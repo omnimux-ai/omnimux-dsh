@@ -30,6 +30,7 @@ subsystem: "global"
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
 | `accepted` | [2026-09-05-astra-agent-guidance-audit.md](2026-09-05-astra-agent-guidance-audit.md) | GPT-6 Astra Agent 指令与工作流审计 | `global` | 2026-09-05 | #602 官方依据、全量入口覆盖、规则收敛与验证边界。 |
+| `accepted` | [2026-09-05-plugin-suite-refactor-audit.md](2026-09-05-plugin-suite-refactor-audit.md) | 重构前审查证据 | `global` | 2026-09-05 | 246 条合并记录、源码热点、82 项选定回归、静态检查边界及既有文档错误。 |
 | `accepted` | [2026-09-05-model-seedance-2-0-text_to_video.md](2026-09-05-model-seedance-2-0-text_to_video.md) | model evidence — seedance-2-0#text_to_video — 2026-09-05 | `omnimux/catalog` | 2026-09-05 | #530 C1 Seedance live t2v；token id 45；listed。 |
 | `accepted` | [2026-09-05-model-seedance-2-0-first_frame.md](2026-09-05-model-seedance-2-0-first_frame.md) | model evidence — seedance-2-0#first_frame — 2026-09-05 | `omnimux/catalog` | 2026-09-05 | #530 C1 images[] live / mapper image 拒；不 listed。 |
 | `accepted` | [2026-09-05-model-seedance-2-0-fast-first_frame.md](2026-09-05-model-seedance-2-0-fast-first_frame.md) | model evidence — seedance-2-0-fast#first_frame — 2026-09-05 | `omnimux/catalog` | 2026-09-05 | #530 C1 PNG/JPEG images[] live；mapper gap；不 listed。 |
