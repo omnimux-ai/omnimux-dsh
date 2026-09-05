@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
+import { JSDOM } from 'jsdom'
 import {
   WORKBENCH_CONVERSATION_MIN_PX,
   WORKBENCH_FOCUS,
@@ -61,9 +62,12 @@ function selIsCollapsedAttr(sel) {
 
 const previousWindow = globalThis.window
 const previousDocument = globalThis.document
+let workbenchDom
 
 afterEach(() => {
   resetWorkbenchForTests(globalThis.window)
+  workbenchDom?.window.close()
+  workbenchDom = undefined
   if (previousWindow === undefined) delete globalThis.window
   else globalThis.window = previousWindow
   if (previousDocument === undefined) delete globalThis.document
@@ -1286,7 +1290,7 @@ test('illegal split widths are not persisted', () => {
 
 /**
  * #505 live-evidence shape: viewport 1728, left rail 280, real better-sidebar
- * fixed panel dragged to inline width 1298 (split max = 1728 − 280 − 360 = 1088).
+ * right panel dragged to inline width 1298 (split max = 1728 − 280 − 360 = 1088).
  * The panel has NO [data-dsh-panel-host] and NO [data-dragging] after release;
  * an unrelated AppFrame node carries [data-dragging] as a decoy.
  */
@@ -1362,7 +1366,7 @@ test('#505 regression: post-release oversized Files panel is clamped on the real
   assert.equal(captured.pointerup?.length, 1)
   captured.pointerup[0]()
 
-  // The resolver must find the real fixed panel via its resize-handle parent,
+  // The resolver must find the real right panel via its resize-handle parent,
   // never the AppFrame [data-dragging] decoy.
   assert.equal(findWorkbenchPanelElement(doc), panel)
   assert.ok(panel.hasAttribute(WORKBENCH_PANEL_ATTR))
@@ -1424,5 +1428,71 @@ test('#505 regression: panel resolution never mistakes an AppFrame [data-draggin
 
 test('#505 split-min CSS clamps the tagged real panel, not only mid-drag nodes', () => {
   assert.match(WORKBENCH_SPLIT_MIN_CSS, /\[data-omnimux-workbench-panel\]/)
+  assert.doesNotMatch(WORKBENCH_SPLIT_MIN_CSS, /\[data-dsh-panel-host\]/)
   assert.doesNotMatch(WORKBENCH_SPLIT_MIN_CSS, /\[data-dragging\]/)
+})
+
+test('#610 regression: panel host is never treated as the workbench panel', () => {
+  const win = setupWindow()
+  const hostAttrs = new Set()
+  const host = {
+    style: { width: '' },
+    hasAttribute: (name) => hostAttrs.has(name),
+    setAttribute: (name) => { hostAttrs.add(name) },
+    removeAttribute: (name) => { hostAttrs.delete(name) },
+    getBoundingClientRect: () => ({ x: 0, right: win.innerWidth, width: win.innerWidth }),
+  }
+  win.document.querySelector = (selector) => (
+    String(selector).includes('data-dsh-panel-host') ? host : null
+  )
+
+  installSplitConversationMin(win.document)
+
+  assert.equal(findWorkbenchPanelElement(win.document), null)
+  assert.equal(host.hasAttribute(WORKBENCH_PANEL_ATTR), false)
+  assert.equal(host.style.width, '')
+})
+
+test('#610 regression: a panel inside the viewport host receives the split marker', () => {
+  workbenchDom = new JSDOM(`<!doctype html><html><head></head><body>
+    <div data-pane="sidebar"></div>
+    <div data-dsh-panel-host style="position:fixed;inset:0;width:1200px">
+      <aside class="_panel_8x" style="position:absolute;right:0;width:900px">
+        <div class="_panelResize_8x"></div>
+      </aside>
+      <aside class="_bottomPanel_8x"><div class="_bottomResize_8x"></div></aside>
+    </div>
+    <div data-dragging class="appFrame_dragTarget"></div>
+  </body></html>`)
+  const { window: win } = workbenchDom
+  Object.defineProperty(win, 'innerWidth', { configurable: true, value: 1200 })
+  globalThis.window = win
+  globalThis.document = win.document
+  const host = win.document.querySelector('[data-dsh-panel-host]')
+  const rail = win.document.querySelector('[data-pane="sidebar"]')
+  const panel = win.document.querySelector('._panel_8x')
+  const bottom = win.document.querySelector('._bottomPanel_8x')
+  const dragging = win.document.querySelector('[data-dragging]')
+  panel.getBoundingClientRect = () => ({ x: 300, right: 1200, width: 900 })
+  rail.getBoundingClientRect = () => ({ x: 0, right: 280, width: 280 })
+  dragging.getBoundingClientRect = () => ({ x: 0, right: 280, width: 280 })
+  const state = makeState([{ id: 'editor:readme', type: 'editor', title: 'Files' }], 900, true)
+  win.document.documentElement.style.setProperty('--dsh-sidebar-width', '900px')
+  const api = installWorkbenchGlobal(win)
+  api.bind({
+    betterSidebar: { getSnapshot: () => ({ sessionId: 's-610', state }) },
+  })
+  focusRecordForTab('s-610', 'editor:readme').mode = WORKBENCH_FOCUS.split
+
+  installSplitConversationMin(win.document)
+  win.document.dispatchEvent(new win.Event('pointermove'))
+
+  assert.equal(findWorkbenchPanelElement(win.document), panel)
+  assert.equal(panel.hasAttribute(WORKBENCH_PANEL_ATTR), true)
+  assert.equal(host.hasAttribute(WORKBENCH_PANEL_ATTR), false)
+  assert.equal(bottom.hasAttribute(WORKBENCH_PANEL_ATTR), false)
+  assert.equal(dragging.hasAttribute(WORKBENCH_PANEL_ATTR), false)
+  assert.equal(host.style.width, '1200px')
+  assert.equal(panel.style.width, '560px')
+  assert.equal(win.document.documentElement.style.getPropertyValue('--dsh-sidebar-width'), '560px')
 })
