@@ -1,37 +1,23 @@
 import { OmnimuxError } from '../media/errors.js'
+import lifecycle from '../plugin-lifecycle.json' with { type: 'json' }
+import release from '../release-channel.json' with { type: 'json' }
 
-/**
- * List of official tools excluded in MVP mode.
- */
-export const MVP_EXCLUDED_OFFICIAL_TOOLS = Object.freeze([
-  'omnimux_accounts_list',
-  'omnimux_accounts_connect',
-  'omnimux_accounts_disconnect',
-  'omnimux_publish_presign',
-  'omnimux_publish_create',
-  'omnimux_publish_get',
-  'omnimux_analytics_daily_metrics',
-  'omnimux_analytics_best_time',
-  'omnimux_analytics_frequency',
-  'omnimux_analytics_content_decay',
-  'omnimux_analytics_follower_stats',
-  'omnimux_analytics_posts',
-  'omnimux_analytics_sync_external',
-  'omnimux_analytics_inbox',
-])
+const lifecycleEntries = Object.entries(lifecycle)
+if (lifecycleEntries.length === 0 || lifecycleEntries.some(([pluginId, entry]) => (
+  !pluginId || entry?.stage !== 'alpha' || !Array.isArray(entry.toolPrefixes) ||
+  entry.toolPrefixes.some(prefix => typeof prefix !== 'string' || prefix.length === 0)
+))) {
+  throw new Error('omnimux: invalid plugin lifecycle registry')
+}
+if (release?.channel !== 'development' && release?.channel !== 'production') {
+  throw new Error('omnimux: invalid packaged release channel')
+}
 
-/**
- * Check if a tool belongs to MVP excluded official tools.
- *
- * @param {string} toolName
- * @returns {boolean}
- */
-export function isMvpExcludedOfficialTool(toolName) {
-  return (
-    toolName.startsWith('omnimux_accounts_') ||
-    toolName.startsWith('omnimux_publish_') ||
-    toolName.startsWith('omnimux_analytics_')
-  )
+const ALPHA_TOOL_PREFIXES = Object.freeze(lifecycleEntries.flatMap(([, entry]) => entry.toolPrefixes))
+
+/** @param {string} toolName */
+export function isAlphaTool(toolName) {
+  return ALPHA_TOOL_PREFIXES.some(prefix => toolName.startsWith(prefix))
 }
 
 /**
@@ -68,12 +54,8 @@ export function isMediaEnabled(gate, kind) {
  */
 export function isToolEnabled(gate, toolName) {
   if (!isGateActive(gate)) return false
-  if (gate?.tools && gate.tools[toolName] !== undefined) {
-    return gate.tools[toolName] !== false
-  }
-  if (gate?.mvp && isMvpExcludedOfficialTool(toolName)) {
-    return false
-  }
+  if (release.channel === 'production' && isAlphaTool(toolName)) return false
+  if (gate?.tools && gate.tools[toolName] === false) return false
   if (toolName === 'omnimux_video_submit') return isMediaEnabled(gate, 'video')
   if (toolName === 'omnimux_image_submit') return isMediaEnabled(gate, 'image')
   if (toolName === 'omnimux_audio_submit') return isMediaEnabled(gate, 'audio')

@@ -91,13 +91,4 @@ describe('parseGateConfig', () => {
   it('rejects non-object plugins', () => {
     assert.throws(() => parseGateConfig({ plugins: 'bad' }), /gate\.plugins must be an object/)
   })
-
-  it('parses mvp flag correctly and rejects non-boolean mvp', () => {
-    const parsedTrue = parseGateConfig({ mvp: true })
-    assert.equal(parsedTrue.mvp, true)
-    const parsedFalse = parseGateConfig({ mvp: false })
-    assert.equal(parsedFalse.mvp, false)
-    assert.throws(() => parseGateConfig({ mvp: 'true' }), /gate\.mvp must be a boolean/)
-    assert.throws(() => parseGateConfig({ mvp: 1 }), /gate\.mvp must be a boolean/)
-  })
 })

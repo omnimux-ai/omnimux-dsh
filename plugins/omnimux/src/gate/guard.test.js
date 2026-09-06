@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { OmnimuxError } from '../media/errors.js'
 import { parseGateConfig } from './config.js'
 import {
@@ -130,43 +134,37 @@ describe('GateGuard logic', () => {
     )
   })
 
-  it('MVP mode disables accounts, publish, and analytics tools by default', () => {
-    const mvpGate = parseGateConfig({ mvp: true })
-
-    // Excluded official tools are disabled
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_list'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_connect'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_disconnect'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_publish_create'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_publish_presign'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_daily_metrics'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_best_time'), false)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_posts'), false)
-
-    // Other tools remain enabled
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_social_data'), true)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_inspiration_list'), true)
-    assert.equal(isToolEnabled(mvpGate, 'omnimux_page_fetch'), true)
-
-    // Explicit override in tools allows re-enabling
-    const overrideGate = parseGateConfig({
-      mvp: true,
+  it('production release disables Alpha tools before user gate overrides', async (t) => {
+    const userOverride = parseGateConfig({
       tools: {
         omnimux_accounts_list: true,
+        omnimux_publish_create: true,
+        omnimux_analytics_daily_metrics: true,
       },
     })
-    assert.equal(isToolEnabled(overrideGate, 'omnimux_accounts_list'), true)
-    assert.equal(isToolEnabled(overrideGate, 'omnimux_accounts_connect'), false)
 
-    // assertCapabilityEnabled throws for excluded tools in MVP mode
+    const fixture = mkdtempSync(join(tmpdir(), 'omnimux-production-guard-'))
+    t.after(() => rmSync(fixture, { recursive: true, force: true }))
+    const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+    mkdirSync(join(fixture, 'src/gate'), { recursive: true })
+    mkdirSync(join(fixture, 'src/media'), { recursive: true })
+    writeFileSync(join(fixture, 'package.json'), '{"type":"module"}\n')
+    copyFileSync(join(sourceRoot, 'gate/guard.js'), join(fixture, 'src/gate/guard.js'))
+    copyFileSync(join(sourceRoot, 'media/errors.js'), join(fixture, 'src/media/errors.js'))
+    copyFileSync(join(sourceRoot, 'plugin-lifecycle.json'), join(fixture, 'src/plugin-lifecycle.json'))
+    writeFileSync(join(fixture, 'src/release-channel.json'), '{"channel":"production"}\n')
+    const productionGuard = await import(pathToFileURL(join(fixture, 'src/gate/guard.js')).href)
+
+    for (const toolName of Object.keys(userOverride.tools)) {
+      assert.equal(productionGuard.isToolEnabled(userOverride, toolName), false, toolName)
+      assert.equal(isToolEnabled(userOverride, toolName), true, toolName)
+    }
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'workflow_run'), true)
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'canvas_write_table_node'), true)
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'omnimux_social_data'), true)
     assert.throws(
-      () => assertCapabilityEnabled(mvpGate, 'omnimux_publish_create', 'tool'),
-      (err) => {
-        assert.ok(err instanceof OmnimuxError)
-        assert.equal(err.code, 'capability-disabled')
-        assert.equal(err.message, "Capability 'omnimux_publish_create' is disabled by capability gate")
-        return true
-      },
+      () => productionGuard.assertCapabilityEnabled(userOverride, 'omnimux_publish_create'),
+      (err) => err.code === 'capability-disabled',
     )
   })
 })

@@ -1,0 +1,14 @@
+{
+  "omnimux-accounts": {
+    "stage": "alpha",
+    "toolPrefixes": ["omnimux_accounts_"]
+  },
+  "omnimux-publish": {
+    "stage": "alpha",
+    "toolPrefixes": ["omnimux_publish_"]
+  },
+  "omnimux-analytics": {
+    "stage": "alpha",
+    "toolPrefixes": ["omnimux_analytics_"]
+  }
+}

@@ -14,10 +14,6 @@ export function parseHubConfig(value) {
   const raw = value && typeof value === 'object' && !Array.isArray(value)
     ? /** @type {Record<string, unknown>} */ (value)
     : {}
-  let gateValue = raw.gate
-  if (raw.mvp !== undefined && (typeof gateValue !== 'object' || gateValue === null || /** @type {any} */ (gateValue).mvp === undefined)) {
-    gateValue = { ...(typeof gateValue === 'object' && gateValue !== null ? gateValue : {}), mvp: raw.mvp }
-  }
   return {
     ...brand,
     media: parseMediaConfig(raw.media),
@@ -31,7 +27,7 @@ export function parseHubConfig(value) {
       ),
     ),
     text: parseTextConfig(raw.text),
-    gate: parseGateConfig(gateValue),
+    gate: parseGateConfig(raw.gate),
   }
 }
 

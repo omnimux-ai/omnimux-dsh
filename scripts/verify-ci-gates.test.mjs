@@ -181,11 +181,11 @@ test('sync-to-app and sync-stable target selection matrix passes', () => {
   strictEqual(res.status, 0, `sync-targets tests failed: ${res.stderr}\n${res.stdout}`)
 })
 
-test('sync-mvp mode toggle matrix passes', () => {
-  const res = spawnSync('node', ['--test', resolve(here, 'sync-mvp.test.mjs')], {
+test('Alpha release materialization policy passes', () => {
+  const res = spawnSync('node', ['--test', resolve(here, 'sync-release-policy.test.mjs')], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: nestedTestEnv,
   })
-  strictEqual(res.status, 0, `sync-mvp tests failed: ${res.stderr}\n${res.stdout}`)
+  strictEqual(res.status, 0, `Alpha release policy tests failed: ${res.stderr}\n${res.stdout}`)
 })

@@ -17,7 +17,7 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -105,112 +105,6 @@ function restartApp(target = 'dev') {
   process.stdout.write('✓ 已请求重启 OmniMux 正式版（人工操作）\n')
 }
 
-const MVP_EXCLUDED = ['omnimux-accounts', 'omnimux-workflow', 'omnimux-publish', 'omnimux-analytics']
-
-function checkMvpStatus() {
-  const profileDirs = [
-    { name: 'Dev (~/.omnimux-dev)', path: join(homedir(), '.omnimux-dev', 'profiles', 'omnimux', 'package.json') },
-    { name: 'Prod (~/.omnimux)', path: join(homedir(), '.omnimux', 'profiles', 'omnimux', 'package.json') },
-    { name: 'DSH (~/.dsh)', path: join(homedir(), '.dsh', 'profiles', 'omnimux', 'package.json') },
-  ]
-  process.stdout.write('== OmniMux Profile MVP 状态检测 ==\n')
-  for (const item of profileDirs) {
-    if (!existsSync(item.path)) {
-      process.stdout.write(`  · ${item.name}: 未找到 profile package.json\n`)
-      continue
-    }
-    try {
-      const pkg = JSON.parse(readFileSync(item.path, 'utf8'))
-      const bundles = Array.isArray(pkg?.dsh?.profile?.bundles) ? pkg.dsh.profile.bundles : []
-      const presentExcluded = MVP_EXCLUDED.filter((p) => bundles.includes(p))
-      if (presentExcluded.length === 0) {
-        process.stdout.write(`  ✓ ${item.name}: 【MVP 模式已开启】(已剔除全部 4 个非核心插件)\n`)
-      } else {
-        process.stdout.write(`  ○ ${item.name}: 【Full 完整模式】(包含: ${presentExcluded.join(', ')})\n`)
-      }
-    } catch (e) {
-      process.stdout.write(`  ✗ ${item.name}: 读取失败 (${e.message})\n`)
-    }
-  }
-}
-
-function toggleProfileMvp(pkgPath, enableMvp) {
-  if (!existsSync(pkgPath)) return { success: false, reason: 'not_found' }
-  try {
-    const raw = readFileSync(pkgPath, 'utf8')
-    const pkg = JSON.parse(raw)
-    if (!pkg.dsh) pkg.dsh = {}
-    if (!pkg.dsh.profile) pkg.dsh.profile = {}
-    if (!Array.isArray(pkg.dsh.profile.bundles)) pkg.dsh.profile.bundles = []
-
-    let changed = false
-    const bundles = pkg.dsh.profile.bundles
-
-    if (enableMvp) {
-      for (const name of MVP_EXCLUDED) {
-        let idx
-        while ((idx = bundles.indexOf(name)) >= 0) {
-          bundles.splice(idx, 1)
-          changed = true
-        }
-      }
-    } else {
-      for (const name of MVP_EXCLUDED) {
-        if (!bundles.includes(name)) {
-          bundles.push(name)
-          changed = true
-        }
-      }
-    }
-
-    if (changed) {
-      writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8')
-    }
-    return { success: true, changed, bundles: pkg.dsh.profile.bundles }
-  } catch (e) {
-    return { success: false, reason: e.message }
-  }
-}
-
-function handleMvpCommand(subCmd, restArgs = []) {
-  const profileDirs = [
-    { name: 'Dev (~/.omnimux-dev)', path: join(homedir(), '.omnimux-dev', 'profiles', 'omnimux', 'package.json') },
-    { name: 'Prod (~/.omnimux)', path: join(homedir(), '.omnimux', 'profiles', 'omnimux', 'package.json') },
-    { name: 'DSH (~/.dsh)', path: join(homedir(), '.dsh', 'profiles', 'omnimux', 'package.json') },
-  ]
-
-  if (subCmd === 'on') {
-    process.stdout.write(`== 切换为 MVP 模式 (停用 4 个插件: ${MVP_EXCLUDED.join(', ')}) ==\n`)
-    for (const item of profileDirs) {
-      const res = toggleProfileMvp(item.path, true)
-      if (res.success) {
-        process.stdout.write(`  ✓ ${item.name}: ${res.changed ? '已剔除 4 个插件' : '已处于 MVP 状态'}\n`)
-      }
-    }
-    process.stdout.write('== 执行同步物化 ==\n')
-    runBash('scripts/sync-to-app.sh', ['--mvp', ...restArgs])
-    return
-  }
-  if (subCmd === 'off') {
-    process.stdout.write(`== 恢复为 Full 完整模式 (加回 4 个插件: ${MVP_EXCLUDED.join(', ')}) ==\n`)
-    for (const item of profileDirs) {
-      const res = toggleProfileMvp(item.path, false)
-      if (res.success) {
-        process.stdout.write(`  ✓ ${item.name}: ${res.changed ? '已恢复 4 个插件' : '已处于 Full 状态'}\n`)
-      }
-    }
-    delete process.env.OMNIMUX_MVP
-    process.stdout.write('== 执行同步物化 ==\n')
-    runBash('scripts/sync-to-app.sh', restArgs)
-    return
-  }
-  if (subCmd === 'status' || !subCmd) {
-    checkMvpStatus()
-    return
-  }
-  die(`未知 mvp 子命令: ${subCmd}。用法: node scripts/omnimux.mjs mvp [on|off|status] [--prod|--dsh|--all]`)
-}
-
 function printHelp() {
   process.stdout.write(`OmniMux 插件开发运维工具 (omnimux-dsh)
 
@@ -218,10 +112,8 @@ function printHelp() {
 插件目录: ${pluginsRoot}
 
 命令:
-  sync [插件...] [--mvp] [--prod|--dsh|--all] [--skip-build]
-                                  构建并将插件物化进目标 Profile（默认仅开发版 ~/.omnimux-dev，可用 --prod / --dsh / --all 扩展；--mvp 停用4个非核心插件）
-  mvp <on|off|status> [--prod|--dsh|--all]
-                                  一键切换 MVP 极简模式 (on=开启MVP停用4插件, off=恢复Full全量, status=查看状态)
+  sync [插件...] [--prod|--dsh|--all] [--skip-build]
+                                  构建并将插件物化进目标 Profile（默认仅开发版 ~/.omnimux-dev，可用 --prod / --dsh / --all 扩展）
   dev <start|stop|ls|rm|watch|restart-host>
                                   L2 独立开发/测试环境（多 Agent 隔离端口池 442xx + Web HMR，测试验证唯一入口）
   dev restart-host <task>         【推荐】仅原地重启指定 L2 环境的 Host 进程（2秒同端口冷重启，Agent 允许调用）
@@ -241,9 +133,6 @@ function printHelp() {
   help                            显示本帮助
 
 示例:
-  node scripts/omnimux.mjs mvp on                             # 一键切换为 MVP 极简模式 (停用账号/画布/发布/分析)
-  node scripts/omnimux.mjs mvp off                            # 一键恢复为完整模式
-  node scripts/omnimux.mjs mvp status                         # 查看当前各 Profile MVP 状态
   node scripts/omnimux.mjs dev start task-a1 omnimux-workflow   # L2 独立隔离验证
   node scripts/omnimux.mjs dev restart-host task-a1            # 修改后端 Tool 后秒级重启 Host
   node scripts/omnimux.mjs sync omnimux-workflow               # 验证通过后物化落盘
@@ -257,9 +146,6 @@ const rest = args.slice(1)
 switch (cmd) {
   case 'sync':
     runBash('scripts/sync-to-app.sh', rest)
-    break
-  case 'mvp':
-    handleMvpCommand(rest[0], rest.slice(1))
     break
   case 'build:all':
     runNodeScript('scripts/build-all.mjs', rest)
