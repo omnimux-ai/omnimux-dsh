@@ -41,36 +41,41 @@ L2 的 `.l2-dev.env` 必须与当前 worktree 的 URL、PORT、SOURCE、COMMIT �
 
 - Web/Stage 验收使用当前 Codex 会话的内置浏览器（IAB），不得使用旧 ego-browser 流程，也不得用桌面截图替代浏览器检查。
 - `pnpm verify:live <stage> --target=l2 --url=<l2-url>` 创建合并前请求；合并后在 Dev 运行 `pnpm verify:live <stage>`。`all` 只覆盖已登记的公开 Stage。
-- CLI 返回 pending/request path 只表示请求已准备，不是通过。当前 IAB Tab 必须实际执行 `scripts/codex-browser-qa.mjs` 的 `runPreparedQa(requestPath, { tab })` 并产出最终报告。
+- CLI 返回 pending/request path 只表示请求已准备，不是通过。当前 IAB Tab 必须实际执行 `scripts/codex-browser-qa.mjs` 的 `runPreparedQa(requestPath, { tab })` 并产出最终报告；它不会自行取得 L2 登录入口或执行 token 登录导航。
 - 请求在页面准备成功后原子消费一次；准备前后均检查有效期、代码 SHA 与请求身份。认证或浏览器预检失败不消费请求；真正探针开始后不得复用。并发执行只能有一个消费者，未取得执行权的调用不得覆盖消费者报告。
 - run ID、代码 SHA、目标、URL、Tab、profile、Host PID/启动时间或运行版本不匹配时失败。不得复用旧 run、旧截图或旧空白会话。
 - 先在同一 IAB Tab 完成本地认证与 QA 会话准备。证据不得保存 token；探针不得发送消息、生成媒体或提交账号任务。
 
 ### 页面准备与认证恢复
 
-页面准备复用 `scripts/codex-browser-qa.mjs`，由 `runPreparedQa` 在消费请求前调用，也可在 Agent 进入 Dev/L2 时单独调用。目标仅限合同规定的本地 Dev/L2 地址；先核对当前 Tab 的 origin，再执行页面操作。
+先为 L2 显式打开正式登录入口，再准备页面；Dev 或已进入 L2 的干净页面只做准备。页面准备复用 `scripts/codex-browser-qa.mjs`，由 `runPreparedQa` 在消费请求前调用，也可单独调用。目标仅限合同规定的本地 Dev/L2 地址；先核对当前 Tab 的 origin，再执行页面操作。
+
+L2 必须由同一模块的 `openL2IabPage` 显式进入。它先后核对 `.l2-dev.env`、当前 Host 身份和 `host.log` 的最后一条正式 `dsh web:` 登录链接；链接必须与已分配 L2 origin 相同、为根路径、无其他参数或凭据、且只有非空 `token`。函数只允许从 `about:blank` 或同一干净 L2 URL 开始，使用一次正常 `tab.goto` 完成 token→Cookie 交换，然后再次核对 Host 身份和干净 URL 后才调用页面准备。链接只在内存中用于该次导航，绝不出现在返回值、日志或证据中。缺少当前登录链接、Host 身份变化、浏览器失败或未回到干净 URL 均停止，不重试、不消费 QA 请求。
 
 在已选择当前任务真实 IAB Tab 的浏览器执行环境中导入该 worktree 的模块：
 
 ```js
-const { prepareIabPage } = await import('/absolute/worktree/scripts/codex-browser-qa.mjs')
+const { prepareIabPage, openL2IabPage } = await import('/absolute/worktree/scripts/codex-browser-qa.mjs')
 const preparation = await prepareIabPage(tab, { url: 'http://127.0.0.1:45120/', target: 'dev' })
+
+// L2 only: pass the clean allocated URL, never a token-bearing URL.
+const l2Preparation = await openL2IabPage(tab, { url: 'http://127.0.0.1:44201/' })
 ```
 
-已有准备好的 QA 请求时，直接调用同一模块的 `runPreparedQa(requestPath, { tab })`，不需另跑页面准备。准备结果的 `ready` 仅表示产品页面已加载且未发现可见连接警告，`status: 'recovered'` 表示本次做过同源导航；都不等于 QA `pass`。业务会话、运行身份和 Stage 断言仍由正式探针验证。L2 调用传 `target: 'l2'` 与该任务实际池内 URL。准备函数不负责创建标签或获取正式登录链接。
+已有准备好的 QA 请求时，直接调用同一模块的 `runPreparedQa(requestPath, { tab })`，不需另跑页面准备。准备结果的 `ready` 仅表示产品页面已加载、未发现可见连接警告，并且现有 Cookie 的同源根路径 `GET` 返回 200；已有旧 UI 而该检查返回 401/403 仍是 `auth-required`，不得消费请求。页面准备最多做两次同源只读检查：首个同源页面检查一次；若随后等待页面就绪或执行精确认证页的内部导航，则在最终就绪后再检查一次。两次之间不循环认证检查。`status: 'recovered'` 表示仅精确认证错误页在检查返回 200 后做过一次页面内部同源导航；都不等于 QA `pass`。业务会话、运行身份和 Stage 断言仍由正式探针验证。L2 调用传 `target: 'l2'` 与该任务实际池内 URL。`prepareIabPage` 不负责创建标签或取得正式登录链接。
 
 预检失败结果返回给调用者；调用者应保存脱敏结果作为该次尝试的证据。请求的规范报告保持 pending 或保留已有消费者报告，不会被未消费的失败尝试覆盖。
 
 | 状态 | 动作与结果 |
 |---|---|
-| 已登录且页面就绪 | 复用当前页面，不刷新、不切换业务页或会话；随后仍须通过完整运行身份与 Stage 探针 |
+| 已登录且页面就绪，且现有 Cookie 同源 GET 返回 200 | 复用当前页面，不刷新、不切换业务页或会话；随后仍须通过完整运行身份与 Stage 探针 |
 | 明确的同源认证错误页 | 一次带 5 秒超时的同源只读请求，使用已有 Cookie；仅在返回 200 时执行一次页面内部同源导航，并等待真实产品 UI 就绪 |
-| 同源请求仍返回 401 | 返回需要认证；Agent 通过已运行 Desktop 的正式“浏览器访问 URL”完成登录，再重新准备页面 |
+| 任一页面状态下同源请求返回 401/403 | 返回需要认证；L2 仅可由显式 `openL2IabPage` 读取当前 Host 的正式链接并完成一次登录导航，再重新准备页面 |
 | 服务不可达、请求或浏览器工具超时 | 有上限退出并保留未消费请求；区分 HTTP/网络结果与工具等待失败，不默认启动或重启共享 App |
 | origin 不匹配或 URL 策略拒绝 | 停止操作，不更换协议、浏览器或请求路径规避拒绝 |
 | 页面没有就绪或业务断言失败 | 分别报告准备失败或 QA 失败；HTTP 200、页面标题不能作为业务验收通过依据 |
 
-正式登录链接由当前已运行 Desktop 提供。桌面设置页的“浏览器访问 URL”来自同源 `GET /api/desktop/settings` 的 `web.localUrl`，该接口受现有认证与同源约束保护。必须在有权访问的 Desktop 上取得链接，并仅在内存中交给同一目标 IAB 完成正常 token→Cookie 交换；随后使用不含凭据的 URL 调用页面准备。无法可靠读取正式入口时报告阻断，不能把该接口当成免认证 bootstrap API。L2 使用该任务 Host 正式打印的认证链接。
+正式登录链接由当前已运行 Desktop 提供。桌面设置页的“浏览器访问 URL”来自同源 `GET /api/desktop/settings` 的 `web.localUrl`，该接口受现有认证与同源约束保护。必须在有权访问的 Desktop 上取得链接，并仅在内存中交给同一目标 IAB 完成正常 token→Cookie 交换；随后使用不含凭据的 URL 调用页面准备。无法可靠读取正式入口时报告阻断，不能把该接口当成免认证 bootstrap API。L2 只能使用该任务当前 Host 在 `host.log` 最后一条正式打印的认证链接；日志时间必须不早于该 Host 的进程启动时间，且读取和导航前后均验证 Host 身份。
 
 禁止复制或伪造 Cookie、读取签名密钥造票、关闭 SameSite、把 fetch 返回的 HTML 写入 DOM、无限重试，以及为验证而清除共享 Dev 认证。缺失认证场景在隔离 L2 验证。登录入口不可用或浏览器工具失败不授予 App 生命周期、配置或凭据修改权限。
 

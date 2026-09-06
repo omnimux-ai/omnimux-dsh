@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -11,6 +12,7 @@ import { assertStageState, saveProbeScreenshot } from './live-stage-probe.mjs'
 
 const repo = process.cwd()
 const roots = []
+const children = []
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 const origin = 'http://127.0.0.1:45120'
 const ready = { origin, authPage: false, rootMounted: true, workbenchReady: true, connectionWarning: false, ready: true }
@@ -18,21 +20,25 @@ const auth = { origin, authPage: true, rootMounted: false, workbenchReady: false
 const loading = { origin, authPage: false, rootMounted: true, workbenchReady: false, connectionWarning: false, ready: false }
 
 afterEach(() => {
+  children.splice(0).forEach((child) => child.kill())
   roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true }))
 })
 
-function fakeTab(values = [ready], { url = `${origin}/`, error, onSend } = {}) {
+function fakeTab(values = [ready], { url = `${origin}/`, error, onSend, goto } = {}) {
   const calls = []
+  const navigations = []
+  let currentUrl = url
   const cdp = { send: async (method, params, options) => {
     calls.push({ method, params, options })
     onSend?.(calls.length)
     if (error) throw error
-    const value = values.shift()
+    const value = values.shift() ?? { kind: 'response', status: 200, sameOrigin: true }
     if (value instanceof Error) throw value
     return { result: { value } }
   } }
   return {
-    id: 'iab-test', calls, url: async () => url,
+    id: 'iab-test', calls, navigations, url: async () => currentUrl,
+    goto: async (value) => { navigations.push(value); currentUrl = await (goto ? goto(value) : `${origin}/`) },
     playwright: { locator: () => ({}) }, capabilities: { get: async () => cdp }, screenshot: async () => png,
   }
 }
@@ -99,23 +105,203 @@ async function request(overrides = {}) {
   return { root, path, value, runner }
 }
 
-test('ready product page is reused without fetch or navigation, including an empty QA session', async () => {
+function availableL2Port() {
+  for (let port = 44299; port >= 44201; port--) {
+    try {
+      execFileSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'], { stdio: 'ignore' })
+    } catch { return port }
+  }
+  throw new Error('no free L2 port available for test')
+}
+
+async function l2Runtime(root, { loginLine = null, logLines } = {}) {
+  const port = availableL2Port()
+  const profile = 'omnimux-dev-qa'
+  const profileDir = join(root, profile)
+  const plugins = join(root, 'plugins')
+  const plugin = join(plugins, 'omnimux')
+  mkdirSync(plugin, { recursive: true })
+  mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
+  symlinkSync(plugin, join(profileDir, 'node_modules', 'omnimux'))
+  writeFileSync(join(profileDir, 'port.txt'), `${port}\n`)
+  const server = spawn(process.execPath, ['-e', "process.title = process.env.QA_L2_PROFILE; require('node:http').createServer((_, response) => response.end('ok')).listen(process.env.QA_L2_PORT, '127.0.0.1', () => process.stdout.write('ready\\n'))"], { env: { ...process.env, QA_L2_PORT: String(port), QA_L2_PROFILE: profile }, stdio: ['ignore', 'pipe', 'pipe'] })
+  children.push(server)
+  await new Promise((resolveReady, rejectReady) => {
+    server.once('error', rejectReady)
+    server.stdout.once('data', resolveReady)
+    server.once('exit', code => rejectReady(new Error(`test L2 Host exited before listening (${code})`)))
+  })
+  writeFileSync(join(profileDir, 'host.pid'), `${server.pid}\n`)
+  const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+  writeFileSync(join(root, '.l2-dev.env'), [
+    `URL=http://127.0.0.1:${port}/`, `PORT=${port}`, `SOURCE=${plugins}`, 'TOPIC=qa', `COMMIT=${sha}`, `PROFILE_DIR=${profileDir}`, 'PLUGIN=omnimux',
+  ].join('\n'))
+  const log = join(profileDir, 'host.log')
+  writeFileSync(log, `${(logLines || [loginLine ?? `dsh web: http://127.0.0.1:${port}/?token=l2-test-token`]).join('\n')}\n`)
+  utimesSync(log, new Date(), new Date())
+  return { url: `http://127.0.0.1:${port}/`, log }
+}
+
+test('authenticated product page is reused without navigation, including an empty QA session', async () => {
   const tab = fakeTab([ready])
   const result = await prepareIabPage(tab, { url: `${origin}/`, target: 'dev' })
   assert.deepEqual([result.status, result.ready, result.attempts, result.recoveryAction], ['ready', true, 0, 'none'])
-  assert.equal(tab.calls.length, 1)
+  assert.equal(tab.calls.length, 2)
   assert.equal(tab.calls[0].options.timeoutMs, 5_000)
+  assert.deepEqual(tab.navigations, [])
 })
 
 test('normal product content mentioning the auth error is not mistaken for the exact auth page', async () => {
-  const tab = vmTab({ body: `Chat says: ${'dsh web authentication required; reopen the URL printed by dsh web.'}`, mounted: true, workbench: true, fetch: async () => { throw new Error('fetch must not run') } })
+  const tab = vmTab({ body: `Chat says: ${'dsh web authentication required; reopen the URL printed by dsh web.'}`, mounted: true, workbench: true, fetch: async (_url, init) => {
+    assert.equal(init.credentials, 'include')
+    return { status: 200, type: 'basic', url: `${origin}/` }
+  } })
   const result = await prepareIabPage(tab, { url: `${origin}/`, target: 'dev' })
   assert.equal(result.status, 'ready')
   assert.equal(result.attempts, 0)
   assert.deepEqual(tab.assignments, [])
 })
 
-test('same-origin auth page executes one fetch and one navigation before reporting recovered', async () => {
+test('a stale-looking ready page with a 401 cookie check is auth-required without navigation', async () => {
+  const tab = fakeTab([ready, { kind: 'response', status: 401, ok: false, sameOrigin: true }])
+  const result = await prepareIabPage(tab, { url: `${origin}/`, target: 'dev' })
+  assert.equal(result.status, 'auth-required')
+  assert.equal(result.ready, false)
+  assert.deepEqual(tab.navigations, [])
+})
+
+test('a loading page checks its existing cookie before and after it becomes ready', async () => {
+  const tab = fakeTab([loading, { kind: 'response', status: 200, sameOrigin: true }, ready, { kind: 'response', status: 403, ok: false, sameOrigin: true }])
+  const result = await prepareIabPage(tab, { url: `${origin}/`, target: 'dev', readyTimeoutMs: 50, pollIntervalMs: 10 })
+  assert.equal(result.status, 'auth-required')
+  assert.equal(result.ready, false)
+  assert.equal(tab.calls.length, 4)
+  assert.deepEqual(tab.navigations, [])
+})
+
+test('explicit L2 entry consumes only the current Host login line, then prepares the clean page', async () => {
+  const item = await request()
+  const l2 = await l2Runtime(item.root)
+  const l2Origin = new URL(l2.url).origin
+  const l2Ready = { ...ready, origin: l2Origin }
+  let tab
+  tab = fakeTab([l2Ready, { kind: 'response', status: 200, sameOrigin: true }], {
+    url: 'about:blank',
+    goto: async (value) => {
+      assert.equal(tab.calls.length, 0, 'no CDP evaluation before normal HTTP navigation')
+      assert.match(value, /^http:\/\/127\.0\.0\.1:\d+\/\?token=/)
+      return l2.url
+    },
+  })
+  const result = await item.runner.openL2IabPage(tab, { url: l2.url })
+  assert.equal(result.status, 'ready')
+  assert.equal(result.ready, true)
+  assert.equal(result.loginAction, 'official-login-navigation')
+  assert.equal(tab.navigations.length, 1)
+  assert.doesNotMatch(JSON.stringify(result), /l2-test-token/)
+})
+
+test('L2 entry fails closed when the current Host has no official login line', async () => {
+  const item = await request()
+  const l2 = await l2Runtime(item.root, { loginLine: 'Host started' })
+  const tab = fakeTab([], { url: 'about:blank' })
+  const result = await item.runner.openL2IabPage(tab, { url: l2.url })
+  assert.equal(result.status, 'l2-login-missing')
+  assert.equal(result.ready, false)
+  assert.equal(tab.navigations.length, 0)
+  assert.equal(tab.calls.length, 0)
+})
+
+test('L2 entry ignores a pre-restart login link and accepts only a link after the latest restart marker', async () => {
+  const stale = await request()
+  const staleL2 = await l2Runtime(stale.root)
+  writeFileSync(staleL2.log, [
+    `dsh web: ${staleL2.url}?token=old-login-token`,
+    '--- [2026-09-06 12:00:00] dev restart-host triggered ---',
+    'Host started',
+  ].join('\n'))
+  utimesSync(staleL2.log, new Date(), new Date())
+  const staleTab = fakeTab([], { url: 'about:blank' })
+  const staleResult = await stale.runner.openL2IabPage(staleTab, { url: staleL2.url })
+  assert.equal(staleResult.status, 'l2-login-missing')
+  assert.equal(staleTab.navigations.length, 0)
+  assert.equal(staleTab.calls.length, 0)
+  assert.doesNotMatch(JSON.stringify(staleResult), /old-login-token/)
+
+  const current = await request()
+  const currentL2 = await l2Runtime(current.root)
+  writeFileSync(currentL2.log, [
+    `dsh web: ${currentL2.url}?token=old-login-token`,
+    '--- [2026-09-06 12:00:00] dev restart-host triggered ---',
+    `dsh web: ${currentL2.url}?token=l2-test-token`,
+  ].join('\n'))
+  utimesSync(currentL2.log, new Date(), new Date())
+  const currentOrigin = new URL(currentL2.url).origin
+  const currentTab = fakeTab([{ ...ready, origin: currentOrigin }, { kind: 'response', status: 200, sameOrigin: true }], { url: 'about:blank', goto: async () => currentL2.url })
+  const currentResult = await current.runner.openL2IabPage(currentTab, { url: currentL2.url })
+  assert.equal(currentResult.status, 'ready')
+  assert.equal(currentTab.navigations.length, 1)
+  assert.doesNotMatch(JSON.stringify(currentResult), /old-login-token|l2-test-token/)
+})
+
+test('L2 entry rejects a foreign selected tab, malformed login line, and stale allocation before navigation', async () => {
+  const foreign = await request()
+  const foreignL2 = await l2Runtime(foreign.root)
+  const foreignTab = fakeTab([], { url: `${origin}/` })
+  const foreignResult = await foreign.runner.openL2IabPage(foreignTab, { url: foreignL2.url })
+  assert.equal(foreignResult.status, 'browser-policy')
+  assert.equal(foreignTab.navigations.length, 0)
+  assert.equal(foreignTab.calls.length, 0)
+
+  const malformed = await request()
+  const malformedL2 = await l2Runtime(malformed.root)
+  writeFileSync(malformedL2.log, `dsh web: ${malformedL2.url}?token=valid&next=forbidden\n`)
+  utimesSync(malformedL2.log, new Date(), new Date())
+  const malformedTab = fakeTab([], { url: 'about:blank' })
+  const malformedResult = await malformed.runner.openL2IabPage(malformedTab, { url: malformedL2.url })
+  assert.equal(malformedResult.status, 'l2-login-missing')
+  assert.equal(malformedTab.navigations.length, 0)
+  assert.equal(malformedTab.calls.length, 0)
+
+  const stale = await request()
+  const staleL2 = await l2Runtime(stale.root)
+  const staleEnv = readFileSync(join(stale.root, '.l2-dev.env'), 'utf8').replace(/COMMIT=.*/, 'COMMIT=0000000')
+  writeFileSync(join(stale.root, '.l2-dev.env'), staleEnv)
+  const staleTab = fakeTab([], { url: 'about:blank' })
+  const staleResult = await stale.runner.openL2IabPage(staleTab, { url: staleL2.url })
+  assert.equal(staleResult.status, 'l2-identity-mismatch')
+  assert.equal(staleTab.navigations.length, 0)
+  assert.equal(staleTab.calls.length, 0)
+})
+
+test('L2 navigation failure is bounded and does not expose the login URL', async () => {
+  const item = await request()
+  const l2 = await l2Runtime(item.root)
+  const tab = fakeTab([], { url: 'about:blank', goto: async (value) => { throw new Error(`navigation failed: ${value}`) } })
+  const result = await item.runner.openL2IabPage(tab, { url: l2.url })
+  assert.equal(result.status, 'browser-transport')
+  assert.equal(result.loginAction, 'official-login-navigation-attempted')
+  assert.equal(tab.navigations.length, 1)
+  assert.equal(tab.calls.length, 0)
+  assert.doesNotMatch(JSON.stringify(result), /l2-test-token/)
+})
+
+test('a timed-out L2 navigation is attempted once and does not retry after a late completion', async () => {
+  const item = await request()
+  const l2 = await l2Runtime(item.root)
+  let completeNavigation
+  const tab = fakeTab([], { url: 'about:blank', goto: () => new Promise(resolveLate => { completeNavigation = resolveLate }) })
+  const result = await item.runner.openL2IabPage(tab, { url: l2.url, toolTimeoutMs: 1 })
+  assert.equal(result.status, 'browser-timeout')
+  assert.equal(result.loginAction, 'official-login-navigation-attempted')
+  assert.equal(tab.navigations.length, 1)
+  assert.equal(tab.calls.length, 0)
+  completeNavigation(l2.url)
+  await new Promise(resolveLate => setTimeout(resolveLate, 0))
+  assert.equal(tab.navigations.length, 1)
+})
+
+test('same-origin auth page executes two checks and one navigation before reporting recovered', async () => {
   const tab = vmTab({ body: 'dsh web authentication required; reopen the URL printed by dsh web.', mounted: false, workbench: false, fetch: async (_url, init) => {
     assert.equal(init.credentials, 'include')
     assert.equal(init.redirect, 'manual')
@@ -123,7 +309,7 @@ test('same-origin auth page executes one fetch and one navigation before reporti
   } })
   const result = await prepareIabPage(tab, { url: `${origin}/`, target: 'dev', readyTimeoutMs: 0 })
   assert.deepEqual([result.status, result.ready, result.attempts, result.recoveryAction], ['recovered', true, 1, 'same-origin-navigation'])
-  assert.equal(tab.calls.length, 4)
+  assert.equal(tab.calls.length, 5)
   assert.deepEqual(tab.assignments, [`${origin}/`])
   assert.equal(tab.calls[1].options.timeoutMs, 6_000)
 })
@@ -175,7 +361,7 @@ test('Chrome network error document is service-unreachable rather than an origin
 test('missing authentication, unreachable Host, and page readiness stay distinct', async () => {
   const required = await prepareIabPage(fakeTab([auth, { kind: 'response', status: 401, ok: false, sameOrigin: true }]), { url: `${origin}/`, target: 'dev' })
   const unreachable = await prepareIabPage(fakeTab([auth, { kind: 'network' }]), { url: `${origin}/`, target: 'dev' })
-  const notReady = await prepareIabPage(fakeTab([loading, loading]), { url: `${origin}/`, target: 'dev', readyTimeoutMs: 0 })
+  const notReady = await prepareIabPage(fakeTab([loading, { kind: 'response', status: 200, sameOrigin: true }, loading]), { url: `${origin}/`, target: 'dev', readyTimeoutMs: 0 })
   assert.equal(required.status, 'auth-required')
   assert.equal(unreachable.status, 'service-unreachable')
   assert.equal(notReady.status, 'not-ready')
@@ -235,6 +421,15 @@ test('failed browser preflight preserves the reusable request and pending canoni
   assert.deepEqual(JSON.parse(readFileSync(item.value.reportPath, 'utf8')), { status: 'pending' })
 })
 
+test('authentication that expires while waiting preserves the reusable QA request', async () => {
+  const item = await request()
+  const tab = fakeTab([loading, { kind: 'response', status: 200, sameOrigin: true }, ready, { kind: 'response', status: 401, ok: false, sameOrigin: true }])
+  const result = await item.runner.runPreparedQa(item.path, { tab, prepareOptions: { readyTimeoutMs: 50, pollIntervalMs: 10 } })
+  assert.equal(result.failureKind, 'auth-required')
+  assert.equal(existsSync(`${item.path}.consumed`), false)
+  assert.equal(JSON.parse(readFileSync(item.path, 'utf8')).consumedAt, null)
+})
+
 test('wrong page path and incomplete IAB capabilities fail before request consumption', async () => {
   const wrongPath = await request()
   const pathResult = await wrongPath.runner.runPreparedQa(wrongPath.path, { tab: fakeTab([ready], { url: `${origin}/other` }) })
@@ -260,7 +455,10 @@ test('request replacement and HEAD change during preparation are rejected before
   assert.equal(existsSync(`${replaced.path}.consumed`), false)
 
   const changedHead = await request()
+  let committed = false
   const headTab = fakeTab([ready], { onSend: () => {
+    if (committed) return
+    committed = true
     writeFileSync(join(changedHead.root, 'README'), 'changed\n')
     execFileSync('git', ['add', 'README'], { cwd: changedHead.root })
     execFileSync('git', ['-c', 'user.name=QA', '-c', 'user.email=qa@localhost', 'commit', '-qm', 'changed'], { cwd: changedHead.root })

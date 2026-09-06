@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import { runStageProbe } from './live-stage-probe.mjs'
 import { captureRuntimeProof, assertRuntimeProofStable } from './live-runtime-proof.mjs'
-import { verifyL2Runtime } from './live-qa.mjs'
+import { resolveTarget, verifyL2Runtime } from './live-qa.mjs'
 import { validateLiveQaReport } from './live-qa-validation.mjs'
 
 const AUTH_TEXT = 'dsh web authentication required; reopen the url printed by dsh web.'
@@ -187,6 +187,21 @@ async function waitUntilReady(cdp, origin, { deadline, toolTimeoutMs, pollInterv
   return { kind: 'not-ready', state }
 }
 
+async function checkExistingCookie(cdp, origin, fetchTimeoutMs) {
+  return evaluateCdp(cdp, fetchExpression(origin, fetchTimeoutMs), fetchTimeoutMs + 1_000)
+}
+
+function cookieCheckFailure(fetched, finish) {
+  if (fetched?.kind === 'origin-mismatch' || fetched?.sameOrigin === false) return finish('browser-policy', false, 'same-origin authentication check left the approved origin')
+  if (fetched?.kind === 'timeout') return finish('service-unreachable', false, 'same-origin authentication check timed out')
+  if (fetched?.kind === 'network') return finish('service-unreachable', false, 'local Host was unreachable from the page')
+  if (fetched?.kind === 'redirect') return finish('browser-policy', false, 'authentication check redirected; recovery stopped')
+  if (fetched?.kind !== 'response') return finish('browser-transport', false, 'browser returned an invalid authentication check result')
+  if (fetched.status === 401 || fetched.status === 403) return finish('auth-required', false, 'valid browser authentication is required')
+  if (fetched.status !== 200) return finish('not-ready', false, 'local Host returned an unexpected response')
+  return null
+}
+
 /** Prepare one approved local Dev/L2 page without consuming a QA request. */
 export async function prepareIabPage(tab, {
   url, target, toolTimeoutMs = 5_000, fetchTimeoutMs = 5_000,
@@ -215,24 +230,20 @@ export async function prepareIabPage(tab, {
     const first = await evaluateCdp(cdp, inspectExpression(origin), toolTimeoutMs)
     if (first?.networkErrorPage) return finish('service-unreachable', false, 'browser displayed a network error page; Host listening state was not confirmed')
     if (first?.origin !== origin) return finish('browser-policy', false, 'page origin changed during preparation')
-    if (first?.ready) return finish('ready', true, 'product page is ready')
+    const failed = cookieCheckFailure(await checkExistingCookie(cdp, origin, fetchTimeoutMs), finish)
+    if (failed) return failed
+    if (first?.ready) return finish('ready', true, 'product page is ready and browser authentication is valid')
     if (!first?.authPage) {
       const waited = await waitUntilReady(cdp, origin, { deadline: Date.now() + readyTimeoutMs, toolTimeoutMs, pollIntervalMs })
       if (waited.kind === 'network-error') return finish('service-unreachable', false, 'browser displayed a network error page; Host listening state was not confirmed')
       if (waited.kind === 'origin-mismatch') return finish('browser-policy', false, 'page origin changed during preparation')
-      return waited.kind === 'ready' ? finish('ready', true, 'product page became ready') : finish('not-ready', false, 'product page did not become ready')
+      if (waited.kind !== 'ready') return finish('not-ready', false, 'product page did not become ready')
+      const finalCheck = cookieCheckFailure(await checkExistingCookie(cdp, origin, fetchTimeoutMs), finish)
+      if (finalCheck) return finalCheck
+      return finish('ready', true, 'product page became ready and browser authentication is valid')
     }
 
     attempts = 1
-    const fetched = await evaluateCdp(cdp, fetchExpression(origin, fetchTimeoutMs), fetchTimeoutMs + 1_000)
-    if (fetched?.kind === 'origin-mismatch' || fetched?.sameOrigin === false) return finish('browser-policy', false, 'same-origin authentication check left the approved origin')
-    if (fetched?.kind === 'timeout') return finish('service-unreachable', false, 'same-origin authentication check timed out')
-    if (fetched?.kind === 'network') return finish('service-unreachable', false, 'local Host was unreachable from the page')
-    if (fetched?.kind === 'redirect') return finish('browser-policy', false, 'authentication check redirected; recovery stopped')
-    if (fetched?.kind !== 'response') return finish('browser-transport', false, 'browser returned an invalid authentication check result')
-    if (fetched.status === 401 || fetched.status === 403) return finish('auth-required', false, 'valid browser authentication is required')
-    if (fetched.status !== 200) return finish('not-ready', false, 'local Host returned an unexpected response')
-
     recoveryAction = 'same-origin-navigation-attempted'
     const navigation = await evaluateCdp(cdp, navigateExpression(origin, Date.now() + toolTimeoutMs), toolTimeoutMs)
     if (navigation?.action === 'expired') return finish('browser-timeout', false, 'same-origin navigation lease expired')
@@ -242,8 +253,71 @@ export async function prepareIabPage(tab, {
     const recovered = await waitUntilReady(cdp, origin, { deadline: Date.now() + readyTimeoutMs, toolTimeoutMs, pollIntervalMs, allowNavigationReset: true })
     if (recovered.kind === 'network-error') return finish('service-unreachable', false, 'browser displayed a network error page; Host listening state was not confirmed')
     if (recovered.kind === 'origin-mismatch') return finish('browser-policy', false, 'page origin changed during recovery')
-    if (recovered.kind === 'ready') return finish(recoveryAction === 'same-origin-navigation' ? 'recovered' : 'ready', true, 'product page is ready')
+    if (recovered.kind === 'ready') {
+      const finalCheck = cookieCheckFailure(await checkExistingCookie(cdp, origin, fetchTimeoutMs), finish)
+      if (finalCheck) return finalCheck
+      return finish(recoveryAction === 'same-origin-navigation' ? 'recovered' : 'ready', true, 'product page is ready')
+    }
     return finish('not-ready', false, 'product page did not become ready after authentication recovery')
+  } catch (error) {
+    const [status, detail] = browserFailure(error)
+    return finish(status, false, detail)
+  }
+}
+
+function officialL2LoginUrl(target, runtime) {
+  try {
+    const logPath = join(runtime.profileDir, 'host.log')
+    const startedAt = Date.parse(runtime.startedAt)
+    if (!Number.isFinite(startedAt) || statSync(logPath).mtimeMs < startedAt) return null
+    const lines = readFileSync(logPath, 'utf8').split(/\r?\n/)
+    const restart = lines.findLastIndex(value => /^--- \[[^\]]+\] dev restart-host triggered ---$/.test(value))
+    const line = lines.slice(restart + 1).reverse().find(value => value.startsWith('dsh web: '))
+    if (!line) return null
+    const link = line.slice('dsh web: '.length)
+    if (!/^http:\/\/127\.0\.0\.1:\d+\/\?token=[^&?#\s]+$/.test(link)) return null
+    const parsed = new URL(link)
+    const expected = new URL(target.url)
+    if (parsed.origin !== expected.origin || parsed.pathname !== '/' || parsed.username || parsed.password || parsed.hash || parsed.searchParams.size !== 1 || !parsed.searchParams.get('token')) return null
+    return link
+  } catch { return null }
+}
+
+/** Open one L2 tab through the current Host's official browser URL. */
+export async function openL2IabPage(tab, { url, toolTimeoutMs = 5_000 } = {}) {
+  const duration = Number.isFinite(toolTimeoutMs) ? Math.min(10_000, Math.max(1, toolTimeoutMs)) : 5_000
+  let origin = null
+  let loginAction = 'none'
+  const startedAt = iso(Date.now())
+  const finish = (status, ready, detail, preparation) => ({ status, ready, origin, loginAction, detail, startedAt, completedAt: iso(Date.now()), ...(preparation ? { preparation } : {}) })
+  try {
+    let target
+    let before
+    try {
+      target = resolveTarget({ target: 'l2', url }, moduleRoot)
+      origin = new URL(target.url).origin
+      before = verifyL2Runtime(target)
+    } catch { return finish('l2-identity-mismatch', false, 'L2 allocation or Host identity is not current') }
+    if (!tab || typeof tab.url !== 'function' || typeof tab.goto !== 'function') return finish('browser-transport', false, 'a navigable Codex IAB tab is required')
+    const actualUrl = await boundedRead(() => tab.url(), duration)
+    if (actualUrl !== 'about:blank' && !sameUrl(actualUrl, target.url)) return finish('browser-policy', false, 'selected tab is not blank or the approved clean L2 URL')
+
+    const loginUrl = officialL2LoginUrl(target, before)
+    if (!loginUrl) return finish('l2-login-missing', false, 'current L2 Host did not provide a valid browser login entry')
+    let afterRead
+    try { afterRead = verifyL2Runtime(target) } catch { return finish('l2-identity-mismatch', false, 'L2 Host identity changed before browser login') }
+    if (!isDeepStrictEqual(before, afterRead)) return finish('l2-identity-mismatch', false, 'L2 Host identity changed before browser login')
+
+    loginAction = 'official-login-navigation-attempted'
+    await boundedRead(() => tab.goto(loginUrl), duration)
+    loginAction = 'official-login-navigation'
+    let afterNavigation
+    try { afterNavigation = verifyL2Runtime(target) } catch { return finish('l2-identity-mismatch', false, 'L2 Host identity changed during browser login') }
+    if (!isDeepStrictEqual(before, afterNavigation)) return finish('l2-identity-mismatch', false, 'L2 Host identity changed during browser login')
+    const cleanUrl = await boundedRead(() => tab.url(), duration)
+    if (!sameUrl(cleanUrl, target.url)) return finish('browser-policy', false, 'browser login did not finish at the approved clean L2 URL')
+    const preparation = await prepareIabPage(tab, { url: target.url, target: 'l2', toolTimeoutMs: duration })
+    return finish(preparation.status, preparation.ready, preparation.detail, preparation)
   } catch (error) {
     const [status, detail] = browserFailure(error)
     return finish(status, false, detail)
