@@ -138,7 +138,7 @@ export function deleteWorkspaceTable(
 
 export function createExecution(
   workspaceId: string,
-  payload: StartExecutionPayload & { expectedVersion?: number } = {},
+  payload: StartExecutionPayload = {},
 ): Promise<ApiResult<CreateExecutionResponse>> {
   return request<CreateExecutionResponse>(WORKFLOW_API_ROUTES.executions(encodeURIComponent(workspaceId)), {
     method: 'POST',
