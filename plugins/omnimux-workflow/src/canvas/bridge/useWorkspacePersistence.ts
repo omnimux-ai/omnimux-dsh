@@ -98,6 +98,18 @@ export function useWorkspacePersistence(
   const [isDirty, setIsDirty] = useState(false);
 
   const workspaceRef = useRef<CanvasWorkspaceSnapshot | null>(workspace);
+  const scopeRef = useRef({ workspaceId: workspace?.id ?? null });
+  if (scopeRef.current.workspaceId !== (workspace?.id ?? null)) {
+    scopeRef.current = { workspaceId: workspace?.id ?? null };
+  }
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  const isCurrentScope = (scope: typeof scopeRef.current) =>
+    mountedRef.current && scopeRef.current === scope
+    && workspaceRef.current?.id === scope.workspaceId;
   const serverVersionRef = useRef(0);
   const lastSavedSigRef = useRef('');
   const lastSavedNodeCountRef = useRef(0);
@@ -120,10 +132,19 @@ export function useWorkspacePersistence(
   // version — it must not clobber the 'saved' badge or dirty tracking.
   useEffect(() => {
     workspaceRef.current = workspace;
-    if (!workspace) return;
+    if (!workspace) {
+      lastInitIdRef.current = '';
+      savingRef.current = false;
+      return;
+    }
     serverVersionRef.current = workspace.version;
     if (lastInitIdRef.current === workspace.id) return;
     lastInitIdRef.current = workspace.id;
+    savingRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    if (savedBadgeTimerRef.current) clearTimeout(savedBadgeTimerRef.current);
+    savedBadgeTimerRef.current = null;
     // 以磁盘/服务端快照为 last-saved，不读可能已被 reset 的 store
     lastSavedSigRef.current = graphSig(workspace.nodes, workspace.edges);
     lastSavedNodeCountRef.current = workspace.nodes.length;
@@ -146,11 +167,13 @@ export function useWorkspacePersistence(
     localEdges: SerializedCanvasEdge[];
   }): Promise<void> => {
     const ws = workspaceRef.current;
+    const scope = scopeRef.current;
     if (!ws) {
       setStatus('error');
       return;
     }
     const latest = await getWorkspace(ws.id);
+    if (!isCurrentScope(scope)) return;
     if (!latest.ok || !latest.body.workspace) {
       setStatus('error');
       return;
@@ -185,7 +208,8 @@ export function useWorkspacePersistence(
     force = false,
   ): Promise<void> => {
     const ws = workspaceRef.current;
-    if (!ws) return;
+    const scope = scopeRef.current;
+    if (!ws || scope.workspaceId !== ws.id) return;
     // 卸载硬闸（force）必须在 enabled 被打成 false 时仍能发出已钉死的快照
     if (!force && !enabledRef.current) return;
     if (savingRef.current) {
@@ -215,6 +239,8 @@ export function useWorkspacePersistence(
         expectedVersion: serverVersionRef.current,
       });
 
+      if (!isCurrentScope(scope)) return;
+
       // 409: the doc moved on under us (another window, an agent edit, or
       // this island's own overlapping autosave/flush). Same-graph advances
       // only adopt the remote version — do not scare the user with a banner.
@@ -234,16 +260,16 @@ export function useWorkspacePersistence(
         setStatus('saved');
         clearSavedBadgeTimer();
         savedBadgeTimerRef.current = setTimeout(() => {
-          setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
+          if (isCurrentScope(scope)) setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_BADGE_MS);
         onSavedRef.current?.(result.body.workspace);
       } else {
         setStatus('error');
       }
     } catch {
-      setStatus('error');
+      if (isCurrentScope(scope)) setStatus('error');
     } finally {
-      savingRef.current = false;
+      if (isCurrentScope(scope)) savingRef.current = false;
     }
   }, [resolveRemoteAdvance]);
 
@@ -376,20 +402,26 @@ export function useWorkspacePersistence(
 
   const reloadFromServer = useCallback(async () => {
     const ws = workspaceRef.current;
+    const scope = scopeRef.current;
     if (!ws) return;
-    const latest = await getWorkspace(ws.id);
-    if (!latest.ok || !latest.body.workspace) {
-      setStatus('error');
-      return;
+    try {
+      const latest = await getWorkspace(ws.id);
+      if (!isCurrentScope(scope)) return;
+      if (!latest.ok || !latest.body.workspace) {
+        setStatus('error');
+        return;
+      }
+      const snapshot = latest.body.workspace;
+      serverVersionRef.current = snapshot.version;
+      lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
+      lastSavedNodeCountRef.current = snapshot.nodes.length;
+      useCanvasStore.getState().hydrateGraph(snapshot.nodes, snapshot.edges);
+      setIsDirty(false);
+      setStatus('idle');
+      onSavedRef.current?.(snapshot);
+    } catch {
+      if (isCurrentScope(scope)) setStatus('error');
     }
-    const snapshot = latest.body.workspace;
-    serverVersionRef.current = snapshot.version;
-    lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
-    lastSavedNodeCountRef.current = snapshot.nodes.length;
-    useCanvasStore.getState().hydrateGraph(snapshot.nodes, snapshot.edges);
-    setIsDirty(false);
-    setStatus('idle');
-    onSavedRef.current?.(snapshot);
   }, []);
 
   // PR3 external-edit watcher: agent tools bump version without this window
@@ -403,10 +435,12 @@ export function useWorkspacePersistence(
       if (!enabledRef.current) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const ws = workspaceRef.current;
+      const scope = scopeRef.current;
       if (!ws || savingRef.current) return;
       inFlight = true;
       try {
         const probe = await getWorkspaceVersion(ws.id);
+        if (!isCurrentScope(scope)) return;
         if (!probe.ok || typeof probe.body.version !== 'number') return;
         if (probe.body.version <= serverVersionRef.current) return;
         const capture = readStoreCapture();
