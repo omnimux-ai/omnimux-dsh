@@ -95,6 +95,10 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   height:auto!important;
   min-height:0;
 }
+/* A hidden preview badge must not leave an empty grid track beside the title. */
+[data-phase='hero'] [class*="headline"]:has(> [class*="previewBadge"][data-omnimux-hide]){
+  grid-template-columns:auto auto;
+}
 
 /* Match the input bar's clearance even when a narrow column limits card width. */
 [data-phase='hero'] [class*="heroWorkspaceRow"]{
