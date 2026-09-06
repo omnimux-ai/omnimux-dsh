@@ -827,7 +827,7 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
   }
 });
 
-test('强制 omnimux 且 seam 缺失：节点错误 needs-provider（不静默 mock）', async () => {
+test('强制 omnimux 且 seam 缺失：目录缺失时拒绝创建执行（不静默 mock）', async () => {
   const h = makeHarness({
     gatewayMode: 'omnimux',
     env: { OMNIMUX_WORKFLOW_GATEWAY: 'omnimux' },
@@ -839,14 +839,9 @@ test('强制 omnimux 且 seam 缺失：节点错误 needs-provider（不静默 m
       url: `/omnimux-workflow/api/workspaces/${wsId}/executions`,
       body: { mode: 'full' },
     });
-    const execId = exec.body.execution.id;
-    const sse = await h.openSse({
-      url: `/omnimux-workflow/api/workspaces/${wsId}/executions/${execId}/events`,
-      until: (raw) => raw.includes('event: execution_error'),
-    });
-    assert.ok(sse.satisfied);
-    const nodeError = h.parseSse(sse.raw).find((e) => e.event === 'node_error');
-    assert.match(nodeError.data.error, /\[omnimux:needs-provider\]/);
+    assert.equal(exec.status, 400);
+    assert.equal(exec.body.reasonCode, 'catalog_unavailable');
+    assert.equal(exec.body.execution, undefined);
   } finally {
     h.dispose();
     rmSync(h.root, { recursive: true, force: true });

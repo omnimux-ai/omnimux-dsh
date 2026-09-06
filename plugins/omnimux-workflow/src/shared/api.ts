@@ -299,6 +299,8 @@ export type NodeExecutionApiStatus = 'pending' | 'running' | 'completed' | 'erro
 
 /** POST /executions request body. */
 export interface StartExecutionPayload {
+  /** Last successfully saved input version; mismatch returns 409 version_conflict. */
+  expectedVersion?: number;
   /** full = whole graph; subset = nodeIds + transitive upstream closure; single = target nodeIds only (inheriting existing upstream outputs). */
   mode?: 'full' | 'subset' | 'single';
   /** Required for subset and single modes. */

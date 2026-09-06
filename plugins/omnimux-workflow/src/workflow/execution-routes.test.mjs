@@ -547,10 +547,39 @@ test('execution API: subset mode runs only the induced subgraph', async () => {
   }
 });
 
+test('execution API rejects stale or invalid input versions without creating an execution', async () => {
+  let submissions = 0;
+  const gateway = host.createMockGateway({ minLatencyMs: 1, maxLatencyMs: 1 });
+  const submit = gateway.submit.bind(gateway);
+  gateway.submit = (...args) => { submissions += 1; return submit(...args); };
+  const h = makeHarness({ gateway });
+  try {
+    const wsId = await h.createLinearWorkspace(1);
+    for (const expectedVersion of [0, -1, 1.5, '1']) {
+      const result = await h.startExecution(wsId, { expectedVersion });
+      assert.equal(result.status, expectedVersion === 0 ? 409 : 400);
+    }
+    assert.equal(submissions, 0);
+    const accepted = await h.startExecution(wsId, { expectedVersion: 1 });
+    assert.equal(accepted.status, 200);
+    assert.ok(await waitUntil(async () => (await h.executionStatus(wsId, accepted.body.execution.id)).body.execution.status === 'completed'));
+    assert.equal(submissions, 1);
+  } finally {
+    h.dispose();
+    rmSync(h.dir, { recursive: true, force: true });
+  }
+});
+
 test('execution API: single mode runs only the target node and seeds upstream outputs from snapshot', async () => {
   const h = makeHarness();
   try {
     const wsId = await h.createLinearWorkspace(3);
+    const rejected = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.body.reasonCode, 'input_waiting');
+    const current = (await h.call({ method: 'GET', url: `/omnimux-workflow/api/workspaces/${wsId}` })).body.workspace;
+    current.nodes.find((node) => node.id === 'n1').data.generatedContent = 'current upstream result';
+    await h.call({ method: 'PUT', url: `/omnimux-workflow/api/workspaces/${wsId}`, headers: h.localHeaders, body: { expectedVersion: current.version, nodes: current.nodes, edges: current.edges } });
     // Single mode on n2: only n2 executes, n1 and n3 stay untouched
     const created = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
     assert.equal(created.status, 200);

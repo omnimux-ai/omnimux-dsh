@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
 import { useNodes, useEdges } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType } from '../../types/materialNode';
-import { resolveMediaPreviewUrl, type MediaAssetLike } from '../utils/mediaUrl';
+import { readNodeInputSource, type InputAvailability } from '../../../shared/graph/nodeInputSource.ts';
 import {
-  readOptionalMediaNumber,
-  readOptionalMime,
   type UpstreamMediaSnapshot,
 } from '../../../shared/validation/operationUi.ts';
 import { readExplicitTargetSlot } from '../../../shared/validation/compatKernel.ts';
 
 export interface UpstreamMediaItem {
   nodeId: string;
+  availability: InputAvailability;
+  availabilityMessage?: string;
+  outputId?: string;
   label: string;
   materialType: MaterialType;
   url?: string;
@@ -39,20 +40,12 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
       const node = nodes.find((n) => n.id === edge.source);
       if (!node) return [];
       const data = (node.data || {}) as unknown as MaterialNodeData;
-      const url = resolveMediaPreviewUrl(
-        data.materialType,
-        data.mediaAssets as MediaAssetLike[] | undefined,
-        data.mediaUrl,
-      );
-      const textContent = (data.content || data.generatedContent || '') as string;
-      const hasMedia = Boolean(url || (data.materialType === 'text' && textContent.trim().length > 0));
-      const mimeType = readOptionalMime((data as Record<string, unknown>).mimeType);
-      const sizeBytes =
-        readOptionalMediaNumber((data as Record<string, unknown>).sizeBytes)
-        ?? readOptionalMediaNumber((data as Record<string, unknown>).fileSize);
-      const durationSec =
-        readOptionalMediaNumber((data as Record<string, unknown>).durationSec)
-        ?? readOptionalMediaNumber((data as Record<string, unknown>).duration);
+      const source = readNodeInputSource(node);
+      const asset = source.output.mediaAssets?.[0];
+      const url = asset?.url;
+      const textContent = source.output.text;
+      const hasMedia = source.availability === 'ready';
+      const { mimeType, sizeBytes, durationSec } = source.metadata ?? {};
       const edgeData = (edge.data ?? {}) as Record<string, unknown>;
       const role =
         typeof edgeData.role === 'string' && edgeData.role.trim()
@@ -63,6 +56,9 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
       return [
         {
           nodeId: node.id,
+          availability: source.availability,
+          availabilityMessage: source.message,
+          outputId: source.outputId,
           label: data.label || node.id,
           materialType: data.materialType || 'image',
           url,
@@ -84,6 +80,11 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
 export function toUpstreamSnapshots(items: UpstreamMediaItem[]): UpstreamMediaSnapshot[] {
   return items.map((item) => ({
     nodeId: item.nodeId,
+    label: item.label,
+    availability: item.availability,
+    availabilityMessage: item.availabilityMessage,
+    outputId: item.outputId,
+    url: item.url,
     materialType: item.materialType,
     ...(item.textContent ? { textContent: item.textContent } : {}),
     ...(item.mimeType ? { mimeType: item.mimeType } : {}),

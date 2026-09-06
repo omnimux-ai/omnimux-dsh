@@ -400,6 +400,7 @@ test('PR4: workflow_execution_control pause → resume → cancel lifecycle', as
       workspace_id: wsId,
       material_type: 'image',
       tool: 'text-to-image',
+      prompt: 'a test image',
     });
     const started = await tool('workflow_run').execute({
       workspace_id: wsId,

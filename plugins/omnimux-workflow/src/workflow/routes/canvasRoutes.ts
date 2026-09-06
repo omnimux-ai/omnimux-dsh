@@ -213,6 +213,8 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore);
   const executionRoutes = createExecutionRoutes({
     store,
+    mediaDir,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
     executionManager,
     ensureProjectBound,
     getCatalog: async () => (await gateway.capabilities()) as import('../../shared/api').CapabilityCatalog,

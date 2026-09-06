@@ -1,8 +1,19 @@
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
 import { createOmnimuxSeamClient } from '../seam/omnimuxGateway.ts';
 import { createMockGateway } from '../seam/mockGateway.ts';
+
+const mediaFixtureRoot = mkdtempSync(`${tmpdir()}/workflow-input-`);
+after(() => rmSync(mediaFixtureRoot, { recursive: true, force: true }));
+function mediaFixture(name) {
+  const path = `${mediaFixtureRoot}/${name}`;
+  writeFileSync(path, 'fixture media');
+  return path;
+}
 
 describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () => {
   it('测试 1：单上游图片接入 -> references 包含 1 张图，req.image 正确填充', async () => {
@@ -25,8 +36,8 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
       mediaAssets: [
         {
           type: 'image',
-          url: '/omnimux-workflow/api/local-file?path=%2Fdata%2Fhero.png',
-          path: '/data/hero.png',
+          url: `/omnimux-workflow/api/local-file?path=${encodeURIComponent(mediaFixture('hero.png'))}`,
+          path: mediaFixture('hero.png'),
         },
       ],
     });
@@ -53,13 +64,13 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
     const req = submissions[0];
     assert.equal(req.capability, 'image');
     assert.equal(req.prompt, 'Generate an anime version');
-    assert.equal(req.image, '/data/hero.png', 'req.image 向后兼容字段应填充首张图物理路径');
+    assert.equal(req.image, mediaFixture('hero.png'), 'req.image 向后兼容字段应填充首张图物理路径');
     assert.ok(Array.isArray(req.references), 'references 应为数组');
     assert.equal(req.references.length, 1);
     assert.deepEqual(req.references[0], {
       role: 'reference',
       type: 'image',
-      pathOrUrl: '/data/hero.png',
+      pathOrUrl: mediaFixture('hero.png'),
     });
   });
 
@@ -83,7 +94,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'image',
           url: 'https://example.com/frame1.png',
-          path: '/assets/frame1.png',
+          path: mediaFixture('frame1.png'),
         },
       ],
     });
@@ -92,7 +103,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'image',
           url: 'https://example.com/frame2.png',
-          path: '/assets/frame2.png',
+          path: mediaFixture('frame2.png'),
         },
       ],
     });
@@ -101,7 +112,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'image',
           url: 'https://example.com/frame3.png',
-          path: '/assets/frame3.png',
+          path: mediaFixture('frame3.png'),
         },
       ],
     });
@@ -127,12 +138,12 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
     assert.equal(submissions.length, 1);
     const req = submissions[0];
     assert.equal(req.capability, 'video');
-    assert.equal(req.image, '/assets/frame1.png', 'req.image 填充第一张图');
+    assert.equal(req.image, mediaFixture('frame1.png'), 'req.image 填充第一张图');
     assert.ok(Array.isArray(req.references));
     assert.equal(req.references.length, 3, '必须收集全部 3 张图片，无短路截断');
-    assert.equal(req.references[0].pathOrUrl, '/assets/frame1.png');
-    assert.equal(req.references[1].pathOrUrl, '/assets/frame2.png');
-    assert.equal(req.references[2].pathOrUrl, '/assets/frame3.png');
+    assert.equal(req.references[0].pathOrUrl, mediaFixture('frame1.png'));
+    assert.equal(req.references[1].pathOrUrl, mediaFixture('frame2.png'));
+    assert.equal(req.references[2].pathOrUrl, mediaFixture('frame3.png'));
   });
 
   it('测试 3：混合上游（1 文本 + 2 图片 + 1 音频） -> 音频默认保留为有序参考素材', async () => {
@@ -158,7 +169,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'image',
           url: 'https://example.com/character.png',
-          path: '/assets/character.png',
+          path: mediaFixture('character.png'),
         },
       ],
     });
@@ -167,7 +178,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'image',
           url: 'https://example.com/background.png',
-          path: '/assets/background.png',
+          path: mediaFixture('background.png'),
         },
       ],
     });
@@ -176,7 +187,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         {
           type: 'audio',
           url: 'https://example.com/voiceover.mp3',
-          path: '/assets/voiceover.mp3',
+          path: mediaFixture('voiceover.mp3'),
         },
       ],
     });
@@ -202,16 +213,16 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
     assert.equal(submissions.length, 1);
     const req = submissions[0];
     assert.equal(req.prompt, 'Upstream story narrative text', '上游文本作为 prompt 回退');
-    assert.equal(req.image, '/assets/character.png', '向后兼容 image 字段');
-    assert.equal(req.audio, '/assets/voiceover.mp3', '向后兼容 audio 字段');
+    assert.equal(req.image, mediaFixture('character.png'), '向后兼容 image 字段');
+    assert.equal(req.audio, mediaFixture('voiceover.mp3'), '向后兼容 audio 字段');
     assert.equal(req.audioTrack, undefined, '未显式标为 audio_track 时不应改写参考音频角色');
     assert.equal(req.references.length, 3, '2 张图片和 1 个参考音频均进入 references');
-    assert.equal(req.references[0].pathOrUrl, '/assets/character.png');
-    assert.equal(req.references[1].pathOrUrl, '/assets/background.png');
+    assert.equal(req.references[0].pathOrUrl, mediaFixture('character.png'));
+    assert.equal(req.references[1].pathOrUrl, mediaFixture('background.png'));
     assert.deepEqual(req.references[2], {
       role: 'reference',
       type: 'audio',
-      pathOrUrl: '/assets/voiceover.mp3',
+      pathOrUrl: mediaFixture('voiceover.mp3'),
     });
   });
 

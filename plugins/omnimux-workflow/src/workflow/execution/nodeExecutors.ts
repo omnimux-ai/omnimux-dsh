@@ -26,6 +26,7 @@ import {
 import { createWorkflowLogger } from './logger.ts';
 import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api.ts';
 import { resolveNodeKind } from '../../shared/graph/materialNode.ts';
+import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 import { readExplicitTargetSlot } from '../../shared/validation/compatKernel.ts';
 
 const LOG_TAG = 'nodeExecutors';
@@ -91,6 +92,24 @@ export function createDispatchingNodeExecutor(
 
     const upstreamOutputs = resolveUpstreamOutputs(node, opts.edges, context);
     const upstreamBindings = resolveUpstreamBindings(node, opts.edges, context);
+
+    if (executorKey === 'material:generate') {
+      const resolvedInputs = new Map([...upstreamOutputs].map(([id, output]) => {
+        const media = (output.mediaAssets ?? []).map((asset) => ({
+          nodeId: id, materialType: asset.type, availability: 'ready' as const,
+          url: asset.url, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, durationSec: asset.durationSec,
+        }));
+        // Media executor labels are not textual content; pure text outputs are.
+        return [id, media.length ? media : [{
+          nodeId: id, materialType: 'text', textContent: output.text,
+          availability: output.text?.trim() ? 'ready' as const : 'waiting' as const,
+        }]];
+      }));
+      const failure = findExecutionReadinessFailure([node], await opts.gateway.capabilities(), {
+        nodes: [], edges: opts.edges, workspaceId: opts.workspaceId, resolvedInputs,
+      });
+      if (failure) throw new Error(failure.message);
+    }
 
     const ctx: ExecutorContext = {
       upstreamOutputs,
@@ -172,5 +191,5 @@ function normalizeOutput(output: unknown): NodeOutput {
   if (output && typeof output === 'object' && ('text' in output || 'mediaAssets' in output)) {
     return output as NodeOutput;
   }
-  return { text: typeof output === 'string' ? output : JSON.stringify(output) };
+  return typeof output === 'string' ? { text: output } : {};
 }

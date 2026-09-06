@@ -2,7 +2,8 @@
  * Execution collection, item, control, and SSE event stream.
  */
 import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api';
-import { localFileMediaUrl, projectFileMediaUrl } from '../../shared/localMedia';
+import type { ResolveExecutionProjectFile } from '../execution/executionMediaSource.ts';
+import { buildInitialOutputs } from '../execution/executionInputs.ts';
 import { jsonBodyProblem, messageOf } from '../../http/helpers';
 import { WorkflowStoreError } from '../workspace/WorkspaceStore';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore';
@@ -35,54 +36,10 @@ const STATUS_BY_CODE: Record<string, number> = {
   'internal': 500,
 };
 
-/**
- * Extract existing output data from a saved node snapshot so downstream nodes
- * executing in single-node mode can consume upstream text/media without re-running.
- */
-function extractNodeOutputFromSnapshot(
-  node: { data?: Record<string, unknown>; [key: string]: unknown },
-  workspaceId: string,
-): unknown {
-  const data = node.data ?? {};
-  const text = (data.generatedContent as string | undefined)
-    ?? (data.content as string | undefined)
-    ?? (data.prompt as string | undefined);
-  const materialType = data.materialType as string | undefined;
-  const type = materialType === 'video' ? 'video' : materialType === 'audio' ? 'audio' : 'image';
-  const relativePath = typeof data.relativePath === 'string' ? data.relativePath.trim() : '';
-  const assetId = typeof data.assetId === 'string' ? data.assetId : undefined;
-  if (relativePath) {
-    const url = workspaceId
-      ? projectFileMediaUrl(workspaceId, relativePath)
-      : (typeof data.mediaUrl === 'string' ? data.mediaUrl : '');
-    return {
-      relativePath,
-      assetId,
-      mediaAssets: [{ type, url, relativePath, assetId }],
-      text,
-    };
-  }
-  const realPath = typeof data.realPath === 'string' ? data.realPath : '';
-  if (realPath) {
-    return {
-      realPath,
-      mediaAssets: [{ type, url: localFileMediaUrl(realPath), path: realPath }],
-      text,
-    };
-  }
-  const mediaAssets = data.mediaAssets;
-  const mediaUrl = data.mediaUrl as string | undefined;
-  if (Array.isArray(mediaAssets) && mediaAssets.length > 0) {
-    return { mediaAssets, text };
-  }
-  if (mediaUrl && !mediaUrl.startsWith('blob:')) {
-    return { mediaAssets: [{ type, url: mediaUrl }], text };
-  }
-  return { text: text ?? '' };
-}
-
 export function createExecutionRoutes(opts: {
   store: WorkspaceStore;
+  mediaDir?: string;
+  resolveProjectFile?: ResolveExecutionProjectFile;
   executionManager: ExecutionManager;
   ensureProjectBound?: EnsureProjectBoundFn;
   getCatalog?: () => Promise<CapabilityCatalog | null>;
@@ -143,7 +100,10 @@ export function createExecutionRoutes(opts: {
       if (method === 'POST') {
         const problem = jsonBodyProblem(req.body);
         if (problem) return problem;
-        const body = req.body as { mode?: unknown; nodeIds?: unknown };
+        const body = req.body as { mode?: unknown; nodeIds?: unknown; expectedVersion?: unknown };
+        if (body.expectedVersion !== undefined && (!Number.isSafeInteger(body.expectedVersion) || (body.expectedVersion as number) < 0)) {
+          return { status: 400, body: { error: 'invalid-version', message: 'expectedVersion 必须是非负整数' } };
+        }
         let mode: ExecutionMode;
         try {
           mode = toExecutionMode(body.mode);
@@ -153,6 +113,9 @@ export function createExecutionRoutes(opts: {
         let snapshot;
         try {
           snapshot = store.get(workspaceId);
+          if (body.expectedVersion !== undefined && body.expectedVersion !== snapshot.version) {
+            return { status: 409, body: { error: 'version_conflict', message: '输入已更新，请确认当前内容后重新生成' } };
+          }
         } catch (error) {
           if (error instanceof WorkflowStoreError) {
             return {
@@ -173,6 +136,7 @@ export function createExecutionRoutes(opts: {
           const readiness = findExecutionReadinessFailure(
             subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
             getCatalog ? await getCatalog() : null,
+            { nodes: snapshot.nodes, edges: snapshot.edges, workspaceId, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
           );
           if (readiness) {
             return {
@@ -201,19 +165,11 @@ export function createExecutionRoutes(opts: {
             }
           }
 
-          // Seed initial outputs for upstream nodes not included in this execution batch
-          const initialOutputs: Record<string, unknown> = {};
-          const executedNodeIds = subgraph.nodeIdSet;
-          for (const edge of snapshot.edges as Array<{ source: string; target: string }>) {
-            if (executedNodeIds.has(edge.target) && !executedNodeIds.has(edge.source)) {
-              const sourceNode = (snapshot.nodes as Array<{ id: string; [key: string]: unknown }>).find(
-                (n) => n.id === edge.source,
-              );
-              if (sourceNode) {
-                initialOutputs[edge.source] = extractNodeOutputFromSnapshot(sourceNode, snapshot.id);
-              }
-            }
+          // Async catalog/project preparation must not hide a concurrent graph edit.
+          if (store.get(workspaceId).version !== snapshot.version) {
+            return { status: 409, body: { error: 'version_conflict', message: '输入已更新，请确认当前内容后重新生成' } };
           }
+          const initialOutputs = buildInitialOutputs(snapshot, subgraph.nodeIdSet, { mediaDir: opts.mediaDir ?? '', resolveProjectFile: opts.resolveProjectFile });
 
           const entry = executionManager.createExecution({
             workspaceId: snapshot.id,

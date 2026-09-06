@@ -70,7 +70,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
   const execution = useExecutionController(workspace ? workspace.id : null, {
     onBeforeStart: async () => {
       await tablePersistence.saveNow();
-      await persistence.saveNow();
+      return persistence.saveNow();
     },
   });
 

@@ -30,7 +30,7 @@ test('clearing the decision record leaves contract validation to the selected op
     ...pendingVideoNode,
     data: { ...pendingVideoNode.data, params: {} },
   };
-  assert.equal(findExecutionReadinessFailure([node], null), null);
+  assert.equal(findExecutionReadinessFailure([node], null).reasonCode, 'catalog_unavailable');
 });
 
 test('kept invalid declared parameters remain a readiness error after the pending decision is cleared', () => {

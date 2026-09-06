@@ -107,6 +107,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   });
   const executionManager = createExecutionManager({
     executionsDir: paths.executionsDir,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
     gateway,
     mediaDir: paths.mediaDir,
     persistGenerated: (input) => persistGeneratedArtifact({
@@ -184,10 +185,12 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       disposers.push(
         registerWorkflowAgentSeats(ctx, {
           store,
+          resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
           executionManager,
           mediaDir: paths.mediaDir,
           ensureProjectBound,
           getCatalog,
+          getExecutionCatalog: () => gateway.capabilities(),
           getGenerationPreferences: () => generationPreferences.get().lastModelByType,
           getActiveView: getActiveView as
             | ((sessionId?: string) => {
