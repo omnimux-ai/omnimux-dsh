@@ -2,9 +2,8 @@
  * AssetsDispatcher: one request in, one result out — all stateful side
  * effects concentrate here behind `dispatch({ method, url, ... })`.
  *
- * Self-implemented (equivalent copies of hub logic, no hub imports):
- * - sendJson with a secret-emission guard (hub auth/http-routes.js)
- * - assertLocalWrite loopback write check (hub apps/origin.js)
+ * JSON secret-emission and loopback-write guards stay local to this plugin;
+ * domain plugins do not import hub internals.
  */
 import { createReadStream, realpathSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
@@ -43,11 +42,6 @@ const STATUS_BY_CODE = {
 }
 
 /**
- * @param {import('node:http').ServerResponse} res
- * @param {number} status
- * @param {unknown} body
- */
-/**
  * Read-only media stream. Never writes user files.
  * @param {import('node:http').ServerResponse} res
  * @param {number} status
@@ -68,15 +62,47 @@ export function sendPreview(res, status, stream) {
   }).pipe(res)
 }
 
+/**
+ * @param {import('node:http').ServerResponse} res
+ * @param {number} status
+ * @param {unknown} body
+ */
 export function sendJson(res, status, body) {
   const text = JSON.stringify(body)
-  if (/access_token|sk-[A-Za-z0-9]/.test(text)) {
+  if (serializedJsonContainsSecret(text)) {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: 'refused to emit a secret' }))
     return
   }
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
   res.end(text)
+}
+
+/**
+ * Inspect JSON as it will appear to the client. This deliberately runs after
+ * the single serialization above so getters, toJSON(), boxed strings, and
+ * escaped characters cannot produce a different value for the guard.
+ *
+ * `sk-` is a token prefix only at a string start or after a character that
+ * is not ASCII alphanumeric. A prefix embedded in an ASCII word (for example
+ * `risk-taking`) remains ordinary product prose.
+ *
+ * @param {string} text
+ */
+function serializedJsonContainsSecret(text) {
+  let found = false
+  JSON.parse(text, (key, value) => {
+    if (containsSecretText(key) || (typeof value === 'string' && containsSecretText(value))) {
+      found = true
+    }
+    return value
+  })
+  return found
+}
+
+/** @param {string} value */
+function containsSecretText(value) {
+  return value.includes('access_token') || /(?:^|[^A-Za-z0-9])sk-[A-Za-z0-9]/.test(value)
 }
 
 /**

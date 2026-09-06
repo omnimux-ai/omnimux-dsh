@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { createAssetsDispatcher } from './http-routes.js'
+import { createAssetsDispatcher, registerAssetsRoutes } from './http-routes.js'
 import { createArtifactStore } from './artifacts.js'
 import { createLibraryStore } from './library.js'
 import { createMappingStore } from './mappings.js'
@@ -47,6 +48,70 @@ function makeDispatcher(opts = {}) {
 /** POST with default local headers. */
 function post(path, body, extra = {}) {
   return { method: 'POST', url: path, body, ...extra }
+}
+
+/**
+ * Exercise the registered prefix route through an actual local HTTP request.
+ * The small webServer adapter is the same seat contract used by apply().
+ * @param {{ dispatch: Function }} dispatcher
+ */
+async function openRegisteredRoutes(dispatcher) {
+  let registered
+  const webServer = {
+    register(route) {
+      registered = route
+      return () => { registered = undefined }
+    },
+  }
+  const dispose = registerAssetsRoutes(webServer, dispatcher)
+  const server = createServer((req, res) => {
+    void registered.handler(req, res)
+  })
+  await new Promise((resolve, reject) => {
+    const onError = (error) => {
+      server.off('listening', onListening)
+      reject(error)
+    }
+    const onListening = () => {
+      server.off('error', onError)
+      resolve()
+    }
+    server.once('error', onError)
+    server.once('listening', onListening)
+    server.listen(0, '127.0.0.1')
+  })
+  const address = server.address()
+  assert.equal(typeof address, 'object')
+  return {
+    port: address.port,
+    async close() {
+      dispose()
+      await new Promise((resolve, reject) => {
+        server.close((error) => error ? reject(error) : resolve())
+      })
+    },
+  }
+}
+
+/**
+ * @param {number} port
+ * @param {{ method?: string, path: string, body?: unknown }} options
+ */
+async function requestJson(port, options) {
+  const payload = options.body === undefined ? undefined : JSON.stringify(options.body)
+  const response = await fetch(`http://127.0.0.1:${port}${options.path}`, {
+    method: options.method ?? 'GET',
+    headers: payload ? { 'Content-Type': 'application/json' } : undefined,
+    body: payload,
+    signal: AbortSignal.timeout(1_000),
+  })
+  const text = await response.text()
+  return {
+    status: response.status,
+    contentType: response.headers.get('content-type'),
+    text,
+    body: JSON.parse(text),
+  }
 }
 
 describe('AssetsDispatcher state', () => {
@@ -324,3 +389,179 @@ describe('AssetsDispatcher unknown routes', () => {
     assert.equal(result.body.error, 'not-found')
   })
 })
+
+describe('Assets routes serialized response guard', () => {
+  it('returns ordinary asset prose through registered HTTP create, update, list, state, and detail routes', async () => {
+    const { dispatcher } = makeDispatcher()
+    const routes = await openRegisteredRoutes(dispatcher)
+    try {
+      const created = await requestJson(routes.port, {
+        method: 'POST',
+        path: '/omnimux/assets/library',
+        body: {
+          name: 'Task-owned',
+          type: 'character',
+          description: 'risk-taking\n\t\\ ordinary prose',
+          tags: ['Task-owned', 'risk-taking'],
+          files: [{ real_path: join(realDir, 'hero.png'), original_name: 'Task-owned-risk-taking.png' }],
+        },
+      })
+      assert.equal(created.status, 200)
+      assert.equal(created.contentType, 'application/json; charset=utf-8')
+      assert.equal(created.body.asset.name, 'Task-owned')
+      assert.equal(created.body.asset.description, 'risk-taking\n\t\\ ordinary prose')
+      assert.deepEqual(created.body.asset.tags, ['Task-owned', 'risk-taking'])
+      assert.equal(created.body.asset.files[0].original_name, 'Task-owned-risk-taking.png')
+
+      const id = created.body.asset.id
+      const updated = await requestJson(routes.port, {
+        method: 'POST',
+        path: '/omnimux/assets/library/update',
+        body: {
+          id,
+          name: 'Task-owned revised',
+          description: 'risk-taking revised\n\t\\ prose',
+          tags: ['Task-owned', 'risk-taking', 'ordinary'],
+          files: [{ real_path: join(realDir, 'hero.png'), original_name: 'Task-owned-risk-taking-revised.png' }],
+        },
+      })
+      assert.equal(updated.status, 200)
+      assert.equal(updated.body.asset.name, 'Task-owned revised')
+      assert.equal(updated.body.asset.description, 'risk-taking revised\n\t\\ prose')
+      assert.equal(updated.body.asset.files[0].original_name, 'Task-owned-risk-taking-revised.png')
+
+      const listed = await requestJson(routes.port, { path: '/omnimux/assets/library' })
+      assert.equal(listed.status, 200)
+      assert.equal(listed.body.assets[0].name, 'Task-owned revised')
+      assert.equal(listed.body.assets[0].tags[1], 'risk-taking')
+
+      const state = await requestJson(routes.port, { path: '/omnimux/assets/state' })
+      assert.equal(state.status, 200)
+      assert.equal(state.body.assets[0].description, 'risk-taking revised\n\t\\ prose')
+
+      const detail = await requestJson(routes.port, { path: `/omnimux/assets/library/detail?id=${id}` })
+      assert.equal(detail.status, 200)
+      assert.equal(detail.body.asset.files[0].original_name, 'Task-owned-risk-taking-revised.png')
+    } finally {
+      await routes.close()
+    }
+  })
+
+  it('refuses synthetic secrets returned by the real asset create, update, list, state, and detail paths', async () => {
+    const { dispatcher, library } = makeDispatcher()
+    const routes = await openRegisteredRoutes(dispatcher)
+    try {
+      const created = await requestJson(routes.port, {
+        method: 'POST',
+        path: '/omnimux/assets/library',
+        body: { name: 'sk-a', type: 'character' },
+      })
+      assertRefused(created, 'sk-a')
+      const createdId = library.list()[0].id
+
+      assertRefused(await requestJson(routes.port, { path: '/omnimux/assets/library' }), 'sk-a')
+      assertRefused(await requestJson(routes.port, { path: '/omnimux/assets/state' }), 'sk-a')
+      assertRefused(await requestJson(routes.port, { path: `/omnimux/assets/library/detail?id=${createdId}` }), 'sk-a')
+
+      const safe = await requestJson(routes.port, {
+        method: 'POST',
+        path: '/omnimux/assets/library',
+        body: { name: 'ordinary asset', type: 'character' },
+      })
+      assert.equal(safe.status, 200)
+      const updated = await requestJson(routes.port, {
+        method: 'POST',
+        path: '/omnimux/assets/library/update',
+        body: { id: safe.body.asset.id, description: 'Bearer sk-a' },
+      })
+      assertRefused(updated, 'Bearer sk-a')
+    } finally {
+      await routes.close()
+    }
+  })
+
+  it('checks serialized keys and values for token boundaries without reserializing response objects', async () => {
+    let body = { text: 'Task-owned risk-taking prefixsk-a', escaped: 'line\n\t\\ prose', upper: 'ACCESS_TOKEN' }
+    const routes = await openRegisteredRoutes({
+      dispatch: async () => ({ status: 201, body }),
+    })
+    try {
+      const ordinary = await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' })
+      assert.equal(ordinary.status, 201)
+      assert.deepEqual(ordinary.body, body)
+
+      const tail = Array.from({ length: 21 }, () => 'ordinary')
+      tail.push('sk-a')
+      let deep = { value: 'sk-a' }
+      for (let depth = 0; depth < 9; depth += 1) deep = { next: deep }
+      const rejected = [
+        ['standalone', { value: 'sk-a' }, 'sk-a'],
+        ['long', { value: 'sk-abcdefghijklmnop' }, 'sk-abcdefghijklmnop'],
+        ['project prefix', { value: 'sk-proj-a' }, 'sk-proj-a'],
+        ['service-account prefix', { value: 'sk-svcacct-a' }, 'sk-svcacct-a'],
+        ['project separator', { value: 'proj sk-a' }, 'proj sk-a'],
+        ['service-account separator', { value: 'svcacct/sk-a' }, 'svcacct/sk-a'],
+        ['Bearer', { value: 'Bearer sk-a' }, 'Bearer sk-a'],
+        ['URL', { value: 'https://example.test/sk-a' }, 'https://example.test/sk-a'],
+        ['Chinese separator', { value: '中文sk-a' }, '中文sk-a'],
+        ['underscore separator', { value: 'proj_sk-a' }, 'proj_sk-a'],
+        ['escaped newline', { value: ['line', 'sk-a'].join('\n') }, 'sk-a'],
+        ['escaped tab', { value: ['line', 'sk-a'].join('\t') }, 'sk-a'],
+        ['escaped backslash', { value: 'line\\sk-a' }, 'sk-a'],
+        ['escaped quote', { value: 'line\"sk-a' }, 'sk-a'],
+        ['key', { 'sk-a': 'ordinary' }, 'sk-a'],
+        ['nested array', { rows: [{ value: 'sk-a' }] }, 'sk-a'],
+        ['array tail', { rows: tail }, 'sk-a'],
+        ['deep object', deep, 'sk-a'],
+        ['access_token prose', { value: 'the access_token field is sensitive' }, 'access_token'],
+        ['nested access_token key', { rows: [{ access_token: null }] }, 'access_token'],
+        ['access_token suffix key', { access_token_suffix: 'ordinary' }, 'access_token'],
+      ]
+      for (const [label, next, original] of rejected) {
+        body = next
+        const response = await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' })
+        assertRefused(response, original)
+      }
+
+      let getterReads = 0
+      body = {
+        get value() {
+          getterReads += 1
+          return 'sk-a'
+        },
+      }
+      assertRefused(await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' }), 'sk-a')
+      assert.equal(getterReads, 1)
+
+      let toJsonCalls = 0
+      body = {
+        toJSON() {
+          toJsonCalls += 1
+          return 'Bearer sk-a'
+        },
+      }
+      assertRefused(await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' }), 'Bearer sk-a')
+      assert.equal(toJsonCalls, 1)
+
+      body = { boxed: new String('sk-a') }
+      assertRefused(await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' }), 'sk-a')
+
+      const cyclic = {}
+      cyclic.self = cyclic
+      body = cyclic
+      const failedSerialization = await requestJson(routes.port, { path: '/omnimux/assets/arbitrary' })
+      assert.equal(failedSerialization.status, 500)
+      assert.deepEqual(failedSerialization.body, { error: 'internal', message: 'internal error' })
+    } finally {
+      await routes.close()
+    }
+  })
+})
+
+/** @param {{ status: number, contentType: string, text: string, body: unknown }} response @param {string} original */
+function assertRefused(response, original) {
+  assert.equal(response.status, 500)
+  assert.equal(response.contentType, 'application/json; charset=utf-8')
+  assert.deepEqual(response.body, { error: 'refused to emit a secret' })
+  assert.equal(response.text.includes(original), false)
+}

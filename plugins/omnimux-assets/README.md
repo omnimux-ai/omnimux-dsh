@@ -50,6 +50,13 @@ omnimux/assets/
 - 不 import hub 任何内部模块
 - POST 路由一律过 loopback 写校验
 
+## 响应密钥保护
+
+资产 HTTP JSON 只序列化一次，并按该序列化输出检查键名和字符串值。含大小写敏感
+`access_token` 的内容一律拒绝；`sk-` 后跟 ASCII 字母数字时，只有前一字符是 ASCII
+字母数字才视为普通词内文本。因此 `Task-owned`、`risk-taking` 可正常返回，而下划线、
+中文或空白后的 token 前缀会固定返回 500 `{ error: 'refused to emit a secret' }`。
+
 ## Agent tools
 
 - `assets_list`：优先 `scope=assets`（可选 `type`）；旧 `mappings` / `mapping_files` / `artifacts` 仍可用
