@@ -818,6 +818,7 @@ case "$cmd" in
     # 日志保留并追加审计记录
     echo "--- [$(date '+%Y-%m-%d %H:%M:%S')] dev restart-host triggered ---" >> "$pdir/host.log"
     echo "$(date '+%Y-%m-%d %H:%M:%S') task=$name port=$assigned_port old_pid=${old_pid:-none}" >> "$pdir/restart-host.log"
+    host_log_offset=$(wc -c < "$pdir/host.log")
 
     DSH_HOME="$RUNTIME_HOME" OMNIMUX_PLUGIN_PROFILE="omnimux-dev-$name" nohup "$NODE_BIN" "$DSH_SRC/apps/cli/lib/bin.js" \
       --profile "omnimux-dev-$name" --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
@@ -830,12 +831,18 @@ case "$cmd" in
     port=""
     for _ in $(seq 1 20); do
       sleep 1
-      port=$(grep -oE 'http://127\.0\.0\.1:[0-9]+' "$pdir/host.log" 2>/dev/null | tail -1 | grep -oE '[0-9]+$' || true)
+      if ! kill -0 "$new_pid" 2>/dev/null; then
+        break
+      fi
+      port=$(tail -c "+$((host_log_offset + 1))" "$pdir/host.log" 2>/dev/null | grep -oE 'http://127\.0\.0\.1:[0-9]+' | tail -1 | grep -oE '[0-9]+$' || true)
       [ -n "$port" ] && break
     done
 
-    if [ -z "$port" ]; then
-      echo "✗ Host 原地重启后未在 20s 内成功监听，请检查日志: $pdir/host.log" >&2
+    if [ -z "$port" ] || ! kill -0 "$new_pid" 2>/dev/null; then
+      if ! kill -0 "$new_pid" 2>/dev/null; then
+        rm -f "$pdir/host.pid"
+      fi
+      echo "✗ Host 原地重启后未在 20s 内成功监听或新进程已退出，请检查日志: $pdir/host.log" >&2
       exit 1
     fi
 

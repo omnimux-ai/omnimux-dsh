@@ -45,7 +45,7 @@ describe('scripts/dev-env.sh L2 Host install-closure preflight', () => {
     writePkg(chatDir, '@deepseek-ai/dsh-client-ui-chat', {})
     writeFileSync(join(chatDir, 'lib', 'index.js'), 'export default {}\n')
     writeFileSync(join(cliDir, 'lib', 'bin.js'),
-      "import { writeFileSync } from 'node:fs';\nwriteFileSync(process.env.TEST_HOST_ARGS_LOG, JSON.stringify(process.argv.slice(2)));\nconst i = process.argv.indexOf('--port');\nconst port = i >= 0 ? process.argv[i+1] : 44201;\nconsole.log('http://127.0.0.1:' + port);\n")
+      "import { writeFileSync } from 'node:fs';\nwriteFileSync(process.env.TEST_HOST_ARGS_LOG, JSON.stringify(process.argv.slice(2)));\nconst i = process.argv.indexOf('--port');\nconst port = i >= 0 ? process.argv[i+1] : 44201;\nconsole.log('http://127.0.0.1:' + port);\nsetInterval(() => {}, 1000);\n")
 
     // node resolution graph: cli → web-app; web-app → ui-chat (optional)
     symlinkSync(webAppDir, join(cliDir, 'node_modules', '@deepseek-ai', 'dsh-web-app'))
@@ -222,6 +222,44 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
       cleanupSandbox()
     }
   })
+
+  for (const printsUrl of [false, true]) {
+    it(`rejects an exited restart process despite ${printsUrl ? 'new and historical' : 'historical'} Host URLs`, () => {
+      setupSandbox({ complete: true })
+      try {
+        runStart()
+        const l2Profile = join(testRoot, 'dev/tasks/deps-test/profiles/omnimux-dev-deps-test')
+        const logPath = join(l2Profile, 'host.log')
+        const oldLog = readFileSync(logPath, 'utf8')
+        assert.match(oldLog, /http:\/\/127\.0\.0\.1:\d+/)
+        const oldPort = readFileSync(join(l2Profile, 'port.txt'), 'utf8')
+        writeFileSync(join(fakeDshSrc, 'apps/cli/lib/bin.js'), [
+          "import { writeFileSync } from 'node:fs';",
+          'writeFileSync(process.env.TEST_HOST_ARGS_LOG, JSON.stringify(process.argv.slice(2)));',
+          ...(printsUrl ? ["console.log('http://127.0.0.1:' + process.argv[process.argv.indexOf('--port') + 1]);"] : []),
+          "console.error('fixture: CLI exited before serving');",
+          'process.exit(23);',
+          '',
+        ].join('\n'))
+        rmSync(hostArgsLog)
+
+        assert.throws(() => runCommand(['restart-host', 'deps-test']), (error) => {
+          assert.equal(error.status, 1)
+          assert.match(error.stderr, /新进程已退出/)
+          assert.doesNotMatch(error.stdout, /冷重启完成/)
+          return true
+        })
+
+        assertWorkspaceBrowserOverlay()
+        assert.ok(readFileSync(logPath, 'utf8').startsWith(oldLog), 'restart must preserve historical logs')
+        assert.match(readFileSync(logPath, 'utf8'), /fixture: CLI exited before serving/)
+        assert.equal(readFileSync(join(l2Profile, 'port.txt'), 'utf8'), oldPort)
+        assert.equal(existsSync(join(l2Profile, 'host.pid')), false, 'dead restart PID must not remain registered')
+      } finally {
+        cleanupSandbox()
+      }
+    })
+  }
 
   it('fails fast when DSH_SRC cannot resolve web-app → ui-chat', () => {
     setupSandbox({ complete: false, emptyProdScope: true })
