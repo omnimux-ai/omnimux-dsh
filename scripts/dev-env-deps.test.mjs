@@ -158,6 +158,7 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
     assert.ok(patchIndex >= 0, 'Host must receive the workspace browser composition')
     assert.equal(args[patchIndex + 1], join(here, 'l2-workspace-browser.patch.yml'))
     assert.equal(args.filter((arg) => arg === '--patch').length, 1)
+    assert.ok(patchIndex < args.indexOf('--host'), 'launcher patches must precede app passthrough arguments')
     assert.equal(args[args.indexOf('--host') + 1], '127.0.0.1', 'picker selection must not widen network exposure')
   }
 

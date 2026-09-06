@@ -686,8 +686,8 @@ case "$cmd" in
     # OMNIMUX_PLUGIN_PROFILE：symlink 装插件时显式注入 profile 名
     # 硬绑池口，避免 --port 0 与静态 patch 层叠碰巧生效
     DSH_HOME="$RUNTIME_HOME" OMNIMUX_PLUGIN_PROFILE="omnimux-dev-$name" nohup "$NODE_BIN" "$DSH_SRC/apps/cli/lib/bin.js" \
-      --profile "omnimux-dev-$name" --host 127.0.0.1 --port "$assigned_port" --no-open \
-      --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
+      --profile "omnimux-dev-$name" --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
+      --host 127.0.0.1 --port "$assigned_port" --no-open \
       > "$pdir/host.log" 2>&1 &
     echo $! > "$pdir/host.pid"
 
@@ -820,8 +820,8 @@ case "$cmd" in
     echo "$(date '+%Y-%m-%d %H:%M:%S') task=$name port=$assigned_port old_pid=${old_pid:-none}" >> "$pdir/restart-host.log"
 
     DSH_HOME="$RUNTIME_HOME" OMNIMUX_PLUGIN_PROFILE="omnimux-dev-$name" nohup "$NODE_BIN" "$DSH_SRC/apps/cli/lib/bin.js" \
-      --profile "omnimux-dev-$name" --host 127.0.0.1 --port "$assigned_port" --no-open \
-      --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
+      --profile "omnimux-dev-$name" --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
+      --host 127.0.0.1 --port "$assigned_port" --no-open \
       >> "$pdir/host.log" 2>&1 &
     new_pid=$!
     echo "$new_pid" > "$pdir/host.pid"
