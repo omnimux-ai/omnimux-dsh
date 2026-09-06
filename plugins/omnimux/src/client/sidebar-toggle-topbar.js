@@ -210,8 +210,9 @@ export function findVisibleWorkbenchPanel(doc) {
       return 1e9
     }
   })()
-  const scoped = doc.querySelectorAll('[data-dsh-better-sidebar] [class*="panel"]')
-  const nodes = scoped.length ? scoped : doc.querySelectorAll('[class*="panel"]')
+  const nodes = doc.querySelectorAll(
+    '[data-dsh-better-sidebar] [data-dsh-panel-host] > [class*="_panel"]',
+  )
   for (const el of nodes) {
     const cls = typeof el.className === 'string' ? el.className : String(el.className || '')
     // Official right panel class fragment is `_panel` (CSS-module hashed).

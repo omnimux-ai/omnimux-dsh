@@ -20,6 +20,7 @@ import {
   computeTabBarPadLeft,
   computeToggleLeftPx,
   ensureSidebarToggleTopbar,
+  findVisibleWorkbenchPanel,
   findOfficialNewSessionButton,
   findOfficialSidebarToggle,
   getExplicitLeftCollapseIntent,
@@ -250,14 +251,40 @@ describe('computeChromeLayout tab pad (overlap, not collapsed boolean)', () => {
     })
   }
 
+  it('uses the semantic panel host and ignores bottom, hidden, and unrelated panels', () => {
+    const doc = setup(`<!doctype html><html><body>
+      <div data-dsh-better-sidebar>
+        <div id="unrelated" class="settings_panel"></div>
+        <div data-dsh-panel-host="true">
+          <div id="bottom" class="nArs4W_panel nArs4W_bottomPanel"></div>
+          <div id="hidden" class="nArs4W_panelHidden"></div>
+          <div id="workbench" class="nArs4W_panel" data-omnimux-workbench-panel>
+            <div class="nArs4W_panelBody">
+              <div class="nArs4W_workbench">
+                <div class="nArs4W_pane"><div class="nArs4W_tabBar"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body></html>`)
+    for (const id of ['unrelated', 'bottom', 'hidden', 'workbench']) {
+      mockRect(doc.getElementById(id), { left: id === 'workbench' ? 640 : 0, width: 1088 })
+    }
+    assert.equal(findVisibleWorkbenchPanel(doc), doc.getElementById('workbench'))
+    assert.equal(computeTabBarPadLeft(doc), 0)
+  })
+
   it('A expanded+gui: panel at 280, pad 0 (toggle lives on the rail)', () => {
     const doc = setup(`<!doctype html><html><body>
       <div class="frame_abc">
         <div class="sidebarCol_x"></div>
       </div>
       <div data-dsh-better-sidebar>
-        <div class="nArs4W_panel">
-          <div class="nArs4W_tabBar"></div>
+        <div data-dsh-panel-host="true">
+          <div class="nArs4W_panel">
+            <div class="nArs4W_tabBar"></div>
+          </div>
         </div>
       </div>
     </body></html>`)
@@ -278,8 +305,10 @@ describe('computeChromeLayout tab pad (overlap, not collapsed boolean)', () => {
         <div class="sidebarCol_x"></div>
       </div>
       <div data-dsh-better-sidebar>
-        <div class="nArs4W_panel">
-          <div class="nArs4W_tabBar"></div>
+        <div data-dsh-panel-host="true">
+          <div class="nArs4W_panel">
+            <div class="nArs4W_tabBar"></div>
+          </div>
         </div>
       </div>
     </body></html>`)
@@ -296,8 +325,10 @@ describe('computeChromeLayout tab pad (overlap, not collapsed boolean)', () => {
         <div class="sidebarCol_x"></div>
       </div>
       <div data-dsh-better-sidebar>
-        <div class="nArs4W_panel">
-          <div class="nArs4W_tabBar"></div>
+        <div data-dsh-panel-host="true">
+          <div class="nArs4W_panel">
+            <div class="nArs4W_tabBar"></div>
+          </div>
         </div>
       </div>
     </body></html>`)
@@ -313,8 +344,10 @@ describe('computeChromeLayout tab pad (overlap, not collapsed boolean)', () => {
         <div class="sidebarCol_x"></div>
       </div>
       <div data-dsh-better-sidebar>
-        <div class="nArs4W_panel">
-          <div class="nArs4W_tabBar"></div>
+        <div data-dsh-panel-host="true">
+          <div class="nArs4W_panel">
+            <div class="nArs4W_tabBar"></div>
+          </div>
         </div>
       </div>
     </body></html>`)
@@ -328,8 +361,10 @@ describe('computeChromeLayout tab pad (overlap, not collapsed boolean)', () => {
         <div class="sidebarCol_x"></div>
       </div>
       <div data-dsh-better-sidebar>
-        <div class="nArs4W_panel">
-          <div class="nArs4W_tabBar"></div>
+        <div data-dsh-panel-host="true">
+          <div class="nArs4W_panel">
+            <div class="nArs4W_tabBar"></div>
+          </div>
         </div>
       </div>
     </body></html>`)
@@ -353,9 +388,12 @@ describe('topbar host layout', () => {
       const doc = setup()
       if (mode) doc.body.setAttribute('data-dsh-desktop-mode', mode)
       if (platform) doc.body.setAttribute('data-dsh-desktop-platform', platform)
+      const host = doc.createElement('div')
+      host.setAttribute('data-dsh-panel-host', 'true')
       const panel = doc.createElement('div')
       panel.className = 'test_panel'
-      doc.querySelector('[data-dsh-better-sidebar]').append(panel)
+      host.append(panel)
+      doc.querySelector('[data-dsh-better-sidebar]').append(host)
       let panelLeft = 0
       panel.getBoundingClientRect = () => ({ left: panelLeft, width: 768 - panelLeft, height: 600 })
       assert.equal(computeChromeLayout(doc).toggleLeft, inset)
@@ -391,10 +429,12 @@ describe('right topbar tab clearance', () => {
     const doc = setup(`<!doctype html><html><body>
       <div data-dsh-better-sidebar>
         <div class="test_toggleCluster"></div>
-        <div class="test_panel">
-          <div><div id="left" class="test_tabBar"></div></div>
-          <div><div id="right" class="test_tabBar"></div></div>
-          <div><div id="lower" class="test_tabBar"></div></div>
+        <div data-dsh-panel-host="true">
+          <div class="test_panel">
+            <div><div id="left" class="test_tabBar"></div></div>
+            <div><div id="right" class="test_tabBar"></div></div>
+            <div><div id="lower" class="test_tabBar"></div></div>
+          </div>
         </div>
         <div class="test_bottomPanel"><div id="bottom" class="test_tabBar"></div></div>
       </div>
@@ -531,6 +571,39 @@ describe('topbar new-session control (collapsed only)', () => {
 })
 
 describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
+  it('styles the real panel-host hierarchy without touching hidden or bottom panels', () => {
+    const doc = setup(`<!doctype html><html data-omnimux-sidebar-toggle-topbar><head>
+      <style>.nArs4W_tabBarPlus{width:22px;height:22px;border-radius:5px}</style>
+    </head><body><div data-dsh-better-sidebar>
+      <div data-dsh-panel-host="true">
+        <div class="nArs4W_panel nArs4W_panelHidden"><div class="nArs4W_tabBar"><button id="hidden-plus" class="nArs4W_tabBarPlus"></button></div></div>
+        <div class="nArs4W_panel nArs4W_bottomPanel"><div class="nArs4W_tabBar"><button id="bottom-plus" class="nArs4W_tabBarPlus"></button></div></div>
+        <div class="nArs4W_panel" data-omnimux-workbench-panel>
+          <div class="nArs4W_panelBody"><div class="nArs4W_workbench"><div class="nArs4W_pane">
+            <div id="workbench-tabbar" class="nArs4W_tabBar"><span class="nArs4W_tabList"><button id="workbench-plus" class="nArs4W_tabBarPlus"><svg id="workbench-plus-icon"></svg></button></span></div>
+          </div></div></div>
+        </div>
+      </div>
+    </div></body></html>`)
+    const style = doc.createElement('style')
+    style.textContent = PRODUCT_STAGE_CHROME
+    doc.head.append(style)
+    const computed = id => doc.defaultView.getComputedStyle(doc.getElementById(id))
+
+    assert.equal(computed('workbench-plus').width, 'var(--omnimux-topbar-toggle-size)')
+    assert.equal(computed('workbench-plus').height, 'var(--omnimux-topbar-toggle-size)')
+    assert.equal(computed('workbench-plus').borderRadius, '8px')
+    assert.equal(computed('workbench-plus-icon').width, '16px')
+    assert.equal(computed('workbench-plus-icon').height, '16px')
+    assert.equal(computed('hidden-plus').width, '22px')
+    assert.equal(computed('bottom-plus').width, '22px')
+    assert.equal(computed('workbench-tabbar').paddingLeft, 'var(--omnimux-tabbar-pad-left,0px)')
+    assert.equal(
+      computed('workbench-tabbar').height,
+      'calc(var(--omnimux-topbar-toggle-size) + 2 * var(--omnimux-topbar-toggle-top) + 1px)',
+    )
+  })
+
   it('includes topbar toggle fixed geometry, visual-0 rail, tabBar padding, blue dot', () => {
     assert.match(PRODUCT_STAGE_CHROME, /data-omnimux-sidebar-toggle-topbar/)
     assert.match(PRODUCT_STAGE_CHROME, /--omnimux-topbar-toggle-end/)

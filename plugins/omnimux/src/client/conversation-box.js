@@ -164,7 +164,7 @@ html[data-omnimux-sidebar-toggle-topbar] body:is(:not([data-dsh-title-bar-compat
   top:var(--omnimux-topbar-toggle-top)!important;
 }
 html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] [class*="toggleCluster"] > button,
-html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] > [class*="panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBarPlus"]{
+html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] [data-dsh-panel-host] > [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBarPlus"]{
   width:var(--omnimux-topbar-toggle-size)!important;
   height:var(--omnimux-topbar-toggle-size)!important;
   padding:0!important;
@@ -172,7 +172,7 @@ html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] > [class*="pa
   border-radius:8px!important;
 }
 html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] [class*="toggleCluster"] > button svg,
-html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] > [class*="panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBarPlus"] svg{
+html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] [data-dsh-panel-host] > [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBarPlus"] svg{
   width:16px;height:16px;
 }
 /* Icon swap: collapse glyph while expanded, expand glyph while collapsed. */
@@ -213,9 +213,9 @@ html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed
    to --omnimux-tabbar-pad-left. Do NOT key this off left-collapsed: collapsed
    + split already starts the panel right of the toggle, so pad must stay 0.
    Selector is the OPEN right-panel tab strip only (never tabBarPlus / bottom).
-   Notice tabBar is a deep descendant of panel (panelBody > workbench > pane > tabBar),
-   so do not use direct-child combinator > on panel. */
-html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] > [class*="panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBar"]:not([class*="Plus"]){
+   The semantic panel host wraps the panel; tabBar remains a deep descendant
+   (panelBody > workbench > pane > tabBar). */
+html[data-omnimux-sidebar-toggle-topbar] [data-dsh-better-sidebar] [data-dsh-panel-host] > [class*="_panel"]:not([class*="bottom"]):not([class*="Hidden"]) [class*="tabBar"]:not([class*="Plus"]){
   padding-left:var(--omnimux-tabbar-pad-left,0px)!important;
   padding-right:var(--omnimux-tabbar-pad-right,0px)!important;
   height:calc(var(--omnimux-topbar-toggle-size) + 2 * var(--omnimux-topbar-toggle-top) + 1px)!important;
