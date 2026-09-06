@@ -21,6 +21,8 @@ import { normalizeCanvasEdge, type CanvasConnectionLike } from './canvasConnecti
 import { validateCanvasConnectionStructure } from './canvasConnectionStructure.ts';
 import { resolveNodeKind } from './materialNode.ts';
 import type { CapabilityCatalog } from '../api.ts';
+import type { MaterialType } from '../canvasTypes.ts';
+import { resolveGenerationPrompt } from './generationPrompt.ts';
 import {
   buildContractView,
   buildUpstreamFingerprint,
@@ -64,6 +66,7 @@ export interface CanvasInputMutation {
  */
 export interface CanvasMutationRuntimeContext {
   catalog?: CapabilityCatalog | null;
+  preferredModels?: Partial<Record<MaterialType, string>>;
 }
 
 export interface CanvasInputMutationPlan extends CanvasInputMutationState {
@@ -182,7 +185,8 @@ function fingerprintForNode(
     .map((edge) => assetFromEdge(edge, nodes))
     .filter((asset): asset is UpstreamAssetFingerprint => asset !== null);
   return buildUpstreamFingerprint({
-    prompt: typeof data.prompt === 'string' ? data.prompt : '',
+    prompt: resolveGenerationPrompt(data, edges.filter((edge) => edge.target === node.id)
+      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return [source?.data.content, source?.data.generatedContent]; })),
     nodeFields: readParams(node),
     assets,
   });
@@ -214,7 +218,8 @@ export function buildCanvasUpstreamFingerprint(
     if (asset) assets.push(asset);
   }
   return buildUpstreamFingerprint({
-    prompt: typeof data.prompt === 'string' ? data.prompt : '',
+    prompt: resolveGenerationPrompt(data, [...edges.filter((edge) => edge.target === targetId).map((edge) => edge.source), ...pendingSourceIds]
+      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return [source?.data.content, source?.data.generatedContent]; })),
     nodeFields: target ? readParams(target) : {},
     assets,
   });
@@ -228,6 +233,7 @@ interface CompatNodeState {
   reasonCodes: string[];
   fingerprint: string;
   catalogFingerprint: string;
+  adaptation?: { fromModelId: string; toModelId: string; toModelLabel: string; inputTypes: string[] };
 }
 
 function buildCompatState(
@@ -322,6 +328,38 @@ function runCompatPass(
   let edges = working.edges;
 
   const nodeById = (id: string) => nodes.find((node) => node.id === id);
+  const addedIds = new Set((mutation.addNodes ?? []).map((node) => node.id));
+  const manualModelIds = new Set((mutation.nodePatches ?? []).filter((patch) => {
+    const next = (patch.data.params as Record<string, unknown> | undefined)?.model;
+    const before = current.nodes.find((node) => node.id === patch.nodeId);
+    return typeof next === 'string' && next !== (before ? readParams(before).model : undefined);
+  }).map((patch) => patch.nodeId));
+  const excludedSavedModel = (node: CanvasNode): boolean => {
+    const kind = node.data.materialType as MaterialType;
+    const policy = catalog?.generationPolicy?.[kind];
+    const model = readParams(node).model;
+    return Boolean(policy && typeof model === 'string' && model && !policy.allowedModelIds.includes(model));
+  };
+  const preferredModel = (node: CanvasNode): string | undefined => {
+    if (readParams(node).model) return undefined;
+    return context.preferredModels?.[node.data.materialType as MaterialType];
+  };
+  const nodeCompatState = (node: CanvasNode, pick: AutoAdaptationPick | null,
+    fingerprint: ReturnType<typeof buildUpstreamFingerprint>, reasonCodes: string[] = []): CompatNodeState => {
+    const state = buildCompatState(pick, fingerprint.signature, catalog, reasonCodes);
+    const previous = readParams(node).model;
+    if (pick && typeof previous === 'string' && previous && previous !== pick.modelId
+      && !addedIds.has(node.id) && !manualModelIds.has(node.id)) {
+      state.adaptation = {
+        fromModelId: previous,
+        toModelId: pick.modelId,
+        toModelLabel: resolveModelView(buildContractView(catalog), pick.modelId)?.label ?? pick.modelId,
+        inputTypes: [...new Set(fingerprint.mediaAssets.map((asset) => asset.type))],
+      };
+    }
+    return state;
+  };
+
 
   /** Strict gate for one generate node (new media edges). */
   const gateNode = (nodeId: string): CompatPassResult['rejected'] | undefined => {
@@ -329,6 +367,7 @@ function runCompatPass(
     if (!isGenerateMaterialNode(node)) return undefined;
     const fingerprint = fingerprintForNode(node!, nodes, edges);
     if (fingerprint.mediaAssets.length === 0) return undefined;
+    if (excludedSavedModel(node!)) return { reasonCode: 'not_listed', reasonMeta: { nodeId, modelId: readParams(node!).model } };
 
     if (!catalog) {
       return { reasonCode: 'catalog_unavailable', reasonMeta: { nodeId } };
@@ -355,11 +394,12 @@ function runCompatPass(
       ...(outputType ? { outputType } : {}),
       ...(typeof params.model === 'string' && params.model ? { currentModelId: params.model } : {}),
       ...(currentOperationId ? { currentOperationId } : {}),
+      preferredModelId: preferredModel(node!),
     });
     if (!pick) {
       return { reasonCode: 'no_compatible_model', reasonMeta: { nodeId, modelId: params.model } };
     }
-    const compatState = buildCompatState(pick, fingerprint.signature, catalog, []);
+    const compatState = nodeCompatState(node!, pick, fingerprint);
     nodes = nodes.map((candidate) => (candidate.id === nodeId ? applyPickToNode(candidate, pick, compatState) : candidate));
     edges = applyBindingsToEdges(edges, nodeId, pick.bindings);
     return undefined;
@@ -373,6 +413,11 @@ function runCompatPass(
     const data = (node!.data ?? {}) as Record<string, unknown>;
     const outputType = typeof data.materialType === 'string' ? data.materialType : undefined;
     const params = readParams(node!);
+    if (excludedSavedModel(node!)) {
+      const state = nodeCompatState(node!, null, fingerprint, ['not_listed']);
+      nodes = nodes.map((candidate) => candidate.id === nodeId ? applyPickToNode(candidate, null, state) : candidate);
+      return;
+    }
     const evaluation = evaluateCatalogCompat(catalog, fingerprint, {
       ...(outputType ? { outputType } : {}),
     });
@@ -394,13 +439,9 @@ function runCompatPass(
       ...(outputType ? { outputType } : {}),
       ...(typeof params.model === 'string' && params.model ? { currentModelId: params.model } : {}),
       ...(currentOperationId ? { currentOperationId } : {}),
+      preferredModelId: preferredModel(node!),
     });
-    const compatState = buildCompatState(
-      pick,
-      fingerprint.signature,
-      catalog,
-      pick ? [] : ['no_compatible_model'],
-    );
+    const compatState = nodeCompatState(node!, pick, fingerprint, pick ? [] : ['no_compatible_model']);
     nodes = nodes.map((candidate) =>
       candidate.id === nodeId ? applyPickToNode(candidate, pick, compatState) : candidate,
     );
@@ -430,7 +471,9 @@ function runCompatPass(
     const node = nodeById(patch.nodeId);
     if (!isGenerateMaterialNode(node)) continue;
     const patchParams = (patch.data.params ?? {}) as Record<string, unknown>;
-    const hasModelPatch = typeof patchParams.model === 'string' && patchParams.model.trim().length > 0;
+    const previousNode = current.nodes.find((candidate) => candidate.id === patch.nodeId);
+    const hasModelPatch = typeof patchParams.model === 'string' && patchParams.model.trim().length > 0
+      && (!previousNode || readParams(previousNode).model !== patchParams.model);
     if (!hasModelPatch) continue;
     patchedModelNodeIds.push(patch.nodeId);
     const fingerprint = fingerprintForNode(node!, nodes, edges);
@@ -486,6 +529,12 @@ function runCompatPass(
       recomputeTargets.add(patch.nodeId);
     }
   }
+  for (const edge of mutation.addEdges ?? []) recomputeTargets.add(edge.target);
+  const changedSources = new Set((mutation.nodePatches ?? []).filter((patch) =>
+    ['content', 'generatedContent', 'materialType', 'mimeType', 'sizeBytes', 'fileSize', 'durationSec', 'duration'].some((key) => key in patch.data),
+  ).map((patch) => patch.nodeId));
+  for (const edge of edges) if (changedSources.has(edge.source)) recomputeTargets.add(edge.target);
+
   // Nodes patched (any content patch) into generate nodes also get a state refresh
   // when the catalog is present — keeps data.compat in sync with prompt edits.
   for (const targetId of recomputeTargets) {

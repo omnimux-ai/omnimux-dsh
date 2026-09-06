@@ -255,6 +255,8 @@ export interface CapabilityModelItem {
 
 /** GET /api/capabilities response (hub modelCatalog.list shape). */
 export interface CapabilityCatalog {
+  /** Canvas product curation, separate from model input capabilities. */
+  generationPolicy?: Readonly<Record<import('./canvasTypes.ts').MaterialType, import('./generationPolicy.ts').GenerationPolicy>>;
   source: 'static-stub' | 'omnimux';
   /** Contract schema version ('1.1' when the hub projects contract v1.1). */
   schemaVersion?: string;

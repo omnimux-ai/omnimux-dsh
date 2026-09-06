@@ -23,6 +23,7 @@ export interface CatalogReconcileInput {
   nodes: CanvasNode[];
   edges: Edge[];
   catalog: CapabilityCatalog | null | undefined;
+  preferredModels?: import('./canvasInputMutationGateway.ts').CanvasMutationRuntimeContext['preferredModels'];
   /** Previously applied catalog fingerprint (store / node.compat). */
   previousFingerprint?: string | null;
 }
@@ -131,7 +132,7 @@ export function reconcileCanvasForCatalog(
   const plan: CanvasInputMutationPlan = planCanvasInputMutation(
     { nodes: input.nodes as CanvasNode[], edges: input.edges },
     { nodePatches },
-    { catalog },
+    { catalog, preferredModels: input.preferredModels },
   );
 
   // Soft recompute never rejects; if it somehow did, keep the graph intact.
