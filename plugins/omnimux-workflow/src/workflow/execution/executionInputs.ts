@@ -14,7 +14,9 @@ export function buildInitialOutputs(
   for (const edge of workspace.edges) {
     if (!executedNodeIds.has(edge.target) || executedNodeIds.has(edge.source)) continue;
     const source = workspace.nodes.find((node) => node.id === edge.source);
-    if (source) initialOutputs[edge.source] = readNodeInputSource(source, workspace.id).output;
+    if (!source) continue;
+    const resolved = readNodeInputSource(source, workspace.id);
+    if (resolved.availability === 'ready') initialOutputs[edge.source] = resolved.output;
   }
   return initialOutputs;
 }
