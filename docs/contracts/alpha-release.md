@@ -16,4 +16,6 @@ subsystem: "global"
 
 开发和隔离 L2 保留 Alpha 插件与已有能力，不能因标记而隐藏或停用。正式发布排除 Alpha 插件的加载名单、依赖及随包产物，并关闭中枢暴露的对应工具；不能仅隐藏 UI。正式渠道由发布入口确定，不能通过单项工具开关重新启用 Alpha。正式策略的验证使用临时隔离目标，不写实际生产 profile。
 
+发布入口将中枢的 `src/release-channel.json` 写为 `production`；源码与开发目标使用 `development`。`sync-to-app.sh --prod` 和桌面 `stage:preset` 均消费同一名单；混合同步按各目标分别应用策略，命名插件同步不得扩大开发目标的写入范围。桌面打包清单与启动校验必须一致，防止已排除的 Alpha 插件仍被当作必需依赖。
+
 部署目标隔离、发布授权和物化路径遵循 [dev pipeline](dev-pipeline.md) 与 [Git/PR policy](plugin-git-pr.md)。合并本规则不授权正式发布或修改真实生产。Alpha 转正需独立评估与更新名单，并验证侧栏和发布产物一致；不得仅删除界面标记。
