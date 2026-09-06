@@ -27,6 +27,19 @@ source "$ROOT/scripts/resolve-omnimux-profile.sh"
 
 TARGET_SELECTION=()
 PLUGINS=()
+MVP_EXCLUDED_PLUGINS=(omnimux-accounts omnimux-workflow omnimux-publish omnimux-analytics)
+MVP_MODE=0
+if [ "${OMNIMUX_MVP:-0}" = "1" ] || [ "${OMNIMUX_MVP:-}" = "true" ]; then
+  MVP_MODE=1
+fi
+
+is_mvp_excluded() {
+  local candidate="$1"
+  for excluded in "${MVP_EXCLUDED_PLUGINS[@]}"; do
+    [ "$candidate" = "$excluded" ] && return 0
+  done
+  return 1
+}
 
 if [ -n "${OMNIMUX_SYNC_TARGETS:-}" ]; then
   IFS=',' read -ra ENV_TARGETS <<< "$OMNIMUX_SYNC_TARGETS"
@@ -71,6 +84,9 @@ while [ $# -gt 0 ]; do
         shift
       fi ;;
     --skip-build)
+      shift ;;
+    --mvp)
+      MVP_MODE=1
       shift ;;
     --*)
       # 忽略其他不认识的参数
@@ -146,7 +162,14 @@ ALL_PLUGINS=(omnimux omnimux-accounts omnimux-assets omnimux-products omnimux-wo
 if [ ${#PLUGINS[@]} -gt 0 ]; then
   TARGET_PLUGINS=("${PLUGINS[@]}")
 else
-  TARGET_PLUGINS=("${ALL_PLUGINS[@]}")
+  if [ "$MVP_MODE" -eq 1 ]; then
+    TARGET_PLUGINS=()
+    for p in "${ALL_PLUGINS[@]}"; do
+      is_mvp_excluded "$p" || TARGET_PLUGINS+=("$p")
+    done
+  else
+    TARGET_PLUGINS=("${ALL_PLUGINS[@]}")
+  fi
 fi
 
 for PROFILE in "${PROFILES[@]}"; do
@@ -214,6 +237,9 @@ for PROFILE in "${PROFILES[@]}"; do
   # we can preserve. A sync can establish the new layout only when its caller
   # explicitly selected every still-legacy package from the current source.
   for name in "${ALL_PLUGINS[@]}"; do
+    if [ "$MVP_MODE" -eq 1 ] && is_mvp_excluded "$name"; then
+      continue
+    fi
     dependency_spec=$(node -e "const fs=require('fs');const p=process.argv[1];const n=process.argv[2];try{const m=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(m.dependencies?.[n]||'')}catch{}" "$PROFILE/package.json" "$name")
     case "$dependency_spec" in
       "file:node_modules/$name"|"file:./node_modules/$name")
@@ -324,10 +350,12 @@ EOF
   fi
 
   # 依赖声明统一回 profile 外的受管 file: 源；声明了 dsh.bundle 的插件幂等写入加载名单。
-  node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$syncs_all_plugins" "$MANAGES_KIT" "$managed_plugins_csv" <<'EOF'
+  node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$syncs_all_plugins" "$MANAGES_KIT" "$managed_plugins_csv" "$MVP_MODE" <<'EOF'
 const fs = require('fs')
 const path = require('path')
-const [profile, managedRoot, pruneLegacy, managesKit, pluginsCsv] = process.argv.slice(2)
+const [profile, managedRoot, pruneLegacy, managesKit, pluginsCsv, mvpModeArg] = process.argv.slice(2)
+const isMvp = mvpModeArg === '1'
+const MVP_EXCLUDED = ['omnimux-accounts', 'omnimux-workflow', 'omnimux-publish', 'omnimux-analytics']
 const plugins = pluginsCsv ? pluginsCsv.split(',') : []
 const file = path.join(profile, 'package.json')
 if (!fs.existsSync(file)) {
@@ -372,12 +400,34 @@ for (const legacy of LEGACY_PRUNE_NAMES) {
   fs.rmSync(path.join(managedRoot, legacy), { recursive: true, force: true })
 }
 
+if (isMvp) {
+  for (const excluded of MVP_EXCLUDED) {
+    if (manifest.dependencies[excluded]) {
+      delete manifest.dependencies[excluded]
+      depChanged = true
+    }
+    let idx
+    while ((idx = bundles.indexOf(excluded)) >= 0) {
+      bundles.splice(idx, 1)
+      bundleChanged = true
+    }
+    const excludedDir = path.join(profile, 'node_modules', excluded)
+    if (fs.existsSync(excludedDir)) {
+      fs.rmSync(excludedDir, { recursive: true, force: true })
+      console.log(`  - [MVP] 已清理运行时包目录: ${excluded}`)
+    }
+  }
+}
+
 if (managesKit === '1') {
   manifest.dependencies['dsh-ui-kit'] = 'file:.materialize-snapshots/plugins/dsh-ui-kit'
   depChanged = true
 }
 
 for (const name of plugins) {
+  if (isMvp && MVP_EXCLUDED.includes(name)) {
+    continue
+  }
   const targetSpec = `file:.materialize-snapshots/plugins/${name}`
   if (manifest.dependencies[name] !== targetSpec) {
     manifest.dependencies[name] = targetSpec
@@ -562,7 +612,7 @@ EOF
   # 写入后由 pnpm 构造 profile 下的 node_modules 符号拓扑。安装失败恢复被暂存的
   # 入口，避免留下缺包；成功后仍由下方的全内容 fingerprint 校验最终结果。
   echo "  → 刷新 profile 依赖 (corepack pnpm install)..."
-  if ! (cd "$PROFILE" && corepack pnpm install); then
+  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false corepack pnpm install); then
     restore_refresh_entries
     echo "✗ pnpm 刷新 profile 依赖失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1

@@ -129,4 +129,44 @@ describe('GateGuard logic', () => {
       },
     )
   })
+
+  it('MVP mode disables accounts, publish, and analytics tools by default', () => {
+    const mvpGate = parseGateConfig({ mvp: true })
+
+    // Excluded official tools are disabled
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_list'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_connect'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_accounts_disconnect'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_publish_create'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_publish_presign'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_daily_metrics'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_best_time'), false)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_analytics_posts'), false)
+
+    // Other tools remain enabled
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_social_data'), true)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_inspiration_list'), true)
+    assert.equal(isToolEnabled(mvpGate, 'omnimux_page_fetch'), true)
+
+    // Explicit override in tools allows re-enabling
+    const overrideGate = parseGateConfig({
+      mvp: true,
+      tools: {
+        omnimux_accounts_list: true,
+      },
+    })
+    assert.equal(isToolEnabled(overrideGate, 'omnimux_accounts_list'), true)
+    assert.equal(isToolEnabled(overrideGate, 'omnimux_accounts_connect'), false)
+
+    // assertCapabilityEnabled throws for excluded tools in MVP mode
+    assert.throws(
+      () => assertCapabilityEnabled(mvpGate, 'omnimux_publish_create', 'tool'),
+      (err) => {
+        assert.ok(err instanceof OmnimuxError)
+        assert.equal(err.code, 'capability-disabled')
+        assert.equal(err.message, "Capability 'omnimux_publish_create' is disabled by capability gate")
+        return true
+      },
+    )
+  })
 })

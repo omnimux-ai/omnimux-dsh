@@ -4,6 +4,7 @@
  */
 export const DEFAULT_GATE = Object.freeze({
   enabled: true,
+  mvp: false,
   tools: Object.freeze({}),
   media: Object.freeze({
     video: true,
@@ -24,6 +25,7 @@ const VALID_MEDIA_KINDS = Object.freeze(['video', 'image', 'audio'])
  * @param {unknown} value
  * @returns {{
  *   enabled: boolean,
+ *   mvp: boolean,
  *   tools: Record<string, boolean>,
  *   media: { video: boolean, image: boolean, audio: boolean },
  *   models: { textComplete: Record<string, boolean> },
@@ -31,9 +33,12 @@ const VALID_MEDIA_KINDS = Object.freeze(['video', 'image', 'audio'])
  * }}
  */
 export function parseGateConfig(value) {
+  const envMvp = process.env.OMNIMUX_MVP === '1' || process.env.OMNIMUX_MVP === 'true'
+
   if (value == null) {
     return {
       enabled: true,
+      mvp: envMvp,
       tools: {},
       media: { ...DEFAULT_GATE.media },
       models: { textComplete: {} },
@@ -54,6 +59,15 @@ export function parseGateConfig(value) {
       throw new Error('omnimux: gate.enabled must be a boolean')
     }
     enabled = raw.enabled
+  }
+
+  // 1.1 mvp mode
+  let mvp = envMvp
+  if (raw.mvp !== undefined) {
+    if (typeof raw.mvp !== 'boolean') {
+      throw new Error('omnimux: gate.mvp must be a boolean')
+    }
+    mvp = raw.mvp
   }
 
   // 2. tools
@@ -128,6 +142,7 @@ export function parseGateConfig(value) {
 
   return {
     enabled,
+    mvp,
     tools,
     media,
     models,
