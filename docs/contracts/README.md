@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -21,6 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `living` | [node-input-submission.md](node-input-submission.md) | 节点有效输入与提交 | `omnimux-workflow` | 2026-09-06 | 上游与本地内容组合、创建/连接/提交分层、任务角色、动态状态与请求一致性。 |
 | `living` | [alpha-release.md](alpha-release.md) | Alpha 内测与正式发布 | `global` | 2026-09-06 | 开发保留 Alpha 并标识内测；正式发布排除插件及对应工具，侧栏与发布共用名单。 |
 | `living` | [agent-workbench-sync.md](agent-workbench-sync.md) | Agent 工作台双向协同契约（信封 / 工具 / WebSocket / 防打扰） | `omnimux` | 2026-09-04 | UI Context Envelope 双通道；Hub 单路只读 WebSocket `GET /omnimux/events/stream` upgrade（`?after=` 重放）；`workbench_*` 两工具 + 防打扰 D1–D10；资产 changed 事件；5s poll 仅兜底。 |
 | `living` | [plugin-agent-tools-inventory.md](plugin-agent-tools-inventory.md) | OmniMux 全量插件 Agent 工具与双面交付清单契约 | `global` | 2026-08-30 | 全量 12 插件 88 工具双面交付契约、L1/L2/L3 分级、破坏性 confirm 守卫与 CI 静态门禁。 |

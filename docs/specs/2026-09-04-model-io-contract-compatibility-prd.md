@@ -5,7 +5,7 @@ type: "spec"
 status: "accepted"
 authority: "L2"
 date: "2026-09-04"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["xu-qingchu"]
 subsystem: "omnimux/catalog"
 tags:
@@ -30,6 +30,8 @@ related:
 # PRD：全模态模型输入输出契约 + 画布兼容性与自动适配
 
 > **2026-09-05 当前方法**：[模型合同文档优先方法修订](2026-09-05-model-contract-docs-first.md) 与 [模型 API 权威](../contracts/model-api-authority.md) 取代本文关于存在性、最小生成、边界探测、样本上限、真实执行和按执行翻转 `listed` 的可执行指令。本文保留原模型范围、历史快照与已发生执行；它们不得被当作当前输入合同。具体 EvoLink/APIMart 模型 API 文档未说明的字段、角色、数量、格式、时长和模式均为未知，不得猜测、试探或跨渠道借用。
+
+> **2026-09-06 输入与提交补充**：[节点有效输入与提交合同](../contracts/node-input-submission.md)规定上游与本地内容组合、选定输出、就绪状态及提交一致性；相关旧叙述以该合同为准。[需求补充与验收矩阵](2026-09-06-node-input-submission-prd.md)记录本次范围，接受需求不代表实现完成。
 
 > **文档地位**：L2 已接受 PRD（Issue #463 / #464）。供架构师收敛 MCC 运行时真源、画布连线 / 列表 / 模式 UI 规则；**只写产品行为与验收，不写模块级实现**。
 > **问题起源**：视频生成模式分裂（runtime 旧别名 vs MCC 标准 operation）暴露的是架构级缺口——文本 / 图片 / 视频 / 音频缺少统一 I/O 契约，且契约未在「录入模型时」闭环。

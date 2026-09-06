@@ -21,6 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `accepted` | [2026-09-06-node-input-submission-prd.md](2026-09-06-node-input-submission-prd.md) | 节点上游输入与提交一致性需求补充 | `omnimux-workflow` | 2026-09-06 | 输入解析缺口与 28 项验收场景；文档接受不代表代码或运行验收完成。 |
 | `accepted` | [2026-09-06-inspiration-pagination-refresh.md](2026-09-06-inspiration-pagination-refresh.md) | 灵感库分页刷新约束 | `omnimux-inspiration` | 2026-09-06 | #637：追加分页不得反馈触发第一页刷新；末页停止请求，筛选、激活和授权刷新统一复位第一页。 |
 | `accepted` | [2026-09-06-gxgen-incremental-import.md](2026-09-06-gxgen-incremental-import.md) | Gxgen 灵感增量导入 | `omnimux` | 2026-09-06 | #630：按 TikTok ID 去重、只新增、原 R2 封面预检、冻结计划及逐条回执；同计划恢复与复验。 |
 | `accepted` | [2026-09-05-video-phase-one-scope.md](2026-09-05-video-phase-one-scope.md) | 视频模型阶段一范围：七个产品型号 | `omnimux/catalog` | 2026-09-05 | 当前阶段仅 Seedance 2.0/2.0 Fast/2.0 Mini/2.5、Wan 3.0、MiniMax H3 和 Grok 视频 1.5；wire 和模式按具体渠道官方 API 文档核对，Kling 与 Wan 派生型号延后不排期。 |

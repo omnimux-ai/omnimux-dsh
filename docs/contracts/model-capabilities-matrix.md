@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan"]
 subsystem: "omnimux/catalog"
 tags:
@@ -205,6 +205,8 @@ Model 级 `research` / `execution` **仅作 defaults**：normalize 时写入每�
 - **H1 实 specs**：政策要求全部 operation 保持 draft 与/或 none|stub，使 **`listedOperations = []`**（不在 H1 审计并宣称厂商 live 事实）。
 
 ## 5. 拒绝与错误（typed rejects）
+
+节点如何从上游与本地形成有效输入，以及创建、连线和提交的区别，遵循 [节点有效输入与提交合同](node-input-submission.md)。本文件及 catalog 规定模型请求约束；必需 prompt 或 `source: node_field` 不代表必须在本地输入框手填。
 
 产品级原因码（非穷尽）包括：`mime_unsupported`、`size_exceeded`、`duration_exceeded`、`slot_capacity`、`role_conflict`、`no_compatible_model`、`model_incompatible`、`operation_incompatible`、`contract_missing`、`limit_source_missing`、`execution_unavailable`、`profile_incompatible`、`min_unsatisfied`、`prompt_required`、`metadata_required`、`configuration_error`。
 UI 必须可解释；**Hide, Don't Grey**。
