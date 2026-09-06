@@ -337,7 +337,7 @@ test('Alpha entries retain activation and labels across placement and remount', 
     element.click()
     assert.equal(element.disabled, false)
     assert.equal(element.getAttribute('aria-label'), '功能')
-    if (name === 'inspiration') {
+    if (name === 'inspiration' || name === 'workflow') {
       assert.equal(element.querySelector('.omnimux-sidebar-alpha-badge'), null)
       assert.equal(element.hasAttribute('data-release-stage'), false)
     } else {
@@ -351,13 +351,13 @@ test('Alpha entries retain activation and labels across placement and remount', 
   }
   assert.equal(clicks, 5)
   for (const { dispose } of rows) dispose()
-  const again = rows.slice(0, 4).map(({ row }) => api.register(row))
+  const again = rows.filter(({ name }) => name !== 'workflow' && name !== 'inspiration').map(({ row }) => api.register(row))
   api.place()
   await new Promise(resolve => setTimeout(resolve, 20))
   const settled = getPlaceCountForTests()
   await new Promise(resolve => setTimeout(resolve, 20))
   assert.equal(getPlaceCountForTests(), settled, 'badge placement must not cause an observer loop')
-  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 4)
+  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 3)
   for (const dispose of again) dispose()
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
 })
