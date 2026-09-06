@@ -222,3 +222,56 @@ test('autosave queued during an in-flight PUT saves the trailing edit once', asy
   assert.equal(h.env.saves[0].nodes[0].data.prompt, 'second');
   assert.equal(h.env.saves[0].expectedVersion, 8);
 });
+
+async function queueConflict(h) {
+  h.edit('first');
+  const pending = deferred();
+  const save = h.env.save;
+  h.env.save = (_id, payload) => { h.env.saves.push(payload); return pending.promise; };
+  h.autosave();
+  h.edit('trailing'); h.autosave();
+  h.env.remote = { ...h.env.remote, version: 12,
+    nodes: h.env.remote.nodes.map(node => ({ ...node, data: { prompt: 'remote edit' } })),
+  };
+  h.env.save = save;
+  pending.resolve({ ok: false, status: 409, body: {} });
+  await settle();
+}
+
+test('divergent 409 blocks queued and future autosaves and flush until explicit resolution', async () => {
+  const h = setup();
+  await queueConflict(h);
+  assert.equal(h.env.saves.length, 1, 'queued trailing autosave must not PUT');
+  h.edit('later edit'); h.autosave(); await settle();
+  h.persistence.flushPendingSave(); await settle();
+  await assert.rejects(h.persistence.saveNow(), /版本冲突/);
+  assert.equal(h.env.saves.length, 1, 'new edits and flush must not bypass conflict');
+  assert.equal(h.env.remote.nodes[0].data.prompt, 'remote edit');
+  await h.persistence.resolveConflict();
+  assert.equal(h.env.saves.length, 2);
+  assert.equal(h.env.saves[1].expectedVersion, 12);
+  assert.equal(h.env.saves[1].nodes[0].data.prompt, 'later edit');
+  h.edit('after resolution'); h.autosave(); await settle();
+  assert.equal(h.env.saves.length, 3);
+});
+
+test('failed explicit resolution retains the persistent conflict barrier', async () => {
+  const h = setup(); await queueConflict(h);
+  h.env.save = async (_id, payload) => {
+    h.env.saves.push(payload);
+    return { ok: false, status: 500, body: { message: 'disk full' } };
+  };
+  await h.persistence.resolveConflict();
+  h.edit('later'); h.autosave(); await settle();
+  assert.equal(h.env.saves.length, 2);
+  await assert.rejects(h.persistence.saveNow(), /版本冲突/);
+});
+
+test('explicit reload releases conflict and next edit saves against the remote version', async () => {
+  const h = setup(); await queueConflict(h);
+  await h.persistence.reloadFromServer();
+  assert.equal(h.canvas.nodes[0].data.prompt, 'remote edit');
+  h.edit('after reload'); h.autosave(); await settle();
+  assert.equal(h.env.saves.length, 2);
+  assert.equal(h.env.saves[1].expectedVersion, 12);
+});

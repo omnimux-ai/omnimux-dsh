@@ -103,6 +103,7 @@ export function useWorkspacePersistence(
   const serverVersionRef = useRef(0);
   const lastSavedSigRef = useRef('');
   const currentSigRef = useRef('');
+  const conflictRef = useRef(false);
   const lastSavedNodeCountRef = useRef(0);
   const lastInitIdRef = useRef('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,6 +128,7 @@ export function useWorkspacePersistence(
     serverVersionRef.current = workspace.version;
     if (lastInitIdRef.current === workspace.id) return;
     lastInitIdRef.current = workspace.id;
+    conflictRef.current = false;
     // 以磁盘/服务端快照为 last-saved，不读可能已被 reset 的 store
     lastSavedSigRef.current = graphSig(workspace.nodes, workspace.edges);
     currentSigRef.current = lastSavedSigRef.current;
@@ -148,36 +150,39 @@ export function useWorkspacePersistence(
   const resolveRemoteAdvance = useCallback(async (input: {
     localNodes: SerializedCanvasNode[];
     localEdges: SerializedCanvasEdge[];
-  }): Promise<void> => {
+  }): Promise<boolean> => {
     const ws = workspaceRef.current;
     if (!ws) {
       setStatus('error');
-      return;
+      return false;
     }
     const latest = await getWorkspace(ws.id);
     if (!latest.ok || !latest.body.workspace) {
       setStatus('error');
-      return;
+      return false;
     }
-    if (workspaceRef.current?.id !== ws.id) return;
+    if (workspaceRef.current?.id !== ws.id) return false;
     const snapshot = latest.body.workspace;
+    serverVersionRef.current = snapshot.version;
+    // Only the explicit resolution controls may release an existing conflict.
+    if (conflictRef.current) return false;
     const current = readStoreCapture();
     // A late conflict response must not reload over edits made during the PUT.
     if (graphSig(current.nodes, current.edges) !== graphSig(input.localNodes, input.localEdges)) {
-      serverVersionRef.current = snapshot.version;
       setIsDirty(true);
+      conflictRef.current = true;
       setStatus('conflict');
-      return;
+      return false;
     }
     const decision = decideRemoteVersionAdvance({
       localSignature: graphSig(input.localNodes, input.localEdges),
       lastSavedSignature: lastSavedSigRef.current,
       remoteSignature: graphSig(snapshot.nodes, snapshot.edges),
     });
-    serverVersionRef.current = snapshot.version;
     if (decision === 'conflict') {
+      conflictRef.current = true;
       setStatus('conflict');
-      return;
+      return false;
     }
     lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
     lastSavedNodeCountRef.current = snapshot.nodes.length;
@@ -187,6 +192,7 @@ export function useWorkspacePersistence(
     setIsDirty(false);
     setStatus('idle');
     onSavedRef.current?.(snapshot);
+    return true;
   }, []);
 
   /**
@@ -196,6 +202,7 @@ export function useWorkspacePersistence(
     capture: GraphCapture,
     cause: PersistCause,
     force = false,
+    resolveConflict = false,
   ): Promise<SaveOutcome> => {
     const ws = workspaceRef.current;
     const previous = savingRef.current;
@@ -204,13 +211,16 @@ export function useWorkspacePersistence(
       if (!ws || workspaceRef.current?.id !== ws.id || (!force && !enabledRef.current)) {
         return { error: '画布尚未就绪，请重新打开后再试' };
       }
+      if (conflictRef.current && !resolveConflict) {
+        return { error: '画布版本冲突，请先保留本地内容或重新加载' };
+      }
       const signature = graphSig(capture.nodes, capture.edges);
       const decision = decidePersist({
         lastSavedNodeCount: lastSavedNodeCountRef.current,
         nextNodes: capture.nodes,
         nextEdges: capture.edges,
         cause,
-        lastSavedSignature: lastSavedSigRef.current,
+        lastSavedSignature: resolveConflict && conflictRef.current ? '' : lastSavedSigRef.current,
         nextSignature: signature,
       });
       if (!decision.persist || !decision.snapshot) {
@@ -231,13 +241,18 @@ export function useWorkspacePersistence(
           return { error: '画布已切换，请重新发起生成' };
         }
         if (result.status === 409) {
-          await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
+          const reconciled = await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
+          if (!reconciled) {
+            conflictRef.current = true;
+            setStatus('conflict');
+          }
           return { error: '画布版本冲突，请确认最新内容后重新生成' };
         }
         if (!result.ok || !result.body.workspace) {
-          setStatus('error');
+          setStatus(conflictRef.current ? 'conflict' : 'error');
           return { error: result.body.message ?? '画布保存失败，请重试' };
         }
+        if (resolveConflict) conflictRef.current = false;
         const version = result.body.workspace.version;
         serverVersionRef.current = version;
         lastSavedSigRef.current = signature;
@@ -252,7 +267,7 @@ export function useWorkspacePersistence(
         onSavedRef.current?.(result.body.workspace);
         return { version };
       } catch {
-        setStatus('error');
+        setStatus(conflictRef.current ? 'conflict' : 'error');
         return { error: '画布保存失败，请重试' };
       }
     })();
@@ -406,19 +421,30 @@ export function useWorkspacePersistence(
   }, [performSave]);
 
   const resolveConflict = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     const capture = readStoreCapture();
-    await performSave(capture, inferPersistCause(capture.nodes.length, 'autosave'));
+    await performSave(capture, inferPersistCause(capture.nodes.length, 'autosave'), false, true);
   }, [performSave]);
 
   const reloadFromServer = useCallback(async () => {
     const ws = workspaceRef.current;
     if (!ws) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (savingRef.current) await savingRef.current;
     const latest = await getWorkspace(ws.id);
     if (!latest.ok || !latest.body.workspace) {
       setStatus('error');
       return;
     }
+    if (workspaceRef.current?.id !== ws.id) return;
     const snapshot = latest.body.workspace;
+    conflictRef.current = false;
     serverVersionRef.current = snapshot.version;
     lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
     lastSavedNodeCountRef.current = snapshot.nodes.length;
@@ -439,7 +465,7 @@ export function useWorkspacePersistence(
       if (!enabledRef.current) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const ws = workspaceRef.current;
-      if (!ws || savingRef.current) return;
+      if (!ws || savingRef.current || conflictRef.current) return;
       inFlight = true;
       try {
         const probe = await getWorkspaceVersion(ws.id);
