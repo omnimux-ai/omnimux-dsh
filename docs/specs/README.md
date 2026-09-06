@@ -21,6 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `accepted` | [2026-09-06-inspiration-pagination-refresh.md](2026-09-06-inspiration-pagination-refresh.md) | 灵感库分页刷新约束 | `omnimux-inspiration` | 2026-09-06 | #637：追加分页不得反馈触发第一页刷新；末页停止请求，筛选、激活和授权刷新统一复位第一页。 |
 | `accepted` | [2026-09-06-gxgen-incremental-import.md](2026-09-06-gxgen-incremental-import.md) | Gxgen 灵感增量导入 | `omnimux` | 2026-09-06 | #630：按 TikTok ID 去重、只新增、原 R2 封面预检、冻结计划及逐条回执；同计划恢复与复验。 |
 | `accepted` | [2026-09-05-video-phase-one-scope.md](2026-09-05-video-phase-one-scope.md) | 视频模型阶段一范围：七个产品型号 | `omnimux/catalog` | 2026-09-05 | 当前阶段仅 Seedance 2.0/2.0 Fast/2.0 Mini/2.5、Wan 3.0、MiniMax H3 和 Grok 视频 1.5；wire 和模式按具体渠道官方 API 文档核对，Kling 与 Wan 派生型号延后不排期。 |
 | `accepted` | [2026-09-05-model-contract-docs-first.md](2026-09-05-model-contract-docs-first.md) | 模型合同：渠道官方 API 文档优先方法修订 | `omnimux/catalog` | 2026-09-05 | 当前方法：具体 EvoLink/APIMart 模型 API 文档决定模式、字段、角色、数量、格式与时长；文档支持、离线实现验证、历史真实执行分列。无真实请求例外；`execution.live` 是待对齐实现差异。 |

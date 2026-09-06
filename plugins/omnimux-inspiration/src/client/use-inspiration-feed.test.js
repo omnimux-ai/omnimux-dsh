@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import React, { act } from 'react'
+import { createRoot } from 'react-dom/client'
+import { JSDOM } from 'jsdom'
+import { invalidateInspirationCache } from './api.js'
 import {
   applyCachedPage,
   cacheKeyOf,
@@ -13,6 +17,56 @@ import {
   toggleIdInSet,
   updateItemInList,
 } from './feed-helpers.js'
+import { useInspirationFeed } from './use-inspiration-feed.js'
+
+function jsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  }
+}
+
+function inspirationRows(prefix, start, count) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${prefix}-${start + index}`,
+    title: `${prefix} ${start + index}`,
+  }))
+}
+
+async function waitFor(predicate, message) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (predicate()) return
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  }
+  assert.fail(message)
+}
+
+class TestIntersectionObserver {
+  static instances = []
+
+  constructor(callback) {
+    this.callback = callback
+    this.disconnected = false
+    TestIntersectionObserver.instances.push(this)
+  }
+
+  observe(target) {
+    this.target = target
+  }
+
+  disconnect() {
+    this.disconnected = true
+  }
+
+  intersect() {
+    if (!this.disconnected) {
+      this.callback([{ isIntersecting: true, target: this.target }])
+    }
+  }
+}
 
 describe('use-inspiration-feed pure helpers', () => {
   describe('cacheKeyOf', () => {
@@ -262,5 +316,105 @@ describe('use-inspiration-feed pure helpers', () => {
       assert.equal(hit, false)
       assert.equal(loadingVal, true)
     })
+  })
+})
+
+describe('useInspirationFeed lifecycle', () => {
+  it('keeps appended pages, stops at the end, and resets filters to page one', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const originalWindow = globalThis.window
+    const originalDocument = globalThis.document
+    const originalFetch = globalThis.fetch
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    const originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+    const requests = []
+    let feed
+
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.IntersectionObserver = TestIntersectionObserver
+    TestIntersectionObserver.instances = []
+    invalidateInspirationCache()
+
+    globalThis.fetch = async (input) => {
+      const url = new URL(String(input), dom.window.location.href)
+      const page = Number(url.searchParams.get('page'))
+      const type = url.searchParams.get('type') || ''
+      requests.push({ path: url.pathname, page, type })
+      if (url.pathname === '/omnimux/inspiration/local') {
+        return jsonResponse(200, { data: { items: [], total: 0 } })
+      }
+      if (url.pathname !== '/omnimux/inspiration') {
+        return jsonResponse(404, { error: 'not-found' })
+      }
+      if (type === 'video') {
+        return jsonResponse(200, {
+          data: { items: inspirationRows('video', 1, 20), total: 25 },
+        })
+      }
+      const items = page === 1
+        ? inspirationRows('all', 1, 20)
+        : inspirationRows('all', 21, 10)
+      return jsonResponse(200, { data: { items, total: 30 } })
+    }
+
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return React.createElement('div', { ref: feed.sentinelRef })
+    }
+
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness))
+      })
+      await waitFor(() => feed?.items.length === 20 && feed?.hasMore, 'first page did not load')
+
+      const pageOneObserver = TestIntersectionObserver.instances.find((observer) => !observer.disconnected)
+      assert.ok(pageOneObserver, 'pagination sentinel should be observed after page one')
+      await act(async () => {
+        pageOneObserver.intersect()
+      })
+      await waitFor(() => feed?.items.length === 30 && !feed?.hasMore, 'second page did not append')
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+      assert.equal(feed.page, 2)
+      assert.deepEqual(feed.items.map((item) => item.id), inspirationRows('all', 1, 30).map((item) => item.id))
+      assert.deepEqual(
+        requests.filter((request) => request.path === '/omnimux/inspiration').map(({ page, type }) => ({ page, type })),
+        [{ page: 1, type: '' }, { page: 2, type: '' }],
+      )
+
+      for (const observer of TestIntersectionObserver.instances) observer.intersect()
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+      assert.equal(requests.filter((request) => request.path === '/omnimux/inspiration').length, 2)
+
+      await act(async () => {
+        feed.setType('video')
+      })
+      await waitFor(
+        () => feed?.page === 1 && feed?.items[0]?.id === 'video-1',
+        'filter change did not load page one',
+      )
+      assert.equal(feed.items.length, 20)
+      assert.deepEqual(
+        requests.filter((request) => request.path === '/omnimux/inspiration').at(-1),
+        { path: '/omnimux/inspiration', page: 1, type: 'video' },
+      )
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      globalThis.window = originalWindow
+      globalThis.document = originalDocument
+      globalThis.fetch = originalFetch
+      globalThis.IntersectionObserver = originalIntersectionObserver
+      globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
+    }
   })
 })
