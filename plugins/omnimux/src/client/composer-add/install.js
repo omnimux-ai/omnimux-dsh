@@ -1,14 +1,9 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AssetPickerModal } from './AssetPickerModal.jsx'
-import { LocalPathPicker } from '../components/local-path-picker/LocalPathPicker.jsx'
-import { createPathImporter } from './path-import.js'
 import { getGlobalAttachmentStore } from '../attachments/store.ts'
-import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
+import { inferKindFromName } from './kind.js'
 import { installComposerAttachmentSubmitCapture } from './submit-inject.js'
-import { registerComposerAddCommands } from './commands.js'
-import { notifyClientActionRuntimeUpdateOnce } from './client-action-runtime-notice.js'
-import { createPickerActionController } from './picker-action.js'
 
 const HOST_ID = 'omnimux-composer-add-host'
 
@@ -50,6 +45,11 @@ function tx(t, key, vars) {
   return interpolate(typeof raw === 'string' && raw ? raw : key, vars)
 }
 
+function currentSessionId(store) {
+  const id = store.getActiveSessionId?.() || ''
+  return id && id !== 'default' ? id : ''
+}
+
 function alreadyEntityIds(store, sessionId) {
   return new Set(
     store.getSnapshot(sessionId).map((row) => row.entityId).filter(Boolean),
@@ -61,11 +61,9 @@ function applyAddResults(store, sessionId, items, t) {
   let duplicate = 0
   let quota = 0
   let failed = 0
-  const outcomes = []
   for (const item of items) {
     if (!item || item.ok === false) {
       failed += 1
-      outcomes.push(item)
       continue
     }
     const result = store.addAttachment(sessionId, {
@@ -82,11 +80,6 @@ function applyAddResults(store, sessionId, items, t) {
     else if (result.reason === 'duplicate') duplicate += 1
     else if (result.reason === 'quota-exceeded') quota += 1
     else failed += 1
-    outcomes.push(result.ok || result.reason === 'duplicate' ? item : {
-      ...item,
-      ok: false,
-      message: tx(t, result.reason === 'quota-exceeded' ? 'composerAdd.toast.quota' : 'composerAdd.toast.failed', { n: 1 }),
-    })
   }
   const parts = []
   if (added) parts.push(tx(t, 'composerAdd.toast.added', { n: added }))
@@ -95,15 +88,14 @@ function applyAddResults(store, sessionId, items, t) {
   if (failed) parts.push(tx(t, 'composerAdd.toast.failed', { n: failed }))
   if (parts.length) toast(parts.join(' · '))
   console.debug('[omnimux:composer-add]', 'add-results', { added, duplicate, quota, failed })
-  return { added, duplicate, quota, failed, outcomes }
+  return { added, duplicate, quota, failed }
 }
 
-async function requestJson(path, body, signal) {
+async function requestJson(path, body) {
   const response = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal,
   })
   let json = {}
   try { json = await response.json() } catch { json = {} }
@@ -120,7 +112,7 @@ function ensureHost(doc) {
 }
 
 /**
- * Composer 附件业务侧：资产库与本地路径面板、文件物化与
+ * Composer 附件业务侧：资产库 modal、本地文件物化、window 事件监听与
  * 提交拦截。「+」菜单入口由 commands.js 通过官方 commandUi.register
  * 贡献（合并进原生命令列表），这里不再拦截任何官方按钮。
  *
@@ -133,132 +125,92 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
   const store = options.store || getGlobalAttachmentStore()
   const host = ensureHost(doc)
   let modalRoot = null
-  const pickerActions = createPickerActionController()
-
-  const closePickerAction = (action) => {
-    if (!pickerActions.settle(action)) return false
-    renderModal()
-    return true
+  const state = {
+    libraryOpen: false,
   }
 
   const renderModal = () => {
-    const action = pickerActions.current()
+    const sessionId = currentSessionId(store)
     if (!modalRoot) modalRoot = createRoot(host)
-    if (!action) {
-      modalRoot.render(null)
-      return
-    }
-    const { sessionId } = action
-    const owned = () => !action.signal.aborted && pickerActions.isCurrent(action)
-    const common = {
-      key: `picker-action-${pickerActions.revision()}`,
-      onClose: () => { closePickerAction(action) },
-      t: (key, vars) => tx(t, key, vars),
-    }
-    if (action.kind === 'paths') {
-      action.importPaths ??= createPathImporter({
-        materialize: async (paths) => {
-          const result = await requestJson('/omnimux/composer/attachments/materialize', {
-            sessionId, paths,
-          }, action.requestSignal)
-          const rows = Array.isArray(result.body.results) ? result.body.results : []
-          if (rows.length === 0) {
-            throw new Error(result.body.message || tx(t, 'composerAdd.toast.failed', { n: paths.length }))
-          }
-          return rows
-        },
-        adopt: (rows) => applyAddResults(store, sessionId, rows, t).outcomes,
-        isCurrent: owned,
-      })
-      modalRoot.render(createElement(LocalPathPicker, {
-        ...common,
-        remaining: Math.max(0, MAX_ATTACHMENTS - store.getSnapshot(sessionId).length),
-        onConfirm: async (paths) => {
-          if (!owned()) return null
-          const remaining = MAX_ATTACHMENTS - store.getSnapshot(sessionId).length
-          if (paths.length > remaining) throw new Error(tx(t, 'composerAdd.toast.quota'))
-          const failed = await action.importPaths(paths)
-          if (!failed) return null
-          if (failed.remainingPaths.length === 0) closePickerAction(action)
-          return failed
-        },
-      }))
-      return
-    }
     modalRoot.render(createElement(AssetPickerModal, {
-      ...common,
-      open: true,
-      occupied: store.getSnapshot(sessionId).length,
-      alreadyIds: alreadyEntityIds(store, sessionId),
+      open: state.libraryOpen,
+      onClose: () => { state.libraryOpen = false; renderModal() },
+      t,
+      occupied: sessionId ? store.getSnapshot(sessionId).length : 0,
+      alreadyIds: sessionId ? alreadyEntityIds(store, sessionId) : new Set(),
       onConfirm: async (picked) => {
-        if (!owned()) return
+        if (!sessionId) return
         const result = await requestJson('/omnimux/composer/attachments/instantiate', {
           sessionId,
           assetIds: picked.map((row) => row.id),
-        }, action.requestSignal)
-        if (!owned()) return
+        })
         const rows = Array.isArray(result.body.results) ? result.body.results : []
         applyAddResults(store, sessionId, rows.map((row) => ({
           ...row,
           entityId: row.entityId || row.sourcePath,
         })), t)
         if (!result.ok && rows.length === 0) {
-          const message = result.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 })
-          toast(message)
-          throw new Error(message)
+          toast(result.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 }))
         }
-        closePickerAction(action)
+        state.libraryOpen = false
+        renderModal()
       },
     }))
   }
 
-  const onKey = (event) => {
-    if (event.key === 'Escape') closePickerAction(pickerActions.current())
-  }
-  doc.addEventListener('keydown', onKey)
-
-  const openPicker = (kind, sessionId, signal, restoreComposerFocus, registrationSignal) => new Promise((resolve) => {
-    const actionSignal = AbortSignal.any([signal, registrationSignal])
-    if (!sessionId || actionSignal.aborted) {
-      resolve()
+  /**
+   * @param {string} sessionId
+   * @param {'file' | 'directory'} kind
+   */
+  async function addLocalPaths(sessionId, kind = 'file') {
+    if (!sessionId) {
+      toast(tx(t, 'composerAdd.needSession'))
       return
     }
-    const requestController = new AbortController()
-    const closeIfCurrent = () => { closePickerAction(action) }
-    const action = pickerActions.start({
-      kind,
-      sessionId,
-      signal: actionSignal,
-      requestSignal: AbortSignal.any([actionSignal, requestController.signal]),
-      restoreComposerFocus,
-      resolve: () => {
-        actionSignal.removeEventListener('abort', closeIfCurrent)
-        requestController.abort()
-        resolve()
-      },
-    })
-    actionSignal.addEventListener('abort', closeIfCurrent, { once: true })
-    renderModal()
-  })
-  const onAddFile = (...args) => openPicker('paths', ...args)
-  const onAddLibrary = (...args) => openPicker('library', ...args)
-  registerComposerAddCommands(options.ctx || {}, {
-    t,
-    onAddFile,
-    onAddLibrary,
-    onClientActionUnavailable: () => {
-      notifyClientActionRuntimeUpdateOnce({
-        storage: () => doc.defaultView?.localStorage,
-        notify: () => toast(tx(t, 'composerAdd.runtimeUpdateRequired')),
-      })
-    },
-  })
+    const pickKind = kind === 'directory' ? 'directory' : 'file'
+    const picked = await requestJson('/omnimux/assets/pick', { kind: pickKind })
+    if (picked.status === 501) {
+      toast(tx(t, 'composerAdd.pickerUnsupported'))
+      return
+    }
+    const paths = Array.isArray(picked.body.paths) ? picked.body.paths.filter(Boolean) : []
+    if (!picked.ok) {
+      toast(picked.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 }))
+      return
+    }
+    if (paths.length === 0) return
+    const materialized = await requestJson('/omnimux/composer/attachments/materialize', { sessionId, paths })
+    const rows = Array.isArray(materialized.body.results) ? materialized.body.results : []
+    applyAddResults(store, sessionId, rows, t)
+    if (!materialized.ok && rows.length === 0) {
+      toast(materialized.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 }))
+    }
+  }
+
+  const onKey = (event) => {
+    if (event.key !== 'Escape') return
+    if (state.libraryOpen) {
+      state.libraryOpen = false
+      renderModal()
+    }
+  }
+
+  doc.addEventListener('keydown', onKey)
+  const onCmdFile = () => { void addLocalPaths(currentSessionId(store), 'file') }
+  const onCmdFolder = () => { void addLocalPaths(currentSessionId(store), 'directory') }
+  const onCmdLibrary = () => { state.libraryOpen = true; renderModal() }
+  const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+  win?.addEventListener?.('omnimux:composer-add-file', onCmdFile)
+  win?.addEventListener?.('omnimux:composer-add-folder', onCmdFolder)
+  win?.addEventListener?.('omnimux:composer-add-library', onCmdLibrary)
   renderModal()
   const stopSubmit = installComposerAttachmentSubmitCapture(doc, { store })
 
   return () => {
     doc.removeEventListener('keydown', onKey)
-    closePickerAction(pickerActions.current())
+    win?.removeEventListener?.('omnimux:composer-add-file', onCmdFile)
+    win?.removeEventListener?.('omnimux:composer-add-folder', onCmdFolder)
+    win?.removeEventListener?.('omnimux:composer-add-library', onCmdLibrary)
     stopSubmit()
     modalRoot?.unmount()
     host.remove()

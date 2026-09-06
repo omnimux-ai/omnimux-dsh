@@ -18,6 +18,7 @@ import { getGlobalAttachmentStore } from './attachments/store.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installComposerEnvelopeCapture } from './composer-envelope.js'
 import { installComposerAddCapture } from './composer-add/install.js'
+import { registerComposerAddCommands } from './composer-add/commands.js'
 
 export const name = 'omnimux'
 export const inject = ['slots', 'locale']
@@ -143,8 +144,14 @@ export function apply(ctx) {
   }, 'omnimux: hub event client')
   if (typeof document !== 'undefined') {
     ctx.effect?.(() => installComposerEnvelopeCapture(document), 'omnimux: composer envelope capture')
-    ctx.effect?.(() => installComposerAddCapture(document, { t, ctx }), 'omnimux: composer add capture')
+    ctx.effect?.(() => installComposerAddCapture(document, { t }), 'omnimux: composer add capture')
   }
+  registerComposerAddCommands(ctx, {
+    t,
+    onAddFile: () => { window.dispatchEvent(new CustomEvent('omnimux:composer-add-file')) },
+    onAddFolder: () => { window.dispatchEvent(new CustomEvent('omnimux:composer-add-folder')) },
+    onAddLibrary: () => { window.dispatchEvent(new CustomEvent('omnimux:composer-add-library')) },
+  })
   // ctx.effect(() => mountSidebarEntry(apps, t, ctx.locale, SIDEBAR_GLOBAL().register), 'omnimux: sidebar apps entry')
   // ctx.effect(() => mountAppTabs(t, ctx.locale, SIDEBAR_GLOBAL().register), 'omnimux: sidebar app tabs')
   // ctx.slots.inject('shell.overlay', () => ctx.slots.register({
