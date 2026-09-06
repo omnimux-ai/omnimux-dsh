@@ -1,5 +1,6 @@
 const REBUILT_EVENT = 'omnimux:hmr:rebuilt'
 const STATE_KEY = Symbol.for('omnimux.hmr.state')
+const LEGACY_HMR_ID = '@deepseek-ai/dsh-client-hmr'
 
 /**
  * Serial plugin replacement using the installed Loader and module services.
@@ -12,6 +13,7 @@ export function installWebSocketHmr(ctx, events, document, options = {}) {
   const target = document.defaultView
   const fetchSnapshot = options.fetch ?? target.fetch.bind(target)
   const reloadPage = options.reloadPage ?? (() => target.location.reload())
+  const legacyDriver = ctx.modules.manifest.modules.some(({ id }) => id === LEGACY_HMR_ID)
   if (target[STATE_KEY]?.modules !== ctx.modules) {
     target[STATE_KEY] = {
       modules: ctx.modules,
@@ -76,6 +78,11 @@ export function installWebSocketHmr(ctx, events, document, options = {}) {
         || snapshot.entries.some(row => typeof row?.id !== 'string' || typeof row?.rev !== 'string')) {
         throw new Error('Invalid HMR revision snapshot')
       }
+      if (legacyDriver) {
+        // A synced client can precede Host restart. Migrate only once the Host graph is ready.
+        if (!snapshot.entries.some(({ id }) => id === LEGACY_HMR_ID)) reloadPage()
+        return
+      }
       if (state.epoch !== null && state.epoch !== snapshot.epoch) {
         // Host startup assigns new opaque revisions to all modules, including boot modules.
         reloadPage()
@@ -92,7 +99,7 @@ export function installWebSocketHmr(ctx, events, document, options = {}) {
       if (snapshotRequest === request) snapshotRequest = null
     }
   }
-  const unsubscribe = events.subscribe(REBUILT_EVENT, ({ payload }) => {
+  const unsubscribe = legacyDriver ? () => {} : events.subscribe(REBUILT_EVENT, ({ payload }) => {
     if (typeof payload?.id === 'string') notifications.set(payload.id, (notifications.get(payload.id) ?? 0) + 1)
     enqueue(payload)
   })
