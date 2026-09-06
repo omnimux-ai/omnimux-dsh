@@ -348,7 +348,7 @@ test('workflow_run wait=true returns the terminal summary with per-node results'
 test('workflow_run resolves by unique name and supports subset mode', async () => {
   const h = makeHarness();
   try {
-    await h.seedWorkspace('按名执行');
+    const wsId = await h.seedWorkspace('按名执行');
     const byName = await h.tool('workflow_run').execute({
       workspace_name: '按名执行',
       wait: true,
@@ -368,6 +368,10 @@ test('workflow_run resolves by unique name and supports subset mode', async () =
     assert.equal(subset.status, 'completed');
     assert.equal(subset.totalNodes, 2);
 
+    // Persist the displayed current result before a single-node execution.
+    const current = (await h.call({ method: 'GET', url: `${PREFIX}/api/workspaces/${wsId}` })).body.workspace;
+    current.nodes.find((node) => node.id === 'txt1').data.generatedContent = 'current selected result';
+    await h.call({ method: 'PUT', url: `${PREFIX}/api/workspaces/${wsId}`, body: { expectedVersion: current.version, nodes: current.nodes, edges: current.edges } });
     // single: only img1 (direct target only) — 1 node.
     const single = await h.tool('workflow_run').execute({
       workspace_name: '按名执行',

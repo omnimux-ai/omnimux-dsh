@@ -66,6 +66,7 @@ export interface WorkflowAgentDeps {
   executionManager: ExecutionManager;
   /** Plugin media root (absolute) — resolves media URLs to local paths. */
   mediaDir: string;
+  resolveProjectFile?: import('../execution/executionMediaSource.ts').ResolveExecutionProjectFile;
   /** Same lazy-bind helper as POST /executions (media generate needs a project root). */
   ensureProjectBound?: EnsureProjectBoundFn;
   /**

@@ -574,6 +574,12 @@ test('execution API: single mode runs only the target node and seeds upstream ou
   const h = makeHarness();
   try {
     const wsId = await h.createLinearWorkspace(3);
+    const rejected = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.body.reasonCode, 'input_waiting');
+    const current = (await h.call({ method: 'GET', url: `/omnimux-workflow/api/workspaces/${wsId}` })).body.workspace;
+    current.nodes.find((node) => node.id === 'n1').data.generatedContent = 'current upstream result';
+    await h.call({ method: 'PUT', url: `/omnimux-workflow/api/workspaces/${wsId}`, headers: h.localHeaders, body: { expectedVersion: current.version, nodes: current.nodes, edges: current.edges } });
     // Single mode on n2: only n2 executes, n1 and n3 stay untouched
     const created = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
     assert.equal(created.status, 200);

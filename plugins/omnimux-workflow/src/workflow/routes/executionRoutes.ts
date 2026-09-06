@@ -2,6 +2,7 @@
  * Execution collection, item, control, and SSE event stream.
  */
 import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api';
+import type { ResolveExecutionProjectFile } from '../execution/executionMediaSource.ts';
 import { buildInitialOutputs } from '../execution/executionInputs.ts';
 import { jsonBodyProblem, messageOf } from '../../http/helpers';
 import { WorkflowStoreError } from '../workspace/WorkspaceStore';
@@ -37,6 +38,8 @@ const STATUS_BY_CODE: Record<string, number> = {
 
 export function createExecutionRoutes(opts: {
   store: WorkspaceStore;
+  mediaDir?: string;
+  resolveProjectFile?: ResolveExecutionProjectFile;
   executionManager: ExecutionManager;
   ensureProjectBound?: EnsureProjectBoundFn;
   getCatalog?: () => Promise<CapabilityCatalog | null>;
@@ -133,6 +136,7 @@ export function createExecutionRoutes(opts: {
           const readiness = findExecutionReadinessFailure(
             subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
             getCatalog ? await getCatalog() : null,
+            { nodes: snapshot.nodes, edges: snapshot.edges, workspaceId, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
           );
           if (readiness) {
             return {
@@ -165,7 +169,7 @@ export function createExecutionRoutes(opts: {
           if (store.get(workspaceId).version !== snapshot.version) {
             return { status: 409, body: { error: 'version_conflict', message: '输入已更新，请确认当前内容后重新生成' } };
           }
-          const initialOutputs = buildInitialOutputs(snapshot, subgraph.nodeIdSet);
+          const initialOutputs = buildInitialOutputs(snapshot, subgraph.nodeIdSet, { mediaDir: opts.mediaDir ?? '', resolveProjectFile: opts.resolveProjectFile });
 
           const entry = executionManager.createExecution({
             workspaceId: snapshot.id,

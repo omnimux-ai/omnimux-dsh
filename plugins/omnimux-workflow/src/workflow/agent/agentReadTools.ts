@@ -127,7 +127,8 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       }
       const readiness = findExecutionReadinessFailure(
         subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
-        (typeof deps.getCatalog === 'function' ? deps.getCatalog() : null) as CapabilityCatalog | null,
+        (typeof deps.getCatalog === 'function' ? await deps.getCatalog() : null) as CapabilityCatalog | null,
+        { nodes: workspace.nodes, edges: workspace.edges, workspaceId: workspace.id, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
       );
       if (readiness) {
         return {
@@ -155,7 +156,12 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       if (store.get(workspace.id).version !== workspace.version) {
         return errorBody('version_conflict', '输入已更新，请确认当前内容后重新生成');
       }
-      const initialOutputs = buildInitialOutputs(workspace, subgraph.nodeIdSet);
+      let initialOutputs;
+      try {
+        initialOutputs = buildInitialOutputs(workspace, subgraph.nodeIdSet, { mediaDir, resolveProjectFile: deps.resolveProjectFile });
+      } catch (error) {
+        return errorBody((error as { code?: string }).code ?? 'invalid-input', error instanceof Error ? error.message : String(error));
+      }
 
       const entry = executionManager.createExecution({
         workspaceId: workspace.id,
