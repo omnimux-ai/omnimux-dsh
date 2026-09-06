@@ -1,3 +1,4 @@
+import { PUBLISH_PROVIDER, isPublishingAccount } from '../account-policy.js'
 /**
  * fetch 封装 over 本插件 Host 路由（/omnimux/publish/*）与 hub 只读面
  * （/omnimux/accounts，hub 权威合并实现）。同源相对路径，Electron 下走
@@ -67,7 +68,7 @@ export async function publishRequest(path, opts = {}) {
   } catch {
     json = { error: `HTTP ${String(response.status)}` }
   }
-  return { ok: response.ok, status: response.status, body: json }
+  return { ok: response.ok && json?.success !== false, status: response.ok && json?.success === false ? 502 : response.status, body: json }
 }
 
 /** 便宜轮询：传当前 revision，未变化时 unchanged:true。 */
@@ -162,11 +163,14 @@ export function retryTask(taskId) {
  * 账号列表：hub 现有只读面（权威 ViewRow 合并）——本插件不自建账号路由。
  * @param {{ platform?: string }} [filters]
  */
-export function listHubAccounts(filters = {}) {
-  const query = new URLSearchParams()
-  if (filters.platform) query.set('platform', filters.platform)
-  const suffix = query.toString() ? `?${query}` : ''
-  return quotaGuard(() => publishRequest(`/omnimux/accounts${suffix}`), { capability: 'publish' })()
+export async function listHubAccounts(filters = {}) {
+  const query = new URLSearchParams({ provider: PUBLISH_PROVIDER, platform: 'tiktok' })
+  const result = await quotaGuard(() => publishRequest(`/omnimux/accounts?${query}`), { capability: 'publish' })()
+  if (result.ok && Array.isArray(result.body?.accounts)) {
+    return { ...result, body: { ...result.body, accounts: result.body.accounts.filter(isPublishingAccount) } }
+  }
+  if (result.ok) return { ok: false, status: 502, body: { error: 'invalid account list response' } }
+  return result
 }
 
 /**
@@ -176,7 +180,7 @@ export function listHubAccounts(filters = {}) {
  */
 export function connectTikTokAccount() {
   return quotaGuard(
-    () => publishRequest('/omnimux/accounts', { method: 'POST', body: { platform: 'tiktok' } }),
+    () => publishRequest('/omnimux/accounts', { method: 'POST', body: { platform: 'tiktok', provider: PUBLISH_PROVIDER } }),
     { capability: 'publish' },
   )()
 }
@@ -196,7 +200,7 @@ export function disconnectHubAccount(accountId) {
     return Promise.resolve({ ok: false, status: 400, body: { error: 'id is required' } })
   }
   return quotaGuard(
-    () => publishRequest(`/omnimux/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    () => publishRequest(`/omnimux/accounts/${encodeURIComponent(id)}?provider=${PUBLISH_PROVIDER}`, { method: 'DELETE' }),
     { capability: 'publish' },
   )()
 }

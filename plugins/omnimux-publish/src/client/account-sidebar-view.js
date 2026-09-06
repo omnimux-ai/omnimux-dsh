@@ -1,3 +1,4 @@
+import { isPublishingAccount } from '../account-policy.js'
 /**
  * TikTok 账号侧栏视图的纯函数逻辑（无 DOM / 无 React，可 node --test 直测）。
  * 数据真源：hub `GET /omnimux/accounts?platform=tiktok`（ViewRow 合并），
@@ -17,7 +18,7 @@ export function extractAccounts(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return []
   const rows = /** @type {Record<string, unknown>} */ (body).accounts
   if (!Array.isArray(rows)) return []
-  return rows.filter((row) => row && typeof row === 'object' && !Array.isArray(row))
+  return rows.filter(isPublishingAccount)
 }
 
 /**
@@ -41,7 +42,7 @@ export function matchesAccountQuery(row, query) {
  */
 export function filterAccounts(rows, query = '') {
   const list = Array.isArray(rows) ? rows : []
-  return list.filter((row) => matchesAccountQuery(row, query))
+  return list.filter((row) => isPublishingAccount(row) && matchesAccountQuery(row, query))
 }
 
 /**
@@ -116,7 +117,7 @@ export function findNewAccount(baselineIds, rows) {
   const baseline = baselineIds instanceof Set ? baselineIds : new Set()
   const list = Array.isArray(rows) ? rows : []
   for (const row of list) {
-    if (!row || typeof row !== 'object') continue
+    if (!isPublishingAccount(row)) continue
     if (!baseline.has(String(row.id))) return row
   }
   return null

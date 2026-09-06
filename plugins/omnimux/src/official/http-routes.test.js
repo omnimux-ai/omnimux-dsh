@@ -61,8 +61,8 @@ function accountFixture() {
   return {
     data: {
       accounts: [
-        { id: 'a', platform: 'tiktok', display_name: 'Ada', username: 'ada', group: 'site-group' },
-        { id: 'b', platform: 'youtube', display_name: 'Bo', username: 'bo' },
+        { id: 'a', provider: 'zernio', platform: 'tiktok', display_name: 'Ada', username: 'ada', group: 'site-group' },
+        { id: 'b', provider: 'zernio', platform: 'youtube', display_name: 'Bo', username: 'bo' },
       ],
     },
   }
@@ -74,7 +74,7 @@ function accountFixtureWithAvatars() {
       accounts: [
         {
           id: 'a',
-          platform: 'tiktok',
+          provider: 'zernio', platform: 'tiktok',
           display_name: 'Ada',
           username: 'ada',
           group: 'site-group',
@@ -82,7 +82,7 @@ function accountFixtureWithAvatars() {
         },
         {
           id: 'b',
-          platform: 'youtube',
+          provider: 'zernio', platform: 'youtube',
           display_name: 'Bo',
           username: 'bo',
           avatar_url: 'https://cdn.example/b.png',
@@ -154,17 +154,17 @@ describe('official accounts dispatcher', () => {
       client: clientWith(async () => ({
         data: {
           accounts: [
-            { id: 'a', platform: 'tiktok', group: 'ops', access_token: 'pat-nope' },
-            { id: 'b', platform: 'youtube', group: 'ads' },
+            { id: 'a', provider: 'zernio', platform: 'tiktok', group: 'ops', access_token: 'pat-nope' },
+            { id: 'b', provider: 'zernio', platform: 'youtube', group: 'ads' },
           ],
         },
       })),
     })
-    const all = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const all = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(all.status, 200)
     assert.deepEqual(all.body.accounts.map((row) => row.id), ['a', 'b'])
     assert.equal('access_token' in all.body.accounts[0], false)
-    const filtered = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?platform=tiktok' })
+    const filtered = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?platform=tiktok&provider=zernio' })
     assert.deepEqual(filtered.body.accounts.map((row) => row.id), ['a'])
   })
 
@@ -181,19 +181,19 @@ describe('official accounts dispatcher', () => {
     })
     const connected = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/accounts',
+      url: '/omnimux/accounts?provider=zernio',
       origin: LOCAL_ORIGIN,
-      body: { platform: 'tiktok' },
+      body: { provider: 'zernio', platform: 'tiktok' },
     })
     assert.equal(connected.status, 200)
     assert.equal(connected.body.auth_url, 'https://omnimux.ai/cli/connect')
     const removed = await dispatcher.dispatch({
       method: 'DELETE',
-      url: '/omnimux/accounts/acc-1',
+      url: '/omnimux/accounts/acc-1?provider=zernio',
       origin: LOCAL_ORIGIN,
     })
     assert.equal(removed.status, 200)
-    assert.deepEqual(seen, ['POST /api/social/v1/connect', 'DELETE /api/social/v1/accounts/acc-1'])
+    assert.deepEqual(seen, ['POST /api/social/v1/connect', 'DELETE /api/social/v1/accounts/acc-1?provider=zernio'])
   })
 
   it('maps client quota failures to 402', async () => {
@@ -204,7 +204,7 @@ describe('official accounts dispatcher', () => {
         throw new OmnimuxError('quota-exceeded', message)
       }),
     })
-    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(result.status, 402)
     assert.deepEqual(result.body, { error: 'quota-exceeded', message })
   })
@@ -216,26 +216,26 @@ describe('official accounts dispatcher', () => {
         throw new OmnimuxError('needs-omnimux', 'sign in')
       }),
     })
-    const unsigned = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const unsigned = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(unsigned.status, 401)
     const refused = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/accounts',
+      url: '/omnimux/accounts?provider=zernio',
       origin: 'https://evil.example',
-      body: { platform: 'tiktok' },
+      body: { provider: 'zernio', platform: 'tiktok' },
     })
     assert.equal(refused.status, 403)
   })
 
   it('is absent when official tools are unmounted', async () => {
     const dispatcher = createOfficialDispatcher({ official: { mount: false } })
-    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(result.status, 404)
   })
 })
 
 describe('official accounts overlay', () => {
-  it('merges meta into GET rows and lazily prunes stale ids', async () => {
+  it('merges meta without pruning accounts absent from a scoped list', async () => {
     const meta = fakeMetaStore({
       a: { group: 'local-group', agent_usable: true },
       gone: { group: 'ops' },
@@ -245,7 +245,7 @@ describe('official accounts overlay', () => {
       client: clientWith(async () => accountFixture()),
       metaStore: meta,
     })
-    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(result.status, 200)
     const a = result.body.accounts.find((row) => row.id === 'a')
     assert.equal(a.group, 'local-group')
@@ -253,7 +253,8 @@ describe('official accounts overlay', () => {
     assert.equal(a.status, 'active')
     const b = result.body.accounts.find((row) => row.id === 'b')
     assert.equal('agent_usable' in b, false)
-    assert.deepEqual(meta.calls, [{ op: 'prune', id: 'a,b' }])
+    assert.deepEqual(meta.calls, [])
+    assert.deepEqual(meta.read().gone, { group: 'ops' })
   })
 
   it('patches group and agent_usable and returns the merged view row', async () => {
@@ -265,7 +266,7 @@ describe('official accounts overlay', () => {
     })
     const result = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/a',
+      url: '/omnimux/accounts/a?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { group: 'brand', agent_usable: false },
     })
@@ -277,7 +278,7 @@ describe('official accounts overlay', () => {
     assert.deepEqual(meta.calls, [{ op: 'update', id: 'a', patch: { group: 'brand', agent_usable: false } }])
   })
 
-  it('normalizes an empty-string group to a clear and allows pure metadata patches', async () => {
+  it('normalizes an empty-string group and refuses metadata for unverified accounts', async () => {
     const meta = fakeMetaStore({ ghost: { group: 'old', agent_usable: true } })
     const dispatcher = createOfficialDispatcher({
       official: { mount: true },
@@ -286,7 +287,7 @@ describe('official accounts overlay', () => {
     })
     const cleared = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/a',
+      url: '/omnimux/accounts/a?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { group: '  ' },
     })
@@ -294,15 +295,16 @@ describe('official accounts overlay', () => {
     assert.equal('group' in cleared.body.account, true, 'site group still shows when overlay is cleared')
     assert.equal(cleared.body.account.group, 'site-group')
     assert.deepEqual(meta.calls, [{ op: 'update', id: 'a', patch: { group: null } }])
-    // site row missing: still updates and returns the metadata-only row
+    // A missing site row cannot authorize a metadata write.
     const ghost = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/ghost',
+      url: '/omnimux/accounts/ghost?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { agent_usable: false },
     })
-    assert.equal(ghost.status, 200)
-    assert.deepEqual(ghost.body.account, { id: 'ghost', group: 'old', agent_usable: false })
+    assert.equal(ghost.status, 409)
+    assert.equal(ghost.body.error, 'account-provider-mismatch')
+    assert.deepEqual(meta.read().ghost, { group: 'old', agent_usable: true })
   })
 
   it('rejects invalid PATCH bodies with 400', async () => {
@@ -322,7 +324,7 @@ describe('official accounts overlay', () => {
     for (const body of cases) {
       const result = await dispatcher.dispatch({
         method: 'PATCH',
-        url: '/omnimux/accounts/a',
+        url: '/omnimux/accounts/a?provider=zernio',
         origin: LOCAL_ORIGIN,
         body,
       })
@@ -331,7 +333,7 @@ describe('official accounts overlay', () => {
     assert.deepEqual(meta.calls, [], 'no meta writes on invalid input')
     const missingId = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/',
+      url: '/omnimux/accounts/?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { group: 'x' },
     })
@@ -347,7 +349,7 @@ describe('official accounts overlay', () => {
     })
     const refused = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/acc-1',
+      url: '/omnimux/accounts/acc-1?provider=zernio',
       origin: 'https://evil.example',
       body: { group: 'nope' },
     })
@@ -355,7 +357,7 @@ describe('official accounts overlay', () => {
     assert.deepEqual(meta.calls, [])
     const removed = await dispatcher.dispatch({
       method: 'DELETE',
-      url: '/omnimux/accounts/acc-1',
+      url: '/omnimux/accounts/acc-1?provider=zernio',
       origin: LOCAL_ORIGIN,
     })
     assert.equal(removed.status, 200)
@@ -393,7 +395,7 @@ describe('official accounts overlay', () => {
 
       const result = await dispatcher.dispatch({
         method: 'DELETE',
-        url: '/omnimux/accounts/acc-1',
+        url: '/omnimux/accounts/acc-1?provider=zernio',
         origin: LOCAL_ORIGIN,
       })
 
@@ -424,7 +426,7 @@ describe('official accounts overlay', () => {
 
     const result = await dispatcher.dispatch({
       method: 'DELETE',
-      url: '/omnimux/accounts/acc-1',
+      url: '/omnimux/accounts/acc-1?provider=zernio',
       origin: LOCAL_ORIGIN,
     })
 
@@ -447,17 +449,17 @@ describe('official accounts overlay', () => {
       })
       const patched = await dispatcher.dispatch({
         method: 'PATCH',
-        url: '/omnimux/accounts/a',
+        url: '/omnimux/accounts/a?provider=zernio',
         origin: LOCAL_ORIGIN,
         body: { agent_usable: false },
       })
       assert.equal(patched.status, 200)
       assert.equal(patched.body.account.agent_usable, false)
-      const listed = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+      const listed = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
       const a = listed.body.accounts.find((row) => row.id === 'a')
       assert.equal(a.agent_usable, false)
-      await dispatcher.dispatch({ method: 'DELETE', url: '/omnimux/accounts/a', origin: LOCAL_ORIGIN })
-      const after = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+      await dispatcher.dispatch({ method: 'DELETE', url: '/omnimux/accounts/a?provider=zernio', origin: LOCAL_ORIGIN })
+      const after = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
       const gone = after.body.accounts.find((row) => row.id === 'a')
       assert.equal('agent_usable' in gone, false)
     } finally {
@@ -474,13 +476,13 @@ describe('official accounts overlay', () => {
     })
     await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/a',
+      url: '/omnimux/accounts/a?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { group: 'local' },
     })
     const cleared = await dispatcher.dispatch({
       method: 'PATCH',
-      url: '/omnimux/accounts/a',
+      url: '/omnimux/accounts/a?provider=zernio',
       origin: LOCAL_ORIGIN,
       body: { group: null },
     })
@@ -500,7 +502,7 @@ describe('official account avatars', () => {
     assert.equal(avatarIdFromPath('/omnimux/accounts/../avatar'), '')
   })
 
-  it('rewrites a cache hit to the same-origin route and prunes stale ids', async () => {
+  it('rewrites a cache hit without pruning other scoped accounts', async () => {
     const avatars = fakeAvatarStore({
       hits: {
         a: { buffer: PNG_BYTES, mimeType: 'image/png', ext: 'png' },
@@ -512,7 +514,7 @@ describe('official account avatars', () => {
       client: clientWith(async () => accountFixtureWithAvatars()),
       avatarStore: avatars,
     })
-    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(result.status, 200)
     const a = result.body.accounts.find((row) => row.id === 'a')
     const b = result.body.accounts.find((row) => row.id === 'b')
@@ -524,7 +526,7 @@ describe('official account avatars', () => {
     )
     assert.deepEqual(
       avatars.calls.filter((call) => call.op === 'prune'),
-      [{ op: 'prune', id: 'a,b' }],
+      [],
     )
   })
 
@@ -535,7 +537,7 @@ describe('official account avatars', () => {
       client: clientWith(async () => accountFixtureWithAvatars()),
       avatarStore: avatars,
     })
-    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?platform=tiktok' })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?platform=tiktok&provider=zernio' })
     assert.deepEqual(result.body.accounts.map((row) => row.id), ['a'])
     assert.deepEqual(
       avatars.calls.filter((call) => call.op === 'putFromUrl'),
@@ -557,7 +559,7 @@ describe('official account avatars', () => {
       avatarStore: avatars,
       identity: signedIdentity(),
     })
-    const listed = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts' })
+    const listed = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/accounts?provider=zernio' })
     assert.equal(listed.body.accounts[0].avatar_url, 'https://cdn.example/a.png')
     assert.deepEqual(avatars.calls, [])
     const bytes = await dispatcher.dispatch({
@@ -627,7 +629,7 @@ describe('official account avatars', () => {
     })
     const removed = await dispatcher.dispatch({
       method: 'DELETE',
-      url: '/omnimux/accounts/acc-1',
+      url: '/omnimux/accounts/acc-1?provider=zernio',
       origin: LOCAL_ORIGIN,
     })
     assert.equal(removed.status, 200)
@@ -686,7 +688,7 @@ describe('registerOfficialRoutes body parsing', () => {
     })
     registerOfficialRoutes(webServer, dispatcher)
     const res = fakeRes()
-    await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a', '{"group":"ops"}'), res)
+    await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a?provider=zernio', '{"group":"ops"}'), res)
     assert.equal(res.state.status, 200)
     assert.equal(JSON.parse(res.state.body).account.group, 'ops')
   })
@@ -699,7 +701,7 @@ describe('registerOfficialRoutes body parsing', () => {
     }
     registerOfficialRoutes(webServer, dispatcher)
     const res = fakeRes()
-    await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a', 'not-json{'), res)
+    await handlerFor(webServer)(fakeReq('PATCH', '/omnimux/accounts/a?provider=zernio', 'not-json{'), res)
     assert.equal(res.state.status, 400)
     assert.equal(JSON.parse(res.state.body).error, 'invalid json')
     assert.equal(dispatched, 0, 'the dispatcher never sees a broken body')
@@ -765,8 +767,8 @@ describe('registerOfficialRoutes body parsing', () => {
       client: {
         async withPat(path) {
           calls.push(path)
-          if (path === '/api/social/v1/accounts') {
-            return { accounts: [{ id: 'acc_tt_01', platform: 'tiktok', username: 'dsh_drama' }] }
+          if (path === '/api/social/v1/accounts?provider=zernio') {
+            return { accounts: [{ id: 'acc_tt_01', provider: 'zernio', platform: 'tiktok', username: 'dsh_drama' }] }
           }
           if (String(path).startsWith('/api/social/v1/analytics/daily-metrics')) {
             return {
@@ -777,7 +779,7 @@ describe('registerOfficialRoutes body parsing', () => {
                 metrics: { likes: 17, comments: 0, shares: 0, views: 930 },
               }],
               platformBreakdown: [{
-                platform: 'tiktok',
+                provider: 'zernio', platform: 'tiktok',
                 postCount: 2,
                 metrics: { likes: 17, views: 930, er: 1.83 },
               }],
@@ -787,7 +789,7 @@ describe('registerOfficialRoutes body parsing', () => {
             return {
               posts: [{
                 postId: 'live_ep1',
-                platform: 'tiktok',
+                provider: 'zernio', platform: 'tiktok',
                 content: 'Live episode',
                 publishedAt: '2026-08-02T10:00:00Z',
                 analytics: { likes: 17, views: 930, engagementRate: 1.83 },
@@ -808,7 +810,7 @@ describe('registerOfficialRoutes body parsing', () => {
     assert.equal(result.body.kpi.engagementRate.value, 0.01828)
     assert.equal(result.body.meta.boundAccountCount, 1)
     assert.equal(result.body.meta.filterAccounts[0].id, 'acc_tt_01')
-    assert.ok(calls.some((path) => path === '/api/social/v1/accounts'))
+    assert.ok(calls.some((path) => path === '/api/social/v1/accounts?provider=zernio'))
     assert.ok(calls.some((path) => String(path).includes('/api/social/v1/analytics/daily-metrics')))
   })
 

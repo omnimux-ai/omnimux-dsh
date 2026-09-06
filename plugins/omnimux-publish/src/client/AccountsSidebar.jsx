@@ -312,7 +312,7 @@ export function AccountsSidebar({ t }) {
               rows.length === 0 ? (
                 <EmptyState t={t} onAdd={() => { setModalOpen(true) }} />
               ) : filtered.length === 0 ? (
-                <div className="omnimux-publish-accounts-note">{t('acct.empty')}</div>
+                <div className="omnimux-publish-accounts-note">{t('acct.noMatches')}</div>
               ) : (
                 <div className="omnimux-publish-accounts-items">
                   {filtered.map((row) => (

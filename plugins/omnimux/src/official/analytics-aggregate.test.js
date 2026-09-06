@@ -243,8 +243,8 @@ describe('aggregateOverview degradation', () => {
   it('still returns a dashboard shell when daily-metrics 502s', async () => {
     const client = {
       async withPat(path) {
-        if (path === '/api/social/v1/accounts') {
-          return { accounts: [{ id: 'acc_tt_01', platform: 'tiktok', username: 'dsh' }] }
+        if (path === '/api/social/v1/accounts?provider=zernio') {
+          return { accounts: [{ id: 'acc_tt_01', provider: 'zernio', platform: 'tiktok', username: 'dsh' }] }
         }
         throw new Error('official request failed (HTTP 502)')
       },

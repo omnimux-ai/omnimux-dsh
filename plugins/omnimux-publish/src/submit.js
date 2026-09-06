@@ -15,6 +15,8 @@
 import { PublishError } from './store.js'
 import { extractPostId, extractRawStatus } from './hubtools.js'
 import { validateForSubmit, validationError } from './validate.js'
+import { requirePublishingAccounts } from './accounts.js'
+import { ACCOUNT_SOURCE_MESSAGE, PUBLISH_PROVIDER } from './account-policy.js'
 
 const INFLIGHT_TASK_STATUSES = new Set(['submitted', 'reviewing'])
 const TERMINAL_TASK_STATUSES = new Set(['published', 'failed'])
@@ -170,6 +172,11 @@ export function createSubmitService(deps) {
     if (!record) throw new PublishError('record-not-found', `record ${recordId} not found`)
     const tasks = Array.isArray(record.subtasks) ? record.subtasks : []
 
+    if (tasks.length === 0 || tasks.some((task) => task.provider !== PUBLISH_PROVIDER)) {
+      throw new PublishError('post-provider-mismatch', ACCOUNT_SOURCE_MESSAGE)
+    }
+    await requirePublishingAccounts(accounts, tasks.map((task) => task.account_id))
+
     // 3. presign + 上传（每媒体一次；上传失败 → 全部子任务 failed，可 retry）
     let uploads
     try {
@@ -247,6 +254,8 @@ export function createSubmitService(deps) {
     for (const task of tasks) {
       if (!task.post_id || !INFLIGHT_TASK_STATUSES.has(task.status)) continue
       try {
+        if (task.provider !== PUBLISH_PROVIDER) throw new PublishError('post-provider-mismatch', ACCOUNT_SOURCE_MESSAGE)
+        await requirePublishingAccounts(accounts, [task.account_id])
         const data = await channel.getPost(task.post_id, opts)
         const raw = extractRawStatus(data)
         if (raw == null) {
@@ -279,6 +288,8 @@ export function createSubmitService(deps) {
     if (rawTask.status !== 'failed') {
       throw new PublishError('task-not-retryable', `task ${taskId} 状态为 ${rawTask.status}，只有 failed 子任务可以重试`)
     }
+    if (rawTask.provider !== PUBLISH_PROVIDER) throw new PublishError('post-provider-mismatch', ACCOUNT_SOURCE_MESSAGE)
+    await requirePublishingAccounts(accounts, [rawTask.account_id])
     // 标记进入 submitting（中断恢复可识别）
     store.updateTask(taskId, { status: 'submitting', error: null, settled_at: null, attempts: (rawTask.attempts || 0) + 1 })
 

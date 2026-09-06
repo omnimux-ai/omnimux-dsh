@@ -91,29 +91,31 @@ describe('formCapabilities（表单整体裁剪视图）', () => {
 
 describe('accountUsable（可用性判定，与 Host 同义）', () => {
   it('active/expiring usable; expired/error/agent_off not', () => {
-    assert.deepEqual(accountUsable({ status: 'active' }), { ok: true, reason: '' })
-    assert.deepEqual(accountUsable({ status: 'expiring' }), { ok: true, reason: '' })
-    assert.deepEqual(accountUsable({ status: 'expired' }), { ok: false, reason: 'expired' })
-    assert.deepEqual(accountUsable({ status: 'error' }), { ok: false, reason: 'error' })
-    assert.deepEqual(accountUsable({ status: 'active', agent_usable: false }), { ok: false, reason: 'agentOff' })
-    assert.deepEqual(accountUsable({}), { ok: true, reason: '' })
+    const account = { platform: 'tiktok', provider: 'tiktok_direct' }
+    assert.deepEqual(accountUsable({ ...account, status: 'active' }), { ok: true, reason: '' })
+    assert.deepEqual(accountUsable({ ...account, status: 'expiring' }), { ok: true, reason: '' })
+    assert.deepEqual(accountUsable({ ...account, status: 'expired' }), { ok: false, reason: 'expired' })
+    assert.deepEqual(accountUsable({ ...account, status: 'error' }), { ok: false, reason: 'error' })
+    assert.deepEqual(accountUsable({ ...account, status: 'active', agent_usable: false }), { ok: false, reason: 'agentOff' })
+    assert.deepEqual(accountUsable({}), { ok: false, reason: 'error' })
   })
 })
 
 describe('groupAccountsByPlatform（两级勾选分组）', () => {
   it('groups, sorts platforms, and marks usability per row', () => {
     const groups = groupAccountsByPlatform([
-      { id: '1', platform: 'xiaohongshu', status: 'active' },
-      { id: '2', platform: 'douyin', status: 'expired' },
-      { id: '3', platform: 'xiaohongshu', status: 'active', agent_usable: false },
+      { id: '1', provider: 'tiktok_direct', platform: 'tiktok', status: 'active' },
+      { id: '2', provider: 'tiktok_direct', platform: 'tiktok', status: 'expired' },
+      { id: '3', provider: 'tiktok_direct', platform: 'tiktok', status: 'active', agent_usable: false },
       { id: '4' },
+      { id: '5', provider: 'zernio', platform: 'tiktok', status: 'active' },
+      { id: '6', provider: 'unknown', platform: 'tiktok', status: 'active' },
     ])
-    assert.deepEqual(groups.map((g) => g.platform), ['douyin', 'other', 'xiaohongshu'])
-    const xhs = groups.find((g) => g.platform === 'xiaohongshu')
-    assert.deepEqual(xhs.accounts.map((a) => a.usable), [true, false])
-    assert.equal(xhs.accounts[1].unusableReason, 'agentOff')
-    const dy = groups.find((g) => g.platform === 'douyin')
-    assert.equal(dy.accounts[0].usable, false)
+    assert.deepEqual(groups.map((g) => g.platform), ['tiktok'])
+    assert.deepEqual(groups[0].accounts.map((a) => a.id), ['1', '2', '3'])
+    assert.deepEqual(groups[0].accounts.map((a) => a.usable), [true, false, false])
+    assert.equal(groups[0].accounts[1].unusableReason, 'expired')
+    assert.equal(groups[0].accounts[2].unusableReason, 'agentOff')
     assert.deepEqual(groupAccountsByPlatform('junk'), [])
   })
 })

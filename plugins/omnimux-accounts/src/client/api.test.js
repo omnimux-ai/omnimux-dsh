@@ -1,6 +1,59 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { authGuard, quotaGuard, whenAuthReady } from './api.js'
+import { authGuard, quotaGuard, whenAuthReady, listAccounts, connectAccount, disconnectAccount, patchAccount } from './api.js'
+
+it('fixes every account operation to Zernio and filters same-name foreign rows', async () => {
+  const savedFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (path, init = {}) => {
+    calls.push({ path, ...init })
+    return new Response(JSON.stringify({ accounts: [
+      { id: 'z', display_name: 'Twin', provider: 'zernio' },
+      { id: 't', display_name: 'Twin', provider: 'tiktok_direct' },
+      { id: 'legacy', display_name: 'Twin' },
+    ] }), { status: 200 })
+  }
+  try {
+    await withWindow({}, async () => {
+      const result = await listAccounts({ provider: 'tiktok_direct', platform: 'tiktok' })
+      assert.deepEqual(result.body.accounts.map((row) => row.id), ['z'])
+      await connectAccount('tiktok')
+      await disconnectAccount('z/id')
+      await patchAccount('z/id', { group: 'team' })
+    })
+    assert.equal(calls[0].path, '/omnimux/accounts?provider=zernio&platform=tiktok')
+    assert.deepEqual(JSON.parse(calls[1].body), { platform: 'tiktok', provider: 'zernio' })
+    assert.equal(calls[2].path, '/omnimux/accounts/z%2Fid?provider=zernio')
+    assert.equal(calls[2].method, 'DELETE')
+    assert.equal(calls[3].path, '/omnimux/accounts/z%2Fid?provider=zernio')
+    assert.equal(calls[3].method, 'PATCH')
+  } finally {
+    globalThis.fetch = savedFetch
+  }
+})
+
+it('distinguishes an empty source from malformed, failed and unauthenticated lists', async () => {
+  const savedFetch = globalThis.fetch
+  try {
+    await withWindow({}, async () => {
+      for (const [body, status, ok, expectedStatus] of [
+        [{ accounts: [] }, 200, true, 200],
+        [{}, 200, false, 502],
+        [{ success: false, message: 'upstream failed' }, 200, false, 502],
+        [{ error: 'needs-omnimux' }, 401, false, 401],
+        [{ error: 'unavailable' }, 503, false, 503],
+      ]) {
+        globalThis.fetch = async () => new Response(JSON.stringify(body), { status })
+        const result = await listAccounts()
+        assert.equal(result.ok, ok)
+        assert.equal(result.status, expectedStatus)
+        if (!ok) assert.equal(result.body.accounts, undefined)
+      }
+    })
+  } finally {
+    globalThis.fetch = savedFetch
+  }
+})
 
 /** Small stub of the hub's `window.__omnimuxAuth` gate. */
 function fakeGate() {

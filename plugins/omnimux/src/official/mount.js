@@ -115,13 +115,14 @@ export function mountOfficial(ctx, deps) {
   tool(
     'omnimux_accounts_list',
     'List connected social accounts. Requires OmniMux sign-in. Does not store a local matrix.',
-    {},
-    () => listAccounts(client),
+    { provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true } },
+    (args) => listAccounts(client, args),
   )
   tool(
     'omnimux_accounts_connect',
     'Start connecting a social account. Returns auth_url. Requires OmniMux sign-in.',
     {
+      provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true },
       platform: { type: 'string', required: true },
       redirect_url: { type: 'string' },
     },
@@ -130,7 +131,7 @@ export function mountOfficial(ctx, deps) {
   tool(
     'omnimux_accounts_disconnect',
     'Disconnect a social account by id. Requires OmniMux sign-in.',
-    { id: { type: 'string', required: true } },
+    { id: { type: 'string', required: true }, provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true } },
     (args) => disconnectAccount(client, args),
   )
   tool(
@@ -146,6 +147,7 @@ export function mountOfficial(ctx, deps) {
     'omnimux_publish_create',
     'Create a social post via OmniMux. Requires OmniMux sign-in. Not a scheduling calendar.',
     {
+      provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true },
       account_ids: { type: 'array' },
       content: { type: 'string' },
       media_items: { type: 'array' },
@@ -155,7 +157,7 @@ export function mountOfficial(ctx, deps) {
   tool(
     'omnimux_publish_get',
     'Get a social post by id. Requires OmniMux sign-in.',
-    { id: { type: 'string', required: true } },
+    { id: { type: 'string', required: true }, provider: { type: 'string', enum: ['tiktok_direct', 'zernio'], required: true } },
     (args) => getPost(client, args),
   )
   tool(

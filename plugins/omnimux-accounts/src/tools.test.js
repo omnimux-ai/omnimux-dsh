@@ -25,11 +25,15 @@ test('omnimux-accounts tools lifecycle', async (t) => {
       get(name) {
         if (name === 'omnimux_accounts_list') {
           return {
-            async execute() {
+            async execute(args) {
+              assert.deepEqual(args, { provider: 'zernio' })
               return {
                 accounts: [
-                  { id: 'acc_1', platform: 'tiktok', account_name: 'TikTok Official', agent_usable: true },
-                  { id: 'acc_2', platform: 'instagram', account_name: 'Insta Official', agent_usable: true },
+                  { id: 'acc_1', provider: 'zernio', platform: 'tiktok', account_name: 'same-name', agent_usable: true },
+                  { id: 'acc_2', provider: 'zernio', platform: 'instagram', account_name: 'Insta Official', agent_usable: true },
+                  { id: 'acc_direct', provider: 'tiktok_direct', platform: 'tiktok', account_name: 'same-name' },
+                  { id: 'acc_missing', platform: 'tiktok' },
+                  { id: 'acc_unknown', provider: 'unknown', platform: 'tiktok' },
                 ],
               }
             },
@@ -54,6 +58,9 @@ test('omnimux-accounts tools lifecycle', async (t) => {
 
   // 2. Update group and agent_usable
   const updateTool = registered.get('accounts_update_group')
+  for (const id of ['acc_direct', 'acc_missing', 'acc_unknown']) {
+    await assert.rejects(updateTool.execute({ id, group: 'forbidden' }), /account-provider-mismatch/)
+  }
   const updateRes = await updateTool.execute({
     id: 'acc_1',
     group: '短剧矩阵A',

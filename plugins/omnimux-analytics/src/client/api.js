@@ -275,7 +275,7 @@ export async function fetchDashboardLive(query) {
  * Bound accounts for the FilterBar. Browser-safe Host list — never the hub client.
  */
 export async function fetchAccounts() {
-  const result = await quotaGuard(authGuard(analyticsRequest), { capability: 'analytics' })('/omnimux/accounts')
+  const result = await quotaGuard(authGuard(analyticsRequest), { capability: 'analytics' })('/omnimux/accounts?provider=zernio')
   if (!result.ok) throwHttp(result)
   const accounts = Array.isArray(result.body?.accounts) ? result.body.accounts : []
   return accounts.map((row) => ({
