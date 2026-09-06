@@ -1496,3 +1496,68 @@ test('#610 regression: a panel inside the viewport host receives the split marke
   assert.equal(panel.style.width, '560px')
   assert.equal(win.document.documentElement.style.getPropertyValue('--dsh-sidebar-width'), '560px')
 })
+
+test('#610 viewport resize updates split limits and preserves focus and drag intent', () => {
+  workbenchDom = new JSDOM('<!doctype html><html><head></head><body><div data-pane="sidebar"></div></body></html>')
+  const { window: win } = workbenchDom
+  globalThis.window = win
+  globalThis.document = win.document
+  win.innerWidth = 1200
+  win.document.querySelector('[data-pane="sidebar"]').getBoundingClientRect = () => ({ width: 280 })
+  let state = makeState([{ id: 'editor:readme', type: 'editor', title: 'Files' }], 560)
+  const store = {
+    getSnapshot: () => ({ sessionId: 's-610-resize', state }),
+    reduce(fn) { state = fn(state) },
+  }
+  const api = installWorkbenchGlobal(win)
+  api.bind({ betterSidebar: store })
+  api.attachStore(store)
+  const record = focusRecordForTab('s-610-resize', 'editor:readme')
+  record.mode = WORKBENCH_FOCUS.split
+  store.reduce(current => ({ ...current, width: 560 }))
+  const uninstall = installSplitConversationMin(win.document)
+  assert.equal(installSplitConversationMin(win.document), uninstall)
+
+  win.innerWidth = 980
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.width, 340)
+  assert.equal(win.document.documentElement.style.getPropertyValue('--omnimux-split-max'), '340px')
+  assert.equal(record.mode, WORKBENCH_FOCUS.split)
+  assert.equal(getConversationCollapsed(), false)
+
+  win.innerWidth = 1280
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.width, 340, 'expanding the viewport must not expand a chosen split width')
+  assert.equal(win.document.documentElement.style.getPropertyValue('--omnimux-split-max'), '640px')
+  store.reduce(current => ({ ...current, width: 640 }))
+  win.document.body.setAttribute('data-dsh-sidebar-dragging', '')
+  win.innerWidth = 980
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.width, 640, 'resize must not fight active drag writes')
+  assert.equal(win.document.documentElement.style.getPropertyValue('--omnimux-split-max'), '340px')
+  win.document.body.removeAttribute('data-dsh-sidebar-dragging')
+  win.document.dispatchEvent(new win.Event('pointerup'))
+  assert.equal(state.width, 340)
+
+  setWorkbenchFocus(WORKBENCH_FOCUS.gui, store)
+  win.innerWidth = 1200
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.width, 920)
+  assert.equal(focusRecordForTab('s-610-resize', 'editor:readme').mode, WORKBENCH_FOCUS.gui)
+  assert.equal(getConversationCollapsed(), true)
+  assert.equal(win.document.documentElement.style.getPropertyValue('--omnimux-split-max'), '')
+  setWorkbenchFocus(WORKBENCH_FOCUS.chat, store)
+  win.innerWidth = 980
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.panelOpen, false)
+  assert.equal(getWorkbenchFocus(), WORKBENCH_FOCUS.chat)
+
+  setWorkbenchFocus(WORKBENCH_FOCUS.split, store)
+  uninstall()
+  const width = state.width
+  const ceiling = win.document.documentElement.style.getPropertyValue('--omnimux-split-max')
+  win.innerWidth = 800
+  win.dispatchEvent(new win.Event('resize'))
+  assert.equal(state.width, width)
+  assert.equal(win.document.documentElement.style.getPropertyValue('--omnimux-split-max'), ceiling)
+})

@@ -5,7 +5,7 @@ type: "spec"
 status: "accepted"
 authority: "L2"
 date: "2026-09-05"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["agent-architect"]
 subsystem: "omnimux"
 ---
@@ -19,6 +19,8 @@ subsystem: "omnimux"
 官方 better-sidebar 的 `[data-dsh-panel-host]` 是全视口定位容器，使用 `position: fixed; inset: 0`。右侧工作台面板位于其中，以 `position: absolute; right: 0` 定位。容器与面板不是同一宽度控制对象。
 
 Hub 分栏 CSS 对容器和面板同时施加 `max-width`，改变了子面板的定位基准。Dev 实测视口 1324px、分栏上限 684px 时，容器被压到 684px；624px 的右面板落在 x=60，盖住会话输入框。输入框虽存在且状态为 split，其中心命中灵感库，而非输入框。顶部按钮修复 #579 不改变这条宽度路径。
+
+L2 窄窗验收还确认：视口从 1280px 缩到 980px、侧栏自身尺寸不变时，已有监听不会更新分栏上限。920px 的旧上限使面板重新覆盖输入框。窗口 resize 必须复用现有宽度同步，同时保持 GUI/chat/split 意图和拖拽期间仅更新 CSS 上限的规则；卸载时移除监听。
 
 ## 已确认实现边界
 

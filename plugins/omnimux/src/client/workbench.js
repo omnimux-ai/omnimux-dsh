@@ -884,10 +884,15 @@ export function installSplitConversationMin(doc = hostDocument()) {
   doc.addEventListener?.('pointermove', onMove, true)
   doc.addEventListener?.('pointerup', onUp, true)
   doc.addEventListener?.('pointercancel', onUp, true)
+  const win = hostWindow()
+  // The viewport can shrink while the official rail keeps the same width.
+  const onResize = () => syncWorkbenchGuiWidth()
+  win?.addEventListener?.('resize', onResize)
   splitMinUnsub = () => {
     doc.removeEventListener?.('pointermove', onMove, true)
     doc.removeEventListener?.('pointerup', onUp, true)
     doc.removeEventListener?.('pointercancel', onUp, true)
+    win?.removeEventListener?.('resize', onResize)
     if (splitMinDoc === doc) {
       splitMinDoc = null
       splitMinUnsub = null
