@@ -42,8 +42,41 @@ L2 的 `.l2-dev.env` 必须与当前 worktree 的 URL、PORT、SOURCE、COMMIT �
 - Web/Stage 验收使用当前 Codex 会话的内置浏览器（IAB），不得使用旧 ego-browser 流程，也不得用桌面截图替代浏览器检查。
 - `pnpm verify:live <stage> --target=l2 --url=<l2-url>` 创建合并前请求；合并后在 Dev 运行 `pnpm verify:live <stage>`。`all` 只覆盖已登记的公开 Stage。
 - CLI 返回 pending/request path 只表示请求已准备，不是通过。当前 IAB Tab 必须实际执行 `scripts/codex-browser-qa.mjs` 的 `runPreparedQa(requestPath, { tab })` 并产出最终报告。
-- 请求一次性消费；run ID、代码 SHA、目标、URL、Tab、profile、Host PID/启动时间或运行版本不匹配时失败。不得复用旧 run、旧截图或旧空白会话。
+- 请求在页面准备成功后原子消费一次；准备前后均检查有效期、代码 SHA 与请求身份。认证或浏览器预检失败不消费请求；真正探针开始后不得复用。并发执行只能有一个消费者，未取得执行权的调用不得覆盖消费者报告。
+- run ID、代码 SHA、目标、URL、Tab、profile、Host PID/启动时间或运行版本不匹配时失败。不得复用旧 run、旧截图或旧空白会话。
 - 先在同一 IAB Tab 完成本地认证与 QA 会话准备。证据不得保存 token；探针不得发送消息、生成媒体或提交账号任务。
+
+### 页面准备与认证恢复
+
+页面准备复用 `scripts/codex-browser-qa.mjs`，由 `runPreparedQa` 在消费请求前调用，也可在 Agent 进入 Dev/L2 时单独调用。目标仅限合同规定的本地 Dev/L2 地址；先核对当前 Tab 的 origin，再执行页面操作。
+
+在已选择当前任务真实 IAB Tab 的浏览器执行环境中导入该 worktree 的模块：
+
+```js
+const { prepareIabPage } = await import('/absolute/worktree/scripts/codex-browser-qa.mjs')
+const preparation = await prepareIabPage(tab, { url: 'http://127.0.0.1:45120/', target: 'dev' })
+```
+
+已有准备好的 QA 请求时，直接调用同一模块的 `runPreparedQa(requestPath, { tab })`，不需另跑页面准备。准备结果的 `ready` 仅表示产品页面已加载且未发现可见连接警告，`status: 'recovered'` 表示本次做过同源导航；都不等于 QA `pass`。业务会话、运行身份和 Stage 断言仍由正式探针验证。L2 调用传 `target: 'l2'` 与该任务实际池内 URL。准备函数不负责创建标签或获取正式登录链接。
+
+预检失败结果返回给调用者；调用者应保存脱敏结果作为该次尝试的证据。请求的规范报告保持 pending 或保留已有消费者报告，不会被未消费的失败尝试覆盖。
+
+| 状态 | 动作与结果 |
+|---|---|
+| 已登录且页面就绪 | 复用当前页面，不刷新、不切换业务页或会话；随后仍须通过完整运行身份与 Stage 探针 |
+| 明确的同源认证错误页 | 一次带 5 秒超时的同源只读请求，使用已有 Cookie；仅在返回 200 时执行一次页面内部同源导航，并等待真实产品 UI 就绪 |
+| 同源请求仍返回 401 | 返回需要认证；Agent 通过已运行 Desktop 的正式“浏览器访问 URL”完成登录，再重新准备页面 |
+| 服务不可达、请求或浏览器工具超时 | 有上限退出并保留未消费请求；区分 HTTP/网络结果与工具等待失败，不默认启动或重启共享 App |
+| origin 不匹配或 URL 策略拒绝 | 停止操作，不更换协议、浏览器或请求路径规避拒绝 |
+| 页面没有就绪或业务断言失败 | 分别报告准备失败或 QA 失败；HTTP 200、页面标题不能作为业务验收通过依据 |
+
+正式登录链接由当前已运行 Desktop 提供。桌面设置页的“浏览器访问 URL”来自同源 `GET /api/desktop/settings` 的 `web.localUrl`，该接口受现有认证与同源约束保护。必须在有权访问的 Desktop 上取得链接，并仅在内存中交给同一目标 IAB 完成正常 token→Cookie 交换；随后使用不含凭据的 URL 调用页面准备。无法可靠读取正式入口时报告阻断，不能把该接口当成免认证 bootstrap API。L2 使用该任务 Host 正式打印的认证链接。
+
+禁止复制或伪造 Cookie、读取签名密钥造票、关闭 SameSite、把 fetch 返回的 HTML 写入 DOM、无限重试，以及为验证而清除共享 Dev 认证。缺失认证场景在隔离 L2 验证。登录入口不可用或浏览器工具失败不授予 App 生命周期、配置或凭据修改权限。
+
+准备结果记录脱敏 origin、时间、有限尝试次数、恢复动作和分类原因；不得持久化 Cookie、token、完整认证 URL 或原始敏感工具错误。Strict Cookie 的请求阻止原因只能在有 Network 证据时确认，不能仅凭 401 推断。外层导航被阻止而同源请求成功时，可证明同源恢复有效；底层浏览器发起者原因另行追踪。
+
+导航命令发出后若工具超时，记录已尝试导航且结果未确认；不得宣称页面完全未变，也不自动再次导航。浏览器自身的网络错误页不等于 URL 策略拒绝，仍需区分页面报告的网络失败与独立监听状态证据。
 
 Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言：目标内容非空、active Tab 与选中项唯一、重复打开幂等、关闭后状态清空、重新打开恢复，以及 viewport/context 属于当前会话。HTTP 200、页面标题、loading 占位或合法空态本身都不足以证明 Stage 通过。
 

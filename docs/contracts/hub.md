@@ -154,7 +154,7 @@ A request may name `model` or omit it for `defaultModel`. The image is an absolu
 | `video_process` | omnimux-video tool over `videoProcess` | same | same | same |
 | `hubEvents` | hub provide (in-process bus) | `emit(type, payload)` / `subscribe` / `replaySince` | `{ id, type, at, payload }` | missing provide → vertical emit is a no-op |
 | `workbenchMailbox` | hub provide (read-only viewport) | `getActiveView(sessionId?)` | `{ ok, stale, sessionId, uiContext }` last-known Envelope | missing provide → vertical tools skip ui_context default |
-| `GET /omnimux/events/stream` | hub Host SSE | loopback origin; `Last-Event-ID` replay | `text/event-stream` (`omnimux:heartbeat` 2s + domain events) | 403 `not-local` |
+| `GET /omnimux/events/stream` | hub Host WebSocket upgrade | official connection auth + loopback origin; `?after=` replay | read-only JSON events (`omnimux:heartbeat` 2s + domain events) | 401 / 403 |
 | `workbench_get_active_view` | hub tool | `{}` | `{ ok, stale, uiContext }` Envelope snapshot | `no-workbench`, `no-session` |
 | `workbench_open_tab` | hub tool | `tabId` + `reason` (+ optional view / highlightIds / undoToken) | `{ ok, applied, code, undoToken? }` | soft-reject codes (`panel-collapsed`, `quota-exceeded`, …); MUST NOT `setFocus` |
 | `POST /omnimux/workbench/viewport` | hub Host HTTP | Envelope JSON; `assertLocalWrite` | `{ ok: true }` | 403 `not-local` |
@@ -286,6 +286,6 @@ The plugin entry exports `Config` (Standard Schema). Brand strings, `media.provi
 | write its own disk contract | implement chrome, login, or provider routes |
 | stub or throw `needs-provider` when a seam is absent | claim `mode: "stub"` is a model render |
 
-Workbench viewport, SSE multiplex, and `workbench_*` tools: [agent-workbench-sync.md](agent-workbench-sync.md). Hub MUST NOT parse a vertical's `library.json`. Vertical clients read `window.__omnimuxWorkbench` / `window.__omnimuxHubEvents` only.
+Workbench viewport, hub event WebSocket, and `workbench_*` tools: [agent-workbench-sync.md](agent-workbench-sync.md). Hub MUST NOT parse a vertical's `library.json`. Vertical clients read `window.__omnimuxWorkbench` / `window.__omnimuxHubEvents` only.
 
 `omnimux` itself is not a shelf app. Official catalog rows: [apps-catalog.md](apps-catalog.md).

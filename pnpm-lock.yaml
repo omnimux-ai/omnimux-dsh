@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      acorn:
+        specifier: 8.15.0
+        version: 8.15.0
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -35,6 +38,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -1655,6 +1661,11 @@ packages:
   '@xyflow/system@0.0.80':
     resolution: {integrity: sha512-ywc3ZqG91brzWrH1WlwMdIX4goOfrpBy6AbLdVSaof/Xx9l138ijIKRExM6EkMro2F+OImGmSiA/WKcXvKVcfA==}
 
+  acorn@8.15.0:
+    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   aigc-provider-runtime-kit@0.2.0:
     resolution: {integrity: sha512-7e6X0KtS0ZHO9RTc1prTY7DtdaS2H4y5/M2B/QoLI6k/gxI55xl5Gz4SmtxwX3hTakg3EsxYkBoek+VJ532JyQ==}
     engines: {node: '>=22'}
@@ -2705,6 +2716,18 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
 snapshots:
 
@@ -3876,6 +3899,8 @@ snapshots:
       d3-interpolate: 3.0.1
       d3-selection: 3.0.0
       d3-zoom: 3.0.0
+
+  acorn@8.15.0: {}
 
   aigc-provider-runtime-kit@0.2.0: {}
 
@@ -5133,3 +5158,5 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.8)
 
   zwitch@2.0.4: {}
+
+  ws@8.21.0: {}

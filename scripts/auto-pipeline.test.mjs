@@ -33,7 +33,21 @@ function liveEvidence(dir) {
   const target = { stage: 'assets', tabId: 'omnimux-assets:library' }
   const now = new Date().toISOString()
   const request = { root: repoRoot, runId: 'run-1', commitSha: execSync('git rev-parse HEAD', { cwd: repoRoot, encoding: 'utf8' }).trim(), target: 'l2', profile: 'omnimux-dev-qa', url: 'http://127.0.0.1:44201/', stage: 'assets', targets: [target], evidenceDir: dir, allocation: null, createdAt: new Date(Date.now() - 2_000).toISOString(), consumedAt: now, expiresAt: new Date(Date.now() + 60_000).toISOString() }
-  const bundle = plugin => ({ plugin, bundleSha256: 'b'.repeat(64), bundlePath: `plugins/${plugin}/client.js`, bundleBytes: 1, loadedScriptUrl: `http://127.0.0.1:44201/plugins/${plugin}/client.js`, loadedScriptSha256: 'c'.repeat(64), matchingScriptCount: 1 })
+  const bundle = plugin => ({
+    plugin,
+    bundlePath: `plugins/${plugin}/client.js`,
+    bundleBytes: 1,
+    bundleSha256: 'b'.repeat(64),
+    bundleRegistrationSha256: 'c'.repeat(64),
+    bundleCodeSha256: 'd'.repeat(64),
+    loadedScriptUrl: `http://127.0.0.1:44201/plugins/${plugin}/client.js`,
+    loadedScriptSha256: 'e'.repeat(64),
+    loadedScriptCodeSha256: 'f'.repeat(64),
+    loadedRegistrationSha256: 'c'.repeat(64),
+    loadedRegistrationCodeSha256: 'd'.repeat(64),
+    match: 'raw-registration',
+    matchingRegistrationCount: 1,
+  })
   const assertions = ['active-content-selection', 'idempotent-open', 'chat-clears-selection', 'restore'].map(suffix => ({ name: `assets:${suffix}`, pass: true })).concat([{ name: 'initial-session-restored', pass: true }, { name: 'initial-workbench-restored', pass: true }])
   const proof = { requestedOrigin: 'http://127.0.0.1:44201', target: 'l2', allocation: null, bundles: [bundle('omnimux'), bundle('omnimux-assets')] }
   const report = { ...request, pass: true, status: 'completed', tool: 'codex-iab', tabId: 'iab-tab-1', actualUrl: request.url, completedAt: now, runtimeProof: { before: proof, after: structuredClone(proof) }, screenshots: [join(dir, 'assets.png')], probe: { targets: [target], assertions, screenshots: [join(dir, 'assets.png')] } }
@@ -206,6 +220,51 @@ allow-skips: false
       ]) {
         writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify({ ...validReport, ...mutation }))
         assert.equal(validateBrowserEvidence(tmpEvidence, expected).pass, false, `伪造证据必须拒绝: ${JSON.stringify(mutation)}`)
+      }
+
+      const mutateProofBundles = (mutate) => {
+        const report = structuredClone(validReport)
+        for (const proof of [report.runtimeProof.before, report.runtimeProof.after]) mutate(proof.bundles[0])
+        return report
+      }
+      const newHashFields = [
+        'bundleRegistrationSha256',
+        'bundleCodeSha256',
+        'loadedScriptCodeSha256',
+        'loadedRegistrationSha256',
+        'loadedRegistrationCodeSha256',
+      ]
+      const normalizedMatch = mutateProofBundles((bundle) => {
+        bundle.loadedRegistrationSha256 = 'a'.repeat(64)
+        bundle.match = 'normalized-registration'
+      })
+      writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify(normalizedMatch))
+      assert.equal(validateBrowserEvidence(tmpEvidence, expected).pass, true, '注释差异的 normalized registration 证据必须放行')
+
+      const oldShape = mutateProofBundles((bundle) => {
+        for (const field of newHashFields) delete bundle[field]
+        delete bundle.match
+        delete bundle.matchingRegistrationCount
+        bundle.matchingScriptCount = 1
+      })
+      writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify(oldShape))
+      assert.equal(validateBrowserEvidence(tmpEvidence, expected).pass, false, '旧 runtime proof shape 必须拒绝')
+
+      for (const field of ['bundleSha256', ...newHashFields, 'loadedScriptSha256']) {
+        const missingHash = mutateProofBundles((bundle) => { delete bundle[field] })
+        writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify(missingHash))
+        assert.equal(validateBrowserEvidence(tmpEvidence, expected).pass, false, `缺少 ${field} 必须拒绝`)
+      }
+      for (const [name, mutate] of [
+        ['malformed hash', bundle => { bundle.loadedScriptSha256 = 'not-a-sha256' }],
+        ['registration code mismatch', bundle => { bundle.loadedRegistrationCodeSha256 = '0'.repeat(64) }],
+        ['raw registration mismatch', bundle => { bundle.loadedRegistrationSha256 = '0'.repeat(64) }],
+        ['invalid match mode', bundle => { bundle.match = 'normalized-code' }],
+        ['duplicate registrations', bundle => { bundle.matchingRegistrationCount = 2 }],
+      ]) {
+        const invalidProof = mutateProofBundles(mutate)
+        writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify(invalidProof))
+        assert.equal(validateBrowserEvidence(tmpEvidence, expected).pass, false, `${name} 必须拒绝`)
       }
     } finally {
       rmSync(tmpEvidence, { recursive: true, force: true })

@@ -6,6 +6,28 @@ import { assertPng, PROBE_ASSERTIONS, STAGE_ASSERTIONS } from './live-stage-prob
 import { assertRuntimeProofStable } from './live-runtime-proof.mjs'
 
 const tabPlugin = target => String(target.tabId).split(':', 1)[0]
+const RUNTIME_HASH_FIELDS = [
+  'bundleSha256',
+  'bundleRegistrationSha256',
+  'bundleCodeSha256',
+  'loadedScriptSha256',
+  'loadedScriptCodeSha256',
+  'loadedRegistrationSha256',
+  'loadedRegistrationCodeSha256',
+]
+const RUNTIME_MATCHES = new Set(['raw-registration', 'normalized-registration'])
+
+function validateRuntimeBundle(bundle) {
+  for (const field of RUNTIME_HASH_FIELDS) {
+    assert.match(bundle?.[field] || '', /^[a-f0-9]{64}$/, `Runtime proof has invalid ${field} for ${bundle?.plugin || 'unknown plugin'}`)
+  }
+  assert.ok(bundle.bundleCodeSha256 === bundle.loadedRegistrationCodeSha256, `Runtime proof registration code differs for ${bundle.plugin}`)
+  assert.ok(RUNTIME_MATCHES.has(bundle.match), `Runtime proof has invalid match mode for ${bundle.plugin}`)
+  assert.equal(bundle.matchingRegistrationCount, 1, `Runtime proof must have exactly one registration for ${bundle.plugin}`)
+  if (bundle.match === 'raw-registration') {
+    assert.ok(bundle.bundleRegistrationSha256 === bundle.loadedRegistrationSha256, `Runtime proof raw registration differs for ${bundle.plugin}`)
+  }
+}
 
 export function validateLiveQaReport(report, request, expected = {}) {
   assert.ok(request?.runId && request.commitSha && request.url, 'Missing prepared request identity')
@@ -35,7 +57,7 @@ export function validateLiveQaReport(report, request, expected = {}) {
     assert.deepEqual(proof.allocation, request.allocation || null, 'Runtime proof allocation does not match request')
     assert.ok(Array.isArray(proof?.bundles) && proof.bundles.length === expectedPlugins.size, 'Runtime proof has incomplete bundle coverage')
     assert.deepEqual(new Set(proof.bundles.map(bundle => bundle.plugin)), expectedPlugins, 'Runtime proof plugins do not match Stage targets')
-    for (const bundle of proof.bundles) assert.match(bundle.bundleSha256 || '', /^[a-f0-9]{64}$/, `Runtime proof has invalid hash for ${bundle.plugin}`)
+    for (const bundle of proof.bundles) validateRuntimeBundle(bundle)
   }
   assert.equal(report.probe?.targets?.length, request.targets.length, 'Missing Stage coverage')
   assert.ok(report.probe.assertions.length && report.probe.assertions.every(item => item.pass), 'Stage assertions failed')

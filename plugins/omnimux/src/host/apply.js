@@ -1,4 +1,5 @@
 import { createHubEventBus } from '../events/hub-event-bus.js'
+import { registerHubEventStream } from '../events/stream.js'
 import { createWorkbenchMailbox } from '../workbench/mailbox.js'
 import { registerWorkbenchHttpRoutes } from '../workbench/http-routes.js'
 import { mountWorkbenchTools } from '../workbench/tools.js'
@@ -117,8 +118,14 @@ export function apply(ctx, config = {}) {
       mountHttp(httpCtx)
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')
       if (server && typeof server.register === 'function') {
-        registerWorkbenchHttpRoutes(server, { hubEvents, mailbox })
+        httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox }), 'omnimux: workbench HTTP')
       }
+    })
+    ctx.inject(['webServer', 'connection'], (streamCtx) => {
+      streamCtx.effect(() => registerHubEventStream(streamCtx.webServer, {
+        hubEvents,
+        connection: streamCtx.connection,
+      }), 'omnimux: hub event stream')
     })
     ctx.inject(['sessionQuery'], (inner) => {
       httpDeps.sessionQuery = inner.sessionQuery ?? inner.get?.('sessionQuery') ?? null
