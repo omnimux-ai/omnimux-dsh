@@ -45,6 +45,10 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
 [data-conversation-scroll]{
   scrollbar-gutter:stable both-edges;
 }
+/* Overlay views reserve the same clearance as both chat scrollbar gutters. */
+[data-conversation-scroll]:has([data-conversation-composer-overlay]) > [data-composer-seat]{
+  left:var(--dsh-scrollbar-width);
+}
 
 /* The card and workspace row share a cap; the input bar owns side clearance. */
 [data-composer-card]{

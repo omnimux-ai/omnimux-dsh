@@ -146,6 +146,7 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(style.textContent, /conversation-scroll/)
   assert.match(style.textContent, /margin-left:auto/)
   assert.match(style.textContent, /scrollbar-gutter:stable both-edges/)
+  assert.match(style.textContent, /\[data-conversation-scroll\]:has\(\[data-conversation-composer-overlay\]\) > \[data-composer-seat\]\{\s*left:var\(--dsh-scrollbar-width\)/)
   assert.match(style.textContent, /\[data-composer-seat\] \[class\*="composerStack"\]/)
   assert.doesNotMatch(style.textContent, /\[data-composer-seat\] > \*/)
   assert.match(style.textContent, /\[class\*="headline"\]:has\(> \[class\*="previewBadge"\]\[data-omnimux-hide\]\)\{\s*grid-template-columns:auto auto;/)
