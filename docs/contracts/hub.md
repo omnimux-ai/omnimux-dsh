@@ -289,3 +289,7 @@ The plugin entry exports `Config` (Standard Schema). Brand strings, `media.provi
 Workbench viewport, hub event WebSocket, and `workbench_*` tools: [agent-workbench-sync.md](agent-workbench-sync.md). Hub MUST NOT parse a vertical's `library.json`. Vertical clients read `window.__omnimuxWorkbench` / `window.__omnimuxHubEvents` only.
 
 `omnimux` itself is not a shelf app. Official catalog rows: [apps-catalog.md](apps-catalog.md).
+
+## 客户端热更新
+
+Hub 复用官方 watcher，通过既有事件 WebSocket 分发客户端 rebuild，避免同源页面长期占用 HTTP 请求连接。默认插件装配、配置保留、重连与升级验证见 [HMR 合同](hmr.md)。

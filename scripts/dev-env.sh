@@ -41,14 +41,6 @@ PROD_HOME="${DSH_HOME:-$HOME/.dsh}"
 L2_PORT_POOL_START="${OMNIMUX_L2_PORT_POOL_START:-44201}"
 L2_PORT_POOL_END="${OMNIMUX_L2_PORT_POOL_END:-44299}"
 LEGACY_HOME="${OMNIMUX_DEV_LEGACY_HOME:-0}"
-L2_PATCH_ARGS=(--patch "$ROOT/scripts/l2-workspace-browser.patch.yml")
-if [ -n "${OMNIMUX_L2_EXTRA_PATCH:-}" ]; then
-  if [ ! -f "$OMNIMUX_L2_EXTRA_PATCH" ]; then
-    echo "✗ L2 extra patch does not exist: $OMNIMUX_L2_EXTRA_PATCH" >&2
-    exit 1
-  fi
-  L2_PATCH_ARGS+=(--patch "$OMNIMUX_L2_EXTRA_PATCH")
-fi
 
 # L2 插件依赖种子 profile：克隆 package.json / cordis.patch.yml / 受管 snapshot，
 # 再由 L2 自己的 pnpm 生成 node_modules。官方 @deepseek-ai/* 不在此层。优先级：
@@ -695,7 +687,7 @@ case "$cmd" in
     # 硬绑池口，避免 --port 0 与静态 patch 层叠碰巧生效
     # --patch 在 --host 之前：禁用 auto 选择器，装配页内 browse，避免 L2 Agent 触发 OS 原生目录窗口
     DSH_HOME="$RUNTIME_HOME" OMNIMUX_PLUGIN_PROFILE="omnimux-dev-$name" nohup "$NODE_BIN" "$DSH_SRC/apps/cli/lib/bin.js" \
-      --profile "omnimux-dev-$name" "${L2_PATCH_ARGS[@]}" \
+      --profile "omnimux-dev-$name" --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
       --host 127.0.0.1 --port "$assigned_port" --no-open \
       > "$pdir/host.log" 2>&1 &
     echo $! > "$pdir/host.pid"
@@ -831,7 +823,7 @@ case "$cmd" in
     host_log_offset=$(wc -c < "$pdir/host.log")
 
     DSH_HOME="$RUNTIME_HOME" OMNIMUX_PLUGIN_PROFILE="omnimux-dev-$name" nohup "$NODE_BIN" "$DSH_SRC/apps/cli/lib/bin.js" \
-      --profile "omnimux-dev-$name" "${L2_PATCH_ARGS[@]}" \
+      --profile "omnimux-dev-$name" --patch "$ROOT/scripts/l2-workspace-browser.patch.yml" \
       --host 127.0.0.1 --port "$assigned_port" --no-open \
       >> "$pdir/host.log" 2>&1 &
     new_pid=$!

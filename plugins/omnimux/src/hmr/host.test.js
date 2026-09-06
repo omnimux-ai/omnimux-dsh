@@ -4,10 +4,16 @@ import { mountWebSocketHmr, REBUILT_EVENT, SNAPSHOT_PATH } from './host.js'
 import { createHubEventBus } from '../events/hub-event-bus.js'
 import { parseHubConfig } from '../config.js'
 
-test('HMR is opt-in and rejects unknown transport values', () => {
-  assert.equal(parseHubConfig({}).hmrTransport, 'native')
-  assert.equal(parseHubConfig({ hmrTransport: 'websocket' }).hmrTransport, 'websocket')
-  assert.throws(() => parseHubConfig({ hmrTransport: 'typo' }), /hmrTransport/)
+test('WebSocket HMR preserves configured hub settings', () => {
+  const parsed = parseHubConfig({
+    productName: 'Configured workspace',
+    media: { defaultProvider: 'omnimux' },
+    gate: { media: { audio: false } },
+  })
+  assert.equal(parsed.hmrTransport, 'websocket')
+  assert.equal(parsed.productName, 'Configured workspace')
+  assert.equal(parsed.media.defaultProvider, 'omnimux')
+  assert.equal(parsed.gate.media.audio, false)
 })
 
 test('official watcher is reused, rebuild is bridged, and snapshot retains authentication', () => {

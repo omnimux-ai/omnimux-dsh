@@ -137,12 +137,12 @@ export function apply(ctx) {
   ctx.effect(() => {
     const eventsClient = createEventsClient()
     const uninstall = installHubEventsGlobal(eventsClient)
-    const hmr = window.__OMNIMUX_BRAND__?.hmrTransport === 'websocket' && ctx.inject(['loader', 'modules'], hmrCtx => {
+    const hmr = ctx.inject(['loader', 'modules'], hmrCtx => {
       hmrCtx.effect(() => installWebSocketHmr(hmrCtx, eventsClient, document), 'omnimux: HMR client')
     })
     eventsClient.connect()
     return () => {
-      if (hmr) void hmr.dispose()
+      void hmr.dispose()
       eventsClient.disconnect()
       uninstall()
     }

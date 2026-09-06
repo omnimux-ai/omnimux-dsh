@@ -128,7 +128,7 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "\${PWD}/node_modules/.modules.yaml"
     }
   }
 
-  const runCommand = (args, extraEnv = {}) => execFileSync(
+  const runCommand = (args) => execFileSync(
     'bash', [scriptPath, ...args, `--source=${wtRoot}`],
     {
       encoding: 'utf8',
@@ -145,7 +145,6 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "\${PWD}/node_modules/.modules.yaml"
         OMNIMUX_NODE_BIN: join(fakeBin, 'node'),
         // Even an older caller requesting 44200 must never allocate production.
         OMNIMUX_L2_PORT_POOL_START: '44200',
-        ...extraEnv,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     },
@@ -219,24 +218,6 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "\${PWD}/node_modules/.modules.yaml"
       assert.equal(readFileSync(join(l2Profile, 'port.txt'), 'utf8'), beforePort)
       assert.equal(readFileSync(sessionPath, 'utf8'), '{"session":"keep"}\n')
       assert.match(out, /保持不变/)
-    } finally {
-      cleanupSandbox()
-    }
-  })
-
-  it('passes an optional experimental overlay as one argument on start and restart', () => {
-    setupSandbox({ complete: true })
-    try {
-      const overlay = join(testRoot, 'experimental overlay.yml')
-      writeFileSync(overlay, '- id: client-hmr\n  disabled: true\n')
-      const env = { OMNIMUX_L2_EXTRA_PATCH: overlay }
-      for (const command of [['start', 'deps-test', 'omnimux-assets'], ['restart-host', 'deps-test']]) {
-        runCommand(command, env)
-        const args = JSON.parse(readFileSync(hostArgsLog, 'utf8'))
-        const patches = args.flatMap((arg, index) => arg === '--patch' ? [args[index + 1]] : [])
-        assert.deepEqual(patches, [join(here, 'l2-workspace-browser.patch.yml'), overlay])
-        assert.ok(args.indexOf(overlay) < args.indexOf('--host'))
-      }
     } finally {
       cleanupSandbox()
     }

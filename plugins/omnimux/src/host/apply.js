@@ -74,12 +74,6 @@ export function apply(ctx, config = {}) {
   const hubEvents = createHubEventBus()
   const mailbox = createWorkbenchMailbox({ hubEvents })
   ctx.provide?.('hubEvents', hubEvents)
-  if (hub.hmrTransport === 'websocket') {
-    ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {
-      const { apply: applyWatcher } = await hmrCtx.loader.import('@deepseek-ai/dsh-client-hmr')
-      mountWebSocketHmr(hmrCtx, hubEvents, applyWatcher)
-    })
-  }
   // Vertical tools (workflow_*) may read last-known viewport for default workspace targeting.
   // Read-only seam: getActiveView only — no open/RPC.
   ctx.provide?.('workbenchMailbox', {
@@ -121,6 +115,10 @@ export function apply(ctx, config = {}) {
   }
   const mountHttp = (httpCtx) => mountHubHttp(httpCtx, httpDeps)
   if (typeof ctx.inject === 'function') {
+    ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {
+      const { apply: applyWatcher } = await hmrCtx.loader.import('@deepseek-ai/dsh-client-hmr')
+      mountWebSocketHmr(hmrCtx, hubEvents, applyWatcher)
+    })
     ctx.inject(['webServer'], (httpCtx) => {
       mountHttp(httpCtx)
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')
