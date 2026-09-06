@@ -33,12 +33,12 @@ Workflow 在 [generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/gen
 
 ## 输入与提示
 
-最终文本取节点非空 prompt、content，再取上游文本节点的首个非空文本；图校验、UI 与执行采用相同优先级。图片或视频的描述元数据不充当上游文本。空节点禁用生成并给出输入提示，不显示错误横幅；真实格式、数量、时长等问题需给出具体原因。
+有效输入的来源、组合和提交语义遵循 [节点有效输入与提交合同](node-input-submission.md)。图校验、UI 与执行须使用一致的有效输入；图片或视频的描述元数据不充当上游文本。空节点禁用生成并给出输入提示，不显示错误横幅；真实格式、数量、时长等问题需给出具体原因。
 
 文本提交携带 operation 和完整有序 references。Hub 在入口归一化旧 image/video/audioTrack 字段，避免重复附加同一素材，并按所选渠道合同检查全部素材和角色。未实现的音频、混合输入或多视频必须明确拒绝，不能截断素材后执行。模型能力只依据 [模型 API 权威](model-api-authority.md)，禁止真实请求探测。
 
 ## 接入与验收条件
 
-Gemini 3.8 的精确 ID 已找到，但 OmniMux 官方输入合同尚未覆盖该型号；当前不注册、不声明接通，详见 [合同缺口](../references/omnimux-gemini-3.8-contract-gap.md)。不得用 Gemini 3.7 或 CPA 路由替代。音频正式目录为空也不因产品范围配置而变为就绪。
+Gemini 3.8 使用精确 ID `gemini-3.8-flash`，依据用户在本任务确认的 3.7 兼容性复用输入合同与 mapper，详见 [接入依据](../references/omnimux-gemini-3.8-contract-gap.md)。不得以 3.7 的 wire ID 或 CPA 路由代替 3.8，也不继承其历史真实执行记录。音频正式目录为空也不因产品范围配置而变为就绪。
 
 离线测试须覆盖选择顺序、跨项目与重启恢复、偏好读写竞态、目录延迟、零候选、其他节点不变、输入完整性及各提交入口。UI 还须完成隔离 L2 的真实 IAB 与共享探针；合入后才按授权物化 Dev 并验收。单测或 HTTP 探活不能代替交互证据。

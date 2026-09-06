@@ -30,7 +30,7 @@ export const TEXT_ROLES = Object.freeze(['flagship', 'classic'])
 
 export const DEFAULT_TEXT = Object.freeze({
   defaultProvider: 'omnimux',
-  defaultModel: 'gemini-3.7-flash',
+  defaultModel: 'gemini-3.8-flash',
   maxTokens: 4096,
   models: Object.freeze(CHAT_MODELS.map((row) => Object.freeze({
     id: row.id,

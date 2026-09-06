@@ -135,7 +135,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'wan-3.0',
   ]);
   assert.deepEqual(dto.audio, []);
-  // #530 PR-A: text bucket carries 11 models with verified+live chat/vision_chat
+  // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
     'claude-opus-4-6',
     'claude-opus-5',
@@ -143,6 +143,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'deepseek-v4-pro',
     'gemini-3.1-pro-preview',
     'gemini-3.7-flash',
+    'gemini-3.8-flash',
     'glm-5.3',
     'gpt-5.5',
     'gpt-5.6-sol',
@@ -150,7 +151,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'kimi-k3',
   ]);
   assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-0-fast');
-  assert.equal(dto.defaultsByOperation.chat, 'gemini-3.7-flash');
+  assert.equal(dto.defaultsByOperation.chat, 'gemini-3.8-flash');
 });
 
 test('mergeInputCapability: union roles, min floor, max ceiling, mimes union', () => {
@@ -193,7 +194,7 @@ test('mergeInputCapability: union roles, min floor, max ceiling, mimes union', (
 test('projectChatRows: full text directory with brand/role/input derived from ops', () => {
   const index = freshIndex();
   const rows = projectChatRows(index);
-  assert.equal(rows.length, 11);
+  assert.equal(rows.length, 12);
   const gemini = rows.find((r) => r.id === 'gemini-3.7-flash');
   assert.deepEqual([...gemini.input], ['text', 'image', 'video']);
   assert.equal(gemini.brand, 'google');
