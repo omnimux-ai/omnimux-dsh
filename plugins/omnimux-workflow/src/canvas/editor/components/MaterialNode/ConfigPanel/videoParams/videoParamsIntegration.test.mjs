@@ -65,14 +65,14 @@ test('视频分支已移除旧版胶囊块（wf-param-pill--video-summary 仅剩
   assert.ok(videoBlock.includes('wf-video-trigger-bar__wrap'), '视频分支应含 TriggerBar 包裹层');
 });
 
-test('handleModelChange 消费带显式提示的 buildVideoParamTransition 并保留防御分支', () => {
+test('handleModelChange 仅视频模型消费 buildVideoParamTransition', () => {
   assert.ok(
     source.includes('buildVideoParamTransition('),
     'handleModelChange 应委托 buildVideoParamTransition',
   );
   assert.ok(
-    source.includes('if (!newModelItem) {'),
-    'newModelItem 不存在时应保留防御分支',
+    source.includes("if (materialType === 'video' && newModelItem) {"),
+    '只有目录中的视频模型使用视频参数转换，其他类型由共享兼容状态决定方式',
   );
   // W2: catalog/upstreams 传入 fallback，便于 operation 收敛
   assert.ok(source.includes('catalog: activeCatalog') || source.includes('catalog,'));

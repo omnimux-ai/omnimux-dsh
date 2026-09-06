@@ -1062,33 +1062,11 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   gap: 8px;
 }
 
-/* 音频子模式 Tab 切换 */
-.wf-config-panel__audio-tabs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-.wf-config-panel__tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--wb-border);
-  background: var(--wb-surface-raised);
-  color: var(--wb-text-secondary);
+.wf-config-panel__input-hint {
+  padding: 8px 12px 0;
   font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 150ms ease;
-}
-
-.wf-config-panel__tab-btn--active {
-  background: #1a1a1a;
-  color: #ffffff;
-  border-color: #1a1a1a;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
 }
 
 /* Prompt 一体化区域（无多余内嵌边框，融入单层卡片） */
