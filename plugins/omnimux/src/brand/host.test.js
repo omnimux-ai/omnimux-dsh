@@ -7,7 +7,8 @@ describe('host brand boot', () => {
   it('taps index HTML with the brand boot payload when webServer is present', () => {
     const taps = []
     const ctx = {
-      inject(_deps, callback) {
+      inject(deps, callback) {
+        if (deps.includes('connection')) return
         callback({
           webServer: {
             register() {},

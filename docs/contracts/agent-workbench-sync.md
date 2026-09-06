@@ -1,14 +1,14 @@
 ---
-title: "Agent 工作台双向协同契约（信封 / 工具 / SSE / 防打扰）"
+title: "Agent 工作台双向协同契约（信封 / 工具 / WebSocket / 防打扰）"
 id: "contract-agent-workbench-sync"
 type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-09-04"
+updated: "2026-09-06"
 authors: ["gao-jianyuan", "agent-architect"]
 subsystem: "omnimux"
-tags: ["workbench", "sse", "ui-context-envelope", "agent-tools"]
+tags: ["workbench", "websocket", "ui-context-envelope", "agent-tools"]
 supersedes: []
 superseded_by: null
 related:
@@ -30,8 +30,8 @@ Normative wire for three orthogonal surfaces: **viewport addressing (G1)**, **wo
 | Seam | Owner | Consumers | MUST NOT |
 |---|---|---|---|
 | `window.__omnimuxWorkbench` | Hub client | Vertical clients | `import` hub; `claimProductStage` |
-| `ctx.provide('hubEvents')` / `ctx.get('hubEvents')` | Hub host | Vertical hosts | Private WebSocket; cloud sockets; per-plugin SSE |
-| `GET /omnimux/events/stream` | Hub host | Hub client (one EventSource) | Verticals opening extra EventSource |
+| `ctx.provide('hubEvents')` / `ctx.get('hubEvents')` | Hub host | Vertical hosts | Private WebSocket; cloud sockets; per-plugin WebSocket |
+| `GET /omnimux/events/stream` | Hub host | Hub client (one WebSocket) | Verticals opening extra sockets |
 | `POST /omnimux/workbench/viewport` | Hub host | Hub client heartbeat | Vertical HTTP clients posting envelopes |
 | `POST /omnimux/workbench/rpc/ack` | Hub host | Hub client RPC bridge | Verticals acking RPC |
 | `workbench_get_active_view` / `workbench_open_tab` | Hub tools | Agent | Vertical `workbench_*` clones |
@@ -79,7 +79,7 @@ User bubble **MUST NOT** show this block (Hub conversation filter). Dev profile 
 
 ### 2.3 Tool-plane mailbox (what `workbench_get_active_view` reads)
 
-Hub client POSTs the full JSON envelope to `/omnimux/workbench/viewport` on snapshot change and at ≤1s heartbeat while a session exists. Host keeps last-known per process. If `capturedAt` is older than **3s**, tools return `stale: true`.
+Hub client POSTs the full JSON envelope to `/omnimux/workbench/viewport` every 2s while a real session exists (never the `default` placeholder). Only one viewport request may be in flight; each viewport/ack request is aborted after 3s and all pending requests are aborted on disposal. Host keeps last-known per process. If `capturedAt` is older than **3s**, tools return `stale: true`.
 
 This is **not** the composer prefix. Both exist (ADR Q1).
 
@@ -92,7 +92,7 @@ window.__omnimuxWorkbench.getUiContext() → Envelope
 
 Unregister on tab unmount. Missing contributor → `reason: no-contributor`, `surface` still filled from snapshot.
 
-## 3. HubEventBus + SSE (G3 transport)
+## 3. HubEventBus + WebSocket (G3 transport)
 
 ### 3.1 Process bus
 
@@ -104,20 +104,20 @@ Event type namespace: `omnimux:<domain>:<verb>` (`omnimux:assets:changed`, `omni
 
 | Item | Rule |
 |---|---|
-| Content-Type | `text/event-stream; charset=utf-8` |
-| Headers | `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`, `retry: 3000` |
-| Auth | Loopback origin/referer hostname ∈ `{127.0.0.1, localhost, ::1, [::1]}`. `sec-fetch-site=cross-site` → **403**. Same host set as `assertLocalWrite`. **GET is not a write**; it MUST NOT skip the origin check. |
-| Heartbeat | `event: omnimux:heartbeat` every **2s**, payload `{ at }` |
-| Replay | Honour `Last-Event-ID`; replay ring entries with `id > last` |
-| Wire | `id: <n>\nevent: <type>\ndata: <json>\n\n` |
+| Transport | WebSocket upgrade on the existing Host `webServer.registerUpgrade`; no separate listener |
+| Auth | Official `connection.requestRejection(req)` plus loopback origin/referer validation; cross-site requests receive **403** |
+| Heartbeat | JSON `{ type: "omnimux:heartbeat", payload: { at } }` every **2s** |
+| Replay | Reconnect query `?after=<last-id>`; replay ring entries with `id > last` |
+| Wire | JSON event `{ id, type, payload, at }`; heartbeat has no replay id |
+| Limits | Read-only feed; client messages close with **1008**; buffered output above **1 MiB** terminates the connection |
 
-SSE is **read-only broadcast**. It MUST NOT bypass `assertLocalWrite` on mutating routes.
+Commands and acknowledgements keep their authenticated HTTP routes. Hub transport MUST NOT reserve an HTTP/1 streaming request slot: multi-page EventSource connections can starve session creation and ordinary API requests (#597).
 
 ### 3.3 Browser singleton
 
-Hub client opens **one** `EventSource('/omnimux/events/stream')` and fans out on `BroadcastChannel('omnimux:hub-events')` plus `window.__omnimuxHubEvents.subscribe(type, fn)`. Verticals **MUST NOT** construct their own EventSource.
+Hub client opens **one** WebSocket per mounted client and exposes `window.__omnimuxHubEvents.subscribe(type, fn)`. Verticals MUST NOT open their own hub sockets. Disposal closes the socket, timers and pending HTTP requests, and removes only its own global facade.
 
-Health: any event (including heartbeat) resets a watchdog. **5s** silence → `healthy = false` → assets (and later other feeds) start `POLL_MS = 5000`. `onopen` / first heartbeat after gap → `force refresh(true)` then stop poll.
+Any event (including heartbeat) resets a **5s** watchdog. Silence closes the socket and marks the feed unhealthy. Reconnect waits **3s** and carries the last replay id. Stale socket callbacks cannot affect the replacement connection. Assets use their existing **5s** poll while unhealthy and refresh on recovery.
 
 ### 3.4 Assets changed payload
 
@@ -170,7 +170,7 @@ Success / soft-reject codes (PRD §5.2 plus `rpc-timeout`, `no-client`):
 | `reason-required` | false | Missing/short reason |
 | `user-denied` | false | Settings `allowAgentSwitchTab === false` |
 | `rpc-timeout` | false | Browser did not ack within 2000ms |
-| `no-client` | false | No SSE subscriber for RPC |
+| `no-client` | false | No event subscriber for RPC |
 
 `ok: true, applied: false` is a **legal success**. Agent MUST NOT retry in a loop.
 
@@ -213,7 +213,7 @@ Copied as engineering gates from PRD §5.3:
 
 ## 6. Poll fallback (assets gold)
 
-SSE healthy → **do not** run the 5s interval. SSE unhealthy → reuse `POLL_MS = 5000` and `GET /omnimux/assets/state?lrev&arev` (`unchanged: true` preserved). Hidden (`display:none`) tabs stay subscribed (keep-alive). First open of a never-mounted tab still `refreshState(true)`.
+WebSocket healthy → **do not** run the 5s interval. WebSocket unhealthy → reuse `POLL_MS = 5000` and `GET /omnimux/assets/state?lrev&arev` (`unchanged: true` preserved). Hidden (`display:none`) tabs stay subscribed (keep-alive). First open of a never-mounted tab still `refreshState(true)`.
 
 ## 7. Settings
 
