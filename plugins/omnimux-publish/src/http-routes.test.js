@@ -359,6 +359,19 @@ describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => 
     assert.equal(media.open(result.record.media_ids[0]).buffer.toString(), 'cover-bytes')
   })
 
+  it('read-only draft detail restores media and saving the restored payload preserves references', async () => {
+    freshDispatcher()
+    const row = media.importBuffer(Buffer.from('fixture image'), { filename: 'restore.png', content_type: 'image/png' }).media
+    const created = store.create({ type: 'image', title: 'Restore', media_ids: [row.id] })
+    const detail = await dispatcher.getRecord({ record_id: created.id, refresh: false })
+    assert.deepEqual(detail.media, [{ id: row.id, kind: 'image', filename: 'restore.png', content_type: 'image/png' }])
+    const saved = await dispatcher.updateDraft({ draft_id: created.id, patch: {
+      title: 'Restored and saved', media: detail.media.map((item) => ({ media_id: item.id })),
+    } })
+    assert.deepEqual(saved.record.media_ids, [row.id])
+    assert.equal(tools.calls.length, 0)
+  })
+
   it('draft result carries media rows (kind/filename) for browser-side restore', async () => {
     freshDispatcher()
     const src = join(dir, 'pic2.png')

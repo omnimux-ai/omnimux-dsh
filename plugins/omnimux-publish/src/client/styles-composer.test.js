@@ -89,6 +89,16 @@ describe('publish composer type-pick styles (layout regression)', () => {
     }
   })
 
+  it('keeps composer and detail within the positioned stage, below host controls', () => {
+    ensureCss()
+    const css = String(stub.appended[0].textContent)
+    assert.match(css, /\.omnimux-publish-stage\s*\{[^}]*position:\s*relative;/)
+    const subscreen = css.match(/\.omnimux-publish-subscreen\s*\{([^}]*)\}/)
+    assert.ok(subscreen)
+    assert.match(subscreen[1], /position:\s*absolute;/)
+    assert.match(subscreen[1], /inset:\s*0;/)
+  })
+
   it('uses defined native tokens for readable account-modal errors', () => {
     ensureCss()
     const css = String(stub.appended[0].textContent)

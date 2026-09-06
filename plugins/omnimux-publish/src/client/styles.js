@@ -79,9 +79,9 @@ const CSS = `
 .omnimux-publish-batch-actions { display: flex; gap: 8px; }
 .omnimux-publish-view-switcher { display: flex; gap: 2px; }
 
-/* Layer 5 Overlay Subscreen (Composer & Detail full-screen) */
+/* Composer and detail stay inside the workbench stage. */
 .omnimux-publish-subscreen {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 300;
   background: var(--dsw-alias-bg-base, #ffffff);
