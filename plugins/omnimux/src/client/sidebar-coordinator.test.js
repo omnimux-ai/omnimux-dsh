@@ -317,3 +317,47 @@ test('openCollapsedNewMenuAt uses topbar anchor rect not hidden rail', async () 
     disposeInline()
   }
 })
+
+
+test('Alpha entries retain activation and labels across placement and remount', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, getPlaceCountForTests } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  let clicks = 0
+  const rows = ['accounts', 'workflow', 'publish', 'analytics', 'inspiration'].map((name, rank) => {
+    const element = document.createElement('button')
+    element.innerHTML = '<span class="omnimux-sidebar-nav-entry-label">功能</span>'
+    element.setAttribute('aria-label', '功能')
+    element.addEventListener('click', () => { clicks += 1 })
+    const row = { id: `omnimux-${name}-entry`, rank: rank + 3, create: () => element }
+    return { name, element, row, dispose: api.register(row) }
+  })
+  for (const { name, element } of rows) {
+    element.click()
+    assert.equal(element.disabled, false)
+    assert.equal(element.getAttribute('aria-label'), '功能')
+    if (name === 'inspiration') {
+      assert.equal(element.querySelector('.omnimux-sidebar-alpha-badge'), null)
+      assert.equal(element.hasAttribute('data-release-stage'), false)
+    } else {
+      assert.equal(element.dataset.releaseStage, 'alpha')
+      assert.equal(element.querySelector('.omnimux-sidebar-alpha-badge').textContent, 'Alpha')
+      assert.match(element.getAttribute('aria-description'), /内测.*优先.*非 Alpha.*正式版/)
+      element.querySelector('.omnimux-sidebar-nav-entry-label').textContent = 'Accounts'
+      element.setAttribute('aria-label', 'Accounts')
+      assert.match(element.title, /内测/)
+    }
+  }
+  assert.equal(clicks, 5)
+  for (const { dispose } of rows) dispose()
+  const again = rows.slice(0, 4).map(({ row }) => api.register(row))
+  api.place()
+  await new Promise(resolve => setTimeout(resolve, 20))
+  const settled = getPlaceCountForTests()
+  await new Promise(resolve => setTimeout(resolve, 20))
+  assert.equal(getPlaceCountForTests(), settled, 'badge placement must not cause an observer loop')
+  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 4)
+  for (const dispose of again) dispose()
+  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
+})
