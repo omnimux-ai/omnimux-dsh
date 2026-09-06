@@ -686,8 +686,8 @@ export function workbenchDefaultWidthPx(state, env = {}) {
 
 /**
  * GUI-focus width: occupy the remainder of the viewport after the official
- * left rail. Conversation stays mounted and is squeezed by better-sidebar's
- * `#root { margin-right }`.
+ * left rail. Conversation stays mounted inside the AppFrame's remaining
+ * content area after better-sidebar reserves the panel padding.
  */
 export function workbenchGuiWidthPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()

@@ -42,7 +42,7 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
 }
 
 /* Reserve equal scrollbar gutters so the content stays centered in the column. */
-[data-phase='hero'] [data-conversation-scroll]{
+[data-conversation-scroll]{
   scrollbar-gutter:stable both-edges;
 }
 
