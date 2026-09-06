@@ -104,6 +104,10 @@ export interface FilteredModelListResult {
 // ============================================================================
 
 export interface UpstreamMediaSnapshot {
+  availability?: 'ready' | 'waiting' | 'unavailable';
+  availabilityMessage?: string;
+  outputId?: string;
+  url?: string;
   nodeId: string;
   materialType: string;
   textContent?: string;
@@ -161,6 +165,11 @@ export function assetFromUpstreamSnapshot(snap: UpstreamMediaSnapshot): Upstream
 
   return {
     sourceNodeId: snap.nodeId,
+    availability: snap.availability,
+    availabilityMessage: snap.availabilityMessage,
+    outputId: snap.outputId,
+    url: snap.url,
+    textContent: snap.textContent,
     type: snap.materialType || 'text',
     ...(edgeId ? { edgeId } : {}),
     ...(mimeType ? { mimeType } : {}),
@@ -172,6 +181,7 @@ export function assetFromUpstreamSnapshot(snap: UpstreamMediaSnapshot): Upstream
 }
 
 export function buildUiUpstreamFingerprint(input: {
+  materialType?: string;
   prompt?: string;
   content?: string;
   nodeFields?: Record<string, unknown>;
@@ -181,6 +191,7 @@ export function buildUiUpstreamFingerprint(input: {
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(input, (input.upstreams ?? []).filter((item) => item.materialType === 'text').map((item) => item.textContent)),
     nodeFields: input.nodeFields,
+    localText: resolveGenerationPrompt(input),
     assets,
   });
 }

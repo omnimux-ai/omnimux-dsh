@@ -50,7 +50,10 @@ export type CompatReasonCode =
   | 'min_unsatisfied'
   | 'prompt_required'
   | 'metadata_required'
-  | 'execution_unavailable';
+  | 'execution_unavailable'
+  | 'input_waiting'
+  | 'input_unavailable'
+  | 'text_role_required';
 
 export interface CompatRejection {
   code: CompatReasonCode;
@@ -142,6 +145,11 @@ const BYTES_PER_MB = 1024 * 1024;
 // ============================================================================
 
 export interface UpstreamAssetFingerprint {
+  availability?: 'ready' | 'waiting' | 'unavailable';
+  availabilityMessage?: string;
+  outputId?: string;
+  url?: string;
+  textContent?: string;
   /** Edge identity (stable per graph edge). */
   edgeId?: string;
   sourceNodeId: string;
@@ -160,6 +168,7 @@ export interface UpstreamFingerprint {
   prompt: string;
   /** Values supplied on the node itself (for `source: node_field` contract slots). */
   nodeFields: Record<string, unknown>;
+  localText?: string;
   /** All upstream assets in deterministic (caller-supplied) order. */
   assets: UpstreamAssetFingerprint[];
   /** Media assets only (image/video/audio) — the hard-gate population. */
@@ -183,6 +192,7 @@ export function buildUpstreamFingerprint(input: {
   prompt?: string;
   nodeFields?: Record<string, unknown>;
   assets?: UpstreamAssetFingerprint[];
+  localText?: string;
 }): UpstreamFingerprint {
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
   const nodeFields = Object.fromEntries(
@@ -190,8 +200,9 @@ export function buildUpstreamFingerprint(input: {
   );
   const assets = (input.assets ?? []).map((asset) => ({ ...asset }));
   const mediaAssets = assets.filter((asset) => isMediaInputType(asset.type));
-  const signature = canonicalJson({ prompt, nodeFields, assets });
-  return { prompt, nodeFields, assets, mediaAssets, signature };
+  const localText = input.localText;
+  const signature = canonicalJson({ prompt, nodeFields, assets, localText });
+  return { prompt, nodeFields, assets, mediaAssets, signature, localText };
 }
 
 // ============================================================================
@@ -699,6 +710,17 @@ export function matchOperationInputs(
   // readyToSubmit: every slot min satisfied + required prompt present.
   const pending: CompatRejection[] = [];
   if (accepts) {
+    if (op.output.type === 'audio' && fingerprint.localText?.trim()
+      && fingerprint.assets.some((asset) => asset.type === 'text' && asset.textContent?.trim())) {
+      pending.push(rejection('text_role_required', '当前音频任务不能分别表达上游正文和本地要求；请将正文保留在一个来源，并用已支持的音色、语速等参数调整表达', { operationId: op.id }));
+    }
+    for (const asset of fingerprint.assets) {
+      if (!asset.availability || asset.availability === 'ready') continue;
+      pending.push(rejection(asset.availability === 'waiting' ? 'input_waiting' : 'input_unavailable',
+        asset.availabilityMessage ?? `来源 ${asset.sourceNodeId} 尚未就绪，请补齐内容或移除引用`, {
+          operationId: op.id, meta: { sourceNodeId: asset.sourceNodeId, edgeId: asset.edgeId },
+        }));
+    }
     for (const state of assignments.values()) {
       if (state.assets.length < state.slot.min) {
         pending.push(rejection('min_unsatisfied', `槽位 ${state.slot.slot} 需要至少 ${state.slot.min} 个输入（当前 ${state.assets.length}）`, {
@@ -724,7 +746,7 @@ export function matchOperationInputs(
       (slot) => (slot.role === 'prompt' || slot.slot === 'prompt') && slot.min >= 1,
     );
     if (promptRequired && !fingerprint.prompt.trim()) {
-      pending.push(rejection('prompt_required', '该 operation 需要非空 prompt', { operationId: op.id }));
+      pending.push(rejection('prompt_required', '请提供正文或补充要求，也可连接已有文本', { operationId: op.id }));
     }
     for (const slot of op.inputs) {
       if (slot.source !== 'node_field' || slot.min < 1 || slot.role === 'prompt' || slot.slot === 'prompt') continue;

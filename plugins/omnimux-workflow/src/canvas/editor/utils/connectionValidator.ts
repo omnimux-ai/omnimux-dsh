@@ -98,7 +98,7 @@ export function rejectReasonKey(reasonCode: string | undefined | null): string {
  * 文本-only 指纹不触发硬闸（prompt 政策由 node_field 槽与 readyToSubmit 管）。
  */
 export function validateDynamicModelCapacity(
-  connection: Pick<Connection, 'source' | 'target'>,
+  connection: Pick<Connection, 'source' | 'target'> & Partial<Pick<Edge, 'data' | 'sourceHandle' | 'targetHandle'>>,
   nodes: Array<Node<Record<string, unknown>>>,
   edges: Edge[],
   catalog?: CapabilityCatalog | null,
@@ -121,17 +121,10 @@ export function validateDynamicModelCapacity(
   const params = (targetData.params || {}) as Record<string, unknown>;
   const modelId = typeof params.model === 'string' ? params.model.trim() : '';
 
-  // 模拟连线后的上游指纹：既有入边（排除同源重复）+ pending source。
-  const pendingSourceIds = edges.some(
-    (edge) => edge.target === connection.target && edge.source === connection.source,
-  )
-    ? []
-    : [connection.source];
   const fingerprint = buildCanvasUpstreamFingerprint(
     connection.target,
     nodes,
-    edges,
-    pendingSourceIds,
+    [...edges, { ...connection, id: 'pending-connection' }],
   );
 
   // 纯文本指纹：软输入，不触发媒体硬闸。

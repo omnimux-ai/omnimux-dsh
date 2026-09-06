@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -10,6 +13,14 @@ import { createImportExecutor } from './importExecutor.ts';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+const mediaFixtureRoot = mkdtempSync(`${tmpdir()}/workflow-input-`);
+after(() => rmSync(mediaFixtureRoot, { recursive: true, force: true }));
+function mediaFixture(name) {
+  const path = `${mediaFixtureRoot}/${name}`;
+  writeFileSync(path, 'fixture media');
+  return path;
+}
 
 describe('resolveNodeKind - 全仓唯一节点身份判定真源', () => {
   it('显式 nodeKind 优先', () => {
@@ -195,12 +206,12 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
     // 模拟上游导入的图片节点输出：既有 content: '截屏2026-08-09 15.18.59.png'，又有 mediaAssets
     upstreamOutputs.set('img-node-1', {
       text: '截屏2026-08-09 15.18.59.png',
-      realPath: '/Users/test/Screenshots/截屏2026-08-09.png',
+      realPath: mediaFixture('截屏2026-08-09.png'),
       mediaAssets: [
         {
           type: 'image',
-          url: '/omnimux-workflow/api/local-file?path=%2FUsers%2Ftest%2FScreenshots%2F%E6%88%AA%E5%B1%8F2026-08-09.png',
-          path: '/Users/test/Screenshots/截屏2026-08-09.png',
+          url: `/omnimux-workflow/api/local-file?path=${encodeURIComponent(mediaFixture('截屏2026-08-09.png'))}`,
+          path: mediaFixture('截屏2026-08-09.png'),
         },
       ],
     });
@@ -230,7 +241,7 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
     assert.equal(req.capability, 'text');
     assert.equal(req.prompt, '解释下这个图片');
     assert.equal(req.model, 'gemini-3.7-flash');
-    assert.equal(req.image, '/Users/test/Screenshots/截屏2026-08-09.png', 'image 必须成功解析为物理绝对路径');
+    assert.equal(req.image, mediaFixture('截屏2026-08-09.png'), 'image 必须成功解析为物理绝对路径');
     assert.equal(output.text, '这是识别到的图片内容');
   });
 
@@ -254,7 +265,7 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
       mediaAssets: [
         {
           type: 'image',
-          url: '/omnimux-workflow/api/local-file?path=%2FUsers%2Ffoo%2Fphoto.jpg',
+          url: `/omnimux-workflow/api/local-file?path=${encodeURIComponent(mediaFixture('photo.jpg'))}`,
         },
       ],
     });
@@ -278,6 +289,6 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
     );
 
     assert.equal(submissions.length, 1);
-    assert.equal(submissions[0].image, '/Users/foo/photo.jpg');
+    assert.equal(submissions[0].image, mediaFixture('photo.jpg'));
   });
 });

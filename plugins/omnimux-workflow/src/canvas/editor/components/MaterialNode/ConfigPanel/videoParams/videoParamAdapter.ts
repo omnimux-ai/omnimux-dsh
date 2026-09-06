@@ -22,6 +22,7 @@ import {
   type UpstreamMediaSnapshot,
 } from '../../../../../../shared/validation/operationUi.ts';
 import { findDeclaredParameterFailure } from '../../../../../../shared/validation/declaredParameterValidation.ts';
+import { resolveGenerationPrompt } from '../../../../../../shared/graph/generationPrompt.ts';
 import type { EffectiveVideoParams, VideoNodeParams } from './types.ts';
 
 export const DEFAULT_ASPECT_RATIO = '16:9';
@@ -430,7 +431,7 @@ export function validateVideoParamsForUi(input: {
     undefined,
   );
   if (declaredFailure) errors.push(declaredFailure.message);
-  const prompt = input.prompt ?? '';
+  const prompt = resolveGenerationPrompt(input, (input.upstreams ?? []).filter((item) => item.materialType === 'text').map((item) => item.textContent));
   const operation = params.effectiveOperations.find((entry) => entry.id === params.operation);
   const promptSlot = operation?.slots.find((slot) => slot.type === 'text' || slot.role === 'prompt');
   const promptLength = Array.from(prompt).length;

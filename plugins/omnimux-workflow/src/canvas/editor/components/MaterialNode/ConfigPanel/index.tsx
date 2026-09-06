@@ -197,14 +197,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     });
   }, [nodeId]);
 
-  const effectivePrompt = resolveGenerationPrompt(nodeData, upstreams
-    .filter((item) => item.materialType === 'text')
-    .map((item) => item.textContent));
+  const localPrompt = resolveGenerationPrompt(nodeData);
 
-  // Match the executor's local-content and upstream-text fallback.
+  // The fingerprint composes source content once, using the same resolver as execution.
   const fingerprint = useMemo(
-    () => buildUiUpstreamFingerprint({ prompt: effectivePrompt, nodeFields: params, upstreams: upstreamSnapshots }),
-    [params, effectivePrompt, upstreamSnapshots],
+    () => buildUiUpstreamFingerprint({ materialType, prompt: nodeData.prompt, content: nodeData.content, nodeFields: params, upstreams: upstreamSnapshots }),
+    [params, materialType, nodeData.prompt, nodeData.content, upstreamSnapshots],
   );
 
   // ASR (speech_to_text) uses outputType 'text' even on a text node with audio upstream.
@@ -272,7 +270,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             {
               catalog: activeCatalog,
               upstreams: upstreamSnapshots,
-              prompt: effectivePrompt,
+              prompt: localPrompt,
               nextOperationId: typeof value === 'string' ? value : undefined,
             },
           );
@@ -288,7 +286,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       }
       onUpdateNodeData({ params: { ...params, [key]: value } });
     },
-    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, effectivePrompt, upstreamSnapshots],
+    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots],
   );
 
   // Effective ops for the currently selected model (all modalities).
@@ -315,10 +313,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             modelItem,
             catalog: activeCatalog,
             upstreams: upstreamSnapshots,
-            prompt: effectivePrompt,
+            prompt: localPrompt,
           })
         : null,
-    [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, effectivePrompt],
+    [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
   );
 
   const handleModelChange = useCallback(
@@ -329,7 +327,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         const transition = buildVideoParamTransition(params as Record<string, unknown>, newModelItem, {
           catalog: activeCatalog,
           upstreams: upstreamSnapshots,
-          prompt: effectivePrompt,
+          prompt: localPrompt,
         });
         onUpdateNodeData({ params: transition.params });
       } else {
@@ -349,13 +347,14 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
       });
     },
-    [activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, effectivePrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
+    [activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
   );
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
+    if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return '补充要求（可选）';
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');
@@ -370,7 +369,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       default:
         return t('panel.promptPlaceholder');
     }
-  }, [materialType, isMusicOperation, isAsrTool, t]);
+  }, [materialType, isMusicOperation, isAsrTool, upstreams, t]);
 
   const aspectRatioValue =
     typeof params.aspectRatio === 'string' && isAspectRatioValid(params.aspectRatio)
@@ -390,13 +389,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const videoValidationErrors = useMemo(
     () => materialType === 'video' && videoEffectiveParams
       ? validateVideoParamsForUi({
-          prompt: effectivePrompt,
+          prompt: localPrompt,
           rawParams: params as Record<string, unknown>,
           params: videoEffectiveParams,
           upstreams: upstreamSnapshots,
         })
       : [],
-    [materialType, effectivePrompt, params, upstreamSnapshots, videoEffectiveParams],
+    [materialType, localPrompt, params, upstreamSnapshots, videoEffectiveParams],
   );
 
   // Generate gate: blocked when zero effective ops / zero candidates / configuration_error.
@@ -510,7 +509,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                   className={`wf-config-panel__ref-thumb-slot ${
                     item.hasMedia ? 'wf-config-panel__ref-thumb-slot--ready' : ''
                   }`}
-                  title={`${item.label} (${item.hasMedia ? '素材已就绪' : '等待素材'})`}
+                  title={item.availabilityMessage ?? `${item.label}：${item.textContent?.slice(0, 120) || '使用当前选定结果'}`}
+                  data-input-availability={item.availability}
                   data-mime={item.mimeType ?? 'unknown'}
                   data-size-bytes={item.sizeBytes ?? 'unknown'}
                   data-duration-sec={item.durationSec ?? 'unknown'}
@@ -622,6 +622,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           }`}
           value={prompt ?? ''}
           placeholder={placeholder}
+          aria-label={placeholder}
           rows={isExpanded ? 8 : 2}
           onChange={(e) => onUpdateNodeData({ prompt: e.target.value })}
         />

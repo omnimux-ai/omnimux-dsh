@@ -23,6 +23,7 @@ import { resolveNodeKind } from './materialNode.ts';
 import type { CapabilityCatalog } from '../api.ts';
 import type { MaterialType } from '../canvasTypes.ts';
 import { resolveGenerationPrompt } from './generationPrompt.ts';
+import { readNodeInputSource, readCurrentText } from './nodeInputSource.ts';
 import {
   buildContractView,
   buildUpstreamFingerprint,
@@ -130,10 +131,6 @@ function readCurrentOperationId(params: Record<string, unknown>): string | undef
     : undefined;
 }
 
-function readFiniteNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
 function assetFromEdge(edge: Edge, nodes: CanvasNode[]): UpstreamAssetFingerprint | null {
   const source = nodes.find((node) => node.id === edge.source);
   if (!source) return null;
@@ -149,21 +146,16 @@ function assetFromEdge(edge: Edge, nodes: CanvasNode[]): UpstreamAssetFingerprin
       ? String((edgeData.slotBinding as { role: string }).role)
       : undefined);
   const targetSlot = readExplicitTargetSlot(edgeData, edge.targetHandle);
-  // Prefer canonical sizeBytes / durationSec; fall back to legacy fileSize / duration.
-  // Unknown stays omitted — never invent 0.
-  const sizeBytes =
-    readFiniteNumber(data.sizeBytes) ?? readFiniteNumber(data.fileSize);
-  const durationSec =
-    readFiniteNumber(data.durationSec) ?? readFiniteNumber(data.duration);
-  const mimeType =
-    typeof data.mimeType === 'string' && data.mimeType.trim()
-    && data.mimeType.trim().toLowerCase() !== 'unknown'
-    && data.mimeType.trim() !== 'application/octet-stream'
-      ? data.mimeType.trim()
-      : undefined;
+  const current = readNodeInputSource(source);
+  const { mimeType, sizeBytes, durationSec } = current.metadata ?? {};
   return {
     edgeId: edge.id,
     sourceNodeId: source.id,
+    availability: current.availability,
+    availabilityMessage: current.message,
+    outputId: current.outputId,
+    url: current.output.mediaAssets?.[0]?.url,
+    textContent: current.output.text,
     type,
     ...(mimeType ? { mimeType } : {}),
     ...(sizeBytes !== undefined ? { sizeBytes } : {}),
@@ -186,7 +178,8 @@ function fingerprintForNode(
     .filter((asset): asset is UpstreamAssetFingerprint => asset !== null);
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, edges.filter((edge) => edge.target === node.id)
-      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return source?.data.materialType === 'text' ? [source.data.content, source.data.generatedContent] : []; })),
+      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return source?.data.materialType === 'text' ? [readCurrentText(source.data)] : []; })),
+    localText: resolveGenerationPrompt(data),
     nodeFields: readParams(node),
     assets,
   });
@@ -219,7 +212,8 @@ export function buildCanvasUpstreamFingerprint(
   }
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, [...edges.filter((edge) => edge.target === targetId).map((edge) => edge.source), ...pendingSourceIds]
-      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return source?.data.materialType === 'text' ? [source.data.content, source.data.generatedContent] : []; })),
+      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return source?.data.materialType === 'text' ? [readCurrentText(source.data)] : []; })),
+    localText: resolveGenerationPrompt(data),
     nodeFields: target ? readParams(target) : {},
     assets,
   });
@@ -531,7 +525,7 @@ function runCompatPass(
   }
   for (const edge of mutation.addEdges ?? []) recomputeTargets.add(edge.target);
   const changedSources = new Set((mutation.nodePatches ?? []).filter((patch) =>
-    ['content', 'generatedContent', 'materialType', 'mimeType', 'sizeBytes', 'fileSize', 'durationSec', 'duration'].some((key) => key in patch.data),
+    ['content', 'generatedContent', 'materialType', 'mimeType', 'sizeBytes', 'fileSize', 'durationSec', 'duration', 'mediaAssets', 'mediaUrl', 'relativePath', 'realPath', 'path', 'taskId', 'status', 'executionStatus', 'probeStatus', 'isMissing', 'fileMissing', 'isOffline'].some((key) => key in patch.data),
   ).map((patch) => patch.nodeId));
   for (const edge of edges) if (changedSources.has(edge.source)) recomputeTargets.add(edge.target);
 

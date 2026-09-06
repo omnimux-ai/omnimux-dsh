@@ -20,6 +20,7 @@ export interface NodeInputSource {
   label: string;
   materialType: string;
   outputId?: string;
+  metadata?: Pick<InputMediaAsset, 'mimeType' | 'sizeBytes' | 'durationSec'>;
   availability: InputAvailability;
   message?: string;
   output: { text?: string; mediaAssets?: InputMediaAsset[] };
@@ -83,7 +84,16 @@ export function readNodeInputSource(
   const data = node.data ?? {};
   const materialType = nonempty(data.materialType) ?? node.type ?? 'text';
   const label = nonempty(data.label) ?? node.id;
-  const base = { nodeId: node.id, label, materialType };
+  const selected = Array.isArray(data.mediaAssets)
+    ? data.mediaAssets.find((asset) => asset && typeof asset === 'object' && asset.type === materialType) as Record<string, unknown> | undefined
+    : undefined;
+  const fields = selected ?? data;
+  const metadata = {
+    mimeType: normalizeMimeType(fields.mimeType ?? data.mimeType) ?? undefined,
+    sizeBytes: normalizeMediaNumber(fields.sizeBytes ?? data.sizeBytes ?? data.fileSize) ?? undefined,
+    durationSec: normalizeMediaNumber(fields.durationSec ?? data.durationSec ?? data.duration) ?? undefined,
+  };
+  const base = { nodeId: node.id, label, materialType, metadata };
   const missing = data.isMissing === true || data.fileMissing === true || data.isOffline === true
     || ['missing', 'corrupted', 'offline'].includes(String(data.status))
     || ['missing', 'corrupted', 'error'].includes(String(data.probeStatus));

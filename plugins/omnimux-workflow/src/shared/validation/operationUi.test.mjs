@@ -469,7 +469,7 @@ describe('generation-node mode presentation', () => {
     }
   });
 
-  it('upstream text and node content satisfy prompt readiness with executor precedence', () => {
+  it('upstream text and local instructions both participate in prompt readiness', () => {
     const upstreams = [{ nodeId: 'source', materialType: 'text', textContent: 'Upstream text' }];
     for (const input of [
       { prompt: '', upstreams },
@@ -479,8 +479,8 @@ describe('generation-node mode presentation', () => {
       const state = buildEffectiveOpsUiState({ catalog: multimodeCatalog('text'), modelId: 'multi', fingerprint, outputType: 'text' });
       assert.equal(state.blockGenerate, false);
     }
-    assert.equal(buildUiUpstreamFingerprint({ prompt: 'Explicit', content: 'Saved', upstreams }).prompt, 'Explicit');
-    assert.equal(buildUiUpstreamFingerprint({ prompt: '', content: 'Saved', upstreams }).prompt, 'Saved');
+    assert.equal(buildUiUpstreamFingerprint({ prompt: 'Explicit', content: 'Saved', upstreams }).prompt, '来源 1：\nUpstream text\n\n补充要求：\nExplicit');
+    assert.equal(buildUiUpstreamFingerprint({ prompt: '', content: 'Saved', upstreams }).prompt, '来源 1：\nUpstream text\n\n补充要求：\nSaved');
   });
 
   it('empty text keeps a typed input reason without inventing readiness', () => {

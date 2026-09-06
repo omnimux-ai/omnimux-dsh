@@ -9,13 +9,14 @@
 import { getOutgoers, type Edge, type Node, type Connection } from '@xyflow/react';
 // 显式 .ts 扩展名：node --test 的 type-stripping 不做 TS 扩展名解析
 import { isNodeConnectionValid } from './connectionConfig.ts';
+import { readExplicitTargetSlot } from '../validation/compatKernel.ts';
 
 export interface CanvasConnectionStructureValidation {
   valid: boolean;
   reasonCode?: 'self_connection' | 'duplicate_edge' | 'missing_node' | 'cycle' | 'type_contract';
 }
 
-type ConnectionLike = Pick<Connection, 'source' | 'target'> & Partial<Pick<Edge, 'sourceHandle' | 'targetHandle'>>;
+type ConnectionLike = Pick<Connection, 'source' | 'target'> & Partial<Pick<Edge, 'sourceHandle' | 'targetHandle' | 'data'>>;
 
 export function validateCanvasConnectionStructure(
   connection: ConnectionLike,
@@ -25,7 +26,15 @@ export function validateCanvasConnectionStructure(
   if (connection.source === connection.target) {
     return { valid: false, reasonCode: 'self_connection' };
   }
-  if (edges.some((edge) => edge.source === connection.source && edge.target === connection.target)) {
+  const bindingKey = (edge: ConnectionLike): string => {
+    const data = edge.data ?? {};
+    const slot = readExplicitTargetSlot(data, edge.targetHandle);
+    const assigned = data.slotBinding && typeof data.slotBinding === 'object' ? data.slotBinding as { role?: unknown } : {};
+    const role = typeof data.role === 'string' ? data.role.trim() : typeof assigned.role === 'string' ? assigned.role.trim() : '';
+    return JSON.stringify([slot ?? '', role]);
+  };
+  if (edges.some((edge) => edge.source === connection.source && edge.target === connection.target
+    && bindingKey(edge) === bindingKey(connection))) {
     return { valid: false, reasonCode: 'duplicate_edge' };
   }
 

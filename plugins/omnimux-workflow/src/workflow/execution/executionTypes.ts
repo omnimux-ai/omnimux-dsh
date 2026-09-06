@@ -25,6 +25,7 @@ export const CANCELABLE_STATUSES = new Set<ExecutionStatusValue>([
 ]);
 
 export interface ExecutionManagerDeps {
+  resolveProjectFile?: (workspaceId: string, relativePath: string) => string;
   executionsDir: string;
   gateway: GenerationGateway;
   /** Plugin media root (absolute). */
