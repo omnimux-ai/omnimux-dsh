@@ -25,6 +25,7 @@ import type { ServerResponse, IncomingMessage } from 'node:http';
 import type { WorkflowPaths } from './paths';
 import { resolveWorkflowPaths } from './paths';
 import { createWorkspaceStore } from './workspace/WorkspaceStore';
+import { createGenerationPreferencesStore } from './workspace/GenerationPreferencesStore';
 import { createProjectAssetsStore } from './workspace/ProjectAssetsStore';
 import { createProjectStore } from '../projects/ProjectStore';
 import { bindEnsureProjectBound } from '../projects/ensureProjectBound';
@@ -87,6 +88,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     workspacesDir: paths.workspacesDir,
     resolveProjectRoot,
   });
+  const generationPreferences = createGenerationPreferencesStore(join(paths.root, 'generation-preferences.json'));
   const templates = new TemplateStore({ templatesDir });
   const gateway =
     opts.gateway
@@ -115,6 +117,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   });
   const dispatcher = createWorkflowDispatcher({
     store,
+    generationPreferences,
     gateway,
     mediaDir: paths.mediaDir,
     executionManager,
@@ -185,6 +188,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
           mediaDir: paths.mediaDir,
           ensureProjectBound,
           getCatalog,
+          getGenerationPreferences: () => generationPreferences.get().lastModelByType,
           getActiveView: getActiveView as
             | ((sessionId?: string) => {
                 ok?: boolean;

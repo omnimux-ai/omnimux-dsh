@@ -23,6 +23,8 @@ export const WORKFLOW_ROUTE_PREFIXES = [
 ] as const;
 
 export const WORKFLOW_API_ROUTES = {
+  /** GET/PATCH: profile-wide last manual model choices. */
+  generationPreferences: `${WORKFLOW_ROUTE_PREFIX}/api/generation-preferences`,
   /** GET: build manifest (canvas.js hash for cache busting). */
   manifest: `${WORKFLOW_ROUTE_PREFIX}/api/manifest`,
   /** GET: island bundle (lazy-loaded by CanvasBridge). */
