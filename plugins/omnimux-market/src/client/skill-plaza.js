@@ -13,26 +13,40 @@
       "音频音乐": "picker.tab.audio",
       "平台工具": "picker.tab.platform",
     };
+    const PLAZA_SHELF_KEYWORDS = {
+      "电商": ["电商", "独立站", "跨境", "shopify", "选品"],
+      "商业广告": ["商业广告"],
+      "短剧漫剧": ["短剧漫剧"],
+      "专业影视": ["专业影视"],
+      "动画": ["动画"],
+      "教育": ["教育"],
+      "创意实验": ["创意实验"],
+      "音频音乐": ["音频音乐"],
+      "平台工具": ["平台工具"],
+    };
+
+    function plazaMatchesTag(item, tag) {
+      if (!item || !tag) return true;
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+      if (tags.includes(tag)) return true;
+      const kws = PLAZA_SHELF_KEYWORDS[tag] || [tag];
+      const hay = [item.category, item.categoryLabel, item.name, item.title, item.description, item.summary, tags.join(" ")]
+        .map((v) => String(v || "")).join(" ");
+      const lower = hay.toLowerCase();
+      return kws.some((kw) => lower.includes(String(kw).toLowerCase()));
+    }
 
     function plazaShelfItem(item) {
       if (!item) return false;
       const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
       if (tags.some((tag) => PLAZA_SHELF_TAGS.includes(tag))) return true;
-      const hay = [item.category, item.categoryLabel, item.name, item.title, item.description, item.summary, tags.join(" ")]
-        .map((v) => String(v || "")).join(" ");
-      return PLAZA_SHELF_TAGS.some((tag) => hay.includes(tag));
+      return PLAZA_SHELF_TAGS.some((tag) => plazaMatchesTag(item, tag));
     }
 
     function plazaFilterShelf(items, tag) {
       const list = (Array.isArray(items) ? items : []).filter(plazaShelfItem);
       if (!tag) return list;
-      return list.filter((it) => {
-        const tags = Array.isArray(it.tags) ? it.tags.map(String) : [];
-        if (tags.includes(tag)) return true;
-        const hay = [it.category, it.categoryLabel, it.name, it.title, it.description, it.summary, tags.join(" ")]
-          .map((v) => String(v || "")).join(" ");
-        return hay.includes(tag);
-      });
+      return list.filter((it) => plazaMatchesTag(it, tag));
     }
 
     function resolvePlazaIconSize(size) {
@@ -112,7 +126,8 @@
           query: category ? (submitted ? submitted + " " + category : category) : submitted,
           limit: pageSize,
           offset: (page - 1) * pageSize,
-          channels: ["custom", "workbuddy"],
+          // channels: ["custom", "workbuddy"]
+          channels: submitted ? ["custom", "workbuddy", "skillhub"] : ["custom", "workbuddy"],
         };
         const key = apiCacheKey("search", payload);
         const cached = apiCache.get(key);

@@ -26,6 +26,17 @@
       "音频音乐": "picker.tab.audio",
       "平台工具": "picker.tab.platform",
     };
+    const PICKER_SHELF_KEYWORDS = {
+      "电商": ["电商", "独立站", "跨境", "shopify", "选品"],
+      "商业广告": ["商业广告"],
+      "短剧漫剧": ["短剧漫剧"],
+      "专业影视": ["专业影视"],
+      "动画": ["动画"],
+      "教育": ["教育"],
+      "创意实验": ["创意实验"],
+      "音频音乐": ["音频音乐"],
+      "平台工具": ["平台工具"],
+    };
     const PICKER_TABS = [
       { id: "all", kind: "all", labelKey: "picker.tab.all" },
       { id: "mine", kind: "mine", labelKey: "picker.tab.mine" },
@@ -64,9 +75,11 @@
       if (!item || !tag) return true;
       const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
       if (tags.includes(tag)) return true;
+      const kws = PICKER_SHELF_KEYWORDS[tag] || [tag];
       const hay = [item.category, item.categoryLabel, item.name, item.title, item.description, item.summary, tags.join(" ")]
         .map((v) => String(v || "")).join(" ");
-      return hay.includes(tag);
+      const lower = hay.toLowerCase();
+      return kws.some((kw) => lower.includes(String(kw).toLowerCase()));
     }
 
     function pickerInShelf(item) {

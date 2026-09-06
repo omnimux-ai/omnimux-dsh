@@ -11,7 +11,9 @@ import {
   buildSearchPayload,
   consumePlazaIntent,
   filterPickerItems,
+  inSkillShelf,
   installPayload,
+  matchesDomainTag,
   skillGesture,
   writePlazaIntent,
   loadPickerSearch,
@@ -43,6 +45,12 @@ describe('skill shelf taxonomy', () => {
     }
     assert.ok(Object.isFrozen(SKILL_SHELF_TAXONOMY))
     assert.ok(Object.isFrozen(SKILL_SHELF_TAGS))
+  })
+
+  it('ecom taxonomy row includes expanded fallback keywords', () => {
+    const ecom = SKILL_SHELF_TAXONOMY.find((row) => row.id === '电商')
+    assert.ok(ecom, '电商 row exists')
+    assert.deepEqual([...ecom.keywords], ['电商', '独立站', '跨境', 'shopify', '选品'])
   })
 })
 
@@ -93,6 +101,29 @@ describe('skill picker logic', () => {
     assert.deepEqual(filterPickerItems(items, '专业影视').map((it) => it.slug), ['b'])
     assert.deepEqual(filterPickerItems(items, '商业广告').map((it) => it.slug), ['ad'])
     assert.deepEqual(filterPickerItems(items, 'all').map((it) => it.slug), ['a', 'b', 'c', 'ad'])
+  })
+
+  it('matches expanded ecom keywords like 独立站 / shopify across fields and case', () => {
+    const standSiteItem = { slug: 'standalone-shop', name: '独立站搭建助手', tags: [] }
+    const shopifyItem = { slug: 'shopify-helper', description: 'Shopify 订单同步工具', tags: [] }
+    const crossBorderItem = { slug: 'cross-border', summary: '跨境出海选品专家', tags: [] }
+    const unrelatedItem = { slug: 'gmail-tool', name: '邮件小助手', description: '收发邮件', tags: [] }
+
+    assert.equal(matchesDomainTag(standSiteItem, '电商'), true)
+    assert.equal(matchesDomainTag(shopifyItem, '电商'), true)
+    assert.equal(matchesDomainTag(crossBorderItem, '电商'), true)
+    assert.equal(matchesDomainTag(unrelatedItem, '电商'), false)
+
+    assert.equal(inSkillShelf(standSiteItem), true)
+    assert.equal(inSkillShelf(shopifyItem), true)
+    assert.equal(inSkillShelf(crossBorderItem), true)
+    assert.equal(inSkillShelf(unrelatedItem), false)
+
+    const list = [standSiteItem, shopifyItem, crossBorderItem, unrelatedItem]
+    const filteredEcom = filterPickerItems(list, '电商')
+    assert.deepEqual(filteredEcom.map((it) => it.slug), ['standalone-shop', 'shopify-helper', 'cross-border'])
+    const filteredAll = filterPickerItems(list, 'all')
+    assert.deepEqual(filteredAll.map((it) => it.slug), ['standalone-shop', 'shopify-helper', 'cross-border'])
   })
 
   it('installs only when the card is not already installed', () => {

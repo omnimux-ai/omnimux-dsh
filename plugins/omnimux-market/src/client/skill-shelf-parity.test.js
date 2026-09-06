@@ -28,6 +28,22 @@ function parseLabelMapKeys(src, constName) {
   return [...match[1].matchAll(/"([^"]+)":/g)].map((m) => m[1])
 }
 
+function parseKeywordMap(src, constName) {
+  const re = new RegExp(`const ${constName} = \\{([\\s\\S]*?)\\};`)
+  const match = src.match(re)
+  assert.ok(match, `${constName} not found in fragment source`)
+  const map = {}
+  for (const line of match[1].split('\n')) {
+    const keyMatch = line.match(/"([^"]+)":\s*\[(.*?)\]/)
+    if (keyMatch) {
+      const tag = keyMatch[1]
+      const kws = [...keyMatch[2].matchAll(/"([^"]+)"/g)].map((m) => m[1])
+      map[tag] = kws
+    }
+  }
+  return map
+}
+
 describe('skill shelf taxonomy parity', () => {
   it('picker UI inline SKILL_SHELF_TAGS matches the canonical order exactly', () => {
     assert.deepEqual(parseInlineStringArray(pickerSrc, 'SKILL_SHELF_TAGS'), [...SKILL_SHELF_TAGS])
@@ -53,6 +69,15 @@ describe('skill shelf taxonomy parity', () => {
     for (const src of [pickerSrc, plazaSrc]) {
       for (const field of fields) {
         assert.ok(src.includes(`.${field}`), `fragment must include ${field} in fallback haystack`)
+      }
+    }
+  })
+
+  it('both fragments inline shelf keywords match the canonical taxonomy', () => {
+    for (const [src, name] of [[pickerSrc, 'PICKER_SHELF_KEYWORDS'], [plazaSrc, 'PLAZA_SHELF_KEYWORDS']]) {
+      const map = parseKeywordMap(src, name)
+      for (const row of SKILL_SHELF_TAXONOMY) {
+        assert.deepEqual(map[row.id], [...row.keywords], `${name} keywords for ${row.id}`)
       }
     }
   })

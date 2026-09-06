@@ -24,7 +24,7 @@ export const PICKER_CACHE_TTL_MS = 90_000
  * keywords 为 L2/L3 兜底匹配词表，v1 收敛为 [id]；扩充需评估误命中（见 docs/design/2026-09-skill-shelf-filter-design.md）。
  */
 export const SKILL_SHELF_TAXONOMY = Object.freeze([
-  { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商']) },
+  { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商', '独立站', '跨境', 'shopify', '选品']) },
   { id: '商业广告', labelKey: 'picker.tab.ad', keywords: Object.freeze(['商业广告']) },
   { id: '短剧漫剧', labelKey: 'picker.tab.drama', keywords: Object.freeze(['短剧漫剧']) },
   { id: '专业影视', labelKey: 'picker.tab.film', keywords: Object.freeze(['专业影视']) },
@@ -77,6 +77,8 @@ export function matchesDomainTag(item, tag) {
   if (!item || !tag) return true
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : []
   if (tags.includes(tag)) return true
+  const row = SKILL_SHELF_TAXONOMY.find((entry) => entry.id === tag)
+  const keywords = row && Array.isArray(row.keywords) && row.keywords.length ? row.keywords : [tag]
   const hay = [
     item.category,
     item.categoryLabel,
@@ -86,7 +88,11 @@ export function matchesDomainTag(item, tag) {
     item.summary,
     tags.join(' '),
   ].map((v) => String(v || '')).join(' ')
-  return hay.includes(tag)
+  const lowerHay = hay.toLowerCase()
+  return keywords.some((kw) => {
+    const k = String(kw || '').toLowerCase()
+    return k ? lowerHay.includes(k) : false
+  })
 }
 
 export function itemShelfTags(item) {
