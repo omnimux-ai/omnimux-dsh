@@ -13,8 +13,8 @@
   --wb-accent: var(--dsw-static-deepseek-500, #4176E6);
   --wb-accent-hover: var(--dsw-static-deepseek-400, #679EFE);
   --wb-accent-soft: color-mix(in srgb, var(--wb-accent) 12%, transparent);
-  /* 品牌色只做品牌强调，不做状态色（荧光绿白底对比度不达标） */
-  --wb-brand-lime: #C8F135; /* OmniMux lime */
+  /* 品牌色只做品牌强调，不做状态色（DESIGN 2.0 极光紫替换旧荧光绿） */
+  --wb-brand-indigo: #6757e7; /* OmniMux indigo */
   /* 语义状态色：AA 达标（白底 ≥ 4.5:1） */
   --wb-success: #2e9e5b;
   --wb-success-soft: color-mix(in srgb, var(--wb-success) 12%, transparent);

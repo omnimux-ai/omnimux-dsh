@@ -26,6 +26,7 @@ import { buildModelCatalog } from '../catalog/list.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { mountHubHttp } from './http.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
+import { mountWebSocketHmr } from '../hmr/host.js'
 
 /**
  * @param {{
@@ -114,6 +115,10 @@ export function apply(ctx, config = {}) {
   }
   const mountHttp = (httpCtx) => mountHubHttp(httpCtx, httpDeps)
   if (typeof ctx.inject === 'function') {
+    ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {
+      const { apply: applyWatcher } = await hmrCtx.loader.import('@deepseek-ai/dsh-client-hmr')
+      mountWebSocketHmr(hmrCtx, hubEvents, applyWatcher)
+    })
     ctx.inject(['webServer'], (httpCtx) => {
       mountHttp(httpCtx)
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')

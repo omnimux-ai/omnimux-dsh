@@ -126,6 +126,10 @@ describe('auth http dispatcher', () => {
       provide() {},
       get() { return undefined },
       inject(deps, callback) {
+        if (deps.includes('clientModules')) {
+          assert.deepEqual(deps, ['clientModules', 'webServer', 'loader', 'connection'])
+          return // This HTTP-only fixture has no client module service.
+        }
         if (deps.includes('connection')) {
           assert.deepEqual(deps, ['webServer', 'connection'])
           return // This HTTP-only fixture has no connection service.
@@ -214,6 +218,10 @@ describe('auth http dispatcher', () => {
       tools: { register() {} },
       provide() {},
       inject(deps, callback) {
+        if (deps.includes('clientModules')) {
+          assert.deepEqual(deps, ['clientModules', 'webServer', 'loader', 'connection'])
+          return // This HTTP-only fixture has no client module service.
+        }
         if (deps.includes('connection')) {
           assert.deepEqual(deps, ['webServer', 'connection'])
           return // This HTTP-only fixture has no connection service.

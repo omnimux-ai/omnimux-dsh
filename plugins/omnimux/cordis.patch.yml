@@ -1,3 +1,8 @@
+# The hub reuses the official watcher through its existing WebSocket.
+- id: client-hmr
+  name: '@deepseek-ai/dsh-client-hmr'
+  disabled: true
+
 - insert:
     - id: omnimux
       name: omnimux
