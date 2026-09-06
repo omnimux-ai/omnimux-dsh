@@ -2,15 +2,18 @@
 title: "云灵感过期封面修复"
 id: "spec-inspiration-cover-repair-584"
 type: "spec"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-09-05"
 updated: "2026-09-05"
 authors: ["x", "codex"]
 subsystem: "omnimux"
+superseded_by: "spec-inspiration-existing-r2-references"
 ---
 
 # 云灵感过期封面修复
+
+本文方案已由[原 R2 引用恢复规格](2026-09-05-inspiration-existing-r2-references.md)取代。145–154 使用已存在的源对象，不能执行下述重新抓取和上传恢复流程。
 
 Issue: [#584](https://github.com/omnimux-ai/omnimux-dsh/issues/584)。
 

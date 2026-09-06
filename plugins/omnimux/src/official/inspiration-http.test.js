@@ -122,6 +122,7 @@ describe('inspiration dispatcher', () => {
       client: clientWith(async () => ({}), async (path, init) => {
         assert.equal(path, '/api/inspiration/v1/media/covers/a.jpg')
         assert.equal(init.headers.range, 'bytes=0-3')
+        assert.equal(init.headers['if-range'], '"original-cover"')
         return {
           status: 206,
           headers: { get: (name) => (name === 'content-type' ? 'image/jpeg' : name === 'content-range' ? 'bytes 0-3/10' : undefined) },
@@ -142,7 +143,7 @@ describe('inspiration dispatcher', () => {
     await dispatcher.streamMedia({
       method: 'GET',
       url: '/omnimux/inspiration/media/covers/a.jpg',
-      headers: { range: 'bytes=0-3' },
+      headers: { range: 'bytes=0-3', 'if-range': '"original-cover"' },
     }, res)
     assert.equal(state.status, 206)
     assert.equal(state.headers['content-type'], 'image/jpeg')

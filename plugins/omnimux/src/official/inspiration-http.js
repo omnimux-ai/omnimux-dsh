@@ -151,9 +151,10 @@ export function createInspirationDispatcher(deps = {}) {
     }
     try {
       const range = header(req, 'range')
+      const ifRange = header(req, 'if-range')
       const upstream = await client.withPatRaw(
         `${SITE_MEDIA}${key}${url.search}`,
-        { headers: range ? { range } : {} },
+        { headers: { ...(range ? { range } : {}), ...(ifRange ? { 'if-range': ifRange } : {}) } },
       )
       /** @type {Record<string, string>} */
       const outHeaders = {}

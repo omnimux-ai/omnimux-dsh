@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 async function resolveToken() {
   if (process.env.OMNIMUX_ACCESS_TOKEN) return process.env.OMNIMUX_ACCESS_TOKEN
@@ -26,7 +27,7 @@ async function resolveToken() {
 const GXGEN_SUPABASE_URL = process.env.GXGEN_SUPABASE_URL || 'http://127.0.0.1:54321'
 const GXGEN_SUPABASE_KEY = process.env.GXGEN_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 
-async function fetchTikTokCovers(tiktokUrl) {
+async function fetchTikTokMetadata(tiktokUrl) {
   try {
     const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(tiktokUrl)}`
     const resp = await fetch(oembedUrl, {
@@ -37,7 +38,6 @@ async function fetchTikTokCovers(tiktokUrl) {
     if (resp.ok) {
       const json = await resp.json()
       return {
-        thumbnail_url: json.thumbnail_url || null,
         author_name: json.author_name || null,
         video_title: json.title || null,
       }
@@ -45,21 +45,16 @@ async function fetchTikTokCovers(tiktokUrl) {
   } catch (err) {
     // ignore
   }
-  return { thumbnail_url: null, author_name: null, video_title: null }
+  return { author_name: null, video_title: null }
 }
 
-const CATEGORY_COVERS = [
-  'https://images.unsplash.com/photo-1512290900672-1f4a9b6c0053?w=800&q=80',
-  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80',
-  'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&q=80',
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&q=80',
-  'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&q=80',
-  'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80',
-  'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80',
-  'https://images.unsplash.com/photo-1617791160505-6f00504e3519?w=800&q=80',
-  'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=800&q=80',
-]
+export function r2CoverReference(row) {
+  const key = row.cover_r2_key
+  const invalid = typeof key !== 'string' || !key.startsWith('publications/') || Buffer.byteLength(`r2/${key}`, 'utf8') > 255 ||
+    /[\\%?#:\p{Cc}]/u.test(key) || key.split('/').some(part => !part || part === '.' || part === '..' || part.trim() !== part)
+  if (invalid) throw new Error(`Invalid or missing top-level cover_r2_key for source row ${row.id}`)
+  return `r2/${key}`
+}
 
 async function fetchFromGxgenDatabase() {
   console.log('=== Step 1: 扫描 Gxgen 数据库中【带有真实 TikTok 链接且具备 5 维拆解】的灵感素材 ===')
@@ -80,6 +75,10 @@ async function fetchFromGxgenDatabase() {
 
   const rows = await resp.json()
 
+  return mapGxgenRows(rows)
+}
+
+export async function mapGxgenRows(rows, { fetchMetadata = fetchTikTokMetadata, timestamp = Math.floor(Date.now() / 1000) } = {}) {
   // 严格过滤：1. 具有真实 TikTok 视频 ID/链接；2. 具有完整的 5 维多模态 AI 拆解
   const tiktokCandidates = []
 
@@ -117,6 +116,7 @@ async function fetchFromGxgenDatabase() {
 
       tiktokCandidates.push({
         gxgenId: r.id,
+        source: r,
         title: r.title || an.video_name || rawSource.title,
         tiktokId,
         tiktokUrl,
@@ -129,19 +129,18 @@ async function fetchFromGxgenDatabase() {
 
   console.log(`在 Gxgen 数据库中成功检索到 ${tiktokCandidates.length} 条符合条件的真实 TikTok 灵感素材`)
 
-  // 为每个素材抓取真实 TikTok 封面并组装
-  const mappedItems = []
-  const timestamp = Math.floor(Date.now() / 1000)
+  const selected = tiktokCandidates.slice(0, 10).map(item => ({ ...item, coverRef: r2CoverReference(item.source) }))
 
-  for (let i = 0; i < Math.min(10, tiktokCandidates.length); i++) {
-    const item = tiktokCandidates[i]
+  // 在任何云端写入前完成所有源引用验证和字段映射。
+  const mappedItems = []
+
+  for (let i = 0; i < selected.length; i++) {
+    const item = selected[i]
     const { assets, an, tiktokId, tiktokUrl, account } = item
 
     console.log(`- [${i + 1}/10] 正在提取信息: 《${item.title}》 (${tiktokUrl})`)
-    const oembedData = await fetchTikTokCovers(tiktokUrl)
+    const oembedData = await fetchMetadata(tiktokUrl)
 
-    // 封面选用高清稳定图
-    const coverUrl = CATEGORY_COVERS[i % CATEGORY_COVERS.length]
 
     // 作者名称
     const authorName = oembedData.author_name || assets.creator?.name || account
@@ -181,7 +180,7 @@ async function fetchFromGxgenDatabase() {
       title,
       content,
       source_url: uniqueSourceUrl,
-      cover_key: coverUrl,
+      cover_key: item.coverRef,
       hot_score: hotScore,
       tags,
       analysis: mappedAnalysis,
@@ -278,7 +277,9 @@ async function syncToOmnimuxCloud() {
   }
 }
 
-syncToOmnimuxCloud().catch((err) => {
-  console.error('Migration error:', err)
-  process.exit(1)
-})
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  syncToOmnimuxCloud().catch((err) => {
+    console.error('Migration error:', err)
+    process.exitCode = 1
+  })
+}

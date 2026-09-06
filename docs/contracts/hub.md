@@ -203,7 +203,7 @@ Browser-local JSON + media stream. The browser app is `plugins/omnimux-inspirati
 | POST `/omnimux/inspiration` | create body | upstream create envelope |
 | PATCH `/omnimux/inspiration/{id}` | patch body | upstream update envelope |
 | DELETE `/omnimux/inspiration/{id}` | — | upstream delete envelope |
-| GET `/omnimux/inspiration/media/{key}` | Range optional | streamed bytes; PAT injected by Host |
+| GET `/omnimux/inspiration/media/{key}` | Range / If-Range optional | streamed bytes; PAT injected by Host |
 
 Writes are same-origin only. Unsigned → 401 `needs-omnimux`. Tools keep the original gateway JSON (no Host rewrite).
 
