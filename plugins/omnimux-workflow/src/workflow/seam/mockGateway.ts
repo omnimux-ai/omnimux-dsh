@@ -10,6 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { InputSlotDto, OperationContractDto } from '../../shared/api.ts';
 import type {
   GenerationGateway,
   SubmitRequest,
@@ -45,11 +46,11 @@ interface MockTask {
   latencyMs: number;
 }
 
-function promptSlot() {
+function promptSlot(): InputSlotDto {
   return { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 };
 }
 
-function op(id: string, label: string, outputType: string, extraInputs: Array<Record<string, unknown>> = []) {
+function op(id: string, label: string, outputType: string, extraInputs: InputSlotDto[] = []): OperationContractDto {
   return {
     id,
     label,

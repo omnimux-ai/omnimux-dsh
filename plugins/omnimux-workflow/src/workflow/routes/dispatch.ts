@@ -11,7 +11,10 @@ import type { TemplateStore } from '../templates/TemplateStore.ts';
 import type { ProjectStore } from '../../projects/ProjectStore';
 import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
 
+import type { GenerationPreferencesStore } from '../workspace/GenerationPreferencesStore.ts';
+
 export interface WorkflowDispatcherDeps {
+  generationPreferences?: GenerationPreferencesStore;
   store: WorkspaceStore;
   gateway: GenerationGateway;
   mediaDir: string;

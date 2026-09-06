@@ -7,6 +7,7 @@ import { parseTextConfig, resolveTextRoute } from './catalog.js'
 import { completeTextViaChat } from './chat.js'
 import { probeTextImage, saveProbedTextImage } from './image.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
+import { normalizeTextReferences } from './references.js'
 
 /**
  * One-shot expert completion. Default path: `ctx.llm.stream` (text / image).
@@ -14,9 +15,8 @@ import { loadTextVideo, toVideoImageUrlPart } from './video.js'
  * `image_url` + `data:video/…` (spike-locked protocol). Not a chat turn: no
  * tools, no parent messages, no dest, no poll.
  *
- * SubmitGuard (#468) admits model/operation against the contract index before
- * the llm/chat path runs. Neutral adapter: does not change the public text API
- * shape; optional `operation` may be passed explicitly.
+ * SubmitGuard admits every normalized reference and its probed metadata before
+ * the attachment store or provider is called. Unsupported media is rejected.
  *
  * @param {{
  *   prompt?: string,
@@ -24,6 +24,9 @@ import { loadTextVideo, toVideoImageUrlPart } from './video.js'
  *   operation?: string,
  *   image?: string,
  *   video?: string,
+ *   audio?: string,
+ *   audioTrack?: object,
+ *   references?: import('./references.js').TextReference[],
  *   system?: string,
  *   maxTokens?: number,
  *   signal?: AbortSignal,
@@ -46,29 +49,31 @@ export async function executeOmnimuxText(input) {
     throw new OmnimuxError('omnimux-invalid-request', 'prompt is required')
   }
   const text = parseTextConfig(input.text)
-  const image = typeof input.image === 'string' ? input.image.trim() : ''
-  const video = typeof input.video === 'string' ? input.video.trim() : ''
-  if (image && video) {
-    throw new OmnimuxError('omnimux-invalid-request', 'pass image or video, not both')
-  }
+  const references = normalizeTextReferences(input)
+  const hasImage = references.some((asset) => asset.type === 'image')
+  const hasVideo = references.some((asset) => asset.type === 'video')
   const gate = input.gate ?? input.hub?.gate
-  const route = resolveTextRoute({ model: input.model, image, video }, text, input.env, gate)
+  const route = resolveTextRoute({ model: input.model, references }, text, input.env, gate)
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
     : route.maxTokens
   const system = typeof input.system === 'string' ? input.system.trim() : ''
 
-  if (image && (!input.attachments || typeof input.attachments.saveImage !== 'function')) {
+  if (hasImage && (!input.attachments || typeof input.attachments.saveImage !== 'function')) {
     throw new OmnimuxError('needs-provider', 'image input requires ctx.attachments')
   }
-  const probedImage = image
-    ? await probeTextImage(image, { attachments: input.attachments, fetcher: input.fetcher, signal: input.signal })
-    : null
-  const packedVideo = video ? await loadTextVideo(video, { signal: input.signal }) : null
-  const assets = [
-    ...(probedImage ? [{ type: 'image', role: 'reference', pathOrUrl: image, mime: probedImage.mediaType, sizeBytes: probedImage.sizeBytes }] : []),
-    ...(packedVideo ? [{ type: 'video', role: 'reference', pathOrUrl: video, mime: packedVideo.mediaType, sizeBytes: packedVideo.bytes }] : []),
-  ]
+  const probed = []
+  const assets = []
+  for (const asset of references) {
+    const media = asset.type === 'image'
+      ? await probeTextImage(asset.pathOrUrl, { attachments: input.attachments, fetcher: input.fetcher, signal: input.signal })
+      : asset.type === 'video' ? await loadTextVideo(asset.pathOrUrl, { signal: input.signal, fetcher: input.fetcher }) : null
+    if (!media) {
+      throw new OmnimuxError('omnimux-invalid-request', `text completion does not support ${asset.type} input`)
+    }
+    probed.push(media)
+    assets.push({ ...asset, mime: media.mediaType, sizeBytes: media.sizeBytes ?? media.bytes })
+  }
   const guardPlan = assertGuardSubmit(
     {
       prompt,
@@ -96,13 +101,13 @@ export async function executeOmnimuxText(input) {
     },
   )
 
-  if (video) {
+  if (hasVideo) {
     const result = await completeTextViaChat({
       model: route.modelId,
       prompt,
       system,
       maxTokens,
-      videoPart: toVideoImageUrlPart(packedVideo),
+      videoPart: toVideoImageUrlPart(probed[0]),
       env: input.env,
       fetcher: input.fetcher,
       signal: input.signal,
@@ -117,8 +122,8 @@ export async function executeOmnimuxText(input) {
     throw new OmnimuxError('needs-provider', 'textComplete requires ctx.llm')
   }
   const content = [{ type: 'text', text: prompt }]
-  if (probedImage) {
-    const attachment = await saveProbedTextImage(probedImage, input.attachments)
+  for (const media of probed) {
+    const attachment = await saveProbedTextImage(media, input.attachments)
     content.push({ type: 'image', attachment })
   }
   const options = {

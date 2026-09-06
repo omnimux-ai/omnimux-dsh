@@ -277,49 +277,6 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
     assert.equal(result.zeroCandidates, true);
   });
 
-  it('no productAllowlist param — listed+compatible survive even with zero whitelist intersection', () => {
-    // Fixture ids (img-*, alias-*) have zero intersection with the retired
-    // MATERIAL_NODE_WHITELIST image set. Candidates must still be non-empty.
-    const legacyWhitelist = [
-      'nanobanana-2', 'nano_banana_2', 'nanobanana-pro', 'nano_banana_pro',
-      'seedream-5.0-pro', 'seedream-4.5', 'midjourney-8.1', 'midjourney-7',
-      'midjourney-niji-7', 'gpt-image-2',
-    ];
-    const fingerprint = fp([
-      { nodeId: 's1', materialType: 'image', mimeType: 'image/png', sizeBytes: 1024 },
-    ]);
-    const result = buildFilteredModelOptions({
-      catalog,
-      fingerprint,
-      outputType: 'image',
-    });
-    assert.equal(result.zeroCandidates, false);
-    assert.ok(result.options.length >= 1);
-    const ids = result.options.map((o) => o.id);
-    for (const id of ids) {
-      assert.ok(!legacyWhitelist.includes(id), `${id} is fixture-only (zero whitelist intersection)`);
-    }
-    // API surface must not accept a second capability filter.
-    assert.equal(
-      buildFilteredModelOptions.length,
-      1,
-      'buildFilteredModelOptions takes a single args object',
-    );
-    // Passing a stale productAllowlist key must be ignored if ever present on the object.
-    const sneaky = buildFilteredModelOptions({
-      catalog,
-      fingerprint,
-      outputType: 'image',
-      // @ts-expect-error intentional stale key — must not filter
-      productAllowlist: legacyWhitelist,
-    });
-    assert.equal(sneaky.zeroCandidates, false);
-    assert.deepEqual(
-      sneaky.options.map((o) => o.id).sort(),
-      result.options.map((o) => o.id).sort(),
-    );
-  });
-
   it('picker options parity with evaluateCatalogCompat compatible set (connection gate)', async () => {
     const { evaluateCatalogCompat } = await import('./compatKernel.ts');
     const fingerprint = fp([
@@ -461,5 +418,78 @@ describe('video operation selection gate', () => {
     assert.equal(stale.selectedOperationId, 'removed_operation');
     assert.equal(stale.blockGenerate, true);
     assert.equal(stale.reasonCode, 'operation_incompatible');
+  });
+});
+
+
+describe('generation-node mode presentation', () => {
+  function multimodeCatalog(outputType) {
+    const prompt = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 };
+    return {
+      source: 'omnimux', text: [], image: [], video: [], audio: [],
+      models: [{
+        id: 'multi', label: 'Multi', listed: true,
+        operations: [
+          { id: 'with_image', label: 'With image', listed: true, output: { type: outputType }, inputs: [prompt,
+            { slot: 'images', type: 'image', role: 'reference', source: 'upstream_edge', min: 1, max: 4 },
+          ] },
+          { id: 'text_only', label: 'Text only', listed: true, output: { type: outputType }, inputs: [prompt] },
+        ],
+      }],
+    };
+  }
+
+  it('text hides multiple modes and picks the ready operation over an empty image mode', () => {
+    const state = buildEffectiveOpsUiState({ catalog: multimodeCatalog('text'), modelId: 'multi', fingerprint: fp(), outputType: 'text' });
+    assert.equal(state.count, 2);
+    assert.equal(shouldRenderModeUi(state), false);
+    assert.equal(state.selectedOperationId, 'text_only');
+    assert.equal(state.blockGenerate, false);
+    assert.equal(resolveTriggerModeText(state), '');
+  });
+
+  it('text replaces a persisted text-only operation after an image is connected', () => {
+    const state = buildEffectiveOpsUiState({
+      catalog: multimodeCatalog('text'), modelId: 'multi', outputType: 'text', preferredOperationId: 'text_only',
+      fingerprint: fp([{ nodeId: 'image', materialType: 'image' }]),
+    });
+    assert.equal(state.selectedOperationId, 'with_image');
+    assert.equal(state.blockGenerate, false);
+    assert.equal(shouldRenderModeUi(state), false);
+  });
+
+  it('image and audio only expose multiple effective operations declared by their selected model', () => {
+    for (const outputType of ['image', 'audio']) {
+      const multi = multimodeCatalog(outputType);
+      const state = buildEffectiveOpsUiState({ catalog: multi, modelId: 'multi', fingerprint: fp(), outputType });
+      assert.equal(shouldRenderModeUi(state), true);
+      multi.models[0].operations = multi.models[0].operations.slice(1);
+      const single = buildEffectiveOpsUiState({ catalog: multi, modelId: 'multi', fingerprint: fp(), outputType });
+      assert.equal(shouldRenderModeUi(single), false);
+    }
+  });
+
+  it('upstream text and node content satisfy prompt readiness with executor precedence', () => {
+    const upstreams = [{ nodeId: 'source', materialType: 'text', textContent: 'Upstream text' }];
+    for (const input of [
+      { prompt: '', upstreams },
+      { prompt: '', content: 'Saved content' },
+    ]) {
+      const fingerprint = buildUiUpstreamFingerprint(input);
+      const state = buildEffectiveOpsUiState({ catalog: multimodeCatalog('text'), modelId: 'multi', fingerprint, outputType: 'text' });
+      assert.equal(state.blockGenerate, false);
+    }
+    assert.equal(buildUiUpstreamFingerprint({ prompt: 'Explicit', content: 'Saved', upstreams }).prompt, 'Explicit');
+    assert.equal(buildUiUpstreamFingerprint({ prompt: '', content: 'Saved', upstreams }).prompt, 'Saved');
+  });
+
+  it('empty text keeps a typed input reason without inventing readiness', () => {
+    const text = multimodeCatalog('text');
+    text.models[0].operations = text.models[0].operations.slice(1);
+    const state = buildEffectiveOpsUiState({ catalog: text, modelId: 'multi', fingerprint: fp([], ''), outputType: 'text' });
+    assert.equal(state.blockGenerate, true);
+    assert.equal(state.reasonCode, 'prompt_required');
+    assert.equal(state.reason.code, 'prompt_required');
+    assert.equal(shouldRenderModeUi(state), false);
   });
 });

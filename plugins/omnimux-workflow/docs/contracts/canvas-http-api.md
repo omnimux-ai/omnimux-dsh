@@ -7,7 +7,7 @@
 ## 总则
 
 - 所有响应为 JSON（bundle/媒体路由/`GET /api/local-file` 除外），错误形如 `{ error, message }`
-- 写操作（POST/PUT/DELETE）经 `assertLocalWrite`：仅接受同机回环来源（origin/referer hostname ∈ {127.0.0.1, localhost, ::1, [::1]}；sec-fetch-site=cross-site 拒绝）
+- 写操作（POST/PUT/PATCH/DELETE）经 `assertLocalWrite`：仅接受同机回环来源（origin/referer hostname ∈ {127.0.0.1, localhost, ::1, [::1]}；sec-fetch-site=cross-site 拒绝）
 - **`GET /api/local-file` 同样必须 loopback**（R1：任意本地路径流式）。非 loopback → 403 `not-local`
 - 响应文本过 secret-emission guard（含 `access_token` / `sk-…` 模式时拒绝发送）
 - 本地导入索引的字段、状态机与安全闸见 [workflow-media-asset-indexing.md](./workflow-media-asset-indexing.md)
@@ -42,6 +42,15 @@ Body：`SaveCanvasWorkspacePayload`（必含 `expectedVersion`）。
 
 ### DELETE /omnimux-workflow/api/workspaces/:id
 `{ "ok": true }`；不存在 → 404
+
+### GET/PATCH /omnimux-workflow/api/generation-preferences
+
+当前应用 profile 的生成模型偏好，存放于 `$DSH_HOME/omnimux/workflow/generation-preferences.json`，不属于项目快照。
+
+- GET 返回 `{ "lastModelByType": { "text"?: string, "image"?: string, "video"?: string, "audio"?: string } }`；首次无文件返回空对象。
+- PATCH 接收 `{ "kind": "text" | "image" | "video" | "audio", "modelId": string }`，返回完整偏好。仅接受该类型画布可用目录中的 canonical model ID；不可用模型、别名、跨类型 ID 返回 400。
+- 只在用户手动选模时写入；自动适配不更新偏好。客户端加载偏好后才开放新节点创建，既有节点与项目版本不因偏好变化而修改。
+- 写入经现有本地来源校验。读取损坏或写入失败返回 500，不静默重置偏好；客户端显示失败原因。
 
 ### GET /omnimux-workflow/api/capabilities
 能力目录（M1 为静态 stub，M4 起来自 OmniMux 能力发现）：

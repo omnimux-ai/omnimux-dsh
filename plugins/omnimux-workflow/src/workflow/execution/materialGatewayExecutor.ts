@@ -8,6 +8,7 @@
 
 import { join } from 'node:path';
 import { localFilePathFromUrl } from '../../shared/localMedia.ts';
+import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
 import type { GenerationGateway, MediaInputRole, ReferenceAssetPayload } from '../seam/gateway';
 import type {
   ExecutionContext,
@@ -161,11 +162,7 @@ export function createMaterialGatewayExecutor(opts: {
 
       // Generative: gateway submit -> await -> output
       const capability = readMaterialType(data);
-      const prompt =
-        readString(data, 'prompt')
-        ?? readString(data, 'content')
-        ?? upstream.text
-        ?? '';
+      const prompt = resolveGenerationPrompt(data, [upstream.text]);
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
       const references = upstream.references;

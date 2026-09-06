@@ -78,6 +78,7 @@ export interface WorkflowAgentDeps {
    * mutation time — the compat kernel fails closed when it returns null.
    */
   getCatalog?: () => unknown;
+  getGenerationPreferences?: () => import('../../shared/generationPreferences').GenerationPreferences;
 }
 
 type FieldSpec = Record<string, unknown> & { required?: boolean | string[] };

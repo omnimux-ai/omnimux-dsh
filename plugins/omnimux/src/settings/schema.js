@@ -8,7 +8,7 @@
  */
 
 export const SETTINGS_DEFAULTS = Object.freeze({
-  defaultTextModel: 'gemini-3.7-flash',
+  defaultTextModel: 'gemini-3.8-flash',
   defaultImageModel: 'gpt-image-2',
   defaultVideoModel: 'seedance-2-0-fast',
   defaultAudioModel: 'suno',

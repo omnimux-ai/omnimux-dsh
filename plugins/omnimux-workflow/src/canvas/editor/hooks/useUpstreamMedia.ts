@@ -85,6 +85,7 @@ export function toUpstreamSnapshots(items: UpstreamMediaItem[]): UpstreamMediaSn
   return items.map((item) => ({
     nodeId: item.nodeId,
     materialType: item.materialType,
+    ...(item.textContent ? { textContent: item.textContent } : {}),
     ...(item.mimeType ? { mimeType: item.mimeType } : {}),
     ...(item.sizeBytes !== undefined ? { sizeBytes: item.sizeBytes } : {}),
     ...(item.durationSec !== undefined ? { durationSec: item.durationSec } : {}),

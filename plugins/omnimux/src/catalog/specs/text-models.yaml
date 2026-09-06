@@ -593,6 +593,99 @@ models:
       profileId: "textComplete"
       seam: "textComplete"
 
+  - id: "gemini-3.8-flash"
+    label: "Gemini 3.8 Flash"
+    family: "google"
+    role: "flagship"
+    operations:
+      - id: "chat"
+        label: "文本对话"
+        output:
+          type: "text"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+        research:
+          status: "verified"
+          docUrl: "docs/references/omnimux-gemini-3.8-contract-gap.md"
+          verifiedAt: "2026-09-06"
+          notes: "2026-09-06 用户确认与 Gemini 3.7 相同；复用现有输入合同，非独立官方发布声明"
+        implementation:
+          status: "ready"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "复用 textComplete 的 Gemini 3.7 mapper；离线验证 Gemini 3.8 wire ID"
+        execution:
+          status: "none"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "未发起 Gemini 3.8 真实请求，不继承 3.7 执行证据"
+      - id: "vision_chat"
+        label: "图文对话"
+        output:
+          type: "text"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+          - slot: "reference_images"
+            type: "image"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 10
+            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            maxSizeMb: 20
+            limitSource:
+              kind: "policy_conservative"
+              note: "继承现有 3.7 产品保守限制；不是 3.8 官方数量或体积上限"
+          - slot: "reference_videos"
+            type: "video"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["video/mp4"]
+            maxSizeMb: 50
+            limitSource:
+              kind: "policy_conservative"
+              note: "继承现有 3.7 单视频与 50MB 产品保守限制；不是 3.8 独立实测"
+        research:
+          status: "verified"
+          docUrl: "docs/references/omnimux-gemini-3.8-contract-gap.md"
+          verifiedAt: "2026-09-06"
+          notes: "2026-09-06 用户确认与 Gemini 3.7 相同；复用现有输入合同，非独立官方发布声明"
+        implementation:
+          status: "ready"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "复用 textComplete 的 Gemini 3.7 mapper；离线验证 Gemini 3.8 wire ID"
+        execution:
+          status: "none"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "未发起 Gemini 3.8 真实请求，不继承 3.7 执行证据"
+    research:
+      status: "verified"
+      docUrl: "docs/references/omnimux-gemini-3.8-contract-gap.md"
+      verifiedAt: "2026-09-06"
+    implementation:
+      status: "ready"
+      profileId: "textComplete"
+      seam: "textComplete"
+      notes: "复用 textComplete 的 Gemini 3.7 mapper；离线验证 Gemini 3.8 wire ID"
+    execution:
+      status: "none"
+      profileId: "textComplete"
+      seam: "textComplete"
+
   - id: "gemini-3.7-flash"
     label: "Gemini 3.7 Flash"
     family: "google"

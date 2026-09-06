@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
   "byOperation": {
-    "chat": "gemini-3.7-flash",
-    "vision_chat": "gemini-3.7-flash",
+    "chat": "gemini-3.8-flash",
+    "vision_chat": "gemini-3.8-flash",
     "text_to_image": "gpt-image-2",
     "text_to_video": "seedance-2-0-fast",
     "text_to_music": "suno",
