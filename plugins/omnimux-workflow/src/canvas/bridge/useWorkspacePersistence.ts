@@ -55,8 +55,8 @@ export interface PersistenceController {
   status: AutosaveStatus;
   /** Whether the local graph differs from the last saved snapshot. */
   isDirty: boolean;
-  /** Force an immediate save (flushes the debounce timer). */
-  saveNow: () => Promise<void>;
+  /** Save the current graph or reject; returns the version safe to submit. */
+  saveNow: () => Promise<number>;
   /**
    * 卸载硬闸：清 debounce，同步 `readStoreCapture()`，再 `void performSave`。
    * 必须在 `resetStore()` 之前调用；PUT 可以异步，capture 必须钉死。
@@ -77,6 +77,8 @@ export interface UseWorkspacePersistenceOptions {
    */
   enabled?: boolean;
 }
+
+type SaveOutcome = { version: number } | { error: string };
 
 interface GraphCapture {
   nodes: SerializedCanvasNode[];
@@ -100,11 +102,12 @@ export function useWorkspacePersistence(
   const workspaceRef = useRef<CanvasWorkspaceSnapshot | null>(workspace);
   const serverVersionRef = useRef(0);
   const lastSavedSigRef = useRef('');
+  const currentSigRef = useRef('');
   const lastSavedNodeCountRef = useRef(0);
   const lastInitIdRef = useRef('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savingRef = useRef(false);
+  const savingRef = useRef<Promise<SaveOutcome> | null>(null);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const onSavedRef = useRef(opts.onSaved);
@@ -126,6 +129,7 @@ export function useWorkspacePersistence(
     lastInitIdRef.current = workspace.id;
     // 以磁盘/服务端快照为 last-saved，不读可能已被 reset 的 store
     lastSavedSigRef.current = graphSig(workspace.nodes, workspace.edges);
+    currentSigRef.current = lastSavedSigRef.current;
     lastSavedNodeCountRef.current = workspace.nodes.length;
     setIsDirty(false);
     setStatus('idle');
@@ -155,7 +159,16 @@ export function useWorkspacePersistence(
       setStatus('error');
       return;
     }
+    if (workspaceRef.current?.id !== ws.id) return;
     const snapshot = latest.body.workspace;
+    const current = readStoreCapture();
+    // A late conflict response must not reload over edits made during the PUT.
+    if (graphSig(current.nodes, current.edges) !== graphSig(input.localNodes, input.localEdges)) {
+      serverVersionRef.current = snapshot.version;
+      setIsDirty(true);
+      setStatus('conflict');
+      return;
+    }
     const decision = decideRemoteVersionAdvance({
       localSignature: graphSig(input.localNodes, input.localEdges),
       lastSavedSignature: lastSavedSigRef.current,
@@ -179,72 +192,75 @@ export function useWorkspacePersistence(
   /**
    * 只用调用瞬间传入的 capture；await 之后禁止再读 store。
    */
-  const performSave = useCallback(async (
+  const performSave = useCallback((
     capture: GraphCapture,
     cause: PersistCause,
     force = false,
-  ): Promise<void> => {
+  ): Promise<SaveOutcome> => {
     const ws = workspaceRef.current;
-    if (!ws) return;
-    // 卸载硬闸（force）必须在 enabled 被打成 false 时仍能发出已钉死的快照
-    if (!force && !enabledRef.current) return;
-    if (savingRef.current) {
-      // A save is in flight; the trailing store notification re-schedules.
-      return;
-    }
-
-    const decision = decidePersist({
-      lastSavedNodeCount: lastSavedNodeCountRef.current,
-      nextNodes: capture.nodes,
-      nextEdges: capture.edges,
-      cause,
-      lastSavedSignature: lastSavedSigRef.current,
-      nextSignature: graphSig(capture.nodes, capture.edges),
-    });
-    if (!decision.persist || !decision.snapshot) return;
-
-    const { nodes, edges } = decision.snapshot;
-    const name = ws.name;
-    savingRef.current = true;
-    setStatus('saving');
-    try {
-      const result = await saveWorkspace(ws.id, {
-        name,
-        nodes: sanitizeNodes(nodes, { workspaceId: ws.id }),
-        edges: sanitizeEdges(edges),
-        expectedVersion: serverVersionRef.current,
-      });
-
-      // 409: the doc moved on under us (another window, an agent edit, or
-      // this island's own overlapping autosave/flush). Same-graph advances
-      // only adopt the remote version — do not scare the user with a banner.
-      if (result.status === 409) {
-        await resolveRemoteAdvance({
-          localNodes: nodes,
-          localEdges: edges,
-        });
-        return;
+    const previous = savingRef.current;
+    const pending = (async (): Promise<SaveOutcome> => {
+      if (previous) await previous;
+      if (!ws || workspaceRef.current?.id !== ws.id || (!force && !enabledRef.current)) {
+        return { error: '画布尚未就绪，请重新打开后再试' };
       }
-
-      if (result.ok && result.body.workspace) {
-        serverVersionRef.current = result.body.workspace.version;
-        lastSavedSigRef.current = graphSig(nodes, edges);
+      const signature = graphSig(capture.nodes, capture.edges);
+      const decision = decidePersist({
+        lastSavedNodeCount: lastSavedNodeCountRef.current,
+        nextNodes: capture.nodes,
+        nextEdges: capture.edges,
+        cause,
+        lastSavedSignature: lastSavedSigRef.current,
+        nextSignature: signature,
+      });
+      if (!decision.persist || !decision.snapshot) {
+        return decision.reason === 'unchanged'
+          ? { version: serverVersionRef.current }
+          : { error: '画布内容尚未保存，请重新打开后再试' };
+      }
+      const { nodes, edges } = decision.snapshot;
+      setStatus('saving');
+      try {
+        const result = await saveWorkspace(ws.id, {
+          name: ws.name,
+          nodes: sanitizeNodes(nodes, { workspaceId: ws.id }),
+          edges: sanitizeEdges(edges),
+          expectedVersion: serverVersionRef.current,
+        });
+        if (workspaceRef.current?.id !== ws.id) {
+          return { error: '画布已切换，请重新发起生成' };
+        }
+        if (result.status === 409) {
+          await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
+          return { error: '画布版本冲突，请确认最新内容后重新生成' };
+        }
+        if (!result.ok || !result.body.workspace) {
+          setStatus('error');
+          return { error: result.body.message ?? '画布保存失败，请重试' };
+        }
+        const version = result.body.workspace.version;
+        serverVersionRef.current = version;
+        lastSavedSigRef.current = signature;
         lastSavedNodeCountRef.current = nodes.length;
-        setIsDirty(false);
-        setStatus('saved');
+        const dirty = currentSigRef.current !== signature;
+        setIsDirty(dirty);
+        setStatus(dirty ? 'pending' : 'saved');
         clearSavedBadgeTimer();
         savedBadgeTimerRef.current = setTimeout(() => {
           setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_BADGE_MS);
         onSavedRef.current?.(result.body.workspace);
-      } else {
+        return { version };
+      } catch {
         setStatus('error');
+        return { error: '画布保存失败，请重试' };
       }
-    } catch {
-      setStatus('error');
-    } finally {
-      savingRef.current = false;
-    }
+    })();
+    savingRef.current = pending;
+    void pending.then(() => {
+      if (savingRef.current === pending) savingRef.current = null;
+    });
+    return pending;
   }, [resolveRemoteAdvance]);
 
   // Core subscription: debounce store changes, skip no-op notifications.
@@ -257,6 +273,7 @@ export function useWorkspacePersistence(
       if (!enabledRef.current) return;
       const capture = readStoreCapture();
       const sig = graphSig(capture.nodes, capture.edges);
+      currentSigRef.current = sig;
       const dirty = sig !== lastSavedSigRef.current;
       setIsDirty(dirty);
       if (!dirty) {
@@ -336,13 +353,32 @@ export function useWorkspacePersistence(
     };
   }, [performSave, enabled]);
 
-  const saveNow = useCallback(async () => {
+  const saveNow = useCallback(async (): Promise<number> => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    const workspaceId = workspaceRef.current?.id;
     const capture = readStoreCapture();
-    await performSave(capture, inferPersistCause(capture.nodes.length, 'autosave'));
+    const signature = graphSig(capture.nodes, capture.edges);
+    const assertCurrent = () => {
+      const current = readStoreCapture();
+      if (!enabledRef.current || workspaceRef.current?.id !== workspaceId
+        || graphSig(current.nodes, current.edges) !== signature) {
+        throw new Error('保存期间输入已变化，请确认内容后重新生成');
+      }
+    };
+    // An autosave may have captured an older graph. Wait for it before saving
+    // this click's snapshot, and never submit if that snapshot has changed.
+    if (savingRef.current) {
+      const previous = await savingRef.current;
+      if ('error' in previous) throw new Error(previous.error);
+    }
+    assertCurrent();
+    const result = await performSave(capture, inferPersistCause(capture.nodes.length, 'autosave'));
+    if ('error' in result) throw new Error(result.error);
+    assertCurrent();
+    return result.version;
   }, [performSave]);
 
   /**

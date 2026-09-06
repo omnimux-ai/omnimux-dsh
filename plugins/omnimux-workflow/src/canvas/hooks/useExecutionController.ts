@@ -28,6 +28,7 @@ import {
 import { useCanvasStore } from '../store/canvasStore';
 import { useExecutionStore, type ExecutionUiStatus } from '../store/executionStore';
 import { t } from '../i18n';
+import { signatureOf } from '../bridge/persistSanitize';
 
 const LIVE_STATUSES = new Set<ExecutionUiStatus>(['pending', 'running', 'paused']);
 const TERMINAL_STATUSES = new Set<ExecutionUiStatus>(['completed', 'error', 'cancelled']);
@@ -143,7 +144,7 @@ function writeNodeData(
 
 export interface ExecutionControllerOptions {
   /** Optional pre-flight hook (e.g. flush canvas persistence before creating run). */
-  onBeforeStart?: () => Promise<void> | void;
+  onBeforeStart?: () => Promise<number | void> | number | void;
 }
 
 export interface ExecutionController {
@@ -159,6 +160,12 @@ export function useExecutionController(
   opts?: ExecutionControllerOptions,
 ): ExecutionController {
   const eventSourceRef = useRef<EventSource | null>( null);
+  const startingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const workspaceIdRef = useRef<string | null>(workspaceId);
   workspaceIdRef.current = workspaceId;
   const onBeforeStartRef = useRef(opts?.onBeforeStart);
@@ -354,43 +361,55 @@ export function useExecutionController(
     async (opts: { mode?: 'full' | 'subset' | 'single'; nodeIds?: string[] } = {}) => {
       const workspace = workspaceIdRef.current;
       if (!workspace) return;
-      closeStream();
-      useExecutionStore.getState().resetExecution();
-      useExecutionStore.getState().setExecution({ status: 'pending' });
-
-      // In single-node mode, mark target node as pending upfront for immediate feedback
-      if (opts.mode === 'single' && opts.nodeIds && opts.nodeIds[0]) {
-        useExecutionStore.getState().setNodeStatus(opts.nodeIds[0], 'pending');
-        writeNodeData(opts.nodeIds[0], {
-          executionStatus: 'pending',
-          executionError: undefined,
-        });
-      }
-
-      // 执行前触发外部保存钩子，确保后端拿到最新的 Prompt/模型参数
-      if (onBeforeStartRef.current) {
-        try {
-          await onBeforeStartRef.current();
-        } catch {
-          // ignore
+      if (startingRef.current || LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
+      startingRef.current = true;
+      const graph = useCanvasStore.getState();
+      const signature = signatureOf(graph.nodes, graph.edges, { workspaceId: workspace });
+      try {
+        const expectedVersion = await onBeforeStartRef.current?.();
+        if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
+        const current = useCanvasStore.getState();
+        if (signatureOf(current.nodes, current.edges, { workspaceId: workspace }) !== signature) {
+          throw new Error('保存期间输入已变化，请确认内容后重新生成');
         }
-      }
-
-      const result = await createExecution(workspace, {
-        mode: opts.mode ?? 'full',
-        nodeIds: opts.nodeIds,
-      });
-      if (!result.ok || !result.body.execution) {
+        // Restoring an existing execution can finish while persistence is saving.
+        if (LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
+        const result = await createExecution(workspace, {
+          mode: opts.mode ?? 'full',
+          nodeIds: opts.nodeIds,
+          ...(typeof expectedVersion === 'number' ? { expectedVersion } : {}),
+        });
+        if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
+        if (!result.ok || !result.body.execution) {
+          throw new Error(result.body.error === 'project-required'
+            ? t('error.projectRequired')
+            : (result.body.message ?? t('error.createExecutionFailed')));
+        }
+        closeStream();
+        useExecutionStore.getState().resetExecution();
+        useExecutionStore.getState().setExecution({
+          executionId: result.body.execution.id,
+          status: 'pending',
+        });
+        if (opts.mode === 'single' && opts.nodeIds?.[0]) {
+          useExecutionStore.getState().setNodeStatus(opts.nodeIds[0], 'pending');
+          writeNodeData(opts.nodeIds[0], {
+            executionStatus: 'pending',
+            executionError: undefined,
+          });
+        }
+        subscribe(result.body.execution.id);
+      } catch (error) {
+        if (!mountedRef.current || workspaceIdRef.current !== workspace) return;
+        // Keep an active run and its stream intact if restore raced preflight.
+        if (LIVE_STATUSES.has(useExecutionStore.getState().status)) return;
         useExecutionStore.getState().setExecution({
           status: 'error',
-          error: result.body.error === 'project-required'
-            ? t('error.projectRequired')
-            : (result.body.message ?? t('error.createExecutionFailed')),
+          error: error instanceof Error ? error.message : t('error.createExecutionFailed'),
         });
-        return;
+      } finally {
+        startingRef.current = false;
       }
-      useExecutionStore.getState().setExecution({ executionId: result.body.execution.id });
-      subscribe(result.body.execution.id);
     },
     [closeStream, subscribe],
   );
