@@ -1,12 +1,4 @@
-/**
- * Sole entry path: contribute the two composer 添加 actions to the official
- * slash/command menu via `commandUi.register`. The composer「+」button opens
- * exactly this native command list (empty-query slash source), so the
- * contributions appear in the「+」menu with name + description and support
- * fuzzy search. Selecting one opens the official popupSelect layer; add-file
- * offers file vs folder rows, add-from-library offers a single confirm row.
- * Optional inject — never add commandUi to the hub's top-level export.
- */
+/** Register composer add actions in the native command menu. */
 
 /**
  * @param {{
@@ -15,9 +7,9 @@
  * }} ctx
  * @param {{
  *   t: (key: string) => string,
- *   onAddFile: () => void,
- *   onAddFolder?: () => void,
- *   onAddLibrary: () => void,
+ *   onAddFile: (sessionId: string, signal: AbortSignal, restoreComposerFocus: () => void, registrationSignal: AbortSignal) => void | Promise<void>,
+ *   onAddLibrary: (sessionId: string, signal: AbortSignal, restoreComposerFocus: () => void, registrationSignal: AbortSignal) => void | Promise<void>,
+ *   onClientActionUnavailable?: () => void,
  * }} actions
  */
 export function registerComposerAddCommands(ctx, actions) {
@@ -25,43 +17,36 @@ export function registerComposerAddCommands(ctx, actions) {
   ctx.inject(['commandUi'], (inner) => {
     const commandUi = inner.commandUi ?? inner.get?.('commandUi')
     if (!commandUi || typeof commandUi.register !== 'function') return
+    if (commandUi.capabilities?.clientAction !== true) {
+      actions.onClientActionUnavailable?.()
+      return
+    }
     const t = actions.t
-    const onFolder = typeof actions.onAddFolder === 'function'
-      ? actions.onAddFolder
-      : actions.onAddFile
+    const registration = new AbortController()
     const stopFile = commandUi.register({
       name: 'add-file',
       description: t('composerAdd.addFile'),
       available: () => true,
       ui: {
-        kind: 'popupSelect',
-        async options() {
-          return [
-            { id: 'file', label: t('composerAdd.pickFiles') },
-            { id: 'folder', label: t('composerAdd.pickFolder') },
-          ]
-        },
-        onSelect(option) {
-          if (option?.id === 'folder') onFolder()
-          else actions.onAddFile()
-        },
+        kind: 'clientAction',
+        run: ({ session, signal, restoreComposerFocus }) =>
+          actions.onAddFile(session.sessionId, signal, restoreComposerFocus, registration.signal),
       },
     })
-    const stopLib = commandUi.register({
+    const stopLibrary = commandUi.register({
       name: 'add-from-library',
       description: t('composerAdd.fromLibrary'),
       available: () => true,
       ui: {
-        kind: 'popupSelect',
-        async options() {
-          return [{ id: 'open', label: t('composerAdd.openLibrary') }]
-        },
-        onSelect() { actions.onAddLibrary() },
+        kind: 'clientAction',
+        run: ({ session, signal, restoreComposerFocus }) =>
+          actions.onAddLibrary(session.sessionId, signal, restoreComposerFocus, registration.signal),
       },
     })
     ctx.effect?.(() => () => {
-      try { stopFile?.() } catch { /* ignore */ }
-      try { stopLib?.() } catch { /* ignore */ }
+      registration.abort()
+      try { stopFile?.() } catch { /* ignore disposer failures */ }
+      try { stopLibrary?.() } catch { /* ignore disposer failures */ }
     }, 'omnimux: composer add commands')
   })
 }

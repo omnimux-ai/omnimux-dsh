@@ -231,14 +231,15 @@ export async function copyFileIntoImported(opts) {
 }
 
 /**
- * Walk a directory tree; collect regular files and total byte size.
+ * Walk a directory tree; retain directories, regular files and total byte size.
  * Symlinks and special nodes are skipped (never followed).
  * @param {string} rootAbs
  * @param {typeof DEFAULT_FS} fs
- * @returns {{ files: Array<{ abs: string, rel: string }>, totalBytes: number }}
+ * @returns {{ files: Array<{ abs: string, rel: string }>, directories: string[], totalBytes: number }}
  */
 function collectDirectoryFiles(rootAbs, fs) {
   const files = []
+  const directories = []
   let totalBytes = 0
   /** @param {string} dirAbs @param {string} relPrefix */
   const walk = (dirAbs, relPrefix) => {
@@ -266,6 +267,7 @@ function collectDirectoryFiles(rootAbs, fs) {
         continue
       }
       if (isDir) {
+        directories.push(childRel)
         walk(childAbs, childRel)
         continue
       }
@@ -281,7 +283,7 @@ function collectDirectoryFiles(rootAbs, fs) {
     }
   }
   walk(rootAbs, '')
-  return { files, totalBytes }
+  return { files, directories, totalBytes }
 }
 
 /**
@@ -315,7 +317,7 @@ export async function copyDirectoryIntoImported(opts) {
   const importedRoot = join(cwd, ...IMPORTED_REL.split('/'))
   assertDestInsideCwd(importedRoot, cwd)
   fs.mkdirSync(importedRoot, { recursive: true })
-  const { files, totalBytes } = collectDirectoryFiles(opts.sourceAbs, fs)
+  const { files, directories, totalBytes } = collectDirectoryFiles(opts.sourceAbs, fs)
   assertDiskSpace(cwd, totalBytes, opts.statfs ?? statfsSync)
   const name = uniqueImportedName(
     importedRoot,
@@ -325,6 +327,11 @@ export async function copyDirectoryIntoImported(opts) {
   const destRoot = join(importedRoot, name)
   assertDestInsideCwd(destRoot, cwd)
   fs.mkdirSync(destRoot, { recursive: true })
+  for (const relativeDirectory of directories) {
+    const destDirectory = join(destRoot, ...relativeDirectory.split('/'))
+    assertDestInsideCwd(destDirectory, cwd)
+    fs.mkdirSync(destDirectory, { recursive: true })
+  }
   const copiedRels = []
   let copiedBytes = 0
   for (const file of files) {

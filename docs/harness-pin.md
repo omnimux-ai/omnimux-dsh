@@ -25,7 +25,7 @@ Override the clone path with `DSH_SRC`. Decision: [decisions/2026-08-16-harness-
 
 ## Overlay against this pin
 
-Directory: `patches/dsh-0.1.2-alpha.3/`. Current overlay: `llm-quota-priority.patch` (quota wording wins over a bare 403 so `insufficient_user_quota` is `QUOTA`, not `AUTH`). Official alpha.3 already carries the old client failure-display quota path; this overlay keeps the four `packages/llm/*` hunks. Desktop packaging patches have left this clone; the shipping shell is `/Users/x/Desktop/Project/omnimux-desktop-fork` (sync per its `docs/contracts/upstream-sync.md`); the retired slim shell `omnimux-desktop` is archived. Historical `patches/dsh-0.1.1-rc.2/` is not the live overlay.
+Directory: `patches/dsh-0.1.2-alpha.3/`. Current overlays: `llm-quota-priority.patch` and `ui-commands-client-action.patch` (quota wording wins over a bare 403 so `insufficient_user_quota` is `QUOTA`, not `AUTH`). Official alpha.3 already carries the old client failure-display quota path; this overlay keeps the four `packages/llm/*` hunks. Desktop packaging patches have left this clone; the shipping shell is `/Users/x/Desktop/Project/omnimux-desktop-fork` (sync per its `docs/contracts/upstream-sync.md`); the retired slim shell `omnimux-desktop` is archived. Historical `patches/dsh-0.1.1-rc.2/` is not the live overlay.
 
 `pnpm-lock.yaml` is not a patch.
 
@@ -38,7 +38,7 @@ DSH_SRC=/Users/x/Desktop/Project/Github/deepseek-harness ./scripts/apply-harness
 DSH_SRC=/Users/x/Desktop/Project/Github/deepseek-harness ./scripts/reset-harness-overlay.sh
 ```
 
-Apply requires `HEAD` to equal the SHA above. Before reset, inspect the script's exact target paths and staged/unstaged changes: it restores tracked files from the current index (not `origin/master`) and removes the named legacy desktop patch. It does not clear staged changes; preserve unrelated work before proceeding.
+Apply requires `HEAD` to equal the SHA above. Before reset, inspect the script's exact quota and ui-commands overlay target paths and staged/unstaged changes: it restores tracked files from the current index (not `origin/master`) and removes the named legacy desktop patch. It does not clear staged changes; preserve unrelated work before proceeding.
 
 ## Bump the pin
 

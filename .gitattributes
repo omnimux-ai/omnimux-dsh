@@ -1,0 +1,2 @@
+# The single leading space on a blank unified-diff context line is patch syntax.
+patches/dsh-0.1.2-alpha.3/ui-commands-client-action.patch whitespace=-blank-at-eol

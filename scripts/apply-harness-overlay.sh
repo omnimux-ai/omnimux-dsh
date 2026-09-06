@@ -7,7 +7,7 @@ pin_sha="dd6322d604e00eec1ba5e0c8541159906a21094a"
 src="${DSH_SRC:-/Users/x/Desktop/Project/Github/deepseek-harness}"
 patch_dir="$root/patches/dsh-0.1.2-alpha.3"
 
-if [[ ! -d "$src/.git" ]]; then
+if [[ ! -e "$src/.git" ]]; then
   echo "apply-harness-overlay: DSH_SRC is not a git clone: $src" >&2
   exit 1
 fi
@@ -34,5 +34,5 @@ if [[ -d "$patch_dir" ]]; then
   done
 fi
 
-echo "apply-harness-overlay: desktop home is /Users/x/Desktop/Project/omnimux-desktop"
+echo "apply-harness-overlay: desktop home is /Users/x/Desktop/Project/omnimux-desktop-fork"
 echo "apply-harness-overlay: pin ok on $src"
