@@ -157,4 +157,4 @@ Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `_
 
 ## Agent driving (pointer)
 
-Agent tools `workbench_get_active_view` / `workbench_open_tab`, UI Context Envelope, and Hub SSE (`GET /omnimux/events/stream`) are specified in [agent-workbench-sync.md](./agent-workbench-sync.md). `open()` sequence in this file still applies. Agent **MUST NOT** `setFocus` or write `conversationCollapsed`.
+Agent tools `workbench_get_active_view` / `workbench_open_tab`, UI Context Envelope, and Hub read-only WebSocket (`GET /omnimux/events/stream` upgrade) are specified in [agent-workbench-sync.md](./agent-workbench-sync.md). `open()` sequence in this file still applies. Agent **MUST NOT** `setFocus` or write `conversationCollapsed`.

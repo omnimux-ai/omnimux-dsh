@@ -133,10 +133,15 @@ export function apply(ctx) {
     locale: NS,
   }, AttachmentTray))
 
-  // Agent-Workbench synergy: single EventSource client & composer envelope capture
-  const eventsClient = createEventsClient()
-  installHubEventsGlobal(eventsClient)
-  eventsClient.connect()
+  ctx.effect(() => {
+    const eventsClient = createEventsClient()
+    const uninstall = installHubEventsGlobal(eventsClient)
+    eventsClient.connect()
+    return () => {
+      eventsClient.disconnect()
+      uninstall()
+    }
+  }, 'omnimux: hub event client')
   if (typeof document !== 'undefined') {
     ctx.effect?.(() => installComposerEnvelopeCapture(document), 'omnimux: composer envelope capture')
     ctx.effect?.(() => installComposerAddCapture(document, { t }), 'omnimux: composer add capture')

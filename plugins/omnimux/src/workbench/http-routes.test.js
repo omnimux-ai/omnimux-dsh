@@ -27,9 +27,9 @@ describe('Workbench HTTP Routes', () => {
 
     const dispose = registerWorkbenchHttpRoutes(fakeServer, { hubEvents: bus, mailbox })
 
-    assert.equal(routes.length, 3)
+    assert.equal(routes.length, 2)
     const paths = routes.map((r) => r.path)
-    assert.ok(paths.includes('/omnimux/events/stream'))
+    assert.equal(paths.includes('/omnimux/events/stream'), false, 'event feed must not hold an HTTP request open')
     assert.ok(paths.includes('/omnimux/workbench/viewport'))
     assert.ok(paths.includes('/omnimux/workbench/rpc/ack'))
     dispose()
