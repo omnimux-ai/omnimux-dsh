@@ -1,0 +1,7 @@
+# Experimental overlay for issue 643; pass after the normal L2 patches.
+# This isolated probe uses hub defaults; it does not carry deployment overrides.
+- id: client-hmr
+  disabled: true
+- id: omnimux
+  config:
+    hmrTransport: websocket

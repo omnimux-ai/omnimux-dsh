@@ -16,6 +16,7 @@ import { installStatsLineShadow } from './stats-line-shadow.js'
 import { AttachmentTray } from './attachments/AttachmentTray.tsx'
 import { getGlobalAttachmentStore } from './attachments/store.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
+import { installWebSocketHmr } from '../hmr/client.js'
 import { installComposerEnvelopeCapture } from './composer-envelope.js'
 import { installComposerAddCapture } from './composer-add/install.js'
 import { registerComposerAddCommands } from './composer-add/commands.js'
@@ -136,8 +137,12 @@ export function apply(ctx) {
   ctx.effect(() => {
     const eventsClient = createEventsClient()
     const uninstall = installHubEventsGlobal(eventsClient)
+    const hmr = window.__OMNIMUX_BRAND__?.hmrTransport === 'websocket' && ctx.inject(['loader', 'modules'], hmrCtx => {
+      hmrCtx.effect(() => installWebSocketHmr(hmrCtx, eventsClient, document), 'omnimux: HMR client')
+    })
     eventsClient.connect()
     return () => {
+      if (hmr) void hmr.dispose()
       eventsClient.disconnect()
       uninstall()
     }

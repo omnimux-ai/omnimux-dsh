@@ -14,8 +14,12 @@ export function parseHubConfig(value) {
   const raw = value && typeof value === 'object' && !Array.isArray(value)
     ? /** @type {Record<string, unknown>} */ (value)
     : {}
+  if (raw.hmrTransport !== undefined && !['native', 'websocket'].includes(raw.hmrTransport)) {
+    throw new TypeError('hmrTransport must be native or websocket')
+  }
   return {
     ...brand,
+    hmrTransport: raw.hmrTransport ?? 'native',
     media: parseMediaConfig(raw.media),
     official: parseOfficialConfig(raw.official),
     apps: parseAppsConfig(

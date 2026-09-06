@@ -26,6 +26,7 @@ import { buildModelCatalog } from '../catalog/list.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { mountHubHttp } from './http.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
+import { mountWebSocketHmr } from '../hmr/host.js'
 
 /**
  * @param {{
@@ -73,6 +74,12 @@ export function apply(ctx, config = {}) {
   const hubEvents = createHubEventBus()
   const mailbox = createWorkbenchMailbox({ hubEvents })
   ctx.provide?.('hubEvents', hubEvents)
+  if (hub.hmrTransport === 'websocket') {
+    ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {
+      const { apply: applyWatcher } = await hmrCtx.loader.import('@deepseek-ai/dsh-client-hmr')
+      mountWebSocketHmr(hmrCtx, hubEvents, applyWatcher)
+    })
+  }
   // Vertical tools (workflow_*) may read last-known viewport for default workspace targeting.
   // Read-only seam: getActiveView only — no open/RPC.
   ctx.provide?.('workbenchMailbox', {
