@@ -16,6 +16,7 @@ export function parseHubConfig(value) {
     : {}
   return {
     ...brand,
+    hmrTransport: 'websocket',
     media: parseMediaConfig(raw.media),
     official: parseOfficialConfig(raw.official),
     apps: parseAppsConfig(
