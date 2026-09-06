@@ -127,7 +127,7 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       }
       const readiness = findExecutionReadinessFailure(
         subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
-        (typeof deps.getCatalog === 'function' ? await deps.getCatalog() : null) as CapabilityCatalog | null,
+        (deps.getExecutionCatalog ? await deps.getExecutionCatalog() : deps.getCatalog ? await deps.getCatalog() : null) as CapabilityCatalog | null,
         { nodes: workspace.nodes, edges: workspace.edges, workspaceId: workspace.id, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
       );
       if (readiness) {

@@ -88,7 +88,7 @@ export function applyExecutionNodeOutput(
 ): void {
   const patch: Record<string, unknown> = { ...basePatch };
   patch.simulated = output.simulated === true ? true : undefined;
-  if (output.text) patch.generatedContent = output.text;
+  if (typeof output.text === 'string') patch.generatedContent = output.text;
   const first = output.mediaAssets?.[0];
   if (output.mediaAssets && output.mediaAssets.length > 0 && first) {
     patch.mediaAssets = output.mediaAssets;

@@ -454,7 +454,7 @@ test('an in-flight execution retains its submitted graph and upstream output aft
   try {
     const nodes = [
       { id: 'gate', type: 'material', data: { materialType: 'text', prompt: 'gate instruction' } },
-      { id: 'target', type: 'material', data: { materialType: 'text', prompt: '', params: { model: 'original' } } },
+      { id: 'target', type: 'material', data: { materialType: 'text', prompt: '', params: { model: 'mock-text-flash' } } },
     ];
     const edges = [{ source: 'source', target: 'target' }, { source: 'gate', target: 'target' }];
     const initialOutputs = { source: { text: 'submitted text' } };
@@ -469,7 +469,7 @@ test('an in-flight execution retains its submitted graph and upstream output aft
     assert.equal(sent.length, 2);
     assert.match(sent[1].prompt, /submitted text/);
     assert.doesNotMatch(sent[1].prompt, /new instruction|new text/);
-    assert.equal(sent[1].model, 'original');
+    assert.equal(sent[1].model, 'mock-text-flash');
   } finally {
     releaseGate();
     manager.disposeAll();

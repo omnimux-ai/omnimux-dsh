@@ -44,7 +44,7 @@ function upstreamSnapshots(nodeId: string, graph?: ExecutionReadinessGraph): Ups
     const source = readNodeInputSource(node ?? { id: edge.source }, graph?.workspaceId);
     const binding = edge.data?.slotBinding as { role?: string } | undefined;
     const inputs = graph?.resolvedInputs?.get(edge.source) ?? [{
-      nodeId: edge.source, materialType: source.materialType,
+      nodeId: edge.source, label: source.label, outputId: source.outputId, materialType: source.materialType,
       availability: source.availability, availabilityMessage: source.message,
       textContent: source.output.text, url: source.output.mediaAssets?.[0]?.url,
       ...source.metadata,
@@ -83,7 +83,7 @@ export function findExecutionReadinessFailure(
 
   for (const node of nodes) {
     if (node.type !== 'material' || resolveNodeKind(node.data ?? {}) !== 'generate') continue;
-    const upstreams = upstreamSnapshots(node.id, graph);
+    let upstreams = upstreamSnapshots(node.id, graph);
     const deferred = new Set(upstreams.filter((input) => {
       const source = graph?.nodes.find((candidate) => candidate.id === input.nodeId);
       return source?.type === 'material' && resolveNodeKind(source.data ?? {}) === 'generate'
@@ -95,13 +95,21 @@ export function findExecutionReadinessFailure(
       reasonCode: unavailable.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
       message: unavailable.availabilityMessage ?? `等待来源 ${unavailable.nodeId} 的内容`,
     };
-    if (!view.available) continue;
+    if (!view.available) return { nodeId: node.id, reasonCode: 'catalog_unavailable', message: '模型目录不可用，请稍后重试' };
+    // These sources will run again; their old result metadata is not this run's input.
+    upstreams = upstreams.map((input) => deferred.has(input.nodeId)
+      ? { nodeId: input.nodeId, label: input.label, materialType: input.materialType, edgeId: input.edgeId,
+          role: input.role, targetSlot: input.targetSlot, availability: 'waiting' as const }
+      : input);
     const data = node.data ?? {};
     const params = data.params && typeof data.params === 'object'
       ? data.params as Record<string, unknown>
       : {};
-    const model = resolveModelView(view, readString(params.model));
-    if (!model) continue;
+    const requestedModel = readString(params.model);
+    const outputKind = typeof data.materialType === 'string' ? data.materialType : 'text';
+    const defaultModel = catalog?.defaults?.[outputKind as keyof NonNullable<CapabilityCatalog['defaults']>];
+    const model = resolveModelView(view, requestedModel ?? defaultModel);
+    if (!model) return { nodeId: node.id, reasonCode: 'unknown_model', message: '当前模型不可用，请选择模型后重试' };
     const fingerprint = buildUiUpstreamFingerprint({
       materialType: typeof data.materialType === 'string' ? data.materialType : undefined,
       prompt: typeof data.prompt === 'string' ? data.prompt : '',

@@ -91,6 +91,8 @@ function makeHarness({ gatewayLatency = { minLatencyMs: 10, maxLatencyMs: 30 }, 
   };
   const libraryRoot = join(dir, 'library');
   mkdirSync(libraryRoot, { recursive: true });
+  const executionGateway = gateway ?? host.createMockGateway(gatewayLatency);
+  if (catalog) executionGateway.capabilities = async () => catalog;
   const dispose = host.mountWorkflowHost(ctx, {
     paths: {
       root: dir,
@@ -99,7 +101,7 @@ function makeHarness({ gatewayLatency = { minLatencyMs: 10, maxLatencyMs: 30 }, 
       mediaDir: join(dir, 'media'),
     },
     libraryRoot,
-    gateway: gateway ?? host.createMockGateway(gatewayLatency),
+    gateway: executionGateway,
   });
 
   const call = async ({ method = 'GET', url, body }) => {
@@ -462,6 +464,7 @@ test('workflow_run unbound media generate 惰性种子项目且幂等', async ()
             materialType: 'video',
             selectedTool: 'video-generation',
             prompt: '1dog',
+            params: { operation: 'text_to_video' },
             status: 'ready',
           },
         }],

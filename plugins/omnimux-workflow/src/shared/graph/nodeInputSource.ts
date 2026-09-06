@@ -94,7 +94,7 @@ export function readNodeInputSource(
     durationSec: normalizeMediaNumber(fields.durationSec ?? data.durationSec ?? data.duration) ?? undefined,
   };
   const base = { nodeId: node.id, label, materialType, metadata };
-  const missing = data.isMissing === true || data.fileMissing === true || data.isOffline === true
+  const missing = data.isMissing === true || data.fileMissing === true || data.fileCorrupted === true || data.isOffline === true
     || ['missing', 'corrupted', 'offline'].includes(String(data.status))
     || ['missing', 'corrupted', 'error'].includes(String(data.probeStatus));
   if (missing) {

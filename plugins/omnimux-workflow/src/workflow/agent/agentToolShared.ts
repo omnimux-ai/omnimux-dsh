@@ -79,6 +79,8 @@ export interface WorkflowAgentDeps {
    * mutation time — the compat kernel fails closed when it returns null.
    */
   getCatalog?: () => unknown;
+  /** Execution uses the same asynchronous gateway catalog as HTTP admission. */
+  getExecutionCatalog?: () => unknown | Promise<unknown>;
   getGenerationPreferences?: () => import('../../shared/generationPreferences').GenerationPreferences;
 }
 
