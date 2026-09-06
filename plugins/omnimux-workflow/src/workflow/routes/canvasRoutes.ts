@@ -43,6 +43,7 @@
  * public assembly + HTTP adapter. Named exports keep the original surface.
  */
 import { createReadStream, statSync } from 'node:fs';
+import { createGenerationPreferencesRoutes } from './generationPreferencesRoutes';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname } from 'node:path';
 import { parseByteRange } from '../byteRange';
@@ -198,6 +199,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const projectDispatcher = createProjectDispatcher(libraryRoot ? { libraryRoot } : {});
   const staticRoutes = createStaticRoutes({ pluginRoot: PLUGIN_ROOT, gateway });
   const workspaceRoutes = createWorkspaceRoutes(store);
+  const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
   const projectStore = deps.projectStore
     ?? createProjectStore({ libraryRoot: libraryRoot ?? ensureLibraryRoot() });
   const ensureProjectBound = deps.ensureProjectBound ?? bindEnsureProjectBound(projectStore);
@@ -244,7 +246,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
         return projectDispatcher.dispatch(req);
       }
 
-      if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+      if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         try {
           assertLocalWrite(req);
         } catch {
@@ -256,6 +258,8 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
       // workspaces, SSE/control/item/collection, capabilities, media.
       const fromBundle = await Promise.resolve(staticRoutes.tryBundle(method, path, req));
       if (fromBundle) return fromBundle;
+      const fromPreferences = await preferenceRoutes?.tryHandle(method, path, req);
+      if (fromPreferences) return fromPreferences;
       const fromTable = await Promise.resolve(tableRoutes.tryHandle(method, path, req));
       if (fromTable) return fromTable;
       const fromWorkspace = await Promise.resolve(workspaceRoutes.tryHandle(method, path, req));

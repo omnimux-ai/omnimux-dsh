@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Writable } from 'node:stream';
+import { CANVAS_GENERATION_POLICY } from '../shared/generationPolicy.ts';
 
 const host = await import('../../dist/index.js');
 
@@ -580,7 +581,7 @@ test('取消：AbortSignal 贯通到 seam 轮询，执行转为 cancelled', asyn
   }
 });
 
-test('capabilities：seam 可达时返回 hub modelCatalog（env 不收缩列表）', async () => {
+test('capabilities：hub 目录按画布白名单投影，不继承画布外默认项', async () => {
   const hub = createFakeSeamHub({
     catalogList() {
       return {
@@ -621,18 +622,16 @@ test('capabilities：seam 可达时返回 hub modelCatalog（env 不收缩列表
   try {
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
-    assert.equal(caps.body.fingerprint, 'fake-catalog-env');
-    assert.equal(caps.body.defaults.video, 'kling-o1');
+    assert.match(caps.body.fingerprint, /^fake-catalog-env:canvas:/);
+    assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
     assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
-    assert.ok(caps.body.video.some((row) => row.id === 'kling-o1'));
+    assert.equal(caps.body.video.some((row) => row.id === 'kling-o1'), false);
     assert.ok(caps.body.image.some((row) => row.id === 'gpt-image-2'));
-    assert.ok(caps.body.image.some((row) => row.id === 'nanobanana-2'));
-    assert.equal(caps.body.text.length, 5);
+    assert.equal(caps.body.image.some((row) => row.id === 'nanobanana-2'), false);
+    assert.equal(caps.body.text.length, 3);
     assert.deepEqual(caps.body.text.map((r) => r.id), [
       'claude-opus-4-6',
       'deepseek-v4-flash-vision-exp',
-      'gemini-3.1-pro-preview',
-      'gemini-3.7-flash',
       'gpt-5.5',
     ]);
     assert.ok(caps.body.audio.some((row) => row.id === 'suno'));
@@ -642,14 +641,14 @@ test('capabilities：seam 可达时返回 hub modelCatalog（env 不收缩列表
     rmSync(h.root, { recursive: true, force: true });
   }
 
-  // Same catalog fixture without extra env: list stays rich; defaults come from catalog.
+  // Canvas policy applies with or without a hub environment overlay.
   const hDefault = makeHarness({ seamHub: hub });
   try {
     const caps = await hDefault.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
-    assert.ok(caps.body.video.some((row) => row.id === 'kling-o1'));
+    assert.equal(caps.body.video.some((row) => row.id === 'kling-o1'), false);
     assert.ok(caps.body.video.some((row) => row.id === 'seedance-2-0-fast'));
-    assert.equal(caps.body.defaults.video, 'kling-o1');
+    assert.equal(caps.body.defaults.video, 'seedance-2-0-fast');
   } finally {
     hDefault.dispose();
     rmSync(hDefault.root, { recursive: true, force: true });
@@ -730,7 +729,7 @@ test('capabilities v1.1：models/operations/research/execution/aliases/parameter
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
     assert.equal(caps.body.schemaVersion, '1.1');
-    assert.equal(caps.body.fingerprint, 'v11-pass');
+    assert.match(caps.body.fingerprint, /^v11-pass:canvas:/);
     assert.deepEqual(caps.body.defaultsByOperation, { text_to_video: 'seedance-2-0-fast' });
 
     // 权威 models[]：operations/inputs/output/research/execution/aliases/parameters 不丢。
@@ -771,7 +770,7 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
     listed: true,
   }));
   const models = Array.from({ length: 7 }, (_, index) => ({
-    id: `video-model-${index + 1}`,
+    id: CANVAS_GENERATION_POLICY.video.allowedModelIds[index],
     label: `Video Model ${index + 1}`,
     listed: true,
     operations: operations.filter((_, operationIndex) => operationIndex % 7 === index),
@@ -781,7 +780,7 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
       source: 'omnimux',
       schemaVersion: '1.1',
       fingerprint: 'seven-video-models',
-      defaults: { video: 'video-model-1' },
+      defaults: { video: 'seedance-2-0' },
       models,
       video: models.map(({ id, label }) => ({ id, label })),
       text: [],
@@ -796,14 +795,14 @@ test('强制 mock：读取本地 modelCatalog，但不会调用任何真实 gene
   try {
     const caps = await h.call({ url: '/omnimux-workflow/api/capabilities' });
     assert.equal(caps.body.source, 'omnimux');
-    assert.equal(caps.body.fingerprint, 'seven-video-models');
+    assert.match(caps.body.fingerprint, /^seven-video-models:canvas:/);
     assert.equal(caps.body.video.length, 7);
     assert.equal(caps.body.models.length, 7);
     assert.equal(caps.body.models.flatMap((model) => model.operations).length, 31);
 
     const { wsId } = await h.createGraph({
       nodes: [h.materialNode('n1', 'video', {
-        params: { model: 'video-model-1', operation: 'video_op_1' },
+        params: { model: 'seedance-2-0', operation: 'video_op_1' },
       })],
       bind: true,
     });
@@ -945,7 +944,8 @@ test('auto 晚绑定：mount 时无 seam，hub 出现后目录升级为 omnimux'
     const after = await h0call(captured, { url: '/omnimux-workflow/api/capabilities' });
     assert.equal(after.body.source, 'omnimux');
     assert.ok(after.body.fingerprint);
-    assert.ok(after.body.video.some((row) => row.id === 'kling-o1'));
+    assert.equal(after.body.video.some((row) => row.id === 'kling-o1'), false);
+    assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
     assert.ok(after.body.video.some((row) => row.id === 'seedance-2-0-fast'));
     assert.ok(after.body.defaults?.video);
   } finally {

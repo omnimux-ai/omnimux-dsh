@@ -9,10 +9,10 @@ import { loadAll, resetContractCache, DEFAULT_SPECS_DIR } from './load.js';
 import { verifyContracts } from './index.js';
 import { loadDispositions } from './dispositions.js';
 
-test('collectRuntimeModelIds returns the 52-id universe (contracts + wire aliases)', () => {
+test('collectRuntimeModelIds returns the 53-id universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 52, `expected 52 runtime ids, got ${ids.length}`);
+  assert.equal(ids.length, 53, `expected 53 runtime ids, got ${ids.length}`);
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
@@ -72,7 +72,7 @@ test('negative: canonical-disposition missing contract is a strict coverage erro
   assert.ok(auditIssues.some((i) => i.code === 'coverage_missing' && i.level === 'warning'));
 });
 
-test('verifyContracts: audit ok; strict ok once 52 dispositions resolve', () => {
+test('verifyContracts: audit ok; strict ok once 53 dispositions resolve', () => {
   const audit = verifyContracts({ strict: false });
   assert.equal(audit.ok, true, JSON.stringify(audit.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(audit.exitCode, 0);
@@ -82,7 +82,7 @@ test('verifyContracts: audit ok; strict ok once 52 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 52);
+  assert.equal(strict.dispositions.total, 53);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
   assert.ok(strict.listedOperations.length > 0);

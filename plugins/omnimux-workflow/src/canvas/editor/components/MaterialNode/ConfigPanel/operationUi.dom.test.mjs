@@ -41,15 +41,11 @@ test('ConfigPanel 消费 buildFilteredModelOptions / buildEffectiveOpsUiState（
   // 不再 evaluateModelCompatibility 驱动 disabled 长列表
   assert.doesNotMatch(configSrc, /evaluateModelCompatibility/);
   assert.doesNotMatch(configSrc, /level === 'disabled'/);
-  // Issue #467：禁止静态白名单 / productAllowlist 第二 capability truth
-  assert.doesNotMatch(configSrc, /MATERIAL_NODE_WHITELIST/);
-  assert.doesNotMatch(configSrc, /NODE_MODEL_WHITELIST/);
-  assert.doesNotMatch(configSrc, /productAllowlist/);
-  assert.doesNotMatch(opUiSrc, /productAllowlist/);
-  assert.doesNotMatch(opUiSrc, /MATERIAL_NODE_WHITELIST/);
+  // Product admission lives in the shared kernel, not a separate picker list.
+  assert.doesNotMatch(configSrc, /MATERIAL_NODE_WHITELIST|NODE_MODEL_WHITELIST/);
 });
 
-test('ConfigPanel 0/1/≥2 mode UI 接线：视频走 Popover，其它模态 inline OperationSegment', () => {
+test('ConfigPanel mode UI consumes presentation policy; video retains its popover', () => {
   assert.match(configSrc, /showModeUi/);
   assert.match(configSrc, /OperationSegment/);
   assert.match(configSrc, /wf-operation-mode-inline|wf-compat-error/);
@@ -162,4 +158,21 @@ test('四模态均可消费 filtered model / effectiveOps', () => {
   assert.match(configSrc, /materialType === 'image'/);
   assert.match(configSrc, /materialType === 'audio'/);
   assert.match(configSrc, /materialType === 'video'/);
+});
+
+
+test('empty inputs use a quiet hint and disabled action; fixed audio tabs are absent', () => {
+  assert.match(configSrc, /quietReason = reasonCode === 'prompt_required'/);
+  assert.match(configSrc, /role="status" data-testid="wf-input-hint"/);
+  assert.match(configSrc, /!quietReason && \(opsState\.blockGenerate/);
+  assert.match(configSrc, /disabledReason=\{blockReason\}/);
+  assert.doesNotMatch(configSrc, /handleAudioSubModeChange|wf-config-panel__audio-tabs/);
+  assert.match(configSrc, /opsState.selectedOperationId === 'text_to_music'/);
+});
+
+test('manual selection remembers the model and reports failed persistence', () => {
+  assert.match(configSrc, /rememberGenerationModel\(materialType, newModelId\)\.catch/);
+  assert.match(configSrc, /toast\.error/);
+  assert.match(configSrc, /nodeCompat\?\.adaptation/);
+  assert.match(configSrc, /role="status" data-testid="wf-model-adaptation"/);
 });

@@ -15,7 +15,7 @@ test('applyCanvasInputMutation：catalogRuntime 注入 + 一次 set 提交 nodes
   assert.match(storeSrc, /catalogRuntime:\s*CapabilityCatalog\s*\|\s*null/);
   assert.match(storeSrc, /setCatalogRuntime:\s*\(catalog:\s*CapabilityCatalog\s*\|\s*null\)\s*=>/);
   assert.match(storeSrc, /planCanvasInputMutation\(/);
-  assert.match(storeSrc, /\{\s*catalog:\s*current\.catalogRuntime\s*\}/);
+  assert.match(storeSrc, /\{\s*catalog:\s*current\.catalogRuntime\s*[,}]/);
   // Allowed path commits nodes + edges in a single set call (atomic).
   assert.match(storeSrc, /set\(\{\s*nodes:\s*plan\.nodes,\s*edges:\s*plan\.edges\s*\}\)/);
   // Rejected path returns plan without a second set of nodes/edges.

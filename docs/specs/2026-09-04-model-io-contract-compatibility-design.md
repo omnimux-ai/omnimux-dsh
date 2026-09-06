@@ -34,6 +34,9 @@ related:
 
 > **2026-09-06 输入语义补充**：实现节点输入解析、就绪判断与执行映射时，遵循 [节点有效输入与提交合同](../contracts/node-input-submission.md)及其 [验收矩阵](2026-09-06-node-input-submission-prd.md#acceptance)。本设计中的节点字段/prompt 映射不得解释为必须由本地输入框提供；后续共享解析方案需单独核对现有实现。
 
+> **2026-09-06 生成节点策略**：[生成节点模型选择与偏好](../contracts/generation-node-policy.md) 取代本文中的自动选模顺序、产品模型范围及模式展示规则；Hub 输入能力与执行合同仍为唯一真源。
+
+
 > **2026-09-05 当前方法**：[模型合同文档优先方法修订](2026-09-05-model-contract-docs-first.md) 与 [模型 API 权威](../contracts/model-api-authority.md) 取代本文关于存在性、最小生成、边界探测、样本上限、真实执行和按执行翻转 `listed` 的可执行指令。本文保留原模型范围、历史快照与已发生执行；它们不得被当作当前输入合同。具体 EvoLink/APIMart 模型 API 文档未说明的字段、角色、数量、格式、时长和模式均为未知，不得猜测、试探或跨渠道借用。
 
 > **文档地位**：L2 已接受设计（Epic #463 / H1 #464）。实现以本文 + L1 MCC / hub / model-list-ownership 为准；产品行为以正式 PRD 为准。

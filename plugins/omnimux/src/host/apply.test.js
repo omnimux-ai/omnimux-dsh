@@ -46,9 +46,9 @@ describe('hub apply composition', () => {
     const catalog = provided.modelCatalog.list()
     assert.equal(catalog.source, 'omnimux')
     assert.ok(Array.isArray(catalog.text))
-    // #530 PR-A: 11 text models listed with verified+live chat/vision_chat
-    assert.equal(catalog.text.length, 11)
-    assert.equal(catalog.defaults.text, 'gemini-3.7-flash')
+    // Catalog includes the user-confirmed Gemini 3.8 mapping.
+    assert.equal(catalog.text.length, 12)
+    assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
   it('registers all 31 tools and 8 seams by default', () => {

@@ -134,6 +134,15 @@
       "notes": "2026-09-05 探测：chat+vision_chat 独立 live 四要素齐全，翻 listed；vision max10 policy_conservative（11 未拒）；禁止继承 deepseek-v4-flash 证据"
     },
     {
+      "id": "gemini-3.8-flash",
+      "disposition": "canonical",
+      "reason": "用户确认与 Gemini 3.7 输入合同相同；textComplete 实现复用并离线验证",
+      "evidence": [
+        "docs/references/omnimux-gemini-3.8-contract-gap.md"
+      ],
+      "notes": "research 记录本任务的兼容性确认；implementation ready；execution none，不继承 3.7 的 live 记录"
+    },
+    {
       "id": "gemini-3.7-flash",
       "disposition": "canonical",
       "reason": "runtime + cordis 在列；2026-09-05 dated live 证据覆盖 chat+vision_chat",

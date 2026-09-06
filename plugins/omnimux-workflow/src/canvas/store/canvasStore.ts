@@ -14,6 +14,7 @@
  */
 
 import { create } from 'zustand';
+import { useGenerationPreferencesStore } from './generationPreferencesStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   type Edge,
@@ -172,7 +173,7 @@ export const useCanvasStore = create<CanvasState>()(
         mutation,
         // Issue #466: catalog-aware compat pass — edge + slot binding +
         // model/operation auto-adaptation commit as ONE store set.
-        { catalog: current.catalogRuntime },
+        { catalog: current.catalogRuntime, preferredModels: useGenerationPreferencesStore.getState().lastModelByType },
       );
       if (plan.status !== 'allowed') return plan;
       set({ nodes: plan.nodes, edges: plan.edges });
@@ -212,6 +213,7 @@ export const useCanvasStore = create<CanvasState>()(
           edges: current.edges,
           catalog,
           previousFingerprint,
+          preferredModels: useGenerationPreferencesStore.getState().lastModelByType,
         });
         if (reconciled.changed) {
           set({
@@ -333,6 +335,7 @@ export const useCanvasStore = create<CanvasState>()(
             edges,
             catalog,
             previousFingerprint: '',
+            preferredModels: useGenerationPreferencesStore.getState().lastModelByType,
           })
         : null;
       const nextNodes = reconciled?.nodes ?? nodes;

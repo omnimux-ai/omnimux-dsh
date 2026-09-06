@@ -55,6 +55,17 @@ export async function request<T>(
   return { ok: response.ok, status: response.status, body: json };
 }
 
+export function fetchGenerationPreferences(): Promise<ApiResult<import('../../shared/generationPreferences').GenerationPreferencesResponse>> {
+  return request(WORKFLOW_API_ROUTES.generationPreferences);
+}
+
+export function saveGenerationPreference(
+  kind: import('../../shared/generationPreferences').GenerationKind,
+  modelId: string,
+): Promise<ApiResult<import('../../shared/generationPreferences').GenerationPreferencesResponse>> {
+  return request(WORKFLOW_API_ROUTES.generationPreferences, { method: 'PATCH', body: { kind, modelId } });
+}
+
 export function fetchManifest(): Promise<ApiResult<BuildManifest>> {
   return request<BuildManifest>(WORKFLOW_API_ROUTES.manifest);
 }
