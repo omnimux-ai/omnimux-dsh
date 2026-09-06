@@ -123,8 +123,8 @@ describe('AccountsSidebar disconnect interaction', () => {
       calls.push({ path: String(path), method: init.method ?? 'GET' })
       if (init.method === 'DELETE') return response({ ok: true })
       return response({ accounts: [
-        { id: 'first', display_name: 'Twin', status: 'connected' },
-        { id: 'second/id', display_name: 'Twin', status: 'connected' },
+        { id: 'first', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin', status: 'connected' },
+        { id: 'second/id', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin', status: 'connected' },
       ] })
     }
     const root = createRoot(container)
@@ -140,7 +140,7 @@ describe('AccountsSidebar disconnect interaction', () => {
       await click(buttonByText(container, 'Disconnect'))
       await flush()
       assert.deepEqual(calls.filter((call) => call.method === 'DELETE'), [
-        { path: '/omnimux/accounts/second%2Fid', method: 'DELETE' },
+        { path: '/omnimux/accounts/second%2Fid?provider=tiktok_direct', method: 'DELETE' },
       ])
       assert.equal(calls.filter((call) => call.method === 'GET').length, 2)
     } finally {
@@ -161,7 +161,7 @@ describe('AccountsSidebar disconnect interaction', () => {
         if (deleteCalls === 1) return pending.promise
         return response({ ok: true })
       }
-      return response({ accounts: [{ id: 'retry-id', display_name: 'Twin', status: 'connected' }] })
+      return response({ accounts: [{ id: 'retry-id', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin', status: 'connected' }] })
     }
     const root = createRoot(container)
     try {
@@ -199,8 +199,8 @@ describe('AccountsSidebar disconnect interaction', () => {
         return response({ ok: true })
       }
       return response({ accounts: [
-        { id: 'first', display_name: 'Twin', status: 'connected' },
-        { id: 'second', display_name: 'Twin', status: 'connected' },
+        { id: 'first', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin', status: 'connected' },
+        { id: 'second', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin', status: 'connected' },
       ] })
     }
     const root = createRoot(container)
@@ -216,8 +216,8 @@ describe('AccountsSidebar disconnect interaction', () => {
       await click(buttonByText(container, 'Disconnect'))
       await flush()
       assert.deepEqual(deletedIds, [
-        '/omnimux/accounts/first',
-        '/omnimux/accounts/second',
+        '/omnimux/accounts/first?provider=tiktok_direct',
+        '/omnimux/accounts/second?provider=tiktok_direct',
       ])
     } finally {
       await act(async () => { root.unmount() })
@@ -233,7 +233,7 @@ describe('AccountsSidebar disconnect interaction', () => {
     const pending = deferred()
     const errors = []
     globalThis.fetch = async (_path, init = {}) => (
-      init.method === 'DELETE' ? pending.promise : response({ accounts: [{ id: 'late-id', display_name: 'Twin' }] })
+      init.method === 'DELETE' ? pending.promise : response({ accounts: [{ id: 'late-id', platform: 'tiktok', provider: 'tiktok_direct', display_name: 'Twin' }] })
     )
     console.error = (...args) => { errors.push(args.join(' ')) }
     const root = createRoot(container)

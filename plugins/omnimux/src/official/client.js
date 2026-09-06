@@ -40,6 +40,9 @@ export function createOfficialClient(deps) {
     }
     assertPublic(json)
     if (!response.ok) {
+      if (['invalid-provider', 'account-provider-mismatch', 'post-provider-mismatch'].includes(json?.code)) {
+        throw new OmnimuxError(json.code, pickErrorMessage(json) || json.code, { status: response.status })
+      }
       const classification = classifyQuotaFailure({ status: response.status, body: json })
       if (classification.kind === 'needs-omnimux') {
         throw new OmnimuxError('needs-omnimux', classification.message, { status: response.status })

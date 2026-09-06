@@ -22,9 +22,9 @@ const SITE_ROWS = {
   success: true,
   data: {
     accounts: [
-      { id: 1, platform: 'xiaohongshu', username: 'red-one', status: 'active', display_name: '红一号' },
-      { id: '2', platform: 'douyin', username: 'dy-two', status: 'expired' },
-      { id: 3, platform: 'kuaishou', username: 'ks-three' }, // 无 status → expires_at 推导 → active
+      { id: 1, provider: 'tiktok_direct', platform: 'tiktok', username: 'red-one', status: 'active', display_name: '一号' },
+      { id: '2', provider: 'tiktok_direct', platform: 'tiktok', username: 'dy-two', status: 'expired' },
+      { id: 3, provider: 'tiktok_direct', platform: 'tiktok', username: 'ks-three' }, // 无 status → expires_at 推导 → active
     ],
   },
 }
@@ -73,15 +73,35 @@ describe('pickAccount / listFromPayload / computeStatus / mergeMeta (hub 等价�
 
 describe('accountAvailability', () => {
   it('active/expiring + agent_usable !== false are usable; others are not', () => {
-    assert.deepEqual(accountAvailability({ status: 'active' }), { ok: true, reason: '' })
-    assert.deepEqual(accountAvailability({ status: 'expiring' }), { ok: true, reason: '' })
-    assert.equal(accountAvailability({ status: 'expired' }).ok, false)
-    assert.equal(accountAvailability({ status: 'error', status_raw: 'x' }).ok, false)
-    assert.equal(accountAvailability({ status: 'active', agent_usable: false }).ok, false)
+    const account = { platform: 'tiktok', provider: 'tiktok_direct' }
+    assert.deepEqual(accountAvailability({ ...account, status: 'active' }), { ok: true, reason: '' })
+    assert.deepEqual(accountAvailability({ ...account, status: 'expiring' }), { ok: true, reason: '' })
+    assert.equal(accountAvailability({ ...account, status: 'expired' }).ok, false)
+    assert.equal(accountAvailability({ ...account, status: 'error', status_raw: 'x' }).ok, false)
+    assert.equal(accountAvailability({ ...account, status: 'active', agent_usable: false }).ok, false)
+    for (const provider of [undefined, 'unknown', 'zernio']) assert.equal(accountAvailability({ ...account, provider, status: 'active' }).ok, false)
   })
 })
 
 describe('AccountSource.list 三分支', () => {
+  it('preserves same-name account providers and rejects overlay changes to provider', async () => {
+    const source = createAccountSource({
+      channel: channelReturning({ accounts: [
+        { id: 1, platform: 'tiktok', display_name: 'same', provider: 'zernio', access_token: 'hidden' },
+        { id: 2, platform: 'tiktok', display_name: 'same', provider: 'tiktok_direct' },
+        { id: 3, platform: 'tiktok', display_name: 'same' },
+      ] }),
+      overlayPath: 'unused-test-overlay',
+      fs: { readFileSync: () => JSON.stringify({ '1': { provider: 'tiktok_direct' }, '3': { provider: 'tiktok_direct' } }) },
+    })
+    const { accounts } = await source.list()
+    assert.deepEqual(accounts.map(({ id, provider }) => ({ id, provider })), [
+      { id: '2', provider: 'tiktok_direct' },
+    ])
+    assert.ok(accounts.every((row) => !('access_token' in row)))
+    assert.equal('provider' in pickAccount({ id: 3 }), false)
+  })
+
   it('merges site rows with the accounts.json overlay', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dsh-publish-acc-'))
     try {
@@ -142,8 +162,7 @@ describe('AccountSource.list 三分支', () => {
   it('platform filter applies', async () => {
     const source = createAccountSource({ channel: channelReturning(SITE_ROWS), overlayPath: '' })
     const { accounts } = await source.list({ platform: 'douyin' })
-    assert.equal(accounts.length, 1)
-    assert.equal(accounts[0].platform, 'douyin')
+    assert.equal(accounts.length, 0)
   })
 
   it('get(id) finds a merged row', async () => {

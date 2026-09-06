@@ -48,8 +48,8 @@ const ACCOUNT_ROWS = {
   success: true,
   data: {
     accounts: [
-      { id: 'acc-1', platform: 'xiaohongshu', username: 'red', status: 'active' },
-      { id: 'acc-2', platform: 'douyin', username: 'dy', status: 'active' },
+      { id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok', username: 'one', status: 'active' },
+      { id: 'acc-2', provider: 'tiktok_direct', platform: 'tiktok', username: 'two', status: 'active' },
     ],
   },
 }
@@ -106,6 +106,63 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
+})
+
+describe('provider isolation before side effects', () => {
+  it('rejects a legacy Zernio draft without uploading or changing its content', async () => {
+    freshService({ omnimux_accounts_list: () => ({ accounts: [{ id: 'acc-1', provider: 'zernio', platform: 'tiktok', status: 'active' }] }) })
+    const draft = seedDraft({ account_ids: ['acc-1'] })
+    const before = store.getView(draft.id)
+    await assert.rejects(service.run(draft.id), (e) => e.details?.errors?.some((entry) => entry.code === 'account-provider-mismatch'))
+    assert.deepEqual(store.getView(draft.id), before)
+    assert.ok(tools.calls.every((call) => call.name === 'omnimux_accounts_list'))
+  })
+
+  it('rejects non-official and unknown historical tasks before retry or refresh', async () => {
+    freshService()
+    for (const provider of ['zernio', undefined, 'unknown']) {
+      const draft = seedDraft({ account_ids: ['acc-1'] })
+      store.materialize(draft.id, [{ id: 'acc-1', platform: 'tiktok', provider }])
+      const task = store.getView(draft.id).subtasks[0]
+      store.updateTask(task.id, { status: 'failed', post_id: 'legacy-post' })
+      const before = store.getView(draft.id)
+      await assert.rejects(service.retryTask(task.id), (e) => e.code === 'post-provider-mismatch')
+      assert.deepEqual(store.getView(draft.id), before)
+      store.updateTask(task.id, { status: 'submitted' })
+      const beforeRefresh = store.getView(draft.id)
+      const result = await service.refresh(draft.id)
+      assert.equal(result.sync_errors.length, 1)
+      assert.deepEqual(store.getView(draft.id), beforeRefresh)
+    }
+    assert.deepEqual(tools.calls, [])
+  })
+
+  it('revalidates the current account before retry mutations and uploads', async () => {
+    freshService()
+    const draft = seedDraft({ account_ids: ['acc-1'] })
+    const prepared = await service.prepare(draft.id)
+    const task = prepared.subtasks[0]
+    assert.equal(task.provider, 'tiktok_direct')
+    store.updateTask(task.id, { status: 'failed', error: 'previous failure', attempts: 2 })
+    handlers.omnimux_accounts_list = () => ({ accounts: [{ id: 'acc-1', platform: 'tiktok', provider: 'zernio', status: 'active' }] })
+    tools.calls.length = 0
+    const before = store.getView(draft.id)
+    await assert.rejects(service.retryTask(task.id), (e) => e.code === 'account-provider-mismatch')
+    assert.deepEqual(store.getView(draft.id), before)
+    assert.ok(tools.calls.every((call) => call.name === 'omnimux_accounts_list'))
+  })
+
+  it('revalidates source between prepare and background dispatch', async () => {
+    freshService()
+    const draft = seedDraft({ account_ids: ['acc-1'] })
+    await service.prepare(draft.id)
+    handlers.omnimux_accounts_list = () => ({ accounts: [] })
+    tools.calls.length = 0
+    const before = store.getView(draft.id)
+    await assert.rejects(service.dispatch(draft.id), (e) => e.code === 'account-provider-mismatch')
+    assert.deepEqual(store.getView(draft.id), before)
+    assert.ok(tools.calls.every((call) => call.name === 'omnimux_accounts_list'))
+  })
 })
 
 describe('SubmitService.run happy path', () => {
@@ -202,15 +259,15 @@ describe('SubmitService.run 失败隔离与降级', () => {
     assert.equal(store.getView(draft.id).subtasks.length, 0)
   })
 
-  it('校验失败（能力冲突）→ validation-failed，草稿保持 draft', async () => {
+  it('non-official account is rejected and its draft remains unchanged', async () => {
     freshService({
       omnimux_accounts_list: () => ({
         success: true,
         data: { accounts: [{ id: 'acc-1', platform: 'bilibili', status: 'active' }] },
       }),
     })
-    const draft = seedDraft({ account_ids: ['acc-1'] }) // bilibili 不支持 image
-    await assert.rejects(() => service.run(draft.id), (e) => e instanceof PublishError && e.code === 'validation-failed')
+    const draft = seedDraft({ account_ids: ['acc-1'] })
+    await assert.rejects(() => service.run(draft.id), (e) => e instanceof PublishError && e.code === 'account-provider-mismatch')
     assert.equal(store.getView(draft.id).status, 'draft')
   })
 

@@ -6,6 +6,7 @@
  */
 import { PublishError, RECORD_TYPES } from './store.js'
 import { accountAvailability } from './accounts.js'
+import { ACCOUNT_SOURCE_MESSAGE, isPublishingAccount } from './account-policy.js'
 
 /**
  * 媒体种类收集：`mediaKinds` = record.media_ids 对应的 kind 列表（调用方从 MediaStore 取）。
@@ -119,8 +120,8 @@ export function validateForSubmit(draft, ctx) {
     if (seen.has(key)) continue
     seen.add(key)
     const row = byId.get(key)
-    if (!row) {
-      errors.push({ code: 'account-not-found', field: 'account_ids', message: `账号 ${key} 不存在（站点列表中无此账号，可能已被断开）` })
+    if (!isPublishingAccount(row)) {
+      errors.push({ code: 'account-provider-mismatch', field: 'account_ids', message: `账号 ${key}：${ACCOUNT_SOURCE_MESSAGE}` })
       continue
     }
     const availability = accountAvailability(row)
@@ -146,7 +147,8 @@ export function validateForSubmit(draft, ctx) {
  * @param {Array<{ code: string, field: string, message: string }>} errors
  */
 export function validationError(errors) {
-  return new PublishError('validation-failed', {
+  const code = errors.some((error) => error.code === 'account-provider-mismatch') ? 'account-provider-mismatch' : 'validation-failed'
+  return new PublishError(code, {
     message: '提交前校验未通过',
     errors,
   })

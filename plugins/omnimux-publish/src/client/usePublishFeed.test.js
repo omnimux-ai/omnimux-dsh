@@ -138,7 +138,7 @@ test('executeSingleRetry triggers task retry and shows toast', async () => {
     let successCalled = false
     const rec = {
       id: 'rec_123',
-      subtasks: [{ platform: 'xhs', account_id: 'acc_1', status: 'failed' }],
+      subtasks: [{ id: 'task_123', provider: 'tiktok_direct', platform: 'tiktok', account_id: 'acc_1', status: 'failed' }],
     }
 
     await executeSingleRetry(rec, (msg) => { toast = msg }, () => { successCalled = true })
@@ -163,14 +163,14 @@ test('executeBatchRetry retries all failed subtasks', async () => {
       {
         id: 'rec_1',
         subtasks: [
-          { platform: 'xhs', account_id: 'acc_1', status: 'failed' },
+          { id: 'task_1', provider: 'tiktok_direct', platform: 'tiktok', account_id: 'acc_1', status: 'failed' },
           { platform: 'douyin', account_id: 'acc_2', status: 'published' },
         ],
       },
       {
         id: 'rec_2',
         subtasks: [
-          { platform: 'weibo', account_id: 'acc_3', status: 'failed' },
+          { id: 'task_2', provider: 'tiktok_direct', platform: 'tiktok', account_id: 'acc_3', status: 'failed' },
         ],
       },
     ]
@@ -179,8 +179,8 @@ test('executeBatchRetry retries all failed subtasks', async () => {
     assert.equal(toast, '已重试 2 个失败子任务')
     assert.equal(successCalled, true)
     assert.equal(calls.length, 2)
-    assert.equal(calls[0].body.task_id, 'rec_1')
-    assert.equal(calls[1].body.task_id, 'rec_2')
+    assert.equal(calls[0].body.task_id, 'task_1')
+    assert.equal(calls[1].body.task_id, 'task_2')
   } finally {
     globalThis.fetch = origFetch
   }
@@ -208,6 +208,37 @@ test('executeBatchDeleteDrafts deletes only drafts in selection', async () => {
     assert.equal(calls.length, 2)
   } finally {
     globalThis.fetch = origFetch
+  }
+})
+
+test('retry excludes legacy sources and does not report a rejected request as success', async () => {
+  const originalFetch = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (_url, opts) => {
+    calls.push(JSON.parse(opts.body))
+    return new Response(JSON.stringify({ error: 'account-provider-mismatch' }), { status: 409 })
+  }
+  try {
+    const legacy = { id: 'legacy', subtasks: [
+      { id: 'z', provider: 'zernio', platform: 'tiktok', status: 'failed' },
+      { id: 'unknown', platform: 'tiktok', status: 'failed' },
+    ] }
+    let success = 0
+    const messages = []
+    await executeSingleRetry(legacy, (message) => messages.push(message), () => success++)
+    await executeBatchRetry([legacy], new Set(['legacy']), (message) => messages.push(message), () => success++)
+    assert.equal(calls.length, 0)
+    const official = { id: 'record', subtasks: [
+      { id: 'official-task', provider: 'tiktok_direct', platform: 'tiktok', status: 'failed' },
+    ] }
+    await executeSingleRetry(official, (message) => messages.push(message), () => success++)
+    await executeBatchRetry([official], new Set(['record']), (message) => messages.push(message), () => success++)
+    assert.deepEqual(calls.map((call) => call.task_id), ['official-task', 'official-task'])
+    assert.equal(success, 0)
+    assert.equal(messages.length, 4)
+    assert.ok(messages.slice(2).every((message) => message.includes('account-provider-mismatch')))
+  } finally {
+    globalThis.fetch = originalFetch
   }
 })
 

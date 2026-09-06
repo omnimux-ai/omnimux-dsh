@@ -13,9 +13,9 @@ import {
   snapshotAccountIds,
 } from './account-sidebar-view.js'
 
-const ROW_A = { id: 'a1', platform: 'tiktok', display_name: 'Mia Store', username: 'mia.store', name: 'Mia', group: '带货', status: 'connected' }
-const ROW_B = { id: 'b2', platform: 'tiktok', display_name: 'Daily Vlog', username: 'dailyvlog', name: '', group: '', status: 'expired' }
-const ROW_C = { id: 'c3', platform: 'tiktok', display_name: '', username: '', name: 'NoHandle', group: '好物', status: 'error' }
+const ROW_A = { id: 'a1', provider: 'tiktok_direct', platform: 'tiktok', display_name: 'Mia Store', username: 'mia.store', name: 'Mia', group: '带货', status: 'connected' }
+const ROW_B = { id: 'b2', provider: 'tiktok_direct', platform: 'tiktok', display_name: 'Daily Vlog', username: 'dailyvlog', name: '', group: '', status: 'expired' }
+const ROW_C = { id: 'c3', provider: 'tiktok_direct', platform: 'tiktok', display_name: '', username: '', name: 'NoHandle', group: '好物', status: 'error' }
 
 describe('extractAccounts', () => {
   it('returns rows from { accounts: [...] }', () => {

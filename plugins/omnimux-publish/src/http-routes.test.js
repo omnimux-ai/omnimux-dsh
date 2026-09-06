@@ -50,7 +50,7 @@ function freshDispatcher(handlerOverrides = {}) {
   handlers = {
     omnimux_accounts_list: () => ({
       success: true,
-      data: { accounts: [{ id: 'acc-1', platform: 'xiaohongshu', username: 'red', status: 'active' }] },
+      data: { accounts: [{ id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok', username: 'red', status: 'active' }] },
     }),
     omnimux_publish_presign: (args) => ({ success: true, data: { upload_url: `https://up/${args.filename}`, public_url: `https://pub/${args.filename}` } }),
     omnimux_publish_create: (args) => ({ success: true, data: { id: `post-${args.account_ids[0]}` } }),
@@ -154,7 +154,7 @@ describe('registerPublishRoutes: 前缀路由全家', () => {
 
   it('GET /omnimux/publish/records filters the three tabs', async () => {
     freshDispatcher()
-    dispatcher.createDraft({ type: 'image', payload: { title: '草稿', description: '描述' } })
+    await dispatcher.createDraft({ type: 'image', payload: { title: '草稿', description: '描述' } })
     const result = await call({ method: 'GET', url: '/omnimux/publish/records?status=draft' })
     assert.equal(result.status, 200)
     assert.equal(result.body.records.length, 1)
@@ -218,7 +218,7 @@ describe('registerPublishRoutes: 前缀路由全家', () => {
 
   it('drafts/delete without confirm → 400 confirm-required', async () => {
     freshDispatcher()
-    const created = dispatcher.createDraft({ type: 'image', payload: { title: 'T' } })
+    const created = await dispatcher.createDraft({ type: 'image', payload: { title: 'T' } })
     const result = await call({
       method: 'POST',
       url: '/dsh-publish/drafts/delete',
@@ -340,7 +340,7 @@ describe('assertLocalWrite（自实现 loopback 校验）', () => {
 describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => {
   it('dispatcher methods back both faces: createDraft + listRecords + capabilities + importPath', async () => {
     freshDispatcher()
-    const created = dispatcher.createDraft({ type: 'video', payload: { description: '视频描述', media: [] } })
+    const created = await dispatcher.createDraft({ type: 'video', payload: { description: '视频描述', media: [] } })
     assert.ok(created.record.id)
     const listed = dispatcher.listRecords({ status_filter: 'draft' })
     assert.equal(listed.records.length, 1)
@@ -354,7 +354,7 @@ describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => 
     const src = join(dir, 'cover.png')
     const { writeFileSync } = await import('node:fs')
     writeFileSync(src, Buffer.from('cover-bytes'))
-    const result = dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
+    const result = await dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
     assert.equal(result.record.media_ids.length, 1)
     assert.equal(media.open(result.record.media_ids[0]).buffer.toString(), 'cover-bytes')
   })
@@ -377,7 +377,7 @@ describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => 
     const src = join(dir, 'pic2.png')
     const { writeFileSync } = await import('node:fs')
     writeFileSync(src, Buffer.from('pic2'))
-    const created = dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
+    const created = await dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
     assert.equal(created.media.length, 1)
     assert.equal(created.media[0].kind, 'image')
     assert.equal(created.media[0].filename, 'pic2.png')
@@ -388,11 +388,11 @@ describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => 
     const src = join(dir, 'pic3.png')
     const { writeFileSync } = await import('node:fs')
     writeFileSync(src, Buffer.from('pic3'))
-    const created = dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
-    // 不存在的账号 → validation-failed（与 publish_assign_accounts 同一条校验）
+    const created = await dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
+    // 无法确认来源的账号必须拒绝。
     await assert.rejects(
       () => dispatcher.updateDraft({ draft_id: created.record.id, patch: { account_ids: ['ghost'] } }),
-      (e) => e instanceof PublishError && e.code === 'validation-failed',
+      (e) => e instanceof PublishError && e.code === 'account-provider-mismatch',
     )
     // 合法账号挂载成功
     const updated = await dispatcher.updateDraft({ draft_id: created.record.id, patch: { account_ids: ['acc-1'] } })
@@ -407,14 +407,14 @@ describe('dispatcher 同源约束（工具面 = HTTP 面同一函数）', () => 
     const src = join(dir, 'pic.png')
     const { writeFileSync } = await import('node:fs')
     writeFileSync(src, Buffer.from('pic'))
-    const created = dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
-    // 平台 xiaohongshu 支持 image → 通过
+    const created = await dispatcher.createDraft({ type: 'image', payload: { title: 'T', media: [{ path: src }] } })
+    // 官方 TikTok 账号允许挂载。
     const assigned = await dispatcher.assignAccounts({ draft_id: created.record.id, account_ids: ['acc-1'] })
     assert.deepEqual(assigned.record.account_ids, ['acc-1'])
-    // 不存在的账号 → validation-failed
+    // 不存在的账号 → account-provider-mismatch
     await assert.rejects(
       () => dispatcher.assignAccounts({ draft_id: created.record.id, account_ids: ['ghost'] }),
-      (e) => e instanceof PublishError && e.code === 'validation-failed',
+      (e) => e instanceof PublishError && e.code === 'account-provider-mismatch',
     )
   })
 })

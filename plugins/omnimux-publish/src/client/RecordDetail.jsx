@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { IconChevronLeftOutline14, IconRefreshOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { Button } from 'dsh-ui-kit'
 import { recordDetail, refreshRecord, retryTask } from './api.js'
+import { isPublishingAccount, isRetryablePublishingTask } from '../account-policy.js'
 
 /**
  * A6/M8 记录详情：per-account 子任务状态展开 + 手动刷新（POST /records/refresh）
@@ -105,6 +106,7 @@ export function RecordDetail({ t, recordId, onBack, onChanged }) {
           size="sm"
           leadingIcon={<IconRefreshOutline16 />}
           loading={busy === 'refresh'}
+          disabled={!tasks.some((task) => isPublishingAccount(task) && task.post_id && ['submitted', 'reviewing', 'submitting'].includes(task.status))}
           onClick={() => { void refresh() }}
         >
           {t('detail.refresh')}
@@ -159,7 +161,8 @@ function SubtaskRow({ t, task, busy, onRetry }) {
       {task.error ? (
         <div className="omnimux-publish-task-err">{String(task.error)}</div>
       ) : null}
-      {status === 'failed' ? (
+      {!isPublishingAccount(task) ? <div className="omnimux-publish-task-err">{t('task.sourceMismatch')}</div> : null}
+      {isRetryablePublishingTask(task) ? (
         <div>
           <Button
             type="button"

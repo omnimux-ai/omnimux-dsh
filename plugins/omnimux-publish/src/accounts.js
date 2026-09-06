@@ -16,11 +16,12 @@
  */
 import { readFileSync } from 'node:fs'
 import { PublishError } from './store.js'
+import { ACCOUNT_SOURCE_MESSAGE, isPublishingAccount } from './account-policy.js'
 
 const DEFAULT_FS = { readFileSync }
 
 const ACCOUNT_KEYS = Object.freeze([
-  'id', 'platform', 'display_name', 'username', 'name', 'group', 'status',
+  'id', 'platform', 'provider', 'display_name', 'username', 'name', 'group', 'status',
   'expires_at', 'connected_at',
 ])
 
@@ -108,11 +109,30 @@ export function mergeMeta(row, meta) {
  * @returns {{ ok: boolean, reason: string }}
  */
 export function accountAvailability(row) {
+  if (!isPublishingAccount(row)) return { ok: false, reason: ACCOUNT_SOURCE_MESSAGE }
   const status = computeStatus(row)
   if (status === 'expired') return { ok: false, reason: 'account token expired' }
   if (status === 'error') return { ok: false, reason: `account status error${typeof row.status === 'string' ? ` (${row.status})` : ''}` }
   if (row.agent_usable === false) return { ok: false, reason: 'agent_usable is false' }
   return { ok: true, reason: '' }
+}
+
+/** Resolve current source truth before any draft/task mutation or media upload.
+ * @param {{ list: Function }} source
+ * @param {string[]} ids
+ */
+export async function requirePublishingAccounts(source, ids) {
+  const { accounts, degraded, message } = await source.list()
+  if (degraded) throw new PublishError(degraded, message || '无法读取官方授权账号。')
+  const selected = []
+  for (const id of ids) {
+    const row = accounts.find((account) => String(account.id) === String(id))
+    if (!isPublishingAccount(row)) throw new PublishError('account-provider-mismatch', ACCOUNT_SOURCE_MESSAGE)
+    const available = accountAvailability(row)
+    if (!available.ok) throw new PublishError('account-unavailable', available.reason)
+    selected.push(row)
+  }
+  return selected
 }
 
 /**
@@ -143,6 +163,10 @@ export function createAccountSource(deps) {
    * @param {unknown} raw
    */
   function viewFrom(raw) {
+    if (raw?.success === false) throw new PublishError('hub-tool-error', String(raw.message || raw.error || 'account list failed'))
+    if (!Array.isArray(raw) && !Array.isArray(raw?.accounts) && !Array.isArray(raw?.data?.accounts) && !Array.isArray(raw?.data) && !Array.isArray(raw?.data?.items)) {
+      throw new PublishError('hub-tool-error', 'account list response is missing accounts')
+    }
     const meta = readOverlay()
     const accounts = listFromPayload(raw)
       .map((item) => {
@@ -151,7 +175,7 @@ export function createAccountSource(deps) {
         row.status = computeStatus(row, now())
         return row
       })
-      .filter((row) => typeof row.id === 'string' && row.id !== '')
+      .filter((row) => typeof row.id === 'string' && row.id !== '' && isPublishingAccount(row))
     return accounts
   }
 

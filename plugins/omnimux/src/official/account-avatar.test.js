@@ -80,7 +80,6 @@ describe('account avatar store', () => {
       mkdirSync(store.dir, { recursive: true, mode: 0o700 })
       writeFileSync(store.path, 'not-json', { mode: 0o600 })
       assert.equal(store.has('a'), false)
-      assert.deepEqual(store.prune(['a']), [])
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
@@ -202,7 +201,7 @@ describe('account avatar store', () => {
     }
   })
 
-  it('remove and prune delete the raster and the index row', async () => {
+  it('remove deletes only the named raster and index row', async () => {
     const home = mkdtempSync(join(tmpdir(), 'omnimux-acct-av-rm-'))
     try {
       const store = createAccountAvatarStore({
@@ -216,11 +215,8 @@ describe('account avatar store', () => {
       store.remove('a')
       assert.equal(store.has('a'), false)
       assert.throws(() => statSync(join(store.dir, fileA)))
-      const removed = store.prune(['c'])
-      assert.deepEqual(removed.sort(), ['b'])
-      assert.equal(store.has('b'), false)
+      assert.equal(store.has('b'), true)
       assert.equal(store.has('c'), true)
-      assert.deepEqual(store.prune(['c']), [])
     } finally {
       rmSync(home, { recursive: true, force: true })
     }

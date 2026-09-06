@@ -96,7 +96,7 @@ function makeHandler(handlerOverrides = {}, serviceOverride) {
   handlers = {
     omnimux_accounts_list: () => ({
       success: true,
-      data: { accounts: [{ id: 'acc-1', platform: 'xiaohongshu', username: 'red', status: 'active' }] },
+      data: { accounts: [{ id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok', username: 'one', status: 'active' }] },
     }),
     omnimux_publish_presign: (args) => ({ success: true, data: { upload_url: `https://up/${args.filename}`, public_url: `https://pub/${args.filename}` } }),
     omnimux_publish_create: (args) => ({ success: true, data: { id: `post-${args.account_ids[0]}` } }),
@@ -122,12 +122,13 @@ function makeHandler(handlerOverrides = {}, serviceOverride) {
 function seedSubmittableDraft() {
   const src = join(dir, `draft-${++tick}.png`)
   writeFileSync(src, Buffer.from('draft-media'))
-  const created = dispatcher.createDraft({
+  const { media: row } = media.importPath(src)
+  const created = store.create({
     type: 'image',
-    payload: { title: 'T', description: 'D', media: [{ path: src }] },
+    title: 'T', description: 'D', media_ids: [row.id],
     account_ids: ['acc-1'],
   })
-  return created.record.id
+  return created.id
 }
 
 beforeEach(() => {
@@ -217,14 +218,14 @@ describe('R2：POST /dsh-publish/records/submit 不静默失败', () => {
     assert.equal(view.subtasks.length, 0)
   })
 
-  it('validation 阶段失败（能力冲突）→ 400 validation-failed with details', async () => {
+  it('legacy non-official account fails submit validation with details', async () => {
     const handler = makeHandler({
       omnimux_accounts_list: () => ({
         success: true,
         data: { accounts: [{ id: 'acc-1', platform: 'bilibili', username: 'bili', status: 'active' }] },
       }),
     })
-    // 草稿挂了 bilibili 账号但内容是 image（bilibili 只支持 video）
+    // 已保存的非官方账号不能被提交。
     const recordId = seedSubmittableDraft()
     const { req, res, captured } = mockReqRes({
       method: 'POST',
@@ -233,8 +234,8 @@ describe('R2：POST /dsh-publish/records/submit 不静默失败', () => {
       body: { record_id: recordId },
     })
     await handler(req, res)
-    assert.equal(captured.status, 400)
-    assert.equal(captured.body.error, 'validation-failed')
+    assert.equal(captured.status, 409)
+    assert.equal(captured.body.error, 'account-provider-mismatch')
     assert.ok(Array.isArray(captured.body.details.errors))
   })
 
@@ -292,7 +293,7 @@ describe('R2：POST /dsh-publish/records/submit 不静默失败', () => {
     store.setRecordError(recordId, 'stale failure')
     assert.match(String(store.getView(recordId).error), /stale failure/)
     // 新一轮物化清掉旧错误
-    store.materialize(recordId, [{ id: 'acc-1', platform: 'xiaohongshu' }])
+    store.materialize(recordId, [{ id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok' }])
     const view = store.getView(recordId)
     assert.equal(view.error, null)
     assert.equal(view.status, 'submitted')

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-16"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -174,21 +174,42 @@ These cannot be swapped for a third-party endpoint. Unconfigured calls throw `ne
 
 The hub may wrap those HTTP calls. It must not store an account matrix, posting calendar, warmup roster, or Drama Center upload.
 
+### Social account provider isolation
+
+| Consumer | Fixed source | Scope |
+|---|---|---|
+| `omnimux-publish` | `tiktok_direct` | Official TikTok accounts, binding, publishing, status and disconnect |
+| `omnimux-accounts` | `zernio` | Zernio accounts, binding, local metadata and disconnect |
+| Existing analytics consumers | `zernio` | Existing Zernio analytics account scope |
+
+The hub owns credentials and cloud transport. Domain plugins do not expose a source switch, store keys, create a second HTTP client, or split the user identity system. `official-only` means the OmniMux cloud, not necessarily the TikTok direct provider.
+
+- `provider` is required on account list (query/tool args), connect (body/tool args), disconnect (query/tool args), post creation (body/tool args), and post lookup (query/tool args). Only `tiktok_direct` and `zernio` are valid. Missing/unknown source returns 400 `invalid-provider`; no platform/feature-flag inference or implicit fallback.
+- The cloud account/post record is authoritative. Requests constrain the expected source; they never rewrite it. Ownership and source validation happen before provider I/O. Cross-source accounts/posts return 409 `account-provider-mismatch` / `post-provider-mismatch`. Idempotency replay also requires the same source and account set, including insert-race replay.
+- Official account lists read direct records without creating a Zernio tenant or syncing Zernio. Zernio lists never append direct accounts. Official connect supports TikTok only, fails explicitly when unavailable, and never falls back. Explicit Zernio connect is independent of the direct feature flag.
+- Browser and Agent views preserve `id`, `platform`, and `provider`. Same names do not establish identity. Publishing filters to `platform=tiktok` and `provider=tiktok_direct`; the Accounts plugin filters to `provider=zernio`. Missing or unknown sources cannot be selected.
+- Draft creation with account IDs, selection saves, assignment, submission and retry validate current source and availability. Retry checks occur before attempts/status mutations, media upload or post creation. Background dispatch revalidates after preparation. New subtasks record the validated source; execution still checks cloud truth.
+- Old drafts are not migrated or assigned replacement accounts. Invalid selections show “原账号不属于官方发布链路或已不可用，请重新选择”; content and media remain. Historical non-official or unknown-source tasks are viewable but cannot retry or refresh upstream state.
+- Scoped lists are not complete inventories. Refresh, emptiness and failures must not prune another source's metadata, avatars or selection state. Metadata PATCH cannot change ID, platform or provider and requires a verified source-scoped account. Successful disconnect cleans only its ID; failure preserves local data. Local disconnection does not prove official token revocation.
+- Existing seat/billing, official revoke-result semantics and Zernio 402 handling are unchanged. Media presign/upload remains Zernio-backed and is explicitly outside account isolation ([follow-up #624](https://github.com/omnimux-ai/omnimux-dsh/issues/624)). Do not claim end-to-end official publishing acceptance from account isolation.
+
+Delivery is coordinated across gateway, CLI and plugins, without an implicit compatibility path. L2 fixture evidence must cover single-source and same-name accounts, invalid source, error vs empty states, old drafts/tasks, idempotency and rejected disconnects. Use [plugin QA](plugin-qa.md); push/merge/deployment and real OAuth, publishing or disconnect require their own authorization. Fixture evidence is not live upstream success. After authorized Dev materialization, verify existing Zernio records remain in Accounts and are absent from Publish.
+
 ### Accounts HTTP (Host `/omnimux/accounts`)
 
 Browser-local write routes (same-origin guard); the browser app is `plugins/omnimux-accounts`.
 
 | Method & Path | Body | Success |
 |---|---|---|
-| GET `/omnimux/accounts` | — | `{accounts: [ViewRow]}`; optional `?platform=&group=` filters. Cache hit rewrites `avatar_url` to the same-origin byte route; a miss keeps the https URL and fills the cache in the background. |
+| GET `/omnimux/accounts?provider=…` | — | `{accounts: [ViewRow]}`; optional `platform` / `group` filters. Cache hit rewrites `avatar_url` to the same-origin byte route; a miss keeps the https URL and fills the cache in the background. |
 | GET `/omnimux/accounts/{id}/avatar` | — | local raster bytes (`image/jpeg\|png\|webp\|gif`); `Cache-Control: private, max-age=86400`; `X-Content-Type-Options: nosniff`. Unsigned → 401; miss / `accountAvatars.enabled=false` → 404; non-GET → 405. Never `sendJson`, never 302 to the CDN. |
-| POST `/omnimux/accounts` | `{platform, redirect_url?}` | `{auth_url}` (site OAuth page; no device-code endpoint exists yet) |
-| PATCH `/omnimux/accounts/{id}` | `{group?: string \| null, agent_usable?: boolean}` | `{account: ViewRow}`; empty-string `group` clears; a missing site row still updates pure metadata |
-| DELETE `/omnimux/accounts/{id}` | — | `{ok: true}`; also deletes the local avatar file + index row |
+| POST `/omnimux/accounts` | `{provider, platform, redirect_url?}` | `{auth_url}` (site OAuth page) |
+| PATCH `/omnimux/accounts/{id}?provider=…` | `{group?: string \| null, agent_usable?: boolean}` | `{account: ViewRow}`; empty-string `group` clears; missing/cross-source account returns 409 |
+| DELETE `/omnimux/accounts/{id}?provider=…` | — | `{ok: true}` only after explicit cloud success; deletes only this ID's metadata and avatar |
 
-ViewRow = the `pickAccount` whitelist (id/platform/display_name/username/name/group/status/expires_at?/connected_at?/avatar_url) plus overlay fields `agent_usable?` / `last_used_at?` and a computed `status` (site status normalized; else expires_at-driven: past → `expired`, <24h → `expiring`; else `active`). `avatar_url` is either `https://…` (cache miss, or `official.accountAvatars.enabled=false`) or the relative path `/omnimux/accounts/{encodeURIComponent(id)}/avatar` after Host rewrite. Absolute same-origin URLs, `http://`, `data:`, `blob:`, and `file:` are dropped. The tool `omnimux_accounts_list` keeps the upstream JSON and does **not** rewrite avatar URLs.
+ViewRow = the `pickAccount` whitelist (id/platform/provider/display_name/username/name/group/status/expires_at?/connected_at?/avatar_url) plus overlay fields `agent_usable?` / `last_used_at?` and a computed `status` (site status normalized; else expires_at-driven: past → `expired`, <24h → `expiring`; else `active`). Missing `provider` must not be filled with a default; the TikTok publishing account rule above applies. `avatar_url` is either `https://…` (cache miss, or `official.accountAvatars.enabled=false`) or the relative path `/omnimux/accounts/{encodeURIComponent(id)}/avatar` after Host rewrite. Absolute same-origin URLs, `http://`, `data:`, `blob:`, and `file:` are dropped. The tool `omnimux_accounts_list` returns source-filtered, sanitized `{accounts}` rows and does **not** rewrite avatar URLs.
 
-Local metadata overlay (`group` / `agent_usable` / `last_used_at`) persists to `$DSH_HOME/omnimux/accounts.json` (dir 0700, file 0600, whole-document rewrite). Local avatar rasters persist to `$DSH_HOME/omnimux/accounts/avatars/` (`index.json` + `{sha256(id)}.{png\|jpg\|webp\|gif}`, dir 0700, files 0600). GET merges overlay over site rows, rewrites a cached avatar_url, and lazily prunes overlay + avatar files whose id the site no longer returns. DELETE removes overlay + avatar. Tokens never reach the Host — connect is site-side OAuth.
+Local metadata overlay (`group` / `agent_usable` / `last_used_at`) persists to `$DSH_HOME/omnimux/accounts.json` (dir 0700, file 0600, whole-document rewrite). Local avatar rasters persist to `$DSH_HOME/omnimux/accounts/avatars/` (`index.json` + `{sha256(id)}.{png\|jpg\|webp\|gif}`, dir 0700, files 0600). GET merges overlay over scoped site rows and rewrites cached avatar URLs without pruning. Successful DELETE removes only the selected overlay and avatar. Provider tokens remain cloud-side; connect is site-side OAuth.
 
 ### Inspiration HTTP (Host `/omnimux/inspiration`)
 

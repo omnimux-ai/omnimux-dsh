@@ -3,6 +3,7 @@ import { IconEllipsisOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { IconButton } from 'dsh-ui-kit'
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import { displayStatus } from '../status-display.js'
+import { isRetryablePublishingTask } from '../../account-policy.js'
 
 /**
  * 行末操作菜单 (⋮)
@@ -20,8 +21,7 @@ export function RowActionMenu({ t, record, onView, onEdit, onDelete, onRetry }) 
 
   const status = displayStatus(record)
   const isDraft = status === 'draft' || record.status === 'draft'
-  const hasFailedTasks = Array.isArray(record.subtasks) && record.subtasks.some((st) => st.status === 'failed')
-  const isRetryable = status === 'failed' || status === 'partial_failed' || hasFailedTasks
+  const isRetryable = Array.isArray(record.subtasks) && record.subtasks.some(isRetryablePublishingTask)
 
   const handleOpen = (e) => {
     e.stopPropagation()

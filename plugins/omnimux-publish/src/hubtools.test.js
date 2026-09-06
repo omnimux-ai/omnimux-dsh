@@ -168,7 +168,7 @@ describe('presign / create / get payload handling', () => {
   })
 
   it('fills in a live AbortSignal when execute is called without one (UI/HTTP 路径)', async () => {
-    const tools = mockTools({ omnimux_accounts_list: () => [{ id: '1' }] })
+    const tools = mockTools({ omnimux_accounts_list: () => ({ accounts: [{ id: '1' }] }) })
     const channel = createHubChannel({ tools })
     await channel.listAccounts()
     const signal = tools.calls[0].signal

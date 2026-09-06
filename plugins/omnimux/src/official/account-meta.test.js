@@ -45,18 +45,16 @@ describe('account meta store', () => {
     }
   })
 
-  it('prunes ids the site no longer returns', () => {
+  it('removes only the named account without touching other sources', () => {
     const home = mkdtempSync(join(tmpdir(), 'omnimux-acct-meta-prune-'))
     try {
       const store = createAccountMetaStore({ home, now: () => '2026-08-20T10:00:00Z' })
       store.update('a', { group: 'ops' })
       store.update('b', { group: 'ads' })
       store.update('c', { agent_usable: false })
-      const removed = store.prune(['a', 'c'])
-      assert.deepEqual(removed, ['b'])
+      store.remove('b')
       assert.deepEqual(Object.keys(store.read()).sort(), ['a', 'c'])
-      // pruning with everything valid is a no-op write
-      assert.deepEqual(store.prune(['a', 'c']), [])
+      store.remove('b')
       assert.deepEqual(Object.keys(store.read()).sort(), ['a', 'c'])
     } finally {
       rmSync(home, { recursive: true, force: true })
