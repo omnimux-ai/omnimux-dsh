@@ -20,7 +20,7 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 - Delegate independent work with bounded inputs, paths, and completion criteria; use separate worktrees for concurrent edits. The coordinator integrates and accepts the result. Do not launch a fixed team for a simple edit.
 - Run the change-specific checks in AGENTS and required CI. Reuse successful evidence for unchanged code while it remains valid for the target revision/environment. Do not repeat broad tests after a documentation-only follow-up unless a dependency or evidence contract requires it.
 - For UI/Stage changes, follow [plugin QA](../../../docs/contracts/plugin-qa.md): bind the current commit to isolated L2, run the shared probe in the current IAB Tab, and preserve the actual evidence. Do not materialize an unmerged worktree into shared Dev.
-- If an operation fails, inspect its result before retrying. Retry with a changed hypothesis or new state. For long waits use a short-lived wake-up; persistent monitoring belongs in Multica. Preserve the goal, authorizations, Issue/PR, SHAs, evidence, and next action across interruptions.
+- If an operation fails, inspect its result before retrying. Retry with a changed hypothesis or new state. Preserve the goal, authorizations, Issue/PR, SHAs, evidence, and next action across interruptions.
 
 ## Deliver and clean
 
@@ -30,4 +30,4 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 4. Keep required checks and Merge Queue. After an authorized merge request, read back `state=MERGED`, `mergedAt`, and `mergeCommit`; enqueue alone is not completion.
 5. Sync a clean primary checkout with `git pull --ff-only origin main`. Pure instruction/docs changes need no App materialization. For runtime changes, complete authorized Dev materialization and task-specific acceptance before cleanup.
 6. Preserve evidence, enumerate the exact task-owned worktree/branch/files, and verify they contain no unrelated work. Then run `pnpm wt:clean <topic> <issue-id> --pr <pr-number>`; do not use a force flag or broad cleanup.
-7. Report the compact Delivery Board from AGENTS. If blocked, state the exact unresolved action, evidence, and next step; do not call a pending PR or skipped check complete.
+7. If blocked, state the exact unresolved action, evidence, and next step; do not call a pending PR or skipped check complete.
