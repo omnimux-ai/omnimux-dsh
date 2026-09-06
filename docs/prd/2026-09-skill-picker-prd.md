@@ -249,7 +249,7 @@ subsystem: "omnimux-market"
 | Composer 写入已有验证算法：React 18 原型 value setter + `InputEvent`；选择器 `[data-composer-card] textarea, [data-composer-seat] textarea, textarea[data-phase], textarea[placeholder]` | `plugins/omnimux-market/src/client/composer.js:8-35` |
 | 手势格式现网口径：`gesture = "/" + item.skill`（专家召唤） | `plugins/omnimux-market/src/expert/summon.js:23` |
 | 「权限设置」按钮 = 官方 `PermissionSelect`，渲染在官方 `InputBar.tsx` 工具行 `.tools` 区；该区域无插件插槽，仅 `conversation.input.attachments`（卡内壁）、`conversation.input.plan`、`conversation.input.model`、`conversation.composer.dock` 等座 | `/Users/x/Desktop/Project/Github/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx:331-456`；`plugins/omnimux/src/client/stats-line-shadow.js:12` |
-| 官方 checkout 无「权限设置」中文串（权限 UI 走 `access.*` i18n key，如 `access.preset.fullAccess`=「完全权限」）；本仓 `patches/dsh-0.1.2-alpha.3/` 当前只有 `llm-quota-priority.patch`，无 composer 相关 overlay | grep 官方 packages；`docs/harness-pin.md` |
+| 官方 checkout 无「权限设置」中文串（权限 UI 走 `access.*` i18n key，如 `access.preset.fullAccess`=「完全权限」）；2026-09-05 侦察时本仓仅有额度源码补丁、无 composer overlay；额度补丁现按 [#668 合同](../contracts/quota-error-compatibility.md) 退役 | grep 官方 packages；`docs/harness-pin.md` |
 | 工作台打开：`__omnimuxWorkbench.open({ tabId, title })`；`openWorkbench` 不支持 tab 参数之外的视图参数；市场 `PlazaView` 默认 tab 为 `plugins`，无 initialTab | `plugins/omnimux/src/client/workbench.js:943-981`；`plaza-shell.js:18, 165-171` |
 | 「创建 skill」预装条目：`sk-omx-skill-creator`（「技能创建」，`skill: "skill-creator"`，git 源）；`dropped.json` 另有过期的 `sk-skill-creator`（废弃，勿用） | `catalog/index.json:5457-5473`；`catalog/dropped.json:2687` |
 | 已安装枚举：`method=list` → `listInstalled(cfg.skillsDir)` | `local-api.ts:92-95`、`install.ts` |

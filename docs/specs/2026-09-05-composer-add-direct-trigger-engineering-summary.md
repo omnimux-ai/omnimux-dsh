@@ -1,5 +1,7 @@
 # Issue #554 Engineering Summary
 
+> 历史记录：本文的官方源码补丁及 apply/reset 命令已由 [#668 退役合同](../contracts/quota-error-compatibility.md) 替代，不再是有效执行入口。原始设计与测试结果保留供追溯。
+
 ## Implemented
 
 - Replaced the pointer-only `menu-direct` interception with the formal `clientAction` command UI contribution declared by the pinned runtime overlay. The native + command list, command names, descriptions, and fuzzy search remain unchanged.

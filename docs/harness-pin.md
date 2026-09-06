@@ -23,28 +23,17 @@ Current upstream this product builds against. Not a fork record.
 
 Override the clone path with `DSH_SRC`. Decision: [decisions/2026-08-16-harness-consume-not-fork.md](decisions/2026-08-16-harness-consume-not-fork.md).
 
-## Overlay against this pin
+## Unmodified official consumption
 
-Directory: `patches/dsh-0.1.2-alpha.3/`. Current overlay: `llm-quota-priority.patch` (quota wording wins over a bare 403 so `insufficient_user_quota` is `QUOTA`, not `AUTH`). Official alpha.3 already carries the old client failure-display quota path; this overlay keeps the four `packages/llm/*` hunks. Desktop packaging patches have left this clone; the shipping shell is `/Users/x/Desktop/Project/omnimux-desktop-fork` (sync per its `docs/contracts/upstream-sync.md`); the retired slim shell `omnimux-desktop` is archived. Historical `patches/dsh-0.1.1-rc.2/` is not the live overlay.
+Official DSH source, submodules, temporary copies, and distribution packages are read-only for product development. Product behavior belongs in plugins, the desktop shell, or existing configuration seams. Source patching and the former apply/reset commands are retired. Cordis configuration patches remain a supported configuration mechanism; they do not change official source.
 
-`pnpm-lock.yaml` is not a patch.
+The table above records the plugin repository's existing alpha compatibility pin; this change does not upgrade it. The shipping desktop's own submodule pin is authoritative for the App. The quota replacement was tested against desktop DSH `0.1.2-rc.1` (`a66e4702047846cdaa10c66c9d3df3951f5ea70d`), with pi-ai `0.84.2` and OpenAI SDK `6.40.0`.
 
-Untracked on the clone and **not** in this directory: `.agents/skills/dsh-plugin-guide`, `CLAUDE.local.md`. MUST NOT recreate `apps/desktop/` on the official clone.
+The gateway normalizes local account-quota rejections on OpenAI text endpoints to HTTP 402 with `insufficient_quota`. Plugin quota notices remain enabled. See [quota compatibility and retirement](contracts/quota-error-compatibility.md) for validation, rollout order, historical evidence, and the separate shared-clone recovery boundary. Removal from this repository does not restore already patched clones.
 
-## Apply / reset
+## Upgrade the pin
 
-```sh
-DSH_SRC=/Users/x/Desktop/Project/Github/deepseek-harness ./scripts/apply-harness-overlay.sh
-DSH_SRC=/Users/x/Desktop/Project/Github/deepseek-harness ./scripts/reset-harness-overlay.sh
-```
-
-Apply requires `HEAD` to equal the SHA above. Before reset, inspect the script's exact target paths and staged/unstaged changes: it restores tracked files from the current index (not `origin/master`) and removes the named legacy desktop patch. It does not clear staged changes; preserve unrelated work before proceeding.
-
-## Bump the pin
-
-1. Fetch the official tag or SHA. Set it in this file.
-2. `reset-harness-overlay.sh`, then `git checkout` that SHA in `DSH_SRC`.
-3. Replay each patch. If official added the same seat or desktop wiring, delete that patch instead of rebasing it.
-4. Install the pinned clone's dependencies. In this product repository, run the affected `omnimux` / domain-plugin checks and the RC skill's Host/desktop acceptance checks.
-5. Load skill `omnimux-rc-upgrade` (`.agents/skills/omnimux-rc-upgrade/SKILL.md`) and finish its report. MUST NOT tag or call the bump done while any `screens.*` is `missing`.
-6. Tag or publish only when the task explicitly authorizes that action; otherwise report the verified pin and acceptance evidence without creating a release.
+1. Select an official release and verify the required seats through read-only inspection.
+2. Prepare an isolated, unmodified checkout or official package through the supported install flow. Do not switch, reset, or clean a shared dirty clone.
+3. Run the affected plugin checks and the [RC skill](../.agents/skills/omnimux-rc-upgrade/SKILL.md) Host/desktop acceptance. Missing screen evidence is not a completed upgrade.
+4. Tag or publish only with release authorization.
