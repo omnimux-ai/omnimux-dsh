@@ -107,6 +107,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   });
   const executionManager = createExecutionManager({
     executionsDir: paths.executionsDir,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
     gateway,
     mediaDir: paths.mediaDir,
     persistGenerated: (input) => persistGeneratedArtifact({

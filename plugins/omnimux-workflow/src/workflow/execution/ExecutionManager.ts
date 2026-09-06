@@ -265,7 +265,7 @@ export function createExecutionManager(deps: ExecutionManagerDeps) {
   const { executionsDir, gateway, mediaDir } = deps;
   const entries = new Map<string, ExecutionEntry>();
 
-  registerExecutor(createMaterialGatewayExecutor({ gateway }));
+  registerExecutor(createMaterialGatewayExecutor({ gateway, resolveProjectFile: deps.resolveProjectFile }));
   registerExecutor(createImportExecutor());
   registerExecutor(createVideoCompositionExecutor());
 
