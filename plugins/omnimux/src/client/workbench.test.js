@@ -1430,6 +1430,9 @@ test('#505 split-min CSS clamps the tagged real panel, not only mid-drag nodes',
   assert.match(WORKBENCH_SPLIT_MIN_CSS, /\[data-omnimux-workbench-panel\]/)
   assert.doesNotMatch(WORKBENCH_SPLIT_MIN_CSS, /\[data-dsh-panel-host\]/)
   assert.doesNotMatch(WORKBENCH_SPLIT_MIN_CSS, /\[data-dragging\]/)
+  // better-sidebar reserves the panel inside AppFrame. A root margin would
+  // subtract it twice and make the measured conversation narrower than its area.
+  assert.doesNotMatch(WORKBENCH_SPLIT_MIN_CSS, /#root|margin-right/)
 })
 
 test('#610 regression: panel host is never treated as the workbench panel', () => {

@@ -145,6 +145,11 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(style.textContent, /data-omnimux-composer-density='icon'/)
   assert.match(style.textContent, /conversation-scroll/)
   assert.match(style.textContent, /margin-left:auto/)
+  assert.match(style.textContent, /scrollbar-gutter:stable both-edges/)
+  assert.match(style.textContent, /\[data-conversation-scroll\]:has\(\[data-conversation-composer-overlay\]\) > \[data-composer-seat\]\{\s*left:var\(--dsh-scrollbar-width\)/)
+  assert.match(style.textContent, /\[data-composer-seat\] \[class\*="composerStack"\]/)
+  assert.doesNotMatch(style.textContent, /\[data-composer-seat\] > \*/)
+  assert.match(style.textContent, /\[class\*="headline"\]:has\(> \[class\*="previewBadge"\]\[data-omnimux-hide\]\)\{\s*grid-template-columns:auto auto;/)
   // Narrow densities (short + icon): model seat (trailing + aria-haspopup=menu)
   // collapses to a 28px glyph chip — hide label/effort/chevron, paint the
   // 3-layer box mask. Scope to the trailing rule so Permission (modes) or
@@ -190,6 +195,7 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
     /\[data-phase='hero'\] \[class\*="heroWorkspaceRow"\]\{([^}]*)\}/,
   )?.[1]
   assert.ok(rowRule, 'hero workspace row rule should be present')
+  assert.match(rowRule, /width:calc\(100% - 2 \* var\(--dsh-composer-side-clearance,16px\)\)!important/)
   assert.match(rowRule, /max-width:var\(--dsh-chat-content-width\)!important/)
   assert.match(rowRule, /min-width:0/)
   assert.match(rowRule, /flex-wrap:nowrap/)

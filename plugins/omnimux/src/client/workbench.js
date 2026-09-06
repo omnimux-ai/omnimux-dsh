@@ -686,8 +686,8 @@ export function workbenchDefaultWidthPx(state, env = {}) {
 
 /**
  * GUI-focus width: occupy the remainder of the viewport after the official
- * left rail. Conversation stays mounted and is squeezed by better-sidebar's
- * `#root { margin-right }`.
+ * left rail. Conversation stays mounted inside the AppFrame's remaining
+ * content area after better-sidebar reserves the panel padding.
  */
 export function workbenchGuiWidthPx(state, env = {}) {
   const viewport = typeof env.viewportWidth === 'number' ? env.viewportWidth : viewportWidth()
@@ -729,9 +729,6 @@ export const WORKBENCH_SPLIT_MIN_STYLE_ID = 'omnimux-split-conversation-min-chro
 // drag-only selector releases the clamp exactly when the oversized inline
 // width is committed (#505).
 export const WORKBENCH_SPLIT_MIN_CSS = `
-html:not([${CONVERSATION_COLLAPSED_ATTR}]) #root{
-  margin-right:min(var(--dsh-sidebar-width,0px),var(${WORKBENCH_SPLIT_MAX_CSS_VAR},var(--dsh-sidebar-width,0px)))!important;
-}
 html:not([${CONVERSATION_COLLAPSED_ATTR}]) [${WORKBENCH_PANEL_ATTR}]{
   max-width:min(100vw,var(${WORKBENCH_SPLIT_MAX_CSS_VAR},100vw))!important;
 }
