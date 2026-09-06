@@ -115,10 +115,9 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   position:relative!important;
   left:0!important;
 }
-/* The first control in this row is the official workspace trigger. Its 360px
-   default is too greedy beside the Agent preset when the conversation is narrow. */
+/* Size the workspace trigger to its content, capped beside the Agent preset. */
 [data-phase='hero'] [class*="heroWorkspaceRow"] > button[aria-label][aria-haspopup='menu'][aria-expanded]:first-child{
-  flex:0 1 ${COMPOSER_WORKSPACE_MAX_WIDTH_PX}px;
+  flex:0 1 auto;
   min-width:0;
   max-width:min(100%,${COMPOSER_WORKSPACE_MAX_WIDTH_PX}px)!important;
   overflow:hidden;

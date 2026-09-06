@@ -199,7 +199,7 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
     /\[data-phase='hero'\] \[class\*="heroWorkspaceRow"\] > button\[aria-label\]\[aria-haspopup='menu'\]\[aria-expanded\]:first-child\{([^}]*)\}/,
   )?.[1]
   assert.ok(triggerRule, 'workspace trigger rule should be present')
-  assert.match(triggerRule, new RegExp(`flex:0 1 ${COMPOSER_WORKSPACE_MAX_WIDTH_PX}px`))
+  assert.match(triggerRule, /flex:0 1 auto/)
   assert.match(triggerRule, /min-width:0/)
   assert.match(triggerRule, new RegExp(`max-width:min\\(100%,${COMPOSER_WORKSPACE_MAX_WIDTH_PX}px\\)!important`))
   assert.match(triggerRule, /overflow:hidden/)
