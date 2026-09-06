@@ -50,6 +50,7 @@
     "test:all": "corepack pnpm -r test && corepack pnpm test:gates",
     "test:ui": "node scripts/scan-ui-gates.mjs",
     "test:e2e-mock": "OMNIMUX_MOCK_MODE=replay node scripts/mock-sidecar.test.mjs",
+    "inspiration:import": "node scripts/import-gxgen-inspirations.mjs",
     "test:dx": "node scripts/test-dx-pipeline.mjs",
     "smoke": "bash scripts/smoke.sh",
     "accept:apps": "bash scripts/accept-apps-install.sh",
