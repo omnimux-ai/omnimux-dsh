@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L2"
 date: "2026-08-26"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -21,6 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `accepted` | [2026-09-06-gxgen-incremental-import.md](2026-09-06-gxgen-incremental-import.md) | Gxgen 灵感增量导入 | `omnimux` | 2026-09-06 | #630：按 TikTok ID 去重、只新增、原 R2 封面预检、冻结计划及逐条回执；同计划恢复与复验。 |
 | `accepted` | [2026-09-05-video-phase-one-scope.md](2026-09-05-video-phase-one-scope.md) | 视频模型阶段一范围：七个产品型号 | `omnimux/catalog` | 2026-09-05 | 当前阶段仅 Seedance 2.0/2.0 Fast/2.0 Mini/2.5、Wan 3.0、MiniMax H3 和 Grok 视频 1.5；wire 和模式按具体渠道官方 API 文档核对，Kling 与 Wan 派生型号延后不排期。 |
 | `accepted` | [2026-09-05-model-contract-docs-first.md](2026-09-05-model-contract-docs-first.md) | 模型合同：渠道官方 API 文档优先方法修订 | `omnimux/catalog` | 2026-09-05 | 当前方法：具体 EvoLink/APIMart 模型 API 文档决定模式、字段、角色、数量、格式与时长；文档支持、离线实现验证、历史真实执行分列。无真实请求例外；`execution.live` 是待对齐实现差异。 |
 | `accepted` | [2026-09-05-workbench-panel-containing-block.md](2026-09-05-workbench-panel-containing-block.md) | 工作台分栏定位容器修复 | `omnimux` | 2026-09-05 | #610/#552：保留全视口 panel host，只限制真实右面板；以几何及 hit-test 验证会话可用。 |
