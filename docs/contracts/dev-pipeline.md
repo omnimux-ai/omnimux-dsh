@@ -35,8 +35,6 @@ subsystem: "global"
 
 L2 初始化从 `OMNIMUX_L2_SEED_PROFILE` 或默认 Dev `~/.omnimux-dev/profiles/omnimux` 取稳定种子，不默认使用旧 `~/.dsh/profiles/omnimux`。它完整复制受管 `.materialize-snapshots/plugins/` 与可重定位的 pnpm 锁到任务 profile，再由任务私有 pnpm store 重建 `node_modules`；不得复制 seed `node_modules`、`.npmrc` 或任何指向 Dev/Prod 的 source 链接。受管 source 或锁缺失时在创建 L2 profile 前失败。启动前必须校验 `$DSH_SRC` 安装闭包；官方 `@deepseek-ai/*` 由 app-boot 投影，不来自任务 profile 的私有 `node_modules`。
 
-L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏览装配](../../scripts/l2-workspace-browser.patch.yml)，禁用自动选择器并成对装配官方 browse backend 与 client surface。首页与侧栏的工作区选择因此都使用页内目录浏览、路径输入和新建目录，继续经过官方 workspace adoption；不根据 Host 的 macOS 桌面环境启用系统窗口。既有 L2 使用同一正式 `restart-host` 入口应用当前装配，保留任务端口、profile 和数据，不手改任务配置。此 CLI 装配与 shipping Desktop 的 profile 装配分别维护，验收须分别覆盖 L2 与 Dev。
-
 ## 物化合同
 
 - 唯一写入口是 `yarn omnimux:sync`，底层为 `scripts/sync-to-app.sh` → `scripts/sync-stable.sh`。禁止手工 rsync/cp 进任何 profile。
