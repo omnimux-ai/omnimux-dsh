@@ -52,7 +52,7 @@ test('native row menu opens, selects actions, closes and respects record status'
       assert.equal(document.querySelector('[role="menu"]'), null)
     }
     record.status = 'failed'
-    record.subtasks = [{ status: 'failed' }]
+    record.subtasks = [{ id: 'official-task', platform: 'tiktok', provider: 'tiktok_direct', status: 'failed' }]
     await render()
     await click('button[aria-label="records.more"]')
     const items = [...document.querySelectorAll('[role="menuitem"]')]
@@ -62,6 +62,13 @@ test('native row menu opens, selects actions, closes and respects record status'
     await click('button[aria-label="records.more"]')
     await act(async () => document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
     assert.equal(document.querySelector('[role="menu"]'), null)
+    for (const provider of ['zernio', undefined]) {
+      record.subtasks = [{ id: 'legacy-task', platform: 'tiktok', provider, status: 'failed' }]
+      await render()
+      await click('button[aria-label="records.more"]')
+      assert.deepEqual([...document.querySelectorAll('[role="menuitem"]')].map(item => item.textContent), ['records.action.view'])
+      await act(async () => document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    }
   } finally {
     await act(async () => root.unmount())
     for (const [key, descriptor] of saved) {
