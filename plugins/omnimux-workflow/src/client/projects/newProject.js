@@ -64,6 +64,21 @@ function errorText(value) {
 }
 
 /**
+ * Enter-Conversation Intent（对齐 omnimux-inspiration #552）：
+ * 从一级库 gui 模式新建/重置会话后，必须解除中间栏折叠并切 split，
+ * 否则 conversation-collapse.css 会把 centerCol 藏成黑屏占位。
+ * @param {string | undefined} sessionId
+ */
+function revealConversationAfterOpen(sessionId) {
+  const workbench = typeof globalThis.window !== 'undefined'
+    ? globalThis.window.__omnimuxWorkbench
+    : undefined
+  if (!workbench) return
+  try { workbench.setConversationCollapsed?.(false, { sessionId }) } catch { /* ignore */ }
+  try { workbench.setFocus?.('split') } catch { /* ignore */ }
+}
+
+/**
  * @param {{
  *   sessions: { create: (opts: { workspaceId: string }) => Promise<string>, open: (id: string) => void },
  *   workspaces: { create: Function },
@@ -97,6 +112,7 @@ export async function runNewProject(ctx, opts = {}) {
     await bindProjectSession(project.id, session.sessionId)
     dismissProductStage(ctx.stage)
     ctx.sessions.open(session.sessionId)
+    revealConversationAfterOpen(session.sessionId)
     await activateProjectCanvas(ctx, { sessionId: session.sessionId, cwd: projectRoot })
     return { ok: true, project: { ...project, sessionId: session.sessionId, path: projectRoot } }
   } catch (error) {
@@ -139,7 +155,9 @@ export async function runResetSession(ctx, opts = {}) {
     const newSessionId = await ctx.sessions.create({ workspaceId });
     // 2. 在当前窗口无缝切换打开（无需重开窗口）
     ctx.sessions.open(newSessionId);
-    // 3. 保持右侧栏画布无缝连接并刷新比例
+    // 3. Enter-Conversation：解除中间栏折叠（与 runNewProject / inspiration #552 对齐）
+    revealConversationAfterOpen(newSessionId);
+    // 4. 保持右侧栏画布无缝连接并刷新比例
     await activateProjectCanvas(ctx, { sessionId: newSessionId, cwd, pageId: opts.pageId });
 
     return { ok: true, sessionId: newSessionId };

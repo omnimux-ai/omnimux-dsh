@@ -97,6 +97,61 @@ describe('projectCanvas isolation', () => {
     assert.equal(opened[0].scope.sessionId, 'sess-1')
   })
 
+  it('activateProjectCanvas uncollapses conversation and forces split after opening canvas', async () => {
+    resetProjectCanvasRatioMemory()
+    const order = []
+    const previous = globalThis.window
+    let focus = 'gui'
+    globalThis.window = {
+      __omnimuxWorkbench: {
+        getFocus() { return focus },
+        setConversationCollapsed(next, opts) {
+          order.push(`collapsed:${next}:${opts?.sessionId || ''}`)
+        },
+        setFocus(mode) {
+          focus = mode
+          order.push(`focus:${mode}`)
+        },
+      },
+    }
+    try {
+      const opened = []
+      const ok = await activateProjectCanvas({
+        betterSidebar: {
+          getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+          getSnapshot() {
+            return {
+              sessionId: 'sess-enter',
+              state: {
+                width: 560,
+                panelOpen: true,
+                splits: { kind: 'leaf', tabs: [] },
+                bottomSplits: { kind: 'leaf', tabs: [] },
+              },
+            }
+          },
+          closeTab() {},
+          openTab(seed, scope) {
+            opened.push({ seed, scope })
+            order.push('openTab')
+          },
+        },
+        layout: { closeDetails() {} },
+        t: (key) => key,
+      }, { sessionId: 'sess-enter', cwd: '/tmp/ws', timeoutMs: 0 })
+
+      assert.equal(ok, true)
+      assert.equal(opened.length, 1)
+      assert.ok(order.indexOf('openTab') >= 0)
+      assert.ok(order.indexOf('collapsed:false:sess-enter') > order.indexOf('openTab'))
+      assert.ok(order.indexOf('focus:split') > order.indexOf('openTab'))
+      assert.equal(focus, 'split')
+    } finally {
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+    }
+  })
+
   it('activateProjectCanvas refuses when canvas tab is not registered yet', async () => {
     const opened = []
     const ok = await activateProjectCanvas({
