@@ -17,7 +17,6 @@ import { displayStatus } from '../status-display.js'
  */
 export function RowActionMenu({ t, record, onView, onEdit, onDelete, onRetry }) {
   const [open, setOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState(null)
 
   const status = displayStatus(record)
   const isDraft = status === 'draft' || record.status === 'draft'
@@ -26,7 +25,6 @@ export function RowActionMenu({ t, record, onView, onEdit, onDelete, onRetry }) 
 
   const handleOpen = (e) => {
     e.stopPropagation()
-    setAnchorEl(e.currentTarget)
     setOpen((prev) => !prev)
   }
 
@@ -35,9 +33,9 @@ export function RowActionMenu({ t, record, onView, onEdit, onDelete, onRetry }) 
     setOpen(false)
   }
 
-  const handleAction = (e, actionFn) => {
-    e.stopPropagation()
+  const handleAction = (id) => {
     setOpen(false)
+    const actionFn = { view: onView, edit: onEdit, delete: onDelete, retry: onRetry }[id]
     if (typeof actionFn === 'function') {
       actionFn(record)
     }
@@ -45,54 +43,53 @@ export function RowActionMenu({ t, record, onView, onEdit, onDelete, onRetry }) 
 
   const items = [
     {
-      key: 'view',
+      id: 'view',
       label: t('records.action.view'),
-      onClick: (e) => handleAction(e, onView),
     },
     isDraft
       ? {
-          key: 'edit',
+          id: 'edit',
           label: t('records.action.edit'),
-          onClick: (e) => handleAction(e, onEdit),
         }
       : null,
     isDraft
       ? {
-          key: 'delete',
+          id: 'delete',
           label: t('records.action.delete'),
           danger: true,
-          onClick: (e) => handleAction(e, onDelete),
         }
       : null,
     isRetryable && !isDraft
       ? {
-          key: 'retry',
+          id: 'retry',
           label: t('records.action.retry'),
-          onClick: (e) => handleAction(e, onRetry),
         }
       : null,
   ].filter(Boolean)
 
   return (
     <div className="omnimux-publish-row-menu-wrap" onClick={(e) => e.stopPropagation()}>
-      <IconButton
-        variant="ghost"
-        size="sm"
-        aria-label={t('records.more')}
-        onClick={handleOpen}
-      >
-        <IconEllipsisOutline16 />
-      </IconButton>
-      {open && anchorEl ? (
-        <Menu
-          portal
-          anchorEl={anchorEl}
-          align="end"
-          dense
-          items={items}
-          onClose={handleClose}
-        />
-      ) : null}
+      <Menu
+        open={open}
+        portal
+        align="end"
+        dense
+        items={items}
+        onSelect={handleAction}
+        onClose={handleClose}
+        anchor={
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label={t('records.more')}
+            aria-expanded={open}
+            aria-haspopup="menu"
+            onClick={handleOpen}
+          >
+            <IconEllipsisOutline16 />
+          </IconButton>
+        }
+      />
     </div>
   )
 }

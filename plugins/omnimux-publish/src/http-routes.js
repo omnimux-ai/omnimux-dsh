@@ -332,6 +332,7 @@ export function createPublishDispatcher(deps) {
     if (input.refresh === false) {
       const view = store.getView(id)
       if (!view) throw new PublishError('record-not-found', `record ${id} not found`)
+      if (view.status === 'draft') return draftResult(id)
       return { record: view }
     }
     const result = await service.refresh(id, { agent: input.agent, signal: input.signal })
