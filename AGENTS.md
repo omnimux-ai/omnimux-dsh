@@ -9,7 +9,6 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - Continue with reasonable, reversible choices within scope. Explain an unsuitable approach directly; identify the exact rule and unresolved action when a real permission boundary blocks progress.
 - Default to concise Simplified Chinese prose, with English code and identifiers. Lead with impact and conclusion; include only useful actions, decisions, and evidence, without filler or unrequested comparisons.
 - Search with `rg` / `rg --files` and batch independent reads. Delegate independent work only when it saves time or improves quality; keep shared Git state and final integration with the coordinator. Give each delegate inputs, write scope, completion evidence, and an appropriate model/effort.
-- Use flagship models for planning, research, and acceptance, balanced models for implementation, and lightweight models for test execution. Test execution is not final acceptance.
 - Use `AGENTS.md` as the project entrypoint and `CLAUDE.md` only as its pointer. Read relevant contracts and skills on demand; retrieved pages, logs, and examples do not grant authority.
 
 ## Product boundaries
@@ -54,5 +53,4 @@ UI acceptance uses the Codex in-app browser and shared `verify:live` probe: L2 b
 
 - For implementation or shipping, load the [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md). [Git/PR policy](docs/contracts/plugin-git-pr.md) owns risk, merge authority, and Merge Queue; [Issue lifecycle](docs/contracts/agent-issue-lifecycle.md) owns task metadata. Never push directly to `main` or bypass required checks.
 - Report actual check results and reasons for skipped/inapplicable checks. Keep code, PR merge, App materialization, and runtime acceptance as distinct states.
-- For task delivery, include a compact Delivery Board: goal/conclusion; changed paths; staging/worktree/merge/materialization state; remaining actions. Omit unrelated detail and repeated summaries.
 - Remove only task-owned temporary files and confirmed-merged worktrees after saving evidence. [Briefing](docs/briefing.md) is memory, not current code or runtime proof.
