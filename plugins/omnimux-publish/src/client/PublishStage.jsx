@@ -96,14 +96,24 @@ export function PublishStageModals(props) {
       <PublishOverlays
         t={t}
         view={view}
-        setView={setView}
-        feed={feed}
+        onBack={() => setView({ name: 'list' })}
+        onSubmitted={(recordId) => {
+          setView({ name: 'detail', recordId })
+          feed.startTracking()
+        }}
+        onSaved={feed.loadList}
+        onChanged={() => {
+          void feed.loadList()
+          feed.startTracking()
+        }}
+        detailTick={feed.detailTick}
       />
       <PublishDeleteConfirmModal
         t={t}
         pendingDelete={feed.pendingDelete}
+        busyDelete={feed.busyDelete}
         onClose={() => feed.setPendingDelete(null)}
-        onConfirm={feed.handleDeleteConfirm}
+        onConfirm={feed.confirmDelete}
       />
     </>
   )
