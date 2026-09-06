@@ -147,6 +147,7 @@ const BYTES_PER_MB = 1024 * 1024;
 export interface UpstreamAssetFingerprint {
   availability?: 'ready' | 'waiting' | 'unavailable';
   availabilityMessage?: string;
+  sourceLabel?: string;
   outputId?: string;
   url?: string;
   textContent?: string;
@@ -718,7 +719,7 @@ export function matchOperationInputs(
       if (!asset.availability || asset.availability === 'ready') continue;
       pending.push(rejection(asset.availability === 'waiting' ? 'input_waiting' : 'input_unavailable',
         asset.availabilityMessage ?? `来源 ${asset.sourceNodeId} 尚未就绪，请补齐内容或移除引用`, {
-          operationId: op.id, meta: { sourceNodeId: asset.sourceNodeId, edgeId: asset.edgeId },
+          operationId: op.id, meta: { sourceNodeId: asset.sourceNodeId, sourceLabel: asset.sourceLabel ?? asset.sourceNodeId, edgeId: asset.edgeId },
         }));
     }
     for (const state of assignments.values()) {

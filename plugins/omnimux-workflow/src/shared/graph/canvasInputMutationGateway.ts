@@ -23,7 +23,7 @@ import { resolveNodeKind } from './materialNode.ts';
 import type { CapabilityCatalog } from '../api.ts';
 import type { MaterialType } from '../canvasTypes.ts';
 import { resolveGenerationPrompt } from './generationPrompt.ts';
-import { readNodeInputSource, readCurrentText } from './nodeInputSource.ts';
+import { readNodeInputSource } from './nodeInputSource.ts';
 import {
   buildContractView,
   buildUpstreamFingerprint,
@@ -151,6 +151,7 @@ function assetFromEdge(edge: Edge, nodes: CanvasNode[]): UpstreamAssetFingerprin
   return {
     edgeId: edge.id,
     sourceNodeId: source.id,
+    sourceLabel: current.label,
     availability: current.availability,
     availabilityMessage: current.message,
     outputId: current.outputId,
@@ -178,7 +179,7 @@ function fingerprintForNode(
     .filter((asset): asset is UpstreamAssetFingerprint => asset !== null);
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, edges.filter((edge) => edge.target === node.id)
-      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return source?.data.materialType === 'text' ? [readCurrentText(source.data)] : []; })),
+      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return source?.data.materialType === 'text' ? [readNodeInputSource(source).output.text] : []; })),
     localText: resolveGenerationPrompt(data),
     nodeFields: readParams(node),
     assets,
@@ -212,7 +213,7 @@ export function buildCanvasUpstreamFingerprint(
   }
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, [...edges.filter((edge) => edge.target === targetId).map((edge) => edge.source), ...pendingSourceIds]
-      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return source?.data.materialType === 'text' ? [readCurrentText(source.data)] : []; })),
+      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return source?.data.materialType === 'text' ? [readNodeInputSource(source).output.text] : []; })),
     localText: resolveGenerationPrompt(data),
     nodeFields: target ? readParams(target) : {},
     assets,

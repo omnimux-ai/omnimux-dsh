@@ -80,6 +80,7 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
 export function toUpstreamSnapshots(items: UpstreamMediaItem[]): UpstreamMediaSnapshot[] {
   return items.map((item) => ({
     nodeId: item.nodeId,
+    label: item.label,
     availability: item.availability,
     availabilityMessage: item.availabilityMessage,
     outputId: item.outputId,

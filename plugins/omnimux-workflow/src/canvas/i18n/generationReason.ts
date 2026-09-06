@@ -13,6 +13,9 @@ export function generationReasonText(
   const meta = reason?.meta ?? {};
   const withValue = (key: string, name: string, value: unknown) => t(`panel.reason.${key}`).replace(`{${name}}`, String(value));
   switch (code) {
+    case 'input_waiting':
+    case 'input_unavailable':
+      return withValue(code, 'source', meta.sourceLabel ?? meta.sourceNodeId ?? '');
     case 'mime_unsupported':
       if (Array.isArray(meta.allowedMimes) && meta.allowedMimes.length) {
         return withValue('mimeSupported', 'formats', meta.allowedMimes.join(', '));

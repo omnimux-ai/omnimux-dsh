@@ -354,7 +354,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
-    if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return '补充要求（可选）';
+    if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');
@@ -415,7 +415,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || pendingVideoParamAdjustment?.notices[0]
     || videoValidationErrors[0];
-  const quietReason = reasonCode === 'prompt_required' || reasonCode === 'catalog_unavailable';
+  const quietReason = reasonCode === 'prompt_required' || reasonCode === 'catalog_unavailable' || reasonCode === 'input_waiting';
   const adaptation = nodeCompat?.adaptation;
   const adaptationInputs = adaptation?.inputTypes.map((type) => t(`node.type.${type}`)).join('、');
   const adaptationMessage = adaptation
@@ -497,6 +497,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           </div>
         </div>
       ) : null}
+
+      {upstreams.filter((item) => item.materialType === 'text' && item.hasMedia).map((item, index) => (
+        <div key={item.edgeId ?? item.nodeId} className="wf-config-panel__input-hint" data-testid="wf-current-text-source">
+          {t('panel.currentTextSource').replace('{source}', `${index + 1} · ${item.label}`).replace('{text}',
+            (item.textContent ?? '').length > 80 ? `${item.textContent!.slice(0, 80)}…` : (item.textContent ?? ''))}
+        </div>
+      ))}
 
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">

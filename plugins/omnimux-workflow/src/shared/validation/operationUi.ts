@@ -104,6 +104,7 @@ export interface FilteredModelListResult {
 // ============================================================================
 
 export interface UpstreamMediaSnapshot {
+  label?: string;
   availability?: 'ready' | 'waiting' | 'unavailable';
   availabilityMessage?: string;
   outputId?: string;
@@ -165,6 +166,7 @@ export function assetFromUpstreamSnapshot(snap: UpstreamMediaSnapshot): Upstream
 
   return {
     sourceNodeId: snap.nodeId,
+    sourceLabel: snap.label,
     availability: snap.availability,
     availabilityMessage: snap.availabilityMessage,
     outputId: snap.outputId,
