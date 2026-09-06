@@ -14,6 +14,7 @@ interface GenerationPreferencesState {
 export const useGenerationPreferencesStore = create<GenerationPreferencesState>(() => ({ lastModelByType: {} }));
 let writeQueue: Promise<unknown> = Promise.resolve();
 let writeVersion = 0;
+let persistedPreferences: GenerationPreferences = {};
 
 export async function loadGenerationPreferences(): Promise<void> {
   const version = writeVersion;
@@ -21,19 +22,36 @@ export async function loadGenerationPreferences(): Promise<void> {
   if (!result.ok) throw new Error(result.body.message ?? '模型偏好读取失败，请重试');
   const value = parseGenerationPreferences(result.body);
   // An old boot response must not replace a newer successful manual selection.
-  if (version === writeVersion) useGenerationPreferencesStore.setState(value);
+  if (version === writeVersion) {
+    persistedPreferences = value.lastModelByType;
+    useGenerationPreferencesStore.setState(value);
+  }
 }
 
 export async function rememberGenerationModel(kind: GenerationKind, modelId: string): Promise<void> {
-  // Preserve click order when multiple model choices are made before a response arrives.
+  const version = ++writeVersion;
+  // A node created immediately after a manual choice uses it even while the save is pending.
+  useGenerationPreferencesStore.setState((state) => ({
+    lastModelByType: { ...state.lastModelByType, [kind]: modelId },
+  }));
   const save = async () => {
-    writeVersion += 1;
-    const result = await saveGenerationPreference(kind, modelId);
-    if (!result.ok) throw new Error(result.body.message ?? '模型偏好保存失败，请重试');
-    const value = parseGenerationPreferences(result.body);
-    writeVersion += 1;
-    useGenerationPreferencesStore.setState(value);
+    try {
+      const result = await saveGenerationPreference(kind, modelId);
+      if (!result.ok) throw new Error(result.body.message ?? '模型偏好保存失败，请重试');
+      const value = parseGenerationPreferences(result.body);
+      persistedPreferences = value.lastModelByType;
+      if (version === writeVersion) useGenerationPreferencesStore.setState(value);
+    } catch (error) {
+      if (version === writeVersion) {
+        useGenerationPreferencesStore.setState({ lastModelByType: persistedPreferences });
+      }
+      throw error;
+    } finally {
+      // Invalidate reads started while this write was pending.
+      if (version === writeVersion) writeVersion += 1;
+    }
   };
+  // Preserve click order, but a failed save does not prevent the next explicit choice.
   const result = writeQueue.then(save, save);
   writeQueue = result;
   return result;

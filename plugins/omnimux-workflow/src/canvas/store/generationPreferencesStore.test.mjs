@@ -70,3 +70,33 @@ test('load and malformed payload failures reject instead of pretending preferenc
   globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) });
   await assert.rejects(loadGenerationPreferences(), /模型偏好格式无效/);
 });
+
+test('immediate new-node reads see the manual choice; save failure restores the persisted choice', async () => {
+  globalThis.fetch = async () => response({ text: 'persisted' });
+  await loadGenerationPreferences();
+  let release;
+  globalThis.fetch = async () => new Promise((resolve) => { release = () => resolve(response({}, 500)); });
+  const pending = rememberGenerationModel('text', 'new-choice');
+  const failure = assert.rejects(pending, /保存失败/);
+  assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, 'new-choice');
+  await Promise.resolve();
+  release();
+  await failure;
+  assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, 'persisted');
+});
+
+test('a read started during a pending write cannot overwrite the acknowledged choice', async () => {
+  let finishRead;
+  let finishSave;
+  globalThis.fetch = async (_url, opts) => opts.method === 'PATCH'
+    ? new Promise((resolve) => { finishSave = () => resolve(response({ text: 'newest' })); })
+    : new Promise((resolve) => { finishRead = () => resolve(response({ text: 'stale' })); });
+  const saving = rememberGenerationModel('text', 'newest');
+  await Promise.resolve();
+  const loading = loadGenerationPreferences();
+  finishSave();
+  await saving;
+  finishRead();
+  await loading;
+  assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, 'newest');
+});
