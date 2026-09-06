@@ -20,7 +20,7 @@ import { PublishError } from './store.js'
 const DEFAULT_FS = { readFileSync }
 
 const ACCOUNT_KEYS = Object.freeze([
-  'id', 'platform', 'display_name', 'username', 'name', 'group', 'status',
+  'id', 'platform', 'provider', 'display_name', 'username', 'name', 'group', 'status',
   'expires_at', 'connected_at',
 ])
 

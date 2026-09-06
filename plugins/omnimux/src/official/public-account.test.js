@@ -3,6 +3,21 @@ import { describe, it } from 'node:test'
 import { computeStatus, filterAccounts, pickAccount, pickAccountsView, pickConnectView } from './public-account.js'
 
 describe('pickAccount', () => {
+  it('preserves provider identity for same-name accounts without inventing missing providers', () => {
+    const accounts = pickAccountsView({ accounts: [
+      { id: 1, platform: 'tiktok', display_name: 'same', provider: 'zernio', access_token: 'hidden' },
+      { id: 2, platform: 'tiktok', display_name: 'same', provider: 'tiktok_direct', access_token: 'hidden' },
+      { id: 3, platform: 'tiktok', display_name: 'same' },
+    ] }).accounts
+    assert.deepEqual(accounts.map(({ id, provider }) => ({ id, provider })), [
+      { id: '1', provider: 'zernio' },
+      { id: '2', provider: 'tiktok_direct' },
+      { id: '3', provider: undefined },
+    ])
+    assert.ok(accounts.every((row) => !('access_token' in row)))
+    assert.equal('provider' in accounts[2], false)
+  })
+
   it('keeps public fields and drops secrets', () => {
     const picked = pickAccount({
       id: 9,

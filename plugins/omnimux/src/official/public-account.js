@@ -3,7 +3,7 @@
 import { mergeMeta } from './account-meta.js'
 
 export const ACCOUNT_KEYS = Object.freeze([
-  'id', 'platform', 'display_name', 'username', 'name', 'group', 'status',
+  'id', 'platform', 'provider', 'display_name', 'username', 'name', 'group', 'status',
   'expires_at', 'connected_at',
 ])
 

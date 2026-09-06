@@ -82,6 +82,26 @@ describe('accountAvailability', () => {
 })
 
 describe('AccountSource.list 三分支', () => {
+  it('preserves same-name account providers and rejects overlay changes to provider', async () => {
+    const source = createAccountSource({
+      channel: channelReturning({ accounts: [
+        { id: 1, platform: 'tiktok', display_name: 'same', provider: 'zernio', access_token: 'hidden' },
+        { id: 2, platform: 'tiktok', display_name: 'same', provider: 'tiktok_direct' },
+        { id: 3, platform: 'tiktok', display_name: 'same' },
+      ] }),
+      overlayPath: 'unused-test-overlay',
+      fs: { readFileSync: () => JSON.stringify({ '1': { provider: 'tiktok_direct' }, '3': { provider: 'tiktok_direct' } }) },
+    })
+    const { accounts } = await source.list()
+    assert.deepEqual(accounts.map(({ id, provider }) => ({ id, provider })), [
+      { id: '1', provider: 'zernio' },
+      { id: '2', provider: 'tiktok_direct' },
+      { id: '3', provider: undefined },
+    ])
+    assert.ok(accounts.every((row) => !('access_token' in row)))
+    assert.equal('provider' in accounts[2], false)
+  })
+
   it('merges site rows with the accounts.json overlay', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dsh-publish-acc-'))
     try {

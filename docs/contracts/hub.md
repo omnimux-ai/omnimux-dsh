@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-16"
-updated: "2026-09-05"
+updated: "2026-09-06"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -174,6 +174,18 @@ These cannot be swapped for a third-party endpoint. Unconfigured calls throw `ne
 
 The hub may wrap those HTTP calls. It must not store an account matrix, posting calendar, warmup roster, or Drama Center upload.
 
+### TikTok publishing account route
+
+当前 `omnimux-publish` 的 TikTok 发布账号唯一允许来源是 **TikTok 官方 API**（`provider: "tiktok_direct"`）。本节是产品要求，不代表现有代码、存量账号或线上链路已通过验收。
+
+- 绑定使用 TikTok 官方 OAuth；发布和发布状态查询使用官方 Content Posting 链路；解绑使用同一账号的官方授权撤销链路。官方链路未启用、未配置或失败时，明确报错，不回退到 Zernio。
+- 账号来源以云端账号记录为准。执行中枢必须保留 `id`、`platform`、`provider` 到浏览器账号视图和发布选择器；不得根据昵称、`platform: "tiktok"`、当前开关或 `official` 目录名推断来源。`official-only` 表示 OmniMux 云端能力，不等于 TikTok 官方直连。
+- 发布插件只允许选择 `platform: "tiktok"` 且 `provider: "tiktok_direct"` 的 TikTok 账号。执行中枢与云端在执行账号/任务操作时须校验实际来源及归属，不能信任客户端自行声明的 `provider`；查询已有发布任务须沿该任务保存的来源执行。
+- Zernio 是独立链路，不得混入当前 TikTok 发布账号选择或成为隐式回退。来源缺失、未知或为 Zernio 的记录不得冒充官方账号；应明确提示来源异常或需要官方授权，不得自动改写记录、迁移授权或删除账号。本节不改变其他平台的链路。
+- 解绑必须返回云端处理结果，失败不得显示成功或移除本地账号。官方撤销结果与本地断开状态须可区分；本地标记断开不能作为官方撤销成功的证据。断开后刷新不能重新出现为可发布账号。
+
+验收必须覆盖：两种来源同名账号不混用、来源缺失/未知被拒绝、官方链路不可用不回退、Zernio 402 不影响官方账号路由，以及官方绑定、发布、状态查询、解绑的逐段证据。离线测试须断言官方流程对 Zernio 零调用；真实发布和解绑须先获得针对测试账号及动作的授权。按 [plugin QA](plugin-qa.md) 完成 L2 和授权物化后的 Dev 验收，不能以绑定成功代替发布或解绑验收。
+
 ### Accounts HTTP (Host `/omnimux/accounts`)
 
 Browser-local write routes (same-origin guard); the browser app is `plugins/omnimux-accounts`.
@@ -186,7 +198,7 @@ Browser-local write routes (same-origin guard); the browser app is `plugins/omni
 | PATCH `/omnimux/accounts/{id}` | `{group?: string \| null, agent_usable?: boolean}` | `{account: ViewRow}`; empty-string `group` clears; a missing site row still updates pure metadata |
 | DELETE `/omnimux/accounts/{id}` | — | `{ok: true}`; also deletes the local avatar file + index row |
 
-ViewRow = the `pickAccount` whitelist (id/platform/display_name/username/name/group/status/expires_at?/connected_at?/avatar_url) plus overlay fields `agent_usable?` / `last_used_at?` and a computed `status` (site status normalized; else expires_at-driven: past → `expired`, <24h → `expiring`; else `active`). `avatar_url` is either `https://…` (cache miss, or `official.accountAvatars.enabled=false`) or the relative path `/omnimux/accounts/{encodeURIComponent(id)}/avatar` after Host rewrite. Absolute same-origin URLs, `http://`, `data:`, `blob:`, and `file:` are dropped. The tool `omnimux_accounts_list` keeps the upstream JSON and does **not** rewrite avatar URLs.
+ViewRow = the `pickAccount` whitelist (id/platform/provider/display_name/username/name/group/status/expires_at?/connected_at?/avatar_url) plus overlay fields `agent_usable?` / `last_used_at?` and a computed `status` (site status normalized; else expires_at-driven: past → `expired`, <24h → `expiring`; else `active`). Missing `provider` must not be filled with a default; the TikTok publishing account rule above applies. `avatar_url` is either `https://…` (cache miss, or `official.accountAvatars.enabled=false`) or the relative path `/omnimux/accounts/{encodeURIComponent(id)}/avatar` after Host rewrite. Absolute same-origin URLs, `http://`, `data:`, `blob:`, and `file:` are dropped. The tool `omnimux_accounts_list` keeps the upstream JSON and does **not** rewrite avatar URLs.
 
 Local metadata overlay (`group` / `agent_usable` / `last_used_at`) persists to `$DSH_HOME/omnimux/accounts.json` (dir 0700, file 0600, whole-document rewrite). Local avatar rasters persist to `$DSH_HOME/omnimux/accounts/avatars/` (`index.json` + `{sha256(id)}.{png\|jpg\|webp\|gif}`, dir 0700, files 0600). GET merges overlay over site rows, rewrites a cached avatar_url, and lazily prunes overlay + avatar files whose id the site no longer returns. DELETE removes overlay + avatar. Tokens never reach the Host — connect is site-side OAuth.
 
