@@ -1,20 +1,20 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { createLibraryActionController } from './library-action.js'
+import { createPickerActionController } from './picker-action.js'
 
 function deferred() {
   let resolve
   return { promise: new Promise((done) => { resolve = done }), resolve }
 }
 
-describe('library action ownership', () => {
+describe('composer picker action ownership', () => {
   it('ignores cleanup when no action is open', () => {
-    const controller = createLibraryActionController()
+    const controller = createPickerActionController()
     assert.equal(controller.settle(null), false)
   })
 
   it('ignores a delayed confirmation after Escape closes and a new action opens', async () => {
-    const controller = createLibraryActionController()
+    const controller = createPickerActionController()
     const writes = []
     const oldSignal = new AbortController().signal
     let oldSettled = 0
@@ -48,7 +48,7 @@ describe('library action ownership', () => {
   })
 
   it('settles a superseded session action without restoring its focus', () => {
-    const controller = createLibraryActionController()
+    const controller = createPickerActionController()
     let oldSettled = 0
     let oldFocus = 0
     const oldAction = {

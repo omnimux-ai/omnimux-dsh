@@ -11,21 +11,18 @@ const commandsSource = readFileSync(join(here, 'commands.js'), 'utf8')
 const pickerSource = readFileSync(join(here, '../components/asset-picker/AssetPicker.jsx'), 'utf8')
 
 describe('composer-add install contract', () => {
-  it('keeps the business side: modal, window events, toast, submit capture', () => {
+  it('keeps client picker actions on the existing materialization and attachment pipeline', () => {
     assert.match(installSource, /installComposerAttachmentSubmitCapture/)
     assert.match(installSource, /AssetPickerModal/)
-    assert.match(installSource, /composerAdd\.pickerUnsupported/)
-    assert.match(installSource, /\/omnimux\/assets\/pick/)
-    assert.match(installSource, /kind === 'directory' \|\| kind === 'any' \? kind : 'file'/)
+    assert.match(installSource, /LocalPathPicker/)
+    assert.doesNotMatch(installSource, /\/omnimux\/assets\/pick/)
     assert.match(installSource, /registerComposerAddCommands/)
-    assert.match(installSource, /addLocalPaths\(sessionId, 'any', actionSignal\)/)
     assert.match(installSource, /AbortSignal\.any\(\[signal, registrationSignal\]\)/)
     assert.match(installSource, /async function requestJson\(path, body, signal\)/)
-    assert.match(installSource, /signal\?\.aborted/)
-    assert.match(installSource, /libraryActions\.isCurrent\(action\)/)
-    assert.match(installSource, /closeLibraryAction\(libraryActions\.current\(\)\)/)
+    assert.match(installSource, /pickerActions\.isCurrent\(action\)/)
+    assert.match(installSource, /closePickerAction\(pickerActions\.current\(\)\)/)
     assert.match(installSource, /\/omnimux\/composer\/attachments\/materialize/)
-    assert.match(installSource, /key: `library-action-\$\{libraryActions\.revision\(\)\}`/)
+    assert.match(installSource, /key: `picker-action-\$\{pickerActions\.revision\(\)\}`/)
   })
 
   it('does not intercept the official + button or draw a replacement menu', () => {

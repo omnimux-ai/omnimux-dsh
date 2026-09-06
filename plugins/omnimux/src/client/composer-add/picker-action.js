@@ -1,5 +1,5 @@
-/** Keep one pending AssetPicker action from settling another action's UI. */
-export function createLibraryActionController() {
+/** Keep one pending composer picker action from settling another action's UI. */
+export function createPickerActionController() {
   let current = null
   let revision = 0
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
@@ -137,6 +137,23 @@ describe('materializePaths', () => {
     assert.equal(results[1].extension, 'DIR')
     assert.equal(results[1].relativePath, 'assets/imported/Bundle')
     assert.deepEqual(results[1].files, ['assets/imported/Bundle/a.md'])
+  })
+
+  it('preserves empty roots and nested empty directories without adding fake files', async () => {
+    const cwd = tempDir('omx-att-empty-cwd-')
+    const source = tempDir('omx-att-empty-src-')
+    mkdirSync(join(source, 'Empty'))
+    mkdirSync(join(source, 'Nested', 'inner', 'empty'), { recursive: true })
+    const { results } = await materializePaths({
+      sessionId: 'ses_empty',
+      paths: [join(source, 'Empty'), join(source, 'Nested')],
+      resolveCwd: async () => cwd,
+    })
+    assert.equal(results.every((item) => item.ok && item.extension === 'DIR'), true)
+    assert.deepEqual(results.map((item) => item.files), [[], []])
+    assert.deepEqual(readdirSync(join(cwd, 'assets/imported/Empty')), [])
+    assert.deepEqual(readdirSync(join(cwd, 'assets/imported/Nested/inner/empty')), [])
+    assert.deepEqual(readdirSync(join(source, 'Nested/inner/empty')), [])
   })
 
   it('copyDirectoryIntoImported rejects a regular file', async () => {

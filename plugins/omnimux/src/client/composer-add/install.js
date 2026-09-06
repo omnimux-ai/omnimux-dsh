@@ -1,12 +1,14 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AssetPickerModal } from './AssetPickerModal.jsx'
+import { LocalPathPicker } from '../components/local-path-picker/LocalPathPicker.jsx'
+import { failedPathSelection } from '../components/local-path-picker/path-selection.js'
 import { getGlobalAttachmentStore } from '../attachments/store.ts'
-import { inferKindFromName } from './kind.js'
+import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { installComposerAttachmentSubmitCapture } from './submit-inject.js'
 import { registerComposerAddCommands } from './commands.js'
 import { notifyClientActionRuntimeUpdateOnce } from './client-action-runtime-notice.js'
-import { createLibraryActionController } from './library-action.js'
+import { createPickerActionController } from './picker-action.js'
 
 const HOST_ID = 'omnimux-composer-add-host'
 
@@ -111,7 +113,7 @@ function ensureHost(doc) {
 }
 
 /**
- * Composer 附件业务侧：资产库 modal、本地文件物化、window 事件监听与
+ * Composer 附件业务侧：资产库与本地路径面板、文件物化与
  * 提交拦截。「+」菜单入口由 commands.js 通过官方 commandUi.register
  * 贡献（合并进原生命令列表），这里不再拦截任何官方按钮。
  *
@@ -124,38 +126,64 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
   const store = options.store || getGlobalAttachmentStore()
   const host = ensureHost(doc)
   let modalRoot = null
-  const state = {
-    libraryOpen: false,
-  }
-  const libraryActions = createLibraryActionController()
+  const pickerActions = createPickerActionController()
 
-  const closeLibraryAction = (action) => {
-    if (!libraryActions.settle(action)) return false
-    state.libraryOpen = false
+  const closePickerAction = (action) => {
+    if (!pickerActions.settle(action)) return false
     renderModal()
     return true
   }
 
   const renderModal = () => {
-    const action = libraryActions.current()
-    const sessionId = action?.sessionId || ''
+    const action = pickerActions.current()
     if (!modalRoot) modalRoot = createRoot(host)
+    if (!action) {
+      modalRoot.render(null)
+      return
+    }
+    const { sessionId } = action
+    const owned = () => !action.signal.aborted && pickerActions.isCurrent(action)
+    const common = {
+      key: `picker-action-${pickerActions.revision()}`,
+      onClose: () => { closePickerAction(action) },
+      t: (key, vars) => tx(t, key, vars),
+    }
+    if (action.kind === 'paths') {
+      modalRoot.render(createElement(LocalPathPicker, {
+        ...common,
+        remaining: Math.max(0, MAX_ATTACHMENTS - store.getSnapshot(sessionId).length),
+        onConfirm: async (paths) => {
+          if (!owned()) return null
+          const remaining = MAX_ATTACHMENTS - store.getSnapshot(sessionId).length
+          if (paths.length > remaining) throw new Error(tx(t, 'composerAdd.toast.quota'))
+          const result = await requestJson('/omnimux/composer/attachments/materialize', {
+            sessionId, paths,
+          }, action.requestSignal)
+          if (!owned()) return null
+          const rows = Array.isArray(result.body.results) ? result.body.results : []
+          if (rows.length === 0) {
+            throw new Error(result.body.message || tx(t, 'composerAdd.toast.failed', { n: paths.length }))
+          }
+          applyAddResults(store, sessionId, rows, t)
+          const failed = failedPathSelection(rows)
+          if (failed.remainingPaths.length === 0) closePickerAction(action)
+          return failed
+        },
+      }))
+      return
+    }
     modalRoot.render(createElement(AssetPickerModal, {
-      key: `library-action-${libraryActions.revision()}`,
-      open: state.libraryOpen,
-      onClose: () => {
-        closeLibraryAction(action)
-      },
-      t,
-      occupied: sessionId ? store.getSnapshot(sessionId).length : 0,
-      alreadyIds: sessionId ? alreadyEntityIds(store, sessionId) : new Set(),
+      ...common,
+      open: true,
+      occupied: store.getSnapshot(sessionId).length,
+      alreadyIds: alreadyEntityIds(store, sessionId),
       onConfirm: async (picked) => {
-        if (!action || !sessionId || action.signal.aborted || !libraryActions.isCurrent(action)) return
+        if (!owned()) return
         const result = await requestJson('/omnimux/composer/attachments/instantiate', {
           sessionId,
           assetIds: picked.map((row) => row.id),
-        })
-        if (action.signal.aborted || !libraryActions.isCurrent(action)) return
+        }, action.requestSignal)
+        if (!owned()) return
         const rows = Array.isArray(result.body.results) ? result.body.results : []
         applyAddResults(store, sessionId, rows.map((row) => ({
           ...row,
@@ -166,69 +194,41 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
           toast(message)
           throw new Error(message)
         }
-        closeLibraryAction(action)
+        closePickerAction(action)
       },
     }))
   }
 
-  /**
-   * @param {string} sessionId
-   * @param {'file' | 'directory' | 'any'} kind
-   */
-  async function addLocalPaths(sessionId, kind = 'file', signal) {
-    if (!sessionId || signal?.aborted) return
-    const pickKind = kind === 'directory' || kind === 'any' ? kind : 'file'
-    const picked = await requestJson('/omnimux/assets/pick', { kind: pickKind }, signal)
-    if (signal?.aborted) return
-    if (picked.status === 501) {
-      toast(tx(t, 'composerAdd.pickerUnsupported'))
-      return
-    }
-    const paths = Array.isArray(picked.body.paths) ? picked.body.paths.filter(Boolean) : []
-    if (!picked.ok) {
-      toast(picked.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 }))
-      return
-    }
-    if (paths.length === 0) return
-    const materialized = await requestJson('/omnimux/composer/attachments/materialize', { sessionId, paths }, signal)
-    if (signal?.aborted) return
-    const rows = Array.isArray(materialized.body.results) ? materialized.body.results : []
-    applyAddResults(store, sessionId, rows, t)
-    if (!materialized.ok && rows.length === 0) {
-      toast(materialized.body.message || tx(t, 'composerAdd.toast.failed', { n: 1 }))
-    }
-  }
-
   const onKey = (event) => {
-    if (event.key !== 'Escape') return
-    if (state.libraryOpen) {
-      closeLibraryAction(libraryActions.current())
-    }
+    if (event.key === 'Escape') closePickerAction(pickerActions.current())
   }
-
   doc.addEventListener('keydown', onKey)
-  const onAddFile = async (sessionId, signal, restoreComposerFocus, registrationSignal) => {
+
+  const openPicker = (kind, sessionId, signal, restoreComposerFocus, registrationSignal) => new Promise((resolve) => {
     const actionSignal = AbortSignal.any([signal, registrationSignal])
-    try {
-      await addLocalPaths(sessionId, 'any', actionSignal)
-    } catch (error) {
-      if (!actionSignal.aborted) throw error
-    } finally {
-      if (!actionSignal.aborted) restoreComposerFocus()
-    }
-  }
-  const onAddLibrary = (sessionId, signal, restoreComposerFocus, registrationSignal) => new Promise((resolve) => {
-    if (signal.aborted || registrationSignal.aborted) {
+    if (!sessionId || actionSignal.aborted) {
       resolve()
       return
     }
-    const action = libraryActions.start({ sessionId, signal, restoreComposerFocus, resolve })
-    state.libraryOpen = true
+    const requestController = new AbortController()
+    const closeIfCurrent = () => { closePickerAction(action) }
+    const action = pickerActions.start({
+      kind,
+      sessionId,
+      signal: actionSignal,
+      requestSignal: AbortSignal.any([actionSignal, requestController.signal]),
+      restoreComposerFocus,
+      resolve: () => {
+        actionSignal.removeEventListener('abort', closeIfCurrent)
+        requestController.abort()
+        resolve()
+      },
+    })
+    actionSignal.addEventListener('abort', closeIfCurrent, { once: true })
     renderModal()
-    const closeIfCurrent = () => { closeLibraryAction(action) }
-    signal.addEventListener('abort', closeIfCurrent, { once: true })
-    registrationSignal.addEventListener('abort', closeIfCurrent, { once: true })
   })
+  const onAddFile = (...args) => openPicker('paths', ...args)
+  const onAddLibrary = (...args) => openPicker('library', ...args)
   registerComposerAddCommands(options.ctx || {}, {
     t,
     onAddFile,
@@ -245,7 +245,7 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
 
   return () => {
     doc.removeEventListener('keydown', onKey)
-    closeLibraryAction(libraryActions.current())
+    closePickerAction(pickerActions.current())
     stopSubmit()
     modalRoot?.unmount()
     host.remove()
