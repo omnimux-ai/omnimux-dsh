@@ -3,7 +3,7 @@
  * Names, descriptions and JSON schemas are unchanged from the monolith.
  */
 
-import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
+import { buildInitialOutputs } from '../execution/executionInputs.ts';
 import type { CapabilityCatalog } from '../../shared/api.ts';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 import {
@@ -26,45 +26,8 @@ import {
   withWorkspace,
   waitForTerminal,
   summarizeNodes,
-  mediaKindFromMaterial,
   WORKSPACE_ID_PARAM_DESC,
 } from './agentToolShared.ts';
-
-function extractNodeInitialOutput(
-  sourceNode: { data?: Record<string, unknown> },
-): Record<string, unknown> {
-  const data = sourceNode.data ?? {};
-  const text = (data.generatedContent as string | undefined)
-    ?? (data.content as string | undefined)
-    ?? (data.prompt as string | undefined);
-  const mediaAssets = data.mediaAssets;
-  const mediaUrl = data.mediaUrl as string | undefined;
-  const materialType = data.materialType as string | undefined;
-
-  if (Array.isArray(mediaAssets) && mediaAssets.length > 0) {
-    return { mediaAssets, text };
-  }
-  if (mediaUrl) {
-    const type = mediaKindFromMaterial(materialType);
-    return { mediaAssets: [{ type, url: mediaUrl }], text };
-  }
-  return { text: text ?? '' };
-}
-
-function buildInitialOutputs(
-  workspace: CanvasWorkspaceSnapshot,
-  executedNodeIds: ReadonlySet<string>,
-): Record<string, unknown> {
-  const initialOutputs: Record<string, unknown> = {};
-  for (const edge of workspace.edges) {
-    if (!executedNodeIds.has(edge.target) || executedNodeIds.has(edge.source)) continue;
-    const sourceNode = workspace.nodes.find((n) => n.id === edge.source);
-    if (sourceNode) {
-      initialOutputs[edge.source] = extractNodeInitialOutput(sourceNode as { data?: Record<string, unknown> });
-    }
-  }
-  return initialOutputs;
-}
 
 export function createWorkflowListTool(deps: WorkflowAgentDeps): AgentToolSpec {
   const { store, executionManager } = deps;
@@ -189,6 +152,9 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
         }
       }
 
+      if (store.get(workspace.id).version !== workspace.version) {
+        return errorBody('version_conflict', '输入已更新，请确认当前内容后重新生成');
+      }
       const initialOutputs = buildInitialOutputs(workspace, subgraph.nodeIdSet);
 
       const entry = executionManager.createExecution({

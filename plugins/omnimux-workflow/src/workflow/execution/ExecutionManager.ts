@@ -163,6 +163,12 @@ function createExecutionInstance(
   entries: Map<string, ExecutionEntry>,
   opts: CreateExecutionOptions,
 ): ExecutionEntry {
+  opts = {
+    ...opts,
+    nodes: structuredClone(opts.nodes),
+    edges: structuredClone(opts.edges),
+    initialOutputs: structuredClone(opts.initialOutputs),
+  };
   const breakpointsList = opts.breakpoints || [];
   const breakpoints = new Set(breakpointsList);
   const context = new ExecutionContext({
