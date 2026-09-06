@@ -14,6 +14,7 @@ interface GenerationPreferencesState {
 export const useGenerationPreferencesStore = create<GenerationPreferencesState>(() => ({ lastModelByType: {} }));
 let writeQueue: Promise<unknown> = Promise.resolve();
 let writeVersion = 0;
+let pendingWrites = 0;
 let persistedPreferences: GenerationPreferences = {};
 
 export async function loadGenerationPreferences(): Promise<void> {
@@ -22,7 +23,7 @@ export async function loadGenerationPreferences(): Promise<void> {
   if (!result.ok) throw new Error(result.body.message ?? '模型偏好读取失败，请重试');
   const value = parseGenerationPreferences(result.body);
   // An old boot response must not replace a newer successful manual selection.
-  if (version === writeVersion) {
+  if (version === writeVersion && pendingWrites === 0) {
     persistedPreferences = value.lastModelByType;
     useGenerationPreferencesStore.setState(value);
   }
@@ -30,6 +31,7 @@ export async function loadGenerationPreferences(): Promise<void> {
 
 export async function rememberGenerationModel(kind: GenerationKind, modelId: string): Promise<void> {
   const version = ++writeVersion;
+  pendingWrites += 1;
   // A node created immediately after a manual choice uses it even while the save is pending.
   useGenerationPreferencesStore.setState((state) => ({
     lastModelByType: { ...state.lastModelByType, [kind]: modelId },
@@ -47,6 +49,7 @@ export async function rememberGenerationModel(kind: GenerationKind, modelId: str
       }
       throw error;
     } finally {
+      pendingWrites -= 1;
       // Invalidate reads started while this write was pending.
       if (version === writeVersion) writeVersion += 1;
     }

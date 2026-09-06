@@ -17,6 +17,7 @@ import type { GenerationGateway } from './gateway';
 import { createMockGateway } from './mockGateway';
 import {
   createOmnimuxSeamClient,
+  resolveCanvasSubmission,
   type SeamGetter,
 } from './omnimuxGateway';
 import { createWorkflowLogger } from '../execution/logger';
@@ -94,7 +95,9 @@ function createCatalogAwareMockGateway(getSeam: SeamGetter, env?: NodeJS.Process
   const mock = createMockGateway();
   const catalogProjection = createOmnimuxSeamClient({ getSeam, env });
   return {
-    submit: (request) => mock.submit(request),
+    submit: async (request) => mock.submit(hasModelCatalog(getSeam)
+      ? resolveCanvasSubmission(request, await catalogProjection.capabilities())
+      : request),
     awaitTask: (taskId, dest, signal) => mock.awaitTask(taskId, dest, signal),
     capabilities: () => (
       hasModelCatalog(getSeam)

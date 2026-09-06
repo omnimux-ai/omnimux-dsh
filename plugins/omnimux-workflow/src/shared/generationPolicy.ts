@@ -60,7 +60,7 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
     if (!outputs.length) return [];
     const operations = (model.operations ?? []).filter((op) => op.listed === true
       && outputs.includes(op.output?.type as MaterialType));
-    return [{ ...model, operations, listedOperations: operations.map((op) => op.id) }];
+    return [{ ...model, operations, listedOperations: operations.map((op) => `${model.id}#${op.id}`) }];
   });
   const defaultsByOperation = Object.fromEntries(Object.entries(catalog.defaultsByOperation ?? {})
     .filter(([operation, id]) => models?.some((model) => model.id === id

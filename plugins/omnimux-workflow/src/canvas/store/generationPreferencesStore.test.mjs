@@ -100,3 +100,21 @@ test('a read started during a pending write cannot overwrite the acknowledged ch
   await loading;
   assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, 'newest');
 });
+
+for (const succeeds of [true, false]) {
+  test(`load finishing before pending save preserves manual preference (save succeeds: ${succeeds})`, async () => {
+    globalThis.fetch = async () => response({ text: 'persisted' });
+    await loadGenerationPreferences();
+    let finishSave;
+    globalThis.fetch = async (_url, opts) => opts.method === 'PATCH'
+      ? new Promise((resolve) => { finishSave = () => resolve(response({ text: 'new' }, succeeds ? 200 : 500)); })
+      : response({ text: 'stale' });
+    const saving = rememberGenerationModel('text', 'new');
+    const finished = succeeds ? saving : assert.rejects(saving, /保存失败/);
+    await loadGenerationPreferences();
+    assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, 'new');
+    finishSave();
+    await finished;
+    assert.equal(useGenerationPreferencesStore.getState().lastModelByType.text, succeeds ? 'new' : 'persisted');
+  });
+}

@@ -186,7 +186,7 @@ function fingerprintForNode(
     .filter((asset): asset is UpstreamAssetFingerprint => asset !== null);
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, edges.filter((edge) => edge.target === node.id)
-      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return [source?.data.content, source?.data.generatedContent]; })),
+      .flatMap((edge) => { const source = nodes.find((candidate) => candidate.id === edge.source); return source?.data.materialType === 'text' ? [source.data.content, source.data.generatedContent] : []; })),
     nodeFields: readParams(node),
     assets,
   });
@@ -219,7 +219,7 @@ export function buildCanvasUpstreamFingerprint(
   }
   return buildUpstreamFingerprint({
     prompt: resolveGenerationPrompt(data, [...edges.filter((edge) => edge.target === targetId).map((edge) => edge.source), ...pendingSourceIds]
-      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return [source?.data.content, source?.data.generatedContent]; })),
+      .flatMap((sourceId) => { const source = nodes.find((candidate) => candidate.id === sourceId); return source?.data.materialType === 'text' ? [source.data.content, source.data.generatedContent] : []; })),
     nodeFields: target ? readParams(target) : {},
     assets,
   });

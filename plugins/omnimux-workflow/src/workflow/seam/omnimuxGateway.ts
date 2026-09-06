@@ -278,6 +278,19 @@ function toSeamError(error: unknown): Error {
   return new SeamGatewayError('omnimux-request-failed', String(error));
 }
 
+/** Validate product selection before either live or offline submission. */
+export function resolveCanvasSubmission(req: SubmitRequest, catalog: CapabilityCatalog): SubmitRequest {
+  const model = req.model?.trim() || catalog.defaults?.[req.capability] || '';
+  if (!catalog[req.capability].some((row) => row.id === model)) {
+    throw new SeamGatewayError('model-not-allowed', '请选择此类节点白名单中可用的模型');
+  }
+  if (req.operation && catalog.models && !catalog.models.some((row) => row.id === model
+    && row.operations?.some((op) => op.id === req.operation && op.listed === true && op.output?.type === req.capability))) {
+    throw new SeamGatewayError('operation-not-allowed', '当前模型不支持所选生成方式，请重新选择');
+  }
+  return { ...req, model };
+}
+
 export function createOmnimuxSeamClient(
   opts: OmniumuxSeamClientOptions,
 ): GenerationGateway & { currentMode(): 'omnimux' } {
@@ -302,55 +315,51 @@ export function createOmnimuxSeamClient(
   }
 
   const readCanvasCatalog = (): CapabilityCatalog => {
-      // Generate seams still decide omnimux vs mock; modelCatalog alone must not
-      // flip the gateway (probeSeams ignores it by design).
-      const hasVideo = isSeamApi(opts.getSeam('videoGenerate'));
-      const hasImage = isSeamApi(opts.getSeam('imageGenerate'));
-      const hasAudio = isSeamApi(opts.getSeam('audioGenerate'));
-      const hasText = isSeamApi(opts.getSeam('textComplete'));
-      const source: 'omnimux' | 'static-stub' =
-        hasVideo || hasImage || hasAudio || hasText ? 'omnimux' : 'static-stub';
+    // Generate seams still decide omnimux vs mock; modelCatalog alone must not
+    // flip the gateway (probeSeams ignores it by design).
+    const hasVideo = isSeamApi(opts.getSeam('videoGenerate'));
+    const hasImage = isSeamApi(opts.getSeam('imageGenerate'));
+    const hasAudio = isSeamApi(opts.getSeam('audioGenerate'));
+    const hasText = isSeamApi(opts.getSeam('textComplete'));
+    const source: 'omnimux' | 'static-stub' =
+      hasVideo || hasImage || hasAudio || hasText ? 'omnimux' : 'static-stub';
 
-      const catalogSeam = opts.getSeam('modelCatalog');
-      if (!isModelCatalog(catalogSeam)) {
-        return {
-          source,
-          fingerprint: undefined,
-          defaults: undefined,
-          text: [],
-          image: [],
-          video: [],
-          audio: [],
-        };
-      }
+    const catalogSeam = opts.getSeam('modelCatalog');
+    if (!isModelCatalog(catalogSeam)) {
+      return {
+        source,
+        fingerprint: undefined,
+        defaults: undefined,
+        text: [],
+        image: [],
+        video: [],
+        audio: [],
+      };
+    }
 
-      const body = catalogSeam.list();
-      return projectCanvasCatalog({
-        source: body.source === 'omnimux' || body.source === 'static-stub' ? body.source : source,
-        schemaVersion: typeof body.schemaVersion === 'string' ? body.schemaVersion : undefined,
-        fingerprint: typeof body.fingerprint === 'string' ? body.fingerprint : undefined,
-        defaults: body.defaults,
-        models: asCatalogModels(body.models),
-        defaultsByOperation: asDefaultsByOperation(body.defaultsByOperation),
-        text: asCatalogRows(body.text),
-        image: asCatalogRows(body.image),
-        video: asCatalogRows(body.video),
-        audio: asCatalogRows(body.audio),
-      });
+    const body = catalogSeam.list();
+    return projectCanvasCatalog({
+      source: body.source === 'omnimux' || body.source === 'static-stub' ? body.source : source,
+      schemaVersion: typeof body.schemaVersion === 'string' ? body.schemaVersion : undefined,
+      fingerprint: typeof body.fingerprint === 'string' ? body.fingerprint : undefined,
+      defaults: body.defaults,
+      models: asCatalogModels(body.models),
+      defaultsByOperation: asDefaultsByOperation(body.defaultsByOperation),
+      text: asCatalogRows(body.text),
+      image: asCatalogRows(body.image),
+      video: asCatalogRows(body.video),
+      audio: asCatalogRows(body.audio),
+    });
   };
 
   return {
     async submit(req: SubmitRequest): Promise<SubmitResult> {
-      const catalog = readCanvasCatalog();
-      const model = req.model?.trim() || catalog.defaults?.[req.capability] || '';
-      if (!catalog[req.capability].some((row) => row.id === model)) {
-        throw new SeamGatewayError('model-not-allowed', '请选择此类节点白名单中可用的模型');
+      if (req.capability === 'text') {
+        if (!isSeamApi(opts.getSeam('textComplete'))) throw new SeamGatewayError('needs-provider', '文本生成服务尚未就绪');
+      } else {
+        requireMediaSeam(opts.getSeam, req.capability);
       }
-      if (req.operation && catalog.models && !catalog.models.some((row) => row.id === model
-        && row.operations?.some((op) => op.id === req.operation && op.listed === true && op.output?.type === req.capability))) {
-        throw new SeamGatewayError('operation-not-allowed', '当前模型不支持所选生成方式，请重新选择');
-      }
-      req = { ...req, model };
+      req = resolveCanvasSubmission(req, readCanvasCatalog());
       if (req.capability === 'text') {
         // textComplete is a one-shot synchronous seam (no taskId protocol):
         // register the work now, run it in awaitTask so the executor's

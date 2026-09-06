@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CANVAS_GENERATION_POLICY, projectCanvasCatalog } from './generationPolicy.ts';
 import { buildUpstreamFingerprint, evaluateCatalogCompat, planAutoAdaptation } from './validation/compatKernel.ts';
-import { planCanvasInputMutation } from './graph/canvasInputMutationGateway.ts';
+import { buildCanvasUpstreamFingerprint, planCanvasInputMutation } from './graph/canvasInputMutationGateway.ts';
 import { reconcileCanvasForCatalog } from './graph/catalogReconcile.ts';
 
 const CLAUDE = 'claude-opus-4-6';
@@ -118,4 +118,17 @@ test('video editing intent cannot silently become generation when no compatible 
   const m={id:'seedance-2-0-fast',label:'Video',operations:[{id:'text_to_video',listed:true,output:{type:'video'},inputs:[]}]};
   view.models.push(m);view.video.push({id:m.id,label:m.label});
   assert.equal(planAutoAdaptation({catalog:view,fingerprint:fp(),outputType:'video',currentModelId:m.id,currentOperationId:'video_edit'}),null);
+});
+
+test('only upstream text contributes prompt; media captions cannot make an empty generation ready', () => {
+  const target = node('target', GPT);
+  target.data.prompt = '';
+  const image = { id: 'image', type: 'material', position: { x: 0, y: 0 }, data: { nodeKind: 'import', materialType: 'image', mediaUrl: '/image.png', content: 'old image caption' } };
+  const text = { id: 'text', type: 'material', position: { x: 0, y: 0 }, data: { nodeKind: 'import', materialType: 'text', content: 'upstream prompt' } };
+  const edge = { id: 'edge', source: 'image', target: 'target' };
+  assert.equal(buildCanvasUpstreamFingerprint('target', [target, image], [edge]).prompt, '');
+  assert.equal(buildCanvasUpstreamFingerprint('target', [target, image], [], ['image']).prompt, '');
+  assert.equal(buildCanvasUpstreamFingerprint('target', [target, image, text], [edge], ['text']).prompt, 'upstream prompt');
+  const result = planCanvasInputMutation({ nodes: [target, image], edges: [] }, { addEdges: [edge] }, { catalog: projectCanvasCatalog(catalog()) });
+  assert.equal(result.nodes.find((n) => n.id === 'target').data.compat.readyToSubmit, false);
 });
