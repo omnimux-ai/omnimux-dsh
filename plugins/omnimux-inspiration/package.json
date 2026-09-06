@@ -51,7 +51,8 @@
     }
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "jsdom": "^30.0.1"
   },
   "license": "MIT",
   "description": "Official OmniMux app: browse inspiration items through the execution hub."

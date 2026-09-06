@@ -266,6 +266,9 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+      jsdom:
+        specifier: ^30.0.1
+        version: 30.0.1
 
   plugins/omnimux-market:
     dependencies:

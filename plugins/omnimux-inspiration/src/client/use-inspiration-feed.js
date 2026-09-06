@@ -163,18 +163,41 @@ function useFeedData(options) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [phase, setPhase] = useState('loading')
   const [error, setError] = useState(null)
+  const pageRef = useRef(page)
+  const itemsRef = useRef(items)
+
+  useEffect(() => {
+    pageRef.current = page
+  }, [page])
+
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
 
   const loadData = useCallback((isNextPage = false) => {
+    if (!isNextPage) {
+      pageRef.current = 1
+      setPage(1)
+    }
     return executeFeedLoad(
-      { isNextPage, tab, q, type, sort, favorite, page, hasExistingItems: items.length > 0 },
+      {
+        isNextPage,
+        tab,
+        q,
+        type,
+        sort,
+        favorite,
+        page: pageRef.current,
+        hasExistingItems: itemsRef.current.length > 0,
+      },
       { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore },
     )
-  }, [tab, q, type, sort, favorite, page, items.length])
+  }, [tab, q, type, sort, favorite])
 
   useEffect(() => {
     if (!active) return
     loadData(false)
-  }, [active, tab, q, type, sort, favorite, loadData])
+  }, [active, loadData])
 
   useEffect(() => {
     return whenAuthReady(() => {
