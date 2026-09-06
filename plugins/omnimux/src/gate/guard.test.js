@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { OmnimuxError } from '../media/errors.js'
 import { parseGateConfig } from './config.js'
 import {
@@ -127,6 +131,40 @@ describe('GateGuard logic', () => {
         assert.equal(err.message, "Model 'grok-4.6' on textComplete is disabled by capability gate")
         return true
       },
+    )
+  })
+
+  it('production release disables Alpha tools before user gate overrides', async (t) => {
+    const userOverride = parseGateConfig({
+      tools: {
+        omnimux_accounts_list: true,
+        omnimux_publish_create: true,
+        omnimux_analytics_daily_metrics: true,
+      },
+    })
+
+    const fixture = mkdtempSync(join(tmpdir(), 'omnimux-production-guard-'))
+    t.after(() => rmSync(fixture, { recursive: true, force: true }))
+    const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+    mkdirSync(join(fixture, 'src/gate'), { recursive: true })
+    mkdirSync(join(fixture, 'src/media'), { recursive: true })
+    writeFileSync(join(fixture, 'package.json'), '{"type":"module"}\n')
+    copyFileSync(join(sourceRoot, 'gate/guard.js'), join(fixture, 'src/gate/guard.js'))
+    copyFileSync(join(sourceRoot, 'media/errors.js'), join(fixture, 'src/media/errors.js'))
+    copyFileSync(join(sourceRoot, 'plugin-lifecycle.json'), join(fixture, 'src/plugin-lifecycle.json'))
+    writeFileSync(join(fixture, 'src/release-channel.json'), '{"channel":"production"}\n')
+    const productionGuard = await import(pathToFileURL(join(fixture, 'src/gate/guard.js')).href)
+
+    for (const toolName of Object.keys(userOverride.tools)) {
+      assert.equal(productionGuard.isToolEnabled(userOverride, toolName), false, toolName)
+      assert.equal(isToolEnabled(userOverride, toolName), true, toolName)
+    }
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'workflow_run'), true)
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'canvas_write_table_node'), true)
+    assert.equal(productionGuard.isToolEnabled(userOverride, 'omnimux_social_data'), true)
+    assert.throws(
+      () => productionGuard.assertCapabilityEnabled(userOverride, 'omnimux_publish_create'),
+      (err) => err.code === 'capability-disabled',
     )
   })
 })

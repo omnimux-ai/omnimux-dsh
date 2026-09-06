@@ -26,6 +26,24 @@ PLUGINS=()
 TARGET_SELECTION=()
 TARGET_FLAGS=()
 EXPLICIT_PLUGIN_SCOPE=0
+ALPHA_PLUGINS=()
+if ! alpha_plugins_output="$(node "$ROOT/scripts/plugin-lifecycle.mjs" list-alpha-plugins)"; then
+  echo "❌ 无法读取 Alpha 插件生命周期注册表，拒绝物化。" >&2
+  exit 1
+fi
+[ -n "$alpha_plugins_output" ] || { echo "❌ Alpha 插件生命周期注册表为空，拒绝物化。" >&2; exit 1; }
+ALPHA_PLUGINS_LABEL="${alpha_plugins_output//$'\n'/ }"
+while IFS= read -r plugin_name; do
+  [ -n "$plugin_name" ] && ALPHA_PLUGINS+=("$plugin_name")
+done <<< "$alpha_plugins_output"
+
+is_alpha_plugin() {
+  local candidate="$1"
+  for alpha_plugin in "${ALPHA_PLUGINS[@]}"; do
+    [ "$candidate" = "$alpha_plugin" ] && return 0
+  done
+  return 1
+}
 
 assert_origin_main_aligned() {
   # —— 未合并物化旁路（仅限 L2 独立任务目录）——
@@ -240,6 +258,40 @@ for home_dir in "${TARGET_HOMES[@]}"; do
   fi
 done
 
+DEFAULT_PLUGINS=(omnimux omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-analytics omnimux-publish)
+if [ ${#PLUGINS[@]} -eq 0 ]; then
+  PLUGINS=("${DEFAULT_PLUGINS[@]}")
+fi
+SYNC_PLUGINS=("${PLUGINS[@]}")
+BUILD_PLUGINS=("${SYNC_PLUGINS[@]}")
+
+# Production policy applies to the target, including named-plugin syncs. A
+# mixed dev+prod run keeps Alpha in Dev while sync-stable filters Prod.
+HAS_PRODUCTION_TARGET=0
+HAS_NON_PRODUCTION_TARGET=0
+for home_dir in "${TARGET_HOMES[@]}"; do
+  release_channel=$(resolve_omnimux_release_channel "$(resolve_omnimux_profile_dir "$home_dir")")
+  if [ "$release_channel" = "production" ]; then
+    HAS_PRODUCTION_TARGET=1
+  else
+    HAS_NON_PRODUCTION_TARGET=1
+  fi
+done
+if [ "$HAS_PRODUCTION_TARGET" -eq 1 ]; then
+  has_hub=0
+  for plugin_name in "${BUILD_PLUGINS[@]}"; do
+    [ "$plugin_name" = "omnimux" ] && has_hub=1
+  done
+  [ "$has_hub" -eq 1 ] || BUILD_PLUGINS+=(omnimux)
+fi
+if [ "$HAS_PRODUCTION_TARGET" -eq 1 ] && [ "$HAS_NON_PRODUCTION_TARGET" -eq 0 ]; then
+  RELEASE_PLUGINS=()
+  for plugin_name in "${BUILD_PLUGINS[@]}"; do
+    is_alpha_plugin "$plugin_name" || RELEASE_PLUGINS+=("$plugin_name")
+  done
+  BUILD_PLUGINS=("${RELEASE_PLUGINS[@]}")
+fi
+
 # ---------------------------------------------------------------------------
 # dsh-ui-kit 版本漂移防护 (Issue #200)
 #
@@ -363,7 +415,7 @@ EOF
 
 assert_dsh_ui_kit_scope_is_ready() {
   local name package_file requires_kit=0
-  for name in "${PLUGINS[@]}"; do
+  for name in "${BUILD_PLUGINS[@]}"; do
     package_file="$PLUGINS_ROOT/$name/package.json"
     if plugin_declares_dsh_ui_kit "$package_file"; then
       requires_kit=1
@@ -405,12 +457,6 @@ else
   ensure_dsh_ui_kit_fresh
 fi
 
-DEFAULT_PLUGINS=(omnimux omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-analytics omnimux-publish)
-
-if [ ${#PLUGINS[@]} -eq 0 ]; then
-  PLUGINS=("${DEFAULT_PLUGINS[@]}")
-fi
-
 build_one() {
   local name="$1"
   local dir="$PLUGINS_ROOT/$name"
@@ -449,10 +495,10 @@ build_one() {
   esac
 }
 
-echo "== sync-to-app: 目标 Profile = [${TARGET_HOMES[*]}] | 插件 = [${PLUGINS[*]}] =="
+echo "== sync-to-app: 目标 Profile = [${TARGET_HOMES[*]}] | 请求插件 = [${SYNC_PLUGINS[*]}] =="
 if [ "$SKIP_BUILD" -eq 0 ]; then
   echo "== 1/3 build =="
-  for name in "${PLUGINS[@]}"; do
+  for name in "${BUILD_PLUGINS[@]}"; do
     build_one "$name"
   done
 else
@@ -460,7 +506,12 @@ else
 fi
 
 echo "== 2/3 物化进 Profile 目录 =="
-OMNIMUX_SYNC_VIA=sync-to-app "$ROOT/scripts/sync-stable.sh" ${TARGET_FLAGS[@]+"${TARGET_FLAGS[@]}"} "${PLUGINS[@]}"
+SYNC_STABLE_ARGS=()
+if [ "${#TARGET_FLAGS[@]}" -gt 0 ]; then
+  SYNC_STABLE_ARGS+=("${TARGET_FLAGS[@]}")
+fi
+SYNC_STABLE_ARGS+=("${SYNC_PLUGINS[@]}")
+OMNIMUX_SYNC_VIA=sync-to-app "$ROOT/scripts/sync-stable.sh" "${SYNC_STABLE_ARGS[@]}"
 
 if [ "$EXPLICIT_PLUGIN_SCOPE" -eq 1 ]; then
   echo "== 3/3 跳过 Agent Presets（命名插件同步不修改预设或应用包）=="
@@ -473,6 +524,7 @@ cat <<EOF
 
 ✓ 已完成物化到目标 Profile（零副作用，未重启任何进程）。
   【同步目标】: ${TARGET_HOMES[*]}
+  【发布策略】: Dev 保留 Alpha；正式版自动剔除 Alpha (${ALPHA_PLUGINS_LABEL})
   【提示】默认仅同步开发版 (~/.omnimux-dev)。指定其他目标可用参数：
     - 同步正式版: ./scripts/sync-to-app.sh --prod
     - 同步底座版: ./scripts/sync-to-app.sh --dsh

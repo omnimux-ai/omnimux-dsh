@@ -20,6 +20,40 @@
  * there is no feedback loop. Product-stage overlays must never be observed.
  */
 
+import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
+
+const ALPHA_DESCRIPTION = 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。'
+const ALPHA_STYLES = `
+.omnimux-sidebar-alpha-badge {
+  flex: none; margin-left: auto; padding: 0 5px;
+  border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px; line-height: 16px; font-weight: 400;
+  white-space: nowrap;
+}
+[data-sidebar-collapsed] .omnimux-sidebar-alpha-badge { display: none; }
+`
+
+/**
+ * Annotate the existing entry without changing its activation or auth handlers.
+ * @param {string} id
+ * @param {HTMLElement} element
+ */
+function markAlphaEntry(id, element) {
+  const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
+  if (pluginLifecycle[pluginId]?.stage !== 'alpha') return
+  injectStyles(ALPHA_STYLES, 'omnimux-sidebar-alpha-styles')
+  element.dataset.releaseStage = 'alpha'
+  element.setAttribute('aria-description', ALPHA_DESCRIPTION)
+  element.title = ALPHA_DESCRIPTION
+  if (element.querySelector('.omnimux-sidebar-alpha-badge')) return
+  const badge = document.createElement('span')
+  badge.className = 'omnimux-sidebar-alpha-badge'
+  badge.textContent = 'Alpha'
+  badge.setAttribute('aria-label', 'Alpha · 内测')
+  element.append(badge)
+}
+
 export const SIDEBAR_GLOBAL_KEY = '__omnimuxSidebar'
 export const SIDEBAR_GLOBAL = () => (typeof window !== 'undefined' ? window[SIDEBAR_GLOBAL_KEY] : undefined)
 
@@ -472,6 +506,7 @@ function createApi() {
       seen.add(id)
       if (row.styles) injectStyles(row.styles, row.styleId)
       const element = row.create()
+      markAlphaEntry(id, element)
       // kind:'inline' → 并排「新建会话」；否则 → 下方 rank 行。
       if (row.kind === 'inline') {
         injectStyles(INLINE_STYLES, 'omnimux-sidebar-inline-styles')

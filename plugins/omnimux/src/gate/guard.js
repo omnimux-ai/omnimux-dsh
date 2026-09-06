@@ -1,4 +1,24 @@
 import { OmnimuxError } from '../media/errors.js'
+import lifecycle from '../plugin-lifecycle.json' with { type: 'json' }
+import release from '../release-channel.json' with { type: 'json' }
+
+const lifecycleEntries = Object.entries(lifecycle)
+if (lifecycleEntries.length === 0 || lifecycleEntries.some(([pluginId, entry]) => (
+  !pluginId || entry?.stage !== 'alpha' || !Array.isArray(entry.toolPrefixes) ||
+  entry.toolPrefixes.some(prefix => typeof prefix !== 'string' || prefix.length === 0)
+))) {
+  throw new Error('omnimux: invalid plugin lifecycle registry')
+}
+if (release?.channel !== 'development' && release?.channel !== 'production') {
+  throw new Error('omnimux: invalid packaged release channel')
+}
+
+const ALPHA_TOOL_PREFIXES = Object.freeze(lifecycleEntries.flatMap(([, entry]) => entry.toolPrefixes))
+
+/** @param {string} toolName */
+export function isAlphaTool(toolName) {
+  return ALPHA_TOOL_PREFIXES.some(prefix => toolName.startsWith(prefix))
+}
 
 /**
  * @param {import('./config.js').parseGateConfig extends (v: any) => infer R ? R : any} [gate]
@@ -34,6 +54,7 @@ export function isMediaEnabled(gate, kind) {
  */
 export function isToolEnabled(gate, toolName) {
   if (!isGateActive(gate)) return false
+  if (release.channel === 'production' && isAlphaTool(toolName)) return false
   if (gate?.tools && gate.tools[toolName] === false) return false
   if (toolName === 'omnimux_video_submit') return isMediaEnabled(gate, 'video')
   if (toolName === 'omnimux_image_submit') return isMediaEnabled(gate, 'image')

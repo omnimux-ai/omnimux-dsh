@@ -27,6 +27,24 @@ source "$ROOT/scripts/resolve-omnimux-profile.sh"
 
 TARGET_SELECTION=()
 PLUGINS=()
+ALPHA_PLUGINS=()
+if ! alpha_plugins_output="$(node "$ROOT/scripts/plugin-lifecycle.mjs" list-alpha-plugins)"; then
+  echo "✗ 无法读取 Alpha 插件生命周期注册表，拒绝物化。" >&2
+  exit 1
+fi
+[ -n "$alpha_plugins_output" ] || { echo "✗ Alpha 插件生命周期注册表为空，拒绝物化。" >&2; exit 1; }
+ALPHA_PLUGINS_LABEL="${alpha_plugins_output//$'\n'/ }"
+while IFS= read -r plugin_name; do
+  [ -n "$plugin_name" ] && ALPHA_PLUGINS+=("$plugin_name")
+done <<< "$alpha_plugins_output"
+
+is_alpha_plugin() {
+  local candidate="$1"
+  for alpha_plugin in "${ALPHA_PLUGINS[@]}"; do
+    [ "$candidate" = "$alpha_plugin" ] && return 0
+  done
+  return 1
+}
 
 if [ -n "${OMNIMUX_SYNC_TARGETS:-}" ]; then
   IFS=',' read -ra ENV_TARGETS <<< "$OMNIMUX_SYNC_TARGETS"
@@ -156,6 +174,28 @@ for PROFILE in "${PROFILES[@]}"; do
   MANAGED_PLUGINS=()
   MANAGES_KIT=0
   LEGACY_KIT_SELF_REFERENCE=0
+  RELEASE_CHANNEL=$(resolve_omnimux_release_channel "$PROFILE")
+  PROFILE_TARGET_PLUGINS=()
+  for name in "${TARGET_PLUGINS[@]}"; do
+    if [ "$RELEASE_CHANNEL" != "production" ] || ! is_alpha_plugin "$name"; then
+      PROFILE_TARGET_PLUGINS+=("$name")
+    fi
+  done
+  profile_has_hub() {
+    [ -f "$MANAGED_SOURCE_ROOT/omnimux/package.json" ] && return 0
+    [ -e "$PROFILE/node_modules/omnimux" ] && return 0
+    node -e "const fs=require('fs');try{const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.exit(p.dependencies?.omnimux||p.dsh?.profile?.bundles?.includes('omnimux')?0:1)}catch{process.exit(1)}" "$PROFILE/package.json"
+  }
+  if [ "$RELEASE_CHANNEL" = "production" ]; then
+    has_hub=0
+    for name in "${PROFILE_TARGET_PLUGINS[@]-}"; do
+      [ "$name" = "omnimux" ] && has_hub=1
+    done
+    if [ "$has_hub" -eq 0 ] && profile_has_hub; then
+      PROFILE_TARGET_PLUGINS+=(omnimux)
+    fi
+    echo "  · production channel: Alpha 插件将被剔除 (${ALPHA_PLUGINS_LABEL})"
+  fi
 
   contains_managed_plugin() {
     local candidate="$1"
@@ -172,7 +212,7 @@ for PROFILE in "${PROFILES[@]}"; do
 
   targets_plugin() {
     local candidate="$1"
-    for selected in "${TARGET_PLUGINS[@]}"; do
+    for selected in "${PROFILE_TARGET_PLUGINS[@]}"; do
       [ "$selected" = "$candidate" ] && return 0
     done
     return 1
@@ -188,6 +228,9 @@ for PROFILE in "${PROFILES[@]}"; do
 
   syncs_all_plugins=1
   for name in "${ALL_PLUGINS[@]}"; do
+    if [ "$RELEASE_CHANNEL" = "production" ] && is_alpha_plugin "$name"; then
+      continue
+    fi
     targets_plugin "$name" || syncs_all_plugins=0
   done
 
@@ -214,6 +257,9 @@ for PROFILE in "${PROFILES[@]}"; do
   # we can preserve. A sync can establish the new layout only when its caller
   # explicitly selected every still-legacy package from the current source.
   for name in "${ALL_PLUGINS[@]}"; do
+    if [ "$RELEASE_CHANNEL" = "production" ] && is_alpha_plugin "$name"; then
+      continue
+    fi
     dependency_spec=$(node -e "const fs=require('fs');const p=process.argv[1];const n=process.argv[2];try{const m=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(m.dependencies?.[n]||'')}catch{}" "$PROFILE/package.json" "$name")
     case "$dependency_spec" in
       "file:node_modules/$name"|"file:./node_modules/$name")
@@ -276,7 +322,7 @@ for PROFILE in "${PROFILES[@]}"; do
 
   # Validate every selected source and its stable-kit prerequisite before
   # materializing the first one, so a missing kit cannot leave a partial sync.
-  for name in "${TARGET_PLUGINS[@]}"; do
+  for name in "${PROFILE_TARGET_PLUGINS[@]}"; do
     src="$PLUGINS_ROOT/$name"
     if [ ! -f "$src/package.json" ]; then
       echo "✗ 源码缺失: $src" >&2
@@ -300,6 +346,15 @@ for PROFILE in "${PROFILES[@]}"; do
       --exclude '*.test.js' \
       --exclude '*.spec.js' \
       "$src/" "$dst/"
+    if [ "$name" = "omnimux" ]; then
+      mkdir -p "$dst/src"
+      node - "$dst/src/release-channel.json" "$RELEASE_CHANNEL" <<'EOF'
+const fs = require('fs')
+const [file, channel] = process.argv.slice(2)
+if (!['development', 'production'].includes(channel)) throw new Error(`invalid release channel: ${channel}`)
+fs.writeFileSync(file, JSON.stringify({ channel }, null, 2) + '\n', 'utf8')
+EOF
+    fi
     if [ "$needs_kit" = "1" ]; then
       node - "$dst/package.json" <<'EOF'
 const fs = require('fs')
@@ -312,7 +367,7 @@ EOF
     add_managed_plugin "$name"
   }
 
-  for name in "${TARGET_PLUGINS[@]}"; do
+  for name in "${PROFILE_TARGET_PLUGINS[@]}"; do
     src="$PLUGINS_ROOT/$name"
     materialize_plugin_source "$name" "$src"
     echo "✓ $name 已物化进 $MANAGED_SOURCE_ROOT"
@@ -324,10 +379,13 @@ EOF
   fi
 
   # 依赖声明统一回 profile 外的受管 file: 源；声明了 dsh.bundle 的插件幂等写入加载名单。
-  node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$syncs_all_plugins" "$MANAGES_KIT" "$managed_plugins_csv" <<'EOF'
+  alpha_plugins_csv=$(IFS=,; printf '%s' "${ALPHA_PLUGINS[*]}")
+  node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$syncs_all_plugins" "$MANAGES_KIT" "$managed_plugins_csv" "$RELEASE_CHANNEL" "$alpha_plugins_csv" <<'EOF'
 const fs = require('fs')
 const path = require('path')
-const [profile, managedRoot, pruneLegacy, managesKit, pluginsCsv] = process.argv.slice(2)
+const [profile, managedRoot, pruneLegacy, managesKit, pluginsCsv, releaseChannel, alphaPluginsCsv] = process.argv.slice(2)
+const isProduction = releaseChannel === 'production'
+const alphaPlugins = alphaPluginsCsv ? alphaPluginsCsv.split(',') : []
 const plugins = pluginsCsv ? pluginsCsv.split(',') : []
 const file = path.join(profile, 'package.json')
 if (!fs.existsSync(file)) {
@@ -370,6 +428,34 @@ for (const legacy of LEGACY_PRUNE_NAMES) {
     console.log(`  - 已清理历史残留包目录: ${legacy}`)
   }
   fs.rmSync(path.join(managedRoot, legacy), { recursive: true, force: true })
+}
+
+if (isProduction) {
+  for (const excluded of alphaPlugins) {
+    if (manifest.dependencies[excluded]) {
+      delete manifest.dependencies[excluded]
+      depChanged = true
+    }
+    let idx
+    while ((idx = bundles.indexOf(excluded)) >= 0) {
+      bundles.splice(idx, 1)
+      bundleChanged = true
+    }
+    const excludedDir = path.join(profile, 'node_modules', excluded)
+    if (fs.existsSync(excludedDir)) {
+      fs.rmSync(excludedDir, { recursive: true, force: true })
+      console.log(`  - [production] 已清理 Alpha 运行时包目录: ${excluded}`)
+    }
+    fs.rmSync(path.join(managedRoot, excluded), { recursive: true, force: true })
+    const virtualStore = path.join(profile, 'node_modules', '.pnpm')
+    if (fs.existsSync(virtualStore)) {
+      for (const entry of fs.readdirSync(virtualStore)) {
+        if (entry === excluded || entry.startsWith(`${excluded}@`)) {
+          fs.rmSync(path.join(virtualStore, entry), { recursive: true, force: true })
+        }
+      }
+    }
+  }
 }
 
 if (managesKit === '1') {
@@ -447,7 +533,7 @@ EOF
     done
     REFRESH_FILE_PACKAGES+=("$candidate")
   }
-  for name in "${TARGET_PLUGINS[@]}"; do
+  for name in "${PROFILE_TARGET_PLUGINS[@]}"; do
     dependency_spec=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(p.dependencies?.[process.argv[2]]||'')" "$PROFILE/package.json" "$name")
     if [ "$dependency_spec" = "file:.materialize-snapshots/plugins/$name" ]; then
       add_refresh_file_package "$name"
@@ -562,7 +648,7 @@ EOF
   # 写入后由 pnpm 构造 profile 下的 node_modules 符号拓扑。安装失败恢复被暂存的
   # 入口，避免留下缺包；成功后仍由下方的全内容 fingerprint 校验最终结果。
   echo "  → 刷新 profile 依赖 (corepack pnpm install)..."
-  if ! (cd "$PROFILE" && corepack pnpm install); then
+  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false corepack pnpm install); then
     restore_refresh_entries
     echo "✗ pnpm 刷新 profile 依赖失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1
@@ -573,13 +659,14 @@ EOF
     exit 1
   fi
   # 安装后同时核验 package 身份、声明入口和内容指纹；不能只相信 pnpm 退出码。
-  if ! node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$MANAGES_KIT" "$managed_plugins_csv" "$PLUGINS_ROOT" <<'EOF'
+  if ! node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$MANAGES_KIT" "$managed_plugins_csv" "$PLUGINS_ROOT" "$RELEASE_CHANNEL" "$alpha_plugins_csv" <<'EOF'
 const crypto = require('crypto')
 const { spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
-const [profile, managedRoot, managesKit, pluginsCsv, pluginsRoot] = process.argv.slice(2)
+const [profile, managedRoot, managesKit, pluginsCsv, pluginsRoot, releaseChannel, alphaPluginsCsv] = process.argv.slice(2)
 const plugins = pluginsCsv ? pluginsCsv.split(',') : []
+const alphaPlugins = alphaPluginsCsv ? alphaPluginsCsv.split(',') : []
 const manifest = JSON.parse(fs.readFileSync(path.join(profile, 'package.json'), 'utf8'))
 const fingerprint = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
 const packedFiles = root => {
@@ -626,6 +713,19 @@ const topLevelLinks = () => fs.readdirSync(profileModules).filter(name => fs.lst
 const isCurrentL2InProgressLink = (name, installedRoot) => {
   if (!isL2TaskProfile || !fs.lstatSync(installedRoot).isSymbolicLink() || topLevelLinks().length !== 1) return false
   return fs.realpathSync(installedRoot) === fs.realpathSync(path.join(pluginsRoot, name))
+}
+if (releaseChannel === 'production') {
+  const bundles = Array.isArray(manifest.dsh?.profile?.bundles) ? manifest.dsh.profile.bundles : []
+  const virtualStore = path.join(profileModules, '.pnpm')
+  const virtualEntries = fs.existsSync(virtualStore) ? fs.readdirSync(virtualStore) : []
+  for (const name of alphaPlugins) {
+    if (manifest.dependencies?.[name] || bundles.includes(name)) throw new Error(`production manifest retains Alpha plugin: ${name}`)
+    if (fs.existsSync(path.join(managedRoot, name))) throw new Error(`production snapshot retains Alpha plugin: ${name}`)
+    if (fs.existsSync(path.join(profileModules, name))) throw new Error(`production node_modules retains Alpha plugin: ${name}`)
+    if (virtualEntries.some(entry => entry === name || entry.startsWith(`${name}@`))) {
+      throw new Error(`production pnpm store retains Alpha plugin: ${name}`)
+    }
+  }
 }
 if (managesKit === '1') {
   const kitSource = path.join(managedRoot, 'dsh-ui-kit')

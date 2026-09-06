@@ -48,6 +48,10 @@ MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a s
 | `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（rank 3）。**Workbench**：`omnimux-accounts:library`，不得 claim；`access: cloud` |
 | `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（rank 8.2）。**现网隐藏**：`apply()` 不挂左侧行；Tab `omnimux-clip:studio` 仍注册，画布/Agent 可打开。`sidebar-entry.js` 保留以便恢复。不得 claim。见 [workbench-split.md](./workbench-split.md) |
 
+## Alpha 内测标记
+
+中枢协调器按 [Alpha release policy](alpha-release.md) 为已有 Alpha 行添加状态标记，不改变 rank、点击或登录处理。禁止域插件各自维护 Alpha 名单或重复添加标记。
+
 ## Offline vs Cloud Visibility
 
 Extra rows follow [docs/contracts/plugin-offline-cloud-matrix.md](./plugin-offline-cloud-matrix.md):
