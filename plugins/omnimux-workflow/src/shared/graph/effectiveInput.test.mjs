@@ -66,6 +66,9 @@ test('IN-23: same image may fill two frame roles, but cannot duplicate the same 
   const edge = { id: 'first', source: 'source', target: 'target', data: { role: 'first_frame', targetSlot: 'first_frame' } };
   assert.equal(validateCanvasConnectionStructure({ ...edge, data: { role: 'last_frame', targetSlot: 'last_frame' } }, nodes, [edge]).valid, true);
   assert.equal(validateCanvasConnectionStructure({ ...edge, sourceHandle: 'another-visual-handle' }, nodes, [edge]).reasonCode, 'duplicate_edge');
+  const automatic = { ...edge, data: { slotBinding: { slot: 'reference_images', role: 'reference', type: 'image' } } };
+  assert.equal(validateCanvasConnectionStructure({ source: edge.source, target: edge.target }, nodes, [automatic]).reasonCode, 'duplicate_edge');
+  assert.equal(validateCanvasConnectionStructure({ source: edge.source, target: edge.target, data: { role: 'reference' } }, nodes, [automatic]).reasonCode, 'duplicate_edge');
 });
 
 test('IN-10: upstream description satisfies both shared and video-specific prompt validation', async () => {

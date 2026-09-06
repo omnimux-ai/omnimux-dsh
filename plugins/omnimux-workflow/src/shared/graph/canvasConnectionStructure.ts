@@ -26,15 +26,23 @@ export function validateCanvasConnectionStructure(
   if (connection.source === connection.target) {
     return { valid: false, reasonCode: 'self_connection' };
   }
-  const bindingKey = (edge: ConnectionLike): string => {
+  const bindingOf = (edge: ConnectionLike) => {
     const data = edge.data ?? {};
-    const slot = readExplicitTargetSlot(data, edge.targetHandle);
     const assigned = data.slotBinding && typeof data.slotBinding === 'object' ? data.slotBinding as { role?: unknown } : {};
-    const role = typeof data.role === 'string' ? data.role.trim() : typeof assigned.role === 'string' ? assigned.role.trim() : '';
-    return JSON.stringify([slot ?? '', role]);
+    return {
+      slot: readExplicitTargetSlot(data, edge.targetHandle),
+      role: typeof data.role === 'string' ? data.role.trim() : typeof assigned.role === 'string' ? assigned.role.trim() : '',
+    };
   };
-  if (edges.some((edge) => edge.source === connection.source && edge.target === connection.target
-    && bindingKey(edge) === bindingKey(connection))) {
+  const requested = bindingOf(connection);
+  if (edges.some((edge) => {
+    if (edge.source !== connection.source || edge.target !== connection.target) return false;
+    // A plain drag repeats the existing reference; another role must be explicit.
+    if (!requested.slot && !requested.role) return true;
+    const existing = bindingOf(edge);
+    if (requested.slot) return existing.slot === requested.slot;
+    return existing.role === requested.role;
+  })) {
     return { valid: false, reasonCode: 'duplicate_edge' };
   }
 
