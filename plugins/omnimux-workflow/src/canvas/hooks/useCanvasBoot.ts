@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
+import { loadGenerationPreferences } from '../store/generationPreferencesStore';
 import { t } from '../i18n';
 import {
   createWorkspace,
@@ -121,6 +122,8 @@ export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
         // list()[0]（会打开别人的最新图，cleanup flush 再和自己 409）。
         if (!targetWorkspaceId) return;
 
+        await loadGenerationPreferences();
+        if (cancelled) return;
         const loaded = await getWorkspace(targetWorkspaceId);
         if (cancelled) return;
         if (loaded.ok && loaded.body.workspace) {

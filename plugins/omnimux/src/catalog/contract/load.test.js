@@ -34,7 +34,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.ok(index.get('whisper-1'));
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 52);
+  assert.equal(index.listedOperations.length, 54);
   for (const key of [
     'seedance-2-0#first_last_frame',
     'seedance-2-0-fast#video_multi_ref',

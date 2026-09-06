@@ -7,11 +7,15 @@
  * - assertLocalWrite loopback 写校验（hub apps/origin.js 同义）
  */
 import { PublishError } from './store.js'
-import { parseDraftPayload, validateContent, validateForSubmit } from './validate.js'
+import { parseDraftPayload, validateContent, validateForSubmit, validationError } from './validate.js'
+import { requirePublishingAccounts } from './accounts.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 
 const STATUS_BY_CODE = {
+  'account-provider-mismatch': 409,
+  'post-provider-mismatch': 409,
+  'account-unavailable': 409,
   'invalid-arguments': 400,
   'validation-failed': 400,
   'confirm-required': 400,
@@ -147,10 +151,12 @@ export function createPublishDispatcher(deps) {
   /**
    * @param {{ type: string, payload?: unknown, account_ids?: string[] }} input
    */
-  function createDraft(input) {
+  async function createDraft(input) {
     const parsed = parseDraftPayload(input.payload)
     const type = input.type ?? parsed.type
     if (!type) throw new PublishError('invalid-arguments', 'type is required (video | image)')
+    const accountIds = input.account_ids || parsed.account_ids || []
+    if (accountIds.length > 0) await requirePublishingAccounts(accounts, accountIds)
     const mediaIds = (parsed.media || []).map((ref) => resolveMediaRef(ref))
     const coverMediaId = parsed.cover ? resolveMediaRef(parsed.cover) : null
     const record = store.create({
@@ -161,7 +167,7 @@ export function createPublishDispatcher(deps) {
       media_ids: mediaIds,
       cover_media_id: coverMediaId,
       settings: parsed.settings,
-      account_ids: input.account_ids || parsed.account_ids || [],
+      account_ids: accountIds,
     })
     return draftResult(record.id)
   }
@@ -198,6 +204,7 @@ export function createPublishDispatcher(deps) {
    */
   async function updateDraft(input) {
     const parsed = parseDraftPayload(input.patch)
+    if (parsed.account_ids?.length > 0) await requirePublishingAccounts(accounts, parsed.account_ids)
     /** @type {Record<string, unknown>} */
     const patch = {}
     if ('type' in parsed && parsed.type !== undefined) patch.type = parsed.type
@@ -276,7 +283,7 @@ export function createPublishDispatcher(deps) {
       },
       { accounts: rows, platforms: config.platforms },
     )
-    if (!verdict.ok) throw new PublishError('validation-failed', { message: '账号挂载校验未通过', errors: verdict.errors })
+    if (!verdict.ok) throw validationError(verdict.errors)
     const view = store.assignAccounts(String(input.draft_id), input.account_ids)
     return { record: view }
   }

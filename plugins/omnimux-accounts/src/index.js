@@ -39,6 +39,16 @@ export function apply(ctx) {
   const homeDir = process.env.DSH_HOME || process.env.HOME || '.'
   const metaStore = createAccountMetaStore({ home: homeDir })
 
+  async function listZernioAccounts() {
+    const tool = ctx.tools.get?.('omnimux_accounts_list')
+    if (!tool || typeof tool.execute !== 'function') throw new Error('needs-hub: install the OmniMux execution hub')
+    const res = await tool.execute({ provider: 'zernio' })
+    if (res?.success === false) throw new Error(res.error?.message || res.message || 'account list failed')
+    const rows = Array.isArray(res?.accounts) ? res.accounts : res?.data?.accounts
+    if (!Array.isArray(rows)) throw new Error('invalid account list response')
+    return rows.filter((acc) => acc?.provider === 'zernio')
+  }
+
   ctx.tools.register({
     name: 'accounts_list',
     description: 'List connected social accounts with local group and agent_usable settings. Optional platform, group, or agent_usable filter.',
@@ -49,17 +59,7 @@ export function apply(ctx) {
     }),
     output: jsonOut,
     async execute(args) {
-      let rawAccounts = []
-      const tool = ctx.tools.get?.('omnimux_accounts_list')
-      if (tool && typeof tool.execute === 'function') {
-        try {
-          const res = await tool.execute({})
-          if (Array.isArray(res?.accounts)) rawAccounts = res.accounts
-          else if (Array.isArray(res?.data?.accounts)) rawAccounts = res.data.accounts
-        } catch {
-          // fall through
-        }
-      }
+      const rawAccounts = await listZernioAccounts()
       const meta = metaStore.read()
       let accounts = rawAccounts.map((acc) => {
         const id = String(acc.id || '')
@@ -67,6 +67,7 @@ export function apply(ctx) {
         return {
           id,
           platform: overlaid.platform,
+          provider: overlaid.provider,
           account_name: overlaid.account_name || overlaid.name || id,
           avatar_url: overlaid.avatar_url,
           group: overlaid.group || null,
@@ -102,6 +103,10 @@ export function apply(ctx) {
     output: jsonOut,
     async execute(args) {
       const id = String(args.id)
+      const rows = await listZernioAccounts()
+      if (!rows.some((acc) => String(acc.id) === id)) {
+        throw new Error('account-provider-mismatch: account does not belong to Zernio')
+      }
       const patch = {}
       if (args.group !== undefined) patch.group = args.group === '' ? null : String(args.group)
       if (args.agent_usable !== undefined) patch.agent_usable = Boolean(args.agent_usable)

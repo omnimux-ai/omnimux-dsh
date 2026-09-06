@@ -142,7 +142,7 @@ describe('apply() 工具面', () => {
     const hubHandlers = {
       omnimux_accounts_list: () => ({
         success: true,
-        data: { accounts: [{ id: 'acc-1', platform: 'xiaohongshu', username: 'red', status: 'active' }] },
+        data: { accounts: [{ id: 'acc-1', provider: 'tiktok_direct', platform: 'tiktok', username: 'red', status: 'active' }] },
       }),
       omnimux_publish_presign: (args) => ({ success: true, data: { upload_url: `https://up/${args.filename}`, public_url: `https://pub/${args.filename}` } }),
       omnimux_publish_create: (args) => ({ success: true, data: { id: `post-${args.account_ids[0]}` } }),

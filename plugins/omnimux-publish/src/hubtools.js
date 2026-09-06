@@ -1,3 +1,4 @@
+import { PUBLISH_PROVIDER } from './account-policy.js'
 /**
  * HubPublishChannel: 懒封装 `ctx.tools.get/execute` 程序化调用 hub
  * `omnimux_publish_*` / `omnimux_accounts_list` 官方工具。
@@ -60,6 +61,9 @@ export function createHubChannel(deps = {}) {
         ? `${String(result.error.message || '')} ${String(result.error.info?.code || '')}`
         : ''
       const errText = `${text}\n${structured}`
+      const sourceError = ['invalid-provider', 'account-provider-mismatch', 'post-provider-mismatch']
+        .find((code) => errText.includes(code))
+      if (sourceError) throw new PublishError(sourceError, text.trim() || sourceError)
       if (/needs-omnimux/i.test(errText)
         || /sign in to OmniMux/i.test(errText)
         || /OMNIMUX_ACCESS_TOKEN/.test(errText)
@@ -121,7 +125,7 @@ export function createHubChannel(deps = {}) {
    * @param {{ agent?: unknown, signal?: AbortSignal }} [opts]
    */
   async function createPost(args, opts = {}) {
-    const value = await exec('omnimux_publish_create', /** @type {Record<string, unknown>} */ (args), opts)
+    const value = await exec('omnimux_publish_create', { ...args, provider: PUBLISH_PROVIDER }, opts)
     return unwrap(value, 'omnimux_publish_create')
   }
 
@@ -130,7 +134,7 @@ export function createHubChannel(deps = {}) {
    * @param {{ agent?: unknown, signal?: AbortSignal }} [opts]
    */
   async function getPost(postId, opts = {}) {
-    const value = await exec('omnimux_publish_get', { id: String(postId) }, opts)
+    const value = await exec('omnimux_publish_get', { id: String(postId), provider: PUBLISH_PROVIDER }, opts)
     return unwrap(value, 'omnimux_publish_get')
   }
 
@@ -138,7 +142,8 @@ export function createHubChannel(deps = {}) {
    * @param {{ agent?: unknown, signal?: AbortSignal }} [opts]
    */
   async function listAccounts(opts = {}) {
-    return exec('omnimux_accounts_list', {}, opts)
+    const value = await exec('omnimux_accounts_list', { provider: PUBLISH_PROVIDER }, opts)
+    return unwrap(value, 'omnimux_accounts_list')
   }
 
   /**

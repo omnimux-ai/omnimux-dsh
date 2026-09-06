@@ -1,6 +1,7 @@
 import { isModelEnabled } from '../gate/guard.js'
 import { OmnimuxError } from '../media/errors.js'
 import { getHealthyContractIndex, projectChatRows } from '../catalog/project.js'
+import { normalizeTextReferences } from './references.js'
 
 /**
  * Chat directory — H2 facade. The hardcoded CHAT_MODELS rows were physically
@@ -29,7 +30,7 @@ export const TEXT_ROLES = Object.freeze(['flagship', 'classic'])
 
 export const DEFAULT_TEXT = Object.freeze({
   defaultProvider: 'omnimux',
-  defaultModel: 'gemini-3.7-flash',
+  defaultModel: 'gemini-3.8-flash',
   maxTokens: 4096,
   models: Object.freeze(CHAT_MODELS.map((row) => Object.freeze({
     id: row.id,
@@ -77,17 +78,18 @@ export function enabledTextModels(text, gate) {
  * Resolve which model a one-shot request runs on. An omitted `model` uses
  * `text.defaultModel` on text-only, image, and video requests; `OMNIMUX_TEXT_
  * DEFAULT_MODEL` overlays it. The chosen row must be enabled; image/video
- * requests must land on a row whose measured matrix includes that modality.
+ * requests must land on a row whose contract includes that modality.
  * `image` and `video` are mutually exclusive on one request.
- * @param {{ model?: string, image?: string, video?: string }} request
+ * @param {{ model?: string, image?: string, video?: string, audio?: string, audioTrack?: object, references?: import('./references.js').TextReference[] }} request
  * @param {ReturnType<typeof parseTextConfig>} text
  * @param {Record<string, string | undefined>} [env]
  * @param {object} [gate]
  */
 export function resolveTextRoute(request, text, env = process.env, gate) {
   const enabled = enabledTextModels(text, gate)
-  const hasImage = typeof request.image === 'string' && request.image.trim().length > 0
-  const hasVideo = typeof request.video === 'string' && request.video.trim().length > 0
+  const references = normalizeTextReferences(request)
+  const hasImage = references.some((asset) => asset.type === 'image')
+  const hasVideo = references.some((asset) => asset.type === 'video')
   if (hasImage && hasVideo) {
     throw new OmnimuxError('omnimux-invalid-request', 'pass image or video, not both')
   }
@@ -99,11 +101,10 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
   }
   const chat = CHAT_BY_ID.get(row.id)
   const input = chat?.input ?? ['text']
-  if (hasImage && !input.includes('image')) {
-    throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept image input`)
-  }
-  if (hasVideo && !input.includes('video')) {
-    throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept video input`)
+  for (const type of new Set(references.map((asset) => asset.type))) {
+    if (!input.includes(type)) {
+      throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept ${type} input`)
+    }
   }
   return {
     providerId: text.defaultProvider,

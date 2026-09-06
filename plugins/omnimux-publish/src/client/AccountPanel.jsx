@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Button } from 'dsh-ui-kit'
 import { listHubAccounts } from './api.js'
 import { groupAccountsByPlatform } from './capabilities.js'
 
@@ -45,6 +46,9 @@ export function AccountPanel({ t, selectedIds, onChange }) {
 
   const groups = groupAccountsByPlatform(rows)
   const selected = new Set(selectedIds)
+  const currentIds = new Set(rows.map((row) => String(row.id)))
+  const missingSelection = selectedIds.some((id) => !currentIds.has(id))
+  const validSelectedIds = selectedIds.filter((id) => currentIds.has(id))
 
   /**
    * @param {string} id
@@ -101,7 +105,15 @@ export function AccountPanel({ t, selectedIds, onChange }) {
     <aside className="omnimux-publish-accounts">
       <div className="omnimux-publish-accounts-title">{t('accounts.title')}</div>
       {error ? <div role="alert" className="omnimux-publish-accounts-alert">{error}</div> : null}
-      {groups.length === 0 ? (
+      {!error && missingSelection ? (
+        <div role="alert" className="omnimux-publish-accounts-alert">
+          <p>{t('accounts.sourceMismatch')}</p>
+          <Button variant="outline" size="sm" onClick={() => { onChange(validSelectedIds, rows.filter((row) => selected.has(String(row.id)))) }}>
+            {t('accounts.clearInvalid')}
+          </Button>
+        </div>
+      ) : null}
+      {!error && groups.length === 0 ? (
         <div className="omnimux-publish-accounts-stack">
           <div>{t('accounts.empty')}</div>
           <div className="omnimux-publish-accounts-muted">{t('accounts.empty.hint')}</div>
@@ -143,7 +155,7 @@ export function AccountPanel({ t, selectedIds, onChange }) {
         </div>
       )}
       <div className="omnimux-publish-accounts-foot">
-        {t('accounts.selected', { count: selected.size })}
+        {t('accounts.selected', { count: validSelectedIds.length })}
       </div>
     </aside>
   )

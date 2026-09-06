@@ -247,29 +247,6 @@ export function createAccountAvatarStore(deps) {
   }
 
   /**
-   * @param {Iterable<string>} liveIds
-   * @returns {string[]}
-   */
-  function prune(liveIds) {
-    const valid = new Set(liveIds)
-    const doc = readIndex()
-    /** @type {string[]} */
-    const removed = []
-    for (const id of Object.keys(doc)) {
-      if (!valid.has(id)) {
-        const file = typeof doc[id]?.file === 'string' ? doc[id].file : ''
-        if (file) {
-          try { unlinkSync(join(dir, file)) } catch { /* already gone */ }
-        }
-        delete doc[id]
-        removed.push(id)
-      }
-    }
-    if (removed.length > 0) writeIndex(doc)
-    return removed
-  }
-
-  /**
    * Fetch a remote raster and persist it. Failures are silent (no throw, no write).
    * @param {string} id
    * @param {string} url
@@ -336,7 +313,6 @@ export function createAccountAvatarStore(deps) {
     sourceUrl,
     localUrlFor,
     remove,
-    prune,
     putFromUrl,
     dir,
     path: indexPath,

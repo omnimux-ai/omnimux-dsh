@@ -85,7 +85,7 @@ describe('textComplete execute', () => {
           },
         },
       })
-      assert.equal(result.model, 'gemini-3.7-flash')
+      assert.equal(result.model, 'gemini-3.8-flash')
       assert.equal(saved.length, 1)
       assert.equal(saved[0].mediaType, 'image/png')
       assert.equal(seen[0].messages[0].content[1].type, 'image')
@@ -230,12 +230,12 @@ describe('textComplete execute', () => {
     })
     assert.deepEqual(result, {
       mode: 'live',
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.8-flash',
       text: 'BG=red; SQUARE=YES_WHITE_SQUARE',
     })
     assert.equal(seen.length, 1)
     assert.equal(seen[0].url, 'https://api.example/v1/chat/completions')
-    assert.equal(seen[0].body.model, 'gemini-3.7-flash')
+    assert.equal(seen[0].body.model, 'gemini-3.8-flash')
     const parts = seen[0].body.messages[0].content
     assert.equal(parts[0].type, 'text')
     assert.equal(parts[1].type, 'image_url')

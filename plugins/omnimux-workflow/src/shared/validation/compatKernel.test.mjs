@@ -429,8 +429,8 @@ test('auto-pick ②：当前 model 的另一个兼容 operation → same_model',
   assert.equal(pick.keptCurrentOperation, false);
 });
 
-test('auto-pick ③：同 family 优先于其他 family → same_family', () => {
-  // alias-img（alpha）在目录序最后，但与当前 img-prompt-only 同 family。
+test('auto-pick ③：按输入兼容性选择剩余目录候选', () => {
+  // 三张参考图排除两个小容量模型，仅 alias-img 能完整处理。
   const pick = planAutoAdaptation({
     catalog: createCompatTestCatalog(),
     fingerprint: fp([img(), img({ sourceNodeId: 'b' }), img({ sourceNodeId: 'c' })]),
@@ -438,8 +438,8 @@ test('auto-pick ③：同 family 优先于其他 family → same_family', () => 
     currentModelId: 'img-prompt-only',
     currentOperationId: 'text_to_image',
   });
-  // 3 张图：img-ref max2 不兼容，img-hd max1 不兼容，alias-img max4 兼容且同 family。
-  assert.equal(pick.rule, 'same_family');
+  // 3 张图：img-ref max2 不兼容，img-hd max1 不兼容，alias-img max4 兼容。
+  assert.equal(pick.rule, 'catalog_order');
   assert.equal(pick.modelId, 'alias-img');
   assert.equal(pick.operationId, 'image_to_image');
 });

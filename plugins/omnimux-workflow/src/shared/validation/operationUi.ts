@@ -1,17 +1,6 @@
-/**
- * Contract-driven operation / model picker helpers (Issue 467 / W2).
- *
- * Pure functions only. Reuses the W1 compatibility kernel as the sole
- * capability judge — never invents a third whitelist. Operation ids stay
- * open strings + Catalog DTO metadata (no MCC 17-union copy).
- *
- * Locked product rules:
- *   effectiveOps = 0 → no mode UI, block generation, typed error
- *   effectiveOps = 1 → no mode UI, implicit sole operation
- *   effectiveOps ≥ 2 → render only effective operations (Hide, Don't Grey)
- *   model picker → only compatible (acceptsCurrentInputs) models in DOM
- */
+/** Canvas picker presentation derived from the shared compatibility kernel. */
 
+import { resolveGenerationPrompt } from '../graph/generationPrompt.ts';
 import type {
   CapabilityCatalog,
   CapabilityModelItem,
@@ -67,7 +56,7 @@ export interface EffectiveOpsUiState {
   effectiveOps: OperationUiOption[];
   /** Count of effective operations. */
   count: number;
-  /** Mode UI visibility: 0/1 → hidden; ≥2 → selector. */
+  /** Text is automatic; other outputs show a selector for multiple operations. */
   visibility: ModeUiVisibility;
   /** Implicit sole operation when count === 1; undefined when 0 or ≥2. */
   implicitOperationId?: string;
@@ -79,6 +68,8 @@ export interface EffectiveOpsUiState {
   reasonCode?: EffectiveOpsReasonCode;
   /** Human-readable explanation (typed, stable). */
   reasonMessage?: string;
+  /** Structured details for localized UI copy. */
+  reason?: CompatRejection;
 }
 
 export interface FilteredModelOption {
@@ -104,6 +95,8 @@ export interface FilteredModelListResult {
   /** Primary rejection when zeroCandidates. */
   reasonCode?: CompatReasonCode;
   reasonMessage?: string;
+  /** Structured details for localized UI copy. */
+  reason?: CompatRejection;
 }
 
 // ============================================================================
@@ -111,8 +104,14 @@ export interface FilteredModelListResult {
 // ============================================================================
 
 export interface UpstreamMediaSnapshot {
+  label?: string;
+  availability?: 'ready' | 'waiting' | 'unavailable';
+  availabilityMessage?: string;
+  outputId?: string;
+  url?: string;
   nodeId: string;
   materialType: string;
+  textContent?: string;
   mimeType?: string | null;
   /** Prefer sizeBytes; fileSize is a legacy alias. Unknown → omit (never invent 0). */
   sizeBytes?: number | null;
@@ -167,6 +166,12 @@ export function assetFromUpstreamSnapshot(snap: UpstreamMediaSnapshot): Upstream
 
   return {
     sourceNodeId: snap.nodeId,
+    sourceLabel: snap.label,
+    availability: snap.availability,
+    availabilityMessage: snap.availabilityMessage,
+    outputId: snap.outputId,
+    url: snap.url,
+    textContent: snap.textContent,
     type: snap.materialType || 'text',
     ...(edgeId ? { edgeId } : {}),
     ...(mimeType ? { mimeType } : {}),
@@ -178,14 +183,17 @@ export function assetFromUpstreamSnapshot(snap: UpstreamMediaSnapshot): Upstream
 }
 
 export function buildUiUpstreamFingerprint(input: {
+  materialType?: string;
   prompt?: string;
+  content?: string;
   nodeFields?: Record<string, unknown>;
   upstreams?: UpstreamMediaSnapshot[];
 }): UpstreamFingerprint {
   const assets = (input.upstreams ?? []).map(assetFromUpstreamSnapshot);
   return buildUpstreamFingerprint({
-    prompt: typeof input.prompt === 'string' ? input.prompt : '',
+    prompt: resolveGenerationPrompt(input, (input.upstreams ?? []).filter((item) => item.materialType === 'text').map((item) => item.textContent)),
     nodeFields: input.nodeFields,
+    localText: resolveGenerationPrompt(input),
     assets,
   });
 }
@@ -251,7 +259,7 @@ export function readPreferredOperationId(
  *
  * 0 → hide mode UI + block generate
  * 1 → hide mode UI, implicit sole op
- * ≥2 → show selector with only effective ops
+ * Text operations adapt automatically; other outputs expose multiple effective ops.
  */
 export function buildEffectiveOpsUiState(args: {
   catalog: CapabilityCatalog | null | undefined;
@@ -269,7 +277,7 @@ export function buildEffectiveOpsUiState(args: {
       visibility: 'hidden',
       blockGenerate: true,
       reasonCode: 'catalog_unavailable',
-      reasonMessage: '模型目录不可用，无法计算有效 operation',
+      reasonMessage: '模型目录不可用，请稍后重试',
     };
   }
   if (!modelId) {
@@ -291,7 +299,7 @@ export function buildEffectiveOpsUiState(args: {
       visibility: 'hidden',
       blockGenerate: true,
       reasonCode: 'catalog_unavailable',
-      reasonMessage: '模型目录不可用，无法计算有效 operation',
+      reasonMessage: '模型目录不可用，请稍后重试',
     };
   }
 
@@ -318,10 +326,8 @@ export function buildEffectiveOpsUiState(args: {
 
   const effectiveOps = verdict.effectiveOperations.map((match) => matchToOption(match, model));
   const count = effectiveOps.length;
-  // A persisted choice is a contract, not a hint. Do not silently replace it
-  // with an implicit operation merely because the new model has one available.
-  // Model transitions may offer a persisted confirmation plan for the sole
-  // compatible replacement; until then the raw operation remains blocked.
+  // Explicit image/audio/video creative choices remain selected until a transition;
+  // text input adaptation is automatic below.
   const preferredIsEffective = !preferred || effectiveOps.some((op) => op.id === preferred);
 
   if (count === 0) {
@@ -334,8 +340,27 @@ export function buildEffectiveOpsUiState(args: {
       reasonCode: primary?.code ?? 'operation_incompatible',
       reasonMessage:
         primary?.message
-        ?? `当前模型 ${modelId} 没有可吸收当前输入的有效 operation`,
+        ?? `当前模型 ${modelId} 无法处理这些输入素材`,
+      ...(primary ? { reason: primary } : {}),
       ...(preferred ? { selectedOperationId: preferred } : {}),
+    };
+  }
+
+  if (args.outputType === 'text') {
+    const preferredOp = effectiveOps.find((op) => op.id === preferred);
+    const selected = (preferredOp?.ready ? preferredOp : undefined)
+      ?? effectiveOps.find((op) => op.ready)
+      ?? preferredOp
+      ?? effectiveOps[0]!;
+    const pending = selected.pending[0];
+    return {
+      effectiveOps,
+      count,
+      visibility: 'hidden',
+      implicitOperationId: selected.id,
+      selectedOperationId: selected.id,
+      blockGenerate: !selected.ready,
+      ...(pending ? { reasonCode: pending.code, reasonMessage: pending.message, reason: pending } : {}),
     };
   }
 
@@ -351,7 +376,7 @@ export function buildEffectiveOpsUiState(args: {
         selectedOperationId: preferred,
         blockGenerate: true,
         reasonCode: 'operation_incompatible',
-        reasonMessage: `当前模型不支持已保存的生成方式 ${preferred}`,
+        reasonMessage: '当前模型不支持已保存的生成方式，请重新选择',
       };
     }
     return {
@@ -361,7 +386,7 @@ export function buildEffectiveOpsUiState(args: {
       implicitOperationId: sole.id,
       selectedOperationId: sole.id,
       blockGenerate: !sole.ready,
-      ...(pending ? { reasonCode: pending.code, reasonMessage: pending.message } : {}),
+      ...(pending ? { reasonCode: pending.code, reasonMessage: pending.message, reason: pending } : {}),
     };
   }
 
@@ -375,7 +400,7 @@ export function buildEffectiveOpsUiState(args: {
       selectedOperationId: preferred,
       blockGenerate: true,
       reasonCode: 'operation_incompatible',
-      reasonMessage: `当前模型不支持已保存的生成方式 ${preferred}`,
+      reasonMessage: '当前模型不支持已保存的生成方式，请重新选择',
     };
   }
   // This stricter gate belongs to video only. Other modality callers retain
@@ -391,7 +416,9 @@ export function buildEffectiveOpsUiState(args: {
     };
   }
   const selected =
-    (preferred ? effectiveOps.find((op) => op.id === preferred) : undefined) ?? effectiveOps[0]!;
+    (preferred ? effectiveOps.find((op) => op.id === preferred) : undefined)
+    ?? effectiveOps.find((op) => op.ready)
+    ?? effectiveOps[0]!;
   const pending = selected.pending[0];
   return {
     effectiveOps,
@@ -399,7 +426,7 @@ export function buildEffectiveOpsUiState(args: {
     visibility: 'selector',
     selectedOperationId: selected.id,
     blockGenerate: !selected.ready,
-    ...(pending ? { reasonCode: pending.code, reasonMessage: pending.message } : {}),
+    ...(pending ? { reasonCode: pending.code, reasonMessage: pending.message, reason: pending } : {}),
   };
 }
 
@@ -448,8 +475,7 @@ function findAuthoritativeItem(
  * Only models with `acceptsCurrentInputs === true` are returned — incompatible
  * / unlisted / not-in-catalog models NEVER enter the DOM (no disabled greys).
  *
- * Sole truth = W1 Catalog + compatibility kernel. No product allowlist /
- * second capability filter may shrink the compatible set (Issue #467).
+ * The kernel applies the canvas model policy and authoritative capability contracts.
  *
  * Whisper / speech_to_text models only appear when their operation is listed
  * (kernel already enforces listed-only); if the catalog has zero listed ASR
@@ -510,9 +536,11 @@ export function buildFilteredModelOptions(args: {
     // Prefer a specific rejection from the evaluation; fall back to generic.
     let reasonCode: CompatReasonCode = 'no_compatible_model';
     let reasonMessage = '当前输入没有可兼容的已上架模型';
+    let reason: CompatRejection | undefined;
     for (const verdict of evaluation.models) {
       const primary = verdict.rejections[0];
       if (primary) {
+        reason = primary;
         reasonCode = primary.code;
         reasonMessage = primary.message;
         break;
@@ -524,6 +552,7 @@ export function buildFilteredModelOptions(args: {
       zeroCandidates: true,
       reasonCode,
       reasonMessage,
+      ...(reason ? { reason } : {}),
     };
   }
 

@@ -7,7 +7,8 @@
  */
 
 import { join } from 'node:path';
-import { localFilePathFromUrl } from '../../shared/localMedia.ts';
+import { resolveExecutionMediaSource, type ResolveExecutionProjectFile } from './executionMediaSource.ts';
+import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
 import type { GenerationGateway, MediaInputRole, ReferenceAssetPayload } from '../seam/gateway';
 import type {
   ExecutionContext,
@@ -55,33 +56,8 @@ function extFor(capability: 'text' | 'image' | 'video' | 'audio'): string {
   return 'txt';
 }
 
-function resolveMediaSourcePath(
-  asset: { url?: string; path?: string; relativePath?: string } | undefined,
-  mediaDir: string,
-): string | undefined {
-  if (!asset) return undefined;
-  if (typeof asset.path === 'string' && asset.path.trim().length > 0) {
-    return asset.path.trim();
-  }
-  const url = typeof asset.url === 'string' ? asset.url.trim() : '';
-  if (!url) return undefined;
-  if (url.startsWith('data:') || /^https?:\/\//i.test(url)) {
-    return url;
-  }
-  const localPath = localFilePathFromUrl(url);
-  if (localPath) {
-    return localPath;
-  }
-  const marker = '/media/';
-  const index = url.indexOf(marker);
-  if (index !== -1 && url.startsWith('/')) {
-    return join(mediaDir, url.slice(index + marker.length));
-  }
-  return url;
-}
-
 interface UpstreamMultiModalData {
-  text?: string;
+  texts: string[];
   references: ReferenceAssetPayload[];
   audioTrack?: ReferenceAssetPayload;
 }
@@ -106,8 +82,10 @@ function normalizeRole(value: unknown): MediaInputRole {
 }
 
 /** Upstream output: collects text, all media references and audio tracks without short-circuiting. */
-function collectUpstreamMultiModal(ctx: ExecutionContext): UpstreamMultiModalData {
-  let text: string | undefined;
+function collectUpstreamMultiModal(ctx: ExecutionContext, resolveProjectFile?: ResolveExecutionProjectFile): UpstreamMultiModalData {
+  const texts: string[] = [];
+  const seenTexts = new Set<string>();
+  const seenMedia = new Set<string>();
   const references: ReferenceAssetPayload[] = [];
   let audioTrack: ReferenceAssetPayload | undefined;
 
@@ -117,16 +95,20 @@ function collectUpstreamMultiModal(ctx: ExecutionContext): UpstreamMultiModalDat
 
   for (const binding of ordered) {
     const output = binding.output;
-    if (!text && output.text && output.text.trim()) {
-      text = output.text.trim();
+    if (output.text?.trim() && !output.mediaAssets?.length && !seenTexts.has(binding.sourceNodeId)) {
+      seenTexts.add(binding.sourceNodeId);
+      texts.push(output.text.trim());
     }
     if (Array.isArray(output.mediaAssets) && output.mediaAssets.length > 0) {
       for (const asset of output.mediaAssets) {
         if (!asset || !asset.type) continue;
-        const pathOrUrl = resolveMediaSourcePath(asset, ctx.mediaDir) || asset.url;
+        const pathOrUrl = resolveExecutionMediaSource(asset, { workspaceId: ctx.workspaceId, mediaDir: ctx.mediaDir, resolveProjectFile });
         if (!pathOrUrl) continue;
 
         const role = normalizeRole(binding.role);
+        const key = JSON.stringify([binding.sourceNodeId, pathOrUrl, role, binding.targetSlot ?? '']);
+        if (seenMedia.has(key)) continue;
+        seenMedia.add(key);
         const payload: ReferenceAssetPayload = {
           role,
           type: asset.type,
@@ -144,11 +126,12 @@ function collectUpstreamMultiModal(ctx: ExecutionContext): UpstreamMultiModalDat
       }
     }
   }
-  return { text, references, audioTrack };
+  return { texts, references, audioTrack };
 }
 
 export function createMaterialGatewayExecutor(opts: {
   gateway: GenerationGateway;
+  resolveProjectFile?: ResolveExecutionProjectFile;
 }): NodeExecutor {
   const { gateway } = opts;
 
@@ -157,15 +140,14 @@ export function createMaterialGatewayExecutor(opts: {
     async execute(node, ctx): Promise<NodeOutput> {
       const data = node.data ?? {};
       const params = data.params as Record<string, unknown> | undefined;
-      const upstream = collectUpstreamMultiModal(ctx);
+      const upstream = collectUpstreamMultiModal(ctx, opts.resolveProjectFile);
 
       // Generative: gateway submit -> await -> output
       const capability = readMaterialType(data);
-      const prompt =
-        readString(data, 'prompt')
-        ?? readString(data, 'content')
-        ?? upstream.text
-        ?? '';
+      if (capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
+        throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
+      }
+      const prompt = resolveGenerationPrompt(data, upstream.texts);
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
       const references = upstream.references;

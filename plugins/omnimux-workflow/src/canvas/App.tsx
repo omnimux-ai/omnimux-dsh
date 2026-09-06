@@ -49,7 +49,8 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
   const workspace = boot.phase === 'ready' ? boot.workspace : null;
 
   const handleSaved = useCallback((snapshot: CanvasWorkspaceSnapshot) => {
-    setBoot((prev) => (prev.phase === 'ready' ? { phase: 'ready', workspace: snapshot } : prev));
+    setBoot((prev) => (prev.phase === 'ready' && prev.workspace.id === snapshot.id
+      ? { phase: 'ready', workspace: snapshot } : prev));
   }, [setBoot]);
 
   // hydrate 完成、boot.phase === 'ready' 之前禁止订阅 / flush，避免空图 autosave
@@ -69,7 +70,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
   const execution = useExecutionController(workspace ? workspace.id : null, {
     onBeforeStart: async () => {
       await tablePersistence.saveNow();
-      await persistence.saveNow();
+      return persistence.saveNow();
     },
   });
 

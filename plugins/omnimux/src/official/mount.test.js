@@ -38,6 +38,19 @@ function registerCapture(gate) {
 }
 
 describe('official mount', () => {
+  it('registered account and publishing tools reject missing source before HTTP', async () => {
+    const capture = registerCapture()
+    let requests = 0
+    capture.deps.fetcher = async () => { requests++; throw new Error('must not access upstream') }
+    mountOfficial(capture.ctx, capture.deps)
+    for (const name of ['omnimux_accounts_list', 'omnimux_accounts_connect', 'omnimux_accounts_disconnect', 'omnimux_publish_create', 'omnimux_publish_get']) {
+      const tool = capture.registeredTools[name]
+      assert.deepEqual(tool.parameters.properties.provider.enum, ['tiktok_direct', 'zernio'])
+      assert.equal(tool.parameters.properties.provider.required, true)
+      await assert.rejects(tool.execute({ id: '1', platform: 'tiktok' }), (error) => error.code === 'invalid-provider')
+    }
+    assert.equal(requests, 0)
+  })
   it('registers official tools by default', () => {
     const capture = registerCapture()
     mountOfficial(capture.ctx, capture.deps)

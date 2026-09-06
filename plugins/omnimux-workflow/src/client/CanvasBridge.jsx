@@ -91,6 +91,8 @@ export function CanvasBridge({ onClose, t, locale, workspaceId }) {
   useEffect(() => { injectWorkflowStyles() }, [])
   const containerRef = useRef(null)
   const mountedRef = useRef(false)
+  const lifetimeRef = useRef(null)
+  const mountedApiRef = useRef(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   // 最新 props 快照：load 完成挂载与 locale/onClose/workspaceId live 切换共用（island
   // 边界纯数据 + 回调，一律走 mountCanvas/updateCanvas，禁止因回调换引用卸岛）。
@@ -100,10 +102,14 @@ export function CanvasBridge({ onClose, t, locale, workspaceId }) {
   // mount 只跑一次。onClose / locale 身份变化不得重跑 load，否则宿主每次
   // 重渲（点选节点、侧栏同步）都会 unmount→mount，岛闪白、选中丢、拖不动。
   const load = useCallback(async () => {
+    const lifetime = lifetimeRef.current
+    if (!lifetime) return
     setStatus('loading')
     try {
       const hash = (await fetchCanvasHash()) ?? String(Date.now())
+      if (lifetimeRef.current !== lifetime) return
       await ensureCanvasScript(hash)
+      if (lifetimeRef.current !== lifetime) return
       const api = window[CANVAS_GLOBAL]
       if (!api || typeof api.mountCanvas !== 'function') {
         throw new Error('canvas island global missing')
@@ -111,30 +117,34 @@ export function CanvasBridge({ onClose, t, locale, workspaceId }) {
       const el = containerRef.current
       if (el && !mountedRef.current) {
         api.mountCanvas(el, propsRef.current)
+        mountedApiRef.current = api
         mountedRef.current = true
         setStatus('ready')
       }
     } catch {
-      setStatus('error')
+      if (lifetimeRef.current === lifetime) setStatus('error')
     }
   }, [])
 
   useEffect(() => {
+    const el = containerRef.current
+    lifetimeRef.current = {}
     void load()
     return () => {
-      const api = window[CANVAS_GLOBAL]
-      const el = containerRef.current
+      lifetimeRef.current = null
+      const api = mountedApiRef.current
       if (api && typeof api.unmountCanvas === 'function' && el && mountedRef.current) {
         api.unmountCanvas(el)
       }
       mountedRef.current = false
+      mountedApiRef.current = null
     }
   }, [load])
 
   // W4 T4.1：宿主切语言 / 关闭回调换人 / 切换会话与画布 → island updateCanvas 同 root 重 render
   // （不可 unmount/remount，会丢画布状态）。
   useEffect(() => {
-    const api = window[CANVAS_GLOBAL]
+    const api = mountedApiRef.current
     const el = containerRef.current
     if (mountedRef.current && el && api && typeof api.updateCanvas === 'function') {
       api.updateCanvas(el, propsRef.current)

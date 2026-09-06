@@ -1,5 +1,6 @@
 import { deleteDraft, errorText, retryTask } from './api.js'
 import { displayStatus } from './status-display.js'
+import { ACCOUNT_SOURCE_MESSAGE, isRetryablePublishingTask } from '../account-policy.js'
 
 /** tab → Host status_filter */
 export const TAB_FILTER = {
@@ -109,21 +110,23 @@ export function exportCsv(records, showToast) {
 }
 
 export async function executeSingleRetry(record, showToast, onSuccess) {
-  if (!record || !Array.isArray(record.subtasks)) return
-  const failedTasks = record.subtasks.filter((st) => st.status === 'failed')
-  for (const _st of failedTasks) {
-    await retryTask(record.id)
+  try {
+    const count = await retryRecordSubtasks(record)
+    if (count === 0) { showToast(ACCOUNT_SOURCE_MESSAGE); return }
+    showToast('已下发重试')
+    onSuccess?.()
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : String(error))
   }
-  showToast('已下发重试')
-  onSuccess?.()
 }
 
 async function retryRecordSubtasks(rec) {
   if (!rec || !Array.isArray(rec.subtasks)) return 0
   let count = 0
-  const failedTasks = rec.subtasks.filter((st) => st.status === 'failed')
-  for (const _st of failedTasks) {
-    await retryTask(rec.id)
+  const failedTasks = rec.subtasks.filter(isRetryablePublishingTask)
+  for (const task of failedTasks) {
+    const result = await retryTask(task.id)
+    if (!result.ok) throw new Error(errorText(result.body, result.status))
     count++
   }
   return count
@@ -131,12 +134,17 @@ async function retryRecordSubtasks(rec) {
 
 export async function executeBatchRetry(records, selectedIds, showToast, onSuccess) {
   let retryCount = 0
-  for (const id of selectedIds) {
-    const rec = records.find((r) => String(r.id) === id)
-    retryCount += await retryRecordSubtasks(rec)
+  try {
+    for (const id of selectedIds) {
+      const rec = records.find((r) => String(r.id) === id)
+      retryCount += await retryRecordSubtasks(rec)
+    }
+    if (retryCount === 0) { showToast(ACCOUNT_SOURCE_MESSAGE); return }
+    showToast(`已重试 ${retryCount} 个失败子任务`)
+    onSuccess?.()
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : String(error))
   }
-  showToast(`已重试 ${retryCount} 个失败子任务`)
-  onSuccess?.()
 }
 
 export async function executeBatchDeleteDrafts(records, selectedIds, showToast, onSuccess) {

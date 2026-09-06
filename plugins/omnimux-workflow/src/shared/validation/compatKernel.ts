@@ -50,7 +50,10 @@ export type CompatReasonCode =
   | 'min_unsatisfied'
   | 'prompt_required'
   | 'metadata_required'
-  | 'execution_unavailable';
+  | 'execution_unavailable'
+  | 'input_waiting'
+  | 'input_unavailable'
+  | 'text_role_required';
 
 export interface CompatRejection {
   code: CompatReasonCode;
@@ -142,6 +145,12 @@ const BYTES_PER_MB = 1024 * 1024;
 // ============================================================================
 
 export interface UpstreamAssetFingerprint {
+  availability?: 'ready' | 'waiting' | 'unavailable';
+  availabilityMessage?: string;
+  sourceLabel?: string;
+  outputId?: string;
+  url?: string;
+  textContent?: string;
   /** Edge identity (stable per graph edge). */
   edgeId?: string;
   sourceNodeId: string;
@@ -160,6 +169,7 @@ export interface UpstreamFingerprint {
   prompt: string;
   /** Values supplied on the node itself (for `source: node_field` contract slots). */
   nodeFields: Record<string, unknown>;
+  localText?: string;
   /** All upstream assets in deterministic (caller-supplied) order. */
   assets: UpstreamAssetFingerprint[];
   /** Media assets only (image/video/audio) — the hard-gate population. */
@@ -183,6 +193,7 @@ export function buildUpstreamFingerprint(input: {
   prompt?: string;
   nodeFields?: Record<string, unknown>;
   assets?: UpstreamAssetFingerprint[];
+  localText?: string;
 }): UpstreamFingerprint {
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
   const nodeFields = Object.fromEntries(
@@ -190,8 +201,9 @@ export function buildUpstreamFingerprint(input: {
   );
   const assets = (input.assets ?? []).map((asset) => ({ ...asset }));
   const mediaAssets = assets.filter((asset) => isMediaInputType(asset.type));
-  const signature = canonicalJson({ prompt, nodeFields, assets });
-  return { prompt, nodeFields, assets, mediaAssets, signature };
+  const localText = input.localText;
+  const signature = canonicalJson({ prompt, nodeFields, assets, localText });
+  return { prompt, nodeFields, assets, mediaAssets, signature, localText };
 }
 
 // ============================================================================
@@ -699,6 +711,17 @@ export function matchOperationInputs(
   // readyToSubmit: every slot min satisfied + required prompt present.
   const pending: CompatRejection[] = [];
   if (accepts) {
+    if (op.output.type === 'audio' && fingerprint.localText?.trim()
+      && fingerprint.assets.some((asset) => asset.type === 'text' && asset.textContent?.trim())) {
+      pending.push(rejection('text_role_required', '当前音频任务不能分别表达上游正文和本地要求；请将正文保留在一个来源，并用已支持的音色、语速等参数调整表达', { operationId: op.id }));
+    }
+    for (const asset of fingerprint.assets) {
+      if (!asset.availability || asset.availability === 'ready') continue;
+      pending.push(rejection(asset.availability === 'waiting' ? 'input_waiting' : 'input_unavailable',
+        asset.availabilityMessage ?? `来源 ${asset.sourceNodeId} 尚未就绪，请补齐内容或移除引用`, {
+          operationId: op.id, meta: { sourceNodeId: asset.sourceNodeId, sourceLabel: asset.sourceLabel ?? asset.sourceNodeId, edgeId: asset.edgeId },
+        }));
+    }
     for (const state of assignments.values()) {
       if (state.assets.length < state.slot.min) {
         pending.push(rejection('min_unsatisfied', `槽位 ${state.slot.slot} 需要至少 ${state.slot.min} 个输入（当前 ${state.assets.length}）`, {
@@ -724,7 +747,7 @@ export function matchOperationInputs(
       (slot) => (slot.role === 'prompt' || slot.slot === 'prompt') && slot.min >= 1,
     );
     if (promptRequired && !fingerprint.prompt.trim()) {
-      pending.push(rejection('prompt_required', '该 operation 需要非空 prompt', { operationId: op.id }));
+      pending.push(rejection('prompt_required', '请提供正文或补充要求，也可连接已有文本', { operationId: op.id }));
     }
     for (const slot of op.inputs) {
       if (slot.source !== 'node_field' || slot.min < 1 || slot.role === 'prompt' || slot.slot === 'prompt') continue;
@@ -923,11 +946,11 @@ export interface AutoAdaptationPick {
   keptCurrentModel: boolean;
   keptCurrentOperation: boolean;
   /** Which rule produced the pick (telemetry / tests). */
-  rule: 'keep_current' | 'same_model' | 'same_family' | 'operation_default' | 'catalog_order';
+  rule: 'keep_current' | 'same_model' | 'user_preference' | 'type_default' | 'operation_default' | 'catalog_order';
 }
 
 function firstEffective(verdict: ModelCompatVerdict): OperationMatch | undefined {
-  return verdict.effectiveOperations[0];
+  return verdict.effectiveOperations.find((op) => op.ready) ?? verdict.effectiveOperations[0];
 }
 
 function effectiveOp(verdict: ModelCompatVerdict, operationId: string | undefined): OperationMatch | undefined {
@@ -954,14 +977,8 @@ function pickFromVerdict(
   };
 }
 
-/**
- * Locked ordering (design Q1/Q2, PRD §6.4):
- *   1. keep current model + current operation (when still compatible)
- *   2. same model, another listed+compatible operation
- *   3. same family, catalog order
- *   4. defaultsByOperation[currentOperation] when compatible
- *   5. first compatible model in catalog order
- * Returns null when zero candidates exist (fail closed).
+/** Keep a compatible current model; otherwise prefer the user's new-node choice,
+ * the node-type default, then the curated catalog order. Never rewrites preferences.
  */
 export function planAutoAdaptation(args: {
   catalog: CapabilityCatalog | null | undefined;
@@ -969,66 +986,63 @@ export function planAutoAdaptation(args: {
   outputType?: string;
   currentModelId?: string;
   currentOperationId?: string;
+  /** Only supplied for a new node without an explicit model. */
+  preferredModelId?: string;
 }): AutoAdaptationPick | null {
   const view = buildContractView(args.catalog);
   if (!view.available) return null;
-
   const outputType = args.outputType;
-  const currentOperationId =
-    typeof args.currentOperationId === 'string' && args.currentOperationId.trim()
-      ? args.currentOperationId.trim()
-      : undefined;
-
-  const evaluate = (model: ContractModelView) =>
-    evaluateModelCompat(model, args.fingerprint, {
-      ...(currentOperationId ? { operationId: currentOperationId } : {}),
-      ...(outputType ? { outputType } : {}),
-    });
-
-  // 1+2. Current model first: keep operation, else same-model operation.
+  const currentOperationId = args.currentOperationId?.trim() || undefined;
+  // Editing/extension is user intent, not an interchangeable input format.
+  const preserveOperation = outputType === 'video'
+    && (currentOperationId === 'video_edit' || currentOperationId === 'video_extend');
+  const pick = (verdict: ModelCompatVerdict, rule: AutoAdaptationPick['rule'], kept: boolean) => {
+    const preferred = effectiveOp(verdict, currentOperationId);
+    if (preserveOperation && !preferred) return null;
+    const operation = outputType === 'text' && !preferred?.ready
+      ? undefined
+      : currentOperationId;
+    return pickFromVerdict(verdict, operation, rule, kept);
+  };
   const current = resolveModelView(view, args.currentModelId);
   if (current) {
-    const verdict = evaluate(current);
+    const verdict = evaluateModelCompat(current, args.fingerprint, { outputType });
     if (verdict.acceptsCurrentInputs) {
-      if (effectiveOp(verdict, currentOperationId)) {
-        return pickFromVerdict(verdict, currentOperationId, 'keep_current', true);
+      const result = pick(verdict, 'keep_current', true);
+      if (result) {
+        if (!result.keptCurrentOperation) result.rule = 'same_model';
+        return result;
       }
-      const pick = pickFromVerdict(verdict, undefined, 'same_model', true);
-      if (pick) return pick;
     }
   }
-
-  const evaluation = evaluateCatalogCompat(args.catalog, args.fingerprint, {
-    ...(outputType ? { outputType } : {}),
-  });
+  const evaluation = evaluateCatalogCompat(args.catalog, args.fingerprint, { outputType });
   if (evaluation.zeroCandidates) return null;
-
-  // 3. Same family (catalog order).
-  if (current?.family) {
-    const sameFamily = evaluation.compatible.find(
-      (verdict) => verdict.family === current.family && verdict.modelId !== current.id,
-    );
-    if (sameFamily) {
-      const pick = pickFromVerdict(sameFamily, currentOperationId, 'same_family', false);
-      if (pick) return pick;
+  const kind = outputType as keyof NonNullable<CapabilityCatalog['defaults']>;
+  const defaults = args.catalog?.generationPolicy?.[kind]?.defaultModelId
+    ?? args.catalog?.defaults?.[kind];
+  const preferredIds: Array<[string | undefined, AutoAdaptationPick['rule']]> = [
+    [!args.currentModelId ? args.preferredModelId : undefined, 'user_preference'],
+    [defaults, 'type_default'],
+    [!args.catalog?.generationPolicy && currentOperationId ? view.defaultsByOperation[currentOperationId] : undefined, 'operation_default'],
+  ];
+  for (const [id, rule] of preferredIds) {
+    if (!id) continue;
+    const resolved = resolveModelView(view, id);
+    const verdict = evaluation.compatible.find((candidate) => candidate.modelId === resolved?.id);
+    if (verdict) {
+      const result = pick(verdict, rule, false);
+      if (result) return result;
     }
   }
-
-  // 4. byOperation default for the current (canonical) operation.
-  if (currentOperationId) {
-    const defaultModelId = view.defaultsByOperation[currentOperationId];
-    if (defaultModelId) {
-      const preferred = evaluation.compatible.find((verdict) => verdict.modelId === defaultModelId);
-      if (preferred) {
-        const pick = pickFromVerdict(preferred, currentOperationId, 'operation_default', false);
-        if (pick) return pick;
-      }
-    }
+  const order = args.catalog?.generationPolicy?.[kind]?.allowedModelIds;
+  const candidates = order
+    ? order.flatMap((id) => evaluation.compatible.filter((candidate) => candidate.modelId === id))
+    : evaluation.compatible;
+  for (const verdict of candidates) {
+    const result = pick(verdict, 'catalog_order', false);
+    if (result) return result;
   }
-
-  // 5. First compatible in catalog order (non-empty: zeroCandidates returned above).
-  const first = evaluation.compatible[0];
-  return first ? pickFromVerdict(first, currentOperationId, 'catalog_order', false) : null;
+  return null;
 }
 
 // ============================================================================

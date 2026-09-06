@@ -1,3 +1,4 @@
+import { isPublishingAccount } from '../account-policy.js'
 /**
  * capabilities.js: 矩阵驱动的表单裁剪判定（纯逻辑，浏览器与测试环境共享）。
  *
@@ -102,6 +103,7 @@ export function formCapabilities(input) {
  * @returns {{ ok: boolean, reason: 'expired' | 'error' | 'agentOff' | '' }}
  */
 export function accountUsable(row) {
+  if (!isPublishingAccount(row)) return { ok: false, reason: 'error' }
   const status = String(row.status || '').toLowerCase()
   if (status === 'expired') return { ok: false, reason: 'expired' }
   if (status && status !== 'active' && status !== 'expiring') return { ok: false, reason: 'error' }
@@ -118,6 +120,7 @@ export function groupAccountsByPlatform(rows) {
   /** @type {Map<string, Array<Record<string, unknown>>>} */
   const byPlatform = new Map()
   for (const row of Array.isArray(rows) ? rows : []) {
+    if (!isPublishingAccount(row)) continue
     const platform = String(row.platform || '').toLowerCase() || 'other'
     if (!byPlatform.has(platform)) byPlatform.set(platform, [])
     byPlatform.get(platform).push(row)

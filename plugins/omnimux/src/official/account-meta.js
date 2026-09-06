@@ -119,26 +119,5 @@ export function createAccountMetaStore(deps) {
     writeAll(doc)
   }
 
-  /**
-   * Drops overlay rows whose id is no longer present on the site (lazy
-   * cleanup on GET). Returns the removed ids.
-   * @param {Iterable<string>} validIds
-   * @returns {string[]}
-   */
-  function prune(validIds) {
-    const valid = new Set(validIds)
-    const doc = readAll()
-    /** @type {string[]} */
-    const removed = []
-    for (const id of Object.keys(doc)) {
-      if (!valid.has(id)) {
-        delete doc[id]
-        removed.push(id)
-      }
-    }
-    if (removed.length > 0) writeAll(doc)
-    return removed
-  }
-
-  return { read, update, remove, prune, path }
+  return { read, update, remove, path }
 }

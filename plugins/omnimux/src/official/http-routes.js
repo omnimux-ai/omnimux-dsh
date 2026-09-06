@@ -24,6 +24,7 @@ import { createOfficialClient } from './client.js'
 import { DEFAULT_ACCOUNT_AVATARS, parseOfficialConfig } from './config.js'
 import { computeStatus, filterRows, localAvatarUrl, pickAccountsView, pickConnectView } from './public-account.js'
 import { mergeMeta } from './account-meta.js'
+import { requireSocialProvider } from './provider.js'
 
 const ACCOUNTS_PREFIX = '/omnimux/accounts/'
 
@@ -33,7 +34,6 @@ function emptyMetaStore() {
     read: () => ({}),
     update: (_id, patch) => ({ ...(patch && typeof patch === 'object' ? patch : {}) }),
     remove: () => {},
-    prune: () => [],
   }
 }
 
@@ -45,7 +45,6 @@ function emptyAvatarStore() {
     sourceUrl: () => '',
     localUrlFor: (id) => localAvatarUrl(id),
     remove: () => {},
-    prune: () => [],
     putFromUrl: async () => ({ ok: false, reason: 'noop' }),
   }
 }
@@ -90,6 +89,9 @@ export function avatarIdFromPath(pathname) {
  * @returns {{ status: number, body: Record<string, string> }}
  */
 export function mapOfficialError(error) {
+  if (error instanceof OmnimuxError && ['invalid-provider', 'account-provider-mismatch', 'post-provider-mismatch'].includes(error.code)) {
+    return { status: error.code === 'invalid-provider' ? 400 : 409, body: { error: error.code, message: error.message } }
+  }
   if (error instanceof OmnimuxError && error.code === 'quota-exceeded') {
     return { status: 402, body: { error: 'quota-exceeded', message: '当前操作需要更多额度，充值后即可继续使用 OmniMux。' } }
   }
@@ -144,14 +146,13 @@ function parseMetaPatch(body) {
  *   env?: NodeJS.ProcessEnv,
  *   fetcher?: typeof fetch,
  *   client?: { withPat: Function },
- *   metaStore?: { read: Function, update: Function, remove: Function, prune: Function },
+ *   metaStore?: { read: Function, update: Function, remove: Function },
  *   avatarStore?: {
  *     has: Function,
  *     get: Function,
  *     sourceUrl?: Function,
  *     localUrlFor: Function,
  *     remove: Function,
- *     prune: Function,
  *     putFromUrl: Function,
  *   },
  * }} [deps]
@@ -233,7 +234,6 @@ export function createOfficialDispatcher(deps = {}) {
         enqueueFill(id, remote)
       }
     }
-    avatarStore.prune(rows.map((row) => String(row.id)))
   }
 
   /**
@@ -280,13 +280,11 @@ export function createOfficialDispatcher(deps = {}) {
     }
     try {
       if (method === 'GET' && path === '/omnimux/accounts') {
-        const raw = await listAccounts(client)
+        const provider = requireSocialProvider(url.searchParams.get('provider'))
+        const raw = await listAccounts(client, { provider })
         const meta = metaStore.read()
         const view = pickAccountsView(raw, { meta, now: Date.now() })
         rewriteAvatars(view.accounts)
-        // Lazy cleanup: overlay rows whose id the site no longer returns are
-        // dropped so the local document cannot accumulate dead ids.
-        metaStore.prune(view.accounts.map((row) => String(row.id)))
         return {
           status: 200,
           body: {
@@ -306,6 +304,7 @@ export function createOfficialDispatcher(deps = {}) {
           return { status: 400, body: { error: 'redirect_url must be https' } }
         }
         const raw = await connectAccount(client, {
+          provider: body.provider,
           platform,
           redirect_url: redirect || undefined,
         })
@@ -316,26 +315,19 @@ export function createOfficialDispatcher(deps = {}) {
         if (!id || id.includes('/')) return { status: 400, body: { error: 'id is required' } }
         const parsed = parseMetaPatch(req.body)
         if ('error' in parsed) return { status: 400, body: { error: parsed.error } }
-        const raw = await listAccounts(client)
+        const provider = requireSocialProvider(url.searchParams.get('provider'))
+        const raw = await listAccounts(client, { provider })
         const siteRow = pickAccountsView(raw).accounts.find((row) => String(row.id) === id)
-        // The overlay update is allowed even when the site row is gone: pure
-        // metadata (group / agent_usable) is Host-local state.
+        if (!siteRow) throw new OmnimuxError('account-provider-mismatch', 'account is not available in this provider')
         const meta = metaStore.update(id, parsed.patch)
-        if (siteRow) {
-          const account = mergeMeta(siteRow, meta)
-          account.status = computeStatus(account, Date.now())
-          return { status: 200, body: { account } }
-        }
-        const account = /** @type {Record<string, unknown>} */ ({ id })
-        if (typeof meta.group === 'string' && meta.group !== '') account.group = meta.group
-        if (typeof meta.agent_usable === 'boolean') account.agent_usable = meta.agent_usable
-        if (typeof meta.last_used_at === 'string' && meta.last_used_at !== '') account.last_used_at = meta.last_used_at
+        const account = mergeMeta(siteRow, meta)
+        account.status = computeStatus(account, Date.now())
         return { status: 200, body: { account } }
       }
       if (method === 'DELETE' && path.startsWith(ACCOUNTS_PREFIX)) {
         const id = decodeURIComponent(path.slice(ACCOUNTS_PREFIX.length))
         if (!id || id.includes('/')) return { status: 400, body: { error: 'id is required' } }
-        await disconnectAccount(client, { id })
+        await disconnectAccount(client, { id, provider: url.searchParams.get('provider') })
         metaStore.remove(id)
         avatarStore.remove(id)
         return { status: 200, body: { ok: true } }

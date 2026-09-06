@@ -3,7 +3,7 @@
  *
  * Contract-driven:
  *   - model picker = only compatible (acceptsCurrentInputs) rows; Hide, Don't Grey
- *   - effectiveOps 0/1 → no mode UI; ≥2 → OperationSegment only for effective ops
+ *   - text adapts its operation automatically; other outputs show genuine model modes
  *   - writes canonical params.operation only
  *   - zero candidates → empty state + block generate with typed reason
  *   - Whisper / unlisted ASR never enter the DOM
@@ -16,7 +16,6 @@ import {
   Plus,
   SlidersHorizontal,
   Music,
-  Mic,
   Play,
   FileText,
   Image as ImageIcon,
@@ -29,7 +28,10 @@ import type { MaterialNodeData } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import { useT } from '../../../../i18n';
-import { CustomSelect, CustomSlider } from '../../../../ui';
+import { CustomSelect, CustomSlider, toast } from '../../../../ui';
+import { rememberGenerationModel } from '../../../../store/generationPreferencesStore';
+import { generationReasonText } from '../../../../i18n/generationReason';
+import { resolveGenerationPrompt } from '../../../../../shared/graph/generationPrompt';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
 import { useCanvasStore } from '../../../../store/canvasStore';
 import { useUpstreamMedia, toUpstreamSnapshots } from '../../../hooks/useUpstreamMedia';
@@ -162,17 +164,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     );
   }
 
-  const audioSubMode = selectedTool === 'text-to-music' ? 'music' : 'speech';
   const isAsrTool = selectedTool === 'audio-transcription';
-
-  const handleAudioSubModeChange = useCallback(
-    (mode: 'speech' | 'music') => {
-      onUpdateNodeData({
-        selectedTool: mode === 'music' ? 'text-to-music' : 'text-to-audio',
-      });
-    },
-    [onUpdateNodeData],
-  );
 
   const handleUnbind = useCallback(
     (upstreamNodeId: string, edgeId?: string) => {
@@ -205,17 +197,19 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     });
   }, [nodeId]);
 
-  // Fingerprint for the current node (prompt + upstream media metadata).
+  const localPrompt = resolveGenerationPrompt(nodeData);
+
+  // The fingerprint composes source content once, using the same resolver as execution.
   const fingerprint = useMemo(
-    () => buildUiUpstreamFingerprint({ prompt, nodeFields: params, upstreams: upstreamSnapshots }),
-    [params, prompt, upstreamSnapshots],
+    () => buildUiUpstreamFingerprint({ materialType, prompt: nodeData.prompt, content: nodeData.content, nodeFields: params, upstreams: upstreamSnapshots }),
+    [params, materialType, nodeData.prompt, nodeData.content, upstreamSnapshots],
   );
 
   // ASR (speech_to_text) uses outputType 'text' even on a text node with audio upstream.
   const outputTypeForCompat = isAsrTool ? 'text' : materialType;
 
   // ---- Filtered model list (Hide, Don't Grey) ----
-  // Sole truth = W1 Catalog + compatibility kernel (no product allowlist).
+  // The shared kernel applies canvas model policy and input compatibility.
   const filteredModels = useMemo(
     () => buildFilteredModelOptions({
       catalog: activeCatalog,
@@ -276,7 +270,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             {
               catalog: activeCatalog,
               upstreams: upstreamSnapshots,
-              prompt,
+              prompt: localPrompt,
               nextOperationId: typeof value === 'string' ? value : undefined,
             },
           );
@@ -292,7 +286,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       }
       onUpdateNodeData({ params: { ...params, [key]: value } });
     },
-    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, prompt, upstreamSnapshots],
+    [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots],
   );
 
   // Effective ops for the currently selected model (all modalities).
@@ -319,38 +313,48 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             modelItem,
             catalog: activeCatalog,
             upstreams: upstreamSnapshots,
-            prompt,
+            prompt: localPrompt,
           })
         : null,
-    [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, prompt],
+    [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
   );
 
   const handleModelChange = useCallback(
     (newModelId: string) => {
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
       const newModelItem = modelList.find((m) => m.id === newModelId);
-      if (!newModelItem) {
-        onUpdateNodeData({
-          params: setParamsOperation({ ...params, model: newModelId }),
-        });
-        return;
-      }
-      const transition = buildVideoParamTransition(
-        params as Record<string, unknown>,
-        newModelItem,
-        {
+      if (materialType === 'video' && newModelItem) {
+        const transition = buildVideoParamTransition(params as Record<string, unknown>, newModelItem, {
           catalog: activeCatalog,
           upstreams: upstreamSnapshots,
-          prompt,
-        },
-      );
-      onUpdateNodeData({ params: transition.params });
+          prompt: localPrompt,
+        });
+        onUpdateNodeData({ params: transition.params });
+      } else {
+        const nextOps = buildEffectiveOpsUiState({
+          catalog: activeCatalog,
+          modelId: newModelId,
+          fingerprint,
+          outputType: outputTypeForCompat,
+        });
+        onUpdateNodeData({ params: setParamsOperation(
+          { ...params, model: newModelId },
+          nextOps.effectiveOps.find((op) => op.id === preferredOperationId && op.ready)?.id
+            ?? nextOps.selectedOperationId,
+        ) });
+      }
+      void rememberGenerationModel(materialType, newModelId).catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
+      });
     },
-    [activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, prompt],
+    [activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
   );
+
+  const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
+    if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');
@@ -359,13 +363,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       case 'video':
         return t('panel.videoPromptPlaceholder');
       case 'audio':
-        return audioSubMode === 'music'
+        return isMusicOperation
           ? t('panel.musicPromptPlaceholder')
           : t('panel.audioPromptPlaceholder');
       default:
         return t('panel.promptPlaceholder');
     }
-  }, [materialType, audioSubMode, isAsrTool, t]);
+  }, [materialType, isMusicOperation, isAsrTool, upstreams, t]);
 
   const aspectRatioValue =
     typeof params.aspectRatio === 'string' && isAspectRatioValid(params.aspectRatio)
@@ -385,18 +389,18 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const videoValidationErrors = useMemo(
     () => materialType === 'video' && videoEffectiveParams
       ? validateVideoParamsForUi({
-          prompt,
+          prompt: localPrompt,
           rawParams: params as Record<string, unknown>,
           params: videoEffectiveParams,
           upstreams: upstreamSnapshots,
         })
       : [],
-    [materialType, prompt, upstreamSnapshots, videoEffectiveParams],
+    [materialType, localPrompt, params, upstreamSnapshots, videoEffectiveParams],
   );
 
   // Generate gate: blocked when zero effective ops / zero candidates / configuration_error.
   const nodeCompat = (nodeData as Record<string, unknown>).compat as
-    | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[] }
+    | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[]; adaptation?: { toModelLabel: string; inputTypes: string[] } }
     | undefined;
   const blockGenerate =
     opsState.blockGenerate
@@ -405,52 +409,44 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     || videoValidationErrors.length > 0
     || Boolean(pendingVideoParamAdjustment)
     || execBusy;
+  const reasonCode = opsState.reasonCode || filteredModels.reasonCode
+    || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
-    opsState.reasonMessage
-    || filteredModels.reasonMessage
+    generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || pendingVideoParamAdjustment?.notices[0]
-    || videoValidationErrors[0]
-    || (nodeCompat?.status === 'configuration_error'
-      ? '节点配置错误：当前输入没有可兼容的已上架模型'
-      : undefined);
+    || videoValidationErrors[0];
+  const quietReason = reasonCode === 'prompt_required' || reasonCode === 'catalog_unavailable' || reasonCode === 'input_waiting';
+  const adaptation = nodeCompat?.adaptation;
+  const adaptationInputs = adaptation?.inputTypes.map((type) => t(`node.type.${type}`)).join('、');
+  const adaptationMessage = adaptation
+    ? t(adaptationInputs ? 'panel.adaptedModel' : 'panel.adaptedModelGeneric')
+      .replace('{model}', adaptation.toModelLabel)
+      .replace('{inputs}', adaptationInputs ?? '')
+    : undefined;
 
   const showEmptyModels = filteredModels.zeroCandidates || modelOptions.length === 0;
 
   return (
     <div className="wf-config-panel" data-effective-ops={opsState.count}>
-      {/* 1. 音频模式专属顶部 Tab（ASR 工具不显示 TTS/音乐切换） */}
-      {materialType === 'audio' && !isAsrTool && (
-        <div className="wf-config-panel__audio-tabs">
-          <button
-            type="button"
-            className={`wf-config-panel__tab-btn ${
-              audioSubMode === 'speech' ? 'wf-config-panel__tab-btn--active' : ''
-            }`}
-            onClick={() => handleAudioSubModeChange('speech')}
-          >
-            <Mic size={13} />
-            <span>{t('panel.audioGen')}</span>
-          </button>
-          <button
-            type="button"
-            className={`wf-config-panel__tab-btn ${
-              audioSubMode === 'music' ? 'wf-config-panel__tab-btn--active' : ''
-            }`}
-            onClick={() => handleAudioSubModeChange('music')}
-          >
-            <Music size={13} />
-            <span>{t('panel.musicGen')}</span>
-          </button>
+      {adaptationMessage ? (
+        <div className="wf-config-panel__input-hint" role="status" data-testid="wf-model-adaptation">
+          {adaptationMessage}
         </div>
-      )}
+      ) : null}
+
+      {quietReason && blockReason ? (
+        <div className="wf-config-panel__input-hint" role="status" data-testid="wf-input-hint">
+          {blockReason}
+        </div>
+      ) : null}
 
       {/* Configuration / zero-candidate error banner */}
-      {(opsState.blockGenerate || showEmptyModels) && blockReason ? (
+      {!quietReason && (opsState.blockGenerate || showEmptyModels || nodeCompat?.status === 'configuration_error') && blockReason ? (
         <div
           className="wf-config-panel__compat-error"
           role="alert"
           data-testid="wf-compat-error"
-          data-reason-code={opsState.reasonCode || filteredModels.reasonCode || 'no_compatible_model'}
+          data-reason-code={reasonCode || 'no_compatible_model'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -502,6 +498,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         </div>
       ) : null}
 
+      {upstreams.filter((item) => item.materialType === 'text' && item.hasMedia).map((item, index) => (
+        <div key={item.edgeId ?? item.nodeId} className="wf-config-panel__input-hint" data-testid="wf-current-text-source">
+          {t('panel.currentTextSource').replace('{source}', `${index + 1} · ${item.label}`).replace('{text}',
+            (item.textContent ?? '').length > 80 ? `${item.textContent!.slice(0, 80)}…` : (item.textContent ?? ''))}
+        </div>
+      ))}
+
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className="wf-config-panel__prompt-header">
@@ -513,7 +516,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                   className={`wf-config-panel__ref-thumb-slot ${
                     item.hasMedia ? 'wf-config-panel__ref-thumb-slot--ready' : ''
                   }`}
-                  title={`${item.label} (${item.hasMedia ? '素材已就绪' : '等待素材'})`}
+                  title={item.availabilityMessage ?? `${item.label}：${item.textContent?.slice(0, 120) || '使用当前选定结果'}`}
+                  data-input-availability={item.availability}
                   data-mime={item.mimeType ?? 'unknown'}
                   data-size-bytes={item.sizeBytes ?? 'unknown'}
                   data-duration-sec={item.durationSec ?? 'unknown'}
@@ -625,6 +629,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           }`}
           value={prompt ?? ''}
           placeholder={placeholder}
+          aria-label={placeholder}
           rows={isExpanded ? 8 : 2}
           onChange={(e) => onUpdateNodeData({ prompt: e.target.value })}
         />
@@ -650,7 +655,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                 color: 'var(--dsw-alias-label-secondary)',
               }}
             >
-              {isAsrTool ? '暂无可用转写模型' : '暂无兼容模型'}
+              {t(reasonCode === 'catalog_unavailable' ? 'panel.reason.catalog_unavailable' : isAsrTool ? 'panel.noTranscriptionModel' : 'panel.noCompatibleModel')}
             </div>
           ) : (
             <CustomSelect
@@ -662,7 +667,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             />
           )}
 
-          {/* 多 operation（≥2）通用 mode 段：text/image/audio 也复用；视频走 Popover 内段 */}
+          {/* 图片和音频只展示模型实际提供的多种方式；视频在浮层中选择。 */}
           {showModeUi && materialType !== 'video' ? (
             <>
               <span className="wf-param-pill__divider">|</span>
@@ -729,6 +734,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           <GenerateButton
             onClick={onGenerate}
             disabled={blockGenerate}
+            disabledReason={blockReason}
             isGenerating={
               nodeData.executionStatus === 'running'
               || resolveNodeLifecycle({ type: nodeData.materialType, data: nodeData as any }) === 'loading'

@@ -939,7 +939,7 @@ function resolveAccounts(raw) {
 }
 
 async function loadAccounts(client) {
-  const raw = await listAccounts(client)
+  const raw = await listAccounts(client, { provider: 'zernio' })
   return resolveAccounts(raw)
 }
 

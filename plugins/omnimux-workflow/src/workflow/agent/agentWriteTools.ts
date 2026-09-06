@@ -39,7 +39,7 @@ import {
  */
 function mutationContext(deps: WorkflowAgentDeps): CanvasMutationRuntimeContext {
   const catalog = typeof deps.getCatalog === 'function' ? deps.getCatalog() : null;
-  return { catalog: (catalog ?? null) as CapabilityCatalog | null };
+  return { catalog: (catalog ?? null) as CapabilityCatalog | null, preferredModels: deps.getGenerationPreferences?.() };
 }
 
 /**
@@ -164,7 +164,7 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
 
         const result = mutateWorkspaceGraph(store, workspaceId, { addNodes: [node] }, mutationContext(deps));
         if (!result.ok) return errorBody(result.error, result.message);
-        return { workspace: workspaceSummary(result.snapshot), node, workspaceSource: target.source };
+        return { workspace: workspaceSummary(result.snapshot), node: result.snapshot.nodes.find((row) => row.id === node.id), workspaceSource: target.source };
       });
     },
   };

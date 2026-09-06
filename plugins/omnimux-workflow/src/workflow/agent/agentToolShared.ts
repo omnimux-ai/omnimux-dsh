@@ -66,6 +66,7 @@ export interface WorkflowAgentDeps {
   executionManager: ExecutionManager;
   /** Plugin media root (absolute) — resolves media URLs to local paths. */
   mediaDir: string;
+  resolveProjectFile?: import('../execution/executionMediaSource.ts').ResolveExecutionProjectFile;
   /** Same lazy-bind helper as POST /executions (media generate needs a project root). */
   ensureProjectBound?: EnsureProjectBoundFn;
   /**
@@ -78,6 +79,9 @@ export interface WorkflowAgentDeps {
    * mutation time — the compat kernel fails closed when it returns null.
    */
   getCatalog?: () => unknown;
+  /** Execution uses the same asynchronous gateway catalog as HTTP admission. */
+  getExecutionCatalog?: () => unknown | Promise<unknown>;
+  getGenerationPreferences?: () => import('../../shared/generationPreferences').GenerationPreferences;
 }
 
 type FieldSpec = Record<string, unknown> & { required?: boolean | string[] };

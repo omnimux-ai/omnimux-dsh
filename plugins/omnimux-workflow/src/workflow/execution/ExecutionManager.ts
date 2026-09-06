@@ -163,6 +163,12 @@ function createExecutionInstance(
   entries: Map<string, ExecutionEntry>,
   opts: CreateExecutionOptions,
 ): ExecutionEntry {
+  opts = {
+    ...opts,
+    nodes: structuredClone(opts.nodes),
+    edges: structuredClone(opts.edges),
+    initialOutputs: structuredClone(opts.initialOutputs),
+  };
   const breakpointsList = opts.breakpoints || [];
   const breakpoints = new Set(breakpointsList);
   const context = new ExecutionContext({
@@ -259,7 +265,7 @@ export function createExecutionManager(deps: ExecutionManagerDeps) {
   const { executionsDir, gateway, mediaDir } = deps;
   const entries = new Map<string, ExecutionEntry>();
 
-  registerExecutor(createMaterialGatewayExecutor({ gateway }));
+  registerExecutor(createMaterialGatewayExecutor({ gateway, resolveProjectFile: deps.resolveProjectFile }));
   registerExecutor(createImportExecutor());
   registerExecutor(createVideoCompositionExecutor());
 

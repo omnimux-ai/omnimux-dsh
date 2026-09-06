@@ -41,8 +41,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(typeof catalog.contractFingerprint, 'string')
     assert.equal(catalog.contractFingerprint.length, 16)
 
-    // authoritative flat list: all 43 contracted models with disposition governance
-    assert.equal(catalog.models.length, 43)
+    // Authoritative flat list includes contracted models under disposition governance.
+    assert.equal(catalog.models.length, 44)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-avatar')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'omni_flash')?.disposition, 'quarantine')
@@ -60,7 +60,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'wan-3.0',
     ])
     assert.deepEqual(catalog.audio, [])
-    // #530 PR-A: 11 text models with verified+live chat/vision_chat enter text bucket
+    // Text bucket includes implementation-ready models without requiring live history.
     assert.deepEqual(catalog.text.map((row) => row.id), [
       'claude-opus-4-6',
       'claude-opus-5',
@@ -68,6 +68,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'deepseek-v4-pro',
       'gemini-3.1-pro-preview',
       'gemini-3.7-flash',
+      'gemini-3.8-flash',
       'glm-5.3',
       'gpt-5.5',
       'gpt-5.6-sol',
@@ -85,15 +86,15 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.image.some((row) => row.id === 'nanobanana-2'), false)
 
     // defaults: config defaults survive where listed; audio still has no listed row
-    assert.equal(catalog.defaults.text, 'gemini-3.7-flash')
+    assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     assert.equal(catalog.defaults.image, 'gpt-image-2')
     assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
     assert.equal(catalog.defaults.audio, '')
     assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-0-fast')
     assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2')
-    assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.7-flash')
+    assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
 
-    assert.equal(catalog.text.length, 11)
+    assert.equal(catalog.text.length, 12)
   })
 
   it('forbids ASCII hyphen-minus in every catalog model label', () => {
@@ -129,7 +130,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     })
     assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
     // fake text id refused → fall back to listed config default
-    assert.equal(catalog.defaults.text, 'gemini-3.7-flash')
+    assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
   it('prefers settings overlay over config when env is absent', () => {
@@ -158,7 +159,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({ text: h.text, media: h.media, gate: h.gate, env: {} })
     // #530 PR-A listed text set is contract-driven, not gate-invented
     assert.ok(catalog.text.some((row) => row.id === 'grok-4.6'))
-    assert.equal(catalog.text.length, 11)
+    assert.equal(catalog.text.length, 12)
     assert.equal(catalog.text.some((row) => row.id === 'whisper-1'), false)
   })
 

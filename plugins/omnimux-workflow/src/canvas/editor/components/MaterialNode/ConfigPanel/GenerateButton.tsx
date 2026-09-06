@@ -15,11 +15,12 @@ export interface GenerateButtonProps {
   onClick: () => void;
   /** execBusy：全图/其他节点执行中（禁用语义不变） */
   disabled?: boolean;
+  disabledReason?: string;
   /** 本节点生成中 → Loader2 spin */
   isGenerating?: boolean;
 }
 
-const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, isGenerating }) => {
+const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, disabledReason, isGenerating }) => {
   const t = useT();
   return (
     <div
@@ -27,7 +28,15 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, isGe
       onClick={disabled || isGenerating ? undefined : onClick}
       style={{ cursor: disabled || isGenerating ? 'default' : 'pointer' }}
       role="button"
-      tabIndex={0}
+      tabIndex={disabled || isGenerating ? -1 : 0}
+      aria-disabled={disabled || isGenerating}
+      title={disabled ? disabledReason : undefined}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && !disabled && !isGenerating && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <span className="wf-generate-btn__label">{t('panel.generate')}</span>
       <button
@@ -39,7 +48,7 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, isGe
         disabled={disabled || isGenerating}
         className="wf-generate-btn__send"
         aria-label={t('panel.generate')}
-        title={t('panel.generate')}
+        title={disabled && disabledReason ? disabledReason : t('panel.generate')}
       >
         {isGenerating ? (
           <Loader2 size={14} className="wf-generate-btn__spin" />

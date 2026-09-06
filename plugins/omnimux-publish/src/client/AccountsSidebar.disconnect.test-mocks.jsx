@@ -1,6 +1,6 @@
 import React from 'react'
 
-export function Button({ children, leadingIcon, ...props }) {
+export function Button({ children, leadingIcon, loading, ...props }) {
   return <button type="button" {...props}>{leadingIcon}{children}</button>
 }
 
@@ -38,3 +38,5 @@ export function Menu({ open, items, onSelect }) {
 
 export function IconEllipsisOutline16() { return <svg aria-hidden="true" /> }
 export function IconPlusOutline16() { return <svg aria-hidden="true" /> }
+export function IconChevronLeftOutline14() { return <svg aria-hidden="true" /> }
+export function IconRefreshOutline16() { return <svg aria-hidden="true" /> }

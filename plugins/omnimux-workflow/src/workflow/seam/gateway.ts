@@ -42,6 +42,8 @@ export interface SubmitRequest {
   prompt?: string;
   /** Reference image (absolute local path / http(s) / data URI). */
   image?: string;
+  /** Legacy single video; prefer ordered references for new callers. */
+  video?: string;
   /** Multi-modal reference asset payloads (images, video references, controlnet, etc.). */
   references?: ReferenceAssetPayload[];
   /** Audio track payload for video audio-driven or lip-sync/background audio. */
@@ -112,18 +114,5 @@ export interface GenerationGateway {
   /** Poll a task and download the artifact to its dest. */
   awaitTask(taskId: string, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult>;
   /** Capability catalog for the config panel (model lists). */
-  capabilities(): Promise<{
-    source: 'static-stub' | 'omnimux';
-    fingerprint?: string;
-    defaults?: {
-      text?: string;
-      image?: string;
-      video?: string;
-      audio?: string;
-    };
-    text: Array<{ id: string; label: string; badge?: string; subtitle?: string; family?: string; parameters?: unknown }>;
-    image: Array<{ id: string; label: string; badge?: string; subtitle?: string; family?: string; parameters?: unknown }>;
-    video: Array<{ id: string; label: string; badge?: string; subtitle?: string; family?: string; parameters?: unknown }>;
-    audio: Array<{ id: string; label: string; badge?: string; subtitle?: string; family?: string; parameters?: unknown }>;
-  }>;
+  capabilities(): Promise<import('../../shared/api.ts').CapabilityCatalog>;
 }

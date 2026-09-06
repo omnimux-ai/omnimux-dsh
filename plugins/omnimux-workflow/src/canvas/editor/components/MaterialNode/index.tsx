@@ -13,6 +13,7 @@ import { Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink } f
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
+import { readCurrentText } from '../../../../shared/graph/nodeInputSource';
 import CanvasNodeHandle, { type CanvasNodeHandleSelectMeta } from '../CanvasNodeHandle';
 import GenerationStateContainer from '../GenerationStateContainer';
 import NodeHeader from './NodeHeader';
@@ -171,7 +172,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     [applyCanvasInputMutation, id],
   );
 
-  const effectiveTextContent = (generatedContent || content || '') as string;
+  const effectiveTextContent = readCurrentText(data as Record<string, unknown>);
 
   // 预设注入：写 prompt + 单选当前节点（空态按钮 nodrag 拦掉了 RF 选中手势）
   const handleApplyPreset = useCallback(

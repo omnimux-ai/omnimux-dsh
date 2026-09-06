@@ -325,7 +325,7 @@ export function createRecordStore(opts = {}) {
    * record.status → submitted，记录 submitted_at。子任务初始 `submitting`
    * （create 成功即转 submitted；加载时遗留 submitting = interrupted）。
    * @param {string} id
-   * @param {Array<{ id: string, platform: string }>} accountRows
+   * @param {Array<{ id: string, platform: string, provider: string }>} accountRows
    */
   function materialize(id, accountRows) {
     const record = findRecord(id)
@@ -339,6 +339,7 @@ export function createRecordStore(opts = {}) {
       id: newId('tsk'),
       record_id: record.id,
       account_id: String(row.id),
+      provider: row.provider,
       platform: String(row.platform || ''),
       status: 'submitting',
       post_id: null,

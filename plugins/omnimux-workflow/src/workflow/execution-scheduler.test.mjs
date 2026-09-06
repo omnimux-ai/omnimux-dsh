@@ -438,6 +438,45 @@ test('material nodes run through the mock gateway (success + media URL)', async 
   }
 });
 
+test('an in-flight execution retains its submitted graph and upstream output after caller edits', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-input-snapshot-'));
+  const sent = [];
+  let releaseGate;
+  const gate = new Promise((resolve) => { releaseGate = resolve; });
+  const gateway = createMockGateway({ minLatencyMs: 1, maxLatencyMs: 1 });
+  const submit = gateway.submit.bind(gateway);
+  gateway.submit = async (request) => {
+    sent.push(request);
+    if (request.prompt === 'gate instruction') await gate;
+    return submit(request);
+  };
+  const manager = createExecutionManager({ executionsDir: join(dir, 'executions'), mediaDir: join(dir, 'media'), gateway });
+  try {
+    const nodes = [
+      { id: 'gate', type: 'material', data: { materialType: 'text', prompt: 'gate instruction' } },
+      { id: 'target', type: 'material', data: { materialType: 'text', prompt: '', params: { model: 'mock-text-flash' } } },
+    ];
+    const edges = [{ source: 'source', target: 'target' }, { source: 'gate', target: 'target' }];
+    const initialOutputs = { source: { text: 'submitted text' } };
+    const entry = manager.createExecution({ workspaceId: 'ws_snapshot', nodes, edges, initialOutputs });
+    assert.ok(await waitUntil(() => sent.length === 1));
+    nodes[1].data.prompt = 'new instruction';
+    nodes[1].data.params.model = 'new model';
+    edges[0].source = 'other';
+    initialOutputs.source.text = 'new text';
+    releaseGate();
+    assert.ok(await waitUntil(() => manager.getSnapshot(entry.context.id)?.status === 'completed'));
+    assert.equal(sent.length, 2);
+    assert.match(sent[1].prompt, /submitted text/);
+    assert.doesNotMatch(sent[1].prompt, /new instruction|new text/);
+    assert.equal(sent[1].model, 'mock-text-flash');
+  } finally {
+    releaseGate();
+    manager.disposeAll();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('mockFail node fails the execution with node_error', async () => {
   const { dir, manager } = makeManager();
   try {
