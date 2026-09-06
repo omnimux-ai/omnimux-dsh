@@ -78,7 +78,8 @@ export interface UseWorkspacePersistenceOptions {
   enabled?: boolean;
 }
 
-type SaveOutcome = { version: number } | { error: string };
+type SavedGraphState = { version: number; signature: string; nodeCount: number };
+type SaveOutcome = SavedGraphState | { error: string; skipped?: true; saved?: SavedGraphState };
 
 interface GraphCapture {
   nodes: SerializedCanvasNode[];
@@ -229,42 +230,59 @@ export function useWorkspacePersistence(
     const ws = workspaceRef.current;
     const scope = scopeRef.current;
     const previous = savingRef.current;
+    const capturedSaved: SavedGraphState = {
+      version: serverVersionRef.current,
+      signature: lastSavedSigRef.current,
+      nodeCount: lastSavedNodeCountRef.current,
+    };
+    const capturedConflict = conflictRef.current;
     const pending = (async (): Promise<SaveOutcome> => {
-      if (previous) await previous;
-      if (!ws || scopeRef.current !== scope || scope.workspaceId !== ws.id
-        || workspaceRef.current?.id !== ws.id || (!force && !enabledRef.current)) {
+      const prior = previous ? await previous : null;
+      const current = isCurrentScope(scope);
+      const priorSaved = prior && 'error' in prior ? prior.saved : prior;
+      const saved = current ? {
+        version: serverVersionRef.current,
+        signature: lastSavedSigRef.current,
+        nodeCount: lastSavedNodeCountRef.current,
+      } : priorSaved ?? capturedSaved;
+      if (!ws || scope.workspaceId !== ws.id) {
         return { error: '画布尚未就绪，请重新打开后再试' };
       }
-      if (conflictRef.current && !resolveConflict) {
+      if (!current && prior && 'error' in prior && !prior.skipped) return prior;
+      // A flush captured before leaving still belongs to this workspace. Its
+      // version follows this queue's successful PUT, never the new canvas refs.
+      if ((!current && !force && cause !== 'flush') || (!force && current && !enabledRef.current)) {
+        return { error: '画布已切换，请重新发起生成', skipped: true, saved };
+      }
+      const conflict = current ? conflictRef.current : capturedConflict;
+      if (conflict && !resolveConflict) {
         return { error: '画布版本冲突，请先保留本地内容或重新加载' };
       }
-      const signature = graphSig(capture.nodes, capture.edges);
+      const signature = signatureOf(capture.nodes, capture.edges, { workspaceId: ws.id });
       const decision = decidePersist({
-        lastSavedNodeCount: lastSavedNodeCountRef.current,
+        lastSavedNodeCount: saved.nodeCount,
         nextNodes: capture.nodes,
         nextEdges: capture.edges,
         cause,
-        lastSavedSignature: resolveConflict && conflictRef.current ? '' : lastSavedSigRef.current,
+        lastSavedSignature: resolveConflict && conflict ? '' : saved.signature,
         nextSignature: signature,
       });
       if (!decision.persist || !decision.snapshot) {
         return decision.reason === 'unchanged'
-          ? { version: serverVersionRef.current }
+          ? saved
           : { error: '画布内容尚未保存，请重新打开后再试' };
       }
       const { nodes, edges } = decision.snapshot;
-      setStatus('saving');
+      if (current) setStatus('saving');
       try {
         const result = await saveWorkspace(ws.id, {
           name: ws.name,
           nodes: sanitizeNodes(nodes, { workspaceId: ws.id }),
           edges: sanitizeEdges(edges),
-          expectedVersion: serverVersionRef.current,
+          expectedVersion: saved.version,
         });
-        if (!isCurrentScope(scope)) {
-          return { error: '画布已切换，请重新发起生成' };
-        }
         if (result.status === 409) {
+          if (!isCurrentScope(scope)) return { error: '画布版本冲突，未保存离开前的修改' };
           const reconciled = await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
           if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
           if (!reconciled) {
@@ -274,11 +292,13 @@ export function useWorkspacePersistence(
           return { error: '画布版本冲突，请确认最新内容后重新生成' };
         }
         if (!result.ok || !result.body.workspace) {
-          setStatus(conflictRef.current ? 'conflict' : 'error');
+          if (isCurrentScope(scope)) setStatus(conflictRef.current ? 'conflict' : 'error');
           return { error: result.body.message ?? '画布保存失败，请重试' };
         }
-        if (resolveConflict) conflictRef.current = false;
         const version = result.body.workspace.version;
+        const nextSaved = { version, signature, nodeCount: nodes.length };
+        if (!isCurrentScope(scope)) return nextSaved;
+        if (resolveConflict) conflictRef.current = false;
         serverVersionRef.current = version;
         lastSavedSigRef.current = signature;
         lastSavedNodeCountRef.current = nodes.length;
@@ -290,7 +310,7 @@ export function useWorkspacePersistence(
           if (isCurrentScope(scope)) setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_BADGE_MS);
         onSavedRef.current?.(result.body.workspace);
-        return { version };
+        return nextSaved;
       } catch {
         if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
         setStatus(conflictRef.current ? 'conflict' : 'error');

@@ -175,3 +175,63 @@ test('B can save before A finishes and retains its saved version after the late 
   h.edit('B again'); await h.controller.saveNow();
   assert.equal(h.env.calls[1].wsId, 'B'); assert.equal(h.env.calls[1].payload.expectedVersion, 21);
 });
+
+for (const queueAutosave of [false, true]) test(`captured trailing flush saves A after switch with its own version${queueAutosave ? ' across a skipped autosave' : ''}`, async () => {
+  const h = setup(), pending = deferred(), save = h.env.save;
+  h.env.save = (wsId, payload) => { h.env.calls.push({ wsId, payload }); return pending.promise; };
+  h.edit('A older'); h.autosave();
+  if (queueAutosave) { h.edit('A middle'); h.autosave(); }
+  h.edit('A latest'); h.controller.flushPendingSave();
+  h.switchTo(workspace('B', 20)); h.edit('B local'); h.env.save = save;
+  pending.resolve({ ok: true, body: { workspace: workspace('A', 4) } }); await settle();
+  assert.equal(h.env.calls.length, 2);
+  assert.equal(h.env.calls[1].wsId, 'A');
+  assert.equal(h.env.calls[1].payload.expectedVersion, 4);
+  assert.equal(h.env.calls[1].payload.nodes[0].data.prompt, 'A latest');
+  assert.equal(h.render().status, 'pending'); assert.equal(h.controller.isDirty, true);
+  assert.equal(h.env.saved.length, 0);
+  await h.controller.saveNow();
+  assert.equal(h.env.calls[2].wsId, 'B'); assert.equal(h.env.calls[2].payload.expectedVersion, 20);
+});
+
+for (const failure of ['409', '500', 'reject']) test(`detached flush does not continue after prior PUT ${failure}`, async () => {
+  const h = setup(), pending = deferred(), save = h.env.save;
+  h.env.save = (wsId, payload) => { h.env.calls.push({ wsId, payload }); return pending.promise; };
+  h.edit('A older'); h.autosave(); h.edit('A latest'); h.controller.flushPendingSave();
+  h.switchTo(workspace('B', 20)); h.edit('B local'); h.env.save = save;
+  if (failure === 'reject') pending.reject(new Error('save failed'));
+  else pending.resolve({ ok: false, status: Number(failure), body: {} });
+  await settle();
+  assert.equal(h.env.calls.length, 1); assert.equal(h.env.saved.length, 0);
+  assert.equal(h.render().status, 'pending'); assert.equal(h.controller.isDirty, true);
+});
+
+test('detached flush 409 blocks the rest of the captured flush queue', async () => {
+  const h = setup(), pending = deferred();
+  h.env.save = (wsId, payload) => { h.env.calls.push({ wsId, payload }); return pending.promise; };
+  h.edit('A older'); h.autosave();
+  h.edit('A middle'); h.controller.flushPendingSave();
+  h.edit('A latest'); h.controller.flushPendingSave();
+  h.switchTo(workspace('B', 20)); h.edit('B local');
+  h.env.save = async (wsId, payload) => {
+    h.env.calls.push({ wsId, payload }); return { ok: false, status: 409, body: {} };
+  };
+  pending.resolve({ ok: true, body: { workspace: workspace('A', 4) } }); await settle();
+  assert.equal(h.env.calls.length, 2); assert.equal(h.env.calls[1].payload.expectedVersion, 4);
+  assert.equal(h.render().status, 'pending'); assert.equal(h.env.saved.length, 0);
+});
+
+test('old A flush never borrows version from a later A visit', async () => {
+  const h = setup(), pending = deferred();
+  h.env.save = (wsId, payload) => { h.env.calls.push({ wsId, payload }); return pending.promise; };
+  h.edit('old A'); h.autosave(); h.edit('old A latest'); h.controller.flushPendingSave();
+  h.switchTo(workspace('B', 20)); h.switchTo(workspace('A', 30)); h.edit('new A edit');
+  h.env.save = async (wsId, payload) => {
+    h.env.calls.push({ wsId, payload });
+    return { ok: false, status: 409, body: {} };
+  };
+  pending.resolve({ ok: true, body: { workspace: workspace('A', 4) } }); await settle();
+  assert.equal(h.env.calls[1].payload.expectedVersion, 4);
+  assert.equal(h.state.nodes[0].data.prompt, 'new A edit');
+  assert.equal(h.render().status, 'pending'); assert.equal(h.controller.isDirty, true);
+});
