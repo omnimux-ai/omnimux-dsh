@@ -26,13 +26,21 @@ test('official watcher is reused, rebuild is bridged, and snapshot retains authe
   const rows = [{ id: 'omnimux', rev: 'v2' }]
   const ctx = {
     effect(factory) { cleanups.push(factory()) },
+    extend(properties) { return Object.assign(Object.create(this), properties) },
     clientModules: { graph: () => ({ entries: rows }), onRebuilt(fn) { rebuilt = fn; return () => { rebuilt = null } } },
-    webServer: { register(route) { routes.push(route); return () => routes.splice(routes.indexOf(route), 1) } },
+    webServer: { register(route) {
+      assert.equal(this, ctx.webServer)
+      routes.push(route)
+      return () => routes.splice(routes.indexOf(route), 1)
+    } },
     connection: { requestRejection: req => req.headers.cookie === 'fixture' ? undefined : 401 },
   }
   mountWebSocketHmr(ctx, bus, (inner, config) => {
-    assert.equal(inner, ctx)
+    assert.notEqual(inner.webServer, ctx.webServer)
+    assert.equal(inner.clientModules, ctx.clientModules)
     watcherConfig = config
+    inner.effect(() => inner.webServer.register({ kind: 'exact', path: '/plugins/events', handler() { assert.fail('legacy SSE handler ran') } }))
+    inner.effect(() => inner.webServer.register({ kind: 'exact', path: '/watcher-other', handler(req, res) { res.end('unchanged') } }))
     inner.effect(() => () => { watcherDisposed = true })
   })
   assert.deepEqual(watcherConfig, { pollIntervalMs: 500 })
@@ -53,6 +61,25 @@ test('official watcher is reused, rebuild is bridged, and snapshot retains authe
   const result = request({ cookie: 'fixture', origin: 'http://127.0.0.1' })
   assert.equal(result.status, 200)
   assert.deepEqual(JSON.parse(result.body).entries, rows)
+  const legacy = routes.find(row => row.path === '/plugins/events')
+  function legacyRequest(headers, method = 'GET') {
+    const result = { ended: false }
+    legacy.handler({ headers, method }, {
+      writeHead(status) { result.status = status },
+      end() { result.ended = true },
+      write() { assert.fail('retired SSE must not open a stream') },
+    })
+    return result
+  }
+  const local = { cookie: 'fixture', origin: 'http://127.0.0.1' }
+  assert.deepEqual(legacyRequest(local), { status: 204, ended: true })
+  assert.deepEqual(legacyRequest(local, 'HEAD'), { status: 204, ended: true })
+  assert.equal(legacyRequest(local, 'POST').status, 405)
+  assert.equal(legacyRequest({ origin: local.origin }).status, 401)
+  assert.equal(legacyRequest({ cookie: 'fixture', origin: 'https://foreign.example' }).status, 403)
+  let otherBody
+  routes.find(row => row.path === '/watcher-other').handler({}, { end(body) { otherBody = body } })
+  assert.equal(otherBody, 'unchanged')
   for (const cleanup of cleanups.reverse()) cleanup()
   unsubscribe()
   assert.equal(rebuilt, null)

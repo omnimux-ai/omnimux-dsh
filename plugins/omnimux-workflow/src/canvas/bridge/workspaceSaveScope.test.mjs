@@ -235,3 +235,17 @@ test('old A flush never borrows version from a later A visit', async () => {
   assert.equal(h.state.nodes[0].data.prompt, 'new A edit');
   assert.equal(h.render().status, 'pending'); assert.equal(h.controller.isDirty, true);
 });
+
+test('late A finally does not release the B in-flight save guard', async () => {
+  const h = setup(), pendingA = deferred(), pendingB = deferred();
+  h.env.save = (wsId, payload) => {
+    h.env.calls.push({ wsId, payload });
+    return wsId === 'A' ? pendingA.promise : pendingB.promise;
+  };
+  h.edit('A edit'); h.autosave();
+  h.switchTo(workspace('B', 20)); h.edit('B edit'); h.autosave();
+  pendingA.resolve({ ok: true, body: { workspace: workspace('A', 4) } }); await settle();
+  h.edit('B trailing'); h.autosave(); await settle();
+  assert.equal(h.env.calls.length, 2, 'B keeps the original single-save-in-flight behavior');
+  pendingB.resolve({ ok: true, body: { workspace: workspace('B', 21) } }); await settle();
+});

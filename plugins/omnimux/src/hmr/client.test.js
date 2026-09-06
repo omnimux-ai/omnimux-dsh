@@ -49,8 +49,55 @@ function fixture(t) {
   function mount() { dispose = installWebSocketHmr(ctx, events, document) }
   t.after(() => dispose())
   const rebuilt = rev => events.emit('omnimux:hmr:rebuilt', { id: 'omnimux', rev })
-  return { ctx, entry, document, events, trace, errors, rebuilt, mount, dispose: () => dispose(), setSnapshot: value => { snapshot = value } }
+  return { ctx, entry, document, events, listeners, trace, errors, rebuilt, mount, dispose: () => dispose(), setSnapshot: value => { snapshot = value } }
 }
+
+test('legacy pages wait for the new Host graph without activating a second HMR driver', async t => {
+  const f = fixture(t)
+  const native = { id: '@deepseek-ai/dsh-client-hmr', rev: 'old' }
+  f.ctx.modules.manifest.modules.push(native)
+  f.setSnapshot({ epoch: 'old-host', entries: [native, { id: 'omnimux', rev: 'v2' }] })
+  f.mount()
+  assert.equal(f.listeners.has('omnimux:hmr:rebuilt'), false)
+  f.rebuilt('v2')
+  f.events.emit('omnimux:connected')
+  await settle()
+  assert.deepEqual(f.trace, [])
+  f.setSnapshot({ epoch: 'new-host', entries: [{ id: 'omnimux', rev: 'v3' }] })
+  f.events.emit('omnimux:connected')
+  await settle()
+  assert.deepEqual(f.trace, ['page-reload'])
+})
+
+test('sync before Host upgrade cannot start a page reload loop', async t => {
+  const f = fixture(t)
+  f.ctx.modules.manifest.modules.push({ id: '@deepseek-ai/dsh-client-hmr', rev: 'old' })
+  f.events.isHealthy = () => true
+  const fetch = f.document.defaultView.fetch
+  let hostUpgraded = false
+  f.document.defaultView.fetch = async () => hostUpgraded ? fetch() : { ok: false, status: 404 }
+  f.mount()
+  await settle()
+  assert.deepEqual(f.trace, [])
+  assert.ok(f.errors.some(error => String(error).includes('HTTP 404')))
+  hostUpgraded = true
+  f.events.emit('omnimux:connected')
+  await settle()
+  assert.deepEqual(f.trace, ['page-reload'])
+})
+
+test('unmount cancels a pending legacy page migration', async t => {
+  const f = fixture(t)
+  f.ctx.modules.manifest.modules.push({ id: '@deepseek-ai/dsh-client-hmr', rev: 'old' })
+  let respond
+  f.document.defaultView.fetch = () => new Promise(resolve => { respond = resolve })
+  f.mount()
+  f.events.emit('omnimux:connected')
+  f.dispose()
+  respond({ ok: true, json: async () => ({ epoch: 'new-host', entries: [] }) })
+  await settle()
+  assert.deepEqual(f.trace, [])
+})
 
 test('reloads in lifecycle order, keeps unrelated styles, and deduplicates repeated notices', async t => {
   const f = fixture(t)

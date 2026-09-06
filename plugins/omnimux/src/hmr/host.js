@@ -3,6 +3,7 @@ import { isLocalRequest } from '../workbench/http-routes.js'
 
 export const REBUILT_EVENT = 'omnimux:hmr:rebuilt'
 export const SNAPSHOT_PATH = '/omnimux/hmr/revisions'
+const LEGACY_EVENTS_PATH = '/plugins/events'
 
 /**
  * Keep the official watcher and publish its notifications on the hub socket.
@@ -39,5 +40,28 @@ export function mountWebSocketHmr(ctx, hubEvents, applyWatcher) {
     hubEvents.emit({ type: REBUILT_EVENT, payload: { id, rev } })
   }), 'omnimux: HMR notifications')
   // Defaults are explicit because direct apply does not run Cordis Config parsing.
-  applyWatcher(ctx, { pollIntervalMs: 500 })
+  const webServer = ctx.webServer
+  const watcherContext = ctx.extend({
+    webServer: {
+      register(route) {
+        if (route.kind !== 'exact' || route.path !== LEGACY_EVENTS_PATH) return webServer.register(route)
+        return webServer.register({
+          ...route,
+          handler(req, res) {
+            const rejection = ctx.connection.requestRejection(req) ?? (isLocalRequest(req) ? undefined : 403)
+            if (rejection !== undefined) {
+              res.writeHead(rejection)
+            } else if (req.method !== 'GET' && req.method !== 'HEAD') {
+              res.writeHead(405)
+            } else {
+              // HTTP 204 permanently stops legacy EventSource reconnection.
+              res.writeHead(204, { 'Cache-Control': 'no-store' })
+            }
+            res.end()
+          },
+        })
+      },
+    },
+  })
+  applyWatcher(watcherContext, { pollIntervalMs: 500 })
 }
