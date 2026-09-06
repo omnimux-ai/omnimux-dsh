@@ -271,15 +271,15 @@ export const HUB_CSS = `
   flex: 0 0 32px;
   border-radius: 8px;
   overflow: visible;
-  background: #101B2B; /* --dsw- */
-  border: 1px solid color-mix(in srgb, #C6F14F 25%, transparent); /* --dsw- */
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px color-mix(in srgb, #C6F14F 15%, transparent); /* --dsw- */
+  background: #b8b7ff; /* --dsw- DESIGN 2.0 lavender tile */
+  border: 1px solid color-mix(in srgb, #7961f2 25%, transparent); /* --dsw- */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px color-mix(in srgb, #7961f2 15%, transparent); /* --dsw- */
 }
 .omnimux-login-gate-brand-logo::before {
   content: '';
   position: absolute;
   inset: -3px;
-  border: 1px dashed color-mix(in srgb, #C6F14F 45%, transparent); /* --dsw- */
+  border: 1px dashed color-mix(in srgb, #7961f2 45%, transparent); /* --dsw- */
   border-radius: 11px;
   pointer-events: none;
 }

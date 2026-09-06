@@ -250,9 +250,11 @@ describe('HUB_CSS login-gate 1:1 tokens', () => {
     assert.match(styles, /width:\s*472px/)
   })
 
-  it('locks the chartreuse dashed logo frame and cube bullets', () => {
+  it('locks the violet dashed logo frame and cube bullets', () => {
     assert.match(styles, /\.omnimux-login-gate-brand-logo/)
-    assert.match(styles, /#C6F14F/)
+    assert.match(styles, /#7961f2/)
+    assert.doesNotMatch(styles, /#C6F14F/)
+    assert.doesNotMatch(styles, /#C8F135/)
     assert.match(styles, /inset:\s*-3px/)
     assert.match(styles, /1px dashed/)
     assert.match(styles, /\.omnimux-login-gate-bullet/)
