@@ -126,6 +126,10 @@ describe('auth http dispatcher', () => {
       provide() {},
       get() { return undefined },
       inject(deps, callback) {
+        if (deps.includes('connection')) {
+          assert.deepEqual(deps, ['webServer', 'connection'])
+          return // This HTTP-only fixture has no connection service.
+        }
         if (deps[0] === 'webServer') {
           assert.deepEqual(deps, ['webServer'])
           callback({
@@ -210,6 +214,10 @@ describe('auth http dispatcher', () => {
       tools: { register() {} },
       provide() {},
       inject(deps, callback) {
+        if (deps.includes('connection')) {
+          assert.deepEqual(deps, ['webServer', 'connection'])
+          return // This HTTP-only fixture has no connection service.
+        }
         if (deps[0] === 'webServer') {
           assert.deepEqual(deps, ['webServer'])
           callback({
@@ -248,7 +256,6 @@ describe('auth http dispatcher', () => {
       'exact:/omnimux/avatar',
       'prefix:/omnimux/composer/attachments',
       // #453: workbench routes register via webServer.register in the same inject
-      'exact:/omnimux/events/stream',
       'exact:/omnimux/workbench/viewport',
       'exact:/omnimux/workbench/rpc/ack',
     ])

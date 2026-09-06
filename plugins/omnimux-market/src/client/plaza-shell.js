@@ -19,14 +19,20 @@
     }
 
     function PlazaTopSearch({ query, onQuery, onSubmit, onClear, placeholder }) {
-      return h("div", { className: "sh-plaza-search" },
+      return h("form", {
+        className: "sh-plaza-search",
+        onSubmit: (e) => {
+          e.preventDefault();
+          if (onSubmit) onSubmit();
+        },
+      },
         h(SearchField, {
-          value: query,
-          placeholder: placeholder,
-          onChange: onQuery,
-          onSubmit: onSubmit,
-          onClear: onClear,
           stretch: true,
+          value: query,
+          debounceMs: 0,
+          placeholder: placeholder,
+          onValueChange: onQuery,
+          onClear: onClear || (() => onQuery("")),
         }),
       );
     }

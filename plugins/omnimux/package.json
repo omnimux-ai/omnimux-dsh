@@ -25,6 +25,7 @@
     "aigc-provider-runtime-kit": "^0.2.0",
     "blobatar": "^0.2.0",
     "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "ws": "^8.21.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

@@ -26,7 +26,7 @@ export const WORKBENCH_CONVERSATION_TARGET_PX = 420
 export const WORKBENCH_CONVERSATION_MIN_PX = 360
 export const WORKBENCH_SPLIT_MAX_CSS_VAR = '--omnimux-split-max'
 /**
- * Marker stamped on the resolved real better-sidebar fixed panel so the
+ * Marker stamped on the resolved real better-sidebar right panel so the
  * split-min CSS max-width keeps applying after the drag ends — the panel
  * itself has no host attribute and only carries `data-dragging` mid-drag
  * (#505). React never removes attributes it did not set, so the marker
@@ -300,7 +300,7 @@ function isLikelyWorkbenchPanel(el) {
 }
 
 /**
- * Resolve the real rendered better-sidebar fixed panel (#505).
+ * Resolve the real rendered better-sidebar right panel (#505).
  *
  * The panel element itself has no stable marker: `data-dragging` exists only
  * mid-drag and `data-dsh-panel-host` belongs to a different host. Resolution
@@ -309,8 +309,7 @@ function isLikelyWorkbenchPanel(el) {
  *    semantic class fragment `panelResize` (the CSS-module hash prefix
  *    varies; the bottom panel uses `bottomResize`, so no collision).
  * 2. A panel we already tagged with {@link WORKBENCH_PANEL_ATTR}.
- * 3. Legacy `[data-dsh-panel-host]`.
- * 4. A `[data-dragging]` node that passes the right-anchored geometry check
+ * 3. A `[data-dragging]` node that passes the right-anchored geometry check
  *    (official AppFrame drag targets do not hug the viewport's right edge).
  */
 export function findWorkbenchPanelElement(doc = hostDocument()) {
@@ -322,8 +321,6 @@ export function findWorkbenchPanelElement(doc = hostDocument()) {
     }
     const tagged = doc.querySelector(`[${WORKBENCH_PANEL_ATTR}]`)
     if (tagged) return tagged
-    const host = doc.querySelector('[data-dsh-panel-host]')
-    if (host) return host
     const dragging = doc.querySelector('[data-dragging]')
     if (dragging && isLikelyWorkbenchPanel(dragging)) return dragging
   } catch {
@@ -334,7 +331,7 @@ export function findWorkbenchPanelElement(doc = hostDocument()) {
 
 /**
  * Stamp {@link WORKBENCH_PANEL_ATTR} on the resolved panel (idempotent) so
- * the split-min CSS max-width binds to the real fixed panel permanently —
+ * the split-min CSS max-width binds to the real right panel permanently —
  * including after pointerup, when `data-dragging` is gone (#505).
  * @returns {Element | null} the resolved panel
  */
@@ -491,7 +488,7 @@ export function officialSessionSidebarWidth(env = {}) {
 /**
  * Re-apply `gui` geometry from the live left rail.
  * Also clamps any open panel that is wider than `viewport − leftRail` so the
- * fixed right panel cannot cover the official session list (#353 / #356).
+ * right panel cannot cover the official session list (#353 / #356).
  *
  * Left-rail resize MUST only rewrite panel width. It MUST NOT call
  * `setConversationCollapsed` / flip middle-pane intent (#372). `wantsGui` is
@@ -727,7 +724,7 @@ export function workbenchSplitMaxPanelPx(state, env = {}) {
 
 export const WORKBENCH_SPLIT_MIN_STYLE_ID = 'omnimux-split-conversation-min-chrome'
 // The panel max-width binds to the persistent WORKBENCH_PANEL_ATTR marker
-// (stamped on the resolved real fixed panel), NOT to [data-dragging]: the
+// (stamped on the resolved real right panel), NOT to [data-dragging]: the
 // real better-sidebar panel only carries data-dragging mid-drag, so a
 // drag-only selector releases the clamp exactly when the oversized inline
 // width is committed (#505).
@@ -735,7 +732,6 @@ export const WORKBENCH_SPLIT_MIN_CSS = `
 html:not([${CONVERSATION_COLLAPSED_ATTR}]) #root{
   margin-right:min(var(--dsh-sidebar-width,0px),var(${WORKBENCH_SPLIT_MAX_CSS_VAR},var(--dsh-sidebar-width,0px)))!important;
 }
-html:not([${CONVERSATION_COLLAPSED_ATTR}]) [data-dsh-panel-host],
 html:not([${CONVERSATION_COLLAPSED_ATTR}]) [${WORKBENCH_PANEL_ATTR}]{
   max-width:min(100vw,var(${WORKBENCH_SPLIT_MAX_CSS_VAR},100vw))!important;
 }
@@ -783,7 +779,7 @@ export function syncSplitMaxCssVar(state = liveSnapshot()?.state, env = {}) {
     try { root.style.removeProperty(WORKBENCH_SPLIT_MAX_CSS_VAR) } catch { /* ignore */ }
     return false
   }
-  // Tag the real fixed panel whenever the split ceiling applies so the CSS
+  // Tag the real right panel whenever the split ceiling applies so the CSS
   // max-width keeps binding after any drag ends (#505).
   tagWorkbenchPanel(hostDocument())
   root.style.setProperty(WORKBENCH_SPLIT_MAX_CSS_VAR, `${workbenchSplitMaxPanelPx(state, env)}px`)
@@ -808,8 +804,8 @@ function clampLiveSplitDom(state = liveSnapshot()?.state, env = {}) {
       root.style.setProperty('--dsh-sidebar-width', `${max}px`)
     }
   }
-  // The REAL fixed panel — resolved from its resize handle / marker, not from
-  // [data-dragging] (gone after release) or [data-dsh-panel-host] (absent).
+  // The real right panel — resolved from its resize handle / marker, not from
+  // [data-dragging] (gone after release).
   if (panel?.style) {
     const current = Number.parseFloat(panel.style.width)
     if (Number.isFinite(current) && current > max) panel.style.width = `${max}px`
@@ -888,10 +884,15 @@ export function installSplitConversationMin(doc = hostDocument()) {
   doc.addEventListener?.('pointermove', onMove, true)
   doc.addEventListener?.('pointerup', onUp, true)
   doc.addEventListener?.('pointercancel', onUp, true)
+  const win = hostWindow()
+  // The viewport can shrink while the official rail keeps the same width.
+  const onResize = () => syncWorkbenchGuiWidth()
+  win?.addEventListener?.('resize', onResize)
   splitMinUnsub = () => {
     doc.removeEventListener?.('pointermove', onMove, true)
     doc.removeEventListener?.('pointerup', onUp, true)
     doc.removeEventListener?.('pointercancel', onUp, true)
+    win?.removeEventListener?.('resize', onResize)
     if (splitMinDoc === doc) {
       splitMinDoc = null
       splitMinUnsub = null
@@ -984,7 +985,7 @@ export function getWorkbenchFocus(env = {}) {
   // Preserve explicit gui intent while the panel is open. A width sized for the
   // collapsed ~56px rail is farther than NEAR from the expanded-rail gui target;
   // rewriting record.mode to split here makes syncWorkbenchGuiWidth no-op and
-  // leaves the fixed panel covering the session list (#356).
+  // leaves the right panel covering the session list (#356).
   if (record.mode === WORKBENCH_FOCUS.gui && state?.panelOpen !== false) {
     return WORKBENCH_FOCUS.gui
   }
