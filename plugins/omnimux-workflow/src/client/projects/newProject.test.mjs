@@ -17,7 +17,7 @@ import {
   sanitizeFolderName,
   validateProjectTitle,
 } from './folderName.js'
-import { createProjectSession, dismissProductStage, runNewProject } from './newProject.js'
+import { createProjectSession, dismissProductStage, runNewProject, runResetSession } from './newProject.js'
 
 function workspacesWith(items, recentWorkspaceId) {
   return {
@@ -279,6 +279,128 @@ describe('runNewProject', () => {
       assert.equal(fetchCalls, 0)
     } finally {
       globalThis.fetch = originalFetch
+    }
+  })
+
+  it('un-collapses conversation after sessions.open (enter-conversation intent)', async () => {
+    const originalFetch = globalThis.fetch
+    const order = []
+    const previousWindow = globalThis.window
+    globalThis.window = {
+      dispatchEvent() { return true },
+      __omnimuxWorkbench: {
+        setConversationCollapsed(next, opts) {
+          order.push(`collapsed:${next}:${opts?.sessionId || ''}`)
+        },
+        setFocus(mode) {
+          order.push(`focus:${mode}`)
+        },
+      },
+    }
+    globalThis.fetch = async (url, opts = {}) => {
+      if (String(url).endsWith('/api/projects') && opts.method === 'POST') {
+        const body = JSON.parse(String(opts.body))
+        return {
+          ok: true,
+          json: async () => ({
+            project: { id: 'p-enter', title: body.title, path: `/lib/${body.title}` },
+          }),
+        }
+      }
+      if (String(url).includes('/api/projects/p-enter') && opts.method === 'PATCH') {
+        return { ok: true, json: async () => ({ project: { id: 'p-enter', sessionId: 'sess-enter' } }) }
+      }
+      return { ok: true, json: async () => ({}) }
+    }
+    try {
+      const opens = []
+      const result = await runNewProject({
+        sessions: {
+          async create() { return 'sess-enter' },
+          open(id) {
+            opens.push(id)
+            order.push(`open:${id}`)
+          },
+        },
+        workspaces: {
+          async create(input) { return { workspaceId: 'ws-enter', path: input.path } },
+        },
+        layout: { closeDetails() {} },
+        betterSidebar: {
+          openTab() { order.push('openTab') },
+          closeTab() {},
+          getTab() { return { id: 'omnimux-workflow:canvas' } },
+          getSnapshot() {
+            return { sessionId: 'sess-enter', state: { splits: { kind: 'leaf', tabs: [] }, width: 700, panelOpen: true } }
+          },
+        },
+        t: (key) => key,
+        stage: { set() {} },
+      }, { title: '进会话' })
+
+      assert.equal(result.ok, true)
+      assert.deepEqual(opens, ['sess-enter'])
+      assert.ok(order.indexOf('open:sess-enter') >= 0)
+      assert.ok(order.indexOf('collapsed:false:sess-enter') > order.indexOf('open:sess-enter'))
+      assert.ok(order.indexOf('focus:split') > order.indexOf('open:sess-enter'))
+    } finally {
+      globalThis.fetch = originalFetch
+      if (previousWindow === undefined) delete globalThis.window
+      else globalThis.window = previousWindow
+    }
+  })
+})
+
+describe('runResetSession', () => {
+  it('un-collapses conversation after opening the fresh session', async () => {
+    const order = []
+    const previousWindow = globalThis.window
+    globalThis.window = {
+      __omnimuxWorkbench: {
+        setConversationCollapsed(next, opts) {
+          order.push(`collapsed:${next}:${opts?.sessionId || ''}`)
+        },
+        setFocus(mode) {
+          order.push(`focus:${mode}`)
+        },
+      },
+    }
+    try {
+      const result = await runResetSession({
+        sessions: {
+          async create(opts) {
+            order.push(`create:${opts.workspaceId}`)
+            return 'sess-reset'
+          },
+          open(id) { order.push(`open:${id}`) },
+        },
+        workspaces: {
+          async create() { return { workspaceId: 'ws-reset' } },
+          list: { getSnapshot: () => ({ items: [{ workspaceId: 'ws-reset', path: '/lib/x' }] }) },
+        },
+        layout: { closeDetails() {} },
+        betterSidebar: {
+          openTab() { order.push('openTab') },
+          closeTab() {},
+          getTab() { return { id: 'omnimux-workflow:canvas' } },
+          getSnapshot() {
+            return {
+              sessionId: 'sess-reset',
+              state: { splits: { kind: 'leaf', tabs: [] }, width: 700, panelOpen: true },
+            }
+          },
+        },
+        t: (key) => key,
+      }, { workspaceId: 'ws-reset', cwd: '/lib/x' })
+
+      assert.equal(result.ok, true)
+      assert.equal(result.sessionId, 'sess-reset')
+      assert.ok(order.indexOf('open:sess-reset') >= 0)
+      assert.ok(order.indexOf('collapsed:false:sess-reset') > order.indexOf('open:sess-reset'))
+      assert.ok(order.indexOf('focus:split') > order.indexOf('open:sess-reset'))
+    } finally {
+      if (previousWindow === undefined) delete globalThis.window
+      else globalThis.window = previousWindow
     }
   })
 })

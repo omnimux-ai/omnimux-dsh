@@ -442,6 +442,19 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     title,
     path: CANVAS_SENTINEL_PATH,
   }, openScope)
-  applyProjectCanvasRatio(service, sessionId)
+
+  // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，
+  // 必须显式解除中间会话栏折叠并切到 split，否则 conversation-collapse.css 会把
+  // centerCol 藏成黑屏占位，且 applyProjectCanvasRatio 因 getFocus()==='gui' 直接跳过。
+  // 与 omnimux-inspiration #552 revealConversationColumn 对齐。
+  const workbench = typeof globalThis.window !== 'undefined' ? globalThis.window.__omnimuxWorkbench : undefined
+  if (workbench) {
+    try { workbench.setConversationCollapsed?.(false, { sessionId }) } catch { /* ignore */ }
+    try { workbench.setFocus?.('split') } catch { /* ignore */ }
+  }
+
+  // force：新建项目会话尚无人手拖拽记录，必须写入 15:85；此前 focus 已切 split，
+  // 不会再被 gui/chat 守卫挡回。
+  applyProjectCanvasRatio(service, sessionId, null, {}, true)
   return true
 }
