@@ -41,12 +41,12 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   )!important;
 }
 
-/* (B6) Symmetrical card centering: eliminate scrollbar gutter bias and ensure
-   strictly balanced left/right margins inside the conversation column.
-   The composer card must ride the SAME content-width rail as the hero seats
-   row ("测试 / 标准模式"), or the two will drift apart on wide/fullscreen
-   columns (official card uses its own ~952px max-width while the seats row
-   follows --dsh-chat-content-width). Lock both to the shared var. */
+/* Reserve equal scrollbar gutters so the content stays centered in the column. */
+[data-phase='hero'] [data-conversation-scroll]{
+  scrollbar-gutter:stable both-edges;
+}
+
+/* The card and workspace row share a cap; the input bar owns side clearance. */
 [data-composer-card]{
   width:100%!important;
   max-width:var(--dsh-chat-content-width)!important;
@@ -57,9 +57,9 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
 [data-composer-seat]{
   box-sizing:border-box!important;
 }
-[data-composer-seat] > *{
+[data-composer-seat] [class*="composerStack"]{
   width:100%!important;
-  max-width:var(--dsh-chat-content-width)!important;
+  min-width:0;
   margin-left:auto!important;
   margin-right:auto!important;
   box-sizing:border-box!important;
@@ -96,13 +96,9 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   min-height:0;
 }
 
-/* (B5) hero seats row ("测试 / 标准模式") shares the exact same centered content rail
-   as [data-composer-card]. Sibling elements inside composerStack both use
-   max-width: var(--dsh-chat-content-width) and margin: 0 auto so they are mathematically
-   guaranteed to share the identical left and right alignment on every reflow frame,
-   completely eliminating JS ResizeObserver lag or stale offset desynchronization. */
+/* Match the input bar's clearance even when a narrow column limits card width. */
 [data-phase='hero'] [class*="heroWorkspaceRow"]{
-  width:100%!important;
+  width:calc(100% - 2 * var(--dsh-composer-side-clearance,16px))!important;
   max-width:var(--dsh-chat-content-width)!important;
   min-width:0;
   margin-left:auto!important;
