@@ -269,9 +269,9 @@ BUILD_PLUGINS=("${SYNC_PLUGINS[@]}")
 # mixed dev+prod run keeps Alpha in Dev while sync-stable filters Prod.
 HAS_PRODUCTION_TARGET=0
 HAS_NON_PRODUCTION_TARGET=0
-PRODUCTION_HOME="$HOME/.omnimux"
 for home_dir in "${TARGET_HOMES[@]}"; do
-  if [ "$home_dir" = "$PRODUCTION_HOME" ]; then
+  release_channel=$(resolve_omnimux_release_channel "$(resolve_omnimux_profile_dir "$home_dir")")
+  if [ "$release_channel" = "production" ]; then
     HAS_PRODUCTION_TARGET=1
   else
     HAS_NON_PRODUCTION_TARGET=1

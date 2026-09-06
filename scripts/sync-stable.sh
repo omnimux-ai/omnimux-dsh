@@ -174,10 +174,7 @@ for PROFILE in "${PROFILES[@]}"; do
   MANAGED_PLUGINS=()
   MANAGES_KIT=0
   LEGACY_KIT_SELF_REFERENCE=0
-  RELEASE_CHANNEL=development
-  if [ "$PROFILE" = "$(resolve_omnimux_profile_dir "$HOME/.omnimux")" ]; then
-    RELEASE_CHANNEL=production
-  fi
+  RELEASE_CHANNEL=$(resolve_omnimux_release_channel "$PROFILE")
   PROFILE_TARGET_PLUGINS=()
   for name in "${TARGET_PLUGINS[@]}"; do
     if [ "$RELEASE_CHANNEL" != "production" ] || ! is_alpha_plugin "$name"; then

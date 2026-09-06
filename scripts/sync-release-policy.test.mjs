@@ -9,6 +9,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -167,6 +168,39 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     assert.equal(prodManifest.dependencies['omnimux-accounts'], undefined)
     assert.equal(readChannel(fixtureRoot, '.omnimux'), 'production')
     assert.equal(readChannel(fixtureRoot, '.omnimux-dev'), 'development')
+  })
+
+  it('applies production policy to equivalent paths through both sync entrypoints', () => {
+    const runner = join(fixtureRoot, 'alias-runner')
+    mkdirSync(join(runner, 'scripts'), { recursive: true })
+    mkdirSync(join(runner, 'plugins/omnimux/src'), { recursive: true })
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs']) {
+      copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
+    }
+    copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(runner, 'plugins/omnimux/src/plugin-lifecycle.json'))
+    for (const entrypoint of ['sync-stable.sh', 'sync-to-app.sh']) {
+      for (const alias of ['trailing-slash', 'dot', 'symlink']) {
+        const home = join(fixtureRoot, `${entrypoint}-${alias}`)
+        seedProfile(home, '.omnimux')
+        const target = alias === 'trailing-slash' ? `${home}/.omnimux/`
+          : alias === 'dot' ? `${home}/./.omnimux` : join(home, 'production-alias')
+        if (alias === 'symlink') symlinkSync(join(home, '.omnimux'), target, 'dir')
+        const result = spawnSync('bash', [join(runner, 'scripts', entrypoint), `--target=${target}`, '--skip-build', 'omnimux-accounts'], {
+          cwd: runner,
+          encoding: 'utf8',
+          env: { ...process.env, HOME: home, CI: 'true', npm_config_offline: 'true', OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: fixturePlugins },
+        })
+        assert.equal(result.status, 0, `${entrypoint}/${alias}: ${result.stderr || result.stdout}`)
+        assert.equal(readChannel(home, '.omnimux'), 'production')
+        const manifest = readManifest(home, '.omnimux')
+        for (const name of alphaPluginIds) {
+          assert.equal(manifest.dependencies[name], undefined)
+          assert.equal(manifest.dsh.profile.bundles.includes(name), false)
+          assert.equal(existsSync(join(profileDir(home, '.omnimux'), 'node_modules', name)), false)
+        }
+        assert.ok(manifest.dsh.profile.bundles.includes('omnimux-workflow'))
+      }
+    }
   })
 
   it('preserves the named plugin scope when sync-to-app targets Dev and Prod together', () => {

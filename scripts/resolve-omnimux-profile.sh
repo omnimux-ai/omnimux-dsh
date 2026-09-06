@@ -34,6 +34,30 @@ expand_omnimux_sync_target_home() {
   esac
 }
 
+# Compare filesystem identity so aliases cannot turn a production write into
+# development policy. Missing profile directories resolve through their parent.
+resolve_omnimux_release_channel() {
+  node - "$1" "$HOME/.omnimux/profiles/omnimux" <<'EOF'
+const fs = require('node:fs')
+const path = require('node:path')
+function canonical(candidate) {
+  const suffix = []
+  for (;;) {
+    try { return path.resolve(fs.realpathSync.native(candidate), ...suffix) }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      const parent = path.dirname(candidate)
+      if (parent === candidate) throw error
+      suffix.unshift(path.basename(candidate))
+      candidate = parent
+    }
+  }
+}
+const [target, production] = process.argv.slice(2)
+process.stdout.write(canonical(target) === canonical(production) ? 'production\n' : 'development\n')
+EOF
+}
+
 resolve_omnimux_profile_dir() {
   local home_dir="$1"
   local tasks_prefix="$HOME/.dsh-dev/tasks"
