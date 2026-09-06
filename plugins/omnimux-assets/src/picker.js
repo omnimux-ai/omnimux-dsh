@@ -7,8 +7,6 @@
  *
  * File picks allow multiple selections. Folder picks also allow multiple
  * folders; each folder is stored as one path ref (never flattened).
- * `any` requests a UTI union in one panel; native mixed selection remains
- * unverified until the macOS picker gate has real evidence.
  *
  * The runner is injectable for deterministic tests.
  */
@@ -17,25 +15,13 @@ import { spawn } from 'node:child_process'
 const PROMPTS = {
   file: '选择要添加的文件',
   directory: '选择要添加的文件夹',
-  any: '选择要添加的文件或文件夹',
 }
 
 /**
- * @param {'file' | 'directory' | 'any'} kind
+ * @param {'file' | 'directory'} kind
  */
 function pickScript(kind) {
   const prompt = PROMPTS[kind]
-  if (kind === 'any') {
-    // UTI union request only; do not infer mixed native selection from this script.
-    return [
-      `set theItems to choose file of type {"public.folder", "public.data"} with prompt "${prompt}" with multiple selections allowed`,
-      'set posixPaths to ""',
-      'repeat with theItem in theItems',
-      'set posixPaths to posixPaths & POSIX path of theItem & linefeed',
-      'end repeat',
-      'return posixPaths',
-    ].join('\n')
-  }
   const choose = kind === 'file' ? 'file' : 'folder'
   return [
     `set theItems to choose ${choose} with prompt "${prompt}" with multiple selections allowed`,
@@ -64,12 +50,12 @@ export function parsePickedPaths(stdout) {
 }
 
 /**
- * @param {'file' | 'directory' | 'any'} kind
+ * @param {'file' | 'directory'} kind
  * @param {{ platform?: NodeJS.Platform, run?: typeof runCommand }} [deps]
  * @returns {Promise<{ path: string | null, paths: string[] }>} path=null means user cancelled.
  */
 export async function pickNativePath(kind, deps = {}) {
-  if (kind !== 'file' && kind !== 'directory' && kind !== 'any') {
+  if (kind !== 'file' && kind !== 'directory') {
     throw new PickerError('picker-invalid-kind', `unknown pick kind: ${String(kind)}`)
   }
   const platform = deps.platform ?? process.platform

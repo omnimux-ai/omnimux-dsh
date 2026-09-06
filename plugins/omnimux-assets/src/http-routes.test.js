@@ -287,27 +287,6 @@ describe('AssetsDispatcher mappings routes', () => {
     assert.equal(cancelled.body.path, null)
     assert.deepEqual(cancelled.body.paths, [])
   })
-
-  it('passes kind "any" through to the picker request', async () => {
-    const seen = []
-    const { dispatcher } = makeDispatcher({
-      picker: async (kind) => {
-        seen.push(kind)
-        return { path: '/tmp/f.png', paths: ['/tmp/f.png', '/tmp/dir'] }
-      },
-    })
-    const picked = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'any' }))
-    assert.equal(picked.status, 200)
-    assert.deepEqual(seen, ['any'])
-    assert.deepEqual(picked.body.paths, ['/tmp/f.png', '/tmp/dir'])
-  })
-
-  it('rejects an explicit invalid pick kind with 400', async () => {
-    const { dispatcher } = makeDispatcher()
-    const bad = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'folder' }))
-    assert.equal(bad.status, 400)
-    assert.equal(bad.body.error, 'picker-invalid-kind')
-  })
 })
 
 describe('AssetsDispatcher artifacts routes', () => {

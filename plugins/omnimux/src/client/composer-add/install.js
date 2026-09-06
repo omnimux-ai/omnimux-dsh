@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AssetPickerModal } from './AssetPickerModal.jsx'
 import { LocalPathPicker } from '../components/local-path-picker/LocalPathPicker.jsx'
-import { failedPathSelection } from '../components/local-path-picker/path-selection.js'
+import { createPathImporter } from './path-import.js'
 import { getGlobalAttachmentStore } from '../attachments/store.ts'
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { installComposerAttachmentSubmitCapture } from './submit-inject.js'
@@ -61,9 +61,11 @@ function applyAddResults(store, sessionId, items, t) {
   let duplicate = 0
   let quota = 0
   let failed = 0
+  const outcomes = []
   for (const item of items) {
     if (!item || item.ok === false) {
       failed += 1
+      outcomes.push(item)
       continue
     }
     const result = store.addAttachment(sessionId, {
@@ -80,6 +82,11 @@ function applyAddResults(store, sessionId, items, t) {
     else if (result.reason === 'duplicate') duplicate += 1
     else if (result.reason === 'quota-exceeded') quota += 1
     else failed += 1
+    outcomes.push(result.ok || result.reason === 'duplicate' ? item : {
+      ...item,
+      ok: false,
+      message: tx(t, result.reason === 'quota-exceeded' ? 'composerAdd.toast.quota' : 'composerAdd.toast.failed', { n: 1 }),
+    })
   }
   const parts = []
   if (added) parts.push(tx(t, 'composerAdd.toast.added', { n: added }))
@@ -88,7 +95,7 @@ function applyAddResults(store, sessionId, items, t) {
   if (failed) parts.push(tx(t, 'composerAdd.toast.failed', { n: failed }))
   if (parts.length) toast(parts.join(' · '))
   console.debug('[omnimux:composer-add]', 'add-results', { added, duplicate, quota, failed })
-  return { added, duplicate, quota, failed }
+  return { added, duplicate, quota, failed, outcomes }
 }
 
 async function requestJson(path, body, signal) {
@@ -149,6 +156,20 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
       t: (key, vars) => tx(t, key, vars),
     }
     if (action.kind === 'paths') {
+      action.importPaths ??= createPathImporter({
+        materialize: async (paths) => {
+          const result = await requestJson('/omnimux/composer/attachments/materialize', {
+            sessionId, paths,
+          }, action.requestSignal)
+          const rows = Array.isArray(result.body.results) ? result.body.results : []
+          if (rows.length === 0) {
+            throw new Error(result.body.message || tx(t, 'composerAdd.toast.failed', { n: paths.length }))
+          }
+          return rows
+        },
+        adopt: (rows) => applyAddResults(store, sessionId, rows, t).outcomes,
+        isCurrent: owned,
+      })
       modalRoot.render(createElement(LocalPathPicker, {
         ...common,
         remaining: Math.max(0, MAX_ATTACHMENTS - store.getSnapshot(sessionId).length),
@@ -156,16 +177,8 @@ export function installComposerAddCapture(doc = (typeof document !== 'undefined'
           if (!owned()) return null
           const remaining = MAX_ATTACHMENTS - store.getSnapshot(sessionId).length
           if (paths.length > remaining) throw new Error(tx(t, 'composerAdd.toast.quota'))
-          const result = await requestJson('/omnimux/composer/attachments/materialize', {
-            sessionId, paths,
-          }, action.requestSignal)
-          if (!owned()) return null
-          const rows = Array.isArray(result.body.results) ? result.body.results : []
-          if (rows.length === 0) {
-            throw new Error(result.body.message || tx(t, 'composerAdd.toast.failed', { n: paths.length }))
-          }
-          applyAddResults(store, sessionId, rows, t)
-          const failed = failedPathSelection(rows)
+          const failed = await action.importPaths(paths)
+          if (!failed) return null
           if (failed.remainingPaths.length === 0) closePickerAction(action)
           return failed
         },

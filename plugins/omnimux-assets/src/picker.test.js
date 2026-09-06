@@ -111,17 +111,6 @@ describe('pickNativePath happy path', () => {
     assert.ok(!scripts[0].includes('$'))
   })
 
-  it('kind "any" builds the UTI-union picker request', async () => {
-    const scripts = []
-    const run = async (_command, argv) => {
-      scripts.push(argv[1])
-      return { stdout: '/tmp/f.png\n/tmp/dir\n', stderr: '' }
-    }
-    const result = await pickNativePath('any', { platform: 'darwin', run })
-    assert.match(scripts[0], /choose file of type \{"public\.folder", "public\.data"\} with prompt "选择要添加的文件或文件夹" with multiple selections allowed/)
-    assert.deepEqual(result.paths, ['/tmp/f.png', '/tmp/dir'])
-  })
-
   it('treats empty stdout as a cancellation', async () => {
     const result = await pickNativePath('file', { platform: 'darwin', run: runOk('') })
     assert.deepEqual(result, { path: null, paths: [] })

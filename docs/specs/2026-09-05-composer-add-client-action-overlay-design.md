@@ -1,4 +1,7 @@
 ---
+
+> 文件入口交互已按用户确认改为[页内本地路径面板](2026-09-06-composer-file-selection-integration.md)，替代本文的原生混选验收要求。clientAction、取消、会话身份和资产选择器约束继续适用。
+
 title: "Composer 原生命令列表 clientAction 扩展增量设计"
 id: "spec-composer-client-action-overlay"
 type: "architecture-design"
