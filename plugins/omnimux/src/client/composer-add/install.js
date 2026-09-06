@@ -53,6 +53,7 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     getCurrentSessionId: () => sessions.list.getSnapshot().current,
     subscribeCurrentSession: listener => sessions.list.subscribe(listener),
     notify: message => toast.show(message),
+    onBegin: () => { focusTarget = doc.activeElement },
     restoreFocus: () => {
       if (focusTarget?.isConnected && typeof focusTarget.focus === 'function') focusTarget.focus()
     },
@@ -64,11 +65,9 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
   })
   return {
     addFiles(sessionId) {
-      focusTarget = doc.activeElement
       return controller.addFiles(sessionId)
     },
     openLibrary(sessionId) {
-      focusTarget = doc.activeElement
       controller.openLibrary(sessionId)
     },
     dispose() {

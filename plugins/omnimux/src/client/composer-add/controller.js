@@ -29,6 +29,7 @@ export async function requestComposerJson(path, body, signal) {
  *   notify: (message: string) => void,
  *   renderLibrary: (model: object | null) => void,
  *   request?: (path: string, body: object, signal?: AbortSignal) => Promise<JsonResponse>,
+ *   onBegin?: () => void,
  *   restoreFocus?: (sessionId: string) => void,
  * }} options
  */
@@ -37,6 +38,7 @@ export function createComposerAddController(options) {
   const request = options.request || requestComposerJson
   let disposed = false
   let revision = 0
+  const importingSessions = new Set()
   /** @type {Operation | null} */
   let owner = null
   let stopAttachments = () => {}
@@ -90,7 +92,7 @@ export function createComposerAddController(options) {
       return null
     }
     if (getCurrentSessionId() !== sessionId) return null
-    if (owner) {
+    if (owner || importingSessions.has(sessionId)) {
       notify(text('composerAdd.busy'))
       return null
     }
@@ -100,6 +102,7 @@ export function createComposerAddController(options) {
     }
     const operation = { id: ++revision, sessionId, kind, importing: false, selection: new AbortController() }
     owner = operation
+    options.onBegin?.()
     stopAttachments = store.subscribe(sessionId, () => render(operation))
     return operation
   }
@@ -183,6 +186,7 @@ export function createComposerAddController(options) {
       }
       if (paths.length) {
         operation.importing = true
+        importingSessions.add(sessionId)
         const response = await request('/omnimux/composer/attachments/materialize', {
           sessionId, paths, filesOnly: true,
         })
@@ -202,6 +206,7 @@ export function createComposerAddController(options) {
     } catch (error) {
       if (visible(operation)) notify(error instanceof Error ? error.message : text('composerAdd.toast.failed', { n: 1 }))
     } finally {
+      if (operation.importing) importingSessions.delete(sessionId)
       close(operation, true)
     }
   }
@@ -213,6 +218,7 @@ export function createComposerAddController(options) {
     const assetIds = [...new Set(picked.map(row => row.id))].filter(id => !known.has(id)).slice(0, remaining)
     if (!assetIds.length) throw new Error(text('composerAdd.toast.quota'))
     operation.importing = true
+    importingSessions.add(operation.sessionId)
     try {
       const response = await request('/omnimux/composer/attachments/instantiate', {
         sessionId: operation.sessionId, assetIds,
@@ -228,6 +234,7 @@ export function createComposerAddController(options) {
       close(operation, true)
     } finally {
       operation.importing = false
+      importingSessions.delete(operation.sessionId)
     }
   }
 

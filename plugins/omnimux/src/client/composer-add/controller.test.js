@@ -103,6 +103,72 @@ describe('composer add controller', () => {
     f.controller.dispose()
   })
 
+  for (const kind of ['file', 'library']) {
+    it(`blocks same-session reentry until an admitted ${kind} import settles`, async () => {
+      const pending = deferred()
+      const endpoint = kind === 'file' ? MATERIALIZE : INSTANTIATE
+      const f = setup(path => {
+        if (path === PICK) return ok({ paths: ['/tmp/pending.txt'] })
+        if (path === endpoint) return pending.promise
+      })
+      occupy(f.store, 'a', 6)
+      let importing
+      if (kind === 'file') importing = f.controller.addFiles('a')
+      else {
+        f.controller.openLibrary('a')
+        importing = f.model.onConfirm([{ id: 'pending' }])
+      }
+      await Promise.resolve()
+      await Promise.resolve()
+      assert.equal(f.requests.filter(row => row.path === endpoint).length, 1)
+      f.switchTo('b')
+      f.controller.openLibrary('b')
+      assert.ok(f.model)
+      f.switchTo('a')
+      f.controller.openLibrary('a')
+      await f.controller.addFiles('a')
+      assert.equal(f.model, null)
+      assert.equal(f.requests.filter(row => row.path === endpoint).length, 1)
+      assert.equal(f.requests.filter(row => row.path === PICK).length, kind === 'file' ? 1 : 0)
+      assert.equal(f.notices.at(-1), zh['composerAdd.busy'])
+      pending.resolve(ok({ results: [kind === 'file' ? file('/tmp/pending.txt') : asset('pending')] }))
+      await importing
+      assert.equal(f.store.getSnapshot('a').length, 7)
+      assert.equal(f.store.getSnapshot('b').length, 0)
+      f.controller.openLibrary('a')
+      assert.ok(f.model)
+      f.controller.dispose()
+    })
+  }
+
+  it('a discarded picker cannot unlock a later import in the same session', async () => {
+    const selection = deferred()
+    const copy = deferred()
+    let picks = 0
+    const f = setup(path => {
+      if (path === PICK && ++picks === 1) return selection.promise
+      if (path === MATERIALIZE) return copy.promise
+    })
+    const old = f.controller.addFiles('a')
+    f.switchTo('b')
+    f.switchTo('a')
+    const importing = f.controller.addFiles('a')
+    await Promise.resolve()
+    await Promise.resolve()
+    f.switchTo('b')
+    f.switchTo('a')
+    selection.resolve(ok({ paths: ['/tmp/stale.txt'] }))
+    await old
+    f.controller.openLibrary('a')
+    assert.equal(f.model, null)
+    assert.equal(f.notices.at(-1), zh['composerAdd.busy'])
+    copy.resolve(ok({ results: [file('/tmp/a.txt')] }))
+    await importing
+    f.controller.openLibrary('a')
+    assert.ok(f.model)
+    f.controller.dispose()
+  })
+
   it('falls back exactly once only for a missing desktop capability', async () => {
     const f = setup(path => {
       if (path === PICK) return failure(501, 'native-picker-unavailable')
