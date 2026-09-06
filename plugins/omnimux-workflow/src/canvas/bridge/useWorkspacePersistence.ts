@@ -100,6 +100,18 @@ export function useWorkspacePersistence(
   const [isDirty, setIsDirty] = useState(false);
 
   const workspaceRef = useRef<CanvasWorkspaceSnapshot | null>(workspace);
+  const scopeRef = useRef({ workspaceId: workspace?.id ?? null });
+  if (scopeRef.current.workspaceId !== (workspace?.id ?? null)) {
+    scopeRef.current = { workspaceId: workspace?.id ?? null };
+  }
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  const isCurrentScope = (scope: typeof scopeRef.current) =>
+    mountedRef.current && scopeRef.current === scope
+    && workspaceRef.current?.id === scope.workspaceId;
   const serverVersionRef = useRef(0);
   const lastSavedSigRef = useRef('');
   const currentSigRef = useRef('');
@@ -124,10 +136,19 @@ export function useWorkspacePersistence(
   // version — it must not clobber the 'saved' badge or dirty tracking.
   useEffect(() => {
     workspaceRef.current = workspace;
-    if (!workspace) return;
+    if (!workspace) {
+      lastInitIdRef.current = '';
+      savingRef.current = null;
+      return;
+    }
     serverVersionRef.current = workspace.version;
     if (lastInitIdRef.current === workspace.id) return;
     lastInitIdRef.current = workspace.id;
+    savingRef.current = null;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    if (savedBadgeTimerRef.current) clearTimeout(savedBadgeTimerRef.current);
+    savedBadgeTimerRef.current = null;
     conflictRef.current = false;
     // 以磁盘/服务端快照为 last-saved，不读可能已被 reset 的 store
     lastSavedSigRef.current = graphSig(workspace.nodes, workspace.edges);
@@ -152,16 +173,17 @@ export function useWorkspacePersistence(
     localEdges: SerializedCanvasEdge[];
   }): Promise<boolean> => {
     const ws = workspaceRef.current;
+    const scope = scopeRef.current;
     if (!ws) {
       setStatus('error');
       return false;
     }
     const latest = await getWorkspace(ws.id);
+    if (!isCurrentScope(scope)) return false;
     if (!latest.ok || !latest.body.workspace) {
       setStatus('error');
       return false;
     }
-    if (workspaceRef.current?.id !== ws.id) return false;
     const snapshot = latest.body.workspace;
     serverVersionRef.current = snapshot.version;
     // Only the explicit resolution controls may release an existing conflict.
@@ -205,10 +227,12 @@ export function useWorkspacePersistence(
     resolveConflict = false,
   ): Promise<SaveOutcome> => {
     const ws = workspaceRef.current;
+    const scope = scopeRef.current;
     const previous = savingRef.current;
     const pending = (async (): Promise<SaveOutcome> => {
       if (previous) await previous;
-      if (!ws || workspaceRef.current?.id !== ws.id || (!force && !enabledRef.current)) {
+      if (!ws || scopeRef.current !== scope || scope.workspaceId !== ws.id
+        || workspaceRef.current?.id !== ws.id || (!force && !enabledRef.current)) {
         return { error: '画布尚未就绪，请重新打开后再试' };
       }
       if (conflictRef.current && !resolveConflict) {
@@ -237,11 +261,12 @@ export function useWorkspacePersistence(
           edges: sanitizeEdges(edges),
           expectedVersion: serverVersionRef.current,
         });
-        if (workspaceRef.current?.id !== ws.id) {
+        if (!isCurrentScope(scope)) {
           return { error: '画布已切换，请重新发起生成' };
         }
         if (result.status === 409) {
           const reconciled = await resolveRemoteAdvance({ localNodes: nodes, localEdges: edges });
+          if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
           if (!reconciled) {
             conflictRef.current = true;
             setStatus('conflict');
@@ -262,11 +287,12 @@ export function useWorkspacePersistence(
         setStatus(dirty ? 'pending' : 'saved');
         clearSavedBadgeTimer();
         savedBadgeTimerRef.current = setTimeout(() => {
-          setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
+          if (isCurrentScope(scope)) setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_BADGE_MS);
         onSavedRef.current?.(result.body.workspace);
         return { version };
       } catch {
+        if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
         setStatus(conflictRef.current ? 'conflict' : 'error');
         return { error: '画布保存失败，请重试' };
       }
@@ -373,12 +399,12 @@ export function useWorkspacePersistence(
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const workspaceId = workspaceRef.current?.id;
+    const scope = scopeRef.current;
     const capture = readStoreCapture();
     const signature = graphSig(capture.nodes, capture.edges);
     const assertCurrent = () => {
       const current = readStoreCapture();
-      if (!enabledRef.current || workspaceRef.current?.id !== workspaceId
+      if (!enabledRef.current || !isCurrentScope(scope)
         || graphSig(current.nodes, current.edges) !== signature) {
         throw new Error('保存期间输入已变化，请确认内容后重新生成');
       }
@@ -431,27 +457,33 @@ export function useWorkspacePersistence(
 
   const reloadFromServer = useCallback(async () => {
     const ws = workspaceRef.current;
+    const scope = scopeRef.current;
     if (!ws) return;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (savingRef.current) await savingRef.current;
-    const latest = await getWorkspace(ws.id);
-    if (!latest.ok || !latest.body.workspace) {
-      setStatus('error');
-      return;
+    try {
+      if (savingRef.current) await savingRef.current;
+      if (!isCurrentScope(scope)) return;
+      const latest = await getWorkspace(ws.id);
+      if (!isCurrentScope(scope)) return;
+      if (!latest.ok || !latest.body.workspace) {
+        setStatus('error');
+        return;
+      }
+      const snapshot = latest.body.workspace;
+      conflictRef.current = false;
+      serverVersionRef.current = snapshot.version;
+      lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
+      lastSavedNodeCountRef.current = snapshot.nodes.length;
+      useCanvasStore.getState().hydrateGraph(snapshot.nodes, snapshot.edges);
+      setIsDirty(false);
+      setStatus('idle');
+      onSavedRef.current?.(snapshot);
+    } catch {
+      if (isCurrentScope(scope)) setStatus(conflictRef.current ? 'conflict' : 'error');
     }
-    if (workspaceRef.current?.id !== ws.id) return;
-    const snapshot = latest.body.workspace;
-    conflictRef.current = false;
-    serverVersionRef.current = snapshot.version;
-    lastSavedSigRef.current = graphSig(snapshot.nodes, snapshot.edges);
-    lastSavedNodeCountRef.current = snapshot.nodes.length;
-    useCanvasStore.getState().hydrateGraph(snapshot.nodes, snapshot.edges);
-    setIsDirty(false);
-    setStatus('idle');
-    onSavedRef.current?.(snapshot);
   }, []);
 
   // PR3 external-edit watcher: agent tools bump version without this window
@@ -465,10 +497,12 @@ export function useWorkspacePersistence(
       if (!enabledRef.current) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const ws = workspaceRef.current;
+      const scope = scopeRef.current;
       if (!ws || savingRef.current || conflictRef.current) return;
       inFlight = true;
       try {
         const probe = await getWorkspaceVersion(ws.id);
+        if (!isCurrentScope(scope)) return;
         if (!probe.ok || typeof probe.body.version !== 'number') return;
         if (probe.body.version <= serverVersionRef.current) return;
         const capture = readStoreCapture();
