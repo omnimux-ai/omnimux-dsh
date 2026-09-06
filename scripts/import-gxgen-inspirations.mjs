@@ -939,37 +939,37 @@ export async function verifyImport(options, deps = {}) {
     try {
       await verifyExistingSnapshot(plan, config, deps)
       for (const item of plan.items) {
-      const previous = durableBinding(journal, item.gxgenId)
-      if (!previous) {
-        const result = { mode: 'verify', tiktokId: item.tiktokId, status: 'verification_failed', error: 'no successful apply receipt exists' }
-        recordReceipt(journal, item.gxgenId, result, deps)
-        runAttempts.push(result)
-      } else {
-        try {
-          if (previous.ownership === 'external') {
-            const current = await getTargetRecord(config, previous.targetId, deps)
-            if (recordSnapshotDigest(current) !== previous.targetSnapshotDigest) throw new Error('external target record changed since it was skipped')
-          } else {
-            await verifyRecord(config, previous.targetId, item, deps)
-          }
-          const result = { mode: 'verify', tiktokId: item.tiktokId, status: 'existing', ownership: previous.ownership || 'plan', targetId: previous.targetId, ...(previous.targetSnapshotDigest ? { targetSnapshotDigest: previous.targetSnapshotDigest } : {}) }
+        const previous = durableBinding(journal, item.gxgenId)
+        if (!previous) {
+          const result = { mode: 'verify', tiktokId: item.tiktokId, status: 'verification_failed', error: 'no successful apply receipt exists' }
           recordReceipt(journal, item.gxgenId, result, deps)
           runAttempts.push(result)
-        } catch (error) {
-          const result = {
-            mode: 'verify', tiktokId: item.tiktokId,
-            status: error instanceof SystemError ? 'unknown' : 'verification_failed', fatal: error instanceof SystemError,
-            ownership: previous.ownership, targetId: previous.targetId,
-            ...(previous.targetSnapshotDigest ? { targetSnapshotDigest: previous.targetSnapshotDigest } : {}),
-            error: safeMessage(error),
+        } else {
+          try {
+            if (previous.ownership === 'external') {
+              const current = await getTargetRecord(config, previous.targetId, deps)
+              if (recordSnapshotDigest(current) !== previous.targetSnapshotDigest) throw new Error('external target record changed since it was skipped')
+            } else {
+              await verifyRecord(config, previous.targetId, item, deps)
+            }
+            const result = { mode: 'verify', tiktokId: item.tiktokId, status: 'existing', ownership: previous.ownership || 'plan', targetId: previous.targetId, ...(previous.targetSnapshotDigest ? { targetSnapshotDigest: previous.targetSnapshotDigest } : {}) }
+            recordReceipt(journal, item.gxgenId, result, deps)
+            runAttempts.push(result)
+          } catch (error) {
+            const result = {
+              mode: 'verify', tiktokId: item.tiktokId,
+              status: error instanceof SystemError ? 'unknown' : 'verification_failed', fatal: error instanceof SystemError,
+              ownership: previous.ownership, targetId: previous.targetId,
+              ...(previous.targetSnapshotDigest ? { targetSnapshotDigest: previous.targetSnapshotDigest } : {}),
+              error: safeMessage(error),
+            }
+            recordReceipt(journal, item.gxgenId, result, deps)
+            runAttempts.push(result)
+            if (result.fatal) throw error
           }
-          recordReceipt(journal, item.gxgenId, result, deps)
-          runAttempts.push(result)
-          if (result.fatal) throw error
         }
+        writeReceipts(file, journal)
       }
-      writeReceipts(file, journal)
-    }
     } catch (error) {
       run.failure = safeMessage(error)
     }
