@@ -70,6 +70,7 @@
     "check:package-files": "node scripts/verify-package-files.mjs"
   },
   "devDependencies": {
+    "acorn": "8.15.0",
     "esbuild": "0.28.2",
     "pngjs": "7.0.0"
   }

@@ -41,7 +41,7 @@ jobs:
           const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
           writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
             private: true,
-            dependencies: { esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs },
+            dependencies: { acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs },
           }));
           JS
           npm --prefix "$QA_DEPS" install --ignore-scripts --no-audit --no-fund
@@ -70,7 +70,7 @@ jobs:
 
       - name: Run regression tests
         run: |
-          node --test scripts/auto-pipeline.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/repair-inspiration-covers.test.mjs
+          node --test scripts/auto-pipeline.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/repair-inspiration-covers.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
         run: |

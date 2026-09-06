@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      acorn:
+        specifier: 8.15.0
+        version: 8.15.0
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -1654,6 +1657,11 @@ packages:
 
   '@xyflow/system@0.0.80':
     resolution: {integrity: sha512-ywc3ZqG91brzWrH1WlwMdIX4goOfrpBy6AbLdVSaof/Xx9l138ijIKRExM6EkMro2F+OImGmSiA/WKcXvKVcfA==}
+
+  acorn@8.15.0:
+    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
 
   aigc-provider-runtime-kit@0.2.0:
     resolution: {integrity: sha512-7e6X0KtS0ZHO9RTc1prTY7DtdaS2H4y5/M2B/QoLI6k/gxI55xl5Gz4SmtxwX3hTakg3EsxYkBoek+VJ532JyQ==}
@@ -3876,6 +3884,8 @@ snapshots:
       d3-interpolate: 3.0.1
       d3-selection: 3.0.0
       d3-zoom: 3.0.0
+
+  acorn@8.15.0: {}
 
   aigc-provider-runtime-kit@0.2.0: {}
 

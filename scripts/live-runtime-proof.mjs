@@ -6,7 +6,9 @@ import { join, relative, resolve, sep } from 'node:path'
 
 const SCRIPT_METHOD = 'Debugger.scriptParsed'
 const MAX_SCRIPT_EVENTS = 1000
-const { transform } = createRequire(import.meta.url)('esbuild')
+const requireFromHere = createRequire(import.meta.url)
+const { parse } = requireFromHere('acorn')
+const { transform } = requireFromHere('esbuild')
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex')
 
@@ -25,6 +27,71 @@ async function canonicalCode(source) {
   // bundle in the middle of the Host concat is immediately followed by the
   // next factory. That boundary is not executable code.
   return result.code.trimEnd()
+}
+
+function propertyName(property) {
+  if (property.type !== 'Property' || property.computed || property.kind !== 'init' || property.method) return null
+  if (property.key.type === 'Identifier') return property.key.name
+  if (property.key.type === 'Literal' && typeof property.key.value === 'string') return property.key.value
+  return null
+}
+
+function isModuleLoaderCall(node) {
+  const callee = node?.type === 'ExpressionStatement' ? node.expression : null
+  if (callee?.type !== 'CallExpression' || callee.optional) return false
+  const load = callee.callee
+  const loader = load?.type === 'MemberExpression' && !load.computed && !load.optional && load.property?.type === 'Identifier' && load.property.name === 'load'
+    ? load.object
+    : null
+  return loader?.type === 'MemberExpression'
+    && !loader.computed
+    && !loader.optional
+    && loader.object?.type === 'Identifier'
+    && loader.object.name === 'window'
+    && loader.property?.type === 'Identifier'
+    && loader.property.name === '__ModuleLoader__'
+}
+
+function moduleRegistration(statement, source) {
+  if (!isModuleLoaderCall(statement)) return null
+  const call = statement.expression
+  assert.equal(call.arguments.length, 1, 'Module loader registration must have exactly one argument')
+  const descriptor = call.arguments[0]
+  assert.equal(descriptor?.type, 'ObjectExpression', 'Module loader registration must use an object literal')
+  assert.ok(descriptor.properties.every((property) => propertyName(property) !== null), 'Module loader registration must use plain, static id and factory properties')
+  const ids = descriptor.properties.filter((property) => propertyName(property) === 'id')
+  const factories = descriptor.properties.filter((property) => propertyName(property) === 'factory')
+  assert.equal(ids.length, 1, 'Module loader registration must have exactly one static id')
+  assert.equal(factories.length, 1, 'Module loader registration must have exactly one function factory')
+  assert.ok(ids[0].value?.type === 'Literal' && typeof ids[0].value.value === 'string', 'Module loader registration must have a static string id')
+  assert.ok(['ArrowFunctionExpression', 'FunctionExpression'].includes(factories[0].value?.type), 'Module loader registration must have a function factory')
+  assert.ok(!factories[0].value.async && !factories[0].value.generator, 'Module loader registration factory must be synchronous')
+  return { id: ids[0].value.value, source: source.slice(statement.start, statement.end) }
+}
+
+function parseProgram(source, label) {
+  try {
+    return parse(source, { ecmaVersion: 'latest', sourceType: 'script' })
+  } catch (error) {
+    throw new SyntaxError(`Unable to parse ${label}: ${error.message}`, { cause: error })
+  }
+}
+
+function runtimeRegistrations(source, label) {
+  return parseProgram(source, label).body.flatMap((statement) => {
+    const registration = moduleRegistration(statement, source)
+    return registration ? [registration] : []
+  })
+}
+
+function declaredRegistration(source, plugin, path) {
+  const program = parseProgram(source, `${plugin} declared client bundle ${path}`)
+  const statements = program.body.filter((statement) => statement.type !== 'EmptyStatement')
+  assert.equal(statements.length, 1, `${plugin} declared client bundle must contain exactly one top-level registration`)
+  const registration = moduleRegistration(statements[0], source)
+  assert.ok(registration, `${plugin} declared client bundle must contain exactly one top-level registration`)
+  assert.equal(registration.id, plugin, `${plugin} declared client bundle registers the wrong module: ${registration.id}`)
+  return registration
 }
 
 function cleanPluginId(value) {
@@ -106,8 +173,15 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
   const plugins = [...new Set(['omnimux', ...targets.map(pluginFromTarget)])]
   const bundles = await Promise.all(plugins.map(async (plugin) => {
     const bundle = declaredClientBundle(root, plugin)
-    const normalized = await canonicalCode(bundle.source)
-    return { ...bundle, normalized, codeSha256: sha256(normalized) }
+    const registration = declaredRegistration(bundle.source, plugin, bundle.path)
+    const normalized = await canonicalCode(registration.source)
+    return {
+      ...bundle,
+      registration: registration.source,
+      registrationSha256: sha256(registration.source),
+      normalized,
+      codeSha256: sha256(normalized),
+    }
   }))
   const beforeUrl = await assertTabOrigin(tab, url, 'before proof')
   const cdp = await tab.capabilities.get('cdp')
@@ -136,28 +210,42 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
       scripts.push({ scriptId: event.scriptId, url: event.url || '', source: response.scriptSource })
     }
     assert.ok(scripts.length > 0, 'CDP emitted no same-origin /plugins/ bundle scripts after Debugger.enable')
-    await Promise.all(scripts.map(async (script) => { script.normalized = await canonicalCode(script.source) }))
+    const targetPlugins = new Set(plugins)
+    await Promise.all(scripts.map(async (script) => {
+      script.registrations = runtimeRegistrations(script.source, `CDP script ${script.scriptId}`)
+      await Promise.all(script.registrations
+        .filter((registration) => targetPlugins.has(registration.id))
+        .map(async (registration) => { registration.normalized = await canonicalCode(registration.source) }))
+      // This digest still identifies the complete Host script. It is evidence,
+      // not the module comparison unit, because concat can rename local symbols.
+      script.normalized = await canonicalCode(script.source)
+    }))
     const proofBundles = bundles.map((bundle) => {
-      const rawMatches = scripts.filter((script) => script.source.includes(bundle.source))
-      const matches = rawMatches.length ? rawMatches : scripts.filter((script) => script.normalized.includes(bundle.normalized))
-      assert.ok(matches.length > 0, `${bundle.plugin} current client bundle is not loaded in the IAB renderer`)
       const versionDigests = new Set(scripts.filter((script) => urlMentionsPlugin(script.url, bundle.plugin))
         .map((script) => sha256(script.source)))
       assert.ok(versionDigests.size <= 1, `${bundle.plugin} has ambiguous old/new client scripts in the IAB renderer`)
-      const loadedDigests = new Set(matches.map((script) => sha256(script.source)))
-      assert.ok(loadedDigests.size === 1, `${bundle.plugin} current client bundle is loaded from conflicting scripts`)
-      const loaded = matches[0]
+      const candidates = scripts.flatMap((script) => script.registrations
+        .filter((registration) => registration.id === bundle.plugin)
+        .map((registration) => ({ script, registration })))
+      assert.ok(candidates.length > 0, `${bundle.plugin} current client bundle is not loaded in the IAB renderer`)
+      assert.equal(candidates.length, 1, `${bundle.plugin} has multiple registrations in the IAB renderer`)
+      const loaded = candidates[0]
+      assert.ok(loaded.registration.normalized === bundle.normalized, `${bundle.plugin} loaded registration does not match its current client bundle`)
+      const rawExact = loaded.registration.source === bundle.registration
       return {
         plugin: bundle.plugin,
         bundlePath: bundle.path,
         bundleSha256: bundle.sha256,
+        bundleRegistrationSha256: bundle.registrationSha256,
         bundleCodeSha256: bundle.codeSha256,
         bundleBytes: bundle.bytes,
-        loadedScriptUrl: loaded.url || null,
-        loadedScriptSha256: sha256(loaded.source),
-        loadedScriptCodeSha256: sha256(loaded.normalized),
-        match: rawMatches.length ? 'raw-exact' : 'normalized-code',
-        matchingScriptCount: matches.length,
+        loadedScriptUrl: loaded.script.url || null,
+        loadedScriptSha256: sha256(loaded.script.source),
+        loadedScriptCodeSha256: sha256(loaded.script.normalized),
+        loadedRegistrationSha256: sha256(loaded.registration.source),
+        loadedRegistrationCodeSha256: sha256(loaded.registration.normalized),
+        match: rawExact ? 'raw-registration' : 'normalized-registration',
+        matchingRegistrationCount: candidates.length,
       }
     })
     const afterUrl = await assertTabOrigin(tab, url, 'after proof')
@@ -190,13 +278,13 @@ export function assertRuntimeProofStable(before, after) {
     requestedOrigin: before?.requestedOrigin,
     target: before?.target,
     allocation: before?.allocation,
-    bundles: before?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, match, matchingScriptCount }) =>
-      ({ plugin, bundlePath, bundleSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, match, matchingScriptCount })),
+    bundles: before?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount }) =>
+      ({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount })),
   }, {
     requestedOrigin: after?.requestedOrigin,
     target: after?.target,
     allocation: after?.allocation,
-    bundles: after?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, match, matchingScriptCount }) =>
-      ({ plugin, bundlePath, bundleSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, match, matchingScriptCount })),
+    bundles: after?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount }) =>
+      ({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount })),
   }, 'Runtime proof changed while the browser QA was running')
 }

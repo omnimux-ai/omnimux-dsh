@@ -342,7 +342,7 @@
             h(SearchField, {
               value: query,
               placeholder: tr("picker.searchPlaceholder"),
-              onChange: setQuery,
+              onValueChange: setQuery,
               onClear: () => setQuery(""),
               stretch: true,
             }),
