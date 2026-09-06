@@ -19,7 +19,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
 
   const api = {
     /**
-     * @param {{ prompt: string, model?: string, image?: string, video?: string, system?: string, maxTokens?: number, signal?: AbortSignal }} req
+     * @param {{ prompt: string, model?: string, operation?: string, references?: import('./references.js').TextReference[], image?: string, video?: string, audio?: string, audioTrack?: object, assetMeta?: object, system?: string, maxTokens?: number, signal?: AbortSignal }} req
      */
     execute(req) {
       assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
@@ -51,18 +51,36 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
   ctx.tools.register({
     name: 'omnimux_text_complete',
     description:
-      'Run one one-shot completion on an enabled OmniMux whitelist model. Not a second chat: the expert does not see this conversation and receives no tools. Call only when the current model cannot do the work, or the user / contract names that model. Omit model to use the configured default (gemini-3.7-flash). Pass image (absolute path, URL, or data URI) for vision on models that accept image input; pass video (absolute path or data URI) for native video on models that accept video (today gemini-3.7-flash) — image and video are mutually exclusive. Video bypasses the harness image store and packs as image_url(data:video). claude-opus-5 is listed but its chat-completions group is temporarily 403. Do not use this to continue the conversation.',
+      'Run one one-shot completion on an enabled OmniMux whitelist model. The expert receives no parent conversation or tools. Call only when the current model cannot do the work, or the user / contract names that model. Omit model to use the configured default. Pass ordered references for multiple images or a single video; the model contract must accept every reference. Current text routes reject audio and mixed image/video input. Legacy image and video fields remain accepted and do not duplicate matching references. Video bypasses the harness image store and packs as image_url(data:video). Do not use this to continue the conversation.',
     parameters: objectParams({
       model: {
         type: 'string',
         ...(modelIds.length > 0 ? { enum: modelIds } : {}),
-        description: 'Whitelist model id. Omit to use the configured default (gemini-3.7-flash).',
+        description: 'Whitelist model id. Omit to use the configured default.',
       },
       operation: {
         type: 'string',
         description: 'Contract operation id (chat | vision_chat | document_analyze). Optional when uniquely inferable from inputs.',
       },
       prompt: { type: 'string', required: true, description: 'Self-contained prompt. The expert cannot see the parent chat.' },
+      references: {
+        type: 'array',
+        description: 'Ordered media references. Every item must satisfy the selected model and operation contract.',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['image', 'video', 'audio'] },
+            pathOrUrl: { type: 'string' },
+            role: { type: 'string' },
+            targetSlot: { type: 'string' },
+            mime: { type: 'string' },
+            sizeBytes: { type: 'number' },
+            durationSec: { type: 'number' },
+          },
+          required: ['type', 'pathOrUrl'],
+          additionalProperties: false,
+        },
+      },
       image: { type: 'string', description: 'Absolute path, http(s) URL, or data URI. Model must accept image input. Mutually exclusive with video.' },
       video: { type: 'string', description: 'Absolute path (.mp4/.webm/.mov) or data:video URI. Model must accept video input. Mutually exclusive with image.' },
       reason: { type: 'string', required: true, description: 'Which missing capability, or which user / contract line authorizes this call.' },
@@ -84,6 +102,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           prompt: args.prompt,
           model: args.model,
           operation: args.operation,
+          references: args.references,
           image: args.image,
           video: args.video,
           system: args.system,
