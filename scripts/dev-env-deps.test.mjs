@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync, chmodSync, lstatSync, realpathSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +17,7 @@ describe('scripts/dev-env.sh L2 Host install-closure preflight', () => {
   let fakeDshSrc
   let fakeBin
   let pnpmLog
+  let hostArgsLog
 
   const writePkg = (dir, name, deps = {}) => {
     mkdirSync(dir, { recursive: true })
@@ -44,7 +45,7 @@ describe('scripts/dev-env.sh L2 Host install-closure preflight', () => {
     writePkg(chatDir, '@deepseek-ai/dsh-client-ui-chat', {})
     writeFileSync(join(chatDir, 'lib', 'index.js'), 'export default {}\n')
     writeFileSync(join(cliDir, 'lib', 'bin.js'),
-      "const i = process.argv.indexOf('--port');\nconst port = i >= 0 ? process.argv[i+1] : 44201;\nconsole.log('http://127.0.0.1:' + port);\n")
+      "import { writeFileSync } from 'node:fs';\nwriteFileSync(process.env.TEST_HOST_ARGS_LOG, JSON.stringify(process.argv.slice(2)));\nconst i = process.argv.indexOf('--port');\nconst port = i >= 0 ? process.argv[i+1] : 44201;\nconsole.log('http://127.0.0.1:' + port);\n")
 
     // node resolution graph: cli → web-app; web-app → ui-chat (optional)
     symlinkSync(webAppDir, join(cliDir, 'node_modules', '@deepseek-ai', 'dsh-web-app'))
@@ -91,6 +92,7 @@ describe('scripts/dev-env.sh L2 Host install-closure preflight', () => {
     writeFileSync(join(wtRoot, 'plugins', 'omnimux-assets', 'package.json'), JSON.stringify({ name: 'omnimux-assets', version: '1.0.0' }))
     fakeBin = join(testRoot, 'bin')
     pnpmLog = join(testRoot, 'pnpm.log')
+    hostArgsLog = join(testRoot, 'host-args.json')
     mkdirSync(fakeBin, { recursive: true })
     symlinkSync(process.execPath, join(fakeBin, 'node'))
     writeFileSync(join(fakeBin, 'corepack'), `#!/bin/bash
@@ -126,8 +128,8 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
     }
   }
 
-  const runStart = () => execSync(
-    `bash "${scriptPath}" start deps-test omnimux-assets --source="${wtRoot}"`,
+  const runCommand = (args) => execFileSync(
+    'bash', [scriptPath, ...args, `--source=${wtRoot}`],
     {
       encoding: 'utf8',
       env: {
@@ -139,6 +141,7 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
         DSH_SRC: fakeDshSrc,
         PATH: `${fakeBin}:${process.env.PATH}`,
         TEST_PNPM_LOG: pnpmLog,
+        TEST_HOST_ARGS_LOG: hostArgsLog,
         OMNIMUX_NODE_BIN: join(fakeBin, 'node'),
         // Even an older caller requesting 44200 must never allocate production.
         OMNIMUX_L2_PORT_POOL_START: '44200',
@@ -147,12 +150,24 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
     },
   )
 
+  const runStart = () => runCommand(['start', 'deps-test', 'omnimux-assets'])
+
+  const assertWorkspaceBrowserOverlay = () => {
+    const args = JSON.parse(readFileSync(hostArgsLog, 'utf8'))
+    const patchIndex = args.indexOf('--patch')
+    assert.ok(patchIndex >= 0, 'Host must receive the workspace browser composition')
+    assert.equal(args[patchIndex + 1], join(here, 'l2-workspace-browser.patch.yml'))
+    assert.equal(args.filter((arg) => arg === '--patch').length, 1)
+    assert.equal(args[args.indexOf('--host') + 1], '127.0.0.1', 'picker selection must not widen network exposure')
+  }
+
   it('clones managed snapshots and uses L2-local pnpm node_modules without copying seed node_modules', () => {
     setupSandbox({ complete: true, emptyProdScope: true })
     try {
       const out = runStart()
       assert.ok(out.includes('L2 Host 安装闭包完整'), `expected install-closure pass, got: ${out}`)
       assert.ok(out.includes('dev 环境已启动'), 'complete DSH_SRC closure should start Host')
+      assertWorkspaceBrowserOverlay()
       const allocated = Number(readFileSync(join(testRoot, 'dev/tasks/deps-test/profiles/omnimux-dev-deps-test/port.txt'), 'utf8').trim())
       assert.ok(allocated >= 44201 && allocated <= 44299, `unsafe allocated port: ${allocated}`)
       const l2Profile = join(testRoot, 'dev/tasks/deps-test/profiles/omnimux-dev-deps-test')
@@ -178,6 +193,30 @@ printf '%s\\n' 'virtualStoreDir: .pnpm' > "${'$'}PWD/node_modules/.modules.yaml"
       assert.equal(realpathSync(join(l2Profile, 'node_modules', 'omnimux-assets')), realpathSync(join(wtRoot, 'plugins', 'omnimux-assets')))
       // Empty prod @deepseek-ai must not be treated as missing deps.
       assert.ok(!out.includes('生产 dsh 层缺失'), 'must not blame empty prod profile scope')
+    } finally {
+      cleanupSandbox()
+    }
+  })
+
+  it('applies the same workspace browser overlay on an existing task restart without rewriting its profile or data', () => {
+    setupSandbox({ complete: true })
+    try {
+      runStart()
+      const l2Profile = join(testRoot, 'dev/tasks/deps-test/profiles/omnimux-dev-deps-test')
+      const patchPath = join(l2Profile, 'cordis.patch.yml')
+      const beforePatch = readFileSync(patchPath, 'utf8')
+      const beforePort = readFileSync(join(l2Profile, 'port.txt'), 'utf8')
+      const sessionPath = join(testRoot, 'dev/tasks/deps-test/session-marker.json')
+      writeFileSync(sessionPath, '{"session":"keep"}\n')
+      rmSync(hostArgsLog)
+
+      const out = runCommand(['restart-host', 'deps-test'])
+
+      assertWorkspaceBrowserOverlay()
+      assert.equal(readFileSync(patchPath, 'utf8'), beforePatch)
+      assert.equal(readFileSync(join(l2Profile, 'port.txt'), 'utf8'), beforePort)
+      assert.equal(readFileSync(sessionPath, 'utf8'), '{"session":"keep"}\n')
+      assert.match(out, /保持不变/)
     } finally {
       cleanupSandbox()
     }
