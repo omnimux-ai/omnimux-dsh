@@ -1497,7 +1497,7 @@ export const INSPIRATION_CSS = `
   min-height: 0;
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.2fr) minmax(300px, 1.1fr);
+  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 1.15fr) minmax(300px, 1.1fr);
   overflow: hidden;
 }
 .omnimux-inspiration-modal-panel {
@@ -1524,11 +1524,9 @@ export const INSPIRATION_CSS = `
 }
 .omnimux-inspiration-modal-player-box {
   position: relative;
-  width: auto;
-  max-width: 100%;
+  width: 100%;
   aspect-ratio: 9 / 16;
-  max-height: min(43vh, 430px);
-  margin: 0 auto 14px;
+  margin: 0 0 14px;
   overflow: hidden;
   border-radius: 8px;
   background: var(--dsw-alias-bg-base);
@@ -1540,6 +1538,7 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-cover-bg {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 .omnimux-inspiration-modal-script-content,
 .omnimux-inspiration-modal-dimensions p,

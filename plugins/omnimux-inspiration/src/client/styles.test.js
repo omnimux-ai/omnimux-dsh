@@ -31,10 +31,14 @@ function decl(body, property) {
 }
 
 describe('inspiration triptych modal', () => {
-  it('uses a three-column grid with independently scrolling panels', () => {
+  it('balances the desktop triptych while keeping independently scrolling panels', () => {
     const body = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-body')
     assert.match(decl(body, 'display'), /grid/)
-    assert.equal(decl(body, 'grid-template-columns'), 'minmax(240px, 0.9fr) minmax(320px, 1.2fr) minmax(300px, 1.1fr)')
+    const columns = decl(body, 'grid-template-columns').split(/\s+(?=minmax)/)
+    assert.equal(columns.length, 3)
+    assert.match(columns[0], /^minmax\(300px, 1\.1fr\)$/)
+    assert.match(columns[1], /^minmax\(320px, 1\.15fr\)$/)
+    assert.equal(columns[0], columns[2])
     const panel = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel')
     assert.equal(decl(panel, 'min-width'), '0')
     assert.equal(decl(panel, 'overflow-y'), 'auto')
@@ -65,11 +69,15 @@ describe('inspiration triptych modal', () => {
     assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-modal-panel\.is-active/)
   })
 
-  it('uses a larger portrait player and compact title-only header', () => {
+  it('fills the video panel width with an uncapped 9:16 preview and compact title-only header', () => {
     const player = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-player-box')
+    assert.equal(decl(player, 'width'), '100%')
     assert.equal(decl(player, 'aspect-ratio'), '9 / 16')
-    assert.equal(decl(player, 'max-height'), 'min(43vh, 430px)')
+    assert.equal(decl(player, 'margin'), '0 0 14px')
+    assert.doesNotMatch(player, /max-height/)
     assert.equal(decl(player, 'display'), 'flex')
+    const media = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-frame,\n.omnimux-inspiration-modal-cover-bg')
+    assert.equal(decl(media, 'object-fit'), 'contain')
     const header = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-header')
     const heading = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-heading')
     assert.equal(decl(header, 'height'), '60px')
