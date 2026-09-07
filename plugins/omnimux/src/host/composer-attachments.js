@@ -411,6 +411,7 @@ function itemError(sourcePath, error) {
  * @param {{
  *   sessionId: string,
  *   paths: unknown,
+ *   filesOnly?: boolean,
  *   sessionQuery?: { observeSession?: Function } | null,
  *   fs?: Partial<typeof DEFAULT_FS>,
  *   statfs?: typeof statfsSync,
@@ -420,6 +421,9 @@ function itemError(sourcePath, error) {
 export async function materializePaths(opts) {
   if (!Array.isArray(opts.paths)) {
     throw new ComposerAttachmentError('invalid-payload', 'paths must be an array')
+  }
+  if (opts.filesOnly !== undefined && typeof opts.filesOnly !== 'boolean') {
+    throw new ComposerAttachmentError('invalid-payload', 'filesOnly must be a boolean')
   }
   const cwd = opts.resolveCwd
     ? await opts.resolveCwd(opts.sessionId)
@@ -436,6 +440,9 @@ export async function materializePaths(opts) {
         isDirectory = false
       }
       if (isDirectory) {
+        if (opts.filesOnly) {
+          throw new ComposerAttachmentError('not-a-file', 'path is not a regular file')
+        }
         const copied = await copyDirectoryIntoImported({
           cwd,
           sourceAbs: sourcePath,

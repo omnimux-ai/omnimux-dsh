@@ -33,7 +33,13 @@ export interface AssetItem {
   updatedAt: number; // timestamp
   tags?: string[];
   previewUrl?: string;
+  /** Legacy/native absolute path only; project-relative paths use relative_path. */
   real_path?: string;
+  relative_path?: string;
+  workspaceId?: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  durationSec?: number | null;
   parentId?: string | null;
   itemCount?: number; // For folders
 }

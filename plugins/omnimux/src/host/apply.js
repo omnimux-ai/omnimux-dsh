@@ -25,6 +25,7 @@ import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { mountHubHttp } from './http.js'
+import { mountComposerCommands } from './composer-commands.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
 import { mountWebSocketHmr } from '../hmr/host.js'
 
@@ -112,7 +113,10 @@ export function apply(ctx, config = {}) {
     hubEvents,
     mailbox,
     sessionQuery: null,
+    getConnection: () => ctx.get?.('connection'),
+    getDesktopRuntime: () => ctx.get?.('desktopRuntime'),
   }
+  mountComposerCommands(ctx)
   const mountHttp = (httpCtx) => mountHubHttp(httpCtx, httpDeps)
   if (typeof ctx.inject === 'function') {
     ctx.inject(['clientModules', 'webServer', 'loader', 'connection'], async hmrCtx => {

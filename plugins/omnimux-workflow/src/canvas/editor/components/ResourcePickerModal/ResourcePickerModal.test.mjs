@@ -61,7 +61,7 @@ test('ConfigPanel Prompt 左上角 [+] 按钮唤起弹窗', () => {
 });
 
 test('MaterialNode 挂载 ResourcePickerModal 与 useResourcePicker', () => {
-  assert.match(nodeSrc, /useResourcePicker\(id\)/);
+  assert.match(nodeSrc, /useResourcePicker\(id,/);
   assert.match(nodeSrc, /<ResourcePickerModal/);
   assert.match(nodeSrc, /fillImportNode/);
   assert.match(nodeSrc, /openPicker\('canvas'\)/);

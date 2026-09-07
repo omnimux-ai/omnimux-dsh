@@ -70,6 +70,28 @@ test('sanitizeNodes 白名单：丢掉 measured/dragging，selected 强制 false
   assert.equal(out.data.label, 'x');
 });
 
+test('runtime workspace identity is absent from PUT nodes and does not dirty the signature', () => {
+  const base = [{
+    id: 'n1',
+    type: 'material',
+    position: { x: 0, y: 0 },
+    data: { label: 'reference', workspaceId: 'business-field' },
+  }];
+  const withIdentity = (id) => [{
+    ...base[0],
+    data: { ...base[0].data, __workspaceId: id },
+  }];
+  const a = withIdentity('workspace-A');
+  const b = withIdentity('workspace-B');
+  const putNodes = sanitizeNodes(a, { workspaceId: 'workspace-A' });
+  assert.deepEqual(putNodes, sanitizeNodes(base, { workspaceId: 'workspace-A' }));
+  assert.equal('__workspaceId' in putNodes[0].data, false);
+  assert.equal(putNodes[0].data.workspaceId, 'business-field');
+  assert.equal(a[0].data.__workspaceId, 'workspace-A', 'live async identity remains available');
+  assert.equal(signatureOf(a, []), signatureOf(base, []));
+  assert.equal(signatureOf(b, []), signatureOf(base, []));
+});
+
 test('sanitizeNodes 保留 extent: parent 与 parentId，供分组重开后约束子节点', () => {
   const [out] = sanitizeNodes([
     {

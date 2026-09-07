@@ -1,6 +1,6 @@
 # 图像模型能力契约 (Image Models Capability Contract)
-# H2: 14 个 runtime image ID 全处置 = 12 契约行 + 2 alias（nanobanana hyphen→underscore）。
-# Batch A：gpt-image-2 / grok-imagine-image 仅 text_to_image 有仓内 dated live 证据
+# H2: 17 个 runtime image ID 全处置 = 12 契约行 + 5 alias（nanobanana 与 Grok Image 2）。
+# Batch A：gpt-image-2 / grok-imagine-image-2 仅 text_to_image 保留仓内 dated live 证据
 # （docs/evidence/2026-08-16-omnimux-image.md）→ verified+live；multi_reference 保持 draft。
 # 其余 10 行 draft（证据不足不上架）。parameters 自旧 runtime SPECS 迁入。
 schemaVersion: "1.1"
@@ -161,11 +161,15 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
-  - id: "grok-imagine-image"
-    label: "Grok Imagine Image"
+  - id: "grok-imagine-image-2"
+    label: "Grok Imagine Image 2"
     family: "grok"
     badge: "极速"
-    subtitle: "xAI Grok"
+    subtitle: "xAI Grok 2"
+    aliases:
+      - "grok-imagine-image"
+      - "grok-imagine-image-2-0"
+      - "grok-imagine-image-2.0"
     operations:
       - id: "text_to_image"
         label: "文生图"

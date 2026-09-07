@@ -275,3 +275,27 @@ test('explicit reload releases conflict and next edit saves against the remote v
   assert.equal(h.env.saves.length, 2);
   assert.equal(h.env.saves[1].expectedVersion, 12);
 });
+
+test('leaving A queues its final capture behind A PUT and ignores its late response in B', async () => {
+  const h = setup();
+  h.edit('A first');
+  const pending = deferred();
+  const writes = [];
+  h.env.save = (id, payload) => { writes.push({ id, payload }); return pending.promise; };
+  h.autosave();
+  h.edit('A final');
+  h.persistence.flushPendingSave();
+  for (const cleanup of h.env.cleanups) cleanup();
+  h.canvas.hydrateGraph([{ id: 'B', type: 'text', data: { prompt: 'B unchanged' } }], []);
+  h.env.save = async (id, payload) => {
+    writes.push({ id, payload });
+    return { ok: true, body: { workspace: { ...h.env.remote, ...payload, version: 9 } } };
+  };
+  pending.resolve({ ok: true, body: { workspace: { ...h.env.remote, version: 8 } } });
+  await settle();
+  assert.equal(writes.length, 2);
+  assert.equal(writes[1].id, 'ws');
+  assert.equal(writes[1].payload.nodes[0].data.prompt, 'A final');
+  assert.equal(writes[1].payload.expectedVersion, 8);
+  assert.equal(h.canvas.nodes[0].data.prompt, 'B unchanged');
+});

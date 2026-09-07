@@ -1,4 +1,4 @@
-import { isBlobUrl, localFilePathFromUrl, looksAbsolutePath } from '../../../shared/localMedia.ts';
+import { displayNameOf, isBlobUrl, localFilePathFromUrl, looksAbsolutePath } from '../../../shared/localMedia.ts';
 
 export interface LibraryFileRef {
   real_path: string;
@@ -54,7 +54,7 @@ export function extractLibraryFilesFromNodes(
     }
     if (!realPath || seen.has(realPath)) continue;
     seen.add(realPath);
-    const name = asTrimmed(data.originalName) || asTrimmed(data.title) || asTrimmed(data.label) || asTrimmed(data.name);
+    const name = displayNameOf(realPath, asTrimmed(data.originalName));
     out.push({
       real_path: realPath,
       nodeId: id || realPath,

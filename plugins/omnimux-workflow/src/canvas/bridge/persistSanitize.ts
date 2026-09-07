@@ -103,6 +103,7 @@ export function sanitizeNodes(
     const raw = node as SerializedCanvasNode & Record<string, unknown>;
     const data = asRecord(raw.data);
     delete data.__catalog;
+    delete data.__workspaceId;
     if (raw.type === 'table') {
       delete data.document;
       delete data.rows;

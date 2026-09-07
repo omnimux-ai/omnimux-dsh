@@ -148,13 +148,13 @@ describe('auth http dispatcher', () => {
           })
           return
         }
-        // sessionQuery / settings are optional for this scenario: model the
+        // sessionQuery / settings / commands are optional for this scenario: model the
         // services as absent, but never swallow an unknown dependency.
         if (deps[0] === 'sessionQuery') {
           assert.deepEqual(deps, ['sessionQuery'])
           return
         }
-        if (deps[0] === 'settings') return
+        if (deps[0] === 'settings' || deps[0] === 'commands') return
         assert.fail(`unexpected inject deps: ${JSON.stringify(deps)}`)
       },
     }, { official: { mount: false } })
@@ -202,6 +202,7 @@ describe('auth http dispatcher', () => {
 
   it('apply mounts auth routes when webServer arrives through inject', async () => {
     const paths = []
+    const optional = {}
     /** @type {{ kind: string, path: string, handler: Function }[]} */
     const routes = []
     /** @type {string[]} */
@@ -217,6 +218,7 @@ describe('auth http dispatcher', () => {
     apply({
       tools: { register() {} },
       provide() {},
+      get(name) { return optional[name] },
       inject(deps, callback) {
         if (deps.includes('clientModules')) {
           assert.deepEqual(deps, ['clientModules', 'webServer', 'loader', 'connection'])
@@ -245,7 +247,7 @@ describe('auth http dispatcher', () => {
           callback({ sessionQuery: sessionQuerySentinel })
           return
         }
-        if (deps[0] === 'settings') return
+        if (deps[0] === 'settings' || deps[0] === 'commands') return
         assert.fail(`unexpected inject deps: ${JSON.stringify(deps)}`)
       },
     })
@@ -288,6 +290,22 @@ describe('auth http dispatcher', () => {
     await composerRoute.handler(req, res)
     assert.equal(seen.status, 200)
     assert.deepEqual(observedSessionIds, ['sess-522'])
+
+    req.url = '/omnimux/composer/attachments/pick-files'
+    req.headers = { host: '127.0.0.1:45121', origin: 'http://127.0.0.1:45121' }
+    seen.chunks = []
+    await composerRoute.handler(req, res)
+    assert.equal(seen.status, 503)
+    optional.connection = { requestRejection: () => undefined }
+    seen.chunks = []
+    await composerRoute.handler(req, res)
+    assert.equal(seen.status, 501)
+    optional.desktopRuntime = { pickFiles: async () => ['/tmp/selected.txt'] }
+    seen.chunks = []
+    await composerRoute.handler(req, res)
+    assert.equal(seen.status, 200)
+    assert.deepEqual(JSON.parse(seen.chunks.join('')), { paths: ['/tmp/selected.txt'] })
+    assert.deepEqual(observedSessionIds, ['sess-522', 'sess-522', 'sess-522'])
   })
 
   it('apply still registers the video tool when webServer is absent', () => {

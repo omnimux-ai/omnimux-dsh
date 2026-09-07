@@ -31,6 +31,8 @@ import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes }
  *   accountAvatarStore?: object,
  *   avatarStore: object,
  *   listCatalog?: () => object,
+ *   getConnection?: () => { requestRejection: Function } | undefined,
+ *   getDesktopRuntime?: () => { pickFiles?: () => Promise<string[]> } | undefined,
  * }} deps
  */
 export function mountHubHttp(httpCtx, deps) {
@@ -92,7 +94,9 @@ export function mountHubHttp(httpCtx, deps) {
       webServer,
       createComposerAttachmentsDispatcher({
         getSessionQuery: () => deps.sessionQuery ?? null,
+        getDesktopRuntime: deps.getDesktopRuntime,
       }),
+      { getConnection: deps.getConnection },
     )
     return () => {
       stopAuth()

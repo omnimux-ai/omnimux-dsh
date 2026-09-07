@@ -146,7 +146,9 @@ test('树按 parentId 展平至少两层', () => {
   assert.equal(folderA?.parentId ?? null, null);
   assert.equal(folderB?.parentId, 'fld_a');
   assert.equal(file?.parentId, 'fld_b');
-  assert.equal(file?.real_path, 'assets/imported/hero.png');
+  assert.equal(file?.real_path, undefined);
+  assert.equal(file?.relative_path, 'assets/imported/hero.png');
+  assert.equal(file?.workspaceId, 'ws_preview01');
   assert.match(file?.previewUrl || '', /\/omnimux-workflow\/api\/workspaces\/ws_preview01\/file\?rel=/);
 });
 

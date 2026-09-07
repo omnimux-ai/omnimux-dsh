@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, FilterBar, PageHeader, SearchField } from 'dsh-ui-kit'
-import { createProduct, deleteProduct, getState, pickPath, updateProduct } from './api.js'
+import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { PlusIcon, RefreshIcon } from './icons.jsx'
 import { ProductFormDialog } from './ProductFormDialog.jsx'
@@ -63,13 +63,37 @@ export function ProductsStage({ t, stage, store, visible = true }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set())
 
   const isFirstMount = useRef(true)
+  const editRequest = useRef(0)
+
+  useEffect(() => () => { editRequest.current += 1 }, [])
+
+  const invalidateEditRequest = () => {
+    editRequest.current += 1
+    setBusy(false)
+  }
+
+  const handleCreate = () => {
+    invalidateEditRequest()
+    setCreating(true)
+    setFormError('')
+    setEditing(null)
+    setEditingDirty(false)
+  }
+
+  const handleCancelForm = () => {
+    invalidateEditRequest()
+    setCreating(false)
+    setEditing(null)
+    setFormError('')
+    setEditingDirty(false)
+  }
 
   const refreshState = useCallback(async (silent = false) => {
     if (!silent) setBusy(true)
     try {
       const res = await getState()
-      if (res.ok && res.body?.state?.products) {
-        setProducts(res.body.state.products)
+      if (res.ok && Array.isArray(res.body?.products)) {
+        setProducts(res.body.products)
         setError('')
       } else if (!res.ok) {
         setError(messageOf(res, t))
@@ -103,6 +127,28 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
+  const handleOpenProduct = async (product) => {
+    const request = ++editRequest.current
+    setBusy(true)
+    setError('')
+    try {
+      const result = await getProductForEdit(product.id)
+      if (request !== editRequest.current) return
+      if (!result.ok || !result.body?.product) {
+        setError(messageOf(result, t))
+        return
+      }
+      setEditing(result.body.product)
+      setEditingDirty(false)
+      setFormError('')
+      setCreating(false)
+    } catch (caught) {
+      if (request === editRequest.current) setError(errText(caught))
+    } finally {
+      if (request === editRequest.current) setBusy(false)
+    }
+  }
+
   const handleSaveProduct = (data, id) => {
     setBusy(true)
     setFormError('')
@@ -112,6 +158,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         setFormError(messageOf(result, t))
         return
       }
+      editRequest.current += 1
       setCreating(false)
       setEditing(null)
       setEditingDirty(false)
@@ -181,6 +228,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
   const clearSelection = () => { setSelectedIds(new Set()) }
 
   const handleClose = () => {
+    handleCancelForm()
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
     if (api && typeof api.closeTab === 'function') {
       api.closeTab(TAB_ID)
@@ -222,7 +270,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         <Button
           variant="primary"
           leadingIcon={<PlusIcon />}
-          onClick={() => { setCreating(true); setFormError(''); setEditing(null); setEditingDirty(false) }}
+          onClick={handleCreate}
         >
           {t('add.button')}
         </Button>
@@ -270,14 +318,16 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       <div className="omnimux-products-body">
         <ProductGrid
           products={visibleProducts}
-          searching={query.trim() !== ''}
+          emptyLabel={t(query.trim() ? 'empty.noMatch' : 'empty.all')}
+          emptyActionLabel={t('add.button')}
+          showEmptyAction={query.trim() === ''}
           selectedIds={selectedIds}
           copiedId={copiedId}
           onToggleSelect={toggleSelect}
-          onEdit={(p) => { setEditing(p); setEditingDirty(false); setFormError(''); setCreating(false) }}
+          onOpen={handleOpenProduct}
           onRemove={(p) => { setPendingRemove({ isBatch: false, product: p, names: [p.name] }) }}
           onCopy={handleCopyCite}
-          onAdd={() => { setCreating(true); setFormError(''); setEditing(null); setEditingDirty(false) }}
+          onEmptyAction={handleCreate}
           t={t}
         />
       </div>
@@ -287,7 +337,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
           t={t}
           data={{ mode: 'create', busy, error: formError, dirty: false, initial: null }}
           onAction={{
-            onCancel: () => { setCreating(false); setFormError('') },
+            onCancel: handleCancelForm,
             onPick: handlePick,
             onSubmit: (payload) => { void handleSaveProduct(payload) },
           }}
@@ -299,7 +349,7 @@ export function ProductsStage({ t, stage, store, visible = true }) {
           t={t}
           data={{ mode: 'edit', busy, error: formError, dirty: editingDirty, initial: editing }}
           onAction={{
-            onCancel: () => { setEditing(null); setFormError(''); setEditingDirty(false) },
+            onCancel: handleCancelForm,
             onPick: handlePick,
             onSubmit: (payload) => { void handleSaveProduct(payload, editing.id) },
           }}

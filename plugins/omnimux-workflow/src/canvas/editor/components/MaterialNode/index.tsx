@@ -140,7 +140,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   const t = useT();
   const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
-  const resourcePicker = useResourcePicker(id);
+  const resourcePicker = useResourcePicker(id, typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : null);
   const kind = resolveNodeKind(nodeData);
 
   const outputMenuOptions = useMemo(
@@ -720,6 +720,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       />
 
       <ResourcePickerModal
+        key={JSON.stringify([nodeData.__workspaceId, id, resourcePicker.sessionId])}
         open={resourcePicker.open}
         nodeId={id}
         initialTab={resourcePicker.initialTab}

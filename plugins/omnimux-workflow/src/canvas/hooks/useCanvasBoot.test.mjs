@@ -50,7 +50,8 @@ test('源码契约：App.tsx flushRef / beforeReset 接线存在', () => {
   assert.match(appSrc, /useCanvasBoot\(\{/);
   assert.match(appSrc, /beforeReset:\s*\(\)\s*=>\s*\{/);
   assert.match(appSrc, /flushRef\.current\(\)/);
-  assert.match(appSrc, /flushRef\.current = persistence\.flushPendingSave/);
+  assert.match(appSrc, /persistence\.flushPendingSave\(\)/);
+  assert.match(appSrc, /tablePersistence\.flushDirtyTables\(\{ force: true \}\)/);
 });
 
 test('纯函数顺序：capture 有节点 → reset 后 store 空 → PUT 用 capture 不是 []', () => {

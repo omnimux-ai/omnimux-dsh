@@ -1,5 +1,5 @@
 /**
- * Dispositions registry tests (H2 + phase-one video): 53-row lock, shape validation, D1-D7
+ * Dispositions registry tests (H2 + phase-one video): 56-row lock, shape validation, D1-D7
  * consistency, forbidden-listed discipline, catalog defaults, cordis cross-refs.
  */
 import { test } from 'node:test';
@@ -37,25 +37,25 @@ function runtimeIdsOf(index) {
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
-test('dispositions.json: exactly 53 rows, unique ids, all kinds valid, reasons present', () => {
+test('dispositions.json: exactly 56 rows, unique ids, all kinds valid, reasons present', () => {
   resetDispositionsCache();
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 53, `expected 53 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 56, `expected 56 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
-  assert.equal(ids.size, 53);
+  assert.equal(ids.size, 56);
   for (const row of rows) {
     assert.ok(DISPOSITION_KINDS.includes(row.disposition), row.id);
     assert.ok(typeof row.reason === 'string' && row.reason.trim(), row.id);
   }
 });
 
-test('53 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
+test('56 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 53);
+  assert.equal(runtimeIds.length, 56);
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });
@@ -79,7 +79,7 @@ test('locked dispositions: draft-probeable / quarantine / alias / Batch A canoni
       ['alias', 'nano_banana_pro'],
     ],
   );
-  for (const id of ['seedance-2-0-fast', 'gpt-image-2', 'grok-imagine-image']) {
+  for (const id of ['seedance-2-0-fast', 'gpt-image-2', 'grok-imagine-image-2']) {
     const row = resolveDisposition(doc, id);
     assert.equal(row?.disposition, 'canonical', id);
     assert.equal(row?.batch, 'A', id);
@@ -112,6 +112,14 @@ test('alias targets exist as canonical contracts declaring the alias', () => {
   assert.equal(index.get('nanobanana-pro'), undefined);
   assert.ok(index.get('nano_banana_2')?.aliases?.includes('nanobanana-2'));
   assert.ok(index.get('nano_banana_pro')?.aliases?.includes('nanobanana-pro'));
+  const doc = loadDispositions();
+  for (const alias of ['grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']) {
+    assert.equal(index.get(alias), undefined);
+    assert.ok(index.get('grok-imagine-image-2')?.aliases?.includes(alias));
+    const row = resolveDisposition(doc, alias);
+    assert.equal(row?.disposition, 'alias');
+    assert.equal(row?.target, 'grok-imagine-image-2');
+  }
 });
 
 test('negative: removing a row triggers disposition_missing under strict', () => {

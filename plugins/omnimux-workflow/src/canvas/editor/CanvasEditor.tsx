@@ -51,6 +51,7 @@ import { DEFAULT_CANVAS_EDGE_OPTIONS } from './utils/canvasConnectionUtils';
 import { applyFocusCanvasNode } from './utils/focusCanvasNode';
 import { createMaterialNode, appendWithSelectionReset } from './utils/nodeFactory';
 import { pickLocalFiles } from '../bridge/apiClient.ts';
+import { useAsyncInstanceGuard } from './hooks/useAsyncInstanceGuard.ts';
 import { draftsFromPickedPaths } from './utils/localFileDraft.ts';
 import { classifyAssetImport } from './utils/assetImportAdapter.ts';
 import { planStandaloneImportNodes } from './utils/resourcePickerPolicy.ts';
@@ -172,6 +173,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   onResetExecution,
 }) => {
   const t = useT();
+  const importGuard = useAsyncInstanceGuard(workspaceId);
   const { screenToFlowPosition, fitView, zoomTo, setCenter } = useReactFlow();
   const reactFlowInstance = useReactFlow();
   const { nodes, edges, onNodesChange, onEdgesChange } = useGraphStore();
@@ -473,10 +475,11 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   // re-rendering every (memo'd) MaterialNode on each keystroke/selection.
   const flowNodes = useMemo(
     () =>
-      catalog
-        ? nodes.map((node) => ({ ...node, data: { ...node.data, __catalog: catalog } }))
-        : nodes,
-    [nodes, catalog],
+      nodes.map((node) => ({
+        ...node,
+        data: { ...node.data, __catalog: catalog, __workspaceId: workspaceId },
+      })),
+    [nodes, catalog, workspaceId],
   );
 
   // 连线入口：store.onConnect 内部经 mutation gateway 校验
@@ -516,9 +519,12 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       };
 
       if (type === 'import_asset') {
-        const picked = await pickLocalFiles();
-        if (!picked.ok) {
-          if (picked.body.error === 'picker-unsupported') {
+        const ticket = importGuard.capture();
+        if (!importGuard.isCurrent(ticket)) return;
+        const picked = await pickLocalFiles().catch(() => null);
+        if (!importGuard.isCurrent(ticket)) return;
+        if (!picked || !picked.ok) {
+          if (picked?.body.error === 'picker-unsupported') {
             toast.warning(t('picker.needPath'));
           } else {
             toast.error(t('picker.pickFailed'));
@@ -569,7 +575,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       if (applied.status !== 'allowed') return;
       nodeCreateCounter.current += 1;
     },
-    [nodes, setNodes, applyCanvasInputMutation, t],
+    [nodes, setNodes, applyCanvasInputMutation, importGuard, t],
   );
 
   // 删除键：级联删除（经 mutation gateway，自动清 dangling edges）
@@ -606,10 +612,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     onAddNode: handleAddNode,
   });
 
-  // 资产侧栏入画布：有绝对路径才落导入节点；无路径拒绝，不建生成节点。
+  // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
   const mountImportFromAsset = useCallback(
     (asset: AssetRecord | Record<string, unknown>, position: { x: number; y: number }) => {
-      const classified = classifyAssetImport(asset);
+      const classified = classifyAssetImport(asset, workspaceId);
       if (!classified.ok) {
         toast.warning(t(classified.reason === 'unsupported' ? 'picker.unsupported' : 'picker.needPath'));
         return false;
@@ -635,7 +641,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       toast.success(t('picker.importOk'));
       return true;
     },
-    [applyCanvasInputMutation, setNodes, setSelectedElement, t],
+    [applyCanvasInputMutation, setNodes, setSelectedElement, t, workspaceId],
   );
 
   const handleInsertAsset = useCallback(

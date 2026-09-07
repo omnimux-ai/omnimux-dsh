@@ -434,12 +434,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         </div>
       ) : null}
 
-      {quietReason && blockReason ? (
-        <div className="wf-config-panel__input-hint" role="status" data-testid="wf-input-hint">
-          {blockReason}
-        </div>
-      ) : null}
-
       {/* Configuration / zero-candidate error banner */}
       {!quietReason && (opsState.blockGenerate || showEmptyModels || nodeCompat?.status === 'configuration_error') && blockReason ? (
         <div
