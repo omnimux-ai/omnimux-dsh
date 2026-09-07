@@ -6,20 +6,20 @@
  * - standard: `presetStandardName` / `presetStandardDescription`
  * - cordis: `presetCordisName` / `presetCordisDescription`
  *
- * This module ensures `standard` renders as "TikTok 营销运营专家团" / "TikTok Marketing & Ops Team"
+ * This module ensures `standard` renders as "OmniAgent"
  * and `cordis` renders as "组建团队" / "Team Builder".
  */
 
 export const AGENT_PRESETS_I18N = {
   zh: {
-    presetStandardName: 'TikTok 营销运营专家团',
-    presetStandardDescription: '专注 TikTok 营销内容自动化：覆盖账号运营管理、爆款文案、口播配音、视觉生图、视频分镜生成、BGM 配乐、剪辑成片与评论互动增长全链路。',
+    presetStandardName: 'OmniAgent',
+    presetStandardDescription: 'OmniMux 全能营销运营 Agent：专注 TikTok 内容自动化，覆盖账号运营管理、爆款文案、口播配音、视觉生图、视频分镜生成、BGM 配乐、剪辑成片与评论互动增长全链路。',
     presetCordisName: '组建团队',
     presetCordisDescription: '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
   },
   en: {
-    presetStandardName: 'TikTok Marketing & Ops Team',
-    presetStandardDescription: 'End-to-end TikTok marketing content automation: account operations, viral copy, voiceover, visual generation, video storyboards, BGM, editing, and comment engagement.',
+    presetStandardName: 'OmniAgent',
+    presetStandardDescription: 'OmniMux all-in-one marketing & operations agent: end-to-end TikTok content automation, account operations, viral copy, voiceover, visual generation, video storyboards, BGM, editing, and comment engagement.',
     presetCordisName: 'Team Builder',
     presetCordisDescription: 'Build and configure custom agent teams with full runtime inspection, plugin experimentation, and preset authoring guidance.',
   },

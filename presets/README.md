@@ -4,7 +4,7 @@
 
 | id | 显示名（中 / 英） | order | 说明 |
 |---|---|---|---|
-| `standard` | TikTok 营销运营专家团 / TikTok Marketing & Ops Team | 1 | 默认 Agent：挂载全部 10 位专家工具，覆盖 TikTok 营销全链路 |
+| `standard` | OmniAgent / OmniAgent | 1 | 默认 Agent：挂载全部 10 位专家工具，覆盖 TikTok 营销全链路 |
 | `cordis` | 组建团队 / Team Builder | 2 | 具备原生 cordis 运行时检查、插件实验与团队预设创作指导能力 |
 
 ## 产品化机制
@@ -27,6 +27,6 @@
 
 ## 专家团与组建团队机制
 
-- **默认预设 `standard`**：主会话定位为「TikTok 营销运营主理人」，内置完整营销运营全流程能力，并挂载 10 个具名 expert_* 社媒专家工具。
+- **默认预设 `standard`**：主会话定位为「OmniAgent」主理人，内置完整营销运营全流程能力，并挂载 10 个具名 expert_* 社媒专家工具。
 - **组建团队 `cordis`**：用于自定义与探索 Agent、插件及预设配置。
 - 专家 spawn 真源在 `presets/fragments/`，由 `scripts/build-agent-presets.mjs` 插入 `presets/standard/agent.cordis.yml`。

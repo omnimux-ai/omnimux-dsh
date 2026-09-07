@@ -92,7 +92,7 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
 
 test('preset.yml metadata matches requirements', () => {
   const standardPreset = read('presets/standard/preset.yml')
-  ok(standardPreset.includes('name: TikTok 营销运营专家团'))
+  ok(standardPreset.includes('name: OmniAgent'))
   ok(standardPreset.includes('order: 1'))
 
   const cordisPreset = read('presets/cordis/preset.yml')
@@ -100,9 +100,9 @@ test('preset.yml metadata matches requirements', () => {
   ok(cordisPreset.includes('order: 2'))
 })
 
-test('standard persona positions as TikTok marketing ops lead and forbids forced spawn', () => {
+test('standard persona positions as OmniAgent lead and forbids forced spawn', () => {
   const text = read('presets/standard/agent.cordis.yml')
-  ok(text.includes('TikTok 营销运营专家团'))
+  ok(text.includes('OmniAgent'))
   ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
   ok(text.includes('不要尝试切换会话 preset'))
 })

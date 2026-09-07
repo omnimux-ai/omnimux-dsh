@@ -220,7 +220,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：只保留 standard (TikTok 营销运营专家团) + cordis (组建团队)
+# OmniMux 出厂会话预设：只保留 standard (OmniAgent) + cordis (组建团队)
 - id: agent-presets
   config:
     default: standard
@@ -230,7 +230,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：只保留 standard (TikTok 营销运营专家团) + cordis (组建团队)
+# OmniMux 出厂会话预设：只保留 standard (OmniAgent) + cordis (组建团队)
 - id: agent-presets
   config:
     default: standard
