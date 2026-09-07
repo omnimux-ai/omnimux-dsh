@@ -3,11 +3,30 @@
  *
  * Generation mode is an open-string Catalog operation id (`params.operation`).
  * retired from the write path; legacy values are read-time migrated only.
+ *
+ * 2026-09-07 全模态收敛（T01）：Cfg* / Popover* / RectLike / ViewportSize /
+ * AspectRatioGeometry 等无材质语义的契约已升格至 ../cfg/types.ts，此处
+ * re-export 保持既有引用路径不报错。VideoParamWriteKey 与断言仍留在本文件。
  */
 
-import type { ReactNode, Ref } from 'react';
+import type { ReactNode } from 'react';
 import type { ModelParameterSchema } from '../../../../../../shared/api.ts';
 import type { OperationUiOption } from '../../../../../../shared/validation/operationUi.ts';
+
+export type {
+  AspectRatioGeometry,
+  CfgControlKind,
+  CfgSummaryItem,
+  CfgSummarySlot,
+  CfgSummarySlotId,
+  CfgSummaryVisibleState,
+  PopoverPlacement,
+  PopoverPosition,
+  RectLike,
+  ViewportSize,
+} from '../cfg/types.ts';
+
+import type { PopoverPlacement, RectLike } from '../cfg/types.ts';
 
 export interface PendingVideoParamAdjustment {
   suggestedParams: Record<string, unknown>;
@@ -81,65 +100,6 @@ export interface EffectiveVideoParams {
 }
 
 /**
- * Popover 浮层弹出方位：
- * - top: 优先向上贴合弹出（自适应限高 200px ~ 480px）
- * - bottom: 顶部空间极端狭窄时向下翻转
- */
-export type PopoverPlacement = 'top' | 'bottom';
-
-/**
- * Popover 浮层绝对定位计算结果
- */
-export interface PopoverPosition {
-  placement: PopoverPlacement;
-  top?: number;
-  bottom?: number;
-  left: number;
-  maxHeight: number;
-  width: number;
-}
-
-/**
- * 通用矩形边界对象定义（兼容 DOMRect）
- */
-export interface RectLike {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-  width: number;
-  height: number;
-}
-
-/**
- * 视口尺寸定义
- */
-export interface ViewportSize {
-  width: number;
-  height: number;
-}
-
-/**
- * 画幅比例矢量几何信息定义
- */
-export interface AspectRatioGeometry {
-  ratio: string;
-  label: string;
-  width: number;
-  height: number;
-  rectWidth: number;
-  rectHeight: number;
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  strokeWidth: number;
-  strokeDasharray?: string;
-  isDashed?: boolean;
-  viewBox: string;
-}
-
-/**
  * 视频参数触发条（TriggerBar）组件属性
  */
 export interface VideoTriggerBarProps {
@@ -147,7 +107,7 @@ export interface VideoTriggerBarProps {
   isOpen: boolean;
   onToggle: () => void;
   disabled?: boolean;
-  triggerRef?: Ref<HTMLElement>;
+  triggerRef?: React.Ref<HTMLElement>;
   className?: string;
 }
 
@@ -167,4 +127,40 @@ export interface VideoParamPopoverProps {
   children?: ReactNode;
 }
 
+/** PopoverPlacement re-export 消费点（保持类型引用不退化） */
+export type { PopoverPlacement as VideoPopoverPlacement };
+
 export type { VideoSummaryFormatResult } from './summaryFormatter.ts';
+
+/** 本迭代允许从浮层写入的 key。新增 UI 控件不得扩大此集合。 */
+export type VideoParamWriteKey =
+  | 'operation'
+  | 'aspectRatio'
+  | 'resolution'
+  | 'duration'
+  | 'sound'
+  | 'seed'
+  | 'watermark'
+  | 'outputFormat'
+  | 'referenceTaskType'
+  | 'generationType'
+  | 'returnLastFrame'
+  | 'webSearch'
+  | 'nsfwCheck'
+  | 'fileUrl'
+  | 'linkUrl';
+
+/** 运行期断言：禁止 generationMode 与未知 key 进入写入路径。 */
+export function assertVideoParamWriteKey(key: string): asserts key is VideoParamWriteKey {
+  const allowed: readonly string[] = [
+    'operation', 'aspectRatio', 'resolution', 'duration', 'sound',
+    'seed', 'watermark', 'outputFormat', 'referenceTaskType', 'generationType',
+    'returnLastFrame', 'webSearch', 'nsfwCheck', 'fileUrl', 'linkUrl',
+  ];
+  if (key === 'generationMode') {
+    throw new Error('UI must not write params.generationMode');
+  }
+  if (!allowed.includes(key)) {
+    throw new Error(`UI must not write params.${key}`);
+  }
+}

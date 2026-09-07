@@ -33,7 +33,7 @@ function printDryRun(options, issue, plugin, topic) {
   process.stdout.write(`\n==> [3/6] 执行 L1 敏捷自动化测试 (Worktree)...\n`)
   process.stdout.write('✓ 真实测试命令与计数门禁（dry-run）\n')
   process.stdout.write(`\n==> [4/6] 执行严过关五维自动化质检门禁...\n`)
-  process.stdout.write('✓ L0 diff-aware / L2 integration / L3 ego-browser 条件门禁（dry-run）\n')
+  process.stdout.write('✓ L0 diff-aware / L2 integration / ego-browser 条件门禁（dry-run）\n')
   process.stdout.write(`\n==> [5/6] 自动提交、发起 PR 并按风险决定合入...\n`)
   process.stdout.write('✓ PR body、CI required checks、R0-R3 通道（dry-run）\n')
   process.stdout.write(`\n==> [6/6] 合入确认后物化、回滚保护并清理...\n`)
@@ -125,7 +125,7 @@ export async function executePipeline(options) {
       if (rootGate.status !== 0) throw new PipelineError('根级 test:gates 失败')
     }
 
-    process.stdout.write('\n==> [4/6] 执行严过关五维自动化质检门禁与 L2/L3 验收...\n')
+    process.stdout.write('\n==> [4/6] 执行严过关五维自动化质检门禁与 L2/ego-browser 验收...\n')
     current = 'qa'
     saveState(repoRoot, options.issueId, 'tests', current, { testReports })
     options.browserRequired = requiresBrowser(paths)

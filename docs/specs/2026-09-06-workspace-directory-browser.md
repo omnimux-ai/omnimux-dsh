@@ -16,11 +16,11 @@ Issue：[产品 #629](https://github.com/omnimux-ai/omnimux-dsh/issues/629)；[�
 1. 独立 worktree 中实现 L2 overlay 与启动/重启回归，配套桌面 profile 修改独立 PR。
 2. 在新建专用 L2 中，从没有工作区的首页开始，验证目录选择、路径编辑、空目录、取消和可见错误；再验证侧栏添加工作区、创建会话及共享 `verify:live`。
 3. 在既有专用 L2 应用修复，核验数据/端口保持、只装配一个目录选择流程。与 #621 协调后通过同一正式入口更新其 L2，恢复该任务的真实会话和探针前置。
-4. 独立复核实际 diff、相关测试与运行身份，满足必需检查后合并两个 PR。从合并源码构建/物化 Dev 45120，执行对应 IAB 和适用 Electron 验收。
+4. 独立复核实际 diff、相关测试与运行身份，满足必需检查后合并两个 PR。从合并源码构建/物化 Dev 45120，执行对应 ego-browser 和适用 Electron 验收。
 5. 保存成功及失败尝试的证据，更新 Issue，清理本任务临时资源；不得清除其他任务工作区、进程或数据。
 
 用户已于2026-09-06明确授权本目标所需的 Issue、实现、验证、push、PR、按正常门禁合并、Dev 重启/物化/复验与安全收尾；授权不涉及生产。
 
 ## 验收记录要求
 
-每个环境记录源码 SHA、profile、端口、Host PID/启动时间、实际加载的目录选择 surface、操作前后 workspace/session 与目录事实。真实 IAB 流程不能调用 native picker；无效、不存在和不可访问路径应有可见反馈且可恢复。取消不创建工作区/会话。共享探针必须完成并包含 runtimeProof，单测或 HTTP 200 不代替运行验收。桌面平台装配另外核验真实 Electron renderer，Windows 行为保留适用回归。
+每个环境记录源码 SHA、profile、端口、Host PID/启动时间、实际加载的目录选择 surface、操作前后 workspace/session 与目录事实。真实 ego-browser 流程不能调用 native picker；无效、不存在和不可访问路径应有可见反馈且可恢复。取消不创建工作区/会话。共享探针必须完成并包含 runtimeProof，单测或 HTTP 200 不代替运行验收。桌面平台装配另外核验真实 Electron renderer，Windows 行为保留适用回归。

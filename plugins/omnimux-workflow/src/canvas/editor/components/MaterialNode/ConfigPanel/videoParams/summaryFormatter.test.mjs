@@ -1,8 +1,11 @@
 /**
+/**
  * Unit tests for summaryFormatter (Issue #467 / W2, Feed-Slot 阶段二 / T04)。
  *
  * 严格四段式：[ 生成模式 · 比例 · 质量 · 时长 ]。
  * 声音开关只属于 Popover，绝不拼入 TriggerBar 胶囊文字。
+ * fullText 以空格拼接（视觉分隔由 CSS 竖线承担），字符串中禁止出现中点 `·`。
+ */
  */
 
 import assert from 'node:assert/strict';
@@ -36,22 +39,23 @@ describe('summaryFormatter - 胶囊摘要格式化引擎（严格四段式）', 
     assert.equal(result.ratioText, '16:9');
     assert.equal(result.resolutionText, '2K');
     assert.equal(result.durationText, '8s');
-    assert.equal(result.fullText, '16:9 · 2K · 8s');
-    assert.ok(!result.fullText.startsWith('·'));
+    assert.equal(result.fullText, '16:9 2K 8s');
+    assert.ok(!result.fullText.includes('·'), 'fullText 不得包含中点 ·');
     assert.ok(!result.fullText.includes('全能参考'));
+    assert.ok(!result.fullText.includes('有声'));
   });
 
   it('声音开关绝不拼入胶囊（sound=true 也不出现"有声"）', () => {
     const result = formatVideoSummary(base({ sound: true, hasSoundSupport: true }));
-    assert.equal(result.fullText, '16:9 · 5s');
+    assert.equal(result.fullText, '16:9 5s');
     assert.ok(!result.fullText.includes('有声'));
     assert.equal('soundText' in result, false, '结构化结果不再携带 soundText 字段');
   });
 
-  it('无分辨率 + 单 op → 仅 比例 · 时长', () => {
+  it('无分辨率无音效 + 单 op → 仅 比例 时长', () => {
     const result = formatVideoSummary(base());
     assert.equal(result.modeText, '');
-    assert.equal(result.fullText, '16:9 · 5s');
+    assert.equal(result.fullText, '16:9 5s');
   });
 
   it('多 operation（showModeUi=true）→ 使用 Catalog label 作为 mode 文案', () => {
@@ -63,10 +67,10 @@ describe('summaryFormatter - 胶囊摘要格式化引擎（严格四段式）', 
       duration: 5,
     }));
     assert.equal(result.modeText, '首尾帧');
-    assert.equal(result.fullText, '首尾帧 · 9:16 · 5s');
+    assert.equal(result.fullText, '首尾帧 9:16 5s');
   });
 
-  it('fullText 无连续分隔符、无首尾分隔符（含声音开启样本）', () => {
+  it('fullText 无中点、无连续空白、段数以单个空格连接（含声音开启样本）', () => {
     const samples = [
       base({ showModeUi: true, operationLabel: '全能参考', resolution: '1080P', duration: 10, sound: true, hasSoundSupport: true }),
       base({ showModeUi: false, aspectRatio: '9:16', duration: 8 }),
@@ -74,18 +78,21 @@ describe('summaryFormatter - 胶囊摘要格式化引擎（严格四段式）', 
     ];
     for (const sample of samples) {
       const result = formatVideoSummary(sample);
-      assert.ok(!result.fullText.includes('··'), `不应存在连续分隔符: ${result.fullText}`);
-      assert.ok(!result.fullText.startsWith('·'), `不应以分隔符开头: ${result.fullText}`);
-      assert.ok(!result.fullText.endsWith('·'), `不应以分隔符结尾: ${result.fullText}`);
-      assert.ok(!result.fullText.includes(' · · '), `不应存在空白包裹的连续分隔符: ${result.fullText}`);
+      assert.ok(!result.fullText.includes('·'), `不应存在中点: ${result.fullText}`);
+      assert.ok(!result.fullText.startsWith(' '), `不应以空白开头: ${result.fullText}`);
+      assert.ok(!result.fullText.endsWith(' '), `不应以空白结尾: ${result.fullText}`);
+      assert.ok(!result.fullText.includes('  '), `不应存在连续空白: ${result.fullText}`);
       const expectedSegments = [
         result.modeText,
         result.ratioText,
         result.resolutionText,
         result.durationText,
       ].filter((s) => s !== null && s !== undefined && String(s).trim() !== '');
-      const sepCount = (result.fullText.match(/ · /g) || []).length;
-      assert.equal(sepCount, expectedSegments.length - 1, `分隔符数量错误: ${result.fullText}`);
+      assert.equal(
+        result.fullText,
+        expectedSegments.join(' '),
+        `fullText 应为各段空格拼接: ${result.fullText}`,
+      );
     }
   });
 
@@ -101,6 +108,6 @@ describe('summaryFormatter - 自动时长', () => {
   it('duration -1 displays the existing automatic-duration label', () => {
     const result = formatVideoSummary(base({ duration: -1 }));
     assert.equal(result.durationText, '自动');
-    assert.equal(result.fullText, '16:9 · 自动');
+    assert.equal(result.fullText, '16:9 自动');
   });
 });

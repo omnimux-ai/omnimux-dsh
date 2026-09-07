@@ -1,0 +1,28 @@
+sequenceDiagram
+  participant Host as ConfigPanel
+  participant Adp as imageParamAdapter
+  participant Bar as ImageTriggerBar
+  participant CfgBar as CfgSummaryBar
+  participant Pop as ImageParamPopover
+  participant Shell as CfgPopoverShell
+  participant Grid as CfgAspectGrid
+  participant Gate as GenerateButton
+
+  Host->>Adp: resolveEffectiveImageParams({params, schema, catalog, upstreams})
+  Adp-->>Host: EffectiveImageParams（展示回退，不写 nodeData）
+  Host->>Bar: params
+  Bar->>Adp: formatImageSummary
+  Bar->>CfgBar: items + IMAGE_COLLAPSE_ORDER + fullText
+  CfgBar->>CfgBar: ResizeObserver → collapseSummary
+  Host->>Gate: disabled=blockGenerate（原公式，不读 ImageAdapter）
+
+  Bar->>Host: onToggle
+  Host->>Pop: isOpen=true
+  Pop->>Shell: Portal + calculatePopoverPosition
+  Grid->>Pop: onChange('9:16')
+  Pop->>Pop: assertImageParamWriteKey('aspectRatio')
+  Pop->>Host: updateParam('aspectRatio', '9:16')
+  Host->>Host: onUpdateNodeData({ params: { ...params, aspectRatio } })
+  Host->>Adp: resolveEffectiveImageParams（再计算）
+  Note over Gate: blockGenerate 公式不变
+  Shell->>Host: Esc / 外点 → onClose

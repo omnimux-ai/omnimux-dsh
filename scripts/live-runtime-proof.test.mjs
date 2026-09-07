@@ -42,9 +42,7 @@ function fakeTab({ origin = 'http://127.0.0.1:45120', scripts, hasMore = false, 
   return {
     calls,
     async url() { return `${origin}/` },
-    capabilities: { async get(name) {
-      assert.equal(name, 'cdp')
-      return {
+    cdp: {
         async readEvents(options) {
           calls.push(['readEvents', options])
           return options.afterSequence === undefined ? { cursor: 4 } : {
@@ -57,8 +55,7 @@ function fakeTab({ origin = 'http://127.0.0.1:45120', scripts, hasMore = false, 
           if (method === 'Debugger.getScriptSource') return { scriptSource: byId.get(params.scriptId) }
           return {}
         },
-      }
-    } },
+    },
   }
 }
 

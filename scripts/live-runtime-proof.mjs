@@ -157,17 +157,17 @@ function urlMentionsPlugin(url, plugin) {
 
 async function assertTabOrigin(tab, url, phase) {
   const actual = await tab.url()
-  assert.equal(new URL(actual).origin, new URL(url).origin, `IAB tab origin changed ${phase}: expected ${new URL(url).origin}, got ${new URL(actual).origin}`)
+  assert.equal(new URL(actual).origin, new URL(url).origin, `ego tab origin changed ${phase}: expected ${new URL(url).origin}, got ${new URL(actual).origin}`)
   return actual
 }
 
 /**
- * Bind a selected IAB tab to the exact plugin client bundles currently loaded
+ * Bind a selected ego tab to the exact plugin client bundles currently loaded
  * by its renderer. Only same-origin /plugins/ loader scripts are read; source
  * is intentionally kept in-memory only.
  */
 export async function captureRuntimeProof(tab, { root, targets = [], url, target, allocation } = {}) {
-  assert.ok(tab?.capabilities?.get, 'Selected IAB tab does not expose capabilities.get')
+  assert.ok(tab?.cdp, 'Selected ego tab does not expose CDP')
   assert.ok(root && url, 'Runtime proof requires root and requested URL')
   assert.ok(Array.isArray(targets), 'Runtime proof targets must be an array')
   const plugins = [...new Set(['omnimux', ...targets.map(pluginFromTarget)])]
@@ -184,8 +184,8 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
     }
   }))
   const beforeUrl = await assertTabOrigin(tab, url, 'before proof')
-  const cdp = await tab.capabilities.get('cdp')
-  assert.ok(cdp?.send && cdp?.readEvents, 'Selected IAB tab does not expose the CDP Debugger API')
+  const cdp = tab.cdp
+  assert.ok(cdp?.send && cdp?.readEvents, 'Selected ego tab does not expose the CDP Debugger API')
 
   let enabled = false
   let operationError
@@ -223,12 +223,12 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
     const proofBundles = bundles.map((bundle) => {
       const versionDigests = new Set(scripts.filter((script) => urlMentionsPlugin(script.url, bundle.plugin))
         .map((script) => sha256(script.source)))
-      assert.ok(versionDigests.size <= 1, `${bundle.plugin} has ambiguous old/new client scripts in the IAB renderer`)
+      assert.ok(versionDigests.size <= 1, `${bundle.plugin} has ambiguous old/new client scripts in the ego renderer`)
       const candidates = scripts.flatMap((script) => script.registrations
         .filter((registration) => registration.id === bundle.plugin)
         .map((registration) => ({ script, registration })))
-      assert.ok(candidates.length > 0, `${bundle.plugin} current client bundle is not loaded in the IAB renderer`)
-      assert.equal(candidates.length, 1, `${bundle.plugin} has multiple registrations in the IAB renderer`)
+      assert.ok(candidates.length > 0, `${bundle.plugin} current client bundle is not loaded in the ego renderer`)
+      assert.equal(candidates.length, 1, `${bundle.plugin} has multiple registrations in the ego renderer`)
       const loaded = candidates[0]
       assert.ok(loaded.registration.normalized === bundle.normalized, `${bundle.plugin} loaded registration does not match its current client bundle`)
       const rawExact = loaded.registration.source === bundle.registration

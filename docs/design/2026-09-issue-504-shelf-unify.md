@@ -229,7 +229,7 @@ const pending = Promise.resolve(fetchSearch(payload)).then((body) => {
 | 仅电商扩充 keywords | 其余类 `[id]` | 误命中评估另单 |
 | `src/client.js` 无运行时引用 | 删除；bundle 测试改盯 `lib/client.js` | 若发现外部文档链到该文件，只改文档 |
 | Plaza 不共用 Picker inflight | `api.js` 缓存已满足完成时刻 TTL | 不把 Plaza 迁到 `loadPickerSearch`（分页/key 不同） |
-| L2：电商匹配与 Plaza 三渠道是用户可见行为 | 合入前独立 L2 + IAB，合入后 Dev 物化 | 纯构建删除若与行为拆 PR 可降为单测，但本 Issue 绑在一起 |
+| L2：电商匹配与 Plaza 三渠道是用户可见行为 | 合入前独立 L2 + ego-browser 共享探针，合入后 Dev 物化 | 纯构建删除若与行为拆 PR 可降为单测，但本 Issue 绑在一起 |
 
 ---
 
@@ -315,7 +315,7 @@ const pending = Promise.resolve(fetchSearch(payload)).then((body) => {
 - 无新 HTTP 合同。`POST` `method=search` 已支持 `channels?: ('custom'|'workbuddy'|'skillhub')[]`。
 - Host 聚合逻辑不改；缺 `channels` 时仍用配置默认三渠道。Plaza **必须显式传** `channels`，否则空 query 会误打 skillhub。
 - 客户端规则模块是 **唯一** taxonomy / 过滤 / Plaza 渠道 / Picker 手势真源。
-- 工作流：**标准 isolated worktree**，不要快速无人值守。R2 且含用户可见行为（电商匹配、Plaza 三渠道），需要 L2 + IAB；`pnpm auto:run` 还要求 `pre-authorized` + `/auto-approve`。命令：`pnpm wt:start omnimux-market shelf-unify 504` 或 `bash scripts/git-wt.sh start omnimux-market shelf-unify 504`。T01∥T02 完成后才许 T03。主工作区保持干净 `main`。合入后 `pnpm sync omnimux-market` 物化 `~/.omnimux-dev`。
+- 工作流：**标准 isolated worktree**，不要快速无人值守。R2 且含用户可见行为（电商匹配、Plaza 三渠道），需要 L2 + ego-browser 共享探针；`pnpm auto:run` 还要求 `pre-authorized` + `/auto-approve`。命令：`pnpm wt:start omnimux-market shelf-unify 504` 或 `bash scripts/git-wt.sh start omnimux-market shelf-unify 504`。T01∥T02 完成后才许 T03。主工作区保持干净 `main`。合入后 `pnpm sync omnimux-market` 物化 `~/.omnimux-dev`。
 
 ## 9. 任务依赖图
 

@@ -1,19 +1,20 @@
 /**
- * T05 集成契约测试 — Video Param Popover 宿主接线
+ * 集成契约测试 — ConfigPanel 全模态接线（2026-09-07 全模态收敛 / T06 更新）
  *
- * 以源码契约风格（readFileSync + node:test）锁定 ConfigPanel 与 videoParams
+ * 以源码契约风格（readFileSync + node:test）锁定 ConfigPanel 与三材质
  * 组件群的集成边界：
  *  - ConfigPanel 消费 VideoTriggerBar / VideoParamPopover / 参数解析与回退适配器；
- *  - 视频分支旧版 3 个 ghost CustomSelect 胶囊块已移除（wf-param-pill--video-summary
- *    仅剩图片分支一处消费）；
- *  - handleModelChange 委托 validateAndFallbackVideoParams；
- *  - videoPopoverOpen / setVideoPopoverOpen 状态接线存在；
- *  - 图片节点分支的 CustomSelect 逻辑保持不变；
- *  - components.css 中 .wf-param-pill--video-summary 因图片分支仍消费而保留。
+ *  - 图像分支废除 wf-param-pill--video-summary 幽灵 Select，改挂
+ *    ImageTriggerBar / ImageParamPopover；
+ *  - 音频（非 ASR）分支废除 SlidersHorizontal 齿轮与 advanced-drawer 内联抽屉，
+ *    改挂 AudioTriggerBar / AudioParamPopover；
+ *  - handleModelChange 委托 buildVideoParamTransition（仅视频）；
+ *  - videoPopoverOpen / imagePopoverOpen / audioPopoverOpen 状态接线存在；
+ *  - components.css 已下线 .wf-param-pill--video-summary；
  *
- * i18n 决策记录：videoParams 组件群沿用 T03/T04 交付的硬编码中文（全能参考/首尾帧/
- * 比例/清晰度/时长/有声等），与仓库同模块既有硬编码中文先例（如 index.tsx 的
- * '降级'/'不可用'、提示文案）保持一致，不引入 panel.videoParam* key，避免半中半典。
+ * i18n 决策记录：cfg/imageParams/audioParams 组件群沿用硬编码中文（生成方式/
+ * 比例/清晰度/时长/音色/纯音乐等），与仓库同模块既有硬编码中文先例保持一致，
+ * 不引入 panel.*Param* key，避免半中半典。
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -49,19 +50,18 @@ test('ConfigPanel 导入并消费 VideoTriggerBar / VideoParamPopover', () => {
   assert.ok(source.includes('<VideoParamPopover'), '面板根部应渲染 <VideoParamPopover>');
 });
 
-test('视频分支已移除旧版胶囊块（wf-param-pill--video-summary 仅剩图片分支一处）', () => {
+test('图像 / 音频分支幽灵入口已移除（wf-param-pill--video-summary 全源码 0 处）', () => {
   const occurrences = (source.match(/wf-param-pill--video-summary/g) || []).length;
   assert.equal(
     occurrences,
-    1,
-    'wf-param-pill--video-summary 应仅剩 1 处（图片分支），旧视频胶囊块已移除',
+    0,
+    'wf-param-pill--video-summary 幽灵 Select 已随图像分支废除，源码不得再出现',
   );
-  // 视频分支不再包含针对 aspectRatio/duration/resolution 的三个 ghost CustomSelect 组合
+  // 视频分支使用 TriggerBar 包裹层
   const videoBlock = source.slice(
     source.indexOf("{materialType === 'video'"),
     source.indexOf('{materialType === \'video\'', source.indexOf("{materialType === 'video'") + 1) + 4000,
   );
-  assert.ok(!videoBlock.includes('wf-param-pill--video-summary'), '视频分支不应再含旧胶囊类名');
   assert.ok(videoBlock.includes('wf-video-trigger-bar__wrap'), '视频分支应含 TriggerBar 包裹层');
 });
 
@@ -94,24 +94,52 @@ test('视频有效参数经 resolveEffectiveVideoParams 解析（消费 catalog/
   assert.ok(source.includes('videoEffectiveParams'));
 });
 
-test('图片节点分支仍保留其 CustomSelect 逻辑', () => {
-  const imageBlock = source.slice(source.indexOf("{materialType === 'image'"));
-  assert.ok(imageBlock.includes("materialType === 'image'"), '图片分支应存在');
-  assert.ok(imageBlock.includes('<CustomSelect'), '图片分支应保留 CustomSelect');
+test('图像分支废除幽灵 CustomSelect，改挂 ImageTriggerBar / ImageParamPopover', () => {
   assert.ok(
-    imageBlock.includes("updateParam('aspectRatio', value)"),
-    '图片分支应保留 aspectRatio 更新',
+    source.includes("import { ImageTriggerBar } from './imageParams/ImageTriggerBar';"),
+    '应导入 ImageTriggerBar',
   );
+  assert.ok(
+    source.includes("import { ImageParamPopover } from './imageParams/ImageParamPopover';"),
+    '应导入 ImageParamPopover',
+  );
+  assert.ok(source.includes('resolveEffectiveImageParams({'), '应经 resolveEffectiveImageParams 解析');
+  const imageBlock = source.slice(source.indexOf("{materialType === 'image'"));
+  assert.ok(imageBlock.includes('<ImageTriggerBar'), '图像分支应渲染 <ImageTriggerBar>');
+  assert.ok(imageBlock.includes('<ImageParamPopover'), '面板根部应渲染 <ImageParamPopover>');
+  assert.ok(imageBlock.includes('imagePopoverOpen'), '图像浮层状态接线存在');
+  assert.ok(!imageBlock.includes('wf-param-bar__select--ghost'), '图像分支不得再含幽灵 Select');
 });
 
-test('components.css 保留 .wf-param-pill--video-summary（图片分支仍消费）', () => {
+test('音频（非 ASR）分支废除齿轮与抽屉，改挂 AudioTriggerBar / AudioParamPopover', () => {
   assert.ok(
-    css.includes('.wf-param-pill--video-summary'),
-    '图片分支仍消费该胶囊类，CSS 规则应保留',
+    source.includes("import { AudioTriggerBar } from './audioParams/AudioTriggerBar';"),
+    '应导入 AudioTriggerBar',
   );
-  // 视频浮层 / 触发条样式已落地
-  assert.ok(css.includes('.wf-video-trigger-bar'), 'wf-video-trigger-bar 样式应存在');
-  assert.ok(css.includes('.wf-video-param-popover'), 'wf-video-param-popover 样式应存在');
+  assert.ok(
+    source.includes("import { AudioParamPopover } from './audioParams/AudioParamPopover';"),
+    '应导入 AudioParamPopover',
+  );
+  assert.ok(source.includes('resolveEffectiveAudioParams({'), '应经 resolveEffectiveAudioParams 解析');
+  assert.ok(source.includes('<AudioTriggerBar'), '音频分支应渲染 <AudioTriggerBar>');
+  assert.ok(source.includes('<AudioParamPopover'), '面板根部应渲染 <AudioParamPopover>');
+  assert.ok(source.includes('audioPopoverOpen'), '音频浮层状态接线存在');
+  assert.ok(source.includes("materialType === 'audio' && !isAsrTool"), 'ASR 不得挂载音频摘要条');
+  assert.ok(!source.includes('SlidersHorizontal'), '音频底栏不得再有孤立齿轮');
+  assert.ok(!source.includes('advanced-drawer'), '内联抽屉整段已废除');
+  assert.ok(!source.includes('showAdvanced'), 'showAdvanced 状态已废除');
+});
+
+test('components.css 已下线 .wf-param-pill--video-summary，wf-cfg-* 双选择器在位', () => {
+  assert.ok(
+    !css.includes('.wf-param-pill--video-summary'),
+    '图像不再消费该胶囊类，CSS 规则必须下线',
+  );
+  // cfg 底座与视频别名：单规则双选择器，数值只出现一次
+  assert.ok(css.includes('.wf-cfg-summary-bar,'), 'wf-cfg-summary-bar 双选择器规则应存在');
+  assert.ok(css.includes('.wf-video-trigger-bar'), 'wf-video-trigger-bar 别名应保留');
+  assert.ok(css.includes('.wf-cfg-popover,'), 'wf-cfg-popover 双选择器规则应存在');
+  assert.ok(css.includes('.wf-video-param-popover'), 'wf-video-param-popover 别名应保留');
 });
 
 test('i18n 决策锁定：videoParams 组件群保持硬编码中文，不引入 panel.videoParam*', () => {

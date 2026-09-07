@@ -24,7 +24,7 @@ export interface VideoSummaryFormatResult {
   resolutionText: string | null;
   /** 时长文案，如 '8s'、'5s' */
   durationText: string;
-  /** 由中点分隔的紧凑完整文本；mode / resolution 缺省时不留悬空分隔符 */
+  /** 由空格分隔的紧凑完整文本（a11y 用；视觉分隔由 CSS 竖线承担，废除中点 `·`） */
   fullText: string;
 }
 
@@ -91,7 +91,7 @@ export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFo
   if (resolutionText) segments.push(resolutionText);
   if (durationText) segments.push(durationText);
 
-  const fullText = segments.join(' · ');
+  const fullText = segments.join(' ');
 
   return {
     modeText,

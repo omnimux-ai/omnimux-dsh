@@ -38,7 +38,7 @@ export function runPackageTest(root, packageName, packageDir, options, evidenceD
 }
 function expectedBrowserEvidence(wtDir, options) {
   if (!options.browserRunId || !options.browserStage || !options.browserTarget) {
-    throw new PipelineError('Codex IAB evidence requires --browser-run-id, --browser-stage, and --browser-target from this pipeline run')
+    throw new PipelineError('ego-browser evidence requires --browser-run-id, --browser-stage, and --browser-target from this pipeline run')
   }
   return { root: wtDir, runId: options.browserRunId, stage: options.browserStage, target: options.browserTarget }
 }
@@ -57,7 +57,7 @@ export function runStaticQa(wtDir, plugin, base, options, evidenceDir) {
   const report = readJsonFile(reportPath)
   if (!report || !report.pass || result.status !== 0) throw new PipelineError('L0 auto-qa-gate 未通过', { report })
   if (browserRequired && !validateBrowserEvidence(evidenceDir, expectedBrowserEvidence(wtDir, options)).pass) {
-    throw new PipelineError('UI 变更缺少当前运行的 Codex IAB 证据')
+    throw new PipelineError('UI 变更缺少当前运行的 ego-browser 证据')
   }
   return { pass: true, reportPath, browserRequired, report }
 }
@@ -65,7 +65,7 @@ export function runBrowserQa(wtDir, issueId, plugin, options, evidenceDir) {
   if (!options.browserRequired) return { required: false, pass: true }
   if (options.dryRun) return { required: true, pass: true }
   const evidence = validateBrowserEvidence(evidenceDir, expectedBrowserEvidence(wtDir, options))
-  if (!evidence.pass) throw new PipelineError('UI 变更需要同一运行的 Codex IAB L3 验收；自动流水线不能伪造或回退到 ego-browser', { evidence, issueId, plugin })
+  if (!evidence.pass) throw new PipelineError('UI 变更需要同一运行的 ego-browser 验收；能力不足为 BLOCKED，不能伪造或回退到 IAB', { evidence, issueId, plugin })
   return { required: true, pass: true, evidence: evidence.report }
 }
 export function runIntegrationGates(root, options, evidenceDir) {

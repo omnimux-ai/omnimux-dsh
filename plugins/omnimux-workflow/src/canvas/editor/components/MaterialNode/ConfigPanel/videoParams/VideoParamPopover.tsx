@@ -1,18 +1,20 @@
 /**
- * Video Param Popover — Portal 浮层 (Issue 467 / W2).
+ * Video Param Popover — 视频参数浮层门面（Issue 467 / W2, 2026-09-07 全模态收敛 / T03）。
  *
+ * Portal / 定位 / Esc / 外点 / nowheel 隔离全部由通用 CfgPopoverShell 承担；
+ * 本文件只负责视频区块信息架构（生成方式 / 比例 / 质量行 / 时长 / 高级）。
  * Mode section renders only when effectiveOps ≥ 2 (params.showModeUi).
- * Operation ids come from Catalog DTO options (open strings). Writes
+ * Operation ids come from Catalog DTO options (open strings).
  *
- * Styles: only `wf-video-param-popover*` classes / `--dsw-*` tokens via CSS.
- * No raw hex, no `banned token island`, no JS theme branch. light/dark follows host cascade.
+ * Styles: `wf-video-param-popover*` 与 `wf-cfg-popover*` 双选择器别名（数值单处定义）。
+ * No raw hex, no banned token island, no JS theme branch. light/dark follows host cascade.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactElement, RefObject } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo } from 'react';
+import type { ReactElement, RefObject } from 'react';
 import type { CapabilityModelItem, ModelParameterSchema } from '../../../../../../shared/api.ts';
 import { CustomSelect, CustomSlider } from '../../../../../ui/index.ts';
+import { CfgPopoverShell } from '../cfg/CfgPopoverShell.tsx';
 import { AspectCardGrid } from './AspectCardGrid.tsx';
 import { DurationGrid } from './DurationGrid.tsx';
 import { projectParamControl } from './paramSchemaFilter.ts';
@@ -22,8 +24,7 @@ import {
   ResolutionSegment,
   SoundSwitchSegment,
 } from './SegmentControls.tsx';
-import type { EffectiveVideoParams, PopoverPosition, VideoNodeParams } from './types.ts';
-import { calculatePopoverPosition } from './viewportPositioner.ts';
+import type { EffectiveVideoParams, VideoNodeParams } from './types.ts';
 
 /** VideoParamPopover 属性 */
 export interface VideoParamPopoverProps {
@@ -44,7 +45,7 @@ export interface VideoParamPopoverProps {
 }
 
 /**
- * 基于 React Portal 的上方自适应浮层外壳组件。
+ * 视频参数浮层：CfgPopoverShell（Portal 契约）+ 视频区块。
  */
 export function VideoParamPopover({
   triggerRef,
@@ -55,74 +56,6 @@ export function VideoParamPopover({
   onClose,
   onParamChange,
 }: VideoParamPopoverProps): ReactElement | null {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<PopoverPosition | null>(null);
-
-  const recompute = (): void => {
-    if (!triggerRef.current) {
-      return;
-    }
-    const rect = triggerRef.current.getBoundingClientRect();
-    const viewport = { width: window.innerWidth, height: window.innerHeight };
-    setPosition(calculatePopoverPosition(rect, viewport));
-  };
-
-  useEffect(() => {
-    if (!isOpen) {
-      setPosition(null);
-      return;
-    }
-    recompute();
-
-    const handleResize = (): void => recompute();
-    const handleScroll = (): void => recompute();
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleScroll, { capture: true } as EventListenerOptions);
-    };
-  }, [isOpen, triggerRef]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const handlePointerDown = (e: MouseEvent): void => {
-      const target = e.target as Node | null;
-      if (!target) {
-        return;
-      }
-      if (
-        panelRef.current?.contains(target)
-        || triggerRef.current?.contains(target)
-        || (target instanceof Element && target.closest('.wf-custom-select-dropdown'))
-      ) {
-        return;
-      }
-      onClose();
-    };
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown, true);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown, true);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose, triggerRef]);
-
-  if (!isOpen || typeof document === 'undefined') {
-    return null;
-  }
-
   const resolutionOptions = schema.resolution?.options ?? [];
   const durationOptions = schema.duration?.options ?? [];
   const durationRange = schema.duration?.range;
@@ -162,32 +95,18 @@ export function VideoParamPopover({
     || enumControls.some(([, , definition]) => definition?.options?.length),
   );
 
-  const panelClass = position?.placement === 'bottom'
-    ? 'wf-video-param-popover wf-video-param-popover--bottom'
-    : 'wf-video-param-popover wf-video-param-popover--top';
-
-  const style: CSSProperties = {
-    position: 'fixed',
-    left: position?.left,
-    maxHeight: position?.maxHeight,
-    width: position?.width,
-    ...(position?.placement === 'bottom'
-      ? { top: position?.top }
-      : { bottom: position?.bottom }),
-  };
-
-  return createPortal(
-    <div
-      ref={panelRef}
-      className={`${panelClass} nowheel nodrag`}
-      style={style}
-      role="dialog"
-      aria-label="视频参数配置"
-      data-show-mode={showModeUi ? 'true' : 'false'}
-      onWheel={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
+  return (
+    <CfgPopoverShell
+      triggerRef={triggerRef}
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="视频参数配置"
+      className="wf-video-param-popover"
     >
-      <div className="wf-video-param-popover__scrollable">
+      <div
+        className="wf-video-param-popover__scrollable"
+        data-show-mode={showModeUi ? 'true' : 'false'}
+      >
         {/* effectiveOps ≥ 2 only — 0/1 不渲染 mode DOM；且 operation 须在 popover 白名单内 */}
         {showModeUi && popoverKeys.has('operation') ? (
           <section
@@ -214,16 +133,31 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {popoverKeys.has('resolution') && resolutionOptions.length > 0 && (
-          <section className="wf-video-param-popover__section">
-            <h4 className="wf-video-param-popover__section-title">清晰度</h4>
-            <ResolutionSegment
-              value={params.resolution}
-              options={resolutionOptions}
-              onChange={(v) => onParamChange('resolution', v)}
-            />
+        {(resolutionOptions.length > 0 && popoverKeys.has('resolution')) || (params.hasSoundSupport && popoverKeys.has('sound')) ? (
+          <section className="wf-video-param-popover__section" data-testid="wf-video-quality-section">
+            <div className="wf-video-param-popover__quality-row">
+              {resolutionOptions.length > 0 && popoverKeys.has('resolution') ? (
+                <div className="wf-video-param-popover__quality-field">
+                  <h4 className="wf-video-param-popover__section-title">清晰度</h4>
+                  <ResolutionSegment
+                    value={params.resolution}
+                    options={resolutionOptions}
+                    onChange={(v) => onParamChange('resolution', v)}
+                  />
+                </div>
+              ) : null}
+              {params.hasSoundSupport && popoverKeys.has('sound') ? (
+                <div className="wf-video-param-popover__quality-field wf-video-param-popover__quality-field--sound">
+                  <h4 className="wf-video-param-popover__section-title">有声</h4>
+                  <SoundSwitchSegment
+                    value={params.sound}
+                    onChange={(v) => onParamChange('sound', v)}
+                  />
+                </div>
+              ) : null}
+            </div>
           </section>
-        )}
+        ) : null}
 
         {popoverKeys.has('duration') && durationOptions.length > 0 && (
           <section className="wf-video-param-popover__section">
@@ -269,15 +203,6 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {params.hasSoundSupport && popoverKeys.has('sound') && (
-          <section className="wf-video-param-popover__section">
-            <h4 className="wf-video-param-popover__section-title">有声视频</h4>
-            <SoundSwitchSegment
-              value={params.sound}
-              onChange={(v) => onParamChange('sound', v)}
-            />
-          </section>
-        )}
 
         {needsFileUrl || needsLinkUrl ? (
           <section className="wf-video-param-popover__section">
@@ -340,8 +265,7 @@ export function VideoParamPopover({
           </section>
         ) : null}
       </div>
-    </div>,
-    document.body,
+    </CfgPopoverShell>
   );
 }
 
