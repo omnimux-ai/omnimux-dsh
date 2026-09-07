@@ -5,7 +5,7 @@ import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
 import { registerExecutor } from '../executors/registry.ts';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 
-const catalog = { source: 'omnimux', models: [{ id: 'text-model', listed: true, operations: [{
+const catalog = { source: 'omnimux', text: [{ id: 'text-model' }], image: [], video: [], audio: [], models: [{ id: 'text-model', listed: true, operations: [{
   id: 'text_generate', listed: true, output: { type: 'text' }, inputs: [
     { slot: 'prompt', role: 'prompt', accepts: ['text'], source: 'node_field', min: 1, max: 1 },
   ],

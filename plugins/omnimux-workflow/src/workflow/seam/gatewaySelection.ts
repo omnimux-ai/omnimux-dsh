@@ -17,7 +17,6 @@ import type { GenerationGateway } from './gateway';
 import { createMockGateway } from './mockGateway';
 import {
   createOmnimuxSeamClient,
-  resolveCanvasSubmission,
   type SeamGetter,
 } from './omnimuxGateway';
 import { createWorkflowLogger } from '../execution/logger';
@@ -92,19 +91,10 @@ function hasModelCatalog(getSeam: SeamGetter): boolean {
  * generation seam; only mock submit/await own artifacts and task lifecycles.
  */
 function createCatalogAwareMockGateway(getSeam: SeamGetter, env?: NodeJS.ProcessEnv): GenerationGateway {
-  const mock = createMockGateway();
+  const fallback = createMockGateway();
   const catalogProjection = createOmnimuxSeamClient({ getSeam, env });
-  return {
-    submit: async (request) => mock.submit(hasModelCatalog(getSeam)
-      ? resolveCanvasSubmission(request, await catalogProjection.capabilities())
-      : request),
-    awaitTask: (taskId, dest, signal) => mock.awaitTask(taskId, dest, signal),
-    capabilities: () => (
-      hasModelCatalog(getSeam)
-        ? catalogProjection.capabilities()
-        : mock.capabilities()
-    ),
-  };
+  return createMockGateway({ catalog: () => hasModelCatalog(getSeam)
+    ? catalogProjection.capabilities() : fallback.capabilities() });
 }
 
 /**

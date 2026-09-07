@@ -23,10 +23,13 @@ export type MediaInputRole =
   | 'motion_source';
 
 export interface ReferenceAssetPayload {
-  role: MediaInputRole;
+  /** Omitted during assembly only; the submit guard binds the catalog role. */
+  role?: MediaInputRole;
   type: 'image' | 'video' | 'audio' | 'document';
   pathOrUrl: string;
   targetSlot?: string;
+  sourceNodeId?: string;
+  edgeId?: string;
   mimeType?: string;
   sizeBytes?: number;
   originalName?: string;
@@ -50,7 +53,9 @@ export interface SubmitRequest {
   audioTrack?: ReferenceAssetPayload;
   /** Video duration hint in seconds. */
   duration?: number;
-  /** Canonical operation id from the model contract. */
+  /** Required for new submissions: explicit canonical catalog operation, never a legacy alias.
+   * Executors resolve omitted saved-node choices before calling submit; polling uses taskId only.
+   */
   operation?: string;
   /** Media resolution hint (e.g. '720P' | '1080P' | '4K'). */
   resolution?: string;
@@ -100,6 +105,13 @@ export interface SubmitResult {
 }
 
 export interface AwaitTaskResult {
+  /** Actual output metadata when supplied by the seam (never request hints). */
+  type?: GenerationCapability;
+  mimeType?: string;
+  sizeBytes?: number;
+  durationSec?: number;
+  relativePath?: string;
+  assetId?: string;
   /** Absolute path (or URL) of the settled artifact. */
   url: string;
   /** Text capability output (mock gateway / future text seam). */

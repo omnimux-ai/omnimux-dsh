@@ -11,6 +11,7 @@ import { resolveNodeKind, isGenerativeTool } from '../../shared/graph/materialNo
 import { resolveExecutorKey } from './nodeExecutors.ts';
 import { createImportExecutor } from './importExecutor.ts';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
+import { catalogFor, operation, slot } from '../seam/submissionFixtures.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -181,7 +182,7 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
     const mockGateway = {
       submit: async () => ({ taskId: 't1', mode: 'stub' }),
       awaitTask: async () => ({ status: 'completed', url: 'https://example.com/out.png' }),
-      capabilities: async () => ({}),
+      capabilities: async () => catalogFor('text', 'gemini-3.7-flash', [operation('vision_chat', 'text', [slot('image')])]),
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -197,7 +198,7 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
         return { taskId: 't1', mode: 'stub' };
       },
       awaitTask: async () => ({ text: '这是识别到的图片内容' }),
-      capabilities: async () => ({}),
+      capabilities: async () => catalogFor('text', 'gemini-3.7-flash', [operation('vision_chat', 'text', [slot('image')])]),
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -254,7 +255,7 @@ describe('materialGatewayExecutor - 专职生成执行器契约', () => {
         return { taskId: 't2', mode: 'stub' };
       },
       awaitTask: async () => ({ text: 'ok' }),
-      capabilities: async () => ({}),
+      capabilities: async () => catalogFor('text', 'gemini-3.7-flash', [operation('vision_chat', 'text', [slot('image')])]),
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });

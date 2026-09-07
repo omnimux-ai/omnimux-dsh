@@ -76,7 +76,9 @@ test('generated artifact metadata reaches node.data, unlocks vision compatibilit
     gateway: {
       submit: async () => ({ taskId: 'task-1', mode: 'stub' }),
       awaitTask: async () => ({ status: 'completed', url: '/tmp/image.png' }),
-      capabilities: async () => ({}),
+      capabilities: async () => ({ source: 'static-stub', defaults: { image: 'img-prompt-only' }, text: [], video: [], audio: [],
+        image: [{ id: 'img-prompt-only', label: 'Image' }], models: [{ id: 'img-prompt-only', label: 'Image',
+          operations: [{ id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] }] }] }),
       mode: 'mock',
     },
   });

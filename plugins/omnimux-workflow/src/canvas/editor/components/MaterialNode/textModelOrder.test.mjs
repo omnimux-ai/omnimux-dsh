@@ -313,7 +313,7 @@ test('harness mock catalog 文本模型按 label A–Z', () => {
 
 test('seam capabilities 走 modelCatalog.list，不再引用 TEXT_MODEL_ORDER / SPECS', () => {
   const seamSrc = readFileSync(
-    join(here, '../../../../workflow/seam/omnimuxGateway.ts'),
+    join(here, '../../../../workflow/seam/canvasCatalog.ts'),
     'utf8',
   );
   assert.match(seamSrc, /modelCatalog/);

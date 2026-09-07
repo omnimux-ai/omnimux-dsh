@@ -9,7 +9,10 @@
 import { join } from 'node:path';
 import { resolveExecutionMediaSource, type ResolveExecutionProjectFile } from './executionMediaSource.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
-import type { GenerationGateway, MediaInputRole, ReferenceAssetPayload } from '../seam/gateway';
+import type { GenerationGateway, MediaInputRole, ReferenceAssetPayload, SubmitRequest } from '../seam/gateway';
+import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
+import { validateGeneratedResult } from '../seam/generatedResult.ts';
+import { SeamGatewayError } from '../seam/SeamGatewayError.ts';
 import type {
   ExecutionContext,
   NodeExecutor,
@@ -75,10 +78,10 @@ const MEDIA_ROLES = new Set<MediaInputRole>([
   'motion_source',
 ]);
 
-function normalizeRole(value: unknown): MediaInputRole {
-  return typeof value === 'string' && MEDIA_ROLES.has(value as MediaInputRole)
-    ? value as MediaInputRole
-    : 'reference';
+function normalizeRole(value: unknown): MediaInputRole | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (typeof value === 'string' && MEDIA_ROLES.has(value as MediaInputRole)) return value as MediaInputRole;
+  throw new SeamGatewayError('role_conflict', '输入素材的用途无效，请重新绑定素材');
 }
 
 /** Upstream output: collects text, all media references and audio tracks without short-circuiting. */
@@ -95,13 +98,16 @@ function collectUpstreamMultiModal(ctx: ExecutionContext, resolveProjectFile?: R
 
   for (const binding of ordered) {
     const output = binding.output;
+    if (!output || (!output.text?.trim() && !output.mediaAssets?.length)) {
+      throw new SeamGatewayError('input_waiting', `来源 ${binding.sourceNodeId} 尚无可用输出，请补齐内容或移除引用`);
+    }
     if (output.text?.trim() && !output.mediaAssets?.length && !seenTexts.has(binding.sourceNodeId)) {
       seenTexts.add(binding.sourceNodeId);
       texts.push(output.text.trim());
     }
     if (Array.isArray(output.mediaAssets) && output.mediaAssets.length > 0) {
       for (const asset of output.mediaAssets) {
-        if (!asset || !asset.type) continue;
+        if (!asset || !asset.type) throw new SeamGatewayError('input_unavailable', `来源 ${binding.sourceNodeId} 的素材类型不可用`);
         const pathOrUrl = resolveExecutionMediaSource(asset, { workspaceId: ctx.workspaceId, mediaDir: ctx.mediaDir, resolveProjectFile });
         if (!pathOrUrl) continue;
 
@@ -113,6 +119,8 @@ function collectUpstreamMultiModal(ctx: ExecutionContext, resolveProjectFile?: R
           role,
           type: asset.type,
           pathOrUrl,
+          sourceNodeId: binding.sourceNodeId,
+          ...(binding.edgeId ? { edgeId: binding.edgeId } : {}),
           ...(binding.targetSlot ? { targetSlot: binding.targetSlot } : {}),
           ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
           ...(typeof asset.sizeBytes === 'number' ? { sizeBytes: asset.sizeBytes } : {}),
@@ -156,9 +164,7 @@ export function createMaterialGatewayExecutor(opts: {
       const audio = references.find((r) => r.type === 'audio')?.pathOrUrl || audioTrack?.pathOrUrl;
 
       const dest = join(ctx.mediaDir, `${node.id}.${extFor(capability)}`);
-      ctx.reportProgress?.(10, '已提交生成任务');
-
-      const submitted = await gateway.submit({
+      const request: SubmitRequest = {
         capability,
         prompt,
         image,
@@ -188,16 +194,20 @@ export function createMaterialGatewayExecutor(opts: {
         dest,
         signal: ctx.signal,
         mockFail: readMockFail(data),
-      });
+      };
+      const resolved = resolveExecutorSubmission(request, await gateway.capabilities());
+      const submitted = await gateway.submit(resolved);
+      ctx.reportProgress?.(10, '已提交生成任务');
 
       ctx.reportProgress?.(40, '生成中…');
       const settled = await gateway.awaitTask(submitted.taskId, dest, ctx.signal);
+      const metadata = validateGeneratedResult(settled, capability, dest);
       ctx.reportProgress?.(90, '生成完成');
       const simulated = settled.simulated === true;
 
       if (capability === 'text') {
         return {
-          text: settled.text ?? `[gateway:${capability}] ${prompt}`,
+          text: settled.text!,
           ...(simulated ? { simulated: true } : {}),
         };
       }
@@ -209,7 +219,7 @@ export function createMaterialGatewayExecutor(opts: {
           tmpAbs: dest,
           materialType: capability,
           prompt,
-          modelId: readString(params, 'model'),
+          modelId: resolved.model,
         });
         return {
           relativePath: persisted.relativePath,
@@ -220,6 +230,7 @@ export function createMaterialGatewayExecutor(opts: {
             url: persisted.url,
             relativePath: persisted.relativePath,
             assetId: persisted.assetId,
+            ...metadata,
             ...(persisted.mimeType ? { mimeType: persisted.mimeType } : {}),
             ...(persisted.sizeBytes != null ? { sizeBytes: persisted.sizeBytes } : {}),
             ...(persisted.durationSec != null ? { durationSec: persisted.durationSec } : {}),
@@ -230,7 +241,12 @@ export function createMaterialGatewayExecutor(opts: {
       const url = ctx.toPublicUrl ? ctx.toPublicUrl(settled.url) : settled.url;
       return {
         ...(simulated ? { simulated: true } : {}),
-        mediaAssets: [{ type: capability as 'image' | 'video' | 'audio', url }],
+        ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
+        ...(settled.assetId ? { assetId: settled.assetId } : {}),
+        mediaAssets: [{ type: capability, url, ...metadata,
+          ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
+          ...(settled.assetId ? { assetId: settled.assetId } : {}),
+        }],
       };
     },
   };
