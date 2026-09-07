@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Button, DropdownSelect, FilterBar, SearchField } from 'dsh-ui-kit'
+import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
@@ -88,24 +88,22 @@ export function InspirationSection({ t, active }) {
         </Button>
       </div>
 
+      <Divider />
+
       <FilterBar
         className="omnimux-inspiration-toolbar"
-        compact
-        filters={[
-          { key: 'all', label: t('tab.all') },
-          { key: 'local', label: t('tab.local') },
-          { key: 'public', label: t('tab.public') },
-        ].map((tabItem) => (
-          <Button
-            key={tabItem.key}
-            variant={tab === tabItem.key ? 'secondary' : 'ghost'}
-            size="sm"
-            aria-pressed={tab === tabItem.key}
-            onClick={() => setTab(tabItem.key)}
-          >
-            {tabItem.label}
-          </Button>
-        ))}
+        filters={
+          <Tabs
+            variant="underline"
+            items={[
+              { id: 'all', label: t('tab.all') },
+              { id: 'local', label: t('tab.local') },
+              { id: 'public', label: t('tab.public') },
+            ]}
+            activeId={tab}
+            onChange={setTab}
+          />
+        }
         search={(
           <SearchField
             value={q}

@@ -1,4 +1,5 @@
 import { FilterBar as KitFilterBar, SearchField, DropdownSelect, IconButton } from 'dsh-ui-kit'
+import { Tabs } from 'dsh-ui-kit'
 import { DEFAULT_SORT_DIRECTIONS } from './view.js'
 
 /**
@@ -66,11 +67,13 @@ export function FilterBar(props) {
       filters={(
         <>
           {platforms.length > 0 ? (
-            <DropdownSelect
-              value={platform}
-              options={platformOptions}
-              aria-label={t('platform')}
-              disabled={disabled}
+            <Tabs
+              variant="underline"
+              items={[
+                { id: '', label: `${t('platform')} · ${t('all')}` },
+                ...platforms.map((value) => ({ id: value, label: value })),
+              ]}
+              activeId={platform}
               onChange={(nextPlatform) => { onFilterChange({ platform: nextPlatform }) }}
             />
           ) : null}

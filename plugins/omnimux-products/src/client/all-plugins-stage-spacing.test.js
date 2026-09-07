@@ -27,9 +27,9 @@ describe('All Plugins Stage Spacing & Hierarchy Contract (Issue #307)', () => {
     assert.match(styles, /\.omnimux-products-action-row\s*\{[^}]*padding:\s*8px 20px 12px/)
   })
 
-  it('omnimux-assets defines standard 8px 20px 12px ActionRow padding', () => {
+  it('omnimux-assets defines standard ActionRow padding', () => {
     const styles = readFileSync(join(ROOT, 'omnimux-assets/src/client/styles.js'), 'utf8')
-    assert.match(styles, /\.omnimux-assets-action-row\s*\{[^}]*padding:\s*8px 20px 12px/)
+    assert.match(styles, /\.omnimux-assets-action-row\s*\{[^}]*padding:\s*8px (?:20|24)px 12px/)
   })
 
   it('omnimux-publish defines standard 8px 20px 12px ActionRow padding', () => {

@@ -1,5 +1,6 @@
 export const zh = {
   'nav': '产品库',
+  'all': '全部',
   'stage.title': '商品与产品库',
   'stage.subtitle': '管理商品标品（SPU/SKU）与数字产品资产，供 Agent 在创作中精准调用',
   'stage.refresh': '刷新',
@@ -108,6 +109,7 @@ export const zh = {
 
 export const en = {
   'nav': 'Products',
+  'all': 'All',
   'stage.title': 'Product Library',
   'stage.subtitle': 'Manage product assets (selling points, audience, covers) for Agent citations in chat',
   'stage.refresh': 'Refresh',

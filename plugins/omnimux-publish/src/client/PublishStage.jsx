@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from 'dsh-ui-kit'
+import { Divider, PageHeader } from 'dsh-ui-kit'
 import { injectPublishStyles } from './styles.js'
 import { usePublishFeed } from './usePublishFeed.js'
 import { AccountsSidebar } from './AccountsSidebar.jsx'
@@ -69,6 +69,7 @@ export function PublishStageContent(props) {
         onToggleBatch={() => feed.setIsBatchMode((prev) => !prev)}
         onExport={feed.handleExport}
       />
+      <Divider />
       <PublishControlBar
         t={t}
         tab={feed.tab}
