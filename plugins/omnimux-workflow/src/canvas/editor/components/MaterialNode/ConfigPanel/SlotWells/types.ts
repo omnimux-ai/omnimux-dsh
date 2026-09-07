@@ -5,6 +5,7 @@
  * 装填/卸装填/对调全部通过 canvas mutation gateway 落回 node.data.slotBindings。
  */
 
+import type { MaterialType } from '../../../../../../shared/canvasTypes.ts';
 import type {
   SlotBindings,
   SlotConflict,
@@ -39,4 +40,12 @@ export interface SlotWellsProps {
   onSwapSlots?: (firstSlot: string, lastSlot: string) => void;
   /** 卸装填：仅摘除槽位占用，不断开供给边。 */
   onClearOccupant: (slot: string, edgeId: string) => void;
+  /** 点击已装填卡槽本体插入 Token 到提示词输入框。 */
+  onInsertToken?: (item: {
+    sourceNodeId: string;
+    slotIndex: number;
+    label: string;
+    materialType: MaterialType;
+    mediaUrl?: string;
+  }) => void;
 }

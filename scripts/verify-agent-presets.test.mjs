@@ -81,7 +81,7 @@ test('tiktok-agent agent.cordis.yml is structurally valid and mounts all 10 expe
   ok(rows >= 8, `tiktok-agent parsed ${rows} top-level rows`)
 })
 
-test('standard agent.cordis.yml is structurally valid native general coding agent', () => {
+test('standard agent.cordis.yml is structurally valid code development agent', () => {
   const rel = 'presets/standard/agent.cordis.yml'
   ok(existsSync(join(root, rel)), rel)
   const text = read(rel)
@@ -91,8 +91,29 @@ test('standard agent.cordis.yml is structurally valid native general coding agen
   ok(text.includes('tool-skill'))
   ok(text.includes('tool-goal'))
   ok(text.includes('tool-workflow'))
+  ok(text.includes('代码开发') || text.includes('CodeDev'))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `standard parsed ${rows} top-level rows`)
+})
+
+test('daily-work agent.cordis.yml is structurally valid daily work collaboration agent', () => {
+  const rel = 'presets/daily-work/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const text = read(rel)
+  deepEqual(toolNames(text), [])
+  ok(text.includes('tool-bash'))
+  ok(text.includes('tool-fs'))
+  ok(text.includes('tool-skill'))
+  ok(text.includes('tool-goal'))
+  ok(text.includes('tool-todo'))
+  ok(text.includes('tool-web'))
+  ok(text.includes('日常工作') && text.includes('WorkAssistant'))
+  ok(text.includes('工作规划与任务推进'))
+  ok(text.includes('日常文书与方案拟定'))
+  ok(text.includes('信息检索与知识整理'))
+  ok(text.includes('综合事务与沟通辅助'))
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `daily-work parsed ${rows} top-level rows`)
 })
 
 test('cordis preset exists and includes native cordis capabilities and skills', () => {
@@ -104,18 +125,27 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
   ok(existsSync(join(root, 'presets/cordis/skills/editing-cordis-compositions/SKILL.md')))
 })
 
-test('preset.yml metadata matches requirements', () => {
+test('preset.yml metadata matches requirements for all four shipped presets', () => {
   const tiktokPreset = read('presets/tiktok-agent/preset.yml')
   ok(tiktokPreset.includes('name: TikTokAgent'))
   ok(tiktokPreset.includes('order: 1'))
 
   const standardPreset = read('presets/standard/preset.yml')
-  ok(standardPreset.includes('name: 通用Agent'))
+  ok(standardPreset.includes('name: 代码开发'))
   ok(standardPreset.includes('order: 2'))
+
+  const dailyWorkPreset = read('presets/daily-work/preset.yml')
+  ok(dailyWorkPreset.includes('name: 日常工作'))
+  ok(dailyWorkPreset.includes('order: 3'))
 
   const cordisPreset = read('presets/cordis/preset.yml')
   ok(cordisPreset.includes('name: 组建团队'))
-  ok(cordisPreset.includes('order: 3'))
+  ok(cordisPreset.includes('order: 4'))
+})
+
+test('sync-agent-presets.sh maintains all four presets in KEEP array', () => {
+  const syncScript = read('scripts/sync-agent-presets.sh')
+  ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis)'))
 })
 
 test('tiktok-agent persona positions as TikTokAgent lead and forbids forced spawn', () => {

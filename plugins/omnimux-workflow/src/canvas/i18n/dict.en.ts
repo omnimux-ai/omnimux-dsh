@@ -25,6 +25,7 @@ const en: Record<DictKey, string> = {
   'node.relink': 'Relink',
   'node.relinkOk': 'Source file relinked',
   'node.replace': 'Replace',
+  'node.replaceMaterial': 'Replace asset',
   'node.emptyMedia': 'No media configured. Select node to configure parameters in the inspector panel.',
   'node.tryMiniMaxH3': 'Explore recommended models',
   'node.h3Guide': 'Best Practice Guide',

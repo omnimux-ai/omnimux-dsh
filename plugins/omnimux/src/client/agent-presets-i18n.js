@@ -5,27 +5,118 @@
  * The official UI agent-preset plugin maps built-in preset IDs to:
  * - standard: `presetStandardName` / `presetStandardDescription`
  * - cordis: `presetCordisName` / `presetCordisDescription`
+ * - daily-work: `presetDailyWorkName` / `presetDailyWorkDescription`
  *
- * This module ensures `standard` renders as "通用Agent" / "GeneralAgent"
- * and `cordis` renders as "组建团队" / "Team Builder".
+ * This module ensures:
+ * - `standard` renders as "代码开发" / "CodeDev"
+ * - `daily-work` renders as "日常工作" / "WorkAssistant"
+ * - `cordis` renders as "组建团队" / "Team Builder"
  */
 
 export const AGENT_PRESETS_I18N = {
   zh: {
-    presetStandardName: '通用Agent',
-    presetStandardDescription: '全功能通用编码与智能协作 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。',
+    presetStandardName: '代码开发',
+    presetStandardDescription: '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
+    presetDailyWorkName: '日常工作',
+    presetDailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
     presetCordisName: '组建团队',
     presetCordisDescription: '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
+    dailyWorkName: '日常工作',
+    dailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
   },
   en: {
-    presetStandardName: 'GeneralAgent',
-    presetStandardDescription: 'Full-featured general coding and collaboration agent with file editing, shell, file and web search, skills, plan, goal, subagent, and workflow capabilities.',
+    presetStandardName: 'CodeDev',
+    presetStandardDescription: 'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
+    presetDailyWorkName: 'WorkAssistant',
+    presetDailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
     presetCordisName: 'Team Builder',
     presetCordisDescription: 'Build and configure custom agent teams with full runtime inspection, plugin experimentation, and preset authoring guidance.',
+    dailyWorkName: 'WorkAssistant',
+    dailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
   },
 }
 
 export const TARGET_NAMESPACE = 'settings.agentPreset'
+
+/**
+ * Resolves fallback display copy for a preset ID if not translated by the framework.
+ * @param {string} presetId
+ * @param {string} [locale='zh']
+ * @returns {{ name: string, description: string } | null}
+ */
+export function getPresetFallbackCopy(presetId, locale = 'zh') {
+  if (!presetId) return null
+  const lang = String(locale).toLowerCase().startsWith('en') ? 'en' : 'zh'
+  const dict = AGENT_PRESETS_I18N[lang]
+  if (presetId === 'daily-work' || presetId === 'dailywork') {
+    return {
+      name: dict.presetDailyWorkName,
+      description: dict.presetDailyWorkDescription,
+    }
+  }
+  if (presetId === 'standard') {
+    return {
+      name: dict.presetStandardName,
+      description: dict.presetStandardDescription,
+    }
+  }
+  if (presetId === 'cordis') {
+    return {
+      name: dict.presetCordisName,
+      description: dict.presetCordisDescription,
+    }
+  }
+  return null
+}
+
+/**
+ * Resolves localized preset display text with fallback support for custom/unrecognized presets like daily-work.
+ * @param {{ id: string, name?: string, description?: string, trust?: string }} preset
+ * @param {(key: string) => string} [t]
+ * @param {string} [activeLocale='zh']
+ * @returns {{ name: string, description?: string }}
+ */
+export function resolvePresetDisplayText(preset, t, activeLocale = 'zh') {
+  if (!preset) return { name: '' }
+  const lang = String(activeLocale).toLowerCase().startsWith('en') ? 'en' : 'zh'
+  const dict = AGENT_PRESETS_I18N[lang]
+
+  if (typeof t === 'function') {
+    if (preset.id === 'standard') {
+      return {
+        name: t('presetStandardName') || dict.presetStandardName,
+        description: t('presetStandardDescription') || dict.presetStandardDescription,
+      }
+    }
+    if (preset.id === 'daily-work') {
+      const translatedName = t('presetDailyWorkName')
+      const translatedDesc = t('presetDailyWorkDescription')
+      return {
+        name: (translatedName && translatedName !== 'presetDailyWorkName') ? translatedName : dict.presetDailyWorkName,
+        description: (translatedDesc && translatedDesc !== 'presetDailyWorkDescription') ? translatedDesc : dict.presetDailyWorkDescription,
+      }
+    }
+    if (preset.id === 'cordis') {
+      return {
+        name: t('presetCordisName') || dict.presetCordisName,
+        description: t('presetCordisDescription') || dict.presetCordisDescription,
+      }
+    }
+  }
+
+  const fallback = getPresetFallbackCopy(preset.id, activeLocale)
+  if (fallback) {
+    return {
+      name: fallback.name,
+      description: fallback.description,
+    }
+  }
+
+  return {
+    name: preset.name ?? preset.id,
+    ...(preset.description === undefined ? {} : { description: preset.description }),
+  }
+}
 
 /**
  * Patch existing locale dictionary maps for settings.agentPreset.

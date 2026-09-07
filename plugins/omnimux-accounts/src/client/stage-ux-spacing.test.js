@@ -68,6 +68,13 @@ describe('Accounts Stage UX & Spacing Contract (Issue #303)', () => {
     assert.match(filterJsx, /value:\s*'expires_at'/)
   })
 
+  it('formats platform Tabs with simplified "平台" and standard localized labels', () => {
+    const filterJsx = readFileSync(join(__dirname, 'FilterBar.jsx'), 'utf8')
+    assert.match(filterJsx, /import\s*\{[^}]*localeText[^}]*\}\s*from\s*'\.\/view\.js'/)
+    assert.match(filterJsx, /id:\s*'',\s*label:\s*t\('platform'\)/)
+    assert.match(filterJsx, /label:\s*localeText\(t,\s*`platform\.\$\{value\}`,\s*value\)/)
+  })
+
   it('declares standard four-layer spacing in styles.js', () => {
     assert.match(STYLES, /\.omnimux-accounts-action-row\s*\{[^}]*padding-top:\s*8px/)
     assert.doesNotMatch(STYLES, /\.omnimux-accounts-cta/)

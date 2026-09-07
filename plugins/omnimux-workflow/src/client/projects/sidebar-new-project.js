@@ -11,7 +11,7 @@ const ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke
 const STYLES = `
 .omnimux-new-project-entry {
   box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px;
-  height: 38px; padding: 8px 16px;
+  height: 38px; padding: 8px 12px;
   border: 1px solid var(--dsw-alias-border-l2, currentColor); border-radius: 12px;
   background: transparent; color: var(--dsw-alias-label-primary, inherit);
   font-size: 14px; font-weight: 500; line-height: 22px; cursor: pointer;

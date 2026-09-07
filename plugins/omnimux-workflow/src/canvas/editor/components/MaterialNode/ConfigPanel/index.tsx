@@ -27,7 +27,7 @@ import {
   AlertTriangle,
   AudioLines,
 } from 'lucide-react';
-import type { MaterialNodeData } from '../../../../types/materialNode';
+import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import { useT } from '../../../../i18n';
@@ -159,7 +159,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const slotState = nodeData.slotState as NodeSlotEngineState | undefined;
 
-  const handleInsertToken = useCallback((slotItem: SlotBindingItem) => {
+  const handleInsertToken = useCallback((slotItem: {
+    sourceNodeId: string;
+    slotIndex: number;
+    label: string;
+    materialType: MaterialType;
+    mediaUrl?: string;
+  }) => {
     promptEditorRef.current?.insertToken({
       raw: `@ref[${slotItem.sourceNodeId}:${slotItem.slotIndex}:${slotItem.label}]`,
       nodeId: slotItem.sourceNodeId,
@@ -693,6 +699,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               onPickSlot={handlePickSlot}
               onSwapSlots={handleSwapSlots}
               onClearOccupant={handleClearOccupant}
+              onInsertToken={handleInsertToken}
             />
           ) : (
             <span />

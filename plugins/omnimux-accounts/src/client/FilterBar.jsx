@@ -1,6 +1,6 @@
 import { FilterBar as KitFilterBar, SearchField, DropdownSelect, IconButton } from 'dsh-ui-kit'
 import { Tabs } from 'dsh-ui-kit'
-import { DEFAULT_SORT_DIRECTIONS } from './view.js'
+import { DEFAULT_SORT_DIRECTIONS, localeText } from './view.js'
 
 /**
  * Filter toolbar: search, platform / group / status dropdowns (options are
@@ -38,14 +38,14 @@ export function FilterBar(props) {
   ]
   const platformOptions = [
     { value: '', label: `${t('platform')} · ${t('all')}` },
-    ...platforms.map((value) => ({ value, label: value })),
+    ...platforms.map((value) => ({ value, label: localeText(t, `platform.${value}`, value) })),
   ]
   const groupOptions = [
     { value: '', label: `${t('group')} · ${t('all')}` },
     ...groups.map((value) => ({ value, label: value })),
   ]
   const statusOptions = [
-    { value: '', label: `${t('filter.status')} · ${t('all')}` },
+    { value: '', label: t('filter.status') },
     ...statuses.map((value) => ({ value, label: t(`status.${value}`) })),
   ]
 
@@ -68,8 +68,8 @@ export function FilterBar(props) {
         <Tabs
           variant="underline"
           items={[
-            { id: '', label: `${t('platform')} · ${t('all')}` },
-            ...platforms.map((value) => ({ id: value, label: value })),
+            { id: '', label: t('platform') },
+            ...platforms.map((value) => ({ id: value, label: localeText(t, `platform.${value}`, value) })),
           ]}
           activeId={platform}
           onChange={(nextPlatform) => { onFilterChange({ platform: nextPlatform }) }}
