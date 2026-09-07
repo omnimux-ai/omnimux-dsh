@@ -46,10 +46,11 @@ function fixture(type, multiple = true) {
 }
 const node = (materialType, extra={}) => ({materialType,kind:'generate',selectedTool:'text-to-text',params:{model:'test-model',operation:'plain'},prompt:'',...extra});
 
-test('new text panel has a quiet input hint, no mode selector, and a disabled generation action', () => {
+test('new text panel has no quiet input hint element, no mode selector, and a disabled generation action', () => {
   const html = render(node('text'),fixture('text'));
-  assert.match(html, /data-testid="wf-input-hint"/);
-  assert.match(html, /请输入内容或连接上游文本/);
+  assert.doesNotMatch(html, /data-testid="wf-input-hint"/);
+  assert.doesNotMatch(html, /wf-compat-error/);
+  assert.match(html, /title="请输入内容或连接上游文本"/);
   assert.match(html, /描述你想生成、分析或改写的内容，也可以连接参考素材。/);
   assert.doesNotMatch(html, /role="alert"|wf-operation-mode-inline|文本对话|图文对话/);
   assert.match(html, /aria-disabled="true"/);

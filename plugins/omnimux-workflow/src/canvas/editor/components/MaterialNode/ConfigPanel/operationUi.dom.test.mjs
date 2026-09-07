@@ -161,9 +161,9 @@ test('四模态均可消费 filtered model / effectiveOps', () => {
 });
 
 
-test('empty inputs use a quiet hint and disabled action; fixed audio tabs are absent', () => {
+test('empty inputs suppress both hint and error banner; fixed audio tabs are absent', () => {
   assert.match(configSrc, /quietReason = reasonCode === 'prompt_required'/);
-  assert.match(configSrc, /role="status" data-testid="wf-input-hint"/);
+  assert.doesNotMatch(configSrc, /data-testid="wf-input-hint"/);
   assert.match(configSrc, /!quietReason && \(opsState\.blockGenerate/);
   assert.match(configSrc, /disabledReason=\{blockReason\}/);
   assert.doesNotMatch(configSrc, /handleAudioSubModeChange|wf-config-panel__audio-tabs/);
