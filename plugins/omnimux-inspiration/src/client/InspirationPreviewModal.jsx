@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import {
   pickCoverSrc,
-  resolveCreatorProfileUrl,
   resolveTikTokEmbedUrl,
   translateInspiration,
   triggerAnalyzeInspiration,
@@ -81,9 +80,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
     ? `/omnimux/inspiration/local/media/${encodeURIComponent(data.safeItem.id)}/video.mp4`
     : null
   const cover = pickCoverSrc(data.safeItem)
-  const creator = data.creator && typeof data.creator === 'object' ? data.creator : {}
-  const creatorUrl = resolveCreatorProfileUrl(creator, sourceUrl, data.platform)
-  const creatorLabel = creator.name || creator.handle || ''
   const dimensions = [
     ['hook', t('modal.deconstruction.hook'), data.hook],
     ['goal', t('modal.deconstruction.goal'), data.targetGoal],
@@ -184,7 +180,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
           <main className="omnimux-inspiration-modal-body">
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel ${activeTab === 'video' ? 'is-active' : ''}`}>
-              <div className="omnimux-inspiration-modal-panel-heading"><h3>{t('modal.panel.video')}</h3></div>
               <div className="omnimux-inspiration-modal-player-box">
                 {embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
@@ -195,42 +190,27 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 ) : (
                   <div className="omnimux-inspiration-cover-fallback">{data.title.slice(0, 1)}</div>
                 )}
-              </div>
-              {sourceUrl ? (
-                <div className="omnimux-inspiration-modal-meta-row">
-                  <a className="omnimux-inspiration-modal-link" href={sourceUrl} target="_blank" rel="noopener noreferrer" title={sourceUrl}>{sourceUrl} {ICON_EXTERNAL}</a>
-                  <CopyButton value={sourceUrl} label={t('modal.meta.copyLink')} copiedLabel={t('modal.header.copied')} iconOnly />
-                </div>
-              ) : null}
-              <div className="omnimux-inspiration-modal-meta-list">
-                {creatorLabel ? (
-                  <div className="omnimux-inspiration-modal-meta-row">
-                    {creatorUrl ? (
-                      <a className="omnimux-inspiration-creator-link" href={creatorUrl} target="_blank" rel="noopener noreferrer">{t('modal.meta.author')}: {creatorLabel}</a>
-                    ) : (
-                      <span>{t('modal.meta.author')}: {creatorLabel}</span>
-                    )}
-                    <CopyButton value={creator.handle || creatorLabel} label={t('modal.meta.copyAuthor')} copiedLabel={t('modal.header.copied')} iconOnly />
+                {sourceUrl ? (
+                  <div className="omnimux-inspiration-player-actions">
+                    <CopyButton
+                      value={sourceUrl}
+                      label={t('modal.meta.copyLink') || '复制链接'}
+                      copiedLabel={t('modal.header.copied') || '已复制'}
+                      iconOnly
+                    />
+                    <a
+                      className="omnimux-inspiration-modal-copy is-icon-only omnimux-inspiration-player-open-link"
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={t('modal.meta.visitLink') || '访问此链接'}
+                      aria-label={t('modal.meta.visitLink') || '访问此链接'}
+                    >
+                      {ICON_EXTERNAL}
+                    </a>
                   </div>
                 ) : null}
-                {data.publishedAt || data.createdAt ? (
-                  <span>
-                    {data.publishedAt ? `${t('modal.meta.publishedAt')} ${data.publishedAt}` : ''}
-                    {data.publishedAt && data.createdAt ? ' · ' : ''}
-                    {data.createdAt ? `${t('modal.meta.createdAt')} ${data.createdAt}` : ''}
-                  </span>
-                ) : null}
               </div>
-              {!embedUrl && Object.keys(data.stats).length ? (
-                <div className="omnimux-inspiration-stats-grid">
-                  {[['likes', 'stat.likes', 'digg_count'], ['comments', 'stat.comments', 'comment_count'], ['shares', 'stat.shares', 'share_count']].map(([key, label, fallback]) => (
-                    <div className="omnimux-inspiration-stat-item" key={key}>
-                      <span className="omnimux-inspiration-stat-label">{t(label)}</span>
-                      <span className="omnimux-inspiration-stat-val">{data.stats[key] ?? data.stats[fallback] ?? '-'}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
             </section>
 
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-script-panel ${activeTab === 'script' ? 'is-active' : ''}`}>
