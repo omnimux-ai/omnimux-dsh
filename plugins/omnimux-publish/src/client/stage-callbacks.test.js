@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client'
 const bundle = new URL('./.stage-callbacks-test.mjs', import.meta.url)
 const stubs = {
   'dsh-ui-kit': `export function PageHeader() { return null }
+    export function Divider() { return null }
     export function ConfirmModal({open, confirmLoading, onConfirm, onClose}) {
       return open ? <><button disabled={confirmLoading} onClick={onConfirm}>delete</button><button disabled={confirmLoading} onClick={onClose}>cancel</button></> : null
     }`,

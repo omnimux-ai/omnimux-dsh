@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sync-agent-presets.sh — 把 OmniMux 出厂两项 Agent Preset 物化进运行时
+# sync-agent-presets.sh — 把 OmniMux 出厂三项 Agent Preset 物化进运行时
 #
 # 默认（无参数 / yarn sync:presets / sync-to-app 不带 target）：
 #   只改 OmniMux Dev.app + ~/.omnimux-dev
@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(standard cordis)
+KEEP=(tiktok-agent standard cordis)
 
-if [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/cordis" ]; then
-  echo "❌ presets/ 缺少出厂预设 (standard, cordis)" >&2
+if [ ! -d "$SRC/tiktok-agent" ] || [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/cordis" ]; then
+  echo "❌ presets/ 缺少出厂预设 (tiktok-agent, standard, cordis)" >&2
   exit 1
 fi
 
@@ -134,6 +134,11 @@ is_omnimux_profile() {
 # ~/.dsh 是共享 Host 家：其中 desktop/web 是 DSH 开发工具 profile，禁止物化社媒两项覆盖。
 should_materialize_profile() {
   local profile_home="$1"
+  local base
+  base=$(basename "$profile_home")
+  if [ "$base" = "node_modules" ] || [[ "$base" == .* ]]; then
+    return 1
+  fi
   local home_dir
   home_dir=$(dirname "$(dirname "$profile_home")")
   if [ "$home_dir" = "$HOME/.dsh" ]; then
@@ -173,6 +178,11 @@ materialize_into() {
 # 1) profiles under target homes that vendor @deepseek-ai/dsh
 shopt -s nullglob
 for home_dir in "${TARGET_HOMES[@]}"; do
+  if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
+    mkdir -p "$home_dir/agent-presets-shipped"
+    materialize_into "$home_dir/agent-presets-shipped"
+  fi
+
   for profile_home in "$home_dir/profiles"/*; do
     [ -d "$profile_home" ] || continue
     if ! should_materialize_profile "$profile_home"; then
@@ -181,6 +191,8 @@ for home_dir in "${TARGET_HOMES[@]}"; do
     fi
     dest="$profile_home/node_modules/@deepseek-ai/dsh/config/agent-presets"
     materialize_into "$dest"
+    mkdir -p "$profile_home/agent-presets-shipped"
+    materialize_into "$profile_home/agent-presets-shipped"
   done
 done
 
@@ -195,12 +207,22 @@ patch_asar_preset_header() {
 
 if [ "$HAS_DEV" -eq 1 ]; then
   materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  if [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  else
+    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  fi
 fi
 
 if [ "$HAS_PROD" -eq 1 ]; then
   materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  if [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  else
+    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  fi
 fi
 
 if [ "$HAS_DSH" -eq 1 ]; then
@@ -220,20 +242,20 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：只保留 standard (OmniAgent) + cordis (组建团队)
+# OmniMux 出厂会话预设：tiktok-agent (TikTokAgent) + standard (通用Agent) + cordis (组建团队)
 - id: agent-presets
   config:
-    default: standard
+    default: tiktok-agent
     includeUserRoot: false
 YAML
     echo "  ✓ wrote agent-presets patch → $patch"
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：只保留 standard (OmniAgent) + cordis (组建团队)
+# OmniMux 出厂会话预设：tiktok-agent (TikTokAgent) + standard (通用Agent) + cordis (组建团队)
 - id: agent-presets
   config:
-    default: standard
+    default: tiktok-agent
     includeUserRoot: false
 YAML
     echo "  ✓ appended agent-presets patch → $patch"

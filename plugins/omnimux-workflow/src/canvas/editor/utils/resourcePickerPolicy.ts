@@ -734,13 +734,17 @@ export function planStandaloneImportNodes(input: {
 }
 
 /**
- * 已有导入节点的填充 / 替换：首个文件写入当前节点（可改 materialType），
+ * 已有导入节点的填充 / 替换，或空状态生成节点的就地蜕变：
+ * 首个文件写入当前节点（可改 materialType，转为 import 节点），
  * 其余文件在下方落成独立导入节点，不连线、不生成。
+ * 导入素材节点不接受上游输入做模型生成，自动断开所有连入该节点的边（edge.target === targetNodeId），
+ * 下游输出边（edge.source === targetNodeId）完整保留。
  */
 export function planImportNodeFill(input: {
   nodes: CanvasNode[];
   targetNodeId: string;
   files: LocalFileDraft[];
+  edges?: Edge[];
 }): ResourcePickerCommitPlan {
   const rejected: ResourcePickerRejection[] = [];
   const target = input.nodes.find((node) => node.id === input.targetNodeId);
@@ -779,10 +783,15 @@ export function planImportNodeFill(input: {
     y += height + IMPORT_STACK_Y;
   });
 
+  const removeEdgeIds = (input.edges ?? [])
+    .filter((edge) => edge.target === input.targetNodeId)
+    .map((edge) => edge.id);
+
   return {
     hasWork: true,
     rejected,
     nodePatches,
     addNodes: addNodes.length > 0 ? addNodes : undefined,
+    removeEdgeIds: removeEdgeIds.length > 0 ? removeEdgeIds : undefined,
   };
 }

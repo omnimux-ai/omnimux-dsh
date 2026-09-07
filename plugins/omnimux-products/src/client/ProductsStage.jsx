@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, FilterBar, PageHeader, SearchField } from 'dsh-ui-kit'
+import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { PlusIcon, RefreshIcon } from './icons.jsx'
@@ -207,7 +207,13 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     return typeof result.body?.path === 'string' && result.body.path !== '' ? [result.body.path] : []
   }
 
+  const [kindTab, setKindTab] = useState('all')
+
   const visibleProducts = products.filter((product) => {
+    if (kindTab !== 'all') {
+      const productKind = product.kind || 'physical'
+      if (productKind !== kindTab) return false
+    }
     if (!query.trim()) return true
     const hay = `${product.name}\n${product.handle}\n${product.selling_points}\n${product.brand}\n${product.sku}\n${product.link}\n${(product.categories || []).join('\n')}`.toLowerCase()
     return hay.includes(query.trim().toLowerCase())
@@ -276,9 +282,22 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         </Button>
       </div>
 
+      <Divider />
+
       <FilterBar
         className="omnimux-products-stage-toolbar"
-        compact
+        filters={
+          <Tabs
+            variant="underline"
+            items={[
+              { id: 'all', label: t('all') || '全部' },
+              { id: 'physical', label: t('kind.physical') },
+              { id: 'digital', label: t('kind.digital') },
+            ]}
+            activeId={kindTab}
+            onChange={setKindTab}
+          />
+        }
         search={(
           <SearchField
             value={query}

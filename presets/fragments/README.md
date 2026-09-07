@@ -10,6 +10,6 @@ node scripts/build-agent-presets.mjs
 
 | 产物 | 插入片段 |
 |---|---|
-| `presets/standard/agent.cordis.yml` | 两份工具清单（10 spawn）+ 标准模式按收益分流 persona |
+| `presets/tiktok-agent/agent.cordis.yml` | 两份工具清单（10 spawn）+ TikTokAgent 主理人 persona |
 | `presets/social-content-team/agent.cordis.yml` | 仅创作 6 人 |
 | `presets/social-engagement-team/agent.cordis.yml` | 仅增长 4 人 |

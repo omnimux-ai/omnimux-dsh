@@ -69,14 +69,28 @@ test('preset fragments exist and list the expected experts', () => {
   deepEqual(toolNames(engagement), ENGAGEMENT)
 })
 
-test('standard agent.cordis.yml is structurally valid and mounts all 10 experts', () => {
-  const rel = 'presets/standard/agent.cordis.yml'
+test('tiktok-agent agent.cordis.yml is structurally valid and mounts all 10 experts', () => {
+  const rel = 'presets/tiktok-agent/agent.cordis.yml'
   ok(existsSync(join(root, rel)), rel)
   const text = read(rel)
   ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
   ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
   ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
   deepEqual(toolNames(text), ALL)
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `tiktok-agent parsed ${rows} top-level rows`)
+})
+
+test('standard agent.cordis.yml is structurally valid native general coding agent', () => {
+  const rel = 'presets/standard/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const text = read(rel)
+  deepEqual(toolNames(text), [])
+  ok(text.includes('tool-bash'))
+  ok(text.includes('tool-fs'))
+  ok(text.includes('tool-skill'))
+  ok(text.includes('tool-goal'))
+  ok(text.includes('tool-workflow'))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `standard parsed ${rows} top-level rows`)
 })
@@ -91,29 +105,33 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
 })
 
 test('preset.yml metadata matches requirements', () => {
+  const tiktokPreset = read('presets/tiktok-agent/preset.yml')
+  ok(tiktokPreset.includes('name: TikTokAgent'))
+  ok(tiktokPreset.includes('order: 1'))
+
   const standardPreset = read('presets/standard/preset.yml')
-  ok(standardPreset.includes('name: OmniAgent'))
-  ok(standardPreset.includes('order: 1'))
+  ok(standardPreset.includes('name: 通用Agent'))
+  ok(standardPreset.includes('order: 2'))
 
   const cordisPreset = read('presets/cordis/preset.yml')
   ok(cordisPreset.includes('name: 组建团队'))
-  ok(cordisPreset.includes('order: 2'))
+  ok(cordisPreset.includes('order: 3'))
 })
 
-test('standard persona positions as OmniAgent lead and forbids forced spawn', () => {
-  const text = read('presets/standard/agent.cordis.yml')
-  ok(text.includes('OmniAgent'))
+test('tiktok-agent persona positions as TikTokAgent lead and forbids forced spawn', () => {
+  const text = read('presets/tiktok-agent/agent.cordis.yml')
+  ok(text.includes('TikTokAgent'))
   ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
   ok(text.includes('不要尝试切换会话 preset'))
 })
 
 test('build-agent-presets is idempotent', () => {
-  const before = read('presets/standard/agent.cordis.yml')
+  const before = read('presets/tiktok-agent/agent.cordis.yml')
   const res = spawnSync('node', [join(root, 'scripts/build-agent-presets.mjs')], {
     cwd: root,
     encoding: 'utf8',
   })
   equal(res.status, 0, res.stderr || res.stdout)
-  const after = read('presets/standard/agent.cordis.yml')
+  const after = read('presets/tiktok-agent/agent.cordis.yml')
   equal(after, before)
 })

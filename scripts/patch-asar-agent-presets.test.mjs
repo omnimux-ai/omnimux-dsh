@@ -8,8 +8,10 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import {
+  calculateAsarHeaderSha256,
   calculateSha256,
   locateInfoPlist,
+  readAsarHeader,
   readPlistIntegrity,
   updatePlistIntegrity,
   verifyIntegrity,
@@ -19,6 +21,30 @@ import {
   unpackedTree,
   sha256,
 } from './patch-asar-agent-presets.mjs'
+
+function createMockAsar(headerObj = { files: {} }, payload = Buffer.from('mock-payload')) {
+  const headerString = typeof headerObj === 'string' ? headerObj : JSON.stringify(headerObj)
+  const headerStrBuf = Buffer.from(headerString, 'utf8')
+
+  const strLenBuf = Buffer.alloc(4)
+  strLenBuf.writeUInt32LE(headerStrBuf.length, 0)
+
+  const remainder = headerStrBuf.length % 4
+  const paddingSize = remainder === 0 ? 0 : 4 - remainder
+  const stringPayload = Buffer.concat([strLenBuf, headerStrBuf, Buffer.alloc(paddingSize)])
+
+  const headerPickle = Buffer.concat([Buffer.alloc(4), stringPayload])
+  headerPickle.writeUInt32LE(stringPayload.length, 0)
+
+  const sizePickle = Buffer.alloc(8)
+  sizePickle.writeUInt32LE(4, 0)
+  sizePickle.writeUInt32LE(headerPickle.length, 4)
+
+  return {
+    headerString,
+    buffer: Buffer.concat([sizePickle, headerPickle, payload]),
+  }
+}
 
 test('calculateSha256 handles buffer and file path', () => {
   const buf = Buffer.from('hello-asar-integrity')
@@ -32,6 +58,34 @@ test('calculateSha256 handles buffer and file path', () => {
 
   const hash2 = calculateSha256(file)
   strictEqual(hash1, hash2)
+  rmSync(tmp, { recursive: true, force: true })
+})
+
+test('calculateAsarHeaderSha256 extracts header and calculates sha256 of header string', () => {
+  const header = { files: { 'a.js': { size: 10 } } }
+  const mock = createMockAsar(header, Buffer.from('file-contents-here'))
+  const expectedHash = sha256(Buffer.from(mock.headerString, 'utf8'))
+
+  // Test with Buffer
+  const hashFromBuf = calculateAsarHeaderSha256(mock.buffer)
+  strictEqual(hashFromBuf, expectedHash)
+
+  // Test with file path
+  const tmp = mkdtempSync(join(tmpdir(), 'test-asar-hdr-'))
+  const asarPath = join(tmp, 'app.asar')
+  writeFileSync(asarPath, mock.buffer)
+
+  const hashFromFile = calculateAsarHeaderSha256(asarPath)
+  strictEqual(hashFromFile, expectedHash)
+
+  // Test that changing payload bytes does NOT change the header hash
+  const modifiedPayload = Buffer.concat([mock.buffer.subarray(0, mock.buffer.length - 10), Buffer.from('different!')])
+  strictEqual(calculateAsarHeaderSha256(modifiedPayload), expectedHash)
+
+  // Test that whole file hash does NOT equal header hash
+  const wholeFileHash = calculateSha256(mock.buffer)
+  ok(wholeFileHash !== expectedHash)
+
   rmSync(tmp, { recursive: true, force: true })
 })
 
@@ -101,8 +155,8 @@ test('verifyIntegrity validates asar sha256 against Info.plist', () => {
 
   const asar = join(resources, 'app.asar')
   const plist = join(contents, 'Info.plist')
-  const asarContent = Buffer.from('asar-content-sample-data')
-  writeFileSync(asar, asarContent)
+  const mock = createMockAsar({ files: { 'main.js': { size: 42 } } })
+  writeFileSync(asar, mock.buffer)
 
   const initialXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -118,8 +172,9 @@ test('verifyIntegrity validates asar sha256 against Info.plist', () => {
   const res1 = verifyIntegrity(asar, plist)
   strictEqual(res1.valid, false)
 
-  // Update plist with real hash
-  const correctHash = calculateSha256(asarContent)
+  // Update plist with real header hash
+  const correctHash = calculateAsarHeaderSha256(mock.buffer)
+  strictEqual(correctHash, sha256(Buffer.from(mock.headerString, 'utf8')))
   updatePlistIntegrity(plist, correctHash)
 
   const res2 = verifyIntegrity(asar, plist)
@@ -138,10 +193,10 @@ test('patch-asar-agent-presets CLI --verify-only and --dry-run flags', () => {
 
   const asar = join(resources, 'app.asar')
   const plist = join(contents, 'Info.plist')
-  const asarContent = Buffer.from('mock-asar-bytes')
-  writeFileSync(asar, asarContent)
+  const mock = createMockAsar({ files: { 'app.js': { size: 100 } } })
+  writeFileSync(asar, mock.buffer)
 
-  const correctHash = calculateSha256(asarContent)
+  const correctHash = calculateAsarHeaderSha256(mock.buffer)
   const initialXml = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>

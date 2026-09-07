@@ -1,12 +1,12 @@
 /**
- * PromptTokenEditor — 富文本 Token 编辑器 (Issue #714 / T04).
+ * PromptTokenEditor — 富文本 Token 编辑器 (Issue #714 / Issue #737).
  *
  * 核心特性：
  * 1. 受控 ContentEditable + React Atomic Span 胶囊容器；
  * 2. Token 胶囊：<span class="wf-prompt-token nodrag" contenteditable="false">，内含缩略图、Label 与 ✕ 按钮；
  * 3. 按键拦截：Backspace/Delete 原子删除 Token 避免字符碎裂，键入 @ 呼出 MentionPopover；
  * 4. 对外暴露 ref: { insertToken, focus, getMarkdown }，支持卡槽卡片点击一键注入；
- * 5. 100% 消费 DSH --dsw-* tokens，完美兼顾 SSR 与无头测试环境。
+ * 5. 100% 消费 DSH --dsw-* tokens，底色完全透明，融入卡片；右下角渲染 Copy 助手与字数统计元数据栏。
  */
 
 import React, {
@@ -14,9 +14,11 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
+import { Copy } from 'lucide-react';
 import type {
   NodeSlotEngineState,
   PromptReferenceToken,
@@ -42,6 +44,8 @@ export interface PromptTokenEditorProps {
   className?: string;
   slotState?: NodeSlotEngineState;
   children?: React.ReactNode;
+  maxLength?: number;
+  materialType?: string;
   onChange?: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 }
@@ -148,6 +152,8 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       className = '',
       slotState,
       children,
+      maxLength,
+      materialType,
       onChange,
       onKeyDown: externalOnKeyDown,
     },
@@ -159,6 +165,16 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
 
     const [mentionOpen, setMentionOpen] = useState(false);
     const [mentionPosition, setMentionPosition] = useState<{ x: number; y: number } | null>(null);
+
+    // 最大字数：生图 7500，视频及其他默认 7000，或由外部传入
+    const effectiveMaxLength = maxLength ?? (materialType === 'image' ? 7500 : 7000);
+
+    // 计算纯可视文本字符数（剥离 @ref 语法壳，保留 label）
+    const visualLength = useMemo(() => {
+      if (!value) return 0;
+      const clean = value.replace(/@ref\[[^\]]*:([^\]]+)\]/g, '$1');
+      return clean.length;
+    }, [value]);
 
     // 删除 Token 回调
     const handleTokenDelete = useCallback(
@@ -357,6 +373,23 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
           {value || null}
         </div>
         {children}
+
+        {/* 字数与模式统计栏（对齐图 2） */}
+        <div className="wf-prompt-token-meta-bar" data-testid="wf-prompt-token-meta-bar">
+          <button
+            type="button"
+            className="wf-prompt-token-meta-btn nodrag"
+            title="提示词助手"
+            aria-label="提示词助手"
+          >
+            <Copy size={12} />
+          </button>
+          <span className="wf-prompt-token-meta-type">T</span>
+          <span className="wf-prompt-token-meta-divider">|</span>
+          <span className="wf-prompt-token-meta-count">
+            {visualLength}/{effectiveMaxLength}
+          </span>
+        </div>
 
         <MentionPopover
           open={mentionOpen}

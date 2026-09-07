@@ -1,5 +1,5 @@
 /**
- * SlotWells — 模式驱动的媒体卡槽区（Feed-Slot 阶段二 / T03）。
+ * SlotWells — 模式驱动的媒体卡槽区（Feed-Slot 阶段二 / T03 / Issue #737 还原视觉）.
  *
  * 按 deriveSlotLayout 的 preset 渲染：
  *   - none  → 不渲染（文生视频等纯文本输入不占高度）；
@@ -7,8 +7,10 @@
  *   - strip → 已填缩略图顺序排列，尾部虚线 + 槽（未达上限或上限未定时）；
  *   - named → 各具名卡槽并列（角色图 / 音频驱动等）。
  *
- * 卡片态：缩略图（ready）/ 加载（waiting）/ 空态（dashed + 标签）。
- * 卸装填（×）只摘除槽位占用，不断开供给边；素材回到 Feed。
+ * 视觉规格（对齐图 2）：
+ *   - 空态与添加卡槽为 44px × 44px 大方圆角虚线加号框，圆角 10px，居中清爽 Plus(size=20) 图标；
+ *   - 空态坚决不展示截断文字（绝无 refe... 截断标签）；
+ *   - 填入素材后展示完整圆角大方块预览，悬浮显示小叉号 ✕ 卸装填。
  */
 
 import React, { memo } from 'react';
@@ -56,21 +58,21 @@ function WellThumb({ model }: { model: WellModel }) {
   if (!model.occupant) {
     return (
       <span className="wf-slot-well__placeholder">
-        <Plus size={12} aria-hidden="true" />
+        <Plus size={20} aria-hidden="true" />
       </span>
     );
   }
   if (!upstream || upstream.availability === 'unavailable') {
     return (
       <span className="wf-slot-well__placeholder wf-slot-well__placeholder--broken">
-        <ImageIcon size={12} aria-hidden="true" />
+        <ImageIcon size={18} aria-hidden="true" />
       </span>
     );
   }
   if (upstream.availability === 'waiting' || !upstream.hasMedia) {
     return (
       <span className="wf-slot-well__placeholder wf-slot-well__placeholder--loading">
-        <Loader2 size={12} className="wf-slot-well__spin" aria-hidden="true" />
+        <Loader2 size={18} className="wf-slot-well__spin" aria-hidden="true" />
       </span>
     );
   }
@@ -81,20 +83,20 @@ function WellThumb({ model }: { model: WellModel }) {
     return (
       <span className="wf-slot-well__video-box">
         <video className="wf-slot-well__media" src={upstream.url} muted />
-        <Play size={9} className="wf-slot-well__overlay-icon" aria-hidden="true" />
+        <Play size={12} className="wf-slot-well__overlay-icon" aria-hidden="true" />
       </span>
     );
   }
   if (upstream.materialType === 'audio') {
     return (
       <span className="wf-slot-well__placeholder wf-slot-well__placeholder--audio">
-        <Music size={12} aria-hidden="true" />
+        <Music size={18} aria-hidden="true" />
       </span>
     );
   }
   return (
     <span className="wf-slot-well__placeholder">
-      <ImageIcon size={12} aria-hidden="true" />
+      <ImageIcon size={18} aria-hidden="true" />
     </span>
   );
 }
@@ -148,7 +150,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
         }}
       >
         <WellThumb model={model} />
-        <span className="wf-slot-well__label">{label}</span>
+        {occupant ? <span className="wf-slot-well__label">{label}</span> : null}
         {occupant ? (
           <button
             type="button"
@@ -160,7 +162,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
               onClearOccupant(spec.slot, occupant.edgeId);
             }}
           >
-            <X size={9} />
+            <X size={10} />
           </button>
         ) : null}
       </div>
@@ -183,7 +185,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
             onSwapSlots?.(first.slot, last.slot);
           }}
         >
-          <ArrowLeftRight size={12} />
+          <ArrowLeftRight size={14} />
         </button>
         {buildWellModels(last, props, upstreamByEdge).map(renderWell)}
       </div>
@@ -213,7 +215,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
             aria-label={t('panel.slotPick').replace('{slot}', slotLabel(addSpec))}
             onClick={() => onPickSlot(pickRequest(addSpec))}
           >
-            <Plus size={13} />
+            <Plus size={20} />
           </button>
         ) : null}
       </div>

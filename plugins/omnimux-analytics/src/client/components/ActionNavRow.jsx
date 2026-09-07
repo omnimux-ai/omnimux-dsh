@@ -1,5 +1,5 @@
 import { IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button } from 'dsh-ui-kit'
+import { Button, Tabs } from 'dsh-ui-kit'
 import { minutesBetween } from '../format.js'
 
 function formatMinutes(t, info, ago) {
@@ -22,28 +22,15 @@ export function ActionNavRow({ t, tab, syncStatus, syncing, now = Date.now(), on
 
   return (
     <div className="omnimux-analytics-stage-action-row">
-      <div className="omnimux-analytics-tabs" role="tablist" aria-label={t('tab.list')}>
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'posting'}
-          variant={tab === 'posting' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => onTabChange('posting')}
-        >
-          {t('tab.posting')}
-        </Button>
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'inbox'}
-          variant={tab === 'inbox' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => onTabChange('inbox')}
-        >
-          {t('tab.inbox')}
-        </Button>
-      </div>
+      <Tabs
+        variant="underline"
+        items={[
+          { id: 'posting', label: t('tab.posting') },
+          { id: 'inbox', label: t('tab.inbox') },
+        ]}
+        activeId={tab}
+        onChange={onTabChange}
+      />
       <div className="omnimux-analytics-sync">
         <span className="omnimux-analytics-sync-caption">{caption}</span>
         <Button

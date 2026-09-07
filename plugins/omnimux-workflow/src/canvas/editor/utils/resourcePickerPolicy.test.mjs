@@ -463,3 +463,158 @@ test('planResourcePickerReplaceCommit：置换 Mutation 计划生成（溢出池
   assert.equal(freshPatchedState.activeSlots[0].sourceNodeId, 'node_fresh');
   assert.equal(freshPatchedState.overflowPool.some((o) => o.sourceNodeId === 'node_hero'), true);
 });
+
+test('planImportNodeFill：支持 edges 入参，生图节点原地蜕变并断开全部上游边、保留下游边', () => {
+  const nodes = [
+    materialNode('upstream_text', 'text', { content: 'prompt text' }),
+    materialNode('target_gen_img', 'image', {
+      nodeKind: 'generate',
+      selectedTool: 'text-to-image',
+      status: 'empty',
+      position: { x: 500, y: 100 },
+    }),
+    materialNode('downstream_video', 'video', {
+      nodeKind: 'generate',
+      selectedTool: 'image-to-video',
+      position: { x: 900, y: 100 },
+    }),
+  ];
+  const edges = [
+    { id: 'edge_in_1', source: 'upstream_text', target: 'target_gen_img' },
+    { id: 'edge_in_2', source: 'other_upstream', target: 'target_gen_img' },
+    { id: 'edge_out_1', source: 'target_gen_img', target: 'downstream_video' },
+  ];
+
+  const plan = planImportNodeFill({
+    nodes,
+    targetNodeId: 'target_gen_img',
+    files: [
+      {
+        id: 'file_imported',
+        name: 'photo.jpg',
+        mime: 'image/jpeg',
+        size: 1024,
+        realPath: '/path/to/photo.jpg',
+        materialType: 'image',
+      },
+    ],
+    edges,
+  });
+
+  assert.equal(plan.hasWork, true);
+  assert.equal(plan.nodePatches?.length, 1);
+  const patch = plan.nodePatches[0];
+  assert.equal(patch.nodeId, 'target_gen_img');
+  assert.equal(patch.data.nodeKind, 'import');
+  assert.equal(patch.data.selectedTool, 'import');
+  assert.equal(patch.data.materialType, 'image');
+  assert.equal(patch.data.status, 'ready');
+  assert.equal(patch.data.realPath, '/path/to/photo.jpg');
+
+  // 断开所有入边，保留出边
+  assert.deepEqual(plan.removeEdgeIds, ['edge_in_1', 'edge_in_2']);
+  assert.equal(plan.removeEdgeIds?.includes('edge_out_1'), false);
+});
+
+test('planImportNodeFill：无上游边时 removeEdgeIds 为 undefined', () => {
+  const nodes = [
+    materialNode('target', 'image', {
+      nodeKind: 'generate',
+      status: 'empty',
+      position: { x: 100, y: 100 },
+    }),
+  ];
+  const edges = [
+    { id: 'other_edge', source: 'target', target: 'downstream' },
+  ];
+
+  const plan = planImportNodeFill({
+    nodes,
+    targetNodeId: 'target',
+    files: [
+      {
+        id: 'f1',
+        name: 'a.png',
+        mime: 'image/png',
+        size: 10,
+        realPath: '/a.png',
+        materialType: 'image',
+      },
+    ],
+    edges,
+  });
+
+  assert.equal(plan.hasWork, true);
+  assert.equal(plan.removeEdgeIds, undefined);
+});
+
+test('planImportNodeFill：多文件拖入空态生图节点，首文件就地蜕变并断入边，后续文件落独立导入节点', () => {
+  const nodes = [
+    materialNode('up_text', 'text', { content: 'prompt' }),
+    materialNode('up_img', 'image', { previewUrl: 'https://example.com/ref.png' }),
+    materialNode('target_gen', 'image', {
+      nodeKind: 'generate',
+      selectedTool: 'text-to-image',
+      status: 'empty',
+      position: { x: 300, y: 200 },
+    }),
+    materialNode('down_v', 'video', {
+      nodeKind: 'generate',
+      position: { x: 700, y: 200 },
+    }),
+    materialNode('unrelated_1', 'text', { content: 'other' }),
+    materialNode('unrelated_2', 'image', { previewUrl: 'https://example.com/o.png' }),
+  ];
+  const edges = [
+    { id: 'edge_in_text', source: 'up_text', target: 'target_gen' },
+    { id: 'edge_in_img', source: 'up_img', target: 'target_gen' },
+    { id: 'edge_out_video', source: 'target_gen', target: 'down_v' },
+    { id: 'edge_unrelated', source: 'unrelated_1', target: 'unrelated_2' },
+  ];
+
+  const plan = planImportNodeFill({
+    nodes,
+    targetNodeId: 'target_gen',
+    files: [
+      {
+        id: 'file_1',
+        name: 'portrait.jpg',
+        mime: 'image/jpeg',
+        size: 2048,
+        realPath: '/path/portrait.jpg',
+        materialType: 'image',
+      },
+      {
+        id: 'file_2',
+        name: 'landscape.png',
+        mime: 'image/png',
+        size: 4096,
+        realPath: '/path/landscape.png',
+        materialType: 'image',
+      },
+    ],
+    edges,
+  });
+
+  assert.equal(plan.hasWork, true);
+  // 1. 首个文件就地蜕变
+  assert.equal(plan.nodePatches?.length, 1);
+  const patch = plan.nodePatches[0];
+  assert.equal(patch.nodeId, 'target_gen');
+  assert.equal(patch.data.nodeKind, 'import');
+  assert.equal(patch.data.selectedTool, 'import');
+  assert.equal(patch.data.materialType, 'image');
+  assert.equal(patch.data.realPath, '/path/portrait.jpg');
+
+  // 2. 第二个文件在下方落地为独立导入节点
+  assert.equal(plan.addNodes?.length, 1);
+  const added = plan.addNodes[0];
+  assert.equal(added.data.nodeKind, 'import');
+  assert.equal(added.data.selectedTool, 'import');
+  assert.equal(added.data.materialType, 'image');
+
+  // 3. 严格断开入边，保留出边与无关连线
+  assert.deepEqual(plan.removeEdgeIds?.sort(), ['edge_in_img', 'edge_in_text'].sort());
+  assert.equal(plan.removeEdgeIds?.includes('edge_out_video'), false);
+  assert.equal(plan.removeEdgeIds?.includes('edge_unrelated'), false);
+});

@@ -70,6 +70,7 @@ import {
   type FeedAsset,
   type SlotBindings,
   type SlotConflict,
+  type SlotLayout,
   type SlotSpec,
 } from '../../../../../shared/graph/feedSlot/index.ts';
 import {
@@ -428,9 +429,35 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   // ---- Feed-Slot 卡槽（T03）：preset 驱动，slotBindings 为消费真源 ----
   const slotLayout = useMemo(
-    () => deriveSlotLayout(activeCatalog, modelValue || undefined, opsState.selectedOperationId || undefined),
-    [activeCatalog, modelValue, opsState.selectedOperationId],
+    () => deriveSlotLayout(
+      activeCatalog,
+      modelValue || undefined,
+      opsState.selectedOperationId || undefined,
+      materialType,
+    ),
+    [activeCatalog, modelValue, opsState.selectedOperationId, materialType],
   );
+
+  const effectiveSlotLayout = useMemo<SlotLayout>(() => {
+    if (materialType === 'image' && (slotLayout.preset === 'none' || slotLayout.slots.length === 0)) {
+      return {
+        operationId: opsState.selectedOperationId || 'text_to_image',
+        preset: 'strip',
+        slots: [{
+          slot: 'reference_image',
+          role: 'reference',
+          type: 'image',
+          min: 0,
+          max: 10,
+          labelKey: 'panel.slot.reference_image',
+        }],
+        swap: false,
+        addButton: true,
+        implementationGaps: [],
+      };
+    }
+    return slotLayout;
+  }, [materialType, slotLayout, opsState.selectedOperationId]);
 
   const feedAssets = useMemo<FeedAsset[]>(
     () => upstreams
@@ -454,9 +481,9 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const slotBindings = useMemo<SlotBindings>(() => {
     if (storedSlotBindings) return storedSlotBindings;
     // 展示兜底：尚未经 gateway 重算的旧节点按内核自动装填派生。
-    if (slotLayout.preset === 'none' || slotLayout.slots.length === 0) return {};
-    return autoFillSlots(feedAssets, slotLayout).bindings;
-  }, [storedSlotBindings, slotLayout, feedAssets]);
+    if (effectiveSlotLayout.preset === 'none' || effectiveSlotLayout.slots.length === 0) return {};
+    return autoFillSlots(feedAssets, effectiveSlotLayout).bindings;
+  }, [storedSlotBindings, effectiveSlotLayout, feedAssets]);
   const slotConflicts = (nodeData.slotConflicts ?? []) as SlotConflict[];
 
   const patchSlotBindings = useCallback(
@@ -500,8 +527,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => slotLayout.slots.filter((spec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
-    [slotLayout, slotBindings],
+    () => effectiveSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
+    [effectiveSlotLayout, slotBindings],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
@@ -656,10 +683,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className="wf-config-panel__prompt-header">
-          {/* T03：模式驱动卡槽；none 预设不渲染、不占高度。 */}
-          {slotLayout.preset !== 'none' && slotLayout.slots.length > 0 ? (
+          {/* T03：模式驱动卡槽；图像节点卡槽始终常驻在线；none 预设不渲染、不占高度。 */}
+          {effectiveSlotLayout.preset !== 'none' && effectiveSlotLayout.slots.length > 0 ? (
             <SlotWells
-              layout={slotLayout}
+              layout={effectiveSlotLayout}
               bindings={slotBindings}
               conflicts={slotConflicts}
               upstreams={upstreams}
@@ -693,6 +720,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           rows={isExpanded ? 8 : 2}
           isExpanded={isExpanded}
           slotState={slotState}
+          materialType={materialType}
           onChange={(newPrompt) => onUpdateNodeData({ prompt: newPrompt })}
         >
           <textarea
@@ -820,6 +848,11 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               />
             </div>
           )}
+
+          {/* 生成数量 / 倍率标签（对齐图 2） */}
+          <span className="wf-config-panel__batch-tag" title="生成数量">
+            x {typeof (params as any)?.batch_size === 'number' ? (params as any).batch_size : typeof (params as any)?.count === 'number' ? (params as any).count : 1}
+          </span>
         </div>
 
         {/* 右侧生成按钮 */}
@@ -833,6 +866,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               nodeData.executionStatus === 'running'
               || resolveNodeLifecycle({ type: nodeData.materialType, data: nodeData as any }) === 'loading'
             }
+            creditCost={typeof (params as any)?.creditCost === 'number' ? (params as any).creditCost : 60}
           />
         </div>
       </div>

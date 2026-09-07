@@ -35,7 +35,7 @@ const zh = {
   'node.h3Guide': '模型最佳实践指南',
   // 顶部胶囊操作栏（pill.*）
   'pill.import': '导入素材',
-  'pill.importImage': '导入素材',
+  'pill.importImage': '导入图片',
   'pill.importVideo': '导入素材',
   'pill.importAudio': '导入素材',
   'pill.textEdit': '文本编辑',
@@ -92,6 +92,7 @@ const zh = {
   'panel.slot.first_frame': '首帧',
   'panel.slot.last_frame': '尾帧',
   'panel.slot.reference': '参考图',
+  'panel.slot.reference_image': '参考图',
   'panel.slot.references': '参考图',
   'panel.slot.images': '参考图',
   'panel.slot.image': '图片',

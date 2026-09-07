@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconDownloadOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { IconButton, PageHeader } from 'dsh-ui-kit'
+import { Divider, IconButton, PageHeader } from 'dsh-ui-kit'
 import { injectAnalyticsStyles } from './styles.js'
 import { useAnalyticsStore } from './store.js'
 import { buildDashboardCsv, downloadCsv } from './csv.js'
@@ -152,6 +152,7 @@ export function AnalyticsStage({ t, stage, store, visible = true }) {
         onTabChange={(tab) => analyticsStore.setQuery({ tab })}
         onSync={() => { void analyticsStore.syncNow() }}
       />
+      <Divider />
       <FilterBar
         t={t}
         query={analyticsStore.query}
