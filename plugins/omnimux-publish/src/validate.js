@@ -4,15 +4,19 @@
  * 同一份合并矩阵（config.platforms）喂 UI 表单裁剪（GET /dsh-publish/capabilities）
  * 与本模块的提交前拦截 —— 同源，保证 UI 与 agent 行为一致。
  */
-import { PublishError, RECORD_TYPES } from './store.js'
+import { PublishError } from './publish-error.js'
+import { RECORD_TYPES } from './record-schema.js'
+import { isObject, isStringArray } from './shared/values.js'
+/** @typedef {{ path?: string, media_id?: string, kind?: string }} MediaRef */
+/** @typedef {{ type?: unknown, title?: unknown, description?: unknown, topics?: string[], media?: MediaRef[], cover?: MediaRef, settings?: Record<string, unknown>, account_ids?: string[] }} DraftPayload */
 import { accountAvailability } from './accounts.js'
 import { ACCOUNT_SOURCE_MESSAGE, isPublishingAccount } from './account-policy.js'
 
 /**
  * 媒体种类收集：`mediaKinds` = record.media_ids 对应的 kind 列表（调用方从 MediaStore 取）。
- * @param {{ kind: string }[]} mediaRows
+ * @param {{ kind: string }[]} [mediaRows]
  */
-function countKinds(mediaRows) {
+function countKinds(mediaRows = []) {
   const rows = Array.isArray(mediaRows) ? mediaRows : []
   return {
     videos: rows.filter((row) => row.kind === 'video').length,
@@ -27,7 +31,7 @@ function countKinds(mediaRows) {
  * @param {string} type record type ('video' | 'image')
  * @param {{ videos: number, images: number, total: number }} counts
  * @param {{ cover: boolean }} flags
- * @param {Record<string, unknown>} platformRow
+ * @param {import('./config.js').PlatformCapabilities} platformRow
  * @param {string} platformName
  * @returns {string[]} 该平台的冲突描述
  */
@@ -35,7 +39,7 @@ function platformConflicts(type, counts, flags, platformRow, platformName) {
   /** @type {string[]} */
   const problems = []
   const mediaTypes = Array.isArray(platformRow.media_types) ? platformRow.media_types : []
-  if (!mediaTypes.includes(type)) {
+  if (!mediaTypes.some((mediaType) => mediaType === type)) {
     problems.push(`平台 ${platformName} 不支持${type === 'video' ? '视频' : '图文'}内容（media_types: ${JSON.stringify(mediaTypes)}）`)
   }
   if (flags.cover && platformRow.supports_cover !== true) {
@@ -101,7 +105,7 @@ export function validateContent(draft) {
  *   coverRow?: { kind: string, id: string } | null,
  *   account_ids: string[],
  * }} draft
- * @param {{ accounts: Record<string, unknown>[], platforms: Record<string, Record<string, unknown>> }} ctx
+ * @param {{ accounts: Record<string, unknown>[], platforms: Record<string, import('./config.js').PlatformCapabilities> }} ctx
  * @returns {{ ok: boolean, errors: Array<{ code: string, field: string, message: string }> }}
  */
 export function validateForSubmit(draft, ctx) {
@@ -158,7 +162,7 @@ export function validationError(errors) {
  * payload 形状校验（publish_create_draft / publish_update_draft 的输入面）。
  * 媒体的 path|media_id 二选一；返回规整后的 media 引用列表。
  * @param {unknown} payload
- * @returns {{ type?: string, title?: string, description?: string, topics?: string[], media: Array<{ kind?: string, path?: string, media_id?: string }>, cover?: { path?: string, media_id?: string }, settings?: Record<string, unknown>, account_ids?: string[] }}
+ * @returns {DraftPayload}
  */
 export function parseDraftPayload(payload) {
   if (payload === undefined || payload === null) return {}
@@ -166,7 +170,7 @@ export function parseDraftPayload(payload) {
     throw new PublishError('invalid-arguments', 'payload must be a JSON object')
   }
   const raw = /** @type {Record<string, unknown>} */ (payload)
-  /** @type {Record<string, unknown>} */
+  /** @type {DraftPayload} */
   // 注意：只有 raw 里出现的字段才进 out——patch 语义是「未提及的字段保持不变」，
   // 绝不能给 media 之类字段设缺省值（否则一个不含 media 的 patch 会清空素材）。
   const out = {}
@@ -174,7 +178,7 @@ export function parseDraftPayload(payload) {
   if ('title' in raw) out.title = raw.title
   if ('description' in raw) out.description = raw.description
   if ('topics' in raw) {
-    if (!Array.isArray(raw.topics) || raw.topics.some((t) => typeof t !== 'string')) {
+    if (!isStringArray(raw.topics)) {
       throw new PublishError('invalid-arguments', 'payload.topics must be an array of strings')
     }
     out.topics = raw.topics
@@ -218,16 +222,16 @@ export function parseDraftPayload(payload) {
     }
   }
   if ('settings' in raw && raw.settings !== undefined && raw.settings !== null) {
-    if (typeof raw.settings !== 'object' || Array.isArray(raw.settings)) {
+    if (!isObject(raw.settings)) {
       throw new PublishError('invalid-arguments', 'payload.settings must be an object')
     }
     out.settings = raw.settings
   }
   if ('account_ids' in raw && raw.account_ids !== undefined) {
-    if (!Array.isArray(raw.account_ids) || raw.account_ids.some((v) => typeof v !== 'string')) {
+    if (!isStringArray(raw.account_ids)) {
       throw new PublishError('invalid-arguments', 'payload.account_ids must be an array of strings')
     }
     out.account_ids = raw.account_ids
   }
-  return /** @type {any} */ (out)
+  return out
 }

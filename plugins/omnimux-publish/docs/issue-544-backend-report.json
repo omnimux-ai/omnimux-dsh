@@ -1,0 +1,68 @@
+{
+  "issue": 544,
+  "owner": "Bei",
+  "scope": "omnimux-publish backend, shared status, type contracts",
+  "IS_PASS": "YES",
+  "pass_scope": "Backend implementation and package-level checks; not full Issue closure or runtime acceptance",
+  "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/publish-record-status-544",
+  "branch": "feat/publish-record-status-544",
+  "base_sha": "c1d44cd42fd6483b6a5d584d15a41bd99229c7cb",
+  "committed": false,
+  "deployed": false,
+  "files_modified": [
+    "docs/architecture.md", "package.json", "src/account-policy.js", "src/accounts.js",
+    "src/config.js", "src/http-routes.js", "src/hubtools.js", "src/media.js",
+    "src/store.js", "src/store.test.js", "src/submit.js", "src/validate.js"
+  ],
+  "files_added": [
+    "docs/record-status-contract.md", "docs/issue-544-backend-report.json",
+    "src/contracts.test.js", "src/contracts.type-test.ts", "src/http-helpers.js",
+    "src/media-types.js", "src/publish-dispatcher.js", "src/publish-error.js",
+    "src/record-boundary.test.js", "src/record-persistence.js", "src/record-schema.js",
+    "src/record-tasks.js", "src/record-types.js", "src/shared/record-status.js",
+    "src/shared/record-status.test.js", "src/shared/values.js", "src/submit-media.js", "tsconfig.json"
+  ],
+  "verification": [
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm test",
+      "cwd": "plugins/omnimux-publish",
+      "exit_code": 0,
+      "tests": 254, "suites": 70, "pass": 254, "fail": 0, "skipped": 0,
+      "includes": "status matrix, restart/recover, idempotent mock submit, HTTP routes, disk boundaries, five negative compiler checks"
+    },
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm run typecheck:contracts",
+      "cwd": "plugins/omnimux-publish", "exit_code": 0,
+      "compiler": "TypeScript 5.9.3", "node_types": "25.9.5",
+      "flags": ["allowJs", "checkJs", "strict", "noEmit"],
+      "coverage": "All eight requested entry files plus actual transitive imports; no noResolve, dependency exclusions or diagnostic suppressions"
+    },
+    { "command": "pnpm_config_verify_deps_before_run=false pnpm run build", "exit_code": 0, "bundle_bytes": 254889 },
+    { "command": "git diff --check", "exit_code": 0 },
+    { "command": "node scripts/verify-plugin-boundaries.mjs", "exit_code": 0, "source_files": 1984 },
+    { "command": "node scripts/verify-package-files.mjs", "exit_code": 0, "plugins": 12 },
+    { "command": "node scripts/verify-plugin-agent-tools.mjs", "exit_code": 0 },
+    { "command": "node scripts/verify-slot-contracts.mjs", "exit_code": 0, "client_files": 1550 }
+  ],
+  "deviations_and_limits": [
+    "Preserved real Host submitted/reviewing in-flight states in addition to requested submitting/uploading/processing. A reviewing-only record aggregates to publishing and displays reviewing, rather than regressing to draft. Aggregate remains strictly five-state.",
+    "Incomplete parsed disk records/media rows now fail explicitly (invalid-record/invalid-media) without modifying original files; missing/unparseable file fallback is retained. No migration or unchecked full-record cast was added.",
+    "The current worktree uses read-only links to existing node_modules. Bare pnpm run typecheck:contracts triggers pnpm 11 whole-workspace dependency installation, failing on another plugin's existing relative file:dsh-ui-kit path. Setting pnpm_config_verify_deps_before_run=false disables only auto-install, not tsc or tests.",
+    "Full-repo verify-stage-contracts failed because other worktree plugins lack jsdom/dsh-ui-kit. Whole-repo test:gates yielded 46 pass, 20 environment failures (pngjs/jsdom missing), then one nested gate run was cancelled after approximately 250 seconds. These checks are not reported passing.",
+    "No frontend file was edited. client/status-display.js illegal reviewing compatibility and capabilities/RecordsList duplicate algorithms remain assigned to the frontend integration task.",
+    "No L2/IAB runtime verification, real account authorization, publish operation, push, merge or Dev materialization was performed. Full Issue #544 is not closure-ready from backend-only evidence."
+  ],
+  "frontend_contract": {
+    "module": "src/shared/record-status.js",
+    "runtime_exports": ["aggregateStatus", "displayStatus", "calculateSubtaskSummary"],
+    "AggregateStatus": ["draft", "publishing", "partial_failed", "failed", "published"],
+    "DisplayStatus": "AggregateStatus | reviewing",
+    "summary_fields": ["total", "published", "failed", "inFlight", "reviewing", "submitted"],
+    "wire_summary_fields_unchanged": ["total", "submitted", "reviewing", "published", "failed"],
+    "input": "unknown; record.subtasks can be an array or dictionary; status string takes precedence over state string",
+    "unknown_state": "Unknown task objects count toward total but are not considered in-flight or success",
+    "cached_fields": "Ignores input aggregate and subtask_summary caches",
+    "pure": true,
+    "next_action": "Frontend imports/re-exports shared functions, keeps localized labels in client/status-display.js, removes duplicate capabilities/RecordsList algorithms, then coordinator integrates and performs L2/IAB acceptance."
+  }
+}

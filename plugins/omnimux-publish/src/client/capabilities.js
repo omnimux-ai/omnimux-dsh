@@ -137,27 +137,6 @@ export function groupAccountsByPlatform(rows) {
 }
 
 /**
- * 展示用聚合状态标签（与 Host store.aggregateStatus 同名值）。
- * @param {Record<string, unknown>} record
- */
-export function aggregateOf(record) {
-  const status = String(record.status || '')
-  if (status === 'draft') return 'draft'
-  const tasks = Array.isArray(record.subtasks) ? record.subtasks : []
-  const summary = record.subtask_summary
-  if (summary && typeof summary === 'object') {
-    const total = Number(summary.total) || 0
-    const published = Number(summary.published) || 0
-    const failed = Number(summary.failed) || 0
-    if (total > 0 && published === total) return 'published'
-    if (total > 0 && published + failed === total) return failed === total ? 'failed' : 'partial_failed'
-    return 'publishing'
-  }
-  if (tasks.length === 0) return 'publishing'
-  return 'publishing'
-}
-
-/**
  * 话题输入解析：空格 / 中英文逗号分隔。
  * @param {string} raw
  * @returns {string[]}

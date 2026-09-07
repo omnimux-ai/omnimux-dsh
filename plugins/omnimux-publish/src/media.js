@@ -7,10 +7,17 @@
 import { createHash } from 'node:crypto'
 import { copyFileSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join } from 'node:path'
-import { PublishError } from './store.js'
+import { PublishError } from './publish-error.js'
+import { isObject } from './shared/values.js'
+import { isMediaRecord } from './media-types.js'
+/** @typedef {import('./media-types.js').MediaRecord} MediaRecord */
+/** @typedef {{ schema: number, revision: number, media: MediaRecord[] }} MediaState */
 
+/** @typedef {Pick<typeof import('node:fs'), 'copyFileSync' | 'mkdirSync' | 'readFileSync' | 'renameSync' | 'statSync' | 'writeFileSync'>} MediaFs */
+/** @type {MediaFs} */
 const DEFAULT_FS = { copyFileSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync }
 
+/** @type {Record<string, string>} */
 const MIME_BY_EXT = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.heic': 'image/heic',
@@ -37,15 +44,15 @@ export function mediaKindOf(contentType) {
 }
 
 /**
- * @param {typeof DEFAULT_FS} fs
+ * @param {MediaFs} io
  * @param {string} file
  * @param {string} text
  */
-function atomicWrite(fs, file, text) {
-  fs.mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
+function atomicWrite(io, file, text) {
+  io.mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
   const tmp = `${file}.tmp`
-  fs.writeFileSync(tmp, text, { mode: 0o600 })
-  fs.renameSync(tmp, file)
+  io.writeFileSync(tmp, text, { mode: 0o600 })
+  io.renameSync(tmp, file)
 }
 
 /**
@@ -53,24 +60,26 @@ function atomicWrite(fs, file, text) {
  */
 export function createMediaStore(opts = {}) {
   const fs = { ...DEFAULT_FS, ...(opts.fs ?? {}) }
-  const paths = opts.paths ?? {}
+  if (!opts.paths) throw new PublishError('invalid-arguments', 'mediaIndexFile and mediaDir are required')
+  const paths = opts.paths
   const maxBytes = typeof opts.maxBytes === 'number' && opts.maxBytes > 0 ? opts.maxBytes : 512 * 1024 * 1024
   const hashOf = opts.createHash ?? createHash
   const now = typeof opts.now === 'function' ? opts.now : () => new Date().toISOString()
 
+  /** @returns {MediaState} */
   function loadState() {
+    /** @type {unknown} */
+    let raw
     try {
-      const raw = JSON.parse(fs.readFileSync(paths.mediaIndexFile, 'utf8'))
-      if (raw && typeof raw === 'object' && Array.isArray(raw.media)) {
-        const media = raw.media.filter(
-          (row) => row && typeof row === 'object' && typeof row.sha256 === 'string',
-        )
-        return { schema: 1, revision: Number(raw.revision) || 0, media }
-      }
+      raw = JSON.parse(fs.readFileSync(paths.mediaIndexFile, 'utf8'))
     } catch {
-      // fall through to empty index
+      return { schema: 1, revision: 0, media: [] }
     }
-    return { schema: 1, revision: 0, media: [] }
+    if (!isObject(raw) || !Array.isArray(raw.media)) return { schema: 1, revision: 0, media: [] }
+    if (!raw.media.every(isMediaRecord)) {
+      throw new PublishError('invalid-media', 'media.json contains an incomplete or invalid row; original data was not modified')
+    }
+    return { schema: 1, revision: Number(raw.revision) || 0, media: raw.media }
   }
 
   let state = loadState()
@@ -169,7 +178,7 @@ export function createMediaStore(opts = {}) {
   /**
    * 读出字节（SubmitService 上传用）。
    * @param {string} id
-   * @returns {{ buffer: Buffer, meta: Record<string, unknown> }}
+   * @returns {{ buffer: Buffer, meta: MediaRecord }}
    */
   function open(id) {
     const row = findRow(String(id))

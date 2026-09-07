@@ -1,7 +1,7 @@
 /** The publishing plugin owns only TikTok official accounts. */
 export const PUBLISH_PROVIDER = 'tiktok_direct'
 
-/** @param {unknown} row */
+/** @param {unknown} row @returns {row is Record<string, unknown> & { platform: 'tiktok', provider: 'tiktok_direct' }} */
 export function isPublishingAccount(row) {
   if (!row || typeof row !== 'object') return false
   const account = /** @type {Record<string, unknown>} */ (row)

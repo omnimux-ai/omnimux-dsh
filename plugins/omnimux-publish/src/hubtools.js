@@ -9,10 +9,13 @@ import { PUBLISH_PROVIDER } from './account-policy.js'
  *   { content, isError, value }；jsonOut 工具的 value 即上游 JSON 原样。
  * - 媒体 PUT 走预签名 URL（自授权），不带任何 secret header。
  */
-import { PublishError } from './store.js'
+import { PublishError } from './publish-error.js'
+import { isObject } from './shared/values.js'
+/** @typedef {{ callId: string, name: string, arguments: Record<string, unknown>, signal: AbortSignal, agent?: unknown }} ToolExecution */
+/** @typedef {{ get?: (name: string) => unknown, execute?: (input: ToolExecution) => Promise<unknown> }} ToolRegistry */
 
 /**
- * @param {{ tools?: { get?: Function, execute?: Function }, fetcher?: typeof fetch, now?: () => number, idFactory?: () => string }} [deps]
+ * @param {{ tools?: ToolRegistry, fetcher?: typeof fetch, now?: () => number, idFactory?: () => string }} [deps]
  */
 export function createHubChannel(deps = {}) {
   const tools = deps.tools
@@ -34,32 +37,28 @@ export function createHubChannel(deps = {}) {
     if (!tool) {
       throw new PublishError('needs-hub', `omnimux hub 插件未装载（工具 ${name} 不存在），请安装/启用 omnimux hub 插件后再使用发布通道`)
     }
-    /** @type {Record<string, unknown>} */
-    const input = { callId: newCallId(), name, arguments: args }
+    /** @type {ToolExecution} */
+    const input = { callId: newCallId(), name, arguments: args, signal: opts.signal || new AbortController().signal }
     if (opts.agent !== undefined) input.agent = opts.agent
-    // harness tools.execute 会读 callerSignal.aborted；UI/HTTP 路径常不带
-    // signal，缺省会 TypeError → 被下面 catch 压成 hub-tool-error。无传时补一个
-    // 未中止 AbortSignal；有传则原样透传（含已 abort，供调用方取消）。
-    input.signal = opts.signal || new AbortController().signal
     let result
     try {
       result = await tools.execute(input)
     } catch (error) {
       throw new PublishError('hub-tool-error', `tool ${name} threw: ${error instanceof Error ? error.message : String(error)}`)
     }
-    if (!result || typeof result !== 'object') {
+    if (!isObject(result)) {
       throw new PublishError('hub-tool-error', `tool ${name} returned no result object`)
     }
     const text = Array.isArray(result.content)
-      ? result.content.map((block) => (block && typeof block === 'object' && typeof block.text === 'string' ? block.text : '')).join('\n')
+      ? result.content.map((/** @type {unknown} */ block) => (isObject(block) && typeof block.text === 'string' ? block.text : '')).join('\n')
       : ''
     if (result.isError) {
       // harness 把 execute 抛错物化为 content 文本 `Error: <message>`；
       // hub OmnimuxError 的 code 不进 content（errorInfo 只认 HarnessError），
       // 所以 needs-omnimux 要按 code + 已知消息特征双路识别（client.js 实证的消息串）。
-      const structured = result.error && typeof result.error === 'object'
-        ? `${String(result.error.message || '')} ${String(result.error.info?.code || '')}`
-        : ''
+      const errorInfo = isObject(result.error) ? result.error : {}
+      const info = isObject(errorInfo.info) ? errorInfo.info : {}
+      const structured = `${String(errorInfo.message || '')} ${String(info.code || '')}`
       const errText = `${text}\n${structured}`
       const sourceError = ['invalid-provider', 'account-provider-mismatch', 'post-provider-mismatch']
         .find((code) => errText.includes(code))
