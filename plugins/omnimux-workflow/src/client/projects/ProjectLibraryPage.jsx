@@ -181,8 +181,8 @@ export function ProjectLibraryPage(props) {
       }}
     >
       <PageHeader
-        title={t('workflow.pageTitle') || 'ComfyUI 工作流'}
-        subtitle={t('workflow.pageSubtitle') || '支持本地部署，可手动运行，也可由 Agent 调用'}
+        title={t('workflow.pageTitle') || '无限画布'}
+        subtitle={t('workflow.pageSubtitle') || '整理创作画布、管理项目资产，集中呈现项目内容'}
         onRefresh={() => { void reload() }}
         refreshing={busy}
         refreshTitle={t('projects.refresh')}
@@ -195,17 +195,7 @@ export function ProjectLibraryPage(props) {
           leadingIcon={<IconPlusOutline16 />}
           onClick={() => { setDialogOpen(true) }}
         >
-          {t('workflow.action.new') || '导入/新建工作流'}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (typeof window !== 'undefined' && window.open) {
-              window.open('https://github.com/comfyanonymous/ComfyUI', '_blank')
-            }
-          }}
-        >
-          {t('workflow.action.explore') || '📖 探索开源'}
+          {t('workflow.action.new') || '新建项目'}
         </Button>
       </div>
       <Divider />
@@ -215,8 +205,8 @@ export function ProjectLibraryPage(props) {
           <Tabs
             variant="underline"
             items={[
-              { id: 'featured', label: t('workflow.tab.featured') || '精选工作流' },
-              { id: 'local', label: t('workflow.tab.my') || t('projects.localTab') || '我的工作流' },
+              { id: 'featured', label: t('workflow.tab.featured') || '共创项目' },
+              { id: 'local', label: t('workflow.tab.my') || t('projects.localTab') || '本地项目' },
             ]}
             activeId={libraryTab}
             onChange={setLibraryTab}
