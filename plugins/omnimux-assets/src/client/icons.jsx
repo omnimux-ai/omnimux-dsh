@@ -259,3 +259,25 @@ export function TypeIcon({ type, size = 14 }) {
   const Component = TYPE_ICONS[type] ?? FileIcon
   return <Component size={size} />
 }
+
+/** @param {{ size?: number }} props */
+export function EyeIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.062 12.348a1 1 0 0 1 0-.696A10.75 10.75 0 0 1 21.938 12.348a1 1 0 0 1 0 .696A10.75 10.75 0 0 1 2.062 12.348" />
+      <circle cx="12" cy="12" r="3" />
+    </Icon>
+  )
+}
+
+/** @param {{ size?: number }} props */
+export function ChatIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </Icon>
+  )
+}
+
+/** Alias MessageIcon for convenience */
+export const MessageIcon = ChatIcon

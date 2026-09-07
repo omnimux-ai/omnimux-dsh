@@ -42,13 +42,13 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
   })
 
   it('contains complete i18n locales for card actions', () => {
-    assert.equal(zh['card.view'], '查看')
-    assert.equal(zh['card.addToConversation'], '加入会话')
+    assert.equal(zh['card.view'], '查看详情')
+    assert.equal(zh['card.addToConversation'], '去对话中试试')
     assert.equal(zh['card.addedToConversation'], '已加入')
     assert.equal(zh['card.actions'], '操作')
 
-    assert.equal(en['card.view'], 'View')
-    assert.equal(en['card.addToConversation'], 'Add to Chat')
+    assert.equal(en['card.view'], 'View Details')
+    assert.equal(en['card.addToConversation'], 'Try in Chat')
     assert.equal(en['card.addedToConversation'], 'Added')
     assert.equal(en['card.actions'], 'Actions')
   })
@@ -57,5 +57,23 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.doesNotMatch(stageJsx, /AssetsTableView/)
     assert.doesNotMatch(stageJsx, /<input\b/)
     assert.match(stageJsx, /<AssetGrid\b/)
+  })
+
+  it('migrates card CTA buttons into thumb hover overlay with EyeIcon and ChatIcon', () => {
+    // 1. Overlay is placed inside card thumb
+    assert.match(gridJsx, /<div className="omnimux-assets-card-overlay">/)
+    assert.match(gridJsx, /<div className="omnimux-assets-card-overlay-actions">/)
+    // 2. Buttons contain EyeIcon and ChatIcon
+    assert.match(gridJsx, /<EyeIcon\s+size=\{14\}\s*\/>/)
+    assert.match(gridJsx, /<ChatIcon\s+size=\{14\}\s*\/>/)
+    // 3. Card body does not contain omnimux-assets-card-actions
+    const cardBodyMatch = gridJsx.match(/className="omnimux-assets-card-body"[\s\S]*?<\/article>/)
+    assert.ok(cardBodyMatch)
+    assert.doesNotMatch(cardBodyMatch[0], /omnimux-assets-card-actions/)
+    // 4. Styles define thumb height 136px and overlay hover styling
+    assert.match(stylesJs, /\.omnimux-assets-card-thumb\s*\{[\s\S]*?height:\s*136px;/)
+    assert.match(stylesJs, /\.omnimux-assets-card-overlay\s*\{[\s\S]*?background:\s*linear-gradient/)
+    assert.match(stylesJs, /\.omnimux-assets-overlay-btn--secondary/)
+    assert.match(stylesJs, /\.omnimux-assets-overlay-btn--primary/)
   })
 })

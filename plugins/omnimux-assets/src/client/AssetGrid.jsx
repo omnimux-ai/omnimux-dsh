@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
-import { CheckIcon, FileIcon } from './icons.jsx'
+import { CheckIcon, FileIcon, EyeIcon, ChatIcon } from './icons.jsx'
 import { previewUrl } from './api.js'
 import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
 
@@ -94,27 +94,51 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onAddToConv
         )}
         <span className="omnimux-assets-badge">{t(`type.${asset.type}`)}</span>
         {missing ? <span className="omnimux-assets-missing">{t('card.missing')}</span> : null}
+        <div className="omnimux-assets-card-overlay">
+          <div className="omnimux-assets-card-overlay-actions">
+            <button
+              type="button"
+              className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--secondary"
+              aria-label={t('card.view')}
+              onClick={handleView}
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation()
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleView(event)
+                }
+              }}
+            >
+              <EyeIcon size={14} />
+              <span>{t('card.view')}</span>
+            </button>
+            <button
+              type="button"
+              className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--primary"
+              aria-label={added ? t('card.addedToConversation') : t('card.addToConversation')}
+              disabled={added}
+              onClick={handleAdd}
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation()
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleAdd(event)
+                }
+              }}
+            >
+              <ChatIcon size={14} />
+              <span>{added ? t('card.addedToConversation') : t('card.addToConversation')}</span>
+            </button>
+          </div>
+        </div>
       </div>
       <div className="omnimux-assets-card-body">
         <div className="omnimux-assets-card-title">{asset.name}</div>
         <div className="omnimux-assets-card-desc">{asset.description || '—'}</div>
-        <div className="omnimux-assets-card-actions">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={handleView}
-          >
-            {t('card.view')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={added}
-            onClick={handleAdd}
-          >
-            {added ? t('card.addedToConversation') : t('card.addToConversation')}
-          </Button>
-        </div>
       </div>
     </article>
   )
@@ -203,6 +227,7 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
           <Button
             variant="ghost"
             size="xs"
+            leadingIcon={<EyeIcon size={14} />}
             onClick={handleView}
           >
             {t('card.view')}
@@ -210,6 +235,7 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
           <Button
             variant="ghost"
             size="xs"
+            leadingIcon={<ChatIcon size={14} />}
             disabled={added}
             onClick={handleAdd}
           >
