@@ -9,7 +9,7 @@ import {
   IconPlusOutline16,
   IconTrashOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, ConfirmModal, FilterBar, IconButton, PageHeader, SearchField } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { listProjects, renameProject, deleteProject, bindProjectSession } from '../api.js'
 import { injectWorkflowStyles } from '../styles.js'
 import { NewLocalProjectDialog } from './NewLocalProjectDialog.jsx'
@@ -181,8 +181,8 @@ export function ProjectLibraryPage(props) {
       }}
     >
       <PageHeader
-        title={t('projects.title')}
-        subtitle={t('projects.subtitle')}
+        title={t('workflow.pageTitle') || 'ComfyUI 工作流'}
+        subtitle={t('workflow.pageSubtitle') || '支持本地部署，可手动运行，也可由 Agent 调用'}
         onRefresh={() => { void reload() }}
         refreshing={busy}
         refreshTitle={t('projects.refresh')}
@@ -195,25 +195,33 @@ export function ProjectLibraryPage(props) {
           leadingIcon={<IconPlusOutline16 />}
           onClick={() => { setDialogOpen(true) }}
         >
-          {t('projects.newButton')}
+          {t('workflow.action.new') || '导入/新建工作流'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.open) {
+              window.open('https://github.com/comfyanonymous/ComfyUI', '_blank')
+            }
+          }}
+        >
+          {t('workflow.action.explore') || '📖 探索开源'}
         </Button>
       </div>
+      <Divider />
       <FilterBar
         className="omnimux-workflow-library-filter"
-        compact
-        filters={[
-          { key: 'local', label: t('projects.localTab') },
-        ].map((tabItem) => (
-          <Button
-            key={tabItem.key}
-            variant={libraryTab === tabItem.key ? 'secondary' : 'ghost'}
-            size="sm"
-            aria-pressed={libraryTab === tabItem.key}
-            onClick={() => { setLibraryTab(tabItem.key) }}
-          >
-            {tabItem.label}
-          </Button>
-        ))}
+        filters={
+          <Tabs
+            variant="underline"
+            items={[
+              { id: 'featured', label: t('workflow.tab.featured') || '精选工作流' },
+              { id: 'local', label: t('workflow.tab.my') || t('projects.localTab') || '我的工作流' },
+            ]}
+            activeId={libraryTab}
+            onChange={setLibraryTab}
+          />
+        }
         search={(
           <SearchField
             value={query}
@@ -225,7 +233,12 @@ export function ProjectLibraryPage(props) {
       />
       {error ? <div className="omnimux-workflow-library-error">{error}</div> : null}
       <div className="omnimux-workflow-library-body">
-        {filtered.length === 0 ? (
+        {libraryTab === 'featured' ? (
+          <div className="omnimux-workflow-library-empty">
+            <div className="omnimux-workflow-library-empty-title">{t('workflow.featured.title')}</div>
+            <div className="omnimux-workflow-library-empty-sub">{t('workflow.featured.subtitle')}</div>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="omnimux-workflow-library-empty">
             <div className="omnimux-workflow-library-empty-title">{t('projects.emptyTitle')}</div>
             <div className="omnimux-workflow-library-empty-sub">{t('projects.emptySubtitle')}</div>

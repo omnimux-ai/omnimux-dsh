@@ -84,13 +84,40 @@ export function hasNodeMaterial(input: HasNodeMaterialInput): boolean {
   }) === 'ready';
 }
 
+export const EMPTY_IMAGE_PILL_ACTION_ID = 'import-image';
+
+export interface EmptyImageGenerateNodeInput {
+  materialType?: string;
+  nodeKind?: string;
+  previewUrl?: string;
+  generationStatus?: string | null;
+}
+
+export function isEmptyImageGenerateNode(input: EmptyImageGenerateNodeInput): boolean {
+  return (
+    input.materialType === 'image' &&
+    input.nodeKind === 'generate' &&
+    !input.previewUrl &&
+    !input.generationStatus
+  );
+}
+
+export function buildEmptyImagePillActionSpec(width: number = 88): ToolbarActionSpec {
+  return {
+    id: EMPTY_IMAGE_PILL_ACTION_ID,
+    section: 'primary',
+    width,
+  };
+}
+
 export function shouldShowNodeToolbar(input: {
   hasMaterial: boolean;
   hovered?: boolean;
   selected?: boolean;
   isMultiSelected?: boolean;
+  allowEmpty?: boolean;
 }): boolean {
-  if (!input.hasMaterial || input.isMultiSelected) return false;
+  if ((!input.hasMaterial && !input.allowEmpty) || input.isMultiSelected) return false;
   return Boolean(input.hovered || input.selected);
 }
 

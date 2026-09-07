@@ -1,44 +1,13 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from 'dsh-ui-kit'
+import { Divider, PageHeader } from 'dsh-ui-kit'
 import { injectPublishStyles } from './styles.js'
 import { usePublishFeed } from './usePublishFeed.js'
-import { AccountsSidebar } from './AccountsSidebar.jsx'
 import { PublishActionRow } from './views/PublishActionRow.jsx'
 import { PublishControlBar } from './views/PublishControlBar.jsx'
 import { PublishViewport } from './views/PublishViewport.jsx'
 import { PublishOverlays, PublishDeleteConfirmModal } from './views/PublishOverlays.jsx'
 
 const TAB_ID = 'omnimux-publish:library'
-
-/** Stage 顶层视图：发布（默认） / 账号侧栏。 */
-const STAGE_VIEWS = ['publish', 'accounts']
-
-/**
- * 顶层分段切换（单行工具栏，pill 选中态）。
- * @param {{
- *   t: (key: string) => string,
- *   stageView: string,
- *   onChange: (view: string) => void,
- * }} props
- */
-function StageViewSwitch({ t, stageView, onChange }) {
-  return (
-    <div className="omnimux-publish-stage-switch" role="tablist">
-      {STAGE_VIEWS.map((name) => (
-        <button
-          key={name}
-          type="button"
-          role="tab"
-          aria-selected={stageView === name}
-          className={`omnimux-publish-stage-switch-btn${stageView === name ? ' active' : ''}`}
-          onClick={() => { onChange(name) }}
-        >
-          {t(`stage.view.${name}`)}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 function createBatchActions(feed) {
   return {
@@ -69,6 +38,7 @@ export function PublishStageContent(props) {
         onToggleBatch={() => feed.setIsBatchMode((prev) => !prev)}
         onExport={feed.handleExport}
       />
+      <Divider />
       <PublishControlBar
         t={t}
         tab={feed.tab}
@@ -142,8 +112,6 @@ export function PublishStage(props) {
 
   const [viewMode, setViewMode] = useState('grid')
   const [view, setView] = useState({ name: 'list' })
-  const [stageView, setStageView] = useState('publish')
-  const [accountsRefreshKey, setAccountsRefreshKey] = useState(0)
   const feed = usePublishFeed({ open: visible, view, t })
   const batchActions = createBatchActions(feed)
   const itemActions = createItemActions(feed, setView)
@@ -176,30 +144,23 @@ export function PublishStage(props) {
       <PageHeader
         title={t('title')}
         subtitle={t('subtitle')}
-        onRefresh={stageView === 'accounts' ? () => setAccountsRefreshKey((key) => key + 1) : feed.loadList}
-        refreshing={stageView === 'accounts' ? false : feed.listLoading}
+        onRefresh={feed.loadList}
+        refreshing={feed.listLoading}
         refreshTitle={t('records.refresh')}
         onClose={handleClose}
         closeTitle={t('close')}
       />
-      <StageViewSwitch t={t} stageView={stageView} onChange={setStageView} />
-      {stageView === 'accounts' ? (
-        <AccountsSidebar key={accountsRefreshKey} t={t} />
-      ) : (
-        <>
-          <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
-          <PublishViewport
-            t={t}
-            viewMode={viewMode}
-            filteredRecords={feed.filteredRecords}
-            selectedIds={feed.selectedIds}
-            isBatchMode={feed.isBatchMode}
-            toastMsg={feed.toastMsg}
-            batchActions={batchActions}
-            itemActions={itemActions}
-          />
-        </>
-      )}
+      <PublishStageContent t={t} feed={feed} viewMode={viewMode} setViewMode={setViewMode} setView={setView} />
+      <PublishViewport
+        t={t}
+        viewMode={viewMode}
+        filteredRecords={feed.filteredRecords}
+        selectedIds={feed.selectedIds}
+        isBatchMode={feed.isBatchMode}
+        toastMsg={feed.toastMsg}
+        batchActions={batchActions}
+        itemActions={itemActions}
+      />
       <PublishStageModals t={t} feed={feed} view={view} setView={setView} />
     </div>
   )

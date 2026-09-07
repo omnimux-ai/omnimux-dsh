@@ -5,9 +5,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_PILL_MAX_WIDTH,
+  EMPTY_IMAGE_PILL_ACTION_ID,
   PILL_NODE_GUTTER,
   buildConversationPayloadFromNode,
+  buildEmptyImagePillActionSpec,
   hasNodeMaterial,
+  isEmptyImageGenerateNode,
   partitionToolbarActions,
   pillMaxWidthForNode,
   shouldShowNodeToolbar,
@@ -176,4 +179,139 @@ test('buildConversationPayloadFromNode：文本 / 表格 / 合成 fallback 路�
   assert.equal(clip?.duration, '0:31');
 
   assert.equal(buildConversationPayloadFromNode({ nodeType: 'material', nodeId: '' }), null);
+});
+
+test('isEmptyImageGenerateNode：仅空状态图片生成节点返回 true', () => {
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+    }),
+    true,
+  );
+  // 有 previewUrl 不是空状态
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      previewUrl: 'https://example.com/img.png',
+    }),
+    false,
+  );
+  // 生成中不是空状态
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      generationStatus: 'generating',
+    }),
+    false,
+  );
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      generationStatus: 'pending',
+    }),
+    false,
+  );
+  // 失败或完成态均非空状态
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      generationStatus: 'failed',
+    }),
+    false,
+  );
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      generationStatus: 'completed',
+    }),
+    false,
+  );
+  // previewUrl 为空字符串或 undefined 保持为空状态
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'generate',
+      previewUrl: '',
+      generationStatus: null,
+    }),
+    true,
+  );
+  // materialType 或 nodeKind 缺失/异常时不应判定为空状态
+  assert.equal(
+    isEmptyImageGenerateNode({
+      nodeKind: 'generate',
+    }),
+    false,
+  );
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+    }),
+    false,
+  );
+  // 导入节点不是生成节点
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'image',
+      nodeKind: 'import',
+    }),
+    false,
+  );
+  // 视频/音频/文本不是图片生成节点
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'video',
+      nodeKind: 'generate',
+    }),
+    false,
+  );
+  assert.equal(
+    isEmptyImageGenerateNode({
+      materialType: 'text',
+      nodeKind: 'generate',
+    }),
+    false,
+  );
+});
+
+test('shouldShowNodeToolbar：allowEmpty 支持空状态生图节点在 hover / selected 时显示', () => {
+  // 未允许空状态时，无素材一律不显示
+  assert.equal(
+    shouldShowNodeToolbar({ hasMaterial: false, hovered: true }),
+    false,
+  );
+  // 允许空状态时，hover 显示
+  assert.equal(
+    shouldShowNodeToolbar({ hasMaterial: false, hovered: true, allowEmpty: true }),
+    true,
+  );
+  // 允许空状态时，selected 显示
+  assert.equal(
+    shouldShowNodeToolbar({ hasMaterial: false, selected: true, allowEmpty: true }),
+    true,
+  );
+  // 允许空状态时，多选仍然不显示
+  assert.equal(
+    shouldShowNodeToolbar({ hasMaterial: false, hovered: true, selected: true, isMultiSelected: true, allowEmpty: true }),
+    false,
+  );
+  // 既不 hover 也不 selected 时不显示
+  assert.equal(
+    shouldShowNodeToolbar({ hasMaterial: false, allowEmpty: true }),
+    false,
+  );
+});
+
+test('buildEmptyImagePillActionSpec：生成符合契约的【导入图片】主区 action spec', () => {
+  const action = buildEmptyImagePillActionSpec();
+  assert.equal(action.id, EMPTY_IMAGE_PILL_ACTION_ID);
+  assert.equal(action.id, 'import-image');
+  assert.equal(action.section, 'primary');
+  assert.equal(action.width, 88);
 });

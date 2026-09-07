@@ -9,7 +9,7 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink } from 'lucide-react';
+import { Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -36,6 +36,7 @@ import { isConfigPanelVisible, mapNodeToGenerationStatus } from '../../utils/nod
 import {
   buildConversationPayloadFromNode,
   hasNodeMaterial,
+  isEmptyImageGenerateNode,
   pillMaxWidthForNode,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
@@ -174,6 +175,23 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   );
 
   const effectiveTextContent = readCurrentText(data as Record<string, unknown>);
+  const isOffline = status === 'offline' || nodeData.isMissing === true;
+  const previewUrl = resolveMediaPreviewUrl(materialType, mediaAssets, mediaUrl);
+  // 文本节点用正文是否存在判定 hasResult；媒体节点用 previewUrl。
+  // 否则文本生成中/完成后 generationStatus 永远落不到 GSC，彩色动效不会出现。
+  const hasResult =
+    materialType === 'text'
+      ? Boolean(effectiveTextContent.trim())
+      : Boolean(previewUrl);
+  const generationStatus = isOffline
+    ? null
+    : mapNodeToGenerationStatus(executionStatus, status, hasResult);
+  const isEmptyImageNode = isEmptyImageGenerateNode({
+    materialType,
+    nodeKind: kind,
+    previewUrl,
+    generationStatus,
+  });
 
   // 预设注入：写 prompt + 单选当前节点（空态按钮 nodrag 拦掉了 RF 选中手势）
   const handleApplyPreset = useCallback(
@@ -222,6 +240,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         nodes: state.nodes,
         targetNodeId: id,
         files: [draft],
+        edges: state.edges,
       });
       if (!plan.hasWork) {
         toast.warning(t('picker.unsupported'));
@@ -230,6 +249,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       const applied = applyCanvasInputMutation({
         addNodes: plan.addNodes,
         nodePatches: plan.nodePatches,
+        removeEdgeIds: plan.removeEdgeIds,
       });
       if (applied.status !== 'allowed') {
         toast.error(t('picker.commitFailed'));
@@ -238,24 +258,26 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     [applyCanvasInputMutation, id, t],
   );
 
-  // 拖拽文件进入：仅导入素材节点接受本地文件，生成节点不再单独导入
+  // 拖拽文件进入：导入素材节点与空状态生图节点均接受本地文件
+  const canAcceptDrop = kind === 'import' || isEmptyImageNode;
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    if (kind !== 'import') return;
+    if (!canAcceptDrop) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(true);
-  }, [kind]);
+  }, [canAcceptDrop]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    if (kind !== 'import') return;
+    if (!canAcceptDrop) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
-  }, [kind]);
+  }, [canAcceptDrop]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      if (kind !== 'import') return;
+      if (!canAcceptDrop) return;
       e.preventDefault();
       e.stopPropagation();
       setIsDraggingOver(false);
@@ -281,6 +303,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         nodes: state.nodes,
         targetNodeId: id,
         files: drafts,
+        edges: state.edges,
       });
       if (!plan.hasWork) {
         toast.warning(t('picker.unsupported'));
@@ -289,12 +312,13 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       const applied = applyCanvasInputMutation({
         addNodes: plan.addNodes,
         nodePatches: plan.nodePatches,
+        removeEdgeIds: plan.removeEdgeIds,
       });
       if (applied.status !== 'allowed') {
         toast.error(t('picker.commitFailed'));
       }
     },
-    [applyCanvasInputMutation, handleImportFile, id, kind, t],
+    [applyCanvasInputMutation, canAcceptDrop, handleImportFile, id, t],
   );
 
   // 文本快捷操作与全屏 Stage 打开
@@ -336,17 +360,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     kind,
     isMultiSelected,
   );
-  const isOffline = status === 'offline' || nodeData.isMissing === true;
-  const previewUrl = resolveMediaPreviewUrl(materialType, mediaAssets, mediaUrl);
-  // 文本节点用正文是否存在判定 hasResult；媒体节点用 previewUrl。
-  // 否则文本生成中/完成后 generationStatus 永远落不到 GSC，彩色动效不会出现。
-  const hasResult =
-    materialType === 'text'
-      ? Boolean(effectiveTextContent.trim())
-      : Boolean(previewUrl);
-  const generationStatus = isOffline
-    ? null
-    : mapNodeToGenerationStatus(executionStatus, status, hasResult);
 
   const loadingAspectRatio =
     materialType === 'video'
@@ -371,6 +384,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     hovered: isHovered,
     selected,
     isMultiSelected,
+    allowEmpty: isEmptyImageNode,
   });
 
   const { addToConversation } = useAddToConversation();
@@ -390,6 +404,23 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   }, [addToConversation, data, id, label, materialType, previewUrl]);
 
   const pillActions: FloatingPillAction[] = useMemo(() => {
+    if (isEmptyImageNode) {
+      return [
+        {
+          key: 'import-image',
+          label: t('pill.importImage'),
+          icon: Upload,
+          section: 'primary',
+          variant: 'primary',
+          title: t('pill.importImage'),
+          onClick: (event) => {
+            event.stopPropagation();
+            resourcePicker.fillImportNode();
+          },
+        },
+      ];
+    }
+
     const chat: FloatingPillAction = {
       key: 'add-to-conversation',
       icon: MessageSquarePlus,
@@ -447,6 +478,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleCopyText,
     handleOpenTextStage,
     handleSplitText,
+    isEmptyImageNode,
     kind,
     materialType,
     resourcePicker,

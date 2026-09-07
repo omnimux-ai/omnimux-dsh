@@ -29,7 +29,7 @@ const en: Record<DictKey, string> = {
   'node.tryMiniMaxH3': 'Explore recommended models',
   'node.h3Guide': 'Best Practice Guide',
   'pill.import': 'Import Asset',
-  'pill.importImage': 'Import Asset',
+  'pill.importImage': 'Import Image',
   'pill.importVideo': 'Import Asset',
   'pill.importAudio': 'Import Asset',
   'pill.textEdit': 'Edit Text',
