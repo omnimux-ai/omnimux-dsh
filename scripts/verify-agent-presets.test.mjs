@@ -69,42 +69,42 @@ test('preset fragments exist and list the expected experts', () => {
   deepEqual(toolNames(engagement), ENGAGEMENT)
 })
 
-for (const [id, expected] of [
-  ['standard', ALL],
-  ['social-content-team', CONTENT],
-  ['social-engagement-team', ENGAGEMENT],
-]) {
-  test(`${id} agent.cordis.yml is structurally valid`, () => {
-    const rel = `presets/${id}/agent.cordis.yml`
-    ok(existsSync(join(root, rel)), rel)
-    const text = read(rel)
-    ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
-    ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
-    ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
-    deepEqual(toolNames(text), expected)
-    const rows = parseWithPython(rel)
-    ok(rows >= 8, `${id} parsed ${rows} top-level rows`)
-  })
-}
-
-test('standard persona routes both teams and forbids forced spawn', () => {
-  const text = read('presets/standard/agent.cordis.yml')
-  ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
-  ok(text.includes('不要尝试切换会话 preset'))
-  for (const name of ALL) ok(text.includes(name), name)
+test('standard agent.cordis.yml is structurally valid and mounts all 10 experts', () => {
+  const rel = 'presets/standard/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const text = read(rel)
+  ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
+  ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
+  ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
+  deepEqual(toolNames(text), ALL)
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `standard parsed ${rows} top-level rows`)
 })
 
-test('dedicated teams keep their own lead persona and do not mix the other team', () => {
-  const content = read('presets/social-content-team/agent.cordis.yml')
-  const engagement = read('presets/social-engagement-team/agent.cordis.yml')
-  ok(content.includes('迪克特'))
-  ok(engagement.includes('格罗斯'))
-  for (const name of ENGAGEMENT) {
-    equal(content.includes(`toolName: ${name}`), false, `content must not own ${name}`)
-  }
-  for (const name of CONTENT) {
-    equal(engagement.includes(`toolName: ${name}`), false, `engagement must not own ${name}`)
-  }
+test('cordis preset exists and includes native cordis capabilities and skills', () => {
+  const rel = 'presets/cordis/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `cordis parsed ${rows} top-level rows`)
+  ok(existsSync(join(root, 'presets/cordis/skills/cordis-plugin-development/SKILL.md')))
+  ok(existsSync(join(root, 'presets/cordis/skills/editing-cordis-compositions/SKILL.md')))
+})
+
+test('preset.yml metadata matches requirements', () => {
+  const standardPreset = read('presets/standard/preset.yml')
+  ok(standardPreset.includes('name: TikTok 营销运营专家团'))
+  ok(standardPreset.includes('order: 1'))
+
+  const cordisPreset = read('presets/cordis/preset.yml')
+  ok(cordisPreset.includes('name: 组建团队'))
+  ok(cordisPreset.includes('order: 2'))
+})
+
+test('standard persona positions as TikTok marketing ops lead and forbids forced spawn', () => {
+  const text = read('presets/standard/agent.cordis.yml')
+  ok(text.includes('TikTok 营销运营专家团'))
+  ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
+  ok(text.includes('不要尝试切换会话 preset'))
 })
 
 test('build-agent-presets is idempotent', () => {
