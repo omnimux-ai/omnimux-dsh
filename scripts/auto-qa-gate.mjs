@@ -177,7 +177,7 @@ export function createReport(options) {
       required: options.requireBrowser,
       pass: !options.requireBrowser,
       evidenceDir: options.evidenceDir || null,
-      errors: options.requireBrowser ? ['未提供 Codex IAB live QA evidence'] : [],
+      errors: options.requireBrowser ? ['未提供 ego-browser live QA evidence'] : [],
     },
     summary: '',
   }
@@ -186,11 +186,11 @@ export function createReport(options) {
 export function validateBrowserEvidence(evidenceDir, expected = {}) {
   const result = { pass: false, errors: [], report: null }
   if (!evidenceDir) {
-    result.errors.push('未提供 Codex IAB live QA evidence 目录')
+    result.errors.push('未提供 ego-browser live QA evidence 目录')
     return result
   }
   const reportPath = join(evidenceDir, 'live-qa-report.json')
-  const requestPath = join(evidenceDir, 'codex-browser-qa-request.json')
+  const requestPath = join(evidenceDir, 'ego-browser-qa-request.json')
   if (!existsSync(reportPath)) {
     result.errors.push(`缺少 ${reportPath}`)
     return result
@@ -204,7 +204,7 @@ export function validateBrowserEvidence(evidenceDir, expected = {}) {
     assert.ok(expected.runId && expected.stage && expected.target, 'Browser evidence requires the current expected run ID, Stage, and target')
     validateLiveQaReport(browserReport, request, { ...expected, root })
   } catch (error) {
-    result.errors.push(`无法解析 Codex IAB 报告：${error.message}`)
+    result.errors.push(`无法解析 ego-browser 报告：${error.message}`)
   }
   result.pass = result.errors.length === 0
   return result

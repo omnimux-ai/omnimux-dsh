@@ -74,7 +74,11 @@ jobs:
           node --check scripts/check-tracked-artifacts.mjs
           node --check scripts/verify-model-contracts.mjs
           bash -n scripts/git-wt.sh
-          bash -n scripts/ego-browser-qa.sh
+          node --check scripts/ego-live-qa.mjs
+          node --check scripts/ego-browser-page.mjs
+          node --check scripts/live-page-preparation.mjs
+          node --check scripts/live-qa-request.mjs
+          node --check scripts/live-browser-utils.mjs
           bash -n scripts/materialize-with-rollback.sh
 
       - name: Forbid tracked omnimux-workflow artifacts
@@ -87,7 +91,7 @@ jobs:
 
       - name: Run regression tests
         run: |
-          node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/auto-pipeline.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/repair-inspiration-covers.test.mjs scripts/import-gxgen-inspirations.test.mjs
+          node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/auto-pipeline.test.mjs scripts/auto-pipeline-qa.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/ego-browser-page.test.mjs scripts/live-page-preparation.test.mjs scripts/ego-live-qa.test.mjs scripts/repair-inspiration-covers.test.mjs scripts/import-gxgen-inspirations.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
         run: |
@@ -141,7 +145,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CI_STATUS: ${{ job.status }}
-          OMNIMUX_ALLOW_L0_UI_PASS: '1'
         run: |
           node scripts/ci-verdict.mjs \
             --report .workbuddy/evidence/auto-qa-report.json \

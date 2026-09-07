@@ -97,6 +97,8 @@ market picker + plaza -> 同一个 shelf 规则模块
 
 ### A1：修复 ego-browser collector（scripts，R1）
 
+A1/A2 的执行器方案已由 [ego-browser 共享验收迁移](2026-09-07-ego-browser-qa.md) 取代；下文的旧 collector 和行号仅保留历史背景，不得恢复为活跃验收入口。
+
 消除 heredoc 中 CommonJS 与 top-level await 混用；在 Shell 端生成安全 JSON prelude，不依赖被 ego runtime 过滤的自定义环境变量。所有 Bash 变量显式定界。成功和失败均输出包含 run ID、SHA、请求/实际 URL、截图、错误与 task space 清理状态的报告；浏览器、快照或截图失败必须非零退出。测试覆盖 JSON 转义、空值、Unicode 路径、macOS Bash 3.2 和错误退出。该单元不改产品 client。
 
 ### A2：让 live/Stage 验收覆盖真实入口（scripts，R1）

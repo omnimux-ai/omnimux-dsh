@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L2"
 date: "2026-08-26"
-updated: "2026-09-06"
+updated: "2026-09-07"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -31,7 +31,8 @@ subsystem: "global"
 | `draft` | [2026-09-05-minimax-h3-end-frame-design.md](2026-09-05-minimax-h3-end-frame-design.md) | 增量设计：#567 MiniMax H3 end-frame 独立 operation/slot/profile/wire | `omnimux/catalog` | 2026-09-05 | BI-2/#567 draft：裁决第 18 op=`end_frame`（禁塞 first_frame/flf）；slot=`end_frame` role=`last_frame`；legacy `endframe`→`end_frame`；复用 `videoGenerate`；model=`minimax-h3-endframe`；#566 `image_tail` 对 end-only 仅 H1 中等假设；schema 17→18；DoD=expressibility+keyless，非 C3 listed；live 硬顶≤8/shape≤3；图：`2026-09-05-minimax-h3-end-frame-*.mermaid`。 |
 | `accepted` | [2026-09-05-inspiration-existing-r2-references.md](2026-09-05-inspiration-existing-r2-references.md) | 原 R2 封面引用恢复 | `omnimux` | 2026-09-05 | #584：保留源对象，独立只读连接，精确十行事务恢复及真实 App 回读。 |
 | `superseded` | [2026-09-05-inspiration-cover-repair.md](2026-09-05-inspiration-cover-repair.md) | 云灵感过期封面修复 | `omnimux` | 2026-09-05 | #584：原 ID 备份、官方来源恢复、持久媒体上传、只更新 cover_key、冲突检查与真实浏览器回读。 |
-| `accepted` | [2026-09-05-builtin-browser-qa.md](2026-09-05-builtin-browser-qa.md) | Codex 内置浏览器验收适配 | `qa` | 2026-09-05 | #581；唯一请求、共享 Stage 探针、实际运行产物证明与严格证据消费。 |
+| `accepted` | [2026-09-07-ego-browser-qa.md](2026-09-07-ego-browser-qa.md) | ego-browser 共享验收执行链迁移 | `qa` | 2026-09-07 | 唯一 ego 入口；保持认证、原子消费、task/tab 身份、runtimeProof 和真实 PNG；能力不足 BLOCKED。 |
+| `superseded` | [2026-09-05-builtin-browser-qa.md](2026-09-05-builtin-browser-qa.md) | Codex 内置浏览器验收适配 | `qa` | 2026-09-07 | #581 历史设计；已由 ego-browser 迁移规范取代，历史证据不重标。 |
 | `draft` | [2026-09-05-wan-3-ref-wire-design.md](2026-09-05-wan-3-ref-wire-design.md) | 增量设计：#569 Wan 3.0 reference 系列 wire 与 mapper/探针路径 | `omnimux/catalog` | 2026-09-05 | 历史 Wan wire/mapper 与探测草案。原模型范围和历史材料保留；字段、参考模式、数量、格式与上限改按具体渠道官方 API 文档核对，未说明为未知，探测预算和 live 门槛不可执行。 |
 | `accepted` | [2026-09-05-model-evidence-backfill-video-prd-addendum.md](2026-09-05-model-evidence-backfill-video-prd-addendum.md) | 增量产品附录：#530 视频优先范围修订（C1–C4 · Seedance/Wan/MiniMax H3/Kling） | `omnimux/catalog` | 2026-09-05 | 历史视频范围附录。保留 Seedance/Wan/MiniMax H3/Kling 的范围和阶段快照；C1–C4 探测、样本上限和按执行上架已替代，首尾帧与全能参考须按渠道官方文档分别核对。 |
 | `accepted` | [2026-09-05-model-evidence-backfill-video-design-addendum.md](2026-09-05-model-evidence-backfill-video-design-addendum.md) | 增量设计附录：#530 视频 C1–C4（Seedance/Wan/MiniMax H3/Kling）证据补齐与上架 | `omnimux/catalog` | 2026-09-05 | 历史视频工程附录。保留目录/mapper 背景；C1–C4、探针、预算、`policy_conservative` 和 `listed` 翻转不再执行，渠道合同与离线验证按现行方法分层。 |

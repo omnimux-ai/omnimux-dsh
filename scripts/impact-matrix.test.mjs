@@ -14,10 +14,10 @@ describe('impact matrix', () => {
     'plugins/a/client/index.js', 'plugins/a/src/client/View.js', 'apps/desktop/main.js',
     'web/index.js', 'plugins/a/Stage.js', 'Stage.ts', 'view.jsx', 'view.tsx', 'view.vue',
     'view.svelte', 'view.html', 'theme.css', 'theme.scss', 'plugins\\a\\client\\View.js',
-  ]) it(`requires IAB for ${file}`, () => {
+  ]) it(`requires ego-browser for ${file}`, () => {
     const matrix = deriveImpactMatrix([file])
     assert.equal(matrix.isUiChange, true)
-    assert.equal(matrix.dimensions.iab.required, true)
+    assert.equal(matrix.dimensions.browser.required, true)
     assert.equal(matrix.dimensions.l0.required, true)
     assert.equal(requiresBrowser([file]), true)
   })
@@ -29,8 +29,8 @@ describe('impact matrix', () => {
   ]) it(`marks non-UI changes not applicable: ${JSON.stringify(files)}`, () => {
     const matrix = deriveImpactMatrix(files)
     assert.equal(matrix.isUiChange, false)
-    assert.equal(matrix.dimensions.iab.required, false)
-    assert.match(matrix.dimensions.iab.reason, /无客户端\/UI文件变更/)
+    assert.equal(matrix.dimensions.browser.required, false)
+    assert.match(matrix.dimensions.browser.reason, /无客户端\/UI文件变更/)
     assert.match(matrix.summary, /not-applicable/)
     assert.equal(matrix.dimensions.l0.required, true)
   })
