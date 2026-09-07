@@ -1,16 +1,15 @@
 /**
- * GenerateButton — W2 T2.3，移植自 Gxgen
- * apps/web/src/pages/CanvasEditor/components/MaterialNode/components/ConfigPanel/GenerateButton.tsx(83)。
+ * GenerateButton — 极简深色一体化生成发送按钮 (Issue #737 对齐图 2).
  *
- * 深色胶囊：radial-gradient(#1a1a1a→#656766) + 白圆发送钮（ArrowUp inline
- * SVG 照抄 Gxgen :60-76）。差异：无积分（showCreditCost 恒 false 裁剪）；
- * isGenerating→lucide Loader2 spin；文案入 i18n 字典。
- * T05：禁用态点击经 onDisabledClick 上浮（画板通知 submit_blocked_click），
- * 禁用原因只走 title / disabledReason，不再渲染常驻静态错误条。
+ * 视觉规格：
+ *   - 左侧：积分点数 ✳ 60（若有 creditCost）；
+ *   - 右侧：方圆角发送按钮（尺寸约 32px × 32px，圆角 8px），内居中纯白粗向上箭头 ↑（ArrowUp）；
+ *   - 不展示笨重的“生成”汉字长药丸文本；
+ *   - 保持禁用态点击 onDisabledClick 上浮（画板通知 submit_blocked_click）与无障碍标准。
  */
 
 import React, { memo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { useT } from '../../../../i18n';
 
 export interface GenerateButtonProps {
@@ -22,20 +21,34 @@ export interface GenerateButtonProps {
   onDisabledClick?: () => void;
   /** 本节点生成中 → Loader2 spin */
   isGenerating?: boolean;
+  /** 积分消耗点数（图 2 示例 ✳ 60） */
+  creditCost?: number;
 }
 
-const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, disabledReason, onDisabledClick, isGenerating }) => {
+const GenerateButton: React.FC<GenerateButtonProps> = ({
+  onClick,
+  disabled,
+  disabledReason,
+  onDisabledClick,
+  isGenerating,
+  creditCost,
+}) => {
   const t = useT();
+
+  const handleAction = () => {
+    if (disabled) {
+      onDisabledClick?.();
+      return;
+    }
+    if (!isGenerating) {
+      onClick();
+    }
+  };
+
   return (
     <div
       className={`wf-generate-btn ${disabled ? 'wf-generate-btn--disabled' : ''}`}
-      onClick={() => {
-        if (disabled) {
-          onDisabledClick?.();
-          return;
-        }
-        if (!isGenerating) onClick();
-      }}
+      onClick={handleAction}
       style={{ cursor: disabled || isGenerating ? 'default' : 'pointer' }}
       role="button"
       tabIndex={0}
@@ -45,23 +58,23 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, disa
         if (event.target !== event.currentTarget) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        if (disabled) {
-          onDisabledClick?.();
-          return;
-        }
-        if (!isGenerating) onClick();
+        handleAction();
       }}
     >
-      <span className="wf-generate-btn__label">{t('panel.generate')}</span>
+      {/* 积分点数：✳ 60 */}
+      {creditCost !== undefined && creditCost > 0 ? (
+        <span className="wf-generate-btn__cost">
+          <span className="wf-generate-btn__cost-icon" aria-hidden="true">✳</span>
+          <span className="wf-generate-btn__cost-num">{creditCost}</span>
+        </span>
+      ) : null}
+
+      {/* 方圆角发送按钮（约 32px × 32px，圆角 8px），内居中白色粗向上箭头 */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          if (disabled) {
-            onDisabledClick?.();
-            return;
-          }
-          if (!isGenerating) onClick();
+          handleAction();
         }}
         aria-disabled={disabled || isGenerating}
         className="wf-generate-btn__send"
@@ -69,23 +82,9 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({ onClick, disabled, disa
         title={disabled && disabledReason ? disabledReason : t('panel.generate')}
       >
         {isGenerating ? (
-          <Loader2 size={14} className="wf-generate-btn__spin" />
+          <Loader2 size={16} className="wf-generate-btn__spin" />
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={14}
-            height={14}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m5 12 7-7 7 7" />
-            <path d="M12 19V5" />
-          </svg>
+          <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />
         )}
       </button>
     </div>
