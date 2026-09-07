@@ -129,7 +129,9 @@ function sessionLabel(button) {
   const raw = button?.getAttribute?.('aria-label') || button?.textContent || ''
   const text = String(raw).trim()
   if (/new session/i.test(text)) return 'New Session'
-  return '新建会话'
+  if (/新对话|新建对话/i.test(text)) return '新对话'
+  if (text) return text
+  return '新对话'
 }
 
 function projectLabel(button) {
@@ -316,10 +318,10 @@ function newSessionButton(root) {
     if (isButtonEl(child)) return child
   }
   const byAria = root.querySelector(
-    'button[aria-label="新建会话"], button[aria-label="New Session"], button[aria-label*="新会话"], button[aria-label*="new session" i]',
+    'button[aria-label="新建会话"], button[aria-label="New Session"], button[aria-label*="新会话"], button[aria-label*="new session" i], button[aria-label*="新对话"], button[aria-label*="新建对话"]',
   )
   if (isButtonEl(byAria)) return byAria
-  return [...root.querySelectorAll('button')].find((button) => /新会话|新建会话|new session/i.test(button.textContent ?? ''))
+  return [...root.querySelectorAll('button')].find((button) => /新会话|新建会话|新对话|新建对话|new session/i.test(button.textContent ?? ''))
 }
 
 /** Optional external family rows (taskboard/atb/ssh) that precede our block. */
