@@ -38,6 +38,24 @@ test('empty editor contains no prefilled @; saved literal user text remains unch
  let view=await mount();assert.equal(view.editor.textContent,'');assert.equal(document.querySelector('[role="listbox"]'),null);
  view=await mount({value:'真实文本 @ 保留'});assert.equal(view.editor.textContent,'真实文本 @ 保留');
 });
+test('audio authority count remains unique with reference menus and preserves overflow semantics', async () => {
+  for (const count of [0, 10000, 10001]) {
+    const { editor, commits } = await mount({ materialType: 'audio', maxLength: 10000, countOverride: count });
+    const counters = document.querySelectorAll('.wf-prompt-token-meta-count');
+    assert.equal(counters.length, 1);
+    assert.equal(counters[0].textContent, `${count}/10000`);
+    assert.equal(counters[0].getAttribute('data-exceeded'), String(count > 10000));
+    assert.equal(counters[0].classList.contains('wf-prompt-token-meta-count--exceeded'), count > 10000);
+    assert.equal(counters[0].getAttribute('role'), count > 10000 ? 'alert' : null);
+    await type(editor, '@por');
+    await key(editor, 'ArrowRight');
+    await key(editor, 'Enter');
+    assert.equal(commits.length, 1);
+    assert.equal(document.querySelectorAll('.wf-prompt-token-meta-count').length, 1);
+    assert.equal(counters[0].textContent, `${count}/10000`);
+  }
+});
+
 test('canvas submenu selection replaces @query in place with one atomic token and closes portals',async()=>{
  const {editor,commits}=await mount();await type(editor,'前文 @por');
  assert.equal(document.querySelectorAll('[role="listbox"]').length,1);
