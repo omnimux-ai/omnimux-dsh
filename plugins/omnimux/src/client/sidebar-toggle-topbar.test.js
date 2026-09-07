@@ -35,7 +35,8 @@ import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
 const here = dirname(fileURLToPath(import.meta.url))
 const moduleSource = readFileSync(join(here, 'sidebar-toggle-topbar.js'), 'utf8')
 const chromeSource = readFileSync(join(here, 'chrome.js'), 'utf8')
-const workbenchSource = readFileSync(join(here, 'workbench.js'), 'utf8')
+// collapsedLeftRailFallbackPx moved to the geometry submodule (Issue #545 split).
+const workbenchGeometrySource = readFileSync(join(here, 'workbench/geometry.js'), 'utf8')
 
 /** @type {JSDOM | undefined} */
 let dom
@@ -653,6 +654,6 @@ describe('hard constraints', () => {
   })
 
   it('workbench collapsed fallback respects topbar feature (0)', () => {
-    assert.match(workbenchSource, /collapsedLeftRailFallbackPx|data-omnimux-sidebar-toggle-topbar/)
+    assert.match(workbenchGeometrySource, /collapsedLeftRailFallbackPx|data-omnimux-sidebar-toggle-topbar/)
   })
 })

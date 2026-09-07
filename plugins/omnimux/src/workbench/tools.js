@@ -7,7 +7,7 @@
  * `output: { schema, render, presentationMeta? }` (same contract as hub media/text tools).
  */
 
-import { isValidTabId } from './schema.js'
+import { isValidTabId } from './contract.js'
 import { JSON_TOOL_OUTPUT } from '../tools/schema.js'
 
 export const MAX_TAB_SWITCHES_PER_SESSION = 3

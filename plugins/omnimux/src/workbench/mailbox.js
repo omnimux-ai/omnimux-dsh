@@ -6,7 +6,7 @@
  * cannot overwrite each other's active workbench state.
  */
 
-import { isViewportStale, validateEnvelope, validateRpcAck } from './schema.js'
+import { isViewportStale, validateEnvelope, validateRpcAck } from './contract.js'
 
 export const RPC_TIMEOUT_MS = 2000
 

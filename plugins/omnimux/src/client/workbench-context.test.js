@@ -3,8 +3,10 @@ import { describe, it } from 'node:test'
 import {
   formatCompactContextBlock,
   getUiContext,
-  installWorkbenchGlobal,
   registerContextContributor,
+} from './workbench/context.js'
+import {
+  installWorkbenchGlobal,
   resetWorkbenchForTests,
 } from './workbench.js'
 

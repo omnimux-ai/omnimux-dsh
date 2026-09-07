@@ -9,7 +9,8 @@ import {
   ensureChatToggle,
   syncChatToggleState,
 } from './chat-toggle.js'
-import { WORKBENCH_FOCUS, installWorkbenchGlobal, resetWorkbenchForTests, setConversationCollapsed } from './workbench.js'
+import { installWorkbenchGlobal, resetWorkbenchForTests, setConversationCollapsed } from './workbench.js'
+import { WORKBENCH_FOCUS } from './workbench/focus-state.js'
 
 const previousWindow = globalThis.window
 const previousDocument = globalThis.document
