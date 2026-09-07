@@ -261,6 +261,24 @@
       ]
     },
     {
+      "id": "seed-audio-1.0",
+      "disposition": "canonical",
+      "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",
+      "evidence": ["docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md"]
+    },
+    {
+      "id": "doubao-seed-audio-1.0",
+      "disposition": "alias",
+      "target": "seed-audio-1.0",
+      "reason": "Seed Audio 1.0 产品别名，统一使用 canonical 模型标识"
+    },
+    {
+      "id": "seed-audio",
+      "disposition": "alias",
+      "target": "seed-audio-1.0",
+      "reason": "Seed Audio 1.0 产品简称，统一使用 canonical 模型标识"
+    },
+    {
       "id": "suno",
       "disposition": "canonical",
       "reason": "命中 runtime；H1 已有契约；YAML 已声明 ≠ live，无 dated 证据保持 draft"

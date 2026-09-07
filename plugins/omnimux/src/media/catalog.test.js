@@ -9,7 +9,7 @@ describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 12) // 14 runtime − 2 hyphen aliases folded
     assert.equal(VIDEO_MODEL_SPECS.length, 17)
-    assert.equal(AUDIO_MODEL_SPECS.length, 3)
+    assert.equal(AUDIO_MODEL_SPECS.length, 4)
   })
 
   it('GPT Image 2 only lists auto, 1:1, 16:9, 9:16 aspect ratios', () => {

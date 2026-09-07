@@ -45,7 +45,14 @@ export function validateVendorResult(result, operation, opts = {}) {
   // Media outputs: expect matching type on outputs[] or top-level url + mode
   const outputs = Array.isArray(row.outputs) ? row.outputs : null
   if (outputs) {
-    const hit = outputs.find((o) => o && typeof o === 'object' && o.type === expectedType && (o.url || o.b64_json))
+    const hit = outputs.find((o) => o && typeof o === 'object' && o.type === expectedType
+      && (o.url || o.b64_json || (o.bytes instanceof Uint8Array && o.bytes.byteLength > 0)))
+    if (hit?.bytes instanceof Uint8Array) {
+      const mime = String(hit.mime || hit.contentType || '').toLowerCase()
+      if (!mime.startsWith(`${expectedType}/`)) {
+        return { ok: false, code: GUARD_CODES.OUTPUT_MIME_MISMATCH, message: `binary output requires ${expectedType} MIME`, mime, expectedType }
+      }
+    }
     if (!hit) {
       const wrong = outputs.find((o) => o && typeof o === 'object' && o.type && o.type !== expectedType)
       if (wrong) {

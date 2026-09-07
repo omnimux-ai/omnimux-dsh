@@ -1,13 +1,55 @@
 # 音频模型能力契约 (Audio Models Capability Contract)
-# H2: 3 个 runtime audio ID 全处置。suno / gpt-4o-mini-tts 有 YAML ≠ live：
-#     仓内无 dated live 证据 → 保持 draft+stub。whisper-1 draft（#538 已挂载
-#     speechToText seam，可探测；#530 探测翻 live；speech_to_text 产出 text，
-#     不得入 audio 产出桶）。
+# Seed Audio 使用同步 speech；suno / gpt-4o-mini-tts 保留 draft+stub。
+# whisper-1 产出 text，不进入 audio 产出桶。
 schemaVersion: "1.1"
 managementGroup: "audio"
 modality: "audio"
 
 models:
+  - id: "seed-audio-1.0"
+    label: "Seed Audio 1.0"
+    family: "bytedance"
+    badge: "语音合成"
+    subtitle: "火山引擎 / 豆包大模型语音合成 · 509+ 精品音色"
+    aliases: ["doubao-seed-audio-1.0", "seed-audio"]
+    operations:
+      - id: "text_to_speech"
+        label: "文本转语音"
+        listed: true
+        output: { type: "audio" }
+        inputs:
+          - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
+    parameters:
+      voice:
+        options:
+          - { value: "zh_male_guanggaojieshuo_uranus_bigtts", label: "广告解说 2.0" }
+          - { value: "zh_female_gujie_uranus_bigtts", label: "顾姐 2.0" }
+          - { value: "zh_male_jieshuoxiaoming_moon_bigtts", label: "解说小明" }
+          - { value: "zh_female_zhixingnv_uranus_bigtts", label: "知性女声 2.0" }
+          - { value: "ICL_uranus_en_female_charlie_tob", label: "Charlie 2.0" }
+        defaultValue: "zh_male_guanggaojieshuo_uranus_bigtts"
+      speed:
+        # Require a finite number without inventing undocumented bounds.
+        range: {}
+        defaultValue: 1.0
+      format:
+        options: ["mp3", "wav", "pcm"]
+        defaultValue: "mp3"
+    research:
+      status: "verified"
+      docUrl: "docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md"
+      verifiedAt: "2026-09-07"
+      notes: "火山引擎 HTTP v3 语音合成接口接入已在网关验证"
+    implementation:
+      status: "ready"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+    execution:
+      status: "live"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+      notes: "同步 POST /v1/audio/speech 管道"
+
   - id: "suno"
     label: "Suno Music"
     family: "suno"
