@@ -50,17 +50,21 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(css, /\.sh-picker-trigger\{[^}]*border:0/)
     assert.match(picker, /peekPickerCache/)
     assert.match(picker, /pickerSearchCache/)
-    assert.match(picker, /商业广告/)
-    assert.match(picker, /平台工具/)
+    // 货架规则统一走 SkillShelf 真源（Issue #504），不再内联标签字面量
+    assert.match(picker, /SkillShelf\.PICKER_TABS/)
+    assert.match(picker, /SkillShelf\.filterPickerItems/)
+    assert.doesNotMatch(picker, /const SKILL_SHELF_TAGS = \[/)
   })
 
-  it('skill plaza uses OmniMux shelf tags instead of SkillHub categories', () => {
+  it('skill plaza consumes SkillShelf rules instead of SkillHub categories', () => {
     const plaza = readFileSync(join(here, 'skill-plaza.js'), 'utf8')
-    assert.match(plaza, /PLAZA_SHELF_TAGS/)
-    assert.match(plaza, /商业广告/)
-    assert.match(plaza, /平台工具/)
+    assert.match(plaza, /SkillShelf\.SKILL_SHELF_TAXONOMY/)
+    assert.match(plaza, /SkillShelf\.filterPlazaShelf/)
+    assert.doesNotMatch(plaza, /const PLAZA_SHELF_TAGS = \[/)
     assert.doesNotMatch(plaza, /office-efficiency/)
-    assert.match(plaza, /channels: \["custom", "workbuddy"\]/)
+    // 渠道由 buildPlazaSearchPayload 真源决定（有 query 才含 skillhub），禁止写死双渠道
+    assert.match(plaza, /SkillShelf\.buildPlazaSearchPayload/)
+    assert.doesNotMatch(plaza, /channels: \["custom", "workbuddy"\]/)
   })
 
   it('plaza view consumes a one-shot skills tab intent', () => {
