@@ -102,6 +102,13 @@
       "requiredInAuto": true
     },
     {
+      "productId": "seed-audio-1.0",
+      "kind": "audio",
+      "priority": "P0",
+      "gatewayIds": ["seed-audio-1.0", "doubao-seed-audio-1.0", "seed-audio"],
+      "requiredInAuto": true
+    },
+    {
       "productId": "suno",
       "kind": "audio",
       "priority": "P1",
