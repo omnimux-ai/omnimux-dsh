@@ -291,6 +291,65 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
       evaluation.compatible.map((v) => v.modelId).sort(),
     );
   });
+
+  it('image node with connected image material keeps image models available even when catalog models only list text_to_image', () => {
+    // Production catalog scenario: image models only list text_to_image (multi_reference is draft/unlisted).
+    const prodCatalog = {
+      source: 'static-stub',
+      defaults: { image: 'nanobanana-2' },
+      image: [
+        { id: 'nanobanana-2', label: 'NanoBanana 2', family: 'nanobanana' },
+        { id: 'gpt-image-2', label: 'GPT Image 2', family: 'openai' },
+        { id: 'midjourney', label: 'Midjourney', family: 'midjourney' },
+      ],
+      models: [
+        {
+          id: 'nanobanana-2',
+          label: 'NanoBanana 2',
+          family: 'nanobanana',
+          operations: [
+            { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
+          ],
+        },
+        {
+          id: 'gpt-image-2',
+          label: 'GPT Image 2',
+          family: 'openai',
+          operations: [
+            { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
+          ],
+        },
+        {
+          id: 'midjourney',
+          label: 'Midjourney',
+          family: 'midjourney',
+          operations: [
+            { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
+          ],
+        },
+      ],
+    };
+
+    const fingerprint = fp([
+      { nodeId: 'upstream-image', materialType: 'image', mimeType: 'image/png', sizeBytes: 2048 },
+    ]);
+
+    const result = buildFilteredModelOptions({
+      catalog: prodCatalog,
+      fingerprint,
+      outputType: 'image',
+    });
+
+    assert.equal(result.catalogAvailable, true);
+    assert.equal(result.zeroCandidates, false, 'zeroCandidates must be false to avoid "no compatible model" false positive');
+    const ids = result.options.map((o) => o.id);
+    assert.ok(ids.includes('nanobanana-2'), 'NanoBanana 2 should be present');
+    assert.ok(ids.includes('gpt-image-2'), 'GPT Image 2 should be present');
+    assert.ok(ids.includes('midjourney'), 'Midjourney should be present');
+    for (const opt of result.options) {
+      assert.equal(opt.verdict.acceptsCurrentInputs, true);
+    }
+  });
 });
 
 describe('canonical preferred operation', () => {

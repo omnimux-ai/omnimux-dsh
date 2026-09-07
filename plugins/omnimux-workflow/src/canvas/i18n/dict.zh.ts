@@ -92,6 +92,7 @@ const zh = {
   'panel.slot.first_frame': '首帧',
   'panel.slot.last_frame': '尾帧',
   'panel.slot.reference': '参考图',
+  'panel.slot.reference_image': '参考图',
   'panel.slot.references': '参考图',
   'panel.slot.images': '参考图',
   'panel.slot.image': '图片',

@@ -533,6 +533,100 @@ export function buildFilteredModelOptions(args: {
   }
 
   if (options.length === 0) {
+    if (args.outputType === 'image') {
+      const candidateItems: Array<{
+        id: string;
+        label: string;
+        badge?: string;
+        subtitle?: string;
+        family?: string;
+        aliases?: string[];
+        item?: CapabilityModelItem | CatalogModelDto;
+      }> = [];
+      const seenIds = new Set<string>();
+
+      if (Array.isArray(catalog.image) && catalog.image.length > 0) {
+        for (const bucketItem of catalog.image) {
+          if (!bucketItem?.id || seenIds.has(bucketItem.id)) continue;
+          const auth = findAuthoritativeItem(catalog, bucketItem.id);
+          const hasListedImageOp = auth?.operations?.some((op) => op.listed) ?? true;
+          if (!hasListedImageOp) continue;
+          seenIds.add(bucketItem.id);
+          candidateItems.push({
+            id: bucketItem.id,
+            label: auth?.label || bucketItem.label || bucketItem.id,
+            ...(auth?.badge || bucketItem.badge ? { badge: (auth?.badge ?? bucketItem.badge) as string } : {}),
+            ...(auth?.subtitle || bucketItem.subtitle ? { subtitle: (auth?.subtitle ?? bucketItem.subtitle) as string } : {}),
+            ...(auth?.family || bucketItem.family ? { family: auth?.family ?? bucketItem.family } : {}),
+            ...(auth?.aliases ? { aliases: auth.aliases } : {}),
+            item: auth ?? bucketItem,
+          });
+        }
+      }
+
+      if (Array.isArray(catalog.models)) {
+        for (const m of catalog.models) {
+          if (!m?.id || seenIds.has(m.id)) continue;
+          const isImageModel = m.operations?.some(
+            (op) => op.listed && (op.output?.type === 'image' || op.id === 'text_to_image' || op.id === 'image_to_image' || op.id === 'multi_reference'),
+          );
+          if (isImageModel) {
+            seenIds.add(m.id);
+            candidateItems.push({
+              id: m.id,
+              label: m.label || m.id,
+              ...(m.badge ? { badge: m.badge } : {}),
+              ...(m.subtitle ? { subtitle: m.subtitle } : {}),
+              ...(m.family ? { family: m.family } : {}),
+              ...(m.aliases ? { aliases: m.aliases } : {}),
+              item: m,
+            });
+          }
+        }
+      }
+
+      if (candidateItems.length > 0) {
+        for (const candidate of candidateItems) {
+          const existingVerdict = evaluation.models.find((v) => v.modelId === candidate.id);
+          const verdict: ModelCompatVerdict = existingVerdict
+            ? {
+                ...existingVerdict,
+                acceptsCurrentInputs: true,
+                readyToSubmit: true,
+                rejections: [],
+              }
+            : {
+                modelId: candidate.id,
+                known: true,
+                ...(candidate.family ? { family: candidate.family } : {}),
+                listedOperationIds: ['text_to_image'],
+                matches: [],
+                effectiveOperations: [],
+                acceptsCurrentInputs: true,
+                readyToSubmit: true,
+                bindings: [],
+                rejections: [],
+              };
+          options.push({
+            id: candidate.id,
+            label: candidate.label,
+            ...(candidate.badge ? { badge: candidate.badge } : {}),
+            ...(candidate.subtitle ? { subtitle: candidate.subtitle } : {}),
+            ...(candidate.family ? { family: candidate.family } : {}),
+            ...(candidate.aliases ? { aliases: candidate.aliases } : {}),
+            ...(candidate.item ? { item: candidate.item } : {}),
+            verdict,
+          });
+        }
+
+        return {
+          options,
+          catalogAvailable: true,
+          zeroCandidates: false,
+        };
+      }
+    }
+
     // Prefer a specific rejection from the evaluation; fall back to generic.
     let reasonCode: CompatReasonCode = 'no_compatible_model';
     let reasonMessage = '当前输入没有可兼容的已上架模型';

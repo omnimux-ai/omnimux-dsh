@@ -126,3 +126,66 @@ test('snapshot is detached and refreshes selected output rather than stale occup
   assets[0].url = 'https://fixture.test/changed.png'; explicit.first_frame[0].sourceNodeId = 'changed';
   assert.equal(snapshot.references[0].pathOrUrl, 'https://fixture.test/1.png'); assert.equal(fill.bindings.first_frame[0].sourceNodeId, 's1');
 });
+test('image operations derive strip preset and have addButton enabled', () => {
+  const imgCatalog = {
+    models: [{
+      id: 'nanobanana-2',
+      operations: [
+        { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
+        { id: 'image_to_image', listed: true, output: { type: 'image' }, inputs: [input('reference_image', 'image', 'reference', 0, 5)] },
+        { id: 'multi_reference', listed: true, output: { type: 'image' }, inputs: [input('reference', 'image', 'reference', 0, 10)] },
+      ],
+    }],
+  };
+  for (const opId of ['text_to_image', 'image_to_image', 'multi_reference']) {
+    const l = deriveSlotLayout(imgCatalog, 'nanobanana-2', opId, 'image');
+    assert.equal(l.preset, 'strip');
+    assert.equal(l.addButton, true);
+    assert.ok(l.slots.length > 0);
+  }
+});
+test('image node slotLayout defaults to strip with reference_image slot even when operation is unlisted or has no inputs', () => {
+  const imgCatalog = {
+    models: [{
+      id: 'gpt-image-2',
+      operations: [
+        { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [] },
+      ],
+    }],
+  };
+  const l1 = deriveSlotLayout(imgCatalog, 'gpt-image-2', 'text_to_image', 'image');
+  assert.equal(l1.preset, 'strip');
+  assert.equal(l1.addButton, true);
+  assert.equal(l1.slots.length, 1);
+  assert.equal(l1.slots[0].slot, 'reference_image');
+  assert.equal(l1.slots[0].role, 'reference');
+  assert.equal(l1.slots[0].type, 'image');
+  assert.equal(l1.slots[0].min, 0);
+  assert.equal(l1.slots[0].max, 10);
+
+  const l2 = deriveSlotLayout(imgCatalog, 'gpt-image-2', 'absent_op', 'image');
+  assert.equal(l2.preset, 'strip');
+  assert.equal(l2.addButton, true);
+  assert.equal(l2.slots.length, 1);
+  assert.equal(l2.slots[0].slot, 'reference_image');
+
+  const l3 = deriveSlotLayout(imgCatalog, 'gpt-image-2', undefined, 'image');
+  assert.equal(l3.preset, 'strip');
+  assert.equal(l3.addButton, true);
+  assert.equal(l3.slots.length, 1);
+  assert.equal(l3.slots[0].slot, 'reference_image');
+});
+test('image slot name aliases match reference, references, input_image and input_images', () => {
+  const customCatalog = {
+    models: [{
+      id: 'test-model',
+      operations: [
+        { id: 'text_to_image', listed: true, output: { type: 'image' }, inputs: [input('input_images', 'image', 'reference', 0, 4)] },
+      ],
+    }],
+  };
+  const l = deriveSlotLayout(customCatalog, 'test-model', 'text_to_image', 'image');
+  assert.equal(l.preset, 'strip');
+  assert.equal(l.slots.length, 1);
+  assert.equal(l.slots[0].slot, 'input_images');
+});
