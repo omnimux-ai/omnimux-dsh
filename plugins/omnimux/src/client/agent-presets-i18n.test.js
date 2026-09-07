@@ -8,10 +8,10 @@ import {
 } from './agent-presets-i18n.js'
 
 test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', () => {
-  assert.equal(AGENT_PRESETS_I18N.zh.presetStandardName, 'OmniAgent')
+  assert.equal(AGENT_PRESETS_I18N.zh.presetStandardName, '通用Agent')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetStandardDescription,
-    'OmniMux 全能营销运营 Agent：专注 TikTok 内容自动化，覆盖账号运营管理、爆款文案、口播配音、视觉生图、视频分镜生成、BGM 配乐、剪辑成片与评论互动增长全链路。',
+    '全功能通用编码与智能协作 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。',
   )
   assert.equal(AGENT_PRESETS_I18N.zh.presetCordisName, '组建团队')
   assert.equal(
@@ -19,10 +19,10 @@ test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', ()
     '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
   )
 
-  assert.equal(AGENT_PRESETS_I18N.en.presetStandardName, 'OmniAgent')
+  assert.equal(AGENT_PRESETS_I18N.en.presetStandardName, 'GeneralAgent')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetStandardDescription,
-    'OmniMux all-in-one marketing & operations agent: end-to-end TikTok content automation, account operations, viral copy, voiceover, visual generation, video storyboards, BGM, editing, and comment engagement.',
+    'Full-featured general coding and collaboration agent with file editing, shell, file and web search, skills, plan, goal, subagent, and workflow capabilities.',
   )
   assert.equal(AGENT_PRESETS_I18N.en.presetCordisName, 'Team Builder')
   assert.equal(
@@ -64,10 +64,10 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
   assert.equal(changed, true)
   assert.equal(published, true)
 
-  assert.equal(zhDict.presetStandardName, 'OmniAgent')
+  assert.equal(zhDict.presetStandardName, '通用Agent')
   assert.equal(
     zhDict.presetStandardDescription,
-    'OmniMux 全能营销运营 Agent：专注 TikTok 内容自动化，覆盖账号运营管理、爆款文案、口播配音、视觉生图、视频分镜生成、BGM 配乐、剪辑成片与评论互动增长全链路。',
+    '全功能通用编码与智能协作 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。',
   )
   assert.equal(zhDict.presetCordisName, '组建团队')
   assert.equal(
@@ -75,10 +75,10 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
     '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
   )
 
-  assert.equal(enDict.presetStandardName, 'OmniAgent')
+  assert.equal(enDict.presetStandardName, 'GeneralAgent')
   assert.equal(
     enDict.presetStandardDescription,
-    'OmniMux all-in-one marketing & operations agent: end-to-end TikTok content automation, account operations, viral copy, voiceover, visual generation, video storyboards, BGM, editing, and comment engagement.',
+    'Full-featured general coding and collaboration agent with file editing, shell, file and web search, skills, plan, goal, subagent, and workflow capabilities.',
   )
   assert.equal(enDict.presetCordisName, 'Team Builder')
   assert.equal(
@@ -99,9 +99,9 @@ test('patchAgentPresetsLocaleDicts handles region variants like zh-CN and en-US'
   const locale = { dicts: dictsMap }
 
   patchAgentPresetsLocaleDicts(locale)
-  assert.equal(zhCnDict.presetStandardName, 'OmniAgent')
+  assert.equal(zhCnDict.presetStandardName, '通用Agent')
   assert.equal(zhCnDict.presetCordisName, '组建团队')
-  assert.equal(enUsDict.presetStandardName, 'OmniAgent')
+  assert.equal(enUsDict.presetStandardName, 'GeneralAgent')
   assert.equal(enUsDict.presetCordisName, 'Team Builder')
 })
 
@@ -145,9 +145,9 @@ test('installAgentPresetsI18n intercepts late register calls and applies patch i
   assert.equal(registerCalled, true)
   const locs = dictsMap.get(TARGET_NAMESPACE)
   assert.ok(locs)
-  assert.equal(locs.get('zh').presetStandardName, 'OmniAgent')
+  assert.equal(locs.get('zh').presetStandardName, '通用Agent')
   assert.equal(locs.get('zh').presetCordisName, '组建团队')
-  assert.equal(locs.get('en').presetStandardName, 'OmniAgent')
+  assert.equal(locs.get('en').presetStandardName, 'GeneralAgent')
   assert.equal(locs.get('en').presetCordisName, 'Team Builder')
 
   cleanup()
@@ -178,8 +178,8 @@ test('installAgentPresetsI18n defensive timer cleans up properly', async () => {
   // Wait for defensive interval
   await new Promise((resolve) => setTimeout(resolve, 250))
 
-  assert.equal(locs.get('zh').presetStandardName, 'OmniAgent')
-  assert.equal(locs.get('en').presetStandardName, 'OmniAgent')
+  assert.equal(locs.get('zh').presetStandardName, '通用Agent')
+  assert.equal(locs.get('en').presetStandardName, 'GeneralAgent')
 
   cleanup()
 })
