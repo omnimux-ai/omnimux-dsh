@@ -134,6 +134,11 @@ is_omnimux_profile() {
 # ~/.dsh 是共享 Host 家：其中 desktop/web 是 DSH 开发工具 profile，禁止物化社媒两项覆盖。
 should_materialize_profile() {
   local profile_home="$1"
+  local base
+  base=$(basename "$profile_home")
+  if [ "$base" = "node_modules" ] || [[ "$base" == .* ]]; then
+    return 1
+  fi
   local home_dir
   home_dir=$(dirname "$(dirname "$profile_home")")
   if [ "$home_dir" = "$HOME/.dsh" ]; then
@@ -173,6 +178,11 @@ materialize_into() {
 # 1) profiles under target homes that vendor @deepseek-ai/dsh
 shopt -s nullglob
 for home_dir in "${TARGET_HOMES[@]}"; do
+  if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
+    mkdir -p "$home_dir/agent-presets-shipped"
+    materialize_into "$home_dir/agent-presets-shipped"
+  fi
+
   for profile_home in "$home_dir/profiles"/*; do
     [ -d "$profile_home" ] || continue
     if ! should_materialize_profile "$profile_home"; then
@@ -181,6 +191,8 @@ for home_dir in "${TARGET_HOMES[@]}"; do
     fi
     dest="$profile_home/node_modules/@deepseek-ai/dsh/config/agent-presets"
     materialize_into "$dest"
+    mkdir -p "$profile_home/agent-presets-shipped"
+    materialize_into "$profile_home/agent-presets-shipped"
   done
 done
 
@@ -195,12 +207,22 @@ patch_asar_preset_header() {
 
 if [ "$HAS_DEV" -eq 1 ]; then
   materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  materialize_into "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  if [ -d "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  else
+    patch_asar_preset_header "/Applications/OmniMux Dev.app/Contents/Resources/app.asar" "/Applications/OmniMux Dev.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  fi
 fi
 
 if [ "$HAS_PROD" -eq 1 ]; then
   materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  materialize_into "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  if [ -d "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets" ]; then
+    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-agent-presets/presets"
+  else
+    patch_asar_preset_header "/Applications/OmniMux.app/Contents/Resources/app.asar" "/Applications/OmniMux.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh/config/agent-presets"
+  fi
 fi
 
 if [ "$HAS_DSH" -eq 1 ]; then

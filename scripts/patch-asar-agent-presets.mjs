@@ -97,13 +97,20 @@ export function patchAsarPresets(asarPath, presetsDir, opts = {}) {
 
   const { header, headerSize, headerString } = disk.readArchiveHeaderSync(asarPath)
   const cfg = header.files?.node_modules?.files?.['@deepseek-ai']?.files?.dsh?.files?.config?.files
-  if (!cfg?.['agent-presets']) {
+  const dshAgentPresetsPkg = header.files?.node_modules?.files?.['@deepseek-ai']?.files?.['dsh-agent-presets']?.files
+
+  let targetNode = null
+  if (dshAgentPresetsPkg?.presets) {
+    targetNode = dshAgentPresetsPkg.presets
+  } else if (cfg?.['agent-presets']) {
+    targetNode = cfg['agent-presets']
+  } else {
     throw new Error(`agent-presets missing in asar header: ${asarPath}`)
   }
 
-  const before = Object.keys(cfg['agent-presets'].files || {})
-  cfg['agent-presets'] = { files: unpackedTree(presetsDir) }
-  const after = Object.keys(cfg['agent-presets'].files)
+  const before = Object.keys(targetNode.files || {})
+  targetNode.files = unpackedTree(presetsDir)
+  const after = Object.keys(targetNode.files)
 
   const newJson = JSON.stringify(header)
   if (newJson.length > headerString.length) {
