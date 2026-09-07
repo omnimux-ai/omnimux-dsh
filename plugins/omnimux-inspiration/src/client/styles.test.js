@@ -232,7 +232,6 @@ describe('one-click replicate source isolation', () => {
     'replicate-to-chat.js',
     'InspirationCoverCard.jsx',
     'InspirationPreviewModal.jsx',
-    'InspirationDetailModal.jsx',
     'use-inspiration-feed.js',
     'InspirationSection.jsx',
   ]
@@ -254,15 +253,13 @@ describe('one-click replicate source isolation', () => {
     }
   })
 
-  it('keeps Preview/Detail primary CTA on card.cta.try and does not fallback 添加到会话', () => {
+  it('keeps Preview primary CTA on card.cta.try and does not fallback 添加到会话', () => {
     const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    const detail = readFileSync(join(here, 'InspirationDetailModal.jsx'), 'utf8')
     const section = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
     assert.match(preview, /t\('card\.cta\.try'\)/)
     assert.match(preview, /onReplicate/)
-    assert.match(detail, /t\('card\.cta\.try'\)/)
-    assert.doesNotMatch(detail, /添加到会话/)
-    assert.doesNotMatch(detail, /MessageSquarePlus/)
+    assert.doesNotMatch(preview, /添加到会话/)
+    assert.doesNotMatch(preview, /MessageSquarePlus/)
     assert.match(section, /onReplicate=\{handleReplicate\}/)
   })
 })

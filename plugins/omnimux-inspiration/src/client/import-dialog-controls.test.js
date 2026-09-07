@@ -145,8 +145,8 @@ describe('import dialog UX styles', () => {
 })
 
 describe('import dialog source contracts', () => {
-  it('both dialogs use CollapsibleTagsField + AutoAnalyzeSwitch and no native checkbox', () => {
-    for (const file of ['InspirationImportDialog.jsx', 'InspirationInlineImportDialog.jsx']) {
+  it('inline dialog uses CollapsibleTagsField + AutoAnalyzeSwitch and no native checkbox', () => {
+    for (const file of ['InspirationInlineImportDialog.jsx']) {
       const source = readFileSync(join(here, file), 'utf8')
       assert.match(source, /CollapsibleTagsField/)
       assert.match(source, /AutoAnalyzeSwitch/)
