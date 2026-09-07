@@ -4,6 +4,8 @@
  * (validated by the extraction spike): self-connection / duplicate /
  * missing-node / type-contract / cycle checks — the heart of the wiring
  * rules.
+ *
+ * Issue #714: 扩展图拓扑校验，支持同一上游素材绑定到不同槽位 (slotIndex / handle / role)。
  */
 
 import { getOutgoers, type Edge, type Node, type Connection } from '@xyflow/react';
@@ -26,23 +28,51 @@ export function validateCanvasConnectionStructure(
   if (connection.source === connection.target) {
     return { valid: false, reasonCode: 'self_connection' };
   }
+
   const bindingOf = (edge: ConnectionLike) => {
     const data = edge.data ?? {};
-    const assigned = data.slotBinding && typeof data.slotBinding === 'object' ? data.slotBinding as { role?: unknown } : {};
+    const assigned =
+      data.slotBinding && typeof data.slotBinding === 'object'
+        ? (data.slotBinding as { role?: unknown; slot?: unknown; slotIndex?: unknown })
+        : {};
     return {
       slot: readExplicitTargetSlot(data, edge.targetHandle),
-      role: typeof data.role === 'string' ? data.role.trim() : typeof assigned.role === 'string' ? assigned.role.trim() : '',
+      role:
+        typeof data.role === 'string'
+          ? data.role.trim()
+          : typeof assigned.role === 'string'
+            ? assigned.role.trim()
+            : '',
+      slotIndex:
+        typeof (data as Record<string, unknown>).slotIndex === 'number'
+          ? ((data as Record<string, unknown>).slotIndex as number)
+          : typeof assigned.slotIndex === 'number'
+            ? assigned.slotIndex
+            : undefined,
+      handle: edge.targetHandle,
     };
   };
+
   const requested = bindingOf(connection);
-  if (edges.some((edge) => {
-    if (edge.source !== connection.source || edge.target !== connection.target) return false;
-    // A plain drag repeats the existing reference; another role must be explicit.
-    if (!requested.slot && !requested.role) return true;
-    const existing = bindingOf(edge);
-    if (requested.slot) return existing.slot === requested.slot;
-    return existing.role === requested.role;
-  })) {
+  if (
+    edges.some((edge) => {
+      if (edge.source !== connection.source || edge.target !== connection.target) return false;
+      // 若显式指定了不同 slotIndex，允许同一上游作为不同素材输入
+      if (requested.slotIndex !== undefined) {
+        const existing = bindingOf(edge);
+        return existing.slotIndex === requested.slotIndex;
+      }
+      // 若显式指定了不同 targetHandle，允许同一上游作为不同输入
+      if (requested.handle && edge.targetHandle && requested.handle !== edge.targetHandle) {
+        return false;
+      }
+      // A plain drag repeats the existing reference; another role must be explicit.
+      if (!requested.slot && !requested.role) return true;
+      const existing = bindingOf(edge);
+      if (requested.slot) return existing.slot === requested.slot;
+      return existing.role === requested.role;
+    })
+  ) {
     return { valid: false, reasonCode: 'duplicate_edge' };
   }
 

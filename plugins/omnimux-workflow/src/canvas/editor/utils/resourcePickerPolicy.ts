@@ -21,10 +21,17 @@ import { buildImportedMediaData, looksAbsolutePath, projectFileMediaUrl } from '
 import { buildMediaMetadata } from '../../../shared/mediaMetadata.ts';
 import { forbiddenRelativePathCode } from '../../../shared/projectAssets.ts';
 import { getDefaultNodeHeight, getDefaultNodeWidth } from './nodeSizeConfig.ts';
+import type {
+  NodeSlotEngineState,
+  SlotBindingItem,
+  OverflowAssetItem,
+} from '../../../shared/graph/slotContractTypes.ts';
+import { promoteOverflowAsset } from '../../../shared/graph/slotEngine.ts';
 
 export type ResourceTypeFilter = 'all' | 'image' | 'video' | 'audio';
 export type ResourcePickerTab = 'canvas' | 'local';
 export type ResourcePickerView = 'grid' | 'list';
+export type ResourcePickerMode = 'add' | 'replace';
 
 const MEDIA_TYPES: readonly MaterialType[] = ['image', 'video', 'audio'];
 const UPSTREAM_GAP_X = 80;
@@ -76,6 +83,78 @@ export interface ResourcePickerCommitInput {
   acceptedTypes?: readonly string[];
   /** 目标 slot 上限（max 1 → 替换；null → 官方未公布上限，追加）。 */
   slotMax?: number | null;
+  mode?: 'add' | 'replace';
+  targetSlotIndex?: number;
+  slotState?: NodeSlotEngineState;
+}
+
+export interface ResourcePickerReplaceCommitInput {
+  nodes: CanvasNode[];
+  edges: Edge[];
+  targetNodeId: string;
+  targetSlotIndex: number;
+  slotState?: NodeSlotEngineState;
+  selectedCanvasNodeId?: string;
+  localFile?: LocalFileDraft;
+}
+
+/**
+ * 防重锁判定纯函数：
+ * - 如果 item.nodeId 已经被当前节点的某个活跃卡槽占用：
+ *   - 若 mode === 'replace' 且正是当前正在被替换的槽位（slotIndex === targetSlotIndex）：标为 isCurrentSlot: true，显示「当前使用中」，置灰不可重选。
+ *   - 若被其他槽位占用：标为 isAssigned: true，显示「✓ 已添加」，覆盖半透明遮罩，置灰禁用不可点击。
+ * - 如果在当前节点的溢出候选池中：标为可选，显示标签「候选池中」。
+ * - 画布上其他未连线节点与本地上传：正常可选。
+ */
+export function evaluateResourcePickerAvailability(args: {
+  item: { nodeId: string; mediaUrl?: string };
+  mode: 'add' | 'replace';
+  targetSlotIndex?: number;
+  slotState?: NodeSlotEngineState;
+}): { isAssigned: boolean; isCurrentSlot: boolean; disabled: boolean; badgeLabel?: string } {
+  const { item, mode, targetSlotIndex, slotState } = args;
+
+  if (!slotState) {
+    return {
+      isAssigned: false,
+      isCurrentSlot: false,
+      disabled: false,
+    };
+  }
+
+  const activeSlot = slotState.activeSlots.find((s) => s.sourceNodeId === item.nodeId);
+  if (activeSlot) {
+    if (mode === 'replace' && typeof targetSlotIndex === 'number' && activeSlot.slotIndex === targetSlotIndex) {
+      return {
+        isAssigned: false,
+        isCurrentSlot: true,
+        disabled: true,
+        badgeLabel: '当前使用中',
+      };
+    }
+    return {
+      isAssigned: true,
+      isCurrentSlot: false,
+      disabled: true,
+      badgeLabel: '✓ 已添加',
+    };
+  }
+
+  const inOverflow = slotState.overflowPool.some((o) => o.sourceNodeId === item.nodeId);
+  if (inOverflow) {
+    return {
+      isAssigned: false,
+      isCurrentSlot: false,
+      disabled: false,
+      badgeLabel: '候选池中',
+    };
+  }
+
+  return {
+    isAssigned: false,
+    isCurrentSlot: false,
+    disabled: false,
+  };
 }
 
 export interface ResourcePickerRejection {
@@ -310,6 +389,175 @@ function placeUpstream(
 }
 
 /**
+ * 置换 Mutation 计划生成器：
+ * - 当在替换模式下确认选择某个素材时：
+ *   - 如果该素材已在溢出池中，通过 slotEngine.promoteOverflowAsset 执行置换；
+ *   - 如果来自其他节点或上传，生成建立连线并将原槽位退入溢出池的 Mutation Plan。
+ */
+export function planResourcePickerReplaceCommit(
+  input: ResourcePickerReplaceCommitInput,
+): ResourcePickerCommitPlan {
+  const rejected: ResourcePickerRejection[] = [];
+  const target = input.nodes.find((node) => node.id === input.targetNodeId);
+  if (!target) {
+    return { hasWork: false, rejected: [{ id: input.targetNodeId, reason: 'missing' }] };
+  }
+
+  const { targetNodeId, targetSlotIndex, slotState, selectedCanvasNodeId, localFile } = input;
+
+  // 1. 如果选中了画布节点
+  if (selectedCanvasNodeId) {
+    if (selectedCanvasNodeId === targetNodeId) {
+      return { hasWork: false, rejected: [{ id: selectedCanvasNodeId, reason: 'self' }] };
+    }
+
+    // 1.1 如果该素材已在溢出池中，通过 promoteOverflowAsset 直接执行置换
+    if (slotState && slotState.overflowPool.some((o) => o.sourceNodeId === selectedCanvasNodeId)) {
+      const nextSlotState = promoteOverflowAsset(slotState, selectedCanvasNodeId, targetSlotIndex);
+      return {
+        hasWork: true,
+        rejected: [],
+        nodePatches: [
+          {
+            nodeId: targetNodeId,
+            data: {
+              slotState: nextSlotState,
+            },
+          },
+        ],
+      };
+    }
+
+    // 1.2 来自其他画布节点（建立连线并将原槽位退入溢出池）
+    const source = input.nodes.find((n) => n.id === selectedCanvasNodeId);
+    if (!source) {
+      return { hasWork: false, rejected: [{ id: selectedCanvasNodeId, reason: 'missing' }] };
+    }
+    if (!canConnect(source, target)) {
+      return { hasWork: false, rejected: [{ id: selectedCanvasNodeId, reason: 'type_contract' }] };
+    }
+
+    const addEdges = [edgeDraft(selectedCanvasNodeId, targetNodeId)];
+    const nodePatches: NonNullable<CanvasInputMutation['nodePatches']> = [];
+
+    if (slotState) {
+      const currentSlotItem = slotState.activeSlots.find((s) => s.slotIndex === targetSlotIndex);
+      const nextOverflow = [...slotState.overflowPool];
+      if (currentSlotItem) {
+        nextOverflow.push({
+          sourceNodeId: currentSlotItem.sourceNodeId,
+          edgeId: currentSlotItem.edgeId,
+          materialType: currentSlotItem.materialType,
+          mediaUrl: currentSlotItem.mediaUrl,
+          label: currentSlotItem.label,
+          mimeType: currentSlotItem.mimeType,
+          addedAt: Date.now(),
+        });
+      }
+      const sData = nodeData(source);
+      const nextActive = slotState.activeSlots.filter((s) => s.slotIndex !== targetSlotIndex);
+      nextActive.push({
+        slotId: `slot_${targetSlotIndex}`,
+        slotIndex: targetSlotIndex,
+        sourceNodeId: selectedCanvasNodeId,
+        materialType: asMaterialType(sData.materialType) ?? 'image',
+        mediaUrl: typeof sData.mediaUrl === 'string' ? sData.mediaUrl : undefined,
+        label: resourceTitle(sData, selectedCanvasNodeId),
+      });
+      nextActive.sort((a, b) => a.slotIndex - b.slotIndex);
+      const nextSlotState: NodeSlotEngineState = {
+        ...slotState,
+        activeSlots: nextActive,
+        overflowPool: nextOverflow,
+      };
+      nodePatches.push({
+        nodeId: targetNodeId,
+        data: {
+          slotState: nextSlotState,
+        },
+      });
+    }
+
+    return {
+      hasWork: true,
+      rejected: [],
+      addEdges,
+      nodePatches: nodePatches.length > 0 ? nodePatches : undefined,
+    };
+  }
+
+  // 2. 如果是本地上传文件
+  if (localFile) {
+    const usable = usableMediaFiles([localFile], rejected);
+    if (usable.length === 0) {
+      return { hasWork: false, rejected };
+    }
+    const file = usable[0]!;
+    const position = placeUpstream(target, 0, file.materialType);
+    const node = createImportNode(file.materialType, position, {
+      ...mediaPatch(file),
+      label: file.name.replace(/\.[^.]+$/, '') || file.name,
+    });
+    if (!canConnect(node, target)) {
+      return { hasWork: false, rejected: [{ id: file.id, reason: 'type_contract' }] };
+    }
+
+    const addNodes = [node];
+    const addEdges = [edgeDraft(node.id, targetNodeId)];
+    const nodePatches: NonNullable<CanvasInputMutation['nodePatches']> = [];
+
+    if (slotState) {
+      const currentSlotItem = slotState.activeSlots.find((s) => s.slotIndex === targetSlotIndex);
+      const nextOverflow = [...slotState.overflowPool];
+      if (currentSlotItem) {
+        nextOverflow.push({
+          sourceNodeId: currentSlotItem.sourceNodeId,
+          edgeId: currentSlotItem.edgeId,
+          materialType: currentSlotItem.materialType,
+          mediaUrl: currentSlotItem.mediaUrl,
+          label: currentSlotItem.label,
+          mimeType: currentSlotItem.mimeType,
+          addedAt: Date.now(),
+        });
+      }
+      const nextActive = slotState.activeSlots.filter((s) => s.slotIndex !== targetSlotIndex);
+      nextActive.push({
+        slotId: `slot_${targetSlotIndex}`,
+        slotIndex: targetSlotIndex,
+        sourceNodeId: node.id,
+        materialType: file.materialType,
+        mediaUrl: typeof (node.data as Record<string, unknown> | undefined)?.mediaUrl === 'string'
+          ? ((node.data as Record<string, unknown>).mediaUrl as string)
+          : undefined,
+        label: file.name.replace(/\.[^.]+$/, '') || file.name,
+      });
+      nextActive.sort((a, b) => a.slotIndex - b.slotIndex);
+      const nextSlotState: NodeSlotEngineState = {
+        ...slotState,
+        activeSlots: nextActive,
+        overflowPool: nextOverflow,
+      };
+      nodePatches.push({
+        nodeId: targetNodeId,
+        data: {
+          slotState: nextSlotState,
+        },
+      });
+    }
+
+    return {
+      hasWork: true,
+      rejected: [],
+      addNodes,
+      addEdges,
+      nodePatches: nodePatches.length > 0 ? nodePatches : undefined,
+    };
+  }
+
+  return { hasWork: false, rejected };
+}
+
+/**
  * 计算一次提交对应的 canvas mutation。
  *
  * 画布资源：为尚未连入的选中节点添加 source→target 边。
@@ -317,6 +565,19 @@ function placeUpstream(
  * 不把任何文件写入当前节点卡片（避免把所选素材 patch 进当前节点替换素材）。
  */
 export function planResourcePickerCommit(input: ResourcePickerCommitInput): ResourcePickerCommitPlan {
+  // 如果是替换模式且提供了 targetSlotIndex，派发至置换 Mutation 计划生成器
+  if (input.mode === 'replace' && typeof input.targetSlotIndex === 'number') {
+    return planResourcePickerReplaceCommit({
+      nodes: input.nodes,
+      edges: input.edges,
+      targetNodeId: input.targetNodeId,
+      targetSlotIndex: input.targetSlotIndex,
+      slotState: input.slotState,
+      selectedCanvasNodeId: input.selectedCanvasNodeIds[0],
+      localFile: input.localFiles[0],
+    });
+  }
+
   const rejected: ResourcePickerRejection[] = [];
   const addEdges: NonNullable<CanvasInputMutation['addEdges']> = [];
   const addNodes: CanvasNode[] = [];

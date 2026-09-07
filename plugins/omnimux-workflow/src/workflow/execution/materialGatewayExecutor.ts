@@ -10,7 +10,9 @@ import { join } from 'node:path';
 import type { ResolveExecutionProjectFile } from './executionMediaSource.ts';
 import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
-import type { GenerationGateway, SubmitRequest } from '../seam/gateway';
+import { compileMultimodalPrompt } from './multimodalCompiler.ts';
+import type { NodeSlotEngineState } from '../../shared/graph/slotContractTypes.ts';
+import type { GenerationGateway, MediaInputRole, SubmitRequest } from '../seam/gateway';
 import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
 import { validateGeneratedResult } from '../seam/generatedResult.ts';
 import type {
@@ -78,10 +80,71 @@ export function createMaterialGatewayExecutor(opts: {
       if (capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
         throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
       }
-      const prompt = resolveGenerationPrompt(data, upstream.texts);
+      const rawPrompt = resolveGenerationPrompt(data, upstream.texts);
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
-      const references = upstream.references;
+      const references = [...upstream.references];
+
+      // Compile multimodal prompt (Issue #714 / T05)
+      const modelId = upstream.modelId ?? readString(params, 'model');
+      const modelDef = catalog.models?.find((m) => m.id === modelId) as Record<string, unknown> | undefined;
+      const supportsInterleaved = Boolean(
+        modelDef?.supportsInterleaved ||
+        (params as Record<string, unknown> | undefined)?.supportsInterleaved
+      );
+
+      const upstreamOutputsObj: Record<string, { mediaUrl?: string; text?: string; mimeType?: string }> = {};
+      for (const [sourceId, out] of ctx.upstreamOutputs.entries()) {
+        const firstAsset = out.mediaAssets?.[0];
+        const mediaUrl = firstAsset?.url || (firstAsset as { path?: string } | undefined)?.path;
+        upstreamOutputsObj[sourceId] = {
+          mediaUrl,
+          text: out.text,
+          mimeType: firstAsset?.mimeType,
+        };
+      }
+      for (const ref of upstream.references) {
+        if (ref.sourceNodeId) {
+          upstreamOutputsObj[ref.sourceNodeId] = {
+            ...upstreamOutputsObj[ref.sourceNodeId],
+            mediaUrl: ref.pathOrUrl,
+            mimeType: ref.mimeType || upstreamOutputsObj[ref.sourceNodeId]?.mimeType,
+          };
+        }
+      }
+
+      const compiled = compileMultimodalPrompt({
+        rawPrompt,
+        slotState: data.slotState as NodeSlotEngineState | undefined,
+        upstreamOutputs: upstreamOutputsObj,
+        modelContract: {
+          supportsInterleaved,
+          category: capability,
+        },
+      });
+
+      const prompt = compiled.cleanedPrompt;
+
+      // Merge resolved references from prompt tokens into upstream references if not already present
+      for (const resolvedRef of compiled.resolvedReferences) {
+        const pathOrUrl = resolvedRef.pathOrUrl || resolvedRef.mediaUrl;
+        const sourceNodeId = resolvedRef.sourceNodeId || '';
+        const exists = references.some(
+          (r) => r.pathOrUrl === pathOrUrl && r.sourceNodeId === sourceNodeId,
+        );
+        if (!exists && pathOrUrl) {
+          const rawType = resolvedRef.type || resolvedRef.materialType;
+          const mediaType = (rawType === 'video' || rawType === 'audio' || rawType === 'document') ? rawType : 'image';
+          references.push({
+            role: (resolvedRef.role as MediaInputRole) || 'reference',
+            type: mediaType,
+            pathOrUrl,
+            sourceNodeId,
+            ...(resolvedRef.mimeType ? { mimeType: resolvedRef.mimeType } : {}),
+          });
+        }
+      }
+
       const audioTrack = upstream.audioTrack;
       const image = references.find((r) => r.type === 'image')?.pathOrUrl || undefined;
       const audio = references.find((r) => r.type === 'audio')?.pathOrUrl || audioTrack?.pathOrUrl;
@@ -90,6 +153,9 @@ export function createMaterialGatewayExecutor(opts: {
       const request: SubmitRequest = {
         capability,
         prompt,
+        interleavedParts: compiled.interleavedParts && compiled.interleavedParts.length > 0
+          ? compiled.interleavedParts
+          : undefined,
         image,
         audio,
         references: references.length > 0 ? references : undefined,

@@ -11,6 +11,8 @@ import {
   planResourcePickerCommit,
   planStandaloneImportNodes,
   planImportNodeFill,
+  evaluateResourcePickerAvailability,
+  planResourcePickerReplaceCommit,
 } from './resourcePickerPolicy.ts';
 
 function materialNode(id, materialType, extras = {}) {
@@ -298,4 +300,166 @@ test('planImportNodeFill：首个文件替换当前导入节点，其余向下�
   assert.equal(plan.addNodes[0].position.x, 400);
   assert.ok(plan.addNodes[0].position.y > 80);
   assert.equal(plan.addEdges, undefined);
+});
+
+test('evaluateResourcePickerAvailability：防重锁判定（活跃卡槽占用、当前使用中、溢出候选池）', () => {
+  const mockSlotState = {
+    modelId: 'test-model',
+    operationId: 'image-to-video',
+    capacity: 2,
+    activeSlots: [
+      {
+        slotId: 'slot_0',
+        slotIndex: 0,
+        sourceNodeId: 'node_hero',
+        materialType: 'image',
+        label: 'Hero',
+      },
+      {
+        slotId: 'slot_1',
+        slotIndex: 1,
+        sourceNodeId: 'node_bg',
+        materialType: 'video',
+        label: 'BG',
+      },
+    ],
+    overflowPool: [
+      {
+        sourceNodeId: 'node_overflow_1',
+        materialType: 'image',
+        label: 'Extra Pic',
+        addedAt: Date.now(),
+      },
+    ],
+  };
+
+  // 1. 追加模式：被活跃卡槽占用 -> isAssigned=true, disabled=true, '✓ 已添加'
+  const addActive = evaluateResourcePickerAvailability({
+    item: { nodeId: 'node_hero' },
+    mode: 'add',
+    slotState: mockSlotState,
+  });
+  assert.equal(addActive.isAssigned, true);
+  assert.equal(addActive.isCurrentSlot, false);
+  assert.equal(addActive.disabled, true);
+  assert.equal(addActive.badgeLabel, '✓ 已添加');
+
+  // 2. 替换模式：正是当前正在替换的槽位 (slotIndex === 0) -> isCurrentSlot=true, disabled=true, '当前使用中'
+  const replaceCurrent = evaluateResourcePickerAvailability({
+    item: { nodeId: 'node_hero' },
+    mode: 'replace',
+    targetSlotIndex: 0,
+    slotState: mockSlotState,
+  });
+  assert.equal(replaceCurrent.isAssigned, false);
+  assert.equal(replaceCurrent.isCurrentSlot, true);
+  assert.equal(replaceCurrent.disabled, true);
+  assert.equal(replaceCurrent.badgeLabel, '当前使用中');
+
+  // 3. 替换模式：被其它活跃槽位占用 (slotIndex === 1, targetSlotIndex === 0) -> isAssigned=true, disabled=true, '✓ 已添加'
+  const replaceOther = evaluateResourcePickerAvailability({
+    item: { nodeId: 'node_bg' },
+    mode: 'replace',
+    targetSlotIndex: 0,
+    slotState: mockSlotState,
+  });
+  assert.equal(replaceOther.isAssigned, true);
+  assert.equal(replaceOther.isCurrentSlot, false);
+  assert.equal(replaceOther.disabled, true);
+  assert.equal(replaceOther.badgeLabel, '✓ 已添加');
+
+  // 4. 处于溢出候选池中 -> 可选，显示标签「候选池中」
+  const overflowRes = evaluateResourcePickerAvailability({
+    item: { nodeId: 'node_overflow_1' },
+    mode: 'replace',
+    targetSlotIndex: 0,
+    slotState: mockSlotState,
+  });
+  assert.equal(overflowRes.isAssigned, false);
+  assert.equal(overflowRes.isCurrentSlot, false);
+  assert.equal(overflowRes.disabled, false);
+  assert.equal(overflowRes.badgeLabel, '候选池中');
+
+  // 5. 画布上其他未连线节点 -> 正常可选
+  const unlinkedRes = evaluateResourcePickerAvailability({
+    item: { nodeId: 'node_fresh' },
+    mode: 'replace',
+    targetSlotIndex: 0,
+    slotState: mockSlotState,
+  });
+  assert.equal(unlinkedRes.isAssigned, false);
+  assert.equal(unlinkedRes.isCurrentSlot, false);
+  assert.equal(unlinkedRes.disabled, false);
+  assert.equal(unlinkedRes.badgeLabel, undefined);
+});
+
+test('planResourcePickerReplaceCommit：置换 Mutation 计划生成（溢出池提拔置换 vs 新连线替换）', () => {
+  const target = materialNode('target', 'video', {
+    selectedTool: 'image-to-video',
+    params: { model: 'test-model' },
+  });
+  const heroNode = materialNode('node_hero', 'image');
+  const freshNode = materialNode('node_fresh', 'image');
+  const overflowNode = materialNode('node_overflow', 'image');
+
+  const initialSlotState = {
+    modelId: 'test-model',
+    operationId: 'image-to-video',
+    capacity: 1,
+    activeSlots: [
+      {
+        slotId: 'slot_0',
+        slotIndex: 0,
+        sourceNodeId: 'node_hero',
+        materialType: 'image',
+        label: 'Hero',
+      },
+    ],
+    overflowPool: [
+      {
+        sourceNodeId: 'node_overflow',
+        materialType: 'image',
+        label: 'Overflow Asset',
+        addedAt: 1000,
+      },
+    ],
+  };
+
+  const nodes = [target, heroNode, freshNode, overflowNode];
+  const edges = [
+    { id: 'e1', source: 'node_hero', target: 'target' },
+    { id: 'e2', source: 'node_overflow', target: 'target' },
+  ];
+
+  // A. 从溢出池置换：通过 promoteOverflowAsset 置换，无需新边，产生 nodePatches 更新 slotState
+  const overflowPlan = planResourcePickerReplaceCommit({
+    nodes,
+    edges,
+    targetNodeId: 'target',
+    targetSlotIndex: 0,
+    slotState: initialSlotState,
+    selectedCanvasNodeId: 'node_overflow',
+  });
+  assert.equal(overflowPlan.hasWork, true);
+  assert.equal(overflowPlan.nodePatches?.length, 1);
+  const patchedState = overflowPlan.nodePatches[0].data.slotState;
+  assert.equal(patchedState.activeSlots[0].sourceNodeId, 'node_overflow');
+  assert.equal(patchedState.overflowPool[0].sourceNodeId, 'node_hero');
+
+  // B. 从未连线节点替换：生成 addEdges 并将原槽位退入 overflowPool
+  const freshPlan = planResourcePickerReplaceCommit({
+    nodes,
+    edges,
+    targetNodeId: 'target',
+    targetSlotIndex: 0,
+    slotState: initialSlotState,
+    selectedCanvasNodeId: 'node_fresh',
+  });
+  assert.equal(freshPlan.hasWork, true);
+  assert.equal(freshPlan.addEdges?.length, 1);
+  assert.equal(freshPlan.addEdges[0].source, 'node_fresh');
+  assert.equal(freshPlan.addEdges[0].target, 'target');
+  const freshPatchedState = freshPlan.nodePatches[0].data.slotState;
+  assert.equal(freshPatchedState.activeSlots[0].sourceNodeId, 'node_fresh');
+  assert.equal(freshPatchedState.overflowPool.some((o) => o.sourceNodeId === 'node_hero'), true);
 });

@@ -9,16 +9,22 @@ import { useT } from '../../../i18n';
 import type { MaterialType } from '../../../types/materialNode';
 import {
   filterCanvasResources,
+  evaluateResourcePickerAvailability,
   type CanvasResourceItem,
   type ResourceTypeFilter,
   type ResourcePickerView,
+  type ResourcePickerMode,
 } from '../../utils/resourcePickerPolicy.ts';
+import type { NodeSlotEngineState } from '../../../../shared/graph/slotContractTypes.ts';
 import PreviewThumb from './PreviewThumb.tsx';
 
 export interface CanvasResourcePaneProps {
   items: CanvasResourceItem[];
   selectedIds: string[];
-  onToggle: (nodeId: string, alreadyConnected: boolean) => void;
+  mode?: ResourcePickerMode;
+  targetSlotIndex?: number;
+  slotState?: NodeSlotEngineState;
+  onToggle: (nodeId: string, alreadyConnected: boolean, disabled?: boolean) => void;
   /** T03：目标 slot 接受的素材类型；列表按此预过滤并锁定分类。 */
   acceptedTypes?: readonly string[];
   /** T03：slot 装填会话允许选中已连入（未消费）的供给。 */
@@ -41,6 +47,9 @@ function typeLabelKey(type: MaterialType): string {
 const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
   items,
   selectedIds,
+  mode = 'add',
+  targetSlotIndex,
+  slotState,
   onToggle,
   acceptedTypes,
   allowConnectedSelection = false,
@@ -127,16 +136,30 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
         <div className="wf-picker-grid">
           {visible.map((item) => {
             const selected = selectedIds.includes(item.nodeId);
+            const availability = evaluateResourcePickerAvailability({
+              item: { nodeId: item.nodeId, mediaUrl: item.previewUrl },
+              mode,
+              targetSlotIndex,
+              slotState,
+            });
+
+            const isAssigned = availability.isAssigned || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+            const isDisabled = availability.disabled || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+
             return (
               <button
                 key={item.nodeId}
                 type="button"
                 className={`wf-picker-card ${selected ? 'wf-picker-card--selected' : ''} ${
-                  item.alreadyConnected ? 'wf-picker-card--added' : ''
+                  isAssigned ? 'wf-picker-card--added wf-resource-item--assigned' : ''
+                } ${
+                  isDisabled ? 'wf-resource-item--disabled' : ''
+                } ${
+                  availability.isCurrentSlot ? 'wf-resource-item--current-slot' : ''
                 }`}
-                onClick={() => onToggle(item.nodeId, item.alreadyConnected && !allowConnectedSelection)}
-                disabled={item.alreadyConnected && !allowConnectedSelection}
-                title={item.title}
+                onClick={() => onToggle(item.nodeId, isAssigned, isDisabled)}
+                disabled={isDisabled}
+                title={availability.badgeLabel ? `${item.title} (${availability.badgeLabel})` : item.title}
               >
                 <PreviewThumb
                   layout="grid"
@@ -144,8 +167,8 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                   previewUrl={item.previewUrl}
                   width={measured[item.nodeId]?.width ?? item.width}
                   height={measured[item.nodeId]?.height ?? item.height}
-                  badge={selected ? 'selected' : item.alreadyConnected ? 'added' : 'none'}
-                  addedLabel={t('picker.added')}
+                  badge={isAssigned ? 'added' : selected ? 'selected' : 'none'}
+                  addedLabel={availability.badgeLabel || t('picker.added')}
                   fallbackLabel={t(typeLabelKey(item.materialType))}
                   mimeOrName={item.previewUrl}
                   onNaturalSize={(s) =>
@@ -164,15 +187,29 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
         <div className="wf-picker-list">
           {visible.map((item) => {
             const selected = selectedIds.includes(item.nodeId);
+            const availability = evaluateResourcePickerAvailability({
+              item: { nodeId: item.nodeId, mediaUrl: item.previewUrl },
+              mode,
+              targetSlotIndex,
+              slotState,
+            });
+
+            const isAssigned = availability.isAssigned || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+            const isDisabled = availability.disabled || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+
             return (
               <button
                 key={item.nodeId}
                 type="button"
                 className={`wf-picker-row ${selected ? 'wf-picker-row--selected' : ''} ${
-                  item.alreadyConnected ? 'wf-picker-row--added' : ''
+                  isAssigned ? 'wf-picker-row--added wf-resource-item--assigned' : ''
+                } ${
+                  isDisabled ? 'wf-resource-item--disabled' : ''
+                } ${
+                  availability.isCurrentSlot ? 'wf-resource-item--current-slot' : ''
                 }`}
-                onClick={() => onToggle(item.nodeId, item.alreadyConnected && !allowConnectedSelection)}
-                disabled={item.alreadyConnected && !allowConnectedSelection}
+                onClick={() => onToggle(item.nodeId, isAssigned, isDisabled)}
+                disabled={isDisabled}
               >
                 <PreviewThumb
                   layout="list"
@@ -196,10 +233,10 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                     {t(typeLabelKey(item.materialType))}
                   </span>
                 </div>
-                {item.alreadyConnected && !allowConnectedSelection ? (
+                {isAssigned || availability.badgeLabel ? (
                   <span className="wf-picker-added-badge wf-picker-added-badge--inline">
-                    <Check size={11} />
-                    {t('picker.added')}
+                    {isAssigned ? <Check size={11} /> : null}
+                    {availability.badgeLabel || t('picker.added')}
                   </span>
                 ) : (
                   <span className={`wf-picker-check ${selected ? 'wf-picker-check--on' : ''}`}>

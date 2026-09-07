@@ -1,0 +1,214 @@
+/**
+ * PromptTokenEditor Styles — 100% 消费 DSH --dsw-* tokens (Issue #714 / T04).
+ */
+
+.wf-prompt-editor-container {
+  position: relative;
+  width: 100%;
+}
+
+.wf-prompt-token-editor {
+  width: 100%;
+  min-height: 48px;
+  max-height: 240px;
+  overflow-y: auto;
+  outline: none;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  border: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
+  border-radius: var(--dsw-radius-md, 6px);
+  padding: 8px 10px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.wf-prompt-token-editor:focus {
+  border-color: var(--dsw-alias-brand-primary, var(--wb-accent));
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary, var(--wb-accent));
+}
+
+.wf-prompt-token-editor--expanded {
+  min-height: 140px;
+  max-height: 360px;
+}
+
+.wf-prompt-token-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  pointer-events: none;
+  display: block;
+}
+
+/* Token 胶囊容器与原子化 Span */
+.wf-prompt-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  margin: 0 3px;
+  padding: 1px 6px 1px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface));
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border-strong));
+  border-radius: var(--dsw-radius-sm, 4px);
+  user-select: none;
+  cursor: default;
+  transition: all 150ms ease;
+}
+
+.wf-prompt-token:hover {
+  border-color: var(--dsw-alias-brand-primary, var(--wb-accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--dsw-alias-brand-primary, var(--wb-accent)) 25%, transparent);
+}
+
+.wf-prompt-token__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.wf-prompt-token__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  flex-shrink: 0;
+}
+
+.wf-prompt-token__label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.wf-prompt-token__slot-tag {
+  font-size: 9px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  background: color-mix(in srgb, var(--dsw-alias-label-primary, var(--wb-text-primary)) 6%, transparent);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.wf-prompt-token__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  flex-shrink: 0;
+  transition: all 120ms ease;
+}
+
+.wf-prompt-token__delete:hover {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary, var(--wb-danger)) 20%, transparent);
+  color: var(--dsw-alias-state-error-primary, var(--wb-danger));
+}
+
+/* MentionPopover 联想浮层 */
+.wf-mention-popover {
+  position: absolute;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  border: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
+  border-radius: var(--dsw-radius-md, 6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+.wf-mention-popover__header {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  padding: 4px 8px 2px;
+  user-select: none;
+}
+
+.wf-mention-popover__empty {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.wf-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--dsw-radius-sm, 4px);
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.wf-mention-item:hover,
+.wf-mention-item--highlighted {
+  background: var(--dsw-alias-bg-layer-2, var(--wb-surface));
+  color: var(--dsw-alias-brand-primary, var(--wb-accent));
+}
+
+.wf-mention-item__thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.wf-mention-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  flex-shrink: 0;
+}
+
+.wf-mention-item__name {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-mention-item__badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  background: color-mix(in srgb, var(--dsw-alias-label-primary, var(--wb-text-primary)) 8%, transparent);
+  flex-shrink: 0;
+}

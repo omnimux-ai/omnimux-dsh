@@ -14,10 +14,12 @@ import {
   planResourcePickerCommit,
   type LocalFileDraft,
   type ResourcePickerTab,
+  type ResourcePickerMode,
 } from '../utils/resourcePickerPolicy.ts';
 import { draftsFromPickedPaths } from '../utils/localFileDraft.ts';
 import { buildImportedMediaData } from '../../../shared/localMedia.ts';
 import type { MaterialType } from '../../../shared/graph/materialNode.ts';
+import type { NodeSlotEngineState } from '../../../shared/graph/slotContractTypes.ts';
 
 export interface ResourcePickerSlotTarget {
   /** 目标 slot 名（内核 SlotSpec.slot）。 */
@@ -32,9 +34,14 @@ export interface UseResourcePickerResult {
   open: boolean;
   initialTab: ResourcePickerTab;
   sessionId: number;
-  /** 当前会话的装填目标 slot（无则为通用加素材）。 */
   slotTarget: ResourcePickerSlotTarget | null;
-  openPicker: (tab?: ResourcePickerTab, slotTarget?: ResourcePickerSlotTarget | null) => void;
+  mode: ResourcePickerMode;
+  targetSlotIndex?: number;
+  openPicker: (
+    tab?: ResourcePickerTab,
+    target?: ResourcePickerSlotTarget | null | ResourcePickerMode,
+    slotIdx?: number,
+  ) => void;
   closePicker: () => void;
   importLocalFiles: () => Promise<boolean>;
   fillImportNode: () => Promise<boolean>;
@@ -42,6 +49,8 @@ export interface UseResourcePickerResult {
   commit: (payload: {
     selectedCanvasNodeIds: string[];
     localFiles: LocalFileDraft[];
+    mode?: ResourcePickerMode;
+    targetSlotIndex?: number;
   }) => boolean;
 }
 
@@ -52,26 +61,55 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
   const [open, setOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<ResourcePickerTab>('canvas');
   const [slotTarget, setSlotTarget] = useState<ResourcePickerSlotTarget | null>(null);
+  const [mode, setMode] = useState<ResourcePickerMode>('add');
+  const [targetSlotIndex, setTargetSlotIndex] = useState<number | undefined>(undefined);
 
-  const openPicker = useCallback((tab: ResourcePickerTab = 'canvas', target: ResourcePickerSlotTarget | null = null) => {
-    guard.deactivate();
-    setSessionId((id) => id + 1);
-    setInitialTab(tab);
-    setSlotTarget(target);
-    setOpen(true);
-  }, [guard]);
+  const openPicker = useCallback(
+    (
+      tab: ResourcePickerTab = 'canvas',
+      target: ResourcePickerSlotTarget | null | ResourcePickerMode = null,
+      slotIdx?: number,
+    ) => {
+      guard.deactivate();
+      setSessionId((id) => id + 1);
+      setInitialTab(tab);
+      if (typeof target === 'string') {
+        setMode(target as ResourcePickerMode);
+        setSlotTarget(null);
+        setTargetSlotIndex(slotIdx);
+      } else {
+        setMode('add');
+        setSlotTarget(target);
+        setTargetSlotIndex(slotIdx);
+      }
+      setOpen(true);
+    },
+    [guard],
+  );
 
   const closePicker = useCallback(() => {
     guard.deactivate();
     setSessionId((id) => id + 1);
     setSlotTarget(null);
     setOpen(false);
+    setMode('add');
+    setTargetSlotIndex(undefined);
   }, [guard]);
 
   const commit = useCallback(
-    (payload: { selectedCanvasNodeIds: string[]; localFiles: LocalFileDraft[] }) => {
+    (payload: {
+      selectedCanvasNodeIds: string[];
+      localFiles: LocalFileDraft[];
+      mode?: ResourcePickerMode;
+      targetSlotIndex?: number;
+    }) => {
       if (!guard.isCurrent(guard.capture())) return false;
       const state = useCanvasStore.getState();
+      const commitMode = payload.mode ?? mode;
+      const commitSlotIndex = payload.targetSlotIndex ?? targetSlotIndex;
+      const targetNode = state.nodes.find((n) => n.id === nodeId);
+      const slotState = targetNode?.data?.slotState as NodeSlotEngineState | undefined;
+
       const plan = planResourcePickerCommit({
         nodes: state.nodes,
         edges: state.edges,
@@ -83,6 +121,9 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
           acceptedTypes: slotTarget.acceptedTypes,
           slotMax: slotTarget.max,
         } : {}),
+        mode: commitMode,
+        targetSlotIndex: commitSlotIndex,
+        slotState,
       });
 
       if (!plan.hasWork) {
@@ -109,7 +150,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
       closePicker();
       return true;
     },
-    [closePicker, guard, nodeId, slotTarget, t],
+    [closePicker, guard, mode, nodeId, slotTarget, t, targetSlotIndex],
   );
 
   const fillImportNode = useCallback(async () => {
@@ -217,6 +258,8 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
     initialTab,
     sessionId,
     slotTarget,
+    mode,
+    targetSlotIndex,
     openPicker,
     closePicker,
     importLocalFiles,

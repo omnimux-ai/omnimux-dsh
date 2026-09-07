@@ -51,6 +51,7 @@ import type { CapabilityCatalog, NodeExecutionApiStatus } from '../../../../shar
 import { draftFromRealPath, nativePathOf } from '../../utils/localFileDraft.ts';
 import { planImportNodeFill } from '../../utils/resourcePickerPolicy.ts';
 import { resolveModelInputCapability } from '../../../../shared/validation/modelCompatibilityEvaluator.ts';
+import type { NodeSlotEngineState } from '../../../../shared/graph/slotContractTypes.ts';
 
 // ==================== 主组件 ====================
 
@@ -700,15 +701,26 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             onUpdateNodeData={updateNodeData}
             onGenerate={handleGenerate}
             execBusy={execBusy}
-            onOpenResourcePicker={
-              kind === 'import'
-                ? () => {
-                    void resourcePicker.fillImportNode();
-                  }
-                : (request) => resourcePicker.openPicker('canvas', request
-                  ? { slot: request.targetSlot, acceptedTypes: request.acceptedTypes, max: request.max }
-                  : null)
-            }
+            onOpenResourcePicker={(requestOrMode, targetSlotIndex) => {
+              if (kind === 'import') {
+                void resourcePicker.fillImportNode();
+                return;
+              }
+              if (typeof requestOrMode === 'object' && requestOrMode !== null) {
+                resourcePicker.openPicker('canvas', {
+                  slot: requestOrMode.targetSlot,
+                  acceptedTypes: requestOrMode.acceptedTypes,
+                  max: requestOrMode.max,
+                });
+                return;
+              }
+              const pickerMode = typeof requestOrMode === 'string' ? requestOrMode : 'add';
+              if (pickerMode === 'add' && targetSlotIndex === undefined) {
+                resourcePicker.openPicker('canvas');
+                return;
+              }
+              resourcePicker.openPicker('canvas', pickerMode, targetSlotIndex);
+            }}
           />
         </ConfigPanelShell>
       )}
@@ -727,6 +739,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         nodeId={id}
         initialTab={resourcePicker.initialTab}
         slotTarget={resourcePicker.slotTarget}
+        mode={resourcePicker.mode}
+        targetSlotIndex={resourcePicker.targetSlotIndex}
+        slotState={nodeData.slotState as NodeSlotEngineState | undefined}
         onCancel={resourcePicker.closePicker}
         onCommit={resourcePicker.commit}
       />

@@ -78,6 +78,11 @@ import {
   shouldRenderModeUi,
 } from '../../../../../shared/validation/operationUi.ts';
 import { OperationSegment } from './videoParams/SegmentControls';
+import PromptTokenEditor, { type PromptTokenEditorRef } from '../../PromptTokenEditor';
+import type {
+  NodeSlotEngineState,
+  SlotBindingItem,
+} from '../../../../../shared/graph/slotContractTypes.ts';
 
 export interface ConfigPanelProps {
   nodeId: string;
@@ -87,8 +92,8 @@ export interface ConfigPanelProps {
   onGenerate: () => void;
   /** 全图/其他节点执行中（禁用执行入口） */
   execBusy: boolean;
-  /** 唤起 ResourcePicker；带 SlotPickRequest 时进入卡槽装填会话。 */
-  onOpenResourcePicker?: (request?: SlotPickRequest) => void;
+  /** 唤起 ResourcePicker；带 SlotPickRequest 时进入卡槽装填会话，或传入 mode/targetSlotIndex。 */
+  onOpenResourcePicker?: (requestOrMode?: SlotPickRequest | 'add' | 'replace', targetSlotIndex?: number) => void;
 }
 
 function getModelVisuals(id: string) {
@@ -144,6 +149,24 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
   const [audioPopoverOpen, setAudioPopoverOpen] = useState(false);
   const audioTriggerRef = useRef<HTMLDivElement | null>(null);
+  const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
+
+  const slotState = nodeData.slotState as NodeSlotEngineState | undefined;
+
+  const handleInsertToken = useCallback((slotItem: SlotBindingItem) => {
+    promptEditorRef.current?.insertToken({
+      raw: `@ref[${slotItem.sourceNodeId}:${slotItem.slotIndex}:${slotItem.label}]`,
+      nodeId: slotItem.sourceNodeId,
+      slotIndex: slotItem.slotIndex,
+      label: slotItem.label,
+      materialType: slotItem.materialType,
+      mediaUrl: slotItem.mediaUrl,
+    });
+  }, []);
+
+  const handleOpenReplacePicker = useCallback((slotIndex: number) => {
+    onOpenResourcePicker?.('replace', slotIndex);
+  }, [onOpenResourcePicker]);
 
   const upstreams = useUpstreamMedia(nodeId);
   const upstreamSnapshots = useMemo(() => toUpstreamSnapshots(upstreams), [upstreams]);
@@ -179,7 +202,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               type="button"
               className="wf-param-pill wf-param-pill--btn"
               style={{ padding: '4px 10px', height: '28px' }}
-              onClick={() => onOpenResourcePicker()}
+              onClick={() => onOpenResourcePicker?.('replace')}
             >
               <span>{t('node.replace')}</span>
             </button>
@@ -633,16 +656,28 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           </div>
         </div>
 
-        <textarea
+        <PromptTokenEditor
+          ref={promptEditorRef}
           className={`wf-config-panel__prompt-input nowheel nodrag${
             isExpanded ? ' wf-config-panel__prompt-input--expanded' : ''
           }`}
           value={prompt ?? ''}
           placeholder={placeholder}
-          aria-label={placeholder}
           rows={isExpanded ? 8 : 2}
-          onChange={(e) => onUpdateNodeData({ prompt: e.target.value })}
-        />
+          isExpanded={isExpanded}
+          slotState={slotState}
+          onChange={(newPrompt) => onUpdateNodeData({ prompt: newPrompt })}
+        >
+          <textarea
+            className="wf-config-panel__prompt-textarea-hidden"
+            style={{ display: 'none' }}
+            rows={isExpanded ? 8 : 2}
+            value={prompt ?? ''}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </PromptTokenEditor>
       </div>
 
       {/* 3. 底部参数与操作底栏 */}
