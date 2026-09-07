@@ -113,7 +113,20 @@ export function patchAsarPresets(asarPath, presetsDir, opts = {}) {
   targetNode.files = unpackedTree(presetsDir)
   const after = Object.keys(targetNode.files)
 
-  const newJson = JSON.stringify(header)
+  let newJson = JSON.stringify(header)
+  if (newJson.length > headerString.length && dshAgentPresetsPkg) {
+    // If adding shipped presets exceeds the fixed header bound by a tiny margin,
+    // safely prune non-runtime documentation metadata from the presets package to fit.
+    const harmlessDocKeys = ['README.i18n.yaml', 'README.zh.md', 'README.md']
+    for (const docKey of harmlessDocKeys) {
+      if (dshAgentPresetsPkg[docKey]) {
+        delete dshAgentPresetsPkg[docKey]
+        newJson = JSON.stringify(header)
+        if (newJson.length <= headerString.length) break
+      }
+    }
+  }
+
   if (newJson.length > headerString.length) {
     throw new Error(`refuse: new header JSON longer (${newJson.length} > ${headerString.length})`)
   }
