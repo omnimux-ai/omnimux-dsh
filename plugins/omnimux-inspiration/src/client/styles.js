@@ -1441,20 +1441,23 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-heading {
   min-width: 0;
   max-width: min(520px, calc(100% - 40px));
-  flex: 0 1 520px;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .omnimux-inspiration-modal-heading h2 {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 16px;
   color: var(--dsw-alias-label-primary);
+}
+.omnimux-inspiration-modal-heading .omnimux-inspiration-modal-copy {
+  flex-shrink: 0;
 }
 .omnimux-inspiration-modal-copy {
   display: inline-flex;
