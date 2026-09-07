@@ -40,6 +40,13 @@ describe('OmniMux Assets Client 4-Layer Layout Contract', () => {
     // Verify no bare rgba literal
     assert.doesNotMatch(stylesJs, /box-shadow:\s*0\s+1px\s+2px\s+rgba\(/)
   })
+
+  it('mounts AssetPreviewModal root container in AssetsStage', () => {
+    assert.match(stageJsx, /import\s+.*AssetPreviewModal.*from '\.\/AssetPreviewModal\.jsx'/)
+    assert.match(stageJsx, /const \[previewTarget,\s*setPreviewTarget\]\s*=\s*useState\(null\)/)
+    assert.match(stageJsx, /onPreview=\{setPreviewTarget\}/)
+    assert.match(stageJsx, /<AssetPreviewModal[\s\S]*?item=\{previewTarget\}[\s\S]*?onClose=\{/)
+  })
 })
 
 describe('AddAssetDialogItem pick/submit wiring (#390)', () => {

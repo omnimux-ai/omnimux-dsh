@@ -49,7 +49,7 @@ export function inferAssetExtension(coverFile, fallbackTitle = '') {
 }
 
 /**
- * Build standard attachment payload for OmniMux conversation bus.
+ * Build standard attachment payload for OmniMux conversation bus from an asset.
  *
  * @param {any} asset
  * @returns {{
@@ -92,22 +92,65 @@ export function buildAssetPayload(asset) {
 }
 
 /**
- * Add asset to conversation:
- * 1. Uncollapse conversation column and set focus to split
- * 2. Build standard attachment payload
- * 3. Call window.__omnimuxAttachments?.addAttachment?.('', payload)
- * 4. Dispatch global CustomEvent 'omnimux:add-to-conversation'
+ * Build standard attachment payload for deep media or preview items.
  *
- * @param {any} asset
+ * @param {any} mediaItem
+ * @returns {{
+ *   sourcePlugin: 'omnimux-assets',
+ *   kind: 'asset',
+ *   entityId: string,
+ *   title: string,
+ *   extension: string,
+ *   relativePath: string,
+ *   previewUrl: string,
+ *   metadata: {
+ *     asset_id: string,
+ *     type: string,
+ *     item_id: string,
+ *     files: any[],
+ *   },
+ * } | null}
+ */
+export function buildMediaPayload(mediaItem) {
+  if (!mediaItem) return null
+  if (Array.isArray(mediaItem.files) && !mediaItem.sourceAssetId) {
+    return buildAssetPayload(mediaItem)
+  }
+
+  const assetId = String(mediaItem.sourceAssetId || mediaItem.assetId || mediaItem.id || '')
+  const title = String(mediaItem.title || mediaItem.name || '媒体')
+  const ext = String(mediaItem.extension || inferAssetExtension(mediaItem, title) || 'MEDIA')
+  const pUrl = typeof mediaItem.previewUrl === 'string' ? mediaItem.previewUrl : ''
+  const relPath = String(mediaItem.pathInfo || mediaItem.relativePath || mediaItem.relative_path || mediaItem.real_path || title)
+
+  return {
+    sourcePlugin: 'omnimux-assets',
+    kind: 'asset',
+    entityId: assetId,
+    title,
+    extension: ext,
+    relativePath: relPath,
+    previewUrl: pUrl,
+    metadata: {
+      asset_id: assetId,
+      type: mediaItem.kind || 'media',
+      item_id: String(mediaItem.id || ''),
+      files: mediaItem.rawItem ? [mediaItem.rawItem] : [],
+    },
+  }
+}
+
+/**
+ * Send an attachment payload into conversation bus.
+ *
+ * @param {any} payload
  * @param {{
  *   window?: any,
  *   CustomEvent?: any,
  * }} [io]
  * @returns {{ ok: boolean, payload?: any, error?: string, addResult?: any }}
  */
-export function addAssetToConversation(asset, io = {}) {
-  if (!asset || !asset.id) return { ok: false, error: 'no-asset' }
-
+function sendPayloadToConversation(payload, io = {}) {
   const win = io.window || (typeof window !== 'undefined' ? window : undefined)
   if (!win) return { ok: false, error: 'no-window' }
 
@@ -122,11 +165,7 @@ export function addAssetToConversation(asset, io = {}) {
     }
   }
 
-  // 2. 构造规范附件载荷
-  const payload = buildAssetPayload(asset)
-  if (!payload) return { ok: false, error: 'invalid-payload' }
-
-  // 3. 优先调用 window.__omnimuxAttachments?.addAttachment?.('', payload)
+  // 2. 优先调用 window.__omnimuxAttachments?.addAttachment?.('', payload)
   const store = win.__omnimuxAttachments
   let addResult = null
   if (store && typeof store.addAttachment === 'function') {
@@ -137,7 +176,7 @@ export function addAssetToConversation(asset, io = {}) {
     }
   }
 
-  // 4. 同时派发全局 window.dispatchEvent(new CustomEvent('omnimux:add-to-conversation', { detail: payload }))
+  // 3. 同时派发全局 window.dispatchEvent(new CustomEvent('omnimux:add-to-conversation', { detail: payload }))
   try {
     if (typeof win.dispatchEvent === 'function') {
       const Evt = io.CustomEvent || (typeof CustomEvent !== 'undefined' ? CustomEvent : null)
@@ -150,4 +189,38 @@ export function addAssetToConversation(asset, io = {}) {
   }
 
   return { ok: true, payload, addResult }
+}
+
+/**
+ * Add asset to conversation.
+ *
+ * @param {any} asset
+ * @param {{
+ *   window?: any,
+ *   CustomEvent?: any,
+ * }} [io]
+ * @returns {{ ok: boolean, payload?: any, error?: string, addResult?: any }}
+ */
+export function addAssetToConversation(asset, io = {}) {
+  if (!asset || !asset.id) return { ok: false, error: 'no-asset' }
+  const payload = buildAssetPayload(asset)
+  if (!payload) return { ok: false, error: 'invalid-payload' }
+  return sendPayloadToConversation(payload, io)
+}
+
+/**
+ * Add child media or preview model to conversation.
+ *
+ * @param {any} mediaItem
+ * @param {{
+ *   window?: any,
+ *   CustomEvent?: any,
+ * }} [io]
+ * @returns {{ ok: boolean, payload?: any, error?: string, addResult?: any }}
+ */
+export function addMediaToConversation(mediaItem, io = {}) {
+  if (!mediaItem) return { ok: false, error: 'no-media' }
+  const payload = buildMediaPayload(mediaItem)
+  if (!payload) return { ok: false, error: 'invalid-payload' }
+  return sendPayloadToConversation(payload, io)
 }

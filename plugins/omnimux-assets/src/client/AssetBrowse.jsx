@@ -3,13 +3,9 @@ import { Button } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { FileIcon, FolderIcon } from './icons.jsx'
 import { listAssetFiles, previewUrl } from './api.js'
+import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
 
-/**
- * @param {any} file
- */
-export function isDirectoryRef(file) {
-  return file?.kind === 'directory' || file?.is_dir === true
-}
+export { isDirectoryRef }
 
 /**
  * One hanging folder → card click opens that folder's first layer.
@@ -23,19 +19,6 @@ function initialStack(asset) {
   return null
 }
 
-const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif|heic|tiff)$/i
-const VIDEO_EXT = /\.(mp4|mov|avi|mkv|webm|m4v|flv)$/i
-
-function mediaKind(row) {
-  if (isDirectoryRef(row) || row?.is_dir) return 'folder'
-  const kind = String(row?.kind || row?.type || '')
-  if (kind === 'image' || kind === 'video') return kind
-  const name = String(row?.name || row?.original_name || row?.real_path || '')
-  if (IMAGE_EXT.test(name)) return 'image'
-  if (VIDEO_EXT.test(name)) return 'video'
-  return 'file'
-}
-
 /**
  * Main-pane hierarchical browse after clicking an asset card.
  * Same card grid as the library; images/videos stream from a read-only preview route.
@@ -44,9 +27,10 @@ function mediaKind(row) {
  *   t: (key: string) => string,
  *   asset: any,
  *   onBack: () => void,
+ *   onPreview?: (item: any) => void,
  * }} props
  */
-export function AssetBrowse({ t, asset, onBack }) {
+export function AssetBrowse({ t, asset, onBack, onPreview }) {
   const [stack, setStack] = useState(() => initialStack(asset))
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)
@@ -142,8 +126,8 @@ export function AssetBrowse({ t, asset, onBack }) {
           {!loading && entries.length > 0 ? (
             <div className="omnimux-assets-grid">
               {entries.map((entry) => {
-                const folder = Boolean(entry.is_dir)
-                const kind = mediaKind(entry)
+                const folder = Boolean(entry.is_dir) || isDirectoryRef(entry)
+                const kind = detectMediaKind(entry)
                 const src = folder
                   ? ''
                   : previewUrl(asset.id, stack.file.id, entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'))
@@ -161,7 +145,11 @@ export function AssetBrowse({ t, asset, onBack }) {
                             path: entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'),
                           })
                         }
-                      : undefined}
+                      : () => {
+                          if (typeof onPreview === 'function') {
+                            onPreview(resolveAssetMediaPreview(entry, { asset, stack }))
+                          }
+                        }}
                   />
                 )
               })}
@@ -175,7 +163,7 @@ export function AssetBrowse({ t, asset, onBack }) {
             <div className="omnimux-assets-grid">
               {files.map((file) => {
                 const folder = isDirectoryRef(file)
-                const kind = mediaKind(file)
+                const kind = detectMediaKind(file)
                 const src = folder ? '' : previewUrl(asset.id, file.id)
                 return (
                   <MediaCard
@@ -184,7 +172,13 @@ export function AssetBrowse({ t, asset, onBack }) {
                     title={file.original_name || file.real_path}
                     kind={kind}
                     src={src}
-                    onOpen={folder ? () => { setStack({ file, path: '' }) } : undefined}
+                    onOpen={folder
+                      ? () => { setStack({ file, path: '' }) }
+                      : () => {
+                          if (typeof onPreview === 'function') {
+                            onPreview(resolveAssetMediaPreview(file, { asset }))
+                          }
+                        }}
                   />
                 )
               })}
