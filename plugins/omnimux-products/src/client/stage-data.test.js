@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,6 +8,7 @@ import test from 'node:test'
 import { build } from 'esbuild'
 import { createProductsDispatcher } from '../http-routes.js'
 import { createLibraryStore } from '../library.js'
+import { buildPayload, getInitialMedia } from './useProductFormState.js'
 
 // Run the production stage, grid, and API against the real dispatcher. Only
 // React's rendering hooks and unrelated visual components are substituted.
@@ -77,8 +78,12 @@ function mount(dispatcher) {
     return tree
   }
   render()
-  for (const effect of effects) effect()
-  return { render, flush: () => new Promise(resolve => setImmediate(resolve)) }
+  const cleanups = effects.map(effect => effect()).filter(cleanup => typeof cleanup === 'function')
+  return {
+    render,
+    flush: () => new Promise(resolve => setImmediate(resolve)),
+    unmount: () => { for (const cleanup of cleanups) cleanup() },
+  }
 }
 
 async function withStore(run) {
@@ -151,3 +156,120 @@ test('empty response clears cards and exposes the grid create action', async () 
     assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.mode, 'create')
   })
 })
+
+
+test('editing preserves a missing source reference and refuses a name-only save until the file is restored', async () => {
+  await withStore(async ({ library, dispatcher, realPath }) => {
+    const product = library.add({ name: '原商品', media: [{ real_path: realPath }] })
+    const libraryFile = join(realPath, '..', 'library.json')
+    const persisted = readFileSync(libraryFile, 'utf8')
+    rmSync(realPath)
+    const ordinary = await dispatcher.dispatch({ method: 'GET', url: `/omnimux/products/${product.id}` })
+    assert.equal(ordinary.body.product.media.length, 0)
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+    const grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products[0].media_count, 0)
+    await grid.props.onOpen(grid.props.products[0])
+    const dialog = find(mounted.render(), component('ProductFormDialog'))
+    const initial = dialog.props.data.initial
+    assert.equal(initial.media[0].real_path, realPath)
+    const payload = buildPayload({
+      name: '修改名称', kind: initial.kind, link: initial.link, categories: initial.categories,
+      media: getInitialMedia(initial), coverId: initial.cover_media_id,
+    })
+    dialog.props.onAction.onSubmit(payload)
+    await mounted.flush()
+    assert.match(find(mounted.render(), component('ProductFormDialog')).props.data.error, /missing, not a file, or unreadable/)
+    assert.equal(library.get(product.id).name, '原商品')
+    assert.equal(library.get(product.id).media[0].real_path, realPath)
+    assert.equal(library.revision(), 1)
+    assert.equal(readFileSync(libraryFile, 'utf8'), persisted)
+    writeFileSync(realPath, 'restored')
+    assert.equal(library.getView(product.id).media[0].real_path, realPath)
+    find(mounted.render(), component('ProductFormDialog')).props.onAction.onSubmit(payload)
+    await mounted.flush()
+    assert.equal(library.get(product.id).name, '修改名称')
+    assert.equal(library.get(product.id).media[0].real_path, realPath)
+  })
+})
+
+function deferEditResponses(dispatcher) {
+  const pending = []
+  return {
+    pending,
+    async dispatch(req) {
+      const response = await dispatcher.dispatch(req)
+      if (!req.url.endsWith('?view=edit')) return response
+      return new Promise((resolve, reject) => {
+        pending.push({ resolve: () => resolve(response), reject })
+      })
+    },
+  }
+}
+
+async function withDeferredEdits(run) {
+  await withStore(async ({ library, dispatcher }) => {
+    const a = library.add({ name: '商品A' })
+    const b = library.add({ name: '商品B' })
+    const delayed = deferEditResponses(dispatcher)
+    const mounted = mount(delayed)
+    await mounted.flush()
+    const open = async product => {
+      void find(mounted.render(), component('ProductGrid')).props.onOpen(product)
+      await mounted.flush()
+    }
+    await run({ mounted, pending: delayed.pending, open, a, b })
+  })
+}
+
+test('a slow A detail response cannot replace the faster B editor', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
+    await open(a)
+    await open(b)
+    pending[1].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.initial.id, b.id)
+    pending[0].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.initial.id, b.id)
+  })
+})
+
+test('closing an editor invalidates an older pending detail request', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
+    await open(a)
+    await open(b)
+    pending[1].resolve()
+    await mounted.flush()
+    find(mounted.render(), component('ProductFormDialog')).props.onAction.onCancel()
+    pending[0].resolve()
+    await mounted.flush()
+    assert.equal(find(mounted.render(), component('ProductFormDialog')), null)
+  })
+})
+
+test('creating a product invalidates pending edit responses', async () => {
+  await withDeferredEdits(async ({ mounted, pending, open, a }) => {
+    await open(a)
+    find(mounted.render(), node => node.type === 'Button' && node.props.children === 'add.button').props.onClick()
+    pending[0].resolve()
+    await mounted.flush()
+    const dialog = find(mounted.render(), component('ProductFormDialog'))
+    assert.equal(dialog.props.data.mode, 'create')
+    assert.equal(dialog.props.data.busy, false)
+  })
+})
+
+for (const action of ['close', 'unmount']) {
+  test(`${action} invalidates a pending detail request`, async () => {
+    await withDeferredEdits(async ({ mounted, pending, open, a }) => {
+      await open(a)
+      if (action === 'close') find(mounted.render(), node => node.type === 'PageHeader').props.onClose()
+      else mounted.unmount()
+      pending[0].resolve()
+      await mounted.flush()
+      assert.equal(find(mounted.render(), component('ProductFormDialog')), null)
+    })
+  })
+}

@@ -32,8 +32,8 @@ export function getState(prev) {
 /**
  * @param {string} id
  */
-export function getProduct(id) {
-  return productsRequest(`/omnimux/products/${encodeURIComponent(id)}`)
+export function getProductForEdit(id) {
+  return productsRequest(`/omnimux/products/${encodeURIComponent(id)}?view=edit`)
 }
 
 /**

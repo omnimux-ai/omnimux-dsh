@@ -251,7 +251,10 @@ export function createProductsDispatcher(deps) {
           const stream = library.resolvePreview(parsed.id, preview)
           return { status: 200, stream }
         }
-        const product = library.getView(parsed.id)
+        // Editing must retain persisted references even when files are currently unavailable.
+        const product = url.searchParams.get('view') === 'edit'
+          ? library.get(parsed.id)
+          : library.getView(parsed.id)
         if (!product) throw new ProductsError('product-not-found', 'product not found')
         return { status: 200, body: { product } }
       }
