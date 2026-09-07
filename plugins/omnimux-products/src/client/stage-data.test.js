@@ -27,6 +27,23 @@ const bundle = await build({
   } }], logLevel: 'silent',
 })
 
+const gridBundle = await build({
+  entryPoints: [fileURLToPath(new URL('./ProductGrid.jsx', import.meta.url))],
+  bundle: true, write: false, format: 'cjs', platform: 'browser', jsx: 'automatic',
+  external: ['dsh-ui-kit'],
+  logLevel: 'silent',
+})
+const gridContext = {
+  module: { exports: {} },
+  require(name) {
+    if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) }
+    if (name === 'dsh-ui-kit') return { Button: 'Button', IconButton: 'IconButton' }
+    throw new Error(`unexpected dependency ${name}`)
+  },
+}
+runInNewContext(gridBundle.outputFiles[0].text, gridContext)
+const { ProductGrid } = gridContext.module.exports
+
 function find(tree, matches) {
   if (!tree || typeof tree !== 'object') return null
   if (matches(tree)) return tree
@@ -273,3 +290,116 @@ for (const action of ['close', 'unmount']) {
     })
   })
 }
+
+// Tests for Issue #572: reconcile ProductGrid props and empty content
+test('ProductGrid falls back to safe labels when emptyLabel and emptyActionLabel are omitted', () => {
+  const tree = ProductGrid({
+    t: key => `translated:${key}`,
+    products: [],
+    showEmptyAction: true,
+    onEmptyAction: () => {},
+  })
+  const p = find(tree, node => node.type === 'p')
+  assert.ok(p, 'empty state should render a paragraph')
+  assert.equal(p.props.children, 'translated:empty.all', 'emptyLabel should fall back to t("empty.all")')
+  assert.notEqual(p.props.children, '', 'paragraph content must not be empty')
+
+  const btn = find(tree, node => node.type === 'Button')
+  assert.ok(btn, 'empty state should render action button when onEmptyAction is provided')
+  assert.equal(btn.props.children, 'translated:add.button', 'emptyActionLabel should fall back to t("add.button")')
+
+  const customTree = ProductGrid({
+    t: key => `translated:${key}`,
+    products: [],
+    emptyLabel: '自定义空状态',
+    emptyActionLabel: '自定义添加',
+    showEmptyAction: true,
+    onEmptyAction: () => {},
+  })
+  assert.equal(find(customTree, node => node.type === 'p').props.children, '自定义空状态')
+  assert.equal(find(customTree, node => node.type === 'Button').props.children, '自定义添加')
+})
+
+test('ProductGrid in searched-empty state renders message only and omits action button', () => {
+  let actionTriggered = false
+  const tree = ProductGrid({
+    t: key => key,
+    products: [],
+    emptyLabel: 'empty.noMatch',
+    emptyActionLabel: 'add.button',
+    showEmptyAction: false,
+    onEmptyAction: () => { actionTriggered = true },
+  })
+  const p = find(tree, node => node.type === 'p')
+  assert.ok(p, 'searched-empty should render message paragraph')
+  assert.equal(p.props.children, 'empty.noMatch')
+
+  const btn = find(tree, node => node.type === 'Button')
+  assert.equal(btn, null, 'searched-empty state must not render empty action button')
+  assert.equal(actionTriggered, false)
+})
+
+test('ProductsStage displays searched-empty state and hides empty action button when query has no match', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    library.add({ name: '真实商品A' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+
+    let grid = find(mounted.render(), component('ProductGrid'))
+    assert.equal(grid.props.products.length, 1)
+
+    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
+    const searchField = filterBar?.props?.search
+    assert.ok(searchField, 'SearchField should be present')
+    searchField.props.onValueChange('不存在的商品')
+    await mounted.flush()
+
+    const tree = mounted.render()
+    grid = find(tree, component('ProductGrid'))
+    assert.equal(grid.props.products.length, 0)
+    assert.equal(grid.props.emptyLabel, 'empty.noMatch')
+    assert.equal(grid.props.showEmptyAction, false)
+
+    const empty = grid.type(grid.props)
+    assert.equal(find(empty, node => node.type === 'p').props.children, 'empty.noMatch')
+    assert.equal(find(empty, node => node.type === 'Button'), null, 'searched-empty must hide action button')
+  })
+})
+
+test('ProductGrid triggers onOpen on card click and onEmptyAction on empty button click', () => {
+  // 1. 空状态下点击操作按钮触发 onEmptyAction
+  let emptyActionCalled = false
+  const emptyTree = ProductGrid({
+    t: key => key,
+    products: [],
+    showEmptyAction: true,
+    onEmptyAction: () => { emptyActionCalled = true },
+  })
+  const emptyBtn = find(emptyTree, node => node.type === 'Button')
+  assert.ok(emptyBtn, 'empty action button should be present')
+  emptyBtn.props.onClick()
+  assert.equal(emptyActionCalled, true, 'clicking empty action button must trigger onEmptyAction')
+
+  // 2. 卡片列表下点击卡片触发 onOpen
+  let openedProduct = null
+  const sample = { id: 'p-101', name: '测试商品', kind: 'physical' }
+  const gridTree = ProductGrid({
+    t: key => key,
+    products: [sample],
+    onOpen: (p) => { openedProduct = p },
+  })
+  const card = find(gridTree, node => node.type === 'article')
+  assert.ok(card, 'product card should be rendered')
+  card.props.onClick()
+  assert.equal(openedProduct, sample, 'clicking card must trigger onOpen with product')
+
+  // 3. 安全调用验证：未提供 onOpen 时点击卡片安全不报错
+  const safeTree = ProductGrid({
+    t: key => key,
+    products: [sample],
+  })
+  const safeCard = find(safeTree, node => node.type === 'article')
+  assert.doesNotThrow(() => {
+    safeCard.props.onClick()
+  }, 'clicking card without onOpen should safely do nothing')
+})

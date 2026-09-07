@@ -5,13 +5,13 @@ import { CheckIcon } from './icons.jsx'
 
 /**
  * @param {{
- *   t: (key: string) => string,
+ *   t?: (key: string) => string,
  *   products: any[],
- *   emptyLabel: string,
+ *   emptyLabel?: string,
  *   emptyActionLabel?: string,
  *   showEmptyAction?: boolean,
  *   onEmptyAction?: () => void,
- *   onOpen: (product: any) => void,
+ *   onOpen?: (product: any) => void,
  *   onCopy: (product: any) => void,
  *   onRemove: (product: any) => void,
  *   copiedId?: string,
@@ -20,13 +20,15 @@ import { CheckIcon } from './icons.jsx'
  * }} props
  */
 export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, showEmptyAction = true, onEmptyAction, onOpen, onCopy, onRemove, copiedId, selectedIds, onToggleSelect }) {
+  const safeEmptyLabel = emptyLabel || (typeof t === 'function' ? t('empty.all') : '')
+  const safeEmptyActionLabel = emptyActionLabel ?? (typeof t === 'function' ? t('add.button') : '')
   if (products.length === 0) {
     return (
       <div className="omnimux-products-empty">
-        <p>{emptyLabel}</p>
-        {emptyActionLabel && onEmptyAction && showEmptyAction ? (
+        <p>{safeEmptyLabel}</p>
+        {safeEmptyActionLabel && onEmptyAction && showEmptyAction ? (
           <Button variant="primary" size="sm" onClick={onEmptyAction}>
-            {emptyActionLabel}
+            {safeEmptyActionLabel}
           </Button>
         ) : null}
       </div>
@@ -49,8 +51,8 @@ export function ProductGrid({ t, products, emptyLabel, emptyActionLabel, showEmp
             tabIndex={0}
             role="button"
             aria-selected={selected ? 'true' : 'false'}
-            onClick={() => { onOpen(product) }}
-            onKeyDown={activateRowKeydown(() => { onOpen(product) })}
+            onClick={() => { onOpen?.(product) }}
+            onKeyDown={activateRowKeydown(() => { onOpen?.(product) })}
           >
             <div className="omnimux-products-card-thumb">
               {preview ? (
