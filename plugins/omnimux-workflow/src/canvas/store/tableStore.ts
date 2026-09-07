@@ -11,6 +11,7 @@ import {
   newColumnId,
   newRowId,
   defaultColumnWidth,
+  createDefaultTextColumn,
   migrateLegacyTableDocument,
 } from '../../shared/types/htable.ts';
 import {
@@ -109,6 +110,14 @@ function cloneDoc(doc: HTableDocument): HTableDocument {
   return JSON.parse(JSON.stringify(doc));
 }
 
+/** 兜底：保证文档至少有一列（0 列时补默认「文本」列），全屏舞台绝不出现空表头 */
+function withDefaultTextColumn(doc: HTableDocument): HTableDocument {
+  if (doc.columns.length === 0) {
+    doc.columns.push(createDefaultTextColumn());
+  }
+  return doc;
+}
+
 export const useTableStore = create<TableStoreState>((set, get) => {
   const pushSnapshot = (currentDoc: HTableDocument) => {
     const { undoStack } = get();
@@ -168,6 +177,9 @@ export const useTableStore = create<TableStoreState>((set, get) => {
       if (!targetDoc) {
         targetDoc = createDefaultInitialDocument();
       }
+
+      // 兜底：打开舞台前保证至少有一列默认「文本」列
+      withDefaultTextColumn(targetDoc);
 
       set({
         activeTableId: tableId,
@@ -507,15 +519,16 @@ export function useTableSession(tableId: string, initialDoc?: Partial<HTableDocu
   const fallbackTitle =
     initialDoc && typeof (initialDoc as any).title === 'string'
       ? (initialDoc as any).title
-      : '表格';
+      : '未命名表格';
 
   const [session, setSession] = useState<TableSession>(() => {
     return (
       tableDocumentCache.getSession(tableId) || {
         tableId,
         tablePath: `.omnimux/tables/${tableId}.htable`,
+        // 兜底：initialDoc 缺少 columns 时保证 session 默认拥有「文本」列
         document: initialDoc
-          ? migrateLegacyTableDocument(initialDoc)
+          ? withDefaultTextColumn(migrateLegacyTableDocument(initialDoc))
           : createDefaultInitialDocument(fallbackTitle),
         loadState: 'idle',
         contentRev: typeof initialDoc?.contentRev === 'number' ? initialDoc.contentRev : 0,

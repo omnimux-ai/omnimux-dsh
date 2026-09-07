@@ -117,7 +117,18 @@ export function newConditionId(): string {
 export function defaultColumnWidth(type: HTableFieldType): number {
   if (type === 'attachment') return 200;
   if (type === 'number') return 120;
-  return 200;
+  return 240;
+}
+
+/** 默认首列：新建节点/空文档兜底使用，保证任何表格文档至少有一列 */
+export function createDefaultTextColumn(): HTableColumn {
+  return {
+    id: newColumnId(),
+    title: '文本',
+    type: 'text',
+    visible: true,
+    width: defaultColumnWidth('text'),
+  };
 }
 
 export function createEmptyTableDocument(defaultColumnTitle = '文本'): HTableDocument {
@@ -160,6 +171,12 @@ export function migrateLegacyTableDocument(raw: unknown): HTableDocument {
     visible: c.visible !== false,
     width: typeof c.width === 'number' && Number.isFinite(c.width) ? c.width : defaultColumnWidth(c.type || 'text'),
   }));
+
+  // 兜底：新建节点/空文档（columns 缺失）或空表（columns 与 rows 均为空）时，
+  // 自动补一列默认「文本」列，保证迁移结果永远不会是 0 列
+  if (columns.length === 0 && (doc.columns === undefined || (Array.isArray(doc.rows) ? doc.rows.length : 0) === 0)) {
+    columns.push(createDefaultTextColumn());
+  }
 
   // 2. 规范化 rows (支持 cells 为对象字典或旧数组格式)
   const rawRows: any[] = Array.isArray(doc.rows) ? doc.rows : [];

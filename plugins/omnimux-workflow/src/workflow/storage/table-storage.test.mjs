@@ -120,3 +120,35 @@ test('TableStorageService: atomic save, load and validation', async () => {
   // 清理
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
+
+test('migrateLegacyTableDocument: 新建节点/空文档兜底默认「文本」列', () => {
+  // 1. columns 字段缺失（新创建节点初始文档）
+  const fresh = migrateLegacyTableDocument({ title: '新表格' });
+  assert.equal(fresh.columns.length, 1, 'columns 缺失时必须兜底一列');
+  assert.equal(fresh.columns[0].title, '文本');
+  assert.equal(fresh.columns[0].type, 'text');
+  assert.equal(fresh.columns[0].visible, true);
+  assert.ok(fresh.columns[0].width >= 220 && fresh.columns[0].width <= 280, '默认列宽度应在 220~280 区间');
+  assert.equal(fresh.rows.length, 0);
+
+  // 2. 空表：columns 与 rows 均为空数组
+  const emptyTable = migrateLegacyTableDocument({ version: 1, columns: [], rows: [] });
+  assert.equal(emptyTable.columns.length, 1);
+  assert.equal(emptyTable.columns[0].title, '文本');
+  assert.equal(emptyTable.columns[0].type, 'text');
+
+  // 3. 完全空对象也兜底
+  const bare = migrateLegacyTableDocument({});
+  assert.equal(bare.columns.length, 1);
+  assert.equal(bare.columns[0].title, '文本');
+  assert.equal(bare.title, '未命名表格');
+
+  // 4. 已有列的文档不受影响
+  const withCols = migrateLegacyTableDocument({
+    columns: [{ id: 'col_x', title: '已有列', type: 'number' }],
+    rows: [],
+  });
+  assert.equal(withCols.columns.length, 1);
+  assert.equal(withCols.columns[0].id, 'col_x');
+  assert.equal(withCols.columns[0].title, '已有列');
+});

@@ -7,6 +7,7 @@
 
 import type { HTableDocument } from '../../shared/types/htable.ts';
 import {
+  createDefaultTextColumn,
   migrateLegacyTableDocument,
 } from '../../shared/types/htable.ts';
 import { getWorkspaceTable } from '../bridge/apiClient.ts';
@@ -40,7 +41,7 @@ function cloneDoc(doc: HTableDocument): HTableDocument {
   return JSON.parse(JSON.stringify(doc));
 }
 
-export function createDefaultInitialDocument(title: string = '表格'): HTableDocument {
+export function createDefaultInitialDocument(title: string = '未命名表格'): HTableDocument {
   return {
     version: 1,
     contentRev: 0,
@@ -130,10 +131,16 @@ class TableDocumentCache {
       }
     }
 
-    const initialTitle = opts.initialDoc?.title || '表格';
+    const initialTitle = opts.initialDoc?.title || '未命名表格';
     const fallbackDoc = opts.initialDoc
       ? migrateLegacyTableDocument(opts.initialDoc)
       : createDefaultInitialDocument(initialTitle);
+
+    // 兜底：initialDoc 缺少 columns（或空表）时保证 session 至少拥有一列默认「文本」列，
+    // 不允许以 0 列文档初始化会话
+    if (fallbackDoc.columns.length === 0) {
+      fallbackDoc.columns.push(createDefaultTextColumn());
+    }
 
     const session: TableSession = existing || {
       tableId,
