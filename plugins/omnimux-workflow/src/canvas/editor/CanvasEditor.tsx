@@ -612,10 +612,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     onAddNode: handleAddNode,
   });
 
-  // 资产侧栏入画布：有绝对路径才落导入节点；无路径拒绝，不建生成节点。
+  // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。
   const mountImportFromAsset = useCallback(
     (asset: AssetRecord | Record<string, unknown>, position: { x: number; y: number }) => {
-      const classified = classifyAssetImport(asset);
+      const classified = classifyAssetImport(asset, workspaceId);
       if (!classified.ok) {
         toast.warning(t(classified.reason === 'unsupported' ? 'picker.unsupported' : 'picker.needPath'));
         return false;
@@ -641,7 +641,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       toast.success(t('picker.importOk'));
       return true;
     },
-    [applyCanvasInputMutation, setNodes, setSelectedElement, t],
+    [applyCanvasInputMutation, setNodes, setSelectedElement, t, workspaceId],
   );
 
   const handleInsertAsset = useCallback(

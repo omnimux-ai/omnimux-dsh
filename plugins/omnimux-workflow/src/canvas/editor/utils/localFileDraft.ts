@@ -4,6 +4,7 @@
  */
 import {
   localFileMediaUrl,
+  looksAbsolutePath,
   materialTypeFromFilename,
   mimeFromFilename,
 } from '../../../shared/localMedia.ts';
@@ -24,7 +25,7 @@ export function draftFromRealPath(
   realPath: string,
   extras: { name?: string; mime?: string; size?: number } = {},
 ): LocalFileDraft | null {
-  if (!realPath) return null;
+  if (!looksAbsolutePath(realPath)) return null;
   const name = extras.name || baseName(realPath);
   const mime = extras.mime || mimeFromFilename(name) || mimeFromFilename(realPath) || '';
   const materialType = materialTypeFromFilename(name, mime);

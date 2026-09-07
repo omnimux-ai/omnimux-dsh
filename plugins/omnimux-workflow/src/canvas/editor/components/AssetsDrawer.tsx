@@ -37,7 +37,10 @@ export interface AssetRecord {
   name: string;
   type: string;
   description?: string;
+  /** Absolute native path only. */
   real_path?: string;
+  relative_path?: string;
+  workspaceId?: string;
   previewUrl?: string;
   files?: Array<{ id: string; name: string; path: string }>;
   tags?: string[];
@@ -216,12 +219,12 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
     });
   };
 
-  const itemPath = (item: { name: string; real_path?: string }) =>
-    item.real_path || item.name;
+  const itemPath = (item: { name: string; real_path?: string; relative_path?: string }) =>
+    item.relative_path || item.real_path || item.name;
 
   const { addToConversation } = useAddToConversation();
 
-  const insertToConversation = (item: { id?: string; name: string; previewUrl?: string; real_path?: string; type?: string }, kind: 'canvas' | 'asset') => {
+  const insertToConversation = (item: { id?: string; name: string; previewUrl?: string; real_path?: string; relative_path?: string; type?: string }, kind: 'canvas' | 'asset') => {
     const ext = item.name.match(/\.([a-zA-Z0-9_-]+)$/)?.[1]?.toUpperCase() || 'FILE';
     addToConversation({
       sourcePlugin: kind === 'canvas' ? 'omnimux-workflow' : 'omnimux-assets',
@@ -229,12 +232,12 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
       entityId: item.id || item.name,
       title: item.name,
       extension: ext,
-      relativePath: item.real_path || item.name,
+      relativePath: itemPath(item),
       previewUrl: item.previewUrl,
     });
   };
 
-  const revealInFinder = (item: { name: string; real_path?: string }) => {
+  const revealInFinder = (item: { name: string; real_path?: string; relative_path?: string }) => {
     const path = itemPath(item);
     navigator.clipboard?.writeText(path);
     window.dispatchEvent(
