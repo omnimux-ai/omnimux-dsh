@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, ConfirmModal } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider } from 'dsh-ui-kit'
 import { AccountCard } from './AccountCard.jsx'
 import { AccountTable } from './AccountTable.jsx'
 import { ConnectModal } from './ConnectModal.jsx'
@@ -294,6 +294,7 @@ export function AccountsSection({ t, active = true }) {
         </Button>
       </div>
       <OverviewBar t={t} summary={summary} filters={filters} onFilterClick={onFilterClick} busy={combinedBusy} />
+      <Divider />
       {accounts.length > 0 ? (
         <div className="omnimux-accounts-toolbar">
           <FilterBar

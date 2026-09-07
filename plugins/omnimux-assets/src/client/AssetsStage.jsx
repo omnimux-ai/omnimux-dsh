@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { Button, DropdownSelect, FilterBar, IconButton, PageHeader, SearchField } from 'dsh-ui-kit'
+import { Button, Divider, DropdownSelect, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
@@ -110,18 +110,32 @@ function AssetsViewToggle(props) {
 }
 
 function AssetsFilterBar(props) {
-  const { t, feed } = props
+  const { t, feed, sourceTab, onSourceTabChange } = props
   const sortOptions = [
     { value: 'updatedAt_desc', label: t('sort.updatedAt_desc') },
     { value: 'updatedAt_asc', label: t('sort.updatedAt_asc') },
     { value: 'name_asc', label: t('sort.name_asc') },
     { value: 'name_desc', label: t('sort.name_desc') },
   ]
+  const typeOptions = [
+    { value: '', label: t('chip.all') },
+    ...ASSET_TYPE_KEYS.map((k) => ({ value: k, label: t(`type.${k}`) })),
+  ]
 
   return (
     <FilterBar
       className="omnimux-assets-stage-toolbar"
-      leading={<AssetsFilterChips t={t} filterType={feed.filterType} onTypeChange={feed.setFilterType} />}
+      filters={
+        <Tabs
+          variant="underline"
+          items={[
+            { id: 'local', label: t('source.local') },
+            { id: 'cloud', label: t('source.cloud') },
+          ]}
+          activeId={sourceTab}
+          onChange={onSourceTabChange}
+        />
+      }
       tools={
         <div className="omnimux-assets-tools-cluster">
           <div className="omnimux-assets-search-wrap">
@@ -130,6 +144,14 @@ function AssetsFilterBar(props) {
               value={feed.query}
               onChange={feed.setQuery}
               onClear={() => feed.setQuery('')}
+            />
+          </div>
+          <div className="omnimux-assets-sort-wrap">
+            <DropdownSelect
+              options={typeOptions}
+              value={feed.filterType}
+              onChange={feed.setFilterType}
+              triggerTitle={t('chip.all')}
             />
           </div>
           <div className="omnimux-assets-sort-wrap">
@@ -205,11 +227,25 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview } = props
+  const { t, feed, emptyProps, onPreview, sourceTab } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
   }
+
+  if (sourceTab === 'cloud') {
+    return (
+      <div className="omnimux-assets-body">
+        <div className="omnimux-assets-main">
+          <EmptyState
+            title={t('cloud.title')}
+            description={t('cloud.desc')}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="omnimux-assets-body">
       <div className="omnimux-assets-main">
@@ -299,6 +335,7 @@ export function AssetsStage(props) {
 
   const feed = useAssetsFeed({ t, open: visible })
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
+  const [sourceTab, setSourceTab] = useState('local')
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -330,10 +367,11 @@ export function AssetsStage(props) {
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} />
       <AssetsActionRow t={t} feed={feed} />
-      <AssetsFilterBar t={t} feed={feed} />
+      <Divider />
+      <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
-      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} />
+      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} sourceTab={sourceTab} />
       <AssetsDialogs t={t} feed={feed} />
       {previewTarget && (
         <AssetPreviewModal
