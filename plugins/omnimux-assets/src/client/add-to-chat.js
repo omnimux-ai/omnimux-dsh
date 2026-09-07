@@ -1,6 +1,17 @@
 import { previewUrl } from './api.js'
 
 export const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif|heic|tiff)$/i
+export const VIDEO_EXT = /\.(mp4|mov|avi|mkv|webm|m4v|flv)$/i
+
+/**
+ * Check if a file descriptor or row reference is a directory.
+ * @param {any} file
+ * @returns {boolean}
+ */
+export function isDirectoryFile(file) {
+  if (!file) return false
+  return file.kind === 'directory' || file.is_dir === true || file.type === 'directory'
+}
 
 /**
  * @param {any} file
@@ -12,6 +23,18 @@ export function isImageFile(file) {
   if (typeof file.mime === 'string' && file.mime.startsWith('image/')) return true
   const name = String(file.original_name || file.name || file.real_path || file.relative_path || '')
   return IMAGE_EXT.test(name)
+}
+
+/**
+ * @param {any} file
+ * @returns {boolean}
+ */
+export function isVideoFile(file) {
+  if (!file) return false
+  if (file.kind === 'video' || file.type === 'video') return true
+  if (typeof file.mime === 'string' && file.mime.startsWith('video/')) return true
+  const name = String(file.original_name || file.name || file.real_path || file.relative_path || '')
+  return VIDEO_EXT.test(name)
 }
 
 /**
@@ -69,15 +92,28 @@ export function inferAssetExtension(coverFile, fallbackTitle = '') {
  */
 export function buildAssetPayload(asset) {
   if (!asset || !asset.id) return null
-  const coverFile = pickCoverFile(asset) || (Array.isArray(asset.files) ? asset.files[0] : null)
+  const files = Array.isArray(asset.files) ? asset.files : []
+  const isMultiFile = files.length > 1
+  const isExplicitDir = asset.type === 'directory' || asset.is_dir === true
+  const isDir = isExplicitDir || (files.length === 1 && isDirectoryFile(files[0]))
+  const coverFile = pickCoverFile(asset) || (files.length > 0 ? files[0] : null)
   const ext = inferAssetExtension(coverFile, asset.name)
   const pUrl = coverFile?.id
     ? previewUrl(asset.id, coverFile.id)
     : (typeof coverFile?.preview_url === 'string' ? coverFile.preview_url : '')
 
+  let kind = 'asset'
+  if (!isMultiFile && !isDir) {
+    if (isImageFile(coverFile) || (ext && ext !== 'ASSET' && IMAGE_EXT.test(`.${ext}`))) {
+      kind = 'image'
+    } else if (isVideoFile(coverFile) || (ext && ext !== 'ASSET' && VIDEO_EXT.test(`.${ext}`))) {
+      kind = 'video'
+    }
+  }
+
   return {
     sourcePlugin: 'omnimux-assets',
-    kind: 'asset',
+    kind,
     entityId: String(asset.id),
     title: asset.name || '资产',
     extension: ext || 'ASSET',
@@ -97,7 +133,7 @@ export function buildAssetPayload(asset) {
  * @param {any} mediaItem
  * @returns {{
  *   sourcePlugin: 'omnimux-assets',
- *   kind: 'asset',
+ *   kind: 'asset' | 'image' | 'video',
  *   entityId: string,
  *   title: string,
  *   extension: string,
@@ -123,9 +159,16 @@ export function buildMediaPayload(mediaItem) {
   const pUrl = typeof mediaItem.previewUrl === 'string' ? mediaItem.previewUrl : ''
   const relPath = String(mediaItem.pathInfo || mediaItem.relativePath || mediaItem.relative_path || mediaItem.real_path || title)
 
+  let kind = 'asset'
+  if (mediaItem.kind === 'image' || isImageFile(mediaItem) || (ext && ext !== 'MEDIA' && ext !== 'ASSET' && IMAGE_EXT.test(`.${ext}`))) {
+    kind = 'image'
+  } else if (mediaItem.kind === 'video' || isVideoFile(mediaItem) || (ext && ext !== 'MEDIA' && ext !== 'ASSET' && VIDEO_EXT.test(`.${ext}`))) {
+    kind = 'video'
+  }
+
   return {
     sourcePlugin: 'omnimux-assets',
-    kind: 'asset',
+    kind,
     entityId: assetId,
     title,
     extension: ext,

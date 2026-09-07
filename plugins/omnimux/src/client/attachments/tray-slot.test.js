@@ -8,6 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const indexSource = readFileSync(join(here, '../index.js'), 'utf8')
 const traySource = readFileSync(join(here, 'AttachmentTray.tsx'), 'utf8')
 const cardSource = readFileSync(join(here, 'AttachmentCard.tsx'), 'utf8')
+const detectorSource = readFileSync(join(here, 'media-detector.ts'), 'utf8')
 const cssSource = readFileSync(join(here, 'styles.css'), 'utf8')
 
 describe('composer inner attachment slot', () => {
@@ -57,8 +58,20 @@ describe('composer inner attachment slot', () => {
   it('keeps compact vector file icons without emoji', () => {
     assert.match(cardSource, /const TableFileIcon[\s\S]*width="16"/)
     assert.match(cardSource, /const DocFileIcon[\s\S]*width="16"/)
+    assert.match(cardSource, /const AudioFileIcon[\s\S]*width="16"/)
     assert.doesNotMatch(cardSource, /width="20"/)
     assert.doesNotMatch(cardSource, /width="22"/)
     assert.doesNotMatch(cardSource, /[\u{1F300}-\u{1FAFF}]/u)
+  })
+
+  it('AttachmentCard defines media and audio extension sets and robust media check', () => {
+    assert.match(detectorSource, /IMAGE_EXTENSIONS\s*=\s*new Set/)
+    assert.match(detectorSource, /VIDEO_EXTENSIONS\s*=\s*new Set/)
+    assert.match(detectorSource, /AUDIO_EXTENSIONS\s*=\s*new Set/)
+    assert.match(detectorSource, /TEXT_EXTENSIONS\s*=\s*new Set/)
+    assert.match(cardSource, /isMediaAttachment/)
+    assert.match(cardSource, /isVideoAttachment/)
+    assert.match(cardSource, /omx-att-card--media/)
+    assert.match(cardSource, /omx-att-card--file/)
   })
 })
