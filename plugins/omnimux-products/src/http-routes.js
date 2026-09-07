@@ -21,6 +21,8 @@ const STATUS_BY_CODE = {
   'text-too-long': 400,
   'categories-invalid': 400,
   'media-invalid': 400,
+  'media-path-invalid': 400,
+  'media-path-unavailable': 400,
   'content-required': 400,
   'brand-strategy-invalid': 400,
   'library-corrupt': 500,

@@ -105,6 +105,32 @@ describe('ProductsDispatcher CRUD', () => {
     assert.equal(gone.status, 404)
   })
 
+  it('returns 400 for invalid or unavailable media without creating or changing products', async () => {
+    const { dispatcher, library } = makeDispatcher()
+    for (const [path, code] of [
+      ['relative/hero.png', 'media-path-invalid'],
+      [join(root, 'missing.png'), 'media-path-unavailable'],
+    ]) {
+      const rejected = await dispatcher.dispatch(post('/omnimux/products', {
+        name: '无效商品', media: [{ real_path: path }],
+      }))
+      assert.equal(rejected.status, 400)
+      assert.equal(rejected.body.error, code)
+    }
+    assert.deepEqual(library.list(), [])
+    assert.equal(library.revision(), 0)
+
+    const product = library.add({ name: '某防晒', price: '99', media: [{ real_path: realFile }] })
+    const before = library.get(product.id)
+    const rejected = await dispatcher.dispatch(put(`/omnimux/products/${product.id}`, {
+      name: '新名称', price: '199', media: [{ real_path: join(root, 'missing.png') }],
+    }))
+    assert.equal(rejected.status, 400)
+    assert.equal(rejected.body.error, 'media-path-unavailable')
+    assert.deepEqual(library.get(product.id), before)
+    assert.equal(library.revision(), 1)
+  })
+
   it('PUT without a JSON object is invalid-json', async () => {
     const { dispatcher } = makeDispatcher()
     const created = await dispatcher.dispatch(post('/omnimux/products', { name: '某防晒' }))

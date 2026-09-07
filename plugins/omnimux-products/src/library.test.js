@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
@@ -73,12 +73,73 @@ describe('LibraryStore add/list', () => {
 })
 
 describe('LibraryStore path refs', () => {
-  it('skips missing paths on create and hides media that vanish later', () => {
+  function invalidMediaCases() {
+    return [
+      { media: [null], code: 'media-path-invalid' },
+      { media: [{ real_path: '' }], code: 'media-path-invalid' },
+      { media: [{ real_path: 'relative/hero.png' }], code: 'media-path-invalid' },
+      { media: [{ real_path: `${realFile}\0` }], code: 'media-path-invalid' },
+      { media: [{ real_path: join(root, 'missing.png') }], code: 'media-path-unavailable' },
+      { media: [{ real_path: root }], code: 'media-path-unavailable' },
+    ]
+  }
+
+  it('rejects invalid paths on create without persisting a partial product', () => {
     const store = makeStore()
-    const missingAtCreate = join(root, 'never-there.jpg')
+    for (const { media, code } of invalidMediaCases()) {
+      assert.throws(
+        () => store.add({ name: '定妆货', media: [{ real_path: realFile }, ...media] }),
+        (error) => error instanceof ProductsError && error.code === code,
+      )
+      assert.deepEqual(store.list(), [])
+      assert.equal(store.revision(), 0)
+      assert.equal(existsSync(join(root, 'store', 'library.json')), false)
+    }
+    assert.equal(readFileSync(realFile, 'utf8'), 'png')
+  })
+
+  it('rejects invalid media updates before mutating any product fields or persisted state', () => {
+    const store = makeStore()
+    const product = store.add({ name: '某防晒', price: '99', media: [{ real_path: realFile }] })
+    const before = store.get(product.id)
+    const file = join(root, 'store', 'library.json')
+    const persisted = readFileSync(file, 'utf8')
+    for (const { media, code } of invalidMediaCases()) {
+      assert.throws(
+        () => store.update(product.id, {
+          name: '新名称', kind: 'digital', price: '199', categories: ['新类别'], language: 'en',
+          media: [{ real_path: realFile }, ...media], cover_media_id: null,
+          brand_strategy: { brand_basic_info: { product: { name: '新战略' } } },
+        }),
+        (error) => error instanceof ProductsError && error.code === code,
+      )
+      assert.deepEqual(store.get(product.id), before)
+      assert.equal(store.revision(), 1)
+      assert.equal(readFileSync(file, 'utf8'), persisted)
+    }
+    assert.equal(readFileSync(realFile, 'utf8'), 'png')
+  })
+
+  it('rejects unreadable paths and preserves an existing product', () => {
+    const store = createLibraryStore({
+      paths: { libraryFile: join(root, 'store', 'library.json') },
+      fs: { accessSync: () => { throw Object.assign(new Error('permission denied'), { code: 'EACCES' }) } },
+    })
+    const product = store.add({ name: '某防晒' })
+    const before = store.get(product.id)
+    assert.throws(
+      () => store.update(product.id, { name: '新名称', media: [{ real_path: realFile }] }),
+      (error) => error.code === 'media-path-unavailable',
+    )
+    assert.deepEqual(store.get(product.id), before)
+    assert.equal(store.revision(), 1)
+  })
+
+  it('hides persisted media that vanish later without changing the source file', () => {
+    const store = makeStore()
     const product = store.add({
       name: '定妆货',
-      media: [{ real_path: realFile }, { real_path: missingAtCreate }],
+      media: [{ real_path: realFile }],
     })
     assert.equal(product.media.length, 1)
     assert.equal(product.media[0].real_path, realFile)

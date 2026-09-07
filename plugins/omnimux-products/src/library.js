@@ -2,12 +2,13 @@
  * Product library: named sellable objects with path-only media refs.
  *
  * RED LINE: this store never copies, moves, or deletes anything under a
- * media `real_path`. Missing paths drop out of the visible media list.
+ * media `real_path`. Writes reject unavailable paths; persisted paths that
+ * later disappear drop out of the visible media list.
  * HTTP and tools MUST both call this module — no second normalizer.
  */
 import { randomUUID } from 'node:crypto'
 import { accessSync, constants, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, extname } from 'node:path'
+import { basename, dirname, extname, isAbsolute } from 'node:path'
 import { emptyBrandStrategy, isDigitalProduct, isPlainStrategy, normalizeBrandStrategy } from './brand-strategy.js'
 import { ProductsError } from './errors.js'
 
@@ -282,16 +283,17 @@ function normalizeMedia(media, fs) {
   let sort = 0
   for (const item of media) {
     const path = typeof item === 'string' ? item.trim() : str(item?.real_path ?? item?.path).trim()
-    if (!path) continue
+    if (!path || !isAbsolute(path) || path.includes('\0')) {
+      throw new ProductsError('media-path-invalid', 'media path must be absolute and contain no null bytes')
+    }
     if (seen.has(path)) continue
     seen.add(path)
     try {
       const info = fs.statSync(path)
-      if (!info.isFile()) continue
+      if (!info.isFile()) throw new Error('not a file')
       fs.accessSync(path, fs.constants.R_OK)
     } catch {
-      // Spec: missing paths are refused as media, the product itself can still be created.
-      continue
+      throw new ProductsError('media-path-unavailable', 'media path is missing, not a file, or unreadable')
     }
     const name = typeof item === 'object' && item ? str(item.original_name) : ''
     const id = typeof item === 'object' && item && typeof item.id === 'string' && item.id
@@ -592,6 +594,7 @@ export function createLibraryStore(opts = {}) {
   function update(idOrHandle, patch) {
     const found = state.products.find((product) => product.id === idOrHandle || product.handle === idOrHandle)
     if (!found) throw new ProductsError('product-not-found', 'product not found')
+    const nextMedia = hasField(patch, 'media') ? normalizeMedia(patch.media, fs) : null
     if (hasField(patch, 'name')) {
       const name = normalizeName(patch.name)
       const handle = handleOf(name)
@@ -616,8 +619,8 @@ export function createLibraryStore(opts = {}) {
     if (hasField(patch, 'language')) {
       found.language = str(patch.language).trim() || 'auto'
     }
-    if (hasField(patch, 'media')) {
-      found.media = normalizeMedia(patch.media, fs)
+    if (nextMedia !== null) {
+      found.media = nextMedia
       found.cover_media_id = found.media[0]?.id ?? null
     }
     if (hasField(patch, 'cover_media_id')) {
