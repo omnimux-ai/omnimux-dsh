@@ -20,7 +20,7 @@ subsystem: qa
 
 2026-09-07 能力实测：task 533、Dev 与 L2 Tab 跨轮稳定；Dev 45120 CDP 返回 26–27 个 parsed events，读取同源插件源成功；PNG 3456×1746 通过 CRC 解码；L2 44201 正式入口登录 ready。能力证明与完整 Stage 验收分列。
 
-真实 L2 `assets` 共享探针 run `0a4438f9-b028-426d-b1e7-dbc6104e78b9`：六项 Stage/恢复断言通过，前后 task/tab、Host 和 runtimeProof 一致；hub 为唯一 normalized registration，assets 为唯一 raw registration。PNG 3808×1826、155573 bytes，经 CRC 解码与严格消费者校验。源码为隔离树未提交 diff、HEAD `3054947b58c9438495bea47e143dc8805139f3b1`；并非最新 main 集成结果，也不代替独立 QA。
+第一阶段 run `0a4438f9-b028-426d-b1e7-dbc6104e78b9` 仅证明旧基线；第二阶段已在 `57f63a709a41124b8dcd199ce61fae3b94e74754` 上完成整合。固定实现 `f9f0588a813233cdcdfc033fd4c7e123b3d9b7a4` 的新 L2 run `eb47e131-869c-4a79-8b26-28e6118f7be9` 完整通过六项断言、双 runtimeProof 与真实 PNG。运行身份、最终交付 SHA 的追加证据及局限以[第二阶段报告](../evidence/2026-09-07-ego-browser-migration-phase2.md)和同目录指向的本地验收索引为准，不代替独立 QA。
 
 ## 模块与唯一执行路径
 
@@ -37,8 +37,8 @@ subsystem: qa
 
 ## 验证与边界
 
-覆盖认证恢复、正式 L2 入口、token 脱敏、过期/替换/并发消费、错 task/tab/URL/profile/Host、事件缺失/超限、指纹漂移、PNG 解码失败及消费者拒绝旧工具。最终 `pnpm test:gates` 70/70、消费者测试 11/11 通过，无 skip；包括迟到身份检查超时后不得继续发命令、锁释放失败仍保存已消费失败报告的回归。使用本机原生 Node/Corepack、完整系统 PATH、现有 Corepack cache 和任务内既有依赖链接，未弱化门禁。独立 QA 由主理人另派。
+覆盖认证恢复、正式 L2 入口、token 脱敏、过期/替换/并发消费、错 task/tab/URL/profile/Host、事件缺失/超限、指纹漂移、PNG 解码失败及消费者拒绝旧工具。第二阶段固定实现的 `pnpm test:gates` 125/125、`pnpm test:ci` 75/75、相关 CI 回归 24/24 通过，无 skip；保留迟到 guard、锁释放失败、impact-matrix、qa-label、ci-verdict 和 authorization 回归。使用本机原生 Node/Corepack、完整系统 PATH、现有 cache 与任务内既有依赖链接，未弱化门禁。
 
-交付时 `origin/main` 已推进到 `57f63a709a41124b8dcd199ce61fae3b94e74754`。其中 #702 的 CI/流水线治理与本树四个文件重叠；必须在保留新治理的前提下迁移实际消费者并重新测试，不得整文件覆盖最新 main。详见[实施报告](../evidence/2026-09-07-ego-browser-migration.md)。
+最新 fetch 基线 `57f63a709a41124b8dcd199ce61fae3b94e74754` 已整合；任务树已按授权收敛到主仓 `.worktrees/browser-ego-migration`，L2 经既有 `--source` 入口重绑。独立 QA 由主理人另派，检查精确交付 SHA 与对应新 run。详见[第二阶段报告](../evidence/2026-09-07-ego-browser-migration-phase2.md)。
 
 只改本仓脚本、测试、浏览器规范和自有 skills；共享 `/Users/x/.codex/AGENTS.md` 由主理人安排后续处理。禁止官方 DSH/其他仓/生产修改、push/merge、账号任务、媒体生成或真实付款。真实 L2 共享探针及独立验收未完成前不宣称迁移交付。
