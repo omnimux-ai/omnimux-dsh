@@ -45,7 +45,7 @@ export function FilterBar(props) {
     ...groups.map((value) => ({ value, label: value })),
   ]
   const statusOptions = [
-    { value: '', label: `${t('filter.status')} · ${t('all')}` },
+    { value: '', label: t('filter.status') },
     ...statuses.map((value) => ({ value, label: t(`status.${value}`) })),
   ]
 
