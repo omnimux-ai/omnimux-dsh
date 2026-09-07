@@ -39,7 +39,7 @@
 
     function PlazaView({ t, onClose, active = true, store }) {
       const tr = typeof t === "function" ? t : lookup;
-      const [tab, setTab] = useState("plugins");
+      const [tab, setTab] = useState("skills");
       const [tabQueries, setTabQueries] = useState({
         plugins: "",
         skills: "",
@@ -113,7 +113,7 @@
           },
         },
           h("div", { className: "sh-plaza-top" },
-            h("div", { className: "sh-plaza-tabs", role: "tablist" },
+            h("div", { className: "sh-plaza-tabs", role: "tablist", style: { display: "none" } },
               h(Button, {
                 type: "button",
                 role: "tab",

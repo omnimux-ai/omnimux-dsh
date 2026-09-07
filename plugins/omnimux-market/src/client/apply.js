@@ -59,7 +59,7 @@
           name: "sidebar.footer.action",
           id: "omnimux-market-plaza",
           order: 8,
-          label: () => lookup("plaza.title") || "插件市场",
+          label: () => lookup("plaza.title") || "Skill工坊",
           locale: "omnimux-market",
         },
         function PlazaEntry(actionProps) {
@@ -76,7 +76,7 @@
           } catch {}
           const registerPlazaTab = () => sidebar.registerTab({
             id: PLAZA_TAB_ID,
-            title: () => lookup("plaza.title") || "插件市场",
+            title: () => lookup("plaza.title") || "Skill工坊",
             icon: renderPlazaIcon,
             order: 25,
             hidden: false,
