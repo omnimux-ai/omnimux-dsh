@@ -170,7 +170,7 @@ export const ASSETS_CSS = `
   border-color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-card-thumb {
-  height: 112px;
+  height: 136px;
   background: var(--dsw-alias-bg-module-platform);
   position: relative;
   display: flex;
@@ -180,6 +180,86 @@ export const ASSETS_CSS = `
   overflow: hidden;
 }
 .omnimux-assets-card-thumb--tall { height: 148px; }
+.omnimux-assets-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--dsw-alias-bg-mask-1) 0%, var(--dsw-alias-bg-mask-2) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  box-sizing: border-box;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.omnimux-assets-card:hover .omnimux-assets-card-overlay,
+.omnimux-assets-card:focus-within .omnimux-assets-card-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+.omnimux-assets-card-overlay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.omnimux-assets-overlay-btn {
+  display: inline-flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+  outline: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+.omnimux-assets-overlay-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-assets-overlay-btn svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+.omnimux-assets-overlay-btn--secondary {
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-assets-overlay-btn--secondary:hover {
+  background: var(--dsw-alias-bg-mask-2);
+}
+.omnimux-assets-overlay-btn--primary {
+  background: var(--dsw-alias-button-primary-fill);
+  border: 1px solid transparent;
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omnimux-assets-overlay-btn--primary:hover {
+  background: var(--dsw-alias-button-primary-hover);
+}
+.omnimux-assets-overlay-btn:disabled,
+.omnimux-assets-overlay-btn[aria-disabled="true"] {
+  opacity: 0.85;
+  cursor: default;
+}
 .omnimux-assets-card-media {
   width: 100%;
   height: 100%;
@@ -217,7 +297,7 @@ export const ASSETS_CSS = `
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 72px;
+  min-height: 48px;
 }
 .omnimux-assets-card-title {
   font-size: 14px;
@@ -256,7 +336,7 @@ export const ASSETS_CSS = `
   justify-content: center;
   padding: 0;
   cursor: pointer;
-  z-index: 1;
+  z-index: 3;
   opacity: 0;
   transform: none;
   transition: opacity 0.15s ease;
