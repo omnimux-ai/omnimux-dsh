@@ -1,51 +1,57 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { JSDOM } from 'jsdom'
+import { WORKBENCH_OCCUPANTS } from '../workbench/contract.js'
 import {
-  WORKBENCH_CONVERSATION_MIN_PX,
-  WORKBENCH_FOCUS,
-  WORKBENCH_PANEL_ATTR,
   WORKBENCH_SPLIT_MIN_CSS,
-  WORKBENCH_LEFT_RAIL_COLLAPSED_FALLBACK_PX,
-  WORKBENCH_LEFT_RAIL_COLLAPSED_MAX_PX,
-  WORKBENCH_LEFT_RAIL_EXPANDED_FALLBACK_PX,
-  WORKBENCH_LEFT_RAIL_EXPANDED_MIN_PX,
-  WORKBENCH_OCCUPANTS,
-  WORKBENCH_TAB_TITLE_FALLBACKS,
-  activeTabId,
   applyDefaultWidth,
-  clampSplitPanelWidth,
-  collapsedLeftRailFallbackPx,
-  collectTabs,
   createWorkbenchSidebarStore,
-  findOfficialSidebarColumn,
-  findWorkbenchPanelElement,
-  inferWorkbenchFocus,
   installSplitConversationMin,
   installWorkbenchGlobal,
-  isOfficialSidebarCollapsed,
-  isSeedFilesTab,
   isWorkbenchActive,
   isWorkbenchOpen,
-  isWorkbenchTab,
-  officialSessionSidebarWidth,
   openWorkbench,
   releaseCurrentProductStage,
   resetWorkbenchForTests,
-  resolveDefaultFocus,
-  resolveWorkbenchTabTitle,
-  focusRecordForTab,
   getConversationCollapsed,
-  getWorkbenchFocus,
   setConversationCollapsed,
   setWorkbenchFocus,
   syncSplitMaxCssVar,
   syncWorkbenchGuiWidth,
-  tabIsOpen,
+} from './workbench.js'
+import {
+  WORKBENCH_CONVERSATION_MIN_PX,
+  WORKBENCH_PANEL_ATTR,
+  WORKBENCH_LEFT_RAIL_COLLAPSED_FALLBACK_PX,
+  WORKBENCH_LEFT_RAIL_COLLAPSED_MAX_PX,
+  WORKBENCH_LEFT_RAIL_EXPANDED_FALLBACK_PX,
+  WORKBENCH_LEFT_RAIL_EXPANDED_MIN_PX,
+  clampSplitPanelWidth,
+  collapsedLeftRailFallbackPx,
+  findOfficialSidebarColumn,
+  findWorkbenchPanelElement,
+  isOfficialSidebarCollapsed,
+  officialSessionSidebarWidth,
   workbenchDefaultWidthPx,
   workbenchGuiWidthPx,
   workbenchSplitMaxPanelPx,
-} from './workbench.js'
+} from './workbench/geometry.js'
+import {
+  WORKBENCH_FOCUS,
+  WORKBENCH_TAB_TITLE_FALLBACKS,
+  focusRecordForTab,
+  getWorkbenchFocus,
+  inferWorkbenchFocus,
+  isWorkbenchTab,
+  resolveDefaultFocus,
+  resolveWorkbenchTabTitle,
+} from './workbench/focus-state.js'
+import {
+  activeTabId,
+  collectTabs,
+  isSeedFilesTab,
+  tabIsOpen,
+} from './workbench/host-adapter.js'
 
 /** Match workbench column / collapsed-host selectors used by live DOM probes. */
 function selIsSidebarColumn(sel) {

@@ -5,7 +5,7 @@ import { createWorkbenchMailbox } from './mailbox.js'
 import { mountWorkbenchTools } from './tools.js'
 import { JSON_TOOL_OUTPUT } from '../tools/schema.js'
 import { createEventsClient } from '../client/events-client.js'
-import { formatCompactContextBlock } from '../client/workbench.js'
+import { formatCompactContextBlock } from '../client/workbench/context.js'
 import { attachComposerEnvelope } from '../client/composer-envelope.js'
 
 describe('Agent-Workbench Synergy End-to-End Closed Loop', () => {

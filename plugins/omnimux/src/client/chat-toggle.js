@@ -7,7 +7,8 @@
  * panel — that re-coupled middle visibility to left-rail width.
  */
 
-import { activeTabId, isWorkbenchTab } from './workbench.js'
+import { activeTabId } from './workbench/host-adapter.js'
+import { isWorkbenchTab } from './workbench/focus-state.js'
 import {
   getConversationCollapsed,
   setConversationCollapsed,
