@@ -117,6 +117,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     }),
   });
   const dispatcher = createWorkflowDispatcher({
+    getSeam: (name) => ctx.get?.(name),
     store,
     generationPreferences,
     gateway,

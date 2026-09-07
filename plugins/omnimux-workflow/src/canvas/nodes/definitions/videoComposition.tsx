@@ -30,6 +30,7 @@ import StatusBadge from '../../editor/components/MaterialNode/StatusBadge';
 import GenerationStateContainer from '../../editor/components/GenerationStateContainer';
 import NodeLauncherState from '../../editor/components/NodeEmptyState/NodeLauncherState';
 import { planClipExportDownstream } from './videoCompositionDownstream';
+import { captionSlicesFromText } from '../../editor/utils/srtParser.ts';
 import {
   mapVideoCompositionToBadge,
   mapVideoCompositionToView,
@@ -106,11 +107,21 @@ function collectUpstreamInputs(nodeId: string): OpenClipEditorPayload['upstreamI
     } else if (materialType === 'text') {
       const text = asString(data.content) || asString(data.generatedContent) || asString(data.prompt);
       if (text) {
-        captions.push({
-          text,
+        // Issue 744 T05：SRT 字幕文本按原音频时间轴精确展开；
+        // 普通文本保持原有整段 3 秒切片（起点为既有 captions 时长累加）。
+        const slices = captionSlicesFromText({
+          content: text,
+          contentFormat: asString(data.contentFormat),
           startTimeMs: captions.reduce((sum, item) => sum + item.durationMs, 0),
-          durationMs: 3000,
+          sliceDurationMs: 3000,
         });
+        for (const slice of slices) {
+          captions.push({
+            text: slice.text,
+            startTimeMs: slice.startTimeMs,
+            durationMs: slice.durationMs,
+          });
+        }
       }
     }
   }

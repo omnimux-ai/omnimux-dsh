@@ -149,6 +149,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'gpt-5.6-sol',
     'grok-4.6',
     'kimi-k3',
+    'doubao-asr-bigmodel',
   ]);
   assert.equal(dto.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
   assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-0-fast');
@@ -212,7 +213,7 @@ test('projectDirectoryRows: media groups project every contracted model (listed 
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 12);
   assert.equal(projectDirectoryRows(index, 'video').length, 17);
-  assert.equal(projectDirectoryRows(index, 'audio').length, 4);
+  assert.equal(projectDirectoryRows(index, 'audio').length, 5);
   // whisper-1 stays in the audio management directory but its output is text
   const audio = projectDirectoryRows(index, 'audio');
   assert.ok(audio.some((r) => r.id === 'whisper-1'));

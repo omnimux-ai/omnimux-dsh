@@ -6,6 +6,38 @@ managementGroup: "audio"
 modality: "audio"
 
 models:
+  - id: "doubao-asr-bigmodel"
+    aliases: ["seedasr-auc"]
+    label: "豆包语音识别大模型 (Doubao-ASR)"
+    family: "bytedance"
+    badge: "语音识别"
+    subtitle: "豆包音频转写 · 文本 / SRT / VTT"
+    operations:
+      - id: "speech_to_text"
+        label: "语音转文字"
+        listed: true
+        output: { type: "text" }
+        inputs:
+          - { slot: "audio_input", type: "audio", role: "source", source: "upstream_edge", min: 1, max: 1 }
+    parameters:
+      response_format:
+        options: ["json", "text", "verbose_json", "srt", "vtt"]
+        defaultValue: "json"
+    research:
+      status: "verified"
+      docUrl: "docs/evidence/2026-09-07-model-doubao-asr-bigmodel-speech_to_text.md"
+      verifiedAt: "2026-09-07"
+      notes: "Issue #744 提供的中枢接入契约；离线验证范围与未核验项见证据文档"
+    implementation:
+      status: "ready"
+      profileId: "speechToText"
+      seam: "speechToText"
+    execution:
+      status: "live"
+      profileId: "speechToText"
+      seam: "speechToText"
+      notes: "按 #744 指定状态登记；本轮仅离线验证，不声明独立真实调用成功"
+
   - id: "seed-audio-1.0"
     label: "Seed Audio 1.0"
     family: "bytedance"

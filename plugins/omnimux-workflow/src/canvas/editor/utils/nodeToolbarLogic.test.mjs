@@ -315,3 +315,62 @@ test('buildEmptyImagePillActionSpec：生成符合契约的【导入图片】主
   assert.equal(action.section, 'primary');
   assert.equal(action.width, 88);
 });
+
+// ============================================================================
+// 语音识别胶囊判定（Issue 744 T04）
+// ============================================================================
+
+test('canRunSpeechToText：仅音频 + 有来源 + 非执行中', async () => {
+  const { canRunSpeechToText } = await import('./nodeToolbarLogic.ts');
+  // 非音频类型一律 false
+  assert.equal(canRunSpeechToText({ materialType: 'text', realPath: '/a.txt' }), false);
+  assert.equal(canRunSpeechToText({ materialType: 'video', realPath: '/a.mp4' }), false);
+  // 音频但无来源
+  assert.equal(canRunSpeechToText({ materialType: 'audio' }), false);
+  // 音频 + 任一来源
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3' }), true);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', relativePath: 'assets/a.mp3' }), true);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', mediaUrl: '/omnimux-workflow/api/local-file?path=/a.mp3' }), true);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', previewUrl: 'file:///a.mp3' }), true);
+  // 离线 / 执行中禁用
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3', isOffline: true }), false);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3', executionStatus: 'running' }), false);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3', executionStatus: 'pending' }), false);
+  // 失败 / 完成后可重试
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3', executionStatus: 'error' }), true);
+  assert.equal(canRunSpeechToText({ materialType: 'audio', realPath: '/a.mp3', executionStatus: 'completed' }), true);
+});
+
+test('resolveSpeechToTextAudioPath：优先级 realPath > local-file URL > http URL > 项目相对路径', async () => {
+  const { resolveSpeechToTextAudioPath } = await import('./nodeToolbarLogic.ts');
+  // realPath 直出
+  assert.equal(
+    resolveSpeechToTextAudioPath({ realPath: '/Users/x/a.mp3', mediaUrl: 'https://cdn/x.mp3' }),
+    '/Users/x/a.mp3',
+  );
+  // local-file 流 URL 还原绝对路径
+  assert.equal(
+    resolveSpeechToTextAudioPath({ mediaUrl: '/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2Fb.wav' }),
+    '/Users/x/b.wav',
+  );
+  // http(s) mediaUrl 直出
+  assert.equal(
+    resolveSpeechToTextAudioPath({ mediaUrl: 'https://example.com/c.mp3' }),
+    'https://example.com/c.mp3',
+  );
+  // relativePath + workspaceId + baseUrl → 项目文件流绝对 URL
+  assert.equal(
+    resolveSpeechToTextAudioPath(
+      { relativePath: 'assets/imported/d.mp3', workspaceId: 'ws 1' },
+      { baseUrl: 'http://127.0.0.1:45120' },
+    ),
+    'http://127.0.0.1:45120/omnimux-workflow/api/workspaces/ws%201/file?rel=assets%2Fimported%2Fd.mp3',
+  );
+  // 缺 baseUrl 不发明路径
+  assert.equal(
+    resolveSpeechToTextAudioPath({ relativePath: 'assets/d.mp3', workspaceId: 'ws1' }),
+    null,
+  );
+  // 全空 → null
+  assert.equal(resolveSpeechToTextAudioPath({}), null);
+});

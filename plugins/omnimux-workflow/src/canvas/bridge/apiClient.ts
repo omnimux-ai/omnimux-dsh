@@ -271,3 +271,14 @@ export function executionAction(
     { method: 'POST', body: {} },
   );
 }
+
+/** Issue 744 T04: audio node → SRT transcription. */
+export function transcribeAudio(
+  workspaceId: string,
+  payload: import('../../shared/speechToText.ts').SpeechToTextRequest,
+): Promise<ApiResult<import('../../shared/speechToText.ts').SpeechToTextResponse>> {
+  return request<import('../../shared/speechToText.ts').SpeechToTextResponse>(
+    WORKFLOW_API_ROUTES.speechToText(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}

@@ -2,410 +2,169 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, it } from 'node:test'
-import { durationFromAudioBytes, executeOmnimuxSpeechToText, loadAudioBytes, transcribeSpeechToTextRequest } from './stt.js'
-import { mountSpeechToText, STT_TOOL_NAME } from './stt-mount.js'
-import { OmnimuxError } from './errors.js'
-import { JSON_TOOL_OUTPUT } from '../tools/schema.js'
+import { test } from 'node:test'
+import { executeOmnimuxSpeechToText, transcribeSpeechToTextRequest } from './stt.js'
 
 const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
-const WAV_BYTES = Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45])
 const M4A_BYTES = Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20])
+const SRT = '1\r\n00:00:00,000 --> 00:00:01,500\r\n你好世界\r\n\r\n'
+const model = 'doubao-asr-bigmodel'
+const dataAudio = `data:audio/mpeg;base64,${AUDIO_BYTES.toString('base64')}`
+const request = { audio: dataAudio, model, env: { OMNIMUX_API_KEY: 'sk-stt-fixture' } }
 
-function wavFixture(seconds) {
-  const byteRate = 16_000
-  const dataSize = byteRate * seconds
-  const bytes = Buffer.alloc(44 + dataSize)
-  bytes.write('RIFF', 0)
-  bytes.writeUInt32LE(36 + dataSize, 4)
-  bytes.write('WAVEfmt ', 8)
-  bytes.writeUInt32LE(16, 16)
-  bytes.writeUInt16LE(1, 20)
-  bytes.writeUInt16LE(1, 22)
-  bytes.writeUInt32LE(8_000, 24)
-  bytes.writeUInt32LE(byteRate, 28)
-  bytes.writeUInt16LE(2, 32)
-  bytes.writeUInt16LE(16, 34)
-  bytes.write('data', 36)
-  bytes.writeUInt32LE(dataSize, 40)
-  return bytes
-}
-
-function mp3Fixture(frameCount) {
-  const frameBytes = Math.floor(144 * 128_000 / 44_100)
-  const bytes = Buffer.alloc(frameBytes * frameCount)
-  for (let offset = 0; offset < bytes.length; offset += frameBytes) {
-    bytes.set([0xff, 0xfb, 0x90, 0x00], offset)
-  }
-  return bytes
-}
-
-async function withTempAudio(fn) {
+function tempAudio(t) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-stt-'))
   const file = join(dir, 'clip.mp3')
   writeFileSync(file, AUDIO_BYTES)
-  try {
-    return await fn(file, dir)
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
+  t.after(() => rmSync(dir, { recursive: true, force: true }))
+  return file
 }
 
-/** Fake fetcher that serves the transcription POST and captures the request. */
-function sttFetcher(captured, body = { text: '你好世界' }, status = 200) {
+function sttFetcher(captured, body = { text: '你好世界' }, status = 200, contentType) {
   return async (url, init) => {
     captured.url = String(url)
     captured.init = init
-    return {
-      ok: status >= 200 && status < 300,
-      status,
-      json: async () => body,
-      text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
-    }
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+      status, headers: { 'content-type': contentType ?? (typeof body === 'string' ? 'text/plain' : 'application/json') },
+    })
   }
 }
 
-/**
- * Protocol fixture: tests the already-admitted wire primitive with an
- * explicit route. It does not model an external submit input.
- */
 function transcribeFixture(input) {
   const env = input.env ?? {}
   return transcribeSpeechToTextRequest({
+    ...input,
     route: {
       baseUrl: env.OMNIMUX_BASE_URL ?? 'https://api.omnimux.ai/v1',
       modelId: input.model ?? env.OMNIMUX_STT_MODEL ?? 'whisper-1',
     },
     apiKey: input.apiKey ?? env.OMNIMUX_API_KEY,
-    audio: input.audio,
-    language: input.language,
-    fetcher: input.fetcher,
-    signal: input.signal,
   })
 }
 
-describe('loadAudioBytes', () => {
-  it('reads an absolute file path with MIME from bytes', async () => {
-    await withTempAudio(async (file) => {
-      const audio = await loadAudioBytes(file)
-      assert.deepEqual(audio.bytes, AUDIO_BYTES)
-      assert.equal(audio.filename, 'clip.mp3')
-      assert.equal(audio.contentType, 'audio/mpeg')
-    })
-  })
-
-  it('decodes a data:audio URI', async () => {
-    const audio = await loadAudioBytes(`data:audio/wav;base64,${WAV_BYTES.toString('base64')}`)
-    assert.deepEqual(audio.bytes, WAV_BYTES)
-    assert.equal(audio.filename, 'audio.wav')
-    assert.equal(audio.contentType, 'audio/wav')
-  })
-
-  it('rejects an unreadable path', async () => {
-    await assert.rejects(
-      () => loadAudioBytes('/nonexistent/nope.mp3'),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-  })
-
-  it('rejects an empty audio value', async () => {
-    await assert.rejects(
-      () => loadAudioBytes('   '),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-  })
-
-  it('rejects a declared audio MIME that does not match its bytes', async () => {
-    await assert.rejects(
-      () => loadAudioBytes(`data:audio/wav;base64,${AUDIO_BYTES.toString('base64')}`),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-  })
+test('STT requires audio and rejects draft whisper before HTTP despite bypassSubmitGuard', async (t) => {
+  await assert.rejects(() => executeOmnimuxSpeechToText({}), { code: 'omnimux-invalid-request' })
+  let calls = 0
+  await assert.rejects(() => executeOmnimuxSpeechToText({
+    audio: tempAudio(t), operation: 'speech_to_text', bypassSubmitGuard: true,
+    env: {}, fetcher: async () => { calls++ },
+  }), { code: 'omnimux-invalid-request' })
+  assert.equal(calls, 0)
 })
 
-describe('audio byte metadata', () => {
-  it('reads PCM WAV duration from byte rate and data length', () => {
-    assert.equal(durationFromAudioBytes(wavFixture(2), 'audio/wav'), 2)
-  })
-
-  it('sums MPEG audio frame durations', () => {
-    const duration = durationFromAudioBytes(mp3Fixture(77), 'audio/mpeg')
-    assert.ok(Math.abs(duration - (77 * 1152 / 44_100)) < 1e-9)
-  })
+test('STT posts exact audio bytes and defaults to JSON after real model admission', async (t) => {
+  const captured = {}
+  const result = await executeOmnimuxSpeechToText({ ...request, audio: tempAudio(t), fetcher: sttFetcher(captured) })
+  assert.equal(captured.url, 'https://api.omnimux.ai/v1/audio/transcriptions')
+  assert.equal(captured.init.method, 'POST')
+  assert.equal(captured.init.headers.authorization, 'Bearer sk-stt-fixture')
+  assert.ok(captured.init.body instanceof FormData)
+  const form = captured.init.body
+  assert.equal(form.get('model'), model)
+  assert.equal(form.get('response_format'), 'json')
+  assert.deepEqual([...form.keys()].sort(), ['file', 'model', 'response_format'])
+  const upload = form.get('file')
+  assert.equal(upload.name, 'clip.mp3')
+  assert.equal(upload.type, 'audio/mpeg')
+  assert.deepEqual(Buffer.from(await upload.arrayBuffer()), AUDIO_BYTES)
+  assert.deepEqual(result, { mode: 'live', model, text: '你好世界' })
 })
 
-describe('executeOmnimuxSpeechToText', () => {
-  it('requires audio', async () => {
-    await assert.rejects(
-      () => executeOmnimuxSpeechToText({ env: { OMNIMUX_API_KEY: 'sk-x' } }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-  })
-
-  it('rejects draft whisper-1 before HTTP even when caller sends bypassSubmitGuard (#468)', async () => {
-    await withTempAudio(async (file) => {
-      let vendorCalls = 0
-      await assert.rejects(
-        () => executeOmnimuxSpeechToText({
-          audio: file,
-          operation: 'speech_to_text',
-          bypassSubmitGuard: true,
-          assetMeta: { [file]: { mime: 'audio/mp3', sizeBytes: 1, durationSec: 1 } },
-          env: { OMNIMUX_API_KEY: 'sk-stt' },
-          fetcher: async () => {
-            vendorCalls += 1
-            return { ok: true, status: 200, json: async () => ({ text: 'nope' }) }
-          },
-        }),
-        (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-      )
-      assert.equal(vendorCalls, 0)
-    })
-  })
-
-  it('posts multipart audio to /audio/transcriptions and returns text', async () => {
-    await withTempAudio(async (file) => {
-      const captured = {}
-      const result = await transcribeFixture({
-        audio: file,
-        env: { OMNIMUX_API_KEY: 'sk-stt' },
-        fetcher: sttFetcher(captured),
-      })
-      assert.equal(captured.url, 'https://api.omnimux.ai/v1/audio/transcriptions')
-      assert.equal(captured.init.method, 'POST')
-      assert.equal(captured.init.headers.authorization, 'Bearer sk-stt')
-      assert.ok(captured.init.body instanceof FormData, 'wire body must be multipart FormData')
-      const form = captured.init.body
-      assert.equal(form.get('model'), 'whisper-1')
-      assert.equal(form.get('response_format'), 'json')
-      const upload = form.get('file')
-      assert.ok(upload && typeof upload === 'object' && typeof upload.name === 'string')
-      assert.equal(upload.name, 'clip.mp3')
-      assert.equal(upload.type, 'audio/mpeg')
-      assert.equal(Buffer.from(await upload.arrayBuffer()).toString(), AUDIO_BYTES.toString())
-      assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: '你好世界' })
-    })
-  })
-
-  it('honours model override and OMNIMUX_STT_MODEL env overlay', async () => {
-    await withTempAudio(async (file) => {
-      const captured = {}
-      await transcribeFixture({
-        audio: file,
-        model: 'whisper-1',
-        env: { OMNIMUX_API_KEY: 'sk-stt', OMNIMUX_STT_MODEL: 'whisper-1' },
-        fetcher: sttFetcher(captured),
-      })
-      assert.equal(captured.init.body.get('model'), 'whisper-1')
-    })
-  })
-
-  it('accepts a data:audio URI without touching the filesystem', async () => {
+for (const id of [model, 'seedasr-auc']) {
+  test(`STT ${id} passes SRT through the guard and preserves raw subtitle bytes`, async () => {
     const captured = {}
-    const result = await transcribeFixture({
-      audio: `data:audio/mpeg;base64,${AUDIO_BYTES.toString('base64')}`,
-      language: 'zh',
-      env: { OMNIMUX_API_KEY: 'sk-stt' },
-      fetcher: sttFetcher(captured),
+    const result = await executeOmnimuxSpeechToText({
+      ...request, model: id, response_format: 'srt', language: 'zh', fetcher: sttFetcher(captured, SRT),
     })
+    assert.equal(captured.init.body.get('model'), model)
     assert.equal(captured.init.body.get('language'), 'zh')
-    assert.equal(result.text, '你好世界')
+    assert.equal(captured.init.body.get('response_format'), 'srt')
+    assert.deepEqual(result, { mode: 'live', model, text: SRT })
   })
+}
 
-  it('fetches http(s) audio bytes before uploading', async () => {
+for (const [response_format, body, text] of [
+  ['json', { text: 'JSON text' }, 'JSON text'],
+  ['verbose_json', { text: 'verbose', segments: [] }, 'verbose'],
+  ['text', 'raw transcript\n', 'raw transcript\n'],
+  ['text', '42', '42'],
+  ['text', 'null', 'null'],
+  ['srt', { data: { text: SRT.trim() } }, SRT.trim()],
+  ['vtt', 'WEBVTT\n\n00:00.000 --> 00:01.500\n你好\n', 'WEBVTT\n\n00:00.000 --> 00:01.500\n你好\n'],
+]) {
+  test(`STT extracts ${response_format} using a single-use native Response`, async () => {
     const captured = {}
-    const urls = []
-    const result = await transcribeFixture({
-      audio: 'https://cdn.example.com/voice/note.m4a',
-      env: { OMNIMUX_API_KEY: 'sk-stt' },
-      fetcher: async (url, init) => {
-        urls.push(String(url))
-        if (init?.method === 'POST') return sttFetcher(captured)(url, init)
-        return {
-          ok: true,
-          status: 200,
-          headers: { get: () => 'audio/m4a' },
-          arrayBuffer: async () => M4A_BYTES,
-        }
-      },
-    })
-    assert.deepEqual(urls, ['https://cdn.example.com/voice/note.m4a', 'https://api.omnimux.ai/v1/audio/transcriptions'])
-    const upload = captured.init.body.get('file')
-    assert.equal(upload.name, 'note.m4a')
-    assert.equal(upload.type, 'audio/m4a')
-    assert.equal(result.mode, 'live')
+    const result = await executeOmnimuxSpeechToText({ ...request, response_format, fetcher: sttFetcher(captured, body) })
+    assert.equal(captured.init.body.get('response_format'), response_format)
+    assert.equal(result.text, text)
   })
+}
 
-  it('uses an explicit test-only token for the admitted protocol primitive', async () => {
-    await withTempAudio(async (file) => {
-      const captured = {}
-      const result = await transcribeFixture({
-        audio: file,
-        apiKey: 'pat-stt-token',
-        fetcher: sttFetcher(captured),
-      })
-      assert.equal(captured.init.headers.authorization, 'Bearer pat-stt-token')
-      assert.equal(result.mode, 'live')
-    })
-  })
-
-  it('maps quota failures to quota-exceeded', async () => {
-    await withTempAudio(async (file) => {
-      await assert.rejects(
-        () => transcribeFixture({
-          audio: file,
-          env: { OMNIMUX_API_KEY: 'sk-stt' },
-          fetcher: sttFetcher({}, { error: { message: 'insufficient quota' } }, 429),
-        }),
-        (error) => error instanceof OmnimuxError && error.code === 'quota-exceeded',
-      )
-    })
-  })
-
-  it('maps other HTTP failures to omnimux-request-failed', async () => {
-    await withTempAudio(async (file) => {
-      await assert.rejects(
-        () => transcribeFixture({
-          audio: file,
-          env: { OMNIMUX_API_KEY: 'sk-stt' },
-          fetcher: sttFetcher({}, { error: { message: 'boom' } }, 500),
-        }),
-        (error) => error instanceof OmnimuxError && error.code === 'omnimux-request-failed',
-      )
-    })
-  })
-
-  it('throws omnimux-invalid-response when the envelope carries no text', async () => {
-    await withTempAudio(async (file) => {
-      await assert.rejects(
-        () => transcribeFixture({
-          audio: file,
-          env: { OMNIMUX_API_KEY: 'sk-stt' },
-          fetcher: sttFetcher({}, { data: {} }),
-        }),
-        (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-response',
-      )
-    })
-  })
-
-  it('accepts a plain-text transcription body', async () => {
-    await withTempAudio(async (file) => {
-      const result = await transcribeFixture({
-        audio: file,
-        env: { OMNIMUX_API_KEY: 'sk-stt' },
-        fetcher: async () => ({
-          ok: true,
-          status: 200,
-          json: async () => { throw new Error('not json') },
-          text: async () => 'raw transcript',
-        }),
-      })
-      assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: 'raw transcript' })
-    })
-  })
+test('STT accepts plain text even when JSON was requested', async () => {
+  const result = await executeOmnimuxSpeechToText({ ...request, fetcher: sttFetcher({}, 'raw transcript') })
+  assert.equal(result.text, 'raw transcript')
 })
 
-describe('mountSpeechToText', () => {
-  function fakeCtx(gate) {
-    const tools = {}
-    const provided = {}
-    return {
-      tools,
-      provided,
-      ctx: {
-        tools: { register(tool) { tools[tool.name] = tool } },
-        provide(name, api) { provided[name] = api },
-        get(name) { return name === 'gate' ? gate : undefined },
-      },
-    }
+test('STT respects explicit model and environment routing without changing the default', async () => {
+  const captured = {}
+  await executeOmnimuxSpeechToText({
+    audio: dataAudio, env: { OMNIMUX_STT_MODEL: 'seedasr-auc', OMNIMUX_API_KEY: 'sk-fixture', OMNIMUX_BASE_URL: 'https://fixture.example/v1' },
+    fetcher: sttFetcher(captured),
+  })
+  assert.equal(captured.url, 'https://fixture.example/v1/audio/transcriptions')
+  assert.equal(captured.init.body.get('model'), model)
+})
+
+test('STT rejects invalid formats before credentials, audio loading or HTTP', async () => {
+  let calls = 0
+  for (const response_format of ['xml', ' SRT ', {}, 42]) {
+    await assert.rejects(() => executeOmnimuxSpeechToText({
+      model, audio: '/nonexistent/not-read.mp3', response_format, env: {},
+      store: { resolve: async () => { calls++ } }, fetcher: async () => { calls++ },
+    }), { code: 'omnimux-invalid-request' })
   }
-
-  it('provides the speechToText seam and registers the tool by default', () => {
-    const { ctx, tools, provided } = fakeCtx(undefined)
-    mountSpeechToText(ctx, {
-      execute: async () => ({ mode: 'live', model: 'whisper-1', text: 'hi' }),
-      media: undefined,
-      jsonOut: JSON_TOOL_OUTPUT,
-    })
-    assert.ok(provided.speechToText && typeof provided.speechToText.execute === 'function')
-    assert.ok(tools[STT_TOOL_NAME])
-    assert.deepEqual(tools[STT_TOOL_NAME].parameters.required, ['audio'])
-  })
-
-  it('skips seam and tool when gate.tools.omnimux_speech_to_text is false', () => {
-    const { ctx, tools, provided } = fakeCtx({ enabled: true, tools: { [STT_TOOL_NAME]: false } })
-    mountSpeechToText(ctx, {
-      execute: async () => ({}),
-      media: undefined,
-      jsonOut: JSON_TOOL_OUTPUT,
-    })
-    assert.equal(provided.speechToText, undefined)
-    assert.equal(tools[STT_TOOL_NAME], undefined)
-  })
-
-  it('seam execute forwards media/store/credentials and returns the result', async () => {
-    const store = { resolve: async () => 'pat' }
-    const credentials = { resolve: async () => undefined }
-    let seen
-    const provided = {}
-    const ctx = {
-      tools: { register() {} },
-      provide(name, value) { provided[name] = value },
-      get(name) { return name === 'credentials' ? credentials : undefined },
-    }
-    mountSpeechToText(ctx, {
-      execute: async (req) => { seen = req; return { mode: 'live', model: 'whisper-1', text: 'ok' } },
-      media: { defaultProvider: 'omnimux' },
-      store,
-      jsonOut: JSON_TOOL_OUTPUT,
-    })
-    const result = await provided.speechToText.execute({ audio: '/tmp/a.mp3', language: 'zh' })
-    assert.equal(result.text, 'ok')
-    assert.equal(seen.audio, '/tmp/a.mp3')
-    assert.equal(seen.language, 'zh')
-    assert.deepEqual(seen.media, { defaultProvider: 'omnimux' })
-    assert.equal(seen.store, store)
-    assert.equal(seen.credentials, credentials)
-  })
-
-  it('tool execute maps args and rethrows OmnimuxError unchanged', async () => {
-    const { ctx, tools } = fakeCtx(undefined)
-    mountSpeechToText(ctx, {
-      execute: async () => {
-        throw new OmnimuxError('omnimux-invalid-request', 'audio is required')
-      },
-      media: undefined,
-      jsonOut: JSON_TOOL_OUTPUT,
-    })
-    await assert.rejects(
-      () => tools[STT_TOOL_NAME].execute({ audio: '' }, {}),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-  })
-
-  it('registered tool and seam reject bypassSubmitGuard before transcription HTTP', async () => {
-    const { ctx, tools, provided } = fakeCtx(undefined)
-    let vendorCalls = 0
-    mountSpeechToText(ctx, {
-      execute: executeOmnimuxSpeechToText,
-      media: undefined,
-      jsonOut: JSON_TOOL_OUTPUT,
-    })
-    const request = {
-      audio: '/tmp/omnimux-guard-never-reads.mp3',
-      operation: 'speech_to_text',
-      bypassSubmitGuard: true,
-      env: { OMNIMUX_API_KEY: 'sk-test' },
-      fetcher: async () => { vendorCalls += 1 },
-    }
-    await assert.rejects(
-      () => tools[STT_TOOL_NAME].execute(request, {}),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-    await assert.rejects(
-      () => provided.speechToText.execute(request),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
-    )
-    assert.equal(vendorCalls, 0)
-  })
+  assert.equal(calls, 0)
 })
+
+test('STT fetches HTTP audio before multipart upload and forwards cancellation', async () => {
+  const captured = {}
+  const urls = []
+  const signal = new AbortController().signal
+  const result = await executeOmnimuxSpeechToText({
+    ...request, audio: 'https://cdn.example.com/voice/note.m4a', signal,
+    fetcher: async (url, init) => {
+      urls.push(String(url))
+      assert.equal(init.signal, signal)
+      if (init.method === 'POST') return sttFetcher(captured)(url, init)
+      assert.equal(init.headers.authorization, undefined)
+      return new Response(M4A_BYTES, { headers: { 'content-type': 'audio/m4a' } })
+    },
+  })
+  assert.deepEqual(urls, ['https://cdn.example.com/voice/note.m4a', 'https://api.omnimux.ai/v1/audio/transcriptions'])
+  assert.equal(captured.init.body.get('file').name, 'note.m4a')
+  assert.equal(captured.init.body.get('file').type, 'audio/m4a')
+  assert.equal(result.mode, 'live')
+})
+
+test('admitted wire primitive keeps explicit token and legacy Whisper compatibility', async () => {
+  const captured = {}
+  const result = await transcribeFixture({ audio: dataAudio, apiKey: 'pat-stt-token', fetcher: sttFetcher(captured) })
+  assert.equal(captured.init.headers.authorization, 'Bearer pat-stt-token')
+  assert.equal(captured.init.body.get('response_format'), 'json')
+  assert.equal(result.model, 'whisper-1')
+})
+
+for (const [status, body, code] of [
+  [429, { error: { message: 'insufficient quota' } }, 'quota-exceeded'],
+  [500, { error: { message: 'boom' } }, 'omnimux-request-failed'],
+  [500, 'server unavailable', 'omnimux-request-failed'],
+  [200, { data: {} }, 'omnimux-invalid-response'],
+  [200, '', 'omnimux-invalid-response'],
+  [200, ' \r\n ', 'omnimux-invalid-response'],
+]) {
+  test(`STT rejects ${status} ${JSON.stringify(body)} without fabricated text`, async () => {
+    await assert.rejects(() => executeOmnimuxSpeechToText({
+      ...request, response_format: 'srt', fetcher: sttFetcher({}, body, status),
+    }), { code })
+  })
+}

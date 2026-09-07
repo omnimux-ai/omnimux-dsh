@@ -48,7 +48,7 @@ export const DEFAULT_PROFILE_PAYLOADS = Object.freeze({
     }),
   }),
   speechToText: Object.freeze({
-    logicalFields: Object.freeze(['audio', 'language', 'model']),
+    logicalFields: Object.freeze(['audio', 'language', 'model', 'response_format']),
     vendorFields: Object.freeze(['file', 'model', 'language', 'response_format']),
     unknownFieldPolicy: 'reject',
   }),

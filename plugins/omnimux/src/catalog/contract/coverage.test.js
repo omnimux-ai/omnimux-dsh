@@ -9,10 +9,10 @@ import { loadAll, resetContractCache, DEFAULT_SPECS_DIR } from './load.js';
 import { verifyContracts } from './index.js';
 import { loadDispositions } from './dispositions.js';
 
-test('collectRuntimeModelIds returns the 59-id universe (contracts + wire aliases)', () => {
+test('collectRuntimeModelIds returns the 61-id universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 59, `expected 59 runtime ids, got ${ids.length}`);
+  assert.equal(ids.length, 61, `expected 61 runtime ids, got ${ids.length}`);
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
@@ -45,6 +45,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'seedance-2.0-fast',
     'seedance-2.0-mini',
     'seedance-2.5',
+    'seedasr-auc',
     'wan3.0-video',
   ]);
   assert.ok(cov.contractIds.includes('kling-avatar'));
@@ -77,7 +78,7 @@ test('negative: canonical-disposition missing contract is a strict coverage erro
   assert.ok(auditIssues.some((i) => i.code === 'coverage_missing' && i.level === 'warning'));
 });
 
-test('verifyContracts: audit ok; strict ok once 59 dispositions resolve', () => {
+test('verifyContracts: audit ok; strict ok once 61 dispositions resolve', () => {
   const audit = verifyContracts({ strict: false });
   assert.equal(audit.ok, true, JSON.stringify(audit.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(audit.exitCode, 0);
@@ -87,7 +88,7 @@ test('verifyContracts: audit ok; strict ok once 59 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 59);
+  assert.equal(strict.dispositions.total, 61);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
   assert.ok(strict.listedOperations.length > 0);

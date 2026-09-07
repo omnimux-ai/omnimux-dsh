@@ -405,6 +405,19 @@
       "reason": "APIMart wire model；产品目录只展示 canonical id"
     },
     {
+      "id": "doubao-asr-bigmodel",
+      "disposition": "canonical",
+      "reason": "Issue #744 指定的豆包 ASR 中枢契约；speech_to_text 使用 speechToText profile",
+      "evidence": ["docs/evidence/2026-09-07-model-doubao-asr-bigmodel-speech_to_text.md"],
+      "notes": "离线请求与响应契约验证；无独立真实模型调用证据"
+    },
+    {
+      "id": "seedasr-auc",
+      "disposition": "alias",
+      "target": "doubao-asr-bigmodel",
+      "reason": "Issue #744 指定的豆包 ASR 别名；提交前归一为 canonical id"
+    },
+    {
       "id": "whisper-1",
       "disposition": "draft",
       "reason": "speechToText seam 已挂载（#538），可探测；仓内无 dated live 证据不上架，#530 探测后方可翻 live",

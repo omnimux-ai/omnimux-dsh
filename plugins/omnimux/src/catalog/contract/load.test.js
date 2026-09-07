@@ -34,7 +34,8 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.ok(index.get('whisper-1'));
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 55);
+  assert.equal(index.listedOperations.length, 56);
+  assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const key of [
     'seedance-2-0#first_last_frame',
     'seedance-2-0-fast#video_multi_ref',
@@ -252,10 +253,7 @@ test('fixture valid dir: chat listed; whisper not; partial ops; aliases layered'
   assert.equal(w.listed, false);
   assert.equal(w.operations[0].listed, false);
   assert.equal(w.operations[0].output.type, 'text');
-  assert.equal(
-    w.operations[0].inputs.some((s) => s.role === 'prompt'),
-    false,
-  );
+  assert.equal(w.operations[0].inputs.some((s) => s.role === 'prompt'), false);
 
   const chat = index.get('fixture-chat-ok');
   assert.ok(chat);

@@ -179,3 +179,12 @@ test('MediaPreview URL：mediaAssets 匹配类型优先，回退首条，再回�
   assert.equal(resolveMediaPreviewUrl('audio', [], undefined), undefined);
   assert.equal(resolveMediaPreviewUrl('audio', [{ type: 'audio' }], undefined), undefined);
 });
+
+test('panelVisible：SRT 字幕文本节点（contentFormat=srt）防御性不展开（Issue 744）', () => {
+  // 即使 kind 不是 import（异常数据），contentFormat === 'srt' 也强制收起
+  assert.equal(isConfigPanelVisible(true, undefined, 'generate', false, 'srt'), false);
+  assert.equal(isConfigPanelVisible(true, 'completed', 'import', false, 'srt'), false);
+  // 其他 contentFormat 不影响既有语义
+  assert.equal(isConfigPanelVisible(true, undefined, 'generate', false, 'markdown'), true);
+  assert.equal(isConfigPanelVisible(true, undefined, 'generate', false, undefined), true);
+});
