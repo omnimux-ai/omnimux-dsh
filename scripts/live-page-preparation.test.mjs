@@ -55,6 +55,7 @@ test('missing, pre-restart, malformed, and stale L2 login entries never navigate
     assert.equal(result.status, kind === 'stale' ? 'l2-identity-mismatch' : 'l2-login-missing')
     assert.equal(tab.navigations.length, 0); assert.equal(tab.calls.length, 0)
     assert.doesNotMatch(JSON.stringify(result), /old-login-token|l2-test-token/)
+    cleanup()
   }
 })
 

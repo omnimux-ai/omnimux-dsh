@@ -64,8 +64,15 @@ test('upstream text enables generation without adding a local prompt', () => {
 test('audio modes come from the selected model, with no fixed speech/music tabs', () => {
   const single = render(node('audio', {selectedTool:'text-to-music',prompt:'Music'}),fixture('audio',false));
   assert.doesNotMatch(single, /wf-config-panel__audio-tabs|wf-operation-mode-inline|音频生成|音乐生成/);
+  // 音频（非 ASR）改挂摘要条；单 op 无 mode 槽（Hide, Don't Grey）
+  assert.match(single, /wf-cfg-summary-bar/);
+  assert.match(single, /data-show-mode="false"/);
   const multi = render(node('audio', {prompt:'Music'}),fixture('audio'));
-  assert.match(multi, /wf-operation-mode-inline/);
+  // 多 op：生成方式进摘要条 / 浮层，底栏无内联 Segment、无孤立齿轮与内联抽屉
+  assert.doesNotMatch(multi, /wf-operation-mode-inline|advanced-drawer/);
+  assert.match(multi, /wf-cfg-summary-bar/);
+  assert.match(multi, /data-show-mode="true"/);
+  assert.match(multi, /文本对话/);
 });
 
 test('automatic model adaptation is a status message, not an error', () => {

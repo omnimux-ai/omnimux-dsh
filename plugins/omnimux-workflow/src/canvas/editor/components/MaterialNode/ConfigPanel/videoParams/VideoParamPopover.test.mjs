@@ -1,12 +1,17 @@
 /**
  * Source-contract tests for the T04 TriggerBar / Portal Popover / CSS style system.
- * （2026-09-07 配置面板 UI 收敛：32px / 8px 几何铁律版）
+ * （2026-09-07 配置面板 UI 收敛：32px / 8px 几何铁律版；
+ *   2026-09-07 全模态收敛 / T03：外壳断言迁往 cfg/ 通用实现源码）
  *
  * 参照仓库 configPanelExpand.test.mjs 与同目录 *.test.mjs 的源码断言风格
  * （readFileSync + node:test），对：
- * 1. VideoTriggerBar.tsx —— 摘要触发条结构契约（32/8、CSS 竖线分隔、折叠协议、14px 图标）；
- * 2. VideoParamPopover.tsx —— React Portal 浮层外壳结构契约（定位/监听/关闭/隔离）；
- * 3. components.css 新增样式块 —— 类名覆盖、overflow-y:auto、32px/8px 几何、
+ * 1. VideoTriggerBar.tsx —— 视频门面槽位组装契约（mode/ratio/duration/sound/chevron、
+ *    14px 图标、wf-video-trigger-bar 双锁类名、title/aria 摘要）；
+ * 2. cfg/CfgSummaryBar.tsx —— 通用摘要条结构契约（32/8、折叠协议、ResizeObserver、
+ *    button 语义、aria-haspopup/expanded）；
+ * 3. cfg/CfgPopoverShell.tsx —— React Portal 浮层外壳结构契约（定位/监听/关闭/隔离）；
+ * 4. VideoParamPopover.tsx —— 视频区块信息架构契约（分区条件渲染、onParamChange 透传）；
+ * 5. components.css 新增样式块 —— 类名覆盖、overflow-y:auto、32px/8px 几何、
  *    brand-primary 选中描边、focus-visible 焦点环、Choice Tile / Compact Toggle 新控件；
  *    禁止裸色字面量与私有 token 岛。
  */
@@ -20,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const triggerSrc = readFileSync(join(here, 'VideoTriggerBar.tsx'), 'utf8');
 const popoverSrc = readFileSync(join(here, 'VideoParamPopover.tsx'), 'utf8');
+const cfgBarSrc = readFileSync(join(here, '../cfg/CfgSummaryBar.tsx'), 'utf8');
+const cfgShellSrc = readFileSync(join(here, '../cfg/CfgPopoverShell.tsx'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../../../../theme/components.css'), 'utf8');
 
 // 提取本次新增的视频参数样式块（从注释分区标题到文件末尾）
@@ -37,23 +44,23 @@ function extractRuleBlock(selector) {
   return videoCssBlock.slice(start, end + 1);
 }
 
-test('VideoTriggerBar 根触发条类名与打开/禁用态', () => {
+test('VideoTriggerBar 根触发条类名与打开/禁用态（双锁 wf-video-trigger-bar）', () => {
   assert.match(triggerSrc, /wf-video-trigger-bar/);
   assert.match(triggerSrc, /wf-video-trigger-bar--open/);
-  // 根为 <button type="button">，disabled + aria-disabled 禁用态
-  assert.match(triggerSrc, /<button\s+type="button"/);
-  assert.match(triggerSrc, /disabled=\{disabled\}/);
-  assert.match(triggerSrc, /aria-disabled=\{disabled\}/);
-  // dialog 语义
-  assert.match(triggerSrc, /aria-haspopup="dialog"/);
-  assert.match(triggerSrc, /aria-expanded=\{isOpen\}/);
+  assert.match(triggerSrc, /CfgSummaryBar/);
+  // 根 <button type="button"> 与 dialog 语义由通用 CfgSummaryBar 承担
+  assert.match(cfgBarSrc, /<button\s+type="button"/);
+  assert.match(cfgBarSrc, /disabled=\{disabled\}/);
+  assert.match(cfgBarSrc, /aria-disabled=\{disabled\}/);
+  assert.match(cfgBarSrc, /aria-haspopup="dialog"/);
+  assert.match(cfgBarSrc, /aria-expanded=\{isOpen\}/);
 });
 
 test('VideoTriggerBar 消费 formatVideoSummary / collapseSummary 与 14px 图标，无中点分隔节点', () => {
   assert.match(triggerSrc, /formatVideoSummary/);
-  // 折叠协议纯函数接入（ResizeObserver 测量 → collapseSummary）
-  assert.match(triggerSrc, /collapseSummary/);
-  assert.match(triggerSrc, /ResizeObserver/);
+  // 折叠协议纯函数接入（ResizeObserver 测量 → collapseSummary）由 CfgSummaryBar 承担
+  assert.match(cfgBarSrc, /collapseSummary/);
+  assert.match(cfgBarSrc, /ResizeObserver/);
   // 图标统一 14px（废除 11/12 混用）
   assert.match(triggerSrc, /AspectRatioIcon\s+ratio=\{params\.aspectRatio\}\s+size=\{14\}/);
   assert.match(triggerSrc, /ChevronDown\s+size=\{14\}/);
@@ -65,55 +72,59 @@ test('VideoTriggerBar 消费 formatVideoSummary / collapseSummary 与 14px 图�
   // 段间分隔由 CSS 竖线承担：无 __dot 类名、源码无「·」字符节点
   assert.doesNotMatch(triggerSrc, /wf-video-trigger-bar__dot/);
   assert.doesNotMatch(triggerSrc, /·/);
-  // 语义化分隔槽位类名
+  // 语义化分隔槽位类名（视频双锁 + 通用槽位）
   assert.match(triggerSrc, /wf-video-trigger-bar__slot/);
+  assert.match(cfgBarSrc, /wf-cfg-summary-bar__slot/);
 });
 
-test('VideoParamPopover 采用 createPortal 挂载到 document.body 且非浏览器环境不渲染', () => {
-  assert.match(popoverSrc, /createPortal/);
-  assert.match(popoverSrc, /document\.body/);
-  assert.match(popoverSrc, /typeof document === 'undefined'/);
-  assert.match(popoverSrc, /!isOpen \|\| typeof document === 'undefined'/);
+test('CfgPopoverShell 采用 createPortal 挂载到 document.body 且非浏览器环境不渲染', () => {
+  assert.match(popoverSrc, /CfgPopoverShell/);
+  assert.match(cfgShellSrc, /createPortal/);
+  assert.match(cfgShellSrc, /document\.body/);
+  assert.match(cfgShellSrc, /typeof document === 'undefined'/);
+  assert.match(cfgShellSrc, /!isOpen \|\| typeof document === 'undefined'/);
 });
 
-test('VideoParamPopover 消费 calculatePopoverPosition 并写入 fixed 定位', () => {
-  assert.match(popoverSrc, /calculatePopoverPosition/);
-  assert.match(popoverSrc, /getBoundingClientRect\(\)/);
-  assert.match(popoverSrc, /window\.innerWidth/);
-  assert.match(popoverSrc, /window\.innerHeight/);
-  assert.match(popoverSrc, /position:\s*'fixed'/);
-  assert.match(popoverSrc, /left:/);
-  assert.match(popoverSrc, /maxHeight:/);
-  assert.match(popoverSrc, /width:/);
+test('CfgPopoverShell 消费 calculatePopoverPosition 并写入 fixed 定位', () => {
+  assert.match(cfgShellSrc, /calculatePopoverPosition/);
+  assert.match(cfgShellSrc, /getBoundingClientRect\(\)/);
+  assert.match(cfgShellSrc, /window\.innerWidth/);
+  assert.match(cfgShellSrc, /window\.innerHeight/);
+  assert.match(cfgShellSrc, /position:\s*'fixed'/);
+  assert.match(cfgShellSrc, /left:/);
+  assert.match(cfgShellSrc, /maxHeight:/);
+  assert.match(cfgShellSrc, /width:/);
 });
 
-test('VideoParamPopover 注册并注销 resize / 捕获 scroll 监听', () => {
-  assert.match(popoverSrc, /addEventListener\('resize'/);
-  assert.match(popoverSrc, /removeEventListener\('resize'/);
-  assert.match(popoverSrc, /addEventListener\('scroll'/);
-  assert.match(popoverSrc, /removeEventListener\('scroll'/);
-  assert.match(popoverSrc, /capture:\s*true/);
-  assert.match(popoverSrc, /passive:\s*true/);
+test('CfgPopoverShell 注册并注销 resize / 捕获 scroll 监听', () => {
+  assert.match(cfgShellSrc, /addEventListener\('resize'/);
+  assert.match(cfgShellSrc, /removeEventListener\('resize'/);
+  assert.match(cfgShellSrc, /addEventListener\('scroll'/);
+  assert.match(cfgShellSrc, /removeEventListener\('scroll'/);
+  assert.match(cfgShellSrc, /capture:\s*true/);
+  assert.match(cfgShellSrc, /passive:\s*true/);
 });
 
-test('VideoParamPopover Escape 与外部点击（捕获阶段 mousedown）关闭', () => {
-  assert.match(popoverSrc, /addEventListener\('mousedown'/);
-  assert.match(popoverSrc, /addEventListener\('keydown'/);
-  assert.match(popoverSrc, /e\.key === 'Escape'/);
-  assert.match(popoverSrc, /onClose\(\)/);
-  assert.match(popoverSrc, /removeEventListener\('mousedown'/);
-  assert.match(popoverSrc, /removeEventListener\('keydown'/);
+test('CfgPopoverShell Escape 与外部点击（捕获阶段 mousedown）关闭', () => {
+  assert.match(cfgShellSrc, /addEventListener\('mousedown'/);
+  assert.match(cfgShellSrc, /addEventListener\('keydown'/);
+  assert.match(cfgShellSrc, /e\.key === 'Escape'/);
+  assert.match(cfgShellSrc, /onClose\(\)/);
+  assert.match(cfgShellSrc, /removeEventListener\('mousedown'/);
+  assert.match(cfgShellSrc, /removeEventListener\('keydown'/);
   // 目标在面板或触发器内时不关闭
-  assert.match(popoverSrc, /panelRef\.current\?\.contains/);
-  assert.match(popoverSrc, /triggerRef\.current\?\.contains/);
+  assert.match(cfgShellSrc, /panelRef\.current\?\.contains/);
+  assert.match(cfgShellSrc, /triggerRef\.current\?\.contains/);
+  // 浮层内 CustomSelect 下拉不关闭 Popover
+  assert.match(cfgShellSrc, /wf-custom-select-dropdown/);
 });
 
-test('VideoParamPopover 事件隔离：nowheel nodrag 与 stopPropagation', () => {
-  assert.match(popoverSrc, /nowheel nodrag/);
-  assert.match(popoverSrc, /onWheel=\{\(e\) => e\.stopPropagation\(\)\}/);
-  assert.match(popoverSrc, /onPointerDown=\{\(e\) => e\.stopPropagation\(\)\}/);
+test('CfgPopoverShell 事件隔离：nowheel nodrag 与 stopPropagation', () => {
+  assert.match(cfgShellSrc, /nowheel nodrag/);
+  assert.match(cfgShellSrc, /onWheel=\{\(e\) => e\.stopPropagation\(\)\}/);
+  assert.match(cfgShellSrc, /onPointerDown=\{\(e\) => e\.stopPropagation\(\)\}/);
   // role=dialog 语义
-  assert.match(popoverSrc, /role="dialog"/);
+  assert.match(cfgShellSrc, /role="dialog"/);
 });
 
 test('VideoParamPopover 滚动容器与分区条件渲染（清晰度+有声同质量行）', () => {
@@ -208,8 +219,8 @@ test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32/
   assert.match(videoCssBlock, /\.wf-video-param-popover \{[\s\S]*?z-index:\s*9999/);
   assert.match(videoCssBlock, /\.wf-video-param-popover \{[\s\S]*?max-width:\s*calc\(100vw - 24px\)/);
   assert.match(videoCssBlock, /backdrop-filter:\s*blur\(20px\)/);
-  // 入场位移随 placement 同向（top 从下方 4px 长出）
-  assert.match(videoCssBlock, /wf-video-popover-in-top[\s\S]*?translateY\(4px\)/);
+  // 入场位移随 placement 同向（top 从下方 4px 长出；keyframes 单处定义于 cfg 名）
+  assert.match(videoCssBlock, /wf-cfg-popover-in-top[\s\S]*?translateY\(4px\)/);
   // 分段容器 32px 高、item nowrap、激活 brand 描边
   assert.match(videoCssBlock, /\.wf-video-seg \{[\s\S]*?height:\s*32px/);
   assert.match(videoCssBlock, /\.wf-video-seg__item \{[\s\S]*?white-space:\s*nowrap/);

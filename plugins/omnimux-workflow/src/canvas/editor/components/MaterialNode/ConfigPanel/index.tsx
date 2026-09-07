@@ -14,7 +14,6 @@ import {
   Maximize2,
   Minimize2,
   Plus,
-  SlidersHorizontal,
   Music,
   Play,
   FileText,
@@ -28,7 +27,7 @@ import type { MaterialNodeData } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import { useT } from '../../../../i18n';
-import { CustomSelect, CustomSlider, toast } from '../../../../ui';
+import { CustomSelect, toast } from '../../../../ui';
 import { rememberGenerationModel } from '../../../../store/generationPreferencesStore';
 import { generationReasonText } from '../../../../i18n/generationReason';
 import { resolveGenerationPrompt } from '../../../../../shared/graph/generationPrompt';
@@ -40,6 +39,12 @@ import { resolveNodeLifecycle } from '../../../utils/nodeMaterialLifecycle';
 import GenerateButton from './GenerateButton';
 import { VideoTriggerBar } from './videoParams/VideoTriggerBar';
 import { VideoParamPopover } from './videoParams/VideoParamPopover';
+import { ImageTriggerBar } from './imageParams/ImageTriggerBar';
+import { ImageParamPopover } from './imageParams/ImageParamPopover';
+import { resolveEffectiveImageParams } from './imageParams/imageParamAdapter';
+import { AudioTriggerBar } from './audioParams/AudioTriggerBar';
+import { AudioParamPopover } from './audioParams/AudioParamPopover';
+import { resolveEffectiveAudioParams } from './audioParams/audioParamAdapter';
 import {
   applyPendingVideoParamAdjustment,
   buildVideoParamTransition,
@@ -87,17 +92,17 @@ function getModelVisuals(id: string) {
     return { icon, badge: 'Yearly -20%', subtitle: '1k-4k' };
   }
   if (id.startsWith('kling')) {
-    let subtitle = '1080P · ⏱ 3-10s';
-    if (id === 'kling-o3') subtitle = '4K · ⏱ 3-15s · 🔊';
+    let subtitle = '1080P · 3-10s';
+    if (id === 'kling-o3') subtitle = '4K · 3-15s';
     else if (id === 'kling-avatar') subtitle = 'Digital Human';
     else if (id === 'kling-motion-control') subtitle = '1080P';
     return { icon, subtitle };
   }
   if (id.startsWith('wan')) {
-    return { icon, subtitle: '720P-1080P · ⏱ 5-15s · 🔊' };
+    return { icon, subtitle: '720P-1080P · 5-15s' };
   }
   if (id.startsWith('veo')) {
-    return { icon, subtitle: '720p-1080p · ⏱ 8s' };
+    return { icon, subtitle: '720p-1080p · 8s' };
   }
   return { icon };
 }
@@ -116,9 +121,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const kind = resolveNodeKind(nodeData);
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [videoPopoverOpen, setVideoPopoverOpen] = useState(false);
   const videoTriggerRef = useRef<HTMLDivElement | null>(null);
+  const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
+  const imageTriggerRef = useRef<HTMLDivElement | null>(null);
+  const [audioPopoverOpen, setAudioPopoverOpen] = useState(false);
+  const audioTriggerRef = useRef<HTMLDivElement | null>(null);
 
   const upstreams = useUpstreamMedia(nodeId);
   const upstreamSnapshots = useMemo(() => toUpstreamSnapshots(upstreams), [upstreams]);
@@ -253,11 +261,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const {
     schema,
     modelItem,
-    aspectRatioOptions,
-    defaultAspectRatio,
-    isAspectRatioValid,
-    defaultDuration,
-    isDurationValid,
   } = useModelParameterSchema(materialType, modelValue, catalog);
 
   const updateParam = useCallback(
@@ -319,6 +322,38 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
   );
 
+  // 图像节点的有效参数（读侧清洗回退，不回写 nodeData）
+  const imageEffectiveParams = useMemo(
+    () =>
+      materialType === 'image'
+        ? resolveEffectiveImageParams({
+            params,
+            schema,
+            modelItem,
+            catalog: activeCatalog,
+            upstreams: upstreamSnapshots,
+            prompt: localPrompt,
+          })
+        : null,
+    [materialType, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
+  );
+
+  // 音频（非 ASR）节点的有效参数（读侧清洗回退，不回写 nodeData）
+  const audioEffectiveParams = useMemo(
+    () =>
+      materialType === 'audio' && !isAsrTool
+        ? resolveEffectiveAudioParams({
+            params,
+            schema,
+            modelItem,
+            catalog: activeCatalog,
+            upstreams: upstreamSnapshots,
+            prompt: localPrompt,
+          })
+        : null,
+    [materialType, isAsrTool, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
+  );
+
   const handleModelChange = useCallback(
     (newModelId: string) => {
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
@@ -370,16 +405,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         return t('panel.promptPlaceholder');
     }
   }, [materialType, isMusicOperation, isAsrTool, upstreams, t]);
-
-  const aspectRatioValue =
-    typeof params.aspectRatio === 'string' && isAspectRatioValid(params.aspectRatio)
-      ? params.aspectRatio
-      : defaultAspectRatio;
-
-  const durationValue =
-    typeof params.duration === 'number' && isDurationValid(params.duration)
-      ? params.duration
-      : defaultDuration;
 
   const pendingVideoParamAdjustment = useMemo(
     () => readPendingVideoParamAdjustment(params as Record<string, unknown>),
@@ -661,8 +686,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             />
           )}
 
-          {/* 图片和音频只展示模型实际提供的多种方式；视频在浮层中选择。 */}
-          {showModeUi && materialType !== 'video' ? (
+          {/* 文本 / ASR 保持内联生成方式入口；图像与音频（非 ASR）的生成方式进各自浮层。 */}
+          {showModeUi && (materialType === 'text' || isAsrTool) ? (
             <>
               <span className="wf-param-pill__divider">|</span>
               <div data-testid="wf-operation-mode-inline">
@@ -675,21 +700,16 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             </>
           ) : null}
 
-          {/* 图片专属参数胶囊 */}
-          {materialType === 'image' && (
-            <>
-              <span className="wf-param-pill__divider">|</span>
-              <div className="wf-param-pill wf-param-pill--video-summary">
-                <CustomSelect
-                  className="wf-param-bar__select wf-param-bar__select--ghost"
-                  variant="ghost"
-                  value={aspectRatioValue}
-                  options={aspectRatioOptions}
-                  popupMatchSelectWidth={false}
-                  onChange={(value) => updateParam('aspectRatio', value)}
-                />
-              </div>
-            </>
+          {/* 图像专属参数：单行摘要 TriggerBar + Portal 浮层（废除幽灵 Select 与前置 `|`） */}
+          {materialType === 'image' && imageEffectiveParams && (
+            <div ref={imageTriggerRef} className="wf-cfg-summary-bar__wrap">
+              <ImageTriggerBar
+                params={imageEffectiveParams}
+                isOpen={imagePopoverOpen}
+                disabled={execBusy}
+                onToggle={() => setImagePopoverOpen((p) => !p)}
+              />
+            </div>
           )}
 
           {/* 视频专属参数胶囊：单行摘要 TriggerBar + Portal 浮层（废除前置 `|` 分隔，由 flex gap 承担） */}
@@ -704,19 +724,16 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             </div>
           )}
 
-          {/* 音频专属设置按钮 */}
-          {materialType === 'audio' && !isAsrTool && (
-            <>
-              <span className="wf-param-pill__divider">|</span>
-              <button
-                type="button"
-                className="wf-param-pill wf-param-pill--btn"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                title={t('panel.advanced')}
-              >
-                <SlidersHorizontal size={13} />
-              </button>
-            </>
+          {/* 音频（非 ASR）专属参数：单行摘要 TriggerBar + Portal 浮层（废除孤立齿轮与内联抽屉） */}
+          {materialType === 'audio' && !isAsrTool && audioEffectiveParams && (
+            <div ref={audioTriggerRef} className="wf-cfg-summary-bar__wrap">
+              <AudioTriggerBar
+                params={audioEffectiveParams}
+                isOpen={audioPopoverOpen}
+                disabled={execBusy}
+                onToggle={() => setAudioPopoverOpen((p) => !p)}
+              />
+            </div>
           )}
         </div>
 
@@ -734,22 +751,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 高级参数展开 */}
-      {showAdvanced && (
-        <div className="wf-config-panel__advanced-drawer">
-          <div className="wf-config-panel__advanced-row">
-            <span className="wf-config-panel__advanced-label">{t('panel.duration')}</span>
-            <CustomSlider
-              style={{ flex: 1 }}
-              min={1}
-              max={materialType === 'video' ? 20 : 60}
-              value={durationValue}
-              onChange={(v) => updateParam('duration', v)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* 视频参数浮层（Portal 挂载，随面板根部渲染） */}
       {materialType === 'video' && videoEffectiveParams && (
         <VideoParamPopover
@@ -760,6 +761,28 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           isOpen={videoPopoverOpen}
           onClose={() => setVideoPopoverOpen(false)}
           onParamChange={(key, value) => updateParam(key as string, value)}
+        />
+      )}
+
+      {/* 图像参数浮层（Portal 挂载，随面板根部渲染） */}
+      {materialType === 'image' && imageEffectiveParams && (
+        <ImageParamPopover
+          triggerRef={imageTriggerRef}
+          params={imageEffectiveParams}
+          isOpen={imagePopoverOpen}
+          onClose={() => setImagePopoverOpen(false)}
+          onParamChange={(key, value) => updateParam(key, value)}
+        />
+      )}
+
+      {/* 音频（非 ASR）参数浮层（Portal 挂载，随面板根部渲染） */}
+      {materialType === 'audio' && !isAsrTool && audioEffectiveParams && (
+        <AudioParamPopover
+          triggerRef={audioTriggerRef}
+          params={audioEffectiveParams}
+          isOpen={audioPopoverOpen}
+          onClose={() => setAudioPopoverOpen(false)}
+          onParamChange={(key, value) => updateParam(key, value)}
         />
       )}
     </div>

@@ -1,0 +1,87 @@
+classDiagram
+  class ConfigPanel {
+    +materialType
+    +updateParam(key, value)
+    +blockGenerate
+    +videoPopoverOpen
+    +imagePopoverOpen
+    +audioPopoverOpen
+  }
+  class GenerateButton {
+    +disabled
+    +disabledReason
+    +onClick()
+  }
+  class CfgSummaryBar {
+    +items: CfgSummaryItem[]
+    +collapseOrder
+    +fullText
+    +onToggle()
+  }
+  class CfgPopoverShell {
+    +triggerRef
+    +isOpen
+    +onClose()
+  }
+  class CfgChoiceTile
+  class CfgAspectGrid
+  class CfgDurationGrid
+  class CfgCompactToggle
+  class CfgSegment
+  class SummaryCollapse {
+    +collapseSummary(slots, px, order)
+  }
+  class ControlKindResolver {
+    +resolveControlKind(input)
+  }
+  class ViewportPositioner {
+    +resolvePanelWidth(w)
+    +calculatePopoverPosition(rect, vp)
+  }
+  class ImageParamAdapter {
+    +resolveEffectiveImageParams(args)
+    +formatImageSummary(params)
+    +assertImageParamWriteKey(key)
+  }
+  class AudioParamAdapter {
+    +resolveEffectiveAudioParams(args)
+    +formatAudioSummary(params)
+    +assertAudioParamWriteKey(key)
+  }
+  class VideoParamAdapter {
+    +resolveEffectiveVideoParams(args)
+    +buildVideoParamTransition(...)
+  }
+  class ImageTriggerBar
+  class ImageParamPopover
+  class AudioTriggerBar
+  class AudioParamPopover
+  class VideoTriggerBar
+  class VideoParamPopover
+
+  ConfigPanel *-- GenerateButton : 语义冻结
+  ConfigPanel *-- VideoTriggerBar
+  ConfigPanel *-- VideoParamPopover
+  ConfigPanel *-- ImageTriggerBar
+  ConfigPanel *-- ImageParamPopover
+  ConfigPanel *-- AudioTriggerBar
+  ConfigPanel *-- AudioParamPopover
+  VideoTriggerBar --> CfgSummaryBar
+  ImageTriggerBar --> CfgSummaryBar
+  AudioTriggerBar --> CfgSummaryBar
+  VideoParamPopover --> CfgPopoverShell
+  ImageParamPopover --> CfgPopoverShell
+  AudioParamPopover --> CfgPopoverShell
+  CfgSummaryBar --> SummaryCollapse
+  CfgPopoverShell --> ViewportPositioner
+  ImageParamPopover --> CfgChoiceTile
+  ImageParamPopover --> CfgAspectGrid
+  ImageParamPopover --> CfgSegment
+  AudioParamPopover --> CfgDurationGrid
+  AudioParamPopover --> CfgCompactToggle
+  ImageTriggerBar --> ImageParamAdapter : 只读
+  ImageParamPopover --> ImageParamAdapter : assert write
+  AudioTriggerBar --> AudioParamAdapter : 只读
+  ConfigPanel --> VideoParamAdapter : 只读（已有）
+  VideoParamAdapter ..> GenerateButton : 不调用
+  ImageParamAdapter ..> GenerateButton : 不调用
