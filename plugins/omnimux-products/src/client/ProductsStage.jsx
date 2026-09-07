@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, FilterBar, PageHeader, SearchField } from 'dsh-ui-kit'
-import { createProduct, deleteProduct, getState, pickPath, updateProduct } from './api.js'
+import { createProduct, deleteProduct, getProduct, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { PlusIcon, RefreshIcon } from './icons.jsx'
 import { ProductFormDialog } from './ProductFormDialog.jsx'
@@ -68,8 +68,8 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     if (!silent) setBusy(true)
     try {
       const res = await getState()
-      if (res.ok && res.body?.state?.products) {
-        setProducts(res.body.state.products)
+      if (res.ok && Array.isArray(res.body?.products)) {
+        setProducts(res.body.products)
         setError('')
       } else if (!res.ok) {
         setError(messageOf(res, t))
@@ -100,6 +100,26 @@ export function ProductsStage({ t, stage, store, visible = true }) {
         setCopiedId(product.id)
         setTimeout(() => { setCopiedId(null) }, 2000)
       })
+    }
+  }
+
+  const handleOpenProduct = async (product) => {
+    setBusy(true)
+    setError('')
+    try {
+      const result = await getProduct(product.id)
+      if (!result.ok || !result.body?.product) {
+        setError(messageOf(result, t))
+        return
+      }
+      setEditing(result.body.product)
+      setEditingDirty(false)
+      setFormError('')
+      setCreating(false)
+    } catch (caught) {
+      setError(errText(caught))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -270,14 +290,16 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       <div className="omnimux-products-body">
         <ProductGrid
           products={visibleProducts}
-          searching={query.trim() !== ''}
+          emptyLabel={t(query.trim() ? 'empty.noMatch' : 'empty.all')}
+          emptyActionLabel={t('add.button')}
+          showEmptyAction={query.trim() === ''}
           selectedIds={selectedIds}
           copiedId={copiedId}
           onToggleSelect={toggleSelect}
-          onEdit={(p) => { setEditing(p); setEditingDirty(false); setFormError(''); setCreating(false) }}
+          onOpen={handleOpenProduct}
           onRemove={(p) => { setPendingRemove({ isBatch: false, product: p, names: [p.name] }) }}
           onCopy={handleCopyCite}
-          onAdd={() => { setCreating(true); setFormError(''); setEditing(null); setEditingDirty(false) }}
+          onEmptyAction={() => { setCreating(true); setFormError(''); setEditing(null); setEditingDirty(false) }}
           t={t}
         />
       </div>
