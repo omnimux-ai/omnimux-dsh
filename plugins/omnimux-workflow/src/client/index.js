@@ -1,10 +1,9 @@
-/** Client half: locale dictionaries, sidebar「项目」row + 「新建项目」inline
- *  button, the project library tab, and the
+/** Client half: locale dictionaries, sidebar「项目」row,
+ *  the project library tab, and the
  *  project-session canvas tab on dsh-better-sidebar. */
 import { createElement } from 'react'
 import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
-import { mountNewProjectEntry } from './projects/sidebar-new-project.js'
 import { ProjectLibraryPage, WORKFLOW_LIBRARY_TAB_ID } from './projects/ProjectLibraryPage.jsx'
 import { CanvasTab } from './projects/CanvasTab.jsx'
 import { bindBetterSidebar, CANVAS_TAB_ID } from './projects/projectCanvas.js'
@@ -29,12 +28,8 @@ export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-workflow: dictionaries')
   const t = ctx.locale.bind(NS)
 
-  // 侧栏：项目 row（rank 4）+ 新建项目 inline 并排按钮（kind:'inline'）。
+  // 侧栏：项目 row（rank 4）。官方新建会话保持单行通栏独占，新建项目统一通过项目库页创建。
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-workflow: sidebar entry')
-  ctx.effect(
-    () => mountNewProjectEntry({ sessions: ctx.sessions, workspaces: ctx.workspaces, layout: ctx.layout, stage: null }, t, ctx.locale),
-    'omnimux-workflow: new-project entry',
-  )
 
   // Cross-plugin seam: inspiration (and future callers) create a project
   // without importing this package. Disposer deletes window.__omnimuxWorkflow.
