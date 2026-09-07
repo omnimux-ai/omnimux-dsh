@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sync-agent-presets.sh — 把 OmniMux 出厂三项 Agent Preset 物化进运行时
+# sync-agent-presets.sh — 把 OmniMux 出厂两项 Agent Preset 物化进运行时
 #
 # 默认（无参数 / yarn sync:presets / sync-to-app 不带 target）：
 #   只改 OmniMux Dev.app + ~/.omnimux-dev
@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(standard social-content-team social-engagement-team)
+KEEP=(standard cordis)
 
-if [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/social-content-team" ] || [ ! -d "$SRC/social-engagement-team" ]; then
-  echo "❌ presets/ 缺少三项出厂预设" >&2
+if [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/cordis" ]; then
+  echo "❌ presets/ 缺少出厂预设 (standard, cordis)" >&2
   exit 1
 fi
 
@@ -131,7 +131,7 @@ is_omnimux_profile() {
   esac
 }
 
-# ~/.dsh 是共享 Host 家：其中 desktop/web 是 DSH 开发工具 profile，禁止物化社媒三项覆盖。
+# ~/.dsh 是共享 Host 家：其中 desktop/web 是 DSH 开发工具 profile，禁止物化社媒两项覆盖。
 should_materialize_profile() {
   local profile_home="$1"
   local home_dir
@@ -220,7 +220,7 @@ patch_profile() {
 # Product defaults for the OmniMux desktop profile. Edit freely.
 # Applied after every bundle layer. Do not put API keys here.
 
-# OmniMux 出厂会话预设：只保留标准模式 + 两个社媒专家团
+# OmniMux 出厂会话预设：只保留 standard (TikTok 营销运营专家团) + cordis (组建团队)
 - id: agent-presets
   config:
     default: standard
@@ -230,7 +230,7 @@ YAML
   else
     cat >> "$patch" <<'YAML'
 
-# OmniMux 出厂会话预设：只保留标准模式 + 两个社媒专家团
+# OmniMux 出厂会话预设：只保留 standard (TikTok 营销运营专家团) + cordis (组建团队)
 - id: agent-presets
   config:
     default: standard

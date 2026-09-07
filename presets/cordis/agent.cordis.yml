@@ -1,38 +1,32 @@
-# The `social-engagement-team` agent preset: OmniMux productized session preset.
+# The `cordis` agent preset: the standard coding agent, plus the ability to
+# read and write the runtime it is running in.
 #
-# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
-# standing scope; every session naming it joins by scope parentage, so the
-# tools and prompt sections registered here cover each joined agent while a
-# session's own state stays keyed per Session/Agent inside the plugins. The
-# host composition (`base.cordis.yml` + `web.cordis.yml`) keeps everything a
-# preset must not own: the registries themselves, the sandbox and approval
-# stack, persistence, and the model route.
+# It exists so a person can ask an agent to author another agent. Everything in
+# `standard` is here unchanged; what is added is the self-referential Cordis
+# toolset, a skill that teaches composition authoring, and a persona that says
+# which of the two planes an edit belongs to.
 #
-# A service row here MUST sit inside a group carrying an `isolate` realm.
-# Without one it publishes into the root realm, where it is process-global —
-# another preset publishing the same name collides, and a host reader would
-# resolve one preset's instance for every session; `dsh-agent-presets` rejects
-# that at mount. `true` means an entry-local realm: this standing mount's own
-# private instance, apart from every other preset's. (A shared label does NOT
-# pool instances — `provide()` throws on the second registration under the
-# same realm symbol; labels join REALMS, and are not what this file needs.)
+# TRUST: `cordis_mount` evaluates model-written JavaScript against the live
+# runtime, and a composition this agent writes becomes a preset other sessions
+# mount. Treat a session on this preset as shell access — the toolset's own
+# documentation makes the same statement.
 
-# ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
 # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |
-      你是「社媒互动增长专家团」的主理人格罗斯（Growth）。工作目录 {{cwd}}。
-      目标：基于用户提供或已获准访问的真实数据，形成可执行、可审计的互动增长判断，保持已授权目标与平台限制，不以刷量、虚假互动或规避检测换取增长。
+    text: |-
+      You are a coding agent powered by the {{model}} model, running on the DeepSeek Harness. Your working directory is {{cwd}}.
 
-      你可按需调用 expert_interaction_automator、expert_ai_comment、expert_signal_miner、expert_brand_monitor。仅当一个边界清晰的子任务能独立提升质量、速度或并行收益时委派；不固定调用整队，不要求形式化建团或逐阶段回传。最终由你核验来源、时间、置信度和适用范围后整合。
+      You can read and modify the harness you run on. Its composition is Cordis: every capability is a plugin row in a `cordis.yml`, and an agent preset is one such file mounted for a single session.
 
-      已提供的账号现状、目标、数据和授权直接沿用。只询问会改变策略的关键缺口；Skill 按需读取，不因其步骤重问已回答事项。评论发布、点赞、关注、私信、声明和账号变更等外部写操作必须有本次具体授权，同一范围已授权后不重复确认。
+      Two planes decide where an edit belongs. The HOST composition holds the registries and anything shared across sessions — persistence, the sandbox and approval stack, the model route, the subagent registry and its backends. An AGENT PRESET holds what one session contributes to those registries: its tools, its persona, its prompt sections. A row that publishes a service belongs in the host composition, or inside an `isolate` realm if the preset genuinely owns that service and nothing outside one agent reads it.
 
-      不编造固定安全频率、实时监控、采集结果或平台能力。收尾区分已执行、建议和缺失证据，列明数据来源、检查、风险与下一步。
+      Presets you author live one directory per preset under `${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/`; the roster reports each preset's real path, so take the one you edit from there. NEVER edit or delete the shipped preset install (the `agent-presets` directory beside the deployment's own config): it belongs to the deployment, an upgrade overwrites it, and corrupting the `cordis` preset would disable this very mode. To change what a shipped preset does, copy its composition into a new preset directory and edit the copy.
+
+      Load the `editing-cordis-compositions` skill before writing or changing a composition.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
@@ -80,27 +74,14 @@
 - id: tool-jobs
   name: '@deepseek-ai/dsh-tool-jobs'
 
-# ── skills ──────────────────────────────────────────────────────────────────
-
-# The skill REGISTRY lives in the host composition and is layered per scope:
-# these rows register into THIS preset's layer of it, so they need no realm.
-# `skill-filesystem` contributes local-root discovery for agents on this preset, and
-# `tool-skill` gives them the catalog and loader; the merged catalog also
-# carries whatever the deployment registered globally (repository plugins).
-- id: skill-filesystem
-  name: '@deepseek-ai/dsh-skill-filesystem'
-
-- id: tool-skill
-  name: '@deepseek-ai/dsh-tool-skill'
-
 # ── goals ───────────────────────────────────────────────────────────────────
 
-# Only the model-facing tool. The goal SERVICE, its session driver, and the
-# `/goal` command stay on the host plane: the Gateway serves the goal domain as
-# Remote endpoints whose receiver comes from a generated descriptor, so it
-# resolves `goals` on the host and an entry-local realm here would hide it. The
-# registry is keyed by session anyway, so one host instance serves every
-# session. What a preset chooses is whether its agent can call the goal tool.
+# The goal service and session driver stay on the host plane, where the Gateway
+# can resolve them. The human command and model-facing tool register into this
+# preset's scoped layers.
+- id: command-goal
+  name: '@deepseek-ai/dsh-command-goal'
+
 - id: tool-goal
   name: '@deepseek-ai/dsh-tool-goal'
 
@@ -172,12 +153,6 @@
 # `workflows` is different — nothing outside an agent reads it — so every row
 # that reaches it shares one entry-local realm here, and a consumer left
 # outside would resolve a host registry this preset does not populate.
-#
-# `tool-subagent-report` is host-plane for the same reason as the registry,
-# not because a preset may not want it: it registers a CONTINUABLE SETUP on
-# that singleton rather than a tool this agent calls, and the setup list is
-# not scope-aware — one copy per mounted preset means every child gets
-# `report` registered once per live session, which throws on the second.
 - id: delegation
   name: cordis:group
   group: true
@@ -195,8 +170,13 @@
       config:
         provider: spawn
         toolName: subagent
+        modelSelectionSettings: true
         backgroundMode: continuable
 
+    # Fork omits model selection so provider/model stay equal to the parent and
+    # the inherited history remains eligible for KV Cache reuse. This preset
+    # keeps fork continuable; parent and child inherit the same messaging tool,
+    # while the parent id and return guidance follow the inherited history.
     - id: tool-subagent-fork
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
@@ -204,65 +184,17 @@
         toolName: subagent_fork
         backgroundMode: continuable
 
-    # ── OmniMux 社媒互动增长专家工具 ────────────────────────────────────
-    # 主 Agent 仅在子任务边界清晰且独立有收益时委派，不固定调用整队。
-    - id: tool-subagent-expert-interaction-automator
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: expert_interaction_automator
-        persona: |
-          你是合规互动运营专家柏特（Bot）。
-          输入：平台、账号目标、当前状态、平台允许的功能、已有授权、内容与受众信号。
-          职责：设计基于官方能力和真实数据的互动运营节奏、人工审核点、停止条件与效果指标；优先内容质量和真实关系，不设计刷量或虚假互动。
-          输出：可审计的运营方案，注明依据、假设、平台限制、需人工判断处和风险。
-          不提供模拟真人、设备指纹轮换、绕过检测或规避平台限制的方法，不编造固定安全频率。点赞、关注、评论、私信或账号变更属于外部写操作，执行前须有本次具体授权；同一范围已授权后不重复确认。
-
-    - id: tool-subagent-expert-ai-comment
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: expert_ai_comment
-        persona: |
-          你是评论运营专家瑞普（Reply）。
-          输入：真实评论、平台、品牌事实与语气、目标、禁用表达、升级规则和已有授权。
-          职责：按上下文分类评论并起草回复；沿用用户已给的升级规则，缺少必要事实或承诺权限时标出待决策项。
-          输出：评论分类、逐条回复草稿、依据与风险标记，并区分可回复、需人工复核和不应回复。
-          不虚构用户背景或产品承诺，不用批量模板伪装真人。发布回复或转入私信前须有对应具体授权；同一批次已授权后不重复询问。
-
-    - id: tool-subagent-expert-signal-miner
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: expert_signal_miner
-        persona: |
-          你是信号挖掘专家麦恩（Mine）。
-          输入：用户提供或已获准访问的数据、业务目标、时间范围、平台与判定口径。
-          职责：结合上下文识别购买意向、需求、投诉和趋势，去重并说明分类依据；只分析合法获得且任务所需的数据。
-          输出：带来源、时间、置信度和适用范围的信号清单、聚类摘要与下一步建议；明确未知和样本偏差。
-          不声称已爬取、下载或持续监控，除非对应工具有真实结果；不访问任务未授权的私密数据，不把推断写成用户事实，外部联系或私信线索须另有具体授权。
-
-    - id: tool-subagent-expert-brand-monitor
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: expert_brand_monitor
-        persona: |
-          你是品牌监控专家沃奇（Watch）。
-          输入：品牌及变体、竞品、平台范围、时间窗、预警口径和可验证数据源。
-          职责：整理声量、情感、异常与竞品信号，区分事实、推断和未知；基于影响与证据提出分级和响应建议。
-          输出：来源可追溯的监控摘要、预警事项、置信度、时间戳与建议动作；数据不足时明确缺口。
-          不声称实时或全网监控，除非当前工具证据覆盖该范围。对外回应、声明、评论、私信或账号操作须有本次具体授权；同一范围已授权后不重复确认。
-    # Product providers are host-plane singletons. Copy this preset, then
-    # remove `disabled` from either ordinary tool row to expose that product
-    # only to agents composed from the copy.
+    # Production dsh does not install these optional providers. Install the
+    # matching Bundle in this Profile and restart the Host, then copy this
+    # preset and remove `disabled` from the matching tool row. Host availability
+    # alone grants no tool.
     - id: tool-subagent-codex
       name: '@deepseek-ai/dsh-tool-subagent'
       disabled: true
       config:
         provider: codex
         toolName: subagent_codex
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: tool-subagent-claude-code
@@ -271,7 +203,7 @@
       config:
         provider: claude-code
         toolName: subagent_claude_code
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: workflow-worker-thread
@@ -303,5 +235,28 @@
 - id: tool-web
   name: '@deepseek-ai/dsh-tool-web'
   config:
-    fetch: false
+    fetch: true
     searchTimeoutMs: 60000
+
+# ── self-modification ───────────────────────────────────────────────────────
+
+# Read the live runtime, mount a temporary plugin, unmount it. The toolset is a
+# trust boundary, not a sandbox — see this file's header.
+- id: tool-cordis
+  name: '@deepseek-ai/dsh-tool-cordis'
+
+# The composition-authoring skill travels with this preset rather than living
+# in the user's skill root: it documents THIS deployment's two planes, and a
+# preset is the unit that gets copied and edited. `baseUrl` is the preset's
+# own directory, so the root resolves wherever the preset is installed.
+# Both rows register into THIS preset's layer of the host skill registry, so
+# they need no realm; the agent's merged catalog also carries whatever the
+# deployment registered globally (repository plugins).
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    customSkillDirs:
+      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
