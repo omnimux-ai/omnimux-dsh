@@ -38,9 +38,26 @@ test('SpreadsheetStage.tsx 不得使用 createPortal 或 document.body（禁止 
   );
 });
 
-test('SpreadsheetStage 未打开时返回 null，打开时直接返回 wf-stage-overlay JSX', () => {
-  assert.match(stageSrc, /if \(!isStageOpen\) return null;/);
+test('SpreadsheetStage 从未打开时返回 null，打开时直接返回 wf-stage-overlay JSX', () => {
+  assert.match(stageSrc, /if \(!everOpened\) return null;/);
   assert.match(stageSrc, /className="wf-stage-overlay wf-canvas-root"/);
+});
+
+test('SpreadsheetStage 使用 everOpened + hidden/display:none 保活隐藏，严禁关页卸树（对齐 TextStage KeepAlive 规范）', () => {
+  // 引入 useState 并维护 everOpened 状态
+  assert.match(stageSrc, /import React, \{[^}]*useState[^}]*\} from 'react';/);
+  assert.match(stageSrc, /const \[everOpened, setEverOpened\] = useState\(false\);/);
+  assert.match(stageSrc, /if \(isStageOpen && !everOpened\)/);
+  // 严禁关页 return null 卸树反模式（只允许 !everOpened 的首次早退）
+  assert.ok(
+    !/if \(!isStageOpen\) return null;/.test(stageSrc),
+    '禁止 if (!isStageOpen) return null 卸树；关页必须隐藏保活',
+  );
+  // 根容器必须带 KeepAlive 隐藏三件套：hidden / data-visible / aria-hidden + display 切换
+  assert.match(stageSrc, /hidden=\{!isStageOpen\}/);
+  assert.match(stageSrc, /data-visible=\{isStageOpen \? 'true' : 'false'\}/);
+  assert.match(stageSrc, /aria-hidden=\{isStageOpen \? undefined : 'true'\}/);
+  assert.match(stageSrc, /display:\s*isStageOpen \? 'flex' : 'none'/);
 });
 
 test('table-node.css 中 .wf-stage-overlay 使用 absolute 贴合画布，严禁 fixed 全局覆盖', () => {
