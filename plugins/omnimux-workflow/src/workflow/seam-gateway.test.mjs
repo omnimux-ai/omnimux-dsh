@@ -490,6 +490,68 @@ test('ADAPTER_FAILED 把 cause 拼进节点错误', async () => {
   }
 });
 
+test('CHANNEL_UNAVAILABLE：渠道不可用错误保持干净用户文案，不拼接 cause 堆栈', async () => {
+  const wrapped = codedError('CHANNEL_UNAVAILABLE', '该模型当前不可用，请换一个试试');
+  wrapped.cause = Object.assign(
+    new Error('无可用渠道 (distributor) 分组 auto 下模型 seedance-2-0-fast'),
+    { code: 'CHANNEL_FAILED' },
+  );
+  const hub = createFakeSeamHub({ failSubmitWith: wrapped });
+  const h = makeHarness({ seamHub: hub });
+  try {
+    const { wsId } = await h.createGraph({ nodes: [h.materialNode('n1', 'image')], bind: true });
+    const exec = await h.call({
+      method: 'POST',
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions`,
+      body: { mode: 'full' },
+    });
+    const execId = exec.body.execution.id;
+    const sse = await h.openSse({
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions/${execId}/events`,
+      until: (raw) => raw.includes('event: execution_error'),
+    });
+    assert.ok(sse.satisfied, 'execution should fail');
+    const nodeError = h.parseSse(sse.raw).find((e) => e.event === 'node_error');
+    // code 前缀保留（画布 UI 用它做脱敏转译），但文案必须是 hub 给的干净
+    // 用户文案，cause 里的 distributor / 分组 auto 行话绝不外泄。
+    assert.match(nodeError.data.error, /\[omnimux:CHANNEL_UNAVAILABLE\]/);
+    assert.match(nodeError.data.error, /该模型当前不可用，请换一个试试/);
+    assert.doesNotMatch(nodeError.data.error, /distributor/);
+    assert.doesNotMatch(nodeError.data.error, /分组\s+auto/);
+    assert.doesNotMatch(nodeError.data.error, /CHANNEL_FAILED/);
+  } finally {
+    h.dispose();
+    rmSync(h.root, { recursive: true, force: true });
+  }
+});
+
+test('CHANNEL_UNAVAILABLE：文本 seam（awaitTask 路径）同样脱敏', async () => {
+  const hub = createFakeSeamHub({
+    failTextWith: codedError('CHANNEL_UNAVAILABLE', '该模型当前不可用，请换一个试试'),
+  });
+  const h = makeHarness({ seamHub: hub });
+  try {
+    const { wsId } = await h.createGraph({ nodes: [h.materialNode('n1', 'text')] });
+    const exec = await h.call({
+      method: 'POST',
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions`,
+      body: { mode: 'full' },
+    });
+    const execId = exec.body.execution.id;
+    const sse = await h.openSse({
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions/${execId}/events`,
+      until: (raw) => raw.includes('event: execution_error'),
+    });
+    assert.ok(sse.satisfied, 'execution should fail');
+    const nodeError = h.parseSse(sse.raw).find((e) => e.event === 'node_error');
+    assert.match(nodeError.data.error, /\[omnimux:CHANNEL_UNAVAILABLE\]/);
+    assert.match(nodeError.data.error, /该模型当前不可用，请换一个试试/);
+  } finally {
+    h.dispose();
+    rmSync(h.root, { recursive: true, force: true });
+  }
+});
+
 test('hub 错误映射：code 透传到节点错误（omnimux-unconfigured）', async () => {
   const hub = createFakeSeamHub({
     failSubmitWith: codedError('omnimux-unconfigured', 'set OMNIMUX_API_KEY or OMNIMUX_TOKEN'),

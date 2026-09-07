@@ -28,6 +28,9 @@ export async function getJson(fetcher, url, apiKey, signal) {
   }
   if (!response.ok) {
     const classified = classifyQuotaFailure({ status: response.status, body })
+    if (classified.kind === 'channel-unavailable') {
+      throw new OmnimuxError(classified.code, classified.message, { status: response.status })
+    }
     if (classified.kind === 'quota-exceeded') {
       throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
     }
@@ -72,6 +75,9 @@ export async function downloadMediaFile(options) {
         try { body = await response.clone().text() } catch { body = null }
       }
       const classified = classifyQuotaFailure({ status: response.status, body })
+      if (classified.kind === 'channel-unavailable') {
+        throw new OmnimuxError(classified.code, classified.message, { status: response.status })
+      }
       if (classified.kind === 'quota-exceeded') {
         throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
       }

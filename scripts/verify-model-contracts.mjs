@@ -17,6 +17,7 @@
  */
 import { dirname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { verifyAutoServing } from './verify-auto-serving.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contractEntry = join(root, 'plugins/omnimux/src/catalog/contract/index.js');
@@ -151,7 +152,7 @@ function usageFailure(message, json) {
  *   usageError?: string,
  *   exitCode?: number,
  * }} opts
- * @param {{ verifyContracts?: Function }} [deps]
+ * @param {{ verifyContracts?: Function, verifyAutoServing?: Function }} [deps]
  */
 export async function runVerify(opts = {}, deps = {}) {
   if (opts.usageError || opts.exitCode === EXIT_USAGE) {
@@ -163,22 +164,22 @@ export async function runVerify(opts = {}, deps = {}) {
     return { exitCode: EXIT_OK, help: true, ok: true };
   }
 
-  // Mutual exclusion also checked in parseArgs; defend if caller sets both
-  if (opts.mode === 'audit' && opts.strict && opts.mode !== 'strict') {
-    // no-op
-  }
-  if (Boolean(opts.strict) && opts.mode === 'audit' && arguments.length) {
-    // callers may pass {strict:true, mode:'audit'} — treat as conflict only from parseArgs
-  }
-
   const mod = deps.verifyContracts
     ? { verifyContracts: deps.verifyContracts }
     : await import(pathToFileURL(contractEntry).href);
 
-  const report = mod.verifyContracts({
+  const contractReport = mod.verifyContracts({
     specsDir: opts.specsDir,
     strict: Boolean(opts.strict) || opts.mode === 'strict',
   });
+  const autoServing = (deps.verifyAutoServing ?? verifyAutoServing)({ specsDir: opts.specsDir });
+  const report = {
+    ...contractReport,
+    ok: contractReport.ok && autoServing.ok,
+    exitCode: !autoServing.ok ? EXIT_FAIL : contractReport.exitCode ?? (contractReport.ok ? EXIT_OK : EXIT_FAIL),
+    autoServing,
+    issues: [...(contractReport.issues ?? []), ...autoServing.issues],
+  };
 
   const listedOperations = report.listedOperations ?? report.coverage?.listedOperations ?? [];
   const listedIds = report.listedIds ?? report.coverage?.listedIds ?? [];
@@ -194,6 +195,7 @@ export async function runVerify(opts = {}, deps = {}) {
       schemaVersion,
       contentFingerprint: report.contentFingerprint,
       exitCode: report.exitCode,
+      autoServing,
       admission: {
         ok: report.admission?.ok,
         errorCount: report.admission?.errorCount ?? 0,
@@ -237,6 +239,7 @@ export async function runVerify(opts = {}, deps = {}) {
     process.stdout.write(
       [
         `model-contracts mode=${report.mode} ok=${report.ok}`,
+        `auto-serving offline ok=${autoServing.ok} registered=${autoServing.registeredCount} required=${autoServing.requiredCount}`,
         `schemaVersion=${schemaVersion}`,
         `fingerprint=${report.contentFingerprint}`,
         `admission errors=${adm.errorCount ?? 0} warnings=${adm.warningCount ?? 0}`,

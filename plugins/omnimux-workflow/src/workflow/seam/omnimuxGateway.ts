@@ -270,6 +270,12 @@ function toSeamError(error: unknown): Error {
     && typeof (error as { code?: unknown }).code === 'string'
   ) {
     const coded = error as unknown as { code: string; message?: string };
+    // CHANNEL_UNAVAILABLE: the hub channel classifier already replaced the raw
+    // routing diagnostics with a clean user-facing message — keep it verbatim
+    // and never append the cause stack (distributor / 分组 auto 等行话).
+    if (coded.code === 'CHANNEL_UNAVAILABLE') {
+      return new SeamGatewayError(coded.code, coded.message ?? String(error));
+    }
     return new SeamGatewayError(coded.code, withCause(coded.message ?? String(error), error));
   }
   if (error instanceof Error) {

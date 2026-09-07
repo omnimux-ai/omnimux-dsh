@@ -1,3 +1,5 @@
+import { classifyChannelFailure } from './channel-classifier.js'
+
 export const QUOTA_EXCEEDED_CODE = 'quota-exceeded'
 export const SAFE_QUOTA_MESSAGE = '当前操作需要更多额度，充值后即可继续使用 OmniMux。'
 
@@ -24,7 +26,6 @@ function walk(value, seen = new Set(), depth = 0) {
   if (typeof value !== 'object') return [String(value)]
   if (seen.has(value)) return []
   seen.add(value)
-  if (value instanceof Error) return [value.message, value.name, ...walk(value.cause, seen, depth + 1)]
   const record = /** @type {Record<string, unknown>} */ (value)
   const out = []
   for (const key of ['code', 'error', 'data', 'message', 'detail', 'details', 'cause', 'type']) {
@@ -58,13 +59,21 @@ function safeMessage(value) {
   return parts.join('; ')
 }
 
+function causeStatus(value, seen = new Set(), depth = 0) {
+  if (!value || typeof value !== 'object' || depth > 6 || seen.has(value)) return undefined
+  seen.add(value)
+  return Number(value.status) || causeStatus(value.cause, seen, depth + 1) || causeStatus(value.error, seen, depth + 1)
+}
+
 export function classifyQuotaFailure({ status, body, data, error, cause, message, reason, code } = {}) {
-  const numericStatus = Number(status) || undefined
+  const numericStatus = Number(status) || causeStatus(error) || causeStatus(cause) || undefined
   const combined = { status: numericStatus, body, data, error, cause, message, reason, code }
   const quota = numericStatus === 402 || hasQuotaEvidence(combined)
   const auth = numericStatus === 401
   if (auth) return { kind: 'needs-omnimux', code: 'needs-omnimux', message: '请先登录 OmniMux。', ...(numericStatus ? { status: numericStatus } : {}), retryable: false }
   if (!quota && walk(combined).some((part) => AUTH_CODES.has(part))) return { kind: 'needs-omnimux', code: 'needs-omnimux', message: '请先登录 OmniMux。', ...(numericStatus ? { status: numericStatus } : {}), retryable: false }
   if (quota) return { kind: 'quota-exceeded', code: QUOTA_EXCEEDED_CODE, message: SAFE_QUOTA_MESSAGE, ...(numericStatus ? { status: numericStatus } : {}), retryable: false }
+  const channel = classifyChannelFailure(combined)
+  if (channel) return { ...channel, ...(numericStatus ? { status: numericStatus } : {}) }
   return { kind: 'other', code: typeof error?.code === 'string' ? error.code : 'omnimux-request-failed', message: safeMessage(message || error) || '请求失败。', ...(numericStatus ? { status: numericStatus } : {}), retryable: false }
 }

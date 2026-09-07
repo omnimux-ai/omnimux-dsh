@@ -1,0 +1,121 @@
+{
+  "version": "1",
+  "defaultGroup": "auto",
+  "models": [
+    {
+      "productId": "claude-opus-4-6",
+      "kind": "text",
+      "priority": "P0",
+      "gatewayIds": ["claude-opus-4-6"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "gemini-3.8-flash",
+      "kind": "text",
+      "priority": "P0",
+      "gatewayIds": ["gemini-3.8-flash"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "deepseek-v4-flash-vision-exp",
+      "kind": "text",
+      "priority": "P0",
+      "gatewayIds": ["deepseek-v4-flash-vision-exp"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "gpt-5.5",
+      "kind": "text",
+      "priority": "P0",
+      "gatewayIds": ["gpt-5.5"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "gpt-image-2",
+      "kind": "image",
+      "priority": "P0",
+      "gatewayIds": ["gpt-image-2"],
+      "requiredInAuto": true
+    },
+    {
+      "productId": "grok-imagine-image-2",
+      "kind": "image",
+      "priority": "P0",
+      "gatewayIds": ["grok-imagine-image-2", "grok-imagine-image", "grok-imagine-image-2-0", "grok-imagine-image-2.0"],
+      "upstreamWireId": "grok-imagine-image-2.0",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "seedance-2-0",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["seedance-2-0", "seedance-2.0"],
+      "upstreamWireId": "seedance-2.0",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "seedance-2-0-fast",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["seedance-2-0-fast", "seedance-2.0-fast"],
+      "upstreamWireId": "seedance-2.0-fast",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "seedance-2-0-mini",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["seedance-2-0-mini", "seedance-2.0-mini"],
+      "upstreamWireId": "seedance-2.0-mini",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "seedance-2-5",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["seedance-2-5", "seedance-2.5"],
+      "upstreamWireId": "seedance-2.5",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "wan-3.0",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["wan-3.0", "wan3.0-video"],
+      "upstreamWireId": "wan3.0-video",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "minimax-h3",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["minimax-h3", "MiniMax-H3"],
+      "upstreamWireId": "MiniMax-H3",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "grok-imagine-video-1-5",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["grok-imagine-video-1-5", "grok-imagine-video-1.5"],
+      "upstreamWireId": "grok-imagine-video-1.5",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "suno",
+      "kind": "audio",
+      "priority": "P1",
+      "gatewayIds": ["suno"],
+      "requiredInAuto": false,
+      "note": "No listed audio operation; registration is not a serving claim."
+    },
+    {
+      "productId": "gpt-4o-mini-tts",
+      "kind": "audio",
+      "priority": "P1",
+      "gatewayIds": ["gpt-4o-mini-tts"],
+      "requiredInAuto": false,
+      "note": "No listed audio operation; registration is not a serving claim."
+    }
+  ]
+}
