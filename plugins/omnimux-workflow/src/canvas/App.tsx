@@ -58,12 +58,16 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
     onSaved: handleSaved,
     enabled: boot.phase === 'ready',
   });
-  flushRef.current = persistence.flushPendingSave;
 
   const tablePersistence = useTablePersistence({
     workspaceId: workspace ? workspace.id : null,
     enabled: boot.phase === 'ready',
   });
+
+  flushRef.current = () => {
+    persistence.flushPendingSave();
+    tablePersistence.flushDirtyTables({ force: true });
+  };
 
   // M3 execution controller: full/subset runs, SSE subscription, node-state
   // sync, and island-reload restore (re-subscribes a still-live execution).

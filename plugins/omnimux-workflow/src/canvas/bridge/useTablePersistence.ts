@@ -35,7 +35,17 @@ export function useTablePersistence(
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savingRef = useRef(false);
+  const scopeRef = useRef({ workspaceId });
+  const savingRef = useRef<Promise<Map<string, number>> | null>(null);
+  if (scopeRef.current.workspaceId !== workspaceId) {
+    scopeRef.current = { workspaceId };
+    savingRef.current = null;
+  }
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -45,48 +55,55 @@ export function useTablePersistence(
   };
 
   const performSave = useCallback(
-    async (captures?: DirtyTableCapture[]) => {
+    (captures?: DirtyTableCapture[], force = false): Promise<void> => {
       const wsId = workspaceIdRef.current;
-      if (!wsId || !enabledRef.current) return;
+      if (!wsId || (!force && !enabledRef.current)) return Promise.resolve();
 
-      const itemsToSave = captures ?? tableDocumentCache.captureDirty();
-      if (itemsToSave.length === 0) {
-        setIsDirty(false);
-        return;
-      }
-
-      savingRef.current = true;
-      try {
-        await Promise.all(
-          itemsToSave.map(async (item) => {
-            tableDocumentCache.setSaving(item.tableId, true);
-            try {
-              const res = await saveWorkspaceTable(wsId, item.tableId, {
-                expectedRev: item.expectedRev,
-                document: item.document,
-              });
-              if (res.ok && res.body.table) {
-                tableDocumentCache.markSaved(
-                  item.tableId,
-                  res.body.table.contentRev,
-                  item.document,
-                );
-              } else {
-                tableDocumentCache.markSaveError(
-                  item.tableId,
-                  res.body.message || res.body.error || 'Save failed',
-                );
+      // Capture before queueing: neither the target nor the document may follow
+      // a later workspace's global cache after an in-flight PUT completes.
+      const itemsToSave = (captures ?? tableDocumentCache.captureDirty()).map(item => ({
+        ...item, session: tableDocumentCache.getSession(item.tableId),
+      }));
+      const scope = scopeRef.current;
+      const isCurrent = () => mountedRef.current && scopeRef.current === scope;
+      const ownsSession = (item: typeof itemsToSave[number]) =>
+        isCurrent() && tableDocumentCache.getSession(item.tableId) === item.session;
+      const previous = savingRef.current;
+      const pending = (async () => {
+        const revisions = new Map(previous ? await previous : []);
+        await Promise.all(itemsToSave.map(async (item) => {
+          if (ownsSession(item)) tableDocumentCache.setSaving(item.tableId, true);
+          try {
+            const res = await saveWorkspaceTable(wsId, item.tableId, {
+              expectedRev: revisions.get(item.tableId) ?? item.expectedRev,
+              document: item.document,
+            });
+            if (res.ok && res.body.table) {
+              revisions.set(item.tableId, res.body.table.contentRev);
+              if (ownsSession(item)) {
+                tableDocumentCache.markSaved(item.tableId, res.body.table.contentRev, item.document);
               }
-            } catch (err: any) {
-              tableDocumentCache.markSaveError(item.tableId, err.message || 'Network error');
+            } else if (ownsSession(item)) {
+              tableDocumentCache.markSaveError(
+                item.tableId, res.body.message || res.body.error || 'Save failed',
+              );
             }
-          }),
-        );
-      } finally {
-        savingRef.current = false;
-        const remaining = tableDocumentCache.captureDirty();
-        setIsDirty(remaining.length > 0);
-      }
+          } catch (err: unknown) {
+            if (ownsSession(item)) {
+              tableDocumentCache.markSaveError(
+                item.tableId, err instanceof Error ? err.message : 'Network error',
+              );
+            }
+          }
+        }));
+        if (isCurrent()) setIsDirty(tableDocumentCache.captureDirty().length > 0);
+        return revisions;
+      })();
+      savingRef.current = pending;
+      void pending.then(() => {
+        if (savingRef.current === pending) savingRef.current = null;
+      });
+      return pending.then(() => {});
     },
     [],
   );
@@ -110,7 +127,7 @@ export function useTablePersistence(
       const captures = tableDocumentCache.captureDirty();
       if (captures.length === 0) return;
 
-      void performSave(captures);
+      void performSave(captures, opts.force);
     },
     [performSave],
   );

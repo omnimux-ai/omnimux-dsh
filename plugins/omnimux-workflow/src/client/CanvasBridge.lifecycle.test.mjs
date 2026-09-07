@@ -28,7 +28,7 @@ const bundle = await build({
       : path.endsWith('/injectStyles') ? 'export const injectCanvasStyles = () => {};'
       : path.endsWith('/CanvasEditor') ? 'export default function CanvasEditor() { return null; }'
       : path.endsWith('/useExecutionController') ? 'export const useExecutionController = () => ({});'
-      : path.endsWith('/useTablePersistence') ? 'export const useTablePersistence = () => ({ saveNow: async () => {} });'
+      : path.endsWith('/useTablePersistence') ? 'export const useTablePersistence = () => ({ saveNow: async () => {}, flushDirtyTables() {} });'
       : path.endsWith('/useModelParameterSchema') ? `export const getCachedCatalog = () => null;
         export const getCachedFingerprint = () => null; export const invalidateCachedCatalog = () => {};
         export const setCachedCatalog = () => {}; export const shouldReplaceCatalogCache = () => true;`
