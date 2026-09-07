@@ -3,15 +3,22 @@ import { test } from 'node:test'
 import {
   AGENT_PRESETS_I18N,
   TARGET_NAMESPACE,
+  getPresetFallbackCopy,
   installAgentPresetsI18n,
   patchAgentPresetsLocaleDicts,
+  resolvePresetDisplayText,
 } from './agent-presets-i18n.js'
 
 test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', () => {
-  assert.equal(AGENT_PRESETS_I18N.zh.presetStandardName, '通用Agent')
+  assert.equal(AGENT_PRESETS_I18N.zh.presetStandardName, '代码开发')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetStandardDescription,
-    '全功能通用编码与智能协作 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。',
+    '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
+  )
+  assert.equal(AGENT_PRESETS_I18N.zh.presetDailyWorkName, '日常工作')
+  assert.equal(
+    AGENT_PRESETS_I18N.zh.presetDailyWorkDescription,
+    '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
   )
   assert.equal(AGENT_PRESETS_I18N.zh.presetCordisName, '组建团队')
   assert.equal(
@@ -19,16 +26,64 @@ test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', ()
     '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
   )
 
-  assert.equal(AGENT_PRESETS_I18N.en.presetStandardName, 'GeneralAgent')
+  assert.equal(AGENT_PRESETS_I18N.en.presetStandardName, 'CodeDev')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetStandardDescription,
-    'Full-featured general coding and collaboration agent with file editing, shell, file and web search, skills, plan, goal, subagent, and workflow capabilities.',
+    'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
+  )
+  assert.equal(AGENT_PRESETS_I18N.en.presetDailyWorkName, 'WorkAssistant')
+  assert.equal(
+    AGENT_PRESETS_I18N.en.presetDailyWorkDescription,
+    'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
   )
   assert.equal(AGENT_PRESETS_I18N.en.presetCordisName, 'Team Builder')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetCordisDescription,
     'Build and configure custom agent teams with full runtime inspection, plugin experimentation, and preset authoring guidance.',
   )
+})
+
+test('getPresetFallbackCopy returns localized fallback copy for all presets', () => {
+  const zhStandard = getPresetFallbackCopy('standard', 'zh')
+  assert.equal(zhStandard.name, '代码开发')
+  const enStandard = getPresetFallbackCopy('standard', 'en')
+  assert.equal(enStandard.name, 'CodeDev')
+
+  const zhDailyWork = getPresetFallbackCopy('daily-work', 'zh')
+  assert.equal(zhDailyWork.name, '日常工作')
+  assert.ok(zhDailyWork.description.includes('待办排期'))
+
+  const enDailyWork = getPresetFallbackCopy('daily-work', 'en')
+  assert.equal(enDailyWork.name, 'WorkAssistant')
+  assert.ok(enDailyWork.description.includes('task planning'))
+
+  const zhCordis = getPresetFallbackCopy('cordis', 'zh')
+  assert.equal(zhCordis.name, '组建团队')
+  const enCordis = getPresetFallbackCopy('cordis', 'en')
+  assert.equal(enCordis.name, 'Team Builder')
+
+  assert.equal(getPresetFallbackCopy('unknown-preset', 'zh'), null)
+})
+
+test('resolvePresetDisplayText handles translation and fallback cleanly', () => {
+  const fakeTranslate = (key) => {
+    if (key === 'presetStandardName') return '代码开发'
+    if (key === 'presetStandardDescription') return '标准描述'
+    if (key === 'presetDailyWorkName') return '日常工作'
+    if (key === 'presetDailyWorkDescription') return '日常描述'
+    return ''
+  }
+
+  const standardRes = resolvePresetDisplayText({ id: 'standard' }, fakeTranslate, 'zh')
+  assert.equal(standardRes.name, '代码开发')
+
+  const dailyWorkRes = resolvePresetDisplayText({ id: 'daily-work' }, fakeTranslate, 'zh')
+  assert.equal(dailyWorkRes.name, '日常工作')
+
+  // Fallback when t cannot translate custom daily-work preset in en
+  const dailyWorkFallbackEn = resolvePresetDisplayText({ id: 'daily-work' }, null, 'en')
+  assert.equal(dailyWorkFallbackEn.name, 'WorkAssistant')
+  assert.ok(dailyWorkFallbackEn.description.includes('General daily office'))
 })
 
 test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictionaries', () => {
@@ -64,27 +119,21 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
   assert.equal(changed, true)
   assert.equal(published, true)
 
-  assert.equal(zhDict.presetStandardName, '通用Agent')
+  assert.equal(zhDict.presetStandardName, '代码开发')
   assert.equal(
     zhDict.presetStandardDescription,
-    '全功能通用编码与智能协作 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。',
+    '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
   )
+  assert.equal(zhDict.presetDailyWorkName, '日常工作')
   assert.equal(zhDict.presetCordisName, '组建团队')
-  assert.equal(
-    zhDict.presetCordisDescription,
-    '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
-  )
 
-  assert.equal(enDict.presetStandardName, 'GeneralAgent')
+  assert.equal(enDict.presetStandardName, 'CodeDev')
   assert.equal(
     enDict.presetStandardDescription,
-    'Full-featured general coding and collaboration agent with file editing, shell, file and web search, skills, plan, goal, subagent, and workflow capabilities.',
+    'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
   )
+  assert.equal(enDict.presetDailyWorkName, 'WorkAssistant')
   assert.equal(enDict.presetCordisName, 'Team Builder')
-  assert.equal(
-    enDict.presetCordisDescription,
-    'Build and configure custom agent teams with full runtime inspection, plugin experimentation, and preset authoring guidance.',
-  )
 })
 
 test('patchAgentPresetsLocaleDicts handles region variants like zh-CN and en-US', () => {
@@ -99,9 +148,11 @@ test('patchAgentPresetsLocaleDicts handles region variants like zh-CN and en-US'
   const locale = { dicts: dictsMap }
 
   patchAgentPresetsLocaleDicts(locale)
-  assert.equal(zhCnDict.presetStandardName, '通用Agent')
+  assert.equal(zhCnDict.presetStandardName, '代码开发')
+  assert.equal(zhCnDict.presetDailyWorkName, '日常工作')
   assert.equal(zhCnDict.presetCordisName, '组建团队')
-  assert.equal(enUsDict.presetStandardName, 'GeneralAgent')
+  assert.equal(enUsDict.presetStandardName, 'CodeDev')
+  assert.equal(enUsDict.presetDailyWorkName, 'WorkAssistant')
   assert.equal(enUsDict.presetCordisName, 'Team Builder')
 })
 
@@ -145,9 +196,11 @@ test('installAgentPresetsI18n intercepts late register calls and applies patch i
   assert.equal(registerCalled, true)
   const locs = dictsMap.get(TARGET_NAMESPACE)
   assert.ok(locs)
-  assert.equal(locs.get('zh').presetStandardName, '通用Agent')
+  assert.equal(locs.get('zh').presetStandardName, '代码开发')
+  assert.equal(locs.get('zh').presetDailyWorkName, '日常工作')
   assert.equal(locs.get('zh').presetCordisName, '组建团队')
-  assert.equal(locs.get('en').presetStandardName, 'GeneralAgent')
+  assert.equal(locs.get('en').presetStandardName, 'CodeDev')
+  assert.equal(locs.get('en').presetDailyWorkName, 'WorkAssistant')
   assert.equal(locs.get('en').presetCordisName, 'Team Builder')
 
   cleanup()
@@ -178,8 +231,10 @@ test('installAgentPresetsI18n defensive timer cleans up properly', async () => {
   // Wait for defensive interval
   await new Promise((resolve) => setTimeout(resolve, 250))
 
-  assert.equal(locs.get('zh').presetStandardName, '通用Agent')
-  assert.equal(locs.get('en').presetStandardName, 'GeneralAgent')
+  assert.equal(locs.get('zh').presetStandardName, '代码开发')
+  assert.equal(locs.get('zh').presetDailyWorkName, '日常工作')
+  assert.equal(locs.get('en').presetStandardName, 'CodeDev')
+  assert.equal(locs.get('en').presetDailyWorkName, 'WorkAssistant')
 
   cleanup()
 })
