@@ -35,6 +35,6 @@ Host 注册无 input 的 add-file、add-from-library 普通命令。菜单说明
 
 ## 验收与交付
 
-单测覆盖文件多选、取消、唯一回退条件、忙碌、鉴权、同源、失效会话、目录拒绝、去重、配额、A/B 切换、晚响应、失败重试和重载清理。实际验收从原生菜单进入，确认真实文件副本、资产及提交引用；L2 IAB 与共享探针、真实 Electron、合并后 Dev 分别保存证据。macOS/Windows/Linux 的实机结果逐平台记录，未执行不得写为通过。
+单测覆盖文件多选、取消、唯一回退条件、忙碌、鉴权、同源、失效会话、目录拒绝、去重、配额、A/B 切换、晚响应、失败重试和重载清理。实际验收从原生菜单进入，确认真实文件副本、资产及提交引用；L2 ego-browser 与共享探针、真实 Electron、合并后 Dev 分别保存证据。macOS/Windows/Linux 的实机结果逐平台记录，未执行不得写为通过。
 
 隔离及交付遵循 [dev-pipeline](../contracts/dev-pipeline.md)、[plugin-qa](../contracts/plugin-qa.md) 和 [plugin-git-pr](../contracts/plugin-git-pr.md)。真实桌面启动若无法保持任务 home/userData 隔离，应保留候选并处理明确阻塞，不在公共 Dev 运行未合并产物。公共 Dev 壳更换及重启须确认目标和窗口，生产发布不属于本任务。

@@ -73,7 +73,7 @@ non-goals: "本 Issue 明确不做的内容"
 | 纯文档 / Issue 模板 | diff、metadata 解析、相对文件链接、实际执行的文档检查；无 L2/App 要求 |
 | 纯逻辑 / 测试 | 相关包或脚本测试、边界/错误路径；仅在运行依赖需要时进入 L2 |
 | Host / 插件运行行为 | 上述检查 + 合并前独立 L2；合并后 Dev 物化与适用运行验证 |
-| Client / Stage / 侧栏 | 上述检查 + L2 与合并后 45120 的 Codex 内置浏览器证据 |
+| Client / Stage / 侧栏 | 上述检查 + L2 与合并后 45120 的 ego-browser 共享探针证据 |
 | 壳层 / 平台门控 | Client 要求 + 真实 Electron renderer/CDP 证据 |
 | 生产发布 | 另获发布授权 + 发布/回滚证据；不属于普通开发 DoD |
 

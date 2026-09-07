@@ -27,29 +27,32 @@ const qa = files => ({ pass: true, summary: 'L0 passed', changedFiles: files })
 test('requires impact context and rejects malformed or contradictory matrices', () => {
   assert.equal(evaluateVerdict({ pass: true }, null).pass, false)
   assert.equal(evaluateVerdict({ pass: true }, null, { requireBrowser: false }).pass, false)
-  for (const impactMatrix of [{}, { dimensions: {} }, { ...deriveImpactMatrix([]), isUiChange: true }]) {
+  const legacy = deriveImpactMatrix([])
+  legacy.dimensions.iab = legacy.dimensions.browser
+  delete legacy.dimensions.browser
+  for (const impactMatrix of [{}, { dimensions: {} }, legacy, { ...deriveImpactMatrix([]), isUiChange: true }]) {
     assert.equal(evaluateVerdict(qa([]), null, { impactMatrix }).pass, false)
   }
   assert.equal(evaluateVerdict(qa(uiFiles), null, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
   assert.equal(evaluateVerdict({ pass: true }, null, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, true)
 })
 
-test('non-UI and empty changes explicitly mark IAB not applicable, even with stale evidence', () => {
+test('non-UI and empty changes explicitly mark ego-browser not applicable, even with stale evidence', () => {
   for (const files of [[], docsFiles, ['scripts/server.mjs', 'docs/contracts/plugin-qa.md']]) {
     const verdict = evaluateVerdict(qa(files), { pass: false, tool: 'stale' })
     assert.equal(verdict.pass, true)
-    assert.equal(verdict.dimensions.iab.pass, true)
-    assert.equal(verdict.dimensions.iab.status, 'not-applicable')
+    assert.equal(verdict.dimensions.browser.pass, true)
+    assert.equal(verdict.dimensions.browser.status, 'not-applicable')
     assert.match(verdict.summary, /无客户端\/UI文件变更/)
   }
 })
 
-test('UI and mixed changes require IAB; requireBrowser:false cannot downgrade the matrix', () => {
+test('UI and mixed changes require ego-browser; requireBrowser:false cannot downgrade the matrix', () => {
   for (const files of [uiFiles, [...uiFiles, ...docsFiles], ['theme.scss']]) {
     const verdict = evaluateVerdict(qa(files), null, { requireBrowser: false })
     assert.equal(verdict.pass, false)
-    assert.match(verdict.errors.join(';'), /缺少 Codex IAB/)
-    assert.equal(verdict.dimensions.iab.required, true)
+    assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
+    assert.equal(verdict.dimensions.browser.required, true)
   }
 })
 
@@ -60,14 +63,15 @@ test('missing, false or truthy non-boolean L0 reports and prior CI failure are r
   assert.equal(evaluateVerdict(qa(docsFiles), null, { ciStatus: 'failure' }).pass, false)
 })
 
-test('current valid IAB receipts pass and stale identity, invalid proof and expired windows fail', () => {
+test('current valid ego-browser receipts pass and stale identity, invalid proof and expired windows fail', () => {
   const root = sandbox()
   const { request, report } = liveEvidence(root, root)
   writeFileSync(join(root, 'assets.png'), tinyPng())
   const options = { browserRequest: request, browserRoot: root, browserRunId: request.runId, browserStage: request.stage, browserTarget: request.target }
   assert.equal(evaluateVerdict(qa(uiFiles), report, options).pass, true)
   for (const mutation of [
-    { pass: false }, { tool: 'ego-browser' }, { status: 'pending' }, { commitSha: 'stale' },
+    { pass: false }, { tool: 'codex-iab' }, { taskSpaceId: null }, { browserIdentity: {} },
+    { status: 'pending' }, { commitSha: 'stale' },
     { runId: 'old' }, { target: null }, { stage: 'other' }, { actualUrl: 'http://127.0.0.1:44202/' },
     { completedAt: '2000-01-01T00:00:00Z' }, { runtimeProof: {} }, { screenshots: [] },
   ]) {
@@ -118,12 +122,12 @@ test('CLI derives impact from explicit files or strict git diff and clears failu
   assert.equal(existsSync(join(root, 'docs/evidence')), false)
 })
 
-test('CLI accepts a SHA-bound IAB receipt and rejects a changed expected run', () => {
+test('CLI accepts a SHA-bound ego-browser receipt and rejects a changed expected run', () => {
   const root = sandbox()
   const { request, report } = liveEvidence(root, root)
   writeFileSync(join(root, 'qa.json'), JSON.stringify(qa(uiFiles)))
   writeFileSync(join(root, 'live-qa-report.json'), JSON.stringify(report))
-  writeFileSync(join(root, 'codex-browser-qa-request.json'), JSON.stringify(request))
+  writeFileSync(join(root, 'ego-browser-qa-request.json'), JSON.stringify(request))
   writeFileSync(join(root, 'assets.png'), tinyPng())
   const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
   const run = runId => spawnSync(process.execPath, [script, '--report', 'qa.json', '--browser-report', 'live-qa-report.json',
@@ -131,7 +135,7 @@ test('CLI accepts a SHA-bound IAB receipt and rejects a changed expected run', (
   { cwd: root, encoding: 'utf8' })
   const valid = run(request.runId)
   assert.equal(valid.status, 0, valid.stderr)
-  assert.equal(JSON.parse(valid.stdout).dimensions.iab.status, 'passed')
+  assert.equal(JSON.parse(valid.stdout).dimensions.browser.status, 'passed')
   assert.equal(run('different-run').status, 1)
 })
 

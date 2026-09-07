@@ -2,7 +2,7 @@
 title: Codex 内置浏览器验收适配
 id: spec-builtin-browser-qa
 type: spec
-status: accepted
+status: superseded
 authority: L2
 date: 2026-09-05
 updated: 2026-09-05
@@ -11,6 +11,8 @@ subsystem: qa
 ---
 
 # Codex 内置浏览器验收适配（#581）
+
+已由 [ego-browser 共享验收执行链迁移](2026-09-07-ego-browser-qa.md) 取代。下文仅保留历史设计，不授予活跃 IAB 执行权限；历史证据不重标。
 
 现有 live QA 将执行器固定为 ego，旧证据消费者还允许缺少当前运行身份的报告通过。此次只修复共享验收执行链；历史 CI 覆盖扩展另行处理。
 

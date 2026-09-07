@@ -16,15 +16,15 @@ export function deriveImpactMatrix(changedFiles = []) {
   }
   const isUiChange = requiresBrowser(changedFiles)
   const reason = isUiChange
-    ? '包含客户端/UI文件变更，必须提供当前代码的 Codex IAB 浏览器验收证据'
-    : '无客户端/UI文件变更，Codex IAB 浏览器验收不适用'
+    ? '包含客户端/UI文件变更，必须提供当前代码的 ego-browser 浏览器验收证据'
+    : '无客户端/UI文件变更，ego-browser 浏览器验收不适用'
   return {
     dimensions: {
       l0: { required: true, reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
-      iab: { required: isUiChange, reason },
+      browser: { required: isUiChange, reason },
     },
     isUiChange,
-    summary: `L0: required；IAB: ${isUiChange ? 'required' : 'not-applicable'}（${reason}）`,
+    summary: `L0: required；ego-browser: ${isUiChange ? 'required' : 'not-applicable'}（${reason}）`,
   }
 }
 

@@ -69,9 +69,9 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Workflow contracts / gate scripts | `pnpm test:gates` plus tests for the changed script |
 | Plugin behavior | `pnpm --filter <package> test`; add relevant boundary/registry checks from [package.json](package.json) |
 | Model contracts | `pnpm verify:model-contracts` (offline); no `verify:models` or `verify:image-live` probing |
-| Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) before editing; `pnpm verify:stages`, then real IAB evidence through [plugin QA](docs/contracts/plugin-qa.md) |
+| Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 
-UI acceptance uses the Codex in-app browser and shared `verify:live` probe: L2 before merge; Dev port 45120 after authorized materialization. Shell/platform-specific behavior additionally needs Electron evidence. Unit tests, HTTP 200, private harnesses, or a pending probe do not establish acceptance.
+Browser-required acceptance MUST use ego-browser and the shared `verify:live` probe: L2 before merge; Dev port 45120 after authorized materialization. Missing ego capabilities are BLOCKED; do not fall back to IAB. Prefer API/scripts/config when no browser is required. Shell/platform-specific behavior additionally needs Electron evidence. Unit tests, HTTP 200, private harnesses, or a pending probe do not establish acceptance.
 
 ## Delivery
 

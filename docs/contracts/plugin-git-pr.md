@@ -69,8 +69,8 @@ R0/R1 在此通道始终停止在人工批准边界。Agent 不得替用户生�
 
 - `auto-pipeline` 不能读取当前对话中的直接用户授权。R0/R1 boss path 和 `--manual` 可能继续更新远端标签、commit、push、建 PR；这些代码路径本身不构成许可，调用前仍须由 Agent 核对本任务授权。
 - `waitForCi` 只判断 PR 上可见 check rollup 是否非空、无失败且无 pending，尚未核对分支保护的 required-check 名单；该结果不能单独证明 required checks 完整。
-- 当前 `quality-gate.yml` 调用 `ci-verdict.mjs` 时只传 L0 report，没有传 `--require-browser`/browser report，也没有把完整相关包、L2 与合并后 Dev 结果交给 verdict；因此它写出的 `qa:pass` 不能单独证明本合同的适用验收已完成。
-- dry-run 和脚本日志中仍有旧 L3/ego-browser/“完整链路”措辞；它们是待修代码文本，不是现行验收合同。
+- `quality-gate.yml` 向 `ci-verdict.mjs` 传入事件基线、实际 diff 与前序 CI 状态；影响面要求浏览器时，缺少同次 ego-browser 请求与报告必须失败，不能只凭 L0 放行。标签投影先清理旧 `qa:pass`，再按聚合结果决定是否添加；完整相关包、L2 与合并后 Dev 的适用证据仍需独立最终验收补核。
+- dry-run 仅验证模拟流程，不执行真实浏览器、远端写入、合入或物化；模拟日志不构成实际验收证据。
 
 这些缺口必须作为残留代码问题处理。不得通过改文档把它们描述成已经修复；合入前由独立最终验收补核 GitHub required checks、当前任务授权与 [plugin-qa](plugin-qa.md) 的适用证据。
 

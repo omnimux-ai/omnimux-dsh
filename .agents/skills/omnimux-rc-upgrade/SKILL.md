@@ -27,7 +27,7 @@ Input: requested upstream version/SHA, current pin, exact source/profile/App pat
    ```
 
    Also run the affected plugin checks from [AGENTS.md](../../../AGENTS.md). Fix the demonstrated failure before re-running its check; there is no real model API probe for RC contract acceptance.
-5. Follow [plugin QA](../../../docs/contracts/plugin-qa.md) for isolated pre-merge validation. After authorized merge/materialization, verify the exact delivered Dev App (45120) with the in-app browser. Test shell-specific behavior in Electron, including Host launch with `--no-open`.
+5. Follow [plugin QA](../../../docs/contracts/plugin-qa.md) for isolated pre-merge validation. After authorized merge/materialization, verify the exact delivered Dev App (45120) with ego-browser and the shared probe. Load ego-browser first; missing capabilities are BLOCKED, never an IAB fallback. Test shell-specific behavior in Electron, including Host launch with `--no-open`.
 
 ## Required acceptance evidence
 

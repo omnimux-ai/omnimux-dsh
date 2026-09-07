@@ -19,7 +19,7 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 - Select only relevant skills and references. Shared external symlinks are not repository-owned files. Read a skill's exact pause clause before treating it as a blocker; current user instructions take precedence over skill guidelines within system/platform bounds.
 - Delegate independent work with bounded inputs, paths, and completion criteria; use separate worktrees for concurrent edits. The coordinator integrates and accepts the result. Do not launch a fixed team for a simple edit.
 - Run the change-specific checks in AGENTS and required CI. Reuse successful evidence for unchanged code while it remains valid for the target revision/environment. Do not repeat broad tests after a documentation-only follow-up unless a dependency or evidence contract requires it.
-- For UI/Stage changes, follow [plugin QA](../../../docs/contracts/plugin-qa.md): bind the current commit to isolated L2, run the shared probe in the current IAB Tab, and preserve the actual evidence. Do not materialize an unmerged worktree into shared Dev.
+- For UI/Stage changes, follow [plugin QA](../../../docs/contracts/plugin-qa.md): bind the current commit to isolated L2, load ego-browser, run the shared probe in the current isolated ego task/Tab, and preserve same-run identity, runtime proof, and real PNG evidence. Missing ego capabilities are BLOCKED; do not fall back to IAB or the retired weak collector. Do not materialize an unmerged worktree into shared Dev.
 - If an operation fails, inspect its result before retrying. Retry with a changed hypothesis or new state. Preserve the goal, authorizations, Issue/PR, SHAs, evidence, and next action across interruptions.
 
 ## Deliver and clean

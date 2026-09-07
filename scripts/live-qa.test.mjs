@@ -191,7 +191,7 @@ test('stage-specific loading and failure markers cannot pass as valid empty cont
   } finally { dom.window.close() }
 })
 
-test('verify:live creates one pending, SHA-bound Codex IAB request and never reports PASS', async () => {
+test('verify:live creates one pending, SHA-bound ego-browser request and never reports PASS', async () => {
   const root = fixture()
   const report = await runLiveQa(['assets'], { root })
   assert.equal(report.status, 'pending')
