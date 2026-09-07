@@ -538,6 +538,35 @@ ensure_task_credentials() {
   fi
 }
 
+ensure_task_settings() {
+  local thome="$1"
+  local dest="$thome/settings.yaml"
+  [ -f "$dest" ] && return 0
+  local seed=""
+  if [ -f "$DEV_HOME/settings.yaml" ]; then
+    seed="$DEV_HOME/settings.yaml"
+  elif [ -f "$HOME/.omnimux-dev/settings.yaml" ]; then
+    seed="$HOME/.omnimux-dev/settings.yaml"
+  elif [ -f "$PROD_HOME/settings.yaml" ]; then
+    seed="$PROD_HOME/settings.yaml"
+  fi
+  if [ -n "$seed" ]; then
+    cp "$seed" "$dest"
+    echo "✓ settings.yaml ← ${seed}（任务内副本，继承侧栏等配置）"
+  else
+    cat << 'EOF' > "$dest"
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+dsh-better-sidebar:
+  agentOpenTools: true
+  browserAllowedLoopback: 127.0.0.1, localhost
+  tabsEnabled:
+    browser: true
+EOF
+    echo "✓ settings.yaml ← 默认 L2 配置（开启 agentOpenTools 与内置浏览器）"
+  fi
+}
+
 # 旧 profile（~/.dsh-dev/profiles/...）迁到 tasks/<name>/profiles/...
 migrate_legacy_profile_if_needed() {
   local n="$1"
@@ -647,6 +676,7 @@ case "$cmd" in
     mkdir -p "$TASK_HOME"
     if [ "$LEGACY_HOME" != "1" ]; then
       ensure_task_credentials "$TASK_HOME"
+      ensure_task_settings "$TASK_HOME"
     fi
     pdir="$(profile_dir "$name")"
     mkdir -p "$(dirname "$pdir")"
