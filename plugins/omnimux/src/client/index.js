@@ -22,6 +22,7 @@ import { installComposerAddCapture } from './composer-add/install.js'
 import { listenComposerAddCommands } from './composer-add/commands.js'
 import { installComposerAttachmentSubmitCapture } from './composer-add/submit-inject.js'
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
+import { installSessionCopyI18n } from './session-copy-i18n.js'
 
 export const name = 'omnimux'
 export const inject = ['slots', 'locale']
@@ -46,6 +47,7 @@ export const inject = ['slots', 'locale']
 export function apply(ctx) {
   const t = installHubChrome(ctx)
   installAgentPresetsI18n(ctx)
+  installSessionCopyI18n(ctx)
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)

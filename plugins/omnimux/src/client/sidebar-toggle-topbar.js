@@ -101,7 +101,7 @@ export function findOfficialNewSessionButton(doc) {
     for (const btn of doc.querySelectorAll(`button${notInjected}`)) {
       if (!(btn instanceof HTMLElement)) continue
       const text = `${btn.getAttribute('aria-label') || ''} ${btn.textContent || ''}`
-      if (/新会话|新建会话|new session/i.test(text)) return btn
+      if (/新会话|新建会话|新对话|新建对话|new session/i.test(text)) return btn
     }
   } catch {
     // ignore

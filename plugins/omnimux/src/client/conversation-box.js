@@ -306,7 +306,7 @@ function workspaceNewSessionButton(target) {
 function newSessionMenuPick(target) {
   const item = target.closest('#omnimux-sidebar-new-menu [role="menuitem"]')
   if (!(item instanceof HTMLElement)) return false
-  return /新会话|新建会话|new session/i.test(item.textContent || '')
+  return /新会话|新建会话|新对话|新建对话|new session/i.test(item.textContent || '')
 }
 
 /**
@@ -320,7 +320,7 @@ function shellNewSessionControl(target) {
   if (button.closest('[role="treeitem"]')) return false
   if (String(button.className).includes('newSession')) return true
   const aria = (button.getAttribute('aria-label') || '').trim()
-  return /^(新建会话|新会话|New session)$/i.test(aria)
+  return /^(新建会话|新会话|新建对话|新对话|New session)$/i.test(aria)
 }
 
 /**
