@@ -12,8 +12,10 @@ import { createImportNode } from '../../../shared/graph/nodeFactory.ts';
 import { isNodeConnectionValid } from '../../../shared/graph/connectionConfig.ts';
 import type {
   CanvasInputMutation,
+  CanvasInputNodePatch,
   CanvasNode,
 } from '../../../shared/graph/canvasInputMutationGateway.ts';
+import type { SlotBindings, SlotOccupant } from '../../../shared/graph/feedSlot/index.ts';
 import { resolveMediaPreviewUrl, type MediaAssetLike } from './mediaUrl.ts';
 import { buildImportedMediaData, looksAbsolutePath, projectFileMediaUrl } from '../../../shared/localMedia.ts';
 import { buildMediaMetadata } from '../../../shared/mediaMetadata.ts';
@@ -68,6 +70,12 @@ export interface ResourcePickerCommitInput {
   targetNodeId: string;
   selectedCanvasNodeIds: string[];
   localFiles: LocalFileDraft[];
+  /** T03：装填目标 slot；选中后 pinned 进该槽位而非仅连线。 */
+  targetSlot?: string;
+  /** 目标 slot 接受的素材类型；不匹配的选中项按 unsupported 预筛。 */
+  acceptedTypes?: readonly string[];
+  /** 目标 slot 上限（max 1 → 替换；null → 官方未公布上限，追加）。 */
+  slotMax?: number | null;
 }
 
 export interface ResourcePickerRejection {
@@ -228,13 +236,36 @@ export function filterCanvasResources(
   });
 }
 
-function edgeDraft(source: string, target: string) {
+function edgeDraft(source: string, target: string, targetSlot?: string) {
   return {
     source,
     sourceHandle: 'out',
     target,
     targetHandle: 'in',
+    ...(targetSlot ? { data: { targetSlot } } : {}),
   };
+}
+
+/** 装填 pinned 占用进 slotBindings：max 1 替换；上限内追加；超限替换末位。 */
+function pinOccupantInto(
+  bindings: SlotBindings | undefined,
+  slot: string,
+  occupant: SlotOccupant,
+  slotMax: number | null | undefined,
+): SlotBindings {
+  const next: SlotBindings = Object.fromEntries(
+    Object.entries(bindings ?? {}).map(([key, values]) => [key, values.map((value) => ({ ...value }))]),
+  );
+  const list = (next[slot] ?? []).filter((item) => item.edgeId !== occupant.edgeId);
+  if (slotMax === 1) {
+    next[slot] = [occupant];
+  } else if (typeof slotMax === 'number' && list.length >= slotMax && list.length > 0) {
+    list[list.length - 1] = occupant;
+    next[slot] = list;
+  } else {
+    next[slot] = [...list, occupant];
+  }
+  return next;
 }
 
 function canConnect(source: CanvasNode, target: CanvasNode): boolean {
@@ -289,6 +320,8 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
   const rejected: ResourcePickerRejection[] = [];
   const addEdges: NonNullable<CanvasInputMutation['addEdges']> = [];
   const addNodes: CanvasNode[] = [];
+  const targetSlot = input.targetSlot?.trim() || undefined;
+  const acceptedTypes = input.acceptedTypes?.length ? new Set(input.acceptedTypes) : null;
 
   const target = input.nodes.find((node) => node.id === input.targetNodeId);
   if (!target) {
@@ -297,14 +330,13 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
 
   const existing = incomingSourceIds(input.edges, input.targetNodeId);
   const seenSources = new Set<string>(existing);
+  // 已连入但未被消费的供给：直接装填（pinned 进目标 slot），不重复连线。
+  let pinnedBindings: SlotBindings | undefined;
+  let pinned = false;
 
   for (const nodeId of input.selectedCanvasNodeIds) {
     if (nodeId === input.targetNodeId) {
       rejected.push({ id: nodeId, reason: 'self' });
-      continue;
-    }
-    if (existing.has(nodeId) || seenSources.has(nodeId)) {
-      rejected.push({ id: nodeId, reason: 'already_connected' });
       continue;
     }
     const source = input.nodes.find((node) => node.id === nodeId);
@@ -312,17 +344,45 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
       rejected.push({ id: nodeId, reason: 'missing' });
       continue;
     }
+    if (acceptedTypes && !acceptedTypes.has(asMaterialType(nodeData(source).materialType) ?? '')) {
+      rejected.push({ id: nodeId, reason: 'unsupported' });
+      continue;
+    }
+    if (existing.has(nodeId) || seenSources.has(nodeId)) {
+      if (targetSlot && existing.has(nodeId)) {
+        const edge = input.edges.find((item) => item.target === input.targetNodeId && item.source === nodeId);
+        if (edge) {
+          pinnedBindings = pinOccupantInto(
+            pinnedBindings ?? (nodeData(target).slotBindings as SlotBindings | undefined),
+            targetSlot,
+            { sourceNodeId: nodeId, edgeId: edge.id, pinned: true },
+            input.slotMax,
+          );
+          pinned = true;
+          continue;
+        }
+      }
+      rejected.push({ id: nodeId, reason: 'already_connected' });
+      continue;
+    }
     if (!canConnect(source, target)) {
       rejected.push({ id: nodeId, reason: 'type_contract' });
       continue;
     }
-    addEdges.push(edgeDraft(nodeId, input.targetNodeId));
+    addEdges.push(edgeDraft(nodeId, input.targetNodeId, targetSlot));
     seenSources.add(nodeId);
   }
 
   // 本地上传：全部可用文件都在当前节点左侧创建导入型上游并连线。
   // 产品预期是新建上游节点并连到当前节点，而非把所选文件 patch 进当前卡片。
-  const usableFiles = usableMediaFiles(input.localFiles, rejected);
+  const usableFiles = usableMediaFiles(input.localFiles, rejected)
+    .filter((file) => {
+      if (acceptedTypes && !acceptedTypes.has(file.materialType)) {
+        rejected.push({ id: file.id, reason: 'unsupported' });
+        return false;
+      }
+      return true;
+    });
 
   let upstreamIndex = 0;
   for (const file of usableFiles) {
@@ -336,15 +396,19 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
       continue;
     }
     addNodes.push(node);
-    addEdges.push(edgeDraft(node.id, input.targetNodeId));
+    addEdges.push(edgeDraft(node.id, input.targetNodeId, targetSlot));
     seenSources.add(node.id);
     upstreamIndex += 1;
   }
 
-  const hasWork = addNodes.length > 0 || addEdges.length > 0;
+  const nodePatches: CanvasInputNodePatch[] | undefined = pinned && pinnedBindings
+    ? [{ nodeId: input.targetNodeId, data: { slotBindings: pinnedBindings } }]
+    : undefined;
+  const hasWork = addNodes.length > 0 || addEdges.length > 0 || Boolean(nodePatches);
   return {
     hasWork,
     rejected,
+    ...(nodePatches ? { nodePatches } : {}),
     addNodes: addNodes.length > 0 ? addNodes : undefined,
     addEdges: addEdges.length > 0 ? addEdges : undefined,
   };

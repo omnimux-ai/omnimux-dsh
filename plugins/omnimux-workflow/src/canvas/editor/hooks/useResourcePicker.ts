@@ -19,11 +19,22 @@ import { draftsFromPickedPaths } from '../utils/localFileDraft.ts';
 import { buildImportedMediaData } from '../../../shared/localMedia.ts';
 import type { MaterialType } from '../../../shared/graph/materialNode.ts';
 
+export interface ResourcePickerSlotTarget {
+  /** 目标 slot 名（内核 SlotSpec.slot）。 */
+  slot: string;
+  /** 该 slot 接受的素材类型。 */
+  acceptedTypes: string[];
+  /** 槽位上限；null 表示官方未公布上限。 */
+  max: number | null;
+}
+
 export interface UseResourcePickerResult {
   open: boolean;
   initialTab: ResourcePickerTab;
   sessionId: number;
-  openPicker: (tab?: ResourcePickerTab) => void;
+  /** 当前会话的装填目标 slot（无则为通用加素材）。 */
+  slotTarget: ResourcePickerSlotTarget | null;
+  openPicker: (tab?: ResourcePickerTab, slotTarget?: ResourcePickerSlotTarget | null) => void;
   closePicker: () => void;
   importLocalFiles: () => Promise<boolean>;
   fillImportNode: () => Promise<boolean>;
@@ -40,17 +51,20 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
   const t = useT();
   const [open, setOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<ResourcePickerTab>('canvas');
+  const [slotTarget, setSlotTarget] = useState<ResourcePickerSlotTarget | null>(null);
 
-  const openPicker = useCallback((tab: ResourcePickerTab = 'canvas') => {
+  const openPicker = useCallback((tab: ResourcePickerTab = 'canvas', target: ResourcePickerSlotTarget | null = null) => {
     guard.deactivate();
     setSessionId((id) => id + 1);
     setInitialTab(tab);
+    setSlotTarget(target);
     setOpen(true);
   }, [guard]);
 
   const closePicker = useCallback(() => {
     guard.deactivate();
     setSessionId((id) => id + 1);
+    setSlotTarget(null);
     setOpen(false);
   }, [guard]);
 
@@ -64,6 +78,11 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
         targetNodeId: nodeId,
         selectedCanvasNodeIds: payload.selectedCanvasNodeIds,
         localFiles: payload.localFiles,
+        ...(slotTarget ? {
+          targetSlot: slotTarget.slot,
+          acceptedTypes: slotTarget.acceptedTypes,
+          slotMax: slotTarget.max,
+        } : {}),
       });
 
       if (!plan.hasWork) {
@@ -90,7 +109,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
       closePicker();
       return true;
     },
-    [closePicker, guard, nodeId, t],
+    [closePicker, guard, nodeId, slotTarget, t],
   );
 
   const fillImportNode = useCallback(async () => {
@@ -197,6 +216,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
     open,
     initialTab,
     sessionId,
+    slotTarget,
     openPicker,
     closePicker,
     importLocalFiles,

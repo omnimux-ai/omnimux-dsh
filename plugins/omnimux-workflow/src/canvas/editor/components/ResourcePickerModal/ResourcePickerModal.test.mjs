@@ -55,16 +55,21 @@ test('导入空态点击卡片唤起 fillImportNode，无私有 file input', () 
   assert.equal(/type="file"/.test(nodeSrc), false);
 });
 
-test('ConfigPanel Prompt 左上角 [+] 按钮唤起弹窗', () => {
-  assert.match(panelSrc, /wf-config-panel__add-ref-btn/);
+test('ConfigPanel 卡槽 / [+] 唤起弹窗（T03：SlotWells + SlotPickRequest）', () => {
+  // 旧 add-ref-btn 已退役；卡槽点击经 SlotPickRequest 进入装填会话
+  assert.doesNotMatch(panelSrc, /wf-config-panel__add-ref-btn/);
   assert.match(panelSrc, /onOpenResourcePicker/);
+  assert.match(panelSrc, /SlotPickRequest/);
+  assert.match(panelSrc, /<SlotWells/);
 });
 
 test('MaterialNode 挂载 ResourcePickerModal 与 useResourcePicker', () => {
   assert.match(nodeSrc, /useResourcePicker\(id,/);
   assert.match(nodeSrc, /<ResourcePickerModal/);
   assert.match(nodeSrc, /fillImportNode/);
-  assert.match(nodeSrc, /openPicker\('canvas'\)/);
+  assert.match(nodeSrc, /openPicker\('canvas',/);
+  // T03：picker 会话携带 slotTarget 进弹窗
+  assert.match(nodeSrc, /slotTarget=\{resourcePicker\.slotTarget\}/);
   assert.equal(/createObjectURL/.test(nodeSrc), false);
 });
 
@@ -122,7 +127,8 @@ test('选择资源样式覆盖 Tab / 网格 / 拖拽区 / 已添加 / [+] 按钮
   assert.match(cssSrc, /\.wf-picker-grid/);
   assert.match(cssSrc, /\.wf-picker-dropzone/);
   assert.match(cssSrc, /\.wf-picker-added-badge/);
-  assert.match(cssSrc, /\.wf-config-panel__add-ref-btn/);
+  // T03：strip 末尾虚线 [+] 槽位（SlotWells）
+  assert.match(cssSrc, /\.wf-slot-well--add/);
 });
 
 test('选择资源弹窗标题栏与 Tab 行不得再画分割线', () => {

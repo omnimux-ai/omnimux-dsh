@@ -78,7 +78,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
       role: 'reference',
       type: 'image',
       pathOrUrl: mediaFixture('hero.png'),
-      sourceNodeId: 'node-img-1', targetSlot: 'reference_images', mimeType: 'image/png', sizeBytes: 13,
+      sourceNodeId: 'node-img-1', edgeId: 'feed-node-img-1-0', targetSlot: 'reference_images', mimeType: 'image/png', sizeBytes: 13,
     });
   });
 
@@ -231,7 +231,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
       role: 'reference',
       type: 'audio',
       pathOrUrl: mediaFixture('voiceover.mp3'),
-      sourceNodeId: 'audio-node', targetSlot: 'reference_audios', mimeType: 'audio/mpeg', sizeBytes: 13,
+      sourceNodeId: 'audio-node', edgeId: 'feed-audio-node-3', targetSlot: 'reference_audios', mimeType: 'audio/mpeg', sizeBytes: 13,
     });
   });
 

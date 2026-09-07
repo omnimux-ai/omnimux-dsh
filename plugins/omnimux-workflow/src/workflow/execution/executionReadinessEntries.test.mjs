@@ -21,6 +21,29 @@ test('HTTP and Agent reject the same empty current source before creating an exe
   assert.equal(creates, 0);
 });
 
+test('HTTP and Agent hydrate the same occupied slots and ignore unused missing media before scheduling', async () => {
+  const captures = [];
+  const frame = (slot, role) => ({ slot, role, type: 'image', source: 'upstream_edge', min: 1, max: 1 });
+  const inputCatalog = { defaults: { video: 'frames' }, models: [{ id: 'frames', listed: true, operations: [{
+    id: 'first_last_frame', listed: true, output: { type: 'video' }, inputs: [frame('start_frame', 'first_frame'), frame('end_frame', 'last_frame')],
+  }] }] };
+  const workspace = { id: 'ws_slots', name: 'slots', version: 1, settings: {}, nodes: [
+    ...['a', 'b', 'unused'].map((id) => ({ id, type: 'material', data: { materialType: 'image', nodeKind: 'import',
+      mediaUrl: id === 'unused' ? '' : `https://example.test/${id}.png`, status: id === 'unused' ? 'loading' : 'ready' } })),
+    { id: 'target', type: 'material', data: { materialType: 'video', params: { model: 'frames', operation: 'first_last_frame' } } },
+  ], edges: ['a', 'b', 'unused'].map((id) => ({ id: `e-${id}`, source: id, target: 'target' })) };
+  const before = structuredClone(workspace);
+  const deps = { store: { get: () => workspace, resolveProjectRoot: () => '/tmp' }, mediaDir: '/tmp', getCatalog: () => inputCatalog,
+    executionManager: { createExecution: (options) => { captures.push(options); return { context: { id: 'captured', workflowId: 'ws_slots', status: 'pending' }, createdAt: 1 }; } } };
+  const http = await createExecutionRoutes(deps).tryHandle('POST', '/omnimux-workflow/api/workspaces/ws_slots/executions', { body: { mode: 'single', nodeIds: ['target'] } });
+  const agent = await createWorkflowRunTool(deps).execute({ workspace_id: 'ws_slots', mode: 'single', node_ids: ['target'] });
+  assert.equal(http.status, 200); assert.equal(agent.executionId, 'captured');
+  assert.deepEqual(captures[0], captures[1]); assert.deepEqual(workspace, before);
+  assert.deepEqual(Object.keys(captures[0].initialOutputs), ['a', 'b']);
+  assert.equal(captures[0].edges.length, 3);
+  assert.equal(captures[0].nodes[0].data.slotBindings.start_frame[0].sourceNodeId, 'a');
+});
+
 const catalog = { defaults: { text: 'text-model' }, models: [{ id: 'text-model', listed: true, operations: [{
   id: 'text_generate', listed: true, output: { type: 'text' }, inputs: [
     { slot: 'prompt', role: 'prompt', type: 'text', source: 'node_field', min: 1, max: 1 },

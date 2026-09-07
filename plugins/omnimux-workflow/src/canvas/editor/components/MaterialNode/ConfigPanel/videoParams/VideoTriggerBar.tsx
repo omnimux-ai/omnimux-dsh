@@ -1,12 +1,13 @@
 /**
- * Video TriggerBar — 单行紧凑摘要胶囊触发器 (Issue 467 / W2).
+ * Video TriggerBar — 单行紧凑摘要胶囊触发器 (Issue 467 / W2, T04)。
  *
- * When effectiveOps ≤ 1, mode text and its leading separator are omitted
- * entirely (no dangling "·"). Styles consume only `wf-video-trigger-bar*`
- * classes (no raw hex / banned token island).
+ * 严格四段式：[ 生成模式 · 比例 · 质量 · 时长 ]。When effectiveOps ≤ 1,
+ * mode text and its leading separator are omitted entirely (no dangling "·").
+ * 声音开关不进入胶囊（只在 Popover 内控制）。Styles consume only
+ * `wf-video-trigger-bar*` classes (no raw hex / banned token island).
  */
 
-import { ChevronDown, Clock, Volume2 } from 'lucide-react';
+import { ChevronDown, Clock } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { AspectRatioIcon } from './aspectRatioGeometry.ts';
 import { formatVideoSummary } from './summaryFormatter.ts';
@@ -79,15 +80,6 @@ export function VideoTriggerBar({
         <Clock size={11} />
         <span className="wf-video-trigger-bar__duration-text">{summary.durationText}</span>
       </span>
-      {summary.soundText ? (
-        <>
-          <span className="wf-video-trigger-bar__dot" aria-hidden="true">·</span>
-          <span className="wf-video-trigger-bar__sound">
-            <Volume2 size={11} />
-            <span className="wf-video-trigger-bar__sound-text">{summary.soundText}</span>
-          </span>
-        </>
-      ) : null}
       <ChevronDown size={11} className="wf-video-trigger-bar__chevron" />
     </button>
   );

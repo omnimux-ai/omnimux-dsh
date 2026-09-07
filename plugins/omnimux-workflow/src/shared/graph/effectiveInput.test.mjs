@@ -52,7 +52,7 @@ test('IN-06/08: local text cannot conceal a connected empty source; edits invali
 test('IN-17: spoken text excludes source labels and unsupported local direction never enters a request', async () => {
   assert.equal(resolveGenerationPrompt({ materialType: 'audio' }, ['第一句', '第二句']), '第一句\n\n第二句');
   let requests = 0;
-  const executor = createMaterialGatewayExecutor({ gateway: { submit: async () => { requests++; } } });
+  const executor = createMaterialGatewayExecutor({ gateway: { capabilities: async () => catalogFor('audio'), submit: async () => { requests++; } } });
   await assert.rejects(executor.execute({ id: 'speech', data: { materialType: 'audio', prompt: '温柔一点' } }, {
     upstreamOutputs: new Map([['body', { text: '朗读正文' }]]), signal: new AbortController().signal, mediaDir: '/tmp/effective-input-test',
   }), /不能分别表达/);

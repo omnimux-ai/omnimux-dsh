@@ -12,6 +12,7 @@
  */
 
 import type { MaterialType } from '../canvasTypes.ts';
+import type { SlotBindings, SlotConflict } from './feedSlot/types.ts';
 import {
   type MaterialTool,
   MATERIAL_TOOLS_BY_TYPE,
@@ -115,6 +116,9 @@ export interface MaterialNodeData {
   prompt?: string;
   params: Record<string, unknown>;
   failStrategy?: NodeFailStrategy;
+  /** Media consumption authority; absent only on graphs awaiting hydration. */
+  slotBindings?: SlotBindings;
+  slotConflicts?: SlotConflict[];
 
   // === 尺寸配置 ===
   nodeWidth?: number;

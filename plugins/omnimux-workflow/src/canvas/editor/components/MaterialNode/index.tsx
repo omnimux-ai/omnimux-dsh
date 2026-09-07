@@ -705,7 +705,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 ? () => {
                     void resourcePicker.fillImportNode();
                   }
-                : () => resourcePicker.openPicker('canvas')
+                : (request) => resourcePicker.openPicker('canvas', request
+                  ? { slot: request.targetSlot, acceptedTypes: request.acceptedTypes, max: request.max }
+                  : null)
             }
           />
         </ConfigPanelShell>
@@ -724,6 +726,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         open={resourcePicker.open}
         nodeId={id}
         initialTab={resourcePicker.initialTab}
+        slotTarget={resourcePicker.slotTarget}
         onCancel={resourcePicker.closePicker}
         onCommit={resourcePicker.commit}
       />
