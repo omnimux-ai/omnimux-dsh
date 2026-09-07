@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 44)
+    assert.equal(catalog.models.length, 45)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-avatar')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'omni_flash')?.disposition, 'quarantine')
@@ -65,7 +65,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'seedance-2-5',
       'wan-3.0',
     ])
-    assert.deepEqual(catalog.audio, [])
+    assert.deepEqual(catalog.audio.map((row) => row.id), ['seed-audio-1.0'])
     // Text bucket includes implementation-ready models without requiring live history.
     assert.deepEqual(catalog.text.map((row) => row.id), [
       'claude-opus-4-6',
@@ -91,11 +91,11 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     // nanobanana: underscore canonical only, hyphen alias never double listed
     assert.equal(catalog.image.some((row) => row.id === 'nanobanana-2'), false)
 
-    // defaults: config defaults survive where listed; audio still has no listed row
+    // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     assert.equal(catalog.defaults.image, 'gpt-image-2')
     assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
-    assert.equal(catalog.defaults.audio, '')
+    assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
     assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-0-fast')
     assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2')
     assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
@@ -148,8 +148,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       settingsDefaults: { defaultImageModel: 'grok-imagine-image', defaultAudioModel: 'gpt-4o-mini-tts' },
     })
     assert.equal(catalog.defaults.image, 'grok-imagine-image-2')
-    // audio list is empty (suno / tts draft) → settings id refused, default empty
-    assert.equal(catalog.defaults.audio, '')
+    // Draft TTS setting is refused; the listed Seed Audio default survives.
+    assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
   })
 
   for (const model of ['grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']) {
@@ -230,7 +230,7 @@ describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 12)
     assert.equal(VIDEO_MODEL_SPECS.length, 17)
-    assert.equal(AUDIO_MODEL_SPECS.length, 3)
+    assert.equal(AUDIO_MODEL_SPECS.length, 4)
   })
 })
 

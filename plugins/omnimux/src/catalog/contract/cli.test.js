@@ -81,7 +81,7 @@ test('runVerify usage error JSON is pure JSON (stdout)', async () => {
   }
 });
 
-test('runVerify audit ok; strict ok with 56 dispositions resolved', async () => {
+test('runVerify audit ok; strict ok with 59 dispositions resolved', async () => {
   const silent = () => true;
   const out = process.stdout.write;
   const err = process.stderr.write;
@@ -101,7 +101,7 @@ test('runVerify audit ok; strict ok with 56 dispositions resolved', async () => 
     assert.equal(strict.ok, true);
     assert.equal(strict.admission.errorCount, 0);
     assert.equal(strict.schemaVersion, '1.1');
-    assert.equal(strict.dispositions.total, 56);
+    assert.equal(strict.dispositions.total, 59);
     assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
     assert.deepEqual(strict.coverage.extraInYaml, []);
   } finally {
@@ -127,7 +127,7 @@ test('runVerify JSON report exposes schemaVersion only (no root version)', async
     assert.equal(Object.prototype.hasOwnProperty.call(parsed, 'version'), false);
     assert.ok(Array.isArray(parsed.listedOperations));
     assert.ok(parsed.listedOperations.length > 0);
-    assert.equal(parsed.dispositions.total, 56);
+    assert.equal(parsed.dispositions.total, 59);
   } finally {
     process.stdout.write = origWrite;
     process.stderr.write = origErr;

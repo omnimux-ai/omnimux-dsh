@@ -77,10 +77,16 @@
       "status": "live",
       "operations": ["text_to_speech", "voice_clone", "text_to_music"],
       "outputTypes": ["audio"],
-      "logicalFields": ["prompt", "voice", "style", "instrumental", "speed", "speech", "audio", "references", "audioTrack", "duration"],
-      "vendorFields": ["prompt", "duration", "image", "images", "references", "audioTrack", "metadata"],
+      "logicalFields": ["prompt", "input", "model", "voice", "style", "instrumental", "speed", "speech", "audio", "references", "audioTrack", "duration", "format", "response_format"],
+      "vendorFields": ["prompt", "input", "model", "voice", "speed", "response_format", "format", "duration", "image", "images", "references", "audioTrack", "metadata"],
       "unknownFieldPolicy": "reject",
-      "notes": "TTS/音乐等"
+      "operationVendorShapes": {
+        "text_to_speech": {
+          "allow": ["model", "input", "voice", "speed", "response_format"],
+          "require": ["input"]
+        }
+      },
+      "notes": "同步语音使用 input/voice/speed/response_format；音乐保留异步任务载荷"
     },
     {
       "id": "speechToText",

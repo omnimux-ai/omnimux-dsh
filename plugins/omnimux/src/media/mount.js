@@ -55,11 +55,11 @@ export function mountMedia(ctx, opts) {
   ctx.tools.register({
     name: toolName,
     description:
-      `Generate one ${kind} to dest. Default waits until the file is on disk (mode live). wait false returns mode submitted plus taskId. Pass task_id with dest to poll and download an existing task. Uses OMNIMUX_API_KEY / OMNIMUX_TOKEN.`,
+      `Generate one ${kind} to dest. Default waits until the file is on disk (mode live). wait false returns mode submitted plus taskId for asynchronous models; synchronous speech always returns mode live with dest. Pass task_id with dest to poll and download an existing task. Uses OMNIMUX_API_KEY / OMNIMUX_TOKEN.`,
     parameters: objectParams({
       prompt: { type: 'string', description: 'Prompt text. Required only when the selected model operation declares it.' },
       dest: { type: 'string', required: true, description: destHint },
-      model: { type: 'string', description: 'Model ID (e.g. suno, gpt-4o-mini-tts, nanobanana-2, seedream-5.0-pro, midjourney-8.1, gpt-image-2)' },
+      model: { type: 'string', description: 'Model ID (e.g. seed-audio-1.0, suno, gpt-4o-mini-tts, nanobanana-2, seedream-5.0-pro, midjourney-8.1, gpt-image-2)' },
       operation: {
         type: 'string',
         description:
@@ -109,7 +109,8 @@ export function mountMedia(ctx, opts) {
       linkUrl: { type: 'string', description: 'Public login-free page URL for webpage_to_video.' },
       speech: { type: 'string', description: 'Talking-head / spoken text. Optional.' },
       audio: { type: 'string', description: 'Reference audio URL. Optional.' },
-      voice: { type: 'string', description: 'TTS voice selection (alloy, echo, fable, onyx, nova, shimmer). Optional.' },
+      voice: { type: 'string', description: 'Voice ID from the selected model contract; omitted uses its default voice.' },
+      ...(kind === 'audio' ? { format: { type: 'string', description: 'Speech audio format: mp3, wav or pcm. Default mp3.' } } : {}),
       style: { type: 'string', description: 'Music/audio style prompt. Optional.' },
       instrumental: { type: 'boolean', description: 'Instrumental only music generation. Optional.' },
       speed: { type: 'number', description: 'Speech speed multiplier. Optional.' },
@@ -145,6 +146,9 @@ export function mountMedia(ctx, opts) {
           linkUrl: args.linkUrl,
           speech: args.speech,
           audio: args.audio,
+          voice: args.voice,
+          speed: args.speed,
+          ...(kind === 'audio' ? { format: args.format } : {}),
           wait: args.wait,
           taskId: args.task_id,
           signal: exec?.signal,

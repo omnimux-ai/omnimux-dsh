@@ -134,7 +134,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'seedance-2-5',
     'wan-3.0',
   ]);
-  assert.deepEqual(dto.audio, []);
+  assert.deepEqual(dto.audio.map((row) => row.id), ['seed-audio-1.0']);
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
     'claude-opus-4-6',
@@ -150,6 +150,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'grok-4.6',
     'kimi-k3',
   ]);
+  assert.equal(dto.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
   assert.equal(dto.defaultsByOperation.text_to_video, 'seedance-2-0-fast');
   assert.equal(dto.defaultsByOperation.chat, 'gemini-3.8-flash');
 });
@@ -211,7 +212,7 @@ test('projectDirectoryRows: media groups project every contracted model (listed 
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 12);
   assert.equal(projectDirectoryRows(index, 'video').length, 17);
-  assert.equal(projectDirectoryRows(index, 'audio').length, 3);
+  assert.equal(projectDirectoryRows(index, 'audio').length, 4);
   // whisper-1 stays in the audio management directory but its output is text
   const audio = projectDirectoryRows(index, 'audio');
   assert.ok(audio.some((r) => r.id === 'whisper-1'));

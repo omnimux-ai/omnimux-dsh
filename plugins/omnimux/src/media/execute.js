@@ -9,6 +9,7 @@ import {
   assertGuardSubmit,
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
+import { generateSpeech } from './speech.js'
 export { probeMediaAssets } from './asset-probe.js'
 
 const CAPABILITY_SEAM = Object.freeze({
@@ -32,6 +33,7 @@ const CAPABILITY_SEAM = Object.freeze({
  *   style?: string,
  *   instrumental?: boolean,
  *   speed?: number,
+ *   format?: string,
  *   aspectRatio?: string,
  *   resolution?: string,
  *   sound?: boolean,
@@ -93,6 +95,7 @@ export async function executeOmnimuxMedia(capability, input) {
       style: input.style,
       instrumental: input.instrumental,
       speed: input.speed,
+      format: input.format,
       aspectRatio: input.aspectRatio,
       resolution: input.resolution,
       sound: input.sound,
@@ -142,6 +145,13 @@ export async function executeOmnimuxMedia(capability, input) {
     operation: guardPlan.operationId,
     guardPlan,
   })
+
+  if (capability === 'audio' && guardPlan.operationId === 'text_to_speech') {
+    return generateSpeech({
+      route, guardPlan, payload: mappedInput, apiKey: auth.apiKey,
+      dest: input.dest, fetcher: input.fetcher, signal: input.signal,
+    })
+  }
 
   let result
   const candidates = route.candidates.slice(0, 2)

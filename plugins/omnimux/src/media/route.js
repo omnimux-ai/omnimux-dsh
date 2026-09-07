@@ -20,7 +20,7 @@ export const DEFAULT_MEDIA = Object.freeze({
       models: Object.freeze({
         video: 'seedance-2-0-fast',
         image: 'gpt-image-2',
-        audio: 'suno',
+        audio: 'seed-audio-1.0',
         stt: 'whisper-1',
       }),
     }),

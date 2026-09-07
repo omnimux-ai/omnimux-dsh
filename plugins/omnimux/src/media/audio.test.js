@@ -8,12 +8,12 @@ import { parseMediaConfig, resolveMediaRoute } from './route.js'
 import { mapOmnimuxInput } from './vendors/omnimux.js'
 
 describe('omnimux audio helpers', () => {
-  it('defaults to suno on the openai-media row', () => {
+  it('defaults to Seed Audio on the openai-media row', () => {
     const route = resolveMediaRoute('audio', {}, parseMediaConfig(undefined), {
       OMNIMUX_API_KEY: 'sk-test',
     })
     assert.equal(route.providerId, 'omnimux')
-    assert.equal(route.modelId, 'suno')
+    assert.equal(route.modelId, 'seed-audio-1.0')
     assert.equal(route.protocol, 'openai-media')
   })
 
@@ -30,6 +30,7 @@ describe('omnimux audio helpers', () => {
     await assert.rejects(
       () => executeOmnimuxAudio({
         prompt: 'synthwave track',
+        model: 'suno',
         dest: '/tmp/no.mp3',
         // Unknown external fields must not alter SubmitGuard admission.
         bypassSubmitGuard: true,

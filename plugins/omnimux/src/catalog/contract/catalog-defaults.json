@@ -6,6 +6,6 @@
     "text_to_image": "gpt-image-2",
     "text_to_video": "seedance-2-0-fast",
     "text_to_music": "suno",
-    "text_to_speech": "gpt-4o-mini-tts"
+    "text_to_speech": "seed-audio-1.0"
   }
 }

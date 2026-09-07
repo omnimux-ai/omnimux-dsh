@@ -6,6 +6,9 @@ export const TASK_PATH = Object.freeze({
   audio: 'audio/generations',
 })
 
+/** Text-to-speech returns audio bytes synchronously, without a task handle. */
+export const SPEECH_PATH = 'audio/speech'
+
 /** Speech-to-text is synchronous: one multipart POST, no task poll. */
 export const TRANSCRIPTION_PATH = 'audio/transcriptions'
 
@@ -131,6 +134,7 @@ export function pickTaskStatus(raw) {
  *   style?: string,
  *   instrumental?: boolean,
  *   speed?: number,
+ *   format?: string,
  *   aspectRatio?: string,
  *   resolution?: string,
  *   operation?: string,
@@ -142,8 +146,16 @@ export function mapOmnimuxInput(capability, request) {
   if (request.guardPlan?.vendorPayload && typeof request.guardPlan.vendorPayload === 'object') {
     const fromGuard = { ...request.guardPlan.vendorPayload }
     // Ensure model wire id is not injected here (protocol layer owns model).
-    if (fromGuard.prompt === undefined && request.prompt) fromGuard.prompt = request.prompt
+    if (fromGuard.prompt === undefined && fromGuard.input === undefined && request.prompt) fromGuard.prompt = request.prompt
     return fromGuard
+  }
+
+  if (capability === 'audio' && (request.operation === 'text_to_speech' || request.model === 'seed-audio-1.0')) {
+    const speech = { input: request.prompt }
+    if (request.voice !== undefined) speech.voice = request.voice
+    if (request.speed !== undefined) speech.speed = request.speed
+    if (request.format !== undefined) speech.response_format = request.format
+    return speech
   }
 
   const input = { prompt: request.prompt }

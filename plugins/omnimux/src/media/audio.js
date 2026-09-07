@@ -23,6 +23,7 @@ export function readOmnimuxAudioConfig(env = process.env) {
 }
 
 /**
+ * Speech operations return bytes synchronously; existing task IDs still poll.
  * @param {Parameters<typeof executeOmnimuxMedia>[1]} input
  */
 export function executeOmnimuxAudio(input) {
