@@ -44,11 +44,11 @@
   --wb-node-ring: var(--dsw-alias-label-primary, #000000);
   --wb-node-radius: 20px;
   --wb-danger-soft: color-mix(in srgb, var(--wb-danger) 12%, transparent);
-  /* 连线物理流光 token（非蓝，双主题自适应：浅色森林翠绿/薄荷，深色电光荧光绿/翡翠） */
-  --wb-beam-start: #047857; /* 浅色端点 1：深翡翠绿（对比度 ≥ 4.5:1） */
-  --wb-beam-end: #10B981;   /* 浅色端点 2：高亮薄荷绿 */
-  --wb-beam-glow: rgba(5, 150, 105, 0.35);
-  --wb-beam-glow-secondary: rgba(16, 185, 129, 0.4);
+  /* 连线物理流光 token（非蓝，双主题自适应：浅色深紫/电紫，深色香芋紫/电紫） */
+  --wb-beam-start: #5644d6; /* 浅色端点 1：悬浮深紫（对比度 ≥ 4.5:1） */
+  --wb-beam-end: #7961f2;   /* 浅色端点 2：极光电紫 */
+  --wb-beam-glow: rgba(121, 97, 242, 0.35);
+  --wb-beam-glow-secondary: rgba(86, 68, 214, 0.4);
   --wb-beam-track: rgba(0, 0, 0, 0.08);
 
   /* Modern Floating Dock & Capsule Header tokens */
@@ -152,11 +152,11 @@ body[data-ds-dark-theme] .wf-canvas-root {
     rgba(0, 0, 0, 0.3) 0 10px 10px -5px,
     rgba(0, 0, 0, 0.3) 0 20px 25px -5px,
     rgba(0, 0, 0, 0.3) 0 20px 32px -12px;
-  /* 连线物理流光暗色翻转：OmniMux 电光荧光绿 + 翡翠翠绿，无蓝色 */
-  --wb-beam-start: #D4FF38;
-  --wb-beam-end: #10B981;
-  --wb-beam-glow: rgba(212, 255, 56, 0.45);
-  --wb-beam-glow-secondary: rgba(16, 185, 129, 0.6);
+  /* 连线物理流光暗色翻转：OmniMux 香芋浅紫 + 极光电紫，无蓝色 */
+  --wb-beam-start: #b8b7ff;
+  --wb-beam-end: #7961f2;
+  --wb-beam-glow: rgba(184, 183, 255, 0.45);
+  --wb-beam-glow-secondary: rgba(121, 97, 242, 0.6);
   --wb-beam-track: rgba(255, 255, 255, 0.12);
   /* 节点选中/高亮边框线暗色自适应：白色边框 */
   --wb-node-ring: var(--dsw-alias-label-primary, #ffffff);

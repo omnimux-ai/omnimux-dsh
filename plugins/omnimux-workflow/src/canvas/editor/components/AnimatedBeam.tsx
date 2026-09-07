@@ -175,7 +175,7 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
               {isHead && (
                 <path
                   d={pathD}
-                  stroke="var(--wb-beam-glow, #10B981)"
+                  stroke="var(--wb-beam-glow, #7961f2)"
                   strokeWidth={seg.haloWidth}
                   strokeLinecap="round"
                   strokeDasharray={seg.dashArray}
@@ -189,10 +189,10 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
                 />
               )}
 
-              {/* 核心彗星能量微元（尾部渐细深翠，头部高亮电光绿） */}
+              {/* 核心彗星能量微元（尾部渐细电紫，头部高亮香芋紫） */}
               <path
                 d={pathD}
-                stroke={seg.index === 7 ? 'var(--wb-beam-start, #D4FF38)' : 'var(--wb-beam-end, #10B981)'}
+                stroke={seg.index === 7 ? 'var(--wb-beam-start, #b8b7ff)' : 'var(--wb-beam-end, #7961f2)'}
                 strokeWidth={seg.coreWidth}
                 strokeLinecap="round"
                 strokeDasharray={seg.dashArray}
