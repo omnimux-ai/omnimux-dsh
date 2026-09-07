@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, ConfirmModal, Divider } from 'dsh-ui-kit'
+import { ActionRow, Button, ConfirmModal, Divider, PageHeader } from 'dsh-ui-kit'
 import { AccountCard } from './AccountCard.jsx'
 import { AccountTable } from './AccountTable.jsx'
 import { ConnectModal } from './ConnectModal.jsx'
@@ -36,9 +36,9 @@ function readStoredView() {
  * `active` is first-level page visibility. The overlay stays mounted while
  * hidden so the list does not flash a skeleton on the next open; the connect
  * dialog, confirm popover and transient notice are dropped on hide.
- * @param {{ t: (key: string) => string, active?: boolean }} props
+ * @param {{ t: (key: string) => string, active?: boolean, showHeader?: boolean, onClose?: () => void }} props
  */
-export function AccountsSection({ t, active = true }) {
+export function AccountsSection({ t, active = true, showHeader = false, onClose }) {
   useEffect(() => {
     injectAccountsStyles()
   }, [])
@@ -283,15 +283,27 @@ export function AccountsSection({ t, active = true }) {
 
   return (
     <div className="omnimux-accounts-root">
+      {showHeader && (
+        <PageHeader
+          title={t('title')}
+          subtitle={t('subtitle')}
+          onClose={onClose}
+          closeTitle={t('close')}
+        />
+      )}
       <div className="omnimux-accounts-action-row">
-        <Button
-          variant="primary"
-          leadingIcon={<PlusIcon />}
-          disabled={combinedBusy !== ''}
-          onClick={openConnect}
-        >
-          {t('connect')}
-        </Button>
+        <ActionRow
+          primaryAction={
+            <Button
+              variant="primary"
+              leadingIcon={<PlusIcon />}
+              disabled={combinedBusy !== ''}
+              onClick={openConnect}
+            >
+              {t('connect')}
+            </Button>
+          }
+        />
       </div>
       <OverviewBar t={t} summary={summary} filters={filters} onFilterClick={onFilterClick} busy={combinedBusy} />
       <Divider />

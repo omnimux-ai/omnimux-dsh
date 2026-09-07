@@ -195,7 +195,7 @@ export function ProjectLibraryPage(props) {
           leadingIcon={<IconPlusOutline16 />}
           onClick={() => { setDialogOpen(true) }}
         >
-          {t('workflow.action.new') || '+ 导入/新建工作流'}
+          {t('workflow.action.new') || '导入/新建工作流'}
         </Button>
         <Button
           variant="outline"
