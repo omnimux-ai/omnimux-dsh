@@ -67,3 +67,45 @@ test('tableDocumentCache: ensure, mutate, undo, redo and dirty tracking', async 
   tableDocumentCache.resetAll();
   assert.equal(tableDocumentCache.getSession(tableId1), undefined);
 });
+
+test('tableDocumentCache: 默认初始文档与 ensure 的缺列兜底', async () => {
+  tableDocumentCache.resetAll();
+
+  // 1. createDefaultInitialDocument：默认标题「未命名表格」，默认包含一列「文本」(text, 280)
+  const defaultDoc = createDefaultInitialDocument();
+  assert.equal(defaultDoc.title, '未命名表格');
+  assert.equal(defaultDoc.columns.length, 1);
+  assert.equal(defaultDoc.columns[0].title, '文本');
+  assert.equal(defaultDoc.columns[0].type, 'text');
+  assert.equal(defaultDoc.columns[0].visible, true);
+  assert.ok(defaultDoc.columns[0].width >= 220 && defaultDoc.columns[0].width <= 280);
+
+  // 2. ensure：initialDoc 缺少 columns 字段时，session.document 必须补全默认「文本」列
+  const s1 = await tableDocumentCache.ensure('', 'tbl_fallback_a', {
+    initialDoc: { title: '无列表' },
+  });
+  assert.equal(s1.document.columns.length, 1);
+  assert.equal(s1.document.columns[0].title, '文本');
+  assert.equal(s1.document.columns[0].type, 'text');
+
+  // 3. ensure：initialDoc 为空表（columns: [], rows: []）时同样补全
+  const s2 = await tableDocumentCache.ensure('', 'tbl_fallback_b', {
+    initialDoc: { title: '空表', columns: [], rows: [] },
+  });
+  assert.equal(s2.document.columns.length, 1);
+  assert.equal(s2.document.columns[0].title, '文本');
+
+  // 4. ensure：initialDoc 已有合法列时不做覆盖
+  const s3 = await tableDocumentCache.ensure('', 'tbl_fallback_c', {
+    initialDoc: {
+      title: '有列表',
+      columns: [{ id: 'col_keep', title: '保留列', type: 'number' }],
+      rows: [],
+    },
+  });
+  assert.equal(s3.document.columns.length, 1);
+  assert.equal(s3.document.columns[0].id, 'col_keep');
+  assert.equal(s3.document.columns[0].title, '保留列');
+
+  tableDocumentCache.resetAll();
+});

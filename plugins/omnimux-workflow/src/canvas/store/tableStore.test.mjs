@@ -65,3 +65,41 @@ test('tableStore: columnId-based cell mutations, row operations and undo/redo', 
   useTableStore.getState().redo();
   assert.equal(useTableStore.getState().document.rows.length, 2);
 });
+
+test('tableStore: openStage 对 0 列文档自动补全默认「文本」列', () => {
+  // 1. 以文档对象形式打开：columns 为空数组
+  useTableStore.getState().openStage({
+    version: 1,
+    title: '空列表格',
+    columns: [],
+    rows: [],
+  });
+  let doc = useTableStore.getState().document;
+  assert.equal(doc.columns.length, 1, '0 列文档打开舞台时必须补全默认列');
+  assert.equal(doc.columns[0].title, '文本');
+  assert.equal(doc.columns[0].type, 'text');
+  assert.equal(doc.columns[0].visible, true);
+  assert.ok(doc.columns[0].width >= 220 && doc.columns[0].width <= 280, '默认列宽度应在 220~280 区间');
+
+  // 2. 以 tableId + initialDoc 形式打开：initialDoc 缺少 columns 字段
+  useTableStore.getState().openStage('tbl_no_columns', { title: '缺列文档', rows: [] });
+  doc = useTableStore.getState().document;
+  assert.equal(doc.columns.length, 1);
+  assert.equal(doc.columns[0].title, '文本');
+  assert.equal(doc.columns[0].type, 'text');
+
+  // 3. 无任何入参打开：获得默认初始文档（含默认「文本」列与「未命名表格」标题）
+  useTableStore.getState().openStage();
+  doc = useTableStore.getState().document;
+  assert.equal(doc.columns.length, 1);
+  assert.equal(doc.columns[0].title, '文本');
+  assert.equal(doc.title, '未命名表格');
+
+  // 4. 补全后的默认列可以直接接收「+ 添加行」写入
+  useTableStore.getState().addRow();
+  useTableStore.getState().updateCell(0, doc.columns[0].id, '首行内容');
+  assert.equal(useTableStore.getState().document.rows[0].cells[doc.columns[0].id], '首行内容');
+
+  // 5. 关闭舞台，避免影响其他测试
+  useTableStore.getState().closeStage();
+});
