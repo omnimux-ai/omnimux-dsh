@@ -27,6 +27,7 @@ import {
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  calculateAsarHeaderSha256,
   calculateSha256,
   locateInfoPlist,
   readPlistIntegrity,
@@ -138,7 +139,8 @@ export function patchAsarPresets(asarPath, presetsDir, opts = {}) {
     throw new Error(`asar length changed ${out.length} vs ${orig.length}`)
   }
 
-  const newHash = sha256(out)
+  // Electron ElectronAsarIntegrity validates SHA256 of entry '<header>' (the header JSON string)
+  const newHash = sha256(Buffer.from(padded, 'utf8'))
   const targetPlist = infoPlistPath || locateInfoPlist(asarPath)
 
   if (!dryRun) {

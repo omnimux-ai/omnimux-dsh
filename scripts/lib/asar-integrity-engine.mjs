@@ -9,7 +9,15 @@
 process.env.ELECTRON_NO_ASAR = '1'
 
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  readSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
@@ -22,6 +30,77 @@ import { tmpdir } from 'node:os'
 export function calculateSha256(input) {
   const buf = typeof input === 'string' ? readFileSync(input) : input
   return createHash('sha256').update(buf).digest('hex')
+}
+
+/**
+ * Read the raw header string / buffer from an asar archive.
+ * Supports file path string or Buffer.
+ * Asar format pickle layout:
+ * - Bytes 0..3: UInt32LE = 4 (pickle size payload)
+ * - Bytes 4..7: UInt32LE = headerSize (pickle payload size)
+ * - Bytes 8..11: UInt32LE = headerSize - 4 (pickle string payload size)
+ * - Bytes 12..15: UInt32LE = strLen (header JSON string length in bytes)
+ * - Bytes 16..16+strLen: header JSON string encoded in UTF-8
+ *
+ * @param {string | Buffer} input Asar file path or Buffer
+ * @returns {Buffer} Raw header buffer (UTF-8 encoded JSON string)
+ */
+export function readAsarHeader(input) {
+  if (typeof input === 'string') {
+    if (!existsSync(input)) {
+      if (input.trim().startsWith('{')) {
+        return Buffer.from(input, 'utf8')
+      }
+      throw new Error(`Asar file not found: ${input}`)
+    }
+    const fd = openSync(input, 'r')
+    try {
+      const sizeBuf = Buffer.alloc(16)
+      const bytesRead = readSync(fd, sizeBuf, 0, 16, 0)
+      if (bytesRead < 16) {
+        throw new Error(`Asar file too small: ${input}`)
+      }
+      const pickleSize = sizeBuf.readUInt32LE(0)
+      const headerSize = sizeBuf.readUInt32LE(4)
+      const strLen = sizeBuf.readUInt32LE(12)
+      if (pickleSize !== 4 || headerSize < strLen) {
+        throw new Error(`Invalid asar header in file: ${input}`)
+      }
+      const headerBuf = Buffer.alloc(strLen)
+      if (readSync(fd, headerBuf, 0, strLen, 16) !== strLen) {
+        throw new Error(`Unable to read full asar header from ${input}`)
+      }
+      return headerBuf
+    } finally {
+      closeSync(fd)
+    }
+  }
+
+  if (Buffer.isBuffer(input)) {
+    if (input.length >= 16 && input.readUInt32LE(0) === 4) {
+      const headerSize = input.readUInt32LE(4)
+      const strLen = input.readUInt32LE(12)
+      if (headerSize >= strLen && input.length >= 16 + strLen) {
+        return input.subarray(16, 16 + strLen)
+      }
+    }
+    return input
+  }
+
+  throw new TypeError('readAsarHeader expects a file path string or Buffer')
+}
+
+/**
+ * Calculate SHA-256 hash of the asar header (<header> entry).
+ * Conforms to Electron's ValidateIntegrity check in electron/shell/common/asar/asar_util.cc
+ * which validates SHA256 of entry '<header>' (the JSON header string), NOT the whole asar file.
+ *
+ * @param {Buffer | string} input File path, asar archive Buffer, or raw header Buffer/string
+ * @returns {string} Hex-encoded SHA-256 hash of the header
+ */
+export function calculateAsarHeaderSha256(input) {
+  const headerBuf = readAsarHeader(input)
+  return createHash('sha256').update(headerBuf).digest('hex')
 }
 
 /**
@@ -212,7 +291,18 @@ export function verifyIntegrity(asarPath, plistPath, asarRelativeKey = 'Resource
   }
 
   const resolvedPlist = plistPath || locateInfoPlist(asarPath)
-  const calculatedHash = calculateSha256(asarPath)
+  let calculatedHash = ''
+  try {
+    calculatedHash = calculateAsarHeaderSha256(asarPath)
+  } catch (err) {
+    return {
+      valid: false,
+      calculatedHash: '',
+      plistHash: null,
+      plistPath: resolvedPlist,
+      error: `Failed to read asar header: ${err.message}`,
+    }
+  }
 
   if (!resolvedPlist || !existsSync(resolvedPlist)) {
     return {
