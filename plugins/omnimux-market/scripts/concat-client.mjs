@@ -13,7 +13,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dir = join(root, 'src', 'client')
 const outFile = join(root, 'lib', 'client.js')
 
-/** Order is load order inside the factory. Do not sort alphabetically. */
+/**
+ * Order is load order inside the factory. Do not sort alphabetically.
+ * skill-picker-logic.js is NOT a fragment: it is an ESM module that esbuild
+ * inlines into the factory via boot.js `require("./skill-picker-logic.js")`.
+ */
 const FRAGMENTS = [
   'boot.js',
   'css.js',
@@ -50,7 +54,9 @@ const result = await esbuild.build({
   absWorkingDir: root,
   stdin: {
     contents: inner,
-    resolveDir: root,
+    // Relative requires (e.g. "./skill-picker-logic.js" in boot.js) resolve
+    // against src/client so esbuild inlines them into the single factory.
+    resolveDir: dir,
     sourcefile: 'client-factory.js',
     loader: 'js',
   },

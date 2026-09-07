@@ -18,6 +18,15 @@ test('client bundle inlines dsh-ui-kit and externalizes host modules', () => {
     assert.match(client, /SearchField|dshUk-SearchField/);
     assert.match(client, /dshUk-Button/);
 });
+test('client bundle has no runtime relative require (logic is inlined)', () => {
+    assert.doesNotMatch(client, /require\(["']\.\//);
+    assert.doesNotMatch(client, /require\(["']\.\.\//);
+});
+test('client bundle inlines the shelf taxonomy keywords', () => {
+    assert.match(client, /shopify/);
+    assert.match(client, /独立站/);
+    assert.match(client, /选品/);
+});
 test('client bundle keeps public slot keys and workbench tab registration', () => {
     for (const needle of [
         'key: "skillhub_search"',

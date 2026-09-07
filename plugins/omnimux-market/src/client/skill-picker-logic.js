@@ -19,12 +19,13 @@ export const PICKER_CACHE_TTL_MS = 90_000
 
 /**
  * Skill 货架分类法（Taxonomy）唯一语义真源。顺序即展示顺序。
- * UI 片段（skill-picker.js / skill-plaza.js）因 concat 单 factory 约束内联副本，
- * 由 skill-shelf-parity.test.js 对拍守卫，漂移即测试失败。
- * keywords 为 L2/L3 兜底匹配词表，v1 收敛为 [id]；扩充需评估误命中（见 docs/design/2026-09-skill-shelf-filter-design.md）。
+ * UI 片段（skill-picker.js / skill-plaza.js / plaza-shell.js）运行时经 boot.js
+ * 注入的 SkillShelf 命名空间消费本模块，禁止再维护内联副本（parity 测试守卫）。
+ * keywords 为 L2/L3 兜底匹配词表；仅电商扩充为五词，其余收敛为 [id]；
+ * 短英文词（ad、music）不得入词表，扩充需评估误命中。
  */
 export const SKILL_SHELF_TAXONOMY = Object.freeze([
-  { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商']) },
+  { id: '电商', labelKey: 'picker.tab.ecom', keywords: Object.freeze(['电商', '独立站', '跨境', 'shopify', '选品']) },
   { id: '商业广告', labelKey: 'picker.tab.ad', keywords: Object.freeze(['商业广告']) },
   { id: '短剧漫剧', labelKey: 'picker.tab.drama', keywords: Object.freeze(['短剧漫剧']) },
   { id: '专业影视', labelKey: 'picker.tab.film', keywords: Object.freeze(['专业影视']) },
@@ -38,10 +39,10 @@ export const SKILL_SHELF_TAXONOMY = Object.freeze([
 export const SKILL_SHELF_TAGS = Object.freeze(SKILL_SHELF_TAXONOMY.map((row) => row.id))
 
 export const PICKER_TABS = Object.freeze([
-  { id: 'all', kind: 'all' },
-  { id: 'mine', kind: 'mine' },
-  { id: 'featured', kind: 'featured' },
-  ...SKILL_SHELF_TAGS.map((id) => ({ id, kind: 'tag' })),
+  { id: 'all', kind: 'all', labelKey: 'picker.tab.all' },
+  { id: 'mine', kind: 'mine', labelKey: 'picker.tab.mine' },
+  { id: 'featured', kind: 'featured', labelKey: 'picker.tab.featured' },
+  ...SKILL_SHELF_TAXONOMY.map((row) => ({ id: row.id, kind: 'tag', labelKey: row.labelKey })),
 ])
 
 export function skillToken(item) {
@@ -73,6 +74,16 @@ export function buildSearchPayload(tabId, query) {
   return payload
 }
 
+/**
+ * tag 在 taxonomy 中有对应行且 keywords 有效时取该行 keywords，
+ * 未知分类回落 [tag]（字面匹配，不崩、不落入「全部」）。
+ */
+export function keywordsForTag(tag) {
+  const row = SKILL_SHELF_TAXONOMY.find((r) => r.id === tag)
+  if (row && Array.isArray(row.keywords) && row.keywords.length) return row.keywords
+  return [tag]
+}
+
 export function matchesDomainTag(item, tag) {
   if (!item || !tag) return true
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : []
@@ -86,7 +97,11 @@ export function matchesDomainTag(item, tag) {
     item.summary,
     tags.join(' '),
   ].map((v) => String(v || '')).join(' ')
-  return hay.includes(tag)
+  const lowerHay = hay.toLowerCase()
+  return keywordsForTag(tag).some((kw) => {
+    const k = String(kw || '').toLowerCase()
+    return k ? lowerHay.includes(k) : false
+  })
 }
 
 export function itemShelfTags(item) {
@@ -107,6 +122,35 @@ export function filterPickerItems(items, tabId) {
   const shelf = list.filter((it) => inSkillShelf(it))
   if (tab.kind === 'tag') return shelf.filter((it) => matchesDomainTag(it, tab.id))
   return shelf
+}
+
+/**
+ * Plaza 货架过滤：先收敛到货架全集，再按分类严格判定。
+ * 未知分类走 matchesDomainTag 的「未知 → [tag]」字面分支，严禁回落「全部」。
+ */
+export function filterPlazaShelf(items, tag) {
+  const list = Array.isArray(items) ? items : []
+  const shelf = list.filter((it) => inSkillShelf(it))
+  const key = String(tag || '').trim()
+  if (!key) return shelf
+  return shelf.filter((it) => matchesDomainTag(it, key))
+}
+
+/** Plaza 检索渠道：仅用户提交 query 时才追加 skillhub；分类浏览保持默认双渠道。 */
+export const PLAZA_DEFAULT_CHANNELS = Object.freeze(['custom', 'workbuddy'])
+export const PLAZA_QUERY_CHANNELS = Object.freeze(['custom', 'workbuddy', 'skillhub'])
+export const PLAZA_PAGE_SIZE = 48
+
+export function buildPlazaSearchPayload(submitted, category, page = 1, pageSize = PLAZA_PAGE_SIZE) {
+  const q = String(submitted || '').trim()
+  const cat = String(category || '').trim()
+  const query = cat ? (q ? `${q} ${cat}` : cat) : q
+  return {
+    query,
+    limit: pageSize,
+    offset: (Math.max(1, Number(page) || 1) - 1) * pageSize,
+    channels: q ? [...PLAZA_QUERY_CHANNELS] : [...PLAZA_DEFAULT_CHANNELS],
+  }
 }
 
 export function installPayload(item) {
@@ -180,7 +224,9 @@ export function loadPickerSearch(payload, opts) {
     return Promise.resolve({ body: null, fromCache: false })
   }
   const pending = Promise.resolve(fetchSearch(payload)).then((body) => {
-    writePickerCache(cache, key, body, now)
+    // TTL 自请求完成时刻起算：必须在 then 回调内读取时钟，禁止闭包捕获发起时刻。
+    const at = opts && typeof opts.completedAt === 'function' ? opts.completedAt() : Date.now()
+    writePickerCache(cache, key, body, at)
     if (inflight && typeof inflight.delete === 'function') inflight.delete(key)
     return body
   }, (err) => {

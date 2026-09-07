@@ -1,39 +1,4 @@
-    // 真源：skill-picker-logic.js SKILL_SHELF_TAXONOMY（顺序锁定，parity 测试对拍守卫）
-    const PLAZA_SHELF_TAGS = [
-      "电商", "商业广告", "短剧漫剧", "专业影视", "动画", "教育", "创意实验", "音频音乐", "平台工具",
-    ];
-    const SKILL_SHELF_LABELS = {
-      "短剧漫剧": "picker.tab.drama",
-      "专业影视": "picker.tab.film",
-      "动画": "picker.tab.anim",
-      "商业广告": "picker.tab.ad",
-      "电商": "picker.tab.ecom",
-      "教育": "picker.tab.edu",
-      "创意实验": "picker.tab.lab",
-      "音频音乐": "picker.tab.audio",
-      "平台工具": "picker.tab.platform",
-    };
-
-    function plazaShelfItem(item) {
-      if (!item) return false;
-      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-      if (tags.some((tag) => PLAZA_SHELF_TAGS.includes(tag))) return true;
-      const hay = [item.category, item.categoryLabel, item.name, item.title, item.description, item.summary, tags.join(" ")]
-        .map((v) => String(v || "")).join(" ");
-      return PLAZA_SHELF_TAGS.some((tag) => hay.includes(tag));
-    }
-
-    function plazaFilterShelf(items, tag) {
-      const list = (Array.isArray(items) ? items : []).filter(plazaShelfItem);
-      if (!tag) return list;
-      return list.filter((it) => {
-        const tags = Array.isArray(it.tags) ? it.tags.map(String) : [];
-        if (tags.includes(tag)) return true;
-        const hay = [it.category, it.categoryLabel, it.name, it.title, it.description, it.summary, tags.join(" ")]
-          .map((v) => String(v || "")).join(" ");
-        return hay.includes(tag);
-      });
-    }
+    // 规则真源：SkillShelf（boot.js 注入 skill-picker-logic.js），禁止内联副本。
 
     function resolvePlazaIconSize(size) {
       if (typeof size === "number" && Number.isFinite(size) && size > 0) return size;
@@ -94,7 +59,7 @@
       const [err, setErr] = useState("");
       const [open, setOpen] = useState(null);
       const applySearchBody = (d, mode) => {
-        const next = plazaFilterShelf(d.items || [], category);
+        const next = SkillShelf.filterPlazaShelf(d.items || [], category);
         const isFallback = !!d.fallback;
         setFallback(isFallback);
         const nextTotal = isFallback ? next.length : Math.min(Number(d.total) || 0, next.length);
@@ -108,12 +73,8 @@
       };
       useEffect(() => {
         let live = true;
-        const payload = {
-          query: category ? (submitted ? submitted + " " + category : category) : submitted,
-          limit: pageSize,
-          offset: (page - 1) * pageSize,
-          channels: ["custom", "workbuddy"],
-        };
+        // 渠道真源：仅用户提交 query 时打 skillhub；分类浏览保持双渠道（#504）。
+        const payload = SkillShelf.buildPlazaSearchPayload(submitted, category, page, pageSize);
         const key = apiCacheKey("search", payload);
         const cached = apiCache.get(key);
         const hasFresh = cached && Date.now() - cached.at < API_CACHE_TTL_MS;
@@ -167,13 +128,13 @@
             variant: !category ? "secondary" : "ghost",
             onClick: () => { setCategory(""); setPage(1); },
           }, tr("mkt.catAll")),
-          PLAZA_SHELF_TAGS.map((key) => h(Button, {
-            key,
+          SkillShelf.SKILL_SHELF_TAXONOMY.map((row) => h(Button, {
+            key: row.id,
             type: "button",
             size: "xs",
-            variant: category === key ? "secondary" : "ghost",
-            onClick: () => { setCategory(key); setPage(1); },
-          }, tr(SKILL_SHELF_LABELS[key]))),
+            variant: category === row.id ? "secondary" : "ghost",
+            onClick: () => { setCategory(row.id); setPage(1); },
+          }, tr(row.labelKey))),
         ),
         status === "ready" ? h("div", { className: "sh-mkt-results" },
           h("p", { className: "sh-mkt-summary" }, summaryText),

@@ -1,131 +1,17 @@
-    const PICKER_SEARCH_LIMIT = 20;
-    const PICKER_DEBOUNCE_MS = 200;
-    const PICKER_CACHE_TTL_MS = 90_000;
+    // 规则真源：SkillShelf（boot.js 注入 skill-picker-logic.js），禁止内联副本。
     const pickerSearchCache = new Map();
     const pickerSearchInflight = new Map();
-    const CREATE_SKILL_ITEM = {
-      id: "sk-omx-skill-creator",
-      slug: "skill-creator",
-      skill: "skill-creator",
-      catalogId: "sk-omx-skill-creator",
-      name: "技能创建",
-      description: "创建双语可复用Skill",
-    };
-    // 真源：skill-picker-logic.js SKILL_SHELF_TAXONOMY（顺序锁定，parity 测试对拍守卫）
-    const SKILL_SHELF_TAGS = [
-      "电商", "商业广告", "短剧漫剧", "专业影视", "动画", "教育", "创意实验", "音频音乐", "平台工具",
-    ];
-    const PICKER_TAB_LABELS = {
-      "短剧漫剧": "picker.tab.drama",
-      "专业影视": "picker.tab.film",
-      "动画": "picker.tab.anim",
-      "商业广告": "picker.tab.ad",
-      "电商": "picker.tab.ecom",
-      "教育": "picker.tab.edu",
-      "创意实验": "picker.tab.lab",
-      "音频音乐": "picker.tab.audio",
-      "平台工具": "picker.tab.platform",
-    };
-    const PICKER_TABS = [
-      { id: "all", kind: "all", labelKey: "picker.tab.all" },
-      { id: "mine", kind: "mine", labelKey: "picker.tab.mine" },
-      { id: "featured", kind: "featured", labelKey: "picker.tab.featured" },
-      ...SKILL_SHELF_TAGS.map((id) => ({ id, kind: "tag", labelKey: PICKER_TAB_LABELS[id] })),
-    ];
-
-    function pickerSkillToken(item) {
-      return String((item && (item.skill || item.slug)) || "").trim().replace(/^\//, "");
-    }
-
-    function pickerSkillGesture(item) {
-      const slug = pickerSkillToken(item);
-      return slug ? "/" + slug + " " : "";
-    }
-
-    function pickerAppendGesture(draft, gesture) {
-      const token = String(gesture || "");
-      if (!token) return String(draft || "");
-      const withSpace = token.endsWith(" ") ? token : token + " ";
-      const base = String(draft || "");
-      const prefix = base && !/\s$/.test(base) ? base + " " : base;
-      return prefix + withSpace;
-    }
-
-    function pickerSearchPayload(tabId, query) {
-      const q = String(query || "").trim();
-      const tab = PICKER_TABS.find((row) => row.id === tabId) || PICKER_TABS[0];
-      const payload = { query: q, limit: PICKER_SEARCH_LIMIT, offset: 0 };
-      if (tab.kind === "featured") payload.channels = ["custom"];
-      if (tab.kind === "tag") payload.query = q ? q + " " + tab.id : tab.id;
-      return payload;
-    }
-
-    function pickerMatchesTag(item, tag) {
-      if (!item || !tag) return true;
-      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-      if (tags.includes(tag)) return true;
-      const hay = [item.category, item.categoryLabel, item.name, item.title, item.description, item.summary, tags.join(" ")]
-        .map((v) => String(v || "")).join(" ");
-      return hay.includes(tag);
-    }
-
-    function pickerInShelf(item) {
-      if (!item) return false;
-      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-      if (tags.some((tag) => SKILL_SHELF_TAGS.includes(tag))) return true;
-      return SKILL_SHELF_TAGS.some((tag) => pickerMatchesTag(item, tag));
-    }
-
-    function pickerFilterItems(items, tabId) {
-      const list = Array.isArray(items) ? items : [];
-      const tab = PICKER_TABS.find((row) => row.id === tabId) || PICKER_TABS[0];
-      if (tab.kind === "mine") return list.filter((it) => it && it.installed === true);
-      const shelf = list.filter((it) => pickerInShelf(it));
-      if (tab.kind === "tag") return shelf.filter((it) => pickerMatchesTag(it, tab.id));
-      return shelf;
-    }
-
-    function pickerCacheKey(payload) {
-      return JSON.stringify(payload || {});
-    }
 
     function peekPickerCache(payload) {
-      const key = pickerCacheKey(payload);
-      const hit = pickerSearchCache.get(key);
-      if (!hit || !hit.body) return null;
-      if (Date.now() - (Number(hit.at) || 0) >= PICKER_CACHE_TTL_MS) return null;
-      return hit.body;
-    }
-
-    function rememberPickerSearch(payload, body) {
-      if (!body) return;
-      pickerSearchCache.set(pickerCacheKey(payload), { at: Date.now(), body });
+      return SkillShelf.peekPickerCache(pickerSearchCache, SkillShelf.pickerCacheKey(payload));
     }
 
     function loadPickerSearch(payload) {
-      const cached = peekPickerCache(payload);
-      if (cached) return Promise.resolve({ body: cached, fromCache: true });
-      const key = pickerCacheKey(payload);
-      const pending = pickerSearchInflight.get(key);
-      if (pending) return pending.then((body) => ({ body, fromCache: false }));
-      const next = api("search", payload).then((body) => {
-        rememberPickerSearch(payload, body);
-        pickerSearchInflight.delete(key);
-        return body;
-      }, (err) => {
-        pickerSearchInflight.delete(key);
-        throw err;
+      return SkillShelf.loadPickerSearch(payload, {
+        cache: pickerSearchCache,
+        inflight: pickerSearchInflight,
+        fetchSearch: (p) => api("search", p),
       });
-      pickerSearchInflight.set(key, next);
-      return next.then((body) => ({ body, fromCache: false }));
-    }
-
-    function pickerInstallPayload(item) {
-      if (!item || item.installed === true) return null;
-      const slug = String(item.slug || item.skill || "").trim();
-      if (!slug) return null;
-      const catalogId = String(item.catalogId || (String(item.id || "").startsWith("sk-") ? item.id : "") || "").trim();
-      return catalogId ? { slug, catalogId } : { slug };
     }
 
     function writePlazaSkillsIntent() {
@@ -218,14 +104,14 @@
 
       useEffect(() => {
         if (!open) return undefined;
-        const timer = setTimeout(() => setDebounced(query), PICKER_DEBOUNCE_MS);
+        const timer = setTimeout(() => setDebounced(query), SkillShelf.PICKER_DEBOUNCE_MS);
         return () => clearTimeout(timer);
       }, [query, open]);
 
       useEffect(() => {
         if (!open) return undefined;
         let live = true;
-        const payload = pickerSearchPayload(tabId, debounced);
+        const payload = SkillShelf.buildSearchPayload(tabId, debounced);
         const cached = peekPickerCache(payload);
         if (cached) {
           setItems(Array.isArray(cached.items) ? cached.items : []);
@@ -297,7 +183,7 @@
         };
       }, [open, onClose, anchorRef]);
 
-      const visible = pickerFilterItems(items, tabId);
+      const visible = SkillShelf.filterPickerItems(items, tabId);
 
       const handlePick = (item) => {
         const ok = onPick(item);
@@ -350,7 +236,7 @@
         ),
         h("div", { className: "sh-picker-cats" },
           h("div", { className: "sh-picker-tabs", ref: tabsRef, role: "tablist" },
-            PICKER_TABS.map((tab) => h("button", {
+            SkillShelf.PICKER_TABS.map((tab) => h("button", {
               key: tab.id,
               type: "button",
               role: "tab",
@@ -382,7 +268,7 @@
           emptyMine ? h("p", { className: "sh-picker-empty" }, tr("picker.emptyMine")) : null,
           emptySearch ? h("p", { className: "sh-picker-empty" }, tr("picker.empty", { q: debounced || "" })) : null,
           visible.map((item, index) => {
-            const slug = pickerSkillToken(item);
+            const slug = SkillShelf.skillToken(item);
             const name = item.name || item.title || slug;
             const desc = item.description || item.summary || "";
             const selected = index === activeIndex;
@@ -430,7 +316,7 @@
       useEffect(() => { setOpen(false); }, [sessionId]);
 
       useEffect(() => {
-        const payload = pickerSearchPayload("all", "");
+        const payload = SkillShelf.buildSearchPayload("all", "");
         loadPickerSearch(payload).catch(() => {});
       }, []);
 
@@ -444,12 +330,12 @@
       const close = useCallback(() => setOpen(false), []);
 
       const applyItem = useCallback((item) => {
-        const gesture = pickerSkillGesture(item);
+        const gesture = SkillShelf.skillGesture(item);
         if (!gesture) return false;
         if (!inputActions || typeof inputActions.setDraft !== "function") return false;
-        inputActions.setDraft(pickerAppendGesture(draft, gesture));
+        inputActions.setDraft(SkillShelf.appendSkillGesture(draft, gesture));
         focusComposerCard();
-        const payload = pickerInstallPayload(item);
+        const payload = SkillShelf.installPayload(item);
         if (payload) {
           api("install", payload).catch(() => {});
         }
@@ -467,7 +353,7 @@
       }, [tr]);
 
       const onCreate = useCallback(() => {
-        applyItem(CREATE_SKILL_ITEM);
+        applyItem(SkillShelf.CREATE_SKILL);
       }, [applyItem]);
 
       return h(I18nProvider, { t: tr },
