@@ -146,66 +146,6 @@ function AssetsFilterBar(props) {
   )
 }
 
-function AssetsTableItem(props) {
-  const { t, item, feed } = props
-  const { selectedIds, toggleSelect, handleRemoveSingle, setDetail } = feed
-  const isSelected = selectedIds.includes(item.id)
-  return (
-    <tr
-      key={item.id}
-      aria-selected={isSelected}
-      className="omnimux-assets-list-row"
-      onClick={() => setDetail(item)}
-    >
-      <td className="omnimux-assets-td-check" onClick={(e) => { e.stopPropagation(); toggleSelect(item.id) }}>
-        <input type="checkbox" checked={isSelected} readOnly />
-      </td>
-      <td className="omnimux-assets-td-name">{item.name}</td>
-      <td className="omnimux-assets-td-type">{t(`type.${item.type}`)}</td>
-      <td className="omnimux-assets-td-desc">{item.description || '-'}</td>
-      <td className="omnimux-assets-td-files">{item.fileCount ?? (item.files?.length || 0)}</td>
-      <td className="omnimux-assets-td-actions" onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="sm" onClick={() => handleRemoveSingle(item.id)}>
-          {t('stage.delete')}
-        </Button>
-      </td>
-    </tr>
-  )
-}
-
-function AssetsTableView(props) {
-  const { t, feed } = props
-  const { visible, selectedIds, toggleSelectAll } = feed
-  const isAllSelected = visible.length > 0 && visible.every((item) => selectedIds.includes(item.id))
-  return (
-    <div className="omnimux-assets-list-wrap">
-      <table className="omnimux-assets-list-table">
-        <thead>
-          <tr>
-            <th className="omnimux-assets-th-check">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={toggleSelectAll}
-              />
-            </th>
-            <th className="omnimux-assets-th-name">{t('field.name')}</th>
-            <th className="omnimux-assets-th-type">{t('field.type')}</th>
-            <th className="omnimux-assets-th-desc">{t('field.description')}</th>
-            <th className="omnimux-assets-th-files">{t('field.files')}</th>
-            <th className="omnimux-assets-th-actions">{t('field.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((item) => (
-            <AssetsTableItem key={item.id} t={t} item={item} feed={feed} />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 function AssetsSelectionBar(props) {
   const { t, feed } = props
   if (!feed.selecting) return null
@@ -270,11 +210,7 @@ function AssetsBody(props) {
   return (
     <div className="omnimux-assets-body">
       <div className="omnimux-assets-main">
-        {feed.viewMode === 'list' && !feed.detail ? (
-          <AssetsTableView t={t} feed={feed} />
-        ) : (
-          <AssetsMainView t={t} feed={feed} emptyProps={emptyProps} onOpenAdd={onOpenAdd} />
-        )}
+        <AssetsMainView t={t} feed={feed} emptyProps={emptyProps} onOpenAdd={onOpenAdd} />
       </div>
       {feed.detail && (
         <AssetDetail
