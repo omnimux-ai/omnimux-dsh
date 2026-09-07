@@ -76,7 +76,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   if (!row) return null
 
   const sourceUrl = data.safeItem.source_url
-  const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || sourceUrl)
+  const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
   const localVideoUrl = data.safeItem.local_paths?.video
     ? `/omnimux/inspiration/local/media/${encodeURIComponent(data.safeItem.id)}/video.mp4`
     : null
