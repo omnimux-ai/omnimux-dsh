@@ -1083,23 +1083,25 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   justify-content: space-between;
   /* 卡槽行与 Prompt 文案：单一间距源，避免再叠 input 上 padding */
   margin-bottom: 8px;
-  min-height: 32px;
+  min-height: 44px;
 }
 
-/* ==================== Feed-Slot 卡槽（T03 SlotWells） ==================== */
+/* ==================== Feed-Slot 卡槽（T03 SlotWells / Issue #737 对齐图 2） ==================== */
 
 .wf-slot-wells {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .wf-slot-well {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid var(--dsw-alias-border-l2, var(--wb-border));
-  background: var(--dsw-alias-bg-secondary, var(--wb-surface));
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15));
+  background: var(--dsw-alias-bg-secondary, rgba(255, 255, 255, 0.04));
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1113,15 +1115,16 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 
 .wf-slot-well--empty {
   border-style: dashed;
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2));
   background: transparent;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
 }
 
 .wf-slot-well--empty:hover,
 .wf-slot-well--add:hover {
-  border-color: var(--dsw-alias-control-primary, var(--wb-accent));
-  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
-  background: var(--dsw-alias-interactive-bg-hover, var(--wb-accent-soft));
+  border-color: var(--dsw-alias-control-primary, #ffffff);
+  color: var(--dsw-alias-label-primary, #ffffff);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* 必需槽位空缺：虚线 + 警示色，空卡槽自解释"还差素材" */
@@ -1166,7 +1169,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.5));
 }
 
 .wf-slot-well__placeholder--audio {
@@ -1202,21 +1205,21 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  background: var(--dsw-alias-bg-mask-2, transparent);
+  background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
 
 .wf-slot-well--empty .wf-slot-well__label {
-  background: transparent;
+  display: none !important;
 }
 
 /* 卸装填按钮：悬浮出现，仅摘除槽位占用（不断边） */
 .wf-slot-well__clear {
   position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 14px;
-  height: 14px;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: none;
   display: flex;
@@ -1224,10 +1227,10 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   justify-content: center;
   padding: 0;
   cursor: pointer;
-  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  background: var(--dsw-alias-bg-elevated, var(--wb-surface-raised));
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.65);
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, background 120ms ease;
 }
 
 .wf-slot-well:hover .wf-slot-well__clear,
@@ -1240,13 +1243,19 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 }
 
 .wf-slot-well--add {
-  border: 1.5px dashed var(--dsw-alias-border-l3, var(--wb-border));
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2));
   background: transparent;
-  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
 }
 
 .wf-slot-wells__swap {
@@ -1279,7 +1288,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 .wf-config-panel__expand-btn {
   background: transparent;
   border: none;
-  color: var(--wb-text-muted);
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
   cursor: pointer;
   padding: 0;
   /* 32px 触控热区；图标视觉仍居中 */
@@ -1294,19 +1303,20 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 }
 
 .wf-config-panel__expand-btn:hover {
-  color: var(--wb-text-primary);
-  background: var(--wb-surface-raised);
+  color: var(--dsw-alias-label-primary, #ffffff);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .wf-config-panel__prompt-input {
   width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
   resize: none;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--wb-text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
   font-family: inherit;
   /* 与 header 的 margin-bottom 单一间距源，不再叠加上 padding */
   padding: 0;
@@ -1320,7 +1330,9 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 }
 
 .wf-config-panel__prompt-input::placeholder {
-  color: var(--wb-text-muted);
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* 底部操作与参数栏 */
@@ -1350,6 +1362,25 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   gap: 6px;
   min-width: 0;
   flex: 1;
+}
+
+.wf-config-panel__batch-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.wf-config-panel__batch-tag::before {
+  content: '';
+  width: 1px;
+  height: 12px;
+  margin: 0 2px 0 0;
+  background: var(--dsw-alias-border-l2, var(--wb-border));
+  flex-shrink: 0;
 }
 
 .wf-param-pill__divider {
@@ -1514,54 +1545,80 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   color: var(--wb-text-muted);
 }
 
-/* GenerateButton 深色胶囊（来源 Gxgen ConfigPanel/GenerateButton.tsx:25-79，
-   裁剪积分；胶囊渐变在亮暗色下均为深色，不走 token） */
+/* GenerateButton 对齐图 2：极简深色一体化，无笨重汉字药丸 */
 .wf-generate-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-  /* Gxgen 原文深色胶囊：亮/暗色均深色，不随主题翻转 */
-  background: radial-gradient(94.74% 157.5% at 50% 21.25%, #1a1a1a 0%, #656766 100%);
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .wf-generate-btn--disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wf-generate-btn__cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.75));
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.wf-generate-btn__cost-icon {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--dsw-alias-brand-primary, #679efe);
+}
+
+.wf-generate-btn__cost-num {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .wf-generate-btn__label {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: var(--wb-fs-caption);
-  font-weight: 500;
-  padding: 0 2px 0 12px;
-  white-space: nowrap;
+  display: none;
 }
 
+/* 方圆角发送按钮：约 32px × 32px，圆角 8px，内居中纯白粗向上箭头 ↑ */
 .wf-generate-btn__send {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 2px;
-  border: none;
-  /* 深色胶囊内的白色发送钮：内容色，不随主题翻转 */
-  background: #ffffff;
-  color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   cursor: pointer;
-  transition: background 150ms ease;
+  flex-shrink: 0;
+  padding: 0;
+  transition: all 150ms ease;
 }
 
 .wf-generate-btn__send:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+  transform: scale(1.02);
+}
+
+.wf-generate-btn__send:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .wf-generate-btn__send:disabled {
-  background: rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.5);
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -6542,12 +6599,24 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 
-/* 摘要条包裹层：允许在 params-group 内收缩，折叠协议由此生效 */
+/* 摘要条包裹层：允许在 params-group 内收缩，折叠协议由此生效；前置轻柔细竖线分隔 */
 .wf-cfg-summary-bar__wrap,
 .wf-video-trigger-bar__wrap {
   display: inline-flex;
+  align-items: center;
   min-width: 0;
   max-width: 100%;
+  gap: 6px;
+}
+
+.wf-cfg-summary-bar__wrap::before,
+.wf-video-trigger-bar__wrap::before {
+  content: '';
+  width: 1px;
+  height: 12px;
+  margin: 0 2px 0 0;
+  background: var(--dsw-alias-border-l2, var(--wb-border));
+  flex-shrink: 0;
 }
 
 /* ---- 浮层外壳 (Popover)：宽 min(360, 100vw-24)，入场位移随 placement 同向 ---- */
