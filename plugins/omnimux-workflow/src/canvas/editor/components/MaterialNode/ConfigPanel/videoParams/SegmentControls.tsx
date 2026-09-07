@@ -1,75 +1,45 @@
 /**
- * Video Param Segment Controls (Issue 467 / W2, 2026-09-07 UI 收敛 / T03).
+ * Video Param Segment Controls (Issue 467 / W2, 2026-09-07 全模态收敛 / T03).
  *
  * OperationSegment is driven by Catalog DTO effective operations (open string
- * ids + labels). Unsupported ops are not
- * rendered (Hide, Don't Grey). effectiveOps ≤ 1 → return null (no DOM).
+ * ids + labels). Unsupported ops are not rendered (Hide, Don't Grey).
+ * effectiveOps ≤ 1 → return null (no DOM).
  *
  * 控件选型走 resolveControlKind 矩阵：长标签 / 单行溢出 → 2×N Choice Tile
  * （nowrap 零断词）；短标签 → Segment。有声从通栏 Segment 降级为
  * 160px CompactToggle，与清晰度同行。
+ * 底层控件全部消费 ../cfg 通用实现，类名经 className 双锁 wf-video-*。
  */
 
 import { Check, Volume2, VolumeX, X } from 'lucide-react';
-import { type ReactElement, type ReactNode } from 'react';
+import { type ReactElement } from 'react';
 import type { OperationUiOption } from '../../../../../../shared/validation/operationUi.ts';
-import { ChoiceTile } from './ChoiceTile.tsx';
-import { CompactToggle } from './CompactToggle.tsx';
-import { resolveControlKind } from './controlKind.ts';
+import { CfgChoiceTile } from '../cfg/CfgChoiceTile.tsx';
+import { CfgCompactToggle } from '../cfg/CfgCompactToggle.tsx';
+import { CfgSegment } from '../cfg/CfgSegment.tsx';
+import type { CfgSegmentOption } from '../cfg/CfgSegment.tsx';
+import { resolveControlKind } from '../cfg/controlKind.ts';
 
-/** 通用分段选项结构 */
-interface SegmentOption<T extends string | number | boolean> {
-  value: T;
-  label: string;
-  /** 可选前置图标（矢量 SVG 组件） */
-  icon?: ReactNode;
-  /** 禁用态（禁用时点击不触发 onChange） */
-  disabled?: boolean;
-  /** 禁用态提示文案（title） */
-  title?: string;
-}
-
-/** 通用横向分段容器：wf-video-seg 包裹，单项 wf-video-seg__item，选中追加 --active */
+/** 视频门面通用分段：cfg 实现 + wf-video-seg 双锁类名 */
 function Segment<T extends string | number | boolean>({
   options,
   value,
   onChange,
   ariaLabel,
 }: {
-  options: Array<SegmentOption<T>>;
+  options: Array<CfgSegmentOption<T>>;
   value: T | undefined;
   onChange: (v: T) => void;
   ariaLabel?: string;
 }): ReactElement {
   return (
-    <div className="wf-video-seg" role="radiogroup" aria-label={ariaLabel}>
-      {options.map((opt) => {
-        const isActive = opt.value === value;
-        const cls = isActive ? 'wf-video-seg__item wf-video-seg__item--active' : 'wf-video-seg__item';
-        const isDisabled = opt.disabled ?? false;
-        return (
-          <button
-            key={String(opt.value)}
-            type="button"
-            role="radio"
-            aria-checked={isActive}
-            aria-disabled={isDisabled}
-            disabled={isDisabled}
-            title={opt.title}
-            className={cls}
-            data-operation-id={typeof opt.value === 'string' ? opt.value : undefined}
-            onClick={() => {
-              if (!isDisabled) {
-                onChange(opt.value);
-              }
-            }}
-          >
-            {opt.icon}
-            <span className="wf-video-seg__label">{opt.label}</span>
-          </button>
-        );
-      })}
-    </div>
+    <CfgSegment
+      options={options}
+      value={value}
+      onChange={onChange}
+      ariaLabel={ariaLabel}
+      className="wf-video-seg"
+    />
   );
 }
 
@@ -105,7 +75,7 @@ export function OperationSegment({
     return null;
   }
 
-  const options: Array<SegmentOption<string>> = effective.map((op) => ({
+  const options: Array<CfgSegmentOption<string>> = effective.map((op) => ({
     value: op.id,
     label: op.label || op.id,
   }));
@@ -118,7 +88,7 @@ export function OperationSegment({
 
   if (kind === 'choice-tile') {
     return (
-      <ChoiceTile
+      <CfgChoiceTile
         options={options}
         value={value}
         onChange={onChange}
@@ -154,7 +124,7 @@ export function ResolutionSegment({
   onChange,
 }: ResolutionSegmentProps): ReactElement {
   const singleReadOnly = options.length <= 1;
-  const segOptions: Array<SegmentOption<string>> = options.map((opt) => ({
+  const segOptions: Array<CfgSegmentOption<string>> = options.map((opt) => ({
     value: opt.value,
     label: opt.label,
     disabled: singleReadOnly,
@@ -173,7 +143,7 @@ export interface SoundSwitchSegmentProps {
 /** 有声/无声 160px 紧凑开关：有声带 Volume2，无声带 VolumeX（废除通栏 Segment） */
 export function SoundSwitchSegment({ value, onChange }: SoundSwitchSegmentProps): ReactElement {
   return (
-    <CompactToggle
+    <CfgCompactToggle
       value={value}
       onChange={onChange}
       trueLabel="有声"
@@ -181,6 +151,7 @@ export function SoundSwitchSegment({ value, onChange }: SoundSwitchSegmentProps)
       trueIcon={<Volume2 size={13} />}
       falseIcon={<VolumeX size={13} />}
       ariaLabel="音效"
+      className="wf-video-compact-toggle"
     />
   );
 }

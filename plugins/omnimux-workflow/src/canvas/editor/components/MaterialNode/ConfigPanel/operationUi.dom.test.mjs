@@ -22,6 +22,8 @@ const configSrc = readFileSync(join(here, 'index.tsx'), 'utf8');
 const segmentSrc = readFileSync(join(here, 'videoParams/SegmentControls.tsx'), 'utf8');
 const triggerSrc = readFileSync(join(here, 'videoParams/VideoTriggerBar.tsx'), 'utf8');
 const popoverSrc = readFileSync(join(here, 'videoParams/VideoParamPopover.tsx'), 'utf8');
+const cfgSummaryBarSrc = readFileSync(join(here, 'cfg/CfgSummaryBar.tsx'), 'utf8');
+const cfgSegmentSrc = readFileSync(join(here, 'cfg/CfgSegment.tsx'), 'utf8');
 const adapterSrc = readFileSync(join(here, 'videoParams/videoParamAdapter.ts'), 'utf8');
 const summarySrc = readFileSync(join(here, 'videoParams/summaryFormatter.ts'), 'utf8');
 const typesSrc = readFileSync(join(here, 'videoParams/types.ts'), 'utf8');
@@ -62,7 +64,7 @@ test('ConfigPanel 写入 canonical params.operation', () => {
 
 test('SegmentControls：OperationSegment 仅渲染 effective ops；≤1 返回 null', () => {
   assert.match(segmentSrc, /OperationSegment/);
-  assert.match(segmentSrc, /operations\.length <= 1/);
+  assert.match(segmentSrc, /effective\.length <= 1/);
   assert.match(segmentSrc, /return null/);
   // 旧 dual-button reference|first_last_frame 硬编码已收口
   assert.doesNotMatch(segmentSrc, /value:\s*'reference'/);
@@ -70,7 +72,8 @@ test('SegmentControls：OperationSegment 仅渲染 effective ops；≤1 返回 n
   assert.doesNotMatch(segmentSrc, /'全能参考'/);
   assert.doesNotMatch(segmentSrc, /supportsReference/);
   assert.doesNotMatch(segmentSrc, /GenerationModeSegment/);
-  assert.match(segmentSrc, /data-operation-id/);
+  // data-operation-id 由通用 CfgSegment / CfgChoiceTile 承担
+  assert.match(cfgSegmentSrc, /data-operation-id/);
 });
 
 test('VideoTriggerBar：showModeUi=false 时无 mode DOM / 无多余分隔符', () => {
@@ -78,11 +81,16 @@ test('VideoTriggerBar：showModeUi=false 时无 mode DOM / 无多余分隔符', 
   assert.match(triggerSrc, /params\.showModeUi/);
   assert.match(triggerSrc, /data-show-mode/);
   assert.match(triggerSrc, /wf-trigger-mode|wf-video-trigger-bar__mode/);
-  // mode 段条件渲染（并受折叠协议 hidden 集合门控）
-  assert.match(triggerSrc, /showMode && !visible\.hidden\.has\('mode'\) \? \(/);
-  // 摘要分隔改用 CSS 竖线：源码无「·」字符节点、无 __dot 类名
-  assert.doesNotMatch(triggerSrc, /·/);
+  // mode 槽仅 showMode 时入列；折叠 hidden 集合门控由通用 CfgSummaryBar 承担
+  assert.match(triggerSrc, /if \(showMode\)/);
+  assert.match(cfgSummaryBarSrc, /visible\.hidden\.has\(item\.id\)/);
+  // 摘要分隔改用 CSS 竖线：源码无「·」字符节点、无 __dot 类名（注释豁免）
+  const stripComments = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+  assert.doesNotMatch(stripComments(triggerSrc), /·/);
   assert.doesNotMatch(triggerSrc, /wf-video-trigger-bar__dot/);
+  assert.doesNotMatch(stripComments(cfgSummaryBarSrc), /·/);
 });
 
 test('VideoParamPopover：mode section 仅 showModeUi；写 operation', () => {
@@ -157,7 +165,8 @@ test('ASR / audio-transcription 空态接线', () => {
 
 test('四模态均可消费 filtered model / effectiveOps', () => {
   assert.match(configSrc, /outputTypeForCompat/);
-  assert.match(configSrc, /materialType !== 'video'/);
+  // 内联 OperationSegment 仅保留文本 / ASR 入口；图像与音频（非 ASR）进各自浮层
+  assert.match(configSrc, /materialType === 'text' \|\| isAsrTool/);
   assert.match(configSrc, /materialType === 'image'/);
   assert.match(configSrc, /materialType === 'audio'/);
   assert.match(configSrc, /materialType === 'video'/);

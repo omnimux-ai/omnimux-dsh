@@ -1295,20 +1295,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   background: var(--wb-surface-raised);
 }
 
-.wf-param-pill--video-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 12px;
-  color: var(--wb-text-secondary);
-  background: var(--wb-surface-raised);
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid var(--wb-border);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .wf-param-pill__dot {
   color: var(--wb-text-muted);
   font-weight: bold;
@@ -6164,9 +6150,10 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 
 
-/* ==================== 视频参数配置面板 (Video Param Popover / TriggerBar) ==================== */
+/* ============ 全模态参数配置面板（cfg 底座；视频参数配置面板 (Video Param Popover / TriggerBar) 双选择器别名） ============ */
 
 /* ---- 摘要触发条 (TriggerBar)：32px / 8px 铁律，废除 28px / 999px / 260px ---- */
+.wf-cfg-summary-bar,
 .wf-video-trigger-bar {
   display: inline-flex;
   align-items: center;
@@ -6187,25 +6174,31 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
+.wf-cfg-summary-bar:hover,
 .wf-video-trigger-bar:hover {
   background: var(--dsw-alias-interactive-bg-hover, var(--wb-pill-hover));
   border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
 }
 
+.wf-cfg-summary-bar--open,
 .wf-video-trigger-bar--open {
   background: var(--dsw-alias-interactive-bg-active);
   border-color: var(--dsw-alias-brand-primary);
 }
 
+.wf-cfg-summary-bar:active,
 .wf-video-trigger-bar:active {
   transform: scale(0.96);
 }
 
+.wf-cfg-summary-bar:focus-visible,
 .wf-video-trigger-bar:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-summary-bar:disabled,
+.wf-cfg-summary-bar[aria-disabled='true'],
 .wf-video-trigger-bar:disabled,
 .wf-video-trigger-bar[aria-disabled='true'] {
   opacity: 0.35;
@@ -6213,6 +6206,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 /* 摘要段：图标 14px + 文字；段间用语义化 CSS 竖线分隔（废除行内「·」字符节点） */
+.wf-cfg-summary-bar__slot,
 .wf-video-trigger-bar__slot {
   display: inline-flex;
   align-items: center;
@@ -6221,6 +6215,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   min-width: 0;
 }
 
+.wf-cfg-summary-bar__slot + .wf-cfg-summary-bar__slot::before,
 .wf-video-trigger-bar__slot + .wf-video-trigger-bar__slot::before {
   content: '';
   width: 1px;
@@ -6231,11 +6226,13 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 /* Mode 类别降权：tertiary / 400；参数值 primary / 500 */
+.wf-cfg-summary-bar__slot--mode,
 .wf-video-trigger-bar__mode {
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
   font-weight: 400;
 }
 
+.wf-cfg-summary-bar__text,
 .wf-video-trigger-bar__ratio-text,
 .wf-video-trigger-bar__resolution,
 .wf-video-trigger-bar__duration-text,
@@ -6244,28 +6241,48 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   font-weight: 500;
 }
 
+/* mode 类别降权在通用槽位内层文本上同样生效（tertiary / 400） */
+.wf-cfg-summary-bar__slot--mode .wf-cfg-summary-bar__text {
+  color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
+  font-weight: 400;
+}
+
 /* 折叠协议第 5 步：仅时长数值允许 ellipsis（图标保留，绝不出半截汉字） */
+.wf-cfg-summary-bar__slot--ellipsis,
 .wf-video-trigger-bar__slot--ellipsis {
   flex-shrink: 1;
 }
 
+.wf-cfg-summary-bar__slot--ellipsis .wf-cfg-summary-bar__text,
 .wf-video-trigger-bar__slot--ellipsis .wf-video-trigger-bar__duration-text {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
 }
 
+.wf-cfg-summary-bar__chevron,
 .wf-video-trigger-bar__chevron {
   flex-shrink: 0;
   color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
   transition: transform 150ms ease;
 }
 
+.wf-cfg-summary-bar--open .wf-cfg-summary-bar__chevron,
 .wf-video-trigger-bar--open .wf-video-trigger-bar__chevron {
   transform: rotate(180deg);
 }
 
+
+/* 摘要条包裹层：允许在 params-group 内收缩，折叠协议由此生效 */
+.wf-cfg-summary-bar__wrap,
+.wf-video-trigger-bar__wrap {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* ---- 浮层外壳 (Popover)：宽 min(360, 100vw-24)，入场位移随 placement 同向 ---- */
+.wf-cfg-popover,
 .wf-video-param-popover {
 
   box-sizing: border-box;
@@ -6282,16 +6299,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   -webkit-backdrop-filter: blur(20px);
 }
 
+.wf-cfg-popover--top,
 .wf-video-param-popover--top {
-  animation: wf-video-popover-in-top 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: wf-cfg-popover-in-top 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.wf-cfg-popover--bottom,
 .wf-video-param-popover--bottom {
-  animation: wf-video-popover-in-bottom 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: wf-cfg-popover-in-bottom 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* top 弹出：从触发条向上长出（初始在下方 4px） */
-@keyframes wf-video-popover-in-top {
+@keyframes wf-cfg-popover-in-top {
   from {
     opacity: 0;
     transform: translateY(4px);
@@ -6303,7 +6322,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 /* bottom 弹出：自上方 4px 落下 */
-@keyframes wf-video-popover-in-bottom {
+@keyframes wf-cfg-popover-in-bottom {
   from {
     opacity: 0;
     transform: translateY(-4px);
@@ -6314,6 +6333,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   }
 }
 
+.wf-cfg-popover__scrollable,
 .wf-video-param-popover__scrollable {
   overflow-y: auto;
   min-height: 0;
@@ -6321,15 +6341,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   scrollbar-color: var(--dsw-alias-label-tertiary) transparent;
 }
 
+.wf-cfg-popover__scrollable::-webkit-scrollbar,
 .wf-video-param-popover__scrollable::-webkit-scrollbar {
   width: 4px;
 }
 
+.wf-cfg-popover__scrollable::-webkit-scrollbar-thumb,
 .wf-video-param-popover__scrollable::-webkit-scrollbar-thumb {
   background: var(--dsw-alias-label-tertiary);
   border-radius: 2px;
 }
 
+.wf-cfg-popover__section,
 .wf-video-param-popover__section {
   display: flex;
   flex-direction: column;
@@ -6337,18 +6360,23 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   padding: 12px 0;
 }
 
-.wf-video-param-popover__section + .wf-video-param-popover__section {
+.wf-cfg-popover__section + .wf-cfg-popover__section,
+.wf-video-param-popover__section + .wf-cfg-popover__section,
+.wf-video-param-popover__section {
   border-top: 1px solid var(--dsw-alias-border-l2);
 }
 
+.wf-cfg-popover__section:first-child,
 .wf-video-param-popover__section:first-child {
   padding-top: 4px;
 }
 
+.wf-cfg-popover__section:last-child,
 .wf-video-param-popover__section:last-child {
   padding-bottom: 4px;
 }
 
+.wf-cfg-popover__section-title,
 .wf-video-param-popover__section-title {
   margin: 0;
   font-size: 12px;
@@ -6357,6 +6385,9 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   color: var(--dsw-alias-label-secondary);
 }
 
+.wf-cfg-popover__section-heading,
+.wf-cfg-popover__range-row,
+.wf-cfg-popover__field-row,
 .wf-video-param-popover__section-heading,
 .wf-video-param-popover__range-row,
 .wf-video-param-popover__field-row {
@@ -6366,16 +6397,20 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   gap: 12px;
 }
 
+.wf-cfg-popover__value,
+.wf-cfg-popover__field-row > span,
 .wf-video-param-popover__value,
 .wf-video-param-popover__field-row > span {
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
 }
 
+.wf-cfg-popover__slider,
 .wf-video-param-popover__slider {
   flex: 1;
 }
 
+.wf-cfg-popover__input,
 .wf-video-param-popover__input {
   box-sizing: border-box;
   width: 100%;
@@ -6390,20 +6425,24 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   font-size: 12px;
 }
 
+.wf-cfg-popover__input:focus,
 .wf-video-param-popover__input:focus {
   border-color: var(--dsw-alias-brand-primary);
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-popover__input::placeholder,
 .wf-video-param-popover__input::placeholder {
   color: var(--dsw-alias-label-tertiary);
 }
 
+.wf-cfg-popover__field-row .wf-cfg-seg,
 .wf-video-param-popover__field-row .wf-video-seg {
   width: 160px;
 }
 
 /* ---- 质量行：清晰度 Segment 与有声 Compact Toggle 同行，窄宽允许折行 ---- */
+.wf-cfg-popover__quality-row,
 .wf-video-param-popover__quality-row {
   display: flex;
   flex-wrap: wrap;
@@ -6411,6 +6450,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   gap: 12px;
 }
 
+.wf-cfg-popover__quality-field,
 .wf-video-param-popover__quality-field {
   display: flex;
   flex-direction: column;
@@ -6419,15 +6459,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   min-width: 0;
 }
 
+.wf-cfg-popover__quality-field--sound,
 .wf-video-param-popover__quality-field--sound {
   flex: 0 0 auto;
 }
 
+.wf-cfg-popover__select,
 .wf-video-param-popover__select {
   min-width: 160px;
 }
 
 /* ---- 生成方式 / 清晰度 / 有声 分段控制器 (Segment) ---- */
+.wf-cfg-seg,
 .wf-video-seg {
   display: flex;
   align-items: center;
@@ -6439,6 +6482,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   background: var(--dsw-alias-bg-layer-1);
 }
 
+.wf-cfg-seg__item,
 .wf-video-seg__item {
   display: inline-flex;
   align-items: center;
@@ -6457,15 +6501,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: background-color 150ms ease, color 150ms ease;
 }
 
+.wf-cfg-seg__item:hover,
 .wf-video-seg__item:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.wf-cfg-seg__item:focus-visible,
 .wf-video-seg__item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-seg__item--active,
 .wf-video-seg__item--active {
   background: var(--dsw-alias-interactive-bg-active);
   color: var(--dsw-alias-label-primary);
@@ -6473,30 +6520,35 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 
+.wf-cfg-seg__item--active:focus-visible,
 .wf-video-seg__item--active:focus-visible {
   box-shadow:
     inset 0 0 0 1px var(--dsw-alias-brand-primary),
     0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-seg__item:disabled,
 .wf-video-seg__item:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
 /* ---- 紧凑两态开关 (Compact Toggle)：160px 定宽，禁止通栏 ---- */
+.wf-cfg-compact-toggle,
 .wf-video-compact-toggle {
   width: 160px;
   flex-shrink: 0;
 }
 
 /* ---- 长标签选择块网格 (Choice Tile)：2 列等高 36px，nowrap 零断词 ---- */
+.wf-cfg-choice-tile-grid,
 .wf-video-choice-tile-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
+.wf-cfg-choice-tile,
 .wf-video-choice-tile {
   display: inline-flex;
   align-items: center;
@@ -6514,20 +6566,24 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
+.wf-cfg-choice-tile:hover,
 .wf-video-choice-tile:hover {
   border-color: var(--dsw-alias-border-l3);
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.wf-cfg-choice-tile:focus-visible,
 .wf-video-choice-tile:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-choice-tile:active,
 .wf-video-choice-tile:active {
   transform: scale(0.96);
 }
 
+.wf-cfg-choice-tile--active,
 .wf-video-choice-tile--active {
   border-color: var(--dsw-alias-brand-primary);
   background: var(--dsw-alias-interactive-bg-active);
@@ -6536,6 +6592,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 
+.wf-cfg-choice-tile--active:focus-visible,
 .wf-video-choice-tile--active:focus-visible {
   box-shadow:
     inset 0 0 0 1px var(--dsw-alias-brand-primary),
@@ -6543,12 +6600,14 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 /* ---- 画幅比例卡片网格 (Aspect) ---- */
+.wf-cfg-aspect-grid,
 .wf-video-aspect-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
+.wf-cfg-aspect-card,
 .wf-video-aspect-card {
   display: flex;
   flex-direction: column;
@@ -6564,19 +6623,23 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
+.wf-cfg-aspect-card:hover,
 .wf-video-aspect-card:hover {
   border-color: var(--dsw-alias-border-l3);
 }
 
+.wf-cfg-aspect-card:focus-visible,
 .wf-video-aspect-card:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-aspect-card:active,
 .wf-video-aspect-card:active {
   transform: scale(0.96);
 }
 
+.wf-cfg-aspect-card--active,
 .wf-video-aspect-card--active {
   border-color: var(--dsw-alias-brand-primary);
   background: var(--dsw-alias-interactive-bg-active);
@@ -6584,16 +6647,19 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 
+.wf-cfg-aspect-card--active:focus-visible,
 .wf-video-aspect-card--active:focus-visible {
   box-shadow:
     inset 0 0 0 1px var(--dsw-alias-brand-primary),
     0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-aspect-card__icon,
 .wf-video-aspect-card__icon {
   display: inline-flex;
 }
 
+.wf-cfg-aspect-card__label,
 .wf-video-aspect-card__label {
   font-size: 12px;
   font-weight: 500;
@@ -6602,12 +6668,14 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 /* ---- 时长胶囊网格 (Duration)：32px / 8px，废除 28px / 999px ---- */
+.wf-cfg-duration-grid,
 .wf-video-duration-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
   gap: 6px;
 }
 
+.wf-cfg-duration-pill,
 .wf-video-duration-pill {
   display: inline-flex;
   align-items: center;
@@ -6624,19 +6692,23 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
+.wf-cfg-duration-pill:hover,
 .wf-video-duration-pill:hover {
   border-color: var(--dsw-alias-border-l3);
 }
 
+.wf-cfg-duration-pill:focus-visible,
 .wf-video-duration-pill:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
+.wf-cfg-duration-pill:active,
 .wf-video-duration-pill:active {
   transform: scale(0.96);
 }
 
+.wf-cfg-duration-pill--active,
 .wf-video-duration-pill--active {
   border-color: var(--dsw-alias-brand-primary);
   background: var(--dsw-alias-interactive-bg-active);
@@ -6645,6 +6717,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 
+.wf-cfg-duration-pill--active:focus-visible,
 .wf-video-duration-pill--active:focus-visible {
   box-shadow:
     inset 0 0 0 1px var(--dsw-alias-brand-primary),

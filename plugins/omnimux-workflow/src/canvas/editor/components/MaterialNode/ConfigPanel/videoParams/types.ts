@@ -3,11 +3,30 @@
  *
  * Generation mode is an open-string Catalog operation id (`params.operation`).
  * retired from the write path; legacy values are read-time migrated only.
+ *
+ * 2026-09-07 全模态收敛（T01）：Cfg* / Popover* / RectLike / ViewportSize /
+ * AspectRatioGeometry 等无材质语义的契约已升格至 ../cfg/types.ts，此处
+ * re-export 保持既有引用路径不报错。VideoParamWriteKey 与断言仍留在本文件。
  */
 
-import type { ReactNode, Ref } from 'react';
+import type { ReactNode } from 'react';
 import type { ModelParameterSchema } from '../../../../../../shared/api.ts';
 import type { OperationUiOption } from '../../../../../../shared/validation/operationUi.ts';
+
+export type {
+  AspectRatioGeometry,
+  CfgControlKind,
+  CfgSummaryItem,
+  CfgSummarySlot,
+  CfgSummarySlotId,
+  CfgSummaryVisibleState,
+  PopoverPlacement,
+  PopoverPosition,
+  RectLike,
+  ViewportSize,
+} from '../cfg/types.ts';
+
+import type { PopoverPlacement, RectLike } from '../cfg/types.ts';
 
 export interface PendingVideoParamAdjustment {
   suggestedParams: Record<string, unknown>;
@@ -81,65 +100,6 @@ export interface EffectiveVideoParams {
 }
 
 /**
- * Popover 浮层弹出方位：
- * - top: 优先向上贴合弹出（自适应限高 200px ~ 480px）
- * - bottom: 顶部空间极端狭窄时向下翻转
- */
-export type PopoverPlacement = 'top' | 'bottom';
-
-/**
- * Popover 浮层绝对定位计算结果
- */
-export interface PopoverPosition {
-  placement: PopoverPlacement;
-  top?: number;
-  bottom?: number;
-  left: number;
-  maxHeight: number;
-  width: number;
-}
-
-/**
- * 通用矩形边界对象定义（兼容 DOMRect）
- */
-export interface RectLike {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-  width: number;
-  height: number;
-}
-
-/**
- * 视口尺寸定义
- */
-export interface ViewportSize {
-  width: number;
-  height: number;
-}
-
-/**
- * 画幅比例矢量几何信息定义
- */
-export interface AspectRatioGeometry {
-  ratio: string;
-  label: string;
-  width: number;
-  height: number;
-  rectWidth: number;
-  rectHeight: number;
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  strokeWidth: number;
-  strokeDasharray?: string;
-  isDashed?: boolean;
-  viewBox: string;
-}
-
-/**
  * 视频参数触发条（TriggerBar）组件属性
  */
 export interface VideoTriggerBarProps {
@@ -147,7 +107,7 @@ export interface VideoTriggerBarProps {
   isOpen: boolean;
   onToggle: () => void;
   disabled?: boolean;
-  triggerRef?: Ref<HTMLElement>;
+  triggerRef?: React.Ref<HTMLElement>;
   className?: string;
 }
 
@@ -167,46 +127,10 @@ export interface VideoParamPopoverProps {
   children?: ReactNode;
 }
 
+/** PopoverPlacement re-export 消费点（保持类型引用不退化） */
+export type { PopoverPlacement as VideoPopoverPlacement };
+
 export type { VideoSummaryFormatResult } from './summaryFormatter.ts';
-
-/* ------------------------------------------------------------------ */
-/* Cfg 控件契约（2026-09-07 配置面板 UI 收敛 / T01）                     */
-/* 仅追加类型与防御性断言，不改动 VideoNodeParams / EffectiveVideoParams */
-/* ------------------------------------------------------------------ */
-
-/** 控件选型矩阵允许的全部控件形态 */
-export type CfgControlKind =
-  | 'summary-bar'
-  | 'segment'
-  | 'choice-tile'
-  | 'aspect-grid'
-  | 'quick-pills'
-  | 'slider'
-  | 'inline-switch'
-  | 'compact-toggle'
-  | 'select'
-  | 'text-field';
-
-/** 摘要条槽位 id */
-export type CfgSummarySlotId = 'mode' | 'ratio' | 'resolution' | 'duration' | 'sound' | 'chevron';
-
-/** 摘要条单个槽位（折叠协议输入） */
-export interface CfgSummarySlot {
-  id: CfgSummarySlotId;
-  text: string;
-  hasIcon: boolean;
-  /** hide=整段丢弃；icon-only=丢文字留图标；ellipsis=数值省略；never=永不丢弃 */
-  dropPolicy: 'hide' | 'icon-only' | 'ellipsis' | 'never';
-  /** 含自身 gap 的估算宽度（调用方按 12px 字 + 14px 图标估算） */
-  estimatePx: number;
-}
-
-/** 摘要折叠结果：三个集合互斥描述每个槽位的可见态 */
-export interface CfgSummaryVisibleState {
-  hidden: ReadonlySet<CfgSummarySlotId>;
-  iconOnly: ReadonlySet<CfgSummarySlotId>;
-  ellipsis: ReadonlySet<CfgSummarySlotId>;
-}
 
 /** 本迭代允许从浮层写入的 key。新增 UI 控件不得扩大此集合。 */
 export type VideoParamWriteKey =
