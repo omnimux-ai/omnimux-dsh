@@ -153,6 +153,13 @@ function createFakeSeamHub(opts = {}) {
       return {
         source: 'omnimux',
         fingerprint: 'fake-catalog',
+        models: [['claude-opus-4-6', 'text', 'chat'], ['deepseek-v4-flash-vision-exp', 'text', 'chat'],
+          ['gpt-5.5', 'text', 'chat'], ['gpt-image-2', 'image', 'text_to_image'],
+          ['seedance-2-0-fast', 'video', 'text_to_video'], ['suno', 'audio', 'text_to_music'],
+          ['gpt-4o-mini-tts', 'audio', 'text_to_speech']].map(([id, type, operation]) => ({ id, label: id,
+          operations: [{ id: operation, listed: true, output: { type }, inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 },
+          ] }] })),
         defaults: {
           text: 'gemini-3.7-flash',
           image: 'gpt-image-2',

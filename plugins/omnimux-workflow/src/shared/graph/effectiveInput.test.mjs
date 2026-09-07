@@ -4,6 +4,7 @@ import { readNodeInputSource } from './nodeInputSource.ts';
 import { resolveGenerationPrompt } from './generationPrompt.ts';
 import { buildUiUpstreamFingerprint, buildEffectiveOpsUiState } from '../validation/operationUi.ts';
 import { createMaterialGatewayExecutor } from '../../workflow/execution/materialGatewayExecutor.ts';
+import { catalogFor } from '../../workflow/seam/submissionFixtures.mjs';
 
 const catalog = { models: [{ id: 'test-text', listed: true, operations: [{
   id: 'text_to_text', listed: true, output: { type: 'text' },
@@ -25,6 +26,7 @@ test('IN-04/05/07: current source outputs and local rewrite instructions reach t
   const executor = createMaterialGatewayExecutor({ gateway: {
     submit: async (request) => { requests.push(request); return { taskId: 'capture', mode: 'stub' }; },
     awaitTask: async () => ({ text: 'result' }),
+    capabilities: async () => catalogFor('text'),
   } });
   const outputs = new Map([old, two].map((node) => [node.id, readNodeInputSource(node).output]));
   await executor.execute({ id: 'target', type: 'material', data: { materialType: 'text', prompt: '缩短到30秒' } }, {
@@ -92,6 +94,7 @@ test('IN-10: upstream description satisfies both shared and video-specific promp
     await createMaterialGatewayExecutor({ gateway: {
       submit: async (input) => { request = input; return { taskId: 'captured' }; },
       awaitTask: async () => ({ url: 'https://example.test/result' }),
+      capabilities: async () => catalogFor(materialType),
     } }).execute({ id: 'target', data: { materialType, prompt: '' } }, {
       upstreamOutputs: new Map([['script', { text: '1dog' }]]), signal: new AbortController().signal, mediaDir: '/tmp/effective-input-test',
     });

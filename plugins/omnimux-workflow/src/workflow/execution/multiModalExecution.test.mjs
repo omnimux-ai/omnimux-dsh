@@ -6,6 +6,13 @@ import { describe, it } from 'node:test';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor.ts';
 import { createOmnimuxSeamClient } from '../seam/omnimuxGateway.ts';
 import { createMockGateway } from '../seam/mockGateway.ts';
+import { catalogFor, operation, slot } from '../seam/submissionFixtures.mjs';
+const captureCatalog = Object.assign({}, catalogFor('text'), {
+  defaults: { text: 'capture-text', image: 'capture-image', video: 'capture-video' },
+  ...Object.fromEntries(['text', 'image', 'video'].map((type) => [type, [{ id: `capture-${type}`, label: type }]])),
+  models: ['text', 'image', 'video'].map((type) => ({ id: `capture-${type}`, label: type,
+    operations: [operation('capture', type, [slot('image'), slot('audio')])] })),
+});
 
 const mediaFixtureRoot = mkdtempSync(`${tmpdir()}/workflow-input-`);
 after(() => rmSync(mediaFixtureRoot, { recursive: true, force: true }));
@@ -25,7 +32,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         return { taskId: 't1', mode: 'stub' };
       },
       awaitTask: async () => ({ url: '/tmp/out.png' }),
-      capabilities: async () => ({}),
+      capabilities: async () => captureCatalog,
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -71,6 +78,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
       role: 'reference',
       type: 'image',
       pathOrUrl: mediaFixture('hero.png'),
+      sourceNodeId: 'node-img-1', targetSlot: 'reference_images', mimeType: 'image/png', sizeBytes: 13,
     });
   });
 
@@ -83,7 +91,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         return { taskId: 't2', mode: 'stub' };
       },
       awaitTask: async () => ({ url: '/tmp/out.mp4' }),
-      capabilities: async () => ({}),
+      capabilities: async () => captureCatalog,
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -155,7 +163,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         return { taskId: 't3', mode: 'stub' };
       },
       awaitTask: async () => ({ url: '/tmp/out.mp4' }),
-      capabilities: async () => ({}),
+      capabilities: async () => captureCatalog,
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -223,6 +231,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
       role: 'reference',
       type: 'audio',
       pathOrUrl: mediaFixture('voiceover.mp3'),
+      sourceNodeId: 'audio-node', targetSlot: 'reference_audios', mimeType: 'audio/mpeg', sizeBytes: 13,
     });
   });
 
@@ -235,7 +244,7 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
         return { taskId: 't4', mode: 'stub' };
       },
       awaitTask: async () => ({ text: 'generated story' }),
-      capabilities: async () => ({}),
+      capabilities: async () => captureCatalog,
       mode: 'mock',
     };
     const executor = createMaterialGatewayExecutor({ gateway: mockGateway });
@@ -283,37 +292,40 @@ describe('Phase 0: multiModalExecution (多模态数据流与执行调度)', () 
     };
 
     const client = createOmnimuxSeamClient({
-      getSeam: (name) => name === 'imageGenerate' ? mockImageSeam : name === 'modelCatalog' ? { list: () => ({ source: 'omnimux', defaults: { image: 'gpt-image-2' }, image: [{ id: 'gpt-image-2', label: 'GPT Image 2' }], text: [], video: [], audio: [] }) } : undefined,
+      getSeam: (name) => name === 'imageGenerate' ? mockImageSeam : name === 'modelCatalog'
+        ? { list: () => catalogFor('image', 'gpt-image-2', [operation('image_to_image', 'image', [slot('image'), slot('audio', 'audio_track')])]) } : undefined,
     });
 
     const submitRes = await client.submit({
       capability: 'image',
       prompt: 'A futuristic city',
+      operation: 'image_to_image',
       dest: '/tmp/dest.png',
-      image: '/legacy/image.png',
+      image: mediaFixture('legacy-image.png'),
       references: [
-        { role: 'reference', type: 'image', pathOrUrl: '/modern/image1.png' },
-        { role: 'reference', type: 'image', pathOrUrl: '/modern/image2.png' },
+        { role: 'reference', type: 'image', pathOrUrl: mediaFixture('modern-image1.png') },
+        { role: 'reference', type: 'image', pathOrUrl: mediaFixture('modern-image2.png') },
       ],
-      audioTrack: { role: 'audio_track', type: 'audio', pathOrUrl: '/audio/track.mp3' },
+      audioTrack: { role: 'audio_track', type: 'audio', pathOrUrl: mediaFixture('track.mp3') },
     });
 
     assert.equal(submitRes.taskId, 'hub-task-99');
     assert.equal(seamRequests.length, 1);
     const seamReq = seamRequests[0];
     assert.equal(seamReq.prompt, 'A futuristic city');
-    assert.equal(seamReq.image, '/legacy/image.png');
+    assert.equal(seamReq.image, mediaFixture('legacy-image.png'));
     assert.equal(seamReq.references.length, 2);
-    assert.equal(seamReq.audioTrack.pathOrUrl, '/audio/track.mp3');
+    assert.equal(seamReq.audioTrack.pathOrUrl, mediaFixture('track.mp3'));
 
     // 2. 测试 mockGateway 接受带 references 的 SubmitRequest
     const mockGw = createMockGateway({ minLatencyMs: 1, maxLatencyMs: 2 });
     const mockRes = await mockGw.submit({
       capability: 'image',
       prompt: 'Mock city',
+      operation: 'image_to_image',
       dest: '/tmp/mock-dest.svg',
       references: [
-        { role: 'reference', type: 'image', pathOrUrl: '/ref1.png' },
+        { role: 'reference', type: 'image', pathOrUrl: mediaFixture('ref1.png') },
       ],
     });
     assert.ok(mockRes.taskId);

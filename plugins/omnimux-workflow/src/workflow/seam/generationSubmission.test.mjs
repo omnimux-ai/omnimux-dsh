@@ -15,7 +15,9 @@ const catalog = {
   text: [{ id: 'gpt-5.5', label: 'GPT 5.5' }, { id: 'excluded', label: 'Excluded' }],
   image: [], video: [], audio: [], defaults: { text: 'excluded' },
   models: ['gpt-5.5', 'excluded'].map((id) => ({ id, operations: [
-    { id: 'vision_chat', listed: true, output: { type: 'text' } },
+    { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: ['image', 'video', 'audio'].map((type) => ({
+      slot: `reference_${type}s`, role: 'reference', type, source: 'upstream_edge', min: 0, max: 4,
+    })) },
     { id: 'draft', listed: false, output: { type: 'text' } },
   ] })),
 };
@@ -33,7 +35,7 @@ for (const mode of ['omnimux', 'mock']) {
   });
 }
 
-test('text seam forwards ordered references, operation and legacy inputs without rewriting', async () => {
+test('text seam forwards ordered references and operation without duplicating legacy mirrors', async () => {
   const root = mkdtempSync(join(tmpdir(), 'generation-submit-'));
   const received = [];
   const gateway = createOmnimuxSeamClient({ getSeam: (name) => name === 'modelCatalog'
@@ -41,16 +43,16 @@ test('text seam forwards ordered references, operation and legacy inputs without
     : name === 'textComplete' ? { execute: async (req) => { received.push(req); return { text: 'ok' }; } } : undefined,
   });
   const references = [
-    { type: 'image', role: 'reference', pathOrUrl: '/one.png' },
-    { type: 'video', role: 'reference', pathOrUrl: '/two.mp4' },
-    { type: 'audio', role: 'reference', pathOrUrl: '/three.wav' },
+    { type: 'image', role: 'reference', pathOrUrl: 'https://example.test/one.png', targetSlot: 'reference_images', mimeType: 'image/png' },
+    { type: 'video', role: 'reference', pathOrUrl: 'https://example.test/two.mp4', targetSlot: 'reference_videos', mimeType: 'video/mp4' },
+    { type: 'audio', role: 'reference', pathOrUrl: 'https://example.test/three.wav', targetSlot: 'reference_audios', mimeType: 'audio/wav' },
   ];
   try {
     const { taskId } = await gateway.submit({ capability: 'text', operation: 'vision_chat', prompt: '分析',
-      references, image: '/one.png', video: '/two.mp4', audioTrack: references[2] });
+      references, image: 'https://example.test/one.png', video: 'https://example.test/two.mp4', audioTrack: references[2] });
     assert.equal(received.length, 0);
     await gateway.awaitTask(taskId, join(root, 'out.txt'));
     assert.deepEqual(received, [{ prompt: '分析', model: 'gpt-5.5', operation: 'vision_chat',
-      image: '/one.png', video: '/two.mp4', references, audioTrack: references[2] }]);
+      references, audioTrack: references[2] }]);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

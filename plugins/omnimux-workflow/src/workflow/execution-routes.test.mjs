@@ -295,7 +295,7 @@ function listSeededProjects(libraryRoot) {
 }
 
 test('execution API blocks missing contract URL fields before every create mode and permits a valid retry', async () => {
-  const baseGateway = host.createMockGateway({ minLatencyMs: 10, maxLatencyMs: 10 });
+  const baseGateway = host.createMockGateway({ minLatencyMs: 10, maxLatencyMs: 10, catalog: urlRequiredCatalog });
   const submitted = [];
   const gateway = {
     ...baseGateway,
