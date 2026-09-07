@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
@@ -57,6 +57,49 @@ describe('composer-attachments path guards', () => {
 })
 
 describe('materializePaths', () => {
+  it('rejects directories and application bundles before creating imported files in filesOnly mode', async () => {
+    const cwd = tempDir('omx-att-files-only-cwd-')
+    const src = tempDir('omx-att-files-only-src-')
+    const paths = [join(src, 'folder'), join(src, 'Example.app')]
+    for (const path of paths) {
+      mkdirSync(path)
+      writeFileSync(join(path, 'keep.txt'), 'original')
+    }
+    const { results } = await materializePaths({
+      sessionId: 'ses_files', paths, filesOnly: true, resolveCwd: async () => cwd,
+      fs: { mkdirSync() { assert.fail('rejected directories must not create destinations') } },
+    })
+    assert.deepEqual(results.map(({ sourcePath, ok, error }) => ({ sourcePath, ok, error })),
+      paths.map((sourcePath) => ({ sourcePath, ok: false, error: 'not-a-file' })))
+    assert.equal(existsSync(join(cwd, 'assets')), false)
+    for (const path of paths) assert.equal(readFileSync(join(path, 'keep.txt'), 'utf8'), 'original')
+  })
+
+  it('copies ordinary files and preserves sourcePath with filesOnly enabled', async () => {
+    const cwd = tempDir('omx-att-files-cwd-')
+    const src = tempDir('omx-att-files-src-')
+    const paths = [join(src, 'one.txt'), join(src, 'two.txt')]
+    paths.forEach((path, index) => writeFileSync(path, `file ${index}`))
+    const { results } = await materializePaths({
+      sessionId: 'ses_files', paths, filesOnly: true, resolveCwd: async () => cwd,
+    })
+    assert.deepEqual(results.map((item) => item.sourcePath), paths)
+    results.forEach((item, index) => {
+      assert.equal(item.ok, true)
+      assert.equal(readFileSync(join(cwd, item.relativePath), 'utf8'), `file ${index}`)
+      assert.equal(readFileSync(paths[index], 'utf8'), `file ${index}`)
+    })
+  })
+
+  it('rejects invalid filesOnly values before session lookup', async () => {
+    for (const filesOnly of ['true', 1, null, {}]) {
+      await assert.rejects(materializePaths({
+        sessionId: 'ses_files', paths: [], filesOnly,
+        resolveCwd() { assert.fail('invalid payload must not resolve the session') },
+      }), (error) => error.code === 'invalid-payload')
+    }
+  })
+
   it('copies one file and reports not-a-file for a missing sibling', async () => {
     const cwd = tempDir('omx-att-cwd-')
     const srcDir = tempDir('omx-att-src-')

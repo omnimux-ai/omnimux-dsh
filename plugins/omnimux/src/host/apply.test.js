@@ -7,6 +7,27 @@ describe('hub apply composition', () => {
     assert.deepEqual(inject, ['tools', 'systemPrompt'])
   })
 
+  it('registers attachment entry commands only when the optional commands service is injected', () => {
+    const injections = []
+    apply({
+      tools: { register() {} }, provide() {}, get() {},
+      inject(deps, callback) { injections.push({ deps, callback }) },
+    }, { official: { mount: false } })
+    const registration = injections.filter(({ deps }) => deps.length === 1 && deps[0] === 'commands')
+    assert.equal(registration.length, 1)
+    const definitions = []
+    const commands = { register(definition) { definitions.push(definition) } }
+    registration[0].callback({ commands })
+    assert.deepEqual(definitions.map(({ name, description }) => ({ name, description })), [
+      { name: 'add-file', description: '添加文件 / Add files' },
+      { name: 'add-from-library', description: '从资产库添加 / Add from library' },
+    ])
+    for (const definition of definitions) {
+      assert.equal(Object.hasOwn(definition, 'input'), false)
+      assert.deepEqual(definition.handler(), { kind: 'success' })
+    }
+  })
+
   it('registers media, text, identity, and catalog seams in a stable order', () => {
     const names = []
     const provided = []

@@ -1,6 +1,17 @@
+---
+title: "Composer 与文件选择能力的历史集成验收"
+id: "spec-composer-file-selection-integration"
+type: "spec"
+status: "archived"
+authority: "L2"
+date: "2026-09-06"
+authors: ["x", "agent-architect"]
+subsystem: "omnimux"
+---
+
 # Composer 与文件选择能力的集成验收
 
-状态：用户已确认页内本地路径面板方案，实施与验收中。日期：2026-09-06。
+状态：历史集成方案。当前原生菜单需求由 [#676 单击添加规格](2026-09-06-composer-single-click.md) 定义；本文保留 #554 当时的决策与证据，不作为当前入口实现要求。日期：2026-09-06。
 
 ## 目标与授权
 

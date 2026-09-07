@@ -8,7 +8,7 @@ describe('host brand boot', () => {
     const taps = []
     const ctx = {
       inject(deps, callback) {
-        if (deps.includes('connection')) return
+        if (deps.includes('connection') || deps.includes('commands')) return
         callback({
           webServer: {
             register() {},
