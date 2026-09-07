@@ -2,7 +2,7 @@
 /**
  * Video TriggerBar — 视频摘要触发条门面（Issue 467 / W2, 严格四段式 / T04）。
  *
- * 严格四段式：[ 生成模式 · 比例 · 质量 · 时长 ]。
+ * 严格四段式：模式、比例、质量、时长。
  * 内部渲染通用 CfgSummaryBar（32px / 8px / ResizeObserver / 折叠协议），
  * 根类名双锁 wf-video-trigger-bar（DOM 与 CSS 双选择器别名一迭代）。
  * 声音开关不进入胶囊（只在 Popover 内控制）。

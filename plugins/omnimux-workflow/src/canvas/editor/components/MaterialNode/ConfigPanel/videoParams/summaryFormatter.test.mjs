@@ -1,11 +1,9 @@
 /**
-/**
  * Unit tests for summaryFormatter (Issue #467 / W2, Feed-Slot 阶段二 / T04)。
  *
- * 严格四段式：[ 生成模式 · 比例 · 质量 · 时长 ]。
+ * 严格四段式：[ 生成模式 比例 质量 时长 ]。
  * 声音开关只属于 Popover，绝不拼入 TriggerBar 胶囊文字。
- * fullText 以空格拼接（视觉分隔由 CSS 竖线承担），字符串中禁止出现中点 `·`。
- */
+ * fullText 以空格拼接（视觉分隔由 CSS 竖线承担），字符串中禁止出现中点。
  */
 
 import assert from 'node:assert/strict';
