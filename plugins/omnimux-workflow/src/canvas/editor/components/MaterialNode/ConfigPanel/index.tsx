@@ -721,6 +721,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           isExpanded={isExpanded}
           slotState={slotState}
           materialType={materialType}
+          maxLength={audioPromptGate ? AUDIO_PROMPT_MAX_CHARS : undefined}
+          countOverride={audioPromptGate ? audioPromptGate.count : undefined}
           onChange={(newPrompt) => onUpdateNodeData({ prompt: newPrompt })}
         >
           <textarea
@@ -733,21 +735,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             aria-hidden="true"
           />
         </PromptTokenEditor>
-
-        {/* T03：音频（非 ASR）朗读正文字数统计；超限红色高亮并阻断生成 */}
-        {audioPromptGate ? (
-          <div
-            className={`wf-config-panel__char-counter${
-              audioPromptGate.exceeded ? ' wf-config-panel__char-counter--exceeded' : ''
-            }`}
-            data-testid="wf-audio-char-counter"
-            data-exceeded={audioPromptGate.exceeded ? 'true' : 'false'}
-            role={audioPromptGate.exceeded ? 'alert' : 'status'}
-            title={audioPromptGate.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined}
-          >
-            {audioPromptGate.count}/{audioPromptGate.max}
-          </div>
-        ) : null}
       </div>
 
       {/* 3. 底部参数与操作底栏 */}

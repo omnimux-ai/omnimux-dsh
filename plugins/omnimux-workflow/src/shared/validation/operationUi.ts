@@ -470,6 +470,39 @@ function findAuthoritativeItem(
 }
 
 /**
+ * Zero-candidate fallback discovery rules. When the kernel yields no
+ * compatible model (e.g. a freshly opened node before any prompt), the
+ * picker still surfaces the node's own listed output-type models so it
+ * never cries "暂无兼容模型" while legal models exist in the catalog.
+ */
+interface FallbackModelDiscoveryRule {
+  /** Bucket list to scan first (catalog[bucketKey]). */
+  bucketKey: 'image' | 'audio';
+  /** Operation predicate for the authoritative catalog.models scan (listed enforced by caller). */
+  matchesModelOperation: (op: { id?: string; output?: { type?: string } }) => boolean;
+  /** Representative operation id used for synthesized fallback verdicts. */
+  defaultOperationId: string;
+}
+
+const FALLBACK_MODEL_DISCOVERY: Record<string, FallbackModelDiscoveryRule> = {
+  image: {
+    bucketKey: 'image',
+    matchesModelOperation: (op) =>
+      op.output?.type === 'image'
+      || op.id === 'text_to_image'
+      || op.id === 'image_to_image'
+      || op.id === 'multi_reference',
+    defaultOperationId: 'text_to_image',
+  },
+  audio: {
+    bucketKey: 'audio',
+    matchesModelOperation: (op) =>
+      op.output?.type === 'audio' || op.id === 'text_to_speech',
+    defaultOperationId: 'text_to_speech',
+  },
+};
+
+/**
  * Build the model picker options for a generate node.
  *
  * Only models with `acceptsCurrentInputs === true` are returned — incompatible
@@ -533,7 +566,8 @@ export function buildFilteredModelOptions(args: {
   }
 
   if (options.length === 0) {
-    if (args.outputType === 'image') {
+    const fallbackRule = FALLBACK_MODEL_DISCOVERY[args.outputType ?? ''];
+    if (fallbackRule) {
       const candidateItems: Array<{
         id: string;
         label: string;
@@ -545,12 +579,13 @@ export function buildFilteredModelOptions(args: {
       }> = [];
       const seenIds = new Set<string>();
 
-      if (Array.isArray(catalog.image) && catalog.image.length > 0) {
-        for (const bucketItem of catalog.image) {
+      const bucketRows = catalog[fallbackRule.bucketKey];
+      if (Array.isArray(bucketRows) && bucketRows.length > 0) {
+        for (const bucketItem of bucketRows) {
           if (!bucketItem?.id || seenIds.has(bucketItem.id)) continue;
           const auth = findAuthoritativeItem(catalog, bucketItem.id);
-          const hasListedImageOp = auth?.operations?.some((op) => op.listed) ?? true;
-          if (!hasListedImageOp) continue;
+          const hasListedOp = auth?.operations?.some((op) => op.listed) ?? true;
+          if (!hasListedOp) continue;
           seenIds.add(bucketItem.id);
           candidateItems.push({
             id: bucketItem.id,
@@ -567,10 +602,10 @@ export function buildFilteredModelOptions(args: {
       if (Array.isArray(catalog.models)) {
         for (const m of catalog.models) {
           if (!m?.id || seenIds.has(m.id)) continue;
-          const isImageModel = m.operations?.some(
-            (op) => op.listed && (op.output?.type === 'image' || op.id === 'text_to_image' || op.id === 'image_to_image' || op.id === 'multi_reference'),
+          const isOutputModel = m.operations?.some(
+            (op) => op.listed && fallbackRule.matchesModelOperation(op),
           );
-          if (isImageModel) {
+          if (isOutputModel) {
             seenIds.add(m.id);
             candidateItems.push({
               id: m.id,
@@ -599,7 +634,7 @@ export function buildFilteredModelOptions(args: {
                 modelId: candidate.id,
                 known: true,
                 ...(candidate.family ? { family: candidate.family } : {}),
-                listedOperationIds: ['text_to_image'],
+                listedOperationIds: [fallbackRule.defaultOperationId],
                 matches: [],
                 effectiveOperations: [],
                 acceptsCurrentInputs: true,

@@ -177,6 +177,12 @@
   color: var(--dsw-alias-label-tertiary, var(--wb-text-muted));
 }
 
+/* 超限红色高亮（Issue 746：右下角唯一字符统计） */
+.wf-prompt-token-meta-count--exceeded {
+  color: var(--dsw-alias-state-error-primary, var(--wb-danger));
+  font-weight: 600;
+}
+
 /* MentionPopover 联想浮层 */
 .wf-mention-popover {
   position: absolute;

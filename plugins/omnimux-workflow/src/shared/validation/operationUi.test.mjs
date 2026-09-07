@@ -350,6 +350,60 @@ describe('filtered model list (Hide, Don\'t Grey)', () => {
       assert.equal(opt.verdict.acceptsCurrentInputs, true);
     }
   });
+
+  it('audio node surfaces listed TTS models even when the kernel yields zero candidates (Issue #746)', () => {
+    // Production scenario: seed-audio-1.0 is listed with text_to_speech, but the
+    // current fingerprint (e.g. an audio upstream the TTS op cannot absorb) makes
+    // the kernel reject everything. The picker must still show the legal audio
+    // models instead of crying "暂无兼容模型".
+    const prodCatalog = {
+      source: 'static-stub',
+      defaults: { audio: 'seed-audio-1.0' },
+      audio: [
+        { id: 'seed-audio-1.0', label: 'Seed Audio 1.0', family: 'seed' },
+        { id: 'suno', label: 'Suno', family: 'suno' },
+      ],
+      models: [
+        {
+          id: 'seed-audio-1.0',
+          label: 'Seed Audio 1.0',
+          family: 'seed',
+          operations: [
+            { id: 'text_to_speech', listed: true, output: { type: 'audio' }, inputs: [
+              { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 },
+            ] },
+          ],
+        },
+        {
+          id: 'suno',
+          label: 'Suno',
+          family: 'suno',
+          operations: [
+            { id: 'text_to_music', listed: true, output: { type: 'audio' }, inputs: [] },
+          ],
+        },
+      ],
+    };
+
+    const fingerprint = fp([
+      { nodeId: 'upstream-audio', materialType: 'audio', mimeType: 'audio/mpeg', sizeBytes: 2048 },
+    ]);
+
+    const result = buildFilteredModelOptions({
+      catalog: prodCatalog,
+      fingerprint,
+      outputType: 'audio',
+    });
+
+    assert.equal(result.catalogAvailable, true);
+    assert.equal(result.zeroCandidates, false, 'zeroCandidates must be false to avoid "no compatible model" false positive');
+    const ids = result.options.map((o) => o.id);
+    assert.ok(ids.includes('seed-audio-1.0'), 'seed-audio-1.0 should be present');
+    assert.ok(ids.includes('suno'), 'Suno should be present');
+    for (const opt of result.options) {
+      assert.equal(opt.verdict.acceptsCurrentInputs, true);
+    }
+  });
 });
 
 describe('canonical preferred operation', () => {
