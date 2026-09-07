@@ -253,5 +253,6 @@ test('源码契约：flushPendingSave 同步 capture，boot cleanup 先 beforeRe
   assert.match(appSrc, /flushRef/);
   assert.match(appSrc, /beforeReset:\s*\(\)\s*=>\s*\{/);
   assert.match(appSrc, /flushRef\.current\(\)/);
-  assert.match(appSrc, /flushRef\.current = persistence\.flushPendingSave/);
+  assert.match(appSrc, /persistence\.flushPendingSave\(\)/);
+  assert.match(appSrc, /tablePersistence\.flushDirtyTables\(\{ force: true \}\)/);
 });

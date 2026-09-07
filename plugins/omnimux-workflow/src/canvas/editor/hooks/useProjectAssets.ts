@@ -20,6 +20,7 @@ import {
 } from '../../../shared/projectAssets.ts';
 import type { AssetItem } from '../components/assets/types.ts';
 import { flattenProjectAssets } from './flattenProjectAssets.ts';
+import { useAsyncInstanceGuard } from './useAsyncInstanceGuard.ts';
 
 export { flattenProjectAssets };
 
@@ -39,6 +40,7 @@ export interface UseProjectAssetsResult {
 }
 
 export function useProjectAssets(workspaceId: string | null | undefined): UseProjectAssetsResult {
+  const guard = useAsyncInstanceGuard(workspaceId);
   const [document, setDocument] = useState<ProjectAssetsDocument>(emptyProjectAssetsDocument);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +48,13 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
   documentRef.current = document;
 
   const hydrate = useCallback(async (id: string, signal: AbortSignal) => {
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return;
     setLoading(true);
     setError(null);
     try {
       const result = await getWorkspaceAssets(id, signal);
-      if (signal.aborted) return;
+      if (signal.aborted || !guard.isCurrent(ticket)) return;
       if (!result.ok || !result.body.assets) {
         setError(result.body.error || result.body.message || `HTTP ${String(result.status)}`);
         setDocument(emptyProjectAssetsDocument());
@@ -58,18 +62,19 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
       }
       setDocument(result.body.assets);
     } catch (err) {
-      if (signal.aborted) return;
+      if (signal.aborted || !guard.isCurrent(ticket)) return;
       setError(err instanceof Error ? err.message : String(err));
       setDocument(emptyProjectAssetsDocument());
     } finally {
-      if (!signal.aborted) setLoading(false);
+      if (!signal.aborted && guard.isCurrent(ticket)) setLoading(false);
     }
-  }, []);
+  }, [guard]);
 
   useEffect(() => {
+    setDocument(emptyProjectAssetsDocument());
+    setError(null);
+    setLoading(false);
     if (!workspaceId) {
-      setDocument(emptyProjectAssetsDocument());
-      setError(null);
       return;
     }
     const controller = new AbortController();
@@ -83,64 +88,84 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
   }, []);
 
   const mkdir = useCallback(async (name: string, parentId?: string | null) => {
-    if (!workspaceId) return false;
+    const ticket = guard.capture();
+    if (!workspaceId || !guard.isCurrent(ticket)) return false;
     const result = await mkdirWorkspaceAsset(workspaceId, {
       name,
       parentId: parentId ?? null,
       expectedRev: documentRef.current.rev,
-    });
+    }).catch((err: unknown) => ({
+      ok: false as const,
+      body: { assets: undefined, message: undefined, error: err instanceof Error ? err.message : String(err) },
+    }));
+    if (!guard.isCurrent(ticket)) return false;
     if (!result.ok || !result.body.assets) {
       setError(result.body.error || result.body.message || 'mkdir failed');
       return false;
     }
     adopt(result.body.assets);
     return true;
-  }, [adopt, workspaceId]);
+  }, [adopt, guard, workspaceId]);
 
   const indexPaths = useCallback(async (paths: string[], parentId?: string | null) => {
-    if (!workspaceId) return false;
+    const ticket = guard.capture();
+    if (!workspaceId || !guard.isCurrent(ticket)) return false;
     const result = await indexWorkspaceAssets(workspaceId, {
       paths,
       parentId: parentId ?? null,
       expectedRev: documentRef.current.rev,
-    });
+    }).catch((err: unknown) => ({
+      ok: false as const,
+      body: { assets: undefined, message: undefined, error: err instanceof Error ? err.message : String(err) },
+    }));
+    if (!guard.isCurrent(ticket)) return false;
     if (!result.ok || !result.body.assets) {
       setError(result.body.error || result.body.message || 'index failed');
       return false;
     }
     adopt(result.body.assets);
     return true;
-  }, [adopt, workspaceId]);
+  }, [adopt, guard, workspaceId]);
 
   const instantiateSubject = useCallback(async (globalSubjectId: string, parentId?: string | null) => {
-    if (!workspaceId) return false;
+    const ticket = guard.capture();
+    if (!workspaceId || !guard.isCurrent(ticket)) return false;
     const result = await instantiateWorkspaceAssets(workspaceId, {
       globalSubjectId,
       parentId: parentId ?? null,
       expectedRev: documentRef.current.rev,
-    });
+    }).catch((err: unknown) => ({
+      ok: false as const,
+      body: { assets: undefined, message: undefined, error: err instanceof Error ? err.message : String(err) },
+    }));
+    if (!guard.isCurrent(ticket)) return false;
     if (!result.ok || !result.body.assets) {
       setError(result.body.error || result.body.message || 'instantiate failed');
       return false;
     }
     adopt(result.body.assets);
     return true;
-  }, [adopt, workspaceId]);
+  }, [adopt, guard, workspaceId]);
 
   const persist = useCallback(async (next: { folders: ProjectAssetsFolder[]; items: ProjectAssetsItem[] }) => {
-    if (!workspaceId) return false;
+    const ticket = guard.capture();
+    if (!workspaceId || !guard.isCurrent(ticket)) return false;
     const result = await saveWorkspaceAssets(workspaceId, {
       expectedRev: documentRef.current.rev,
       folders: next.folders,
       items: next.items,
-    });
+    }).catch((err: unknown) => ({
+      ok: false as const,
+      body: { assets: undefined, message: undefined, error: err instanceof Error ? err.message : String(err) },
+    }));
+    if (!guard.isCurrent(ticket)) return false;
     if (!result.ok || !result.body.assets) {
       setError(result.body.error || result.body.message || 'save failed');
       return false;
     }
     adopt(result.body.assets);
     return true;
-  }, [adopt, workspaceId]);
+  }, [adopt, guard, workspaceId]);
 
   const renameFolder = useCallback(async (folderId: string, name: string) => {
     const current = documentRef.current;

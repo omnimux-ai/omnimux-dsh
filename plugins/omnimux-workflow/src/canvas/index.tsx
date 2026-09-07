@@ -27,12 +27,16 @@ interface RootEntry {
 }
 
 const roots = new WeakMap<HTMLElement, RootEntry>();
+// Canvas and table stores are shared by the island: only one root may own them.
+let activeElement: HTMLElement | null = null;
 
 export function mountCanvas(el: HTMLElement, props: CanvasIslandProps): void {
   if (!el || roots.has(el)) return;
+  if (activeElement) unmountCanvas(activeElement);
   injectCanvasStyles();
   const root = createRoot(el);
   roots.set(el, { root, lastProps: props });
+  activeElement = el;
   root.render(<App {...props} />);
 }
 
@@ -43,6 +47,11 @@ export function mountCanvas(el: HTMLElement, props: CanvasIslandProps): void {
 export function updateCanvas(el: HTMLElement, props: CanvasIslandProps): void {
   const entry = roots.get(el);
   if (!entry) return;
+  if (entry.lastProps.workspaceId !== props.workspaceId) {
+    unmountCanvas(el);
+    mountCanvas(el, props);
+    return;
+  }
   entry.lastProps = props;
   entry.root.render(<App {...props} />);
 }
@@ -52,6 +61,7 @@ export function unmountCanvas(el: HTMLElement): void {
   if (!entry) return;
   entry.root.unmount();
   roots.delete(el);
+  if (activeElement === el) activeElement = null;
 }
 
 export { useTextStageStore } from './store/textStageStore';

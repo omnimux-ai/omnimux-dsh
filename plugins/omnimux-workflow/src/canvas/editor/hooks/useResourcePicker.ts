@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useState } from 'react';
+import { useAsyncInstanceGuard } from './useAsyncInstanceGuard.ts';
 import { useCanvasStore } from '../../store/canvasStore';
 import { toast } from '../../ui';
 import { useT } from '../../i18n';
@@ -21,6 +22,7 @@ import type { MaterialType } from '../../../shared/graph/materialNode.ts';
 export interface UseResourcePickerResult {
   open: boolean;
   initialTab: ResourcePickerTab;
+  sessionId: number;
   openPicker: (tab?: ResourcePickerTab) => void;
   closePicker: () => void;
   importLocalFiles: () => Promise<boolean>;
@@ -32,22 +34,29 @@ export interface UseResourcePickerResult {
   }) => boolean;
 }
 
-export function useResourcePicker(nodeId: string): UseResourcePickerResult {
+export function useResourcePicker(nodeId: string, workspaceId?: string | null): UseResourcePickerResult {
+  const [sessionId, setSessionId] = useState(0);
+  const guard = useAsyncInstanceGuard(JSON.stringify([workspaceId, nodeId, sessionId]));
   const t = useT();
   const [open, setOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<ResourcePickerTab>('canvas');
 
   const openPicker = useCallback((tab: ResourcePickerTab = 'canvas') => {
+    guard.deactivate();
+    setSessionId((id) => id + 1);
     setInitialTab(tab);
     setOpen(true);
-  }, []);
+  }, [guard]);
 
   const closePicker = useCallback(() => {
+    guard.deactivate();
+    setSessionId((id) => id + 1);
     setOpen(false);
-  }, []);
+  }, [guard]);
 
   const commit = useCallback(
     (payload: { selectedCanvasNodeIds: string[]; localFiles: LocalFileDraft[] }) => {
+      if (!guard.isCurrent(guard.capture())) return false;
       const state = useCanvasStore.getState();
       const plan = planResourcePickerCommit({
         nodes: state.nodes,
@@ -78,16 +87,19 @@ export function useResourcePicker(nodeId: string): UseResourcePickerResult {
       } else {
         toast.success(t('picker.commitOk'));
       }
-      setOpen(false);
+      closePicker();
       return true;
     },
-    [nodeId, t],
+    [closePicker, guard, nodeId, t],
   );
 
   const fillImportNode = useCallback(async () => {
-    const result = await pickLocalFiles();
-    if (!result.ok) {
-      if (result.body.error === 'picker-unsupported') {
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return false;
+    const result = await pickLocalFiles().catch(() => null);
+    if (!guard.isCurrent(ticket)) return false;
+    if (!result || !result.ok) {
+      if (result?.body.error === 'picker-unsupported') {
         toast.warning(t('picker.needPath'));
       } else {
         toast.error(t('picker.pickFailed'));
@@ -121,12 +133,15 @@ export function useResourcePicker(nodeId: string): UseResourcePickerResult {
     }
     toast.success(t('picker.importOk'));
     return true;
-  }, [nodeId, t]);
+  }, [guard, nodeId, t]);
 
   const importLocalFiles = useCallback(async () => {
-    const result = await pickLocalFiles();
-    if (!result.ok) {
-      if (result.body.error === 'picker-unsupported') {
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return false;
+    const result = await pickLocalFiles().catch(() => null);
+    if (!guard.isCurrent(ticket)) return false;
+    if (!result || !result.ok) {
+      if (result?.body.error === 'picker-unsupported') {
         toast.warning(t('picker.needPath'));
       } else {
         toast.error(t('picker.pickFailed'));
@@ -141,11 +156,14 @@ export function useResourcePicker(nodeId: string): UseResourcePickerResult {
       return false;
     }
     return commit({ selectedCanvasNodeIds: [], localFiles: drafts });
-  }, [commit, t]);
+  }, [commit, guard, t]);
 
   const relinkLocalFile = useCallback(async (materialType: MaterialType) => {
-    const result = await pickLocalFiles();
-    if (!result.ok) {
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return false;
+    const result = await pickLocalFiles().catch(() => null);
+    if (!guard.isCurrent(ticket)) return false;
+    if (!result || !result.ok) {
       toast.error(t('picker.pickFailed'));
       return false;
     }
@@ -173,11 +191,12 @@ export function useResourcePicker(nodeId: string): UseResourcePickerResult {
     }
     toast.success(t('node.relinkOk'));
     return true;
-  }, [nodeId, t]);
+  }, [guard, nodeId, t]);
 
   return {
     open,
     initialTab,
+    sessionId,
     openPicker,
     closePicker,
     importLocalFiles,

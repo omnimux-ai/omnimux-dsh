@@ -143,6 +143,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
         />
       ) : (
         <LocalUploadPane
+          active={open}
           files={localFiles}
           onAddFiles={handleAddFiles}
           onRemove={handleRemoveFile}

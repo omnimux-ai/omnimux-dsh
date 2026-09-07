@@ -15,7 +15,9 @@ import type {
   CanvasNode,
 } from '../../../shared/graph/canvasInputMutationGateway.ts';
 import { resolveMediaPreviewUrl, type MediaAssetLike } from './mediaUrl.ts';
-import { buildImportedMediaData } from '../../../shared/localMedia.ts';
+import { buildImportedMediaData, looksAbsolutePath, projectFileMediaUrl } from '../../../shared/localMedia.ts';
+import { buildMediaMetadata } from '../../../shared/mediaMetadata.ts';
+import { forbiddenRelativePathCode } from '../../../shared/projectAssets.ts';
 import { getDefaultNodeHeight, getDefaultNodeWidth } from './nodeSizeConfig.ts';
 
 export type ResourceTypeFilter = 'all' | 'image' | 'video' | 'audio';
@@ -48,6 +50,17 @@ export interface LocalFileDraft {
   /** Transient picker-only preview. Must not be persisted. */
   previewUrl?: string;
 }
+
+/** Project assets carry their owning workspace; they never become native disk paths. */
+export interface ProjectFileDraft extends Omit<LocalFileDraft, 'realPath' | 'size'> {
+  relativePath: string;
+  workspaceId: string;
+  assetId?: string;
+  size: number | null;
+  durationSec?: number | null;
+}
+
+export type ImportFileDraft = LocalFileDraft | ProjectFileDraft;
 
 export interface ResourcePickerCommitInput {
   nodes: CanvasNode[];
@@ -228,7 +241,21 @@ function canConnect(source: CanvasNode, target: CanvasNode): boolean {
   return isNodeConnectionValid(source, target);
 }
 
-function mediaPatch(file: LocalFileDraft): Record<string, unknown> {
+function mediaPatch(file: ImportFileDraft): Record<string, unknown> {
+  if ('relativePath' in file) {
+    const url = projectFileMediaUrl(file.workspaceId, file.relativePath);
+    return {
+      ...buildMediaMetadata({ mime: file.mime, size: file.size, durationSec: file.durationSec, name: file.name }),
+      relativePath: file.relativePath,
+      assetId: file.assetId,
+      mediaUrl: url,
+      status: 'ready',
+      content: file.name,
+      originalName: file.name,
+      isMissing: false,
+      mediaAssets: [{ type: file.materialType, url, relativePath: file.relativePath, assetId: file.assetId }],
+    };
+  }
   return buildImportedMediaData({
     realPath: file.realPath,
     name: file.name,
@@ -295,13 +322,7 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
 
   // 本地上传：全部可用文件都在当前节点左侧创建导入型上游并连线。
   // 产品预期是新建上游节点并连到当前节点，而非把所选文件 patch 进当前卡片。
-  const usableFiles = input.localFiles.filter((file) => {
-    if (!file.realPath || !MEDIA_TYPES.includes(file.materialType)) {
-      rejected.push({ id: file.id, reason: 'unsupported' });
-      return false;
-    }
-    return true;
-  });
+  const usableFiles = usableMediaFiles(input.localFiles, rejected);
 
   let upstreamIndex = 0;
   for (const file of usableFiles) {
@@ -330,11 +351,14 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
 }
 
 function usableMediaFiles(
-  files: LocalFileDraft[],
+  files: ImportFileDraft[],
   rejected: ResourcePickerRejection[],
-): LocalFileDraft[] {
+): ImportFileDraft[] {
   return files.filter((file) => {
-    if (!file.realPath || !MEDIA_TYPES.includes(file.materialType)) {
+    const hasPath = 'relativePath' in file
+      ? typeof file.workspaceId === 'string' && file.workspaceId.trim() !== '' && !forbiddenRelativePathCode(file.relativePath)
+      : looksAbsolutePath(file.realPath);
+    if (!hasPath || !MEDIA_TYPES.includes(file.materialType)) {
       rejected.push({ id: file.id, reason: 'unsupported' });
       return false;
     }
@@ -343,7 +367,7 @@ function usableMediaFiles(
 }
 
 function importNodeFromFile(
-  file: LocalFileDraft,
+  file: ImportFileDraft,
   position: { x: number; y: number },
   selected = false,
 ): CanvasNode {
@@ -359,7 +383,7 @@ function importNodeFromFile(
  * 取消选择 / 无可用文件时 hasWork=false，调用方不得创建空节点。
  */
 export function planStandaloneImportNodes(input: {
-  files: LocalFileDraft[];
+  files: ImportFileDraft[];
   origin: { x: number; y: number };
 }): ResourcePickerCommitPlan {
   const rejected: ResourcePickerRejection[] = [];

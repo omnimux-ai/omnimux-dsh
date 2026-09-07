@@ -21,6 +21,8 @@ const STATUS_BY_CODE = {
   'text-too-long': 400,
   'categories-invalid': 400,
   'media-invalid': 400,
+  'media-path-invalid': 400,
+  'media-path-unavailable': 400,
   'content-required': 400,
   'brand-strategy-invalid': 400,
   'library-corrupt': 500,
@@ -249,7 +251,10 @@ export function createProductsDispatcher(deps) {
           const stream = library.resolvePreview(parsed.id, preview)
           return { status: 200, stream }
         }
-        const product = library.getView(parsed.id)
+        // Editing must retain persisted references even when files are currently unavailable.
+        const product = url.searchParams.get('view') === 'edit'
+          ? library.get(parsed.id)
+          : library.getView(parsed.id)
         if (!product) throw new ProductsError('product-not-found', 'product not found')
         return { status: 200, body: { product } }
       }

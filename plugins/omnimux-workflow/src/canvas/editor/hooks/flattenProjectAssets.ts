@@ -1,7 +1,7 @@
 /**
  * Pure flatten: assets.json document → drawer AssetItem[] (folders + files).
  */
-import { localFileMediaUrl, projectFileMediaUrl } from '../../../shared/localMedia.ts';
+import { localFileMediaUrl, looksAbsolutePath, projectFileMediaUrl } from '../../../shared/localMedia.ts';
 import type { ProjectAssetsDocument, ProjectAssetsFolder, ProjectAssetsItem } from '../../../shared/projectAssets.ts';
 import type { AssetItem } from '../components/assets/types.ts';
 
@@ -18,8 +18,8 @@ function folderToAsset(folder: ProjectAssetsFolder, itemCount: number): AssetIte
 }
 
 function itemPreviewUrl(item: ProjectAssetsItem, workspaceId?: string | null): string | undefined {
-  if (item.relative_path && workspaceId) return projectFileMediaUrl(workspaceId, item.relative_path);
-  if (item.real_path) return localFileMediaUrl(item.real_path);
+  if (item.relative_path) return workspaceId ? projectFileMediaUrl(workspaceId, item.relative_path) : undefined;
+  if (item.real_path && looksAbsolutePath(item.real_path)) return localFileMediaUrl(item.real_path);
   return undefined;
 }
 
@@ -30,7 +30,12 @@ function itemToAsset(item: ProjectAssetsItem, workspaceId?: string | null): Asse
     type: item.type,
     fileExt: item.name.split('.').pop()?.toUpperCase() || 'FILE',
     parentId: item.parentId,
-    real_path: item.relative_path || item.real_path,
+    real_path: item.real_path && looksAbsolutePath(item.real_path) ? item.real_path : undefined,
+    relative_path: item.relative_path || undefined,
+    workspaceId: workspaceId || undefined,
+    mimeType: item.mimeType,
+    sizeBytes: item.sizeBytes ?? item.size,
+    durationSec: item.durationSec,
     updatedAt: item.updatedAt,
     previewUrl: itemPreviewUrl(item, workspaceId),
   };
