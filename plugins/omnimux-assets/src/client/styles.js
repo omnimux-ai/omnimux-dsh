@@ -183,7 +183,7 @@ export const ASSETS_CSS = `
 .omnimux-assets-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.7) 100%);
+  background: linear-gradient(180deg, var(--dsw-alias-bg-mask-1) 0%, var(--dsw-alias-bg-mask-2) 100%);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   opacity: 0;
@@ -238,23 +238,22 @@ export const ASSETS_CSS = `
   height: 14px;
 }
 .omnimux-assets-overlay-btn--secondary {
-  background: rgba(20, 20, 20, 0.7);
+  background: var(--dsw-alias-bg-mask-1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  border: 1px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-overlay-btn--secondary:hover {
-  background: rgba(40, 40, 40, 0.85);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--dsw-alias-bg-mask-2);
 }
 .omnimux-assets-overlay-btn--primary {
-  background: var(--dsw-accent-primary, #7c3aed);
+  background: var(--dsw-alias-button-primary-fill);
   border: 1px solid transparent;
-  color: #ffffff;
+  color: var(--dsw-alias-label-primary-foreground);
 }
 .omnimux-assets-overlay-btn--primary:hover {
-  background: #6d28d9;
+  background: var(--dsw-alias-button-primary-hover);
 }
 .omnimux-assets-overlay-btn:disabled,
 .omnimux-assets-overlay-btn[aria-disabled="true"] {
