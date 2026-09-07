@@ -23,6 +23,27 @@ describe('media route', () => {
     assert.equal(route.modelId, 'gpt-image-2')
   })
 
+  for (const model of [
+    'grok-imagine-image-2',
+    'grok-imagine-image',
+    'grok-imagine-image-2-0',
+    'grok-imagine-image-2.0',
+  ]) {
+    it(`normalizes image request, env and config model ${model} to Grok Image 2`, () => {
+      const media = parseMediaConfig(undefined)
+      assert.equal(toMediaWireModelId(` ${model} `), 'grok-imagine-image-2')
+      assert.equal(resolveMediaRoute('image', { model }, media, {}).modelId, 'grok-imagine-image-2')
+      assert.equal(resolveMediaRoute('image', {}, media, { OMNIMUX_IMAGE_MODEL: model }).modelId, 'grok-imagine-image-2')
+      media.providers.omnimux.models.image = model
+      assert.equal(resolveMediaRoute('image', {}, media, {}).modelId, 'grok-imagine-image-2')
+    })
+  }
+
+  it('does not rewrite other Grok image variants', () => {
+    assert.equal(toMediaWireModelId('grok-imagine-image-quality'), 'grok-imagine-image-quality')
+    assert.equal(toMediaWireModelId('grok-imagine-image-3'), 'grok-imagine-image-3')
+  })
+
   it('overlays OmniMux env on the omnimux row', () => {
     const media = parseMediaConfig(undefined)
     const route = resolveMediaRoute('video', {}, media, {

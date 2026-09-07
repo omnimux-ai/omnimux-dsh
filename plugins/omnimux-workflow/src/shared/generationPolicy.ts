@@ -15,7 +15,7 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'automatic',
   },
   image: {
-    allowedModelIds: ['gpt-image-2', 'grok-imagine-image'],
+    allowedModelIds: ['gpt-image-2', 'grok-imagine-image-2'],
     defaultModelId: 'gpt-image-2',
     modeSelection: 'model',
   },

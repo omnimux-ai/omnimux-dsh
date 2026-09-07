@@ -12,6 +12,9 @@ export const MEDIA_WIRE_MODEL_IDS = Object.freeze({
   'wan3.0-video': 'wan-3.0',
   'MiniMax-H3': 'minimax-h3',
   'grok-imagine-video-1.5': 'grok-imagine-video-1-5',
+  'grok-imagine-image-2.0': 'grok-imagine-image-2',
+  'grok-imagine-image-2-0': 'grok-imagine-image-2',
+  'grok-imagine-image': 'grok-imagine-image-2',
 })
 
 /**

@@ -36,7 +36,7 @@
       "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft"
     },
     {
-      "id": "grok-imagine-image",
+      "id": "grok-imagine-image-2",
       "disposition": "canonical",
       "batch": "A",
       "reason": "命中 runtime；仓内 dated live 证据覆盖 text_to_image",
@@ -44,6 +44,27 @@
         "docs/evidence/2026-08-16-omnimux-image.md"
       ],
       "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft"
+    },
+    {
+      "id": "grok-imagine-image",
+      "disposition": "alias",
+      "target": "grok-imagine-image-2",
+      "reason": "旧版无版本号 id 归一为 Grok Image 2 产品 id",
+      "notes": "向后兼容旧版无版本号 grok-imagine-image"
+    },
+    {
+      "id": "grok-imagine-image-2-0",
+      "disposition": "alias",
+      "target": "grok-imagine-image-2",
+      "reason": "渠道 wire id 归一为 Grok Image 2 产品 id",
+      "notes": "渠道 wire id 别名"
+    },
+    {
+      "id": "grok-imagine-image-2.0",
+      "disposition": "alias",
+      "target": "grok-imagine-image-2",
+      "reason": "上游官方端点 wire id 归一为 Grok Image 2 产品 id",
+      "notes": "上游官方端点 wire id 别名"
     },
     {
       "id": "claude-opus-5",

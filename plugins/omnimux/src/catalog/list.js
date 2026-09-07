@@ -7,6 +7,7 @@ import {
   assertContractHealthy,
   getHealthyContractIndex,
   projectCatalog,
+  resolveModelId,
 } from './project.js'
 import {
   loadDispositions,
@@ -111,9 +112,11 @@ export function buildModelCatalog(opts = {}) {
     defaults[kind] = resolveDefault({
       kind,
       ids,
-      env,
-      settingsDefaults,
-      configDefault: configDefaults[kind],
+      env: { [ENV_DEFAULT_KEYS[kind]]: resolveModelId(index, trimId(env[ENV_DEFAULT_KEYS[kind]])) },
+      settingsDefaults: {
+        [SETTINGS_DEFAULT_KEYS[kind]]: resolveModelId(index, trimId(settingsDefaults[SETTINGS_DEFAULT_KEYS[kind]])),
+      },
+      configDefault: resolveModelId(index, configDefaults[kind]) ?? '',
       fallback,
     })
   }
