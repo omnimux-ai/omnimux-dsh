@@ -25,7 +25,7 @@ export function mapValidatedPlanToVendor(args) {
   /** @type {Record<string, unknown>} */
   const logical = {}
   const prompt = typeof args.prompt === 'string' ? args.prompt : ''
-  if (prompt) {
+  if (prompt && profileId !== 'speechToText') {
     vendor[speech ? 'input' : 'prompt'] = prompt
     logical.prompt = prompt
   }
@@ -188,9 +188,15 @@ export function mapValidatedPlanToVendor(args) {
       logical.maxTokens = extras.maxTokens
     }
   }
-  if (profileId === 'speechToText' && typeof extras.language === 'string' && extras.language) {
-    vendor.language = extras.language
-    logical.language = extras.language
+  if (profileId === 'speechToText') {
+    vendor.model = args.modelId
+    logical.model = args.modelId
+    for (const key of ['language', 'response_format']) {
+      if (typeof extras[key] === 'string' && extras[key]) {
+        vendor[key] = extras[key]
+        logical[key] = extras[key]
+      }
+    }
   }
   const checked = assertVendorBodyAllowed(vendor, profile, opId)
   if (!checked.ok) return checked

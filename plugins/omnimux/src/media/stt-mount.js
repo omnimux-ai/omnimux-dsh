@@ -30,7 +30,7 @@ export function mountSpeechToText(ctx, opts) {
 
   const api = {
     /**
-     * @param {{ audio: string, model?: string, provider?: string, language?: string, signal?: AbortSignal }} req
+     * @param {{ audio: string, model?: string, provider?: string, language?: string, response_format?: string, signal?: AbortSignal }} req
      */
     execute(req) {
       assertCapabilityEnabled(gate, STT_TOOL_NAME, 'tool')
@@ -63,6 +63,10 @@ export function mountSpeechToText(ctx, opts) {
         description: 'Contract operation id (default speech_to_text). Draft/unlisted models are rejected by SubmitGuard.',
       },
       language: { type: 'string', description: 'ISO language hint (e.g. zh, en). Optional.' },
+      response_format: {
+        type: 'string', enum: ['json', 'text', 'verbose_json', 'srt', 'vtt'],
+        description: 'Transcript output format. Defaults to json; srt/vtt retain subtitle timestamps.',
+      },
     }),
     output: jsonOut,
     async execute(args, exec) {
@@ -73,6 +77,7 @@ export function mountSpeechToText(ctx, opts) {
           model: args.model,
           operation: args.operation,
           language: args.language,
+          response_format: args.response_format,
           signal: exec?.signal,
         })
       } catch (error) {

@@ -94,7 +94,7 @@
       "status": "live",
       "operations": ["speech_to_text"],
       "outputTypes": ["text"],
-      "logicalFields": ["audio", "language", "model"],
+      "logicalFields": ["audio", "language", "model", "response_format"],
       "vendorFields": ["file", "model", "language", "response_format"],
       "unknownFieldPolicy": "reject",
       "notes": "#538 已挂载 speechToText seam；whisper-1 未 verified/live/listed 时 SubmitGuard 拒绝初次 submit"

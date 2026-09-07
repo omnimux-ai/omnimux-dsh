@@ -15,6 +15,8 @@ import type { GenerationPreferencesStore } from '../workspace/GenerationPreferen
 
 export interface WorkflowDispatcherDeps {
   generationPreferences?: GenerationPreferencesStore;
+  /** Lazy neutral seam lookup; no provider clients in workflow. */
+  getSeam?: (name: string) => unknown;
   store: WorkspaceStore;
   gateway: GenerationGateway;
   mediaDir: string;

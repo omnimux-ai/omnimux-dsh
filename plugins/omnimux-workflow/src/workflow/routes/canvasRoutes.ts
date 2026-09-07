@@ -28,26 +28,14 @@
  *   GET  /omnimux-workflow/api/templates/:id    one template
  *   DELETE /omnimux-workflow/api/templates/:id
  *
- * M3 execution routes (legacy prefix aliases all of them):
- *   GET  /omnimux-workflow/api/workspaces/:id/executions            list live runs
- *   POST /omnimux-workflow/api/workspaces/:id/executions            create {mode: full|subset, nodeIds?}
- *   GET  /omnimux-workflow/api/workspaces/:id/executions/:execId    status snapshot
- *   POST /omnimux-workflow/api/workspaces/:id/executions/:execId/pause|resume|cancel
- *   GET  /omnimux-workflow/api/workspaces/:id/executions/:execId/events   SSE (11 events)
- *
- * Self-implemented helpers equivalent to hub logic (no hub imports):
- * sendJson secret guard + assertLocalWrite loopback check, matching the
- * omnimux-assets plugin conventions.
+ *   POST /omnimux-workflow/api/workspaces/:id/speech-to-text audio → text via hub seam
  *
  * Dispatch is composed from per-domain route modules; this file stays the
  * public assembly + HTTP adapter. Named exports keep the original surface.
  */
-import { createReadStream, statSync } from 'node:fs';
 import { createGenerationPreferencesRoutes } from './generationPreferencesRoutes';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { extname } from 'node:path';
-import { parseByteRange } from '../byteRange';
-import { detectMimeFromFile } from '../../shared/localMedia';
+import { serveFile } from './serveFile';
 import {
   LEGACY_WORKFLOW_ROUTE_PREFIX,
   WORKFLOW_ROUTE_PREFIX,
@@ -84,6 +72,7 @@ import { ensureLibraryRoot } from '../../projects/library';
 import { bindEnsureProjectBound } from '../../projects/ensureProjectBound';
 import { createTemplateRoutes } from './templateRoutes';
 import { createTableRoutes } from './tableRoutes';
+import { createSpeechToTextRoutes } from './speechToTextRoutes';
 
 export {
   MAX_JSON_BODY_BYTES,
@@ -126,73 +115,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   'subject-has-no-files': 400,
 };
 
-const MIME_BY_EXT: Record<string, string> = {
-  '.js': 'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.txt': 'text/plain; charset=utf-8',
-};
-
 const PLUGIN_ROOT = resolvePluginRoot();
-
-/** Serve a file body with mime + optional Range 206 (never throws synchronously). */
-function serveFile(
-  res: ServerResponse,
-  filePath: string,
-  fallbackMime: string,
-  rangeHeader?: string,
-): void {
-  const mime = detectMimeFromFile(
-    filePath,
-    MIME_BY_EXT[extname(filePath)] ?? fallbackMime,
-  );
-  const stat = statSync(filePath);
-  const range = parseByteRange(rangeHeader, stat.size);
-  if (range && 'invalid' in range) {
-    res.writeHead(416, {
-      'Content-Range': `bytes */${stat.size}`,
-      'Content-Type': 'text/plain; charset=utf-8',
-    });
-    res.end('Requested Range Not Satisfiable');
-    return;
-  }
-  if (range) {
-    const chunkSize = range.end - range.start + 1;
-    res.writeHead(206, {
-      'Content-Type': mime,
-      'Content-Length': chunkSize,
-      'Content-Range': `bytes ${range.start}-${range.end}/${stat.size}`,
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': 'no-cache',
-    });
-    const stream = createReadStream(filePath, { start: range.start, end: range.end });
-    stream.on('error', () => {
-      res.destroy();
-    });
-    stream.pipe(res);
-    return;
-  }
-  res.writeHead(200, {
-    'Content-Type': mime,
-    'Content-Length': stat.size,
-    'Accept-Ranges': 'bytes',
-    'Cache-Control': 'no-cache',
-  });
-  const stream = createReadStream(filePath);
-  stream.on('error', () => {
-    res.destroy();
-  });
-  stream.pipe(res);
-}
 
 export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const { store, gateway, mediaDir, executionManager, picker, templates, libraryRoot } = deps;
@@ -223,6 +146,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const localFileRoutes = createLocalFileRoutes(picker ? { picker } : {});
   const templateRoutes = createTemplateRoutes(templates);
   const tableRoutes = createTableRoutes(store);
+  const speechToTextRoutes = createSpeechToTextRoutes({ store, getSeam: deps.getSeam });
 
   /**
    * Legacy M1 prefix compatibility: /dsh-workflow/* is rewritten (in-memory,
@@ -247,6 +171,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
       if (projectDispatcher.owns(path)) {
         return projectDispatcher.dispatch(req);
       }
+
+      const fromSpeechToText = await speechToTextRoutes.tryHandle(method, path, req);
+      if (fromSpeechToText) return fromSpeechToText;
 
       if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         try {

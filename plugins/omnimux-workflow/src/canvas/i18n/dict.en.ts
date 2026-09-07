@@ -43,6 +43,13 @@ const en: Record<DictKey, string> = {
   'pill.fullscreen': 'Fullscreen',
   'pill.download': 'Download',
   'pill.more': 'More',
+  'pill.speechToText': 'Speech to Text',
+  // Speech to text (Issue 744, stt.*)
+  'stt.nodeLabel': 'Subtitles',
+  'stt.toast.success': 'Transcription complete. Subtitle node is ready.',
+  'stt.toast.failed': 'Transcription failed. Please try again.',
+  'stt.noAudio': 'No transcribable audio file found.',
+  'stt.noWorkspace': 'Canvas is not saved yet. Please try again later.',
   'panel.generate': 'Generate',
   'panel.preferenceSaveFailed': 'Model changed, but the default preference could not be saved. Try again.',
   'panel.adaptedModel': 'Switched to {model} to handle {inputs} inputs',

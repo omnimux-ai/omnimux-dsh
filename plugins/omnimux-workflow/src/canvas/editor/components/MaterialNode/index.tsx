@@ -9,7 +9,7 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -35,11 +35,15 @@ import {
 import { isConfigPanelVisible, mapNodeToGenerationStatus } from '../../utils/nodeVisualMath';
 import {
   buildConversationPayloadFromNode,
+  canRunSpeechToText,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
   pillMaxWidthForNode,
+  resolveSpeechToTextAudioPath,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
+import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
+import { transcribeAudio } from '../../../bridge/apiClient.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
@@ -177,6 +181,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const effectiveTextContent = readCurrentText(data as Record<string, unknown>);
   const isOffline = status === 'offline' || nodeData.isMissing === true;
   const previewUrl = resolveMediaPreviewUrl(materialType, mediaAssets, mediaUrl);
+  // SRT 字幕文本节点（Issue 744）：不展开配置底栏，双击仍可进 TextStage 浏览编辑
+  const contentFormat = typeof nodeData.contentFormat === 'string' ? nodeData.contentFormat : undefined;
+  const isSrtSubtitle = contentFormat === 'srt';
   // 文本节点用正文是否存在判定 hasResult；媒体节点用 previewUrl。
   // 否则文本生成中/完成后 generationStatus 永远落不到 GSC，彩色动效不会出现。
   const hasResult =
@@ -359,6 +366,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     executionStatus,
     kind,
     isMultiSelected,
+    contentFormat,
   );
 
   const loadingAspectRatio =
@@ -388,6 +396,75 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   });
 
   const { addToConversation } = useAddToConversation();
+
+  // 语音识别（Issue 744 T04）：音频节点转写并派生下游 SRT 字幕节点。
+  // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
+  const handleSpeechToText = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('stt.noWorkspace'));
+      return;
+    }
+    const audioPath = resolveSpeechToTextAudioPath(
+      {
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        workspaceId,
+      },
+      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+    );
+    if (!audioPath) {
+      toast.error(t('stt.noAudio'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, sttActive: true });
+    try {
+      const result = await transcribeAudio(workspaceId, {
+        nodeId: id,
+        audioPath,
+        model: 'doubao-asr-bigmodel',
+        responseFormat: 'srt',
+      });
+      if (!result.ok || !result.body?.text?.trim()) {
+        const message = result.body?.message || result.body?.error || t('stt.toast.failed');
+        // 保留 sttActive：GSC failed 态的原生重试按钮可再次触发转写
+        updateNodeData({ executionStatus: 'error', executionError: message });
+        toast.error(message);
+        return;
+      }
+      const store = useCanvasStore.getState();
+      const audioNode = store.nodes.find((n) => n.id === id);
+      const plan = planSpeechToTextDownstream({
+        audioNodeId: id,
+        audioPosition: audioNode?.position ?? { x: 0, y: 0 },
+        audioNodeWidth: nodeWidth,
+        srtText: result.body.text,
+        label: t('stt.nodeLabel'),
+        currentNodes: store.nodes,
+        currentEdges: store.edges,
+      });
+      updateNodeData({ executionStatus: 'completed', executionError: undefined, sttActive: undefined });
+      if (!plan) {
+        toast.error(t('stt.toast.failed'));
+        return;
+      }
+      applyCanvasInputMutation({
+        addNodes: plan.addNodes,
+        addEdges: plan.addEdges,
+        nodePatches: plan.nodePatches,
+      });
+      // 自动聚焦字幕节点（exclusive select）
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
+      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+      toast.success(t('stt.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('stt.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message });
+      toast.error(message);
+    }
+  }, [applyCanvasInputMutation, id, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
 
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
@@ -471,16 +548,51 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       ];
     }
 
+    if (
+      materialType === 'audio'
+      && canRunSpeechToText({
+        materialType,
+        executionStatus,
+        isOffline,
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+      })
+    ) {
+      return [
+        {
+          key: 'speech-to-text',
+          label: t('pill.speechToText'),
+          icon: AudioLines,
+          section: 'primary',
+          title: t('pill.speechToText'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void handleSpeechToText();
+          },
+        },
+        chat,
+      ];
+    }
+
     return [chat];
   }, [
     copied,
+    executionStatus,
     handleAddToConversation,
     handleCopyText,
     handleOpenTextStage,
+    handleSpeechToText,
     handleSplitText,
     isEmptyImageNode,
+    isOffline,
     kind,
     materialType,
+    mediaUrl,
+    nodeData.realPath,
+    nodeData.relativePath,
+    previewUrl,
     resourcePicker,
     t,
   ]);
@@ -682,7 +794,11 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 loadingAspectRatio={loadingAspectRatio}
                 errorMessage={executionError ?? errorMessage}
                 taskId={nodeData.taskId}
-                onRetry={handleGenerate}
+                onRetry={
+                  materialType === 'audio' && nodeData.sttActive === true
+                    ? () => { void handleSpeechToText(); }
+                    : handleGenerate
+                }
               >
                 {previewUrl ? (
                   <MediaPreview
@@ -723,8 +839,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         )}
       </div>
 
-      {/* 配置面板 */}
-      {panelVisible && (
+      {/* 配置面板（SRT 字幕节点防御性不渲染，闸门见 isConfigPanelVisible） */}
+      {panelVisible && !isSrtSubtitle && (
         <ConfigPanelShell>
           <ConfigPanel
             nodeId={id}

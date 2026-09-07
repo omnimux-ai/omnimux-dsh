@@ -49,6 +49,13 @@ const zh = {
   'pill.fullscreen': '全屏',
   'pill.download': '下载',
   'pill.more': '更多',
+  'pill.speechToText': '语音识别',
+  // 语音识别（Issue 744，stt.*）
+  'stt.nodeLabel': '字幕',
+  'stt.toast.success': '语音识别完成，字幕节点已就绪',
+  'stt.toast.failed': '语音识别失败，请重试',
+  'stt.noAudio': '未找到可识别的音频文件',
+  'stt.noWorkspace': '画布尚未保存，请稍后重试',
   // 配置面板（W2，panel.*）
   'panel.generate': '生成',
   'panel.preferenceSaveFailed': '模型已切换，但未能保存为默认偏好，请重试',

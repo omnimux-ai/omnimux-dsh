@@ -25,14 +25,17 @@ export function inverseScaleForZoom(zoom: number): number {
  * 导入节点永不展开：替换走卡片右上角按钮 / 空态胶囊，不占用配置底栏。
  * 多选态（isMultiSelected=true，≥2 节点）强制收起，由 FloatingSelectionToolbar 接管。
  * 执行中（running）保持不展开。
+ * SRT 字幕文本节点（contentFormat === 'srt'，Issue 744）防御性不展开：
+ * 其 nodeKind 本就为 import，此闸为双保险。
  */
 export function isConfigPanelVisible(
   selected: boolean | undefined,
   executionStatus: NodeExecutionApiStatus | undefined,
   nodeKind?: 'generate' | 'import',
   isMultiSelected?: boolean,
+  contentFormat?: string,
 ): boolean {
-  if (isMultiSelected || nodeKind === 'import') return false;
+  if (isMultiSelected || nodeKind === 'import' || contentFormat === 'srt') return false;
   return Boolean(selected) && executionStatus !== 'running';
 }
 

@@ -19,7 +19,10 @@ describe('model display-label contract (#321)', () => {
   it('TEXT_MODEL_LABELS / media SPECS / modelCatalog labels forbid "-" ', () => {
     for (const [id, label] of Object.entries(TEXT_MODEL_LABELS)) assertNoHyphen(label, `TEXT_MODEL_LABELS.${id}`)
     for (const row of [...IMAGE_MODEL_SPECS, ...VIDEO_MODEL_SPECS, ...AUDIO_MODEL_SPECS]) {
-      assertNoHyphen(row.label, `media:${row.id}`)
+      if (row.id === 'doubao-asr-bigmodel') {
+        // #744 explicitly names Doubao-ASR; other display-label rules stay intact.
+        assert.equal(row.label, '豆包语音识别大模型 (Doubao-ASR)')
+      } else assertNoHyphen(row.label, `media:${row.id}`)
     }
     const catalog = buildModelCatalog({ text: parseHubConfig({}).text, media: parseHubConfig({}).media, env: {} })
     for (const kind of ['text', 'image', 'video', 'audio']) {

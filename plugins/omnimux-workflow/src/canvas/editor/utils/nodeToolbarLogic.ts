@@ -4,6 +4,7 @@
  */
 
 import { resolveNodeLifecycle } from './nodeMaterialLifecycle.ts';
+import { localFilePathFromUrl, projectFileMediaUrl } from '../../../shared/localMedia.ts';
 
 export const DEFAULT_PILL_MAX_WIDTH = 280;
 export const PILL_NODE_GUTTER = 24;
@@ -85,6 +86,79 @@ export function hasNodeMaterial(input: HasNodeMaterialInput): boolean {
 }
 
 export const EMPTY_IMAGE_PILL_ACTION_ID = 'import-image';
+
+// ============================================================================
+// 语音识别胶囊操作（Issue 744 T04）
+// ============================================================================
+
+export const SPEECH_TO_TEXT_PILL_ACTION_ID = 'speech-to-text';
+
+export interface SpeechToTextEligibilityInput {
+  materialType?: string;
+  executionStatus?: string | null;
+  isOffline?: boolean;
+  realPath?: string;
+  relativePath?: string;
+  mediaUrl?: string;
+  previewUrl?: string;
+}
+
+/**
+ * 「语音识别」按钮可见性：音频素材节点、有可解析的音频来源、
+ * 非离线、非执行中（running/pending）。
+ */
+export function canRunSpeechToText(input: SpeechToTextEligibilityInput): boolean {
+  if (input.materialType !== 'audio') return false;
+  if (input.isOffline) return false;
+  if (input.executionStatus === 'running' || input.executionStatus === 'pending') return false;
+  return Boolean(
+    input.realPath || input.relativePath || input.mediaUrl || input.previewUrl,
+  );
+}
+
+function asTrimmedPath(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/**
+ * 解析音频节点的转写来源路径（后端契约：绝对路径或无凭据 HTTP(S) URL）：
+ * 1. realPath（导入节点的本机绝对路径）；
+ * 2. mediaUrl / previewUrl 中可还原的 /api/local-file 绝对路径；
+ * 3. mediaUrl 本身是 HTTP(S) URL；
+ * 4. relativePath + workspaceId → 项目文件流 URL（需 baseUrl 拼成绝对 URL，
+ *    浏览器侧传 window.location.origin；无 baseUrl 时返回 null，不发明路径）。
+ */
+export function resolveSpeechToTextAudioPath(
+  input: {
+    realPath?: string;
+    relativePath?: string;
+    mediaUrl?: string;
+    previewUrl?: string;
+    workspaceId?: string;
+  },
+  opts?: { baseUrl?: string },
+): string | null {
+  const realPath = asTrimmedPath(input.realPath);
+  if (realPath) return realPath;
+
+  for (const url of [input.mediaUrl, input.previewUrl]) {
+    const local = localFilePathFromUrl(url);
+    if (local) return local;
+  }
+
+  const mediaUrl = asTrimmedPath(input.mediaUrl);
+  if (mediaUrl && /^https?:\/\//.test(mediaUrl)) return mediaUrl;
+
+  const relativePath = asTrimmedPath(input.relativePath);
+  const workspaceId = asTrimmedPath(input.workspaceId);
+  const baseUrl = asTrimmedPath(opts?.baseUrl);
+  if (relativePath && workspaceId && baseUrl) {
+    return new URL(projectFileMediaUrl(workspaceId, relativePath), baseUrl).toString();
+  }
+  return null;
+}
+
+
 
 export interface EmptyImageGenerateNodeInput {
   materialType?: string;

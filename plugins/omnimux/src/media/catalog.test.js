@@ -9,7 +9,7 @@ describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 12) // 14 runtime − 2 hyphen aliases folded
     assert.equal(VIDEO_MODEL_SPECS.length, 17)
-    assert.equal(AUDIO_MODEL_SPECS.length, 4)
+    assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 
   it('GPT Image 2 only lists auto, 1:1, 16:9, 9:16 aspect ratios', () => {
@@ -114,6 +114,10 @@ describe('hub media catalog facade (contract-derived)', () => {
       ['audio', AUDIO_MODEL_SPECS],
     ]) {
       for (const row of rows) {
+        if (row.id === 'doubao-asr-bigmodel') {
+          assert.equal(row.label, '豆包语音识别大模型 (Doubao-ASR)')
+          continue
+        }
         assert.doesNotMatch(
           row.label,
           /-/,
