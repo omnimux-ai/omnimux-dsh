@@ -331,6 +331,7 @@ export function coverGlyph(title) {
 
 const TIKTOK_VIDEO_RE = /tiktok\.com\/@?[^/]+\/video\/(\d{15,25})/i
 const TIKTOK_V_RE = /tiktok\.com\/v\/(\d{15,25})/i
+const TIKTOK_PLAYER_RE = /tiktok\.com\/player\/v1\/(\d{15,25})/i
 
 /**
  * Extract TikTok video ID from a URL or raw string.
@@ -339,7 +340,7 @@ const TIKTOK_V_RE = /tiktok\.com\/v\/(\d{15,25})/i
  */
 export function extractTikTokVideoId(url) {
   if (typeof url !== 'string' || !url.trim()) return null
-  const m = url.match(TIKTOK_VIDEO_RE) || url.match(TIKTOK_V_RE)
+  const m = url.match(TIKTOK_VIDEO_RE) || url.match(TIKTOK_V_RE) || url.match(TIKTOK_PLAYER_RE)
   if (m && m[1]) return m[1]
   return null
 }
@@ -352,6 +353,10 @@ export function extractTikTokVideoId(url) {
 export function resolveTikTokEmbedUrl(sourceUrlOrId) {
   if (!sourceUrlOrId) return null
   const raw = String(sourceUrlOrId).trim()
+  const playerMatch = raw.match(/^https?:\/\/(?:www\.)?tiktok\.com\/player\/v1\/(\d{15,25})(?:[/?#].*)?$/i)
+  if (playerMatch && playerMatch[1]) {
+    return `https://www.tiktok.com/player/v1/${playerMatch[1]}`
+  }
   if (/^\d{15,25}$/.test(raw)) {
     return `https://www.tiktok.com/player/v1/${raw}`
   }

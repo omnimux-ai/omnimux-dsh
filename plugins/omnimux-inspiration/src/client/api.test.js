@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   authGuard,
+  extractTikTokVideoId,
   hostMediaSrc,
   quotaGuard,
   resolveCreatorProfileUrl,
@@ -167,5 +168,63 @@ describe('resolveCreatorProfileUrl', () => {
 
   it('falls back to source URL @handle when creator handle is generic', () => {
     assert.equal(resolveCreatorProfileUrl({ handle: 'creator' }, 'https://www.tiktok.com/@mariaqvcpb9/video/123'), 'https://www.tiktok.com/@mariaqvcpb9')
+  })
+})
+
+describe('extractTikTokVideoId', () => {
+  it('extracts id from standard video URLs with and without @, with query params', () => {
+    assert.equal(extractTikTokVideoId('https://www.tiktok.com/@user/video/7555186216296008990'), '7555186216296008990')
+    assert.equal(extractTikTokVideoId('https://www.tiktok.com/user/video/7555186216296008990'), '7555186216296008990')
+    assert.equal(extractTikTokVideoId('https://tiktok.com/@creator/video/7555186216296008990?is_from_webapp=1&sender_device=pc'), '7555186216296008990')
+  })
+
+  it('extracts id from /v/:id format URLs', () => {
+    assert.equal(extractTikTokVideoId('https://www.tiktok.com/v/7555186216296008990'), '7555186216296008990')
+    assert.equal(extractTikTokVideoId('http://tiktok.com/v/7555186216296008990.html'), '7555186216296008990')
+  })
+
+  it('extracts id from player/v1/:id format URLs', () => {
+    assert.equal(extractTikTokVideoId('https://www.tiktok.com/player/v1/7555186216296008990'), '7555186216296008990')
+    assert.equal(extractTikTokVideoId('https://tiktok.com/player/v1/7555186216296008990?autoplay=1'), '7555186216296008990')
+  })
+
+  it('returns null for invalid or empty URLs', () => {
+    assert.equal(extractTikTokVideoId(''), null)
+    assert.equal(extractTikTokVideoId(null), null)
+    assert.equal(extractTikTokVideoId(undefined), null)
+    assert.equal(extractTikTokVideoId(12345), null)
+    assert.equal(extractTikTokVideoId('https://instagram.com/reel/1234567890'), null)
+    assert.equal(extractTikTokVideoId('https://youtube.com/watch?v=abc'), null)
+    assert.equal(extractTikTokVideoId('https://tiktok.com/about'), null)
+  })
+})
+
+describe('resolveTikTokEmbedUrl', () => {
+  it('handles pure numeric video ID', () => {
+    assert.equal(resolveTikTokEmbedUrl('7555186216296008990'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+    assert.equal(resolveTikTokEmbedUrl(7555186216296008990n), 'https://www.tiktok.com/player/v1/7555186216296008990')
+  })
+
+  it('handles standard TikTok video URLs with or without @ and query params', () => {
+    assert.equal(resolveTikTokEmbedUrl('https://www.tiktok.com/@user/video/7555186216296008990'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+    assert.equal(resolveTikTokEmbedUrl('https://tiktok.com/@user/video/7555186216296008990?lang=en'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+  })
+
+  it('handles /v/:id format URLs', () => {
+    assert.equal(resolveTikTokEmbedUrl('https://www.tiktok.com/v/7555186216296008990'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+  })
+
+  it('handles already formed /player/v1/:id format URLs and formats them properly', () => {
+    assert.equal(resolveTikTokEmbedUrl('https://www.tiktok.com/player/v1/7555186216296008990'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+    assert.equal(resolveTikTokEmbedUrl('http://tiktok.com/player/v1/7555186216296008990?autoplay=1'), 'https://www.tiktok.com/player/v1/7555186216296008990')
+  })
+
+  it('returns null for invalid or empty inputs', () => {
+    assert.equal(resolveTikTokEmbedUrl(''), null)
+    assert.equal(resolveTikTokEmbedUrl(null), null)
+    assert.equal(resolveTikTokEmbedUrl(undefined), null)
+    assert.equal(resolveTikTokEmbedUrl('not-a-valid-url'), null)
+    assert.equal(resolveTikTokEmbedUrl('https://example.com/video/123'), null)
+    assert.equal(resolveTikTokEmbedUrl('123'), null)
   })
 })
