@@ -8,8 +8,12 @@
  * host mount time (src/workflow/execution/nodeExecutors.ts).
  */
 
+import type { CapabilityCatalog } from '../../shared/api.ts';
+
 /** Upstream-resolved inputs handed to each executor. */
 export interface ExecutionContext {
+  /** Catalog captured alongside dispatch validation for the current request. */
+  catalog?: CapabilityCatalog;
   /** Node outputs keyed by upstream node id. */
   upstreamOutputs: Map<string, NodeOutput>;
   /** Inbound edges in canvas order, including semantic slot metadata. */

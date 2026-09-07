@@ -1,13 +1,14 @@
 /**
- * Video TriggerBar — 视频摘要触发条门面（Issue 467 / W2, 2026-09-07 全模态收敛 / T03）。
+/**
+ * Video TriggerBar — 视频摘要触发条门面（Issue 467 / W2, 严格四段式 / T04）。
  *
+ * 严格四段式：模式、比例、质量、时长。
  * 内部渲染通用 CfgSummaryBar（32px / 8px / ResizeObserver / 折叠协议），
  * 根类名双锁 wf-video-trigger-bar（DOM 与 CSS 双选择器别名一迭代）。
- * 槽位组装（mode → ratio → resolution → duration → sound → chevron）与
- * 估算宽（12px 字 + 14px 图标）为视频门面职责，CfgSummaryBar 无材质语义。
+ * 声音开关不进入胶囊（只在 Popover 内控制）。
  */
 
-import { ChevronDown, Clock, Volume2 } from 'lucide-react';
+import { ChevronDown, Clock } from 'lucide-react';
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { AspectRatioIcon } from '../cfg/aspectRatioGeometry.ts';
@@ -92,16 +93,6 @@ export function VideoTriggerBar({
       'wf-video-trigger-bar__slot wf-video-trigger-bar__duration',
       'wf-video-trigger-bar__duration-text',
     );
-    if (summary.soundText) {
-      push(
-        'sound',
-        summary.soundText,
-        <Volume2 size={14} strokeWidth={1.75} />,
-        'icon-only',
-        'wf-video-trigger-bar__slot wf-video-trigger-bar__sound',
-        'wf-video-trigger-bar__sound-text',
-      );
-    }
     list.push({
       id: 'chevron',
       text: '',

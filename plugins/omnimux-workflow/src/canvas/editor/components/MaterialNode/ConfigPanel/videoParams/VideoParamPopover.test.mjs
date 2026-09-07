@@ -65,7 +65,10 @@ test('VideoTriggerBar 消费 formatVideoSummary / collapseSummary 与 14px 图�
   assert.match(triggerSrc, /AspectRatioIcon\s+ratio=\{params\.aspectRatio\}\s+size=\{14\}/);
   assert.match(triggerSrc, /ChevronDown\s+size=\{14\}/);
   assert.match(triggerSrc, /Clock\s+size=\{14\}/);
-  assert.match(triggerSrc, /Volume2\s+size=\{14\}/);
+  // T04：声音开关只在 Popover 内部，绝不进入 TriggerBar 胶囊
+  assert.doesNotMatch(triggerSrc, /Volume2/);
+  assert.doesNotMatch(triggerSrc, /soundText/);
+  assert.match(popoverSrc, /SoundSwitchSegment/);
   // 摘要超长省略与 title 提示
   assert.match(triggerSrc, /title=\{summary\.fullText\}/);
   assert.match(triggerSrc, /wf-video-trigger-bar__chevron/);

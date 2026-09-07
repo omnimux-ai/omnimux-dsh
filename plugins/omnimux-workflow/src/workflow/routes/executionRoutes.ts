@@ -4,6 +4,7 @@
 import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api';
 import type { ResolveExecutionProjectFile } from '../execution/executionMediaSource.ts';
 import { buildInitialOutputs } from '../execution/executionInputs.ts';
+import { prepareExecutionSlotGraph } from '../../shared/graph/feedSlot/prepareExecutionSlotGraph.ts';
 import { jsonBodyProblem, messageOf } from '../../http/helpers';
 import { WorkflowStoreError } from '../workspace/WorkspaceStore';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore';
@@ -126,6 +127,8 @@ export function createExecutionRoutes(opts: {
           throw error;
         }
         try {
+          const catalog = getCatalog ? await getCatalog() : null;
+          snapshot = { ...snapshot, ...prepareExecutionSlotGraph(snapshot.nodes, snapshot.edges, catalog) };
           const subgraph = resolveExecutionSubgraph({
             nodes: snapshot.nodes as Array<{ id: string; [key: string]: unknown }>,
             edges: snapshot.edges as Array<{ source: string; target: string; [key: string]: unknown }>,
@@ -135,7 +138,7 @@ export function createExecutionRoutes(opts: {
 
           const readiness = findExecutionReadinessFailure(
             subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
-            getCatalog ? await getCatalog() : null,
+            catalog,
             { nodes: snapshot.nodes, edges: snapshot.edges, workspaceId, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
           );
           if (readiness) {

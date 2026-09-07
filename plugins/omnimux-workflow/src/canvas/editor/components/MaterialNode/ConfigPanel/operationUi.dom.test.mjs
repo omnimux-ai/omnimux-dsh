@@ -50,10 +50,13 @@ test('ConfigPanel 消费 buildFilteredModelOptions / buildEffectiveOpsUiState（
 test('ConfigPanel mode UI consumes presentation policy; video retains its popover', () => {
   assert.match(configSrc, /showModeUi/);
   assert.match(configSrc, /OperationSegment/);
-  assert.match(configSrc, /wf-operation-mode-inline|wf-compat-error/);
+  assert.match(configSrc, /wf-operation-mode-inline/);
   assert.match(configSrc, /blockGenerate/);
   // 生成门禁绑定 effectiveOps / zeroCandidates / configuration_error
   assert.match(configSrc, /opsState\.blockGenerate|filteredModels\.zeroCandidates|configuration_error/);
+  // T05：节点内常驻静态错误条已彻底拆除，禁用原因只走按钮 title / 画板通知
+  assert.doesNotMatch(configSrc, /wf-config-panel__compat-error/);
+  assert.doesNotMatch(configSrc, /wf-compat-error/);
 });
 
 test('ConfigPanel 写入 canonical params.operation', () => {
@@ -173,11 +176,11 @@ test('四模态均可消费 filtered model / effectiveOps', () => {
 });
 
 
-test('empty inputs suppress both hint and error banner; fixed audio tabs are absent', () => {
-  assert.match(configSrc, /quietReason = reasonCode === 'prompt_required'/);
+test('empty inputs suppress the hint; block reason lives on the disabled button, not a static bar', () => {
   assert.doesNotMatch(configSrc, /data-testid="wf-input-hint"/);
-  assert.match(configSrc, /!quietReason && \(opsState\.blockGenerate/);
+  assert.doesNotMatch(configSrc, /role="alert"[\s\S]*?wf-compat-error/);
   assert.match(configSrc, /disabledReason=\{blockReason\}/);
+  assert.match(configSrc, /onDisabledClick=\{handleDisabledGenerateClick\}/);
   assert.doesNotMatch(configSrc, /handleAudioSubModeChange|wf-config-panel__audio-tabs/);
   assert.match(configSrc, /opsState.selectedOperationId === 'text_to_music'/);
 });

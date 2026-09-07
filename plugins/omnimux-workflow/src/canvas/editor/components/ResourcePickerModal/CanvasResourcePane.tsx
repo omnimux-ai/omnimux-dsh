@@ -19,6 +19,10 @@ export interface CanvasResourcePaneProps {
   items: CanvasResourceItem[];
   selectedIds: string[];
   onToggle: (nodeId: string, alreadyConnected: boolean) => void;
+  /** T03：目标 slot 接受的素材类型；列表按此预过滤并锁定分类。 */
+  acceptedTypes?: readonly string[];
+  /** T03：slot 装填会话允许选中已连入（未消费）的供给。 */
+  allowConnectedSelection?: boolean;
 }
 
 function typeLabelKey(type: MaterialType): string {
@@ -38,12 +42,23 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
   items,
   selectedIds,
   onToggle,
+  acceptedTypes,
+  allowConnectedSelection = false,
 }) => {
   const t = useT();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<ResourceTypeFilter>('all');
   const [view, setView] = useState<ResourcePickerView>('grid');
   const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({});
+
+  const scopedItems = useMemo(
+    () => (acceptedTypes?.length
+      ? items.filter((item) => acceptedTypes.includes(item.materialType))
+      : items),
+    [items, acceptedTypes],
+  );
+  const lockedFilter = acceptedTypes?.length === 1 ? acceptedTypes[0] as ResourceTypeFilter : null;
+  const effectiveFilter = lockedFilter ?? typeFilter;
 
   const filterOptions = useMemo(
     () => [
@@ -56,11 +71,11 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
   );
 
   const visible = useMemo(
-    () => filterCanvasResources(items, query, typeFilter),
-    [items, query, typeFilter],
+    () => filterCanvasResources(scopedItems, query, effectiveFilter),
+    [scopedItems, query, effectiveFilter],
   );
 
-  const emptyKey = items.length === 0 ? 'picker.empty' : 'picker.emptyFilter';
+  const emptyKey = scopedItems.length === 0 ? 'picker.empty' : 'picker.emptyFilter';
 
   return (
     <div className="wf-picker-pane">
@@ -75,13 +90,15 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <CustomSelect
-          className="wf-picker-filter"
-          variant="standard"
-          value={typeFilter}
-          options={filterOptions}
-          onChange={(value) => setTypeFilter(value)}
-        />
+        {!lockedFilter && (
+          <CustomSelect
+            className="wf-picker-filter"
+            variant="standard"
+            value={typeFilter}
+            options={filterOptions}
+            onChange={(value) => setTypeFilter(value)}
+          />
+        )}
         <div className="wf-picker-view-toggle" role="group" aria-label={t('picker.view.grid')}>
           <button
             type="button"
@@ -117,8 +134,8 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                 className={`wf-picker-card ${selected ? 'wf-picker-card--selected' : ''} ${
                   item.alreadyConnected ? 'wf-picker-card--added' : ''
                 }`}
-                onClick={() => onToggle(item.nodeId, item.alreadyConnected)}
-                disabled={item.alreadyConnected}
+                onClick={() => onToggle(item.nodeId, item.alreadyConnected && !allowConnectedSelection)}
+                disabled={item.alreadyConnected && !allowConnectedSelection}
                 title={item.title}
               >
                 <PreviewThumb
@@ -127,7 +144,7 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                   previewUrl={item.previewUrl}
                   width={measured[item.nodeId]?.width ?? item.width}
                   height={measured[item.nodeId]?.height ?? item.height}
-                  badge={item.alreadyConnected ? 'added' : selected ? 'selected' : 'none'}
+                  badge={selected ? 'selected' : item.alreadyConnected ? 'added' : 'none'}
                   addedLabel={t('picker.added')}
                   fallbackLabel={t(typeLabelKey(item.materialType))}
                   mimeOrName={item.previewUrl}
@@ -154,8 +171,8 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                 className={`wf-picker-row ${selected ? 'wf-picker-row--selected' : ''} ${
                   item.alreadyConnected ? 'wf-picker-row--added' : ''
                 }`}
-                onClick={() => onToggle(item.nodeId, item.alreadyConnected)}
-                disabled={item.alreadyConnected}
+                onClick={() => onToggle(item.nodeId, item.alreadyConnected && !allowConnectedSelection)}
+                disabled={item.alreadyConnected && !allowConnectedSelection}
               >
                 <PreviewThumb
                   layout="list"
@@ -179,7 +196,7 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                     {t(typeLabelKey(item.materialType))}
                   </span>
                 </div>
-                {item.alreadyConnected ? (
+                {item.alreadyConnected && !allowConnectedSelection ? (
                   <span className="wf-picker-added-badge wf-picker-added-badge--inline">
                     <Check size={11} />
                     {t('picker.added')}

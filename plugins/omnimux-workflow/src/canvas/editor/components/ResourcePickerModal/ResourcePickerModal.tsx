@@ -11,6 +11,7 @@ import {
   type LocalFileDraft,
   type ResourcePickerTab,
 } from '../../utils/resourcePickerPolicy.ts';
+import type { ResourcePickerSlotTarget } from '../../hooks/useResourcePicker.ts';
 import CanvasResourcePane from './CanvasResourcePane';
 import LocalUploadPane from './LocalUploadPane';
 
@@ -18,6 +19,8 @@ export interface ResourcePickerModalProps {
   open: boolean;
   nodeId: string;
   initialTab?: ResourcePickerTab;
+  /** T03：卡槽装填会话——预过滤素材类型、允许选中已连入供给、提交时 pinned 进 slot。 */
+  slotTarget?: ResourcePickerSlotTarget | null;
   onCancel: () => void;
   onCommit: (payload: {
     selectedCanvasNodeIds: string[];
@@ -29,6 +32,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   open,
   nodeId,
   initialTab = 'canvas',
+  slotTarget = null,
   onCancel,
   onCommit,
 }) => {
@@ -72,7 +76,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
 
   const usableCanvasCount = selectedIds.filter((id) => {
     const item = canvasItems.find((entry) => entry.nodeId === id);
-    return item && !item.alreadyConnected;
+    return item && (!item.alreadyConnected || Boolean(slotTarget));
   }).length;
   const selectedCount = usableCanvasCount + localFiles.length;
 
@@ -140,6 +144,8 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
           items={canvasItems}
           selectedIds={selectedIds}
           onToggle={handleToggle}
+          acceptedTypes={slotTarget?.acceptedTypes}
+          allowConnectedSelection={Boolean(slotTarget)}
         />
       ) : (
         <LocalUploadPane

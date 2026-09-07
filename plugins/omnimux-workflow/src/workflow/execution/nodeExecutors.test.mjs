@@ -53,10 +53,13 @@ test('full scheduling may defer a generated dependency; single execution and mis
 });
 
 
-test('final operation validation rejects incompatible media and ambiguous audio text with zero requests', async () => {
+test('nonconsumed media stays out of requests; ambiguous audio text remains blocked', async () => {
   const requests = [];
-  await assert.rejects(dispatch({ first: { mediaAssets: [{ type: 'image', url: 'https://example.test/image.png' }] }, second: { text: 'body' } }, requests));
-  assert.equal(requests.length, 0);
+  await dispatch({ first: { mediaAssets: [{ type: 'image', url: 'https://example.test/image.png' }] }, second: { text: 'body' } }, requests);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].references, undefined);
+  assert.equal(requests[0].image, undefined);
+  requests.length = 0;
   const audioCatalog = { source: 'omnimux', models: [{ id: 'voice-model', listed: true, operations: [{ id: 'speak', listed: true, output: { type: 'audio' }, inputs: [{ slot: 'prompt', role: 'prompt', source: 'node_field', accepts: ['text'], min: 1, max: 1 }] }] }] };
   await assert.rejects(dispatch({ first: { text: '朗读正文' }, second: { text: '另一段正文' } }, requests, { ...target, data: { materialType: 'audio', prompt: '温柔一点', params: { model: 'voice-model', operation: 'speak' } } }, audioCatalog), /正文/);
   assert.equal(requests.length, 0);

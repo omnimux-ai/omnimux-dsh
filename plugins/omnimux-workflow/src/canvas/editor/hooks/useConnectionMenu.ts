@@ -49,7 +49,7 @@ const INITIAL_MENU_STATE: ConnectionMenuState = {
 };
 
 export function useConnectionMenu(options?: {
-  /** 拒绝提示旁路（CanvasEditor 的 wf-rejected-toast）。 */
+  /** 拒绝提示旁路（T05：CanvasEditor 的画板级 structure_reject 通知）。 */
   onReject?: (reason: string) => void;
 }) {
   const t = useT();

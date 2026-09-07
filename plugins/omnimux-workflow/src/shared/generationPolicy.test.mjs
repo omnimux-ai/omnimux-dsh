@@ -78,7 +78,7 @@ test('graph atomically assigns new-node preference; manual choice never changes 
   assert.deepEqual(manual.nodes.find((n)=>n.id==='old'),sibling);
 });
 
-test('input adaptation preserves assets, explains switch, and leaves preference data untouched', () => {
+test('supply changes preserve the current model, operation and stored preference', () => {
   const view=projectCanvasCatalog(catalog());
   const prefs={text:CLAUDE};
   const asset={...node('asset'),data:{nodeKind:'import',materialType:'video'}};
@@ -86,9 +86,10 @@ test('input adaptation preserves assets, explains switch, and leaves preference 
   assert.equal(result.status,'allowed');
   assert.equal(result.edges.length,1);
   const changed=result.nodes.find((n)=>n.id==='n');
-  assert.equal(changed.data.params.model,GEMINI);
-  assert.equal(changed.data.params.operation,'vision_chat');
-  assert.deepEqual(changed.data.compat.adaptation,{fromModelId:CLAUDE,toModelId:GEMINI,toModelLabel:'Gemini 3.8 Flash',inputTypes:['video']});
+  assert.equal(changed.data.params.model,CLAUDE);
+  assert.equal(changed.data.params.operation,'chat');
+  assert.equal(changed.data.compat.adaptation,undefined);
+  assert.deepEqual(changed.data.slotBindings,{});
   assert.deepEqual(prefs,{text:CLAUDE});
 });
 

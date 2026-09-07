@@ -492,7 +492,7 @@ function isRequiredNodeFieldPresent(slot: InputSlotDto, value: unknown): boolean
 }
 
 /** Slots that upstream edges can bind into (prompt/node_field slots excluded). */
-function bindableSlots(op: ContractOperationView): InputSlotDto[] {
+export function bindableSlots(op: ContractOperationView): InputSlotDto[] {
   return op.inputs.filter(
     (slot) => slot.source !== 'node_field' && slot.role !== 'prompt' && isMediaInputType(slot.type),
   );

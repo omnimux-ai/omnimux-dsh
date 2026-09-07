@@ -1,5 +1,5 @@
 /**
- * ConfigPanel — 统一材质创作底栏（Issue 467 / W2）。
+ * ConfigPanel — 统一材质创作底栏（Issue 467 / W2；Feed-Slot 阶段二 T03/T04/T05）。
  *
  * Contract-driven:
  *   - model picker = only compatible (acceptsCurrentInputs) rows; Hide, Don't Grey
@@ -7,9 +7,14 @@
  *   - writes canonical params.operation only
  *   - zero candidates → empty state + block generate with typed reason
  *   - Whisper / unlisted ASR never enter the DOM
+ *
+ * Feed-Slot:
+ *   - 媒体卡槽由 deriveSlotLayout 的 preset 驱动（SlotWells），slotBindings 是消费真源；
+ *   - 不再有节点内常驻静态错误条：禁用原因走 GenerateButton title/disabledReason，
+ *     瞬时反馈走画板级通知（canvasNoticeService）。
  */
 
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Maximize2,
   Minimize2,
@@ -20,8 +25,6 @@ import {
   Image as ImageIcon,
   X,
   AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
 } from 'lucide-react';
 import type { MaterialNodeData } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
@@ -36,9 +39,13 @@ import { useCanvasStore } from '../../../../store/canvasStore';
 import { useUpstreamMedia, toUpstreamSnapshots } from '../../../hooks/useUpstreamMedia';
 import { useModelParameterSchema, getCachedCatalog } from '../../../hooks/useModelParameterSchema';
 import { resolveNodeLifecycle } from '../../../utils/nodeMaterialLifecycle';
+import { canvasNoticeService } from '../../../notices/canvasNoticeService.ts';
 import GenerateButton from './GenerateButton';
+import SlotWells from './SlotWells/SlotWells';
+import type { SlotPickRequest } from './SlotWells/types.ts';
 import { VideoTriggerBar } from './videoParams/VideoTriggerBar';
 import { VideoParamPopover } from './videoParams/VideoParamPopover';
+import { filterWrite } from './videoParams/paramSchemaFilter.ts';
 import { ImageTriggerBar } from './imageParams/ImageTriggerBar';
 import { ImageParamPopover } from './imageParams/ImageParamPopover';
 import { resolveEffectiveImageParams } from './imageParams/imageParamAdapter';
@@ -53,6 +60,15 @@ import {
   resolveEffectiveVideoParams,
   validateVideoParamsForUi,
 } from './videoParams/videoParamAdapter';
+import {
+  autoFillSlots,
+  deriveSlotLayout,
+  swapNamedSlots,
+  type FeedAsset,
+  type SlotBindings,
+  type SlotConflict,
+  type SlotSpec,
+} from '../../../../../shared/graph/feedSlot/index.ts';
 import {
   buildEffectiveOpsUiState,
   buildFilteredModelOptions,
@@ -71,7 +87,8 @@ export interface ConfigPanelProps {
   onGenerate: () => void;
   /** 全图/其他节点执行中（禁用执行入口） */
   execBusy: boolean;
-  onOpenResourcePicker?: () => void;
+  /** 唤起 ResourcePicker；带 SlotPickRequest 时进入卡槽装填会话。 */
+  onOpenResourcePicker?: (request?: SlotPickRequest) => void;
 }
 
 function getModelVisuals(id: string) {
@@ -162,7 +179,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               type="button"
               className="wf-param-pill wf-param-pill--btn"
               style={{ padding: '4px 10px', height: '28px' }}
-              onClick={onOpenResourcePicker}
+              onClick={() => onOpenResourcePicker()}
             >
               <span>{t('node.replace')}</span>
             </button>
@@ -173,37 +190,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   }
 
   const isAsrTool = selectedTool === 'audio-transcription';
-
-  const handleUnbind = useCallback(
-    (upstreamNodeId: string, edgeId?: string) => {
-      const state = useCanvasStore.getState();
-      const edgeIdsToRemove = state.edges
-        .filter((edge) => edge.target === nodeId && (edgeId ? edge.id === edgeId : edge.source === upstreamNodeId))
-        .map((edge) => edge.id);
-      if (edgeIdsToRemove.length > 0) {
-        state.applyCanvasInputMutation({ removeEdgeIds: edgeIdsToRemove });
-      }
-    },
-    [nodeId],
-  );
-
-  const handleMoveUpstream = useCallback((edgeId: string, direction: -1 | 1) => {
-    const state = useCanvasStore.getState();
-    const inbound = state.edges.filter((edge) => edge.target === nodeId);
-    const index = inbound.findIndex((edge) => edge.id === edgeId);
-    const other = inbound[index + direction];
-    const current = inbound[index];
-    if (!current || !other) return;
-    const currentIndex = state.edges.findIndex((edge) => edge.id === current.id);
-    const otherIndex = state.edges.findIndex((edge) => edge.id === other.id);
-    if (currentIndex < 0 || otherIndex < 0) return;
-    state.pushHistory();
-    state.setEdges((edges) => {
-      const next = [...edges];
-      [next[currentIndex], next[otherIndex]] = [next[otherIndex]!, next[currentIndex]!];
-      return next;
-    });
-  }, [nodeId]);
 
   const localPrompt = resolveGenerationPrompt(nodeData);
 
@@ -287,7 +273,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         }
         return;
       }
-      onUpdateNodeData({ params: { ...params, [key]: value } });
+      // T04：视频参数写入经声明式白名单过滤（hidden / 非白名单键被剥离）。
+      const patch = materialType === 'video'
+        ? filterWrite({ [key]: value }, typeof params.operation === 'string' ? params.operation : undefined)
+        : { [key]: value };
+      if (Object.keys(patch).length === 0) return;
+      onUpdateNodeData({ params: { ...params, ...patch } });
     },
     [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots],
   );
@@ -387,6 +378,108 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
 
+  // ---- Feed-Slot 卡槽（T03）：preset 驱动，slotBindings 为消费真源 ----
+  const slotLayout = useMemo(
+    () => deriveSlotLayout(activeCatalog, modelValue || undefined, opsState.selectedOperationId || undefined),
+    [activeCatalog, modelValue, opsState.selectedOperationId],
+  );
+
+  const feedAssets = useMemo<FeedAsset[]>(
+    () => upstreams
+      .filter((item) => item.materialType !== 'text')
+      .map((item, ordinal) => ({
+        edgeId: item.edgeId ?? `feed-${item.nodeId}-${ordinal}`,
+        sourceNodeId: item.nodeId,
+        ...(item.outputId ? { outputId: item.outputId } : {}),
+        type: item.materialType,
+        availability: item.availability,
+        ...(item.mimeType ? { mimeType: item.mimeType } : {}),
+        ordinal,
+        ...(item.url ? { url: item.url } : {}),
+        ...(item.role ? { role: item.role } : {}),
+        ...(item.targetSlot ? { targetSlot: item.targetSlot } : {}),
+      })),
+    [upstreams],
+  );
+
+  const storedSlotBindings = nodeData.slotBindings as SlotBindings | undefined;
+  const slotBindings = useMemo<SlotBindings>(() => {
+    if (storedSlotBindings) return storedSlotBindings;
+    // 展示兜底：尚未经 gateway 重算的旧节点按内核自动装填派生。
+    if (slotLayout.preset === 'none' || slotLayout.slots.length === 0) return {};
+    return autoFillSlots(feedAssets, slotLayout).bindings;
+  }, [storedSlotBindings, slotLayout, feedAssets]);
+  const slotConflicts = (nodeData.slotConflicts ?? []) as SlotConflict[];
+
+  const patchSlotBindings = useCallback(
+    (next: SlotBindings) => {
+      useCanvasStore.getState().applyCanvasInputMutation({
+        nodePatches: [{ nodeId, data: { slotBindings: next } }],
+      });
+    },
+    [nodeId],
+  );
+
+  const handleSwapSlots = useCallback(
+    (firstSlot: string, lastSlot: string) => {
+      patchSlotBindings(swapNamedSlots(slotBindings, firstSlot, lastSlot));
+    },
+    [patchSlotBindings, slotBindings],
+  );
+
+  // 卸装填：只摘除槽位占用，供给边保留，素材回到 Feed。
+  const handleClearOccupant = useCallback(
+    (slot: string, edgeId: string) => {
+      patchSlotBindings({
+        ...slotBindings,
+        [slot]: (slotBindings[slot] ?? []).filter((occupant) => occupant.edgeId !== edgeId),
+      });
+    },
+    [patchSlotBindings, slotBindings],
+  );
+
+  const handlePickSlot = useCallback(
+    (request: SlotPickRequest) => onOpenResourcePicker?.(request),
+    [onOpenResourcePicker],
+  );
+
+  // 必需槽位缺口：空卡槽自解释，提交按钮 disabledReason 同步提示。
+  const slotLabelOf = useCallback(
+    (spec: SlotSpec) => {
+      const label = t(spec.labelKey);
+      return label === spec.labelKey ? spec.slot : label;
+    },
+    [t],
+  );
+  const missingRequiredSlots = useMemo(
+    () => slotLayout.slots.filter((spec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
+    [slotLayout, slotBindings],
+  );
+  const slotShortageReason = missingRequiredSlots.length > 0
+    ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
+    : undefined;
+
+  // T05：切换模式/模型导致已有供给不再被消费 → 画板 Banner（5s 自动淡出）。
+  const boundEdgeIds = useMemo(
+    () => Object.values(slotBindings).flatMap((occupants) => occupants.map((occupant) => occupant.edgeId)).sort(),
+    [slotBindings],
+  );
+  const modeConsumptionRef = useRef<{ key: string; bound: string[] } | null>(null);
+  useEffect(() => {
+    const key = `${modelValue}::${opsState.selectedOperationId || ''}`;
+    const prev = modeConsumptionRef.current;
+    if (prev && prev.key !== key && prev.bound.length > 0) {
+      const lost = prev.bound.filter((edgeId) => !boundEdgeIds.includes(edgeId));
+      if (lost.length > 0) {
+        canvasNoticeService.publish({
+          kind: 'mode_consumption_changed',
+          message: t('notice.modeConsumptionChanged'),
+        });
+      }
+    }
+    modeConsumptionRef.current = { key, bound: boundEdgeIds };
+  }, [modelValue, opsState.selectedOperationId, boundEdgeIds, t]);
+
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
     if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
@@ -423,7 +516,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     [materialType, localPrompt, params, upstreamSnapshots, videoEffectiveParams],
   );
 
-  // Generate gate: blocked when zero effective ops / zero candidates / configuration_error.
+  // Generate gate: blocked when zero effective ops / zero candidates / configuration_error /
+  // 必需卡槽空缺 / 待确认参数调整 / 执行中。
   const nodeCompat = (nodeData as Record<string, unknown>).compat as
     | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[]; adaptation?: { toModelLabel: string; inputTypes: string[] } }
     | undefined;
@@ -433,14 +527,15 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     || nodeCompat?.status === 'configuration_error'
     || videoValidationErrors.length > 0
     || Boolean(pendingVideoParamAdjustment)
+    || missingRequiredSlots.length > 0
     || execBusy;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
     generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || pendingVideoParamAdjustment?.notices[0]
-    || videoValidationErrors[0];
-  const quietReason = reasonCode === 'prompt_required' || reasonCode === 'catalog_unavailable' || reasonCode === 'input_waiting';
+    || videoValidationErrors[0]
+    || slotShortageReason;
   const adaptation = nodeCompat?.adaptation;
   const adaptationInputs = adaptation?.inputTypes.map((type) => t(`node.type.${type}`)).join('、');
   const adaptationMessage = adaptation
@@ -451,35 +546,19 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const showEmptyModels = filteredModels.zeroCandidates || modelOptions.length === 0;
 
+  // T05：禁用态点击 → 画板 Toast（4s 自动淡出），不再渲染常驻静态错误条。
+  const handleDisabledGenerateClick = useCallback(() => {
+    canvasNoticeService.publish({
+      kind: 'submit_blocked_click',
+      message: blockReason || t('notice.submitBlocked'),
+    });
+  }, [blockReason, t]);
+
   return (
     <div className="wf-config-panel" data-effective-ops={opsState.count}>
       {adaptationMessage ? (
         <div className="wf-config-panel__input-hint" role="status" data-testid="wf-model-adaptation">
           {adaptationMessage}
-        </div>
-      ) : null}
-
-      {/* Configuration / zero-candidate error banner */}
-      {!quietReason && (opsState.blockGenerate || showEmptyModels || nodeCompat?.status === 'configuration_error') && blockReason ? (
-        <div
-          className="wf-config-panel__compat-error"
-          role="alert"
-          data-testid="wf-compat-error"
-          data-reason-code={reasonCode || 'no_compatible_model'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 12px',
-            fontSize: 12,
-            color: 'var(--dsw-alias-label-primary)',
-            background: 'var(--dsw-alias-bg-secondary)',
-            borderRadius: 8,
-            margin: '8px 12px 0',
-          }}
-        >
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>{blockReason}</span>
         </div>
       ) : null}
 
@@ -527,105 +606,17 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className="wf-config-panel__prompt-header">
-          {upstreams.length > 0 || onOpenResourcePicker ? (
-            <div className="wf-config-panel__ref-slots-group" data-testid="wf-slot-cards">
-              {upstreams.map((item, index) => (
-                <div
-                  key={item.edgeId ?? item.nodeId}
-                  className={`wf-config-panel__ref-thumb-slot ${
-                    item.hasMedia ? 'wf-config-panel__ref-thumb-slot--ready' : ''
-                  }`}
-                  title={item.availabilityMessage ?? `${item.label}：${item.textContent?.slice(0, 120) || '使用当前选定结果'}`}
-                  data-input-availability={item.availability}
-                  data-mime={item.mimeType ?? 'unknown'}
-                  data-size-bytes={item.sizeBytes ?? 'unknown'}
-                  data-duration-sec={item.durationSec ?? 'unknown'}
-                  data-reference-order={index + 1}
-                  data-reference-role={item.role ?? 'auto'}
-                >
-                  {item.url && item.materialType === 'image' ? (
-                    <img
-                      src={item.url}
-                      alt={item.label}
-                      className="wf-config-panel__ref-thumb-media"
-                    />
-                  ) : item.url && item.materialType === 'video' ? (
-                    <div className="wf-config-panel__ref-thumb-video-box">
-                      <video src={item.url} className="wf-config-panel__ref-thumb-media" muted />
-                      <Play size={10} className="wf-config-panel__ref-thumb-overlay-icon" />
-                    </div>
-                  ) : item.materialType === 'audio' ? (
-                    <div className="wf-config-panel__ref-thumb-icon-box wf-config-panel__ref-thumb-icon-box--audio">
-                      <Music size={13} />
-                    </div>
-                  ) : item.materialType === 'text' ? (
-                    <div className="wf-config-panel__ref-thumb-icon-box wf-config-panel__ref-thumb-icon-box--text">
-                      <FileText size={13} />
-                    </div>
-                  ) : (
-                    <div className="wf-config-panel__ref-thumb-icon-box">
-                      <ImageIcon size={13} />
-                    </div>
-                  )}
-
-                  {item.hasMedia && <span className="wf-config-panel__ref-thumb-dot" />}
-
-                  <span className="wf-config-panel__ref-thumb-order" title={item.role ?? `素材 ${index + 1}`}>
-                    {item.role === 'first_frame' ? '首' : item.role === 'last_frame' ? '尾' : index + 1}
-                  </span>
-
-                  {item.edgeId && upstreams.length > 1 ? (
-                    <span className="wf-config-panel__ref-thumb-sort">
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        aria-label={`将素材 ${index + 1} 前移`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleMoveUpstream(item.edgeId!, -1);
-                        }}
-                      >
-                        <ArrowLeft size={8} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === upstreams.length - 1}
-                        aria-label={`将素材 ${index + 1} 后移`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleMoveUpstream(item.edgeId!, 1);
-                        }}
-                      >
-                        <ArrowRight size={8} />
-                      </button>
-                    </span>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    className="wf-config-panel__ref-thumb-unbind nodrag"
-                    title={t('edge.disconnect')}
-                    aria-label={t('edge.disconnect')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUnbind(item.nodeId, item.edgeId);
-                    }}
-                  >
-                    <X size={8} />
-                  </button>
-                </div>
-              ))}
-              {onOpenResourcePicker ? (
-                <button
-                  type="button"
-                  className="wf-config-panel__add-ref-btn"
-                  onClick={onOpenResourcePicker}
-                  title={t('picker.addRef')}
-                >
-                  <Plus size={14} />
-                </button>
-              ) : null}
-            </div>
+          {/* T03：模式驱动卡槽；none 预设不渲染、不占高度。 */}
+          {slotLayout.preset !== 'none' && slotLayout.slots.length > 0 ? (
+            <SlotWells
+              layout={slotLayout}
+              bindings={slotBindings}
+              conflicts={slotConflicts}
+              upstreams={upstreams}
+              onPickSlot={handlePickSlot}
+              onSwapSlots={handleSwapSlots}
+              onClearOccupant={handleClearOccupant}
+            />
           ) : (
             <span />
           )}
@@ -712,7 +703,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             </div>
           )}
 
-          {/* 视频专属参数胶囊：单行摘要 TriggerBar + Portal 浮层（废除前置 `|` 分隔，由 flex gap 承担） */}
+          {/* 视频专属参数胶囊：四段式摘要 TriggerBar + Portal 浮层 */}
           {materialType === 'video' && videoEffectiveParams && (
             <div ref={videoTriggerRef} className="wf-video-trigger-bar__wrap">
               <VideoTriggerBar
@@ -743,6 +734,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             onClick={onGenerate}
             disabled={blockGenerate}
             disabledReason={blockReason}
+            onDisabledClick={handleDisabledGenerateClick}
             isGenerating={
               nodeData.executionStatus === 'running'
               || resolveNodeLifecycle({ type: nodeData.materialType, data: nodeData as any }) === 'loading'

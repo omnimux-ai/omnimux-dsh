@@ -71,7 +71,7 @@ describe('reconcileCanvasForCatalog', () => {
     assert.equal(gen.data.compat.catalogFingerprint, catalog.fingerprint);
   });
 
-  it('zero-candidate historical graph keeps edges and marks configuration_error', () => {
+  it('unsupported historical feed keeps edges and does not invalidate a prompt-only task', () => {
     const nodes = [
       {
         id: 'src',
@@ -101,10 +101,10 @@ describe('reconcileCanvasForCatalog', () => {
     assert.equal(result.edges.length, 1, 'edges must not be deleted');
     assert.equal(result.edges[0].id, 'e1');
     const gen = result.nodes.find((n) => n.id === 'g1');
-    // Either auto-adapted to a compatible model or configuration_error.
-    // gif is unsupported by all fixture image slots → configuration_error.
-    assert.equal(gen.data.compat.status, 'configuration_error');
-    assert.equal(gen.data.compat.acceptsCurrentInputs, false);
+    assert.equal(gen.data.compat.status, 'ok');
+    assert.equal(gen.data.compat.acceptsCurrentInputs, true);
+    assert.deepEqual(gen.data.slotBindings, {});
+    assert.equal(gen.data.compat.readyToSubmit, false, 'the task still needs prompt');
   });
 
   it('readGraphCatalogFingerprint reads the stamped value', () => {

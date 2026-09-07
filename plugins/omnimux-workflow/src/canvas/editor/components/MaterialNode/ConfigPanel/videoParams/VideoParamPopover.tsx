@@ -10,12 +10,14 @@
  * No raw hex, no banned token island, no JS theme branch. light/dark follows host cascade.
  */
 
+import { useMemo } from 'react';
 import type { ReactElement, RefObject } from 'react';
 import type { CapabilityModelItem, ModelParameterSchema } from '../../../../../../shared/api.ts';
 import { CustomSelect, CustomSlider } from '../../../../../ui/index.ts';
 import { CfgPopoverShell } from '../cfg/CfgPopoverShell.tsx';
 import { AspectCardGrid } from './AspectCardGrid.tsx';
 import { DurationGrid } from './DurationGrid.tsx';
+import { projectParamControl } from './paramSchemaFilter.ts';
 import {
   BooleanSwitchSegment,
   OperationSegment,
@@ -59,21 +61,36 @@ export function VideoParamPopover({
   const durationRange = schema.duration?.range;
   const showModeUi = Boolean(params.showModeUi) && (params.effectiveOperations?.length ?? 0) >= 2;
   const activeOperation = params.effectiveOperations.find((operation) => operation.id === params.operation);
-  const needsFileUrl = activeOperation?.slots.some((slot) => slot.slot === 'file_url') ?? false;
-  const needsLinkUrl = activeOperation?.slots.some((slot) => slot.slot === 'link_url') ?? false;
-  const booleanControls = [
+
+  // T04 声明式参数过滤：白名单 ∩ schema 支持度 → Popover 常规项 / Advanced 高级项。
+  const projected = useMemo(
+    () => projectParamControl({
+      operationId: params.operation,
+      schema,
+      operationCount: params.effectiveOperations?.length ?? (showModeUi ? 2 : 1),
+    }),
+    [params.operation, params.effectiveOperations, schema, showModeUi],
+  );
+  const popoverKeys = new Set(projected.popover);
+  const advancedKeys = new Set(projected.advanced);
+
+  const needsFileUrl = advancedKeys.has('fileUrl')
+    && (activeOperation?.slots.some((slot) => slot.slot === 'file_url') ?? false);
+  const needsLinkUrl = advancedKeys.has('linkUrl')
+    && (activeOperation?.slots.some((slot) => slot.slot === 'link_url') ?? false);
+  const booleanControls = ([
     ['watermark', 'AI 水印', schema.watermark, params.watermark],
     ['returnLastFrame', '返回尾帧', schema.returnLastFrame, params.returnLastFrame],
     ['webSearch', '联网搜索', schema.webSearch, params.webSearch],
     ['nsfwCheck', '内容审核', schema.nsfwCheck, params.nsfwCheck],
-  ] as const;
-  const enumControls = [
+  ] as const).filter(([field]) => advancedKeys.has(field));
+  const enumControls = ([
     ['outputFormat', '输出格式', schema.outputFormat, params.outputFormat],
     ['referenceTaskType', '参考任务类型', schema.referenceTaskType, params.referenceTaskType],
     ['generationType', '生成类型', schema.generationType, params.generationType],
-  ] as const;
+  ] as const).filter(([field]) => advancedKeys.has(field));
   const showAdvanced = Boolean(
-    schema.seed
+    (advancedKeys.has('seed') && schema.seed)
     || booleanControls.some(([, , definition]) => definition?.supported)
     || enumControls.some(([, , definition]) => definition?.options?.length),
   );
@@ -90,8 +107,8 @@ export function VideoParamPopover({
         className="wf-video-param-popover__scrollable"
         data-show-mode={showModeUi ? 'true' : 'false'}
       >
-        {/* effectiveOps ≥ 2 only — 0/1 不渲染 mode DOM */}
-        {showModeUi ? (
+        {/* effectiveOps ≥ 2 only — 0/1 不渲染 mode DOM；且 operation 须在 popover 白名单内 */}
+        {showModeUi && popoverKeys.has('operation') ? (
           <section
             className="wf-video-param-popover__section"
             data-testid="wf-operation-mode-section"
@@ -105,7 +122,7 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {(schema.aspectRatio?.options?.length ?? 0) > 0 ? (
+        {popoverKeys.has('aspectRatio') && (schema.aspectRatio?.options?.length ?? 0) > 0 ? (
           <section className="wf-video-param-popover__section">
             <h4 className="wf-video-param-popover__section-title">比例</h4>
             <AspectCardGrid
@@ -116,10 +133,10 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {resolutionOptions.length > 0 || params.hasSoundSupport ? (
+        {(resolutionOptions.length > 0 && popoverKeys.has('resolution')) || (params.hasSoundSupport && popoverKeys.has('sound')) ? (
           <section className="wf-video-param-popover__section" data-testid="wf-video-quality-section">
             <div className="wf-video-param-popover__quality-row">
-              {resolutionOptions.length > 0 ? (
+              {resolutionOptions.length > 0 && popoverKeys.has('resolution') ? (
                 <div className="wf-video-param-popover__quality-field">
                   <h4 className="wf-video-param-popover__section-title">清晰度</h4>
                   <ResolutionSegment
@@ -129,7 +146,7 @@ export function VideoParamPopover({
                   />
                 </div>
               ) : null}
-              {params.hasSoundSupport ? (
+              {params.hasSoundSupport && popoverKeys.has('sound') ? (
                 <div className="wf-video-param-popover__quality-field wf-video-param-popover__quality-field--sound">
                   <h4 className="wf-video-param-popover__section-title">有声</h4>
                   <SoundSwitchSegment
@@ -142,7 +159,7 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {durationOptions.length > 0 && (
+        {popoverKeys.has('duration') && durationOptions.length > 0 && (
           <section className="wf-video-param-popover__section">
             <h4 className="wf-video-param-popover__section-title">时长</h4>
             <DurationGrid
@@ -153,7 +170,7 @@ export function VideoParamPopover({
           </section>
         )}
 
-        {durationOptions.length === 0 && durationRange ? (
+        {popoverKeys.has('duration') && durationOptions.length === 0 && durationRange ? (
           <section className="wf-video-param-popover__section">
             <div className="wf-video-param-popover__section-heading">
               <h4 className="wf-video-param-popover__section-title">时长</h4>
@@ -186,6 +203,7 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
+
         {needsFileUrl || needsLinkUrl ? (
           <section className="wf-video-param-popover__section">
             <h4 className="wf-video-param-popover__section-title">
@@ -204,7 +222,7 @@ export function VideoParamPopover({
         {showAdvanced ? (
           <section className="wf-video-param-popover__section" data-testid="wf-video-advanced-parameters">
             <h4 className="wf-video-param-popover__section-title">高级参数</h4>
-            {schema.seed ? (
+            {advancedKeys.has('seed') && schema.seed ? (
               <label className="wf-video-param-popover__field-row">
                 <span>随机种子</span>
                 <input

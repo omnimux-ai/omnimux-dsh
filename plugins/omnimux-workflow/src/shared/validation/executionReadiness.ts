@@ -7,6 +7,9 @@ import { readNodeInputSource } from '../graph/nodeInputSource.ts';
 import type { UpstreamMediaSnapshot } from './operationUi.ts';
 import { readExplicitTargetSlot } from './compatKernel.ts';
 import { resolveNodeKind } from '../graph/materialNode.ts';
+import { deriveSlotLayout, hydrateSlotBindings, slotBindingConflicts, type SlotBindings, type SlotConflict } from '../graph/feedSlot/index.ts';
+import { effectiveSlotFingerprint, feedFromFingerprint } from '../graph/feedSlot/effectiveFingerprint.ts';
+import { resolveSlotOperation } from '../graph/feedSlot/resolveSlotOperation.ts';
 import {
   buildContractView,
   matchOperationInputs,
@@ -39,17 +42,17 @@ export interface ExecutionReadinessGraph {
 }
 
 function upstreamSnapshots(nodeId: string, graph?: ExecutionReadinessGraph): UpstreamMediaSnapshot[] {
-  return (graph?.edges ?? []).filter((edge) => edge.target === nodeId).flatMap((edge) => {
+  return (graph?.edges ?? []).filter((edge) => edge.target === nodeId).flatMap((edge, ordinal) => {
     const node = graph!.nodes.find((candidate) => candidate.id === edge.source);
     const source = readNodeInputSource(node ?? { id: edge.source }, graph?.workspaceId);
     const binding = edge.data?.slotBinding as { role?: string } | undefined;
     const inputs = graph?.resolvedInputs?.get(edge.source) ?? [{
-      nodeId: edge.source, label: source.label, outputId: source.outputId, materialType: source.materialType,
+      nodeId: edge.source, label: source.label, outputId: source.outputId, materialType: node ? source.materialType : String(edge.data?.feedType ?? source.materialType),
       availability: source.availability, availabilityMessage: source.message,
       textContent: source.output.text, url: source.output.mediaAssets?.[0]?.url,
       ...source.metadata,
     }];
-    return inputs.map((input) => ({ ...input, edgeId: edge.id,
+    return inputs.map((input) => ({ ...input, edgeId: edge.id ?? `feed-${edge.source}-${ordinal}`,
       role: typeof edge.data?.role === 'string' ? edge.data.role : binding?.role,
       targetSlot: readExplicitTargetSlot(edge.data ?? {}, edge.targetHandle),
     }));
@@ -89,12 +92,9 @@ export function findExecutionReadinessFailure(
       return source?.type === 'material' && resolveNodeKind(source.data ?? {}) === 'generate'
         && graph?.scheduledNodeIds?.has(source.id);
     }).map((input) => input.nodeId));
-    const unavailable = upstreams.find((input) => input.availability !== 'ready' && !deferred.has(input.nodeId));
-    if (unavailable) return {
-      nodeId: node.id,
-      reasonCode: unavailable.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
-      message: unavailable.availabilityMessage ?? `等待来源 ${unavailable.nodeId} 的内容`,
-    };
+    const waitingText = upstreams.find((input) => input.materialType === 'text' && input.availability !== 'ready' && !deferred.has(input.nodeId));
+    if (waitingText) return { nodeId: node.id, reasonCode: waitingText.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
+      message: waitingText.availabilityMessage ?? `等待来源 ${waitingText.nodeId} 的内容` };
     if (!view.available) return { nodeId: node.id, reasonCode: 'catalog_unavailable', message: '模型目录不可用，请稍后重试' };
     // These sources will run again; their old result metadata is not this run's input.
     upstreams = upstreams.map((input) => deferred.has(input.nodeId)
@@ -110,7 +110,7 @@ export function findExecutionReadinessFailure(
     const defaultModel = catalog?.defaults?.[outputKind as keyof NonNullable<CapabilityCatalog['defaults']>];
     const model = resolveModelView(view, requestedModel ?? defaultModel);
     if (!model) return { nodeId: node.id, reasonCode: 'unknown_model', message: '当前模型不可用，请选择模型后重试' };
-    const fingerprint = buildUiUpstreamFingerprint({
+    const rawFingerprint = buildUiUpstreamFingerprint({
       materialType: typeof data.materialType === 'string' ? data.materialType : undefined,
       prompt: typeof data.prompt === 'string' ? data.prompt : '',
       content: typeof data.content === 'string' ? data.content : undefined,
@@ -118,6 +118,16 @@ export function findExecutionReadinessFailure(
       nodeFields: params,
     });
     const outputType = typeof data.materialType === 'string' ? data.materialType : undefined;
+    const chosenId = resolveSlotOperation(catalog, model.id, params.operation, outputType, rawFingerprint);
+    const layout = deriveSlotLayout(catalog, model.id, chosenId);
+    const hydrated = data.slotBindings === undefined ? hydrateSlotBindings(feedFromFingerprint(rawFingerprint), layout) : undefined;
+    const bindings = (data.slotBindings ?? hydrated?.bindings ?? {}) as SlotBindings;
+    const conflicts = [...(data.slotConflicts ?? hydrated?.conflicts ?? []) as SlotConflict[], ...slotBindingConflicts(layout, bindings, feedFromFingerprint(rawFingerprint))];
+    if (conflicts.length) return { nodeId: node.id, reasonCode: 'role_conflict', message: '已指定素材的卡槽或用途不再合法，请重新绑定' };
+    const fingerprint = effectiveSlotFingerprint(rawFingerprint, layout, bindings, conflicts);
+    const unavailable = fingerprint.assets.find((asset) => asset.availability !== 'ready' && !deferred.has(asset.sourceNodeId));
+    if (unavailable) return { nodeId: node.id, reasonCode: unavailable.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
+      message: unavailable.availabilityMessage ?? `等待来源 ${unavailable.sourceNodeId} 的内容` };
     const opsState = buildEffectiveOpsUiState({
       catalog,
       modelId: model.id,
@@ -126,7 +136,7 @@ export function findExecutionReadinessFailure(
       ...(readString(params.operation) ? { preferredOperationId: readString(params.operation) } : {}),
     });
     const rawOperation = readString(params.operation);
-    const selectedOperationId = rawOperation ?? opsState.selectedOperationId ?? opsState.implicitOperationId;
+    const selectedOperationId = rawOperation ?? chosenId ?? opsState.selectedOperationId ?? opsState.implicitOperationId;
     const operation = selectedOperationId
       ? model.operations.find((candidate) => candidate.id === selectedOperationId && candidate.listed)
       : undefined;

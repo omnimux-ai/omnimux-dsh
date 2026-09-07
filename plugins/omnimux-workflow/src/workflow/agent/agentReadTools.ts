@@ -4,6 +4,7 @@
  */
 
 import { buildInitialOutputs } from '../execution/executionInputs.ts';
+import { prepareExecutionSlotGraph } from '../../shared/graph/feedSlot/prepareExecutionSlotGraph.ts';
 import type { CapabilityCatalog } from '../../shared/api.ts';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 import {
@@ -95,7 +96,7 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       const workspaceName = readString(args, 'workspace_name');
       const resolved = resolveWorkspace(store, workspaceId, workspaceName, { getActiveView });
       if ('error' in resolved) return resolved;
-      const workspace = resolved.snapshot;
+      let workspace = resolved.snapshot;
 
       let mode: 'full' | 'subset' | 'single';
       try {
@@ -107,6 +108,8 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
         );
       }
 
+      const catalog = (deps.getExecutionCatalog ? await deps.getExecutionCatalog() : deps.getCatalog ? await deps.getCatalog() : null) as CapabilityCatalog | null;
+      workspace = { ...workspace, ...prepareExecutionSlotGraph(workspace.nodes, workspace.edges, catalog) };
       const nodeIds = normalizeNodeIds(args.node_ids);
       let subgraph;
       try {
@@ -127,7 +130,7 @@ export function createWorkflowRunTool(deps: WorkflowAgentDeps): AgentToolSpec {
       }
       const readiness = findExecutionReadinessFailure(
         subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
-        (deps.getExecutionCatalog ? await deps.getExecutionCatalog() : deps.getCatalog ? await deps.getCatalog() : null) as CapabilityCatalog | null,
+        catalog,
         { nodes: workspace.nodes, edges: workspace.edges, workspaceId: workspace.id, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
       );
       if (readiness) {

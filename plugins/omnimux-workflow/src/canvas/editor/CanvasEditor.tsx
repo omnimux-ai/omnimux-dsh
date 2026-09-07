@@ -69,6 +69,8 @@ import { sanitizeEdges, sanitizeNodes } from '../bridge/persistSanitize';
 import { planInstantiateTemplate } from './utils/planInstantiateTemplate';
 import { SpreadsheetStage } from '../components/table-node/stage/SpreadsheetStage';
 import { TextStage } from '../components/text-stage/TextStage';
+import { CanvasNoticeHost } from './notices/CanvasNoticeHost';
+import { canvasNoticeService } from './notices/canvasNoticeService.ts';
 import { useTextStageStore } from '../store/textStageStore';
 import { registerTableCanvasSyncHandler } from '../store/tableStore';
 import type { CapabilityCatalog } from '../../shared/api';
@@ -187,7 +189,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   const redo = useCanvasStore((state) => state.redo);
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
-  const [lastRejectedReason, setLastRejectedReason] = useState<string | null>(null);
+  // T05：结构硬拒绝（自连/成环等）→ 画板级 Toast（3s 自动淡出，相同文案防堆叠）。
+  const publishStructureReject = useCallback((message: string) => {
+    canvasNoticeService.publish({ kind: 'structure_reject', message });
+  }, []);
   const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -459,7 +464,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     onConnectEnd: handleConnectEnd,
     onMenuSelect: handleConnectionMenuSelect,
     onMenuClose: handleConnectionMenuClose,
-  } = useConnectionMenu({ onReject: setLastRejectedReason });
+  } = useConnectionMenu({ onReject: publishStructureReject });
 
   // History recording: every nodes/edges change offers a snapshot; the
   // store debounces + dedupes internally (Gxgen useCanvasHistory port).
@@ -487,14 +492,10 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     (connection: Connection) => {
       const plan = applyCanvasInputMutation({ addEdges: [connection] });
       if (plan.status === 'rejected') {
-        const reasonText = t(rejectReasonKey(plan.reasonCode));
-        setLastRejectedReason(reasonText);
-        toast.warning(reasonText);
-      } else {
-        setLastRejectedReason(null);
+        publishStructureReject(t(rejectReasonKey(plan.reasonCode)));
       }
     },
-    [applyCanvasInputMutation, t],
+    [applyCanvasInputMutation, publishStructureReject, t],
   );
 
   // 拖线过程中的实时校验（同 Gxgen isValidConnection 接线）
@@ -935,9 +936,8 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         }}
       />
 
-      {lastRejectedReason && (
-        <div className="wf-rejected-toast">{lastRejectedReason}</div>
-      )}
+      {/* 画板级通知宿主（T05：Toast / Banner 自动淡出，替代节点内静态错误条） */}
+      <CanvasNoticeHost />
     </div>
   );
 };

@@ -7,14 +7,13 @@
  */
 
 import { join } from 'node:path';
-import { resolveExecutionMediaSource, type ResolveExecutionProjectFile } from './executionMediaSource.ts';
+import type { ResolveExecutionProjectFile } from './executionMediaSource.ts';
+import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
-import type { GenerationGateway, MediaInputRole, ReferenceAssetPayload, SubmitRequest } from '../seam/gateway';
+import type { GenerationGateway, SubmitRequest } from '../seam/gateway';
 import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
 import { validateGeneratedResult } from '../seam/generatedResult.ts';
-import { SeamGatewayError } from '../seam/SeamGatewayError.ts';
 import type {
-  ExecutionContext,
   NodeExecutor,
   NodeOutput,
 } from '../executors/registry';
@@ -59,84 +58,6 @@ function extFor(capability: 'text' | 'image' | 'video' | 'audio'): string {
   return 'txt';
 }
 
-interface UpstreamMultiModalData {
-  texts: string[];
-  references: ReferenceAssetPayload[];
-  audioTrack?: ReferenceAssetPayload;
-}
-
-const MEDIA_ROLES = new Set<MediaInputRole>([
-  'reference',
-  'first_frame',
-  'last_frame',
-  'controlnet',
-  'mask',
-  'audio_track',
-  'source',
-  'document',
-  'webpage',
-  'motion_source',
-]);
-
-function normalizeRole(value: unknown): MediaInputRole | undefined {
-  if (value === undefined || value === '') return undefined;
-  if (typeof value === 'string' && MEDIA_ROLES.has(value as MediaInputRole)) return value as MediaInputRole;
-  throw new SeamGatewayError('role_conflict', '输入素材的用途无效，请重新绑定素材');
-}
-
-/** Upstream output: collects text, all media references and audio tracks without short-circuiting. */
-function collectUpstreamMultiModal(ctx: ExecutionContext, resolveProjectFile?: ResolveExecutionProjectFile): UpstreamMultiModalData {
-  const texts: string[] = [];
-  const seenTexts = new Set<string>();
-  const seenMedia = new Set<string>();
-  const references: ReferenceAssetPayload[] = [];
-  let audioTrack: ReferenceAssetPayload | undefined;
-
-  const ordered: NonNullable<ExecutionContext['upstreamBindings']> = ctx.upstreamBindings && ctx.upstreamBindings.length > 0
-    ? ctx.upstreamBindings
-    : [...ctx.upstreamOutputs.entries()].map(([sourceNodeId, output]) => ({ sourceNodeId, output }));
-
-  for (const binding of ordered) {
-    const output = binding.output;
-    if (!output || (!output.text?.trim() && !output.mediaAssets?.length)) {
-      throw new SeamGatewayError('input_waiting', `来源 ${binding.sourceNodeId} 尚无可用输出，请补齐内容或移除引用`);
-    }
-    if (output.text?.trim() && !output.mediaAssets?.length && !seenTexts.has(binding.sourceNodeId)) {
-      seenTexts.add(binding.sourceNodeId);
-      texts.push(output.text.trim());
-    }
-    if (Array.isArray(output.mediaAssets) && output.mediaAssets.length > 0) {
-      for (const asset of output.mediaAssets) {
-        if (!asset || !asset.type) throw new SeamGatewayError('input_unavailable', `来源 ${binding.sourceNodeId} 的素材类型不可用`);
-        const pathOrUrl = resolveExecutionMediaSource(asset, { workspaceId: ctx.workspaceId, mediaDir: ctx.mediaDir, resolveProjectFile });
-        if (!pathOrUrl) continue;
-
-        const role = normalizeRole(binding.role);
-        const key = JSON.stringify([binding.sourceNodeId, pathOrUrl, role, binding.targetSlot ?? '']);
-        if (seenMedia.has(key)) continue;
-        seenMedia.add(key);
-        const payload: ReferenceAssetPayload = {
-          role,
-          type: asset.type,
-          pathOrUrl,
-          sourceNodeId: binding.sourceNodeId,
-          ...(binding.edgeId ? { edgeId: binding.edgeId } : {}),
-          ...(binding.targetSlot ? { targetSlot: binding.targetSlot } : {}),
-          ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
-          ...(typeof asset.sizeBytes === 'number' ? { sizeBytes: asset.sizeBytes } : {}),
-          ...(typeof asset.durationSec === 'number' ? { durationSec: asset.durationSec } : {}),
-        };
-        if (asset.type === 'audio' && role === 'audio_track' && !audioTrack) {
-          audioTrack = payload;
-        } else {
-          references.push(payload);
-        }
-      }
-    }
-  }
-  return { texts, references, audioTrack };
-}
-
 export function createMaterialGatewayExecutor(opts: {
   gateway: GenerationGateway;
   resolveProjectFile?: ResolveExecutionProjectFile;
@@ -146,9 +67,11 @@ export function createMaterialGatewayExecutor(opts: {
   return {
     key: 'material:generate',
     async execute(node, ctx): Promise<NodeOutput> {
-      const data = node.data ?? {};
+      const data = structuredClone(node.data ?? {});
       const params = data.params as Record<string, unknown> | undefined;
-      const upstream = collectUpstreamMultiModal(ctx, opts.resolveProjectFile);
+      const inputs = { ...ctx, upstreamOutputs: structuredClone(ctx.upstreamOutputs), upstreamBindings: structuredClone(ctx.upstreamBindings) };
+      const catalog = structuredClone(ctx.catalog ?? await gateway.capabilities());
+      const upstream = collectMaterialSlotInputs(data, inputs, catalog, opts.resolveProjectFile);
 
       // Generative: gateway submit -> await -> output
       const capability = readMaterialType(data);
@@ -172,8 +95,8 @@ export function createMaterialGatewayExecutor(opts: {
         references: references.length > 0 ? references : undefined,
         audioTrack,
         duration: readDuration(data),
-        operation: readString(params, 'operation'),
-        model: readString(params, 'model'),
+        operation: upstream.operationId,
+        model: upstream.modelId,
         resolution: readString(params, 'resolution'),
         aspectRatio: readString(params, 'aspectRatio'),
         voice: readString(params, 'voice'),
@@ -195,7 +118,7 @@ export function createMaterialGatewayExecutor(opts: {
         signal: ctx.signal,
         mockFail: readMockFail(data),
       };
-      const resolved = resolveExecutorSubmission(request, await gateway.capabilities());
+      const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);
       ctx.reportProgress?.(10, '已提交生成任务');
 

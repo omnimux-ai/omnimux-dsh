@@ -60,8 +60,9 @@ test('catalog-first hydrate reconciles the loaded graph even when runtime finger
   store.hydrateGraph(saved.nodes, saved.edges);
 
   const node = useCanvasStore.getState().nodes.find((candidate) => candidate.id === 'gen');
-  assert.equal(node.data.params.model, 'img-ref');
-  assert.equal(node.data.params.operation, 'image_to_image');
+  assert.equal(node.data.params.model, 'img-prompt-only');
+  assert.equal(node.data.params.operation, 'text_to_image');
+  assert.deepEqual(node.data.slotBindings, {});
 });
 
 test('graph-first hydrate reconciles after catalog arrives and preserves an explicit valid model', () => {
@@ -71,7 +72,7 @@ test('graph-first hydrate reconciles after catalog arrives and preserves an expl
   store.setCatalogRuntime(createCompatTestCatalog());
   assert.equal(
     useCanvasStore.getState().nodes.find((candidate) => candidate.id === 'gen').data.params.model,
-    'img-ref',
+    'img-prompt-only',
   );
 
   store.resetStore();

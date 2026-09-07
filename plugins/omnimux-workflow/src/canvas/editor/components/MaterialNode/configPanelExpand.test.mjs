@@ -39,7 +39,9 @@ test('展开态仍保留底部参数栏与生成按钮，不拆成第二套编�
   assert.match(panelSrc, /wf-config-panel__bottom-bar/);
   assert.match(panelSrc, /<GenerateButton/);
   assert.match(panelSrc, /<CustomSelect/);
-  assert.match(panelSrc, /wf-config-panel__ref-slots-group/);
+  // T03：旧 ref-slots-group 简易缩略图行已由 SlotWells 取代
+  assert.match(panelSrc, /<SlotWells/);
+  assert.doesNotMatch(panelSrc, /wf-config-panel__ref-slots-group/);
   assert.equal((panelSrc.match(/<textarea/g) || []).length, 1);
 });
 
@@ -63,10 +65,10 @@ test('prompt 输入框展开样式与 8pt 内外间距规范', () => {
   assert.match(cssSrc, /\.wf-config-panel__prompt-input \{[\s\S]*?padding:\s*0;/);
   assert.match(cssSrc, /\.wf-config-panel__prompt-container \{[\s\S]*?padding:\s*0;/);
   assert.match(cssSrc, /\.wf-config-panel__bottom-bar \{[\s\S]*?padding:\s*0;/);
-  assert.match(cssSrc, /\.wf-config-panel__add-ref-btn \{[\s\S]*?width:\s*32px/);
-  assert.match(cssSrc, /\.wf-config-panel__add-ref-btn \{[\s\S]*?height:\s*32px/);
-  assert.match(cssSrc, /\.wf-config-panel__ref-thumb-slot \{[\s\S]*?width:\s*32px/);
-  assert.match(cssSrc, /\.wf-config-panel__ref-thumb-slot \{[\s\S]*?height:\s*32px/);
+  // T03：卡槽 32px 基准（含 strip 末尾虚线 + 槽位）
+  assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?width:\s*32px/);
+  assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?height:\s*32px/);
+  assert.match(cssSrc, /\.wf-slot-well--add \{[\s\S]*?border:\s*1\.5px dashed/);
 });
 
 test('展开 / 收起文案入典', () => {
@@ -76,11 +78,18 @@ test('展开 / 收起文案入典', () => {
   assert.match(enSrc, /'panel\.collapse': 'Collapse'/);
 });
 
-test('上游参考槽：解绑按钮 + 兼容错误空态（W2 Hide, Don\'t Grey，无 degraded 灰置）', () => {
-  // W2: incompatible models are hidden; typed error banner replaces degraded greys.
-  assert.match(panelSrc, /wf-config-panel__ref-thumb-unbind/);
-  assert.match(panelSrc, /handleUnbind/);
-  assert.match(panelSrc, /wf-compat-error|wf-model-empty|blockGenerate/);
+test('Feed-Slot 卡槽：SlotWells 驱动 + 卸装填不断边 + 无节点内静态错误条（T03/T05）', () => {
+  // W2: incompatible models are hidden; typed reason only lives on the
+  // GenerateButton title / disabledReason, never as a static error bar.
+  assert.match(panelSrc, /wf-slot-well__clear|handleClearOccupant/);
+  assert.match(panelSrc, /patchSlotBindings/);
+  assert.match(panelSrc, /wf-model-empty|blockGenerate/);
+  assert.doesNotMatch(panelSrc, /wf-config-panel__compat-error/);
+  assert.doesNotMatch(panelSrc, /wf-compat-error/);
   assert.doesNotMatch(panelSrc, /isModelDegraded/);
   assert.doesNotMatch(panelSrc, /evaluateModelCompatibility/);
+  // T05：禁用点击与模式切换走画板级通知
+  assert.match(panelSrc, /canvasNoticeService\.publish/);
+  assert.match(panelSrc, /submit_blocked_click/);
+  assert.match(panelSrc, /mode_consumption_changed/);
 });

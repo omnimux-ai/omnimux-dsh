@@ -3,8 +3,8 @@
  *
  * When the hub catalog fingerprint changes while a canvas is open, every
  * generate node is re-evaluated through the W1 mutation gateway so
- * model / operation / slot bindings stay in sync. Historical zero-candidate
- * graphs keep their edges and only flip to configuration_error.
+ * slot bindings stay in sync without replacing saved model / operation choices.
+ * Unavailable configurations retain their supply edges and report configuration_error.
  *
  * Oscillation guard: reconcile is a no-op when the fingerprint is unchanged
  * or the graph has no generate nodes that still carry a stale fingerprint.
@@ -76,9 +76,8 @@ export function shouldReconcileCatalog(args: {
  *
  * Implementation: issue a no-op structural plan that still runs the soft
  * recompute path by patching each generate node with its current prompt
- * (identity patch). The gateway's soft recompute re-runs auto-adaptation,
- * `data.compat.catalogFingerprint`. Zero candidates → configuration_error,
- * edges retained.
+ * (identity patch). The gateway recomputes Feed-Slot consumption and stamps
+ * `data.compat.catalogFingerprint`; supply edges remain intact.
  */
 export function reconcileCanvasForCatalog(
   input: CatalogReconcileInput,

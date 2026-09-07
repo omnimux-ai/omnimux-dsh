@@ -1,15 +1,17 @@
 /**
- * Video Summary Capsule Formatter Engine (Issue 467 / W2).
+ * Video Summary Capsule Formatter Engine (Issue 467 / W2, Feed-Slot 阶段二 / T04)。
  *
- * Mode text is omitted when `showModeUi` is false (effectiveOps 0/1) so the
- * TriggerBar never shows a lone "全能参考" / mode name or a dangling separator.
- * When ≥2 effective ops, mode text comes from the Catalog operation label.
+ * 胶囊摘要严格四段式：[ 生成模式 · 比例 · 质量 · 时长 ]。
+ *   - 生成模式：仅 showModeUi（effectiveOps ≥ 2）时出现，文案取 Catalog label；
+ *   - 质量（分辨率）：模型无分辨率选项时整段缺席；
+ *   - 声音开关只在 Popover 内部展示与控制，绝不进入 TriggerBar 胶囊文字；
+ *   - 任何一段缺席都不留悬空分隔符。
  */
 
 import type { EffectiveVideoParams } from './types.ts';
 
 /**
- * 视频参数摘要结构化格式化结果
+ * 视频参数摘要结构化格式化结果（严格四段）。
  */
 export interface VideoSummaryFormatResult {
   /**
@@ -22,8 +24,6 @@ export interface VideoSummaryFormatResult {
   resolutionText: string | null;
   /** 时长文案，如 '8s'、'5s' */
   durationText: string;
-  /** 音效状态文案，若支持且开启则为 '有声'，否则为 null */
-  soundText: string | null;
   /** 由空格分隔的紧凑完整文本（a11y 用；视觉分隔由 CSS 竖线承担，废除中点 `·`） */
   fullText: string;
 }
@@ -76,21 +76,20 @@ function resolveModeText(params: EffectiveVideoParams): string {
 }
 
 /**
- * 将生效的 EffectiveVideoParams 转换为胶囊展示用的结构化摘要及拼接文本
+ * 将生效的 EffectiveVideoParams 转换为胶囊展示用的四段式结构化摘要及拼接文本。
+ * 声音（sound / hasSoundSupport）被刻意忽略：它只属于 Popover 内部。
  */
 export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFormatResult {
   const modeText = resolveModeText(params);
   const ratioText = (params.aspectRatio && params.aspectRatio.trim()) || '16:9';
   const resolutionText = normalizeResolution(params.resolution);
   const durationText = normalizeDuration(params.duration);
-  const soundText = params.hasSoundSupport && params.sound ? '有声' : null;
 
   const segments: string[] = [];
   if (modeText) segments.push(modeText);
   if (ratioText) segments.push(ratioText);
   if (resolutionText) segments.push(resolutionText);
   if (durationText) segments.push(durationText);
-  if (soundText) segments.push(soundText);
 
   const fullText = segments.join(' ');
 
@@ -99,7 +98,6 @@ export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFo
     ratioText,
     resolutionText,
     durationText,
-    soundText,
     fullText,
   };
 }

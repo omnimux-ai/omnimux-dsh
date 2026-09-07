@@ -2,13 +2,14 @@ import { resolveNodeKind } from '../../shared/graph/materialNode.ts';
 import { readNodeInputSource } from '../../shared/graph/nodeInputSource.ts';
 import { resolveExecutionMediaSource, type ExecutionMediaSourceOptions } from './executionMediaSource.ts';
 import type { NodeOutput } from '../executors/registry.ts';
+import type { SlotBindings } from '../../shared/graph/feedSlot/types.ts';
 
 /** Seed only dependencies outside the scheduled graph, using their displayed current output. */
 export function buildInitialOutputs(
   workspace: {
     id: string;
     nodes: Array<{ id: string; type?: string; data?: Record<string, unknown> }>;
-    edges: Array<{ source: string; target: string }>;
+    edges: Array<{ id?: string; source: string; target: string }>;
   },
   executedNodeIds: ReadonlySet<string>,
   options?: Omit<ExecutionMediaSourceOptions, 'workspaceId'>,
@@ -21,6 +22,10 @@ export function buildInitialOutputs(
     const scheduled = executedNodeIds.has(edge.source);
     if (scheduled && source.type === 'material' && resolveNodeKind(source.data ?? {}) === 'generate') continue;
     const resolved = readNodeInputSource(source, workspace.id);
+    const target = workspace.nodes.find((node) => node.id === edge.target);
+    const slots = target?.data?.slotBindings as SlotBindings | undefined;
+    if (slots !== undefined && ['image', 'video', 'audio'].includes(resolved.materialType)
+      && !Object.values(slots).flat().some((item) => item.edgeId === edge.id && item.sourceNodeId === edge.source)) continue;
     if (resolved.availability === 'ready') {
       const output = {
         ...resolved.output,
