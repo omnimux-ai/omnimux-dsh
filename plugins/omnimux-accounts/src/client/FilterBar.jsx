@@ -65,16 +65,25 @@ export function FilterBar(props) {
         />
       )}
       filters={(
+        <Tabs
+          variant="underline"
+          items={[
+            { id: '', label: `${t('platform')} · ${t('all')}` },
+            ...platforms.map((value) => ({ id: value, label: value })),
+          ]}
+          activeId={platform}
+          onChange={(nextPlatform) => { onFilterChange({ platform: nextPlatform }) }}
+        />
+      )}
+      tools={(
         <>
-          {platforms.length > 0 ? (
-            <Tabs
-              variant="underline"
-              items={[
-                { id: '', label: `${t('platform')} · ${t('all')}` },
-                ...platforms.map((value) => ({ id: value, label: value })),
-              ]}
-              activeId={platform}
-              onChange={(nextPlatform) => { onFilterChange({ platform: nextPlatform }) }}
+          {statuses.length > 0 ? (
+            <DropdownSelect
+              value={status}
+              options={statusOptions}
+              aria-label={t('filter.status')}
+              disabled={disabled}
+              onChange={(nextStatus) => { onFilterChange({ status: nextStatus }) }}
             />
           ) : null}
           {groups.length > 0 ? (
@@ -84,15 +93,6 @@ export function FilterBar(props) {
               aria-label={t('group')}
               disabled={disabled}
               onChange={(nextGroup) => { onFilterChange({ group: nextGroup }) }}
-            />
-          ) : null}
-          {statuses.length > 0 ? (
-            <DropdownSelect
-              value={status}
-              options={statusOptions}
-              aria-label={t('filter.status')}
-              disabled={disabled}
-              onChange={(nextStatus) => { onFilterChange({ status: nextStatus }) }}
             />
           ) : null}
         </>
