@@ -11,8 +11,7 @@ import type { ResolveExecutionProjectFile } from './executionMediaSource.ts';
 import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
 import { compileMultimodalPrompt } from './multimodalCompiler.ts';
-import type { NodeSlotEngineState } from '../../shared/graph/slotContractTypes.ts';
-import type { GenerationGateway, MediaInputRole, SubmitRequest } from '../seam/gateway';
+import type { GenerationGateway, SubmitRequest } from '../seam/gateway';
 import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
 import { validateGeneratedResult } from '../seam/generatedResult.ts';
 import type {
@@ -96,7 +95,7 @@ export function createMaterialGatewayExecutor(opts: {
       const upstreamOutputsObj: Record<string, { mediaUrl?: string; text?: string; mimeType?: string }> = {};
       for (const [sourceId, out] of ctx.upstreamOutputs.entries()) {
         const firstAsset = out.mediaAssets?.[0];
-        const mediaUrl = firstAsset?.url || (firstAsset as { path?: string } | undefined)?.path;
+        const mediaUrl = upstream.references.find((reference) => reference.sourceNodeId === sourceId)?.pathOrUrl;
         upstreamOutputsObj[sourceId] = {
           mediaUrl,
           text: out.text,
@@ -115,7 +114,8 @@ export function createMaterialGatewayExecutor(opts: {
 
       const compiled = compileMultimodalPrompt({
         rawPrompt,
-        slotState: data.slotState as NodeSlotEngineState | undefined,
+        // The resolved Slot population alone authorizes media consumption, not legacy caches.
+        slotState: undefined,
         upstreamOutputs: upstreamOutputsObj,
         modelContract: {
           supportsInterleaved,
@@ -125,25 +125,7 @@ export function createMaterialGatewayExecutor(opts: {
 
       const prompt = compiled.cleanedPrompt;
 
-      // Merge resolved references from prompt tokens into upstream references if not already present
-      for (const resolvedRef of compiled.resolvedReferences) {
-        const pathOrUrl = resolvedRef.pathOrUrl || resolvedRef.mediaUrl;
-        const sourceNodeId = resolvedRef.sourceNodeId || '';
-        const exists = references.some(
-          (r) => r.pathOrUrl === pathOrUrl && r.sourceNodeId === sourceNodeId,
-        );
-        if (!exists && pathOrUrl) {
-          const rawType = resolvedRef.type || resolvedRef.materialType;
-          const mediaType = (rawType === 'video' || rawType === 'audio' || rawType === 'document') ? rawType : 'image';
-          references.push({
-            role: (resolvedRef.role as MediaInputRole) || 'reference',
-            type: mediaType,
-            pathOrUrl,
-            sourceNodeId,
-            ...(resolvedRef.mimeType ? { mimeType: resolvedRef.mimeType } : {}),
-          });
-        }
-      }
+      // Tokens annotate the prompt; they cannot add media beyond the resolved Slot set.
 
       const audioTrack = upstream.audioTrack;
       const image = references.find((r) => r.type === 'image')?.pathOrUrl || undefined;

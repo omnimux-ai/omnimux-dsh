@@ -25,9 +25,9 @@ import type {
 } from '../../../../shared/graph/slotContractTypes.ts';
 import {
   parseMarkdownToTokenSegments,
-  serializeSegmentsToMarkdown,
 } from './promptTokenCompiler.ts';
 import MentionPopover from './MentionPopover.tsx';
+import type { ReferenceCandidate } from './referenceCandidates.ts';
 
 export interface PromptTokenEditorRef {
   insertToken: (token: PromptReferenceToken) => void;
@@ -43,6 +43,10 @@ export interface PromptTokenEditorProps {
   disabled?: boolean;
   className?: string;
   slotState?: NodeSlotEngineState;
+  currentReferences?: ReferenceCandidate[];
+  canvasReferences?: ReferenceCandidate[];
+  onCommitReference?: (token: PromptReferenceToken, prompt: string) => boolean;
+  onHistoryStep?: (redo: boolean) => void;
   children?: React.ReactNode;
   maxLength?: number;
   /** 外部权威计数（如音频朗读正文 code point 闸门）；缺省时回退到可视长度。 */
@@ -110,9 +114,16 @@ function createTokenSpan(
     img.className = 'wf-prompt-token__thumb';
     span.appendChild(img);
   } else {
-    const icon = document.createElement('span');
-    icon.className = 'wf-prompt-token__icon';
-    icon.textContent = token.materialType === 'video' ? '🎬' : token.materialType === 'audio' ? '🎵' : '🖼️';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('class', 'wf-prompt-token__icon');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', token.materialType === 'text' ? 'M5 4h14M12 4v16M8 20h8' : 'M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.5');
+    icon.appendChild(path);
     span.appendChild(icon);
   }
 
@@ -123,10 +134,12 @@ function createTokenSpan(
   span.appendChild(labelSpan);
 
   // 槽位编号
-  const slotTag = document.createElement('span');
-  slotTag.className = 'wf-prompt-token__slot-tag';
-  slotTag.textContent = `#${token.slotIndex + 1}`;
-  span.appendChild(slotTag);
+  if (token.slotIndex >= 0) {
+    const slotTag = document.createElement('span');
+    slotTag.className = 'wf-prompt-token__slot-tag';
+    slotTag.textContent = `#${token.slotIndex + 1}`;
+    span.appendChild(slotTag);
+  }
 
   // ✕ 删除小按钮
   const delBtn = document.createElement('button');
@@ -153,6 +166,10 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       disabled = false,
       className = '',
       slotState,
+      currentReferences = [],
+      canvasReferences = [],
+      onCommitReference,
+      onHistoryStep,
       children,
       maxLength,
       countOverride,
@@ -162,6 +179,10 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
     },
     ref,
   ) => {
+    const composingRef = useRef(false);
+    const mentionRangeRef = useRef<Range | null>(null);
+    const caretRangeRef = useRef<Range | null>(null);
+    const [mentionQuery, setMentionQuery] = useState('');
     const containerRef = useRef<HTMLDivElement | null>(null);
     const editorRef = useRef<HTMLDivElement | null>(null);
     const lastRenderedMarkdownRef = useRef<string>('');
@@ -201,7 +222,7 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
         if (!editorRef.current) return;
         editorRef.current.innerHTML = '';
 
-        const segments = parseMarkdownToTokenSegments(md, slotState);
+        const segments = parseMarkdownToTokenSegments(md, slotState, [...currentReferences, ...canvasReferences]);
         for (const seg of segments) {
           if (seg.type === 'text') {
             const lines = seg.text.split('\n');
@@ -220,7 +241,7 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
         }
         lastRenderedMarkdownRef.current = md;
       },
-      [handleTokenDelete, slotState],
+      [handleTokenDelete, slotState, currentReferences, canvasReferences],
     );
 
     // 监听外部 value 属性变化（如外部重置或初始加载）
@@ -238,7 +259,8 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       lastRenderedMarkdownRef.current = md;
       onChange?.(md);
 
-      // 检测光标前是否键入了 @
+      if (composingRef.current) { setMentionOpen(false); return; }
+      mentionRangeRef.current = null;
       if (typeof window !== 'undefined' && window.getSelection) {
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
@@ -246,13 +268,16 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
           if (range.collapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
             const textContent = range.startContainer.nodeValue ?? '';
             const offset = range.startOffset;
-            if (offset > 0 && textContent[offset - 1] === '@') {
+            caretRangeRef.current = range.cloneRange();
+            const query = /@([^@\s\[\]]*)$/.exec(textContent.slice(0, offset));
+            if (query) {
+              const replacement = range.cloneRange();
+              replacement.setStart(range.startContainer, offset - query[0].length);
+              mentionRangeRef.current = replacement;
               const rect = range.getBoundingClientRect();
-              const containerRect = containerRef.current?.getBoundingClientRect();
-              setMentionPosition({
-                x: rect.left - (containerRect?.left ?? 0),
-                y: rect.bottom - (containerRect?.top ?? 0),
-              });
+              const fallback = editorRef.current.getBoundingClientRect();
+              setMentionPosition({ x: rect.width || rect.height ? rect.left : fallback.left, y: rect.width || rect.height ? rect.top : fallback.top });
+              setMentionQuery(query[1] ?? '');
               setMentionOpen(true);
               return;
             }
@@ -265,24 +290,17 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
     // 插入 Token 纯实现
     const insertTokenImpl = useCallback(
       (token: PromptReferenceToken) => {
-        if (!editorRef.current) return;
-        const raw = `@ref[${token.nodeId}:${token.slotIndex}:${token.label}]`;
+        if (!editorRef.current || disabled || composingRef.current) return;
+        const before = domToMarkdown(editorRef.current);
+        const raw = token.raw || `@ref[${token.nodeId}:${token.slotIndex}:${token.label}]`;
         const tokenSpan = createTokenSpan(token, raw, handleTokenDelete);
 
         if (typeof window !== 'undefined' && window.getSelection) {
           const sel = window.getSelection();
-          if (sel && sel.rangeCount > 0 && editorRef.current.contains(sel.anchorNode)) {
-            const range = sel.getRangeAt(0);
-
-            // 若正处于 @ 唤起状态，删除光标前面的 @ 字符
-            if (range.collapsed && range.startContainer.nodeType === Node.TEXT_NODE) {
-              const textNode = range.startContainer as Text;
-              const offset = range.startOffset;
-              if (offset > 0 && textNode.nodeValue && textNode.nodeValue[offset - 1] === '@') {
-                textNode.deleteData(offset - 1, 1);
-              }
-            }
-
+          const saved = mentionOpen ? mentionRangeRef.current : caretRangeRef.current;
+          const active = sel && sel.rangeCount > 0 && editorRef.current.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+          const range = saved && editorRef.current.contains(saved.startContainer) ? saved.cloneRange() : active;
+          if (sel && range) {
             range.deleteContents();
             range.insertNode(tokenSpan);
 
@@ -307,41 +325,50 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
         }
 
         const nextMd = domToMarkdown(editorRef.current);
+        if (onCommitReference && !onCommitReference(token, nextMd)) {
+          syncMarkdownToDom(before);
+          setMentionOpen(false);
+          return;
+        }
         lastRenderedMarkdownRef.current = nextMd;
-        onChange?.(nextMd);
+        if (!onCommitReference) onChange?.(nextMd);
+        mentionRangeRef.current = null;
+        caretRangeRef.current = null;
         setMentionOpen(false);
+        editorRef.current.focus();
       },
-      [handleTokenDelete, onChange],
+      [handleTokenDelete, onChange, onCommitReference, syncMarkdownToDom, mentionOpen, disabled],
     );
 
     // 键盘事件处理（拦截 Backspace/Delete 防止字符破碎）
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (composingRef.current || e.nativeEvent.isComposing) return;
+        if (onHistoryStep && (e.metaKey || e.ctrlKey) && ['z', 'y'].includes(e.key.toLowerCase())) {
+          e.preventDefault(); e.stopPropagation(); setMentionOpen(false);
+          onHistoryStep(e.shiftKey || e.key.toLowerCase() === 'y');
+          return;
+        }
+        if (mentionOpen && ['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) return;
         externalOnKeyDown?.(e);
         if (e.defaultPrevented) return;
 
-        if (e.key === 'Backspace') {
-          if (typeof window !== 'undefined' && window.getSelection) {
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              const range = sel.getRangeAt(0);
-              if (range.collapsed) {
-                // 如果光标在文本节点的开头，且前一个兄弟节点是 Token 胶囊，整块删除它
-                if (range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
-                  const prevSibling = range.startContainer.previousSibling;
-                  if (prevSibling && (prevSibling as HTMLElement).classList?.contains('wf-prompt-token')) {
-                    e.preventDefault();
-                    prevSibling.remove();
-                    handleInput();
-                    return;
-                  }
-                }
-              }
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          const selection = window.getSelection();
+          const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+          if (range?.collapsed) {
+            const container = range.startContainer;
+            const offset = range.startOffset;
+            const candidate = container.nodeType === Node.TEXT_NODE
+              ? (e.key === 'Backspace' && offset === 0 ? container.previousSibling : e.key === 'Delete' && offset === (container.nodeValue?.length ?? 0) ? container.nextSibling : null)
+              : container.childNodes[e.key === 'Backspace' ? offset - 1 : offset];
+            if (candidate instanceof HTMLElement && candidate.classList.contains('wf-prompt-token')) {
+              e.preventDefault(); handleTokenDelete(candidate); return;
             }
           }
         }
       },
-      [externalOnKeyDown, handleInput],
+      [externalOnKeyDown, handleTokenDelete, mentionOpen, onHistoryStep],
     );
 
     // 对外暴露 ref 操作
@@ -372,13 +399,17 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
           } ${className}`}
           data-placeholder={placeholder}
           onInput={handleInput}
+          onCompositionStart={() => { composingRef.current = true; setMentionOpen(false); }}
+          onCompositionEnd={() => { composingRef.current = false; handleInput(); }}
+          onBlur={() => {
+            const selection = window.getSelection();
+            if (selection?.rangeCount && editorRef.current?.contains(selection.anchorNode)) caretRangeRef.current = selection.getRangeAt(0).cloneRange();
+          }}
           onKeyDown={handleKeyDown}
           role="textbox"
           aria-multiline="true"
           aria-label={placeholder || 'Prompt 输入'}
-        >
-          {value || null}
-        </div>
+        />
         {children}
 
         {/* 字数与模式统计栏（对齐图 2） */}
@@ -407,9 +438,11 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
         <MentionPopover
           open={mentionOpen}
           position={mentionPosition}
-          slotState={slotState}
+          query={mentionQuery}
+          current={currentReferences}
+          canvas={canvasReferences}
           onSelect={insertTokenImpl}
-          onClose={() => setMentionOpen(false)}
+          onClose={() => { mentionRangeRef.current = null; setMentionOpen(false); }}
         />
       </div>
     );

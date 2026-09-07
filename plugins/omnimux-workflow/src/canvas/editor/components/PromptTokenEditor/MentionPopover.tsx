@@ -1,213 +1,121 @@
-/**
- * MentionPopover — 联想推荐浮层组件 (Issue #714 / T04).
- *
- * 1. 键入 @ 时弹出，展示当前节点的 activeSlots 与 overflowPool 素材；
- * 2. 展示模态图标、缩略图、文件名、所属槽位状态（如 [槽位 1]、[候选池]）；
- * 3. 键盘上下箭头导航、Enter / Tab 确认插入、Escape 取消。
- */
-
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ImageIcon, Video, Music, FileText } from 'lucide-react';
-import type { MaterialType } from '../../../../shared/graph/materialNode.ts';
-import type {
-  NodeSlotEngineState,
-  PromptReferenceToken,
-} from '../../../../shared/graph/slotContractTypes.ts';
-
-export interface MentionCandidate {
-  nodeId: string;
-  slotIndex: number;
-  label: string;
-  materialType: MaterialType;
-  mediaUrl?: string;
-  statusLabel: string;
-  isOverflow?: boolean;
-}
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, FileText, ImageIcon, Music, Video } from 'lucide-react';
+import { useT } from '../../../i18n';
+import { rejectReasonKey } from '../../utils/connectionValidator.ts';
+import { calculatePopoverPosition } from '../MaterialNode/ConfigPanel/cfg/viewportPositioner.ts';
+import type { ReferenceCandidate } from './referenceCandidates.ts';
 
 export interface MentionPopoverProps {
   open: boolean;
   position: { x: number; y: number } | null;
-  slotState?: NodeSlotEngineState;
-  onSelect: (token: PromptReferenceToken) => void;
+  query: string;
+  current: ReferenceCandidate[];
+  canvas: ReferenceCandidate[];
+  onSelect: (token: ReferenceCandidate) => void;
   onClose: () => void;
 }
 
-function renderModalIcon(type: MaterialType) {
-  switch (type) {
-    case 'image':
-      return <ImageIcon size={12} className="wf-mention-item__icon" />;
-    case 'video':
-      return <Video size={12} className="wf-mention-item__icon" />;
-    case 'audio':
-      return <Music size={12} className="wf-mention-item__icon" />;
-    default:
-      return <FileText size={12} className="wf-mention-item__icon" />;
-  }
+function CandidateIcon({ candidate }: { candidate: ReferenceCandidate }) {
+  if (candidate.mediaUrl && candidate.materialType === 'image') return <img src={candidate.mediaUrl} alt="" className="wf-mention-item__thumb" />;
+  const Icon = candidate.materialType === 'text' ? FileText : candidate.materialType === 'video' ? Video : candidate.materialType === 'audio' ? Music : ImageIcon;
+  return <Icon size={18} className="wf-mention-item__icon" />;
 }
 
-export const MentionPopover: React.FC<MentionPopoverProps> = ({
-  open,
-  position,
-  slotState,
-  onSelect,
-  onClose,
-}) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+/** Body portals escape the panel clip and ReactFlow's transformed coordinate system. */
+export default function MentionPopover({ open, position, query, current, canvas, onSelect, onClose }: MentionPopoverProps) {
+  const t = useT();
+  const [category, setCategory] = useState<'image' | 'text' | null>(null);
+  const originRef = useRef<{ x: number; y: number } | null>(null);
+  const [index, setIndex] = useState(0);
+  const [inSubmenu, setInSubmenu] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const subRef = useRef<HTMLDivElement>(null);
+  const [subStyle, setSubStyle] = useState<React.CSSProperties>({});
+  const matches = (item: ReferenceCandidate) => item.label.toLocaleLowerCase().includes(query.toLocaleLowerCase());
+  const references = current.filter(matches);
+  const children = canvas.filter((item) => item.materialType === category && matches(item));
+  const rootCount = references.length + 2;
+  const choose = (item: ReferenceCandidate | undefined) => { if (item && !item.reasonCode) onSelect(item); };
 
-  // 构造推荐候选项列表：活跃卡槽 + 候选池素材
-  const candidates = React.useMemo<MentionCandidate[]>(() => {
-    if (!slotState) return [];
-    const list: MentionCandidate[] = [];
-
-    // 1. 活跃槽位项
-    for (const slot of slotState.activeSlots) {
-      list.push({
-        nodeId: slot.sourceNodeId,
-        slotIndex: slot.slotIndex,
-        label: slot.label,
-        materialType: slot.materialType,
-        mediaUrl: slot.mediaUrl,
-        statusLabel: `[槽位 ${slot.slotIndex + 1}]`,
-        isOverflow: false,
-      });
-    }
-
-    // 2. 候选池项
-    slotState.overflowPool.forEach((item, idx) => {
-      list.push({
-        nodeId: item.sourceNodeId,
-        slotIndex: slotState.activeSlots.length + idx,
-        label: item.label,
-        materialType: item.materialType,
-        mediaUrl: item.mediaUrl,
-        statusLabel: '[候选池]',
-        isOverflow: true,
-      });
-    });
-
-    return list;
-  }, [slotState]);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [candidates]);
-
-  // 键盘快捷键监听
+  useEffect(() => { setIndex(0); setCategory(null); setInSubmenu(false); }, [open, query]);
   useEffect(() => {
     if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (candidates.length === 0 ? 0 : (prev + 1) % candidates.length));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          candidates.length === 0 ? 0 : (prev - 1 + candidates.length) % candidates.length,
-        );
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        if (candidates.length > 0) {
-          e.preventDefault();
-          const target = candidates[selectedIndex];
-          if (target) {
-            onSelect({
-              raw: `@ref[${target.nodeId}:${target.slotIndex}:${target.label}]`,
-              nodeId: target.nodeId,
-              slotIndex: target.slotIndex,
-              label: target.label,
-              materialType: target.materialType,
-              mediaUrl: target.mediaUrl,
-            });
-          }
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
+    const editor = document.activeElement as HTMLElement | null;
+    const rect = editor?.getBoundingClientRect();
+    originRef.current = rect ? { x: rect.x, y: rect.y } : null;
+    let frame = 0;
+    const track = () => {
+      const current = editor?.getBoundingClientRect();
+      const origin = originRef.current;
+      if (current && origin && (current.x !== origin.x || current.y !== origin.y)) { onClose(); return; }
+      frame = requestAnimationFrame(track);
     };
-
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [open, candidates, selectedIndex, onSelect, onClose]);
-
-  // 点击外部关闭
+    if (typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(track);
+    return () => { if (frame) cancelAnimationFrame(frame); };
+  }, [open, position, onClose]);
+  useLayoutEffect(() => {
+    if (!category || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    const width = Math.min(280, window.innerWidth - 24);
+    const height = Math.min(subRef.current?.scrollHeight ?? 300, window.innerHeight - 24);
+    const rightFits = rect.right + width + 4 <= window.innerWidth - 12;
+    setSubStyle({ position: 'fixed', width, left: rightFits ? rect.right + 4 : Math.max(12, rect.left - width - 4), top: Math.max(12, Math.min(rect.top, window.innerHeight - height - 12)), maxHeight: window.innerHeight - 24 });
+  }, [category, query, children.length, position]);
   useEffect(() => {
     if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+    const outside = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node) && !subRef.current?.contains(event.target as Node)) onClose();
     };
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.isComposing || event.keyCode === 229) return;
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Tab', 'Escape'].includes(event.key)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const count = inSubmenu ? children.length : rootCount;
+      if (event.key === 'Escape') onClose();
+      else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        setIndex((previous) => count ? (previous + (event.key === 'ArrowDown' ? 1 : -1) + count) % count : 0);
+      } else if (event.key === 'ArrowLeft') {
+        setIndex(references.length + (category === 'text' ? 1 : 0)); setInSubmenu(false); setCategory(null);
+      } else if (!inSubmenu && index >= references.length) {
+        setCategory(index === references.length ? 'image' : 'text'); setInSubmenu(true); setIndex(0);
+      } else if (event.key !== 'ArrowRight') choose(inSubmenu ? children[index] : references[index]);
     };
-  }, [open, onClose]);
-
-  if (!open) {
-    return null;
-  }
-
-  const style: React.CSSProperties = position
-    ? {
-        left: Math.max(0, position.x),
-        top: position.y + 4,
-      }
-    : {
-        left: 0,
-        top: '100%',
-      };
-
-  return (
-    <div
-      ref={containerRef}
-      className="wf-mention-popover nodrag nowheel"
-      style={style}
-      role="listbox"
-      aria-label="引用素材"
-    >
-      <div className="wf-mention-popover__header">引用素材（上下键选择，回车插入）</div>
-
-      {candidates.length === 0 ? (
-        <div className="wf-mention-popover__empty">当前暂无连接的上游素材</div>
-      ) : (
-        candidates.map((cand, index) => {
-          const isSelected = index === selectedIndex;
-          return (
-            <button
-              key={`${cand.nodeId}-${cand.slotIndex}`}
-              type="button"
-              className={`wf-mention-item ${isSelected ? 'wf-mention-item--highlighted' : ''}`}
-              role="option"
-              aria-selected={isSelected}
-              onMouseEnter={() => setSelectedIndex(index)}
-              onClick={() => {
-                onSelect({
-                  raw: `@ref[${cand.nodeId}:${cand.slotIndex}:${cand.label}]`,
-                  nodeId: cand.nodeId,
-                  slotIndex: cand.slotIndex,
-                  label: cand.label,
-                  materialType: cand.materialType,
-                  mediaUrl: cand.mediaUrl,
-                });
-              }}
-            >
-              {cand.mediaUrl && cand.materialType === 'image' ? (
-                <img src={cand.mediaUrl} alt={cand.label} className="wf-mention-item__thumb" />
-              ) : (
-                renderModalIcon(cand.materialType)
-              )}
-              <span className="wf-mention-item__name">{cand.label}</span>
-              <span className="wf-mention-item__badge">{cand.statusLabel}</span>
-            </button>
-          );
-        })
-      )}
-    </div>
+    window.addEventListener('mousedown', outside);
+    window.addEventListener('keydown', keydown, true);
+    window.addEventListener('resize', onClose);
+    return () => { window.removeEventListener('mousedown', outside); window.removeEventListener('keydown', keydown, true); window.removeEventListener('resize', onClose); };
+  }, [open, onClose, onSelect, references, children, rootCount, index, inSubmenu, category]);
+  useEffect(() => {
+    const root = inSubmenu ? subRef.current : rootRef.current;
+    root?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [index, inSubmenu]);
+  if (!open || !position || typeof document === 'undefined') return null;
+  const placement = calculatePopoverPosition({ top: position.y, bottom: position.y, left: position.x, right: position.x, width: 0, height: 0 }, { width: window.innerWidth, height: window.innerHeight });
+  const style: React.CSSProperties = { position: 'fixed', left: placement.left, width: Math.min(280, placement.width), maxHeight: Math.max(0, Math.min(400, placement.maxHeight, placement.placement === 'top' ? window.innerHeight - (placement.bottom ?? 0) - 12 : window.innerHeight - (placement.top ?? 0) - 12)), ...(placement.placement === 'top' ? { bottom: placement.bottom } : { top: placement.top }) };
+  const renderCandidate = (item: ReferenceCandidate, itemIndex: number, submenu: boolean) => (
+    <button key={`${item.nodeId}:${item.slotIndex}`} type="button" role="option" aria-selected={inSubmenu === submenu && index === itemIndex} aria-disabled={Boolean(item.reasonCode)}
+      className={`wf-mention-item ${inSubmenu === submenu && index === itemIndex ? 'wf-mention-item--highlighted' : ''}`}
+      onMouseEnter={() => { setInSubmenu(submenu); setIndex(itemIndex); if (!submenu) setCategory(null); }} onClick={() => choose(item)}>
+      <CandidateIcon candidate={item} />
+      <span className="wf-mention-item__text"><span className="wf-mention-item__name">{item.label}</span>
+        {item.reasonCode ? <small>{t(rejectReasonKey(item.reasonCode))}</small> : item.availability !== 'ready' ? <small>{t(item.availability === 'waiting' ? 'mention.waiting' : 'mention.unavailable')}</small> : null}
+      </span>
+    </button>
   );
-};
-
-export default MentionPopover;
+  return createPortal(<>
+    <div ref={rootRef} className="wf-mention-popover nodrag nowheel" role="listbox" aria-label={t('mention.current')} style={style} onMouseDown={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+      <div className="wf-mention-popover__header">{t('mention.current')}</div>
+      {references.length ? references.map((item, itemIndex) => renderCandidate(item, itemIndex, false)) : <div className="wf-mention-popover__empty">{t('mention.empty')}</div>}
+      <div className="wf-mention-popover__header wf-mention-popover__divider">{t('mention.canvas')}</div>
+      {(['image', 'text'] as const).map((type, offset) => <button key={type} type="button" role="option" aria-selected={!inSubmenu && index === references.length + offset} aria-haspopup="listbox" aria-expanded={category === type} className="wf-mention-item"
+        onMouseEnter={() => { setCategory(type); setInSubmenu(false); setIndex(references.length + offset); }} onClick={() => { setCategory(type); setInSubmenu(true); setIndex(0); }}>
+        {type === 'image' ? <ImageIcon size={18} /> : <FileText size={18} />}<span className="wf-mention-item__name">{t(`node.type.${type}`)}</span><span>{canvas.filter((item) => item.materialType === type).length}</span><ChevronRight size={14} />
+      </button>)}
+    </div>
+    {category && <div ref={subRef} className="wf-mention-popover wf-mention-submenu nodrag nowheel" style={subStyle} role="listbox" aria-label={t(`node.type.${category}`)} onMouseDown={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+      {children.length ? children.map((item, itemIndex) => renderCandidate(item, itemIndex, true)) : <div className="wf-mention-popover__empty">{t('mention.noMatches')}</div>}
+    </div>}
+  </>, document.body);
+}

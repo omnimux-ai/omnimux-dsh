@@ -81,6 +81,8 @@ import {
 } from '../../../../../shared/validation/operationUi.ts';
 import { OperationSegment } from './videoParams/SegmentControls';
 import PromptTokenEditor, { type PromptTokenEditorRef } from '../../PromptTokenEditor';
+import { canvasReferenceCandidates, currentReferenceCandidates, referenceMutation } from '../../PromptTokenEditor/referenceCandidates.ts';
+import { rejectReasonKey } from '../../../utils/connectionValidator.ts';
 import type {
   NodeSlotEngineState,
   SlotBindingItem,
@@ -742,6 +744,24 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           rows={isExpanded ? 8 : 2}
           isExpanded={isExpanded}
           slotState={slotState}
+          currentReferences={currentReferenceCandidates(upstreams, slotBindings)}
+          canvasReferences={canvasReferenceCandidates(nodeId, useCanvasStore.getState().nodes ?? [], useCanvasStore.getState().edges)}
+          onCommitReference={(token, nextPrompt) => {
+            const store = useCanvasStore.getState();
+            store.pushHistory();
+            const plan = store.applyCanvasInputMutation(referenceMutation(nodeId, token.nodeId, nextPrompt, store.edges));
+            if (plan.status !== 'allowed') {
+              toast.error(t(rejectReasonKey(plan.reasonCode)));
+              return false;
+            }
+            store.pushHistory(true);
+            return true;
+          }}
+          onHistoryStep={(redo) => {
+            const store = useCanvasStore.getState();
+            store.pushHistory();
+            if (redo) store.redo(); else store.undo();
+          }}
           materialType={materialType}
           maxLength={audioPromptGate ? AUDIO_PROMPT_MAX_CHARS : undefined}
           countOverride={audioPromptGate ? audioPromptGate.count : undefined}

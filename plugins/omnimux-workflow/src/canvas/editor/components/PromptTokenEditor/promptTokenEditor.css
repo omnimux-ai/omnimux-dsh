@@ -183,17 +183,23 @@
   font-weight: 600;
 }
 
+.wf-mention-item__text { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 4px; }
+.wf-mention-item__text small { color: var(--dsw-alias-label-secondary); font-size: 11px; white-space: normal; }
+.wf-mention-item[aria-disabled="true"] { cursor: not-allowed; }
+.wf-mention-popover__divider { border-top: 1px solid var(--dsw-alias-border-l2); margin-top: 4px; padding-top: 8px; }
+.wf-mention-submenu { z-index: 1201; }
+
 /* MentionPopover 联想浮层 */
 .wf-mention-popover {
-  position: absolute;
-  z-index: 1000;
-  min-width: 220px;
-  max-width: 320px;
-  max-height: 220px;
+  position: fixed;
+  z-index: 1200;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
   overflow-y: auto;
-  background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
-  border: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
-  border-radius: var(--dsw-radius-md, 6px);
+  background: var(--dsw-alias-bg-elevated, var(--wb-surface-raised));
+  color: var(--dsw-alias-label-primary);
+  border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
+  border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   padding: 4px;
 }

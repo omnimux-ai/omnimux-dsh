@@ -114,7 +114,7 @@ export interface CanvasState {
   /** Redo stack (undone states, oldest first). */
   future: HistorySnapshot[];
   /** Record the current graph as a potential undo target (debounced). */
-  pushHistory: () => void;
+  pushHistory: (force?: boolean) => void;
   undo: () => void;
   redo: () => void;
   /** Drop all history and reseed from the current graph. */
@@ -357,7 +357,7 @@ export const useCanvasStore = create<CanvasState>()(
     past: [] as HistorySnapshot[],
     future: [] as HistorySnapshot[],
 
-    pushHistory: () => {
+    pushHistory: (force = false) => {
       const snap = snapshotOf(get().nodes, get().edges);
       // No-op when nothing changed (also absorbs the re-render that undo
       // itself triggers: history.current was already moved to the restored
@@ -367,7 +367,7 @@ export const useCanvasStore = create<CanvasState>()(
       const now = Date.now();
       if (
         history.current
-        && now - history.lastPushAt >= HISTORY_DEBOUNCE_MS
+        && (force || now - history.lastPushAt >= HISTORY_DEBOUNCE_MS)
       ) {
         const previous = history.current;
         set((state) => ({

@@ -13,7 +13,8 @@
  *   - 填入素材后展示完整圆角大方块预览，悬浮显示小叉号 ✕ 卸装填。
  */
 
-import React, { memo, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
+import SlotHoverPreview from './SlotHoverPreview.tsx';
 import { ArrowLeftRight, Image as ImageIcon, Loader2, Music, Play, Plus, X } from 'lucide-react';
 import type { MaterialType } from '../../../../../../shared/canvasTypes.ts';
 import type { SlotOccupant, SlotSpec } from '../../../../../../shared/graph/feedSlot/index.ts';
@@ -56,7 +57,6 @@ function buildWellModels(spec: SlotSpec, props: SlotWellsProps, upstreamByEdge: 
 
 function WellThumb({ model }: { model: WellModel }) {
   const { upstream } = model;
-  const [aspectRatio, setAspectRatio] = useState<number | undefined>(undefined);
 
   if (!model.occupant) {
     return (
@@ -85,13 +85,6 @@ function WellThumb({ model }: { model: WellModel }) {
         className="wf-slot-well__media"
         src={upstream.url}
         alt={upstream.label}
-        style={aspectRatio ? { aspectRatio: `${aspectRatio}` } : undefined}
-        onLoad={(e) => {
-          const img = e.currentTarget;
-          if (img.naturalWidth && img.naturalHeight) {
-            setAspectRatio(img.naturalWidth / img.naturalHeight);
-          }
-        }}
       />
     );
   }
@@ -120,6 +113,8 @@ function WellThumb({ model }: { model: WellModel }) {
 const SlotWells: React.FC<SlotWellsProps> = (props) => {
   const { layout, onPickSlot, onSwapSlots, onClearOccupant, onInsertToken } = props;
   const t = useT();
+  const [hover, setHover] = useState<{ anchor: HTMLElement; model: WellModel } | null>(null);
+  const closeHover = useCallback(() => setHover(null), []);
   const slotLabel = useSlotLabel();
   const upstreamByEdge = new Map(
     props.upstreams.filter((item) => item.edgeId).map((item) => [item.edgeId as string, item]),
@@ -147,10 +142,10 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
 
     const handleWellClick = () => {
       if (occupant) {
-        if (onInsertToken) {
+        if (onInsertToken && model.upstream) {
           onInsertToken({
-            sourceNodeId: model.upstream?.nodeId ?? occupant.edgeId,
-            slotIndex: index,
+            sourceNodeId: model.upstream.nodeId,
+            slotIndex: Object.values(props.bindings).flat().findIndex((item) => item === occupant),
             label: model.upstream?.label ?? label,
             materialType: (model.upstream?.materialType ?? (spec.type as MaterialType) ?? 'image') as MaterialType,
             mediaUrl: model.upstream?.url,
@@ -172,10 +167,9 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
         data-slot={spec.slot}
         data-slot-role={spec.role}
         data-slot-state={occupant ? (conflicted ? 'conflict' : 'filled') : 'empty'}
-        title={occupant
-          ? (model.upstream?.label ?? label)
-          : t('panel.slotPick').replace('{slot}', label)}
-        aria-label={occupant ? label : t('panel.slotPick').replace('{slot}', label)}
+        aria-label={occupant ? (model.upstream?.label ?? label) : t('panel.slotPick').replace('{slot}', label)}
+        onMouseEnter={(event) => { if (occupant) setHover({ anchor: event.currentTarget, model }); }}
+        onFocus={(event) => { if (occupant && event.target === event.currentTarget) setHover({ anchor: event.currentTarget, model }); }}
         onClick={handleWellClick}
         onKeyDown={(event) => {
           if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
@@ -185,25 +179,13 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
         }}
       >
         <WellThumb model={model} />
-        {occupant ? (
-          <button
-            type="button"
-            className="wf-slot-well__replace-pill nodrag"
-            title={t('node.replaceMaterial')}
-            aria-label={t('node.replaceMaterial')}
-            onClick={(event) => {
-              event.stopPropagation();
-              onPickSlot(pickRequest(spec));
-            }}
-          >
-            {t('node.replaceMaterial')}
-          </button>
+        {hover?.anchor.dataset.slot === spec.slot && hover.model.occupant?.edgeId === occupant?.edgeId && occupant ? (
+          <SlotHoverPreview anchor={hover.anchor} upstream={model.upstream} onReplace={() => onPickSlot(pickRequest(spec))} onClose={closeHover} />
         ) : null}
         {occupant ? (
           <button
             type="button"
             className="wf-slot-well__clear nodrag"
-            title={t('panel.slotClear')}
             aria-label={t('panel.slotClear')}
             onClick={(event) => {
               event.stopPropagation();
