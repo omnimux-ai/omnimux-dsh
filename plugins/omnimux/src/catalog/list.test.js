@@ -49,7 +49,13 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.models.find((m) => m.id === 'nano_banana_2')?.aliases?.includes('nanobanana-2'), true)
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2', 'grok-imagine-image'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2', 'grok-imagine-image-2'])
+    const grokImage = catalog.image.find((row) => row.id === 'grok-imagine-image-2')
+    assert.equal(grokImage.label, 'Grok Imagine Image 2')
+    assert.equal(grokImage.subtitle, 'xAI Grok 2')
+    assert.deepEqual(catalog.models.find((row) => row.id === grokImage.id).aliases, [
+      'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0',
+    ])
     assert.deepEqual(catalog.video.map((row) => row.id), [
       'grok-imagine-video-1-5',
       'minimax-h3',
@@ -141,10 +147,27 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       env: {},
       settingsDefaults: { defaultImageModel: 'grok-imagine-image', defaultAudioModel: 'gpt-4o-mini-tts' },
     })
-    assert.equal(catalog.defaults.image, 'grok-imagine-image')
+    assert.equal(catalog.defaults.image, 'grok-imagine-image-2')
     // audio list is empty (suno / tts draft) → settings id refused, default empty
     assert.equal(catalog.defaults.audio, '')
   })
+
+  for (const model of ['grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']) {
+    it(`preserves image defaults from env, settings and config for ${model}`, () => {
+      for (const source of ['env', 'settings', 'config']) {
+        const h = hub()
+        if (source === 'config') h.media.providers.omnimux.models.image = model
+        const opts = {
+          text: h.text,
+          media: h.media,
+          env: source === 'env' ? { OMNIMUX_IMAGE_MODEL: model } : {},
+          settingsDefaults: source === 'settings' ? { defaultImageModel: model } : {},
+        }
+        assert.equal(buildModelCatalog(opts).defaults.image, 'grok-imagine-image-2', source)
+        assert.equal(buildModelCatalog({ ...opts, gate: { media: { image: false } } }).defaults.image, '', source)
+      }
+    })
+  }
 
   it('empties a media kind when the gate disables it', () => {
     const h = parseHubConfig({ gate: { media: { video: false } } })
