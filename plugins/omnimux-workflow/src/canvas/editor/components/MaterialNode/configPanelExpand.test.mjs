@@ -45,11 +45,16 @@ test('展开态仍保留底部参数栏与生成按钮，不拆成第二套编�
   assert.equal((panelSrc.match(/<textarea/g) || []).length, 1);
 });
 
-test('Issue #330: 彻底移除字数统计 DOM 与 maxLimit 计算', () => {
-  assert.doesNotMatch(panelSrc, /wf-config-panel__char-counter/);
+test('Issue #330: 移除通用字数统计；Issue #735 仅音频（非 ASR）重引字数闸门', () => {
+  // #735 T03：音频节点右下角字数统计（wf-audio-char-counter），超限红色高亮并阻断生成；
+  // 其余模态不渲染（audioPromptGate 仅 materialType==='audio' && !isAsrTool 时非空）。
+  assert.match(panelSrc, /wf-config-panel__char-counter/);
+  assert.match(panelSrc, /audioPromptGate \?/);
+  assert.match(panelSrc, /materialType === 'audio' && !isAsrTool \? resolveAudioPromptGate/);
+  // #330 语义保持：不再有通用 maxLimit 计算与按 .length 的计数
   assert.doesNotMatch(panelSrc, /maxLimit/);
   assert.doesNotMatch(panelSrc, /\(prompt \|\| ''\)\.length/);
-  assert.doesNotMatch(cssSrc, /\.wf-config-panel__char-counter/);
+  assert.match(cssSrc, /\.wf-config-panel__char-counter/);
   assert.doesNotMatch(cssSrc, /padding:\s*0\s+0\s+20px\s+0/);
 });
 

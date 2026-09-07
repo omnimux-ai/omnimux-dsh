@@ -7086,3 +7086,271 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   background: transparent;
   color: var(--dsw-alias-label-primary);
 }
+
+/* ==================== 音色选择（Issue 735 T03/T04） ==================== */
+
+/* T03：朗读正文字数统计（Prompt 容器右下角；超限红色高亮） */
+.wf-config-panel__char-counter {
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--wb-text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.wf-config-panel__char-counter--exceeded {
+  color: var(--wb-danger);
+  font-weight: 600;
+  pointer-events: auto;
+}
+
+/* T04：底栏音色触发按钮（模型下拉右侧） */
+.wf-voice-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--wb-pill-bg);
+  color: var(--wb-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 180px;
+  flex-shrink: 1;
+  min-width: 0;
+  transition: background 120ms ease;
+}
+
+.wf-voice-trigger:hover {
+  background: var(--wb-pill-hover);
+}
+
+.wf-voice-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.wf-voice-trigger:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.wf-voice-trigger__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* T04：音色选择弹窗（540px / ≤70vh / 16px 圆角） */
+.wf-voice-picker-modal {
+  max-height: 70vh;
+  border-radius: 16px;
+}
+
+.wf-voice-picker-modal .wf-modal-body.wf-voice-picker-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.wf-voice-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--wb-pill-bg);
+  color: var(--wb-text-muted);
+  flex-shrink: 0;
+}
+
+.wf-voice-picker__search:focus-within {
+  outline: 1px solid var(--dsw-alias-brand-primary);
+}
+
+.wf-voice-picker__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--wb-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.wf-voice-picker__search input::placeholder {
+  color: var(--wb-text-muted);
+}
+
+.wf-voice-picker__filters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wf-voice-picker__filter {
+  width: 100%;
+  min-width: 0;
+}
+
+.wf-voice-picker__list {
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.wf-voice-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  outline: none;
+  transition: background 120ms ease;
+}
+
+.wf-voice-picker__row:hover,
+.wf-voice-picker__row:focus-visible {
+  background: var(--wb-pill-bg);
+}
+
+.wf-voice-picker__row--selected,
+.wf-voice-picker__row--selected:hover {
+  background: var(--wb-pill-bg);
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
+}
+
+.wf-voice-picker__preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--wb-border);
+  background: transparent;
+  color: var(--wb-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.wf-voice-picker__preview:hover {
+  color: var(--wb-text-primary);
+  border-color: var(--wb-border-strong);
+}
+
+.wf-voice-picker__preview:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.wf-voice-picker__row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wf-voice-picker__row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-voice-picker__hot {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--wb-danger);
+  background: var(--wb-danger-soft);
+  flex-shrink: 0;
+}
+
+.wf-voice-picker__row-tags {
+  font-size: 11px;
+  color: var(--wb-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-voice-picker__row-check {
+  color: var(--dsw-alias-brand-primary);
+  flex-shrink: 0;
+}
+
+.wf-voice-picker__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 0;
+}
+
+.wf-voice-picker__empty-text {
+  font-size: 13px;
+  color: var(--wb-text-muted);
+}
+
+.wf-voice-picker__empty-clear {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.wf-voice-picker__empty-clear:hover {
+  background: var(--wb-pill-bg);
+}
+
+.wf-voice-picker__selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-start;
+  color: var(--wb-text-secondary);
+  font-size: 12px;
+}
+
+.wf-voice-picker__selected-name {
+  color: var(--wb-text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

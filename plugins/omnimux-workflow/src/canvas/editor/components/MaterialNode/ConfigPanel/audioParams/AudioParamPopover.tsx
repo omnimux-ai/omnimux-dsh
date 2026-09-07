@@ -20,6 +20,7 @@ import { CfgPopoverShell } from '../cfg/CfgPopoverShell.tsx';
 import { CfgSegment } from '../cfg/CfgSegment.tsx';
 import { resolveControlKind } from '../cfg/controlKind.ts';
 import { assertAudioParamWriteKey } from './audioParamAdapter.ts';
+import { VOICE_PICKER_MIN_OPTIONS } from './voicePickerModel.ts';
 import type { AudioParamPopoverProps } from './types.ts';
 
 /** 音色基数 ≥6 走 CustomSelect（选型矩阵） */
@@ -37,6 +38,9 @@ export function AudioParamPopover({
   const durationOptions = schema.duration?.options ?? [];
   const durationRange = schema.duration?.range;
   const voiceOptions = schema.voice?.options ?? [];
+  // T04：大音色目录由底栏 VoiceTrigger + VoicePickerDialog 承载，Popover 音色区收缩，
+  // 浮层专注生成方式 / 时长 / 纯音乐 / 输出格式等通用参数。
+  const voiceHostedByPicker = voiceOptions.length >= VOICE_PICKER_MIN_OPTIONS;
   const formatOptions = schema.outputFormat?.options ?? [];
   const showModeUi = Boolean(params.showModeUi) && (params.effectiveOperations?.length ?? 0) >= 2;
 
@@ -130,7 +134,7 @@ export function AudioParamPopover({
           </section>
         ) : null}
 
-        {voiceOptions.length > 0 ? (
+        {voiceOptions.length > 0 && !voiceHostedByPicker ? (
           <section className="wf-cfg-popover__section" data-testid="wf-audio-voice-section">
             <h4 className="wf-cfg-popover__section-title">音色</h4>
             {voiceOptions.length >= VOICE_SELECT_THRESHOLD ? (

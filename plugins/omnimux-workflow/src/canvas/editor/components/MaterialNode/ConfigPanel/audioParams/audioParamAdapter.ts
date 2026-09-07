@@ -30,6 +30,22 @@ import type {
 
 export const DEFAULT_AUDIO_DURATION = 60;
 
+/** T03：朗读正文长度上限（Unicode code point 计，与 schema.prompt 约定同单位） */
+export const AUDIO_PROMPT_MAX_CHARS = 10000;
+
+/**
+ * T03：朗读正文字数闸门。Array.from 按 Unicode code point 准确统计；
+ * exceeded 时宿主禁用 GenerateButton 并提示「朗读正文不能超过 10000 字符」。
+ */
+export function resolveAudioPromptGate(prompt: string | undefined | null): {
+  count: number;
+  max: number;
+  exceeded: boolean;
+} {
+  const count = Array.from(prompt ?? '').length;
+  return { count, max: AUDIO_PROMPT_MAX_CHARS, exceeded: count > AUDIO_PROMPT_MAX_CHARS };
+}
+
 /** 音频浮层允许写入的 key。禁止 generationMode 与未知 key。 */
 export type AudioParamWriteKey =
   | 'operation'

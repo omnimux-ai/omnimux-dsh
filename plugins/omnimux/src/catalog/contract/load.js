@@ -27,6 +27,7 @@ import {
   deriveModelListedSummary,
 } from './status.js';
 import { mapLegacyOperation } from './legacy-operation-map.js';
+import { materializeVoiceOptions, readVoiceIndexSnapshot } from '../voices/options.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_SPECS_DIR = join(__dirname, '..', 'specs');
@@ -648,7 +649,8 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
   const useCache = opts.useCache !== false;
 
   const snapshots = readYamlSnapshots(specsDir);
-  const cacheKey = buildContentCacheKey(specsDir, snapshots);
+  const voiceSnapshot = readVoiceIndexSnapshot();
+  const cacheKey = buildContentCacheKey(specsDir, [...snapshots, voiceSnapshot]);
 
   if (useCache && memoCache && memoCache.key === cacheKey) {
     return memoCache.index;
@@ -668,6 +670,7 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
     let parsed;
     try {
       parsed = parseYamlText(snap.content, snap.path);
+      parsed.doc = materializeVoiceOptions(parsed.doc, voiceSnapshot);
     } catch (err) {
       parseErrors.push(err?.message ?? String(err));
       allIssues.push({
@@ -730,6 +733,7 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
         aliases: rest.aliases,
         listed: rest.listed,
         listedOperations: rest.listedOperations,
+        parameters: rest.parameters,
         operations: (rest.operations ?? []).map((op) => ({
           id: op.id,
           listed: op.listed,
@@ -737,6 +741,7 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
           execution: op.execution,
           output: op.output,
           inputs: op.inputs,
+          parameters: op.parameters,
           // operation aliases are legacy op-name only; included for content stability
           aliases: op.aliases,
         })),
