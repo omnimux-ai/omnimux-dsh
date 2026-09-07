@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/shared/record-status.js",
+    "src/client/status-display.js",
+    "src/store.js",
+    "src/submit.js",
+    "src/http-routes.js",
+    "src/config.js",
+    "src/media.js",
+    "src/hubtools.js",
+    "src/accounts.js",
+    "src/contracts.type-test.ts"
+  ]
+}

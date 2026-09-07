@@ -11,6 +11,10 @@
 
 ---
 
+## Issue #544：状态与服务端类型边界
+
+当前状态导出、依赖拆分和 checkJs 门禁见 [record-status-contract.md](record-status-contract.md)。本节更新 Host 状态/类型职责；下文保留初版设计观察，不作为当前 UI 座位或部署状态证明。
+
 ## 1. 扩展点逐项裁决
 
 ### 1.1 工具面（B1–B5）

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   accountUsable,
-  aggregateOf,
   coverDecision,
   formCapabilities,
   groupAccountsByPlatform,
@@ -117,17 +116,6 @@ describe('groupAccountsByPlatform（两级勾选分组）', () => {
     assert.equal(groups[0].accounts[1].unusableReason, 'expired')
     assert.equal(groups[0].accounts[2].unusableReason, 'agentOff')
     assert.deepEqual(groupAccountsByPlatform('junk'), [])
-  })
-})
-
-describe('aggregateOf（列表聚合标签）', () => {
-  it('derives from record status + subtask_summary', () => {
-    assert.equal(aggregateOf({ status: 'draft' }), 'draft')
-    assert.equal(aggregateOf({ status: 'submitted', subtask_summary: { total: 2, published: 2, failed: 0 } }), 'published')
-    assert.equal(aggregateOf({ status: 'submitted', subtask_summary: { total: 2, published: 0, failed: 2 } }), 'failed')
-    assert.equal(aggregateOf({ status: 'submitted', subtask_summary: { total: 2, published: 1, failed: 1 } }), 'partial_failed')
-    assert.equal(aggregateOf({ status: 'submitted', subtask_summary: { total: 2, published: 1, failed: 0 } }), 'publishing')
-    assert.equal(aggregateOf({ status: 'submitted', subtasks: [] }), 'publishing')
   })
 })
 

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, statSync, existsSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, statSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import { aggregateStatus, createRecordStore, matchesStatusFilter, PublishError } from './store.js'
+import { aggregateStatus as sharedAggregate, displayStatus } from './shared/record-status.js'
 
 /** @type {string} */
 let dir = ''
@@ -200,6 +201,9 @@ describe('三 tab 过滤与聚合状态', () => {
     const { records } = store.listViews({ status_filter: 'reviewing' })
     assert.equal(records.length, 1)
     assert.equal(records[0].title, '审核中')
+    assert.equal(records[0].aggregate, 'publishing')
+    assert.equal(displayStatus(records[0]), 'reviewing')
+    assert.deepEqual(records[0].subtask_summary, { total: 1, submitted: 0, reviewing: 1, published: 0, failed: 0 })
   })
 
   it('failed filter returns records with failed subtasks; published only all-published', () => {
@@ -232,21 +236,21 @@ describe('matchesStatusFilter semantics', () => {
   })
 })
 
-describe('aggregateStatus transitions', () => {
-  it('walks publishing → partial_failed → published', () => {
-    const record = { status: 'submitted', subtasks: [{ status: 'submitted' }] }
-    assert.equal(aggregateStatus(record), 'publishing')
-    record.subtasks[0].status = 'failed'
-    record.subtasks.push({ status: 'submitted' })
-    assert.equal(aggregateStatus(record), 'publishing') // in-flight 优先
-    record.subtasks[1].status = 'published'
-    assert.equal(aggregateStatus(record), 'partial_failed')
-    record.subtasks[0].status = 'published'
-    assert.equal(aggregateStatus(record), 'published')
+describe('shared aggregate integration', () => {
+  it('re-exports the actual shared implementation, not an algorithm copy', () => {
+    assert.equal(aggregateStatus, sharedAggregate)
   })
 
-  it('all failed → failed; draft stays draft', () => {
-    assert.equal(aggregateStatus({ status: 'submitted', subtasks: [{ status: 'failed' }, { status: 'failed' }] }), 'failed')
-    assert.equal(aggregateStatus({ status: 'draft', subtasks: [] }), 'draft')
+  it('projects submitted records with no tasks as draft without changing the ledger status', () => {
+    const view = draftRecord()
+    const file = join(dir, 'records.json')
+    const raw = JSON.parse(readFileSync(file, 'utf8'))
+    raw.records[0].status = 'submitted'
+    raw.records[0].submitted_at = 't'
+    writeFileSync(file, JSON.stringify(raw))
+    const after = freshStore().getView(view.id)
+    assert.equal(after.status, 'submitted')
+    assert.equal(after.aggregate, 'draft')
+    assert.deepEqual(after.subtask_summary, { total: 0, submitted: 0, reviewing: 0, published: 0, failed: 0 })
   })
 })

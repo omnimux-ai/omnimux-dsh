@@ -27,6 +27,7 @@ test('native row menu opens, selects actions, closes and respects record status'
   for (const key of keys) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[key] })
   const { RowActionMenu } = await import(bundle.href)
   await rm(fileURLToPath(bundle))
+  await rm(fileURLToPath(bundle).replace(/\.mjs$/, '.css'), { force: true })
   const root = createRoot(document.getElementById('root'))
   const calls = []
   const record = { id: 'fixture-draft', status: 'draft', subtasks: [] }
