@@ -148,6 +148,8 @@ describe('GateGuard logic', () => {
     const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)))
     mkdirSync(join(fixture, 'src/gate'), { recursive: true })
     mkdirSync(join(fixture, 'src/media'), { recursive: true })
+    mkdirSync(join(fixture, 'src/errors'), { recursive: true })
+    copyFileSync(join(sourceRoot, 'errors/channel-classifier.js'), join(fixture, 'src/errors/channel-classifier.js'))
     writeFileSync(join(fixture, 'package.json'), '{"type":"module"}\n')
     copyFileSync(join(sourceRoot, 'gate/guard.js'), join(fixture, 'src/gate/guard.js'))
     copyFileSync(join(sourceRoot, 'media/errors.js'), join(fixture, 'src/media/errors.js'))

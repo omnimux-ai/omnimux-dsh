@@ -1,32 +1,13 @@
 import { OmnimuxError } from './errors.js'
+import { gatewayCandidates, PRODUCT_ID_ALIASES, toProductId } from '../catalog/serving/id-universe.js'
 
+export { gatewayCandidates, toProductId }
 export const PROTOCOLS = Object.freeze(['openai-media'])
 export const AUTH_MODES = Object.freeze(['auto', 'token', 'custom'])
 
-/** Channel wire ids accepted at the boundary and normalized to product ids. */
-export const MEDIA_WIRE_MODEL_IDS = Object.freeze({
-  'seedance-2.0': 'seedance-2-0',
-  'seedance-2.0-fast': 'seedance-2-0-fast',
-  'seedance-2.0-mini': 'seedance-2-0-mini',
-  'seedance-2.5': 'seedance-2-5',
-  'wan3.0-video': 'wan-3.0',
-  'MiniMax-H3': 'minimax-h3',
-  'grok-imagine-video-1.5': 'grok-imagine-video-1-5',
-  'grok-imagine-image-2.0': 'grok-imagine-image-2',
-  'grok-imagine-image-2-0': 'grok-imagine-image-2',
-  'grok-imagine-image': 'grok-imagine-image-2',
-})
-
-/**
- * Map a channel id to the canonical product id. The cloud APIMart adapter owns
- * product-id → official wire-model conversion.
- * @param {unknown} modelId
- * @returns {string}
- */
-export function toMediaWireModelId(modelId) {
-  const id = typeof modelId === 'string' ? modelId.trim() : ''
-  return MEDIA_WIRE_MODEL_IDS[id] || id
-}
+/** @deprecated Compatibility names; these normalize to product IDs, not wire IDs. */
+export const MEDIA_WIRE_MODEL_IDS = PRODUCT_ID_ALIASES
+export const toMediaWireModelId = toProductId
 
 export const DEFAULT_MEDIA = Object.freeze({
   defaultProvider: 'omnimux',
@@ -148,7 +129,7 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   const catalogModelId = (typeof request.model === 'string' && request.model.trim()
     ? request.model.trim()
     : (envModel || row.models[capability] || ''))
-  const modelId = toMediaWireModelId(catalogModelId)
+  const modelId = toProductId(catalogModelId)
   if (!modelId) {
     throw new OmnimuxError('unknown-model', `no model configured for ${providerId}/${capability}`)
   }
@@ -161,6 +142,7 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
     apiKeyEnv: row.apiKeyEnv,
     authMode: media.authMode || 'auto',
     modelId,
+    candidates: providerId === 'omnimux' ? gatewayCandidates(modelId) : [modelId],
     capability,
   }
 }

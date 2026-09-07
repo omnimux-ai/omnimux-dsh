@@ -113,6 +113,7 @@ const zh = {
   // 错误消息映射（Gxgen canvasEditor.errors.*）
   'error.contentPolicyViolation': '内容安全审核未通过，请调整提示词或参考图后重试。',
   'error.generationProviderFailed': '生成服务失败，请稍后重试。',
+  'error.channelUnavailable': '该模型服务通道正在维护中，建议切换至默认模型继续生成。',
   // 连线与端口（W3，edge.*/menu.*）
   'edge.disconnect': '取消连接',
   'menu.generateFromNode': '从该节点生成',

@@ -35,6 +35,7 @@ export async function pollOpenAiMediaTask(options) {
     if (status === 'completed' || status === 'success') return json
     if (status === 'failed' || status === 'error') {
       const classified = classifyQuotaFailure({ body: json })
+      if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
       if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
       throw new OmnimuxError('omnimux-failed', `${options.capability} task ${options.taskId} failed`)
     }
@@ -51,6 +52,7 @@ export async function pollOpenAiMediaTask(options) {
  *   modelId: string,
  *   capability: string,
  *   poll?: typeof pollOpenAiMediaTask,
+ *   onSubmitted?: (taskId: string) => void,
  * }} options
  */
 export function createOpenAiMediaRuntime(options) {
@@ -63,7 +65,19 @@ export function createOpenAiMediaRuntime(options) {
   const client = createOpenAICompatibleClient({
     baseUrl: options.baseUrl,
     apiKey: options.apiKey,
-    fetcher,
+    fetcher: async (...args) => {
+      const response = await fetcher(...args)
+      // runtime-kit keeps only error.message; classify code-only envelopes first.
+      if (!response.ok && typeof response.clone === 'function') {
+        let body
+        try { body = await response.clone().text() } catch { body = undefined }
+        const failure = classifyQuotaFailure({ status: response.status, body })
+        if (failure.kind === 'channel-unavailable') {
+          throw new OmnimuxError(failure.code, failure.message, { status: response.status })
+        }
+      }
+      return response
+    },
   })
   const registry = createProviderRegistry({
     providers: [{
@@ -110,6 +124,7 @@ export function createOpenAiMediaRuntime(options) {
       if (!taskId) {
         throw new OmnimuxError('omnimux-invalid-response', `${capability} submit returned no task_id or url`)
       }
+      options.onSubmitted?.(taskId)
       if (!wait) {
         return {
           status: 'completed',

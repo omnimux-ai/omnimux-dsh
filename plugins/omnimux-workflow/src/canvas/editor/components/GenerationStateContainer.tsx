@@ -46,6 +46,17 @@ function useUserFacingErrorMessage(errorMessage: string | undefined): string | u
   const t = useT();
   if (!errorMessage) return undefined;
   const normalized = errorMessage.toLowerCase();
+  // 渠道不可用（hub channel-classifier 归一为 CHANNEL_UNAVAILABLE；此处兜底
+  // 拦截 distributor / adapter openai-compatible / 无可用渠道 等底层行话，
+  // 彻底阻止 [omnimux:ADAPTER_FAILED] / 分组 auto 原文裸露在卡片上）。
+  if (
+    normalized.includes('channel_unavailable') ||
+    errorMessage.includes('无可用渠道') ||
+    normalized.includes('distributor') ||
+    normalized.includes('adapter openai-compatible')
+  ) {
+    return t('error.channelUnavailable');
+  }
   if (
     normalized.includes('content_policy_violation') ||
     normalized.includes('inappropriate content') ||

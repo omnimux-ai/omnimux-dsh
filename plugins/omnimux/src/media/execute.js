@@ -7,21 +7,15 @@ import { mapOmnimuxInput, pickMediaUrl } from './vendors/omnimux.js'
 import {
   assertGuardOutput,
   assertGuardSubmit,
-  normalizeLogicalRequest,
 } from '../catalog/contract/submit-guard/index.js'
-import { probeTextImage } from '../text/image.js'
-import { probeTextVideo } from '../text/video.js'
-import { probeRemoteDocument } from '../text/document.js'
-import { durationFromAudioBytes, loadAudioBytes } from './stt.js'
+import { probeMediaAssets } from './asset-probe.js'
+export { probeMediaAssets } from './asset-probe.js'
 
 const CAPABILITY_SEAM = Object.freeze({
   video: 'videoGenerate',
   image: 'imageGenerate',
   audio: 'audioGenerate',
 })
-const MAX_PROBED_IMAGE_BYTES = 50 * 1024 * 1024
-const MAX_PROBED_VIDEO_BYTES = 200 * 1024 * 1024
-const MAX_PROBED_DOCUMENT_BYTES = 100 * 1024 * 1024
 
 /**
  * @param {string} capability
@@ -130,8 +124,6 @@ export async function executeOmnimuxMedia(capability, input) {
   })
 
   const wait = input.wait !== false
-  const runtime = input.runtime ?? createProtocolRuntime(route, input.fetcher, auth.apiKey)
-
   const mappedInput = mapOmnimuxInput(capability, {
     prompt: guardPlan.prompt,
     model: guardPlan.modelId,
@@ -152,22 +144,35 @@ export async function executeOmnimuxMedia(capability, input) {
   })
 
   let result
-  try {
-    result = await runtime.execute({
-      providerId: route.providerId,
-      modelId: `${route.providerId}-${capability}`,
-      input: mappedInput,
-      timeoutMs: 10 * 60_000,
-      metadata: { wait },
-      ...(input.signal ? { signal: input.signal } : {}),
-    })
-  } catch (error) {
-    const unwrapped = unwrapAdapterError(error)
-    const classified = classifyQuotaFailure({ error: unwrapped, cause: unwrapped, message: unwrapped?.message })
-    if (classified.kind === 'quota-exceeded') {
-      throw new OmnimuxError('quota-exceeded', classified.message, { cause: unwrapped instanceof Error ? unwrapped : undefined })
+  const candidates = route.candidates.slice(0, 2)
+  for (const [attempt, candidate] of candidates.entries()) {
+    let submitted = false
+    const runtime = input.runtime ?? createProtocolRuntime(
+      { ...route, modelId: candidate }, input.fetcher, auth.apiKey, () => { submitted = true },
+    )
+    try {
+      result = await runtime.execute({
+        providerId: route.providerId,
+        modelId: `${route.providerId}-${capability}`,
+        input: { ...mappedInput, model: candidate },
+        timeoutMs: 10 * 60_000,
+        metadata: { wait },
+        ...(input.signal ? { signal: input.signal } : {}),
+      })
+      break
+    } catch (error) {
+      const unwrapped = unwrapAdapterError(error)
+      const classified = classifyQuotaFailure({ error, cause: error, message: error?.message })
+      if (classified.kind === 'quota-exceeded') {
+        throw new OmnimuxError('quota-exceeded', classified.message)
+      }
+      const channelUnavailable = unwrapped?.code === 'CHANNEL_UNAVAILABLE'
+      if (channelUnavailable && classified.kind === 'needs-omnimux') {
+        throw new OmnimuxError(classified.code, classified.message)
+      }
+      if (channelUnavailable && !submitted && !input.signal?.aborted && attempt + 1 < candidates.length) continue
+      throw unwrapped
     }
-    throw unwrapped
   }
 
   assertGuardOutput(guardPlan, result, { capability })
@@ -192,95 +197,6 @@ export async function executeOmnimuxMedia(capability, input) {
     signal: input.signal,
   })
   return { mode: 'live', taskId: submittedId, url }
-}
-
-/**
- * Ignore caller-provided media metadata and derive every guard asset from its
- * bytes. A reference with an unknown type deliberately reaches the guard
- * without MIME/size metadata, where any restricted slot rejects it.
- * @param {Record<string, unknown>} input
- * @param {{ capability?: string, seam?: string }} [context]
- */
-export async function probeMediaAssets(input, context = {}) {
-  const capability = typeof context.capability === 'string' ? context.capability : undefined
-  const seam = typeof context.seam === 'string' ? context.seam : undefined
-  const topImage = typeof input.image === 'string' ? input.image.trim() : ''
-  const topImageIsExplicitReference = topImage && (
-    Array.isArray(input.references)
-      ? input.references.some((reference) => {
-        if (!reference || typeof reference !== 'object') return false
-        const row = /** @type {Record<string, unknown>} */ (reference)
-        return typeof row.pathOrUrl === 'string' && row.pathOrUrl.trim() === topImage
-      })
-      : false
-  )
-  const normalized = normalizeLogicalRequest({
-    ...input,
-    // A workflow often repeats its leading explicit reference in `image`.
-    // Omit only that shorthand before normalization so a first_frame supplied
-    // by `references` remains an explicit asset rather than being filtered.
-    image: topImageIsExplicitReference ? undefined : input.image,
-    assetMeta: {},
-    metadata: undefined,
-    imageMeta: undefined,
-    imageTailMeta: undefined,
-    audioMeta: undefined,
-    // This boundary owns capability semantics. Mounted callers must not be
-    // able to turn video shorthand into a generic reference.
-    capability,
-    seam,
-  })
-  return Promise.all(normalized.assets.map(async (asset) => {
-    const identity = {
-      type: asset.type,
-      pathOrUrl: asset.pathOrUrl,
-      ...(asset.role ? { role: asset.role } : {}),
-      ...(asset.targetSlot ? { targetSlot: asset.targetSlot } : {}),
-    }
-    if (asset.type === 'image') {
-      const image = await probeTextImage(asset.pathOrUrl, {
-        attachments: { imageLimits: { maxImageBytes: MAX_PROBED_IMAGE_BYTES } },
-        fetcher: input.fetcher,
-        signal: input.signal,
-      })
-      return { ...identity, mime: image.mediaType, sizeBytes: image.sizeBytes }
-    }
-    if (asset.type === 'video') {
-      const video = await probeTextVideo(asset.pathOrUrl, {
-        maxVideoBytes: MAX_PROBED_VIDEO_BYTES,
-        fetcher: input.fetcher,
-        signal: input.signal,
-      })
-      return {
-        ...identity,
-        mime: video.mediaType,
-        sizeBytes: video.sizeBytes,
-        ...(video.durationSec !== undefined ? { durationSec: video.durationSec } : {}),
-      }
-    }
-    if (asset.type === 'audio') {
-      const audio = await loadAudioBytes(asset.pathOrUrl, {
-        fetcher: input.fetcher,
-        signal: input.signal,
-      })
-      const durationSec = durationFromAudioBytes(audio.bytes, audio.contentType)
-      return {
-        ...identity,
-        mime: audio.contentType === 'audio/mpeg' ? 'audio/mp3' : audio.contentType,
-        sizeBytes: audio.bytes.byteLength,
-        ...(durationSec !== undefined ? { durationSec } : {}),
-      }
-    }
-    if (asset.type === 'document' && (asset.role === 'document' || asset.targetSlot === 'file_url')) {
-      const document = await probeRemoteDocument(asset.pathOrUrl, {
-        maxDocumentBytes: MAX_PROBED_DOCUMENT_BYTES,
-        fetcher: input.fetcher,
-        signal: input.signal,
-      })
-      return { ...identity, mime: document.mime, sizeBytes: document.sizeBytes }
-    }
-    return identity
-  }))
 }
 
 /**
@@ -342,8 +258,9 @@ export async function finishMediaTask(capability, route, input) {
  * @param {ReturnType<typeof resolveMediaRoute>} route
  * @param {typeof fetch} [fetcher]
  * @param {string} [apiKey]
+ * @param {(taskId: string) => void} [onSubmitted]
  */
-function createProtocolRuntime(route, fetcher, apiKey = route.apiKey) {
+function createProtocolRuntime(route, fetcher, apiKey = route.apiKey, onSubmitted) {
   if (route.protocol === 'openai-media') {
     return createOpenAiMediaRuntime({
       fetcher,
@@ -352,6 +269,7 @@ function createProtocolRuntime(route, fetcher, apiKey = route.apiKey) {
       providerId: route.providerId,
       modelId: route.modelId,
       capability: route.capability,
+      onSubmitted,
     })
   }
   throw new OmnimuxError('unknown-protocol', `unsupported media protocol '${route.protocol}'`)

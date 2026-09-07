@@ -106,6 +106,7 @@ const en: Record<DictKey, string> = {
   'error.contentPolicyViolation':
     'Content safety review did not pass. Please adjust the prompt or reference image and try again.',
   'error.generationProviderFailed': 'Generation service failed. Please try again later.',
+  'error.channelUnavailable': 'This model channel is temporarily unavailable. Please switch to another model.',
   'edge.disconnect': 'Disconnect',
   'menu.generateFromNode': 'Generate from this node',
   'edge.reject.selfConnection': 'Cannot connect a node to itself',

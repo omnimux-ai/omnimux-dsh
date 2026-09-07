@@ -1,3 +1,5 @@
+import { classifyChannelFailure } from '../errors/channel-classifier.js'
+
 export class OmnimuxError extends Error {
   /**
    * @param {string} code
@@ -15,13 +17,15 @@ export class OmnimuxError extends Error {
 
 /**
  * runtime-kit wraps HTTP failures as `ADAPTER_FAILED` and hides the
- * provider message on `error.cause`. Walk that chain so canvas / tools
- * show "Invalid token" instead of a bare adapter name.
+ * provider message on `error.cause`. Classify the entire envelope before
+ * returning it so routing diagnostics cannot reach canvas / tool errors.
  *
  * @param {unknown} error
  * @returns {unknown}
  */
 export function unwrapAdapterError(error) {
+  const channel = classifyChannelFailure(error)
+  if (channel) return new OmnimuxError(channel.code, channel.message)
   if (!error || typeof error !== 'object') return error
   const coded = /** @type {{ code?: unknown, message?: unknown, cause?: unknown }} */ (error)
   if (coded.code !== 'ADAPTER_FAILED') return error
