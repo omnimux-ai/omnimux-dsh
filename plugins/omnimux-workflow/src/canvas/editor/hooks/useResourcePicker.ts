@@ -178,6 +178,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
       nodes: state.nodes,
       targetNodeId: nodeId,
       files: drafts,
+      edges: state.edges,
     });
     if (!plan.hasWork) {
       toast.warning(t('picker.unsupported'));
@@ -186,6 +187,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
     const applied = state.applyCanvasInputMutation({
       addNodes: plan.addNodes,
       nodePatches: plan.nodePatches,
+      removeEdgeIds: plan.removeEdgeIds,
     });
     if (applied.status !== 'allowed') {
       toast.error(t('picker.commitFailed'));

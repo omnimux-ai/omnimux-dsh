@@ -79,3 +79,28 @@ test('MaterialNode chat 胶囊是次区图标：section secondary，无可见 la
   const split = sliceActionBlock(nodeSrc, 'split');
   assert.match(split, /section:\s*'secondary'/);
 });
+
+test('MaterialNode 空状态图片生成节点胶囊契约：主区导入图片 + Upload 图标 + 原生选择器触发', () => {
+  // 胶囊栏允许空态图片节点显示
+  assert.match(nodeSrc, /allowEmpty:\s*isEmptyImageNode/);
+  assert.match(nodeSrc, /isEmptyImageGenerateNode/);
+
+  // 胶囊 action：import-image
+  const importAction = sliceActionBlock(nodeSrc, 'import-image');
+  assert.match(importAction, /section:\s*'primary'/);
+  assert.match(importAction, /icon:\s*Upload/);
+  assert.match(importAction, /label:\s*t\('pill\.importImage'\)/);
+  assert.match(importAction, /title:\s*t\('pill\.importImage'\)/);
+  assert.match(importAction, /event\.stopPropagation\(\)/);
+  assert.match(importAction, /resourcePicker\.fillImportNode\(\)/);
+});
+
+test('MaterialNode 拖拽与就地蜕变契约：空态图片节点支持拖入，传入 edges 并断开上游边', () => {
+  // 拖入条件包含 isEmptyImageNode
+  assert.match(nodeSrc, /canAcceptDrop\s*=\s*kind === 'import' \|\| isEmptyImageNode/);
+  assert.match(nodeSrc, /if \(!canAcceptDrop\) return/);
+
+  // 导入计划传入当前 edges，断开上游边应用至画布
+  assert.match(nodeSrc, /edges:\s*state\.edges/);
+  assert.match(nodeSrc, /removeEdgeIds:\s*plan\.removeEdgeIds/);
+});
