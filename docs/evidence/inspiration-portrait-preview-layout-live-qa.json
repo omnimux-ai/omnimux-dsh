@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "stage": "omnimux-inspiration:library",
+  "topic": "portrait-preview-layout",
+  "commitSha": "1ca4ceb04176a871b0e271d4bca31e893d3a4de9",
+  "task": "inspiration-portrait-preview-layout",
+  "plugin": "omnimux-inspiration",
+  "l2": {
+    "host": "127.0.0.1",
+    "port": 44200,
+    "baseUrl": "http://127.0.0.1:44200/",
+    "authUrl": "redacted",
+    "dshHome": "/Users/x/.dsh-dev/tasks/portrait-preview-layout",
+    "profile": "/Users/x/.dsh-dev/tasks/portrait-preview-layout/profiles/omnimux-dev-portrait-preview-layout",
+    "taskSpaceId": 504
+  },
+  "result": "PASS",
+  "checks": [
+    {"id":"triptych-three-columns","pass":true,"detail":"Desktop runtime panels=3; widths 386.8047 / 404.3828 / 386.8125px"},
+    {"id":"outer-columns-equal","pass":true,"detail":"Left/right differ 0.0078px (<1px)"},
+    {"id":"player-width-and-edges","pass":true,"detail":"Player runtime rect x=291 width=345.8047 right=636.8047; aligned to video panel content edges"},
+    {"id":"player-ratio","pass":true,"detail":"Desktop 345.8047/614.7578=0.5625; mobile 754/1340.4375=0.5625"},
+    {"id":"player-no-max-height","pass":true,"detail":"computed max-height=none"},
+    {"id":"media-object-fit","pass":true,"detail":"computed object-fit=contain"},
+    {"id":"mobile-video-tab","pass":true,"detail":"820px viewport; Video aria-selected=true; active panel display block"},
+    {"id":"mobile-no-horizontal-overflow","pass":true,"detail":"document/body scrollWidth=820; active panel x=13 width=794 right=807; player x=29 right=783"}
+  ],
+  "runtimeEvidence": {
+    "desktop": {"viewport":[1728,873],"modalBody":[275,122.109375,1178,632.7734375],"playerBox":[291,171.109375,345.8047,614.7578],"panelCount":3,"panelWidths":[386.8047,404.3828,386.8125],"maxHeight":"none","objectFit":"contain"},
+    "mobile": {"viewport":[820,873],"activeTab":"Video","activePanel":[13,162.5,794,597],"playerBox":[29,211.5,754,1340.4375],"scrollWidth":[820,820]}
+  },
+  "evidence": ["docs/evidence/inspiration-portrait-preview-layout-desktop.png","docs/evidence/inspiration-portrait-preview-layout-mobile.png"],
+  "tests": {"total":169,"pass":167,"fail":0,"skipped":2,"command":"node --test plugins/omnimux-inspiration/src/*.test.js plugins/omnimux-inspiration/src/client/*.test.js","result":"PASS"},
+  "verifyLive": {"command":"OMNIMUX_PORT=44200 pnpm verify:live inspiration","result":"FAIL","exitCode":1,"detail":"HTTP status 401 from http://127.0.0.1:44200/; verifier exited non-zero. Actual result recorded; no LIMITED/BLOCKED classification."},
+  "scope": {"qaModifiedBusinessImplementation":false,"acceptedBusinessImplementationChangesPresent":true,"acceptedBusinessImplementationChanges":["plugins/omnimux-inspiration/src/client/styles.js","plugins/omnimux-inspiration/src/client/styles.test.js"],"appRestarted":false,"materialized":false,"tokensExposed":false},
+  "cleanup": {
+    "timestamp":"2026-09-05T04:02:03Z",
+    "taskSpaceId":504,
+    "taskSpace":{"status":"absent","verifiedBy":"ego-browser listTaskSpaces()","observedAt":"2026-09-05T04:02:03Z","action":"not applicable; task space 504 was not present, so completeTaskSpace(504,{keep:false}) was not executed"},
+    "l2":{"command":"bash /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/scripts/dev-env.sh rm portrait-preview-layout","result":"success","hostWatch":"stopped","taskDirectory":"removed: /Users/x/.dsh-dev/tasks/portrait-preview-layout","verified":"task directory absent; no matching 44200/task processes found after cleanup"},
+    "playwrightArtifacts":"removed duplicate untracked .playwright-mcp/ screenshots from task worktree; docs/evidence screenshots and JSON retained"
+  }
+}
