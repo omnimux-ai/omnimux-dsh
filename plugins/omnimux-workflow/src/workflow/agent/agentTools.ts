@@ -39,10 +39,12 @@ import {
   createWorkflowNodeAddTool,
   createWorkflowNodeUpdateTool,
   createWorkflowNodeRemoveTool,
+} from './agentWriteTools.ts';
+import {
   createWorkflowConnectTool,
   createWorkflowDisconnectTool,
   createWorkflowExecutionControlTool,
-} from './agentWriteTools.ts';
+} from './agentControlTools.ts';
 import {
   type AgentSeatContext,
   type AgentToolSpec,

@@ -1,29 +1,31 @@
-import path from 'node:path';
 import type { WorkflowAgentDeps, AgentToolSpec } from './agentTools.ts';
 import { TableStorageService } from '../storage/TableStorageService.ts';
 import {
-  buildTableDocument,
-  tableDocumentToLlmContent,
-  type HTableDocument,
-  shortId,
-} from '../../shared/types/htable.ts';
+  extractTableIdFromRelPath,
+  resolveTableAbsPath,
+  resolveTableRelativePath,
+  TablePathError,
+} from '../storage/tablePath.ts';
+import { buildTableDocument, tableDocumentToLlmContent, shortId } from '../../shared/types/htable.ts';
 import {
-  errorBody,
-  jsonOut,
-  readPosition,
-  defaultNodePosition,
-  withWorkspace,
+  errorBody, jsonOut, readString, readPosition, defaultNodePosition, withWorkspace,
+  resolveTargetWorkspaceId, WORKSPACE_ID_PARAM_DESC,
 } from './agentToolShared.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 
-function readString(args: Record<string, unknown>, key: string): string | undefined {
-  const v = args[key];
-  return typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined;
+function readTableId(nodeId: string | undefined, tablePath: string | undefined): string {
+  if (nodeId) resolveTableRelativePath(nodeId);
+  const pathId = tablePath ? extractTableIdFromRelPath(tablePath) : undefined;
+  if (nodeId && pathId && nodeId !== pathId) {
+    throw new TablePathError('invalid-args', 'node_id 与 table_path 指向不同的表格');
+  }
+  const tableId = nodeId || pathId;
+  if (!tableId) throw new TablePathError('invalid-args', 'Either table_path or node_id is required');
+  return tableId;
 }
 
 export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentToolSpec {
   const { store } = deps;
-
   return {
     name: 'canvas_write_table_node',
     description:
@@ -33,8 +35,10 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
     parameters: {
       type: 'object',
       properties: {
-        workspace_id: { type: 'string', description: '工作区 ID (缺省则使用默认工作区)' },
+        workspace_id: { type: 'string', description: WORKSPACE_ID_PARAM_DESC },
+        workspace_name: { type: 'string', description: '无显式 ID 和当前画布时，按唯一工作区名称查找' },
         node_id: { type: 'string', description: '已有节点 ID。提供时执行 REPLACE 全量更新，缺省时执行 CREATE' },
+        table_path: { type: 'string', description: '[REPLACE] 可选表格相对路径，必须与 node_id 指向同一表格' },
         title: { type: 'string', description: '表格标题 (如 "短剧分镜表")' },
         columns: {
           type: 'array',
@@ -87,120 +91,76 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
         position: {
           type: 'object',
           description: '[CREATE 专有] 画布坐标位置',
-          properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-          },
+          properties: { x: { type: 'number' }, y: { type: 'number' } },
         },
       },
       required: ['columns', 'rows'],
     },
-    output: {
-      schema: { type: 'object' },
-      render: jsonOut.render,
-    },
+    output: { schema: { type: 'object' }, render: jsonOut.render },
     async execute(args) {
-      const isReplace = Boolean(readString(args, 'node_id'));
-      const nodeId = readString(args, 'node_id') || `tbl_${shortId()}`;
-      const title = readString(args, 'title') || '未命名表格';
+      const existingNodeId = readString(args, 'node_id');
+      const isReplace = Boolean(existingNodeId);
+      const nodeId = existingNodeId || `tbl_${shortId()}`;
+      const tablePath = readString(args, 'table_path');
       const rawColumns = Array.isArray(args.columns) ? (args.columns as any[]) : [];
-      const rawRows = Array.isArray(args.rows) ? (args.rows as any[]) : [];
-      const rowHeight = (readString(args, 'row_height') as any) || 'low';
-      const filter = typeof args.filter === 'object' && args.filter !== null ? (args.filter as any) : undefined;
-
       if (isReplace && rawColumns.length === 0) {
         return errorBody('invalid-args', 'Replacing a table requires at least one column in columns');
       }
-
-      // 确定目标工作区
-      let targetWorkspaceId = readString(args, 'workspace_id');
-      if (!targetWorkspaceId) {
-        const list = store.list();
-        if (list.length > 0 && list[0]) {
-          targetWorkspaceId = list[0].id;
-        } else {
-          const created = store.create('默认工作流');
-          targetWorkspaceId = created.id;
-        }
+      try {
+        readTableId(nodeId, tablePath);
+        if (tablePath && !isReplace) return errorBody('invalid-args', 'table_path requires node_id in REPLACE mode');
+      } catch (err) {
+        return errorBody('invalid-args', err instanceof Error ? err.message : String(err));
       }
-
-      // 1. 利用 buildTableDocument 构建标准物理字典文档
-      const doc = buildTableDocument({
-        title,
-        columns: rawColumns,
-        rows: rawRows,
-        filter,
-        rowHeight,
-      });
-
-      return await withWorkspace(store, targetWorkspaceId, async (snapshot) => {
+      const target = resolveTargetWorkspaceId(store, args, { getActiveView: deps.getActiveView });
+      if ('error' in target) {
+        return target.error === 'no-current-workspace'
+          ? errorBody('no-current-workspace', '未指定 workspace_id 且未打开任何工作流') : target;
+      }
+      const { workspaceId } = target;
+      return await withWorkspace(store, workspaceId, async (snapshot) => {
+        if (isReplace) {
+          const node = snapshot.nodes.find((row) => row.id === nodeId);
+          if (!node) return errorBody('node-not-found', `node ${nodeId} not found in workspace ${workspaceId}`);
+          if (node.type !== 'table') return errorBody('invalid-args', `node ${nodeId} is not a table`);
+        }
         try {
-          const wsDir = path.dirname(store.canvasFileOf(targetWorkspaceId!));
-          const fullPath = TableStorageService.resolveTablePath(wsDir, nodeId);
-          await TableStorageService.saveTable(fullPath, doc);
-
-          const tableRelPath = `.omnimux/tables/${nodeId}.htable`;
+          const fullPath = resolveTableAbsPath(store, workspaceId, nodeId);
+          const tableRelPath = resolveTableRelativePath(nodeId);
+          const saved = await TableStorageService.saveTable(fullPath, buildTableDocument({
+            title: readString(args, 'title') || '未命名表格',
+            columns: rawColumns,
+            rows: Array.isArray(args.rows) ? (args.rows as any[]) : [],
+            filter: typeof args.filter === 'object' && args.filter !== null ? (args.filter as any) : undefined,
+            rowHeight: (readString(args, 'row_height') as any) || 'low',
+          }));
+          const doc = saved.document;
           const firstCol = doc.columns[0];
-          const previewRows: string[] = doc.rows.slice(0, 3).map((r) => {
-            const cellVal = firstCol ? r.cells[firstCol.id] : undefined;
-            if (typeof cellVal === 'string' && cellVal) return cellVal;
-            if (typeof cellVal === 'number') return String(cellVal);
-            if (Array.isArray(cellVal) && cellVal.length > 0) return `📎 附件 (${cellVal.length})`;
+          const previewRows = doc.rows.slice(0, 3).map((row) => {
+            const value = firstCol ? row.cells[firstCol.id] : undefined;
+            if (typeof value === 'string' && value) return value;
+            if (typeof value === 'number') return String(value);
+            if (Array.isArray(value) && value.length > 0) return `📎 附件 (${value.length})`;
             return '（空记录）';
           });
-
-          if (!isReplace) {
-            const node = {
-              id: nodeId,
-              type: 'table',
-              position: readPosition(args) ?? defaultNodePosition(snapshot),
-              data: {
-                label: doc.title,
-                title: doc.title,
-                tableId: nodeId,
-                tablePath: tableRelPath,
-                rowCount: doc.rows.length,
-                columnCount: doc.columns.length,
-                contentRev: doc.contentRev ?? 0,
-                previewRows,
-                status: doc.rows.length > 0 ? 'ready' : 'empty',
-              },
-            };
-            const mutResult = mutateWorkspaceGraph(store, targetWorkspaceId!, { addNodes: [node] });
-            if (!mutResult.ok) {
-              return errorBody(mutResult.error, mutResult.message);
-            }
-          } else {
-            const mutResult = mutateWorkspaceGraph(store, targetWorkspaceId!, {
-              nodePatches: [{
-                nodeId,
-                data: {
-                  label: doc.title,
-                  title: doc.title,
-                  rowCount: doc.rows.length,
-                  columnCount: doc.columns.length,
-                  contentRev: doc.contentRev ?? 0,
-                  previewRows,
-                  status: doc.rows.length > 0 ? 'ready' : 'empty',
-                },
-              }],
-            });
-            if (!mutResult.ok) {
-              return errorBody(mutResult.error, mutResult.message);
-            }
-          }
-
-          return {
-            ok: true,
-            nodeId,
-            tablePath: tableRelPath,
-            title: doc.title,
-            columnCount: doc.columns.length,
-            rowCount: doc.rows.length,
-            created: !isReplace,
+          const data = {
+            label: doc.title, title: doc.title, tableId: nodeId, tablePath: tableRelPath,
+            rowCount: doc.rows.length, columnCount: doc.columns.length,
+            contentRev: saved.contentRev, previewRows,
+            status: doc.rows.length > 0 ? 'ready' : 'empty',
           };
-        } catch (err: any) {
-          return errorBody('table-save-failed', err?.message || 'Failed to save table document');
+          const result = mutateWorkspaceGraph(store, workspaceId, isReplace
+            ? { nodePatches: [{ nodeId, data }] }
+            : { addNodes: [{ id: nodeId, type: 'table', position: readPosition(args) ?? defaultNodePosition(snapshot), data }] });
+          if (!result.ok) return errorBody(result.error, result.message);
+          return {
+            ok: true, nodeId, tablePath: tableRelPath, title: doc.title,
+            columnCount: doc.columns.length, rowCount: doc.rows.length,
+            contentRev: saved.contentRev, created: !isReplace,
+          };
+        } catch (err) {
+          return errorBody(err instanceof TablePathError ? 'invalid-args' : 'table-save-failed',
+            err instanceof Error ? err.message : 'Failed to save table document');
         }
       });
     },
@@ -209,61 +169,38 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
 
 export function createCanvasGetTableNodeTool(deps: WorkflowAgentDeps): AgentToolSpec {
   const { store } = deps;
-
   return {
     name: 'canvas_get_table_node',
     description: '读取画布结构化数据表节点的完整数据内容 (.htable)，返回 LLM 友好的脱敏字段列表与二维行记录数据。',
     parameters: {
       type: 'object',
       properties: {
-        workspace_id: { type: 'string', description: '工作区 ID (缺省则使用默认工作区)' },
+        workspace_id: { type: 'string', description: WORKSPACE_ID_PARAM_DESC },
+        workspace_name: { type: 'string', description: '无显式 ID 和当前画布时，按唯一工作区名称查找' },
         table_path: { type: 'string', description: '表格相对路径 (如 .omnimux/tables/tbl_xxx.htable)' },
-        node_id: { type: 'string', description: '表格节点 ID (与 table_path 二选一)' },
+        node_id: { type: 'string', description: '表格节点 ID；与 table_path 至少提供一个，同时提供时必须指向同一表格' },
       },
     },
-    output: {
-      schema: { type: 'object' },
-      render: jsonOut.render,
-    },
+    output: { schema: { type: 'object' }, render: jsonOut.render },
     async execute(args) {
-      let targetWorkspaceId = readString(args, 'workspace_id');
-      if (!targetWorkspaceId) {
-        const list = store.list();
-        if (list.length > 0 && list[0]) {
-          targetWorkspaceId = list[0].id;
-        }
-      }
-
-      const tablePath = readString(args, 'table_path');
-      const nodeId = readString(args, 'node_id');
-
-      if (!tablePath && !nodeId) {
-        return errorBody('invalid-args', 'Either table_path or node_id is required');
-      }
-
       try {
-        let fullPath: string;
-        if (targetWorkspaceId) {
-          const wsDir = path.dirname(store.canvasFileOf(targetWorkspaceId));
-          const effectiveTableId = nodeId || (tablePath ? path.basename(tablePath, '.htable') : '');
-          fullPath = TableStorageService.resolveTablePath(wsDir, effectiveTableId);
-        } else if (tablePath) {
-          fullPath = path.isAbsolute(tablePath) ? tablePath : path.join(process.cwd(), tablePath);
-        } else {
-          fullPath = path.join(process.cwd(), `.omnimux/tables/${nodeId}.htable`);
+        const tableId = readTableId(readString(args, 'node_id'), readString(args, 'table_path'));
+        const target = resolveTargetWorkspaceId(store, args, { getActiveView: deps.getActiveView });
+        if ('error' in target) {
+          return target.error === 'no-current-workspace'
+            ? errorBody('no-current-workspace', '未指定 workspace_id 且未打开任何工作流') : target;
         }
-
+        const fullPath = resolveTableAbsPath(store, target.workspaceId, tableId, { checkLegacy: true });
         const doc = await TableStorageService.loadTable(fullPath);
-        // 转换为 LLM 纯净二维格式
-        const llmContent = tableDocumentToLlmContent(doc);
-
         return {
           ok: true,
-          tablePath: tablePath || `.omnimux/tables/${nodeId}.htable`,
-          tableContent: llmContent,
+          tablePath: resolveTableRelativePath(tableId),
+          contentRev: doc.contentRev ?? 0,
+          tableContent: tableDocumentToLlmContent(doc),
         };
-      } catch (err: any) {
-        return errorBody('table-read-failed', err?.message || 'Failed to load table document');
+      } catch (err) {
+        return errorBody(err instanceof TablePathError ? 'invalid-args' : 'table-read-failed',
+          err instanceof Error ? err.message : 'Failed to load table document');
       }
     },
   };

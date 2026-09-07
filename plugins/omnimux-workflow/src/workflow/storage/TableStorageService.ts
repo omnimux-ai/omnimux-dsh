@@ -126,13 +126,6 @@ export class TableStorageService {
   }
 
   /**
-   * 计算表格文件在工作区内的物理存储路径
-   */
-  static resolveTablePath(baseDir: string, tableId: string): string {
-    return path.join(baseDir, '.omnimux', 'tables', `${tableId}.htable`);
-  }
-
-  /**
    * 检查表格文件是否存在
    */
   static async exists(tablePath: string): Promise<boolean> {
