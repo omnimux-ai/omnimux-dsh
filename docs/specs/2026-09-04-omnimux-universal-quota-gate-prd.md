@@ -158,4 +158,4 @@ Chat 保留 turn 失败，modal 置顶；Tab 保留加载/同步错误和表单�
 
 ## 12. 核验真源
 
-`docs/specs/2026-08-28-omnimux-universal-login-gate-prd.md`、`docs/specs/2026-08-20-omnimux-login-gate.md`、`plugins/omnimux/src/client/quota-failure.js`、`QuotaTopUpLink.jsx`、`plugins/omnimux/src/official/client.js`、`plugins/omnimux/src/media/job.js`、`plugins/omnimux/src/media/errors.js`、`plugins/omnimux/src/client/api-auth.js`、`docs/contracts/hub.md`、`research/omnimux/sources/official/15-connection-usage.md`、`patches/dsh-0.1.2-alpha.3/llm-quota-priority.patch`、`docs/harness-pin.md`、`docs/decisions/2026-08-14-execution-hub.md`、`design.md`。
+`docs/specs/2026-08-28-omnimux-universal-login-gate-prd.md`、`docs/specs/2026-08-20-omnimux-login-gate.md`、`plugins/omnimux/src/client/quota-failure.js`、`QuotaTopUpLink.jsx`、`plugins/omnimux/src/official/client.js`、`plugins/omnimux/src/media/job.js`、`plugins/omnimux/src/media/errors.js`、`plugins/omnimux/src/client/api-auth.js`、`docs/contracts/hub.md`、`research/omnimux/sources/official/15-connection-usage.md`、[历史额度补丁与现行替代合同](../contracts/quota-error-compatibility.md)、`docs/harness-pin.md`、`docs/decisions/2026-08-14-execution-hub.md`、`design.md`。

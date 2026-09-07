@@ -2,7 +2,7 @@
 title: "决策：消费官方 dsh，不整仓 fork"
 id: "decision-harness-consume-not-fork"
 type: "decision"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-08-16"
 authors: ["x", "agent-architect"]
@@ -10,6 +10,8 @@ subsystem: "omnimux"
 ---
 
 # 决策：消费官方 dsh，不整仓 fork
+
+> 2026-09-06：本文保留历史证据；其中允许官方源码补丁及重放补丁的条款已由 [现行只读消费合同](../harness-pin.md) 和 [#668 退役合同](../contracts/quota-error-compatibility.md) 替代，不得再作为执行授权。
 
 日期：2026-08-16。
 状态：**站位已确认。**

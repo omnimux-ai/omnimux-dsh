@@ -20,6 +20,8 @@ related:
 
 # Composer「+」原生列表直达：正式 `clientAction` 扩展与最小 Host Overlay 设计
 
+> 历史记录：本文的官方源码补丁及 apply/reset 命令已由 [#668 退役合同](../contracts/quota-error-compatibility.md) 替代，不再是有效执行入口。原始设计与测试结果保留供追溯。
+
 ## 0. 结论、边界与已核实事实
 
 **决策：淘汰 PR #558 中的 `menu-direct.js` DOM/MutationObserver/capture 路线；以官方 `@deepseek-ai/dsh-client-ui-commands` 增加一种客户端贡献 UI 类型 `clientAction`。** 命令仍由官方 `commandUi.register()` 合成至原生「+」命令列表，鼠标、触摸、菜单辅助激活和键盘 Enter 都进入同一 `dispatch()` 决策表；不再依赖菜单 DOM、文本、事件相位或合成 Escape。
