@@ -71,6 +71,12 @@ export const ASSETS_CSS = `
 .omnimux-assets-th-desc { min-width: 200px; }
 .omnimux-assets-th-files, .omnimux-assets-td-files { width: 120px; }
 .omnimux-assets-th-actions, .omnimux-assets-td-actions { width: 160px; text-align: right; }
+.omnimux-assets-list-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .omnimux-assets-list-badge { position: static !important; }
 .omnimux-assets-list-missing { position: static !important; margin-left: 6px; }
 .omnimux-assets-td-desc {
