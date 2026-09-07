@@ -69,13 +69,46 @@ describe('inspiration triptych modal', () => {
     assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-modal-panel\.is-active/)
   })
 
-  it('fills the video panel width with an uncapped 9:16 preview and compact title-only header', () => {
+  it('fills the video panel width with a 9:16 preview, floating actions, and compact title-only header', () => {
+    const videoPanel = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-video-panel')
+    assert.equal(decl(videoPanel, 'display'), 'flex')
+    assert.equal(decl(videoPanel, 'flex-direction'), 'column')
+    assert.equal(decl(videoPanel, 'align-items'), 'center')
+    assert.equal(decl(videoPanel, 'justify-content'), 'center')
+    assert.equal(decl(videoPanel, 'padding'), '12px')
+    assert.equal(decl(videoPanel, 'height'), '100%')
+
     const player = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-player-box')
     assert.equal(decl(player, 'width'), '100%')
+    assert.equal(decl(player, 'height'), '100%')
+    assert.equal(decl(player, 'max-height'), '100%')
     assert.equal(decl(player, 'aspect-ratio'), '9 / 16')
-    assert.equal(decl(player, 'margin'), '0 0 14px')
-    assert.doesNotMatch(player, /max-height/)
+    assert.equal(decl(player, 'margin'), '0')
     assert.equal(decl(player, 'display'), 'flex')
+
+    const actions = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-actions')
+    assert.equal(decl(actions, 'position'), 'absolute')
+    assert.equal(decl(actions, 'top'), '10px')
+    assert.equal(decl(actions, 'right'), '10px')
+    assert.equal(decl(actions, 'z-index'), '20')
+    assert.equal(decl(actions, 'display'), 'flex')
+    assert.equal(decl(actions, 'gap'), '6px')
+    assert.equal(decl(actions, 'opacity'), '0')
+    assert.equal(decl(actions, 'pointer-events'), 'none')
+
+    const actionsHover = ruleBody(
+      INSPIRATION_CSS,
+      '.omnimux-inspiration-modal-player-box:hover .omnimux-inspiration-player-actions,\n.omnimux-inspiration-modal-player-box:focus-within .omnimux-inspiration-player-actions',
+    )
+    assert.equal(decl(actionsHover, 'opacity'), '1')
+    assert.equal(decl(actionsHover, 'pointer-events'), 'auto')
+
+    const actionCopy = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-actions .omnimux-inspiration-modal-copy')
+    assert.equal(decl(actionCopy, 'width'), '32px')
+    assert.equal(decl(actionCopy, 'height'), '32px')
+    assert.equal(decl(actionCopy, 'border-radius'), '6px')
+    assert.equal(decl(actionCopy, 'color'), 'var(--dsw-alias-label-primary, #ffffff)')
+
     const media = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-frame,\n.omnimux-inspiration-modal-cover-bg')
     assert.equal(decl(media, 'object-fit'), 'contain')
     const header = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-header')
@@ -90,6 +123,16 @@ describe('inspiration triptych modal', () => {
     assert.equal(decl(headingTitle, 'text-overflow'), 'ellipsis')
     assert.equal(decl(headingCopy, 'flex-shrink'), '0')
     assert.match(INSPIRATION_CSS, /modal-copy\.is-icon-only/)
+  })
+
+  it('removes video panel heading and metadata list, adding floating action controls on player', () => {
+    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.doesNotMatch(section, /modal\.panel\.video/)
+    assert.doesNotMatch(section, /omnimux-inspiration-modal-meta-list/)
+    assert.doesNotMatch(section, /omnimux-inspiration-stats-grid/)
+    assert.match(section, /omnimux-inspiration-player-actions/)
+    assert.match(section, /omnimux-inspiration-player-open-link/)
+    assert.match(section, /modal\.meta\.visitLink/)
   })
 
   it('removes platform, favorite, and re-analyze controls from the modal header', () => {

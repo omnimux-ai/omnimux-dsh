@@ -1513,6 +1513,14 @@ export const INSPIRATION_CSS = `
   color: var(--dsw-alias-label-primary);
 }
 .omnimux-inspiration-modal-panel:last-child { border-right: 0; }
+.omnimux-inspiration-modal-video-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  height: 100%;
+}
 .omnimux-inspiration-modal-panel-heading {
   display: flex;
   align-items: center;
@@ -1528,14 +1536,46 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-player-box {
   position: relative;
   width: 100%;
+  height: 100%;
+  max-height: 100%;
   aspect-ratio: 9 / 16;
-  margin: 0 0 14px;
-  overflow: hidden;
+  margin: 0;
   border-radius: 8px;
+  overflow: hidden;
   background: var(--dsw-alias-bg-base);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.omnimux-inspiration-player-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.omnimux-inspiration-modal-player-box:hover .omnimux-inspiration-player-actions,
+.omnimux-inspiration-modal-player-box:focus-within .omnimux-inspiration-player-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.omnimux-inspiration-player-actions .omnimux-inspiration-modal-copy {
+  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.65));
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--dsw-alias-border, rgba(255, 255, 255, 0.18));
+  border-radius: 6px;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  width: 32px;
+  height: 32px;
+}
+.omnimux-inspiration-player-actions .omnimux-inspiration-modal-copy:hover {
+  background: var(--dsw-alias-bg-mask-2, var(--dsw-alias-bg-mask-1));
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omnimux-inspiration-player-frame,
 .omnimux-inspiration-modal-cover-bg {
