@@ -10,8 +10,10 @@ import {
   listCanvasResources,
   type LocalFileDraft,
   type ResourcePickerTab,
+  type ResourcePickerMode,
 } from '../../utils/resourcePickerPolicy.ts';
 import type { ResourcePickerSlotTarget } from '../../hooks/useResourcePicker.ts';
+import type { NodeSlotEngineState } from '../../../../shared/graph/slotContractTypes.ts';
 import CanvasResourcePane from './CanvasResourcePane';
 import LocalUploadPane from './LocalUploadPane';
 
@@ -21,10 +23,15 @@ export interface ResourcePickerModalProps {
   initialTab?: ResourcePickerTab;
   /** T03：卡槽装填会话——预过滤素材类型、允许选中已连入供给、提交时 pinned 进 slot。 */
   slotTarget?: ResourcePickerSlotTarget | null;
+  mode?: ResourcePickerMode;
+  targetSlotIndex?: number;
+  slotState?: NodeSlotEngineState;
   onCancel: () => void;
   onCommit: (payload: {
     selectedCanvasNodeIds: string[];
     localFiles: LocalFileDraft[];
+    mode?: ResourcePickerMode;
+    targetSlotIndex?: number;
   }) => boolean;
 }
 
@@ -33,6 +40,9 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   nodeId,
   initialTab = 'canvas',
   slotTarget = null,
+  mode = 'add',
+  targetSlotIndex,
+  slotState,
   onCancel,
   onCommit,
 }) => {
@@ -61,14 +71,33 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
     onCancel();
   }, [onCancel]);
 
-  const handleToggle = useCallback((id: string, alreadyConnected: boolean) => {
-    if (alreadyConnected) return;
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }, []);
+  const handleToggle = useCallback(
+    (id: string, alreadyConnected: boolean, disabled?: boolean) => {
+      if (disabled) return;
+      if (mode === 'replace') {
+        setSelectedIds((prev) => (prev.includes(id) ? [] : [id]));
+        setLocalFiles([]);
+        return;
+      }
+      if (alreadyConnected && !slotTarget) return;
+      setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    },
+    [mode, slotTarget],
+  );
 
-  const handleAddFiles = useCallback((incoming: LocalFileDraft[]) => {
-    setLocalFiles((prev) => [...prev, ...incoming]);
-  }, []);
+  const handleAddFiles = useCallback(
+    (incoming: LocalFileDraft[]) => {
+      if (mode === 'replace') {
+        if (incoming.length > 0) {
+          setLocalFiles([incoming[incoming.length - 1]!]);
+          setSelectedIds([]);
+        }
+        return;
+      }
+      setLocalFiles((prev) => [...prev, ...incoming]);
+    },
+    [mode],
+  );
 
   const handleRemoveFile = useCallback((id: string) => {
     setLocalFiles((prev) => prev.filter((file) => file.id !== id));
@@ -76,6 +105,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
 
   const usableCanvasCount = selectedIds.filter((id) => {
     const item = canvasItems.find((entry) => entry.nodeId === id);
+    if (mode === 'replace') return Boolean(item);
     return item && (!item.alreadyConnected || Boolean(slotTarget));
   }).length;
   const selectedCount = usableCanvasCount + localFiles.length;
@@ -85,12 +115,19 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
     const ok = onCommit({
       selectedCanvasNodeIds: selectedIds,
       localFiles,
+      mode,
+      targetSlotIndex,
     });
     if (ok) {
       setLocalFiles([]);
       setSelectedIds([]);
     }
-  }, [localFiles, onCommit, selectedCount, selectedIds]);
+  }, [localFiles, mode, onCommit, selectedCount, selectedIds, targetSlotIndex]);
+
+  const useButtonLabel =
+    mode === 'replace'
+      ? t('picker.replace') || '替换素材'
+      : `${t('picker.use')} ${selectedCount} ${t('picker.items')}`;
 
   const footer = (
     <div className="wf-picker-footer">
@@ -103,16 +140,21 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
         disabled={selectedCount === 0}
         onClick={handleUse}
       >
-        {t('picker.use')} {selectedCount} {t('picker.items')}
+        {useButtonLabel}
       </button>
     </div>
   );
+
+  const modalTitle =
+    mode === 'replace'
+      ? t('picker.replaceTitle') || '替换素材'
+      : t('picker.title');
 
   return (
     <CustomModal
       open={open}
       onCancel={handleCancel}
-      title={t('picker.title')}
+      title={modalTitle}
       width={720}
       className="wf-picker-modal"
       bodyClassName="wf-picker-modal__body"
@@ -143,6 +185,9 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
         <CanvasResourcePane
           items={canvasItems}
           selectedIds={selectedIds}
+          mode={mode}
+          targetSlotIndex={targetSlotIndex}
+          slotState={slotState}
           onToggle={handleToggle}
           acceptedTypes={slotTarget?.acceptedTypes}
           allowConnectedSelection={Boolean(slotTarget)}

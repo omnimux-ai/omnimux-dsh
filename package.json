@@ -10,6 +10,7 @@
     "plugins/*"
   ],
   "scripts": {
+    "typecheck": "npm --prefix plugins/omnimux-workflow run typecheck",
     "dev": "node scripts/omnimux.mjs dev",
     "sync": "node scripts/omnimux.mjs sync",
     "doctor": "node scripts/omnimux.mjs doctor",

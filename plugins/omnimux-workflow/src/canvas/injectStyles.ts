@@ -12,6 +12,7 @@ import themeCss from './theme/workbench-theme.css';
 import componentsCss from './theme/components.css';
 import tableNodeCss from './theme/table-node.css';
 import textStageCss from './components/text-stage/text-stage.css';
+import promptTokenEditorCss from './editor/components/PromptTokenEditor/promptTokenEditor.css';
 
 const STYLESHEETS: Array<{ id: string; css: string }> = [
   { id: 'omnimux-workflow-xyflow-base', css: xyflowCss },
@@ -19,6 +20,7 @@ const STYLESHEETS: Array<{ id: string; css: string }> = [
   { id: 'omnimux-workflow-components', css: componentsCss },
   { id: 'omnimux-workflow-table-node', css: tableNodeCss },
   { id: 'omnimux-workflow-text-stage', css: textStageCss },
+  { id: 'omnimux-workflow-prompt-token-editor', css: promptTokenEditorCss },
 ];
 
 export function injectCanvasStyles(): void {

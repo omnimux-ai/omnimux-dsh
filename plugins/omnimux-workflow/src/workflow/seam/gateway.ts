@@ -43,6 +43,22 @@ export interface SubmitRequest {
   capability: GenerationCapability;
   /** Prompt text (or upstream text content). */
   prompt?: string;
+  /** Interleaved multimodal message parts (Issue #714 / T05). */
+  interleavedParts?: Array<{
+    type: 'text' | 'image_url' | 'video_url' | 'audio_url' | string;
+    text?: string;
+    url?: string;
+    mediaUrl?: string;
+    image_url?: { url: string };
+    video_url?: { url: string };
+    audio_url?: { url: string };
+    mimeType?: string;
+    slotIndex?: number;
+    sourceNodeId?: string;
+    label?: string;
+    materialType?: string;
+    [key: string]: unknown;
+  }>;
   /** Reference image (absolute local path / http(s) / data URI). */
   image?: string;
   /** Legacy single video; prefer ordered references for new callers. */
