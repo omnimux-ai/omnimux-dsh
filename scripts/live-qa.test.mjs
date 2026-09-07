@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
@@ -219,7 +219,16 @@ test('CLI argument failures overwrite stale success and retain per-run failure e
   }
 })
 
-test('CLI returns exit 2 while its request remains pending', () => {
-  const cli = spawnSync(process.execPath, [join(repo, 'scripts/agent-live-qa.mjs'), 'assets', '--target=prod'], { encoding: 'utf8' })
-  assert.notEqual(cli.status, 0)
+test('CLI rejects production in a sandbox without overwriting workspace evidence', () => {
+  const root = fixture()
+  const workspaceReport = join(repo, 'docs/evidence/live-qa-report.json')
+  const before = existsSync(workspaceReport) ? readFileSync(workspaceReport) : null
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('OMNIMUX_')))
+  Object.assign(env, { HOME: root, DSH_HOME: join(root, '.dsh'), XDG_CONFIG_HOME: join(root, '.config') })
+  const cli = spawnSync(process.execPath, [join(repo, 'scripts/agent-live-qa.mjs'), 'assets', '--target=prod'], { cwd: root, env, encoding: 'utf8' })
+  assert.equal(cli.status, 1, cli.stderr)
+  const report = JSON.parse(readFileSync(join(root, 'docs/evidence/live-qa-report.json'), 'utf8'))
+  assert.equal(report.pass, false)
+  assert.match(report.errors.join(';'), /Unknown target: prod/)
+  assert.deepEqual(existsSync(workspaceReport) ? readFileSync(workspaceReport) : null, before)
 })

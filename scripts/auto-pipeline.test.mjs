@@ -1,13 +1,17 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { execSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PNG } from 'pngjs'
+import { liveEvidence, tinyPng } from './test-fixtures/live-evidence.mjs'
+import { transitionIssue } from './auto-pipeline-github.mjs'
 
 import {
+  assessAdmission,
   assessAuthorization,
+  assessRuntimeAuthorization,
   classifyRisk,
   parseFrontmatter,
   slugifyTopic,
@@ -24,35 +28,6 @@ import { evaluateVerdict } from './ci-verdict.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
-
-function tinyPng() {
-  return PNG.sync.write({ width: 1, height: 1, data: Buffer.from([0, 0, 0, 255]) })
-}
-
-function liveEvidence(dir) {
-  const target = { stage: 'assets', tabId: 'omnimux-assets:library' }
-  const now = new Date().toISOString()
-  const request = { root: repoRoot, runId: 'run-1', commitSha: execSync('git rev-parse HEAD', { cwd: repoRoot, encoding: 'utf8' }).trim(), target: 'l2', profile: 'omnimux-dev-qa', url: 'http://127.0.0.1:44201/', stage: 'assets', targets: [target], evidenceDir: dir, allocation: null, createdAt: new Date(Date.now() - 2_000).toISOString(), consumedAt: now, expiresAt: new Date(Date.now() + 60_000).toISOString() }
-  const bundle = plugin => ({
-    plugin,
-    bundlePath: `plugins/${plugin}/client.js`,
-    bundleBytes: 1,
-    bundleSha256: 'b'.repeat(64),
-    bundleRegistrationSha256: 'c'.repeat(64),
-    bundleCodeSha256: 'd'.repeat(64),
-    loadedScriptUrl: `http://127.0.0.1:44201/plugins/${plugin}/client.js`,
-    loadedScriptSha256: 'e'.repeat(64),
-    loadedScriptCodeSha256: 'f'.repeat(64),
-    loadedRegistrationSha256: 'c'.repeat(64),
-    loadedRegistrationCodeSha256: 'd'.repeat(64),
-    match: 'raw-registration',
-    matchingRegistrationCount: 1,
-  })
-  const assertions = ['active-content-selection', 'idempotent-open', 'chat-clears-selection', 'restore'].map(suffix => ({ name: `assets:${suffix}`, pass: true })).concat([{ name: 'initial-session-restored', pass: true }, { name: 'initial-workbench-restored', pass: true }])
-  const proof = { requestedOrigin: 'http://127.0.0.1:44201', target: 'l2', allocation: null, bundles: [bundle('omnimux'), bundle('omnimux-assets')] }
-  const report = { ...request, pass: true, status: 'completed', tool: 'codex-iab', tabId: 'iab-tab-1', actualUrl: request.url, completedAt: now, runtimeProof: { before: proof, after: structuredClone(proof) }, screenshots: [join(dir, 'assets.png')], probe: { targets: [target], assertions, screenshots: [join(dir, 'assets.png')] } }
-  return { request, report }
-}
 
 describe('OmniMux 自动化交付流水线与质量门禁套件', () => {
   it('auto-qa-gate.mjs 脚本存在且支持 JSON 输出模式与五维指标', () => {
@@ -170,8 +145,7 @@ allow-skips: false
   })
 
   it('pipeline-state 排他锁与原子状态机工作正常', () => {
-    const tmpRoot = join(repoRoot, '.workbuddy', 'tmp-test-state')
-    mkdirSync(tmpRoot, { recursive: true })
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'pipeline-state-'))
     try {
       const lock1 = acquireIssueLock(tmpRoot, '888')
       assert.ok(lock1.lock, '锁路径有效')
@@ -194,12 +168,11 @@ allow-skips: false
   })
 
   it('validateBrowserEvidence 正确核验证据完整性', () => {
-    const tmpEvidence = join(repoRoot, '.workbuddy', 'tmp-test-evidence')
-    mkdirSync(tmpEvidence, { recursive: true })
+    const tmpEvidence = mkdtempSync(join(tmpdir(), 'pipeline-evidence-'))
     try {
       const shotFile = join(tmpEvidence, 'assets.png')
       writeFileSync(shotFile, tinyPng())
-      const { request, report: validReport } = liveEvidence(tmpEvidence)
+      const { request, report: validReport } = liveEvidence(repoRoot, tmpEvidence)
       writeFileSync(join(tmpEvidence, 'live-qa-report.json'), JSON.stringify(validReport))
       writeFileSync(join(tmpEvidence, 'codex-browser-qa-request.json'), JSON.stringify(request))
 
@@ -271,19 +244,49 @@ allow-skips: false
     }
   })
 
-  it('evaluateVerdict 聚合 CI 判定逻辑正确', () => {
-    const passQa = { pass: true, summary: 'L0 PASS' }
-    const failQa = { pass: false, summary: 'L0 FAIL' }
-    const verdictDir = join(repoRoot, '.workbuddy', 'tmp-test-verdict')
-    mkdirSync(verdictDir, { recursive: true })
-    const { request: browserRequest, report: passBrowser } = liveEvidence(verdictDir)
-    writeFileSync(join(verdictDir, 'assets.png'), tinyPng())
+  it('evaluateVerdict 按实际影响面聚合，不以 L0 代替 IAB', () => {
+    const passQa = { pass: true, summary: 'L0 PASS', changedFiles: ['docs/guide.md'] }
+    assert.equal(evaluateVerdict(passQa, null).pass, true)
+    assert.equal(evaluateVerdict({ ...passQa, pass: false }, null).pass, false)
+    assert.equal(evaluateVerdict({ ...passQa, changedFiles: ['plugins/a/client/index.js'] }, null).pass, false)
+    assert.equal(evaluateVerdict({ pass: true }, null).pass, false)
+  })
 
-    assert.equal(evaluateVerdict(passQa, null, { requireBrowser: false }).pass, true)
-    assert.equal(evaluateVerdict(failQa, null, { requireBrowser: false }).pass, false)
-    assert.equal(evaluateVerdict(passQa, passBrowser, { requireBrowser: true, browserRequest, root: repoRoot, browserRoot: repoRoot, browserRunId: browserRequest.runId, browserStage: browserRequest.stage, browserTarget: browserRequest.target }).pass, true)
-    assert.equal(evaluateVerdict(passQa, null, { requireBrowser: true }).pass, false)
-    rmSync(verdictDir, { recursive: true, force: true })
+  it('准入后真实状态迁移剥除 ready，运行时复验通过且撤销/升级熔断', () => {
+    const maintainers = new Set(['boss-user'])
+    const issue = {
+      body: '---\nrisk-tier: R2\npre-authorized: true\n---\n', state: 'OPEN',
+      labels: ['status:ready-to-run', 'risk:R2'],
+      comments: [{ author: { login: 'boss-user' }, body: '/auto-approve risk:R2' }],
+    }
+    assert.equal(assessAdmission(issue, maintainers).eligible, true)
+    const options = { execCommand(command, args) {
+      assert.equal(command, 'gh')
+      const labels = new Set(issue.labels)
+      for (let i = 0; i < args.length; i += 1) {
+        if (args[i] === '--add-label') labels.add(args[++i])
+        else if (args[i] === '--remove-label') labels.delete(args[++i])
+      }
+      issue.labels = [...labels]
+      return { status: 0 }
+    } }
+    for (const status of ['status:pipeline-running', 'status:in-progress', 'status:qa-review', 'status:auto-merge-pending']) {
+      transitionIssue(606, status, options)
+      assert.equal(issue.labels.includes('status:ready-to-run'), false)
+      assert.equal(assessRuntimeAuthorization(issue, maintainers, 'R2').valid, true)
+    }
+    const risk = classifyRisk(issue, ['docs/contracts/plugin-qa.md'])
+    assert.equal(risk.tier, 'R1')
+    assert.equal(assessRuntimeAuthorization(issue, maintainers, risk.tier).valid, false)
+    issue.comments.push({ author: { login: 'boss-user' }, body: '/revoke' })
+    assert.equal(assessRuntimeAuthorization(issue, maintainers, 'R2').valid, false)
+  })
+
+  it('入口调用 admission，等待 CI 后在合入前调用 runtime', () => {
+    const source = readFileSync(join(here, 'auto-pipeline.mjs'), 'utf8')
+    assert.match(source, /assessAdmission\(issue, maintainers\)/)
+    assert.match(source, /await waitForCi[\s\S]*assessRuntimeAuthorization\(latestIssue, maintainers, risk\.tier\)[\s\S]*await requestAndConfirmMerge/)
+    assert.doesNotMatch(source, /assessAuthorization\(latestIssue/)
   })
 
   it('slugifyTopic 截断长度且保留有效字符', () => {

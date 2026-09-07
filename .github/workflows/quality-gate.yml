@@ -16,6 +16,8 @@ jobs:
   static-and-tests:
     name: Static L0 QA & Tests
     runs-on: ubuntu-latest
+    env:
+      QA_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || 'origin/main' }}
     permissions:
       contents: read
       pull-requests: write
@@ -30,6 +32,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Clear stale QA label
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          node --input-type=module - <<'JS'
+          import { syncQaPassLabel } from './scripts/qa-label.mjs';
+          const result = syncQaPassLabel({ prNumber: process.env.PR_NUMBER, pass: false });
+          if (!result.ok) throw new Error(result.errors.join('; '));
+          JS
 
       - name: Install QA verifier dependencies
         run: |
@@ -54,6 +68,9 @@ jobs:
           node --check scripts/auto-pipeline.mjs
           node --check scripts/pipeline-state.mjs
           node --check scripts/ci-verdict.mjs
+          node --check scripts/impact-matrix.mjs
+          node --check scripts/authorization.mjs
+          node --check scripts/qa-label.mjs
           node --check scripts/check-tracked-artifacts.mjs
           node --check scripts/verify-model-contracts.mjs
           bash -n scripts/git-wt.sh
@@ -66,11 +83,11 @@ jobs:
       - name: Run diff-aware L0 static QA
         run: |
           mkdir -p .workbuddy/evidence
-          node scripts/auto-qa-gate.mjs . --diff --base origin/main --json --output .workbuddy/evidence/auto-qa-report.json
+          node scripts/auto-qa-gate.mjs . --diff --base "$QA_BASE" --json --output .workbuddy/evidence/auto-qa-report.json
 
       - name: Run regression tests
         run: |
-          node --test scripts/auto-pipeline.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/repair-inspiration-covers.test.mjs scripts/import-gxgen-inspirations.test.mjs
+          node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/auto-pipeline.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/repair-inspiration-covers.test.mjs scripts/import-gxgen-inspirations.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
         run: |
@@ -119,10 +136,14 @@ jobs:
           retention-days: 7
 
       - name: Evaluate CI verdict
+        if: ${{ always() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          CI_STATUS: ${{ job.status }}
         run: |
           node scripts/ci-verdict.mjs \
             --report .workbuddy/evidence/auto-qa-report.json \
+            --files-from-git --base "$QA_BASE" \
+            --ci-status "$CI_STATUS" \
             ${{ github.event.pull_request.number && format('--pr {0}', github.event.pull_request.number) || '--dry-run' }}
