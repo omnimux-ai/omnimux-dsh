@@ -62,16 +62,27 @@ test('SegmentControls operation 分段消费 effective operations；≤1 隐藏�
   assert.match(segmentSrc, /wf-video-seg/);
   // 分辨率只读提示
   assert.match(segmentSrc, /当前模型仅支持此分辨率/);
-  // 有声/无声 label
-  assert.match(segmentSrc, /'有声'/);
-  assert.match(segmentSrc, /'无声'/);
+  // 有声/无声 label（CompactToggle JSX 属性形式）
+  assert.match(segmentSrc, /"有声"/);
+  assert.match(segmentSrc, /"无声"/);
+});
+
+test('SegmentControls 控件选型矩阵：Operation 走 resolveControlKind，Sound 走 160px CompactToggle', () => {
+  // 生成方式：长标签 / 溢出 → Choice Tile（2×N nowrap），否则 Segment
+  assert.match(segmentSrc, /resolveControlKind/);
+  assert.match(segmentSrc, /ChoiceTile/);
+  assert.match(segmentSrc, /kind === 'choice-tile'/);
+  // 有声：从通栏 Segment 降级为 CompactToggle（与清晰度同行）
+  assert.match(segmentSrc, /CompactToggle/);
+  assert.match(segmentSrc, /trueLabel="有声"/);
+  assert.match(segmentSrc, /falseLabel="无声"/);
 });
 
 test('DurationGrid 含时长胶囊网格类与 onChange 透传', () => {
   assert.match(durationSrc, /wf-video-duration-grid/);
   assert.match(durationSrc, /wf-video-duration-pill/);
   assert.match(durationSrc, /wf-video-duration-pill--active/);
-  assert.match(durationSrc, /repeat\(auto-fill,\s*minmax\(52px,\s*1fr\)\)/);
+  assert.match(durationSrc, /repeat\(auto-fill,\s*minmax\(56px,\s*1fr\)\)/);
   assert.match(durationSrc, /onChange\(opt\.value\)/);
 });
 

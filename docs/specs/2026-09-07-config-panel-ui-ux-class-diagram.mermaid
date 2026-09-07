@@ -1,0 +1,238 @@
+classDiagram
+    direction TB
+
+    class MaterialNodeData {
+        +string label
+        +MaterialType materialType
+        +string prompt
+        +VideoNodeParams params
+    }
+
+    class VideoNodeParams {
+        +string model
+        +string operation
+        +string aspectRatio
+        +string resolution
+        +number duration
+        +boolean sound
+        +number seed
+        +boolean watermark
+        +string outputFormat
+        +PendingVideoParamAdjustment pendingVideoParamAdjustment
+    }
+
+    class EffectiveVideoParams {
+        +string model
+        +string operation
+        +string operationLabel
+        +OperationUiOption[] effectiveOperations
+        +boolean showModeUi
+        +ModelParameterSchema schema
+        +string aspectRatio
+        +string resolution
+        +number duration
+        +boolean sound
+        +boolean hasSoundSupport
+    }
+
+    class CfgControlKind {
+        <<enumeration>>
+        summary-bar
+        segment
+        choice-tile
+        aspect-grid
+        quick-pills
+        slider
+        inline-switch
+        compact-toggle
+        select
+        text-field
+    }
+
+    class CfgField {
+        +string id
+        +string label
+        +CfgControlKind kind
+        +true schemaDriven
+        +primary|advanced group
+        +string paramKey
+    }
+
+    class CfgSummarySlot {
+        +mode|ratio|resolution|duration|sound|chevron id
+        +string text
+        +boolean hasIcon
+        +hide|icon-only|ellipsis|never dropPolicy
+        +number estimatePx
+    }
+
+    class CfgSummaryVisibleState {
+        +ReadonlySet hidden
+        +ReadonlySet iconOnly
+        +ReadonlySet ellipsis
+    }
+
+    class ControlKindResolver {
+        +CJK_LONG_THRESHOLD number
+        +resolveControlKind(input: ControlKindInput) CfgControlKind
+        +estimateSegmentOverflow(labels: string[], containerPx: number) boolean
+    }
+
+    class SummaryCollapse {
+        +COLLAPSE_ORDER string[]
+        +collapseSummary(slots: CfgSummarySlot[], availablePx: number) CfgSummaryVisibleState
+        +formatSummaryA11yText(parts: string[]) string
+    }
+
+    class VideoParamAdapter {
+        +mergeVideoParameterSchema(base, override) ModelParameterSchema
+        +resolveEffectiveVideoParams(args) EffectiveVideoParams
+        +buildVideoParamTransition(args) VideoParamTransition
+        +validateVideoParamsForUi(params, schema) string[]
+    }
+
+    class ViewportPositioner {
+        +PANEL_WIDTH number
+        +PANEL_DEFAULT_MAX_HEIGHT number
+        +PANEL_MIN_HEIGHT number
+        +GAP number
+        +VIEWPORT_PADDING number
+        +resolvePanelWidth(viewportWidth: number) number
+        +calculatePopoverPosition(triggerRect, viewport) PopoverPosition
+    }
+
+    class PopoverPosition {
+        +top|bottom placement
+        +number top
+        +number bottom
+        +number left
+        +number maxHeight
+        +number width
+    }
+
+    class ConfigPanel {
+        -boolean videoPopoverOpen
+        +handleModelChange(id: string) void
+        +updateParam(key: string, value: unknown) void
+        +onGenerate() void
+    }
+
+    class CfgSummaryBar {
+        +CfgSummarySlot[] slots
+        +boolean isOpen
+        +boolean disabled
+        +string fullText
+        +onToggle() void
+    }
+
+    class VideoTriggerBar {
+        +EffectiveVideoParams params
+        +boolean isOpen
+        +boolean disabled
+        +onToggle() void
+    }
+
+    class CfgParamPopover {
+        +boolean isOpen
+        +PopoverPosition position
+        +CfgField[] fields
+        +onClose() void
+    }
+
+    class VideoParamPopover {
+        +RefObject triggerRef
+        +EffectiveVideoParams params
+        +ModelParameterSchema schema
+        +boolean isOpen
+        +onClose() void
+        +onParamChange(key, value) void
+    }
+
+    class CfgChoiceTile {
+        +options T[]
+        +T value
+        +onChange(v: T) void
+        +number columns
+        +number itemHeight
+    }
+
+    class CfgSegment {
+        +options T[]
+        +T value
+        +onChange(v: T) void
+        +boolean nowrap
+    }
+
+    class CfgCompactToggle {
+        +boolean value
+        +string trueLabel
+        +string falseLabel
+        +number widthPx
+        +onChange(v: boolean) void
+    }
+
+    class CfgAspectGrid {
+        +string value
+        +options Option[]
+        +onChange(v: string) void
+    }
+
+    class CfgQuickPills {
+        +number value
+        +options Option[]
+        +onChange(v: number) void
+    }
+
+    class CfgSliderRow {
+        +number min
+        +number max
+        +number step
+        +number value
+        +boolean allowAuto
+        +onChange(v: number) void
+    }
+
+    class OperationSegment {
+        +string value
+        +OperationUiOption[] operations
+        +onChange(id: string) void
+    }
+
+    class ResolutionSegment {
+        +string value
+        +options Option[]
+        +onChange(v: string) void
+    }
+
+    class SoundSwitchSegment {
+        +boolean value
+        +onChange(v: boolean) void
+    }
+
+    MaterialNodeData --> VideoNodeParams : params
+    VideoParamAdapter --> EffectiveVideoParams : 纯函数产出
+    VideoParamAdapter ..> VideoNodeParams : 不改字段名
+    ConfigPanel --> VideoParamAdapter : resolve / transition
+    ConfigPanel *-- VideoTriggerBar : 底栏摘要
+    ConfigPanel *-- VideoParamPopover : Portal 浮层
+    VideoTriggerBar --> CfgSummaryBar : P0-b 门面
+    VideoTriggerBar --> SummaryCollapse : 折叠协议
+    VideoTriggerBar --> EffectiveVideoParams : 只读投影
+    VideoParamPopover --> CfgParamPopover : P0-b 门面
+    VideoParamPopover --> ViewportPositioner : 宽夹紧 + flip 不变
+    VideoParamPopover *-- OperationSegment
+    VideoParamPopover *-- CfgAspectGrid
+    VideoParamPopover *-- ResolutionSegment
+    VideoParamPopover *-- CfgCompactToggle
+    VideoParamPopover *-- CfgQuickPills
+    VideoParamPopover *-- CfgSliderRow
+    OperationSegment --> ControlKindResolver : 长标签升级 Tile
+    OperationSegment --> CfgChoiceTile : 生成方式 2x2
+    OperationSegment --> CfgSegment : 短标签
+    ResolutionSegment --> CfgSegment
+    SoundSwitchSegment --> CfgCompactToggle : 160px 行内
+    ControlKindResolver --> CfgControlKind
+    CfgField --> CfgControlKind
+    ViewportPositioner --> PopoverPosition
+    CfgSummaryBar --> CfgSummarySlot
+    SummaryCollapse --> CfgSummaryVisibleState

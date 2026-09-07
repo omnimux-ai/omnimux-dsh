@@ -3,7 +3,7 @@
  *
  * 视口自适应弹性定位、边界碰撞与动态限高纯函数算法。
  * 遵循设计文档规格：
- * - PANEL_WIDTH = 360
+ * - PANEL_WIDTH = 360（设计宽；实际宽度由 resolvePanelWidth 按视口夹紧）
  * - PANEL_DEFAULT_MAX_HEIGHT = 480
  * - PANEL_MIN_HEIGHT = 200
  * - GAP = 8
@@ -17,6 +17,14 @@ export const PANEL_DEFAULT_MAX_HEIGHT = 480;
 export const PANEL_MIN_HEIGHT = 200;
 export const GAP = 8;
 export const VIEWPORT_PADDING = 12;
+
+/**
+ * 浮层实际宽度：min(360, viewport - 24)。
+ * 与 CSS `max-width: calc(100vw - 24px)` 保持一致，窄视口下面板左右各留 12px 安全边距。
+ */
+export function resolvePanelWidth(viewportWidth: number): number {
+  return Math.min(PANEL_WIDTH, Math.max(0, viewportWidth - VIEWPORT_PADDING * 2));
+}
 
 /**
  * 计算参数 Popover 浮层基于视口（Screen / Viewport CSS Pixels）的绝对定位与弹性高度。
@@ -56,12 +64,13 @@ export function calculatePopoverPosition(
     bottom = undefined;
   }
 
-  // 3. 横向防溢出对齐与安全边距校正
+  // 3. 横向防溢出对齐与安全边距校正（宽度随视口夹紧：min(360, viewport-24)）
+  const width = resolvePanelWidth(vWidth);
   let left = triggerRect.left;
 
   // 靠右边缘溢出防御：向左推移
-  if (left + PANEL_WIDTH > vWidth - VIEWPORT_PADDING) {
-    left = vWidth - VIEWPORT_PADDING - PANEL_WIDTH;
+  if (left + width > vWidth - VIEWPORT_PADDING) {
+    left = vWidth - VIEWPORT_PADDING - width;
   }
 
   // 靠左边缘溢出防御：向右纠偏至安全边距
@@ -73,7 +82,7 @@ export function calculatePopoverPosition(
     placement,
     left,
     maxHeight,
-    width: PANEL_WIDTH,
+    width,
   };
 
   if (top !== undefined) {

@@ -168,3 +168,75 @@ export interface VideoParamPopoverProps {
 }
 
 export type { VideoSummaryFormatResult } from './summaryFormatter.ts';
+
+/* ------------------------------------------------------------------ */
+/* Cfg 控件契约（2026-09-07 配置面板 UI 收敛 / T01）                     */
+/* 仅追加类型与防御性断言，不改动 VideoNodeParams / EffectiveVideoParams */
+/* ------------------------------------------------------------------ */
+
+/** 控件选型矩阵允许的全部控件形态 */
+export type CfgControlKind =
+  | 'summary-bar'
+  | 'segment'
+  | 'choice-tile'
+  | 'aspect-grid'
+  | 'quick-pills'
+  | 'slider'
+  | 'inline-switch'
+  | 'compact-toggle'
+  | 'select'
+  | 'text-field';
+
+/** 摘要条槽位 id */
+export type CfgSummarySlotId = 'mode' | 'ratio' | 'resolution' | 'duration' | 'sound' | 'chevron';
+
+/** 摘要条单个槽位（折叠协议输入） */
+export interface CfgSummarySlot {
+  id: CfgSummarySlotId;
+  text: string;
+  hasIcon: boolean;
+  /** hide=整段丢弃；icon-only=丢文字留图标；ellipsis=数值省略；never=永不丢弃 */
+  dropPolicy: 'hide' | 'icon-only' | 'ellipsis' | 'never';
+  /** 含自身 gap 的估算宽度（调用方按 12px 字 + 14px 图标估算） */
+  estimatePx: number;
+}
+
+/** 摘要折叠结果：三个集合互斥描述每个槽位的可见态 */
+export interface CfgSummaryVisibleState {
+  hidden: ReadonlySet<CfgSummarySlotId>;
+  iconOnly: ReadonlySet<CfgSummarySlotId>;
+  ellipsis: ReadonlySet<CfgSummarySlotId>;
+}
+
+/** 本迭代允许从浮层写入的 key。新增 UI 控件不得扩大此集合。 */
+export type VideoParamWriteKey =
+  | 'operation'
+  | 'aspectRatio'
+  | 'resolution'
+  | 'duration'
+  | 'sound'
+  | 'seed'
+  | 'watermark'
+  | 'outputFormat'
+  | 'referenceTaskType'
+  | 'generationType'
+  | 'returnLastFrame'
+  | 'webSearch'
+  | 'nsfwCheck'
+  | 'fileUrl'
+  | 'linkUrl';
+
+/** 运行期断言：禁止 generationMode 与未知 key 进入写入路径。 */
+export function assertVideoParamWriteKey(key: string): asserts key is VideoParamWriteKey {
+  const allowed: readonly string[] = [
+    'operation', 'aspectRatio', 'resolution', 'duration', 'sound',
+    'seed', 'watermark', 'outputFormat', 'referenceTaskType', 'generationType',
+    'returnLastFrame', 'webSearch', 'nsfwCheck', 'fileUrl', 'linkUrl',
+  ];
+  if (key === 'generationMode') {
+    throw new Error('UI must not write params.generationMode');
+  }
+  if (!allowed.includes(key)) {
+    throw new Error(`UI must not write params.${key}`);
+  }
+}
