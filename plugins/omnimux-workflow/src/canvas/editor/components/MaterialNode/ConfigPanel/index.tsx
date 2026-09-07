@@ -25,6 +25,7 @@ import {
   Image as ImageIcon,
   X,
   AlertTriangle,
+  AudioLines,
 } from 'lucide-react';
 import type { MaterialNodeData } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
@@ -51,7 +52,9 @@ import { ImageParamPopover } from './imageParams/ImageParamPopover';
 import { resolveEffectiveImageParams } from './imageParams/imageParamAdapter';
 import { AudioTriggerBar } from './audioParams/AudioTriggerBar';
 import { AudioParamPopover } from './audioParams/AudioParamPopover';
-import { resolveEffectiveAudioParams } from './audioParams/audioParamAdapter';
+import { resolveEffectiveAudioParams, resolveAudioPromptGate, AUDIO_PROMPT_MAX_CHARS } from './audioParams/audioParamAdapter';
+import { VOICE_PICKER_MIN_OPTIONS, resolveVoiceLabel } from './audioParams/voicePickerModel.ts';
+import { VoicePickerDialog } from './audioParams/VoicePickerDialog';
 import {
   applyPendingVideoParamAdjustment,
   buildVideoParamTransition,
@@ -149,6 +152,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
   const [audioPopoverOpen, setAudioPopoverOpen] = useState(false);
   const audioTriggerRef = useRef<HTMLDivElement | null>(null);
+  // T04：音色选择弹窗（大音色目录时由底栏 VoiceTrigger 唤起）
+  const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
 
   const slotState = nodeData.slotState as NodeSlotEngineState | undefined;
@@ -368,6 +373,26 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     [materialType, isAsrTool, params, schema, modelItem, activeCatalog, upstreamSnapshots, localPrompt],
   );
 
+  // T04：音色目录（schema.voice.options 为真源，含 VoiceOptionMeta）
+  const voiceCatalogOptions = useMemo(
+    () => (materialType === 'audio' && !isAsrTool
+      ? audioEffectiveParams?.schema.voice?.options ?? []
+      : []),
+    [materialType, isAsrTool, audioEffectiveParams],
+  );
+  // 大音色目录 → 底栏 VoiceTrigger + VoicePickerDialog；小目录仍走 Popover 内音色区。
+  const showVoicePicker = voiceCatalogOptions.length >= VOICE_PICKER_MIN_OPTIONS;
+  const selectedVoiceOption = useMemo(
+    () => voiceCatalogOptions.find((option) => option.value === audioEffectiveParams?.voice),
+    [voiceCatalogOptions, audioEffectiveParams],
+  );
+
+  // T03：朗读正文字数闸门（Unicode code point 计，10000 上限）
+  const audioPromptGate = useMemo(
+    () => (materialType === 'audio' && !isAsrTool ? resolveAudioPromptGate(prompt) : null),
+    [materialType, isAsrTool, prompt],
+  );
+
   const handleModelChange = useCallback(
     (newModelId: string) => {
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
@@ -549,13 +574,15 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     || filteredModels.zeroCandidates
     || nodeCompat?.status === 'configuration_error'
     || videoValidationErrors.length > 0
+    || Boolean(audioPromptGate?.exceeded)
     || Boolean(pendingVideoParamAdjustment)
     || missingRequiredSlots.length > 0
     || execBusy;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
-    generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
+    (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
+    || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
     || pendingVideoParamAdjustment?.notices[0]
     || videoValidationErrors[0]
     || slotShortageReason;
@@ -678,6 +705,21 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             aria-hidden="true"
           />
         </PromptTokenEditor>
+
+        {/* T03：音频（非 ASR）朗读正文字数统计；超限红色高亮并阻断生成 */}
+        {audioPromptGate ? (
+          <div
+            className={`wf-config-panel__char-counter${
+              audioPromptGate.exceeded ? ' wf-config-panel__char-counter--exceeded' : ''
+            }`}
+            data-testid="wf-audio-char-counter"
+            data-exceeded={audioPromptGate.exceeded ? 'true' : 'false'}
+            role={audioPromptGate.exceeded ? 'alert' : 'status'}
+            title={audioPromptGate.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined}
+          >
+            {audioPromptGate.count}/{audioPromptGate.max}
+          </div>
+        ) : null}
       </div>
 
       {/* 3. 底部参数与操作底栏 */}
@@ -711,6 +753,23 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               onChange={(value) => handleModelChange(String(value))}
             />
           )}
+
+          {/* T04：音色触发入口（模型下拉右侧），唤起 VoicePickerDialog */}
+          {showVoicePicker ? (
+            <button
+              type="button"
+              className="wf-voice-trigger"
+              data-testid="wf-voice-trigger"
+              disabled={execBusy}
+              title={selectedVoiceOption ? `音色：${resolveVoiceLabel(selectedVoiceOption)}` : '选择音色'}
+              onClick={() => setVoicePickerOpen(true)}
+            >
+              <AudioLines size={14} strokeWidth={1.75} aria-hidden="true" />
+              <span className="wf-voice-trigger__label">
+                {selectedVoiceOption ? resolveVoiceLabel(selectedVoiceOption) : '选择音色'}
+              </span>
+            </button>
+          ) : null}
 
           {/* 文本 / ASR 保持内联生成方式入口；图像与音频（非 ASR）的生成方式进各自浮层。 */}
           {showModeUi && (materialType === 'text' || isAsrTool) ? (
@@ -812,6 +871,20 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           onParamChange={(key, value) => updateParam(key, value)}
         />
       )}
+
+      {/* T04：音色选择弹窗（选中即写回 params.voice 并关闭） */}
+      {showVoicePicker ? (
+        <VoicePickerDialog
+          open={voicePickerOpen}
+          options={voiceCatalogOptions}
+          {...(audioEffectiveParams?.voice ? { value: audioEffectiveParams.voice } : {})}
+          onClose={() => setVoicePickerOpen(false)}
+          onSelect={(voiceType) => {
+            updateParam('voice', voiceType);
+            setVoicePickerOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 };

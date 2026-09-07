@@ -21,12 +21,8 @@ models:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
     parameters:
       voice:
-        options:
-          - { value: "zh_male_guanggaojieshuo_uranus_bigtts", label: "广告解说 2.0" }
-          - { value: "zh_female_gujie_uranus_bigtts", label: "顾姐 2.0" }
-          - { value: "zh_male_jieshuoxiaoming_moon_bigtts", label: "解说小明" }
-          - { value: "zh_female_zhixingnv_uranus_bigtts", label: "知性女声 2.0" }
-          - { value: "ICL_uranus_en_female_charlie_tob", label: "Charlie 2.0" }
+        # Resolved by the catalog loader; the DTO and SubmitGuard share one index.
+        optionsFrom: "volcengine-voice-index"
         defaultValue: "zh_male_guanggaojieshuo_uranus_bigtts"
       speed:
         # Require a finite number without inventing undocumented bounds.

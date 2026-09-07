@@ -42,6 +42,25 @@ test('Seed Audio speech maps selected voice, speed and all supported formats at 
   }
 })
 
+test('all 509 catalog voices pass the exact whitelist for the canonical model and both aliases', () => {
+  const index = getContractIndex()
+  const contract = index.get(model)
+  const voices = contract.parameters.voice.options
+  assert.equal(voices.length, 509)
+  for (const id of [model, ...contract.aliases]) {
+    for (const { value } of voices) {
+      const plan = assertGuardSubmit({ ...request, model: id, voice: value }, { ...options, index })
+      assert.equal(plan.vendorPayload.voice, value)
+      assert.deepEqual(Object.keys(plan.vendorPayload).sort(), ['input', 'response_format', 'speed', 'voice'])
+    }
+    for (const voice of ['alloy', 'unknown-voice', 'zh_male_not_official_bigtts', voices[0].value.toUpperCase()]) {
+      const rejected = guardSubmit({ ...request, model: id, voice }, { ...options, index })
+      assert.equal(rejected.ok, false, voice)
+      assert.equal(rejected.code, 'parameter_unsupported')
+    }
+  }
+})
+
 test('Seed Audio rejects missing text and unsupported parameters', () => {
   for (const invalid of [
     { prompt: '' }, { prompt: '   ' }, { voice: 'alloy' }, { format: 'flac' },

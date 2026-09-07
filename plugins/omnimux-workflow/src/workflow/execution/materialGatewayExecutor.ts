@@ -184,6 +184,14 @@ export function createMaterialGatewayExecutor(opts: {
         signal: ctx.signal,
         mockFail: readMockFail(data),
       };
+      // Synchronous speech consumes text and voice parameters, not reference media.
+      if (capability === 'audio' && upstream.operationId === 'text_to_speech') {
+        delete request.references;
+        delete request.audio;
+        delete request.audioTrack;
+        delete request.image;
+        delete request.interleavedParts;
+      }
       const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);
       ctx.reportProgress?.(10, '已提交生成任务');

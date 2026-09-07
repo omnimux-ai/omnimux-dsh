@@ -88,9 +88,17 @@ export interface BuildManifest {
   canvasHash: string;
 }
 
+import type { VoiceOptionMeta } from './voiceCatalog.ts';
+export type { VoiceOptionMeta } from './voiceCatalog.ts';
+
 export interface ModelParameterOption<T = string | number> {
   value: T;
   label: string;
+}
+
+export interface VoiceCatalogOption extends ModelParameterOption<string> {
+  /** Present for rich voice catalogs; legacy providers may only send value/label. */
+  meta?: VoiceOptionMeta;
 }
 
 export interface ModelParameterSchema {
@@ -164,7 +172,7 @@ export interface ModelParameterSchema {
   };
   /** 音色选项 (TTS) */
   voice?: {
-    options: Array<ModelParameterOption<string>>;
+    options: VoiceCatalogOption[];
     defaultValue: string;
   };
   /** 纯音乐选项 (Suno) */

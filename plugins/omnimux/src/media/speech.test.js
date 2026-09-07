@@ -62,6 +62,21 @@ for (const [format, mime] of [['mp3', 'audio/mpeg'], ['wav', 'audio/wav'], ['pcm
   })
 }
 
+test('newly indexed non-core voice reaches only the synchronous speech HTTP body', async (t) => {
+  const selectedVoice = 'zh_female_linxiao_uranus_bigtts'
+  const calls = []
+  const dest = destFor(t)
+  await executeOmnimuxAudio({ dest, model, operation: 'text_to_speech', prompt: '正文', voice: selectedVoice, env,
+    fetcher: async (url, options) => {
+      calls.push({ url, body: JSON.parse(options.body) })
+      return response()
+    },
+  })
+  assert.deepEqual(calls, [{ url: 'https://speech.example/v1/audio/speech',
+    body: { model, input: '正文', voice: selectedVoice, speed: 1, response_format: 'mp3' } }])
+  assert.deepEqual(readFileSync(dest), bytes)
+})
+
 test('admission fails before auth or HTTP for invalid speech input', async (t) => {
   let authCalls = 0, httpCalls = 0
   for (const invalid of [{ prompt: '' }, { prompt: '  ' }, { voice: 'alloy' }, { speed: NaN }, { speed: '1' }, { format: 'ogg' }, { model: 'suno' }]) {
