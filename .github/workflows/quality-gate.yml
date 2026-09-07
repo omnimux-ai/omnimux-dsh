@@ -145,7 +145,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CI_STATUS: ${{ job.status }}
-          OMNIMUX_ALLOW_L0_UI_PASS: '1'
         run: |
           node scripts/ci-verdict.mjs \
             --report .workbuddy/evidence/auto-qa-report.json \

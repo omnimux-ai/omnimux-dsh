@@ -56,6 +56,42 @@ test('UI and mixed changes require ego-browser; requireBrowser:false cannot down
   }
 })
 
+test('legacy programmatic L0 fallback cannot waive required browser evidence', () => {
+  const verdict = evaluateVerdict(qa(uiFiles), null, { allowL0Fallback: true })
+  assert.equal(verdict.pass, false)
+  assert.equal(verdict.dimensions.browser.pass, false)
+  assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
+})
+
+for (const bypass of [
+  { name: 'flag', args: ['--allow-l0-fallback'], environment: '' },
+  { name: 'environment', args: [], environment: '1' },
+]) {
+  test(`legacy L0 fallback ${bypass.name} cannot pass missing browser evidence or add qa:pass`, () => {
+    const root = sandbox()
+    const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
+    const log = join(root, 'labels.log')
+    writeFileSync(join(root, 'qa.json'), JSON.stringify(qa(uiFiles)))
+    writeFileSync(join(root, 'gh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$LABEL_LOG"\n')
+    chmodSync(join(root, 'gh'), 0o755)
+    const result = spawnSync(process.execPath, [script, '--report', 'qa.json', '--pr', '605', '--json', ...bypass.args], {
+      cwd: root, encoding: 'utf8',
+      env: { ...process.env, PATH: `${root}:${process.env.PATH}`, LABEL_LOG: log,
+        GITHUB_REPOSITORY: 'owner/repo', OMNIMUX_ALLOW_L0_UI_PASS: bypass.environment },
+    })
+    assert.equal(result.status, 1, result.stdout)
+    assert.match(readFileSync(log, 'utf8'), /--remove-label qa:pass/)
+    assert.doesNotMatch(readFileSync(log, 'utf8'), /--add-label/)
+    if (bypass.name === 'flag') assert.match(result.stdout, /未知或缺值参数: --allow-l0-fallback/)
+    else {
+      const verdict = JSON.parse(result.stdout)
+      assert.equal(verdict.pass, false)
+      assert.equal(verdict.dimensions.browser.status, 'failed')
+      assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
+    }
+  })
+}
+
 test('missing, false or truthy non-boolean L0 reports and prior CI failure are rejected', () => {
   for (const report of [null, { pass: false }, { pass: 'true' }]) {
     assert.equal(evaluateVerdict(report, null, { changedFiles: docsFiles }).pass, false)
@@ -145,5 +181,6 @@ test('workflow passes event-specific diff context and always evaluates failures'
   assert.match(workflow, /Evaluate CI verdict\n\s+if:.*always\(\)/)
   assert.match(workflow, /--files-from-git --base "\$QA_BASE"/)
   assert.match(workflow, /--ci-status "\$CI_STATUS"/)
+  assert.doesNotMatch(workflow, /OMNIMUX_ALLOW_L0_UI_PASS|--allow-l0-fallback/)
   assert.match(workflow, /syncQaPassLabel\(\{ prNumber: process\.env\.PR_NUMBER, pass: false \}\)/)
 })

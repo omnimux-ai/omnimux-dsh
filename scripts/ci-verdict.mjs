@@ -26,7 +26,6 @@ function parseArgs(argv) {
     const arg = argv[i]
     if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--json') options.json = true
-    else if (arg === '--allow-l0-fallback') options.allowL0Fallback = true
     else if (arg === '--require-browser') options.requireBrowser = true
     else if (arg === '--files-from-git') options.filesFromGit = true
     else if ((arg === '--changed-files' || values[arg]) && argv[i + 1] !== undefined && !argv[i + 1].startsWith('--')) {
@@ -71,11 +70,7 @@ export function evaluateVerdict(qaReport, browserReport, options = {}) {
   let browserPass = required === false
   if (required === true) {
     if (!browserReport) {
-      if (options.allowL0Fallback || process.env.OMNIMUX_ALLOW_L0_UI_PASS === '1') {
-        browserPass = true
-      } else {
-        errors.push('缺少 ego-browser live-qa-report.json 浏览器验收报告')
-      }
+      errors.push('缺少 ego-browser live-qa-report.json 浏览器验收报告')
     } else {
       try {
         if (!options.browserRunId || !options.browserStage || !options.browserTarget || !options.browserRoot) {
