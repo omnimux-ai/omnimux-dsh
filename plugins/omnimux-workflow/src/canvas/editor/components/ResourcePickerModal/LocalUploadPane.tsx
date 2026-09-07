@@ -14,14 +14,17 @@ import {
 import { draftFromRealPath, draftsFromPickedPaths, nativePathOf } from '../../utils/localFileDraft.ts';
 import { localFileMediaUrl } from '../../../../shared/localMedia.ts';
 import PreviewThumb from './PreviewThumb.tsx';
+import { useAsyncInstanceGuard } from '../../hooks/useAsyncInstanceGuard.ts';
 
 export interface LocalUploadPaneProps {
   files: LocalFileDraft[];
+  active: boolean;
   onAddFiles: (files: LocalFileDraft[]) => void;
   onRemove: (id: string) => void;
 }
 
-const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, onAddFiles, onRemove }) => {
+const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddFiles, onRemove }) => {
+  const guard = useAsyncInstanceGuard(active);
   const t = useT();
   const [dragging, setDragging] = useState(false);
   const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({});
@@ -37,9 +40,13 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, onAddFiles, on
   );
 
   const chooseNative = useCallback(async () => {
-    const result = await pickLocalFiles();
-    if (!result.ok) {
-      if (result.body.error === 'picker-unsupported') {
+    if (!active) return;
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return;
+    const result = await pickLocalFiles().catch(() => null);
+    if (!guard.isCurrent(ticket)) return;
+    if (!result || !result.ok) {
+      if (result?.body.error === 'picker-unsupported') {
         toast.warning(t('picker.needPath'));
       } else {
         toast.error(t('picker.pickFailed'));
@@ -49,7 +56,7 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, onAddFiles, on
     const paths = result.body.paths ?? [];
     if (paths.length === 0) return;
     ingestPaths(paths);
-  }, [ingestPaths, t]);
+  }, [active, guard, ingestPaths, t]);
 
   const ingestFiles = useCallback(
     (list: FileList | File[]) => {

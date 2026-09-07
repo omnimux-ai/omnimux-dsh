@@ -28,6 +28,7 @@ import type {
   ViewMode,
 } from './assets/types';
 import { useProjectAssets } from '../hooks/useProjectAssets';
+import { useAsyncInstanceGuard } from '../hooks/useAsyncInstanceGuard.ts';
 import { useAddToConversation } from '../../hooks/useAddToConversation';
 import { useSubjectLibrary } from '../hooks/useSubjectLibrary';
 
@@ -87,6 +88,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
   onFocusNode: propOnFocusNode,
   workspaceId,
 }) => {
+  const guard = useAsyncInstanceGuard(JSON.stringify([workspaceId, isOpen]));
   const [activeTab, setActiveTab] = useState<ActiveTab>('canvas');
   const [viewState, setViewState] = useState<'normal' | 'subject-library'>('normal');
   const [canvasViewMode, setCanvasViewMode] = useState<ViewMode>('tree');
@@ -242,6 +244,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
   };
 
   const handleCanvasMenuAction = (action: string, item: CanvasNodeItem) => {
+    const ticket = guard.capture();
     switch (action) {
       case 'add-to-canvas':
       case 'focus-in-canvas':
@@ -263,6 +266,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
           real_path: item.real_path,
           original_name: item.name,
         }]).then((created) => {
+          if (!guard.isCurrent(ticket)) return;
           if (created) toast.success(`已添加到主体库：${created.name}`);
           else toast.warning('主体库暂不可用');
         });
@@ -274,6 +278,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
           break;
         }
         void projectAssets.indexPaths([item.real_path]).then((ok) => {
+          if (!guard.isCurrent(ticket)) return;
           if (ok) toast.success(`已存到项目资产：${item.name}`);
           else toast.error('写入项目资产失败');
         });
@@ -318,6 +323,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
   };
 
   const handleAssetMenuAction = (action: string, item: AssetItem) => {
+    const ticket = guard.capture();
     switch (action) {
       case 'add-to-canvas':
         onInsertAsset?.(item);
@@ -338,6 +344,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
         if (target && target.trim()) {
           const folder = folders.find((row) => row.name === target.trim());
           void projectAssets.moveNode(item.id, folder?.id ?? null).then((ok) => {
+            if (!guard.isCurrent(ticket)) return;
             if (ok) toast.success(`已移动到：${target.trim()}`);
             else toast.error('移动失败');
           });
@@ -346,6 +353,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
       }
       case 'delete':
         void projectAssets.deleteNode(item.id).then((ok) => {
+          if (!guard.isCurrent(ticket)) return;
           if (ok) toast.success(`已删除：${item.name}`);
           else toast.error('删除失败');
         });
@@ -357,6 +365,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
   };
 
   const handleFolderMenuAction = (action: string, item: AssetItem) => {
+    const ticket = guard.capture();
     switch (action) {
       case 'reveal-in-finder':
         revealInFinder(item);
@@ -365,6 +374,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
         const newName = prompt('重命名文件夹：', item.name);
         if (newName && newName.trim()) {
           void projectAssets.renameFolder(item.id, newName.trim()).then((ok) => {
+            if (!guard.isCurrent(ticket)) return;
             if (ok) toast.success('文件夹已重命名');
             else toast.error('重命名失败');
           });
@@ -378,6 +388,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
         if (target && target.trim()) {
           const folder = folders.find((row) => row.name === target.trim());
           void projectAssets.moveNode(item.id, folder?.id ?? null).then((ok) => {
+            if (!guard.isCurrent(ticket)) return;
             if (ok) toast.success(`文件夹已移动到：${target.trim()}`);
             else toast.error('移动失败');
           });
@@ -386,6 +397,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
       }
       case 'delete':
         void projectAssets.deleteNode(item.id).then((ok) => {
+          if (!guard.isCurrent(ticket)) return;
           if (ok) toast.success(`已删除文件夹：${item.name}`);
           else toast.error('删除失败');
         });
@@ -398,7 +410,14 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
 
   /** Canvas Tab: #122 workflow pick. Never falls back to hidden <input type=file>. */
   const handleCanvasImport = async () => {
-    const result = await pickLocalFiles();
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return;
+    const result = await pickLocalFiles().catch(() => null);
+    if (!guard.isCurrent(ticket)) return;
+    if (!result) {
+      toast.error('选择文件失败');
+      return;
+    }
     const interpretation = interpretPickResponse(result);
     if (interpretation.kind !== 'ok') {
       reportPickFailure(interpretation);
@@ -418,21 +437,27 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
 
   /** Assets Tab: POST /omnimux/assets/pick. Cancel = no toast.error, no write. */
   const handleAssetsImport = async () => {
+    const ticket = guard.capture();
+    if (!guard.isCurrent(ticket)) return;
     const result = await assetsPickClient.pickAssets('file');
+    if (!guard.isCurrent(ticket)) return;
     const interpretation = result.interpretation;
     if (interpretation.kind !== 'ok') {
       reportPickFailure(interpretation);
       return;
     }
     const ok = await projectAssets.indexPaths(interpretation.paths);
+    if (!guard.isCurrent(ticket)) return;
     if (ok) toast.success(`已导入 ${String(interpretation.paths.length)} 个文件`);
     else toast.error(projectAssets.error || '写入项目资产失败');
   };
 
   const handleCreateFolder = () => {
+    const ticket = guard.capture();
     const name = prompt('请输入新文件夹名称：', '新建素材文件夹');
     if (!name || !name.trim()) return;
     void projectAssets.mkdir(name.trim()).then((ok) => {
+      if (!guard.isCurrent(ticket)) return;
       if (ok) toast.success(`已新建文件夹：${name.trim()}`);
       else toast.error(projectAssets.error || '新建文件夹失败');
     });
@@ -478,7 +503,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
         <button
           type="button"
           className="wf-drawer-close-btn-compact"
-          onClick={onClose}
+          onClick={() => { guard.invalidate(); onClose(); }}
           title="关闭抽屉 (Esc / A)"
         >
           <X size={14} />
@@ -492,7 +517,9 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
             error={subjectLibrary.error}
             onBack={() => setViewState('normal')}
             onSelectSubject={(subject) => {
+              const ticket = guard.capture();
               void projectAssets.instantiateSubject(subject.id).then((ok) => {
+                if (!guard.isCurrent(ticket)) return;
                 if (ok) {
                   toast.success(`已实例化到项目：${subject.name}`);
                   setViewState('normal');
@@ -503,9 +530,11 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
               });
             }}
             onCreateSubject={() => {
+              const ticket = guard.capture();
               const name = prompt('请输入新主体名称：', '新主体');
               if (!name || !name.trim()) return;
               void subjectLibrary.createSubject(name.trim()).then((created) => {
+                if (!guard.isCurrent(ticket)) return;
                 if (created) toast.success(`已新建主体：${created.name}`);
                 else toast.warning('主体库暂不可用，未能创建');
               });
@@ -547,7 +576,10 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
             onCreateFolder={handleCreateFolder}
             onInsertToCanvas={(item) => onInsertAsset?.(item)}
             onRefresh={() => {
-              void projectAssets.refresh().then(() => toast.success('已刷新项目资产'));
+              const ticket = guard.capture();
+              void projectAssets.refresh().then(() => {
+                if (guard.isCurrent(ticket)) toast.success('已刷新项目资产');
+              });
             }}
           />
         )}
