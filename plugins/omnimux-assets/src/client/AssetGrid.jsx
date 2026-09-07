@@ -4,6 +4,7 @@ import { activateRowKeydown } from './a11y.js'
 import { CheckIcon, FileIcon, EyeIcon, ChatIcon } from './icons.jsx'
 import { previewUrl } from './api.js'
 import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
+import { isFolderAsset, resolveAssetMediaPreview } from './asset-routing.js'
 
 /**
  * @param {{
@@ -12,11 +13,12 @@ import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
  *   selected?: boolean,
  *   onToggleSelect?: (asset: any) => void,
  *   onOpen: (asset: any) => void,
+ *   onPreview?: (item: any) => void,
  *   onAddToConversation?: (asset: any) => void,
  *   missing?: boolean,
  * }} props
  */
-function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onAddToConversation, missing }) {
+function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, onAddToConversation, missing }) {
   const [broken, setBroken] = useState(false)
   const [added, setAdded] = useState(false)
   const timerRef = useRef(null)
@@ -35,9 +37,19 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onAddToConv
 
   const src = coverFile && !broken ? previewUrl(asset.id, coverFile.id) : ''
 
+  const handleTriggerAction = () => {
+    if (isFolderAsset(asset)) {
+      onOpen(asset)
+    } else if (typeof onPreview === 'function') {
+      onPreview(resolveAssetMediaPreview(asset))
+    } else {
+      onOpen(asset)
+    }
+  }
+
   const handleView = (event) => {
     event.stopPropagation()
-    onOpen(asset)
+    handleTriggerAction()
   }
 
   const handleAdd = (event) => {
@@ -61,8 +73,8 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onAddToConv
       tabIndex={0}
       role="button"
       aria-selected={selected ? 'true' : 'false'}
-      onClick={() => onOpen(asset)}
-      onKeyDown={activateRowKeydown(() => onOpen(asset))}
+      onClick={handleTriggerAction}
+      onKeyDown={activateRowKeydown(handleTriggerAction)}
     >
       <div className="omnimux-assets-card-thumb">
         {onToggleSelect ? (
@@ -151,11 +163,12 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onAddToConv
  *   selected?: boolean,
  *   onToggleSelect?: (asset: any) => void,
  *   onOpen: (asset: any) => void,
+ *   onPreview?: (item: any) => void,
  *   onAddToConversation?: (asset: any) => void,
  *   missing?: boolean,
  * }} props
  */
-function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConversation, missing }) {
+function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onPreview, onAddToConversation, missing }) {
   const [added, setAdded] = useState(false)
   const timerRef = useRef(null)
 
@@ -165,9 +178,19 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
     }
   }, [])
 
+  const handleTriggerAction = () => {
+    if (isFolderAsset(asset)) {
+      onOpen(asset)
+    } else if (typeof onPreview === 'function') {
+      onPreview(resolveAssetMediaPreview(asset))
+    } else {
+      onOpen(asset)
+    }
+  }
+
   const handleView = (event) => {
     event.stopPropagation()
-    onOpen(asset)
+    handleTriggerAction()
   }
 
   const handleAdd = (event) => {
@@ -189,7 +212,7 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
     <tr
       className="omnimux-assets-list-row"
       aria-selected={selected ? 'true' : 'false'}
-      onClick={() => onOpen(asset)}
+      onClick={handleTriggerAction}
     >
       <td className="omnimux-assets-td-check" onClick={(e) => e.stopPropagation()}>
         {onToggleSelect ? (
@@ -256,6 +279,7 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
  *   showEmptyAction?: boolean,
  *   onEmptyAction?: () => void,
  *   onOpen: (asset: any) => void,
+ *   onPreview?: (item: any) => void,
  *   onAddToConversation?: (asset: any) => void,
  *   selectedIds?: Set<string>,
  *   onToggleSelect?: (asset: any) => void,
@@ -263,6 +287,7 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onAddToConve
  *   onCopy?: (asset: any) => void,
  *   onRemove?: (asset: any) => void,
  *   copiedId?: string,
+ *   onBrowse?: (asset: any) => void,
  * }} props
  */
 export function AssetGrid({
@@ -273,6 +298,7 @@ export function AssetGrid({
   showEmptyAction = true,
   onEmptyAction,
   onOpen,
+  onPreview,
   onAddToConversation,
   selectedIds,
   onToggleSelect,
@@ -317,6 +343,7 @@ export function AssetGrid({
                   selected={selected}
                   onToggleSelect={onToggleSelect}
                   onOpen={onOpen}
+                  onPreview={onPreview}
                   onAddToConversation={onAddToConversation}
                   missing={missing}
                 />
@@ -341,6 +368,7 @@ export function AssetGrid({
             selected={selected}
             onToggleSelect={onToggleSelect}
             onOpen={onOpen}
+            onPreview={onPreview}
             onAddToConversation={onAddToConversation}
             missing={missing}
           />

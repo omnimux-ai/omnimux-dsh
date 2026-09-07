@@ -5,6 +5,7 @@ import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
 import { AssetGrid } from './AssetGrid.jsx'
 import { AssetDetail } from './AssetDetail.jsx'
+import { AssetPreviewModal } from './AssetPreviewModal.jsx'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
@@ -166,7 +167,7 @@ function AssetsSelectionBar(props) {
 }
 
 function AssetsMainView(props) {
-  const { t, feed, emptyProps, onOpenAdd } = props
+  const { t, feed, emptyProps, onOpenAdd, onPreview } = props
   const { detail, setDetail, visible, viewMode, copyCite, copiedId, selectedIds, toggleSelect, handleRemoveSingle } = feed
   const { emptyLabel, emptyActionLabel, searching } = emptyProps
 
@@ -177,6 +178,7 @@ function AssetsMainView(props) {
         t={t}
         asset={detail}
         onBack={() => setDetail(null)}
+        onPreview={onPreview}
       />
     )
   }
@@ -191,6 +193,7 @@ function AssetsMainView(props) {
       showEmptyAction={!searching}
       onEmptyAction={onOpenAdd}
       onOpen={setDetail}
+      onPreview={onPreview}
       onCopy={copyCite}
       onRemove={handleRemoveSingle}
       copiedId={copiedId}
@@ -202,7 +205,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps } = props
+  const { t, feed, emptyProps, onPreview } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -210,7 +213,7 @@ function AssetsBody(props) {
   return (
     <div className="omnimux-assets-body">
       <div className="omnimux-assets-main">
-        <AssetsMainView t={t} feed={feed} emptyProps={emptyProps} onOpenAdd={onOpenAdd} />
+        <AssetsMainView t={t} feed={feed} emptyProps={emptyProps} onOpenAdd={onOpenAdd} onPreview={onPreview} />
       </div>
       {feed.detail && (
         <AssetDetail
@@ -283,6 +286,7 @@ function AssetsDialogs(props) {
  */
 export function AssetsStage(props) {
   const { t, stage, store, visible = true } = props
+  const [previewTarget, setPreviewTarget] = useState(null)
   useEffect(() => { injectAssetsStyles() }, [])
   const everOpened = true
 
@@ -329,8 +333,15 @@ export function AssetsStage(props) {
       <AssetsFilterBar t={t} feed={feed} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
-      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} />
+      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} />
       <AssetsDialogs t={t} feed={feed} />
+      {previewTarget && (
+        <AssetPreviewModal
+          item={previewTarget}
+          t={t}
+          onClose={() => setPreviewTarget(null)}
+        />
+      )}
     </div>
   )
 }

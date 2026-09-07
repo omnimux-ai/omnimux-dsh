@@ -501,6 +501,173 @@ export const ASSETS_CSS = `
   display: inline-block;
   vertical-align: middle;
 }
+.omnimux-assets-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: omnimux-assets-fade-in 140ms ease;
+}
+@keyframes omnimux-assets-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes omnimux-assets-zoom-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.omnimux-assets-modal-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 860px;
+  max-height: 85vh;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 16px 48px var(--dsw-alias-bg-mask-1);
+  animation: omnimux-assets-zoom-in 140ms ease;
+}
+.omnimux-assets-modal-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-base));
+}
+.omnimux-assets-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.omnimux-assets-modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-assets-modal-badge {
+  font-size: 11px;
+  line-height: 16px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+  border: 1px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 500;
+}
+.omnimux-assets-modal-close {
+  flex: none;
+}
+.omnimux-assets-modal-body {
+  flex: 1;
+  min-height: 240px;
+  max-height: calc(85vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+  overflow: hidden;
+  position: relative;
+}
+.omnimux-assets-modal-media-wrap {
+  width: 100%;
+  height: 100%;
+  max-height: calc(85vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.omnimux-assets-modal-image {
+  max-width: 100%;
+  max-height: calc(85vh - 152px);
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+}
+.omnimux-assets-modal-video {
+  max-width: 100%;
+  max-height: calc(85vh - 152px);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-module-platform);
+  display: block;
+}
+.omnimux-assets-modal-unsupported {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-assets-modal-unsupported-icon {
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-modal-unsupported-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-modal-unsupported-filename {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-assets-modal-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-base));
+}
+.omnimux-assets-modal-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-assets-modal-path-label {
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-modal-path-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-assets-modal-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 `
 
 export function injectAssetsStyles() {

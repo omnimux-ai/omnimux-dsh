@@ -36,19 +36,27 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.match(stylesJs, /\.omnimux-assets-list-actions\s*\{/)
   })
 
+  it('implements dual-track branching for folder vs single media assets', () => {
+    // Imports isFolderAsset and resolveAssetMediaPreview
+    assert.match(gridJsx, /import\s+.*isFolderAsset.*resolveAssetMediaPreview.*from '\.\/asset-routing\.js'/)
+    // In Card: branches on isFolderAsset(asset)
+    assert.match(gridJsx, /if\s*\(isFolderAsset\(asset\)\)\s*\{[\s\S]*?onOpen\(asset\)/)
+    assert.match(gridJsx, /onPreview\(resolveAssetMediaPreview\(asset\)\)/)
+  })
+
   it('completely removes copyCite and remove buttons from card actions and list rows', () => {
     assert.doesNotMatch(gridJsx, /\{t\('card\.copyCite'\)\}/)
     assert.doesNotMatch(gridJsx, /\{t\('mapping\.remove'\)\}/)
   })
 
-  it('contains complete i18n locales for card actions', () => {
+  it('contains complete i18n locales for card actions with Add to Conversation updated', () => {
     assert.equal(zh['card.view'], '查看详情')
-    assert.equal(zh['card.addToConversation'], '去对话中试试')
+    assert.equal(zh['card.addToConversation'], '加入对话')
     assert.equal(zh['card.addedToConversation'], '已加入')
     assert.equal(zh['card.actions'], '操作')
 
     assert.equal(en['card.view'], 'View Details')
-    assert.equal(en['card.addToConversation'], 'Try in Chat')
+    assert.equal(en['card.addToConversation'], 'Add to Conversation')
     assert.equal(en['card.addedToConversation'], 'Added')
     assert.equal(en['card.actions'], 'Actions')
   })
