@@ -13,8 +13,9 @@
  *   - 填入素材后展示完整圆角大方块预览，悬浮显示小叉号 ✕ 卸装填。
  */
 
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { ArrowLeftRight, Image as ImageIcon, Loader2, Music, Play, Plus, X } from 'lucide-react';
+import type { MaterialType } from '../../../../../../shared/canvasTypes.ts';
 import type { SlotOccupant, SlotSpec } from '../../../../../../shared/graph/feedSlot/index.ts';
 import { useT } from '../../../../../i18n';
 import type { UpstreamMediaItem } from '../../../../hooks/useUpstreamMedia.ts';
@@ -55,6 +56,8 @@ function buildWellModels(spec: SlotSpec, props: SlotWellsProps, upstreamByEdge: 
 
 function WellThumb({ model }: { model: WellModel }) {
   const { upstream } = model;
+  const [aspectRatio, setAspectRatio] = useState<number | undefined>(undefined);
+
   if (!model.occupant) {
     return (
       <span className="wf-slot-well__placeholder">
@@ -77,7 +80,20 @@ function WellThumb({ model }: { model: WellModel }) {
     );
   }
   if (upstream.url && upstream.materialType === 'image') {
-    return <img className="wf-slot-well__media" src={upstream.url} alt={upstream.label} />;
+    return (
+      <img
+        className="wf-slot-well__media"
+        src={upstream.url}
+        alt={upstream.label}
+        style={aspectRatio ? { aspectRatio: `${aspectRatio}` } : undefined}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          if (img.naturalWidth && img.naturalHeight) {
+            setAspectRatio(img.naturalWidth / img.naturalHeight);
+          }
+        }}
+      />
+    );
   }
   if (upstream.url && upstream.materialType === 'video') {
     return (
@@ -102,7 +118,7 @@ function WellThumb({ model }: { model: WellModel }) {
 }
 
 const SlotWells: React.FC<SlotWellsProps> = (props) => {
-  const { layout, onPickSlot, onSwapSlots, onClearOccupant } = props;
+  const { layout, onPickSlot, onSwapSlots, onClearOccupant, onInsertToken } = props;
   const t = useT();
   const slotLabel = useSlotLabel();
   const upstreamByEdge = new Map(
@@ -128,6 +144,25 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
       model.requiredEmpty ? 'wf-slot-well--required' : '',
       conflicted ? 'wf-slot-well--conflict' : '',
     ].filter(Boolean).join(' ');
+
+    const handleWellClick = () => {
+      if (occupant) {
+        if (onInsertToken) {
+          onInsertToken({
+            sourceNodeId: model.upstream?.nodeId ?? occupant.edgeId,
+            slotIndex: index,
+            label: model.upstream?.label ?? label,
+            materialType: (model.upstream?.materialType ?? (spec.type as MaterialType) ?? 'image') as MaterialType,
+            mediaUrl: model.upstream?.url,
+          });
+        } else {
+          onPickSlot(pickRequest(spec));
+        }
+      } else {
+        onPickSlot(pickRequest(spec));
+      }
+    };
+
     return (
       <div
         key={`${spec.slot}:${occupant?.edgeId ?? `empty-${index}`}`}
@@ -141,16 +176,29 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
           ? (model.upstream?.label ?? label)
           : t('panel.slotPick').replace('{slot}', label)}
         aria-label={occupant ? label : t('panel.slotPick').replace('{slot}', label)}
-        onClick={() => onPickSlot(pickRequest(spec))}
+        onClick={handleWellClick}
         onKeyDown={(event) => {
           if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault();
-            onPickSlot(pickRequest(spec));
+            handleWellClick();
           }
         }}
       >
         <WellThumb model={model} />
-        {occupant ? <span className="wf-slot-well__label">{label}</span> : null}
+        {occupant ? (
+          <button
+            type="button"
+            className="wf-slot-well__replace-pill nodrag"
+            title={t('node.replaceMaterial')}
+            aria-label={t('node.replaceMaterial')}
+            onClick={(event) => {
+              event.stopPropagation();
+              onPickSlot(pickRequest(spec));
+            }}
+          >
+            {t('node.replaceMaterial')}
+          </button>
+        ) : null}
         {occupant ? (
           <button
             type="button"

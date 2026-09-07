@@ -29,6 +29,7 @@ const zh = {
   'node.relink': '重新链接',
   'node.relinkOk': '已重新链接源文件',
   'node.replace': '替换',
+  'node.replaceMaterial': '替换素材',
   // 媒体空态
   'node.emptyMedia': '未配置素材输入。选中节点在属性面板中配置参数。',
   'node.tryMiniMaxH3': '探索推荐生成模型',

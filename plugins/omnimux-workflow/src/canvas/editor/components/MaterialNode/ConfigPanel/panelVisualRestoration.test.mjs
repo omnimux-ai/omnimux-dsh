@@ -51,8 +51,8 @@ test('TC-737-03: SlotWells 空态 44px 大方圆角虚线框且绝无截断文�
   assert.match(themeCss, /\.wf-slot-well\s*\{[\s\S]*?border-radius:\s*10px/);
   // 空态强制隐藏文字标签
   assert.match(themeCss, /\.wf-slot-well--empty\s+\.wf-slot-well__label\s*\{[\s\S]*?display:\s*none\s*!important/);
-  // SlotWells.tsx 中空态不输出 label
-  assert.match(slotWellsSrc, /\{occupant \? <span className="wf-slot-well__label">\{label\}<\/span> : null\}/);
+  // SlotWells.tsx 中彻底移除文字浮层，保持纯净预览（Issue #755）
+  assert.doesNotMatch(slotWellsSrc, /<span className="wf-slot-well__label">/);
   // 加号 Plus 图标尺寸升级至 20
   assert.match(slotWellsSrc, /<Plus\s+size=\{20\}/);
 });
