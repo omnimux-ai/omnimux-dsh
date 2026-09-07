@@ -113,6 +113,22 @@
 | `--dsw-alias-state-warn-primary` / `--dsw-alias-label-warning` | 警告、只读降级、待确认操作 | `#fbbf24` (Dark) / `#d97706` (Light) | `rgba(245, 158, 11, 0.12)` |
 | `--dsw-alias-status-success` / `--dsw-alias-label-success` | 成功、已就绪、运行正常 | `#4ade80` (Dark) / `#16a34a` (Light) | `rgba(34, 197, 94, 0.12)` |
 
+### 3.6 双主题黑白中性底与极光紫角色分工表（对标 MiniMax 图 1 与图 3）
+
+遵循三层职责正交体系（Structural Monochrome / Action Ink & Paper / AI Intelligence Violet），严禁主按钮彩色通胀：
+
+| 视觉层级 | UI 元素 | Dark 主题规范（图 1 基准） | Light 主题规范（图 3 基准） | 铁律约束 |
+|---|---|---|---|---|
+| **画布底色** | 工作台与 Stage 根底色 | 深曜石黑 `#0C0F17` / `#111113` | 纸白 / 极浅暖灰 `#FFFFFF` / `#F8F8F9` | 70% 视网膜纯净底色 |
+| **点阵坐标** | 画布 20px 网格微米点 | `rgba(255, 255, 255, 0.07)` 径向消隐 | `rgba(0, 0, 0, 0.05)` 径向消隐 | 弱感知工程参照 |
+| **常规卡片** | 节点容器、属性抽屉、提示词面板 | 半透暗石板 `#151A26`，边框 `rgba(255,255,255,0.08)` | 纯白卡片 `#FFFFFF`，边框 `rgba(0,0,0,0.08)` | 保持空间悬浮感 |
+| **视听媒体卡** | **视频播放器、首尾帧预览节点** | 极暗深黑 `#080C14`，边框 `white/12%` | **依然保持深暗底（#11141D）！** | **暗房原则：浅色下视听节点不漂白** |
+| **主执行按钮** | **“执行”、“提交”、“保存”、“创建”** | **纯白实心底 + 纯黑字**（对比度 > 18:1） | **纯黑实心底 + 纯白字（Ink CTA）** | **坚决不用紫色！** |
+| **发送按钮** | 输入框圆形发送键 (`↑`) | **纯白圆底 + 黑色实心箭头** | **纯黑圆底 + 白色实心箭头** | **坚决不用宿主亮蓝（#3b82f6）** |
+| **次级按钮** | 取消、配置、筛选下拉 | 微透暗底 `rgba(255,255,255,0.05)` | 纯白底 `rgba(255,255,255,0.9)` | 视觉降级，不抢主焦点 |
+| **AI 能量流** | 节点贝塞尔连线粒子流（Beam） | **极光亮紫发光流**（`#7961F2` / `#9A88FA`） | **深邃皇家靛紫流**（`#6757E7` / `#5644D6`） | **紫色的专属舞台** |
+| **品牌锁扣** | Logo 锁扣与算力套餐标签 | 香芋紫底 (`#B8B7FF`) + 曜石黑 IP | 极光紫底 (`#7961F2`) + 纯白 IP | 保持品牌图腾记忆点 |
+
 ---
 
 ## 4. 排版与字体系统（Typography System）
@@ -201,12 +217,14 @@
 
 ### 5.3 按钮体系（Button Hierarchy）
 
-| 按钮类型 | 样式定义 | 适用场景 |
-|---|---|---|
-| **Primary (主行动按钮)** | 背景 `var(--dsw-alias-button-primary-fill)`，文字 `var(--dsw-alias-label-primary-foreground)`，无边框，高度 32px，圆角 8px | 页面主要 CTA（`+ 新建资产`、`发布`、`保存`） |
-| **Secondary / Outline (次级按钮)** | 背景 `var(--dsw-alias-bg-layer-1)`，边框 `1px solid var(--dsw-alias-border-l2)`，文字 `var(--dsw-alias-label-primary)`，Hover 边框 `border-l3` | 次级操作、取消、导出、刷新 |
-| **Ghost / IconButton (图标按钮)** | 尺寸 `32px × 32px`，背景透明或 `interactive-bg-hover`，文字 `var(--dsw-alias-label-secondary)`，Hover 提亮 | 工具栏图标、更多菜单、视图切换 |
-| **Danger (危险按钮)** | 背景 `var(--dsw-alias-state-error-primary)`，文字反白，或红字描边 | 删除、解绑、重置等破坏性操作 |
+| 按钮类型 | 样式定义 | 适用场景 | 颜色约束 |
+|---|---|---|---|
+| **Primary (主行动按钮)** | 背景 `var(--dsw-alias-label-primary)`，文字 `var(--dsw-alias-bg-base)`（Light 纯黑白字，Dark 纯白黑字），高度 32px/40px，圆角 8px 或 999px | 页面与节点主要 CTA（`执行`、`+ 新建`、`发布`、`保存`） | **坚决禁用紫色**（WCAG AAA 级高对比） |
+| **Round Send (圆形发送钮)** | 尺寸 32px × 32px，圆角 50%，背景 `label-primary`，内嵌反色 SVG 箭头 | 聊天/Prompt 输入框右侧发送按键 | **坚决禁用宿主亮蓝（#3b82f6）** |
+| **Secondary / Outline (次级按钮)** | 背景 `var(--dsw-alias-bg-layer-1)`，边框 `1px solid var(--dsw-alias-border-l2)`，文字 `var(--dsw-alias-label-primary)`，Hover 边框 `border-l3` | 次级操作、取消、导出、刷新 | 次级降级，不与主按钮争抢焦点 |
+| **Ghost / IconButton (图标按钮)** | 尺寸 `32px × 32px`，背景透明或 `interactive-bg-hover`，文字 `var(--dsw-alias-label-secondary)`，Hover 提亮 | 工具栏图标、更多菜单、视图切换 | 保持中性灰阶 |
+| **Brand (品牌展示胶囊)** | 背景 `linear-gradient(135deg, #6757e7, #7961f2)`，白字，高度 32px，圆角 999px | 算力购买、Annual Plan、VIP 特权标 | **特权保留**，不作为日常主操作按键 |
+| **Danger (危险按钮)** | 背景 `var(--dsw-alias-state-error-primary)`，文字反白，或红字描边 | 删除、解绑、重置等破坏性操作 | 语义红 |
 
 - **按压微动效**：所有按钮点击/按压时声明 `active: { transform: scale(0.96); }`，`transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1)`。
 
