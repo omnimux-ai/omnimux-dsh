@@ -36,6 +36,11 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     assert.match(stylesJs, /\.omnimux-assets-list-actions\s*\{/)
   })
 
+  it('completely removes copyCite and remove buttons from card actions and list rows', () => {
+    assert.doesNotMatch(gridJsx, /\{t\('card\.copyCite'\)\}/)
+    assert.doesNotMatch(gridJsx, /\{t\('mapping\.remove'\)\}/)
+  })
+
   it('contains complete i18n locales for card actions', () => {
     assert.equal(zh['card.view'], '查看')
     assert.equal(zh['card.addToConversation'], '加入会话')

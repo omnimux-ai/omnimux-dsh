@@ -55,7 +55,7 @@ describe('add-to-chat helpers', () => {
       assert.equal(pickCoverFile(asset)?.id, 'f_img')
     })
 
-    it('returns null if no image exists', () => {
+    it('returns null if no image exists or files is non-array', () => {
       const asset = {
         cover: { id: 'cov_doc', kind: 'file', name: 'doc.pdf' },
         files: [
@@ -63,6 +63,8 @@ describe('add-to-chat helpers', () => {
         ],
       }
       assert.equal(pickCoverFile(asset), null)
+      assert.equal(pickCoverFile({ files: null }), null)
+      assert.equal(pickCoverFile({ files: 'not-an-array' }), null)
     })
   })
 
@@ -105,6 +107,13 @@ describe('add-to-chat helpers', () => {
         type: 'character',
         files: asset.files,
       })
+    })
+
+    it('handles asset without name and falls back to default title', () => {
+      const payload = buildAssetPayload({ id: 'ast_noname', files: [] })
+      assert.ok(payload)
+      assert.equal(payload.title, '资产')
+      assert.equal(payload.extension, 'ASSET')
     })
 
     it('returns null for null or missing id asset', () => {
@@ -173,6 +182,22 @@ describe('add-to-chat helpers', () => {
       assert.ok(dispatchedEvent)
       assert.equal(dispatchedEvent.type, 'omnimux:add-to-conversation')
       assert.equal(dispatchedEvent.detail.entityId, 'ast_456')
+    })
+
+    it('survives throwing workbench, store, or event dispatch errors gracefully', () => {
+      const brokenWindow = {
+        __omnimuxWorkbench: {
+          setConversationCollapsed: () => { throw new Error('collapsed boom') },
+          setFocus: () => { throw new Error('focus boom') },
+        },
+        __omnimuxAttachments: {
+          addAttachment: () => { throw new Error('store boom') },
+        },
+        dispatchEvent: () => { throw new Error('dispatch boom') },
+      }
+      const res = addAssetToConversation({ id: 'ast_err', name: 'Fault Tolerant' }, { window: brokenWindow })
+      assert.equal(res.ok, true)
+      assert.equal(res.payload.entityId, 'ast_err')
     })
 
     it('returns error if asset has no id', () => {
