@@ -45,6 +45,8 @@ export interface PromptTokenEditorProps {
   slotState?: NodeSlotEngineState;
   children?: React.ReactNode;
   maxLength?: number;
+  /** 外部权威计数（如音频朗读正文 code point 闸门）；缺省时回退到可视长度。 */
+  countOverride?: number;
   materialType?: string;
   onChange?: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -153,6 +155,7 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       slotState,
       children,
       maxLength,
+      countOverride,
       materialType,
       onChange,
       onKeyDown: externalOnKeyDown,
@@ -175,6 +178,10 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       const clean = value.replace(/@ref\[[^\]]*:([^\]]+)\]/g, '$1');
       return clean.length;
     }, [value]);
+
+    // 展示计数与超限态：外部闸门计数优先，保证与生成阻断口径一致
+    const displayCount = countOverride ?? visualLength;
+    const exceeded = displayCount > effectiveMaxLength;
 
     // 删除 Token 回调
     const handleTokenDelete = useCallback(
@@ -386,8 +393,14 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
           </button>
           <span className="wf-prompt-token-meta-type">T</span>
           <span className="wf-prompt-token-meta-divider">|</span>
-          <span className="wf-prompt-token-meta-count">
-            {visualLength}/{effectiveMaxLength}
+          <span
+            className={`wf-prompt-token-meta-count${
+              exceeded ? ' wf-prompt-token-meta-count--exceeded' : ''
+            }`}
+            data-exceeded={exceeded ? 'true' : 'false'}
+            role={exceeded ? 'alert' : undefined}
+          >
+            {displayCount}/{effectiveMaxLength}
           </span>
         </div>
 

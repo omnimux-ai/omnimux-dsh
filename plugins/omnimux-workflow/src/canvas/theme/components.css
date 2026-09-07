@@ -7145,23 +7145,8 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 /* ==================== 音色选择（Issue 735 T03/T04） ==================== */
 
-/* T03：朗读正文字数统计（Prompt 容器右下角；超限红色高亮） */
-.wf-config-panel__char-counter {
-  position: absolute;
-  right: 4px;
-  bottom: 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--wb-text-muted);
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-
-.wf-config-panel__char-counter--exceeded {
-  color: var(--wb-danger);
-  font-weight: 600;
-  pointer-events: auto;
-}
+/* T03：朗读正文字数统计已并入 PromptTokenEditor 内置 meta-bar（Issue 746），
+   外部 wf-config-panel__char-counter 移除，右下角只保留唯一字符统计。 */
 
 /* T04：底栏音色触发按钮（模型下拉右侧） */
 .wf-voice-trigger {

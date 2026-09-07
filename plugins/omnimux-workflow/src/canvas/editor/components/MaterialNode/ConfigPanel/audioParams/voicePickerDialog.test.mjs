@@ -5,7 +5,8 @@
  *  - VoicePickerDialog：CustomModal 540px、标题「选择音色」、搜索占位、四维筛选、
  *    空态「未找到匹配音色 + 清除筛选」、试听仅 toast.info 不发起真 TTS、
  *    选中即 onSelect(voice_type)、底部常驻选中条；
- *  - ConfigPanel 宿主：字数统计 wf-audio-char-counter（Array.from / 10000）、
+ *  - ConfigPanel 宿主：朗读正文字数闸门（Array.from / 10000）经 maxLength/countOverride
+ *    传入 PromptTokenEditor 内置 meta-bar，右下角仅保留唯一字符统计（Issue #746）、
  *    超限进入 blockGenerate 且禁用文案「朗读正文不能超过 10000 字符」、
  *    底栏 wf-voice-trigger（AudioLines 图标）唤起弹窗并写回 params.voice；
  *  - AudioParamPopover：大音色目录由 VoiceTrigger 承载时音色区收缩；
@@ -24,6 +25,8 @@ const modelSrc = readFileSync(join(here, 'voicePickerModel.ts'), 'utf8');
 const popoverSrc = readFileSync(join(here, 'AudioParamPopover.tsx'), 'utf8');
 const configSrc = readFileSync(join(here, '..', 'index.tsx'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../../../../theme/components.css'), 'utf8');
+const promptEditorSrc = readFileSync(join(here, '../../../PromptTokenEditor/PromptTokenEditor.tsx'), 'utf8');
+const promptEditorCss = readFileSync(join(here, '../../../PromptTokenEditor/promptTokenEditor.css'), 'utf8');
 
 const stripComments = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -64,13 +67,21 @@ test('VoicePickerDialog：选中写回契约（onSelect(voice_type)，宿主负�
 });
 
 test('ConfigPanel T03：字数统计与超限阻断', () => {
-  assert.match(configSrc, /wf-audio-char-counter/);
+  // Issue #746：右下角唯一字符统计由 PromptTokenEditor 内置 meta-bar 承载，
+  // 外部 wf-config-panel__char-counter / wf-audio-char-counter 已移除，杜绝 0/0/10000 重叠。
+  assert.doesNotMatch(configSrc, /wf-config-panel__char-counter/);
+  assert.doesNotMatch(configSrc, /wf-audio-char-counter/);
   assert.match(configSrc, /resolveAudioPromptGate/);
   assert.match(configSrc, /AUDIO_PROMPT_MAX_CHARS/);
+  assert.match(configSrc, /maxLength=\{audioPromptGate \? AUDIO_PROMPT_MAX_CHARS : undefined\}/);
+  assert.match(configSrc, /countOverride=\{audioPromptGate \? audioPromptGate\.count : undefined\}/);
   assert.match(configSrc, /朗读正文不能超过/);
   // 超限进入生成门禁
   assert.match(configSrc, /audioPromptGate\?\.exceeded/);
-  assert.match(configSrc, /wf-config-panel__char-counter--exceeded/);
+  // 内置 meta-bar 承载唯一计数与超限红色高亮
+  assert.match(promptEditorSrc, /countOverride/);
+  assert.match(promptEditorSrc, /wf-prompt-token-meta-count--exceeded/);
+  assert.match(promptEditorCss, /\.wf-prompt-token-meta-count--exceeded/);
 });
 
 test('ConfigPanel T04：底栏 VoiceTrigger 唤起弹窗并写回 params.voice', () => {
@@ -105,6 +116,9 @@ test('样式门禁：新增源码零 raw hex/rgba、零违禁 tokens', () => {
   // CSS：音色相关块使用 --wb-* / --dsw-* tokens
   assert.match(cssSrc, /wf-voice-picker-modal/);
   assert.match(cssSrc, /wf-voice-trigger/);
-  assert.match(cssSrc, /wf-config-panel__char-counter/);
+  // Issue #746：外部重叠计数样式已移除，超限高亮收编进 PromptTokenEditor meta-bar
+  assert.doesNotMatch(cssSrc, /\.wf-config-panel__char-counter/);
+  assert.match(promptEditorCss, /\.wf-prompt-token-meta-count--exceeded/);
   assert.doesNotMatch(cssSrc, /--omx-/);
+  assert.doesNotMatch(promptEditorCss, /--omx-/);
 });
