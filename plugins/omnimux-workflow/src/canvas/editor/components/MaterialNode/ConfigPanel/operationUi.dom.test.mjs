@@ -78,8 +78,11 @@ test('VideoTriggerBar：showModeUi=false 时无 mode DOM / 无多余分隔符', 
   assert.match(triggerSrc, /params\.showModeUi/);
   assert.match(triggerSrc, /data-show-mode/);
   assert.match(triggerSrc, /wf-trigger-mode|wf-video-trigger-bar__mode/);
-  // mode 段条件渲染
-  assert.match(triggerSrc, /showMode \? \(/);
+  // mode 段条件渲染（并受折叠协议 hidden 集合门控）
+  assert.match(triggerSrc, /showMode && !visible\.hidden\.has\('mode'\) \? \(/);
+  // 摘要分隔改用 CSS 竖线：源码无「·」字符节点、无 __dot 类名
+  assert.doesNotMatch(triggerSrc, /·/);
+  assert.doesNotMatch(triggerSrc, /wf-video-trigger-bar__dot/);
 });
 
 test('VideoParamPopover：mode section 仅 showModeUi；写 operation', () => {

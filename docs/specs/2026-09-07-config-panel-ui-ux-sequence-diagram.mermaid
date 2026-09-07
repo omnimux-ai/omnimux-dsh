@@ -1,0 +1,63 @@
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant CP as ConfigPanel
+    participant Adapter as VideoParamAdapter
+    participant TB as VideoTriggerBar
+    participant Collapse as SummaryCollapse
+    participant Pos as ViewportPositioner
+    participant Pop as VideoParamPopover
+    participant Kind as ControlKindResolver
+    participant Store as CanvasStore
+    participant Gate as 提交闸 / 有效输入
+
+    rect rgb(240, 248, 255)
+    Note over CP, Gate: 场景 0: 节点挂载 — 只读投影，不改 params 字段
+    CP->>Adapter: resolveEffectiveVideoParams(params, schema, catalog, upstreams)
+    Adapter-->>CP: EffectiveVideoParams (operation / showModeUi / schema)
+    CP->>TB: slots = 摘要段列表
+    TB->>Collapse: collapseSummary(slots, clientWidth)
+    Collapse-->>TB: hidden / iconOnly / ellipsis；chevron 永不丢
+    Note over Gate: blockGenerate / quietReason / pendingAdjustment 路径不变
+    end
+
+    rect rgb(245, 255, 240)
+    Note over User, Pop: 场景 1: 打开浮层
+    User->>TB: 点击 Summary Bar
+    TB->>CP: onToggle()
+    CP->>Pos: calculatePopoverPosition(rect, viewport)
+    Pos->>Pos: width = min(360, viewport-24)；flip 逻辑不变
+    Pos-->>CP: PopoverPosition
+    CP->>Pop: Portal → document.body（nowheel nodrag）
+    Pop->>Kind: resolveControlKind(生成方式 labels)
+    Kind-->>Pop: choice-tile（长中文）或 segment（短标签）
+    end
+
+    rect rgb(255, 250, 240)
+    Note over User, Store: 场景 2: 改参数 — 字段名与 adapter 语义冻结
+    User->>Pop: 选 Tile / Aspect / Pill / CompactToggle
+    Pop->>CP: onParamChange(key, value) key ∈ keyof VideoNodeParams
+    CP->>Store: updateParam（operation / aspectRatio / resolution / duration / sound）
+    Store-->>CP: 新 params
+    CP->>Adapter: resolveEffectiveVideoParams
+    Adapter-->>CP: 新 EffectiveVideoParams
+    CP->>TB: 重算摘要折叠
+    Note over Pop, Gate: 禁止写 generationMode；ops≤1 不渲染生成方式 DOM
+    end
+
+    rect rgb(255, 240, 245)
+    Note over User, Gate: 场景 3: 模型切换与提交（本迭代零改动）
+    User->>CP: 切换模型
+    CP->>Adapter: buildVideoParamTransition(...)
+    Adapter-->>CP: params + 可选 pendingVideoParamAdjustment
+    User->>CP: 点击生成
+    CP->>Gate: blockGenerate / disabledReason
+    Gate-->>User: 与 node-input-submission 一致；UI 重构不得放宽或收紧
+    end
+
+    rect rgb(240, 240, 255)
+    Note over User, Pop: 场景 4: 关闭
+    User->>Pop: Esc / 外点 / 再次点击 Trigger
+    Pop->>CP: onClose()
+    CP->>TB: isOpen=false（brand 描边收回，chevron 回转）
+    end

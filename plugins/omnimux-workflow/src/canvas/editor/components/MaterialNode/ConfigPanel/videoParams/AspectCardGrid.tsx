@@ -3,8 +3,10 @@
  *
  * 画幅比例卡片网格：
  * - 网格容器 `wf-video-aspect-grid`：4 列，grid-template-columns: repeat(4, 1fr); gap: 8px;
+ *   末行不满时保持格子宽度（诚实空列，不拉宽变形）；
  * - 每张卡片 `<button>` `wf-video-aspect-card`，选中追加 `--active`，高 56px；
- * - 上部消费 AspectRatioIcon（24x24 矢量线框），下部为 11px 比例 label。
+ *   选中态 = interactive-bg-active + brand-primary 描边（叠加 inset 1px），高对比可辨；
+ * - 上部消费 AspectRatioIcon（24x24 矢量线框），下部为 12px 比例 label（废除 11px）。
  */
 
 import { type ReactElement } from 'react';

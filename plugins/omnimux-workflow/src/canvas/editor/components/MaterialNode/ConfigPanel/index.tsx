@@ -692,19 +692,16 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             </>
           )}
 
-          {/* 视频专属参数胶囊：单行摘要 TriggerBar + Portal 浮层 */}
+          {/* 视频专属参数胶囊：单行摘要 TriggerBar + Portal 浮层（废除前置 `|` 分隔，由 flex gap 承担） */}
           {materialType === 'video' && videoEffectiveParams && (
-            <>
-              <span className="wf-param-pill__divider">|</span>
-              <div ref={videoTriggerRef} className="wf-video-trigger-bar__wrap">
-                <VideoTriggerBar
-                  params={videoEffectiveParams}
-                  isOpen={videoPopoverOpen}
-                  disabled={execBusy}
-                  onToggle={() => setVideoPopoverOpen((p) => !p)}
-                />
-              </div>
-            </>
+            <div ref={videoTriggerRef} className="wf-video-trigger-bar__wrap">
+              <VideoTriggerBar
+                params={videoEffectiveParams}
+                isOpen={videoPopoverOpen}
+                disabled={execBusy}
+                onToggle={() => setVideoPopoverOpen((p) => !p)}
+              />
+            </div>
           )}
 
           {/* 音频专属设置按钮 */}

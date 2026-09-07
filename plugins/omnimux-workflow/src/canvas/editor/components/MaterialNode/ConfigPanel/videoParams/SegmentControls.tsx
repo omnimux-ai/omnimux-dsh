@@ -1,14 +1,21 @@
 /**
- * Video Param Segment Controls (Issue 467 / W2).
+ * Video Param Segment Controls (Issue 467 / W2, 2026-09-07 UI 收敛 / T03).
  *
  * OperationSegment is driven by Catalog DTO effective operations (open string
  * ids + labels). Unsupported ops are not
  * rendered (Hide, Don't Grey). effectiveOps ≤ 1 → return null (no DOM).
+ *
+ * 控件选型走 resolveControlKind 矩阵：长标签 / 单行溢出 → 2×N Choice Tile
+ * （nowrap 零断词）；短标签 → Segment。有声从通栏 Segment 降级为
+ * 160px CompactToggle，与清晰度同行。
  */
 
 import { Check, Volume2, VolumeX, X } from 'lucide-react';
 import { type ReactElement, type ReactNode } from 'react';
 import type { OperationUiOption } from '../../../../../../shared/validation/operationUi.ts';
+import { ChoiceTile } from './ChoiceTile.tsx';
+import { CompactToggle } from './CompactToggle.tsx';
+import { resolveControlKind } from './controlKind.ts';
 
 /** 通用分段选项结构 */
 interface SegmentOption<T extends string | number | boolean> {
@@ -85,6 +92,8 @@ export interface OperationSegmentProps {
  * 1. 只渲染传入的 effective operations；不支持项不在 DOM。
  * 2. operations.length <= 1 → return null（0/1 无 mode UI）。
  * 3. 未知未来合法 id 以 string 消费，不穷举 17-union。
+ * 4. 选型走 resolveControlKind：长标签（>4 汉字）/ 单行溢出 → Choice Tile
+ *    2×N（高 36px，nowrap 零断词），否则 Segment 单行 nowrap。
  */
 export function OperationSegment({
   value,
@@ -100,6 +109,23 @@ export function OperationSegment({
     value: op.id,
     label: op.label || op.id,
   }));
+
+  const kind = resolveControlKind({
+    cardinality: options.length,
+    labels: options.map((opt) => opt.label),
+    containerPx: 328,
+  });
+
+  if (kind === 'choice-tile') {
+    return (
+      <ChoiceTile
+        options={options}
+        value={value}
+        onChange={onChange}
+        ariaLabel="生成方式"
+      />
+    );
+  }
 
   return (
     <Segment
@@ -144,14 +170,19 @@ export interface SoundSwitchSegmentProps {
   onChange: (v: boolean) => void;
 }
 
-/** 有声/无声分段：有声带 Volume2，无声带 VolumeX */
+/** 有声/无声 160px 紧凑开关：有声带 Volume2，无声带 VolumeX（废除通栏 Segment） */
 export function SoundSwitchSegment({ value, onChange }: SoundSwitchSegmentProps): ReactElement {
-  const options: Array<SegmentOption<boolean>> = [
-    { value: true, label: '有声', icon: <Volume2 size={13} /> },
-    { value: false, label: '无声', icon: <VolumeX size={13} /> },
-  ];
-
-  return <Segment options={options} value={value} onChange={onChange} ariaLabel="音效" />;
+  return (
+    <CompactToggle
+      value={value}
+      onChange={onChange}
+      trueLabel="有声"
+      falseLabel="无声"
+      trueIcon={<Volume2 size={13} />}
+      falseIcon={<VolumeX size={13} />}
+      ariaLabel="音效"
+    />
+  );
 }
 
 export function BooleanSwitchSegment({

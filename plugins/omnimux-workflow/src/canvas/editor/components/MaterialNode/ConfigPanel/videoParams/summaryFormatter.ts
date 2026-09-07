@@ -24,7 +24,7 @@ export interface VideoSummaryFormatResult {
   durationText: string;
   /** 音效状态文案，若支持且开启则为 '有声'，否则为 null */
   soundText: string | null;
-  /** 由中点分隔的紧凑完整文本；mode 缺省时不以分隔符开头 */
+  /** 由空格分隔的紧凑完整文本（a11y 用；视觉分隔由 CSS 竖线承担，废除中点 `·`） */
   fullText: string;
 }
 
@@ -92,7 +92,7 @@ export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFo
   if (durationText) segments.push(durationText);
   if (soundText) segments.push(soundText);
 
-  const fullText = segments.join(' · ');
+  const fullText = segments.join(' ');
 
   return {
     modeText,

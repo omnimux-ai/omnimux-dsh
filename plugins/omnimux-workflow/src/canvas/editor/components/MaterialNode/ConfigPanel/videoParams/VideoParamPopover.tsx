@@ -198,16 +198,31 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {resolutionOptions.length > 0 && (
-          <section className="wf-video-param-popover__section">
-            <h4 className="wf-video-param-popover__section-title">清晰度</h4>
-            <ResolutionSegment
-              value={params.resolution}
-              options={resolutionOptions}
-              onChange={(v) => onParamChange('resolution', v)}
-            />
+        {resolutionOptions.length > 0 || params.hasSoundSupport ? (
+          <section className="wf-video-param-popover__section" data-testid="wf-video-quality-section">
+            <div className="wf-video-param-popover__quality-row">
+              {resolutionOptions.length > 0 ? (
+                <div className="wf-video-param-popover__quality-field">
+                  <h4 className="wf-video-param-popover__section-title">清晰度</h4>
+                  <ResolutionSegment
+                    value={params.resolution}
+                    options={resolutionOptions}
+                    onChange={(v) => onParamChange('resolution', v)}
+                  />
+                </div>
+              ) : null}
+              {params.hasSoundSupport ? (
+                <div className="wf-video-param-popover__quality-field wf-video-param-popover__quality-field--sound">
+                  <h4 className="wf-video-param-popover__section-title">有声</h4>
+                  <SoundSwitchSegment
+                    value={params.sound}
+                    onChange={(v) => onParamChange('sound', v)}
+                  />
+                </div>
+              ) : null}
+            </div>
           </section>
-        )}
+        ) : null}
 
         {durationOptions.length > 0 && (
           <section className="wf-video-param-popover__section">
@@ -252,16 +267,6 @@ export function VideoParamPopover({
             </div>
           </section>
         ) : null}
-
-        {params.hasSoundSupport && (
-          <section className="wf-video-param-popover__section">
-            <h4 className="wf-video-param-popover__section-title">有声视频</h4>
-            <SoundSwitchSegment
-              value={params.sound}
-              onChange={(v) => onParamChange('sound', v)}
-            />
-          </section>
-        )}
 
         {needsFileUrl || needsLinkUrl ? (
           <section className="wf-video-param-popover__section">
