@@ -1,5 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import type { ConversationAttachment } from './types.ts';
+import {
+  AUDIO_EXTENSIONS,
+  IMAGE_EXTENSIONS,
+  TEXT_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+  isMediaAttachment,
+  isVideoAttachment,
+} from './media-detector.ts';
+
+export {
+  AUDIO_EXTENSIONS,
+  IMAGE_EXTENSIONS,
+  TEXT_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+  isMediaAttachment,
+  isVideoAttachment,
+};
 
 interface AttachmentCardProps {
   attachment: ConversationAttachment;
@@ -52,6 +69,14 @@ const MediaPlaceholderIcon = () => (
   </svg>
 );
 
+const AudioFileIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 18V5l12-2v13" />
+    <circle cx="6" cy="18" r="3" />
+    <circle cx="18" cy="16" r="3" />
+  </svg>
+);
+
 export const AttachmentCard: React.FC<AttachmentCardProps> = ({
   attachment,
   onRemove,
@@ -60,8 +85,9 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
 
-  const isMedia = attachment.kind === 'image' || attachment.kind === 'video' || (attachment.kind === 'inspiration' && Boolean(attachment.previewUrl));
-  const isVideo = attachment.kind === 'video' || (attachment.kind === 'inspiration' && Boolean(attachment.duration));
+  const ext = (attachment.extension || '').toUpperCase();
+  const isMedia = isMediaAttachment(attachment);
+  const isVideo = isVideoAttachment(attachment);
 
   const fileIcon = useMemo(() => {
     if (attachment.kind === 'table') {
@@ -70,8 +96,11 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
     if (attachment.kind === 'inspiration') {
       return <SparklesIcon />;
     }
+    if (attachment.kind === 'audio' || AUDIO_EXTENSIONS.has(ext)) {
+      return <AudioFileIcon />;
+    }
     return <DocFileIcon />;
-  }, [attachment.kind]);
+  }, [attachment.kind, ext]);
 
   const handleRemoveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
