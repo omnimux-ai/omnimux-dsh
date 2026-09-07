@@ -1,0 +1,97 @@
+{
+  "issue": 547,
+  "author": "Bei",
+  "IS_PASS": "YES",
+  "scope": "Core backend, Agent tools, table storage/path validation and local verification only",
+  "status": "ready-for-coordinator-review",
+  "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-table-workspace-547",
+  "package": "plugins/omnimux-workflow",
+  "branch": "feat/workflow-table-workspace-547",
+  "head": "cc3c404fddbb8017662da054062cf19e37bb7e1e",
+  "fetched_base": "b17576880231a3b5b7ff6430cdee899a0803b2d5",
+  "base_drift": "Fetched origin/main is one commit ahead of HEAD; its diff contains no workflow package changes. No rebase or merge performed.",
+  "files_modified": [
+    "src/workflow/agent/tableTools.ts",
+    "src/workflow/agent/agentWriteTools.ts",
+    "src/workflow/agent/agentTools.ts",
+    "src/workflow/storage/tablePath.ts",
+    "src/workflow/storage/TableStorageService.ts",
+    "src/workflow/agent/tableTools.test.mjs",
+    "src/workflow/routes/tableRoutes.test.mjs"
+  ],
+  "files_added": [
+    "src/workflow/agent/agentControlTools.ts",
+    "src/workflow/agent/agentMutationContext.ts",
+    "src/workflow/agent/tableTools.test-support.mjs",
+    "src/workflow/storage/tablePath.test.mjs",
+    "docs/issue-547-backend-report.json"
+  ],
+  "implementation": [
+    "CREATE, REPLACE and GET use resolveTargetWorkspaceId: explicit ID > current UI > unique workspace_name. Missing context returns the requested no-current-workspace message. Deleted explicit/UI targets and duplicate names fail without fallback.",
+    "Agent CREATE/REPLACE/GET/REMOVE and HTTP consume tablePath.ts. TableStorageService.resolveTablePath and canvas-directory-based table addressing are removed.",
+    "extractTableIdFromRelPath accepts exact .omnimux/tables/<id>.htable and preserved .hilo references. Absolute paths, parent segments, NUL, encoded/basename disguises and arbitrary directories fail before table I/O. Workspace/table ids are validated before project lookup.",
+    "node_id/table_path disagreement returns invalid-args with the requested Chinese message. REPLACE checks node existence and table type before saveTable.",
+    "Agent L1 metadata and write responses use saveTable's returned document/contentRev. GET reports the loaded revision. HTTP PUT already uses the saved document/revision; its source and external contract are unchanged.",
+    "REMOVE validates canonical paths before graph mutation, then preserves best-effort canonical file cleanup. It does not delete legacy .hilo files.",
+    "Legacy .hilo read fallback and old array-document migration remain intact. Tests assert legacy file bytes are unchanged. GET retains the same legacy missing-revision default of zero as HTTP."
+  ],
+  "checks": [
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm test",
+      "cwd": "plugins/omnimux-workflow",
+      "exit_code": 0,
+      "tests": 994,
+      "passed": 994,
+      "failed": 0,
+      "skipped": 0,
+      "suites": 52,
+      "duration_ms": 3936.152584
+    },
+    {
+      "command": "node --test src/workflow/agent/tableTools.test.mjs src/workflow/routes/tableRoutes.test.mjs src/workflow/storage/tablePath.test.mjs src/workflow/storage/table-storage.test.mjs",
+      "cwd": "plugins/omnimux-workflow",
+      "exit_code": 0,
+      "tests": 23,
+      "passed": 23,
+      "failed": 0
+    },
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm run typecheck",
+      "cwd": "plugins/omnimux-workflow",
+      "exit_code": 0,
+      "covers": ["tsconfig.canvas.json", "tsconfig.host.json"]
+    },
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm run build",
+      "cwd": "plugins/omnimux-workflow",
+      "exit_code": 0,
+      "covers": ["Host", "Client", "Canvas"],
+      "note": "Generated bundles remain ignored/untracked; no installed profile was changed."
+    },
+    {
+      "command": "pnpm_config_verify_deps_before_run=false pnpm check:boundaries && pnpm_config_verify_deps_before_run=false pnpm registry:verify && pnpm_config_verify_deps_before_run=false pnpm verify:tools",
+      "cwd": "worktree root",
+      "exit_code": 0,
+      "result": "1997 source files verified; all 12 plugin manifests consistent; tool scan: zero errors and warnings."
+    },
+    { "command": "git diff --check", "exit_code": 0 },
+    { "check": "All changed/new code files <= 300 lines", "result": "PASS" },
+    { "check": "Moved connect/disconnect/execution-control implementations equal HEAD byte-for-byte", "result": "PASS" }
+  ],
+  "environment_notes": [
+    "Existing task worktree initially had no dependency links. Workflow node_modules and Hub node_modules were linked to existing primary-checkout dependency directories for read-only use; no package install, package metadata edit or dependency target write was performed.",
+    "Initial full test run reported 974 passes and 3 module-load failures: missing Hub jsdom/yaml in the isolated tree. Linking existing Hub dependencies resolved these without changing assertions or Hub source.",
+    "Package has no lint script; typechecks, boundary/tool checks, tests and diff whitespace validation were run."
+  ],
+  "scope_adjustments": [
+    "REMOVE was included because D1 explicitly requires CREATE/REPLACE/GET/REMOVE parity and it was the remaining consumer of the deleted resolver.",
+    "To satisfy the 300-line code-file limit, the pre-existing 432-line agentWriteTools.ts was split: connection/execution-control tools moved unchanged to agentControlTools.ts; mutation context is shared in agentMutationContext.ts; registration imports were updated."
+  ],
+  "verification_limits": [
+    "Cross-entry tests exercise real temporary files and WorkspaceStore plus route handlers; these are not L2/browser UI acceptance evidence.",
+    "No frontend source/cache changes, production profile writes, real model calls, commit, push, PR, merge or deployment were performed.",
+    "No new graph/file distributed transaction was introduced; this fix prevalidates REPLACE targets and retains the existing per-file atomic save."
+  ],
+  "next_owner": "Coordinating agent",
+  "next_action": "Review this local diff and report, then complete independent L2/IAB cross-entry acceptance and the authorized repository delivery flow."
+}

@@ -5,6 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createWorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import { createTableRoutes } from './tableRoutes.ts';
+import { createCanvasWriteTableNodeTool, createCanvasGetTableNodeTool } from '../agent/tableTools.ts';
+import { createWorkflowNodeRemoveTool } from '../agent/agentWriteTools.ts';
+import { createTableHarness, tableInput, forbidTableIo } from '../agent/tableTools.test-support.mjs';
 
 function createHarness() {
   const root = mkdtempSync(join(tmpdir(), 'table-routes-test-'));
@@ -159,4 +162,69 @@ test('tableRoutes: PUT and GET table document with optimistic lock', async () =>
   } finally {
     cleanup();
   }
+});
+
+for (const bound of [false, true]) {
+  test(`tableRoutes: Agent CREATE -> HTTP GET/PUT -> Agent REPLACE/GET/REMOVE (bound=${bound})`, async (t) => {
+    const h = createTableHarness(t, { bound });
+    const ws = h.store.create('cross-entry');
+    const routes = createTableRoutes(h.store);
+    const write = createCanvasWriteTableNodeTool(h.deps);
+    const get = createCanvasGetTableNodeTool(h.deps);
+    const created = await write.execute({ workspace_id: ws.id, ...tableInput });
+    assert.equal(created.ok, true);
+    const url = `/omnimux-workflow/api/workspaces/${ws.id}/tables/${created.nodeId}`;
+    const request = (method, body) => routes.tryHandle(method, url, { method, url, body });
+    const fetched = await request('GET');
+    assert.equal(fetched.status, 200);
+    assert.equal(fetched.body.table.contentRev, 1);
+    assert.equal(fetched.body.table.contentRev, created.contentRev);
+    const node = h.store.get(ws.id).nodes.find((n) => n.id === created.nodeId);
+    const saved = await request('PUT', {
+      expectedRev: node.data.contentRev,
+      document: { ...fetched.body.table.document, title: 'UI edit' },
+    });
+    assert.equal(saved.status, 200, JSON.stringify(saved));
+    assert.equal(saved.body.table.contentRev, 2);
+    assert.equal(saved.body.table.document.contentRev, 2);
+    const read = await get.execute({ workspace_id: ws.id, table_path: created.tablePath });
+    assert.equal(read.contentRev, 2);
+    assert.equal(read.tableContent.title, 'UI edit');
+    const replaced = await write.execute({ workspace_id: ws.id, node_id: created.nodeId, ...tableInput });
+    assert.equal(replaced.contentRev, 3);
+    assert.equal(h.store.get(ws.id).nodes.find((n) => n.id === created.nodeId).data.contentRev, 3);
+    const stale = await request('PUT', { expectedRev: 2, document: saved.body.table.document });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.body.currentRev, 3);
+    assert.equal((await request('GET')).body.table.contentRev, 3);
+    const removed = await createWorkflowNodeRemoveTool(h.deps).execute({
+      workspace_id: ws.id, node_ids: [created.nodeId],
+    });
+    assert.equal(removed.removedNodes, 1);
+    assert.equal((await request('GET')).status, 404);
+  });
+}
+
+test('tableRoutes: malformed table/workspace paths are rejected before resolver lookup or table I/O', async (t) => {
+  const h = createTableHarness(t);
+  const ws = h.store.create('test');
+  const routes = createTableRoutes(h.store);
+  const ioCalls = forbidTableIo(t);
+  const projectLookup = t.mock.method(h.store, 'resolveProjectRoot', () => null);
+  for (const method of ['GET', 'PUT', 'DELETE']) {
+    for (const tableId of ['..', '%2e%2e%2fescape', '%2Ftmp%2Fescape', '..\\escape', 'C:\\escape']) {
+      const url = `/omnimux-workflow/api/workspaces/${ws.id}/tables/${tableId}`;
+      const result = await routes.tryHandle(method, url, { method, url });
+      assert.equal(result.status, 400);
+      assert.equal(result.body.error, 'invalid-id');
+    }
+    for (const workspaceId of ['..', '%2e%2e', '%2Ftmp', '..\\escape', 'C:\\escape']) {
+      const url = `/omnimux-workflow/api/workspaces/${workspaceId}/tables/tbl_demo`;
+      const result = await routes.tryHandle(method, url, { method, url });
+      assert.equal(result.status, 400);
+      assert.equal(result.body.error, 'invalid-id');
+    }
+  }
+  assert.equal(projectLookup.mock.callCount(), 0);
+  assert.equal(ioCalls(), 0);
 });
