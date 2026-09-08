@@ -1,0 +1,120 @@
+sequenceDiagram
+  actor User as 用户
+  participant View as WorkshopView
+  participant Guard as RequestGuard
+  participant Query as QueryService
+  participant Inventory as InventoryService
+  participant Install as InstallService
+  participant Validator as PackageValidator
+  participant Store as WorkshopStore
+  participant Registry as RegistryAdapter
+  participant Update as UpdateService
+  participant Coord as SessionCoordinator
+  participant Sessions as 官方sessions
+  participant Input as B的官方输入scope
+  participant WB as 公共Workbench
+
+  Note over Store,Registry: 以下策略屏障为依赖规格非现有官方API；缺失则禁止真实提交
+  Registry->>Registry: capabilities()
+  Store->>Store: recover()
+  Store->>Registry: setAllowed(identity, false, revision)重放持久tombstone
+  Registry-->>Store: 全加载路径确认后才开放；缺能力不报成功
+  User->>View: 打开工坊或Enter查询
+  View->>Query: query(request)
+  Query->>Inventory: reconcile()
+  Inventory->>Store: read()
+  Inventory-->>Query: 真实库存与revision
+  Query->>Query: 有界取源、去重、匹配、分区、排序
+  Query-->>View: 快照、计数模式、排序范围、游标
+  View->>View: 仅接受当前queryRevision
+  User->>View: 查看详情
+  View->>Query: detail(sourceRef)
+  Query-->>View: 精确同来源详情
+
+  User->>View: 文件安装或同源新版更新
+  View->>Guard: POST头部、连接身份、操作权限
+  Guard->>Guard: 读body前认证与精确Origin
+  alt 未认证、越权、Origin非法或公共seam缺失
+    Guard-->>View: 拒绝，不读取body，不暂存
+  else 准入通过
+    Guard->>Install: prepare(有界body, actionId)
+    Install->>Validator: stage(stream, format)
+    Validator->>Validator: validate(package)
+    Validator-->>Install: manifest与hash或错误
+    Install-->>View: 计划、冲突、confirmationRevision
+    User->>View: 确认计划
+    View->>Guard: commit(operationId, revision)
+    Guard->>Install: confirm(operationId, revision)
+    Install->>Store: 根锁、身份锁、CAS复核、PREPARED
+    Install->>Registry: commitBarrier(identity)
+    alt scope或统一策略屏障不足
+      Registry-->>Install: CAPABILITY_UNAVAILABLE或SCOPE_UNVERIFIED
+      Install-->>View: 初装也不写目标，保持原包
+    else 门槛全部解除
+      Install->>Store: 保留旧包、提交新包、元数据registering
+      Install->>Registry: verify(精确目标, scope)
+      alt 注册正确且非空
+        Install->>Store: durable COMMITTED；新确认再安装才清tombstone
+        Install->>Registry: 确认策略revision并释放屏障
+        Install-->>View: committed与真实库存revision
+      else 写入或注册失败
+        Install->>Store: 恢复旧包与旧记录
+        Install-->>View: 失败阶段与回滚结果
+      end
+    end
+  end
+
+  User->>View: 关闭或开启已装Skill
+  View->>Guard: enabled写请求
+  Guard->>Install: setEnabled(installId, enabled, revision)
+  Install->>Registry: commitBarrier(identity)
+  Install->>Registry: setAllowed(identity, enabled, revision)
+  Install->>Store: compareAndSwap(revision, next)
+  Install-->>View: 共同确认或恢复原状态，不改包字节
+  User->>View: 详情确认卸载
+  View->>Guard: remove写请求
+  Guard->>Install: remove(installId, revision)
+  Install->>Registry: commitBarrier(identity)
+  Install->>Store: journal旧策略及记录；durable tombstone(scopeKey, skillKey)
+  Install->>Registry: setAllowed(identity, false, revision)
+  Registry-->>Install: 全路径拒绝确认或失败
+  Install->>Store: 仅确认后事务删受管包及InstallRecord；保留tombstone
+  Install-->>View: 一致后成功；失败恢复旧包记录策略或保持RECOVERY_REQUIRED
+  Note over Store,Registry: 重启/catalog刷新/JIT均不得清意图；仅新确认再安装成功才解除
+
+  User->>View: 主动开启自动更新
+  View->>Guard: preferences写请求
+  Guard->>Update: setPreference(true, revision)
+  Update->>Store: compareAndSwap(revision, next)
+  Update->>Update: check(enable)
+  Note over Update,Install: 后续启动/打开我的24h冷却；并发1、查50、提交10、5min，不连跑超额
+  Update->>Install: prepare并confirm合格同源新版
+  Install-->>Update: 同一事务结果，保留enabled
+  Update-->>View: 更新、跳过、失败的真实结果
+
+  User->>View: 试用或通过OmniMux创建
+  View->>Coord: start(skillKey, mode)
+  Coord->>Coord: 内存捕获A原始快照；固定actionId与新B，核实合法workspace
+  Coord->>Registry: verify(已确认准备的目标Skill, scope)
+  alt 安装、启用、workspace或解析失败
+    Coord-->>View: 保留A，不创建B
+  else 准备成功
+    Coord->>Sessions: create(workspaceId, targetSessionId)
+    Sessions-->>Coord: 真实B或带目标身份的失败
+    Note over Coord,Sessions: attach失败实体B仍在；查询并重试绑定同B，等binding，不盲建新会话
+    Coord->>Coord: 检查导航是否被用户切C取代
+    Coord->>Sessions: open(B)仅在导航意图仍有效时
+    Coord->>WB: setFocus(split)
+    Input-->>Coord: B初始空快照与draftRev
+    Coord->>Coord: 即时复核B身份/phase=plain/空draft与files/初始rev/TTL
+    Note over Coord,Input: 复核到同步bail不得await；只有文本CAS，不是附件与phase联合atomic
+    Coord->>Input: bail insert-text(text, span, draftRev)仅保护条件全部满足
+    alt 返回严格true
+      Input-->>Coord: 已应用文本
+      Coord->>Coord: 标记一次消费并立即回读B及核对A
+      Coord-->>View: 匹配才ready；不符报冲突但不再次插入
+    else undefined或用户编辑、切换、超时、同步保护不可证明
+      Coord-->>View: 保留B，拒覆盖；仅安全条件满足时有界重试同B
+    end
+  end
+  Note over View,Input: 全流程不修改A草稿/附件/preset，不自动发送；失败释放屏障仅在一致性恢复后

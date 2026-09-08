@@ -112,7 +112,7 @@
             overflow: "hidden",
           },
         },
-          h("div", { className: "sh-plaza-top" },
+          h("div", { className: "sh-plaza-top", style: tab === "skills" ? { borderBottom: 0, height: "auto", padding: "12px 20px 0" } : undefined },
             h("div", { className: "sh-plaza-tabs", role: "tablist", style: { display: "none" } },
               h(Button, {
                 type: "button",
@@ -151,14 +151,14 @@
                 onClick: () => setTab("connectors"),
               }, tr("plaza.connectors")),
             ),
-            h(PlazaTopSearch, {
+            tab === "skills" ? null : h(PlazaTopSearch, {
               query: currentQuery,
               onQuery: handleQueryChange,
               onSubmit: handleSubmit,
               onClear: handleClear,
               placeholder,
             }),
-            h("span", { className: "sh-plaza-close" },
+            h("span", { className: "sh-plaza-close", style: tab === "skills" ? { marginLeft: "auto" } : undefined },
               h(IconButton, {
                 variant: "ghost",
                 onClick: handleClose,

@@ -1,0 +1,114 @@
+classDiagram
+  class WorkshopSkill {
+    +string skillKey
+    +string token
+    +string title
+    +string[] domains
+    +boolean recommended
+    +SourceRef sourceRef
+  }
+  class SourceRef {
+    +string kind
+    +string identity
+    +string revision
+  }
+  class InstallRecord {
+    +string installId
+    +string skillKey
+    +string origin
+    +string relativePath
+    +string contentHash
+    +boolean enabled
+    +number revision
+  }
+  class PolicyTombstone {
+    +string scopeKey
+    +string skillKey
+    +string token
+    +string reason
+    +string operationId
+    +number revision
+  }
+  class WorkshopStore {
+    +__init__(scope)
+    +read() State
+    +compareAndSwap(revision, next) State
+    +recover() RecoveryResult
+  }
+  class InventoryService {
+    +__init__(store, roots)
+    +reconcile() Inventory
+    +get(installId) InstallRecord
+  }
+  class QueryService {
+    +__init__(sources, inventory)
+    +query(request) WorkshopQueryResult
+    +detail(sourceRef) WorkshopSkill
+  }
+  class RequestGuard {
+    +__init__(auth, trustedOrigin)
+    +authorizeHeaders(request, operation) Principal
+    +authorizeResource(principal, scope, operationId) void
+  }
+  class PackageValidator {
+    +__init__(limits)
+    +stage(stream, format) StagedPackage
+    +validate(package) ValidationResult
+  }
+  class RegistryAdapter {
+    +__init__(skills, capabilities)
+    +capabilities() CapabilityResult
+    +verify(record, scope) Verification
+    +setAllowed(identity, allowed, revision) PolicyResult
+    +commitBarrier(identity) Barrier
+  }
+  class InstallService {
+    +__init__(store, validator, registry)
+    +prepare(request) Operation
+    +confirm(operationId, revision) Operation
+    +cancel(operationId) Operation
+    +setEnabled(installId, enabled, revision) Operation
+    +remove(installId, revision) Operation
+  }
+  class UpdateService {
+    +__init__(store, installer)
+    +setPreference(enabled, revision) Preference
+    +check(reason) UpdateResult
+  }
+  class SessionIntent {
+    +string actionId
+    +string targetSessionId
+    +string sourceSessionId
+    +string workspaceId
+    +string phase
+    +number expiresAt
+  }
+  class SessionCoordinator {
+    +__init__(sessions, api, workbench)
+    +start(skillKey, mode) SessionIntent
+    +retry(actionId) SessionIntent
+    +prefill(target, initialSnapshot) PrefillResult
+  }
+  class WorkshopView {
+    +__init__(api, coordinator)
+    +open() void
+    +selectFilters(filters) void
+    +dispose() void
+  }
+  WorkshopSkill --> SourceRef : 发现来源
+  InstallRecord --> SourceRef : 实际安装出处
+  WorkshopStore "1" o-- "*" InstallRecord : 持久记录
+  WorkshopStore "1" o-- "*" PolicyTombstone : 独立持久卸载意图
+  RegistryAdapter ..> PolicyTombstone : 公共拒绝seam强制并确认revision
+  InventoryService --> WorkshopStore : 核对与迁移
+  QueryService --> InventoryService : 真实安装状态
+  QueryService --> WorkshopSkill : 生成快照
+  RequestGuard --> InstallService : 认证授权后准入
+  InstallService --> PackageValidator : 暂存验证
+  InstallService --> WorkshopStore : 日志与CAS
+  InstallService --> RegistryAdapter : 策略屏障与验证
+  UpdateService --> InstallService : 同源更新复用事务
+  SessionCoordinator --> SessionIntent : 单次动作
+  WorkshopView --> QueryService : 经本机API
+  WorkshopView --> InstallService : 经本机API
+  WorkshopView --> SessionCoordinator : 显式会话动作

@@ -27,6 +27,7 @@ const FRAGMENTS = [
   'constants.js',
   'api.js',
   'keepalive.js',
+  'session-create.js',
   'skills-ui.js',
   'tool-views.js',
   'list-view.js',

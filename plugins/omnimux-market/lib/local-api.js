@@ -16,6 +16,49 @@ import { installMarketPlugin, isPluginInstallBusy, listPluginCategories, listPlu
 import { scheduleRestart, servingPort, trustedRestartRequest } from './restart.js';
 import { fetchEvalScore, fetchSkillTab } from './skill-detail.js';
 import { aggregateSkillSearch } from './skill-aggregate.js';
+import { RequestGuard, WORKSHOP_READ_METHODS } from './workshop-request-guard.js';
+import { WorkshopReadError } from './workshop-store.js';
+import { WorkshopQueryError } from './workshop-query.js';
+/** Fixed, GET-only methods: authentication and scope checks precede payload decoding. */
+export async function handleWorkshopApi(req, res, method, host, authorization) {
+    try {
+        await new RequestGuard(authorization).authorizeHeaders(req, method);
+        if (!WORKSHOP_READ_METHODS.includes(method))
+            throw new WorkshopReadError('INVALID_REQUEST', 400);
+        const url = new URL(req.url || '/', 'http://127.0.0.1');
+        if ((req.url?.length || 0) > 8192 || [...url.searchParams.keys()].some((key) => key !== 'request')
+            || url.searchParams.getAll('request').length > 1)
+            throw new WorkshopReadError('INVALID_REQUEST', 400);
+        const raw = url.searchParams.get('request');
+        let result;
+        if (method === 'workshopCapabilities' || method === 'workshopInventory') {
+            if (raw !== null)
+                throw new WorkshopReadError('INVALID_REQUEST', 400);
+            result = await host[method](req);
+        }
+        else {
+            if (!raw)
+                throw new WorkshopReadError('INVALID_REQUEST', 400);
+            let input;
+            try {
+                input = JSON.parse(raw);
+            }
+            catch {
+                throw new WorkshopReadError('INVALID_REQUEST', 400);
+            }
+            result = method === 'workshopQuery' ? await host.workshopQuery(req, input)
+                : await host.workshopDetail(req, input);
+        }
+        res.setHeader('cache-control', 'no-store');
+        return sendJson(res, 200, { ok: true, ...result });
+    }
+    catch (error) {
+        const code = error instanceof WorkshopReadError || error instanceof WorkshopQueryError ? error.code : 'CAPABILITY_UNAVAILABLE';
+        const status = error instanceof WorkshopReadError ? error.status : code === 'INVALID_REQUEST' ? 400 : code === 'CURSOR_EXPIRED' ? 409 : 503;
+        res.setHeader('cache-control', 'no-store');
+        return sendJson(res, status, { ok: false, code, error: code, retryable: status >= 500 });
+    }
+}
 let restarting = false;
 export const MUTATING_METHODS = new Set([
     'install',
