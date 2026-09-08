@@ -17,6 +17,7 @@ export const SLOT_LAYOUT_TABLE: Readonly<Record<string, SlotLayoutPolicy>> = Obj
   first_last_frame: { preset: 'pair', slots: ['first_frame', 'last_frame'], swap: true },
   video_multi_ref: { preset: 'strip', slots: ['reference'], addButton: true },
   digital_human: { preset: 'named', slots: ['character', 'driving_audio'] },
+  text_to_speech: { preset: 'strip', slots: ['reference_audio', 'reference'], addButton: true },
 });
 
 export const SLOT_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = Object.freeze({
@@ -26,4 +27,5 @@ export const SLOT_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = Ob
   driving_audio: ['audio_track', 'audio', 'source_audio'],
   reference_image: ['reference', 'references', 'input_image', 'input_images'],
   reference: ['reference_image', 'references', 'input_image', 'input_images'],
+  reference_audio: ['reference', 'references', 'input_audio', 'audio_track', 'audio'],
 });

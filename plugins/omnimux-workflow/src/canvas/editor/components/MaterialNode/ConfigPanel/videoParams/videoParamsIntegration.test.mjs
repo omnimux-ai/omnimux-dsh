@@ -1,15 +1,15 @@
 /**
- * 集成契约测试 — ConfigPanel 全模态接线（2026-09-07 全模态收敛 / T06 更新）
+ * 集成契约测试 — ConfigPanel 全模态接线（2026-09-07 全模态收敛 / T06 更新；Issue #763 更新）
  *
  * 以源码契约风格（readFileSync + node:test）锁定 ConfigPanel 与三材质
  * 组件群的集成边界：
  *  - ConfigPanel 消费 VideoTriggerBar / VideoParamPopover / 参数解析与回退适配器；
  *  - 图像分支废除 wf-param-pill--video-summary 幽灵 Select，改挂
  *    ImageTriggerBar / ImageParamPopover；
- *  - 音频（非 ASR）分支废除 SlidersHorizontal 齿轮与 advanced-drawer 内联抽屉，
- *    改挂 AudioTriggerBar / AudioParamPopover；
+ *  - 音频（非 ASR）分支在 Issue #763 中彻底移除 AudioTriggerBar / AudioParamPopover
+ *    （时长由文本长度决定），底栏只保留模型下拉 + wf-voice-trigger + 生成按钮；
  *  - handleModelChange 委托 buildVideoParamTransition（仅视频）；
- *  - videoPopoverOpen / imagePopoverOpen / audioPopoverOpen 状态接线存在；
+ *  - videoPopoverOpen / imagePopoverOpen 状态接线存在（音频浮层状态已随 #763 移除）；
  *  - components.css 已下线 .wf-param-pill--video-summary；
  *
  * i18n 决策记录：cfg/imageParams/audioParams 组件群沿用硬编码中文（生成方式/
@@ -111,20 +111,14 @@ test('图像分支废除幽灵 CustomSelect，改挂 ImageTriggerBar / ImagePara
   assert.ok(!imageBlock.includes('wf-param-bar__select--ghost'), '图像分支不得再含幽灵 Select');
 });
 
-test('音频（非 ASR）分支废除齿轮与抽屉，改挂 AudioTriggerBar / AudioParamPopover', () => {
-  assert.ok(
-    source.includes("import { AudioTriggerBar } from './audioParams/AudioTriggerBar';"),
-    '应导入 AudioTriggerBar',
-  );
-  assert.ok(
-    source.includes("import { AudioParamPopover } from './audioParams/AudioParamPopover';"),
-    '应导入 AudioParamPopover',
-  );
-  assert.ok(source.includes('resolveEffectiveAudioParams({'), '应经 resolveEffectiveAudioParams 解析');
-  assert.ok(source.includes('<AudioTriggerBar'), '音频分支应渲染 <AudioTriggerBar>');
-  assert.ok(source.includes('<AudioParamPopover'), '面板根部应渲染 <AudioParamPopover>');
-  assert.ok(source.includes('audioPopoverOpen'), '音频浮层状态接线存在');
-  assert.ok(source.includes("materialType === 'audio' && !isAsrTool"), 'ASR 不得挂载音频摘要条');
+test('音频（非 ASR）分支：Issue #763 移除时长摘要条与参数浮层，仅保留音色胶囊', () => {
+  assert.ok(!source.includes('AudioTriggerBar'), '音频分支不得再渲染/导入 AudioTriggerBar');
+  assert.ok(!source.includes('AudioParamPopover'), '面板根部不得再渲染/导入 AudioParamPopover');
+  assert.ok(!source.includes('audioPopoverOpen'), '音频浮层状态已移除');
+  assert.ok(!source.includes('audioTriggerRef'), '音频触发条 ref 已移除');
+  assert.ok(source.includes('resolveEffectiveAudioParams({'), '音色读侧仍经 resolveEffectiveAudioParams 解析');
+  assert.ok(source.includes('wf-voice-trigger'), '底栏保留 wf-voice-trigger 音色胶囊');
+  assert.ok(source.includes("materialType === 'audio' && !isAsrTool"), 'ASR 分支守卫保留');
   assert.ok(!source.includes('SlidersHorizontal'), '音频底栏不得再有孤立齿轮');
   assert.ok(!source.includes('advanced-drawer'), '内联抽屉整段已废除');
   assert.ok(!source.includes('showAdvanced'), 'showAdvanced 状态已废除');

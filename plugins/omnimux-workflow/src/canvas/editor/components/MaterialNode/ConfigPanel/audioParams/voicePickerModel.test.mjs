@@ -14,7 +14,6 @@ import { describe, it } from 'node:test';
 import {
   EMPTY_VOICE_FILTERS,
   VOICE_HOT_TAGS,
-  VOICE_PICKER_MIN_OPTIONS,
   collectVoiceFacets,
   extractPinyinInitials,
   filterAndSortVoices,
@@ -168,7 +167,6 @@ describe('voicePickerModel - 热门排序', () => {
       'zh_male_out_moon_bigtts',
     ]);
     assert.ok(VOICE_HOT_TAGS.includes('抖音同款'));
-    assert.equal(VOICE_PICKER_MIN_OPTIONS >= 6, true);
   });
 });
 

@@ -94,6 +94,7 @@ const en: Record<DictKey, string> = {
   'panel.slot.last_frame': 'Last frame',
   'panel.slot.reference': 'Reference',
   'panel.slot.reference_image': 'Reference image',
+  'panel.slot.reference_audio': 'Reference audio',
   'panel.slot.references': 'Reference',
   'panel.slot.images': 'Reference',
   'panel.slot.image': 'Image',
