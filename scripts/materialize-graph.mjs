@@ -519,7 +519,10 @@ export class GraphInspector {
       const nodes = structuredClone(state.nodes);
       for (const node of Object.values(nodes)) {
         if (node.name === request.name) node.integrity = null;
-        for (const entry of node.payload?.entries || []) entry.mode = null;
+        if (node.payload) {
+          for (const entry of node.payload.entries || []) entry.mode = null;
+          node.payload.digest = null;
+        }
       }
       return stable(normalize({ nodes, roots: state.roots, edges: state.resolutionGraph.map(JSON.parse), absent: state.absent, bins: state.bins }));
     };
