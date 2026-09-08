@@ -296,7 +296,7 @@ export class ManagedSync {
     return result;
   }
   async capture(profile, withoutPnpm = false) {
-    if (withoutPnpm) return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: this.payload } });
+    if (withoutPnpm || this.request.target === 'dev') return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: this.payload } });
     makeDirectory(path.join(this.directory, 'runtime'));
     const result = await this.pnpm(['list', '--json', '--depth', 'Infinity'], { cwd: profile, env: privatePnpmEnvironment(path.join(this.directory, 'runtime')) });
     if (result.code !== 0 || result.signal) fail('controlled pnpm list failed', 5);
