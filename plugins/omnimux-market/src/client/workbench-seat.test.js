@@ -20,14 +20,15 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /registerPlazaTab/)
     assert.match(source, /icon:\s*renderPlazaIcon/)
     assert.doesNotMatch(source, /slots\.inject\(['"]shell\.overlay['"]/)
-    assert.doesNotMatch(source, /mountSidebarEntry/)
   })
 
-  it('plaza entry sits on sidebar.footer.action above Settings', () => {
+  it('plaza entry is registered to __omnimuxSidebar under projects (rank 4.1), not in footer', () => {
     const source = readFileSync(join(here, 'apply.js'), 'utf8')
-    assert.match(source, /sidebar\.footer\.action/)
-    assert.match(source, /omnimux-market-plaza/)
-    assert.match(source, /PlazaAction/)
+    assert.doesNotMatch(source, /slots\.inject\(['"]sidebar\.footer\.action['"]/)
+    assert.match(source, /__omnimuxSidebar/)
+    assert.match(source, /rank:\s*4\.1/)
+    assert.match(source, /data-omnimux-market-entry/)
+    assert.match(source, /PLAZA_TAB_ID/)
   })
 
   it('registers the composer Skill picker on conversation.input.left', () => {

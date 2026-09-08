@@ -55,7 +55,7 @@ jobs:
           const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
           writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
             private: true,
-            dependencies: { acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs },
+            dependencies: { acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
           }));
           JS
           npm --prefix "$QA_DEPS" install --ignore-scripts --no-audit --no-fund
@@ -88,6 +88,37 @@ jobs:
         run: |
           mkdir -p .workbuddy/evidence
           node scripts/auto-qa-gate.mjs . --diff --base "$QA_BASE" --json --output .workbuddy/evidence/auto-qa-report.json
+
+      - name: Setup Python for managed archives
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Setup fixed pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Test managed tarball unit suite
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/managed-tarball-home"
+          export TMPDIR="$RUNNER_TEMP/managed-tarball-tmp"
+          export COREPACK_HOME="$RUNNER_TEMP/managed-tarball-corepack"
+          export XDG_CONFIG_HOME="$HOME/config" XDG_CACHE_HOME="$HOME/cache" XDG_STATE_HOME="$HOME/state"
+          export npm_config_userconfig="$HOME/empty-user.npmrc" npm_config_globalconfig="$HOME/empty-global.npmrc"
+          export npm_config_cache="$HOME/npm-cache" npm_config_store_dir="$HOME/store" npm_config_global_dir="$HOME/global"
+          export COREPACK_DEFAULT_TO_LATEST=0 COREPACK_ENABLE_AUTO_PIN=0
+          export npm_config_manage_package_manager_versions=false npm_config_verify_deps_before_run=false
+          unset NODE_OPTIONS NODE_PATH PNPM_HOME NPM_CONFIG_USERCONFIG NPM_CONFIG_GLOBALCONFIG
+          mkdir -p "$HOME" "$TMPDIR" "$COREPACK_HOME"
+          printf '' > "$npm_config_userconfig"
+          printf '' > "$npm_config_globalconfig"
+          corepack prepare pnpm@11.7.0 --activate
+          export COREPACK_ENABLE_NETWORK=0
+          test "$(corepack pnpm --version)" = 11.7.0
+          corepack pnpm --config.verify-deps-before-run=false test:managed-tarball:unit
 
       - name: Run regression tests
         run: |

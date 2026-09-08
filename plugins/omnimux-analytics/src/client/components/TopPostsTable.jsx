@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { POST_TABLE_COLUMNS } from '../constants.js'
 import { formatCount, formatEr } from '../format.js'
 import { sortRows, sortTopPostsDefault } from '../sort.js'
@@ -29,47 +29,43 @@ export function TopPostsTable({ t, rows }) {
         <h3 className="omnimux-analytics-panel-title">{t('table.postsTitle')}</h3>
       </header>
       <div className="omnimux-analytics-tablescroll">
-        <table className="omnimux-analytics-table">
-          <thead>
-            <tr>
+        <Table className="omnimux-analytics-table" stickyHeader dense>
+          <TableHeader>
+            <TableRow>
               {POST_TABLE_COLUMNS.map((column) => {
-                const sortable = column.sortable !== false
+                const isSortable = column.sortable !== false
                 const active = sort.key === column.key
                 return (
-                  <th key={column.key} scope="col" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    {sortable ? (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="omnimux-analytics-sortbtn"
-                        onClick={() => {
-                          setSort((prev) => (
-                            prev.key === column.key
-                              ? { key: column.key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                              : { key: column.key, dir: 'desc' }
-                          ))
-                        }}
-                      >
-                        {t(column.labelKey)}
-                        <span className="omnimux-analytics-sortmark" data-active={active ? 'true' : 'false'} data-dir={sort.dir} />
-                      </Button>
-                    ) : t(column.labelKey)}
-                  </th>
+                  <TableHead
+                    key={column.key}
+                    scope="col"
+                    sortable={isSortable}
+                    sortDirection={isSortable && active ? sort.dir : null}
+                    onClick={isSortable ? () => {
+                      setSort((prev) => (
+                        prev.key === column.key
+                          ? { key: column.key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+                          : { key: column.key, dir: 'desc' }
+                      ))
+                    } : undefined}
+                  >
+                    {t(column.labelKey)}
+                  </TableHead>
                 )
               })}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sorted.length === 0 ? (
-              <tr>
-                <td colSpan={POST_TABLE_COLUMNS.length}>{t('table.empty')}</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={POST_TABLE_COLUMNS.length}>{t('table.empty')}</TableCell>
+              </TableRow>
             ) : sorted.map((row) => (
-              <tr key={row.postId}>
+              <TableRow key={row.postId}>
                 {POST_TABLE_COLUMNS.map((column) => {
                   if (column.kind === 'post') {
                     return (
-                      <td key={column.key}>
+                      <TableCell key={column.key}>
                         <div className="omnimux-analytics-postcell">
                           {row.coverUrl ? (
                             <img className="omnimux-analytics-thumb" src={row.coverUrl} alt="" />
@@ -82,21 +78,21 @@ export function TopPostsTable({ t, rows }) {
                             <div className="omnimux-analytics-postmeta">{row.publishedLabel || '-'}</div>
                           </div>
                         </div>
-                      </td>
+                      </TableCell>
                     )
                   }
                   return (
-                    <td key={column.key} className="is-num">
+                    <TableCell key={column.key} className="is-num">
                       {column.kind === 'er' && row.er != null
                         ? <span className="omnimux-analytics-er">{formatEr(row.er)}</span>
                         : cellText(column.kind, row[column.key])}
-                    </td>
+                    </TableCell>
                   )
                 })}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </section>
   )

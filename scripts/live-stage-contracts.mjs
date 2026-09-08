@@ -93,7 +93,13 @@ export async function captureStageContract(root, stage) {
     effect(fn) { const dispose = fn(); if (typeof dispose === 'function') disposers.push(dispose) },
     inject(_names, fn) { return fn(ctx) },
   }
-  win.__omnimuxSidebar = { register: () => () => {} }
+  const sidebarRows = []
+  win.__omnimuxSidebar = { register(row) {
+    const record = { ...row, element: row.create() }
+    sidebarRows.push(record)
+    win.document.body.append(record.element)
+    return () => { sidebarRows.splice(sidebarRows.indexOf(record), 1); record.element.remove() }
+  } }
   const react = require('react')
   const marketReact = { ...react, useState: (value) => [value, () => {}], useEffect() {}, useLayoutEffect() {} }
   win.require = (name) => name === 'react' && stage === 'market' ? marketReact : name === 'dsh-ui-kit'
@@ -119,27 +125,55 @@ export async function captureStageContract(root, stage) {
       win.__ModuleLoader__ = { load: ({ factory }) => { client = factory(win.require) } }
       win.eval(readFileSync(join(root, 'plugins', plugin, 'lib/client.js'), 'utf8'))
       client.apply(ctx)
-      // Execute the actual footer action; its marker and click payload are
-      // captured from the registered React element, not copied from source text.
-      const footer = slots.filter((slot) => slot.options.name === 'sidebar.footer.action')
-      assert.equal(footer.length, 1, 'Market must register one footer action')
-      const element = footer[0].component({ wide: true })
-      const tree = element.type(element.props)
-      const elements = (node) => !node || typeof node !== 'object' ? [] : [node, ...react.Children.toArray(node.props?.children).flatMap(elements)]
-      const action = elements(tree).find((node) => node.type === 'button' && Object.keys(node.props).some((key) => /^data-[\w-]+-entry$/.test(key)))
-      assert.ok(action, 'Market footer is missing its sidebar marker')
-      const datasetKey = Object.keys(action.props).find((key) => /^data-[\w-]+-entry$/.test(key))
-      action.props.onClick({ preventDefault() {} })
-      for (let i = 0; i < 12; i++) await Promise.resolve()
+      // Capture the production coordinator registration and click its real DOM
+      // entry. PR #785 places this sole row between projects (4) and publish (4.2).
+      assert.equal(slots.filter((slot) => slot.options.name === 'sidebar.footer.action').length, 0, 'Market must not retain a footer action')
+      assert.equal(sidebarRows.length, 1, 'Market must register one sidebar row')
+      const { id, rank, element: action } = sidebarRows[0]
+      assert.equal(id, 'omnimux-market-entry')
+      assert.equal(rank, 4.1, 'Market must sit directly below projects and above publish')
+      assert.equal(action.tagName, 'BUTTON')
+      const datasetKey = 'data-omnimux-market-entry'
+      assert.ok(action.hasAttribute(datasetKey), 'Market is missing its sidebar marker')
+      assert.equal(win.document.querySelectorAll(`[${datasetKey}]`).length, 1)
+      const lifecycle = JSON.parse(readFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), 'utf8'))
+      assert.equal(Object.hasOwn(lifecycle, plugin), false, 'Market must remain available in formal releases')
+      const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
+      action.click()
+      await settle()
       const tabId = state().splits.active
+      assert.equal(tabId, 'omnimux-market:plaza')
       assert.ok(tabs.has(tabId) && api.isActive(tabId), 'Market action must activate its registered Tab')
+      assert.equal(tabs.get(tabId).single, true)
+      assert.equal(tabs.get(tabId).hidden, false)
+      assert.equal(action.dataset.active, 'true')
+      assert.ok(!win.document.documentElement.dataset.dshProductStage, 'Market must not claim an overlay')
+      action.click()
+      await settle()
+      assert.equal(state().splits.tabs.filter((tab) => tab.id === tabId).length, 1, 'Market must not duplicate its Tab')
+      api.closePanel()
+      assert.equal(api.isActive(tabId), false)
+      assert.notEqual(action.dataset.active, 'true')
+      action.click()
+      await settle()
+      assert.ok(api.isActive(tabId), 'Market must reopen its collapsed panel')
+      sessionId = 'qa-session-b'
+      emit()
+      assert.equal(api.isActive(tabId), false, 'Market must not leak across sessions')
+      sessionId = 'qa-session-a'
+      emit()
+      assert.ok(api.isActive(tabId), 'Market must restore session A')
+      for (const dispose of disposers.splice(0).reverse()) dispose()
+      assert.equal(sidebarRows.length, 0, 'Market must dispose its coordinator registration')
+      assert.equal(win.document.querySelectorAll(`[${datasetKey}]`).length, 0)
+      assert.equal(tabs.has(tabId), false, 'Market must dispose its registered Tab')
       const i18n = readFileSync(join(root, 'plugins', plugin, 'src/client/i18n.js'), 'utf8')
       const allowedStatusTexts = evaluate(`module.exports = (() => {
         const React = require('react'); ${i18n}
         return [ZH, EN].flatMap(dict => [dict['mkt.empty'], dict['search.empty'], dict['expert.empty']]);
       })()`)
       assert.ok(allowedStatusTexts.length === 6 && allowedStatusTexts.every((text) => typeof text === 'string' && text.trim()), 'Market empty-state translations are missing')
-      return { stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'footer-slot' }
+      return { stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'sidebar-coordinator', rank }
     }
     const client = evaluate(await compile(`plugins/${plugin}/src/client/index.js`))
     client.apply(ctx)

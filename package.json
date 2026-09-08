@@ -45,7 +45,10 @@
     "archived:verify": "node scripts/verify-archived-agent-notes.mjs",
     "archived:seal": "node scripts/verify-archived-agent-notes.mjs --write",
     "check:boundaries": "node scripts/verify-plugin-boundaries.mjs",
-    "test:gates": "node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/verify-ci-gates.test.mjs scripts/live-qa.test.mjs scripts/ego-browser-page.test.mjs scripts/live-page-preparation.test.mjs scripts/ego-live-qa.test.mjs scripts/live-runtime-proof.test.mjs",
+    "test:managed-tarball:unit": "node --test scripts/managed-tarball.test.mjs scripts/materialize-cache.test.mjs scripts/managed-tarball-l2.test.mjs scripts/managed-tarball-preparation.test.mjs",
+    "test:managed-tarball:transaction": "node --test scripts/managed-tarball-t02.qa.test.mjs scripts/managed-tarball-transaction.test.mjs scripts/managed-tarball-recovery.test.mjs",
+    "test:managed-tarball": "corepack pnpm test:managed-tarball:unit && corepack pnpm test:managed-tarball:transaction",
+    "test:gates": "node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/verify-ci-gates.test.mjs scripts/live-qa.test.mjs scripts/ego-browser-page.test.mjs scripts/live-page-preparation.test.mjs scripts/ego-live-qa.test.mjs scripts/live-runtime-proof.test.mjs scripts/sync-repeat-install.test.mjs scripts/guard-worktree.qa.test.mjs",
     "auto:run": "node scripts/auto-pipeline.mjs",
     "test": "corepack pnpm --filter omnimux test && corepack pnpm --filter omnimux-accounts test && corepack pnpm --filter omnimux-inspiration test && corepack pnpm --filter omnimux-market test && corepack pnpm --filter omnimux-publish test && corepack pnpm test:gates",
     "test:all": "corepack pnpm -r test && corepack pnpm test:gates",
@@ -63,7 +66,7 @@
     "verify:slots": "node scripts/verify-slot-contracts.mjs",
     "verify:smoke": "node scripts/verify-dev-smoke.mjs",
     "verify:live": "node scripts/agent-live-qa.mjs",
-    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:gates",
+    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm test:gates",
     "verify:all": "corepack pnpm verify:gates && corepack pnpm test && corepack pnpm registry:verify && corepack pnpm doctor",
     "sync:presets": "bash scripts/sync-agent-presets.sh",
     "presets:build": "node scripts/build-agent-presets.mjs",
@@ -74,6 +77,10 @@
   "devDependencies": {
     "acorn": "8.15.0",
     "esbuild": "0.28.2",
-    "pngjs": "7.0.0"
+    "pngjs": "7.0.0",
+    "jsdom": "30.0.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "yaml": "2.9.0"
   }
 }

@@ -372,7 +372,7 @@ export function AssetsStage(props) {
       aria-hidden={visible ? undefined : 'true'}
       className="omnimux-assets-stage"
       data-visible={visible ? 'true' : 'false'}
-      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }}
+      style={{ display: visible ? 'flex' : 'none', position: 'relative', width: '100%', height: '100%', flexDirection: 'column', overflow: 'hidden' }} /* exempt-ui02: Stage 根容器布局 */
     >
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} />
       <AssetsActionRow t={t} feed={feed} />

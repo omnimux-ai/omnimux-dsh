@@ -14,7 +14,14 @@ import { packageRoot, profileDir } from './expert/paths.js'
 import { configureHttpJsonCache } from './http.js'
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js'
 import { aggregateSkillSearch } from './skill-aggregate.js'
-import { handleApi, handleIcon } from './local-api.js'
+import { handleApi, handleIcon, handleWorkshopApi } from './local-api.js'
+import { InventoryService } from './workshop-inventory.js'
+import { QueryService, createWorkshopSources } from './workshop-sources.js'
+import type { WorkshopSources, WorkshopDetailRequest } from './workshop-sources.js'
+import { RequestGuard, canonicalWorkshopOrigin, WORKSHOP_READ_METHODS } from './workshop-request-guard.js'
+import type { WorkshopConnection, WorkshopReadAuthorization, WorkshopReadMethod } from './workshop-request-guard.js'
+import { WorkshopReadError } from './workshop-store.js'
+import type { CapabilityResult, WorkshopReadScope, WorkshopState, WorkshopInventoryResult, WorkshopQueryRequest } from './types.js'
 import { cloneJson, renderInstall, renderList, renderSearch } from './host-render.js'
 import { listMarketplaceConnectors } from './marketplace-connectors.js'
 import { createPlazaTools, PLAZA_PROMPT_LINES } from './plaza-tools.js'
@@ -32,7 +39,57 @@ import type { InstallResult, InstalledSkill, MarketToolSpec, PluginConfig, Searc
 export const name = 'omnimux-market'
 export const inject = ['tools', 'skills']
 
-export interface Config extends PluginConfig {}
+export interface Config extends PluginConfig {
+  workshopOrigin?: string
+}
+
+export interface WorkshopReadHostOptions {
+  scope?: WorkshopReadScope | null
+  connection?: WorkshopConnection
+  trustedOrigin?: string
+  authorizeRead?: WorkshopReadAuthorization['authorizeRead']
+  store?: { read(): Promise<WorkshopState> }
+  sources?: WorkshopSources
+}
+
+/** Public package seam. Host owns this binding; request payloads never choose scope or roots. */
+export function createWorkshopReadHost(cfg: PluginConfig, options: WorkshopReadHostOptions = {}) {
+  const scope = options.scope ? structuredClone(options.scope) : null
+  const inventory = new InventoryService({ scope, store: options.store })
+  const query = new QueryService(options.sources || createWorkshopSources(cfg), inventory)
+  const guard = new RequestGuard({ connection: options.connection, trustedOrigin: options.trustedOrigin,
+    authorizeRead: options.authorizeRead || ((_req, method) => method === 'workshopCapabilities') })
+  const authorize = (req: IncomingMessage, method: WorkshopReadMethod) => guard.authorizeHeaders(req, method)
+  return {
+    async workshopCapabilities(req: IncomingMessage): Promise<CapabilityResult> {
+      await authorize(req, 'workshopCapabilities')
+      return { scopeKey: scope?.scopeKey || null, scopeLabel: scope?.label || '未核实', scopeVerified: scope?.complete === true,
+        connectionAuth: !!options.connection, exactOrigin: canonicalWorkshopOrigin(options.trustedOrigin) !== null,
+        operationAuth: false, registryVerify: false, unifiedPolicy: false, commitBarrier: false, writable: false,
+        reasons: [...(scope?.reasons || ['SCOPE_UNVERIFIED']), 'OPERATION_AUTH_UNVERIFIED', 'REGISTRY_VERIFY_UNAVAILABLE', 'COMMIT_BARRIER_UNAVAILABLE'] }
+    },
+    async workshopInventory(req: IncomingMessage): Promise<WorkshopInventoryResult> {
+      await authorize(req, 'workshopInventory')
+      return inventory.reconcile()
+    },
+    async workshopQuery(req: IncomingMessage, request: WorkshopQueryRequest) {
+      await authorize(req, 'workshopQuery')
+      assertWorkshopFields(request, ['view', 'query', 'domain', 'source', 'uninstalledOnly', 'queryRevision', 'cursor'])
+      return query.query(request)
+    },
+    async workshopDetail(req: IncomingMessage, request: WorkshopDetailRequest) {
+      await authorize(req, 'workshopDetail')
+      assertWorkshopFields(request, ['skillKey', 'sourceRef', 'installId'])
+      return query.detail(request)
+    },
+  }
+}
+
+function assertWorkshopFields(request: unknown, fields: string[]): void {
+  if (!request || typeof request !== 'object' || Array.isArray(request) || Object.keys(request).some((key) => !fields.includes(key))) {
+    throw new WorkshopReadError('INVALID_REQUEST', 400)
+  }
+}
 
 export const Config: Schema<Config> = Schema.object({
   apiBase: Schema.string().default('https://api.skillhub.cn').description('SkillHub API'),
@@ -50,6 +107,7 @@ export const Config: Schema<Config> = Schema.object({
   aggregateChannels: Schema.array(Schema.union(['custom', 'workbuddy', 'skillhub'] as const)).default(['custom', 'workbuddy', 'skillhub']).description('技能搜索默认聚合渠道'),
   workbuddySkillsMarketplace: Schema.string().default('').description('WorkBuddy 技能市场扩展目录；空则探测 ~/.workbuddy/skills-marketplace'),
   aggregateRemoteSoftFail: Schema.boolean().default(true).description('远程 SkillHub 失败时不阻断本地渠道'),
+  workshopOrigin: Schema.string().default('').description('Skill工坊只读入口的受信完整Origin；未配置拒绝请求'),
 })
 
 export function apply(ctx: Context, config: Config): void {
@@ -246,6 +304,20 @@ export function apply(ctx: Context, config: Config): void {
     const server = (c as unknown as { webServer: { register: (route: { kind: string; path: string; handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void> }) => void } }).webServer
     server.register({ kind: 'exact', path: '/omnimux-market', handler: (req, res) => handleApi(req, res, cfg) })
     server.register({ kind: 'exact', path: '/omnimux-market/icon', handler: (req, res) => handleIcon(req, res, cfg) })
+    const connection: WorkshopConnection = {
+      requestRejection(req) {
+        const service = (c as unknown as { get(name: string): unknown }).get('connection') as WorkshopConnection | undefined
+        return service?.requestRejection(req) ?? (service ? undefined : { status: 401 })
+      },
+    }
+    // cfg.skillsDir alone does not prove all effective provider roots or read authorization.
+    const authorization: WorkshopReadAuthorization = { connection, trustedOrigin: config.workshopOrigin,
+      authorizeRead: (_req, method) => method === 'workshopCapabilities' }
+    const workshop = createWorkshopReadHost(cfg, authorization)
+    for (const method of WORKSHOP_READ_METHODS) {
+      server.register({ kind: 'exact', path: `/omnimux-market/workshop/${method}`,
+        handler: (req, res) => handleWorkshopApi(req, res, method, workshop, authorization) })
+    }
   })
 
   // 插件配置页按 Host settings 命名空间分发 settings.plugin.item。

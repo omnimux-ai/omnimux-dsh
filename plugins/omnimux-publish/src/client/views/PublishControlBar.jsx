@@ -3,10 +3,9 @@ import {
   IconListOutline16,
   IconCalendarOutline16,
 } from '../icons/stage.js'
-import { Button, IconButton, SearchField, DropdownSelect, FilterBar, Tabs } from 'dsh-ui-kit'
+import { Badge, Button, IconButton, SearchField, DropdownSelect, FilterBar, Tabs } from 'dsh-ui-kit'
 
 export function PublishTabButton({ item, active, onClick }) {
-  const badgeClass = `omnimux-publish-tab-badge${item.isRetry ? ' retry' : ''}`
   return (
     <Button
       variant={active ? 'secondary' : 'ghost'}
@@ -14,7 +13,11 @@ export function PublishTabButton({ item, active, onClick }) {
       onClick={onClick}
     >
       {item.label}
-      {item.count > 0 ? <span className={badgeClass}>{item.count}</span> : null}
+      {item.count > 0 ? (
+        <Badge variant={item.isRetry ? 'error' : 'neutral'} size="sm">
+          {item.count}
+        </Badge>
+      ) : null}
     </Button>
   )
 }
@@ -32,9 +35,9 @@ export function PublishTabFilters({ t, tab, counts, onTabChange }) {
     id: item.key,
     label: item.label,
     badge: item.count > 0 ? (
-      <span className={`omnimux-publish-tab-badge${item.isRetry ? ' retry' : ''}`}>
+      <Badge variant={item.isRetry ? 'error' : 'neutral'} size="sm">
         {item.count}
-      </span>
+      </Badge>
     ) : undefined,
   }))
 

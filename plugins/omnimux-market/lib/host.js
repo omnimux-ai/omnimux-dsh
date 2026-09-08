@@ -12,7 +12,11 @@ import { packageRoot, profileDir } from './expert/paths.js';
 import { configureHttpJsonCache } from './http.js';
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js';
 import { aggregateSkillSearch } from './skill-aggregate.js';
-import { handleApi, handleIcon } from './local-api.js';
+import { handleApi, handleIcon, handleWorkshopApi } from './local-api.js';
+import { InventoryService } from './workshop-inventory.js';
+import { QueryService, createWorkshopSources } from './workshop-sources.js';
+import { RequestGuard, canonicalWorkshopOrigin, WORKSHOP_READ_METHODS } from './workshop-request-guard.js';
+import { WorkshopReadError } from './workshop-store.js';
 import { cloneJson, renderInstall, renderList, renderSearch } from './host-render.js';
 import { listMarketplaceConnectors } from './marketplace-connectors.js';
 import { createPlazaTools, PLAZA_PROMPT_LINES } from './plaza-tools.js';
@@ -21,6 +25,43 @@ import { installMarketPlugin, isProtectedBundle, listPlugins, readInstalledPlugi
 import { renderAttachedExpertSection, sessionIdFromExec } from './session-attach.js';
 export const name = 'omnimux-market';
 export const inject = ['tools', 'skills'];
+/** Public package seam. Host owns this binding; request payloads never choose scope or roots. */
+export function createWorkshopReadHost(cfg, options = {}) {
+    const scope = options.scope ? structuredClone(options.scope) : null;
+    const inventory = new InventoryService({ scope, store: options.store });
+    const query = new QueryService(options.sources || createWorkshopSources(cfg), inventory);
+    const guard = new RequestGuard({ connection: options.connection, trustedOrigin: options.trustedOrigin,
+        authorizeRead: options.authorizeRead || ((_req, method) => method === 'workshopCapabilities') });
+    const authorize = (req, method) => guard.authorizeHeaders(req, method);
+    return {
+        async workshopCapabilities(req) {
+            await authorize(req, 'workshopCapabilities');
+            return { scopeKey: scope?.scopeKey || null, scopeLabel: scope?.label || '未核实', scopeVerified: scope?.complete === true,
+                connectionAuth: !!options.connection, exactOrigin: canonicalWorkshopOrigin(options.trustedOrigin) !== null,
+                operationAuth: false, registryVerify: false, unifiedPolicy: false, commitBarrier: false, writable: false,
+                reasons: [...(scope?.reasons || ['SCOPE_UNVERIFIED']), 'OPERATION_AUTH_UNVERIFIED', 'REGISTRY_VERIFY_UNAVAILABLE', 'COMMIT_BARRIER_UNAVAILABLE'] };
+        },
+        async workshopInventory(req) {
+            await authorize(req, 'workshopInventory');
+            return inventory.reconcile();
+        },
+        async workshopQuery(req, request) {
+            await authorize(req, 'workshopQuery');
+            assertWorkshopFields(request, ['view', 'query', 'domain', 'source', 'uninstalledOnly', 'queryRevision', 'cursor']);
+            return query.query(request);
+        },
+        async workshopDetail(req, request) {
+            await authorize(req, 'workshopDetail');
+            assertWorkshopFields(request, ['skillKey', 'sourceRef', 'installId']);
+            return query.detail(request);
+        },
+    };
+}
+function assertWorkshopFields(request, fields) {
+    if (!request || typeof request !== 'object' || Array.isArray(request) || Object.keys(request).some((key) => !fields.includes(key))) {
+        throw new WorkshopReadError('INVALID_REQUEST', 400);
+    }
+}
 export const Config = Schema.object({
     apiBase: Schema.string().default('https://api.skillhub.cn').description('SkillHub API'),
     webBase: Schema.string().default('https://skillhub.cn').description('技能主页'),
@@ -37,6 +78,7 @@ export const Config = Schema.object({
     aggregateChannels: Schema.array(Schema.union(['custom', 'workbuddy', 'skillhub'])).default(['custom', 'workbuddy', 'skillhub']).description('技能搜索默认聚合渠道'),
     workbuddySkillsMarketplace: Schema.string().default('').description('WorkBuddy 技能市场扩展目录；空则探测 ~/.workbuddy/skills-marketplace'),
     aggregateRemoteSoftFail: Schema.boolean().default(true).description('远程 SkillHub 失败时不阻断本地渠道'),
+    workshopOrigin: Schema.string().default('').description('Skill工坊只读入口的受信完整Origin；未配置拒绝请求'),
 });
 export function apply(ctx, config) {
     const cfg = withDefaults(config);
@@ -212,6 +254,20 @@ export function apply(ctx, config) {
         const server = c.webServer;
         server.register({ kind: 'exact', path: '/omnimux-market', handler: (req, res) => handleApi(req, res, cfg) });
         server.register({ kind: 'exact', path: '/omnimux-market/icon', handler: (req, res) => handleIcon(req, res, cfg) });
+        const connection = {
+            requestRejection(req) {
+                const service = c.get('connection');
+                return service?.requestRejection(req) ?? (service ? undefined : { status: 401 });
+            },
+        };
+        // cfg.skillsDir alone does not prove all effective provider roots or read authorization.
+        const authorization = { connection, trustedOrigin: config.workshopOrigin,
+            authorizeRead: (_req, method) => method === 'workshopCapabilities' };
+        const workshop = createWorkshopReadHost(cfg, authorization);
+        for (const method of WORKSHOP_READ_METHODS) {
+            server.register({ kind: 'exact', path: `/omnimux-market/workshop/${method}`,
+                handler: (req, res) => handleWorkshopApi(req, res, method, workshop, authorization) });
+        }
     });
     // 插件配置页按 Host settings 命名空间分发 settings.plugin.item。
     // 不登记 omnimux-market 的话，客户端卡片永远不会被 dispatch。

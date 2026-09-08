@@ -25,6 +25,24 @@ MANAGED_DSH_UI_KIT_RELATIVE_PATH='.materialize-snapshots/plugins/dsh-ui-kit'
 # Keep L2 task profiles aligned with dev-env.sh; shared with sync-to-app.sh.
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 
+ORIGINAL_ARGS=("$@")
+for arg in "$@"; do
+  case "$arg" in
+    --managed-tarball*|--expect-*|--recover-managed-tarball*)
+      request="$(node "$ROOT/scripts/managed-tarball.mjs" request "$@")" || { printf '%s\n' "$request"; exit 2; }
+      profile="$(printf '%s' "$request" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.parse(s).profile))')"
+      lock_status=0
+      python3 "$ROOT/scripts/managed-tarball-archive.py" check-locks "$profile" || lock_status=$?
+      if [ "$lock_status" -eq 10 ]; then
+        exec python3 "$ROOT/scripts/managed-tarball-archive.py" lock "$profile" -- bash "$0" "$@"
+      elif [ "$lock_status" -ne 0 ]; then
+        exit 4
+      fi
+      printf '%s' "$request" | node "$ROOT/scripts/managed-tarball.mjs" run
+      exit $?
+      ;;
+  esac
+done
 TARGET_SELECTION=()
 PLUGINS=()
 ALPHA_PLUGINS=()
@@ -157,6 +175,17 @@ for home_candidate in "${TARGET_HOMES[@]}"; do
     fi
   fi
 done
+
+if [ "${#PROFILES[@]}" -gt 0 ]; then
+  lock_status=0
+  python3 "$ROOT/scripts/managed-tarball-archive.py" check-locks "${PROFILES[@]}" || lock_status=$?
+  if [ "$lock_status" -eq 10 ]; then
+    exec python3 "$ROOT/scripts/managed-tarball-archive.py" lock "${PROFILES[@]}" -- bash "$0" ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"}
+  elif [ "$lock_status" -ne 0 ]; then
+    exit 4
+  fi
+  python3 "$ROOT/scripts/managed-tarball-archive.py" pending "${PROFILES[@]}" || exit 7
+fi
 
 # 产品树垂直（含产品库 / 插件市场 / 剪辑）+ omnimux-video + omnimux-analytics（埋点）+ omnimux-publish（发布中心）
 ALL_PLUGINS=(omnimux omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-analytics omnimux-publish)
@@ -648,7 +677,8 @@ EOF
   # 写入后由 pnpm 构造 profile 下的 node_modules 符号拓扑。安装失败恢复被暂存的
   # 入口，避免留下缺包；成功后仍由下方的全内容 fingerprint 校验最终结果。
   echo "  → 刷新 profile 依赖 (corepack pnpm install)..."
-  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false corepack pnpm install); then
+  # The selected entries were moved above; workspace freshness cannot prove they exist.
+  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false pnpm_config_optimistic_repeat_install=false corepack pnpm install); then
     restore_refresh_entries
     echo "✗ pnpm 刷新 profile 依赖失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1

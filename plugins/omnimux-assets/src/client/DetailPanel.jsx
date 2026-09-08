@@ -1,36 +1,5 @@
+import { Badge, Drawer } from 'dsh-ui-kit'
 import { formatBytes, formatDateTime } from './format.js'
-import { CloseIcon } from './icons.jsx'
-
-const panel = {
-  flex: 'none',
-  width: 320,
-  overflow: 'auto',
-  borderLeft: '1px solid var(--dsw-alias-border, var(--dsw-border, rgba(128,128,128,.25)))',
-  background: 'var(--dsw-alias-bg-secondary, var(--dsw-bg, #161616))',
-  display: 'flex',
-  flexDirection: 'column',
-}
-
-const header = {
-  flex: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '10px 14px',
-  borderBottom: '1px solid var(--dsw-alias-border, var(--dsw-border, rgba(128,128,128,.25)))',
-}
-
-const title = {
-  flex: 1,
-  minWidth: 0,
-  margin: 0,
-  fontSize: 13,
-  fontWeight: 600,
-  lineHeight: '20px',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-}
 
 const body = {
   padding: '8px 14px 14px',
@@ -54,41 +23,6 @@ const fieldValue = {
   wordBreak: 'break-all',
 }
 
-const closeButton = {
-  flex: 'none',
-  width: 24,
-  height: 24,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  border: 'none',
-  background: 'transparent',
-  color: 'inherit',
-  cursor: 'pointer',
-  borderRadius: 4,
-  padding: 0,
-}
-
-const badge = {
-  display: 'inline-block',
-  fontSize: 11,
-  lineHeight: '16px',
-  padding: '1px 8px',
-  borderRadius: 8,
-}
-
-const tracedBadge = {
-  ...badge,
-  color: 'var(--dsw-alias-label-success, #3f9142)',
-  border: '1px solid var(--dsw-alias-label-success, #3f9142)',
-}
-
-const untracedBadge = {
-  ...badge,
-  color: 'var(--dsw-alias-label-warning, #d48806)',
-  border: '1px solid var(--dsw-alias-label-warning, #d48806)',
-}
-
 function Field({ label, value }) {
   return (
     <div>
@@ -99,8 +33,8 @@ function Field({ label, value }) {
 }
 
 /**
- * Right-hand detail side panel. Core-1 rows show file metadata plus the real
- * path (read-only display); core-2 rows show the source traceability block.
+ * Right-hand detail side panel using Drawer primitive. Core-1 rows show file metadata
+ * plus the real path (read-only display); core-2 rows show the source traceability block.
  * @param {{
  *   t: (key: string) => string,
  *   detail: { kind: 'file', file: any, mapping: any } | { kind: 'artifact', artifact: any },
@@ -116,34 +50,44 @@ export function DetailPanel({ t, detail, onClose }) {
       ? `${mapping.real_path.replace(/\/$/, '')}/${file.relative_path}`
       : ''
     return (
-      <aside style={panel} aria-label={t('detail.file')}>
-        <div style={header}>
-          <h3 style={title} title={String(file.name)}>{String(file.name)}</h3>
-          <button type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
-        </div>
+      <Drawer
+        open={Boolean(detail)}
+        onClose={onClose}
+        placement="right"
+        width={320}
+        title={String(file.name)}
+        aria-label={t('detail.file')}
+      >
         <div style={body}>
           <Field label={t('detail.path')} value={realPath} />
           <Field label={t('detail.size')} value={file.is_dir ? '—' : formatBytes(Number(file.size))} />
           <Field label={t('detail.mtime')} value={formatDateTime(String(file.mtime))} />
           <Field label={t('detail.type')} value={file.is_dir ? t('type.other') : t(`type.${file.type}`)} />
         </div>
-      </aside>
+      </Drawer>
     )
   }
 
   const artifact = detail.artifact
   const source = artifact?.source ?? {}
   return (
-    <aside style={panel} aria-label={t('detail.artifact')}>
-      <div style={header}>
-        <h3 style={title} title={String(artifact.title)}>{String(artifact.title)}</h3>
-        <button type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
-      </div>
+    <Drawer
+      open={Boolean(detail)}
+      onClose={onClose}
+      placement="right"
+      width={320}
+      title={String(artifact.title)}
+      aria-label={t('detail.artifact')}
+    >
       <div style={body}>
         <div>
-          <span style={source.traced ? tracedBadge : untracedBadge}>
+          <Badge
+            variant={source.traced ? 'success' : 'warning'}
+            shape="capsule"
+            size="sm"
+          >
             {source.traced ? t('detail.traced') : t('detail.untraced')}
-          </span>
+          </Badge>
         </div>
         <Field label={t('detail.agent')} value={source.agent} />
         <Field label={t('detail.model')} value={source.model} />
@@ -155,6 +99,6 @@ export function DetailPanel({ t, detail, onClose }) {
         <Field label={t('detail.mtime')} value={formatDateTime(String(artifact.created_at))} />
         <Field label={t('detail.contentRef')} value={artifact.content_ref} />
       </div>
-    </aside>
+    </Drawer>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, DropdownSelect, IconButton, InputField } from 'dsh-ui-kit'
+import { Badge, Button, DropdownSelect, IconButton, InputField } from 'dsh-ui-kit'
 import { ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
 import { isFolderAsset } from './asset-routing.js'
@@ -75,7 +75,9 @@ export function AssetDetail({ t, asset, busy, onClose, onSave, onPreview }) {
                   <Button variant="ghost" size="xs" disabled>
                     <FileIcon size={14} />
                     <span className="omnimux-assets-filelist-name">{file.original_name || file.real_path}</span>
-                    <span className="omnimux-assets-folder-badge">{t('detail.file')}</span>
+                    <Badge size="sm" shape="capsule" variant="neutral" className="omnimux-assets-folder-badge">
+                      {t('detail.file')}
+                    </Badge>
                   </Button>
                 </li>
               ))}

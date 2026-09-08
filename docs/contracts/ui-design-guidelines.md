@@ -137,3 +137,26 @@ subsystem: "omnimux-accounts"
 - [ ] **外部关闭**：所有浮层和下拉菜单均支持点击外部及 `Esc` 键关闭。
 - [ ] **微动效与反馈**：所有交互元素具备平滑的 `transition`（100~150ms）、Hover 高亮、Focus 蓝光晕以及 Active 按压缩放。
 - [ ] **物化与重启验证**：执行 `sync-to-app.sh` 物化到生产 profile，并通过 `yarn omnimux:restart` 重启后在真机窗口中核实。
+
+---
+
+## 5. 双重硬门禁与规范豁免标准（Dual Hard Gates & Exemption Syntax）
+
+为杜绝违规 UI 代码（原生控件、内联样式、裸色、非标字阶）流入代码库，实施双重硬门禁物理防御：
+
+### 5.1 第一重门禁：PreToolUse 运行时拦截守卫 (`scripts/guard-ui-design.mjs`)
+- 挂载于 `.dsh/hooks.json`，在 Agent 调用 `write`/`edit` 落地代码前毫秒级检测；
+- 违规代码立即被物理打断并返回 `permissionDecision: "deny"`，附带错误行号、`design.md` 对应章节及Before/After修正示例；
+- 完全合规或非 UI 客户端路径即刻返回 `permissionDecision: "allow"` 放行。
+
+### 5.2 第二重门禁：静态门禁扫描与 CI 致命阻断 (`scripts/scan-ui-gates.mjs`)
+- 接入 `package.json` 的 `verify:gates`（位于 `test:gates` 前执行）；
+- UI01（原生控件）、UI02（内联样式）、UI03（裸色硬编码）、UI07（非幂等导航）、UI08（私建页头类）、UI09（手写 h1）、UI10（合规字阶）全面纳入致命 FATAL 校验；
+- 发现任何一处违规即触发 `process.exit(1)` 彻底阻断 CI 与合并队列。
+
+### 5.3 规范豁免标准语法
+如属第三方复杂内嵌、特化大字（如 Hero 品牌大字、KPI 数字）或不可避免的特殊业务场景，必须在违规行显式添加行级规范豁免注释：
+- 原生控件豁免：`// exempt-ui01 <特化原因>` 或 `/* exempt-ui01 <特化原因> */`
+- 内联样式豁免：`// exempt-ui02 <特化原因>` 或 `/* exempt-ui02 <特化原因> */`
+- 裸色硬编码豁免：`// exempt-ui03 <特化原因>` 或 `/* exempt-ui03 <特化原因> */`
+- 非标字阶豁免：`// exempt-ui10 <特化原因>` 或 `/* exempt-ui10 <特化原因> */`

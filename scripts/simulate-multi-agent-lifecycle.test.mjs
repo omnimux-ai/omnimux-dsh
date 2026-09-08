@@ -50,20 +50,22 @@ function makeUnpushedRepo() {
 
 describe('Multi-Agent Automated Lifecycle & Destructive Incident Simulation', () => {
   it('Phase 1: Agent 1 (许清楚) & Agent 2 (高见远) Worktree Isolation Enforced', () => {
-    const mainWriteResult = decideWrite({
-      toolName: 'edit',
-      cwd: repoRoot,
-      filePath: 'plugins/omnimux-clip/src/client/ClipStage.jsx',
-    })
-    assert.equal(mainWriteResult.decision, 'deny')
-    assert.ok(mainWriteResult.reason === 'tracked-file' || mainWriteResult.reason === 'tracked-plugin')
-
-    const wtWriteResult = decideWrite({
-      toolName: 'edit',
-      cwd: '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh-wt-sim-test-999',
-      filePath: 'plugins/omnimux-clip/src/client/ClipStage.jsx',
-    })
-    assert.equal(wtWriteResult.decision, 'allow')
+    const primary = join(here, `.lifecycle-fixture-${process.pid}`)
+    mkdirSync(primary)
+    try {
+      execSync('git init -b main', { cwd: primary, stdio: 'ignore' })
+      writeFileSync(join(primary, 'package.json'), '{}\n')
+      execSync('git add package.json && git -c user.name=sim -c user.email=sim@test commit -m seed', { cwd: primary, stdio: 'ignore' })
+      const linked = join(primary, '.worktrees', 'agent')
+      execSync(`git worktree add -b agent "${linked}"`, { cwd: primary, stdio: 'ignore' })
+      const mainWriteResult = decideWrite({ toolName: 'edit', cwd: primary, filePath: 'package.json' })
+      assert.equal(mainWriteResult.decision, 'deny')
+      assert.equal(mainWriteResult.reason, 'tracked-file')
+      const wtWriteResult = decideWrite({ toolName: 'edit', cwd: linked, filePath: 'package.json' })
+      assert.equal(wtWriteResult.decision, 'allow')
+    } finally {
+      rmSync(primary, { recursive: true, force: true })
+    }
   })
 
   it('Phase 2: unpushed commits make git -C reset --hard deny, and the commit stays', () => {

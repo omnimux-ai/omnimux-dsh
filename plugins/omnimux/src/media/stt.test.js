@@ -14,7 +14,7 @@ const request = { audio: dataAudio, model, env: { OMNIMUX_API_KEY: 'sk-stt-fixtu
 
 function tempAudio(t) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-stt-'))
-  const file = join(dir, 'clip.mp3')
+  const file = join(dir, 'TK 口播女.mp3')
   writeFileSync(file, AUDIO_BYTES)
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   return file
@@ -60,14 +60,14 @@ test('STT posts exact audio bytes and defaults to JSON after real model admissio
   assert.equal(captured.init.headers.authorization, 'Bearer sk-stt-fixture')
   assert.ok(captured.init.body instanceof FormData)
   const form = captured.init.body
-  assert.equal(form.get('model'), model)
+  assert.equal(form.get('model'), 'whisper-1')
   assert.equal(form.get('response_format'), 'json')
   assert.deepEqual([...form.keys()].sort(), ['file', 'model', 'response_format'])
   const upload = form.get('file')
-  assert.equal(upload.name, 'clip.mp3')
+  assert.equal(upload.name, 'TK 口播女.mp3')
   assert.equal(upload.type, 'audio/mpeg')
   assert.deepEqual(Buffer.from(await upload.arrayBuffer()), AUDIO_BYTES)
-  assert.deepEqual(result, { mode: 'live', model, text: '你好世界' })
+  assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: '你好世界' })
 })
 
 for (const id of [model, 'seedasr-auc']) {
@@ -76,10 +76,12 @@ for (const id of [model, 'seedasr-auc']) {
     const result = await executeOmnimuxSpeechToText({
       ...request, model: id, response_format: 'srt', language: 'zh', fetcher: sttFetcher(captured, SRT),
     })
-    assert.equal(captured.init.body.get('model'), model)
+    assert.equal(captured.init.body.get('model'), 'whisper-1')
     assert.equal(captured.init.body.get('language'), 'zh')
     assert.equal(captured.init.body.get('response_format'), 'srt')
-    assert.deepEqual(result, { mode: 'live', model, text: SRT })
+    assert.equal(captured.init.body.has('url'), false)
+    assert.equal(captured.init.body.has('audio_url'), false)
+    assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: SRT })
   })
 }
 
@@ -112,7 +114,7 @@ test('STT respects explicit model and environment routing without changing the d
     fetcher: sttFetcher(captured),
   })
   assert.equal(captured.url, 'https://fixture.example/v1/audio/transcriptions')
-  assert.equal(captured.init.body.get('model'), model)
+  assert.equal(captured.init.body.get('model'), 'whisper-1')
 })
 
 test('STT rejects invalid formats before credentials, audio loading or HTTP', async () => {
@@ -126,24 +128,49 @@ test('STT rejects invalid formats before credentials, audio loading or HTTP', as
   assert.equal(calls, 0)
 })
 
-test('STT fetches HTTP audio before multipart upload and forwards cancellation', async () => {
+for (const id of [model, 'seedasr-auc']) {
+  test(`STT ${id} forwards public URL fields without downloading audio`, async () => {
+    const captured = {}
+    const signal = new AbortController().signal
+    const audio = 'https://cdn.example.com/voice/note.m4a?signature=abc'
+    let calls = 0
+    const result = await executeOmnimuxSpeechToText({
+      ...request, model: id, audio: ` ${audio} `, signal, response_format: 'srt',
+      fetcher: async (url, init) => {
+        calls++
+        assert.equal(init.method, 'POST')
+        assert.equal(init.signal, signal)
+        return sttFetcher(captured, SRT)(url, init)
+      },
+    })
+    assert.equal(calls, 1)
+    assert.equal(captured.init.body.get('url'), audio)
+    assert.equal(captured.init.body.get('audio_url'), audio)
+    assert.equal(captured.init.body.get('model'), model)
+    assert.equal(captured.init.body.has('file'), false)
+    assert.deepEqual(result, { mode: 'live', model, text: SRT })
+  })
+}
+
+test('Whisper wire requests retain multipart bytes and forward public URL fields', async () => {
   const captured = {}
+  const audio = 'https://cdn.example.com/voice/note.m4a'
   const urls = []
-  const signal = new AbortController().signal
-  const result = await executeOmnimuxSpeechToText({
-    ...request, audio: 'https://cdn.example.com/voice/note.m4a', signal,
+  const result = await transcribeFixture({
+    ...request, model: 'whisper-1', audio,
     fetcher: async (url, init) => {
       urls.push(String(url))
-      assert.equal(init.signal, signal)
       if (init.method === 'POST') return sttFetcher(captured)(url, init)
       assert.equal(init.headers.authorization, undefined)
       return new Response(M4A_BYTES, { headers: { 'content-type': 'audio/m4a' } })
     },
   })
-  assert.deepEqual(urls, ['https://cdn.example.com/voice/note.m4a', 'https://api.omnimux.ai/v1/audio/transcriptions'])
+  assert.deepEqual(urls, [audio, 'https://api.omnimux.ai/v1/audio/transcriptions'])
   assert.equal(captured.init.body.get('file').name, 'note.m4a')
   assert.equal(captured.init.body.get('file').type, 'audio/m4a')
-  assert.equal(result.mode, 'live')
+  assert.equal(captured.init.body.get('url'), audio)
+  assert.equal(captured.init.body.get('audio_url'), audio)
+  assert.equal(result.model, 'whisper-1')
 })
 
 test('admitted wire primitive keeps explicit token and legacy Whisper compatibility', async () => {

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { TABLE_COLUMNS, formatMetric } from '../metrics-display.js'
 import { displayStatus, statusText } from '../status-display.js'
 import { RowActionMenu } from './RowActionMenu.jsx'
@@ -41,64 +42,68 @@ export function RecordsTable({
   if (!records || records.length === 0) {
     return (
       <div className="omnimux-publish-table-wrap">
-        <table className="omnimux-publish-table">
-          <thead>
-            <tr>
-              <th className="omnimux-publish-col-check" />
-              <th className="omnimux-publish-col-content">Content</th>
-              <th className="omnimux-publish-col-platforms">Platforms</th>
+        <Table className="omnimux-publish-table" stickyHeader dense>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="omnimux-publish-col-check" />
+              <TableHead className="omnimux-publish-col-content">Content</TableHead>
+              <TableHead className="omnimux-publish-col-platforms">Platforms</TableHead>
               {TABLE_COLUMNS.map((col) => (
-                <th key={col.key} style={{ '--pub-min-w': col.minWidth ? `${col.minWidth}px` : undefined }}>
+                <TableHead key={col.key} style={{ '--pub-min-w': col.minWidth ? `${col.minWidth}px` : undefined }}>
                   {col.label}
-                </th>
+                </TableHead>
               ))}
-              <th className="omnimux-publish-col-menu" />
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan={14} className="omnimux-publish-table-empty">
+              <TableHead className="omnimux-publish-col-menu" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={14} className="omnimux-publish-table-empty">
                 {t('records.empty.all')}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
     )
   }
 
   return (
     <div className="omnimux-publish-table-wrap">
-      <table className="omnimux-publish-table">
-        <thead>
-          <tr>
-            <th className="omnimux-publish-col-check">
+      <Table className="omnimux-publish-table" stickyHeader dense>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="omnimux-publish-col-check">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={(e) => onToggleAll(e.target.checked)}
                 aria-label={t('action.selectAll')}
               />
-            </th>
-            <th className="omnimux-publish-col-content">Content</th>
-            <th className="omnimux-publish-col-platforms">Platforms</th>
-            <th
+            </TableHead>
+            <TableHead className="omnimux-publish-col-content">Content</TableHead>
+            <TableHead className="omnimux-publish-col-platforms">Platforms</TableHead>
+            <TableHead
+              sortable
+              sortDirection={sortField === 'date' ? sortOrder : null}
               className="omnimux-publish-col-sort omnimux-publish-col-date"
               onClick={() => onSort('date')}
             >
-              Date {sortField === 'date' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th
+              Date
+            </TableHead>
+            <TableHead
+              sortable
+              sortDirection={sortField === 'status' ? sortOrder : null}
               className="omnimux-publish-col-sort omnimux-publish-col-status"
               onClick={() => onSort('status')}
             >
-              Status {sortField === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-            </th>
+              Status
+            </TableHead>
             {/* 8 维指标表头 (包含 14px SVG 图标 + 短名，锁定 56px 宽) */}
             {TABLE_COLUMNS.slice(5, 13).map((col) => {
               const IconComp = col.icon
               return (
-                <th
+                <TableHead
                   key={col.key}
                   className="omnimux-publish-th-metric"
                   title={col.label}
@@ -107,13 +112,13 @@ export function RecordsTable({
                     {IconComp ? <IconComp /> : null}
                     <span>{col.label}</span>
                   </div>
-                </th>
+                </TableHead>
               )
             })}
-            <th className="omnimux-publish-col-menu" />
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead className="omnimux-publish-col-menu" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {records.map((record) => {
             const id = String(record.id)
             const isSelected = selectedIds.has(id)
@@ -130,20 +135,21 @@ export function RecordsTable({
               : subtasks.map((st) => st.platform || 'unknown')
 
             return (
-              <tr
+              <TableRow
                 key={id}
+                selected={isSelected}
                 className={isSelected ? 'omnimux-publish-row selected' : 'omnimux-publish-row'}
                 onClick={() => (isDraft ? onEdit(record) : onView(record))}
               >
-                <td className="omnimux-publish-td-center" onClick={(e) => e.stopPropagation()}>
+                <TableCell className="omnimux-publish-td-center" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleSelect(id)}
                     aria-label={`Select ${title}`}
                   />
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <div className="omnimux-publish-td-content">
                     <div className="omnimux-publish-td-thumb">
                       {isVideo ? (
@@ -158,8 +164,8 @@ export function RecordsTable({
                       </span>
                     </div>
                   </div>
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <div className="omnimux-publish-platforms-cluster">
                     {platforms.length > 0 ? (
                       platforms.map((p, idx) => (
@@ -171,23 +177,23 @@ export function RecordsTable({
                       <span className="omnimux-publish-muted">-</span>
                     )}
                   </div>
-                </td>
-                <td className="omnimux-publish-td-datetime">{dateStr.slice(0, 16).replace('T', ' ')}</td>
-                <td>
+                </TableCell>
+                <TableCell className="omnimux-publish-td-datetime">{dateStr.slice(0, 16).replace('T', ' ')}</TableCell>
+                <TableCell>
                   <span className={`omnimux-publish-status-pill ${status}`}>
                     {statusLabel}
                   </span>
-                </td>
+                </TableCell>
                 {/* 8 维指标单元格：全部使用 formatMetric 渲染为诚实空槽 '-' */}
-                <td className="omnimux-publish-td-metric">{formatMetric(record.likes)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.comments)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.shares)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.saves)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.clicks)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.views)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.impressions)}</td>
-                <td className="omnimux-publish-td-metric">{formatMetric(record.reach)}</td>
-                <td className="omnimux-publish-td-center" onClick={(e) => e.stopPropagation()}>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.likes)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.comments)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.shares)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.saves)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.clicks)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.views)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.impressions)}</TableCell>
+                <TableCell className="omnimux-publish-td-metric">{formatMetric(record.reach)}</TableCell>
+                <TableCell className="omnimux-publish-td-center" onClick={(e) => e.stopPropagation()}>
                   <RowActionMenu
                     t={t}
                     record={record}
@@ -196,12 +202,12 @@ export function RecordsTable({
                     onDelete={onDelete}
                     onRetry={onRetry}
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   )
 }

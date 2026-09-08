@@ -3,10 +3,37 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { loadAudioBytes, durationFromAudioBytes } from './stt.js'
+import { loadAudioBytes, durationFromAudioBytes, isPublicAudioUrl } from './stt-audio.js'
 
 const MP3 = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
 const WAV = Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45])
+
+for (const url of [
+  'https://cdn.example.com/voice.mp3', ' HTTP://cdn.example.com/audio.wav?signature=abc ',
+  'https://localhost.example.com/audio.mp3', 'https://127.0.0.1.example.com/audio.mp3',
+  'https://8.8.8.8/voice.mp3', 'https://[2606:4700:4700::1111]/voice.mp3',
+]) {
+  test(`audio URL classifier accepts external HTTP(S): ${url}`, () => {
+    assert.equal(isPublicAudioUrl(url), true)
+  })
+}
+
+for (const value of [
+  '', undefined, '/Users/x/Desktop/TK 口播女.mp3', 'data:audio/mpeg;base64,SUQzBAAA',
+  'file:///tmp/audio.mp3', 'blob:https://cdn.example.com/id', 'https://', 'ftp://cdn.example/audio.mp3',
+  'http://localhost:43120/audio.mp3', 'http://LOCALHOST./audio.mp3', 'http://audio.localhost/audio.mp3',
+  'http://127.0.0.1/audio.mp3', 'http://127.42.0.8/audio.mp3', 'http://127.1/audio.mp3',
+  'http://2130706433/audio.mp3', 'http://0.0.0.0/audio.mp3', 'http://10.0.0.1/audio.mp3',
+  'http://172.16.1.1/audio.mp3', 'http://192.168.1.1/audio.mp3', 'http://169.254.169.254/audio.mp3',
+  'http://100.64.0.1/audio.mp3', 'http://[::1]/audio.mp3', 'http://[::]/audio.mp3',
+  'http://[::ffff:127.0.0.1]/audio.mp3', 'http://[::ffff:192.168.1.1]/audio.mp3',
+  'http://[fd00::1]/audio.mp3', 'http://[fe80::1]/audio.mp3', 'http://nas.local/audio.mp3',
+  'http://nas/audio.mp3', 'https://user:password@cdn.example.com/audio.mp3',
+]) {
+  test(`audio URL classifier excludes local or non-public sources: ${value}`, () => {
+    assert.equal(isPublicAudioUrl(value), false)
+  })
+}
 
 test('audio loader reads absolute files and derives MIME from bytes', async (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-audio-'))

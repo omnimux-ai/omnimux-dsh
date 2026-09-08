@@ -245,7 +245,7 @@ export function AssetPicker({
       <div className="omx-asset-pick">
         <nav className="omx-asset-pick__nav" aria-label={tt('composerAdd.categories')}>
           {tabs.map((id) => (
-            <button
+            <button /* exempt-ui01: 资产分类Tab */
               key={id}
               type="button"
               className="omx-asset-pick__tab"

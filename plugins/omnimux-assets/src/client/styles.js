@@ -685,6 +685,42 @@ export const ASSETS_CSS = `
   align-items: center;
   gap: 8px;
 }
+.omnimux-assets-file-table, .omnimux-assets-artifact-table {
+  width: 100%;
+}
+.omnimux-assets-th-file-name {
+  width: 40%;
+}
+.omnimux-assets-th-artifact-name {
+  width: 34%;
+}
+.omnimux-assets-clickable-row {
+  cursor: pointer;
+}
+.omnimux-assets-cell-file-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+.omnimux-assets-cell-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-assets-cell-dir-arrow {
+  display: inline-flex;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-mapping-invalid {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-alias-state-warn-primary);
+}
 
 `
 

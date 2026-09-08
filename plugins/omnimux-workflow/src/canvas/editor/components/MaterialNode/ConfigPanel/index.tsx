@@ -50,10 +50,8 @@ import { filterWrite } from './videoParams/paramSchemaFilter.ts';
 import { ImageTriggerBar } from './imageParams/ImageTriggerBar';
 import { ImageParamPopover } from './imageParams/ImageParamPopover';
 import { resolveEffectiveImageParams } from './imageParams/imageParamAdapter';
-import { AudioTriggerBar } from './audioParams/AudioTriggerBar';
-import { AudioParamPopover } from './audioParams/AudioParamPopover';
 import { resolveEffectiveAudioParams, resolveAudioPromptGate, AUDIO_PROMPT_MAX_CHARS } from './audioParams/audioParamAdapter';
-import { VOICE_PICKER_MIN_OPTIONS, resolveVoiceLabel } from './audioParams/voicePickerModel.ts';
+import { resolveVoiceLabel } from './audioParams/voicePickerModel.ts';
 import { VoicePickerDialog } from './audioParams/VoicePickerDialog';
 import {
   applyPendingVideoParamAdjustment,
@@ -151,9 +149,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const videoTriggerRef = useRef<HTMLDivElement | null>(null);
   const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
-  const [audioPopoverOpen, setAudioPopoverOpen] = useState(false);
-  const audioTriggerRef = useRef<HTMLDivElement | null>(null);
-  // T04：音色选择弹窗（大音色目录时由底栏 VoiceTrigger 唤起）
+  // T04：音色选择弹窗（schema 提供音色选项时由底栏 VoiceTrigger 唤起）
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
 
@@ -387,8 +383,9 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       : []),
     [materialType, isAsrTool, audioEffectiveParams],
   );
-  // 大音色目录 → 底栏 VoiceTrigger + VoicePickerDialog；小目录仍走 Popover 内音色区。
-  const showVoicePicker = voiceCatalogOptions.length >= VOICE_PICKER_MIN_OPTIONS;
+  // Issue #763：时长由文本长度决定，底栏不再有音频参数浮层；
+  // 只要 schema 提供音色选项，底栏即常驻 VoiceTrigger + VoicePickerDialog。
+  const showVoicePicker = voiceCatalogOptions.length > 0;
   const selectedVoiceOption = useMemo(
     () => voiceCatalogOptions.find((option) => option.value === audioEffectiveParams?.voice),
     [voiceCatalogOptions, audioEffectiveParams],
@@ -462,8 +459,26 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         implementationGaps: [],
       };
     }
+    // Issue #763：音频（非 ASR）节点与图片一致，素材卡槽常驻（参考音频 reference_audio）。
+    if (materialType === 'audio' && !isAsrTool && (slotLayout.preset === 'none' || slotLayout.slots.length === 0)) {
+      return {
+        operationId: opsState.selectedOperationId || 'text_to_speech',
+        preset: 'strip',
+        slots: [{
+          slot: 'reference_audio',
+          role: 'reference',
+          type: 'audio',
+          min: 0,
+          max: 5,
+          labelKey: 'panel.slot.reference_audio',
+        }],
+        swap: false,
+        addButton: true,
+        implementationGaps: [],
+      };
+    }
     return slotLayout;
-  }, [materialType, slotLayout, opsState.selectedOperationId]);
+  }, [materialType, isAsrTool, slotLayout, opsState.selectedOperationId]);
 
   const feedAssets = useMemo<FeedAsset[]>(
     () => upstreams
@@ -689,7 +704,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className="wf-config-panel__prompt-header">
-          {/* T03：模式驱动卡槽；图像节点卡槽始终常驻在线；none 预设不渲染、不占高度。 */}
+          {/* T03：模式驱动卡槽；图像与音频（非 ASR）节点卡槽始终常驻在线；none 预设不渲染、不占高度。 */}
           {effectiveSlotLayout.preset !== 'none' && effectiveSlotLayout.slots.length > 0 ? (
             <SlotWells
               layout={effectiveSlotLayout}
@@ -793,7 +808,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
             </button>
           ) : null}
 
-          {/* 文本 / ASR 保持内联生成方式入口；图像与音频（非 ASR）的生成方式进各自浮层。 */}
+          {/* 文本 / ASR 保持内联生成方式入口；图像的生成方式进自身浮层（Issue #763：音频时长由文本长度决定，无参数浮层）。 */}
           {showModeUi && (materialType === 'text' || isAsrTool) ? (
             <>
               <span className="wf-param-pill__divider">|</span>
@@ -827,18 +842,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                 isOpen={videoPopoverOpen}
                 disabled={execBusy}
                 onToggle={() => setVideoPopoverOpen((p) => !p)}
-              />
-            </div>
-          )}
-
-          {/* 音频（非 ASR）专属参数：单行摘要 TriggerBar + Portal 浮层（废除孤立齿轮与内联抽屉） */}
-          {materialType === 'audio' && !isAsrTool && audioEffectiveParams && (
-            <div ref={audioTriggerRef} className="wf-cfg-summary-bar__wrap">
-              <AudioTriggerBar
-                params={audioEffectiveParams}
-                isOpen={audioPopoverOpen}
-                disabled={execBusy}
-                onToggle={() => setAudioPopoverOpen((p) => !p)}
               />
             </div>
           )}
@@ -885,17 +888,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           params={imageEffectiveParams}
           isOpen={imagePopoverOpen}
           onClose={() => setImagePopoverOpen(false)}
-          onParamChange={(key, value) => updateParam(key, value)}
-        />
-      )}
-
-      {/* 音频（非 ASR）参数浮层（Portal 挂载，随面板根部渲染） */}
-      {materialType === 'audio' && !isAsrTool && audioEffectiveParams && (
-        <AudioParamPopover
-          triggerRef={audioTriggerRef}
-          params={audioEffectiveParams}
-          isOpen={audioPopoverOpen}
-          onClose={() => setAudioPopoverOpen(false)}
           onParamChange={(key, value) => updateParam(key, value)}
         />
       )}

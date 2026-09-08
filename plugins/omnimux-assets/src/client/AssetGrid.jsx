@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, IconButton } from 'dsh-ui-kit'
-import { activateRowKeydown } from './a11y.js'
+import { Badge, Button, IconButton, MediaCard, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { CheckIcon, FileIcon, EyeIcon, ChatIcon } from './icons.jsx'
 import { previewUrl } from './api.js'
 import { pickCoverFile, addAssetToConversation } from './add-to-chat.js'
@@ -67,92 +66,96 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
     }, 1800)
   }
 
-  return (
-    <article
-      className="omnimux-assets-focusable omnimux-assets-card"
-      tabIndex={0}
-      role="button"
-      aria-selected={selected ? 'true' : 'false'}
-      onClick={handleTriggerAction}
-      onKeyDown={activateRowKeydown(handleTriggerAction)}
-    >
-      <div className="omnimux-assets-card-thumb">
-        {onToggleSelect ? (
-          <IconButton
+  const coverNode = (
+    <div className="omnimux-assets-card-thumb">
+      {onToggleSelect ? (
+        <IconButton
+          variant="ghost"
+          size="xs"
+          className="omnimux-assets-check"
+          data-selected={selected ? 'true' : 'false'}
+          aria-label={t('select.toggle')}
+          aria-pressed={selected ? 'true' : 'false'}
+          title=""
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleSelect(asset)
+          }}
+        >
+          {selected ? <CheckIcon size={12} /> : <span />}
+        </IconButton>
+      ) : null}
+      {src ? (
+        <img
+          src={src}
+          className="omnimux-assets-card-media"
+          alt=""
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <FileIcon size={22} />
+      )}
+      <Badge size="sm" shape="capsule" className="omnimux-assets-badge">
+        {t(`type.${asset.type}`)}
+      </Badge>
+      {missing ? <span className="omnimux-assets-missing">{t('card.missing')}</span> : null}
+      <div className="omnimux-assets-card-overlay">
+        <div className="omnimux-assets-card-overlay-actions">
+          <Button
+            type="button"
             variant="ghost"
             size="xs"
-            className="omnimux-assets-check"
-            data-selected={selected ? 'true' : 'false'}
-            aria-label={t('select.toggle')}
-            aria-pressed={selected ? 'true' : 'false'}
-            title=""
-            onClick={(event) => {
+            className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--secondary"
+            aria-label={t('card.view')}
+            leadingIcon={<EyeIcon size={14} />}
+            onClick={handleView}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
               event.stopPropagation()
-              onToggleSelect(asset)
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleView(event)
+              }
             }}
           >
-            {selected ? <CheckIcon size={12} /> : <span />}
-          </IconButton>
-        ) : null}
-        {src ? (
-          <img
-            src={src}
-            className="omnimux-assets-card-media"
-            alt=""
-            onError={() => setBroken(true)}
-          />
-        ) : (
-          <FileIcon size={22} />
-        )}
-        <span className="omnimux-assets-badge">{t(`type.${asset.type}`)}</span>
-        {missing ? <span className="omnimux-assets-missing">{t('card.missing')}</span> : null}
-        <div className="omnimux-assets-card-overlay">
-          <div className="omnimux-assets-card-overlay-actions">
-            <button
-              type="button"
-              className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--secondary"
-              aria-label={t('card.view')}
-              onClick={handleView}
-              onMouseDown={(event) => event.stopPropagation()}
-              onPointerDown={(event) => event.stopPropagation()}
-              onKeyDown={(event) => {
-                event.stopPropagation()
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  handleView(event)
-                }
-              }}
-            >
-              <EyeIcon size={14} />
-              <span>{t('card.view')}</span>
-            </button>
-            <button
-              type="button"
-              className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--primary"
-              aria-label={added ? t('card.addedToConversation') : t('card.addToConversation')}
-              disabled={added}
-              onClick={handleAdd}
-              onMouseDown={(event) => event.stopPropagation()}
-              onPointerDown={(event) => event.stopPropagation()}
-              onKeyDown={(event) => {
-                event.stopPropagation()
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  handleAdd(event)
-                }
-              }}
-            >
-              <ChatIcon size={14} />
-              <span>{added ? t('card.addedToConversation') : t('card.addToConversation')}</span>
-            </button>
-          </div>
+            {t('card.view')}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="xs"
+            className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--primary"
+            aria-label={added ? t('card.addedToConversation') : t('card.addToConversation')}
+            disabled={added}
+            leadingIcon={<ChatIcon size={14} />}
+            onClick={handleAdd}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              event.stopPropagation()
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleAdd(event)
+              }
+            }}
+          >
+            {added ? t('card.addedToConversation') : t('card.addToConversation')}
+          </Button>
         </div>
       </div>
-      <div className="omnimux-assets-card-body">
-        <div className="omnimux-assets-card-title">{asset.name}</div>
-        <div className="omnimux-assets-card-desc">{asset.description || '—'}</div>
-      </div>
-    </article>
+    </div>
+  )
+
+  return (
+    <MediaCard
+      className="omnimux-assets-focusable omnimux-assets-card"
+      selected={selected}
+      onClick={handleTriggerAction}
+      coverNode={coverNode}
+      title={asset.name}
+      subtitle={asset.description || '—'}
+    />
   )
 }
 
@@ -209,12 +212,12 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onPreview, o
   }
 
   return (
-    <tr
+    <TableRow
+      selected={selected}
       className="omnimux-assets-list-row"
-      aria-selected={selected ? 'true' : 'false'}
       onClick={handleTriggerAction}
     >
-      <td className="omnimux-assets-td-check" onClick={(e) => e.stopPropagation()}>
+      <TableCell className="omnimux-assets-td-check" onClick={(e) => e.stopPropagation()}>
         {onToggleSelect ? (
           <IconButton
             variant="ghost"
@@ -226,26 +229,26 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onPreview, o
             {selected ? <CheckIcon size={12} /> : <span />}
           </IconButton>
         ) : null}
-      </td>
-      <td className="omnimux-assets-td-name">
+      </TableCell>
+      <TableCell className="omnimux-assets-td-name">
         <div className="omnimux-assets-list-cell-name">
           <FileIcon size={16} />
           <span>{asset.name}</span>
         </div>
-      </td>
-      <td className="omnimux-assets-td-type">
-        <span className="omnimux-assets-badge omnimux-assets-list-badge">
+      </TableCell>
+      <TableCell className="omnimux-assets-td-type">
+        <Badge size="sm" shape="capsule" variant="neutral" className="omnimux-assets-badge omnimux-assets-list-badge">
           {t(`type.${asset.type}`)}
-        </span>
-      </td>
-      <td className="omnimux-assets-td-desc">
+        </Badge>
+      </TableCell>
+      <TableCell className="omnimux-assets-td-desc">
         {asset.description || '—'}
-      </td>
-      <td className="omnimux-assets-td-files">
+      </TableCell>
+      <TableCell className="omnimux-assets-td-files">
         {asset.files?.length ? `${asset.files.length} 个素材` : '无素材'}
         {missing ? <span className="omnimux-assets-missing omnimux-assets-list-missing">{t('card.missing')}</span> : null}
-      </td>
-      <td className="omnimux-assets-td-actions" onClick={(e) => e.stopPropagation()}>
+      </TableCell>
+      <TableCell className="omnimux-assets-td-actions" onClick={(e) => e.stopPropagation()}>
         <div className="omnimux-assets-list-actions">
           <Button
             variant="ghost"
@@ -265,8 +268,8 @@ function AssetListRow({ asset, t, selected, onToggleSelect, onOpen, onPreview, o
             {added ? t('card.addedToConversation') : t('card.addToConversation')}
           </Button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -320,18 +323,18 @@ export function AssetGrid({
   if (viewMode === 'list') {
     return (
       <div className="omnimux-assets-list-wrap">
-        <table className="omnimux-assets-list-table">
-          <thead>
-            <tr>
-              <th className="omnimux-assets-th-check" />
-              <th className="omnimux-assets-th-name">{t('detail.name')}</th>
-              <th className="omnimux-assets-th-type">{t('detail.type')}</th>
-              <th className="omnimux-assets-th-desc">{t('detail.description')}</th>
-              <th className="omnimux-assets-th-files">{t('detail.files')}</th>
-              <th className="omnimux-assets-th-actions">{t('card.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table stickyHeader dense className="omnimux-assets-list-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="omnimux-assets-th-check" />
+              <TableHead className="omnimux-assets-th-name">{t('detail.name')}</TableHead>
+              <TableHead className="omnimux-assets-th-type">{t('detail.type')}</TableHead>
+              <TableHead className="omnimux-assets-th-desc">{t('detail.description')}</TableHead>
+              <TableHead className="omnimux-assets-th-files">{t('detail.files')}</TableHead>
+              <TableHead className="omnimux-assets-th-actions">{t('card.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {assets.map((asset) => {
               const selected = selectedIds?.has(asset.id)
               const missing = (Number(asset.missing_file_count) > 0 || asset.unavailable_files?.length > 0) && !asset.files?.length
@@ -349,8 +352,8 @@ export function AssetGrid({
                 />
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     )
   }

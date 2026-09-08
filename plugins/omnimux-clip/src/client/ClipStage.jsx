@@ -29,14 +29,14 @@ class ClipErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, color: 'var(--dsw-alias-label-primary, #ffffff)', background: 'var(--dsw-alias-bg-base, #111113)', height: '100%', boxSizing: 'border-box' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: 16, color: 'var(--dsw-alias-label-danger)' }}>剪辑器加载遇到异常</h3>
-          <pre style={{ fontSize: 12, padding: 12, borderRadius: 6, background: 'var(--dsw-alias-bg-mask-1)', overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+        <div style={{ padding: 24, color: 'var(--dsw-alias-label-primary, #ffffff)', background: 'var(--dsw-alias-bg-base, #111113)', height: '100%', boxSizing: 'border-box' }} /* exempt-ui02: 错误边界兜底容器 */>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: 16, color: 'var(--dsw-alias-label-danger)' }} /* exempt-ui02: 错误标题 */>剪辑器加载遇到异常</h3>
+          <pre style={{ fontSize: 12, padding: 12, borderRadius: 6, background: 'var(--dsw-alias-bg-mask-1)', overflow: 'auto', whiteSpace: 'pre-wrap' }} /* exempt-ui02: 错误调用栈代码块 */>
             {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
           </pre>
-          <button
+          <button /* exempt-ui01: 错误边界重试按钮 */
             type="button"
-            style={{ marginTop: 12, padding: '8px 16px', background: 'var(--dsw-alias-accent-primary)', color: 'var(--dsw-alias-on-accent, #fff)', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+            style={{ marginTop: 12, padding: '8px 16px', background: 'var(--dsw-alias-accent-primary)', color: 'var(--dsw-alias-on-accent, #fff)', border: 'none', borderRadius: 8, cursor: 'pointer' }} /* exempt-ui02 */
             onClick={() => this.setState({ hasError: false, error: null })}
           >
             重试加载
@@ -221,7 +221,7 @@ export function ClipStage({ t, stage }) {
     >
       <div className="omnimux-clip-stage-header">
         <div className="omnimux-clip-stage-actions">
-          <button
+          <button /* exempt-ui01: 剪辑器关闭按钮 */
             type="button"
             className="omnimux-clip-stage-close-btn"
             aria-label="Close"

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, DropdownSelect, IconButton, InputField, ModalDialog } from 'dsh-ui-kit'
+import { Badge, Button, DropdownSelect, IconButton, InputField, ModalDialog } from 'dsh-ui-kit'
 import { FileIcon, FolderIcon } from './icons.jsx'
 
 export const ASSET_TYPE_KEYS = ['character', 'scene', 'style', 'prop', 'knowledge', 'custom']
@@ -142,7 +142,7 @@ export function AddAssetDialog({ t, busy, presetType = 'character', error, onCan
                 {looksLikeFolder(file.real_path) ? <FolderIcon size={14} /> : <FileIcon size={14} />}
                 <span className="omnimux-assets-filelist-name">{file.real_path}</span>
                 {looksLikeFolder(file.real_path) ? (
-                  <span className="omnimux-assets-folder-badge">{t('add.folderBadge')}</span>
+                  <Badge size="sm" shape="capsule" variant="neutral" className="omnimux-assets-folder-badge">{t('add.folderBadge')}</Badge>
                 ) : null}
                 <IconButton
                   variant="ghost"
@@ -164,7 +164,7 @@ export function AddAssetDialog({ t, busy, presetType = 'character', error, onCan
             <div>
               <div className="omnimux-assets-tags">
                 {tags.map((tag) => (
-                  <span key={tag} className="omnimux-assets-tag">
+                  <Badge key={tag} size="sm" shape="capsule" variant="neutral" className="omnimux-assets-tag">
                     {tag}
                     <IconButton
                       variant="ghost"
@@ -174,7 +174,7 @@ export function AddAssetDialog({ t, busy, presetType = 'character', error, onCan
                     >
                       ×
                     </IconButton>
-                  </span>
+                  </Badge>
                 ))}
               </div>
               <InputField

@@ -275,148 +275,150 @@
       );
     }
 
-    function DetailCard({ item, busy, onClose, onInstalled, onUninstalled }) {
+    function DetailCard({ item, onClose, onInstalled, onUninstalled }) {
       const tr = useTr();
       const [toast, setToast] = useState("");
       const [working, setWorking] = useState("");
-      const [tab, setTab] = useState("overview");
       const [view, setView] = useState(item);
-      const [pane, setPane] = useState({ loading: false, error: "", data: null });
-      const cacheRef = React.useRef({});
-      const installed = !!view.installed;
+      const [confirmUninstall, setConfirmUninstall] = useState(false);
+
       useEffect(() => { setView(item); }, [item]);
-      const applyDetail = (d) => {
-        if (!d) return;
-        const card = d.card && typeof d.card === "object" ? d.card : null;
-        setView((cur) => ({
-          ...cur,
-          ...(card || {}),
-          slug: item.slug,
-          installed: d.installed ?? cur.installed,
-          version: d.version || card?.version || cur.version,
-          pageUrl: card?.pageUrl || cur.pageUrl,
-          rating: card?.rating ?? cur.rating,
-          verified: card?.verified ?? cur.verified,
-          publisherName: card?.publisherName || cur.publisherName,
-          description: card?.description || cur.description,
-          security: card?.security || cur.security,
-          integrity: card?.integrity || cur.integrity,
-        }));
-      };
+
       useEffect(() => {
         let live = true;
-        api("detail", { slug: item.slug })
-          .then((d) => { if (live) applyDetail(d); })
+        const slug = item.slug || item.token || item.skillKey || "";
+        if (!slug) return undefined;
+        api("detail", { slug })
+          .then((d) => {
+            if (!live || !d) return;
+            const card = (d.card && typeof d.card === "object") ? d.card : {};
+            setView((cur) => ({
+              ...cur,
+              ...card,
+              installed: d.installed ?? cur.installed,
+              version: d.version || card.version || cur.version,
+              description: card.description || cur.description,
+              source: d.source || cur.source,
+            }));
+          })
           .catch(() => {});
         return () => { live = false; };
-      }, [item.slug]);
-      useEffect(() => {
-        if (tab === "overview") return;
-        const cached = cacheRef.current[tab];
-        if (cached) {
-          setPane({ loading: false, error: "", data: cached });
-          return;
-        }
-        let live = true;
-        setPane({ loading: true, error: "", data: null });
-        api("skillTab", { slug: item.slug, tab })
-          .then((d) => {
-            if (!live) return;
-            cacheRef.current[tab] = d;
-            setPane({ loading: false, error: "", data: d });
-          })
-          .catch((e) => {
-            if (!live) return;
-            setPane({ loading: false, error: e.message || String(e), data: null });
-          });
-        return () => { live = false; };
-      }, [item.slug, tab]);
-      const run = async (method, extra) => {
-        const ver = extra && extra.version;
-        setWorking(ver || method);
+      }, [item.slug, item.token, item.skillKey]);
+
+      const handleInstall = async () => {
+        setWorking("install");
+        const slug = item.slug || item.token || item.skillKey || "";
         try {
-          const result = await api(method, { slug: item.slug, ...(extra || {}) });
-          if (method === "install") {
-            item.installed = true;
-            if (result.version) item.version = result.version;
-            else if (ver) item.version = ver;
-            setView((cur) => ({ ...cur, installed: true, version: item.version || cur.version }));
-            onInstalled?.(item);
-            const shown = (view.name || item.name) + (item.version ? " v" + String(item.version).replace(/^v/i, "") : "");
-            setToast(tr("toast.installed", { name: shown }));
-            api("detail", { slug: item.slug }).then(applyDetail).catch(() => {});
-          } else {
-            item.installed = false;
-            setView((cur) => ({ ...cur, installed: false }));
-            onUninstalled?.(item);
-            setToast(tr("toast.uninstalled", { name: view.name || item.name }));
-          }
+          await api("install", { slug, catalogId: item.catalogId || item.id });
+          setView((cur) => ({ ...cur, installed: true, enabled: true }));
+          item.installed = true;
+          item.enabled = true;
+          onInstalled?.(item);
+          setToast(tr("toast.installed", { name: view.name || view.title || item.name || slug }));
         } catch (e) {
           setToast(e.message || String(e));
         } finally {
           setWorking("");
         }
       };
-      return h("div", { className: "sh-drawer sh-skill sh-fade", role: "dialog", "aria-modal": "true" },
-        h("span", { className: "sh-close" },
-          h(IconButton, {
-            variant: "ghost",
+
+      const handleUninstall = async () => {
+        setWorking("uninstall");
+        const slug = item.slug || item.token || item.skillKey || "";
+        try {
+          await api("uninstall", { slug });
+          setView((cur) => ({ ...cur, installed: false }));
+          item.installed = false;
+          onUninstalled?.(item);
+          setToast(tr("toast.uninstalled", { name: view.name || view.title || item.name || slug }));
+          setConfirmUninstall(false);
+        } catch (e) {
+          setToast(e.message || String(e));
+        } finally {
+          setWorking("");
+        }
+      };
+
+      const handleToggleEnable = () => {
+        const next = view.enabled === false;
+        setView((cur) => ({ ...cur, enabled: next }));
+        item.enabled = next;
+      };
+
+      const handleTry = () => {
+        trySkillInSession(view);
+        onClose();
+      };
+
+      const title = view.name || view.title || item.slug || "";
+      const desc = view.description || view.summary || "暂无描述";
+      const source = view.source || view.origin || view.channel || "OmniMux";
+      const category = catLabel(view, tr) || "通用";
+      const version = view.version ? "v" + String(view.version).replace(/^v/i, "") : "v1.0.0";
+      const isInstalled = Boolean(view.installed);
+      const isEnabled = view.enabled !== false;
+
+      return h("div", { className: "modal-dialog ws-detail-dialog", role: "dialog", "aria-modal": "true" },
+        h("div", { className: "modal-header" },
+          h("h3", { className: "modal-title" }, title),
+          h("button", {
+            type: "button",
+            className: "modal-close-btn",
             "aria-label": tr("action.close"),
             onClick: onClose,
-          }, h(IconCloseOutline16)),
-        ),
-        h("div", { className: "sh-head" },
-          h(Icon, { item: view, className: "sh-dicon" }),
-          h("div", { className: "sh-head-copy" },
-            h("h2", null, view.name),
-            view.id ? h("div", { className: "sh-canon" }, view.id) : null,
-            h(Marks, { item: view, detail: true }),
-            h("div", { className: "sh-tags" },
-              catLabel(view, tr) ? h("span", { className: "sh-tag blue" }, catLabel(view, tr)) : null,
-              view.version ? h("span", { className: "sh-tag" }, "v" + view.version) : null,
-              installed ? h("span", { className: "sh-tag green" }, tr("action.installed")) : null,
+          },
+            h("svg", { width: "18", height: "18", viewBox: "0 0 24 24" },
+              h("line", { x1: "18", y1: "6", x2: "6", y2: "18", stroke: "currentColor", strokeWidth: "2" }),
+              h("line", { x1: "6", y1: "6", x2: "18", y2: "18", stroke: "currentColor", strokeWidth: "2" }),
             ),
           ),
         ),
-        h("div", { className: "sh-body" },
-          h("div", { className: "sh-stats" },
-            h("div", { className: "sh-stat" }, tr("stat.downloads") + " ", h("b", null, fmtStat(view.downloads, tr))),
-            h("div", { className: "sh-stat" }, tr("stat.stars") + " ", h("b", null, fmtStat(view.stars, tr))),
-            h("div", { className: "sh-stat" }, tr("stat.installs") + " ", h("b", null, fmtStat(view.installs, tr))),
+        h("p", { className: "ws-detail-desc" }, desc),
+        h("div", { className: "ws-detail-meta-grid" },
+          h("div", { className: "ws-detail-meta-item" },
+            h("span", { className: "ws-detail-meta-label" }, tr("workshop.source")),
+            h("span", { className: "ws-detail-meta-val" }, source),
           ),
-          h(TabBar, { tab, onChange: setTab }),
-          h("div", { className: "sh-pane" },
-            tab === "overview" ? h("p", { className: "sh-overview" }, view.description || tr("overview.empty")) : null,
-            tab !== "overview" && pane.loading ? h("p", { className: "sh-hint" }, tr("loading")) : null,
-            tab !== "overview" && pane.error ? h("p", { className: "sh-err" }, pane.error) : null,
-            tab === "versions" && pane.data ? h(VersionsPane, {
-              data: pane.data,
-              currentVersion: view.version,
-              installed,
-              busy: working,
-              onInstall: (version) => run("install", { version }),
-            }) : null,
-            tab === "evaluation" && pane.data ? h(EvaluationPane, { data: pane.data }) : null,
+          h("div", { className: "ws-detail-meta-item" },
+            h("span", { className: "ws-detail-meta-label" }, tr("workshop.category")),
+            h("span", { className: "ws-detail-meta-val" }, category),
+          ),
+          h("div", { className: "ws-detail-meta-item" },
+            h("span", { className: "ws-detail-meta-label" }, tr("workshop.version")),
+            h("span", { className: "ws-detail-meta-val" }, version),
+          ),
+          h("div", { className: "ws-detail-meta-item" },
+            h("span", { className: "ws-detail-meta-label" }, tr("workshop.status")),
+            h("span", { className: "ws-detail-meta-val" }, isInstalled ? (isEnabled ? tr("workshop.enabled") : tr("workshop.disabled")) : tr("workshop.uninstalled")),
           ),
         ),
-        h("div", { className: "sh-foot" },
-          view.pageUrl ? h("a", { className: "sh-mini", href: view.pageUrl, target: "_blank", rel: "noreferrer" }, tr("action.openHome")) : null,
-          installed ? h(Button, {
+        confirmUninstall ? h("div", { className: "ws-detail-confirm" },
+          h("p", null, tr("workshop.confirmUninstall")),
+          h("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
+            h(Button, { size: "sm", variant: "outline", onClick: () => setConfirmUninstall(false) }, "取消"),
+            h(Button, { size: "sm", variant: "primary", loading: working === "uninstall", onClick: handleUninstall }, "确认卸载"),
+          ),
+        ) : h("div", { className: "ws-detail-actions" },
+          isInstalled ? h(Button, {
             type: "button",
             size: "sm",
             variant: "outline",
-            disabled: !!working || busy,
-            loading: working === "uninstall",
-            onClick: () => run("uninstall"),
-          }, tr("action.uninstall")) : null,
+            disabled: !!working,
+            onClick: () => setConfirmUninstall(true),
+          }, tr("workshop.uninstall")) : null,
+          isInstalled ? h(Button, {
+            type: "button",
+            size: "sm",
+            variant: "outline",
+            onClick: handleToggleEnable,
+          }, isEnabled ? tr("workshop.disable") : tr("workshop.enable")) : null,
           h(Button, {
             type: "button",
             size: "sm",
             variant: "primary",
-            disabled: installed || !!working || busy,
-            loading: !!(working && working !== "uninstall"),
-            onClick: () => run("install"),
-          }, installed ? tr("action.installed") : tr("action.install")),
+            onClick: isInstalled ? handleTry : handleInstall,
+            loading: working === "install",
+          }, isInstalled ? tr("workshop.try") : tr("action.install")),
         ),
         toast ? h(Toast, { text: toast, onDone: () => setToast("") }) : null,
       );

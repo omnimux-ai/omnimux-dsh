@@ -21,6 +21,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGINS_ROOT="${OMNIMUX_PLUGINS_DIR:-$ROOT/plugins}"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
+# Managed mode is mutually exclusive and branches before build, kit or preset writes.
+ORIGINAL_ARGS=("$@")
+for arg in "$@"; do
+  case "$arg" in
+    --managed-tarball*|--expect-*|--recover-managed-tarball*)
+      exec bash "$ROOT/scripts/sync-stable.sh" "$@"
+      ;;
+  esac
+done
 SKIP_BUILD=0
 PLUGINS=()
 TARGET_SELECTION=()
@@ -257,6 +266,17 @@ for home_dir in "${TARGET_HOMES[@]}"; do
     fi
   fi
 done
+
+if [ "${#TARGET_PROFILES[@]}" -gt 0 ]; then
+  lock_status=0
+  python3 "$ROOT/scripts/managed-tarball-archive.py" check-locks "${TARGET_PROFILES[@]}" || lock_status=$?
+  if [ "$lock_status" -eq 10 ]; then
+    exec python3 "$ROOT/scripts/managed-tarball-archive.py" lock "${TARGET_PROFILES[@]}" -- bash "$0" ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"}
+  elif [ "$lock_status" -ne 0 ]; then
+    exit 4
+  fi
+  python3 "$ROOT/scripts/managed-tarball-archive.py" pending "${TARGET_PROFILES[@]}" || exit 7
+fi
 
 DEFAULT_PLUGINS=(omnimux omnimux-accounts omnimux-assets omnimux-products omnimux-workflow omnimux-market omnimux-inspiration omnimux-clip omnimux-video omnimux-analytics omnimux-publish)
 if [ ${#PLUGINS[@]} -eq 0 ]; then

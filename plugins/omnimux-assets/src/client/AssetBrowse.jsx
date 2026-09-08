@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Badge, Button } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { FileIcon, FolderIcon } from './icons.jsx'
 import { previewUrl } from './api.js'
@@ -129,7 +129,7 @@ function MediaCard({ t, title, kind, src, onOpen, status = '', detail = '' }) {
           />
         ) : null}
         {!showImage && !showVideo ? (kind === 'folder' ? <FolderIcon size={28} /> : <FileIcon size={28} />) : null}
-        <span className="omnimux-assets-badge">{badge}</span>
+        <Badge size="sm" shape="capsule" className="omnimux-assets-badge">{badge}</Badge>
       </div>
       <div className="omnimux-assets-card-body">
         <div className="omnimux-assets-card-title" title={title}>{title}</div>

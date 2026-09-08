@@ -56,6 +56,31 @@ test('loads bundled catalog', () => {
   assert.equal(doc.categories.some((row) => row.tab === 'skills' && row.title === 'AI / Agent 工具'), false)
 })
 
+test('skill metadata is strict and cannot alter expert/team featured semantics', () => {
+  const base = { id: 'sk-test', kind: 'skill', tab: 'skills', skill: 'test', title: 'Test', summary: '动画', category: 'sk-visual', source: { type: 'bundled', path: 'catalog/skills/test' } }
+  for (const recommended of [undefined, false, 'true', 1, [], {}]) {
+    const doc = parseCatalog({ schema: 1, generated_at: 'fixture', items: [{ ...base, recommended }] })
+    assert.equal(doc.items[0].recommended, false)
+    assert.equal(doc.items[0].downloads, null)
+  }
+  const doc = parseCatalog({ schema: 1, generated_at: 'fixture', featured: ['exp-test'], items: [
+    { ...base, recommended: true, downloads: 0, version: '1.0', cover: { asset: 'catalog/covers/test.webp', alt: 'Test' } },
+    { ...base, id: 'exp-test', kind: 'expert', tab: 'experts', recommended: true },
+    { ...base, id: 'team-test', kind: 'team', tab: 'experts', recommended: true },
+  ] })
+  assert.equal(doc.items[0].recommended, true)
+  assert.equal(doc.items[0].downloads, 0)
+  assert.equal(doc.items[0].version, '1.0')
+  assert.deepEqual(doc.items[0].cover, { asset: 'catalog/covers/test.webp', alt: 'Test' })
+  assert.deepEqual(doc.featured, ['exp-test'])
+  assert.equal('recommended' in doc.items[1], false)
+  assert.equal('recommended' in doc.items[2], false)
+  for (const asset of ['https://example.com/image.png', 'catalog/covers/../private.png', 'catalog/covers/test.svg']) {
+    const parsed = parseCatalog({ schema: 1, generated_at: 'fixture', items: [{ ...base, cover: { asset } }] })
+    assert.equal(parsed.items[0].cover, undefined)
+  }
+})
+
 test('rejects unknown schema', () => {
   assert.throws(() => parseCatalog({ schema: 2, generated_at: 'x', items: [] }), /unsupported schema/)
 })

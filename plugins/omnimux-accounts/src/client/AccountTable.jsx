@@ -1,4 +1,4 @@
-import { Button } from 'dsh-ui-kit'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { AccountMenu, AgentSwitch } from './account-controls.jsx'
 import { Avatar, GroupChip, PlatformChip, StatusDot } from './chips.jsx'
 import { fmt, localeText, relativeTime, selectAllState } from './view.js'
@@ -47,10 +47,10 @@ export function AccountTable(props) {
 
   return (
     <div className="omnimux-accounts-tablewrap">
-      <table className="omnimux-accounts-table">
-        <thead>
-          <tr>
-            <th scope="col" className="omnimux-accounts-table-check">
+      <Table className="omnimux-accounts-table" stickyHeader dense>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col" className="omnimux-accounts-table-check">
               <input
                 type="checkbox"
                 checked={checkState.all}
@@ -61,36 +61,29 @@ export function AccountTable(props) {
                 disabled={disabled || accounts.length === 0}
                 onChange={onToggleSelectAll}
               />
-            </th>
+            </TableHead>
             {COLUMNS.map((column) => (
-              <th
-                key={column.id}
-                scope="col"
-                aria-sort={column.sortKey && sortKey === column.sortKey ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-              >
-                {column.sortKey ? (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="omnimux-accounts-sortbtn"
-                    disabled={disabled}
-                    onClick={() => { onSortHeader(column.sortKey) }}
-                  >
-                    {t(column.labelKey)}
-                    <span className="omnimux-accounts-sortmark" aria-hidden="true">
-                      {sortKey === column.sortKey ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-                    </span>
-                  </Button>
-                ) : (
-                  <span className="omnimux-accounts-thtext">{t(column.labelKey)}</span>
-                )}
-              </th>
+              column.sortKey ? (
+                <TableHead
+                  key={column.id}
+                  scope="col"
+                  sortable
+                  sortDirection={sortKey === column.sortKey ? sortDir : null}
+                  onClick={disabled ? undefined : () => { onSortHeader(column.sortKey) }}
+                >
+                  {t(column.labelKey)}
+                </TableHead>
+              ) : (
+                <TableHead key={column.id} scope="col">
+                  {t(column.labelKey)}
+                </TableHead>
+              )
             ))}
-            <th scope="col"><span className="omnimux-accounts-thtext">{t('card.agentUsable')}</span></th>
-            <th scope="col"><span className="omnimux-accounts-thtext">{t('card.menu')}</span></th>
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead scope="col">{t('card.agentUsable')}</TableHead>
+            <TableHead scope="col">{t('card.menu')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {accounts.map((account) => {
             const id = String(account.id)
             const name = rowName(account)
@@ -100,8 +93,13 @@ export function AccountTable(props) {
             const lastUsed = typeof account.last_used_at === 'string' ? relativeTime(account.last_used_at) : ''
             const isSelected = selected.has(id)
             return (
-              <tr key={id} className={isSelected ? 'omnimux-accounts-row-selected' : undefined} data-busy={disabled}>
-                <td className="omnimux-accounts-table-check">
+              <TableRow
+                key={id}
+                selected={isSelected}
+                className={isSelected ? 'omnimux-accounts-row-selected' : undefined}
+                data-busy={disabled}
+              >
+                <TableCell className="omnimux-accounts-table-check">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -109,8 +107,8 @@ export function AccountTable(props) {
                     disabled={disabled}
                     onChange={() => { onToggleSelect(id) }}
                   />
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <div className="omnimux-accounts-cell-id">
                     <Avatar account={account} t={t} />
                     <div className="omnimux-accounts-id">
@@ -118,48 +116,48 @@ export function AccountTable(props) {
                       {username !== '' ? <span className="omnimux-accounts-username">{username}</span> : null}
                     </div>
                   </div>
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {typeof account.platform === 'string' && account.platform !== '' ? (
                     <PlatformChip platform={account.platform} t={t} />
                   ) : null}
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {typeof account.group === 'string' && account.group !== '' ? (
                     <GroupChip group={account.group} />
                   ) : null}
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {status !== '' ? (
                     <div className={`omnimux-accounts-status omnimux-accounts-status--${status}`}>
                       <StatusDot status={status} label={statusLabel} />
                       <span>{statusLabel}</span>
                     </div>
                   ) : null}
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {lastUsed !== '' ? (
                     <span className="omnimux-accounts-meta">{lastUsed}</span>
                   ) : null}
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <AgentSwitch
                     t={t}
                     checked={account.agent_usable !== false}
                     disabled={disabled}
                     onToggle={(next) => { onAgentToggle(id, next) }}
                   />
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <span className="omnimux-accounts-cellmenu">
                     <AccountMenu t={t} name={name} disabled={disabled} onDisconnect={() => { onDisconnect(id) }} />
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   )
 }

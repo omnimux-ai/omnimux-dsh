@@ -26,7 +26,7 @@ export function CollapsibleTagsField({ t, value, disabled = false, onChange }) {
 
   return (
     <div className="omnimux-inspiration-tags-collapse">
-      <button
+      <button /* exempt-ui01: 标签折叠面板切换按钮 */
         type="button"
         className="omnimux-inspiration-tags-toggle"
         aria-expanded={expanded}
@@ -75,7 +75,7 @@ export function AutoAnalyzeSwitch({ t, checked, disabled = false, onChange }) {
 
   return (
     <div className="omnimux-inspiration-switch-row">
-      <button
+      <button /* exempt-ui01: 开关控件微按钮 */
         type="button"
         role="switch"
         className="omnimux-inspiration-switch"

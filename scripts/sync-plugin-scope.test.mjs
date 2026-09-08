@@ -52,6 +52,11 @@ function setupFixture({
   mkdirSync(join(profile, 'node_modules', 'omnimux-workflow'), { recursive: true })
   mkdirSync(bin, { recursive: true })
 
+  for (const name of ['managed-tarball-archive.py', 'plugin-lifecycle.mjs']) {
+    writeFileSync(join(scripts, name), readFileSync(join(root, 'scripts', name)))
+  }
+  mkdirSync(join(fixture, 'plugins/omnimux/src'), { recursive: true })
+  writeFileSync(join(fixture, 'plugins/omnimux/src/plugin-lifecycle.json'), readFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json')))
   writeFileSync(join(scripts, 'sync-to-app.sh'), sourceSync, 'utf8')
   chmodSync(join(scripts, 'sync-to-app.sh'), 0o755)
   writeFileSync(join(scripts, 'resolve-omnimux-profile.sh'), sourceProfileResolver, 'utf8')

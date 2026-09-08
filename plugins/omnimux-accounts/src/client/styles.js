@@ -743,25 +743,6 @@ export const STYLES = `
   cursor: pointer;
 }
 .omnimux-accounts-table input[type="checkbox"]:disabled { cursor: default; }
-.omnimux-accounts-sortbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.omnimux-accounts-sortbtn:not(:disabled):hover {
-  color: var(--dsw-alias-label-primary, inherit);
-}
-.omnimux-accounts-sortbtn:disabled { cursor: default; opacity: 0.5; }
-.omnimux-accounts-sortmark { opacity: 0.6; }
 .omnimux-accounts-thtext {
   font-size: 12px;
   font-weight: 600;

@@ -64,15 +64,14 @@ test('upstream text enables generation without adding a local prompt', () => {
 test('audio modes come from the selected model, with no fixed speech/music tabs', () => {
   const single = render(node('audio', {selectedTool:'text-to-music',prompt:'Music'}),fixture('audio',false));
   assert.doesNotMatch(single, /wf-config-panel__audio-tabs|wf-operation-mode-inline|音频生成|音乐生成/);
-  // 音频（非 ASR）改挂摘要条；单 op 无 mode 槽（Hide, Don't Grey）
-  assert.match(single, /wf-cfg-summary-bar/);
-  assert.match(single, /data-show-mode="false"/);
+  // Issue #763：时长由文本长度决定，摘要条 / 参数浮层移除；素材卡槽常驻（reference_audio 兜底）
+  assert.doesNotMatch(single, /wf-cfg-summary-bar|data-show-mode/);
+  assert.match(single, /data-testid="wf-slot-wells"/);
+  assert.match(single, /data-slot="reference_audio"/);
   const multi = render(node('audio', {prompt:'Music'}),fixture('audio'));
-  // 多 op：生成方式进摘要条 / 浮层，底栏无内联 Segment、无孤立齿轮与内联抽屉
-  assert.doesNotMatch(multi, /wf-operation-mode-inline|advanced-drawer/);
-  assert.match(multi, /wf-cfg-summary-bar/);
-  assert.match(multi, /data-show-mode="true"/);
-  assert.match(multi, /文本对话/);
+  // 多 op：底栏无内联 Segment、无孤立齿轮与内联抽屉、无参数浮层，卡槽仍常驻
+  assert.doesNotMatch(multi, /wf-operation-mode-inline|advanced-drawer|wf-cfg-summary-bar/);
+  assert.match(multi, /data-testid="wf-slot-wells"/);
 });
 
 test('automatic model adaptation is a status message, not an error', () => {
