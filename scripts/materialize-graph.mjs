@@ -153,6 +153,16 @@ export function lockLocator(lock, name, reference) {
   return matches[0];
 }
 
+const peerCompatible = (locA, locB) => {
+  if (locA === locB) return true;
+  const pA = locA.includes('(') ? locA.slice(locA.indexOf('(')) : '';
+  const pB = locB.includes('(') ? locB.slice(locB.indexOf('(')) : '';
+  if (pA !== pB) return false;
+  const bA = locA.split('(')[0];
+  const bB = locB.split('(')[0];
+  return bA.includes('@file:') || bB.includes('@file:');
+};
+
 /** Cross-check list paths and consumer edges against the exact lock snapshots. */
 function mapListOccurrences(list, lock, profile, modules, metadata) {
   const occurrences = new Map();
@@ -199,7 +209,7 @@ function mapListOccurrences(list, lock, profile, modules, metadata) {
         const referenceVersion = typeof reference === 'object' ? reference.version : reference;
         if (item.version !== referenceVersion && item.version !== pkg.version && item.version !== locator) throw new Error('list lock version mismatch');
         const previous = occurrences.get(root);
-        if (previous && previous.locator !== locator) throw new Error('one occurrence has conflicting peer locators');
+        if (previous && !peerCompatible(previous.locator, locator)) throw new Error('one occurrence has conflicting peer locators');
         if (!previous) occurrences.set(root, { locator, name: pkg.name, version: pkg.version, integrity: resolution.resolution?.integrity || null });
         if (item.dependencies || item.optionalDependencies || item.devDependencies) walk(item, root, lock.snapshots[locator]);
       }
@@ -253,7 +263,7 @@ function mapLockOccurrences(lock, manifest, profile, modules, metadata) {
         if (metadata.nodeLinker === 'hoisted' && locations
             && !locations.some(relative => path.resolve(profile, relative) === root)) throw new Error('hoisted lock/disk location mismatch');
         const previous = occurrences.get(root);
-        if (previous && previous.locator !== locator) throw new Error('one occurrence has conflicting peer locators');
+        if (previous && !peerCompatible(previous.locator, locator)) throw new Error('one occurrence has conflicting peer locators');
         if (previous) continue;
         occurrences.set(root, { locator, name: pkg.name, version: pkg.version, integrity: item.resolution?.integrity || null });
         walk(root, lock.snapshots[locator]);
