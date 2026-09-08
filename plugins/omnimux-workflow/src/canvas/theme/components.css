@@ -7304,6 +7304,14 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   outline-offset: 1px;
 }
 
+/* Issue 771：试听播放中激活态（品牌 subtle 底 + 品牌色图标/描边） */
+.wf-voice-picker__preview--playing,
+.wf-voice-picker__preview--playing:hover {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary, var(--wb-accent)) 16%, transparent);
+  border-color: var(--dsw-alias-brand-primary, var(--wb-accent));
+  color: var(--dsw-alias-brand-primary, var(--wb-accent));
+}
+
 .wf-voice-picker__row-main {
   flex: 1;
   min-width: 0;

@@ -1,5 +1,5 @@
 /**
- * VoicePickerDialog — 音色选择弹窗（Issue #735 / T04）。
+ * VoicePickerDialog — 音色选择弹窗（Issue #735 / T04；Issue #771 试听接入）。
  *
  * 结构（基于现网 CustomModal，540px / ≤70vh / 16px 圆角）：
  *   Header  标题「选择音色」+ X 关闭（CustomModal 内建）
@@ -8,16 +8,18 @@
  *   Filters 语言 / 口音 / 性别 / 场景 四维紧凑下拉，选项由 meta 动态聚合，
  *           AND 关系，空值即「全部」
  *   List    热门置顶（hot_order 1–10 → 热门标签 → 目录原序）；行内 ▶ 试听
- *           P0 无 previewUrl，点击仅 Toast「暂无试听音频」，绝不发起 TTS；
- *           点击行直接 onSelect(voice_type) 并由宿主关闭弹窗；
- *           空结果 → 友好空态 + 清除筛选
+ *           Issue #771：原生 Audio 对象加载火山官方 CDN 样音（见
+ *           getVoiceSampleUrl），单例播放（同时只有一个音色发声），
+ *           播放中切 ⏸ 可暂停；加载失败兜底 Toast「该音色暂无官方试听音频」，
+ *           绝不发起 TTS 请求；点击行直接 onSelect(voice_type) 并由宿主
+ *           关闭弹窗；空结果 → 友好空态 + 清除筛选
  *   Footer  常驻当前选中音色条
  * 全部颜色走 --wb-* / --dsw-* tokens，零裸 hex/rgba。
  */
 
-import { useMemo, useState } from 'react';
-import type { ReactElement } from 'react';
-import { AudioLines, Check, Play, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactElement } from 'react';
+import { AudioLines, Check, Pause, Play, Search } from 'lucide-react';
 import { CustomModal, CustomSelect, toast } from '../../../../../ui/index.ts';
 import type { VoiceCatalogOption } from '../../../../../../shared/api.ts';
 import {
@@ -29,6 +31,14 @@ import {
   voiceTagLine,
   type VoiceFilterState,
 } from './voicePickerModel.ts';
+
+/** 火山引擎大模型官方公开 CDN：预置音色 3~5 秒 MP3 试听样音（已开 CORS） */
+export const VOLCENGINE_SAMPLE_CDN_BASE = 'https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts';
+
+/** 按 voice_type 生成官方试听样音 URL（纯前端 Audio 播放，零 TTS 请求） */
+export function getVoiceSampleUrl(voiceType: string): string {
+  return `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(voiceType)}.mp3`;
+}
 
 export interface VoicePickerDialogProps {
   /** 弹窗是否打开 */
@@ -51,6 +61,60 @@ export function VoicePickerDialog({
   onClose,
 }: VoicePickerDialogProps): ReactElement | null {
   const [filters, setFilters] = useState<VoiceFilterState>(EMPTY_VOICE_FILTERS);
+  /** 当前正在播放试听的 voice_type；无播放为 null */
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  /** 全局单例 Audio 实例：同一时刻弹窗内只有一个音色发声 */
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** 立即停止并清理当前试听实例，重置播放状态 */
+  const stopPlayback = (): void => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.onended = null;
+      audio.onerror = null;
+      audio.src = '';
+      audioRef.current = null;
+    }
+    setPlayingVoice(null);
+  };
+
+  // 弹窗关闭（!open）时停止试听，防止声音在后台继续播放
+  useEffect(() => {
+    if (!open) stopPlayback();
+  }, [open]);
+
+  // 组件卸载时兜底清理
+  useEffect(() => stopPlayback, []);
+
+  /** 试听/暂停切换：stopPropagation 防止触发行选择 */
+  const togglePreview = (event: ReactMouseEvent<HTMLButtonElement>, voiceType: string): void => {
+    event.stopPropagation();
+    if (playingVoice === voiceType) {
+      // 当前音色正在播放 → 暂停
+      stopPlayback();
+      return;
+    }
+    // 正在播放其他音色 → 先停掉再播当前
+    stopPlayback();
+    const audio = new Audio(getVoiceSampleUrl(voiceType));
+    audioRef.current = audio;
+    const clearPlayback = (): void => {
+      if (audioRef.current === audio) audioRef.current = null;
+      setPlayingVoice(null);
+    };
+    audio.onended = clearPlayback;
+    audio.onerror = () => {
+      // 部分非常规音色无官方样音（404）：优雅提示，绝不冒充试听
+      clearPlayback();
+      toast.info('该音色暂无官方试听音频');
+    };
+    setPlayingVoice(voiceType);
+    void audio.play().catch(() => {
+      clearPlayback();
+      toast.info('该音色暂无官方试听音频');
+    });
+  };
 
   const patchFilters = (patch: Partial<VoiceFilterState>): void => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -155,6 +219,7 @@ export function VoicePickerDialog({
             const tagLine = voiceTagLine(option);
             const isSelected = option.value === value;
             const isHot = Boolean(option.meta?.is_hot);
+            const isPlaying = playingVoice === option.value;
             return (
               <div
                 key={option.value}
@@ -172,16 +237,16 @@ export function VoicePickerDialog({
               >
                 <button
                   type="button"
-                  className="wf-voice-picker__preview"
-                  aria-label={`试听 ${label}`}
-                  title="试听"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    // P0 音色索引无 previewUrl：优雅提示，绝不调用真 TTS 冒充试听。
-                    toast.info('暂无试听音频');
-                  }}
+                  className={`wf-voice-picker__preview${isPlaying ? ' wf-voice-picker__preview--playing' : ''}`}
+                  aria-label={isPlaying ? `暂停试听 ${label}` : `试听 ${label}`}
+                  title={isPlaying ? '暂停试听' : '试听'}
+                  onClick={(event) => togglePreview(event, option.value)}
                 >
-                  <Play size={12} aria-hidden="true" />
+                  {isPlaying ? (
+                    <Pause size={12} aria-hidden="true" />
+                  ) : (
+                    <Play size={12} aria-hidden="true" />
+                  )}
                 </button>
                 <span className="wf-voice-picker__row-main">
                   <span className="wf-voice-picker__row-name">
