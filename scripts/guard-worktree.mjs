@@ -4,23 +4,23 @@
  * dsh-hooks-plugin PreToolUse Guard for OmniMux DSH
  *
  * 全域版本控制守卫 (Universal Version-Control Guard):
- * 严禁在主仓库 main 分支直接对任何已加入 Git 版本管理（Tracked）的文件/文件夹执行 edit/write 操作。
+ * 严禁在主 checkout 直接对任何已加入 Git 版本管理（Tracked）的文件/文件夹执行 edit/write 操作。
  * 强制所有改动走独立 Worktree 工作区 (./scripts/git-wt.sh) 进行物理隔离，防止主干污染、冲突覆盖与成果丢弃。
  * 同时拦截对未推送提交具有毁灭性覆盖风险的 `git reset --hard` 操作。
  *
  * 豁免清单 (允许在主仓操作):
- *   - 独立 Worktree 目录 (路径含 omnimux-dsh-wt-)
+ *   - 独立 Worktree 目录 (目标路径经 Git 元数据与注册表核实的 linked worktree)
  *   - 临时/衍生目录或文件: node_modules, dist, dist-harness, tmp, temp, coverage, *.log, *.tsbuildinfo, .pnpm-store 等
  *   - 符合 .gitignore 的未跟踪/忽略文件 (git check-ignore)
  *   - 尚未被 git 跟踪的本地临时文件/草稿
  */
 
 import { spawnSync } from 'node:child_process'
-import { isAbsolute, resolve, sep } from 'node:path'
+import { lstatSync, realpathSync, readFileSync } from 'node:fs'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const MAIN_PLUGINS_MARK = `${sep}omnimux-dsh${sep}plugins${sep}`
-const WORKTREE_MARK = `${sep}omnimux-dsh-wt-`
 
 const EPHEMERAL_DIR_NAMES = new Set([
   'node_modules',
@@ -60,8 +60,80 @@ const PROTECTED_ROOT_FILES = new Set([
   '.dsh/hooks.json',
 ])
 
+/** Resolve symlinks before classifying existing files or a new file's parent. */
+function canonicalTarget(fullPath) {
+  let ancestor = resolve(fullPath)
+  const missing = []
+  for (;;) {
+    try {
+      lstatSync(ancestor)
+      return resolve(realpathSync(ancestor), ...missing)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      // A dangling symlink must not be mistaken for a missing directory.
+      try {
+        if (lstatSync(ancestor).isSymbolicLink()) throw new Error('Dangling symlink')
+      } catch (statError) {
+        if (statError.code !== 'ENOENT') throw statError
+      }
+      const parent = dirname(ancestor)
+      if (parent === ancestor) throw error
+      missing.unshift(relative(parent, ancestor))
+      ancestor = parent
+    }
+  }
+}
+
+function existingDirectory(fullPath) {
+  let current = fullPath
+  for (;;) {
+    try {
+      return lstatSync(current).isDirectory() ? current : dirname(current)
+    } catch (error) {
+      if (error.code !== 'ENOENT' || dirname(current) === current) throw error
+      current = dirname(current)
+    }
+  }
+}
+
+/** Require reciprocal Git metadata and an exact worktree registry entry. */
 export function isWorktreePath(fullPath) {
-  return Boolean(fullPath && fullPath.includes(WORKTREE_MARK))
+  if (!fullPath) return false
+  try {
+    const target = canonicalTarget(fullPath)
+    const cwd = existingDirectory(target)
+    const root = gitRoot(cwd)
+    if (!root) return false
+    const query = (args) => {
+      const result = git(args, cwd)
+      if (result.status !== 0 || result.error) throw new Error('Git metadata unavailable')
+      return result.stdout.trim()
+    }
+    const top = realpathSync(root)
+    // Git can skip malformed nested .git directories and discover an outer repo.
+    for (let parent = cwd; parent !== top; parent = dirname(parent)) {
+      if (dirname(parent) === parent) return false
+      try {
+        lstatSync(resolve(parent, '.git'))
+        return false
+      } catch (error) {
+        if (error.code !== 'ENOENT') return false
+      }
+    }
+    const gitDir = realpathSync(query(['rev-parse', '--absolute-git-dir']))
+    const common = realpathSync(query(['rev-parse', '--path-format=absolute', '--git-common-dir']))
+    if (gitDir === common || dirname(gitDir) !== resolve(common, 'worktrees')) return false
+    const marker = resolve(top, '.git')
+    if (!lstatSync(marker).isFile()) return false
+    if (realpathSync(readFileSync(resolve(gitDir, 'gitdir'), 'utf8').trim()) !== marker) return false
+    const pointer = readFileSync(marker, 'utf8').trim()
+    if (!pointer.startsWith('gitdir: ') || realpathSync(resolve(top, pointer.slice(8))) !== gitDir) return false
+    const registry = query(['worktree', 'list', '--porcelain', '-z'])
+    return registry.split('\0\0').some((record) =>
+      record.split('\0').some((field) => field === `worktree ${top}`))
+  } catch {
+    return false
+  }
 }
 
 export function isMainRepoPluginPath(fullPath) {
@@ -108,9 +180,16 @@ export function isProtectedScope(fullPath, cwd) {
   return false
 }
 
-function git(args, cwd) {
+function git(args, cwd, preserveEnvironment = false) {
+  const env = { ...process.env }
+  if (!preserveEnvironment) {
+    for (const key of Object.keys(env)) {
+      if (key.startsWith('GIT_')) delete env[key]
+    }
+  }
   return spawnSync('git', args, {
     cwd,
+    env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -120,8 +199,8 @@ function gitUnavailable(res) {
   return Boolean(res.error) || res.status === 128 || res.status == null
 }
 
-function gitRoot(cwd) {
-  const res = git(['rev-parse', '--show-toplevel'], cwd)
+function gitRoot(cwd, preserveEnvironment = false) {
+  const res = git(['rev-parse', '--show-toplevel'], cwd, preserveEnvironment)
   if (gitUnavailable(res) || res.status !== 0) return ''
   return String(res.stdout || '').trim()
 }
@@ -137,7 +216,7 @@ export function isGitTracked(fullPath, cwd) {
   const root = gitRoot(cwd) || cwd
   const res = git(['ls-files', '--error-unmatch', '--', fullPath], root)
   // Git missing / not a repo → treat as tracked so the gate stays closed safely.
-  if (gitUnavailable(res)) return true
+  if (gitUnavailable(res) || ![0, 1].includes(res.status)) return true
   return res.status === 0
 }
 
@@ -147,8 +226,8 @@ function toFullPath(filePath, cwd) {
 }
 
 export function getUnpushedCommits(cwd) {
-  const root = gitRoot(cwd) || cwd
-  const res = git(['rev-list', 'origin/main..HEAD'], root)
+  const root = gitRoot(cwd, true) || cwd
+  const res = git(['rev-list', 'origin/main..HEAD'], root, true)
   if (gitUnavailable(res) || res.status !== 0) return []
   return String(res.stdout || '')
     .split('\n')
@@ -210,8 +289,14 @@ export function decideWrite({ filePath, cwd, toolName }) {
   const name = rawName.replace(/^.*:/, '')
   if (name !== 'edit' && name !== 'write') return { decision: 'allow' }
 
-  const fullPath = toFullPath(String(filePath || '').trim(), cwd)
+  let fullPath = toFullPath(String(filePath || '').trim(), cwd)
   if (!fullPath) return { decision: 'allow' }
+  try {
+    fullPath = canonicalTarget(fullPath)
+    cwd = existingDirectory(fullPath)
+  } catch {
+    return { decision: 'deny', fullPath, reason: 'unresolved-target' }
+  }
 
   // 1. 独立 Worktree 目录完全豁免放行
   if (isWorktreePath(fullPath)) {
@@ -261,11 +346,11 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '🚫【DSH 核心门禁阻断】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
         '📌 核心防线原则：在主目录直接创建未跟踪源码文件会导致主干工作区被污染，并引发构建衍生与多 Agent 冲突覆盖。',
         '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
-        'ℹ️  豁免范围：独立 Worktree 目录 (omnimux-dsh-wt-*)、本地工作台记录 (.workbuddy/)、临时缓存目录 (tmp/、dist/、node_modules/)。',
+        'ℹ️  豁免范围：经 Git 元数据与注册表核实的 linked worktree、本地工作台记录 (.workbuddy/)、临时缓存目录 (tmp/、dist/、node_modules/)。',
       ].join('\n')
     } else {
       output.permissionDecisionReason = [
-        '🚫【DSH 核心门禁阻断】严禁在主仓库 main 分支直接修改任何已加入版本管理（Git Tracked）的文件！',
+        '🚫【DSH 核心门禁阻断】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！',
         '📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。',
         '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
         'ℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。',
