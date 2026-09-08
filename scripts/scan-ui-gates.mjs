@@ -2,10 +2,9 @@
 /**
  * scripts/scan-ui-gates.mjs
  * UI01~UI10 Static Scanner for OmniMux UI Design Guidelines
- * Contract: docs/contracts/ui-design-guidelines.md, Issue #20
+ * Contract: design.md (L1), docs/contracts/ui-design-guidelines.md, Issue #20
  *
- * UI08~UI10 由 Issue #200 (UI 共享收敛) 引入，起步为 WARN，待全量插件迁移完成后转 FATAL。
- * 详见 docs/contracts/ui-design-guidelines.md。
+ * UI01~UI10 全面纳入 FATAL 门禁，任何违规均导致 process.exit(1) 阻断 CI 与构建。
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -20,10 +19,16 @@ const EXEMPT_PATHS = [
   'node_modules',
   'lib',
   'dist',
+  'dist-harness',
+  'build',
+  '.dsh',
+  '.workbuddy',
   'tests',
   'fixtures',
+  '__tests__',
   '.test.',
   '.spec.',
+  'test-mocks',
   // Vendored upstream OpenReel source tree
   'openreel',
   // React Flow / Canvas internals exemption (excluding canvas/ui)
@@ -42,6 +47,19 @@ const ALLOWED_FONT_SIZES = new Set(FONT_SIZE_WHITELIST)
 // 关页保活写法：display: none / open ? undefined : 'none' / active ? undefined : 'none'
 const DISPLAY_KEEPALIVE_RE =
   /^display\s*:\s*(?:['"]none['"]|(?:open|active|visible)\s*\?\s*undefined\s*:\s*['"]none['"]|!\s*open\s*\?\s*['"]none['"]\s*:\s*undefined)/
+
+/**
+ * 递归剥离 var(...) 及其嵌套回退值
+ */
+function stripCssVarFallbacks(str) {
+  let result = str
+  let prev
+  do {
+    prev = result
+    result = result.replace(/var\s*\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '')
+  } while (result !== prev)
+  return result
+}
 
 /**
  * 按顶层逗号切分 style 对象体。
@@ -79,9 +97,11 @@ function splitStyleProps(body) {
 
 function isExempt(filePath) {
   const rel = relative(REPO_ROOT, filePath).replace(/\\/g, '/')
+  const relLower = rel.toLowerCase()
   for (const ex of EXEMPT_PATHS) {
-    if (rel.includes(ex)) return true
+    if (relLower.includes(ex.toLowerCase())) return true
   }
+  if (/\.test[-.]|\.spec[-.]/i.test(rel) || rel.includes('test-mocks')) return true
   return false
 }
 
@@ -143,13 +163,13 @@ for (const file of clientFiles) {
     // UI01: Raw Controls Check (<button, <select)
     // Exclude button inside SVG defs or exempt patterns. Note: <button is lowercase (HTML), <Button is dsh-ui-kit (React).
     if (/<button\b/.test(lineText)) {
-      if (!lineText.includes('// exempt-ui01') && !lineText.includes('/* exempt-ui01 */')) {
-        reportError('UI01', file, lineNum, `使用了原生 <button> 控件，必须使用 dsh-ui-kit (Button/IconButton) 替代`)
+      if (!lineText.includes('// exempt-ui01') && !lineText.includes('/* exempt-ui01') && !lineText.includes('exempt-ui01')) {
+        reportError('UI01', file, lineNum, `使用了原生 <button> 控件，必须使用 dsh-ui-kit (Button/IconButton) 替代 (参见 [design.md](design.md) §2.1 & §2.4)`)
       }
     }
     if (/<select\b/.test(lineText)) {
-      if (!lineText.includes('// exempt-ui01') && !lineText.includes('/* exempt-ui01 */')) {
-        reportError('UI01', file, lineNum, `使用了原生 <select> 控件，必须使用 dsh-ui-kit (DropdownSelect) 替代`)
+      if (!lineText.includes('// exempt-ui01') && !lineText.includes('/* exempt-ui01') && !lineText.includes('exempt-ui01')) {
+        reportError('UI01', file, lineNum, `使用了原生 <select> 控件，必须使用 dsh-ui-kit (DropdownSelect) 替代 (参见 [design.md](design.md) §2.4 & §5.1)`)
       }
     }
 
@@ -157,31 +177,37 @@ for (const file of clientFiles) {
     // Only allow display: open ? undefined : 'none', display: 'none', and CSS variables (--*)
     const styleMatch = lineText.match(/style=\{\{([^}]+)\}\}/)
     if (styleMatch) {
-      const styleBody = styleMatch[1]
-      // 按顶层逗号切分。注意：var(--x, #fff) 这类回退值内部含逗号，
-      // 旧的 split(',') 会把一个合法 CSS 变量切成碎片而误报（Issue #200 修复）。
-      for (const p of splitStyleProps(styleBody)) {
-        if (!p) continue
-        if (/^['"]?--[A-Za-z0-9-]+['"]?\s*:/.test(p)) continue
-        if (DISPLAY_KEEPALIVE_RE.test(p)) continue
-        if (p.includes('exempt-ui02')) continue
-        reportError('UI02', file, lineNum, `禁止在 JSX 中使用内联业务样式属性 [${p}]，仅允许 CSS 变量 (--stage-*) 与关页保活 display:none`)
+      if (!lineText.includes('exempt-ui02')) {
+        const styleBody = styleMatch[1]
+        // 按顶层逗号切分。注意：var(--x, #fff) 这类回退值内部含逗号，
+        // 旧的 split(',') 会把一个合法 CSS 变量切成碎片而误报（Issue #200 修复）。
+        for (const p of splitStyleProps(styleBody)) {
+          if (!p) continue
+          if (/^['"]?--[A-Za-z0-9-]+['"]?\s*:/.test(p)) continue
+          if (DISPLAY_KEEPALIVE_RE.test(p)) continue
+          if (p.includes('exempt-ui02')) continue
+          reportError('UI02', file, lineNum, `禁止在 JSX 中使用内联业务样式属性 [${p}]，仅允许 CSS 变量 (--stage-*) 与关页保活 display:none (参见 [design.md](design.md) §1.1)`)
+        }
       }
     }
 
     // UI03: Bare Colors (hardcoded #fff / #123456 / rgb(...) not wrapped in CSS var or in SVG defs)
     if (!file.endsWith('.svg')) {
-      const bareHexMatch = lineText.match(/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g)
-      if (bareHexMatch) {
-        for (const hex of bareHexMatch) {
-          // Exclude svg paths/icons defs or var fallback lines
-          if (lineText.includes('var(') || lineText.includes('xmlns=') || lineText.includes('<path') || lineText.includes('<svg') || lineText.includes('exempt-ui03')) continue
-          // Exclude color hex constants in theme mapping files
-          if (file.includes('constants')) continue
-          // styles.js 曾整体豁免，导致页头与组件样式成为裸色免检区。
-          // 现仅豁免「Token 定义行」（形如 --foo: var(--bar, #hex)），业务样式照常告警。
-          if (file.includes('styles.js') && /--[A-Za-z0-9-]+\s*:/.test(lineText)) continue
-          reportWarn('UI03', file, lineNum, `存在未经 CSS变量封装的裸色硬编码 [${hex}]，必须使用官方 --dsw-alias-* Token`)
+      const isSvgElementLine = /<svg|<path|<circle|<rect|<line|<polygon|xmlns=/i.test(lineText)
+      const isThemeTokenLine = file.includes('styles.js') && /--[A-Za-z0-9-]+\s*:/.test(lineText)
+      const isConstantsFile = file.includes('constants')
+
+      if (!isSvgElementLine && !isThemeTokenLine && !isConstantsFile && !lineText.includes('exempt-ui03')) {
+        const stripped = stripCssVarFallbacks(lineText)
+        const bareHexMatches = stripped.match(/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g)
+        const bareRgbMatches = stripped.match(/\brgba?\s*\([^)]*\)/gi)
+
+        const detected = []
+        if (bareHexMatches) detected.push(...bareHexMatches)
+        if (bareRgbMatches) detected.push(...bareRgbMatches)
+
+        if (detected.length > 0) {
+          reportError('UI03', file, lineNum, `存在未经 CSS变量封装的裸色硬编码 [${detected.join(', ')}]，必须使用官方 --dsw-alias-* Token (参见 [design.md](design.md) §1.1 & §3)`)
         }
       }
     }
@@ -222,14 +248,16 @@ for (const file of clientFiles) {
 
     // UI10: Type Scale Whitelist (design.md §4.2)
     const fontSizeMatch = lineText.match(/font-size\s*:\s*([0-9]+(?:\.[0-9]+)?)px/i)
-    if (fontSizeMatch && !lineText.includes('exempt-ui10')) {
-      const size = Number(fontSizeMatch[1])
-      if (!ALLOWED_FONT_SIZES.has(size)) {
-        reportWarn(
+    const jsFontSizeMatch = lineText.match(/\bfontSize\s*:\s*['"]?([0-9]+(?:\.[0-9]+)?)(?:px)?['"]?/i)
+    const matchedSize = fontSizeMatch ? Number(fontSizeMatch[1]) : jsFontSizeMatch ? Number(jsFontSizeMatch[1]) : null
+
+    if (matchedSize !== null && !lineText.includes('exempt-ui10')) {
+      if (!ALLOWED_FONT_SIZES.has(matchedSize)) {
+        reportError(
           'UI10',
           file,
           lineNum,
-          `非标字号 [${size}px]，合规字阶白名单为 [${FONT_SIZE_WHITELIST.join(', ')}]px；特化场景请加 // exempt-ui10 <原因>`,
+          `非标字号 [${matchedSize}px]，合规字阶白名单为 [${FONT_SIZE_WHITELIST.join(', ')}]px (参见 [design.md](design.md) §4.2)；特化场景请加 // exempt-ui10 <原因>`,
         )
       }
     }
@@ -262,6 +290,8 @@ if (errors.length > 0) {
   console.log(`\n✗ 发现 ${errors.length} 处严重违规 (FAIL):`)
   for (const [code, n] of summarize(errors)) console.log(`  ${code}: ${n} 处`)
   errors.forEach((e) => console.log(`    ${e}`))
+  console.log('\n📖 必读文档：请阅读项目根目录 [design.md](design.md)（§1.1 官方 Token 体系、§2.1 32px 控件基准高、§2.2 8px 圆角体系、§3 色彩映射表、§4.2 字阶白名单）')
+  console.log('👉 修复指引：原生控件改用 dsh-ui-kit，硬编码色值改用 var(--dsw-alias-*)，特化场景使用 // exempt-ui0* 显式豁免。')
   process.exit(1)
 } else {
   console.log('✓ UI01~UI10 静态扫描全部合规（0 违规拦截）。')

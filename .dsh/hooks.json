@@ -10,6 +10,17 @@
           "timeout": 5
         }
       ]
+    },
+    {
+      "matcher": "edit|write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node scripts/guard-ui-design.mjs",
+          "statusMessage": "🎨 检查 UI 设计规范硬门禁（原生控件/内联样式/裸色/字阶）",
+          "timeout": 5
+        }
+      ]
     }
   ]
 }

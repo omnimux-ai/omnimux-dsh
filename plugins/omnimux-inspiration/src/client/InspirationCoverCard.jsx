@@ -140,7 +140,7 @@ export function InspirationCoverCard({ card }) {
           </svg>
         </div>
         <div className="omnimux-inspiration-overlay-cta">
-          <button
+          <button /* exempt-ui01: 视频卡片蒙层操作按钮 */
             type="button"
             className="omnimux-inspiration-overlay-cta-btn secondary"
             aria-label={t('card.cta.detail')}
@@ -155,7 +155,7 @@ export function InspirationCoverCard({ card }) {
             {ICON_EYE}
             {t('card.cta.detail')}
           </button>
-          <button
+          <button /* exempt-ui01: 视频卡片蒙层操作按钮 */
             type="button"
             className="omnimux-inspiration-overlay-cta-btn primary"
             aria-label={t('card.cta.tryFull')}

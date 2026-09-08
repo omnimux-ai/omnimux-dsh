@@ -9,12 +9,12 @@ export const ASPECT_PRESETS = {
 }
 
 export const TEXT_PRESETS = [
-  { id: 'title', label: '标题', content: '标题文字', fontFamily: 'sans-serif', fontSize: 72, fontWeight: 'bold', color: '#ffffff', strokeColor: '#000000', strokeWidth: 4, textAlign: 'center' },
+  { id: 'title', label: '标题', content: '标题文字', fontFamily: 'sans-serif', fontSize: 72, fontWeight: 'bold', color: '#ffffff', strokeColor: '#000000', strokeWidth: 4, textAlign: 'center' }, // exempt-ui03 // exempt-ui10: 视频大标题预设
   // 字幕底衬遮罩：链官方 mask 别名，令牌缺席时落回原值（画布侧由 theme/colors.js 解析）。
-  { id: 'subtitle', label: '字幕', content: '字幕内容', fontFamily: 'sans-serif', fontSize: 42, fontWeight: 'normal', color: '#ffffff', strokeColor: '#000000', strokeWidth: 3, backgroundColor: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))', textAlign: 'center' },
+  { id: 'subtitle', label: '字幕', content: '字幕内容', fontFamily: 'sans-serif', fontSize: 42, fontWeight: 'normal', color: '#ffffff', strokeColor: '#000000', strokeWidth: 3, backgroundColor: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))', textAlign: 'center' }, // exempt-ui03 // exempt-ui10: 视频字幕预设
   // 花字是创作内容默认色而非 UI 表面色：链官方品牌位令牌，缺席时保持原值。
-  { id: 'caption', label: '花字', content: '花字', fontFamily: 'sans-serif', fontSize: 56, fontWeight: 'bold', color: 'var(--dsw-specific-caption-accent, #ffe566)', strokeColor: 'var(--dsw-specific-caption-stroke, #ff4d6d)', strokeWidth: 5, textAlign: 'center' },
-  { id: 'lower-third', label: '下三分之一', content: '姓名 / 身份', fontFamily: 'sans-serif', fontSize: 36, fontWeight: 'bold', color: '#ffffff', backgroundColor: 'var(--dsw-alias-bg-mask-2, rgba(20,20,24,0.75))', textAlign: 'left' },
+  { id: 'caption', label: '花字', content: '花字', fontFamily: 'sans-serif', fontSize: 56, fontWeight: 'bold', color: 'var(--dsw-specific-caption-accent, #ffe566)', strokeColor: 'var(--dsw-specific-caption-stroke, #ff4d6d)', strokeWidth: 5, textAlign: 'center' }, // exempt-ui10: 视频花字大字号预设
+  { id: 'lower-third', label: '下三分之一', content: '姓名 / 身份', fontFamily: 'sans-serif', fontSize: 36, fontWeight: 'bold', color: '#ffffff', backgroundColor: 'var(--dsw-alias-bg-mask-2, rgba(20,20,24,0.75))', textAlign: 'left' }, // exempt-ui03 // exempt-ui10: 视频下三分之一大字号预设
 ]
 
 export const TRANSITIONS = [
@@ -36,7 +36,7 @@ export function defaultCanvasConfig(aspectRatio = '16:9') {
     height: size.height,
     fps: 30,
     durationMs: 8000,
-    backgroundColor: '#000000',
+    backgroundColor: '#000000', // exempt-ui03: 视频黑场预设底色
   }
 }
 
@@ -53,10 +53,10 @@ export function defaultTextStyle(overrides = {}) {
     presetId: 'subtitle',
     content: '字幕',
     fontFamily: 'sans-serif',
-    fontSize: 42,
+    fontSize: 42, // exempt-ui10: 视频字幕大字预设
     fontWeight: 'normal',
-    color: '#ffffff',
-    strokeColor: '#000000',
+    color: '#ffffff', // exempt-ui03: 视频字幕前景色
+    strokeColor: '#000000', // exempt-ui03: 视频字幕描边色
     strokeWidth: 3,
     backgroundColor: '',
     textAlign: 'center',

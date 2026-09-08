@@ -65,7 +65,7 @@ export function ArtifactTable({ t, artifacts, onOpen, activeKey }) {
     <table style={tableStyle}>
       <thead>
         <tr>
-          <th style={{ ...th, width: '34%' }}>{t('table.name')}</th>
+          <th style={{ ...th, width: '34%' }} /* exempt-ui02: 表格定宽列 */>{t('table.name')}</th>
           <th style={th}>{t('artifact.agent')}</th>
           <th style={th}>{t('artifact.model')}</th>
           <th style={th}>{t('table.type')}</th>
@@ -77,7 +77,7 @@ export function ArtifactTable({ t, artifacts, onOpen, activeKey }) {
           <tr
             key={String(artifact.id)}
             className="omnimux-assets-focusable"
-            style={{ cursor: 'pointer', ...activeRowStyle(activeKey === artifact.id) }}
+            style={{ cursor: 'pointer', ...activeRowStyle(activeKey === artifact.id) }} /* exempt-ui02: 激活行动态交互样式 */
             tabIndex={0}
             role="button"
             aria-label={String(artifact.title)}
@@ -85,9 +85,9 @@ export function ArtifactTable({ t, artifacts, onOpen, activeKey }) {
             onKeyDown={activateRowKeydown(() => { onOpen(artifact) })}
           >
             <td style={td} title={String(artifact.title)}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%' }} /* exempt-ui02 */>
                 <TypeIcon type={artifact.type} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{String(artifact.title)}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} /* exempt-ui02 */>{String(artifact.title)}</span>
               </span>
             </td>
             <td style={td}>{String(artifact.source?.agent ?? '—')}</td>

@@ -148,7 +148,7 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
           )}
         </div>
 
-        <button
+        <button /* exempt-ui01: 附件卡片角标关闭按钮 */
           type="button"
           className="omx-att-card__remove-btn omx-att-card__remove-btn--media"
           onClick={handleRemoveClick}
@@ -178,7 +178,7 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
         </span>
       </div>
 
-      <button
+      <button /* exempt-ui01: 附件卡片角标关闭按钮 */
         type="button"
         className="omx-att-card__remove-btn"
         onClick={handleRemoveClick}

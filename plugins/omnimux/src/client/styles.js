@@ -105,9 +105,9 @@ export const HUB_CSS = `
   user-select: none;
   background: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--dsw-alias-brand-primary, #4c1d95) 55%, #3b0764) 0%,
+    color-mix(in srgb, var(--dsw-alias-brand-primary, #4c1d95) 55%, #3b0764) 0%, /* exempt-ui03: 登录门禁背景渐变深色底 */
     var(--dsw-alias-brand-primary, #6d28d9) 45%,
-    #3b0764 100% /* --dsw- */
+    #3b0764 100% /* exempt-ui03: 登录门禁背景渐变深色底 */
   );
 }
 .omnimux-login-gate-hero::after {
@@ -175,7 +175,7 @@ export const HUB_CSS = `
   mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 54%, black 20%, transparent 68%);
   opacity: 0.92;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)) contrast(1.15) brightness(1.08); /* --dsw- */
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)) contrast(1.15) brightness(1.08); /* exempt-ui03: 果冻发光投影 */
   pointer-events: none;
 }
 .omnimux-login-gate-hero-scrim {
@@ -209,7 +209,7 @@ export const HUB_CSS = `
   font-weight: 700;
   letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--dsw-alias-label-primary, #e9d5ff) 88%, #c084fc);
+  color: color-mix(in srgb, var(--dsw-alias-label-primary, #e9d5ff) 88%, #c084fc); /* exempt-ui03: 门禁标签辅助色 */
   margin-bottom: 6px;
   opacity: 0.9;
 }
@@ -227,7 +227,7 @@ export const HUB_CSS = `
   letter-spacing: -0.8px;
   line-height: 1.05;
   color: var(--dsw-alias-label-primary, #fff);
-  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--dsw-alias-brand-primary, #a855f7) 30%, transparent);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--dsw-alias-brand-primary, #a855f7) 30%, transparent); /* exempt-ui03: 品牌大字阴影 */
 }
 .omnimux-login-gate-hero-title,
 .omnimux-login-gate-hero-ai {
@@ -239,13 +239,13 @@ export const HUB_CSS = `
   margin-top: 2px;
   padding-bottom: 6px;
   overflow: visible;
-  background: linear-gradient(180deg, var(--dsw-alias-label-primary, #fff) 30%, color-mix(in srgb, var(--dsw-alias-brand-primary, #e9d5ff) 70%, #fff) 100%);
+  background: linear-gradient(180deg, var(--dsw-alias-label-primary, #fff) 30%, color-mix(in srgb, var(--dsw-alias-brand-primary, #e9d5ff) 70%, #fff) 100%); /* exempt-ui03: 文字渐变 */
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
   text-shadow: none;
-  filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.6)); /* --dsw- */
+  filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.6)); /* exempt-ui03: 标题投影 */
 }
 .omnimux-login-gate-content {
   position: relative;
@@ -271,15 +271,15 @@ export const HUB_CSS = `
   flex: 0 0 32px;
   border-radius: 8px;
   overflow: visible;
-  background: #b8b7ff; /* --dsw- DESIGN 2.0 lavender tile */
-  border: 1px solid color-mix(in srgb, #7961f2 25%, transparent); /* --dsw- */
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px color-mix(in srgb, #7961f2 15%, transparent); /* --dsw- */
+  background: #b8b7ff; /* exempt-ui03: 登录门禁香芋紫品牌底板 */
+  border: 1px solid color-mix(in srgb, #7961f2 25%, transparent); /* exempt-ui03: 品牌锁扣边框 */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px color-mix(in srgb, #7961f2 15%, transparent); /* exempt-ui03: 品牌锁扣阴影 */
 }
 .omnimux-login-gate-brand-logo::before {
   content: '';
   position: absolute;
   inset: -3px;
-  border: 1px dashed color-mix(in srgb, #7961f2 45%, transparent); /* --dsw- */
+  border: 1px dashed color-mix(in srgb, #7961f2 45%, transparent); /* exempt-ui03: 品牌虚线框 */
   border-radius: 11px;
   pointer-events: none;
 }
@@ -354,7 +354,7 @@ export const HUB_CSS = `
   border: none !important;
   background: var(--login-gate-cta-bg, #ffffff) !important;
   color: var(--login-gate-cta-text, #09090b) !important; /* --dsw- */
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15) !important; /* --dsw- */
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15) !important; /* exempt-ui03: CTA发光阴影 */
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer !important;
   text-decoration: none !important;
@@ -363,13 +363,13 @@ export const HUB_CSS = `
   background: var(--login-gate-cta-hover, #f4f4f5) !important; /* --dsw- */
   color: var(--login-gate-cta-text, #09090b) !important; /* --dsw- */
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25) !important; /* --dsw- */
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25) !important; /* exempt-ui03: CTA Hover阴影 */
 }
 .omnimux-login-gate-cta:active:not(:disabled):not([aria-disabled="true"]) {
   background: var(--login-gate-cta-active, #e4e4e7) !important; /* --dsw- */
   color: var(--login-gate-cta-text, #09090b) !important; /* --dsw- */
   transform: translateY(0) !important;
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15) !important; /* --dsw- */
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15) !important; /* exempt-ui03: CTA Active阴影 */
 }
 .omnimux-login-gate-waiting {
   width: 100%;

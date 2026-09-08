@@ -1,69 +1,51 @@
 sequenceDiagram
     autonumber
-    actor User as 用户 (User)
-    participant Canvas as 工作流画布 (React Flow Canvas)
-    participant TB as VideoTriggerBar (底栏触发器)
-    participant CP as ConfigPanel (宿主容器)
-    participant Pos as ViewportPositioner (视口弹性算法)
-    participant Pop as VideoParamPopover (Portal 浮层面板)
-    participant Adapter as VideoParamAdapter (模型降级状态机)
-    participant Store as CanvasStore (画布数据源)
+    actor Agent as 编码 Agent (DeepSeek Harness)
+    participant Engine as DSH Tool Execution Engine
+    participant HookPlugin as dsh-hooks-plugin (PreToolUse)
+    participant GuardWT as guard-worktree.mjs (隔离守卫)
+    participant GuardUI as guard-ui-design.mjs (设计守卫)
+    participant Classifier as TargetScopeClassifier (路径范围)
+    participant Rules as RuleEngine (UI01/02/03/10)
+    participant Formatter as UIDiagnosisFormatter (诊断渲染器)
+    participant FileSystem as 本地文件系统 (Disk)
 
-    %% 场景 1: 点击 TriggerBar 弹出 Popover
-    rect rgb(240, 245, 255)
-    Note over User, Pop: 场景 1: 点击 TriggerBar 呼出上方自适应浮层面板
-    User->>TB: 点击参数摘要胶囊 (Click)
-    TB->>TB: e.stopPropagation() 阻止画布节点拖拽/选中穿透
-    TB->>CP: onTogglePopover(true)
-    CP->>Pos: calculatePopoverPosition(triggerRect, innerWidth, innerHeight)
-    Pos-->>CP: 返回弹性坐标与限高 { placement, bottom, left, maxHeight, width }
-    CP->>Pop: 挂载 Portal 浮层至 document.body (带 nowheel nodrag 隔离类)
-    CP->>Pop: 注册全局事件监听 (pointerdown-outside, ESC, resize, scroll)
-    Pop-->>User: 向上弹性平滑展开参数面板 (360px 宽度，限高滚动)
-    end
+    Note over Agent, Engine: 第一阶段：Agent 尝试调用 edit / write 工具修改 UI 文件
+    Agent->>Engine: invokeTool("write" | "edit", { file_path, content | new_string })
+    Engine->>HookPlugin: 触发 PreToolUse 钩子事件
 
-    %% 场景 2: 画布平移缩放或视口尺寸变更
-    rect rgb(250, 250, 250)
-    Note over User, Pop: 场景 2: 视口重置 / 画布变换时的动态重定位
-    User->>Canvas: 缩放/平移画布 或 调整浏览器窗口大小
-    Canvas-->>Pop: 触发 window.scroll / resize / canvas:transform 事件
-    Pop->>Pos: 重新计算 triggerEl.getBoundingClientRect()
-    Pos-->>Pop: 动态更新 bottom / top 与 maxHeight
-    Pop-->>User: 浮层位置与最大高度无缝弹性同步贴合
-    end
+    Note over HookPlugin, GuardWT: 第二阶段：守卫链式检查（先隔离守卫，后设计守卫）
+    HookPlugin->>GuardWT: 执行 guard-worktree.mjs (stdin JSON)
+    GuardWT-->>HookPlugin: 返回 allow (工作区隔离合规)
 
-    %% 场景 3: 用户修改视频参数
-    rect rgb(240, 255, 245)
-    Note over User, Store: 场景 3: 用户交互修改视频参数 (如切换比例)
-    User->>Pop: 点击画幅网格卡片 (如选择 "9:16")
-    Pop->>Pop: e.stopPropagation() 阻断事件穿透
-    Pop->>CP: onParamChange('aspectRatio', '9:16')
-    CP->>Store: onUpdateNodeData({ params: { ...params, aspectRatio: '9:16' } })
-    Store-->>CP: 节点数据响应式更新
-    CP-->>TB: 传入最新 params 驱动摘要重新格式化
-    TB-->>User: 触发器实时刷新摘要文本与画幅线框图标
-    end
+    HookPlugin->>GuardUI: 执行 guard-ui-design.mjs (stdin JSON)
+    GuardUI->>Classifier: isTargetUIFile(file_path)
 
-    %% 场景 4: 用户切换模型触发自适应校验与降级
-    rect rgb(255, 250, 240)
-    Note over User, Store: 场景 4: 模型切换与参数自适应平滑降级
-    User->>CP: 切换模型 (如 Kling V3 -> Grok Video)
-    CP->>Adapter: validateAndFallback(params, targetModelItem)
-    Adapter->>Adapter: 校验 generationMode / aspectRatio / duration / resolution / sound
-    Note over Adapter: 不支持参数平滑降级至目标模型默认值或首选值
-    Adapter-->>CP: 返回清洗与降级后的 safeParams
-    CP->>Store: onUpdateNodeData({ params: safeParams })
-    Store-->>CP: 状态同步完成
-    CP-->>Pop: 重新渲染参数选项池 (按新模型 capabilities 过滤)
-    CP-->>TB: 刷新参数摘要显示
-    end
+    alt 非 UI 范围文件 (如 server/, scripts/, openreel/, tests/)
+        Classifier-->>GuardUI: false (豁免路径或非 UI 扩展名)
+        GuardUI-->>HookPlugin: stdout: { permissionDecision: "allow" }
+        HookPlugin-->>Engine: 放行操作
+        Engine->>FileSystem: 写入磁盘
+        FileSystem-->>Agent: 写入成功
+    else 目标为 UI 客户端源文件 (plugins/*/src/client/**/*.{tsx,jsx,ts,js})
+        Classifier-->>GuardUI: true (命中 UI 监控范围)
+        GuardUI->>Rules: inspect(codeLines, toolName)
+        Rules->>Rules: 逐行检查 UI01(原生控件), UI02(内联样式), UI03(裸色), UI10(非标字阶)
+        Rules->>Rules: 检查行级/块级豁免 (// exempt-ui*)
 
-    %% 场景 5: 点击外部或 ESC 关闭面板
-    rect rgb(255, 240, 245)
-    Note over User, Pop: 场景 5: 点击外部 / ESC 关闭面板
-    User->>Canvas: 点击画布空白处 或 按下 Escape 键
-    Pop->>Pop: 检测到 target 落在 Popover 与 TriggerBar 外部
-    Pop->>CP: onClosePopover()
-    CP->>Pop: 销毁 Portal 浮层 DOM，移除全局监听器
-    Pop-->>User: 面板收起退出
+        alt 发现设计规范违规 (Violations > 0)
+            Rules-->>GuardUI: 返回 violations 列表
+            GuardUI->>Formatter: formatDenyReason(violations, file_path)
+            Formatter-->>GuardUI: 生成包含 [design.md] 章节锚点与修正建议的高冲击力 Reason
+            GuardUI-->>HookPlugin: stdout: { permissionDecision: "deny", permissionDecisionReason: "..." }
+            HookPlugin-->>Engine: 强行物理阻断工具调用 (Exit code / Deny decision)
+            Engine-->>Agent: 报错 Error: 🚫【UI 设计规范硬门禁拦截】并附带自修正指引
+            Note over Agent: Agent 工具执行被强行打断，读取错误中的 design.md 章节并修正代码
+        else 代码完全合规 (Violations == 0)
+            Rules-->>GuardUI: 0 violations
+            GuardUI-->>HookPlugin: stdout: { permissionDecision: "allow" }
+            HookPlugin-->>Engine: 允许工具执行
+            Engine->>FileSystem: 写入磁盘
+            FileSystem-->>Agent: 写入成功
+        end
     end

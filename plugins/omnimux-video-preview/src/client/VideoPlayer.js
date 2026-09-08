@@ -60,7 +60,7 @@ export function VideoPlayer({ mediaUrl, path, title }) {
             maxHeight: '100%',
             borderRadius: 'var(--dsw-alias-radius-md, 8px)',
             boxShadow: '0 4px 20px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.4))',
-            backgroundColor: '#000',
+            backgroundColor: 'var(--dsw-alias-bg-base, #000)',
             outline: 'none',
           },
         })

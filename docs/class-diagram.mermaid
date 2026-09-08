@@ -1,166 +1,98 @@
 classDiagram
     direction TB
 
-    %% 数据实体与模型层
-    class MaterialNodeData {
-        +string label
-        +MaterialType materialType
-        +NodeKind nodeKind
-        +MaterialStatus status
-        +MaterialTool selectedTool
-        +string prompt
-        +VideoNodeParams params
-        +NodeFailStrategy failStrategy
+    class UIDesignGuard {
+        +run(rawInput: string) HookResult
+        -parseInput(rawInput: string) PreToolUseInput
+        -createDecision(event: string, decision: string, reason: string) HookResult
     }
 
-    class VideoNodeParams {
-        +string model
-        +GenerationMode generationMode
-        +string aspectRatio
-        +string resolution
-        +number duration
-        +boolean sound
+    class TargetScopeClassifier {
+        +isTargetUIFile(filePath: string) boolean
+        +isExemptPath(filePath: string) boolean
+        +isUIExtension(filePath: string) boolean
+        -normalizePath(filePath: string) string
     }
 
-    class CapabilityModelItem {
-        +string id
-        +string label
-        +string badge
-        +string subtitle
-        +string family
-        +InputCapability inputCapability
-        +ModelParameterSchema parameters
+    class RuleEngine {
+        -rules: List~IRuleChecker~
+        +inspect(context: RuleInspectionContext) List~UIViolation~
+        +registerRule(rule: IRuleChecker) void
     }
 
-    class InputCapability {
-        +string[] modalities
-        +ReferenceImagesCap referenceImages
-        +ReferenceAudiosCap referenceAudios
+    class IRuleChecker {
+        <<interface>>
+        +code: string
+        +name: string
+        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
+        +isLineExempt(line: string) boolean
     }
 
-    class ReferenceImagesCap {
-        +number min
-        +number max
-        +string[] allowedMimeTypes
-        +string[] supportedRoles
+    class UI01RawControlRule {
+        +code: "UI01"
+        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
+        -hasRawButton(line: string) boolean
+        -hasRawSelect(line: string) boolean
     }
 
-    class ModelParameterSchema {
-        +AspectRatioSchema aspectRatio
-        +DurationSchema duration
-        +ResolutionSchema resolution
-        +SoundSchema sound
+    class UI02InlineStyleRule {
+        +code: "UI02"
+        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
+        -splitStyleProps(styleBody: string) List~string~
+        -isAllowedStyleProp(prop: string) boolean
     }
 
-    %% 核心算法与工具类
-    class ViewportPositioner {
-        +GAP number
-        +VIEWPORT_PADDING number
-        +PANEL_WIDTH number
-        +PANEL_DEFAULT_MAX_HEIGHT number
-        +PANEL_MIN_HEIGHT number
-        +calculatePopoverPosition(triggerRect: DOMRect, viewportWidth: number, viewportHeight: number) PopoverPosition
+    class UI03BareColorRule {
+        +code: "UI03"
+        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
+        -extractBareHex(line: string) List~string~
+        -extractBareRgb(line: string) List~string~
+        -isInsideCssVarFallback(line: string, match: string) boolean
     }
 
-    class PopoverPosition {
-        +Placement placement
-        +number top
-        +number bottom
-        +number left
-        +number maxHeight
-        +number width
+    class UI10FontSizeRule {
+        +code: "UI10"
+        +whitelist: Set~number~
+        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
     }
 
-    class VideoParamAdapter {
-        +isGenerationModeSupported(modelItem: CapabilityModelItem, mode: GenerationMode) boolean
-        +resolveSupportedGenerationModes(modelItem: CapabilityModelItem) GenerationModeOption[]
-        +validateAndFallback(params: VideoNodeParams, newModelItem: CapabilityModelItem) VideoNodeParams
-        +resolveEffectiveParams(params: VideoNodeParams, schema: ModelParameterSchema) EffectiveVideoParams
+    class UIDiagnosisFormatter {
+        +formatDenyReason(violations: List~UIViolation~, filePath: string) string
+        -renderViolationDetail(v: UIViolation) string
+        -renderDesignMdAnchors(ruleCodes: Set~string~) string
+        -renderQuickFixExamples(ruleCodes: Set~string~) string
     }
 
-    class SummaryFormatter {
-        +formatSummary(params: EffectiveVideoParams) VideoSummaryResult
+    class UIViolation {
+        +ruleCode: string
+        +ruleName: string
+        +line: number
+        +rawSnippet: string
+        +message: string
+        +fixSuggestion: string
+        +designSection: string
     }
 
-    class VideoSummaryResult {
-        +string textSummary
-        +SummaryItem[] items
+    class PreToolUseInput {
+        +hook_event_name: string
+        +tool_name: string
+        +tool_input: ToolInputData
+        +cwd: string
     }
 
-    class SummaryItem {
-        +string key
-        +string label
-        +string iconKind
+    class HookResult {
+        +hookSpecificOutput: HookSpecificOutputData
     }
 
-    %% UI 组件与容器层
-    class ConfigPanel {
-        -isExpanded boolean
-        -isPopoverOpen boolean
-        +handleModelChange(newModelId: string) void
-        +handleParamUpdate(key: string, value: unknown) void
-    }
-
-    class VideoTriggerBar {
-        +EffectiveVideoParams params
-        +boolean isOpen
-        +boolean disabled
-        +onToggle() void
-    }
-
-    class VideoParamPopover {
-        +PopoverPosition position
-        +EffectiveVideoParams params
-        +ModelParameterSchema schema
-        +CapabilityModelItem currentModel
-        +onParamChange(key: string, value: unknown) void
-        +onClose() void
-    }
-
-    class GenerationModeSegment {
-        +GenerationMode value
-        +GenerationModeOption[] options
-        +onChange(mode: GenerationMode) void
-    }
-
-    class AspectCardGrid {
-        +string value
-        +AspectRatioOption[] options
-        +onChange(ratio: string) void
-    }
-
-    class ResolutionSegment {
-        +string value
-        +ResolutionOption[] options
-        +onChange(res: string) void
-    }
-
-    class DurationGrid {
-        +number value
-        +DurationOption[] options
-        +onChange(dur: number) void
-    }
-
-    class SoundSwitchSegment {
-        +boolean value
-        +boolean visible
-        +onChange(sound: boolean) void
-    }
-
-    %% 关系映射
-    MaterialNodeData *-- VideoNodeParams : 持有
-    CapabilityModelItem *-- InputCapability : 声明
-    CapabilityModelItem *-- ModelParameterSchema : 包含
-    InputCapability *-- ReferenceImagesCap : 约束
-
-    ConfigPanel ..> VideoParamAdapter : 依赖校验与降级
-    ConfigPanel *-- VideoTriggerBar : 渲染底栏
-    ConfigPanel *-- VideoParamPopover : Portal 呼出
-    VideoTriggerBar ..> SummaryFormatter : 渲染格式化摘要
-    VideoParamPopover ..> ViewportPositioner : 空间弹性计算
-
-    VideoParamPopover *-- GenerationModeSegment : 模块1
-    VideoParamPopover *-- AspectCardGrid : 模块2
-    VideoParamPopover *-- ResolutionSegment : 模块3
-    VideoParamPopover *-- DurationGrid : 模块4
-    VideoParamPopover *-- SoundSwitchSegment : 模块5
+    UIDesignGuard --> TargetScopeClassifier : uses
+    UIDesignGuard --> RuleEngine : executes
+    UIDesignGuard --> UIDiagnosisFormatter : formats deny reason
+    UIDesignGuard ..> PreToolUseInput : parses
+    UIDesignGuard ..> HookResult : returns
+    RuleEngine o-- IRuleChecker : contains
+    IRuleChecker <|.. UI01RawControlRule : implements
+    IRuleChecker <|.. UI02InlineStyleRule : implements
+    IRuleChecker <|.. UI03BareColorRule : implements
+    IRuleChecker <|.. UI10FontSizeRule : implements
+    RuleEngine ..> UIViolation : produces
+    UIDiagnosisFormatter ..> UIViolation : consumes

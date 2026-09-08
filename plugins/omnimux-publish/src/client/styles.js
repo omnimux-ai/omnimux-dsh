@@ -176,7 +176,7 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   justify-content: center;
   font-size: 14px;
   flex-shrink: 0;
-  color: #ffffff;
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omnimux-publish-td-title-wrap {
   flex: 1;
@@ -247,7 +247,7 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   border-radius: 4px;
   font-size: 11px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omnimux-publish-plat-tag.tiktok { background: var(--dsw-alias-platform-tiktok, #000000); }
 .omnimux-publish-plat-tag.xiaohongshu, .omnimux-publish-plat-tag.xhs { background: var(--dsw-alias-platform-xhs, #ff2442); }
@@ -297,7 +297,7 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omnimux-publish-card-thumb-icon {
   font-size: 14px;
@@ -309,7 +309,7 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   top: 6px;
   right: 6px;
   background: var(--dsw-alias-backdrop-bg, rgba(0,0,0,0.65));
-  color: #ffffff;
+  color: var(--dsw-alias-label-primary, #ffffff);
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
