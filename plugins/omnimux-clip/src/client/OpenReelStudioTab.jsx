@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useHostLocale } from './useHostLocale.js'
 import OpenReelApp from './openreel/web/App.tsx'
 import { useProjectStore } from './openreel/web/stores/project-store.ts'
 import { useEngineStore } from './openreel/web/stores/engine-store.ts'
@@ -9,10 +10,10 @@ import './openreel/web/index.css'
 import './theme/dsw-map.css'
 
 const PRESET_OPTIONS = [
-  { value: '1920x1080', label: '横屏 1920×1080' },
-  { value: '1080x1920', label: '竖屏 1080×1920' },
-  { value: '1080x1080', label: '方形 1080×1080' },
-  { value: '1280x720', label: '横屏 1280×720' },
+  { value: '1920x1080', directionKey: 'tab.landscape' },
+  { value: '1080x1920', directionKey: 'tab.portrait' },
+  { value: '1080x1080', directionKey: 'tab.square' },
+  { value: '1280x720', directionKey: 'tab.landscape' },
 ]
 
 const FPS_OPTIONS = [
@@ -115,7 +116,7 @@ function StudioCreateForm({ t, onCreated }) {
           >
             {PRESET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(opt.directionKey)} {opt.value.replace('x', '×')}
               </option>
             ))}
           </select>
@@ -166,7 +167,8 @@ function StudioCreateForm({ t, onCreated }) {
  * Wraps OpenReel with an OmniMux top action row (project name + save status + save button).
  * @param {{ t?: (key: string) => string, store?: { reduce?: Function, getSnapshot?: Function } }} props
  */
-export function OpenReelStudioTab({ t: tProp, store }) {
+export function OpenReelStudioTab({ t: tProp, store, locale }) {
+  useHostLocale(locale)
   const t = (key) => {
     if (typeof tProp === 'function') {
       try {
@@ -181,6 +183,9 @@ export function OpenReelStudioTab({ t: tProp, store }) {
       'tab.nameLabel': '项目名称',
       'tab.namePlaceholder': '我的短视频',
       'tab.sizeLabel': '分辨率',
+      'tab.landscape': '横屏',
+      'tab.portrait': '竖屏',
+      'tab.square': '方形',
       'tab.fpsLabel': '帧率',
       'tab.create': '创建并进入编辑器',
       'tab.openOfficial': '进入官方欢迎页',
@@ -219,10 +224,10 @@ export function OpenReelStudioTab({ t: tProp, store }) {
     if (!hasOpenProject || !project?.id) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
-      setSaveStatus(t('tab.saving'))
+      setSaveStatus('saving')
       putClipProject(project.id, { title: project.name, openreel: project })
-        .then(() => setSaveStatus(t('tab.saved')))
-        .catch(() => setSaveStatus(t('tab.saveFailed')))
+        .then(() => setSaveStatus('saved'))
+        .catch(() => setSaveStatus('saveFailed'))
     }, 1200)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -237,17 +242,17 @@ export function OpenReelStudioTab({ t: tProp, store }) {
         <div className="openreel-studio-hostbar-title">
           {project?.name || t('tab.title')}
         </div>
-        <div className="openreel-studio-hostbar-status">{saveStatus}</div>
+        <div className="openreel-studio-hostbar-status">{saveStatus ? t(`tab.${saveStatus}`) : ''}</div>
         <button
           type="button"
           disabled={!hasOpenProject}
           className="omnimux-clip-stage-save-btn"
           onClick={() => {
             if (!project?.id) return
-            setSaveStatus(t('tab.saving'))
+            setSaveStatus('saving')
             putClipProject(project.id, { title: project.name, openreel: project })
-              .then(() => setSaveStatus(t('tab.saved')))
-              .catch(() => setSaveStatus(t('tab.saveFailed')))
+              .then(() => setSaveStatus('saved'))
+              .catch(() => setSaveStatus('saveFailed'))
           }}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

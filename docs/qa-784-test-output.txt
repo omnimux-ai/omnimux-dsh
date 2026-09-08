@@ -1,0 +1,190 @@
+$ node --test src/*.test.js src/timeline/*.test.js src/client/store/timelineStore.test.js src/client/*.test.js
+✔ stage-store: openFromCanvas does not claim stage, set(false) does not release stage (0.912125ms)
+✔ stage-store: set(true) still claims overlay (canvas portal / leftover only; sidebar must not call this) (0.097084ms)
+✔ stage-store: external switch to another stage exits canvas mode (0.106625ms)
+✔ stage-store: external switch to omnimux-clip activates standalone mode (0.070375ms)
+✔ CanvasBridge: mounts and routes OMNIMUX_CLIP_OPEN / CLOSE (0.174375ms)
+✔ clip-events payload validators (0.084375ms)
+✔ getActiveClipSession: tracks canvas session and clears on dispose (0.064333ms)
+✔ notifyCanvasSave & notifyCanvasProgress: deliver correct payloads to canvas listener (0.151791ms)
+✔ canvas-toolbar-mode: canvas 隐藏左段（模式切换） (0.454458ms)
+✔ canvas-toolbar-mode: canvas 隐藏中段（项目名称 + 项目切换器） (0.079417ms)
+✔ canvas-toolbar-mode: canvas 保留右段并顶到最右 (0.07475ms)
+✔ canvas-toolbar-mode: return action occupies its own non-drag row (0.067792ms)
+✔ canvas-toolbar-mode: standalone 三段全部按 flex 展示 (0.063708ms)
+✔ canvas-toolbar-mode: 官方 responsive 段不被无脑强制 flex（保留 lg 断点） (0.107125ms)
+✔ canvas-toolbar-mode: 左/中段在两种模式下互斥，右段不互斥 (0.31725ms)
+✔ canvas-toolbar-mode: Toolbar.tsx 三段标记齐全 (0.597916ms)
+✔ canvas-toolbar-mode: MotionCreatorShell.tsx 三段标记齐全 (2.463291ms)
+✔ canvas-toolbar-mode: 段标记双保险类名与属性成对出现 (0.447125ms)
+✔ canvas-toolbar-mode: 中段标记确实包住项目名称输入与项目切换器 (0.123916ms)
+✔ canvas-toolbar-mode: 左段标记确实包住 WorkspaceModeTabs (0.105209ms)
+✔ canvas-toolbar-mode: 两段模式选择器都以 data-clip-mode 为条件 (0.067417ms)
+✔ canvas-toolbar-mode: canvas 模式下隐藏媒体素材卡片上的生成 (KieAI/Sparkles) 图标 (0.048584ms)
+✔ QA: non-slot Studio follows initial host, live switch, revision and remount (31.336791ms)
+✖ QA: English Studio preset options contain no untranslated Chinese directions (5.208333ms)
+The above error occurred in the <ClipStage> component:
+
+    at ClipStage (eval at load (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip/src/client/composition-locale-qa.test.js:43:3), <anonymous>:386:22)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+✖ QA: saved hostbar status changes language without saving again (5.420583ms)
+✖ QA: return clears active session but preserves portal editor and translated reopen (25.639542ms)
+✔ isCanvasClipExportSession: true only while canvas session is active (0.443084ms)
+✔ createSilentCanvasWritable: captures encoded chunks without download or picker (0.714292ms)
+✔ canvas export sources skip showSaveDialog / showSaveFilePicker before picker calls (5.013625ms)
+✔ export-theme-token: Export 文件无硬编码 text-white (0.483542ms)
+✔ export-theme-token: Export 文件无硬编码 border-white/25 (0.103917ms)
+✔ export-theme-token: Export 文件无硬编码 stroke="#fff" (0.174667ms)
+✔ export-theme-token: 主导出按钮消费 text-accent-fg (0.096625ms)
+✔ export-theme-token: 下拉箭头分隔线消费 border-accent-divider (0.089958ms)
+✔ export-theme-token: Toolbar 内联箭头 SVG 消费 stroke="currentColor" (0.048083ms)
+✔ export-theme-token: Motion 导出按钮 hover 消费 bg-accent-strong (0.128667ms)
+✔ export-theme-token: Export 按钮文字色与箭头色同源（不出现游离白色） (0.120333ms)
+✔ export-theme-token: dsw-map.css 定义 --accent-divider (0.0745ms)
+✔ export-theme-token: dsw-map.css 的 accent 三件套映射完整 (0.129833ms)
+✔ export-theme-token: dsw-map.css 不引入裸色值作为 accent 主色 (0.087833ms)
+✔ export-theme-token: tailwind 配置补齐 accent.divider (0.052125ms)
+✔ export-theme-token: tailwind accent 调色板字段齐全 (0.104083ms)
+✔ export-theme-token: token 链路闭合（CSS 变量 → tailwind → 组件类名） (0.051334ms)
+✔ export-theme-token: token 类名写在静态字符串里（Tailwind 能扫到） (0.786417ms)
+✔ export-theme-token: 无已废弃的 --omx-* 变量残留 (0.178ms)
+✔ findCanvasHost: returns the first visible canvas tab (0.402209ms)
+✔ findCanvasHost: skips tiny or hidden nodes and returns null when none fit (0.064708ms)
+✔ findCanvasHost: null root is safe (0.043584ms)
+✔ isVisibleCanvasHost: rejects data-visible=false (0.038916ms)
+✔ isVisibleCanvasHost: accepts a sizable visible tab (0.039541ms)
+✔ host locale reads initial and reloaded preferences and subscribes with the receiver intact (0.406875ms)
+✔ absent host has a stable fallback and no independent persistence (0.109083ms)
+✔ both Clip surfaces receive and subscribe to host locale without locale-key remounts (2.896125ms)
+✔ clip sidebar store forwards to hub createSidebarStore and never claims product stage (0.825584ms)
+✔ clip sidebar store is a no-op when workbench factory is missing (0.14125ms)
+▶ timelineStore
+  ✔ hydrates upstream media onto video/audio tracks (2.413667ms)
+  ✔ splits, trims, moves, and undoes clip edits (0.589458ms)
+  ✔ keeps draftSchema when reopening (0.13225ms)
+✔ timelineStore (3.90625ms)
+✔ viewport-adapt: CLIP_CSS contains the stage in the conversation box (0.355ms)
+✔ viewport-adapt: standalone box follows the live sidebar, not a 56px guess (0.102ms)
+✔ viewport-adapt: readHostSidebarInset uses the real sidebar column (0.091292ms)
+✔ viewport-adapt: macOS safe-area header padding computation (0.54175ms)
+✔ viewport-adapt: timeline ratio container calculation clamps properly (0.218625ms)
+▶ clip workbench seat (sidebar must not claim overlay)
+  ✔ sidebar entry uses the workbench store, not the product stage (1.83475ms)
+  ✔ client apply keeps the studio tab but does not mount the left sidebar row (0.192667ms)
+  ✔ stage store no longer restores a leftover product-stage claim (0.5365ms)
+  ✔ stage component has no in-tab FocusBar and does not claim overlay (0.1255ms)
+✔ clip workbench seat (sidebar must not claim overlay) (3.183833ms)
+▶ cordis entry inject contracts
+  ✔ host entry declares tools and systemPrompt (13.207875ms)
+  ✔ client entry declares slots and locale (no undeclared ctx.locale read) (0.283959ms)
+  ✔ host entry has no direct ctx service reads beyond declared/nested injects (0.121291ms)
+  ✔ compiled lib/client.js matches source inject declarations (bundle drift guard) (26.391584ms)
+✔ cordis entry inject contracts (40.458708ms)
+▶ ClipDomainError
+  ✔ carries a stable code and message (0.686041ms)
+  ✔ exposes static factories for every frozen code (0.156542ms)
+  ✔ maps codes to HTTP status (0.067458ms)
+✔ ClipDomainError (1.294375ms)
+▶ resolveClipPaths
+  ✔ honours DSH_HOME and lays out the four subdirs (0.360625ms)
+  ✔ falls back to homeDir then ~/.dsh (0.12275ms)
+✔ resolveClipPaths (0.890916ms)
+▶ ensureClipDirs
+  ✔ mkdirs projects/exports/snapshots/tmp under the clip root (2.590958ms)
+✔ ensureClipDirs (2.656333ms)
+▶ path safety
+  ✔ accepts kebab project ids and rejects traversal (0.297916ms)
+  ✔ refuses writes that escape the clip root (0.197625ms)
+✔ path safety (0.6015ms)
+▶ secToMs
+  ✔ converts agent seconds to integer milliseconds (0.391625ms)
+✔ secToMs (0.734333ms)
+▶ applyOperations
+  ✔ splits, trims, moves and removes as one batch (0.53375ms)
+  ✔ set_text creates a caption at 56px when no clipId (0.170333ms)
+  ✔ remove_range splits a covering clip (0.170125ms)
+  ✔ cut_silences closes video-track gaps (0.199375ms)
+  ✔ rejects unknown operation types with ClipDomainError (0.103792ms)
+  ✔ findClip throws not-found (0.096166ms)
+✔ applyOperations (1.41875ms)
+▶ diagnoseTimeline
+  ✔ reports timeline_gap, clip_overlap and media_missing (0.2615ms)
+✔ diagnoseTimeline (0.323791ms)
+▶ clip_* tools
+  ✔ registers the six frozen tool names (2.710584ms)
+  ✔ clip_get returns seconds and respects view=clips (1.994291ms)
+  ✔ clip_edit is one undo step and validateOnly does not persist (2.179666ms)
+  ✔ clip_view / clip_snapshot throw PREVIEW_NOT_READY when overlay is down (1.626125ms)
+  ✔ clip_view seeks in seconds without creating an undo step (1.879084ms)
+  ✔ clip_snapshot writes png paths and clip_export queues a job (2.401667ms)
+  ✔ clip_diagnostics reports gaps without throwing (2.192042ms)
+  ✔ missing projectId and unknown project throw ClipDomainError, never { ok: false } (1.547458ms)
+✔ clip_* tools (17.092583ms)
+▶ apply() host entry
+  ✔ declares strict injects including systemPrompt (regression: boot crash) (0.058375ms)
+  ✔ registers tools, prompt and clipEditor seam (1.061625ms)
+  ✔ mounts routes via canonical guarded webServer resolution (regression: register without inject) (1.355458ms)
+✔ apply() host entry (2.565333ms)
+ℹ tests 98
+ℹ suites 12
+ℹ pass 95
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 707.343667
+
+✖ failing tests:
+
+test at src/client/composition-locale-qa.test.js:75:1
+✖ QA: English Studio preset options contain no untranslated Chinese directions (5.208333ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /横屏|竖屏|方形/. Input:
+
+  '横屏 1920×1080竖屏 1080×1920方形 1080×1080横屏 1280×720'
+
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip/src/client/composition-locale-qa.test.js:78:15)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '横屏 1920×1080竖屏 1080×1920方形 1080×1080横屏 1280×720',
+    expected: /横屏|竖屏|方形/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at src/client/composition-locale-qa.test.js:81:1
+✖ QA: saved hostbar status changes language without saving again (5.420583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  '已保存' !== 'Saved'
+
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip/src/client/composition-locale-qa.test.js:88:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '已保存',
+    expected: 'Saved',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at src/client/composition-locale-qa.test.js:92:1
+✖ QA: return clears active session but preserves portal editor and translated reopen (25.639542ms)
+  ReferenceError: HTMLStyleElement is not defined
+      at injectClipStyles (eval at load (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip/src/client/composition-locale-qa.test.js:43:3), <anonymous>:281:26)
+      at eval (eval at load (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip/src/client/composition-locale-qa.test.js:43:3), <anonymous>:389:5)
+      at commitHookEffectListMount (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+      at commitPassiveMountOnFiber (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+      at commitPassiveMountEffects_complete (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+      at commitPassiveMountEffects_begin (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+      at commitPassiveMountEffects (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+      at flushPassiveEffectsImpl (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:27078:3)
+      at flushPassiveEffects (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:27023:14)
+      at performSyncWorkOnRoot (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26115:3)
+/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/composition-locale-784/plugins/omnimux-clip:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] omnimux-clip@0.1.0 test: `node --test src/*.test.js src/timeline/*.test.js src/client/store/timelineStore.test.js src/client/*.test.js`
+Exit status 1

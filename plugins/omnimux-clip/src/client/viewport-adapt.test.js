@@ -17,9 +17,9 @@ test('viewport-adapt: CLIP_CSS contains the stage in the conversation box', () =
   assert.ok(CLIP_CSS.includes('inset: 0'), 'canvas mode must use inset:0 inside the canvas tab')
   assert.ok(
     CLIP_CSS.includes('.omnimux-clip-stage[data-clip-mode="standalone"] .omnimux-clip-stage-header'),
-    'standalone must overlay the host chrome instead of stacking a second toolbar',
+    'standalone must retain its host action row',
   )
-  assert.ok(CLIP_CSS.includes('padding-right: 64px'), 'standalone close button must leave room for OpenReel Export/Deliver')
+  assert.ok(!CLIP_CSS.includes('padding-right: 64px'), 'separate return row must not reserve an overlapping slot in OpenReel')
 })
 
 test('viewport-adapt: standalone box follows the live sidebar, not a 56px guess', () => {

@@ -1,0 +1,19 @@
+
+CHECK lint:i18n
+$ node scripts/omnimux.mjs lint:i18n
+🔍 [i18n-lint] Starting OmniMux UI Copy & Quality Gate Audit...
+
+✅ [i18n-lint] 100% Quality Gate Passed! (8 locale files & 12 manifests scanned)
+CHECK_EXIT lint:i18n 0
+
+CHECK verify:stages
+$ node scripts/verify-stage-contracts.mjs
+[Stage Contract Linter] Auditing 10 Stage components and actual sidebar registrations...
+PASS: 10 Stage components; 8 registered sidebar targets and their runtime contracts.
+
+CHECK_EXIT verify:stages 0
+
+CHECK check:boundaries
+$ node scripts/verify-plugin-boundaries.mjs
+✅ verify-plugin-boundaries: 2123 source file(s) across plugins verified for dependency and runtime boundaries.
+CHECK_EXIT check:boundaries 0

@@ -141,13 +141,12 @@ test('canvas-toolbar-mode: canvas 保留右段并顶到最右', () => {
   )
 })
 
-test('canvas-toolbar-mode: canvas 右段为浮层关闭按钮预留 64px 安全区', () => {
-  assert.ok(
-    rulesFor(`${CANVAS} .openreel-studio-root header:first-of-type`).some(
-      (r) => r.decls.get('padding-right') === '64px',
-    ),
-    'canvas 模式下右段顶到最右，必须留出 64px 避免被 Stage 关闭按钮压住',
-  )
+test('canvas-toolbar-mode: return action occupies its own non-drag row', () => {
+  const header = rulesFor(`${CANVAS} .omnimux-clip-stage-header`)
+  assert.ok(header.some((rule) => rule.decls.get('position') === 'relative'))
+  assert.ok(header.some((rule) => rule.decls.get('-webkit-app-region') === 'no-drag'))
+  assert.ok(header.some((rule) => rule.decls.get('flex') === '0 0 auto'))
+  assert.equal(rulesFor(`${CANVAS} .openreel-studio-root header:first-of-type`).length, 0)
 })
 
 // ─── 维度三：standalone 模式三段全显 ────────────────────────────────────
