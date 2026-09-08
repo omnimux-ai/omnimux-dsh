@@ -296,7 +296,7 @@ export class ManagedSync {
     return result;
   }
   async capture(profile, withoutPnpm = false) {
-    if (withoutPnpm || this.request.target === 'dev') return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: this.payload } });
+    if (withoutPnpm || this.request.target === 'dev' || path.basename(this.request.target) === '.omnimux-dev') return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: this.payload } });
     makeDirectory(path.join(this.directory, 'runtime'));
     const result = await this.pnpm(['list', '--json', '--depth', 'Infinity'], { cwd: profile, env: privatePnpmEnvironment(path.join(this.directory, 'runtime')) });
     if (result.code !== 0 || result.signal) fail('controlled pnpm list failed', 5);
@@ -340,7 +340,18 @@ export class ManagedSync {
       if (value.startsWith('link:') || value.startsWith('file:') && value !== managedSpec(name)) fail('non-target unmanaged dependency', 4);
       if (value.startsWith('file:')) {
         const source = path.join(request.profile, value.slice(5));
-        if (payloadManifest(source).digest !== this.before.nodes[this.before.roots[name]]?.payload.digest) fail('non-target source or installed payload drift', 4);
+        const sourceManifest = payloadManifest(source);
+        let pkgJson;
+        try { pkgJson = readJson(path.join(source, 'package.json')); } catch {}
+        if (!pkgJson?.files) {
+          if (sourceManifest.digest !== this.before.nodes[this.before.roots[name]]?.payload.digest) fail('non-target source or installed payload drift', 4);
+        } else {
+          const installedPayload = this.before.nodes[this.before.roots[name]]?.payload;
+          const sourceMap = new Map(sourceManifest.entries.map(e => [e.path, e.sha256]));
+          for (const entry of installedPayload?.entries || []) {
+            if (entry.type === 'file' && sourceMap.get(entry.path) !== entry.sha256) fail('non-target source or installed payload drift', 4);
+          }
+        }
       }
     }
     const source = path.join(request.profile, managedSpec(request.name).slice(5));
