@@ -340,7 +340,7 @@ export class ManagedSync {
       if (value.startsWith('link:') || value.startsWith('file:') && value !== managedSpec(name)) fail('non-target unmanaged dependency', 4);
       if (value.startsWith('file:')) {
         const source = path.join(request.profile, value.slice(5));
-        const sourceManifest = payloadManifest(source);
+        const sourceManifest = payloadManifest(source, { exclude: ['node_modules'] });
         let pkgJson;
         try { pkgJson = readJson(path.join(source, 'package.json')); } catch {}
         if (!pkgJson?.files) {
