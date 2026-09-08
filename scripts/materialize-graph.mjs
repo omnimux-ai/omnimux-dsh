@@ -517,7 +517,10 @@ export class GraphInspector {
         : Array.isArray(value) ? value.map(normalize)
           : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [normalize(key), normalize(item)])) : value;
       const nodes = structuredClone(state.nodes);
-      for (const node of Object.values(nodes)) if (node.name === request.name) node.integrity = null;
+      for (const node of Object.values(nodes)) {
+        if (node.name === request.name) node.integrity = null;
+        for (const entry of node.payload?.entries || []) entry.mode = null;
+      }
       return stable(normalize({ nodes, roots: state.roots, edges: state.resolutionGraph.map(JSON.parse), absent: state.absent, bins: state.bins }));
     };
     if (canonical(before) !== canonical(candidate)) throw new Error('installed payload or resolution graph drift');
