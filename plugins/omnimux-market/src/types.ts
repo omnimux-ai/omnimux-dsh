@@ -211,6 +211,8 @@ export interface SkillCard {
   catalogId?: string
   installBackend?: SkillInstallBackend
   tags?: string[]
+  recommended?: boolean
+  cover?: { asset: string; alt?: string }
 }
 
 export interface SearchResult {

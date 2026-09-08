@@ -319,4 +319,20 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(cssSrc, /\.switch-bg\.on/)
     assert.match(cssSrc, /\.modal-dialog/)
   })
+
+  it('Issue #773: top bar strictly aligns with reference mock and featured card metadata is complete', () => {
+    // 移除大 Header
+    assert.ok(!skillPlazaSrc.includes('className: "page-header"'), 'page-header DOM should be removed')
+    // 激活 Tab 带 ⓘ 图标
+    assert.match(skillPlazaSrc, /className:\s*"tab-info-icon"/)
+    assert.match(cssSrc, /\.tab-info-icon/)
+    // 官方精选包含 h3-badge、MiniMax Design 与下载量
+    assert.match(skillPlazaSrc, /className:\s*"h3-badge"/)
+    assert.match(skillPlazaSrc, /MiniMax Design/)
+    assert.match(skillPlazaSrc, /className:\s*"featured-card-footer"/)
+    assert.match(skillPlazaSrc, /className:\s*"featured-card-dl"/)
+    assert.match(cssSrc, /\.h3-badge/)
+    assert.match(cssSrc, /\.featured-card-footer/)
+    assert.match(cssSrc, /font-size:\s*20px/)
+  })
 })

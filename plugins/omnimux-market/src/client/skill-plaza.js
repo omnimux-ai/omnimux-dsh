@@ -224,7 +224,11 @@
       }, [loadInstalled]);
 
       const applySearchBody = (d, mode) => {
-        const next = SkillShelf.filterPlazaShelf(d.items || [], category);
+        const filterCat = category === "featured" ? "" : category;
+        let next = SkillShelf.filterPlazaShelf(d.items || [], filterCat);
+        if (category === "featured") {
+          next = next.filter((it) => it && (it.recommended === true || it.featured === true || (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured")))));
+        }
         const isFallback = !!d.fallback;
         setFallback(isFallback);
         const nextTotal = isFallback ? next.length : Math.min(Number(d.total) || 0, next.length);
@@ -350,32 +354,7 @@
       ];
 
       return h("div", { className: "sh-mkt" },
-        // 1. 页面顶部 Header
-        h("header", { className: "page-header" },
-          h("h1", { className: "page-title" }, tr("workshop.title") || "Skill"),
-          h("p", { className: "page-subtitle" }, tr("workshop.subtitle") || "发现、安装并管理 Skill，扩展 OmniMux 的创作能力"),
-          h("div", { className: "action-row" },
-            h("button", {
-              type: "button",
-              className: "btn-create",
-              onClick: () => createSkillSession(),
-            },
-              h("svg", { viewBox: "0 0 24 24" },
-                h("path", { d: "M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" }),
-              ),
-              h("span", null, tr("workshop.create") || "通过 OmniMux 创建"),
-            ),
-            h("button", {
-              type: "button",
-              className: "btn-install",
-              onClick: () => setOpenInstallModal(true),
-            },
-              h("span", null, tr("workshop.install") || "+ 安装Skill"),
-            ),
-          ),
-        ),
-
-        // 2. 双 Tab 与搜索行
+        // 1. 双 Tab 与搜索行
         h("div", { className: "nav-bar" },
           h("div", { className: "nav-tabs" },
             h("div", {
@@ -383,6 +362,22 @@
               onClick: () => { setMainTab("discover"); setPage(1); },
             },
               h("span", null, tr("workshop.tabSkill") || "Skill"),
+              h("svg", {
+                className: "tab-info-icon",
+                width: "14",
+                height: "14",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: "2",
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+                "aria-hidden": "true",
+              },
+                h("circle", { cx: "12", cy: "12", r: "10" }),
+                h("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
+                h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" }),
+              ),
             ),
             h("div", {
               className: "nav-tab" + (mainTab === "mine" ? " active" : ""),
@@ -485,6 +480,7 @@
                 onClick: () => setOpen(item),
               },
                 h("div", { className: "featured-cover-wrap" },
+                  h("span", { className: "h3-badge" }, "H3"),
                   h("svg", { viewBox: "0 0 320 180", width: "100%", height: "100%", fill: "none", xmlns: "http://www.w3.org/2000/svg" },
                     h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
                     h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
@@ -506,6 +502,38 @@
                 h("div", { className: "featured-content" },
                   h("div", { className: "featured-card-name", title: item.name || item.title }, item.name || item.title),
                   h("div", { className: "featured-card-desc" }, item.description || item.summary || "暂无描述"),
+                  h("div", { className: "featured-card-footer" },
+                    h("div", { className: "featured-card-author" },
+                      h("span", { className: "featured-author-name" }, "MiniMax Design"),
+                      h("svg", {
+                        className: "featured-author-badge",
+                        width: "14",
+                        height: "14",
+                        viewBox: "0 0 16 16",
+                        fill: "none",
+                        xmlns: "http://www.w3.org/2000/svg",
+                      },
+                        h("circle", { cx: "8", cy: "8", r: "7", fill: "var(--dsw-color-brand-primary, #6f59ff)" }),
+                        h("path", { d: "M5 8l2 2 4-4", stroke: "var(--dsw-alias-label-primary-foreground, #ffffff)", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" }),
+                      ),
+                    ),
+                    h("div", { className: "featured-card-dl" },
+                      h("svg", {
+                        width: "12",
+                        height: "12",
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: "currentColor",
+                        strokeWidth: "2",
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                        style: { marginRight: "2px" },
+                      },
+                        h("path", { d: "M12 5v14M19 12l-7 7-7-7" }),
+                      ),
+                      h("span", null, fmt(item.downloads || 2700, tr)),
+                    ),
+                  ),
                 ),
               )),
             ),
