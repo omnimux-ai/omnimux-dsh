@@ -1,10 +1,14 @@
 /**
- * VoicePickerDialog / VoiceTrigger / 字数闸门集成契约测试（Issue #735 / T03/T04；Issue #763 更新）。
+ * VoicePickerDialog / VoiceTrigger / 字数闸门集成契约测试（Issue #735 / T03/T04；
+ * Issue #763 / #771 更新）。
  *
  * 源码契约（readFileSync + node:test）锁定：
  *  - VoicePickerDialog：CustomModal 540px、标题「选择音色」、搜索占位、四维筛选、
- *    空态「未找到匹配音色 + 清除筛选」、试听仅 toast.info 不发起真 TTS、
- *    选中即 onSelect(voice_type)、底部常驻选中条；
+ *    空态「未找到匹配音色 + 清除筛选」、选中即 onSelect(voice_type)、底部常驻选中条；
+ *  - Issue #771 试听：原生 Audio 对象经 getVoiceSampleUrl 加载火山官方 CDN 样音
+ *    （零 fetch / TTS 请求），playingVoice + audioRef 单例控制，play/pause 切换，
+ *    onended/onerror/play().catch 兜底 toast.info('该音色暂无官方试听音频')，
+ *    弹窗关闭或卸载即停播清理；
  *  - ConfigPanel 宿主：朗读正文字数闸门（Array.from / 10000）经 maxLength/countOverride
  *    传入 PromptTokenEditor 内置 meta-bar，右下角仅保留唯一字符统计（Issue #746）、
  *    超限进入 blockGenerate 且禁用文案「朗读正文不能超过 10000 字符」、
@@ -49,8 +53,32 @@ test('VoicePickerDialog：结构契约（标题 / 搜索 / 四维筛选 / 空态
   assert.match(dialogSrc, /当前音色/);
 });
 
-test('VoicePickerDialog：试听占位安全（仅 Toast，绝不发起真 TTS 请求）', () => {
-  assert.match(dialogSrc, /toast\.info\('暂无试听音频'\)/);
+test('VoicePickerDialog：试听安全（原生 Audio 加载官方 CDN 样音，零 fetch / TTS 请求）', () => {
+  // Issue #771：火山官方公开 CDN 样音 URL 生成（encodeURIComponent 防注入）
+  assert.match(dialogSrc, /VOLCENGINE_SAMPLE_CDN_BASE/);
+  assert.match(dialogSrc, /lf3-static\.bytednsdoc\.com/);
+  assert.match(dialogSrc, /export function getVoiceSampleUrl\(voiceType: string\): string/);
+  assert.match(dialogSrc, /encodeURIComponent\(voiceType\)/);
+  assert.match(dialogSrc, /new Audio\(getVoiceSampleUrl\(voiceType\)\)/);
+  // 单例控制与 play/pause 切换
+  assert.match(dialogSrc, /playingVoice/);
+  assert.match(dialogSrc, /audioRef/);
+  assert.match(dialogSrc, /useRef<HTMLAudioElement \| null>\(null\)/);
+  assert.match(dialogSrc, /playingVoice === voiceType/);
+  assert.match(dialogSrc, /audio\.pause\(\)/);
+  assert.match(dialogSrc, /audio\.play\(\)\.catch/);
+  assert.match(dialogSrc, /audio\.onended/);
+  assert.match(dialogSrc, /audio\.onerror/);
+  assert.match(dialogSrc, /event\.stopPropagation\(\)/);
+  // 弹窗关闭 / 组件卸载时停止播放并清理
+  assert.match(dialogSrc, /if \(!open\) stopPlayback\(\)/);
+  assert.match(dialogSrc, /useEffect\(\(\) => stopPlayback, \[\]\)/);
+  // 加载失败兜底 Toast，绝不冒充试听
+  assert.match(dialogSrc, /toast\.info\('该音色暂无官方试听音频'\)/);
+  // 播放/暂停按钮状态与无障碍文案
+  assert.match(dialogSrc, /wf-voice-picker__preview--playing/);
+  assert.match(dialogSrc, /暂停试听/);
+  assert.match(dialogSrc, /Pause\s+size=\{12\}/);
   const code = stripComments(dialogSrc);
   assert.doesNotMatch(code, /fetch\(|XMLHttpRequest|EventSource|WebSocket/);
   assert.doesNotMatch(code, /speechSynthesis|AudioContext/);
@@ -109,6 +137,8 @@ test('样式门禁：新增源码零 raw hex/rgba、零违禁 tokens', () => {
   // CSS：音色相关块使用 --wb-* / --dsw-* tokens
   assert.match(cssSrc, /wf-voice-picker-modal/);
   assert.match(cssSrc, /wf-voice-trigger/);
+  // Issue #771：试听播放中激活态样式存在且无裸色
+  assert.match(cssSrc, /\.wf-voice-picker__preview--playing/);
   // Issue #746：外部重叠计数样式已移除，超限高亮收编进 PromptTokenEditor meta-bar
   assert.doesNotMatch(cssSrc, /\.wf-config-panel__char-counter/);
   assert.match(promptEditorCss, /\.wf-prompt-token-meta-count--exceeded/);
