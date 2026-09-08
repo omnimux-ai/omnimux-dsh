@@ -295,11 +295,15 @@
 
     /**
      * 寻找当前或目标 DOM 输入框（基于官方 Composer 属性）。
-     * 必须是正常激活的输入框，排除处于禁用状态（如未选工作区）的 textarea。
+     * 必须是正常激活的输入框，支持官方 contenteditable 富文本及传统 textarea，排除处于禁用状态（如未选工作区）的元素。
      */
     function findComposer() {
       if (typeof document === "undefined") return null;
       const selectors = [
+        "[data-composer-card] [contenteditable='true']",
+        "[data-composer-seat] [contenteditable='true']",
+        "[role='textbox'][contenteditable='true']",
+        "[contenteditable='true']",
         "[data-composer-card] textarea",
         "[data-composer-seat] textarea",
         "textarea[data-phase]",
@@ -417,20 +421,46 @@
 
             const composer = findComposer();
             if (composer) {
+              const isContentEditable = Boolean(composer.isContentEditable || (typeof composer.getAttribute === "function" && composer.getAttribute("contenteditable") === "true"));
+              const currentText = (composer.value && composer.value.trim().length > 0)
+                ? composer.value
+                : (isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || ""));
+
               // 安全 CAS：已有用户输入严禁覆盖
-              if (composer.value && composer.value.trim().length > 0) {
+              if (currentText && currentText.trim().length > 0) {
                 prefilled = true;
                 break;
               }
 
-              const proto = typeof HTMLTextAreaElement === "function" && composer instanceof HTMLTextAreaElement
-                ? HTMLTextAreaElement.prototype
-                : typeof HTMLInputElement === "function" && composer instanceof HTMLInputElement
-                  ? HTMLInputElement.prototype
-                  : Object.getPrototypeOf(composer);
-              const setter = proto ? Object.getOwnPropertyDescriptor(proto, "value")?.set : undefined;
-              if (setter) setter.call(composer, prefillText);
-              else composer.value = prefillText;
+              if (isContentEditable) {
+                try {
+                  composer.focus?.();
+                  if (typeof window !== "undefined" && window.getSelection && document.createRange) {
+                    const sel = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(composer);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                  }
+                  const success = typeof document.execCommand === "function"
+                    ? document.execCommand("insertText", false, prefillText)
+                    : false;
+                  if (!success) {
+                    composer.innerText = prefillText;
+                  }
+                } catch {
+                  composer.innerText = prefillText;
+                }
+              } else {
+                const proto = typeof HTMLTextAreaElement === "function" && composer instanceof HTMLTextAreaElement
+                  ? HTMLTextAreaElement.prototype
+                  : typeof HTMLInputElement === "function" && composer instanceof HTMLInputElement
+                    ? HTMLInputElement.prototype
+                    : Object.getPrototypeOf(composer);
+                const setter = proto ? Object.getOwnPropertyDescriptor(proto, "value")?.set : undefined;
+                if (setter) setter.call(composer, prefillText);
+                else composer.value = prefillText;
+              }
 
               const Input = typeof InputEvent === "function"
                 ? InputEvent
@@ -438,7 +468,8 @@
               composer.dispatchEvent(new Input("input", { bubbles: true, inputType: "insertText", data: prefillText }));
               composer.focus?.();
 
-              if (composer.value === prefillText) {
+              const updatedText = isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || "");
+              if (updatedText.includes(prefillText) || updatedText.trim().length > 0) {
                 prefilled = true;
                 break;
               }
