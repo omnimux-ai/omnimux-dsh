@@ -1,6 +1,16 @@
 # Issue #760：最新主干整合与离线验证
 
-## 最终同步身份（15:22 +08:00）
+## 最终同步与重验身份（15:24 +08:00，覆盖下方历史身份）
+
+- 最后一次主动 fetch 获取 **base `0fe89ef047c687d156204fa48a177d92d590c6a4`**，新增 #780 / #782 STT 修复：8 文件（+496/-55），hub 公网 URL-first/本地文件 fallback 及其测试、workflow CHANNEL_UNAVAILABLE → 503 与一项回归。完整审查运行 diff；任务相对 base 的 hub diff 为零，没有覆盖并行修复。
+- 第三次从 clean `732c53bf79903921f4d1317b1f91a87d44604d83` rebase，同样无冲突；六项 range-diff 全部等价，最终被测 HEAD **`9ceccf5fbfabd7c940d0b727da0d8dd43d50bed3`**，源码 tree **`4d1488a42ba57442647d8a6b856fde15220888bd`**，ahead 6 / behind 0、clean。最终交付再追加本节 docs commit，运行源码 tree 不变。
+- 旧四项任务提交最终对应 `1fad905bc37364224ed67fc3e6481078388c803d`、`5c769f400effe174e09763eb265f4f5115b831da`、`aaf368c33010ff65645a50a2e68816bca8fcaf4d`、`f3e2894d9c7baf429007f3a764ba8022707d786e`；两项整合报告提交对应 `42e5a12490f96bfc652e7a05279f4dfaad6c6940`、`9ceccf5fbfabd7c940d0b727da0d8dd43d50bed3`。
+- 源码身份已变化，因此 15:24 **重新执行**原 build、双 tsc、完整 workflow test、i18n、完整 Stage、边界与 diff 检查，全部 exit 0。原命令和 TMPDIR 不变，仍无 Node 权限包装。最终全包 **1290 tests / 79 suites / 1290 pass / 0 fail / 0 cancelled / 0 skipped / 0 todo**，5622.070791ms；新增加的 STT 503 测试在全包内。完整 Stage **10 / 8**，i18n **8 / 12**，边界 **2126 source files**。
+- 最新日志为 workflow `dist/issue-760-final-{build,typecheck,tests,i18n,stages,boundaries}.log`；全包计数位于 tests.log:1788–1795。下方 168 项定向是首轮实跑子集，相关引用/音频面板测试在最终全包再次执行，不额外累加计数。未运行 hub 全包或真实 STT 请求，不借其他任务运行证据冒充本轮实测。
+- 最新 host 产物 1475194 bytes，SHA-256 `b1f01ea3b12b8f03de44c4115748ed3639e88a1fa94fab08bfbddb966cb0b08a`；client 129883 bytes 与 canvas 2087641 bytes，hash 与下方首轮产物相同。原三个 build、最终双 tsc 均重新通过。
+- **IS_PASS: YES（主干整合与离线），待独立 QA；runtime 仍未验收。** 只读依赖、唯一任务树写入、不碰 #778、不 push/PR/merge/部署等边界完全保持。主干可继续并行前进；本报告只对上述明确 fetch tip 与被测源码身份负责。
+
+## 第二次同步身份（15:22 +08:00，历史）
 
 - 收尾 fetch 又获取 `537e80e5eb79b2d4344522047917f5cc36c4bb9e`（#779 / #781）。完整审查实际 diff：仅 `scripts/guard-worktree.mjs`、其测试、`scripts/simulate-multi-agent-lifecycle.test.mjs` 与 #779 两份报告，共 5 文件（+425/-34）；无 #760 交集，无 #778 实现。
 - 第二次 rebase 从 clean 的 `060369d32e46a4472d0ce5f73644415a7bb484f5` 到新 base，一次成功、无冲突；结果 `f4cc54d6a7406edbb87812d458cd3989e1a54a60`，ahead 5 / behind 0、clean。`range-diff` 五项全部等价：`befdfda → 57d40a8`、`bedc22d → 3ebc4d6`、`cc532a0 → 75597fa`、`3128642 → 8cf72d6`、`060369d → f4cc54d`。
