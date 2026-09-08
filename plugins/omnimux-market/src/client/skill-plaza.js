@@ -486,9 +486,9 @@
               },
                 h("div", { className: "featured-cover-wrap" },
                   h("svg", { viewBox: "0 0 320 180", width: "100%", height: "100%", fill: "none", xmlns: "http://www.w3.org/2000/svg" },
-                    h("rect", { width: "320", height: "180", fill: "#1a1c24" }),
-                    h("circle", { cx: "160", cy: "90", r: "36", fill: "#272a38" }),
-                    h("text", { x: "160", y: "96", textAnchor: "middle", fill: "#6f59ff", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
+                    h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
+                    h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
+                    h("text", { x: "160", y: "96", textAnchor: "middle", fill: "var(--dsw-color-brand-primary, #6f59ff)", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
                   ),
                   h("div", { className: "featured-hover-actions" },
                     h("button", {
