@@ -8,6 +8,13 @@ import { looksAbsolutePath } from './localMedia.ts';
 
 export const PROJECT_ASSETS_SCHEMA_VERSION = 1 as const;
 
+export const AUDIO_SAVE_LIMITS = { bytes: 16 * 1024 * 1024, timeoutMs: 20_000 } as const;
+
+export interface AudioBytesResponse {
+  item: ProjectAssetsItem;
+  rev: number;
+}
+
 export const PROJECT_ASSET_FILE_TYPES = ['image', 'video', 'audio', 'doc'] as const;
 export type ProjectAssetFileType = (typeof PROJECT_ASSET_FILE_TYPES)[number];
 

@@ -65,6 +65,7 @@ import { createExecutionRoutes } from './executionRoutes';
 import { createMediaRoutes } from './mediaRoutes';
 import { createLocalFileRoutes } from './localFileRoutes';
 import { createProjectAssetsRoutes } from './projectAssetsRoutes';
+import { createAudioBytesRoutes } from './audioBytesRoutes.ts';
 import { createLibraryHttpClient } from '../library/libraryHttp';
 import { createProjectAssetsStore } from '../workspace/ProjectAssetsStore';
 import { createProjectStore } from '../../projects/ProjectStore';
@@ -231,7 +232,8 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     }
   }
 
-  return { dispatch };
+  const audioRoutes = createAudioBytesRoutes(assetsStore, () => deps.getSeam?.('connection'));
+  return { dispatch, handleAudioRequest: audioRoutes.handle };
 }
 
 /**
@@ -246,6 +248,7 @@ export function registerWorkflowRoutes(
   const makeHandler = () => {
     return async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
+        if (await dispatcher.handleAudioRequest(req, res)) return;
         const method = (req.method || 'GET').toUpperCase();
         let body: unknown;
         if (method === 'POST' || method === 'PUT' || method === 'PATCH') {

@@ -5,7 +5,8 @@
  * `/workspaces/:id/assets` is not swallowed by `/workspaces/:id`.
  */
 import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api.ts';
-import { jsonBodyProblem } from '../../http/helpers.ts';
+import { assertLocalWrite, jsonBodyProblem } from '../../http/helpers.ts';
+import { audioFileAction, AudioFileActionError, type AudioFileActionDeps } from '../audioFileAction.ts';
 import type {
   IngestProjectAssetsPayload,
   InstantiateProjectAssetsPayload,
@@ -16,7 +17,7 @@ import type {
 import type { ProjectAssetsStore } from '../workspace/ProjectAssetsStore.ts';
 import { notFound, type RouteTry, type WorkflowDispatchRequest } from './dispatch.ts';
 
-export function createProjectAssetsRoutes(store: ProjectAssetsStore): { tryHandle: RouteTry } {
+export function createProjectAssetsRoutes(store: ProjectAssetsStore, audioDeps: AudioFileActionDeps = {}): { tryHandle: RouteTry } {
   const assetsRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets$`);
   const mkdirRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets/mkdir$`);
   const ingestRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets/ingest$`);
@@ -25,8 +26,26 @@ export function createProjectAssetsRoutes(store: ProjectAssetsStore): { tryHandl
   const promoteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets/promote$`);
   const fileRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/file$`);
   const aliasFilePath = `${WORKFLOW_ROUTE_PREFIX}/api/project-file`;
+  const audioActionRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/audio-file-action$`);
 
   const tryHandle: RouteTry = async (method, path, req: WorkflowDispatchRequest) => {
+    const audioActionMatch = audioActionRe.exec(path);
+    if (audioActionMatch) {
+      if (method !== 'POST') return notFound();
+      try { assertLocalWrite(req); } catch {
+        return { status: 403, body: { error: 'not-local' } };
+      }
+      const problem = jsonBodyProblem(req.body);
+      if (problem) return problem;
+      try {
+        await audioFileAction(store, decodeURIComponent(audioActionMatch[1] ?? ''), req.body as { action?: unknown; relativePath?: unknown }, audioDeps);
+        return { status: 200, body: { ok: true } };
+      } catch (error) {
+        if (error instanceof AudioFileActionError) return { status: error.status, body: { error: error.code } };
+        throw error;
+      }
+    }
+
     const mkdirMatch = mkdirRe.exec(path);
     if (mkdirMatch) {
       if (method !== 'POST') return notFound();

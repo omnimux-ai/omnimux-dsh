@@ -9,6 +9,7 @@
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
 import { AudioLines, Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
@@ -91,7 +92,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const nodeWidth = nodeData.nodeWidth ?? getDefaultNodeWidth(materialType);
   const sizeCategory = getNodeSizeCategory(materialType);
   const defaultCalculatedHeight = calculateNodeHeight(nodeWidth, sizeCategory);
-  const nodeHeight = mediaAspectHeight ?? nodeData.nodeHeight ?? defaultCalculatedHeight;
+  const nodeHeight = materialType === 'audio'
+    ? Math.max(150, nodeData.nodeHeight ?? defaultCalculatedHeight)
+    : mediaAspectHeight ?? nodeData.nodeHeight ?? defaultCalculatedHeight;
 
   const updateNodeData = useCallback(
     (updates: Partial<MaterialNodeData>) => {
@@ -181,6 +184,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const effectiveTextContent = readCurrentText(data as Record<string, unknown>);
   const isOffline = status === 'offline' || nodeData.isMissing === true;
   const previewUrl = resolveMediaPreviewUrl(materialType, mediaAssets, mediaUrl);
+  const audioWorkspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : undefined;
+  const handleSaveAudio = useSaveRemoteAudio(id, audioWorkspaceId, previewUrl);
   // SRT 字幕文本节点（Issue 744）：不展开配置底栏，双击仍可进 TextStage 浏览编辑
   const contentFormat = typeof nodeData.contentFormat === 'string' ? nodeData.contentFormat : undefined;
   const isSrtSubtitle = contentFormat === 'srt';
@@ -670,7 +675,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`wf-material-node ${selected ? 'wf-material-node--selected' : ''}`}
+      className={`wf-material-node ${materialType === 'audio' ? 'wf-material-node--audio' : ''} ${selected ? 'wf-material-node--selected' : ''}`}
       style={{ width: nodeWidth }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -729,7 +734,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         )}
 
         {/* 媒体节点卡片内侧右上角「替换」按钮 */}
-        {showReplaceButton && (
+        {showReplaceButton && materialType !== 'audio' && (
           <button
             type="button"
             className="wf-material-node__replace-btn nodrag"
@@ -805,10 +810,13 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     materialType={materialType}
                     mediaAssets={mediaAssets}
                     mediaUrl={mediaUrl}
+                    workspaceId={typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : undefined}
                     label={label}
                     status={status}
                     isMissing={nodeData.isMissing === true}
                     onMediaSizeChange={handleMediaSizeChange}
+                    onSaveAudio={audioWorkspaceId ? handleSaveAudio : undefined}
+                    onReplaceAudio={!isMultiSelected ? () => { void resourcePicker.fillImportNode(); } : undefined}
                   />
                 ) : (
                   <NodeEmptyState
