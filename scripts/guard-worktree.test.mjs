@@ -1,5 +1,6 @@
 import { after, describe, it } from 'node:test'
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
+import { chmodSync, mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -9,6 +10,7 @@ import {
   decideWrite,
   isDestructiveResetCommand,
   isEphemeralPath,
+  isGitTracked,
   isWorktreePath,
 } from './guard-worktree.mjs'
 
@@ -381,6 +383,137 @@ describe('guard-worktree PreToolUse protocol', () => {
       tool_input: { file_path: join(mainRepoRoot, '__guard_untracked_scratch__.tmp') },
     })
     assert.equal(untracked.hookSpecificOutput.permissionDecision, 'allow')
+  })
+})
+
+describe('non-Git targets and Git read failures', () => {
+  const nonGit = mkdtempSync(join(tmpdir(), 'guard-non-git-'))
+  after(() => rmSync(nonGit, { recursive: true, force: true }))
+  const target = join(nonGit, '.agents/skills/agent-backup/scripts/backup.py')
+  mkdirSync(dirname(target), { recursive: true })
+  writeFileSync(target, '# isolated fixture\n')
+  const nonGitProbe = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: nonGit, encoding: 'utf8', env: { ...process.env, LC_ALL: 'C', LANGUAGE: 'C' },
+  })
+  assert.equal(nonGitProbe.status, 128, 'fixture must be outside every Git repository')
+  assert.match(nonGitProbe.stderr, /not a git repository/)
+
+  function hook(filePath, env = {}, cwd = mainRepoRoot) {
+    const result = spawnSync(process.execPath, [scriptPath], {
+      cwd, encoding: 'utf8', env: { ...process.env, ...env },
+      input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'write', cwd, tool_input: { file_path: filePath } }),
+    })
+    assert.equal(result.status, 0, result.stderr)
+    return JSON.parse(result.stdout).hookSpecificOutput
+  }
+
+  it('does not classify a confirmed non-Git target as tracked', () => {
+    assert.equal(isGitTracked(target, dirname(target)), false)
+    for (const filePath of [target, join(nonGit, 'docs/missing/parent/new.md')]) {
+      const result = decideWrite({ filePath, cwd: mainRepoRoot, toolName: 'write' })
+      assert.equal(result.decision, 'allow')
+      assert.equal(result.reason, 'non-git-target')
+    }
+  })
+
+  it('classifies absolute and relative targets from a non-Git cwd', () => {
+    assert.equal(hook(target, {}, nonGit).permissionDecision, 'allow')
+    assert.equal(hook('.agents/skills/agent-backup/scripts/backup.py', {}, nonGit).permissionDecision, 'allow')
+    assert.equal(hook(join(mainRepoRoot, 'package.json'), {}, nonGit).permissionDecision, 'deny')
+  })
+
+  it('uses deterministic Git diagnostics regardless of caller locale', () => {
+    const bin = join(fixture, 'locale-bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'git'), '#!/bin/sh\nif [ "$LC_ALL" = C ] && [ "$LANGUAGE" = C ]; then\n  echo "fatal: not a git repository (or any of the parent directories): .git" >&2\nelse\n  echo "fatal: kein Git-Repository" >&2\nfi\nexit 128\n', { mode: 0o755 })
+    const out = hook(target, { PATH: bin, LC_ALL: 'de_DE.UTF-8', LANG: 'de_DE.UTF-8', LANGUAGE: 'de' })
+    assert.equal(out.permissionDecision, 'allow')
+    assert.equal(hook(join(mainRepoRoot, 'package.json'), { PATH: bin }).permissionDecision, 'deny')
+  })
+
+  it('does not grant an authorization exception from payload fields', () => {
+    // This hook only classifies isolation; external authorization is a separate gate.
+    const out = runHook({ tool_name: 'write', cwd: nonGit, authorized: true,
+      tool_input: { file_path: join(mainRepoRoot, 'package.json'), authorized: true } })
+    assert.equal(out.hookSpecificOutput.permissionDecision, 'deny')
+  })
+
+  it('denies unavailable Git and all non-discovery failures with accurate attribution', () => {
+    const bin = join(fixture, 'error-bin')
+    mkdirSync(bin)
+    const failures = [null, 'exit 42', 'exit 128',
+      'echo "fatal: unable to read index: Permission denied" >&2; exit 128',
+      'echo "fatal: detected dubious ownership in repository" >&2; exit 128',
+      'echo "fatal: not a git repository: /broken/gitdir" >&2; exit 128',
+      'echo "fatal: not a git repository (or any of the parent directories): .git" >&2; echo "fatal: Permission denied" >&2; exit 128']
+    for (const failure of failures) {
+      if (failure) writeFileSync(join(bin, 'git'), `#!/bin/sh\n${failure}\n`, { mode: 0o755 })
+      for (const filePath of [target, join(mainRepoRoot, 'package.json')]) {
+        const out = hook(filePath, { PATH: bin })
+        assert.equal(out.permissionDecision, 'deny')
+        assert.match(out.permissionDecisionReason, /仓库 Hook.*Git.*读取/)
+        assert.doesNotMatch(out.permissionDecisionReason, /Git Tracked|DSH 核心/)
+      }
+    }
+  })
+
+  it('denies real corrupt-index errors instead of calling them tracked files', () => {
+    const root = createRepo('corrupt-index')
+    writeFileSync(join(root, '.git/index'), 'not an index')
+    const filePath = join(root, 'package.json')
+    assert.equal(isGitTracked(filePath, root), true)
+    assert.equal(decideWrite({ filePath, cwd: root, toolName: 'edit' }).reason, 'git-read-error')
+    assert.match(hook(filePath).permissionDecisionReason, /Git.*读取/)
+  })
+
+  it('keeps invalid cwd, unreadable metadata, and failed ls-files conservative', () => {
+    assert.equal(isGitTracked(target, join(nonGit, 'missing-cwd')), true)
+    const root = createRepo('unreadable-metadata')
+    const metadata = join(root, '.git')
+    chmodSync(metadata, 0)
+    try {
+      assert.equal(hook(join(root, 'package.json')).permissionDecision, 'deny')
+    } finally {
+      chmodSync(metadata, 0o700)
+    }
+    const bin = join(fixture, 'ls-files-error-bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'git'), '#!/bin/sh\ncase "$1" in\nrev-parse) printf "%s\\n" "$PWD"; exit 0 ;;\n*) echo "fatal: not a git repository (or any of the parent directories): .git" >&2; exit 128 ;;\nesac\n', { mode: 0o755 })
+    const out = hook(target, { PATH: bin })
+    assert.equal(out.permissionDecision, 'deny')
+    assert.match(out.permissionDecisionReason, /Git.*读取/)
+  })
+
+  it('denies malformed metadata outside Git and nested primary repositories', () => {
+    const broken = join(nonGit, 'broken')
+    mkdirSync(join(broken, '.git'), { recursive: true })
+    assert.equal(hook(join(broken, 'notes.txt')).permissionDecision, 'deny')
+    const nested = join(nonGit, 'nested')
+    mkdirSync(nested)
+    gitCommand(nested, 'init', '-b', 'main')
+    writeFileSync(join(nested, 'notes.txt'), 'tracked\n')
+    gitCommand(nested, 'add', 'notes.txt')
+    assert.equal(hook(join(nested, 'notes.txt')).permissionDecision, 'deny')
+    assert.equal(hook(join(nested, 'scripts/new/deep.js')).permissionDecision, 'deny')
+    symlinkSync(nested, join(nonGit, 'escape'))
+    assert.equal(hook(join(nonGit, 'escape/notes.txt')).permissionDecision, 'deny')
+  })
+
+  it('fails closed on actual unreadable directories and unresolved symlinks', () => {
+    const locked = join(nonGit, 'locked')
+    mkdirSync(locked)
+    writeFileSync(join(locked, 'notes.txt'), 'private\n')
+    chmodSync(locked, 0)
+    try {
+      const out = hook(join(locked, 'notes.txt'))
+      assert.equal(out.permissionDecision, 'deny')
+      assert.match(out.permissionDecisionReason, /仓库 Hook.*路径/)
+      assert.doesNotMatch(out.permissionDecisionReason, /Git Tracked|DSH 核心/)
+    } finally {
+      chmodSync(locked, 0o700)
+    }
+    symlinkSync(join(nonGit, 'absent'), join(nonGit, 'dangling'))
+    assert.equal(hook(join(nonGit, 'dangling/notes.txt')).permissionDecision, 'deny')
   })
 })
 

@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -65,6 +66,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const managed = join(profile, '.materialize-snapshots/plugins')
     const dependencies = {}
     mkdirSync(join(profile, 'node_modules/.pnpm'), { recursive: true })
+    writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
     for (const name of allPlugins) {
       writePackage(join(managed, name), name)
       dependencies[name] = `file:.materialize-snapshots/plugins/${name}`
@@ -118,6 +120,22 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     ])
   })
 
+  it('keeps profile dependency discovery inside its own workspace boundary', () => {
+    const ancestor = join(fixtureRoot, 'workspace-ancestor')
+    const home = join(ancestor, 'home')
+    mkdirSync(ancestor, { recursive: true })
+    writeFileSync(join(ancestor, 'pnpm-workspace.yaml'), 'packages:\n  - unrelated/*\n')
+    seedProfile(home, '.omnimux-dev')
+    const profile = profileDir(home, '.omnimux-dev')
+    const result = spawnSync('corepack', ['pnpm', 'root', '--workspace-root'], {
+      cwd: profile,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(realpathSync(result.stdout.trim()), realpathSync(join(profile, 'node_modules')))
+  })
+
   it('keeps every Alpha plugin and a development marker in the default Dev target', () => {
     const result = run(fixtureRoot)
     assert.equal(result.status, 0, result.stderr || result.stdout)
@@ -158,7 +176,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
 
   it('keeps Alpha in non-production profiles during a mixed-target sync', () => {
     const result = run(fixtureRoot, ['--all', 'omnimux-accounts'])
-    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     for (const target of ['.omnimux-dev', '.dsh']) {
       const manifest = readManifest(fixtureRoot, target)
       assert.ok(manifest.dependencies['omnimux-accounts'])

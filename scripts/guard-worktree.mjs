@@ -186,6 +186,9 @@ function git(args, cwd, preserveEnvironment = false) {
     for (const key of Object.keys(env)) {
       if (key.startsWith('GIT_')) delete env[key]
     }
+    // Discovery diagnostics are parsed only in this controlled locale.
+    env.LC_ALL = 'C'
+    env.LANGUAGE = 'C'
   }
   return spawnSync('git', args, {
     cwd,
@@ -212,12 +215,48 @@ export function isGitIgnored(fullPath, cwd) {
   return res.status === 0
 }
 
-export function isGitTracked(fullPath, cwd) {
-  const root = gitRoot(cwd) || cwd
+/**
+ * Confirm failed discovery is not hiding malformed or unreadable metadata.
+ * @param {string} cwd Canonical existing target directory.
+ * @returns {boolean} Whether every ancestor is free of Git markers.
+ */
+function hasNoGitMetadata(cwd) {
+  for (let parent = cwd; ; parent = dirname(parent)) {
+    try {
+      lstatSync(resolve(parent, '.git'))
+      return false
+    } catch (error) {
+      if (error.code !== 'ENOENT') return false
+    }
+    if (dirname(parent) === parent) return true
+  }
+}
+
+/**
+ * Classify Git state without treating a failed read as proof of tracking.
+ * @param {string} fullPath Canonical target path.
+ * @param {string} cwd Existing target directory.
+ * @returns {'non-git-target'|'git-read-error'|'tracked-file'|'untracked-draft'}
+ */
+function gitFileState(fullPath, cwd) {
+  const discovery = git(['rev-parse', '--show-toplevel'], cwd)
+  if (discovery.error || discovery.status !== 0) {
+    const notRepo = !discovery.error && discovery.status === 128 &&
+      !String(discovery.stdout || '').trim() &&
+      String(discovery.stderr || '').trim() === 'fatal: not a git repository (or any of the parent directories): .git'
+    return notRepo && hasNoGitMetadata(cwd) ? 'non-git-target' : 'git-read-error'
+  }
+  const root = String(discovery.stdout || '').trim()
+  if (!root) return 'git-read-error'
   const res = git(['ls-files', '--error-unmatch', '--', fullPath], root)
-  // Git missing / not a repo → treat as tracked so the gate stays closed safely.
-  if (gitUnavailable(res) || ![0, 1].includes(res.status)) return true
-  return res.status === 0
+  if (res.error || ![0, 1].includes(res.status)) return 'git-read-error'
+  return res.status === 0 ? 'tracked-file' : 'untracked-draft'
+}
+
+export function isGitTracked(fullPath, cwd) {
+  const state = gitFileState(fullPath, cwd)
+  // Keep the boolean API conservative for callers that cannot represent errors.
+  return state === 'tracked-file' || state === 'git-read-error'
 }
 
 function toFullPath(filePath, cwd) {
@@ -313,9 +352,13 @@ export function decideWrite({ filePath, cwd, toolName }) {
     return { decision: 'allow', fullPath, reason: 'gitignored' }
   }
 
-  // 4. 【核心全域拦截】任何已加入 Git 版本管理（Tracked）的文件，在主仓一律严禁直接修改！
-  if (isGitTracked(fullPath, cwd)) {
-    return { decision: 'deny', fullPath, reason: 'tracked-file' }
+  // Classification is not cross-workspace authorization; that remains external.
+  const state = gitFileState(fullPath, cwd)
+  if (state === 'non-git-target') {
+    return { decision: 'allow', fullPath, reason: state }
+  }
+  if (state === 'tracked-file' || state === 'git-read-error') {
+    return { decision: 'deny', fullPath, reason: state }
   }
 
   // 5. 【新增核心防线：新建未跟踪源码拦截】严禁在主仓核心源码或配置目录下新建任何未跟踪文件！
@@ -341,16 +384,20 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '  1. 若成果有效：请切换到工作分支推送远端（git push / 提 PR 合入 main）；',
         '  2. 若确需重置：请先执行备份命令（如 git tag backup/safety-$(date +%s)）后再安全处理。',
       ].join('\n')
+    } else if (reason === 'git-read-error') {
+      output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。'
+    } else if (reason === 'unresolved-target') {
+      output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】目标路径无法安全解析；保守拒绝写入。请检查路径读取权限、符号链接及父目录。'
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
-        '🚫【DSH 核心门禁阻断】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
+        '🚫【OmniMux 仓库 Hook】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
         '📌 核心防线原则：在主目录直接创建未跟踪源码文件会导致主干工作区被污染，并引发构建衍生与多 Agent 冲突覆盖。',
         '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
         'ℹ️  豁免范围：经 Git 元数据与注册表核实的 linked worktree、本地工作台记录 (.workbuddy/)、临时缓存目录 (tmp/、dist/、node_modules/)。',
       ].join('\n')
     } else {
       output.permissionDecisionReason = [
-        '🚫【DSH 核心门禁阻断】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！',
+        '🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！',
         '📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。',
         '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
         'ℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。',

@@ -648,7 +648,7 @@ EOF
   # 写入后由 pnpm 构造 profile 下的 node_modules 符号拓扑。安装失败恢复被暂存的
   # 入口，避免留下缺包；成功后仍由下方的全内容 fingerprint 校验最终结果。
   echo "  → 刷新 profile 依赖 (corepack pnpm install)..."
-  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false corepack pnpm install); then
+  if ! (cd "$PROFILE" && pnpm_config_frozen_lockfile=false pnpm_config_optimistic_repeat_install=false corepack pnpm install); then
     restore_refresh_entries
     echo "✗ pnpm 刷新 profile 依赖失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1
