@@ -391,7 +391,7 @@ function TypeCard({ t, value, onPick }) {
   // Native <button>: dsh-ui-kit Button is locked to 32px single-row; type cards
   // are multi-line selection tiles (icon + name + hint) and must not inherit it.
   return (
-    <button
+    <button /* exempt-ui01: 多行卡片选择器，非32px单行按钮 */
       type="button"
       className="omnimux-publish-type-card"
       onClick={() => { onPick(value) }}

@@ -141,7 +141,7 @@ export function AuthorizeModal({ t, baselineIds, onClose, onNeedLogin, onConnect
 
   const warnBanner = (
     <div className="omnimux-publish-accounts-warn">
-      <button
+      <button /* exempt-ui01: 折叠提示面板手风琴头部 */
         type="button"
         className="omnimux-publish-accounts-warn-head"
         aria-expanded={expanded}

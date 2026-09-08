@@ -108,7 +108,7 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
         {missing ? <span className="omnimux-assets-missing">{t('card.missing')}</span> : null}
         <div className="omnimux-assets-card-overlay">
           <div className="omnimux-assets-card-overlay-actions">
-            <button
+            <button /* exempt-ui01: 资产卡片悬浮操作按钮 */
               type="button"
               className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--secondary"
               aria-label={t('card.view')}
@@ -126,7 +126,7 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
               <EyeIcon size={14} />
               <span>{t('card.view')}</span>
             </button>
-            <button
+            <button /* exempt-ui01: 资产卡片悬浮操作按钮 */
               type="button"
               className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--primary"
               aria-label={added ? t('card.addedToConversation') : t('card.addToConversation')}

@@ -63,7 +63,7 @@
     "verify:slots": "node scripts/verify-slot-contracts.mjs",
     "verify:smoke": "node scripts/verify-dev-smoke.mjs",
     "verify:live": "node scripts/agent-live-qa.mjs",
-    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:gates",
+    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm test:gates",
     "verify:all": "corepack pnpm verify:gates && corepack pnpm test && corepack pnpm registry:verify && corepack pnpm doctor",
     "sync:presets": "bash scripts/sync-agent-presets.sh",
     "presets:build": "node scripts/build-agent-presets.mjs",

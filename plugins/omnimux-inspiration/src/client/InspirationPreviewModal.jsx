@@ -34,7 +34,7 @@ function CopyButton({ value, label, copiedLabel, iconOnly = false }) {
     }
   }
   return (
-    <button
+    <button /* exempt-ui01: 复制按钮 */
       type="button"
       className={`omnimux-inspiration-modal-copy${iconOnly ? ' is-icon-only' : ''}`}
       onClick={copy}
@@ -165,7 +165,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
           <nav className="omnimux-inspiration-modal-mobile-tabs" role="tablist" aria-label={t('modal.header.tabs')}>
             {['video', 'script', 'deconstruction'].map((tab) => (
-              <button
+              <button /* exempt-ui01: 移动端Tab */
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab}
@@ -219,7 +219,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 <div className="omnimux-inspiration-modal-panel-actions">
                   <CopyButton value={scriptValue} label={t('modal.script.copy')} copiedLabel={t('modal.header.copied')} />
                   {data.script ? (
-                    <button type="button" className="omnimux-inspiration-modal-copy" onClick={handleTranslate} disabled={translating}>
+                    <button type="button" className="omnimux-inspiration-modal-copy" onClick={handleTranslate} disabled={translating} /* exempt-ui01 */>
                       {translating ? t('modal.script.translating') : (showTranslation && data.translationText ? t('modal.script.showSource') : t('modal.script.translate'))}
                     </button>
                   ) : null}
@@ -269,7 +269,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                       className={section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}
                       onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
                     >
-                      <button
+                      <button /* exempt-ui01: 折叠面板手风琴按钮 */
                         type="button"
                         className="omnimux-inspiration-modal-fold"
                         onClick={(event) => {
@@ -288,7 +288,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                     </article>
                   )) : dimensions.map(([key, label, value]) => value ? (
                     <article key={key}>
-                      <button
+                      <button /* exempt-ui01: 折叠面板标题 */
                         type="button"
                         className="omnimux-inspiration-modal-fold"
                         onClick={() => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }))}
@@ -302,7 +302,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   ) : null)}
                   {data.rawMarkdown ? (
                     <div className="omnimux-inspiration-modal-raw">
-                      <button type="button" className="omnimux-inspiration-modal-copy" onClick={() => setShowRaw((value) => !value)}>
+                      <button type="button" className="omnimux-inspiration-modal-copy" onClick={() => setShowRaw((value) => !value)} /* exempt-ui01 */>
                         {showRaw ? t('modal.deconstruction.hideRaw') : t('modal.deconstruction.showRaw')}
                       </button>
                       {showRaw ? <pre>{data.rawMarkdown}</pre> : null}

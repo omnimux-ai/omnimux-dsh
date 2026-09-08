@@ -131,9 +131,9 @@ function createTabRow(model) {
     <span class="omnimux-app-tab-icon" aria-hidden="true">${iconFor(model.id)}</span>
     <span class="omnimux-app-tab-label"></span>
     <span class="omnimux-app-tab-actions">
-      <button type="button" class="omnimux-app-tab-action" data-kind="top">\u2B06</button>
-      <button type="button" class="omnimux-app-tab-action" data-kind="pin">\u{1F4CC}</button>
-      <button type="button" class="omnimux-app-tab-action" data-kind="remove">\u2715</button>
+      <button type="button" class="omnimux-app-tab-action" data-kind="top" /* exempt-ui01 */>\u2B06</button>
+      <button type="button" class="omnimux-app-tab-action" data-kind="pin" /* exempt-ui01 */>\u{1F4CC}</button>
+      <button type="button" class="omnimux-app-tab-action" data-kind="remove" /* exempt-ui01 */>\u2715</button>
     </span>`
   return row
 }

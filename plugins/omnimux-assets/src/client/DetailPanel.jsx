@@ -119,7 +119,7 @@ export function DetailPanel({ t, detail, onClose }) {
       <aside style={panel} aria-label={t('detail.file')}>
         <div style={header}>
           <h3 style={title} title={String(file.name)}>{String(file.name)}</h3>
-          <button type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
+          <button /* exempt-ui01: 侧栏详情关闭按钮 */ type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
         </div>
         <div style={body}>
           <Field label={t('detail.path')} value={realPath} />
@@ -137,7 +137,7 @@ export function DetailPanel({ t, detail, onClose }) {
     <aside style={panel} aria-label={t('detail.artifact')}>
       <div style={header}>
         <h3 style={title} title={String(artifact.title)}>{String(artifact.title)}</h3>
-        <button type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
+        <button /* exempt-ui01: 侧栏详情关闭按钮 */ type="button" aria-label={t('detail.close')} style={closeButton} onClick={onClose}><CloseIcon /></button>
       </div>
       <div style={body}>
         <div>

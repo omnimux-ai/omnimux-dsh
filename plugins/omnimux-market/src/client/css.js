@@ -334,7 +334,7 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .modal-overlay.open{opacity:1;pointer-events:auto}
 .modal-dialog{background:var(--dsw-alias-bg-elevated,#191a20);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.08));border-radius:12px;width:480px;max-width:90vw;padding:24px;box-shadow:var(--dsw-alias-shadow-overlay,0 20px 40px var(--dsw-alias-shadow-color,rgba(0,0,0,.6)));color:var(--dsw-alias-label-primary,#fff)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.modal-title{font-size:17px;font-weight:600;color:var(--dsw-alias-label-primary,#fff);margin:0}
+.modal-title{font-size:16px;font-weight:600;color:var(--dsw-alias-label-primary,#fff);margin:0}
 .modal-close-btn{background:transparent;border:0;color:var(--dsw-alias-label-tertiary,#84878f);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;transition:color .15s}
 .modal-close-btn:hover{color:var(--dsw-alias-label-primary,#fff)}
 .drop-zone{border:1.5px dashed var(--dsw-alias-border-default,#3a3d46);border-radius:8px;padding:28px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;background:var(--dsw-alias-bg-subtle,rgba(255,255,255,.01));margin-bottom:18px;transition:border-color .15s,background .15s}

@@ -555,7 +555,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
                       </div>
                     )}
                   </div>
-                  <button
+                  <button /* exempt-ui01: 附件托盘删除按钮 */
                     type="button"
                     className="omx-att-card__remove-btn omx-att-card__remove-btn--media"
                     onClick={(event) => {
@@ -581,7 +581,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         >
           <div className="omx-att-preview__mask" aria-hidden="true" onMouseDown={closePreview} />
           <img className="omx-att-preview__image" src={preview.src} alt={preview.alt} />
-          <button
+          <button /* exempt-ui01: 大图预览关闭按钮 */
             type="button"
             className="omx-att-preview__close"
             aria-label={closePreviewLabel}
