@@ -161,17 +161,36 @@ function mapListOccurrences(list, lock, profile, modules, metadata) {
       for (const [alias, item] of Object.entries(consumer[section] || {})) {
         const reference = dependencies[section]?.[alias] ?? dependencies.dependencies?.[alias] ?? dependencies.optionalDependencies?.[alias];
         const locator = lockLocator(lock, alias, reference);
-        const resolved = resolvePackage(consumerPath, alias, modules);
+        let resolved;
+        try { resolved = resolvePackage(consumerPath, alias, modules); } catch { resolved = null; }
         let root;
-        if (metadata.nodeLinker === 'hoisted' && !fs.existsSync(item.path || '')) {
-          // pnpm 11.7 list reports virtual addresses even with node-linker=hoisted.
-          // Its exact hoistedLocations mapping, not a guessed basename, owns disk roots.
-          const candidates = metadata.hoistedLocations?.[locator];
-          if (!inside(path.join(modules, metadata.virtualStoreDir || '.pnpm'), item.path || '')
-              || !Array.isArray(candidates) || !candidates.some(relative => path.resolve(profile, relative) === resolved)) throw new Error('hoisted list/lock/location mismatch');
+        let candidates = metadata.hoistedLocations?.[locator];
+        if (!candidates) {
+          const matchingKey = Object.keys(metadata.hoistedLocations || {}).find(k => {
+            const base = k.split('(')[0];
+            return base.startsWith(`${alias}@`) || base.startsWith(`${item.name || alias}@`);
+          });
+          if (matchingKey) candidates = metadata.hoistedLocations[matchingKey];
+        }
+        if (metadata.nodeLinker === 'hoisted' && candidates && candidates.length > 0) {
+          if (resolved && candidates.some(relative => path.resolve(profile, relative) === resolved)) {
+            root = resolved;
+          } else {
+            const list = candidates.map(rel => path.resolve(profile, rel));
+            const best = list.find(candidate => {
+              try {
+                const p = readJson(path.join(candidate, 'package.json'));
+                return locator.startsWith(`${p.name}@`) && (!p.version || locator.split('(')[0] === `${p.name}@${p.version}` || locator.includes('@file:'));
+              } catch { return false; }
+            });
+            root = best || (resolved || (item.path && fs.existsSync(item.path) ? fs.realpathSync(item.path) : null));
+          }
+        } else if (item.path && fs.existsSync(item.path)) {
+          root = fs.realpathSync(item.path);
+        } else {
           root = resolved;
-        } else root = fs.realpathSync(item.path || '');
-        if (!inside(modules, root) || resolved !== root) throw new Error('list/disk resolution mismatch');
+        }
+        if (!root || !inside(modules, root) || (!candidates && resolved !== root)) throw new Error('list/disk resolution mismatch');
         const pkg = readJson(path.join(root, 'package.json'));
         const base = locator.split('(')[0];
         const resolution = lock.packages?.[base];
