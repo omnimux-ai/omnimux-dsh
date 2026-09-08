@@ -9,7 +9,7 @@
 - 本地恢复提交 `d3de295` 经 rebase 后为 `10568d418d31e20eaf49909a1c40d0e092179c1f`。第二轮补充测试/报告提交位于其后，可用 `git rev-parse HEAD` 获取最终目标；未 push。
 - 按本轮明确授权执行了本任务 commit、fetch origin main 和 rebase；未运行 git-wt、push、PR、merge、部署、真实模型 API 或修改官方 DSH。
 - 实现限于 `plugins/omnimux-workflow/src` 和本说明；未修改合同、脚本、根包、manifest 或 lock。依赖使用任务树内指向主 checkout 已有 node_modules 的软链接，仅只读使用。
-- **IS_PASS: YES（工程全局一致性审查、workflow 本地构建/类型/全包回归）**；这不是全部仓库门禁通过声明。**verify:stages: BLOCKED；L2/整体交付: NO**。Stage 的 market 分支要求跨包写构建产物，超出本轮输出授权；L2 有主理人已记录的受管 seed 阻断。不得据此合入或关闭 Issue。
+- **当前 IS_PASS: YES（QA 反馈修复的工程全局一致性审查、定向 114/114、原构建与双 tsc）**；**本轮全包命令 exit 1：1289 项 / 1287 pass / 2 fail（Node 权限模式阻止既有 symlink 测试建夹具）**，不得宣称全包全绿。完整 Stage 采用独立 QA 第一轮已验证的 10 组件 / 8 注册入口（含 market）exit 0 证据，本轮未重跑。**独立 QA 第二轮待执行；L2 / browser 仍 BLOCKED；整体不放行**。下文第二轮集成数据为历史，最新修复及实际计数见文末。
 
 ## 已验证根因
 
@@ -137,3 +137,59 @@ NODE_OPTIONS="--permission --allow-fs-read=* --allow-fs-write=$PWD/plugins/omnim
 - 现有序列化不支持文件名内未转义 `]`；本次保持格式兼容，没有扩展转义协议。
 - 音频任务对上游正文与本地要求不可分离时仍按既有合同拒绝，不因引用菜单放宽音频语义；未新增该能力。
 - 代码已具备独立 QA 接手条件；尚未具备合入/关闭 Issue 条件。下一负责人：主理人统筹独立 QA 和共享 Git 操作。
+
+## QA 第一轮反馈修复（2026-09-08）
+
+### 身份与输出边界
+
+- 固定 base：`5485c25875cb9f71d7cb78a6aa69d07e07fffbab`；起始及结束 HEAD：`ca83e4579fbb8e47b9d4170b46faa05be8f57c83`。本轮结果为该 HEAD 上的未提交工作树 diff，不代表远端最新 tip。
+- 先完整读取本说明、[独立 QA 第一轮报告](../qa/issue-760-slot-mention-menu.md) 及其 `issue760.qa.test.mjs`。原 QA 文件与报告不改动、不暂存、不提交。
+- 本轮运行源码仅改四个文件：`PromptTokenEditor.tsx`、`MentionPopover.tsx`、`SlotWells/SlotHoverPreview.tsx`、`cfg/viewportPositioner.ts`；新增 `PromptTokenEditor/referenceBoundaries.dom.test.mjs`，并更新本说明。没有 fetch、rebase、commit、push、merge、deploy、install、共享 profile 或主 checkout 写操作。
+- 三段构建产物仅写任务树 workflow dist/lib；只读使用已存在的 node_modules 链接。全包 `TMPDIR` 指向任务 workflow/dist，Node 写权限仅允许该目录，避免测试夹具写往其他工作区或系统临时目录。权限模式对子进程/native addon 并非 OS 沙箱，另以已读构建脚本及输出 realpath 核验落点。
+
+### 修复与全局一致性审查
+
+1. **QA-760-01**：插入选择顺序为合法菜单 query Range → 合法实时 Selection → 合法 blur 缓存 → 尾部兜底。合法性同时验证 Range 起点与终点均在本编辑器，不能仅以 anchor/start 判定；插入使用克隆 Range。公开 API、菜单 query 替换、composition guard、blur 保存时机和事务失败恢复保持原接口。
+2. **QA-760-02**：共享定位器增加可选 `preferredWidth`，默认 360 保持既有参数浮层兼容；预览传入 240、引用根菜单传入 280，先按视口夹紧，再用同一宽度计算 left 和渲染。1000×800 视口右缘槽 [950,994] 的预览为 [748,988]，不再出现 82px 横向脱离；220px 窄屏宽度为 196。没有针对 QA 坐标硬编码分支。
+3. QA 提示的 MentionPopover 同类缺陷同步修复。Portal、180ms 离开延迟、rAF 锚点跟踪、上下翻转、Esc/外点关闭均保持；未把延迟机制描述为新增几何 hover bridge，也未据 JSDOM 声称慢速鼠标路径已验收。
+4. 新增 12 项组件边界回归：实时非折叠选区、外部选区与 blur 缓存、跨编辑器选区、query 优先、完整 composition 生命周期、连续两次插入、预览左/右/窄屏/顶部翻转及根菜单宽/窄视口。使用真实组件实现、受控 value 回传；未改 QA 失败断言。
+5. 全局审查核对四份运行 diff 与新增测试的 import、可选参数兼容、Range 端点保护及统一宽度数据流。默认 360 定位回归保持通过，现有 Feed/Slot、图事务、执行内容、音频计数语义无修改。**IS_PASS: YES，仅工程源码一致性及已完成定向/类型/构建检查；不是独立 QA、全包全绿或 UI 放行。**
+
+### 本轮实际验证
+
+| 检查 | 结果 | 说明 |
+| --- | --- | --- |
+| 修复前独立 QA 文件 | 4 tests / 2 pass / 2 fail，exit 1 | 原样重现光标错位与预览 [628,868] |
+| 修复后独立 QA 文件 | 4/4 pass | 包含在以下 114 项实跑范围，不作为额外新增计数 |
+| 扩展定向最终运行 | **114 tests / 6 suites；114 pass / 0 fail / 0 cancelled / 0 skipped，exit 0** | 引用组件全测、Slot、两份旧定位器、Feed/Slot 执行、有效输入及 i18n |
+| workflow `npm --logs-max=0 run build` | **exit 0** | 原 host/client/canvas 三段，不用 harness 替代 |
+| workflow `npm --logs-max=0 run typecheck` | **exit 0** | 原 canvas/host 两份 tsc --noEmit |
+| workflow 全包 `npm --logs-max=0 run test` | **1289 tests / 80 suites；1287 pass / 2 fail / 0 cancelled / 0 skipped，exit 1** | 相比前序 1273 新增 QA 4 + 工程边界 12；失败见下节 |
+| `git diff --check` | exit 0 | 当前未提交修复 diff |
+| 完整 Stage | 复用 QA 第一轮 10 components / 8 targets，exit 0（含 market） | 本轮未运行，源码修改不涉及 Stage 注册/组装；不改写 QA 历史报告 |
+| L2 / ego-browser / verify:live | **BLOCKED，按授权不重试** | 沿用 QA 已证实的不合规 seed，无 profile 修改或替代浏览器证据 |
+
+新增工程测试的首次定向运行是 114 项 / 112 pass / 2 fail：测试宿主未回传受控 value，且 React DOM 在 JSDOM 之前初始化导致原生 composition 事件未接通。仅修正新测试宿主为受控组件并在 DOM globals 就绪后加载 React DOM，全部业务断言保持，最终 114/114；QA 文件始终未修改。
+
+定向命令（任务树 `plugins/omnimux-workflow`）：
+
+```sh
+node --test src/canvas/editor/components/PromptTokenEditor/*.test.mjs \
+  src/canvas/editor/components/MaterialNode/ConfigPanel/slotInteractionRefinement.test.mjs \
+  src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/viewportPositioner.test.mjs \
+  src/canvas/editor/components/MaterialNode/ConfigPanel/videoParams/viewportPositioner.test.mjs \
+  src/workflow/execution/feedSlotSubmission.test.mjs \
+  src/workflow/execution/multimodalCompiler.test.mjs \
+  src/shared/graph/effectiveInput.test.mjs \
+  src/shared/graph/feedSlot/feedSlotKernel.test.mjs src/canvas/i18n/*.test.mjs
+NODE_OPTIONS="--permission --allow-fs-read=* --allow-fs-write=$PWD/dist --allow-fs-write=$PWD/lib --allow-child-process --allow-worker --allow-addons" npm --logs-max=0 run build
+NODE_OPTIONS="--permission --allow-fs-read=* --allow-child-process --allow-worker --allow-addons" npm --logs-max=0 run typecheck
+TMPDIR="$PWD/dist" NODE_OPTIONS="--permission --allow-fs-read=* --allow-fs-write=$PWD/dist --allow-child-process --allow-worker --allow-addons" npm --logs-max=0 run test
+```
+
+### 全包未通过原因与交接
+
+- `src/workflow/execution/executionMediaSource.test.mjs:54` 与 `src/workflow/m2-fixes.test.mjs:204` 在创建原有 symlink 逃逸测试夹具时被 Node 权限模式拒绝：`ERR_ACCESS_DENIED: fs.symlink API requires full fs.read and fs.write permissions.` 两项未进入业务断言，不是本次引用源码断言失败。
+- 未禁用、skip 或改弱两项测试；未移除权限模式或扩大到全盘写权限重跑。因此真实全包结果仍为 exit 1，不能把历史 1273/1273 或当前 1287 pass 称为全包通过。
+- 主理人转交 QA 第二轮，在原工作树检查未提交修复并重跑原 QA/引用影响面；如需完整全包全绿证据，由主理人提供符合写边界且允许任务夹具 symlink 的运行环境。L2 由 seed 所属负责方正式解决后再进行真实 hover、IME、四边/缩放、持久化及菜单验收。
+- 修复已具备 QA 第二轮接手条件；**not ready to merge / close**。本轮无提交，QA 测试和报告均保留未提交；所有已启动构建/测试 job 已收集结束。

@@ -92,8 +92,8 @@ export default function MentionPopover({ open, position, query, current, canvas,
     root?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
   }, [index, inSubmenu]);
   if (!open || !position || typeof document === 'undefined') return null;
-  const placement = calculatePopoverPosition({ top: position.y, bottom: position.y, left: position.x, right: position.x, width: 0, height: 0 }, { width: window.innerWidth, height: window.innerHeight });
-  const style: React.CSSProperties = { position: 'fixed', left: placement.left, width: Math.min(280, placement.width), maxHeight: Math.max(0, Math.min(400, placement.maxHeight, placement.placement === 'top' ? window.innerHeight - (placement.bottom ?? 0) - 12 : window.innerHeight - (placement.top ?? 0) - 12)), ...(placement.placement === 'top' ? { bottom: placement.bottom } : { top: placement.top }) };
+  const placement = calculatePopoverPosition({ top: position.y, bottom: position.y, left: position.x, right: position.x, width: 0, height: 0 }, { width: window.innerWidth, height: window.innerHeight }, 280);
+  const style: React.CSSProperties = { position: 'fixed', left: placement.left, width: placement.width, maxHeight: Math.max(0, Math.min(400, placement.maxHeight, placement.placement === 'top' ? window.innerHeight - (placement.bottom ?? 0) - 12 : window.innerHeight - (placement.top ?? 0) - 12)), ...(placement.placement === 'top' ? { bottom: placement.bottom } : { top: placement.top }) };
   const renderCandidate = (item: ReferenceCandidate, itemIndex: number, submenu: boolean) => (
     <button key={`${item.nodeId}:${item.slotIndex}`} type="button" role="option" aria-selected={inSubmenu === submenu && index === itemIndex} aria-disabled={Boolean(item.reasonCode)}
       className={`wf-mention-item ${inSubmenu === submenu && index === itemIndex ? 'wf-mention-item--highlighted' : ''}`}

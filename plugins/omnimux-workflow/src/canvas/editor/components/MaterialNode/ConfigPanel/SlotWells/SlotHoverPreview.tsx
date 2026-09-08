@@ -26,7 +26,7 @@ export default function SlotHoverPreview({ anchor, upstream, onReplace, onClose 
       const signature = `${rect.x}:${rect.y}:${rect.width}:${rect.height}:${window.innerWidth}:${window.innerHeight}`;
       if (signature !== previous) {
         previous = signature;
-        setPosition(calculatePopoverPosition(rect, { width: window.innerWidth, height: window.innerHeight }));
+        setPosition(calculatePopoverPosition(rect, { width: window.innerWidth, height: window.innerHeight }, 240));
       }
       frame = requestAnimationFrame(update);
     };
@@ -49,7 +49,7 @@ export default function SlotHoverPreview({ anchor, upstream, onReplace, onClose 
   const available = Math.max(0, Math.min(position.maxHeight, position.placement === 'top' ? window.innerHeight - (position.bottom ?? 0) - 12 : window.innerHeight - (position.top ?? 0) - 12));
   return createPortal(
     <div ref={panelRef} className="wf-slot-hover-preview nodrag nowheel" role="dialog" aria-label={t('mention.preview')}
-      style={{ position: 'fixed', left: position.left, width: Math.min(240, position.width), maxHeight: available, ...(position.placement === 'top' ? { bottom: position.bottom } : { top: position.top }) }}
+      style={{ position: 'fixed', left: position.left, width: position.width, maxHeight: available, ...(position.placement === 'top' ? { bottom: position.bottom } : { top: position.top }) }}
       onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
       {upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'image' ? <img src={upstream.url} alt={upstream.label} style={{ maxHeight: Math.max(0, available - 56) }} />
         : upstream?.url && upstream.availability === 'ready' && upstream.materialType === 'video' ? <video src={upstream.url} muted controls style={{ maxHeight: Math.max(0, available - 56) }} />

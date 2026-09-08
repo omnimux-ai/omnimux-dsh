@@ -297,9 +297,16 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
 
         if (typeof window !== 'undefined' && window.getSelection) {
           const sel = window.getSelection();
-          const saved = mentionOpen ? mentionRangeRef.current : caretRangeRef.current;
-          const active = sel && sel.rangeCount > 0 && editorRef.current.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
-          const range = saved && editorRef.current.contains(saved.startContainer) ? saved.cloneRange() : active;
+          const withinEditor = (range: Range | null): range is Range => Boolean(range
+            && editorRef.current?.contains(range.startContainer)
+            && editorRef.current?.contains(range.endContainer));
+          const mention = mentionOpen ? mentionRangeRef.current : null;
+          const active = sel?.rangeCount ? sel.getRangeAt(0) : null;
+          const saved = caretRangeRef.current;
+          // Query replacement owns its range; slot insertion follows the live selection,
+          // falling back to the blur snapshot only when selection leaves the editor.
+          const target = withinEditor(mention) ? mention : withinEditor(active) ? active : withinEditor(saved) ? saved : null;
+          const range = target?.cloneRange() ?? null;
           if (sel && range) {
             range.deleteContents();
             range.insertNode(tokenSpan);
