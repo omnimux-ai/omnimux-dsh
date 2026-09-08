@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { clamp, fetchSkillCard, parseSlug } from './api.js'
 import { parseCategory } from './categories.js'
 import { assignConfig, dshHome, publicConfig, sanitizePatch, sanitizeSortBy, writeOverlay } from './config-store.js'
@@ -313,6 +314,24 @@ export async function handleIcon(req: IncomingMessage, res: ServerResponse, cfg:
       res.setHeader('cache-control', 'public, max-age=3600')
       res.end(body)
       return
+    }
+
+    // 本地 catalog 封面图 catalog/covers/<filename>
+    if (target.startsWith('catalog/covers/')) {
+      const fileName = target.slice('catalog/covers/'.length)
+      if (/^[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
+        const coverPath = join(packageRoot(), 'catalog', 'covers', fileName)
+        if (existsSync(coverPath)) {
+          const body = readFileSync(coverPath)
+          const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase()
+          const contentType = ext === '.webp' ? 'image/webp' : (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg' : 'image/png'
+          res.statusCode = 200
+          res.setHeader('content-type', contentType)
+          res.setHeader('cache-control', 'public, max-age=3600')
+          res.end(body)
+          return
+        }
+      }
     }
 
     if (!/^https:\/\//i.test(target)) {
