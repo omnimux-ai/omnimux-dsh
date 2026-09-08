@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, DropdownSelect, IconButton, InputField } from 'dsh-ui-kit'
+import { Badge, Button, DropdownSelect, IconButton, InputField } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { listAssetFiles } from './api.js'
 import { ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
@@ -116,9 +116,9 @@ function TopFileList({ t, files, onOpenFolder }) {
               <span className="omnimux-assets-filelist-name">
                 {file.original_name || file.real_path}
               </span>
-              <span className="omnimux-assets-folder-badge">
+              <Badge size="sm" shape="capsule" variant="neutral" className="omnimux-assets-folder-badge">
                 {folder ? t('detail.browse') : t('detail.file')}
-              </span>
+              </Badge>
             </Button>
           </li>
         )

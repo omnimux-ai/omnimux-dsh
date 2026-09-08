@@ -74,10 +74,11 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
     // 2. Buttons contain EyeIcon and ChatIcon
     assert.match(gridJsx, /<EyeIcon\s+size=\{14\}\s*\/>/)
     assert.match(gridJsx, /<ChatIcon\s+size=\{14\}\s*\/>/)
-    // 3. Card body does not contain omnimux-assets-card-actions
-    const cardBodyMatch = gridJsx.match(/className="omnimux-assets-card-body"[\s\S]*?<\/article>/)
-    assert.ok(cardBodyMatch)
-    assert.doesNotMatch(cardBodyMatch[0], /omnimux-assets-card-actions/)
+    // 3. Conforms to MediaCard and Table primitive composite contract without legacy raw button or card-actions
+    assert.match(gridJsx, /<MediaCard\b/)
+    assert.match(gridJsx, /<Table\b/)
+    assert.doesNotMatch(gridJsx, /omnimux-assets-card-actions/)
+    assert.doesNotMatch(gridJsx, /<button\b/)
     // 4. Styles define thumb height 136px and overlay hover styling
     assert.match(stylesJs, /\.omnimux-assets-card-thumb\s*\{[\s\S]*?height:\s*136px;/)
     assert.match(stylesJs, /\.omnimux-assets-card-overlay\s*\{[\s\S]*?background:\s*linear-gradient/)
