@@ -180,7 +180,7 @@
 
     function SkillPlaza(props) {
       const tr = useTr();
-      const pageSize = 48;
+      const pageSize = 80;
       const initialSubmitted = (props && props.submittedQuery) ?? "";
 
       const [mainTab, setMainTab] = useState("discover"); // "discover" | "mine"
@@ -319,10 +319,17 @@
           });
       };
 
+      const isFeaturedItem = (it) => {
+        if (!it) return false;
+        if (it.recommended === true || it.featured === true) return true;
+        if (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured"))) return true;
+        return false;
+      };
+
       // 官方精选：根据当前 category 和 query 筛选推荐项
-      const featuredItems = items.filter((it) => it && (it.recommended === true || it.featured === true));
+      const featuredItems = items.filter(isFeaturedItem);
       // 普通列表：扣除官方精选，且若 category === 'featured' 则不显示
-      let regularItems = items.filter((it) => !it || (!it.recommended && !it.featured));
+      let regularItems = items.filter((it) => !isFeaturedItem(it));
       if (uninstalledOnly) {
         regularItems = regularItems.filter((it) => !it.installed);
       }
