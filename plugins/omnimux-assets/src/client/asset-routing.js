@@ -15,13 +15,15 @@ export function isDirectoryRef(file) {
 }
 
 /**
- * Determine if an asset represents a folder (single directory ref or composite multiple files).
+ * Determine whether an asset needs hierarchical browsing, including logical or unavailable refs.
  * @param {any} asset
  * @returns {boolean}
  */
 export function isFolderAsset(asset) {
   if (!asset) return false
   const files = Array.isArray(asset.files) ? asset.files : []
+  if (Array.isArray(asset.unavailable_files) && asset.unavailable_files.length > 0) return true
+  if (files.some((file) => typeof file.logical_path === 'string' && file.logical_path.length > 0)) return true
   if (files.length > 1) return true
   if (files.length === 1 && isDirectoryRef(files[0])) return true
   return false

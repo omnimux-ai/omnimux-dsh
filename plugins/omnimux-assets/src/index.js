@@ -1,8 +1,8 @@
 import { createAssetsDispatcher, registerAssetsRoutes } from './http-routes.js'
-import { createArtifactStore } from './artifacts.js'
-import { createLibraryStore } from './library.js'
-import { createMappingStore, AssetsError } from './mappings.js'
-import { resolveAssetsPaths } from './paths.js'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { AssetsError } from './mappings.js'
+import { AssetsRuntime } from './storage-runtime.js'
+import { MigrationService } from './storage-migration.js'
 import { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri } from './protocol.js'
 
 export { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri }
@@ -51,13 +51,30 @@ const jsonOut = {
  *   inject?: (deps: string[], callback: (inner: object) => void) => void,
  * }} ctx
  */
-export function apply(ctx) {
-  const paths = resolveAssetsPaths()
-  const mappings = createMappingStore({ paths })
-  const artifacts = createArtifactStore({ paths })
-  const library = createLibraryStore({ paths })
-  library.migrateMappings(mappings)
-  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library })
+export function apply(hostCtx) {
+  const runtime = new AssetsRuntime()
+  new MigrationService(runtime)
+  void runtime.initialize()
+  const operations = new AsyncLocalStorage()
+  const proxy = (name) => new Proxy({}, { get: (_target, key) => {
+    const store = operations.getStore()?.[name]
+    if (!store) throw new AssetsError('storage-busy', 'asset operation requires a root snapshot')
+    return typeof store[key] === 'function' ? store[key].bind(store) : store[key]
+  } })
+  const library = proxy('library')
+  const artifacts = proxy('artifacts')
+  const mappings = proxy('mappings')
+  const ctx = Object.create(hostCtx)
+  ctx.tools = { register(spec) {
+    const execute = spec.execute
+    const write = ['assets_create', 'assets_update', 'assets_delete', 'assets_upload'].includes(spec.name)
+    return hostCtx.tools.register({ ...spec, execute: async (args) => {
+      if (['assets_list', 'assets_search', 'assets_get'].includes(spec.name)) await runtime.ensureLegacy()
+      return runtime[write ? 'write' : 'read']((bundle) => operations.run(bundle, () => execute(args)))
+    } })
+  } }
+  if (typeof hostCtx.effect === 'function') hostCtx.effect(() => () => runtime.dispose(), 'omnimux-assets: storage worker')
+  const dispatcher = createAssetsDispatcher({ runtime })
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
@@ -98,7 +115,7 @@ export function apply(ctx) {
       const scope = args.scope
       if (scope === 'assets') {
         const type = typeof args.type === 'string' && args.type.trim() !== '' ? args.type.trim() : ''
-        return { assets: library.list(type ? { type } : {}) }
+        return { assets: await library.list(type ? { type } : {}) }
       }
       if (scope === 'mappings') {
         return { mappings: mappings.list() }
@@ -131,7 +148,7 @@ export function apply(ctx) {
     async execute(args) {
       const query = typeof args.query === 'string' ? args.query : ''
       const type = typeof args.type === 'string' && args.type.trim() !== '' ? args.type.trim() : ''
-      return { assets: library.list({ query, ...(type ? { type } : {}) }) }
+      return { assets: await library.list({ query, ...(type ? { type } : {}) }) }
     },
   })
 
@@ -145,7 +162,7 @@ export function apply(ctx) {
     output: jsonOut,
     async execute(args) {
       const id = typeof args.id === 'string' ? args.id : ''
-      const asset = library.getView(id)
+      const asset = await library.getView(id)
       if (!asset) throw new AssetsError('asset-not-found', `no asset ${id}`)
       return { asset }
     },
@@ -301,8 +318,8 @@ export function apply(ctx) {
     }),
     output: jsonOut,
     async execute(args) {
-      const diskPath = resolveAssetUri(args.path)
-      const artifact = artifacts.report(diskPath, {
+      const diskPath = resolveAssetUri(args.path, { rootPath: operations.getStore().paths.dir })
+      const artifact = await artifacts.report(diskPath, {
         agent: args.agent,
         run_id: args.run_id,
         model: args.model,
@@ -323,4 +340,5 @@ export function apply(ctx) {
       return { artifact }
     },
   })
+  return () => runtime.dispose()
 }

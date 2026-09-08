@@ -1,5 +1,7 @@
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { validateRoot } from './storage-types.js'
 
 /**
  * Resolve the official DSH home, matching the hub auth/store.js convention.
@@ -10,15 +12,24 @@ export function resolveDshHome(homeDir, env = process.env) {
   return homeDir || env.DSH_HOME || join(homedir(), '.dsh')
 }
 
-/**
- * All assets state lives under `<dsh home>/omnimux/assets/`.
- * This directory is the only disk area this plugin may write.
- * @param {{ homeDir?: string, env?: NodeJS.ProcessEnv }} [opts]
- */
+/** Resolve the stable Home control area independently of the removable content root. */
+export function resolveStoragePaths(opts = {}) {
+  const home = resolve(resolveDshHome(opts.homeDir, opts.env))
+  const controlDir = join(home, 'omnimux', 'assets-storage')
+  return { home, controlDir, rootFile: join(controlDir, 'root.json'), defaultRoot: join(home, 'omnimux', 'assets') }
+}
+
+/** Read the sole root pointer; a corrupt pointer must never select a default empty library. */
 export function resolveAssetsPaths(opts = {}) {
-  const home = resolveDshHome(opts.homeDir, opts.env)
-  const dir = join(home, 'omnimux', 'assets')
+  const storage = resolveStoragePaths(opts)
+  let dir = opts.rootPath
+  if (!dir) {
+    try { dir = validateRoot(JSON.parse(readFileSync(storage.rootFile, 'utf8'))).active.path }
+    catch (error) { if (error.code !== 'ENOENT') throw error }
+  }
+  dir ||= storage.defaultRoot
   return {
+    ...storage,
     dir,
     mappingsFile: join(dir, 'mappings.json'),
     libraryFile: join(dir, 'library.json'),

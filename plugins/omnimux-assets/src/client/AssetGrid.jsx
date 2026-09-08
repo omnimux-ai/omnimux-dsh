@@ -334,7 +334,7 @@ export function AssetGrid({
           <tbody>
             {assets.map((asset) => {
               const selected = selectedIds?.has(asset.id)
-              const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
+              const missing = (Number(asset.missing_file_count) > 0 || asset.unavailable_files?.length > 0) && !asset.files?.length
               return (
                 <AssetListRow
                   key={asset.id}
@@ -358,7 +358,7 @@ export function AssetGrid({
   return (
     <div className="omnimux-assets-grid">
       {assets.map((asset) => {
-        const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
+        const missing = (Number(asset.missing_file_count) > 0 || asset.unavailable_files?.length > 0) && !asset.files?.length
         const selected = selectedIds?.has(asset.id)
         return (
           <AssetGridCard

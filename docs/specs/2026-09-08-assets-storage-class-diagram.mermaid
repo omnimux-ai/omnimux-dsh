@@ -1,0 +1,119 @@
+classDiagram
+  class RootConfig {
+    +int schema
+    +string homeId
+    +int epoch
+    +RootIdentity active
+    +string commitId
+  }
+  class RootIdentity {
+    +string path
+    +string rootId
+    +string volumeId
+    +string dev
+    +string ino
+    +string nonce
+  }
+  class AssetsRuntime {
+    +__init__(home, fs)
+    +initialize() Promise
+    +read(fn) Promise
+    +write(fn) Promise
+    +freeze(taskId) Promise
+    +installBundle(config) Promise
+    +status() StorageStatus
+  }
+  class StoreBundle {
+    +RootConfig root
+    +LibraryStore library
+    +ArtifactStore artifacts
+    +MappingStore mappings
+  }
+  class LibraryStore {
+    +list(filter) Asset[]
+    +getView(id) Asset
+    +add(input) Promise
+    +update(id, patch) Promise
+    +remove(id) Promise
+    +materializeLegacy(id) Promise
+  }
+  class ArtifactStore {
+    +report(path, source) Promise
+    +list(filter) Artifact[]
+    +get(id) Artifact
+  }
+  class MappingStore {
+    +list() Mapping[]
+    +add(path, name) Mapping
+    +rename(id, name) Mapping
+    +remove(id) void
+    +writeScan(id, entries) void
+  }
+  class FileRef {
+    +string id
+    +string relative_path
+    +string ownership
+    +string status
+    +string recovery_ref
+  }
+  class MigrationTask {
+    +string id
+    +int seq
+    +string state
+    +string planHash
+    +RootIdentity source
+    +RootIdentity target
+    +PlanEntry[] entries
+  }
+  class PlanEntry {
+    +string id
+    +string operation
+    +string targetRel
+    +string sourceHash
+    +string targetHash
+    +string decision
+    +string[] affectedRefs
+  }
+  class StoragePlanner {
+    +__init__(fs)
+    +scan(source, target) Promise
+    +build(snapshot) MigrationTask
+    +validate(task) Promise
+  }
+  class MigrationService {
+    +__init__(runtime, planner, fs)
+    +preflight(path) Promise
+    +confirm(id, planHash) Promise
+    +decide(id, decisions) Promise
+    +pause(id) Promise
+    +resume(id) Promise
+    +abandon(id) Promise
+    +commit(id) Promise
+    +recover() Promise
+    +cleanup(id, manifestHash) Promise
+  }
+  class SafeStorageFS {
+    +__init__(pythonPath)
+    +probe() Capabilities
+    +lock(root) Lease
+    +scan(root) Stream
+    +hash(ref) Promise
+    +copyVerify(entry) Promise
+    +install(entry) Promise
+    +atomicJson(path, value) Promise
+    +unlinkOwned(entry) Promise
+  }
+  AssetsRuntime *-- RootConfig
+  AssetsRuntime *-- StoreBundle
+  StoreBundle *-- LibraryStore
+  StoreBundle *-- ArtifactStore
+  StoreBundle *-- MappingStore
+  LibraryStore o-- FileRef
+  MigrationService --> AssetsRuntime
+  MigrationService --> StoragePlanner
+  MigrationService --> SafeStorageFS
+  MigrationService *-- MigrationTask
+  MigrationTask *-- PlanEntry
+  MigrationTask o-- RootIdentity
+  RootConfig *-- RootIdentity
+  StoragePlanner --> SafeStorageFS

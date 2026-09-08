@@ -13,7 +13,20 @@
     "lib/client.js",
     "scripts/build-client.mjs",
     "cordis.patch.yml",
-    "README.md"
+    "dsh.manifest.json",
+    "README.md",
+    "runtime/python-supply.json",
+    "runtime/arm64-integrity.json",
+    "runtime/x64-integrity.json",
+    "runtime/licenses",
+    "runtime/cpython-3.13.15+20260807-darwin-arm64",
+    "runtime/cpython-3.13.15+20260807-darwin-x64",
+    "!runtime/**/__pycache__/**",
+    "!runtime/**/*.pyc",
+    "!src/**/*.test.js",
+    "!src/storage-pressure.mjs",
+    "!src/**/.storage-*",
+    "!src/**/.private-*"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",

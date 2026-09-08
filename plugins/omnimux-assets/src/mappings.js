@@ -9,23 +9,11 @@
  */
 import { randomUUID } from 'node:crypto'
 import { accessSync, constants, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
+import { storageSync, storageSync as defaultStorageSync } from './storage-fs.js'
 import { statStatus } from './scanner.js'
-
-/**
- * Typed error carrying a wire error code (see http-routes.js STATUS_BY_CODE).
- */
-export class AssetsError extends Error {
-  /**
-   * @param {string} code
-   * @param {string} message
-   */
-  constructor(code, message) {
-    super(message)
-    this.name = 'AssetsError'
-    this.code = code
-  }
-}
+import { AssetsError, validateLedger } from './storage-types.js'
+export { AssetsError } from './storage-types.js'
 
 const DEFAULT_FS = { accessSync, constants, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync }
 
@@ -43,17 +31,16 @@ export function newRecordId(prefix) {
  * @param {string} file
  * @param {string} text
  */
-function atomicWrite(fs, file, text) {
+function atomicWrite(fs, file, text, sync = storageSync) {
   fs.mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
-  const tmp = `${file}.tmp`
-  fs.writeFileSync(tmp, text, { mode: 0o600 })
-  fs.renameSync(tmp, file)
+  sync('json', { root: dirname(file), rel: basename(file), value: JSON.parse(text) })
 }
 
 /**
  * @param {{ paths?: { mappingsFile: string, scansDir: string }, fs?: Partial<typeof DEFAULT_FS> }} [opts]
  */
 export function createMappingStore(opts = {}) {
+  const storageSync = opts.safeFS ? opts.safeFS.sync.bind(opts.safeFS) : defaultStorageSync
   const fs = { ...DEFAULT_FS, ...(opts.fs ?? {}) }
   const paths = opts.paths ?? {}
 
@@ -63,23 +50,23 @@ export function createMappingStore(opts = {}) {
    */
   function loadState() {
     try {
-      const raw = JSON.parse(fs.readFileSync(paths.mappingsFile, 'utf8'))
+      const raw = validateLedger(JSON.parse(fs.readFileSync(paths.mappingsFile, 'utf8')), 'mappings.json')
       if (raw && typeof raw === 'object' && Array.isArray(raw.mappings)) {
         const mappings = raw.mappings.filter(
-          (row) => row && typeof row === 'object' && typeof row.id === 'string' && typeof row.real_path === 'string',
+          (row) => row && typeof row === 'object' && typeof row.id === 'string' && (typeof row.real_path === 'string' || typeof row.relative_path === 'string' || row.status === 'unmigrated'),
         )
-        return { schema: 1, revision: Number(raw.revision) || 0, mappings }
+        return { ...raw, schema: 2, revision: raw.revision, mappings }
       }
-    } catch {
-      // fall through to empty registry
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error instanceof AssetsError ? error : new AssetsError('ledger-corrupt', 'cannot load mappings ledger')
     }
     return { schema: 1, revision: 0, mappings: [] }
   }
 
-  let state = loadState()
+  let state = opts.initialState ?? loadState()
 
   function persist() {
-    atomicWrite(fs, paths.mappingsFile, `${JSON.stringify(state, null, 2)}\n`)
+    atomicWrite(fs, paths.mappingsFile, `${JSON.stringify(state, null, 2)}\n`, storageSync)
   }
 
   /**
@@ -117,6 +104,7 @@ export function createMappingStore(opts = {}) {
    * @returns {unknown[] | null}
    */
   function readScan(id) {
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) throw new AssetsError('path-denied', 'invalid cache identifier')
     try {
       const raw = JSON.parse(fs.readFileSync(join(paths.scansDir, `${id}.json`), 'utf8'))
       return Array.isArray(raw) ? raw : []
@@ -133,8 +121,9 @@ export function createMappingStore(opts = {}) {
    * @param {unknown[]} files
    */
   function writeScan(id, files) {
-    fs.mkdirSync(paths.scansDir, { recursive: true, mode: 0o700 })
-    fs.writeFileSync(join(paths.scansDir, `${id}.json`), `${JSON.stringify(files)}\n`, { mode: 0o600 })
+    if (!state.mappings.some((row) => row.id === id)) throw new AssetsError('mapping-not-found', 'mapping not found')
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) throw new AssetsError('path-denied', 'invalid cache identifier')
+    storageSync('json', { root: paths.dir || dirname(paths.mappingsFile), rel: `scans/${id}.json`, value: files })
   }
 
   /**
@@ -143,6 +132,7 @@ export function createMappingStore(opts = {}) {
    * @param {{ id: string, display_name: string, real_path: string, kind?: string, created_at: string, last_scanned_at: string | null }} mapping
    */
   function viewOf(mapping) {
+    mapping = { ...mapping, ...(mapping.relative_path ? { real_path: join(paths.dir, mapping.relative_path) } : {}) }
     const kind = mapping.kind === 'file' ? 'file' : 'directory'
     const status = statStatus(mapping.real_path, kind) === 'ok' ? 'ok' : 'invalid'
     const cached = status === 'ok' ? readScan(mapping.id) : []
@@ -159,7 +149,7 @@ export function createMappingStore(opts = {}) {
    */
   function get(id) {
     const found = state.mappings.find((mapping) => mapping.id === id)
-    return found ? { ...found } : null
+    return found ? { ...found, ...(found.relative_path ? { real_path: join(paths.dir, found.relative_path) } : {}) } : null
   }
 
   /**

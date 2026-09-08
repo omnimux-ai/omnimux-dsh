@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { apply } from './index.js'
 
 test('omnimux-assets tools registration and execution', async (t) => {
-  const tmp = mkdtempSync(join(tmpdir(), 'assets-tools-test-'))
+  const tmp = mkdtempSync(new URL('./.storage-tools-', import.meta.url).pathname)
   const prevHome = process.env.DSH_HOME
   process.env.DSH_HOME = tmp
 
@@ -26,7 +26,8 @@ test('omnimux-assets tools registration and execution', async (t) => {
     systemPrompt: { section() {} },
   }
 
-  apply(mockCtx)
+  const dispose = apply(mockCtx)
+  t.after(dispose)
 
   assert.ok(registered.has('assets_list'), 'assets_list registered')
   assert.ok(registered.has('assets_search'), 'assets_search registered')

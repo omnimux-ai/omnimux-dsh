@@ -6,7 +6,8 @@
  * The scanner never mutates anything under `real_path`.
  */
 import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname, basename } from 'node:path'
+import { safeRelative, AssetsError } from './storage-types.js'
 
 const TYPE_BY_EXT = {
   image: new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico', '.avif', '.heic', '.tiff']),
@@ -19,6 +20,30 @@ const TYPE_BY_EXT = {
 
 export const DEFAULT_IGNORES = ['.DS_Store']
 export const DEFAULT_MAX_ENTRIES = 2000
+
+/** Safe runtime one-layer scan, using the existing metadata-only helper. */
+export async function safeScanEntries(safeFS, root, rel = '') {
+  if (rel) safeRelative(rel)
+  const probeRoot = rel ? root : dirname(root)
+  const probeRel = rel || basename(root)
+  const probe = await safeFS.request('stat', { root: probeRoot, rel: probeRel })
+  if (probe.kind === 'unsafe') throw new AssetsError('path-denied', 'unsafe scan target')
+  const convert = (row, path) => {
+    const name = basename(path)
+    const directory = row.kind === 'directory'
+    return { name, relative_path: path, ext: directory ? '' : extOf(name),
+      size: directory ? 0 : Number(row.identity?.size ?? row.size ?? 0),
+      mtime: new Date(Number(row.identity?.mtimeNs ?? 0) / 1e6).toISOString(),
+      is_dir: directory, type: directory ? 'other' : bucketOf(extOf(name)) }
+  }
+  if (probe.kind === 'file') return [convert(probe, basename(probeRel))]
+  const scanned = await safeFS.request('scan', { root, ...(rel ? { rel } : {}), metadataOnly: true, singleLevel: true })
+  const prefix = rel ? `${rel}/` : ''
+  return scanned.entries.filter((row) => {
+    const child = row.relative_path.slice(prefix.length)
+    return !child.includes('/') && !DEFAULT_IGNORES.includes(child) && child !== '.omnimux-assets'
+  }).map((row) => convert(row, row.relative_path.slice(prefix.length)))
+}
 
 const MIME_BY_EXT = {
   '.png': 'image/png',

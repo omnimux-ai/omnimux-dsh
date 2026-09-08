@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "implementation": "CPython",
+  "version": "3.13.15",
+  "release": "20260807",
+  "upstreamCommit": "00c8a06113f11220667c3bcf5fab1672ff9e78ef",
+  "releaseUrl": "https://github.com/astral-sh/python-build-standalone/releases/tag/20260807",
+  "checksums": {
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/SHA256SUMS",
+    "sha256": "e2b9a8a4ed5a5085f3e8bb2809f94da9fd4c9b68db4c45c74d952a9e6942df7b"
+  },
+  "executionFlags": ["-I", "-S", "-B", "-u"],
+  "artifacts": [
+    {
+      "platform": "darwin",
+      "arch": "arm64",
+      "triple": "aarch64-apple-darwin",
+      "filename": "cpython-3.13.15+20260807-aarch64-apple-darwin-install_only.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.13.15%2B20260807-aarch64-apple-darwin-install_only.tar.gz",
+      "sha256": "ebcf53fe921c356ad2eecfcea370cb744e7bd96fdef41a53e1e8f32a15c6dfeb",
+      "compressedBytes": 25307899,
+      "unpackedFileBytes": 65477772,
+      "minimumMacOS": "11.0",
+      "executableSha256": "298d21ab43a8940a867fe356aca16bb216a2129f8df7f23a6a52e8bfa37446fa",
+      "directory": "cpython-3.13.15+20260807-darwin-arm64",
+      "executable": "python/bin/python3.13"
+    },
+    {
+      "platform": "darwin",
+      "arch": "x64",
+      "triple": "x86_64-apple-darwin",
+      "filename": "cpython-3.13.15+20260807-x86_64-apple-darwin-install_only.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.13.15%2B20260807-x86_64-apple-darwin-install_only.tar.gz",
+      "sha256": "6704f2a981d7ea358d6a7ef4f2be2457d17a65ca096b466924f469eefc1c3d70",
+      "compressedBytes": 25052477,
+      "unpackedFileBytes": 65910502,
+      "minimumMacOS": "10.15",
+      "executableSha256": "29004fa50d925259627f7ad7f0a134f9dc7204bd09317e02226af8b188489ef2",
+      "directory": "cpython-3.13.15+20260807-darwin-x64",
+      "executable": "python/bin/python3.13"
+    }
+  ]
+}
