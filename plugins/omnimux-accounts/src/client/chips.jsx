@@ -1,8 +1,16 @@
 import { useState } from 'react'
+import { Badge } from 'dsh-ui-kit'
 import { platformInfo } from './platforms.js'
 import { localeText } from './view.js'
 
 const KNOWN_STATUSES = Object.freeze(['active', 'expiring', 'expired', 'error'])
+
+const STATUS_VARIANTS = Object.freeze({
+  active: 'success',
+  expiring: 'warning',
+  expired: 'error',
+  error: 'error',
+})
 
 /**
  * Colored status dot. Four states; an unrecognized status renders as error
@@ -12,8 +20,12 @@ const KNOWN_STATUSES = Object.freeze(['active', 'expiring', 'expired', 'error'])
 export function StatusDot({ status, label = '' }) {
   const safe = KNOWN_STATUSES.includes(/** @type {string} */ (status)) ? /** @type {'active' | 'expiring' | 'expired' | 'error'} */ (status) : 'error'
   const text = label !== '' ? label : safe
+  const statusVariant = STATUS_VARIANTS[safe] || 'error'
   return (
-    <span
+    <Badge
+      variant={statusVariant}
+      dot
+      size="sm"
       role="img"
       aria-label={text}
       title={text}
@@ -32,15 +44,25 @@ export function PlatformChip({ platform, t }) {
   const info = platformInfo(platform)
   const label = localeText(t, `platform.${info.id}`, String(platform || info.id))
   if (info.tone === 'solid') {
-    return <span className="omnimux-accounts-chip omnimux-accounts-chip--solid">{label}</span>
+    return (
+      <Badge
+        shape="capsule"
+        size="sm"
+        className="omnimux-accounts-chip omnimux-accounts-chip--solid"
+      >
+        {label}
+      </Badge>
+    )
   }
   return (
-    <span
+    <Badge
+      shape="capsule"
+      size="sm"
       className="omnimux-accounts-chip omnimux-accounts-chip--accent"
       style={{ '--dsw-accounts-platform-color': info.color }}
     >
       {label}
-    </span>
+    </Badge>
   )
 }
 
@@ -49,7 +71,16 @@ export function PlatformChip({ platform, t }) {
  * @param {{ group: string }} props
  */
 export function GroupChip({ group }) {
-  return <span className="omnimux-accounts-chip omnimux-accounts-chip--group">{group}</span>
+  return (
+    <Badge
+      variant="neutral"
+      shape="capsule"
+      size="sm"
+      className="omnimux-accounts-chip omnimux-accounts-chip--group"
+    >
+      {group}
+    </Badge>
+  )
 }
 
 /**
