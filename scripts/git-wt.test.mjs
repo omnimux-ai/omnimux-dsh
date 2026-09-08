@@ -113,6 +113,9 @@ describe('scripts/git-wt.sh finish lifecycle in isolated environment', () => {
       }
     }, null, 2))
 
+    // 隔离嵌套 TMPDIR 中的父 workspace；派生 worktree 继承此边界。
+    writeFileSync(join(mainRepo, 'pnpm-workspace.yaml'), 'packages:\n  - "plugins/*"\n')
+
     // 创建 plugins/omnimux-workflow/package.json
     writeFileSync(join(mainRepo, 'plugins', 'omnimux-workflow', 'package.json'), JSON.stringify({
       name: 'omnimux-workflow',
