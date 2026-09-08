@@ -4,6 +4,124 @@ export type SkillChannel = 'custom' | 'workbuddy' | 'skillhub'
 
 export type SkillInstallBackend = 'catalog' | 'skillhub'
 
+/** Shared catalog input; only the Host-controlled catalog may grant recommendations. */
+export interface CatalogSkillItem {
+  id: string
+  tab?: string
+  kind?: string
+  title?: string
+  subtitle?: string
+  summary?: string
+  category?: string
+  tags?: string[]
+  skill?: string
+  avatar?: string
+  source?: { type?: string; repo?: string; path?: string }
+  recommended?: boolean
+  cover?: { asset: string; alt: string }
+  downloads?: number | null
+  updatedAt?: string | null
+  publishedAt?: string | null
+  version?: string | null
+}
+
+export interface CatalogDoc {
+  items: CatalogSkillItem[]
+}
+
+export type WorkshopDomain = '短剧漫剧' | '专业影视' | '动画' | '商业广告' | '电商'
+  | '教育' | '创意实验' | '音频音乐' | '平台工具'
+export type InstallOrigin = 'omnimux' | 'workbuddy' | 'skillhub' | 'local' | 'unknown'
+export type SourceRef =
+  | { kind: 'catalog'; catalogId: string; revision: string }
+  | { kind: 'git'; sourceId: string; repo: string; path: string; ref: string; commit: string }
+  | { kind: 'skillhub'; identity: string; version: string | null }
+  | { kind: 'local'; contentHash: string }
+
+export interface WorkshopSkill {
+  skillKey: string
+  token: string
+  title: string
+  description: string
+  domains: WorkshopDomain[]
+  /** Null for historical or legacy inputs without provable provenance. */
+  sourceRef: SourceRef | null
+  version: string | null
+  recommended: boolean
+  cover?: { asset: string; alt: string }
+  downloads: number | null
+  updatedAt: string | null
+  publishedAt: string | null
+  installed: boolean
+  enabled: boolean | null
+}
+
+/** Supplied by an independently verified inventory adapter, never derived from search. */
+export interface WorkshopInventoryEntry {
+  skill: WorkshopSkill
+  origin: InstallOrigin
+}
+
+export interface WorkshopInventoryInput {
+  scopeKey: string
+  revision: number
+  status: 'complete' | 'partial' | 'error'
+  entries: readonly WorkshopInventoryEntry[]
+}
+
+export interface SourceStatus {
+  origin: InstallOrigin
+  status: 'complete' | 'partial' | 'error'
+  fetched: number
+  exhausted: boolean
+  code?: string
+}
+
+/** Evidence is separate from legacy placeholder statistics and scraped timestamps. */
+export interface WorkshopRemoteCandidate {
+  card: SkillCard
+  sourceRef: Extract<SourceRef, { kind: 'skillhub' }> | null
+  downloads: number | null
+  updatedAt: string | null
+  publishedAt: string | null
+}
+
+export interface WorkshopQueryInput {
+  /** Trusted catalog only; never accept this object from a query request or imported package. */
+  catalog: CatalogDoc
+  catalogRevision: string
+  remote: readonly WorkshopRemoteCandidate[]
+  sourceStatus: readonly SourceStatus[]
+  inventory: WorkshopInventoryInput
+}
+
+export interface WorkshopQueryRequest {
+  view: 'discover' | 'mine'
+  query: string
+  domain: 'all' | 'featured' | WorkshopDomain
+  source: InstallOrigin | 'all'
+  uninstalledOnly: boolean
+  queryRevision: number
+  cursor?: string
+}
+
+export interface WorkshopQueryResult {
+  schemaVersion: 1
+  snapshotId: string
+  scopeKey: string
+  queryKey: string
+  catalogRevision: string
+  queryRevision: number
+  inventoryRevision: number
+  featured: WorkshopSkill[]
+  items: WorkshopSkill[]
+  count: { value: number; mode: 'exact' | 'loaded' }
+  completeness: 'complete' | 'partial'
+  sortScope: 'complete-result' | 'loaded-result'
+  nextCursor: string | null
+  sourceStatus: SourceStatus[]
+}
+
 export interface FetchOptions {
   timeoutMs: number
   userAgent: string
@@ -170,6 +288,89 @@ export interface SkillHubDetailRaw {
   publisher?: SkillHubSkillRaw['publisher']
   latestVersion?: { version?: string }
   securityReports?: SkillHubSkillRaw['securityReports']
+}
+
+/** Host-owned authorization binding. Never deserialize this object from an API payload. */
+export interface WorkshopReadScope {
+  scopeKey: string
+  label: string
+  roots: readonly { id: string; path: string }[]
+  /** True only when the Host has accounted for every effective filesystem/provider layer. */
+  complete: boolean
+  reasons: readonly string[]
+}
+
+export interface InstallRecord {
+  installId: string
+  skillKey: string
+  token: string
+  origin: InstallOrigin
+  sourceRef?: SourceRef
+  relativePath: string
+  version: string | null
+  contentHash: string
+  enabled: boolean
+  installedAt: string | null
+  updatedAt: string | null
+  verification: 'verified' | 'invalid' | 'unreadable' | 'recovering'
+  revision: number
+}
+
+export interface PolicyTombstone {
+  scopeKey: string
+  skillKey: string
+  token: string
+  reason: 'uninstalled'
+  operationId: string
+  revision: number
+}
+
+export interface WorkshopPreferences {
+  autoUpdate: boolean
+  revision: number
+  lastCheckAt: string | null
+  nextEligibleAt: string | null
+}
+
+export interface WorkshopState {
+  schemaVersion: 1
+  scopeKey: string
+  revision: number
+  records: InstallRecord[]
+  preferences: WorkshopPreferences
+  policyTombstones: PolicyTombstone[]
+}
+
+/** Read projection, not a new installation or a claim of Registry verification. */
+export interface WorkshopInventoryRecord {
+  installId: string
+  skill: WorkshopSkill
+  origin: InstallOrigin
+  verification: 'readable' | 'invalid' | 'unreadable' | 'unverified'
+  installedAt: string | null
+  reasons: string[]
+}
+
+export interface WorkshopInventoryResult extends WorkshopInventoryInput {
+  records: WorkshopInventoryRecord[]
+  sourceOptions: Array<InstallOrigin | 'all'>
+  reasons: string[]
+  scopeVerified: boolean
+  preferences: WorkshopPreferences | null
+}
+
+export interface CapabilityResult {
+  scopeKey: string | null
+  scopeVerified: boolean
+  scopeLabel: string
+  connectionAuth: boolean
+  operationAuth: boolean
+  exactOrigin: boolean
+  registryVerify: boolean
+  unifiedPolicy: boolean
+  commitBarrier: boolean
+  writable: boolean
+  reasons: string[]
 }
 
 export interface SkillHubListResponse {

@@ -145,7 +145,29 @@ function parseItem(raw) {
     throw new Error(`catalog: item ${id} missing serverName`)
   }
   const hub = parseHub(row.hub)
-  return { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub }
+  const item = { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub }
+  // Skill-only metadata; expert/team fields and top-level featured retain their contract.
+  if (kind === 'skill' && tab === 'skills') {
+    return {
+      ...item,
+      recommended: Object.hasOwn(row, 'recommended') && row.recommended === true,
+      cover: parseSkillCover(row.cover),
+      downloads: typeof row.downloads === 'number' && Number.isSafeInteger(row.downloads) && row.downloads >= 0
+        ? row.downloads : null,
+      version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
+      updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
+      publishedAt: typeof row.publishedAt === 'string' ? row.publishedAt : null,
+    }
+  }
+  return item
+}
+
+/** Only controlled relative raster asset references; no URL proxy or inline SVG. */
+function parseSkillCover(raw) {
+  if (!raw || typeof raw !== 'object') return undefined
+  const { asset, alt } = raw
+  if (typeof asset !== 'string' || !/^catalog\/covers\/[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(asset)) return undefined
+  return { asset, alt: typeof alt === 'string' ? alt.slice(0, 200) : '' }
 }
 
 /**

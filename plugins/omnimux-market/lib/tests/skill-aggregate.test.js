@@ -211,6 +211,19 @@ test('aggregateSkillSearch ignores remote popular fallback when local hits exist
     assert.equal(result.items.some((it) => it.slug === 'hot-skill'), false);
     assert.equal(result.items[0].slug, 'face-warp');
 });
+test('legacy Agent search retains popular fallback and its existing return fields', async () => {
+    const result = await aggregateSkillSearch('unmatched', {
+        cfg: cfg(), catalog: { items: [] },
+        searchSkills: async () => remoteResult([remoteCard('hot', 'Hot')], { fallback: true }),
+    });
+    assert.equal(result.fallback, true);
+    assert.equal(result.items[0].slug, 'hot');
+    assert.equal(result.total, 1);
+    assert.equal(result.totalApprox, false);
+    assert.equal(result.offset, 0);
+    assert.equal(result.hasMore, false);
+    assert.equal(result.sortBy, 'score');
+});
 test('findCatalogSkill matches slug, catalog id, and sk-omx- prefix', () => {
     const a = findCatalogSkill('face-warp', undefined, FAKE_CATALOG);
     assert.equal(a?.id, 'sk-omx-face-warp');

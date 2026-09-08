@@ -35,8 +35,8 @@ test('client bundle keeps public slot keys and workbench tab registration', () =
         'key: "omnimux-market"',
         'settings.plugin.item',
         'omnimux-market:plaza',
-        'sidebar.footer.action',
-        'omnimux-market-plaza',
+        '__omnimuxSidebar',
+        'omnimux-market-entry',
         'conversation.input.left',
         'omnimux-market-skill-picker',
         'data-omnimux-skill-picker',
@@ -51,6 +51,6 @@ test('client bundle keeps public slot keys and workbench tab registration', () =
     }
     assert.ok(!client.includes('PlazaFocusBar'), 'in-tab FocusBar removed');
     assert.ok(!client.includes('omnimux-workbench-focus'), 'in-tab FocusBar styles/markers removed');
-    assert.ok(!client.includes('mountSidebarEntry'), 'extra-row mount removed');
+    assert.ok(!client.includes('slots.inject("sidebar.footer.action"'), 'footer action removed');
     assert.ok(!client.includes('icon: () => h(PlazaIcon)'), 'tab icon must accept size');
 });

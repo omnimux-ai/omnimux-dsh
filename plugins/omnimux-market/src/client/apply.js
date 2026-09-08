@@ -53,19 +53,109 @@
         },
         SkillPickerButton,
       ));
-      slots.inject("sidebar.footer.action", () => registerSlot(
-        slots,
-        {
-          name: "sidebar.footer.action",
-          id: "omnimux-market-plaza",
-          order: 8,
-          label: () => lookup("plaza.title") || "Skill工坊",
-          locale: "omnimux-market",
-        },
-        function PlazaEntry(actionProps) {
-          return h(PlazaAction, { ...actionProps });
-        },
-      ));
+
+      function mountSidebarEntry() {
+        const SIDEBAR_ENTRY_STYLES = `
+.omnimux-sidebar-nav-entry {
+  box-sizing: border-box; display: flex; align-items: center; gap: 6px; position: relative;
+  width: calc(100% - 8px); height: 32px; margin: 0 4px; padding: 0 8px;
+  border: none; border-radius: 8px; background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font: var(--dsw-font-s-14, inherit); font-size: 14px; line-height: 20px;
+  cursor: pointer; text-align: left;
+}
+.omnimux-sidebar-nav-entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omnimux-sidebar-nav-entry[data-active="true"] {
+  background: var(--dsw-alias-interactive-bg-active);
+  font-weight: 500;
+}
+.omnimux-sidebar-nav-entry-icon {
+  flex: none; display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center;
+}
+.omnimux-sidebar-nav-entry-icon svg {
+  display: block; width: 14px; height: 14px;
+}
+.omnimux-sidebar-nav-entry-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 20px; font-size: 14px;
+}
+`;
+
+        function createEntryElement() {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "omnimux-sidebar-nav-entry omnimux-market-entry";
+          btn.setAttribute("data-omnimux-market-entry", "");
+          btn.setAttribute("data-omnimux-esc-entry", "");
+          const titleText = lookup("plaza.title") || "Skill工坊";
+          btn.setAttribute("aria-label", titleText);
+          btn.title = titleText;
+
+          const iconWrap = document.createElement("span");
+          iconWrap.className = "omnimux-sidebar-nav-entry-icon";
+          iconWrap.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><rect x="1.75" y="1.75" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="8.75" y="1.75" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="1.75" y="8.75" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="8.75" y="8.75" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/></svg>';
+
+          const labelWrap = document.createElement("span");
+          labelWrap.className = "omnimux-sidebar-nav-entry-label";
+          labelWrap.textContent = titleText;
+
+          btn.appendChild(iconWrap);
+          btn.appendChild(labelWrap);
+
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            window.__omnimuxWorkbench?.open?.({ tabId: PLAZA_TAB_ID, title: lookup("plaza.title") || "Skill工坊" });
+          });
+
+          const syncActive = () => {
+            try {
+              const active = window.__omnimuxWorkbench?.isActive?.(PLAZA_TAB_ID);
+              if (active) {
+                btn.setAttribute("data-active", "true");
+              } else {
+                btn.removeAttribute("data-active");
+              }
+            } catch {
+              btn.removeAttribute("data-active");
+            }
+          };
+          syncActive();
+          window.__omnimuxWorkbench?.subscribe?.(syncActive);
+
+          return btn;
+        }
+
+        let unregister = () => {};
+        let disposed = false;
+        const registerWhenReady = () => {
+          if (disposed) return;
+          const api = typeof window !== "undefined" ? window.__omnimuxSidebar : undefined;
+          if (!api || typeof api.register !== "function") return;
+          unregister = api.register({
+            id: "omnimux-market-entry",
+            rank: 4.1,
+            styles: SIDEBAR_ENTRY_STYLES,
+            styleId: "omnimux-sidebar-nav-entry-styles",
+            create: createEntryElement,
+          });
+          clearInterval(timer);
+        };
+        const timer = setInterval(registerWhenReady, 200);
+        registerWhenReady();
+
+        return () => {
+          disposed = true;
+          clearInterval(timer);
+          unregister();
+        };
+      }
+
+      if (typeof ctx.effect === "function") {
+        ctx.effect(() => mountSidebarEntry(), "omnimux-market-sidebar-entry");
+      } else {
+        mountSidebarEntry();
+      }
 
       if (typeof ctx.inject === "function") {
         ctx.inject(["betterSidebar"], (inner) => {

@@ -2,7 +2,8 @@ import { clamp, collectQueries, searchSkills as searchSkillsRemote } from './api
 import { categoryLabel, parseCategory } from './categories.js'
 import { parseAggregateChannels, sanitizeSortBy } from './config-store.js'
 import { loadCatalog as loadCatalogDefault } from './expert/catalog.js'
-import type { PluginConfig, SearchResult, SkillCard, SkillChannel, SortBy } from './types.js'
+import type { CatalogDoc, CatalogSkillItem, PluginConfig, SearchResult, SkillCard, SkillChannel, SortBy } from './types.js'
+export type { CatalogDoc, CatalogSkillItem } from './types.js'
 
 const CHANNEL_WEIGHT: Record<SkillChannel, number> = {
   custom: 3,
@@ -18,25 +19,6 @@ const STOP = new Set([
   '的', '了', '和', '与', '及', '或', '在', '为', '对', '把', '被', '让', '请', '帮', '我', '你',
   '一个', '一份', '一些', '这个', '那个', '帮我', '我要', '写', '做', '开发', '实现', '需要',
 ])
-
-/** catalog.js 是 JS；聚合只读 skills 行。 */
-export interface CatalogSkillItem {
-  id: string
-  tab?: string
-  kind?: string
-  title?: string
-  subtitle?: string
-  summary?: string
-  category?: string
-  tags?: string[]
-  skill?: string
-  avatar?: string
-  source?: { type?: string; repo?: string; path?: string }
-}
-
-export interface CatalogDoc {
-  items: CatalogSkillItem[]
-}
 
 export interface AggregateSkillSearchOptions {
   cfg: PluginConfig
