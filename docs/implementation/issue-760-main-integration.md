@@ -1,6 +1,14 @@
 # Issue #760：最新主干整合与离线验证
 
-## 结论与授权范围
+## 最终同步身份（15:22 +08:00）
+
+- 收尾 fetch 又获取 `537e80e5eb79b2d4344522047917f5cc36c4bb9e`（#779 / #781）。完整审查实际 diff：仅 `scripts/guard-worktree.mjs`、其测试、`scripts/simulate-multi-agent-lifecycle.test.mjs` 与 #779 两份报告，共 5 文件（+425/-34）；无 #760 交集，无 #778 实现。
+- 第二次 rebase 从 clean 的 `060369d32e46a4472d0ce5f73644415a7bb484f5` 到新 base，一次成功、无冲突；结果 `f4cc54d6a7406edbb87812d458cd3989e1a54a60`，ahead 5 / behind 0、clean。`range-diff` 五项全部等价：`befdfda → 57d40a8`、`bedc22d → 3ebc4d6`、`cc532a0 → 75597fa`、`3128642 → 8cf72d6`、`060369d → f4cc54d`。
+- **最终 base：`537e80e5eb79b2d4344522047917f5cc36c4bb9e`**；最终交付在 `f4cc54d` 上另加本节的 docs commit，准确 SHA 由 `git rev-parse HEAD` 获取。
+- 最终 workflow `src` tree 仍为 `35561612ea544fac5b9584e777d614f349223e22`，workflow 配置、构建、Stage/i18n/边界脚本均无变化。下文 `5802349 → 3128642` 是本轮实际执行的完整离线证据，最终按相同源码与环境复用，不声称重跑于最终 commit。新 base 到 HEAD 的 `git diff --check` 再次通过。
+- 未修改或部署同步引入的既有主干 guard 修复，未把 #779 报告内历史测试计成本任务新实跑；不因无关 guard 同步无条件重复 workflow 全包与 Stage 验证。独立 QA 应绑定最终交付 SHA 和上述最终 base。
+
+## 首轮结论与授权范围
 
 - **IS_PASS: YES，仅指本次主干整合、工程全局一致性与离线验证。** 无文本冲突，无新增运行源码或测试修改；四个既有任务提交已完整 rebase。
 - **待独立 QA；整体仍 not ready to merge / close。** L2 / ego-browser / verify:live 未执行；正式受管 seed 的恢复归属 #778，本任务明确不重试、不实现纳管、不把 DOM/Stage 测试冒充 runtime 验收。
