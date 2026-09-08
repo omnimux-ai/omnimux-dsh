@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { InputField } from 'dsh-ui-kit'
+import { Button, InputField } from 'dsh-ui-kit'
 import {
   AUTO_ANALYZE_STORAGE_KEY,
   readAutoAnalyzePreference,
@@ -26,8 +26,9 @@ export function CollapsibleTagsField({ t, value, disabled = false, onChange }) {
 
   return (
     <div className="omnimux-inspiration-tags-collapse">
-      <button /* exempt-ui01: 标签折叠面板切换按钮 */
+      <Button
         type="button"
+        variant="ghost"
         className="omnimux-inspiration-tags-toggle"
         aria-expanded={expanded}
         disabled={disabled}
@@ -40,7 +41,7 @@ export function CollapsibleTagsField({ t, value, disabled = false, onChange }) {
         >
           ▾
         </span>
-      </button>
+      </Button>
       {expanded ? (
         <InputField
           type="text"
@@ -75,8 +76,9 @@ export function AutoAnalyzeSwitch({ t, checked, disabled = false, onChange }) {
 
   return (
     <div className="omnimux-inspiration-switch-row">
-      <button /* exempt-ui01: 开关控件微按钮 */
+      <Button
         type="button"
+        variant="ghost"
         role="switch"
         className="omnimux-inspiration-switch"
         aria-checked={String(checked)}
@@ -85,7 +87,7 @@ export function AutoAnalyzeSwitch({ t, checked, disabled = false, onChange }) {
         onClick={handleToggle}
       >
         <span className="omnimux-inspiration-switch-knob" />
-      </button>
+      </Button>
       <span className="omnimux-inspiration-switch-label">{t('add.autoAnalyze')}</span>
     </div>
   )

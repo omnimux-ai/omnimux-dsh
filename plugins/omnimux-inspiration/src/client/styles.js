@@ -342,6 +342,9 @@ export const INSPIRATION_CSS = `
               border-color 180ms cubic-bezier(.2,.4,.6,1),
               box-shadow 180ms ease;
 }
+.omnimux-inspiration-card-pure > [class*="body"] {
+  display: none;
+}
 .omnimux-inspiration-card-pure[aria-selected="true"] {
   border-color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7));
   box-shadow: 0 0 0 1px var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7)), 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.5));

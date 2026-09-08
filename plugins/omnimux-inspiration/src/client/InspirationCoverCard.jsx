@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { IconButton } from 'dsh-ui-kit'
+import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc } from './api.js'
 
 const ICON_EYE = (
@@ -60,20 +60,8 @@ export function InspirationCoverCard({ card }) {
     if (typeof onReplicate === 'function') onReplicate(row)
   }
 
-  return (
-    <article
-      className="omnimux-inspiration-card-pure"
-      aria-selected={selected ? 'true' : 'false'}
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          if (selecting && isLocal && onToggleSelect) onToggleSelect(row)
-          else onSelect(row)
-        }
-      }}
-    >
+  const coverNode = (
+    <>
       {/* 悬停/多选复选框 Checkbox */}
       {isLocal && onToggleSelect ? (
         <IconButton
@@ -104,9 +92,14 @@ export function InspirationCoverCard({ card }) {
       ) : null}
 
       {/* 右上角平台/本地角标 */}
-      <span className={`omnimux-inspiration-badge-platform ${isLocal ? 'local' : ''}`}>
+      <Badge
+        size="sm"
+        shape="capsule"
+        variant={isLocal ? 'brand' : 'neutral'}
+        className={`omnimux-inspiration-badge-platform ${isLocal ? 'local' : ''}`}
+      >
         {isLocal ? '本地' : platform}
-      </span>
+      </Badge>
 
       {broken ? (
         <div className="omnimux-inspiration-cover-fallback" aria-hidden="true">
@@ -140,10 +133,12 @@ export function InspirationCoverCard({ card }) {
           </svg>
         </div>
         <div className="omnimux-inspiration-overlay-cta">
-          <button /* exempt-ui01: 视频卡片蒙层操作按钮 */
+          <Button
             type="button"
+            variant="ghost"
             className="omnimux-inspiration-overlay-cta-btn secondary"
             aria-label={t('card.cta.detail')}
+            leadingIcon={ICON_EYE}
             onClick={handleDetail}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
@@ -152,15 +147,16 @@ export function InspirationCoverCard({ card }) {
               if (e.key === 'Enter' || e.key === ' ') handleDetail(e)
             }}
           >
-            {ICON_EYE}
             {t('card.cta.detail')}
-          </button>
-          <button /* exempt-ui01: 视频卡片蒙层操作按钮 */
+          </Button>
+          <Button
             type="button"
+            variant="primary"
             className="omnimux-inspiration-overlay-cta-btn primary"
             aria-label={t('card.cta.tryFull')}
             aria-disabled={anyBusy ? 'true' : 'false'}
             disabled={anyBusy}
+            leadingIcon={ICON_REPLICATE}
             onClick={handleReplicate}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
@@ -169,14 +165,24 @@ export function InspirationCoverCard({ card }) {
               if (e.key === 'Enter' || e.key === ' ') handleReplicate(e)
             }}
           >
-            {ICON_REPLICATE}
             {t('card.cta.try')}
-          </button>
+          </Button>
         </div>
         <div className="omnimux-inspiration-overlay-footer">
           {title.length > 32 ? `${title.slice(0, 32)}…` : title}
         </div>
       </div>
-    </article>
+    </>
+  )
+
+  return (
+    <MediaCard
+      className="omnimux-inspiration-card-pure"
+      aspectRatio="9:16"
+      selected={selected}
+      onClick={handleClick}
+      coverNode={coverNode}
+      title={title}
+    />
   )
 }

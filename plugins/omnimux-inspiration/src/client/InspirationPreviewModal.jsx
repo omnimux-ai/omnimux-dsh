@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, IconButton } from 'dsh-ui-kit'
+import { Badge, Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
 import {
   pickCoverSrc,
   resolveTikTokEmbedUrl,
@@ -14,38 +14,10 @@ import {
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
 
-const ICON_COPY = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" /></svg>
 const ICON_CLOSE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
 const ICON_REPLICATE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" /></svg>
 const ICON_EXTERNAL = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 4h6v6M20 4 11 13" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>
 const ICON_CHEVRON = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-
-function CopyButton({ value, label, copiedLabel, iconOnly = false }) {
-  const [copied, setCopied] = useState(false)
-  if (!value) return null
-  const copy = async () => {
-    try {
-      const clipboardApi = navigator['clipboard']
-      await clipboardApi?.writeText(String(value))
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1400)
-    } catch {
-      setCopied(false)
-    }
-  }
-  return (
-    <button /* exempt-ui01: 复制按钮 */
-      type="button"
-      className={`omnimux-inspiration-modal-copy${iconOnly ? ' is-icon-only' : ''}`}
-      onClick={copy}
-      title={iconOnly ? label : undefined}
-      aria-label={label}
-    >
-      {ICON_COPY}
-      {iconOnly ? null : <span>{copied ? copiedLabel : label}</span>}
-    </button>
-  )
-}
 
 function translatedSegmentText(data, segment) {
   const hit = data.translationSegments.find((row) => row.id === segment.id)
@@ -148,6 +120,15 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const scriptValue = scriptCopyText(data, showTranslation)
   const deconValue = deconstructionCopyText(data)
+  const deconStatus = hasDeconstruction(data) ? 'done' : 'pending'
+
+  const mobileTabs = useMemo(
+    () => ['video', 'script', 'deconstruction'].map((tab) => ({
+      id: tab,
+      label: t(`modal.panel.${tab}`),
+    })),
+    [t],
+  )
 
   return (
     <div className="omnimux-inspiration-modal-backdrop" onClick={onClose}>
@@ -156,27 +137,31 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
           <header className="omnimux-inspiration-modal-header">
             <div className="omnimux-inspiration-modal-heading">
               <h2 title={data.title}>{data.title}</h2>
-              <CopyButton value={data.title} label={t('modal.header.copy')} copiedLabel={t('modal.header.copied')} iconOnly />
+              <CopyButton
+                text={data.title}
+                label=""
+                copiedLabel=""
+                title={t('modal.header.copy')}
+                aria-label={t('modal.header.copy')}
+                size="sm"
+                variant="ghost"
+                className="omnimux-inspiration-modal-copy is-icon-only"
+              />
             </div>
             <IconButton className="omnimux-inspiration-modal-close" variant="ghost" size="sm" aria-label={t('close')} onClick={onClose}>
               {ICON_CLOSE}
             </IconButton>
           </header>
 
-          <nav className="omnimux-inspiration-modal-mobile-tabs" role="tablist" aria-label={t('modal.header.tabs')}>
-            {['video', 'script', 'deconstruction'].map((tab) => (
-              <button /* exempt-ui01: 移动端Tab */
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                className={activeTab === tab ? 'active' : ''}
-                onClick={() => setActiveTab(tab)}
-                key={tab}
-              >
-                {t(`modal.panel.${tab}`)}
-              </button>
-            ))}
-          </nav>
+          <Tabs
+            className="omnimux-inspiration-modal-mobile-tabs"
+            variant="pill"
+            size="sm"
+            items={mobileTabs}
+            activeId={activeTab}
+            onChange={setActiveTab}
+            aria-label={t('modal.header.tabs')}
+          />
 
           <main className="omnimux-inspiration-modal-body">
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel ${activeTab === 'video' ? 'is-active' : ''}`}>
@@ -193,10 +178,14 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 {sourceUrl ? (
                   <div className="omnimux-inspiration-player-actions">
                     <CopyButton
-                      value={sourceUrl}
-                      label={t('modal.meta.copyLink') || '复制链接'}
-                      copiedLabel={t('modal.header.copied') || '已复制'}
-                      iconOnly
+                      text={sourceUrl}
+                      label=""
+                      copiedLabel=""
+                      title={t('modal.meta.copyLink') || '复制链接'}
+                      aria-label={t('modal.meta.copyLink') || '复制链接'}
+                      size="sm"
+                      variant="ghost"
+                      className="omnimux-inspiration-modal-copy is-icon-only"
                     />
                     <a
                       className="omnimux-inspiration-modal-copy is-icon-only omnimux-inspiration-player-open-link"
@@ -217,11 +206,25 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <div className="omnimux-inspiration-modal-panel-heading">
                 <h3>{t('modal.panel.script')}</h3>
                 <div className="omnimux-inspiration-modal-panel-actions">
-                  <CopyButton value={scriptValue} label={t('modal.script.copy')} copiedLabel={t('modal.header.copied')} />
+                  <CopyButton
+                    text={scriptValue}
+                    label={t('modal.script.copy')}
+                    copiedLabel={t('modal.header.copied')}
+                    size="sm"
+                    variant="ghost"
+                    className="omnimux-inspiration-modal-copy"
+                  />
                   {data.script ? (
-                    <button type="button" className="omnimux-inspiration-modal-copy" onClick={handleTranslate} disabled={translating} /* exempt-ui01 */>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="omnimux-inspiration-modal-copy"
+                      onClick={handleTranslate}
+                      disabled={translating}
+                    >
                       {translating ? t('modal.script.translating') : (showTranslation && data.translationText ? t('modal.script.showSource') : t('modal.script.translate'))}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -238,7 +241,14 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                       <span className="omnimux-inspiration-modal-script-line">
                         {showTranslation ? translatedSegmentText(data, segment) : segment.text}
                       </span>
-                      <CopyButton value={showTranslation ? translatedSegmentText(data, segment) : segment.text} label={t('modal.script.copySegment')} copiedLabel={t('modal.header.copied')} />
+                      <CopyButton
+                        text={showTranslation ? translatedSegmentText(data, segment) : segment.text}
+                        label={t('modal.script.copySegment')}
+                        copiedLabel={t('modal.header.copied')}
+                        size="sm"
+                        variant="ghost"
+                        className="omnimux-inspiration-modal-copy"
+                      />
                     </li>
                   ))}
                 </ol>
@@ -259,7 +269,22 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-deconstruction-panel ${activeTab === 'deconstruction' ? 'is-active' : ''}`}>
               <div className="omnimux-inspiration-modal-panel-heading">
                 <h3>{t('modal.panel.deconstruction')}</h3>
-                <CopyButton value={deconValue} label={t('modal.deconstruction.copy')} copiedLabel={t('modal.header.copied')} />
+                <Badge
+                  size="sm"
+                  shape="capsule"
+                  variant={deconStatus === 'done' ? 'success' : 'warning'}
+                  className={`omnimux-inspiration-status-badge ${deconStatus}`}
+                >
+                  {deconStatus === 'done' ? t('status.breakdownReady') : t('status.breakdownGenerating')}
+                </Badge>
+                <CopyButton
+                  text={deconValue}
+                  label={t('modal.deconstruction.copy')}
+                  copiedLabel={t('modal.header.copied')}
+                  size="sm"
+                  variant="ghost"
+                  className="omnimux-inspiration-modal-copy"
+                />
               </div>
               {hasDeconstruction(data) ? (
                 <div className="omnimux-inspiration-modal-dimensions">
@@ -269,8 +294,9 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                       className={section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}
                       onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
                     >
-                      <button /* exempt-ui01: 折叠面板手风琴按钮 */
+                      <Button
                         type="button"
+                        variant="ghost"
                         className="omnimux-inspiration-modal-fold"
                         onClick={(event) => {
                           event.stopPropagation()
@@ -278,7 +304,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         }}
                       >
                         <h4>{section.title}</h4>
-                      </button>
+                      </Button>
                       {collapsed[section.id] ? null : (
                         <>
                           {section.quote ? <blockquote>{renderPlainBreakdownText(section.quote)}</blockquote> : null}
@@ -288,23 +314,30 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                     </article>
                   )) : dimensions.map(([key, label, value]) => value ? (
                     <article key={key}>
-                      <button /* exempt-ui01: 折叠面板标题 */
+                      <Button
                         type="button"
+                        variant="ghost"
                         className="omnimux-inspiration-modal-fold"
                         onClick={() => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }))}
                         aria-expanded={!collapsed[key]}
                       >
                         <h4>{label}</h4>
                         <span className={`omnimux-inspiration-modal-chevron${collapsed[key] ? ' is-collapsed' : ''}`}>{ICON_CHEVRON}</span>
-                      </button>
+                      </Button>
                       {collapsed[key] ? null : <p>{renderPlainBreakdownText(value)}</p>}
                     </article>
                   ) : null)}
                   {data.rawMarkdown ? (
                     <div className="omnimux-inspiration-modal-raw">
-                      <button type="button" className="omnimux-inspiration-modal-copy" onClick={() => setShowRaw((value) => !value)} /* exempt-ui01 */>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="omnimux-inspiration-modal-copy"
+                        onClick={() => setShowRaw((value) => !value)}
+                      >
                         {showRaw ? t('modal.deconstruction.hideRaw') : t('modal.deconstruction.showRaw')}
-                      </button>
+                      </Button>
                       {showRaw ? <pre>{data.rawMarkdown}</pre> : null}
                     </div>
                   ) : null}

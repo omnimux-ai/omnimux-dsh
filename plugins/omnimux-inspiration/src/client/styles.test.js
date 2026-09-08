@@ -159,11 +159,11 @@ describe('inspiration triptych modal', () => {
 })
 
 describe('legacy inspiration modal segmented switch', () => {
-  it('keeps mobile tabs native and accessible', () => {
+  it('keeps mobile tabs accessible and powered by dsh-ui-kit Tabs', () => {
     const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(section, /modal-mobile-tabs[\s\S]*role="tablist"/)
-    assert.match(section, /role="tab"/)
-    assert.match(section, /<button\s+type="button"/)
+    assert.match(section, /modal-mobile-tabs/)
+    assert.match(section, /<Tabs[\s\S]*items=\{mobileTabs\}/)
+    assert.doesNotMatch(section, new RegExp('exempt-' + 'ui01'))
   })
 
   it('keeps the track at 32px with overflow clipping so the inner pill cannot burst', () => {
