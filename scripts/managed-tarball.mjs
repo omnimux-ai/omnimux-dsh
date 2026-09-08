@@ -32,6 +32,11 @@ function stamp(entry) {
 function matches(actual, expected) {
   return actual && expected && stable(actual.identity.slice(0, 2)) === stable(expected.identity.slice(0, 2)) && actual.digest === expected.digest;
 }
+export function slimResolution(state) {
+  if (!state) return null;
+  const { resolutionGraph, ...rest } = state;
+  return { ...rest, resolutionGraphDigest: digest(resolutionGraph) };
+}
 function invokeArchive(action, request) {
   const result = spawnSync('python3', ['-B', archive, action], { input: JSON.stringify(request), encoding: 'utf8', maxBuffer: 16 << 20 });
   if (result.status !== 0) fail(`${action} rejected`, action === 'safeMove' ? 7 : action === 'probeRecovery' ? 5 : 3);
@@ -324,7 +329,7 @@ export class ManagedSync {
     this.payload = invokeArchive('freeze', { ...request, destination: path.join(this.directory, 'input.tgz') });
     const alreadyManaged = readJson(path.join(request.profile, 'package.json')).dependencies?.[request.name] === managedSpec(request.name);
     this.before = await this.capture(request.profile, alreadyManaged);
-    this.journal.before = this.before;
+    this.journal.before = slimResolution(this.before);
     this.journal.diskBefore = this.diskState();
     this.journal.payload = this.payload;
     this.save();
@@ -453,7 +458,7 @@ export class ManagedSync {
     const after = await this.capture(this.candidate);
     inspector.compare(this.before, after, this.request);
     inspector.assertRelocatable(after);
-    this.journal.candidate = after;
+    this.journal.candidate = slimResolution(after);
     this.probeSpace();
     await this.backup();
     this.journal.phase = 'PREPARED';
@@ -482,8 +487,8 @@ export class ManagedSync {
     const profile = this.request.profile;
     const currentInput = invokeArchive('inspect', this.request);
     if (stable(currentInput.identity) !== stable(this.payload.identity)) fail('input identity changed after freeze', 3);
-    if (stable(await this.capture(profile)) !== stable(this.before)) fail('live profile changed during preparation', 4);
-    if (stable(await this.capture(this.candidate)) !== stable(this.journal.candidate)) fail('candidate changed before publication', 5);
+    if (stable(slimResolution(await this.capture(profile))) !== stable(this.journal.before)) fail('live profile changed during preparation', 4);
+    if (stable(slimResolution(await this.capture(this.candidate))) !== stable(this.journal.candidate)) fail('candidate changed before publication', 5);
     this.hooks.io?.('fsync', this);
     syncTree(this.directory);
     if (stable(this.diskState()) !== stable(this.journal.diskBefore)) fail('live identity changed before publication', 4);
