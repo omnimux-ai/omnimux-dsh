@@ -3911,7 +3911,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3700
+      "downloads": 3700,
+      "cover": {
+        "asset": "catalog/covers/3d-animation-short-generator.png",
+        "alt": "3D动画短片"
+      }
     },
     {
       "id": "sk-omx-ad-creative",
@@ -5840,7 +5844,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4800
+      "downloads": 4800,
+      "cover": {
+        "asset": "catalog/covers/video-deconstruct.png",
+        "alt": "视频拆解与复刻"
+      }
     },
     {
       "id": "sk-omx-video-deconstruct-analyzer",
