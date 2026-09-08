@@ -29,6 +29,20 @@ import type {
   SaveProjectAssetsPayload,
 } from '../../shared/projectAssets.ts';
 
+/** Upload already bounded bytes; the Host never receives the source URL. */
+export async function importAudioBytes(workspaceId: string, bytes: Blob, signal: AbortSignal): Promise<import('../../shared/projectAssets.ts').AudioBytesResponse> {
+  const response = await fetch(WORKFLOW_API_ROUTES.workspaceAudioBytes(encodeURIComponent(workspaceId)), {
+    method: 'POST', credentials: 'same-origin', redirect: 'error', signal,
+    headers: { 'Content-Type': 'application/octet-stream' }, body: bytes,
+  });
+  const result = await response.json() as import('../../shared/projectAssets.ts').AudioBytesResponse & { error?: string };
+  if (!response.ok) throw new Error(result.error || 'audio-save-failed');
+  if (!result.item?.id || result.item.type !== 'audio' || !result.item.relative_path?.startsWith('assets/imported/')) {
+    throw new Error('audio-save-failed');
+  }
+  return result;
+}
+
 export interface ApiResult<T> {
   ok: boolean;
   status: number;

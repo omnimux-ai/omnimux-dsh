@@ -1,13 +1,14 @@
 /**
  * MediaPreview（W1 T1.7）— 真实媒体预览，替换 M1-M5 的文字占位。
  *
- * image → img；video → <video controls>；audio → <audio controls>。
+ * image → img；video → <video controls>；audio → 真实波形播放器。
  * 数据源：mediaAssets（SSE node_complete 写入，
  * useExecutionController.ts:147-152）取首个匹配类型的 asset，回退 mediaUrl。
  * 嵌入 GenerationStateContainer 的 completed 分支。
  */
 
 import { memo, useMemo, useCallback } from 'react';
+import AudioPreview from './AudioPreview';
 import type { MaterialType } from '../../../types/materialNode';
 import { resolveMediaPreviewUrl, type MediaAssetLike } from '../../utils/mediaUrl';
 
@@ -19,9 +20,12 @@ export interface MediaPreviewProps {
   mediaAssets?: MediaAssetLike[];
   mediaUrl?: string;
   label?: string;
+  workspaceId?: string;
   status?: string;
   isMissing?: boolean;
   onMediaSizeChange?: (width: number, height: number) => void;
+  onSaveAudio?: () => Promise<void>;
+  onReplaceAudio?: () => void;
 }
 
 const MediaPreview: React.FC<MediaPreviewProps> = ({
@@ -29,9 +33,12 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
   mediaAssets,
   mediaUrl,
   label,
+  workspaceId,
   status,
   isMissing,
   onMediaSizeChange,
+  onSaveAudio,
+  onReplaceAudio,
 }) => {
   const url = useMemo(
     () => resolveMediaPreviewUrl(materialType, mediaAssets, mediaUrl),
@@ -83,9 +90,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
       );
     case 'audio':
       return (
-        <div className="wf-media-preview__audio">
-          <audio src={url} controls preload="metadata" className="wf-media-preview__audio-el" />
-        </div>
+        <AudioPreview key={`${workspaceId ?? ''}:${url}`} source={url} workspaceId={workspaceId} label={label} onSave={onSaveAudio} onReplace={onReplaceAudio} />
       );
     default:
       return null;

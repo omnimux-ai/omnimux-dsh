@@ -44,6 +44,8 @@ export const WORKFLOW_API_ROUTES = {
   workspaceAssetsMkdir: (id: string) => `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${id}/assets/mkdir`,
   /** POST: copy source files into `<ProjectRoot>/assets/imported/`. */
   workspaceAssetsIngest: (id: string) => `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${id}/assets/ingest`,
+  /** POST application/octet-stream: bounded external audio bytes, never a URL. */
+  workspaceAudioBytes: (id: string) => `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${id}/assets/audio-bytes`,
   /** POST: deprecated alias of ingest (physical copy, not a path index). */
   workspaceAssetsIndex: (id: string) => `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${id}/assets/index`,
   /** POST: copy a global library subject into `<ProjectRoot>/assets/subjects/<id>/`. */

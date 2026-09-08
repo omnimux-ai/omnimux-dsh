@@ -7,6 +7,9 @@
  * Writes are atomic (tmp-pid-ts + rename). Ingest copies; never unlinks user sources.
  */
 import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
+import { ingestAudioBytes } from '../ingest/AudioBytesIngest.ts';
+import type { AudioBytesResponse } from '../../shared/projectAssets.ts';
 import {
   existsSync,
   mkdirSync,
@@ -77,6 +80,7 @@ export interface ProjectAssetsStore {
   save(workspaceId: string, payload: SaveProjectAssetsPayload): ProjectAssetsDocument;
   mkdir(workspaceId: string, payload: MkdirProjectAssetsPayload): ProjectAssetsDocument;
   ingest(workspaceId: string, payload: IngestProjectAssetsPayload): Promise<ProjectAssetsDocument>;
+  ingestAudio(workspaceId: string, source: Readable, signal: AbortSignal): Promise<AudioBytesResponse>;
   /** Deprecated alias — forwards to ingest (physical copy). */
   index(workspaceId: string, payload: IngestProjectAssetsPayload): Promise<ProjectAssetsDocument>;
   instantiate(workspaceId: string, payload: InstantiateProjectAssetsPayload): Promise<ProjectAssetsDocument>;
@@ -137,6 +141,9 @@ function persistableItem(item: ProjectAssetsItem): ProjectAssetsItem {
     updatedAt: item.updatedAt,
   };
   if (typeof item.size === 'number' && Number.isFinite(item.size)) next.size = item.size;
+  if (typeof item.mimeType === 'string' || item.mimeType === null) next.mimeType = item.mimeType;
+  if (typeof item.durationSec === 'number' || item.durationSec === null) next.durationSec = item.durationSec;
+  if (typeof item.sizeBytes === 'number' || item.sizeBytes === null) next.sizeBytes = item.sizeBytes;
   if (item.lineage != null) next.lineage = item.lineage;
   if (item.snapshot?.globalSubjectId) next.snapshot = { globalSubjectId: item.snapshot.globalSubjectId };
   return next;
@@ -426,8 +433,8 @@ export function createProjectAssetsStore(opts: {
       throw new WorkflowStoreError('invalid-id', 'parent folder does not exist');
     }
     const now = Date.now();
-    const items = [...current.items];
-    const existingRel = new Set(items.map((item) => item.relative_path).filter(Boolean));
+    const stagedItems: ProjectAssetsItem[] = [];
+    const seenRelative = new Set<string>();
     for (const raw of payload.paths) {
       if (typeof raw !== 'string') {
         throw new WorkflowStoreError('invalid-path', 'path must be a string');
@@ -437,9 +444,9 @@ export function createProjectAssetsStore(opts: {
         throw new WorkflowStoreError(sourceCode, 'source path is invalid');
       }
       const copied = await copyFileIntoImported({ projectRoot, sourceAbs: raw });
-      if (existingRel.has(copied.relativePath)) continue;
-      existingRel.add(copied.relativePath);
-      items.push({
+      if (seenRelative.has(copied.relativePath)) continue;
+      seenRelative.add(copied.relativePath);
+      stagedItems.push({
         id: newItemId(),
         name: copied.name,
         type: fileTypeOf(copied.name),
@@ -449,7 +456,25 @@ export function createProjectAssetsStore(opts: {
         updatedAt: now,
       });
     }
-    return persist(filePath, current, { folders: current.folders, items });
+    // The copy crossed awaits: reload the latest ledger, merge newly imported items, then persist.
+    const latest = load(workspaceId);
+    if (latest.projectRoot !== projectRoot || latest.filePath !== filePath) {
+      throw new WorkflowStoreError('path-denied', 'workspace project changed');
+    }
+    assertProjectWriteSafe(join(latest.projectRoot, '.omnimux'), latest.projectRoot);
+    assertProjectWriteSafe(latest.filePath, latest.projectRoot);
+    if (!parentExists(latest.current, parentId)) {
+      throw new WorkflowStoreError('invalid-id', 'parent folder does not exist');
+    }
+    const existingRel = new Set(latest.current.items.map((item) => item.relative_path).filter(Boolean));
+    const mergedItems = [...latest.current.items];
+    for (const item of stagedItems) {
+      if (!existingRel.has(item.relative_path)) {
+        existingRel.add(item.relative_path);
+        mergedItems.push(item);
+      }
+    }
+    return persist(latest.filePath, latest.current, { folders: latest.current.folders, items: mergedItems });
   }
 
   function resolveFile(workspaceId: string, rel: string): string {
@@ -518,6 +543,30 @@ export function createProjectAssetsStore(opts: {
     },
 
     ingest,
+
+    async ingestAudio(workspaceId: string, source: Readable, signal: AbortSignal): Promise<AudioBytesResponse> {
+      const bound = requireBoundProject(workspaceId);
+      return ingestAudioBytes({
+        projectRoot: bound.projectRoot, source, signal,
+        register(audio) {
+          signal.throwIfAborted();
+          // The stream crossed awaits: reload, then append and persist synchronously.
+          const { current, filePath, projectRoot } = load(workspaceId);
+          if (projectRoot !== bound.projectRoot || filePath !== bound.assetsFile) {
+            throw new WorkflowStoreError('path-denied', 'workspace project changed');
+          }
+          assertProjectWriteSafe(join(projectRoot, '.omnimux'), projectRoot);
+          assertProjectWriteSafe(filePath, projectRoot);
+          const item: ProjectAssetsItem = {
+            id: newItemId(), name: audio.name, type: 'audio', parentId: null,
+            relative_path: audio.relativePath, size: audio.size, sizeBytes: audio.size,
+            mimeType: audio.mimeType, durationSec: null, updatedAt: Date.now(),
+          };
+          const document = persist(filePath, current, { folders: current.folders, items: [...current.items, item] });
+          return { item, rev: document.rev };
+        },
+      });
+    },
 
     index(workspaceId: string, payload: IngestProjectAssetsPayload): Promise<ProjectAssetsDocument> {
       return ingest(workspaceId, payload);
