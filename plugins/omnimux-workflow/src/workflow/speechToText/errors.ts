@@ -16,6 +16,7 @@ const FAILURES: Record<string, [number, string]> = {
   'unknown-model': [400, '语音转写模型不可用'],
   'unknown-provider': [503, '语音转写供应商未配置'],
   'unknown-protocol': [503, '语音转写协议不可用'],
+  'CHANNEL_UNAVAILABLE': [503, '语音转写模型当前不可用，请稍后重试或更换模型'],
   'omnimux-invalid-request': [400, '音频或模型参数不符合语音转写要求，请检查素材与设置'],
   'omnimux-download-failed': [502, '源音频读取失败，请检查音频地址后重试'],
   'omnimux-request-failed': [502, '上游语音转写请求失败，请稍后重试'],
