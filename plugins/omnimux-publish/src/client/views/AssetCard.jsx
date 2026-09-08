@@ -1,4 +1,5 @@
 import React from 'react'
+import { Badge } from 'dsh-ui-kit'
 import { displayStatus, statusText } from '../status-display.js'
 import { RowActionMenu } from './RowActionMenu.jsx'
 
@@ -60,9 +61,9 @@ export function AssetCard({
         <div className="omnimux-publish-card-thumb-icon">
           {isVideo ? '🎬 视频' : '🖼 图文'}
         </div>
-        <span className="omnimux-publish-card-type-badge">
+        <Badge variant="neutral" size="sm" className="omnimux-publish-card-type-badge">
           {isVideo ? t('type.video') : t('type.image')}
-        </span>
+        </Badge>
         {isBatchMode ? (
           <div className="omnimux-publish-card-checkbox" onClick={(e) => e.stopPropagation()}>
             <input

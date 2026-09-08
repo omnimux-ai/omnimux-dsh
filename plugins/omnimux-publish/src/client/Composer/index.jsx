@@ -7,7 +7,7 @@ import {
   IconPlusOutline16,
   IconTrashOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, InputField, Toolbar } from 'dsh-ui-kit'
+import { Button, InputField, SelectableTile, Toolbar } from 'dsh-ui-kit'
 import { createDraft, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
 import { AccountPanel } from '../AccountPanel.jsx'
@@ -388,18 +388,16 @@ function describeError(caught, t) {
  */
 function TypeCard({ t, value, onPick }) {
   const Icon = value === 'video' ? IconPlayOutline16 : IconPaperclipOutline16
-  // Native <button>: dsh-ui-kit Button is locked to 32px single-row; type cards
-  // are multi-line selection tiles (icon + name + hint) and must not inherit it.
   return (
-    <button /* exempt-ui01: 多行卡片选择器，非32px单行按钮 */
-      type="button"
+    <SelectableTile
+      id={value}
+      selectionType="radio"
+      icon={<Icon size={20} />}
+      title={t('type.' + value)}
+      description={t('type.' + value + '.hint')}
+      onChange={(_sel, id) => onPick(id)}
       className="omnimux-publish-type-card"
-      onClick={() => { onPick(value) }}
-    >
-      <span className="omnimux-publish-type-icon" aria-hidden="true"><Icon size={20} /></span>
-      <span className="omnimux-publish-type-name">{t(`type.${value}`)}</span>
-      <span className="omnimux-publish-type-hint">{t(`type.${value}.hint`)}</span>
-    </button>
+    />
   )
 }
 
