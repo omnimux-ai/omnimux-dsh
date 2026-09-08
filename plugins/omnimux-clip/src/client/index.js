@@ -16,6 +16,9 @@ const zh = {
   'tab.nameLabel': '项目名称',
   'tab.namePlaceholder': '我的短视频',
   'tab.sizeLabel': '分辨率',
+  'tab.landscape': '横屏',
+  'tab.portrait': '竖屏',
+  'tab.square': '方形',
   'tab.fpsLabel': '帧率',
   'tab.create': '创建并进入编辑器',
   'tab.openOfficial': '进入官方欢迎页',
@@ -26,6 +29,8 @@ const zh = {
   'tab.saveToNode': '保存草稿至节点',
   'tab.savedToNode': '已保存至节点',
   'tab.canvasMode': '画布联动模式',
+  'tab.returnToCanvas': '返回画布',
+  'tab.close': '关闭',
 }
 
 const en = {
@@ -35,6 +40,9 @@ const en = {
   'tab.nameLabel': 'Project name',
   'tab.namePlaceholder': 'My video',
   'tab.sizeLabel': 'Resolution',
+  'tab.landscape': 'Landscape',
+  'tab.portrait': 'Portrait',
+  'tab.square': 'Square',
   'tab.fpsLabel': 'Frame rate',
   'tab.create': 'Create and open editor',
   'tab.openOfficial': 'Open official welcome',
@@ -45,6 +53,8 @@ const en = {
   'tab.saveToNode': 'Save draft to node',
   'tab.savedToNode': 'Saved to node',
   'tab.canvasMode': 'Canvas Link Mode',
+  'tab.returnToCanvas': 'Back to canvas',
+  'tab.close': 'Close',
 }
 
 function renderClipIcon(size = 16) {
@@ -103,7 +113,7 @@ export function apply(ctx) {
     : (key) => zh[key] || key
 
   const stage = createStageStore(() => window.__omnimuxStage)
-  const stageFace = () => ({ t, stage })
+  const stageFace = () => ({ t, stage, locale: ctx.locale })
 
   if (typeof ctx.effect === 'function') {
     ctx.effect(() => () => stage.dispose?.(), 'omnimux-clip: stage store')
@@ -141,7 +151,7 @@ export function apply(ctx) {
       order: 10,
       hidden: false,
       single: true,
-      component: (props) => createElement(OpenReelStudioTab, { ...props, t }),
+      component: (props) => createElement(OpenReelStudioTab, { ...props, t, locale: ctx.locale }),
     })
   }
 

@@ -1,4 +1,5 @@
-import { Component, useEffect, useLayoutEffect, useState, useSyncExternalStore } from 'react'
+import { Component, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useHostLocale } from './useHostLocale.js'
 import { createPortal } from 'react-dom'
 import OpenReelApp from './openreel/web/App.tsx'
 import { applyOpenReelTheme } from './openreel/web/stores/theme-store.ts'
@@ -68,7 +69,8 @@ class ClipErrorBoundary extends Component {
  *   },
  * }} props
  */
-export function ClipStage({ t, stage }) {
+export function ClipStage({ t, stage, locale }) {
+  useHostLocale(locale)
   useEffect(() => {
     injectClipStyles()
     applyOpenReelTheme(true)
@@ -78,11 +80,16 @@ export function ClipStage({ t, stage }) {
     stage ? (cb) => stage.subscribe(cb) : () => () => {},
     stage ? () => stage.getSnapshot() : () => false,
   )
-  const session = useSyncExternalStore(
+  const activeSession = useSyncExternalStore(
     stage ? (cb) => stage.subscribe(cb) : () => () => {},
     stage ? () => stage.getSessionSnapshot() : () => null,
   )
 
+  // Closing clears the active store session, but must not move the mounted
+  // editor out of its portal or replay upstream ingestion on the next render.
+  const lastSession = useRef(null)
+  if (activeSession) lastSession.current = activeSession
+  const session = activeSession ?? lastSession.current
   const isCanvasMode = session?.source === 'canvas'
 
   const [everOpened, setEverOpened] = useState(false)
@@ -224,12 +231,13 @@ export function ClipStage({ t, stage }) {
           <button /* exempt-ui01: 剪辑器关闭按钮 */
             type="button"
             className="omnimux-clip-stage-close-btn"
-            aria-label="Close"
+            aria-label={t(isCanvasMode ? 'tab.returnToCanvas' : 'tab.close')}
             onClick={handleClose}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d={isCanvasMode ? 'M9 3L4 8L9 13M4 8H14' : 'M12 4L4 12M4 4L12 12'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+            {t(isCanvasMode ? 'tab.returnToCanvas' : 'tab.close')}
           </button>
         </div>
       </div>
