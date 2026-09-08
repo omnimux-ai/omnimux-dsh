@@ -334,7 +334,12 @@ export class GraphInspector {
     const listed = mapLockOccurrences(lock, manifest, profile, modules, metadata);
     if (!withoutPnpm) {
       const fromList = mapListOccurrences(listJson[0], lock, profile, modules, metadata);
-      for (const root of listed.keys()) if (!fromList.has(root)) throw new Error('disk package occurrence missing from pnpm list');
+      for (const root of listed.keys()) {
+        if (!fromList.has(root)) {
+          const missing = [...listed.keys()].filter(r => !fromList.has(r));
+          throw new Error(`disk package occurrence missing from pnpm list (total missing: ${missing.length}, first: ${missing[0]}, locator: ${listed.get(missing[0]).locator})`);
+        }
+      }
       const normalized = map => stable([...map].sort(([a], [b]) => a.localeCompare(b)));
       if (normalized(fromList) !== normalized(listed)) throw new Error('pnpm list/lock occurrence mismatch');
     }
@@ -596,7 +601,7 @@ export function candidateConfig(profile) {
   const workspace = readYaml(path.join(profile, 'pnpm-workspace.yaml'));
   const allowed = new Set(['packages', 'nodeLinker', 'hoist', 'hoistPattern', 'publicHoistPattern', 'shamefullyHoist',
     'autoInstallPeers', 'strictPeerDependencies', 'resolvePeersFromWorkspaceRoot', 'dedupePeerDependents',
-    'overrides', 'peerDependencyRules', 'onlyBuiltDependencies', 'ignoredBuiltDependencies', 'allowBuilds']);
+    'overrides', 'peerDependencyRules', 'onlyBuiltDependencies', 'ignoredBuiltDependencies', 'allowBuilds', 'minimumReleaseAge']);
   if (!workspace || Object.keys(workspace).some(key => !allowed.has(key))) throw new Error('unsupported workspace configuration');
   if (workspace.packages && stable(workspace.packages) !== '["."]') throw new Error('workspace escapes candidate');
   if (['.pnpmfile.cjs', 'pnpmfile.cjs'].some(name => fs.existsSync(path.join(profile, name)))) throw new Error('pnpm config hook forbidden');
