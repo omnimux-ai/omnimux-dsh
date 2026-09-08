@@ -326,12 +326,12 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     // 激活 Tab 带 ⓘ 图标
     assert.match(skillPlazaSrc, /className:\s*"tab-info-icon"/)
     assert.match(cssSrc, /\.tab-info-icon/)
-    // 官方精选卡片包含 h3-badge、支持真实图片封面，且彻底移除 MiniMax Design 及冗余底栏
-    assert.match(skillPlazaSrc, /className:\s*"h3-badge"/)
+    // 官方精选卡片支持真实图片封面，彻底移除 MiniMax Design、冗余底栏以及 H3 角标
+    assert.ok(!skillPlazaSrc.includes('className: "h3-badge"'), 'h3-badge should be removed')
     assert.match(skillPlazaSrc, /coverSrc\s*\?/)
     assert.ok(!skillPlazaSrc.includes('MiniMax Design'), 'MiniMax Design should be removed')
     assert.ok(!skillPlazaSrc.includes('className: "featured-card-footer"'), 'featured-card-footer should be removed')
-    assert.match(cssSrc, /\.h3-badge/)
+    assert.ok(!cssSrc.includes('.h3-badge'), '.h3-badge CSS should be removed')
     assert.match(cssSrc, /font-size:\s*20px/)
   })
 })

@@ -292,7 +292,6 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .featured-card:hover{background:var(--dsw-alias-interactive-bg-hover,#17181c);border-color:var(--dsw-alias-border-l1,rgba(255,255,255,.16))}
 .featured-cover-wrap{width:100%;aspect-ratio:16/9;background:var(--dsw-alias-bg-elevated,#1c1d22);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .featured-cover-wrap svg,.featured-cover-wrap img{width:100%;height:100%;object-fit:cover;display:block}
-.h3-badge{position:absolute;top:8px;left:8px;background:var(--dsw-alias-brand-primary,#6f59ff);color:var(--dsw-alias-label-primary-foreground,#ffffff);font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:14px;z-index:2;letter-spacing:0.5px}
 .featured-hover-actions{position:absolute;bottom:8px;left:8px;right:8px;display:flex;align-items:center;gap:6px;opacity:0;transform:translateY(4px);transition:opacity .2s ease,transform .2s ease;pointer-events:none;z-index:3}
 .featured-card:hover .featured-hover-actions{opacity:1;transform:translateY(0);pointer-events:auto}
 .hover-btn{flex:1;height:34px;border-radius:6px;border:0;display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;padding:0 6px;transition:filter .15s ease}
