@@ -139,7 +139,9 @@ async function prepareDependencies({ candidate, privateRoot, beforeLock, request
         const managed = Object.values(initialLock.packages || {}).some(item => item.resolution?.type === 'directory'
           && item.resolution.directory === managedSpec(name).slice(5));
         if (/^(?:file|link|git|https?|npm):/.test(spec) || spec.includes('://')) {
-          if (!managed || spec !== managedSpec(name)) reject('unapproved nested dependency source');
+          const resolvedTarget = spec.startsWith('file:') ? path.resolve(source, spec.slice(5)) : null;
+          const expectedTarget = path.join(candidate, managedSpec(name).slice(5));
+          if (!managed || (spec !== managedSpec(name) && resolvedTarget !== expectedTarget)) reject('unapproved nested dependency source');
         } else if (!managed && !approvedPackages.some(locator => locator.startsWith(`${name}@`))) reject('source dependency absent from approved lock');
       }
     }
