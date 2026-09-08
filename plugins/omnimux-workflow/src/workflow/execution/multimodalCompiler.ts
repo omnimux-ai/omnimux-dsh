@@ -147,7 +147,7 @@ export function compileMultimodalPrompt(args: CompileMultimodalPromptArgs): Comp
   const resolveTokenData = (nodeId: string, slotIndex: number, fileName: string) => {
     let mediaUrl: string | undefined;
     let mimeType: string | undefined;
-    let materialType: MaterialType | undefined;
+    let materialType: MaterialType | undefined = slotIndex === -1 ? 'text' : undefined;
 
     // 1. 优先从 upstreamOutputs 查找
     if (upstreamOutputs) {
@@ -276,8 +276,8 @@ export function compileMultimodalPrompt(args: CompileMultimodalPromptArgs): Comp
         });
       }
     } else {
-      // 容错平滑降级：媒体丢失或未就绪
-      logger.warn('多模态编译警告：引用素材未就绪或丢失，平滑降级为文本标签', {
+      // Text is already composed by effective-input resolution; do not duplicate its body.
+      if (materialType !== 'text') logger.warn('多模态编译警告：引用素材未就绪或丢失，平滑降级为文本标签', {
         nodeId,
         slotIndex: validSlotIndex,
         fileName,

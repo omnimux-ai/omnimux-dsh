@@ -52,6 +52,7 @@ function inferMaterialType(fileName: string): MaterialType {
 export function parseMarkdownToTokenSegments(
   markdown: string,
   slotState?: NodeSlotEngineState,
+  references: PromptReferenceToken[] = [],
 ): TokenSegment[] {
   if (!markdown) {
     return [];
@@ -82,12 +83,12 @@ export function parseMarkdownToTokenSegments(
     }
 
     // 从 slotState 查找丰富信息
-    let materialType: MaterialType = inferMaterialType(label);
+    let materialType: MaterialType = slotIndex === -1 ? 'text' : inferMaterialType(label);
     let mediaUrl: string | undefined;
 
     if (slotState) {
       const activeItem = slotState.activeSlots.find(
-        (s) => s.sourceNodeId === nodeId || s.slotIndex === slotIndex,
+        (s) => s.sourceNodeId === nodeId && s.slotIndex === slotIndex,
       );
       if (activeItem) {
         materialType = activeItem.materialType;
@@ -101,6 +102,12 @@ export function parseMarkdownToTokenSegments(
           mediaUrl = overflowItem.mediaUrl;
         }
       }
+    }
+
+    const reference = references.find((item) => item.nodeId === nodeId);
+    if (reference) {
+      materialType = reference.materialType;
+      mediaUrl = reference.mediaUrl;
     }
 
     segments.push({

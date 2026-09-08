@@ -21,11 +21,11 @@ export const GAP = 8;
 export const VIEWPORT_PADDING = 12;
 
 /**
- * 浮层实际宽度：min(360, viewport - 24)。
+ * 浮层实际宽度：min(preferredWidth, viewport - 24)，默认设计宽度 360px。
  * 与 CSS `max-width: calc(100vw - 24px)` 保持一致，窄视口下面板左右各留 12px 安全边距。
  */
-export function resolvePanelWidth(viewportWidth: number): number {
-  return Math.min(PANEL_WIDTH, Math.max(0, viewportWidth - VIEWPORT_PADDING * 2));
+export function resolvePanelWidth(viewportWidth: number, preferredWidth: number = PANEL_WIDTH): number {
+  return Math.min(preferredWidth, Math.max(0, viewportWidth - VIEWPORT_PADDING * 2));
 }
 
 /**
@@ -33,11 +33,13 @@ export function resolvePanelWidth(viewportWidth: number): number {
  *
  * @param triggerRect 触发器元素在视口中的外接矩形 (getBoundingClientRect)
  * @param viewport 视口尺寸 (window.innerWidth / window.innerHeight)
+ * @param preferredWidth 浮层目标 border-box 宽度，参与视口夹紧和边缘避让
  * @returns PopoverPosition 包含 placement、坐标与弹性限高
  */
 export function calculatePopoverPosition(
   triggerRect: RectLike | DOMRect,
   viewport: ViewportSize | { width: number; height: number },
+  preferredWidth: number = PANEL_WIDTH,
 ): PopoverPosition {
   const vWidth = viewport?.width ?? 0;
   const vHeight = viewport?.height ?? 0;
@@ -66,8 +68,8 @@ export function calculatePopoverPosition(
     bottom = undefined;
   }
 
-  // 3. 横向防溢出对齐与安全边距校正（宽度随视口夹紧：min(360, viewport-24)）
-  const width = resolvePanelWidth(vWidth);
+  // 3. 按真实渲染宽度避让，定位后不再单独缩窄浮层。
+  const width = resolvePanelWidth(vWidth, preferredWidth);
   let left = triggerRect.left;
 
   // 靠右边缘溢出防御：向左推移

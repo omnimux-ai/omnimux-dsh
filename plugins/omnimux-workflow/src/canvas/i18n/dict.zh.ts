@@ -64,6 +64,13 @@ const zh = {
   'node.relinkOk': '已重新链接源文件',
   'node.replace': '替换',
   'node.replaceMaterial': '替换素材',
+  'mention.current': '当前参考素材',
+  'mention.canvas': '从画布添加',
+  'mention.empty': '暂无参考素材，可从画布添加',
+  'mention.noMatches': '没有匹配的节点',
+  'mention.waiting': '等待上游内容或结果',
+  'mention.unavailable': '素材不可用，请替换或重试',
+  'mention.preview': '素材预览',
   // 媒体空态
   'node.emptyMedia': '未配置素材输入。选中节点在属性面板中配置参数。',
   'node.tryMiniMaxH3': '探索推荐生成模型',
