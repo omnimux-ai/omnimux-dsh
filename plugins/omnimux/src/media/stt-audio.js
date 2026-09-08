@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
+import { BlockList, isIP } from 'node:net'
 import { OmnimuxError } from './errors.js'
 
 const AUDIO_EXT_BY_MIME = Object.freeze({
@@ -14,6 +15,35 @@ const AUDIO_EXT_BY_MIME = Object.freeze({
   'audio/flac': '.flac',
   'audio/mp4': '.mp4',
 })
+
+const LOCAL_AUDIO_ADDRESSES = new BlockList()
+for (const [address, prefix] of [
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.168.0.0', 16], ['224.0.0.0', 3],
+]) LOCAL_AUDIO_ADDRESSES.addSubnet(address, prefix, 'ipv4')
+for (const [address, prefix] of [
+  ['::', 128], ['::1', 128], ['fc00::', 7], ['fe80::', 10], ['ff00::', 8],
+]) LOCAL_AUDIO_ADDRESSES.addSubnet(address, prefix, 'ipv6')
+
+/**
+ * Classify URL-first candidates without DNS or network probes. Remote reachability
+ * remains the provider's responsibility; local/private sources require bytes.
+ * @param {unknown} audio
+ * @returns {boolean}
+ */
+export function isPublicAudioUrl(audio) {
+  if (typeof audio !== 'string' || !/^https?:\/\//i.test(audio.trim())) return false
+  try {
+    const url = new URL(audio.trim())
+    const host = url.hostname.toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '')
+    if (url.username || url.password || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false
+    const ipVersion = isIP(host)
+    if (ipVersion) return !LOCAL_AUDIO_ADDRESSES.check(host, ipVersion === 4 ? 'ipv4' : 'ipv6')
+    return host.includes('.')
+  } catch {
+    return false
+  }
+}
 
 /**
  * Resolve an absolute path, http(s) URL or data URI into uploadable audio.

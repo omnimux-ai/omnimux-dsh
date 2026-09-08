@@ -106,7 +106,7 @@ test('workflow STT returns needs-provider when absent, then uses a seam injected
 for (const [code, status] of [
   ['omnimux-invalid-request', 400], ['needs-omnimux', 401], ['quota-exceeded', 402],
   ['capability-disabled', 403], ['omnimux-request-failed', 502], ['omnimux-download-failed', 502],
-  ['omnimux-unconfigured', 503], ['unexpected-provider-error', 500],
+  ['omnimux-unconfigured', 503], ['CHANNEL_UNAVAILABLE', 503], ['unexpected-provider-error', 500],
 ]) {
   test(`workflow STT safely maps ${code} to HTTP ${status}`, async (t) => {
     const h = harness(t, async () => { throw Object.assign(new Error('private upstream stack / credential'), { code }); });
