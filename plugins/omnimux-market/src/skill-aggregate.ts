@@ -259,7 +259,7 @@ export function catalogItemToCard(
     category,
     categoryLabel: categoryLabel(category) || category,
     version: '',
-    downloads: 0,
+    downloads: typeof item.downloads === 'number' && Number.isSafeInteger(item.downloads) && item.downloads >= 0 ? item.downloads : 0,
     stars: 0,
     installs: 0,
     pageUrl: `${cfg.webBase.replace(/\/$/, '')}/skills/${encodeURIComponent(slug)}`,
@@ -269,6 +269,8 @@ export function catalogItemToCard(
     catalogId: String(item.id || ''),
     installBackend: 'catalog',
     tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+    recommended: Object.hasOwn(item, 'recommended') && item.recommended === true,
+    cover: item.cover,
   }
   if (avatar) card.iconUrl = avatar
   return card
