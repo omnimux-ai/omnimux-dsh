@@ -41,10 +41,10 @@ after(() => {
 
 test('QA-PKG01 actual archive identity and independent entry list excludes caches/tests', () => {
   const tgz = readFileSync(join(root, 'omnimux-assets-0.2.0.tgz'))
-  assert.equal(tgz.length, 48580935); assert.equal(sha(tgz), '572a0da5b70dd1e1a7d5b389b26eebbb8fb1134e6c0fe62af17275cc3f492acf')
+  assert.equal(tgz.length, 48587041); assert.equal(sha(tgz), '4133161d36e651f04ea97024517c3536c2996e0c4c651d855edc36734ba7bb29')
   const regular = files.filter((f) => f.bytes !== undefined)
   assert.equal(regular.length, 3372)
-  assert.equal(regular.reduce((sum, f) => sum + f.bytes, 0), 132868862)
+  assert.equal(regular.reduce((sum, f) => sum + f.bytes, 0), 132909626)
   assert.ok(files.every((f) => !/(^runtime\/(archives|evidence)\/)|__pycache__|\.pyc$|\.test\.|\.package-cache|storage-pressure/.test(f.path)))
   for (const f of regular.filter((f) => f.path.startsWith('src/') || ['package.json', 'dsh.manifest.json', 'lib/client.js'].includes(f.path))) assert.equal(f.sha256, sha(readFileSync(join(root, f.path))), f.path)
 })

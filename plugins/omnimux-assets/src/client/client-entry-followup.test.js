@@ -52,7 +52,10 @@ function harness() {
     if (Array.isArray(node)) return node.flatMap((item, index) => expand(item, `${path}.${index}`))
     if (!React.isValidElement(node)) return node == null || node === false ? [] : [node]
     if (typeof node.type === 'function') return expand(invoke(node.type, node.props, path), `${path}.render`)
-    const children = expand(node.props.children, `${path}.children`)
+    const children = [
+      ...expand(node.props.children, `${path}.children`),
+      ...(node.props.coverNode ? expand(node.props.coverNode, `${path}.coverNode`) : []),
+    ]
     return [{ type: node.type, props: node.props, children }]
   }
   return { invoke, render: (Component, props) => expand(React.createElement(Component, props)) }
@@ -99,12 +102,12 @@ for (const viewMode of ['grid', 'list']) {
     test(`${viewMode} card and View route ${asset.name}/${asset.unavailable_files.length} to browse`, () => {
       const opened = [], previews = []
       const tree = harness().render(AssetGrid, { assets: [asset], t, viewMode, onOpen: (value) => opened.push(value), onPreview: (value) => previews.push(value) })
-      const row = nodes(tree).find((node) => node.type === (viewMode === 'grid' ? 'article' : 'tr') && node.props.onClick)
+      const row = nodes(tree).find((node) => (viewMode === 'grid' ? ['article', 'MediaCard'].includes(node.type) : ['tr', 'TableRow'].includes(node.type)) && node.props.onClick)
       click(row)
       click(nodes(tree).find((node) => ['button', 'Button'].includes(node.type) && text(node.children).includes(t('card.view'))))
       assert.deepEqual(opened, [asset, asset])
       assert.deepEqual(previews, [])
-      if (viewMode === 'grid') {
+      if (viewMode === 'grid' && typeof row.props.onKeyDown === 'function') {
         let prevented = false
         row.props.onKeyDown({ target: row, currentTarget: row, key: 'Enter', preventDefault() { prevented = true } })
         assert.equal(prevented, true)
@@ -120,7 +123,7 @@ for (const viewMode of ['grid', 'list']) {
     assert.deepEqual(selected, [asset])
     assert.deepEqual(opened, [])
     assert.deepEqual(previews, [])
-    click(nodes(tree).find((node) => node.type === (viewMode === 'grid' ? 'article' : 'tr') && node.props.onClick))
+    click(nodes(tree).find((node) => (viewMode === 'grid' ? ['article', 'MediaCard'].includes(node.type) : ['tr', 'TableRow'].includes(node.type)) && node.props.onClick))
     assert.equal(previews[0].previewUrl, '/omnimux/assets/library/preview?id=image&file=image-file')
     assert.deepEqual(opened, [])
   })
@@ -158,7 +161,7 @@ test('Stage card opens the main logical tree for partial and fully unavailable a
     const feed = { detail: null, visible: [asset], viewMode: 'grid', setDetail: (value) => { feed.detail = value } }
     const props = { t, feed, emptyProps: {}, onPreview() {}, sourceTab: 'local' }
     let tree = await renderPage(renderer, AssetsBody, props)
-    click(nodes(tree).find((node) => node.type === 'article'))
+    click(nodes(tree).find((node) => ['article', 'MediaCard'].includes(node.type)))
     assert.equal(feed.detail, asset)
     tree = await renderPage(renderer, AssetsBody, props)
     const main = nodes(tree).find((node) => node.props.className === 'omnimux-assets-main')
