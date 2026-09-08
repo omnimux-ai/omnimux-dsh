@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'dsh-ui-kit'
 import { PLATFORM_TABLE_COLUMNS } from '../constants.js'
 import { formatCount, formatEr } from '../format.js'
 import { sortRows } from '../sort.js'
@@ -27,42 +27,40 @@ export function PlatformTable({ t, rows }) {
         <h3 className="omnimux-analytics-panel-title">{t('table.platformTitle')}</h3>
       </header>
       <div className="omnimux-analytics-tablescroll">
-        <table className="omnimux-analytics-table">
-          <thead>
-            <tr>
+        <Table className="omnimux-analytics-table" stickyHeader dense>
+          <TableHeader>
+            <TableRow>
               {PLATFORM_TABLE_COLUMNS.map((column) => {
                 const active = sort.key === column.key
                 return (
-                  <th key={column.key} scope="col" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="omnimux-analytics-sortbtn"
-                      onClick={() => {
-                        setSort((prev) => (
-                          prev.key === column.key
-                            ? { key: column.key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                            : { key: column.key, dir: 'desc' }
-                        ))
-                      }}
-                    >
-                      {t(column.labelKey)}
-                      <span className="omnimux-analytics-sortmark" data-active={active ? 'true' : 'false'} data-dir={sort.dir} />
-                    </Button>
-                  </th>
+                  <TableHead
+                    key={column.key}
+                    scope="col"
+                    sortable
+                    sortDirection={active ? sort.dir : null}
+                    onClick={() => {
+                      setSort((prev) => (
+                        prev.key === column.key
+                          ? { key: column.key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+                          : { key: column.key, dir: 'desc' }
+                      ))
+                    }}
+                  >
+                    {t(column.labelKey)}
+                  </TableHead>
                 )
               })}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sorted.length === 0 ? (
-              <tr>
-                <td colSpan={PLATFORM_TABLE_COLUMNS.length}>{t('table.empty')}</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={PLATFORM_TABLE_COLUMNS.length}>{t('table.empty')}</TableCell>
+              </TableRow>
             ) : sorted.map((row) => (
-              <tr key={row.platform}>
+              <TableRow key={row.platform}>
                 {PLATFORM_TABLE_COLUMNS.map((column) => (
-                  <td key={column.key} className={column.kind === 'text' ? '' : 'is-num'}>
+                  <TableCell key={column.key} className={column.kind === 'text' ? '' : 'is-num'}>
                     {column.key === 'platformLabel' ? (
                       <span className="omnimux-analytics-platform">
                         <span className="omnimux-analytics-platform-dot" data-platform={row.platform} />
@@ -71,12 +69,12 @@ export function PlatformTable({ t, rows }) {
                     ) : column.kind === 'er' && row.er != null ? (
                       <span className="omnimux-analytics-er">{formatEr(row.er)}</span>
                     ) : cellText(column.kind, row[column.key])}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </section>
   )
