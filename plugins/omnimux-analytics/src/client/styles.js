@@ -495,28 +495,6 @@ export const ANALYTICS_CSS = `
 .omnimux-analytics-table tbody tr:hover td {
   background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.06));
 }
-.omnimux-analytics-sortbtn {
-  padding: 0 4px !important;
-  height: 24px;
-  gap: 4px;
-}
-.omnimux-analytics-sortmark {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-bottom: 5px solid var(--dsw-alias-label-tertiary, rgba(128,128,128,.45));
-  opacity: 0.45;
-}
-.omnimux-analytics-sortmark[data-active="true"] { opacity: 1; }
-.omnimux-analytics-sortmark[data-active="true"][data-dir="desc"] {
-  border-bottom: 0;
-  border-top: 5px solid var(--dsw-alias-label-primary, currentColor);
-}
-.omnimux-analytics-sortmark[data-active="true"][data-dir="asc"] {
-  border-bottom-color: var(--dsw-alias-label-primary, currentColor);
-}
 .omnimux-analytics-er {
   display: inline-block;
   padding: 2px 6px;

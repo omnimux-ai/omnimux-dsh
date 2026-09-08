@@ -1,9 +1,18 @@
 import { IconRightUpOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Badge } from 'dsh-ui-kit'
 import { formatCount, formatEr, formatSignedCount } from '../format.js'
 
 function Trend({ up, children }) {
   if (!children) return null
-  return <span className={up ? 'omnimux-analytics-kpi-badge is-up' : 'omnimux-analytics-kpi-badge'}>{children}</span>
+  return (
+    <Badge
+      variant={up ? 'success' : 'neutral'}
+      size="sm"
+      shape="capsule"
+    >
+      {children}
+    </Badge>
+  )
 }
 
 function BestPostCard({ t, post }) {
