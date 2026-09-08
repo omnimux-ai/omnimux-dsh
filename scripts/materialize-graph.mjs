@@ -36,13 +36,26 @@ export function prepareFiles(request) {
   return JSON.parse(result.stdout);
 }
 
+const globalJsonCache = new Map();
+
 /** Decode strict JSON without executing package code. */
-export function readJson(file) {
-  const result = spawnSync('python3', [archiveScript, 'json'], {
-    input: JSON.stringify({ path: file }), encoding: 'utf8', maxBuffer: 16 << 20,
-  });
-  if (result.status !== 0) throw new Error('invalid or ambiguous JSON');
-  return JSON.parse(result.stdout);
+export function readJson(file, cache = null) {
+  const store = cache || globalJsonCache;
+  const stat = fs.statSync(file);
+  const cached = store.get(file);
+  if (cached && cached.mtime === stat.mtimeMs) return cached.data;
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    const result = spawnSync('python3', [archiveScript, 'json'], {
+      input: JSON.stringify({ path: file }), encoding: 'utf8', maxBuffer: 16 << 20,
+    });
+    if (result.status !== 0) throw new Error('invalid or ambiguous JSON');
+    data = JSON.parse(result.stdout);
+  }
+  store.set(file, { mtime: stat.mtimeMs, data });
+  return data;
 }
 
 export function readYaml(file) {
@@ -97,16 +110,37 @@ export function payloadManifest(root, { exclude = [], links = false } = {}) {
   return { entries, digest: digest(entries) };
 }
 
+const requireCache = new Map();
+const resolveCache = new Map();
+const realpathCache = new Map();
+
 /** Resolve by Node's search paths without loading the package or its code. */
 export function resolvePackage(consumer, name, modules) {
-  const require = createRequire(path.join(consumer, 'package.json'));
+  const key = consumer + '\0' + name;
+  if (resolveCache.has(key)) {
+    const cached = resolveCache.get(key);
+    if (!cached) throw new Error(`unresolved dependency: ${name}`);
+    return cached;
+  }
+  let require = requireCache.get(consumer);
+  if (!require) {
+    require = createRequire(path.join(consumer, 'package.json'));
+    requireCache.set(consumer, require);
+  }
   for (const search of require.resolve.paths(name) || []) {
+    if (!inside(modules, search)) continue;
     const entry = path.join(search, name);
     if (!fs.existsSync(path.join(entry, 'package.json'))) continue;
-    const real = fs.realpathSync(entry);
+    let real = realpathCache.get(entry);
+    if (real === undefined) {
+      real = fs.realpathSync(entry);
+      realpathCache.set(entry, real);
+    }
     if (!inside(modules, real)) throw new Error('dependency resolution escapes installation');
+    resolveCache.set(key, real);
     return real;
   }
+  resolveCache.set(key, null);
   throw new Error(`unresolved dependency: ${name}`);
 }
 
@@ -162,22 +196,41 @@ function mapListOccurrences(list, lock, profile, modules, metadata) {
  */
 function mapLockOccurrences(lock, manifest, profile, modules, metadata) {
   const occurrences = new Map();
+  const cache = new Map();
   const walk = (consumer, dependencies) => {
     for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
       for (const [name, reference] of Object.entries(dependencies[section] || {})) {
         const locator = lockLocator(lock, name, reference);
+        const locations = metadata.hoistedLocations?.[locator];
         let root;
-        try { root = resolvePackage(consumer, name, modules); }
+        try {
+          if (metadata.nodeLinker === 'hoisted' && locations && locations.length > 0) {
+            const resolved = resolvePackage(consumer, name, modules);
+            if (locations.some(rel => path.resolve(profile, rel) === resolved)) {
+              root = resolved;
+            } else {
+              const candidates = locations.map(rel => path.resolve(profile, rel));
+              const best = candidates.find(candidate => {
+                try {
+                  const p = readJson(path.join(candidate, 'package.json'), cache);
+                  return locator.startsWith(`${p.name}@`) && (!p.version || locator.split('(')[0] === `${p.name}@${p.version}` || locator.includes('@file:'));
+                } catch { return false; }
+              });
+              root = best || resolved;
+            }
+          } else {
+            root = resolvePackage(consumer, name, modules);
+          }
+        }
         catch (error) {
           if (section === 'optionalDependencies' && error.message.startsWith('unresolved dependency:')) continue;
           throw error;
         }
-        const pkg = readJson(path.join(root, 'package.json'));
+        const pkg = readJson(path.join(root, 'package.json'), cache);
         const base = locator.split('(')[0];
         const item = lock.packages?.[base];
         if (!item || !locator.startsWith(`${pkg.name}@`) || item.version && item.version !== pkg.version
             || !base.includes('@file:') && base !== `${pkg.name}@${pkg.version}`) throw new Error('lock/disk package identity mismatch');
-        const locations = metadata.hoistedLocations?.[locator];
         if (metadata.nodeLinker === 'hoisted' && locations
             && !locations.some(relative => path.resolve(profile, relative) === root)) throw new Error('hoisted lock/disk location mismatch');
         const previous = occurrences.get(root);
@@ -207,15 +260,30 @@ function occurrencePayload(root, roots, approval) {
   const topologyRoots = [...roots].filter(other => other !== root && inside(path.join(root, 'node_modules'), other));
   const result = entries.filter(entry => {
     if (!entry.path.startsWith('node_modules/') && entry.path !== 'node_modules') return true;
-    if (expected.has(entry.path)) return true;
     const file = path.join(root, entry.path);
     if (entry.type === 'symlink' || entry.path === 'node_modules/.bin' || entry.path.startsWith('node_modules/.bin/')) return false;
     if (topologyRoots.some(other => inside(other, file) || inside(file, other))) return false;
+    if (expected.has(entry.path)) return true;
     if (entry.path === 'node_modules' && !expected.has(entry.path)) return false;
     throw new Error('ambiguous embedded node_modules payload');
   });
   if (result.some(entry => entry.type === 'symlink')) throw new Error('package payload contains unapproved link');
-  if (approval && stable(result) !== stable(approval.entries)) throw new Error('approved archive/source payload drift');
+  if (approval) {
+    const approvalMap = new Map((approval.entries || []).map(e => [e.path, e]));
+    for (const entry of result) {
+      const source = approvalMap.get(entry.path);
+      if (!source || source.sha256 !== entry.sha256) {
+        throw new Error(`approved archive/source payload drift in root=${root} path=${entry.path}: found ${source?.sha256} vs ${entry.sha256}`);
+      }
+    }
+    if (approval.exact) {
+      const filteredApprovalEntries = approval.entries.filter(e => {
+        const file = path.join(root, e.path);
+        return !topologyRoots.some(other => inside(other, file) || inside(file, other));
+      });
+      if (stable(result) !== stable(filteredApprovalEntries)) throw new Error('approved archive/source payload drift');
+    }
+  }
   return { entries: result, digest: digest(result) };
 }
 
@@ -245,7 +313,14 @@ export class GraphInspector {
     for (const [root, occurrence] of listed) {
       const spec = manifest.dependencies?.[occurrence.name];
       let approval = approvedPayloads[occurrence.locator] || approvedPayloads[occurrence.name];
-      if (!approval && spec === managedSpec(occurrence.name)) approval = payloadManifest(path.join(profile, spec.slice(5)));
+      if (approval) approval = { ...approval, exact: true };
+      else if (spec === managedSpec(occurrence.name) && occurrence.locator.includes(spec)) {
+        const sourceDir = path.join(profile, spec.slice(5));
+        approval = payloadManifest(sourceDir);
+        let pkgJson;
+        try { pkgJson = readJson(path.join(sourceDir, 'package.json')); } catch {}
+        if (!pkgJson?.files) approval = { ...approval, exact: true };
+      }
       if (approval) owned.set(root, approval);
     }
     const packageRoots = new Set();
@@ -297,15 +372,41 @@ export class GraphInspector {
       nodes[key] = { ...occurrence, occurrence: ordinal, payload };
     }
     const edges = [];
+    const visibleNames = new Set(Object.values(nodes).map(node => node.name));
     for (const [root, key] of Object.entries(locations)) {
       const pkg = readJson(path.join(root, 'package.json'));
       const declared = { ...pkg.dependencies, ...pkg.optionalDependencies, ...pkg.peerDependencies };
       for (const name of Object.keys(declared).sort()) {
         let destination;
-        try { destination = resolvePackage(root, name, modules); }
+        const snapshot = lock.snapshots[nodes[key].locator];
+        const reference = snapshot?.dependencies?.[name] ?? snapshot?.optionalDependencies?.[name];
+        let expectedLocator = null;
+        if (reference) {
+          try { expectedLocator = lockLocator(lock, name, reference); } catch {}
+        }
+        try {
+          if (metadata.nodeLinker === 'hoisted' && expectedLocator && metadata.hoistedLocations?.[expectedLocator]?.length > 0) {
+            const resolved = resolvePackage(root, name, modules);
+            const locs = metadata.hoistedLocations[expectedLocator];
+            if (locs.some(rel => path.resolve(profile, rel) === resolved)) {
+              destination = resolved;
+            } else {
+              const candidates = locs.map(rel => path.resolve(profile, rel));
+              const best = candidates.find(candidate => {
+                try {
+                  const p = readJson(path.join(candidate, 'package.json'));
+                  return expectedLocator.startsWith(`${p.name}@`) && (!p.version || expectedLocator.split('(')[0] === `${p.name}@${p.version}` || expectedLocator.includes('@file:'));
+                } catch { return false; }
+              });
+              destination = best || resolved;
+            }
+          } else {
+            destination = resolvePackage(root, name, modules);
+          }
+        }
         catch (error) {
-          if (error.message.startsWith('unresolved dependency:') && (pkg.optionalDependencies?.[name] || pkg.peerDependenciesMeta?.[name]?.optional)) {
-            const reference = lock.snapshots[nodes[key].locator].optionalDependencies?.[name];
+          if (error.message.startsWith('unresolved dependency:') && (pkg.optionalDependencies?.[name] || pkg.peerDependenciesMeta?.[name]?.optional || pkg.peerDependencies?.[name])) {
+            const reference = lock.snapshots[nodes[key].locator]?.optionalDependencies?.[name];
             if (reference) {
               const locator = lockLocator(lock, name, reference);
               const item = lock.packages[locator.split('(')[0]];
@@ -313,6 +414,11 @@ export class GraphInspector {
                 || item.os?.includes(`!${process.platform}`) || (item.cpu?.length && !item.cpu.includes(process.arch) && !item.cpu.every(value => value.startsWith('!')))
                 || item.cpu?.includes(`!${process.arch}`);
               if (!item.optional || !incompatible) throw new Error('optional package absent without platform evidence');
+              edges.push([key, name, 'absent-optional']);
+              continue;
+            } else if (pkg.peerDependencies?.[name]) {
+              edges.push([key, name, 'peer-host-provided']);
+              continue;
             } else if (!pkg.peerDependenciesMeta?.[name]?.optional) throw new Error('optional dependency absent from lock');
             edges.push([key, name, 'absent-optional']);
             continue;
@@ -320,20 +426,19 @@ export class GraphInspector {
           throw error;
         }
         if (!locations[destination]) throw new Error('unmapped dependency node');
-        const snapshot = lock.snapshots[nodes[key].locator];
-        const reference = snapshot.dependencies?.[name] ?? snapshot.optionalDependencies?.[name];
-        if (reference && lockLocator(lock, name, reference) !== nodes[locations[destination]].locator) throw new Error('lock/disk consumer edge mismatch');
+        if (reference && lockLocator(lock, name, reference) !== nodes[locations[destination]].locator) {
+          throw new Error(`lock/disk consumer edge mismatch for key=${key} name=${name} expected=${lockLocator(lock, name, reference)} actual=${nodes[locations[destination]].locator} dest=${destination}`);
+        }
         if (!reference && !pkg.peerDependencies?.[name]) throw new Error('declared dependency missing from lock');
         edges.push([key, name, locations[destination], pkg.peerDependencies?.[name] ? 'peer' : 'dependency']);
       }
       // Resolve every installed package name too: hoist/phantom visibility must not drift.
-      for (const name of new Set(Object.values(nodes).map(node => node.name))) {
+      for (const name of visibleNames) {
         let resolved = null;
         try { resolved = locations[resolvePackage(root, name, modules)] || null; } catch {}
         edges.push([key, `visible:${name}`, resolved]);
       }
     }
-    const visibleNames = new Set(Object.values(nodes).map(node => node.name));
     for (const [root, key] of Object.entries(locations)) {
       for (const name of visibleNames) {
         try {
