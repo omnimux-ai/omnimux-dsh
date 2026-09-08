@@ -10,6 +10,13 @@
       const slots = ctx.slots;
       const sessions = ctx.sessions;
       plazaSessions = sessions;
+      if (typeof ctx.inject === "function") {
+        ctx.inject(["workspaces"], (c) => {
+          try {
+            plazaWorkspaces = c.workspaces ?? c.get?.("workspaces");
+          } catch {}
+        });
+      }
       if (!slots) return;
       ctx.inject(["locale"], (c) => {
         if (!c.locale || typeof c.locale.register !== "function") return;
