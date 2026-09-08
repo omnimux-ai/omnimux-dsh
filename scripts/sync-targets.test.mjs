@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const syncToAppScript = join(root, 'scripts/sync-to-app.sh')
 const syncStableScript = join(root, 'scripts/sync-stable.sh')
-const syncPresetsScript = join(root, 'scripts/sync-agent-presets.sh')
+const presetFixture = join(tmpdir(), `sync-presets-fixture-${process.pid}`)
+const syncPresetsScript = join(presetFixture, 'scripts/sync-agent-presets.sh')
 
 describe('OmniMux Profile Target Selection Matrix', () => {
   const fakeHome = join(tmpdir(), 'test-fake-home-omnimux-' + Date.now())
@@ -22,7 +23,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       OMNIMUX_SYNC_VIA: 'internal',
       OMNIMUX_PLUGINS_DIR: fixturePlugins,
       HOME: fakeHome,
-      COREPACK_HOME: '/Users/x/.cache/node/corepack',
+      COREPACK_HOME: process.env.COREPACK_HOME,
+      COREPACK_DEFAULT_TO_LATEST: '0',
+      COREPACK_ENABLE_AUTO_PIN: '0',
       CI: 'true',
       npm_config_offline: 'true',
       ...extra,
@@ -44,6 +47,12 @@ describe('OmniMux Profile Target Selection Matrix', () => {
   }
 
   before(() => {
+    // Keep the real preset implementation, but never address installed Apps.
+    mkdirSync(join(presetFixture, 'scripts'), { recursive: true })
+    cpSync(join(root, 'presets'), join(presetFixture, 'presets'), { recursive: true })
+    cpSync(join(root, 'scripts/resolve-omnimux-profile.sh'), join(presetFixture, 'scripts/resolve-omnimux-profile.sh'))
+    writeFileSync(syncPresetsScript, readFileSync(join(root, 'scripts/sync-agent-presets.sh'), 'utf8')
+      .replaceAll('/Applications/', `${presetFixture}/Applications/`))
     for (const name of [
       'omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products',
       'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip',
@@ -54,6 +63,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     for (const sub of ['.omnimux-dev', '.omnimux', '.dsh']) {
       const p = join(fakeHome, sub, 'profiles', 'omnimux')
       mkdirSync(p, { recursive: true })
+      writeFileSync(join(p, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
       writeFileSync(join(p, 'package.json'), JSON.stringify({
         name: 'omnimux-profile-mock',
         dependencies: {},
@@ -65,6 +75,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
   after(() => {
     try {
       rmSync(fakeHome, { recursive: true, force: true })
+      rmSync(presetFixture, { recursive: true, force: true })
     } catch {}
   })
 
@@ -92,7 +103,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       env: syncEnv(),
       encoding: 'utf8',
     })
-    assert.equal(res.status, 0)
+    assert.equal(res.status, 0, res.stdout + res.stderr)
     assert.match(res.stdout, /\.omnimux-dev\/profiles\/omnimux/)
     assert.doesNotMatch(res.stdout, new RegExp(fakeHome + '/\\.omnimux/profiles'))
     assert.doesNotMatch(res.stdout, new RegExp(fakeHome + '/\\.dsh/profiles'))
@@ -140,7 +151,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       env: syncEnv(),
       encoding: 'utf8',
     })
-    assert.equal(res.status, 0)
+    assert.equal(res.status, 0, res.stdout + res.stderr)
     assert.match(res.stdout, /\.omnimux-dev\/profiles\/omnimux/)
     assert.match(res.stdout, /\.omnimux\/profiles\/omnimux/)
     assert.match(res.stdout, /\.dsh\/profiles\/omnimux/)
@@ -156,7 +167,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       env: syncEnv(),
       encoding: 'utf8',
     })
-    assert.equal(res.status, 0)
+    assert.equal(res.status, 0, res.stdout + res.stderr)
     assert.match(res.stdout, /\.omnimux-dev\/profiles\/omnimux/)
     assert.match(res.stdout, /\.omnimux\/profiles\/omnimux/)
     assert.doesNotMatch(res.stdout, new RegExp(fakeHome + '/\\.dsh/profiles'))
@@ -502,6 +513,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     const validationHome = join(tmpdir(), 'test-managed-validation-' + Date.now())
     const profile = join(validationHome, '.omnimux-dev', 'profiles', 'omnimux')
     mkdirSync(profile, { recursive: true })
+    if (!existsSync(join(profile, 'pnpm-workspace.yaml'))) {
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'managed-validation-profile', private: true, dependencies: {}, dsh: { profile: { bundles: [] } },
     }, null, 2) + '\n')
@@ -631,6 +645,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     const plugin = join(fixturePlugins, 'omnimux-stale-helper')
     const staleHelper = join(profile, 'node_modules', 'omnimux-stale-helper', 'helper.js')
     mkdirSync(profile, { recursive: true })
+    if (!existsSync(join(profile, 'pnpm-workspace.yaml'))) {
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
     mkdirSync(bin, { recursive: true })
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'managed-stale-helper-profile', private: true, dependencies: {}, dsh: { profile: { bundles: [] } },
@@ -667,6 +684,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     const plugin = join(fixturePlugins, 'omnimux-external-package')
     const installedPlugin = join(profile, 'node_modules', 'omnimux-external-package')
     mkdirSync(profile, { recursive: true })
+    if (!existsSync(join(profile, 'pnpm-workspace.yaml'))) {
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
     mkdirSync(bin, { recursive: true })
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'managed-external-package-profile', private: true, dependencies: {}, dsh: { profile: { bundles: [] } },
@@ -715,6 +735,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     }) + '\n')
     writeFileSync(join(plugin, 'index.js'), "module.exports = require('rollback-dependency')\n")
     mkdirSync(profile, { recursive: true })
+    if (!existsSync(join(profile, 'pnpm-workspace.yaml'))) {
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'rollback-profile', private: true, dependencies: { 'rollback-plugin': 'file:.materialize-snapshots/plugins/rollback-plugin' },
     }, null, 2) + '\n')
@@ -747,6 +770,50 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       assert.equal(restored.stdout, 'old-dependency')
     } finally {
       rmSync(rollbackHome, { recursive: true, force: true })
+    }
+  })
+
+  it('refreshes without changing the lock or installing platform-incompatible optional dependencies', () => {
+    const testHome = join(tmpdir(), `test-refresh-platform-${process.pid}`)
+    const excludedOs = process.platform === 'win32' ? 'darwin' : 'win32'
+    try {
+      for (const linker of ['hoisted', 'isolated']) {
+        const profile = join(testHome, linker, '.omnimux-dev/profiles/omnimux')
+        const snapshots = join(profile, '.materialize-snapshots/plugins')
+        const name = 'omnimux-platform-fixture'
+        const optional = 'fixture-other-platform'
+        writeFixturePlugin(name, '1.0.0', 'platform-stable', {
+          optionalDependencies: { [optional]: 'file:../fixture-other-platform' },
+        })
+        mkdirSync(snapshots, { recursive: true })
+        cpSync(join(fixturePlugins, name), join(snapshots, name), { recursive: true })
+        mkdirSync(join(snapshots, optional), { recursive: true })
+        writeFileSync(join(snapshots, optional, 'package.json'), JSON.stringify({
+          name: optional, version: '1.0.0', os: [excludedOs],
+          scripts: { install: 'node -e "require(\'fs\').writeFileSync(\'SCRIPT-RAN\',\'bad\')"' },
+        }) + '\n')
+        writeFileSync(join(profile, 'package.json'), JSON.stringify({
+          name: 'platform-refresh-profile', private: true, packageManager: 'pnpm@11.7.0',
+          dependencies: { [name]: `file:.materialize-snapshots/plugins/${name}` },
+          dsh: { profile: { bundles: [name] } },
+        }) + '\n')
+        writeFileSync(join(profile, 'pnpm-workspace.yaml'), `packages:\n  - .\nnodeLinker: ${linker}\nignoredBuiltDependencies:\n  - ${optional}\n`)
+        const env = syncEnv({ HOME: join(testHome, linker), npm_config_ignore_scripts: 'true',
+          npm_config_store_dir: join(testHome, linker, 'store') })
+        const initial = spawnSync('corepack', ['pnpm@11.7.0', 'install', '--offline', '--ignore-scripts', '--ignore-pnpmfile', '--package-import-method=copy'], { cwd: profile, env, encoding: 'utf8' })
+        assert.equal(initial.status, 0, initial.stdout + initial.stderr)
+        const beforeLock = readFileSync(join(profile, 'pnpm-lock.yaml'), 'utf8')
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const result = spawnSync('bash', [syncStableScript, name], { cwd: root, env, encoding: 'utf8' })
+          assert.equal(result.status, 0, result.stdout + result.stderr)
+          assert.equal(readFileSync(join(profile, 'pnpm-lock.yaml'), 'utf8'), beforeLock)
+          assert.equal(existsSync(join(profile, 'node_modules', optional)), false)
+          assert.equal(existsSync(join(snapshots, optional, 'SCRIPT-RAN')), false)
+          assert.match(readFileSync(join(profile, 'node_modules', name, 'index.js'), 'utf8'), /platform-stable/)
+        }
+      }
+    } finally {
+      rmSync(testHome, { recursive: true, force: true })
     }
   })
 

@@ -1,0 +1,38 @@
+sequenceDiagram
+  participant E as Existing sync
+  participant T as ManagedSync
+  participant A as ArchiveGuard
+  participant P as T03 pnpm runner
+  participant D as T02 CandidateDependencies
+  participant G as GraphInspector
+  participant B as T01 backup owner
+  E->>T: await run(request) under profile lock
+  T->>A: freeze(request, destination)
+  T->>P: await runPnpm(list, controlled env)
+  T->>G: capture({listJson}), validate before
+  alt exact managed no-op
+    T->>A: recheck input and path binding
+    T-->>E: unchanged
+  else adoption
+    T->>A: probeRecovery(paths)
+    T->>D: prepareCandidateDependencies(options with runPnpm)
+    D->>P: candidate lock generation
+    D->>G: compare non-target lock
+    D->>P: controlled private acquisition then frozen offline install
+    D-->>T: lockDigest, storeRef, acquisition
+    T->>G: capture candidate and compare full graph
+    T->>B: RecoveryInput for two non-secret staging files
+    B-->>T: verified RecoveryReceipt
+    T->>T: recheck before and durable PREPARED
+    T->>A: safeMove four-item publication with durable intents
+    T->>G: validate actual live state
+    alt valid
+      T->>T: durable COMMITTED, compact receipt and owned cleanup
+      T-->>E: committed
+    else failure or supported interruption
+      T->>P: terminate and wait for owned workers
+      T->>A: reverse recorded moves idempotently
+      T->>G: verify restored before
+      T-->>E: recovered failure or recovery-required
+    end
+  end

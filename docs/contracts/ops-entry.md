@@ -22,10 +22,14 @@ subsystem: "global"
 | `yarn omnimux:dev restart-host <task>` | 只重启指定 L2 Host；不碰公共 App |
 | `yarn omnimux:sync <plugin…>` | 默认只写 Dev；只构建/物化点名插件并只读核验受管 shared kit，不改 presets 或 App 包 |
 | `yarn omnimux:sync` | 默认只写 Dev；完整构建/物化并更新既有受管 kit snapshot 与 Agent Presets |
+| `yarn omnimux:sync --managed-tarball=<绝对路径> --expect-name=<完整包名> --expect-version=<精确版本> --expect-sha256=<64位hex> --target=dev` | 显式单包纳管；与普通同步互斥，不 build、不改 kit/presets/bundle；仅适用于已授权包和协调窗口 |
+| `yarn omnimux:sync --recover-managed-tarball=<transaction-id> --target=dev` | 只恢复该 profile 的未完成事务，不继续安装；恢复前态不等于 seed 合规 |
 | `yarn omnimux:doctor` | 运行当前环境诊断；实际覆盖范围与限制见 [dev-pipeline](dev-pipeline.md) |
 | `yarn omnimux:restart <dev-or-prod>` | 重启已明确指定的公共 App；需要该 App 与协调窗口的用户确认 |
 | `yarn omnimux:stage` | 发版前写入桌面 preset；需要发布授权 |
 | `yarn omnimux:path` / `yarn omnimux:help` | 显示解析路径和用法 |
+
+纳管内部接缝以 [冻结架构合同](../specs/issue-778-managed-tarball-architecture.md#33-状态模型与接口) 为准。私有 cache 获取及两文件恢复点不新增公开运维入口；只有 `SyncResult.schemaVersion=1` 的明确终态能作为磁盘操作结果，候选安装、备份或 Host 监听不等于业务验收。
 
 `sync` 不重启进程。无参数和点名插件同步都默认 `~/.omnimux-dev`；`--prod`、`--all`、正式 App、stage/打包不属于普通交付，必须单独获得发布授权。授权后由 Agent 完成非付款操作。
 

@@ -47,6 +47,15 @@ L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏�
 - 任何受管 source 缺失、kit 漂移、未受管自引用、旧 `file:node_modules/...` 残留或已安装入口身份/文件校验失败，都必须在首次写入前失败；不得迁移、静默跳过或留下部分同步。
 - `omnimux-workflow` 只跟踪 `src/`；`dist/index.js`、`lib/client.js`、`lib/canvas.js` 由 prepare/sync 现场生成。其它插件的跟踪策略按各包当前清单执行。
 
+## 显式单包 tarball 纳管
+
+- 纳管是既有 sync 链的互斥例外，不是普通 sync 的缺源修复旁路。四个输入身份参数全部必填，输入必须是外部绝对普通 `.tgz`/`.tar.gz`；不得混用命名插件、skip-build、批量、Prod/Base 或环境目标列表。
+- Dev 必须是干净、与 origin/main 精确一致的 main；主理人持有 MQ receipt 并协调停止安装、配置编辑和 seed 克隆后执行。本次真实目标限定 `@crosery/dsh-viewer@0.1.0`。合并前仅允许显式任务根和相等 `OMNIMUX_ALLOW_UNMERGED_TARGET` 的 synthetic 样本。
+- 安全归档、完整 source/installed payload、pnpm 锁节点/边与实际 peer/hoist 解析必须一致。目录重打包过滤成员、未知配置、native 产物丢失、缓存不足等均停止，不补 node_modules、不启 lifecycle、不更换包。
+- pnpm 11.7.0 仅在 profile 内私有 candidate/store 工作：先生成候选锁并比较非目标解析，再允许已锁定公开 registry 包受控获取到同一私有 store，最后 `--frozen-lockfile --offline` 安装。目标输入仍只接受授权本地 tgz；凭据、未知 registry、git/任意 URL 依赖停止。各阶段禁脚本/配置执行，HOME/config/cache/state/global-dir/TMP 全私有，不写共享 store，不启 Corepack 自动下载或切版。提交只交换目标缺失 source、manifest、锁和整个 node_modules；保留旧图用于恢复，配置/数据/kit/presets 不进入写集。
+- 普通 sync 与纳管共用稳定 flock。非终态 journal 阻止新同步，须经公开 `--recover-managed-tarball=<id>` 明确恢复；不得删除 journal 强行继续。多路径 rename 是可恢复事务，不宣称瞬时原子交换；恢复不完整时保留现场并返回失败。
+- receipt 只能证明磁盘事务；严格 seed、真实 Host/L2、公共 App 重载与 viewer 交互分别验收。限值和完整故障矩阵见 [Issue #778 架构](../specs/issue-778-managed-tarball-architecture.md)。
+
 ## 刷新与重启
 
 - L2 Host 属于任务私有环境，Agent 可用 `yarn omnimux:dev restart-host <task>` 原地重启并保持端口/数据身份。

@@ -1,0 +1,73 @@
+classDiagram
+  class ManagedRequest {
+    +string profile
+    +string tarball
+    +string name
+    +string version
+    +string sha256
+  }
+  class PayloadManifest {
+    +FileRecord[] entries
+    +string digest
+    +object identity
+  }
+  class GraphState {
+    +object manifest
+    +object lock
+    +object resolutionGraph
+    +object payloads
+    +object protectedDigests
+  }
+  class TransactionJournal {
+    +int schemaVersion
+    +string id
+    +string phase
+    +GraphState before
+    +object candidate
+    +MoveRecord[] moves
+  }
+  class ArchiveGuard {
+    +freeze(request, destination) PayloadManifest
+    +safeMove(profile, txnId, from, to, expected) MoveResult
+    +probeRecovery(paths) RecoveryCapability
+  }
+  class GraphInspector {
+    +__init__(profile)
+    +capture(listJson) GraphState
+    +compare(before, candidate, request) void
+    +assertRelocatable(candidate) void
+  }
+  class CandidateDependencies {
+    +prepareCandidateDependencies(options) CacheReceipt
+  }
+  class ManagedSync {
+    +__init__(request, hooks)
+    +run() Promise~SyncResult~
+    +recover(id) Promise~SyncResult~
+  }
+  class PnpmRunner {
+    +runPnpm(argv, options) Promise~ProcessResult~
+  }
+  class RecoveryInput {
+    +string transactionId
+    +string sourceProfileDigest
+    +string[] paths
+    +string[] sha256
+    +int[] mode
+  }
+  class RecoveryReceipt {
+    +string batchId
+    +boolean verified
+    +string digest
+  }
+  ManagedSync --> ManagedRequest
+  ManagedSync --> ArchiveGuard
+  ManagedSync --> GraphInspector
+  ManagedSync --> CandidateDependencies
+  ManagedSync --> PnpmRunner
+  ManagedSync *-- TransactionJournal
+  ManagedSync --> RecoveryInput
+  ManagedSync --> RecoveryReceipt
+  CandidateDependencies --> PnpmRunner : injected runPnpm
+  ArchiveGuard --> PayloadManifest
+  GraphInspector --> GraphState

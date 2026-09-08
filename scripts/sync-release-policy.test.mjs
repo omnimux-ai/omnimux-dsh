@@ -192,7 +192,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const runner = join(fixtureRoot, 'alias-runner')
     mkdirSync(join(runner, 'scripts'), { recursive: true })
     mkdirSync(join(runner, 'plugins/omnimux/src'), { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
     }
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(runner, 'plugins/omnimux/src/plugin-lifecycle.json'))
@@ -234,7 +234,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     mkdirSync(join(isolatedHome, '.omnimux'), { recursive: true })
     writePackage(join(isolatedPlugins, 'omnimux-accounts'), 'omnimux-accounts')
     writePackage(join(isolatedPlugins, 'omnimux'), 'omnimux')
-    for (const name of ['sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs']) {
+    for (const name of ['sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(isolatedScripts, name))
     }
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(isolatedRegistry, 'plugin-lifecycle.json'))
@@ -281,7 +281,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     mkdirSync(isolatedScripts, { recursive: true })
     mkdirSync(isolatedRegistry, { recursive: true })
     mkdirSync(isolatedProfile, { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(isolatedScripts, name))
     }
     writeFileSync(join(isolatedRegistry, 'plugin-lifecycle.json'), '{ malformed\n')
