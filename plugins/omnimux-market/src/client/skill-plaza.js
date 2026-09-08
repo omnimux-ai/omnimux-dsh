@@ -494,7 +494,12 @@
                       src: coverSrc,
                       alt: (item.cover && item.cover.alt) || item.name || item.title || "Cover",
                       loading: "lazy",
-                      onError: (e) => { e.currentTarget.style.display = "none"; },
+                      style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+                      onError: (e) => {
+                        e.currentTarget.style.display = "none";
+                        const next = e.currentTarget.nextElementSibling;
+                        if (next) next.style.display = "block";
+                      },
                     }) : null,
                     h("svg", {
                       viewBox: "0 0 320 180",
@@ -502,7 +507,7 @@
                       height: "100%",
                       fill: "none",
                       xmlns: "http://www.w3.org/2000/svg",
-                      style: coverSrc ? { position: "absolute", zIndex: 0 } : undefined,
+                      style: coverSrc ? { display: "none" } : undefined,
                     },
                       h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
                       h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
