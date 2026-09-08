@@ -4033,7 +4033,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2400
+      "downloads": 2400,
+      "cover": {
+        "asset": "catalog/covers/asmr-ambient.png",
+        "alt": "助眠音频"
+      }
     },
     {
       "id": "sk-omx-audiobook",
@@ -4055,7 +4059,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2900
+      "downloads": 2900,
+      "cover": {
+        "asset": "catalog/covers/audiobook.png",
+        "alt": "有声书"
+      }
     },
     {
       "id": "sk-omx-backrooms-dreamcore",
@@ -4155,7 +4163,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3900
+      "downloads": 3900,
+      "cover": {
+        "asset": "catalog/covers/brand-promo-video-generator.png",
+        "alt": "品牌宣传短片生成器"
+      }
     },
     {
       "id": "sk-omx-brand-stream-mg",
@@ -4177,7 +4189,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3200
+      "downloads": 3200,
+      "cover": {
+        "asset": "catalog/covers/brand-stream-mg.png",
+        "alt": "品牌流线 MG 动效"
+      }
     },
     {
       "id": "sk-omx-brand-brief",
@@ -4239,7 +4255,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2900
+      "downloads": 2900,
+      "cover": {
+        "asset": "catalog/covers/chinese-style-short-drama-generator.png",
+        "alt": "国风短剧成片生成器"
+      }
     },
     {
       "id": "sk-omx-cinematic-motion-language",
@@ -4316,7 +4336,11 @@
         "path": "catalog/skills/clip-export"
       },
       "recommended": true,
-      "downloads": 4600
+      "downloads": 4600,
+      "cover": {
+        "asset": "catalog/covers/clip-export.png",
+        "alt": "剪映导出"
+      }
     },
     {
       "id": "sk-omx-co-op-game-intro-generator",
@@ -4338,7 +4362,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2600
+      "downloads": 2600,
+      "cover": {
+        "asset": "catalog/covers/co-op-game-intro-generator.png",
+        "alt": "双人游戏开场视频生成器"
+      }
     },
     {
       "id": "sk-omx-content-strategy",
@@ -4438,7 +4466,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3500
+      "downloads": 3500,
+      "cover": {
+        "asset": "catalog/covers/digital-product-promo-generator.png",
+        "alt": "数字产品宣传片生成"
+      }
     },
     {
       "id": "sk-omx-documentary",
@@ -4498,7 +4530,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2500
+      "downloads": 2500,
+      "cover": {
+        "asset": "catalog/covers/dot-matrix-brand-wordmark-motion.png",
+        "alt": "点阵品牌字形动效"
+      }
     },
     {
       "id": "sk-omx-drama-soundtrack",
@@ -4520,7 +4556,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3600
+      "downloads": 3600,
+      "cover": {
+        "asset": "catalog/covers/drama-soundtrack.png",
+        "alt": "影视配乐"
+      }
     },
     {
       "id": "sk-omx-dynamic-poster",
@@ -4559,7 +4599,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4600
+      "downloads": 4600,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "电商图设计"
+      }
     },
     {
       "id": "sk-omx-ecommerce-image",
@@ -4579,7 +4623,11 @@
         "path": "catalog/skills/ecommerce-image"
       },
       "recommended": true,
-      "downloads": 4700
+      "downloads": 4700,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-image.png",
+        "alt": "电商商品图"
+      }
     },
     {
       "id": "sk-omx-education-studio",
@@ -4601,7 +4649,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3800
+      "downloads": 3800,
+      "cover": {
+        "asset": "catalog/covers/education-studio.png",
+        "alt": "教育内容工作室"
+      }
     },
     {
       "id": "sk-omx-face-warp",
@@ -4662,7 +4714,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4200
+      "downloads": 4200,
+      "cover": {
+        "asset": "catalog/covers/film-reference-prompt-writer.png",
+        "alt": "电影质感提示词大师"
+      }
     },
     {
       "id": "sk-omx-film-shot",
@@ -4723,7 +4779,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2700
+      "downloads": 2700,
+      "cover": {
+        "asset": "catalog/covers/fpv-tour-video-generator.png",
+        "alt": "第一视角 FPV 穿越生成"
+      }
     },
     {
       "id": "sk-omx-frontend-slides",
@@ -4764,7 +4824,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4800
+      "downloads": 4800,
+      "cover": {
+        "asset": "catalog/covers/h3-prompt-expert.png",
+        "alt": "H3 提示词专家"
+      }
     },
     {
       "id": "sk-omx-h3-visual-design",
@@ -4789,7 +4853,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3900
+      "downloads": 3900,
+      "cover": {
+        "asset": "catalog/covers/h3-visual-design.png",
+        "alt": "H3 Visual Design"
+      }
     },
     {
       "id": "sk-omx-handdrawn-live-video-generator",
@@ -4812,7 +4880,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3400
+      "downloads": 3400,
+      "cover": {
+        "asset": "catalog/covers/handdrawn-live-video-generator.png",
+        "alt": "手绘实拍融合视频生成器"
+      }
     },
     {
       "id": "sk-omx-image-paint-edit",
@@ -4874,7 +4946,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3600
+      "downloads": 3600,
+      "cover": {
+        "asset": "catalog/covers/ip-toy-grid-motion.png",
+        "alt": "IP潮玩六宫格动态海报"
+      }
     },
     {
       "id": "sk-omx-kling3-prompt-expert",
@@ -4938,7 +5014,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3300
+      "downloads": 3300,
+      "cover": {
+        "asset": "catalog/covers/line-doodle-explainer-generator.png",
+        "alt": "线条图解科普视频生成"
+      }
     },
     {
       "id": "sk-omx-lip-product-ad-generator",
@@ -4960,7 +5040,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2800
+      "downloads": 2800,
+      "cover": {
+        "asset": "catalog/covers/lip-product-ad-generator.png",
+        "alt": "唇部彩妆广告生成"
+      }
     },
     {
       "id": "sk-omx-live-sketch-motion",
@@ -5020,7 +5104,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3300
+      "downloads": 3300,
+      "cover": {
+        "asset": "catalog/covers/micro-expression-video-generator.png",
+        "alt": "人物微表情视频生成"
+      }
     },
     {
       "id": "sk-omx-minecraft-pixel-art",
@@ -5062,7 +5150,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4300
+      "downloads": 4300,
+      "cover": {
+        "asset": "catalog/covers/minimalist-product-ad-generator.png",
+        "alt": "极简产品广告生成器"
+      }
     },
     {
       "id": "sk-omx-multi-shot",
@@ -5104,7 +5196,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3100
+      "downloads": 3100,
+      "cover": {
+        "asset": "catalog/covers/music-video-subtitle-generator.png",
+        "alt": "音乐MV动态字幕生成器"
+      }
     },
     {
       "id": "sk-omx-mv-creator",
@@ -5206,7 +5302,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2900
+      "downloads": 2900,
+      "cover": {
+        "asset": "catalog/covers/paper-collage-explainer-generator.png",
+        "alt": "纸拼贴讲解动画"
+      }
     },
     {
       "id": "sk-omx-papercraft-stop-motion-explainer",
@@ -5230,7 +5330,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3100
+      "downloads": 3100,
+      "cover": {
+        "asset": "catalog/covers/papercraft-stop-motion-explainer.png",
+        "alt": "纸艺定格科普视频生成器"
+      }
     },
     {
       "id": "sk-omx-podcast-marketing",
@@ -5392,7 +5496,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3500
+      "downloads": 3500,
+      "cover": {
+        "asset": "catalog/covers/pov-short-film-generator.png",
+        "alt": "第一视角短片生成"
+      }
     },
     {
       "id": "sk-omx-product-photography-brief",
@@ -5493,7 +5601,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3500
+      "downloads": 3500,
+      "cover": {
+        "asset": "catalog/covers/short-drama-multilingual-dubbing.png",
+        "alt": "短剧多语言出海配音"
+      }
     },
     {
       "id": "sk-omx-short-drama-screenwriter",
@@ -5515,7 +5627,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3100
+      "downloads": 3100,
+      "cover": {
+        "asset": "catalog/covers/short-drama-screenwriter.png",
+        "alt": "短剧编剧助手"
+      }
     },
     {
       "id": "sk-omx-short-drama-series-writer",
@@ -5537,7 +5653,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3800
+      "downloads": 3800,
+      "cover": {
+        "asset": "catalog/covers/short-drama-series-writer.png",
+        "alt": "微短剧剧集编剧"
+      }
     },
     {
       "id": "sk-omx-silkscreen-decorative-illustration-short",
@@ -5560,7 +5680,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2800
+      "downloads": 2800,
+      "cover": {
+        "asset": "catalog/covers/silkscreen-decorative-illustration-short.png",
+        "alt": "丝印装饰插画风格短片"
+      }
     },
     {
       "id": "sk-omx-skill-creator",
@@ -5697,7 +5821,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3900
+      "downloads": 3900,
+      "cover": {
+        "asset": "catalog/covers/subtitle-correction.png",
+        "alt": "字幕修正"
+      }
     },
     {
       "id": "sk-omx-surreal-spot",
@@ -5738,7 +5866,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2700
+      "downloads": 2700,
+      "cover": {
+        "asset": "catalog/covers/suspense-title-sequence-generator.png",
+        "alt": "悬疑电影片头生成"
+      }
     },
     {
       "id": "sk-omx-sword-dance",
@@ -5779,7 +5911,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3000
+      "downloads": 3000,
+      "cover": {
+        "asset": "catalog/covers/transcript-broll-planner.png",
+        "alt": "口播视频B-roll规划器"
+      }
     },
     {
       "id": "sk-omx-ugc-ad-production",
@@ -5872,7 +6008,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4200
+      "downloads": 4200,
+      "cover": {
+        "asset": "catalog/covers/video-deconstruct-analyzer.png",
+        "alt": "视频拆解分析师"
+      }
     },
     {
       "id": "sk-omx-video-prompting",
@@ -6009,7 +6149,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4400
+      "downloads": 4400,
+      "cover": {
+        "asset": "catalog/covers/vox-style-video-generator.png",
+        "alt": "Vox风格科普动画"
+      }
     },
     {
       "id": "sk-omx-writing-fragments",
@@ -6091,7 +6235,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3200
+      "downloads": 3200,
+      "cover": {
+        "asset": "catalog/covers/2d-animation-commentary-drama.png",
+        "alt": "2D动画半解说短剧"
+      }
     },
     {
       "id": "sk-omx-3d-comic-commentary-drama",
@@ -6113,7 +6261,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2800
+      "downloads": 2800,
+      "cover": {
+        "asset": "catalog/covers/3d-comic-commentary-drama.png",
+        "alt": "3D漫剧半解说"
+      }
     },
     {
       "id": "sk-omx-live-action-commentary-drama",
@@ -6135,7 +6287,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4100
+      "downloads": 4100,
+      "cover": {
+        "asset": "catalog/covers/live-action-commentary-drama.png",
+        "alt": "半解说真人短剧"
+      }
     },
     {
       "id": "sk-omx-wes-anderson-aesthetic-generator",
@@ -6157,7 +6313,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3600
+      "downloads": 3600,
+      "cover": {
+        "asset": "catalog/covers/wes-anderson-aesthetic-generator.png",
+        "alt": "韦斯·安德森美学短片生成器"
+      }
     },
     {
       "id": "sk-omx-sitcom-story-video-generator",
@@ -6179,7 +6339,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2500
+      "downloads": 2500,
+      "cover": {
+        "asset": "catalog/covers/sitcom-story-video-generator.png",
+        "alt": "情景喜剧故事视频"
+      }
     },
     {
       "id": "sk-omx-scifi-cinematic-video-generator",
@@ -6201,7 +6365,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 4500
+      "downloads": 4500,
+      "cover": {
+        "asset": "catalog/covers/scifi-cinematic-video-generator.png",
+        "alt": "未来科幻质感影视生成器"
+      }
     },
     {
       "id": "sk-omx-retro-city-cel-animation-short",
@@ -6223,7 +6391,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2900
+      "downloads": 2900,
+      "cover": {
+        "asset": "catalog/covers/retro-city-cel-animation-short.png",
+        "alt": "复古都市赛璐璐短片"
+      }
     },
     {
       "id": "sk-omx-felt-stop-motion-story-short",
@@ -6246,7 +6418,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3800
+      "downloads": 3800,
+      "cover": {
+        "asset": "catalog/covers/felt-stop-motion-story-short.png",
+        "alt": "羊毛毡故事短片"
+      }
     },
     {
       "id": "sk-omx-fashion-scene-showcase-video",
@@ -6269,7 +6445,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 3400
+      "downloads": 3400,
+      "cover": {
+        "asset": "catalog/covers/fashion-scene-showcase-video.png",
+        "alt": "时装场景展示视频"
+      }
     },
     {
       "id": "sk-omx-product-kinetic-typography-tvc",
@@ -6291,7 +6471,11 @@
         "ref": "main"
       },
       "recommended": true,
-      "downloads": 2200
+      "downloads": 2200,
+      "cover": {
+        "asset": "catalog/covers/product-kinetic-typography-tvc.png",
+        "alt": "产品贴字动画TVC"
+      }
     }
   ]
 }

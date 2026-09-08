@@ -489,7 +489,6 @@
                   onClick: () => setOpen(item),
                 },
                   h("div", { className: "featured-cover-wrap" },
-                    h("span", { className: "h3-badge" }, "H3"),
                     coverSrc ? h("img", {
                       src: coverSrc,
                       alt: (item.cover && item.cover.alt) || item.name || item.title || "Cover",
