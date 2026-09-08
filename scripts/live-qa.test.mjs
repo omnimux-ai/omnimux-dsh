@@ -17,6 +17,7 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'omnimux-live-qa-'))
   roots.push(root)
   symlinkSync(join(repo, 'plugins'), join(root, 'plugins'))
+  symlinkSync(join(repo, 'node_modules'), join(root, 'node_modules'))
   execFileSync('git', ['init', '-q', root])
   writeFileSync(join(root, 'README'), 'QA fixture\n')
   execFileSync('git', ['add', 'README'], { cwd: root })
@@ -83,6 +84,11 @@ test('stage selection and actual runtime discovery reject empty or unknown targe
   assert.equal(targets.length, 8)
   assert.equal(targets.filter((target) => target.adapter === 'six-methods-and-disposer').length, 7)
   assert.equal(targets.find((target) => target.stage === 'workflow').selector, '[data-dsh-omnimux-workflow-entry]')
+  const market = targets.find((target) => target.stage === 'market')
+  assert.equal(market.adapter, 'sidebar-coordinator')
+  assert.equal(market.rank, 4.1)
+  assert.equal(market.selector, '[data-omnimux-market-entry]')
+  assert.equal(market.tabId, 'omnimux-market:plaza')
 })
 
 const target = { stage: 'assets', selector: '[data-omnimux-assets-entry]', tabId: 'omnimux-assets:library' }
@@ -194,7 +200,7 @@ test('stage-specific loading and failure markers cannot pass as valid empty cont
 test('verify:live creates one pending, SHA-bound ego-browser request and never reports PASS', async () => {
   const root = fixture()
   const report = await runLiveQa(['assets'], { root })
-  assert.equal(report.status, 'pending')
+  assert.equal(report.status, 'pending', JSON.stringify(report.errors))
   assert.equal(report.pass, false)
   assert.ok(report.requestPath)
   const request = JSON.parse(readFileSync(report.requestPath, 'utf8'))
