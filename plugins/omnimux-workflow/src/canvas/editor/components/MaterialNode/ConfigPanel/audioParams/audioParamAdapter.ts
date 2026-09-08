@@ -1,12 +1,16 @@
 /**
- * AudioParamAdapter — 音频参数读侧适配器（2026-09-07 全模态收敛 / T05）。
+ * AudioParamAdapter — 音频参数读侧适配器（2026-09-07 全模态收敛 / T05；Issue #763 精简）。
  *
- * 职责：只读清洗与摘要格式化（schema-driven，废除现网抽屉的 1–60 硬编码滑块）。
+ * 职责：只读清洗（schema-driven，废除现网抽屉的 1–60 硬编码滑块）。
  * - 时长：allowAuto && -1 合法；options 命中或 range+step 命中保留；
  *   否则展示回退 schema.duration.defaultValue（兜底 60）；字符串 '8s' 可 parse 后校验；
  * - voice / instrumental / outputFormat 显隐只看 schema，不把 operation id 当开关真源；
  * - 绝不在 resolve 时回写 nodeData.params；
  * - operation 语义委托共享内核 buildEffectiveOpsUiState（outputType: 'audio'）。
+ *
+ * Issue #763：朗读时长由文本长度决定，底栏时长摘要条与参数浮层已移除，
+ * 摘要格式化与浮层写路径白名单随之下线；
+ * 本适配器继续为底栏 VoiceTrigger / VoicePickerDialog 提供音色读侧真源。
  */
 
 import type {
@@ -24,7 +28,6 @@ import {
 } from '../../../../../../shared/validation/operationUi.ts';
 import type {
   AudioNodeParams,
-  AudioSummaryFormatResult,
   EffectiveAudioParams,
 } from './types.ts';
 
@@ -44,26 +47,6 @@ export function resolveAudioPromptGate(prompt: string | undefined | null): {
 } {
   const count = Array.from(prompt ?? '').length;
   return { count, max: AUDIO_PROMPT_MAX_CHARS, exceeded: count > AUDIO_PROMPT_MAX_CHARS };
-}
-
-/** 音频浮层允许写入的 key。禁止 generationMode 与未知 key。 */
-export type AudioParamWriteKey =
-  | 'operation'
-  | 'duration'
-  | 'voice'
-  | 'instrumental'
-  | 'outputFormat'
-  | 'seed';
-
-/** 运行期断言：禁止 generationMode 与未知 key 进入写入路径。 */
-export function assertAudioParamWriteKey(key: string): asserts key is AudioParamWriteKey {
-  const allowed: readonly string[] = ['operation', 'duration', 'voice', 'instrumental', 'outputFormat', 'seed'];
-  if (key === 'generationMode') {
-    throw new Error('UI must not write params.generationMode');
-  }
-  if (!allowed.includes(key)) {
-    throw new Error(`UI must not write params.${key}`);
-  }
 }
 
 export interface ResolveEffectiveAudioParamsArgs {
@@ -186,28 +169,4 @@ export function resolveEffectiveAudioParams(
   if (outputFormat !== undefined) result.outputFormat = outputFormat;
   if (typeof params?.seed === 'number') result.seed = params.seed;
   return result;
-}
-
-/**
- * 将生效的 EffectiveAudioParams 转换为摘要触发条展示用的结构化摘要。
- * fullText 为空格拼接（禁止中点 `·`）。
- */
-export function formatAudioSummary(params: EffectiveAudioParams): AudioSummaryFormatResult {
-  const modeText = params.showModeUi
-    ? (params.operationLabel.trim() || params.operation.trim())
-    : '';
-  const durationText = params.duration === -1 ? '自动' : `${params.duration}s`;
-  const formatText = params.outputFormat ? params.outputFormat.trim().toUpperCase() : null;
-
-  const segments: string[] = [];
-  if (modeText) segments.push(modeText);
-  if (formatText) segments.push(formatText);
-  if (durationText) segments.push(durationText);
-
-  return {
-    modeText,
-    durationText,
-    formatText,
-    fullText: segments.join(' '),
-  };
 }

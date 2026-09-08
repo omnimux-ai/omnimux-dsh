@@ -1,83 +1,82 @@
 /**
- * audioParams 集成契约测试（2026-09-07 全模态收敛 / T05 + T06）。
+ * audioParams 集成契约测试（Issue #763：音频输入面板卡槽常驻 + 底栏精简）。
  *
  * 源码契约（readFileSync + node:test）锁定：
- *  - AudioTriggerBar 消费 CfgSummaryBar + AUDIO_COLLAPSE_ORDER，
- *    槽位 mode/format/duration/chevron，duration 走 ellipsis；
- *  - AudioParamPopover 消费 CfgPopoverShell + CfgDurationGrid/CustomSlider/
- *    CustomSelect/CfgCompactToggle，schema-driven 显隐，无 1–60 硬编码；
- *  - 写路径先 assertAudioParamWriteKey；
- *  - ConfigPanel 宿主：音频（非 ASR）无 SlidersHorizontal 齿轮、无 advanced-drawer；
- *    ASR 不挂载摘要条（isAsrTool 分支）。
+ *  - AudioTriggerBar / AudioParamPopover 组件文件已删除，ConfigPanel 不再导入、
+ *    渲染或持有其状态（audioPopoverOpen / audioTriggerRef）；
+ *  - 音频底栏只保留：模型下拉 + wf-voice-trigger 音色胶囊 + 生成按钮；
+ *  - SLOT_LAYOUT_TABLE 新增 text_to_speech strip 策略，SLOT_NAME_ALIASES
+ *    新增 reference_audio 别名；
+ *  - ConfigPanel 为音频（非 ASR）提供 reference_audio 常驻卡槽兜底（同 image）；
+ *  - audioParamAdapter 不再导出 formatAudioSummary / assertAudioParamWriteKey；
+ *  - ASR（isAsrTool）不挂卡槽兜底，字数闸门保留。
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const triggerSrc = readFileSync(join(here, 'AudioTriggerBar.tsx'), 'utf8');
-const popoverSrc = readFileSync(join(here, 'AudioParamPopover.tsx'), 'utf8');
 const adapterSrc = readFileSync(join(here, 'audioParamAdapter.ts'), 'utf8');
 const configSrc = readFileSync(join(here, '..', 'index.tsx'), 'utf8');
+const tableSrc = readFileSync(
+  join(here, '..', '..', '..', '..', '..', '..', 'shared', 'graph', 'feedSlot', 'slotLayoutTable.ts'),
+  'utf8',
+);
 
-test('AudioTriggerBar 消费 CfgSummaryBar 与 AUDIO_COLLAPSE_ORDER，槽位契约锁定', () => {
-  assert.match(triggerSrc, /CfgSummaryBar/);
-  assert.match(triggerSrc, /AUDIO_COLLAPSE_ORDER/);
-  assert.match(triggerSrc, /formatAudioSummary/);
-  assert.match(triggerSrc, /Clock\s+size=\{14\}/);
-  assert.match(triggerSrc, /ChevronDown\s+size=\{14\}/);
-  // 音频槽位：mode → format → duration → chevron；duration 走 ellipsis 尽量保留
-  assert.match(triggerSrc, /push\('mode'/);
-  assert.match(triggerSrc, /push\('format'/);
-  assert.match(triggerSrc, /push\('duration', summary\.durationText, <Clock[\s\S]*?'ellipsis'\)/);
-  assert.match(triggerSrc, /dropPolicy: 'never'/);
-  assert.doesNotMatch(triggerSrc, /·/);
+test('Issue #763：AudioTriggerBar / AudioParamPopover 组件文件已删除', () => {
+  assert.equal(existsSync(join(here, 'AudioTriggerBar.tsx')), false, 'AudioTriggerBar.tsx 必须删除');
+  assert.equal(existsSync(join(here, 'AudioParamPopover.tsx')), false, 'AudioParamPopover.tsx 必须删除');
 });
 
-test('AudioParamPopover 消费 cfg 控件族，schema-driven 显隐，无 1–60 硬编码', () => {
-  assert.match(popoverSrc, /CfgPopoverShell/);
-  assert.match(popoverSrc, /CfgDurationGrid/);
-  assert.match(popoverSrc, /CustomSlider/);
-  assert.match(popoverSrc, /CustomSelect/);
-  assert.match(popoverSrc, /CfgCompactToggle/);
-  assert.match(popoverSrc, /assertAudioParamWriteKey\(key\)/);
-  // 时长：options → pills；range 且无 options → slider（options 优先）
-  assert.match(popoverSrc, /durationOptions\.length > 0/);
-  assert.match(popoverSrc, /durationRange/);
-  // 音色 ≥6 → Select
-  assert.match(popoverSrc, /VOICE_SELECT_THRESHOLD = 6/);
-  // 纯音乐显隐看 schema（hasInstrumentalSupport）
-  assert.match(popoverSrc, /params\.hasInstrumentalSupport/);
-  // 分区标题
-  assert.match(popoverSrc, /生成方式/);
-  assert.match(popoverSrc, /时长/);
-  assert.match(popoverSrc, /音色/);
-  assert.match(popoverSrc, /纯音乐/);
-  // 无 1–60 硬编码上限、无原生 select、无 JS 主题分支
-  assert.doesNotMatch(popoverSrc, /max=\{?60\}?/);
-  assert.doesNotMatch(popoverSrc, /<select/);
-  assert.doesNotMatch(popoverSrc, /isDark|theme\s*===|matchMedia/);
-  assert.match(popoverSrc, /showModeUi/);
-});
-
-test('audioParamAdapter 不调用视频过渡，instrumental 显隐真源是 schema 而非 operation id', () => {
-  assert.doesNotMatch(adapterSrc, /buildVideoParamTransition/);
-  assert.doesNotMatch(adapterSrc, /onUpdateNodeData/);
-  assert.match(adapterSrc, /outputType: 'audio'/);
-  assert.match(adapterSrc, /schema\.instrumental\?\.supported/);
-  assert.doesNotMatch(adapterSrc, /selectedOperationId === 'text_to_music'/);
-  assert.match(adapterSrc, /assertAudioParamWriteKey/);
-});
-
-test('ConfigPanel 音频分支：无齿轮、无抽屉；ASR（isAsrTool）不挂摘要条', () => {
+test('Issue #763：ConfigPanel 不再挂载音频时长摘要条与参数浮层', () => {
+  assert.doesNotMatch(configSrc, /AudioTriggerBar/);
+  assert.doesNotMatch(configSrc, /AudioParamPopover/);
+  assert.doesNotMatch(configSrc, /audioPopoverOpen/);
+  assert.doesNotMatch(configSrc, /audioTriggerRef/);
   assert.doesNotMatch(configSrc, /SlidersHorizontal/);
   assert.doesNotMatch(configSrc, /advanced-drawer/);
   assert.doesNotMatch(configSrc, /showAdvanced/);
-  // 音频摘要条仅在非 ASR 挂载
-  assert.match(configSrc, /materialType === 'audio' && !isAsrTool && audioEffectiveParams/);
-  // ASR 仍走 isAsrTool 分支（无参数摘要）
+});
+
+test('Issue #763：音频底栏保留模型下拉与 VoiceTrigger 音色胶囊（有音色选项即常驻）', () => {
+  assert.match(configSrc, /wf-voice-trigger/);
+  assert.match(configSrc, /VoicePickerDialog/);
+  assert.match(configSrc, /resolveVoiceLabel/);
+  // 浮层已移除，音色选择不再按大目录门槛收缩：任何音色选项都走 VoiceTrigger
+  assert.match(configSrc, /voiceCatalogOptions\.length > 0/);
+  assert.doesNotMatch(configSrc, /VOICE_PICKER_MIN_OPTIONS/);
+  // 音色读侧真源仍是 resolveEffectiveAudioParams
+  assert.match(configSrc, /resolveEffectiveAudioParams\(\{/);
+  assert.match(configSrc, /updateParam\('voice', voiceType\)/);
+});
+
+test('Issue #763：text_to_speech 进入 SLOT_LAYOUT_TABLE，reference_audio 别名在位', () => {
+  assert.match(tableSrc, /text_to_speech: \{ preset: 'strip', slots: \['reference_audio', 'reference'\], addButton: true \}/);
+  assert.match(tableSrc, /reference_audio: \['reference', 'references', 'input_audio', 'audio_track', 'audio'\]/);
+});
+
+test('Issue #763：ConfigPanel 为音频（非 ASR）提供 reference_audio 常驻卡槽兜底', () => {
+  assert.match(configSrc, /materialType === 'audio' && !isAsrTool && \(slotLayout\.preset === 'none' \|\| slotLayout\.slots\.length === 0\)/);
+  assert.match(configSrc, /opsState\.selectedOperationId \|\| 'text_to_speech'/);
+  assert.match(configSrc, /slot: 'reference_audio'/);
+  assert.match(configSrc, /labelKey: 'panel\.slot\.reference_audio'/);
+});
+
+test('audioParamAdapter：摘要格式化与浮层写白名单随浮层下线，字数闸门保留', () => {
+  assert.doesNotMatch(adapterSrc, /formatAudioSummary/);
+  assert.doesNotMatch(adapterSrc, /assertAudioParamWriteKey/);
+  assert.doesNotMatch(adapterSrc, /buildVideoParamTransition/);
+  assert.doesNotMatch(adapterSrc, /onUpdateNodeData/);
+  assert.match(adapterSrc, /outputType: 'audio'/);
+  assert.match(adapterSrc, /resolveAudioPromptGate/);
+  assert.match(adapterSrc, /AUDIO_PROMPT_MAX_CHARS/);
+});
+
+test('ASR（isAsrTool）不挂音频卡槽兜底，字数闸门接线保留', () => {
   assert.match(configSrc, /isAsrTool/);
+  assert.match(configSrc, /maxLength=\{audioPromptGate \? AUDIO_PROMPT_MAX_CHARS : undefined\}/);
+  assert.match(configSrc, /audioPromptGate\?\.exceeded/);
 });

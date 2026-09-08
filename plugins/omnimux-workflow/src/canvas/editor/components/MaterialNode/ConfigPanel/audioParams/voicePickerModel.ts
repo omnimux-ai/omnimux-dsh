@@ -13,9 +13,6 @@
 
 import type { VoiceCatalogOption, VoiceOptionMeta } from '../../../../../../shared/api.ts';
 
-/** 音色基数 ≥ 12 时由底栏 VoiceTrigger + VoicePickerDialog 承载（Popover 音色区收缩） */
-export const VOICE_PICKER_MIN_OPTIONS = 12;
-
 /** 热门标签（次优先级置顶） */
 export const VOICE_HOT_TAGS = ['抖音同款', '剪映同款', '豆包同款'] as const;
 

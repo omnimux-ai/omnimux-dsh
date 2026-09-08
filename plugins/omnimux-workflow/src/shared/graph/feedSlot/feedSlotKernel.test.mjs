@@ -189,3 +189,38 @@ test('image slot name aliases match reference, references, input_image and input
   assert.equal(l.slots.length, 1);
   assert.equal(l.slots[0].slot, 'input_images');
 });
+test('Issue #763: text_to_speech derives strip preset with reference_audio slot and addButton', () => {
+  const ttsCatalog = {
+    models: [{
+      id: 'seed-audio-1.0',
+      operations: [
+        { id: 'text_to_speech', listed: true, output: { type: 'audio' }, inputs: [input('reference_audio', 'audio', 'reference', 0, 5)] },
+      ],
+    }],
+  };
+  const l = deriveSlotLayout(ttsCatalog, 'seed-audio-1.0', 'text_to_speech', 'audio');
+  assert.equal(l.preset, 'strip');
+  assert.equal(l.addButton, true);
+  assert.equal(l.slots.length, 1);
+  assert.equal(l.slots[0].slot, 'reference_audio');
+  assert.equal(l.slots[0].type, 'audio');
+  assert.equal(l.slots[0].min, 0);
+  assert.equal(l.slots[0].max, 5);
+  assert.equal(l.slots[0].labelKey, 'panel.slot.reference_audio');
+});
+test('Issue #763: reference_audio aliases match reference, references, input_audio, audio_track and audio', () => {
+  for (const slotName of ['reference', 'references', 'input_audio', 'audio_track', 'audio']) {
+    const customCatalog = {
+      models: [{
+        id: 'tts-model',
+        operations: [
+          { id: 'text_to_speech', listed: true, output: { type: 'audio' }, inputs: [input(slotName, 'audio', 'reference', 0, 3)] },
+        ],
+      }],
+    };
+    const l = deriveSlotLayout(customCatalog, 'tts-model', 'text_to_speech', 'audio');
+    assert.equal(l.preset, 'strip', `${slotName} 应派生 strip 预设`);
+    assert.equal(l.slots.length, 1, `${slotName} 应命中卡槽`);
+    assert.equal(l.slots[0].slot, slotName);
+  }
+});

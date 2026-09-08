@@ -1,23 +1,22 @@
 /**
- * Unit tests for audioParamAdapter（2026-09-07 全模态收敛 / T05）。
+ * Unit tests for audioParamAdapter（2026-09-07 全模态收敛 / T05；Issue #763 精简）。
  *
  * 真值断言（非源码正则）：
  * - 时长 schema-driven：options 命中 / range+step 命中保留，非法展示回退
  *   defaultValue（兜底 60）；字符串 '8s' 可 parse；allowAuto 的 -1 合法；
  *   全程无 1–60 硬编码上限；
  * - voice / instrumental / outputFormat 显隐只看 schema；
- * - effectiveOps ≤ 1 → showModeUi false / modeText 空；
- * - fullText 空格拼接、无中点 `·`；
- * - assertAudioParamWriteKey 白名单防御。
+ * - effectiveOps ≤ 1 → showModeUi false；
+ *
+ * Issue #763：时长由文本长度决定，TriggerBar / Popover 已移除，
+ * formatAudioSummary 与 assertAudioParamWriteKey 随之下线，不再断言。
  */
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createCompatTestCatalog } from '../../../../../../shared/validation/compatTestCatalog.ts';
 import {
-  assertAudioParamWriteKey,
   durationIsValid,
-  formatAudioSummary,
   resolveEffectiveAudioParams,
 } from './audioParamAdapter.ts';
 
@@ -124,7 +123,7 @@ describe('audioParamAdapter - 时长（schema-driven）', () => {
     assert.equal(resolved.duration, 90);
   });
 
-  it('allowAuto 的 -1 合法，摘要显示「自动」；无 schema 兜底 60', () => {
+  it('allowAuto 的 -1 合法；无 schema 兜底 60', () => {
     const autoSchema = {
       duration: { range: { min: 5, max: 120 }, defaultValue: 30, allowAuto: true },
     };
@@ -138,7 +137,6 @@ describe('audioParamAdapter - 时长（schema-driven）', () => {
       prompt: '',
     });
     assert.equal(resolved.duration, -1);
-    assert.equal(formatAudioSummary(resolved).durationText, '自动');
 
     const bare = resolveEffectiveAudioParams({
       params: { model: 'aud-tts', duration: 45 },
@@ -214,7 +212,7 @@ describe('audioParamAdapter - voice / instrumental / format（schema 为显隐�
     assert.equal(unsupported.hasInstrumentalSupport, false);
   });
 
-  it('outputFormat：有 options 才解析，摘要大写；无则 null', () => {
+  it('outputFormat：有 options 才解析；无则 undefined', () => {
     const schema = {
       ...OPTIONS_SCHEMA,
       outputFormat: { options: [{ value: 'mp3', label: 'mp3' }, { value: 'wav', label: 'wav' }], defaultValue: 'mp3' },
@@ -228,7 +226,6 @@ describe('audioParamAdapter - voice / instrumental / format（schema 为显隐�
       prompt: '',
     });
     assert.equal(resolved.outputFormat, 'wav');
-    assert.equal(formatAudioSummary(resolved).formatText, 'WAV');
 
     const noFormat = resolveEffectiveAudioParams({
       params: { model: 'aud-tts' },
@@ -239,12 +236,11 @@ describe('audioParamAdapter - voice / instrumental / format（schema 为显隐�
       prompt: '',
     });
     assert.equal(noFormat.outputFormat, undefined);
-    assert.equal(formatAudioSummary(noFormat).formatText, null);
   });
 });
 
-describe('audioParamAdapter - 生成方式与摘要', () => {
-  it('ops ≥ 2 → showModeUi true 且 modeText 来自 operation label；ops ≤ 1 → 无 mode', () => {
+describe('audioParamAdapter - 生成方式', () => {
+  it('ops ≥ 2 → showModeUi true 且 operationLabel 来自 operation label；ops ≤ 1 → 无 mode', () => {
     const twoOps = resolveEffectiveAudioParams({
       params: { model: 'aud-multi' },
       schema: OPTIONS_SCHEMA,
@@ -255,7 +251,7 @@ describe('audioParamAdapter - 生成方式与摘要', () => {
     });
     assert.equal(twoOps.showModeUi, true);
     assert.ok(twoOps.effectiveOperations.length >= 2);
-    assert.ok(formatAudioSummary(twoOps).modeText.length > 0);
+    assert.ok(twoOps.operationLabel.length > 0);
 
     const oneOp = resolveEffectiveAudioParams({
       params: { model: 'aud-tts' },
@@ -266,42 +262,5 @@ describe('audioParamAdapter - 生成方式与摘要', () => {
       prompt: '',
     });
     assert.equal(oneOp.showModeUi, false);
-    assert.equal(formatAudioSummary(oneOp).modeText, '');
-  });
-
-  it('fullText 空格拼接、无中点；顺序 mode → format → duration', () => {
-    const schema = {
-      ...OPTIONS_SCHEMA,
-      outputFormat: { options: [{ value: 'mp3', label: 'mp3' }], defaultValue: 'mp3' },
-    };
-    const resolved = resolveEffectiveAudioParams({
-      params: { model: 'aud-multi', duration: 30 },
-      schema,
-      modelItem: { id: 'aud-multi', label: 'aud-multi' },
-      catalog: audioCatalog,
-      upstreams: [],
-      prompt: '',
-    });
-    const summary = formatAudioSummary(resolved);
-    assert.equal(summary.durationText, '30s');
-    assert.ok(!summary.fullText.includes('·'));
-    assert.ok(summary.fullText.endsWith('MP3 30s') || summary.fullText.endsWith('mp3 30s'.toUpperCase()));
-  });
-});
-
-describe('assertAudioParamWriteKey - 写入白名单防御', () => {
-  it('白名单 key 不抛错', () => {
-    for (const key of ['operation', 'duration', 'voice', 'instrumental', 'outputFormat', 'seed']) {
-      assert.doesNotThrow(() => assertAudioParamWriteKey(key));
-    }
-  });
-
-  it('generationMode 被明确禁止', () => {
-    assert.throws(() => assertAudioParamWriteKey('generationMode'), /generationMode/);
-  });
-
-  it('未知 key 抛错', () => {
-    assert.throws(() => assertAudioParamWriteKey('aspectRatio'), /aspectRatio/);
-    assert.throws(() => assertAudioParamWriteKey('bogusField'), /bogusField/);
   });
 });

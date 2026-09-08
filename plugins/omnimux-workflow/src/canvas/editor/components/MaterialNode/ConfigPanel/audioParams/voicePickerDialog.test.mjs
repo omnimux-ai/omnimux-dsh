@@ -1,5 +1,5 @@
 /**
- * VoicePickerDialog / VoiceTrigger / 字数闸门集成契约测试（Issue #735 / T03/T04）。
+ * VoicePickerDialog / VoiceTrigger / 字数闸门集成契约测试（Issue #735 / T03/T04；Issue #763 更新）。
  *
  * 源码契约（readFileSync + node:test）锁定：
  *  - VoicePickerDialog：CustomModal 540px、标题「选择音色」、搜索占位、四维筛选、
@@ -9,7 +9,8 @@
  *    传入 PromptTokenEditor 内置 meta-bar，右下角仅保留唯一字符统计（Issue #746）、
  *    超限进入 blockGenerate 且禁用文案「朗读正文不能超过 10000 字符」、
  *    底栏 wf-voice-trigger（AudioLines 图标）唤起弹窗并写回 params.voice；
- *  - AudioParamPopover：大音色目录由 VoiceTrigger 承载时音色区收缩；
+ *  - Issue #763：AudioParamPopover 已删除，音色选择统一由 VoiceTrigger +
+ *    VoicePickerDialog 承载（有音色选项即显示，不再按大目录门槛收缩）；
  *  - 样式门禁：新增源码零 raw hex/rgba、零 --omx-* 违禁 tokens。
  */
 
@@ -22,7 +23,6 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const dialogSrc = readFileSync(join(here, 'VoicePickerDialog.tsx'), 'utf8');
 const modelSrc = readFileSync(join(here, 'voicePickerModel.ts'), 'utf8');
-const popoverSrc = readFileSync(join(here, 'AudioParamPopover.tsx'), 'utf8');
 const configSrc = readFileSync(join(here, '..', 'index.tsx'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../../../../theme/components.css'), 'utf8');
 const promptEditorSrc = readFileSync(join(here, '../../../PromptTokenEditor/PromptTokenEditor.tsx'), 'utf8');
@@ -88,18 +88,12 @@ test('ConfigPanel T04：底栏 VoiceTrigger 唤起弹窗并写回 params.voice',
   assert.match(configSrc, /wf-voice-trigger/);
   assert.match(configSrc, /AudioLines/);
   assert.match(configSrc, /VoicePickerDialog/);
-  assert.match(configSrc, /VOICE_PICKER_MIN_OPTIONS/);
+  // Issue #763：浮层移除后，任何音色选项都由 VoiceTrigger 承载
+  assert.match(configSrc, /voiceCatalogOptions\.length > 0/);
+  assert.doesNotMatch(configSrc, /VOICE_PICKER_MIN_OPTIONS/);
   assert.match(configSrc, /setVoicePickerOpen\(true\)/);
   assert.match(configSrc, /updateParam\('voice', voiceType\)/);
   assert.match(configSrc, /setVoicePickerOpen\(false\)/);
-});
-
-test('AudioParamPopover T04：大音色目录由 VoiceTrigger 承载，音色区收缩', () => {
-  assert.match(popoverSrc, /VOICE_PICKER_MIN_OPTIONS/);
-  assert.match(popoverSrc, /voiceHostedByPicker/);
-  assert.match(popoverSrc, /voiceOptions\.length > 0 && !voiceHostedByPicker/);
-  // 小目录仍保留 Popover 内音色控件
-  assert.match(popoverSrc, /VOICE_SELECT_THRESHOLD = 6/);
 });
 
 test('样式门禁：新增源码零 raw hex/rgba、零违禁 tokens', () => {
@@ -107,7 +101,6 @@ test('样式门禁：新增源码零 raw hex/rgba、零违禁 tokens', () => {
   for (const [name, src] of [
     ['VoicePickerDialog', dialogSrc],
     ['voicePickerModel', modelSrc],
-    ['AudioParamPopover', popoverSrc],
   ]) {
     const code = stripComments(src);
     assert.doesNotMatch(code, colorRe, `${name} must not use raw hex/rgba`);
