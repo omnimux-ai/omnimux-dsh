@@ -63,4 +63,3 @@ Analyze [uploaded search term report] from [platform] for [date range], using [a
 
 Analyze performance on [platform] for [date range] against [target ROAS/CPA], considering [attribution window] and [product margin]. Evaluate campaign, ad group or ad set, and ad-level spend, revenue, ROAS, CPA, CTR, CPC, and conversion rate; identify budget, audience, bidding, creative, and landing-page issues; and prioritize what to pause, scale, or test next. Distinguish data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.
 ```
-

@@ -30,6 +30,7 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   const timer = useRef(null)
   const mounted = useRef(true)
   const selected = STARTERS.find(card => card.id === state.selectedId)
+  const multipleReferences = selected?.references === 'many' || /[\r\n]/.test(state.urlValue)
   live.current = { input, inputActions, state, selected }
 
   const current = useCallback(() => mounted.current && sessionId && sessionId !== 'default'
@@ -48,7 +49,7 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
     if (!card || previous.manualUrl) return previous.manualUrl ? 'manualUrl' : 'ready'
     if (composing.current) return 'composing'
     const result = syncVideoUrls(previous, value.draft, {
-      multiple: card.references === 'many', label: t(card.references === 'many' ? 'guide.urls' : 'guide.url'),
+      multiple: card.references === 'many' || /[\r\n]/.test(previous.urlValue), label: t(card.references === 'many' ? 'guide.urls' : 'guide.url'),
     })
     try {
       if (result.draft !== value.draft) {
@@ -140,7 +141,7 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   return <>
     {selected && <div className="omnimux-starter-materials" data-omnimux-starter-materials="">
       <label htmlFor={urlId}>{t(selected.references === 'many' ? 'guide.urls' : 'guide.url')}</label>
-      {selected.references === 'many'
+      {multipleReferences
         ? <textarea id={urlId} rows={2} value={state.urlValue} disabled={state.manualUrl}
           placeholder={t('guide.urlsPlaceholder')} aria-invalid={error} aria-describedby={hintId}
           onChange={event => editUrl(event.target.value)} onBlur={sync}
