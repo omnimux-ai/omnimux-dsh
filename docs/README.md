@@ -30,12 +30,12 @@ tags: ["portal", "index", "docs-root", "navigation"]
 |---|---|
 | [plugin-git-pr](contracts/plugin-git-pr.md) | 风险、授权、push/merge、Merge Queue 与发布政策真源 |
 | [agent-issue-lifecycle](contracts/agent-issue-lifecycle.md) | Issue metadata、阶段状态、职责分配与恢复信息 |
-| [plugin-qa](contracts/plugin-qa.md) | 按变更面选择测试、L2、45120、浏览器和 Electron 证据 |
-| [dev-pipeline](contracts/dev-pipeline.md) | L2 / Dev / Prod 隔离、materialization，以及稳定基线当前/迁移/目标 |
-| [ops-entry](contracts/ops-entry.md) | 对外运维命令入口与重启对象边界；布尔 `--promote-baseline` / activate 现为拟实现 |
+| [plugin-qa](contracts/plugin-qa.md) | 合入前相关自动化/静态与独立评审；合入后按需 Dev 45120 浏览器/Electron 证据 |
+| [dev-pipeline](contracts/dev-pipeline.md) | Worktree 检查 → required CI/MQ → main → 按需 Dev 物化验收；Prod 边界 |
+| [ops-entry](contracts/ops-entry.md) | 对外同步、诊断、重启入口；不提供合入前独立运行环境 |
 | [docs-governance-standard](contracts/docs-governance-standard.md) | 文档层级、metadata、生命周期与工具真实能力 |
 
-[稳定基线迁移规格](specs/2026-09-09-stable-baseline-migration.md)（L2）是命名不可变 baseline 的设计与验收真源；不证明已切换默认种子。
+[稳定基线迁移规格](specs/2026-09-09-stable-baseline-migration.md)及旧 L2 验收流程已 **superseded**，只作历史追溯。现行流程以以上合同为准；历史 QA/evidence/logs 不重写、不将失败改为通过。文档 authority、工具与 UI 层级中的 L2 是独立分类，仍有效。
 
 完整执行 SOP 不复制在这些合同中；按需加载[仓库原生 workflow skill](../.agents/skills/omnimux-repo-workflow/SKILL.md)。
 

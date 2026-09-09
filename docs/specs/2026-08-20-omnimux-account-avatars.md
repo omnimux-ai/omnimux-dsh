@@ -11,6 +11,8 @@ subsystem: "omnimux-accounts"
 
 # 社媒账号头像本地持久化（Phase 2）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 Web 验收流程退役；产品约束不变，账号操作仍须相应授权。现行 [plugin-qa](../contracts/plugin-qa.md) 要求合入前 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego 验收。历史结果不重标。
+
 挂载点 = Host HTTP `prefix:/omnimux/accounts`（新增 `GET /{id}/avatar` 字节路由 + GET 列表改写）+ 现有 Client Slot `shell.overlay`（只改 `Avatar`），形态 = 函数插件（hub mixed `omnimux` + 垂直 `omnimux-accounts`），产物 = dsh.bundle。
 
 否决备选：Client IndexedDB/localStorage 二号缓存；把 data URI 塞进 `accounts.json`；灵感库式纯实时代理不落盘；垂直插件自建 Host 存储；复用 `/omnimux/avatar` blobatar；列表 JSON 内嵌 base64。

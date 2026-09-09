@@ -1,6 +1,6 @@
 # Issue #778 — 单包 tarball 纳管增量 PRD
 
-> **历史横幅（2026-09-09，PR-D）：** 下文状态句、固定 SHA 与「待架构/未合入」表述是撰写当时的任务快照，不是当前仓库或 Dev 事实。本文件不因此改写历史 QA 正文。现行默认种子与 D→C→S 见 [稳定基线迁移规格](2026-09-09-stable-baseline-migration.md)。
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 seed/独立 Host 验收与专属 baseline D/C/S 迁移要求退役，受管 tarball 内容、事务与安全要求不变。当前流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)。下文固定 SHA、阶段状态与失败是历史快照，不是当前仓库或 Dev 事实，不重标结果。
 
 - 项目：`managed_tarball_778`；语言：简体中文；技术范围：既有 Shell / Node / pnpm 运维链，不新增 Web UI 或技术栈。
 - Issue：[开放的 #778](https://github.com/omnimux-ai/omnimux-dsh/issues/778)；风险：实施至少 R1。

@@ -85,26 +85,15 @@ OmniMux 采用与 **Multica** 相同的 **Open-Core** 模式与 **Sustainable So
 * **pnpm**：`>=9`
 * **DeepSeek Harness (DSH)**：通过 `npx @deepseek-ai/dsh` 或本地 DSH 环境运行。
 
-### 本地部署运行
-```bash
-# 1. 克隆代码仓库
-git clone https://github.com/omnimux-ai/omnimux-dsh.git
-cd omnimux-dsh
+### 本地开发与交付
 
-# 2. 安装依赖并运行测试
-pnpm install
-pnpm test
-./scripts/smoke.sh
+从 [AGENTS.md](AGENTS.md) 和[仓库 workflow](.agents/skills/omnimux-repo-workflow/SKILL.md)进入开发流程：
 
-# 3. 挂载插件至 DSH
-dsh plugin add ./plugins/omnimux
-dsh plugin add ./plugins/omnimux-workflow
-dsh plugin add ./plugins/omnimux-accounts
-dsh plugin add ./plugins/omnimux-publish
+1. 在仓内隔离 worktree 实施，运行与变更面相关的自动化测试、静态检查和独立评审；选择依据见[插件 QA](docs/contracts/plugin-qa.md)。例如在当前任务 worktree 执行 `pnpm --filter <package> test`，文档变更执行 `git diff --check` 与 `pnpm doc:lint`。
+2. PR 满足 required CI，经 Merge Queue 合入 `main`。CI `qa:pass` 只证明合入前静态与测试，不证明 Dev 已通过。
+3. 影响已安装运行时才从已合并 `main` 经[正式同步入口](docs/contracts/ops-entry.md)物化 Dev `~/.omnimux-dev`。Web/Stage 在 45120 使用 ego-browser 与共享 `pnpm verify:live <stage>` 验收；纯文档、流程、脚本无需 App 物化。
 
-# 4. 启动 DSH Web 工作台
-dsh web
-```
+没有合并前独立 App/Host 测试环境。不得将未合并 worktree link 或物化到 Dev/Prod；生产 `~/.omnimux`、`--prod`、`--all` 与正式发布仍需独立授权。完整边界见[开发环境合同](docs/contracts/dev-pipeline.md)。
 
 ---
 

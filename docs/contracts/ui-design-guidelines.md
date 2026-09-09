@@ -136,7 +136,7 @@ subsystem: "omnimux-accounts"
 - [ ] **无文字图标**：排序箭头、网格切换、关闭等均使用精确的 SVG 图标。
 - [ ] **外部关闭**：所有浮层和下拉菜单均支持点击外部及 `Esc` 键关闭。
 - [ ] **微动效与反馈**：所有交互元素具备平滑的 `transition`（100~150ms）、Hover 高亮、Focus 蓝光晕以及 Active 按压缩放。
-- [ ] **物化与重启验证**：执行 `sync-to-app.sh` 物化到生产 profile，并通过 `yarn omnimux:restart` 重启后在真机窗口中核实。
+- [ ] **分阶段验证**：隔离 worktree 完成相关自动化/静态检查与独立评审，通过 PR required CI/MQ 后，按[开发环境合同](dev-pipeline.md)从已合并 `main` 物化 Dev，在 45120 使用 ego-browser 与共享 `verify:live` 验收。仅平台/壳层行为追加 Electron 证据；不将未合并源码送入 Dev/Prod，不默认重启或写生产。
 
 ---
 

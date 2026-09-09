@@ -2,7 +2,7 @@
 title: "决策：L2 在研插件仍保持「每个 profile link ≤ 1」"
 id: "decision-l2-in-progress-plugin-cap"
 type: "decision"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-08-26"
 authors: ["x", "agent-architect"]
@@ -10,6 +10,8 @@ subsystem: "omnimux-assets"
 ---
 
 # 决策：L2 在研插件仍保持「每个 profile link ≤ 1」
+
+> **SUPERSEDED — 2026-09-09 / #864：** L2 独立环境及其生命周期、单 link 门槛已全量退役，不再执行下文命令。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)：隔离 worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120 验收。下文是历史决策原文，历史结果不重标。
 
 日期：2026-08-26。
 状态：**已确认（审计修订）。**

@@ -30,7 +30,7 @@ Host 在 Web 服务就绪后通过公开 `loader.import()` 调用官方 HMR `app
 
 上游兼容点是官方 watcher 的公开 apply、clientModules 的 graph/artifactBaseline/onGraphChanged/onRebuilt、Loader 的 import 与客户端 fiber 卸载顺序。客户端替换顺序由 Hub 维护，因为官方客户端 reload 没有独立导出。升级底座时按 [RC 升级流程](../../.agents/skills/omnimux-rc-upgrade/SKILL.md) 复核这些接口。
 
-行为检查使用隔离 L2 和合并后 Dev，不修改官方源码或生产 profile。依据 [插件 QA](plugin-qa.md) 执行共享 Stage 探针，并核对：
+合并前在隔离 worktree 运行相关自动化/静态检查与独立评审，通过 required CI/MQ；合并后在 Dev 物化并验证行为，不修改官方源码或生产 profile。依据 [插件 QA](plugin-qa.md) 在 45120 执行 ego-browser 共享 Stage 探针，并核对：
 
 - 两个独立 Codex 会话各四个同源页面，普通请求、工作区及资产库交互正常。
 - 一次真实 client rebuild 到达每页，每页应用一次且 timeOrigin 不变。

@@ -1,5 +1,7 @@
 # 工作区页内目录选择
 
+> **流程及 L2 装配部分 SUPERSEDED — 2026-09-09 / #864：** 下文独立 L2 overlay、启动/重启和合入前浏览器验收要求退役，不再实现或维护；页内目录选择产品要求及 shipping Desktop 边界仍保留。现行 [plugin-qa](../contracts/plugin-qa.md) 要求 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego及 Electron 验收。历史记录不重标。
+
 Issue：[产品 #629](https://github.com/omnimux-ai/omnimux-dsh/issues/629)；[桌面 #47](https://github.com/laozhong86/omnimux-desktop-fork/issues/47)。
 
 用户确认 OmniMux 的 L2 与 Dev 工作区选择必须能由 Agent 在页内完成。官方自动选择器根据 Host 的 loopback、平台和 SSH 环境判断 native；本地 macOS Host 会启动系统目录窗口，即使使用者是内置浏览器中的 Agent。输入区附件选择与这个工作区入口是两个独立流程。

@@ -1,5 +1,7 @@
 # dsh-publish 五段式一级页布局架构（PRD-v2.3）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境、旧 `dev start` 与合入前浏览器验收要求退役，产品和布局层级不变。当前流程见 [dev-pipeline](../../../docs/contracts/dev-pipeline.md) 和 [plugin-qa](../../../docs/contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史结果不重标。
+
 架构：高见远 ／ 输入：主理人「五段式 UI 布局架构核对」+ PRD-v2.3 + 资产中心真实现 + 一级页合同
 版本观察：Harness Slot Catalog `shell.overlay` list / 产品树 `omnimux-assets` 为视觉同构真源
 核对日期：2026-08-25

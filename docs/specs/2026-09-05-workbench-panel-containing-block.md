@@ -12,6 +12,8 @@ subsystem: "omnimux"
 
 # 工作台分栏面板的定位容器
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立运行与合入前浏览器验收要求退役，布局要求和历史证据不变。现行 [plugin-qa](../contracts/plugin-qa.md) 要求 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后在 Dev 45120/ego 验收；历史失败与未验状态不重标。
+
 关联 [#610](https://github.com/omnimux-ai/omnimux-dsh/issues/610)、[#552](https://github.com/omnimux-ai/omnimux-dsh/issues/552)。
 
 ## 问题与根因

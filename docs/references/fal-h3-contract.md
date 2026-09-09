@@ -26,4 +26,4 @@ Hub 保持 canonical `operation`、`image_with_roles`、`image_urls`、`video_ur
 
 插件Issue #838依赖网关Issue laozhong86/OmniMux#192。`scripts/h3-cross-repo-fixtures.mjs`实际执行Hub guard与mapper；网关`TestHubToFalFixtures`读取该输出，执行真实Adaptor验证、最终URL和完整JSON body断言。设置`OMNIMUX_DSH_FIXTURE_ROOT`为插件隔离树后运行对应Go测试。测试不证明真实上游可用性。
 
-独立QA仍需按正式L2和共享verify:live核对当前SHA、单link及页面输入。旧44204双主树link、历史手写PASS均不构成本次验收；本工程不签署QA或操作viewer/官方DSH/共享profile。
+合入前完成隔离 worktree 自动化/静态检查与独立评审，经 required CI/MQ 合入后，按[插件 QA](../contracts/plugin-qa.md)在 Dev 45120 使用 ego-browser 和共享 verify:live 核对物化SHA及页面输入；没有合入前独立运行环境。旧44204双主树link、历史手写PASS仍不构成本次验收；本参考不签署QA或授权操作viewer/官方DSH/共享profile。

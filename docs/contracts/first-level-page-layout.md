@@ -206,6 +206,6 @@ export function StandardStage({ t, stage, ...props }) {
 - 主按钮使用 `--dsw-alias-brand-primary` / `--dsw-alias-label-primary`，悬浮使用 `--dsw-alias-interactive-bg-hover`。
 - 严禁在 CSS 中硬编码 `rgba(0,0,0,0.x)` 或 `#hex`。
 
-### 5. 零重启物化与 L2 Web 隔离测试
-- 任何 UI 布局调整，必须在 L2 Web 隔离环境验证，通过 `node scripts/omnimux.mjs sync <plugin>` 静态物化，刷新（Cmd+R）立即生效。
-- 严禁杀桌面进程。
+### 5. 分阶段验证与 Dev 物化
+- UI 布局调整先在隔离 worktree 完成相关自动化/静态检查和独立评审，经 required CI/MQ 合入后，从已合并 `main` 通过[正式同步入口](ops-entry.md)物化 Dev；没有合入前独立 App/Host 环境。
+- Client 物化后刷新指定 Dev 页面，在 45120 使用 ego-browser 与共享 `verify:live` 验收；Host 变更须按[开发环境合同](dev-pipeline.md)重新加载目标进程。不得默认强杀桌面进程或写 Prod。

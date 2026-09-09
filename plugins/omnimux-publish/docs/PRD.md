@@ -1,5 +1,7 @@
 # PRD：dsh-publish 内容发布中心插件（v1）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境与合入前运行验收要求退役，产品和发布授权边界不变。当前流程见 [dev-pipeline](../../../docs/contracts/dev-pipeline.md) 和 [plugin-qa](../../../docs/contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史结果不重标。
+
 状态：Confirmed（2026-08-21 老板确认实施，进入 Phase 2 架构设计）
 需求评审：许清楚（Phase 1 产出汇编）／边界定界：齐活林（Phase 0）
 

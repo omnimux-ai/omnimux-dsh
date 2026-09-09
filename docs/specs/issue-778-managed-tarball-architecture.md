@@ -1,6 +1,6 @@
 # Issue #778 — 单包 tarball 纳管架构与工程顺序
 
-> **历史横幅（2026-09-09，PR-D）：** 下文状态句、固定 SHA 与「未合入」表述是撰写当时的任务快照，不是当前仓库或 Dev 事实。私有 store、frozen-offline、copy 隔离原则可被稳定基线迁移复用；本文件不因此改写历史 QA 正文。现行默认种子与 D→C→S 见 [稳定基线迁移规格](2026-09-09-stable-baseline-migration.md)。
+> **流程 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 seed/独立 Host 验收及专属 baseline D/C/S 迁移要求已退役；当前流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)。合入前仅 worktree 自动化/静态与独立评审，required CI/MQ 合入后按需 Dev 验收。受管 tarball 的内容、事务与安全约束仍保留；下文固定 SHA、失败与阶段状态是历史快照，不作当前仓库/Dev 证明，不重标结果。
 
 状态：**定向补工中，工程 IS_PASS: NO；未最终集成、未合入、未修复 Dev**。冻结补工接缝和写集以 [followup §3、§7](issue-778-managed-tarball-followup.md) 为准；T01 阶段证据见 [T01 报告](../implementation/issue-778-t01-followup.md)。固定 base / 本轮 HEAD：`580234923268673562cacb5cd01aebdb780339e1`。上游：[完整 PRD](issue-778-managed-tarball-prd.md)，A01–A12 全部为 P0。本设计只扩展本仓 Shell / Node / pnpm 同步链；不引入 Web 技术栈。
 

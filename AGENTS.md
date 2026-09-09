@@ -44,7 +44,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - Keep AGPL projects isolated. `omnimux-clip` vendors the complete MIT OpenReel GUI and media pipeline; no headless replacement or parallel editor. Read its [vendor contract](docs/contracts/openreel-vendor-contract.md).
 - For node inputs, connections, generation controls, or submission changes, follow the [node input and submission contract](docs/contracts/node-input-submission.md), including shared effective-input semantics and request-content acceptance.
 - Model contracts come from selected-channel official documentation, checked offline; do not probe real model APIs to discover support. Only submission `mode: "live"` proves live generation. See [model API authority](docs/contracts/model-api-authority.md).
-- Before merge, use an isolated L2 profile with at most one in-progress plugin link. After merge, materialize Dev `~/.omnimux-dev` through the official sync entry. Production `~/.omnimux` requires an explicit release instruction; `--prod`/`--all` require authorization covering those targets, never routine development. Do not hand-copy profiles or guess `$DSH_HOME`. Named immutable baselines, create-versus-activate, and implicit Dev/Prod/`~/.dsh` fallback are owned by [dev pipeline](docs/contracts/dev-pipeline.md); current seed is still the implicit chain until PR-S. See [stable baseline spec](docs/specs/2026-09-09-stable-baseline-migration.md).
+- Before merge, run relevant automated tests/static checks and independent review in an isolated worktree, then satisfy PR required CI and Merge Queue. There is no separate pre-merge runtime environment. After merge, materialize `main` to Dev `~/.omnimux-dev` only when runtime acceptance applies. Dev/Prod must never link or receive unmerged worktrees. Production `~/.omnimux`, `--prod` and `--all` require explicit release authorization. Do not hand-copy profiles or guess `$DSH_HOME`; follow [dev pipeline](docs/contracts/dev-pipeline.md).
 
 ## Source map
 
@@ -70,7 +70,7 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Model contracts | `pnpm verify:model-contracts` (offline); no `verify:models` or `verify:image-live` probing |
 | Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 
-Browser-required acceptance MUST use ego-browser and the shared `verify:live` probe: L2 before merge; Dev port 45120 after authorized materialization. Missing ego capabilities are BLOCKED; do not fall back to IAB. Prefer API/scripts/config when no browser is required. Shell/platform-specific behavior additionally needs Electron evidence. Unit tests, HTTP 200, private harnesses, or a pending probe do not establish acceptance.
+Browser-required acceptance MUST use ego-browser and the shared `verify:live` probe on Dev port 45120 after merge and authorized materialization. CI `qa:pass` proves only pre-merge static checks/tests, not Dev acceptance. Pure docs/process/scripts need no App materialization. Missing ego capabilities are BLOCKED; do not fall back to IAB. Prefer API/scripts/config when no browser is required. Shell/platform-specific behavior additionally needs Electron evidence. Unit tests, HTTP 200, private harnesses, or a pending probe do not establish runtime acceptance.
 
 ## Delivery
 

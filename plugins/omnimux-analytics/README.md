@@ -74,18 +74,15 @@ OmniMux 产品插件用量埋点。**一个 host 端 hook 插件**，观察 DSH 
 
 ## 开发与发布
 
-```sh
-# L1 单测（不开 App）
-cd plugins/omnimux-analytics && node --test src/*.test.js
+在隔离 worktree 执行相关测试与静态检查，并完成独立评审：
 
-# L2 / L3：统一走 fork 主入口（禁止直调 sync-stable / 插件私有 deploy）
-cd ~/Desktop/Project/omnimux-desktop-fork
-yarn omnimux:dev start analytics-v1 omnimux-analytics
-yarn omnimux:sync omnimux-analytics
-yarn omnimux:restart   # 需要加载时再跑
+```sh
+pnpm --filter omnimux-analytics test
 ```
 
-L2/L3 后记得在 profile 层配置上文的 `config.websiteId`（`analytics.omnimux.ai` 后台新建站点并取得 id）。
+PR 通过 required CI/MQ 合入 `main` 后，按[开发环境合同](../../docs/contracts/dev-pipeline.md)从正式 fork 入口 `yarn omnimux:sync omnimux-analytics` 物化 Dev。需要重新加载 Host 时核对目标和占用情况，再按授权重启 Dev；浏览器验收在 45120 使用 ego-browser 与共享 `verify:live`。没有合入前独立运行环境，Dev/Prod 不接收未合并 worktree，生产发布仍需独立授权。
+
+需要采集时，在已授权 Dev profile 配置上文的 `config.websiteId`；站点创建与账号写入按现有授权边界执行。
 
 ## 看数据
 
