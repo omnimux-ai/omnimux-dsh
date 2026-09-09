@@ -218,4 +218,38 @@ test('formatRowPreview & formatTablePreviewRows: 富有信息量的代表列提�
   };
   const analysisPreviews = formatTablePreviewRows(analysisDoc);
   assert.equal(analysisPreviews[0], '以强烈反差冲突抓住眼球');
+
+  // 4. 包含分镜画面附件列（type: 'attachment'）的分镜表：跳过分镜画面列，优先选取文本描述列，防止退化为 📎 附件 (1)
+  const deconstructStoryboardDoc = {
+    version: 1,
+    title: '视频拆解分镜表',
+    columns: [
+      { id: 'c_shot', title: '镜头序号', type: 'text', visible: true, width: 80 },
+      { id: 'c_image', title: '分镜画面', type: 'attachment', visible: true, width: 180 },
+      { id: 'c_desc', title: '画面描述', type: 'text', visible: true, width: 200 },
+      { id: 'c_action', title: '关键动作', type: 'text', visible: true, width: 150 },
+    ],
+    rows: [
+      {
+        id: 'r1',
+        cells: {
+          c_shot: '1',
+          c_image: [
+            {
+              assetId: 'ast_001',
+              name: 'scene_001.jpg',
+              kind: 'image',
+              path: '/path/scene_001.jpg',
+              url: '/url/scene_001.jpg',
+              thumbnailUrl: '/url/scene_001.jpg',
+            },
+          ],
+          c_desc: '开场反差视觉',
+          c_action: '快速推入',
+        },
+      },
+    ],
+  };
+  const deconstructPreviews = formatTablePreviewRows(deconstructStoryboardDoc);
+  assert.equal(deconstructPreviews[0], '第 1 镜: 开场反差视觉', '卡片预览必须跳过分镜画面附件列，提取文本描述列');
 });

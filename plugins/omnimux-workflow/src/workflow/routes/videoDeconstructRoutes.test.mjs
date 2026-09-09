@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -129,9 +129,10 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含�
   assert.ok(colImage, '必须包含「分镜画面」列');
   assert.equal(colImage.type, 'attachment');
   assert.equal(colImage.width, 180);
+  assert.equal(colImage.visible, true, '「分镜画面」列 visible 必须为 true');
   assert.equal(savedDoc.columns[1].id, colImage.id, '「分镜画面」附件列应紧随「镜头序号」排布在第 2 列');
 
-  // 验证每一行记录均包含合规的图片附件对象
+  // 验证每一行记录均包含合规的图片附件对象，且物理保底文件真实存在并具备合法 JPEG 头部
   for (const row of savedDoc.rows) {
     const attachList = row.cells[colImage.id];
     assert.ok(Array.isArray(attachList), '分镜画面单元格应为附件数组');
@@ -141,6 +142,11 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含�
     assert.equal(attach.kind, 'image');
     assert.ok(typeof attach.name === 'string' && attach.name.endsWith('.jpg'));
     assert.ok(typeof attach.path === 'string');
+    assert.ok(existsSync(attach.path), `保底关键帧图片必须真实存在: ${attach.path}`);
+    const fileBuf = readFileSync(attach.path);
+    assert.ok(fileBuf.length > 0, '保底关键帧文件内容不可为空');
+    assert.equal(fileBuf[0], 0xff, 'JPEG 文件头部第 1 字节必须是 0xFF');
+    assert.equal(fileBuf[1], 0xd8, 'JPEG 文件头部第 2 字节必须是 0xD8');
     assert.ok(attach.url.startsWith(`/omnimux-workflow/media/deconstruct/${res.body.tableId}/`));
     assert.equal(attach.thumbnailUrl, attach.url);
   }
@@ -189,6 +195,8 @@ test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆�
   const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
   assert.ok(colImage);
   assert.equal(colImage.type, 'attachment');
+  assert.equal(colImage.width, 180);
+  assert.equal(colImage.visible, true);
   assert.equal(savedDoc.columns[1].id, colImage.id);
 
   for (const row of savedDoc.rows) {
