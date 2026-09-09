@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -39,18 +39,20 @@ import {
   canExtractVideoFromTextNode,
   canRunSpeechToText,
   canRunVideoDeconstruct,
+  canRunVideoStoryboard,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
   pillMaxWidthForNode,
   resolveSpeechToTextAudioPath,
   resolveVideoDeconstructPath,
+  resolveVideoStoryboardPath,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
 import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
 import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
-import { deconstructVideo, extractVideoFromUrl, transcribeAudio } from '../../../bridge/apiClient.ts';
+import { deconstructVideo, extractVideoFromUrl, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
@@ -656,10 +658,69 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       toast.success(t('deconstructVideo.toast.success'));
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : t('deconstructVideo.toast.failed');
-      updateNodeData({ executionStatus: 'error', executionError: message });
+      updateNodeData({ executionStatus: 'error', executionError: message, videoDeconstructActive: undefined });
       toast.error(message);
     }
   }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+
+  // 视频做分镜表：提取逐镜头分镜图与脚本，派生下游表格节点 (.htable，含多模态图片附件)
+  const handleStoryboardVideo = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('storyboardVideo.noWorkspace'));
+      return;
+    }
+    const videoPath = resolveVideoStoryboardPath(
+      {
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        workspaceId,
+      },
+      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+    );
+    if (!videoPath) {
+      toast.error(t('storyboardVideo.noVideo'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, videoStoryboardActive: true });
+    try {
+      const result = await storyboardVideo(workspaceId, {
+        nodeId: id,
+        videoPath,
+        title: label ? `${label} 分镜表` : t('storyboardVideo.nodeLabel'),
+      });
+      if (!result.ok || !result.body?.tableId) {
+        const message = result.body?.message || result.body?.error || t('storyboardVideo.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
+        toast.error(message);
+        return;
+      }
+      updateNodeData({ executionStatus: 'completed', executionError: undefined, videoStoryboardActive: undefined });
+
+      const serverWorkspace = result.body.workspace;
+      const returnedTableId = result.body.tableId;
+
+      if (serverWorkspace && Array.isArray(serverWorkspace.nodes) && Array.isArray(serverWorkspace.edges)) {
+        useCanvasStore.getState().hydrateGraph(serverWorkspace.nodes as any, serverWorkspace.edges as any);
+        notifyWorkspaceSaved(serverWorkspace);
+
+        const targetNodeId = serverWorkspace.nodes.find(
+          (n: any) => n.id === returnedTableId || (n.data as any)?.tableId === returnedTableId,
+        )?.id || returnedTableId;
+
+        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
+        useCanvasStore.getState().setSelectedElement('node', targetNodeId);
+      }
+
+      toast.success(t('storyboardVideo.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('storyboardVideo.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
+      toast.error(message);
+    }
+  }, [id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, previewUrl, setNodes, t, updateNodeData]);
 
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
@@ -814,6 +875,17 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             void handleDeconstructVideo();
           },
         },
+        {
+          key: 'storyboard-video',
+          label: t('pill.storyboardVideo'),
+          icon: Clapperboard,
+          section: 'primary',
+          title: t('pill.storyboardVideo'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void handleStoryboardVideo();
+          },
+        },
         chat,
       ];
     }
@@ -830,6 +902,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleOpenTextStage,
     handleSpeechToText,
     handleSplitText,
+    handleStoryboardVideo,
     isEmptyImageNode,
     isOffline,
     kind,

@@ -87,6 +87,9 @@ export const WORKFLOW_API_ROUTES = {
   /** POST: deconstruct video into structured table document (.htable). */
   deconstructVideo: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/deconstruct-video`,
+  /** POST: generate video storyboard table with keyframe image attachments and scripts. */
+  storyboardVideo: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/storyboard-video`,
   /** GET: list templates. POST: create template. */
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */

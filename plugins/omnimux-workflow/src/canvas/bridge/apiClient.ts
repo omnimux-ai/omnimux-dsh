@@ -318,3 +318,14 @@ export function deconstructVideo(
     { method: 'POST', body: payload },
   );
 }
+
+/** 视频节点：生成视频逐镜头分镜表表格节点 (.htable，含分镜图附件) */
+export function storyboardVideo(
+  workspaceId: string,
+  payload: { nodeId: string; videoPath: string; title?: string },
+): Promise<ApiResult<import('../../workflow/videoStoryboard/schema.ts').StoryboardVideoResponse>> {
+  return request<import('../../workflow/videoStoryboard/schema.ts').StoryboardVideoResponse>(
+    WORKFLOW_API_ROUTES.storyboardVideo(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}
