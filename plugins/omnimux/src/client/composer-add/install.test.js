@@ -8,9 +8,9 @@ const indexSource = read('../index.js')
 const commandsSource = read('./commands.js')
 
 describe('composer add integration boundaries', () => {
-  it('keeps selection UI separate from the existing submission capture', () => {
+  it('keeps selection UI separate from the session-scoped submission bridge', () => {
     assert.match(installSource, /AssetPickerModal/)
-    assert.match(indexSource, /installComposerAttachmentSubmitCapture/)
+    assert.match(indexSource, /AttachmentSubmitBridge/)
     assert.match(indexSource, /export const inject = \['slots', 'locale'\]/)
   })
 

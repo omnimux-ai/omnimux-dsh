@@ -1,0 +1,5 @@
+2026-09-09，ego-browser 观察摘要（已去除账号与会话标识）。
+Marketing Insight 大卡片操作后进入 Marketing Expert 会话。
+用户消息为 Category Opportunity 的品类研究模板。
+页面显示：Paywall Availability；MCP tools could not be loaded on the Free plan. Please upgrade to connect and use MCP tools.
+会话用量显示 Total used 0。未升级，未继续执行。该研究会话保留，未删除。

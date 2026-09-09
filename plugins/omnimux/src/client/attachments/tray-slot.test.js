@@ -18,7 +18,11 @@ describe('composer inner attachment slot', () => {
     assert.match(indexSource, /id: 'omnimux-attachment-tray'/)
     assert.match(indexSource, /priority: -10/)
     assert.match(indexSource, /locale: NS/)
-    assert.doesNotMatch(indexSource, /conversation\.input\.dock/)
+    const trayEnd = indexSource.indexOf('}, AttachmentTray)')
+    const trayStart = indexSource.lastIndexOf('ctx.slots.inject', trayEnd)
+    const trayRegistration = indexSource.slice(trayStart, trayEnd)
+    assert.match(trayRegistration, /conversation\.input\.attachments/)
+    assert.doesNotMatch(trayRegistration, /conversation\.input\.dock/)
   })
 
   it('accepts native composer attachment props and drop callbacks', () => {
