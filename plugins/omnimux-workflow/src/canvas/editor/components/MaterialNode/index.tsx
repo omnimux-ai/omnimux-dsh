@@ -754,7 +754,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           label: t('pill.importImage'),
           icon: Upload,
           section: 'primary',
-          variant: 'primary',
           title: t('pill.importImage'),
           onClick: (event) => {
             event.stopPropagation();
@@ -783,7 +782,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             label: t('pill.extractVideo'),
             icon: Film,
             section: 'primary',
-            variant: 'primary',
             title: t('pill.extractVideo'),
             onClick: (event) => {
               event.stopPropagation();
@@ -878,7 +876,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           label: t('pill.deconstructVideo'),
           icon: FileSpreadsheet,
           section: 'primary',
-          variant: 'primary',
           title: t('pill.deconstructVideo'),
           onClick: (event) => {
             event.stopPropagation();

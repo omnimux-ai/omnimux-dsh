@@ -94,7 +94,7 @@ const zh = {
   'pill.speechToText': '语音识别',
   'pill.extractVideo': '提取视频',
   'pill.deconstructVideo': '内容拆解',
-  'pill.storyboardVideo': '做分镜表',
+  'pill.storyboardVideo': '分镜表',
   // 视频内容拆解（deconstructVideo.*）
   'deconstructVideo.nodeLabel': '视频拆解表',
   'deconstructVideo.toast.success': '视频内容拆解完成，已生成表格节点',
