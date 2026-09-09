@@ -14,6 +14,7 @@ import { installQuotaGlobal } from './quota-gate.js'
 import { SidebarUpdateAction } from './SidebarUpdateAction.jsx'
 import { getStatusCached } from './api.js'
 import { installHubChrome } from './chrome.js'
+import { installWorkbenchGlobal } from './workbench.js'
 import { STYLES_ID, injectHubStyles } from './styles.js'
 import { HeroBrandMark } from './HeroBrandMark.jsx'
 import { installHeroBrandSlot } from './hero-brand.js'
@@ -137,6 +138,7 @@ export function apply(ctx) {
   let guideSessions = null
   const guideFace = {
     store: guideStore,
+    workbench: installWorkbenchGlobal(),
     attachmentDrafts,
     getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
   }

@@ -26,9 +26,16 @@ test('session guide switches drafts without a reference panel or send intercepti
   let blank = true
   let writes = 0
   let sends = 0
+  let workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
+  const listeners = new Set()
+  const workbench = { subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) }, getSnapshot: () => workbenchSnapshot }
+  const setPanel = (sessionId, panelOpen) => act(async () => {
+    workbenchSnapshot = { sessionId, state: { panelOpen } }
+    for (const listener of listeners) listener()
+  })
   const props = () => ({ sessionId: owner, useSession: selector => selector({ blank }), useConversation: selector => selector({ activeTargets: new Set() }),
     useInput: selector => selector({ draft, phase }), inputActions: { setDraft(value) { draft = value; writes++ } },
-    getCurrentSessionId: () => owner, store, t: key => key,
+    getCurrentSessionId: () => owner, store, workbench, t: key => key,
   })
   const render = () => act(async () => root.render(React.createElement(SessionGuide, props())))
   const click = async selector => act(async () => document.querySelector(selector).click())
@@ -55,6 +62,22 @@ test('session guide switches drafts without a reference panel or send intercepti
       await render()
       assert.equal(document.querySelector('.omnimux-starter-materials'), null)
     }
+    draft += '\nkeep this edit'
+    await render()
+    const savedDraft = draft
+    const savedState = store.get(owner)
+    const savedWrites = writes
+    await setPanel(owner, true)
+    assert.equal(document.querySelector('[data-omnimux-starter-guide]'), null)
+    assert.equal(document.querySelector('[data-omnimux-starter-host]'), null)
+    await setPanel(owner, false)
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
+    assert.ok(document.querySelector('[data-omnimux-starter-host]'))
+    assert.equal(draft, savedDraft)
+    assert.equal(store.get(owner), savedState)
+    assert.equal(writes, savedWrites)
+    await setPanel('another-session', true)
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
     await click('[data-send-button]')
     assert.equal(sends, 1, 'normal send needs no extra synchronization gesture')
     owner = 'B'
