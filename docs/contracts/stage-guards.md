@@ -37,7 +37,7 @@ subsystem: "omnimux-accounts"
 3. **允许 overlay 白名单**：`plugins/omnimux/src/client/index.js`（LoginGate）、`plugins/omnimux-clip/src/client/index.js`（ClipStage portal only）。
 4. **禁止库页 claim**：迁入名单包的 sidebar / workbench-store 源码不得出现 `claimProductStage` / `stage.claim(`（clip portal 除外）。
 
-实际 sidebar 检查从 client 装配入口捕获传给 kit 的 adapter；六方法、取消订阅、Tab 注册、会话隔离与关闭重开必须执行通过。静态入口不再以旧 wrapper 的工厂导出作为运行覆盖。真实浏览器验收用 `pnpm verify:live <stage>`，Dev/L2 参数与证据格式见 [plugin-qa.md](./plugin-qa.md)。
+实际 sidebar 检查从 client 装配入口捕获传给 kit 的 adapter；六方法、取消订阅、Tab 注册、会话隔离与关闭重开必须执行通过。静态入口不再以旧 wrapper 的工厂导出作为运行覆盖。合并前在隔离 worktree 完成相关自动化/静态检查和独立评审；合入后物化 Dev，在 45120 用 ego-browser 与 `pnpm verify:live <stage>` 完成真实浏览器验收，证据格式见 [plugin-qa.md](./plugin-qa.md)。
 
 ## 2. 本地写闸
 

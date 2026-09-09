@@ -1,5 +1,5 @@
 #!/bin/bash
-# dev-doctor.sh — 三层环境合规自检。规范：docs/contracts/dev-pipeline.md
+# dev-doctor.sh — profile 与插件静态自检。规范：docs/contracts/dev-pipeline.md
 #
 # 下次会话/动手前先跑一遍：./scripts/dev-doctor.sh
 # 输出每项 ✓/✗ 与修复提示；任一 ✗ 时退出码 1。
@@ -10,7 +10,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGINS_ROOT="${OMNIMUX_PLUGINS_DIR:-$REPO_ROOT/plugins}"
 PROD_HOME="${DSH_HOME:-$HOME/.dsh}"
 PROD_PROFILE="$PROD_HOME/profiles/omnimux"
-DEV_HOME="${DSH_DEV_HOME:-$HOME/.dsh-dev}"
 PLUGINS=(omnimux omnimux-forms omnimux-accounts omnimux-assets omnimux-products omnimux-market omnimux-workflow omnimux-inspiration omnimux-clip omnimux-video omnimux-analytics omnimux-publish)
 fails=0
 warns=0
@@ -86,130 +85,6 @@ if [ -f "$PROD_PROFILE/.npmrc" ] && grep -q "store-dir=$PROD_PROFILE/.pnpm-store
   ok ".npmrc store-dir 固定 profile 内"
 else
   bad ".npmrc 缺失或 store 未固定 → 写入: echo 'store-dir=$PROD_PROFILE/.pnpm-store/v10' > $PROD_PROFILE/.npmrc"
-fi
-
-echo
-echo "== 5. dev 环境（任务子根 / 在研 ≤1 / 端口池） =="
-check_dev_profile() {
-  local d="$1"
-  local tag="${2:-}"
-  local name short linked pid running aport home age_days
-  name="$(basename "$d")"
-  short="${name#omnimux-dev-}"
-  linked=$(find "$d/node_modules" -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
-  pid=""
-  [ -f "$d/host.pid" ] && pid=$(cat "$d/host.pid")
-  running="stopped"
-  if [ -n "$pid" ]; then
-    if kill -0 "$pid" 2>/dev/null; then
-      running="running"
-    else
-      bad "$name${tag} stale host.pid=$pid → yarn omnimux:dev stop $short 或 rm"
-      running="stale"
-    fi
-  fi
-  if [ "$linked" -le 1 ]; then
-    # 进一步校验这唯一一条 link 的真实目标路径是否合法存在
-    if [ "$linked" -eq 1 ]; then
-      local single_link
-      single_link=$(find "$d/node_modules" -maxdepth 1 -type l 2>/dev/null | head -1)
-      if [ -n "$single_link" ]; then
-        local target
-        target=$(readlink "$single_link" 2>/dev/null || true)
-        if [ ! -e "$single_link" ]; then
-          bad "$name${tag} 软链悬空失效: $(basename "$single_link") -> $target"
-        elif [[ "$target" != "$PLUGINS_ROOT/"* ]] && [[ "$target" != *"dsh-plugin/"* ]]; then
-          warn "$name${tag} 软链目标位于非标准插件源: $target"
-        else
-          ok "$name${tag} [$running] link: $(basename "$single_link") -> $target"
-        fi
-      fi
-    else
-      ok "$name${tag} [$running] link 数 0 (纯物化)"
-    fi
-  else
-    bad "$name${tag} link 数 ${linked}（>1，违反在研 ≤1 铁律）→ 修复: yarn omnimux:dev rm $short"
-  fi
-  aport=""
-  [ -f "$d/port.txt" ] && aport=$(tr -d '[:space:]' < "$d/port.txt")
-  if [ "$running" = "running" ]; then
-    if [ -n "$aport" ] && [ "$aport" -ge 44200 ] 2>/dev/null && [ "$aport" -le 44299 ] 2>/dev/null; then
-      ok "$name port $aport ∈ L2 池"
-    elif [ -n "$aport" ] && [ "$aport" -ge 44120 ] 2>/dev/null && [ "$aport" -le 44151 ] 2>/dev/null; then
-      bad "$name running 口 $aport 落在 App 保留窗 → 再 start 迁入 44200-44299"
-    elif [ -n "$aport" ]; then
-      echo "· $name port ${aport}（非池内；动态口可接受，建议下次 start 进池）"
-    else
-      echo "· $name 无 port.txt"
-    fi
-    if [ -f "$d/dsh-home.txt" ]; then
-      home=$(tr -d '[:space:]' < "$d/dsh-home.txt")
-      case "$home" in
-        */tasks/"$short"|*/tasks/"$short"/) ok "$name DSH_HOME 任务子根" ;;
-        "$DEV_HOME"|"$DEV_HOME"/) echo "· $name 仍用共享 DEV_HOME（legacy 或 OMNIMUX_DEV_LEGACY_HOME=1）" ;;
-        *) echo "· $name DSH_HOME=$home" ;;
-      esac
-    else
-      echo "· $name 无 dsh-home.txt（旧环境；再 start 会写入）"
-    fi
-  elif [ "$running" = "stopped" ]; then
-    if [ -d "$d" ]; then
-      age_days=$(( ( $(date +%s) - $(stat -f %m "$d" 2>/dev/null || stat -c %Y "$d") ) / 86400 ))
-      if [ "$age_days" -ge 7 ]; then
-        echo "· $name${tag} stopped 已 ${age_days} 天 → 建议 yarn omnimux:dev rm $short"
-      fi
-    fi
-  fi
-}
-found=0
-if [ -d "$DEV_HOME/tasks" ]; then
-  for d in "$DEV_HOME"/tasks/*/profiles/omnimux-dev-*; do
-    [ -d "$d" ] || continue
-    found=1
-    check_dev_profile "$d"
-  done
-fi
-if [ -d "$DEV_HOME/profiles" ]; then
-  for d in "$DEV_HOME"/profiles/omnimux-dev-*; do
-    [ -d "$d" ] || continue
-    case "$d" in *.migrated-*) continue ;; esac
-    found=1
-    check_dev_profile "$d" " [legacy]"
-  done
-fi
-[ "$found" = 0 ] && echo "· 无 dev 环境（正常，用完即弃）"
-
-# 孤儿端口扫描 (44200~44299)：发现未记录在任务中的 LISTEN 端口仅报警，严禁擅自杀死
-if command -v lsof >/dev/null 2>&1; then
-  orphan_ports=$(lsof -nP -iTCP:44200-44299 -sTCP:LISTEN 2>/dev/null | awk 'NR>1 {print $2, $9}' | while read -r pid addr; do
-    port=$(echo "$addr" | awk -F: '{print $NF}')
-    # 检查该 port 是否属于某个活跃 profile
-    matched=0
-    if [ -d "$DEV_HOME/tasks" ]; then
-      for pf in "$DEV_HOME"/tasks/*/profiles/omnimux-dev-*/port.txt; do
-        [ -f "$pf" ] || continue
-        if [ "$(tr -d '[:space:]' < "$pf")" = "$port" ]; then
-          matched=1; break
-        fi
-      done
-    fi
-    if [ "$matched" = 0 ]; then
-      echo "$port (PID: $pid)"
-    fi
-  done || true)
-
-  if [ -n "$orphan_ports" ]; then
-    warn "发现 L2 端口池孤儿监听进程（未匹配任何活跃 task）: $orphan_ports → 建议人工核对或 lsof 确认"
-  fi
-fi
-
-echo
-echo "== 6. dev 环境 MUST NOT 出现在生产数据根 =="
-stray=$(find "$PROD_HOME/profiles" -maxdepth 1 -name "omnimux-dev-*" 2>/dev/null | head -1)
-if [ -n "$stray" ]; then
-  bad "生产数据根下发现 dev profile: $stray → 移走或删除"
-else
-  ok "生产数据根无 dev profile"
 fi
 
 echo

@@ -13,12 +13,12 @@ afterEach(() => {
   for (const directory of temporaryRoots.splice(0)) rmSync(directory, { recursive: true, force: true })
 })
 
-test('sync-agent-presets preserves a case-sensitive L2 ~/ target', () => {
+test('sync-agent-presets preserves a case-sensitive custom ~/ target', () => {
   const fixture = mkdtempSync(join(tmpdir(), 'omnimux-preset-target-'))
   temporaryRoots.push(fixture)
   const scripts = join(fixture, 'scripts')
-  const target = join(fixture, '.dsh-dev', 'tasks', 'Full Layout')
-  const profile = join(target, 'profiles', 'omnimux-dev-Full Layout')
+  const target = join(fixture, 'Custom Targets', 'Full Layout')
+  const profile = join(target, 'profiles', 'omnimux')
   const destination = join(profile, 'node_modules', '@deepseek-ai', 'dsh', 'config', 'agent-presets')
 
   mkdirSync(scripts, { recursive: true })
@@ -32,7 +32,7 @@ test('sync-agent-presets preserves a case-sensitive L2 ~/ target', () => {
   process.env.OMNIMUX_SYNC_TARGETS = 'fixture-inherited-target'
   let result
   try {
-    result = spawnSync('bash', [join(scripts, 'sync-agent-presets.sh'), '--target=~/.dsh-dev/tasks/Full Layout'], {
+    result = spawnSync('bash', [join(scripts, 'sync-agent-presets.sh'), '--target=~/Custom Targets/Full Layout'], {
       cwd: fixture,
       encoding: 'utf8',
       env: { ...process.env, HOME: fixture, OMNIMUX_SYNC_TARGETS: '' },

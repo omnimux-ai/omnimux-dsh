@@ -11,6 +11,8 @@ branch: "agent/market-skill-workshop-issue-773"
 
 # Skill工坊：正式实施架构与任务分解
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2/seed/独立 Host 与合入前浏览器验收要求退役，产品及安全设计不变。执行顺序按 [dev-pipeline](../../contracts/dev-pipeline.md) 与 [plugin-qa](../../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev/ego 验收。历史状态、版本与未验结果不重标。
+
 > **已批准方案正式化，不是功能完成报告。** 复用 `omnimux-market`，增量实现发现、真实库存、安全安装/启停/更新、真实新会话与无损预填。P0/P1 均属完整交付，不能用 partial、Alpha 或假开关替代。
 >
 > **T01 所查 alpha.3/dd632 与 rc.1/a66e 公共 Registry 面均缺统一 deny/barrier 和精确目标无副作用验证；仍是限定版本的静态结论，不是 runtime 实测。** 统一策略与加载屏障影响完整首次安装、更新、卸载、启用和停用；离线验证及事务协议可先实现，真实提交必须先解除对应门槛。

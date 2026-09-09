@@ -15,7 +15,6 @@ OmniMux 多 Agent Worktree 隔离与管理工具 (支持 GitHub Issue 绑定与�
 用法:
   ./scripts/git-wt.sh start <plugin> <topic> [issue_id]   从 origin/main 切出专属 Worktree
   ./scripts/git-wt.sh auto-start <issue_id>               根据 Issue ID 自动解析创建 Worktree
-  ./scripts/git-wt.sh dev <topic> [issue_id] [plugin]     在独立 L2 任务环境（端口 44201–44299）启动该工作树源码（合并前验证）
   ./scripts/git-wt.sh finish <topic> [issue_id] [flags]   本地门禁 → 推送特性分支 → 创建/核验 PR（禁止本地合 main）
   ./scripts/git-wt.sh clean <topic> [issue_id]            PR MERGED 后安全销毁 Worktree 及本地分支
   ./scripts/git-wt.sh list                                列出当前全部活跃的 Worktree 与对应分支
@@ -25,12 +24,10 @@ OmniMux 多 Agent Worktree 隔离与管理工具 (支持 GitHub Issue 绑定与�
   --skip-test     跳过本地单元测试门禁
   --skip-sync     即使 PR 已 MERGED 也跳过 App 物化
   --skip-push     跳过推送特性分支（交付未完成，保留沙箱）
-  --skip-l2       跳过「L2 独立环境验证记录」门禁（仅限 R3/纯文档/纯后端）
 
 示例:
   # 推荐: 绑定 GitHub Issue ID
   ./scripts/git-wt.sh start workflow table-node 42
-  ./scripts/git-wt.sh dev table-node 42            # 独立 L2 环境验证（44201–44299 端口）
   ./scripts/git-wt.sh finish table-node 42
   ./scripts/git-wt.sh clean table-node 42
 
@@ -184,101 +181,12 @@ cmd_start() {
   echo "   (在该目录下修改代码、构建与测试，互不干扰)"
 }
 
-cmd_dev() {
-  local topic="${1:-}"
-  local raw_issue="${2:-}"
-  local explicit_plugin="${3:-}"
-  if [ -z "$topic" ]; then
-    echo "❌ 错误: 必须提供 <topic>"
-    echo "示例: ./scripts/git-wt.sh dev <topic> [issue_id] [plugin]"
-    exit 1
-  fi
-
-  local wt_suffix="${topic}"
-  if [ -n "$raw_issue" ]; then
-    local clean_issue=$(echo "$raw_issue" | sed 's/^[^0-9]*//g')
-    if [ -n "$clean_issue" ]; then
-      wt_suffix="${topic}-${clean_issue}"
-    fi
-  fi
-
-  local wt_dir="$(cd "$REPO_ROOT/.." && pwd)/omnimux-dsh-wt-${wt_suffix}"
-  if [ ! -d "$wt_dir" ]; then
-    local matched_dir
-    matched_dir=$(ls -d "$(cd "$REPO_ROOT/.." && pwd)/omnimux-dsh-wt-${topic}"* 2>/dev/null | head -1 || true)
-    if [ -n "$matched_dir" ] && [ -d "$matched_dir" ]; then
-      wt_dir="$matched_dir"
-    else
-      echo "❌ 错误: 未找到 Worktree 目录: $wt_dir" >&2
-      git -C "$REPO_ROOT" worktree list >&2
-      exit 1
-    fi
-  fi
-
-  local branch
-  branch=$(git -C "$wt_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
-  local plugin="${explicit_plugin}"
-  if [ -z "$plugin" ]; then
-    plugin=$(detect_plugin_name "$branch" "$topic")
-  fi
-  if [ -z "$plugin" ]; then
-    echo "❌ 未能探测插件，请显式传入 <plugin>" >&2
-    echo "示例: ./scripts/git-wt.sh dev ${topic} ${raw_issue} omnimux-assets" >&2
-    exit 1
-  fi
-
-  if [ ! -f "$REPO_ROOT/scripts/dev-env.sh" ]; then
-    echo "❌ 缺少 scripts/dev-env.sh（L2 环境管理），无法启动独立验证环境" >&2
-    exit 1
-  fi
-
-  echo "==> 启动 L2 独立验证环境（源码源: ${wt_dir}/plugins）..."
-  local dev_out
-  if ! dev_out=$(OMNIMUX_PLUGINS_DIR="$wt_dir/plugins" bash "$REPO_ROOT/scripts/dev-env.sh" start "$topic" "$plugin" 2>&1); then
-    echo "❌ dev-env.sh start 失败：" >&2
-    echo "$dev_out" >&2
-    echo "---- 现有 L2 环境 ----" >&2
-    bash "$REPO_ROOT/scripts/dev-env.sh" ls 2>&1 >&2 || true
-    exit 1
-  fi
-  echo "$dev_out"
-
-  local port url commit profile_dir
-  port=$(echo "$dev_out" | sed -n 's/.*port:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | tail -1)
-  url=$(echo "$dev_out" | sed -n 's#.*URL:[[:space:]]*\(http://[^ ]*\).*#\1#p' | tail -1)
-  [ -z "$url" ] && [ -n "$port" ] && url="http://127.0.0.1:${port}"
-  commit=$(git -C "$wt_dir" rev-parse --short HEAD 2>/dev/null || echo "?")
-  profile_dir=$(echo "$dev_out" | sed -n 's/^[[:space:]]*profile:[[:space:]]*//p' | tail -1)
-
-  # 写 L2 验证记录（finish 门禁读取）
-  cat > "$wt_dir/.l2-dev.env" <<EOF
-TOPIC=${topic}
-PLUGIN=${plugin}
-PORT=${port}
-URL=${url}
-COMMIT=${commit}
-SOURCE=${wt_dir}/plugins
-PROFILE_DIR=${profile_dir}
-EOF
-  echo "✓ L2 验证记录已写入: $wt_dir/.l2-dev.env"
-
-  # 追加到 pr-board（.workbuddy 已被 gitignore，只作本机跟踪）
-  if [ -f "$REPO_ROOT/.workbuddy/pr-board.md" ]; then
-    printf '\n## %s L2 pre-merge verify\n- Plugin: %s\n- L2 port: %s\n- L2 URL: %s\n- Source commit: %s\n' \
-      "$topic" "$plugin" "${port:-?}" "${url:-?}" "$commit" >> "$REPO_ROOT/.workbuddy/pr-board.md"
-    echo "✓ pr-board 已记录 L2 验证信息"
-  fi
-  echo "🧪 独立验证 URL: ${url:-<未知>}"
-  echo "   （合并前测试请在独立端口进行；公共 dev 仅接受已合并 main 物化）"
-}
-
 cmd_finish() {
   local topic=""
   local raw_issue=""
   local skip_test=0
   local skip_sync=0
   local skip_push=0
-  local skip_l2=0
   local positional=()
 
   while [ $# -gt 0 ]; do
@@ -295,13 +203,13 @@ cmd_finish() {
         skip_push=1
         shift
         ;;
-      --skip-l2)
-        skip_l2=1
-        shift
-        ;;
       -h|--help)
-        echo "用法: ./scripts/git-wt.sh finish <topic> [issue_id] [--skip-test] [--skip-sync] [--skip-push] [--skip-l2]"
+        echo "用法: ./scripts/git-wt.sh finish <topic> [issue_id] [--skip-test] [--skip-sync] [--skip-push]"
         return 0
+        ;;
+      --*)
+        echo "❌ 未知参数: $1" >&2
+        return 1
         ;;
       *)
         positional+=("$1")
@@ -404,27 +312,6 @@ cmd_finish() {
     echo "✓ 本地门禁测试全绿通过"
   fi
 
-  # 步骤 2.5: L2 独立环境验证门禁（合并前测试必须走独立端口，不得污染公共 dev）
-  local l2_ok=0
-  local l2_port="" l2_url=""
-  if [ "$skip_l2" -eq 1 ]; then
-    echo "==> 步骤 2.5: L2 验证门禁跳过 (--skip-l2)"
-  elif [ -f "$wt_dir/.l2-dev.env" ]; then
-    l2_port=$(sed -n 's/^PORT=//p' "$wt_dir/.l2-dev.env" 2>/dev/null || true)
-    l2_url=$(sed -n 's/^URL=//p' "$wt_dir/.l2-dev.env" 2>/dev/null || true)
-    if [ -n "$l2_url" ] || [ -n "$l2_port" ]; then
-      l2_ok=1
-      echo "==> 步骤 2.5: ✓ L2 独立环境验证记录存在 (port=${l2_port:-?} url=${l2_url:-?})"
-    else
-      echo "❌ .l2-dev.env 缺少 PORT/URL，请重跑: pnpm wt dev ${topic}" >&2
-      exit 1
-    fi
-  else
-    echo "❌ 缺少 L2 独立环境验证记录。合并前测试请先运行: pnpm wt dev ${topic}" >&2
-    echo "   （仅 R3/纯文档/纯后端变更可用 --skip-l2 显式跳过）" >&2
-    exit 1
-  fi
-
   # 步骤 3: 主仓必须停留在干净的 main，只允许 fast-forward 对齐远端（禁止把特性分支合进本地 main）
   echo "==> 步骤 3: 检查主仓 main 纯净度与远端状态..."
   cd "$REPO_ROOT"
@@ -471,7 +358,6 @@ cmd_finish() {
   local pr_state=""
   local merged=0
   local synced=0
-  local cleaned=0
 
   # 步骤 4: 只推特性分支，严禁直推主干 / 把特性分支合进本地 main
   if [ "$skip_push" -eq 1 ]; then
@@ -560,22 +446,9 @@ cmd_finish() {
     echo "⏩ 远端 origin/main 尚未包含该提交，禁止物化。请等待 PR MERGED 后再 pnpm sync / git-wt.sh clean。"
   fi
 
-  # 步骤 7: 仅 MERGED 后销毁沙箱
-  echo "==> 步骤 7: 沙箱回收策略..."
-  if [ "$merged" -eq 1 ]; then
-    if [ -d "$wt_dir" ]; then
-      git -C "$REPO_ROOT" worktree remove "$wt_dir" 2>/dev/null || git -C "$REPO_ROOT" worktree remove "$wt_dir" --force 2>/dev/null || rm -rf "$wt_dir"
-      git -C "$REPO_ROOT" worktree prune
-      echo "✓ Worktree 目录已安全移除: $wt_dir"
-    fi
-    if [ -n "$branch" ] && git -C "$REPO_ROOT" rev-parse --verify "$branch" >/dev/null 2>&1; then
-      git -C "$REPO_ROOT" branch -d "$branch" 2>/dev/null || git -C "$REPO_ROOT" branch -D "$branch" 2>/dev/null || true
-      echo "✓ 本地分支已删除: $branch"
-    fi
-    cleaned=1
-  else
-    echo "⏩ PR 未 MERGED，Worktree 与特性分支已保留: $wt_dir"
-  fi
+  echo "==> 步骤 7: 保留验收现场..."
+  echo "⏩ Worktree 与特性分支已保留: $wt_dir"
+  echo "   合并后完成适用的 Dev 验收，再显式运行 clean；物化不等于验收通过。"
 
   echo ""
   echo "================================================================================"
@@ -606,24 +479,14 @@ cmd_finish() {
     echo "  🧬 主干合并:      ⏳ 本地 main 未合入特性分支（防丢失）"
   fi
   if [ "$skip_sync" -eq 1 ]; then
-    echo "  🚀 App 生产物化:  ⏩ 跳过 (--skip-sync)"
+    echo "  🚀 Dev 物化:  ⏩ 跳过 (--skip-sync)"
   elif [ "$synced" -eq 1 ]; then
-    echo "  🚀 App 生产物化:  ✅ 已同步（HEAD 已等于 origin/main）"
+    echo "  🚀 Dev 物化:  ✅ 已同步（HEAD 已等于 origin/main）"
   else
-    echo "  🚀 App 生产物化:  ⏳ 未执行（等待 PR MERGED）"
+    echo "  🚀 Dev 物化:  ⏳ 未执行（等待 PR MERGED）"
   fi
-  if [ "$skip_l2" -eq 1 ]; then
-    echo "  🧪 L2 验证:        ⏩ 跳过 (--skip-l2)"
-  elif [ "$l2_ok" -eq 1 ]; then
-    echo "  🧪 L2 验证:        ✅ port=${l2_port:-?} url=${l2_url:-?}"
-  else
-    echo "  🧪 L2 验证:        ⏳ 无独立验证记录"
-  fi
-  if [ "$cleaned" -eq 1 ]; then
-    echo "  🧹 沙箱环境:      ✅ Worktree 已销毁"
-  else
-    echo "  🧹 沙箱环境:      ⏳ 已保留 $wt_dir"
-  fi
+  echo "  🧪 Dev 运行验收:  ⏳ 尚未由本命令验证，按变更面完成适用验收"
+  echo "  🧹 沙箱环境:      ⏳ 已保留 $wt_dir"
   echo "================================================================================"
   echo ""
 }
@@ -722,23 +585,6 @@ cmd_clean() {
     done
   fi
 
-  echo "==> 3. 回收 L2 独立任务环境..."
-  if [ -f "$REPO_ROOT/scripts/dev-env.sh" ]; then
-    local recycled=0
-    for try_topic in "${topic}" "${wt_suffix}"; do
-      [ -z "$try_topic" ] && continue
-      if bash "$REPO_ROOT/scripts/dev-env.sh" ls 2>/dev/null | grep -qE "(omnimux-dev-${try_topic}[[:space:]])"; then
-        bash "$REPO_ROOT/scripts/dev-env.sh" rm "$try_topic" 2>&1 | tail -3
-        echo "✓ L2 任务环境 omnimux-dev-${try_topic} 已回收"
-        recycled=1
-        break
-      fi
-    done
-    [ "$recycled" -eq 1 ] || echo "· L2 任务环境不存在，跳过回收"
-  else
-    echo "· scripts/dev-env.sh 不存在，跳过 L2 回收"
-  fi
-
   echo "✅ Topic [${wt_suffix}] 对应的 Worktree 与分支清理完成。"
 }
 
@@ -797,10 +643,6 @@ case "$1" in
   auto-start)
     shift
     cmd_auto_start "$@"
-    ;;
-  dev)
-    shift
-    cmd_dev "$@"
     ;;
   finish)
     shift

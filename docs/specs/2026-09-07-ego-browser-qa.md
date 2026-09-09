@@ -12,6 +12,8 @@ subsystem: qa
 
 # ego-browser 共享验收执行链迁移
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 生命周期、认证入口与合入前独立运行验收已退役；ego-only、认证安全、请求身份、共享探针和真实 PNG 约束仍保留。当前 [plugin-qa](../contracts/plugin-qa.md) 要求 worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史 run/失败/未验记录不重标。
+
 取代 [Codex 内置浏览器适配](2026-09-05-builtin-browser-qa.md) 的活跃执行规范，不修改或重标历史证据。API、脚本和配置仍优先；必须浏览器时统一 ego，不回退 IAB。能力不足为 BLOCKED，不降低验收标准。
 
 ## 能力前提

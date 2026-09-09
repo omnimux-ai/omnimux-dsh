@@ -36,10 +36,9 @@ function currentReferenceBlock(state, draft) {
   return draft.split(/\n\s*\n/).find(part => part.startsWith(`${label}:`) || part.startsWith(`${label}：`)) || ''
 }
 
-/** Replacing an edited draft requires a separate explicit confirmation. */
-export function selectStarter(state, draft, { id, prompt }, confirmed = false) {
+/** Choosing another task replaces its prompt and retains the current references. */
+export function selectStarter(state, draft, { id, prompt }) {
   if (state.selectedId === id) return { status: 'unchanged', state, draft }
-  if (draft && draft !== state.lastWritten && !confirmed) return { status: 'confirm', state, draft }
   const references = currentReferenceBlock(state, draft)
   const nextDraft = prompt + (references ? `\n\n${references}` : '')
   const detached = state.manualUrl || !hasOwnedBlock(draft, state.urlBlock)

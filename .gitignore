@@ -8,7 +8,6 @@ dist
 
 # 本机 PR board / 会话状态（不进 git）
 .workbuddy/
-/.l2-dev.env
 /docs/evidence/live-qa-report.json
 .worktrees/
 .agent-backups/

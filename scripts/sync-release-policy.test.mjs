@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import {
   existsSync,
+  cpSync,
   copyFileSync,
   chmodSync,
   mkdirSync,
@@ -18,9 +19,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, it } from 'node:test'
 import { alphaPluginIds, alphaToolPrefixes } from './plugin-lifecycle.mjs'
+import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const syncStable = join(root, 'scripts/sync-stable.sh')
+let syncStable
+let gitPath
 const allPlugins = [
   'omnimux',
   'omnimux-accounts',
@@ -112,6 +115,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
       env: {
         ...process.env,
         HOME: home,
+        PATH: gitPath,
         CI: 'true',
         npm_config_offline: 'true',
         OMNIMUX_SYNC_VIA: 'internal',
@@ -122,7 +126,10 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
 
   before(() => {
     fixtureRoot = mkdtempSync(join(tmpdir(), 'omnimux-alpha-release-'))
-    fixturePlugins = join(fixtureRoot, 'fixture-plugins')
+    fixturePlugins = join(fixtureRoot, 'plugins')
+    copySyncScripts(fixtureRoot)
+    syncStable = join(fixtureRoot, 'scripts/sync-stable.sh')
+    gitPath = fakeGitPath(fixtureRoot, fixtureRoot)
     for (const name of allPlugins) writePackage(join(fixturePlugins, name), name)
     for (const target of ['.omnimux-dev', '.omnimux', '.dsh']) seedProfile(fixtureRoot, target)
   })
@@ -214,9 +221,10 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const runner = join(fixtureRoot, 'alias-runner')
     mkdirSync(join(runner, 'scripts'), { recursive: true })
     mkdirSync(join(runner, 'plugins/omnimux/src'), { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
     }
+    cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(runner, 'plugins/omnimux/src/plugin-lifecycle.json'))
     initCleanMainRepo(runner)
     for (const entrypoint of ['sync-stable.sh', 'sync-to-app.sh']) {
@@ -229,7 +237,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
         const result = spawnSync('bash', [join(runner, 'scripts', entrypoint), `--target=${target}`, '--skip-build', 'omnimux-accounts'], {
           cwd: runner,
           encoding: 'utf8',
-          env: { ...process.env, HOME: home, CI: 'true', npm_config_offline: 'true', OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: fixturePlugins },
+          env: { ...process.env, HOME: home, CI: 'true', npm_config_offline: 'true', OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: join(runner, 'plugins') },
         })
         assert.equal(result.status, 0, `${entrypoint}/${alias}: ${result.stderr || result.stdout}`)
         assert.equal(readChannel(home, '.omnimux'), 'production')
@@ -248,7 +256,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const isolatedRoot = join(fixtureRoot, 'mixed-wrapper-runner')
     const isolatedScripts = join(isolatedRoot, 'scripts')
     const isolatedRegistry = join(isolatedRoot, 'plugins/omnimux/src')
-    const isolatedPlugins = join(isolatedRoot, 'fixture-plugins')
+    const isolatedPlugins = join(isolatedRoot, 'plugins')
     const isolatedHome = join(fixtureRoot, 'mixed-wrapper-home')
     const argsFile = join(isolatedRoot, 'stable-args.txt')
     mkdirSync(isolatedScripts, { recursive: true })
@@ -257,7 +265,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     mkdirSync(join(isolatedHome, '.omnimux'), { recursive: true })
     writePackage(join(isolatedPlugins, 'omnimux-accounts'), 'omnimux-accounts')
     writePackage(join(isolatedPlugins, 'omnimux'), 'omnimux')
-    for (const name of ['sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
+    for (const name of ['sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(isolatedScripts, name))
     }
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(isolatedRegistry, 'plugin-lifecycle.json'))
@@ -305,7 +313,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     mkdirSync(isolatedScripts, { recursive: true })
     mkdirSync(isolatedRegistry, { recursive: true })
     mkdirSync(isolatedProfile, { recursive: true })
-    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
+    for (const name of ['sync-stable.sh', 'sync-to-app.sh', 'resolve-omnimux-profile.sh', 'sync-main.sh', 'plugin-lifecycle.mjs', 'managed-tarball-archive.py']) {
       copyFileSync(join(root, 'scripts', name), join(isolatedScripts, name))
     }
     writeFileSync(join(isolatedRegistry, 'plugin-lifecycle.json'), '{ malformed\n')

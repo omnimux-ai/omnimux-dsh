@@ -15,8 +15,8 @@ after(() => { if (!process.env.MANAGED_TEST_RETAIN) fs.rmSync(scratch, { recursi
 function write(file, value) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value); }
 export async function fixture(label, { nodeLinker = 'hoisted', filtered = false } = {}) {
   const home = path.join(scratch, label);
-  const task = path.join(home, '.dsh-dev/tasks/synthetic-seed');
-  const profile = path.join(task, 'profiles/omnimux-dev-synthetic-seed');
+  const task = path.join(home, 'synthetic-target');
+  const profile = path.join(task, 'profiles/omnimux');
   const source = path.join(home, 'input');
   const metadata = { name: '@fixture/viewer', version: '0.1.0', main: 'index.js',
     dsh: { bundle: { patch: './patch.yml', client: './client.js' } },
@@ -341,7 +341,7 @@ test('public sync entry rejects mixed managed flags without profile writes', asy
   const f = await fixture('public-entry');
   const before = payloadManifest(f.profile, { links: true }).digest;
   const result = spawnSync('bash', [path.join(here, 'sync-to-app.sh'), `--managed-tarball=${f.tarball}`, '--expect-name=@fixture/viewer', '--expect-version=0.1.0', `--expect-sha256=${f.request.sha256}`, `--target=${f.task}`, '--skip-build'], {
-    env: { ...process.env, HOME: f.home, OMNIMUX_ALLOW_UNMERGED_TARGET: f.task }, encoding: 'utf8',
+    env: { ...process.env, HOME: f.home }, encoding: 'utf8',
   });
   assert.equal(result.status, 2);
   assert.equal(payloadManifest(f.profile, { links: true }).digest, before);

@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { assertPng, PROBE_ASSERTIONS, STAGE_ASSERTIONS } from './live-stage-probe.mjs'
 import { assertRuntimeProofStable } from './live-runtime-proof.mjs'
+import { allowedAddress } from './live-browser-utils.mjs'
 
 const tabPlugin = target => String(target.tabId).split(':', 1)[0]
 const RUNTIME_HASH_FIELDS = [
@@ -31,6 +32,8 @@ function validateRuntimeBundle(bundle) {
 
 export function validateLiveQaReport(report, request, expected = {}) {
   assert.ok(request?.runId && request.commitSha && request.url, 'Missing prepared request identity')
+  assert.ok(allowedAddress(request.url, request.target), 'Prepared request must target the local Dev origin on 45120')
+  assert.equal(request.profile, 'omnimux-dev', 'Prepared request must use the Dev profile')
   assert.ok(Array.isArray(request.targets) && request.targets.length > 0, 'Prepared request has zero Stage targets')
   if (expected.root) {
     assert.equal(resolve(request.root), resolve(expected.root), 'Prepared request belongs to another worktree')
@@ -49,8 +52,6 @@ export function validateLiveQaReport(report, request, expected = {}) {
   const identity = { taskSpaceId: report.taskSpaceId, tabId: report.tabId }
   assert.deepEqual(report.browserIdentity?.before, identity, 'ego initial task/tab identity does not match report')
   assert.deepEqual(report.browserIdentity?.after, identity, 'ego task/tab identity changed during QA')
-  assert.deepEqual(report.runtime || null, request.runtime || null, 'Report Host identity does not match request')
-  assert.deepEqual(report.allocation || null, request.allocation || null, 'Report profile allocation does not match request')
   const actual = new URL(report.actualUrl); const expectedUrl = new URL(request.url)
   assert.equal(actual.origin, expectedUrl.origin, 'Reported ego origin does not match request')
   assert.equal(actual.pathname, expectedUrl.pathname, 'Reported ego path does not match request')
@@ -60,10 +61,13 @@ export function validateLiveQaReport(report, request, expected = {}) {
   for (const proof of [report.runtimeProof.before, report.runtimeProof.after]) {
     assert.equal(proof.requestedOrigin, expected.origin || expectedUrl.origin, 'Runtime proof origin does not match request')
     assert.equal(proof.target, request.target, 'Runtime proof target does not match request')
-    assert.deepEqual(proof.allocation, request.allocation || null, 'Runtime proof allocation does not match request')
     assert.ok(Array.isArray(proof?.bundles) && proof.bundles.length === expectedPlugins.size, 'Runtime proof has incomplete bundle coverage')
     assert.deepEqual(new Set(proof.bundles.map(bundle => bundle.plugin)), expectedPlugins, 'Runtime proof plugins do not match Stage targets')
-    for (const bundle of proof.bundles) validateRuntimeBundle(bundle)
+    for (const bundle of proof.bundles) {
+      validateRuntimeBundle(bundle)
+      const loaded = new URL(bundle.loadedScriptUrl, expectedUrl)
+      assert.ok(loaded.origin === expectedUrl.origin && loaded.pathname.startsWith('/plugins/') && !loaded.username && !loaded.password, 'Runtime proof script must be a same-origin plugin bundle')
+    }
   }
   assert.equal(report.probe?.targets?.length, request.targets.length, 'Missing Stage coverage')
   assert.ok(report.probe.assertions.length && report.probe.assertions.every(item => item.pass), 'Stage assertions failed')

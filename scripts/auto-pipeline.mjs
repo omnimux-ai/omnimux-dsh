@@ -5,11 +5,11 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { acquireIssueLock, assertSameRun, makeRunKey, readState, transitionState, writeState } from './pipeline-state.mjs'
 import { assessAdmission, assessRuntimeAuthorization, parseFrontmatter } from './authorization.mjs'
-import { requiresBrowser } from './impact-matrix.mjs'
+import { deriveImpactMatrix, postMergeAcceptance } from './impact-matrix.mjs'
 import { PipelineError, repoRoot, runCommand, writeEvidence } from './auto-pipeline-runtime.mjs'
 import { classifyRisk, fetchIssue, inferPlugin, maintainersFor, parseArgs, resolveDeliveryChannel, slugifyTopic } from './auto-pipeline-metadata.mjs'
 import { baseSha, changedPaths, ensureBranchAndWorktree, getPackageInfo, hasCodeChanges, materializeAndCleanup, pluginNamesFromChanges, runImplementation } from './auto-pipeline-worktree.mjs'
-import { runBrowserQa, runIntegrationGates, runPackageTest, runStaticQa } from './auto-pipeline-qa.mjs'
+import { runIntegrationGates, runPackageTest, runStaticQa } from './auto-pipeline-qa.mjs'
 import { commitAndPush, findOrCreatePr, labelPr, requestAndConfirmMerge, transitionIssue, waitForCi } from './auto-pipeline-github.mjs'
 
 export { assessAdmission, assessRuntimeAuthorization, parseFrontmatter } from './authorization.mjs'
@@ -33,10 +33,10 @@ function printDryRun(options, issue, plugin, topic) {
   process.stdout.write(`\n==> [3/6] 执行 L1 敏捷自动化测试 (Worktree)...\n`)
   process.stdout.write('✓ 真实测试命令与计数门禁（dry-run）\n')
   process.stdout.write(`\n==> [4/6] 执行严过关五维自动化质检门禁...\n`)
-  process.stdout.write('✓ L0 diff-aware / L2 integration / ego-browser 条件门禁（dry-run）\n')
+  process.stdout.write('✓ 合并前 L0 diff-aware / 静态与测试集成门禁（dry-run）；合并后 Dev 待验收\n')
   process.stdout.write(`\n==> [5/6] 自动提交、发起 PR 并按风险决定合入...\n`)
   process.stdout.write('✓ PR body、CI required checks、R0-R3 通道（dry-run）\n')
-  process.stdout.write(`\n==> [6/6] 合入确认后物化、回滚保护并清理...\n`)
+  process.stdout.write(`\n==> [6/6] 合入确认后按需交接 Dev 验收或收尾...\n`)
   process.stdout.write('✓ 仅在 state=MERGED 且 mergeCommit 存在后执行（dry-run）\n')
   process.stdout.write(`\n================================================================\n`)
   process.stdout.write('🎉 无人值守全自动流水线执行完毕（dry-run，未修改远端）\n')
@@ -44,18 +44,36 @@ function printDryRun(options, issue, plugin, topic) {
 }
 
 /** Persist a resumable handoff; this record conveys context, never authorization. */
-export function handoffToAgent(root, issueId, evidence, options) {
+export function handoffToAgent(root, issueId, evidence, options, fromPhase = 'pr') {
+  const merged = fromPhase === 'merged-confirmed'
+  if (merged && (evidence.merged?.state !== 'MERGED' || !evidence.merged.mergedAt || !evidence.merged.mergeCommit?.oid)) {
+    throw new PipelineError('Dev handoff requires confirmed MERGED identity')
+  }
   // Reuse an existing label so deployed repositories need no label migration.
   transitionIssue(issueId, 'status:qa-review', options, [`risk:${evidence.risk.tier}`])
   const handoff = {
-    owner: 'coordinating-agent',
-    mergeProhibited: Boolean(options.noMerge),
+    owner: 'coordinating-agent', fromPhase, phase: merged ? 'post-merge-dev' : 'pre-merge',
+    mergeProhibited: merged || Boolean(options.noMerge),
     materializeProhibited: options.materialize === false,
-    nextAction: options.noMerge
-      ? 'Complete PR acceptance and report within --no-merge scope; do not merge or materialize.'
-      : `Recheck current user scope and revocation, PR head, required checks and independent acceptance; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' and Dev delivery'}, requesting only missing boundary authorization.`,
+    nextAction: merged
+      ? `${options.materialize === false ? 'Do not materialize (--no-materialize); retain pending Dev acceptance.' : 'Review Dev applicability against the actual diff (record a not-applicable reason for pure scripts/metadata), verify Dev ownership and current task scope, then materialize the merged main revision through the official sync entry and complete applicable Dev 45120 acceptance.'} Preserve evidence and worktree; do not claim succeeded or clean up before applicable Dev acceptance passes.`
+      : options.noMerge
+        ? 'Complete PR acceptance and report within --no-merge scope; do not merge or materialize.'
+        : `Recheck current user scope and revocation, PR head, required static/test checks and independent review; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' then applicable Dev delivery'}, requesting only missing boundary authorization.`,
   }
-  return saveState(root, issueId, 'pr', 'ready-for-agent', { ...evidence, handoff })
+  return saveState(root, issueId, fromPhase, 'ready-for-agent', { ...evidence, handoff })
+}
+
+export function finishMergedDelivery(root, wt, { issueId, plugin, topic, ...evidence }, options, cleanup = materializeAndCleanup) {
+  if (evidence.merged?.state !== 'MERGED' || !evidence.merged.mergedAt || !evidence.merged.mergeCommit?.oid) {
+    throw new PipelineError('Delivery requires confirmed MERGED identity')
+  }
+  if (evidence.reports.dev.required) {
+    return handoffToAgent(root, issueId, { ...evidence, materialized: false }, options, 'merged-confirmed')
+  }
+  cleanup(wt, plugin, topic, issueId, evidence.pr, { ...options, materialize: false })
+  transitionIssue(issueId, 'status:auto-merged', options, [`risk:${evidence.risk.tier}`])
+  return saveState(root, issueId, 'merged-confirmed', 'succeeded', { ...evidence, materialized: false })
 }
 
 export async function executePipeline(options) {
@@ -136,14 +154,13 @@ export async function executePipeline(options) {
       if (rootGate.status !== 0) throw new PipelineError('根级 test:gates 失败')
     }
 
-    process.stdout.write('\n==> [4/6] 执行严过关五维自动化质检门禁与 L2/ego-browser 验收...\n')
+    process.stdout.write('\n==> [4/6] 执行严过关五维静态质检与测试集成门禁...\n')
     current = 'qa'
     saveState(repoRoot, options.issueId, 'tests', current, { testReports })
-    options.browserRequired = requiresBrowser(paths)
-    const browser = runBrowserQa(wt.wtDir, options.issueId, plugin, options, evidenceDir)
+    const impactMatrix = deriveImpactMatrix(paths)
     const qa = runStaticQa(wt.wtDir, plugin, sha, options, evidenceDir)
     const integration = runIntegrationGates(wt.wtDir, options, evidenceDir)
-    const reports = { qa, browser, integration, tests: testReports }
+    const reports = { qa, ...postMergeAcceptance(impactMatrix), impactMatrix, integration, tests: testReports }
     saveState(repoRoot, options.issueId, 'qa', 'qa', { reports })
     transitionIssue(options.issueId, 'status:qa-review', options, [`risk:${risk.tier}`])
 
@@ -159,7 +176,7 @@ export async function executePipeline(options) {
       return { ...handoff, issue, plugin, topic }
     }
 
-    process.stdout.write('\n==> [6/6] CI、受控合入确认、物化与收尾...\n')
+    process.stdout.write('\n==> [6/6] CI、受控合入确认与 Dev 验收交接...\n')
     current = 'ci'
     saveState(repoRoot, options.issueId, 'pr', current, { commit, pr, reports })
     transitionIssue(options.issueId, 'status:auto-merge-pending', options, [`risk:${risk.tier}`])
@@ -174,11 +191,11 @@ export async function executePipeline(options) {
     saveState(repoRoot, options.issueId, 'ci', 'auto-merge-pending', { ci })
     const merged = await requestAndConfirmMerge(pr.number, options)
     saveState(repoRoot, options.issueId, 'auto-merge-pending', 'merged-confirmed', { merged })
-    materializeAndCleanup(wt, plugin, topic, options.issueId, pr, options)
-    transitionIssue(options.issueId, 'status:auto-merged', options, [`risk:${risk.tier}`])
-    saveState(repoRoot, options.issueId, 'merged-confirmed', 'succeeded', { merged, materialized: options.materialize })
-    process.stdout.write(`\n🎉 Issue #${options.issueId} 已确认 MERGED、物化并完成收尾\n`)
-    return { state: 'succeeded', issue, plugin, topic, risk, pr, merged, reports }
+    const delivery = finishMergedDelivery(repoRoot, wt, { issueId: options.issueId, plugin, topic, commit, risk, pr, merged, reports }, options)
+    process.stdout.write(delivery.state === 'ready-for-agent'
+      ? `\n✓ Issue #${options.issueId} 已确认 MERGED；Dev 验收 pending，现场交给协调 Agent，未物化或清理\n`
+      : `\n✓ Issue #${options.issueId} 已确认 MERGED；Dev 不适用，已完成收尾\n`)
+    return { ...delivery, issue, plugin, topic }
   } catch (error) {
     if (stateWritten) {
       const message = error instanceof Error ? error.message : String(error)

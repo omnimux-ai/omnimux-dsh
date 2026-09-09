@@ -3,9 +3,9 @@
  * auto-qa-gate.mjs — diff-aware L0 static quality gate.
  *
  * This is intentionally a deterministic scanner, not the complete QA process.
- * Real package tests, integration checks, and ego-browser evidence are separate
- * gates. A report is PASS only when every requested dimension and every required
- * evidence check passes.
+ * Package tests and static integration checks precede merge. Browser evidence
+ * is validated only when explicitly requested for post-merge Dev acceptance;
+ * missing evidence fails there, while CI never claims browser acceptance.
  *
  * Usage:
  *   node scripts/auto-qa-gate.mjs [target] [--plugin <name>] [--diff]
@@ -41,7 +41,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
     requireBrowser: false,
     evidenceDir: '',
     output: '',
-    browserRunId: '', browserStage: '', browserTarget: '', browserRoot: '',
+    browserRunId: '', browserStage: '', browserRoot: '',
   }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -51,12 +51,12 @@ export function parseArgs(argv = process.argv.slice(2)) {
     else if (arg === '--output' && argv[i + 1]) options.output = resolve(argv[++i])
     else if (arg === '--browser-run-id' && argv[i + 1]) options.browserRunId = argv[++i]
     else if (arg === '--browser-stage' && argv[i + 1]) options.browserStage = argv[++i]
-    else if (arg === '--browser-target' && argv[i + 1]) options.browserTarget = argv[++i]
     else if (arg === '--browser-root' && argv[i + 1]) options.browserRoot = resolve(argv[++i])
     else if (arg === '--json') options.outputJson = true
     else if (arg === '--diff') options.diff = true
     else if (arg === '--require-browser') options.requireBrowser = true
     else if (!arg.startsWith('-')) options.targetDir = resolve(arg)
+    else throw new Error(`未知或缺值参数: ${arg}`)
   }
   return options
 }
@@ -174,8 +174,9 @@ export function createReport(options) {
       guards: emptyDimension(),
     },
     browser: {
-      required: options.requireBrowser,
-      pass: !options.requireBrowser,
+      required: options.requireBrowser, phase: 'post-merge', target: 'dev',
+      status: options.requireBrowser ? 'failed' : 'not-requested',
+      pass: options.requireBrowser ? false : null,
       evidenceDir: options.evidenceDir || null,
       errors: options.requireBrowser ? ['未提供 ego-browser live QA evidence'] : [],
     },
@@ -226,25 +227,18 @@ export function runGate(options) {
   staticScan(report, files, root)
 
   if (options.requireBrowser) {
+    const evidence = validateBrowserEvidence(options.evidenceDir, { root: options.browserRoot || root, runId: options.browserRunId, stage: options.browserStage, target: 'dev' })
     report.browser = {
-      required: true,
-      evidenceDir: options.evidenceDir || null,
-      ...validateBrowserEvidence(options.evidenceDir, { root: options.browserRoot || root, runId: options.browserRunId, stage: options.browserStage, target: options.browserTarget }),
-    }
-  } else {
-    report.browser = {
-      required: false,
-      pass: true,
-      evidenceDir: options.evidenceDir || null,
-      errors: [],
+      required: true, phase: 'post-merge', target: 'dev', status: evidence.pass ? 'passed' : 'failed',
+      evidenceDir: options.evidenceDir || null, ...evidence,
     }
   }
 
-  report.pass = Object.values(report.dimensions).every(dimension => dimension.pass) && report.browser.pass
+  report.pass = Object.values(report.dimensions).every(dimension => dimension.pass) && (!options.requireBrowser || report.browser.pass)
   const errorCount = Object.values(report.dimensions).reduce((sum, dimension) => sum + dimension.errors.length, 0) + report.browser.errors.length
   report.summary = report.pass
-    ? `PASS: L0 diff-aware 静态门禁通过（扫描 ${files.length} 个文件）`
-    : `FAIL: L0 静态/浏览器证据门禁发现 ${errorCount} 项阻断`
+    ? `PASS: L0 diff-aware 静态门禁通过（扫描 ${files.length} 个文件）${options.requireBrowser ? '；合并后 Dev ego-browser 证据通过' : '；未执行浏览器验收'}`
+    : `FAIL: L0 静态/Dev 浏览器证据检查发现 ${errorCount} 项阻断`
   return report
 }
 
@@ -264,7 +258,7 @@ function renderHuman(report) {
     for (const check of dimension.checks) lines.push(`   ✓ ${check}`)
     for (const error of dimension.errors) lines.push(`   ✗ [${error.file}${error.line ? `:${error.line}` : ''}] ${error.message}`)
   }
-  lines.push(`[${report.browser.pass ? '✓' : '✗'}] EGO-BROWSER (${report.browser.required ? 'required' : 'not required'})`)
+  lines.push(`[${report.browser.required ? report.browser.pass ? '✓' : '✗' : '-'}] DEV EGO-BROWSER (${report.browser.status}, post-merge)`)
   for (const error of report.browser.errors || []) lines.push(`   ✗ ${error}`)
   lines.push('======================================================', '')
   return lines.join('\n')

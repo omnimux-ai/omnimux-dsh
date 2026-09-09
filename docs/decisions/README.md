@@ -17,6 +17,8 @@ subsystem: "global"
 ## 1. 目录职能
 重大架构决议与技术选型裁定。历史决议不可篡改，若有升级仅通过新增补丁决议替代。
 
+> **流程版本边界（2026-09-09 / #864）：** 历史决议中的 L2 独立运行环境、生命周期与合入前浏览器验收要求已退役。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)；文档 authority、工具/UI 层级 L2 不受影响，历史结果不重标。
+
 ## 2. 索引矩阵 (Index Matrix)
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
@@ -27,8 +29,8 @@ subsystem: "global"
 | `accepted` | [2026-08-30-physical-materialization.md](2026-08-30-physical-materialization.md) | 决策：画布与资产库 100% 物理实体化 | `omnimux-workflow` | 2026-08-30 | 废止零拷贝 `real_path` 作为画布/主体库持久化策略；受管副本可随记录回收。 |
 | `accepted` | [2026-08-27-adopt-dsh-native-ui-system.md](2026-08-27-adopt-dsh-native-ui-system.md) | 决策：全面适配 DeepSeek Harness 原生 UI 规范，彻底废除外部主题覆盖层 | `omnimux` | 2026-08-27 | OmniMux 系列全量插件（Hub、Accounts、Assets、Products、Inspiration、Workflow、Clip、Publish 等）**100% 回归并严格消费 DeepS |
 | `accepted` | [2026-08-27-unified-shared-auth-config.md](2026-08-27-unified-shared-auth-config.md) | 决策：OmniMux 统一共享复用认证配置落地方案（极简纯文件标准） | `omnimux` | 2026-08-27 | 日期：2026-08-27。 |
-| `accepted` | [2026-08-26-l2-in-progress-plugin-cap.md](2026-08-26-l2-in-progress-plugin-cap.md) | 决策：L2 在研插件仍保持「每个 profile link ≤ 1」 | `omnimux-assets` | 2026-08-26 | 日期：2026-08-26。 |
-| `accepted` | [2026-08-26-l2-restart-host-session-semantics.md](2026-08-26-l2-restart-host-session-semantics.md) | 决策：L2 restart-host 保端口与磁盘，不保浏览器会话 | `omnimux` | 2026-08-26 | 日期：2026-08-26。 |
+| `superseded` | [2026-08-26-l2-in-progress-plugin-cap.md](2026-08-26-l2-in-progress-plugin-cap.md) | 决策：L2 在研插件仍保持「每个 profile link ≤ 1」 | `omnimux-assets` | 2026-09-09 | L2 独立环境及单 link 门槛退役，现行流程见 dev-pipeline。 |
+| `superseded` | [2026-08-26-l2-restart-host-session-semantics.md](2026-08-26-l2-restart-host-session-semantics.md) | 决策：L2 restart-host 保端口与磁盘，不保浏览器会话 | `omnimux` | 2026-09-09 | L2 生命周期退役；Dev 重启仍按现行授权与占用协调边界。 |
 | `accepted` | [2026-08-26-ops-entry-authority.md](2026-08-26-ops-entry-authority.md) | 决策：运维命令权威入口仍是 fork yarn omnimux: | `omnimux` | 2026-08-26 | 日期：2026-08-26。 |
 | `accepted` | [2026-08-21-gxgen-capability-plugin.md](2026-08-21-gxgen-capability-plugin.md) | Gxgen 微服务 → OmniMux 能力插件 | `omnimux-video` | 2026-08-21 | **Superseded（2026-08-21 下午方向变更）**：引擎客户端方案废除——用户明确要求本地化自包含，不可能依赖本地 Docker 引擎或云端。Gxgen video-engine 降级 |
 | `superseded` | [2026-08-21-xai-full-shell-theme.md](2026-08-21-xai-full-shell-theme.md) | 决策：全壳 x.ai 品牌染色（overrideTokens 渲染官方 --dsw-） | `omnimux` | 2026-08-21 | 日期：2026-08-21。 |

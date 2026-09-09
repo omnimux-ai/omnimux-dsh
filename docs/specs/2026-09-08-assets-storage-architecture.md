@@ -1,5 +1,7 @@
 # Issue #766｜资产库自定义根与安全迁移合并架构
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立运行、端口/profile/link 与合入前浏览器验收要求退役；存储、迁移安全、平台兼容与原生选择证据要求不变。当前流程见 [dev-pipeline](../contracts/dev-pipeline.md) 和 [plugin-qa](../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego及原生验收。历史失败与未验状态不重标。
+
 - 架构负责人：高见远；状态：设计交付，未实施、未运行验收。
 - 需求真源：[完整 PRD](2026-09-08-assets-storage-prd.md)（332 行已全文读取）。P0 全部保留，不以“先改路径”替代迁移安全。
 - 核验表面：本地固定 base = HEAD `5485c25875cb9f71d7cb78a6aa69d07e07fffbab`，分支 `agent/assets-storage-issue-766`，仅工作树 `.worktrees/assets-storage-766`；不是远端最新分支审查。

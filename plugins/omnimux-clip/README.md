@@ -21,4 +21,4 @@ node scripts/build-client.mjs
 node --test src/*.test.js
 ```
 
-加载走绝对路径 patch，禁止杀桌面 App。L2：`node scripts/omnimux.mjs dev start <task> omnimux-clip`。
+合入前在隔离 worktree 完成相关自动化/静态检查与独立评审，通过 required CI/MQ；没有合入前独立 App/Host 环境。合入后才从 `main` 经正式同步入口物化 Dev，在 45120 用 ego-browser 与共享 `verify:live` 验收；按需追加 Electron 证据，不默认强杀 App。详见[插件 QA](../../docs/contracts/plugin-qa.md)与[开发环境合同](../../docs/contracts/dev-pipeline.md)。

@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { fakeGitPath } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const sourceSync = readFileSync(join(root, 'scripts', 'sync-to-app.sh'), 'utf8')
@@ -26,7 +27,6 @@ function setupFixture({
   kitSource = 'current-kit',
   kitTarget = kitSource,
   selectedBuild = 'process.exit(0)',
-  l2Task = false,
   homeSegment = '',
   targetRelative = 'target',
 } = {}) {
@@ -37,8 +37,8 @@ function setupFixture({
   const plugin = join(fixture, 'plugins', 'omnimux-assets')
   const kit = join(fixture, 'kit')
   const home = homeSegment ? join(fixture, homeSegment) : fixture
-  const targetHome = l2Task ? join(home, '.dsh-dev', 'tasks', 'client-action') : join(home, targetRelative)
-  const profile = join(targetHome, 'profiles', l2Task ? 'omnimux-dev-client-action' : 'omnimux')
+  const targetHome = join(home, targetRelative)
+  const profile = join(targetHome, 'profiles', 'omnimux')
   const managedKit = join(profile, '.materialize-snapshots', 'plugins', 'dsh-ui-kit')
   const events = join(fixture, 'events.log')
   const bin = join(fixture, 'bin')
@@ -52,7 +52,7 @@ function setupFixture({
   mkdirSync(join(profile, 'node_modules', 'omnimux-workflow'), { recursive: true })
   mkdirSync(bin, { recursive: true })
 
-  for (const name of ['managed-tarball-archive.py', 'plugin-lifecycle.mjs']) {
+  for (const name of ['managed-tarball-archive.py', 'plugin-lifecycle.mjs', 'sync-main.sh']) {
     writeFileSync(join(scripts, name), readFileSync(join(root, 'scripts', name)))
   }
   mkdirSync(join(fixture, 'plugins/omnimux/src'), { recursive: true })
@@ -142,7 +142,7 @@ function run(fixture, args, extraEnv = {}) {
       ...extraEnv,
       OMNIMUX_DSH_UI_KIT_DIR: fixture.kit,
       SYNC_EVENTS: fixture.events,
-      PATH: `${fixture.bin}:${process.env.PATH}`,
+      PATH: fakeGitPath(fixture.fixture, fixture.fixture, `${fixture.bin}:${process.env.PATH}`),
     },
   })
 }
@@ -184,13 +184,13 @@ describe('sync-to-app named-plugin scope', () => {
     assert.equal(readFileSync(join(fixture.managedKit, 'lib', 'index.js'), 'utf8'), 'stale-kit')
   })
 
-  it('uses the real L2 profile name for a case-sensitive target home', () => {
-    const fixture = setupFixture({ l2Task: true, homeSegment: 'Case Sensitive Home' })
+  it('uses the standard profile name for a case-sensitive target home', () => {
+    const fixture = setupFixture({ homeSegment: 'Case Sensitive Home' })
     const result = run(fixture, ['--skip-build', `--target=${fixture.targetHome}`, 'omnimux-assets'])
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(events(fixture), /stable:.*omnimux-assets/)
-    assert.equal(existsSync(join(fixture.targetHome, 'profiles', 'omnimux')), false)
+    assert.equal(existsSync(join(fixture.targetHome, 'profiles', 'omnimux')), true)
   })
 
   it('preserves a ~/ target with case and spaces through the wrapper', () => {

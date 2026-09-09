@@ -22,6 +22,8 @@ related:
 
 # OmniMux Clip Studio（omnimux-clip）完整微应用技术 Spec
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境与合入前浏览器验收要求退役，OpenReel 产品和架构约束不变。当前流程以 [dev-pipeline](../contracts/dev-pipeline.md) 和 [plugin-qa](../contracts/plugin-qa.md) 为准：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史结果不重标。
+
 > **版本**：v3.0.0（2026-08-27：废弃 Headless + 手写 GUI；完整套用 OpenReel 官方源码，以 `dsh-better-sidebar` Tab 为 P1 主座）
 > **状态**：架构已定型，编码以本文件为准
 > **关联 PRD**：[2026-08-25-omnimux-clip-studio-prd.md](./2026-08-25-omnimux-clip-studio-prd.md)

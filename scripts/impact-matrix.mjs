@@ -5,8 +5,25 @@ import { fileURLToPath } from 'node:url'
 // Shared by CI and the delivery pipeline, including styles and non-React clients.
 export const UI_FILE_RE = /(?:^|[\\/])(?:client|apps|web)(?:[\\/]|$)|Stage\.(?:js|jsx|ts|tsx)$|\.(?:jsx|tsx|vue|svelte|html|css|scss)$/i
 
+const NON_RUNTIME_RE = /(?:^|\/)(?:docs?|tests?|__tests__|test-fixtures|fixtures)(?:\/|$)|\.(?:test|spec)\.[^/]+$|\.(?:md|mdx)$/i
+
+const runtimeFiles = files => files.map(file => file.replaceAll('\\', '/')).filter(file => !NON_RUNTIME_RE.test(file))
+
 export function requiresBrowser(changedFiles = []) {
-  return changedFiles.some(file => UI_FILE_RE.test(file))
+  return runtimeFiles(changedFiles).some(file => UI_FILE_RE.test(file))
+}
+
+export function requiresDev(changedFiles = []) {
+  return requiresBrowser(changedFiles) || runtimeFiles(changedFiles).some(file =>
+    /^(?:plugins|packages|apps)\//.test(file) || /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$/.test(file))
+}
+
+/** Pending delivery requirements, never evidence of browser/runtime success. */
+export function postMergeAcceptance(matrix) {
+  return Object.fromEntries(['dev', 'browser'].map(name => [name, {
+    ...matrix.dimensions[name], pass: null,
+    status: matrix.dimensions[name].required ? 'pending' : 'not-applicable',
+  }]))
 }
 
 /** Derive required evidence from repository-relative paths without I/O. */
@@ -15,16 +32,20 @@ export function deriveImpactMatrix(changedFiles = []) {
     throw new TypeError('changedFiles 必须是非空文件路径组成的数组')
   }
   const isUiChange = requiresBrowser(changedFiles)
+  const devRequired = requiresDev(changedFiles)
   const reason = isUiChange
-    ? '包含客户端/UI文件变更，必须提供当前代码的 ego-browser 浏览器验收证据'
+    ? '包含客户端/UI文件变更，合并后必须提供 Dev 45120 的 ego-browser 验收证据'
     : '无客户端/UI文件变更，ego-browser 浏览器验收不适用'
   return {
     dimensions: {
-      l0: { required: true, reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
-      browser: { required: isUiChange, reason },
+      l0: { required: true, phase: 'pre-merge', reason: '所有代码变更均需通过 L0 离线单测与语法检查' },
+      dev: { required: devRequired, phase: 'post-merge', target: 'dev', reason: devRequired
+        ? '路径涉及产品运行时或依赖，合并后 Dev required；协调 Agent 按实际 diff 复核，纯 scripts/元数据需记录不适用理由'
+        : '无产品运行时或依赖变更，Dev 物化与验收不适用' },
+      browser: { required: isUiChange, phase: 'post-merge', target: 'dev', reason },
     },
     isUiChange,
-    summary: `L0: required；ego-browser: ${isUiChange ? 'required' : 'not-applicable'}（${reason}）`,
+    summary: `L0: pre-merge required；Dev: post-merge ${devRequired ? 'required' : 'not-applicable'}；ego-browser: post-merge ${isUiChange ? 'required' : 'not-applicable'}（${reason}）`,
   }
 }
 

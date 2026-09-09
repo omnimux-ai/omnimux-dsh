@@ -249,29 +249,17 @@ export function parseRequest(argv, env = process.env) {
       reverseReceiptId: options['expect-reverse-receipt'] || null };
   }
   const target = options.target || 'dev';
-  let home;
-  if (target === 'dev') {
-    home = path.join(env.HOME, '.omnimux-dev');
-    const git = args => {
-      const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
-      if (result.status !== 0) fail('Git main alignment unavailable', 4);
-      return result.stdout.trim();
-    };
-    if (git(['branch', '--show-current']) !== 'main' || git(['status', '--porcelain'])
-        || git(['rev-parse', 'HEAD']) !== git(['rev-parse', 'refs/remotes/origin/main'])) fail('managed Dev requires clean aligned main and coordinator MQ receipt', 4);
-    if (!recover && !transition && (options['expect-name'] !== '@crosery/dsh-viewer' || options['expect-version'] !== '0.1.0')) fail('Dev authorization is viewer 0.1.0 only', 2);
-    if (transition && (options['expect-name'] !== viewerRelease.name
-        || !transition.reverseReceiptId && (transition.before.version !== '0.1.0'
-          || options['expect-version'] !== viewerRelease.version || options['expect-sha256'] !== viewerRelease.sha256
-          || transition.after.sourceRepo !== viewerRelease.sourceRepo || transition.after.sourceCommit !== viewerRelease.sourceCommit)
-        || transition.reverseReceiptId && (transition.before.version !== viewerRelease.version
-          || transition.before.sha256 !== viewerRelease.sha256 || options['expect-version'] !== '0.1.0'))) fail('unauthorized viewer transition', 2);
-  } else {
-    const prefix = path.join(env.HOME, '.dsh-dev', 'tasks');
-    if (!path.isAbsolute(target) || path.dirname(target) !== prefix || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(path.basename(target))
-        || env.OMNIMUX_ALLOW_UNMERGED_TARGET !== target) fail('managed target must be one explicit isolated L2 task', 2);
-    home = target;
-  }
+  if (target !== 'dev') fail('managed target must be dev', 2);
+  const home = path.join(env.HOME, '.omnimux-dev');
+  const alignment = spawnSync('bash', [path.join(here, 'sync-main.sh'), root], { env, encoding: 'utf8' });
+  if (alignment.status !== 0) fail('managed Dev requires clean aligned main', 4);
+  if (!recover && !transition && (options['expect-name'] !== '@crosery/dsh-viewer' || options['expect-version'] !== '0.1.0')) fail('Dev authorization is viewer 0.1.0 only', 2);
+  if (transition && (options['expect-name'] !== viewerRelease.name
+      || !transition.reverseReceiptId && (transition.before.version !== '0.1.0'
+        || options['expect-version'] !== viewerRelease.version || options['expect-sha256'] !== viewerRelease.sha256
+        || transition.after.sourceRepo !== viewerRelease.sourceRepo || transition.after.sourceCommit !== viewerRelease.sourceCommit)
+      || transition.reverseReceiptId && (transition.before.version !== viewerRelease.version
+        || transition.before.sha256 !== viewerRelease.sha256 || options['expect-version'] !== '0.1.0'))) fail('unauthorized viewer transition', 2);
   assertPath(home);
   const resolver = spawnSync('bash', ['-c', 'source "$1"; resolve_omnimux_profile_dir "$2"', 'resolver', path.join(here, 'resolve-omnimux-profile.sh'), home], { env, encoding: 'utf8' });
   if (resolver.status !== 0) fail('profile resolver rejected target', 2);
@@ -828,7 +816,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const mode = process.argv[2];
     if (mode === 'request') console.log(JSON.stringify(parseRequest(process.argv.slice(3))));
     else if (mode === 'run') {
-      const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+      const request = parseRequest(process.argv.slice(3));
       const result = await new ManagedSync(request).run();
       console.log(JSON.stringify(result));
       process.exitCode = result.code;

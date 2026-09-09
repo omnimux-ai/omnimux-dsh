@@ -29,14 +29,13 @@ describe('session starters', () => {
       }
     }
   })
-  it('protects an existing draft until explicit replacement', () => {
-    assert.equal(selectStarter(emptyGuideState(), 'My own instructions', card).status, 'confirm')
-    assert.equal(selectStarter(emptyGuideState(), 'My own instructions', card, true).draft, card.prompt)
+  it('replaces an existing draft immediately when choosing a task', () => {
+    assert.equal(selectStarter(emptyGuideState(), 'My own instructions', card).draft, card.prompt)
   })
-  it('switches untouched templates but preserves edits and repeated selections', () => {
+  it('switches edited templates directly and keeps repeated selections stable', () => {
     const first = selected()
     assert.equal(selectStarter(first.state, first.draft, other).draft, other.prompt)
-    assert.equal(selectStarter(first.state, first.draft + ' edit', other).status, 'confirm')
+    assert.equal(selectStarter(first.state, first.draft + ' edit', other).draft, other.prompt)
     assert.equal(selectStarter(first.state, first.draft + ' edit', card).draft, first.draft + ' edit')
   })
   it('retains references when changing an unedited template', () => {
@@ -91,7 +90,7 @@ describe('visible reference synchronization', () => {
     assert.equal(changed.draft, 'My changed brief\n\nReference video:\nhttps://example.com/new')
     const clear = syncVideoUrls({ ...changed.state, urlValue: '' }, changed.draft, options)
     assert.equal(clear.draft, 'My changed brief')
-    assert.equal(selectStarter(clear.state, clear.draft, other).status, 'confirm')
+    assert.equal(selectStarter(clear.state, clear.draft, other).draft, other.prompt)
   })
   it('does not overwrite or restore a reference edited or deleted in the body', () => {
     const first = withUrl()
@@ -102,11 +101,11 @@ describe('visible reference synchronization', () => {
       assert.equal(syncVideoUrls(result.state, edited, options).status, 'manualUrl')
     }
   })
-  it('keeps an explicitly edited reference when replacement is confirmed', () => {
+  it('keeps an explicitly edited reference when switching tasks', () => {
     const first = withUrl()
     const edited = first.draft.replace(url, 'https://example.com/manual')
     const detached = syncVideoUrls(first.state, edited, options)
-    const next = selectStarter(detached.state, edited, other, true)
+    const next = selectStarter(detached.state, edited, other)
     assert.ok(next.draft.includes('https://example.com/manual'))
     assert.ok(!next.draft.includes(url))
     assert.equal(next.state.urlValue, '')

@@ -43,7 +43,7 @@ Prompt 使用固定文字与字段占位符，仅替换一次；选项输出 val
 
 运行 `check` 和 `preview` 留存实际结果，再运行 `verify:forms`。本期自动检查覆盖结构、语义、输出样例及生成物漂移；视觉质量和业务准确性不能由 Schema 完全证明。
 
-修改内置模板时，构建并测试 `omnimux-forms`，在隔离 L2 使用 ego-browser 和共享 `verify:live forms --target=l2 --url=<实际地址>`。合并后按官方同步入口物化 Dev，再执行 `verify:live forms` 并核对窄屏、键盘焦点、字段错误、真实素材、引用失效、已有草稿保护和重复点击。共享探针只证明其实际断言，具体填写与交接必须另留同次浏览器证据。
+修改内置模板时，先在隔离 worktree 构建并测试 `omnimux-forms`，完成静态检查和独立评审。按[插件 QA](../../../../docs/contracts/plugin-qa.md)通过 required CI/Merge Queue 合并后，经官方同步入口物化 Dev，在 45120 使用 ego-browser 和共享 `verify:live forms`，核对窄屏、键盘焦点、字段错误、真实素材、引用失效、已有草稿保护和重复点击。共享探针只证明其实际断言，具体填写与交接必须另留同次浏览器证据；没有合并前独立运行环境，纯离线配置任务无需 App 物化。
 
 填写草稿按工作区、模板和版本保存；模板版本变化须验证旧草稿保留并明确提示不兼容，不能静默套用新规则。内置案例素材真源在 `packages/form-contract/examples/`，构建时随插件分发；`values.json` 的 `example:` 附件仍仅供离线测试。
 

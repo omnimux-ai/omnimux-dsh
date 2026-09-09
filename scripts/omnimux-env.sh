@@ -6,7 +6,7 @@
 # 导致任何 `pnpm`/`node` 都 exec 成 DSH 主二进制，并以 GUI App 方式启动 ——
 # 表现为屏幕上一排图标疯狂闪烁 + 反复的 `did-become-active` 前台激活循环。
 #
-# 本脚本复刻 dev-env.sh 的 `resolve_node_bin()`：把 node 解析到**真实** Node
+# 本脚本把 node 解析到真实 Node
 # （优先 OMNIMUX_NODE_BIN / $NVM_BIN，剔除 Yarn xfs 临时 node、DSH shim），
 # 剔除 PATH 中的 DSH `runtime-commands/bin`，并导出真实可执行路径：
 #   OMNIMUX_NODE   —— 真实 node
@@ -19,7 +19,7 @@
 #   bash scripts/omnimux-env.sh              # 直接打印解析结果（自检）
 set -euo pipefail
 
-# ---- 解析真实 node（与 dev-env.sh 的 resolve_node_bin 同源，抽出来共用）----
+# ---- 解析真实 node ----
 resolve_node_bin() {
   local candidate
   if [ -n "${OMNIMUX_NODE_BIN:-}" ] && [ -x "$OMNIMUX_NODE_BIN" ]; then

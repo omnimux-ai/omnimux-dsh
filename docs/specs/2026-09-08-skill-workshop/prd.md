@@ -16,6 +16,8 @@ evidence_type: "用户功能确认与完整计划批准 + 前序静态证据继�
 
 # Skill工坊完整产品需求文档（批准实施，全部功能待验收）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2/seed/独立 Host 与合入前浏览器验收要求退役，功能 AC、安全与授权边界不变。执行顺序按 [dev-pipeline](../../contracts/dev-pipeline.md) 和 [plugin-qa](../../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev/ego 验收。历史状态与未验结果不重标。
+
 ## 0. 文档状态、结论与阅读约定
 
 **结论：在现有 `omnimux-market` 内完成 Skill工坊，不新建插件。以“发现 → 判断 → 安装/启用 → 在真正的新会话中引用”为主链路，另提供“我的 Skill”管理和 `/skill-creator` 创建入口。唯一侧栏入口迁至顶部“项目”正下方，去掉底部入口；插件/专家/连接器Tab继续隐藏且功能、数据、存储原样保留。页面严格遵循用户确认的demo精简样式。**

@@ -10,6 +10,8 @@ branch: "agent/market-skill-workshop-issue-773"
 
 # Skill工坊：完整验收规格
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2/seed/独立 Host 与合入前浏览器验收要求退役，产品 AC 和安全约束不变。执行顺序按 [dev-pipeline](../../contracts/dev-pipeline.md) 与 [plugin-qa](../../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev/ego 验收。历史状态、版本与未验结果不重标。
+
 **本文件是待执行验收契约，不是测试通过报告。** 原 PRD v0.1.1 的 AC-01–57 全部保留映射，并应用用户已批准的产品语义及架构安全修订。正式方案见 [architecture.md](architecture.md)，图见 [类图](class-diagram.mermaid) 与 [时序图](sequence-diagram.mermaid)。本次功能用例统一 **NOT_RUN**；不因为某项依赖未核实便断言当前 runtime 不支持。
 
 固定任务 base 为 `580234923268673562cacb5cd01aebdb780339e1`。本轮完整采纳[T01静态能力报告](../../implementation/issue-773-capabilities.md)（244行，含§8）和[规格QA](../../qa/issue-773-spec-review.md)；修订追踪及精确最小外部需求见[revision-notes.md](revision-notes.md)。默认未来L2为alpha.3/dd632，Dev安装声明为App2.0.5、rc.1/a66e；二者不混用，也不等于实际运行身份。**所查两源码面及安装JS的公共Registry缺统一deny/barrier/精确目标无副作用验证，限定静态结论；runtime未验。** `requestRejection(req)`公开认证已静态证实，但操作许可与精确Origin另验；文本CAS不含附件/phase。

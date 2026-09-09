@@ -29,6 +29,8 @@ related:
 
 # PRD：全模态模型输入输出契约 + 画布兼容性与自动适配
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 UI 合入前 L2/预览环境验收要求退役；文档 authority L2、模型与产品约束不变。当前 [plugin-qa](../contracts/plugin-qa.md) 要求合入前 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego 验收。历史结果不重标，不授予真实模型探测权限。
+
 > **2026-09-06 生成节点策略**：[生成节点模型选择与偏好](../contracts/generation-node-policy.md) 取代本文中的自动选模顺序、产品模型范围及模式展示规则；Hub 输入能力与执行合同仍为唯一真源。
 
 

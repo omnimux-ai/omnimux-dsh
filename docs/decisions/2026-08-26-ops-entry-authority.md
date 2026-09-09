@@ -11,6 +11,8 @@ subsystem: "omnimux"
 
 # 决策：运维命令权威入口仍是 fork `yarn omnimux:*`
 
+> **命令表部分 SUPERSEDED — 2026-09-09 / #864：** fork 权威入口原则保留；下文 L2/`dev` 生命周期、合入前运行环境与默认生产同步描述不再适用。当前命令和 Dev 默认目标见 [ops-entry](../contracts/ops-entry.md) 与 [dev-pipeline](../contracts/dev-pipeline.md)。旧命令表仅作历史追溯，不要求外仓保留已退役入口。
+
 日期：2026-08-26。
 状态：**已确认（审计修订）。**
 性质：否决 `spec-plugin-dx-pipeline.md` v1.0.0 G1「唯一心智入口改到 dsh-plugin 根 npm scripts」。对照合同 [ops-entry.md](../contracts/ops-entry.md)。
