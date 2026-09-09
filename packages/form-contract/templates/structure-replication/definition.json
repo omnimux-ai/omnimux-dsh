@@ -1,13 +1,13 @@
 {
   "protocolVersion": 1,
   "id": "structure-replication",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "title": "保留结构复刻",
   "description": "保持参考视频的镜头结构与节奏，根据新主题组织复刻需求。",
   "examples": [
     {
-      "ref": "example:demo-structure-replication",
-      "title": "保留结构复刻示例",
+      "ref": "/api/omnimux/forms/examples/replication-demo.mp4",
+      "title": "原创产品结构示意：开场、细节、收尾",
       "kind": "video"
     }
   ],

@@ -81,7 +81,7 @@ test('stage selection and actual runtime discovery reject empty or unknown targe
   assert.throws(() => selectStages(''), /Unknown stage/)
   await assert.rejects(captureStageContracts(repo, []), /Zero stage/)
   const targets = await captureStageContracts(repo)
-  assert.equal(targets.length, 8)
+  assert.equal(targets.length, 9)
   assert.equal(targets.filter((target) => target.adapter === 'six-methods-and-disposer').length, 7)
   assert.equal(targets.find((target) => target.stage === 'workflow').selector, '[data-dsh-omnimux-workflow-entry]')
   const market = targets.find((target) => target.stage === 'market')
