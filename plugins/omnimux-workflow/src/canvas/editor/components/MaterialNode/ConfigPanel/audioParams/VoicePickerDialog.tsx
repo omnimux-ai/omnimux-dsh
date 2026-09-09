@@ -40,6 +40,57 @@ export function getVoiceSampleUrl(voiceType: string): string {
   return `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(voiceType)}.mp3`;
 }
 
+/**
+ * 计算音色试听候选样音文件名列表（按匹配优先级排序，解决火山官方对英文/别名音色命名差异）：
+ * 1. 英文/外语音色（或含英文别名的音色）：如 Charlie 2.0 -> Charlie.mp3、Frosty Man -> Frosty_Man.mp3、爽快思思/Skye -> Skye.mp3
+ * 2. 官方标准代号名：voice_type.mp3
+ * 3. 中文名（去除斜杠等）：如 解说小明.mp3、枕边低语.mp3
+ * 4. 去除 2.0 后缀后的名称
+ */
+export function getVoiceSampleCandidates(optionOrVoiceType: VoiceCatalogOption | string): string[] {
+  const isString = typeof optionOrVoiceType === 'string';
+  const voiceType = isString ? optionOrVoiceType : optionOrVoiceType.value;
+  const option = isString ? null : optionOrVoiceType;
+  const rawName = option?.meta?.name || '';
+  const displayName = option?.meta?.display_name || option?.label || '';
+
+  const fileNames: string[] = [];
+
+  // 1. 英文名 / 拼写（如 Charlie, Frosty_Man, The_Grinch 等）或带斜杠别名（爽快思思/Skye）
+  if (rawName) {
+    if (rawName.includes('/')) {
+      const parts = rawName.split('/').map((s) => s.trim().replace(/ /g, '_'));
+      if (parts[1]) fileNames.push(`${parts[1]}.mp3`);
+      if (parts[0]) fileNames.push(`${parts[0]}.mp3`);
+    } else {
+      const cleanName = rawName.replace(/ /g, '_');
+      if (/^[A-Za-z0-9_ -]+$/.test(rawName)) {
+        fileNames.push(`${cleanName}.mp3`);
+      }
+    }
+  }
+
+  // 2. 官方标准代号：voice_type.mp3
+  fileNames.push(`${voiceType}.mp3`);
+
+  // 3. 中文名或常规名
+  if (rawName && !rawName.includes('/')) {
+    const cleanName = rawName.replace(/ /g, '_');
+    fileNames.push(`${cleanName}.mp3`);
+  }
+
+  // 4. 去除 2.0 后缀的名称（如 枕边低语 2.0 -> 枕边低语.mp3）
+  if (displayName) {
+    const noVer = displayName.replace(/[_ ]?2\.0$/, '').replace(/ /g, '_');
+    if (noVer && !fileNames.includes(`${noVer}.mp3`)) {
+      fileNames.push(`${noVer}.mp3`);
+    }
+  }
+
+  const unique = Array.from(new Set(fileNames));
+  return unique.map((name) => `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(name)}`);
+}
+
 export interface VoicePickerDialogProps {
   /** 弹窗是否打开 */
   open: boolean;
@@ -88,8 +139,12 @@ export function VoicePickerDialog({
   useEffect(() => stopPlayback, []);
 
   /** 试听/暂停切换：stopPropagation 防止触发行选择 */
-  const togglePreview = (event: ReactMouseEvent<HTMLButtonElement>, voiceType: string): void => {
+  const togglePreview = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    optionOrVoiceType: VoiceCatalogOption | string,
+  ): void => {
     event.stopPropagation();
+    const voiceType = typeof optionOrVoiceType === 'string' ? optionOrVoiceType : optionOrVoiceType.value;
     if (playingVoice === voiceType) {
       // 当前音色正在播放 → 暂停
       stopPlayback();
@@ -97,22 +152,43 @@ export function VoicePickerDialog({
     }
     // 正在播放其他音色 → 先停掉再播当前
     stopPlayback();
-    const audio = new Audio(getVoiceSampleUrl(voiceType));
+    const candidateUrls = getVoiceSampleCandidates(optionOrVoiceType);
+    if (candidateUrls.length === 0) {
+      toast.info('该音色暂无官方试听音频');
+      return;
+    }
+
+    let candidateIndex = 0;
+    const audio = new Audio(candidateUrls[0]);
     audioRef.current = audio;
+
     const clearPlayback = (): void => {
       if (audioRef.current === audio) audioRef.current = null;
       setPlayingVoice(null);
     };
-    audio.onended = clearPlayback;
-    audio.onerror = () => {
-      // 部分非常规音色无官方样音（404）：优雅提示，绝不冒充试听
+
+    const tryNextOrReportError = (): void => {
+      candidateIndex += 1;
+      if (candidateIndex < candidateUrls.length && audioRef.current === audio) {
+        audio.src = candidateUrls[candidateIndex]!;
+        void audio.play().catch(() => {
+          tryNextOrReportError();
+        });
+        return;
+      }
       clearPlayback();
       toast.info('该音色暂无官方试听音频');
     };
+
+    audio.onended = clearPlayback;
+    audio.onerror = () => {
+      // 当前候选 URL 加载失败（如 404），自动降级尝试下一候选，全部候选穷尽后才优雅提示
+      tryNextOrReportError();
+    };
+
     setPlayingVoice(voiceType);
     void audio.play().catch(() => {
-      clearPlayback();
-      toast.info('该音色暂无官方试听音频');
+      tryNextOrReportError();
     });
   };
 
@@ -240,7 +316,7 @@ export function VoicePickerDialog({
                   className={`wf-voice-picker__preview${isPlaying ? ' wf-voice-picker__preview--playing' : ''}`}
                   aria-label={isPlaying ? `暂停试听 ${label}` : `试听 ${label}`}
                   title={isPlaying ? '暂停试听' : '试听'}
-                  onClick={(event) => togglePreview(event, option.value)}
+                  onClick={(event) => togglePreview(event, option)}
                 >
                   {isPlaying ? (
                     <Pause size={12} aria-hidden="true" />

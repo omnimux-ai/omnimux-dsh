@@ -193,4 +193,63 @@ export function voiceTagLine(option: VoiceCatalogOption): string {
   return segments.join(' · ');
 }
 
+/** 火山引擎大模型官方公开 CDN：预置音色 3~5 秒 MP3 试听样音（已开 CORS） */
+export const VOLCENGINE_SAMPLE_CDN_BASE = 'https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts';
+
+/** 按 voice_type 生成官方试听样音 URL（向下兼容单个 URL 导出） */
+export function getVoiceSampleUrl(voiceType: string): string {
+  return `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(voiceType)}.mp3`;
+}
+
+/**
+ * 计算音色试听候选样音文件名列表（按匹配优先级排序，解决火山官方对英文/别名音色命名差异）：
+ * 1. 英文/外语音色（或含英文别名的音色）：如 Charlie 2.0 -> Charlie.mp3、Frosty Man -> Frosty_Man.mp3、爽快思思/Skye -> Skye.mp3
+ * 2. 官方标准代号名：voice_type.mp3
+ * 3. 中文名（去除斜杠等）：如 解说小明.mp3、枕边低语.mp3
+ * 4. 去除 2.0 后缀后的名称
+ */
+export function getVoiceSampleCandidates(optionOrVoiceType: VoiceCatalogOption | string): string[] {
+  const isString = typeof optionOrVoiceType === 'string';
+  const voiceType = isString ? optionOrVoiceType : optionOrVoiceType.value;
+  const option = isString ? null : optionOrVoiceType;
+  const rawName = option?.meta?.name || '';
+  const displayName = option?.meta?.display_name || option?.label || '';
+
+  const fileNames: string[] = [];
+
+  // 1. 英文名 / 拼写（如 Charlie, Frosty_Man, The_Grinch 等）或带斜杠别名（爽快思思/Skye）
+  if (rawName) {
+    if (rawName.includes('/')) {
+      const parts = rawName.split('/').map((s) => s.trim().replace(/ /g, '_'));
+      if (parts[1]) fileNames.push(`${parts[1]}.mp3`);
+      if (parts[0]) fileNames.push(`${parts[0]}.mp3`);
+    } else {
+      const cleanName = rawName.replace(/ /g, '_');
+      if (/^[A-Za-z0-9_ -]+$/.test(rawName)) {
+        fileNames.push(`${cleanName}.mp3`);
+      }
+    }
+  }
+
+  // 2. 官方标准代号：voice_type.mp3
+  fileNames.push(`${voiceType}.mp3`);
+
+  // 3. 中文名或常规名
+  if (rawName && !rawName.includes('/')) {
+    const cleanName = rawName.replace(/ /g, '_');
+    fileNames.push(`${cleanName}.mp3`);
+  }
+
+  // 4. 去除 2.0 后缀的名称（如 枕边低语 2.0 -> 枕边低语.mp3）
+  if (displayName) {
+    const noVer = displayName.replace(/[_ ]?2\.0$/, '').replace(/ /g, '_');
+    if (noVer && !fileNames.includes(`${noVer}.mp3`)) {
+      fileNames.push(`${noVer}.mp3`);
+    }
+  }
+
+  const unique = Array.from(new Set(fileNames));
+  return unique.map((name) => `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(name)}`);
+}
+
 export type { VoiceOptionMeta };
