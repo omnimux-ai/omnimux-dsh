@@ -98,6 +98,56 @@ test('QA pointer/double-click/keyboard events do not escape to canvas handlers',
   assert.deepEqual(escaped, []);
 });
 
+test('QA821 playback, save and replacement controls isolate pointer and click events', async t => {
+  const f = await fixture(t);
+  const calls = { save: 0, replace: 0 };
+  await f.render({
+    mediaUrl: 'https://audio.example.test/qa821.wav',
+    onSaveAudio: async () => { calls.save += 1; },
+    onReplaceAudio: () => { calls.replace += 1; },
+  });
+  const escaped = [];
+  for (const type of ['pointerdown', 'click']) {
+    f.win.document.addEventListener(type, () => escaped.push(type));
+  }
+  for (const selector of ['.wf-audio__play', '.wf-audio__save', '.wf-audio__replace']) {
+    await f.flush(() => {
+      const button = f.query(selector);
+      button.dispatchEvent(new f.win.Event('pointerdown', { bubbles: true }));
+      button.click();
+    });
+  }
+  assert.deepEqual(escaped, []);
+  assert.equal(f.calls.play, 1);
+  assert.deepEqual(calls, { save: 1, replace: 1 });
+});
+
+test('QA821 waveform retry is isolated and retries decoding without replacing or opening media', async t => {
+  const f = await fixture(t);
+  let replacements = 0;
+  let requests = 0;
+  await f.render({ onReplaceAudio: () => { replacements += 1; } });
+  f.win.fetch = async () => { requests += 1; throw new Error('offline waveform fixture'); };
+  await metadata(f);
+  const firstRequests = requests;
+  assert.ok(firstRequests > 0);
+  assert.ok(f.query('.wf-audio__retry'));
+  const escaped = [];
+  for (const type of ['pointerdown', 'click']) {
+    f.win.document.addEventListener(type, () => escaped.push(type));
+  }
+  await f.flush(() => {
+    const button = f.query('.wf-audio__retry');
+    button.dispatchEvent(new f.win.Event('pointerdown', { bubbles: true }));
+    button.click();
+  });
+  assert.deepEqual(escaped, []);
+  assert.ok(requests > firstRequests);
+  assert.equal(replacements, 0);
+  assert.equal(f.calls.play, 0);
+  assert.ok(f.query('.wf-audio__retry'));
+});
+
 test('QA workspace replacement aborts pending native-action request and ignores late success', async t => {
   const f = await fixture(t);
   await f.render();

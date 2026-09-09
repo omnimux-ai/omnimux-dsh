@@ -163,7 +163,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
           }}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          {playing ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+          {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
         </button>
         <div className="wf-audio__timeline">
           <div
@@ -221,7 +221,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
               }}
               onPointerDown={(event) => event.stopPropagation()}
             >
-              <Download size={13} aria-hidden="true" />
+              <Download size={16} aria-hidden="true" />
               <span>{t('audio.save')}</span>
             </button>
           ) : (
@@ -238,7 +238,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
               >
-                <ExternalLink size={13} aria-hidden="true" />
+                <ExternalLink size={16} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -252,7 +252,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
               >
-                <FolderOpen size={13} aria-hidden="true" />
+                <FolderOpen size={16} aria-hidden="true" />
               </button>
             </>
           )}
@@ -261,7 +261,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
             {waveFailed && !error && (
               <button
                 type="button"
-                className="wf-audio__retry nodrag"
+                className="wf-audio__button wf-audio__retry nodrag"
                 aria-label={t('audio.retry')}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -269,7 +269,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
               >
-                <RefreshCw size={11} aria-hidden="true" />
+                <RefreshCw size={16} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -286,7 +286,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
             }}
             onPointerDown={(event) => event.stopPropagation()}
           >
-            <RefreshCw size={13} aria-hidden="true" />
+            <RefreshCw size={16} aria-hidden="true" />
           </button>
         )}
       </div>
