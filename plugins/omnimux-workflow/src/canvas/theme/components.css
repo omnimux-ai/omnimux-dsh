@@ -6752,7 +6752,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   flex-shrink: 0;
 }
 
-/* ---- 浮层外壳 (Popover)：宽 min(360, 100vw-24)，入场位移随 placement 同向 ---- */
+/* ---- 浮层外壳 (Popover)：宽 min(420, 100vw-24)，入场位移随 placement 同向 ---- */
 .wf-cfg-popover,
 .wf-video-param-popover {
 
@@ -7006,11 +7006,11 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   flex-shrink: 0;
 }
 
-/* ---- 长标签选择块网格 (Choice Tile)：2 列等高 36px，nowrap 零断词 ---- */
+/* ---- 长标签选择块网格 (Choice Tile)：一行三个（最多），nowrap 零断词 ---- */
 .wf-cfg-choice-tile-grid,
 .wf-video-choice-tile-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -7065,22 +7065,27 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
     0 0 0 2px var(--dsw-alias-state-business-tertiary);
 }
 
-/* ---- 画幅比例卡片网格 (Aspect) ---- */
+/* ---- 画幅比例卡片网格 (Aspect)：单行自适应平铺 ---- */
 .wf-cfg-aspect-grid,
 .wf-video-aspect-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
 }
 
 .wf-cfg-aspect-card,
 .wf-video-aspect-card {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   height: 56px;
+  padding: 0 2px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
@@ -7127,10 +7132,48 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-cfg-aspect-card__label,
 .wf-video-aspect-card__label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 14px;
   color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ---- 时长模式与滑块容器 ---- */
+.wf-cfg-popover__duration-mode-row,
+.wf-video-param-popover__duration-mode-row {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.wf-cfg-popover__duration-slider-container,
+.wf-video-param-popover__duration-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.wf-cfg-popover__range-labels,
+.wf-video-param-popover__range-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--dsw-alias-label-tertiary);
+  padding: 0 2px;
+}
+
+.wf-cfg-popover__range-min,
+.wf-cfg-popover__range-max,
+.wf-video-param-popover__range-min,
+.wf-video-param-popover__range-max {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
 }
 
 /* ---- 时长胶囊网格 (Duration)：32px / 8px，废除 28px / 999px ---- */

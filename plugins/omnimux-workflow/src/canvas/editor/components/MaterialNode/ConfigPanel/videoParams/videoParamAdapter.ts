@@ -197,7 +197,7 @@ export function resolveEffectiveVideoParams(
     if (definition?.supported) {
       result[field] = typeof params?.[field] === 'boolean'
         ? params[field] as boolean
-        : definition.defaultValue;
+        : false;
     }
   }
   for (const [field] of ENUM_FIELDS) {
@@ -309,7 +309,7 @@ export function buildVideoParamTransition(
   for (const [field] of BOOLEAN_FIELDS) {
     const definition = schema[field];
     if (definition?.supported && typeof nextParams[field] !== 'boolean') {
-      nextParams[field] = definition.defaultValue;
+      nextParams[field] = field === 'sound' ? (definition.defaultValue ?? true) : false;
     }
   }
   for (const [field] of ENUM_FIELDS) {

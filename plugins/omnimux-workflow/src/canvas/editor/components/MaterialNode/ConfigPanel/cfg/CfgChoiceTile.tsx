@@ -20,15 +20,21 @@ export interface CfgChoiceTileProps<T extends string | number> {
   ariaLabel: string;
 }
 
-/** 2×N 等高 nowrap 选择块网格 */
+/** 一行最多 3 列等高 nowrap 选择块网格 */
 export function CfgChoiceTile<T extends string | number>({
   options,
   value,
   onChange,
   ariaLabel,
 }: CfgChoiceTileProps<T>): ReactElement {
+  const columns = options.length <= 2 ? options.length : 3;
   return (
-    <div className="wf-cfg-choice-tile-grid" role="radiogroup" aria-label={ariaLabel}>
+    <div
+      className="wf-cfg-choice-tile-grid"
+      role="radiogroup"
+      aria-label={ariaLabel}
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+    >
       {options.map((opt) => {
         const isActive = opt.value === value;
         const cls = isActive

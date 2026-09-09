@@ -15,6 +15,7 @@ import type { ReactElement, RefObject } from 'react';
 import type { CapabilityModelItem, ModelParameterSchema } from '../../../../../../shared/api.ts';
 import { CustomSelect, CustomSlider } from '../../../../../ui/index.ts';
 import { CfgPopoverShell } from '../cfg/CfgPopoverShell.tsx';
+import { CfgSegment } from '../cfg/CfgSegment.tsx';
 import { AspectCardGrid } from './AspectCardGrid.tsx';
 import { DurationGrid } from './DurationGrid.tsx';
 import { projectParamControl } from './paramSchemaFilter.ts';
@@ -58,7 +59,36 @@ export function VideoParamPopover({
 }: VideoParamPopoverProps): ReactElement | null {
   const resolutionOptions = schema.resolution?.options ?? [];
   const durationOptions = schema.duration?.options ?? [];
-  const durationRange = schema.duration?.range;
+  const hasAutoDurationSupport = Boolean(
+    schema.duration?.allowAuto || durationOptions.some((opt) => opt.value === -1),
+  );
+  const durationRange = useMemo(() => {
+    if (schema.duration?.range) {
+      return {
+        min: schema.duration.range.min,
+        max: schema.duration.range.max,
+        step: schema.duration.range.step ?? 1,
+      };
+    }
+    const positiveOptions = durationOptions.filter((opt) => typeof opt.value === 'number' && opt.value > 0);
+    if (positiveOptions.length > 0) {
+      const vals = positiveOptions.map((opt) => opt.value);
+      return {
+        min: Math.min(...vals),
+        max: Math.max(...vals),
+        step: 1,
+      };
+    }
+    return { min: 4, max: 30, step: 1 };
+  }, [schema.duration?.range, durationOptions]);
+
+  const isAutoDuration = params.duration === -1 || (typeof params.duration === 'string' && (params.duration === 'auto' || params.duration === '-1'));
+  const validCustomDuration = typeof params.duration === 'number' && params.duration > 0
+    ? params.duration
+    : (typeof schema.duration?.defaultValue === 'number' && schema.duration.defaultValue > 0
+        ? schema.duration.defaultValue
+        : durationRange.min);
+  const durationDisplayValue = isAutoDuration ? '自动' : `${validCustomDuration}s`;
   const showModeUi = Boolean(params.showModeUi) && (params.effectiveOperations?.length ?? 0) >= 2;
   const activeOperation = params.effectiveOperations.find((operation) => operation.id === params.operation);
 
@@ -90,8 +120,7 @@ export function VideoParamPopover({
     ['generationType', '生成类型', schema.generationType, params.generationType],
   ] as const).filter(([field]) => advancedKeys.has(field));
   const showAdvanced = Boolean(
-    (advancedKeys.has('seed') && schema.seed)
-    || booleanControls.some(([, , definition]) => definition?.supported)
+    booleanControls.some(([, , definition]) => definition?.supported)
     || enumControls.some(([, , definition]) => definition?.options?.length),
   );
 
@@ -159,50 +188,62 @@ export function VideoParamPopover({
           </section>
         ) : null}
 
-        {popoverKeys.has('duration') && durationOptions.length > 0 && (
-          <section className="wf-video-param-popover__section">
-            <h4 className="wf-video-param-popover__section-title">时长</h4>
-            <DurationGrid
-              value={typeof params.duration === 'number' ? params.duration : Number(params.duration) || 5}
-              options={durationOptions}
-              onChange={(v) => onParamChange('duration', v)}
-            />
-          </section>
-        )}
-
-        {popoverKeys.has('duration') && durationOptions.length === 0 && durationRange ? (
-          <section className="wf-video-param-popover__section">
+        {popoverKeys.has('duration') && (
+          <section className="wf-video-param-popover__section" data-testid="wf-video-duration-section">
             <div className="wf-video-param-popover__section-heading">
               <h4 className="wf-video-param-popover__section-title">时长</h4>
-              <span className="wf-video-param-popover__value">
-                {params.duration === -1 ? '自动' : `${params.duration}s`}
-              </span>
+              <span className="wf-video-param-popover__value">{durationDisplayValue}</span>
             </div>
-            <div className="wf-video-param-popover__range-row">
-              <CustomSlider
-                className="wf-video-param-popover__slider"
-                min={durationRange.min}
-                max={durationRange.max}
-                step={durationRange.step ?? 1}
-                value={typeof params.duration === 'number' && params.duration >= durationRange.min
-                  ? params.duration
-                  : schema.duration?.defaultValue ?? durationRange.min}
-                onChange={(value) => onParamChange('duration', value)}
-              />
-              {schema.duration?.allowAuto ? (
-                <button
-                  type="button"
-                  className={`wf-video-duration-pill${params.duration === -1 ? ' wf-video-duration-pill--active' : ''}`}
-                  aria-pressed={params.duration === -1}
-                  onClick={() => onParamChange('duration', -1)}
-                >
-                  自动
-                </button>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
 
+            {hasAutoDurationSupport ? (
+              <div className="wf-video-param-popover__duration-mode-row">
+                <CfgSegment
+                  options={[
+                    { value: 'custom', label: '自定义' },
+                    { value: 'auto', label: '自动' },
+                  ]}
+                  value={isAutoDuration ? 'auto' : 'custom'}
+                  onChange={(mode) => {
+                    if (mode === 'auto') {
+                      onParamChange('duration', -1);
+                    } else {
+                      onParamChange('duration', validCustomDuration);
+                    }
+                  }}
+                  ariaLabel="时长模式"
+                  className="wf-video-seg"
+                />
+              </div>
+            ) : null}
+
+            {!isAutoDuration ? (
+              <div className="wf-video-param-popover__duration-slider-container">
+                <div className="wf-video-param-popover__range-row">
+                  <CustomSlider
+                    className="wf-video-param-popover__slider"
+                    min={durationRange.min}
+                    max={durationRange.max}
+                    step={durationRange.step}
+                    value={validCustomDuration}
+                    onChange={(value) => onParamChange('duration', value)}
+                  />
+                </div>
+                <div className="wf-video-param-popover__range-labels">
+                  <span className="wf-video-param-popover__range-min">{durationRange.min}s</span>
+                  <span className="wf-video-param-popover__range-max">{durationRange.max}s</span>
+                </div>
+              </div>
+            ) : null}
+
+            {durationOptions.length > 0 && !schema.duration?.range && !hasAutoDurationSupport ? (
+              <DurationGrid
+                value={typeof params.duration === 'number' ? params.duration : Number(params.duration) || 5}
+                options={durationOptions}
+                onChange={(v) => onParamChange('duration', v)}
+              />
+            ) : null}
+          </section>
+        )}
 
         {needsFileUrl || needsLinkUrl ? (
           <section className="wf-video-param-popover__section">
@@ -222,24 +263,6 @@ export function VideoParamPopover({
         {showAdvanced ? (
           <section className="wf-video-param-popover__section" data-testid="wf-video-advanced-parameters">
             <h4 className="wf-video-param-popover__section-title">高级参数</h4>
-            {advancedKeys.has('seed') && schema.seed ? (
-              <label className="wf-video-param-popover__field-row">
-                <span>随机种子</span>
-                <input
-                  type="number"
-                  className="wf-video-param-popover__input"
-                  min={schema.seed.range?.min}
-                  max={schema.seed.range?.max}
-                  step={schema.seed.range?.step ?? 1}
-                  value={params.seed ?? ''}
-                  placeholder="随机"
-                  onChange={(event) => {
-                    const value = event.target.value.trim();
-                    onParamChange('seed', value === '' ? undefined : Number(value));
-                  }}
-                />
-              </label>
-            ) : null}
             {enumControls.map(([field, label, definition, value]) => definition?.options?.length ? (
               <div className="wf-video-param-popover__field-row" key={field}>
                 <span>{label}</span>
@@ -257,7 +280,7 @@ export function VideoParamPopover({
                 <span>{label}</span>
                 <BooleanSwitchSegment
                   ariaLabel={label}
-                  value={typeof value === 'boolean' ? value : definition.defaultValue}
+                  value={typeof value === 'boolean' ? value : false}
                   onChange={(next) => onParamChange(field, next)}
                 />
               </div>
