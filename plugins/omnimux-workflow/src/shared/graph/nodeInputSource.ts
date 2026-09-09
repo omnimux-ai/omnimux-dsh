@@ -1,5 +1,6 @@
 import { localFileMediaUrl, looksAbsolutePath, projectFileMediaUrl } from '../localMedia.ts';
 import { normalizeMediaNumber, normalizeMimeType } from '../mediaMetadata.ts';
+import { serializeTableNodeToText } from './tableTextSerializer.ts';
 
 export type InputAvailability = 'ready' | 'waiting' | 'unavailable';
 
@@ -83,7 +84,7 @@ export function readNodeInputSource(
 ): NodeInputSource {
   const data = node.data ?? {};
   const materialType = nonempty(data.materialType) ?? node.type ?? 'text';
-  const label = nonempty(data.label) ?? node.id;
+  const label = nonempty(data.label) ?? nonempty(data.title) ?? node.id;
   const selected = Array.isArray(data.mediaAssets)
     ? data.mediaAssets.find((asset) => asset && typeof asset === 'object' && asset.type === materialType) as Record<string, unknown> | undefined
     : undefined;
@@ -101,7 +102,13 @@ export function readNodeInputSource(
     return { ...base, availability: 'unavailable', message: `“${label}”的素材不可用，请重试、替换或移除引用`, output: {} };
   }
 
-  const text = materialType === 'text' ? readCurrentText(data) : undefined;
+  let text: string | undefined = undefined;
+  if (materialType === 'text') {
+    text = readCurrentText(data);
+  } else if (materialType === 'table') {
+    const raw = serializeTableNodeToText(data);
+    text = raw.trim() ? raw : undefined;
+  }
   const media = materialType === 'image' || materialType === 'video' || materialType === 'audio'
     ? mediaAsset(data, materialType, workspaceId) : undefined;
   const output = {
@@ -112,6 +119,7 @@ export function readNodeInputSource(
     return {
       ...base, availability: 'ready', output,
       outputId: media?.assetId ?? media?.relativePath ?? media?.path ?? media?.url
+        ?? (materialType === 'table' ? nonempty(data.tableId) ?? `${node.id}:table` : undefined)
         ?? nonempty(data.taskId) ?? `${node.id}:current`,
     };
   }
@@ -122,7 +130,7 @@ export function readNodeInputSource(
     availability: failed ? 'unavailable' : 'waiting',
     message: failed
       ? `“${label}”尚无可用结果，请重试或移除引用`
-      : `等待“${label}”的${materialType === 'text' ? '内容' : '素材或结果'}`,
+      : `等待“${label}”的${materialType === 'text' ? '内容' : materialType === 'table' ? '表格记录' : '素材或结果'}`,
     output,
   };
 }

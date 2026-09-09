@@ -60,7 +60,7 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
           availabilityMessage: source.message,
           outputId: source.outputId,
           label: data.label || node.id,
-          materialType: data.materialType || 'image',
+          materialType: data.materialType || (node.type === 'table' ? 'table' : 'image'),
           url,
           hasMedia,
           textContent,
