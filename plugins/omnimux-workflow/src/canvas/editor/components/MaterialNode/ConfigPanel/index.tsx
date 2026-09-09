@@ -72,6 +72,11 @@ import {
   type SlotSpec,
 } from '../../../../../shared/graph/feedSlot/index.ts';
 import {
+  bindableSlots,
+  buildContractView,
+  resolveModelView,
+} from '../../../../../shared/validation/compatKernel.ts';
+import {
   buildEffectiveOpsUiState,
   buildFilteredModelOptions,
   buildUiUpstreamFingerprint,
@@ -480,8 +485,41 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         implementationGaps: [],
       };
     }
+    if (materialType === 'text') {
+      if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
+        return slotLayout;
+      }
+      const contractView = buildContractView(activeCatalog);
+      const model = resolveModelView(contractView, modelValue);
+      const isMultimodal = model?.operations.some(
+        (op) => op.listed && bindableSlots(op).length > 0,
+      );
+      if (isMultimodal) {
+        return {
+          operationId: opsState.selectedOperationId || 'vision_chat',
+          preset: 'strip',
+          slots: [{
+            slot: 'reference_images',
+            role: 'reference',
+            type: 'image',
+            min: 0,
+            max: 10,
+            labelKey: 'panel.slot.reference_images',
+          }],
+          swap: false,
+          addButton: true,
+          implementationGaps: [],
+        };
+      }
+      return {
+        ...slotLayout,
+        preset: 'none',
+        slots: [],
+        addButton: false,
+      };
+    }
     return slotLayout;
-  }, [materialType, isAsrTool, slotLayout, opsState.selectedOperationId]);
+  }, [materialType, isAsrTool, slotLayout, opsState.selectedOperationId, activeCatalog, modelValue]);
 
   const feedAssets = useMemo<FeedAsset[]>(
     () => upstreams
@@ -557,6 +595,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
     : undefined;
+
+  const hasSlots = effectiveSlotLayout.preset !== 'none' && effectiveSlotLayout.slots.length > 0;
 
   // T05：切换模式/模型导致已有供给不再被消费 → 画板 Banner（5s 自动淡出）。
   const boundEdgeIds = useMemo(
@@ -697,9 +737,9 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
-        <div className="wf-config-panel__prompt-header">
+        <div className={`wf-config-panel__prompt-header${!hasSlots ? ' wf-config-panel__prompt-header--empty-slots' : ''}`}>
           {/* T03：模式驱动卡槽；图像与音频（非 ASR）节点卡槽始终常驻在线；none 预设不渲染、不占高度。 */}
-          {effectiveSlotLayout.preset !== 'none' && effectiveSlotLayout.slots.length > 0 ? (
+          {hasSlots && (
             <SlotWells
               layout={effectiveSlotLayout}
               bindings={slotBindings}
@@ -710,8 +750,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               onClearOccupant={handleClearOccupant}
               onInsertToken={handleInsertToken}
             />
-          ) : (
-            <span />
           )}
 
           <div className="wf-config-panel__prompt-header-actions">

@@ -4,14 +4,13 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-// Only published sidebar surfaces belong to `all`; canvas and clip have no
+// Only published sidebar surfaces belong to `all`; canvas, clip, and forms have no
 // independent visible sidebar row. Selectors identify content, not page chrome.
 export const STAGE_CONTENT = Object.freeze({
   accounts: '.omnimux-accounts-stage-body',
   workflow: '.omnimux-workflow-library-body',
   assets: '.omnimux-assets-body',
   products: '.omnimux-products-body',
-  forms: '.omnimux-forms-body',
   inspiration: '.omnimux-inspiration-stage-body',
   publish: '.omnimux-publish-viewport',
   analytics: '.omnimux-analytics-stage-body',
@@ -23,7 +22,6 @@ export const STAGE_STATUS = Object.freeze({
     loading: '.omnimux-analytics-empty[data-code="loading"]',
     error: '.omnimux-analytics-empty[data-code="fetch_failed"], .omnimux-analytics-banner[data-code="network_error"]',
   },
-  forms: { loading: '.omnimux-forms-loading', error: '.omnimux-forms-load-error' },
   inspiration: { loading: '.omnimux-inspiration-skeleton' },
   market: { status: '.sh-mkt-status:not(.left)' },
 })

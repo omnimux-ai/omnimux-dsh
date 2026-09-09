@@ -47,6 +47,7 @@ MUST NOT use 13px labels or 16px filled icons on these rows. MUST NOT invent a s
 | `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（rank 4.5 现网）。**Workbench**：`omnimux-analytics:library`，不得 claim |
 | `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（rank 3）。**Workbench**：`omnimux-accounts:library`，不得 claim；`access: cloud` |
 | `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（rank 8.2）。**现网隐藏**：`apply()` 不挂左侧行；Tab `omnimux-clip:studio` 仍注册，画布/Agent 可打开。`sidebar-entry.js` 保留以便恢复。不得 claim。见 [workbench-split.md](./workbench-split.md) |
+| `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（rank 11）。**现网隐藏**：`apply()` 不挂左侧行；Tab `omnimux-forms:tasks` 仍注册。`sidebar-entry.js` 保留以便恢复。不得 claim。 |
 
 ## Alpha 内测标记
 

@@ -1,6 +1,10 @@
 /**
  * 任务表单 row under 新会话, placed by the single sidebar coordinator.
  * Consumes standardized createSidebarEntry from dsh-ui-kit with idempotent activation.
+ *
+ * Currently unused: `client/index.js` does not call `mountSidebarEntry`
+ * (temporarily hidden from left sidebar rail). Kept intact so re-enabling
+ * the sidebar entry is a single line change in `index.js`.
  */
 import { createSidebarEntry } from 'dsh-ui-kit'
 

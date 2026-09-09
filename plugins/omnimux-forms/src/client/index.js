@@ -1,11 +1,11 @@
 import { createElement } from 'react'
-import { mountSidebarEntry } from './sidebar-entry.js'
 import { FormsPage } from './FormsPage.jsx'
 export const name = 'omnimux-forms'
 export const inject = ['slots']
 export const FORMS_TAB_ID = 'omnimux-forms:tasks'
 export function apply(ctx) {
-  ctx.effect(() => mountSidebarEntry(null, () => '任务表单', null), 'omnimux-forms: sidebar entry')
+  // Left sidebar row under 新会话 is intentionally not mounted (temporarily hidden from rail).
+  // `sidebar-entry.js` remains intact for a future re-enable.
   ctx.inject(['betterSidebar'], inner => {
     const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
     ctx.effect(() => sidebar.registerTab({
