@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { createGuideStore, emptyGuideState, isBlankConversation, parseVideoUrls, selectStarter, syncVideoUrls } from './state.js'
 import { STARTERS, STARTER_GROUPS, guideEn, guideZh } from './catalog.js'
 
@@ -14,17 +15,19 @@ function withUrl() {
 }
 
 describe('session starters', () => {
-  it('defines six localized business intents without executable commands', () => {
-    assert.equal(STARTERS.length, 6)
-    assert.equal(new Set(STARTERS.map(card => card.id)).size, 6)
-    assert.equal(STARTER_GROUPS.length, 3)
+  it('matches all ten reference actions and their exact prompts', () => {
+    assert.equal(STARTERS.length, 10)
+    assert.equal(new Set(STARTERS.map(card => card.id)).size, 10)
+    assert.equal(STARTER_GROUPS.length, 4)
     assert.deepEqual(Object.keys(guideEn).sort(), Object.keys(guideZh).sort())
-    for (const item of STARTERS) {
+    const reference = JSON.parse(readFileSync(new URL('../../../../../docs/research/topview-ai-marketer-2026-09-09/quick-actions.json', import.meta.url)))
+    assert.deepEqual(STARTERS.map(item => guideEn[`guide.${item.id}.title`]), reference.map(item => item.name))
+    assert.deepEqual(STARTER_GROUPS.map(group => STARTERS.filter(item => item.group === group).length), [3, 2, 3, 2])
+    for (const [index, item] of STARTERS.entries()) {
       assert.ok(STARTER_GROUPS.includes(item.group))
       for (const locale of [guideZh, guideEn]) {
         assert.ok(locale[`guide.${item.id}.title`])
-        assert.ok(locale[`guide.${item.id}.description`])
-        assert.ok(locale[`guide.${item.id}.prompt`])
+        assert.equal(locale[`guide.${item.id}.prompt`], reference[index].state.fields.find(field => field.tag === 'TEXTAREA').value)
         assert.ok(!locale[`guide.${item.id}.prompt`].startsWith('/'))
       }
     }

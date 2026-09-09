@@ -38,7 +38,7 @@ test('session guide uses owner actions, directly switches edited drafts, and flu
   document.querySelector('[data-send-button]').addEventListener('click', () => sends++)
   try {
     await render()
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 6)
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
     const first = document.querySelector('[data-starter-id]').dataset.starterId
     await click(`[data-starter-id="${first}"]`)
     await render()
@@ -47,7 +47,7 @@ test('session guide uses owner actions, directly switches edited drafts, and flu
     assert.equal(writes, 1)
     draft += '\nuser edit'
     await render()
-    const second = document.querySelectorAll('[data-starter-id]')[1].dataset.starterId
+    const second = document.querySelectorAll('[data-starter-id]')[4].dataset.starterId
     await click(`[data-starter-id="${second}"]`)
     assert.equal(document.querySelector('.omnimux-starter-confirm'), null)
     assert.equal(draft, `guide.${second}.prompt`)
@@ -75,7 +75,7 @@ test('session guide uses owner actions, directly switches edited drafts, and flu
     await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'https://example.com/a\nhttps://example.com/b' }))
     await click('[data-send-button]')
     await render()
-    await click('[data-starter-id="rewrite"]')
+    await click('[data-starter-id="recreate-viral-ads"]')
     await render()
     assert.equal(document.querySelector('.omnimux-starter-materials textarea').value, 'https://example.com/a\nhttps://example.com/b')
     await click('[data-send-button]')
