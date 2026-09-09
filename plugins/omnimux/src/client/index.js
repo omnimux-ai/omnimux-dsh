@@ -1,6 +1,10 @@
 import { mountFormsBridge } from './forms/mount.js'
 /** Registers OmniMux profile in Settings and Apps under 新会话. */
 import { NS } from './locales.js'
+import { SessionGuide } from './session-guide/SessionGuide.jsx'
+import { createGuideStore } from './session-guide/state.js'
+import { guideZh, guideEn } from './session-guide/catalog.js'
+import { installGuideStyles } from './session-guide/styles.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
@@ -18,10 +22,11 @@ import { AttachmentTray } from './attachments/AttachmentTray.tsx'
 import { getGlobalAttachmentStore } from './attachments/store.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installWebSocketHmr } from '../hmr/client.js'
-import { installComposerEnvelopeCapture } from './composer-envelope.js'
+import { injectUiContextStyle } from './composer-envelope.js'
 import { installComposerAddCapture } from './composer-add/install.js'
 import { listenComposerAddCommands } from './composer-add/commands.js'
-import { installComposerAttachmentSubmitCapture } from './composer-add/submit-inject.js'
+import { createAttachmentAdmission } from './composer-add/attachment-admission.js'
+import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.jsx'
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 
@@ -127,12 +132,34 @@ export function apply(ctx) {
     inject: () => ({ t }),
   }, SidebarUpdateAction))
 
+  const guideStore = createGuideStore()
+  const attachmentDrafts = new Map()
+  let guideMaterials = null
+  let guideSessions = null
+  const guideFace = {
+    store: guideStore,
+    attachmentDrafts,
+    getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
+    getMaterials: () => guideMaterials,
+  }
+  ctx.effect(() => ctx.locale.register('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux: starter locale')
+  ctx.effect(() => () => guideStore.dispose(), 'omnimux: starter state')
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock', id: 'omnimux:session-guide', order: 110,
+    locale: 'omnimux-session-guide', inject: () => guideFace,
+  }, SessionGuide))
   // 全平台通用「添加到会话」附件附着槽 (挂载至输入框内侧 conversation.input.attachments)
   // Official `dsh-client-ui-attachment` already occupies this single cell at
   // default priority 0. Shadow it with a lower priority so OmniMux wins
   // (lowest renders) instead of failing the client Loader.
   const attachmentStore = getGlobalAttachmentStore()
   mountFormsBridge(ctx, attachmentStore)
+  const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore, drafts: attachmentDrafts })
+  ctx.effect(() => () => { attachmentAdmission.dispose(); attachmentDrafts.clear() }, 'omnimux: attachment admission')
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
+    inject: () => ({ attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
+  }, AttachmentSubmitBridge))
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
@@ -155,14 +182,18 @@ export function apply(ctx) {
     }
   }, 'omnimux: hub event client')
   if (typeof document !== 'undefined') {
-    ctx.effect?.(() => installComposerEnvelopeCapture(document), 'omnimux: composer envelope capture')
-    ctx.effect?.(() => installComposerAttachmentSubmitCapture(document, { store: attachmentStore }), 'omnimux: attachment submit capture')
+    ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
+    ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.inject(['commandUi', 'sessions'], (inner) => {
+      guideSessions = inner.sessions
       inner.effect(() => {
         const controller = installComposerAddCapture(document, { t, store: attachmentStore, sessions: inner.sessions })
+        guideMaterials = controller
         const stopCommands = listenComposerAddCommands(inner, controller)
         return () => {
           stopCommands()
+          guideMaterials = null
+          guideSessions = null
           controller.dispose()
         }
       }, 'omnimux: composer add commands')
