@@ -7,6 +7,7 @@ import { materializePaths, resolveSessionCwd } from './composer-attachments.js'
 
 export const MAX_FORM_FILE_BYTES = 100 * 1024 * 1024
 const idPattern = /^[a-zA-Z0-9_-]{1,100}$/
+const mediaExtensions = { 'video/mp4': '.mp4', 'video/webm': '.webm', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/gif': '.gif' }
 function checkId(id) { if (typeof id !== 'string' || !idPattern.test(id)) throw new Error('invalid-reference'); return id }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 
@@ -96,7 +97,7 @@ export function createFormAttachmentService({ root, getWorkspaceRegistry, getSes
         // Preserve changed/missing/symlink entries; rebuild only to a fresh task-owned name.
         await ensureImportedDirectory(cwd)
         // Existing composer materialization owns disk capacity, copies and path safety.
-        const named = join(root, assetId, `source-${requestId}-${randomUUID()}-${record.name}`)
+        const named = join(root, assetId, `form-${randomUUID()}${mediaExtensions[record.mimeType]}`)
         await writeFile(named, await readFile(path), { mode: 0o600 })
         let item
         try { item = (await materializePaths({ sessionId, paths: [named], filesOnly: true, sessionQuery: getSessionQuery() })).results[0] }

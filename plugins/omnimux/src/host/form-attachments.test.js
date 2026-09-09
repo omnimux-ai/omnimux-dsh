@@ -76,3 +76,17 @@ test('materialization refuses symlink import directories before writing outside 
   await assert.rejects(f.service.materialize({ workspaceId: 'ws', requestId: 'r', sessionId: 's', assetIds: [file.assetId] }), /import-directory-invalid/)
   assert.deepEqual(await readdir(outside), [])
 })
+
+test('long ASCII and Chinese display names never become filesystem basenames', async t => {
+  const f = await fixture(t)
+  for (const [index, name] of ['a'.repeat(220) + '.png', '参考视频'.repeat(50) + '.png'].entries()) {
+    const file = await f.service.importFile({ workspaceId: 'ws', name, mimeType: 'image/png', bytes: png })
+    assert.equal(file.name, name.slice(0, 160))
+    const [result] = await f.service.materialize({ workspaceId: 'ws', requestId: String(index).repeat(100), sessionId: 's', assetIds: [file.assetId] })
+    const basename = result.relativePath.split('/').at(-1)
+    assert.match(basename, /^form-[0-9a-f-]{36}\.png$/)
+    assert.ok(Buffer.byteLength(`${basename}.tmp-${process.pid}-${Date.now()}`) < 255)
+    assert.equal(result.name, file.name)
+    assert.deepEqual(await readFile(join(f.cwd, result.relativePath)), png)
+  }
+})
