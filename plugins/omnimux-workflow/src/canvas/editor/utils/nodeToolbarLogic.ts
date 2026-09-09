@@ -5,6 +5,7 @@
 
 import { resolveNodeLifecycle } from './nodeMaterialLifecycle.ts';
 import { localFilePathFromUrl, projectFileMediaUrl } from '../../../shared/localMedia.ts';
+import { isSupportedSocialVideoUrl } from './socialMediaVideoUrl.ts';
 
 export const DEFAULT_PILL_MAX_WIDTH = 280;
 export const PILL_NODE_GUTTER = 24;
@@ -156,6 +157,41 @@ export function resolveSpeechToTextAudioPath(
     return new URL(projectFileMediaUrl(workspaceId, relativePath), baseUrl).toString();
   }
   return null;
+}
+
+// ============================================================================
+// 文本节点提取视频胶囊操作
+// ============================================================================
+
+export const EXTRACT_VIDEO_PILL_ACTION_ID = 'extract-video';
+
+export interface ExtractVideoEligibilityInput {
+  materialType?: string;
+  content?: string;
+  generatedContent?: string;
+  isOffline?: boolean;
+  executionStatus?: string | null;
+}
+
+/**
+ * 「提取视频」按钮可见性：
+ * 文本节点（或 materialType 为空但在文本环境）、非离线、非执行中、
+ * 且内容中识别出支持的社媒视频链接（TikTok、抖音、快手、小红书、B站、YouTube、X、Instagram等）。
+ */
+export function canExtractVideoFromTextNode(input: ExtractVideoEligibilityInput): boolean {
+  if (input.materialType && input.materialType !== 'text') return false;
+  if (input.isOffline) return false;
+  if (input.executionStatus === 'running' || input.executionStatus === 'pending') return false;
+  const text = (input.content || input.generatedContent || '').trim();
+  return isSupportedSocialVideoUrl(text);
+}
+
+export function buildExtractVideoPillActionSpec(width: number = 88): ToolbarActionSpec {
+  return {
+    id: EXTRACT_VIDEO_PILL_ACTION_ID,
+    section: 'primary',
+    width,
+  };
 }
 
 

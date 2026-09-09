@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Copy, FileEdit, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Copy, FileEdit, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -36,6 +36,7 @@ import {
 import { isConfigPanelVisible, mapNodeToGenerationStatus } from '../../utils/nodeVisualMath';
 import {
   buildConversationPayloadFromNode,
+  canExtractVideoFromTextNode,
   canRunSpeechToText,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
@@ -43,8 +44,10 @@ import {
   resolveSpeechToTextAudioPath,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
+import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
-import { transcribeAudio } from '../../../bridge/apiClient.ts';
+import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
+import { extractVideoFromUrl, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
@@ -392,15 +395,90 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     previewUrl,
     isOffline,
   });
+  const canExtractVideo = useMemo(
+    () =>
+      canExtractVideoFromTextNode({
+        materialType,
+        content: content as string | undefined,
+        generatedContent: generatedContent as string | undefined,
+        isOffline,
+        executionStatus,
+      }),
+    [content, executionStatus, generatedContent, isOffline, materialType],
+  );
+
   const showFloatingPill = shouldShowNodeToolbar({
     hasMaterial,
     hovered: isHovered,
     selected,
     isMultiSelected,
-    allowEmpty: isEmptyImageNode,
+    allowEmpty: isEmptyImageNode || canExtractVideo,
   });
 
   const { addToConversation } = useAddToConversation();
+
+  // 文本节点提取视频：从社媒链接提取无水印视频并下载保存为下游视频节点
+  const handleExtractVideo = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('extractVideo.noWorkspace'));
+      return;
+    }
+    const detected = extractSocialVideoUrl(effectiveTextContent);
+    if (!detected || !detected.url) {
+      toast.error(t('extractVideo.noUrl'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, videoExtractActive: true });
+    try {
+      const result = await extractVideoFromUrl(workspaceId, {
+        nodeId: id,
+        url: detected.url,
+      });
+      if (!result.ok || !result.body?.data?.mediaUrl) {
+        const message = result.body?.message || result.body?.error || t('extractVideo.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message, videoExtractActive: undefined });
+        toast.error(message);
+        return;
+      }
+      const extracted = result.body.data;
+      const store = useCanvasStore.getState();
+      const textNode = store.nodes.find((n) => n.id === id);
+      const plan = planVideoExtractionDownstream({
+        textNodeId: id,
+        textPosition: textNode?.position ?? { x: 0, y: 0 },
+        textNodeWidth: nodeWidth,
+        videoResult: {
+          videoPath: extracted.videoPath,
+          mediaUrl: extracted.mediaUrl,
+          previewUrl: extracted.previewUrl,
+          title: extracted.title,
+          duration: extracted.duration,
+          coverUrl: extracted.coverUrl,
+        },
+        label: extracted.title || t('extractVideo.nodeLabel'),
+        currentNodes: store.nodes,
+        currentEdges: store.edges,
+      });
+      updateNodeData({ executionStatus: 'completed', executionError: undefined, videoExtractActive: undefined });
+      if (!plan) {
+        toast.error(t('extractVideo.toast.failed'));
+        return;
+      }
+      applyCanvasInputMutation({
+        addNodes: plan.addNodes,
+        addEdges: plan.addEdges,
+        nodePatches: plan.nodePatches,
+      });
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
+      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+      toast.success(t('extractVideo.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('extractVideo.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message, videoExtractActive: undefined });
+      toast.error(message);
+    }
+  }, [applyCanvasInputMutation, effectiveTextContent, id, nodeData.__workspaceId, nodeWidth, setNodes, t, updateNodeData]);
 
   // 语音识别（Issue 744 T04）：音频节点转写并派生下游 SRT 字幕节点。
   // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
@@ -515,6 +593,24 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     };
 
     if (materialType === 'text') {
+      if (canExtractVideo) {
+        return [
+          {
+            key: 'extract-video',
+            label: t('pill.extractVideo'),
+            icon: Film,
+            section: 'primary',
+            variant: 'primary',
+            title: t('pill.extractVideo'),
+            onClick: (event) => {
+              event.stopPropagation();
+              void handleExtractVideo();
+            },
+          },
+          chat,
+        ];
+      }
+
       return [
         {
           key: 'edit',
@@ -583,10 +679,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
     return [chat];
   }, [
+    canExtractVideo,
     copied,
     executionStatus,
     handleAddToConversation,
     handleCopyText,
+    handleExtractVideo,
     handleOpenTextStage,
     handleSpeechToText,
     handleSplitText,
@@ -668,7 +766,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     ) : (
       <NodeEmptyState
         materialType="text"
-        onStartEdit={handleOpenTextStage}
+        onStartEdit={() => setTextEditing(true)}
         onApplyPreset={handleApplyPreset}
       />
     );
@@ -758,6 +856,18 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             onDoubleClick={(e) => {
               e.stopPropagation();
               handleOpenTextStage();
+            }}
+            onPaste={(e) => {
+              if (textEditing) return;
+              const pasted = e.clipboardData?.getData('text');
+              if (pasted) {
+                updateNodeData({
+                  content: pasted,
+                  status: pasted.trim() ? 'ready' : 'empty',
+                  generatedContent: undefined,
+                });
+                setTextEditing(true);
+              }
             }}
           >
             {generationStatus ? (

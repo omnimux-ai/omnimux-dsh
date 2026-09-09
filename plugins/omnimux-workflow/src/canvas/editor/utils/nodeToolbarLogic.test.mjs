@@ -374,3 +374,43 @@ test('resolveSpeechToTextAudioPath：优先级 realPath > local-file URL > http 
   // 全空 → null
   assert.equal(resolveSpeechToTextAudioPath({}), null);
 });
+
+// ============================================================================
+// 提取视频胶囊判定
+// ============================================================================
+
+test('canExtractVideoFromTextNode：仅文本 + 包含社媒视频链接 + 非离线 + 非执行中', async () => {
+  const { canExtractVideoFromTextNode, buildExtractVideoPillActionSpec } = await import('./nodeToolbarLogic.ts');
+
+  // 非文本类型返回 false
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'image', content: 'https://v.douyin.com/abc/' }), false);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'video', content: 'https://v.douyin.com/abc/' }), false);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'audio', content: 'https://v.douyin.com/abc/' }), false);
+
+  // 纯普通文本（无社媒链接）返回 false
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: '普通的短视频策划案文本' }), false);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://example.com/test.html' }), false);
+
+  // 包含支持的社媒链接（裸链接与混合文案）返回 true
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://www.tiktok.com/@user/video/71234567890' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: '来看看这个抖音作品 https://v.douyin.com/abc/ 精彩极了' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://www.bilibili.com/video/BV1xx411c7mD' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://x.com/user/status/123456' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', generatedContent: 'https://www.instagram.com/reel/C8abc123xyz/' }), true);
+
+  // 离线或执行中（running/pending）禁用
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://v.douyin.com/abc/', isOffline: true }), false);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://v.douyin.com/abc/', executionStatus: 'running' }), false);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://v.douyin.com/abc/', executionStatus: 'pending' }), false);
+
+  // 错误或完成后可重新提取
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://v.douyin.com/abc/', executionStatus: 'error' }), true);
+  assert.equal(canExtractVideoFromTextNode({ materialType: 'text', content: 'https://v.douyin.com/abc/', executionStatus: 'completed' }), true);
+
+  // action spec 生成符合契约
+  const action = buildExtractVideoPillActionSpec();
+  assert.equal(action.id, 'extract-video');
+  assert.equal(action.section, 'primary');
+  assert.equal(action.width, 88);
+});

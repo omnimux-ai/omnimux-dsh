@@ -81,6 +81,9 @@ export const WORKFLOW_API_ROUTES = {
   /** POST: speech-to-text transcription (Issue 744; default model doubao-asr-bigmodel, default format srt). */
   speechToText: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/speech-to-text`,
+  /** POST: extract video from social media URL and download to local media. */
+  extractVideo: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/extract-video`,
   /** GET: list templates. POST: create template. */
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */

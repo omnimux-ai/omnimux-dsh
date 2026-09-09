@@ -296,3 +296,14 @@ export function transcribeAudio(
     { method: 'POST', body: payload },
   );
 }
+
+/** 文本节点：从社媒 URL 提取视频并下载到本地保存为视频节点 */
+export function extractVideoFromUrl(
+  workspaceId: string,
+  payload: { nodeId?: string; url: string },
+): Promise<ApiResult<import('../../workflow/videoExtraction/schema.ts').ExtractVideoResponse>> {
+  return request<import('../../workflow/videoExtraction/schema.ts').ExtractVideoResponse>(
+    WORKFLOW_API_ROUTES.extractVideo(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}
