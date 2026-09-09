@@ -1,0 +1,48 @@
+✔ session-only close resolves a unique identity and reopening creates a fresh store (1.5635ms)
+✔ same session in different cwd is ambiguous; exact close preserves the other workspace (0.13325ms)
+✔ repoRoot identity stays exact and malformed scopes never fall back or create shared stores (0.101084ms)
+✔ identity indexes belong to each registration and are cleared on direct disposal (0.0855ms)
+✔ malformed external documents are rejected without publishing or losing the current draft (4.224416ms)
+✔ reference slots retain portrait and reject cross-mode references without charging (2.436834ms)
+✔ synchronous malformed adapter results fail and refund exactly once (0.409292ms)
+✔ F07 A-token-B-token-C maintains order through update/move/remove (3.029708ms)
+✔ F07 URL syntax rejects credentials, private literals, bad protocols and signed query (0.474708ms)
+✔ F07 IME guard covers native composing and keyCode 229 (0.069542ms)
+✔ F09 exact menu labels, ordering and demo prices (0.823209ms)
+✔ F09 independent dimensions are ANDed, clearing one retains others (2.481375ms)
+✔ QA2 existing eight production Stage contracts retain strict sidebar validation (647.301ms)
+✔ QA2 public closeTab session-only callback clears closed Studio scope, preserving other sessions (62.081917ms)
+✔ QA01 sparse document is rejected before entering immutable draft (0.84725ms)
+✔ QA02 reference snapshot rejects missing identity and metadata (0.336458ms)
+✔ QA03 draft mode cannot be reassigned through a patch (0.097791ms)
+✔ QA04 cancelling with synchronous failure callback refunds once (0.927958ms)
+✔ QA05 independent scopes keep task completion and balance isolated (0.35425ms)
+✔ QA06 actual bundled kit installs no styles before dependencies become available (52.1485ms)
+✔ QA07 sparse adapter batch is not a successful four-result batch (0.29925ms)
+✔ QA08 unknown video submode fails validation (0.101417ms)
+✔ QA09 boundary length and batch validation stay atomic (0.267375ms)
+✔ F11/F12 ten dependency injection cycles dispose tab/locale/style/registry exactly once (71.643333ms)
+✔ F11 absent dependencies produce no style or fallback when injector waits (6.950708ms)
+✔ real bundle evaluated ten times leaves Host style identity and bytes unchanged (123.454209ms)
+✔ fixture references preserve full identity in frozen request and reject each missing field (1.485125ms)
+✔ cancel wins before abort callbacks, subscriber reentry and late completion (0.244667ms)
+✔ scene filter uses real fixtures, survives navigation and does not alter image dimensions (0.151125ms)
+✔ rendered scene chips filter real cards and image examples assemble without charging (120.8865ms)
+✔ F04 scope tuple isolation and unknown cwd refusal (1.644167ms)
+✔ F06 hide pauses remaining time, cancel/delete refund once and no late callback (1.492542ms)
+✔ F10 immutable complete snapshot, batch four, restore without submission (0.878708ms)
+✔ F10 zero / one-short credits reject without mutations or timers (0.199875ms)
+✔ F10 same-clock 100 submissions mint UUIDs and preserve 15s / auto (2.105042ms)
+✔ F06/F10 adapter failure and partial batch refund once; malicious late outcome ignored (0.138666ms)
+✔ F08 main and detail navigation retain identical draft, invalid submission does not navigate (0.127791ms)
+✔ F10 analysis clears model/spec and creates explicit text sample (0.355333ms)
+✔ F01/F02/F03/F14 static local CSS, no chrome and portable build (2.534708ms)
+✔ F07 rendered editor handles token Enter, IME, ordered text and Backspace (91.257334ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1456.762875

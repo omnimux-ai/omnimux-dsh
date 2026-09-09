@@ -1,0 +1,86 @@
+classDiagram
+    class ScopeRegistry {
+        +Map stores
+        +__init__(adapterFactory)
+        +getOrCreate(scope) StudioStore
+        +releaseView(key) void
+        +disposeScope(key) void
+        +disposeAll() void
+    }
+    class StudioStore {
+        +string scopeKey
+        +boolean disposed
+        +number epoch
+        +StudioState state
+        +__init__(key, adapter)
+        +getSnapshot() StudioState
+        +subscribe(listener) Function
+        +updateDraft(mode, patch) void
+        +applyPreset(id) void
+        +navigate(view) void
+        +setFilter(patch) void
+        +setVisible(visible) void
+        +submitDraft(mode) SubmitResult
+        +cancelTask(id) void
+        +deleteTask(id) void
+        +restoreDraft(id) void
+        +dispose() void
+    }
+    class StudioState {
+        +Map drafts
+        +Map tasks
+        +number mockCredits
+        +string view
+        +object filters
+    }
+    class Draft {
+        +string mode
+        +EditorDocument document
+        +string modelId
+        +object spec
+        +List references
+    }
+    class EditorDocument {
+        +number version
+        +List parts
+    }
+    class Task {
+        +string id
+        +string attemptId
+        +RequestSnapshot request
+        +string status
+        +List results
+        +boolean refunded
+    }
+    class RequestSnapshot {
+        +string requestId
+        +string scopeKey
+        +string mode
+        +Draft draft
+        +number totalCost
+    }
+    class MockAdapter {
+        +__init__(clock, idFactory)
+        +start(request, signal, onResult) JobHandle
+    }
+    class JobHandle {
+        +pause() void
+        +resume() void
+        +cancel() void
+    }
+    class StudioStage {
+        +object scope
+        +boolean visible
+        +render() ReactNode
+    }
+    ScopeRegistry "1" *-- "0..*" StudioStore : scope隔离
+    StudioStore *-- StudioState
+    StudioState *-- Draft
+    StudioState *-- Task
+    Draft *-- EditorDocument
+    Task *-- RequestSnapshot : 不可变快照
+    RequestSnapshot *-- Draft : 深拷贝
+    StudioStore --> MockAdapter
+    MockAdapter --> JobHandle
+    StudioStage --> ScopeRegistry : 绑定与解绑
+    StudioStage --> StudioStore : 主区和详情共用
