@@ -25,16 +25,20 @@ function fixture(t, state = 'aligned') {
   git('config', 'user.email', 'agent@omnimux.test')
   git('add', '.')
   git('commit', '-m', 'fixture: clean main')
+  const remote = join(home, 'remote.git')
+  spawnSync('git', ['init', '--bare', remote], { encoding: 'utf8', env: gitEnv })
+  git('remote', 'add', 'origin', remote)
+  git('push', 'origin', 'main')
   git('update-ref', 'refs/remotes/origin/main', 'HEAD')
   if (state === 'feature' || state === 'master') git('switch', '-c', state)
   if (state === 'detached') git('checkout', '--detach')
   if (state === 'dirty') writeFileSync(join(repo, 'scripts/sync-main.sh'), readFileSync(join(repo, 'scripts/sync-main.sh'), 'utf8') + '\n')
   if (state === 'untracked') writeFileSync(join(repo, 'untracked'), 'dirty')
-  if (state === 'missing-ref') git('update-ref', '-d', 'refs/remotes/origin/main')
+  if (state === 'missing-ref') { git('update-ref', '-d', 'refs/remotes/origin/main'); git('remote', 'remove', 'origin'); }
   if (state === 'non-git') rmSync(join(repo, '.git'), { recursive: true })
   if (state === 'ahead' || state === 'behind') {
     git('commit', '--allow-empty', '-m', 'fixture: next main')
-    if (state === 'behind') { git('update-ref', 'refs/remotes/origin/main', 'HEAD'); git('checkout', 'HEAD~1', '-B', 'main') }
+    if (state === 'behind') { git('push', 'origin', 'main'); git('checkout', 'HEAD~1', '-B', 'main') }
   }
   const target = join(home, 'target')
   const profile = join(target, 'profiles/omnimux')

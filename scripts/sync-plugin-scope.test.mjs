@@ -129,6 +129,21 @@ function setupFixture({
   writeFileSync(asar, 'asar sentinel', 'utf8')
   writeFileSync(infoPlist, 'plist sentinel', 'utf8')
 
+  // These tests mutate synthetic profiles and kit fixtures, not the tracked wrapper.
+  writeFileSync(join(fixture, '.gitignore'), '*\n')
+  const git = (...args) => {
+    const result = spawnSync('git', args, { cwd: fixture, encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+  }
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'Scope Fixture')
+  git('config', 'user.email', 'fixture@example.invalid')
+  git('add', '-f', 'scripts/sync-to-app.sh', '.gitignore')
+  git('commit', '-m', 'fixture source')
+  git('init', '--bare', join(fixture, 'remote.git'))
+  git('remote', 'add', 'origin', join(fixture, 'remote.git'))
+  git('push', 'origin', 'main')
+
   return { fixture, home, targetHome, profile, managedKit, kit, events, bin, preset, asar, infoPlist }
 }
 

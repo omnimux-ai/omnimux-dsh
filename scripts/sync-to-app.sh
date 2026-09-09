@@ -176,6 +176,35 @@ fi
 
 TARGET_PROFILES=()
 
+
+# —— 未合并物化旁路安全门禁 ——
+unmerged_target="${OMNIMUX_ALLOW_UNMERGED_TARGET:-}"
+if [ "${OMNIMUX_ALLOW_UNMERGED_MATERIALIZE:-0}" = "1" ] && [ -z "$unmerged_target" ]; then
+  echo "❌ sync: OMNIMUX_ALLOW_UNMERGED_MATERIALIZE 已废弃：未合并物化必须同时设置 OMNIMUX_ALLOW_UNMERGED_TARGET=<~/.dsh-dev/tasks/... 前缀>，未提交代码禁止物化。" >&2
+  exit 1
+fi
+if [ -n "$unmerged_target" ]; then
+  tasks_prefix="$HOME/.dsh-dev/tasks"
+  case "$unmerged_target" in
+    "$tasks_prefix"|"$tasks_prefix"/*) ;;
+    *)
+      echo "❌ sync: OMNIMUX_ALLOW_UNMERGED_TARGET 必须以 ${tasks_prefix}/ 开头（当前: ${unmerged_target}）。未提交代码禁止物化。" >&2
+      exit 1
+      ;;
+  esac
+  if [ "${#TARGET_HOMES[@]}" -gt 0 ]; then
+    for h in "${TARGET_HOMES[@]}"; do
+      case "$h" in
+        "$unmerged_target"|"$unmerged_target"/*) ;;
+        *)
+          echo "❌ sync: 未合并物化目标 [$h] 不在允许前缀 [$unmerged_target] 内，未提交代码禁止物化。" >&2
+          exit 1
+          ;;
+      esac
+    done
+  fi
+fi
+
 source "$ROOT/scripts/sync-main.sh"
 assert_omnimux_sync_main "$ROOT"
 assert_omnimux_sync_plugins "$ROOT" "$PLUGINS_ROOT"

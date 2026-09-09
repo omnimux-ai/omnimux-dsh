@@ -25,7 +25,7 @@ subsystem: "global"
 | Prod | 正式运行 | `~/.omnimux/profiles/omnimux`，OmniMux App `44200` | 仅独立发布授权后的物化副本 |
 | Base | 官方底座 | `~/.dsh` | 不接收 OmniMux 日常交付 |
 
-Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并运行物化旁路。纯文档、流程、脚本和不影响已安装运行时的测试任务无需 App 物化或浏览器验收。运行行为变更合并后更新 `main`，默认同步到 Dev，在 45120 验证；普通交付不得自动追加 `--prod`、`--all` 或正式包发布。
+Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并运行物化旁路。纯文档、流程、脚本和不影响已安装运行时的测试任务无需 App 物化或浏览器验收。运行行为变更合并后使用干净且 HEAD 精确等于本次成功 fetch 的 `origin/main` 的源码树（支持主检出、命名分支或 detached HEAD 的 linked worktree），默认同步到 Dev，在 45120 验证；普通交付不得自动追加 `--prod`、`--all` 或正式包发布。普通同步在构建与目标写入前显式 fetch `refs/heads/main` 到 `refs/remotes/origin/main`；非 Git 源、状态读取失败、dirty（含 staged/untracked）、remote 缺失、fetch 失败、远端 main 缺失及 HEAD ahead/behind/diverged 均拒绝。
 
 原 L2 生命周期、端口池、env/guard/gates 及其专属稳定 baseline D/C/S 迁移已退役；[历史规格](../specs/2026-09-09-stable-baseline-migration.md)不再定义执行前提。历史失败和 QA 证据保持原样，不因流程变化改成通过。
 
