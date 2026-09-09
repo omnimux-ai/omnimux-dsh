@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { STARTERS, STARTER_GROUPS } from './catalog.js'
-import { isBlankConversation, selectStarter, syncVideoUrls } from './state.js'
-import { installGuideSubmitGuard } from './submit-guard.js'
+import { isBlankConversation, selectStarter } from './state.js'
 
 function StarterIcon({ icon }) {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -19,25 +18,20 @@ export function SessionGuide(props) {
   const session = props.useSession(value => value)
   const hasTargets = props.useConversation(value => value.activeTargets.size > 0)
   if (!isBlankConversation(session, hasTargets)) return null
-  return <BlankSessionGuide {...props} key={props.sessionId} pendingSubmit={Boolean(session.pendingSubmissions?.length)} />
+  return <BlankSessionGuide {...props} key={props.sessionId} />
 }
 
-function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCurrentSessionId, getMaterials, attachmentDrafts, pendingSubmit }) {
+function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCurrentSessionId, attachmentDrafts }) {
   const input = useInput(value => value)
   const state = useSyncExternalStore(store.subscribe, () => store.get(sessionId), () => store.get(sessionId))
   const [notice, setNotice] = useState(null)
   const guideRef = useRef(null)
   const live = useRef(null)
-  const composing = useRef(false)
-  const timer = useRef(null)
   const mounted = useRef(true)
-  const submittingDraft = useRef(null)
-  const selected = STARTERS.find(card => card.id === state.selectedId)
-  const multipleReferences = selected?.references === 'many' || /[\r\n]/.test(state.urlValue)
-  live.current = { input, inputActions, state, selected }
+  live.current = { input, state }
 
-  const current = useCallback(() => mounted.current && sessionId && sessionId !== 'default'
-    && getCurrentSessionId() === sessionId, [getCurrentSessionId, sessionId])
+  const current = () => mounted.current && sessionId && sessionId !== 'default'
+    && getCurrentSessionId() === sessionId
 
   function focusEditor() {
     // Scope is the exact slot owner's conversation; this lookup only moves focus.
@@ -45,70 +39,15 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
     root?.querySelector('[data-composer-input="true"]')?.focus()
   }
 
-  const sync = useCallback(() => {
-    clearTimeout(timer.current)
-    const { input: value, inputActions: actions, state: previous, selected: card } = live.current
-    if (!current()) return 'unavailable'
-    if (!card?.references || previous.manualUrl) return previous.manualUrl ? 'manualUrl' : 'ready'
-    if (composing.current) return 'composing'
-    const result = syncVideoUrls(previous, value.draft, {
-      multiple: card.references === 'many' || /[\r\n]/.test(previous.urlValue), label: t(card.id === 'review-insights' ? 'guide.productUrl' : card.references === 'many' ? 'guide.urls' : 'guide.url'),
-    })
-    try {
-      if (result.draft !== value.draft) {
-        if (!actions?.setDraft || value.phase !== 'plain') return 'unavailable'
-        const root = guideRef.current?.closest('[data-omnimux-starter-host]')
-        const field = root?.ownerDocument.activeElement
-        const preserveFocus = field?.closest?.('[data-omnimux-starter-materials]') && 'selectionStart' in field
-        const selection = preserveFocus ? [field.selectionStart, field.selectionEnd] : null
-        actions.setDraft(result.draft)
-        if (preserveFocus && current()) {
-          field.focus()
-          if (selection[0] !== null) field.setSelectionRange(...selection)
-        }
-      }
-      // Keep event handlers current even before React commits the next render.
-      live.current = { ...live.current, input: { ...value, draft: result.draft }, state: result.state }
-      if (result.state !== previous) store.set(sessionId, result.state)
-      setNotice(['ready', 'synced'].includes(result.status) ? null : result.status)
-      return result.status
-    } catch { setNotice('unavailable'); return 'unavailable' }
-  }, [current, sessionId, store, t])
-
   useLayoutEffect(() => {
     mounted.current = true
     const root = guideRef.current?.closest('[data-phase]')
-    if (!root) return
-    root.setAttribute('data-omnimux-starter-host', '')
-    const dispose = installGuideSubmitGuard(root, () => {
-      if (!current()) return true
-      const result = sync()
-      if (result === 'synced') setNotice('synced')
-      else if (result === 'unavailable') setNotice('unavailable')
-      else if (result === 'composing') setNotice('composing')
-      const ready = result === 'ready' || result === 'manualUrl'
-      if (ready) submittingDraft.current = live.current.input.draft
-      return ready
-    })
+    root?.setAttribute('data-omnimux-starter-host', '')
     return () => {
       mounted.current = false
-      clearTimeout(timer.current)
-      root.removeAttribute('data-omnimux-starter-host')
-      dispose()
+      root?.removeAttribute('data-omnimux-starter-host')
     }
-  }, [current, sync])
-
-  // A body edit/deletion transfers ownership of our reference paragraph to the user.
-  useEffect(() => {
-    if (pendingSubmit || (submittingDraft.current !== null && input.draft === '')) return
-    submittingDraft.current = null
-    if (!state.urlBlock || state.manualUrl || composing.current) return
-    const result = syncVideoUrls(state, input.draft, { multiple: true, label: t('guide.urls') })
-    if (result.status === 'manualUrl') {
-      store.set(sessionId, result.state)
-      setNotice('manualUrl')
-    }
-  }, [input.draft, state, sessionId, store, t, pendingSubmit])
+  }, [])
 
   function choose(card) {
     if (!current() || input.phase !== 'plain' || !inputActions?.setDraft) { setNotice('unavailable'); return }
@@ -119,54 +58,14 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
       inputActions.setDraft(result.draft)
       // Template replacement owns this write; selected materials will be reassembled.
       attachmentDrafts?.delete(sessionId)
-      live.current = { ...live.current, state: result.state, selected: card, input: { ...input, draft: result.draft } }
+      live.current = { ...live.current, state: result.state, input: { ...input, draft: result.draft } }
       store.set(sessionId, result.state)
-      setNotice(result.state.manualUrl ? 'manualUrl' : null)
+      setNotice(null)
       focusEditor()
     } catch { setNotice('unavailable') }
   }
 
-  function editUrl(value) {
-    const next = { ...live.current.state, urlValue: value }
-    live.current = { ...live.current, state: next }
-    store.set(sessionId, next)
-    clearTimeout(timer.current)
-    if (!composing.current) timer.current = setTimeout(sync, 250)
-  }
-
-  function material(kind) {
-    if (!current()) return
-    const actions = getMaterials()
-    if (!actions) { setNotice('materialUnavailable'); return }
-    if (kind === 'library') actions.openLibrary(sessionId)
-    else void actions.addFiles(sessionId).catch(() => { if (current()) setNotice('materialUnavailable') })
-  }
-
-  const urlId = `omnimux-starter-url-${sessionId}`
-  const hintId = `${urlId}-hint`
-  const error = notice === 'invalidUrl' || notice === 'singleUrl'
-  return <>
-    {selected?.references && <div className="omnimux-starter-materials" data-omnimux-starter-materials="">
-      <label htmlFor={urlId}>{t(selected.id === 'review-insights' ? 'guide.productUrl' : selected.references === 'many' ? 'guide.urls' : 'guide.url')}</label>
-      {multipleReferences
-        ? <textarea id={urlId} rows={2} value={state.urlValue} disabled={state.manualUrl}
-          placeholder={t('guide.urlsPlaceholder')} aria-invalid={error} aria-describedby={hintId}
-          onChange={event => editUrl(event.target.value)} onBlur={sync}
-          onCompositionStart={() => { composing.current = true; clearTimeout(timer.current) }}
-          onCompositionEnd={() => { composing.current = false; sync() }} />
-        : <input id={urlId} type="url" value={state.urlValue} disabled={state.manualUrl}
-          placeholder={t(selected.id === 'review-insights' ? 'guide.productUrlPlaceholder' : 'guide.urlPlaceholder')} aria-invalid={error} aria-describedby={hintId}
-          onChange={event => editUrl(event.target.value)} onBlur={sync}
-          onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); sync() } }}
-          onCompositionStart={() => { composing.current = true; clearTimeout(timer.current) }}
-          onCompositionEnd={() => { composing.current = false; sync() }} />}
-      <p id={hintId}>{state.manualUrl ? t('guide.manualUrl') : t('guide.urlHint')}</p>
-      <div className="omnimux-starter-material-actions">
-        <button type="button" onClick={() => material('library')}>{t('guide.library')}</button>
-        <button type="button" onClick={() => material('upload')}>{t('guide.upload')}</button>
-      </div>
-      <p>{t(selected.materials ? 'guide.materials' : 'guide.videoMaterials')}</p>
-    </div>}
+  return (
     <section ref={guideRef} className="omnimux-starter-guide" data-omnimux-starter-guide="" data-session-id={sessionId} aria-label={t('guide.title')}>
       {notice && <div className="omnimux-starter-notice" role="status">{t(`guide.${notice}`)}
         {notice === 'unavailable' && <button type="button" onClick={() => { setNotice(null); focusEditor() }}>{t('guide.retry')}</button>}
@@ -184,5 +83,5 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
         </section>)}
       </div>
     </section>
-  </>
+  )
 }

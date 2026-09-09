@@ -134,13 +134,11 @@ export function apply(ctx) {
 
   const guideStore = createGuideStore()
   const attachmentDrafts = new Map()
-  let guideMaterials = null
   let guideSessions = null
   const guideFace = {
     store: guideStore,
     attachmentDrafts,
     getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
-    getMaterials: () => guideMaterials,
   }
   ctx.effect(() => ctx.locale.register('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux: starter locale')
   ctx.effect(() => () => guideStore.dispose(), 'omnimux: starter state')
@@ -188,11 +186,9 @@ export function apply(ctx) {
       guideSessions = inner.sessions
       inner.effect(() => {
         const controller = installComposerAddCapture(document, { t, store: attachmentStore, sessions: inner.sessions })
-        guideMaterials = controller
         const stopCommands = listenComposerAddCommands(inner, controller)
         return () => {
           stopCommands()
-          guideMaterials = null
           guideSessions = null
           controller.dispose()
         }
