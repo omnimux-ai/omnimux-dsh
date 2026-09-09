@@ -49,7 +49,7 @@ export function readStageState(target, sidebarSelectors) {
     return Boolean(hit && node.contains(hit))
   }
   const content = [...document.querySelectorAll(target.content)].filter(visible)
-  const entries = [...document.querySelectorAll(target.selector)].filter(visible)
+  const entries = target.selector ? [...document.querySelectorAll(target.selector)].filter(visible) : []
   const selected = sidebarSelectors.flatMap((selector) => [...document.querySelectorAll(selector)]
     .filter((node) => visible(node) && node.getAttribute('data-active') === 'true').map(() => selector))
   const layoutNodes = [document.getElementById('root'), ...entries, ...content].filter(Boolean)
@@ -89,17 +89,20 @@ export function assertStageState(state, target, sessionId) {
   assert.ok(state.hasState && state.sessionId, 'Missing real session/workbench snapshot; select a workspace and open a QA session first')
   assert.equal(state.sessionId, sessionId, 'Active session changed during the probe')
   assert.equal(state.contextSessionId, sessionId, 'Viewport context belongs to another session')
-  assert.equal(state.entryCount, 1, `${target.stage}: missing or duplicate sidebar entry`)
+  if (target.adapter !== 'community-tab') assert.equal(state.entryCount, 1, `${target.stage}: missing or duplicate sidebar entry`)
   assert.ok(state.panelOpen && state.active, `${target.stage}: sidebar click did not activate the Tab`)
   assert.equal(state.activeTab, target.tabId, `${target.stage}: wrong active Tab`)
-  assert.ok(state.selected?.length === 1 && state.selected[0] === target.selector, `${target.stage}: sidebar selection must be unique`)
+  if (target.adapter === 'community-tab') {
+    assert.equal(state.selected?.length, 0, `${target.stage}: community Tab must not claim a sidebar Stage`)
+    assert.equal(state.openedTabs?.filter(id => id === target.tabId).length, 1, `${target.stage}: community Tab must be uniquely opened`)
+  } else assert.ok(state.selected?.length === 1 && state.selected[0] === target.selector, `${target.stage}: sidebar selection must be unique`)
   assert.equal(state.contentCount, 1, `${target.stage}: content root missing, hidden or duplicated`)
   assert.ok(state.contentLength > 0 && !state.loadingOnly, `${target.stage}: empty or loading-only content`)
   assert.equal(state.visibleErrors, 0, `${target.stage}: visible content error`)
 }
 
 /** Browser operations are passed by the selected transport adapter. */
-export async function runStageProbe(browser, { targets, sidebarSelectors = targets.map((t) => t.selector), evidenceDir, onProgress = () => {} }) {
+export async function runStageProbe(browser, { targets, sidebarSelectors = targets.map((t) => t.selector).filter(Boolean), evidenceDir, onProgress = () => {} }) {
   assert.ok(targets.length > 0, 'Zero stage targets')
   const result = { targets: [], assertions: [], screenshots: [] }
   const record = (name, pass, detail) => {
@@ -149,6 +152,16 @@ export async function runStageProbe(browser, { targets, sidebarSelectors = targe
   }
   const clickEntry = async (target) => {
     assert.equal((await read(target)).sessionId, initial.sessionId, 'Active session changed; stop UI operations')
+    if (target.adapter === 'community-tab') {
+      await browser.js(`(async () => {
+        const wb = window.__omnimuxWorkbench;
+        if (wb.getSnapshot()?.sessionId !== ${JSON.stringify(initial.sessionId)}) throw new Error('Active session changed; stop UI operations');
+        const service = await wb.waitForService();
+        if (!service.getTab(${JSON.stringify(target.tabId)})) throw new Error('Community Tab is not registered');
+        await wb.open({tabId: ${JSON.stringify(target.tabId)}});
+      })()`)
+      return
+    }
     if (await browser.js('Boolean(document.querySelector(\'[data-sidebar-collapsed="true"]\'))')) {
       await browser.click('button[aria-label="打开侧边栏"]')
     }
@@ -164,7 +177,7 @@ export async function runStageProbe(browser, { targets, sidebarSelectors = targe
   }
   try {
     for (const target of targets) {
-      await browser.waitForElement(target.selector, { timeout: 12 })
+      if (target.adapter !== 'community-tab') await browser.waitForElement(target.selector, { timeout: 12 })
       await clickEntry(target)
       await waitForStage(target)
       const state = await read(target)

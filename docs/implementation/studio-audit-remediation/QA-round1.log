@@ -1,0 +1,187 @@
+$ node --test tests/*.test.mjs
+✔ malformed external documents are rejected without publishing or losing the current draft (4.671667ms)
+✔ reference slots retain portrait and reject cross-mode references without charging (1.596375ms)
+✔ synchronous malformed adapter results fail and refund exactly once (0.51925ms)
+✔ F07 A-token-B-token-C maintains order through update/move/remove (6.437083ms)
+✔ F07 URL syntax rejects credentials, private literals, bad protocols and signed query (0.513541ms)
+✔ F07 IME guard covers native composing and keyCode 229 (0.093625ms)
+✔ F09 exact menu labels, ordering and demo prices (1.831084ms)
+✔ F09 independent dimensions are ANDed, clearing one retains others (4.805208ms)
+✖ QA01 sparse document is rejected before entering immutable draft (2.311125ms)
+✖ QA02 reference snapshot rejects missing identity and metadata (0.67875ms)
+✖ QA03 draft mode cannot be reassigned through a patch (0.235209ms)
+✖ QA04 cancelling with synchronous failure callback refunds once (0.494917ms)
+✔ QA05 independent scopes keep task completion and balance isolated (0.672792ms)
+✖ QA06 actual bundled kit installs no styles before dependencies become available (122.628583ms)
+✖ QA07 sparse adapter batch is not a successful four-result batch (0.3135ms)
+✖ QA08 unknown video submode fails validation (0.2235ms)
+✔ QA09 boundary length and batch validation stay atomic (0.400917ms)
+✔ F11/F12 ten dependency injection cycles dispose tab/locale/style/registry exactly once (80.376667ms)
+✔ F11 absent dependencies produce no style or fallback when injector waits (6.436417ms)
+✔ F04 scope tuple isolation and unknown cwd refusal (8.3195ms)
+✔ F06 hide pauses remaining time, cancel/delete refund once and no late callback (1.325166ms)
+✔ F10 immutable complete snapshot, batch four, restore without submission (0.408583ms)
+✔ F10 zero / one-short credits reject without mutations or timers (0.190375ms)
+✔ F10 same-clock 100 submissions mint UUIDs and preserve 15s / auto (7.090083ms)
+✔ F06/F10 adapter failure and partial batch refund once; malicious late outcome ignored (0.274875ms)
+✔ F08 main and detail navigation retain identical draft, invalid submission does not navigate (0.400792ms)
+✔ F10 analysis clears model/spec and creates explicit text sample (1.041167ms)
+✔ F01/F02/F03/F14 static local CSS, no chrome and portable build (2.2835ms)
+✔ F07 rendered editor handles token Enter, IME, ordered text and Backspace (103.527584ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 22
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1159.660709
+
+✖ failing tests:
+
+test at tests/independent-qa.test.mjs:18:1
+✖ QA01 sparse document is rejected before entering immutable draft (2.311125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:22:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:25:1
+✖ QA02 reference snapshot rejects missing identity and metadata (0.67875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:30:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:34:1
+✖ QA03 draft mode cannot be reassigned through a patch (0.235209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'image' !== 'video'
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:38:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'image',
+    expected: 'video',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:41:1
+✖ QA04 cancelling with synchronous failure callback refunds once (0.494917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3480 !== 3463
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:46:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3480,
+    expected: 3463,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:67:1
+✖ QA06 actual bundled kit installs no styles before dependencies become available (122.628583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  21 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:75:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 21,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:78:1
+✖ QA07 sparse adapter batch is not a successful four-result batch (0.3135ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'completed'
+  - 'failed'
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:85:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'completed',
+    expected: 'failed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/independent-qa.test.mjs:89:1
+✖ QA08 unknown video submode fails validation (0.2235ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-studio/tests/independent-qa.test.mjs:91:68)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+[ELIFECYCLE] Test failed. See above for more details.

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button } from './components/Button.jsx'
 import { StudioContext, useStudioApi, useStudioStore } from './use-studio-store.js'
 import { scopeKey } from './scope-registry.js'
 import { DraftWorkspace } from './components/DraftWorkspace.jsx'
@@ -57,6 +57,7 @@ function StudioContent() {
   const tasks = state.tasks.filter(task => mode === 'image' ? task.request.draft.mode === 'image' : mode === 'agent' ? task.request.draft.mode === 'agent' && !task.request.draft.spec : task.request.draft.mode !== 'image' && task.request.draft.spec)
   const filteredTasks = mode === 'image' ? filterItems(tasks.map(task => ({ ...task, modelId: task.request.draft.modelId, ...task.request.draft.spec })), state.filters) : tasks
   const examples = filterItems(IMAGE_EXAMPLES, state.filters)
+  const dashboardExamples = DASHBOARD_ASSETS.filter(item => state.sceneFilter === null || item.type === state.sceneFilter)
   return <div ref={root} data-omnimux-studio tabIndex={-1} className="studio-root">
     <div className="studio-scroll">
       <p className="studio-notice">前端演示 · 不调用模型 · 不扣真实点数 · 演示余额 {state.mockCredits}</p>
@@ -66,8 +67,9 @@ function StudioContent() {
         <DraftWorkspace key={mode} mode={mode} />
         <div className="studio-toolbar"><Button onClick={() => store.navigate('video')}>视频历史与示例</Button><Button onClick={() => store.navigate('image')}>图片历史与示例</Button></div>
         {mode === 'agent' && tasks.map(task => <GenerationStatusCard key={task.id} task={task} onPreview={preview} onConfirm={confirm} />)}
-        <p>灵感样例 · {DASHBOARD_ASSETS.length} 项</p>
-        <div className="studio-grid">{DASHBOARD_ASSETS.map(item => <article className="studio-example" key={item.id}><img src={item.img} alt={`Mock ${item.badge}`} loading="lazy" /><p>Mock · {item.badge}</p><p>{item.prompt}</p><Button onClick={() => applyExample(item, mode)}>装配样例正文</Button></article>)}</div>
+        <div className="studio-toolbar" aria-label="场景筛选"><Button aria-pressed={state.sceneFilter === null} onClick={() => store.setSceneFilter(null)}>全部场景</Button>{DASHBOARD_ASSETS.map(item => <Button key={item.type} aria-pressed={state.sceneFilter === item.type} onClick={() => store.setSceneFilter(item.type)}>{item.badge}</Button>)}</div>
+        <p>灵感样例 · {dashboardExamples.length} 项</p>
+        <div className="studio-grid">{dashboardExamples.map(item => <article className="studio-example" key={item.id}><img src={item.img} alt={`Mock ${item.badge}`} loading="lazy" /><p>Mock · {item.badge}</p><p>{item.prompt}</p><Button onClick={() => applyExample(item, mode)}>装配样例正文</Button></article>)}</div>
       </> : <>
         <div className="studio-toolbar"><Button onClick={() => store.navigate('dashboard')}>返回创作区</Button><span>{mode === 'image' ? '图片' : '视频'}历史与样例</span></div>
         <div className="studio-toolbar">{[['history', '历史'], ['examples', '示例']].map(([id, label]) => <Button key={id} aria-pressed={state.section === id} onClick={() => store.publish({ section: id })}>{label}</Button>)}</div>
@@ -79,7 +81,7 @@ function StudioContent() {
           {['Auto', '1:1', '9:16', '16:9'].map(aspect => <Button key={aspect} aria-pressed={state.filters.aspect === aspect} onClick={() => store.setFilter({ aspect })}>{aspect}</Button>)}
           <Button onClick={() => store.setFilter({ modelId: null, resolution: null, aspect: null })}>清空全部条件</Button>
         </div>}
-        {state.section === 'history' ? <div className="studio-grid">{filteredTasks.length ? filteredTasks.map(task => <GenerationStatusCard key={task.id} task={task} onPreview={preview} onConfirm={confirm} />) : <p>没有匹配的模拟记录</p>}</div> : mode === 'image' ? <><p>样例 {examples.length} 项</p><div className="studio-grid">{examples.length ? examples.map(item => <article className="studio-example" key={item.id}><p>Mock · {IMAGE_MODELS.find(model => model.id === item.modelId)?.name} · {item.resolution} · {item.aspect}</p><p>{item.prompt}</p><SampleMedia result={{ ...item, kind: 'image' }} onPreview={preview} /></article>) : <p>没有匹配的样例</p>}</div></> : <><p>Mock 视频创意示例 {VIDEO_EXAMPLES.length} 项（封面样例，非视频产物）</p><div className="studio-grid">{VIDEO_EXAMPLES.map(item => <article className="studio-example" key={item.id}><img src={item.previewImg} alt={`Mock ${item.title}`} loading="lazy" /><p>{item.title}</p><p>{item.prompt}</p><Button onClick={() => applyExample(item, 'video')}>装配样例正文</Button></article>)}</div></>}
+        {state.section === 'history' ? <div className="studio-grid">{filteredTasks.length ? filteredTasks.map(task => <GenerationStatusCard key={task.id} task={task} onPreview={preview} onConfirm={confirm} />) : <p>没有匹配的模拟记录</p>}</div> : mode === 'image' ? <><p>样例 {examples.length} 项</p><div className="studio-grid">{examples.length ? examples.map(item => <article className="studio-example" key={item.id}><p>Mock · {IMAGE_MODELS.find(model => model.id === item.modelId)?.name} · {item.resolution} · {item.aspect}</p><p>{item.prompt}</p><SampleMedia result={{ ...item, kind: 'image' }} onPreview={preview} /><Button onClick={() => applyExample(item, 'image')}>装配样例正文</Button></article>) : <p>没有匹配的样例</p>}</div></> : <><p>Mock 视频创意示例 {VIDEO_EXAMPLES.length} 项（封面样例，非视频产物）</p><div className="studio-grid">{VIDEO_EXAMPLES.map(item => <article className="studio-example" key={item.id}><img src={item.previewImg} alt={`Mock ${item.title}`} loading="lazy" /><p>{item.title}</p><p>{item.prompt}</p><Button onClick={() => applyExample(item, 'video')}>装配样例正文</Button></article>)}</div></>}
         <div className="studio-dock"><DraftWorkspace key={dockMode} mode={dockMode} /></div>
       </>}
     </div>

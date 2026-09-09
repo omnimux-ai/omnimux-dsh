@@ -1,0 +1,7 @@
+✅ verify-plugin-boundaries: 2237 source file(s) across plugins verified for dependency and runtime boundaries.
+[Stage Contract Linter] Auditing 11 Stage components and actual sidebar registrations...
+PASS: 11 Stage components; 8 registered sidebar targets and their runtime contracts.
+
+== OmniMux UI01~UI10 规范静态门禁扫描 ==
+扫描完成：共分析 296 个客户端视图源文件。
+✓ UI01~UI10 静态扫描全部合规（0 违规拦截）。

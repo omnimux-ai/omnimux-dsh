@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button } from './Button.jsx'
 import { modelsFor } from '../fixtures.js'
 
 export function ModelSelectPopover({ isOpen, type = 'video', selectedModel, onSelect, onClose }) {

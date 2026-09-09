@@ -1,0 +1,43 @@
+$ node --test tests/*.test.mjs
+✔ malformed external documents are rejected without publishing or losing the current draft (3.618583ms)
+✔ reference slots retain portrait and reject cross-mode references without charging (1.498292ms)
+✔ synchronous malformed adapter results fail and refund exactly once (0.436167ms)
+✔ F07 A-token-B-token-C maintains order through update/move/remove (5.250542ms)
+✔ F07 URL syntax rejects credentials, private literals, bad protocols and signed query (0.500708ms)
+✔ F07 IME guard covers native composing and keyCode 229 (0.109208ms)
+✔ F09 exact menu labels, ordering and demo prices (1.955208ms)
+✔ F09 independent dimensions are ANDed, clearing one retains others (5.574333ms)
+✔ QA01 sparse document is rejected before entering immutable draft (1.872125ms)
+✔ QA02 reference snapshot rejects missing identity and metadata (0.433791ms)
+✔ QA03 draft mode cannot be reassigned through a patch (0.12425ms)
+✔ QA04 cancelling with synchronous failure callback refunds once (0.422625ms)
+✔ QA05 independent scopes keep task completion and balance isolated (0.293875ms)
+✔ QA06 actual bundled kit installs no styles before dependencies become available (81.605041ms)
+✔ QA07 sparse adapter batch is not a successful four-result batch (0.418917ms)
+✔ QA08 unknown video submode fails validation (0.125917ms)
+✔ QA09 boundary length and batch validation stay atomic (0.328208ms)
+✔ F11/F12 ten dependency injection cycles dispose tab/locale/style/registry exactly once (90.650666ms)
+✔ F11 absent dependencies produce no style or fallback when injector waits (6.215625ms)
+✔ real bundle evaluated ten times leaves Host style identity and bytes unchanged (156.976083ms)
+✔ fixture references preserve full identity in frozen request and reject each missing field (2.241083ms)
+✔ cancel wins before abort callbacks, subscriber reentry and late completion (0.437292ms)
+✔ scene filter uses real fixtures, survives navigation and does not alter image dimensions (0.2105ms)
+✔ rendered scene chips filter real cards and image examples assemble without charging (151.685834ms)
+✔ F04 scope tuple isolation and unknown cwd refusal (5.58575ms)
+✔ F06 hide pauses remaining time, cancel/delete refund once and no late callback (1.339291ms)
+✔ F10 immutable complete snapshot, batch four, restore without submission (0.522125ms)
+✔ F10 zero / one-short credits reject without mutations or timers (0.177625ms)
+✔ F10 same-clock 100 submissions mint UUIDs and preserve 15s / auto (6.3155ms)
+✔ F06/F10 adapter failure and partial batch refund once; malicious late outcome ignored (0.207375ms)
+✔ F08 main and detail navigation retain identical draft, invalid submission does not navigate (0.116875ms)
+✔ F10 analysis clears model/spec and creates explicit text sample (0.512584ms)
+✔ F01/F02/F03/F14 static local CSS, no chrome and portable build (2.868416ms)
+✔ F07 rendered editor handles token Enter, IME, ordered text and Backspace (124.742625ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1074.647125

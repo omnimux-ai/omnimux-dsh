@@ -21,7 +21,10 @@
 [data-omnimux-studio] .studio-parameter-options > fieldset { flex: 0 0 auto; white-space: nowrap; }
 [data-omnimux-studio] .studio-parameter-options button { flex-shrink: 0; }
 [data-omnimux-studio] fieldset { border: 1px solid var(--dsw-alias-border); border-radius: 8px; display: flex; gap: 4px; overflow-x: auto; min-width: 0; max-width: 100%; }
-[data-omnimux-studio] button { min-height: 32px; border-radius: 8px; }
+[data-omnimux-studio] .studio-button { height: 32px; box-sizing: border-box; border-radius: 8px; border: 1px solid var(--dsw-alias-border); padding: 0 10px; font: inherit; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); cursor: pointer; white-space: nowrap; }
+[data-omnimux-studio] .studio-button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+[data-omnimux-studio] .studio-button:active:not(:disabled) { background: var(--dsw-alias-interactive-bg-active); }
+[data-omnimux-studio] .studio-button:disabled { color: var(--dsw-alias-label-secondary); cursor: not-allowed; }
 [data-omnimux-studio] button[aria-pressed="true"] { outline: 1px solid var(--dsw-alias-brand-primary); }
 [data-omnimux-studio] :focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
 [data-omnimux-studio] .studio-submit-row { justify-content: flex-end; }

@@ -1,0 +1,30 @@
+Scope: all 14 workspace projects
+✓ Lockfile passes supply-chain policies (verified 11h ago)
+esbuild is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/esbuild@0.28.2/node_modules/esbuild
+acorn is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/acorn@8.15.0/node_modules/acorn
+pngjs is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/pngjs@7.0.0/node_modules/pngjs
+jsdom is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/jsdom@30.0.1/node_modules/jsdom
+react is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react@18.3.1/node_modules/react
+react-dom is linked to /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/node_modules from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom
+Progress: resolved 1, reused 0, downloaded 0, added 0
+plugins/omnimux-workflow                 | [WARN] deprecated @types/marked@6.0.0
+/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-clip:
+[ENOENT] ENOENT: no such file or directory, scandir '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/personal/dsh-ui-kit'
+
+This error happened while installing a direct dependency of /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/plugins/omnimux-clip
+
+
+
+[ERROR] Command failed with exit code 254: '/Users/x/Library/Application Support/DSH Desktop/runtime-commands/private/node-bin/node' '/Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/bin/pnpm.mjs' install
+
+pnpm: Command failed with exit code 254: '/Users/x/Library/Application Support/DSH Desktop/runtime-commands/private/node-bin/node' '/Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/bin/pnpm.mjs' install
+    at getFinalError (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:34109:14)
+    at makeError (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:36416:21)
+    at getSyncResult (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:38260:10)
+    at spawnSubprocessSync (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:38220:14)
+    at execaCoreSync (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:38150:23)
+    at callBoundExeca (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:40678:23)
+    at boundExeca (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:40655:49)
+    at sync (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:40814:10)
+    at runPnpmCli (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:245099:5)
+    at runDepsStatusCheck (file:///Users/x/Library/pnpm/store/v11/links/@/pnpm/11.7.0/8c331c0d88cc547da3af5afe3709ff2ab54cf917ede98c38575c216c4dadd425/node_modules/pnpm/dist/pnpm.mjs:246833:7)

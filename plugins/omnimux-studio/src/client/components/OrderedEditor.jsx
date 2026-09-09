@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button } from './Button.jsx'
 import { isComposing, reduceEditor, serializeDocument, textPart, tokenPart, validateToken } from '../editor-document.js'
 
 /** Ordered text segments and inline URL inputs; never parses HTML. */

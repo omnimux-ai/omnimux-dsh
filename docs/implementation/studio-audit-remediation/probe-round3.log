@@ -1,0 +1,33 @@
+✔ expired and stale SHA requests fail before consumption (227.974084ms)
+✔ preflight authentication failure preserves reusable request and pending canonical report (246.129959ms)
+✔ wrong path, incomplete capabilities, and missing task/tab identity fail before consumption (870.893916ms)
+✔ request replacement and HEAD change during preparation cannot obtain execution rights (366.678708ms)
+✔ expiry is checked again after page preparation (140.575625ms)
+✔ concurrent consumers grant probe ownership once and preserve the winner report (222.3535ms)
+✔ two requests cannot operate the same task concurrently and task lock releases on preflight failure (261.515333ms)
+✔ invalid secret-bearing requests do not record target credentials (119.029667ms)
+✔ post-consumption errors redact headers and JSON secrets but record actual consumption (138.284ms)
+✔ lock release failure still persists the consumed failure report (131.306167ms)
+✔ screenshots must decode as PNG, not JPEG, empty, or header-only bytes (2.798333ms)
+✔ Stage state accepts cross-realm arrays but still requires exactly one selected entry (0.717958ms)
+✔ Dev has a fixed 45120 default and rejects stale env ports, production and remote origins (1.898875ms)
+✔ L2 must match its worktree URL, port, source and current code revision (175.0965ms)
+✔ reused L2 ports and changed plugin links cannot certify another worktree (105.727416ms)
+✔ stage selection and actual runtime discovery reject empty or unknown targets (949.724583ms)
+✔ homepage content cannot replace a visible, nonempty and uniquely selected target Tab (0.532958ms)
+✔ positive-size content outside the viewport or covered by another panel is not visible (42.311958ms)
+✔ session drift aborts cleanup without modifying the newly active session (9.081583ms)
+✔ stage-specific loading and failure markers cannot pass as valid empty content (177.628042ms)
+✔ verify:live creates one pending, SHA-bound ego-browser request and never reports PASS (1547.076583ms)
+✔ CLI argument failures overwrite stale success and retain per-run failure evidence (199.024708ms)
+✔ CLI rejects production in a sandbox without overwriting workspace evidence (224.28125ms)
+✔ Studio is explicit-only and preserves the eight existing Stage targets (789.403584ms)
+✔ community Tab acceptance still rejects wrong, hidden, duplicate, loading and error content (1.679958ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3507.36525

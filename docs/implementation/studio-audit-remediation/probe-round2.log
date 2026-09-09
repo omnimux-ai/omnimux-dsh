@@ -1,0 +1,245 @@
+✖ expired and stale SHA requests fail before consumption (131.198875ms)
+✖ preflight authentication failure preserves reusable request and pending canonical report (149.413375ms)
+✖ wrong path, incomplete capabilities, and missing task/tab identity fail before consumption (123.70325ms)
+✖ request replacement and HEAD change during preparation cannot obtain execution rights (125.518375ms)
+✖ expiry is checked again after page preparation (139.21625ms)
+✖ concurrent consumers grant probe ownership once and preserve the winner report (150.162917ms)
+✖ two requests cannot operate the same task concurrently and task lock releases on preflight failure (127.944125ms)
+✖ invalid secret-bearing requests do not record target credentials (148.745542ms)
+✖ post-consumption errors redact headers and JSON secrets but record actual consumption (106.17825ms)
+✖ lock release failure still persists the consumed failure report (120.556166ms)
+✔ screenshots must decode as PNG, not JPEG, empty, or header-only bytes (4.080083ms)
+✔ Stage state accepts cross-realm arrays but still requires exactly one selected entry (1.203792ms)
+✔ Dev has a fixed 45120 default and rejects stale env ports, production and remote origins (4.927208ms)
+✔ L2 must match its worktree URL, port, source and current code revision (263.979291ms)
+✔ reused L2 ports and changed plugin links cannot certify another worktree (175.83075ms)
+✔ stage selection and actual runtime discovery reject empty or unknown targets (1020.018041ms)
+✔ homepage content cannot replace a visible, nonempty and uniquely selected target Tab (0.590583ms)
+✔ positive-size content outside the viewport or covered by another panel is not visible (56.916ms)
+✔ session drift aborts cleanup without modifying the newly active session (12.020875ms)
+✔ stage-specific loading and failure markers cannot pass as valid empty content (172.32625ms)
+✖ verify:live creates one pending, SHA-bound ego-browser request and never reports PASS (111.8945ms)
+✔ CLI argument failures overwrite stale success and retain per-run failure evidence (222.158417ms)
+✔ CLI rejects production in a sandbox without overwriting workspace evidence (212.901875ms)
+✔ Studio is explicit-only and preserves the eight existing Stage targets (684.485792ms)
+✔ community Tab acceptance still rejects wrong, hidden, duplicate, loading and error content (0.940833ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 14
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2349.9605
+
+✖ failing tests:
+
+test at scripts/ego-live-qa.test.mjs:19:1
+✖ expired and stale SHA requests fail before consumption (131.198875ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-lq4ztv/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-lq4ztv/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-lq4ztv/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:28:1
+✖ preflight authentication failure preserves reusable request and pending canonical report (149.413375ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-EdbEGZ/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-EdbEGZ/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-EdbEGZ/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:38:1
+✖ wrong path, incomplete capabilities, and missing task/tab identity fail before consumption (123.70325ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-tvKmkF/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-tvKmkF/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-tvKmkF/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:51:1
+✖ request replacement and HEAD change during preparation cannot obtain execution rights (125.518375ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-GlMGJo/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-GlMGJo/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-GlMGJo/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:68:1
+✖ expiry is checked again after page preparation (139.21625ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-wmOX9b/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-wmOX9b/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-wmOX9b/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:75:1
+✖ concurrent consumers grant probe ownership once and preserve the winner report (150.162917ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-cZrIcT/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-cZrIcT/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-cZrIcT/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:85:1
+✖ two requests cannot operate the same task concurrently and task lock releases on preflight failure (127.944125ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-IPxcig/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-IPxcig/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-IPxcig/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:95:1
+✖ invalid secret-bearing requests do not record target credentials (148.745542ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-fCyzJ6/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-fCyzJ6/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-fCyzJ6/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:102:1
+✖ post-consumption errors redact headers and JSON secrets but record actual consumption (106.17825ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-01bI65/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-01bI65/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-01bI65/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/ego-live-qa.test.mjs:116:1
+✖ lock release failure still persists the consumed failure report (120.556166ms)
+  Error: Cannot find module 'acorn'
+  Require stack:
+  - /private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-0xhrlI/scripts/live-runtime-proof.mjs
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1048:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1072:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1093:12)
+      at Module._load (node:internal/modules/cjs/loader:1261:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1575:12)
+      at require (node:internal/modules/helpers:191:16)
+      at file:///private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-0xhrlI/scripts/live-runtime-proof.mjs:10:19
+      at ModuleJob.run (node:internal/modules/esm/module_job:430:25) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/private/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-ego-qa-0xhrlI/scripts/live-runtime-proof.mjs' ]
+  }
+
+test at scripts/live-qa.test.mjs:200:1
+✖ verify:live creates one pending, SHA-bound ego-browser request and never reports PASS (111.8945ms)
+  AssertionError [ERR_ASSERTION]: ["Cannot find module 'react'\nRequire stack:\n- /var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/omnimux-live-qa-WV20Wi/plugins/omnimux-accounts/package.json"]
+  + actual - expected
+  
+  + 'failed'
+  - 'pending'
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/live-qa.test.mjs:203:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'pending',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -16,6 +16,6 @@ export type Result = {
 };
 export type AdapterOutcome = { status: 'completed'; results: Result[] } | { status: 'failed'; results: [] };
 export type Task = { id: string; attemptId: string; request: RequestSnapshot; status: 'pending' | 'completed' | 'failed' | 'cancelled'; results: Result[]; refunded: boolean; error: string | null };
-export type StudioState = { drafts: Record<Mode, Draft>; tasks: Task[]; mockCredits: number; view: 'dashboard' | 'video' | 'image'; mode: Mode; filters: { modelId: string | null; resolution: string | null; aspect: string | null }; section: 'history' | 'examples' };
+export type StudioState = { drafts: Record<Mode, Draft>; tasks: Task[]; mockCredits: number; view: 'dashboard' | 'video' | 'image'; mode: Mode; sceneFilter: string | null; filters: { modelId: string | null; resolution: string | null; aspect: string | null }; section: 'history' | 'examples' };
 export type SubmitResult = { ok: true; taskId: string } | { ok: false; errors: string[] };
 export type JobHandle = { pause(): void; resume(): void; cancel(): void };

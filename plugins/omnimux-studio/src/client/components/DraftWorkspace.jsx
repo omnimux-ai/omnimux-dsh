@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button } from './Button.jsx'
 import { useStudioApi, useStudioStore } from '../use-studio-store.js'
 import { initialDraft } from '../studio-store.js'
 import { modelsFor, PRESETS } from '../fixtures.js'

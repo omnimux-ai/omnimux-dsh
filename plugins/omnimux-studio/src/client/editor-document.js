@@ -13,7 +13,7 @@ export function tokenPart(tokenType, value = '') {
 export function validateDocument(document) {
   if (!document || document.version !== 1 || !Array.isArray(document.parts) || !document.parts.length) return false
   const ids = new Set()
-  return document.parts.every(part => {
+  return Array.from(document.parts).every(part => {
     if (!part || typeof part.id !== 'string' || !part.id.trim() || ids.has(part.id)) return false
     ids.add(part.id)
     if (part.kind === 'text') return typeof part.text === 'string'

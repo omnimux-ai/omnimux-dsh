@@ -1,6 +1,7 @@
 import { createDocument, textPart, tokenPart, serializeDocument, validateToken, validateDocument } from './editor-document.js'
 import { modelsFor, PRESETS, MEDIA } from './fixtures.js'
 import { MockAdapter } from './mock-adapter.js'
+import { DASHBOARD_ASSETS } from './mock-data.js'
 
 export function deepFreeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -26,7 +27,7 @@ export class StudioStore {
     this.listeners = new Set()
     this.jobs = new Map()
     this.resources = new Map()
-    this.state = deepFreeze({ drafts: Object.fromEntries(['agent', 'video', 'image'].map(mode => [mode, initialDraft(mode)])), tasks: [], mockCredits: 3463, view: 'dashboard', mode: 'video', filters: { modelId: null, resolution: null, aspect: null }, section: 'history' })
+    this.state = deepFreeze({ drafts: Object.fromEntries(['agent', 'video', 'image'].map(mode => [mode, initialDraft(mode)])), tasks: [], mockCredits: 3463, view: 'dashboard', mode: 'video', sceneFilter: null, filters: { modelId: null, resolution: null, aspect: null }, section: 'history' })
   }
   getSnapshot = () => this.state
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
@@ -36,9 +37,11 @@ export class StudioStore {
     for (const listener of this.listeners) listener()
   }
   updateDraft(mode, patch) {
-    if (!this.state.drafts[mode] || !patch || typeof patch !== 'object') return
+    if (!Object.hasOwn(this.state.drafts, mode) || !patch || typeof patch !== 'object' || Array.isArray(patch)) return
+    const fields = ['mode', 'document', 'submode', 'skillId', 'presetId', 'modelId', 'spec', 'references']
+    if (Object.keys(patch).some(key => !fields.includes(key)) || (Object.hasOwn(patch, 'mode') && patch.mode !== mode)) return
     if (Object.hasOwn(patch, 'document') && !validateDocument(patch.document)) return
-    if (Object.hasOwn(patch, 'references') && (!Array.isArray(patch.references) || patch.references.some(ref => !ref || typeof ref !== 'object'))) return
+    if (Object.hasOwn(patch, 'references') && (!Array.isArray(patch.references) || Array.from(patch.references).some(ref => !ref || typeof ref !== 'object'))) return
     const current = this.state.drafts[mode]
     const draft = { ...current, ...structuredClone(patch) }
     if (patch.spec && current.spec) draft.spec = { ...current.spec, ...patch.spec }
@@ -58,6 +61,9 @@ export class StudioStore {
     this.publish({ mode: 'agent', drafts: { ...this.state.drafts, agent: draft } })
   }
   navigate(view) { if (['dashboard', 'video', 'image'].includes(view)) this.publish({ view }) }
+  setSceneFilter(type) {
+    if (type === null || DASHBOARD_ASSETS.some(item => item.type === type)) this.publish({ sceneFilter: type })
+  }
   setFilter(patch) { this.publish({ filters: { ...this.state.filters, ...patch } }) }
   setVisible(visible) {
     if (this.disposed) return
@@ -66,9 +72,18 @@ export class StudioStore {
   }
   validateDraft(draft) {
     const errors = []
-    if (!draft || !validateDocument(draft.document) || !Array.isArray(draft.references) || draft.references.some(ref => !ref || typeof ref !== 'object')) {
+    if (!draft || !validateDocument(draft.document) || !Array.isArray(draft.references) || Array.from(draft.references).some(ref => !ref || typeof ref !== 'object')) {
       return { errors: ['草稿文档或参考结构无效'], prompt: '', model: null, totalCost: 0 }
     }
+    if (!['agent', 'video', 'image'].includes(draft.mode) || (draft.mode === 'video' ? !['edit', 'ref', 'firstlast'].includes(draft.submode) : draft.submode !== null)) errors.push('创作模式无效')
+    const referenceIds = new Set()
+    if (!Array.from(draft.references).every(ref => {
+      if (!ref || !['id', 'slot', 'name', 'mime'].every(key => typeof ref[key] === 'string' && ref[key].trim()) || referenceIds.has(ref.id)) return false
+      referenceIds.add(ref.id)
+      return ['image', 'video'].includes(ref.kind) && ref.mime.startsWith(`${ref.kind}/`)
+        && (ref.source === 'fixture' ? ref.fileId === null && ref.fixtureId === `mock:sample-${ref.kind}`
+          : ref.source === 'local' && ref.fixtureId === null && typeof ref.fileId === 'string' && Boolean(ref.fileId))
+    })) errors.push('参考素材身份或元信息不完整')
     const prompt = serializeDocument(draft.document)
     if (!prompt.trim()) errors.push('请输入创作内容')
     if (prompt.length > (draft.mode === 'image' ? 2000 : 8000)) errors.push('正文超过长度限制')
@@ -113,7 +128,7 @@ export class StudioStore {
         const ids = new Set()
         const completed = outcome?.status === 'completed' && Array.isArray(outcome.results)
           && outcome.results.length === (request.draft.spec?.batchCount ?? 1)
-          && outcome.results.every(result => {
+          && Array.from(outcome.results).every(result => {
             if (!result || typeof result.id !== 'string' || !result.id || ids.has(result.id)) return false
             ids.add(result.id)
             return result.kind === expectedKind && result.fixtureId === `mock:sample-${expectedKind}`
@@ -142,10 +157,11 @@ export class StudioStore {
     const task = this.state.tasks.find(item => item.id === id)
     if (!task || task.status !== 'pending' || this.disposed) return
     const job = this.jobs.get(id)
-    job?.handle.cancel()
-    job?.controller.abort()
     this.jobs.delete(id)
+    // Commit the terminal state before invoking reentrant listeners or adapter code.
     this.publish({ tasks: this.state.tasks.map(item => item.id === id ? { ...item, status: 'cancelled', refunded: true } : item), mockCredits: this.state.mockCredits + (task.refunded ? 0 : task.request.totalCost) })
+    job?.controller.abort()
+    job?.handle.cancel()
   }
   deleteTask(id) { this.cancelTask(id); this.publish({ tasks: this.state.tasks.filter(item => item.id !== id) }); this.releaseUnusedResources() }
   restoreDraft(id) {
