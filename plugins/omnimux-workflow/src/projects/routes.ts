@@ -10,6 +10,8 @@
  *
  * 项目库作用域 = 默认库，不再接收 cwd。写操作先过 assertLocalWrite。
  */
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
   MAX_JSON_BODY_BYTES,
   sendJson,
@@ -25,6 +27,15 @@ import { createProjectStore, ProjectStoreError } from './ProjectStore';
 
 export const PROJECT_ROUTE_PREFIX = '/omnimux-workflow/api/projects';
 export const PROJECT_LIBRARY_PATH = `${PROJECT_ROUTE_PREFIX}/library`;
+
+function inferMediaType(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  if (['mp4', 'mov', 'webm', 'mkv'].includes(ext)) return 'video';
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext)) return 'image';
+  if (['mp3', 'wav', 'aac', 'm4a', 'flac'].includes(ext)) return 'audio';
+  if (['txt', 'md', 'json', 'csv', 'htable'].includes(ext)) return 'text';
+  return 'other';
+}
 
 const STATUS_BY_CODE: Record<string, number> = {
   'invalid-json': 400,
@@ -80,6 +91,9 @@ export function createProjectDispatcher(opts: { libraryRoot?: string } = {}): Pr
   const itemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)$`);
   const pagesRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages$`);
   const pageItemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/pages/([^/]+)$`);
+  const filesRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/files$`);
+  const mkdirRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/mkdir$`);
+  const uploadRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)/upload$`);
 
   function owns(path: string): boolean {
     return path === PROJECT_ROUTE_PREFIX || path.startsWith(`${PROJECT_ROUTE_PREFIX}/`);
@@ -191,6 +205,100 @@ export function createProjectDispatcher(opts: { libraryRoot?: string } = {}): Pr
           return { status: 200, body: { project: store.removePage(projectId, pageId) } };
         }
         return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+      }
+
+      // 物理工作区文件列表 GET /api/projects/:id/files
+      const filesMatch = filesRe.exec(path);
+      if (filesMatch) {
+        if (method !== 'GET') return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+        const projectId = filesMatch[1] ?? '';
+        const { store } = scopedStore(opts.libraryRoot);
+        const project = store.get(projectId);
+        const subpath = url.searchParams.get('subpath') || '';
+        const targetDir = resolve(project.path, subpath);
+        const rel = relative(project.path, targetDir);
+        if (rel.startsWith('..') || isAbsolute(rel)) {
+          return { status: 403, body: { error: 'path-denied', message: 'access denied outside project directory' } };
+        }
+        if (!existsSync(targetDir)) {
+          return { status: 200, body: { items: [], currentSubpath: subpath } };
+        }
+        const entries = readdirSync(targetDir, { withFileTypes: true });
+        const items = [];
+        for (const entry of entries) {
+          if (entry.name.startsWith('.')) continue;
+          const full = join(targetDir, entry.name);
+          const isFolder = entry.isDirectory();
+          let size = 0;
+          let updatedAt = new Date().toISOString();
+          try {
+            const st = statSync(full);
+            size = isFolder ? 0 : st.size;
+            updatedAt = st.mtime.toISOString();
+          } catch {}
+          items.push({
+            id: `${subpath ? subpath + '/' : ''}${entry.name}`,
+            name: entry.name,
+            isFolder,
+            size,
+            updatedAt,
+            type: inferMediaType(entry.name),
+          });
+        }
+        items.sort((a, b) => {
+          if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+        return { status: 200, body: { items, currentSubpath: subpath } };
+      }
+
+      // 物理工作区新建文件夹 POST /api/projects/:id/mkdir
+      const mkdirMatch = mkdirRe.exec(path);
+      if (mkdirMatch) {
+        if (method !== 'POST') return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+        const projectId = mkdirMatch[1] ?? '';
+        const { store } = scopedStore(opts.libraryRoot);
+        const project = store.get(projectId);
+        const problem = jsonBodyProblem(req.body);
+        if (problem) return problem;
+        const body = req.body as { name?: unknown; subpath?: unknown };
+        const name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (!name) return { status: 400, body: { error: 'name-required' } };
+        const subpath = typeof body.subpath === 'string' ? body.subpath.trim() : '';
+        const targetDir = resolve(project.path, subpath, name);
+        const rel = relative(project.path, targetDir);
+        if (rel.startsWith('..') || isAbsolute(rel)) {
+          return { status: 403, body: { error: 'path-denied' } };
+        }
+        mkdirSync(targetDir, { recursive: true });
+        return { status: 200, body: { ok: true, name, path: targetDir } };
+      }
+
+      // 物理工作区上传文件 POST /api/projects/:id/upload
+      const uploadMatch = uploadRe.exec(path);
+      if (uploadMatch) {
+        if (method !== 'POST') return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
+        const projectId = uploadMatch[1] ?? '';
+        const { store } = scopedStore(opts.libraryRoot);
+        const project = store.get(projectId);
+        const problem = jsonBodyProblem(req.body);
+        if (problem) return problem;
+        const body = req.body as { paths?: unknown; subpath?: unknown };
+        const paths = Array.isArray(body.paths) ? body.paths.filter((p): p is string => typeof p === 'string') : [];
+        const subpath = typeof body.subpath === 'string' ? body.subpath.trim() : '';
+        const targetDir = resolve(project.path, subpath);
+        const rel = relative(project.path, targetDir);
+        if (rel.startsWith('..') || isAbsolute(rel)) {
+          return { status: 403, body: { error: 'path-denied' } };
+        }
+        mkdirSync(targetDir, { recursive: true });
+        for (const src of paths) {
+          if (existsSync(src)) {
+            const basename = join(src).split('/').pop() || 'upload';
+            copyFileSync(src, join(targetDir, basename));
+          }
+        }
+        return { status: 200, body: { ok: true } };
       }
 
       const itemMatch = itemRe.exec(path);

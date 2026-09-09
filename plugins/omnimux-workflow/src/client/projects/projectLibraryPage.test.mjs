@@ -31,8 +31,11 @@ describe('ProjectLibraryPage Architectural Hierarchy', () => {
     assert.match(folderCardSource, /omnimux-folder-tab-shape/);
   });
 
-  it('renders ProjectPagesTab with creation CTA and page cards', () => {
-    assert.match(pagesTabSource, /\+ 新建创作页/);
+  it('renders ProjectPagesTab with creation CTA in header and page cards in grid', () => {
+    assert.match(pageSource, /\+ 新建创作页/);
+    assert.match(pageSource, /fetchProjectFiles/);
+    assert.match(pageSource, /mkdirProjectFile/);
+    assert.match(pageSource, /uploadProjectFiles/);
     assert.match(pagesTabSource, /omnimux-pages-grid/);
     assert.match(pagesTabSource, /omnimux-page-card/);
   });

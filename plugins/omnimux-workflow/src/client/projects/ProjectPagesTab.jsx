@@ -32,29 +32,19 @@ export function ProjectPagesTab({
   pages = [],
   activePageId,
   onOpenPage,
-  onCreatePage,
   onRenamePage,
   onDeletePage,
-  loading = false,
   t,
 }) {
+  const displayPages = Array.isArray(pages) && pages.length > 0 ? pages : [
+    { id: 'page-default', title: '创作页 1', canvasWorkspaceId: 'ws_default' },
+  ]
+
   return (
     <div className="omnimux-project-pages-tab">
-      {/* 顶部操作行：右上角放置「+ 新建创作页」按钮 */}
-      <div className="omnimux-project-pages-action-row">
-        <Button
-          variant="primary"
-          leadingIcon={<IconPlusOutline16 />}
-          disabled={loading}
-          onClick={onCreatePage}
-        >
-          {loading ? '正在新建…' : '+ 新建创作页'}
-        </Button>
-      </div>
-
       {/* 创作页卡片网格 */}
       <div className="omnimux-pages-grid">
-        {pages.map((page, index) => {
+        {displayPages.map((page, index) => {
           const isFirst = index === 0
           const dateStr = page.createdAt || page.updatedAt
             ? new Date(page.createdAt || page.updatedAt).toLocaleDateString().replace(/\//g, '.')

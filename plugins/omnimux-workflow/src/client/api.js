@@ -124,3 +124,25 @@ export function deleteProjectPage(projectId, pageId) {
     method: 'DELETE',
   })
 }
+
+/** 浏览工作区真实物理文件列表 */
+export function fetchProjectFiles(projectId, subpath = '') {
+  const query = subpath ? `?subpath=${encodeURIComponent(subpath)}` : ''
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/files${query}`)
+}
+
+/** 在工作区物理目录下新建文件夹 */
+export function mkdirProjectFile(projectId, name, subpath = '') {
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/mkdir`, {
+    method: 'POST',
+    body: { name, subpath },
+  })
+}
+
+/** 上传本地物理文件到工作区目录 */
+export function uploadProjectFiles(projectId, paths = [], subpath = '') {
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/upload`, {
+    method: 'POST',
+    body: { paths, subpath },
+  })
+}

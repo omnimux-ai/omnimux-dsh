@@ -21,6 +21,9 @@ import {
   createProjectPage,
   updateProjectPage,
   deleteProjectPage,
+  fetchProjectFiles,
+  mkdirProjectFile,
+  uploadProjectFiles,
 } from '../api.js'
 import {
   getWorkspaceAssets,
@@ -98,11 +101,20 @@ export function ProjectLibraryPage(props) {
         setProjectDetail(project)
       }
 
-      // 加载项目资产
-      const assetsWorkspaceId = project.canvasWorkspaceIds?.[0] || project.id
-      const assetsRes = await getWorkspaceAssets(assetsWorkspaceId)
-      if (assetsRes.ok && assetsRes.body?.assets) {
-        setAssetsDoc(assetsRes.body.assets)
+      // 优先从真实物理工作区目录读取文件列表
+      const filesRes = await fetchProjectFiles(project.id)
+      if (filesRes.ok && Array.isArray(filesRes.body?.items)) {
+        setAssetsDoc({
+          folders: filesRes.body.items.filter((i) => i.isFolder),
+          items: filesRes.body.items.filter((i) => !i.isFolder),
+        })
+      } else {
+        // 加载项目资产 (回退)
+        const assetsWorkspaceId = project.canvasWorkspaceIds?.[0] || project.id
+        const assetsRes = await getWorkspaceAssets(assetsWorkspaceId)
+        if (assetsRes.ok && assetsRes.body?.assets) {
+          setAssetsDoc(assetsRes.body.assets)
+        }
       }
     } catch {
       setProjectDetail(project)
@@ -210,36 +222,42 @@ export function ProjectLibraryPage(props) {
     }
   }
 
-  // 8. 资产管理：新建文件夹
+  // 8. 资产管理：新建文件夹 (物理工作区目录)
   const handleCreateFolder = async () => {
     if (!selectedProject) return
     const name = window.prompt('请输入新建文件夹名称：', '新建文件夹')
     if (!name || !name.trim()) return
-    const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
     setBusy(true)
     try {
-      const res = await mkdirWorkspaceAsset(wsId, { name: name.trim() })
-      if (res.ok && res.body?.assets) {
-        setAssetsDoc(res.body.assets)
+      const res = await mkdirProjectFile(selectedProject.id, name.trim())
+      if (res.ok) {
+        void loadProjectDetail(selectedProject)
+      } else {
+        const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
+        await mkdirWorkspaceAsset(wsId, { name: name.trim() })
+        void loadProjectDetail(selectedProject)
       }
     } finally {
       setBusy(false)
     }
   }
 
-  // 9. 资产管理：上传文件
+  // 9. 资产管理：上传文件 (物理工作区目录)
   const handleUploadFile = async () => {
     if (!selectedProject) return
-    const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
     try {
       const pickRes = await pickLocalFiles()
       if (pickRes.ok && Array.isArray(pickRes.body?.paths) && pickRes.body.paths.length > 0) {
         setBusy(true)
-        const ingestRes = await ingestWorkspaceAssets(wsId, {
-          files: pickRes.body.paths.map((p) => ({ source_path: p })),
-        })
-        if (ingestRes.ok && ingestRes.body?.assets) {
-          setAssetsDoc(ingestRes.body.assets)
+        const uploadRes = await uploadProjectFiles(selectedProject.id, pickRes.body.paths)
+        if (uploadRes.ok) {
+          void loadProjectDetail(selectedProject)
+        } else {
+          const wsId = selectedProject.canvasWorkspaceIds?.[0] || selectedProject.id
+          await ingestWorkspaceAssets(wsId, {
+            files: pickRes.body.paths.map((p) => ({ source_path: p })),
+          })
+          void loadProjectDetail(selectedProject)
         }
       }
     } finally {
@@ -317,10 +335,16 @@ export function ProjectLibraryPage(props) {
     return (p.title || '').toLowerCase().includes(q)
   })
 
-  const currentProjectPages = projectDetail?.pages ?? selectedProject?.pages ?? [
-    { id: 'page-default', title: '创作页 1', canvasWorkspaceId: selectedProject?.id },
-  ]
-  const currentAssetsCount = assetsDoc?.items?.length ?? 0
+  const rawPages = projectDetail?.pages ?? selectedProject?.pages ?? []
+  const currentProjectPages = Array.isArray(rawPages) && rawPages.length > 0
+    ? rawPages
+    : [{
+        id: 'page-default',
+        title: selectedProject?.title || '创作页 1',
+        canvasWorkspaceId: selectedProject?.canvasWorkspaceIds?.[0] || selectedProject?.id,
+        createdAt: selectedProject?.createdAt || new Date().toISOString(),
+      }]
+  const currentAssetsCount = (assetsDoc?.folders?.length ?? 0) + (assetsDoc?.items?.length ?? 0)
 
   return (
     <div
@@ -352,7 +376,7 @@ export function ProjectLibraryPage(props) {
             </div>
           </div>
 
-          {/* 创作页 / 项目资产 选项卡栏 */}
+          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs，右侧「+ 新建创作页」，对齐图 2) */}
           <div className="omnimux-project-detail-tabs-bar">
             <Tabs
               variant="underline"
@@ -363,6 +387,16 @@ export function ProjectLibraryPage(props) {
               activeId={detailTab}
               onChange={setDetailTab}
             />
+            {detailTab === 'pages' && (
+              <Button
+                variant="primary"
+                leadingIcon={<IconPlusOutline16 />}
+                disabled={busy}
+                onClick={handleCreatePageInProject}
+              >
+                + 新建创作页
+              </Button>
+            )}
           </div>
 
           {error ? <div className="omnimux-workflow-library-error">{error}</div> : null}
