@@ -321,6 +321,10 @@ export class GraphInspector {
   constructor(profile) { this.profile = assertPath(profile); }
 
   capture({ listJson, approvedPayloads = {}, withoutPnpm = false } = {}) {
+    // A transaction can replace the whole installation at the same path.
+    resolveCache.clear();
+    realpathCache.clear();
+    requireCache.clear();
     const profile = this.profile;
     const manifest = readJson(path.join(profile, 'package.json'));
     const lock = readYaml(path.join(profile, 'pnpm-lock.yaml'));
@@ -511,6 +515,11 @@ export class GraphInspector {
     const expected = structuredClone(before.manifest);
     expected.dependencies[request.name] = managedSpec(request.name);
     if (stable(expected) !== stable(candidate.manifest)) throw new Error('non-target manifest drift');
+    if (request.transition) {
+      compareTransitionGraphs(before, candidate, request);
+      compareLocks(before.lock, candidate.lock, request);
+      return;
+    }
     const canonical = state => {
       const root = state.lock.importers['.'].dependencies[request.name].version.split('(')[0];
       const normalize = value => typeof value === 'string' ? value.split(root).join('<target>')
@@ -538,10 +547,49 @@ export class GraphInspector {
   }
 }
 
+/** Compare a single approved occurrence without rewriting unrelated strings. */
+function compareTransitionGraphs(before, after, request) {
+  const project = (state, approved) => {
+    const key = state.roots[request.name];
+    const target = state.nodes[key];
+    if (!target || Object.values(state.nodes).filter(node => node.name === request.name).length !== 1
+        || target.version !== approved.version || target.payload.digest !== approved.payloadDigest) {
+      throw new Error('transition target occurrence or payload mismatch');
+    }
+    const mapKey = value => value === key ? '<target>' : value;
+    const nodes = Object.fromEntries(Object.entries(state.nodes).map(([id, node]) => [mapKey(id), id === key
+      ? { ...node, locator: '<target>', version: '<approved>', integrity: null, payload: '<approved>' } : node]));
+    return stable({ nodes, roots: Object.fromEntries(Object.entries(state.roots).map(([name, id]) => [name, mapKey(id)])),
+      edges: state.resolutionGraph.map(value => JSON.parse(value).map(mapKey)).map(stable).sort(),
+      absent: state.absent, bins: state.bins, topology: state.topology });
+  };
+  if (project(before, request.transition.before) !== project(after, request.transition.after)) {
+    throw new Error('transition non-target payload or resolution drift');
+  }
+}
+
 /** Allow only the target locator change; preserve every peer context and edge. */
 export function compareLocks(before, after, request) {
   const a = structuredClone(before);
   const b = structuredClone(after);
+  if (request.transition) {
+    const spec = managedSpec(request.name);
+    for (const [lock, approved] of [[a, request.transition.before], [b, request.transition.after]]) {
+      const root = lock.importers?.['.']?.dependencies?.[request.name];
+      if (root?.specifier !== spec || typeof root.version !== 'string') throw new Error('transition managed importer required');
+      const keys = Object.keys(lock.packages || {}).filter(key => key === `${request.name}@${spec}` || key === spec);
+      if (keys.length !== 1) throw new Error('ambiguous transition lock occurrence');
+      const item = lock.packages[keys[0]];
+      if (item.version !== undefined && item.version !== approved.version
+          || stable(item.peerDependencies || {}) !== stable(approved.peerDependencies || {})) {
+        throw new Error('transition lock identity mismatch');
+      }
+      item.version = '<approved>';
+      item.peerDependencies = '<approved>';
+    }
+    if (stable(a) !== stable(b)) throw new Error('transition lock nodes or dependency edges drift');
+    return;
+  }
   const oldRoot = a.importers?.['.']?.dependencies?.[request.name];
   const newRoot = b.importers?.['.']?.dependencies?.[request.name];
   if (!oldRoot || !newRoot || newRoot.specifier !== managedSpec(request.name)) throw new Error('target importer mismatch');
