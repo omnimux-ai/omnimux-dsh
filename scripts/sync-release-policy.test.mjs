@@ -77,6 +77,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     }
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'omnimux-profile-fixture',
+      packageManager: 'pnpm@11.7.0',
       private: true,
       dependencies,
       dsh: { profile: { bundles: [...allPlugins] } },
@@ -320,6 +321,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     assert.match(result.stderr, /无法读取 Alpha 插件生命周期注册表/)
     assert.equal(readFileSync(join(isolatedProfile, 'package.json'), 'utf8'), sentinel)
 
+    initCleanMainRepo(isolatedRoot)
     const wrapperResult = spawnSync('bash', [join(isolatedScripts, 'sync-to-app.sh'), '--prod', '--skip-build'], {
       cwd: isolatedRoot,
       encoding: 'utf8',

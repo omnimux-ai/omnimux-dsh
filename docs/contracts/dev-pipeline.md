@@ -74,6 +74,16 @@ L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏�
 - 普通 sync 与纳管共用稳定 flock。非终态 journal 阻止新同步，须经公开 `--recover-managed-tarball=<id>` 明确恢复；不得删除 journal 强行继续。多路径 rename 是可恢复事务，不宣称瞬时原子交换；恢复不完整时保留现场并返回失败。
 - receipt 只能证明磁盘事务；严格 seed、真实 Host/L2、公共 App 重载与 viewer 交互分别验收。限值和完整故障矩阵见 [Issue #778 架构](../specs/issue-778-managed-tarball-architecture.md)。
 
+### #839：#765 viewer 精确转换例外
+
+既有同版本同 payload 纳管规则保持。额外转换只允许已受管 viewer `0.1.0` 到 `0.1.1-omnimux.765.1`，新归档 SHA256 固定 `555346d3469bd7e11b9453f8beaa0c09de28d695dd6ed2cddbdc875952264a31`，来源 `https://github.com/Crosery/dsh-viewer.git` / `ccfc0a7c6cfa692aa737f48d9e8c97c41db82950`；不是任意升级或首次装包能力。
+
+- 在原 managed 参数外成套提供 `--expect-before-tarball`、`--expect-before-version`、`--expect-before-sha256`、`--expect-before-receipt`、`--expect-source-repo`、`--expect-source-commit`、`--expect-qa-receipt`、`--expect-qa-sha256`。旧 archive 必须从原来源取得并实时验证，不得从已安装目录重打包。QA 报告哈希及内容绑定新版本、归档和 source commit。
+- before 用旧归档完整清单，candidate/new 用新归档完整清单；只有唯一目标节点 version/payload/经归档证明的 peer range 可变化。所有非目标锁字段、节点、字节/模式、边、实际 peer provider、可见性、optional 和 bin 均冻结。私有 candidate 严格 peer 安装失败即停止，不扩大 acquisition。
+- v2 journal 将旧目标 source 移至自身 old-generation，再发布候选 source；既有 manifest/lock/整个 node_modules 事务不变。未终态故障逆序恢复全部四项，无需原 tgz 或网络；v1 恢复兼容。共享 Dev main/MQ/协调窗口门禁不变，未合工具不能操作 Dev。
+- `recover(COMMITTED)` 仅清理自有 scratch，不退版。提交后反向转换须带 `--expect-reverse-receipt`，精确绑定同 profile 的成功正向 receipt，以其 after 为 before、其 before 为新输入；重新构建和验证候选，不允许任意降级。旧原 tgz 必须仍可读取。
+- 幂等需 live source/installed/lock 全图和同一转换 receipt 同时匹配；仅相同 version 或历史 receipt 不够。转换后仍分别验严格 seed、Host/L2 和 #765 ego；磁盘成功不替代运行验收。
+
 ## 刷新与重启
 
 - L2 Host 属于任务私有环境，Agent 可用 `yarn omnimux:dev restart-host <task>` 原地重启并保持端口/数据身份。

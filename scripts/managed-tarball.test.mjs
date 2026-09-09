@@ -5,7 +5,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { hash, payloadManifest, stable } from './materialize-graph.mjs';
+import { hash, payloadManifest, stable, compareLocks, GraphInspector } from './materialize-graph.mjs';
 import { parseRequest } from './managed-tarball.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -19,6 +19,45 @@ export function makeArchive(file, entries = [], metadata = {}) {
   assert.equal(result.status, 0, result.stderr);
   return { tarball: file, name: '@fixture/viewer', version: '0.1.0', sha256: hash(fs.readFileSync(file)) };
 }
+
+test('transition lock exception preserves every non-target field and peer provider', () => {
+  const name = '@fixture/viewer', spec = `file:.materialize-snapshots/plugins/${name}`;
+  const before = { importers: { '.': { dependencies: { [name]: { specifier: spec, version: spec } } } },
+    packages: { [`${name}@${spec}`]: { resolution: { type: 'directory', directory: spec.slice(5) }, peerDependencies: { peer: '1.0.0' } },
+      'peer@1.0.0': { resolution: { integrity: 'sha512-old' } } },
+    snapshots: { [`${name}@${spec}`]: { dependencies: { peer: '1.0.0' } }, 'peer@1.0.0': {} } };
+  const after = structuredClone(before);
+  after.packages[`${name}@${spec}`].peerDependencies.peer = '^1.0.0';
+  const request = { name, transition: { before: { version: '0.1.0', peerDependencies: { peer: '1.0.0' } },
+    after: { version: '0.1.1-omnimux.765.1', peerDependencies: { peer: '^1.0.0' } } } };
+  assert.doesNotThrow(() => compareLocks(before, after, request));
+  for (const mutate of [lock => { lock.packages['peer@1.0.0'].resolution.integrity = 'changed'; },
+    lock => { lock.snapshots[`${name}@${spec}`].dependencies.peer = '2.0.0'; },
+    lock => { lock.packages[`${name}@${spec}`].version = '9.0.0'; },
+    lock => { lock.packages[`${name}@${spec}`].peerDependencies.peer = '*'; },
+    lock => { lock.packages[`${name}@${spec}(peer@2.0.0)`] = {}; }]) {
+    const changed = structuredClone(after); mutate(changed);
+    assert.throws(() => compareLocks(before, changed, request));
+  }
+});
+
+test('transition graph rejects duplicate target, non-target bytes, bins and visibility changes', () => {
+  const name = '@fixture/viewer';
+  const manifest = { dependencies: { [name]: `file:.materialize-snapshots/plugins/${name}` } };
+  const before = { manifest, roots: { [name]: 'target#0' }, nodes: {
+    'target#0': { name, locator: 'target', version: '0.1.0', payload: { digest: 'old' } },
+    'peer#0': { name: 'peer', locator: 'peer', version: '1.0.0', payload: { digest: 'peer' } } },
+    resolutionGraph: [JSON.stringify(['target#0', 'peer', 'peer#0', 'peer'])], absent: [], bins: [] };
+  const after = structuredClone(before);
+  after.nodes['target#0'].version = '0.1.1-omnimux.765.1'; after.nodes['target#0'].payload.digest = 'new';
+  const request = { name, transition: { before: { version: '0.1.0', payloadDigest: 'old' }, after: { version: '0.1.1-omnimux.765.1', payloadDigest: 'new' } } };
+  for (const mutate of [state => { state.nodes['duplicate'] = state.nodes['target#0']; },
+    state => { state.nodes['peer#0'].payload.digest = 'drift'; }, state => { state.bins.push({ path: 'unexpected' }); },
+    state => { state.resolutionGraph = []; }]) {
+    const changed = structuredClone(after); mutate(changed);
+    assert.throws(() => new GraphInspector(scratch).compare(before, changed, request), /transition/);
+  }
+});
 
 function guard(request, action = 'inspect') {
   return spawnSync('python3', [path.join(here, 'managed-tarball-archive.py'), action], { input: JSON.stringify(request), encoding: 'utf8' });
