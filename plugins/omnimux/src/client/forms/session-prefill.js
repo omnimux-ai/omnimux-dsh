@@ -30,6 +30,8 @@ export function queueSessionPrefill(request) {
       prompt,
       attach,
       requireReadback: request.requireReadback === true,
+      resumeOwnPrompt: request.resumeOwnPrompt === true,
+      onDraftWritten: request.onDraftWritten,
       resolve,
       timer: setTimeout(() => finishIntent(intent, { ok: false, error: 'composer-missing' }), timeoutMs),
     }
@@ -64,7 +66,8 @@ export function consumeSessionPrefill(intent, slot) {
     finishIntent(intent, { ok: true, via: 'input-actions' })
     return 'consumed'
   }
-  if (slot?.protected || String(slot?.draft ?? '') !== '') {
+  const resumesOwnPrompt = intent.resumeOwnPrompt && String(slot?.draft ?? '') === intent.prompt
+  if (slot?.protected || (String(slot?.draft ?? '') !== '' && !resumesOwnPrompt)) {
     finishIntent(intent, { ok: false, error: 'draft-protected' })
     return 'protected'
   }
@@ -90,10 +93,18 @@ export function consumeSessionPrefill(intent, slot) {
     return error
   }
   try {
-    if (intent.requireReadback) { intent.written = true; intent.rollback = attachment?.rollback }
+    if (resumesOwnPrompt) {
+      finishIntent(intent, { ok: true, via: 'input-actions' })
+      return 'consumed'
+    }
+    if (intent.requireReadback) intent.rollback = attachment?.rollback
     const result = slot.inputActions.setDraft(intent.prompt)
     if (result && typeof result.then === 'function') throw new Error('async setDraft unsupported')
-    if (intent.requireReadback) return 'waiting'
+    if (intent.requireReadback) {
+      intent.written = true
+      intent.onDraftWritten?.()
+      return 'waiting'
+    }
     finishIntent(intent, {
       ok: true,
       via: 'input-actions',

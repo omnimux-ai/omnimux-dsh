@@ -197,3 +197,23 @@ it('readback requires the exact prompt from the intended session and protects na
   assert.deepEqual(await blocked, { ok: false, error: 'draft-protected' })
   assert.equal(added, false)
 })
+
+it('recovers own projected prompt after timeout without overwriting it or duplicating attachments', async () => {
+  let draft = '', attached = false, ownWrite = false, writes = 0
+  const attach = () => { assert.equal(attached, false); attached = true; return { ok: true, rollback: () => { attached = false } } }
+  const first = queueSessionPrefill({ targetSessionId: 's', prompt: 'own prompt', requireReadback: true, timeoutMs: 5, attach,
+    onDraftWritten: () => { ownWrite = true } })
+  consumeSessionPrefill(getPendingSessionPrefill(), { sessionId: 's', draft, inputActions: { setDraft(text) { draft = text; writes++ } } })
+  assert.deepEqual(await first, { ok: false, error: 'composer-missing' })
+  assert.equal(attached, false); assert.equal(draft, 'own prompt'); assert.equal(ownWrite, true)
+  const retry = queueSessionPrefill({ targetSessionId: 's', prompt: 'own prompt', requireReadback: true, resumeOwnPrompt: ownWrite, attach })
+  consumeSessionPrefill(getPendingSessionPrefill(), { sessionId: 's', draft, inputActions: { setDraft() { throw new Error('must preserve projected draft') } } })
+  assert.equal((await retry).ok, true); assert.equal(attached, true); assert.equal(writes, 1)
+})
+it('a recovery attempt preserves edits made after its original prompt write', async () => {
+  let attached = false
+  const retry = queueSessionPrefill({ targetSessionId: 's', prompt: 'own prompt', requireReadback: true, resumeOwnPrompt: true,
+    attach: () => { attached = true; return { ok: true } } })
+  consumeSessionPrefill(getPendingSessionPrefill(), { sessionId: 's', draft: 'own prompt plus my edits', inputActions: { setDraft() { throw new Error('must not overwrite') } } })
+  assert.deepEqual(await retry, { ok: false, error: 'draft-protected' }); assert.equal(attached, false)
+})

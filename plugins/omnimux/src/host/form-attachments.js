@@ -1,6 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto'
-import { mkdir, writeFile, readFile, rename, rm, realpath, stat } from 'node:fs/promises'
-import { join, basename } from 'node:path'
+import { mkdir, writeFile, readFile, rename, rm, realpath, stat, lstat } from 'node:fs/promises'
+import { join, basename, resolve, sep } from 'node:path'
 import { probeTextImage } from '../text/image.js'
 import { probeTextVideo } from '../text/video.js'
 import { materializePaths, resolveSessionCwd } from './composer-attachments.js'
@@ -90,21 +90,59 @@ export function createFormAttachmentService({ root, getWorkspaceRegistry, getSes
       if (receipt && receipt.fingerprint !== fingerprint) throw new Error('request-conflict')
       receipt ||= { fingerprint, results: [] }
       for (const assetId of assetIds) {
-        const old = receipt.results.find(row => row.assetId === assetId)
-        if (old) { await stat(join(cwd, old.relativePath)); continue }
         const { record, path } = await resolveFile(workspaceId, assetId)
+        const old = receipt.results.find(row => row.assetId === assetId)
+        if (old && await validMaterialized(cwd, old, record)) continue
+        // Preserve changed/missing/symlink entries; rebuild only to a fresh task-owned name.
+        await ensureImportedDirectory(cwd)
         // Existing composer materialization owns disk capacity, copies and path safety.
-        const named = join(root, assetId, `source-${requestId}-${record.name}`)
+        const named = join(root, assetId, `source-${requestId}-${randomUUID()}-${record.name}`)
         await writeFile(named, await readFile(path), { mode: 0o600 })
         let item
         try { item = (await materializePaths({ sessionId, paths: [named], filesOnly: true, sessionQuery: getSessionQuery() })).results[0] }
         finally { await rm(named, { force: true }) }
         if (!item?.ok) throw new Error(item?.error || 'materialize-failed')
-        receipt.results.push({ ...publicRecord(record), relativePath: item.relativePath, kind: item.kind })
+        const next = { ...publicRecord(record), relativePath: item.relativePath, kind: item.kind }
+        if (!await validMaterialized(cwd, next, record)) throw new Error('materialized-file-invalid')
+        receipt.results = receipt.results.filter(row => row.assetId !== assetId)
+        receipt.results.push(next)
         await writeFile(`${receiptPath}.tmp`, JSON.stringify(receipt), { mode: 0o600 })
         await rename(`${receiptPath}.tmp`, receiptPath)
       }
       return receipt.results
+    }
+  }
+
+  async function validMaterialized(cwd, row, record) {
+    if (typeof row.relativePath !== 'string') return false
+    const path = resolve(cwd, row.relativePath)
+    if (!path.startsWith(cwd + sep)) return false
+    try {
+      const info = await lstat(path)
+      if (!info.isFile() || info.isSymbolicLink() || info.size !== record.sizeBytes) return false
+      // Reject an intermediate directory symlink as well as a symlink leaf.
+      if (await realpath(path) !== path) return false
+      if (hash(await readFile(path)) !== record.digest) return false
+      const metadata = await probe(path, record.mimeType)
+      return row.mimeType === metadata.mimeType && row.sizeBytes === metadata.sizeBytes
+        && row.durationSeconds === metadata.durationSeconds
+    } catch (error) {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false
+      throw error
+    }
+  }
+  async function ensureImportedDirectory(cwd) {
+    let path = cwd
+    for (const part of ['assets', 'imported']) {
+      path = join(path, part)
+      try {
+        const info = await lstat(path)
+        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('import-directory-invalid')
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error
+        await mkdir(path, { mode: 0o700 })
+      }
+      if (await realpath(path) !== path) throw new Error('import-directory-invalid')
     }
   }
   return { importFile, resolveFiles, resolveFile, materialize }

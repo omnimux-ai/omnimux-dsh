@@ -1,13 +1,13 @@
 import { queueSessionPrefill } from './session-prefill.js'
 
 /** Hub-owned client adapter; injected official services are the only session authority. */
-export function createFormsBridge({ sessions, workspaces, store, request = jsonRequest, upload = uploadFile, window: win = globalThis.window, uuid = () => crypto.randomUUID() }) {
+export function createFormsBridge({ sessions, workspaces, store, request = jsonRequest, upload = uploadFile, window: win = globalThis.window, uuid = () => crypto.randomUUID(), prefill = queueSessionPrefill }) {
   const operations = new Map()
   let busy = false
   const storage = win?.sessionStorage
   const storageKey = requestId => `omnimux-form-handoff:${requestId}`
   function save(requestId, state) {
-    storage?.setItem(storageKey(requestId), JSON.stringify({ fingerprint: state.fingerprint, sessionId: state.sessionId, created: state.created }))
+    storage?.setItem(storageKey(requestId), JSON.stringify({ fingerprint: state.fingerprint, sessionId: state.sessionId, created: state.created, resumeOwnPrompt: state.resumeOwnPrompt === true }))
   }
   function getWorkspace() {
     const snapshot = sessions.list.getSnapshot()
@@ -57,7 +57,10 @@ export function createFormsBridge({ sessions, workspaces, store, request = jsonR
       sessions.open(state.sessionId)
       win?.__omnimuxWorkbench?.setConversationCollapsed?.(false)
       win?.__omnimuxWorkbench?.setFocus?.('split')
-      const result = await queueSessionPrefill({ targetSessionId: state.sessionId, prompt, requireReadback: true, attach() {
+      const result = await prefill({ targetSessionId: state.sessionId, prompt, requireReadback: true,
+        resumeOwnPrompt: state.resumeOwnPrompt === true,
+        onDraftWritten() { state.resumeOwnPrompt = true; save(requestId, state) },
+        attach() {
         // An existing native or hub draft is never supplemented by this operation.
         if (store.getSnapshot(state.sessionId).length > 0) return { ok: false, reason: 'draft-protected' }
         const added = []
