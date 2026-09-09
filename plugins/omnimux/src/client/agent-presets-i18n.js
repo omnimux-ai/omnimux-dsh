@@ -10,7 +10,7 @@
  * This module ensures:
  * - `standard` renders as "代码开发" / "CodeDev"
  * - `daily-work` renders as "日常工作" / "WorkAssistant"
- * - `cordis` renders as "组建团队" / "Team Builder"
+ * - `cordis` renders as "创造模式" / "Creator Mode"
  */
 
 export const AGENT_PRESETS_I18N = {
@@ -19,8 +19,8 @@ export const AGENT_PRESETS_I18N = {
     presetStandardDescription: '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
     presetDailyWorkName: '日常工作',
     presetDailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
-    presetCordisName: '组建团队',
-    presetCordisDescription: '组建与配置自定义 Agent 专家团队：具备标准模式的全部能力，并提供运行时检查、插件实验和团队预设创作指导。',
+    presetCordisName: '创造模式',
+    presetCordisDescription: '具备标准模式的全部能力，并提供运行时检查、插件实验与 Agent 预设创作指导。',
     dailyWorkName: '日常工作',
     dailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
   },
@@ -29,8 +29,8 @@ export const AGENT_PRESETS_I18N = {
     presetStandardDescription: 'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
     presetDailyWorkName: 'WorkAssistant',
     presetDailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
-    presetCordisName: 'Team Builder',
-    presetCordisDescription: 'Build and configure custom agent teams with full runtime inspection, plugin experimentation, and preset authoring guidance.',
+    presetCordisName: 'Creator Mode',
+    presetCordisDescription: 'Full coding agent with runtime inspection, plugin experimentation, and preset authoring guidance.',
     dailyWorkName: 'WorkAssistant',
     dailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
   },
