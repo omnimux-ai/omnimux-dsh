@@ -150,33 +150,6 @@ describe('LibraryStore copy-on-ingest', () => {
   })
 })
 
-describe('LibraryStore ownership and shared content', () => {
-  it('retains a managed file while another record references its bytes', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: 'first', files: [realFile] })
-    const path = asset.files[0].real_path
-    const ledgerPath = join(root, 'store', 'library.json')
-    const ledger = JSON.parse(readFileSync(ledgerPath, 'utf8'))
-    ledger.assets.push({ ...ledger.assets[0], id: 'ast_shared', name: 'second', handle: 'second' })
-    writeFileSync(ledgerPath, JSON.stringify(ledger))
-    const reopened = makeStore()
-    reopened.remove(asset.id)
-    assert.equal(readFileSync(path, 'utf8'), 'png')
-    reopened.remove('ast_shared')
-    assert.equal(existsSync(path), false)
-  })
-
-  it('retains externally changed managed bytes instead of unlinking them', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: 'changed', files: [realFile] })
-    const path = asset.files[0].real_path
-    writeFileSync(path, 'externally edited')
-    const result = store.remove(asset.id)
-    assert.equal(result.cleaned, 0)
-    assert.equal(readFileSync(path, 'utf8'), 'externally edited')
-  })
-})
-
 describe('LibraryStore mapping migrate', () => {
   it('turns each mapping into a custom path-ref asset then copies on list', async () => {
     const mappings = createMappingStore({

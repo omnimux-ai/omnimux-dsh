@@ -5,17 +5,12 @@
 
 /**
  * @param {string} path
- * @param {{ method?: string, body?: unknown, timeoutMs?: number }} [opts]
+ * @param {{ method?: string, body?: unknown }} [opts]
  * @returns {Promise<{ ok: boolean, status: number, body: any }>}
  */
-let activeEpoch = null
-
 export async function assetsRequest(path, opts = {}) {
-  const capturedEpoch = activeEpoch
-  const requestPath = activeEpoch != null && !path.includes('/storage') ? `${path}${path.includes('?') ? '&' : '?'}epoch=${activeEpoch}` : path
-  const response = await fetch(requestPath, {
+  const response = await fetch(path, {
     method: opts.method ?? 'GET',
-    ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}),
     headers: opts.body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
   })
@@ -25,12 +20,6 @@ export async function assetsRequest(path, opts = {}) {
   } catch {
     json = { error: `HTTP ${String(response.status)}` }
   }
-  if (Number.isSafeInteger(json.epoch)) {
-    if (activeEpoch != null && json.epoch < activeEpoch) return { ok: false, status: 409, body: { error: 'stale-root', message: 'Stale root response discarded' } }
-    if (activeEpoch != null && json.epoch !== activeEpoch && typeof window !== 'undefined') window.dispatchEvent(new Event('omnimux-assets-root-changed'))
-    activeEpoch = json.epoch
-  } else if (capturedEpoch !== activeEpoch && !path.includes('/storage')) return { ok: false, status: 409, body: { error: 'stale-root' } }
-  if (json.error === 'stale-root') activeEpoch = null
   return { ok: response.ok, status: response.status, body: json }
 }
 
@@ -64,7 +53,7 @@ export function updateAsset(id, patch) {
 }
 
 /**
- * Removes the record; the Host may recycle only verified, unreferenced managed files.
+ * Deletes the library record and recycles data/files/<id>/. User originals stay.
  * @param {string} id
  */
 export function deleteAsset(id) {
@@ -110,13 +99,10 @@ export function pickPath(kind) {
  * @param {string} fileId
  * @param {string} [subPath]
  */
-export function listAssetFiles(assetId, fileId = '', subPath = '', options = {}) {
-  const query = new URLSearchParams({ id: assetId, limit: String(options.limit ?? 100) })
-  if (fileId) query.set('file', fileId)
-  if (options.logical) query.set('logical', '1')
-  if (options.cursor) query.set('cursor', options.cursor)
+export function listAssetFiles(assetId, fileId, subPath = '') {
+  const query = new URLSearchParams({ id: assetId, file: fileId })
   if (subPath !== '') query.set('path', subPath)
-  return assetsRequest(`/omnimux/assets/library/files?${query}`, { timeoutMs: 15000 })
+  return assetsRequest(`/omnimux/assets/library/files?${query}`)
 }
 
 /**
@@ -129,7 +115,6 @@ export function previewUrl(assetId, fileId = '', subPath = '') {
   const query = new URLSearchParams({ id: assetId })
   if (fileId) query.set('file', fileId)
   if (subPath !== '') query.set('path', subPath)
-  if (activeEpoch != null) query.set('epoch', String(activeEpoch))
   return `/omnimux/assets/library/preview?${query}`
 }
 

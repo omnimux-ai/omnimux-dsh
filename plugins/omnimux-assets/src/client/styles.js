@@ -1,40 +1,6 @@
 export const STYLES_ID = 'omnimux-assets-styles'
 
 export const ASSETS_CSS = `
-.omnimux-assets-settings-tooltip {
-  position: fixed;
-  left: var(--assets-tooltip-left);
-  top: var(--assets-tooltip-top);
-  z-index: 100;
-  width: max-content;
-  max-width: min(50vw, calc(100vw - 24px));
-  padding: 3px 7px;
-  border-radius: 8px;
-  background: var(--dsw-alias-tooltip-bg);
-  color: var(--dsw-static-neutral-bluish-00);
-  font-size: 13px;
-  line-height: 20px;
-  white-space: pre-line;
-  overflow-wrap: break-word;
-  pointer-events: none;
-}
-.omnimux-assets-storage { display: flex; flex-direction: column; gap: 12px; color: var(--dsw-alias-label-primary); }
-.omnimux-assets-storage code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; font-size: 12px; }
-.omnimux-assets-storage-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.omnimux-assets-storage-list { max-height: 280px; overflow: auto; }
-.omnimux-assets-storage-entry { padding: 12px 0; border-bottom: 1px solid var(--dsw-alias-border-l2); }
-.omnimux-assets-storage p { margin: 0; line-height: 1.5; }
-.omnimux-assets-storage h3, .omnimux-assets-storage h4 { margin: 0; font-size: 14px; }
-.omnimux-assets-storage progress { width: 100%; accent-color: var(--dsw-alias-label-primary); }
-.omnimux-assets-storage-confirm { padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
-.omnimux-assets-storage-actions { align-items: center; }
-.omnimux-assets-storage-actions > * { min-width: 0; max-width: 100%; }
-.omnimux-assets-storage-entry p, .omnimux-assets-browse-notice { overflow-wrap: anywhere; }
-.omnimux-assets-browse-notice { margin: 0; font-size: 13px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
-.omnimux-assets-storage summary { cursor: pointer; }
-.omnimux-assets-storage summary:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
-@media (max-width: 480px) { .omnimux-assets-browse .omnimux-assets-grid { grid-template-columns: minmax(0, 1fr); } }
-
 .omnimux-assets-stage {
   position: relative;
   width: 100%;

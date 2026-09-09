@@ -77,7 +77,6 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
           aria-label={t('select.toggle')}
           aria-pressed={selected ? 'true' : 'false'}
           title=""
-          onKeyDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation()
             onToggleSelect(asset)
@@ -338,7 +337,7 @@ export function AssetGrid({
           <TableBody>
             {assets.map((asset) => {
               const selected = selectedIds?.has(asset.id)
-              const missing = (Number(asset.missing_file_count) > 0 || asset.unavailable_files?.length > 0) && !asset.files?.length
+              const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
               return (
                 <AssetListRow
                   key={asset.id}
@@ -362,7 +361,7 @@ export function AssetGrid({
   return (
     <div className="omnimux-assets-grid">
       {assets.map((asset) => {
-        const missing = (Number(asset.missing_file_count) > 0 || asset.unavailable_files?.length > 0) && !asset.files?.length
+        const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
         const selected = selectedIds?.has(asset.id)
         return (
           <AssetGridCard
