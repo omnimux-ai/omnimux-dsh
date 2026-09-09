@@ -224,3 +224,92 @@ test('Issue #763: reference_audio aliases match reference, references, input_aud
     assert.equal(l.slots[0].slot, slotName);
   }
 });
+
+test('text multimodal model derives strip preset with reference_images and reference_videos even when op is chat', () => {
+  const textMultimodalCatalog = {
+    models: [{
+      id: 'gemini-3.8-flash',
+      operations: [
+        { id: 'chat', listed: true, output: { type: 'text' }, inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field' }] },
+        {
+          id: 'vision_chat',
+          listed: true,
+          output: { type: 'text' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field' },
+            input('reference_images', 'image', 'reference', 0, 10),
+            input('reference_videos', 'video', 'reference', 0, 3),
+          ],
+        },
+      ],
+    }],
+  };
+  // 当当前操作为默认 chat 时
+  const chatLayout = deriveSlotLayout(textMultimodalCatalog, 'gemini-3.8-flash', 'chat', 'text');
+  assert.equal(chatLayout.preset, 'strip');
+  assert.equal(chatLayout.addButton, true);
+  assert.equal(chatLayout.slots.length, 2);
+  assert.equal(chatLayout.slots[0].slot, 'reference_images');
+  assert.equal(chatLayout.slots[0].type, 'image');
+  assert.equal(chatLayout.slots[0].max, 10);
+  assert.equal(chatLayout.slots[0].labelKey, 'panel.slot.reference_images');
+  assert.equal(chatLayout.slots[1].slot, 'reference_videos');
+  assert.equal(chatLayout.slots[1].type, 'video');
+  assert.equal(chatLayout.slots[1].max, 3);
+  assert.equal(chatLayout.slots[1].labelKey, 'panel.slot.reference_videos');
+
+  // 当当前操作为 vision_chat 时
+  const visionLayout = deriveSlotLayout(textMultimodalCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
+  assert.equal(visionLayout.preset, 'strip');
+  assert.equal(visionLayout.addButton, true);
+  assert.equal(visionLayout.slots.length, 2);
+  assert.equal(visionLayout.slots[0].slot, 'reference_images');
+  assert.equal(visionLayout.slots[1].slot, 'reference_videos');
+});
+
+test('pure text model derives none preset with empty slots', () => {
+  const pureTextCatalog = {
+    models: [{
+      id: 'deepseek-v4-pro',
+      operations: [
+        { id: 'chat', listed: true, output: { type: 'text' }, inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field' }] },
+      ],
+    }],
+  };
+  const l = deriveSlotLayout(pureTextCatalog, 'deepseek-v4-pro', 'chat', 'text');
+  assert.equal(l.preset, 'none');
+  assert.equal(l.slots.length, 0);
+  assert.equal(l.addButton, false);
+});
+
+test('reference_images and reference_videos aliases match expected variants', () => {
+  for (const slotName of ['reference_image', 'reference', 'references', 'input_images']) {
+    const customCatalog = {
+      models: [{
+        id: 'text-vision',
+        operations: [
+          { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: [input(slotName, 'image', 'reference', 0, 5)] },
+        ],
+      }],
+    };
+    const l = deriveSlotLayout(customCatalog, 'text-vision', 'vision_chat', 'text');
+    assert.equal(l.preset, 'strip');
+    assert.equal(l.slots.length, 1);
+    assert.equal(l.slots[0].slot, slotName);
+  }
+
+  for (const slotName of ['reference_video', 'reference', 'references', 'input_videos']) {
+    const customCatalog = {
+      models: [{
+        id: 'text-video',
+        operations: [
+          { id: 'vision_chat', listed: true, output: { type: 'text' }, inputs: [input(slotName, 'video', 'reference', 0, 3)] },
+        ],
+      }],
+    };
+    const l = deriveSlotLayout(customCatalog, 'text-video', 'vision_chat', 'text');
+    assert.equal(l.preset, 'strip');
+    assert.equal(l.slots.length, 1);
+    assert.equal(l.slots[0].slot, slotName);
+  }
+});

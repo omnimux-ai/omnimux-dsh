@@ -1151,6 +1151,12 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   min-height: 44px;
 }
 
+.wf-config-panel__prompt-header--empty-slots {
+  min-height: 24px;
+  margin-bottom: 4px;
+  justify-content: flex-end;
+}
+
 /* ==================== Feed-Slot 卡槽（T03 SlotWells / Issue #737 对齐图 2） ==================== */
 
 .wf-slot-wells {
