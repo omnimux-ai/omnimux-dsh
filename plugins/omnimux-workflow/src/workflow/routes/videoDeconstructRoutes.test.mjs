@@ -32,6 +32,18 @@ function harness(t, opts = {}) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const store = createWorkspaceStore({ workspacesDir: join(root, 'workspaces') });
   const workspace = store.create('视频拆解测试工作区');
+  store.save(workspace.id, {
+    expectedVersion: workspace.version,
+    nodes: [
+      {
+        id: 'node_video_1',
+        type: 'material',
+        position: { x: 50, y: 50 },
+        data: { materialType: 'video', label: '测试视频节点' },
+      },
+    ],
+    edges: [],
+  });
 
   const toolCalls = [];
   const videoAnalyzeTool = {
@@ -109,6 +121,20 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格', async (t
   assert.equal(savedDoc.rows.length, 2);
   assert.equal(h.toolCalls.length, 1);
   assert.equal(h.toolCalls[0].video, h.dummyVideo);
+
+  // 验证返回体携带 workspace 快照，并且服务端已经原子写入 canvas.json
+  assert.ok(res.body.workspace);
+  const latestSnapshot = h.store.get(h.workspace.id);
+  assert.equal(latestSnapshot.version, res.body.workspace.version);
+  const createdTable = latestSnapshot.nodes.find((n) => n.id === res.body.tableId);
+  assert.ok(createdTable, '新建的表格节点应写入 canvas.json');
+  assert.equal(createdTable.type, 'table');
+  assert.equal(createdTable.data.tableId, res.body.tableId);
+  assert.equal(createdTable.data.title, '我的爆款视频拆解');
+  const edge = latestSnapshot.edges.find(
+    (e) => e.source === 'node_video_1' && e.target === res.body.tableId,
+  );
+  assert.ok(edge, '视频节点到表格节点的连线应写入 canvas.json');
 });
 
 test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆解保底模板', async (t) => {
@@ -248,4 +274,67 @@ test('videoDeconstruct: 传入工作流媒体相对路径 /omnimux-workflow/medi
   assert.equal(res3.body.ok, true);
   assert.equal(h.toolCalls.length, 3);
   assert.equal(h.toolCalls[2].video, 'https://cdn.example.com/videos/remote_video.mp4?auth=token');
+});
+
+test('videoDeconstruct: 服务端原子持久化与单一下游约束（多次拆解就地更新，绝不重复生成第二个节点）', async (t) => {
+  const h = harness(t);
+
+  // 预置工作区，包含一个视频节点
+  const curWs = h.store.get(h.workspace.id);
+  h.store.save(h.workspace.id, {
+    expectedVersion: curWs.version,
+    nodes: [
+      {
+        id: 'node_video_src',
+        type: 'material',
+        position: { x: 100, y: 100 },
+        data: { materialType: 'video', label: '源视频', nodeWidth: 400 },
+      },
+    ],
+    edges: [],
+  });
+
+  // 第一次拆解：应新建下游 table 节点，id 对齐 tableId，横向偏移 400 + 120 = 520
+  const res1 = await h.call({
+    nodeId: 'node_video_src',
+    videoPath: h.dummyVideo,
+    title: '拆解第1版',
+  });
+
+  assert.equal(res1.status, 200);
+  assert.equal(res1.body.ok, true);
+  const firstTableId = res1.body.tableId;
+
+  // 检查磁盘 canvas.json
+  const snap1 = h.store.get(h.workspace.id);
+  assert.equal(snap1.nodes.length, 2, '应包含源视频节点和新建表格节点');
+  const tableNode1 = snap1.nodes.find((n) => n.id === firstTableId);
+  assert.ok(tableNode1);
+  assert.equal(tableNode1.type, 'table');
+  assert.equal(tableNode1.position.x, 100 + 400 + 120);
+  assert.equal(tableNode1.position.y, 100);
+  assert.equal(tableNode1.data.title, '拆解第1版');
+  assert.equal(snap1.edges.length, 1);
+  assert.equal(snap1.edges[0].source, 'node_video_src');
+  assert.equal(snap1.edges[0].target, firstTableId);
+
+  // 第二次对同一个源视频节点调用拆解（模拟用户再次点击拆解）
+  const res2 = await h.call({
+    nodeId: 'node_video_src',
+    videoPath: h.dummyVideo,
+    title: '拆解第2版',
+  });
+
+  assert.equal(res2.status, 200);
+  assert.equal(res2.body.ok, true);
+
+  // 严格断言单一下游约束：节点总数仍然是 2，绝不能产生第三个节点！
+  const snap2 = h.store.get(h.workspace.id);
+  assert.equal(snap2.nodes.length, 2, '单一下游约束：不可产生多余节点，节点总数仍为 2');
+  const updatedTable = snap2.nodes.find((n) => n.id === firstTableId);
+  assert.ok(updatedTable, '原有下游表格节点应被就地保留并更新');
+  assert.equal(updatedTable.data.title, '拆解第2版');
+  assert.equal(updatedTable.data.tableId, res2.body.tableId);
+  assert.equal(snap2.edges.length, 1, '连线总数仍为 1，不产生多余连线');
+  assert.equal(snap2.edges[0].target, firstTableId);
 });

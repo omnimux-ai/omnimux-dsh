@@ -51,6 +51,14 @@ export type AutosaveStatus =
   | 'error'
   | 'conflict';
 
+export const WORKSPACE_SAVED_EVENT = 'canvas:workspace-saved';
+
+export function notifyWorkspaceSaved(workspace: CanvasWorkspaceSnapshot): void {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent(WORKSPACE_SAVED_EVENT, { detail: workspace }));
+  }
+}
+
 export interface PersistenceController {
   status: AutosaveStatus;
   /** Whether the local graph differs from the last saved snapshot. */
@@ -158,6 +166,28 @@ export function useWorkspacePersistence(
     setIsDirty(false);
     setStatus('idle');
   }, [workspace?.id, workspace?.version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 监听外部（如服务端原子写入或拆解完成）的已保存快照广播，对齐本地版本并触发 onSaved
+  useEffect(() => {
+    const handleRemoteSaved = (e: Event) => {
+      const snap = (e as CustomEvent<CanvasWorkspaceSnapshot>).detail;
+      if (!snap || snap.id !== workspaceRef.current?.id) return;
+      serverVersionRef.current = snap.version;
+      lastSavedSigRef.current = graphSig(snap.nodes, snap.edges);
+      currentSigRef.current = lastSavedSigRef.current;
+      lastSavedNodeCountRef.current = snap.nodes.length;
+      conflictRef.current = false;
+      setIsDirty(false);
+      setStatus('idle');
+      onSavedRef.current?.(snap);
+    };
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener(WORKSPACE_SAVED_EVENT, handleRemoteSaved);
+      return () => {
+        window.removeEventListener(WORKSPACE_SAVED_EVENT, handleRemoteSaved);
+      };
+    }
+  }, []);
 
   const clearSavedBadgeTimer = () => {
     if (savedBadgeTimerRef.current) {

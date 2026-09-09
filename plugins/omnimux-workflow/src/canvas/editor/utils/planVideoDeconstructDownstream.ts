@@ -73,7 +73,7 @@ export interface VideoDeconstructDownstreamPlan {
   nodePatches: VideoDeconstructNodePatch[];
 }
 
-function isVideoDeconstructTableNode(
+export function isVideoDeconstructDownstreamNode(
   node: VideoDeconstructGraphNode,
   videoNodeId: string,
 ): boolean {
@@ -83,6 +83,9 @@ function isVideoDeconstructTableNode(
   if (node.type !== 'table') return false;
   return data.sourceVideoNodeId === videoNodeId;
 }
+
+// 别名保持向后兼容
+export const isVideoDeconstructTableNode = isVideoDeconstructDownstreamNode;
 
 function edgeBetween(source: string, target: string): VideoDeconstructGraphEdge {
   return {
@@ -120,33 +123,32 @@ export function planVideoDeconstructDownstream(
     return null;
   }
 
-  // 复用候选：显式标记来源，或当前已从该视频节点连出的 video_deconstruct 表格节点。
-  const connectedTargetIds = new Set(
+  // 强化已有节点判定（单一下游约束）：
+  // 优先找显式标记 origin 的，次选当前已连线的任意 table 节点
+  const connectedTableNodeIds = new Set(
     input.currentEdges
       .filter((edge) => edge.source === input.videoNodeId)
       .map((edge) => edge.target),
   );
-  const existing = input.currentNodes.find(
-    (node) =>
-      isVideoDeconstructTableNode(node, input.videoNodeId) ||
-      (connectedTargetIds.has(node.id) &&
-        node.data?.origin === VIDEO_DECONSTRUCT_ORIGIN &&
-        node.type === 'table'),
-  );
+  const existingNode = input.currentNodes.find((node) => {
+    if (node.type !== 'table') return false;
+    return isVideoDeconstructDownstreamNode(node, input.videoNodeId)
+      || connectedTableNodeIds.has(node.id);
+  });
 
   const nodeLabel = tableResult.title || input.label || '视频拆解表';
 
-  if (existing) {
+  if (existingNode) {
     return {
       mode: 'update',
-      targetNodeId: existing.id,
+      targetNodeId: existingNode.id,
       addNodes: [],
-      addEdges: hasDrawableEdge(input.currentEdges, input.videoNodeId, existing.id)
+      addEdges: hasDrawableEdge(input.currentEdges, input.videoNodeId, existingNode.id)
         ? []
-        : [edgeBetween(input.videoNodeId, existing.id)],
+        : [edgeBetween(input.videoNodeId, existingNode.id)],
       nodePatches: [
         {
-          nodeId: existing.id,
+          nodeId: existingNode.id,
           data: {
             label: nodeLabel,
             title: nodeLabel,
@@ -166,7 +168,7 @@ export function planVideoDeconstructDownstream(
 
   const newNodeId =
     input.createNodeId?.() ??
-    `node_tbl_deconstruct_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    input.tableResult.tableId;
   const width =
     Number.isFinite(input.videoNodeWidth) && input.videoNodeWidth > 0
       ? input.videoNodeWidth
