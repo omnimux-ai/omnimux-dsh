@@ -28,6 +28,98 @@ export const EXIT_FAIL = 1;
 export const EXIT_USAGE = 2;
 
 /**
+ * Scan model parameters to forbid hardcoded physical pixel dimensions (No-Concrete-Pixels Lint).
+ * @param {object} index
+ * @returns {object[]}
+ */
+export function verifyNoConcretePixels(index) {
+  const issues = [];
+  const pixelRegex = /^\d{3,5}x\d{3,5}$/i;
+  const models = index?.all ? index.all() : (index?.byId ? Array.from(index.byId.values()) : []);
+  for (const model of models) {
+    if (!model.parameters || typeof model.parameters !== 'object') continue;
+    for (const [paramKey, paramDef] of Object.entries(model.parameters)) {
+      if (!paramDef || typeof paramDef !== 'object') continue;
+      if (Array.isArray(paramDef.options)) {
+        paramDef.options.forEach((opt, idx) => {
+          const val = opt && typeof opt === 'object' && 'value' in opt ? opt.value : opt;
+          if (typeof val === 'string' && pixelRegex.test(val.trim())) {
+            issues.push({
+              level: 'error',
+              code: 'parameter_concrete_pixels_forbidden',
+              modelId: model.id,
+              path: `parameters.${paramKey}.options[${idx}].value`,
+              file: model.sourceFile,
+              message: `Physical pixel dimension "${val}" is forbidden in parameters.${paramKey}.options.value; use semantic tiers (e.g. 1K, 2K, 4K) instead`,
+            });
+          }
+        });
+      }
+      if (typeof paramDef.defaultValue === 'string' && pixelRegex.test(paramDef.defaultValue.trim())) {
+        issues.push({
+          level: 'error',
+          code: 'parameter_concrete_pixels_forbidden',
+          modelId: model.id,
+          path: `parameters.${paramKey}.defaultValue`,
+          file: model.sourceFile,
+          message: `Physical pixel dimension "${paramDef.defaultValue}" is forbidden in parameters.${paramKey}.defaultValue; use semantic tiers (e.g. 1K, 2K, 4K) instead`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+/**
+ * Verify parameter dispatch closure for all live models against profile logicalFields (Parameter-Dispatch-Closure Lint).
+ * @param {object} index
+ * @param {object} profilesObj
+ * @returns {object[]}
+ */
+export function verifyParameterDispatchClosure(index, profilesObj) {
+  const issues = [];
+  const profilesMap = new Map();
+  const profilesList = Array.isArray(profilesObj?.profiles)
+    ? profilesObj.profiles
+    : Array.isArray(profilesObj)
+      ? profilesObj
+      : [];
+  for (const p of profilesList) {
+    if (p?.id) profilesMap.set(p.id, p);
+  }
+
+  const models = index?.all ? index.all() : (index?.byId ? Array.from(index.byId.values()) : []);
+  for (const model of models) {
+    const isModelLive = model.execution?.status === 'live';
+    const liveOp = (model.operations ?? []).find((op) => op.execution?.status === 'live');
+    if (!isModelLive && !liveOp) continue;
+
+    const profileId = model.execution?.profileId || liveOp?.execution?.profileId;
+    if (!profileId) continue;
+
+    const profile = profilesMap.get(profileId);
+    if (!profile) continue;
+
+    const logicalFields = new Set(profile.logicalFields ?? []);
+    if (!model.parameters || typeof model.parameters !== 'object') continue;
+
+    for (const paramKey of Object.keys(model.parameters)) {
+      if (!logicalFields.has(paramKey)) {
+        issues.push({
+          level: 'error',
+          code: 'parameter_dispatch_closure_missing',
+          modelId: model.id,
+          path: `parameters.${paramKey}`,
+          file: model.sourceFile,
+          message: `Parameter "${paramKey}" declared by live model "${model.id}" is not registered in profile "${profileId}" logicalFields`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+/**
  * @param {string[]} argv
  * @returns {{
  *   help?: boolean,
@@ -173,12 +265,42 @@ export async function runVerify(opts = {}, deps = {}) {
     strict: Boolean(opts.strict) || opts.mode === 'strict',
   });
   const autoServing = (deps.verifyAutoServing ?? verifyAutoServing)({ specsDir: opts.specsDir });
+
+  let extraGateIssues = [];
+  try {
+    const index = mod.getContractIndex ? mod.getContractIndex(opts.specsDir) : null;
+    const profiles = mod.loadAdapterProfiles ? mod.loadAdapterProfiles() : null;
+    if (index) {
+      extraGateIssues.push(...verifyNoConcretePixels(index));
+      if (profiles) {
+        extraGateIssues.push(...verifyParameterDispatchClosure(index, profiles));
+      }
+    }
+  } catch (_e) {
+    // contractReport already catches core errors
+  }
+
+  const hasGateError = extraGateIssues.some((i) => i.level === 'error');
+  const mergedIssues = [...(contractReport.issues ?? []), ...autoServing.issues, ...extraGateIssues];
+  const seenKeys = new Set();
+  const dedupedIssues = [];
+  for (const iss of mergedIssues) {
+    const k = `${iss.code}|${iss.modelId ?? ''}|${iss.path ?? ''}|${iss.message}`;
+    if (!seenKeys.has(k)) {
+      seenKeys.add(k);
+      dedupedIssues.push(iss);
+    }
+  }
+
+  const isOverallOk = contractReport.ok && autoServing.ok && !hasGateError;
+  const resolvedExitCode = !isOverallOk ? EXIT_FAIL : (contractReport.exitCode ?? EXIT_OK);
+
   const report = {
     ...contractReport,
-    ok: contractReport.ok && autoServing.ok,
-    exitCode: !autoServing.ok ? EXIT_FAIL : contractReport.exitCode ?? (contractReport.ok ? EXIT_OK : EXIT_FAIL),
+    ok: isOverallOk,
+    exitCode: resolvedExitCode,
     autoServing,
-    issues: [...(contractReport.issues ?? []), ...autoServing.issues],
+    issues: dedupedIssues,
   };
 
   const listedOperations = report.listedOperations ?? report.coverage?.listedOperations ?? [];

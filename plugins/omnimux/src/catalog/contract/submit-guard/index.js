@@ -19,6 +19,7 @@ export {
   DEFAULT_PROFILE_PAYLOADS,
   resolveProfilePayloadContract,
   mapValidatedPlanToVendor,
+  mapOpenAiImageSize,
   assertVendorBodyAllowed,
 } from './map.js'
 export { validateVendorResult } from './output.js'

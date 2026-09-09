@@ -276,10 +276,14 @@ export function guardSubmit(request, opts = {}) {
     operation: opAdmit.operation,
     profile: opAdmit.profile,
     modelId: modelAdmit.modelId,
+    model: modelAdmit.model,
+    family: modelAdmit.model?.family,
     prompt: normalized.prompt,
     bindings: slotResult.bindings,
     bySlot: slotResult.bySlot,
     extras: parameterResult.values,
+    userSpecifiedQuality: (request?.quality !== undefined && request?.quality !== null && request?.quality !== '')
+      || (normalized.extras?.quality !== undefined && Object.prototype.hasOwnProperty.call(request, 'quality')),
   })
   if (!mapped.ok) {
     return reject({
