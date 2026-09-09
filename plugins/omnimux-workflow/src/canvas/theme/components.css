@@ -6825,23 +6825,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0;
-}
-
-.wf-cfg-popover__section + .wf-cfg-popover__section,
-.wf-video-param-popover__section + .wf-cfg-popover__section,
-.wf-video-param-popover__section {
-  border-top: 1px solid var(--dsw-alias-border-l2);
+  padding: 10px 0;
+  border-top: none;
 }
 
 .wf-cfg-popover__section:first-child,
 .wf-video-param-popover__section:first-child {
-  padding-top: 4px;
+  padding-top: 0;
 }
 
 .wf-cfg-popover__section:last-child,
 .wf-video-param-popover__section:last-child {
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 
 .wf-cfg-popover__section-title,
