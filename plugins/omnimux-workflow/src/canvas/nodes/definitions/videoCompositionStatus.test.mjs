@@ -25,7 +25,7 @@ const ALL_STATUSES = ['idle', 'editing', 'rendering', 'completed', 'error'];
 test('mapVideoCompositionToBadge：五种状态全矩阵', () => {
   assert.equal(mapVideoCompositionToBadge('completed'), 'completed');
   assert.equal(mapVideoCompositionToBadge('rendering'), 'generating');
-  assert.equal(mapVideoCompositionToBadge('editing'), 'generating');
+  assert.equal(mapVideoCompositionToBadge('editing'), undefined);
   assert.equal(mapVideoCompositionToBadge('error'), 'failed');
   assert.equal(mapVideoCompositionToBadge('idle'), undefined);
 });
@@ -35,7 +35,7 @@ test('mapVideoCompositionToBadge：五种状态全矩阵', () => {
 test('mapVideoCompositionToGeneration：五种状态全矩阵', () => {
   assert.equal(mapVideoCompositionToGeneration('completed'), 'completed');
   assert.equal(mapVideoCompositionToGeneration('rendering'), 'generating');
-  assert.equal(mapVideoCompositionToGeneration('editing'), 'generating');
+  assert.equal(mapVideoCompositionToGeneration('editing'), null);
   assert.equal(mapVideoCompositionToGeneration('error'), 'failed');
   assert.equal(mapVideoCompositionToGeneration('idle'), null);
 });
@@ -121,13 +121,13 @@ test('projectFileName：截断 48 字符与空兜底', () => {
 // ==================== 状态流转与产物联动契约 ====================
 
 test('状态流转：save 事件触发后状态从 rendering/editing 转换为 completed，视图仍保持 launcher', () => {
-  // 模拟从 editing 阶段开始
+  // 模拟从 editing 阶段开始：编辑态下为静态交互，不展示运行中徽标（undefined），视图保持 launcher
   const editingStatus = 'editing';
   const hasOutputBefore = false;
   assert.equal(mapVideoCompositionToView(editingStatus, hasOutputBefore), 'launcher');
-  assert.equal(mapVideoCompositionToBadge(editingStatus), 'generating');
+  assert.equal(mapVideoCompositionToBadge(editingStatus), undefined);
 
-  // 模拟导出进行中 rendering 阶段
+  // 模拟导出进行中 rendering 阶段：真正后台渲染时才展示 generating 徽标，视图切至 rendering
   const renderingStatus = 'rendering';
   assert.equal(mapVideoCompositionToView(renderingStatus, hasOutputBefore), 'rendering');
   assert.equal(mapVideoCompositionToBadge(renderingStatus), 'generating');

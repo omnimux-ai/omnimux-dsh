@@ -23,11 +23,11 @@ export type VideoCompositionView = 'rendering' | 'error' | 'launcher';
 /**
  * 节点状态 → StatusBadge 语义（节点外置标题栏尾缀徽标）。
  *
- * 矩阵（与旧内联三元等值）：
+ * 矩阵：
  * - completed      → completed（实心绿点）
- * - rendering/editing → generating（脉冲转点：编辑器打开或后台渲染均视为"进行中"）
+ * - rendering      → generating（脉冲转点：仅在真正后台合成渲染中才视为"运行中"并展示旋转徽标）
+ * - editing / idle → undefined（未运行 / 编辑时间轴等静态交互态，不展示运行中徽标）
  * - error          → failed（红点）
- * - idle           → undefined（不渲染徽标）
  */
 export function mapVideoCompositionToBadge(
   status: VideoCompositionStatus,
@@ -36,20 +36,20 @@ export function mapVideoCompositionToBadge(
     case 'completed':
       return 'completed';
     case 'rendering':
-    case 'editing':
       return 'generating';
-    case 'error':
-      return 'failed';
+    case 'editing':
     case 'idle':
       return undefined;
+    case 'error':
+      return 'failed';
   }
 }
 
 /**
  * 节点状态 → GenerationStateContainer 状态机输入。
  *
- * - completed → 'completed'（GSC 淡入产物）；rendering/editing → 'generating'；
- * - error → 'failed'；idle → null（不进 GSC，走 launcher 空态）。
+ * - completed → 'completed'（GSC 淡入产物）；rendering → 'generating'；
+ * - error → 'failed'；idle / editing → null（未运行或编辑态不进 GSC，走 launcher 空态）。
  */
 export function mapVideoCompositionToGeneration(
   status: VideoCompositionStatus,
@@ -58,12 +58,12 @@ export function mapVideoCompositionToGeneration(
     case 'completed':
       return 'completed';
     case 'rendering':
-    case 'editing':
       return 'generating';
-    case 'error':
-      return 'failed';
+    case 'editing':
     case 'idle':
       return null;
+    case 'error':
+      return 'failed';
   }
 }
 
