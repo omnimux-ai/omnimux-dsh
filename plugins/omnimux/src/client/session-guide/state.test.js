@@ -9,7 +9,7 @@ const other = { id: 'rewrite', prompt: 'Rewrite for my product.' }
 function selected() { return selectStarter(emptyGuideState(), '', card) }
 
 describe('session starters', () => {
-  it('matches all ten reference actions and their exact prompts', () => {
+  it('matches all ten reference actions with localized prompts', () => {
     assert.equal(STARTERS.length, 10)
     assert.equal(new Set(STARTERS.map(card => card.id)).size, 10)
     assert.equal(STARTER_GROUPS.length, 4)
@@ -19,9 +19,13 @@ describe('session starters', () => {
     assert.deepEqual(STARTER_GROUPS.map(group => STARTERS.filter(item => item.group === group).length), [3, 2, 3, 2])
     for (const [index, item] of STARTERS.entries()) {
       assert.ok(STARTER_GROUPS.includes(item.group))
+      const key = `guide.${item.id}.prompt`
+      assert.equal(guideEn[key], reference[index].state.fields.find(field => field.tag === 'TEXTAREA').value)
+      assert.match(guideZh[key], /[\u4e00-\u9fff]/)
+      assert.equal((guideZh[key].match(/\[/g) || []).length, (guideEn[key].match(/\[/g) || []).length)
       for (const locale of [guideZh, guideEn]) {
         assert.ok(locale[`guide.${item.id}.title`])
-        assert.equal(locale[`guide.${item.id}.prompt`], reference[index].state.fields.find(field => field.tag === 'TEXTAREA').value)
+        assert.ok(locale[`guide.${item.id}.prompt`])
         assert.ok(!locale[`guide.${item.id}.prompt`].startsWith('/'))
       }
     }
@@ -34,6 +38,16 @@ describe('session starters', () => {
     assert.equal(selectStarter(first.state, first.draft, other).draft, other.prompt)
     assert.equal(selectStarter(first.state, first.draft + ' edit', other).draft, other.prompt)
     assert.equal(selectStarter(first.state, first.draft + ' edit', card).draft, first.draft + ' edit')
+  })
+  it('applies the current language when reselecting a starter without touching edits before selection', () => {
+    const id = 'recreate-viral-ads'
+    const english = { id, prompt: guideEn[`guide.${id}.prompt`] }
+    const chinese = { id, prompt: guideZh[`guide.${id}.prompt`] }
+    const first = selectStarter(emptyGuideState(), '', english)
+    assert.equal(selectStarter(first.state, first.draft + ' user edit', english).draft, first.draft + ' user edit')
+    const next = selectStarter(first.state, first.draft, chinese)
+    assert.equal(next.draft, chinese.prompt)
+    assert.equal(selectStarter(next.state, next.draft, english).draft, english.prompt)
   })
   it('uses official lifecycle, not an empty input, to decide visibility', () => {
     assert.equal(isBlankConversation({ blank: true, running: false }, false), true)
