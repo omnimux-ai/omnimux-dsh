@@ -1718,11 +1718,11 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   display: none;
 }
 
-/* 方圆角发送按钮：约 32px × 32px，圆角 8px，内居中纯白粗向上箭头 ↑ */
+/* 圆形发送按钮：32px × 32px 正圆形规格，圆角 999px，内居中纯白粗向上箭头 ↑ */
 .wf-generate-btn__send {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6607,7 +6607,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 /* ============ 全模态参数配置面板（cfg 底座；视频参数配置面板 (Video Param Popover / TriggerBar) 双选择器别名） ============ */
 
-/* ---- 摘要触发条 (TriggerBar)：32px / 8px 铁律，废除 28px / 999px / 260px ---- */
+/* ---- 摘要触发条 (TriggerBar)：32px 高度 / 999px 胶囊圆角规格（对齐底栏胶囊圆角） ---- */
 .wf-cfg-summary-bar,
 .wf-video-trigger-bar {
   display: inline-flex;
@@ -6618,7 +6618,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   max-width: 100%;
   padding: 0 8px 0 10px;
   border: 1px solid var(--dsw-alias-border-l2, var(--wb-border));
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
   font-size: 12px;

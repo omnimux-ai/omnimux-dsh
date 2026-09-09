@@ -195,17 +195,17 @@ test('components.css 覆盖全部视频参数类名规则', () => {
   }
 });
 
-test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32/8 铁律）', () => {
+test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32px 高度 / 胶囊圆角 999px）', () => {
   assert.match(videoCssBlock, /overflow-y:\s*auto/);
   assert.match(videoCssBlock, /scrollbar-width:\s*thin/);
-  // 触发条规格：32px 高 / 圆角 8px / padding 0 8px 0 10px / max-width 100%
+  // 触发条规格：32px 高 / 圆角 999px（胶囊圆角规格） / padding 0 8px 0 10px / max-width 100%
   assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?height:\s*32px/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?border-radius:\s*8px/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?border-radius:\s*999px/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?padding:\s*0\s+8px\s+0\s+10px/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?max-width:\s*100%/);
-  // 废除旧几何：触发条根规则内禁止 28px / 999px / 260px
+  // 废除旧几何：触发条根规则内禁止 28px / 260px
   const triggerRule = extractRuleBlock('.wf-video-trigger-bar');
-  assert.doesNotMatch(triggerRule, /28px|999px|260px/);
+  assert.doesNotMatch(triggerRule, /28px|260px/);
   // 触发条 open 态 brand 描边 + focus-visible 焦点环 + 按压 scale
   assert.match(videoCssBlock, /\.wf-video-trigger-bar--open \{[\s\S]*?brand-primary/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar:focus-visible \{[\s\S]*?state-business-tertiary/);
