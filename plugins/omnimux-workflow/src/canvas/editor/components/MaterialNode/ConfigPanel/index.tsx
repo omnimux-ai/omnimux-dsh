@@ -697,13 +697,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         </div>
       ) : null}
 
-      {upstreams.filter((item) => item.materialType === 'text' && item.hasMedia).map((item, index) => (
-        <div key={item.edgeId ?? item.nodeId} className="wf-config-panel__input-hint" data-testid="wf-current-text-source">
-          {t('panel.currentTextSource').replace('{source}', `${index + 1} · ${item.label}`).replace('{text}',
-            (item.textContent ?? '').length > 80 ? `${item.textContent!.slice(0, 80)}…` : (item.textContent ?? ''))}
-        </div>
-      ))}
-
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className="wf-config-panel__prompt-header">

@@ -109,7 +109,6 @@ const zh = {
   'panel.reason.input_unavailable': '“{source}”的素材不可用，请重试、替换或移除引用',
   'panel.reason.text_role_required': '当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源，并用音色、语速等参数调整表达',
   'panel.supplementOptional': '补充要求（可选）',
-  'panel.currentTextSource': '引用 {source}：{text}',
   'panel.reason.prompt_required': '请输入内容或连接上游文本',
   'panel.reason.catalog_unavailable': '正在获取模型，请稍候',
   'panel.reason.model_unselected': '请选择模型',
