@@ -30,6 +30,16 @@ importers:
         specifier: 2.9.0
         version: 2.9.0
 
+  packages/form-contract:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   plugins/omnimux:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
