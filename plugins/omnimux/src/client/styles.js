@@ -9,6 +9,25 @@ const LOGIN_GATE_JELLY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
 
 export const HUB_CSS = `
+/* Accounts and Inspiration already inset their entire content root by 20px. */
+:is(.omnimux-assets-stage, .omnimux-products-stage, .omnimux-publish-stage,
+    .omnimux-analytics-stage, .omnimux-workflow-library-page)
+  > [role="separator"][aria-orientation="horizontal"] {
+  width: auto;
+  margin-inline: 20px;
+}
+.omnimux-assets-stage > [role="separator"][aria-orientation="horizontal"] {
+  margin-inline: 24px;
+}
+.omnimux-analytics-stage > .omnimux-analytics-stage-filter {
+  margin-inline: 20px;
+  padding-inline: 0;
+}
+@media (max-width: 720px) {
+  .omnimux-workflow-library-page > [role="separator"][aria-orientation="horizontal"] {
+    margin-inline: 12px;
+  }
+}
 .omnimux-apps-stage {
   position: fixed;
   z-index: 200;

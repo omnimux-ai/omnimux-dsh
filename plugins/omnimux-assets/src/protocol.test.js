@@ -52,7 +52,7 @@ describe('virtual asset protocol (asset://)', () => {
 
     // Scoped asset
     const charPath = resolveAssetUri('asset://character/ch_wei_an/avatar.png', { homeDir: home })
-    assert.equal(charPath, join(home, 'omnimux', 'assets', 'ch_wei_an', 'avatar.png'))
+    assert.equal(charPath, join(home, 'omnimux', 'assets', 'character', 'ch_wei_an', 'avatar.png'))
 
     // Passthrough absolute path
     assert.equal(resolveAssetUri('/tmp/direct.png'), '/tmp/direct.png')

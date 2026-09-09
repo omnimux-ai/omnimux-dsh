@@ -1,93 +1,207 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge, Button } from 'dsh-ui-kit'
 import { activateRowKeydown } from './a11y.js'
 import { FileIcon, FolderIcon } from './icons.jsx'
-import { previewUrl } from './api.js'
+import { listAssetFiles, previewUrl } from './api.js'
 import { isDirectoryRef, detectMediaKind, resolveAssetMediaPreview } from './asset-routing.js'
-import { BROWSE_PAGE_SIZE, createDirectoryFeed } from './directory-feed.js'
 
-export { isDirectoryRef, BROWSE_PAGE_SIZE }
+export { isDirectoryRef }
 
-function initialLocation(asset) {
-  const files = asset.files || []
-  const logical = files.some((file) => file.logical_path) || Boolean(asset.unavailable_files?.length)
-  const file = !logical && files.length === 1 && isDirectoryRef(files[0]) ? files[0] : null
-  return { file, path: '', logical: !file }
+/**
+ * One hanging folder → card click opens that folder's first layer.
+ * Mixed files/folders stay on the top list.
+ * @param {any} asset
+ */
+function initialStack(asset) {
+  const files = Array.isArray(asset.files) ? asset.files : []
+  const folders = files.filter(isDirectoryRef)
+  if (folders.length === 1 && files.length === 1) return { file: folders[0], path: '' }
+  return null
 }
 
-/** Shared card/detail browser. Every displayed layer comes from the paginated route. */
+/**
+ * Main-pane hierarchical browse after clicking an asset card.
+ * Same card grid as the library; images/videos stream from a read-only preview route.
+ *
+ * @param {{
+ *   t: (key: string) => string,
+ *   asset: any,
+ *   onBack: () => void,
+ *   onPreview?: (item: any) => void,
+ * }} props
+ */
 export function AssetBrowse({ t, asset, onBack, onPreview }) {
-  const [location, setLocation] = useState(() => initialLocation(asset))
-  const feed = useMemo(() => createDirectoryFeed(), [asset.id])
-  const [listing, setListing] = useState(() => feed.getSnapshot())
-  useEffect(() => feed.subscribe(setListing), [feed])
-  useEffect(() => { setLocation(initialLocation(asset)) }, [asset.id])
+  const [stack, setStack] = useState(() => initialStack(asset))
+  const [entries, setEntries] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
   useEffect(() => {
-    void feed.navigate({ assetId: asset.id, fileId: location.file?.id, path: location.path, logical: location.logical })
-  }, [feed, asset.id, location])
+    setStack(initialStack(asset))
+    setEntries([])
+    setError('')
+  }, [asset.id])
+
   useEffect(() => {
-    const refresh = () => { void feed.refresh() }
-    window.addEventListener('omnimux-assets-root-changed', refresh)
-    return () => window.removeEventListener('omnimux-assets-root-changed', refresh)
-  }, [feed])
-  const crumbs = location.path.split('/').filter(Boolean)
-  const navigate = (path) => setLocation({ ...location, path })
-  const goCrumb = (index) => navigate(crumbs.slice(0, index + 1).join('/'))
-  const back = () => {
-    if (crumbs.length) navigate(crumbs.slice(0, -1).join('/'))
-    else if (location.file && (asset.files?.length !== 1 || asset.files?.some((file) => file.logical_path))) setLocation({ file: null, path: '', logical: true })
-    else onBack()
+    if (!stack) return undefined
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    void listAssetFiles(asset.id, stack.file.id, stack.path).then((result) => {
+      if (cancelled) return
+      if (!result.ok) {
+        setError(String(result.body?.message || result.body?.error || `HTTP ${String(result.status)}`))
+        setEntries([])
+        setLoading(false)
+        return
+      }
+      setEntries(Array.isArray(result.body?.entries) ? result.body.entries : [])
+      setLoading(false)
+    }).catch((caught) => {
+      if (cancelled) return
+      setError(caught instanceof Error ? caught.message : String(caught))
+      setEntries([])
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [asset.id, stack?.file?.id, stack?.path])
+
+  const crumbs = stack
+    ? [asset.name, stack.file.original_name || stack.file.real_path, ...String(stack.path || '').split('/').filter(Boolean)]
+    : [asset.name]
+
+  const goCrumb = (index) => {
+    if (index <= 0) {
+      onBack()
+      return
+    }
+    if (!stack) return
+    if (index === 1) {
+      setStack({ file: stack.file, path: '' })
+      return
+    }
+    const parts = String(stack.path || '').split('/').filter(Boolean)
+    setStack({ file: stack.file, path: parts.slice(0, index - 1).join('/') })
   }
-  return <div className="omnimux-assets-browse">
-    <div className="omnimux-assets-crumbs" aria-label={t('browse.location')}>
-      <Button variant="outline" size="xs" onClick={back}>{t('browse.back')}</Button>
-      <Button variant="ghost" size="xs" onClick={() => setLocation(initialLocation(asset))}>{asset.name}</Button>
-      {location.file && <Button variant="ghost" size="xs" onClick={() => navigate('')}>{location.file.original_name || location.file.id}</Button>}
-      {crumbs.map((crumb, index) => <Button key={index} variant="ghost" size="xs" onClick={() => goCrumb(index)}>{crumb}</Button>)}
-    </div>
-    {asset.unavailable_files?.length > 0 && <p className="omnimux-assets-browse-notice">{t('browse.unavailableNotice')}</p>}
-    {listing.loading && <p className="omnimux-assets-muted">{t('loading')}</p>}
-    {listing.error && <div role="alert"><p className="omnimux-assets-error">{listing.error}</p><Button onClick={() => { void feed.refresh() }}>{t('storage.retryRead')}</Button></div>}
-    {!listing.loading && !listing.error && <>
-      {listing.entries.length === 0 && <p className="omnimux-assets-muted">{t('detail.emptyFolder')}</p>}
-      <div className="omnimux-assets-grid">
-        {listing.entries.map((entry) => {
-          const unavailable = ['unmigrated', 'excluded'].includes(entry.status)
-          const folder = entry.virtual || isDirectoryRef(entry)
-          const file = { ...entry, id: entry.fileId, original_name: entry.name }
-          const stack = location.file ? { file: location.file, path: location.path } : null
-          const src = folder || unavailable ? '' : previewUrl(asset.id, entry.fileId, location.logical ? '' : entry.relative_path)
-          const open = () => {
-            if (entry.virtual) navigate(entry.logical_path)
-            else if (folder) {
-              if (location.logical) setLocation({ file, path: '', logical: false })
-              else navigate(entry.relative_path)
-            } else if (typeof onPreview === 'function') {
-              if (location.logical) onPreview(resolveAssetMediaPreview(file, { asset }))
-              else onPreview(resolveAssetMediaPreview(entry, { asset, stack }))
+
+  const files = Array.isArray(asset.files) ? asset.files : []
+
+  return (
+    <div className="omnimux-assets-browse">
+      <div className="omnimux-assets-crumbs">
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => {
+            if (!stack) {
+              onBack()
+              return
             }
-          }
-          return <MediaCard key={entry.fileId ? `${entry.fileId}:${entry.relative_path || entry.logical_path}` : entry.logical_path}
-            t={t} title={entry.name} kind={folder ? 'folder' : detectMediaKind(entry)} src={src}
-            status={unavailable ? t(`storage.operation.${entry.status}`) : ''}
-            detail={unavailable ? [entry.reason || entry.recovery_ref?.reason, entry.recovery_ref?.taskId].filter(Boolean).join(' · ') : ''}
-            onOpen={unavailable ? undefined : open} />
-        })}
+            const parts = String(stack.path || '').split('/').filter(Boolean)
+            if (parts.length === 0) setStack(null)
+            else setStack({ file: stack.file, path: parts.slice(0, -1).join('/') })
+          }}
+        >
+          {t('browse.back')}
+        </Button>
+        {crumbs.map((crumb, index) => (
+          <span key={`${crumb}-${index}`} className="omnimux-assets-crumb">
+            {index > 0 ? <span className="omnimux-assets-crumb-sep">/</span> : null}
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => { goCrumb(index) }}
+            >
+              {crumb}
+            </Button>
+          </span>
+        ))}
       </div>
-      {(listing.page > 0 || listing.nextCursor) && <nav className="omnimux-assets-storage-actions" aria-label={t('browse.pages')}>
-        <Button size="sm" variant="outline" disabled={listing.page === 0} onClick={() => { void feed.previous() }}>{t('storage.previousPage')}</Button>
-        <span role="status">{t('browse.page').replace('{page}', String(listing.page + 1)).replace('{pages}', String(Math.ceil(listing.total / BROWSE_PAGE_SIZE)))}</span>
-        <Button size="sm" variant="outline" disabled={!listing.nextCursor} onClick={() => { void feed.next() }}>{t('storage.nextPage')}</Button>
-      </nav>}
-    </>}
-  </div>
+
+      {stack ? (
+        <>
+          {loading ? <p className="omnimux-assets-muted">{t('loading')}</p> : null}
+          {error ? <p className="omnimux-assets-error">{error}</p> : null}
+          {!loading && !error && entries.length === 0 ? <p className="omnimux-assets-muted">{t('detail.emptyFolder')}</p> : null}
+          {!loading && entries.length > 0 ? (
+            <div className="omnimux-assets-grid">
+              {entries.map((entry) => {
+                const folder = Boolean(entry.is_dir) || isDirectoryRef(entry)
+                const kind = detectMediaKind(entry)
+                const src = folder
+                  ? ''
+                  : previewUrl(asset.id, stack.file.id, entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'))
+                return (
+                  <MediaCard
+                    key={String(entry.relative_path || entry.name)}
+                    t={t}
+                    title={entry.name}
+                    kind={kind}
+                    src={src}
+                    onOpen={folder
+                      ? () => {
+                          setStack({
+                            file: stack.file,
+                            path: entry.relative_path || [stack.path, entry.name].filter(Boolean).join('/'),
+                          })
+                        }
+                      : () => {
+                          if (typeof onPreview === 'function') {
+                            onPreview(resolveAssetMediaPreview(entry, { asset, stack }))
+                          }
+                        }}
+                  />
+                )
+              })}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        files.length === 0
+          ? <p className="omnimux-assets-muted">{t('browse.empty')}</p>
+          : (
+            <div className="omnimux-assets-grid">
+              {files.map((file) => {
+                const folder = isDirectoryRef(file)
+                const kind = detectMediaKind(file)
+                const src = folder ? '' : previewUrl(asset.id, file.id)
+                return (
+                  <MediaCard
+                    key={file.id}
+                    t={t}
+                    title={file.original_name || file.real_path}
+                    kind={kind}
+                    src={src}
+                    onOpen={folder
+                      ? () => { setStack({ file, path: '' }) }
+                      : () => {
+                          if (typeof onPreview === 'function') {
+                            onPreview(resolveAssetMediaPreview(file, { asset }))
+                          }
+                        }}
+                  />
+                )
+              })}
+            </div>
+          )
+      )}
+    </div>
+  )
 }
 
-function MediaCard({ t, title, kind, src, onOpen, status = '', detail = '' }) {
+/**
+ * @param {{
+ *   t: (key: string) => string,
+ *   title: string,
+ *   kind: 'folder' | 'image' | 'video' | 'file',
+ *   src?: string,
+ *   onOpen?: () => void,
+ * }} props
+ */
+function MediaCard({ t, title, kind, src, onOpen }) {
   const clickable = typeof onOpen === 'function'
   const activate = clickable ? onOpen : undefined
   const [broken, setBroken] = useState(false)
-  useEffect(() => { setBroken(false) }, [src])
   const showImage = kind === 'image' && Boolean(src) && !broken
   const showVideo = kind === 'video' && Boolean(src) && !broken
   const badge = kind === 'folder'
@@ -132,9 +246,7 @@ function MediaCard({ t, title, kind, src, onOpen, status = '', detail = '' }) {
         <Badge size="sm" shape="capsule" className="omnimux-assets-badge">{badge}</Badge>
       </div>
       <div className="omnimux-assets-card-body">
-        <div className="omnimux-assets-card-title" title={title}>{title}</div>
-        {status && <p className="omnimux-assets-browse-notice">{status}</p>}
-        {detail && <small className="omnimux-assets-browse-notice">{detail}</small>}
+        <div className="omnimux-assets-card-title">{title}</div>
       </div>
     </article>
   )

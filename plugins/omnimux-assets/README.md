@@ -28,7 +28,7 @@ npm run build # esbuild → lib/client.js（ModuleLoader 包裹，ID = omnimux-a
 
 ## 数据位置
 
-默认内容根仍为 `$DSH_HOME || ~/.dsh` → `omnimux/assets/`。根指针与迁移恢复信息保存在 `omnimux/assets-storage/`；自定义根仅能通过已确认迁移计划切换，不修改 `DSH_HOME`。应用自建控制目录 `0700`、JSON `0600`，不递归改变用户树权限：
+全部落 `$DSH_HOME || ~/.dsh` → `omnimux/assets/`（本插件唯一可写区；目录 `0700`、JSON `0600`）：
 
 ```
 omnimux/assets/
@@ -40,18 +40,7 @@ omnimux/assets/
 └── artifacts/<aa>/<sha256>.<ext>
 ```
 
-用户桌面原文件留在原地。选定根已有内容按 `adopted` 原位纳管，删除记录不删原文件。`managed` 内容仅按 inventory、完整哈希、身份及共享引用逐文件回收；不递归删除 ID 目录或用户树。
-
-### 保存位置与迁移（Issue #766，工程验证中）
-
-搜索框左侧设置按钮打开保存位置弹窗：选择单目录、只读预检、确认计划，再迁移合并。覆盖前保留校验后的目标版本；跳过项保留源并显式标记未迁入。旧源不会在迁移期间删除。已完成任务不能重新执行旧账本；反向切根必须新建计划。
-
-- 安全文件助手 `src/storage-fs.py` 使用插件内固定 CPython 3.13.15+20260807（macOS arm64/x64），不依赖系统 Python 或 PATH。启动核验供应清单、全载荷摘要及安装权限；同步/异步使用同一绝对执行文件与 `-I -S -B -u`，环境仅允许固定 locale。载荷缺失或改变明确报 `storage-platform-unsupported`；不联网下载、不安装系统依赖、不回退不安全复制。供应来源和许可证见 `runtime/python-supply.json`、`runtime/licenses/NOTICE.md`。
-- 本次正式平台验证目标为 macOS 本地卷；系统目录选择另需 `osascript`。NAS、云占位文件、多个 Host 共享写和新旧插件混跑同根不支持。
-- Home 与根写锁由非 detached 助手持有；第二 writer 拒绝。迁移期间请停止外部编辑，应用锁不能阻止其他进程更改内容。
-- 自定义根掉盘或损坏不回落默认空库。控制区仍供恢复任务查询；历史任务/媒体版本仅本机存储。
-- 完成至少 7 天后才可检查清理清单，并且需要逐项复验和确认；无自动删除。存在未迁入项不允许清理旧源。
-- 工程测试不等于可发布结论：合入后 Dev/ego、原生选择、真实可移除卷、Intel原生/最低系统与最终安装信任链证据仍需独立验收；不声称上游二进制已有正式签名/公证。当前集成结果见仓库 `docs/implementation/issue-766-final-integration.md`。
+用户桌面原文件留在原地。删除资产删 `library.json` 行并回收 `data/files/<id>/`。
 
 ## 只读红线
 

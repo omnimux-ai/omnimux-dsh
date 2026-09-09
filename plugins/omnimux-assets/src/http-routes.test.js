@@ -358,7 +358,7 @@ describe('AssetsDispatcher artifacts routes', () => {
   it('lists, filters by type, and resolves details', async () => {
     const { dispatcher, artifacts } = makeDispatcher()
     writeFileSync(join(realDir, 'out.json'), '{}')
-    const artifact = await artifacts.report(join(realDir, 'out.json'), { agent: 'a', run_id: 'r' })
+    const artifact = artifacts.report(join(realDir, 'out.json'), { agent: 'a', run_id: 'r' })
 
     const empty = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/artifacts' })
     assert.equal(empty.status, 200)

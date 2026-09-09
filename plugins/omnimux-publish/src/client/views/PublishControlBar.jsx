@@ -3,7 +3,7 @@ import {
   IconListOutline16,
   IconCalendarOutline16,
 } from '../icons/stage.js'
-import { Badge, Button, IconButton, SearchField, DropdownSelect, FilterBar, Tabs } from 'dsh-ui-kit'
+import { Badge, Button, IconButton, SearchField, DropdownSelect, Tabs } from 'dsh-ui-kit'
 
 export function PublishTabButton({ item, active, onClick }) {
   return (
@@ -56,7 +56,8 @@ export function PublishViewSwitcher({ t, viewMode, onViewModeChange }) {
     <div key="view-switcher" className="omnimux-publish-view-switcher">
       <IconButton
         variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-        size="xs"
+        aria-pressed={viewMode === 'grid'}
+        aria-label={t('view.grid')}
         title={t('view.grid')}
         onClick={() => onViewModeChange('grid')}
       >
@@ -64,7 +65,8 @@ export function PublishViewSwitcher({ t, viewMode, onViewModeChange }) {
       </IconButton>
       <IconButton
         variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-        size="xs"
+        aria-pressed={viewMode === 'table'}
+        aria-label={t('view.table')}
         title={t('view.table')}
         onClick={() => onViewModeChange('table')}
       >
@@ -72,7 +74,8 @@ export function PublishViewSwitcher({ t, viewMode, onViewModeChange }) {
       </IconButton>
       <IconButton
         variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
-        size="xs"
+        aria-pressed={viewMode === 'calendar'}
+        aria-label={t('view.calendar')}
         title={t('view.calendar')}
         onClick={() => onViewModeChange('calendar')}
       >
@@ -109,26 +112,33 @@ export function PublishControlTools(props) {
   return [
     <SearchField
       key="search"
-      width={220}
+      className="omnimux-publish-search"
       placeholder={t('search.placeholder')}
+      aria-label={t('search.placeholder')}
+      clearLabel={t('search.clear')}
       value={searchQuery}
-      onChange={(e) => onSearchChange(e.target.value)}
+      onValueChange={onSearchChange}
     />,
     <DropdownSelect
       key="sort"
       value={sortOption}
+      aria-label={t('filter.sort')}
       onChange={onSortChange}
       options={sortOptions}
     />,
     <DropdownSelect
       key="type"
-      value={typeFilter}
+      value={typeFilter || undefined}
+      placeholder={t('filter.type')}
+      aria-label={t('filter.type')}
       onChange={onTypeChange}
       options={typeOptions}
     />,
     <DropdownSelect
       key="mode"
-      value={modeFilter}
+      value={modeFilter || undefined}
+      placeholder={t('filter.mode')}
+      aria-label={t('filter.mode')}
       onChange={onModeChange}
       options={modeOptions}
     />,
@@ -145,11 +155,12 @@ export function PublishControlBar(props) {
   const { t, tab, counts, onTabChange, ...toolProps } = props
   return (
     <section className="omnimux-publish-control-bar">
-      <FilterBar
-        compact
-        filters={<PublishTabFilters t={t} tab={tab} counts={counts} onTabChange={onTabChange} />}
-        tools={<PublishControlTools t={t} {...toolProps} />}
-      />
+      <div className="omnimux-publish-tabs">
+        <PublishTabFilters t={t} tab={tab} counts={counts} onTabChange={onTabChange} />
+      </div>
+      <div className="omnimux-publish-control-tools" role="toolbar" aria-label={t('title')}>
+        <PublishControlTools t={t} {...toolProps} />
+      </div>
     </section>
   )
 }

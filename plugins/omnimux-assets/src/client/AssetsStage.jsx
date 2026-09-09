@@ -1,8 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, DropdownSelect, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
-import { StorageSettingsButton } from './StorageSettingsButton.jsx'
-import { StorageSettingsDialog } from './StorageSettingsDialog.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
 import { AssetGrid } from './AssetGrid.jsx'
@@ -112,7 +110,7 @@ function AssetsViewToggle(props) {
 }
 
 function AssetsFilterBar(props) {
-  const { t, feed, sourceTab, onSourceTabChange, onStorageSettings } = props
+  const { t, feed, sourceTab, onSourceTabChange } = props
   const sortOptions = [
     { value: 'updatedAt_desc', label: t('sort.updatedAt_desc') },
     { value: 'updatedAt_asc', label: t('sort.updatedAt_asc') },
@@ -140,7 +138,6 @@ function AssetsFilterBar(props) {
       }
       tools={
         <div className="omnimux-assets-tools-cluster">
-          <StorageSettingsButton label={t('storage.settings')} onClick={onStorageSettings} />
           <div className="omnimux-assets-search-wrap">
             <SearchField
               placeholder={t('search.placeholder')}
@@ -261,7 +258,6 @@ function AssetsBody(props) {
           busy={feed.busy}
           onClose={() => feed.setDetail(null)}
           onSave={feed.handleSaveDetail}
-          onPreview={onPreview}
         />
       )}
     </div>
@@ -291,8 +287,8 @@ function ConfirmRemoveDialogItem(props) {
   const { t, feed } = props
   const { pendingRemove, setPendingRemove, busy, handleConfirmDelete } = feed
   const removeTitle = pendingRemove.isBatch
-    ? `${t('select.removeTitle').replace('{n}', String(pendingRemove.assets.length))} ${pendingRemove.names.join('、')}`
-    : t('mapping.removeTitle').replace('{name}', String(pendingRemove.names[0] ?? ''))
+    ? t('confirm.deleteSelected').replace('{n}', String(pendingRemove.ids.length))
+    : t('confirm.deleteTitle').replace('{name}', String(pendingRemove.names[0] ?? ''))
   return (
     <ConfirmRemoveDialog
       t={t}
@@ -327,12 +323,6 @@ function AssetsDialogs(props) {
 export function AssetsStage(props) {
   const { t, stage, store, visible = true } = props
   const [previewTarget, setPreviewTarget] = useState(null)
-  const [storageOpen, setStorageOpen] = useState(false)
-  useEffect(() => {
-    const changed = () => setPreviewTarget(null)
-    window.addEventListener('omnimux-assets-root-changed', changed)
-    return () => window.removeEventListener('omnimux-assets-root-changed', changed)
-  }, [])
   useEffect(() => { injectAssetsStyles() }, [])
   const everOpened = true
 
@@ -378,12 +368,11 @@ export function AssetsStage(props) {
       <AssetsHeader t={t} stage={stage} busy={feed.busy} refreshState={feed.refreshState} setBusy={feed.setBusy} />
       <AssetsActionRow t={t} feed={feed} />
       <Divider />
-      <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} onStorageSettings={() => setStorageOpen(true)} />
+      <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} sourceTab={sourceTab} />
       <AssetsDialogs t={t} feed={feed} />
-      {storageOpen && <StorageSettingsDialog t={t} onClose={() => { setStorageOpen(false); void feed.refreshState(true) }} />}
       {previewTarget && (
         <AssetPreviewModal
           item={previewTarget}
