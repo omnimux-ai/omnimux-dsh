@@ -180,7 +180,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
       >
         <WellThumb model={model} />
         {hover?.anchor.dataset.slot === spec.slot && hover.model.occupant?.edgeId === occupant?.edgeId && occupant ? (
-          <SlotHoverPreview anchor={hover.anchor} upstream={model.upstream} onReplace={() => onPickSlot(pickRequest(spec))} onClose={closeHover} />
+          <SlotHoverPreview anchor={hover.anchor} upstream={model.upstream} onReplace={() => onPickSlot({ ...pickRequest(spec), replaceEdgeId: occupant.edgeId })} onClose={closeHover} />
         ) : null}
         {occupant ? (
           <button

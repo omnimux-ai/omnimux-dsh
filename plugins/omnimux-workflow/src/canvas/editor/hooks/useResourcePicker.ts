@@ -28,6 +28,7 @@ export interface ResourcePickerSlotTarget {
   acceptedTypes: string[];
   /** 槽位上限；null 表示官方未公布上限。 */
   max: number | null;
+  replaceEdgeId?: string;
 }
 
 export interface UseResourcePickerResult {
@@ -78,7 +79,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
         setSlotTarget(null);
         setTargetSlotIndex(slotIdx);
       } else {
-        setMode('add');
+        setMode(target?.replaceEdgeId ? 'replace' : 'add');
         setSlotTarget(target);
         setTargetSlotIndex(slotIdx);
       }
@@ -120,6 +121,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
           targetSlot: slotTarget.slot,
           acceptedTypes: slotTarget.acceptedTypes,
           slotMax: slotTarget.max,
+          replaceEdgeId: slotTarget.replaceEdgeId,
         } : {}),
         mode: commitMode,
         targetSlotIndex: commitSlotIndex,
@@ -131,6 +133,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
         return false;
       }
 
+      if (slotTarget?.replaceEdgeId) state.pushHistory();
       const result = state.applyCanvasInputMutation({
         addNodes: plan.addNodes,
         addEdges: plan.addEdges,
@@ -142,6 +145,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
         return false;
       }
 
+      if (slotTarget?.replaceEdgeId) state.pushHistory(true);
       if (plan.rejected.length > 0) {
         toast.warning(t('picker.commitPartial'));
       } else {
