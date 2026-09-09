@@ -144,9 +144,15 @@ test('canvas-toolbar-mode: canvas 保留右段并顶到最右', () => {
 test('canvas-toolbar-mode: return action is inlined into toolbar right with non-drag protection', () => {
   const src = stripComments(readFileSync(TOOLBAR_TSX, 'utf8'))
   assert.ok(src.includes('data-toolbar-section="right"'), 'Toolbar 必须包含右段标记')
-  assert.ok(src.includes('omnimux-clip-stage-close-btn'), '右段必须包含返回按钮类名')
-  assert.ok(src.includes('WebkitAppRegion: "no-drag"'), '返回按钮必须具有原生 no-drag 拖拽保护')
-  assert.ok(src.includes('gap-2.5'), '右段必须使用 gap-2.5 并排布局返回按钮与导出按钮')
+  assert.ok(src.includes('omnimux-clip-stage-close-btn'), '右段必须包含退出编辑按钮类名')
+  assert.ok(src.includes('WebkitAppRegion: "no-drag"'), '退出编辑按钮必须具有原生 no-drag 拖拽保护')
+  assert.ok(src.includes('gap-2.5'), '右段必须使用 gap-2.5 并排布局导出按钮与退出编辑按钮')
+
+  const exportIndex = src.indexOf('openreel-export-btn')
+  const exitBtnIndex = src.indexOf('omnimux-clip-stage-close-btn')
+  assert.ok(exportIndex !== -1, '右段必须包含导出按钮')
+  assert.ok(exitBtnIndex !== -1, '右段必须包含退出编辑按钮')
+  assert.ok(exportIndex < exitBtnIndex, '退出编辑按钮必须位于 Export 导出按钮的右侧')
 })
 
 // ─── 维度三：standalone 模式三段全显 ────────────────────────────────────
