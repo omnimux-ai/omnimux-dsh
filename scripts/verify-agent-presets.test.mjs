@@ -158,13 +158,30 @@ test('tiktok-agent persona positions as TikTokAgent lead and forbids forced spaw
   ok(text.includes('不要尝试切换会话 preset'))
 })
 
+test('content-creation-team agent.cordis.yml is structurally valid and mounts all 6 content experts', () => {
+  const rel = 'presets/content-creation-team/agent.cordis.yml'
+  ok(existsSync(join(root, rel)), rel)
+  const text = read(rel)
+  ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
+  ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
+  ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
+  deepEqual(toolNames(text), CONTENT)
+  ok(text.includes('内容创作'))
+  ok(text.includes('omnimux-workflow') || text.includes('workflow_create'))
+  const rows = parseWithPython(rel)
+  ok(rows >= 8, `content-creation-team parsed ${rows} top-level rows`)
+})
+
 test('build-agent-presets is idempotent', () => {
-  const before = read('presets/tiktok-agent/agent.cordis.yml')
+  const beforeTikTok = read('presets/tiktok-agent/agent.cordis.yml')
+  const beforeContent = read('presets/content-creation-team/agent.cordis.yml')
   const res = spawnSync('node', [join(root, 'scripts/build-agent-presets.mjs')], {
     cwd: root,
     encoding: 'utf8',
   })
   equal(res.status, 0, res.stderr || res.stdout)
-  const after = read('presets/tiktok-agent/agent.cordis.yml')
-  equal(after, before)
+  const afterTikTok = read('presets/tiktok-agent/agent.cordis.yml')
+  const afterContent = read('presets/content-creation-team/agent.cordis.yml')
+  equal(afterTikTok, beforeTikTok)
+  equal(afterContent, beforeContent)
 })
