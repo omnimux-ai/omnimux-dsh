@@ -61,10 +61,10 @@ non-goals: "本 Issue 明确不做的内容"
 | 定界 | goal、scope、acceptance、non-goals、dependencies、风险声明 | 计划可执行；需要的授权已取得或明确停在授权边界 |
 | 实施 | Issue、base SHA、worktree、分支、当前目标 | diff 完成并通过相关本地检查 |
 | 合并前验收 | commit/dirty 状态、L2 身份、测试与运行证据 | 适用检查通过，独立最终验收完成 |
-| PR/合入 | PR、head SHA、CI、授权来源与有效范围 | 按 [plugin-git-pr](plugin-git-pr.md) 条件自治合入或在阻断时暂停 |
+| PR/合入 | PR、head SHA、CI、授权来源与有效范围 | 按 [plugin-git-pr](plugin-git-pr.md) 完成已授权且通过门禁的动作；仅暂停受阻动作 |
 | 合并后交付 | merge commit、Dev 物化源、45120 证据 | 适用 Dev 验收通过并完成安全清理，最终交付端到端闭环成果 |
 
-标签可反映状态，但不能替代事实或授权。`qa:pass`、风险与合入通道遵循 [plugin-git-pr](plugin-git-pr.md)；本文件不重复定义。当用户在任务开始时已下达明确实施/修复指令，且全部适用验收门禁（L0+L2+浏览器+CI）均验证通过时，Agent 自动贯通合入、物化与环境清理，直接交付「合并后交付」终态。
+标签可反映状态，但不能替代事实或授权。`qa:pass`、风险、授权范围与合入通道遵循 [plugin-git-pr](plugin-git-pr.md)；本文件不重复定义。Agent 持续完成已授权且适用的阶段；缺少后续阶段授权时，完成独立准备后仅询问该动作，不把质量门禁通过视为新增权限。
 
 ## 条件式 DoD
 
