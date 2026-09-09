@@ -70,10 +70,11 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
     presetId === 'content-creation-team' ||
     presetId === 'content-creator-team' ||
     presetId === 'exp-ai-content-creator-team' ||
+    presetId === '内容创作' ||
     presetId === '内容创作专家团'
   ) {
     return {
-      name: lang === 'en' ? 'Content Creation Team' : '内容创作专家团',
+      name: lang === 'en' ? 'Content Creation' : '内容创作',
       description:
         lang === 'en'
           ? 'Multimodal content creation team: creative planning, ad copywriting, visual design, and video production.'

@@ -19,6 +19,7 @@ export function getPresetSkillBinding(presetId) {
         norm === 'ai-content-creator-team' ||
         norm === 'content-creation' ||
         norm === 'content-creator' ||
+        presetId === '内容创作' ||
         presetId === '内容创作专家团';
     const entry = AGENT_PRESET_SKILL_BINDINGS[presetId] ||
         AGENT_PRESET_SKILL_BINDINGS[norm] ||
@@ -37,7 +38,7 @@ export function getPresetSkillBinding(presetId) {
         ];
         return {
             presetId: entry.presetId || presetId,
-            name: entry.name || '内容创作专家团',
+            name: entry.name || '内容创作',
             useDefaultContentCatalog: true,
             categories: SKILL_SHELF_TAXONOMY.map((r) => ({ id: r.id, name: r.id, labelKey: r.labelKey })),
             tabs,
