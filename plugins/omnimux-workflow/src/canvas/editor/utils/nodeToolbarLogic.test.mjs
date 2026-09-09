@@ -452,7 +452,7 @@ test('canRunVideoDeconstruct：仅视频 + 有来源 + 非执行中', async () =
 });
 
 test('resolveVideoDeconstructPath：优先级 realPath > local-file URL > http URL > previewUrl > relativePath', async () => {
-  const { resolveVideoDeconstructPath } = await import('./nodeToolbarLogic.ts');
+  const { resolveVideoDeconstructPath, canRunVideoDeconstruct } = await import('./nodeToolbarLogic.ts');
   // realPath 直出
   assert.equal(
     resolveVideoDeconstructPath({ realPath: '/Users/x/a.mp4', mediaUrl: 'https://cdn/x.mp4' }),
@@ -481,6 +481,38 @@ test('resolveVideoDeconstructPath：优先级 realPath > local-file URL > http U
     ),
     'assets/imported/d.mp4',
   );
+  // 相对媒体 URL（/omnimux-workflow/media/... 与 /dsh-workflow/media/...）直接作为可用视频路径返回
+  assert.equal(
+    resolveVideoDeconstructPath({ mediaUrl: '/omnimux-workflow/media/videos/video_92570ba4.mp4' }),
+    '/omnimux-workflow/media/videos/video_92570ba4.mp4',
+  );
+  assert.equal(
+    resolveVideoDeconstructPath({ previewUrl: '/omnimux-workflow/media/videos/video_92570ba4.mp4' }),
+    '/omnimux-workflow/media/videos/video_92570ba4.mp4',
+  );
+  assert.equal(
+    resolveVideoDeconstructPath({ mediaUrl: '/omnimux-workflow/media/videos/video_92570ba4.mp4?t=1725000000' }),
+    '/omnimux-workflow/media/videos/video_92570ba4.mp4?t=1725000000',
+  );
+  assert.equal(
+    resolveVideoDeconstructPath({ mediaUrl: '/dsh-workflow/media/videos/video_abc.mp4' }),
+    '/dsh-workflow/media/videos/video_abc.mp4',
+  );
+
+  // 与 canRunVideoDeconstruct 对称性验证：只要 canRunVideoDeconstruct 为 true，resolveVideoDeconstructPath 绝不返回 null
+  const candidates = [
+    { realPath: '/data/video.mp4' },
+    { relativePath: 'assets/video.mp4' },
+    { mediaUrl: '/omnimux-workflow/media/videos/video_92570ba4.mp4' },
+    { previewUrl: '/omnimux-workflow/media/videos/preview.mp4' },
+    { mediaUrl: 'https://example.com/video.mp4' },
+  ];
+  for (const c of candidates) {
+    const eligibility = { materialType: 'video', ...c };
+    assert.equal(canRunVideoDeconstruct(eligibility), true);
+    assert.notEqual(resolveVideoDeconstructPath(c), null);
+  }
+
   // 全空 → null
   assert.equal(resolveVideoDeconstructPath({}), null);
 });

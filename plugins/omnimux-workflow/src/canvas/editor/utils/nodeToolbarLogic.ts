@@ -200,9 +200,12 @@ export function buildDeconstructVideoPillActionSpec(width: number = 88): Toolbar
  * 解析视频节点的拆解来源路径：
  * 1. realPath（导入节点的本机绝对路径）；
  * 2. mediaUrl / previewUrl 中可还原的 /api/local-file 绝对路径；
- * 3. mediaUrl 本身是 HTTP(S) URL；
- * 4. relativePath（项目相对路径）；
- * 5. relativePath + workspaceId → 项目文件流 URL。
+ * 3. mediaUrl（完整 HTTP(S) 或内部媒体相对 URL 如 /omnimux-workflow/media/...）；
+ * 4. previewUrl（预览视频 URL 或相对路径）；
+ * 5. relativePath（项目相对路径）；
+ * 6. relativePath + workspaceId → 项目文件流 URL。
+ * 
+ * 对称原则：只要 canRunVideoDeconstruct 为真，本函数绝不返回 null。
  */
 export function resolveVideoDeconstructPath(
   input: {
@@ -223,10 +226,10 @@ export function resolveVideoDeconstructPath(
   }
 
   const mediaUrl = asTrimmedPath(input.mediaUrl);
-  if (mediaUrl && /^https?:\/\//.test(mediaUrl)) return mediaUrl;
+  if (mediaUrl) return mediaUrl;
 
   const previewUrl = asTrimmedPath(input.previewUrl);
-  if (previewUrl && /^https?:\/\//.test(previewUrl)) return previewUrl;
+  if (previewUrl) return previewUrl;
 
   const relativePath = asTrimmedPath(input.relativePath);
   if (relativePath) return relativePath;
