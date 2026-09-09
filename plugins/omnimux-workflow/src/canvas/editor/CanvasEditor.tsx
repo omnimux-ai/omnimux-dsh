@@ -38,6 +38,7 @@ import Toolbar, { type CanvasPointerMode } from './components/Toolbar';
 import HeaderControls from './components/HeaderControls';
 import AssetsDrawer, { type AssetRecord } from './components/AssetsDrawer';
 import ShortcutsModal from './components/ShortcutsModal';
+import PublishWizardModal from './components/publish/PublishWizardModal.tsx';
 import CanvasNodeActionMenu from './components/CanvasNodeActionMenu';
 import ContextMenu from './components/ContextMenu';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -195,6 +196,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   }, []);
   const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [assetsCategoryIndex, setAssetsCategoryIndex] = useState<number | undefined>(undefined);
@@ -803,6 +805,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         onResumeExecution={onResumeExecution}
         onCancelExecution={onCancelExecution}
         onResetExecution={onResetExecution}
+        onOpenPublish={() => setIsPublishModalOpen(true)}
       />
 
       {/* 浮动小地图 Popover */}
@@ -851,6 +854,16 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* 发布为 AI 应用向导弹窗 */}
+      <PublishWizardModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        nodes={nodes}
+        edges={edges}
+        catalog={catalog}
+        workspaceId={workspaceId}
       />
 
       {/* 多选浮动工具栏 */}

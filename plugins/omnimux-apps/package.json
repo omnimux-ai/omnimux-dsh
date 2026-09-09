@@ -1,0 +1,36 @@
+{
+  "name": "omnimux-apps",
+  "version": "1.0.0-alpha.1",
+  "type": "module",
+  "main": "src/host/index.ts",
+  "exports": {
+    ".": "./src/host/index.ts",
+    "./client": "./src/client/index.ts",
+    "./shared": "./src/shared/manifest.ts",
+    "./validator": "./src/shared/schemaValidator.ts",
+    "./storage": "./src/host/storage/appStorage.ts",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'src/**/*.test.mjs' 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "lucide-react": "^1.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.0"
+  },
+  "license": "MIT",
+  "description": "OmniMux AI Applications: consumption portal and application domain storage."
+}

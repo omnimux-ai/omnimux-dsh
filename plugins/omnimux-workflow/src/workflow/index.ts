@@ -37,6 +37,8 @@ import {
   type GatewayMode,
 } from './seam/gatewaySelection';
 import { createExecutionManager } from './execution/ExecutionManager';
+import { createHeadlessExecutionSeam } from './execution/HeadlessExecutionSeam';
+import type { HeadlessExecutionSeam } from './execution/HeadlessExecutionSeam';
 import { persistGeneratedArtifact } from './execution/persistGeneratedArtifact';
 import { createLibraryHttpClient } from './library/libraryHttp';
 import { createWorkflowDispatcher, registerWorkflowRoutes } from './routes/canvasRoutes';
@@ -136,6 +138,21 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   // do not wait on it; recovered executions stream to late SSE subscribers.
   void executionManager.recoverAll();
 
+  // Headless execution seam for omnimux-apps & headless orchestration
+  const headlessSeam = createHeadlessExecutionSeam({
+    executionManager,
+    workspaceStore: store,
+    ensureProjectBound,
+    getCatalog: () => Promise.resolve(gateway.capabilities()),
+    mediaDir: paths.mediaDir,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
+  });
+
+  if (typeof ctx.provide === 'function') {
+    ctx.provide('omnimux-workflow', headlessSeam);
+  }
+  ctx['omnimux-workflow'] = headlessSeam;
+
   const disposers: Array<() => void> = [];
 
   const mountHttp = (httpCtx: { webServer?: WebServer }) => {
@@ -223,3 +240,4 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
 export { resolveWorkflowPaths };
 export * from './execution/fingerprintCache';
 export * from './execution/stepCheckpoint';
+export * from './execution/HeadlessExecutionSeam';
