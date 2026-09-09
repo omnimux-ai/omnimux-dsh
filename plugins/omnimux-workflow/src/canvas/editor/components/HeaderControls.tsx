@@ -22,7 +22,6 @@ import {
   LayoutGrid,
   Map,
   SplitSquareVertical,
-  Waypoints,
   Play,
   Pause,
   X,
@@ -257,14 +256,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             <LayoutGrid size={15} />
           </button>
         )}
-
-        <button
-          type="button"
-          className="wf-header-capsule__btn"
-          title={t('header.routingCurved')}
-        >
-          <Waypoints size={15} />
-        </button>
 
         <button
           type="button"
