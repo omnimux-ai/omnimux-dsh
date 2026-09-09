@@ -144,6 +144,22 @@ export const ASPECT_RATIO_GEOMETRIES: Record<string, AspectRatioGeometry> = {
     isDashed: true,
     viewBox: DEFAULT_VIEWBOX,
   },
+  adaptive: {
+    ratio: 'adaptive',
+    label: '自适应',
+    width: 18,
+    height: 18,
+    rectWidth: 18,
+    rectHeight: 18,
+    x: 3,
+    y: 3,
+    rx: DEFAULT_RX,
+    ry: DEFAULT_RY,
+    strokeWidth: DEFAULT_STROKE_WIDTH,
+    strokeDasharray: '2 2',
+    isDashed: true,
+    viewBox: DEFAULT_VIEWBOX,
+  },
 };
 
 /**
@@ -160,7 +176,7 @@ export function getAspectRatioGeometry(ratio: string): AspectRatioGeometry {
     return DEFAULT_ASPECT_RATIO_GEOMETRY;
   }
   const normalized = ratio.trim().toLowerCase();
-  if (normalized === 'auto') {
+  if (normalized === 'auto' || normalized === 'adaptive') {
     return ASPECT_RATIO_GEOMETRIES['auto'] ?? DEFAULT_ASPECT_RATIO_GEOMETRY;
   }
   return ASPECT_RATIO_GEOMETRIES[ratio] ?? ASPECT_RATIO_GEOMETRIES[normalized] ?? DEFAULT_ASPECT_RATIO_GEOMETRY;

@@ -34,6 +34,9 @@ export function CfgAspectGrid({
         const cls = isActive
           ? 'wf-cfg-aspect-card wf-cfg-aspect-card--active'
           : 'wf-cfg-aspect-card';
+        const displayLabel = opt.label === 'adaptive' || (opt.value === 'adaptive' && opt.label === opt.value)
+          ? '自适应'
+          : opt.label;
         return (
           <button
             key={opt.value}
@@ -46,7 +49,7 @@ export function CfgAspectGrid({
             <span className="wf-cfg-aspect-card__icon">
               <AspectRatioIcon ratio={opt.value} size={24} />
             </span>
-            <span className="wf-cfg-aspect-card__label">{opt.label}</span>
+            <span className="wf-cfg-aspect-card__label">{displayLabel}</span>
           </button>
         );
       })}

@@ -263,6 +263,16 @@ describe('AspectRatioGeometry - 画幅几何规格与映射校验', () => {
     assert.equal(geoAuto.strokeDasharray, '2 2');
     assert.equal(geoAuto.isDashed, true);
 
+    // 7b. 校验 adaptive (映射为自适应虚线)
+    const geoAdaptive = getAspectRatioGeometry('adaptive');
+    assert.equal(geoAdaptive.ratio, 'auto');
+    assert.equal(geoAdaptive.width, 18);
+    assert.equal(geoAdaptive.height, 18);
+    assert.equal(geoAdaptive.x, 3);
+    assert.equal(geoAdaptive.y, 3);
+    assert.equal(geoAdaptive.strokeDasharray, '2 2');
+    assert.equal(geoAdaptive.isDashed, true);
+
     // 8. 校验全量支持比例列表
     assert.ok(SUPPORTED_ASPECT_RATIOS.includes('16:9'));
     assert.ok(SUPPORTED_ASPECT_RATIOS.includes('9:16'));
@@ -271,6 +281,7 @@ describe('AspectRatioGeometry - 画幅几何规格与映射校验', () => {
     assert.ok(SUPPORTED_ASPECT_RATIOS.includes('3:4'));
     assert.ok(SUPPORTED_ASPECT_RATIOS.includes('21:9'));
     assert.ok(SUPPORTED_ASPECT_RATIOS.includes('auto'));
+    assert.ok(SUPPORTED_ASPECT_RATIOS.includes('adaptive'));
 
     // 9. 校验未知比例降级回退到 16:9
     const fallbackGeo = getAspectRatioGeometry('unknown_ratio');
