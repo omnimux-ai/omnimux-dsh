@@ -1,0 +1,12 @@
+{
+  "reference_video": [
+    {
+      "ref": "example:reference-video",
+      "name": "reference.mp4",
+      "mimeType": "video/mp4",
+      "sizeBytes": 1048576
+    }
+  ],
+  "focus": "开头三秒的钩子和产品展示",
+  "detail": "逐镜头"
+}

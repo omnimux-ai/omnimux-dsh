@@ -47,6 +47,13 @@ export function parseArgs(argv = process.argv.slice(2)) {
   if (!Number.isFinite(options.waitSeconds) || options.waitSeconds < 0) throw new PipelineError('--wait-seconds 必须是非负数字')
   return options
 }
+/** Manual means an accountable coordinating Agent, not an additional user approval. */
+export function resolveDeliveryChannel(risk, authorization, options = {}) {
+  if (options.manual) return 'agent'
+  if (risk.automaticAllowed && authorization.eligible) return 'auto'
+  throw new PipelineError(`机器预授权不足，未执行远端写入；由已获任务授权的协调 Agent 使用 --manual 接管: ${authorization.reasons.join('；')}`)
+}
+
 export function maintainersFor(repo = REPO) {
   const configured = String(process.env.OMNIMUX_PIPELINE_MAINTAINERS || '').split(',').map(value => value.trim()).filter(Boolean)
   if (configured.length > 0) return new Set(configured)
@@ -62,12 +69,12 @@ export function classifyRisk(issue, changedFiles = []) {
   if (declared === 'R0') reasons.push('Issue 声明为 R0')
   if (declared === 'R1') reasons.push('Issue 声明为 R1')
   if (changedFiles.some(file => HIGH_RISK_PATHS.some(pattern => pattern.test(file)))) {
-    tier = 'R1'
+    if (tier !== 'R0') tier = 'R1'
     reasons.push('变更命中合同/CI/脚本/manifest 等 R1 路径')
   }
   const pluginPaths = new Set(changedFiles.map(file => /^plugins\/([^/]+)\//.exec(file)?.[1]).filter(Boolean))
   if (pluginPaths.size > 1) {
-    tier = 'R1'
+    if (tier !== 'R0') tier = 'R1'
     reasons.push(`跨插件变更（${[...pluginPaths].join(', ')}）`)
   }
   if (changedFiles.some(file => /(?:^|\/)production|rollback|credentials?|secret|token/i.test(file))) {

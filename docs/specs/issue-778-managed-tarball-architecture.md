@@ -1,6 +1,20 @@
 # Issue #778 — 单包 tarball 纳管架构与工程顺序
 
+> **历史横幅（2026-09-09，PR-D）：** 下文状态句、固定 SHA 与「未合入」表述是撰写当时的任务快照，不是当前仓库或 Dev 事实。私有 store、frozen-offline、copy 隔离原则可被稳定基线迁移复用；本文件不因此改写历史 QA 正文。现行默认种子与 D→C→S 见 [稳定基线迁移规格](2026-09-09-stable-baseline-migration.md)。
+
 状态：**定向补工中，工程 IS_PASS: NO；未最终集成、未合入、未修复 Dev**。冻结补工接缝和写集以 [followup §3、§7](issue-778-managed-tarball-followup.md) 为准；T01 阶段证据见 [T01 报告](../implementation/issue-778-t01-followup.md)。固定 base / 本轮 HEAD：`580234923268673562cacb5cd01aebdb780339e1`。上游：[完整 PRD](issue-778-managed-tarball-prd.md)，A01–A12 全部为 P0。本设计只扩展本仓 Shell / Node / pnpm 同步链；不引入 Web 技术栈。
+
+## #839 精确转换增补
+
+以下正文的阶段状态是 #778 历史设计，不是实时部署证明。同包转纳管合同保留；#839 仅增加 [dev-pipeline 中的 #765 viewer 转换例外](../contracts/dev-pipeline.md#839765-viewer-精确转换例外)。不修改外层 Shell、fork wrapper、依赖获取模块或 package scripts。
+
+转换 request 包含 `transition.before={tarball,version,sha256,receiptId,receiptDigest,payloadDigest,sourceSpec,peerDependencies}` 与 `transition.after={version,sha256,payloadDigest,sourceSpec,sourceRepo,sourceCommit,qaReceipt,qaReceiptDigest,peerDependencies}`；before 与 after 均由独立安全归档清单和实际 source/installed 比较证明。终态 receipt 保留该转换身份，活动 journal schemaVersion=2；既有 schemaVersion=1 继续恢复。无转换请求时原纳管行为不变。
+
+v2 source 写集只新增 `(目标source, 本事务old-generation/同一目标source)`，以及已有 candidate source→live；逆向移动只能引用 durable intent。未提交恢复不需要归档或网络；COMMITTED 只清理，不承诺回滚。显式反向转换绑定成功正向 receipt 并重新执行候选、全图、备份和事务验证。
+
+目标唯一 occurrence 的 version/payload 可按两份归档投影，非目标 nodes/payload/modes/edges/bins/absent 不投影。锁只允许精确目标 package 项的 version（目录锁可能省略）及已验证 peer range 变化；importer locator、peer context、snapshot依赖边及全部非目标字段逐项冻结，不使用递归字符串替换。候选由真实 pnpm strict-peer 校验；新依赖获取范围不扩展。
+
+工程测试与共享验收分开：本地 synthetic 事务、拒绝和恢复测试完成后交独立 QA；主理人按非 UI 工具 Git 门禁合入后才可执行共享 Dev 转换。viewer 既有独立 release QA 只作为输入证据，不重复其源码检查。
 
 ## Part A：系统设计
 

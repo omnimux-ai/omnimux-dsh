@@ -1,0 +1,258 @@
+[
+  {
+    "name": "Category Opportunity",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Trending Products",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Identify trending products with strong sales potential in [category] on [ecommerce platform] in [target market], taking [business context or constraints] into account. Explain the demand signals, audience fit, competitive intensity, pricing opportunity, seasonality, and operational risks behind each recommendation. If context is missing, ask an open follow-up question about useful reference information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Competitor Scan",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Analyze the top-ranking competitor product listings for [keyword/category] on [ecommerce platform] in [target market]. Compare positioning, pricing, offers, reviews, content, selling points, and conversion tactics, then identify specific opportunities for differentiation. If context is missing, ask an open follow-up question about useful reference information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Title Optimization",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Optimize [current product title] for [ecommerce platform] using [product details or target keywords]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide the recommended title with a concise rationale. If context is missing, ask an open follow-up question about useful product information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Review Insights",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Product URL\nAttach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "placeholder": "Enter or paste a product page URL...",
+          "value": "",
+          "required": false,
+          "accept": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Analyze customer reviews for [product/listing] in [target market] using [review source or exported review data]. Identify recurring complaints, unmet needs, purchase drivers, language patterns, and product or messaging opportunities. Quantify themes where possible and distinguish evidence from assumptions. If context is missing, ask an open follow-up question about useful reference information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "UGC Brief",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Create a UGC video brief for [product] on [platform] in [target market], aimed at [target audience] and supporting [campaign goal] within [constraints]. Include key messages, filming guidelines, required shots, deliverables, and success criteria. If context is missing, ask an open follow-up question about useful campaign information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Video Scripts",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Write 10 short-form video scripts for [product] on [platform], aimed at [target audience] and reflecting [offer] and [tone]. Give each a strong hook, relatable scenario, product demonstration, proof point, and call to action, with enough creative variety for testing. If context is missing, ask an open follow-up question about useful creative information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Recreate Viral Ads",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Video URL\nAttach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "INPUT",
+          "type": "text",
+          "placeholder": "Enter or paste a video URL...",
+          "value": "",
+          "required": false,
+          "accept": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Recreate this video using the selected clone mode and references.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "Search Terms",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "Analyze [uploaded search term report] from [platform] for [date range], using [attribution settings] and [target metrics]. Identify high-performing queries, wasted ad spend, negative-keyword opportunities, and bid or budget actions. Separate data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
+          "required": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "ROAS Analysis",
+    "state": {
+      "url": "https://www.topview.ai/ai-marketer",
+      "text": "Attach image\nActivate expert\nClaude Sonnet 5\nSend message",
+      "fields": [
+        {
+          "tag": "INPUT",
+          "type": "file",
+          "placeholder": "",
+          "value": "",
+          "required": false,
+          "accept": ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.pdf,.txt,.md,.csv,.json,.yaml,.yml,.docx,.pptx,.xlsx,application/pdf,text/plain,text/markdown,text/csv,application/json,application/yaml,text/yaml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        {
+          "tag": "TEXTAREA",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "[Drop or upload your Ads report in CSV or XLSX format]\n\nAnalyze performance on [platform] for [date range] against [target ROAS/CPA], considering [attribution window] and [product margin]. Evaluate campaign, ad group or ad set, and ad-level spend, revenue, ROAS, CPA, CTR, CPC, and conversion rate; identify budget, audience, bidding, creative, and landing-page issues; and prioritize what to pause, scale, or test next. Distinguish data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
+          "required": false
+        }
+      ]
+    }
+  }
+]

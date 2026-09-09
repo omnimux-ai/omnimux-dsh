@@ -7,7 +7,7 @@ import { acquireIssueLock, assertSameRun, makeRunKey, readState, transitionState
 import { assessAdmission, assessRuntimeAuthorization, parseFrontmatter } from './authorization.mjs'
 import { requiresBrowser } from './impact-matrix.mjs'
 import { PipelineError, repoRoot, runCommand, writeEvidence } from './auto-pipeline-runtime.mjs'
-import { classifyRisk, fetchIssue, inferPlugin, maintainersFor, parseArgs, slugifyTopic } from './auto-pipeline-metadata.mjs'
+import { classifyRisk, fetchIssue, inferPlugin, maintainersFor, parseArgs, resolveDeliveryChannel, slugifyTopic } from './auto-pipeline-metadata.mjs'
 import { baseSha, changedPaths, ensureBranchAndWorktree, getPackageInfo, hasCodeChanges, materializeAndCleanup, pluginNamesFromChanges, runImplementation } from './auto-pipeline-worktree.mjs'
 import { runBrowserQa, runIntegrationGates, runPackageTest, runStaticQa } from './auto-pipeline-qa.mjs'
 import { commitAndPush, findOrCreatePr, labelPr, requestAndConfirmMerge, transitionIssue, waitForCi } from './auto-pipeline-github.mjs'
@@ -17,7 +17,7 @@ export function assessAuthorization(issue, maintainers = maintainersFor()) {
   return assessAdmission(issue, maintainers)
 }
 export { PipelineError, runCommand } from './auto-pipeline-runtime.mjs'
-export { classifyRisk, fetchIssue, maintainersFor, parseArgs, slugifyTopic } from './auto-pipeline-metadata.mjs'
+export { classifyRisk, fetchIssue, maintainersFor, parseArgs, resolveDeliveryChannel, slugifyTopic } from './auto-pipeline-metadata.mjs'
 const saveState = transitionState
 
 function printDryRun(options, issue, plugin, topic) {
@@ -43,6 +43,21 @@ function printDryRun(options, issue, plugin, topic) {
   process.stdout.write('================================================================\n\n')
 }
 
+/** Persist a resumable handoff; this record conveys context, never authorization. */
+export function handoffToAgent(root, issueId, evidence, options) {
+  // Reuse an existing label so deployed repositories need no label migration.
+  transitionIssue(issueId, 'status:qa-review', options, [`risk:${evidence.risk.tier}`])
+  const handoff = {
+    owner: 'coordinating-agent',
+    mergeProhibited: Boolean(options.noMerge),
+    materializeProhibited: options.materialize === false,
+    nextAction: options.noMerge
+      ? 'Complete PR acceptance and report within --no-merge scope; do not merge or materialize.'
+      : `Recheck current user scope and revocation, PR head, required checks and independent acceptance; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' and Dev delivery'}, requesting only missing boundary authorization.`,
+  }
+  return saveState(root, issueId, 'pr', 'ready-for-agent', { ...evidence, handoff })
+}
+
 export async function executePipeline(options) {
   const issue = fetchIssue(options.issueId, options)
   const plugin = inferPlugin(issue, options.plugin)
@@ -65,17 +80,13 @@ export async function executePipeline(options) {
       return previous
     }
     if ((idem.kind === 'active' || idem.kind === 'different') && !options.forceRetry) {
-      throw new PipelineError(`Issue #${options.issueId} 存在未完成或不同 runKey 的流水线状态，使用 --force-retry 前先人工检查现场`)
+      throw new PipelineError(`Issue #${options.issueId} 存在未完成或不同 runKey 的流水线状态，使用 --force-retry 前先由协调 Agent 核对已有 PR、状态与证据，避免重复实施`)
     }
 
     const maintainers = maintainersFor()
     const auth = assessAdmission(issue, maintainers)
     const preRisk = classifyRisk(issue, [])
-    const channel = preRisk.automaticAllowed && auth.eligible ? 'auto' : 'boss'
-    if (!options.manual && !auth.eligible && preRisk.automaticAllowed) {
-      throw new PipelineError(`R2/R3 Issue 未满足自动授权，拒绝进入无人值守通道: ${auth.reasons.join('；')}`)
-    }
-    if (preRisk.tier === 'R0' || preRisk.tier === 'R1') process.stdout.write(`· 风险 ${preRisk.tier}：强制老板人工合入\n`)
+    const channel = resolveDeliveryChannel(preRisk, auth, options)
 
     current = 'preflight'
     saveState(repoRoot, options.issueId, null, current, {
@@ -101,7 +112,7 @@ export async function executePipeline(options) {
     runImplementation(wt.wtDir, plugin, topic, options.issueId, options)
     const paths = changedPaths(wt.wtDir, sha, options)
     const risk = classifyRisk(issue, paths)
-    const effectiveChannel = risk.automaticAllowed && auth.eligible ? 'auto' : 'boss'
+    const effectiveChannel = channel === 'auto' && risk.automaticAllowed ? 'auto' : 'agent'
     saveState(repoRoot, options.issueId, current, current, { changedFiles: paths, riskTier: risk.tier, channel: effectiveChannel, riskReasons: risk.reasons })
 
     process.stdout.write('\n==> [3/6] 执行 L1 敏捷自动化测试 (Worktree)...\n')
@@ -142,11 +153,10 @@ export async function executePipeline(options) {
     const commit = commitAndPush(wt.wtDir, plugin, issue.title || `Issue #${options.issueId}`, options.issueId, wt.expectedBranch, options)
     const pr = findOrCreatePr(wt.wtDir, wt.expectedBranch, plugin, issue.title || `Issue #${options.issueId}`, options.issueId, reports, risk, options, evidenceDir)
     labelPr(pr.number, risk, options)
-    if (risk.tier === 'R0' || risk.tier === 'R1' || effectiveChannel !== 'auto') {
-      transitionIssue(options.issueId, 'status:ready-for-boss', options, [`risk:${risk.tier}`])
-      saveState(repoRoot, options.issueId, 'pr', 'ready-for-boss', { commit, pr, reports })
-      process.stdout.write(`✓ PR #${pr.number || '(dry-run)'} 已交老板人工通道；不自动合入、不物化、不清理\n`)
-      return { state: 'ready-for-boss', issue, plugin, topic, risk, pr, reports }
+    if (effectiveChannel !== 'auto' || options.noMerge) {
+      const handoff = handoffToAgent(repoRoot, options.issueId, { commit, pr, reports, risk }, options)
+      process.stdout.write(`✓ PR #${pr.number || '(dry-run)'} 已准备；协调 Agent 按任务授权继续验收与交付。${options.noMerge ? '--no-merge 保持有效。' : ''}\n`)
+      return { ...handoff, issue, plugin, topic }
     }
 
     process.stdout.write('\n==> [6/6] CI、受控合入确认、物化与收尾...\n')

@@ -40,6 +40,31 @@ function interruptedFixture(label) {
   return { profile, id, dir, journal, request: { profile, target: profile, recover: id } };
 }
 
+for (const phase of ['before-reverse-1', 'after-reverse-1', 'complete']) test(`v2 source generation recovery ${phase} requires no archives`, async () => {
+  const f = interruptedFixture(`source-${phase}`);
+  const relative = '.materialize-snapshots/plugins/@fixture/viewer';
+  write(path.join(f.profile, relative, 'index.js'), 'old source');
+  f.journal.diskBefore.protected = payloadManifest(f.profile, { exclude: ['node_modules', 'package.json', 'pnpm-lock.yaml', '.materialize-transactions', '.materialize.lock'], links: true });
+  f.journal.schemaVersion = 2;
+  const side = version => ({ version, sha256: 'a'.repeat(64), payloadDigest: 'b'.repeat(64), sourceSpec: `file:${relative}` });
+  f.journal.transition = { before: side('0.1.0'), after: side('0.1.1-omnimux.765.1') };
+  const destination = `.materialize-transactions/${f.id}/old-generation/${relative}`;
+  fs.mkdirSync(path.dirname(path.join(f.profile, destination)), { recursive: true });
+  const move = { from: relative, to: destination, stamp: stamp(path.join(f.profile, relative)), done: false };
+  f.journal.moves.push(move);
+  write(path.join(f.dir, 'journal.json'), JSON.stringify(f.journal));
+  const moved = spawnSync('python3', ['-B', helper, 'safeMove'], { input: JSON.stringify({ profile: f.profile, txnId: f.id, from: relative, to: destination, expected: { from: move.stamp.identity, to: null } }), encoding: 'utf8' });
+  assert.equal(moved.status, 0, moved.stderr);
+  if (phase !== 'complete') {
+    const code = `import {ManagedSync} from ${JSON.stringify(moduleUrl)};await new ManagedSync(JSON.parse(process.argv[1]),{checkpoint(p){if(p===${JSON.stringify(phase)})process.kill(process.pid,'SIGKILL')}}).run();`;
+    assert.equal(spawnSync(process.execPath, ['--input-type=module', '-e', code, JSON.stringify(f.request)]).signal, 'SIGKILL');
+  }
+  const result = await new ManagedSync(f.request).run();
+  assert.equal(result.code, 0, JSON.stringify(result));
+  assert.equal(fs.readFileSync(path.join(f.profile, relative, 'index.js'), 'utf8'), 'old source');
+  assert.equal(pending(f.profile), 0);
+});
+
 for (const phase of ['before-reverse-1', 'after-reverse-1']) test(`recovery KILL at ${phase} is restartable without pnpm or input`, async () => {
   const f = interruptedFixture(phase);
   const source = `import {ManagedSync} from ${JSON.stringify(moduleUrl)};await new ManagedSync(JSON.parse(process.argv[1]),{checkpoint(p){if(p===${JSON.stringify(phase)})process.kill(process.pid,'SIGKILL')}}).run();`;
@@ -119,10 +144,11 @@ test('runner bounds logs and waits on timeout and abort', async () => {
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGKILL']) test(`active real pnpm worker is reaped after coordinator ${signal}`, async () => {
   const home = path.join(scratch, `active-${signal}`);
   fs.mkdirSync(home);
+  write(path.join(home, 'package.json'), JSON.stringify({ name: 'worker-lifetime-fixture', private: true, packageManager: 'pnpm@11.7.0' }));
   const marker = path.join(home, 'ready');
   const lease = path.join(home, 'home', 'pnpm-worker.lock');
   const payload = `require('fs').writeFileSync(${JSON.stringify(marker)},'ready');setInterval(()=>{},1000)`;
-  const source = `import {runPnpm,pnpmEnvironment} from ${JSON.stringify(moduleUrl)};const c=new AbortController();process.on('SIGINT',()=>c.abort());process.on('SIGTERM',()=>c.abort());const r=await runPnpm(['exec',process.execPath,'-e',${JSON.stringify(payload)}],{cwd:process.argv[1],env:pnpmEnvironment(process.argv[1]),signal:c.signal,timeoutMs:10000});console.log(JSON.stringify(r));`;
+  const source = `import {runPnpm,pnpmEnvironment} from ${JSON.stringify(moduleUrl)};const c=new AbortController();process.on('SIGINT',()=>c.abort());process.on('SIGTERM',()=>c.abort());const r=await runPnpm(['--config.verify-deps-before-run=false','exec',process.execPath,'-e',${JSON.stringify(payload)}],{cwd:process.argv[1],env:pnpmEnvironment(process.argv[1]),signal:c.signal,timeoutMs:10000});console.log(JSON.stringify(r));`;
   const child = spawn(process.execPath, ['--input-type=module', '-e', source, home], { stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '';
   child.stdout.on('data', bytes => { stdout += bytes; });
@@ -161,7 +187,8 @@ test('coordinator KILL closes lifetime pipe and releases worker lease', async ()
   const lease = path.join(home, 'home', 'pnpm-worker.lock');
   const source = `import {runPnpm,pnpmEnvironment} from ${JSON.stringify(moduleUrl)};await runPnpm(['--version'],{cwd:process.argv[1],env:pnpmEnvironment(process.argv[1]),timeoutMs:30000});`;
   const child = spawn(process.execPath, ['--input-type=module', '-e', source, home], { stdio: 'ignore' });
-  await new Promise(resolve => setTimeout(resolve, 200));
+  for (let attempt = 0; attempt < 100 && !fs.existsSync(lease); attempt++) await new Promise(resolve => setTimeout(resolve, 50));
+  assert.ok(fs.existsSync(lease), 'worker lease exists before coordinator termination');
   child.kill('SIGKILL');
   await new Promise(resolve => child.once('close', resolve));
   const probe = spawnSync('python3', ['-c', 'import os,fcntl,sys,time\np=sys.argv[1]\nfor i in range(30):\n try:\n  f=os.open(p,os.O_RDWR);fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB);os.close(f);sys.exit(0)\n except (BlockingIOError,FileNotFoundError):time.sleep(.1)\nsys.exit(1)', lease], { encoding: 'utf8' });

@@ -1,0 +1,16 @@
+{
+  "values": {
+    "reference_video": [],
+    "focus": "开头三秒的钩子和产品展示",
+    "detail": "逐镜头"
+  },
+  "expectedErrors": [
+    {
+      "code": "REQUIRED",
+      "path": [
+        "values",
+        "reference_video"
+      ]
+    }
+  ]
+}
