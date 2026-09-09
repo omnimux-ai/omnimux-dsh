@@ -29,6 +29,18 @@ export interface VideoSummaryFormatResult {
 }
 
 /**
+ * 格式化画幅比例文案（将 adaptive / auto 映射为「自适应」）
+ */
+function normalizeRatio(ratio: string | undefined): string {
+  if (!ratio) return '16:9';
+  const trimmed = ratio.trim();
+  if (trimmed === 'adaptive' || trimmed === 'auto') {
+    return '自适应';
+  }
+  return trimmed;
+}
+
+/**
  * 格式化分辨率标签（如将 1080p 转为 1080P，4k 转为 4K）
  */
 function normalizeResolution(resolution: string | undefined): string | null {
@@ -81,7 +93,7 @@ function resolveModeText(params: EffectiveVideoParams): string {
  */
 export function formatVideoSummary(params: EffectiveVideoParams): VideoSummaryFormatResult {
   const modeText = resolveModeText(params);
-  const ratioText = (params.aspectRatio && params.aspectRatio.trim()) || '16:9';
+  const ratioText = normalizeRatio(params.aspectRatio);
   const resolutionText = normalizeResolution(params.resolution);
   const durationText = normalizeDuration(params.duration);
 

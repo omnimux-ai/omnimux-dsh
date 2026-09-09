@@ -99,6 +99,16 @@ describe('summaryFormatter - 胶囊摘要格式化引擎（严格四段式）', 
     assert.equal(result.resolutionText, '1080P');
     assert.ok(result.fullText.includes('1080P'));
   });
+
+  it('aspectRatio 为 adaptive / auto 时标准化为中文「自适应」', () => {
+    const resultAdaptive = formatVideoSummary(base({ aspectRatio: 'adaptive' }));
+    assert.equal(resultAdaptive.ratioText, '自适应');
+    assert.equal(resultAdaptive.fullText, '自适应 5s');
+
+    const resultAuto = formatVideoSummary(base({ aspectRatio: 'auto' }));
+    assert.equal(resultAuto.ratioText, '自适应');
+    assert.equal(resultAuto.fullText, '自适应 5s');
+  });
 });
 
 
