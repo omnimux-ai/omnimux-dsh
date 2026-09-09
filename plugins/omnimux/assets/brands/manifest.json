@@ -70,7 +70,7 @@
       "company": "MiniMax",
       "series": { "zh": "海螺", "en": "Hailuo" },
       "primaryColor": "#10B981",
-      "models": ["minimax-h3", "minimax-video", "hailuo-01", "minimax-chat"]
+      "models": ["minimax-h3", "minimax-h3-max", "minimax-h3-max-turbo", "minimax-video", "hailuo-01", "minimax-chat"]
     },
     "grok": {
       "id": "grok",

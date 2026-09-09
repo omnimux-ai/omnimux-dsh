@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { audioFileAction } from './audioFileAction.ts';
@@ -8,7 +8,7 @@ import { createProjectAssetsStore } from './workspace/ProjectAssetsStore.ts';
 import { createProjectAssetsRoutes } from './routes/projectAssetsRoutes.ts';
 
 function fixture(t) {
-  const root = mkdtempSync(join(tmpdir(), 'wf-audio-qa-'));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'wf-audio-qa-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const project = join(root, 'project');
   const workspacesDir = join(root, 'workspaces');

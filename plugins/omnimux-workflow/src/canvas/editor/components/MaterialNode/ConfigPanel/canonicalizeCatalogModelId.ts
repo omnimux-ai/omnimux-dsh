@@ -6,6 +6,10 @@ export const CANONICAL_CATALOG_MODEL_IDS: Readonly<Record<string, string>> = Obj
   'grok-imagine-video': 'grok-imagine-video-1-5',
   'grok-imagine-video.1.5': 'grok-imagine-video-1-5',
   'grok-imagine-video-1.5': 'grok-imagine-video-1-5',
+  'minimax/h3-max': 'minimax-h3-max',
+  'h3-max': 'minimax-h3-max',
+  'minimax/h3-max-turbo': 'minimax-h3-max-turbo',
+  'h3-max-turbo': 'minimax-h3-max-turbo',
 });
 
 /**

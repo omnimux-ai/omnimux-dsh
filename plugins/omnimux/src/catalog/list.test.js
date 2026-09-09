@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 46)
+    assert.equal(catalog.models.length, 48)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-avatar')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'omni_flash')?.disposition, 'quarantine')
@@ -59,6 +59,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.deepEqual(catalog.video.map((row) => row.id), [
       'grok-imagine-video-1-5',
       'minimax-h3',
+      'minimax-h3-max',
+      'minimax-h3-max-turbo',
       'seedance-2-0',
       'seedance-2-0-fast',
       'seedance-2-0-mini',
@@ -229,7 +231,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 12)
-    assert.equal(VIDEO_MODEL_SPECS.length, 17)
+    assert.equal(VIDEO_MODEL_SPECS.length, 19)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 })

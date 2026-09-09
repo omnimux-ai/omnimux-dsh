@@ -1,5 +1,5 @@
 /**
- * Dispositions registry tests (H2 + phase-one video): 61-row lock, shape validation, D1-D7
+ * Dispositions registry tests (H2 + phase-one video): 67-row lock, shape validation, D1-D7
  * consistency, forbidden-listed discipline, catalog defaults, cordis cross-refs.
  */
 import { test } from 'node:test';
@@ -37,25 +37,25 @@ function runtimeIdsOf(index) {
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
-test('dispositions.json: exactly 61 rows, unique ids, all kinds valid, reasons present', () => {
+test('dispositions.json: exactly 67 rows, unique ids, all kinds valid, reasons present', () => {
   resetDispositionsCache();
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 61, `expected 61 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 67, `expected 67 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
-  assert.equal(ids.size, 61);
+  assert.equal(ids.size, 67);
   for (const row of rows) {
     assert.ok(DISPOSITION_KINDS.includes(row.disposition), row.id);
     assert.ok(typeof row.reason === 'string' && row.reason.trim(), row.id);
   }
 });
 
-test('61 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
+test('67 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 61);
+  assert.equal(runtimeIds.length, 67);
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });

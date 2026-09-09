@@ -113,7 +113,7 @@ export function mapValidatedPlanToVendor(args) {
   }
   if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
     if (profileId === 'videoGenerate' || profileId === 'videoDigitalHuman') {
-      const useAspectRatio = args.modelId === 'minimax-h3' || args.modelId === 'grok-imagine-video-1-5'
+      const useAspectRatio = args.modelId.startsWith('minimax-h3') || args.modelId === 'grok-imagine-video-1-5'
       vendor[useAspectRatio ? 'aspect_ratio' : 'size'] = extras.aspectRatio
     }
     logical.aspectRatio = extras.aspectRatio

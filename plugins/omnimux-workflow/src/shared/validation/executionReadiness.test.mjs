@@ -1,3 +1,6 @@
+import { buildModelCatalog } from '../../../../omnimux/src/catalog/list.js';
+import { projectCanvasCatalog } from '../generationPolicy.ts';
+import { resolveCanvasSubmission, resolveExecutorSubmission } from '../../workflow/seam/submitGuard.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findExecutionReadinessFailure } from './executionReadiness.ts';
@@ -146,4 +149,318 @@ test('multiple effective video operations require a persisted selection', () => 
     reasonCode: 'operation_incompatible',
     message: '请选择生成方式',
   });
+});
+
+
+// ============================================================================
+// MiniMax H3 Max & Turbo Canvas Readiness & Submission Tests
+// ============================================================================
+const realHubCatalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
+
+test('MiniMax H3 Max & Turbo: text_to_video with valid parameters passes execution readiness (returns null)', () => {
+  for (const modelId of ['minimax-h3-max', 'minimax-h3-max-turbo', 'h3-max', 'minimax/h3-max-turbo']) {
+    const node = {
+      id: `video-t2v-${modelId}`,
+      type: 'material',
+      data: {
+        materialType: 'video',
+        selectedTool: 'video-generation',
+        prompt: 'A cinematic drone shot of majestic mountains',
+        params: {
+          model: modelId,
+          operation: 'text_to_video',
+          aspectRatio: '16:9',
+          duration: 5,
+          resolution: '720p',
+        },
+      },
+    };
+    const failure = findExecutionReadinessFailure([node], realHubCatalog);
+    assert.equal(failure, null, `Expected null failure for ${modelId} text_to_video`);
+
+    // Case-insensitive checks for resolution and aspectRatio
+    const caseNode = {
+      ...node,
+      data: {
+        ...node.data,
+        params: {
+          ...node.data.params,
+          aspectRatio: '16:9',
+          duration: 10,
+          resolution: '1080P',
+        },
+      },
+    };
+    assert.equal(findExecutionReadinessFailure([caseNode], realHubCatalog), null);
+  }
+});
+
+test('MiniMax H3 Max & Turbo: first_frame with valid image upstream passes execution readiness', () => {
+  const imgNode = {
+    id: 'img-first-frame',
+    type: 'material',
+    data: {
+      nodeKind: 'import',
+      materialType: 'image',
+      mediaUrl: 'https://example.test/first_frame.png',
+      mimeType: 'image/png',
+      sizeBytes: 1024 * 512,
+    },
+  };
+
+  for (const modelId of ['minimax-h3-max', 'minimax-h3-max-turbo']) {
+    const videoNode = {
+      id: `video-ff-${modelId}`,
+      type: 'material',
+      data: {
+        materialType: 'video',
+        selectedTool: 'video-generation',
+        prompt: 'Animate this character walking forward',
+        params: {
+          model: modelId,
+          operation: 'first_frame',
+          aspectRatio: 'adaptive',
+          duration: 5,
+          resolution: '720p',
+        },
+      },
+    };
+    const graph = {
+      nodes: [imgNode, videoNode],
+      edges: [{
+        id: `e-ff-${modelId}`,
+        source: 'img-first-frame',
+        target: videoNode.id,
+        data: {
+          role: 'first_frame',
+          targetSlot: 'first_frame',
+        },
+      }],
+    };
+    const failure = findExecutionReadinessFailure([videoNode], realHubCatalog, graph);
+    assert.equal(failure, null, `Expected null failure for ${modelId} first_frame`);
+  }
+});
+
+test('MiniMax H3 Max: video_multi_ref with reference image upstream passes execution readiness (Max only)', () => {
+  const refImgNode = {
+    id: 'img-ref-1',
+    type: 'material',
+    data: {
+      nodeKind: 'import',
+      materialType: 'image',
+      mediaUrl: 'https://example.test/reference_art.png',
+      mimeType: 'image/png',
+      sizeBytes: 1024 * 1024,
+    },
+  };
+  const maxNode = {
+    id: 'video-mr-max',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      selectedTool: 'video-generation',
+      prompt: 'A cyberpunk cityscape matching this art style',
+      params: {
+        model: 'minimax-h3-max',
+        operation: 'video_multi_ref',
+        aspectRatio: 'adaptive',
+        duration: 10,
+        resolution: '1080p',
+      },
+    },
+  };
+  const graph = {
+    nodes: [refImgNode, maxNode],
+    edges: [{
+      id: 'e-mr-1',
+      source: 'img-ref-1',
+      target: 'video-mr-max',
+      data: {
+        role: 'reference',
+        targetSlot: 'reference_images',
+      },
+    }],
+  };
+  const failure = findExecutionReadinessFailure([maxNode], realHubCatalog, graph);
+  assert.equal(failure, null, 'Expected null failure for minimax-h3-max video_multi_ref');
+
+  // Turbo does not support video_multi_ref
+  const turboNode = {
+    ...maxNode,
+    id: 'video-mr-turbo',
+    data: {
+      ...maxNode.data,
+      params: {
+        ...maxNode.data.params,
+        model: 'minimax-h3-max-turbo',
+      },
+    },
+  };
+  const turboGraph = {
+    nodes: [refImgNode, turboNode],
+    edges: [{
+      id: 'e-mr-turbo',
+      source: 'img-ref-1',
+      target: 'video-mr-turbo',
+      data: {
+        role: 'reference',
+        targetSlot: 'reference_images',
+      },
+    }],
+  };
+  const turboFailure = findExecutionReadinessFailure([turboNode], realHubCatalog, turboGraph);
+  assert.ok(turboFailure !== null);
+  assert.equal(turboFailure.reasonCode, 'role_conflict');
+});
+
+test('MiniMax H3 Max & Turbo: invalid parameters strictly intercepted with parameter_unsupported', () => {
+  const baseNode = {
+    id: 'video-bad-param',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      selectedTool: 'video-generation',
+      prompt: 'Testing invalid parameters',
+      params: {
+        model: 'minimax-h3-max',
+        operation: 'text_to_video',
+        aspectRatio: '16:9',
+        duration: 5,
+        resolution: '720p',
+      },
+    },
+  };
+
+  // 1. Duration out of allowed discrete options (must be 5 or 10)
+  for (const badDuration of [3, 7, 15, 0, -1]) {
+    const node = {
+      ...baseNode,
+      data: {
+        ...baseNode.data,
+        params: { ...baseNode.data.params, duration: badDuration },
+      },
+    };
+    const failure = findExecutionReadinessFailure([node], realHubCatalog);
+    assert.deepEqual(failure, {
+      nodeId: 'video-bad-param',
+      reasonCode: 'parameter_unsupported',
+      message: `参数“duration”不支持值 ${badDuration}`,
+    });
+  }
+
+  // 2. Unsupported aspectRatio
+  for (const badAspect of ['3:2', '2:1', 'square', 'invalid']) {
+    const node = {
+      ...baseNode,
+      data: {
+        ...baseNode.data,
+        params: { ...baseNode.data.params, aspectRatio: badAspect },
+      },
+    };
+    const failure = findExecutionReadinessFailure([node], realHubCatalog);
+    assert.deepEqual(failure, {
+      nodeId: 'video-bad-param',
+      reasonCode: 'parameter_unsupported',
+      message: `参数“aspectRatio”不支持值 ${JSON.stringify(badAspect)}`,
+    });
+  }
+
+  // 3. Unsupported resolution
+  for (const badRes of ['480p', '4k', '2k']) {
+    const node = {
+      ...baseNode,
+      data: {
+        ...baseNode.data,
+        params: { ...baseNode.data.params, resolution: badRes },
+      },
+    };
+    const failure = findExecutionReadinessFailure([node], realHubCatalog);
+    assert.deepEqual(failure, {
+      nodeId: 'video-bad-param',
+      reasonCode: 'parameter_unsupported',
+      message: `参数“resolution”不支持值 ${JSON.stringify(badRes)}`,
+    });
+  }
+});
+
+test('MiniMax H3 Max & Turbo: resolveCanvasSubmission and resolveExecutorSubmission produce canonical model and parameters', () => {
+  // Test T2V submission with alias
+  const t2vSubmission = resolveCanvasSubmission({
+    capability: 'video',
+    model: 'minimax/h3-max',
+    operation: 'text_to_video',
+    prompt: 'A sunny beach',
+    aspectRatio: '16:9',
+    duration: 5,
+    resolution: '720p',
+  }, realHubCatalog);
+  assert.equal(t2vSubmission.model, 'minimax-h3-max');
+  assert.equal(t2vSubmission.operation, 'text_to_video');
+  assert.equal(t2vSubmission.aspectRatio, '16:9');
+  assert.equal(t2vSubmission.duration, 5);
+  assert.equal(t2vSubmission.resolution, '720p');
+
+  // Test first_frame submission with turbo alias
+  const ffSubmission = resolveCanvasSubmission({
+    capability: 'video',
+    model: 'h3-max-turbo',
+    operation: 'first_frame',
+    prompt: 'Dance animation',
+    references: [{
+      pathOrUrl: 'https://example.test/dancer.png',
+      type: 'image',
+      role: 'first_frame',
+      targetSlot: 'first_frame',
+      mimeType: 'image/png',
+      sizeBytes: 1024 * 800,
+    }],
+    aspectRatio: 'adaptive',
+    duration: 10,
+    resolution: '1080p',
+  }, realHubCatalog);
+  assert.equal(ffSubmission.model, 'minimax-h3-max-turbo');
+  assert.equal(ffSubmission.operation, 'first_frame');
+  assert.equal(ffSubmission.references.length, 1);
+  assert.equal(ffSubmission.references[0].role, 'first_frame');
+  assert.equal(ffSubmission.references[0].targetSlot, 'first_frame');
+  assert.equal(ffSubmission.duration, 10);
+  assert.equal(ffSubmission.resolution, '1080p');
+
+  // Test video_multi_ref submission (Max only)
+  const mrSubmission = resolveCanvasSubmission({
+    capability: 'video',
+    model: 'h3-max',
+    operation: 'video_multi_ref',
+    prompt: 'Style replication',
+    references: [{
+      pathOrUrl: 'https://example.test/style.png',
+      type: 'image',
+      role: 'reference',
+      targetSlot: 'reference_images',
+      mimeType: 'image/png',
+      sizeBytes: 1024 * 600,
+    }],
+    aspectRatio: '16:9',
+    duration: 5,
+    resolution: '720p',
+  }, realHubCatalog);
+  assert.equal(mrSubmission.model, 'minimax-h3-max');
+  assert.equal(mrSubmission.operation, 'video_multi_ref');
+  assert.equal(mrSubmission.references.length, 1);
+  assert.equal(mrSubmission.references[0].role, 'reference');
+  assert.equal(mrSubmission.references[0].targetSlot, 'reference_images');
+
+  // Test resolveExecutorSubmission with explicit operation and alias
+  const execSubmission = resolveExecutorSubmission({
+    capability: 'video',
+    model: 'minimax/h3-max-turbo',
+    operation: 'text_to_video',
+    prompt: 'Quick cinematic cut',
+    aspectRatio: '16:9',
+    duration: 5,
+    resolution: '720p',
+  }, realHubCatalog);
+  assert.equal(execSubmission.model, 'minimax-h3-max-turbo');
+  assert.equal(execSubmission.operation, 'text_to_video');
 });

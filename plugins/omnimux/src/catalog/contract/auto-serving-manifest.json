@@ -102,6 +102,22 @@
       "requiredInAuto": true
     },
     {
+      "productId": "minimax-h3-max",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["minimax/h3-max", "h3-max", "minimax-h3-max"],
+      "upstreamWireId": "minimax/h3-max",
+      "requiredInAuto": true
+    },
+    {
+      "productId": "minimax-h3-max-turbo",
+      "kind": "video",
+      "priority": "P0",
+      "gatewayIds": ["minimax/h3-max-turbo", "h3-max-turbo", "minimax-h3-max-turbo"],
+      "upstreamWireId": "minimax/h3-max-turbo",
+      "requiredInAuto": true
+    },
+    {
       "productId": "seed-audio-1.0",
       "kind": "audio",
       "priority": "P0",
