@@ -143,7 +143,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   onOpenResourcePicker,
 }) => {
   const t = useT();
-  const { materialType, selectedTool, params, prompt } = nodeData;
+  const { materialType, selectedTool, prompt } = nodeData;
+  const params = (nodeData.params && typeof nodeData.params === 'object') ? nodeData.params : {};
   const kind = resolveNodeKind(nodeData);
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -275,7 +276,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   // The picker reflects the exact model the executor receives. Catalog
   // reconciliation owns replacement of stale saved ids; the UI never renders
   // a different default without writing it back to params.
-  const modelValue = typeof params.model === 'string' ? params.model.trim() : '';
+  const modelValue = typeof params?.model === 'string' ? params.model.trim() : '';
 
   const {
     schema,

@@ -141,8 +141,11 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
     } finally { if (alive.current) setBusy(false); }
   };
 
+  const statusKey = fileMessage || error || (waveFailed ? waveStatus : null);
+  const statusText = statusKey ? t(statusKey) : '';
+
   return (
-    <div className="wf-audio nodrag nopan nowheel" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+    <div className="wf-audio" onDoubleClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
       <audio ref={audio} src={source} preload="metadata"
         onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
         onDurationChange={(event) => setDuration(event.currentTarget.duration)}
@@ -150,34 +153,142 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)} onError={() => { setPlaying(false); setError('audio.loadFailed'); }} />
       <div className="wf-audio__transport">
-        <button type="button" className="wf-audio__button wf-audio__play" aria-label={t(playing ? 'audio.pause' : 'audio.play')} onClick={() => void toggle()}>
-          {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+        <button
+          type="button"
+          className="wf-audio__button wf-audio__play nodrag"
+          aria-label={t(playing ? 'audio.pause' : 'audio.play')}
+          onClick={(event) => {
+            event.stopPropagation();
+            void toggle();
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {playing ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
         </button>
         <div className="wf-audio__timeline">
-          <div className="wf-audio__wave">
+          <div
+            className="wf-audio__wave"
+            onClick={(event) => {
+              if (!playableDuration) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (rect.width > 0) {
+                const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+                seek(ratio * playableDuration);
+              }
+            }}
+          >
             {peaks ? <svg viewBox="0 0 288 40" preserveAspectRatio="none" aria-hidden="true">
               <defs><clipPath id={clipId}><rect width={288 * progress} height="40" /></clipPath></defs>
               {[false, true].map((played) => <g key={String(played)} className={played ? 'wf-audio__played' : 'wf-audio__unplayed'} clipPath={played ? `url(#${clipId})` : undefined}>
                 {peaks.map((peak, index) => <rect key={index} x={index * 288 / peaks.length} y={20 - peak * 19} width={Math.max(1, 288 / peaks.length - 1)} height={Math.max(0.5, peak * 38)} rx="0.5" />)}
               </g>)}
             </svg> : <div className="wf-audio__fallback" style={{ '--audio-progress': `${progress * 100}%` } as React.CSSProperties} />}
-            <input className="wf-audio__seek" type="range" min="0" max={playableDuration || 1} step="0.1" value={Math.min(time, playableDuration)} disabled={!playableDuration}
-              aria-label={`${t('audio.position')}${label ? `: ${label}` : ''}`} aria-valuetext={`${audioTime(time)} / ${audioTime(duration)}`}
-              onChange={(event) => seek(Number(event.target.value))} />
+            <input
+              className="wf-audio__seek"
+              type="range"
+              min="0"
+              max={playableDuration || 1}
+              step="0.1"
+              value={Math.min(time, playableDuration)}
+              disabled={!playableDuration}
+              aria-label={`${t('audio.position')}${label ? `: ${label}` : ''}`}
+              aria-valuetext={`${audioTime(time)} / ${audioTime(duration)}`}
+              onChange={(event) => seek(Number(event.target.value))}
+              onPointerDown={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              style={{ pointerEvents: 'none', position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, margin: 0 }}
+            />
           </div>
-          <div className="wf-audio__time"><span>{audioTime(time)}</span><span>{duration ? audioTime(duration) : '--:--'}</span></div>
+          <div className="wf-audio__time">
+            <span>{audioTime(time)}</span>
+            <span className="wf-audio__time-sep">/</span>
+            <span>{duration ? audioTime(duration) : '--:--'}</span>
+          </div>
         </div>
       </div>
-      <div className="wf-audio__status" role="status">
-        <span>{t(fileMessage || error || waveStatus || (target ? 'audio.projectCopy' : 'audio.remote'))}</span>
-        {waveFailed && !error && <button type="button" className="wf-audio__button" aria-label={t('audio.retry')} onClick={() => setRetry((value) => value + 1)}><RefreshCw size={14} aria-hidden="true" /></button>}
-      </div>
-      <div className="wf-audio__files">
-        {!target && onSave ? <button type="button" className="wf-audio__button wf-audio__save" disabled={busy} title={t('audio.remote')} onClick={() => void save()}><Download size={14} aria-hidden="true" />{t('audio.save')}</button> : <>
-          <button type="button" className="wf-audio__button" disabled={!target || busy} title={t(target ? 'audio.openHint' : 'audio.remote')} aria-label={t('audio.open')} onClick={() => void fileAction('open')}><ExternalLink size={14} aria-hidden="true" /></button>
-          <button type="button" className="wf-audio__button" disabled={!target || busy} title={t(target ? 'audio.revealHint' : 'audio.remote')} aria-label={t('audio.reveal')} onClick={() => void fileAction('reveal')}><FolderOpen size={14} aria-hidden="true" /></button>
-        </>}
-        {onReplace && <button type="button" className="wf-audio__button wf-audio__replace" aria-label={t('node.replace')} title={t('node.replace')} onClick={onReplace}><RefreshCw size={14} aria-hidden="true" /></button>}
+      <div className="wf-audio__actions wf-audio__files">
+        <div className="wf-audio__actions-left">
+          {!target && onSave ? (
+            <button
+              type="button"
+              className="wf-audio__button wf-audio__save nodrag"
+              disabled={busy}
+              title={t('audio.remote')}
+              onClick={(event) => {
+                event.stopPropagation();
+                void save();
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <Download size={13} aria-hidden="true" />
+              <span>{t('audio.save')}</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="wf-audio__button wf-audio__action nodrag"
+                disabled={!target || busy}
+                title={t(target ? 'audio.openHint' : 'audio.remote')}
+                aria-label={t('audio.open')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void fileAction('open');
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <ExternalLink size={13} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="wf-audio__button wf-audio__action nodrag"
+                disabled={!target || busy}
+                title={t(target ? 'audio.revealHint' : 'audio.remote')}
+                aria-label={t('audio.reveal')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void fileAction('reveal');
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <FolderOpen size={13} aria-hidden="true" />
+              </button>
+            </>
+          )}
+          <div className="wf-audio__status" role="status">
+            <span>{statusText}</span>
+            {waveFailed && !error && (
+              <button
+                type="button"
+                className="wf-audio__retry nodrag"
+                aria-label={t('audio.retry')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setRetry((value) => value + 1);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <RefreshCw size={11} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </div>
+        {onReplace && (
+          <button
+            type="button"
+            className="wf-audio__button wf-audio__replace nodrag"
+            aria-label={t('node.replace')}
+            title={t('node.replace')}
+            onClick={(event) => {
+              event.stopPropagation();
+              onReplace();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <RefreshCw size={13} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   );
