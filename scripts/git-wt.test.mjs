@@ -296,6 +296,30 @@ describe('scripts/git-wt.sh finish lifecycle in isolated environment', () => {
     }
   })
 
+  it('finish retains a merged task for post-merge Dev acceptance', () => {
+    setupSandbox()
+    try {
+      execSync(`bash "${scriptCopy}" start workflow merged-task 864`, { cwd: mainRepo, stdio: 'ignore' })
+      const wtDir = join(testRoot, 'omnimux-dsh-wt-merged-task-864')
+      writeFileSync(join(wtDir, 'feature.txt'), 'needs Dev acceptance')
+      execSync(`git -C "${wtDir}" add . && git -C "${wtDir}" commit -m feature`, { stdio: 'ignore' })
+      // The fixture remote has already merged the change; no real remote is used.
+      execSync(`git -C "${wtDir}" push origin HEAD:main`, { stdio: 'ignore' })
+      const remoteUrl = 'https://github.com/omnimux-test/lifecycle.git'
+      execSync(`git -C "${mainRepo}" config url."${remoteRepo}".insteadOf "${remoteUrl}"`, { stdio: 'ignore' })
+      execSync(`git -C "${mainRepo}" remote set-url origin "${remoteUrl}"`, { stdio: 'ignore' })
+      const bin = join(testRoot, 'bin')
+      mkdirSync(bin)
+      writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho '{"state":"MERGED","url":"https://github.com/omnimux-test/lifecycle/pull/864"}'\n`, { mode: 0o755 })
+      const out = execSync(`bash "${scriptCopy}" finish merged-task 864 --skip-test`, {
+        cwd: mainRepo, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      })
+      assert.match(out, /MOCK SYNC/)
+      assert.match(out, /物化不等于验收通过/)
+      assert.ok(existsSync(join(wtDir, 'feature.txt')), 'merged worktree must stay for acceptance')
+    } finally { cleanupSandbox() }
+  })
+
   it('clean honors --force even without an issue_id (arg parsing regression)', () => {
     setupSandbox()
     try {
