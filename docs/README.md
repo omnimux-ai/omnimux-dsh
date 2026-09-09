@@ -48,6 +48,9 @@ tags: ["portal", "index", "docs-root", "navigation"]
 | [specs/](specs/README.md) | 产品与技术规格、原型 |
 | [evidence/](evidence/README.md) | 具目标/SHA/环境身份的验收证据 |
 | [logs/](logs/README.md) | 阶段和操作记录 |
+| [implementation/](implementation/) | 实施过程与交付报告；查任务改动和未完成项 |
+| [qa/](qa/) | 验收报告；查实际命令、结果及证据身份 |
+| [standards/](standards/) | 既有规范与操作参考；按文档职责发现适用入口 |
 | [references/](references/README.md) | 外部资料与业务参考 |
 | [archive/](archive/README.md) | 已废弃历史与替代关系 |
 

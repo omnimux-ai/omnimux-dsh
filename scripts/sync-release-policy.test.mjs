@@ -87,25 +87,34 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     }, null, 2) + '\n')
   }
 
-  function initCleanMainRepo(dir) {
-    const runGit = (args) => {
-      const res = spawnSync('git', args, {
-        cwd: dir,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          GIT_CONFIG_NOSYSTEM: '1',
-          GIT_CONFIG_GLOBAL: '/dev/null',
-        },
-      })
-      assert.equal(res.status, 0, res.stderr || res.stdout)
+  function gitEnvironment(home) {
+    const env = { ...process.env, HOME: home, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' }
+    for (const key of Object.keys(env)) {
+      if (key.startsWith('GIT_') && !['GIT_CONFIG_NOSYSTEM', 'GIT_CONFIG_GLOBAL'].includes(key)) delete env[key]
+      if (key.startsWith('OMNIMUX_ALLOW_UNMERGED_')) delete env[key]
     }
-    runGit(['init', '-b', 'main'])
-    runGit(['config', 'user.email', 'qa@example.com'])
-    runGit(['config', 'user.name', 'QA Fixture'])
-    runGit(['add', '-A'])
-    runGit(['commit', '-m', 'fixture: clean main'])
-    runGit(['update-ref', 'refs/remotes/origin/main', 'HEAD'])
+    return env
+  }
+
+  function fixtureGit(runner, ...args) {
+    const result = spawnSync('git', args, { cwd: runner, env: gitEnvironment(fixtureRoot), encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    return result.stdout.trim()
+  }
+
+  function initRunner(runner) {
+    fixtureGit(runner, 'init', '-b', 'main')
+    fixtureGit(runner, 'config', 'user.name', 'Fixture')
+    fixtureGit(runner, 'config', 'user.email', 'fixture@example.invalid')
+    fixtureGit(runner, 'config', 'core.hooksPath', '/dev/null')
+    fixtureGit(runner, 'add', '.')
+    fixtureGit(runner, '-c', 'commit.gpgsign=false', 'commit', '-m', 'Fixture baseline')
+    // A local tracking ref at a real commit; no network or fabricated Git output.
+    fixtureGit(runner, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    assert.equal(realpathSync(fixtureGit(runner, 'rev-parse', '--show-toplevel')), realpathSync(runner))
+    assert.equal(fixtureGit(runner, 'branch', '--show-current'), 'main')
+    assert.equal(fixtureGit(runner, 'status', '--porcelain'), '')
+    assert.equal(fixtureGit(runner, 'rev-parse', 'HEAD'), fixtureGit(runner, 'rev-parse', 'origin/main'))
   }
 
   function run(home, args = []) {
@@ -227,7 +236,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     }
     cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(runner, 'plugins/omnimux/src/plugin-lifecycle.json'))
-    initCleanMainRepo(runner)
+    initRunner(runner)
     for (const entrypoint of ['sync-stable.sh', 'sync-to-app.sh']) {
       for (const alias of ['trailing-slash', 'dot', 'symlink']) {
         const home = join(fixtureRoot, `${entrypoint}-${alias}`)
@@ -238,7 +247,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
         const result = spawnSync('bash', [join(runner, 'scripts', entrypoint), `--target=${target}`, '--skip-build', 'omnimux-accounts'], {
           cwd: runner,
           encoding: 'utf8',
-          env: { ...process.env, HOME: home, CI: 'true', npm_config_offline: 'true', OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: join(runner, 'plugins') },
+          env: { ...gitEnvironment(home), CI: 'true', npm_config_offline: 'true', OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: join(runner, 'plugins') },
         })
         assert.equal(result.status, 0, `${entrypoint}/${alias}: ${result.stderr || result.stdout}`)
         assert.equal(readChannel(home, '.omnimux'), 'production')
@@ -272,7 +281,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(isolatedRegistry, 'plugin-lifecycle.json'))
     writeFileSync(join(isolatedScripts, 'sync-stable.sh'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$ARGS_FILE"\n')
     chmodSync(join(isolatedScripts, 'sync-stable.sh'), 0o755)
-    initCleanMainRepo(isolatedRoot)
+    initRunner(isolatedRoot)
 
     const result = spawnSync('bash', [
       join(isolatedScripts, 'sync-to-app.sh'),
@@ -283,8 +292,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
       cwd: isolatedRoot,
       encoding: 'utf8',
       env: {
-        ...process.env,
-        HOME: isolatedHome,
+        ...gitEnvironment(isolatedHome),
         ARGS_FILE: argsFile,
         OMNIMUX_PLUGINS_DIR: isolatedPlugins,
       },
@@ -295,6 +303,30 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
       'omnimux-accounts',
     ])
   })
+
+  for (const [state, diagnostic] of [
+    ['dirty', /未提交改动/],
+    ['feature', /当前分支是 \[feature\/fixture\]/],
+    ['ahead', /HEAD 未对齐 origin\/main/],
+  ]) {
+    it(`rejects a real ${state} repository before Dev or Prod writes`, () => {
+      const runner = join(fixtureRoot, `rejected-${state}`)
+      const home = join(fixtureRoot, `rejected-home-${state}`)
+      copySyncScripts(runner)
+      cpSync(fixturePlugins, join(runner, 'plugins'), { recursive: true })
+      initRunner(runner)
+      if (state === 'dirty') writeFileSync(join(runner, 'uncommitted.txt'), 'dirty\n')
+      if (state === 'feature') fixtureGit(runner, 'checkout', '-b', 'feature/fixture')
+      if (state === 'ahead') fixtureGit(runner, '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-m', 'Unaligned fixture')
+      mkdirSync(home)
+      const result = spawnSync('bash', [join(runner, 'scripts/sync-to-app.sh'), '--target=dev,prod', '--skip-build', 'omnimux-accounts'], {
+        cwd: runner, encoding: 'utf8', env: { ...gitEnvironment(home), OMNIMUX_PLUGINS_DIR: join(runner, 'plugins') },
+      })
+      assert.equal(result.status, 1, result.stdout + result.stderr)
+      assert.match(result.stderr, diagnostic)
+      assert.deepEqual(readdirSync(home), [], 'rejection must precede profile creation')
+    })
+  }
 
   it('fails before writing when a selected production source is missing', () => {
     const before = readFileSync(manifestPath(fixtureRoot, '.omnimux'), 'utf8')
@@ -324,17 +356,17 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     const result = spawnSync('bash', [join(isolatedScripts, 'sync-stable.sh'), '--prod'], {
       cwd: isolatedRoot,
       encoding: 'utf8',
-      env: { ...process.env, HOME: isolatedHome, OMNIMUX_SYNC_VIA: 'internal' },
+      env: { ...gitEnvironment(isolatedHome), OMNIMUX_SYNC_VIA: 'internal' },
     })
     assert.notEqual(result.status, 0)
     assert.match(result.stderr, /无法读取 Alpha 插件生命周期注册表/)
     assert.equal(readFileSync(join(isolatedProfile, 'package.json'), 'utf8'), sentinel)
 
-    initCleanMainRepo(isolatedRoot)
+    initRunner(isolatedRoot)
     const wrapperResult = spawnSync('bash', [join(isolatedScripts, 'sync-to-app.sh'), '--prod', '--skip-build'], {
       cwd: isolatedRoot,
       encoding: 'utf8',
-      env: { ...process.env, HOME: isolatedHome },
+      env: { ...gitEnvironment(isolatedHome) },
     })
     assert.notEqual(wrapperResult.status, 0)
     assert.match(wrapperResult.stderr, /无法读取 Alpha 插件生命周期注册表/)

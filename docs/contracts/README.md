@@ -30,7 +30,7 @@ subsystem: "global"
 | `living` | [plugin-offline-cloud-matrix.md](plugin-offline-cloud-matrix.md) | 插件离线/云端定界与侧栏动态可见性合同 | `global` | 2026-08-30 | 规范 8 大插件离线 vs 云端定级，云端依赖未登录隐藏，离线可用常驻且落地方案 D 礼貌拦截。 |
 | `living` | [project-assets-contract.md](project-assets-contract.md) | 项目资产与主体库物理实体化合同 | `omnimux-workflow` | 2026-08-30 | 导入即 copy；项目相对路径；全局仓 `data/files/`；禁止 `/api/projects/:id` 新前缀。 |
 | `living` | [openreel-vendor-contract.md](openreel-vendor-contract.md) | openreel-vendor-contract — OpenReel 完整微应用引入与反自研契约 | `omnimux-clip` | 2026-08-27 | 在 `omnimux-clip` 中，**严禁重新发明已经成熟的开源 NLE（含其官方 GUI）**。 |
-| `living` | [agent-issue-lifecycle.md](agent-issue-lifecycle.md) | agent-issue-lifecycle — OmniMux Agent 专属 GitHub Issue 驱动开发合同 | `omnimux` | 2026-08-26 | 1. **唯一真源（Single Source of Truth）**：GitHub Issue 是任务背景、技术决策、验收标准和流转状态的唯一真源。 |
+| `living` | [agent-issue-lifecycle.md](agent-issue-lifecycle.md) | agent-issue-lifecycle — OmniMux Agent Issue 生命周期合同 | `omnimux` | 2026-09-09 | Issue 保存边界、验收标准与依赖；按适用阶段记录证据，权限与风险由 plugin-git-pr 定义。 |
 | `living` | [briefing.md](briefing.md) | Briefing contract | `global` | 2026-08-26 | Project briefing process. Memory, not truth. |
 | `living` | [client-ui-remediation.md](client-ui-remediation.md) | Client UI 形态定界与 4 层整改合同 | `omnimux-accounts` | 2026-08-26 | `挂载点 = ctx.slots.inject("shell.overlay")，形态 = 各垂直对象插件自有 Stage，产物 = dsh.bundle；共享 4 层壳下沉 dsh-ui-kit（非 |
 | `living` | [docs-governance-standard.md](docs-governance-standard.md) | 开发文档工程实践管理规范 | `global` | 2026-08-26 | 在 OmniMux-DSH 多智能体（Multi-Agent）与人类工程师协同的工程研发体系中，文档不仅是人类的知识沉淀与备忘录，更是 Agent 执行任务时的**行为护栏（Guardrails）与最 |
@@ -40,7 +40,7 @@ subsystem: "global"
 | `living` | [plugin-qa.md](plugin-qa.md) | plugin-qa — OmniMux 插件验收证据合同 | `omnimux` | 2026-09-09 | 合入前自动化/静态与独立评审；合入后按需 Dev/ego/shared probe；CI 不证明 Dev 通过。 |
 | `archived` | [series.md](series.md) | series/ contract | `omnimux-workflow` | 2026-08-26 | Product store. Session logs are not this store. |
 | `living` | [settings-ui.md](settings-ui.md) | Settings UI placement | `omnimux-accounts` | 2026-08-26 | Normative seat for OmniMux plugin UI in the official Web Settings panel. Live slot names come from t |
-| `living` | [workbench-split.md](workbench-split.md) | Workbench split — 对话可收、插件 GUI 常驻 | `omnimux` | 2026-08-31 | 工作台挂 `dsh-better-sidebar`；库页留 overlay；焦点 = 右栏几何（split/gui/chat）；禁止 claim product-stage。 |
+| `living` | [workbench-split.md](workbench-split.md) | Workbench split — 对话可收、插件 GUI 常驻 | `omnimux` | 2026-08-31 | 工作台与一级库页统一使用 `dsh-better-sidebar` Tabs；焦点 = 右栏几何（split/gui/chat）；禁止 claim product-stage，合法 overlay 仅按合同限定。 |
 | `living` | [sidebar-extra-entries.md](sidebar-extra-entries.md) | Sidebar extra entries (under 新会话) | `omnimux-assets` | 2026-08-26 | Normative look for any extra row injected under the official **新会话** button. Official workspace sess |
 | `living` | [stage-guards.md](stage-guards.md) | stage-guards — 一级 Stage / 本地写闸 / 空态静态契约 | `omnimux-accounts` | 2026-08-26 | \| 规则 \| 判定 \| |
 | `living` | [ui-copywriting-and-naming-standards.md](ui-copywriting-and-naming-standards.md) | OmniMux 全局 UI 命名与微文案规范 (UI Copywriting & Naming Standards) | `omnimux` | 2026-08-26 | * **规则**：维度标识、筛选字段必须使用 **2~4 字纯实体名词**。 |
