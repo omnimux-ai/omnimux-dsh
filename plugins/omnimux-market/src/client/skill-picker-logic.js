@@ -2,6 +2,87 @@
 import catalog from '../../catalog/index.json' with { type: 'json' }
 
 import recommendations from '../../catalog/skill-recommendations.json' with { type: 'json' }
+import presetSkillsMap from '../../catalog/preset-skills.json' with { type: 'json' }
+
+/**
+ * Agent 预设与 Skill 绑定表（Agent 模式决定 skill 范围）。
+ */
+export const AGENT_PRESET_SKILL_BINDINGS = Object.freeze(presetSkillsMap)
+
+export function normalizePresetId(presetId) {
+  return String(presetId || '').trim().toLowerCase().replace(/_/g, '-')
+}
+
+export function getPresetSkillBinding(presetId) {
+  if (!presetId) return null
+  const norm = normalizePresetId(presetId)
+  const entry = AGENT_PRESET_SKILL_BINDINGS[presetId] ||
+    AGENT_PRESET_SKILL_BINDINGS[norm] ||
+    (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok'
+      ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
+      : null)
+  if (!entry) return null
+  const categories = entry.categories || []
+  const tabs = [
+    { id: 'all', kind: 'all', labelKey: 'picker.tab.all', name: '全部' },
+    ...categories.map((c) => ({ id: c.id, kind: 'preset-category', name: c.name })),
+  ]
+  return {
+    presetId: entry.presetId || presetId,
+    name: entry.name || presetId,
+    categories,
+    tabs,
+    skills: entry.skills || [],
+  }
+}
+
+export function hasPresetSkillBinding(presetId) {
+  return getPresetSkillBinding(presetId) !== null
+}
+
+export function resolveActivePreset({ props, sessions } = {}) {
+  if (props && typeof props.agentPreset === 'string' && props.agentPreset) {
+    return props.agentPreset
+  }
+  try {
+    const snap = sessions?.list?.getSnapshot?.()
+    const targetId = (props && props.sessionId) || snap?.current
+    if (targetId && snap?.byId?.[targetId]) {
+      const p = snap.byId[targetId]?.projectionValues?.agentPreset
+      if (typeof p === 'string' && p) return p
+    }
+  } catch {}
+  if (typeof window !== 'undefined' && window.__omnimuxActivePreset) {
+    return window.__omnimuxActivePreset
+  }
+  return undefined
+}
+
+export function filterPresetSkills(skills = [], tabId = 'all', query = '') {
+  const list = Array.isArray(skills) ? skills : []
+  const q = String(query || '').trim().toLowerCase()
+  return list.filter((item) => {
+    if (!item) return false
+    if (tabId && tabId !== 'all') {
+      const cat = String(item.category || item.categoryLabel || '').trim()
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : []
+      if (cat !== tabId && !tags.includes(tabId)) return false
+    }
+    if (q) {
+      const hay = [
+        item.name,
+        item.title,
+        item.slug,
+        item.skill,
+        item.description,
+        item.summary,
+        item.category,
+      ].map((v) => String(v || '')).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    return true
+  })
+}
 
 /** Validate editorial IDs separately from resilient rendering; shipped configuration is tested. */
 export function validateSkillRecommendations(config = recommendations, entries = catalog.items) {
@@ -40,9 +121,17 @@ export function resolveSkillRecommendations(ids = [], entries = catalog.items) {
 
 /** Split only displayed recommendations out of discovery; full-library search stays independent. */
 export function plazaDiscoverySections(items = [], { category = '', query = '', uninstalledOnly = false,
-  installedItems = [], config = recommendations, entries = catalog.items } = {}) {
+  installedItems = [], config = recommendations, entries = catalog.items, presetBinding = null } = {}) {
   const key = item => item.slug || item.skill || item.catalogId || item.id
-  const matches = item => !category || category === 'featured' || matchesDomainTag(item, category)
+  const matches = item => {
+    if (!category || category === 'featured') return true
+    if (presetBinding && Array.isArray(presetBinding.skills)) {
+      const cat = String(item.category || item.categoryLabel || '').trim()
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : []
+      return cat === category || tags.includes(category)
+    }
+    return matchesDomainTag(item, category)
+  }
   const available = item => !uninstalledOnly || !item.installed
   const unique = list => [...new Map(list.map(item => [key(item), item])).values()]
   const installed = new Map(installedItems.map(item => [key(item), item]))
@@ -64,7 +153,10 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
     ...item, catalogId: item.id, slug: item.skill, name: item.title, description: item.summary,
     installBackend: 'catalog', installed: installed.has(item.skill),
   }))
-  const regular = unique([...localCards, ...items]).map(item => installed.has(key(item))
+  const presetCards = presetBinding && Array.isArray(presetBinding.skills)
+    ? filterPresetSkills(presetBinding.skills, category, query)
+    : []
+  const regular = unique([...presetCards, ...localCards, ...items]).map(item => installed.has(key(item))
     ? { ...item, installed: true, enabled: installed.get(key(item)).enabled !== false } : item).filter(matches).filter(available)
     .filter(item => !featuredKeys.has(key(item)))
     .filter(item => category !== 'featured' || (hasQuery && catalogFeatured.has(key(item))))
@@ -195,7 +287,10 @@ export function inSkillShelf(item) {
   return SKILL_SHELF_TAGS.some((tag) => matchesDomainTag(item, tag))
 }
 
-export function filterPickerItems(items, tabId) {
+export function filterPickerItems(items, tabId, presetBinding = null) {
+  if (presetBinding && Array.isArray(presetBinding.skills)) {
+    return filterPresetSkills(presetBinding.skills, tabId)
+  }
   const list = Array.isArray(items) ? items : []
   const tab = PICKER_TABS.find((row) => row.id === tabId) || PICKER_TABS[0]
   if (tab.kind === 'mine') return list.filter((it) => it && it.installed === true)

@@ -101,4 +101,12 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(shell, /__omnimuxWorkbench/)
     assert.doesNotMatch(shell, /__omnimuxStage\.claim/)
   })
+
+  it('skill picker button binds to agent preset and hides when unbound', () => {
+    const picker = readFileSync(join(here, 'skill-picker.js'), 'utf8')
+    assert.match(picker, /SkillShelf\.resolveActivePreset/)
+    assert.match(picker, /SkillShelf\.getPresetSkillBinding/)
+    assert.match(picker, /if \(!presetBinding\)\s*\{\s*return null;\s*\}/)
+    assert.match(picker, /presetBinding/)
+  })
 })

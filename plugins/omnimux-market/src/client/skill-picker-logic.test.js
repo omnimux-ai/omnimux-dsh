@@ -26,6 +26,11 @@ import {
   pickerCacheKey,
   writePickerCache,
   PICKER_CACHE_TTL_MS,
+  AGENT_PRESET_SKILL_BINDINGS,
+  getPresetSkillBinding,
+  hasPresetSkillBinding,
+  resolveActivePreset,
+  filterPresetSkills,
 } from './skill-picker-logic.js'
 
 describe('skill shelf taxonomy', () => {
@@ -270,5 +275,156 @@ describe('plaza search payload channels (Issue #504)', () => {
       channels: ['custom', 'workbuddy', 'skillhub'],
     })
     assert.deepEqual(buildPlazaSearchPayload('  ', '  ', 1).channels, ['custom', 'workbuddy'])
+  })
+})
+
+describe('agent preset skill bindings', () => {
+  it('exposes AGENT_PRESET_SKILL_BINDINGS containing tiktok-agent', () => {
+    assert.ok(AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'])
+    assert.equal(AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'].presetId, 'tiktok-agent')
+  })
+
+  it('getPresetSkillBinding resolves tiktok-agent and TikTokAgent', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    assert.ok(binding)
+    assert.equal(binding.name, 'TikTokAgent')
+    assert.equal(getPresetSkillBinding('TikTokAgent')?.presetId, 'tiktok-agent')
+    assert.equal(getPresetSkillBinding('tiktok')?.presetId, 'tiktok-agent')
+  })
+
+  it('unbound presets return null and hasPresetSkillBinding is false', () => {
+    for (const id of ['standard', 'daily-work', 'cordis', 'unknown', '', null, undefined]) {
+      assert.equal(getPresetSkillBinding(id), null)
+      assert.equal(hasPresetSkillBinding(id), false)
+    }
+    assert.equal(hasPresetSkillBinding('tiktok-agent'), true)
+    assert.equal(hasPresetSkillBinding('TikTokAgent'), true)
+  })
+
+  it('tiktok-agent contains the 6 categories from the screenshots', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    const catIds = binding.categories.map((c) => c.id)
+    assert.deepEqual(catIds, ['选品', '搜索爆款视频', '创作视频', '生成电商图', '创作图片', '数据分析'])
+    assert.equal(binding.tabs.length, 7)
+    assert.equal(binding.tabs[0].id, 'all')
+  })
+
+  it('tiktok-agent contains all 44 skills from the 7 screenshots with complete metadata', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    assert.equal(binding.skills.length, 44)
+
+    const titles = new Set(binding.skills.map((s) => s.name))
+    // 选品 (Screenshot 4)
+    assert.ok(titles.has('TikTok 蓝海爆品发现'))
+    assert.ok(titles.has('以图找同款商品'))
+    assert.ok(titles.has('头部跨境店爆品参考'))
+    assert.ok(titles.has('商品口碑与差评洞察'))
+    assert.ok(titles.has('高佣金潜力品筛选'))
+    assert.ok(titles.has('TK品类视频热度与洞察报告'))
+
+    // 搜索爆款视频 (Screenshot 5)
+    assert.ok(titles.has('爆款带货提示词生成器'))
+    assert.ok(titles.has('采集爆款视频'))
+    assert.ok(titles.has('视频分析'))
+    assert.ok(titles.has('反推视频提示词'))
+    assert.ok(titles.has('下载TK视频'))
+    assert.ok(titles.has('生成带货脚本提示词'))
+    assert.ok(titles.has('反推视频提示词并改写脚本'))
+    assert.ok(titles.has('爆款批量搜索 + 深度拆解报告'))
+    assert.ok(titles.has('生成长时间视频脚本'))
+    assert.ok(titles.has('爆款选题与话题tag挖掘'))
+
+    // 创作视频 (Screenshot 1)
+    assert.ok(titles.has('复刻爆款视频'))
+    assert.ok(titles.has('创作带货视频'))
+    assert.ok(titles.has('视频脚本创作'))
+    assert.ok(titles.has('视频提示词生成'))
+    assert.ok(titles.has('视频生成'))
+
+    // 生成电商图 (Screenshot 6)
+    assert.ok(titles.has('图片翻译'))
+    assert.ok(titles.has('生成白底图'))
+    assert.ok(titles.has('生成场景图'))
+    assert.ok(titles.has('生成卖点图'))
+    assert.ok(titles.has('生成细节特写四宫格'))
+    assert.ok(titles.has('一键买家秀'))
+    assert.ok(titles.has('基于参考人物生成角色'))
+    assert.ok(titles.has('生成试穿套装'))
+    assert.ok(titles.has('生成电商套图'))
+    assert.ok(titles.has('去除图片背景'))
+
+    // 创作图片 (Screenshot 2)
+    assert.ok(titles.has('视频分镜图'))
+    assert.ok(titles.has('商品套图'))
+    assert.ok(titles.has('A+内容'))
+    assert.ok(titles.has('图片复刻'))
+    assert.ok(titles.has('多角度产品图'))
+    assert.ok(titles.has('AI 换装'))
+
+    // 数据分析 (Screenshot 7 & 3)
+    assert.ok(titles.has('TK博主蒸馏器'))
+    assert.ok(titles.has('采集创作者账号视频'))
+    assert.ok(titles.has('TK 视频批量拆解'))
+    assert.ok(titles.has('关键词赛道速览(商品/视频/达人)'))
+    assert.ok(titles.has('TK账号内容复盘与优化建议'))
+    assert.ok(titles.has('分析账号'))
+  })
+
+  it('filterPresetSkills filters by category and search query', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    const xuanpin = filterPresetSkills(binding.skills, '选品')
+    assert.equal(xuanpin.length, 6)
+
+    const searchViral = filterPresetSkills(binding.skills, '搜索爆款视频')
+    assert.equal(searchViral.length, 10)
+
+    const creativeVideo = filterPresetSkills(binding.skills, '创作视频')
+    assert.equal(creativeVideo.length, 6)
+
+    const ecomImg = filterPresetSkills(binding.skills, '生成电商图')
+    assert.equal(ecomImg.length, 10)
+
+    const creativeImg = filterPresetSkills(binding.skills, '创作图片')
+    assert.equal(creativeImg.length, 6)
+
+    const dataAnalysis = filterPresetSkills(binding.skills, '数据分析')
+    assert.equal(dataAnalysis.length, 6)
+
+    const allSkills = filterPresetSkills(binding.skills, 'all')
+    assert.equal(allSkills.length, 44)
+
+    const searchMatch = filterPresetSkills(binding.skills, 'all', '蓝海')
+    assert.equal(searchMatch.length, 1)
+    assert.equal(searchMatch[0].name, 'TikTok 蓝海爆品发现')
+
+    const buyerShow = filterPresetSkills(binding.skills, 'all', '买家秀')
+    assert.equal(buyerShow.length, 1)
+    assert.equal(buyerShow[0].name, '一键买家秀')
+  })
+
+  it('filterPickerItems delegates to filterPresetSkills when presetBinding is passed', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    const res = filterPickerItems([], '选品', binding)
+    assert.equal(res.length, 6)
+    assert.equal(res[0].category, '选品')
+  })
+
+  it('resolveActivePreset extracts preset from props or sessions', () => {
+    assert.equal(resolveActivePreset({ props: { agentPreset: 'custom-preset' } }), 'custom-preset')
+
+    const fakeSessions = {
+      list: {
+        getSnapshot: () => ({
+          current: 's1',
+          byId: {
+            s1: { projectionValues: { agentPreset: 'tiktok-agent' } },
+            s2: { projectionValues: { agentPreset: 'standard' } },
+          },
+        }),
+      },
+    }
+    assert.equal(resolveActivePreset({ sessions: fakeSessions }), 'tiktok-agent')
+    assert.equal(resolveActivePreset({ props: { sessionId: 's2' }, sessions: fakeSessions }), 'standard')
+    assert.equal(resolveActivePreset({}), undefined)
   })
 })
