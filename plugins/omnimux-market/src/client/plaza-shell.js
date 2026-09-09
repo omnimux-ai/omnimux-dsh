@@ -112,7 +112,7 @@
             overflow: "hidden",
           },
         },
-          h("div", { className: "sh-plaza-top", style: tab === "skills" ? { borderBottom: 0, height: "auto", padding: "12px 20px 0" } : undefined },
+          h("div", { className: "sh-plaza-top", hidden: tab === "skills" },
             h("div", { className: "sh-plaza-tabs", role: "tablist", style: { display: "none" } },
               h(Button, {
                 type: "button",

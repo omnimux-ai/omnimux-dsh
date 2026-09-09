@@ -55,11 +55,11 @@
     }
 
     function InstallModal({ open, onClose, onInstalled }) {
-      if (!open) return null;
       const [file, setFile] = useState(null);
       const [uploading, setUploading] = useState(false);
       const [error, setError] = useState("");
       const fileInputRef = useRef(null);
+      if (!open) return null;
 
       const handleFileChange = (e) => {
         const selected = e.target.files && e.target.files[0];
@@ -89,9 +89,7 @@
           if (onInstalled) onInstalled({ name, slug: name, installed: true, enabled: true });
           onClose();
         } catch (err) {
-          const name = file.name.replace(/\.(zip|md)$/i, "");
-          if (onInstalled) onInstalled({ name, slug: name, installed: true, enabled: true });
-          onClose();
+          setError(err.message || String(err));
         } finally {
           setUploading(false);
         }
@@ -336,6 +334,8 @@
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
+        if (category === "featured" && !isFeaturedItem(item)) return false;
+        if (category && category !== "featured" && !SkillShelf.matchesDomainTag(item, category)) return false;
         if (mineCategory && !SkillShelf.matchesDomainTag(item, mineCategory)) return false;
         if (mineSource) {
           const src = String(item.source || item.origin || item.channel || "OmniMux").toLowerCase();
@@ -361,10 +361,23 @@
       ];
 
       return h("div", { className: "sh-mkt" },
-        // 1. 双 Tab 与搜索行
+        h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },
+          h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, tr("workshop.title")),
+          h("p", { className: "workshop-description" }, tr("workshop.subtitle")),
+          h("div", { className: "action-row" },
+            h("button", { type: "button", className: "btn-create", onClick: () => createSkillSession({ text: "/skill-creator" }) },
+              h(PlazaIcon, { size: 14 }), tr("workshop.create")),
+            h("button", { type: "button", className: "btn-install", onClick: () => setOpenInstallModal(true) },
+              h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M8 3v10M3 8h10", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" })), tr("workshop.install")),
+          ),
+        ),
+        // 双 Tab 与搜索行
         h("div", { className: "nav-bar" },
           h("div", { className: "nav-tabs" },
-            h("div", {
+            h("button", {
+              type: "button",
+              "aria-pressed": mainTab === "discover",
               className: "nav-tab" + (mainTab === "discover" ? " active" : ""),
               onClick: () => { setMainTab("discover"); setPage(1); },
             },
@@ -386,7 +399,9 @@
                 h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" }),
               ),
             ),
-            h("div", {
+            h("button", {
+              type: "button",
+              "aria-pressed": mainTab === "mine",
               className: "nav-tab" + (mainTab === "mine" ? " active" : ""),
               onClick: () => setMainTab("mine"),
             },
@@ -412,7 +427,16 @@
           ),
         ),
 
-        // 3. 视图内容
+        h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
+          workshopCategories.map((c) => h("button", {
+            key: c.id,
+            type: "button",
+            className: "cat-btn" + (category === c.id ? " active" : ""),
+            "aria-pressed": category === c.id,
+            onClick: () => { setCategory(c.id); setMineCategory(""); setPage(1); },
+          }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
+        ),
+        // 视图内容
         mainTab === "mine" ? h("div", null,
           // 「我的 Skill」专属工具行
           h("div", { className: "mine-toolbar" },
@@ -467,15 +491,6 @@
             )),
           ) : h("p", { className: "sh-mkt-status" }, tr("workshop.emptyMine") || "暂无已安装的 Skill"),
         ) : h("div", null,
-          // 「Skill 发现」分类药丸栏
-          h("div", { className: "category-bar" },
-            workshopCategories.map((c) => h("button", {
-              key: c.id,
-              type: "button",
-              className: "cat-btn" + (category === c.id ? " active" : ""),
-              onClick: () => { setCategory(c.id); setPage(1); },
-            }, c.label)),
-          ),
 
           // 官方精选（结果大于等于 1 项才显示，否则完全隐藏）
           featuredItems.length > 0 ? h("section", { className: "featured-section" },

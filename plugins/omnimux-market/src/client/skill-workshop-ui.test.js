@@ -309,9 +309,9 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
   })
 
   it('css defines minimalist design matching demo', () => {
-    assert.match(cssSrc, /\.page-header/)
-    assert.match(cssSrc, /\.page-title/)
-    assert.match(cssSrc, /\.page-subtitle/)
+    assert.match(cssSrc, /\.workshop-intro/)
+    assert.match(cssSrc, /\.workshop-heading/)
+    assert.match(cssSrc, /\.workshop-description/)
     assert.match(cssSrc, /\.btn-create/)
     assert.match(cssSrc, /\.btn-install/)
     assert.match(cssSrc, /\.featured-cover-wrap/)
