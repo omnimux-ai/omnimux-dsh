@@ -6,10 +6,10 @@
 
 - 社区 `dsh-better-sidebar` 0.18.0 提供 betterSidebar；不是官方内置服务。
 - 已核实官方 locale/ui-primitives 0.1.2-rc.1，使用 locale.register/bind。
-- React 18.3.1、esbuild 0.28.2；dsh-ui-kit 沿用仓库 file 依赖惯例，只读消费，不修改其源。
-- `node scripts/build-client.mjs` 从声明依赖解析，输出 lib/client.js；无机器路径或缓存扫描。
-- `node --test tests/*.test.mjs`；仓根可执行 `pnpm --filter omnimux-studio test`。
-- 测试的 jsdom/react/esbuild 复用仓根声明。当前工作树通过任务私有 node_modules 链接复用已安装 dsh-ui-kit。尚未完成干净依赖安装/lock 纳管，不能据此宣称跨机可复现。
+- pnpm 11.7.0、React 18.3.1、esbuild 0.28.2、jsdom 30.0.1。插件自带独立 workspace 与 lock，避免嵌套工作树解析其他插件的历史外部 file 依赖。
+- 在本插件目录执行 `pnpm install --frozen-lockfile --ignore-scripts --store-dir ../../.pnpm-store/studio`，然后 `pnpm test && pnpm build`。构建输出 lib/client.js，不含机器路径兜底或缓存扫描。
+- MIT `dsh-ui-kit@0.1.0` 使用随源码纳管的 `dsh-ui-kit-0.1.0.tgz`，由 canonical personal/dsh-ui-kit 只读 npm pack（ignore-scripts）产生，不从已安装 node_modules 反向回填。SHA256：`eb4accab76b146592af2871aff6fc068114a93a9f4aee21d0b40e9faeebe1154`。包内保留原源码、README 和 MIT license 声明。
+- 官方客户端与 betterSidebar 是 Host 服务前提；开发安装闭合不证明 Host 已装配。根 workspace 的旧外部 kit 路径问题保持原样，本插件独立安装不是全仓安装修复。
 
 ## 状态与生命周期
 

@@ -9,9 +9,23 @@ export function tokenPart(tokenType, value = '') {
   const part = { id: crypto.randomUUID(), kind: 'url-token', tokenType, value }
   return { ...part, ...validateToken(part) }
 }
+/** Check untrusted document structure before rendering or serializing it. */
+export function validateDocument(document) {
+  if (!document || document.version !== 1 || !Array.isArray(document.parts) || !document.parts.length) return false
+  const ids = new Set()
+  return document.parts.every(part => {
+    if (!part || typeof part.id !== 'string' || !part.id.trim() || ids.has(part.id)) return false
+    ids.add(part.id)
+    if (part.kind === 'text') return typeof part.text === 'string'
+    return part.kind === 'url-token' && ['product', 'video'].includes(part.tokenType)
+      && typeof part.value === 'string' && ['empty', 'invalid', 'valid'].includes(part.validation)
+      && (part.error === undefined || typeof part.error === 'string')
+  })
+}
 export function validateToken(part) {
-  const value = part.value.trim()
   const invalid = { validation: 'invalid', error: '仅接受公开 HTTP(S) 链接或商品 ID；禁止凭据及签名参数' }
+  if (!part || typeof part.value !== 'string' || !['product', 'video'].includes(part.tokenType)) return invalid
+  const value = part.value.trim()
   if (!value) return { validation: 'empty', error: '请填写链接或商品 ID' }
   if (value.length > 2048) return invalid
   if (part.tokenType === 'product' && /^[A-Za-z0-9_-]{1,64}$/.test(value)) return { validation: 'valid' }

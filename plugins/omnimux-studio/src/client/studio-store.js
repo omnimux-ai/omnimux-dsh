@@ -1,4 +1,4 @@
-import { createDocument, textPart, tokenPart, serializeDocument, validateToken } from './editor-document.js'
+import { createDocument, textPart, tokenPart, serializeDocument, validateToken, validateDocument } from './editor-document.js'
 import { modelsFor, PRESETS, MEDIA } from './fixtures.js'
 import { MockAdapter } from './mock-adapter.js'
 
@@ -36,7 +36,9 @@ export class StudioStore {
     for (const listener of this.listeners) listener()
   }
   updateDraft(mode, patch) {
-    if (!this.state.drafts[mode]) return
+    if (!this.state.drafts[mode] || !patch || typeof patch !== 'object') return
+    if (Object.hasOwn(patch, 'document') && !validateDocument(patch.document)) return
+    if (Object.hasOwn(patch, 'references') && (!Array.isArray(patch.references) || patch.references.some(ref => !ref || typeof ref !== 'object'))) return
     const current = this.state.drafts[mode]
     const draft = { ...current, ...structuredClone(patch) }
     if (patch.spec && current.spec) draft.spec = { ...current.spec, ...patch.spec }
@@ -64,6 +66,9 @@ export class StudioStore {
   }
   validateDraft(draft) {
     const errors = []
+    if (!draft || !validateDocument(draft.document) || !Array.isArray(draft.references) || draft.references.some(ref => !ref || typeof ref !== 'object')) {
+      return { errors: ['草稿文档或参考结构无效'], prompt: '', model: null, totalCost: 0 }
+    }
     const prompt = serializeDocument(draft.document)
     if (!prompt.trim()) errors.push('请输入创作内容')
     if (prompt.length > (draft.mode === 'image' ? 2000 : 8000)) errors.push('正文超过长度限制')
@@ -78,7 +83,7 @@ export class StudioStore {
       if (!spec || !Number.isInteger(spec.batchCount) || spec.batchCount < 1 || spec.batchCount > (image ? 4 : 1)) errors.push('批量无效')
       if (spec && (image ? spec.durationMode !== 'none' || spec.durationSeconds !== null : !['auto', 'fixed'].includes(spec.durationMode) || (spec.durationMode === 'auto' ? spec.durationSeconds !== null : ![5, 8, 10, 15].includes(spec.durationSeconds)))) errors.push('时长无效')
     }
-    const allowedSlots = draft.mode === 'image' ? { reference: 'image' } : draft.mode === 'agent' ? {} : draft.submode === 'firstlast' ? { first: 'image', last: 'image' } : draft.submode === 'ref' ? { 'reference-video': 'video', 'reference-image': 'image' } : { 'edit-video': 'video', 'edit-image': 'image' }
+    const allowedSlots = draft.mode === 'image' ? { reference: 'image' } : draft.mode === 'agent' ? {} : draft.submode === 'firstlast' ? { first: 'image', last: 'image' } : draft.submode === 'ref' ? { 'reference-video': 'video', 'reference-image': 'image' } : { 'edit-video': 'video', 'edit-image': 'image', 'edit-portrait': 'image' }
     const slots = new Set()
     for (const ref of draft.references) {
       if (slots.has(ref.slot) || allowedSlots[ref.slot] !== ref.kind || (ref.source === 'fixture' ? !MEDIA[ref.fixtureId] || ref.fixtureId !== `mock:sample-${ref.kind}` : ref.source !== 'local' || !this.resources.has(ref.fileId))) errors.push('参考槽与当前模式不兼容，请移除或切回原模式')
@@ -104,7 +109,21 @@ export class StudioStore {
         const current = this.state.tasks.find(item => item.id === task.id)
         if (this.disposed || this.epoch !== epoch || request.scopeKey !== this.scopeKey || controller.signal.aborted || current?.attemptId !== task.attemptId || current.status !== 'pending') return
         this.jobs.delete(task.id)
-        const completed = outcome.status === 'completed' && outcome.results?.length === (request.draft.spec?.batchCount ?? 1)
+        const expectedKind = request.draft.spec === null ? 'text' : request.draft.mode === 'image' ? 'image' : 'video'
+        const ids = new Set()
+        const completed = outcome?.status === 'completed' && Array.isArray(outcome.results)
+          && outcome.results.length === (request.draft.spec?.batchCount ?? 1)
+          && outcome.results.every(result => {
+            if (!result || typeof result.id !== 'string' || !result.id || ids.has(result.id)) return false
+            ids.add(result.id)
+            return result.kind === expectedKind && result.fixtureId === `mock:sample-${expectedKind}`
+              && ['idle', 'loading', 'ready', 'error'].includes(result.mediaState)
+              && result.actualMetadata && typeof result.actualMetadata === 'object'
+              && !Array.isArray(result.actualMetadata)
+              && (expectedKind === 'text' ? typeof result.actualMetadata.text === 'string'
+                : typeof result.actualMetadata.source === 'string' && typeof result.actualMetadata.dimensions === 'string'
+                  && (result.actualMetadata.durationSeconds === null || Number.isFinite(result.actualMetadata.durationSeconds)))
+          })
         this.publish({ tasks: this.state.tasks.map(item => item.id === task.id ? { ...item, status: completed ? 'completed' : 'failed', results: completed ? outcome.results : [], refunded: !completed, error: completed ? null : 'mock-failure' } : item), mockCredits: this.state.mockCredits + (completed ? 0 : totalCost) })
       }
       try {
