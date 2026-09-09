@@ -23,17 +23,56 @@ const CSS = `
 .omnimux-publish-action-row {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 20px 12px;
   background: var(--dsw-alias-bg-base, #ffffff);
 }
 
-/* Layer 3: Control Bar (Single FilterBar, 44px, 0 20px 12px) */
+/* Keep controls intact in both full-width and split workbench panels. */
 .omnimux-publish-control-bar {
   flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
   padding: 0 20px 12px;
   background: var(--dsw-alias-bg-base, #ffffff);
+}
+.omnimux-publish-tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.omnimux-publish-tabs [role="tablist"] {
+  flex-wrap: wrap;
+  height: auto;
+  row-gap: 0;
+}
+.omnimux-publish-tabs [role="tab"] {
+  height: 44px;
+}
+.omnimux-publish-control-tools {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+}
+.omnimux-publish-control-tools > * {
+  flex-shrink: 0;
+}
+.omnimux-publish-control-tools .omnimux-publish-search {
+  flex: 1 1 200px;
+  min-width: min(140px, 100%);
+  max-width: 260px;
+  width: auto;
 }
 .omnimux-publish-tab-badge {
   display: inline-flex;

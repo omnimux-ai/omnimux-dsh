@@ -50,8 +50,8 @@ export function PublishStageContent(props) {
         onSortChange={feed.setSortOption}
         typeFilter={feed.typeFilter}
         onTypeChange={feed.setTypeFilter}
-        channelFilter={feed.channelFilter}
-        onChannelChange={feed.setChannelFilter}
+        modeFilter={feed.modeFilter}
+        onModeChange={feed.setModeFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
