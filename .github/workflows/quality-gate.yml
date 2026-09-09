@@ -54,9 +54,10 @@ jobs:
           import { readFileSync, writeFileSync } from 'node:fs';
           const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
           const formContract = JSON.parse(readFileSync('packages/form-contract/package.json', 'utf8'));
+          const formRuntime = JSON.parse(readFileSync('plugins/omnimux-forms/package.json', 'utf8')).devDependencies;
           writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
             private: true,
-            dependencies: { ...formContract.dependencies, ...formContract.devDependencies, acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
+            dependencies: { ...formContract.dependencies, ...formContract.devDependencies, '@chakra-ui/react': formRuntime['@chakra-ui/react'], '@emotion/react': formRuntime['@emotion/react'], acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
           }));
           JS
           npm --prefix "$QA_DEPS" install --ignore-scripts --no-audit --no-fund
@@ -123,6 +124,9 @@ jobs:
 
       - name: Verify form contracts, authoring tools and generated references
         run: pnpm --config.verify-deps-before-run=false verify:forms
+
+      - name: Verify task form runtime and protected draft handoff
+        run: node --test plugins/omnimux-forms/src/*.test.mjs plugins/omnimux-forms/src/client/*.test.mjs plugins/omnimux/src/host/form-attachments*.test.js plugins/omnimux/src/client/forms/*.test.js
 
       - name: Run regression tests
         run: |

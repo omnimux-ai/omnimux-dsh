@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-28T04:00:58.624Z",
+  "updatedAt": "2026-09-09T04:26:49.091Z",
   "topology": {
     "tiers": [
       {
@@ -23,9 +23,9 @@
       }
     ],
     "summary": {
-      "totalPlugins": 12,
+      "totalPlugins": 13,
       "totalTools": 59,
-      "totalSeams": 5
+      "totalSeams": 6
     }
   },
   "plugins": [
@@ -71,6 +71,10 @@
           {
             "name": "textComplete",
             "interfaceDoc": "ctx.get('textComplete').generate(params)"
+          },
+          {
+            "name": "modelCatalog",
+            "interfaceDoc": "ctx.get('modelCatalog').list() → { source, fingerprint, defaults, text, image, video, audio }"
           }
         ],
         "seamsConsumed": [],
@@ -247,14 +251,18 @@
           }
         ],
         "storageDomains": [
-          "$DSH_HOME/omnimux/assets/"
+          "$DSH_HOME/omnimux/assets-storage/ (root pointer and task receipts)",
+          "$DSH_HOME/omnimux/assets/ (default root)",
+          "Active root selected through a confirmed storage migration plan; cleanup limited to confirmed managed-file manifests"
         ]
       },
       "dependencies": {
         "requiredPlugins": [
           "omnimux"
         ],
-        "systemBinaries": []
+        "systemBinaries": [
+          "osascript"
+        ]
       },
       "path": "plugins/omnimux-assets"
     },
@@ -349,6 +357,33 @@
         "systemBinaries": []
       },
       "path": "plugins/omnimux-clip"
+    },
+    {
+      "id": "omnimux-forms",
+      "name": "omnimux-forms",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "参考视频拆解与复刻任务表单",
+      "capabilities": {
+        "tools": [],
+        "seamsProvided": [],
+        "seamsConsumed": [
+          "omnimuxForms"
+        ],
+        "slots": [],
+        "storageDomains": [
+          "$DSH_HOME/omnimux/forms/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": []
+      },
+      "path": "plugins/omnimux-forms"
     },
     {
       "id": "omnimux-inspiration",
