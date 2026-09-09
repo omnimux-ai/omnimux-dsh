@@ -47,7 +47,8 @@
     "sk-omx-retro-city-cel-animation-short",
     "sk-omx-felt-stop-motion-story-short",
     "sk-omx-fashion-scene-showcase-video",
-    "sk-omx-product-kinetic-typography-tvc"
+    "sk-omx-product-kinetic-typography-tvc",
+    "sk-bggg-data-amazon"
   ],
-  "homeRecommendations": []
+  "homeRecommendations": ["sk-bggg-data-amazon"]
 }

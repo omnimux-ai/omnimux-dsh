@@ -1,5 +1,44 @@
 # #832 首页显式推荐配置：独立工程增量
 
+## 2026-09-09 实际名单与新封面交付（取代下文临时空名单状态）
+
+输入 HEAD `83ff6e88d2753693efeb184b0cffa6b0f9412752`，仍为同一任务树。首页实际入选 **1 项**：`sk-bggg-data-amazon` / `bggg-data-amazon`，名称 **BGGG Amazon Data · Amazon 评论采集**；全局精选 **49 项**。不凑16，不称评论优化；其他候选不新增推荐。仅本地源码及提交，未 push/merge/部署、未写用户 Skill 配置、未注入或执行采集。
+
+### 准入与正式分发
+
+- 读取本任务三个 home-recommendations 报告并采用用户最新“近似可用、缺失不展示”的决定。B/D/F 浏览器适配未核，其他不明许可内容不复制。
+- A/J/K 的首页配置引用本身不会复制正文，HTTP404不能推出无权使用。但实际 `installGitBundle()` 会优先复制本机目录或下载子目录，既有 catalog/精选提交不含适用权利证明；现有资料中没有补足授权证据，故不新推荐，也不删除旧条目。没有把404当作唯一否决理由。
+- E 从公开 `binggandata/bggg-skills@1034ee5805f3fd5b010a4f57affa4aa796ab75d5` 下载唯一包目录及根 LICENSE。逐文件 Git blob SHA 验证一致，外仓未改动。
+- 使用**已有 bundled 完整目录机制**，不新增分发服务。旧 git 安装器优先本机浮动副本、只复制 subpath 遗漏根许可，且固定SHA被拼为 `origin/<SHA>`；本轮不扩改旧 git 安装行为。固定来源、改编说明写入包内 `PROVENANCE.md`，而非把浮动git安装伪称固定版本。
+- 包内 `LICENSE` 保留 BGGG 根 MIT；`references/upstream_LICENSE` 保留抓取器 MIT，原blob分别为 `f7f6f5e831eaae0afea9565f47c5eaa66545c7fc` / `14fac913ccf80234b1848540089a3bbcb6e5283d`。插件 notices 链接两者，安装测试对全部文件逐字节比对。
+- SKILL.md 仅本repo改编：明确 `SKILL_ROOT` 取安装返回/加载资源的绝对根，命令使用 `"$SKILL_ROOT/scripts/..."`，用户项目仍是数据 cwd；`run_batch.py` 用 `Path(__file__).with_name(...)` 定位同包 scraper。三个上游脚本原样保留，未执行。
+- 运行要求保守声明 **Python 3.10+、标准库、命令执行与网络**；本地 Python 3.14.6 仅用于语法解析，不能证明客户端已供应Python。没有配置依赖、创建Python服务、调用Woot或其他采集端点。首次采集需用户目标授权和站点/数据权利检查。
+
+### 新封面与最小接线
+
+- 唯一入选E已加载 `skill-cover-generator`，调用 `image_generate(provider=gpt,size=1536x1024,quality=high)` 一次成功，失败0；每项最多3失败熔断未触发。
+- 新封面 `catalog/covers/home/bggg-data-amazon.png`，最终1280×720，独立 `homeCover` 字段仅在默认首页映射为卡片 `cover`；分类/精选和旧字段不被覆盖。
+- 技能说明将1536×1024误写为16:9；实际为3:2，本轮显式中心裁切再缩放到16:9，未改外部Skill。完整四段英文prompt、请求、路径及局限保存在同目录 `bggg-data-amazon.generation.json`。
+- **provider证据差异**：请求gpt（工具文档为GPT image2偏好），返回只含图片路径，无实际provider/model/fallback回执；实际字段保持null，不声称已证明GPT最终执行。
+- `handleIcon()` 原只允许平级图名；最小扩展仅允许可选 `home/` 一个固定子目录，不允许任意子路径或JSON。新增实际handler回归验证PNG字节及穿越/嵌套拒绝。
+- 已通过 display_file 显示可解码PNG；画面能力主题为评论卡/星级和数据归档，不承诺改善评分。独立视觉签字由QA完成。
+
+### 自检与回交
+
+- 相对输入HEAD逐行对象比较：原 **310条catalog记录全部相同**，包含旧48精选；原 **48张封面逐字节相同**。只新增E，不修改此前三张图。
+- 实际bundled安装测试仅写本任务插件内随机临时home并清理，验证11文件完整复制、两层MIT、三个脚本固定blob及重复安装幂等；不碰用户配置，不执行Python包。
+- 三个脚本通过Python3.10语法AST解析；仅静态语法，不是采集端点验活。
+- 首轮664项中663通过、唯一失败为旧49≠48计数断言，随真实新增精选修正；第二轮664/664通过。最终封面路由新增测试后 **665/665通过，0失败/跳过/取消**，工程离线 **IS_PASS: YES**；独立QA/真实UI未验，整体交付 **IS_PASS: NO**。
+- 最终tarball SHA256：`b6293399b15bc50e9f50d3ff724038a0caf865f00f062eacfa2a8ca0b132ac7b`；18个关键资源/代码/notice逐字节验证通过。
+- Stage 10/8通过、Slot1670文件0违规、boundaries2213文件通过、UI279视图0违规。一次误用不存在的 `verify-stages.mjs` 已定位package脚本并改跑 `verify-stage-contracts.mjs` 通过；一次在仓根npm pack因根无version失败，已改从market包目录成功打包。无门禁绕过。
+- 完整最终日志在任务内 `.workbuddy/evidence/issue-832-qa/admitted-market-cover-final.log`；安装tarball和清单在同目录。npm pack使用 `--ignore-scripts`，不安装、不发布；包内资源与源逐字节核验。
+- 全局一致性检查覆盖完整catalog→helper→真实UI卡片→icon handler、bundled安装目录、包files与notice；未改布局、安装交互或宿主配置。正式L2/ego/verify:live及独立QA未在本轮执行，不能以离线通过替代。
+- 下一Owner：主理人将最终本地提交回交QA，验证一个真实首页推荐、新封面路由与旧交互。受管viewer依赖仍须按原依赖报告由环境Owner解除；不部署空或未验名单。
+
+---
+
+以下为83ff6e88之前的历史实现记录（其中空名单/48数值不代表当前状态）：
+
 ## 状态与范围
 
 - 固定输入 HEAD：`1e4510308a2d2bfd0c079bf25659efad10b62f9c`；分支 `agent/market-skill-header-issue-832`，任务树 `.worktrees/skill-header-832`。仅本地提交，不 push/PR/merge/部署。

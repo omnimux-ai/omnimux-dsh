@@ -1,0 +1,4 @@
+interface:
+  display_name: "BGGG Amazon Data"
+  short_description: "批量抓取 Amazon 评论并保存可审计原始数据与规范化 JSONL"
+  default_prompt: "Use $bggg-data-amazon to collect Amazon product reviews at scale and save raw plus normalized auditable datasets."

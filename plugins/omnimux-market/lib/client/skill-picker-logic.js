@@ -54,7 +54,8 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
         .map(item => {
         const current = live.get(item.id);
         const local = installed.get(key(item));
-        return { ...item, ...(current ? { rating: current.rating, installed: current.installed, enabled: current.enabled } : {}),
+        return { ...item, ...(!category && item.homeCover ? { cover: item.homeCover } : {}),
+            ...(current ? { rating: current.rating, installed: current.installed, enabled: current.enabled } : {}),
             ...(local ? { installed: true, enabled: local.enabled !== false } : {}) };
     }).filter(matches).filter(available);
     const featuredKeys = new Set(featured.map(key));

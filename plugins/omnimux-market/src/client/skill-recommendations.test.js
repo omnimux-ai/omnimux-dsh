@@ -12,13 +12,18 @@ const settings = { featuredSkills: ['b', 'a'], homeRecommendations: ['a'] }
 const sections = (items = [], options = {}) => SkillShelf.plazaDiscoverySections(items, { entries, config: settings, ...options })
 const ids = items => items.map(item => item.id)
 
-test('shipped editorial configuration preserves all 48 catalog recommendations and has an explicit empty home', () => {
+test('shipped configuration adds the admitted collector while preserving all 48 existing recommendations', () => {
   assert.deepEqual(SkillShelf.validateSkillRecommendations(), [])
-  assert.equal(config.featuredSkills.length, 48)
+  assert.equal(config.featuredSkills.length, 49)
   assert.deepEqual(config.featuredSkills, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.id))
-  assert.deepEqual(config.homeRecommendations, [])
-  assert.deepEqual(SkillShelf.plazaDiscoverySections().featured, [])
-  assert.equal(SkillShelf.plazaDiscoverySections().regular.length, catalog.items.filter(item => item.kind === 'skill').length)
+  assert.deepEqual(config.homeRecommendations, ['sk-bggg-data-amazon'])
+  const home = SkillShelf.plazaDiscoverySections()
+  assert.deepEqual(ids(home.featured), config.homeRecommendations)
+  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill').length - 1)
+  const collector = catalog.items.find(item => item.id === 'sk-bggg-data-amazon')
+  assert.deepEqual(home.featured[0].cover, collector.homeCover)
+  assert.equal(collector.cover, undefined)
+  assert.equal(SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.at(-1).cover, undefined)
 })
 
 test('ordered resolution deduplicates and never renders unknown, non-Skill or non-featured IDs', () => {
@@ -92,12 +97,15 @@ function workshop(initial = {}, response = { items: [] }) {
   return { state, calls, render: () => { cursor = 0; effects = []; return render({}) }, effects: () => effects.forEach(fn => fn()) }
 }
 
-test('real workshop hides empty homepage recommendation section without placeholders and retains all 48 on Featured', () => {
+test('real workshop shows one admitted homepage card and retains all 49 on Featured', () => {
   const ui = workshop({ 14: 'ready' })
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 0)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 1)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 1)
   assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, 192)
+  const image = nodes(ui.render(), node => node.type === 'img' && node.props.src === 'catalog/covers/home/bggg-data-amazon.png')
+  assert.equal(image.length, 1)
   ui.state.set(1, 'featured')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 48)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 49)
 })
 
 test('real search effect preserves full-library results, search heading and pagination payload', async () => {
@@ -115,5 +123,5 @@ test('real search effect preserves full-library results, search heading and pagi
   await new Promise(resolve => setImmediate(resolve))
   assert.equal(ui.calls.filter(call => call.action === 'search').at(-1).payload.offset, 80)
   ui.state.set(4, '')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 0)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 1)
 })

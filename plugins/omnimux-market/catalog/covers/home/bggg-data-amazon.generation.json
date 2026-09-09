@@ -1,0 +1,27 @@
+{
+  "skill": "bggg-data-amazon",
+  "generatedAt": "2026-09-09T03:48:09.504Z",
+  "tool": "image_generate",
+  "request": {
+    "provider": "gpt",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A precise editorial still life about collecting public product review data: three floating ivory review cards with abstract horizontal line marks and small star symbols, connected by thin luminous threads to one transparent structured data archive cube. Represents Amazon US written review collection and traceable JSONL records, not review optimization. [Style & Aesthetics] Premium minimalist ecommerce data illustration, photorealistic 3D render, frosted glass, matte porcelain, crisp geometric detail, tasteful amber accents and slate blue. [Lighting & Atmosphere] Soft studio daylight from the upper left, subtle cool rim lighting, realistic gentle shadows, calm trustworthy atmosphere. [Composition & Constraints] Widescreen 16:9 safe central composition within a 1536x1024 image intended for a centered 1536x864 crop. Keep every important object inside the central 84 percent height. Single focused theme, generous negative space, no text, no letters, no numbers, no logo, no Amazon logo, no user faces, no real review screenshots, no rising rating arrows, no watermark, no official endorsement."
+  },
+  "response": {
+    "message": "Saved 1 image(s)",
+    "sourcePath": "/Users/x/.dsh/plugins/subscriptions/images/image-2026-09-09T03-48-09-504Z-aoxiyo-0.png",
+    "actualProvider": null,
+    "actualModel": null,
+    "limitation": "Tool returns only a saved path. Requested gpt (documented GPT image2 preference); actual provider/model and fallback use are not independently attested."
+  },
+  "processing": "ffmpeg crop=iw:iw*9/16,scale=1280:720; one frame; no old asset overwritten",
+  "output": "catalog/covers/home/bggg-data-amazon.png",
+  "width": 1280,
+  "height": 720,
+  "attempts": 1,
+  "failures": 0,
+  "sourceRights": "New model-generated illustration; no third-party review screenshots, faces or logo supplied.",
+  "inspection": "Displayed as a decoded 1280x720 PNG. Dedicated review-card/data-archive visual; final independent visual acceptance belongs to QA.",
+  "skillInstructionCorrection": "The skill calls 1536x1024 a 16:9 size, but it is 3:2. Final asset is explicitly cropped and resized to exact 16:9; shared skill source was not modified."
+}
