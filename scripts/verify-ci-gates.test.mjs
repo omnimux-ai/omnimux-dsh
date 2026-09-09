@@ -207,3 +207,12 @@ test('Alpha release materialization policy passes', () => {
   })
   strictEqual(res.status, 0, `Alpha release policy tests failed: ${res.stderr}\n${res.stdout}`)
 })
+
+test('sync-to-app merged source identity policy passes', () => {
+  const res = spawnSync('node', ['--test', resolve(here, 'sync-source-identity.test.mjs')], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: nestedTestEnv,
+  })
+  strictEqual(res.status, 0, `sync-source-identity tests failed: ${res.stderr}\n${res.stdout}`)
+})

@@ -110,7 +110,9 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     fixtureGit(runner, 'add', '.')
     fixtureGit(runner, '-c', 'commit.gpgsign=false', 'commit', '-m', 'Fixture baseline')
     // A local tracking ref at a real commit; no network or fabricated Git output.
-    fixtureGit(runner, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    fixtureGit(runner, 'init', '--bare', join(runner, '.git', 'fixture-origin.git'))
+    fixtureGit(runner, 'remote', 'add', 'origin', join(runner, '.git', 'fixture-origin.git'))
+    fixtureGit(runner, 'push', 'origin', 'main')
     assert.equal(realpathSync(fixtureGit(runner, 'rev-parse', '--show-toplevel')), realpathSync(runner))
     assert.equal(fixtureGit(runner, 'branch', '--show-current'), 'main')
     assert.equal(fixtureGit(runner, 'status', '--porcelain'), '')
