@@ -13,6 +13,18 @@
 - 本轮已收到正式L2凭据/settings整文件继承的明确任务授权；下文第一轮“未授权”仅为历史状态。正式L2启动结果见本节后续记录，浏览器验收仍由主理人派独立QA。
 - 日志：任务内 `.workbuddy/evidence/issue-832-qa/round2-market-final.log`；未push/PR/merge/共享Dev或Prod物化。
 
+### 第二轮 L2 实际结果
+
+- 代码/测试提交：`95e127e7a64191265d70fb2e2cbfeb1733461023`。本报告后续提交仅文档；运行身份不宣称通过。
+- 正式命令：`OMNIMUX_PLUGINS_DIR="$PWD/plugins" bash scripts/dev-env.sh start skill-header-832 omnimux-market`，退出1。已按授权复制Dev凭据和settings到任务私有根，未显示内容、未改来源、未发模型/付费请求。
+- 私有根：`/Users/x/.dsh-dev/tasks/skill-header-832`；profile：`/Users/x/.dsh-dev/tasks/skill-header-832/profiles/omnimux-dev-skill-header-832`；SOURCE：本任务树 `plugins/`；仅 `omnimux-market` 为在研link。
+- 分配 URL `http://127.0.0.1:44201` / PORT `44201`，不是可用服务。正式脚本完成受管seed克隆及私有依赖安装，保留viewer。Host未在20秒内监听；随后日志明确报 `failed to import loader entry viewer (@crosery/dsh-viewer)`，根因 `@deepseek-ai/dsh-settings` 不导出 `installSettingsSection`。
+- Host PID文件 `99970`，2026-09-09 10:28检查该进程已退出，44201无listener；watch.pid不存在，watch未启动。没有创建伪成功 `.l2-dev.env` 或运行ego探针。
+- DSH_SRC为正式脚本默认 `/Users/x/Desktop/Project/Github/deepseek-harness`，只消费未修改；未替换底座、未删除viewer、未绕过seed/闭包门禁。
+- 任务job：bash-45（首次测试exit1，新增选择器问题）、bash-47（最终全包exit0）、bash-49（正式L2 start exit1），均已收集结束；无遗留活跃job/Host/watch。
+- 启动日志：`.workbuddy/evidence/issue-832-qa/round2-l2-start.log`；Host日志留在上述profile的`host.log`，不得复制含认证信息的完整日志到报告。
+- L2/ego状态 **BLOCKED**，整体 **IS_PASS: NO**。下一Owner主理人：协调viewer受管seed兼容性依赖完成后，派独立QA；QA从本任务树正式start重试、验证真实PID/端口后绑定当前COMMIT/SOURCE/PROFILE至`.l2-dev.env`，再执行同一ego任务的正式探针。不能以本地654通过替代独立验收。
+
 ## 第一轮身份与结论
 - Issue: https://github.com/omnimux-ai/omnimux-dsh/issues/832
 - Worktree: `/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/skill-header-832`
