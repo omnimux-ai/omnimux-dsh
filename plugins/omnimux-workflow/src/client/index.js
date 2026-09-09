@@ -6,7 +6,8 @@ import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
 import { ProjectLibraryPage, WORKFLOW_LIBRARY_TAB_ID } from './projects/ProjectLibraryPage.jsx'
 import { CanvasTab } from './projects/CanvasTab.jsx'
-import { bindBetterSidebar, CANVAS_TAB_ID } from './projects/projectCanvas.js'
+import { AppTab } from './projects/AppTab.jsx'
+import { bindBetterSidebar, CANVAS_TAB_ID, APP_TAB_ID } from './projects/projectCanvas.js'
 import { installWorkflowGlobal } from './projects/workflow-global.js'
 
 export const name = 'omnimux-workflow'
@@ -93,6 +94,19 @@ export function apply(ctx) {
     })
   }
 
+  const registerAppTab = (sidebar) => {
+    if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
+    return sidebar.registerTab({
+      id: APP_TAB_ID,
+      title: (seed) => seed?.title || 'AI 应用',
+      icon: renderWorkflowIcon,
+      order: 6,
+      hidden: false,
+      single: false,
+      component: (props) => createElement(AppTab, { ...props, t }),
+    })
+  }
+
   const bindWorkbench = (patch) => {
     try {
       window.__omnimuxWorkbench?.bind?.(patch)
@@ -106,9 +120,11 @@ export function apply(ctx) {
       if (typeof ctx.effect === 'function') {
         ctx.effect(() => registerWorkflowLibraryTab(sidebar), 'omnimux-workflow: library tab')
         ctx.effect(() => registerCanvas(sidebar), 'omnimux-workflow: canvas tab')
+        ctx.effect(() => registerAppTab(sidebar), 'omnimux-workflow: app tab')
       } else {
         registerWorkflowLibraryTab(sidebar)
         registerCanvas(sidebar)
+        registerAppTab(sidebar)
       }
     })
   }

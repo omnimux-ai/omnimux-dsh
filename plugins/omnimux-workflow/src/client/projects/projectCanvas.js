@@ -11,6 +11,7 @@
  *   并把本会话右侧栏默认设成对话:画布 = 15:85。
  */
 export const CANVAS_TAB_ID = 'omnimux-workflow:canvas'
+export const APP_TAB_ID = 'omnimux-workflow:app'
 /** 让 better-sidebar 把这次 open 当成 content open，从而自动展开右侧栏。 */
 export const CANVAS_SENTINEL_PATH = 'omnimux-workflow:canvas'
 /** 项目会话：中间对话 15、右侧画布 85（相对 #root 被推挤后的对话+画布总宽）。 */
@@ -35,6 +36,17 @@ let boundService = null
 /** registerCanvasTab 绑一次，供 newProject 在没有 inject 的 ctx 上取到服务。 */
 export function bindBetterSidebar(service) {
   boundService = service || null
+  const win = typeof globalThis !== 'undefined' && globalThis.window
+    ? globalThis.window
+    : (typeof window !== 'undefined' ? window : undefined)
+  if (win) {
+    try {
+      win.__omnimuxBetterSidebar = boundService
+      win.__omnimuxOpenAppTab = openAppTab
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export function getBetterSidebar(ctx) {
@@ -46,7 +58,46 @@ export function getBetterSidebar(ctx) {
       // ignore: 走 boundService
     }
   }
-  return boundService || null
+  const win = typeof globalThis !== 'undefined' && globalThis.window
+    ? globalThis.window
+    : (typeof window !== 'undefined' ? window : undefined)
+  return boundService || win?.__omnimuxBetterSidebar || null
+}
+
+/**
+ * 打开发布生成的独立 AI 应用 Tab。
+ *
+ * @param {object} [manifest]
+ * @param {{ appId?: string, title?: string, scope?: object }} [opts]
+ * @returns {boolean}
+ */
+export function openAppTab(manifest = {}, opts = {}) {
+  const service = getBetterSidebar()
+  if (service && typeof service.openTab === 'function') {
+    const targetAppId = manifest?.appId || opts?.appId || Date.now()
+    const title = manifest?.metadata?.name || opts?.title || 'AI 应用'
+    service.openTab({
+      type: APP_TAB_ID,
+      id: `app_${manifest?.appId || opts?.appId || targetAppId}`,
+      title,
+      path: `app://${manifest?.appId || opts?.appId || targetAppId}`,
+      extra: { manifest, appId: manifest?.appId || opts?.appId || targetAppId },
+    }, opts?.scope)
+    return true
+  }
+  return false
+}
+
+// 安全同步挂载至 globalThis.window.__omnimuxOpenAppTab
+const globalWin = typeof globalThis !== 'undefined' && globalThis.window
+  ? globalThis.window
+  : (typeof window !== 'undefined' ? window : undefined)
+if (globalWin) {
+  try {
+    globalWin.__omnimuxOpenAppTab = openAppTab
+  } catch {
+    // ignore
+  }
 }
 
 /** workflow 与 better-sidebar 谁先加载不确定，新建项目时可能还没 provide。 */

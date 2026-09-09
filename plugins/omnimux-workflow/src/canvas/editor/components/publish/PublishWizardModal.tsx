@@ -270,6 +270,20 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
             detail: { id: manifest.appId, manifest },
           }),
         );
+
+        // 显式调用 window.__omnimuxOpenAppTab 或通过 window.__omnimuxBetterSidebar.openTab 调度打开该新 Tab
+        const win = window as any;
+        if (typeof win.__omnimuxOpenAppTab === 'function') {
+          win.__omnimuxOpenAppTab(manifest);
+        } else if (win.__omnimuxBetterSidebar && typeof win.__omnimuxBetterSidebar.openTab === 'function') {
+          win.__omnimuxBetterSidebar.openTab({
+            type: 'omnimux-workflow:app',
+            id: `app_${manifest.appId}`,
+            title: manifest.metadata?.name || 'AI 应用',
+            path: `app://${manifest.appId}`,
+            extra: { manifest, appId: manifest.appId },
+          });
+        }
       }
 
       // 6. Invoke onPublished callback if provided

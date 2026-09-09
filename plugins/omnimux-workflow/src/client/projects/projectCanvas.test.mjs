@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import {
   activateProjectCanvas,
   applyProjectCanvasRatio,
+  APP_TAB_ID,
   bindBetterSidebar,
   CANVAS_SENTINEL_PATH,
   CANVAS_TAB_ID,
@@ -12,6 +13,7 @@ import {
   leftoverHalfSidebarWidthPx,
   legacyProjectCanvasWidthPx,
   officialSessionSidebarWidth,
+  openAppTab,
   PROJECT_CANVAS_MIN_PX,
   PROJECT_CANVAS_RATIO,
   projectCanvasWidthPx,
@@ -473,5 +475,113 @@ describe('projectCanvas isolation', () => {
     }, { sessionId: 'sess-1', timeoutMs: 0 })
     assert.equal(ok, false)
     assert.deepEqual(details, ['close'])
+  })
+
+  it('APP_TAB_ID constant is correctly defined', () => {
+    assert.equal(APP_TAB_ID, 'omnimux-workflow:app')
+  })
+
+  it('bindBetterSidebar mounts boundService and openAppTab onto globalThis.window', () => {
+    const previous = globalThis.window
+    const fakeWin = {}
+    globalThis.window = fakeWin
+    try {
+      const mockService = { openTab: () => {} }
+      bindBetterSidebar(mockService)
+      assert.equal(fakeWin.__omnimuxBetterSidebar, mockService)
+      assert.equal(typeof fakeWin.__omnimuxOpenAppTab, 'function')
+    } finally {
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+      bindBetterSidebar(null)
+    }
+  })
+
+  it('openAppTab opens app tab with APP_TAB_ID and manifest details', () => {
+    const opened = []
+    const mockService = {
+      openTab(seed, scope) {
+        opened.push({ seed, scope })
+        return true
+      },
+    }
+    bindBetterSidebar(mockService)
+    try {
+      const manifest = {
+        appId: 'app_creative_video_01',
+        metadata: {
+          name: '爆款创意短视频',
+          category: 'video',
+        },
+      }
+      const ok = openAppTab(manifest, { scope: { sessionId: 'sess-test-app' } })
+      assert.equal(ok, true)
+      assert.equal(opened.length, 1)
+      assert.equal(opened[0].seed.type, APP_TAB_ID)
+      assert.equal(opened[0].seed.id, 'app_app_creative_video_01')
+      assert.equal(opened[0].seed.title, '爆款创意短视频')
+      assert.equal(opened[0].seed.path, 'app://app_creative_video_01')
+      assert.deepEqual(opened[0].seed.extra, { manifest, appId: 'app_creative_video_01' })
+      assert.deepEqual(opened[0].scope, { sessionId: 'sess-test-app' })
+    } finally {
+      bindBetterSidebar(null)
+    }
+  })
+
+  it('openAppTab supports fallback and opts parameters when manifest fields are missing', () => {
+    const opened = []
+    const mockService = {
+      openTab(seed, scope) {
+        opened.push({ seed, scope })
+        return true
+      },
+    }
+    bindBetterSidebar(mockService)
+    try {
+      const ok = openAppTab({}, { appId: 'custom_id_99', title: '自定义标题' })
+      assert.equal(ok, true)
+      assert.equal(opened.length, 1)
+      assert.equal(opened[0].seed.type, APP_TAB_ID)
+      assert.equal(opened[0].seed.id, 'app_custom_id_99')
+      assert.equal(opened[0].seed.title, '自定义标题')
+      assert.equal(opened[0].seed.path, 'app://custom_id_99')
+      assert.equal(opened[0].seed.extra.appId, 'custom_id_99')
+    } finally {
+      bindBetterSidebar(null)
+    }
+  })
+
+  it('openAppTab returns false when sidebar service is missing or lacks openTab', () => {
+    bindBetterSidebar(null)
+    assert.equal(openAppTab({ appId: 'no_service' }), false)
+    bindBetterSidebar({})
+    assert.equal(openAppTab({ appId: 'no_open_tab' }), false)
+    bindBetterSidebar(null)
+  })
+
+  it('window.__omnimuxOpenAppTab delegates to openAppTab', () => {
+    const previous = globalThis.window
+    const fakeWin = {}
+    globalThis.window = fakeWin
+    const opened = []
+    const mockService = {
+      openTab(seed, scope) {
+        opened.push({ seed, scope })
+        return true
+      },
+    }
+    try {
+      bindBetterSidebar(mockService)
+      assert.equal(typeof fakeWin.__omnimuxOpenAppTab, 'function')
+      const ok = fakeWin.__omnimuxOpenAppTab({ appId: 'from_window_global', metadata: { name: '全局打开测试' } })
+      assert.equal(ok, true)
+      assert.equal(opened.length, 1)
+      assert.equal(opened[0].seed.id, 'app_from_window_global')
+      assert.equal(opened[0].seed.title, '全局打开测试')
+    } finally {
+      if (previous === undefined) delete globalThis.window
+      else globalThis.window = previous
+      bindBetterSidebar(null)
+    }
   })
 })
