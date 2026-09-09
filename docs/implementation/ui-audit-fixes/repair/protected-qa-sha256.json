@@ -1,0 +1,6 @@
+{
+  "QA-REPORT.md": "c64793931cdaf4d62ebdc7fd30551f1b96e88fbd57eafa01de9d87026ac8e90d",
+  "qa-binding-result.json": "32529552b81328ec528872db5558b055c469fba391a21f69ed74164eae46784f",
+  "scripts/ui-audit.independent.test.mjs": "0d301fb6d72dfc5d75ada0c82235101f7cf2844ed5c1c7f1abb0962ed57fcb2d",
+  "scripts/ui-audit.binding-qa.mjs": "c1fb75b6163877da820986565898a6e7fe7d86157d3bc894ff3e65ca16bcc029"
+}

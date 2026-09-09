@@ -1,0 +1,15 @@
+{
+  "productHead": "1ce51cf7f4f4701e2fe3aab1a6a026a090b0a644",
+  "productBase": "867b192ecf6aa35be4e1639db7351a89bea782c7",
+  "kitHead": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "kitBase": "9d52a0cd5b41211d4fd8a260330b89d50be99f64",
+  "productBundleSha256": "243297231365bbf00dee9a4192ba4f78db63a97ac672976e4aa8bd0dd082f4c4",
+  "kitBundleSha256": "c2ceedbfb6d9129eeb590d8520eb1b8e563b9d6e313cce88fe5ed51a20bbdbbc",
+  "kitTarSha256": "8f7f7161294ecbbcf6f20e81f95d8e862941e71e567607599455b57658ac8b72",
+  "binding": "../binding.json",
+  "report": "../REPAIR-REPORT.md",
+  "localRepairPass": true,
+  "completeUiAcceptancePass": false,
+  "deployed": false,
+  "note": "Post-commit delivery manifest is intentionally untracked; local binary artifacts and original QA outputs are retained."
+}

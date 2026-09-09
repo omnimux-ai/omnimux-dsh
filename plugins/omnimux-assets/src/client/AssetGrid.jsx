@@ -77,6 +77,7 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
           aria-label={t('select.toggle')}
           aria-pressed={selected ? 'true' : 'false'}
           title=""
+          onKeyDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation()
             onToggleSelect(asset)

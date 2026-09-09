@@ -1,0 +1,38 @@
+{
+  "productBase": "867b192ecf6aa35be4e1639db7351a89bea782c7",
+  "kitBase": "9d52a0cd5b41211d4fd8a260330b89d50be99f64",
+  "kitHead": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "kitLibSha256": "724912626ca72d49de0743bb578dad21943d4ae369176f4155f639ddf84ab85d",
+  "kitTarSha256": "8f7f7161294ecbbcf6f20e81f95d8e862941e71e567607599455b57658ac8b72",
+  "dependencyRealpath": "/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit/.worktrees/ui-audit-fixes",
+  "bundles": {
+    "omnimux-accounts": {
+      "sha256": "93763a2174c6275fdfbac8b4c1adabd33eb81c26cd59c687c77ceb9602281692",
+      "bytes": 223582,
+      "containsKitSource": true
+    },
+    "omnimux-analytics": {
+      "sha256": "51a0b002b30fc9639ca413ff1c08908bcde567133331a265f7c1b704543d4ad0",
+      "bytes": 259528,
+      "containsKitSource": true
+    },
+    "omnimux-inspiration": {
+      "sha256": "ef35ddaf917228211290f43881641a0f0555ca70094c6139a8e093f9cc7480c4",
+      "bytes": 278137,
+      "containsKitSource": true
+    },
+    "omnimux-publish": {
+      "sha256": "056200ec457b76cf681a638a99b86ed6bf5307774582279a0628d3470d9bd1b8",
+      "bytes": 277516,
+      "containsKitSource": true
+    },
+    "omnimux-assets": {
+      "sha256": "0407982e3ebceb2795b290db2aedd645a9498fa72094005d96330960cffd88ee",
+      "bytes": 302063,
+      "containsKitSource": true
+    }
+  },
+  "kitSourceBuildCommit": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "productSourceCommit": "7f0dee48eeba47393fd5ddd60caab79014c96bed",
+  "kitTarPath": "docs/implementation/ui-audit-fixes/repair/dsh-ui-kit-0.1.0.tgz"
+}

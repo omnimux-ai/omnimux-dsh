@@ -120,15 +120,13 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const scriptValue = scriptCopyText(data, showTranslation)
   const deconValue = deconstructionCopyText(data)
-  const deconStatus = hasDeconstruction(data) ? 'done' : 'pending'
+  const deconStatus = analyzing ? 'running' : analyzeError ? 'failed' : hasDeconstruction(data) ? 'done' : 'idle'
+  const deconStatusLabel = { done: 'status.breakdownReady', running: 'status.breakdownGenerating', failed: 'modal.deconstruction.error', idle: 'modal.deconstruction.empty' }[deconStatus]
 
-  const mobileTabs = useMemo(
-    () => ['video', 'script', 'deconstruction'].map((tab) => ({
-      id: tab,
-      label: t(`modal.panel.${tab}`),
-    })),
-    [t],
-  )
+  const mobileTabs = ['video', 'script', 'deconstruction'].map((tab) => ({
+    id: tab,
+    label: t(`modal.panel.${tab}`),
+  }))
 
   return (
     <div className="omnimux-inspiration-modal-backdrop" onClick={onClose}>
@@ -206,14 +204,14 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <div className="omnimux-inspiration-modal-panel-heading">
                 <h3>{t('modal.panel.script')}</h3>
                 <div className="omnimux-inspiration-modal-panel-actions">
-                  <CopyButton
+                  {scriptValue ? <CopyButton
                     text={scriptValue}
                     label={t('modal.script.copy')}
                     copiedLabel={t('modal.header.copied')}
                     size="sm"
                     variant="ghost"
                     className="omnimux-inspiration-modal-copy"
-                  />
+                  /> : null}
                   {data.script ? (
                     <Button
                       type="button"
@@ -272,19 +270,19 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 <Badge
                   size="sm"
                   shape="capsule"
-                  variant={deconStatus === 'done' ? 'success' : 'warning'}
+                  variant={deconStatus === 'done' ? 'success' : deconStatus === 'failed' ? 'error' : deconStatus === 'running' ? 'warning' : 'default'}
                   className={`omnimux-inspiration-status-badge ${deconStatus}`}
                 >
-                  {deconStatus === 'done' ? t('status.breakdownReady') : t('status.breakdownGenerating')}
+                  {t(deconStatusLabel)}
                 </Badge>
-                <CopyButton
+                {deconValue ? <CopyButton
                   text={deconValue}
                   label={t('modal.deconstruction.copy')}
                   copiedLabel={t('modal.header.copied')}
                   size="sm"
                   variant="ghost"
                   className="omnimux-inspiration-modal-copy"
-                />
+                /> : null}
               </div>
               {hasDeconstruction(data) ? (
                 <div className="omnimux-inspiration-modal-dimensions">
