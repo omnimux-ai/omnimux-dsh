@@ -372,7 +372,11 @@ function validateDeclaredParameters(request, operationParameters, modelParameter
           && typeof candidate === 'string'
           && typeof value === 'string'
           && candidate.toLowerCase() === value.toLowerCase()))
-      if (!optionMatches) {
+      const inRange = definition.range && typeof definition.range === 'object'
+        && typeof value === 'number' && Number.isFinite(value)
+        && (typeof definition.range.min !== 'number' || value >= definition.range.min)
+        && (typeof definition.range.max !== 'number' || value <= definition.range.max)
+      if (!optionMatches && !inRange) {
         return {
           ok: false,
           code: GUARD_CODES.PARAMETER_UNSUPPORTED,

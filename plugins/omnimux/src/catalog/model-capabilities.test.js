@@ -22,8 +22,8 @@ const PHASE_ONE_VIDEO_OPERATIONS = {
   'wan-3.0': ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref', 'document_to_video', 'webpage_to_video'],
   'minimax-h3': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
   'grok-imagine-video-1-5': ['text_to_video', 'video_multi_ref'],
-  'minimax-h3-max': ['text_to_video', 'first_frame', 'video_multi_ref'],
-  'minimax-h3-max-turbo': ['text_to_video', 'first_frame'],
+  'minimax-h3-max': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame', 'video_multi_ref'],
+  'minimax-h3-max-turbo': ['text_to_video', 'first_frame', 'end_frame', 'first_last_frame'],
 };
 
 test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loader）', () => {
@@ -76,7 +76,7 @@ test('H2: 处置表 67 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 61);
+  assert.equal(index.listedOperations.length, 65);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {

@@ -63,7 +63,10 @@ models:
         research:
           status: "draft"
         implementation:
-          status: "none"
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
         execution:
           status: "stub"
           profileId: "imageGenerate"
@@ -75,6 +78,11 @@ models:
           - { value: "1:1", label: "1:1" }
           - { value: "16:9", label: "16:9" }
           - { value: "9:16", label: "9:16" }
+          - { value: "4:3", label: "4:3" }
+          - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
+          - { value: "21:9", label: "21:9" }
         defaultValue: "16:9"
       resolution:
         options:
@@ -86,6 +94,12 @@ models:
           - { value: "standard", label: "标准" }
           - { value: "hd", label: "高清 HD" }
         defaultValue: "standard"
+      n:
+        options:
+          - { value: 1, label: "1 张" }
+          - { value: 2, label: "2 张" }
+          - { value: 4, label: "4 张" }
+        defaultValue: 1
     research:
       status: "verified"
       docUrl: "docs/evidence/2026-08-16-omnimux-image.md"
@@ -138,6 +152,11 @@ models:
             limitSource:
               kind: "policy_conservative"
               note: "继承 runtime 表行 max1；官方审计前保守"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
     parameters:
       aspectRatio:
         options:
@@ -145,12 +164,23 @@ models:
           - { value: "1:1", label: "1:1" }
           - { value: "16:9", label: "16:9" }
           - { value: "9:16", label: "9:16" }
+          - { value: "4:3", label: "4:3" }
+          - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
+          - { value: "21:9", label: "21:9" }
         defaultValue: "16:9"
       resolution:
         options:
           - { value: "2K", label: "2K" }
           - { value: "4K", label: "4K" }
         defaultValue: "2K"
+      n:
+        options:
+          - { value: 1, label: "1 张" }
+          - { value: 2, label: "2 张" }
+          - { value: 4, label: "4 张" }
+        defaultValue: 1
     research:
       status: "draft"
       notes: "runtime 存在；无独立 dated live 证据，不上架"
@@ -220,7 +250,10 @@ models:
         research:
           status: "draft"
         implementation:
-          status: "none"
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
         execution:
           status: "stub"
           profileId: "imageGenerate"
@@ -234,6 +267,8 @@ models:
           - { value: "9:16", label: "9:16" }
           - { value: "4:3", label: "4:3" }
           - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
         defaultValue: "16:9"
       resolution:
         options:
@@ -293,6 +328,11 @@ models:
             limitSource:
               kind: "policy_conservative"
               note: "继承 runtime 表行 max4；官方审计前保守"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
     parameters:
       aspectRatio:
         options:
@@ -302,6 +342,8 @@ models:
           - { value: "9:16", label: "9:16" }
           - { value: "4:3", label: "4:3" }
           - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
         defaultValue: "16:9"
       resolution:
         options:

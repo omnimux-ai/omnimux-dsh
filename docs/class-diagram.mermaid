@@ -1,98 +1,91 @@
 classDiagram
     direction TB
 
-    class UIDesignGuard {
-        +run(rawInput: string) HookResult
-        -parseInput(rawInput: string) PreToolUseInput
-        -createDecision(event: string, decision: string, reason: string) HookResult
+    class ModelContract {
+        +string id
+        +string label
+        +string family
+        +string badge
+        +OperationSpec[] operations
+        +Map~string, ParameterSpec~ parameters
+        +ImplementationSpec implementation
+        +ExecutionSpec execution
+        +getOperation(opId: string) OperationSpec
+        +getParameter(paramId: string) ParameterSpec
     }
 
-    class TargetScopeClassifier {
-        +isTargetUIFile(filePath: string) boolean
-        +isExemptPath(filePath: string) boolean
-        +isUIExtension(filePath: string) boolean
-        -normalizePath(filePath: string) string
+    class OperationSpec {
+        +string id
+        +string label
+        +InputSlot[] inputs
+        +OutputType output
+        +string seam
+        +string profileId
+        +string status
+        +isLive() bool
     }
 
-    class RuleEngine {
-        -rules: List~IRuleChecker~
-        +inspect(context: RuleInspectionContext) List~UIViolation~
-        +registerRule(rule: IRuleChecker) void
+    class ParameterSpec {
+        +string id
+        +string label
+        +string type
+        +string defaultValue
+        +ParameterOption[] options
+        +number min
+        +number max
+        +validate(value: any) bool
     }
 
-    class IRuleChecker {
-        <<interface>>
-        +code: string
-        +name: string
-        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
-        +isLineExempt(line: string) boolean
+    class AdapterProfile {
+        +string id
+        +string seam
+        +string status
+        +string[] operations
+        +string[] logicalFields
+        +string[] vendorFields
+        +string[] forbiddenVendorFields
+        +Map~string, ShapeConstraint~ operationVendorShapes
+        +validatePayload(vendor: object, opId: string) ValidationResult
     }
 
-    class UI01RawControlRule {
-        +code: "UI01"
-        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
-        -hasRawButton(line: string) boolean
-        -hasRawSelect(line: string) boolean
+    class AspectRatioConvergenceOperator {
+        +mapOpenAiImageSize(aspectRatio: string, resolution: string) OpenAiSizeResult
+        +mapGrokAspectRatio(aspectRatio: string) string
+        +mapMidjourneyParams(prompt: string, aspectRatio: string, version: string) MidjourneyParamResult
+        +mapVideoSizeOrRatio(family: string, modelId: string, aspectRatio: string) VideoDimensionResult
     }
 
-    class UI02InlineStyleRule {
-        +code: "UI02"
-        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
-        -splitStyleProps(styleBody: string) List~string~
-        -isAllowedStyleProp(prop: string) boolean
+    class ImageEditsRouter {
+        +determineEndpoint(operation: string, references: ImageRef[]) string
+        +buildEditsPayload(modelId: string, prompt: string, images: ImageRef[], extras: object) VendorPayload
     }
 
-    class UI03BareColorRule {
-        +code: "UI03"
-        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
-        -extractBareHex(line: string) List~string~
-        -extractBareRgb(line: string) List~string~
-        -isInsideCssVarFallback(line: string, match: string) boolean
+    class VideoVendorMapper {
+        +mapSeedancePayload(modelId: string, operation: string, inputs: object, extras: object) VendorPayload
+        +mapWanPayload(operation: string, inputs: object, extras: object) VendorPayload
+        +mapMinimaxPayload(modelId: string, operation: string, inputs: object, extras: object) VendorPayload
+        +mapKlingPayload(modelId: string, operation: string, inputs: object, extras: object) VendorPayload
+        +mapGrokVideoPayload(operation: string, inputs: object, extras: object) VendorPayload
     }
 
-    class UI10FontSizeRule {
-        +code: "UI10"
-        +whitelist: Set~number~
-        +check(line: string, lineNum: number, fileContext: FileContext) UIViolation?
+    class AudioVendorMapper {
+        +mapDoubaoAsrPayload(audioUrl: string, extras: object) VendorPayload
+        +mapSeedAudioPayload(prompt: string, voice: string, extras: object) VendorPayload
+        +mapSunoTaskPayload(prompt: string, extras: object) VendorPayload
     }
 
-    class UIDiagnosisFormatter {
-        +formatDenyReason(violations: List~UIViolation~, filePath: string) string
-        -renderViolationDetail(v: UIViolation) string
-        -renderDesignMdAnchors(ruleCodes: Set~string~) string
-        -renderQuickFixExamples(ruleCodes: Set~string~) string
+    class SubmitGuard {
+        +admit(modelId: string, operationId: string) AdmissionResult
+        +mapValidatedPlanToVendor(args: PlanArgs) VendorPayloadResult
+        +assertVendorBodyAllowed(vendor: object, profile: AdapterProfile, opId: string) ValidationResult
     }
 
-    class UIViolation {
-        +ruleCode: string
-        +ruleName: string
-        +line: number
-        +rawSnippet: string
-        +message: string
-        +fixSuggestion: string
-        +designSection: string
-    }
-
-    class PreToolUseInput {
-        +hook_event_name: string
-        +tool_name: string
-        +tool_input: ToolInputData
-        +cwd: string
-    }
-
-    class HookResult {
-        +hookSpecificOutput: HookSpecificOutputData
-    }
-
-    UIDesignGuard --> TargetScopeClassifier : uses
-    UIDesignGuard --> RuleEngine : executes
-    UIDesignGuard --> UIDiagnosisFormatter : formats deny reason
-    UIDesignGuard ..> PreToolUseInput : parses
-    UIDesignGuard ..> HookResult : returns
-    RuleEngine o-- IRuleChecker : contains
-    IRuleChecker <|.. UI01RawControlRule : implements
-    IRuleChecker <|.. UI02InlineStyleRule : implements
-    IRuleChecker <|.. UI03BareColorRule : implements
-    IRuleChecker <|.. UI10FontSizeRule : implements
-    RuleEngine ..> UIViolation : produces
-    UIDiagnosisFormatter ..> UIViolation : consumes
+    ModelContract "1" *-- "many" OperationSpec : defines
+    ModelContract "1" *-- "many" ParameterSpec : defines
+    OperationSpec ..> AdapterProfile : references profileId
+    SubmitGuard ..> ModelContract : validates against
+    SubmitGuard ..> AdapterProfile : enforces
+    SubmitGuard ..> AspectRatioConvergenceOperator : delegates dimension normalization
+    SubmitGuard ..> ImageEditsRouter : delegates image edits
+    SubmitGuard ..> VideoVendorMapper : delegates video vendor mapping
+    SubmitGuard ..> AudioVendorMapper : delegates audio vendor mapping

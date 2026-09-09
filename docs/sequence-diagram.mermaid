@@ -1,51 +1,55 @@
 sequenceDiagram
     autonumber
-    actor Agent as 编码 Agent (DeepSeek Harness)
-    participant Engine as DSH Tool Execution Engine
-    participant HookPlugin as dsh-hooks-plugin (PreToolUse)
-    participant GuardWT as guard-worktree.mjs (隔离守卫)
-    participant GuardUI as guard-ui-design.mjs (设计守卫)
-    participant Classifier as TargetScopeClassifier (路径范围)
-    participant Rules as RuleEngine (UI01/02/03/10)
-    participant Formatter as UIDiagnosisFormatter (诊断渲染器)
-    participant FileSystem as 本地文件系统 (Disk)
+    actor Client as 业务客户端 / 工作流节点
+    participant SG as SubmitGuard (契约门禁)
+    participant ARC as AspectRatioOp (画幅收敛算子)
+    participant Router as OperationRouter (模式分发)
+    participant Formatter as VendorPayloadMapper (发包层)
+    participant Gateway as OmniMux Gateway (/v1/*)
+    participant Channel as Channel Adaptor (APIMart/fal/volc/sora/kling)
+    participant Upstream as 上游大模型服务提供商
 
-    Note over Agent, Engine: 第一阶段：Agent 尝试调用 edit / write 工具修改 UI 文件
-    Agent->>Engine: invokeTool("write" | "edit", { file_path, content | new_string })
-    Engine->>HookPlugin: 触发 PreToolUse 钩子事件
+    Note over Client, SG: 1. 提交前契约与模式准入校验
+    Client->>SG: submitTask(modelId, operation, logicalInputs, extras)
+    SG->>SG: admitDisposition(modelId) & validateOperation(operation)
 
-    Note over HookPlugin, GuardWT: 第二阶段：守卫链式检查（先隔离守卫，后设计守卫）
-    HookPlugin->>GuardWT: 执行 guard-worktree.mjs (stdin JSON)
-    GuardWT-->>HookPlugin: 返回 allow (工作区隔离合规)
-
-    HookPlugin->>GuardUI: 执行 guard-ui-design.mjs (stdin JSON)
-    GuardUI->>Classifier: isTargetUIFile(file_path)
-
-    alt 非 UI 范围文件 (如 server/, scripts/, openreel/, tests/)
-        Classifier-->>GuardUI: false (豁免路径或非 UI 扩展名)
-        GuardUI-->>HookPlugin: stdout: { permissionDecision: "allow" }
-        HookPlugin-->>Engine: 放行操作
-        Engine->>FileSystem: 写入磁盘
-        FileSystem-->>Agent: 写入成功
-    else 目标为 UI 客户端源文件 (plugins/*/src/client/**/*.{tsx,jsx,ts,js})
-        Classifier-->>GuardUI: true (命中 UI 监控范围)
-        GuardUI->>Rules: inspect(codeLines, toolName)
-        Rules->>Rules: 逐行检查 UI01(原生控件), UI02(内联样式), UI03(裸色), UI10(非标字阶)
-        Rules->>Rules: 检查行级/块级豁免 (// exempt-ui*)
-
-        alt 发现设计规范违规 (Violations > 0)
-            Rules-->>GuardUI: 返回 violations 列表
-            GuardUI->>Formatter: formatDenyReason(violations, file_path)
-            Formatter-->>GuardUI: 生成包含 [design.md] 章节锚点与修正建议的高冲击力 Reason
-            GuardUI-->>HookPlugin: stdout: { permissionDecision: "deny", permissionDecisionReason: "..." }
-            HookPlugin-->>Engine: 强行物理阻断工具调用 (Exit code / Deny decision)
-            Engine-->>Agent: 报错 Error: 🚫【UI 设计规范硬门禁拦截】并附带自修正指引
-            Note over Agent: Agent 工具执行被强行打断，读取错误中的 design.md 章节并修正代码
-        else 代码完全合规 (Violations == 0)
-            Rules-->>GuardUI: 0 violations
-            GuardUI-->>HookPlugin: stdout: { permissionDecision: "allow" }
-            HookPlugin-->>Engine: 允许工具执行
-            Engine->>FileSystem: 写入磁盘
-            FileSystem-->>Agent: 写入成功
-        end
+    Note over SG, ARC: 2. 画幅标准与清晰度收敛转换
+    SG->>ARC: normalizeAspectRatio(family, modelId, aspectRatio, resolution)
+    alt OpenAI 图像家族 (gpt-image-2*)
+        ARC-->>SG: 聚类转换 -> size: "1024x1024" | "1024x1792" | "1792x1024" (禁止 aspect_ratio)
+    else Grok 图像/视频家族 (grok-imagine-*)
+        ARC-->>SG: 透传 8 档 aspect_ratio: "16:9" / "9:16" / "3:2" / ... (禁止绝对像素 size)
+    else Kling 视频家族 (kling-*)
+        ARC-->>SG: 注入 metadata.aspect_ratio 与 aspect_ratio 字段 (规避 adaptor 默认 1:1 bug)
+    else Wan 视频家族 (wan-3.0)
+        ARC-->>SG: 透传 size 比例字符串，强制大写 resolution: "720P" / "1080P"
+    else Seedance 视频家族 (seedance-*)
+        ARC-->>SG: 透传 size 比例字符串，强制小写 resolution: "720p" / "1080p"
     end
+
+    Note over SG, Router: 3. 模态操作判定与端到端端点打通
+    SG->>Router: resolveEndpoint(profileId, operation, bindings)
+    alt 图像文生图
+        Router-->>SG: POST /v1/images/generations
+    else 图像图生图 / 多图参考 (multi_reference)
+        Router-->>SG: POST /v1/images/edits (携带 image/images 或 multipart)
+    else 视频多模态 / Suno 音乐任务
+        Router-->>SG: POST /v1/video/generations (异步媒体任务)
+    else 语音合成 (TTS)
+        Router-->>SG: POST /v1/audio/speech (同步二进制/流)
+    else 语音识别 (ASR: 豆包大模型)
+        Router-->>SG: POST /v1/audio/transcriptions (URL-first 极速转写)
+    end
+
+    Note over SG, Formatter: 4. Profile 白名单过滤与 Vendor Payload 构建
+    SG->>Formatter: mapValidatedPlanToVendor()
+    Formatter->>Formatter: assertVendorBodyAllowed(vendor, profile, operation)
+    Formatter-->>SG: vendorPayload
+
+    Note over SG, Gateway: 5. 网关转发与通道适配
+    SG->>Gateway: HTTP Request (对应端点)
+    Gateway->>Channel: 分发到对应渠道适配器
+    Channel->>Upstream: 调用服务提供商 API
+    Upstream-->>Channel: 返回任务 ID 或同步产物
+    Channel-->>Gateway: 封装标准响应
+    Gateway-->>Client: HTTP 200 { id, task_id, status, data }

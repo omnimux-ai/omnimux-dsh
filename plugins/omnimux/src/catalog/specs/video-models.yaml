@@ -810,6 +810,9 @@ models:
         defaultValue: 5
         unit: s
         allowAuto: true
+        options:
+          - value: -1
+            label: "自适应 (-1)"
       resolution:
         options:
           - value: 480p
@@ -1723,6 +1726,99 @@ models:
                 label: adaptive
             defaultValue: adaptive
             caseInsensitive: true
+      - id: end_frame
+        label: 尾帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: last_frame
+            type: image
+            role: last_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
+      - id: first_last_frame
+        label: 首尾帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max
+          - slot: last_frame
+            type: image
+            role: last_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
       - id: video_multi_ref
         label: 全能参考生视频
         output:
@@ -1910,6 +2006,99 @@ models:
           - slot: first_frame
             type: image
             role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max-turbo
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
+      - id: end_frame
+        label: 尾帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: last_frame
+            type: image
+            role: last_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max-turbo
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
+      - id: first_last_frame
+        label: 首尾帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
+              url: https://fal.ai/models/minimax/h3-max-turbo
+          - slot: last_frame
+            type: image
+            role: last_frame
             source: upstream_edge
             min: 1
             max: 1
