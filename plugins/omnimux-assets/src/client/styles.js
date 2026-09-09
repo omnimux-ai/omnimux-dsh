@@ -1,7 +1,23 @@
 export const STYLES_ID = 'omnimux-assets-styles'
 
 export const ASSETS_CSS = `
-.omnimux-assets-settings-button { width: 32px; height: 32px; flex-shrink: 0; }
+.omnimux-assets-settings-tooltip {
+  position: fixed;
+  left: var(--assets-tooltip-left);
+  top: var(--assets-tooltip-top);
+  z-index: 100;
+  width: max-content;
+  max-width: min(50vw, calc(100vw - 24px));
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: var(--dsw-alias-tooltip-bg);
+  color: var(--dsw-static-neutral-bluish-00);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  pointer-events: none;
+}
 .omnimux-assets-storage { display: flex; flex-direction: column; gap: 12px; color: var(--dsw-alias-label-primary); }
 .omnimux-assets-storage code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; font-size: 12px; }
 .omnimux-assets-storage-actions { display: flex; gap: 8px; flex-wrap: wrap; }

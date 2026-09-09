@@ -67,9 +67,9 @@ const t = (key) => en[key] || key
 async function load(file, exports = '') {
   const compiled = await build({ stdin: { contents: readFileSync(`${directory}${file}`, 'utf8') + exports,
     resolveDir: directory, loader: file.endsWith('.jsx') ? 'jsx' : 'js' }, bundle: true, write: false,
-    platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react/jsx-runtime', 'dsh-ui-kit'] })
+    platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react/jsx-runtime', 'react-dom', 'dsh-ui-kit', '@deepseek-ai/dsh-client-ui-primitives'] })
   const module = { exports: {} }
-  new Function('require', 'module', 'exports', compiled.outputFiles[0].text)((name) => name === 'react' ? hooks : name === 'dsh-ui-kit' ? kit : require(name), module, module.exports)
+  new Function('require', 'module', 'exports', compiled.outputFiles[0].text)((name) => name === 'react' ? hooks : ['dsh-ui-kit', '@deepseek-ai/dsh-client-ui-primitives'].includes(name) ? kit : require(name), module, module.exports)
   return module.exports
 }
 const { AssetGrid } = await load('AssetGrid.jsx')
