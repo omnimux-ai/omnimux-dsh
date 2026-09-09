@@ -20,32 +20,34 @@ export const GUIDE_CSS = `
   max-width:var(--dsh-chat-content-width); box-sizing:border-box; margin-inline:auto;
   min-width:0; color:var(--dsw-alias-label-primary); font-family:inherit; font-size:13px; line-height:1.5;
 }
-.omnimux-starter-guide { container-type:inline-size; container-name:starter-guide; padding-top:8px; }
-.omnimux-starter-groups { display:flex; flex-direction:column; gap:24px; }
-.omnimux-starter-group { min-width:0; }
-.omnimux-starter-group h2 { margin:0 0 20px; color:var(--dsw-alias-label-secondary); font-size:13px; font-weight:500; text-align:center; }
-.omnimux-starter-cards { display:flex; justify-content:center; gap:12px; }
+.omnimux-starter-guide { container-type:inline-size; container-name:starter-guide; padding-top:8px; max-width:928px; }
+.omnimux-starter-groups { display:flex; justify-content:center; flex-wrap:wrap; row-gap:24px; width:max-content; max-width:100%; margin-inline:auto; }
+.omnimux-starter-group { position:relative; min-width:0; padding-inline:20px; }
+.omnimux-starter-group:first-child { padding-left:4px; }
+.omnimux-starter-group:last-child { padding-right:4px; }
+.omnimux-starter-group:not(:last-child)::after {
+  content:""; position:absolute; right:0; top:50%; height:40px; transform:translateY(-50%);
+  border-right:1px solid var(--dsw-alias-border-l2);
+}
+.omnimux-starter-group h2 { margin:0 0 12px; color:var(--dsw-alias-label-secondary); font-size:11px; line-height:16.5px; font-weight:400; text-align:center; }
+.omnimux-starter-cards { display:flex; align-items:flex-start; gap:4px; }
 .omnimux-starter-cards button {
-  display:flex; flex-direction:column; align-items:center; gap:10px;
-  flex:1 1 0; max-width:112px; min-width:0; padding:0 4px;
-  border:0; border-radius:8px; background:transparent;
-  color:var(--dsw-alias-label-secondary); text-align:center; font:inherit; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  flex:none; width:72px; min-width:0; padding:8px 4px; box-sizing:border-box;
+  border:0; border-radius:14px; background:transparent;
+  color:var(--dsw-alias-label-secondary); text-align:center; font:inherit; font-size:11px; font-weight:400; cursor:pointer;
 }
-/* Reference-sized launch tiles; these are task entries, not toolbar IconButtons. */
+/* The requested reference uses 36px icon tiles inside 72px task buttons. */
 .omnimux-starter-icon {
-  display:flex; align-items:center; justify-content:center; flex:none; width:48px; height:48px;
-  box-sizing:border-box; border:1px solid var(--dsw-alias-border-l2); border-radius:14px;
-  background:var(--dsw-alias-bg-layer-1); box-shadow:inset 0 0 0 2px var(--dsw-alias-bg-base);
-  transition:background-color 120ms ease,border-color 120ms ease,transform 120ms ease;
+  display:flex; align-items:center; justify-content:center; flex:none; width:36px; height:36px;
+  box-sizing:border-box; border:1px solid var(--dsw-alias-border-l2); border-radius:8px;
+  background:var(--dsw-alias-bg-layer-1); box-shadow:inset 0 1px 2px var(--dsw-alias-bg-base);
+  transition:background-color 120ms ease,border-color 120ms ease;
 }
-.omnimux-starter-icon svg { width:24px; height:24px; }
-.omnimux-starter-label { font-size:13px; font-weight:500; line-height:20px; overflow-wrap:break-word; text-wrap:balance; }
-.omnimux-starter-cards button:hover .omnimux-starter-icon,
-.omnimux-starter-cards button[aria-pressed="true"] .omnimux-starter-icon {
-  background:var(--dsw-alias-bg-layer-2); border-color:var(--dsw-alias-label-secondary);
-}
-.omnimux-starter-cards button:is(:hover,[aria-pressed="true"]) { color:var(--dsw-alias-label-primary); }
-.omnimux-starter-cards button:active .omnimux-starter-icon { transform:scale(0.96); }
+.omnimux-starter-icon svg { width:20px; height:20px; }
+.omnimux-starter-label { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px; font-size:11px; font-weight:400; line-height:16px; }
+.omnimux-starter-cards button:hover { background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary); }
+.omnimux-starter-cards button:hover .omnimux-starter-icon { border-color:var(--dsw-alias-label-secondary); }
 .omnimux-starter-guide button:focus-visible, .omnimux-starter-materials :is(input,textarea,button):focus-visible {
   outline:2px solid var(--dsw-alias-label-primary); outline-offset:2px;
 }
@@ -66,16 +68,9 @@ export const GUIDE_CSS = `
 }
 .omnimux-starter-notice button { margin-left:8px; }
 .omnimux-starter-notice { margin-bottom:12px; }
-@container starter-guide (min-width:640px) {
-  .omnimux-starter-groups { flex-direction:row; gap:0; }
-  .omnimux-starter-group { flex:1 1 0; }
-  .omnimux-starter-group[data-starter-group="understand"] { flex-grow:2; }
-  .omnimux-starter-group[data-starter-group="create"] { flex-grow:3; }
-  .omnimux-starter-group + .omnimux-starter-group { position:relative; margin-left:20px; padding-left:20px; }
-  .omnimux-starter-group + .omnimux-starter-group::before {
-    content:""; position:absolute; left:0; top:40px; height:54px;
-    border-left:1px solid var(--dsw-alias-border-l2);
-  }
+@container starter-guide (max-width:871px) {
+  .omnimux-starter-group, .omnimux-starter-group:first-child, .omnimux-starter-group:last-child { padding-inline:12px; }
+  .omnimux-starter-group::after { display:none; }
 }
 @media (prefers-reduced-motion:reduce) { .omnimux-starter-icon { transition:none; } }
 
