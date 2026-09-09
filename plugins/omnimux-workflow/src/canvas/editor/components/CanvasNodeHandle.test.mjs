@@ -101,3 +101,35 @@ test('坑#1 守门契约：.wf-handle 本体 pointer-events 不被 hover 门控'
     /\.wf-handle--node-hovered \.wf-handle__plus-hit-area,[\s\S]*?pointer-events:\s*auto;/,
   );
 });
+
+test('REQ-WF-HANDLE-MONOCHROME: .wf-handle accent 必须是 --wb-node-ring，严禁使用 --wb-accent 避免蓝色边框', () => {
+  assert.match(
+    componentsCss,
+    /--wf-handle-accent:\s*var\(--wb-node-ring\);/,
+    '.wf-handle must consume --wb-node-ring for monochrome theme alignment',
+  );
+  assert.doesNotMatch(
+    componentsCss,
+    /--wf-handle-accent:\s*var\(--wb-accent\);/,
+    '.wf-handle must not consume --wb-accent which introduces blue borders',
+  );
+});
+
+test('REQ-WF-HANDLE-MONOCHROME: 深色和浅色主题下 plus-button 边框与高亮黑白自适应', () => {
+  // 浅色模式默认边框基于黑白中性调色
+  assert.match(
+    componentsCss,
+    /\.wf-handle__plus-button\s*\{[\s\S]*?border:\s*2px solid color-mix\(in srgb,\s*var\(--wf-handle-accent\) 35%,\s*var\(--wb-surface\)\);/,
+  );
+  // 深色模式下默认边框基于暗色 surface 混合白度
+  assert.match(
+    componentsCss,
+    /body\[data-ds-dark-theme\] \.wf-canvas-root \.wf-handle__plus-button\s*\{[\s\S]*?border-color:\s*color-mix\(in srgb,\s*var\(--wf-handle-accent\) 45%,\s*var\(--wb-surface-raised\)\);/,
+  );
+  // 深色模式 hover 态边框高亮
+  assert.match(
+    componentsCss,
+    /body\[data-ds-dark-theme\] \.wf-canvas-root \.wf-handle--surface-hovered \.wf-handle__plus-button,[\s\S]*?border-color:\s*var\(--wf-handle-accent\);/,
+  );
+});
+
