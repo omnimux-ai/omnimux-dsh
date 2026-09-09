@@ -17,6 +17,10 @@ export interface WorkflowDispatcherDeps {
   generationPreferences?: GenerationPreferencesStore;
   /** Lazy neutral seam lookup; no provider clients in workflow. */
   getSeam?: (name: string) => unknown;
+  /** Lazy neutral tool lookup from host context. */
+  getTool?: (name: string) => unknown;
+  /** Injected fetcher for media downloads (tests). */
+  fetcher?: typeof fetch;
   store: WorkspaceStore;
   gateway: GenerationGateway;
   mediaDir: string;

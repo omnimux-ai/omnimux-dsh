@@ -74,6 +74,7 @@ import { bindEnsureProjectBound } from '../../projects/ensureProjectBound';
 import { createTemplateRoutes } from './templateRoutes';
 import { createTableRoutes } from './tableRoutes';
 import { createSpeechToTextRoutes } from './speechToTextRoutes';
+import { createVideoExtractionRoutes } from './videoExtractionRoutes';
 
 export {
   MAX_JSON_BODY_BYTES,
@@ -148,6 +149,13 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const templateRoutes = createTemplateRoutes(templates);
   const tableRoutes = createTableRoutes(store);
   const speechToTextRoutes = createSpeechToTextRoutes({ store, getSeam: deps.getSeam });
+  const videoExtractionRoutes = createVideoExtractionRoutes({
+    store,
+    mediaDir,
+    getSeam: deps.getSeam,
+    getTool: deps.getTool,
+    fetcher: deps.fetcher,
+  });
 
   /**
    * Legacy M1 prefix compatibility: /dsh-workflow/* is rewritten (in-memory,
@@ -175,6 +183,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
 
       const fromSpeechToText = await speechToTextRoutes.tryHandle(method, path, req);
       if (fromSpeechToText) return fromSpeechToText;
+
+      const fromVideoExtraction = await videoExtractionRoutes.tryHandle(method, path, req);
+      if (fromVideoExtraction) return fromVideoExtraction;
 
       if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         try {
