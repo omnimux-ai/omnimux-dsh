@@ -307,3 +307,14 @@ export function extractVideoFromUrl(
     { method: 'POST', body: payload },
   );
 }
+
+/** 视频节点：拆解视频为结构化表格节点 (.htable) */
+export function deconstructVideo(
+  workspaceId: string,
+  payload: { nodeId: string; videoPath: string; title?: string },
+): Promise<ApiResult<import('../../workflow/videoDeconstruct/schema.ts').DeconstructVideoResponse>> {
+  return request<import('../../workflow/videoDeconstruct/schema.ts').DeconstructVideoResponse>(
+    WORKFLOW_API_ROUTES.deconstructVideo(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}
