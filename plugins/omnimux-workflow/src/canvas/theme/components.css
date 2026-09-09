@@ -2427,8 +2427,8 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 
 /* ==================== canvas node handle（W3 T3.1）====================
    来源 Gxgen styles/pages/canvas-editor.css:113-330。
-   转写：--canvas-node-handle-accent → --wb-accent；
-   rgba(114,80,255,α) → color-mix(in srgb, var(--wb-accent) α%, transparent)；
+   转写：--canvas-node-handle-accent → --wb-node-ring（遵循黑白中性主题规范，深色白、浅色黑，杜绝蓝色）；
+   rgba(114,80,255,α) → color-mix(in srgb, var(--wf-handle-accent) α%, transparent)；
    .dark → body[data-ds-dark-theme] .wf-canvas-root。
    坑#1：Handle 本体（.wf-handle）pointer-events 恒为 auto（不门控），
    只有 plus-hit-area 的 pointer-events 由 hover class 门控。 */
@@ -2441,7 +2441,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   --wf-handle-plus-hit-area-width: 72px;
   --wf-handle-plus-hit-area-height: 64px;
   --wf-handle-dot-size: 10px;
-  --wf-handle-accent: var(--wb-accent);
+  --wf-handle-accent: var(--wb-node-ring);
   --wf-handle-plus-center-offset: 30px;
 
   width: var(--wf-handle-hitbox-size) !important;
@@ -2547,7 +2547,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 2px solid var(--wb-text-muted);
+  border: 2px solid color-mix(in srgb, var(--wf-handle-accent) 35%, var(--wb-surface));
   background-color: var(--wb-surface);
   color: var(--wb-text-muted);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
@@ -2589,13 +2589,13 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   pointer-events: none;
 }
 
-/* 亮色态加号按钮 hover / 菜单打开高亮（主动补齐） */
+/* 亮色态加号按钮 hover / 菜单打开高亮（黑白规范：黑色高亮） */
 .wf-handle--surface-hovered .wf-handle__plus-button,
 .wf-handle--open .wf-handle__plus-button {
   border-color: var(--wf-handle-accent);
-  background-color: color-mix(in srgb, var(--wf-handle-accent) 12%, var(--wb-surface));
+  background-color: color-mix(in srgb, var(--wf-handle-accent) 8%, var(--wb-surface));
   color: var(--wb-text-primary);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--wf-handle-accent) 22%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--wf-handle-accent) 18%, transparent);
 }
 
 body[data-ds-dark-theme] .wf-canvas-root .wf-handle__plus-button {
@@ -2604,12 +2604,13 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-handle__plus-button {
   color: var(--wb-text-secondary);
 }
 
+/* 暗色态加号按钮 hover / 菜单打开高亮（黑白规范：白色高亮与微光） */
 body[data-ds-dark-theme] .wf-canvas-root .wf-handle--surface-hovered .wf-handle__plus-button,
 body[data-ds-dark-theme] .wf-canvas-root .wf-handle--open .wf-handle__plus-button {
   border-color: var(--wf-handle-accent);
-  background-color: color-mix(in srgb, var(--wf-handle-accent) 28%, var(--wb-surface-raised));
+  background-color: color-mix(in srgb, var(--wf-handle-accent) 20%, var(--wb-surface-raised));
   color: var(--wb-text-primary);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--wf-handle-accent) 30%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--wf-handle-accent) 25%, transparent);
 }
 
 /* ==================== 边断开控制（W3 T3.3）====================
