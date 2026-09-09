@@ -1,5 +1,15 @@
 # #839 最终 Git 集成工程报告
 
+## 最新基线补充（以本节为最终集成基线）
+
+创建 Draft PR #857 时 main 前进到 `9db9502eaaeba832ae13b04955598ee7618cc830`（#849 业务卡片）。已再次 fetch 并在任务分支无冲突 merge，最终代码集成 HEAD 为 `1e0233cb96acec092bf99bf0475bfe49fee03e89`。下文 e3f71ae6 / 1bd7210c 是第一轮集成及专项测试的精确历史输入。
+
+- 最终 exact base：`9db9502eaaeba832ae13b04955598ee7618cc830`；交付前 ls-remote 再核实未前进。
+- 第一轮实测 HEAD 到最新集成 HEAD 的 `scripts/`、package.json、pnpm-lock.yaml、pnpm-workspace.yaml 差异为空，source/recovery 8/8 与 unit 71/71 证据有效复用。
+- 因 main 的客户端新增会进入静态扫描，在最新集成 HEAD 再跑 `pnpm test:gates`：**149/149、4 suites、0 fail/skip/cancel/todo、287539.64675ms、exit0**。日志 `.workbuddy/issue-839-integration-latest-gates.log`，SHA256 `7e46d4cde5fae21442038a6001f55e0e53e38344152e05f6373ea56c71018017`。
+- 最终报告跟随提交仅更新本节，无生产代码变化；最终交付 head 从 PR 读回并在回执中提供。相对最新 base 的文件清单仍为下文16项，无新增任务冲突。
+- PR：https://github.com/omnimux-ai/omnimux-dsh/pull/857 ，Draft，独立最终集成 QA 仍未完成。最终 Git diffcheck PASS；最新 main 不改 workflow，自动部署结论不变。
+
 ## 状态与精确修订
 
 工程集成检查 IS_PASS: YES；**独立最终集成 QA 未完成，Draft / 不可 ready、merge 或部署**。第二轮独立 QA Route NoOne 仅适用于原固定工具树，不自动继承为本集成修订的独立通过结论。
