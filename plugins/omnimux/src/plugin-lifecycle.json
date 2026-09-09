@@ -10,5 +10,9 @@
   "omnimux-analytics": {
     "stage": "alpha",
     "toolPrefixes": ["omnimux_analytics_"]
+  },
+  "omnimux-forms": {
+    "stage": "alpha",
+    "toolPrefixes": []
   }
 }
