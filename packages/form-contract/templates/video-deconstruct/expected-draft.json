@@ -1,7 +1,7 @@
 {
   "protocolVersion": 1,
   "templateId": "video-deconstruct",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "prompt": "请拆解附带的参考视频。\n分析重点：开头三秒的钩子和产品展示\n拆解粒度：逐镜头\n请输出钩子、镜头结构、节奏、画面与声音表达，并区分可观察事实和推断。",
   "attachments": [
     {

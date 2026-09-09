@@ -1,0 +1,6 @@
+{
+  "id":"omnimux-forms","name":"omnimux-forms","version":"0.1.0","tier":"tier-1-app",
+  "entrypoint":"src/index.js","status":"active","description":"参考视频拆解与复刻任务表单",
+  "capabilities":{"tools":[],"seamsProvided":[],"seamsConsumed":["omnimuxForms"],"slots":[],"storageDomains":["$DSH_HOME/omnimux/forms/"]},
+  "dependencies":{"requiredPlugins":["omnimux"],"systemBinaries":[]}
+}

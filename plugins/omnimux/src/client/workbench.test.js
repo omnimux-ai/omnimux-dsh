@@ -168,6 +168,7 @@ test('default focus matrix: canvas defaults to split, all 9 libraries default to
     'omnimux-clip:studio',
     'omnimux-assets:library',
     'omnimux-products:library',
+    'omnimux-forms:tasks',
     'omnimux-accounts:library',
     'omnimux-inspiration:library',
     'omnimux-publish:library',
@@ -179,7 +180,7 @@ test('default focus matrix: canvas defaults to split, all 9 libraries default to
     assert.equal(resolveDefaultFocus(lib), WORKBENCH_FOCUS.gui, `${lib} must default to gui`)
     assert.ok(isWorkbenchTab(lib), `${lib} must be recognized as workbench tab`)
   }
-  assert.equal(WORKBENCH_OCCUPANTS.length, 10)
+  assert.equal(WORKBENCH_OCCUPANTS.length, 11)
 })
 
 test('workbenchDefaultWidthPx keeps ~420px for conversation', () => {

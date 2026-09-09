@@ -1,3 +1,4 @@
+import { mountFormsBridge } from './forms/mount.js'
 /** Registers OmniMux profile in Settings and Apps under 新会话. */
 import { NS } from './locales.js'
 import { SessionGuide } from './session-guide/SessionGuide.jsx'
@@ -152,6 +153,7 @@ export function apply(ctx) {
   // default priority 0. Shadow it with a lower priority so OmniMux wins
   // (lowest renders) instead of failing the client Loader.
   const attachmentStore = getGlobalAttachmentStore()
+  mountFormsBridge(ctx, attachmentStore)
   const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore, drafts: attachmentDrafts })
   ctx.effect(() => () => { attachmentAdmission.dispose(); attachmentDrafts.clear() }, 'omnimux: attachment admission')
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({

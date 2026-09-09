@@ -25,7 +25,7 @@ const allPlugins = [
   'omnimux',
   'omnimux-accounts',
   'omnimux-assets',
-  'omnimux-products',
+  'omnimux-products', 'omnimux-forms',
   'omnimux-workflow',
   'omnimux-market',
   'omnimux-inspiration',

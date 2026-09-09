@@ -113,6 +113,7 @@ export function apply(ctx, config = {}) {
     hubEvents,
     mailbox,
     sessionQuery: null,
+    getWorkspaceRegistry: () => ctx.get?.('workspaceRegistry'),
     getConnection: () => ctx.get?.('connection'),
     getDesktopRuntime: () => ctx.get?.('desktopRuntime'),
   }
