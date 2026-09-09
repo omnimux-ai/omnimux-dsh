@@ -114,15 +114,31 @@ export function patchAsarPresets(asarPath, presetsDir, opts = {}) {
   const after = Object.keys(targetNode.files)
 
   let newJson = JSON.stringify(header)
-  if (newJson.length > headerString.length && dshAgentPresetsPkg) {
+  if (newJson.length > headerString.length) {
     // If adding shipped presets exceeds the fixed header bound by a tiny margin,
-    // safely prune non-runtime documentation metadata from the presets package to fit.
+    // safely prune non-runtime documentation metadata (README.zh.md, README.i18n.yaml, README.md)
+    // from @deepseek-ai packages in header to fit.
     const harmlessDocKeys = ['README.i18n.yaml', 'README.zh.md', 'README.md']
-    for (const docKey of harmlessDocKeys) {
-      if (dshAgentPresetsPkg[docKey]) {
-        delete dshAgentPresetsPkg[docKey]
-        newJson = JSON.stringify(header)
-        if (newJson.length <= headerString.length) break
+    if (dshAgentPresetsPkg) {
+      for (const docKey of harmlessDocKeys) {
+        if (dshAgentPresetsPkg[docKey]) {
+          delete dshAgentPresetsPkg[docKey]
+          newJson = JSON.stringify(header)
+          if (newJson.length <= headerString.length) break
+        }
+      }
+    }
+    const deepseekPkgs = header.files?.node_modules?.files?.['@deepseek-ai']?.files || {}
+    for (const pkgName of Object.keys(deepseekPkgs)) {
+      if (newJson.length <= headerString.length) break
+      const pkgFiles = deepseekPkgs[pkgName]?.files
+      if (!pkgFiles) continue
+      for (const docKey of harmlessDocKeys) {
+        if (pkgFiles[docKey]) {
+          delete pkgFiles[docKey]
+          newJson = JSON.stringify(header)
+          if (newJson.length <= headerString.length) break
+        }
       }
     }
   }

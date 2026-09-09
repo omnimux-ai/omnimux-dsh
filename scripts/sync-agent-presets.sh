@@ -16,10 +16,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
-KEEP=(tiktok-agent standard daily-work cordis)
+KEEP=(tiktok-agent standard daily-work cordis content-creation-team)
 
-if [ ! -d "$SRC/tiktok-agent" ] || [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/daily-work" ] || [ ! -d "$SRC/cordis" ]; then
-  echo "❌ presets/ 缺少出厂预设 (tiktok-agent, standard, daily-work, cordis)" >&2
+if [ ! -d "$SRC/tiktok-agent" ] || [ ! -d "$SRC/standard" ] || [ ! -d "$SRC/daily-work" ] || [ ! -d "$SRC/cordis" ] || [ ! -d "$SRC/content-creation-team" ]; then
+  echo "❌ presets/ 缺少出厂预设 (tiktok-agent, standard, daily-work, cordis, content-creation-team)" >&2
   exit 1
 fi
 

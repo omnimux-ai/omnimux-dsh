@@ -8,13 +8,14 @@
 | `standard` | 代码开发 / CodeDev | 2 | 全功能代码开发与工程实现 Agent：专注架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工程闭环交付 |
 | `daily-work` | 日常工作 / WorkAssistant | 3 | 通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环 |
 | `cordis` | 创造模式 / Creator Mode | 4 | 原生创造模式 Agent：具备标准模式的全部能力，并提供运行时检查、插件实验与 Agent 预设创作指导 |
+| `content-creation-team` | 内容创作 / Content Creation | 5 | AI驱动的多模态创意内容生产 Agent：专注创意策划、广告创意、文案创作、二次元设计、短剧影视、动漫制作与音视频内容创作 |
 
 ## 产品化机制
 
 1. 本目录是 **OmniMux 产品真源**（不是 DSH 上游 `config/agent-presets`）。
 2. `scripts/sync-agent-presets.sh` 物化到：
    - `app.asar.unpacked/.../config/agent-presets/`（真实文件）
-   - 同长度 patch `app.asar` header，把出厂目录保留为 `tiktok-agent`、`standard`、`daily-work` 与 `cordis`（Electron 先读 asar 清单）
+   - 同长度 patch `app.asar` header，把出厂目录保留为 `tiktok-agent`、`standard`、`daily-work`、`cordis` 与 `content-creation-team`（Electron 先读 asar 清单）
    - 可选清理 `~/.dsh/.agent-presets` 旧用户预设
 3. Profile `cordis.patch.yml` 必须设置：
 
@@ -25,7 +26,7 @@
     includeUserRoot: false
 ```
 
-这样顶部下拉保留出厂的四大预设体系，且前端通过 `agent-presets-i18n.js` 自适应注入中英双语展示名称与描述。
+这样顶部下拉保留出厂的五大预设体系，且前端通过 `agent-presets-i18n.js` 自适应注入中英双语展示名称与描述。
 
 ## 专家团与组建团队机制
 

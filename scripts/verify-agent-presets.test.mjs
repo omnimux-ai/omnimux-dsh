@@ -141,11 +141,14 @@ test('preset.yml metadata matches requirements for all four shipped presets', ()
   const cordisPreset = read('presets/cordis/preset.yml')
   ok(cordisPreset.includes('name: 创造模式') || cordisPreset.includes('name: 组建团队'))
   ok(cordisPreset.includes('order: 4'))
+
+  const contentCreationPreset = read('presets/content-creation-team/preset.yml')
+  ok(contentCreationPreset.includes('name: 内容创作'))
 })
 
 test('sync-agent-presets.sh maintains all four presets in KEEP array', () => {
   const syncScript = read('scripts/sync-agent-presets.sh')
-  ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis)'))
+  ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis') && syncScript.includes('content-creation-team)'))
 })
 
 test('tiktok-agent persona positions as TikTokAgent lead and forbids forced spawn', () => {
