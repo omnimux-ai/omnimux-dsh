@@ -41,7 +41,7 @@ models:
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -69,7 +69,7 @@ models:
           seam: videoGenerate
           notes: 保留既有 stub 记录；本轮按官方文档完成字段映射
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -101,7 +101,7 @@ models:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -253,7 +253,7 @@ models:
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -281,7 +281,7 @@ models:
           seam: videoGenerate
           notes: 保留既有 stub 记录；本轮按官方文档完成字段映射
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -313,7 +313,7 @@ models:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -461,7 +461,7 @@ models:
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -506,7 +506,7 @@ models:
           seam: videoGenerate
           notes: 保留既有 stub 记录；本轮按官方文档完成字段映射
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -550,7 +550,7 @@ models:
                 label: "自适应"
             defaultValue: adaptive
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -893,7 +893,7 @@ models:
           seam: videoGenerate
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -921,7 +921,7 @@ models:
           seam: videoGenerate
           notes: 保留既有 stub 记录；本轮按官方文档完成字段映射
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -953,7 +953,7 @@ models:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -1092,7 +1092,7 @@ models:
             min: 1
             max: 1
       - id: "first_frame"
-        label: "首帧生视频"
+        label: "首帧"
         output:
           type: "video"
         inputs:
@@ -1158,7 +1158,7 @@ models:
             min: 1
             max: 1
       - id: "first_frame"
-        label: "首帧生视频"
+        label: "首帧"
         output:
           type: "video"
         inputs:
@@ -1260,7 +1260,7 @@ models:
             min: 1
             max: 1
       - id: "first_frame"
-        label: "首帧生视频"
+        label: "首帧"
         output:
           type: "video"
         inputs:
@@ -1422,7 +1422,7 @@ models:
             min: 1
             max: 1
       - id: "video_multi_ref"
-        label: "参考图生成"
+        label: "参考图"
         output:
           type: "video"
         inputs:
@@ -1488,7 +1488,7 @@ models:
             min: 1
             max: 1
       - id: "video_multi_ref"
-        label: "参考图生成"
+        label: "参考图"
         output:
           type: "video"
         inputs:
@@ -1565,7 +1565,7 @@ models:
             min: 1
             max: 1
       - id: video_multi_ref
-        label: 参考图生视频
+        label: 参考图
         output:
           type: video
           allowedMimes:
@@ -1644,7 +1644,7 @@ models:
       seam: videoGenerate
       notes: 仅离线替身/历史 stub，不是渠道真实生成
 
-  # fal.ai MiniMax H3 Max：旗舰版，支持文生视频、首帧生视频、全能参考生视频。
+  # fal.ai MiniMax H3 Max：旗舰版，支持文生视频、首帧、全能参考。
   - id: minimax-h3-max
     label: MiniMax H3 Max
     family: minimax
@@ -1689,7 +1689,7 @@ models:
             defaultValue: "16:9"
             caseInsensitive: true
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -1727,7 +1727,7 @@ models:
             defaultValue: adaptive
             caseInsensitive: true
       - id: end_frame
-        label: 尾帧生视频
+        label: 尾帧
         output:
           type: video
           allowedMimes:
@@ -1765,7 +1765,7 @@ models:
             defaultValue: adaptive
             caseInsensitive: true
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -1820,7 +1820,7 @@ models:
             defaultValue: adaptive
             caseInsensitive: true
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -1938,14 +1938,14 @@ models:
       profileId: videoGenerate
       seam: videoGenerate
       verifiedAt: 2026-09-08
-      notes: 接入 videoGenerate profile，支持文生、首帧、全能参考生视频
+      notes: 接入 videoGenerate profile，支持文生、首帧、全能参考
     execution:
       status: stub
       profileId: videoGenerate
       seam: videoGenerate
       notes: 离线测试存根
 
-  # fal.ai MiniMax H3 Max Turbo：极速版，支持文生视频、首帧生视频。
+  # fal.ai MiniMax H3 Max Turbo：极速版，支持文生视频、首帧。
   - id: minimax-h3-max-turbo
     label: MiniMax H3 Max Turbo
     family: minimax
@@ -1990,7 +1990,7 @@ models:
             defaultValue: "16:9"
             caseInsensitive: true
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -2028,7 +2028,7 @@ models:
             defaultValue: adaptive
             caseInsensitive: true
       - id: end_frame
-        label: 尾帧生视频
+        label: 尾帧
         output:
           type: video
           allowedMimes:
@@ -2066,7 +2066,7 @@ models:
             defaultValue: adaptive
             caseInsensitive: true
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -2168,7 +2168,7 @@ models:
       profileId: videoGenerate
       seam: videoGenerate
       verifiedAt: 2026-09-08
-      notes: 接入 videoGenerate profile，支持文生与首帧生视频
+      notes: 接入 videoGenerate profile，支持文生与首帧
     execution:
       status: stub
       profileId: videoGenerate
@@ -2204,7 +2204,7 @@ models:
             min: 1
             max: 1
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -2239,7 +2239,7 @@ models:
                 label: frame
             defaultValue: frame
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -2289,7 +2289,7 @@ models:
                 label: frame
             defaultValue: frame
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
@@ -2364,7 +2364,7 @@ models:
                 label: reference
             defaultValue: reference
       - id: document_to_video
-        label: 文档参考生视频
+        label: 文档参考
         output:
           type: video
           allowedMimes:
@@ -2402,7 +2402,7 @@ models:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/wan3.0-video/generation.md
       - id: webpage_to_video
-        label: 网页参考生视频
+        label: 网页参考
         output:
           type: video
           allowedMimes:
@@ -2738,7 +2738,7 @@ models:
             min: 1
             max: 1
       - id: "video_multi_ref"
-        label: "参考图生成"
+        label: "参考图"
         output:
           type: "video"
         inputs:
@@ -2830,7 +2830,7 @@ models:
                 label: "9:16"
             defaultValue: "16:9"
       - id: first_frame
-        label: 首帧生视频
+        label: 首帧
         output:
           type: video
           allowedMimes:
@@ -2866,7 +2866,7 @@ models:
                 label: "自适应"
             defaultValue: adaptive
       - id: end_frame
-        label: 尾帧生视频
+        label: 尾帧
         output:
           type: video
           allowedMimes:
@@ -2902,7 +2902,7 @@ models:
                 label: "自适应"
             defaultValue: adaptive
       - id: first_last_frame
-        label: 首尾帧生视频
+        label: 首尾帧
         output:
           type: video
           allowedMimes:
@@ -2954,7 +2954,7 @@ models:
                 label: "自适应"
             defaultValue: adaptive
       - id: video_multi_ref
-        label: 全能参考生视频
+        label: 全能参考
         output:
           type: video
           allowedMimes:
