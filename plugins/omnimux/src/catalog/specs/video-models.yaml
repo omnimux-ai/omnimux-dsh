@@ -1646,7 +1646,7 @@ models:
     label: MiniMax H3 Max
     family: minimax
     badge: 旗舰
-    subtitle: 720p/1080p · 5–10s
+    subtitle: 768p/1080p · 5s/10s
     aliases:
       - minimax/h3-max
       - h3-max
@@ -1713,7 +1713,8 @@ models:
               - image/heif
             maxSizeMb: 30
             limitSource:
-              kind: official_docs
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
               url: https://fal.ai/models/minimax/h3-max
         parameters:
           aspectRatio:
@@ -1750,7 +1751,8 @@ models:
               - image/heif
             maxSizeMb: 30
             limitSource:
-              kind: official_docs
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
               url: https://fal.ai/models/minimax/h3-max
           - slot: reference_videos
             type: video
@@ -1766,7 +1768,8 @@ models:
             maxDurationSec: 15
             totalMaxDurationSec: 15
             limitSource:
-              kind: official_docs
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
               url: https://fal.ai/models/minimax/h3-max
         inputGroups:
           - slots:
@@ -1794,7 +1797,7 @@ models:
     parameters:
       prompt:
         minLength: 1
-        maxLength: 7000
+        maxLength: 50000
       aspectRatio:
         options:
           - value: "16:9"
@@ -1823,17 +1826,17 @@ models:
         unit: s
       resolution:
         options:
-          - value: 720p
-            label: 720p
+          - value: 768p
+            label: 768p
           - value: 1080p
             label: 1080p
-        defaultValue: 720p
+        defaultValue: 768p
         caseInsensitive: true
     research:
       status: verified
       docUrl: https://fal.ai/models/minimax/h3-max
       verifiedAt: 2026-09-08
-      notes: fal.ai 官方文档确认 MiniMax H3 Max 接口规范
+      notes: fal端点schema确认prompt上限50000及768P/1080P；产品仅开放5s/10s与768p/1080p，非官方全部能力。旧720p须用户重新选择768p，不静默转换。媒体体积/MIME保留产品子集，非官方verified；详见docs/references/fal-h3-contract.md。
     implementation:
       status: ready
       profileId: videoGenerate
@@ -1851,7 +1854,7 @@ models:
     label: MiniMax H3 Max Turbo
     family: minimax
     badge: 极速
-    subtitle: 720p/1080p · 5–10s
+    subtitle: 768p/1080p · 5s/10s
     aliases:
       - minimax/h3-max-turbo
       - h3-max-turbo
@@ -1918,7 +1921,8 @@ models:
               - image/heif
             maxSizeMb: 30
             limitSource:
-              kind: official_docs
+              kind: policy_conservative
+              note: 产品保留现有30MB图片/50MB视频及MIME子集；渠道对应限制尚未证实。数量9图/3视频及视频2–15秒、合计15秒见端点schema。
               url: https://fal.ai/models/minimax/h3-max-turbo
         parameters:
           aspectRatio:
@@ -1930,7 +1934,7 @@ models:
     parameters:
       prompt:
         minLength: 1
-        maxLength: 7000
+        maxLength: 50000
       aspectRatio:
         options:
           - value: "16:9"
@@ -1959,17 +1963,17 @@ models:
         unit: s
       resolution:
         options:
-          - value: 720p
-            label: 720p
+          - value: 768p
+            label: 768p
           - value: 1080p
             label: 1080p
-        defaultValue: 720p
+        defaultValue: 768p
         caseInsensitive: true
     research:
       status: verified
       docUrl: https://fal.ai/models/minimax/h3-max-turbo
       verifiedAt: 2026-09-08
-      notes: fal.ai 官方文档确认 MiniMax H3 Max Turbo 接口规范
+      notes: fal端点schema确认prompt上限50000及768P/1080P；产品仅开放5s/10s与768p/1080p，非官方全部能力。旧720p须重新选择768p；体积与MIME为产品子集，不冒充官方限制；详见docs/references/fal-h3-contract.md。
     implementation:
       status: ready
       profileId: videoGenerate
