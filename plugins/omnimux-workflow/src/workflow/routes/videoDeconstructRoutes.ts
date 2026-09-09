@@ -42,6 +42,7 @@ export function createVideoDeconstructRoutes(
         rowCount: result.rowCount,
         previewRows: result.previewRows,
         markdown: result.markdown,
+        workspace: result.workspace,
       };
       logger.info('request completed', { status: 200, durationMs: Date.now() - started });
       return { status: 200, body };

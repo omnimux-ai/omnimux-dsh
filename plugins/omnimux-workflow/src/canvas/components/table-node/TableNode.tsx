@@ -26,13 +26,14 @@ const DEFAULT_TABLE_NODE_WIDTH = 380;
 const DEFAULT_TABLE_NODE_HEIGHT = 280;
 
 export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
+  const effectiveTableId = (data as any)?.tableId || id;
   const nodeTitle = (data as any)?.label || (data as any)?.title || '表格';
-  const tableRelPath = (data as any)?.tablePath || (data as any)?.path || `.omnimux/tables/${id}.htable`;
+  const tableRelPath = (data as any)?.tablePath || (data as any)?.path || `.omnimux/tables/${effectiveTableId}.htable`;
   const l1RowCount = typeof (data as any)?.rowCount === 'number' ? (data as any)?.rowCount : 0;
   const l1PreviewRows = (data as any)?.previewRows as string[] | undefined;
 
   const { openStage } = useTableStore();
-  const { document, addRow } = useTableSession(id, {
+  const { document, addRow } = useTableSession(effectiveTableId, {
     title: nodeTitle,
     contentRev: (data as any)?.contentRev ?? 0,
   });
@@ -56,8 +57,8 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
   const { addToConversation } = useAddToConversation();
 
   const handleOpenFullscreen = useCallback(() => {
-    openStage(id, document);
-  }, [id, document, openStage]);
+    openStage(effectiveTableId, document);
+  }, [effectiveTableId, document, openStage]);
 
   const handleAddToConversation = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

@@ -51,6 +51,7 @@ import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstre
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
 import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
 import { deconstructVideo, extractVideoFromUrl, transcribeAudio } from '../../../bridge/apiClient.ts';
+import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
@@ -601,37 +602,57 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         toast.error(message);
         return;
       }
-      const store = useCanvasStore.getState();
-      const videoNode = store.nodes.find((n) => n.id === id);
-      const plan = planVideoDeconstructDownstream({
-        videoNodeId: id,
-        videoPosition: videoNode?.position ?? { x: 0, y: 0 },
-        videoNodeWidth: nodeWidth,
-        tableResult: {
-          tableId: result.body.tableId,
-          tablePath: result.body.tablePath || `.omnimux/tables/${result.body.tableId}.htable`,
-          title: result.body.title || t('deconstructVideo.nodeLabel'),
-          rowCount: result.body.rowCount ?? 0,
-          columnCount: result.body.columnCount ?? 0,
-          previewRows: result.body.previewRows ?? [],
-        },
-        label: result.body.title || t('deconstructVideo.nodeLabel'),
-        currentNodes: store.nodes,
-        currentEdges: store.edges,
-      });
       updateNodeData({ executionStatus: 'completed', executionError: undefined, videoDeconstructActive: undefined });
-      if (!plan) {
-        toast.error(t('deconstructVideo.toast.failed'));
-        return;
+
+      const serverWorkspace = result.body.workspace;
+      const returnedTableId = result.body.tableId;
+
+      if (serverWorkspace && Array.isArray(serverWorkspace.nodes) && Array.isArray(serverWorkspace.edges)) {
+        // 后端原子持久化到 canvas.json 成功：直接灌入最新快照并触发 onSaved 对齐，消除可能的版本冲突
+        useCanvasStore.getState().hydrateGraph(serverWorkspace.nodes as any, serverWorkspace.edges as any);
+        notifyWorkspaceSaved(serverWorkspace);
+
+        // 自动聚焦并选中新建/更新的表格节点
+        const targetNodeId = serverWorkspace.nodes.find(
+          (n: any) => n.id === returnedTableId || (n.data as any)?.tableId === returnedTableId,
+        )?.id || returnedTableId;
+
+        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
+        useCanvasStore.getState().setSelectedElement('node', targetNodeId);
+      } else {
+        // 降级回退：走前端本地 planVideoDeconstructDownstream
+        const store = useCanvasStore.getState();
+        const videoNode = store.nodes.find((n) => n.id === id);
+        const plan = planVideoDeconstructDownstream({
+          videoNodeId: id,
+          videoPosition: videoNode?.position ?? { x: 0, y: 0 },
+          videoNodeWidth: nodeWidth,
+          tableResult: {
+            tableId: returnedTableId,
+            tablePath: result.body.tablePath || `.omnimux/tables/${returnedTableId}.htable`,
+            title: result.body.title || t('deconstructVideo.nodeLabel'),
+            rowCount: result.body.rowCount ?? 0,
+            columnCount: result.body.columnCount ?? 0,
+            previewRows: result.body.previewRows ?? [],
+          },
+          label: result.body.title || t('deconstructVideo.nodeLabel'),
+          currentNodes: store.nodes,
+          currentEdges: store.edges,
+        });
+        if (!plan) {
+          toast.error(t('deconstructVideo.toast.failed'));
+          return;
+        }
+        applyCanvasInputMutation({
+          addNodes: plan.addNodes,
+          addEdges: plan.addEdges,
+          nodePatches: plan.nodePatches,
+        });
+        // 自动聚焦并选中新建的表格节点
+        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
+        useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
       }
-      applyCanvasInputMutation({
-        addNodes: plan.addNodes,
-        addEdges: plan.addEdges,
-        nodePatches: plan.nodePatches,
-      });
-      // 自动聚焦并选中新建的表格节点
-      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
-      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+
       toast.success(t('deconstructVideo.toast.success'));
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : t('deconstructVideo.toast.failed');
