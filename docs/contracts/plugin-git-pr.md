@@ -28,6 +28,18 @@ subsystem: "global"
 
 PR 必须关联 `Closes #<issue-id>`。Issue ID 应贯穿分支、worktree、commit 和 PR；纯调查尚未进入实施时可先不建分支。
 
+### 稳定基线三 PR 顺序
+
+命名不可变 baseline 迁移必须按此顺序。真实 Host **无法启动禁止切 S**：切 S 被本表禁止时，真实 Host 没有成功的 activate / 删 fallback 路径。这是阶段与写集边界，不是脚本判断人类授权。切 S 遵循本文「授权边界」；不另设 S 二次确认。Agent 核阶段与合入证据。细节真源：[稳定基线迁移规格](../specs/2026-09-09-stable-baseline-migration.md)、[dev-pipeline](dev-pipeline.md)。
+
+| 顺序 | PR | 合入前提 | 写集 | 禁止 |
+|---|---|---|---|---|
+| 1 | **PR-D** | 独立文档 QA | 仅合同、索引、薄 AGENTS、skill 归属、本规格 | 脚本实现；声称已切换默认种子 |
+| 2 | **PR-C** | **实施前** PR-D 已 `state=MERGED`；**合入前**隔离双真实 Host 并发、离线重建、ego smoke 等适用验证 | 命名不可变 baseline **创建**与**显式消费**（固定 id/路径；published 候选可隔离消费） | 写共享 `current`；切全员默认；删隐式 Dev/Prod/`~/.dsh` fallback；消费接到 current 写路径 |
+| 3 | **PR-S** | PR-C 已合入；C 后正式候选隔离验收成功并 **verified** | 删除隐式 fallback 并 `activate-baseline`（仅 verified；锁 + temp + 同 FS rename） | 禁止切 S 时于真实 Host 执行 activate / 删 fallback；未 verified 写入 `current`；激活失败自动回落 Dev |
+
+风险：触及合同/`AGENTS.md`/`scripts/` 的 D 至少 R1；C/S 按实际 diff 上调，删除隐式 fallback 或激活默认按 R0/R1 处理。pin/API 不匹配另走 RC 授权，不得外仓修改或删除 viewer。
+
 ## 授权边界
 
 - 用户确认需求并要求实施、修复或交付后，任务授权覆盖约定范围内的调查、隔离实施、测试、Issue/分支写入、push、PR、合并、Dev 物化与验收、任务清理。授权跨轮有效，直至撤销、任务结束或边界实质变化；不得逐阶段索要确认。仅分析、仅本地修改、仅开 PR 不合并等明确限制优先。

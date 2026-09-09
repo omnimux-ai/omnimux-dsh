@@ -44,7 +44,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - Keep AGPL projects isolated. `omnimux-clip` vendors the complete MIT OpenReel GUI and media pipeline; no headless replacement or parallel editor. Read its [vendor contract](docs/contracts/openreel-vendor-contract.md).
 - For node inputs, connections, generation controls, or submission changes, follow the [node input and submission contract](docs/contracts/node-input-submission.md), including shared effective-input semantics and request-content acceptance.
 - Model contracts come from selected-channel official documentation, checked offline; do not probe real model APIs to discover support. Only submission `mode: "live"` proves live generation. See [model API authority](docs/contracts/model-api-authority.md).
-- Before merge, use an isolated L2 profile with at most one in-progress plugin link. After merge, materialize Dev `~/.omnimux-dev` through the official sync entry. Production `~/.omnimux` requires an explicit release instruction; `--prod`/`--all` require authorization covering those targets, never routine development. Do not hand-copy profiles or guess `$DSH_HOME`. See [dev pipeline](docs/contracts/dev-pipeline.md).
+- Before merge, use an isolated L2 profile with at most one in-progress plugin link. After merge, materialize Dev `~/.omnimux-dev` through the official sync entry. Production `~/.omnimux` requires an explicit release instruction; `--prod`/`--all` require authorization covering those targets, never routine development. Do not hand-copy profiles or guess `$DSH_HOME`. Named immutable baselines, create-versus-activate, and implicit Dev/Prod/`~/.dsh` fallback are owned by [dev pipeline](docs/contracts/dev-pipeline.md); current seed is still the implicit chain until PR-S. See [stable baseline spec](docs/specs/2026-09-09-stable-baseline-migration.md).
 
 ## Source map
 
@@ -53,7 +53,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 | [CONTEXT.md](CONTEXT.md), [docs/README.md](docs/README.md) | Product map and document discovery | Live deployment status or new authority |
 | `plugins/omnimux/` | Hub implementation | Domain-private storage |
 | `plugins/omnimux-*/` | Each business domain | Hub chrome, keys, provider routing |
-| `.agents/skills/` | Repo development skills; inspect symlink ownership before editing | External shared skill sources |
+| `.agents/skills/` | Repo development skills; inspect symlink vs in-tree ownership before editing; only in-repo files may be changed here | External shared skill sources |
 | `plugins/*/skills/`, `plugins/omnimux-market/catalog/`, `presets/` | Product-distributed skills and expert workflows | Codex's global agent configuration |
 | `scripts/`, [package.json](package.json) | Existing build, worktree, and verification entrypoints | A second deployment system |
 | `/Users/x/Desktop/Project/omnimux-desktop-fork` | Shipping shell and `yarn omnimux:*` operations | Plugin source; retired `omnimux-desktop` is read-only |

@@ -9,7 +9,7 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 
 ## Prepare
 
-1. Read [AGENTS.md](../../../AGENTS.md), [Git/PR policy](../../../docs/contracts/plugin-git-pr.md), and the relevant contract. Use the current session's decisions; ask only for missing information that changes the result.
+1. Read [AGENTS.md](../../../AGENTS.md), [Git/PR policy](../../../docs/contracts/plugin-git-pr.md), and the relevant contract. Use the current session's decisions; ask only for missing information that changes the result. Before editing any skill, resolve whether this path is an in-repo file or a symlink to an external shared source; only in-repository skill files may be changed in this repo. This skill's true home is `.agents/skills/omnimux-repo-workflow/SKILL.md` in omnimux-dsh.
 2. Record `git status --short --branch -uall` and `git rev-parse HEAD`. Inspect existing work without stashing or overwriting it. Reuse the task's Issue/PR; if implementation needs an Issue, prepare its scope, risk, and measurable acceptance criteria yourself.
 3. Fetch the named base (normally `origin/main`). Verify and reuse the current task's isolated worktree. Only create one if none exists or its isolation is unsuitable, using `bash scripts/worktree.sh new <plugin-or-common>-<topic> origin/main --type agent --issue <issue-id>` from the product root. Keep the worktree inside `<repo>/.worktrees/`; do not use the legacy sibling-directory `git-wt.sh` entry. Do not switch the primary checkout for review.
 4. For a substantial task, state the plan and put agreed decisions in the owning contract/specification. A clear request to implement authorizes routine preparation; it does not authorize unrelated publication, production changes, or payment.
