@@ -53,9 +53,10 @@ jobs:
           node --input-type=module - <<'JS'
           import { readFileSync, writeFileSync } from 'node:fs';
           const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const formContract = JSON.parse(readFileSync('packages/form-contract/package.json', 'utf8'));
           writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
             private: true,
-            dependencies: { acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
+            dependencies: { ...formContract.dependencies, ...formContract.devDependencies, acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
           }));
           JS
           npm --prefix "$QA_DEPS" install --ignore-scripts --no-audit --no-fund
@@ -119,6 +120,9 @@ jobs:
           export COREPACK_ENABLE_NETWORK=0
           test "$(corepack pnpm --version)" = 11.7.0
           corepack pnpm --config.verify-deps-before-run=false test:managed-tarball:unit
+
+      - name: Verify form contracts, authoring tools and generated references
+        run: pnpm --config.verify-deps-before-run=false verify:forms
 
       - name: Run regression tests
         run: |

@@ -1,0 +1,14 @@
+{
+  "reference_video": [
+    {
+      "ref": "example:reference-video",
+      "name": "reference.mp4",
+      "mimeType": "video/mp4",
+      "sizeBytes": 1048576
+    }
+  ],
+  "brief": "改为一款旅行背包，突出收纳空间。",
+  "aspect_ratio": "9:16",
+  "duration": 15,
+  "count": 2
+}

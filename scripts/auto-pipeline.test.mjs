@@ -12,6 +12,8 @@ import {
   assessAuthorization,
   assessRuntimeAuthorization,
   classifyRisk,
+  resolveDeliveryChannel,
+  handoffToAgent,
   parseFrontmatter,
   slugifyTopic,
 } from './auto-pipeline.mjs'
@@ -263,6 +265,53 @@ allow-skips: false
     assert.match(source, /assessAdmission\(issue, maintainers\)/)
     assert.match(source, /await waitForCi[\s\S]*assessRuntimeAuthorization\(latestIssue, maintainers, risk\.tier\)[\s\S]*await requestAndConfirmMerge/)
     assert.doesNotMatch(source, /assessAuthorization\(latestIssue/)
+  })
+  it('unauthorized machine runs fail closed even for R0/R1; manual remains an Agent handoff', () => {
+    for (const tier of ['R0', 'R1', 'R2', 'R3']) {
+      const risk = classifyRisk({ body: `---\nrisk-tier: ${tier}\n---\n` })
+      const denied = { eligible: false, reasons: ['missing trusted authorization'] }
+      assert.throws(() => resolveDeliveryChannel(risk, denied, {}), /机器预授权不足/)
+      assert.equal(resolveDeliveryChannel(risk, denied, { manual: true }), 'agent')
+      const approved = { eligible: true, reasons: [] }
+      assert.equal(resolveDeliveryChannel(risk, approved, { manual: true }), 'agent')
+      if (['R2', 'R3'].includes(tier)) assert.equal(resolveDeliveryChannel(risk, approved, {}), 'auto')
+      else assert.throws(() => resolveDeliveryChannel(risk, approved, {}), /机器预授权不足/)
+    }
+  })
+  it('R0 is not downgraded by contract or cross-plugin paths', () => {
+    for (const paths of [['docs/contracts/plugin-git-pr.md'], ['plugins/a/file.ts', 'plugins/b/file.ts']]) {
+      assert.equal(classifyRisk({ body: '---\nrisk-tier: R0\n---\n' }, paths).tier, 'R0')
+    }
+  })
+  it('handoff preserves recovery evidence and no-merge scope without invoking merge or materialization', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-handoff-'))
+    try {
+      for (const [noMerge, materialize] of [[false, true], [true, true], [false, false], [true, false]]) {
+        writeState(root, '840', { state: 'pr', runKey: 'run', baseSha: 'base', worktree: '/task', branch: 'task' })
+        const calls = []
+        const evidence = { commit: { headSha: 'head' }, pr: { number: 841 }, reports: { qa: { pass: true } }, risk: { tier: 'R1' } }
+        const result = handoffToAgent(root, '840', evidence, {
+          noMerge, materialize, execCommand: (command, args) => { calls.push([command, args]); return { status: 0 } },
+        })
+        assert.equal(result.state, 'ready-for-agent')
+        assert.equal(result.handoff.owner, 'coordinating-agent')
+        assert.equal(result.handoff.mergeProhibited, noMerge)
+        assert.equal(result.handoff.materializeProhibited, !materialize)
+        assert.equal(result.baseSha, 'base')
+        assert.equal(result.worktree, '/task')
+        assert.equal(result.commit.headSha, 'head')
+        assert.deepEqual(readState(root, '840'), result)
+        assert.equal(calls.length, 1)
+        assert.equal(calls[0][0], 'gh')
+        assert.deepEqual(calls[0][1].slice(0, 3), ['issue', 'edit', '840'])
+        assert.ok(calls[0][1].includes('status:qa-review'))
+        if (noMerge) assert.match(result.handoff.nextAction, /do not merge or materialize/)
+        else {
+          assert.match(result.handoff.nextAction, /revocation.*required checks/)
+          if (!materialize) assert.match(result.handoff.nextAction, /do not materialize/)
+        }
+      }
+    } finally { rmSync(root, { recursive: true, force: true }) }
   })
   it('slugifyTopic 截断长度且保留有效字符', () => {
     const slug = slugifyTopic('feat(clip): Support Multi-Track Video Timeline Editing & Export!', '42')
