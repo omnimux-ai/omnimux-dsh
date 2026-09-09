@@ -17,3 +17,48 @@ export function sessionToWorkspaceId(sessionId: unknown): string | undefined {
   const hex2 = (h2 >>> 0).toString(16).padStart(8, '0');
   return `ws_${(hex1 + hex2).slice(0, 12)}`;
 }
+
+export const SESSION_CANVAS_OVERRIDE_PREFIX = 'omnimux:session-canvas-override:';
+
+/**
+ * Register an inherited or explicit canvas workspace id for a session.
+ */
+export function setSessionCanvasOverride(sessionId: string, canvasWorkspaceId: string): void {
+  if (typeof sessionId !== 'string' || !sessionId) return;
+  if (typeof canvasWorkspaceId !== 'string' || !canvasWorkspaceId) return;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`${SESSION_CANVAS_OVERRIDE_PREFIX}${sessionId}`, canvasWorkspaceId);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Read the explicit or inherited canvas workspace id if registered.
+ */
+export function getSessionCanvasOverride(sessionId: unknown): string | undefined {
+  if (typeof sessionId !== 'string' || !sessionId) return undefined;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const val = localStorage.getItem(`${SESSION_CANVAS_OVERRIDE_PREFIX}${sessionId}`);
+      if (val && typeof val === 'string' && val.trim()) {
+        return val.trim();
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+/**
+ * Resolve effective canvas workspace id:
+ * priority: explicit override > hashed session id.
+ */
+export function resolveEffectiveWorkspaceId(sessionId: unknown): string | undefined {
+  const override = getSessionCanvasOverride(sessionId);
+  if (override) return override;
+  return sessionToWorkspaceId(sessionId);
+}
