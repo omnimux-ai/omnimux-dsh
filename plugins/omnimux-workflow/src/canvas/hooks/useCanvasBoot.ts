@@ -84,8 +84,8 @@ export function useCanvasBoot(opts: UseCanvasBootOptions = {}) {
         })
       ) {
         // Same fingerprint and cache already in memory: skip localStorage write.
-        // Still hydrate boot catalog state if it is empty.
-        setCatalog((prev) => prev ?? next);
+        // Still hydrate boot catalog state with fresh server response.
+        setCatalog(next);
         useCanvasStore.getState().setCatalogRuntime(next);
         return;
       }

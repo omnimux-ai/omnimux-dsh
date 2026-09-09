@@ -14,7 +14,7 @@ import { shouldReplaceCatalogCache } from './catalogCache';
 export { shouldReplaceCatalogCache };
 export type { ShouldReplaceCatalogCacheInput } from './catalogCache';
 
-const CATALOG_CACHE_KEY = 'wf_capabilities_catalog_v3';
+const CATALOG_CACHE_KEY = 'wf_capabilities_catalog_v4';
 const CATALOG_TTL_MS = 60 * 60 * 1000;
 
 /** 针对未包含在 Catalog 中的未知模型提供的安全通用兜底 Schema */
