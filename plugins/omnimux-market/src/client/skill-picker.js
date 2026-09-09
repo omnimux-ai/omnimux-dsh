@@ -110,7 +110,7 @@
 
       useEffect(() => {
         if (!open) return undefined;
-        if (presetBinding) {
+        if (presetBinding && !presetBinding.useDefaultContentCatalog) {
           const list = SkillShelf.filterPresetSkills(presetBinding.skills, tabId, debounced);
           setItems(list);
           setStatus("ready");
@@ -192,7 +192,7 @@
         };
       }, [open, onClose, anchorRef]);
 
-      const visible = presetBinding
+      const visible = presetBinding && !presetBinding.useDefaultContentCatalog
         ? SkillShelf.filterPickerItems(items, tabId, presetBinding)
         : SkillShelf.filterPickerItems(items, tabId);
 

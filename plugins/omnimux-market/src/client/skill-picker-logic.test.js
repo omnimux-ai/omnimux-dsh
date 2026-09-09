@@ -427,4 +427,28 @@ describe('agent preset skill bindings', () => {
     assert.equal(resolveActivePreset({ props: { sessionId: 's2' }, sessions: fakeSessions }), 'standard')
     assert.equal(resolveActivePreset({}), undefined)
   })
+
+  it('getPresetSkillBinding resolves content-creation-team and binds default content taxonomy', () => {
+    const binding = getPresetSkillBinding('content-creation-team')
+    assert.ok(binding)
+    assert.equal(binding.name, '内容创作专家团')
+    assert.equal(binding.useDefaultContentCatalog, true)
+    // 12 tabs: all, mine, featured, and 9 shelf categories
+    assert.equal(binding.tabs.length, 12)
+    assert.equal(binding.tabs[0].id, 'all')
+    assert.equal(binding.tabs[1].id, 'mine')
+    assert.equal(binding.tabs[2].id, 'featured')
+    assert.equal(binding.tabs[3].id, '电商')
+    assert.equal(binding.tabs[4].id, '商业广告')
+    assert.equal(binding.tabs[5].id, '短剧漫剧')
+    assert.equal(binding.tabs[6].id, '专业影视')
+    assert.equal(binding.tabs[7].id, '动画')
+
+    // Aliases also resolve to content-creation-team
+    assert.equal(getPresetSkillBinding('content-creator-team')?.presetId, 'content-creation-team')
+    assert.equal(getPresetSkillBinding('exp-ai-content-creator-team')?.presetId, 'content-creation-team')
+    assert.equal(getPresetSkillBinding('内容创作专家团')?.presetId, 'content-creation-team')
+    assert.equal(hasPresetSkillBinding('content-creation-team'), true)
+    assert.equal(hasPresetSkillBinding('内容创作专家团'), true)
+  })
 })

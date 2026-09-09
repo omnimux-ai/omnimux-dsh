@@ -496,5 +496,90 @@
         "installed": true
       }
     ]
+  },
+  "content-creation-team": {
+    "presetId": "content-creation-team",
+    "name": "内容创作专家团",
+    "description": "AI驱动的多模态内容生产团队：专注创意策划、广告创意、二次元设计、短剧影视、动漫制作、电商视觉与音视频内容创作。",
+    "useDefaultContentCatalog": true,
+    "categories": [
+      { "id": "电商", "name": "电商" },
+      { "id": "商业广告", "name": "商业广告" },
+      { "id": "短剧漫剧", "name": "短剧漫剧" },
+      { "id": "专业影视", "name": "专业影视" },
+      { "id": "动画", "name": "动画" },
+      { "id": "教育", "name": "教育" },
+      { "id": "创意实验", "name": "创意实验" },
+      { "id": "音频音乐", "name": "音频音乐" },
+      { "id": "平台工具", "name": "平台工具" }
+    ],
+    "skills": [
+      {
+        "id": "sk-omx-3d-animation-short-generator",
+        "slug": "3d-animation-short-generator",
+        "skill": "3d-animation-short-generator",
+        "name": "3D 动画短片",
+        "title": "3D 动画短片",
+        "category": "动画",
+        "description": "根据故事创意完成角色场景设定、镜头规划、分镜生成与动画短片成片渲染。",
+        "summary": "根据故事创意完成角色场景设定、镜头规划、分镜生成与动画短片成片渲染。",
+        "installed": false
+      },
+      {
+        "id": "sk-omx-ad-creative",
+        "slug": "ad-creative",
+        "skill": "ad-creative",
+        "name": "广告创意",
+        "title": "广告创意",
+        "category": "商业广告",
+        "description": "跨 Google/Meta/LinkedIn/TikTok/X 大规模生成、迭代广告文案与创意变体。",
+        "summary": "跨 Google/Meta/LinkedIn/TikTok/X 大规模生成、迭代广告文案与创意变体。",
+        "installed": false
+      },
+      {
+        "id": "sk-omx-anime-design",
+        "slug": "anime-design",
+        "skill": "anime-design",
+        "name": "二次元设计",
+        "title": "二次元设计",
+        "category": "动画",
+        "description": "14 种二次元画风且锁定角色一致。",
+        "summary": "14 种二次元画风且锁定角色一致。",
+        "installed": false
+      },
+      {
+        "id": "sk-omx-anime-game-pv",
+        "slug": "anime-game-pv",
+        "skill": "anime-game-pv",
+        "name": "二次元漫画 / 游戏 PV",
+        "title": "二次元漫画 / 游戏 PV",
+        "category": "动画",
+        "description": "为二次元游戏、日漫、韩漫或原创漫画角色制作 15 秒以内高燃动态漫与游戏预告片。",
+        "summary": "为二次元游戏、日漫、韩漫或原创漫画角色制作 15 秒以内高燃动态漫与游戏预告片。",
+        "installed": false
+      },
+      {
+        "id": "sk-omx-anime-pv-maker",
+        "slug": "anime-pv-maker",
+        "skill": "anime-pv-maker",
+        "name": "二次元PV",
+        "title": "二次元PV",
+        "category": "动画",
+        "description": "将短音频与视觉参考转化为节奏同步的二次元 PV 创作方案并输出完整成片。",
+        "summary": "将短音频与视觉参考转化为节奏同步的二次元 PV 创作方案并输出完整成片。",
+        "installed": false
+      },
+      {
+        "id": "sk-omx-anime-style-forge",
+        "slug": "anime-style-forge",
+        "skill": "anime-style-forge",
+        "name": "二次元风格锻造",
+        "title": "二次元风格锻造",
+        "category": "动画",
+        "description": "把角色锻造为目标二次元画风。",
+        "summary": "把角色锻造为目标二次元画风。",
+        "installed": false
+      }
+    ]
   }
 }

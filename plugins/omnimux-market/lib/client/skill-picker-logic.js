@@ -13,13 +13,37 @@ export function getPresetSkillBinding(presetId) {
     if (!presetId)
         return null;
     const norm = normalizePresetId(presetId);
+    const isContentTeam = norm === 'content-creation-team' ||
+        norm === 'content-creator-team' ||
+        norm === 'exp-ai-content-creator-team' ||
+        norm === 'ai-content-creator-team' ||
+        norm === 'content-creation' ||
+        norm === 'content-creator' ||
+        presetId === '内容创作专家团';
     const entry = AGENT_PRESET_SKILL_BINDINGS[presetId] ||
         AGENT_PRESET_SKILL_BINDINGS[norm] ||
         (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok'
             ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
-            : null);
+            : null) ||
+        (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null);
     if (!entry)
         return null;
+    if (entry.useDefaultContentCatalog) {
+        const tabs = [
+            { id: 'all', kind: 'all', labelKey: 'picker.tab.all', name: '全部' },
+            { id: 'mine', kind: 'mine', labelKey: 'picker.tab.mine', name: '我的' },
+            { id: 'featured', kind: 'featured', labelKey: 'picker.tab.featured', name: '精选' },
+            ...SKILL_SHELF_TAXONOMY.map((r) => ({ id: r.id, kind: 'tag', labelKey: r.labelKey, name: r.id })),
+        ];
+        return {
+            presetId: entry.presetId || presetId,
+            name: entry.name || '内容创作专家团',
+            useDefaultContentCatalog: true,
+            categories: SKILL_SHELF_TAXONOMY.map((r) => ({ id: r.id, name: r.id, labelKey: r.labelKey })),
+            tabs,
+            skills: entry.skills || [],
+        };
+    }
     const categories = entry.categories || [];
     const tabs = [
         { id: 'all', kind: 'all', labelKey: 'picker.tab.all', name: '全部' },
