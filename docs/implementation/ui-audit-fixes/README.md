@@ -1,5 +1,7 @@
 # UI 审计修复（本地 BugFix）
 
+> 本文保留首轮工程记录。2026-09-09 QA 返修后的当前结论、PageHeader 补入与 task-only 方案见 [REPAIR-REPORT.md](REPAIR-REPORT.md)；当前制品身份见 [binding.json](binding.json)。首轮 QA 文件与制品未覆盖。
+
 ## 范围与授权
 
 仅产品 omnimux-dsh 与独立 dsh-ui-kit。风险 R1（跨插件共享 UI）。仅本地代码、测试、构建、提交和制品；未授权 push、PR、merge、部署。未创建远端 Issue；此文件承担本地依赖与验收记录。
@@ -54,7 +56,7 @@ UI_AUDIT_KIT=/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit/.worktrees/
 - Node 25.8.0；kit typecheck/build exit 0；既有测试 56/56。
 - 新增实际组件行为测试 12/12（包含 publish/DataTable 消费者）。
 - Accounts 62/62；Analytics 84/84；Inspiration 189 pass / 2 既有 skip；Publish 254/254。
-- Assets 原完整命令 348 pass / 5 fail：`final-package-qa.test.js` 固定要求不存在的历史 `omnimux-assets-0.2.0.tgz`，其预期 SHA 是旧发布制品且强制与当前源码一致，不能用新修复包冒充旧 SHA。原测试完整保留，不篡改断言。显式排除 `QA-PKG0[1-4]` 后 348 业务测试全通过；这是范围说明，不是完整包验收通过。
+- Assets 原完整命令 347 pass / 5 fail（独立 QA 已核对基线同五项失败）：`final-package-qa.test.js` 固定要求不存在的历史 `omnimux-assets-0.2.0.tgz`，其预期 SHA 是旧发布制品且强制与当前源码一致，不能用新修复包冒充旧 SHA。原测试完整保留，不篡改断言。显式排除 `QA-PKG0[1-4]` 后 348 业务测试全通过；这是范围说明，不是完整包验收通过。
 - Assets 私有 Python 经现有 `python-supply.mjs acquire` 验证下载双架构，任务树独享；无系统 Python 替代。
 - Stage 10 组件/8 侧栏 runtime contract 通过；boundaries 通过；UI 279 文件 0 违规；五个 plugin bundle 构建通过；diff --check 通过。
 - 日志留在本目录（本地忽略的 .log）；`binding.json` 为源码 commit→kit lib/tar→五包 bundle 的 SHA256 身份记录，tarball 是本地未发布制品。必要恢复归档有逐文件来源和 mode。

@@ -1,36 +1,38 @@
 {
   "productBase": "867b192ecf6aa35be4e1639db7351a89bea782c7",
   "kitBase": "9d52a0cd5b41211d4fd8a260330b89d50be99f64",
-  "kitHead": "eba33873f3ebaf89ba69e8bbe9d53cafd5402283",
-  "kitLibSha256": "a9dbc0222a3d3ce29465d38e24dc8dbe82ba5ae02140e1fa170fd595eb311d0b",
-  "kitTarSha256": "57de2a0bff91941b007a805ff13e239a075f7f4f9a0bf207337efbb7915da03f",
+  "kitHead": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "kitLibSha256": "724912626ca72d49de0743bb578dad21943d4ae369176f4155f639ddf84ab85d",
+  "kitTarSha256": "8f7f7161294ecbbcf6f20e81f95d8e862941e71e567607599455b57658ac8b72",
   "dependencyRealpath": "/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit/.worktrees/ui-audit-fixes",
   "bundles": {
     "omnimux-accounts": {
-      "sha256": "c36ce5c69a222603c82acd45446868db78c4e13e26ee5d5474051ecb1e777ad6",
-      "bytes": 223320,
+      "sha256": "93763a2174c6275fdfbac8b4c1adabd33eb81c26cd59c687c77ceb9602281692",
+      "bytes": 223582,
       "containsKitSource": true
     },
     "omnimux-analytics": {
-      "sha256": "6d2fe8e82af69872f7b5979db8186fd22a8d71efc153307b622df7005ec4bc44",
-      "bytes": 259266,
+      "sha256": "51a0b002b30fc9639ca413ff1c08908bcde567133331a265f7c1b704543d4ad0",
+      "bytes": 259528,
       "containsKitSource": true
     },
     "omnimux-inspiration": {
-      "sha256": "c7bbe6e3f8f27c8226733f1b544b05641ca0bbf7f19c2a8238f4f544747e6a5c",
-      "bytes": 277875,
+      "sha256": "ef35ddaf917228211290f43881641a0f0555ca70094c6139a8e093f9cc7480c4",
+      "bytes": 278137,
       "containsKitSource": true
     },
     "omnimux-publish": {
-      "sha256": "104d99cf8cb69cda2b1db3bc63e1aa662d65cb9a3cb703d27704613fd1478448",
-      "bytes": 277254,
+      "sha256": "056200ec457b76cf681a638a99b86ed6bf5307774582279a0628d3470d9bd1b8",
+      "bytes": 277516,
       "containsKitSource": true
     },
     "omnimux-assets": {
-      "sha256": "16134f3ee047d9ed694efd2ad646a1b0929040a64fd09197a4957c62939d0625",
-      "bytes": 301801,
+      "sha256": "0407982e3ebceb2795b290db2aedd645a9498fa72094005d96330960cffd88ee",
+      "bytes": 302063,
       "containsKitSource": true
     }
   },
-  "kitSourceBuildCommit": "98767d80a74bdd375b12f5897856f1fe5ba93de5"
+  "kitSourceBuildCommit": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "productSourceCommit": "7f0dee48eeba47393fd5ddd60caab79014c96bed",
+  "kitTarPath": "docs/implementation/ui-audit-fixes/repair/dsh-ui-kit-0.1.0.tgz"
 }
