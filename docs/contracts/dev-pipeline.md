@@ -5,14 +5,16 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-21"
-updated: "2026-09-05"
+updated: "2026-09-09"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
 
 # dev-pipeline — 开发、Dev 与生产环境合同
 
-本合同防止未合并源码、并行任务和生产 profile 相互污染。命令入口见 [ops-entry](ops-entry.md)，证据要求见 [plugin-qa](plugin-qa.md)，发布权限见 [plugin-git-pr](plugin-git-pr.md)。
+本合同防止未合并源码、并行任务和生产 profile 相互污染。命令入口见 [ops-entry](ops-entry.md)，证据要求见 [plugin-qa](plugin-qa.md)，发布权限见 [plugin-git-pr](plugin-git-pr.md)。命名不可变 baseline 的设计与验收见 [稳定基线迁移规格](../specs/2026-09-09-stable-baseline-migration.md)。
+
+**阶段诚实：**本文同时记录**当前实现**、**迁移期（PR-C）**和**目标（PR-S）**。PR-D 只改文档。不得把目标写成已切换。`--promote-baseline`（布尔）/ 显式消费 / `--activate-baseline=<id>` 在 [ops-entry](ops-entry.md) 标拟实现，脚本尚未提供这些旗标。真实 Host **无法启动禁止切 S**（阶段与写集边界，不是脚本读聊天授权）。切 S 遵循既有[任务授权政策](plugin-git-pr.md)；不另设 S 二次确认。Agent 核阶段与合入证据，脚本只核兼容性、完整性与绑定该摘要的 sidecar。
 
 ## 环境分层
 
@@ -26,6 +28,16 @@ subsystem: "global"
 
 生产或 Dev profile 都不得 link 工作树。L2 profile 用完即弃，不作为长期环境。
 
+### 稳定基线阶段（当前 / 迁移 / 目标）
+
+| 阶段 | L2 默认种子 | shared `current` | 隐式 Dev / Prod / `~/.dsh` |
+|---|---|---|---|
+| **当前**（至 PR-C 合入前） | `OMNIMUX_L2_SEED_PROFILE`，否则 `~/.omnimux-dev/profiles/omnimux`，否则 `~/.omnimux/profiles/omnimux`，否则 `$DSH_HOME`/`~/.dsh/profiles/omnimux`（`scripts/dev-env.sh`） | 不存在 | **仍存在** |
+| **迁移**（PR-C 已合入、PR-S 前） | **旧默认保留**并标迁移期；允许显式消费命名 baseline（含 published 候选，仅隔离验收） | **禁止写入**；C 消费走固定不可变路径/ID | **仍存在**，不得删除 |
+| **目标**（PR-S 激活成功后） | 仅已激活的命名不可变 baseline | 只影响**新**任务；仅 **verified** id | **删除**；禁止静默回落 |
+
+**C 实施前 D 必须 `state=MERGED`。** PR-C 只增加命名不可变 baseline 的**创建**和**显式消费**，不写共享 `current`，消费路径无 current 写逻辑，不切全员默认。**C 合入前**完成隔离双真实 Host 并发、离线重建、ego smoke 等适用验证。**C 合入后**正式候选 published 可被隔离显式消费以验收；sidecar 绑定该内容哈希 id 后才 verified。**其后** PR-S 才删除隐式 fallback 并激活。真实 Host 无法启动禁止切 S。回滚与 `current` 激活只允许 verified id；失败保持旧指针，不能自动 Dev。S 激活复用锁、temp 指针、同 FS rename。
+
 ## 合并边界
 
 - 合并前运行验证必须使用独立 L2；SOURCE 精确指向当前隔离 worktree 的 `plugins/`，不得指向共享主工作区或另一个任务。可配置 source 不等于可以放弃 worktree 隔离。
@@ -33,7 +45,13 @@ subsystem: "global"
 - 合并后更新 `main`，默认同步到 Dev，再按变更面在 45120 验收。普通交付到此为止；不得自动追加 `--prod`、`--all` 或正式包发布。
 - 纯文档和不影响已安装运行时的任务不要求 L2、Dev 物化或 App 验收。
 
-L2 初始化从 `OMNIMUX_L2_SEED_PROFILE` 或默认 Dev `~/.omnimux-dev/profiles/omnimux` 取稳定种子，不默认使用旧 `~/.dsh/profiles/omnimux`。它完整复制受管 `.materialize-snapshots/plugins/` 与可重定位的 pnpm 锁到任务 profile，再由任务私有 pnpm store 重建 `node_modules`；不得复制 seed `node_modules`、`.npmrc` 或任何指向 Dev/Prod 的 source 链接。受管 source 或锁缺失时在创建 L2 profile 前失败。启动前必须校验 `$DSH_SRC` 安装闭包；官方 `@deepseek-ai/*` 由 app-boot 投影，不来自任务 profile 的私有 `node_modules`。
+**当前实现：** L2 初始化优先 `OMNIMUX_L2_SEED_PROFILE`，否则 Dev `~/.omnimux-dev/profiles/omnimux`。脚本仍可能继续落到 Prod `~/.omnimux/profiles/omnimux` 或 `$DSH_HOME`/`~/.dsh/profiles/omnimux`（见 `resolve_l2_seed_profile`）。文档曾写「不默认旧 `~/.dsh`」；**以脚本为当前运行事实**，该隐式链保留到 PR-S 删除。
+
+它完整复制受管 `.materialize-snapshots/plugins/` 与可重定位的 pnpm 锁到任务 profile，再由任务私有 pnpm store 重建 `node_modules`；不得复制 seed `node_modules`、`.npmrc` 或任何指向 Dev/Prod 的 source 链接。受管 source 或锁缺失时在创建 L2 profile 前失败。启动前必须校验 `$DSH_SRC` 安装闭包；官方 `@deepseek-ai/*` 由 app-boot 投影，不来自任务 profile 的私有 `node_modules`。
+
+**迁移期显式消费（PR-C，拟实现）：** 任务指定命名 `baselineId`（内容哈希）。消费直接固定到该不可变路径/ID，offline frozen：私有 store copy/核验已锁定包，`pnpm install --frozen-lockfile --offline`，`--package-import-method=copy` 或可证写隔离的同卷 CoW；禁止共享 hardlink 写穿。**published 候选允许隔离显式消费用以验收**；只有 **verified** 可 `current` 激活/回滚。准备阶段才允许对已锁定公开 registry 做受控在线获取。**容量预检在大复制之前。** 创建与激活分离；C 无共享 current 写逻辑；`current` 只影响新任务；旧任务引用受保护；无后台 GC。
+
+**Baseline 闭包：** 包含受管 kit、锁、白名单解析 patch、manifest 内容摘要、Host 实际身份、Node/pnpm/OS/架构。排除用户 settings、凭据、`node_modules`、App 包。`baselineId` 为完整内容哈希（规范化文件字节、路径模式、工具与 Host 版本）；`createdAt`、来源路径、验收报告不进入身份。产物不原地修改；验证 receipt 为绑定该 id 的独立 sidecar。源前后 digest 须与既有锁一致；staging 发布后才成为不可变 id。容量按**本次实测**字节预检，文档不编造数字。凭据业务测试走现有明确授权注入，不进 baseline。pin/API 与记录不匹配须另授权，不得改 [harness-pin](../harness-pin.md) 或外仓 viewer。S 激活：锁 + temp 指针 + 同 FS rename；失败旧指针保持；兼容失败不 Dev 回退。
 
 L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏览装配](../../scripts/l2-workspace-browser.patch.yml)，禁用自动选择器并成对装配官方 browse backend 与 client surface。首页与侧栏的工作区选择因此都使用页内目录浏览、路径输入和新建目录，继续经过官方 workspace adoption；不根据 Host 的 macOS 桌面环境启用系统窗口。既有 L2 使用同一正式 `restart-host` 入口应用当前装配，保留任务端口、profile 和数据，不手改任务配置。此 CLI 装配与 shipping Desktop 的 profile 装配分别维护，验收须分别覆盖 L2 与 Dev。
 
@@ -70,7 +88,7 @@ L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏�
 
 - L2 Host 属于任务私有环境，Agent 可用 `yarn omnimux:dev restart-host <task>` 原地重启并保持端口/数据身份。
 - Client 物化后优先在指定 Dev 页面或窗口刷新；Host 变更只有在目标进程重新加载后才生效。
-- 公共 App 重启必须先确认具体 App（Dev/Prod）和协调窗口。确认后由 Agent 执行指定重启并复核，不得把非付款操作交回用户，也不得默认 `pkill` 未确认目标。
+- Dev 重启按 [Git/PR 授权边界](plugin-git-pr.md#授权边界)执行：Agent 核实目标身份、状态可恢复性及占用冲突；无冲突时自主执行并复核，有冲突时只协调该冲突。Prod 保留生产授权边界，不得默认 `pkill` 未确认目标。
 - 只有壳层/平台门控改动需要额外 Electron renderer/CDP；普通 Web/Stage 仍以 L2 和合并后 45120 浏览器证据为主。
 
 ## 数据与诊断边界

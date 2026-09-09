@@ -1,0 +1,21 @@
+{
+  "reference_video": [
+    {
+      "ref": "example:reference-video",
+      "name": "reference.mp4",
+      "mimeType": "video/mp4",
+      "sizeBytes": 1048576
+    }
+  ],
+  "replacement_assets": [
+    {
+      "ref": "example:replacement-product",
+      "name": "backpack.png",
+      "mimeType": "image/png",
+      "sizeBytes": 2048
+    }
+  ],
+  "brief": "把视频中的手提袋替换为素材中的背包。",
+  "preserve": "保留镜头顺序和转场节奏。",
+  "aspect_ratio": "9:16"
+}

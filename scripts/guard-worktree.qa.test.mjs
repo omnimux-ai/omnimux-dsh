@@ -15,6 +15,7 @@ const external = join(root, 'external-primary')
 for (const path of [home, nonGit, external]) mkdirSync(path)
 const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: home, LC_ALL: 'C', LANGUAGE: 'C' }
 for (const key of Object.keys(env)) if (key.startsWith('GIT_')) delete env[key]
+env.GIT_CEILING_DIRECTORIES = root
 // Fixture setup alone suppresses ambient Git configuration. No commit is needed.
 const setupEnv = { ...env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' }
 function git(...args) {

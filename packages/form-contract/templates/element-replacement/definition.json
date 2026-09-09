@@ -1,0 +1,80 @@
+{
+  "protocolVersion": 1,
+  "id": "element-replacement",
+  "templateVersion": "1.0.0",
+  "title": "替换人物或产品复刻",
+  "description": "用用户提供的素材替换指定元素，并明确需要保留的内容。",
+  "examples": [
+    {
+      "ref": "example:demo-element-replacement",
+      "title": "替换人物或产品复刻示例",
+      "kind": "video"
+    }
+  ],
+  "fields": [
+    {
+      "id": "reference_video",
+      "type": "file",
+      "label": "参考视频",
+      "required": true,
+      "accept": [
+        "video/mp4",
+        "video/webm"
+      ],
+      "maxFiles": 1,
+      "maxBytes": 104857600
+    },
+    {
+      "id": "replacement_assets",
+      "type": "file",
+      "label": "替换素材",
+      "required": true,
+      "accept": [
+        "image/*"
+      ],
+      "maxFiles": 6,
+      "maxBytes": 20971520
+    },
+    {
+      "id": "brief",
+      "type": "textarea",
+      "label": "任务说明",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    {
+      "id": "preserve",
+      "type": "textarea",
+      "label": "需要保留的内容",
+      "required": false,
+      "maxLength": 2000
+    },
+    {
+      "id": "aspect_ratio",
+      "type": "aspect-ratio",
+      "label": "画面比例",
+      "required": true,
+      "options": [
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "1:1",
+          "label": "1:1"
+        },
+        {
+          "value": "9:16",
+          "label": "9:16"
+        }
+      ],
+      "default": "9:16"
+    }
+  ],
+  "prompt": "请根据附带参考视频及替换素材准备复刻。\n替换要求：{{brief}}\n需要保留：{{preserve}}\n目标画幅：{{aspect_ratio}}\n先说明替换元素与参考素材的对应关系，不擅自改变未要求替换的内容。",
+  "attachments": [
+    "reference_video",
+    "replacement_assets"
+  ]
+}

@@ -84,15 +84,25 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     }, null, 2) + '\n')
   }
 
-  function commitRunner(directory) {
-    for (const args of [
-      ['init', '-q', '-b', 'main'], ['add', '.'],
-      ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@localhost', 'commit', '-qm', 'isolated sync fixture'],
-      ['update-ref', 'refs/remotes/origin/main', 'HEAD'],
-    ]) {
-      const result = spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
-      assert.equal(result.status, 0, result.stderr);
+  function initCleanMainRepo(dir) {
+    const runGit = (args) => {
+      const res = spawnSync('git', args, {
+        cwd: dir,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GIT_CONFIG_NOSYSTEM: '1',
+          GIT_CONFIG_GLOBAL: '/dev/null',
+        },
+      })
+      assert.equal(res.status, 0, res.stderr || res.stdout)
     }
+    runGit(['init', '-b', 'main'])
+    runGit(['config', 'user.email', 'qa@example.com'])
+    runGit(['config', 'user.name', 'QA Fixture'])
+    runGit(['add', '-A'])
+    runGit(['commit', '-m', 'fixture: clean main'])
+    runGit(['update-ref', 'refs/remotes/origin/main', 'HEAD'])
   }
 
   function run(home, args = []) {
@@ -208,7 +218,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
       copyFileSync(join(root, 'scripts', name), join(runner, 'scripts', name))
     }
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(runner, 'plugins/omnimux/src/plugin-lifecycle.json'))
-    commitRunner(runner)
+    initCleanMainRepo(runner)
     for (const entrypoint of ['sync-stable.sh', 'sync-to-app.sh']) {
       for (const alias of ['trailing-slash', 'dot', 'symlink']) {
         const home = join(fixtureRoot, `${entrypoint}-${alias}`)
@@ -253,7 +263,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     copyFileSync(join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), join(isolatedRegistry, 'plugin-lifecycle.json'))
     writeFileSync(join(isolatedScripts, 'sync-stable.sh'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$ARGS_FILE"\n')
     chmodSync(join(isolatedScripts, 'sync-stable.sh'), 0o755)
-    commitRunner(isolatedRoot)
+    initCleanMainRepo(isolatedRoot)
 
     const result = spawnSync('bash', [
       join(isolatedScripts, 'sync-to-app.sh'),
@@ -311,7 +321,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
     assert.match(result.stderr, /无法读取 Alpha 插件生命周期注册表/)
     assert.equal(readFileSync(join(isolatedProfile, 'package.json'), 'utf8'), sentinel)
 
-    commitRunner(isolatedRoot)
+    initCleanMainRepo(isolatedRoot)
     const wrapperResult = spawnSync('bash', [join(isolatedScripts, 'sync-to-app.sh'), '--prod', '--skip-build'], {
       cwd: isolatedRoot,
       encoding: 'utf8',
