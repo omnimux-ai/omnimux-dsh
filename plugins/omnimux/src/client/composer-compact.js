@@ -104,11 +104,18 @@ html:not([data-omnimux-conversation-collapsed]) [class*="centerCol"]{
   grid-template-columns:auto auto;
 }
 
+/* Collapse empty input-dock item in hero phase so it does not consume a flex gap. */
+[data-phase='hero'] [data-slot="conversation.input.dock"] > div:empty{
+  display:none!important;
+}
+
 /* Match the input bar's clearance even when a narrow column limits card width. */
 [data-phase='hero'] [class*="heroWorkspaceRow"]{
   width:calc(100% - 2 * var(--dsh-composer-side-clearance,16px))!important;
   max-width:var(--dsh-chat-content-width)!important;
   min-width:0;
+  margin-top:0!important;
+  margin-bottom:-8px!important;
   margin-left:auto!important;
   margin-right:auto!important;
   padding-left:0!important;

@@ -191,6 +191,11 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   // name consume the adjacent Agent preset's space. Scope every assertion to
   // its rule so an unrelated compact-label declaration cannot create a green.
   assert.equal(COMPOSER_WORKSPACE_MAX_WIDTH_PX, 220)
+  const dockRule = style.textContent.match(
+    /\[data-phase='hero'\] \[data-slot="conversation\.input\.dock"\] > div:empty\{([^}]*)\}/,
+  )?.[1]
+  assert.ok(dockRule, 'empty dock rule should be present')
+  assert.match(dockRule, /display:none!important/)
   const rowRule = style.textContent.match(
     /\[data-phase='hero'\] \[class\*="heroWorkspaceRow"\]\{([^}]*)\}/,
   )?.[1]
@@ -198,6 +203,8 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(rowRule, /width:calc\(100% - 2 \* var\(--dsh-composer-side-clearance,16px\)\)!important/)
   assert.match(rowRule, /max-width:var\(--dsh-chat-content-width\)!important/)
   assert.match(rowRule, /min-width:0/)
+  assert.match(rowRule, /margin-top:0!important/)
+  assert.match(rowRule, /margin-bottom:-8px!important/)
   assert.match(rowRule, /flex-wrap:nowrap/)
   assert.match(rowRule, /overflow:hidden/)
 
