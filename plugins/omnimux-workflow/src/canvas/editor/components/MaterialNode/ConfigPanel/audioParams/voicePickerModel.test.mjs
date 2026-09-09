@@ -14,9 +14,12 @@ import { describe, it } from 'node:test';
 import {
   EMPTY_VOICE_FILTERS,
   VOICE_HOT_TAGS,
+  VOLCENGINE_SAMPLE_CDN_BASE,
   collectVoiceFacets,
   extractPinyinInitials,
   filterAndSortVoices,
+  getVoiceSampleCandidates,
+  getVoiceSampleUrl,
   resolveVoiceLabel,
   voiceMatchesQuery,
   voiceTagLine,
@@ -202,5 +205,60 @@ describe('resolveAudioPromptGate - 朗读正文字数闸门（T03）', () => {
   it('空 / undefined 输入安全', () => {
     assert.deepEqual(resolveAudioPromptGate(undefined), { count: 0, max: 10000, exceeded: false });
     assert.deepEqual(resolveAudioPromptGate(null), { count: 0, max: 10000, exceeded: false });
+  });
+});
+
+describe('getVoiceSampleCandidates - 官方试听样音多候选解析（Issue #923）', () => {
+  it('英文音色优先生成纯英文名 CDN 样音链接（如 Charlie 2.0 / Frosty Man 2.0）', () => {
+    const charlie = voice({
+      voice_type: 'ICL_uranus_en_female_charlie_tob',
+      name: 'Charlie',
+      display_name: 'Charlie 2.0',
+      category: '外语音色',
+      language: '美式英语',
+    });
+    const urls = getVoiceSampleCandidates(charlie);
+    assert.equal(urls[0], `${VOLCENGINE_SAMPLE_CDN_BASE}/Charlie.mp3`);
+    assert.ok(urls.includes(`${VOLCENGINE_SAMPLE_CDN_BASE}/ICL_uranus_en_female_charlie_tob.mp3`));
+
+    const frosty = voice({
+      voice_type: 'ICL_uranus_en_male_frosty_man_tob',
+      name: 'Frosty Man',
+      display_name: 'Frosty Man 2.0',
+      category: '外语音色',
+      language: '美式英语',
+    });
+    const frostyUrls = getVoiceSampleCandidates(frosty);
+    assert.equal(frostyUrls[0], `${VOLCENGINE_SAMPLE_CDN_BASE}/Frosty_Man.mp3`);
+  });
+
+  it('斜杠双语别名音色优先英文别名，再 fallback 中文名与代号（如 爽快思思/Skye）', () => {
+    const skye = voice({
+      voice_type: 'zh_female_shuangkuaisisi_moon_bigtts',
+      name: '爽快思思/Skye',
+      display_name: '爽快思思/Skye',
+      category: '通用场景',
+      language: '中文,美式英语',
+    });
+    const urls = getVoiceSampleCandidates(skye);
+    assert.equal(urls[0], `${VOLCENGINE_SAMPLE_CDN_BASE}/Skye.mp3`);
+    assert.equal(urls[1], `${VOLCENGINE_SAMPLE_CDN_BASE}/%E7%88%BD%E5%BF%AB%E6%80%9D%E6%80%9D.mp3`);
+    assert.ok(urls.includes(`${VOLCENGINE_SAMPLE_CDN_BASE}/zh_female_shuangkuaisisi_moon_bigtts.mp3`));
+  });
+
+  it('常规中文音色保留 voice_type.mp3 与中文名候选', () => {
+    const ad = voice({
+      voice_type: 'zh_male_guanggaojieshuo_uranus_bigtts',
+      name: '广告解说',
+      display_name: '广告解说 2.0',
+    });
+    const urls = getVoiceSampleCandidates(ad);
+    assert.ok(urls.includes(`${VOLCENGINE_SAMPLE_CDN_BASE}/zh_male_guanggaojieshuo_uranus_bigtts.mp3`));
+  });
+
+  it('纯字符串入参向下兼容', () => {
+    const urls = getVoiceSampleCandidates('zh_female_test');
+    assert.deepEqual(urls, [`${VOLCENGINE_SAMPLE_CDN_BASE}/zh_female_test.mp3`]);
+    assert.equal(getVoiceSampleUrl('zh_female_test'), `${VOLCENGINE_SAMPLE_CDN_BASE}/zh_female_test.mp3`);
   });
 });

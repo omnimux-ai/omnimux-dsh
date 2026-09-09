@@ -54,12 +54,13 @@ test('VoicePickerDialog：结构契约（标题 / 搜索 / 四维筛选 / 空态
 });
 
 test('VoicePickerDialog：试听安全（原生 Audio 加载官方 CDN 样音，零 fetch / TTS 请求）', () => {
-  // Issue #771：火山官方公开 CDN 样音 URL 生成（encodeURIComponent 防注入）
+  // Issue #771 / Issue #923：火山官方公开 CDN 样音 URL 生成与自适应候选重试
   assert.match(dialogSrc, /VOLCENGINE_SAMPLE_CDN_BASE/);
   assert.match(dialogSrc, /lf3-static\.bytednsdoc\.com/);
   assert.match(dialogSrc, /export function getVoiceSampleUrl\(voiceType: string\): string/);
+  assert.match(dialogSrc, /export function getVoiceSampleCandidates\(/);
   assert.match(dialogSrc, /encodeURIComponent\(voiceType\)/);
-  assert.match(dialogSrc, /new Audio\(getVoiceSampleUrl\(voiceType\)\)/);
+  assert.match(dialogSrc, /new Audio\(candidateUrls\[0\]\)/);
   // 单例控制与 play/pause 切换
   assert.match(dialogSrc, /playingVoice/);
   assert.match(dialogSrc, /audioRef/);
@@ -70,6 +71,8 @@ test('VoicePickerDialog：试听安全（原生 Audio 加载官方 CDN 样音，
   assert.match(dialogSrc, /audio\.onended/);
   assert.match(dialogSrc, /audio\.onerror/);
   assert.match(dialogSrc, /event\.stopPropagation\(\)/);
+  // 候选降级自适应
+  assert.match(dialogSrc, /tryNextOrReportError/);
   // 弹窗关闭 / 组件卸载时停止播放并清理
   assert.match(dialogSrc, /if \(!open\) stopPlayback\(\)/);
   assert.match(dialogSrc, /useEffect\(\(\) => stopPlayback, \[\]\)/);
