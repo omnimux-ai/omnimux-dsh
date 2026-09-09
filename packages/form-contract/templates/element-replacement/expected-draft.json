@@ -1,0 +1,22 @@
+{
+  "protocolVersion": 1,
+  "templateId": "element-replacement",
+  "templateVersion": "1.0.0",
+  "prompt": "请根据附带参考视频及替换素材准备复刻。\n替换要求：把视频中的手提袋替换为素材中的背包。\n需要保留：保留镜头顺序和转场节奏。\n目标画幅：9:16\n先说明替换元素与参考素材的对应关系，不擅自改变未要求替换的内容。",
+  "attachments": [
+    {
+      "ref": "example:reference-video",
+      "name": "reference.mp4",
+      "mimeType": "video/mp4",
+      "sizeBytes": 1048576,
+      "fieldId": "reference_video"
+    },
+    {
+      "ref": "example:replacement-product",
+      "name": "backpack.png",
+      "mimeType": "image/png",
+      "sizeBytes": 2048,
+      "fieldId": "replacement_assets"
+    }
+  ]
+}

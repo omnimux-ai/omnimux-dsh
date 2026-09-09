@@ -12,6 +12,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(here);
 const archive = path.join(here, 'managed-tarball-archive.py');
 const terminal = new Set(['COMMITTED', 'ROLLED_BACK', 'REJECTED']);
+const viewerRelease = Object.freeze({ name: '@crosery/dsh-viewer', version: '0.1.1-omnimux.765.1',
+  sha256: '555346d3469bd7e11b9453f8beaa0c09de28d695dd6ed2cddbdc875952264a31',
+  sourceRepo: 'https://github.com/Crosery/dsh-viewer.git', sourceCommit: 'ccfc0a7c6cfa692aa737f48d9e8c97c41db82950' });
 const namePattern = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
 const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$/;
 
@@ -212,7 +215,9 @@ async function verifyRecoveryReceipt(input, receipt, executeOverride) {
 /** Parse only the explicit, mutually exclusive managed mode. No writes. */
 export function parseRequest(argv, env = process.env) {
   if (env.OMNIMUX_SYNC_TARGETS) fail('OMNIMUX_SYNC_TARGETS conflicts with managed mode', 2);
-  const allowed = new Set(['managed-tarball', 'expect-name', 'expect-version', 'expect-sha256', 'target', 'recover-managed-tarball']);
+  const allowed = new Set(['managed-tarball', 'expect-name', 'expect-version', 'expect-sha256', 'target', 'recover-managed-tarball',
+    'expect-before-tarball', 'expect-before-version', 'expect-before-sha256', 'expect-before-receipt',
+    'expect-source-repo', 'expect-source-commit', 'expect-qa-sha256', 'expect-qa-receipt', 'expect-reverse-receipt']);
   const options = {};
   for (let index = 0; index < argv.length; index++) {
     const match = /^--([^=]+)(?:=(.*))?$/.exec(argv[index]);
@@ -227,6 +232,22 @@ export function parseRequest(argv, env = process.env) {
   } else if (!options['managed-tarball'] || !namePattern.test(options['expect-name'] || '')
       || options['expect-name'].length > 214 || !versionPattern.test(options['expect-version'] || '')
       || !/^[0-9a-fA-F]{64}$/.test(options['expect-sha256'] || '')) fail('complete exact identity and SHA256 required', 2);
+  const transitionKeys = ['expect-before-tarball', 'expect-before-version', 'expect-before-sha256', 'expect-before-receipt',
+    'expect-source-repo', 'expect-source-commit', 'expect-qa-sha256', 'expect-qa-receipt'];
+  let transition = null;
+  if (transitionKeys.some(key => options[key]) || options['expect-reverse-receipt']) {
+    if (recover || transitionKeys.some(key => !options[key])
+        || !versionPattern.test(options['expect-before-version'])
+        || !/^[a-f0-9]{64}$/.test(options['expect-before-sha256'])
+        || !/^[a-f0-9-]{36}$/.test(options['expect-before-receipt'])
+        || !/^[a-f0-9]{40}$/.test(options['expect-source-commit'])
+        || !/^[a-f0-9]{64}$/.test(options['expect-qa-sha256'])
+        || options['expect-reverse-receipt'] && !/^[a-f0-9-]{36}$/.test(options['expect-reverse-receipt'])) fail('complete transition identity required', 2);
+    transition = { before: { tarball: options['expect-before-tarball'], version: options['expect-before-version'],
+      sha256: options['expect-before-sha256'], receiptId: options['expect-before-receipt'] },
+      after: { sourceRepo: options['expect-source-repo'], sourceCommit: options['expect-source-commit'], qaReceiptDigest: options['expect-qa-sha256'], qaReceipt: options['expect-qa-receipt'] },
+      reverseReceiptId: options['expect-reverse-receipt'] || null };
+  }
   const target = options.target || 'dev';
   let home;
   if (target === 'dev') {
@@ -238,7 +259,13 @@ export function parseRequest(argv, env = process.env) {
     };
     if (git(['branch', '--show-current']) !== 'main' || git(['status', '--porcelain'])
         || git(['rev-parse', 'HEAD']) !== git(['rev-parse', 'refs/remotes/origin/main'])) fail('managed Dev requires clean aligned main and coordinator MQ receipt', 4);
-    if (!recover && (options['expect-name'] !== '@crosery/dsh-viewer' || options['expect-version'] !== '0.1.0')) fail('Dev authorization is viewer 0.1.0 only', 2);
+    if (!recover && !transition && (options['expect-name'] !== '@crosery/dsh-viewer' || options['expect-version'] !== '0.1.0')) fail('Dev authorization is viewer 0.1.0 only', 2);
+    if (transition && (options['expect-name'] !== viewerRelease.name
+        || !transition.reverseReceiptId && (transition.before.version !== '0.1.0'
+          || options['expect-version'] !== viewerRelease.version || options['expect-sha256'] !== viewerRelease.sha256
+          || transition.after.sourceRepo !== viewerRelease.sourceRepo || transition.after.sourceCommit !== viewerRelease.sourceCommit)
+        || transition.reverseReceiptId && (transition.before.version !== viewerRelease.version
+          || transition.before.sha256 !== viewerRelease.sha256 || options['expect-version'] !== '0.1.0'))) fail('unauthorized viewer transition', 2);
   } else {
     const prefix = path.join(env.HOME, '.dsh-dev', 'tasks');
     if (!path.isAbsolute(target) || path.dirname(target) !== prefix || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(path.basename(target))
@@ -250,7 +277,8 @@ export function parseRequest(argv, env = process.env) {
   if (resolver.status !== 0) fail('profile resolver rejected target', 2);
   const profile = assertPath(resolver.stdout.trim());
   const request = { profile, target: home, recover: recover || null, tarball: options['managed-tarball'] || null,
-    name: options['expect-name'] || null, version: options['expect-version'] || null, sha256: options['expect-sha256']?.toLowerCase() || null };
+    name: options['expect-name'] || null, version: options['expect-version'] || null, sha256: options['expect-sha256']?.toLowerCase() || null,
+    ...(transition ? { transition } : {}) };
   if (!recover) {
     assertPath(request.tarball);
     if (inside(home, request.tarball) || !fs.lstatSync(request.tarball).isFile() || !/\.(tgz|tar\.gz)$/.test(request.tarball)) fail('input must be an external local regular gzip archive', 3);
@@ -300,12 +328,12 @@ export class ManagedSync {
     this.save();
     return result;
   }
-  async capture(profile, withoutPnpm = false) {
-    if (withoutPnpm || this.request.target === 'dev' || path.basename(this.request.target) === '.omnimux-dev') return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: this.payload } });
+  async capture(profile, withoutPnpm = false, payload = this.payload) {
+    if (withoutPnpm || this.request.target === 'dev' || path.basename(this.request.target) === '.omnimux-dev') return new GraphInspector(profile).capture({ withoutPnpm: true, approvedPayloads: { [this.request.name]: payload } });
     makeDirectory(path.join(this.directory, 'runtime'));
     const result = await this.pnpm(['list', '--json', '--depth', 'Infinity'], { cwd: profile, env: privatePnpmEnvironment(path.join(this.directory, 'runtime')) });
     if (result.code !== 0 || result.signal) fail('controlled pnpm list failed', 5);
-    return new GraphInspector(profile).capture({ listJson: JSON.parse(result.stdout), approvedPayloads: { [this.request.name]: this.payload } });
+    return new GraphInspector(profile).capture({ listJson: JSON.parse(result.stdout), approvedPayloads: { [this.request.name]: payload } });
   }
   diskState() {
     const profile = this.request.profile;
@@ -315,6 +343,97 @@ export class ManagedSync {
       protected: payloadManifest(profile, { exclude: ['node_modules', 'package.json', 'pnpm-lock.yaml', '.materialize-transactions', '.materialize.lock'], links: true }),
     };
   }
+  async transitionUnchanged() {
+    const request = this.request;
+    const source = path.join(request.profile, managedSpec(request.name).slice(5));
+    if (!fs.existsSync(source) || readJson(path.join(source, 'package.json')).version !== request.version) return false;
+    if (payloadManifest(source).digest !== this.payload.digest) fail('same version with different source payload', 4);
+    const state = await this.capture(request.profile, true);
+    new GraphInspector(request.profile).assertRelocatable(state);
+    const summary = value => ({ before: { version: value.before.version, sha256: value.before.sha256,
+      payloadDigest: value.before.payloadDigest, receiptId: value.before.receiptId, receiptDigest: value.before.receiptDigest },
+      after: { version: value.after.version, sha256: value.after.sha256, payloadDigest: value.after.payloadDigest,
+        sourceRepo: value.after.sourceRepo, sourceCommit: value.after.sourceCommit, qaReceiptDigest: value.after.qaReceiptDigest },
+      reverseReceiptId: value.reverseReceiptId });
+    const ids = fs.readdirSync(path.join(request.profile, '.materialize-transactions')).filter(id => id !== this.id);
+    let matched = false;
+    for (const id of ids) {
+      const value = readJson(assertPath(path.join(request.profile, '.materialize-transactions', id, 'journal.json')));
+      if (value.phase !== 'COMMITTED' || !value.transition) continue;
+      const receipt = this.readReceipt(id);
+      if (stable(summary(receipt.transition)) === stable(summary(request.transition)) && receipt.afterDigest === digest(state)) matched = true;
+    }
+    if (!matched) fail('current target lacks matching committed transition receipt', 4);
+    if (stable(invokeArchive('inspect', request).identity) !== stable(this.payload.identity)) fail('no-op input drift', 3);
+    const old = request.transition.before;
+    if (stable(invokeArchive('inspect', { ...request, ...old }).identity) !== stable(this.beforePayload.identity)
+        || digest(this.readReceipt(old.receiptId)) !== old.receiptDigest
+        || stable(await this.capture(request.profile, true)) !== stable(state)) fail('no-op transition identity or graph drift', 4);
+    if (!request.transition.reverseReceiptId && hashFile(assertPath(request.transition.after.qaReceipt)) !== request.transition.after.qaReceiptDigest) fail('no-op QA receipt drift', 4);
+    this.before = state;
+    this.finish('REJECTED');
+    return true;
+  }
+
+  readReceipt(id) {
+    if (!/^[a-f0-9-]{36}$/.test(id || '')) fail('invalid transition receipt', 4);
+    const directory = assertPath(path.join(this.request.profile, '.materialize-transactions', id));
+    const receipt = readJson(assertPath(path.join(directory, 'journal.json')));
+    if (receipt.id !== id || receipt.profile !== this.request.profile || receipt.phase !== 'COMMITTED'
+        || receipt.name !== this.request.name || ![1, 2].includes(receipt.schemaVersion)
+        || stable(receipt.owner) !== stable(identity(directory).slice(0, 2))) fail('transition receipt identity mismatch', 4);
+    return receipt;
+  }
+
+  prepareTransition() {
+    const request = this.request;
+    const transition = request.transition;
+    if (!transition) return;
+    const old = transition.before;
+    const dev = path.basename(request.target) === '.omnimux-dev' || request.target === 'dev';
+    if (!old || !transition.after || !versionPattern.test(old.version || '') || !/^[a-f0-9]{64}$/.test(old.sha256 || '')
+        || !/^[a-f0-9]{40}$/.test(transition.after.sourceCommit || '')
+        || !/^[a-f0-9]{64}$/.test(transition.after.qaReceiptDigest || '')
+        || transition.after.sourceRepo !== viewerRelease.sourceRepo) fail('invalid transition identity', 2);
+    if ((dev || request.name === viewerRelease.name) && (request.name !== viewerRelease.name
+        || !transition.reverseReceiptId && (old.version !== '0.1.0' || request.version !== viewerRelease.version
+          || request.sha256 !== viewerRelease.sha256 || transition.after.sourceCommit !== viewerRelease.sourceCommit)
+        || transition.reverseReceiptId && (old.version !== viewerRelease.version || old.sha256 !== viewerRelease.sha256 || request.version !== '0.1.0'))) fail('unauthorized viewer transition', 2);
+    if (!dev && (![viewerRelease.name, '@fixture/viewer'].includes(request.name) || !inside(path.join(request.target, 'profiles'), request.profile))) fail('transition is restricted to viewer or isolated synthetic fixture', 2);
+    if (!transition.reverseReceiptId) {
+      const qa = assertPath(transition.after.qaReceipt);
+      if (!fs.lstatSync(qa).isFile() || fs.statSync(qa).size > 1 << 20 || inside(request.target, qa)
+          || hashFile(qa) !== transition.after.qaReceiptDigest) fail('QA receipt hash or path mismatch', 3);
+      const text = fs.readFileSync(qa, 'utf8');
+      if (![request.sha256, request.version, transition.after.sourceCommit].every(value => text.includes(value))
+          || !text.includes('IS_PASS: YES') || !text.includes('NoOne')) fail('QA receipt does not bind release identity', 3);
+    }
+    assertPath(old.tarball);
+    if (inside(request.target, old.tarball) || !fs.lstatSync(old.tarball).isFile()
+        || !/\.(tgz|tar\.gz)$/.test(old.tarball) || old.version === request.version) fail('invalid previous archive', 3);
+    const oldRequest = { ...request, tarball: old.tarball, version: old.version, sha256: old.sha256 };
+    this.beforePayload = invokeArchive('freeze', { ...oldRequest, destination: path.join(this.directory, 'before-input.tgz') });
+    const receipt = this.readReceipt(old.receiptId);
+    if (receipt.request.version !== old.version || receipt.request.sha256 !== old.sha256) fail('previous archive not bound to receipt', 4);
+    transition.before = { ...old, payloadDigest: this.beforePayload.digest, sourceSpec: managedSpec(request.name) };
+    transition.after = { ...transition.after, version: request.version, sha256: request.sha256, payloadDigest: this.payload.digest,
+      sourceSpec: managedSpec(request.name) };
+    if (transition.reverseReceiptId) {
+      const forward = this.readReceipt(transition.reverseReceiptId).transition;
+      if (!forward || forward.reverseReceiptId || transition.reverseReceiptId !== old.receiptId
+          || forward.after.sha256 !== old.sha256 || forward.after.version !== old.version
+          || forward.before.sha256 !== request.sha256 || forward.before.version !== request.version
+          || forward.before.payloadDigest !== this.payload.digest || forward.after.payloadDigest !== this.beforePayload.digest
+          || transition.after.sourceRepo !== forward.after.sourceRepo || transition.after.sourceCommit !== forward.after.sourceCommit
+          || transition.after.qaReceiptDigest !== forward.after.qaReceiptDigest) fail('reverse transition must bind committed forward receipt', 4);
+    }
+    transition.before.receiptDigest = digest(receipt);
+    this.journal.schemaVersion = 2;
+    this.journal.transition = transition;
+    this.journal.beforePayload = this.beforePayload;
+    this.save();
+  }
+
   async prepare() {
     const request = this.request;
     const pending = spawnSync('python3', [archive, 'pending', request.profile], { encoding: 'utf8' });
@@ -327,8 +446,12 @@ export class ManagedSync {
       moves: [], createdParents: [], owner: identity(this.directory).slice(0, 2) };
     this.save();
     this.payload = invokeArchive('freeze', { ...request, destination: path.join(this.directory, 'input.tgz') });
+    this.prepareTransition();
+    if (request.transition && await this.transitionUnchanged()) return null;
     const alreadyManaged = readJson(path.join(request.profile, 'package.json')).dependencies?.[request.name] === managedSpec(request.name);
-    this.before = await this.capture(request.profile, alreadyManaged);
+    if (request.transition && !alreadyManaged) fail('transition requires managed previous source', 4);
+    this.before = await this.capture(request.profile, alreadyManaged, this.beforePayload || this.payload);
+    if (request.transition && this.readReceipt(request.transition.before.receiptId).afterDigest !== digest(this.before)) fail('live previous graph not bound to receipt', 4);
     this.journal.before = slimResolution(this.before);
     this.journal.diskBefore = this.diskState();
     this.journal.payload = this.payload;
@@ -336,7 +459,9 @@ export class ManagedSync {
     const spec = this.before.manifest.dependencies?.[request.name];
     if (![managedSpec(request.name), `file:${request.tarball}`].includes(spec)) fail('target is not the exact authorized tarball or managed source', 4);
     const targetNode = this.before.nodes[this.before.roots[request.name]];
-    if (!targetNode || targetNode.version !== request.version || stable(targetNode.payload.entries) !== stable(this.payload.entries)) fail('installed target does not match complete archive', 4);
+    const beforePayload = this.beforePayload || this.payload;
+    if (!targetNode || targetNode.version !== (request.transition?.before.version || request.version)
+        || stable(targetNode.payload.entries) !== stable(beforePayload.entries)) fail('installed target does not match complete archive', 4);
     if (this.before.manifest.pnpm || this.before.manifest.workspaces || this.before.manifest.devEngines
         || this.before.manifest.scripts && Object.keys(this.before.manifest.scripts).length) fail('unsupported profile execution configuration', 4);
     this.config = candidateConfig(request.profile);
@@ -362,13 +487,14 @@ export class ManagedSync {
     const source = path.join(request.profile, managedSpec(request.name).slice(5));
     assertPath(source, true);
     const sourceExists = fs.existsSync(source);
-    if (sourceExists && stable(payloadManifest(source).entries) !== stable(this.payload.entries)) fail('conflicting managed source', 4);
+    if (request.transition && !sourceExists) fail('previous managed source missing', 4);
+    if (sourceExists && stable(payloadManifest(source).entries) !== stable(beforePayload.entries)) fail('conflicting managed source', 4);
     const kit = path.join(request.profile, '.materialize-snapshots/plugins/dsh-ui-kit');
     if (fs.existsSync(kit)) {
       const authority = process.env.OMNIMUX_DSH_UI_KIT_DIR;
       if (!authority || payloadManifest(assertPath(authority), { exclude: ['node_modules'] }).digest !== payloadManifest(kit).digest) fail('authoritative kit unavailable or drifting', 4);
     }
-    if (spec === managedSpec(request.name) && sourceExists) {
+    if (!request.transition && spec === managedSpec(request.name) && sourceExists) {
       new GraphInspector(request.profile).assertRelocatable(this.before);
       const current = invokeArchive('inspect', request);
       if (stable(current.identity) !== stable(this.payload.identity) || stable(await this.capture(request.profile, true)) !== stable(this.before)) fail('no-op input or profile drift', 4);
@@ -390,7 +516,13 @@ export class ManagedSync {
     }
     const candidateSource = path.join(this.candidate, managedSpec(request.name).slice(5));
     prepareFiles({ operation: 'mkdir', path: path.dirname(candidateSource) });
-    if (!sourceExists) invokeArchive('extract', { ...request, tarball: input, destination: candidateSource });
+    if (request.transition) anchored('remove', candidateSource);
+    if (!sourceExists || request.transition) invokeArchive('extract', { ...request, tarball: input, destination: candidateSource });
+    if (request.transition) {
+      request.transition.before.peerDependencies = readJson(path.join(source, 'package.json')).peerDependencies || {};
+      request.transition.after.peerDependencies = readJson(path.join(candidateSource, 'package.json')).peerDependencies || {};
+      this.save();
+    }
     for (const file of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']) prepareFiles({ operation: 'copy', source: path.join(request.profile, file), destination: path.join(this.candidate, file) });
     const manifest = structuredClone(this.before.manifest);
     manifest.dependencies[request.name] = managedSpec(request.name);
@@ -413,7 +545,8 @@ export class ManagedSync {
     const bytes = manifest => manifest.entries.reduce((sum, item) => sum + BigInt(item.size || 0), 0n);
     const installed = bytes(payloadManifest(path.join(profile, 'node_modules'), { links: true }));
     const sources = fs.existsSync(path.join(profile, '.materialize-snapshots')) ? bytes(payloadManifest(path.join(profile, '.materialize-snapshots'))) : 0n;
-    const required = installed * 3n + sources + bytes(this.payload) * 2n + BigInt(this.payload.identity[2]) + 64n * 1024n * 1024n;
+    const previous = this.beforePayload ? bytes(this.beforePayload) + BigInt(this.beforePayload.identity[2]) : 0n;
+    const required = installed * 3n + sources + bytes(this.payload) * 2n + previous + BigInt(this.payload.identity[2]) + 64n * 1024n * 1024n;
     if (BigInt(probe.availableBytes) < required) fail('insufficient full candidate/store/recovery space', 5);
     this.journal.feasibility = { requiredBytes: String(required), availableBytes: probe.availableBytes, device: probe.device };
   }
@@ -450,7 +583,8 @@ export class ManagedSync {
       runPnpm: async (argv, options) => {
         if (argv.includes('--lockfile-only')) await this.checkpoint('lock-generation');
         else if (argv[0] === 'install') await this.checkpoint('install');
-        const result = await this.pnpm(argv, options);
+        const result = await this.pnpm(this.request.transition && argv[0] === 'install'
+          ? [...argv, '--strict-peer-dependencies'] : argv, options);
         if (argv.includes('--lockfile-only')) await this.checkpoint('lock-generated');
         return result;
       } });
@@ -487,13 +621,27 @@ export class ManagedSync {
     const profile = this.request.profile;
     const currentInput = invokeArchive('inspect', this.request);
     if (stable(currentInput.identity) !== stable(this.payload.identity)) fail('input identity changed after freeze', 3);
-    if (stable(slimResolution(await this.capture(profile))) !== stable(this.journal.before)) fail('live profile changed during preparation', 4);
+    if (this.request.transition) {
+      const old = this.request.transition.before;
+      const currentOld = invokeArchive('inspect', { ...this.request, ...old });
+      if (stable(currentOld.identity) !== stable(this.beforePayload.identity)) fail('previous input changed after freeze', 3);
+      if (digest(this.readReceipt(old.receiptId)) !== old.receiptDigest) fail('previous receipt changed during preparation', 4);
+      if (!this.request.transition.reverseReceiptId && hashFile(assertPath(this.request.transition.after.qaReceipt)) !== this.request.transition.after.qaReceiptDigest) fail('QA receipt changed during preparation', 4);
+    }
+    if (stable(slimResolution(await this.capture(profile, false, this.beforePayload || this.payload))) !== stable(this.journal.before)) fail('live profile changed during preparation', 4);
     if (stable(slimResolution(await this.capture(this.candidate))) !== stable(this.journal.candidate)) fail('candidate changed before publication', 5);
     this.hooks.io?.('fsync', this);
     syncTree(this.directory);
     if (stable(this.diskState()) !== stable(this.journal.diskBefore)) fail('live identity changed before publication', 4);
     this.journal.phase = 'COMMITTING';
     this.save();
+    if (this.request.transition) {
+      const relative = managedSpec(this.request.name).slice(5);
+      const oldSource = path.join(this.directory, 'old-generation', relative);
+      makeDirectory(path.dirname(oldSource));
+      await this.move(path.join(profile, relative), oldSource);
+      await this.move(path.join(this.candidate, relative), path.join(profile, relative));
+    }
     for (const file of ['node_modules', 'package.json', 'pnpm-lock.yaml']) {
       await this.move(path.join(profile, file), path.join(this.directory, 'old-generation', file));
       await this.move(path.join(this.candidate, file), path.join(profile, file));
@@ -518,10 +666,14 @@ export class ManagedSync {
     const after = await this.capture(profile);
     inspector.compare(this.before, after, this.request);
     inspector.assertRelocatable(after);
-    const expectedProtected = this.before.protectedDigests.entries.filter(entry => !entry.path.startsWith('.materialize-snapshots/plugins/' + this.request.name));
-    const actualProtected = after.protectedDigests.entries.filter(entry => !entry.path.startsWith('.materialize-snapshots/plugins/' + this.request.name)
+    const targetSource = '.materialize-snapshots/plugins/' + this.request.name;
+    const isTargetSource = entry => entry.path === targetSource || entry.path.startsWith(targetSource + '/');
+    const expectedProtected = this.before.protectedDigests.entries.filter(entry => !isTargetSource(entry));
+    const actualProtected = after.protectedDigests.entries.filter(entry => !isTargetSource(entry)
       && !this.journal.createdParents.includes(entry.path));
     if (stable(expectedProtected) !== stable(actualProtected)) fail('protected profile surface changed', 7);
+    const source = path.join(profile, managedSpec(this.request.name).slice(5));
+    if (stable(payloadManifest(source).entries) !== stable(this.payload.entries)) fail('published source differs from approved archive', 7);
     this.journal.afterDigest = digest(after);
     this.hooks.io?.('terminal', this);
     this.finish('COMMITTED');
@@ -601,7 +753,8 @@ export class ManagedSync {
 
   finish(phase) {
     const active = this.journal;
-    const receipt = { schemaVersion: 1, id: this.id, profile: this.request.profile, owner: active.owner,
+    const receipt = { schemaVersion: active.schemaVersion, ...(active.transition ? { transition: active.transition } : {}),
+      id: this.id, profile: this.request.profile, owner: active.owner,
       phase, name: this.request.name, request: active.request, beforeDigest: this.before ? digest(this.before) : null,
       afterDigest: active.afterDigest || null, backup: active.backup || null, backupFailure: active.backupFailure || null,
       cache: phase === 'COMMITTED' ? { storeRef: active.cache?.storeRef || null } : null,
@@ -618,7 +771,7 @@ export class ManagedSync {
     this.hooks.io?.('cleanup', this);
     for (const name of fs.readdirSync(this.directory)) {
       if (name === 'journal.json' || name === 'dependencies' && this.journal.phase === 'COMMITTED') continue;
-      if (!['candidate', 'old-generation', 'input.tgz', 'runtime', 'dependencies', 'worker.lock', 'empty.npmrc', 'empty-global.npmrc', 'journal.json.next'].includes(name)) fail('unknown transaction cleanup item', 7);
+      if (!['candidate', 'old-generation', 'input.tgz', 'before-input.tgz', 'runtime', 'dependencies', 'worker.lock', 'empty.npmrc', 'empty-global.npmrc', 'journal.json.next'].includes(name)) fail('unknown transaction cleanup item', 7);
       anchored('remove', path.join(this.directory, name));
     }
   }
