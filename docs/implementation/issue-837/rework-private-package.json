@@ -1,0 +1,12 @@
+{
+  "size": 48587949,
+  "unpackedSize": 132916698,
+  "entryCount": 3373,
+  "sha256": "4038e8426c7fc30a44ceffc7c28e41d38d132de8cb348e8ed574b4ac8f81ba3c",
+  "bothCpuPayloads": "all ordinary non-cache files match",
+  "extractedNoPathProbe": {
+    "supported": true,
+    "python": "3.13.15",
+    "chunkBytes": 1048576
+  }
+}
