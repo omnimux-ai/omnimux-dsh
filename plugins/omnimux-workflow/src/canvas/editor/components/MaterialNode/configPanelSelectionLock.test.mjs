@@ -29,7 +29,7 @@ test('MaterialNode 不再持有 setPanelDismissed / panelDismissed 隐藏通道'
   assert.doesNotMatch(nodeSrc, /setPanelDismissed/);
   assert.match(
     nodeSrc,
-    /isConfigPanelVisible\(\s*selected,\s*executionStatus,\s*kind,\s*isMultiSelected/,
+    /isConfigPanelVisible\(\s*selected,\s*executionStatus,\s*(?:kind|effectiveKind),\s*isMultiSelected/,
   );
 });
 

@@ -433,3 +433,88 @@ export function buildTableDocument(
 
   return doc;
 }
+
+/**
+ * 智能提取富有信息量的行预览文本：
+ * 1. 如果第 1 列是数字序号/镜号且存在第 2/3/4 列：
+ *    优先寻找包含「描述/画面/视觉/动作/脚本/台词/旁白/内容/镜头语言/Prompt」的列，拼合如：第 1 镜: [画面描述/动作]
+ *    若未匹配到关键字列，则优先拼合第 2 列有效文本
+ * 2. 若第 1 列非数字序号，则智能选择包含「描述/画面/动作/脚本/台词/内容」的代表列
+ * 3. 兜底退回第 1 列或首个非空列
+ */
+export function formatRowPreview(row: HTableRow, columns: HTableColumn[]): string {
+  if (!columns || columns.length === 0 || !row || !row.cells) {
+    return '（空记录）';
+  }
+
+  const firstCol = columns[0];
+  const firstVal = firstCol ? row.cells[firstCol.id] : undefined;
+  const firstStr = typeof firstVal === 'string' ? firstVal.trim() : typeof firstVal === 'number' ? String(firstVal) : '';
+
+  const descKeywordRegex = /描述|画面|视觉|动作|脚本|台词|旁白|内容|镜头语言|Prompt/i;
+  const otherCols = columns.slice(1);
+  let representativeCol = otherCols.find((col) => descKeywordRegex.test(col.title));
+  if (!representativeCol && otherCols.length > 0) {
+    representativeCol = otherCols[0];
+  }
+
+  const isSeqTitle = firstCol && /^(?:序号|镜号|镜头|镜头号|分镜号|id|no\.?|#)$/i.test(firstCol.title.trim());
+  const isSeqValue = /^\d+$/.test(firstStr) || /^第?\s*\d+\s*(?:镜|条|场|个)?$/i.test(firstStr);
+  const isFirstSeq = isSeqTitle || (isSeqValue && columns.length > 1);
+
+  if (isFirstSeq && representativeCol) {
+    const descVal = row.cells[representativeCol.id];
+    let descText = '';
+    if (typeof descVal === 'string') {
+      descText = descVal.trim();
+    } else if (typeof descVal === 'number') {
+      descText = String(descVal);
+    } else if (Array.isArray(descVal) && descVal.length > 0) {
+      descText = `📎 附件 (${descVal.length})`;
+    }
+
+    if (descText) {
+      const numMatch = firstStr.match(/\d+/);
+      const seqNum = numMatch ? numMatch[0] : firstStr;
+      if (firstStr.includes('镜')) {
+        return `${firstStr}: ${descText}`;
+      }
+      return `第 ${seqNum} 镜: ${descText}`;
+    }
+  }
+
+  if (representativeCol && (!firstStr || isSeqValue)) {
+    const descVal = row.cells[representativeCol.id];
+    if (typeof descVal === 'string' && descVal.trim()) return descVal.trim();
+    if (typeof descVal === 'number') return String(descVal);
+  }
+
+  const anyDescCol = columns.find((col) => descKeywordRegex.test(col.title));
+  if (anyDescCol) {
+    const val = row.cells[anyDescCol.id];
+    if (typeof val === 'string' && val.trim()) return val.trim();
+    if (typeof val === 'number') return String(val);
+  }
+
+  if (typeof firstVal === 'string' && firstVal.trim()) return firstVal.trim();
+  if (typeof firstVal === 'number') return String(firstVal);
+  if (Array.isArray(firstVal) && firstVal.length > 0) return `📎 附件 (${firstVal.length})`;
+
+  for (const col of columns) {
+    const val = row.cells[col.id];
+    if (typeof val === 'string' && val.trim()) return val.trim();
+    if (typeof val === 'number') return String(val);
+    if (Array.isArray(val) && val.length > 0) return `📎 附件 (${val.length})`;
+  }
+
+  return '（空记录）';
+}
+
+/**
+ * 智能提取整个表格的富有信息量的卡片预览行
+ */
+export function formatTablePreviewRows(doc: HTableDocument, maxCount: number = 3): string[] {
+  if (!doc || !doc.rows || doc.rows.length === 0) return [];
+  const columns = doc.columns || [];
+  return doc.rows.slice(0, maxCount).map((r) => formatRowPreview(r, columns));
+}

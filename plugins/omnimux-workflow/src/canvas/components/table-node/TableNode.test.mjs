@@ -78,7 +78,30 @@ test('TableNode 契约：必须提取 effectiveTableId 并传给 useTableSession
   // 4. 验证 openStage 接收 effectiveTableId
   assert.match(
     tableNodeSrc,
-    /openStage\(effectiveTableId,\s*document\)/,
+    /openStage\(effectiveTableId/,
     'openStage 必须传入 effectiveTableId',
+  );
+});
+
+test('TableNode 自动拉取与缓存同步契约：挂载 ensure + openStage 确保文档 + 富有信息量的代表列预览', () => {
+  // 1. 验证存在 useEffect 自动加载 tableDocumentCache.ensure
+  assert.match(
+    tableNodeSrc,
+    /tableDocumentCache\.ensure\(workspaceId,\s*effectiveTableId,\s*\{\s*forceReload:\s*false\s*\}\)/,
+    'TableNode 挂载时必须自动调用 tableDocumentCache.ensure 拉取文档',
+  );
+
+  // 2. 验证 handleOpenFullscreen 会在未 ready 时先 ensure 最新文档
+  assert.match(
+    tableNodeSrc,
+    /await\s+tableDocumentCache\.ensure\(workspaceId,\s*effectiveTableId,\s*\{\s*forceReload:\s*false\s*\}\)/,
+    '全屏打开前必须确保文档已载入',
+  );
+
+  // 3. 验证使用 formatRowPreview 智能预览
+  assert.match(
+    tableNodeSrc,
+    /formatRowPreview\(r,\s*document\.columns\)/,
+    '预览行必须调用 formatRowPreview 智能选择信息量最大的代表列',
   );
 });

@@ -111,7 +111,7 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格', async (t
   assert.equal(res.body.columnCount, 6);
   assert.equal(res.body.rowCount, 2);
   assert.equal(res.body.previewRows.length, 2);
-  assert.equal(res.body.previewRows[0], '1');
+  assert.equal(res.body.previewRows[0], '第 1 镜: 开场反差视觉');
 
   // 验证磁盘上的 .htable 物理文件是否真实存在且有效
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
@@ -198,7 +198,7 @@ test('videoDeconstruct: 无 Markdown 表格时，按五维分析维度构造结�
   assert.equal(res.body.columnCount, 2);
   // 6 个维度
   assert.equal(res.body.rowCount, 6);
-  assert.equal(res.body.previewRows[0], '一句话描述');
+  assert.equal(res.body.previewRows[0], '以沉浸式妆造前后反差为核心钩子的爆款美妆短视频。');
 
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const savedDoc = await TableStorageService.loadTable(absPath);
@@ -334,7 +334,9 @@ test('videoDeconstruct: 服务端原子持久化与单一下游约束（多次�
   const updatedTable = snap2.nodes.find((n) => n.id === firstTableId);
   assert.ok(updatedTable, '原有下游表格节点应被就地保留并更新');
   assert.equal(updatedTable.data.title, '拆解第2版');
-  assert.equal(updatedTable.data.tableId, res2.body.tableId);
+  assert.equal(updatedTable.data.tableId, firstTableId, '下游已有表格节点时，数据应写回已有节点的 tableId');
+  assert.equal(res2.body.tableId, firstTableId, '下游已有表格节点时，服务返回的 tableId 应严格复用');
+  assert.equal(updatedTable.data.contentRev, 2, '再次拆解更新时，contentRev 必须自增递增');
   assert.equal(snap2.edges.length, 1, '连线总数仍为 1，不产生多余连线');
   assert.equal(snap2.edges[0].target, firstTableId);
 });

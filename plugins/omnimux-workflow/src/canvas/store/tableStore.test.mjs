@@ -103,3 +103,119 @@ test('tableStore: openStage 对 0 列文档自动补全默认「文本」列', (
   // 5. 关闭舞台，避免影响其他测试
   useTableStore.getState().closeStage();
 });
+
+test('tableStore: closeStage 防空冲刷保护（未发生显式删行时禁止以空数据冲刷画布）', async () => {
+  const { registerTableCanvasSyncHandler } = await import('./tableStore.ts');
+
+  // 1. 注册同步监听器
+  let syncCallCount = 0;
+  let lastSyncPayload = null;
+  const unregister = registerTableCanvasSyncHandler((id, doc) => {
+    syncCallCount += 1;
+    lastSyncPayload = { id, doc };
+  });
+
+  // 2. 模拟场景 A：打开前画布/初始文档有 2 行数据，舞台异常以 0 行空文档呈现，且无显式删行
+  useTableStore.getState().openStage('tbl_anti_wash', {
+    version: 1,
+    title: '防冲刷表格',
+    columns: [{ id: 'col1', title: '内容', type: 'text', visible: true }],
+    rows: [
+      { id: 'r1', cells: { col1: '行 1' } },
+      { id: 'r2', cells: { col1: '行 2' } },
+    ],
+  });
+
+  assert.equal(useTableStore.getState().initialRowCount, 2);
+  assert.equal(useTableStore.getState().hasExplicitDeleteRow, false);
+
+  // 人为将舞台 document 改为 0 行模拟加载空态
+  useTableStore.setState({
+    document: {
+      version: 1,
+      title: '防冲刷表格',
+      columns: [{ id: 'col1', title: '内容', type: 'text', visible: true }],
+      rows: [],
+    },
+  });
+
+  const countBeforeClose = syncCallCount;
+  // 关闭舞台：触发防空冲刷保护，禁止覆盖画布
+  useTableStore.getState().closeStage();
+  assert.equal(syncCallCount, countBeforeClose, '防空冲刷保护触发：禁止向画布同步 0 行空文档');
+
+  // 3. 模拟场景 B：用户在舞台中执行了显式的删行操作（deleteRow / deleteSelectedRows）
+  useTableStore.getState().openStage('tbl_legit_delete', {
+    version: 1,
+    title: '合法删除表格',
+    columns: [{ id: 'col1', title: '内容', type: 'text', visible: true }],
+    rows: [{ id: 'r1', cells: { col1: '行 1' } }],
+  });
+  assert.equal(useTableStore.getState().initialRowCount, 1);
+  assert.equal(useTableStore.getState().hasExplicitDeleteRow, false);
+
+  // 用户点击删行
+  useTableStore.getState().deleteRow(0);
+  assert.equal(useTableStore.getState().hasExplicitDeleteRow, true);
+  assert.equal(useTableStore.getState().document.rows.length, 0);
+
+  const countBeforeLegitClose = syncCallCount;
+  useTableStore.getState().closeStage();
+  assert.equal(syncCallCount, countBeforeLegitClose + 1, '显式删行后应允许正常同步到画布');
+  unregister();
+});
+
+test('formatRowPreview & formatTablePreviewRows: 富有信息量的代表列提取与序号拼合', async () => {
+  const { formatRowPreview, formatTablePreviewRows } = await import('../../shared/types/htable.ts');
+
+  // 1. 分镜表典型结构：第 1 列是数字序号（如 1、2、3），第 2 列是画面描述
+  const storyboardDoc = {
+    version: 1,
+    title: '分镜表',
+    columns: [
+      { id: 'c_seq', title: '镜号', type: 'text', visible: true },
+      { id: 'c_desc', title: '画面描述', type: 'text', visible: true },
+      { id: 'c_action', title: '角色动作', type: 'text', visible: true },
+    ],
+    rows: [
+      { id: 'r1', cells: { c_seq: '1', c_desc: '主角在暴雨中快步奔跑', c_action: '奔跑' } },
+      { id: 'r2', cells: { c_seq: 2, c_desc: '特写主角坚毅的眼神', c_action: '特写' } },
+      { id: 'r3', cells: { c_seq: '第3镜', c_desc: '远景雷电划破长空', c_action: '远景' } },
+    ],
+  };
+
+  const previewRows = formatTablePreviewRows(storyboardDoc);
+  assert.equal(previewRows.length, 3);
+  assert.equal(previewRows[0], '第 1 镜: 主角在暴雨中快步奔跑');
+  assert.equal(previewRows[1], '第 2 镜: 特写主角坚毅的眼神');
+  assert.equal(previewRows[2], '第3镜: 远景雷电划破长空');
+
+  // 2. 纯单列表格
+  const singleColDoc = {
+    version: 1,
+    title: '单列表格',
+    columns: [{ id: 'col1', title: '文本', type: 'text', visible: true }],
+    rows: [
+      { id: 'r1', cells: { col1: '普通记录内容' } },
+      { id: 'r2', cells: { col1: '' } },
+    ],
+  };
+  const singlePreviews = formatTablePreviewRows(singleColDoc);
+  assert.equal(singlePreviews[0], '普通记录内容');
+  assert.equal(singlePreviews[1], '（空记录）');
+
+  // 3. 维度分析表（分析维度 + 分析内容）
+  const analysisDoc = {
+    version: 1,
+    title: '分析表',
+    columns: [
+      { id: 'c1', title: '分析维度', type: 'text', visible: true },
+      { id: 'c2', title: '分析内容', type: 'text', visible: true },
+    ],
+    rows: [
+      { id: 'r1', cells: { c1: '开篇黄金3秒', c2: '以强烈反差冲突抓住眼球' } },
+    ],
+  };
+  const analysisPreviews = formatTablePreviewRows(analysisDoc);
+  assert.equal(analysisPreviews[0], '以强烈反差冲突抓住眼球');
+});

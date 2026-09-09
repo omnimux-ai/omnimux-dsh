@@ -171,7 +171,7 @@ test('MiniMax H3 Max & Turbo: text_to_video with valid parameters passes executi
           operation: 'text_to_video',
           aspectRatio: '16:9',
           duration: 5,
-          resolution: '720p',
+          resolution: '768p',
         },
       },
     };
@@ -221,7 +221,7 @@ test('MiniMax H3 Max & Turbo: first_frame with valid image upstream passes execu
           operation: 'first_frame',
           aspectRatio: 'adaptive',
           duration: 5,
-          resolution: '720p',
+          resolution: '768p',
         },
       },
     };
