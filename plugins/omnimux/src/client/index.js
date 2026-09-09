@@ -1,3 +1,4 @@
+import { mountFormsBridge } from './forms/mount.js'
 /** Registers OmniMux profile in Settings and Apps under 新会话. */
 import { NS } from './locales.js'
 import { ProfileSection } from './ProfileSection.jsx'
@@ -131,6 +132,7 @@ export function apply(ctx) {
   // default priority 0. Shadow it with a lower priority so OmniMux wins
   // (lowest renders) instead of failing the client Loader.
   const attachmentStore = getGlobalAttachmentStore()
+  mountFormsBridge(ctx, attachmentStore)
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
