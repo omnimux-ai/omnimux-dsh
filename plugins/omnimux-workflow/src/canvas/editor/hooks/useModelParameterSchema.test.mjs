@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(here, 'useModelParameterSchema.ts'), 'utf8');
 
-test('catalog cache key is v3 with fingerprint + fetchedAt envelope', () => {
-  assert.match(src, /wf_capabilities_catalog_v3/);
+test('catalog cache key is v4 with fingerprint + fetchedAt envelope', () => {
+  assert.match(src, /wf_capabilities_catalog_v4/);
   assert.match(src, /fingerprint/);
   assert.match(src, /fetchedAt/);
   assert.match(src, /invalidateCachedCatalog/);

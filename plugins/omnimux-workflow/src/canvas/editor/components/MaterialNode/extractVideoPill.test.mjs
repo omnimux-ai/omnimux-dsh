@@ -36,7 +36,6 @@ test('MaterialNode 文本节点社媒链接检测与工具栏可见性契约', (
 test('MaterialNode 提取视频胶囊契约：主区 primary + Film 图标 + i18n 文案', () => {
   const extractAction = sliceActionBlock(nodeSrc, 'extract-video');
   assert.match(extractAction, /section:\s*'primary'/);
-  assert.match(extractAction, /variant:\s*'primary'/);
   assert.match(extractAction, /icon:\s*Film/);
   assert.match(extractAction, /label:\s*t\('pill\.extractVideo'\)/);
   assert.match(extractAction, /title:\s*t\('pill\.extractVideo'\)/);

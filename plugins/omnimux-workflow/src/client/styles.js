@@ -284,6 +284,419 @@ export const WORKFLOW_CSS = `
 .omnimux-workflow-canvas-tab[data-visible="false"] {
   visibility: hidden;
 }
+/* OmniMux AI App Tab Styles */
+.omx-apptab-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  font-family: inherit;
+}
+.omx-apptab-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.omx-apptab-empty-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+.omx-apptab-empty-title {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin-bottom: 6px;
+}
+.omx-apptab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-surface-raised);
+  flex-shrink: 0;
+}
+.omx-apptab-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.omx-apptab-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--dsw-alias-interactive-bg);
+  color: var(--dsw-alias-label-secondary);
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-apptab-version {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-apptab-desc {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omx-apptab-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.omx-apptab-form-panel {
+  width: 448px;
+  min-width: 448px;
+  max-width: 448px;
+  box-sizing: border-box;
+  padding: 20px 24px 24px;
+  border-right: 1px solid var(--dsw-alias-border-l2);
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-surface-raised);
+  overflow-y: auto;
+}
+.omx-apptab-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.omx-apptab-form-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.omx-apptab-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 398px;
+}
+.omx-apptab-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-apptab-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.omx-apptab-required {
+  color: var(--dsw-alias-status-danger);
+}
+.omx-apptab-hint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-apptab-input,
+.omx-apptab-select {
+  height: 40px;
+  width: 398px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-interactive-bg);
+  color: var(--dsw-alias-label-primary);
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.omx-apptab-input.is-error,
+.omx-apptab-select.is-error,
+.omx-apptab-textarea.is-error {
+  border-color: var(--dsw-alias-status-danger);
+}
+.omx-apptab-select option {
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  height: 40px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omx-apptab-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-textarea {
+  height: 80px;
+  width: 398px;
+  border-radius: 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-interactive-bg);
+  color: var(--dsw-alias-label-primary);
+  padding: 8px 12px;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.omx-apptab-error-text {
+  font-size: 11px;
+  color: var(--dsw-alias-status-danger);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.omx-apptab-cta-wrap {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+.omx-apptab-cta-btn {
+  height: 44px;
+  width: 398px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-primary);
+  color: var(--dsw-alias-label-inverse);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+  box-shadow: 0 2px 8px var(--dsw-alias-bg-mask-1);
+}
+.omx-apptab-cta-btn:disabled {
+  background: var(--dsw-alias-interactive-bg-disabled);
+  color: var(--dsw-alias-label-disabled);
+  cursor: not-allowed;
+}
+.omx-apptab-output-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--dsw-alias-bg-base);
+  overflow: hidden;
+}
+.omx-apptab-right-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-surface-raised);
+  flex-shrink: 0;
+}
+.omx-apptab-tab-pill {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.omx-apptab-tab-pill.is-active {
+  font-weight: 600;
+  border-color: var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-output-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.omx-apptab-tasks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 70%;
+  color: var(--dsw-alias-label-secondary);
+  text-align: center;
+}
+.omx-apptab-tasks-empty-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+.omx-apptab-tasks-empty-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--dsw-alias-label-primary);
+  margin-bottom: 6px;
+}
+.omx-apptab-tasks-empty-desc {
+  font-size: 13px;
+  max-width: 320px;
+}
+.omx-apptab-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.omx-apptab-task-card {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--dsw-alias-surface-raised);
+  border: 1px solid var(--dsw-alias-border-l2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.omx-apptab-task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-apptab-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omx-apptab-status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--dsw-alias-interactive-bg);
+  color: var(--dsw-alias-brand-primary);
+}
+.omx-apptab-status-badge.is-completed {
+  background: var(--dsw-alias-status-success-bg, var(--dsw-alias-interactive-bg));
+  color: var(--dsw-alias-status-success);
+}
+.omx-apptab-status-badge.is-failed {
+  background: var(--dsw-alias-status-danger-bg, var(--dsw-alias-interactive-bg));
+  color: var(--dsw-alias-status-danger);
+}
+.omx-apptab-task-time {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-apptab-task-id {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: monospace;
+}
+.omx-apptab-media-box {
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-surface, var(--dsw-alias-bg-elevated));
+  border: 1px solid var(--dsw-alias-border-l1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+}
+.omx-apptab-media-video {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 6px;
+}
+.omx-apptab-media-audio {
+  width: 100%;
+  padding: 16px 8px;
+  box-sizing: border-box;
+}
+.omx-apptab-media-img {
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.omx-apptab-error-box {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--dsw-alias-status-danger-bg, var(--dsw-alias-interactive-bg));
+  border: 1px solid var(--dsw-alias-border-danger, var(--dsw-alias-border-l2));
+  color: var(--dsw-alias-status-danger);
+  font-size: 12px;
+}
+.omx-apptab-inputs-summary {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-base);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.omx-apptab-inputs-summary span {
+  margin-right: 12px;
+}
+.omx-apptab-showcase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.omx-apptab-showcase-empty {
+  color: var(--dsw-alias-label-secondary);
+  text-align: center;
+  padding: 40px;
+}
+.omx-apptab-showcase-card {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--dsw-alias-surface-raised);
+  border: 1px solid var(--dsw-alias-border-l2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.omx-apptab-showcase-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omx-apptab-showcase-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-apptab-showcase-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+.omx-apptab-showcase-media {
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-surface, var(--dsw-alias-bg-elevated));
+  display: flex;
+  justify-content: center;
+}
 `
 
 export function injectWorkflowStyles() {
