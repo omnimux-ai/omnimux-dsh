@@ -1,0 +1,56 @@
+sequenceDiagram
+    participant DI as inner dependency scope
+    participant Sidebar as betterSidebar
+    participant Registry as ScopeRegistry
+    participant UI as StudioStage
+    participant Store as StudioStore
+    participant Mock as MockAdapter
+    DI->>DI: inner.effect绑定locale/style清理
+    DI->>Sidebar: registerTab(descriptor)
+    Sidebar->>UI: component(scope, visible)
+    UI->>Registry: getOrCreate(scope)
+    alt cwd或sessionId缺失
+        Registry-->>UI: null，等待工作区且禁提交
+    else 有效scope
+        Registry->>Store: __init__(key, adapter)（首次）
+        UI->>Store: subscribe(listener), getSnapshot()
+        UI->>Store: setVisible(visible)
+        UI->>Store: updateDraft(mode, patch)
+        Note over UI,Store: 行内Token Enter只校验，IME不提交
+        UI->>Store: navigate(video)
+        Store-->>UI: 详情dock读取同一draft
+        UI->>Store: submitDraft(mode)
+        alt 校验或余额失败
+            Store-->>UI: errors，无任务/扣点/路由变化
+        else 接受模拟提交
+            Store->>Store: 冻结快照，UUID，扣虚拟点数，pending
+            Store->>Mock: start(request, signal, onResult)
+            Mock-->>Store: JobHandle
+            Store-->>UI: taskId，显示Mock标识
+            alt 完成或失败
+                Mock-->>Store: onResult(outcome)
+                Store->>Store: 校验scope/epoch/attempt/pending
+                Store-->>UI: completed或failed（失败退款一次）
+            else 用户取消或删除
+                UI->>Store: cancelTask(id) / deleteTask(id)
+                Store->>Mock: JobHandle.cancel(), abort
+                Store->>Store: cancelled与一次退款，删除则移除
+                Note over Mock,Store: 迟到回调忽略，无toast
+            end
+        end
+        UI->>Store: restoreDraft(id)
+        Store-->>UI: 完整快照回填，不自动提交
+        Sidebar->>UI: visible=false / scope切换
+        UI->>Store: setVisible(false)
+        UI->>Registry: releaseView(oldKey)
+        Store->>Mock: JobHandle.pause()
+        UI->>Registry: getOrCreate(newScope)
+        Note over Registry,UI: 返回旧scope重取内存；可见后resume
+        Sidebar->>Registry: onClose: disposeScope(key)
+        Registry->>Store: dispose()
+        Store->>Mock: 取消全部句柄并释放媒体/订阅
+    end
+    DI->>Registry: disposeAll() on dependency unload
+    DI->>Sidebar: registerTab disposer
+    DI->>DI: locale disposer与style disposer
+    Note over Registry,Store: 刷新后全新实例，不承诺持久化

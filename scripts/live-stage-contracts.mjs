@@ -29,7 +29,7 @@ export const STAGE_STATUS = Object.freeze({
 })
 
 export function selectStages(stage) {
-  assert.ok(stage === 'all' || Object.hasOwn(STAGE_CONTENT, stage), `Unknown stage: ${stage}`)
+  assert.ok(stage === 'all' || stage === 'studio' || Object.hasOwn(STAGE_CONTENT, stage), `Unknown stage: ${stage}`)
   return stage === 'all' ? Object.keys(STAGE_CONTENT) : [stage]
 }
 
@@ -110,6 +110,7 @@ export async function captureStageContract(root, stage) {
   const compile = async (entry) => (await build({
     absWorkingDir: root, entryPoints: [entry], bundle: true, packages: 'external',
     platform: 'browser', format: 'cjs', jsx: 'automatic', write: false, logLevel: 'silent',
+    ...(stage === 'studio' ? { loader: { '.css': 'text', '.js': 'jsx' } } : {}),
   })).outputFiles[0].text
   const evaluate = (code) => {
     win.module = { exports: {} }
@@ -177,8 +178,27 @@ export async function captureStageContract(root, stage) {
       assert.ok(allowedStatusTexts.length === 6 && allowedStatusTexts.every((text) => typeof text === 'string' && text.trim()), 'Market empty-state translations are missing')
       return { stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'sidebar-coordinator', rank }
     }
+    const hostStyles = [...win.document.head.querySelectorAll('style')]
     const client = evaluate(await compile(`plugins/${plugin}/src/client/index.js`))
     client.apply(ctx)
+    if (stage === 'studio') {
+      const tabId = 'omnimux-studio:workspace'
+      const tab = tabs.get(tabId)
+      assert.ok(tab && tab.single === true && tab.hidden === false && typeof tab.component === 'function', 'Studio must register its visible single community Tab')
+      assert.equal(entries.length, 0, 'Studio must not manufacture a sidebar Stage')
+      await api.open({ tabId, title: tab.title() })
+      assert.ok(api.isActive(tabId), 'Studio must open through the public workbench')
+      api.closePanel()
+      assert.equal(api.isActive(tabId), false)
+      await api.open({ tabId, title: tab.title() })
+      assert.ok(api.isActive(tabId), 'Studio must restore through the public workbench')
+      assert.equal(state().splits.tabs.filter(item => item.id === tabId).length, 1)
+      for (const dispose of disposers.splice(0).reverse()) dispose()
+      assert.equal(tabs.has(tabId), false, 'Studio Tab disposer must unregister')
+      assert.equal(win.document.querySelectorAll('#omnimux-studio-styles').length, 0, 'Studio must release its stylesheet')
+      assert.ok(hostStyles.every(style => style.isConnected), 'Studio must preserve Host styles')
+      return { stage, plugin, tabId, content: '[data-omnimux-studio].studio-root', adapter: 'community-tab' }
+    }
     assert.equal(entries.length, 1, `${plugin}: expected one actual kit sidebar entry`)
     const { stageStore: adapter, datasetKey } = entries[0]
     assert.match(datasetKey, /^data-[\w-]+-entry$/)

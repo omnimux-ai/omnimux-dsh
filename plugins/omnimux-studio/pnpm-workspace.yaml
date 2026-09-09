@@ -1,0 +1,5 @@
+# Standalone, reproducible plugin development closure inside nested worktrees.
+packages:
+  - '.'
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,64 @@
+{
+  "name": "omnimux-studio",
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.7.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md",
+    "dsh-ui-kit-0.1.0.tgz"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "prepare": "npm run build",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "dsh-better-sidebar",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.1.2-rc.1",
+    "dsh-better-sidebar": "0.18.0",
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "dsh-ui-kit": "file:./dsh-ui-kit-0.1.0.tgz"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "jsdom": "30.0.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "license": "MIT",
+  "description": "Conversational Visual Generation Studio (omnimux-studio) for DeepSeek Harness."
+}

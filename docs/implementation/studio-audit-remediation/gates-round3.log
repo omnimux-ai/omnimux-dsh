@@ -1,0 +1,389 @@
+
+> test:gates
+> node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/verify-ci-gates.test.mjs scripts/live-qa.test.mjs scripts/ego-browser-page.test.mjs scripts/live-page-preparation.test.mjs scripts/ego-live-qa.test.mjs scripts/live-runtime-proof.test.mjs scripts/sync-repeat-install.test.mjs scripts/guard-worktree.qa.test.mjs
+
+▶ admission
+  ✔ keeps the legacy export as the same admission function (1.580042ms)
+  ✔ rejects missing ready (0.113583ms)
+  ✔ rejects missing approval (0.061833ms)
+  ✔ rejects untrusted author (0.060708ms)
+  ✔ rejects display name impersonation (0.066583ms)
+  ✔ rejects missing preauthorization (0.059917ms)
+  ✔ rejects missing risk frontmatter (0.064ms)
+  ✔ rejects mismatched label (0.050667ms)
+  ✔ rejects multiple risk labels (0.06525ms)
+  ✔ rejects mismatched approval (0.087917ms)
+  ✔ rejects revoke (0.052625ms)
+  ✔ rejects closed (0.038625ms)
+  ✔ rejects blocked (0.038334ms)
+  ✔ never admits R0 (0.032541ms)
+  ✔ never admits R1 (0.032958ms)
+  ✔ ignores quoted approvals and malformed risk tokens (0.050417ms)
+✔ admission (3.014125ms)
+▶ runtime authorization lifecycle
+  ✔ admits, consumes ready, transitions to merge-pending, revokes and reauthorizes (2.007542ms)
+  ✔ ignores untrusted revoke but rejects removal of approval or preauthorization (0.086333ms)
+  ✔ rejects closed, blocked or re-declared Issues (0.0675ms)
+  ✔ treats smaller tier numbers as higher risk and never expands R0/R1 authority (0.402708ms)
+✔ runtime authorization lifecycle (2.685958ms)
+✔ requires impact context and rejects malformed or contradictory matrices (0.825125ms)
+✔ non-UI and empty changes explicitly mark ego-browser not applicable, even with stale evidence (0.150875ms)
+✔ UI and mixed changes require ego-browser; requireBrowser:false cannot downgrade the matrix (0.104584ms)
+✔ legacy programmatic L0 fallback cannot waive required browser evidence (0.07825ms)
+✔ legacy L0 fallback flag cannot pass missing browser evidence or add qa:pass (308.715833ms)
+✔ legacy L0 fallback environment cannot pass missing browser evidence or add qa:pass (292.758042ms)
+✔ missing, false or truthy non-boolean L0 reports and prior CI failure are rejected (0.34ms)
+✔ current valid ego-browser receipts pass and stale identity, invalid proof and expired windows fail (387.874542ms)
+✔ legacy label API delegates removal and conditional addition (0.461458ms)
+✔ CLI derives impact from explicit files or strict git diff and clears failure labels (741.900958ms)
+✔ CLI accepts a SHA-bound ego-browser receipt and rejects a changed expected run (253.849708ms)
+✔ workflow passes event-specific diff context and always evaluates failures (0.730125ms)
+✔ adapts documented ego helpers and preserves stable identity and timeout units (4.117083ms)
+✔ drains cursor then captures all script events with a CDP ordering barrier (0.357542ms)
+✔ missing helpers, invalid ids, incomplete queues, and overflow fail closed (1.135709ms)
+✔ task/tab change and user control loss latch a hard stop without issuing browser cleanup (0.6305ms)
+✔ policy failures latch without echoing token URL or fallback commands (0.158542ms)
+✔ a guard resolving after timeout cannot issue further browser commands (10.663459ms)
+✔ expired and stale SHA requests fail before consumption (238.233875ms)
+✔ preflight authentication failure preserves reusable request and pending canonical report (255.983125ms)
+✔ wrong path, incomplete capabilities, and missing task/tab identity fail before consumption (864.862333ms)
+✔ request replacement and HEAD change during preparation cannot obtain execution rights (369.162417ms)
+✔ expiry is checked again after page preparation (160.994083ms)
+✔ concurrent consumers grant probe ownership once and preserve the winner report (172.644959ms)
+✔ two requests cannot operate the same task concurrently and task lock releases on preflight failure (331.492125ms)
+✔ invalid secret-bearing requests do not record target credentials (115.885333ms)
+✔ post-consumption errors redact headers and JSON secrets but record actual consumption (166.515334ms)
+✔ lock release failure still persists the consumed failure report (141.953209ms)
+✔ screenshots must decode as PNG, not JPEG, empty, or header-only bytes (2.896417ms)
+✔ Stage state accepts cross-realm arrays but still requires exactly one selected entry (1.023375ms)
+▶ independent #786 non-Git guard QA
+  ✔ allows a real non-Git protected-looking target with missing parents (80.885208ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\".agents/skills/fixture/scripts/missing/target.py\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ canonicalizes a repository alias into a real non-Git directory (90.358084ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/external-primary\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/external-primary/plain-alias/docs/missing/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ denies an external tracked file from a non-Git cwd (130.4325ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/external-primary/tracked.txt\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！\\n📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。\\n👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！\\nℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ denies realpath escapes from non-Git into tracked primary files (137.780666ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain/tracked-alias\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！\\n📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。\\n👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！\\nℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ ignores repository redirection and caller locale for real non-Git targets (100.824458ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"scripts/new/tool.mjs\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ does not hide external tracked files under discovery and index pollution (162.338959ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/external-primary/tracked.txt\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！\\n📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。\\n👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！\\nℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for nonempty-stdout, not non-Git discovery (288.785ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for wrong-exit, not non-Git discovery (467.192083ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for signal-exit, not non-Git discovery (272.511708ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for diagnostic-suffix, not non-Git discovery (298.875666ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for mixed-stderr, not non-Git discovery (231.426875ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for localized-stderr, not non-Git discovery (275.054375ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for empty-success, not non-Git discovery (221.699208ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ rejects exact non-Git diagnostics when an ancestor has a .git directory (291.87375ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/marker-directory/several/levels/down/docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ rejects exact non-Git diagnostics when an ancestor has a .git file (210.277958ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/marker-file/several/levels/down/docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ rejects exact non-Git diagnostics when an ancestor has a .git dangling-link (266.275417ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/marker-dangling-link/several/levels/down/docs/new.md\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+  ✔ fails closed for malformed HOME Git config without mutating real user config (130.498375ms)
+  ℹ {"script":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/guard-worktree.mjs","stdin":"{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"default_api:write\",\"cwd\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/plain\",\"tool_input\":{\"file_path\":\"/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/guard786-qa-cases-Rl051l/external-primary/tracked.txt\"}}","stdout":"{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。\"}}\n","stderr":"","exit":0,"signal":null,"error":null}
+✔ independent #786 non-Git guard QA (3658.226709ms)
+▶ impact matrix
+  ✔ requires ego-browser for plugins/a/client/index.js (0.601042ms)
+  ✔ requires ego-browser for plugins/a/src/client/View.js (0.052958ms)
+  ✔ requires ego-browser for apps/desktop/main.js (0.044416ms)
+  ✔ requires ego-browser for web/index.js (0.037125ms)
+  ✔ requires ego-browser for plugins/a/Stage.js (0.083375ms)
+  ✔ requires ego-browser for Stage.ts (0.078875ms)
+  ✔ requires ego-browser for view.jsx (0.064125ms)
+  ✔ requires ego-browser for view.tsx (0.053834ms)
+  ✔ requires ego-browser for view.vue (0.059583ms)
+  ✔ requires ego-browser for view.svelte (0.078833ms)
+  ✔ requires ego-browser for view.html (0.042416ms)
+  ✔ requires ego-browser for theme.css (0.260167ms)
+  ✔ requires ego-browser for theme.scss (0.070375ms)
+  ✔ requires ego-browser for plugins\a\client\View.js (0.144459ms)
+  ✔ marks non-UI changes not applicable: [] (0.120917ms)
+  ✔ marks non-UI changes not applicable: ["docs/guide.md"] (0.02775ms)
+  ✔ marks non-UI changes not applicable: ["scripts/server.mjs","docs/contracts/plugin-qa.md"] (0.023125ms)
+  ✔ marks non-UI changes not applicable: ["plugins/a/src/service.js",".github/workflows/quality-gate.yml"] (2.538834ms)
+  ✔ marks non-UI changes not applicable: ["contracts/api.json","package.json","clients/readme.md","website/backend.js"] (0.062292ms)
+  ✔ is deterministic and does not mutate frozen input (2.917959ms)
+  ✔ CLI prints JSON and strictly rejects unresolved git bases in an isolated cwd (303.116833ms)
+✔ impact matrix (311.443708ms)
+✔ ready product is reused without navigation, with a fresh same-origin cookie check (4.581417ms)
+✔ product content mentioning the auth error is not mistaken for the exact auth page (0.818667ms)
+✔ ready and loading pages stop on expired authentication without navigation (0.266292ms)
+✔ official L2 entry uses only the current login line once and returns no token (445.326167ms)
+✔ missing, pre-restart, malformed, and stale L2 login entries never navigate (1808.544875ms)
+✔ L2 selects the post-restart link and rejects foreign selected tabs (560.597292ms)
+✔ failed and timed-out login attempts are not retried or exposed (832.726041ms)
+✔ exact same-origin auth page performs two read checks and one internal recovery navigation (1.154917ms)
+✔ fetch timeout, redirects, and non-200 responses do not recover (12.041541ms)
+✔ expired navigation lease and tool timeout record attempted but unconfirmed recovery (11.2905ms)
+✔ network error page, auth-required, and not-ready classifications remain distinct (0.629792ms)
+✔ wrong origin, production and secret targets fail without evaluation (0.1385ms)
+✔ policy rejection and control loss stop immediately with sanitized diagnostics (0.261875ms)
+✔ Dev has a fixed 45120 default and rejects stale env ports, production and remote origins (1.384792ms)
+✔ L2 must match its worktree URL, port, source and current code revision (198.48325ms)
+✔ reused L2 ports and changed plugin links cannot certify another worktree (98.998167ms)
+✔ stage selection and actual runtime discovery reject empty or unknown targets (831.363417ms)
+✔ homepage content cannot replace a visible, nonempty and uniquely selected target Tab (0.647083ms)
+✔ positive-size content outside the viewport or covered by another panel is not visible (44.260375ms)
+✔ session drift aborts cleanup without modifying the newly active session (8.870458ms)
+✔ stage-specific loading and failure markers cannot pass as valid empty content (174.409291ms)
+✔ verify:live creates one pending, SHA-bound ego-browser request and never reports PASS (1610.78325ms)
+✔ CLI argument failures overwrite stale success and retain per-run failure evidence (180.751708ms)
+✔ CLI rejects production in a sandbox without overwriting workspace evidence (192.60525ms)
+✔ binds the selected renderer to exact hub and selected plugin registrations (17.0525ms)
+✔ matches an isolated registration across concat identifier deconfliction and source-path comments (9.953833ms)
+✔ ignores loader-like text in strings, templates, comments, and nested functions (5.038542ms)
+✔ rejects wrong modules, mutated factories, and duplicate old/new registrations (17.129125ms)
+✔ rejects wrong origin, incomplete event pages, missing bundles, and parse failures (15.434791ms)
+✔ rejects dynamic or duplicate properties, invalid factories, and extra local statements (10.668167ms)
+✔ stable proof compares registration and complete-script fingerprints (1.188041ms)
+✔ CI removes stale qa:pass before adding a new success (0.709917ms)
+✔ failure and non-boolean verdicts only clear the label (0.121542ms)
+✔ dry-run and missing PR never execute gh (0.059667ms)
+✔ removal failure stops the add and is reported instead of silently passing (0.093292ms)
+✔ add failure and thrown command errors fail label synchronization (0.445834ms)
+✖ hoisted: sync restores staged entries on consecutive normal refreshes without changing lock or platform optionals (76.559875ms)
+✖ hoisted: non-optimistic frozen install restores missing entry without resolving or installing incompatible optionals (47.4275ms)
+✖ isolated: sync restores staged entries on consecutive normal refreshes without changing lock or platform optionals (49.103916ms)
+✖ isolated: non-optimistic frozen install restores missing entry without resolving or installing incompatible optionals (50.1535ms)
+✔ gitBlobHash computes accurate SHA-1 blob hashes (0.682083ms)
+✔ walkAgentNoteTree discovers valid agent notes and checks structure (0.446875ms)
+✔ verify-agent-note-format runs successfully on codebase (30.676791ms)
+✔ verify-bilingual-docs passes on codebase (421.833875ms)
+✔ verify-archived-agent-notes passes on codebase (37.0265ms)
+✔ verify-plugin-boundaries passes on codebase (182.936709ms)
+✔ verify-plugin-inject-contract passes on codebase (116.326834ms)
+✔ verify-stage-contracts passes on all first-level Stage and StageStore files (977.208334ms)
+✔ verify-slot-contracts passes static scan on all plugin client files (179.853542ms)
+✔ slot-contracts unit tests pass (239.540167ms)
+✔ asar integrity engine and presets patcher unit tests pass (243.379375ms)
+✔ smoke probe utils and cold-start verifier unit tests pass (5137.802208ms)
+✔ verify-plugin-agent-tools passes 4-dimension audit on all 12 plugins (57.570125ms)
+✔ guard-worktree PreToolUse contract and unit tests pass (11536.862667ms)
+✔ simulate-multi-agent-lifecycle incident tests pass (803.714708ms)
+✔ agent presets splice and persona routing stay valid (271.710875ms)
+✔ git-wt finish never locally merges or force-pushes main (5528.81925ms)
+✖ verify-package-files passes on all plugins (35.646709ms)
+✖ verify-package-files unit tests pass (86.784084ms)
+✔ sync-to-app and sync-stable target selection matrix passes (83465.206875ms)
+✔ Alpha release materialization policy passes (89561.903083ms)
+ℹ tests 149
+ℹ suites 4
+ℹ pass 143
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 198986.355375
+
+✖ failing tests:
+
+test at scripts/sync-repeat-install.test.mjs:81:3
+✖ hoisted: sync restores staged entries on consecutive normal refreshes without changing lock or platform optionals (76.559875ms)
+  AssertionError [ERR_ASSERTION]: 
+  
+  Network access disabled by the environment; can't reach https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz
+  
+  
+  1 !== 0
+  
+      at run (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:60:12)
+      at createFixture (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:63:16)
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:82:21)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/sync-repeat-install.test.mjs:89:3
+✖ hoisted: non-optimistic frozen install restores missing entry without resolving or installing incompatible optionals (47.4275ms)
+  AssertionError [ERR_ASSERTION]: 
+  
+  Network access disabled by the environment; can't reach https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz
+  
+  
+  1 !== 0
+  
+      at run (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:60:12)
+      at createFixture (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:63:16)
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:90:21)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/sync-repeat-install.test.mjs:81:3
+✖ isolated: sync restores staged entries on consecutive normal refreshes without changing lock or platform optionals (49.103916ms)
+  AssertionError [ERR_ASSERTION]: 
+  
+  Network access disabled by the environment; can't reach https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz
+  
+  
+  1 !== 0
+  
+      at run (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:60:12)
+      at createFixture (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:63:16)
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:82:21)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/sync-repeat-install.test.mjs:89:3
+✖ isolated: non-optimistic frozen install restores missing entry without resolving or installing incompatible optionals (50.1535ms)
+  AssertionError [ERR_ASSERTION]: 
+  
+  Network access disabled by the environment; can't reach https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz
+  
+  
+  1 !== 0
+  
+      at run (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:60:12)
+      at createFixture (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:63:16)
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/sync-repeat-install.test.mjs:90:21)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/verify-ci-gates.test.mjs:158:1
+✖ verify-package-files passes on all plugins (35.646709ms)
+  AssertionError [ERR_ASSERTION]: package-files verification failed: 
+  ❌ 发现 2 项包打包清单违规：
+    - [omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-arm64" 在磁盘上不存在
+    - [omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-x64" 在磁盘上不存在
+  
+  请参照工程规范：凡使用 src 作为运行时的插件，必须在 package.json 的 files 中声明 "src"，以确保新增模块完整物化。
+  
+  == 正在执行插件打包清单 (package.json files) 完整性巡检... ==
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/verify-ci-gates.test.mjs:163:3)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/verify-ci-gates.test.mjs:166:1
+✖ verify-package-files unit tests pass (86.784084ms)
+  AssertionError [ERR_ASSERTION]: package-files unit tests failed: 
+  ▶ isPathCoveredByFiles
+    ✔ matches exact and ancestor directory patterns (0.684083ms)
+    ✔ rejects uncovered paths (0.063833ms)
+    ✔ treats empty files list as unrestricted (0.048458ms)
+  ✔ isPathCoveredByFiles (1.1935ms)
+  ▶ verifyPackageFiles
+    ✔ passes when src-based plugin declares "src" holistically (1.84125ms)
+    ✔ fails when src-based plugin fragments src subdirs without "src" (3.188667ms)
+    ✔ fails when files lists a missing non-build path (1.632667ms)
+    ✔ fails when main is not covered by files (1.7285ms)
+    ✖ passes on the live monorepo after omnimux files consolidation (2.113417ms)
+  ✖ verifyPackageFiles (10.736458ms)
+  ℹ tests 8
+  ℹ suites 2
+  ℹ pass 7
+  ℹ fail 1
+  ℹ cancelled 0
+  ℹ skipped 0
+  ℹ todo 0
+  ℹ duration_ms 54.571541
+  
+  ✖ failing tests:
+  
+  test at scripts/verify-package-files.test.mjs:100:3
+  ✖ passes on the live monorepo after omnimux files consolidation (2.113417ms)
+    AssertionError [ERR_ASSERTION]: live monorepo must be clean: [omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-arm64" 在磁盘上不存在; [omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-x64" 在磁盘上不存在
+    + actual - expected
+    
+    + [
+    +   '[omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-arm64" 在磁盘上不存在',
+    +   '[omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-x64" 在磁盘上不存在'
+    + ]
+    - []
+    
+        at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/verify-package-files.test.mjs:106:12)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1201:25)
+        at Suite.processPendingSubtests (node:internal/test_runner/test:831:18)
+        at Test.postRun (node:internal/test_runner/test:1330:19)
+        at Test.run (node:internal/test_runner/test:1258:12)
+        at async Suite.processPendingSubtests (node:internal/test_runner/test:831:7) {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: [ '[omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-arm64" 在磁盘上不存在', '[omnimux-assets] files 中声明的条目 "runtime/cpython-3.13.15+20260807-darwin-x64" 在磁盘上不存在' ],
+      expected: [],
+      operator: 'deepStrictEqual',
+      diff: 'simple'
+    }
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation/scripts/verify-ci-gates.test.mjs:172:3)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

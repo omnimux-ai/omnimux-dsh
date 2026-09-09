@@ -68,12 +68,13 @@ export async function runLiveQa(args, { root = process.cwd(), now = () => Date.n
     report.evidenceDir = evidenceDir
     mkdirSync(evidenceDir, { recursive: true })
     const registry = await captureStageContracts(root)
+    if (stages.includes('studio')) registry.push(...await captureStageContracts(root, ['studio']))
     report.targets = registry.filter(entry => stages.includes(entry.stage))
     assert.ok(report.targets.length, 'Zero stage targets')
     report.assertions.push({ name: 'actual-sidebar-contracts', pass: true, count: report.targets.length })
     const expiresAt = new Date(now() + 15 * 60_000).toISOString()
     const requestPath = join(evidenceDir, 'ego-browser-qa-request.json')
-    const request = { version: 1, root, runId: report.runId, commitSha: report.commitSha, target: report.target, profile: report.profile, url: report.url, allocation: report.allocation || null, runtime: report.runtime || null, stage: report.stage, targets: report.targets, sidebarSelectors: registry.map(entry => entry.selector), evidenceDir, reportPath, createdAt: new Date(now()).toISOString(), expiresAt, consumedAt: null }
+    const request = { version: 1, root, runId: report.runId, commitSha: report.commitSha, target: report.target, profile: report.profile, url: report.url, allocation: report.allocation || null, runtime: report.runtime || null, stage: report.stage, targets: report.targets, sidebarSelectors: registry.map(entry => entry.selector).filter(Boolean), evidenceDir, reportPath, createdAt: new Date(now()).toISOString(), expiresAt, consumedAt: null }
     writeFileSync(requestPath, `${JSON.stringify(request, null, 2)}\n`, { mode: 0o600, flag: 'wx' })
     report.requestPath = requestPath; report.expiresAt = expiresAt; report.status = 'pending'
     report.errors.push('Pending ego-browser execution: follow docs/contracts/plugin-qa.md, import scripts/ego-live-qa.mjs in an ego-browser nodejs heredoc, and call runPreparedQa(requestPath, { tab }); missing ego capabilities are BLOCKED, not PASS')
