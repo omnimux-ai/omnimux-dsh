@@ -15,7 +15,7 @@ import {
 } from './guard-worktree.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const fixture = mkdtempSync(join(here, '.guard-fixture-'))
+const fixture = mkdtempSync(join(tmpdir(), 'guard-fixture-'))
 after(() => rmSync(fixture, { recursive: true, force: true }))
 function gitCommand(cwd, ...args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' })

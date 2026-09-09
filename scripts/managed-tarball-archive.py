@@ -697,7 +697,7 @@ def read_at(parent: DirectoryAnchor, name: str, limit: int = 64 << 20) -> object
     return strict_json(raw)
 
 
-def allowed_moves(txn_id: str, name: str) -> list:
+def allowed_moves(txn_id: str, name: str, transition: bool = False) -> list:
     if not re.fullmatch(r'[0-9a-f-]{36}', txn_id) or not re.fullmatch(r'(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*', name):
         raise ValueError('journal identity invalid')
     prefix = f'.materialize-transactions/{txn_id}'
@@ -707,15 +707,32 @@ def allowed_moves(txn_id: str, name: str) -> list:
                       (f'{prefix}/candidate/{item}', item)])
     source = f'.materialize-snapshots/plugins/{name}'
     pairs.append((f'{prefix}/candidate/{source}', source))
+    if transition:
+        pairs.append((source, f'{prefix}/old-generation/{source}'))
     return pairs
 
 
 def validate_journal(value: object, profile: str, txn_id: str) -> list:
-    if not isinstance(value, dict) or value.get('schemaVersion') != 1 or value.get('id') != txn_id or value.get('profile') != profile:
+    if not isinstance(value, dict) or value.get('schemaVersion') not in (1, 2) or value.get('id') != txn_id or value.get('profile') != profile:
         raise ValueError('journal identity mismatch')
     if value.get('phase') not in ('PREPARING', 'PREPARED', 'COMMITTING', 'RECOVERING', 'COMMITTED', 'ROLLED_BACK', 'REJECTED'):
         raise ValueError('journal phase invalid')
-    pairs = allowed_moves(txn_id, value.get('name', ''))
+    transition = value.get('transition')
+    if value['schemaVersion'] == 2:
+        if not isinstance(transition, dict):
+            raise ValueError('transition journal missing identity')
+        for side in ('before', 'after'):
+            item = transition.get(side)
+            if not isinstance(item, dict) or not isinstance(item.get('version'), str):
+                raise ValueError('transition identity invalid')
+            for key in ('sha256', 'payloadDigest'):
+                if not re.fullmatch(r'[a-f0-9]{64}', item.get(key, '')):
+                    raise ValueError('transition digest invalid')
+            if item.get('sourceSpec') != f"file:.materialize-snapshots/plugins/{value.get('name')}":
+                raise ValueError('transition source invalid')
+    elif transition is not None:
+        raise ValueError('legacy journal cannot authorize transition')
+    pairs = allowed_moves(txn_id, value.get('name', ''), value['schemaVersion'] == 2)
     moves = value.get('moves', [])
     if not isinstance(moves, list) or any(not isinstance(m, dict) or (m.get('from'), m.get('to')) not in pairs for m in moves):
         raise ValueError('journal move outside exact write set')

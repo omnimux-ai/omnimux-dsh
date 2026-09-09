@@ -51,6 +51,89 @@ export async function fixture(label, { nodeLinker = 'hoisted', filtered = false 
   return { home, task, profile, tarball, request: { target: task, profile, tarball, name: '@fixture/viewer', version: '0.1.0', sha256: hash(fs.readFileSync(tarball)) } };
 }
 
+export async function transitionFixture(label = 'transition') {
+  const f = await fixture(label);
+  const adopted = await new ManagedSync(f.request, { error(error) { console.error(error.stack); } }).run();
+  assert.equal(adopted.code, 0, JSON.stringify(adopted));
+  const source = path.join(f.home, 'input');
+  const metadata = JSON.parse(fs.readFileSync(path.join(source, 'package.json')));
+  metadata.version = '0.1.1-omnimux.765.1';
+  metadata.peerDependencies.peer = '^1.0.0';
+  write(path.join(source, 'package.json'), JSON.stringify(metadata));
+  write(path.join(source, 'index.js'), 'module.exports = 839;\n');
+  const tarball = path.join(f.home, 'new-viewer.tgz');
+  const packed = spawnSync('python3', ['-c', 'import sys,tarfile\nwith tarfile.open(sys.argv[2],"w:gz") as t:t.add(sys.argv[1],arcname="package")', source, tarball], { encoding: 'utf8' });
+  assert.equal(packed.status, 0, packed.stderr);
+  const request = { ...f.request, tarball, version: metadata.version, sha256: hash(fs.readFileSync(tarball)),
+    transition: { before: { tarball: f.tarball, version: f.request.version, sha256: f.request.sha256, receiptId: adopted.transactionId },
+      after: { sourceRepo: 'https://github.com/Crosery/dsh-viewer.git', sourceCommit: 'ccfc0a7c6cfa692aa737f48d9e8c97c41db82950', qaReceiptDigest: 'a'.repeat(64) }, reverseReceiptId: null } };
+  request.transition.after.qaReceipt = path.join(f.home, 'release-qa.md');
+  write(request.transition.after.qaReceipt, `IS_PASS: YES; NoOne; ${request.version}; ${request.sha256}; ${request.transition.after.sourceCommit}`);
+  request.transition.after.qaReceiptDigest = hash(fs.readFileSync(request.transition.after.qaReceipt));
+  return { f, request, metadata, tarball };
+}
+
+test('receipt-bound transition exchanges managed source and preserves peers', async () => {
+  const { f, request, metadata, tarball } = await transitionFixture();
+  let competingWriterRejected = false;
+  const result = await new ManagedSync(request, { error(error) { console.error(error.stack); }, async checkpoint(phase, sync) {
+    if (phase === 'lock-generated') {
+      const competing = await new ManagedSync(structuredClone(request)).run();
+      assert.notEqual(competing.code, 0, 'concurrent transition must not publish');
+      competingWriterRejected = true;
+    }
+    if (phase === 'lock-generated' && process.env.MANAGED_TEST_EVIDENCE) {
+      write(path.join(process.env.MANAGED_TEST_EVIDENCE, 'transition-before.yaml'), fs.readFileSync(path.join(f.profile, 'pnpm-lock.yaml')));
+      write(path.join(process.env.MANAGED_TEST_EVIDENCE, 'transition-after.yaml'), fs.readFileSync(path.join(sync.candidate, 'pnpm-lock.yaml')));
+    }
+  } }).run();
+  assert.equal(result.code, 0, JSON.stringify(result));
+  assert.equal(result.status, 'committed');
+  assert.equal(competingWriterRejected, true);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.profile, '.materialize-snapshots/plugins/@fixture/viewer/package.json'))).version, metadata.version);
+  const unchanged = await new ManagedSync(structuredClone(request), { checkpoint() { assert.fail('unchanged transition must not run candidate'); }, error(error) { console.error(error.stack); } }).run();
+  assert.equal(unchanged.status, 'unchanged', JSON.stringify(unchanged));
+  const reverse = { ...f.request, transition: { before: { tarball, version: metadata.version, sha256: request.sha256, receiptId: result.transactionId },
+    after: { ...request.transition.after }, reverseReceiptId: result.transactionId } };
+  const restored = await new ManagedSync(reverse, { error(error) { console.error(error.stack); } }).run();
+  assert.equal(restored.status, 'committed', JSON.stringify(restored));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.profile, '.materialize-snapshots/plugins/@fixture/viewer/package.json'))).version, '0.1.0');
+});
+
+test('transition rejects identity tampering and non-target candidate mutation before publication', async () => {
+  const { f, request } = await transitionFixture('transition-rejections');
+  const before = payloadManifest(f.profile, { exclude: ['.materialize-transactions', '.materialize.lock'], links: true }).digest;
+  for (const mutate of [r => { r.transition.before.sha256 = '0'.repeat(64); },
+    r => { r.transition.before.version = '0.0.9'; }, r => { r.transition.before.receiptId = '0'.repeat(36); },
+    r => { r.transition.after.qaReceiptDigest = '0'.repeat(64); }, r => { r.transition.after.sourceCommit = '0'.repeat(40); },
+    r => { r.transition.reverseReceiptId = r.transition.before.receiptId; }, r => { r.sha256 = '0'.repeat(64); }]) {
+    const changed = structuredClone(request); mutate(changed);
+    const result = await new ManagedSync(changed).run();
+    assert.notEqual(result.code, 0, JSON.stringify(result));
+    assert.equal(payloadManifest(f.profile, { exclude: ['.materialize-transactions', '.materialize.lock'], links: true }).digest, before);
+  }
+  const result = await new ManagedSync(structuredClone(request), { checkpoint(phase, sync) {
+    if (phase === 'source-prepare') return;
+    if (phase === 'lock-generated') write(path.join(sync.candidate, '.materialize-snapshots/plugins/consumer/index.js'), 'unapproved');
+  } }).run();
+  assert.notEqual(result.code, 0, JSON.stringify(result));
+  assert.equal(payloadManifest(f.profile, { exclude: ['.materialize-transactions', '.materialize.lock'], links: true }).digest, before);
+});
+
+for (const phase of [...Array.from({ length: 8 }, (_, i) => [`before-rename-${i + 1}`, `after-rename-${i + 1}`]).flat(), 'live-verify']) {
+  test(`transition fault ${phase} restores source and complete old generation`, async () => {
+    const { f, request } = await transitionFixture(`transition-${phase}`);
+    const before = payloadManifest(f.profile, { exclude: ['.materialize-transactions', '.materialize.lock'], links: true });
+    let hit = false;
+    const result = await new ManagedSync(request, { checkpoint(point) {
+      if (point === phase) { hit = true; throw new Error('injected transition fault'); }
+    } }).run();
+    assert.equal(hit, true, JSON.stringify(result));
+    assert.equal(result.code, 6, JSON.stringify(result));
+    assert.equal(stable(payloadManifest(f.profile, { exclude: ['.materialize-transactions', '.materialize.lock'], links: true })), stable(before));
+  });
+}
+
 async function capture(f) {
   const result = await runPnpm(['list', '--json', '--depth', 'Infinity'], { cwd: f.profile, env: pnpmEnvironment(path.join(f.home, 'inspect-runtime')) });
   assert.equal(result.code, 0, JSON.stringify(result));
