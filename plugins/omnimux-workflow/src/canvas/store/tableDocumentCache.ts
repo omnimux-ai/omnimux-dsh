@@ -361,4 +361,7 @@ class TableDocumentCache {
   }
 }
 
+import { registerTableDocumentResolver } from '../../shared/graph/tableTextSerializer.ts';
+
 export const tableDocumentCache = new TableDocumentCache();
+registerTableDocumentResolver((tableId) => tableDocumentCache.getSession(tableId)?.document);

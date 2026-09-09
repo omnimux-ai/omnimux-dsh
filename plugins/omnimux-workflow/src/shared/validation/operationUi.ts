@@ -191,7 +191,12 @@ export function buildUiUpstreamFingerprint(input: {
 }): UpstreamFingerprint {
   const assets = (input.upstreams ?? []).map(assetFromUpstreamSnapshot);
   return buildUpstreamFingerprint({
-    prompt: resolveGenerationPrompt(input, (input.upstreams ?? []).filter((item) => item.materialType === 'text').map((item) => item.textContent)),
+    prompt: resolveGenerationPrompt(
+      input,
+      (input.upstreams ?? [])
+        .filter((item) => item.materialType === 'text' || item.materialType === 'table' || (Boolean(item.textContent) && !item.url))
+        .map((item) => item.textContent),
+    ),
     nodeFields: input.nodeFields,
     localText: resolveGenerationPrompt(input),
     assets,

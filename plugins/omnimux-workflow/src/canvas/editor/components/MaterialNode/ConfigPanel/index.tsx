@@ -620,7 +620,11 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     if (isAsrTool) return t('panel.promptPlaceholder');
     if (materialType === 'image') return t('panel.imagePromptPlaceholder');
     if (materialType === 'video') return t('panel.videoPromptPlaceholder');
-    if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
+    if (
+      materialType !== 'audio' &&
+      upstreams.some((item) => (item.materialType === 'text' || item.materialType === 'table') && item.hasMedia)
+    )
+      return t('panel.supplementOptional');
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');

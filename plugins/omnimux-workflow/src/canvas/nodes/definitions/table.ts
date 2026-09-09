@@ -11,6 +11,7 @@ export const tableNodeDefinition: NodeDefinition = {
   defaultData: () => ({
     label: '表格',
     title: '表格',
+    materialType: 'table',
     tableId: '',
     tablePath: '',
     columnCount: 1,

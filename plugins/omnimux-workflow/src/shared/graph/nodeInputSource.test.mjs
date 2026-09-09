@@ -43,3 +43,53 @@ test('displayed current media wins over stale aliases and only that result is re
   assert.equal(result.output.mediaAssets.length, 1);
   assert.equal(result.output.text, undefined);
 });
+
+test('table node with document or previewRows projects ready Markdown text to downstream', () => {
+  // 1. 空表等待添加记录
+  const emptyTable = readNodeInputSource({ id: 'tbl-1', type: 'table', data: { title: '空分镜表' } });
+  assert.equal(emptyTable.availability, 'waiting');
+  assert.equal(emptyTable.message, '等待“空分镜表”的表格记录');
+  assert.equal(emptyTable.output.text, undefined);
+
+  // 2. 带有完整 document 的表节点投射标准 Markdown 表格
+  const populatedTable = readNodeInputSource({
+    id: 'tbl-2',
+    type: 'table',
+    data: {
+      title: 'TikTok 分镜脚本表',
+      document: {
+        title: 'TikTok 分镜脚本表',
+        columns: [
+          { id: 'c1', title: '镜号', type: 'text', visible: true },
+          { id: 'c2', title: '画面动作设计', type: 'text', visible: true },
+        ],
+        rows: [
+          { id: 'r1', cells: { c1: '第 01 镜', c2: '客厅法兰绒毛毯被快速掀开' } },
+          { id: 'r2', cells: { c1: '第 02 镜', c2: '阳光草坪上1.5岁宝宝狂奔' } },
+        ],
+      },
+    },
+  });
+  assert.equal(populatedTable.availability, 'ready');
+  assert.match(populatedTable.output.text, /### 表格：TikTok 分镜脚本表/);
+  assert.match(populatedTable.output.text, /\| 镜号 \| 画面动作设计 \|/);
+  assert.match(populatedTable.output.text, /\| 第 01 镜 \| 客厅法兰绒毛毯被快速掀开 \|/);
+  assert.match(populatedTable.output.text, /\| 第 02 镜 \| 阳光草坪上1\.5岁宝宝狂奔 \|/);
+  assert.equal(populatedTable.outputId, 'tbl-2:table');
+
+  // 3. 带有 previewRows 的降级轻量表节点亦能提供可用清单
+  const previewTable = readNodeInputSource({
+    id: 'tbl-3',
+    type: 'table',
+    data: {
+      title: '轻量预览表',
+      previewRows: [
+        '第 01 镜: 开箱展示',
+        '第 02 镜: 细节特写',
+      ],
+    },
+  });
+  assert.equal(previewTable.availability, 'ready');
+  assert.match(previewTable.output.text, /### 表格：轻量预览表/);
+  assert.match(previewTable.output.text, /- 第 01 镜: 开箱展示/);
+});
