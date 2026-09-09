@@ -26,6 +26,13 @@ test('rendered scene chips filter real cards and image examples assemble without
   try {
     await React.act(async () => root.render(React.createElement(module.exports.StudioStage, { registry, scope, visible: true })))
     assert.equal(document.querySelectorAll('.studio-example').length, 8)
+    const retainedRoot = document.querySelector('[data-omnimux-studio]')
+    await React.act(async () => root.render(React.createElement(module.exports.StudioStage, { registry, scope, visible: false })))
+    assert.equal(document.querySelector('[data-omnimux-studio]'), retainedRoot)
+    assert.equal(retainedRoot.hidden, true)
+    await React.act(async () => root.render(React.createElement(module.exports.StudioStage, { registry, scope, visible: true })))
+    assert.equal(document.querySelector('[data-omnimux-studio]'), retainedRoot)
+    assert.equal(retainedRoot.hidden, false)
     await click('模特试穿')
     assert.equal(document.querySelectorAll('.studio-example').length, 1)
     assert.match(document.querySelector('.studio-example').textContent, /欧美职业女性/)

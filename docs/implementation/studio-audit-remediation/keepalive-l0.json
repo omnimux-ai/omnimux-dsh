@@ -1,0 +1,156 @@
+{
+  "timestamp": "2026-09-09T07:12:11.870Z",
+  "targetDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/studio-audit-remediation",
+  "pluginName": "",
+  "diffMode": true,
+  "base": "origin/main",
+  "changedFiles": [
+    "docs/implementation/studio-audit-remediation/DELIVERY.md",
+    "docs/implementation/studio-audit-remediation/ISSUE.md",
+    "docs/implementation/studio-audit-remediation/L2-PREPARATION.md",
+    "docs/implementation/studio-audit-remediation/P2-ENGINEERING-REPAIR.md",
+    "docs/implementation/studio-audit-remediation/QA-REPORT-ROUND2.md",
+    "docs/implementation/studio-audit-remediation/QA-REPORT.md",
+    "docs/implementation/studio-audit-remediation/QA-round1.log",
+    "docs/implementation/studio-audit-remediation/QA-round2.log",
+    "docs/implementation/studio-audit-remediation/QA-round3.log",
+    "docs/implementation/studio-audit-remediation/REPAIR-REPORT.md",
+    "docs/implementation/studio-audit-remediation/REPORT.md",
+    "docs/implementation/studio-audit-remediation/gates-round2.log",
+    "docs/implementation/studio-audit-remediation/gates-round3.log",
+    "docs/implementation/studio-audit-remediation/input-hashes.json",
+    "docs/implementation/studio-audit-remediation/integration-probe.log",
+    "docs/implementation/studio-audit-remediation/integration-studio.log",
+    "docs/implementation/studio-audit-remediation/probe-round2.log",
+    "docs/implementation/studio-audit-remediation/probe-round3.log",
+    "docs/implementation/studio-audit-remediation/spec/PRD.md",
+    "docs/implementation/studio-audit-remediation/spec/class-diagram.mermaid",
+    "docs/implementation/studio-audit-remediation/spec/sequence-diagram.mermaid",
+    "docs/implementation/studio-audit-remediation/spec/system_design.md",
+    "docs/implementation/studio-audit-remediation/static-round2.log",
+    "plugins/omnimux-studio/README.md",
+    "plugins/omnimux-studio/cordis.patch.yml",
+    "plugins/omnimux-studio/dsh-ui-kit-0.1.0.tgz",
+    "plugins/omnimux-studio/package.json",
+    "plugins/omnimux-studio/pnpm-lock.yaml",
+    "plugins/omnimux-studio/pnpm-workspace.yaml",
+    "plugins/omnimux-studio/scripts/build-client.mjs",
+    "plugins/omnimux-studio/src/client/StudioStage.jsx",
+    "plugins/omnimux-studio/src/client/components/AgentWorkspace.jsx",
+    "plugins/omnimux-studio/src/client/components/Button.jsx",
+    "plugins/omnimux-studio/src/client/components/DraftWorkspace.jsx",
+    "plugins/omnimux-studio/src/client/components/GenerationStatusCard.jsx",
+    "plugins/omnimux-studio/src/client/components/ModelSelectPopover.jsx",
+    "plugins/omnimux-studio/src/client/components/OrderedEditor.jsx",
+    "plugins/omnimux-studio/src/client/editor-document.js",
+    "plugins/omnimux-studio/src/client/fixtures.js",
+    "plugins/omnimux-studio/src/client/index.js",
+    "plugins/omnimux-studio/src/client/locales.js",
+    "plugins/omnimux-studio/src/client/mock-adapter.js",
+    "plugins/omnimux-studio/src/client/mock-data.js",
+    "plugins/omnimux-studio/src/client/scope-registry.js",
+    "plugins/omnimux-studio/src/client/studio-store.js",
+    "plugins/omnimux-studio/src/client/studio.css",
+    "plugins/omnimux-studio/src/client/styles.js",
+    "plugins/omnimux-studio/src/client/types.d.ts",
+    "plugins/omnimux-studio/src/client/use-studio-store.js",
+    "plugins/omnimux-studio/src/index.js",
+    "plugins/omnimux-studio/tests/close-scope.test.mjs",
+    "plugins/omnimux-studio/tests/document-boundaries.test.mjs",
+    "plugins/omnimux-studio/tests/editor.test.mjs",
+    "plugins/omnimux-studio/tests/fixtures.test.mjs",
+    "plugins/omnimux-studio/tests/independent-qa-round2.test.mjs",
+    "plugins/omnimux-studio/tests/independent-qa.test.mjs",
+    "plugins/omnimux-studio/tests/lifecycle.test.mjs",
+    "plugins/omnimux-studio/tests/remediation.test.mjs",
+    "plugins/omnimux-studio/tests/scene-ui.test.mjs",
+    "plugins/omnimux-studio/tests/store.test.mjs",
+    "plugins/omnimux-studio/tests/ui-contract.test.mjs",
+    "scripts/live-qa.mjs",
+    "scripts/live-stage-contracts.mjs",
+    "scripts/live-stage-probe.mjs",
+    "scripts/studio-live-qa.test.mjs"
+  ],
+  "scannedFiles": [
+    "plugins/omnimux-studio/scripts/build-client.mjs",
+    "plugins/omnimux-studio/src/client/StudioStage.jsx",
+    "plugins/omnimux-studio/src/client/components/AgentWorkspace.jsx",
+    "plugins/omnimux-studio/src/client/components/Button.jsx",
+    "plugins/omnimux-studio/src/client/components/DraftWorkspace.jsx",
+    "plugins/omnimux-studio/src/client/components/GenerationStatusCard.jsx",
+    "plugins/omnimux-studio/src/client/components/ModelSelectPopover.jsx",
+    "plugins/omnimux-studio/src/client/components/OrderedEditor.jsx",
+    "plugins/omnimux-studio/src/client/editor-document.js",
+    "plugins/omnimux-studio/src/client/fixtures.js",
+    "plugins/omnimux-studio/src/client/index.js",
+    "plugins/omnimux-studio/src/client/locales.js",
+    "plugins/omnimux-studio/src/client/mock-adapter.js",
+    "plugins/omnimux-studio/src/client/mock-data.js",
+    "plugins/omnimux-studio/src/client/scope-registry.js",
+    "plugins/omnimux-studio/src/client/studio-store.js",
+    "plugins/omnimux-studio/src/client/styles.js",
+    "plugins/omnimux-studio/src/client/types.d.ts",
+    "plugins/omnimux-studio/src/client/use-studio-store.js",
+    "plugins/omnimux-studio/src/index.js",
+    "plugins/omnimux-studio/tests/close-scope.test.mjs",
+    "plugins/omnimux-studio/tests/document-boundaries.test.mjs",
+    "plugins/omnimux-studio/tests/editor.test.mjs",
+    "plugins/omnimux-studio/tests/fixtures.test.mjs",
+    "plugins/omnimux-studio/tests/independent-qa-round2.test.mjs",
+    "plugins/omnimux-studio/tests/independent-qa.test.mjs",
+    "plugins/omnimux-studio/tests/lifecycle.test.mjs",
+    "plugins/omnimux-studio/tests/remediation.test.mjs",
+    "plugins/omnimux-studio/tests/scene-ui.test.mjs",
+    "plugins/omnimux-studio/tests/store.test.mjs",
+    "plugins/omnimux-studio/tests/ui-contract.test.mjs",
+    "scripts/live-qa.mjs",
+    "scripts/live-stage-contracts.mjs",
+    "scripts/live-stage-probe.mjs",
+    "scripts/studio-live-qa.test.mjs"
+  ],
+  "pass": true,
+  "dimensions": {
+    "syntax": {
+      "pass": true,
+      "checks": [
+        "已检查 35 个变更源码文件的 JavaScript 语法与动态插件语法"
+      ],
+      "errors": []
+    },
+    "lifecycle": {
+      "pass": true,
+      "checks": [
+        "已检查定时器、全局事件与 disposer 线索"
+      ],
+      "errors": []
+    },
+    "security": {
+      "pass": true,
+      "checks": [
+        "已检查凭据、live data 序列化与跨界写入"
+      ],
+      "errors": []
+    },
+    "tokens": {
+      "pass": true,
+      "checks": [
+        "已检查 UI 裸颜色与废弃 token（无 UI 变更时为空检查）"
+      ],
+      "errors": []
+    },
+    "guards": {
+      "pass": true,
+      "checks": [
+        "已检查 Stage 保活线索（无 Stage 变更时为空检查）"
+      ],
+      "errors": []
+    }
+  },
+  "browser": {
+    "required": false,
+    "pass": true,
+    "evidenceDir": null,
+    "errors": []
+  },
+  "summary": "PASS: L0 diff-aware 静态门禁通过（扫描 35 个文件）"
+}

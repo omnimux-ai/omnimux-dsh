@@ -39,12 +39,17 @@ function LocalDialog({ value, close, root }) {
     </div>
   </div>
 }
-function StudioContent() {
+function StudioContent({ visible }) {
   const store = useStudioApi()
   const state = useStudioStore()
   const root = useRef(null)
   const [dialog, setDialog] = useState(null)
   const close = React.useCallback(() => setDialog(null), [])
+  useEffect(() => {
+    if (visible) return
+    setDialog(null)
+    root.current?.querySelectorAll('video,audio').forEach(media => media.pause())
+  }, [visible])
   const preview = result => setDialog({ result })
   const confirm = (message, action) => setDialog({ message, action })
   const applyExample = (item, targetMode) => confirm('用此样例正文覆盖当前草稿？不会提交或扣点。', () => {
@@ -58,7 +63,7 @@ function StudioContent() {
   const filteredTasks = mode === 'image' ? filterItems(tasks.map(task => ({ ...task, modelId: task.request.draft.modelId, ...task.request.draft.spec })), state.filters) : tasks
   const examples = filterItems(IMAGE_EXAMPLES, state.filters)
   const dashboardExamples = DASHBOARD_ASSETS.filter(item => state.sceneFilter === null || item.type === state.sceneFilter)
-  return <div ref={root} data-omnimux-studio tabIndex={-1} className="studio-root">
+  return <div ref={root} data-omnimux-studio hidden={!visible} tabIndex={-1} className="studio-root">
     <div className="studio-scroll">
       <p className="studio-notice">前端演示 · 不调用模型 · 不扣真实点数 · 演示余额 {state.mockCredits}</p>
       <p>本页内存草稿，刷新或关闭工作台后清空</p>
@@ -90,12 +95,14 @@ function StudioContent() {
 }
 export function StudioStage({ scope, visible, registry }) {
   const key = scopeKey(scope)
+  const [everOpened, setEverOpened] = useState(Boolean(visible))
+  useEffect(() => { if (visible) setEverOpened(true) }, [visible])
   const store = React.useMemo(() => registry.getOrCreate(scope), [registry, key])
   useEffect(() => {
     store?.setVisible(Boolean(visible))
     return () => { if (store) registry.releaseView(store.scopeKey) }
   }, [store, visible, registry])
   if (!store) return <div data-omnimux-studio>等待工作区 · 暂不可提交</div>
-  if (!visible) return null
-  return <StudioContext.Provider value={store}><StudioContent key={key} /></StudioContext.Provider>
+  if (!everOpened && !visible) return null
+  return <StudioContext.Provider value={store}><StudioContent key={key} visible={visible} /></StudioContext.Provider>
 }
