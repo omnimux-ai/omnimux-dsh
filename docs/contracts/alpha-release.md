@@ -12,7 +12,7 @@ subsystem: "global"
 
 开发优先完善非 Alpha 功能。Alpha 表示功能处于内测，不代表禁用，也不改变既有 MVP 范围和授权边界。
 
-插件阶段及工具归属唯一名单为 [plugin-lifecycle.json](../../plugins/omnimux/src/plugin-lifecycle.json)。Alpha 包括账号、发布、数据分析；项目（工作流／画布）不属于 Alpha，开发版和正式版均保留；未列为 Alpha 的插件不显示此标记。中枢侧栏消费同一名单，在已有入口旁显示 Alpha，说明内测状态、开发优先级及正式版不包含该功能。原有点击、登录、选中和关闭行为保持不变。
+插件阶段及工具归属唯一名单为 [plugin-lifecycle.json](../../plugins/omnimux/src/plugin-lifecycle.json)。Alpha 包括账号、发布、数据分析、任务表单；项目（工作流／画布）不属于 Alpha，开发版和正式版均保留；未列为 Alpha 的插件不显示此标记。中枢侧栏消费同一名单，在已有入口旁显示 Alpha，说明内测状态、开发优先级及正式版不包含该功能。原有点击、登录、选中和关闭行为保持不变。
 
 开发源码与 Dev 保留 Alpha 插件和已有能力，不能因标记而隐藏或停用。正式发布排除 Alpha 插件的加载名单、依赖及随包产物，并关闭中枢暴露的对应工具；不能仅隐藏 UI。正式渠道由发布入口确定，不能通过单项工具开关重新启用 Alpha。正式策略的自动化验证使用合成文件系统 fixture，不部署独立运行环境、不写实际生产 profile。
 
