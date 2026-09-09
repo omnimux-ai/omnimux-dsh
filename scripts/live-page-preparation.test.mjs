@@ -32,6 +32,25 @@ test('ready and loading pages stop on expired authentication without navigation'
   }
 })
 
+test('concurrent synthetic L2 fixtures bind distinct ports without lsof', async () => {
+  const items = await Promise.all([request(), request(), request()])
+  const originalPath = process.env.PATH
+  let runtimes
+  try {
+    process.env.PATH = '/nonexistent-fixture-tools'
+    const pending = items.map(item => l2Runtime(item.root))
+    process.env.PATH = originalPath
+    runtimes = await Promise.all(pending)
+  } finally {
+    process.env.PATH = originalPath
+  }
+  assert.equal(new Set(runtimes.map(runtime => runtime.url)).size, items.length)
+  for (const runtime of runtimes) {
+    const response = await fetch(runtime.url)
+    assert.equal(await response.text(), 'ok')
+  }
+})
+
 test('official L2 entry uses only the current login line once and returns no token', async () => {
   const item = await request(); const l2 = await l2Runtime(item.root)
   const tab = fakeTab([{ ...ready, origin: new URL(l2.url).origin }], { url: 'about:blank', goto: async value => {

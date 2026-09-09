@@ -867,6 +867,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                   slot: requestOrMode.targetSlot,
                   acceptedTypes: requestOrMode.acceptedTypes,
                   max: requestOrMode.max,
+                  replaceEdgeId: requestOrMode.replaceEdgeId,
                 });
                 return;
               }

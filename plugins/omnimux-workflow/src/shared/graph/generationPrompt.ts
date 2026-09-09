@@ -4,7 +4,10 @@ export function resolveGenerationPrompt(
   upstreamTexts: unknown[] = [],
 ): string {
   const local = [data.prompt, data.content].find((value) => typeof value === 'string' && value.trim());
-  const instruction = typeof local === 'string' ? local.trim() : '';
+  // Text references annotate connected content; they are not additional instructions.
+  const instruction = typeof local === 'string'
+    ? local.replace(/@ref\[([^:]+):-1:([^\]]+)\]/g, '').trim()
+    : '';
   const texts = upstreamTexts.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
     .map((value) => value.trim());
   if (texts.length === 0) return instruction;

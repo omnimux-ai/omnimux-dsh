@@ -244,6 +244,26 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
       [handleTokenDelete, slotState, currentReferences, canvasReferences],
     );
 
+    // Refresh only atomic token media; retain text nodes, selection and delete listeners.
+    const syncTokenMedia = useCallback(() => {
+      if (!editorRef.current || composingRef.current) return;
+      for (const span of editorRef.current.querySelectorAll<HTMLElement>('.wf-prompt-token')) {
+        const raw = span.getAttribute('data-raw') ?? '';
+        const segment = parseMarkdownToTokenSegments(raw, slotState, [...currentReferences, ...canvasReferences])[0];
+        if (segment?.type !== 'token') continue;
+        const media = span.querySelector('.wf-prompt-token__thumb, .wf-prompt-token__icon');
+        const token = segment.token;
+        if (media?.tagName === 'IMG' && token.materialType === 'image' && token.mediaUrl) {
+          if (media.getAttribute('src') !== token.mediaUrl) media.setAttribute('src', token.mediaUrl);
+        } else {
+          const replacement = createTokenSpan(token, raw, handleTokenDelete).firstChild;
+          if (media && replacement) media.replaceWith(replacement);
+        }
+      }
+    }, [slotState, currentReferences, canvasReferences, handleTokenDelete]);
+
+    useEffect(syncTokenMedia, [syncTokenMedia]);
+
     // 监听外部 value 属性变化（如外部重置或初始加载）
     useEffect(() => {
       if (typeof window === 'undefined') return;
@@ -407,7 +427,7 @@ export const PromptTokenEditor = forwardRef<PromptTokenEditorRef, PromptTokenEdi
           data-placeholder={placeholder}
           onInput={handleInput}
           onCompositionStart={() => { composingRef.current = true; setMentionOpen(false); }}
-          onCompositionEnd={() => { composingRef.current = false; handleInput(); }}
+          onCompositionEnd={() => { composingRef.current = false; handleInput(); syncTokenMedia(); }}
           onBlur={() => {
             const selection = window.getSelection();
             if (selection?.rangeCount && editorRef.current?.contains(selection.anchorNode)) caretRangeRef.current = selection.getRangeAt(0).cloneRange();

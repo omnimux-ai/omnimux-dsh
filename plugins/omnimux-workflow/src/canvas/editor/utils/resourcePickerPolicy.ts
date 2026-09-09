@@ -27,6 +27,7 @@ import type {
   OverflowAssetItem,
 } from '../../../shared/graph/slotContractTypes.ts';
 import { promoteOverflowAsset } from '../../../shared/graph/slotEngine.ts';
+import { normalizeCanvasEdge } from '../../../shared/graph/canvasConnectionUtils.ts';
 
 export type ResourceTypeFilter = 'all' | 'image' | 'video' | 'audio';
 export type ResourcePickerTab = 'canvas' | 'local';
@@ -79,6 +80,8 @@ export interface ResourcePickerCommitInput {
   localFiles: LocalFileDraft[];
   /** T03：装填目标 slot；选中后 pinned 进该槽位而非仅连线。 */
   targetSlot?: string;
+  /** Replace this occupant in the current named slot, never an index from a stale view. */
+  replaceEdgeId?: string;
   /** 目标 slot 接受的素材类型；不匹配的选中项按 unsupported 预筛。 */
   acceptedTypes?: readonly string[];
   /** 目标 slot 上限（max 1 → 替换；null → 官方未公布上限，追加）。 */
@@ -565,6 +568,7 @@ export function planResourcePickerReplaceCommit(
  * 不把任何文件写入当前节点卡片（避免把所选素材 patch 进当前节点替换素材）。
  */
 export function planResourcePickerCommit(input: ResourcePickerCommitInput): ResourcePickerCommitPlan {
+  if (input.replaceEdgeId) return planNamedOccupantReplacement(input);
   // 如果是替换模式且提供了 targetSlotIndex，派发至置换 Mutation 计划生成器
   if (input.mode === 'replace' && typeof input.targetSlotIndex === 'number') {
     return planResourcePickerReplaceCommit({
@@ -673,6 +677,47 @@ export function planResourcePickerCommit(input: ResourcePickerCommitInput): Reso
     addNodes: addNodes.length > 0 ? addNodes : undefined,
     addEdges: addEdges.length > 0 ? addEdges : undefined,
   };
+}
+
+/** Replace one current occupant atomically while retaining every supply edge. */
+function planNamedOccupantReplacement(input: ResourcePickerCommitInput): ResourcePickerCommitPlan {
+  const target = input.nodes.find((node) => node.id === input.targetNodeId);
+  const slot = input.targetSlot;
+  const bindings = target ? nodeData(target).slotBindings as SlotBindings | undefined : undefined;
+  const occupants = slot ? bindings?.[slot] : undefined;
+  const index = occupants?.findIndex((item) => item.edgeId === input.replaceEdgeId) ?? -1;
+  if (!target || !slot || !occupants || index < 0) {
+    return { hasWork: false, rejected: [{ id: input.replaceEdgeId!, reason: 'missing' }] };
+  }
+  if (input.selectedCanvasNodeIds.length + input.localFiles.length !== 1) {
+    return { hasWork: false, rejected: [{ id: target.id, reason: 'unsupported' }] };
+  }
+  const selectedId = input.selectedCanvasNodeIds[0];
+  if (selectedId && occupants.some((item) => item.sourceNodeId === selectedId)) {
+    return { hasWork: false, rejected: [{ id: selectedId, reason: 'already_connected' }] };
+  }
+  // Reuse source/file validation, but omit slot hints: the explicit patch owns placement.
+  const plan = planResourcePickerCommit({ ...input, replaceEdgeId: undefined,
+    targetSlot: undefined, targetSlotIndex: undefined, mode: 'add' });
+  const existingEdge = selectedId ? input.edges.find((edge) => edge.target === target.id && edge.source === selectedId) : undefined;
+  const source = selectedId ? input.nodes.find((node) => node.id === selectedId) : plan.addNodes?.[0];
+  if (!source || (input.acceptedTypes?.length && !input.acceptedTypes.includes(String(nodeData(source).materialType)))) {
+    return { hasWork: false, rejected: [{ id: selectedId ?? target.id, reason: 'unsupported' }] };
+  }
+  if (!existingEdge && (!plan.hasWork || plan.rejected.length)) return plan;
+  const newEdges = plan.addEdges?.map(normalizeCanvasEdge);
+  const edge = existingEdge ?? newEdges?.[0];
+  if (!edge) return { hasWork: false, rejected: [{ id: source.id, reason: 'missing' }] };
+  const next = occupants.map((item, position) => position === index
+    ? { sourceNodeId: source.id, edgeId: edge.id, pinned: true }
+    : { ...item, pinned: true });
+  return { hasWork: true, rejected: [], addNodes: plan.addNodes, addEdges: newEdges,
+    nodePatches: [{ nodeId: target.id, data: { slotBindings: { ...bindings, [slot]: next },
+      slotStandbyEdgeIds: [...new Set([
+        ...(Array.isArray(target.data.slotStandbyEdgeIds) ? target.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : []),
+        input.replaceEdgeId!,
+      ])].filter((id) => id !== edge.id),
+    } }] };
 }
 
 function usableMediaFiles(

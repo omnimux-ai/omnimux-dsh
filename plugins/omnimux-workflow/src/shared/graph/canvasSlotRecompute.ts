@@ -50,7 +50,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
       explicit[hint] = slot?.max === 1 ? [occupant] : [...(explicit[hint] ?? []), occupant];
     }
   }
-  const fill = explicit ? autoFillSlots(feed, layout, explicit) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
+  const fill = explicit ? autoFillSlots(feed, layout, explicit, Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : []) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
   const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
   const reasonCodes = !view.available ? ['catalog_unavailable'] : !permitted ? ['not_listed'] : !model ? ['unknown_model']

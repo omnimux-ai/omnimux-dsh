@@ -81,16 +81,45 @@ export async function request(overrides = {}) {
 
 export async function l2Runtime(root, { loginLine = null, logLines } = {}) {
   let port
-  for (let candidate = 44299; candidate >= 44201; candidate--) {
-    try { execFileSync('lsof', ['-nP', `-iTCP:${candidate}`, '-sTCP:LISTEN'], { stdio: 'ignore' }) } catch { port = candidate; break }
-  }
-  if (!port) throw new Error('no free L2 port available for test')
   const profile = 'omnimux-dev-qa'; const profileDir = join(root, profile); const plugins = join(root, 'plugins'); const plugin = join(plugins, 'omnimux')
   mkdirSync(plugin, { recursive: true }); mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
-  symlinkSync(plugin, join(profileDir, 'node_modules', 'omnimux')); writeFileSync(join(profileDir, 'port.txt'), `${port}\n`)
-  const server = spawn(process.execPath, ['-e', "process.title = process.env.QA_L2_PROFILE; require('node:http').createServer((_, response) => response.end('ok')).listen(process.env.QA_L2_PORT, '127.0.0.1', () => process.stdout.write('ready\\n'))"], { env: { ...process.env, QA_L2_PORT: String(port), QA_L2_PROFILE: profile }, stdio: ['ignore', 'pipe', 'pipe'] })
+  symlinkSync(plugin, join(profileDir, 'node_modules', 'omnimux'))
+  // Bind in the owning process: checking a port before spawning races other fixtures.
+  const server = spawn(process.execPath, ['-e', `
+    process.title = process.env.QA_L2_PROFILE;
+    const server = require('node:http').createServer((_, response) => response.end('ok'));
+    let candidate = 44299;
+    server.on('error', error => {
+      if (error.code === 'EADDRINUSE' && candidate > 44201) {
+        candidate -= 1;
+        server.listen(candidate, '127.0.0.1');
+      } else {
+        process.stderr.write(String(error.code || error.message));
+        process.exit(1);
+      }
+    });
+    server.on('listening', () => process.stdout.write(String(server.address().port) + '\\n'));
+    server.listen(candidate, '127.0.0.1');
+  `], { env: { ...process.env, QA_L2_PROFILE: profile }, stdio: ['ignore', 'pipe', 'pipe'] })
   children.push(server)
-  await new Promise((done, reject) => { server.once('error', reject); server.stdout.once('data', done); server.once('exit', code => reject(new Error(`test L2 Host exited (${code})`))) })
+  port = await new Promise((done, reject) => {
+    let output = ''; let diagnostic = ''
+    const timer = setTimeout(() => { server.kill(); reject(new Error('test L2 Host startup timed out')) }, 5000)
+    const fail = error => { clearTimeout(timer); reject(error) }
+    server.once('error', fail)
+    server.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-1000) })
+    server.once('exit', code => fail(new Error(`test L2 Host exited (${code}): ${diagnostic}`)))
+    server.stdout.on('data', data => {
+      output += data
+      if (!output.includes('\n')) return
+      const selected = Number(output.trim())
+      clearTimeout(timer)
+      if (!Number.isInteger(selected) || selected < 44201 || selected > 44299) {
+        server.kill(); reject(new Error('test L2 Host returned an invalid port'))
+      } else done(selected)
+    })
+  })
+  writeFileSync(join(profileDir, 'port.txt'), `${port}\n`)
   writeFileSync(join(profileDir, 'host.pid'), `${server.pid}\n`)
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
   writeFileSync(join(root, '.l2-dev.env'), [`URL=http://127.0.0.1:${port}/`, `PORT=${port}`, `SOURCE=${plugins}`, 'TOPIC=qa', `COMMIT=${sha}`, `PROFILE_DIR=${profileDir}`, 'PLUGIN=omnimux'].join('\n'))

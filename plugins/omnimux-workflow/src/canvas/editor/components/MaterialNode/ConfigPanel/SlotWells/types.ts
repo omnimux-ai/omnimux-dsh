@@ -23,6 +23,8 @@ export interface SlotPickRequest {
   acceptedTypes: string[];
   /** 槽位上限；null 表示官方未公布上限。 */
   max: number | null;
+  /** Stable occupant identity for replacement; absent for an empty well. */
+  replaceEdgeId?: string;
 }
 
 export interface SlotWellsProps {

@@ -46,7 +46,9 @@ export function validateDynamicModelCapacity(
   const model = resolveModelView(buildContractView(catalog), params.model as string | undefined);
   const op = resolveSlotOperation(catalog, model?.id, params.operation, target.data.materialType as string | undefined, fingerprint);
   const layout = deriveSlotLayout(catalog, model?.id, op);
-  const fill = autoFillSlots(feedFromFingerprint(fingerprint), layout, (target.data.slotBindings ?? {}) as SlotBindings);
+  const standby = Array.isArray(target.data.slotStandbyEdgeIds)
+    ? target.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : [];
+  const fill = autoFillSlots(feedFromFingerprint(fingerprint), layout, (target.data.slotBindings ?? {}) as SlotBindings, standby);
   return { valid: true, advisory: {
     ...(!catalog ? { reasonCode: 'catalog_unavailable' as const }
       : !model ? { reasonCode: 'unknown_model' as const }

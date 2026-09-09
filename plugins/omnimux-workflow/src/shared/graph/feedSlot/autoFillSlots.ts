@@ -6,13 +6,14 @@ export function acceptsFeedAsset(slot: SlotSpec, asset: FeedAsset): boolean {
 }
 
 /** Preserve explicit choices first; automatically use each supply edge at most once. */
-export function autoFillSlots(feedAssets: FeedAsset[], layout: SlotLayout, explicit: SlotBindings = {}): FillResult {
+export function autoFillSlots(feedAssets: FeedAsset[], layout: SlotLayout, explicit: SlotBindings = {}, standbyEdgeIds: readonly string[] = []): FillResult {
   const feed = [...feedAssets].sort((a, b) => a.ordinal - b.ordinal);
   const byEdge = new Map(feed.map((asset) => [asset.edgeId, asset]));
   const slots = layout.preset === 'none' ? [] : layout.slots;
   const bindings: SlotBindings = Object.fromEntries(slots.map((slot) => [slot.slot, []]));
   const conflicts: FillResult['conflicts'] = [];
-  const reserved = new Set<string>();
+  // Explicit bindings can reuse standby supply; only automatic filling excludes it.
+  const reserved = new Set<string>(standbyEdgeIds);
   const used = new Set<string>();
   const usedInputs = new Set<string>();
   const usedRoles = new Set<string>();
