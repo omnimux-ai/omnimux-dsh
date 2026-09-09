@@ -77,6 +77,7 @@ test('tiktok-agent agent.cordis.yml is structurally valid and mounts all 10 expe
   ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
   ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
   deepEqual(toolNames(text), ALL)
+  ok(existsSync(join(root, 'presets/tiktok-agent/skills/tiktok-growth/SKILL.md')))
   const rows = parseWithPython(rel)
   ok(rows >= 8, `tiktok-agent parsed ${rows} top-level rows`)
 })
