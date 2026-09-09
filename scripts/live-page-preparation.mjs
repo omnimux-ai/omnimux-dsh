@@ -1,9 +1,4 @@
-import { readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
-import { isDeepStrictEqual } from 'node:util'
-import { resolveTarget, verifyL2Runtime } from './live-qa.mjs'
-import { moduleRoot } from './live-qa-request.mjs'
-import { AUTH_TEXT, allowedAddress, boundedRead, browserFailure, evaluateCdp, iso, sameOrigin, sameUrl } from './live-browser-utils.mjs'
+import { AUTH_TEXT, allowedAddress, boundedRead, browserFailure, evaluateCdp, iso, sameOrigin } from './live-browser-utils.mjs'
 
 function inspectExpression(origin) {
   return `(() => {
@@ -105,7 +100,7 @@ export async function prepareEgoPage(tab, {
   const finish = (status, ready, detail) => ({ status, ready, origin, attempts, recoveryAction, detail, startedAt, completedAt: iso(now()) })
   try {
     const expected = allowedAddress(url, target)
-    if (!expected) return finish('browser-policy', false, 'target URL is outside the approved local Dev/L2 origins')
+    if (!expected) return finish('browser-policy', false, 'target URL is outside the approved local Dev origin')
     origin = expected.origin
     if (!tab?.cdp?.send || typeof tab?.url !== 'function') return finish('browser-transport', false, 'a real ego browser page is required')
     const actualUrl = await boundedRead(() => tab.url(), toolTimeoutMs)
@@ -142,62 +137,6 @@ export async function prepareEgoPage(tab, {
       return finish(recoveryAction === 'same-origin-navigation' ? 'recovered' : 'ready', true, 'product page is ready')
     }
     return finish('not-ready', false, 'product page did not become ready after authentication recovery')
-  } catch (error) {
-    const [status, detail] = browserFailure(error)
-    return finish(status, false, detail)
-  }
-}
-
-function officialL2LoginUrl(target, runtime) {
-  try {
-    const logPath = join(runtime.profileDir, 'host.log')
-    const startedAt = Date.parse(runtime.startedAt)
-    if (!Number.isFinite(startedAt) || statSync(logPath).mtimeMs < startedAt) return null
-    const lines = readFileSync(logPath, 'utf8').split(/\r?\n/)
-    const restart = lines.findLastIndex(value => /^--- \[[^\]]+\] dev restart-host triggered ---$/.test(value))
-    const line = lines.slice(restart + 1).reverse().find(value => value.startsWith('dsh web: '))
-    if (!line) return null
-    const link = line.slice('dsh web: '.length)
-    if (!/^http:\/\/127\.0\.0\.1:\d+\/\?token=[^&?#\s]+$/.test(link)) return null
-    const parsed = new URL(link)
-    if (parsed.origin !== new URL(target.url).origin || parsed.pathname !== '/' || parsed.username || parsed.password || parsed.hash || parsed.searchParams.size !== 1 || !parsed.searchParams.get('token')) return null
-    return link
-  } catch { return null }
-}
-
-/** Use the current L2 Host's official login URL once, without persisting credentials. */
-export async function openL2EgoPage(tab, { url, toolTimeoutMs = 5_000 } = {}) {
-  const duration = Number.isFinite(toolTimeoutMs) ? Math.min(10_000, Math.max(1, toolTimeoutMs)) : 5_000
-  let origin = null
-  let loginAction = 'none'
-  const startedAt = iso(Date.now())
-  const finish = (status, ready, detail, preparation) => ({ status, ready, origin, loginAction, detail, startedAt, completedAt: iso(Date.now()), ...(preparation ? { preparation } : {}) })
-  try {
-    let target
-    let before
-    try {
-      target = resolveTarget({ target: 'l2', url }, moduleRoot)
-      origin = new URL(target.url).origin
-      before = verifyL2Runtime(target)
-    } catch { return finish('l2-identity-mismatch', false, 'L2 allocation or Host identity is not current') }
-    if (!tab || typeof tab.url !== 'function' || typeof tab.goto !== 'function') return finish('browser-transport', false, 'a navigable ego browser page is required')
-    const actualUrl = await boundedRead(() => tab.url(), duration)
-    if (actualUrl !== 'about:blank' && !sameUrl(actualUrl, target.url)) return finish('browser-policy', false, 'selected tab is not blank or the approved clean L2 URL')
-    const loginUrl = officialL2LoginUrl(target, before)
-    if (!loginUrl) return finish('l2-login-missing', false, 'current L2 Host did not provide a valid browser login entry')
-    let afterRead
-    try { afterRead = verifyL2Runtime(target) } catch { return finish('l2-identity-mismatch', false, 'L2 Host identity changed before browser login') }
-    if (!isDeepStrictEqual(before, afterRead)) return finish('l2-identity-mismatch', false, 'L2 Host identity changed before browser login')
-    loginAction = 'official-login-navigation-attempted'
-    await boundedRead(() => tab.goto(loginUrl), duration)
-    loginAction = 'official-login-navigation'
-    let afterNavigation
-    try { afterNavigation = verifyL2Runtime(target) } catch { return finish('l2-identity-mismatch', false, 'L2 Host identity changed during browser login') }
-    if (!isDeepStrictEqual(before, afterNavigation)) return finish('l2-identity-mismatch', false, 'L2 Host identity changed during browser login')
-    const cleanUrl = await boundedRead(() => tab.url(), duration)
-    if (!sameUrl(cleanUrl, target.url)) return finish('browser-policy', false, 'browser login did not finish at the approved clean L2 URL')
-    const preparation = await prepareEgoPage(tab, { url: target.url, target: 'l2', toolTimeoutMs: duration })
-    return finish(preparation.status, preparation.ready, preparation.detail, preparation)
   } catch (error) {
     const [status, detail] = browserFailure(error)
     return finish(status, false, detail)

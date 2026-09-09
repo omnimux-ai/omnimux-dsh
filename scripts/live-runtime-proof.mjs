@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, relative, resolve, sep } from 'node:path'
+import { allowedAddress } from './live-browser-utils.mjs'
 
 const SCRIPT_METHOD = 'Debugger.scriptParsed'
 const MAX_SCRIPT_EVENTS = 1000
@@ -166,9 +167,10 @@ async function assertTabOrigin(tab, url, phase) {
  * by its renderer. Only same-origin /plugins/ loader scripts are read; source
  * is intentionally kept in-memory only.
  */
-export async function captureRuntimeProof(tab, { root, targets = [], url, target, allocation } = {}) {
+export async function captureRuntimeProof(tab, { root, targets = [], url, target = 'dev' } = {}) {
   assert.ok(tab?.cdp, 'Selected ego tab does not expose CDP')
   assert.ok(root && url, 'Runtime proof requires root and requested URL')
+  assert.ok(allowedAddress(url, target), 'Runtime proof requires a local Dev origin on 45120')
   assert.ok(Array.isArray(targets), 'Runtime proof targets must be an array')
   const plugins = [...new Set(['omnimux', ...targets.map(pluginFromTarget)])]
   const bundles = await Promise.all(plugins.map(async (plugin) => {
@@ -254,7 +256,6 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
       beforeUrl,
       afterUrl,
       target: target || null,
-      allocation: allocation || null,
       scriptCount: scripts.length,
       bundles: proofBundles,
     }
@@ -277,13 +278,11 @@ export function assertRuntimeProofStable(before, after) {
   assert.deepEqual({
     requestedOrigin: before?.requestedOrigin,
     target: before?.target,
-    allocation: before?.allocation,
     bundles: before?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount }) =>
       ({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount })),
   }, {
     requestedOrigin: after?.requestedOrigin,
     target: after?.target,
-    allocation: after?.allocation,
     bundles: after?.bundles?.map(({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount }) =>
       ({ plugin, bundlePath, bundleSha256, bundleRegistrationSha256, bundleCodeSha256, bundleBytes, loadedScriptUrl, loadedScriptSha256, loadedScriptCodeSha256, loadedRegistrationSha256, loadedRegistrationCodeSha256, match, matchingRegistrationCount })),
   }, 'Runtime proof changed while the browser QA was running')

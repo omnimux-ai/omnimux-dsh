@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { afterEach, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { resolveTarget, runLiveQa, verifyL2Runtime } from './live-qa.mjs'
+import { resolveTarget, runLiveQa } from './live-qa.mjs'
 import { captureStageContract, captureStageContracts, selectStages, STAGE_STATUS } from './live-stage-contracts.mjs'
 import { assertStageState, readStageState, runStageProbe, PROBE_ASSERTIONS, STAGE_ASSERTIONS } from './live-stage-probe.mjs'
 
@@ -24,12 +24,6 @@ function fixture() {
   execFileSync('git', ['-c', 'user.name=QA', '-c', 'user.email=qa@localhost', 'commit', '-qm', 'fixture'], { cwd: root })
   return root
 }
-function allocate(root, changes = {}) {
-  const values = { TOPIC: 'qa', PLUGIN: 'omnimux', PORT: '44201', URL: 'http://127.0.0.1:44201',
-    COMMIT: execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
-    SOURCE: join(root, 'plugins'), PROFILE_DIR: join(root, 'omnimux-dev-qa'), ...changes }
-  writeFileSync(join(root, '.l2-dev.env'), Object.entries(values).map(([key, value]) => `${key}=${value}`).join('\n'))
-}
 
 test('Dev has a fixed 45120 default and rejects stale env ports, production and remote origins', () => {
   assert.deepEqual(resolveTarget({}, repo), { target: 'dev', profile: 'omnimux-dev', url: 'http://127.0.0.1:45120/' })
@@ -39,41 +33,11 @@ test('Dev has a fixed 45120 default and rejects stale env ports, production and 
   assert.throws(() => resolveTarget({ target: 'prod' }, repo), /Unknown target/)
 })
 
-test('L2 must match its worktree URL, port, source and current code revision', () => {
-  const root = fixture()
-  const options = { target: 'l2', url: 'http://127.0.0.1:44201/' }
-  assert.throws(() => resolveTarget({ target: 'l2' }, root), /requires --url/)
-  assert.throws(() => resolveTarget(options, root), /ENOENT/)
-  allocate(root)
-  assert.equal(resolveTarget(options, root).profile, 'omnimux-dev-qa')
-  for (const mismatch of [{ URL: 'http://127.0.0.1:44202' }, { PORT: '44202' }, { SOURCE: root }, { COMMIT: '0000000' }]) {
-    allocate(root, mismatch)
-    assert.throws(() => resolveTarget(options, root))
+test('only Dev is accepted even with an explicit local URL', () => {
+  for (const target of ['l2', 'prod', 'test', '']) {
+    assert.throws(() => resolveTarget({ target, url: 'http://127.0.0.1:45120/' }), /Unknown target/)
   }
-  allocate(root, { PORT: '44200', URL: 'http://127.0.0.1:44200' })
-  assert.throws(() => resolveTarget({ target: 'l2', url: 'http://127.0.0.1:44200' }, root), /production/)
-})
-
-test('reused L2 ports and changed plugin links cannot certify another worktree', () => {
-  const root = fixture()
-  allocate(root)
-  const target = resolveTarget({ target: 'l2', url: 'http://127.0.0.1:44201' }, root)
-  const dir = target.allocation.profileDir
-  mkdirSync(join(dir, 'node_modules'), { recursive: true })
-  writeFileSync(join(dir, 'port.txt'), '44201')
-  writeFileSync(join(dir, 'host.pid'), '123')
-  const linked = join(dir, 'node_modules/omnimux')
-  symlinkSync(join(root, 'plugins/omnimux'), linked)
-  const processInfo = (command, args) => command === 'lsof' ? 'p123\n' : args.at(-1) === 'command='
-    ? 'node bin.js --profile omnimux-dev-qa --port 44201' : 'Sat Sep 5 12:00:00 2026'
-  const runtime = verifyL2Runtime(target, processInfo)
-  assert.equal(runtime.pid, '123')
-  assert.throws(() => verifyL2Runtime(target, () => 'p456\n'), /not listening/)
-  assert.throws(() => verifyL2Runtime(target, (command, args) => command === 'ps' && args.at(-1) === 'command='
-    ? 'node bin.js --profile another-task' : processInfo(command, args)), /profile does not match/)
-  rmSync(linked)
-  symlinkSync(join(root, 'plugins/omnimux-assets'), linked)
-  assert.throws(() => verifyL2Runtime(target, processInfo), /another worktree source/)
+  assert.deepEqual(resolveTarget({ url: 'http://localhost:45120/' }), { target: 'dev', profile: 'omnimux-dev', url: 'http://localhost:45120/' })
 })
 
 test('stage selection and actual runtime discovery reject empty or unknown targets', async () => {

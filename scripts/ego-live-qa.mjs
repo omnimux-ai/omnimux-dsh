@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { assertPng, runStageProbe } from './live-stage-probe.mjs'
 import { captureRuntimeProof, assertRuntimeProofStable } from './live-runtime-proof.mjs'
-import { verifyL2Runtime } from './live-qa.mjs'
 import { validateLiveQaReport } from './live-qa-validation.mjs'
 import { consumeRequest, validateRequest, writeJson } from './live-qa-request.mjs'
 import { boundedRead, evaluateCdp, iso, safeErrorMessage, sameUrl } from './live-browser-utils.mjs'
@@ -13,7 +12,7 @@ import { prepareEgoPage } from './live-page-preparation.mjs'
 import { acquireTaskLock, releaseTaskLock } from './ego-task-lock.mjs'
 
 export { createEgoPage } from './ego-browser-page.mjs'
-export { prepareEgoPage, openL2EgoPage } from './live-page-preparation.mjs'
+export { prepareEgoPage } from './live-page-preparation.mjs'
 
 export async function captureEgoPng(tab) {
   const response = await tab.cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
@@ -33,8 +32,8 @@ function browserFor(tab) {
 }
 
 function reportBase(request, startedAt) {
-  const { runId, commitSha, target, profile, url, allocation, runtime, stage, targets, sidebarSelectors, evidenceDir, reportPath, createdAt, expiresAt } = request
-  return { runId, commitSha, target, profile, url, allocation, runtime, stage, targets, sidebarSelectors, evidenceDir, reportPath, createdAt, expiresAt, status: 'running', pass: false, errors: [], assertions: [], screenshots: [], tool: 'ego-browser', startedAt }
+  const { runId, commitSha, target, profile, url, stage, targets, sidebarSelectors, evidenceDir, reportPath, createdAt, expiresAt } = request
+  return { runId, commitSha, target, profile, url, stage, targets, sidebarSelectors, evidenceDir, reportPath, createdAt, expiresAt, status: 'running', pass: false, errors: [], assertions: [], screenshots: [], tool: 'ego-browser', startedAt }
 }
 
 /** Execute one prepared request in the selected isolated ego task and tab. */
@@ -76,15 +75,12 @@ export async function runPreparedQa(requestPath, { tab, now = () => Date.now(), 
     report.browserIdentity = { before: identity }
     const parsedActual = new URL(actualUrl)
     report.actualUrl = `${parsedActual.origin}${parsedActual.pathname}`
-    const l2Before = request.target === 'l2' ? verifyL2Runtime(request) : null
-    if (l2Before) assert.deepEqual(l2Before, request.runtime, 'L2 Host changed after request preparation')
-    const before = await captureRuntimeProof(tab, { root, targets: request.targets, url: request.url, target: request.target, allocation: request.allocation })
+    const before = await captureRuntimeProof(tab, { root, targets: request.targets, url: request.url, target: request.target })
     const probe = await runStageProbe(browserFor(tab), { targets: request.targets, sidebarSelectors: request.sidebarSelectors, evidenceDir: request.evidenceDir, onProgress: value => { report.probe = value } })
-    const after = await captureRuntimeProof(tab, { root, targets: request.targets, url: request.url, target: request.target, allocation: request.allocation })
+    const after = await captureRuntimeProof(tab, { root, targets: request.targets, url: request.url, target: request.target })
     assertRuntimeProofStable(before, after)
     report.browserIdentity.after = await tab.assertIdentity()
     assert.deepEqual(report.browserIdentity.after, identity, 'ego task/tab identity changed during verification')
-    if (request.target === 'l2') assert.deepEqual(verifyL2Runtime(request), l2Before, 'L2 Host changed during verification')
     assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), request.commitSha, 'Code SHA changed during verification')
     report.probe = probe; report.runtimeProof = { before, after }; report.assertions = probe.assertions; report.screenshots = probe.screenshots
     report.cleanup = { kind: 'workbench-restored', success: probe.assertions.some(item => item.name === 'initial-session-restored' && item.pass) && probe.assertions.some(item => item.name === 'initial-workbench-restored' && item.pass), tabRetained: true }

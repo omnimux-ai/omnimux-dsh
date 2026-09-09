@@ -172,6 +172,15 @@ test('verify-package-files unit tests pass', () => {
   strictEqual(res.status, 0, `package-files unit tests failed: ${res.stderr}\n${res.stdout}`)
 })
 
+test('static CI and post-merge Dev handoff regressions pass', () => {
+  const res = spawnSync('node', ['--test', resolve(here, 'auto-pipeline.test.mjs'), resolve(here, 'auto-pipeline-qa.test.mjs')], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: nestedTestEnv,
+  })
+  strictEqual(res.status, 0, `pipeline handoff tests failed: ${res.stderr}\n${res.stdout}`)
+})
+
 test('sync-to-app and sync-stable target selection matrix passes', () => {
   const res = spawnSync('node', ['--test', resolve(here, 'sync-targets.test.mjs')], {
     cwd: repoRoot,

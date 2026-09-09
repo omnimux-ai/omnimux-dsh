@@ -14,6 +14,8 @@ import {
   classifyRisk,
   resolveDeliveryChannel,
   handoffToAgent,
+  finishMergedDelivery,
+  parseArgs,
   parseFrontmatter,
   slugifyTopic,
 } from './auto-pipeline.mjs'
@@ -26,6 +28,7 @@ import {
 } from './pipeline-state.mjs'
 import { isScannableSourceFile, validateBrowserEvidence } from './auto-qa-gate.mjs'
 import { evaluateVerdict } from './ci-verdict.mjs'
+import { deriveImpactMatrix, postMergeAcceptance } from './impact-matrix.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
 describe('OmniMux 自动化交付流水线与质量门禁套件', () => {
@@ -66,7 +69,7 @@ describe('OmniMux 自动化交付流水线与质量门禁套件', () => {
     assert.ok(out.includes('[3/6] 执行 L1 敏捷自动化测试'), '必须包含阶段3')
     assert.ok(out.includes('[4/6] 执行严过关五维自动化质检门禁'), '必须包含阶段4')
     assert.ok(out.includes('[5/6] 自动提交、发起 PR 并按风险决定合入'), '必须包含阶段5')
-    assert.ok(out.includes('[6/6] 合入确认后物化、回滚保护并清理'), '必须包含阶段6')
+    assert.ok(out.includes('[6/6] 合入确认后按需交接 Dev 验收或收尾'), '必须包含阶段6')
     assert.ok(out.includes('无人值守全自动流水线执行完毕（dry-run，未修改远端）'), '必须包含完成提示')
   })
   it('omnimux CLI 正确挂载 qa:gate 与 auto:run 命令', () => {
@@ -168,8 +171,8 @@ allow-skips: false
         { tool: 'codex-iab' },
         { taskSpaceId: null },
         { browserIdentity: { before: { taskSpaceId: 77, tabId: 'other' }, after: { taskSpaceId: 77, tabId: 'other' } } },
-        { allocation: { profileDir: '/another/task' } },
-        { runtime: { pid: '123', startedAt: 'old' } },
+        { profile: 'another-profile' },
+        { target: 'l2' },
         { commitSha: 'stale' },
         { actualUrl: 'http://127.0.0.1:44202/' },
         { targets: [], probe: { ...validReport.probe, targets: [] }, screenshots: [] },
@@ -224,12 +227,15 @@ allow-skips: false
       rmSync(tmpEvidence, { recursive: true, force: true })
     }
   })
-  it('evaluateVerdict 按实际影响面聚合，不以 L0 代替 ego-browser', () => {
+  it('evaluateVerdict only certifies pre-merge static/tests and leaves UI acceptance pending', () => {
     const passQa = { pass: true, summary: 'L0 PASS', changedFiles: ['docs/guide.md'] }
-    assert.equal(evaluateVerdict(passQa, null).pass, true)
-    assert.equal(evaluateVerdict({ ...passQa, pass: false }, null).pass, false)
-    assert.equal(evaluateVerdict({ ...passQa, changedFiles: ['plugins/a/client/index.js'] }, null).pass, false)
-    assert.equal(evaluateVerdict({ pass: true }, null).pass, false)
+    assert.equal(evaluateVerdict(passQa).pass, true)
+    assert.equal(evaluateVerdict({ ...passQa, pass: false }).pass, false)
+    const ui = evaluateVerdict({ ...passQa, changedFiles: ['plugins/a/client/index.js'] })
+    assert.equal(ui.pass, true)
+    assert.equal(ui.dimensions.browser.status, 'pending')
+    assert.equal(ui.dimensions.browser.pass, null)
+    assert.equal(evaluateVerdict({ pass: true }).pass, false)
   })
   it('准入后真实状态迁移剥除 ready，运行时复验通过且撤销/升级熔断', () => {
     const maintainers = new Set(['boss-user'])
@@ -307,11 +313,66 @@ allow-skips: false
         assert.ok(calls[0][1].includes('status:qa-review'))
         if (noMerge) assert.match(result.handoff.nextAction, /do not merge or materialize/)
         else {
-          assert.match(result.handoff.nextAction, /revocation.*required checks/)
+          assert.match(result.handoff.nextAction, /revocation.*required static\/test checks/)
           if (!materialize) assert.match(result.handoff.nextAction, /do not materialize/)
         }
       }
     } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('post-merge UI/runtime delivery retains the worktree and pending Dev without materialization or success', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-dev-handoff-'))
+    try {
+      for (const files of [['plugins/a/client/View.js'], ['plugins/a/src/server.js']]) {
+        for (const materialize of [true, false]) {
+          writeState(root, '866', { state: 'merged-confirmed', runKey: 'run', worktree: '/task' })
+          const reports = postMergeAcceptance(deriveImpactMatrix(files))
+          const evidence = { issueId: '866', plugin: 'a', topic: 'task', reports, risk: { tier: 'R2' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }
+          const calls = []
+          const result = finishMergedDelivery(root, { wtDir: '/task' }, evidence, {
+            materialize, execCommand: (command, args) => { calls.push([command, args]); return { status: 0 } },
+          }, () => { throw new Error('must not materialize or clean before Dev acceptance') })
+          assert.equal(result.state, 'ready-for-agent')
+          assert.equal(result.handoff.fromPhase, 'merged-confirmed')
+          assert.equal(result.handoff.phase, 'post-merge-dev')
+          assert.equal(result.handoff.materializeProhibited, !materialize)
+          assert.equal(result.materialized, false)
+          assert.equal(result.reports.dev.status, 'pending')
+          assert.equal(result.reports.dev.pass, null)
+          assert.equal(result.worktree, '/task')
+          assert.equal(result.merged.mergeCommit.oid, 'merge')
+          assert.match(result.handoff.nextAction, /do not claim succeeded or clean up/)
+          if (!materialize) assert.match(result.handoff.nextAction, /Do not materialize/)
+          assert.equal(calls.length, 1)
+          assert.ok(calls[0][1].includes('status:qa-review'))
+        }
+      }
+      writeState(root, '866', { state: 'merged-confirmed' })
+      assert.throws(() => handoffToAgent(root, '866', { merged: { state: 'OPEN' } }, {}, 'merged-confirmed'), /confirmed MERGED/)
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('docs-only merged delivery can finish without claiming Dev materialization', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-docs-finish-'))
+    try {
+      writeState(root, '866', { state: 'merged-confirmed' })
+      const reports = postMergeAcceptance(deriveImpactMatrix(['docs/guide.md']))
+      let cleaned = false
+      const result = finishMergedDelivery(root, {}, { issueId: '866', reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { materialize: true, execCommand: () => ({ status: 0 }) }, (_wt, _plugin, _topic, _issue, _pr, options) => {
+        cleaned = true; assert.equal(options.materialize, false)
+      })
+      assert.equal(cleaned, true)
+      assert.equal(result.state, 'succeeded')
+      assert.equal(result.materialized, false)
+      assert.equal(result.reports.dev.status, 'not-applicable')
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('obsolete pre-merge browser CLI options are rejected without affecting risk or scope options', () => {
+    for (const option of ['--l2-url', '--expected-text', '--browser-run-id', '--browser-stage', '--browser-target']) {
+      assert.throws(() => parseArgs(['866', option, 'value']), /未知参数/)
+    }
+    const options = parseArgs(['866', '--manual', '--no-merge', '--no-materialize'])
+    assert.equal(options.manual, true)
+    assert.equal(options.noMerge, true)
+    assert.equal(options.materialize, false)
   })
   it('slugifyTopic 截断长度且保留有效字符', () => {
     const slug = slugifyTopic('feat(clip): Support Multi-Track Video Timeline Editing & Export!', '42')

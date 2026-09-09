@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { deriveImpactMatrix, requiresBrowser } from './impact-matrix.mjs'
+import { deriveImpactMatrix, requiresBrowser, requiresDev, postMergeAcceptance } from './impact-matrix.mjs'
 
 const script = fileURLToPath(new URL('./impact-matrix.mjs', import.meta.url))
 
@@ -18,6 +18,9 @@ describe('impact matrix', () => {
     const matrix = deriveImpactMatrix([file])
     assert.equal(matrix.isUiChange, true)
     assert.equal(matrix.dimensions.browser.required, true)
+    assert.equal(matrix.dimensions.browser.phase, 'post-merge')
+    assert.equal(matrix.dimensions.browser.target, 'dev')
+    assert.equal(matrix.dimensions.dev.required, true)
     assert.equal(matrix.dimensions.l0.required, true)
     assert.equal(requiresBrowser([file]), true)
   })
@@ -33,6 +36,22 @@ describe('impact matrix', () => {
     assert.match(matrix.dimensions.browser.reason, /无客户端\/UI文件变更/)
     assert.match(matrix.summary, /not-applicable/)
     assert.equal(matrix.dimensions.l0.required, true)
+  })
+
+  it('runtime-only changes require post-merge Dev, while docs and test fixtures do not', () => {
+    for (const file of ['plugins/a/src/service.js', 'plugins/a/dsh.manifest.json', 'package.json', 'pnpm-lock.yaml', 'packages/host/index.ts']) {
+      assert.equal(requiresDev([file]), true, file)
+      assert.equal(requiresBrowser([file]), false, file)
+      const pending = postMergeAcceptance(deriveImpactMatrix([file]))
+      assert.equal(pending.dev.status, 'pending')
+      assert.equal(pending.dev.pass, null)
+      assert.equal(pending.browser.status, 'not-applicable')
+      assert.equal(pending.browser.pass, null)
+    }
+    for (const file of ['plugins/a/src/client/View.test.tsx', 'plugins/a/tests/client.js', 'scripts/test-fixtures/page.html', 'plugins/a/README.md']) {
+      assert.equal(requiresDev([file]), false, file)
+      assert.equal(requiresBrowser([file]), false, file)
+    }
   })
 
   it('is deterministic and does not mutate frozen input', () => {

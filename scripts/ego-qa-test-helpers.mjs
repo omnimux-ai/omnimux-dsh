@@ -1,12 +1,11 @@
-import { execFileSync, spawn } from 'node:child_process'
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import vm from 'node:vm'
 
 export const roots = []
-export const children = []
 export const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 export const origin = 'http://127.0.0.1:45120'
 export const ready = { origin, authPage: false, rootMounted: true, workbenchReady: true, connectionWarning: false, ready: true }
@@ -15,7 +14,6 @@ export const loading = { origin, authPage: false, rootMounted: true, workbenchRe
 let taskId = 1000000 + process.pid * 1000
 
 export function cleanup() {
-  children.splice(0).forEach(child => child.kill())
   roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true }))
 }
 
@@ -62,7 +60,7 @@ export function vmTab({ body, mounted, workbench, fetch: fetchImpl, delayNavigat
 export async function request(overrides = {}) {
   const root = mkdtempSync(join(tmpdir(), 'omnimux-ego-qa-')); roots.push(root)
   const scripts = join(root, 'scripts'); mkdirSync(scripts)
-  for (const file of ['ego-live-qa.mjs', 'ego-browser-page.mjs', 'ego-task-lock.mjs', 'live-browser-utils.mjs', 'live-page-preparation.mjs', 'live-qa-request.mjs', 'live-qa.mjs', 'live-qa-validation.mjs', 'live-stage-probe.mjs', 'live-runtime-proof.mjs', 'live-stage-contracts.mjs']) copyFileSync(join(process.cwd(), 'scripts', file), join(scripts, file))
+  for (const file of ['ego-live-qa.mjs', 'ego-browser-page.mjs', 'ego-task-lock.mjs', 'live-browser-utils.mjs', 'live-page-preparation.mjs', 'live-qa-request.mjs', 'live-qa-validation.mjs', 'live-stage-probe.mjs', 'live-runtime-proof.mjs']) copyFileSync(join(process.cwd(), 'scripts', file), join(scripts, file))
   symlinkSync(join(process.cwd(), 'node_modules'), join(root, 'node_modules'))
   execFileSync('git', ['init', '-q'], { cwd: root }); writeFileSync(join(root, 'README'), 'fixture\n')
   execFileSync('git', ['add', '.'], { cwd: root })
@@ -71,60 +69,10 @@ export async function request(overrides = {}) {
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
   const value = {
     version: 1, root, runId: 'run-ego', commitSha: sha, target: 'dev', profile: 'omnimux-dev',
-    url: `${origin}/`, allocation: null, runtime: null, stage: 'assets', targets: [], sidebarSelectors: [],
+    url: `${origin}/`, stage: 'assets', targets: [], sidebarSelectors: [],
     evidenceDir: join(root, '.workbuddy/evidence/live-qa/run-ego'), reportPath: join(root, 'docs/evidence/live-qa-report.json'),
     createdAt: new Date(1000).toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), consumedAt: null, ...overrides,
   }
   const path = join(root, 'request.json'); writeFileSync(path, `${JSON.stringify(value)}\n`)
   return { root, path, value, runner }
-}
-
-export async function l2Runtime(root, { loginLine = null, logLines } = {}) {
-  let port
-  const profile = 'omnimux-dev-qa'; const profileDir = join(root, profile); const plugins = join(root, 'plugins'); const plugin = join(plugins, 'omnimux')
-  mkdirSync(plugin, { recursive: true }); mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
-  symlinkSync(plugin, join(profileDir, 'node_modules', 'omnimux'))
-  // Bind in the owning process: checking a port before spawning races other fixtures.
-  const server = spawn(process.execPath, ['-e', `
-    process.title = process.env.QA_L2_PROFILE;
-    const server = require('node:http').createServer((_, response) => response.end('ok'));
-    let candidate = 44299;
-    server.on('error', error => {
-      if (error.code === 'EADDRINUSE' && candidate > 44201) {
-        candidate -= 1;
-        server.listen(candidate, '127.0.0.1');
-      } else {
-        process.stderr.write(String(error.code || error.message));
-        process.exit(1);
-      }
-    });
-    server.on('listening', () => process.stdout.write(String(server.address().port) + '\\n'));
-    server.listen(candidate, '127.0.0.1');
-  `], { env: { ...process.env, QA_L2_PROFILE: profile }, stdio: ['ignore', 'pipe', 'pipe'] })
-  children.push(server)
-  port = await new Promise((done, reject) => {
-    let output = ''; let diagnostic = ''
-    const timer = setTimeout(() => { server.kill(); reject(new Error('test L2 Host startup timed out')) }, 5000)
-    const fail = error => { clearTimeout(timer); reject(error) }
-    server.once('error', fail)
-    server.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-1000) })
-    server.once('exit', code => fail(new Error(`test L2 Host exited (${code}): ${diagnostic}`)))
-    server.stdout.on('data', data => {
-      output += data
-      if (!output.includes('\n')) return
-      const selected = Number(output.trim())
-      clearTimeout(timer)
-      if (!Number.isInteger(selected) || selected < 44201 || selected > 44299) {
-        server.kill(); reject(new Error('test L2 Host returned an invalid port'))
-      } else done(selected)
-    })
-  })
-  writeFileSync(join(profileDir, 'port.txt'), `${port}\n`)
-  writeFileSync(join(profileDir, 'host.pid'), `${server.pid}\n`)
-  const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
-  writeFileSync(join(root, '.l2-dev.env'), [`URL=http://127.0.0.1:${port}/`, `PORT=${port}`, `SOURCE=${plugins}`, 'TOPIC=qa', `COMMIT=${sha}`, `PROFILE_DIR=${profileDir}`, 'PLUGIN=omnimux'].join('\n'))
-  const log = join(profileDir, 'host.log')
-  writeFileSync(log, `${(logLines || [loginLine ?? `dsh web: http://127.0.0.1:${port}/?token=l2-test-token`]).join('\n')}\n`)
-  utimesSync(log, new Date(), new Date())
-  return { url: `http://127.0.0.1:${port}/`, log }
 }
