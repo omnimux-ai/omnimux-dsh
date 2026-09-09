@@ -1,0 +1,80 @@
+[
+  {
+    "path": "docs/contracts/dev-pipeline.md",
+    "sha256": "ae6150d25d8fb7268382d662dc168935bf18d4b53a3d0e6b11917817cf890ab9",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "docs/contracts/ops-entry.md",
+    "sha256": "ae8691bdef352add9e768eb6b8a053a44260bc73df961cb22e5194e5f2407443",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "docs/specs/issue-778-managed-tarball-architecture.md",
+    "sha256": "c2a988dc65891c1a6497c0f78da11c66046360f6b3973a4939871b33cee437fe",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/guard-worktree.test.mjs",
+    "sha256": "c3fc51bf2ed0db26e127b84ef50df50532c0118d1bf983d3c0e462d16969775a",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/managed-tarball-archive.py",
+    "sha256": "aa5e9068fe44486fe23249c6297ae930404d600c6564ef1629be204b43a860af",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/managed-tarball-recovery.test.mjs",
+    "sha256": "d6669a21e3530dbe200ed80199fa3e2616a5f8aabb78274f62b9bb06f055f449",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/managed-tarball-transaction.test.mjs",
+    "sha256": "0e176a82c2e209d284a42f675e4875365b290022b8c3cb40b8da16a661fefd18",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/managed-tarball.mjs",
+    "sha256": "b82bb29514783d2eb3e97b26a31e3c85b91cbfeabc1844902731fd3659fa1ed5",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/managed-tarball.test.mjs",
+    "sha256": "2e4ef9a7799fea270618284c35d01a44408746777c150a34d265f2f4957f9e20",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/materialize-graph.mjs",
+    "sha256": "bd799de658d5d7cb4497511bd36951404671431dc24337e011d20b9cc0448940",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/sync-release-policy.test.mjs",
+    "sha256": "7a4a09e75a46b2e0063f11899e4aa00276628865832500fd2b8f81c72772e75f",
+    "mode": "0o644",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/issue-839-independent.qa.test.mjs",
+    "sha256": "bfcba01c30f491fb2456a3f8102f0849a3618edde2b836d3c55d418cec1cdf36",
+    "mode": "0o600",
+    "validationCopyEqual": true
+  },
+  {
+    "path": "scripts/issue-839-source-verification.test.mjs",
+    "sha256": "176af238009f79cff2f0bd67f8845c5900fff25067aa09afada1ea13953a4ef0",
+    "mode": "0o600",
+    "validationCopyEqual": true
+  }
+]
