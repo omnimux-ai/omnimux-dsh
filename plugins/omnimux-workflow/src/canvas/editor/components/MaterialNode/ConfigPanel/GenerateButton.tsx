@@ -2,8 +2,7 @@
  * GenerateButton — 极简深色一体化生成发送按钮 (Issue #737 对齐图 2).
  *
  * 视觉规格：
- *   - 左侧：积分点数 ✳ 60（若有 creditCost）；
- *   - 右侧：方圆角发送按钮（尺寸约 32px × 32px，圆角 8px），内居中纯白粗向上箭头 ↑（ArrowUp）；
+ *   - 方圆角发送按钮（尺寸约 32px × 32px，圆角 8px），内居中纯白粗向上箭头 ↑（ArrowUp）；
  *   - 不展示笨重的“生成”汉字长药丸文本；
  *   - 保持禁用态点击 onDisabledClick 上浮（画板通知 submit_blocked_click）与无障碍标准。
  */
@@ -21,7 +20,7 @@ export interface GenerateButtonProps {
   onDisabledClick?: () => void;
   /** 本节点生成中 → Loader2 spin */
   isGenerating?: boolean;
-  /** 积分消耗点数（图 2 示例 ✳ 60） */
+  /** 兼容可选属性，不再渲染 */
   creditCost?: number;
 }
 
@@ -31,7 +30,6 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
   disabledReason,
   onDisabledClick,
   isGenerating,
-  creditCost,
 }) => {
   const t = useT();
 
@@ -61,14 +59,6 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
         handleAction();
       }}
     >
-      {/* 积分点数：✳ 60 */}
-      {creditCost !== undefined && creditCost > 0 ? (
-        <span className="wf-generate-btn__cost">
-          <span className="wf-generate-btn__cost-icon" aria-hidden="true">✳</span>
-          <span className="wf-generate-btn__cost-num">{creditCost}</span>
-        </span>
-      ) : null}
-
       {/* 方圆角发送按钮（约 32px × 32px，圆角 8px），内居中白色粗向上箭头 */}
       <button
         type="button"

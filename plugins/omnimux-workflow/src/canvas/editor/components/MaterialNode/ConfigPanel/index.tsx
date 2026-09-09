@@ -857,11 +857,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               />
             </div>
           )}
-
-          {/* 生成数量 / 倍率标签（对齐图 2） */}
-          <span className="wf-config-panel__batch-tag" title="生成数量">
-            x {typeof (params as any)?.batch_size === 'number' ? (params as any).batch_size : typeof (params as any)?.count === 'number' ? (params as any).count : 1}
-          </span>
         </div>
 
         {/* 右侧生成按钮 */}
@@ -875,7 +870,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               nodeData.executionStatus === 'running'
               || resolveNodeLifecycle({ type: nodeData.materialType, data: nodeData as any }) === 'loading'
             }
-            creditCost={typeof (params as any)?.creditCost === 'number' ? (params as any).creditCost : 60}
           />
         </div>
       </div>

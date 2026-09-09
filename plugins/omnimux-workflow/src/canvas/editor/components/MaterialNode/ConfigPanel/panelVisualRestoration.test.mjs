@@ -62,9 +62,8 @@ test('TC-737-04: GenerateButton 极简深色一体化（去汉字，方圆角粗
   assert.doesNotMatch(generateBtnSrc, /<span className="wf-generate-btn__label">/);
   // 采用 ArrowUp 图标
   assert.match(generateBtnSrc, /<ArrowUp\s+size=\{16\}\s+strokeWidth=\{2\.5\}/);
-  // 支持积分点数展示
-  assert.match(generateBtnSrc, /wf-generate-btn__cost/);
-  assert.match(generateBtnSrc, /creditCost/);
+  // 不再展示积分点数
+  assert.doesNotMatch(generateBtnSrc, /wf-generate-btn__cost/);
   // CSS 中定义了 32px 方圆角发送按钮
   assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?width:\s*32px/);
   assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?height:\s*32px/);
@@ -72,11 +71,10 @@ test('TC-737-04: GenerateButton 极简深色一体化（去汉字，方圆角粗
 });
 
 test('TC-737-05: 底栏排版与全模态覆盖一致性', () => {
-  // 底栏包含生成数量标签 x 1
-  assert.match(panelSrc, /wf-config-panel__batch-tag/);
-  assert.match(themeCss, /\.wf-config-panel__batch-tag/);
+  // 底栏不再展示生成数量标签 x 1
+  assert.doesNotMatch(panelSrc, /wf-config-panel__batch-tag/);
   // 摘要条包裹层前置细竖线
   assert.match(themeCss, /\.wf-cfg-summary-bar__wrap::before/);
-  // ConfigPanel 传入 creditCost 给 GenerateButton
-  assert.match(panelSrc, /creditCost=\{typeof \(params as any\)\?\.creditCost === 'number'/);
+  // ConfigPanel 不再传递 creditCost 给 GenerateButton
+  assert.doesNotMatch(panelSrc, /creditCost=/);
 });
