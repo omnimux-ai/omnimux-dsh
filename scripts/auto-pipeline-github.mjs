@@ -33,19 +33,20 @@ export function commitAndPush(wtDir, plugin, title, issueId, branch, options) {
   const summary = String(title).replace(/\r?\n/g, ' ').trim().slice(0, 60) || `Issue #${issueId} delivery pipeline`
   runCommand('git', ['commit', '-m', `${type}(${scope}): ${summary} (#${issueId})`], { cwd: wtDir })
   runCommand('git', ['push', '-u', 'origin', branch], { cwd: wtDir })
-  return { branch, committed: true }
+  const headSha = runCommand('git', ['rev-parse', 'HEAD'], { cwd: wtDir }).stdout.trim()
+  return { branch, headSha, committed: true }
 }
 export function findOrCreatePr(wtDir, branch, plugin, title, issueId, reports, risk, options, evidenceDir) {
   const body = [
     `Closes #${issueId}`, '', '## 变更说明', `- Issue: #${issueId}`, `- branch: \`${branch}\``,
-    `- risk-tier: ${risk.tier}`, `- merge channel: ${risk.automaticAllowed ? 'auto only with explicit Issue authorization' : 'boss-only'}`,
+    `- risk-tier: ${risk.tier}`, `- merge channel: ${risk.automaticAllowed && !options.manual ? 'auto only with verified Issue authorization' : 'coordinating Agent under task authorization'}`,
     '', '## 机器证据',
     `- L0 report: \`${relative(wtDir, reports.qa.reportPath).replaceAll('\\', '/')}\``,
     `- Browser required: ${reports.browser.required ? 'yes' : 'no'}`,
     `- Browser evidence: ${reports.browser.required ? `\`${relative(wtDir, evidenceDir).replaceAll('\\', '/')}\`` : 'not applicable to changed surface'}`,
     `- Integration gates: ${reports.integration.length} command(s) completed`, '', '## 合入规则',
     '- `qa:pass` 由 CI 聚合门禁写入；本流水线不自授予。',
-    '- R0/R1 必须由老板人工合入；R2/R3 只有显式预授权且 required checks 全绿才可自动合入。',
+    '- R0/R1 由协调 Agent 核对任务授权及实际影响后继续；无人值守合入仅限机器预授权完整的 R2/R3。所有通道保留适用验收与 required checks。',
     '- 未确认 `MERGED` 前不物化、不清理 Worktree。',
   ].join('\n')
   const bodyPath = join(evidenceDir, 'pr-body.md')
@@ -99,7 +100,7 @@ export async function waitForCi(prNumber, options) {
   throw new PipelineError('等待 CI required checks 超时或没有任何 check', { last })
 }
 export async function requestAndConfirmMerge(prNumber, options) {
-  if (options.noMerge) throw new PipelineError('已通过 --no-merge 禁止合入；保留 PR 供老板处理')
+  if (options.noMerge) throw new PipelineError('已通过 --no-merge 禁止合入；保留 PR，由协调 Agent 在指定范围内收尾')
   if (options.dryRun) return { state: 'MERGED', mergedAt: 'dry-run', mergeCommit: { oid: 'dry-run' } }
   runCommand('gh', ['pr', 'merge', String(prNumber), '--repo', REPO, '--squash', '--auto', '--delete-branch'], { cwd: repoRoot })
   const deadline = Date.now() + options.waitSeconds * 1000
