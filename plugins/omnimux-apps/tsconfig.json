@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/@types+react@19.2.18/node_modules/@types",
+      "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/.pnpm/@types+node@25.9.5/node_modules/@types"
+    ]
+  },
+  "include": ["src"]
+}
