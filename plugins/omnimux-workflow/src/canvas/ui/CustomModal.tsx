@@ -44,11 +44,20 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="wf-modal-overlay wf-canvas-root" onClick={onCancel}>
+    <div
+      className="wf-modal-overlay wf-canvas-root nodrag nopan"
+      onClick={onCancel}
+      onWheel={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div
-        className={['wf-modal-card', className].filter(Boolean).join(' ')}
+        className={['wf-modal-card nodrag nopan', className].filter(Boolean).join(' ')}
         style={{ width }}
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="wf-modal-header">
           <div className="wf-modal-title">{title}</div>

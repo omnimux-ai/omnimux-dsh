@@ -4604,6 +4604,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overscroll-behavior: contain;
   animation: wf-modal-fade 0.15s ease-out;
 }
 
@@ -4672,6 +4673,8 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-modal-body {
   padding: 20px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .wf-modal-footer {
