@@ -19,16 +19,23 @@ describe('CanvasPageHeader Component', () => {
     assert.match(source, /className="wf-page-header-more-btn"/);
   });
 
-  it('provides dropdown list and create page button', () => {
+  it('provides clean dropdown list without redundant header row', () => {
     assert.match(source, /className="wf-page-dropdown-popover"/);
     assert.match(source, /className="wf-page-dropdown-list"/);
     assert.match(source, /className="wf-page-dropdown-create-btn"/);
     assert.match(source, /新建创作页/);
+    assert.doesNotMatch(source, /wf-page-dropdown-header/);
+  });
+
+  it('supports hovering rename pencil button and inline rename input', () => {
+    assert.match(source, /className="wf-page-edit-btn"/);
+    assert.match(source, /className="wf-page-rename-input"/);
+    assert.match(source, /renameProjectPage/);
   });
 
   it('calls createProjectPage and triggers workspace switch', () => {
     assert.match(source, /createProjectPage\(workspaceId/);
-    assert.match(source, /onSwitchWorkspaceId\(newWs\.id\)/);
+    assert.match(source, /onSwitchWorkspaceId\(newWsId\)/);
   });
 
   it('supports selecting and activating existing pages', () => {

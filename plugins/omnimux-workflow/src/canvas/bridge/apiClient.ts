@@ -368,3 +368,14 @@ export function setActiveProjectPage(
     { method: 'PATCH', body: { active: true } },
   );
 }
+
+export function renameProjectPage(
+  workspaceId: string,
+  pageId: string,
+  title: string,
+): Promise<ApiResult<{ ok: boolean; activePage?: ProjectPageDto; canvasWorkspaceId: string }>> {
+  return request<{ ok: boolean; activePage?: ProjectPageDto; canvasWorkspaceId: string }>(
+    WORKFLOW_API_ROUTES.workspaceProjectPageItem(encodeURIComponent(workspaceId), encodeURIComponent(pageId)),
+    { method: 'PATCH', body: { title } },
+  );
+}
