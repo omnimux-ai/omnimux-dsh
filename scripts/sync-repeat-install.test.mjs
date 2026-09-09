@@ -5,14 +5,16 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, w
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const syncScript = join(root, 'scripts/sync-stable.sh')
 
 /** Create an offline profile with its own workspace and package store. */
 function createFixture(t, linker) {
   const home = mkdtempSync(join(tmpdir(), `sync-repeat-${linker}-`))
   t.after(() => rmSync(home, { recursive: true, force: true }))
+  copySyncScripts(home)
+  const syncScript = join(home, 'scripts/sync-stable.sh')
   const profile = join(home, '.omnimux-dev/profiles/omnimux')
   const plugins = join(home, 'plugins')
   const snapshots = join(profile, '.materialize-snapshots/plugins')
@@ -41,6 +43,7 @@ function createFixture(t, linker) {
   writeFileSync(join(profile, 'pnpm-workspace.yaml'), `packages:\n  - .\nnodeLinker: ${linker}\n`)
   const env = {
     ...process.env, HOME: home, OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: plugins,
+    PATH: fakeGitPath(home, home),
     COREPACK_ENABLE_NETWORK: '0', COREPACK_ENABLE_AUTO_PIN: '0', COREPACK_DEFAULT_TO_LATEST: '0',
     npm_config_offline: 'true', npm_config_ignore_scripts: 'true', npm_config_ignore_pnpmfile: 'true',
     npm_config_verify_deps_before_run: 'false', npm_config_manage_package_manager_versions: 'false',
@@ -74,14 +77,14 @@ function createFixture(t, linker) {
     assert.equal(resolution.status, 0, resolution.stderr)
   }
   verify()
-  return { home, installed, run, verify }
+  return { home, installed, run, verify, syncScript }
 }
 
 for (const linker of ['hoisted', 'isolated']) {
   test(`${linker}: sync restores staged entries on consecutive normal refreshes without changing lock or platform optionals`, t => {
     const fixture = createFixture(t, linker)
     for (let attempt = 0; attempt < 2; attempt++) {
-      fixture.run('bash', [syncScript, 'omnimux-repeat-fixture'])
+      fixture.run('bash', [fixture.syncScript, 'omnimux-repeat-fixture'])
       fixture.verify()
     }
   })

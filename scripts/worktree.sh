@@ -6,7 +6,7 @@
 # Implements standardized worktree contracts:
 #   1. Primary checkout stays clean on default branch (main/master/omnimux).
 #   2. Task work lives strictly in <repo>/.worktrees/<task>.
-#   3. Worktrees MUST be removed after merge or abandon; no orphaned dirs.
+#   3. Remove task worktrees only after merge and applicable acceptance, or abandon.
 #   4. Worktrees MUST NOT be created as repository siblings or long-lived in /tmp.
 #   5. Task naming strictly conforms to ASCII kebab-case (^[a-z0-9][a-z0-9-]*$).
 #
@@ -14,9 +14,7 @@
 #   - Full worktree-ops compatibility (init, new, list, ship, remove, clean, prune).
 #   - GitHub Issue & PR integration (--issue <id>, --pr <number>, auto-new <id>).
 #   - Safe PR-First guard (verifies PR MERGED before destruction).
-#   - L2 Task Environment hooks (auto recycles dev-env.sh ports upon cleanup).
 #   - Backward-compatible detection for legacy sibling worktrees (../*-wt-*).
-#   - L2 Dev shortcut (worktree.sh dev <task>).
 # ==============================================================================
 
 set -euo pipefail
@@ -144,21 +142,6 @@ resolve_worktree_dir() {
 
   # Fallback to standard path
   echo "${WT_DIR}/${task}"
-}
-
-# -----------------------------------------------------------------------------
-# L2 Task Environment Lifecycle Hook
-# -----------------------------------------------------------------------------
-
-recycle_l2_environment() {
-  local task="$1"
-  local dev_env_script="${ROOT}/scripts/dev-env.sh"
-  if [ -f "${dev_env_script}" ]; then
-    if bash "${dev_env_script}" ls 2>/dev/null | grep -qE "(omnimux-dev-${task}[[:space:]])"; then
-      say "releasing L2 task environment: omnimux-dev-${task}"
-      bash "${dev_env_script}" rm "${task}" 2>&1 | tail -3 || true
-    fi
-  fi
 }
 
 # -----------------------------------------------------------------------------
@@ -354,9 +337,12 @@ cmd_ship() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --pr) shift; pr_number="${1:-}" ;;
+      *) die "unknown flag: $1" ;;
     esac
     shift
   done
+  [[ "${pr_number}" =~ ^[0-9]+$ ]] || die "ship requires --pr <merged-pr-number>; merge through GitHub Merge Queue first"
+  command -v gh >/dev/null 2>&1 || die "gh is required to verify the merged PR"
 
   local wt
   wt="$(resolve_worktree_dir "${task}")"
@@ -380,42 +366,17 @@ cmd_ship() {
     die "primary checkout has tracked uncommitted changes; stash them before shipping"
   fi
 
-  say "fetch ${REMOTE}"
-  git fetch "${REMOTE}" --prune 2>/dev/null || true
-
-  say "push ${branch} to ${REMOTE}"
-  git -C "${wt}" push "${REMOTE}" "${branch}" || say "note: push branch upstream failed or rejected"
-
-  # If PR verification specified, verify PR MERGED instead of local merge
-  if [ -n "${pr_number}" ] && command -v gh >/dev/null 2>&1; then
-    say "verifying GitHub PR #${pr_number} merge state..."
-    local pr_state
-    pr_state=$(gh pr view "${pr_number}" --json state -q '.state' 2>/dev/null || true)
-    if [ "${pr_state}" != "MERGED" ]; then
-      die "PR #${pr_number} is in state [${pr_state}], not MERGED. Cannot finish shipping."
-    fi
-    say "PR #${pr_number} is confirmed MERGED. Syncing primary branch..."
-    git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}"
-  else
-    say "sync primary ${DEFAULT_BRANCH} with ${REMOTE}"
-    git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}" 2>/dev/null || true
-
-    say "merging ${branch} into ${DEFAULT_BRANCH}"
-    if ! git -C "${ROOT}" merge --ff-only "${branch}" 2>/dev/null; then
-      git -C "${ROOT}" merge -m "merge: ${branch}" --no-ff "${branch}" || die "merge failed; resolve in primary checkout"
-    fi
-
-    say "push ${REMOTE} ${DEFAULT_BRANCH}"
-    git -C "${ROOT}" push "${REMOTE}" "${DEFAULT_BRANCH}" 2>/dev/null || say "note: push ${DEFAULT_BRANCH} skipped/failed"
-  fi
-
-  say "removing worktree directory and branch..."
-  git worktree remove "${wt}" || die "git worktree remove failed; run 'worktree.sh prune'"
-  git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
-  git worktree prune
-
-  recycle_l2_environment "${task}"
-  say "done: ${branch} shipped and worktree cleaned up"
+  say "verifying GitHub PR #${pr_number} merge state and task revision..."
+  local pr_info pr_state pr_branch pr_head pr_base
+  pr_info=$(gh pr view "${pr_number}" --json state,headRefName,headRefOid,baseRefName \
+    -q '[.state, .headRefName, .headRefOid, .baseRefName] | @tsv') || die "cannot read PR #${pr_number}"
+  IFS=$'\t' read -r pr_state pr_branch pr_head pr_base <<< "${pr_info}"
+  [ "${pr_state}" = "MERGED" ] || die "PR #${pr_number} is [${pr_state}], not MERGED"
+  [ "${pr_branch}" = "${branch}" ] && [ "${pr_head}" = "$(git -C "${wt}" rev-parse HEAD)" ] \
+    && [ "${pr_base}" = "${DEFAULT_BRANCH}" ] || die "PR #${pr_number} does not match this task branch, HEAD and base"
+  git -C "${ROOT}" pull --ff-only "${REMOTE}" "${DEFAULT_BRANCH}"
+  say "PR MERGED; applicable Dev materialization/acceptance is pending. Worktree retained: ${wt}"
+  say "After acceptance, run: worktree.sh remove ${task} --pr ${pr_number}"
 }
 
 cmd_remove() {
@@ -486,7 +447,6 @@ cmd_remove() {
   fi
 
   git worktree prune
-  recycle_l2_environment "${task}"
   say "done: ${task} removed"
 }
 
@@ -592,20 +552,6 @@ clean_one() {
   say "removing merged worktree: ${wt} (branch: ${branch})"
   git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
   git branch -d "${branch}" 2>/dev/null || true
-  local task_name="$(basename "${wt}" | sed "s/^$(basename "${ROOT}")-wt-//")"
-  recycle_l2_environment "${task_name}"
-}
-
-cmd_dev() {
-  local task="${1:-}"
-  local plugin="${2:-}"
-  [ -n "${task}" ] || die "usage: worktree.sh dev <task> [plugin]"
-
-  local dev_env_script="${ROOT}/scripts/dev-env.sh"
-  [ -f "${dev_env_script}" ] || die "scripts/dev-env.sh not found"
-
-  say "launching L2 task environment for ${task}..."
-  exec bash "${dev_env_script}" start "${task}" ${plugin}
 }
 
 usage() {
@@ -621,8 +567,7 @@ Usage:
   worktree.sh new <task> [base] [--type ...] create .worktrees/<task>
   worktree.sh auto-new <issue_id>            fetch GitHub Issue and create worktree automatically
   worktree.sh list                           show active worktrees and dirty counts
-  worktree.sh dev <task> [plugin]            launch isolated L2 task environment (port 44201+)
-  worktree.sh ship <task> [--pr <num>]       finish & sync: merge to ${DEFAULT_BRANCH} or verify PR MERGED
+  worktree.sh ship <task> --pr <num>         verify matching PR MERGED, sync ${DEFAULT_BRANCH}, retain acceptance workspace
   worktree.sh remove <task> [flags]          safely remove worktree (--discard, --abandon, --pr <num>)
   worktree.sh prune                          drop stale worktree records & list safe-to-delete branches
   worktree.sh clean                          batch clean merged & clean worktrees
@@ -647,9 +592,8 @@ case "${cmd}" in
   new)      [ "$#" -ge 1 ] || die "usage: worktree.sh new <task> [base] [--type feat|fix|chore|agent] [--issue <id>]"; cmd_new "$@" ;;
   auto-new) [ "$#" -ge 1 ] || die "usage: worktree.sh auto-new <issue_id>"; cmd_auto_new "$@" ;;
   list)     cmd_list ;;
-  dev)      [ "$#" -ge 1 ] || die "usage: worktree.sh dev <task> [plugin]"; cmd_dev "$@" ;;
-  ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> [--pr <num>]"; cmd_ship "$@" ;;
-  finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> [--pr <num>]"; cmd_ship "$@" ;;
+  ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num>"; cmd_ship "$@" ;;
+  finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num>"; cmd_ship "$@" ;;
   remove)   [ "$#" -ge 1 ] || die "usage: worktree.sh remove <task> [--discard] [--abandon] [--pr <num>]"; cmd_remove "$@" ;;
   prune)    cmd_prune ;;
   clean)    cmd_clean "$@" ;;

@@ -42,12 +42,12 @@ export function findOrCreatePr(wtDir, branch, plugin, title, issueId, reports, r
     `- risk-tier: ${risk.tier}`, `- merge channel: ${risk.automaticAllowed && !options.manual ? 'auto only with verified Issue authorization' : 'coordinating Agent under task authorization'}`,
     '', '## 机器证据',
     `- L0 report: \`${relative(wtDir, reports.qa.reportPath).replaceAll('\\', '/')}\``,
-    `- Browser required: ${reports.browser.required ? 'yes' : 'no'}`,
-    `- Browser evidence: ${reports.browser.required ? `\`${relative(wtDir, evidenceDir).replaceAll('\\', '/')}\`` : 'not applicable to changed surface'}`,
+    `- Post-merge Dev: ${reports.dev.status} (${reports.dev.reason})`,
+    `- Post-merge Dev ego-browser: ${reports.browser.status} (${reports.browser.reason})`,
     `- Integration gates: ${reports.integration.length} command(s) completed`, '', '## 合入规则',
     '- `qa:pass` 由 CI 聚合门禁写入；本流水线不自授予。',
     '- R0/R1 由协调 Agent 核对任务授权及实际影响后继续；无人值守合入仅限机器预授权完整的 R2/R3。所有通道保留适用验收与 required checks。',
-    '- 未确认 `MERGED` 前不物化、不清理 Worktree。',
+    '- 未确认 `MERGED` 前不物化；适用 Dev 验收仍 pending 时保留 Worktree，不声称交付成功。',
   ].join('\n')
   const bodyPath = join(evidenceDir, 'pr-body.md')
   writeEvidence(bodyPath, `${body}\n`)

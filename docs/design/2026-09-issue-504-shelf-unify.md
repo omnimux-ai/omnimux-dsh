@@ -1,5 +1,7 @@
 # Issue #504 架构设计：Picker 与 Plaza 统一消费货架规则并删除死入口
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立运行与合入前浏览器验收要求退役，产品设计和匹配层级不变。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史测试数、结果与未验状态不重标。
+
 - 日期：2026-09-07
 - 作者：Gao（高见远 / Architect）
 - 范围：`plugins/omnimux-market` 客户端 concat factory、`skill-picker-logic` 单一规则模块、Picker / Plaza / Plaza Shell

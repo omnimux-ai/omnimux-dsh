@@ -1,5 +1,7 @@
 # dsh-publish Table 扩展 + 状态中文化架构（PRD-v2.4）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境、旧 `dev start` 与合入前浏览器验收要求退役，产品和布局层级不变。当前流程见 [dev-pipeline](../../../docs/contracts/dev-pipeline.md) 和 [plugin-qa](../../../docs/contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史结果不重标。
+
 架构：高见远 ／ 输入：主理人转交「许清楚定界」——Table 14 列（含 8 维指标槽 + ⋮）、六态中文全链路、demo/index.html 与架构文档改动范围  
 版本观察：沿用 `docs/architecture.md`（harness `141eb6fef8`）+ `docs/architecture-ui-slim.md`（v2.2 诚实空值）+ `docs/architecture-ui-layout-v2.3.md`（四层壳）  
 核对日期：2026-08-25  

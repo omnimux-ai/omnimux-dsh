@@ -16,6 +16,8 @@ related:
 
 # 灵感库卡片悬停 CTA × 去对话复刻：架构规格与任务分解
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境与合入前浏览器验收要求退役；产品约束不变。现行 [plugin-qa](../contracts/plugin-qa.md) 要求 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego 验收。历史结果不重标。
+
 > 作者：高见远（扩展点架构）  
 > 输入：许清楚《灵感库卡片悬停操作 × 添加到对话复刻 —— 需求评审与 4 轨分流报告》+ 8 项量化 DoD + 现网 `omnimux-inspiration` / `omnimux-workflow` Inspect  
 > 给：工程师林深  

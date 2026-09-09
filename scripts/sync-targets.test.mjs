@@ -6,16 +6,18 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const syncToAppScript = join(root, 'scripts/sync-to-app.sh')
-const syncStableScript = join(root, 'scripts/sync-stable.sh')
+let syncStableScript
 const presetFixture = join(tmpdir(), `sync-presets-fixture-${process.pid}`)
 const syncPresetsScript = join(presetFixture, 'scripts/sync-agent-presets.sh')
 
 describe('OmniMux Profile Target Selection Matrix', () => {
   const fakeHome = join(tmpdir(), 'test-fake-home-omnimux-' + Date.now())
-  const fixturePlugins = join(fakeHome, 'fixture-plugins')
+  const fixturePlugins = join(fakeHome, 'plugins')
+  let gitPath
 
   function syncEnv(extra = {}) {
     return {
@@ -29,6 +31,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       CI: 'true',
       npm_config_offline: 'true',
       ...extra,
+      PATH: `${gitPath}:${extra.PATH || process.env.PATH}`,
     }
   }
 
@@ -47,6 +50,9 @@ describe('OmniMux Profile Target Selection Matrix', () => {
   }
 
   before(() => {
+    copySyncScripts(fakeHome)
+    syncStableScript = join(fakeHome, 'scripts/sync-stable.sh')
+    gitPath = fakeGitPath(fakeHome, fakeHome, '')
     // Keep the real preset implementation, but never address installed Apps.
     mkdirSync(join(presetFixture, 'scripts'), { recursive: true })
     cpSync(join(root, 'presets'), join(presetFixture, 'presets'), { recursive: true })
@@ -427,83 +433,40 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     }
   })
 
-  it('keeps the one current-worktree L2 plugin link while refreshing another managed package', () => {
-    const testHome = join(tmpdir(), 'test-l2-in-progress-link-' + Date.now())
-    const l2Home = join(testHome, '.dsh-dev', 'tasks', 'refresh-hub')
-    const profile = join(l2Home, 'profiles', 'omnimux-dev-refresh-hub')
+  it('rejects an external plugin link before install or writes to its source, selected or not', () => {
+    const testHome = join(tmpdir(), 'test-external-plugin-link-' + Date.now())
+    const target = join(testHome, 'Custom Target')
+    const profile = join(target, 'profiles', 'omnimux')
     const snapshots = join(profile, '.materialize-snapshots', 'plugins')
     const linkedWorkflow = join(profile, 'node_modules', 'omnimux-workflow')
+    const workflowSource = join(fixturePlugins, 'omnimux-workflow')
     mkdirSync(snapshots, { recursive: true })
-    writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\nnodeLinker: hoisted\n')
+    mkdirSync(join(profile, 'node_modules'), { recursive: true })
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
-      name: 'l2-in-progress-link-profile',
-      private: true,
-      dependencies: {
-        omnimux: 'file:.materialize-snapshots/plugins/omnimux',
-        'omnimux-workflow': 'file:.materialize-snapshots/plugins/omnimux-workflow',
-      },
+      name: 'external-link-profile', private: true,
+      dependencies: { omnimux: 'file:.materialize-snapshots/plugins/omnimux',
+        'omnimux-workflow': 'file:.materialize-snapshots/plugins/omnimux-workflow' },
       dsh: { profile: { bundles: [] } },
-    }, null, 2) + '\n')
+    }) + '\n')
     cpSync(join(fixturePlugins, 'omnimux'), join(snapshots, 'omnimux'), { recursive: true })
-    cpSync(join(fixturePlugins, 'omnimux-workflow'), join(snapshots, 'omnimux-workflow'), { recursive: true })
-
+    cpSync(workflowSource, join(snapshots, 'omnimux-workflow'), { recursive: true })
+    symlinkSync(workflowSource, linkedWorkflow)
+    const manifest = readFileSync(join(profile, 'package.json'))
+    const source = readFileSync(join(workflowSource, 'index.js'))
     try {
-      const initial = spawnSync('corepack', ['pnpm', 'install'], { cwd: profile, env: syncEnv({ HOME: testHome }), encoding: 'utf8' })
-      assert.equal(initial.status, 0, `${initial.stdout}\n${initial.stderr}`)
-      const workflowSource = join(fixturePlugins, 'omnimux-workflow')
-      const linkedDependency = join(fixturePlugins, 'fixture-link-dependency')
-      mkdirSync(linkedDependency, { recursive: true })
-      writeFileSync(join(linkedDependency, 'package.json'), JSON.stringify({ name: 'fixture-link-dependency', version: '1.0.0', main: 'index.js' }) + '\n')
-      writeFileSync(join(linkedDependency, 'index.js'), 'module.exports = {}\n')
-      const workflowManifestPath = join(workflowSource, 'package.json')
-      const workflowManifest = JSON.parse(readFileSync(workflowManifestPath, 'utf8'))
-      workflowManifest.dependencies = { 'fixture-link-dependency': 'file:../fixture-link-dependency' }
-      writeFileSync(workflowManifestPath, JSON.stringify(workflowManifest, null, 2) + '\n')
-      rmSync(linkedWorkflow, { recursive: true, force: true })
-      symlinkSync(workflowSource, linkedWorkflow)
-
-      const result = spawnSync('bash', [syncStableScript, `--target=${l2Home}`, 'omnimux'], {
-        cwd: root,
-        env: syncEnv({ HOME: testHome }),
-        encoding: 'utf8',
-      })
-      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-      assert.ok(lstatSync(linkedWorkflow).isSymbolicLink())
-      assert.match(result.stdout, /保留 L2 在研 link: omnimux-workflow/)
-      assert.equal(existsSync(join(workflowSource, 'node_modules')), false)
-
-      rmSync(linkedWorkflow, { recursive: true, force: true })
-      const wrongLinkTarget = join(fixturePlugins, 'omnimux')
-      symlinkSync(wrongLinkTarget, linkedWorkflow)
-      const blockBin = join(testHome, 'blocked-bin')
-      const blockedCalls = join(testHome, 'blocked-calls.log')
-      mkdirSync(blockBin, { recursive: true })
-      for (const command of ['corepack', 'mv']) {
-        const file = join(blockBin, command)
-        writeFileSync(file, `#!/bin/bash\nprintf '${command} %s\\n' "$*" >> ${JSON.stringify(blockedCalls)}\nexit 91\n`)
-        chmodSync(file, 0o755)
+      for (const selected of ['omnimux', 'omnimux-workflow']) {
+        const result = spawnSync('bash', [syncStableScript, `--target=${target}`, selected], {
+          cwd: root, env: syncEnv({ HOME: testHome }), encoding: 'utf8',
+        })
+        assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+        assert.match(result.stderr, /已安装包解析到 profile 外部: omnimux-workflow/)
+        assert.ok(lstatSync(linkedWorkflow).isSymbolicLink())
+        assert.equal(readlinkSync(linkedWorkflow), workflowSource)
+        assert.equal(existsSync(join(workflowSource, 'node_modules')), false)
+        assert.deepEqual(readFileSync(join(workflowSource, 'index.js')), source)
+        assert.deepEqual(readFileSync(join(profile, 'package.json')), manifest)
+        assert.equal(readdirSync(profile).some(name => name.startsWith('.pnpm-file-refresh.')), false)
       }
-      const blockedEnv = syncEnv({ HOME: testHome, PATH: `${blockBin}:${process.env.PATH}` })
-      const blockedOther = spawnSync('bash', [syncStableScript, `--target=${l2Home}`, 'omnimux'], {
-        cwd: root,
-        env: blockedEnv,
-        encoding: 'utf8',
-      })
-      assert.equal(blockedOther.status, 1, `${blockedOther.stdout}\n${blockedOther.stderr}`)
-      assert.match(blockedOther.stderr, /非法 L2 在研 link: omnimux-workflow 未指向当前 worktree source/)
-      assert.ok(lstatSync(linkedWorkflow).isSymbolicLink())
-      assert.equal(readlinkSync(linkedWorkflow), wrongLinkTarget)
-
-      const blockedSelected = spawnSync('bash', [syncStableScript, `--target=${l2Home}`, 'omnimux-workflow'], {
-        cwd: root,
-        env: blockedEnv,
-        encoding: 'utf8',
-      })
-      assert.equal(blockedSelected.status, 1, `${blockedSelected.stdout}\n${blockedSelected.stderr}`)
-      assert.match(blockedSelected.stderr, /非法 L2 在研 link: omnimux-workflow 未指向当前 worktree source/)
-      assert.ok(lstatSync(linkedWorkflow).isSymbolicLink())
-      assert.equal(readlinkSync(linkedWorkflow), wrongLinkTarget)
-      assert.equal(existsSync(blockedCalls), false)
     } finally {
       rmSync(testHome, { recursive: true, force: true })
     }

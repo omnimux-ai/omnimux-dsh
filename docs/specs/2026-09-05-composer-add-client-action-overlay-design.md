@@ -20,6 +20,8 @@ related:
 
 # Composer「+」原生列表直达：正式 `clientAction` 扩展与最小 Host Overlay 设计
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境、合入前浏览器验收及内置浏览器指令不适用。当前流程与 ego-only 边界见 [plugin-qa](../contracts/plugin-qa.md) 和 [dev-pipeline](../contracts/dev-pipeline.md)；历史结果、已退役补丁及产品约束不重写。
+
 > 历史记录：本文的官方源码补丁及 apply/reset 命令已由 [#668 退役合同](../contracts/quota-error-compatibility.md) 替代，不再是有效执行入口。原始设计与测试结果保留供追溯。
 
 ## 0. 结论、边界与已核实事实

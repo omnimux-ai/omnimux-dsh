@@ -18,6 +18,8 @@ related:
 
 # OmniMux 插件套件重构方案
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境、端口/profile/link 与合入前浏览器验收要求退役，不再维护对应实现。当前执行顺序以 [dev-pipeline](../contracts/dev-pipeline.md)、[plugin-qa](../contracts/plugin-qa.md) 为准：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。其余设计与历史结果不重标。
+
 本方案已由用户确认并进入实施，父任务为 [#539](https://github.com/omnimux-ai/omnimux-dsh/issues/539)，文档交付由 [#556](https://github.com/omnimux-ai/omnimux-dsh/issues/556) 承载。保留现有插件划分，围绕真实入口消除重复规则，将状态决策从宿主操作中分离，在 HTTP、执行事件、领域数据和宿主接口四处补可执行类型检查。
 
 近期问题的共同点是：同一规则有多份实现；同一模块同时操作宿主、状态和 DOM；测试或类型注释没有覆盖真正运行的入口。单纯拆小文件不能解决这些问题。

@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hash, payloadManifest, stable, compareLocks, GraphInspector } from './materialize-graph.mjs';
 import { parseRequest } from './managed-tarball.mjs';
+import { fakeGitPath } from './sync-fixtures.test.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scratch = fs.mkdtempSync(path.join(tmpdir(), 'managed-archive-'));
@@ -251,4 +252,42 @@ test('managed request rejects every missing identity and mixed target before wri
   }
   assert.throws(() => parseRequest([...args, args[0]]), /duplicate/);
   assert.throws(() => parseRequest(args, { ...process.env, OMNIMUX_SYNC_TARGETS: 'dev' }), /conflicts/);
+});
+
+test('managed public request accepts only Dev with clean main and the existing viewer identity', () => {
+  const home = path.join(scratch, 'request-home');
+  const target = path.join(home, '.omnimux-dev');
+  const profile = path.join(target, 'profiles/omnimux');
+  fs.mkdirSync(profile, { recursive: true });
+  const request = makeArchive(path.join(scratch, 'viewer-request.tgz'), [], { name: '@crosery/dsh-viewer' });
+  const args = [`--managed-tarball=${request.tarball}`, '--expect-name=@crosery/dsh-viewer', '--expect-version=0.1.0', `--expect-sha256=${request.sha256}`];
+  const env = { ...process.env, HOME: home, OMNIMUX_SYNC_TARGETS: '', PATH: fakeGitPath(home, path.dirname(here)) };
+  const parsed = parseRequest(args, env);
+  assert.equal(parsed.profile, profile);
+  assert.equal(parsed.target, target);
+  assert.throws(() => parseRequest(args.map(arg => arg === '--expect-name=@crosery/dsh-viewer' ? '--expect-name=@fixture/viewer' : arg), env), /viewer 0.1.0 only/);
+  for (const custom of [path.join(home, '.dsh-dev/tasks/old-task'), path.join(home, 'synthetic-target'), 'prod']) {
+    assert.throws(() => parseRequest([...args, `--target=${custom}`], { ...env,
+      OMNIMUX_ALLOW_UNMERGED_MATERIALIZE: '1', OMNIMUX_ALLOW_UNMERGED_TARGET: custom }), /target must be dev/);
+  }
+  const recovery = parseRequest(['--recover-managed-tarball=11111111-1111-1111-1111-111111111111'], env);
+  assert.equal(recovery.profile, profile);
+  assert.equal(recovery.tarball, null);
+  const git = path.join(home, 'git-boundary/git');
+  fs.writeFileSync(git, '#!/bin/bash\nexit 1\n');
+  assert.throws(() => parseRequest(args, { ...env, OMNIMUX_ALLOW_UNMERGED_MATERIALIZE: '1', OMNIMUX_ALLOW_UNMERGED_TARGET: target }), /clean aligned main/);
+});
+
+test('managed run CLI cannot accept an unvalidated synthetic request on stdin', () => {
+  const profile = path.join(scratch, 'stdin-profile');
+  fs.mkdirSync(profile);
+  fs.writeFileSync(path.join(profile, 'sentinel'), 'unchanged');
+  const before = payloadManifest(profile);
+  const result = spawnSync(process.execPath, [path.join(here, 'managed-tarball.mjs'), 'run'], {
+    input: JSON.stringify({ profile, target: profile, recover: '11111111-1111-1111-1111-111111111111' }),
+    encoding: 'utf8', env: { ...process.env, OMNIMUX_SYNC_TARGETS: '' },
+  });
+  assert.equal(result.status, 2, result.stderr);
+  assert.match(JSON.parse(result.stdout).message, /identity.*required/);
+  assert.deepEqual(payloadManifest(profile), before);
 });

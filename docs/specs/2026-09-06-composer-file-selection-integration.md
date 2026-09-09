@@ -11,6 +11,8 @@ subsystem: "omnimux"
 
 # Composer 与文件选择能力的集成验收
 
+> **历史流程 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立运行与合入前浏览器验收要求退役，历史需求与结果不重标。当前执行顺序以 [dev-pipeline](../contracts/dev-pipeline.md) 和 [plugin-qa](../contracts/plugin-qa.md) 为准。
+
 状态：历史集成方案。当前原生菜单需求由 [#676 单击添加规格](2026-09-06-composer-single-click.md) 定义；本文保留 #554 当时的决策与证据，不作为当前入口实现要求。日期：2026-09-06。
 
 ## 目标与授权

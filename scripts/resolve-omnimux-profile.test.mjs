@@ -32,7 +32,7 @@ function resolve(home, target) {
 describe('resolve_omnimux_profile_dir', () => {
   it('only normalizes symbolic aliases and preserves case-sensitive absolute paths with spaces', () => {
     const home = fixture()
-    const target = join(home, 'Case Sensitive Target', 'L2 Profile')
+    const target = join(home, 'Case Sensitive Target', 'Custom Profile')
     const result = spawnSync('bash', ['-c', [
       'source "$1"',
       'normalize_omnimux_sync_target "$2"',
@@ -82,33 +82,22 @@ describe('resolve_omnimux_profile_dir', () => {
     assert.equal(result.stdout.trim(), join(target, 'profiles', 'omnimux'))
   })
 
-  it('uses dev-env’s task-name profile for an L2 task root', () => {
+  it('uses the standard profile even for a legacy task-shaped target', () => {
     const home = fixture()
-    const task = join(home, '.dsh-dev', 'tasks', 'client-action')
-    const result = resolve(home, task)
+    const target = join(home, '.dsh-dev', 'tasks', 'client-action')
+    mkdirSync(join(target, 'profiles', 'omnimux-dev-client-action'), { recursive: true })
+    mkdirSync(join(target, 'profiles', 'omnimux'), { recursive: true })
+    const result = resolve(home, target)
 
     assert.equal(result.status, 0, result.stderr)
-    assert.equal(result.stdout.trim(), join(task, 'profiles', 'omnimux-dev-client-action'))
+    assert.equal(result.stdout.trim(), join(target, 'profiles', 'omnimux'))
   })
 
-  it('rejects a task-root alias so a temporary profiles/omnimux symlink cannot become a target', () => {
+  it('does not derive a profile name from nested custom target paths', () => {
     const home = fixture()
-    const task = join(home, '.dsh-dev', 'tasks', 'client-action')
-    mkdirSync(join(task, 'profiles', 'omnimux'), { recursive: true })
-    const result = resolve(home, task)
-
-    assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /拒绝 profiles\/omnimux alias/)
-  })
-
-  it('rejects an L2 target with both profile names instead of guessing', () => {
-    const home = fixture()
-    const task = join(home, '.dsh-dev', 'tasks', 'client-action')
-    mkdirSync(join(task, 'profiles', 'omnimux'), { recursive: true })
-    mkdirSync(join(task, 'profiles', 'omnimux-dev-client-action'), { recursive: true })
-    const result = resolve(home, task)
-
-    assert.notEqual(result.status, 0)
-    assert.match(result.stderr, /同时存在/)
+    const target = join(home, 'Custom Targets', 'nested', 'Target')
+    const result = resolve(home, target)
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.stdout.trim(), join(target, 'profiles', 'omnimux'))
   })
 })

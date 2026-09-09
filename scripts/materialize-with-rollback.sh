@@ -66,7 +66,7 @@ if [[ -z "$TARGET_PLUGIN" ]]; then
   exit 2
 fi
 
-if [[ "${OMNIMUX_MERGE_CONFIRMED:-0}" != "1" && "${OMNIMUX_ALLOW_UNMERGED_MATERIALIZE:-0}" != "1" ]]; then
+if [[ "${OMNIMUX_MERGE_CONFIRMED:-0}" != "1" ]]; then
   echo "❌ materialize-with-rollback: 未置位 OMNIMUX_MERGE_CONFIRMED=1；生产物化仅在确认 MERGED 后执行" >&2
   exit 1
 fi

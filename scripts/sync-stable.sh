@@ -22,8 +22,8 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGINS_ROOT="${OMNIMUX_PLUGINS_DIR:-$ROOT/plugins}"
 MANAGED_DSH_UI_KIT_RELATIVE_PATH='.materialize-snapshots/plugins/dsh-ui-kit'
-# Keep L2 task profiles aligned with dev-env.sh; shared with sync-to-app.sh.
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
+source "$ROOT/scripts/sync-main.sh"
 
 ORIGINAL_ARGS=("$@")
 for arg in "$@"; do
@@ -38,7 +38,7 @@ for arg in "$@"; do
       elif [ "$lock_status" -ne 0 ]; then
         exit 4
       fi
-      printf '%s' "$request" | node "$ROOT/scripts/managed-tarball.mjs" run
+      node "$ROOT/scripts/managed-tarball.mjs" run "$@"
       exit $?
       ;;
   esac
@@ -156,6 +156,9 @@ else
     esac
   done
 fi
+
+assert_omnimux_sync_main "$ROOT"
+assert_omnimux_sync_plugins "$ROOT" "$PLUGINS_ROOT"
 
 PROFILES=()
 for home_candidate in "${TARGET_HOMES[@]}"; do
@@ -363,6 +366,24 @@ for PROFILE in "${PROFILES[@]}"; do
     fi
   done
 
+  # Reject external installation links before pnpm can write through them.
+  node - "$PROFILE" <<'EOF'
+const fs = require('node:fs')
+const path = require('node:path')
+const profile = process.argv[2]
+const modules = path.join(profile, 'node_modules')
+const manifest = JSON.parse(fs.readFileSync(path.join(profile, 'package.json'), 'utf8'))
+for (const [name, spec] of Object.entries(manifest.dependencies || {})) {
+  if (typeof spec === 'string' && spec.startsWith('link:')) throw new Error(`不允许外部安装 link: ${name}`)
+  const installed = path.join(modules, name)
+  if (!fs.lstatSync(installed, { throwIfNoEntry: false })?.isSymbolicLink()) continue
+  const relative = path.relative(fs.realpathSync(modules), fs.realpathSync(installed))
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`已安装包解析到 profile 外部: ${name}`)
+  }
+}
+EOF
+
   mkdir -p "$PROFILE/node_modules" "$MANAGED_SOURCE_ROOT"
 
   materialize_plugin_source() {
@@ -553,7 +574,7 @@ EOF
 
   # pnpm 11 对同版本 directory file: 依赖会保留现有安装入口，即使受管 source
   # 已由本轮 rsync 替换。只暂存本轮显式选中、且 manifest 精确声明为受管 file:
-  # 的入口，使 pnpm install 重装它们；link: 入口（例如 L2 的 workflow）绝不触碰。
+  # 的入口，使 pnpm install 重装它们；失败时恢复原安装入口。
   REFRESH_FILE_PACKAGES=()
   add_refresh_file_package() {
     local candidate="$1" existing
@@ -573,41 +594,6 @@ EOF
     if [ "$dependency_spec" = "file:.materialize-snapshots/plugins/dsh-ui-kit" ]; then
       add_refresh_file_package "dsh-ui-kit"
     fi
-  fi
-
-  # L2 可以保留唯一一条当前 worktree 的在研 link。pnpm 会尝试为这条 link
-  # 的源目录补齐依赖；先暂存它，让 install 只读取 profile 内的受管 snapshot，
-  # 随后立即还原 link。其它 profile、多个 link 或任何非当前源路径都不放行。
-  if ! IN_PROGRESS_LINK_NAME="$(node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$PLUGINS_ROOT" <<'EOF'
-const fs = require('fs')
-const path = require('path')
-const [profile, managedRoot, pluginsRoot] = process.argv.slice(2)
-const reject = reason => {
-  console.error(`✗ 非法 L2 在研 link: ${reason}`)
-  process.exit(1)
-}
-try {
-  const taskRoot = path.dirname(path.dirname(profile))
-  if (path.basename(path.dirname(taskRoot)) !== 'tasks' || path.basename(path.dirname(path.dirname(taskRoot))) !== '.dsh-dev') process.exit(0)
-  const modules = path.join(profile, 'node_modules')
-  const links = fs.readdirSync(modules).filter(name => fs.lstatSync(path.join(modules, name)).isSymbolicLink())
-  if (links.length === 0) process.exit(0)
-  if (links.length !== 1) reject(`顶层 link 数 ${links.length}（必须为 1）`)
-  const name = links[0]
-  const manifest = JSON.parse(fs.readFileSync(path.join(profile, 'package.json'), 'utf8'))
-  if (manifest.dependencies?.[name] !== `file:.materialize-snapshots/plugins/${name}`) reject(`${name} 未声明为受管 snapshot`)
-  if (!fs.existsSync(path.join(managedRoot, name, 'package.json'))) reject(`${name} 缺少受管 snapshot`)
-  const installed = path.join(modules, name)
-  const source = path.join(pluginsRoot, name)
-  if (fs.realpathSync(installed) !== fs.realpathSync(source)) reject(`${name} 未指向当前 worktree source`)
-  if (JSON.parse(fs.readFileSync(path.join(installed, 'package.json'), 'utf8')).name !== name) reject(`${name} 包身份错误`)
-  process.stdout.write(name)
-} catch (error) {
-  reject(error instanceof Error ? error.message : String(error))
-}
-EOF
-)"; then
-    exit 1
   fi
 
   REFRESH_BACKUP_DIR=""
@@ -641,20 +627,7 @@ EOF
     rm -rf "$REFRESH_BACKUP_DIR"
     REFRESH_BACKUP_DIR=""
   }
-  restore_in_progress_link() {
-    local installed backup
-    [ -n "$IN_PROGRESS_LINK_NAME" ] || return 0
-    installed="$PROFILE/node_modules/$IN_PROGRESS_LINK_NAME"
-    backup="$REFRESH_BACKUP_DIR/$IN_PROGRESS_LINK_NAME"
-    if [ -e "$backup" ] || [ -L "$backup" ]; then
-      if [ -e "$installed" ] || [ -L "$installed" ]; then
-        rm -rf "$installed"
-      fi
-      mkdir -p "$(dirname "$installed")"
-      mv "$backup" "$installed"
-    fi
-  }
-  if [ "${#REFRESH_FILE_PACKAGES[@]}" -gt 0 ] || [ -n "$IN_PROGRESS_LINK_NAME" ]; then
+  if [ "${#REFRESH_FILE_PACKAGES[@]}" -gt 0 ]; then
     if ! REFRESH_BACKUP_DIR="$(mktemp -d "$PROFILE/.pnpm-file-refresh.XXXXXX")"; then
       echo "✗ 无法创建 profile-local file: 刷新备份目录: ${PROFILE}" >&2
       exit 1
@@ -666,11 +639,6 @@ EOF
         exit 1
       fi
     done
-    if [ -n "$IN_PROGRESS_LINK_NAME" ] && ! backup_refresh_entry "$IN_PROGRESS_LINK_NAME"; then
-      restore_refresh_entries
-      echo "✗ 无法暂存 L2 在研 link: $PROFILE/node_modules/$IN_PROGRESS_LINK_NAME" >&2
-      exit 1
-    fi
     echo "  → 刷新本轮受管 file: 入口 (${REFRESH_FILE_PACKAGES[*]})"
   fi
 
@@ -683,18 +651,13 @@ EOF
     echo "✗ pnpm 刷新 profile 依赖失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1
   fi
-  if ! restore_in_progress_link; then
-    restore_refresh_entries
-    echo "✗ 无法还原 L2 在研 link: $PROFILE/node_modules/$IN_PROGRESS_LINK_NAME" >&2
-    exit 1
-  fi
   # 安装后同时核验 package 身份、声明入口和内容指纹；不能只相信 pnpm 退出码。
-  if ! node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$MANAGES_KIT" "$managed_plugins_csv" "$PLUGINS_ROOT" "$RELEASE_CHANNEL" "$alpha_plugins_csv" <<'EOF'
+  if ! node - "$PROFILE" "$MANAGED_SOURCE_ROOT" "$MANAGES_KIT" "$managed_plugins_csv" "$RELEASE_CHANNEL" "$alpha_plugins_csv" <<'EOF'
 const crypto = require('crypto')
 const { spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
-const [profile, managedRoot, managesKit, pluginsCsv, pluginsRoot, releaseChannel, alphaPluginsCsv] = process.argv.slice(2)
+const [profile, managedRoot, managesKit, pluginsCsv, releaseChannel, alphaPluginsCsv] = process.argv.slice(2)
 const plugins = pluginsCsv ? pluginsCsv.split(',') : []
 const alphaPlugins = alphaPluginsCsv ? alphaPluginsCsv.split(',') : []
 const manifest = JSON.parse(fs.readFileSync(path.join(profile, 'package.json'), 'utf8'))
@@ -737,13 +700,6 @@ const verifyPackedFiles = (name, sourceRoot, installedRoot) => {
   }
 }
 const profileModules = fs.realpathSync(path.join(profile, 'node_modules'))
-const isL2TaskProfile = path.basename(path.dirname(path.dirname(path.dirname(profile)))) === 'tasks'
-  && path.basename(path.dirname(path.dirname(path.dirname(path.dirname(profile))))) === '.dsh-dev'
-const topLevelLinks = () => fs.readdirSync(profileModules).filter(name => fs.lstatSync(path.join(profileModules, name)).isSymbolicLink())
-const isCurrentL2InProgressLink = (name, installedRoot) => {
-  if (!isL2TaskProfile || !fs.lstatSync(installedRoot).isSymbolicLink() || topLevelLinks().length !== 1) return false
-  return fs.realpathSync(installedRoot) === fs.realpathSync(path.join(pluginsRoot, name))
-}
 if (releaseChannel === 'production') {
   const bundles = Array.isArray(manifest.dsh?.profile?.bundles) ? manifest.dsh.profile.bundles : []
   const virtualStore = path.join(profileModules, '.pnpm')
@@ -775,12 +731,6 @@ for (const name of plugins) {
   }
   const sourceRoot = path.join(managedRoot, name)
   const installedRoot = path.join(profile, 'node_modules', name)
-  if (isCurrentL2InProgressLink(name, installedRoot)) {
-    const linkedPackage = JSON.parse(fs.readFileSync(path.join(installedRoot, 'package.json'), 'utf8'))
-    if (linkedPackage.name !== name) throw new Error(`L2 在研 link 身份不匹配: ${name}`)
-    console.log(`  ✓ 保留 L2 在研 link: ${name} → ${fs.realpathSync(installedRoot)}`)
-    continue
-  }
   if (!inside(profileModules, fs.realpathSync(installedRoot))) {
     throw new Error(`已安装包解析到 profile 外部: ${name}`)
   }

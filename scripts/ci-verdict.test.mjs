@@ -7,7 +7,6 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { evaluateVerdict, applyVerdictLabel } from './ci-verdict.mjs'
 import { deriveImpactMatrix } from './impact-matrix.mjs'
-import { liveEvidence, tinyPng } from './test-fixtures/live-evidence.mjs'
 
 const roots = []
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
@@ -23,107 +22,97 @@ function sandbox() {
 const uiFiles = ['plugins/a/src/client/View.tsx']
 const docsFiles = ['docs/guide.md']
 const qa = files => ({ pass: true, summary: 'L0 passed', changedFiles: files })
+const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
 
-test('requires impact context and rejects malformed or contradictory matrices', () => {
-  assert.equal(evaluateVerdict({ pass: true }, null).pass, false)
-  assert.equal(evaluateVerdict({ pass: true }, null, { requireBrowser: false }).pass, false)
+test('requires impact context and rejects malformed, pre-merge browser or contradictory matrices', () => {
+  assert.equal(evaluateVerdict({ pass: true }).pass, false)
   const legacy = deriveImpactMatrix([])
-  legacy.dimensions.iab = legacy.dimensions.browser
-  delete legacy.dimensions.browser
+  legacy.dimensions.browser.phase = 'pre-merge'
   for (const impactMatrix of [{}, { dimensions: {} }, legacy, { ...deriveImpactMatrix([]), isUiChange: true }]) {
-    assert.equal(evaluateVerdict(qa([]), null, { impactMatrix }).pass, false)
+    assert.equal(evaluateVerdict(qa([]), { impactMatrix }).pass, false)
   }
-  assert.equal(evaluateVerdict(qa(uiFiles), null, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
-  assert.equal(evaluateVerdict({ pass: true }, null, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, true)
+  assert.equal(evaluateVerdict(qa(uiFiles), { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
+  assert.equal(evaluateVerdict(qa(['plugins/a/src/server.js']), { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, false)
+  assert.equal(evaluateVerdict({ pass: true }, { impactMatrix: deriveImpactMatrix(docsFiles) }).pass, true)
 })
 
-test('non-UI and empty changes explicitly mark ego-browser not applicable, even with stale evidence', () => {
+test('non-UI changes mark browser not applicable rather than passed', () => {
   for (const files of [[], docsFiles, ['scripts/server.mjs', 'docs/contracts/plugin-qa.md']]) {
-    const verdict = evaluateVerdict(qa(files), { pass: false, tool: 'stale' })
+    const verdict = evaluateVerdict(qa(files))
     assert.equal(verdict.pass, true)
-    assert.equal(verdict.dimensions.browser.pass, true)
+    assert.equal(verdict.scope, 'pre-merge-static-tests')
+    assert.equal(verdict.dimensions.browser.pass, null)
     assert.equal(verdict.dimensions.browser.status, 'not-applicable')
+    assert.equal(verdict.dimensions.dev.status, 'not-applicable')
     assert.match(verdict.summary, /无客户端\/UI文件变更/)
   }
 })
 
-test('UI and mixed changes require ego-browser; requireBrowser:false cannot downgrade the matrix', () => {
+test('UI static CI passes while Dev and browser remain post-merge pending, not accepted', () => {
   for (const files of [uiFiles, [...uiFiles, ...docsFiles], ['theme.scss']]) {
-    const verdict = evaluateVerdict(qa(files), null, { requireBrowser: false })
-    assert.equal(verdict.pass, false)
-    assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
-    assert.equal(verdict.dimensions.browser.required, true)
+    const verdict = evaluateVerdict(qa(files))
+    assert.equal(verdict.pass, true)
+    assert.equal(verdict.dimensions.l0.status, 'passed')
+    for (const name of ['dev', 'browser']) {
+      assert.equal(verdict.dimensions[name].pass, null)
+      assert.equal(verdict.dimensions[name].status, 'pending')
+      assert.equal(verdict.dimensions[name].phase, 'post-merge')
+      assert.equal(verdict.dimensions[name].target, 'dev')
+    }
+    assert.doesNotMatch(verdict.summary, /ego-browser 通过/)
   }
 })
 
-test('legacy programmatic L0 fallback cannot waive required browser evidence', () => {
-  const verdict = evaluateVerdict(qa(uiFiles), null, { allowL0Fallback: true })
-  assert.equal(verdict.pass, false)
-  assert.equal(verdict.dimensions.browser.pass, false)
-  assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
+test('Host runtime changes need Dev after merge without inventing browser requirements', () => {
+  const verdict = evaluateVerdict(qa(['plugins/a/src/service.js']))
+  assert.equal(verdict.pass, true)
+  assert.equal(verdict.dimensions.dev.status, 'pending')
+  assert.equal(verdict.dimensions.browser.status, 'not-applicable')
 })
 
-for (const bypass of [
-  { name: 'flag', args: ['--allow-l0-fallback'], environment: '' },
-  { name: 'environment', args: [], environment: '1' },
-]) {
-  test(`legacy L0 fallback ${bypass.name} cannot pass missing browser evidence or add qa:pass`, () => {
-    const root = sandbox()
-    const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
-    const log = join(root, 'labels.log')
-    writeFileSync(join(root, 'qa.json'), JSON.stringify(qa(uiFiles)))
-    writeFileSync(join(root, 'gh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$LABEL_LOG"\n')
-    chmodSync(join(root, 'gh'), 0o755)
-    const result = spawnSync(process.execPath, [script, '--report', 'qa.json', '--pr', '605', '--json', ...bypass.args], {
-      cwd: root, encoding: 'utf8',
-      env: { ...process.env, PATH: `${root}:${process.env.PATH}`, LABEL_LOG: log,
-        GITHUB_REPOSITORY: 'owner/repo', OMNIMUX_ALLOW_L0_UI_PASS: bypass.environment },
+test('missing, false or truthy non-boolean L0 reports and prior CI failure are rejected', () => {
+  for (const report of [null, { pass: false }, { pass: 'true' }]) {
+    assert.equal(evaluateVerdict(report, { changedFiles: docsFiles }).pass, false)
+  }
+  for (const ciStatus of ['failure', 'cancelled', 'skipped', 'pending']) {
+    assert.equal(evaluateVerdict(qa(uiFiles), { ciStatus }).pass, false)
+  }
+})
+
+test('environment cannot turn pending Dev into a browser pass or waive static failure', () => {
+  const root = sandbox()
+  for (const pass of [true, false]) {
+    writeFileSync(join(root, 'qa.json'), JSON.stringify({ ...qa(uiFiles), pass }))
+    const run = extraEnv => spawnSync(process.execPath, [script, '--report', 'qa.json', '--ci-status', 'success', '--dry-run', '--json'], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, ...extraEnv },
+    })
+    const normal = run({ GITHUB_ACTIONS: '', GITHUB_RUN_ID: '', OMNIMUX_ALLOW_L0_UI_PASS: '' })
+    const hosted = run({ GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '123', OMNIMUX_ALLOW_L0_UI_PASS: '1', OMNIMUX_BROWSER_TARGET: 'l2' })
+    assert.equal(hosted.status, pass ? 0 : 1)
+    assert.deepEqual(JSON.parse(hosted.stdout), JSON.parse(normal.stdout))
+    assert.equal(JSON.parse(hosted.stdout).dimensions.browser.status, 'pending')
+  }
+})
+
+test('obsolete browser and fallback CLI arguments fail and remove old qa:pass', () => {
+  const root = sandbox()
+  const log = join(root, 'labels.log')
+  writeFileSync(join(root, 'qa.json'), JSON.stringify(qa(uiFiles)))
+  writeFileSync(join(root, 'gh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$LABEL_LOG"\n')
+  chmodSync(join(root, 'gh'), 0o755)
+  for (const args of [['--allow-l0-fallback'], ['--require-browser'], ['--browser-report', 'report.json'], ['--browser-target', 'l2']]) {
+    writeFileSync(log, '')
+    const result = spawnSync(process.execPath, [script, '--report', 'qa.json', '--pr', '605', '--json', ...args], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${root}:${process.env.PATH}`, LABEL_LOG: log, GITHUB_REPOSITORY: 'owner/repo' },
     })
     assert.equal(result.status, 1, result.stdout)
     assert.match(readFileSync(log, 'utf8'), /--remove-label qa:pass/)
     assert.doesNotMatch(readFileSync(log, 'utf8'), /--add-label/)
-    if (bypass.name === 'flag') assert.match(result.stdout, /未知或缺值参数: --allow-l0-fallback/)
-    else {
-      const verdict = JSON.parse(result.stdout)
-      assert.equal(verdict.pass, false)
-      assert.equal(verdict.dimensions.browser.status, 'failed')
-      assert.match(verdict.errors.join(';'), /缺少 ego-browser/)
-    }
-  })
-}
-
-test('missing, false or truthy non-boolean L0 reports and prior CI failure are rejected', () => {
-  for (const report of [null, { pass: false }, { pass: 'true' }]) {
-    assert.equal(evaluateVerdict(report, null, { changedFiles: docsFiles }).pass, false)
+    assert.match(result.stdout, /未知或缺值参数/)
   }
-  assert.equal(evaluateVerdict(qa(docsFiles), null, { ciStatus: 'failure' }).pass, false)
 })
 
-test('current valid ego-browser receipts pass and stale identity, invalid proof and expired windows fail', () => {
-  const root = sandbox()
-  const { request, report } = liveEvidence(root, root)
-  writeFileSync(join(root, 'assets.png'), tinyPng())
-  const options = { browserRequest: request, browserRoot: root, browserRunId: request.runId, browserStage: request.stage, browserTarget: request.target }
-  assert.equal(evaluateVerdict(qa(uiFiles), report, options).pass, true)
-  for (const mutation of [
-    { pass: false }, { tool: 'codex-iab' }, { taskSpaceId: null }, { browserIdentity: {} },
-    { status: 'pending' }, { commitSha: 'stale' },
-    { runId: 'old' }, { target: null }, { stage: 'other' }, { actualUrl: 'http://127.0.0.1:44202/' },
-    { completedAt: '2000-01-01T00:00:00Z' }, { runtimeProof: {} }, { screenshots: [] },
-  ]) {
-    const verdict = evaluateVerdict(qa(uiFiles), { ...report, ...mutation }, options)
-    assert.equal(verdict.pass, false, JSON.stringify(mutation))
-    assert.match(verdict.errors.join(';'), /证据无效/)
-  }
-  const oldRequest = { ...request, commitSha: '0'.repeat(40) }
-  assert.equal(evaluateVerdict(qa(uiFiles), { ...report, commitSha: oldRequest.commitSha }, { ...options, browserRequest: oldRequest }).pass, false)
-  for (const browserRequest of [null, { ...request, consumedAt: null }, { ...request, expiresAt: request.createdAt }]) {
-    assert.equal(evaluateVerdict(qa(uiFiles), report, { ...options, browserRequest }).pass, false)
-  }
-  assert.equal(evaluateVerdict(qa(uiFiles), report, { ...options, browserRunId: '' }).pass, false)
-})
-
-test('legacy label API delegates removal and conditional addition', () => {
+test('label API delegates removal and conditional addition', () => {
   for (const pass of [true, false]) {
     const calls = []
     const result = applyVerdictLabel(605, pass, false, { repo: 'owner/repo', execCommand: (_cmd, args) => { calls.push(args.at(-2)); return { status: 0 } } })
@@ -134,7 +123,6 @@ test('legacy label API delegates removal and conditional addition', () => {
 
 test('CLI derives impact from explicit files or strict git diff and clears failure labels', () => {
   const root = sandbox()
-  const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
   writeFileSync(join(root, 'qa.json'), JSON.stringify({ pass: true }))
   writeFileSync(join(root, 'gh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$LABEL_LOG"\n')
   chmodSync(join(root, 'gh'), 0o755)
@@ -144,7 +132,7 @@ test('CLI derives impact from explicit files or strict git diff and clears failu
   const passed = run(['--changed-files', 'docs/guide.md'])
   assert.equal(passed.status, 0, passed.stderr)
   assert.match(readFileSync(log, 'utf8'), /--remove-label qa:pass\n.*--add-label qa:pass/)
-  for (const args of [[], ['--changed-files', 'x.tsx'], ['--files-from-git', '--base', 'missing-ref'], ['--unknown']]) {
+  for (const args of [[], ['--files-from-git', '--base', 'missing-ref'], ['--unknown']]) {
     writeFileSync(log, '')
     const failed = run(args)
     assert.equal(failed.status, 1)
@@ -153,26 +141,10 @@ test('CLI derives impact from explicit files or strict git diff and clears failu
   }
   writeFileSync(join(root, 'x.tsx'), 'export default null\n')
   const ui = run(['--files-from-git', '--base', 'HEAD'])
-  assert.equal(ui.status, 1)
+  assert.equal(ui.status, 0, ui.stderr)
   assert.equal(JSON.parse(ui.stdout).impactMatrix.isUiChange, true)
+  assert.equal(JSON.parse(ui.stdout).dimensions.browser.status, 'pending')
   assert.equal(existsSync(join(root, 'docs/evidence')), false)
-})
-
-test('CLI accepts a SHA-bound ego-browser receipt and rejects a changed expected run', () => {
-  const root = sandbox()
-  const { request, report } = liveEvidence(root, root)
-  writeFileSync(join(root, 'qa.json'), JSON.stringify(qa(uiFiles)))
-  writeFileSync(join(root, 'live-qa-report.json'), JSON.stringify(report))
-  writeFileSync(join(root, 'ego-browser-qa-request.json'), JSON.stringify(request))
-  writeFileSync(join(root, 'assets.png'), tinyPng())
-  const script = fileURLToPath(new URL('./ci-verdict.mjs', import.meta.url))
-  const run = runId => spawnSync(process.execPath, [script, '--report', 'qa.json', '--browser-report', 'live-qa-report.json',
-    '--browser-root', root, '--browser-stage', 'assets', '--browser-target', 'l2', '--browser-run-id', runId, '--dry-run', '--json'],
-  { cwd: root, encoding: 'utf8' })
-  const valid = run(request.runId)
-  assert.equal(valid.status, 0, valid.stderr)
-  assert.equal(JSON.parse(valid.stdout).dimensions.browser.status, 'passed')
-  assert.equal(run('different-run').status, 1)
 })
 
 test('workflow passes event-specific diff context and always evaluates failures', () => {
@@ -181,6 +153,6 @@ test('workflow passes event-specific diff context and always evaluates failures'
   assert.match(workflow, /Evaluate CI verdict\n\s+if:.*always\(\)/)
   assert.match(workflow, /--files-from-git --base "\$QA_BASE"/)
   assert.match(workflow, /--ci-status "\$CI_STATUS"/)
-  assert.doesNotMatch(workflow, /OMNIMUX_ALLOW_L0_UI_PASS|--allow-l0-fallback/)
+  assert.doesNotMatch(workflow, /OMNIMUX_ALLOW_L0_UI_PASS|--allow-l0-fallback|--require-browser|--browser-report/)
   assert.match(workflow, /syncQaPassLabel\(\{ prNumber: process\.env\.PR_NUMBER, pass: false \}\)/)
 })

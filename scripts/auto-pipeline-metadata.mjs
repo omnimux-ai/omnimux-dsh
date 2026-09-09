@@ -10,9 +10,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
   const options = {
     issueId: '', plugin: '', topic: '', dryRun: false, manual: false, forceRetry: false, allowExistingChanges: false,
     implementationCommand: process.env.OMNIMUX_IMPLEMENT_COMMAND || '',
-    l2Url: process.env.OMNIMUX_L2_URL || '', expectedText: process.env.OMNIMUX_EGO_EXPECT || '',
-    browserRunId: process.env.OMNIMUX_BROWSER_RUN_ID || '', browserStage: process.env.OMNIMUX_BROWSER_STAGE || '',
-    browserTarget: process.env.OMNIMUX_BROWSER_TARGET || '', evidenceDir: '',
+    evidenceDir: '',
     waitSeconds: Number(process.env.OMNIMUX_PIPELINE_WAIT_SECONDS || 600), noMerge: false, materialize: true, worktree: '',
   }
   for (let index = 0; index < argv.length; index += 1) {
@@ -25,11 +23,6 @@ export function parseArgs(argv = process.argv.slice(2)) {
     if (arg === '--plugin') options.plugin = next()
     else if (arg === '--topic') options.topic = next()
     else if (arg === '--implementation-command' || arg === '--implement-command') options.implementationCommand = next()
-    else if (arg === '--l2-url') options.l2Url = next()
-    else if (arg === '--expected-text') options.expectedText = next()
-    else if (arg === '--browser-run-id') options.browserRunId = next()
-    else if (arg === '--browser-stage') options.browserStage = next()
-    else if (arg === '--browser-target') options.browserTarget = next()
     else if (arg === '--evidence-dir') options.evidenceDir = resolve(next())
     else if (arg === '--wait-seconds') options.waitSeconds = Number(next())
     else if (arg === '--worktree') options.worktree = resolve(next())

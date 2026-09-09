@@ -16,8 +16,8 @@ const unconsumed = item => {
   assert.equal(JSON.parse(readFileSync(item.path, 'utf8')).consumedAt, null)
 }
 
-test('expired and stale SHA requests fail before consumption', async () => {
-  for (const overrides of [{ expiresAt: new Date(0).toISOString() }, { commitSha: '0'.repeat(40) }]) {
+test('expired, stale SHA, and non-Dev requests fail before consumption', async () => {
+  for (const overrides of [{ expiresAt: new Date(0).toISOString() }, { commitSha: '0'.repeat(40) }, { target: 'l2' }, { url: 'http://127.0.0.1:44201/' }, { profile: 'other-profile' }]) {
     const item = await request(overrides)
     const result = await item.runner.runPreparedQa(item.path, { tab: fakeTab() })
     assert.equal(result.pass, false); assert.equal(result.failureKind, 'request-invalid'); unconsumed(item)

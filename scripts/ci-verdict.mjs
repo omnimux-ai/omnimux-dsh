@@ -1,32 +1,23 @@
 #!/usr/bin/env node
-/** CI verdict: required evidence must pass before projecting qa:pass. */
+/** CI verdict projects static/test readiness, not post-merge Dev acceptance. */
 import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { validateLiveQaReport } from './live-qa-validation.mjs'
-import { deriveImpactMatrix, impactFilesFromGit } from './impact-matrix.mjs'
+import { deriveImpactMatrix, impactFilesFromGit, postMergeAcceptance } from './impact-matrix.mjs'
 import { syncQaPassLabel } from './qa-label.mjs'
 
 function parseArgs(argv) {
   const options = {
-    pr: process.env.PR_NUMBER || '', report: '', browserReport: '', impact: '',
-    browserRunId: process.env.OMNIMUX_BROWSER_RUN_ID || '',
-    browserStage: process.env.OMNIMUX_BROWSER_STAGE || '',
-    browserTarget: process.env.OMNIMUX_BROWSER_TARGET || '',
-    browserRoot: process.env.GITHUB_WORKSPACE || process.cwd(),
+    pr: process.env.PR_NUMBER || '', report: '', impact: '',
     base: process.env.QA_BASE || 'origin/main', dryRun: false,
   }
   const values = {
-    '--pr': 'pr', '--report': 'report', '--browser-report': 'browserReport', '--impact': 'impact',
-    '--browser-run-id': 'browserRunId', '--browser-stage': 'browserStage',
-    '--browser-target': 'browserTarget', '--browser-root': 'browserRoot',
-    '--base': 'base', '--ci-status': 'ciStatus',
+    '--pr': 'pr', '--report': 'report', '--impact': 'impact', '--base': 'base', '--ci-status': 'ciStatus',
   }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--json') options.json = true
-    else if (arg === '--require-browser') options.requireBrowser = true
     else if (arg === '--files-from-git') options.filesFromGit = true
     else if ((arg === '--changed-files' || values[arg]) && argv[i + 1] !== undefined && !argv[i + 1].startsWith('--')) {
       const value = argv[++i]
@@ -45,69 +36,39 @@ function readJson(path) {
 function resolveImpact(qaReport, options) {
   const files = options.changedFiles ?? qaReport?.changedFiles
   const derived = files === undefined ? null : deriveImpactMatrix(files)
-  const matrix = options.impactMatrix ?? options.impact ?? derived
-  if (!matrix) throw new Error('缺少影响面矩阵或 changedFiles，不能仅凭 L0 授予 qa:pass')
-  const { l0, browser } = matrix.dimensions || {}
-  if (l0?.required !== true || typeof browser?.required !== 'boolean'
-      || typeof matrix.isUiChange !== 'boolean' || matrix.isUiChange !== browser.required
-      || !l0.reason?.trim() || !browser.reason?.trim()) {
-    throw new Error('影响面矩阵无效：必须声明 L0 与 ego-browser 的适用性及理由')
+  const matrix = options.impactMatrix ?? derived
+  if (!matrix) throw new Error('缺少影响面矩阵或 changedFiles，不能判断合并后 Dev 适用性')
+  const { l0, browser, dev } = matrix.dimensions || {}
+  if (l0?.required !== true || l0.phase !== 'pre-merge'
+      || typeof browser?.required !== 'boolean' || typeof dev?.required !== 'boolean'
+      || browser.phase !== 'post-merge' || dev.phase !== 'post-merge' || browser.target !== 'dev' || dev.target !== 'dev'
+      || typeof matrix.isUiChange !== 'boolean' || matrix.isUiChange !== browser.required || (browser.required && !dev.required)
+      || !l0.reason?.trim() || !browser.reason?.trim() || !dev.reason?.trim()) {
+    throw new Error('影响面矩阵无效：必须声明合并前 L0 与合并后 Dev/ego-browser 的适用性及理由')
   }
-  if (derived && derived.dimensions.browser.required !== browser.required) throw new Error('影响面矩阵与 changedFiles 不匹配')
+  if (derived && ['browser', 'dev'].some(name => derived.dimensions[name].required !== matrix.dimensions[name].required)) {
+    throw new Error('影响面矩阵与 changedFiles 不匹配')
+  }
   return matrix
 }
 
-export function evaluateVerdict(qaReport, browserReport, options = {}) {
+export function evaluateVerdict(qaReport, options = {}) {
   const errors = [...(options.inputErrors || [])]
   if (options.ciStatus && options.ciStatus !== 'success') errors.push(`前序 CI 检查未通过: ${options.ciStatus}`)
   const l0Pass = qaReport?.pass === true
   if (!qaReport) errors.push('缺少 L0 auto-qa-report.json 报告')
   else if (!l0Pass) errors.push(`L0 QA 未通过: ${qaReport.summary || '存在未通过维度'}`)
-
   let impactMatrix = null
   try { impactMatrix = resolveImpact(qaReport, options) } catch (error) { errors.push(error.message) }
-  const required = impactMatrix?.dimensions.browser.required
-  let browserPass = required === false
-  if (required === true) {
-    if (!browserReport) {
-      if (
-        process.env.GITHUB_ACTIONS === 'true'
-        && Boolean(process.env.GITHUB_RUN_ID)
-        && options.filesFromGit === true
-        && options.ciStatus === 'success'
-        && l0Pass
-        && !process.env.OMNIMUX_ALLOW_L0_UI_PASS
-        && !options.allowL0Fallback
-      ) {
-        browserPass = true
-      } else {
-        errors.push('缺少 ego-browser live-qa-report.json 浏览器验收报告')
-      }
-    } else {
-      try {
-        if (!options.browserRunId || !options.browserStage || !options.browserTarget || !options.browserRoot) {
-          throw new Error('Missing CI expected browser run ID, Stage, target, or worktree')
-        }
-        validateLiveQaReport(browserReport, options.browserRequest, {
-          root: options.browserRoot, runId: options.browserRunId,
-          stage: options.browserStage, target: options.browserTarget,
-        })
-        browserPass = true
-      } catch (error) { errors.push(`ego-browser 证据无效: ${error.message}`) }
-    }
-  }
+  const postMerge = impactMatrix ? postMergeAcceptance(impactMatrix) : null
   const dimensions = {
-    l0: { required: true, pass: l0Pass, status: l0Pass ? 'passed' : 'failed', reason: impactMatrix?.dimensions.l0.reason || 'L0 始终必需' },
-    browser: {
-      required: required ?? null, pass: browserPass,
-      status: required === false ? 'not-applicable' : browserPass ? 'passed' : 'failed',
-      reason: impactMatrix?.dimensions.browser.reason || '缺少有效影响面，不能判断 ego-browser 适用性',
-    },
+    l0: { required: true, phase: 'pre-merge', pass: l0Pass, status: l0Pass ? 'passed' : 'failed', reason: impactMatrix?.dimensions.l0.reason || 'L0 始终必需' },
+    ...(postMerge || {}),
   }
   return {
-    pass: errors.length === 0, errors, impactMatrix, dimensions,
+    pass: errors.length === 0, scope: 'pre-merge-static-tests', errors, impactMatrix, dimensions,
     summary: errors.length ? `FAIL: ${errors.join('；')}`
-      : `PASS: L0 通过；ego-browser ${required ? '通过' : `not-applicable（${dimensions.browser.reason}）`}`,
+      : `PASS: 合并前静态/测试通过；合并后 Dev ${postMerge.dev.status}；ego-browser ${postMerge.browser.status}（${postMerge.browser.reason}）`,
   }
 }
 
@@ -131,9 +92,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
   } catch (error) { inputErrors.push(error.message) }
   const qaReport = readJson(options.report)
-  const browserReport = readJson(options.browserReport)
-  const browserRequest = options.browserReport ? readJson(join(dirname(options.browserReport), 'ego-browser-qa-request.json')) : null
-  const verdict = evaluateVerdict(qaReport, browserReport, { ...options, impact: undefined, impactMatrix, browserRequest, inputErrors })
+  const verdict = evaluateVerdict(qaReport, { ...options, impactMatrix, inputErrors })
   const label = applyVerdictLabel(options.pr, verdict.pass, options.dryRun)
   if (options.json) process.stdout.write(`${JSON.stringify({ ...verdict, label }, null, 2)}\n`)
   else process.stdout.write(`[ci-verdict] ${verdict.summary}\n`)

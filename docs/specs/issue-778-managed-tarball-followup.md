@@ -1,6 +1,6 @@
 # Issue #778 — 有限设计复核与补工合同
 
-> **历史横幅（2026-09-09，PR-D）：** 下文结论、固定 SHA 与「不具备合并或真实 Dev 操作条件」是撰写当时的任务快照，不是当前仓库或 Dev 事实。本文件不因此改写历史 QA 正文。现行默认种子与 D→C→S 见 [稳定基线迁移规格](2026-09-09-stable-baseline-migration.md)。
+> **流程 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 seed/独立 Host 验收及专属 baseline D/C/S 迁移要求已退役；当前流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)。受管 tarball 的内容、事务与安全约束仍保留。下文结论、固定 SHA 与「不具备合并或真实 Dev 操作条件」是当时任务快照，不是当前仓库或 Dev 事实，不重写历史 QA 或将失败改为通过。
 
 **结论：IS_PASS: NO；可以继续定向工程，不是已交付，不具备合并或真实 Dev 操作条件。** 保留原 PRD A01–A12 全部 P0；本补充只纠正实现机制、细化可执行边界，不全面重写架构，不扩成通用软件发行系统。
 

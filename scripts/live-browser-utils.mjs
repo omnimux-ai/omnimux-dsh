@@ -9,7 +9,7 @@ export function allowedAddress(url, target) {
   try { address = new URL(url) } catch { return null }
   const port = Number(address.port)
   const local = address.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(address.hostname)
-  const targetPort = target === 'dev' ? port === 45120 : target === 'l2' && port >= 44201 && port <= 44299
+  const targetPort = target === 'dev' && port === 45120
   if (!local || !targetPort || address.pathname !== '/' || address.username || address.password || address.search || address.hash) return null
   return address
 }

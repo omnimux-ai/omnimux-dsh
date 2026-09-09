@@ -17,11 +17,13 @@ subsystem: "global"
 ## 1. 目录职能
 各垂直插件与中枢功能的产品需求 PRD、技术设计规格 RFC 与高保真交互原型。
 
+> **流程版本边界（2026-09-09 / #864）：** 本目录历史规格中的 L2 环境、合入前独立 Host/浏览器验收及专属稳定 baseline D/C/S 要求均已 **superseded**；现行流程仅由 [dev-pipeline](../contracts/dev-pipeline.md)、[plugin-qa](../contracts/plugin-qa.md) 与 [plugin-git-pr](../contracts/plugin-git-pr.md)定义。产品/接口约束、文档 authority 和工具/UI 层级 L2 不因此失效；历史失败、未执行与证据不重标。
+
 ## 2. 索引矩阵 (Index Matrix)
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
-| `accepted` | [2026-09-09-stable-baseline-migration.md](2026-09-09-stable-baseline-migration.md) | 稳定基线迁移：设计与验收规格（PR-D） | `global` | 2026-09-09 | 当前/迁移/目标；D→C→S；内容哈希 id；published 可隔离消费；真实 Host 无法启动禁止切 S。 |
+| `superseded` | [2026-09-09-stable-baseline-migration.md](2026-09-09-stable-baseline-migration.md) | 稳定基线迁移：设计与验收规格（PR-D） | `global` | 2026-09-09 | L2 专属 D/C/S 迁移已退役；历史原文，不再作为实施或合入门槛；现行流程见 dev-pipeline。 |
 | `accepted` | [2026-09-06-node-input-submission-prd.md](2026-09-06-node-input-submission-prd.md) | 节点上游输入与提交一致性需求补充 | `omnimux-workflow` | 2026-09-06 | 输入解析缺口与 28 项验收场景；文档接受不代表代码或运行验收完成。 |
 | `accepted` | [2026-09-06-inspiration-pagination-refresh.md](2026-09-06-inspiration-pagination-refresh.md) | 灵感库分页刷新约束 | `omnimux-inspiration` | 2026-09-06 | #637：追加分页不得反馈触发第一页刷新；末页停止请求，筛选、激活和授权刷新统一复位第一页。 |
 | `accepted` | [2026-09-06-gxgen-incremental-import.md](2026-09-06-gxgen-incremental-import.md) | Gxgen 灵感增量导入 | `omnimux` | 2026-09-06 | #630：按 TikTok ID 去重、只新增、原 R2 封面预检、冻结计划及逐条回执；同计划恢复与复验。 |

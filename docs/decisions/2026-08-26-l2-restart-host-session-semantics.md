@@ -2,7 +2,7 @@
 title: "决策：L2 restart-host 保端口与磁盘，不保浏览器会话"
 id: "decision-l2-restart-host-session-semantics"
 type: "decision"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-08-26"
 authors: ["x", "agent-architect"]
@@ -10,6 +10,8 @@ subsystem: "omnimux"
 ---
 
 # 决策：L2 `restart-host` 保端口与磁盘，不保浏览器会话
+
+> **SUPERSEDED — 2026-09-09 / #864：** L2 独立环境及其起停、端口和会话生命周期已全量退役，不再执行下文命令。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)：合入前 worktree 自动化/静态与独立评审，required CI/MQ 合入 main 后按需 Dev 45120 验收。下文是历史决策原文，历史结果不重标。
 
 日期：2026-08-26。
 状态：**已确认（审计修订）。**

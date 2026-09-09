@@ -2,8 +2,8 @@
  * watch-plugin.mjs — 统一管理一个产品树插件的构建 watcher。
  *
  * 设计：
- * - 由 dev-env.sh start 拉起；也可单独跑。
- * - 改源码 → 重建构建产物（lib/client.js 等）→ 官方 Host HMR（stat-poll）自动推浏览器。
+ * - 独立运行，只监听源码并重建构建产物（lib/client.js 等）。
+ * - 不启动 Host、不物化 profile；合入后通过正式 sync 入口交付 Dev。
  * - workflow 复用其自带 scripts/dev.mjs；其余插件用本文件的通用 watcher。
  *
  * 用法：
@@ -173,5 +173,5 @@ if (strategy.kind === 'workflow') {
       )
     })
   }
-  console.log(`[${name}] watching ${strategy.dirs.join(', ')} — Host HMR 会自动推浏览器`)
+  console.log(`[${name}] watching ${strategy.dirs.join(', ')} — 仅重建源码产物`)
 }

@@ -11,6 +11,8 @@ subsystem: "omnimux-workflow"
 
 # omnimux-market Agent 工具矩阵：架构设计与任务拆解
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 Web 验收流程退役；工具与产品约束不变。现行 [plugin-qa](../contracts/plugin-qa.md) 要求合入前 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego 验收。历史结果不重标。
+
 > 作者：高见远（架构）  
 > 输入：许清楚《omnimux-market Agent 工具矩阵需求规格说明书》要点 + 现网 `omnimux-market` 源码审计 + 广场规格 `2026-08-23-omnimux-market-agent-plaza.md`  
 > 给：工程师林深  

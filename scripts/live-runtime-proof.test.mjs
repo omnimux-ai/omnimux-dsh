@@ -201,7 +201,7 @@ test('stable proof compares registration and complete-script fingerprints', () =
     match: 'normalized-registration',
     matchingRegistrationCount: 1,
   }
-  const proof = { requestedOrigin: 'http://127.0.0.1:45120', target: 'dev', allocation: null, bundles: [bundle] }
+  const proof = { requestedOrigin: 'http://127.0.0.1:45120', target: 'dev', bundles: [bundle] }
   assertRuntimeProofStable(proof, structuredClone(proof))
   for (const field of ['bundleSha256', 'bundleRegistrationSha256', 'bundleCodeSha256', 'loadedScriptSha256', 'loadedScriptCodeSha256', 'loadedRegistrationSha256', 'loadedRegistrationCodeSha256', 'match', 'matchingRegistrationCount']) {
     assert.throws(() => assertRuntimeProofStable(proof, { ...proof, bundles: [{ ...bundle, [field]: 'changed' }] }), /changed/)

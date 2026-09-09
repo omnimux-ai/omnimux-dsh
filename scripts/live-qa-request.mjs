@@ -21,7 +21,8 @@ export function validateRequest(requestPath, request, now) {
   assert.equal(realpathSync(root), realpathSync(moduleRoot), 'Prepared QA request belongs to another worktree')
   assert.ok(isInside(join(root, '.workbuddy', 'evidence', 'live-qa'), resolve(request.evidenceDir)), 'Prepared QA evidence directory is outside this worktree')
   assert.equal(resolve(request.reportPath), resolve(root, 'docs/evidence/live-qa-report.json'), 'Prepared QA report path is outside this worktree')
-  assert.ok(allowedAddress(request.url, request.target), 'Prepared QA target is not an allowed local Dev/L2 origin')
+  assert.ok(allowedAddress(request.url, request.target), 'Prepared QA target is not an allowed local Dev origin')
+  assert.equal(request.profile, 'omnimux-dev', 'Prepared QA profile must be omnimux-dev')
   assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), request.commitSha, 'Prepared QA request SHA is stale')
   assert.ok(existsSync(requestPath), 'Prepared QA request does not exist')
   return root

@@ -2,7 +2,7 @@
 title: "稳定基线迁移：设计与验收规格（PR-D）"
 id: "spec-2026-09-09-stable-baseline-migration"
 type: "spec"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-09-09"
 updated: "2026-09-09"
@@ -10,7 +10,7 @@ authors: ["x", "agent-architect"]
 subsystem: "global"
 tags: ["baseline", "l2", "dev-pipeline", "migration", "pr-d"]
 supersedes: []
-superseded_by: null
+superseded_by: "docs/contracts/dev-pipeline.md"
 related:
   - "docs/contracts/dev-pipeline.md"
   - "docs/contracts/ops-entry.md"
@@ -21,6 +21,8 @@ related:
 ---
 
 # 稳定基线迁移：设计与验收规格（PR-D）
+
+> **SUPERSEDED — 2026-09-09 / #864：** 本规格的 L2 生命周期与专属 baseline D/C/S 创建、消费、激活、双 Host/离线重建门槛全部退役，不再作为实施或合入要求。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md)、[plugin-qa](../contracts/plugin-qa.md) 和 [plugin-git-pr](../contracts/plugin-git-pr.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120 验收。下文仅保留原设计与当时状态，不重写 #848 或历史 QA/evidence，不将未通过改成通过。
 
 状态：**文档合同已批准；实现未落地。** 本文是 Issue [#835](https://github.com/omnimux-ai/omnimux-dsh/issues/835)（父 [#834](https://github.com/omnimux-ai/omnimux-dsh/issues/834)）的设计与验收真源，并补齐已批准计划。Living 政策以 [dev-pipeline](../contracts/dev-pipeline.md)、[ops-entry](../contracts/ops-entry.md)、[plugin-qa](../contracts/plugin-qa.md)、[plugin-git-pr](../contracts/plugin-git-pr.md) 为准。本文**不**证明 named baseline 已是默认种子。
 

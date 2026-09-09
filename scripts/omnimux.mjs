@@ -6,8 +6,6 @@
  *   node scripts/omnimux.mjs sync [插件...] [--skip-build]  - 构建并同步物化到生产 Profile
  *   node scripts/omnimux.mjs restart dev                   - 【人类专用】重启开发版应用 (/Applications/OmniMux Dev.app)
  *   node scripts/omnimux.mjs restart prod                  - 【人类专用】重启正式版应用 (/Applications/OmniMux.app)
- *   node scripts/omnimux.mjs dev start <task> <plugin>     - 启动 L2 预发布独立开发环境
- *   node scripts/omnimux.mjs dev stop|ls|rm|watch ...      - 管理开发环境
  *   node scripts/omnimux.mjs doctor                        - 环境合规检查
  *   node scripts/omnimux.mjs build:all                     - 全量并发构建插件
  *   node scripts/omnimux.mjs lint:i18n                     - 文案/禁词质量门禁
@@ -81,12 +79,9 @@ function runForkCommand(yarnScript, args = [], extraEnv = {}) {
 
 function restartApp(target = 'dev') {
   if (process.env.DSH_AGENT_SESSION || process.env.AGENT_ROLE || process.env.CI) {
-    die(`Agent 严禁强杀或重启任何桌面应用 (/Applications/OmniMux*.app)！
-原因：
-1. Agent 无法调试 Native 桌面窗口，所有测试验证必须在 L2 独立隔离环境（Web 端）进行:
-   node scripts/omnimux.mjs dev start <task-id> <plugin>
-2. 重启公共 App 进程会导致多 Agent / 人机并发撞车。
-3. 验证完成后直接执行 node scripts/omnimux.mjs sync <plugin> 静态物化即可，前端修改在页面刷新 (Cmd+R) 后自动生效。`)
+    die(`Agent 严禁通过此批量命令强杀或重启任何桌面应用 (/Applications/OmniMux*.app)！
+合入后使用 sync 物化 Dev；Client 变更刷新已核实的 Dev 页面。
+Host 重启须按 docs/contracts/plugin-git-pr.md 核实目标进程、可恢复状态和并发占用，不得强杀不明进程。`)
   }
 
   if (target === 'dev') {
@@ -114,9 +109,6 @@ function printHelp() {
 命令:
   sync [插件...] [--prod|--dsh|--all] [--skip-build]
                                   构建并将插件物化进目标 Profile（默认仅开发版 ~/.omnimux-dev，可用 --prod / --dsh / --all 扩展）
-  dev <start|stop|ls|rm|watch|restart-host>
-                                  L2 独立开发/测试环境（多 Agent 隔离端口池 442xx + Web HMR，测试验证唯一入口）
-  dev restart-host <task>         【推荐】仅原地重启指定 L2 环境的 Host 进程（2秒同端口冷重启，Agent 允许调用）
   build:all                       并发全量构建产品插件
   lint:i18n                       全量文案/禁词与多语言门禁检查
   analyze:refactor [路径...]       代码重构与简化分析工具 (CRSA: 行数超标与业务逻辑混乱检测)
@@ -133,9 +125,8 @@ function printHelp() {
   help                            显示本帮助
 
 示例:
-  node scripts/omnimux.mjs dev start task-a1 omnimux-workflow   # L2 独立隔离验证
-  node scripts/omnimux.mjs dev restart-host task-a1            # 修改后端 Tool 后秒级重启 Host
-  node scripts/omnimux.mjs sync omnimux-workflow               # 验证通过后物化落盘
+  node scripts/omnimux.mjs sync omnimux-workflow               # 合入后物化 Dev
+  pnpm verify:live workflow                                  # Dev 浏览器验收
 `)
 }
 
@@ -169,9 +160,6 @@ switch (cmd) {
     break
   case 'restart':
     restartApp(rest[0] || 'dev')
-    break
-  case 'dev':
-    runBash('scripts/dev-env.sh', rest)
     break
   case 'doctor':
     runBash('scripts/dev-doctor.sh', rest)

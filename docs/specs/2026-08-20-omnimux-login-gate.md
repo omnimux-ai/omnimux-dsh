@@ -11,6 +11,8 @@ subsystem: "omnimux"
 
 # OmniMux 统一登录门 — 架构设计
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 独立环境、源码 link 与合入前浏览器验收要求退役；登录安全和产品约束不变。当前流程见 [dev-pipeline](../contracts/dev-pipeline.md) 和 [plugin-qa](../contracts/plugin-qa.md)：worktree 自动化/静态与独立评审 → required CI/MQ → main → 按需 Dev 45120/ego 验收。历史结果不重标。
+
 - 作者：高见远（架构师）
 - 状态：Phase 2 设计（待工程实现 / QA 终审）
 - 定界：登录/身份属 OmniMux 核心，全部改动落在 `plugins/omnimux`（dsh-omnimux 执行中枢）；垂直包只消费 seam，不实现登录；不新建兄弟包；桌面壳不参与。

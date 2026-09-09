@@ -41,4 +41,4 @@ Workflow 在 [generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/gen
 
 Gemini 3.8 使用精确 ID `gemini-3.8-flash`，依据用户在本任务确认的 3.7 兼容性复用输入合同与 mapper，详见 [接入依据](../references/omnimux-gemini-3.8-contract-gap.md)。不得以 3.7 的 wire ID 或 CPA 路由代替 3.8，也不继承其历史真实执行记录。音频正式目录为空也不因产品范围配置而变为就绪。
 
-离线测试须覆盖选择顺序、跨项目与重启恢复、偏好读写竞态、目录延迟、零候选、其他节点不变、输入完整性及各提交入口。UI 还须完成隔离 L2 的真实 ego-browser 与共享探针；合入后才按授权物化 Dev 并验收。单测或 HTTP 探活不能代替交互证据。
+离线测试须覆盖选择顺序、跨项目与重启恢复、偏好读写竞态、目录延迟、零候选、其他节点不变、输入完整性及各提交入口。合入前完成相关静态检查与独立评审，通过 required CI/MQ 后才按授权物化 Dev，在 45120 使用真实 ego-browser 与共享探针验收 UI；没有合入前独立运行环境。单测或 HTTP 探活不能代替交互证据。

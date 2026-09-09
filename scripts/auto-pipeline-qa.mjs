@@ -36,37 +36,23 @@ export function runPackageTest(root, packageName, packageDir, options, evidenceD
   if ((summary.skipped || 0) > 0 && !allowSkips) throw new PipelineError(`${packageName} 存在未声明 skip 测试`, { packageName, summary })
   return { packageName, status: result.status, ...summary }
 }
-function expectedBrowserEvidence(wtDir, options) {
-  if (!options.browserRunId || !options.browserStage || !options.browserTarget) {
-    throw new PipelineError('ego-browser evidence requires --browser-run-id, --browser-stage, and --browser-target from this pipeline run')
-  }
-  return { root: wtDir, runId: options.browserRunId, stage: options.browserStage, target: options.browserTarget }
-}
 export function runStaticQa(wtDir, plugin, base, options, evidenceDir) {
   const qaScript = join(wtDir, 'scripts', 'auto-qa-gate.mjs')
   if (!existsSync(qaScript)) throw new PipelineError(`Worktree 缺少 auto-qa-gate.mjs: ${qaScript}`)
   const reportPath = join(evidenceDir, 'auto-qa-report.json')
   const args = [qaScript, wtDir, '--plugin', plugin, '--diff', '--base', base, '--json', '--output', reportPath]
-  const browserRequired = options.browserRequired
-  if (browserRequired) {
-    const expected = expectedBrowserEvidence(wtDir, options)
-    args.push('--require-browser', '--evidence-dir', evidenceDir, '--browser-root', expected.root, '--browser-run-id', expected.runId, '--browser-stage', expected.stage, '--browser-target', expected.target)
-  }
   const result = runCommand('node', args, { cwd: wtDir, dryRun: options.dryRun })
-  if (options.dryRun) return { pass: true, reportPath, browserRequired }
+  if (options.dryRun) return { pass: null, status: 'simulated', reportPath }
   const report = readJsonFile(reportPath)
   if (!report || !report.pass || result.status !== 0) throw new PipelineError('L0 auto-qa-gate 未通过', { report })
-  if (browserRequired && !validateBrowserEvidence(evidenceDir, expectedBrowserEvidence(wtDir, options)).pass) {
-    throw new PipelineError('UI 变更缺少当前运行的 ego-browser 证据')
-  }
-  return { pass: true, reportPath, browserRequired, report }
+  return { pass: true, reportPath, report }
 }
-export function runBrowserQa(wtDir, issueId, plugin, options, evidenceDir) {
-  if (!options.browserRequired) return { required: false, pass: true }
-  if (options.dryRun) return { required: true, pass: true }
-  const evidence = validateBrowserEvidence(evidenceDir, expectedBrowserEvidence(wtDir, options))
-  if (!evidence.pass) throw new PipelineError('UI 变更需要同一运行的 ego-browser 验收；能力不足为 BLOCKED，不能伪造或回退到 IAB', { evidence, issueId, plugin })
-  return { required: true, pass: true, evidence: evidence.report }
+
+/** Explicit post-merge Dev evidence validation; never invoked by pre-merge CI. */
+export function runBrowserQa(root, { runId, stage } = {}, evidenceDir) {
+  const evidence = validateBrowserEvidence(evidenceDir, { root, runId, stage, target: 'dev' })
+  if (!evidence.pass) throw new PipelineError('合并后 Dev 需要同一运行的 ego-browser 验收；能力不足为 BLOCKED，不能伪造或回退到 IAB', { evidence })
+  return { required: true, phase: 'post-merge', target: 'dev', status: 'passed', pass: true, evidence: evidence.report }
 }
 export function runIntegrationGates(root, options, evidenceDir) {
   const commands = [['pnpm', ['test:gates']], ['pnpm', ['check:boundaries']], ['pnpm', ['verify:stages']]]

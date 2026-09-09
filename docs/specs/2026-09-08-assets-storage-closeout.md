@@ -1,5 +1,7 @@
 # #766 架构执行收口清单（非重新设计、非 QA 验证）
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2/独立环境验收要求退役，存储、兼容与安全要求不变。当前执行顺序见 [dev-pipeline](../contracts/dev-pipeline.md) 和 [plugin-qa](../contracts/plugin-qa.md)；历史失败、欠项与源码快照不重标。
+
 - 负责人：高见远。结论：**保留全部既定 P0；沿用现有 Runtime、Planner、MigrationService 与 FD helper 收口，不增加子系统。当前尚不能关闭 #766。**
 - 唯一核对树：`/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/assets-storage-766`；固定 base = 本轮 HEAD `5485c25875cb9f71d7cb78a6aa69d07e07fffbab`，目标为该 HEAD 上的本地未提交增量，非远端审查。
 - 快照：2026-09-08 16:00–16:04（Asia/Shanghai）读取。工程78可能继续更新源码和目录报告；下面的源码行号及状态是读取快照，不是对其后续成果的否定，也不是接管或暂停指令。

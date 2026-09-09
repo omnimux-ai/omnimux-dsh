@@ -11,6 +11,8 @@ subsystem: "omnimux-analytics"
 
 # OmniMux 社媒数据分析看板 (omnimux-analytics) 技术架构与实现 Spec
 
+> **流程部分 SUPERSEDED — 2026-09-09 / #864：** 下文 L2 Web 开发/验收流程退役，产品与架构约束不变。合入前 worktree 自动化/静态与独立评审，经 required CI/MQ 合入后按需 Dev 45120/ego 验收；见 [plugin-qa](../contracts/plugin-qa.md)。历史结果不重标。
+
 > **版本**：v1.0.0  
 > **状态**：**架构已定型 / 编码就绪**  
 > **负责人**：高见远（架构师） · 交付总监：齐活林  
