@@ -270,4 +270,34 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
     assert.equal(valResult.valid, false);
     assert.ok(valResult.errors.some((e) => e.includes('"agent" category is strictly prohibited')));
   });
+
+  it('T03.5: Prevents scroll jitter and canvas pan propagation in modal and Step 2 container', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const fileURLToPath = (await import('node:url')).fileURLToPath;
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    // 1. Check PublishWizardModal.tsx Step 2 scroll container
+    const publishWizardSrc = fs.readFileSync(path.join(__dirname, 'PublishWizardModal.tsx'), 'utf-8');
+    assert.ok(publishWizardSrc.includes('className="nodrag nopan"'), 'PublishWizardModal Step 2 container should have nodrag nopan');
+    assert.ok(publishWizardSrc.includes("onWheel={(e) => e.stopPropagation()}"), 'PublishWizardModal Step 2 container should stop wheel propagation');
+    assert.ok(publishWizardSrc.includes("overscrollBehavior: 'contain'"), 'PublishWizardModal Step 2 container should have overscrollBehavior contain');
+    assert.ok(publishWizardSrc.includes("scrollbarGutter: 'stable'"), 'PublishWizardModal Step 2 container should have scrollbarGutter stable');
+
+    // 2. Check CustomModal.tsx
+    const customModalSrc = fs.readFileSync(path.resolve(__dirname, '../../../ui/CustomModal.tsx'), 'utf-8');
+    assert.ok(customModalSrc.includes('wf-modal-overlay wf-canvas-root nodrag nopan'), 'CustomModal overlay should have nodrag nopan');
+    assert.ok(customModalSrc.includes("['wf-modal-card nodrag nopan'"), 'CustomModal card should have nodrag nopan');
+    assert.ok(customModalSrc.includes('onWheel={(e) => e.stopPropagation()}'), 'CustomModal should stop wheel propagation');
+    assert.ok(customModalSrc.includes('onMouseDown={(e) => e.stopPropagation()}'), 'CustomModal should stop mouse down propagation');
+    assert.ok(customModalSrc.includes('onPointerDown={(e) => e.stopPropagation()}'), 'CustomModal should stop pointer down propagation');
+
+    // 3. Check components.css
+    const componentsCss = fs.readFileSync(path.resolve(__dirname, '../../../theme/components.css'), 'utf-8');
+    const overlayBlock = componentsCss.match(/\.wf-modal-overlay\s*\{[^}]+\}/)?.[0] || '';
+    assert.ok(overlayBlock.includes('overscroll-behavior: contain;'), '.wf-modal-overlay should have overscroll-behavior: contain');
+    const bodyBlock = componentsCss.match(/\.wf-modal-body\s*\{[^}]+\}/)?.[0] || '';
+    assert.ok(bodyBlock.includes('overscroll-behavior: contain;'), '.wf-modal-body should have overscroll-behavior: contain');
+    assert.ok(bodyBlock.includes('scrollbar-gutter: stable;'), '.wf-modal-body should have scrollbar-gutter: stable');
+  });
 });

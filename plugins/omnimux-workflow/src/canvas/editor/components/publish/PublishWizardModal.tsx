@@ -587,7 +587,19 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
 
         {/* STEP 2: 输入项暴露勾选 */}
         {currentStep === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '420px', overflowY: 'auto' }}>
+          <div
+            className="nodrag nopan"
+            onWheel={(e) => e.stopPropagation()}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              maxHeight: '420px',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              scrollbarGutter: 'stable',
+            }}
+          >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Layers size={14} style={{ color: 'var(--dsw-alias-state-business-primary, #4c8dff)' }} />
