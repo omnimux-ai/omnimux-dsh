@@ -295,12 +295,13 @@
 }
 
 .wf-floating-top-pill__btn--primary {
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary, var(--wb-accent)) 18%, transparent);
+  background: transparent;
   color: var(--dsw-alias-brand-primary, var(--wb-accent));
 }
 
 .wf-floating-top-pill__btn--primary:hover {
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary, var(--wb-accent)) 28%, transparent);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-brand-primary, var(--wb-accent));
 }
 
 .wf-floating-top-pill__icon {
