@@ -21,6 +21,17 @@
           "timeout": 5
         }
       ]
+    },
+    {
+      "matcher": "bash|pwsh",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node scripts/guard-l2.mjs",
+          "statusMessage": "🧪 检查 L2 独立环境测试门禁与用户可控前置预警",
+          "timeout": 5
+        }
+      ]
     }
   ]
 }
