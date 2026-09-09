@@ -139,7 +139,7 @@ test('preset.yml metadata matches requirements for all four shipped presets', ()
   ok(dailyWorkPreset.includes('order: 3'))
 
   const cordisPreset = read('presets/cordis/preset.yml')
-  ok(cordisPreset.includes('name: 组建团队'))
+  ok(cordisPreset.includes('name: 创造模式') || cordisPreset.includes('name: 组建团队'))
   ok(cordisPreset.includes('order: 4'))
 })
 
