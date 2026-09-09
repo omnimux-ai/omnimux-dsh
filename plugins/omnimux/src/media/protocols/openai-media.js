@@ -32,8 +32,8 @@ export async function pollOpenAiMediaTask(options) {
     }
     const json = await getJson(options.fetcher, url, options.apiKey, options.signal)
     const status = pickTaskStatus(json)
-    if (status === 'completed' || status === 'success') return json
-    if (status === 'failed' || status === 'error') {
+    if (status === 'completed' || status === 'success' || status === 'succeeded') return json
+    if (status === 'failed' || status === 'error' || status === 'failure') {
       const classified = classifyQuotaFailure({ body: json })
       if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
       if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
