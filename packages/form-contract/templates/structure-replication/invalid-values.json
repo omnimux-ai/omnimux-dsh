@@ -1,0 +1,18 @@
+{
+  "values": {
+    "reference_video": [],
+    "brief": "改为一款旅行背包，突出收纳空间。",
+    "aspect_ratio": "9:16",
+    "duration": 15,
+    "count": 2
+  },
+  "expectedErrors": [
+    {
+      "code": "REQUIRED",
+      "path": [
+        "values",
+        "reference_video"
+      ]
+    }
+  ]
+}

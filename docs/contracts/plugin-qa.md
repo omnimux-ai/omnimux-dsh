@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-09-07"
+updated: "2026-09-09"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -34,8 +34,11 @@ subsystem: "omnimux"
 | 合并前 L2 | 端口 `44201–44299`，`~/.dsh-dev/tasks/<task>`，SOURCE 指向当前 worktree，link 在研插件不超过一个 |
 | 合并后 Dev | `~/.omnimux-dev`，端口 `45120`，物化源必须是已合并 `main` |
 | Prod | `~/.omnimux`；没有独立发布授权不得写入或用于普通交付 |
+| 命名 baseline（PR-C 起，拟实现） | 显式消费时 `.l2-dev.env` 必须记录 `baselineId`（完整内容哈希）、contentDigest、Host 实际身份、Node/pnpm/OS/arch；私有 store 与任务绑定。**published** 候选允许隔离显式消费用以验收；**只有 verified** 可 `current` 激活/回滚。receipt 为绑定该 id 的独立 sidecar，不改产物。**当前默认仍是隐式 Dev 链**，不得把目标态写成已切换 |
 
 L2 的 `.l2-dev.env` 必须与当前 worktree 的 URL、PORT、SOURCE、COMMIT 和 PROFILE_DIR 一致。提交变化后重新绑定证据；端口被回收或 Host 身份变化后旧证据失效。
+
+稳定基线相关证据不得互相冒充：独立 L2 测试不是多插件集成；单 Host 起停两次不是双真实 Host 并发；在线偶然成功不是 offline frozen 重建；HTTP 200 / 单测不是 ego smoke；未消费的 published 不是 verified；经 current 消费不是 C 显式消费。凭据业务测试走现有明确授权注入，不把凭据写入 baseline 或证据。容量只记录本次实测字节，预检在大复制前，不编造数字。`createdAt`、来源路径、验收报告不进入 `baselineId`。C 合入前须有隔离双真实 Host 等适用验证；C 后正式候选验收才进入 S。脚本不读聊天授权。完整阶段表见 [稳定基线迁移规格](../specs/2026-09-09-stable-baseline-migration.md) 与 [dev-pipeline](dev-pipeline.md)。
 
 ## 浏览器与共享探针
 

@@ -1,0 +1,16 @@
+{
+  "name": "@omnimux/form-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline form definitions, validation and deterministic conversation drafts",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "exports": { ".": "./src/index.ts", "./schema": "./generated/form.schema.json" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": { "zod": "4.4.3" },
+  "devDependencies": { "typescript": "5.9.3" }
+}
