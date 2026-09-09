@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
@@ -8,6 +8,7 @@ import {
   type HTableColumn,
   type HTableDocument,
   type HTableRow,
+  type HTableAttachment,
   type HTableCellValue,
   defaultColumnWidth,
   newColumnId,
@@ -289,88 +290,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
     // 2. 解析视频绝对路径
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
 
-    // 3. 调用 video_analyze 工具或 videoAnalyze 接缝执行五维拆解
-    const tool = (deps.getTool?.('video_analyze') ?? deps.getSeam?.('videoAnalyze')) as
-      | { execute?: (args: Record<string, unknown>) => Promise<any> }
-      | undefined;
-
-    let markdown = '';
-    if (tool && typeof tool.execute === 'function') {
-      try {
-        const res = await tool.execute({ video: absVideoPath });
-        const text =
-          res?.report ||
-          res?.text ||
-          res?.data?.report ||
-          res?.data?.text ||
-          (typeof res === 'string' ? res : '');
-        if (typeof text === 'string' && text.trim()) {
-          markdown = text.trim();
-        }
-      } catch {
-        // 工具调用抛错时降级为内置保底模板
-      }
-    }
-
-    // 4. 若无分析文本，则启用语义五维拆解保底模板，保证稳定可用
-    if (!markdown) {
-      markdown = generateFallbackDeconstructionMarkdown(input.title);
-    }
-
-    // 5. 结构化解析：优先提取 Markdown 表格（逐镜头分解等），若无表格则按五维维度提取行
-    const tables = extractMarkdownTables(markdown);
-    let columns: HTableColumn[] = [];
-    let rows: HTableRow[] = [];
-
-    if (tables.length > 0 && tables[0]!.headers.length > 0) {
-      const primaryTable = tables[0]!;
-      columns = primaryTable.headers.map((h, idx) => ({
-        id: newColumnId(),
-        title: h || `列 ${idx + 1}`,
-        type: 'text',
-        visible: true,
-        width: defaultColumnWidth('text'),
-      }));
-
-      rows = primaryTable.rows.map((rowCells) => {
-        const cells: Record<string, HTableCellValue> = {};
-        columns.forEach((col, idx) => {
-          cells[col.id] = rowCells[idx] ?? '';
-        });
-        return {
-          id: newRowId(),
-          cells,
-        };
-      });
-    } else {
-      // 无 Markdown 表格：提取五维分析维度构造标准行记录
-      const dimensions = extractFiveDimensions(markdown);
-      const colDim: HTableColumn = {
-        id: newColumnId(),
-        title: '分析维度',
-        type: 'text',
-        visible: true,
-        width: 160,
-      };
-      const colContent: HTableColumn = {
-        id: newColumnId(),
-        title: '分析内容',
-        type: 'text',
-        visible: true,
-        width: 520,
-      };
-      columns = [colDim, colContent];
-
-      rows = dimensions.map((item) => ({
-        id: newRowId(),
-        cells: {
-          [colDim.id]: item.dimension,
-          [colContent.id]: item.content,
-        },
-      }));
-    }
-
-    // 6. 查找是否有已有下游表格节点，严格复用已有 tableId 与物理文件，避免生成游离碎片文件
+    // 3. 查找是否有已有下游表格节点，严格复用已有 tableId 与物理文件，避免生成游离碎片文件
     let existingNode: CanvasNode | undefined;
     let videoNode: CanvasNode | undefined;
     let currentNodes: CanvasNode[] = [];
@@ -404,6 +324,215 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
     const tableId = typeof existingTableId === 'string' && existingTableId.trim()
       ? existingTableId.trim()
       : (existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
+    const targetTableId = tableId;
+
+    // 4. 提取帧输出目录：优先使用 mediaDir/deconstruct/targetTableId，若无则使用工作区内路径
+    let framesDir: string;
+    let getMediaUrl: (filename: string) => string;
+    if (deps.mediaDir) {
+      framesDir = join(deps.mediaDir, 'deconstruct', targetTableId);
+      getMediaUrl = (filename: string) => `/omnimux-workflow/media/deconstruct/${targetTableId}/${filename}`;
+    } else {
+      framesDir = join(deps.store.workspacesDir, workspaceId, '.omnimux', 'media', 'deconstruct', targetTableId);
+      getMediaUrl = (filename: string) => `/api/local-file?path=${encodeURIComponent(join(framesDir, filename))}`;
+    }
+
+    if (!existsSync(framesDir)) {
+      try {
+        mkdirSync(framesDir, { recursive: true });
+      } catch {}
+    }
+
+    // 5. 场景识别与关键帧抽取：调用 videoProcess 接缝或 video_process 工具
+    const videoProcess = (deps.getSeam?.('videoProcess') ?? deps.getTool?.('video_process')) as
+      | { execute?: (args: Record<string, unknown>) => Promise<any> }
+      | undefined;
+
+    interface DetectedFrameInfo {
+      path: string;
+      filename: string;
+      url: string;
+      timeSeconds: number;
+    }
+    const detectedFrames: DetectedFrameInfo[] = [];
+
+    if (videoProcess && typeof videoProcess.execute === 'function') {
+      try {
+        const detectRes = await videoProcess.execute({
+          capability: 'video_scene_detect',
+          input: {
+            videoUrl: absVideoPath,
+            threshold: 0.35,
+            extractFrames: true,
+          },
+          dest: framesDir,
+        });
+
+        if (Array.isArray(detectRes?.files)) {
+          for (const f of detectRes.files) {
+            if (f && typeof f.path === 'string' && existsSync(f.path)) {
+              const fname = basename(f.path);
+              detectedFrames.push({
+                path: f.path,
+                filename: fname,
+                url: getMediaUrl(fname),
+                timeSeconds: typeof f.meta?.timeSeconds === 'number' ? f.meta.timeSeconds : 0,
+              });
+            }
+          }
+        }
+      } catch {
+        // 抽帧异常容错降级
+      }
+    }
+
+    // 6. 保底关键帧：若未检测出帧（如静态/纯音频/工具不可用），写入有效占位 JPEG 文件作为保底帧，确保链路永不抛错
+    if (detectedFrames.length === 0) {
+      const fallbackFrameNames = ['frame-001.jpg', 'frame-002.jpg', 'frame-003.jpg'];
+      // 写入微型有效占位 JPEG 文件
+      const tinyJpg = Buffer.from(
+        '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+        'base64',
+      );
+      fallbackFrameNames.forEach((fname, idx) => {
+        const fpath = join(framesDir, fname);
+        try {
+          if (!existsSync(fpath)) writeFileSync(fpath, tinyJpg);
+          detectedFrames.push({
+            path: fpath,
+            filename: fname,
+            url: getMediaUrl(fname),
+            timeSeconds: idx * 3,
+          });
+        } catch {}
+      });
+    }
+
+    // 7. 调用 video_analyze 工具或 videoAnalyze 接缝执行五维拆解
+    const tool = (deps.getTool?.('video_analyze') ?? deps.getSeam?.('videoAnalyze')) as
+      | { execute?: (args: Record<string, unknown>) => Promise<any> }
+      | undefined;
+
+    let markdown = '';
+    if (tool && typeof tool.execute === 'function') {
+      try {
+        const res = await tool.execute({ video: absVideoPath });
+        const text =
+          res?.report ||
+          res?.text ||
+          res?.data?.report ||
+          res?.data?.text ||
+          (typeof res === 'string' ? res : '');
+        if (typeof text === 'string' && text.trim()) {
+          markdown = text.trim();
+        }
+      } catch {
+        // 工具调用抛错时降级为内置保底模板
+      }
+    }
+
+    // 8. 若无分析文本，则启用语义五维拆解保底模板，保证稳定可用
+    if (!markdown) {
+      markdown = generateFallbackDeconstructionMarkdown(input.title);
+    }
+
+    // 9. 结构化解析：优先提取 Markdown 表格（逐镜头分解等），若无表格则按五维维度提取行
+    const tables = extractMarkdownTables(markdown);
+    let columns: HTableColumn[] = [];
+    let rows: HTableRow[] = [];
+    let docRowHeight: HTableDocument['rowHeight'] = 'low';
+
+    if (tables.length > 0 && tables[0]!.headers.length > 0) {
+      const primaryTable = tables[0]!;
+
+      const colImage: HTableColumn = {
+        id: newColumnId(),
+        title: '分镜画面',
+        type: 'attachment',
+        visible: true,
+        width: 180,
+      };
+
+      // 推荐排布在第 2 列（紧随「镜头序号」之后），随后是「时间段」、「景别运镜」、「画面描述」、「关键动作」、「台词脚本」等。
+      const firstColTitle = primaryTable.headers[0] || '镜头序号';
+      const colShotNo: HTableColumn = {
+        id: newColumnId(),
+        title: firstColTitle,
+        type: 'text',
+        visible: true,
+        width: 80,
+      };
+
+      const remainingCols: HTableColumn[] = primaryTable.headers.slice(1).map((h, idx) => ({
+        id: newColumnId(),
+        title: h || `列 ${idx + 2}`,
+        type: 'text',
+        visible: true,
+        width: defaultColumnWidth('text'),
+      }));
+
+      columns = [colShotNo, colImage, ...remainingCols];
+
+      rows = primaryTable.rows.map((rowCells, rowIdx) => {
+        const frame = detectedFrames[rowIdx] ?? detectedFrames[detectedFrames.length - 1];
+        const imageAttachment: HTableAttachment[] = frame
+          ? [
+              {
+                assetId: `ast_${randomUUID().slice(0, 8)}`,
+                name: frame.filename,
+                kind: 'image',
+                path: frame.path,
+                url: frame.url,
+                thumbnailUrl: frame.url,
+              },
+            ]
+          : [];
+
+        const cells: Record<string, HTableCellValue> = {
+          [colShotNo.id]: rowCells[0] ?? '',
+          [colImage.id]: imageAttachment,
+        };
+
+        remainingCols.forEach((col, idx) => {
+          cells[col.id] = rowCells[idx + 1] ?? '';
+        });
+
+        return {
+          id: newRowId(),
+          cells,
+        };
+      });
+
+      docRowHeight = 'extraTall';
+    } else {
+      // 无 Markdown 表格：提取五维分析维度构造标准行记录
+      const dimensions = extractFiveDimensions(markdown);
+      const colDim: HTableColumn = {
+        id: newColumnId(),
+        title: '分析维度',
+        type: 'text',
+        visible: true,
+        width: 160,
+      };
+      const colContent: HTableColumn = {
+        id: newColumnId(),
+        title: '分析内容',
+        type: 'text',
+        visible: true,
+        width: 520,
+      };
+      columns = [colDim, colContent];
+
+      rows = dimensions.map((item) => ({
+        id: newRowId(),
+        cells: {
+          [colDim.id]: item.dimension,
+          [colContent.id]: item.content,
+        },
+      }));
+
+      docRowHeight = 'low';
+    }
 
     const tablePath = resolveTableRelativePath(tableId);
     const tableAbsPath = resolveTableAbsPath(deps.store, workspaceId, tableId);
@@ -420,10 +549,10 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       title,
       columns,
       rows,
-      rowHeight: 'low',
+      rowHeight: docRowHeight,
     };
 
-    // 7. 持久化存储 .htable（覆盖至已有文件或新建文件）
+    // 10. 持久化存储 .htable（覆盖至已有文件或新建文件）
     try {
       await TableStorageService.saveTable(tableAbsPath, doc);
     } catch (saveErr) {
@@ -434,7 +563,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       );
     }
 
-    // 8. 构造富有信息量的预览行列表
+    // 11. 构造富有信息量的预览行列表
     const previewRows = formatTablePreviewRows(doc, 3);
 
     // 9. 服务端图变更：单一下游约束，原子写入工作区 canvas.json 持久化

@@ -453,9 +453,11 @@ export function formatRowPreview(row: HTableRow, columns: HTableColumn[]): strin
 
   const descKeywordRegex = /描述|画面|视觉|动作|脚本|台词|旁白|内容|镜头语言|Prompt/i;
   const otherCols = columns.slice(1);
-  let representativeCol = otherCols.find((col) => descKeywordRegex.test(col.title));
+  let representativeCol =
+    otherCols.find((col) => col.type !== 'attachment' && descKeywordRegex.test(col.title)) ||
+    otherCols.find((col) => descKeywordRegex.test(col.title));
   if (!representativeCol && otherCols.length > 0) {
-    representativeCol = otherCols[0];
+    representativeCol = otherCols.find((col) => col.type !== 'attachment') || otherCols[0];
   }
 
   const isSeqTitle = firstCol && /^(?:序号|镜号|镜头|镜头号|分镜号|id|no\.?|#)$/i.test(firstCol.title.trim());
