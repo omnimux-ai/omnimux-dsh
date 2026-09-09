@@ -62,7 +62,7 @@ export function createEditor({ definition, workspaceId, hub, request = draftRequ
         revision = saved.draft?.revision ?? 0
         const values = saved.draft?.values ?? defaultValues(checked.value)
         const restored = validateValues(definition, values)
-        if (!restored.ok && restored.errors.some(error => ['INVALID_VALUES', 'INVALID_VALUE', 'UNKNOWN_FIELD', 'INVALID_ATTACHMENT'].includes(error.code))) {
+        if (!restored.ok && restored.errors.some(error => ['INVALID_VALUES', 'UNKNOWN_FIELD', 'INVALID_ATTACHMENT'].includes(error.code) || (error.code === 'INVALID_VALUE' && values[error.path[1]] !== ''))) {
           return emit({ loading: false, restoreInvalid: true, notice: '保存的草稿格式不符合当前模板，已保留原稿。请重置此表单后重新填写。' })
         }
         const resolved = await resolveValues(values)
