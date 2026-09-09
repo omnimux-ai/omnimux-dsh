@@ -147,12 +147,9 @@ test('i18n 决策锁定：videoParams 组件群保持硬编码中文，不引入
   );
 });
 
-test('待确认视频参数调整持久化，并提供确认或保留原值的显式动作', () => {
-  assert.ok(source.includes('readPendingVideoParamAdjustment(params as Record<string, unknown>)'));
-  assert.ok(source.includes('applyPendingVideoParamAdjustment(params as Record<string, unknown>)'));
-  assert.ok(source.includes('keepCurrentVideoParamValues(params as Record<string, unknown>)'));
-  assert.ok(source.includes('确认调整'));
-  assert.ok(source.includes('保留原值'));
-  assert.ok(source.includes('Boolean(pendingVideoParamAdjustment)'));
-  assert.equal(source.includes('const [videoParamNotices'), false, '提示必须保存在节点 params 中，重载后仍可确认');
+test('不应存在待确认视频参数调整提示与确认/保留原值动作（已移除）', () => {
+  assert.ok(!source.includes('wf-video-param-notice'));
+  assert.ok(!source.includes('确认调整'));
+  assert.ok(!source.includes('保留原值'));
+  assert.ok(!source.includes('Boolean(pendingVideoParamAdjustment)'));
 });

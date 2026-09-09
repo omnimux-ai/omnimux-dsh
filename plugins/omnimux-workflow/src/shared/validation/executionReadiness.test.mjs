@@ -20,12 +20,8 @@ const pendingVideoNode = {
   },
 };
 
-test('pending video parameter adjustment blocks execution even before catalog lookup', () => {
-  assert.deepEqual(findExecutionReadinessFailure([pendingVideoNode], null), {
-    nodeId: 'video-1',
-    reasonCode: 'parameter_adjustment_required',
-    message: '视频参数调整等待确认；请确认建议调整或保留原值后重新提交',
-  });
+test('legacy pending video parameter adjustment does not block execution or raise parameter_adjustment_required', () => {
+  assert.equal(findExecutionReadinessFailure([pendingVideoNode], null)?.reasonCode, 'catalog_unavailable');
 });
 
 test('clearing the decision record leaves contract validation to the selected operation', () => {

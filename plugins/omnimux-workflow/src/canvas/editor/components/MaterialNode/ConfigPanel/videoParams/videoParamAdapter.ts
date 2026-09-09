@@ -227,34 +227,13 @@ function withoutPendingAdjustment(params: Record<string, unknown>): Record<strin
 
 /** Returns a persisted pending adjustment only when its shape is usable. */
 export function readPendingVideoParamAdjustment(
-  params: Record<string, unknown> | undefined,
+  _params: Record<string, unknown> | undefined,
 ): PendingVideoParamAdjustment | undefined {
-  const value = params?.[PENDING_ADJUSTMENT_KEY];
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const candidate = value as Record<string, unknown>;
-  if (!candidate.suggestedParams || typeof candidate.suggestedParams !== 'object' || Array.isArray(candidate.suggestedParams)) {
-    return undefined;
-  }
-  const notices = Array.isArray(candidate.notices)
-    ? candidate.notices.filter((notice): notice is string => typeof notice === 'string' && notice.length > 0)
-    : [];
-  const originalParams = candidate.originalParams && typeof candidate.originalParams === 'object' && !Array.isArray(candidate.originalParams)
-    ? candidate.originalParams as Record<string, unknown>
-    : {};
-  return { suggestedParams: candidate.suggestedParams as Record<string, unknown>, originalParams, notices };
+  return undefined;
 }
 
 export function applyPendingVideoParamAdjustment(params: Record<string, unknown>): Record<string, unknown> {
-  const pending = readPendingVideoParamAdjustment(params);
-  const current = withoutPendingAdjustment(params);
-  if (!pending) return current;
-  const next = { ...current };
-  for (const [field, value] of Object.entries(pending.suggestedParams)) {
-    if (!(field in pending.originalParams) || Object.is(current[field], pending.originalParams[field])) {
-      next[field] = value;
-    }
-  }
-  return next;
+  return withoutPendingAdjustment(params);
 }
 
 export function keepCurrentVideoParamValues(params: Record<string, unknown>): Record<string, unknown> {
@@ -262,10 +241,9 @@ export function keepCurrentVideoParamValues(params: Record<string, unknown>): Re
 }
 
 /**
- * Builds an explicit confirmation plan. Existing values are never overwritten
- * or removed during a model/operation switch. Only fields that were unset may
- * be initialized immediately; incompatible saved values are stored as a
- * persisted suggestion and block execution until the user decides.
+ * Builds video parameter transition. When switching model or operation,
+ * values are automatically adjusted to valid/compatible options declared by the
+ * target model/operation without blocking the user with pending confirmations.
  */
 export function buildVideoParamTransition(
   oldParams: Record<string, unknown>,
@@ -287,9 +265,6 @@ export function buildVideoParamTransition(
   if (opts.nextOperationId !== undefined) {
     nextParams = setParamsOperation(nextParams, opts.nextOperationId);
   }
-  const suggestedParams: Record<string, unknown> = {};
-  const originalParams: Record<string, unknown> = {};
-  const notices: string[] = [];
 
   let operationOption: OperationUiOption | undefined;
   if (opts.catalog && targetModelItem?.id) {
@@ -303,36 +278,20 @@ export function buildVideoParamTransition(
     operationOption = requestedOperation
       ? opsState.effectiveOps.find((option) => option.id === requestedOperation)
       : selectedOperation(opsState);
-    // A model-only switch retains the raw operation. When there is exactly one
-    // compatible replacement, stage it behind the same explicit confirmation
-    // gate as parameter changes instead of silently rewriting the contract.
     if (requestedOperation && !operationOption && opsState.effectiveOps.length === 1) {
       const replacement = opsState.effectiveOps[0]!.id;
-      suggestedParams.operation = replacement;
-      originalParams.operation = nextParams.operation;
-      pushUnique(notices, `生成方式将从 ${requestedOperation} 调整为 ${replacement}`);
+      nextParams = setParamsOperation(nextParams, replacement);
     }
   }
 
   const schema = mergeVideoParameterSchema(targetModelItem?.parameters, operationOption?.parameters);
-  const suggestAdjustment = (field: string, value: unknown, label: string): void => {
-    if (nextParams[field] === undefined) {
-      nextParams[field] = value;
-      return;
-    }
-    if (!Object.is(nextParams[field], value)) {
-      suggestedParams[field] = value;
-      originalParams[field] = nextParams[field];
-      pushUnique(notices, `${label}将从 ${String(nextParams[field])} 调整为 ${String(value)}`);
-    }
-  };
 
   const ratioOptions = schema.aspectRatio?.options ?? [];
   if (ratioOptions.length > 0 && !ratioOptions.some((option) => Object.is(option.value, nextParams.aspectRatio))) {
-    suggestAdjustment('aspectRatio', schema.aspectRatio?.defaultValue ?? ratioOptions[0]?.value ?? DEFAULT_ASPECT_RATIO, '比例');
+    nextParams.aspectRatio = schema.aspectRatio?.defaultValue ?? ratioOptions[0]?.value ?? DEFAULT_ASPECT_RATIO;
   }
   if (schema.duration && !durationIsValid(nextParams.duration, schema.duration)) {
-    suggestAdjustment('duration', schema.duration.defaultValue ?? DEFAULT_DURATION, '时长');
+    nextParams.duration = schema.duration.defaultValue ?? DEFAULT_DURATION;
   }
   const resolutionOptions = schema.resolution?.options ?? [];
   if (resolutionOptions.length > 0 && nextParams.resolution !== undefined) {
@@ -342,32 +301,30 @@ export function buildVideoParamTransition(
       schema.resolution?.defaultValue ?? resolutionOptions[0]!.value,
       schema.resolution?.caseInsensitive === true,
     );
-    suggestAdjustment('resolution', canonicalResolution, '清晰度');
+    nextParams.resolution = canonicalResolution;
   } else if (resolutionOptions.length > 0 && nextParams.resolution === undefined) {
-    suggestAdjustment('resolution', schema.resolution?.defaultValue ?? resolutionOptions[0]!.value, '清晰度');
+    nextParams.resolution = schema.resolution?.defaultValue ?? resolutionOptions[0]!.value;
   }
 
-  for (const [field, label] of BOOLEAN_FIELDS) {
+  for (const [field] of BOOLEAN_FIELDS) {
     const definition = schema[field];
     if (definition?.supported && typeof nextParams[field] !== 'boolean') {
-      suggestAdjustment(field, definition.defaultValue, label);
+      nextParams[field] = definition.defaultValue;
     }
   }
-  for (const [field, label] of ENUM_FIELDS) {
+  for (const [field] of ENUM_FIELDS) {
     const definition = schema[field];
     if (definition?.options?.length && !definition.options.some((option) => Object.is(option.value, nextParams[field]))) {
-      suggestAdjustment(field, definition.defaultValue ?? definition.options[0]?.value, label);
+      nextParams[field] = definition.defaultValue ?? definition.options[0]?.value;
     }
   }
   if (schema.seed && nextParams.seed !== undefined && !integerIsValid(nextParams.seed, schema.seed)) {
-    suggestAdjustment('seed', schema.seed.range?.min ?? 0, '随机种子');
+    nextParams.seed = schema.seed.range?.min ?? 0;
   }
 
-  const pending = notices.length > 0 ? { suggestedParams, originalParams, notices } : undefined;
   return {
-    params: pending ? { ...nextParams, [PENDING_ADJUSTMENT_KEY]: pending } : nextParams,
-    ...(pending ? { pending } : {}),
-    notices,
+    params: nextParams,
+    notices: [],
   };
 }
 

@@ -6544,8 +6544,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   cursor: not-allowed;
 }
 
-.wf-config-panel__validation-list,
-.wf-config-panel__param-notice {
+.wf-config-panel__validation-list {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -7188,31 +7187,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   box-shadow:
     inset 0 0 0 1px var(--dsw-alias-brand-primary),
     0 0 0 2px var(--dsw-alias-state-business-tertiary);
-}
-
-.wf-config-panel__param-notice-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.wf-config-panel__param-notice-action {
-  height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--dsw-alias-brand-primary);
-  border-radius: 6px;
-  background: var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-label-on-brand);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.wf-config-panel__param-notice-action--secondary {
-  border-color: var(--dsw-alias-border-l2);
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
 }
 
 /* ==================== 音色选择（Issue 735 T03/T04） ==================== */
