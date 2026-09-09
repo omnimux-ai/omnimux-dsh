@@ -10,7 +10,7 @@ export const GUIDE_CSS = `
   gap:16px; padding-bottom:0!important;
 }
 [data-omnimux-starter-host] [class*="composerHero"] > :first-child {
-  margin-top:0!important; margin-bottom:16px!important;
+  margin-top:0!important; margin-bottom:4px!important;
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
 .omnimux-starter-guide { order:3; }

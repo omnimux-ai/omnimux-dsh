@@ -31,8 +31,10 @@ test('owner draft is updated before send; URL textarea, other sessions and faile
   document.querySelector('button').addEventListener('click', () => sends++)
   try {
     await act(async () => root.render(React.createElement(AttachmentSubmitBridge, props)))
+    assert.equal(document.querySelector('#bridge > div').style.display, 'none', 'empty notice container should not occupy layout space')
     await act(async () => document.querySelector('button').click())
     assert.equal(sends, 0); assert.equal(arms.length, 0); assert.match(draft, /brief.md/)
+    assert.equal(document.querySelector('#bridge > div').style.display, '', 'active notice container should be visible')
     assert.equal(document.querySelector('textarea').value, 'https://example.com/video')
     await act(async () => root.render(React.createElement(AttachmentSubmitBridge, props)))
     await act(async () => document.querySelector('button').click())

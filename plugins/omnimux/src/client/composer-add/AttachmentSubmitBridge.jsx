@@ -94,5 +94,5 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       doc.removeEventListener('keydown', key, true)
     }
   }, [sessionId, attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId])
-  return <div ref={anchor}>{notice && <p role="status">{t(`attachments.submit.${notice}`)}</p>}</div>
+  return <div ref={anchor} style={notice ? undefined : { display: 'none' }}>{notice && <p role="status">{t(`attachments.submit.${notice}`)}</p>}</div>
 }
