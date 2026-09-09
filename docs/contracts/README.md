@@ -21,6 +21,8 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `living` | [workflow-app-boundary.md](workflow-app-boundary.md) | Canvas / AI 应用协作契约 | `omnimux-workflow` | 2026-09-09 | 目标：Canvas 调度、Hub 凭证/provider HTTP/路由、Apps 注册存储与 schema/UI 发布规范；fail closed、有效输入/版本核验、事件与产物适配。另列固定 SHA 源码缺口；不是现有 API 或运行通过证明。 |
+| `living` | [ai-app-ui-spec.md](ai-app-ui-spec.md) | OmniMux AI 应用 UI 布局与表单交互标准规范 | `omnimux-apps` | 2026-09-09 | 目标：视频/图片/音频三类、通用表单、单个左右大卡片、真实历史与多媒体示例隔离；448−2−48=398px、compact tabs 等特定例外；媒体依自身比例。固定旧 SHA 的 mock/内存原型尚未完成真实运行验收，不随本文合入 main。 |
 | `living` | [node-input-submission.md](node-input-submission.md) | 节点有效输入与提交 | `omnimux-workflow` | 2026-09-06 | 上游与本地内容组合、创建/连接/提交分层、任务角色、动态状态与请求一致性。 |
 | `living` | [alpha-release.md](alpha-release.md) | Alpha 内测与正式发布 | `global` | 2026-09-06 | 开发保留 Alpha 并标识内测；正式发布排除插件及对应工具，侧栏与发布共用名单。 |
 | `living` | [agent-workbench-sync.md](agent-workbench-sync.md) | Agent 工作台双向协同契约（信封 / 工具 / WebSocket / 防打扰） | `omnimux` | 2026-09-04 | UI Context Envelope 双通道；Hub 单路只读 WebSocket `GET /omnimux/events/stream` upgrade（`?after=` 重放）；`workbench_*` 两工具 + 防打扰 D1–D10；资产 changed 事件；5s poll 仅兜底。 |
