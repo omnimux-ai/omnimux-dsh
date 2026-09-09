@@ -64,15 +64,18 @@ export function apply(hostCtx) {
   const library = proxy('library')
   const artifacts = proxy('artifacts')
   const mappings = proxy('mappings')
-  const ctx = Object.create(hostCtx)
-  ctx.tools = { register(spec) {
-    const execute = spec.execute
-    const write = ['assets_create', 'assets_update', 'assets_delete', 'assets_upload'].includes(spec.name)
-    return hostCtx.tools.register({ ...spec, execute: async (args) => {
-      if (['assets_list', 'assets_search', 'assets_get'].includes(spec.name)) await runtime.ensureLegacy()
-      return runtime[write ? 'write' : 'read']((bundle) => operations.run(bundle, () => execute(args)))
-    } })
-  } }
+  const ctx = {
+    tools: {
+      register(spec) {
+        const execute = spec.execute
+        const write = ['assets_create', 'assets_update', 'assets_delete', 'assets_upload'].includes(spec.name)
+        return hostCtx.tools.register({ ...spec, execute: async (args) => {
+          if (['assets_list', 'assets_search', 'assets_get'].includes(spec.name)) await runtime.ensureLegacy()
+          return runtime[write ? 'write' : 'read']((bundle) => operations.run(bundle, () => execute(args)))
+        } })
+      },
+    },
+  }
   if (typeof hostCtx.effect === 'function') hostCtx.effect(() => () => runtime.dispose(), 'omnimux-assets: storage worker')
   const dispatcher = createAssetsDispatcher({ runtime })
 
@@ -83,16 +86,16 @@ export function apply(hostCtx) {
     if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux-assets: http routes')
     else mount()
   }
-  if (typeof ctx.inject === 'function') ctx.inject(['webServer'], mountHttp)
-  else mountHttp(ctx)
+  if (typeof hostCtx.inject === 'function') hostCtx.inject(['webServer'], mountHttp)
+  else mountHttp(hostCtx)
 
-  if (ctx.systemPrompt && typeof ctx.systemPrompt.section === 'function') {
-    const registerPrompt = () => ctx.systemPrompt.section({
+  if (hostCtx.systemPrompt && typeof hostCtx.systemPrompt.section === 'function') {
+    const registerPrompt = () => hostCtx.systemPrompt.section({
       name: 'assets:ops',
       order: 50,
       text: ASSETS_PROMPT,
     })
-    if (typeof ctx.effect === 'function') ctx.effect(registerPrompt, 'assets.ops')
+    if (typeof hostCtx.effect === 'function') hostCtx.effect(registerPrompt, 'assets.ops')
     else registerPrompt()
   }
 
