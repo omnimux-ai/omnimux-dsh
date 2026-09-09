@@ -65,4 +65,5 @@ export function unmountCanvas(el: HTMLElement): void {
 }
 
 export { useTextStageStore } from './store/textStageStore';
+export { useCanvasStore } from './store/canvasStore';
 
