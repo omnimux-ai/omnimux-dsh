@@ -581,14 +581,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
+    if (materialType === 'image') return t('panel.imagePromptPlaceholder');
+    if (materialType === 'video') return t('panel.videoPromptPlaceholder');
     if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');
-      case 'image':
-        return t('panel.imagePromptPlaceholder');
-      case 'video':
-        return t('panel.videoPromptPlaceholder');
       case 'audio':
         return isMusicOperation
           ? t('panel.musicPromptPlaceholder')
