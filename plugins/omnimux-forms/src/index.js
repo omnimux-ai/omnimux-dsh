@@ -14,6 +14,10 @@ export function apply(ctx) {
   const dispose = webServer.register({ kind: 'prefix', path: PREFIX, async handler(req, res) {
     const send = (status, body) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)) }
     try {
+      const connection = ctx.get?.('connection') ?? ctx.connection
+      if (typeof connection?.requestRejection !== 'function') return send(503, { error: 'Host connection authentication is unavailable' })
+      const rejection = connection.requestRejection(req)
+      if (rejection !== undefined) return send(rejection, { error: 'Host connection authentication refused the request' })
       const url = new URL(req.url, 'http://localhost')
       if (req.method === 'GET' && url.pathname.startsWith(`${PREFIX}/examples/`)) {
         const filename = url.pathname.slice(`${PREFIX}/examples/`.length)
@@ -28,7 +32,17 @@ export function apply(ctx) {
         const stream = createReadStream(path, { start, end }); stream.on('error', () => res.destroy()); stream.pipe(res); return
       }
       if (url.pathname !== `${PREFIX}/draft`) return send(404, { error: 'Not found' })
-      if (req.method === 'GET') return send(200, await store.get(Object.fromEntries(url.searchParams)))
+      const registry = ctx.get?.('workspaceRegistry') ?? ctx.workspaceRegistry
+      if (typeof registry?.get !== 'function') return send(503, { error: 'Workspace registry is unavailable' })
+      const checkWorkspace = input => {
+        if (typeof input?.workspaceId !== 'string' || !input.workspaceId) throw new DraftError('Workspace is required')
+        if (!registry.get(input.workspaceId)) throw new DraftError('Workspace not found', 404)
+      }
+      if (req.method === 'GET') {
+        const input = Object.fromEntries(url.searchParams)
+        checkWorkspace(input)
+        return send(200, await store.get(input))
+      }
       if (req.method !== 'PUT') return send(405, { error: 'Method not allowed' })
       const origin = req.headers.origin
       if (req.headers['sec-fetch-site'] === 'cross-site' || !origin || new URL(origin).host !== req.headers.host) return send(403, { error: 'Same-origin request required' })
@@ -36,6 +50,7 @@ export function apply(ctx) {
       const chunks = []; let size = 0
       for await (const chunk of req) { size += chunk.length; if (size > 150_000) throw new DraftError('Draft too large', 413); chunks.push(chunk) }
       let input; try { input = JSON.parse(Buffer.concat(chunks).toString()) } catch { throw new DraftError('Invalid JSON') }
+      checkWorkspace(input)
       return send(200, await store.put(input))
     } catch (error) { send(error instanceof DraftError ? error.status : 500, { error: error instanceof DraftError ? error.message : '无法读取或保存表单草稿' }) }
   } })
