@@ -18,8 +18,8 @@
       "status": "live",
       "operations": ["text_to_image", "image_to_image", "multi_reference", "inpaint_outpaint"],
       "outputTypes": ["image"],
-      "logicalFields": ["prompt", "image", "references", "duration", "aspectRatio", "resolution", "quality"],
-      "vendorFields": ["prompt", "image", "images", "references", "duration", "metadata", "size", "aspect_ratio", "resolution", "quality"],
+      "logicalFields": ["prompt", "image", "images", "references", "duration", "aspectRatio", "resolution", "quality", "n", "watermark"],
+      "vendorFields": ["prompt", "image", "images", "image_urls", "references", "duration", "metadata", "size", "aspect_ratio", "resolution", "quality", "n", "watermark"],
       "unknownFieldPolicy": "reject",
       "notes": "图生成"
     },
@@ -30,27 +30,27 @@
       "operations": ["text_to_video", "first_frame", "first_last_frame", "end_frame", "video_multi_ref", "video_edit", "video_extend", "document_to_video", "webpage_to_video"],
       "outputTypes": ["video"],
       "logicalFields": ["prompt", "references", "duration", "aspectRatio", "resolution", "sound", "seed", "watermark", "outputFormat", "referenceTaskType", "generationType", "returnLastFrame", "webSearch", "nsfwCheck", "fileUrl", "linkUrl"],
-      "vendorFields": ["operation", "prompt", "image_with_roles", "image_urls", "video_urls", "audio_urls", "file_url", "link_url", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check"],
-      "forbiddenVendorFields": ["images", "references", "audioTrack", "metadata", "speech", "voice", "style", "image", "image_tail", "reference_images"],
+      "vendorFields": ["operation", "prompt", "image_with_roles", "image_urls", "video_urls", "audio_urls", "file_url", "link_url", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"],
+      "forbiddenVendorFields": ["images", "references", "audioTrack", "speech", "voice", "style", "image", "image_tail", "reference_images"],
       "unknownFieldPolicy": "reject",
       "operationVendorShapes": {
         "text_to_video": {
-          "allow": ["operation", "prompt", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "return_last_frame", "tools", "nsfw_check"]
+          "allow": ["operation", "prompt", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "return_last_frame", "tools", "nsfw_check", "metadata"]
         },
         "first_frame": {
-          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check"],
+          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"],
           "require": ["image_with_roles"]
         },
         "first_last_frame": {
-          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check"],
+          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"],
           "require": ["image_with_roles"]
         },
         "end_frame": {
-          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check"],
+          "allow": ["operation", "prompt", "image_with_roles", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"],
           "require": ["image_with_roles"]
         },
         "video_multi_ref": {
-          "allow": ["operation", "prompt", "image_urls", "video_urls", "audio_urls", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check"]
+          "allow": ["operation", "prompt", "image_urls", "video_urls", "audio_urls", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check", "metadata"]
         },
         "video_edit": {
           "allow": ["operation", "prompt", "image_urls", "video_urls", "audio_urls", "duration", "size", "aspect_ratio", "resolution", "generate_audio", "audio", "seed", "watermark", "output_format", "omni_reference_task_type", "generation_type", "return_last_frame", "tools", "nsfw_check"],
@@ -77,13 +77,17 @@
       "status": "live",
       "operations": ["text_to_speech", "voice_clone", "text_to_music"],
       "outputTypes": ["audio"],
-      "logicalFields": ["prompt", "input", "model", "voice", "style", "instrumental", "speed", "speech", "audio", "references", "audioTrack", "duration", "format", "response_format"],
-      "vendorFields": ["prompt", "input", "model", "voice", "speed", "response_format", "format", "duration", "image", "images", "references", "audioTrack", "metadata"],
+      "logicalFields": ["prompt", "input", "model", "voice", "style", "instrumental", "speed", "speech", "audio", "references", "audioTrack", "duration", "format", "response_format", "title", "tags"],
+      "vendorFields": ["model", "prompt", "input", "voice", "speed", "response_format", "format", "duration", "image", "images", "references", "audioTrack", "metadata", "title", "tags", "style", "instrumental"],
       "unknownFieldPolicy": "reject",
       "operationVendorShapes": {
         "text_to_speech": {
-          "allow": ["model", "input", "voice", "speed", "response_format"],
+          "allow": ["model", "input", "voice", "speed", "response_format", "format"],
           "require": ["input"]
+        },
+        "text_to_music": {
+          "allow": ["model", "prompt", "title", "tags", "style", "instrumental", "duration"],
+          "require": ["prompt"]
         }
       },
       "notes": "同步语音使用 input/voice/speed/response_format；音乐保留异步任务载荷"
@@ -94,8 +98,8 @@
       "status": "live",
       "operations": ["speech_to_text"],
       "outputTypes": ["text"],
-      "logicalFields": ["audio", "language", "model", "response_format"],
-      "vendorFields": ["file", "model", "language", "response_format"],
+      "logicalFields": ["audio", "language", "model", "response_format", "url", "audio_url"],
+      "vendorFields": ["file", "model", "language", "response_format", "url", "audio_url"],
       "unknownFieldPolicy": "reject",
       "notes": "#538 已挂载 speechToText seam；whisper-1 未 verified/live/listed 时 SubmitGuard 拒绝初次 submit"
     },

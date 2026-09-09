@@ -24,7 +24,7 @@ test('Doubao ASR canonical and alias are admitted with text output and no prompt
     const plan = assertGuardSubmit({ ...request, model: id }, options)
     assert.equal(plan.modelId, model)
     assert.equal(plan.profileId, 'speechToText')
-    assert.deepEqual(plan.vendorPayload, { model, file: audio, response_format: 'json' })
+    assert.deepEqual(plan.vendorPayload, { model, file: audio, url: audio, audio_url: audio, response_format: 'json' })
     assert.deepEqual(plan.logicalPayload, { model, audio, response_format: 'json' })
   }
 })
@@ -34,7 +34,7 @@ test('Doubao ASR maps every admitted response format without speech-generation f
   for (const field of ['model', 'audio', 'response_format']) assert.ok(profile.logicalFields.includes(field))
   for (const response_format of ['json', 'text', 'verbose_json', 'srt', 'vtt']) {
     const plan = assertGuardSubmit({ ...request, response_format, prompt: 'not required' }, options)
-    assert.deepEqual(plan.vendorPayload, { model, file: audio, response_format })
+    assert.deepEqual(plan.vendorPayload, { model, file: audio, url: audio, audio_url: audio, response_format })
   }
 })
 

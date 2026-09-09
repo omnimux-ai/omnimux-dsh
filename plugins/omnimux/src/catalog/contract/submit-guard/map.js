@@ -36,8 +36,8 @@ export function mapOpenAiImageSize(aspectRatio = '16:9', resolution = '2K') {
     return { size: '1024x1792' }
   }
 
-  // 横屏聚类：16:9, 4:3, 21:9, auto, etc.
-  if (ratio === '16:9' || ratio === '4:3' || ratio === '21:9' || ratio === 'auto') {
+  // 横屏聚类：16:9, 4:3, 3:2, 21:9, auto, etc.
+  if (ratio === '16:9' || ratio === '4:3' || ratio === '3:2' || ratio === '21:9' || ratio === 'auto') {
     return { size: '1792x1024' }
   }
 
@@ -143,12 +143,32 @@ export function mapValidatedPlanToVendor(args) {
     if (genericImages.length || references.length || firstFrames.length) {
       const urls = [...firstFrames, ...references, ...genericImages].filter((u, i, a) => a.indexOf(u) === i)
       if (urls.length) {
-        vendor.image = urls[0]
+        const family = args.family || args.model?.family
+        const isSeedream = family === 'seedream' || String(args.modelId ?? '').startsWith('seedream')
+        const isOpenAi = family === 'openai' || args.model?.family === 'openai' || String(args.modelId ?? '').startsWith('gpt-image')
+        const isGrok = family === 'grok' || String(args.modelId ?? '').startsWith('grok')
+
         logical.image = urls[0]
         if (urls.length > 1) {
-          vendor.images = urls
-          vendor.references = urls.map((pathOrUrl) => ({ type: 'image', role: 'reference', pathOrUrl }))
-          logical.references = vendor.references
+          logical.references = urls.map((pathOrUrl) => ({ type: 'image', role: 'reference', pathOrUrl }))
+        }
+
+        if (isOpenAi) {
+          vendor.image = urls[0]
+        } else if (isSeedream) {
+          vendor.image = urls[0]
+          vendor.image_urls = urls
+        } else if (isGrok) {
+          vendor.image = urls[0]
+          if (urls.length > 1) {
+            vendor.images = urls
+          }
+        } else {
+          vendor.image = urls[0]
+          if (urls.length > 1) {
+            vendor.images = urls
+            vendor.references = urls.map((pathOrUrl) => ({ type: 'image', role: 'reference', pathOrUrl }))
+          }
         }
       }
     }
@@ -157,6 +177,10 @@ export function mapValidatedPlanToVendor(args) {
     if (audioUrl) {
       logical.audio = audioUrl
       vendor.file = audioUrl
+      if (args.modelId === 'doubao-asr-bigmodel' || String(args.modelId ?? '').startsWith('doubao-asr')) {
+        vendor.url = audioUrl
+        vendor.audio_url = audioUrl
+      }
     }
   } else if (profileId === 'textComplete') {
     if (genericImages.length || references.length || firstFrames.length) {
@@ -207,6 +231,11 @@ export function mapValidatedPlanToVendor(args) {
         logical.quality = extras.quality
       }
     }
+
+    if (typeof extras.n === 'number' && extras.n > 0) {
+      vendor.n = extras.n
+      logical.n = extras.n
+    }
   }
 
   if (typeof extras.duration === 'number' && (extras.duration > 0 || extras.duration === -1)) {
@@ -215,18 +244,26 @@ export function mapValidatedPlanToVendor(args) {
   }
   if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
     if (profileId === 'videoGenerate' || profileId === 'videoDigitalHuman') {
-      const useAspectRatio = args.modelId.startsWith('minimax-h3') || args.modelId === 'grok-imagine-video-1-5'
+      const isKling = args.family === 'kling' || args.model?.family === 'kling' || String(args.modelId ?? '').startsWith('kling')
+      const useAspectRatio = isKling || args.modelId.startsWith('minimax-h3') || args.modelId === 'grok-imagine-video-1-5'
       vendor[useAspectRatio ? 'aspect_ratio' : 'size'] = extras.aspectRatio
+      if (isKling) {
+        vendor.metadata = { ...(vendor.metadata || {}), aspect_ratio: extras.aspectRatio }
+      }
     }
     logical.aspectRatio = extras.aspectRatio
   }
   if (typeof extras.resolution === 'string' && extras.resolution) {
-    if (profileId === 'videoGenerate' || profileId === 'videoDigitalHuman') vendor.resolution = extras.resolution
+    if (profileId === 'videoGenerate' || profileId === 'videoDigitalHuman') {
+      const isWan = args.modelId === 'wan-3.0' || args.family === 'wan' || args.model?.family === 'wan'
+      vendor.resolution = isWan ? extras.resolution.toUpperCase() : extras.resolution
+    }
     logical.resolution = extras.resolution
   }
   if (profileId === 'videoGenerate') {
     if (typeof extras.sound === 'boolean') {
-      vendor[args.modelId === 'wan-3.0' ? 'audio' : 'generate_audio'] = extras.sound
+      const isWan = args.modelId === 'wan-3.0' || args.family === 'wan' || args.model?.family === 'wan'
+      vendor[isWan ? 'audio' : 'generate_audio'] = extras.sound
       logical.sound = extras.sound
     }
     if (typeof extras.seed === 'number' && Number.isInteger(extras.seed)) {
@@ -270,15 +307,37 @@ export function mapValidatedPlanToVendor(args) {
       }
     }
   } else if (profileId === 'audioGenerate' || profileId === 'imageGenerate') {
-    const metadata = {}
-    for (const key of ['speech', 'audio', 'voice', 'style', 'instrumental', 'speed']) {
-      if (extras[key] !== undefined && extras[key] !== null && extras[key] !== '') {
-        metadata[key] = extras[key]
-        logical[key] = extras[key]
+    if (args.modelId === 'suno' || opId === 'text_to_music') {
+      for (const key of ['title', 'tags', 'style', 'duration']) {
+        if (extras[key] !== undefined && extras[key] !== null && extras[key] !== '') {
+          vendor[key] = extras[key]
+          logical[key] = extras[key]
+        }
+      }
+      if (typeof extras.instrumental === 'boolean') {
+        vendor.instrumental = extras.instrumental
+        logical.instrumental = extras.instrumental
+      }
+      if (args.modelId) {
+        vendor.model = args.modelId
+        logical.model = args.modelId
       }
     }
-    if (genericAudio[0] && metadata.audio === undefined) metadata.audio = genericAudio[0]
-    if (Object.keys(metadata).length) vendor.metadata = metadata
+    if (typeof extras.format === 'string' && extras.format) {
+      vendor.format = extras.format
+      logical.format = extras.format
+    }
+    if (args.modelId !== 'suno' && opId !== 'text_to_music') {
+      const metadata = {}
+      for (const key of ['speech', 'audio', 'voice', 'style', 'instrumental', 'speed']) {
+        if (extras[key] !== undefined && extras[key] !== null && extras[key] !== '') {
+          metadata[key] = extras[key]
+          logical[key] = extras[key]
+        }
+      }
+      if (genericAudio[0] && metadata.audio === undefined) metadata.audio = genericAudio[0]
+      if (Object.keys(metadata).length) vendor.metadata = metadata
+    }
   }
   if (profileId === 'textComplete') {
     if (typeof extras.system === 'string' && extras.system) {
