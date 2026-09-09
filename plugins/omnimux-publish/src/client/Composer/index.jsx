@@ -7,7 +7,7 @@ import {
   IconPlusOutline16,
   IconTrashOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, InputField, SelectableTile, Toolbar } from 'dsh-ui-kit'
+import { Button, InputField, Toolbar } from 'dsh-ui-kit'
 import { createDraft, errorText, getCapabilities, mediaContentUrl, recordDetail, submitRecord, updateDraft, uploadMedia } from '../api.js'
 import { formCapabilities, parseTopics } from '../capabilities.js'
 import { AccountPanel } from '../AccountPanel.jsx'
@@ -389,15 +389,11 @@ function describeError(caught, t) {
 function TypeCard({ t, value, onPick }) {
   const Icon = value === 'video' ? IconPlayOutline16 : IconPaperclipOutline16
   return (
-    <SelectableTile
-      id={value}
-      selectionType="radio"
-      icon={<Icon size={20} />}
-      title={t('type.' + value)}
-      description={t('type.' + value + '.hint')}
-      onChange={(_sel, id) => onPick(id)}
-      className="omnimux-publish-type-card"
-    />
+    <Button type="button" variant="ghost" onClick={() => onPick(value)} className="omnimux-publish-type-card">
+      <span className="omnimux-publish-type-icon"><Icon size={20} /></span>
+      <span className="omnimux-publish-type-name">{t('type.' + value)}</span>
+      <span className="omnimux-publish-type-hint">{t('type.' + value + '.hint')}</span>
+    </Button>
   )
 }
 
