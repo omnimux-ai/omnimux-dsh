@@ -36,6 +36,9 @@ export function StorageSettingsButton({ label, onClick }) {
   }, [])
   useLayoutEffect(() => {
     if (!visible) return
+    let frame = 0
+    let previousLeft = null
+    let previousTop = null
     const position = () => {
       if (!anchor.current || !bubble.current) return
       const rect = anchor.current.getBoundingClientRect()
@@ -44,20 +47,22 @@ export function StorageSettingsButton({ label, onClick }) {
       const top = rect.bottom + 8 + tip.height <= window.innerHeight - 12
         ? rect.bottom + 8
         : Math.max(12, rect.top - tip.height - 8)
-      bubble.current.style.setProperty('--assets-tooltip-left', `${left}px`)
-      bubble.current.style.setProperty('--assets-tooltip-top', `${top}px`)
+      if (left !== previousLeft) {
+        bubble.current.style.setProperty('--assets-tooltip-left', `${left}px`)
+        previousLeft = left
+      }
+      if (top !== previousTop) {
+        bubble.current.style.setProperty('--assets-tooltip-top', `${top}px`)
+        previousTop = top
+      }
     }
-    position()
-    window.addEventListener('resize', position)
-    window.addEventListener('scroll', position, true)
-    const observer = new ResizeObserver(position)
-    observer.observe(anchor.current)
-    observer.observe(bubble.current)
-    return () => {
-      window.removeEventListener('resize', position)
-      window.removeEventListener('scroll', position, true)
-      observer.disconnect()
+    // Size observers miss translations caused by deferred parent layout or transforms.
+    const trackPosition = () => {
+      position()
+      frame = window.requestAnimationFrame(trackPosition)
     }
+    trackPosition()
+    return () => window.cancelAnimationFrame(frame)
   }, [visible, label])
 
   return <>
