@@ -22,6 +22,16 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 - For UI/Stage changes, follow [plugin QA](../../../docs/contracts/plugin-qa.md): bind the current commit to isolated L2, load ego-browser, run the shared probe in the current isolated ego task/Tab, and preserve same-run identity, runtime proof, and real PNG evidence. Missing ego capabilities are BLOCKED; do not fall back to IAB or the retired weak collector. Do not materialize an unmerged worktree into shared Dev.
 - If an operation fails, inspect its result before retrying. Retry with a changed hypothesis or new state. Preserve the goal, authorizations, Issue/PR, SHAs, evidence, and next action across interruptions.
 
+## Wait and resume
+
+Use a temporary continuation loop when CI, builds, or Merge Queue must finish before authorized work can proceed. An in-progress check is a waiting state, not task completion.
+
+1. Read live state first. If the result is already available, act now. Otherwise, before ending the turn, discover the native scheduling tool and reuse an existing loop for this task. In Codex desktop, use `automation_update` with `kind: heartbeat`, targeting the current task; start with a five-minute cadence. Do not create a standalone task, duplicate timer, or shell polling daemon. If the native tool is unavailable, use a bounded in-turn wait when feasible; otherwise report the unscheduled continuation as blocked.
+2. Save a durable prompt with the goal, repository/worktree, Issue/PR, last observed base/head SHA, authorization scope, evidence location, waiting condition, and next action. On every wake-up, read the latest user steering and remote head; results for an old head cannot pass the current revision. Reuse valid unchanged-code evidence and never infer new permissions from a green check.
+3. While the operation is pending, keep the loop active and stay quiet unless there is a meaningful change. On failure, inspect logs, fix within authorized scope, run relevant checks, and push only if authorized. On success, complete the next authorized action immediately rather than merely notifying that CI is green. Check required-check coverage and applicable acceptance before any authorized merge.
+4. Verify the tool's creation/update receipt and retain its automation ID. Report the scheduled cadence and outstanding condition once; do not claim future execution from a proposed schedule. Keep the same loop through relevant retries and head updates. Scheduling failures do not count as an active loop.
+5. On completion, cancellation, or a necessary human-input boundary with no independent work left, pause/delete this loop through the scheduling tool and verify the receipt. Deliver the result or precise remaining decision once. Do not repeatedly poll for user approval, leave an idle loop after completion, or archive the user's task without authorization.
+
 ## Deliver and clean
 
 1. Recheck HEAD and dirty paths before staging, committing, and pushing; include only task-owned changes. Review the full diff against the fetched base and run the applicable checks.
