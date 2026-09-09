@@ -736,6 +736,7 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
         parameters: rest.parameters,
         operations: (rest.operations ?? []).map((op) => ({
           id: op.id,
+          label: op.label,
           listed: op.listed,
           research: op.research,
           execution: op.execution,
