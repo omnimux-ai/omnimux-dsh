@@ -2,8 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, mkdtemp, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { copyExamples } from '../../scripts/copy-examples.mjs'
 const root=fileURLToPath(new URL('../../',import.meta.url)), require=createRequire(import.meta.url)
 const directory=`${root}node_modules/.cache/forms-test`
 await mkdir(directory,{recursive:true})
@@ -20,9 +23,19 @@ test('theme emits no document reset or html/body base styling',()=>{
  const globals=JSON.stringify(formSystem._global)
  assert.ok(globals.includes('.omnimux-forms-body'));assert.ok(!globals.includes(':root'));assert.ok(!globals.includes('html'))
 })
-test('runtime templates are bundled and generated example is copied into installed plugin',async()=>{
- const client=await readFile(`${root}lib/client.js`,'utf8');assert.ok(client.includes('video-deconstruct'));assert.ok(!client.includes('require("@omnimux/form-contract")'))
- const bytes=await readFile(`${root}assets/examples/replication-demo.mp4`);assert.ok(bytes.length>1000)
+test('browser page embeds the real templates and contract without a runtime source dependency',async()=>{
+ const result=await build({entryPoints:[`${root}src/client/FormsPage.jsx`],bundle:true,write:false,format:'cjs',platform:'browser',jsx:'automatic',alias:{'@omnimux/form-contract':`${root}../../packages/form-contract/src/index.ts`},external:['react','react/jsx-runtime','react-dom'],define:{'process.env.NODE_ENV':'"production"'}})
+ const client=result.outputFiles[0].text
+ for(const id of ['video-deconstruct','structure-replication','element-replacement']) assert.ok(client.includes(id))
+ assert.ok(!client.includes('require("@omnimux/form-contract")'))
+})
+test('packaging copies real example bytes and fails if required sources are missing',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'forms-examples-'))
+ t.after(()=>rm(directory,{recursive:true,force:true}))
+ const source=`${root}../../packages/form-contract/examples`
+ await copyExamples(source,`${directory}/assets/examples`)
+ assert.deepEqual(await readFile(`${directory}/assets/examples/replication-demo.mp4`),await readFile(`${source}/replication-demo.mp4`))
+ await assert.rejects(copyExamples(`${directory}/missing`,`${directory}/other`),{code:'ENOENT'})
 })
 
 test('malformed bundled definition fails closed before reading examples or fields',()=>{const html=renderPage([{id:'broken'}]);assert.ok(html.includes('模板配置不可用'));assert.ok(!html.includes('填写表单'));assert.ok(!html.includes('data-form-field'))})

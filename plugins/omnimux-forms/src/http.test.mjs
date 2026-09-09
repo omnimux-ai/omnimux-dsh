@@ -1,13 +1,22 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, cp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:http'
-import { apply } from './index.js'
+import { pathToFileURL } from 'node:url'
+import { copyExamples } from '../scripts/copy-examples.mjs'
 
 test('draft routes enforce origin, optimistic revision and self-contained media ranges', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'forms-http-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const installed = join(directory, 'installed')
+  await mkdir(join(installed, 'src'), { recursive: true })
+  await writeFile(join(installed, 'package.json'), '{"type":"module"}')
+  await cp(new URL('./index.js', import.meta.url), join(installed, 'src/index.js'))
+  await cp(new URL('./store.js', import.meta.url), join(installed, 'src/store.js'))
+  await copyExamples(new URL('../../../packages/form-contract/examples', import.meta.url), join(installed, 'assets/examples'))
+  const { apply } = await import(pathToFileURL(join(installed, 'src/index.js')).href)
   const previous = process.env.DSH_HOME
   process.env.DSH_HOME = directory
   let handler
@@ -16,7 +25,7 @@ test('draft routes enforce origin, optimistic revision and self-contained media 
   finally { if (previous === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previous }
   const server = createServer(handler)
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
-  t.after(async () => { await new Promise(resolve => server.close(resolve)); await rm(directory, { recursive: true, force: true }) })
+  t.after(() => new Promise(resolve => server.close(resolve)))
   const origin = `http://127.0.0.1:${server.address().port}`, path = `${origin}/api/omnimux/forms/draft`
   const query = new URLSearchParams({ workspaceId: 'w', templateId: 't', templateVersion: '1.0.0' })
   assert.equal((await fetch(`${path}?${query}`)).status, 401)

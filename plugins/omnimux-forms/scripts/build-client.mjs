@@ -1,7 +1,8 @@
-import { mkdir, writeFile, cp } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
+import { copyExamples } from './copy-examples.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const contract = resolve(root, '../../packages/form-contract')
 const result = await build({
@@ -14,4 +15,4 @@ const result = await build({
 await mkdir(resolve(root, 'lib'), { recursive: true })
 await writeFile(resolve(root, 'lib/client.js'), `window.__ModuleLoader__.load({id:"omnimux-forms",factory:(require)=>{var module={exports:{}};var exports=module.exports;\n${result.outputFiles[0].text}\nreturn module.exports;}});`)
 // Only the installed copy is served. Definitions and validation are bundled above.
-await cp(`${contract}/examples`, `${root}/assets/examples`, { recursive: true })
+await copyExamples(`${contract}/examples`, `${root}/assets/examples`)
