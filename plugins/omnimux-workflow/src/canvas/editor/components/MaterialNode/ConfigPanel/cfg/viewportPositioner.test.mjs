@@ -43,7 +43,7 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
 
     // 校验基本规格
     assert.equal(pos.width, PANEL_WIDTH);
-    assert.equal(pos.width, 360);
+    assert.equal(pos.width, 420);
 
     // 校验向上弹出判定与限高
     assert.equal(pos.placement, 'top');
@@ -113,8 +113,8 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
   it('场景 4: 靠视口右边缘位置 -> left 坐标向左推移，确保 left + width 不超出 viewport - VIEWPORT_PADDING', () => {
     const viewport = { width: 1000, height: 800 };
     // triggerRect.left = 850
-    // left + width = 850 + 360 = 1210 > 1000 - 12 (988)
-    // expectedLeft = 1000 - 12 - 360 = 628
+    // left + width = 850 + 420 = 1270 > 1000 - 12 (988)
+    // expectedLeft = 1000 - 12 - 420 = 568
     const triggerRect = {
       top: 600,
       bottom: 632,
@@ -126,16 +126,16 @@ describe('ViewportPositioner - 视口自适应弹性定位纯算法', () => {
 
     const pos = calculatePopoverPosition(triggerRect, viewport);
 
-    assert.equal(pos.left, 628);
+    assert.equal(pos.left, 568);
     assert.equal(pos.left + pos.width, viewport.width - VIEWPORT_PADDING);
     assert.equal(pos.left + pos.width, 988);
   });
 
-  it('场景 4b: 窄视口宽度夹紧 -> width = min(360, viewport-24)，left + width 不超出 viewport - 12', () => {
-    // viewport.width = 320 → width = 320 - 24 = 296（宽视口仍为 360）
-    assert.equal(resolvePanelWidth(1200), 360);
+  it('场景 4b: 窄视口宽度夹紧 -> width = min(420, viewport-24)，left + width 不超出 viewport - 12', () => {
+    // viewport.width = 320 → width = 320 - 24 = 296（宽视口为 420）
+    assert.equal(resolvePanelWidth(1200), 420);
     assert.equal(resolvePanelWidth(320), 296);
-    assert.equal(resolvePanelWidth(384), 360);
+    assert.equal(resolvePanelWidth(450), 420);
 
     const viewport = { width: 320, height: 800 };
     const triggerRect = {

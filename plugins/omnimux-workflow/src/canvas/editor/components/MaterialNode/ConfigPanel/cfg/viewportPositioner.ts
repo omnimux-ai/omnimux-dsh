@@ -3,7 +3,7 @@
  *
  * 视口自适应弹性定位、边界碰撞与动态限高纯函数算法。
  * 遵循设计文档规格：
- * - PANEL_WIDTH = 360（设计宽；实际宽度由 resolvePanelWidth 按视口夹紧）
+ * - PANEL_WIDTH = 420（设计宽；实际宽度由 resolvePanelWidth 按视口夹紧）
  * - PANEL_DEFAULT_MAX_HEIGHT = 480
  * - PANEL_MIN_HEIGHT = 200
  * - GAP = 8
@@ -14,14 +14,14 @@
 
 import type { PopoverPlacement, PopoverPosition, RectLike, ViewportSize } from './types.ts';
 
-export const PANEL_WIDTH = 360;
+export const PANEL_WIDTH = 420;
 export const PANEL_DEFAULT_MAX_HEIGHT = 480;
 export const PANEL_MIN_HEIGHT = 200;
 export const GAP = 8;
 export const VIEWPORT_PADDING = 12;
 
 /**
- * 浮层实际宽度：min(preferredWidth, viewport - 24)，默认设计宽度 360px。
+ * 浮层实际宽度：min(preferredWidth, viewport - 24)，默认设计宽度 420px。
  * 与 CSS `max-width: calc(100vw - 24px)` 保持一致，窄视口下面板左右各留 12px 安全边距。
  */
 export function resolvePanelWidth(viewportWidth: number, preferredWidth: number = PANEL_WIDTH): number {

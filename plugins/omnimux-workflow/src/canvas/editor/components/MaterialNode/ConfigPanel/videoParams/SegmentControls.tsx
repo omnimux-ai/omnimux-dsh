@@ -83,7 +83,7 @@ export function OperationSegment({
   const kind = resolveControlKind({
     cardinality: options.length,
     labels: options.map((opt) => opt.label),
-    containerPx: 328,
+    containerPx: 388,
   });
 
   if (kind === 'choice-tile') {

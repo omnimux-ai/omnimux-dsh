@@ -114,28 +114,6 @@ export function ImageParamPopover({
             />
           </section>
         ) : null}
-
-        {schema.seed ? (
-          <section className="wf-cfg-popover__section" data-testid="wf-image-advanced-parameters">
-            <h4 className="wf-cfg-popover__section-title">高级参数</h4>
-            <label className="wf-cfg-popover__field-row">
-              <span>随机种子</span>
-              <input
-                type="number"
-                className="wf-cfg-popover__input"
-                min={schema.seed.range?.min}
-                max={schema.seed.range?.max}
-                step={schema.seed.range?.step ?? 1}
-                value={params.seed ?? ''}
-                placeholder="随机"
-                onChange={(event) => {
-                  const value = event.target.value.trim();
-                  writeParam('seed', value === '' ? undefined : Number(value));
-                }}
-              />
-            </label>
-          </section>
-        ) : null}
       </div>
     </CfgPopoverShell>
   );
