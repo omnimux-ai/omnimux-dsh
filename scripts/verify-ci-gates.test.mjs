@@ -181,6 +181,15 @@ test('static CI and post-merge Dev handoff regressions pass', () => {
   strictEqual(res.status, 0, `pipeline handoff tests failed: ${res.stderr}\n${res.stdout}`)
 })
 
+test('sync source identity, profile resolution and named-plugin scope regressions pass', () => {
+  const res = spawnSync('node', ['--test', ...['sync-bypass.test.mjs', 'resolve-omnimux-profile.test.mjs', 'sync-plugin-scope.test.mjs', 'sync-agent-presets-targets.test.mjs'].map(name => resolve(here, name))], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: nestedTestEnv,
+  })
+  strictEqual(res.status, 0, `sync identity and scope tests failed: ${res.stderr}\n${res.stdout}`)
+})
+
 test('sync-to-app and sync-stable target selection matrix passes', () => {
   const res = spawnSync('node', ['--test', resolve(here, 'sync-targets.test.mjs')], {
     cwd: repoRoot,

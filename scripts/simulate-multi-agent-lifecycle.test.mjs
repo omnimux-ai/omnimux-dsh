@@ -114,7 +114,7 @@ describe('Multi-Agent Automated Lifecycle & Destructive Incident Simulation', ()
     assert.ok(matchers.some((m) => m.includes('edit') && m.includes('write') && m.includes('bash')))
 
     const syncSrc = readFileSync(join(here, 'sync-to-app.sh'), 'utf8')
-    assert.ok(syncSrc.includes('assert_origin_main_aligned'))
+    assert.ok(syncSrc.includes('assert_omnimux_sync_main'))
     assert.ok(!syncSrc.includes('放行 L2 任务目录'))
   })
 })
