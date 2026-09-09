@@ -19,7 +19,7 @@ export const LABELS = [
   { name: 'status:pipeline-running', color: '6f42c1', description: '自动流水线已取得 Issue 锁，禁止重复运行' },
   { name: 'status:in-progress', color: 'fbca04', description: '专属 Worktree 隔离编码与单测中 (林深)' },
   { name: 'status:qa-review', color: '0e8a16', description: 'PR 已发起，L0-L3 质量验收中 (严过关)' },
-  { name: 'status:ready-for-boss', color: '1d76db', description: '人工通道准备完成，等待老板审查与合入' },
+  { name: 'status:ready-for-boss', color: '1d76db', description: '旧交接状态；由协调 Agent 核对任务授权及证据后继续' },
   { name: 'status:auto-merge-pending', color: '5319e7', description: '质量已通过，等待受控自动合入确认' },
   { name: 'status:auto-merged', color: '6f42c1', description: '自动合入、物化与收尾全部完成' },
   { name: 'status:blocked', color: 'b60205', description: '授权、门禁、合入或收尾被阻断，保留现场' },
@@ -35,8 +35,8 @@ export const LABELS = [
   { name: 'qa:changes-requested', color: 'b60205', description: '严过关发现阻断项，需修复后复检' },
 
   // Risk labels
-  { name: 'risk:R0', color: 'b60205', description: 'R0：生产/阻断/权限边界，仅老板人工' },
-  { name: 'risk:R1', color: 'd93f0b', description: 'R1：跨插件/一级页/契约/CI，仅老板人工' },
+  { name: 'risk:R0', color: 'b60205', description: 'R0：核对高风险动作明确授权及适用证据' },
+  { name: 'risk:R1', color: 'd93f0b', description: 'R1：跨插件/一级页/契约/CI，由协调 Agent 验收交付' },
   { name: 'risk:R2', color: '0e8a16', description: 'R2：单插件常规变更，显式预授权可自动' },
   { name: 'risk:R3', color: '1d76db', description: 'R3：低风险文档/测试/格式化，显式预授权可自动' },
 
