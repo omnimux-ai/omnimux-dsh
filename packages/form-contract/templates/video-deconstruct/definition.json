@@ -1,0 +1,56 @@
+{
+  "protocolVersion": 1,
+  "id": "video-deconstruct",
+  "templateVersion": "1.0.0",
+  "title": "参考视频拆解",
+  "description": "分析参考视频的结构、节奏和表达，为后续复刻提供依据。",
+  "examples": [
+    {
+      "ref": "example:demo-video-deconstruct",
+      "title": "参考视频拆解示例",
+      "kind": "video"
+    }
+  ],
+  "fields": [
+    {
+      "id": "reference_video",
+      "type": "file",
+      "label": "参考视频",
+      "required": true,
+      "accept": [
+        "video/mp4",
+        "video/webm"
+      ],
+      "maxFiles": 1,
+      "maxBytes": 104857600
+    },
+    {
+      "id": "focus",
+      "type": "text",
+      "label": "分析重点",
+      "required": true,
+      "maxLength": 300
+    },
+    {
+      "id": "detail",
+      "type": "select",
+      "label": "拆解粒度",
+      "required": true,
+      "options": [
+        {
+          "value": "逐镜头",
+          "label": "逐镜头"
+        },
+        {
+          "value": "按段落",
+          "label": "按段落"
+        }
+      ],
+      "default": "逐镜头"
+    }
+  ],
+  "prompt": "请拆解附带的参考视频。\n分析重点：{{focus}}\n拆解粒度：{{detail}}\n请输出钩子、镜头结构、节奏、画面与声音表达，并区分可观察事实和推断。",
+  "attachments": [
+    "reference_video"
+  ]
+}
