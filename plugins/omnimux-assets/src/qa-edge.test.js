@@ -97,12 +97,12 @@ describe('QA edge: MappingStore path/name validation', () => {
 })
 
 describe('QA edge: ArtifactStore duplicate upload & secret guard', () => {
-  it('re-uploading the same file stores one blob but appends two index records', () => {
+  it('re-uploading the same file stores one blob but appends two index records', async () => {
     const src = join(root, 'same.png')
     writeFileSync(src, 'identical-bytes')
     const { artifacts } = makeStores()
-    const first = artifacts.report(src, { agent: 'a', run_id: 'r1' })
-    const second = artifacts.report(src, { agent: 'a', run_id: 'r2' })
+    const first = await artifacts.report(src, { agent: 'a', run_id: 'r1' })
+    const second = await artifacts.report(src, { agent: 'a', run_id: 'r2' })
 
     // Disk is content-addressed: one blob, identical content_ref.
     assert.equal(second.content_ref, first.content_ref)
@@ -115,11 +115,11 @@ describe('QA edge: ArtifactStore duplicate upload & secret guard', () => {
     assert.equal(artifacts.revision(), 2)
   })
 
-  it('blocks a prompt_hash that carries an sk- token', () => {
+  it('blocks a prompt_hash that carries an sk- token', async () => {
     const src = join(root, 'clean.png')
     writeFileSync(src, 'clean')
     const { artifacts } = makeStores()
-    assert.throws(
+    await assert.rejects(
       () => artifacts.report(src, { agent: 'a', prompt_hash: 'sk-abcdefghijklmnop' }),
       (error) => error instanceof AssetsError && error.code === 'secret-detected',
     )

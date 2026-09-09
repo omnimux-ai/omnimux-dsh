@@ -70,6 +70,29 @@ describe('asset-routing pure functions and preview resolution contract', () => {
       assert.equal(isMediaAsset(singleDoc), true)
     })
 
+    it('routes a single logical leaf and partial or fully unavailable records to browse', () => {
+      const leaf = { id: 'leaf', original_name: 'a.png', logical_path: '素材/人物/a.png', relative_path: 'shared/a.png' }
+      const unavailable = { id: 'skip', logical_path: '素材/人物/b.png', status: 'unmigrated' }
+      for (const asset of [
+        { files: [leaf] },
+        { files: [{ id: 'plain', original_name: 'a.png' }], unavailable_files: [unavailable] },
+        { files: [], unavailable_files: [unavailable] },
+        { unavailable_files: [{ ...unavailable, status: 'excluded' }] },
+      ]) {
+        assert.equal(isFolderAsset(asset), true)
+        assert.equal(isMediaAsset(asset), false)
+      }
+      const model = resolveAssetMediaPreview(leaf, { asset: { id: 'asset' } })
+      assert.equal(model.previewUrl, '/omnimux/assets/library/preview?id=asset&file=leaf')
+      assert.equal(model.pathInfo, 'shared/a.png')
+    })
+
+    it('does not turn ordinary single images into browse based on physical paths or empty metadata', () => {
+      for (const extra of [{}, { logical_path: '' }, { ownership: 'adopted' }]) {
+        assert.equal(isFolderAsset({ files: [{ id: 'image', relative_path: 'data/files/image/a.png', ...extra }], unavailable_files: [] }), false)
+      }
+    })
+
     it('handles empty or missing files array gracefully', () => {
       assert.equal(isFolderAsset(null), false)
       assert.equal(isMediaAsset(null), false)

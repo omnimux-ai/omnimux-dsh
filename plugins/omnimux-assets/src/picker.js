@@ -55,7 +55,7 @@ export function parsePickedPaths(stdout) {
  * @returns {Promise<{ path: string | null, paths: string[] }>} path=null means user cancelled.
  */
 export async function pickNativePath(kind, deps = {}) {
-  if (kind !== 'file' && kind !== 'directory') {
+  if (kind !== 'file' && kind !== 'directory' && kind !== 'storage-directory') {
     throw new PickerError('picker-invalid-kind', `unknown pick kind: ${String(kind)}`)
   }
   const platform = deps.platform ?? process.platform
@@ -63,7 +63,9 @@ export async function pickNativePath(kind, deps = {}) {
     throw new PickerError('picker-unsupported', `native picker not supported on ${platform}`)
   }
   const run = deps.run ?? runCommand
-  const script = pickScript(kind)
+  const script = kind === 'storage-directory'
+    ? 'set theItem to choose folder with prompt "选择资产库保存位置" without multiple selections allowed\nreturn POSIX path of theItem'
+    : pickScript(kind)
   try {
     const { stdout } = await run('osascript', ['-e', script])
     const paths = parsePickedPaths(stdout)

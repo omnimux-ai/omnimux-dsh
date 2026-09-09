@@ -1,1 +1,15 @@
 lib/client.js
+
+# Build & package artifacts
+*.tgz
+.package-cache/
+runtime/archives/
+runtime/evidence/
+runtime/cpython-3.13.15+20260807-darwin-arm64/
+runtime/cpython-3.13.15+20260807-darwin-x64/
+
+# Test output logs & temporary reports
+.closeout-*
+.final-*
+.pagination-*
+.storage-final-test-output.txt

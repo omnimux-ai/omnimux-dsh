@@ -1,0 +1,48 @@
+sequenceDiagram
+  actor User
+  participant UI as StorageSettingsDialog
+  participant API as AssetsDispatcher
+  participant RT as AssetsRuntime
+  participant MS as MigrationService
+  participant Plan as StoragePlanner
+  participant FS as SafeStorageFS
+  participant Store as LibraryStore
+  RT->>FS: probe and lock Home
+  RT->>MS: recover()
+  MS->>FS: read root/task/commit markers strictly
+  MS-->>RT: stable root or recovery barrier
+  RT->>RT: initialize StoreBundle
+  User->>UI: open settings and pick folder
+  UI->>API: POST storage/preflight
+  API->>MS: preflight(targetPath)
+  MS->>Plan: scan(source,target)
+  Plan->>FS: no-follow scan, stream hashes, statvfs
+  Plan-->>MS: plan and conflicts
+  MS->>FS: durable task and plan
+  UI->>API: GET task / entries
+  API-->>UI: actual progress and preview
+  User->>UI: confirm plan / conflict choices
+  UI->>API: confirm(planHash)
+  API->>MS: confirm()
+  MS->>RT: freeze(taskId), drain writes
+  MS->>Plan: validate revisions and identities
+  loop each unique payload
+    MS->>FS: copyVerify(entry)
+    MS->>FS: persist overwrite intent and backup
+    MS->>FS: install(entry), verify and receipt
+  end
+  MS->>FS: persist ledger before/after and commit intent
+  MS->>FS: install target ledger set and ready marker
+  MS->>FS: atomic Home root config epoch+1
+  MS->>RT: installBundle(newConfig)
+  MS-->>UI: completed or completed_with_skips
+  User->>API: POST library create/update
+  API->>RT: write(operation)
+  RT->>Store: add(input) / update(id,patch)
+  Store->>FS: safe copy and atomic ledger
+  API->>RT: read(list/detail)
+  RT->>Store: list(filter) / getView(id)
+  User->>API: POST library/delete
+  API->>RT: write(remove)
+  RT->>Store: remove(id)
+  Store->>FS: persist ledger then unlinkOwned unreferenced files

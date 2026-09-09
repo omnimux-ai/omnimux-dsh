@@ -103,6 +103,13 @@ function useFeedFilterState() {
   }
 }
 
+/** Capture the actual records shown by confirmation and used by the delete request. */
+export function createRemovalRequest(assets = [], isBatch = false) {
+  const records = [...new Map(assets.filter((asset) => asset?.id).map((asset) => [asset.id, asset])).values()]
+  if (records.length === 0) return null
+  return { assets: records, ids: records.map((asset) => asset.id), names: records.map((asset) => asset.name || asset.id), isBatch }
+}
+
 function useFeedSelection(assets) {
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [pendingRemove, setPendingRemove] = useState(null)
@@ -116,12 +123,11 @@ function useFeedSelection(assets) {
   }, [])
 
   const handleRemoveSingle = useCallback((asset) => {
-    setPendingRemove({ ids: [asset.id], names: [asset.name] })
+    setPendingRemove(createRemovalRequest([asset]))
   }, [])
 
   const handleOpenBatchDelete = useCallback(() => {
-    const names = assets.filter((row) => selectedIds.has(row.id)).map((row) => row.name)
-    setPendingRemove({ ids: [...selectedIds], names })
+    setPendingRemove(createRemovalRequest(assets.filter((row) => selectedIds.has(row.id)), true))
   }, [assets, selectedIds])
 
   return {
@@ -159,15 +165,13 @@ function useFeedPolling(open, refreshState) {
       }
     }
 
-    if (!hubEvents?.isHealthy?.()) {
-      startPoll()
-    }
+    startPoll()
 
     const unsub = hubEvents?.subscribe?.('*', (ev) => {
       if (ev.type === 'omnimux:assets:changed') {
         void refreshState(true)
       } else if (ev.type === 'omnimux:connected' || ev.type === 'omnimux:heartbeat') {
-        stopPoll()
+        startPoll()
       } else if (ev.type === 'omnimux:disconnected' || ev.type === 'omnimux:silence') {
         startPoll()
       }
@@ -333,6 +337,11 @@ export function useAssetsFeed(options) {
 
   const filters = useFeedFilterState()
   const selection = useFeedSelection(assets)
+  useEffect(() => {
+    const changed = () => { setDetail(null); setAssets([]); selection.clearSelection(); selection.setPendingRemove(null) }
+    window.addEventListener('omnimux-assets-root-changed', changed)
+    return () => window.removeEventListener('omnimux-assets-root-changed', changed)
+  }, [selection.clearSelection])
 
   const data = useFeedData({
     t,

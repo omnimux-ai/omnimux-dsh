@@ -6,8 +6,11 @@
  * decoupling them from absolute disk paths on a specific machine.
  */
 
-import { isAbsolute, join, normalize, relative, resolve } from 'node:path'
-import { resolveAssetsPaths, resolveDshHome } from './paths.js'
+import { isAbsolute, join, normalize, relative, resolve, sep } from 'node:path'
+import { resolveAssetsPaths } from './paths.js'
+import { safeRelative } from './storage-types.js'
+import { AssetsError } from './mappings.js'
+const contained = (path, root) => path === root || path.startsWith(root + sep)
 
 export const ASSET_PROTOCOL_PREFIX = 'asset://'
 
@@ -75,24 +78,24 @@ export function formatAssetUri(scope, subpath = '') {
  */
 export function toAssetUri(diskPath, opts = {}) {
   if (isAssetUri(diskPath)) return diskPath
-  const paths = resolveAssetsPaths({ homeDir: opts.homeDir, env: opts.env })
+  const paths = resolveAssetsPaths({ homeDir: opts.homeDir, env: opts.env, rootPath: opts.rootPath })
   const norm = normalize(diskPath)
 
   // 1. Artifact path
-  if (norm.startsWith(paths.artifactsDir)) {
+  if (contained(norm, paths.artifactsDir)) {
     const rel = relative(paths.artifactsDir, norm).replace(/\\/g, '/')
     return formatAssetUri('artifact', rel)
   }
 
   // 2. Assets base dir
-  if (norm.startsWith(paths.dir)) {
+  if (contained(norm, paths.dir)) {
     const rel = relative(paths.dir, norm).replace(/\\/g, '/')
     return formatAssetUri(opts.scope || 'custom', rel)
   }
 
   // 3. Workspace dir
   const ws = opts.workspaceDir ? normalize(opts.workspaceDir) : process.cwd()
-  if (norm.startsWith(ws)) {
+  if (contained(norm, ws)) {
     const rel = relative(ws, norm).replace(/\\/g, '/')
     return formatAssetUri('workspace', rel)
   }
@@ -116,8 +119,10 @@ export function resolveAssetUri(uriOrPath, opts = {}) {
 
   const parsed = parseAssetUri(uriOrPath)
   if (!parsed) return ''
+  if (!SCOPE_SET.has(parsed.scope)) throw new AssetsError('path-denied', 'unknown asset URI scope')
+  safeRelative(parsed.path)
 
-  const paths = resolveAssetsPaths({ homeDir: opts.homeDir, env: opts.env })
+  const paths = resolveAssetsPaths({ homeDir: opts.homeDir, env: opts.env, rootPath: opts.rootPath })
 
   if (parsed.scope === 'artifact') {
     return join(paths.artifactsDir, parsed.path)
@@ -132,5 +137,5 @@ export function resolveAssetUri(uriOrPath, opts = {}) {
   }
 
   // General typed asset scope (character/scene/style/prop/knowledge/custom)
-  return join(paths.dir, parsed.scope, parsed.path)
+  return join(paths.dir, parsed.path)
 }

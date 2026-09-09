@@ -5,11 +5,12 @@
  * JSON secret-emission and loopback-write guards stay local to this plugin;
  * domain plugins do not import hub internals.
  */
-import { createReadStream, realpathSync } from 'node:fs'
+import { realpathSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
-import { statStatus, scanDir, scanFile } from './scanner.js'
+import { statStatus, scanDir, scanFile, safeScanEntries } from './scanner.js'
 import { AssetsError } from './mappings.js'
 import { PickerError, pickNativePath } from './picker.js'
+import { STORAGE_STATUS } from './storage-types.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 
@@ -48,18 +49,25 @@ const STATUS_BY_CODE = {
  * @param {{ absolutePath: string, mime: string, size?: number }} stream
  */
 export function sendPreview(res, status, stream) {
-  res.writeHead(status, {
-    'Content-Type': stream.mime,
-    ...(Number.isFinite(stream.size) ? { 'Content-Length': String(stream.size) } : {}),
-    'Cache-Control': 'private, max-age=30',
-  })
-  createReadStream(stream.absolutePath).on('error', () => {
-    if (!res.headersSent) {
-      sendJson(res, 500, { error: 'internal', message: 'preview stream failed' })
-      return
-    }
-    res.destroy()
-  }).pipe(res)
+  if (!stream.readable) {
+    void stream.release?.()
+    sendJson(res, 501, { error: 'storage-platform-unsupported', message: 'safe FD preview stream required' })
+    return
+  }
+  const input = stream.readable
+  const finish = () => { input.destroy(); void stream.release?.() }
+  res.once('close', finish)
+  res.once('error', finish)
+  input.once('error', () => { res.destroy(); finish() })
+  input.once('close', () => { void stream.release?.() })
+  try {
+    res.writeHead(status, {
+      'Content-Type': stream.mime,
+      ...(Number.isFinite(stream.size) ? { 'Content-Length': String(stream.size) } : {}),
+      'Cache-Control': 'private, max-age=30',
+    })
+    input.pipe(res)
+  } catch (error) { finish(); throw error }
 }
 
 /**
@@ -175,6 +183,7 @@ function messageOf(error) {
  * }} deps
  */
 export function createAssetsDispatcher(deps) {
+  if (deps.runtime) return createRuntimeDispatcher(deps.runtime, deps.picker)
   const { mappings, artifacts, library } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
 
@@ -198,7 +207,7 @@ export function createAssetsDispatcher(deps) {
    * Cheap polling: matching revisions answer `unchanged: true`.
    * `mrev` is accepted as a legacy alias of `lrev`.
    */
-  function stateRoute(url) {
+  async function stateRoute(url) {
     const lrevParam = url.searchParams.has('lrev')
       ? url.searchParams.get('lrev')
       : url.searchParams.get('mrev')
@@ -217,7 +226,7 @@ export function createAssetsDispatcher(deps) {
         mrev: currentL,
         arev: currentA,
         unchanged: false,
-        assets: library ? library.list() : [],
+        assets: library ? await library.list() : [],
         mappings: mappings.list(),
       },
     }
@@ -262,7 +271,12 @@ export function createAssetsDispatcher(deps) {
    * @param {{ id: string, real_path: string, kind?: string }} mapping
    * @param {string} [subPath]
    */
-  function scanMapping(mapping, subPath = '') {
+  async function scanMapping(mapping, subPath = '') {
+    if (deps.safeFS) {
+      const rel = mapping.relative_path ? (subPath ? `${mapping.relative_path}/${subPath}` : mapping.relative_path) : subPath
+      const files = await safeScanEntries(deps.safeFS, mapping.relative_path ? deps.paths.dir : mapping.real_path, rel)
+      return files.map((row) => ({ ...row, relative_path: subPath ? `${subPath}/${row.relative_path}` : row.relative_path }))
+    }
     if (mapping.kind === 'file') return scanFile(mapping.real_path)
     const target = resolveSubPath(mapping.real_path, subPath)
     return scanDir(target, { prefix: subPath === '' ? '' : subPath.replace(/^\/+|\/+$/g, '') })
@@ -272,7 +286,7 @@ export function createAssetsDispatcher(deps) {
    * Shared mapping files loader: auto-scan once when no cache exists.
    * @param {string} id
    */
-  function loadMappingFiles(id) {
+  async function loadMappingFiles(id) {
     const mapping = mappings.get(id)
     if (!mapping) throw new AssetsError('mapping-not-found', 'mapping not found')
     const kind = mapping.kind === 'file' ? 'file' : 'directory'
@@ -281,9 +295,11 @@ export function createAssetsDispatcher(deps) {
     }
     let files = mappings.readScan(id)
     if (files === null) {
-      files = scanMapping({ ...mapping, kind })
-      mappings.writeScan(id, files)
-      mappings.touchScan(id)
+      files = await scanMapping({ ...mapping, kind })
+      if (!deps.readOnly) {
+        mappings.writeScan(id, files)
+        mappings.touchScan(id)
+      }
     }
     return { mapping: mappings.getView(id), files }
   }
@@ -313,12 +329,12 @@ export function createAssetsDispatcher(deps) {
       if (library && method === 'GET' && path === '/omnimux/assets/library') {
         const type = url.searchParams.get('type') || ''
         const query = url.searchParams.get('q') || ''
-        return { status: 200, body: { lrev: library.revision(), assets: library.list({ type, query }) } }
+        return { status: 200, body: { lrev: library.revision(), assets: await library.list({ type, query }) } }
       }
 
       if (library && method === 'GET' && path === '/omnimux/assets/library/detail') {
         const id = url.searchParams.get('id') || ''
-        const asset = library.getView(id)
+        const asset = await library.getView(id)
         if (!asset) throw new AssetsError('asset-not-found', 'asset not found')
         return { status: 200, body: { asset } }
       }
@@ -327,7 +343,12 @@ export function createAssetsDispatcher(deps) {
         const id = url.searchParams.get('id') || ''
         const fileId = url.searchParams.get('file') || ''
         const subPath = url.searchParams.get('path') || ''
-        const listed = library.listFileEntries(id, fileId, subPath)
+        const listed = await library.listFileEntries(id, fileId, subPath, {
+          logical: url.searchParams.get('logical') === '1',
+          cursor: url.searchParams.get('cursor') || '',
+          limit: url.searchParams.get('limit') ?? 100,
+          epoch: deps.epoch ?? 0,
+        })
         return { status: 200, body: listed }
       }
 
@@ -400,7 +421,7 @@ export function createAssetsDispatcher(deps) {
         if (statStatus(mapping.real_path, kind) !== 'ok') {
           return { status: 200, body: { mapping: mappings.getView(id), files: [] } }
         }
-        const files = scanMapping({ ...mapping, kind })
+        const files = await scanMapping({ ...mapping, kind })
         mappings.writeScan(id, files)
         mappings.touchScan(id)
         return { status: 200, body: { mapping: mappings.getView(id), files } }
@@ -422,7 +443,7 @@ export function createAssetsDispatcher(deps) {
         const id = url.searchParams.get('id') || ''
         const subPath = url.searchParams.get('path') || ''
         if (subPath === '') {
-          const result = loadMappingFiles(id)
+          const result = await loadMappingFiles(id)
           return { status: 200, body: result }
         }
         // Sub-directory drill-down: scanned live, never cached at top level.
@@ -434,7 +455,7 @@ export function createAssetsDispatcher(deps) {
         if (statStatus(mapping.real_path, 'directory') !== 'ok') {
           return { status: 200, body: { mapping: mappings.getView(id), files: [] } }
         }
-        const files = scanMapping({ ...mapping, kind: 'directory' }, subPath)
+        const files = await scanMapping({ ...mapping, kind: 'directory' }, subPath)
         return { status: 200, body: { mapping: mappings.getView(id), files, path: subPath } }
       }
 
@@ -463,7 +484,7 @@ export function createAssetsDispatcher(deps) {
     } catch (error) {
       if (error instanceof AssetsError || error instanceof PickerError) {
         return {
-          status: STATUS_BY_CODE[error.code] ?? 400,
+          status: (deps.safeFS ? STORAGE_STATUS[error.code] : STATUS_BY_CODE[error.code]) ?? STATUS_BY_CODE[error.code] ?? STORAGE_STATUS[error.code] ?? 400,
           body: { error: error.code, message: error.message },
         }
       }
@@ -472,6 +493,66 @@ export function createAssetsDispatcher(deps) {
   }
 
   return { dispatch }
+}
+
+/** Dispatch every request with exactly one Runtime snapshot and epoch. */
+function createRuntimeDispatcher(runtime, picker = pickNativePath) {
+  return { async dispatch(req) {
+    try {
+      const url = new URL(req.url, 'http://127.0.0.1')
+      const path = url.pathname.slice('/omnimux/assets'.length)
+      const method = (req.method || 'GET').toUpperCase()
+      const body = req.body ?? {}
+      if (method === 'POST') {
+        try { assertLocalWrite(req) } catch { return { status: 403, body: { error: 'not-local', message: 'cross-origin write refused' } } }
+        if (!body || typeof body !== 'object' || Array.isArray(body) || req.body === null) throw new AssetsError('invalid-json', 'JSON object required')
+      }
+      await runtime.initialize()
+      const migration = runtime.migration
+      if (path === '/storage' && method === 'GET') return { status: 200, body: runtime.status() }
+      if (path === '/storage/pick' && method === 'POST') return { status: 200, body: await picker('storage-directory') }
+      if (path === '/storage/preflight' && method === 'POST') return { status: 202, body: await migration.preflight(body.targetPath, body.expectedEpoch, body.requestId) }
+      const taskMatch = path.match(/^\/storage\/tasks\/([a-zA-Z0-9-]+)(?:\/([a-z-]+))?$/)
+      if (taskMatch) {
+        const [, id, action] = taskMatch
+        migration.assertTask(id)
+        if (method === 'GET' && !action) return { status: 200, body: { task: migration.task, progress: migration.task.progress, seq: migration.task.seq,
+          unchanged: Number(url.searchParams.get('afterSeq')) === migration.task.seq } }
+        if (method === 'GET' && action === 'preview') return { status: 200, stream: await migration.preview(id, url.searchParams.get('entry'), url.searchParams.get('side')) }
+        if (method === 'GET' && action === 'entries') return { status: 200, body: migration.entries(id, Object.fromEntries(url.searchParams)) }
+        if (method === 'POST') {
+          const actions = {
+            confirm: () => migration.confirm(id, body), decisions: () => migration.decide(id, body),
+            pause: () => migration.pause(id), resume: () => migration.resume(id), abandon: () => migration.abandon(id, body),
+            'accept-partial': () => migration.acceptPartial(id, body), cleanup: () => migration.cleanup(id, body.manifestHash, body.confirm === true),
+          }
+          if (actions[action]) return { status: 202, body: await actions[action]() }
+        }
+      }
+      const epoch = url.searchParams.get('epoch')
+      if (epoch != null && Number(epoch) !== runtime.config?.epoch) throw new AssetsError('stale-root', 'refresh stale asset reference')
+      if (method === 'GET' && ['/state', '/library', '/library/detail', '/library/files', '/library/preview'].includes(path)) await runtime.ensureLegacy()
+      if (method === 'GET' && path === '/library/preview') {
+        const stream = await runtime.preview((bundle) => {
+          if (epoch != null && Number(epoch) !== bundle.epoch) throw new AssetsError('stale-root', 'refresh stale asset reference')
+          return bundle.library.previewRef(url.searchParams.get('id') || '', url.searchParams.get('file') || '', url.searchParams.get('path') || '')
+        })
+        return { status: 200, stream }
+      }
+      const cacheWrite = method === 'GET' && path === '/mappings/files' && !runtime.frozen
+      return await runtime[method === 'POST' || cacheWrite ? 'write' : 'read'](async (bundle) => {
+        if (epoch != null && Number(epoch) !== bundle.epoch) throw new AssetsError('stale-root', 'refresh stale asset reference')
+        const forwarded = new URL(url)
+        if (epoch == null) for (const key of ['lrev', 'mrev', 'arev']) forwarded.searchParams.delete(key)
+        const result = await createAssetsDispatcher({ ...bundle, safeFS: runtime.fs, readOnly: method !== 'POST' && !cacheWrite, picker }).dispatch({ ...req, url: forwarded.toString() })
+        if (result.body && typeof result.body === 'object') result.body = { ...result.body, epoch: bundle.epoch }
+        return result
+      })
+    } catch (error) {
+      return { status: STORAGE_STATUS[error.code] ?? STATUS_BY_CODE[error.code] ?? 500,
+        body: { error: error.code ?? 'internal', message: error.message, taskId: runtime.migration?.task?.id } }
+    }
+  } }
 }
 
 /**

@@ -20,10 +20,10 @@
       { "target": "sidebar.extra", "componentPath": "src/client/sidebar-entry.js" },
       { "target": "shell.overlay", "componentPath": "src/client/AssetsStage.jsx" }
     ],
-    "storageDomains": ["$DSH_HOME/omnimux/assets/"]
+    "storageDomains": ["$DSH_HOME/omnimux/assets-storage/ (root pointer and task receipts)", "$DSH_HOME/omnimux/assets/ (default root)", "Active root selected through a confirmed storage migration plan; cleanup limited to confirmed managed-file manifests"]
   },
   "dependencies": {
     "requiredPlugins": ["omnimux"],
-    "systemBinaries": []
+    "systemBinaries": ["osascript"]
   }
 }
