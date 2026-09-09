@@ -19,6 +19,7 @@ export function installGuideSubmitGuard(root, check) {
   function key(event) {
     if (!belongs(event.target) || event.key !== 'Enter' || event.shiftKey
       || event.isComposing || event.keyCode === 229) return
+    if (root.ownerDocument.querySelector('[data-trigger-menu] [aria-activedescendant]')?.getAttribute('aria-activedescendant')) return
     // Only the official editor or send button. Enter in our URL field stays local.
     if (!event.target.closest?.('[data-composer-input="true"]') && !sendButton(event.target)) return
     if (!check()) stop(event)

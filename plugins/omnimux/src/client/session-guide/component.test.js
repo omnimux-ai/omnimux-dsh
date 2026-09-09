@@ -24,10 +24,11 @@ test('session guide uses owner actions, protects edits, and flushes pending URLs
   let draft = ''
   let phase = 'plain'
   let blank = true
+  let pendingSubmit = false
   let writes = 0
   let sends = 0
   const materialCalls = []
-  const props = () => ({ sessionId: owner, useSession: selector => selector({ blank }), useConversation: selector => selector({ activeTargets: new Set() }),
+  const props = () => ({ sessionId: owner, useSession: selector => selector({ blank, pendingSubmissions: pendingSubmit ? [{}] : [] }), useConversation: selector => selector({ activeTargets: new Set() }),
     useInput: selector => selector({ draft, phase }), inputActions: { setDraft(value) { draft = value; writes++ } },
     getCurrentSessionId: () => owner, store, t: key => key,
     getMaterials: () => ({ openLibrary: id => materialCalls.push(id), addFiles: async id => materialCalls.push(id) }),
@@ -59,6 +60,13 @@ test('session guide uses owner actions, protects edits, and flushes pending URLs
     await render()
     await click('[data-send-button]')
     assert.equal(sends, 1)
+    const acceptedDraft = draft
+    pendingSubmit = true; draft = ''
+    await render()
+    assert.equal(store.get(owner).manualUrl, false, 'optimistic clear is not a user edit')
+    pendingSubmit = false; draft = acceptedDraft
+    await render()
+    assert.equal(store.get(owner).manualUrl, false, 'failed submission keeps URL editable')
     phase = 'claimed'
     await render()
     await click('[data-send-button]')

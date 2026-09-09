@@ -16,10 +16,10 @@ export function SessionGuide(props) {
   const session = props.useSession(value => value)
   const hasTargets = props.useConversation(value => value.activeTargets.size > 0)
   if (!isBlankConversation(session, hasTargets)) return null
-  return <BlankSessionGuide {...props} key={props.sessionId} />
+  return <BlankSessionGuide {...props} key={props.sessionId} pendingSubmit={Boolean(session.pendingSubmissions?.length)} />
 }
 
-function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCurrentSessionId, getMaterials }) {
+function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCurrentSessionId, getMaterials, attachmentDrafts, pendingSubmit }) {
   const input = useInput(value => value)
   const state = useSyncExternalStore(store.subscribe, () => store.get(sessionId), () => store.get(sessionId))
   const [pending, setPending] = useState(null)
@@ -29,6 +29,7 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   const composing = useRef(false)
   const timer = useRef(null)
   const mounted = useRef(true)
+  const submittingDraft = useRef(null)
   const selected = STARTERS.find(card => card.id === state.selectedId)
   const multipleReferences = selected?.references === 'many' || /[\r\n]/.test(state.urlValue)
   live.current = { input, inputActions, state, selected }
@@ -83,7 +84,9 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
       if (result === 'synced') setNotice('synced')
       else if (result === 'unavailable') setNotice('unavailable')
       else if (result === 'composing') setNotice('composing')
-      return result === 'ready' || result === 'manualUrl'
+      const ready = result === 'ready' || result === 'manualUrl'
+      if (ready) submittingDraft.current = live.current.input.draft
+      return ready
     })
     return () => {
       mounted.current = false
@@ -95,13 +98,15 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
 
   // A body edit/deletion transfers ownership of our reference paragraph to the user.
   useEffect(() => {
+    if (pendingSubmit || (submittingDraft.current !== null && input.draft === '')) return
+    submittingDraft.current = null
     if (!state.urlBlock || state.manualUrl || composing.current) return
     const result = syncVideoUrls(state, input.draft, { multiple: true, label: t('guide.urls') })
     if (result.status === 'manualUrl') {
       store.set(sessionId, result.state)
       setNotice('manualUrl')
     }
-  }, [input.draft, state, sessionId, store, t])
+  }, [input.draft, state, sessionId, store, t, pendingSubmit])
 
   function choose(card, confirmed = false) {
     if (!current() || input.phase !== 'plain' || !inputActions?.setDraft) { setNotice('unavailable'); return }
@@ -112,6 +117,8 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
     if (result.status === 'unchanged') { focusEditor(); return }
     try {
       inputActions.setDraft(result.draft)
+      // Template replacement owns this write; selected materials will be reassembled.
+      attachmentDrafts?.delete(sessionId)
       live.current = { ...live.current, state: result.state, selected: card, input: { ...input, draft: result.draft } }
       store.set(sessionId, result.state)
       setNotice(result.state.manualUrl ? 'manualUrl' : null)

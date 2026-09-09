@@ -21,10 +21,11 @@ import { AttachmentTray } from './attachments/AttachmentTray.tsx'
 import { getGlobalAttachmentStore } from './attachments/store.ts'
 import { createEventsClient, installHubEventsGlobal } from './events-client.js'
 import { installWebSocketHmr } from '../hmr/client.js'
-import { installComposerEnvelopeCapture } from './composer-envelope.js'
+import { injectUiContextStyle } from './composer-envelope.js'
 import { installComposerAddCapture } from './composer-add/install.js'
 import { listenComposerAddCommands } from './composer-add/commands.js'
-import { installComposerAttachmentSubmitCapture } from './composer-add/submit-inject.js'
+import { createAttachmentAdmission } from './composer-add/attachment-admission.js'
+import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.jsx'
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 
@@ -131,10 +132,12 @@ export function apply(ctx) {
   }, SidebarUpdateAction))
 
   const guideStore = createGuideStore()
+  const attachmentDrafts = new Map()
   let guideMaterials = null
   let guideSessions = null
   const guideFace = {
     store: guideStore,
+    attachmentDrafts,
     getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
     getMaterials: () => guideMaterials,
   }
@@ -149,6 +152,12 @@ export function apply(ctx) {
   // default priority 0. Shadow it with a lower priority so OmniMux wins
   // (lowest renders) instead of failing the client Loader.
   const attachmentStore = getGlobalAttachmentStore()
+  const attachmentAdmission = createAttachmentAdmission({ getSessions: () => guideSessions, store: attachmentStore, drafts: attachmentDrafts })
+  ctx.effect(() => () => { attachmentAdmission.dispose(); attachmentDrafts.clear() }, 'omnimux: attachment admission')
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
+    inject: () => ({ attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
+  }, AttachmentSubmitBridge))
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
@@ -172,8 +181,7 @@ export function apply(ctx) {
   }, 'omnimux: hub event client')
   if (typeof document !== 'undefined') {
     ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
-    ctx.effect?.(() => installComposerEnvelopeCapture(document), 'omnimux: composer envelope capture')
-    ctx.effect?.(() => installComposerAttachmentSubmitCapture(document, { store: attachmentStore }), 'omnimux: attachment submit capture')
+    ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.inject(['commandUi', 'sessions'], (inner) => {
       guideSessions = inner.sessions
       inner.effect(() => {
