@@ -48,14 +48,20 @@ function ValidEditor({ definition, workspace, hub, onBack }) {
     </Box>
   </Flex>
 }
-export function FormsPage({ definitions = templates } = {}) {
+export function FormsPage({ definitions = templates, store, visible = true } = {}) {
+  useEffect(() => {
+    const api = window.__omnimuxWorkbench
+    if (!store || typeof api?.attachStore !== 'function') return undefined
+    api.attachStore(store)
+    return () => api.detachStore?.(store)
+  }, [store])
   const available = useMemo(() => checkedTemplates(definitions), [definitions])
   const [hub, setHub] = useState(() => window.__omnimuxForms)
   useEffect(() => { const ready = () => setHub(window.__omnimuxForms); window.addEventListener('omnimux-forms-ready', ready); return () => window.removeEventListener('omnimux-forms-ready', ready) }, [])
   const [workspace, setWorkspace] = useState(() => hub?.getWorkspace?.() ?? null)
   const [selected, setSelected] = useState(null)
   useEffect(() => { setWorkspace(hub?.getWorkspace?.() ?? null); return hub?.subscribeWorkspace?.(() => setWorkspace(hub.getWorkspace())) }, [hub])
-  return <ChakraProvider value={formSystem}><Box className="omnimux-forms-body" height="100%" minHeight="0" width="100%" color="var(--dsw-alias-label-primary)" bg="var(--dsw-alias-bg-base)" fontFamily="inherit" fontSize="14px">
+  return <ChakraProvider value={formSystem}><Box className="omnimux-forms-body" aria-hidden={visible ? undefined : true} display={visible ? 'block' : 'none'} height="100%" minHeight="0" width="100%" color="var(--dsw-alias-label-primary)" bg="var(--dsw-alias-bg-base)" fontFamily="inherit" fontSize="14px">
     {!available ? <Box className="omnimux-forms-error" padding="24px" role="alert">模板配置不可用，无法打开任务表单。</Box> : !hub ? <Box padding="24px" role="alert">会话服务尚未就绪，请重新打开任务表单。</Box> : !workspace ? <Box padding="24px" role="status">请先打开目标工作区中的会话，再进入任务表单。</Box> : selected ? <Editor key={`${workspace.id}:${selected.id}`} definition={selected} workspace={workspace} hub={hub} onBack={() => setSelected(null)} /> : <Box overflowY="auto" height="100%" padding={{ base: '24px 16px', md: '32px' }}><Box maxWidth="1080px" marginInline="auto"><Heading fontFamily="inherit" fontSize="20px" fontWeight="600" margin="0 0 8px">任务表单</Heading><Text color="var(--dsw-alias-label-secondary)" margin="0 0 28px">从参考视频出发，整理拆解与复刻要求。</Text><Flex direction="column" gap="24px">{available.map((template, index) => <Box key={template.id} display="grid" gridTemplateColumns={{ base: 'minmax(0,1fr)', md: '240px minmax(0,1fr)' }} gap="24px" paddingBottom="24px" borderBottom="1px solid var(--dsw-alias-border-l2)"><Example example={template.examples[0]} /><Flex direction="column" align="start" justify="center" gap="12px"><Text fontSize="12px" color="var(--dsw-alias-label-secondary)">{String(index + 1).padStart(2, '0')}</Text><Heading fontFamily="inherit" fontSize="16px" fontWeight="600" margin="0">{template.title}</Heading><Text fontSize="14px" color="var(--dsw-alias-label-secondary)" margin="0">{template.description}</Text><Button {...secondary} onClick={() => setSelected(template)}>填写表单</Button></Flex></Box>)}</Flex></Box></Box>}
   </Box></ChakraProvider>
 }

@@ -12,7 +12,7 @@ export function FormField({ field, value, errors, disabled, editor, state, hub, 
     <NumberInput.Input {...control} px="10px" aria-label={field.label} />
     <NumberInput.Control><NumberInput.IncrementTrigger aria-label={`增加${field.label}`} /><NumberInput.DecrementTrigger aria-label={`减少${field.label}`} /></NumberInput.Control>
   </NumberInput.Root>
-  if (field.type === 'slider') input = <Slider.Root id={id} min={field.min} max={field.max} step={field.step} value={[typeof value === 'number' ? value : field.min]} disabled={disabled} onValueChange={e => change(e.value[0])}>
+  if (field.type === 'slider') input = <Slider.Root width="100%" id={id} min={field.min} max={field.max} step={field.step} value={[typeof value === 'number' ? value : field.min]} disabled={disabled} onValueChange={e => change(e.value[0])}>
     <Flex justify="flex-end"><Slider.Label srOnly>{field.label}</Slider.Label><Slider.ValueText /></Flex>
     <Slider.Control paddingBlock="12px"><Slider.Track height="4px" bg="var(--dsw-alias-bg-layer-3)"><Slider.Range bg="var(--dsw-alias-label-primary)" /></Slider.Track><Slider.Thumb index={0} aria-label={field.label} width="16px" height="16px" bg="var(--dsw-alias-label-primary)" borderColor="var(--dsw-alias-border-l3)"><Slider.HiddenInput aria-label={field.label} /></Slider.Thumb></Slider.Control>
   </Slider.Root>
