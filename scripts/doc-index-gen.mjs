@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * scripts/doc-index-gen.mjs
- * OmniMux 文档工程自动化索引生成与验证工具
+ * OmniMux 文档子目录索引写入工具（非只读验证）
  *
  * 职能：
- * 1. 扫描 docs/ 各子目录文档的 YAML Frontmatter
- * 2. 自动生成与维护各子目录下的 README.md (索引矩阵表)
- * 3. 自动生成与维护 docs/README.md 全局统一门户索引
+ * 1. 扫描 docs/ 下七个配置子目录的直接子文件并简化解析 Frontmatter
+ * 2. 生成并覆盖 contracts、decisions、specs、evidence、logs、references、archive 的 README.md
+ * 3. 不生成或更新 docs/README.md 根门户
  */
 
 import fs from 'node:fs'
@@ -126,7 +126,7 @@ function scanDirectory(dirPath) {
 }
 
 export function generateAllIndexes() {
-  console.log('🔄 开始扫描并更新 docs 目录全量索引...\n')
+  console.log('开始扫描并覆盖七个配置子目录的 README.md 索引；不更新 docs/README.md（非只读检查）。\n')
 
   const sections = [
     {
@@ -221,7 +221,7 @@ ${sec.desc}
     console.log(`✓ 已生成索引: docs/${sec.dir}/README.md (${items.length} 篇文档)`)
   }
 
-  console.log('\n✅ 所有子目录 README.md 索引生成完成！')
+  console.log('\n七个配置子目录的 README.md 索引写入完成；docs/README.md 未更新。')
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

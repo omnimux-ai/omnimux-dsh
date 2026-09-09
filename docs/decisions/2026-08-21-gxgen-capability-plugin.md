@@ -2,9 +2,11 @@
 title: "Gxgen 微服务 → OmniMux 能力插件"
 id: "decision-gxgen-capability-plugin"
 type: "decision"
-status: "accepted"
+status: "superseded"
 authority: "L2"
 date: "2026-08-21"
+updated: "2026-09-09"
+superseded_by: "docs/contracts/dsh-video-plugin.md"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-video"
 ---

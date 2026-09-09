@@ -6,11 +6,11 @@
  * 遵循规范：《开发文档工程实践管理规范》(docs/contracts/docs-governance-standard.md)
  * 
  * 校验维度：
- * 1. YAML Frontmatter 格式与字段合法性 (Schema Validation)
- * 2. 内部链接有效性与死链检测 (Broken Links & Anchor Verification)
- * 3. 文件命名规范 (Naming Conventions)
- * 4. 索引收录完整性 (Unindexed / Orphan Document Discovery)
- * 5. 术语与禁词规范扫描 (Forbidden Terms Check)
+ * 1. 简化 Frontmatter 解析、必填字段与 type/status/authority 枚举检查，非完整 Schema 校验
+ * 2. Markdown 内部链接目标路径存在性检查，不验证锚点
+ * 3. 配置目录的文件命名检查
+ * 4. 核心索引/根文档存在性检查，不检测索引收录或孤岛文档
+ * 5. 术语正则告警，不判断引用、历史上下文或内容语义
  */
 
 import fs from 'node:fs'
@@ -242,7 +242,7 @@ function lintDocument(file, allDocPaths) {
     if (item.exemptFiles && item.exemptFiles.some((ef) => relPath.endsWith(ef))) {
       continue
     }
-    // 忽略引用块或历史上下文说明中的词汇，但检查正文
+    // 扫描全文，不识别引用块或历史上下文的语义豁免
     if (item.regex.test(content)) {
       // 简单告警
       logWarn(file, item.desc)
@@ -288,12 +288,13 @@ export async function run() {
   console.log('\n─────────────────────────────────────────────────────────────────')
   console.log(`📊 扫描结果汇总: ❌ 错误: ${errorCount} 项 | ⚠️  警告: ${warningCount} 项`)
   console.log('─────────────────────────────────────────────────────────────────\n')
+  console.log('覆盖范围有限：未校验完整 Frontmatter Schema、锚点、索引收录/孤岛或内容语义；警告需单独审阅，不阻断退出码。')
 
   if (errorCount > 0) {
-    console.error('🚫 门禁检查未通过！请根据上述错误指引修复后再行提交。')
+    console.error('DocLint 检查未通过；请处理上述错误，警告仍需单独审阅。')
     process.exit(1)
   } else {
-    console.log('🎉 恭喜！所有文档均 100% 符合《开发文档工程实践管理规范》！')
+    console.log('DocLint 已实现的检查项未发现错误；不代表全部文档符合治理规范，警告仍需单独审阅。')
     process.exit(0)
   }
 }

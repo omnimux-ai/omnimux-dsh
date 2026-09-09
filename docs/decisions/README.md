@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L2"
 date: "2026-08-26"
-updated: "2026-09-04"
+updated: "2026-09-09"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -32,7 +32,7 @@ subsystem: "global"
 | `superseded` | [2026-08-26-l2-in-progress-plugin-cap.md](2026-08-26-l2-in-progress-plugin-cap.md) | 决策：L2 在研插件仍保持「每个 profile link ≤ 1」 | `omnimux-assets` | 2026-09-09 | L2 独立环境及单 link 门槛退役，现行流程见 dev-pipeline。 |
 | `superseded` | [2026-08-26-l2-restart-host-session-semantics.md](2026-08-26-l2-restart-host-session-semantics.md) | 决策：L2 restart-host 保端口与磁盘，不保浏览器会话 | `omnimux` | 2026-09-09 | L2 生命周期退役；Dev 重启仍按现行授权与占用协调边界。 |
 | `accepted` | [2026-08-26-ops-entry-authority.md](2026-08-26-ops-entry-authority.md) | 决策：运维命令权威入口仍是 fork yarn omnimux: | `omnimux` | 2026-08-26 | 日期：2026-08-26。 |
-| `accepted` | [2026-08-21-gxgen-capability-plugin.md](2026-08-21-gxgen-capability-plugin.md) | Gxgen 微服务 → OmniMux 能力插件 | `omnimux-video` | 2026-08-21 | **Superseded（2026-08-21 下午方向变更）**：引擎客户端方案废除——用户明确要求本地化自包含，不可能依赖本地 Docker 引擎或云端。Gxgen video-engine 降级 |
+| `superseded` | [2026-08-21-gxgen-capability-plugin.md](2026-08-21-gxgen-capability-plugin.md) | Gxgen 微服务 → OmniMux 能力插件 | `omnimux-video` | 2026-08-21 | 引擎客户端方案已由 [dsh-video-plugin](../contracts/dsh-video-plugin.md) 的自包含本地执行方案取代；原 ADR 保留历史理由。 |
 | `superseded` | [2026-08-21-xai-full-shell-theme.md](2026-08-21-xai-full-shell-theme.md) | 决策：全壳 x.ai 品牌染色（overrideTokens 渲染官方 --dsw-） | `omnimux` | 2026-08-21 | 日期：2026-08-21。 |
 | `accepted` | [2026-08-16-harness-consume-not-fork.md](2026-08-16-harness-consume-not-fork.md) | 决策：消费官方 dsh，不整仓 fork | `omnimux` | 2026-08-16 | 日期：2026-08-16。 |
 | `accepted` | [2026-08-16-hub-io-and-facilities.md](2026-08-16-hub-io-and-facilities.md) | 决策：执行中枢 I/O 与落地设施 | `omnimux` | 2026-08-16 | 日期：2026-08-16。 |

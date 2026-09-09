@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-09-06"
+updated: "2026-09-09"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan"]
 subsystem: "omnimux/catalog"
 tags:
@@ -47,9 +47,9 @@ related:
 4. **新模型准入 (No Spec, No Model)**
    新增模型必须先有完整 YAML 契约（含显式 `output.type`、槽位限制与上限来源）。无契约不得进入可选择目录。
 
-5. **无执行面不上架 (No Executor / No Evidence, No List) — operation 原子**
-   仅有纸面 YAML 不足。画布 / 选择列表资格见 §4：**listed 的原子单位是 operation**（键建议 `modelId#operationId`）。当前机器实现检查该 op 的 research 验证、execution live、**与 adapter profile 在 operation/output/seam 上相容**，且 gate 允许。
-   - **禁止**仅因 model 级 `research: verified` + `execution: live` 把该模型**所有** operation 一并放行。
+5. **实现未就绪不上架 (No Ready Implementation, No List)，operation 原子**
+   仅有纸面 YAML 不足。画布 / 选择列表资格见 §4：**listed 的原子单位是 operation**（键建议 `modelId#operationId`）。当前机器实现检查该 op 的 contract complete、research verified、implementation ready、**adapter profile 相容**，且 gate 允许；历史 `execution.live` 不是准入前提。
+   - **禁止**仅因 model 级 `research: verified` + `implementation: ready` 把该模型**所有** operation 一并放行。
    - `model.listed` 若存在，仅为 `any(operation.listed)` 的**摘要**，不得作为 UI 放行全 op 的依据。
    - 无 speechToText 等执行缝时，对应 ASR **operation** 不得 listed。
    - 粗 `videoGenerate` profile **不得**自动使 `digital_human` listed。
@@ -62,8 +62,8 @@ related:
    - YAML **应显式**列出所需 prompt slot（减少 normalize 魔法）。
    - 兼容 normalize 若补槽，**仅** `required` 可注入；`speech_to_text` / 明确 source-only / `promptPolicy: none` **不得**强制 prompt；`digital_human` 等为 `optional` 时不得自动 min=1。
 
-8. **H1 诚实上架**
-   H1（#464）shadow 阶段：现有实文件 specs **不得**对任何 operation 做 listed claim（normalize 后 `listedOperations = []`）。`verified`/`live` 正例仅用于 **fixtures** 验证判定逻辑。逐 op 补证上架与 runtime constraints 对账属 **H2**。
+8. **H1 诚实上架（历史阶段）**
+   以下仅记录 H1（#464）shadow 阶段政策，不覆盖当前 §4 准入：现有实文件 specs **不得**对任何 operation 做 listed claim（normalize 后 `listedOperations = []`）。`verified`/`live` 正例仅用于 **fixtures** 验证判定逻辑。逐 op 补证上架与 runtime constraints 对账属 **H2**。
 
 ## 2. 全模态标准 operation（首批 17）
 
@@ -121,7 +121,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 - `id` / `label`：非空
 - **`aliases`（可选，model metadata）**：string[]；唯一、非空元素；用于 **runtime / wire model ID 归一**到 `model.id`；跨 model 全局唯一（含不得抢占他模 `id`）
 - `operations`（或遗留 `modes`→normalize 为 operations）
-- 可选 model 级 `parameters` / `research` / `execution`（**仅 defaults**）
+- 可选 model 级 `parameters` / `research` / `implementation` / `execution`（**仅 defaults**）
 
 每个模型的每个 **operation** 必须声明：
 
@@ -129,7 +129,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 - **`output.type`**：`text` | `image` | `video` | `audio`（**禁止**从文件管理分组或输入模态推断）
 - `output.allowedMimes` / `min` / `max`（可选；若出现则 allowedMimes 为非空字符串数组，min/max 为有限数字且 min≤max）
 - `inputs[]`：输入槽列表
-- **`research` / `execution`（operation 级）**：可省略并继承 model defaults，但 **normalize 后每个 operation 必须物化自身** research 与 execution
+- **`research` / `implementation` / `execution`（operation 级）**：可省略并继承 model defaults，但 **normalize 后每个 operation 必须物化自身**三类状态
 - **`aliases`（可选，operation 级）**：**仅** legacy **operation 名**附属声明（定界）；**不是** model wire-id 真源。全局旧 GenerationMode→标准 op 仍以 Hub `legacy-operation-map` 为准
 
 **UI display label** ≠ `aliases`（见 model-display-label 合同）。
@@ -170,27 +170,30 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 
 **Profile 文档合法性（H1 强制，不可推 H2）**：`validateAdapterProfiles` 必须拒绝 `operations[]` 中的未知 operation（code **`profile_operation_unknown`** 或可定位的 `schema_invalid`）。未知 op = **malformed profile**；**`--audit` 与 `--strict` 均为 error**（admission fail），不是 coverage 警告。
 
-当 operation 声明 `execution.status: live` 时，admission 必须校验：profile 存在且 live，**且** `operation.id ∈ profile.operations`，**且** `output.type ∈ profile.outputTypes`，seam 一致（若两侧声明）。不相容 → `profile_incompatible`（不可 listed）。
+上架兼容检查使用 operation 的 `implementation.profileId` 与 `implementation.seam`：profile 存在且自身 `status: live`，**且** `operation.id ∈ profile.operations`，**且** `output.type ∈ profile.outputTypes`，seam 一致（若两侧声明）；profile 若声明非空 `slotRoles`，输入还须包含所需角色。不相容 → `profile_incompatible`（不可 listed）。profile 自身的 `live` 条件保留，不等同于要求 operation 的历史 `execution.status: live`。
 
 ## 4. research / execution / listed（operation 级）
 
 | 维度 | 值 | 含义 |
 |---|---|---|
 | `research.status` | `draft` \| `verified` \| `rejected` | **该 operation** 研究完备；`verified` 需 docUrl 等依据 |
-| `execution.status` | `none` \| `stub` \| `live` | **该 operation** 执行面 |
-| `execution.profileId` | string | 映射 adapter profile |
+| `implementation.status` | `none` \| `ready` | **该 operation** 实现是否就绪 |
+| `implementation.profileId` / `implementation.seam` | string | 准入使用的 adapter profile 与执行缝 |
+| `implementation.verifiedAt` / `implementation.notes` | string，可选 | 实现核对日期与说明 |
+| `execution.status` | `none` \| `stub` \| `live` | **该 operation** 历史执行状态，不是上架前提 |
+| `execution.profileId` / `execution.seam` | string，可选 | 历史执行记录关联的 profile 与执行缝 |
 
-Model 级 `research` / `execution` **仅作 defaults**：normalize 时写入每个未显式声明的 operation。Catalog / coverage / UI 门禁 **只读 operation 级结果**。
+Model 级 `research` / `implementation` / `execution` **仅作 defaults**：normalize 时写入每个未显式声明的 operation。operation 显式声明 implementation 时先独立归一化，缺失的 profileId/seam 从 model defaults 补齐；implementation 状态缺失或非法时归一为 `none`，不从历史 execution 推导 `ready`。Catalog / coverage / UI 门禁 **只读 operation 级结果**。
 
 **当前 `operationListed` 实现**（可出现在画布/生成选择 UI 的原子资格）检查：
 
 1. **contract complete**（该 op schema 通过，slots/显式 output 齐备，有可信上限来源规则）；
 2. **`op.research.status = verified`**；
-3. **`op.execution.status = live`**；
-4. **adapter profile compatible**（exists + live + operations/outputTypes/seam）；
-5. **gate allowed**（`Config.gate` 未关闭该能力/模型/op；H1 可先 model 级钩子）。
+3. **`op.implementation.status = ready`**；
+4. **adapter profile compatible**（由 implementation 关联，profile exists + 自身 status live + operations/outputTypes/seam，含已声明的 slotRoles 要求）；
+5. **gate allowed**（gate 回调未关闭该模型/op；支持 model 级或 operation 级回调）。
 
-该五项是当前代码行为记录。后续须按 [接口准据 §5](model-api-authority.md#5-与当前目录实现的关系) 分离实现覆盖与历史真实执行；不得为满足 `live` 字段发真实请求或伪造状态。本次文档修订不改变运行时准入。
+该五项对应 [status.js](../../plugins/omnimux/src/catalog/contract/status.js) 的 `computeOperationListed`。按 [接口准据 §5](model-api-authority.md#5-与当前目录实现的关系)，实现覆盖与历史真实执行已分离：operation 的 `execution.status: live` 不是准入前提，adapter profile 自身 `status: live` 仍是现有兼容条件。不得为补历史 execution 发真实请求或伪造状态；本次文档修订不改变运行时准入。
 
 派生：
 
@@ -199,10 +202,10 @@ Model 级 `research` / `execution` **仅作 defaults**：normalize 时写入每�
 
 推论：
 
-- Whisper 等 ASR 在 speechToText 执行面未 live 前，其 `speech_to_text` **不得 listed**。
+- Whisper 等 ASR 若未达到 `implementation.status: ready` 或缺少相容的 speechToText adapter profile，其 `speech_to_text` **不得 listed**；是否具备资格须读当前 operation 与 profile，不以历史 execution 是否 live 判断。
 - 同模型可以「仅 text_to_video listed、first_frame 仍 draft」。
-- draft / 无执行面 / 无证据 / profile 不相容 → 对选择 UI **隐藏该 operation**。
-- **H1 实 specs**：政策要求全部 operation 保持 draft 与/或 none|stub，使 **`listedOperations = []`**（不在 H1 审计并宣称厂商 live 事实）。
+- contract 不完整 / research 未 verified / implementation 未 ready / profile 不相容 / gate 不允许 → 对选择 UI **隐藏该 operation**。
+- **H1 实 specs（历史政策）**：当时要求全部 operation 保持 draft 与/或 none|stub，使 **`listedOperations = []`**，不在 H1 审计并宣称厂商 live 事实；不作为当前准入规则。
 
 ## 5. 拒绝与错误（typed rejects）
 
@@ -212,6 +215,8 @@ Model 级 `research` / `execution` **仅作 defaults**：normalize 时写入每�
 UI 必须可解释；**Hide, Don't Grey**。
 
 ## 6. 门禁与演进
+
+下表 H1/H2 为阶段演进记录；H1 shadow 的零上架政策仅适用于历史阶段，当前准入以 §4 为准。
 
 | 阶段 | 要求 |
 |---|---|

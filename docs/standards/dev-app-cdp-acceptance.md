@@ -1,27 +1,27 @@
 ---
-title: "Dev App 真机验收 = CDP 直连 Electron 窗口"
+title: "Dev App Electron 专属追加验收参考"
 id: "standard-dev-app-cdp-acceptance"
-type: "standard"
+type: "reference"
 status: "living"
-authority: "L1"
+authority: "L4"
 date: "2026-09-02"
-supersedes:
-  - "dev-pipeline.md §真机定点验收（旧：Ego-Browser 连 45120 即验收）"
+updated: "2026-09-09"
 related:
   - "docs/contracts/dev-pipeline.md"
   - "docs/contracts/plugin-qa.md"
   - "scripts/verify-dev-cdp.mjs"
 ---
 
-# Dev App 真机验收 = CDP 直连 Electron 窗口
+# Dev App Electron 专属追加验收参考
 
-> 此规范是对「Dev App UI 验收」的**唯一真源**。它修订并收窄 `dev-pipeline.md` / `plugin-qa.md` 中关于真机验收的表述，明确「Web 侧 ≠ Electron 窗口」。
+> 本文保留 Electron CDP 方法与历史案例，不定义通用验收政策，也不证明当前 App 已通过验收。适用层以 [plugin-qa.md](../contracts/plugin-qa.md) 为准，环境以 [dev-pipeline.md](../contracts/dev-pipeline.md) 为准；本文不替代这两份合同。
 
 ## TL;DR
 
-- **禁止**用 Ego-Browser / curl / opencli 访问 `http://127.0.0.1:45120` 的渲染结果作为 **Dev App 界面验收**依据。
-- 涉及 **壳层样式 / `data-dsh-desktop-*` / macOS 门控** 的改动，必须用 **CDP 直连 Electron renderer** 验收。
-- Dev App 通过 desktop-fork #33 暴露 CDP 端口（默认 `9229`）。Agent 用 `pnpm verify:cdp` 自动断言真实窗口。
+- 合并前在隔离 worktree 完成相关自动化测试、静态检查和独立评审，再通过 required CI / Merge Queue；没有独立 App/Host 测试环境。普通 Web/Stage 改动合并后从 `main` 物化 Dev `~/.omnimux-dev`，在 45120 使用 ego-browser + 共享 `verify:live`，默认不要求 Electron。
+- Dev/Prod 不得 link 或接收未合并工作树。纯文档、流程、脚本无需 App 物化；CI `qa:pass` 仅证明合入前静态与测试，不证明 Dev 验收。
+- 只有涉及 **壳层样式 / `data-dsh-desktop-*` / 平台门控** 等 Electron 专属行为时，才追加 **CDP 直连 Electron renderer** 证据；45120 网页不能代替该层，CDP 也不能代替所需 Web 证据。
+- 下文记录 desktop-fork #33 的 Dev CDP 端口方案（默认 `9229`）及 `pnpm verify:cdp` 用法。实际构建、目标窗口和运行身份须在每次验收时核对。
 
 ## 一、为什么「45120 网页 ≠ Dev App 窗口」
 
@@ -42,9 +42,9 @@ Dev App 是 **Electron 应用**。`http://127.0.0.1:45120` 是其 **host 端口*
 
 1. 触及壳层样式：`dsh-plugin-desktop/src/client/*.ts` 注入的、`[class*=...]` / `!important` / `data-dsh-desktop-*` 门控规则；
 2. macOS / Windows 平台门控的布局、窗口、滚动、panel 表现；
-3. 任何你无法在 web 侧复现、但用户/真机上报的 UI 差异。
+3. 用户在 Electron 窗口上报、Web 侧无法复现，且需要核实壳层/平台差异的行为。
 
-纯插件 web 逻辑（不涉壳层/平台门控）的场景，仍可用 Ego-Browser 做 web 侧自查，但**不得作为 Dev App 最终验收依据**。
+纯插件 Web/Stage 逻辑（不涉壳层/平台门控）按 `plugin-qa` 的 Web 证据完成适用验收，不追加 Electron 要求；curl 或页面可达性不能替代共享浏览器探针。
 
 ## 三、验收通道：CDP 直连（desktop-fork #33）
 
@@ -64,7 +64,7 @@ if (cdpPort !== null) app.commandLine.appendSwitch('remote-debugging-port', cdpP
 
 `scripts/verify-dev-cdp.mjs` 自动：
 
-1. 连 `http://127.0.0.1:<CDP_PORT>/json/list`，找指向 `:45120` 的 page target（Dev App 窗口）；
+1. 连 `http://127.0.0.1:<CDP_PORT>/json/list`，优先选择指向 `:45120`（可由 `OMNIMUX_PORT` 覆盖）的 page target；脚本在无匹配时会回退到任意 page，不能仅凭脚本 PASS 确认目标就是所需 Dev App 窗口；
 2. 若目标 selector 不在，驱动窗口（创作 → 画布 → 选中节点）；
 3. `Runtime.evaluate` 读 `.wf-panel-shell__card` 的 computed 样式；
 4. 断言 `padding-top`（默认 `12px`）；
@@ -83,23 +83,25 @@ OMNIMUX_CDP_PORT=9333 pnpm verify:cdp
 
 **前置条件**：Dev App 正在运行且已暴露 CDP 端口（desktop-fork #33 已合并 + Dev App 以新构建启动）。
 
-## 四、合同落点（已同步）
+## 四、合同落点
 
-- `docs/contracts/dev-pipeline.md §真机定点验收`：更新为「Electron 窗口红线，CDP 直连」，明确「Web 侧 ≠ Electron 窗口」，严禁以 web 侧 45120 渲染作为 Dev App 验收依据。
-- `docs/contracts/plugin-qa.md`：新增「CDP 直连 Electron 窗口」章节，说明 Ego-Browser（web 侧）与 CDP（Electron 窗口）是两层验收，不可互相替代。
+- [dev-pipeline.md](../contracts/dev-pipeline.md)：定义隔离 worktree 检查、合并后 Dev 与生产环境边界；只有壳层/平台门控改动额外要求 Electron。
+- [plugin-qa.md](../contracts/plugin-qa.md)：定义适用矩阵、Web 共享探针与 Electron 追加证据。需要 Electron 而 CDP 不可用时为 BLOCKED，不以网页或截图猜测代替。
+
+现有 CDP 脚本只提供 selector/computed style 的定向测量；其报告未记录完整代码 SHA、dirty、profile 和 Host 身份，不能单独构成当前任务的完整放行证据。验收者须按合同补核身份和适用项。
 
 ## 五、判别法则（给 Agent 的检查清单）
 
-交付涉及 Dev App UI 的改动时，验收前先自问：
+按 `plugin-qa` 判定需要 Electron 追加证据后，检查：
 
-- [ ] 这个样式/布局会不会受 `data-dsh-desktop-*` 或壳层规则影响？→ 是则走 CDP。
-- [ ] 我在哪个渲染进程量到的？—— `45120` 网页还是 Electron 窗口？→ 必须是 Electron 窗口才能作为 Dev App 验收。
-- [ ] `.wf-panel-shell__card` / 关键 selector 的 computed 值是否符合预期、无 `!important` 外部覆盖？→ 用 `verify:cdp` 断言。
-- [ ] 证据落盘了吗？—— `docs/evidence/live-cdp-qa-report.json` 是 CDP 验收证据。
+- [ ] 目标行为是否依赖 `data-dsh-desktop-*` 或壳层规则？普通 Web/Stage 不追加该层。
+- [ ] 测量是否来自目标 Electron 窗口，且运行身份已核对？45120 网页不能证明 Electron 专属行为。
+- [ ] `.wf-panel-shell__card` / 关键 selector 的 computed 值是否符合预期、无 `!important` 外部覆盖？按目标行为配置 `verify:cdp` 断言。
+- [ ] `docs/evidence/live-cdp-qa-report.json` 是否属于本次运行，并与任务代码和环境身份一同留存？文件存在或历史 PASS 不等于当前验收。
 
 ## 六、历史根因（参考）
 
-桌面壳 `extended-styles.ts` 曾用：
+以下保留 2026-09-02 文档中的历史案例，不证明当前桌面构建、样式或验收状态。桌面壳 `extended-styles.ts` 曾用：
 
 ```css
 body[data-dsh-desktop-platform="darwin"] [class*="panel"] { padding-top: 0 !important }

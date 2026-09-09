@@ -112,8 +112,8 @@ function printHelp() {
   build:all                       并发全量构建产品插件
   lint:i18n                       全量文案/禁词与多语言门禁检查
   analyze:refactor [路径...]       代码重构与简化分析工具 (CRSA: 行数超标与业务逻辑混乱检测)
-  doc:lint                        开发文档工程实践合规与死链校验
-  doc:index                       自动生成与更新全量文档索引矩阵
+  doc:lint                        检查部分元数据、命名、链接目标及核心索引存在性；不覆盖完整 Schema、锚点、孤岛或语义
+  doc:index                       写入七个配置子目录 README.md 索引（覆盖文件，非只读；不更新 docs/README.md）
   registry [build|verify|query]   编译与校验插件 Manifest 及能力注册表
   doctor                          多层开发环境自检
   restart dev                     【人类专用】手动重启开发版应用 (/Applications/OmniMux Dev.app)
