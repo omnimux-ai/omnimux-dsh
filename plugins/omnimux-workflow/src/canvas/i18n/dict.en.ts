@@ -87,6 +87,13 @@ const en: Record<DictKey, string> = {
   'pill.more': 'More',
   'pill.speechToText': 'Speech to Text',
   'pill.extractVideo': 'Extract Video',
+  'pill.deconstructVideo': 'Deconstruct',
+  // Video deconstruction (deconstructVideo.*)
+  'deconstructVideo.nodeLabel': 'Video Breakdown',
+  'deconstructVideo.toast.success': 'Video deconstructed into table node',
+  'deconstructVideo.toast.failed': 'Video deconstruction failed',
+  'deconstructVideo.noWorkspace': 'Workspace not ready',
+  'deconstructVideo.noVideo': 'No video file found',
   // Speech to text (Issue 744, stt.*)
   'stt.nodeLabel': 'Subtitles',
   'stt.toast.success': 'Transcription complete. Subtitle node is ready.',

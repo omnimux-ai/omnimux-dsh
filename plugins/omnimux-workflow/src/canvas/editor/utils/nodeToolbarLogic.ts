@@ -160,6 +160,86 @@ export function resolveSpeechToTextAudioPath(
 }
 
 // ============================================================================
+// 视频节点内容拆解胶囊操作
+// ============================================================================
+
+export const DECONSTRUCT_VIDEO_PILL_ACTION_ID = 'deconstruct-video';
+
+export interface VideoDeconstructEligibilityInput {
+  materialType?: string;
+  executionStatus?: string | null;
+  isOffline?: boolean;
+  realPath?: string;
+  relativePath?: string;
+  mediaUrl?: string;
+  previewUrl?: string;
+}
+
+/**
+ * 「内容拆解」按钮可见性：视频素材节点、有可解析的视频来源、
+ * 非离线、非执行中（running/pending）。
+ */
+export function canRunVideoDeconstruct(input: VideoDeconstructEligibilityInput): boolean {
+  if (input.materialType !== 'video') return false;
+  if (input.isOffline) return false;
+  if (input.executionStatus === 'running' || input.executionStatus === 'pending') return false;
+  return Boolean(
+    input.realPath || input.relativePath || input.mediaUrl || input.previewUrl,
+  );
+}
+
+export function buildDeconstructVideoPillActionSpec(width: number = 88): ToolbarActionSpec {
+  return {
+    id: DECONSTRUCT_VIDEO_PILL_ACTION_ID,
+    section: 'primary',
+    width,
+  };
+}
+
+/**
+ * 解析视频节点的拆解来源路径：
+ * 1. realPath（导入节点的本机绝对路径）；
+ * 2. mediaUrl / previewUrl 中可还原的 /api/local-file 绝对路径；
+ * 3. mediaUrl 本身是 HTTP(S) URL；
+ * 4. relativePath（项目相对路径）；
+ * 5. relativePath + workspaceId → 项目文件流 URL。
+ */
+export function resolveVideoDeconstructPath(
+  input: {
+    realPath?: string;
+    relativePath?: string;
+    mediaUrl?: string;
+    previewUrl?: string;
+    workspaceId?: string;
+  },
+  opts?: { baseUrl?: string },
+): string | null {
+  const realPath = asTrimmedPath(input.realPath);
+  if (realPath) return realPath;
+
+  for (const url of [input.mediaUrl, input.previewUrl]) {
+    const local = localFilePathFromUrl(url);
+    if (local) return local;
+  }
+
+  const mediaUrl = asTrimmedPath(input.mediaUrl);
+  if (mediaUrl && /^https?:\/\//.test(mediaUrl)) return mediaUrl;
+
+  const previewUrl = asTrimmedPath(input.previewUrl);
+  if (previewUrl && /^https?:\/\//.test(previewUrl)) return previewUrl;
+
+  const relativePath = asTrimmedPath(input.relativePath);
+  if (relativePath) return relativePath;
+
+  const workspaceId = asTrimmedPath(input.workspaceId);
+  const baseUrl = asTrimmedPath(opts?.baseUrl);
+  if (relativePath && workspaceId && baseUrl) {
+    return new URL(projectFileMediaUrl(workspaceId, relativePath), baseUrl).toString();
+  }
+  return null;
+}
+
+// ============================================================================
 // 文本节点提取视频胶囊操作
 // ============================================================================
 

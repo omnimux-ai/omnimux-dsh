@@ -84,6 +84,9 @@ export const WORKFLOW_API_ROUTES = {
   /** POST: extract video from social media URL and download to local media. */
   extractVideo: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/extract-video`,
+  /** POST: deconstruct video into structured table document (.htable). */
+  deconstructVideo: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/deconstruct-video`,
   /** GET: list templates. POST: create template. */
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */

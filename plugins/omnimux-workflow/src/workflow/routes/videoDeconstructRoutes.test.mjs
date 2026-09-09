@@ -1,0 +1,207 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { after, test } from 'node:test';
+import { buildSync } from 'esbuild';
+
+const buildDir = mkdtempSync(join(tmpdir(), 'video-deconstruct-route-build-'));
+const bundle = join(buildDir, 'runtime.mjs');
+buildSync({
+  stdin: {
+    contents: `
+      export { createWorkspaceStore } from '../workspace/WorkspaceStore.ts';
+      export { createWorkflowDispatcher } from './canvasRoutes.ts';
+      export { TableStorageService } from '../storage/TableStorageService.ts';
+      export { resolveTableAbsPath } from '../storage/tablePath.ts';
+    `,
+    resolveDir: fileURLToPath(new URL('.', import.meta.url)),
+  },
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  outfile: bundle,
+});
+const { createWorkspaceStore, createWorkflowDispatcher, TableStorageService, resolveTableAbsPath } =
+  await import(pathToFileURL(bundle).href);
+after(() => rmSync(buildDir, { recursive: true, force: true }));
+
+function harness(t, opts = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'video-deconstruct-test-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const store = createWorkspaceStore({ workspacesDir: join(root, 'workspaces') });
+  const workspace = store.create('视频拆解测试工作区');
+
+  const toolCalls = [];
+  const videoAnalyzeTool = {
+    async execute(args) {
+      toolCalls.push(args);
+      if (opts.toolExecute) return opts.toolExecute(args);
+      return {
+        report: `# 视频逐镜头分解
+
+## 逐镜头分解表
+| 镜头序号 | 时间段 | 景别 | 画面描述 | 关键动作 | 台词脚本 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 00:00 - 00:03 | 特写 | 开场反差视觉 | 快速推入 | "痛点前置" |
+| 2 | 00:03 - 00:10 | 中景 | 实操演示过程 | 涂抹吸收 | "效果真实可见" |
+`,
+      };
+    },
+  };
+
+  const dispatcher = createWorkflowDispatcher({
+    store,
+    mediaDir: join(root, 'media'),
+    libraryRoot: join(root, 'library'),
+    executionManager: {},
+    gateway: { capabilities: async () => ({}) },
+    getTool: (name) => {
+      if (opts.disableTool) return undefined;
+      return name === 'video_analyze' ? videoAnalyzeTool : undefined;
+    },
+    getSeam: (name) => {
+      if (opts.disableTool) return undefined;
+      return name === 'videoAnalyze' ? videoAnalyzeTool : undefined;
+    },
+  });
+
+  const dummyVideo = join(root, 'test.mp4');
+  writeFileSync(dummyVideo, 'dummy video binary content');
+
+  const url = `/omnimux-workflow/api/workspaces/${workspace.id}/deconstruct-video`;
+  const call = (body, extra = {}) =>
+    dispatcher.dispatch({
+      method: 'POST',
+      url,
+      body,
+      origin: 'http://127.0.0.1:45120',
+      ...extra,
+    });
+
+  return { call, toolCalls, store, workspace, url, dummyVideo };
+}
+
+test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格', async (t) => {
+  const h = harness(t);
+  const res = await h.call({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '我的爆款视频拆解',
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.title, '我的爆款视频拆解');
+  assert.ok(res.body.tableId.startsWith('tbl_'));
+  assert.equal(res.body.tablePath, `.omnimux/tables/${res.body.tableId}.htable`);
+  assert.equal(res.body.columnCount, 6);
+  assert.equal(res.body.rowCount, 2);
+  assert.equal(res.body.previewRows.length, 2);
+  assert.equal(res.body.previewRows[0], '1');
+
+  // 验证磁盘上的 .htable 物理文件是否真实存在且有效
+  const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
+  const savedDoc = await TableStorageService.loadTable(absPath);
+  assert.equal(savedDoc.title, '我的爆款视频拆解');
+  assert.equal(savedDoc.columns.length, 6);
+  assert.equal(savedDoc.rows.length, 2);
+  assert.equal(h.toolCalls.length, 1);
+  assert.equal(h.toolCalls[0].video, h.dummyVideo);
+});
+
+test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆解保底模板', async (t) => {
+  const h = harness(t, { disableTool: true });
+  const res = await h.call({
+    nodeId: 'node_video_fallback',
+    videoPath: h.dummyVideo,
+    title: '保底拆解视频',
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.title, '保底拆解视频');
+  assert.ok(res.body.tableId.startsWith('tbl_'));
+  assert.equal(res.body.columnCount, 6);
+  assert.equal(res.body.rowCount, 3);
+  assert.ok(res.body.markdown.includes('逐镜头分解与五维分析报告'));
+
+  // 验证磁盘持久化有效
+  const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
+  const savedDoc = await TableStorageService.loadTable(absPath);
+  assert.equal(savedDoc.title, '保底拆解视频');
+  assert.equal(savedDoc.rows.length, 3);
+});
+
+test('videoDeconstruct: 无 Markdown 表格时，按五维分析维度构造结构化表格', async (t) => {
+  const h = harness(t, {
+    toolExecute: async () => ({
+      report: `
+## 一句话视频描述
+以沉浸式妆造前后反差为核心钩子的爆款美妆短视频。
+
+## I. 核心目标
+* 转化目标: 引导点击左下角购买同款粉底液
+* 情绪基调: 惊艳、自信
+
+## II. 影响力分析
+明线展现遮瑕力，暗线击碎早八妆容焦虑。
+
+## III. 叙事结构
+0-3s 纯素颜强反差 → 3-10s 上妆半脸对比 → 结尾展示全妆
+
+## IV. 画面分析
+高保真近景特写，原生自然光影。
+
+## V. 核心复刻策略
+[素颜痛点] + [半脸对比] + [全脸惊艳成效] + [CTA直接带货]
+`,
+    }),
+  });
+
+  const res = await h.call({
+    nodeId: 'node_video_text_only',
+    videoPath: h.dummyVideo,
+    title: '五维维度表格',
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  // 提取为「分析维度」和「分析内容」2 列
+  assert.equal(res.body.columnCount, 2);
+  // 6 个维度
+  assert.equal(res.body.rowCount, 6);
+  assert.equal(res.body.previewRows[0], '一句话描述');
+
+  const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
+  const savedDoc = await TableStorageService.loadTable(absPath);
+  assert.equal(savedDoc.columns[0].title, '分析维度');
+  assert.equal(savedDoc.columns[1].title, '分析内容');
+  assert.equal(savedDoc.rows.length, 6);
+});
+
+test('videoDeconstruct: 请求校验与异常阻断', async (t) => {
+  const h = harness(t);
+
+  // 1. 跨域写入请求被阻断
+  const deniedRes = await h.call({ nodeId: 'node_1', videoPath: '/tmp/test.mp4' }, { origin: 'http://evil.com' });
+  assert.equal(deniedRes.status, 403);
+  assert.equal(deniedRes.body.error, 'not-local');
+
+  // 2. 缺少必需参数
+  const badNode = await h.call({ nodeId: '', videoPath: '/tmp/test.mp4' });
+  assert.equal(badNode.status, 400);
+  assert.equal(badNode.body.error, 'invalid-request');
+
+  const badPath = await h.call({ nodeId: 'node_1', videoPath: '   ' });
+  assert.equal(badPath.status, 400);
+  assert.equal(badPath.body.error, 'invalid-request');
+
+  // 3. 工作区不存在
+  const badWsDispatcher = h.store;
+  const badRes = await h.call({ nodeId: 'node_1', videoPath: '/tmp/test.mp4' }, {
+    url: '/omnimux-workflow/api/workspaces/ws_non_existent/deconstruct-video',
+  });
+  assert.equal(badRes.status, 404);
+});

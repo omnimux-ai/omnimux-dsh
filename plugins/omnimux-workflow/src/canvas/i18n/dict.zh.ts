@@ -93,6 +93,13 @@ const zh = {
   'pill.more': '更多',
   'pill.speechToText': '语音识别',
   'pill.extractVideo': '提取视频',
+  'pill.deconstructVideo': '内容拆解',
+  // 视频内容拆解（deconstructVideo.*）
+  'deconstructVideo.nodeLabel': '视频拆解表',
+  'deconstructVideo.toast.success': '视频内容拆解完成，已生成表格节点',
+  'deconstructVideo.toast.failed': '视频内容拆解失败',
+  'deconstructVideo.noWorkspace': '工作区未就绪',
+  'deconstructVideo.noVideo': '未找到可用视频文件',
   // 语音识别（Issue 744，stt.*）
   'stt.nodeLabel': '字幕',
   'stt.toast.success': '语音识别完成，字幕节点已就绪',

@@ -414,3 +414,73 @@ test('canExtractVideoFromTextNode：仅文本 + 包含社媒视频链接 + 非�
   assert.equal(action.section, 'primary');
   assert.equal(action.width, 88);
 });
+
+// ============================================================================
+// 视频拆解胶囊判定
+// ============================================================================
+
+test('canRunVideoDeconstruct：仅视频 + 有来源 + 非执行中', async () => {
+  const { canRunVideoDeconstruct, buildDeconstructVideoPillActionSpec } = await import('./nodeToolbarLogic.ts');
+  // 非视频类型一律 false
+  assert.equal(canRunVideoDeconstruct({ materialType: 'text', realPath: '/a.mp4' }), false);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'image', realPath: '/a.mp4' }), false);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'audio', realPath: '/a.mp4' }), false);
+
+  // 视频但无来源
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video' }), false);
+
+  // 视频 + 任一来源
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4' }), true);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', relativePath: 'assets/a.mp4' }), true);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', mediaUrl: '/omnimux-workflow/api/local-file?path=/a.mp4' }), true);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', previewUrl: 'file:///a.mp4' }), true);
+
+  // 离线 / 执行中禁用
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4', isOffline: true }), false);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4', executionStatus: 'running' }), false);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4', executionStatus: 'pending' }), false);
+
+  // 失败 / 完成后可重试
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4', executionStatus: 'error' }), true);
+  assert.equal(canRunVideoDeconstruct({ materialType: 'video', realPath: '/a.mp4', executionStatus: 'completed' }), true);
+
+  // action spec 生成符合契约
+  const spec = buildDeconstructVideoPillActionSpec();
+  assert.equal(spec.id, 'deconstruct-video');
+  assert.equal(spec.section, 'primary');
+  assert.equal(spec.width, 88);
+});
+
+test('resolveVideoDeconstructPath：优先级 realPath > local-file URL > http URL > previewUrl > relativePath', async () => {
+  const { resolveVideoDeconstructPath } = await import('./nodeToolbarLogic.ts');
+  // realPath 直出
+  assert.equal(
+    resolveVideoDeconstructPath({ realPath: '/Users/x/a.mp4', mediaUrl: 'https://cdn/x.mp4' }),
+    '/Users/x/a.mp4',
+  );
+  // local-file 流 URL 还原绝对路径
+  assert.equal(
+    resolveVideoDeconstructPath({ mediaUrl: '/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2Fb.mp4' }),
+    '/Users/x/b.mp4',
+  );
+  // http(s) mediaUrl 直出
+  assert.equal(
+    resolveVideoDeconstructPath({ mediaUrl: 'https://example.com/c.mp4' }),
+    'https://example.com/c.mp4',
+  );
+  // relativePath 直出
+  assert.equal(
+    resolveVideoDeconstructPath({ relativePath: 'assets/imported/d.mp4' }),
+    'assets/imported/d.mp4',
+  );
+  // relativePath + workspaceId + baseUrl → 项目文件流绝对 URL
+  assert.equal(
+    resolveVideoDeconstructPath(
+      { relativePath: 'assets/imported/d.mp4', workspaceId: 'ws 1' },
+      { baseUrl: 'http://127.0.0.1:45120' },
+    ),
+    'assets/imported/d.mp4',
+  );
+  // 全空 → null
+  assert.equal(resolveVideoDeconstructPath({}), null);
+});

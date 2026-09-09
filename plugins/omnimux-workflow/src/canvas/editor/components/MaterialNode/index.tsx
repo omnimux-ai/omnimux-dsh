@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Copy, FileEdit, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -38,16 +38,19 @@ import {
   buildConversationPayloadFromNode,
   canExtractVideoFromTextNode,
   canRunSpeechToText,
+  canRunVideoDeconstruct,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
   pillMaxWidthForNode,
   resolveSpeechToTextAudioPath,
+  resolveVideoDeconstructPath,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
 import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
-import { extractVideoFromUrl, transcribeAudio } from '../../../bridge/apiClient.ts';
+import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
+import { deconstructVideo, extractVideoFromUrl, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
@@ -549,6 +552,80 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [applyCanvasInputMutation, id, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
 
+  // 视频内容拆解：视频节点拆解并派生下游表格节点。
+  // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
+  const handleDeconstructVideo = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('deconstructVideo.noWorkspace'));
+      return;
+    }
+    const videoPath = resolveVideoDeconstructPath(
+      {
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        workspaceId,
+      },
+      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+    );
+    if (!videoPath) {
+      toast.error(t('deconstructVideo.noVideo'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, videoDeconstructActive: true });
+    try {
+      const result = await deconstructVideo(workspaceId, {
+        nodeId: id,
+        videoPath,
+        title: label || t('deconstructVideo.nodeLabel'),
+      });
+      if (!result.ok || !result.body?.tableId) {
+        const message = result.body?.message || result.body?.error || t('deconstructVideo.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message });
+        toast.error(message);
+        return;
+      }
+      const store = useCanvasStore.getState();
+      const videoNode = store.nodes.find((n) => n.id === id);
+      const plan = planVideoDeconstructDownstream({
+        videoNodeId: id,
+        videoPosition: videoNode?.position ?? { x: 0, y: 0 },
+        videoNodeWidth: nodeWidth,
+        tableResult: {
+          tableId: result.body.tableId,
+          tablePath: result.body.tablePath || `.omnimux/tables/${result.body.tableId}.htable`,
+          title: result.body.title || t('deconstructVideo.nodeLabel'),
+          rowCount: result.body.rowCount ?? 0,
+          columnCount: result.body.columnCount ?? 0,
+          previewRows: result.body.previewRows ?? [],
+        },
+        label: result.body.title || t('deconstructVideo.nodeLabel'),
+        currentNodes: store.nodes,
+        currentEdges: store.edges,
+      });
+      updateNodeData({ executionStatus: 'completed', executionError: undefined, videoDeconstructActive: undefined });
+      if (!plan) {
+        toast.error(t('deconstructVideo.toast.failed'));
+        return;
+      }
+      applyCanvasInputMutation({
+        addNodes: plan.addNodes,
+        addEdges: plan.addEdges,
+        nodePatches: plan.nodePatches,
+      });
+      // 自动聚焦并选中新建的表格节点
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
+      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+      toast.success(t('deconstructVideo.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('deconstructVideo.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message });
+      toast.error(message);
+    }
+  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
       nodeType: 'material',
@@ -677,6 +754,35 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       ];
     }
 
+    if (
+      materialType === 'video'
+      && canRunVideoDeconstruct({
+        materialType,
+        executionStatus,
+        isOffline,
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+      })
+    ) {
+      return [
+        {
+          key: 'deconstruct-video',
+          label: t('pill.deconstructVideo'),
+          icon: FileSpreadsheet,
+          section: 'primary',
+          variant: 'primary',
+          title: t('pill.deconstructVideo'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void handleDeconstructVideo();
+          },
+        },
+        chat,
+      ];
+    }
+
     return [chat];
   }, [
     canExtractVideo,
@@ -684,6 +790,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     executionStatus,
     handleAddToConversation,
     handleCopyText,
+    handleDeconstructVideo,
     handleExtractVideo,
     handleOpenTextStage,
     handleSpeechToText,
@@ -912,7 +1019,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 onRetry={
                   materialType === 'audio' && nodeData.sttActive === true
                     ? () => { void handleSpeechToText(); }
-                    : handleGenerate
+                    : materialType === 'video' && nodeData.videoDeconstructActive === true
+                      ? () => { void handleDeconstructVideo(); }
+                      : handleGenerate
                 }
               >
                 {previewUrl ? (
