@@ -15,12 +15,12 @@ function checkMutation(mutate, code) {
   assert.ok(report.issues.some((issue) => issue.code === `auto_serving_${code}`), JSON.stringify(report))
 }
 
-test('manifest registers all 15 whitelist IDs without claiming online supply', () => {
+test('manifest registers all 18 whitelist IDs without claiming online supply', () => {
   const report = verifyAutoServing()
   assert.equal(report.ok, true, JSON.stringify(report.issues))
   assert.equal(report.exitCode, 0)
-  assert.equal(report.registeredCount, 15)
-  assert.equal(report.requiredCount, 13)
+  assert.equal(report.registeredCount, 18)
+  assert.equal(report.requiredCount, 16)
   assert.equal(report.onlineVerified, false)
 })
 

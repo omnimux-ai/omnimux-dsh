@@ -8,7 +8,7 @@ import { AUDIO_MODEL_SPECS, IMAGE_MODEL_SPECS, VIDEO_MODEL_SPECS, findMediaModel
 describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 12) // 14 runtime − 2 hyphen aliases folded
-    assert.equal(VIDEO_MODEL_SPECS.length, 17)
+    assert.equal(VIDEO_MODEL_SPECS.length, 19)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 

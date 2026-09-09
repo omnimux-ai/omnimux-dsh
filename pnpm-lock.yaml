@@ -14,12 +14,12 @@ importers:
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
-      pngjs:
-        specifier: 7.0.0
-        version: 7.0.0
       jsdom:
         specifier: 30.0.1
         version: 30.0.1
+      pngjs:
+        specifier: 7.0.0
+        version: 7.0.0
       react:
         specifier: 18.3.1
         version: 18.3.1

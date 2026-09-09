@@ -135,6 +135,10 @@ async function loadApply() {
     export const Fragment = 'Fragment'
     export const jsxDEV = (type, props) => ({ type, props })
   `)
+  writeFileSync(join(dir, 'react-dom.js'), `
+    export function createPortal(children) { return children }
+    export default { createPortal }
+  `)
   writeFileSync(join(dir, 'primitives.js'), `
     export function IconEditOutline16() { return null }
     export function IconTrashOutline16() { return null }
@@ -161,6 +165,8 @@ async function loadApply() {
     .replaceAll("from 'react'", "from './react.js'")
     .replaceAll("from \"@deepseek-ai/dsh-client-ui-primitives\"", "from \"./primitives.js\"")
     .replaceAll("from '@deepseek-ai/dsh-client-ui-primitives'", "from './primitives.js'")
+    .replaceAll('from "react-dom"', 'from "./react-dom.js"')
+    .replaceAll("from 'react-dom'", "from './react-dom.js'")
   const file = join(dir, 'apply.mjs')
   writeFileSync(file, rewritten)
   return import(pathToFileURL(file).href)

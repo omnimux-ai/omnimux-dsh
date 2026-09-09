@@ -1641,6 +1641,347 @@ models:
       seam: videoGenerate
       notes: 仅离线替身/历史 stub，不是渠道真实生成
 
+  # fal.ai MiniMax H3 Max：旗舰版，支持文生视频、首帧生视频、全能参考生视频。
+  - id: minimax-h3-max
+    label: MiniMax H3 Max
+    family: minimax
+    badge: 旗舰
+    subtitle: 720p/1080p · 5–10s
+    aliases:
+      - minimax/h3-max
+      - h3-max
+    routing:
+      channel: fal
+      wireModel: minimax/h3-max
+      endpoint: /v1/video/generations
+      automaticFallback: false
+    operations:
+      - id: text_to_video
+        label: 文生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+        parameters:
+          aspectRatio:
+            options:
+              - value: "16:9"
+                label: "16:9"
+              - value: "9:16"
+                label: "9:16"
+              - value: "1:1"
+                label: "1:1"
+              - value: "4:3"
+                label: "4:3"
+              - value: "21:9"
+                label: "21:9"
+            defaultValue: "16:9"
+            caseInsensitive: true
+      - id: first_frame
+        label: 首帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/minimax/h3-max
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
+      - id: video_multi_ref
+        label: 全能参考生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: reference_images
+            type: image
+            role: reference
+            source: upstream_edge
+            min: 0
+            max: 9
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/minimax/h3-max
+          - slot: reference_videos
+            type: video
+            role: reference
+            source: upstream_edge
+            min: 0
+            max: 3
+            allowedMimes:
+              - video/mp4
+              - video/quicktime
+            maxSizeMb: 50
+            minDurationSec: 2
+            maxDurationSec: 15
+            totalMaxDurationSec: 15
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/minimax/h3-max
+        inputGroups:
+          - slots:
+              - reference_images
+              - reference_videos
+            min: 1
+            hint: MiniMax H3 Max 参考模式至少需要一张图片或一个视频
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+              - value: "16:9"
+                label: "16:9"
+              - value: "9:16"
+                label: "9:16"
+              - value: "1:1"
+                label: "1:1"
+              - value: "4:3"
+                label: "4:3"
+              - value: "21:9"
+                label: "21:9"
+            defaultValue: adaptive
+            caseInsensitive: true
+    parameters:
+      prompt:
+        minLength: 1
+        maxLength: 7000
+      aspectRatio:
+        options:
+          - value: "16:9"
+            label: "16:9"
+          - value: "9:16"
+            label: "9:16"
+          - value: "1:1"
+            label: "1:1"
+          - value: "4:3"
+            label: "4:3"
+          - value: "21:9"
+            label: "21:9"
+        defaultValue: "16:9"
+        caseInsensitive: true
+      duration:
+        options:
+          - value: 5
+            label: "5s"
+          - value: 10
+            label: "10s"
+        range:
+          min: 5
+          max: 10
+          step: 5
+        defaultValue: 5
+        unit: s
+      resolution:
+        options:
+          - value: 720p
+            label: 720p
+          - value: 1080p
+            label: 1080p
+        defaultValue: 720p
+        caseInsensitive: true
+    research:
+      status: verified
+      docUrl: https://fal.ai/models/minimax/h3-max
+      verifiedAt: 2026-09-08
+      notes: fal.ai 官方文档确认 MiniMax H3 Max 接口规范
+    implementation:
+      status: ready
+      profileId: videoGenerate
+      seam: videoGenerate
+      verifiedAt: 2026-09-08
+      notes: 接入 videoGenerate profile，支持文生、首帧、全能参考生视频
+    execution:
+      status: stub
+      profileId: videoGenerate
+      seam: videoGenerate
+      notes: 离线测试存根
+
+  # fal.ai MiniMax H3 Max Turbo：极速版，支持文生视频、首帧生视频。
+  - id: minimax-h3-max-turbo
+    label: MiniMax H3 Max Turbo
+    family: minimax
+    badge: 极速
+    subtitle: 720p/1080p · 5–10s
+    aliases:
+      - minimax/h3-max-turbo
+      - h3-max-turbo
+    routing:
+      channel: fal
+      wireModel: minimax/h3-max-turbo
+      endpoint: /v1/video/generations
+      automaticFallback: false
+    operations:
+      - id: text_to_video
+        label: 文生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+        parameters:
+          aspectRatio:
+            options:
+              - value: "16:9"
+                label: "16:9"
+              - value: "9:16"
+                label: "9:16"
+              - value: "1:1"
+                label: "1:1"
+              - value: "4:3"
+                label: "4:3"
+              - value: "21:9"
+                label: "21:9"
+            defaultValue: "16:9"
+            caseInsensitive: true
+      - id: first_frame
+        label: 首帧生视频
+        output:
+          type: video
+          allowedMimes:
+            - video/mp4
+            - video/quicktime
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - image/jpeg
+              - image/png
+              - image/webp
+              - image/heic
+              - image/heif
+            maxSizeMb: 30
+            limitSource:
+              kind: official_docs
+              url: https://fal.ai/models/minimax/h3-max-turbo
+        parameters:
+          aspectRatio:
+            options:
+              - value: adaptive
+                label: adaptive
+            defaultValue: adaptive
+            caseInsensitive: true
+    parameters:
+      prompt:
+        minLength: 1
+        maxLength: 7000
+      aspectRatio:
+        options:
+          - value: "16:9"
+            label: "16:9"
+          - value: "9:16"
+            label: "9:16"
+          - value: "1:1"
+            label: "1:1"
+          - value: "4:3"
+            label: "4:3"
+          - value: "21:9"
+            label: "21:9"
+        defaultValue: "16:9"
+        caseInsensitive: true
+      duration:
+        options:
+          - value: 5
+            label: "5s"
+          - value: 10
+            label: "10s"
+        range:
+          min: 5
+          max: 10
+          step: 5
+        defaultValue: 5
+        unit: s
+      resolution:
+        options:
+          - value: 720p
+            label: 720p
+          - value: 1080p
+            label: 1080p
+        defaultValue: 720p
+        caseInsensitive: true
+    research:
+      status: verified
+      docUrl: https://fal.ai/models/minimax/h3-max-turbo
+      verifiedAt: 2026-09-08
+      notes: fal.ai 官方文档确认 MiniMax H3 Max Turbo 接口规范
+    implementation:
+      status: ready
+      profileId: videoGenerate
+      seam: videoGenerate
+      verifiedAt: 2026-09-08
+      notes: 接入 videoGenerate profile，支持文生与首帧生视频
+    execution:
+      status: stub
+      profileId: videoGenerate
+      seam: videoGenerate
+      notes: 离线测试存根
+
   # APIMart Wan 3.0：包含帧、全模态、文档和网页参考。
   - id: wan-3.0
     label: Wan 3.0

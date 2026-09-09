@@ -128,6 +128,8 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   assert.deepEqual(dto.video.map((r) => r.id), [
     'grok-imagine-video-1-5',
     'minimax-h3',
+    'minimax-h3-max',
+    'minimax-h3-max-turbo',
     'seedance-2-0',
     'seedance-2-0-fast',
     'seedance-2-0-mini',
@@ -212,7 +214,7 @@ test('projectChatRows: full text directory with brand/role/input derived from op
 test('projectDirectoryRows: media groups project every contracted model (listed or not)', () => {
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 12);
-  assert.equal(projectDirectoryRows(index, 'video').length, 17);
+  assert.equal(projectDirectoryRows(index, 'video').length, 19);
   assert.equal(projectDirectoryRows(index, 'audio').length, 5);
   // whisper-1 stays in the audio management directory but its output is text
   const audio = projectDirectoryRows(index, 'audio');
@@ -261,5 +263,5 @@ test('visibleOps only surfaces listed ops', () => {
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 7);
+  assert.equal(projectKindRows(index, 'video').length, 9);
 });

@@ -261,6 +261,46 @@
       ]
     },
     {
+      "id": "minimax-h3-max",
+      "disposition": "canonical",
+      "reason": "fal.ai 官方文档确认 MiniMax H3 Max 接口与文生、首帧、全能参考模式；适配与离线合同已就绪",
+      "evidence": [
+        "docs/specs/2026-09-05-video-phase-one-scope.md"
+      ]
+    },
+    {
+      "id": "minimax/h3-max",
+      "disposition": "alias",
+      "target": "minimax-h3-max",
+      "reason": "fal.ai wire model；产品目录统一使用 canonical id"
+    },
+    {
+      "id": "h3-max",
+      "disposition": "alias",
+      "target": "minimax-h3-max",
+      "reason": "MiniMax H3 Max 别名，统一使用 canonical id"
+    },
+    {
+      "id": "minimax-h3-max-turbo",
+      "disposition": "canonical",
+      "reason": "fal.ai 官方文档确认 MiniMax H3 Max Turbo 接口与文生、首帧模式；适配与离线合同已就绪",
+      "evidence": [
+        "docs/specs/2026-09-05-video-phase-one-scope.md"
+      ]
+    },
+    {
+      "id": "minimax/h3-max-turbo",
+      "disposition": "alias",
+      "target": "minimax-h3-max-turbo",
+      "reason": "fal.ai wire model；产品目录统一使用 canonical id"
+    },
+    {
+      "id": "h3-max-turbo",
+      "disposition": "alias",
+      "target": "minimax-h3-max-turbo",
+      "reason": "MiniMax H3 Max Turbo 别名，统一使用 canonical id"
+    },
+    {
       "id": "seed-audio-1.0",
       "disposition": "canonical",
       "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",
