@@ -124,6 +124,8 @@ function toSummary(project: Project, path: string): ProjectSummary {
     updatedAt: project.updatedAt,
     sessionId: project.sessionId,
     path,
+    pages: project.pages ?? [],
+    activePageId: project.activePageId,
   };
 }
 

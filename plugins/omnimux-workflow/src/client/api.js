@@ -74,6 +74,11 @@ export function createProject(title, sessionId = null, projectRoot) {
   })
 }
 
+/** 获取单个项目详情 (含全部 pages 及 activePageId) */
+export function getProject(id) {
+  return workflowRequest(`/omnimux-workflow/api/projects/${id}`)
+}
+
 /** 重命名项目（展示名；不改文件夹名）。 */
 export function renameProject(id, title) {
   return workflowRequest(`/omnimux-workflow/api/projects/${id}`, {
