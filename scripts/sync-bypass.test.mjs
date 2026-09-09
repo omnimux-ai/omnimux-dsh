@@ -1,96 +1,100 @@
-import { describe, it } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execSync } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, copyFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync, symlinkSync, copyFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
+import { copySyncScripts } from './sync-fixtures.test.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const scriptPath = join(here, 'sync-to-app.sh')
-const resolverPath = join(here, 'resolve-omnimux-profile.sh')
-const source = readFileSync(scriptPath, 'utf8')
-
-describe('sync-to-app.sh unmerged bypass whitelist', () => {
-  let testRoot
-  let repoRoot
-
-  const setupRepo = () => {
-    const runId = Math.random().toString(36).substring(2, 9)
-    testRoot = join(tmpdir(), `omnimux-sync-bypass-${runId}`)
-    repoRoot = join(testRoot, 'repo')
-    mkdirSync(join(repoRoot, 'scripts'), { recursive: true })
-    execSync(`git init -b main "${repoRoot}"`, { stdio: 'ignore' })
-    execSync(`git -C "${repoRoot}" config user.name "Test Agent"`, { stdio: 'ignore' })
-    execSync(`git -C "${repoRoot}" config user.email "agent@omnimux.test"`, { stdio: 'ignore' })
-    // 非 main 分支，触发对齐门禁
-    execSync(`git -C "${repoRoot}" checkout -b agent/feature-bypass`, { stdio: 'ignore' })
-    copyFileSync(scriptPath, join(repoRoot, 'scripts', 'sync-to-app.sh'))
-    copyFileSync(resolverPath, join(repoRoot, 'scripts', 'resolve-omnimux-profile.sh'))
-    for (const name of ['managed-tarball-archive.py', 'plugin-lifecycle.mjs']) copyFileSync(join(here, name), join(repoRoot, 'scripts', name))
-    mkdirSync(join(repoRoot, 'plugins/omnimux/src'), { recursive: true })
-    copyFileSync(join(here, '../plugins/omnimux/src/plugin-lifecycle.json'), join(repoRoot, 'plugins/omnimux/src/plugin-lifecycle.json'))
-    writeFileSync(join(repoRoot, 'package.json'), JSON.stringify({ name: 'omnimux-dsh', private: true }))
-    execSync(`git -C "${repoRoot}" add .`, { stdio: 'ignore' })
-    execSync(`git -C "${repoRoot}" commit -m "chore: test repo"`, { stdio: 'ignore' })
+function fixture(t, state = 'aligned') {
+  const home = mkdtempSync(join(tmpdir(), 'omnimux-sync-main-'))
+  t.after(() => rmSync(home, { recursive: true, force: true }))
+  const repo = join(home, 'repo')
+  copySyncScripts(repo)
+  const gitEnv = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' }
+  for (const key of Object.keys(gitEnv)) if (key.startsWith('GIT_') && !['GIT_CONFIG_NOSYSTEM', 'GIT_CONFIG_GLOBAL'].includes(key)) delete gitEnv[key]
+  const git = (...args) => {
+    const result = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf8', env: gitEnv })
+    assert.equal(result.status, 0, result.stderr)
+    return result.stdout.trim()
   }
-
-  const cleanup = () => {
-    if (testRoot && existsSync(testRoot)) {
-      try { rmSync(testRoot, { recursive: true, force: true }) } catch { /* ignore */ }
-    }
+  git('init', '-b', 'main')
+  git('config', 'user.name', 'Test Agent')
+  git('config', 'user.email', 'agent@omnimux.test')
+  git('add', '.')
+  git('commit', '-m', 'fixture: clean main')
+  git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+  if (state === 'feature' || state === 'master') git('switch', '-c', state)
+  if (state === 'detached') git('checkout', '--detach')
+  if (state === 'dirty') writeFileSync(join(repo, 'scripts/sync-main.sh'), readFileSync(join(repo, 'scripts/sync-main.sh'), 'utf8') + '\n')
+  if (state === 'untracked') writeFileSync(join(repo, 'untracked'), 'dirty')
+  if (state === 'missing-ref') git('update-ref', '-d', 'refs/remotes/origin/main')
+  if (state === 'non-git') rmSync(join(repo, '.git'), { recursive: true })
+  if (state === 'ahead' || state === 'behind') {
+    git('commit', '--allow-empty', '-m', 'fixture: next main')
+    if (state === 'behind') { git('update-ref', 'refs/remotes/origin/main', 'HEAD'); git('checkout', 'HEAD~1', '-B', 'main') }
   }
+  const target = join(home, 'target')
+  const profile = join(target, 'profiles/omnimux')
+  mkdirSync(profile, { recursive: true })
+  writeFileSync(join(profile, 'package.json'), '{"sentinel":"unchanged"}\n')
+  return { repo, home, target, profile, gitEnv }
+}
 
-  const run = (env) => {
-    try {
-      execSync(`bash "${join(repoRoot, 'scripts', 'sync-to-app.sh')}" --skip-build`, {
-        cwd: repoRoot, encoding: 'utf8', env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'],
+for (const state of ['feature', 'master', 'detached', 'dirty', 'untracked', 'ahead', 'behind', 'missing-ref', 'non-git']) {
+  test(`both sync entrypoints reject ${state}, regardless of obsolete bypass variables`, t => {
+    const f = fixture(t, state)
+    for (const entry of ['sync-to-app.sh', 'sync-stable.sh']) {
+      const result = spawnSync('bash', [join(f.repo, 'scripts', entry), '--skip-build', `--target=${f.target}`, 'missing-plugin'], {
+        encoding: 'utf8', env: { ...f.gitEnv, HOME: f.home, OMNIMUX_SYNC_VIA: 'internal',
+          OMNIMUX_SYNC_TARGETS: '', OMNIMUX_ALLOW_UNMERGED_MATERIALIZE: '1',
+          OMNIMUX_ALLOW_UNMERGED_TARGET: f.target },
       })
-      return { ok: true, out: '' }
-    } catch (err) {
-      return { ok: false, out: `${err.stdout || ''}${err.stderr || ''}` }
+      assert.notEqual(result.status, 0, `${entry}/${state}`)
+      assert.match(result.stderr, /sync:.*(main|Git|未提交)/, result.stderr)
+      assert.equal(readFileSync(join(f.profile, 'package.json'), 'utf8'), '{"sentinel":"unchanged"}\n')
+      assert.doesNotMatch(result.stdout, /物化完成|已物化进/)
     }
+  })
+}
+
+test('clean main must match origin/main exactly; inherited Git overrides cannot attest another checkout', t => {
+  const aligned = fixture(t)
+  const dirty = fixture(t, 'untracked')
+  const gate = (f, extra = {}) => spawnSync('bash', [join(here, 'sync-main.sh'), f.repo], {
+    encoding: 'utf8', env: { ...f.gitEnv, ...extra },
+  })
+  assert.equal(gate(aligned).status, 0)
+  const spoofed = gate(dirty, { GIT_DIR: join(aligned.repo, '.git'), GIT_WORK_TREE: aligned.repo })
+  assert.equal(spoofed.status, 1)
+  assert.match(spoofed.stderr, /未提交/)
+})
+
+test('both entrypoints reject external plugin roots even from clean aligned main', t => {
+  const f = fixture(t)
+  const external = join(f.home, 'external-plugins')
+  mkdirSync(external)
+  for (const entry of ['sync-to-app.sh', 'sync-stable.sh']) {
+    const result = spawnSync('bash', [join(f.repo, 'scripts', entry), '--skip-build', `--target=${f.target}`, 'missing-plugin'], {
+      encoding: 'utf8', env: { ...f.gitEnv, HOME: f.home, OMNIMUX_PLUGINS_DIR: external, OMNIMUX_SYNC_TARGETS: '' },
+    })
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /ROOT\/plugins/)
   }
+  const alias = join(f.home, 'plugins-alias')
+  symlinkSync(join(f.repo, 'plugins'), alias)
+  const result = spawnSync('bash', ['-c', 'source "$1"; assert_omnimux_sync_plugins "$2" "$3"', 'check', join(here, 'sync-main.sh'), f.repo, alias], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+})
 
-  it('rejects the legacy boolean bypass without a whitelist target', () => {
-    setupRepo()
-    try {
-      const r = run({ OMNIMUX_ALLOW_UNMERGED_MATERIALIZE: '1' })
-      assert.equal(r.ok, false, 'must reject legacy boolean bypass')
-      assert.ok(r.out.includes('已废弃'), `expected deprecation message, got: ${r.out}`)
-    } finally {
-      cleanup()
-    }
+test('rollback wrapper does not accept the obsolete unmerged flag instead of merge confirmation', t => {
+  const f = fixture(t)
+  copyFileSync(join(here, 'materialize-with-rollback.sh'), join(f.repo, 'scripts/materialize-with-rollback.sh'))
+  const result = spawnSync('bash', [join(f.repo, 'scripts/materialize-with-rollback.sh'), 'omnimux'], {
+    encoding: 'utf8', env: { ...f.gitEnv, HOME: f.home, OMNIMUX_MERGE_CONFIRMED: '0', OMNIMUX_ALLOW_UNMERGED_MATERIALIZE: '1' },
   })
-
-  it('rejects an unmerged target outside ~/.dsh-dev/tasks (e.g. public dev)', () => {
-    setupRepo()
-    try {
-      const r = run({ OMNIMUX_ALLOW_UNMERGED_TARGET: `${process.env.HOME}/.omnimux-dev` })
-      assert.equal(r.ok, false, 'must reject public dev target')
-      assert.ok(r.out.includes('必须以'), `expected tasks-prefix error, got: ${r.out}`)
-    } finally {
-      cleanup()
-    }
-  })
-
-  it('rejects an unmerged target that does not cover every sync target', () => {
-    setupRepo()
-    try {
-      const r = run({
-        OMNIMUX_ALLOW_UNMERGED_TARGET: `${process.env.HOME}/.dsh-dev/tasks/foo`,
-        OMNIMUX_SYNC_TARGETS: `${process.env.HOME}/.omnimux-dev`,
-      })
-      assert.equal(r.ok, false, 'must reject targets outside the whitelist prefix')
-      assert.ok(r.out.includes('不在允许前缀'), `expected whitelist mismatch, got: ${r.out}`)
-    } finally {
-      cleanup()
-    }
-  })
-
-  it('embeds the L2 whitelist logic in source', () => {
-    assert.ok(source.includes('OMNIMUX_ALLOW_UNMERGED_TARGET'), 'whitelist env var must exist')
-    assert.ok(source.includes('$HOME/.dsh-dev/tasks'), 'must anchor to the L2 tasks dir')
-    assert.ok(source.includes('已废弃'), 'legacy boolean must be deprecated')
-  })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /OMNIMUX_MERGE_CONFIRMED/)
 })
