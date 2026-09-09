@@ -12,7 +12,7 @@ const module = { exports: {} }
 new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
 const { SessionGuide } = module.exports
 
-test('session guide uses owner actions, protects edits, and flushes pending URLs before send', async () => {
+test('session guide uses owner actions, directly switches edited drafts, and flushes pending URLs before send', async () => {
   const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
@@ -49,10 +49,10 @@ test('session guide uses owner actions, protects edits, and flushes pending URLs
     await render()
     const second = document.querySelectorAll('[data-starter-id]')[1].dataset.starterId
     await click(`[data-starter-id="${second}"]`)
-    assert.ok(document.querySelector('.omnimux-starter-confirm'))
-    assert.match(draft, /user edit/)
-    await click('.omnimux-starter-confirm button:last-child')
-    assert.match(draft, /user edit/)
+    assert.equal(document.querySelector('.omnimux-starter-confirm'), null)
+    assert.equal(draft, `guide.${second}.prompt`)
+    assert.equal(store.get(owner).selectedId, second)
+    assert.equal(sends, 0, 'choosing a task never submits')
     await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'https://example.com/video' }))
     await click('[data-send-button]')
     assert.equal(sends, 0)
@@ -75,8 +75,7 @@ test('session guide uses owner actions, protects edits, and flushes pending URLs
     await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'https://example.com/a\nhttps://example.com/b' }))
     await click('[data-send-button]')
     await render()
-    await click(`[data-starter-id="${second}"]`)
-    await click('.omnimux-starter-confirm button:first-of-type')
+    await click('[data-starter-id="rewrite"]')
     await render()
     assert.equal(document.querySelector('.omnimux-starter-materials textarea').value, 'https://example.com/a\nhttps://example.com/b')
     await click('[data-send-button]')

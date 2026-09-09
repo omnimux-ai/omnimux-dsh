@@ -22,7 +22,6 @@ export function SessionGuide(props) {
 function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCurrentSessionId, getMaterials, attachmentDrafts, pendingSubmit }) {
   const input = useInput(value => value)
   const state = useSyncExternalStore(store.subscribe, () => store.get(sessionId), () => store.get(sessionId))
-  const [pending, setPending] = useState(null)
   const [notice, setNotice] = useState(null)
   const guideRef = useRef(null)
   const live = useRef(null)
@@ -108,12 +107,10 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
     }
   }, [input.draft, state, sessionId, store, t, pendingSubmit])
 
-  function choose(card, confirmed = false) {
+  function choose(card) {
     if (!current() || input.phase !== 'plain' || !inputActions?.setDraft) { setNotice('unavailable'); return }
     const result = selectStarter(live.current.state, live.current.input.draft,
-      { id: card.id, prompt: t(`guide.${card.id}.prompt`) }, confirmed)
-    if (result.status === 'confirm') { setPending(card); return }
-    setPending(null)
+      { id: card.id, prompt: t(`guide.${card.id}.prompt`) })
     if (result.status === 'unchanged') { focusEditor(); return }
     try {
       inputActions.setDraft(result.draft)
@@ -171,19 +168,14 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
       {notice && <div className="omnimux-starter-notice" role="status">{t(`guide.${notice}`)}
         {notice === 'unavailable' && <button type="button" onClick={() => { setNotice(null); focusEditor() }}>{t('guide.retry')}</button>}
       </div>}
-      {pending && <div className="omnimux-starter-confirm" role="group" aria-label={t('guide.replaceQuestion')}>
-        <p>{t('guide.replaceQuestion')}</p>
-        <button type="button" onClick={() => choose(pending, true)}>{t('guide.replaceDraft')}</button>
-        <button type="button" onClick={() => { setPending(null); focusEditor() }}>{t('guide.keepDraft')}</button>
-      </div>}
       <div className="omnimux-starter-groups">
-        {STARTER_GROUPS.map(group => <section key={group} className="omnimux-starter-group" aria-label={t(`guide.${group}`)}>
+        {STARTER_GROUPS.map(group => <section key={group} className="omnimux-starter-group" data-starter-group={group} aria-label={t(`guide.${group}`)}>
           <h2>{t(`guide.${group}`)}</h2>
           <div className="omnimux-starter-cards">
             {STARTERS.filter(card => card.group === group).map(card => <button key={card.id} type="button"
               data-starter-id={card.id} aria-pressed={state.selectedId === card.id} onClick={() => choose(card)}>
-              <StarterIcon group={group} />
-              <span><strong>{t(`guide.${card.id}.title`)}</strong><small>{t(`guide.${card.id}.description`)}</small></span>
+              <span className="omnimux-starter-icon"><StarterIcon group={group} /></span>
+              <span className="omnimux-starter-label">{t(`guide.${card.id}.title`)}</span>
             </button>)}
           </div>
         </section>)}
