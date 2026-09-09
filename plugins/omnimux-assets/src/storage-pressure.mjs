@@ -49,9 +49,9 @@ try {
   }, 200)
   const started = Date.now()
   await service.preflight(target, 0, 'pressure'); await service.running
-  assert.equal(service.task.state, 'awaiting_confirmation', JSON.stringify(service.task.error))
+  assert.equal(service.task.state, 'awaiting_confirmation', String(service.task.error?.message || ''))
   await service.confirm(service.task.id, { planHash: service.plan.planHash, expectedDecisionRevision: 0, confirm: true }); await service.running
-  assert.equal(service.task.state, 'completed', JSON.stringify(service.task.error))
+  assert.equal(service.task.state, 'completed', String(service.task.error?.message || ''))
   assert.equal(service.task.progress.completedFiles, 10001)
   assert.equal((await runtime.fs.hash(target, 'large.mp4')).sha256, expected)
   assert.equal((await runtime.fs.hash(source, 'large.mp4')).sha256, expected)
