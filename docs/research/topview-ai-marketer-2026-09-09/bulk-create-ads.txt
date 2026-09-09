@@ -1,0 +1,33 @@
+Bulk Create Ads
+
+Generate multiple ad variations with controlled format, duration, and creative angles.
+
+EXAMPLE
+EXAMPLE
+EXAMPLE
+Creative brief
+References
+OPTIONAL
+Add references
+Upload product photos, packaging, or short reference clips.
+
+Up to 6 files
+
+Aspect ratio
+16:9
+4:3
+1:1
+3:4
+9:16
+Duration
+15s
+4s
+30s
+Number of videos
+
+Generate 1–10 variations from the same brief.
+
+−
+4
++
+Generate creative plans

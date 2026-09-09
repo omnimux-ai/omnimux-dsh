@@ -1,0 +1,41 @@
+URL to Video
+
+Turn a product page into a ready-to-run video ad.
+
+EXAMPLE
+EXAMPLE
+EXAMPLE
+Product URL
+Target audience
+Key selling point
+Visual style
+Clean studio
+Cinematic luxury
+Minimalist premium
+Natural lifestyle
+Bold & colorful
+Futuristic tech
+UGC style
+Unboxing
+Street style
+Duration
+Auto
+4s
+180s
+Auto
+
+Let the model choose a natural length
+
+Aspect ratio
+21:9
+16:9
+4:3
+1:1
+3:4
+9:16
+Browser extension
+
+Capture product details from a live page when available.
+
+Use extension
+Start creating
