@@ -358,7 +358,6 @@ cmd_finish() {
   local pr_state=""
   local merged=0
   local synced=0
-  local cleaned=0
 
   # 步骤 4: 只推特性分支，严禁直推主干 / 把特性分支合进本地 main
   if [ "$skip_push" -eq 1 ]; then
@@ -447,22 +446,9 @@ cmd_finish() {
     echo "⏩ 远端 origin/main 尚未包含该提交，禁止物化。请等待 PR MERGED 后再 pnpm sync / git-wt.sh clean。"
   fi
 
-  # 步骤 7: 仅 MERGED 后销毁沙箱
-  echo "==> 步骤 7: 沙箱回收策略..."
-  if [ "$merged" -eq 1 ]; then
-    if [ -d "$wt_dir" ]; then
-      git -C "$REPO_ROOT" worktree remove "$wt_dir" 2>/dev/null || git -C "$REPO_ROOT" worktree remove "$wt_dir" --force 2>/dev/null || rm -rf "$wt_dir"
-      git -C "$REPO_ROOT" worktree prune
-      echo "✓ Worktree 目录已安全移除: $wt_dir"
-    fi
-    if [ -n "$branch" ] && git -C "$REPO_ROOT" rev-parse --verify "$branch" >/dev/null 2>&1; then
-      git -C "$REPO_ROOT" branch -d "$branch" 2>/dev/null || git -C "$REPO_ROOT" branch -D "$branch" 2>/dev/null || true
-      echo "✓ 本地分支已删除: $branch"
-    fi
-    cleaned=1
-  else
-    echo "⏩ PR 未 MERGED，Worktree 与特性分支已保留: $wt_dir"
-  fi
+  echo "==> 步骤 7: 保留验收现场..."
+  echo "⏩ Worktree 与特性分支已保留: $wt_dir"
+  echo "   合并后完成适用的 Dev 验收，再显式运行 clean；物化不等于验收通过。"
 
   echo ""
   echo "================================================================================"
@@ -493,17 +479,14 @@ cmd_finish() {
     echo "  🧬 主干合并:      ⏳ 本地 main 未合入特性分支（防丢失）"
   fi
   if [ "$skip_sync" -eq 1 ]; then
-    echo "  🚀 App 生产物化:  ⏩ 跳过 (--skip-sync)"
+    echo "  🚀 Dev 物化:  ⏩ 跳过 (--skip-sync)"
   elif [ "$synced" -eq 1 ]; then
-    echo "  🚀 App 生产物化:  ✅ 已同步（HEAD 已等于 origin/main）"
+    echo "  🚀 Dev 物化:  ✅ 已同步（HEAD 已等于 origin/main）"
   else
-    echo "  🚀 App 生产物化:  ⏳ 未执行（等待 PR MERGED）"
+    echo "  🚀 Dev 物化:  ⏳ 未执行（等待 PR MERGED）"
   fi
-  if [ "$cleaned" -eq 1 ]; then
-    echo "  🧹 沙箱环境:      ✅ Worktree 已销毁"
-  else
-    echo "  🧹 沙箱环境:      ⏳ 已保留 $wt_dir"
-  fi
+  echo "  🧪 Dev 运行验收:  ⏳ 尚未由本命令验证，按变更面完成适用验收"
+  echo "  🧹 沙箱环境:      ⏳ 已保留 $wt_dir"
   echo "================================================================================"
   echo ""
 }
