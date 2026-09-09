@@ -1,4 +1,12 @@
 /** Pure helpers for the Composer Skill picker. Importable by tests; the UI fragment inlines the same rules. */
+import catalog from '../../catalog/index.json' with { type: 'json' };
+const recommendedSkillSlugs = new Set(catalog.items
+    .filter(item => item.kind === 'skill' && item.recommended === true && item.skill)
+    .map(item => item.skill));
+/** Installed listings omit catalog metadata; only authoritative catalog identities qualify. */
+export function isRecommendedInstalledSkill(item) {
+    return recommendedSkillSlugs.has(skillToken(item));
+}
 export const PLAZA_INTENT_KEY = 'omnimux-market:plaza-intent';
 /** 暂时隐藏的广场 Tab（Issue #502）：恢复时清空数组并在 plaza-shell.js 还原守卫。 */
 export const PLAZA_HIDDEN_TABS = Object.freeze(['connectors']);

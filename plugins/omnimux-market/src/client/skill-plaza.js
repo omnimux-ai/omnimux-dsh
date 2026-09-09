@@ -152,7 +152,7 @@
       );
     }
 
-    function ConfirmInstallModal({ item, onConfirm, onClose }) {
+    function ConfirmInstallModal({ item, onConfirm, onClose, error = "", installing = false }) {
       if (!item) return null;
       return h(Overlay, { onClose },
         h("div", { className: "modal-dialog", style: { width: "400px" }, role: "dialog", "aria-modal": "true" },
@@ -162,9 +162,10 @@
           h("p", { style: { fontSize: "13px", color: "var(--dsw-alias-label-secondary, #d1d5db)", margin: "0 0 20px" } },
             "即将安装「" + (item.name || item.title || item.slug) + "」，安装完成后将自动为您启用。"
           ),
+          error ? h("p", { className: "sh-err", role: "alert" }, error) : null,
           h("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
-            h(Button, { size: "sm", variant: "outline", onClick: onClose }, "取消"),
-            h(Button, { size: "sm", variant: "primary", onClick: onConfirm }, "确认安装"),
+            h(Button, { size: "sm", variant: "outline", onClick: onClose, disabled: installing }, "取消"),
+            h(Button, { size: "sm", variant: "primary", onClick: onConfirm, disabled: installing }, installing ? "正在安装…" : "确认安装"),
           ),
         ),
       );
@@ -202,6 +203,8 @@
       const [open, setOpen] = useState(null);
       const [openInstallModal, setOpenInstallModal] = useState(false);
       const [confirmInstallItem, setConfirmInstallItem] = useState(null);
+      const [confirmInstallError, setConfirmInstallError] = useState("");
+      const [confirmInstalling, setConfirmInstalling] = useState(false);
 
       const loadInstalled = useCallback(() => {
         api("list")
@@ -298,23 +301,26 @@
           setItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
           setInstalledItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
         } else {
+          setConfirmInstallError("");
           setConfirmInstallItem(item);
         }
       };
 
-      const handleConfirmInstall = () => {
-        if (!confirmInstallItem) return;
+      const handleConfirmInstall = async () => {
+        if (!confirmInstallItem || confirmInstalling) return;
         const item = confirmInstallItem;
         const slug = item.slug || item.token || item.skillKey || "";
-        api("install", { slug, catalogId: item.catalogId || item.id })
-          .then(() => {
-            mark(item, true);
-            setConfirmInstallItem(null);
-          })
-          .catch(() => {
-            mark(item, true);
-            setConfirmInstallItem(null);
-          });
+        setConfirmInstalling(true);
+        setConfirmInstallError("");
+        try {
+          await api("install", { slug, catalogId: item.catalogId || item.id });
+          mark(item, true);
+          setConfirmInstallItem(null);
+        } catch (error) {
+          setConfirmInstallError(error?.message || String(error));
+        } finally {
+          setConfirmInstalling(false);
+        }
       };
 
       const isFeaturedItem = (it) => {
@@ -334,7 +340,7 @@
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
-        if (category === "featured" && !isFeaturedItem(item)) return false;
+        if (category === "featured" && !SkillShelf.isRecommendedInstalledSkill(item)) return false;
         if (category && category !== "featured" && !SkillShelf.matchesDomainTag(item, category)) return false;
         if (mineCategory && !SkillShelf.matchesDomainTag(item, mineCategory)) return false;
         if (mineSource) {
@@ -616,7 +622,13 @@
         h(ConfirmInstallModal, {
           item: confirmInstallItem,
           onConfirm: handleConfirmInstall,
-          onClose: () => setConfirmInstallItem(null),
+          error: confirmInstallError,
+          installing: confirmInstalling,
+          onClose: () => {
+            if (confirmInstalling) return;
+            setConfirmInstallItem(null);
+            setConfirmInstallError("");
+          },
         }),
       );
     }

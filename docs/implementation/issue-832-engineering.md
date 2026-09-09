@@ -1,6 +1,19 @@
 # Issue #832 Skill 工坊工程交接
 
-## 身份与结论
+## 第二轮返修（2026-09-09）
+
+- 固定 base `867b192ecf6aa35be4e1639db7351a89bea782c7`，返修输入 head `4cf79b2d47675f04bad1abb25097c19ff486b074`；当前 head 以 `git rev-parse HEAD` 为准。
+- Q1：`skill-picker-logic.js` 从本包 catalog 建立 kind=skill 且 recommended=true 的稳定 slug 集合；我的 Skill 精选只按此权威集合判定，不依赖 listInstalled 缺失的 flags 或当前搜索页，未知条目即使自带推荐标签也不入选。生成的 `lib/client/skill-picker-logic.js` 同步提交。
+- Q2：确认安装 catch 只保存原错误，不 mark、不关框；请求期间禁用按钮与关闭，失败后可重试，成功才标记安装并关闭。错误复用 sh-err 并加 role=alert。
+- QA 原四项测试完整保留，仅追加两项直接回归：未知推荐/Tab/分类重入/列表刷新；失败错误呈现/重试清错/请求禁用/成功状态。
+- `npm --prefix plugins/omnimux-market test` 最终退出0：654 tests、654 pass、0 fail/skip/cancelled。首次新增测试选择器误选 nav-tabs 容器导致653/654；限定原生 button 后全包重跑通过，未改原QA断言。
+- Stage（10/8）、Slot（1670/0违规）、plugin boundaries（2210）、UI gates（279/0违规）均退出0；`git diff --check`退出0。
+- Registry初次缺workflow dist；本地build-host首跑缺zod/@xyflow/react。任务树只读链接已有workflow node_modules后，正式build-host成功，仅生成忽略的dist/index.js，Registry 12插件全部通过。未修改workflow源码、共享依赖或外部仓库。
+- 全局一致性检查：源/生成 helper 导入路径、SkillShelf调用、确认框props、原QA状态索引一致，相关全包构建与测试通过。工程代码自检 IS_PASS: YES；独立QA与ego尚未执行，不是整体放行。
+- 本轮已收到正式L2凭据/settings整文件继承的明确任务授权；下文第一轮“未授权”仅为历史状态。正式L2启动结果见本节后续记录，浏览器验收仍由主理人派独立QA。
+- 日志：任务内 `.workbuddy/evidence/issue-832-qa/round2-market-final.log`；未push/PR/merge/共享Dev或Prod物化。
+
+## 第一轮身份与结论
 - Issue: https://github.com/omnimux-ai/omnimux-dsh/issues/832
 - Worktree: `/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/skill-header-832`
 - Branch: `agent/market-skill-header-issue-832`
