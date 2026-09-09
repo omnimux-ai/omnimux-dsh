@@ -8,8 +8,8 @@ export const DEFAULT_PROFILE_PAYLOADS = Object.freeze({
     unknownFieldPolicy: 'reject',
   }),
   imageGenerate: Object.freeze({
-    logicalFields: Object.freeze(['prompt', 'image', 'references', 'duration', 'aspectRatio', 'resolution']),
-    vendorFields: Object.freeze(['prompt', 'image', 'images', 'references', 'duration', 'metadata']),
+    logicalFields: Object.freeze(['prompt', 'image', 'references', 'duration', 'aspectRatio', 'resolution', 'quality']),
+    vendorFields: Object.freeze(['prompt', 'image', 'images', 'references', 'duration', 'metadata', 'size', 'aspect_ratio', 'resolution', 'quality']),
     unknownFieldPolicy: 'reject',
   }),
   videoGenerate: Object.freeze({

@@ -251,6 +251,7 @@ export function normalizeLogicalRequest(request = {}) {
     speed: ['speed'],
     aspectRatio: ['aspectRatio', 'aspect_ratio', 'size', 'ratio'],
     resolution: ['resolution'],
+    quality: ['quality'],
     language: ['language'],
     system: ['system'],
     maxTokens: ['maxTokens', 'max_tokens'],

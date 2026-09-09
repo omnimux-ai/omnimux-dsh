@@ -18,8 +18,8 @@
       "status": "live",
       "operations": ["text_to_image", "image_to_image", "multi_reference", "inpaint_outpaint"],
       "outputTypes": ["image"],
-      "logicalFields": ["prompt", "image", "references", "duration", "aspectRatio", "resolution"],
-      "vendorFields": ["prompt", "image", "images", "references", "duration", "metadata"],
+      "logicalFields": ["prompt", "image", "references", "duration", "aspectRatio", "resolution", "quality"],
+      "vendorFields": ["prompt", "image", "images", "references", "duration", "metadata", "size", "aspect_ratio", "resolution", "quality"],
       "unknownFieldPolicy": "reject",
       "notes": "图生成"
     },

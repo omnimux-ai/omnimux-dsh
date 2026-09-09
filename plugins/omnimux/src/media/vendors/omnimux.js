@@ -216,6 +216,10 @@ export function mapOmnimuxInput(capability, request) {
   } else {
     // 非 video（image/audio）保持现存的向后兼容逻辑不变
     if (request.image) input.image = request.image
+    if (capability === 'image') {
+      if (request.size) input.size = request.size
+      if (request.quality) input.quality = request.quality
+    }
     if (Array.isArray(request.references) && request.references.length > 0) {
       input.references = request.references
       const imageRefs = request.references

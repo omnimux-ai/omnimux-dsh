@@ -64,7 +64,13 @@ export {
   gateAllowsModel,
 } from './status.js';
 
-export { checkAdmission, isAdmissionStrictError, ADMISSION_ERROR_CODES } from './admission.js';
+export {
+  checkAdmission,
+  isAdmissionStrictError,
+  ADMISSION_ERROR_CODES,
+  verifyNoConcretePixels,
+  verifyParameterDispatchClosure,
+} from './admission.js';
 
 export {
   collectRuntimeModelIds,

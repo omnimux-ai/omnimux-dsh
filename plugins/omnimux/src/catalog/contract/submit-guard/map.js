@@ -5,6 +5,65 @@ import { assertVendorBodyAllowed } from './map-contract.js'
 export { DEFAULT_PROFILE_PAYLOADS, resolveProfilePayloadContract, assertVendorBodyAllowed } from './map-contract.js'
 
 /**
+ * OpenAI DALL-E 3 size mapping matrix.
+ *
+ * Matrix specification:
+ * - 1:1 + 1K ➜ size: "1024x1024"
+ * - 1:1 + 2K ➜ size: "1024x1024", quality: "hd" (若未指定)
+ * - 16:9 + 1K/2K ➜ size: "1792x1024"
+ * - 9:16 + 1K/2K ➜ size: "1024x1792"
+ * - 横屏聚类（4:3、21:9 等）➜ size: "1792x1024"
+ * - 竖屏聚类（3:4、2:3 等）➜ size: "1024x1792"
+ * - auto ➜ size: "1792x1024"
+ *
+ * @param {string} [aspectRatio]
+ * @param {string} [resolution]
+ * @returns {{ size: string, quality?: string }}
+ */
+export function mapOpenAiImageSize(aspectRatio = '16:9', resolution = '2K') {
+  const ratio = typeof aspectRatio === 'string' && aspectRatio.trim() ? aspectRatio.trim() : '16:9'
+  const res = typeof resolution === 'string' && resolution.trim() ? resolution.trim().toUpperCase() : '2K'
+
+  if (ratio === '1:1') {
+    return {
+      size: '1024x1024',
+      ...(res === '2K' ? { quality: 'hd' } : {}),
+    }
+  }
+
+  // 竖屏聚类：9:16, 3:4, 2:3, etc.
+  if (ratio === '9:16' || ratio === '3:4' || ratio === '2:3' || ratio === '4:5') {
+    return { size: '1024x1792' }
+  }
+
+  // 横屏聚类：16:9, 4:3, 21:9, auto, etc.
+  if (ratio === '16:9' || ratio === '4:3' || ratio === '21:9' || ratio === 'auto') {
+    return { size: '1792x1024' }
+  }
+
+  // 兜底：按比例高宽比判断或默认横屏
+  const parts = ratio.split(':')
+  if (parts.length === 2) {
+    const w = parseFloat(parts[0])
+    const h = parseFloat(parts[1])
+    if (!Number.isNaN(w) && !Number.isNaN(h) && h > 0) {
+      if (w < h) {
+        return { size: '1024x1792' }
+      }
+      if (w > h) {
+        return { size: '1792x1024' }
+      }
+      return {
+        size: '1024x1024',
+        ...(res === '2K' ? { quality: 'hd' } : {}),
+      }
+    }
+  }
+
+  return { size: '1792x1024' }
+}
+
+/**
  * @param {{
  *   operation: object,
  *   profile: object,
@@ -107,6 +166,49 @@ export function mapValidatedPlanToVendor(args) {
   }
 
   // Extras have passed the effective model + operation parameter contract.
+  if (profileId === 'imageGenerate') {
+    const isOpneAi = args.family === 'openai'
+      || args.model?.family === 'openai'
+      || String(args.modelId ?? '').startsWith('gpt-image')
+
+    if (isOpneAi) {
+      const openAiMapped = mapOpenAiImageSize(extras.aspectRatio, extras.resolution)
+      vendor.size = openAiMapped.size
+
+      if (args.userSpecifiedQuality && typeof extras.quality === 'string' && extras.quality) {
+        vendor.quality = extras.quality
+        logical.quality = extras.quality
+      } else if (openAiMapped.quality) {
+        vendor.quality = openAiMapped.quality
+        logical.quality = openAiMapped.quality
+      } else if (typeof extras.quality === 'string' && extras.quality) {
+        vendor.quality = extras.quality
+        logical.quality = extras.quality
+      }
+
+      if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
+        logical.aspectRatio = extras.aspectRatio
+      }
+      if (typeof extras.resolution === 'string' && extras.resolution) {
+        logical.resolution = extras.resolution
+      }
+      // 严禁向 vendor 注入 aspect_ratio
+    } else {
+      if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
+        vendor.aspect_ratio = extras.aspectRatio
+        logical.aspectRatio = extras.aspectRatio
+      }
+      if (typeof extras.resolution === 'string' && extras.resolution) {
+        vendor.resolution = extras.resolution
+        logical.resolution = extras.resolution
+      }
+      if (typeof extras.quality === 'string' && extras.quality) {
+        vendor.quality = extras.quality
+        logical.quality = extras.quality
+      }
+    }
+  }
+
   if (typeof extras.duration === 'number' && (extras.duration > 0 || extras.duration === -1)) {
     vendor.duration = extras.duration
     logical.duration = extras.duration
