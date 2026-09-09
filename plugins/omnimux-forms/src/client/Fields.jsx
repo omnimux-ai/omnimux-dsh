@@ -8,7 +8,7 @@ export function FormField({ field, value, errors, disabled, editor, state, hub, 
   let input
   if (field.type === 'text') input = <Input id={id} {...control} px="10px" value={value ?? ''} maxLength={field.maxLength} onChange={e => change(e.target.value)} />
   if (field.type === 'textarea') input = <Textarea id={id} {...control} height="auto" minHeight="104px" padding="10px" resize="vertical" value={value ?? ''} maxLength={field.maxLength} onChange={e => change(e.target.value)} />
-  if (field.type === 'number') input = <NumberInput.Root id={id} value={value === undefined ? '' : String(value)} min={field.min} max={field.max} step={field.step} disabled={disabled} onValueChange={e => change(e.value === '' ? undefined : Number.isFinite(e.valueAsNumber) ? e.valueAsNumber : undefined)}>
+  if (field.type === 'number') input = <NumberInput.Root id={id} value={value === undefined ? '' : String(value)} min={field.min} max={field.max} step={field.step} disabled={disabled} onValueChange={e => change(e.value === '' ? '' : Number.isFinite(e.valueAsNumber) ? e.valueAsNumber : e.value)}>
     <NumberInput.Input {...control} px="10px" aria-label={field.label} />
     <NumberInput.Control><NumberInput.IncrementTrigger aria-label={`增加${field.label}`} /><NumberInput.DecrementTrigger aria-label={`减少${field.label}`} /></NumberInput.Control>
   </NumberInput.Root>
@@ -30,7 +30,7 @@ export function FormField({ field, value, errors, disabled, editor, state, hub, 
       </FileUpload.Dropzone>
     </FileUpload.Root>
     {(Array.isArray(value) ? value : []).map(item => <Flex key={item.ref} align="center" gap="10px" py="8px" borderBottom="1px solid var(--dsw-alias-border-l1)">
-      {hub.getFileUrl && !state.staleRefs.includes(item.ref) && <Box flexShrink={0} width="64px" height="48px" overflow="hidden" borderRadius="8px">{item.mimeType.startsWith('image/') ? <img alt={item.name} src={hub.getFileUrl({ workspaceId, assetId: item.ref })} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.mimeType.startsWith('video/') ? <video aria-label={item.name} src={hub.getFileUrl({ workspaceId, assetId: item.ref })} controls preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : null}</Box>}
+      {hub.getFileUrl && !state.staleRefs.includes(item.ref) && <Box flexShrink={0} width="64px" height="48px" overflow="hidden" borderRadius="8px">{item.mimeType.startsWith('image/') ? <Box as="img" alt={item.name} src={hub.getFileUrl({ workspaceId, assetId: item.ref })} width="100%" height="100%" objectFit="contain" /> : item.mimeType.startsWith('video/') ? <Box as="video" aria-label={item.name} src={hub.getFileUrl({ workspaceId, assetId: item.ref })} controls preload="metadata" width="100%" height="100%" objectFit="contain" /> : null}</Box>}
       <Box flex="1" minWidth="0"><Text fontSize="13px" overflowWrap="anywhere">{item.name}</Text><Text fontSize="12px" color={state.staleRefs.includes(item.ref) ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-label-secondary)'}>{state.staleRefs.includes(item.ref) ? '素材已失效，请重新选择' : `${(item.sizeBytes / 1024 / 1024).toFixed(1)} MB`}</Text></Box>
       <Button {...secondary} disabled={disabled} onClick={() => editor.removeAttachment(field.id, item.ref)} aria-label={`移除${item.name}`}>移除</Button>
     </Flex>)}

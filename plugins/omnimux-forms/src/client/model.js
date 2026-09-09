@@ -20,7 +20,7 @@ export function createEditor({ definition, workspaceId, hub, request = draftRequ
   const checked = validateDefinition(definition)
   const listeners = new Set()
   const key = { workspaceId, templateId: definition.id, templateVersion: definition.templateVersion }
-  let state = { loading: true, values: checked.ok ? defaultValues(checked.value) : {}, errors: [], notice: '', saveStatus: '', uploads: [], busy: false, staleRefs: [] }
+  let state = { loading: true, values: checked.ok ? defaultValues(checked.value) : {}, errors: [], notice: '', saveStatus: '', uploads: [], busy: false, staleRefs: [], focusRevision: 0 }
   let disposed = false, revision = 0, saveTimer, saves = Promise.resolve(), saveFailure = null, dirty = false, requestKey = '', requestId = '', epoch = 0
   const emit = patch => { if (disposed) return; state = { ...state, ...patch }; listeners.forEach(fn => fn()) }
   const validate = values => { const result = validateValues(definition, values); return result.ok ? [] : result.errors }
@@ -61,19 +61,23 @@ export function createEditor({ definition, workspaceId, hub, request = draftRequ
         if (disposed) return
         revision = saved.draft?.revision ?? 0
         const values = saved.draft?.values ?? defaultValues(checked.value)
+        const restored = validateValues(definition, values)
+        if (!restored.ok && restored.errors.some(error => ['INVALID_VALUES', 'INVALID_VALUE', 'UNKNOWN_FIELD', 'INVALID_ATTACHMENT'].includes(error.code))) {
+          return emit({ loading: false, restoreInvalid: true, notice: '保存的草稿格式不符合当前模板，已保留原稿。请重置此表单后重新填写。' })
+        }
         const resolved = await resolveValues(values)
-        emit({ loading: false, ...resolved, errors: saved.draft ? validate(resolved.values) : [], saveStatus: saved.draft ? '已恢复草稿' : '', notice: saved.otherVersions.length ? '保留了旧版本草稿。当前模板使用独立填写内容。' : '' })
+        emit({ loading: false, ...resolved, errors: saved.draft ? validate(resolved.values) : [], saveStatus: saved.draft ? '已恢复草稿' : '', notice: [saved.otherVersions.length ? '保留了旧版本草稿。当前模板使用独立填写内容。' : '', saved.draft && validate(resolved.values).length ? '恢复的草稿需要检查，请修正标出的内容或重置表单。' : ''].filter(Boolean).join(' ') })
       } catch (error) { emit({ loading: false, invalid: true, notice: `无法恢复草稿：${error.message}。请重新打开模板。` }) }
     },
     set(fieldId, value) {
-      if (state.loading || state.busy || state.invalid) return
+      if (state.loading || state.busy || state.invalid || state.restoreInvalid) return
       const values = { ...state.values }
       if (value === undefined) delete values[fieldId]; else values[fieldId] = value
       emit({ values, errors: state.errors.length ? validate(values) : [], saveStatus: '待保存', success: null })
       dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(save, 350)
     },
     async importFiles(field, files) {
-      if (state.loading || state.busy || state.invalid) return
+      if (state.loading || state.busy || state.invalid || state.restoreInvalid) return
       const existing = Array.isArray(state.values[field.id]) ? state.values[field.id] : []
       const outstanding = state.uploads.filter(u => u.fieldId === field.id).length
       if (existing.length + outstanding + files.length > field.maxFiles) return emit({ notice: `${field.label}最多选择 ${field.maxFiles} 个文件。` })
@@ -105,14 +109,14 @@ export function createEditor({ definition, workspaceId, hub, request = draftRequ
     async reset() {
       if (state.busy) return
       epoch++; clearTimeout(saveTimer)
-      emit({ values: defaultValues(definition), errors: [], uploads: [], staleRefs: [], notice: '', success: null })
+      emit({ values: defaultValues(definition), errors: [], uploads: [], staleRefs: [], notice: '', success: null, restoreInvalid: false })
       dirty = true; await save()
     },
     async submit() {
-      if (state.busy || state.loading || state.invalid) return
+      if (state.busy || state.loading || state.invalid || state.restoreInvalid) return
       if (state.uploads.length) return emit({ notice: '请完成上传，或移除失败的文件后再生成草稿。' })
       const errors = validate(state.values)
-      if (errors.length) return emit({ errors, notice: '请检查标出的字段。' })
+      if (errors.length) return emit({ errors, focusRevision: state.focusRevision + 1, notice: '请检查标出的字段。' })
       emit({ busy: true, errors: [], notice: '', success: null })
       try {
         await save()
