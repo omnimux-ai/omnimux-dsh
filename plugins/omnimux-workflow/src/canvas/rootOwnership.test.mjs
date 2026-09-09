@@ -7,12 +7,13 @@ import { build } from 'esbuild';
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('./index.tsx', import.meta.url))],
   bundle: true, write: false, format: 'iife', globalName: 'island', platform: 'node', jsx: 'automatic',
+  define: { 'process.env.NODE_ENV': '"test"' },
   plugins: [{ name: 'root-boundaries', setup(build) {
     build.onResolve({ filter: /react-dom\/client|react\/jsx-runtime|^\.\/App$|injectStyles|textStageStore/ },
       ({ path }) => ({ path, namespace: 'test' }));
     build.onLoad({ filter: /.*/, namespace: 'test' }, ({ path }) => ({ contents:
       path === 'react-dom/client' ? 'export const createRoot = el => env.createRoot(el);'
-      : path === 'react/jsx-runtime' ? 'export const jsx = (type, props) => props;'
+      : path === 'react/jsx-runtime' ? 'export const jsx = (type, props) => props; export const jsxs = jsx; export const Fragment = Symbol.for("react.fragment");'
       : path === './App' ? 'export default function App() {}'
       : path.includes('injectStyles') ? 'export const injectCanvasStyles = () => {};'
       : 'export const useTextStageStore = {};',
