@@ -629,25 +629,9 @@ export const Toolbar: React.FC = () => {
             type="button"
             onClick={handleReturnToCanvas}
             aria-label={returnToCanvasText}
-            className="omnimux-clip-stage-close-btn flex items-center gap-1.5 h-[36px] px-3.5 py-[8px] rounded-[8px] bg-bg-2 hover:bg-hover border border-border hover:border-border-focus text-fg-2 hover:text-fg text-[13px] font-medium whitespace-nowrap transition-colors select-none"
+            className="omnimux-clip-stage-close-btn inline-flex items-center justify-center h-[36px] px-3.5 py-[8px] rounded-[8px] bg-bg-2 hover:bg-hover border border-border hover:border-border-focus text-fg-2 hover:text-fg text-[13px] font-medium whitespace-nowrap transition-colors select-none shrink-0"
             style={{ WebkitAppRegion: "no-drag", pointerEvents: "auto" } as React.CSSProperties}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="shrink-0"
-              aria-hidden="true"
-            >
-              <path
-                d="M9 3L4 8L9 13M4 8H14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
             <span className="whitespace-nowrap">{returnToCanvasText}</span>
           </button>
         )}

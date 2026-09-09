@@ -153,6 +153,11 @@ test('canvas-toolbar-mode: return action is inlined into toolbar right with non-
   assert.ok(exportIndex !== -1, '右段必须包含导出按钮')
   assert.ok(exitBtnIndex !== -1, '右段必须包含退出编辑按钮')
   assert.ok(exportIndex < exitBtnIndex, '退出编辑按钮必须位于 Export 导出按钮的右侧')
+
+  const exitBtnEnd = src.indexOf('</button>', exitBtnIndex)
+  const exitBtnSnippet = src.slice(exitBtnIndex, exitBtnEnd)
+  assert.ok(!exitBtnSnippet.includes('<svg'), '退出编辑按钮必须为纯文本按钮，不包含 svg 图标')
+  assert.ok(exitBtnSnippet.includes('inline-flex'), '退出编辑按钮必须使用 inline-flex 居中布局')
 })
 
 // ─── 维度三：standalone 模式三段全显 ────────────────────────────────────
