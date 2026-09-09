@@ -46,11 +46,36 @@ export function syncTableL1ToCanvasStore(tableId: string, doc: HTableDocument): 
   }
 }
 
+export type TableCanvasRowCountQuery = (tableId: string) => number;
+let globalCanvasRowCountQuery: TableCanvasRowCountQuery | null = null;
+
+export function registerTableCanvasRowCountQuery(query: TableCanvasRowCountQuery): () => void {
+  globalCanvasRowCountQuery = query;
+  return () => {
+    if (globalCanvasRowCountQuery === query) {
+      globalCanvasRowCountQuery = null;
+    }
+  };
+}
+
+export function queryCanvasRowCount(tableId: string): number {
+  if (globalCanvasRowCountQuery && tableId) {
+    try {
+      return globalCanvasRowCountQuery(tableId) || 0;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
 export interface TableStoreState {
   // Document & Session State
   activeTableId: string | null;
   document: HTableDocument;
   isStageOpen: boolean;
+  initialRowCount: number;
+  hasExplicitDeleteRow: boolean;
 
   // Row Selection State
   selectedRowIndices: number[];
@@ -150,6 +175,8 @@ export const useTableStore = create<TableStoreState>((set, get) => {
     redoStack: [],
     activePopover: null,
     activeContextMenuColIdx: null,
+    initialRowCount: 0,
+    hasExplicitDeleteRow: false,
     modalState: {
       isOpen: false,
       mode: 'add',
@@ -165,7 +192,11 @@ export const useTableStore = create<TableStoreState>((set, get) => {
       if (typeof tableIdOrDoc === 'string') {
         tableId = tableIdOrDoc;
         const cached = tableDocumentCache.getSession(tableId);
-        if (cached) {
+        if (cached?.document && cached.document.rows.length > 0) {
+          targetDoc = cloneDoc(cached.document);
+        } else if (initialDoc && (initialDoc.rows?.length ?? 0) > 0) {
+          targetDoc = cloneDoc(migrateLegacyTableDocument(initialDoc));
+        } else if (cached?.document) {
           targetDoc = cloneDoc(cached.document);
         } else if (initialDoc) {
           targetDoc = cloneDoc(migrateLegacyTableDocument(initialDoc));
@@ -181,6 +212,13 @@ export const useTableStore = create<TableStoreState>((set, get) => {
       // 兜底：打开舞台前保证至少有一列默认「文本」列
       withDefaultTextColumn(targetDoc);
 
+      // 记录打开前基线行数，用于防空冲刷保护
+      const canvasRowCount = tableId ? queryCanvasRowCount(tableId) : 0;
+      const cached = tableId ? tableDocumentCache.getSession(tableId) : undefined;
+      const cachedRowCount = cached?.document?.rows?.length ?? 0;
+      const initialDocRowCount = typeof (initialDoc as any)?.rowCount === 'number' ? (initialDoc as any).rowCount : 0;
+      const initialRowCount = Math.max(targetDoc.rows.length, canvasRowCount, cachedRowCount, initialDocRowCount);
+
       set({
         activeTableId: tableId,
         document: targetDoc,
@@ -189,12 +227,21 @@ export const useTableStore = create<TableStoreState>((set, get) => {
         undoStack: [],
         redoStack: [],
         activePopover: null,
+        initialRowCount,
+        hasExplicitDeleteRow: false,
       });
     },
 
     closeStage: () => {
-      const { activeTableId, document } = get();
-      if (activeTableId) {
+      const { activeTableId, document, initialRowCount, hasExplicitDeleteRow } = get();
+      // 防空冲刷保护：如果舞台内的文档行数为 0，但在打开前或画布节点原本记录的 rowCount > 0，
+      // 且未发生显式的删除行操作，禁止用空数据冲刷覆盖画布节点
+      const isSuspiciousEmptyWash =
+        document.rows.length === 0 &&
+        initialRowCount > 0 &&
+        !hasExplicitDeleteRow;
+
+      if (activeTableId && !isSuspiciousEmptyWash) {
         syncTableL1ToCanvasStore(activeTableId, document);
       }
       set({
@@ -236,7 +283,7 @@ export const useTableStore = create<TableStoreState>((set, get) => {
         const newRows = doc.rows.filter((_, idx) => !toDeleteSet.has(idx));
         return { ...doc, rows: newRows };
       });
-      set({ selectedRowIndices: [] });
+      set({ selectedRowIndices: [], hasExplicitDeleteRow: true });
     },
 
     undo: () => {
@@ -389,6 +436,7 @@ export const useTableStore = create<TableStoreState>((set, get) => {
         selectedRowIndices: selectedRowIndices
           .filter((idx) => idx !== rowIdx)
           .map((idx) => (idx > rowIdx ? idx - 1 : idx)),
+        hasExplicitDeleteRow: true,
       });
     },
 

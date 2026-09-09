@@ -73,7 +73,8 @@ import { TextStage } from '../components/text-stage/TextStage';
 import { CanvasNoticeHost } from './notices/CanvasNoticeHost';
 import { canvasNoticeService } from './notices/canvasNoticeService.ts';
 import { useTextStageStore } from '../store/textStageStore';
-import { registerTableCanvasSyncHandler } from '../store/tableStore';
+import { registerTableCanvasSyncHandler, registerTableCanvasRowCountQuery } from '../store/tableStore';
+import { formatTablePreviewRows } from '../../shared/types/htable.ts';
 import type { CapabilityCatalog } from '../../shared/api';
 
 // 抽屉独立隔离保护器：确保抽屉内部发生任何未捕获错误时，画布绝不崩溃或黑屏
@@ -275,20 +276,13 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     return unregister;
   }, [setNodes]);
 
-  // 全表 TableStage / TableNode 提交同步器
+  // 全表 TableStage / TableNode 提交同步器与状态查询器
   useEffect(() => {
-    const unregister = registerTableCanvasSyncHandler((tableId, doc) => {
+    const unregisterSync = registerTableCanvasSyncHandler((tableId, doc) => {
       setNodes((currentNodes) =>
         currentNodes.map((n) => {
-          if (n.id !== tableId) return n;
-          const firstCol = doc.columns[0];
-          const previewRows = doc.rows.slice(0, 3).map((r, idx) => {
-            const cellVal = firstCol ? r.cells[firstCol.id] : undefined;
-            if (typeof cellVal === 'string' && cellVal) return cellVal;
-            if (typeof cellVal === 'number') return String(cellVal);
-            if (Array.isArray(cellVal) && cellVal.length > 0) return `📎 附件 (${cellVal.length})`;
-            return '（空记录）';
-          });
+          if (n.id !== tableId && (n.data as any)?.tableId !== tableId) return n;
+          const previewRows = formatTablePreviewRows(doc, 3);
           return {
             ...n,
             data: {
@@ -306,7 +300,18 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
         }),
       );
     });
-    return unregister;
+
+    const unregisterQuery = registerTableCanvasRowCountQuery((tableId) => {
+      const node = useCanvasStore.getState().nodes.find(
+        (n) => n.id === tableId || (n.data as any)?.tableId === tableId,
+      );
+      return typeof (node?.data as any)?.rowCount === 'number' ? (node?.data as any)?.rowCount : 0;
+    });
+
+    return () => {
+      unregisterSync();
+      unregisterQuery();
+    };
   }, [setNodes]);
 
   const handleInsertTemplate = useCallback(async (templateId: string) => {

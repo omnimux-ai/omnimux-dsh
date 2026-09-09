@@ -10,6 +10,7 @@ import {
 import { useTableStore, useTableSession } from '../../store/tableStore.ts';
 import { useIsMultiSelected, useCanvasStore } from '../../store/canvasStore.ts';
 import { tableDocumentCache } from '../../store/tableDocumentCache.ts';
+import { formatRowPreview } from '../../../shared/types/htable.ts';
 import NodeHeader from '../../editor/components/MaterialNode/NodeHeader.tsx';
 import CanvasNodeHandle from '../../editor/components/CanvasNodeHandle.tsx';
 import FloatingTopPill, { type FloatingPillAction } from '../../editor/components/FloatingTopPill.tsx';
@@ -32,16 +33,28 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
   const l1RowCount = typeof (data as any)?.rowCount === 'number' ? (data as any)?.rowCount : 0;
   const l1PreviewRows = (data as any)?.previewRows as string[] | undefined;
 
+  const workspaceId =
+    (typeof (data as any)?.__workspaceId === 'string' && (data as any).__workspaceId) ||
+    (typeof (data as any)?.workspaceId === 'string' && (data as any).workspaceId) ||
+    (useCanvasStore.getState().nodes.find((n) => n.id === id)?.data as any)?.__workspaceId ||
+    '';
+
   const { openStage } = useTableStore();
-  const { document, addRow } = useTableSession(effectiveTableId, {
+  const session = useTableSession(effectiveTableId, {
     title: nodeTitle,
     contentRev: (data as any)?.contentRev ?? 0,
   });
+  const { document, addRow } = session;
+
+  useEffect(() => {
+    if (effectiveTableId && workspaceId) {
+      void tableDocumentCache.ensure(workspaceId, effectiveTableId, { forceReload: false });
+    }
+  }, [effectiveTableId, workspaceId]);
 
   const [isHovered, setIsHovered] = useState(false);
 
   const rows = document.rows || [];
-  const firstCol = document.columns[0];
   const effectiveRowCount = rows.length > 0 ? rows.length : l1RowCount;
 
   const isMultiSelected = useIsMultiSelected();
@@ -56,9 +69,17 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
 
   const { addToConversation } = useAddToConversation();
 
-  const handleOpenFullscreen = useCallback(() => {
-    openStage(effectiveTableId, document);
-  }, [effectiveTableId, document, openStage]);
+  const handleOpenFullscreen = useCallback(async () => {
+    if (effectiveTableId && workspaceId && session.loadState !== 'ready') {
+      try {
+        await tableDocumentCache.ensure(workspaceId, effectiveTableId, { forceReload: false });
+      } catch (err) {
+        console.warn('[TableNode] ensure table document error:', err);
+      }
+    }
+    const latestDoc = tableDocumentCache.getSession(effectiveTableId)?.document || session.document;
+    openStage(effectiveTableId, latestDoc || session.document);
+  }, [effectiveTableId, openStage, session.document, session.loadState, workspaceId]);
 
   const handleAddToConversation = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -92,22 +113,25 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
     },
   ], [handleAddToConversation, handleOpenFullscreen, t]);
 
-  // 构建预览记录列表：优先从内存 rows 格式化，次选 L1 previewRows
+  // 构建预览记录列表：优先从内存 rows 智能格式化，次选 L1 previewRows
   const previewItems: string[] = useMemo(() => {
     if (rows.length > 0) {
-      return rows.slice(0, 3).map((r) => {
-        const cellVal = firstCol ? r.cells[firstCol.id] : undefined;
-        if (typeof cellVal === 'string' && cellVal) return cellVal;
-        if (typeof cellVal === 'number') return String(cellVal);
-        if (Array.isArray(cellVal) && cellVal.length > 0) return `📎 附件 (${cellVal.length})`;
-        return '（空记录）';
-      });
+      return rows.slice(0, 3).map((r) => formatRowPreview(r, document.columns));
     }
     if (l1PreviewRows && l1PreviewRows.length > 0) {
       return l1PreviewRows.slice(0, 3);
     }
     return [];
-  }, [firstCol, l1PreviewRows, rows]);
+  }, [document.columns, l1PreviewRows, rows]);
+
+  // 查找代表列标题用于卡片表头展示
+  const displayColumnTitle = useMemo(() => {
+    if (!document.columns || document.columns.length === 0) return '文本';
+    const descKeywordRegex = /描述|画面|视觉|动作|脚本|台词|旁白|内容|镜头语言|Prompt/i;
+    const descCol = document.columns.find((c) => descKeywordRegex.test(c.title));
+    if (descCol) return descCol.title;
+    return document.columns[0]?.title || '文本';
+  }, [document.columns]);
 
   return (
     <div
@@ -196,7 +220,7 @@ export const TableNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FileSpreadsheet size={14} />
-                <span>{firstCol?.title || '文本'}</span>
+                <span>{displayColumnTitle}</span>
               </div>
               <span style={{ fontSize: 11, color: 'var(--wb-text-muted)', fontFamily: 'monospace' }}>
                 共 {effectiveRowCount} 行

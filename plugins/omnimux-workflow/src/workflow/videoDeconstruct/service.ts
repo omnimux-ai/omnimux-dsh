@@ -12,12 +12,13 @@ import {
   defaultColumnWidth,
   newColumnId,
   newRowId,
+  formatTablePreviewRows,
 } from '../../shared/types/htable.ts';
 import { resolveTableAbsPath, resolveTableRelativePath } from '../storage/tablePath.ts';
 import { TableStorageService } from '../storage/TableStorageService.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
-import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
+import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
 
 export interface VideoDeconstructServiceDeps {
   store: WorkspaceStore;
@@ -369,21 +370,60 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       }));
     }
 
-    // 6. 生成 tableId 并构造 HTableDocument
-    const tableId = `tbl_${randomUUID().slice(0, 8)}`;
+    // 6. 查找是否有已有下游表格节点，严格复用已有 tableId 与物理文件，避免生成游离碎片文件
+    let existingNode: CanvasNode | undefined;
+    let videoNode: CanvasNode | undefined;
+    let currentNodes: CanvasNode[] = [];
+    let currentEdges: SerializedCanvasEdge[] = [];
+
+    try {
+      const currentSnapshot = deps.store.get(workspaceId);
+      currentNodes = (currentSnapshot.nodes || []) as CanvasNode[];
+      currentEdges = (currentSnapshot.edges || []) as SerializedCanvasEdge[];
+
+      videoNode = currentNodes.find((n) => n.id === input.nodeId);
+
+      const connectedTableNodeIds = new Set(
+        currentEdges
+          .filter((edge) => edge.source === input.nodeId)
+          .map((edge) => edge.target),
+      );
+
+      existingNode = currentNodes.find((node) => {
+        if (node.type !== 'table') return false;
+        const d = node.data as Record<string, unknown> | undefined;
+        const isDeconstructOrigin =
+          d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId;
+        return isDeconstructOrigin || connectedTableNodeIds.has(node.id);
+      });
+    } catch {
+      // ignore
+    }
+
+    const existingTableId = (existingNode?.data as Record<string, unknown> | undefined)?.tableId;
+    const tableId = typeof existingTableId === 'string' && existingTableId.trim()
+      ? existingTableId.trim()
+      : (existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
+
     const tablePath = resolveTableRelativePath(tableId);
     const tableAbsPath = resolveTableAbsPath(deps.store, workspaceId, tableId);
-    const title = input.title?.trim() || '视频拆解表';
+    const title = input.title?.trim() || ((existingNode?.data as Record<string, unknown> | undefined)?.title as string) || '视频拆解表';
+
+    const prevContentRev = typeof (existingNode?.data as Record<string, unknown> | undefined)?.contentRev === 'number'
+      ? ((existingNode!.data as Record<string, unknown>).contentRev as number)
+      : 0;
+    const contentRev = prevContentRev + 1;
 
     const doc: HTableDocument = {
       version: 1,
+      contentRev,
       title,
       columns,
       rows,
       rowHeight: 'low',
     };
 
-    // 7. 持久化存储 .htable
+    // 7. 持久化存储 .htable（覆盖至已有文件或新建文件）
     try {
       await TableStorageService.saveTable(tableAbsPath, doc);
     } catch (saveErr) {
@@ -394,42 +434,15 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       );
     }
 
-    // 8. 构造预览行列表
-    const firstCol = doc.columns[0];
-    const previewRows: string[] = doc.rows.slice(0, 3).map((r) => {
-      const val = firstCol ? r.cells[firstCol.id] : undefined;
-      if (typeof val === 'string' && val.trim()) return val.trim();
-      if (typeof val === 'number') return String(val);
-      return '（空记录）';
-    });
+    // 8. 构造富有信息量的预览行列表
+    const previewRows = formatTablePreviewRows(doc, 3);
 
     // 9. 服务端图变更：单一下游约束，原子写入工作区 canvas.json 持久化
     let workspaceSnapshot: CanvasWorkspaceSnapshot | undefined;
     try {
-      const currentSnapshot = deps.store.get(workspaceId);
-      const currentNodes = (currentSnapshot.nodes || []) as CanvasNode[];
-      const currentEdges = currentSnapshot.edges || [];
-
-      // 寻找源视频节点
-      const videoNode = currentNodes.find((n) => n.id === input.nodeId);
       const videoPos = videoNode?.position ?? { x: 0, y: 0 };
       const rawWidth = (videoNode?.data as Record<string, unknown> | undefined)?.nodeWidth;
       const videoWidth = typeof rawWidth === 'number' && rawWidth > 0 ? rawWidth : 350;
-
-      // 单一下游约束：判定已有下游表格节点
-      const connectedTableNodeIds = new Set(
-        currentEdges
-          .filter((edge) => edge.source === input.nodeId)
-          .map((edge) => edge.target),
-      );
-
-      const existingNode = currentNodes.find((node) => {
-        if (node.type !== 'table') return false;
-        const d = node.data as Record<string, unknown> | undefined;
-        const isDeconstructOrigin =
-          d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId;
-        return isDeconstructOrigin || connectedTableNodeIds.has(node.id);
-      });
 
       const nodeData: Record<string, unknown> = {
         label: title,
@@ -439,6 +452,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
         columnCount: doc.columns.length,
         rowCount: doc.rows.length,
         previewRows,
+        contentRev,
         origin: 'video_deconstruct',
         sourceVideoNodeId: input.nodeId,
         status: 'ready',
@@ -448,7 +462,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       const canConnectEdge = Boolean(videoNode);
 
       if (existingNode) {
-        // 已有与该视频节点连线或关联的表格节点：就地更新，缺线补线
+        // 已有与该视频节点连线或关联的表格节点：就地更新，严格复用已有 tableId，缺线补线
         const hasEdge = currentEdges.some(
           (e) =>
             e.source === input.nodeId &&

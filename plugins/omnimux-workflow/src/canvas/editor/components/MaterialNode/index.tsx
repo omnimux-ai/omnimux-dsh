@@ -60,6 +60,7 @@ import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
 import { useExecutionStore } from '../../../store/executionStore';
 import { useCanvasStore, useIsMultiSelected } from '../../../store/canvasStore';
 import { useTextStageStore } from '../../../store/textStageStore';
+import { tableDocumentCache } from '../../../store/tableDocumentCache.ts';
 import { useT } from '../../../i18n';
 import { toast } from '../../../ui';
 import type { CapabilityCatalog, NodeExecutionApiStatus } from '../../../../shared/api';
@@ -653,6 +654,15 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         // 自动聚焦并选中新建的表格节点
         setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
         useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+      }
+
+      // 拆解完成后主动强制刷新该表格的前端缓存，确保画布卡片和全屏舞台即刻同步呈现拆解出的全部数据
+      if (returnedTableId && workspaceId) {
+        try {
+          await tableDocumentCache.ensure(workspaceId, returnedTableId, { forceReload: true });
+        } catch (err) {
+          console.warn('[MaterialNode] failed to force reload tableDocumentCache:', err);
+        }
       }
 
       toast.success(t('deconstructVideo.toast.success'));

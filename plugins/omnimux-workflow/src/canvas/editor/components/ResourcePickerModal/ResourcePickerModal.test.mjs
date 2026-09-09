@@ -74,7 +74,7 @@ test('MaterialNode 挂载 ResourcePickerModal 与 useResourcePicker', () => {
 });
 
 test('导入节点选中不展开 ConfigPanel，有媒体时替换统一走卡片内侧右上角', () => {
-  assert.match(nodeSrc, /isConfigPanelVisible\(\s*selected,\s*executionStatus,\s*kind,\s*isMultiSelected/);
+  assert.match(nodeSrc, /isConfigPanelVisible\(\s*selected,\s*executionStatus,\s*(?:kind|effectiveKind),\s*isMultiSelected/);
   assert.match(nodeSrc, /hasNodeMaterial/);
   assert.match(nodeSrc, /showReplaceButton/);
   assert.match(nodeSrc, /wf-material-node__replace-btn/);
