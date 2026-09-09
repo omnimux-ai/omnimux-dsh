@@ -50,7 +50,11 @@ test('both Clip surfaces receive and subscribe to host locale without locale-key
   }
   const stage = readFileSync(new URL('./ClipStage.jsx', import.meta.url), 'utf8')
   assert.match(stage, /activeSession \?\? lastSession\.current/)
-  assert.match(stage, /tab\.returnToCanvas/)
-  assert.match(stage, /onClick=\{handleClose\}/)
-  assert.match(stage, /notifyCanvasClose\(\{ nodeId: session\.nodeId \}\)/)
+
+  const toolbar = readFileSync(new URL('./openreel/web/components/editor/Toolbar.tsx', import.meta.url), 'utf8')
+  assert.match(toolbar, /useHostLocale\(\)/)
+  assert.match(toolbar, /Back to canvas/)
+  assert.match(toolbar, /返回画布/)
+  assert.match(toolbar, /onClick=\{handleReturnToCanvas\}/)
+  assert.match(toolbar, /notifyCanvasClose\(\{ nodeId: activeSession\.nodeId \}\)/)
 })

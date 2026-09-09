@@ -141,12 +141,12 @@ test('canvas-toolbar-mode: canvas 保留右段并顶到最右', () => {
   )
 })
 
-test('canvas-toolbar-mode: return action occupies its own non-drag row', () => {
-  const header = rulesFor(`${CANVAS} .omnimux-clip-stage-header`)
-  assert.ok(header.some((rule) => rule.decls.get('position') === 'relative'))
-  assert.ok(header.some((rule) => rule.decls.get('-webkit-app-region') === 'no-drag'))
-  assert.ok(header.some((rule) => rule.decls.get('flex') === '0 0 auto'))
-  assert.equal(rulesFor(`${CANVAS} .openreel-studio-root header:first-of-type`).length, 0)
+test('canvas-toolbar-mode: return action is inlined into toolbar right with non-drag protection', () => {
+  const src = stripComments(readFileSync(TOOLBAR_TSX, 'utf8'))
+  assert.ok(src.includes('data-toolbar-section="right"'), 'Toolbar 必须包含右段标记')
+  assert.ok(src.includes('omnimux-clip-stage-close-btn'), '右段必须包含返回按钮类名')
+  assert.ok(src.includes('WebkitAppRegion: "no-drag"'), '返回按钮必须具有原生 no-drag 拖拽保护')
+  assert.ok(src.includes('gap-2.5'), '右段必须使用 gap-2.5 并排布局返回按钮与导出按钮')
 })
 
 // ─── 维度三：standalone 模式三段全显 ────────────────────────────────────

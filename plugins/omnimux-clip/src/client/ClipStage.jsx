@@ -8,7 +8,6 @@ import { useProjectStore } from './openreel/web/stores/project-store.ts'
 import { injectClipStyles } from './styles.js'
 import { computeHeaderPadLeft, computeStandaloneBox, readHostSidebarInset } from './stage-box.js'
 import { useCanvasIngestion } from './hooks/useCanvasIngestion.ts'
-import { notifyCanvasSave, notifyCanvasClose } from './CanvasBridge.js'
 import { findCanvasHost } from './findCanvasHost.js'
 import './openreel/web/index.css'
 import './theme/dsw-map.css'
@@ -105,7 +104,6 @@ export function ClipStage({ t, stage, locale }) {
     }
     return { top: 0, left: 0, width: 0, height: 0 }
   })
-  const [saveStatus, setSaveStatus] = useState('')
 
   useEffect(() => {
     if (open) setEverOpened(true)
@@ -184,24 +182,6 @@ export function ClipStage({ t, stage, locale }) {
   if (!stage) return null
   if (!open && !everOpened) return null
 
-  const handleSaveDraft = () => {
-    if (session?.nodeId) {
-      notifyCanvasSave({
-        nodeId: session.nodeId,
-        projectId: session.projectId,
-      })
-      setSaveStatus(t ? t('tab.savedToNode') : '已保存至节点')
-      setTimeout(() => setSaveStatus(''), 2000)
-    }
-  }
-
-  const handleClose = () => {
-    if (isCanvasMode && session?.nodeId) {
-      notifyCanvasClose({ nodeId: session.nodeId })
-    }
-    stage.set(false)
-  }
-
   const isMac = typeof navigator !== 'undefined' && /Macintosh|Mac OS X/i.test(navigator.userAgent)
   const headerPadLeft = computeHeaderPadLeft({ isCanvasMode, boxLeft: box.left, isMac })
   const portalTarget = isCanvasMode ? canvasHost : null
@@ -226,21 +206,6 @@ export function ClipStage({ t, stage, locale }) {
         '--clip-header-pad-left': `${headerPadLeft}px`,
       }}
     >
-      <div className="omnimux-clip-stage-header">
-        <div className="omnimux-clip-stage-actions">
-          <button /* exempt-ui01: 剪辑器关闭按钮 */
-            type="button"
-            className="omnimux-clip-stage-close-btn"
-            aria-label={t(isCanvasMode ? 'tab.returnToCanvas' : 'tab.close')}
-            onClick={handleClose}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d={isCanvasMode ? 'M9 3L4 8L9 13M4 8H14' : 'M12 4L4 12M4 4L12 12'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {t(isCanvasMode ? 'tab.returnToCanvas' : 'tab.close')}
-          </button>
-        </div>
-      </div>
       <div className="omnimux-clip-stage-body openreel-studio-root dark" data-theme="dark">
         <ClipErrorBoundary>
           <OpenReelApp />
