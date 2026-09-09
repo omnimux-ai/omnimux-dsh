@@ -21,7 +21,19 @@ export function StorageSettingsButton({ label, onClick }) {
     setVisible(false)
   }
 
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => {
+    const escape = (event) => {
+      if (event.key !== 'Escape') return
+      clearTimeout(timer.current)
+      timer.current = null
+      setVisible(false)
+    }
+    document.addEventListener('keydown', escape)
+    return () => {
+      clearTimeout(timer.current)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [])
   useLayoutEffect(() => {
     if (!visible) return
     const position = () => {
@@ -35,20 +47,15 @@ export function StorageSettingsButton({ label, onClick }) {
       bubble.current.style.setProperty('--assets-tooltip-left', `${left}px`)
       bubble.current.style.setProperty('--assets-tooltip-top', `${top}px`)
     }
-    const escape = (event) => {
-      if (event.key === 'Escape') hide()
-    }
     position()
     window.addEventListener('resize', position)
     window.addEventListener('scroll', position, true)
-    document.addEventListener('keydown', escape)
     const observer = new ResizeObserver(position)
     observer.observe(anchor.current)
     observer.observe(bubble.current)
     return () => {
       window.removeEventListener('resize', position)
       window.removeEventListener('scroll', position, true)
-      document.removeEventListener('keydown', escape)
       observer.disconnect()
     }
   }, [visible, label])

@@ -1,0 +1,20 @@
+{
+  "source": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/assets-storage-766/plugins/omnimux-assets/runtime",
+  "target": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/assets-settings-tooltip-837/plugins/omnimux-assets/runtime",
+  "report": [
+    {
+      "arch": "arm64",
+      "entries": 1809,
+      "archiveSha256": "ebcf53fe921c356ad2eecfcea370cb744e7bd96fdef41a53e1e8f32a15c6dfeb",
+      "executableSha256": "298d21ab43a8940a867fe356aca16bb216a2129f8df7f23a6a52e8bfa37446fa",
+      "result": "verified copied and reverified"
+    },
+    {
+      "arch": "x64",
+      "entries": 1805,
+      "archiveSha256": "6704f2a981d7ea358d6a7ef4f2be2457d17a65ca096b466924f469eefc1c3d70",
+      "executableSha256": "29004fa50d925259627f7ad7f0a134f9dc7204bd09317e02226af8b188489ef2",
+      "result": "verified copied and reverified"
+    }
+  ]
+}

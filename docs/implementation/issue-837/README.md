@@ -1,5 +1,7 @@
 # #837 资产库设置 Tooltip 工程报告
 
+最新返修见 [REWORK-REPORT.md](REWORK-REPORT.md)：pending Escape 已修复，定向35/35；当前源码 tgz 已构建核验，全包350 pass/4历史制品或证据依赖失败，L2仍BLOCKED。以下保留首轮工程结果，不代表当前放行。
+
 ## 状态与身份
 
 - Issue: https://github.com/omnimux-ai/omnimux-dsh/issues/837 ，关联 #766 / PR #830。

@@ -1,0 +1,23 @@
+{
+  "archive": "../assets-storage-766/plugins/omnimux-assets/omnimux-assets-0.2.0.tgz",
+  "bytes": 48587041,
+  "sha256": "4133161d36e651f04ea97024517c3536c2996e0c4c651d855edc36734ba7bb29",
+  "expectedHistoricalHash": "4133161d36e651f04ea97024517c3536c2996e0c4c651d855edc36734ba7bb29",
+  "files": [
+    {
+      "name": "src/client/AssetsStage.jsx",
+      "archiveHash": "ba01d644cfcd461fe9dfa4dde3182008f2f7c428cb2fee49c79b84c57af6bb35",
+      "headHash": "222aa95bee40bbc5611ff546fc02d8ba453955e8068dc3dfe2432a0b15e51839"
+    },
+    {
+      "name": "src/client/styles.js",
+      "archiveHash": "3dccda2ce29cc063c723ce6470d8dbcc2d97e2694e377ee649e4f1993e1bafa3",
+      "headHash": "362e7be4d7ff7aa79e44b8e9f5dcbc0302fa9845d9036e406ace362eb418c9cf"
+    },
+    {
+      "name": "lib/client.js",
+      "archiveHash": "e572fafd0b22b8fec98027462f2a9f47680818d835c17ea561ab574aac1739b5",
+      "headHash": "f62ead86ef4b309c244b2781508eb73c63d0fede43cd9f4c8d8ec13eb664f838"
+    }
+  ]
+}
