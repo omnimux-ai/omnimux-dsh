@@ -61,10 +61,10 @@ non-goals: "本 Issue 明确不做的内容"
 | 定界 | goal、scope、acceptance、non-goals、dependencies、风险声明 | 计划可执行；需要的授权已取得或明确停在授权边界 |
 | 实施 | Issue、base SHA、worktree、分支、当前目标 | diff 完成并通过相关本地检查 |
 | 合并前验收 | commit/dirty 状态、L2 身份、测试与运行证据 | 适用检查通过，独立最终验收完成 |
-| PR/合入 | PR、head SHA、CI、授权来源与有效范围 | 按 [plugin-git-pr](plugin-git-pr.md) 条件自治合入或在阻断时暂停 |
+| PR/合入 | PR、head SHA、CI、授权来源与有效范围 | 按 [plugin-git-pr](plugin-git-pr.md) 完成已授权且通过门禁的动作；仅暂停受阻动作 |
 | 合并后交付 | merge commit、Dev 物化源、45120 证据 | 适用 Dev 验收通过并完成安全清理，最终交付端到端闭环成果 |
 
-标签可反映状态，但不能替代事实或授权。`qa:pass`、风险与合入通道遵循 [plugin-git-pr](plugin-git-pr.md)；本文件不重复定义。当用户在任务开始时已下达明确实施/修复指令，且全部适用验收门禁（L0+L2+浏览器+CI）均验证通过时，Agent 自动贯通合入、物化与环境清理，直接交付「合并后交付」终态。
+标签可反映状态，但不能替代事实或授权。`qa:pass`、风险、授权范围与合入通道遵循 [plugin-git-pr](plugin-git-pr.md)；本文件不重复定义。Agent 持续完成已授权且适用的阶段；缺少后续阶段授权时，完成独立准备后仅询问该动作，不把质量门禁通过视为新增权限。
 
 ## 条件式 DoD
 
@@ -81,10 +81,10 @@ non-goals: "本 Issue 明确不做的内容"
 
 ## 等待、恢复与阻断
 
-- 会话内等待使用一次或短期 wake-up；长时间监控交给 Multica。不得用常驻 heartbeat 重复实现仓库 workflow。
-- wake-up/交接最少保留 Issue/PR、base/head SHA、goal、当前阶段、授权范围与撤销状态、证据路径、下一动作和阻断原因。
+- CI、构建或 Merge Queue 尚在进行且后续授权工作未完成时，结束本轮前必须创建或复用当前任务的临时自动唤醒循环，并核对成功回执。具体调度、恢复和停止步骤见[仓库 workflow 的 Wait and resume](../../.agents/skills/omnimux-repo-workflow/SKILL.md#wait-and-resume)。这类自行停止的任务续办不需要移交 Multica；跨任务长期运营监控另行定界。
+- wake-up/交接最少保留 Issue/PR、仓库/worktree、base/head SHA、goal、当前阶段、授权范围与撤销状态、证据路径、等待条件、下一动作及自动化 ID。没有成功调度回执不得声称已安排后续检查。
 - 用户在同一任务中已经给出的授权继续有效；恢复时核对目标未变化，不重复索要同一确认。
-- 外部状态未变化不等于失败。保持现场并等待；只有事实变化、需要新授权或达到明确终态时推进。
+- 外部状态未变化时保持循环且不重复通知；失败后继续授权范围内的诊断修复，成功后立即推进下一步。目标完成、用户取消或仅剩必要人工输入时，停止循环并核对回执。自动唤醒不授予额外权限，也不允许把仅完成 CI 写成任务已完成。
 
 ## 最终报告
 
