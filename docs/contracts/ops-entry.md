@@ -32,6 +32,8 @@ subsystem: "global"
 | `yarn omnimux:stage` | 发版前写入桌面 preset；需要发布授权 |
 | `yarn omnimux:path` / `yarn omnimux:help` | 显示解析路径和用法 |
 
+#765 viewer 版本转换仍使用同一 `yarn omnimux:sync --managed-tarball=…` 入口，追加的成套旧/新来源参数、固定身份与反向 receipt 约束见 [dev-pipeline 转换例外](dev-pipeline.md#839765-viewer-精确转换例外)。没有新部署命令；未合并工具只允许 synthetic task 验证，不得写共享 Dev。`--recover-managed-tarball` 遇到 COMMITTED 仅完成终态清理，提交后退版必须走绑定成功 receipt 的新反向转换，不能把恢复命令当降级命令。
+
 纳管内部接缝以 [冻结架构合同](../specs/issue-778-managed-tarball-architecture.md#33-状态模型与接口) 为准。私有 cache 获取及两文件恢复点不新增公开运维入口；只有 `SyncResult.schemaVersion=1` 的明确终态能作为磁盘操作结果，候选安装、备份或 Host 监听不等于业务验收。
 
 `sync` 不重启进程。无参数和点名插件同步都默认 `~/.omnimux-dev`；`--prod`、`--all`、正式 App、stage/打包不属于普通交付，必须单独获得发布授权。授权后由 Agent 完成非付款操作。
