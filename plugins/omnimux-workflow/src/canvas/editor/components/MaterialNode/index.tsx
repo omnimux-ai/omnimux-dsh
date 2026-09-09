@@ -228,6 +228,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         const updates: Record<string, unknown> = {
           prompt: injected,
           selectedTool: 'text-to-text',
+          nodeKind: 'generate',
+          content: undefined,
+          generatedContent: undefined,
         };
         setNodes((nodes) => planSelectAndPatchNode(nodes, id, updates));
         useCanvasStore.getState().setSelectedElement('node', id);
@@ -372,10 +375,21 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [selected]);
 
+  // 文本节点业务逻辑（模型生成与手动编辑模式互斥）：
+  // 用户在空状态下选择了自己编辑，只要填写的内容非空，就不会再显示模型的生成面板。
+  // 执行时作为一个文本文件输入（import），不再支持模型生成。
+  const isTextManualEdit =
+    materialType === 'text' &&
+    Boolean(effectiveTextContent.trim()) &&
+    !nodeData.generatedContent &&
+    (!nodeData.prompt || !String(nodeData.prompt).trim());
+
+  const effectiveKind = isTextManualEdit ? 'import' : kind;
+
   const panelVisible = isConfigPanelVisible(
     selected,
     executionStatus,
-    kind,
+    effectiveKind,
     isMultiSelected,
     contentFormat,
   );
@@ -862,13 +876,27 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         }}
         onFocus={() => setTextEditing(true)}
         onBlur={() => setTextEditing(false)}
-        onChange={(e) =>
-          updateNodeData({
-            content: e.target.value,
-            status: e.target.value.trim() ? 'ready' : 'empty',
-            generatedContent: undefined,
-          })
-        }
+        onChange={(e) => {
+          const val = e.target.value;
+          const trimmed = val.trim();
+          if (trimmed) {
+            updateNodeData({
+              content: val,
+              status: 'ready',
+              nodeKind: 'import',
+              selectedTool: 'text-editor',
+              prompt: undefined,
+              generatedContent: undefined,
+            });
+          } else {
+            updateNodeData({
+              content: '',
+              status: 'empty',
+              nodeKind: 'generate',
+              generatedContent: undefined,
+            });
+          }
+        }}
       />
     ) : (
       <NodeEmptyState
@@ -896,10 +924,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       {/* 输入 Handle */}
       <CanvasNodeHandle side="left" nodeHovered={isHovered} />
 
-      {/* 节点标题：导入节点统一显示「导入素材」 */}
+      {/* 节点标题：导入节点统一显示「导入素材」（非文本节点） */}
       <NodeHeader
         label={label}
-        materialType={kind === 'import' ? 'import_asset' : materialType}
+        materialType={kind === 'import' && materialType !== 'text' ? 'import_asset' : materialType}
         onLabelChange={(newLabel) => updateNodeData({ label: newLabel })}
         isDegraded={isDegraded}
         degradedWarning={degradedWarning}
@@ -968,11 +996,24 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
               if (textEditing) return;
               const pasted = e.clipboardData?.getData('text');
               if (pasted) {
-                updateNodeData({
-                  content: pasted,
-                  status: pasted.trim() ? 'ready' : 'empty',
-                  generatedContent: undefined,
-                });
+                const trimmed = pasted.trim();
+                if (trimmed) {
+                  updateNodeData({
+                    content: pasted,
+                    status: 'ready',
+                    nodeKind: 'import',
+                    selectedTool: 'text-editor',
+                    prompt: undefined,
+                    generatedContent: undefined,
+                  });
+                } else {
+                  updateNodeData({
+                    content: '',
+                    status: 'empty',
+                    nodeKind: 'generate',
+                    generatedContent: undefined,
+                  });
+                }
                 setTextEditing(true);
               }
             }}

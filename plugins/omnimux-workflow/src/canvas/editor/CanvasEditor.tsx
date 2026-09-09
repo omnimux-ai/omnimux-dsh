@@ -250,6 +250,8 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       setNodes((currentNodes) =>
         currentNodes.map((n) => {
           if (n.id !== nodeId) return n;
+          const isText = (n.data as any)?.materialType === 'text';
+          const trimmed = payload.content.trim();
           return {
             ...n,
             data: {
@@ -259,7 +261,11 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
               versions: payload.versions,
               wordCount: payload.wordCount,
               charCount: payload.charCount,
-              status: payload.content.trim() ? 'ready' : 'empty',
+              status: trimmed ? 'ready' : 'empty',
+              ...(isText ? {
+                nodeKind: trimmed ? 'import' : 'generate',
+                ...(trimmed ? { selectedTool: 'text-editor', prompt: undefined } : {}),
+              } : {}),
               generatedContent: undefined,
             },
           };

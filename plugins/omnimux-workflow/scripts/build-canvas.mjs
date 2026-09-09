@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const repoRoot = join(root, '../..')
 const outFile = join(root, 'lib', 'canvas.js')
 const withHarness = process.argv.includes('--harness')
 
@@ -31,6 +32,11 @@ const shared = {
   write: false,
   logLevel: 'info',
   legalComments: 'none',
+  nodePaths: [
+    join(root, 'node_modules'),
+    join(repoRoot, 'node_modules/.pnpm/node_modules'),
+    join(repoRoot, 'node_modules'),
+  ],
   loader: {
     '.css': 'text',
   },

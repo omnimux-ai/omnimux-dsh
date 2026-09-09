@@ -167,7 +167,23 @@ export function resolveNodeKind(data: {
   nodeKind?: unknown;
   selectedTool?: unknown;
   realPath?: unknown;
+  materialType?: unknown;
+  content?: unknown;
+  prompt?: unknown;
+  generatedContent?: unknown;
 }): NodeKind {
+  // 文本节点专属业务逻辑（模型生成与手动编辑互斥）：
+  // 若填写了手动编辑内容且无活跃 Prompt，坚决判定为 import（文本文件输入，不再支持模型生成）
+  if (
+    data.materialType === 'text' &&
+    typeof data.content === 'string' &&
+    data.content.trim().length > 0 &&
+    !data.generatedContent &&
+    (!data.prompt || !String(data.prompt).trim())
+  ) {
+    return 'import';
+  }
+
   if (data.nodeKind === 'generate' || data.nodeKind === 'import') {
     return data.nodeKind;
   }

@@ -6,13 +6,25 @@
  * canvas island itself — CanvasBridge only passes a DOM container and
  * plain-data props to window.__omnimuxWorkflowCanvas.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = join(root, '../..');
 const outFile = join(root, 'lib', 'client.js');
+
+let cur = root;
+let kitDir = null;
+while (cur && cur !== dirname(cur)) {
+  const candidate = join(cur, 'personal', 'dsh-ui-kit');
+  if (existsSync(candidate)) {
+    kitDir = candidate;
+    break;
+  }
+  cur = dirname(cur);
+}
 
 const result = await esbuild.build({
   absWorkingDir: root,
@@ -23,6 +35,14 @@ const result = await esbuild.build({
   jsx: 'automatic',
   write: false,
   logLevel: 'info',
+  alias: {
+    'dsh-ui-kit': kitDir,
+  },
+  nodePaths: [
+    join(root, 'node_modules'),
+    join(repoRoot, 'node_modules/.pnpm/node_modules'),
+    join(repoRoot, 'node_modules'),
+  ],
   external: [
     'react',
     'react/jsx-runtime',

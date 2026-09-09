@@ -56,6 +56,25 @@ describe('resolveNodeKind - 全仓唯一节点身份判定真源', () => {
     assert.equal(resolveNodeKind({ nodeKind: 'unknown' }), 'generate');
   });
 
+  it('文本节点业务逻辑：手动编辑内容非空时判定为 import，清空时恢复为 generate', () => {
+    // 未显式指定 nodeKind 但 selectedTool 为 text-editor 且手动填写内容非空 -> import
+    assert.equal(resolveNodeKind({ materialType: 'text', selectedTool: 'text-editor', content: '用户自己手写的剧本' }), 'import');
+
+    // 显式标注 nodeKind 优先
+    assert.equal(resolveNodeKind({ materialType: 'text', nodeKind: 'import', content: '手写内容' }), 'import');
+    assert.equal(resolveNodeKind({ materialType: 'text', nodeKind: 'generate', content: '' }), 'generate');
+
+    // 内容清空或未填写 -> generate（恢复空状态支持模型生成）
+    assert.equal(resolveNodeKind({ materialType: 'text', selectedTool: 'text-editor', content: '' }), 'generate');
+    assert.equal(resolveNodeKind({ materialType: 'text', selectedTool: 'text-editor', content: '   ' }), 'generate');
+
+    // 仅有 prompt / 模型生成配置 -> generate
+    assert.equal(resolveNodeKind({ materialType: 'text', prompt: '写一段剧本' }), 'generate');
+
+    // 仅有 generatedContent（模型生成产物） -> 保持 generate 身份供重生成
+    assert.equal(resolveNodeKind({ materialType: 'text', generatedContent: '模型生成的文本' }), 'generate');
+  });
+
   it('isGenerativeTool 兼容包装函数行为一致', () => {
     assert.equal(isGenerativeTool('import'), false);
     assert.equal(isGenerativeTool('text-to-image'), true);
@@ -85,6 +104,19 @@ describe('resolveExecutorKey - 调度分派键派生', () => {
     );
     assert.equal(
       resolveExecutorKey({ type: 'material', data: { nodeKind: 'generate' } }),
+      'material:generate',
+    );
+    // 文本节点手动编辑分派测试
+    assert.equal(
+      resolveExecutorKey({ type: 'material', data: { materialType: 'text', selectedTool: 'text-editor', content: '手动剧本' } }),
+      'material:import',
+    );
+    assert.equal(
+      resolveExecutorKey({ type: 'material', data: { materialType: 'text', nodeKind: 'import', content: '手动剧本' } }),
+      'material:import',
+    );
+    assert.equal(
+      resolveExecutorKey({ type: 'material', data: { materialType: 'text', selectedTool: 'text-editor', content: '' } }),
       'material:generate',
     );
   });
@@ -174,6 +206,27 @@ describe('importExecutor - 专职导入执行器契约', () => {
     );
     assert.ok(output.mediaAssets);
     assert.equal(output.mediaAssets[0].url, 'https://example.com/demo.mp4');
+  });
+
+  it('文本节点作为静态文本输入时直接透传 content（不调任何模型生成）', async () => {
+    const executor = createImportExecutor();
+    const mockCtx = {
+      upstreamOutputs: new Map(),
+      signal: new AbortController().signal,
+      mediaDir: '/tmp',
+    };
+    const output = await executor.execute(
+      {
+        id: 'node-text-manual',
+        type: 'material',
+        data: {
+          materialType: 'text',
+          content: '用户手动输入的静态文本文件内容',
+        },
+      },
+      mockCtx,
+    );
+    assert.equal(output.text, '用户手动输入的静态文本文件内容');
   });
 });
 
