@@ -201,6 +201,16 @@ export function guardSubmit(request, opts = {}) {
     return reject({ ...opAdmit, modelId: modelAdmit.modelId })
   }
 
+  if (modelAdmit.modelId.startsWith('minimax-h3')
+    && /^720p?$/i.test(String(normalized.extras?.resolution ?? request?.resolution ?? ''))) {
+    return reject({
+      code: GUARD_CODES.OPERATION_INCOMPATIBLE,
+      message: 'MiniMax H3 的旧 720p 配置已停用，请在分辨率中重新选择 768p；不会自动改写已保存的选择。',
+      modelId: modelAdmit.modelId,
+      field: 'resolution',
+    })
+  }
+
   const parameterResult = validateDeclaredParameters(
     { ...request, ...normalized.extras, prompt: normalized.prompt },
     opAdmit.operation.parameters,

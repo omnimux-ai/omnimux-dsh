@@ -1,0 +1,23 @@
+{
+  "startedAt": "2026-09-09T11:35:02.306501+08:00",
+  "endedAt": "2026-09-09T11:35:57.529405+08:00",
+  "command": [
+    "yarn",
+    "omnimux:dev",
+    "start",
+    "h3-838-l2",
+    "omnimux",
+    "--source=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/h3-contract-fixes-838"
+  ],
+  "exitCode": 1,
+  "credentialsCopied": true,
+  "settingsCopied": true,
+  "closurePassed": true,
+  "privateInstallStarted": true,
+  "hostTimeout": true,
+  "viewerSettingsImportFailure": false,
+  "unmanagedSeedFailure": false,
+  "pnpmFailure": false,
+  "reportedStarted": false,
+  "outputBytes": 3345
+}
