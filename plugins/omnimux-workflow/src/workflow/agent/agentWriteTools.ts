@@ -54,6 +54,7 @@ function parseNodePatch(
   }
 
   const materialType = (node.data as Record<string, unknown>)?.materialType as MaterialType | undefined;
+  const isText = materialType === 'text';
   let selectedTool: MaterialTool | undefined;
   if (spec.tool !== undefined) {
     if (!materialType) return errorBody('invalid-args', `node ${nodeId} has no material_type; cannot set tool`);
@@ -64,12 +65,49 @@ function parseNodePatch(
 
   const data: Record<string, unknown> = {};
   if (spec.label !== undefined) data.label = spec.label;
-  if (spec.prompt !== undefined) data.prompt = spec.prompt;
   if (spec.params !== undefined) data.params = spec.params;
   if (selectedTool !== undefined) data.selectedTool = selectedTool;
 
+  if (spec.content !== undefined) {
+    if (typeof spec.content !== 'string') {
+      return errorBody('invalid-args', 'patch.content must be a string');
+    }
+    if (isText) {
+      const trimmed = spec.content.trim();
+      if (trimmed) {
+        data.content = spec.content;
+        data.status = 'ready';
+        data.nodeKind = 'import';
+        data.selectedTool = 'text-editor';
+        data.prompt = undefined; // 激活手动编辑，关闭模型生成
+        data.generatedContent = undefined;
+      } else {
+        data.content = '';
+        data.status = 'empty';
+        data.nodeKind = 'generate';
+        data.generatedContent = undefined;
+      }
+    } else {
+      data.content = spec.content;
+    }
+  }
+
+  if (spec.prompt !== undefined) {
+    if (typeof spec.prompt !== 'string') {
+      return errorBody('invalid-args', 'patch.prompt must be a string');
+    }
+    data.prompt = spec.prompt;
+    if (isText && spec.prompt.trim()) {
+      data.nodeKind = 'generate';
+      data.selectedTool = 'text-to-text';
+      data.content = undefined; // 激活模型生成，关闭手动编辑
+      data.generatedContent = undefined;
+      data.status = 'empty';
+    }
+  }
+
   if (Object.keys(data).length === 0 && position === undefined) {
-    return errorBody('invalid-args', 'patch must contain at least one of label / prompt / tool / params / position');
+    return errorBody('invalid-args', 'patch must contain at least one of label / prompt / content / tool / params / position');
   }
 
   return {
@@ -124,6 +162,10 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
       },
       label: { type: 'string', description: 'Display label (empty = localized type name)' },
       prompt: { type: 'string', description: 'Generation prompt for generative tools' },
+      content: {
+        type: 'string',
+        description: 'Direct text content for manual edit (material_type="text"). Setting non-empty text puts the node in manual edit mode (static text input) and disables model generation.',
+      },
     }),
     output: jsonOut,
     async execute(args) {
@@ -142,11 +184,30 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
       return withWorkspace(store, workspaceId, (snapshot) => {
         const label = readString(args, 'label');
         const prompt = readString(args, 'prompt');
-        const node = createMaterialNode(materialType, readPosition(args) ?? defaultNodePosition(snapshot), {
+        const content = readString(args, 'content');
+
+        const overrides: Record<string, unknown> = {
           selectedTool: toolResolved.tool,
           ...(label !== undefined ? { label } : {}),
-          ...(prompt !== undefined ? { prompt } : {}),
-        });
+        };
+
+        if (materialType === 'text') {
+          if (content !== undefined && content.trim()) {
+            overrides.content = content;
+            overrides.status = 'ready';
+            overrides.nodeKind = 'import';
+            overrides.selectedTool = 'text-editor';
+          } else if (prompt !== undefined && prompt.trim()) {
+            overrides.prompt = prompt;
+            overrides.status = 'empty';
+            overrides.nodeKind = 'generate';
+            overrides.selectedTool = toolResolved.tool === 'text-editor' ? 'text-to-text' : toolResolved.tool;
+          }
+        } else {
+          if (prompt !== undefined) overrides.prompt = prompt;
+        }
+
+        const node = createMaterialNode(materialType, readPosition(args) ?? defaultNodePosition(snapshot), overrides);
 
         const result = mutateWorkspaceGraph(store, workspaceId, { addNodes: [node] }, mutationContext(deps));
         if (!result.ok) return errorBody(result.error, result.message);
@@ -161,7 +222,7 @@ export function createWorkflowNodeUpdateTool(deps: WorkflowAgentDeps): AgentTool
   return {
     name: 'workflow_node_update',
     description:
-      'Patch one node on the current or specified workflow canvas: label / prompt / tool / params / position (all optional, shallow-merged into the node). Omit workspace_id to use the ui_context current canvas. tool must be valid for the node\'s material_type. Changing tool never invalidates existing edges (edge validation uses the union of all tools of the material type), but it changes what the node does on the next workflow_run. material_type and output content fields cannot be changed — remove and re-add the node instead.',
+      'Patch one node on the current or specified workflow canvas: label / prompt / content / tool / params / position (all optional, shallow-merged into the node). For text nodes, content can be set to directly edit manual text content. Omit workspace_id to use the ui_context current canvas. tool must be valid for the node\'s material_type. Changing tool never invalidates existing edges (edge validation uses the union of all tools of the material type), but it changes what the node does on the next workflow_run. material_type and media output content fields cannot be changed — remove and re-add the node instead.',
     parameters: objectParams({
       workspace_id: { type: 'string', description: WORKSPACE_ID_PARAM_DESC },
       node_id: { type: 'string', required: true, description: 'Node id (from workflow_snapshot include_nodes=true)' },
@@ -171,6 +232,10 @@ export function createWorkflowNodeUpdateTool(deps: WorkflowAgentDeps): AgentTool
         properties: {
           label: { type: 'string' },
           prompt: { type: 'string' },
+          content: {
+            type: 'string',
+            description: 'Direct text content for manual edit (text nodes only). Setting non-empty text puts the node in manual edit mode as static text input and disables model generation; clearing content restores empty state and re-enables model generation.',
+          },
           tool: { type: 'string', description: 'New selectedTool; must belong to the node material_type' },
           params: { type: 'object', additionalProperties: true, description: 'Tool params (e.g. aspectRatio 1:1|4:3|16:9|9:16, duration) — replaces the whole params object' },
           position: {

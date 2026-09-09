@@ -3,7 +3,7 @@
  * 第三方 tab 只给 DOM 容器；双 React 树边界仍是 CanvasBridge 的硬规则。
  */
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
-import { sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
+import { resolveEffectiveWorkspaceId, sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
 import { CanvasBridge } from '../CanvasBridge.jsx'
 import { injectWorkflowStyles } from '../styles.js'
 import { applyProjectCanvasRatio, CANVAS_TAB_ID, getBetterSidebar } from './projectCanvas.js'
@@ -29,8 +29,10 @@ export function CanvasTab({ ctx, t, visible, store, scope }) {
   )
   const sessionId = scope?.sessionId
   // 每个会话 / 项目拥有专属独立的画布工作区 ID，绝不串连其他项目的画布。
-  // sessionId 未就绪时禁止挂岛：否则 workspaceId=undefined，boot 会误开最新图。
-  const targetWorkspaceId = sessionToWorkspaceId(sessionId)
+  // 支持通过 scope 显式指定或继承映射定向复用既有画布工作区，否则按 sessionId 散列派生。
+  // sessionId 与显式 ID 均未就绪时禁止挂岛：否则 workspaceId=undefined，boot 会误开最新图。
+  const explicitWorkspaceId = scope?.canvasWorkspaceId || scope?.workspaceId
+  const targetWorkspaceId = explicitWorkspaceId || resolveEffectiveWorkspaceId(sessionId)
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined

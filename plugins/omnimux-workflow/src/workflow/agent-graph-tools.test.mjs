@@ -207,6 +207,55 @@ test('node_update patches prompt/tool/params/position; rejects unknown node', as
       patch: {},
     });
     assert.equal(empty.error, 'invalid-args');
+
+    // 业务逻辑优化演练：文本节点模型生成与手动编辑模式互斥切换
+    // 1. Agent 通过手动编辑方式提交 content -> 切换为 import，status: ready，prompt 被清除
+    const manualEdit = await h.tool('workflow_node_update').execute({
+      workspace_id: wsId,
+      node_id: textNode.id,
+      patch: { content: '这是 Agent 手动编辑填写的文本正文' },
+    });
+    assert.equal(manualEdit.error, undefined);
+    assert.equal(manualEdit.node.data.content, '这是 Agent 手动编辑填写的文本正文');
+    assert.equal(manualEdit.node.data.status, 'ready');
+    assert.equal(manualEdit.node.data.nodeKind, 'import');
+    assert.equal(manualEdit.node.data.selectedTool, 'text-editor');
+    assert.equal(manualEdit.node.data.prompt, undefined);
+
+    // 2. 清空 content -> 恢复为空状态，nodeKind: generate，重新支持模型生成
+    const clearContent = await h.tool('workflow_node_update').execute({
+      workspace_id: wsId,
+      node_id: textNode.id,
+      patch: { content: '' },
+    });
+    assert.equal(clearContent.error, undefined);
+    assert.equal(clearContent.node.data.content, '');
+    assert.equal(clearContent.node.data.status, 'empty');
+    assert.equal(clearContent.node.data.nodeKind, 'generate');
+
+    // 3. 再次通过 Prompt 模式激活模型生成 -> nodeKind: generate, content 被清除
+    const promptGen = await h.tool('workflow_node_update').execute({
+      workspace_id: wsId,
+      node_id: textNode.id,
+      patch: { prompt: '根据主题生成分镜头脚本' },
+    });
+    assert.equal(promptGen.error, undefined);
+    assert.equal(promptGen.node.data.prompt, '根据主题生成分镜头脚本');
+    assert.equal(promptGen.node.data.nodeKind, 'generate');
+    assert.equal(promptGen.node.data.selectedTool, 'text-to-text');
+    assert.equal(promptGen.node.data.content, undefined);
+
+    // 4. workflow_node_add 直接以手动编辑方式创建文本节点
+    const manualAdd = await h.tool('workflow_node_add').execute({
+      workspace_id: wsId,
+      material_type: 'text',
+      content: '直接以静态文本文件输入创建的内容',
+    });
+    assert.equal(manualAdd.error, undefined);
+    assert.equal(manualAdd.node.data.content, '直接以静态文本文件输入创建的内容');
+    assert.equal(manualAdd.node.data.status, 'ready');
+    assert.equal(manualAdd.node.data.nodeKind, 'import');
+    assert.equal(manualAdd.node.data.selectedTool, 'text-editor');
   } finally {
     h.cleanup();
   }

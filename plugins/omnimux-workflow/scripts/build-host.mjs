@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = join(root, '../..');
 const outFile = join(root, 'dist', 'index.js');
 
 const result = await esbuild.build({
@@ -19,6 +20,11 @@ const result = await esbuild.build({
   platform: 'node',
   format: 'esm',
   target: 'node18',
+  nodePaths: [
+    join(root, 'node_modules'),
+    join(repoRoot, 'node_modules/.pnpm/node_modules'),
+    join(repoRoot, 'node_modules'),
+  ],
   write: false,
   logLevel: 'info',
   legalComments: 'none',
