@@ -52,3 +52,33 @@ test('TableNode 顶部胶囊栏契约：通用 FloatingTopPill + 有行才显示
   assert.doesNotMatch(tableNodeSrc, /title:\s*'添加到会话'/);
   assert.doesNotMatch(tableNodeSrc, /title:\s*'全屏编辑'/);
 });
+
+test('TableNode 契约：必须提取 effectiveTableId 并传给 useTableSession 和 tableRelPath', () => {
+  // 1. 验证源码中声明了 effectiveTableId = (data as any)?.tableId || id
+  assert.match(
+    tableNodeSrc,
+    /const\s+effectiveTableId\s*=\s*\(data as any\)\?\.tableId\s*\|\|\s*id;/,
+    '必须提取 effectiveTableId，优先使用 data.tableId',
+  );
+
+  // 2. 验证 tableRelPath 使用了 effectiveTableId
+  assert.match(
+    tableNodeSrc,
+    /const\s+tableRelPath\s*=\s*\(data as any\)\?\.tablePath\s*\|\|\s*\(data as any\)\?\.path\s*\|\|\s*`\.omnimux\/tables\/\$\{effectiveTableId\}\.htable`;/,
+    'tableRelPath 必须拼接 effectiveTableId',
+  );
+
+  // 3. 验证 useTableSession 接收 effectiveTableId 而非硬编码 id
+  assert.match(
+    tableNodeSrc,
+    /useTableSession\(effectiveTableId,\s*\{/,
+    'useTableSession 必须传入 effectiveTableId',
+  );
+
+  // 4. 验证 openStage 接收 effectiveTableId
+  assert.match(
+    tableNodeSrc,
+    /openStage\(effectiveTableId,\s*document\)/,
+    'openStage 必须传入 effectiveTableId',
+  );
+});

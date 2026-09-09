@@ -182,11 +182,11 @@ test('其他视频节点的拆解表格不被误更新', () => {
   assert.equal(plan.nodePatches.length, 0);
 });
 
-test('普通无 origin 的表格节点不被误判为拆解表格', () => {
+test('单一下游约束：只要存在已连线的 table 节点（即使无 origin 标记），强制就地更新不产生新节点', () => {
   const genericTable = {
     id: 'tbl_manual',
     type: 'table',
-    data: { label: '自定义数据表' },
+    data: { label: '已有表格' },
   };
   const edge = {
     id: 'e1',
@@ -198,13 +198,37 @@ test('普通无 origin 的表格节点不被误判为拆解表格', () => {
     baseInput({
       currentNodes: [VIDEO_NODE, genericTable],
       currentEdges: [edge],
-      createNodeId: () => 'tbl_new_2',
+    }),
+  );
+
+  assert.ok(plan);
+  assert.equal(plan.mode, 'update');
+  assert.equal(plan.targetNodeId, 'tbl_manual');
+  assert.equal(plan.addNodes.length, 0);
+  assert.equal(plan.nodePatches.length, 1);
+  assert.equal(plan.nodePatches[0].nodeId, 'tbl_manual');
+  assert.equal(plan.nodePatches[0].data.tableId, 'tbl_test123');
+});
+
+test('未与该视频连线的普通表格节点不被判定为下游，创建新节点且 id 默认对齐 tableId', () => {
+  const genericTable = {
+    id: 'tbl_unrelated',
+    type: 'table',
+    data: { label: '无关表格' },
+  };
+
+  const plan = planVideoDeconstructDownstream(
+    baseInput({
+      currentNodes: [VIDEO_NODE, genericTable],
+      currentEdges: [],
     }),
   );
 
   assert.ok(plan);
   assert.equal(plan.mode, 'create');
-  assert.equal(plan.targetNodeId, 'tbl_new_2');
+  // 未指定 createNodeId 时，直接对齐 tableResult.tableId
+  assert.equal(plan.targetNodeId, 'tbl_test123');
+  assert.equal(plan.addNodes[0].id, 'tbl_test123');
 });
 
 test('空输入守卫：空节点 id 或空 tableId 返回 null', () => {

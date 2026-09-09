@@ -15,6 +15,9 @@ import {
 } from '../../shared/types/htable.ts';
 import { resolveTableAbsPath, resolveTableRelativePath } from '../storage/tablePath.ts';
 import { TableStorageService } from '../storage/TableStorageService.ts';
+import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
+import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
+import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
 
 export interface VideoDeconstructServiceDeps {
   store: WorkspaceStore;
@@ -400,6 +403,114 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       return '（空记录）';
     });
 
+    // 9. 服务端图变更：单一下游约束，原子写入工作区 canvas.json 持久化
+    let workspaceSnapshot: CanvasWorkspaceSnapshot | undefined;
+    try {
+      const currentSnapshot = deps.store.get(workspaceId);
+      const currentNodes = (currentSnapshot.nodes || []) as CanvasNode[];
+      const currentEdges = currentSnapshot.edges || [];
+
+      // 寻找源视频节点
+      const videoNode = currentNodes.find((n) => n.id === input.nodeId);
+      const videoPos = videoNode?.position ?? { x: 0, y: 0 };
+      const rawWidth = (videoNode?.data as Record<string, unknown> | undefined)?.nodeWidth;
+      const videoWidth = typeof rawWidth === 'number' && rawWidth > 0 ? rawWidth : 350;
+
+      // 单一下游约束：判定已有下游表格节点
+      const connectedTableNodeIds = new Set(
+        currentEdges
+          .filter((edge) => edge.source === input.nodeId)
+          .map((edge) => edge.target),
+      );
+
+      const existingNode = currentNodes.find((node) => {
+        if (node.type !== 'table') return false;
+        const d = node.data as Record<string, unknown> | undefined;
+        const isDeconstructOrigin =
+          d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId;
+        return isDeconstructOrigin || connectedTableNodeIds.has(node.id);
+      });
+
+      const nodeData: Record<string, unknown> = {
+        label: title,
+        title,
+        tableId,
+        tablePath,
+        columnCount: doc.columns.length,
+        rowCount: doc.rows.length,
+        previewRows,
+        origin: 'video_deconstruct',
+        sourceVideoNodeId: input.nodeId,
+        status: 'ready',
+      };
+
+      let mutation: CanvasInputMutation;
+      const canConnectEdge = Boolean(videoNode);
+
+      if (existingNode) {
+        // 已有与该视频节点连线或关联的表格节点：就地更新，缺线补线
+        const hasEdge = currentEdges.some(
+          (e) =>
+            e.source === input.nodeId &&
+            e.target === existingNode.id &&
+            (e.sourceHandle === undefined || e.sourceHandle === null || e.sourceHandle === 'out') &&
+            (e.targetHandle === undefined || e.targetHandle === null || e.targetHandle === 'in'),
+        );
+        mutation = {
+          nodePatches: [
+            {
+              nodeId: existingNode.id,
+              data: nodeData,
+            },
+          ],
+          addEdges: (hasEdge || !canConnectEdge)
+            ? []
+            : [
+                {
+                  id: `edge_${input.nodeId}_${existingNode.id}`,
+                  source: input.nodeId,
+                  target: existingNode.id,
+                  sourceHandle: 'out',
+                  targetHandle: 'in',
+                },
+              ],
+        };
+      } else {
+        // 新建节点：在视频节点右侧（横向偏移 nodeWidth + 120）插入，id 设为 tableId
+        const position = {
+          x: videoPos.x + videoWidth + 120,
+          y: videoPos.y,
+        };
+        const newNode: CanvasNode = {
+          id: tableId,
+          type: 'table',
+          position,
+          data: nodeData,
+        };
+        mutation = {
+          addNodes: [newNode],
+          addEdges: canConnectEdge
+            ? [
+                {
+                  id: `edge_${input.nodeId}_${tableId}`,
+                  source: input.nodeId,
+                  target: tableId,
+                  sourceHandle: 'out',
+                  targetHandle: 'in',
+                },
+              ]
+            : [],
+        };
+      }
+
+      const mutResult = mutateWorkspaceGraph(deps.store, workspaceId, mutation);
+      if (mutResult.ok) {
+        workspaceSnapshot = mutResult.snapshot;
+      }
+    } catch {
+      // 容错处理：图变更若异常，不阻断拆解核心产物返回
+    }
+
     return {
       tableId,
       tablePath,
@@ -408,6 +519,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       rowCount: doc.rows.length,
       previewRows,
       markdown,
+      workspace: workspaceSnapshot,
     };
   };
 }

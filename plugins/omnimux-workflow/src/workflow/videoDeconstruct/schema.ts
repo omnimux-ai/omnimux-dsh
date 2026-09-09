@@ -1,3 +1,4 @@
+import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
 import { VideoDeconstructError } from './errors.ts';
 
 function invalid(message: string): never {
@@ -46,6 +47,7 @@ export interface DeconstructVideoResult {
   rowCount: number;
   previewRows: string[];
   markdown: string;
+  workspace?: CanvasWorkspaceSnapshot;
 }
 
 export interface DeconstructVideoResponse {
@@ -61,4 +63,5 @@ export interface DeconstructVideoResponse {
   rowCount?: number;
   previewRows?: string[];
   markdown?: string;
+  workspace?: CanvasWorkspaceSnapshot;
 }
