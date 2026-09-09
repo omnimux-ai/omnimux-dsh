@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -80,7 +80,7 @@ function harness(t, opts = {}) {
       ...extra,
     });
 
-  return { call, toolCalls, store, workspace, url, dummyVideo };
+  return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
 }
 
 test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格', async (t) => {
@@ -204,4 +204,48 @@ test('videoDeconstruct: 请求校验与异常阻断', async (t) => {
     url: '/omnimux-workflow/api/workspaces/ws_non_existent/deconstruct-video',
   });
   assert.equal(badRes.status, 404);
+});
+
+test('videoDeconstruct: 传入工作流媒体相对路径 /omnimux-workflow/media/videos/xxx.mp4 能成功解析真实物理路径并拆解', async (t) => {
+  const h = harness(t);
+  const mediaVideosDir = join(h.mediaDir, 'videos');
+  mkdirSync(mediaVideosDir, { recursive: true });
+  const targetVideo = join(mediaVideosDir, 'video_92570ba4.mp4');
+  writeFileSync(targetVideo, 'binary content of social media extracted video');
+
+  // 1. 标准工作流媒体相对 URL，带 query 参数
+  const res1 = await h.call({
+    nodeId: 'node_video_extracted_1',
+    videoPath: '/omnimux-workflow/media/videos/video_92570ba4.mp4?t=1725890000',
+    title: '社媒提取视频拆解1',
+  });
+
+  assert.equal(res1.status, 200);
+  assert.equal(res1.body.ok, true);
+  assert.equal(h.toolCalls.length, 1);
+  assert.equal(h.toolCalls[0].video, targetVideo);
+
+  // 2. /dsh-workflow/media/ 前缀兼容
+  const res2 = await h.call({
+    nodeId: 'node_video_extracted_2',
+    videoPath: '/dsh-workflow/media/videos/video_92570ba4.mp4',
+    title: '社媒提取视频拆解2',
+  });
+
+  assert.equal(res2.status, 200);
+  assert.equal(res2.body.ok, true);
+  assert.equal(h.toolCalls.length, 2);
+  assert.equal(h.toolCalls[1].video, targetVideo);
+
+  // 3. 远端 HTTP(S) URL 在本地无文件时保留原 URL 传给拆解工具
+  const res3 = await h.call({
+    nodeId: 'node_video_remote',
+    videoPath: 'https://cdn.example.com/videos/remote_video.mp4?auth=token',
+    title: '远端视频拆解',
+  });
+
+  assert.equal(res3.status, 200);
+  assert.equal(res3.body.ok, true);
+  assert.equal(h.toolCalls.length, 3);
+  assert.equal(h.toolCalls[2].video, 'https://cdn.example.com/videos/remote_video.mp4?auth=token');
 });

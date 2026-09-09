@@ -195,12 +195,7 @@ export function resolveVideoAbsolutePath(
 ): string {
   const trimmed = videoPath.trim();
 
-  // 1. 本身已是存在的绝对路径
-  if (isAbsolute(trimmed) && existsSync(trimmed)) {
-    return trimmed;
-  }
-
-  // 2. 尝试从 local-file URL 还原
+  // 1. 尝试从 local-file URL 还原（保留 query 参数用于提取 ?path=）
   const localMatch = /[\?&]path=([^&]+)/.exec(trimmed);
   if (localMatch?.[1]) {
     try {
@@ -211,33 +206,72 @@ export function resolveVideoAbsolutePath(
     } catch {}
   }
 
-  // 3. 项目绑定工作区文件解析
+  // 去除可能存在的 URL query/hash 参数，获得纯路径进行本地文件系统比对
+  const cleanPath = trimmed.split(/[?#]/)[0] ?? trimmed;
+
+  // 2. 本身已是存在的绝对路径
+  if (isAbsolute(cleanPath) && existsSync(cleanPath)) {
+    return cleanPath;
+  }
+
+  // 3. 剥除 /omnimux-workflow/media/ 或 /dsh-workflow/media/ 前缀
+  let stripped = cleanPath;
+  const mediaPrefixMatch = cleanPath.match(/(?:omnimux-workflow|dsh-workflow)\/media\/(.+)$/);
+  if (mediaPrefixMatch?.[1]) {
+    stripped = mediaPrefixMatch[1];
+  }
+
+  // 4. mediaDir 候选路径匹配
+  if (deps.mediaDir) {
+    // 4.1 尝试 join(deps.mediaDir, stripped)
+    const candidateStripped = join(deps.mediaDir, stripped);
+    if (existsSync(candidateStripped)) return candidateStripped;
+
+    // 4.2 尝试 join(deps.mediaDir, 'videos', basename(stripped))
+    const candidateVideos = join(deps.mediaDir, 'videos', basename(stripped));
+    if (existsSync(candidateVideos)) return candidateVideos;
+
+    // 4.3 尝试 join(deps.mediaDir, basename(stripped))
+    const candidateBasename = join(deps.mediaDir, basename(stripped));
+    if (existsSync(candidateBasename)) return candidateBasename;
+
+    // 4.4 尝试 join(deps.mediaDir, cleanPath)
+    const candidateClean = join(deps.mediaDir, cleanPath);
+    if (existsSync(candidateClean)) return candidateClean;
+  }
+
+  // 5. 项目绑定工作区文件解析
   const bound = deps.store.resolveProjectRoot(workspaceId);
   if (bound && bound.path) {
-    const candidate = join(bound.path, trimmed);
-    if (existsSync(candidate)) return candidate;
+    const candidateClean = join(bound.path, cleanPath);
+    if (existsSync(candidateClean)) return candidateClean;
+    const candidateStripped = join(bound.path, stripped);
+    if (existsSync(candidateStripped)) return candidateStripped;
   }
 
-  // 4. 工作区目录或 mediaDir 解析
-  const wsCandidate = join(deps.store.workspacesDir, workspaceId, trimmed);
-  if (existsSync(wsCandidate)) return wsCandidate;
+  // 6. 工作区目录解析
+  const wsCandidateClean = join(deps.store.workspacesDir, workspaceId, cleanPath);
+  if (existsSync(wsCandidateClean)) return wsCandidateClean;
+  const wsCandidateStripped = join(deps.store.workspacesDir, workspaceId, stripped);
+  if (existsSync(wsCandidateStripped)) return wsCandidateStripped;
 
-  if (deps.mediaDir) {
-    const mediaCandidate = join(deps.mediaDir, trimmed);
-    if (existsSync(mediaCandidate)) return mediaCandidate;
-    const mediaNameCandidate = join(deps.mediaDir, basename(trimmed));
-    if (existsSync(mediaNameCandidate)) return mediaNameCandidate;
-  }
-
+  // 7. resolveProjectFile 解析
   if (deps.resolveProjectFile) {
     try {
-      const resolved = deps.resolveProjectFile(workspaceId, trimmed);
-      if (existsSync(resolved)) return resolved;
+      const resolvedClean = deps.resolveProjectFile(workspaceId, cleanPath);
+      if (existsSync(resolvedClean)) return resolvedClean;
+      const resolvedStripped = deps.resolveProjectFile(workspaceId, stripped);
+      if (existsSync(resolvedStripped)) return resolvedStripped;
     } catch {}
   }
 
-  // 保底：若已经是绝对路径则返回，否则返回工作区下的完整路径
-  return isAbsolute(trimmed) ? trimmed : join(deps.store.workspacesDir, workspaceId, trimmed);
+  // 8. 若找不到本地文件但给的是有效 HTTP(S) URL，保留作为输入传递给拆解服务
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // 保底：若 cleanPath 已经是绝对路径则返回，否则返回工作区下的完整路径
+  return isAbsolute(cleanPath) ? cleanPath : join(deps.store.workspacesDir, workspaceId, cleanPath);
 }
 
 export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps) {
