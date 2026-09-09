@@ -41,7 +41,8 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       const workbench = doc.defaultView?.__omnimuxWorkbench
       if (value.phase === 'plain' && !value.occurrences?.length && !draft.trimStart().startsWith('/') && !draft.includes('<ui_context') && workbench?.getUiContext && workbench?.formatCompactContextBlock) {
         const context = workbench.getUiContext()
-        const block = context?.ok ? workbench.formatCompactContextBlock(context) : ''
+        const block = context?.ok && context.surface?.tabId && context.surface.panelOpen
+          ? workbench.formatCompactContextBlock(context) : ''
         if (block) draft = `${block}\n\n${draft}`
       }
       const result = reconcileAttachmentDraft(draft, previous, attachments)
