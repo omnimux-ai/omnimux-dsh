@@ -21,14 +21,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName';
-import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId';
+import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName.ts';
+import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId.ts';
 import {
   PROJECT_README_NAME,
   assertProjectInsideLibrary,
   assertProjectWriteSafe,
   resolveProjectPaths,
-} from './paths';
+} from './paths.ts';
 import {
   MAX_PROJECT_TITLE_LENGTH,
   PROJECT_SCHEMA_VERSION,
@@ -36,7 +36,7 @@ import {
   type Project,
   type ProjectPage,
   type ProjectSummary,
-} from './schema';
+} from './schema.ts';
 
 export class ProjectStoreError extends Error {
   readonly code: string;

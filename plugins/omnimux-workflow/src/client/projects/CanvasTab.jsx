@@ -2,7 +2,7 @@
  * better-sidebar 画布 tab：宿主 React 18 壳里挂 CanvasBridge（React 19 island）。
  * 第三方 tab 只给 DOM 容器；双 React 树边界仍是 CanvasBridge 的硬规则。
  */
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { resolveEffectiveWorkspaceId, sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts'
 import { CanvasBridge } from '../CanvasBridge.jsx'
 import { injectWorkflowStyles } from '../styles.js'
@@ -28,11 +28,38 @@ export function CanvasTab({ ctx, t, visible, store, scope }) {
     () => (locale ? locale.getLocale().active : 'zh'),
   )
   const sessionId = scope?.sessionId
+  const [activeOverride, setActiveOverride] = useState(() => {
+    try {
+      return typeof localStorage !== 'undefined' ? localStorage.getItem('omnimux:latest-active-canvas') : null
+    } catch {
+      return null
+    }
+  })
+
+  useEffect(() => {
+    const handler = (e) => {
+      const wsId = e?.detail?.workspaceId
+      if (wsId) {
+        setActiveOverride(wsId)
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('omnimux:latest-active-canvas', wsId)
+          }
+        } catch {}
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('omnimux:active-canvas-changed', handler)
+      return () => window.removeEventListener('omnimux:active-canvas-changed', handler)
+    }
+    return undefined
+  }, [])
+
   // 每个会话 / 项目拥有专属独立的画布工作区 ID，绝不串连其他项目的画布。
-  // 支持通过 scope 显式指定或继承映射定向复用既有画布工作区，否则按 sessionId 散列派生。
-  // sessionId 与显式 ID 均未就绪时禁止挂岛：否则 workspaceId=undefined，boot 会误开最新图。
+  // 支持创作页就地切换 (activeOverride)、显式 scope 传入或继承映射，否则按 sessionId 散列派生。
+  // 确保同工作区新建会话时，画布稳定停留在当前激活的创作页上，不跳图、不重置。
   const explicitWorkspaceId = scope?.canvasWorkspaceId || scope?.workspaceId
-  const targetWorkspaceId = explicitWorkspaceId || resolveEffectiveWorkspaceId(sessionId)
+  const targetWorkspaceId = activeOverride || explicitWorkspaceId || resolveEffectiveWorkspaceId(sessionId)
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined

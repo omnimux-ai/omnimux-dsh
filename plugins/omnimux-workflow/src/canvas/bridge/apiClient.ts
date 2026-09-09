@@ -329,3 +329,42 @@ export function storyboardVideo(
     { method: 'POST', body: payload },
   );
 }
+
+export interface ProjectPageDto {
+  id: string;
+  title: string;
+  canvasWorkspaceId?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ProjectPagesResponse {
+  projectId: string | null;
+  projectTitle: string | null;
+  activePageId: string;
+  pages: ProjectPageDto[];
+}
+
+export function fetchProjectPages(workspaceId: string): Promise<ApiResult<ProjectPagesResponse>> {
+  return request<ProjectPagesResponse>(WORKFLOW_API_ROUTES.workspaceProjectPages(encodeURIComponent(workspaceId)));
+}
+
+export function createProjectPage(
+  workspaceId: string,
+  title?: string,
+): Promise<ApiResult<{ page: ProjectPageDto; workspace: CanvasWorkspaceSnapshot }>> {
+  return request<{ page: ProjectPageDto; workspace: CanvasWorkspaceSnapshot }>(
+    WORKFLOW_API_ROUTES.workspaceProjectPages(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: { title } },
+  );
+}
+
+export function setActiveProjectPage(
+  workspaceId: string,
+  pageId: string,
+): Promise<ApiResult<{ ok: boolean; activePage?: ProjectPageDto; canvasWorkspaceId: string }>> {
+  return request<{ ok: boolean; activePage?: ProjectPageDto; canvasWorkspaceId: string }>(
+    WORKFLOW_API_ROUTES.workspaceProjectPageItem(encodeURIComponent(workspaceId), encodeURIComponent(pageId)),
+    { method: 'PATCH', body: { active: true } },
+  );
+}
