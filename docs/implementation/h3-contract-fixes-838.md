@@ -1,4 +1,6 @@
-# H3 六项修复工程报告（待独立 QA）
+# H3 六项修复工程报告（待第二轮独立 QA）
+
+> 本文原工程记录的构建缺失已被首轮独立 QA 的正式构建结果取代：gateway build-web、go build、make test，以及 workflow 三 bundle、registry、Stage 均通过。首轮 QA 仍发现 F1–F3，原工程 IS_PASS 不构成独立放行。第二轮源码返修与精确修订见 [第二轮工程报告](h3-contract-fixes-838-round2.md)；首轮 QA 原文与反例保留在 `qa-evidence/h3-edward/`，未改预期。
 
 ## 固定范围
 
