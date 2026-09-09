@@ -13,9 +13,8 @@ export const GUIDE_CSS = `
   margin-top:0!important; margin-bottom:16px!important;
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
-.omnimux-starter-materials { order:1; }
 .omnimux-starter-guide { order:3; }
-.omnimux-starter-guide, .omnimux-starter-materials {
+.omnimux-starter-guide {
   width:calc(100% - 2 * var(--dsh-composer-side-clearance,16px));
   max-width:var(--dsh-chat-content-width); box-sizing:border-box; margin-inline:auto;
   min-width:0; color:var(--dsw-alias-label-primary); font-family:inherit; font-size:13px; line-height:1.5;
@@ -48,21 +47,10 @@ export const GUIDE_CSS = `
 .omnimux-starter-label { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px; font-size:11px; font-weight:400; line-height:16px; }
 .omnimux-starter-cards button:hover { background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary); }
 .omnimux-starter-cards button:hover .omnimux-starter-icon { border-color:var(--dsw-alias-label-secondary); }
-.omnimux-starter-guide button:focus-visible, .omnimux-starter-materials :is(input,textarea,button):focus-visible {
+.omnimux-starter-guide button:focus-visible {
   outline:2px solid var(--dsw-alias-label-primary); outline-offset:2px;
 }
-.omnimux-starter-materials label { display:block; margin-bottom:6px; font-weight:500; }
-.omnimux-starter-materials :is(input,textarea) {
-  display:block; width:100%; box-sizing:border-box; min-width:0; padding:5px 10px;
-  border:1px solid var(--dsw-alias-border-l2); border-radius:8px;
-  background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary); font:inherit;
-}
-.omnimux-starter-materials input { height:32px; }
-.omnimux-starter-materials textarea { min-height:56px; resize:vertical; }
-.omnimux-starter-materials :is(input,textarea):disabled { opacity:0.65; }
-.omnimux-starter-materials p { margin:6px 0 0; font-size:12px; color:var(--dsw-alias-label-secondary); }
-.omnimux-starter-material-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-.omnimux-starter-material-actions button, .omnimux-starter-notice button {
+.omnimux-starter-notice button {
   box-sizing:border-box; height:32px; padding:4px 10px; border:1px solid var(--dsw-alias-border-l2); border-radius:8px;
   font:inherit; color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-layer-1); cursor:pointer;
 }

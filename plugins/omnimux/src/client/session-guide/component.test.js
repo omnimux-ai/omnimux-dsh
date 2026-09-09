@@ -12,7 +12,7 @@ const module = { exports: {} }
 new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
 const { SessionGuide } = module.exports
 
-test('session guide uses owner actions, directly switches edited drafts, and flushes pending URLs before send', async () => {
+test('session guide switches drafts without a reference panel or send interception', async () => {
   const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
   globalThis.window = dom.window
@@ -24,14 +24,11 @@ test('session guide uses owner actions, directly switches edited drafts, and flu
   let draft = ''
   let phase = 'plain'
   let blank = true
-  let pendingSubmit = false
   let writes = 0
   let sends = 0
-  const materialCalls = []
-  const props = () => ({ sessionId: owner, useSession: selector => selector({ blank, pendingSubmissions: pendingSubmit ? [{}] : [] }), useConversation: selector => selector({ activeTargets: new Set() }),
+  const props = () => ({ sessionId: owner, useSession: selector => selector({ blank }), useConversation: selector => selector({ activeTargets: new Set() }),
     useInput: selector => selector({ draft, phase }), inputActions: { setDraft(value) { draft = value; writes++ } },
     getCurrentSessionId: () => owner, store, t: key => key,
-    getMaterials: () => ({ openLibrary: id => materialCalls.push(id), addFiles: async id => materialCalls.push(id) }),
   })
   const render = () => act(async () => root.render(React.createElement(SessionGuide, props())))
   const click = async selector => act(async () => document.querySelector(selector).click())
@@ -53,39 +50,13 @@ test('session guide uses owner actions, directly switches edited drafts, and flu
     assert.equal(draft, `guide.${second}.prompt`)
     assert.equal(store.get(owner).selectedId, second)
     assert.equal(sends, 0, 'choosing a task never submits')
-    await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'https://example.com/video' }))
+    for (const button of document.querySelectorAll('[data-starter-id]')) {
+      await click(`[data-starter-id="${button.dataset.starterId}"]`)
+      await render()
+      assert.equal(document.querySelector('.omnimux-starter-materials'), null)
+    }
     await click('[data-send-button]')
-    assert.equal(sends, 0)
-    assert.match(draft, /https:\/\/example.com\/video/)
-    await render()
-    await click('[data-send-button]')
-    assert.equal(sends, 1)
-    const acceptedDraft = draft
-    pendingSubmit = true; draft = ''
-    await render()
-    assert.equal(store.get(owner).manualUrl, false, 'optimistic clear is not a user edit')
-    pendingSubmit = false; draft = acceptedDraft
-    await render()
-    assert.equal(store.get(owner).manualUrl, false, 'failed submission keeps URL editable')
-    phase = 'claimed'
-    await render()
-    await click('[data-send-button]')
-    assert.equal(sends, 2, 'unchanged references must not block command input')
-    phase = 'plain'
-    await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'https://example.com/a\nhttps://example.com/b' }))
-    await click('[data-send-button]')
-    await render()
-    await click('[data-starter-id="recreate-viral-ads"]')
-    await render()
-    assert.equal(document.querySelector('.omnimux-starter-materials textarea').value, 'https://example.com/a\nhttps://example.com/b')
-    await click('[data-send-button]')
-    assert.equal(sends, 3, 'multiple retained references remain sendable after changing card')
-    await act(async () => store.set(owner, { ...store.get(owner), urlValue: 'invalid' }))
-    await render()
-    await click('[data-send-button]')
-    assert.equal(sends, 3)
-    await click('.omnimux-starter-material-actions button:first-child')
-    assert.deepEqual(materialCalls, ['A'])
+    assert.equal(sends, 1, 'normal send needs no extra synchronization gesture')
     owner = 'B'
     draft = ''
     await render()
