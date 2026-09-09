@@ -1,6 +1,27 @@
 # #832 离线恢复 runbook / 本地 PR 草稿
 
-## 状态与固定范围
+## 当前交付快照（2026-09-09 12:25，覆盖下方历史计划的当前状态）
+
+**BLOCKED / 不可合并；仅准备 Draft PR，不 merge、不部署。** 下方原始恢复计划与第6节旧草稿完整保留，记录当时的654测试、48推荐与远端限制，不是当前事实；发布 PR 使用本节最新口径。
+
+- 已读取[最终第二轮分页独立 QA](issue-832-pagination-round2-qa.md)及其新增4项测试。固定源码 HEAD `1e86ec64e81332fa4aaaa022745dd2b6db724975`，独立实绩 **687 tests / 687 pass / 0 fail / 0 cancelled / 0 skipped，8 suites**；无新源码 bug，QH1原反例通过。工程683、历史654不重写、不叠加；本轮不重复测试。
+- 用户已接受「采用真实近似 Skill，缺失暂不展示」，以[最终准入名单](issue-832-home-recommendations-approved-list.md)为准，不要求凑16/9项。实际 **homepage=1 / global featured=49**；首页唯一 `sk-bggg-data-amazon`（BGGG Amazon Data / Amazon评论采集，不冒称完整评论优化）。旧48精选身份/资格保持；首页增量仅1张真正新封面 `catalog/covers/home/bggg-data-amazon.png`。
+- 资源比较边界：round2对 `1e4510308a2d2bfd0c079bf25659efad10b62f9c` 验证旧310个catalog对象及48张封面不变；当前总311对象/193 Skills。整条任务分支相对远端共同祖先还包含早期3张封面替换，不能将“首页增量旧48保持”误称为“整个PR未改旧封面”。
+- 最新远端 base 已 fetch：`origin/main=e3f71ae6097c49ed507130d7ece566f73ad78386`；共同祖先 `867b192ecf6aa35be4e1639db7351a89bea782c7`；输入HEAD相对远端 ahead8/behind5，提交QA后ahead9/behind5。任务差异原55文件，加两份QA后57文件；远端新增路径与任务路径无交集。不自动 merge/rebase，不修改主树。
+- 已只读核对最新远端 Git/PR 合同（updated 2026-09-09）及 plugin-qa：合同原文「测试、L2 或浏览器验收失败阻止合并和交付声明；Agent 在既有范围和风险内继续诊断、修复、复验。」任务授权覆盖push/PR，合同未禁止未验Draft；用户本轮明确允许在此条件下push及Draft，明确禁止merge/部署。不自打qa:pass，不绕required checks。
+- 本轮仅提交 `issue-832-pagination-round2-qa.md` 与 `home-pagination-round2.qa.test.js` 两份QA产物；本文追加更新留在本地不纳入该commit。业务源码、历史QA原文不改。
+- **运行仍BLOCKED，依赖 #839** 正式受管兼容viewer制品/receipt及实际任务消费证据；未重复viewer哈希、Host启动或采用未纳管包。L2 / ego-browser / verify:live、宽屏/分屏/375px、中英/深浅、草稿附件保护、Tab及真实图片路由未签字。旧tgz不代表分页修复。
+- 恢复时第5节“全48推荐”应执行当前双集合验收：首页1、全局49（旧48保留）、1张首页新封面，另验证早期3张修订封面；分页须验证实际第二页、跨页去重及搜索/分类。其余状态保护矩阵保留。新运行必须绑定实际最终HEAD，不改旧报告SHA。
+- PR标题：`[BLOCKED] fix(market): Skill workshop, home recommendations and pagination (#832)`；正文关联 `Closes #832` 与 `Blocked by #839`，明确Draft/不可合并、R1、离线PASS不等于整体PASS。实际commit、PR URL及CI初始状态在发布后追加；不等待CI结束。
+
+### 实际远端回执（2026-09-09 12:27 Asia/Shanghai）
+
+- QA commit：`c70436bbfcc57e6476598604ffa9c7946b33370b`，仅2文件/156行新增；普通push成功，远端任务分支与本地HEAD一致。
+- Draft PR：[#855](https://github.com/omnimux-ai/omnimux-dsh/pull/855)，`state=OPEN`、`isDraft=true`、`mergeStateStatus=BEHIND`；base `e3f71ae6097c49ed507130d7ece566f73ad78386`，head同上。关联Closes #832与Blocked by #839，无merge/部署。
+- 实际CI初始状态：[Quality Gate & Auto QA run 34311019804](https://github.com/omnimux-ai/omnimux-dsh/actions/runs/34311019804)，`Static L0 QA & Tests=IN_PROGRESS`，startedAt `2026-09-09T04:27:11Z`，conclusion为空；不是PASS。本轮只取初始状态、不忙等或建立CI轮询。
+- 工作树唯一未提交文件为本文；历史原文保留、最新草稿在PR正文。未启动任何后台job。
+
+## 历史状态与固定范围（原文保留）
 
 2026-09-09：**仅文档交付；运行未验、远端未提交，整体仍 BLOCKED，不具备 qa:pass / 合入 / 归档条件。** 本轮不启动环境、不重复 viewer 哈希核验、不重跑 654 测试、不改业务代码，不 push / 创建 PR / merge / 物化。
 
