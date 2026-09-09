@@ -171,3 +171,29 @@ describe('session-scoped replication prefill', () => {
     assert.deepEqual(await first, { ok: true, via: 'input-actions' })
   })
 })
+
+it('readback handoff does not claim success from a void setDraft call', async () => {
+  let rollbacks = 0
+  const completion = queueSessionPrefill({ targetSessionId: 's', prompt: 'expected', requireReadback: true, timeoutMs: 5,
+    attach: () => ({ ok: true, rollback: () => { rollbacks++ } }) })
+  const intent = getPendingSessionPrefill()
+  assert.equal(consumeSessionPrefill(intent, { sessionId: 's', draft: '', inputActions: { setDraft() {} } }), 'waiting')
+  assert.equal(getPendingSessionPrefill(), intent)
+  assert.deepEqual(await completion, { ok: false, error: 'composer-missing' })
+  assert.equal(rollbacks, 1)
+  assert.equal(consumeSessionPrefill(intent, { sessionId: 's', draft: 'expected' }), 'waiting')
+})
+it('readback requires the exact prompt from the intended session and protects native images', async () => {
+  const done = queueSessionPrefill({ targetSessionId: 's', prompt: 'expected', requireReadback: true, attach: () => ({ ok: true }) })
+  const intent = getPendingSessionPrefill()
+  consumeSessionPrefill(intent, { sessionId: 's', draft: '', inputActions: { setDraft() {} } })
+  assert.equal(consumeSessionPrefill(intent, { sessionId: 'other', draft: 'expected' }), 'waiting')
+  assert.equal(consumeSessionPrefill(intent, { sessionId: 's', draft: 'different' }), 'waiting')
+  assert.equal(consumeSessionPrefill(intent, { sessionId: 's', draft: 'expected' }), 'consumed')
+  assert.equal((await done).ok, true)
+  let added = false
+  const blocked = queueSessionPrefill({ targetSessionId: 's', prompt: 'expected', attach: () => { added = true; return { ok: true } } })
+  consumeSessionPrefill(getPendingSessionPrefill(), { sessionId: 's', draft: '', protected: true })
+  assert.deepEqual(await blocked, { ok: false, error: 'draft-protected' })
+  assert.equal(added, false)
+})
