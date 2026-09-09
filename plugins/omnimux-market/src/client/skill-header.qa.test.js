@@ -15,7 +15,7 @@ function workshop(initial = {}, api = async () => ({})) {
   const state = new Map(Object.entries(initial).map(([key, value]) => [Number(key), value]))
   let cursor = 0
   const render = runInNewContext(`${source}\nSkillPlaza`, {
-    h, SkillShelf, api, Drawer: 'Drawer', useTr: () => key => key, lookup: key => key,
+    h, SkillShelf, api, fmt: value => String(value), iconSrc: value => value, Drawer: 'Drawer', useTr: () => key => key, lookup: key => key,
     useState: value => {
       const index = cursor++
       if (!state.has(index)) state.set(index, value)

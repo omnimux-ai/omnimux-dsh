@@ -292,8 +292,8 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(skillPlazaSrc, /hover-btn-try/)
   })
 
-  it('category featured hides other skills regular section (AC-14, AC-11)', () => {
-    assert.match(skillPlazaSrc, /category === "featured" \? null :/)
+  it('category featured hides regular section only without a submitted search', () => {
+    assert.match(skillPlazaSrc, /category === "featured" && !hasQuery \? null :/)
   })
 
   it('install modal provides drag & drop and requirements notice', () => {

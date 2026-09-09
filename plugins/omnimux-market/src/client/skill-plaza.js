@@ -226,10 +226,7 @@
 
       const applySearchBody = (d, mode) => {
         const filterCat = category === "featured" ? "" : category;
-        let next = SkillShelf.filterPlazaShelf(d.items || [], filterCat);
-        if (category === "featured") {
-          next = next.filter((it) => it && (it.recommended === true || it.featured === true || (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured")))));
-        }
+        const next = (d.items || []).filter((item) => !filterCat || SkillShelf.matchesDomainTag(item, filterCat));
         const isFallback = !!d.fallback;
         setFallback(isFallback);
         const nextTotal = isFallback ? next.length : Math.min(Number(d.total) || 0, next.length);
@@ -323,20 +320,10 @@
         }
       };
 
-      const isFeaturedItem = (it) => {
-        if (!it) return false;
-        if (it.recommended === true || it.featured === true) return true;
-        if (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured"))) return true;
-        return false;
-      };
-
-      // 官方精选：根据当前 category 和 query 筛选推荐项
-      const featuredItems = items.filter(isFeaturedItem);
-      // 普通列表：扣除官方精选，且若 category === 'featured' 则不显示
-      let regularItems = items.filter((it) => !isFeaturedItem(it));
-      if (uninstalledOnly) {
-        regularItems = regularItems.filter((it) => !it.installed);
-      }
+      const hasQuery = Boolean(submitted.trim());
+      const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(items, {
+        category, query: submitted, uninstalledOnly, installedItems,
+      });
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
@@ -421,7 +408,7 @@
             h("input", {
               type: "text",
               value: searchQuery,
-              placeholder: tr("workshop.searchPlaceholder") || "搜索 Skill...",
+              placeholder: tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder"),
               onChange: (e) => setSearchQuery(e.target.value),
               onKeyDown: (e) => {
                 if (e.key === "Enter") {
@@ -556,10 +543,10 @@
           ) : null,
 
           // 其他Skill区块（在精选分类下不显示普通区）
-          category === "featured" ? null : h("section", { className: "regular-section" },
+          category === "featured" && !hasQuery ? null : h("section", { className: "regular-section" },
             h("div", { className: "regular-header" },
               h("div", { className: "regular-title-row" },
-                h("span", null, tr("workshop.otherTitle") || "其他Skill"),
+                h("span", null, tr(hasQuery ? "workshop.searchResults" : "workshop.otherTitle")),
                 h("span", { className: "regular-title-count" }, " · " + (regularItems.length)),
               ),
               h("div", { className: "regular-controls" },
@@ -598,6 +585,7 @@
               )),
             ) : null,
           ),
+          hasMore ? h(Button, { size: "sm", variant: "outline", onClick: () => setPage(page + 1) }, tr("mkt.more")) : null,
         ),
 
         // 详情弹窗

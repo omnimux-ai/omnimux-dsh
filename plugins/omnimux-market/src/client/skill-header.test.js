@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { runInNewContext } from 'node:vm'
+import * as SkillShelf from './skill-picker-logic.js'
 
 const source = readFileSync(new URL('./skill-plaza.js', import.meta.url), 'utf8')
 const h = (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity) })
@@ -20,10 +21,10 @@ function renderWorkshop() {
   const stateWrites = []
   let index = 0
   const context = {
-    h, useTr: () => (key) => key,
+    h, fmt: value => String(value), iconSrc: value => value, useTr: () => (key) => key,
     useState: (initial) => { const key = index++; return [initial, (value) => stateWrites.push([key, value])] },
     useCallback: (fn) => fn, useEffect: () => {},
-    SkillShelf: { SKILL_SHELF_TAXONOMY: [] },
+    SkillShelf,
     createSkillSession: (options) => calls.push(options),
     Drawer: 'Drawer', lookup: (key) => key,
   }
