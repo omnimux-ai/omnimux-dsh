@@ -581,14 +581,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
+    if (materialType === 'image') return t('panel.imagePromptPlaceholder');
+    if (materialType === 'video') return t('panel.videoPromptPlaceholder');
     if (materialType !== 'audio' && upstreams.some((item) => item.materialType === 'text' && item.hasMedia)) return t('panel.supplementOptional');
     switch (materialType) {
       case 'text':
         return t('panel.textPromptPlaceholder');
-      case 'image':
-        return t('panel.imagePromptPlaceholder');
-      case 'video':
-        return t('panel.videoPromptPlaceholder');
       case 'audio':
         return isMusicOperation
           ? t('panel.musicPromptPlaceholder')
@@ -696,13 +694,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
           </div>
         </div>
       ) : null}
-
-      {upstreams.filter((item) => item.materialType === 'text' && item.hasMedia).map((item, index) => (
-        <div key={item.edgeId ?? item.nodeId} className="wf-config-panel__input-hint" data-testid="wf-current-text-source">
-          {t('panel.currentTextSource').replace('{source}', `${index + 1} · ${item.label}`).replace('{text}',
-            (item.textContent ?? '').length > 80 ? `${item.textContent!.slice(0, 80)}…` : (item.textContent ?? ''))}
-        </div>
-      ))}
 
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
@@ -866,11 +857,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               />
             </div>
           )}
-
-          {/* 生成数量 / 倍率标签（对齐图 2） */}
-          <span className="wf-config-panel__batch-tag" title="生成数量">
-            x {typeof (params as any)?.batch_size === 'number' ? (params as any).batch_size : typeof (params as any)?.count === 'number' ? (params as any).count : 1}
-          </span>
         </div>
 
         {/* 右侧生成按钮 */}
@@ -884,7 +870,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               nodeData.executionStatus === 'running'
               || resolveNodeLifecycle({ type: nodeData.materialType, data: nodeData as any }) === 'loading'
             }
-            creditCost={typeof (params as any)?.creditCost === 'number' ? (params as any).creditCost : 60}
           />
         </div>
       </div>
