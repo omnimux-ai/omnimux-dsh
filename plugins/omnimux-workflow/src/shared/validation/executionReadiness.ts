@@ -68,20 +68,6 @@ export function findExecutionReadinessFailure(
   catalog: CapabilityCatalog | null | undefined,
   graph?: ExecutionReadinessGraph,
 ): ExecutionReadinessFailure | null {
-  for (const node of nodes) {
-    if (node.type !== 'material' || resolveNodeKind(node.data ?? {}) !== 'generate') continue;
-    const params = node.data?.params && typeof node.data.params === 'object'
-      ? node.data.params as Record<string, unknown>
-      : {};
-    if (params.pendingVideoParamAdjustment && typeof params.pendingVideoParamAdjustment === 'object') {
-      return {
-        nodeId: node.id,
-        reasonCode: 'parameter_adjustment_required',
-        message: '视频参数调整等待确认；请确认建议调整或保留原值后重新提交',
-      };
-    }
-  }
-
   const view = buildContractView(catalog);
 
   for (const node of nodes) {

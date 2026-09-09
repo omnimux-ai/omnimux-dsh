@@ -142,7 +142,7 @@ describe('videoParamAdapter - validateAndFallbackVideoParams (W2)', () => {
     assert.equal(next.sound, true);
   });
 
-  it('holds a sole compatible operation replacement for explicit confirmation', () => {
+  it('automatically migrates a sole compatible operation replacement on model switch', () => {
     const transition = buildVideoParamTransition(
       { model: 'old', operation: 'obsolete_video_op', aspectRatio: '16:9', duration: 5 },
       {
@@ -160,10 +160,9 @@ describe('videoParamAdapter - validateAndFallbackVideoParams (W2)', () => {
         },
       },
     );
-    assert.equal(transition.params.operation, 'obsolete_video_op');
-    assert.equal(transition.pending?.suggestedParams.operation, 'video_edit');
-    assert.equal(transition.pending?.originalParams.operation, 'obsolete_video_op');
-    assert.match(transition.pending?.notices.join(' ') ?? '', /生成方式/);
+    assert.equal(transition.params.operation, 'video_edit');
+    assert.equal(transition.pending, undefined);
+    assert.deepEqual(transition.notices, []);
   });
 
   it('target schema without resolution/sound keeps dormant values for a reversible switch', () => {
@@ -196,7 +195,7 @@ describe('videoParamAdapter - validateAndFallbackVideoParams (W2)', () => {
     assert.equal(next.operation, 'text_to_video');
   });
 
-  it('holds existing Seedance values as a persisted proposal until confirmation', () => {
+  it('automatically adjusts Seedance values to target operation schema on transition', () => {
     const seedanceCatalog = {
       ...catalog,
       models: [
@@ -235,23 +234,13 @@ describe('videoParamAdapter - validateAndFallbackVideoParams (W2)', () => {
     }, { catalog: seedanceCatalog, nextOperationId: 'video_edit' });
 
     assert.equal(transition.params.operation, 'video_edit');
-    assert.equal(transition.params.duration, 5);
-    assert.equal(transition.params.aspectRatio, '16:9');
-    assert.equal(transition.params.referenceTaskType, 'reference');
-    assert.equal(transition.params.seed, 42);
-    assert.ok(transition.params.pendingVideoParamAdjustment);
-    assert.deepEqual(transition.pending?.suggestedParams, {
-      duration: -1,
-      aspectRatio: 'adaptive',
-      referenceTaskType: 'edit',
-      seed: 0,
-    });
-    assert.deepEqual(transition.pending?.originalParams, {
-      duration: 5,
-      aspectRatio: '16:9',
-      referenceTaskType: 'reference',
-      seed: 42,
-    });
+    assert.equal(transition.params.duration, -1);
+    assert.equal(transition.params.aspectRatio, 'adaptive');
+    assert.equal(transition.params.referenceTaskType, 'edit');
+    assert.equal(transition.params.seed, 0);
+    assert.equal(transition.params.pendingVideoParamAdjustment, undefined);
+    assert.equal(transition.pending, undefined);
+    assert.deepEqual(transition.notices, []);
 
     const current = resolveEffectiveVideoParams({
       params: transition.params,
@@ -259,27 +248,10 @@ describe('videoParamAdapter - validateAndFallbackVideoParams (W2)', () => {
       modelItem: { id: 'seedance-2.5', label: 'Seedance 2.5', parameters: {} },
       catalog: seedanceCatalog,
     });
-    assert.equal(current.duration, 5);
-    assert.equal(current.aspectRatio, '16:9');
-    assert.equal(current.referenceTaskType, 'reference');
-    assert.equal(current.seed, 42);
-    assert.deepEqual(applyPendingVideoParamAdjustment(transition.params), {
-      ...oldParams,
-      operation: 'video_edit',
-      ...transition.pending?.suggestedParams,
-    });
-    assert.deepEqual(applyPendingVideoParamAdjustment({ ...transition.params, duration: 7 }), {
-      ...oldParams,
-      operation: 'video_edit',
-      duration: 7,
-      aspectRatio: 'adaptive',
-      referenceTaskType: 'edit',
-      seed: 0,
-    }, 'confirm must not overwrite a parameter changed after the proposal was created');
-    assert.deepEqual(keepCurrentVideoParamValues(transition.params), {
-      ...oldParams,
-      operation: 'video_edit',
-    });
+    assert.equal(current.duration, -1);
+    assert.equal(current.aspectRatio, 'adaptive');
+    assert.equal(current.referenceTaskType, 'edit');
+    assert.equal(current.seed, 0);
   });
 
 });

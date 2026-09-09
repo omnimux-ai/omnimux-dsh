@@ -54,10 +54,7 @@ import { resolveEffectiveAudioParams, resolveAudioPromptGate, AUDIO_PROMPT_MAX_C
 import { resolveVoiceLabel } from './audioParams/voicePickerModel.ts';
 import { VoicePickerDialog } from './audioParams/VoicePickerDialog';
 import {
-  applyPendingVideoParamAdjustment,
   buildVideoParamTransition,
-  keepCurrentVideoParamValues,
-  readPendingVideoParamAdjustment,
   resolveEffectiveVideoParams,
   validateVideoParamsForUi,
 } from './videoParams/videoParamAdapter';
@@ -636,11 +633,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     }
   }, [materialType, isMusicOperation, isAsrTool, upstreams, t]);
 
-  const pendingVideoParamAdjustment = useMemo(
-    () => readPendingVideoParamAdjustment(params as Record<string, unknown>),
-    [params],
-  );
-
   const videoValidationErrors = useMemo(
     () => materialType === 'video' && videoEffectiveParams
       ? validateVideoParamsForUi({
@@ -654,7 +646,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   // Generate gate: blocked when zero effective ops / zero candidates / configuration_error /
-  // 必需卡槽空缺 / 待确认参数调整 / 执行中。
+  // 必需卡槽空缺 / 执行中。
   const nodeCompat = (nodeData as Record<string, unknown>).compat as
     | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[]; adaptation?: { toModelLabel: string; inputTypes: string[] } }
     | undefined;
@@ -664,7 +656,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     || nodeCompat?.status === 'configuration_error'
     || videoValidationErrors.length > 0
     || Boolean(audioPromptGate?.exceeded)
-    || Boolean(pendingVideoParamAdjustment)
     || missingRequiredSlots.length > 0
     || execBusy;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
@@ -672,7 +663,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const blockReason =
     (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
     || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
-    || pendingVideoParamAdjustment?.notices[0]
     || videoValidationErrors[0]
     || slotShortageReason;
   const adaptation = nodeCompat?.adaptation;
@@ -705,33 +695,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         <div className="wf-config-panel__validation-list" role="alert" data-testid="wf-video-validation-errors">
           <AlertTriangle size={14} aria-hidden="true" />
           <span>{videoValidationErrors.join('；')}</span>
-        </div>
-      ) : null}
-
-      {pendingVideoParamAdjustment ? (
-        <div className="wf-config-panel__param-notice" role="alert" data-testid="wf-video-param-notice">
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>{pendingVideoParamAdjustment.notices.join('；')}</span>
-          <div className="wf-config-panel__param-notice-actions">
-            <button
-              type="button"
-              className="wf-config-panel__param-notice-action"
-              onClick={() => onUpdateNodeData({
-                params: applyPendingVideoParamAdjustment(params as Record<string, unknown>),
-              })}
-            >
-              确认调整
-            </button>
-            <button
-              type="button"
-              className="wf-config-panel__param-notice-action wf-config-panel__param-notice-action--secondary"
-              onClick={() => onUpdateNodeData({
-                params: keepCurrentVideoParamValues(params as Record<string, unknown>),
-              })}
-            >
-              保留原值
-            </button>
-          </div>
         </div>
       ) : null}
 

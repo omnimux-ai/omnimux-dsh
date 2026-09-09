@@ -589,51 +589,6 @@ test('pinned schemas: workflow_* tool names and parameter contracts remain equal
   }
 });
 
-test('workflow_run blocks a persisted pending video parameter adjustment', async () => {
-  const h = makeHarness();
-  try {
-    const created = await h.call({
-      method: 'POST',
-      url: `${PREFIX}/api/workspaces`,
-      body: { name: '待确认参数' },
-    });
-    const workspaceId = created.body.workspace.id;
-    await h.call({
-      method: 'PUT',
-      url: `${PREFIX}/api/workspaces/${workspaceId}`,
-      body: {
-        expectedVersion: 0,
-        nodes: [{
-          id: 'video-pending',
-          type: 'material',
-          position: { x: 0, y: 0 },
-          data: {
-            label: '待确认视频',
-            materialType: 'video',
-            selectedTool: 'video-generation',
-            status: 'ready',
-            params: {
-              pendingVideoParamAdjustment: {
-                suggestedParams: { duration: -1 },
-                notices: ['时长将从 5 调整为 -1'],
-              },
-            },
-          },
-        }],
-        edges: [],
-      },
-    });
-    const result = await h.tool('workflow_run').execute({ workspace_id: workspaceId });
-    assert.equal(result.error, 'configuration_error');
-    assert.equal(result.reasonCode, 'parameter_adjustment_required');
-    assert.equal(result.nodeId, 'video-pending');
-  } finally {
-    h.dispose();
-    rmSync(h.dir, { recursive: true, force: true });
-  }
-});
-
-
 test('workflow_run blocks invalid model parameters even when operation is implicit', async () => {
   const catalog = {
     source: 'omnimux', text: [], image: [], audio: [], video: [],
