@@ -57,17 +57,17 @@ test('TC-737-03: SlotWells 空态 44px 大方圆角虚线框且绝无截断文�
   assert.match(slotWellsSrc, /<Plus\s+size=\{20\}/);
 });
 
-test('TC-737-04: GenerateButton 极简深色一体化（去汉字，方圆角粗白色 ArrowUp 发送按钮）', () => {
+test('TC-737-04: GenerateButton 极简深色一体化（去汉字，圆形白色 ArrowUp 发送按钮）', () => {
   // 不再渲染冗余汉字 label
   assert.doesNotMatch(generateBtnSrc, /<span className="wf-generate-btn__label">/);
   // 采用 ArrowUp 图标
   assert.match(generateBtnSrc, /<ArrowUp\s+size=\{16\}\s+strokeWidth=\{2\.5\}/);
   // 不再展示积分点数
   assert.doesNotMatch(generateBtnSrc, /wf-generate-btn__cost/);
-  // CSS 中定义了 32px 方圆角发送按钮
+  // CSS 中定义了 32px 圆形发送按钮
   assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?width:\s*32px/);
   assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?height:\s*32px/);
-  assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?border-radius:\s*8px/);
+  assert.match(themeCss, /\.wf-generate-btn__send\s*\{[\s\S]*?border-radius:\s*999px/);
 });
 
 test('TC-737-05: 底栏排版与全模态覆盖一致性', () => {
