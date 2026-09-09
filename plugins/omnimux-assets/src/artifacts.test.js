@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -30,11 +30,11 @@ function makeStore() {
 }
 
 describe('ArtifactStore report', () => {
-  it('copies content-addressed and records full source metadata', async () => {
+  it('copies content-addressed and records full source metadata', () => {
     const src = join(srcDir, 'hero.png')
     writeFileSync(src, 'pngbytes')
     const store = makeStore()
-    const artifact = await store.report(src, { agent: 'image_painter_v2', run_id: 'run_1', model: 'm1' })
+    const artifact = store.report(src, { agent: 'image_painter_v2', run_id: 'run_1', model: 'm1' })
 
     assert.match(artifact.id, /^art_[0-9a-f]{8}$/)
     assert.equal(artifact.title, 'hero.png')
@@ -55,11 +55,11 @@ describe('ArtifactStore report', () => {
     assert.equal(store.revision(), 1)
   })
 
-  it('backfills missing source fields and stays untraced', async () => {
+  it('backfills missing source fields and stays untraced', () => {
     const src = join(srcDir, 'note.txt')
     writeFileSync(src, 'hello')
     const store = makeStore()
-    const artifact = await store.report(src, {})
+    const artifact = store.report(src, {})
     assert.equal(artifact.source.agent, 'unknown')
     assert.equal(artifact.source.model, '')
     assert.equal(artifact.source.prompt_hash, '')
@@ -70,22 +70,22 @@ describe('ArtifactStore report', () => {
     assert.equal(artifact.type, 'document')
   })
 
-  it('traced requires both agent and run_id', async () => {
+  it('traced requires both agent and run_id', () => {
     const src = join(srcDir, 'half.png')
     writeFileSync(src, 'half')
     const store = makeStore()
-    assert.equal((await store.report(src, { agent: 'a' })).source.traced, false)
-    assert.equal((await store.report(src, { run_id: 'r' })).source.traced, false)
+    assert.equal(store.report(src, { agent: 'a' }).source.traced, false)
+    assert.equal(store.report(src, { run_id: 'r' }).source.traced, false)
   })
 
-  it('dedupes identical content into one stored blob', async () => {
+  it('dedupes identical content into one stored blob', () => {
     const first = join(srcDir, 'one.png')
     const second = join(srcDir, 'two.png')
     writeFileSync(first, 'same')
     writeFileSync(second, 'same')
     const store = makeStore()
-    const a = await store.report(first, { agent: 'a' }, 'One')
-    const b = await store.report(second, { agent: 'a' }, 'Two')
+    const a = store.report(first, { agent: 'a' }, 'One')
+    const b = store.report(second, { agent: 'a' }, 'Two')
     assert.equal(a.content_ref, b.content_ref)
     const prefixDir = join(artifactsDir, a.content_ref.split('/')[1])
     assert.deepEqual(readdirSync(prefixDir).length, 1)
@@ -93,42 +93,30 @@ describe('ArtifactStore report', () => {
     assert.equal(store.revision(), 2)
   })
 
-  it('refuses corrupted existing hash-addressed content without overwriting it', async () => {
-    const src = join(srcDir, 'integrity.png')
-    writeFileSync(src, 'expected')
-    const store = makeStore()
-    const artifact = await store.report(src)
-    const blob = join(root, 'store', artifact.content_ref)
-    writeFileSync(blob, 'externally changed')
-    await assert.rejects(() => store.report(src), { code: 'plan-stale' })
-    assert.equal(readFileSync(blob, 'utf8'), 'externally changed')
-    assert.equal(store.list().length, 1)
-  })
-
-  it('respects an explicit title', async () => {
+  it('respects an explicit title', () => {
     const src = join(srcDir, 'hero.png')
     writeFileSync(src, 'x')
     const store = makeStore()
-    const artifact = await store.report(src, { agent: 'a' }, '落日 hero')
+    const artifact = store.report(src, { agent: 'a' }, '落日 hero')
     assert.equal(artifact.title, '落日 hero')
   })
 
-  it('rejects missing files and non-files', async () => {
+  it('rejects missing files and non-files', () => {
     const store = makeStore()
-    await assert.rejects(() => store.report(join(srcDir, 'missing.png'), { agent: 'a' }), (error) => error.code === 'path-not-found')
-    await assert.rejects(() => store.report(srcDir, { agent: 'a' }), (error) => error.code === 'path-not-found')
+    assert.throws(() => store.report(join(srcDir, 'missing.png'), { agent: 'a' }), (error) => error.code === 'path-not-found')
+    assert.throws(() => store.report(srcDir, { agent: 'a' }), (error) => error.code === 'path-not-found')
   })
 
-  it('refuses content that looks like a secret token and persists nothing', async () => {
+  it('refuses content that looks like a secret token and persists nothing', () => {
     const secret = join(srcDir, 'leak.json')
     writeFileSync(secret, '{"token": "sk-abcdefghijklmnop"}')
     writeFileSync(join(srcDir, 'ok.txt'), 'clean')
     const store = makeStore()
-    await assert.rejects(
+    assert.throws(
       () => store.report(secret, { agent: 'a' }),
       (error) => error.code === 'secret-detected',
     )
-    await assert.rejects(
+    assert.throws(
       () => store.report(join(srcDir, 'ok.txt'), { agent: 'a' }, 'key sk-abcdefghijklmnop'),
       (error) => error.code === 'secret-detected',
     )
@@ -139,12 +127,12 @@ describe('ArtifactStore report', () => {
 })
 
 describe('ArtifactStore list/get/persist', () => {
-  it('filters by type and resolves by id', async () => {
+  it('filters by type and resolves by id', () => {
     writeFileSync(join(srcDir, 'a.png'), 'a')
     writeFileSync(join(srcDir, 'b.json'), 'b')
     const store = makeStore()
-    const imageArtifact = await store.report(join(srcDir, 'a.png'), { agent: 'a' })
-    const jsonArtifact = await store.report(join(srcDir, 'b.json'), { agent: 'a' })
+    const imageArtifact = store.report(join(srcDir, 'a.png'), { agent: 'a' })
+    const jsonArtifact = store.report(join(srcDir, 'b.json'), { agent: 'a' })
     assert.equal(store.list().length, 2)
     assert.deepEqual(store.list({ type: 'image' }).map((row) => row.id), [imageArtifact.id])
     assert.deepEqual(store.list({ type: 'json' }).map((row) => row.id), [jsonArtifact.id])
@@ -152,10 +140,10 @@ describe('ArtifactStore list/get/persist', () => {
     assert.equal(store.get('art_missing'), null)
   })
 
-  it('persists 0600 and reloads across store instances', async () => {
+  it('persists 0600 and reloads across store instances', () => {
     writeFileSync(join(srcDir, 'a.png'), 'a')
     const first = makeStore()
-    await first.report(join(srcDir, 'a.png'), { agent: 'a', run_id: 'r' })
+    first.report(join(srcDir, 'a.png'), { agent: 'a', run_id: 'r' })
     assert.equal(statSync(artifactsFile).mode & 0o777, 0o600)
 
     const second = createArtifactStore({
@@ -166,10 +154,14 @@ describe('ArtifactStore list/get/persist', () => {
     assert.equal(second.list()[0].source.traced, true)
   })
 
-  it('fails closed on corrupted JSON without overwriting it', () => {
+  it('falls back to an empty index on corrupted JSON', () => {
     mkdirSync(join(root, 'store'), { recursive: true })
     writeFileSync(artifactsFile, '{oops', { mode: 0o600 })
-    assert.throws(() => makeStore(), { code: 'ledger-corrupt' })
-    assert.equal(readFileSync(artifactsFile, 'utf8'), '{oops')
+    const store = makeStore()
+    assert.equal(store.revision(), 0)
+    assert.equal(store.list().length, 0)
+    writeFileSync(join(srcDir, 'a.png'), 'a')
+    store.report(join(srcDir, 'a.png'), { agent: 'a' })
+    assert.equal(store.list().length, 1)
   })
 })

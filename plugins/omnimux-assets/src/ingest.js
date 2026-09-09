@@ -17,9 +17,6 @@ import { statfsSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { AssetsError } from './mappings.js'
-import { SafeStorageFS } from './storage-fs.js'
-import { lstatSync, realpathSync } from 'node:fs'
-import { randomUUID } from 'node:crypto'
 
 export const DISK_HEADROOM_BYTES = 500 * 1024 * 1024
 export const DISK_SIZE_FACTOR = 1.5
@@ -142,10 +139,9 @@ export function resolveVaultRelPath(vaultRoot, rel) {
  * @returns {number}
  */
 export function measureBytes(abs, fs = DEFAULT_FS) {
-  const info = lstatSync(abs)
-  if (info.isSymbolicLink()) throw new AssetsError('path-denied', 'symbolic-link imports are not supported')
+  const info = fs.statSync(abs)
   if (info.isFile()) return Number(info.size) || 0
-  if (!info.isDirectory()) throw new AssetsError('path-denied', 'special files are not supported')
+  if (!info.isDirectory()) return 0
   let total = 0
   const names = (fs.readdirSync || readdirSync)(abs)
   for (const name of names) {
@@ -231,40 +227,15 @@ export async function copyIntoVault(opts) {
   if (!isInsideDir(opts.destDir, opts.vaultRoot)) {
     throw new AssetsError('path-denied', 'destination escapes assets vault')
   }
-  if (!opts.safeFS) fs.mkdirSync(opts.vaultRoot, { recursive: true, mode: 0o700 })
-  const metadata = opts.safeFS && info.isDirectory() ? await opts.safeFS.request('scan', { root: sourceAbs, metadataOnly: true }) : null
-  if (metadata?.excluded.length) throw new AssetsError('path-denied', 'directory includes unsafe or unreadable entries')
-  const incoming = metadata ? metadata.entries.reduce((sum, row) => sum + (row.kind === 'file' ? Number(row.size) : 0), 0) : measureBytes(sourceAbs, fs)
+  fs.mkdirSync(opts.destDir, { recursive: true, mode: 0o700 })
+  const incoming = measureBytes(sourceAbs, fs)
   assertDiskSpace(opts.vaultRoot, incoming, opts.statfs ?? fs.statfsSync ?? statfsSync)
   const name = uniqueName(opts.destDir, opts.originalName || basename(sourceAbs.replace(/\/+$/, '')), fs)
   const destAbs = join(opts.destDir, name)
   if (!isInsideDir(destAbs, opts.vaultRoot)) {
     throw new AssetsError('path-denied', 'destination escapes assets vault')
   }
-  const safe = opts.safeFS ?? new SafeStorageFS()
-  try {
-    if (!opts.safeFS) await safe.probe()
-    if (lstatSync(sourceAbs).isSymbolicLink()) throw new AssetsError('path-denied', 'symbolic-link imports are not supported')
-    const sourceRoot = realpathSync(dirname(sourceAbs))
-    const sourceRel = basename(sourceAbs)
-    const destinationRel = toVaultRelativePath(opts.vaultRoot, destAbs)
-    const copy = async (fromRoot, fromRel, targetRel) => {
-      const expected = await safe.hash(fromRoot, fromRel)
-      const stagedRel = `data/.staging/${randomUUID()}`
-      await safe.copyVerify({ sourceRoot: fromRoot, sourceRel: fromRel, root: opts.vaultRoot, targetRel: stagedRel, expected, reserve: DISK_HEADROOM_BYTES })
-      await safe.install({ root: opts.vaultRoot, stagedRel, rel: targetRel, sha256: expected.sha256 })
-    }
-    if (info.isDirectory()) {
-      const scan = await safe.scan(sourceAbs)
-      if (scan.excluded.length) throw new AssetsError('path-denied', 'directory includes links, special files, or unreadable entries')
-      await safe.mkdir(opts.vaultRoot, destinationRel)
-      for (const row of scan.entries) {
-        const targetRel = `${destinationRel}/${row.relative_path}`
-        if (row.kind === 'directory') await safe.mkdir(opts.vaultRoot, targetRel)
-        else await copy(sourceAbs, row.relative_path, targetRel)
-      }
-    } else await copy(sourceRoot, sourceRel, destinationRel)
-  } finally { if (!opts.safeFS) safe.dispose() }
+  await copyTree(sourceAbs, destAbs, fs)
   return {
     destAbs,
     relativePath: toVaultRelativePath(opts.vaultRoot, destAbs),
@@ -294,7 +265,7 @@ export function copyIntoVaultSync(opts) {
   if (!isInsideDir(opts.destDir, opts.vaultRoot)) {
     throw new AssetsError('path-denied', 'destination escapes assets vault')
   }
-  fs.mkdirSync(opts.vaultRoot, { recursive: true, mode: 0o700 })
+  fs.mkdirSync(opts.destDir, { recursive: true, mode: 0o700 })
   const incoming = measureBytes(sourceAbs, fs)
   assertDiskSpace(opts.vaultRoot, incoming, opts.statfs ?? fs.statfsSync ?? statfsSync)
   const name = uniqueName(opts.destDir, opts.originalName || basename(sourceAbs.replace(/\/+$/, '')), fs)

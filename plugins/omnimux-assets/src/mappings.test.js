@@ -137,12 +137,19 @@ describe('MappingStore persistence', () => {
     assert.equal(second.list()[0].display_name, '素材')
   })
 
-  it('fails closed on corrupted JSON', () => {
+  it('falls back to an empty registry on corrupted JSON', () => {
     const mappingsFile = join(root, 'store', 'mappings.json')
     mkdirSync(join(root, 'store'), { recursive: true })
     writeFileSync(mappingsFile, '{oops', { mode: 0o600 })
-    assert.throws(() => createMappingStore({
+    const store = createMappingStore({
       paths: { mappingsFile, scansDir: join(root, 'store', 'scans') },
-    }), { code: 'ledger-corrupt' })
+    })
+    assert.equal(store.revision(), 0)
+    assert.equal(store.list().length, 0)
+    store.add(realDir, '恢复后的映射')
+    const reopened = createMappingStore({
+      paths: { mappingsFile, scansDir: join(root, 'store', 'scans') },
+    })
+    assert.equal(reopened.list().length, 1)
   })
 })

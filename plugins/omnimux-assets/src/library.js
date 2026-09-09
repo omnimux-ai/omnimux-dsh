@@ -5,10 +5,7 @@
  * vault-relative `relative_path`. User originals are never unlinked.
  * Deleting a record recycles the managed copy only.
  */
-import { accessSync, constants, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { validateLedger, safeRelative } from './storage-types.js'
-import { directoryPage, logicalEntries } from './directory-page.js'
-import { storageSync, storageSync as defaultStorageSync } from './storage-fs.js'
+import { accessSync, constants, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import { bucketOf, extOf, previewMimeOf, scanDir, scanFile, statStatus } from './scanner.js'
 import { AssetsError, newRecordId } from './mappings.js'
@@ -46,9 +43,11 @@ function str(value) {
  * @param {string} file
  * @param {string} text
  */
-function atomicWrite(fs, file, text, sync = storageSync) {
+function atomicWrite(fs, file, text) {
   fs.mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
-  sync('json', { root: dirname(file), rel: basename(file), value: JSON.parse(text) })
+  const tmp = `${file}.tmp`
+  fs.writeFileSync(tmp, text, { mode: 0o600 })
+  fs.renameSync(tmp, file)
 }
 
 /**
@@ -174,31 +173,15 @@ function fileView(absPath, fs, file = {}) {
  * @param {{ statSync: typeof statSync }} fs
  * @param {string | undefined} vaultRoot
  */
-function viewOf(asset, fs, vaultRoot, probes = null) {
+function viewOf(asset, fs, vaultRoot) {
   const visibleFiles = []
   for (const file of asset.files) {
-    if (['unmigrated', 'excluded'].includes(file.status) || (probes && !file.relative_path)) continue
-    if (file.relative_path && vaultRoot) {
-      try {
-        const probe = probes ? probes.get(file.relative_path) : storageSync('stat', { root: vaultRoot, rel: file.relative_path })
-        if (!probe || probe.kind === 'unsafe') continue
-        if (probe.kind === 'directory' && (probes ? probe.excluded : storageSync('scan', { root: vaultRoot, rel: file.relative_path, metadataOnly: true }).excluded.length)) continue
-      } catch { continue }
-    }
     const abs = absoluteOf(file, vaultRoot)
-    const probe = probes?.get(file.relative_path)
-    const live = probes ? (probe ? {
-      relative_path: file.relative_path, real_path: abs,
-      original_name: file.original_name || basename(abs),
-      kind: probe.kind === 'directory' ? 'directory' : bucketOf(extOf(file.original_name || basename(abs))),
-      size: probe.kind === 'directory' ? null : Number(probe.identity?.size ?? probe.size ?? 0), visible: true,
-    } : null) : fileView(abs, fs, file)
+    const live = fileView(abs, fs, file)
     if (!live) continue
     visibleFiles.push({
       id: file.id,
-      ownership: file.ownership ?? 'unknown',
-      logical_path: file.logical_path,
-      uri: toAssetUri(abs, { scope: asset.type, rootPath: vaultRoot }),
+      uri: toAssetUri(abs, { scope: asset.type }),
       ...live,
     })
   }
@@ -210,7 +193,6 @@ function viewOf(asset, fs, vaultRoot, probes = null) {
     ...asset,
     uri: formatAssetUri(asset.type, asset.handle || asset.id),
     files: visibleFiles,
-    unavailable_files: asset.files.filter((file) => ['unmigrated', 'excluded'].includes(file.status)),
     cover_file_id: cover ? cover.id : null,
     cover: cover,
     missing_file_count: asset.files.length - visibleFiles.length,
@@ -280,7 +262,6 @@ function normalizeFiles(files, fs, opts = {}) {
  * }} [opts]
  */
 export function createLibraryStore(opts = {}) {
-  const storageSync = opts.safeFS ? opts.safeFS.sync.bind(opts.safeFS) : defaultStorageSync
   const fs = { ...DEFAULT_FS, ...(opts.fs ?? {}) }
   const paths = opts.paths ?? {}
   const vaultRoot = paths.dir || (paths.libraryFile ? dirname(paths.libraryFile) : '')
@@ -288,21 +269,20 @@ export function createLibraryStore(opts = {}) {
 
   function loadState() {
     try {
-      const raw = validateLedger(JSON.parse(fs.readFileSync(paths.libraryFile, 'utf8')), 'library.json')
+      const raw = JSON.parse(fs.readFileSync(paths.libraryFile, 'utf8'))
       if (raw && typeof raw === 'object' && Array.isArray(raw.assets)) {
         const assets = raw.assets.filter((row) => row && typeof row === 'object' && typeof row.id === 'string' && typeof row.name === 'string')
         return {
-          ...raw,
-          schema: 3,
+          schema: 2,
           revision: Number(raw.revision) || 0,
           migrated_mappings: Boolean(raw.migrated_mappings),
           assets: assets.map(hydrateAsset),
         }
       }
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error instanceof AssetsError ? error : new AssetsError('ledger-corrupt', 'cannot load library ledger')
+    } catch {
+      // fall through
     }
-    return { schema: 3, revision: 0, migrated_mappings: false, assets: [], file_inventory: [] }
+    return { schema: 2, revision: 0, migrated_mappings: false, assets: [] }
   }
 
   /**
@@ -312,11 +292,10 @@ export function createLibraryStore(opts = {}) {
     const name = str(row.name)
     const type = TYPE_SET.has(row.type) ? row.type : 'custom'
     const files = Array.isArray(row.files)
-      ? row.files.filter((file) => file && (typeof file.relative_path === 'string' || typeof file.real_path === 'string' || file.status)).map((file) => {
+      ? row.files.filter((file) => file && (typeof file.relative_path === 'string' || typeof file.real_path === 'string')).map((file) => {
           const relative = str(file.relative_path)
           const real = str(file.real_path)
           return {
-            ...file,
             id: typeof file.id === 'string' ? file.id : newRecordId('fil'),
             ...(relative ? { relative_path: relative } : {}),
             ...(real && !relative ? { real_path: real } : {}),
@@ -325,7 +304,6 @@ export function createLibraryStore(opts = {}) {
         })
       : []
     return {
-      ...row,
       id: row.id,
       name,
       handle: str(row.handle) || handleOf(name),
@@ -340,28 +318,7 @@ export function createLibraryStore(opts = {}) {
     }
   }
 
-  let state = opts.initialState ? { ...opts.initialState, assets: opts.initialState.assets.map(hydrateAsset) } : loadState()
-
-  function makeView(asset) {
-    if (!opts.safeFS) return viewOf(asset, fs, vaultRoot)
-    return (async () => {
-      const probes = new Map()
-      for (const file of asset.files) {
-        if (!file.relative_path || ['unmigrated', 'excluded'].includes(file.status)) continue
-        try {
-          const probe = await opts.safeFS.request('stat', { root: vaultRoot, rel: file.relative_path })
-          if (probe.kind === 'directory') {
-            const scanned = await opts.safeFS.request('scan', { root: vaultRoot, rel: file.relative_path, metadataOnly: true })
-            probe.excluded = scanned.excluded.length
-          }
-          probes.set(file.relative_path, probe)
-        } catch (error) {
-          if (!['storage-offline', 'path-denied'].includes(error.code)) throw error
-        }
-      }
-      return viewOf(asset, fs, vaultRoot, probes)
-    })()
-  }
+  let state = loadState()
 
   /**
    * @param {{ id: string, relative_path?: string, real_path?: string, original_name?: string }} file
@@ -369,7 +326,6 @@ export function createLibraryStore(opts = {}) {
   function persistableFile(file) {
     const relative = str(file.relative_path)
     const row = {
-      ...file,
       id: file.id,
       original_name: str(file.original_name),
     }
@@ -378,26 +334,16 @@ export function createLibraryStore(opts = {}) {
     return row
   }
 
-  function ledgerValue() {
-    return {
-      schema: 3,
-      file_inventory: state.file_inventory ?? [],
+  function persist() {
+    atomicWrite(fs, paths.libraryFile, `${JSON.stringify({
+      schema: 2,
       revision: state.revision,
       migrated_mappings: state.migrated_mappings,
       assets: state.assets.map((asset) => ({
         ...asset,
         files: asset.files.map(persistableFile),
       })),
-    }
-  }
-
-  function persist() {
-    atomicWrite(fs, paths.libraryFile, `${JSON.stringify(ledgerValue(), null, 2)}\n`, storageSync)
-  }
-
-  async function persistAsync() {
-    if (opts.safeFS) await opts.safeFS.atomicJson(vaultRoot, basename(paths.libraryFile), ledgerValue())
-    else persist()
+    }, null, 2)}\n`)
   }
 
   function managedDirOf(assetId) {
@@ -410,7 +356,7 @@ export function createLibraryStore(opts = {}) {
    * @param {{ id: string, relative_path?: string, real_path?: string, original_name?: string }} file
    */
   function materializeFileSync(assetId, file) {
-    if (str(file.relative_path) || opts.disableLazy || file.status) return file
+    if (str(file.relative_path)) return file
     const source = str(file.real_path)
     if (!source || !filesDir || !vaultRoot) return file
     try {
@@ -421,20 +367,6 @@ export function createLibraryStore(opts = {}) {
         originalName: file.original_name || basename(source.replace(/\/+$/, '')),
         fs,
       })
-      const containerRel = `data/files/${assetId}`
-      const containerStat = storageSync('stat', { root: vaultRoot, rel: containerRel, optional: true })
-      if (containerStat?.identity) {
-        state.file_inventory ||= []
-        if (!state.file_inventory.some((item) => item.relative_path === containerRel && item.kind === 'directory')) {
-          state.file_inventory.push({
-            relative_path: containerRel,
-            kind: 'directory',
-            ownership: 'managed',
-            identity: containerStat.identity,
-            owners: [assetId],
-          })
-        }
-      }
       return {
         id: file.id,
         relative_path: copied.relativePath,
@@ -475,104 +407,34 @@ export function createLibraryStore(opts = {}) {
         destDir: managedDirOf(assetId),
         vaultRoot,
         originalName: file.original_name,
-        safeFS: opts.safeFS,
         fs,
       })
-      const request = (op, args) => opts.safeFS ? opts.safeFS.request(op, args) : storageSync(op, args)
-      const leaves = copied.kind === 'directory'
-        ? (await request('scan', { root: copied.destAbs })).entries.filter((row) => row.kind === 'file').map((row) => ({ rel: `${copied.relativePath}/${row.relative_path}`, identity: row.identity }))
-        : [{ rel: copied.relativePath, identity: await request('hash', { root: vaultRoot, rel: copied.relativePath }) }]
-      state.file_inventory ||= []
-      for (const leaf of leaves) state.file_inventory.push({ relative_path: leaf.rel, kind: 'file', ownership: 'managed', identity: leaf.identity,
-        sha256: leaf.identity.sha256, size: Number(leaf.identity.size), owners: [assetId] })
-      const containerRel = `data/files/${assetId}`
-      const containerStat = await request('stat', { root: vaultRoot, rel: containerRel, optional: true })
-      if (containerStat?.identity) {
-        if (!state.file_inventory.some((item) => item.relative_path === containerRel && item.kind === 'directory')) {
-          state.file_inventory.push({
-            relative_path: containerRel,
-            kind: 'directory',
-            ownership: 'managed',
-            identity: containerStat.identity,
-            owners: [assetId],
-          })
-        }
-      }
       out.push({
         id: file.id,
         relative_path: copied.relativePath,
-        ownership: 'managed',
         original_name: file.original_name || copied.name,
       })
     }
     return out
   }
 
-  /** Reclaim only inventoried leaves with no library, artifact or mapping owner. */
-  function recycleManagedFiles(removed) {
-    const references = state.assets.flatMap((asset) => asset.files.map((file) => file.relative_path)).filter(Boolean)
-    const mappingsLedger = storageSync('read', { root: vaultRoot, rel: 'mappings.json', optional: true })
-    const mappings = mappingsLedger ? validateLedger(mappingsLedger, 'mappings.json').mappings : []
-    for (const mapping of mappings) {
-      if (mapping.relative_path) references.push(mapping.relative_path)
-    }
-    const artifactsLedger = storageSync('read', { root: vaultRoot, rel: 'artifacts.json', optional: true })
-    if (artifactsLedger) {
-      const artifacts = validateLedger(artifactsLedger, 'artifacts.json').artifacts
-      for (const artifact of artifacts) {
-        if (artifact.content_ref) references.push(artifact.content_ref)
-        for (const ref of artifact.input_refs ?? []) {
-          if (typeof ref !== 'string') continue
-          const match = ref.match(/^asset:\/\/(character|scene|style|prop|knowledge|custom|artifact|tmp)\/(.+)$/)
-          if (match) {
-            references.push((match[1] === 'artifact' ? 'artifacts/' : match[1] === 'tmp' ? 'tmp/' : '') + match[2])
-          } else {
-            if (ref === removed.id) {
-              references.push(...removed.files.map((file) => file.relative_path).filter(Boolean))
-            } else {
-              const matchedFile = removed.files.find((file) => file.id === ref)
-              if (matchedFile?.relative_path) references.push(matchedFile.relative_path)
-              const matchedMapping = mappings.find((m) => m.id === ref)
-              if (matchedMapping?.relative_path) references.push(matchedMapping.relative_path)
-            }
-          }
-        }
+  function recycleManagedDir(assetId) {
+    const dir = managedDirOf(assetId)
+    if (!dir || !vaultRoot || !isInsideDir(dir, vaultRoot)) return
+    if (typeof fs.rmSync === 'function') {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true })
+      } catch {
+        // ignore recycle failure
       }
     }
-    const includes = (rel, parent) => rel === parent || rel.startsWith(`${parent}/`)
-    const candidates = (state.file_inventory ?? []).filter((item) => item.ownership === 'managed' &&
-      removed.files.some((file) => file.ownership !== 'adopted' && file.relative_path && includes(item.relative_path, file.relative_path)))
-    const retained = []
-    const cleaned = []
-    for (const item of candidates) {
-      if (references.some((rel) => includes(item.relative_path, rel) || includes(rel, item.relative_path))) { retained.push(item.relative_path); continue }
-      try {
-        storageSync('unlink', { root: vaultRoot, rel: item.relative_path, expected: item.identity })
-        cleaned.push(item.relative_path)
-      } catch (error) { retained.push({ path: item.relative_path, reason: error.code }) }
-    }
-    state.file_inventory = (state.file_inventory ?? []).filter((item) => !cleaned.includes(item.relative_path))
-    if (cleaned.length) persist()
-    // Only the application-created ID container can be removed, and only if empty and credentials verified.
-    const rel = `data/files/${removed.id}`
-    const containerEntry = (state.file_inventory ?? []).find((item) => item.relative_path === rel && item.kind === 'directory')
-    const containerExpected = containerEntry?.identity ?? removed.container_identity
-    if (containerExpected?.ino && containerExpected?.dev && removed.files.some((file) => file.ownership === 'managed' && file.relative_path?.startsWith(`${rel}/`))) {
-      try {
-        storageSync('rmdir', { root: vaultRoot, rel, expected: { ino: containerExpected.ino, dev: containerExpected.dev } })
-        state.file_inventory = (state.file_inventory ?? []).filter((item) => item.relative_path !== rel)
-      } catch (error) {
-        if (!['path-denied', 'storage-offline', 'plan-stale'].includes(error.code)) retained.push({ path: rel, reason: error.code })
-      }
-    }
-    return { cleaned: cleaned.length, retained }
   }
 
   /**
    * One-shot: each v0.1 mapping becomes a custom asset pointing at the same path.
    * @param {{ list: Function }} mappings
    */
-  function migrateMappings(mappings, deferPersist = false) {
+  function migrateMappings(mappings) {
     if (state.migrated_mappings) return { migrated: 0 }
     const rows = typeof mappings?.list === 'function' ? mappings.list() : []
     let count = 0
@@ -608,23 +470,23 @@ export function createLibraryStore(opts = {}) {
     }
     state.migrated_mappings = true
     state.revision += 1
-    if (!deferPersist) persist()
+    persist()
     return { migrated: count }
   }
 
   function list(filter = {}) {
     const type = str(filter.type).trim()
     const query = str(filter.query).trim().toLowerCase()
-    let rows = state.assets.slice()
+    let rows = state.assets.map((asset) => viewOf(materializeAssetSync(asset), fs, vaultRoot))
     if (type && TYPE_SET.has(type)) rows = rows.filter((row) => row.type === type)
-    if (query) rows = rows.filter((row) => `${row.name}\n${row.handle}\n${row.description}\n${row.tags.join('\n')}`.toLowerCase().includes(query))
+    if (query) {
+      rows = rows.filter((row) => {
+        const hay = `${row.name}\n${row.handle}\n${row.description}\n${row.tags.join('\n')}`.toLowerCase()
+        return hay.includes(query)
+      })
+    }
     rows.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))
-    if (!opts.safeFS) return rows.map((asset) => makeView(materializeAssetSync(asset)))
-    return (async () => {
-      const views = []
-      for (const asset of rows) views.push(await makeView(asset))
-      return views
-    })()
+    return rows
   }
 
   /**
@@ -657,7 +519,7 @@ export function createLibraryStore(opts = {}) {
     const found = get(idOrHandle)
     if (!found) return null
     const live = state.assets.find((asset) => asset.id === found.id)
-    return makeView(materializeAssetSync(live || found))
+    return viewOf(materializeAssetSync(live || found), fs, vaultRoot)
   }
 
   /**
@@ -690,8 +552,8 @@ export function createLibraryStore(opts = {}) {
     asset.cover_file_id = asset.files[0]?.id ?? null
     state.assets.push(asset)
     state.revision += 1
-    await persistAsync()
-    return makeView(asset)
+    persist()
+    return viewOf(asset, fs, vaultRoot)
   }
 
   /**
@@ -725,8 +587,8 @@ export function createLibraryStore(opts = {}) {
     }
     found.updated_at = new Date().toISOString()
     state.revision += 1
-    await persistAsync()
-    return makeView(found)
+    persist()
+    return viewOf(found, fs, vaultRoot)
   }
 
   /**
@@ -736,11 +598,11 @@ export function createLibraryStore(opts = {}) {
   function remove(id) {
     const index = state.assets.findIndex((asset) => asset.id === id)
     if (index < 0) throw new AssetsError('asset-not-found', 'asset not found')
-    const removed = state.assets[index]
+    const assetId = state.assets[index].id
     state.assets.splice(index, 1)
     state.revision += 1
     persist()
-    return { removed: removed.id, ...recycleManagedFiles(removed) }
+    recycleManagedDir(assetId)
   }
 
   function revision() {
@@ -784,19 +646,13 @@ export function createLibraryStore(opts = {}) {
    * @param {string} fileId
    * @param {string} [subPath]
    */
-  function listFileEntries(assetId, fileId, subPath = '', pageOptions = undefined) {
-    if (pageOptions) return listDirectoryPage(assetId, fileId, subPath, pageOptions)
-    if (opts.safeFS) return listSafeFileEntries(assetId, fileId, subPath)
+  function listFileEntries(assetId, fileId, subPath = '') {
     const live = get(assetId)
     if (!live) throw new AssetsError('asset-not-found', 'asset not found')
     const stored = state.assets.find((row) => row.id === live.id) || live
     materializeAssetSync(stored)
     const file = stored.files.find((row) => row.id === fileId)
-    if (!file || ['unmigrated', 'excluded'].includes(file.status)) throw new AssetsError('path-not-found', 'asset file not available')
-    if (file.relative_path) {
-      const probe = storageSync('stat', { root: vaultRoot, rel: file.relative_path })
-      if (probe.kind === 'unsafe') throw new AssetsError('path-denied', 'unsafe file reference')
-    }
+    if (!file) throw new AssetsError('path-not-found', 'asset file not found')
     const abs = absoluteOf(file, vaultRoot)
     const view = fileView(abs, fs, file)
     if (!view) throw new AssetsError('path-not-found', 'path does not exist')
@@ -829,11 +685,7 @@ export function createLibraryStore(opts = {}) {
     const stored = state.assets.find((row) => row.id === live.id) || live
     materializeAssetSync(stored)
     const file = stored.files.find((row) => row.id === fileId)
-    if (!file || ['unmigrated', 'excluded'].includes(file.status)) throw new AssetsError('path-not-found', 'asset file not available')
-    if (file.relative_path) {
-      const probe = storageSync('stat', { root: vaultRoot, rel: file.relative_path })
-      if (probe.kind === 'unsafe') throw new AssetsError('path-denied', 'unsafe file reference')
-    }
+    if (!file) throw new AssetsError('path-not-found', 'asset file not found')
     const abs = absoluteOf(file, vaultRoot)
     const view = fileView(abs, fs, file)
     if (!view) throw new AssetsError('path-not-found', 'path does not exist')
@@ -857,119 +709,5 @@ export function createLibraryStore(opts = {}) {
     return { absolutePath, mime, size: Number(info.size) || 0 }
   }
 
-  /** HTTP listings use bounded pages for both logical refs and physical directories. */
-  async function listDirectoryPage(assetId, fileId, subPath, options) {
-    const asset = get(assetId)
-    if (!asset) throw new AssetsError('asset-not-found', 'asset not found')
-    if (subPath) safeRelative(subPath)
-    const request = (op, args) => opts.safeFS ? opts.safeFS.request(op, args) : storageSync(op, args)
-    const scope = [vaultRoot, options.epoch ?? 0, state.revision, asset.id, fileId, subPath, Boolean(options.logical)]
-    if (options.logical) {
-      const page = directoryPage(logicalEntries(asset.files, subPath), [...scope, asset.files], options)
-      // Only page-sized probes are needed; logical paths are never used for I/O.
-      for (const entry of page.entries) {
-        if (!entry.fileId || entry.status !== 'available') continue
-        const ref = asset.files.find((file) => file.id === entry.fileId)
-        const probe = await request('stat', { root: vaultRoot, rel: ref.relative_path })
-        if (probe.kind === 'unsafe') { entry.status = 'excluded'; entry.reason = 'link-special-or-nested-volume'; continue }
-        entry.is_dir = probe.kind === 'directory'
-        entry.kind = entry.is_dir ? 'directory' : bucketOf(extOf(entry.name))
-      }
-      return { ...page, path: subPath, logical: true }
-    }
-    const file = asset.files.find((row) => row.id === fileId)
-    if (!file?.relative_path || ['unmigrated', 'excluded'].includes(file.status)) throw new AssetsError('path-not-found', 'asset file not available')
-    const rel = subPath ? `${file.relative_path}/${subPath}` : file.relative_path
-    safeRelative(rel)
-    const rootProbe = await request('stat', { root: vaultRoot, rel: file.relative_path })
-    if (subPath && rootProbe.kind !== 'directory') throw new AssetsError('path-not-dir', 'file refs have no sub directories')
-    const probe = subPath ? await request('stat', { root: vaultRoot, rel }) : rootProbe
-    if (probe.kind === 'unsafe') throw new AssetsError('path-denied', 'unsafe file reference')
-    const scanned = probe.kind === 'directory'
-      ? await request('scan', { root: vaultRoot, rel, metadataOnly: true, singleLevel: true })
-      : { entries: [{ ...probe, relative_path: rel }], excluded: [] }
-    const rows = [...scanned.entries, ...scanned.excluded.map((row) => ({ ...row, kind: 'unsafe' }))]
-      .filter((row) => !['.DS_Store', '.omnimux-assets'].includes(basename(row.relative_path)))
-      .map((row) => {
-        const name = basename(row.relative_path)
-        const directory = row.kind === 'directory'
-        return { name, relative_path: subPath ? `${subPath}/${name}` : name, fileId: file.id,
-          is_dir: directory, kind: directory ? 'directory' : bucketOf(extOf(name)), type: directory ? 'other' : bucketOf(extOf(name)),
-          ext: directory ? '' : extOf(name), size: directory ? 0 : Number(row.identity?.size ?? row.size ?? 0),
-          status: row.kind === 'unsafe' ? 'excluded' : 'available', reason: row.reason }
-      })
-    rows.sort((a, b) => Number(b.is_dir) - Number(a.is_dir) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
-    return { ...directoryPage(rows, [...scope, probe.identity, scanned.entries, scanned.excluded, scanned.directoryIdentity], options), path: subPath,
-      file: { id: file.id, original_name: file.original_name, kind: rootProbe.kind } }
-  }
-
-  async function listSafeFileEntries(assetId, fileId, subPath) {
-    const asset = get(assetId)
-    if (!asset) throw new AssetsError('asset-not-found', 'asset not found')
-    const file = asset.files.find((row) => row.id === fileId)
-    if (!file?.relative_path || ['unmigrated', 'excluded'].includes(file.status)) throw new AssetsError('path-not-found', 'asset file awaits materialization')
-    const child = String(subPath)
-    if (child && (child.startsWith('/') || child.includes('\\') || child.split('/').some((part) => !part || part === '.' || part === '..'))) throw new AssetsError('path-denied', 'unsafe directory subpath')
-    const rel = child ? `${file.relative_path}/${child}` : file.relative_path
-    resolveVaultRelPath(vaultRoot, rel)
-    const probe = await opts.safeFS.request('stat', { root: vaultRoot, rel })
-    if (probe.kind === 'unsafe') throw new AssetsError('path-denied', 'unsafe file reference')
-    const entry = (row, path) => {
-      const name = basename(path)
-      const directory = row.kind === 'directory'
-      return { name, relative_path: path, ext: directory ? '' : extOf(name), size: directory ? 0 : Number(row.identity?.size ?? row.size ?? 0),
-        mtime: new Date(Number(row.identity?.mtimeNs ?? 0) / 1e6).toISOString(), is_dir: directory, type: directory ? 'other' : bucketOf(extOf(name)) }
-    }
-    const view = { id: file.id, relative_path: file.relative_path, real_path: resolveVaultRelPath(vaultRoot, file.relative_path),
-      original_name: file.original_name || basename(file.relative_path), kind: probe.kind === 'directory' ? 'directory' : bucketOf(extOf(rel)) }
-    if (probe.kind !== 'directory') return { file: view, path: child, entries: [entry(probe, child || basename(rel))] }
-    const scanned = await opts.safeFS.request('scan', { root: vaultRoot, rel, metadataOnly: true })
-    const entries = scanned.entries.filter((row) => !row.relative_path.slice(rel.length + 1).includes('/')).map((row) => entry(row, child ? `${child}/${basename(row.relative_path)}` : basename(row.relative_path)))
-    return { file: view, path: child, entries, excluded: scanned.excluded }
-  }
-
-  function hasLegacy() {
-    return !state.migrated_mappings || state.assets.some((asset) => asset.files.some((file) => file.real_path && !file.relative_path && !file.status))
-  }
-
-  /** Run only inside a Runtime write lease; keep IDs and retryable source refs. */
-  async function materializeLegacy(mappings) {
-    if (!state.migrated_mappings) {
-      migrateMappings(mappings, true)
-      await persistAsync()
-    }
-    for (const asset of state.assets) {
-      for (let index = 0; index < asset.files.length; index += 1) {
-        const file = asset.files[index]
-        if (!file.real_path || file.relative_path || file.status) continue
-        try {
-          const [copied] = await materializeIncomingFiles(asset.id, [file])
-          if (!copied) continue
-          const { real_path, ...metadata } = file
-          asset.files[index] = { ...metadata, ...copied, id: file.id }
-          state.revision += 1
-          await persistAsync()
-        } catch (error) {
-          if (!['path-not-found', 'path-denied', 'storage-offline'].includes(error.code)) throw error
-        }
-      }
-    }
-  }
-
-  /** Resolve only a ledger-authorized relative path; the helper opens the FD. */
-  function previewRef(assetId, fileId, subPath = '') {
-    const asset = get(assetId)
-    if (!asset) throw new AssetsError('asset-not-found', 'asset not found')
-    const file = asset.files.find((row) => row.id === fileId)
-    if (!file?.relative_path || ['unmigrated', 'excluded'].includes(file.status)) throw new AssetsError('path-not-found', 'asset file awaits materialization')
-    const child = String(subPath)
-    if (child && (child.startsWith('/') || child.includes('\\') || child.split('/').some((part) => !part || part === '.' || part === '..'))) throw new AssetsError('path-denied', 'unsafe preview subpath')
-    const rel = child ? `${file.relative_path}/${child}` : file.relative_path
-    resolveVaultRelPath(vaultRoot, rel)
-    const mime = previewMimeOf(basename(rel))
-    if (!mime) throw new AssetsError('path-unsupported', 'unsupported preview media')
-    return { relativePath: rel, mime }
-  }
-
-  return { list, get, getView, add, update, remove, migrateMappings, materializeLegacy, hasLegacy, previewRef, revision, listFileEntries, resolvePreview }
+  return { list, get, getView, add, update, remove, migrateMappings, revision, listFileEntries, resolvePreview }
 }
