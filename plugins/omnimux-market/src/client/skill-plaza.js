@@ -55,11 +55,11 @@
     }
 
     function InstallModal({ open, onClose, onInstalled }) {
-      if (!open) return null;
       const [file, setFile] = useState(null);
       const [uploading, setUploading] = useState(false);
       const [error, setError] = useState("");
       const fileInputRef = useRef(null);
+      if (!open) return null;
 
       const handleFileChange = (e) => {
         const selected = e.target.files && e.target.files[0];
@@ -89,9 +89,7 @@
           if (onInstalled) onInstalled({ name, slug: name, installed: true, enabled: true });
           onClose();
         } catch (err) {
-          const name = file.name.replace(/\.(zip|md)$/i, "");
-          if (onInstalled) onInstalled({ name, slug: name, installed: true, enabled: true });
-          onClose();
+          setError(err.message || String(err));
         } finally {
           setUploading(false);
         }
@@ -154,7 +152,7 @@
       );
     }
 
-    function ConfirmInstallModal({ item, onConfirm, onClose }) {
+    function ConfirmInstallModal({ item, onConfirm, onClose, error = "", installing = false }) {
       if (!item) return null;
       return h(Overlay, { onClose },
         h("div", { className: "modal-dialog", style: { width: "400px" }, role: "dialog", "aria-modal": "true" },
@@ -164,9 +162,10 @@
           h("p", { style: { fontSize: "13px", color: "var(--dsw-alias-label-secondary, #d1d5db)", margin: "0 0 20px" } },
             "即将安装「" + (item.name || item.title || item.slug) + "」，安装完成后将自动为您启用。"
           ),
+          error ? h("p", { className: "sh-err", role: "alert" }, error) : null,
           h("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
-            h(Button, { size: "sm", variant: "outline", onClick: onClose }, "取消"),
-            h(Button, { size: "sm", variant: "primary", onClick: onConfirm }, "确认安装"),
+            h(Button, { size: "sm", variant: "outline", onClick: onClose, disabled: installing }, "取消"),
+            h(Button, { size: "sm", variant: "primary", onClick: onConfirm, disabled: installing }, installing ? "正在安装…" : "确认安装"),
           ),
         ),
       );
@@ -204,6 +203,8 @@
       const [open, setOpen] = useState(null);
       const [openInstallModal, setOpenInstallModal] = useState(false);
       const [confirmInstallItem, setConfirmInstallItem] = useState(null);
+      const [confirmInstallError, setConfirmInstallError] = useState("");
+      const [confirmInstalling, setConfirmInstalling] = useState(false);
 
       const loadInstalled = useCallback(() => {
         api("list")
@@ -225,10 +226,7 @@
 
       const applySearchBody = (d, mode) => {
         const filterCat = category === "featured" ? "" : category;
-        let next = SkillShelf.filterPlazaShelf(d.items || [], filterCat);
-        if (category === "featured") {
-          next = next.filter((it) => it && (it.recommended === true || it.featured === true || (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured")))));
-        }
+        const next = (d.items || []).filter((item) => !filterCat || SkillShelf.matchesDomainTag(item, filterCat));
         const isFallback = !!d.fallback;
         setFallback(isFallback);
         const nextTotal = isFallback ? next.length : Math.min(Number(d.total) || 0, next.length);
@@ -300,42 +298,37 @@
           setItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
           setInstalledItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
         } else {
+          setConfirmInstallError("");
           setConfirmInstallItem(item);
         }
       };
 
-      const handleConfirmInstall = () => {
-        if (!confirmInstallItem) return;
+      const handleConfirmInstall = async () => {
+        if (!confirmInstallItem || confirmInstalling) return;
         const item = confirmInstallItem;
         const slug = item.slug || item.token || item.skillKey || "";
-        api("install", { slug, catalogId: item.catalogId || item.id })
-          .then(() => {
-            mark(item, true);
-            setConfirmInstallItem(null);
-          })
-          .catch(() => {
-            mark(item, true);
-            setConfirmInstallItem(null);
-          });
+        setConfirmInstalling(true);
+        setConfirmInstallError("");
+        try {
+          await api("install", { slug, catalogId: item.catalogId || item.id });
+          mark(item, true);
+          setConfirmInstallItem(null);
+        } catch (error) {
+          setConfirmInstallError(error?.message || String(error));
+        } finally {
+          setConfirmInstalling(false);
+        }
       };
 
-      const isFeaturedItem = (it) => {
-        if (!it) return false;
-        if (it.recommended === true || it.featured === true) return true;
-        if (Array.isArray(it.tags) && (it.tags.includes("精选") || it.tags.includes("featured"))) return true;
-        return false;
-      };
-
-      // 官方精选：根据当前 category 和 query 筛选推荐项
-      const featuredItems = items.filter(isFeaturedItem);
-      // 普通列表：扣除官方精选，且若 category === 'featured' 则不显示
-      let regularItems = items.filter((it) => !isFeaturedItem(it));
-      if (uninstalledOnly) {
-        regularItems = regularItems.filter((it) => !it.installed);
-      }
+      const hasQuery = Boolean(submitted.trim());
+      const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(items, {
+        category, query: submitted, uninstalledOnly, installedItems,
+      });
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
+        if (category === "featured" && !SkillShelf.isRecommendedInstalledSkill(item)) return false;
+        if (category && category !== "featured" && !SkillShelf.matchesDomainTag(item, category)) return false;
         if (mineCategory && !SkillShelf.matchesDomainTag(item, mineCategory)) return false;
         if (mineSource) {
           const src = String(item.source || item.origin || item.channel || "OmniMux").toLowerCase();
@@ -361,10 +354,23 @@
       ];
 
       return h("div", { className: "sh-mkt" },
-        // 1. 双 Tab 与搜索行
+        h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },
+          h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, tr("workshop.title")),
+          h("p", { className: "workshop-description" }, tr("workshop.subtitle")),
+          h("div", { className: "action-row" },
+            h("button", { type: "button", className: "btn-create", onClick: () => createSkillSession({ text: "/skill-creator" }) },
+              h(PlazaIcon, { size: 14 }), tr("workshop.create")),
+            h("button", { type: "button", className: "btn-install", onClick: () => setOpenInstallModal(true) },
+              h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M8 3v10M3 8h10", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" })), tr("workshop.install")),
+          ),
+        ),
+        // 双 Tab 与搜索行
         h("div", { className: "nav-bar" },
           h("div", { className: "nav-tabs" },
-            h("div", {
+            h("button", {
+              type: "button",
+              "aria-pressed": mainTab === "discover",
               className: "nav-tab" + (mainTab === "discover" ? " active" : ""),
               onClick: () => { setMainTab("discover"); setPage(1); },
             },
@@ -386,7 +392,9 @@
                 h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" }),
               ),
             ),
-            h("div", {
+            h("button", {
+              type: "button",
+              "aria-pressed": mainTab === "mine",
               className: "nav-tab" + (mainTab === "mine" ? " active" : ""),
               onClick: () => setMainTab("mine"),
             },
@@ -400,7 +408,7 @@
             h("input", {
               type: "text",
               value: searchQuery,
-              placeholder: tr("workshop.searchPlaceholder") || "搜索 Skill...",
+              placeholder: tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder"),
               onChange: (e) => setSearchQuery(e.target.value),
               onKeyDown: (e) => {
                 if (e.key === "Enter") {
@@ -412,7 +420,16 @@
           ),
         ),
 
-        // 3. 视图内容
+        h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
+          workshopCategories.map((c) => h("button", {
+            key: c.id,
+            type: "button",
+            className: "cat-btn" + (category === c.id ? " active" : ""),
+            "aria-pressed": category === c.id,
+            onClick: () => { setCategory(c.id); setMineCategory(""); setPage(1); },
+          }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
+        ),
+        // 视图内容
         mainTab === "mine" ? h("div", null,
           // 「我的 Skill」专属工具行
           h("div", { className: "mine-toolbar" },
@@ -467,15 +484,6 @@
             )),
           ) : h("p", { className: "sh-mkt-status" }, tr("workshop.emptyMine") || "暂无已安装的 Skill"),
         ) : h("div", null,
-          // 「Skill 发现」分类药丸栏
-          h("div", { className: "category-bar" },
-            workshopCategories.map((c) => h("button", {
-              key: c.id,
-              type: "button",
-              className: "cat-btn" + (category === c.id ? " active" : ""),
-              onClick: () => { setCategory(c.id); setPage(1); },
-            }, c.label)),
-          ),
 
           // 官方精选（结果大于等于 1 项才显示，否则完全隐藏）
           featuredItems.length > 0 ? h("section", { className: "featured-section" },
@@ -535,10 +543,10 @@
           ) : null,
 
           // 其他Skill区块（在精选分类下不显示普通区）
-          category === "featured" ? null : h("section", { className: "regular-section" },
+          category === "featured" && !hasQuery ? null : h("section", { className: "regular-section" },
             h("div", { className: "regular-header" },
               h("div", { className: "regular-title-row" },
-                h("span", null, tr("workshop.otherTitle") || "其他Skill"),
+                h("span", null, tr(hasQuery ? "workshop.searchResults" : "workshop.otherTitle")),
                 h("span", { className: "regular-title-count" }, " · " + (regularItems.length)),
               ),
               h("div", { className: "regular-controls" },
@@ -577,6 +585,7 @@
               )),
             ) : null,
           ),
+          hasMore ? h(Button, { size: "sm", variant: "outline", onClick: () => setPage(page + 1) }, tr("mkt.more")) : null,
         ),
 
         // 详情弹窗
@@ -601,7 +610,13 @@
         h(ConfirmInstallModal, {
           item: confirmInstallItem,
           onConfirm: handleConfirmInstall,
-          onClose: () => setConfirmInstallItem(null),
+          error: confirmInstallError,
+          installing: confirmInstalling,
+          onClose: () => {
+            if (confirmInstalling) return;
+            setConfirmInstallItem(null);
+            setConfirmInstallError("");
+          },
         }),
       );
     }

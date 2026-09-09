@@ -1,0 +1,46 @@
+[
+  {
+    "name": "omnimux-accounts",
+    "exit": 0,
+    "rebuiltSha": "93763a2174c6275fdfbac8b4c1adabd33eb81c26cd59c687c77ceb9602281692",
+    "expectedSha": "93763a2174c6275fdfbac8b4c1adabd33eb81c26cd59c687c77ceb9602281692",
+    "output": "wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/ui-audit-fixes/docs/implementation/ui-audit-fixes/repair/rebuild-omnimux-accounts.js (223566 bytes)\n"
+  },
+  {
+    "name": "omnimux-analytics",
+    "exit": 0,
+    "rebuiltSha": "51a0b002b30fc9639ca413ff1c08908bcde567133331a265f7c1b704543d4ad0",
+    "expectedSha": "51a0b002b30fc9639ca413ff1c08908bcde567133331a265f7c1b704543d4ad0",
+    "output": "wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/ui-audit-fixes/docs/implementation/ui-audit-fixes/repair/rebuild-omnimux-analytics.js (259512 bytes)\n"
+  },
+  {
+    "name": "omnimux-inspiration",
+    "exit": 0,
+    "rebuiltSha": "ef35ddaf917228211290f43881641a0f0555ca70094c6139a8e093f9cc7480c4",
+    "expectedSha": "ef35ddaf917228211290f43881641a0f0555ca70094c6139a8e093f9cc7480c4",
+    "output": "wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/ui-audit-fixes/docs/implementation/ui-audit-fixes/repair/rebuild-omnimux-inspiration.js (278071 bytes)\n"
+  },
+  {
+    "name": "omnimux-publish",
+    "exit": 0,
+    "rebuiltSha": "056200ec457b76cf681a638a99b86ed6bf5307774582279a0628d3470d9bd1b8",
+    "expectedSha": "056200ec457b76cf681a638a99b86ed6bf5307774582279a0628d3470d9bd1b8",
+    "output": "wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/ui-audit-fixes/docs/implementation/ui-audit-fixes/repair/rebuild-omnimux-publish.js (277204 bytes)\n"
+  },
+  {
+    "name": "omnimux-assets",
+    "exit": 0,
+    "rebuiltSha": "0407982e3ebceb2795b290db2aedd645a9498fa72094005d96330960cffd88ee",
+    "expectedSha": "0407982e3ebceb2795b290db2aedd645a9498fa72094005d96330960cffd88ee",
+    "output": "wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/ui-audit-fixes/docs/implementation/ui-audit-fixes/repair/rebuild-omnimux-assets.js (302047 bytes)\n"
+  },
+  {
+    "name": "kit archive payload equals fixed checkout",
+    "files": 73,
+    "sha256": "8f7f7161294ecbbcf6f20e81f95d8e862941e71e567607599455b57658ac8b72"
+  },
+  {
+    "name": "kit sourcemap source consistency",
+    "files": 31
+  }
+]

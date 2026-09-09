@@ -11,6 +11,7 @@ export const STAGE_CONTENT = Object.freeze({
   workflow: '.omnimux-workflow-library-body',
   assets: '.omnimux-assets-body',
   products: '.omnimux-products-body',
+  forms: '.omnimux-forms-body',
   inspiration: '.omnimux-inspiration-stage-body',
   publish: '.omnimux-publish-viewport',
   analytics: '.omnimux-analytics-stage-body',
@@ -22,6 +23,7 @@ export const STAGE_STATUS = Object.freeze({
     loading: '.omnimux-analytics-empty[data-code="loading"]',
     error: '.omnimux-analytics-empty[data-code="fetch_failed"], .omnimux-analytics-banner[data-code="network_error"]',
   },
+  forms: { loading: '.omnimux-forms-loading', error: '.omnimux-forms-load-error' },
   inspiration: { loading: '.omnimux-inspiration-skeleton' },
   market: { status: '.sh-mkt-status:not(.left)' },
 })

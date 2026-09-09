@@ -538,6 +538,13 @@ th[style*="--pub-min-w"] { min-width: var(--pub-min-w); }
   -webkit-appearance: none;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
+.omnimux-publish-type-card > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  white-space: normal;
+}
 .omnimux-publish-type-card:hover {
   border-color: var(--dsw-alias-border-l2, #cbd5e1);
   background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));

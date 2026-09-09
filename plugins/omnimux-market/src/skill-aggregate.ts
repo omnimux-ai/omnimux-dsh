@@ -85,31 +85,61 @@ export async function aggregateSkillSearch(
     channelCounts.workbuddy = workbuddy.length
   }
 
+  const localHits = custom.length + workbuddy.length
+  const remoteCards: SkillCard[] = []
+  const seen = new Set(mergeRanked([custom, workbuddy]).map(dedupeKey))
+  const target = offset + limit + 1
   let remote: SearchResult | undefined
+  let remoteOffset = 0
+  let remoteEnd = 0
   if (want.has('skillhub')) {
     const searchFn = opts.searchSkills || searchSkillsRemote
     try {
-      remote = await searchFn(query, {
-        cfg,
-        queries: opts.queries,
-        category,
-        sortBy,
-        limit: clamp(Math.max(limit + offset, 12), 1, 80),
-        offset: 0,
-        installed,
-        signal: opts.signal,
-      })
+      // Replay only the prefix needed for a stable, deduplicated offset window.
+      // The first response's total bounds traversal even if hasMore is stale.
+      const batchSize = clamp(Math.max(limit, 12), 1, 80)
+      do {
+        const page = await searchFn(query, {
+          cfg,
+          queries: opts.queries,
+          category,
+          sortBy,
+          limit: batchSize,
+          offset: remoteOffset,
+          installed,
+          signal: opts.signal,
+        })
+        if (!remote) {
+          remoteEnd = Number.isFinite(page.total) ? Math.max(page.items.length, page.total) : page.items.length
+          remote = page
+        }
+        else if (page.fallback) {
+          remoteEnd = remoteOffset
+          break
+        }
+        remoteCards.push(...page.items)
+        for (const card of page.items) {
+          const key = dedupeKey(card)
+          if (key) seen.add(key)
+        }
+        remoteOffset += page.items.length
+        if (!page.items.length || !page.hasMore || page.fallback) {
+          remoteEnd = remoteOffset
+          break
+        }
+      } while (seen.size < target && remoteOffset < remoteEnd)
+      remote = { ...remote!, items: remoteCards, total: remoteEnd }
       channelsServed.push('skillhub')
-      channelCounts.skillhub = remote.items.length
+      channelCounts.skillhub = remoteCards.length
     }
     catch (err) {
+      remote = undefined
       const message = classifyRemoteError(err)
       channelErrors.skillhub = message
       if (cfg.aggregateRemoteSoftFail === false) throw err
     }
   }
 
-  const localHits = custom.length + workbuddy.length
   if (remote?.fallback && localHits > 0) {
     channelCounts.skillhub = 0
     const idx = channelsServed.indexOf('skillhub')
@@ -130,7 +160,7 @@ export async function aggregateSkillSearch(
     : 0
   const total = merged.length + extraRemote
   const items = merged.slice(offset, offset + limit)
-  const hasMore = offset + items.length < merged.length || extraRemote > 0 || Boolean(remote?.hasMore && extraRemote > 0)
+  const hasMore = offset + items.length < merged.length || extraRemote > 0
 
   const errors = Object.keys(channelErrors).length ? channelErrors : undefined
   const emptyLocal = localHits === 0

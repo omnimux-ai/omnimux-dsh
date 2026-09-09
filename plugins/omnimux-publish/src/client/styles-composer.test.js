@@ -110,18 +110,17 @@ describe('publish composer type-pick styles (layout regression)', () => {
     assert.doesNotMatch(match[1], /state-error-(text|subtle)(?:\s|,|\))/)
   })
 
-  it('TypeCard consumes dsh-ui-kit SelectableTile without native button or exempt-ui01', () => {
-    assert.match(composerSrc, /import\s*\{[^}]*SelectableTile[^}]*\}\s*from\s*['"]dsh-ui-kit['"]/)
+  it('TypeCard consumes a kit action Button rather than a selection role', () => {
     assert.match(composerSrc, /function TypeCard\(/)
     assert.match(composerSrc, /className="omnimux-publish-type-card"/)
-    // Extract TypeCard body and assert it consumes SelectableTile, not <button> or <Button>.
+    // An action starts the composer; it does not represent a checked choice.
     const match = composerSrc.match(/function TypeCard\([\s\S]*?\n\}/)
     assert.ok(match, 'TypeCard function not found')
     const body = match[0]
-    assert.match(body, /<SelectableTile[\s\S]*className="omnimux-publish-type-card"/)
-    assert.doesNotMatch(body, /<button/i)
+    assert.match(body, /<Button[\s\S]*className="omnimux-publish-type-card"/)
+    assert.doesNotMatch(body, /selectionType|aria-checked|<SelectableTile/)
+    assert.doesNotMatch(body, /<button\b/)
     assert.doesNotMatch(body, /exempt-ui01/)
-    assert.doesNotMatch(body, /<Button[\s\S]*className="omnimux-publish-type-card"/)
     assert.doesNotMatch(composerSrc, /exempt-ui01/)
     assert.doesNotMatch(composerSrc, /<button/)
   })

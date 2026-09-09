@@ -68,6 +68,7 @@ export function AccountTable(props) {
                   key={column.id}
                   scope="col"
                   sortable
+                  disabled={disabled}
                   sortDirection={sortKey === column.sortKey ? sortDir : null}
                   onClick={disabled ? undefined : () => { onSortHeader(column.sortKey) }}
                 >

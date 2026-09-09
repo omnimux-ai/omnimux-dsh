@@ -1,13 +1,13 @@
 {
   "protocolVersion": 1,
   "id": "video-deconstruct",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "title": "参考视频拆解",
   "description": "分析参考视频的结构、节奏和表达，为后续复刻提供依据。",
   "examples": [
     {
-      "ref": "example:demo-video-deconstruct",
-      "title": "参考视频拆解示例",
+      "ref": "/api/omnimux/forms/examples/replication-demo.mp4",
+      "title": "原创产品结构示意：开场、细节、收尾",
       "kind": "video"
     }
   ],

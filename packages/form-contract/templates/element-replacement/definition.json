@@ -1,13 +1,13 @@
 {
   "protocolVersion": 1,
   "id": "element-replacement",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "title": "替换人物或产品复刻",
   "description": "用用户提供的素材替换指定元素，并明确需要保留的内容。",
   "examples": [
     {
-      "ref": "example:demo-element-replacement",
-      "title": "替换人物或产品复刻示例",
+      "ref": "/api/omnimux/forms/examples/replication-demo.mp4",
+      "title": "原创产品结构示意：开场、细节、收尾",
       "kind": "video"
     }
   ],

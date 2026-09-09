@@ -1,7 +1,7 @@
 {
   "protocolVersion": 1,
   "templateId": "structure-replication",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "prompt": "请基于附带参考视频设计复刻方案，保留镜头结构、节奏与核心表达。\n新主题与要求：改为一款旅行背包，突出收纳空间。\n目标画幅：9:16\n目标时长：15 秒\n方案数量：2\n以上是创作目标，不代表模型已支持这些参数；执行前确认可用能力。",
   "attachments": [
     {

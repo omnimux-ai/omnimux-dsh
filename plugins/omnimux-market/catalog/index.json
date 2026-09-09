@@ -6476,6 +6476,26 @@
         "asset": "catalog/covers/product-kinetic-typography-tvc.png",
         "alt": "产品贴字动画TVC"
       }
+    },
+    {
+      "id": "sk-bggg-data-amazon",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "BGGG Amazon Data · Amazon 评论采集",
+      "subtitle": "Python 3.10+ · 标准库 · 网络与端点可用性待运行时核实",
+      "summary": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入；不含评论优化报告，不保证全部评论。需环境提供 Python 3.10+ 与命令执行能力，不自动配置依赖。",
+      "category": "sk-commerce",
+      "tags": ["电商", "评论采集", "精选"],
+      "skill": "bggg-data-amazon",
+      "source": {
+        "type": "bundled",
+        "path": "catalog/skills/bggg-data-amazon"
+      },
+      "recommended": true,
+      "homeCover": {
+        "asset": "catalog/covers/home/bggg-data-amazon.png",
+        "alt": "评论卡与可追溯数据归档，Amazon 书面评论采集"
+      }
     }
   ]
 }

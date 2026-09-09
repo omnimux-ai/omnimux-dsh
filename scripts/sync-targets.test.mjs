@@ -54,7 +54,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     writeFileSync(syncPresetsScript, readFileSync(join(root, 'scripts/sync-agent-presets.sh'), 'utf8')
       .replaceAll('/Applications/', `${presetFixture}/Applications/`))
     for (const name of [
-      'omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products',
+      'omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms',
       'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip',
       'omnimux-video', 'omnimux-analytics', 'omnimux-publish',
     ]) writeFixturePlugin(name, '1.0.0')
@@ -318,12 +318,12 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'managed-full-kit-refresh', private: true,
       dependencies: Object.fromEntries([
-        ...['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish'],
+        ...['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish'],
         'dsh-ui-kit',
       ].map(name => [name, `file:.materialize-snapshots/plugins/${name}`])),
       dsh: { profile: { bundles: [] } },
     }, null, 2) + '\n')
-    for (const name of ['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish', 'dsh-ui-kit']) {
+    for (const name of ['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish', 'dsh-ui-kit']) {
       cpSync(join(fixturePlugins, name), join(snapshotPlugins, name), { recursive: true })
     }
     const assetManifestPath = join(snapshotPlugins, 'omnimux-assets', 'package.json')

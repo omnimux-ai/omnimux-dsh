@@ -1,51 +1,12 @@
-import { createElement, useEffect, useSyncExternalStore } from 'react'
+import { createElement } from 'react'
 import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
 import { InspirationStage } from './InspirationStage.jsx'
 import { bindOfficialSessions } from './new-session-click.js'
-import {
-  consumeSessionPrefill,
-  getPendingSessionPrefill,
-  subscribeSessionPrefill,
-} from './session-prefill.js'
-
 export const name = 'omnimux-inspiration'
 export const inject = ['slots', 'locale']
 
 export const INSPIRATION_TAB_ID = 'omnimux-inspiration:library'
-// A newly created or reused blank session is rendered as the Hero. The
-// official renderer omits `conversation.composer.dock` in that branch, while
-// `conversation.input.dock` is rendered for every live session InputZone.
-// Keep the consumer in the latter so the target's session-scoped
-// `inputActions` are available before the first message exists.
-export const SESSION_PREFILL_SLOT = 'conversation.input.dock'
-
-/**
- * Consume a queued replication prefill only from its official session-scoped
- * composer slot. The hook sees the slot's current draft before any write.
- * @param {{ sessionId?: string, useInput?: Function, inputActions?: { setDraft?: Function } }} props
- * @returns {null}
- */
-export function SessionPrefillConsumer(props) {
-  const intent = useSyncExternalStore(
-    subscribeSessionPrefill,
-    getPendingSessionPrefill,
-    getPendingSessionPrefill,
-  )
-  const draft = typeof props?.useInput === 'function'
-    ? String(props.useInput((state) => state?.draft ?? '') ?? '')
-    : ''
-  const sessionId = String(props?.sessionId ?? '')
-  useEffect(() => {
-    consumeSessionPrefill(intent, {
-      sessionId,
-      draft,
-      inputActions: props?.inputActions,
-    })
-  }, [draft, intent, sessionId, props?.inputActions])
-  return null
-}
-
 function renderInspirationIcon(size = 16) {
   return createElement('svg', {
     width: size,
@@ -83,12 +44,6 @@ export function apply(ctx) {
   const t = ctx.locale.bind(NS)
 
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-inspiration: sidebar entry')
-  ctx.slots.inject(SESSION_PREFILL_SLOT, () => ctx.slots.register({
-    name: SESSION_PREFILL_SLOT,
-    id: 'omnimux-inspiration:session-prefill',
-    order: 100,
-  }, SessionPrefillConsumer))
-
   const registerInspirationTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
     return sidebar.registerTab({

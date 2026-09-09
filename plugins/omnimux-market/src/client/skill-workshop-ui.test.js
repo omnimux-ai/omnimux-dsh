@@ -292,8 +292,8 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(skillPlazaSrc, /hover-btn-try/)
   })
 
-  it('category featured hides other skills regular section (AC-14, AC-11)', () => {
-    assert.match(skillPlazaSrc, /category === "featured" \? null :/)
+  it('category featured hides regular section only without a submitted search', () => {
+    assert.match(skillPlazaSrc, /category === "featured" && !hasQuery \? null :/)
   })
 
   it('install modal provides drag & drop and requirements notice', () => {
@@ -309,9 +309,9 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
   })
 
   it('css defines minimalist design matching demo', () => {
-    assert.match(cssSrc, /\.page-header/)
-    assert.match(cssSrc, /\.page-title/)
-    assert.match(cssSrc, /\.page-subtitle/)
+    assert.match(cssSrc, /\.workshop-intro/)
+    assert.match(cssSrc, /\.workshop-heading/)
+    assert.match(cssSrc, /\.workshop-description/)
     assert.match(cssSrc, /\.btn-create/)
     assert.match(cssSrc, /\.btn-install/)
     assert.match(cssSrc, /\.featured-cover-wrap/)

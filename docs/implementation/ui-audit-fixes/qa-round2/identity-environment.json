@@ -1,0 +1,31 @@
+{
+  "productHead": "1ce51cf7f4f4701e2fe3aab1a6a026a090b0a644",
+  "kitHead": "0cff2942d1248bffb39176d05b1defa45ff1057a",
+  "protectedQaUnchanged": true,
+  "gitBundlesVerified": true,
+  "kitRebuildMatches": true,
+  "environment": [
+    {
+      "profile": "/Users/x/.omnimux-dev/profiles/omnimux",
+      "viewerDependency": "file:.materialize-snapshots/plugins/@crosery/dsh-viewer",
+      "viewerSha": "e9f78cef7245fed9b634d670879d039bfac6c6bab50748940fabb344b9bca65a",
+      "installedViewerSha": "e9f78cef7245fed9b634d670879d039bfac6c6bab50748940fabb344b9bca65a",
+      "importsInstallSettingsSection": true,
+      "kitSha": "cb27fd9f29182777516098dcec703657810042029bb47c5bc662f9480f4c13fb"
+    },
+    {
+      "profile": "/Users/x/.dsh-dev/tasks/ui-audit-qa-0909/profiles/omnimux-dev-ui-audit-qa-0909",
+      "viewerDependency": "file:.materialize-snapshots/plugins/@crosery/dsh-viewer",
+      "viewerSha": "e9f78cef7245fed9b634d670879d039bfac6c6bab50748940fabb344b9bca65a",
+      "installedViewerSha": "e9f78cef7245fed9b634d670879d039bfac6c6bab50748940fabb344b9bca65a",
+      "importsInstallSettingsSection": true,
+      "kitSha": "cb27fd9f29182777516098dcec703657810042029bb47c5bc662f9480f4c13fb"
+    }
+  ],
+  "officialHead": "dd6322d604e00eec1ba5e0c8541159906a21094a",
+  "settingsSha": "bb4bee8b1772c59b52c5b89fc5464a09a5ef6f23dfbcaa93b1b84c53ae8a43ec",
+  "settingsExports": [
+    " SettingsConflictError, SettingsProvider, SettingsProvider as default, redactSecrets "
+  ],
+  "l2EnvExists": false
+}
