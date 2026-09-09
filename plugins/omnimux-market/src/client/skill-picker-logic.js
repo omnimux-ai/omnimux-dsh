@@ -1,4 +1,84 @@
 /** Pure helpers for the Composer Skill picker. Importable by tests; the UI fragment inlines the same rules. */
+import catalog from '../../catalog/index.json' with { type: 'json' }
+
+import recommendations from '../../catalog/skill-recommendations.json' with { type: 'json' }
+
+/** Validate editorial IDs separately from resilient rendering; shipped configuration is tested. */
+export function validateSkillRecommendations(config = recommendations, entries = catalog.items) {
+  const errors = []
+  const byId = new Map(entries.map(item => [item.id, item]))
+  for (const field of ['featuredSkills', 'homeRecommendations']) {
+    if (!Array.isArray(config[field])) {
+      errors.push(`${field}: expected an ordered ID array`)
+      continue
+    }
+    const seen = new Set()
+    for (const id of config[field]) {
+      const item = byId.get(id)
+      if (seen.has(id)) errors.push(`${field}: duplicate ${id}`)
+      seen.add(id)
+      if (!item || item.kind !== 'skill' || item.recommended !== true) errors.push(`${field}: not a recommended Skill: ${id}`)
+      if (field === 'homeRecommendations' && !config.featuredSkills?.includes(id)) errors.push(`${field}: not in featuredSkills: ${id}`)
+    }
+  }
+  for (const item of entries) {
+    if (item.kind === 'skill' && item.recommended === true && !config.featuredSkills?.includes(item.id)) errors.push(`featuredSkills: missing ${item.id}`)
+  }
+  return errors
+}
+
+/** Resolve from the complete bundled catalog, never a paginated search response. */
+export function resolveSkillRecommendations(ids = [], entries = catalog.items) {
+  const byId = new Map(entries.map(item => [item.id, item]))
+  return [...new Set(ids)].flatMap(id => {
+    const item = byId.get(id)
+    if (!item || item.kind !== 'skill' || item.recommended !== true) return []
+    return [{ ...item, catalogId: item.id, slug: item.skill, name: item.title,
+      description: item.summary, installBackend: 'catalog', installed: false }]
+  })
+}
+
+/** Split only displayed recommendations out of discovery; full-library search stays independent. */
+export function plazaDiscoverySections(items = [], { category = '', query = '', uninstalledOnly = false,
+  installedItems = [], config = recommendations, entries = catalog.items } = {}) {
+  const key = item => item.slug || item.skill || item.catalogId || item.id
+  const matches = item => !category || category === 'featured' || matchesDomainTag(item, category)
+  const available = item => !uninstalledOnly || !item.installed
+  const unique = list => [...new Map(list.map(item => [key(item), item])).values()]
+  const installed = new Map(installedItems.map(item => [key(item), item]))
+  const live = new Map(items.map(item => [item.catalogId || item.id, item]))
+  const hasQuery = Boolean(String(query).trim())
+  const ids = category ? config.featuredSkills : config.homeRecommendations
+  const featured = hasQuery ? [] : resolveSkillRecommendations(ids || [], entries)
+    .filter(item => category || config.featuredSkills?.includes(item.id))
+    .map(item => {
+      const current = live.get(item.id)
+      const local = installed.get(key(item))
+      return { ...item, ...(!category && item.homeCover ? { cover: item.homeCover } : {}),
+        ...(current ? { rating: current.rating, installed: current.installed, enabled: current.enabled } : {}),
+        ...(local ? { installed: true, enabled: local.enabled !== false } : {}) }
+    }).filter(matches).filter(available)
+  const featuredKeys = new Set(featured.map(key))
+  const catalogFeatured = new Set(entries.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.skill))
+  const localCards = hasQuery ? [] : entries.filter(item => item.kind === 'skill').map(item => ({
+    ...item, catalogId: item.id, slug: item.skill, name: item.title, description: item.summary,
+    installBackend: 'catalog', installed: installed.has(item.skill),
+  }))
+  const regular = unique([...localCards, ...items]).map(item => installed.has(key(item))
+    ? { ...item, installed: true, enabled: installed.get(key(item)).enabled !== false } : item).filter(matches).filter(available)
+    .filter(item => !featuredKeys.has(key(item)))
+    .filter(item => category !== 'featured' || (hasQuery && catalogFeatured.has(key(item))))
+  return { featured, regular }
+}
+
+const recommendedSkillSlugs = new Set(catalog.items
+  .filter(item => item.kind === 'skill' && item.recommended === true && item.skill)
+  .map(item => item.skill))
+
+/** Installed listings omit catalog metadata; only authoritative catalog identities qualify. */
+export function isRecommendedInstalledSkill(item) {
+  return recommendedSkillSlugs.has(skillToken(item))
+}
 
 export const PLAZA_INTENT_KEY = 'omnimux-market:plaza-intent'
 /** 暂时隐藏的广场 Tab（Issue #502）：恢复时清空数组并在 plaza-shell.js 还原守卫。 */

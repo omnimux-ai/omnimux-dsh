@@ -327,7 +327,7 @@ export async function handleIcon(req, res, cfg) {
         // 本地 catalog 封面图 catalog/covers/<filename>
         if (target.startsWith('catalog/covers/')) {
             const fileName = target.slice('catalog/covers/'.length);
-            if (/^[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
+            if (/^(?:home\/)?[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
                 const coverPath = join(packageRoot(), 'catalog', 'covers', fileName);
                 if (existsSync(coverPath)) {
                     const body = readFileSync(coverPath);

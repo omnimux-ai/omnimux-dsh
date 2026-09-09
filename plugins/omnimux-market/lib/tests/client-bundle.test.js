@@ -44,7 +44,7 @@ test('client bundle keeps public slot keys and workbench tab registration', () =
         'sk-omx-skill-creator',
         'data-omnimux-market-entry',
         'renderPlazaIcon',
-        'Skill工坊',
+        'Skill 工坊',
         'Skill Workshop',
     ]) {
         assert.ok(client.includes(needle), `missing ${needle}`);

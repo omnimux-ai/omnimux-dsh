@@ -80,6 +80,16 @@ dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 ```
 
+## BGGG Amazon Data
+
+The bundled `catalog/skills/bggg-data-amazon/` package is derived from
+https://github.com/binggandata/bggg-skills/tree/1034ee5805f3fd5b010a4f57affa4aa796ab75d5/bggg-data-amazon.
+Its complete root MIT notice (Copyright (c) 2026 BGGG) is retained in that
+package's `LICENSE`; the upstream scraper MIT notice is retained in
+`references/upstream_LICENSE`. Both files travel with the installed directory.
+`PROVENANCE.md` records the pinned source and the SKILL.md runtime/path adaptation.
+The MIT grants cover software, not rights to collected customer reviews.
+
 ## 上游同步策略
 
 上游迭代活跃，本 fork 的改动保持「追加式」以降低同步成本。同步上游修复时：

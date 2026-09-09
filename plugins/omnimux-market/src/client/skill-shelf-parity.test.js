@@ -68,7 +68,7 @@ describe('skill shelf single source of truth', () => {
     }
     for (const needle of [
       'SkillShelf.SKILL_SHELF_TAXONOMY',
-      'SkillShelf.filterPlazaShelf',
+      'SkillShelf.plazaDiscoverySections',
       'SkillShelf.buildPlazaSearchPayload',
     ]) {
       assert.ok(plazaSrc.includes(needle), `skill-plaza.js must consume ${needle}`)

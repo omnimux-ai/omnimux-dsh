@@ -29,7 +29,7 @@ test('packaged real catalog is enumerated and fingerprinted without recommendati
   assert.match(result.revision, /^[a-f0-9]{64}$/)
   assert(result.sourceStatus.every((s) => s.status === 'complete' && s.exhausted))
   assert(result.catalog.items.some((r) => r.kind === 'skill'))
-  assert.equal(result.catalog.items.filter((r) => r.kind === 'skill' && r.recommended).length, 48)
+  assert.equal(result.catalog.items.filter((r) => r.kind === 'skill' && r.recommended).length, 49)
 })
 test('catalog failure returns per-source error rather than complete empty', async () => {
   const result = await readWorkshopCatalog('/not-a-task-catalog')

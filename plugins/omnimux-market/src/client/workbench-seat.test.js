@@ -60,7 +60,7 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
   it('skill plaza consumes SkillShelf rules instead of SkillHub categories', () => {
     const plaza = readFileSync(join(here, 'skill-plaza.js'), 'utf8')
     assert.match(plaza, /SkillShelf\.SKILL_SHELF_TAXONOMY/)
-    assert.match(plaza, /SkillShelf\.filterPlazaShelf/)
+    assert.match(plaza, /SkillShelf\.plazaDiscoverySections/)
     assert.doesNotMatch(plaza, /const PLAZA_SHELF_TAGS = \[/)
     assert.doesNotMatch(plaza, /office-efficiency/)
     // 渠道由 buildPlazaSearchPayload 真源决定（有 query 才含 skillhub），禁止写死双渠道
@@ -83,9 +83,9 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /preserveAspectRatio:\s*"xMidYMid meet"/)
   })
 
-  it('plaza title is Skill工坊 / Skill Workshop', () => {
+  it('plaza title is Skill 工坊 / Skill Workshop', () => {
     const source = readFileSync(join(here, 'i18n.js'), 'utf8')
-    assert.match(source, /"plaza.title": "Skill工坊"/)
+    assert.match(source, /"plaza.title": "Skill 工坊"/)
     assert.match(source, /"plaza.title": "Skill Workshop"/)
     assert.doesNotMatch(source, /插件市场/)
     assert.doesNotMatch(source, /Plugin Market/)
