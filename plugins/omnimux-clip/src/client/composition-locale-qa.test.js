@@ -19,7 +19,36 @@ host.getBoundingClientRect = () => ({ width: 900, height: 600 })
 const fixture = { project: null, hasOpenProject: false, mounts: 0, unmounts: 0, close: [] }
 globalThis.__clipQa = fixture
 const mocks = {
-  'App.tsx': `import React, {useEffect,useState} from 'react'; export default function App(){const [edit,setEdit]=useState('original');useEffect(()=>{globalThis.__clipQa.mounts++;return()=>{globalThis.__clipQa.unmounts++}},[]);return React.createElement('input',{id:'editor-state',value:edit,onChange:e=>setEdit(e.target.value)})}`,
+  'App.tsx': `import React, {useEffect,useState,useSyncExternalStore} from 'react';
+export default function App(){
+  const [edit,setEdit]=useState('original');
+  useEffect(()=>{globalThis.__clipQa.mounts++;return()=>{globalThis.__clipQa.unmounts++}},[]);
+  const langStore = globalThis.__clipQa.lang;
+  const stage = globalThis.__clipQa.stage;
+  const langSnap = useSyncExternalStore(
+    cb => langStore ? langStore.subscribe(cb) : () => {},
+    () => langStore ? langStore.getSnapshot() : { active: 'zh' }
+  );
+  const stageSnap = useSyncExternalStore(
+    cb => stage ? stage.subscribe(cb) : () => {},
+    () => stage ? stage.getSnapshot() : false
+  );
+  const session = stage?.getSessionSnapshot();
+  const isCanvasMode = session?.source === 'canvas';
+  const label = langSnap?.active === 'en' ? 'Back to canvas' : '返回画布';
+  const handleClose = () => {
+    if (session?.nodeId) globalThis.__clipQa.close.push({ nodeId: session.nodeId });
+    stage?.set(false);
+  };
+  return React.createElement('div', null,
+    isCanvasMode ? React.createElement('button', {
+      className: 'omnimux-clip-stage-close-btn',
+      'aria-label': label,
+      onClick: handleClose,
+    }, label) : null,
+    React.createElement('input', {id:'editor-state',value:edit,onChange:e=>setEdit(e.target.value)})
+  );
+}`,
   'project-store.ts': `export const useProjectStore = select => select(globalThis.__clipQa);`,
   'engine-store.ts': `export const useEngineStore = {getState:()=>({})};`,
   'theme-store.ts': `export const applyOpenReelTheme = ()=>{};`,
@@ -52,6 +81,8 @@ function locale(active) {
 }
 async function render(Component, initial, extra = {}) {
   const lang = locale(initial)
+  globalThis.__clipQa.lang = lang
+  globalThis.__clipQa.stage = extra.stage
   const t = key => dictionaries[lang.snapshot.active][key] || key
   const root = createRoot(document.getElementById('root'))
   await act(async()=>root.render(React.createElement(Component,{locale:lang,t,...extra})))

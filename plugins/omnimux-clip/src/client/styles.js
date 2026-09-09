@@ -60,6 +60,7 @@ html:not([data-dsh-product-stage]) .omnimux-clip-stage[data-clip-mode="canvas"][
 }
 .omnimux-clip-stage[data-clip-mode="canvas"] [data-toolbar-section="right"],
 .omnimux-clip-stage[data-clip-mode="canvas"] .openreel-toolbar-right {
+  display: flex !important;
   margin-left: auto !important;
 }
 /* canvas 模式下隐藏媒体素材卡片上的生成 (KieAI/Sparkles) 图标按钮 */
@@ -88,18 +89,7 @@ html:not([data-dsh-product-stage]) .omnimux-clip-stage[data-clip-mode="canvas"][
 .omnimux-clip-stage-header, /* exempt-ui08: 画布内浮层操作区，非页面标题栏 */
 .omnimux-clip-stage[data-clip-mode="standalone"] .omnimux-clip-stage-header, /* exempt-ui08: 同上 */
 .omnimux-clip-stage[data-clip-mode="canvas"] .omnimux-clip-stage-header { /* exempt-ui08: 同上 */
-  position: relative;
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  z-index: 40;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px;
-  border: none;
-  background: transparent;
-  pointer-events: none;
-  -webkit-app-region: no-drag;
+  display: none !important;
 }
 .omnimux-clip-stage-heading, /* exempt-ui08: 画布内浮层操作区标题，非页面标题栏 */
 .omnimux-clip-stage-icon-btn,
@@ -129,30 +119,10 @@ html:not([data-dsh-product-stage]) .omnimux-clip-stage[data-clip-mode="canvas"][
   gap: 8px;
   height: 32px;
 }
-.omnimux-clip-stage-close-btn,
-.omnimux-clip-stage[data-clip-mode="standalone"] .omnimux-clip-stage-close-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 12px;
-  gap: 6px;
+.omnimux-clip-stage-close-btn {
   white-space: nowrap;
-  font-size: 13px;
   -webkit-app-region: no-drag;
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-elevated, rgba(22, 22, 24, 0.92));
-  border: 1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.16));
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7));
-  cursor: pointer;
-  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
-}
-.omnimux-clip-stage-close-btn:hover,
-.omnimux-clip-stage[data-clip-mode="standalone"] .omnimux-clip-stage-close-btn:hover {
-  color: var(--dsw-alias-label-primary, #ffffff);
-  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.1));
-  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.25));
+  pointer-events: auto;
 }
 .omnimux-clip-stage-save-btn {
   display: inline-flex;
@@ -180,24 +150,6 @@ html:not([data-dsh-product-stage]) .omnimux-clip-stage[data-clip-mode="canvas"][
 .omnimux-clip-stage-save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.omnimux-clip-stage-close-btn {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65));
-  cursor: pointer;
-  transition: color 150ms ease, background-color 150ms ease;
-}
-.omnimux-clip-stage-close-btn:hover {
-  color: var(--dsw-alias-label-primary, #ffffff);
-  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08));
 }
 `
 
