@@ -320,15 +320,27 @@
         }
       };
 
+      const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
+      const activePreset = SkillShelf.resolveActivePreset({ sessions });
+      const presetBinding = SkillShelf.getPresetSkillBinding(activePreset);
+
       const hasQuery = Boolean(submitted.trim());
       const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(items, {
-        category, query: submitted, uninstalledOnly, installedItems,
+        category, query: submitted, uninstalledOnly, installedItems, presetBinding,
       });
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
         if (category === "featured" && !SkillShelf.isRecommendedInstalledSkill(item)) return false;
-        if (category && category !== "featured" && !SkillShelf.matchesDomainTag(item, category)) return false;
+        if (category && category !== "featured") {
+          if (presetBinding) {
+            const cat = String(item.category || item.categoryLabel || "").trim();
+            const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+            if (cat !== category && !tags.includes(category)) return false;
+          } else if (!SkillShelf.matchesDomainTag(item, category)) {
+            return false;
+          }
+        }
         if (mineCategory && !SkillShelf.matchesDomainTag(item, mineCategory)) return false;
         if (mineSource) {
           const src = String(item.source || item.origin || item.channel || "OmniMux").toLowerCase();
@@ -344,14 +356,19 @@
 
       const availableSources = Array.from(new Set(installedItems.map((it) => it.source || it.origin || it.channel || "OmniMux").filter(Boolean)));
 
-      const workshopCategories = [
-        { id: "", label: tr("workshop.catAll") || "全部" },
-        { id: "featured", label: tr("workshop.catFeatured") || "精选" },
-        ...WORKSHOP_DOMAIN_ORDER.map((id) => {
-          const row = SkillShelf.SKILL_SHELF_TAXONOMY.find((r) => r.id === id);
-          return { id, label: row ? tr(row.labelKey) : id };
-        }),
-      ];
+      const workshopCategories = presetBinding
+        ? [
+            { id: "", label: tr("workshop.catAll") || "全部" },
+            ...presetBinding.categories.map((c) => ({ id: c.id, label: c.name })),
+          ]
+        : [
+            { id: "", label: tr("workshop.catAll") || "全部" },
+            { id: "featured", label: tr("workshop.catFeatured") || "精选" },
+            ...WORKSHOP_DOMAIN_ORDER.map((id) => {
+              const row = SkillShelf.SKILL_SHELF_TAXONOMY.find((r) => r.id === id);
+              return { id, label: row ? tr(row.labelKey) : id };
+            }),
+          ];
 
       return h("div", { className: "sh-mkt" },
         h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },

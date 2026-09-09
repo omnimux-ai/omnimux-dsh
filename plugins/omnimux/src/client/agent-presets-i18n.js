@@ -66,6 +66,20 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
       description: dict.presetCordisDescription,
     }
   }
+  if (
+    presetId === 'content-creation-team' ||
+    presetId === 'content-creator-team' ||
+    presetId === 'exp-ai-content-creator-team' ||
+    presetId === '内容创作专家团'
+  ) {
+    return {
+      name: lang === 'en' ? 'Content Creation Team' : '内容创作专家团',
+      description:
+        lang === 'en'
+          ? 'Multimodal content creation team: creative planning, ad copywriting, visual design, and video production.'
+          : 'AI驱动的多模态内容生产团队：专注创意策划、广告创意、二次元设计、短剧影视、动漫制作与音视频内容创作。',
+    }
+  }
   return null
 }
 

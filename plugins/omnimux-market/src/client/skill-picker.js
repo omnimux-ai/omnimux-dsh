@@ -87,7 +87,7 @@
       );
     }
 
-    function SkillPickerPanel({ open, anchorRef, onClose, onPick, onExplore, onCreate, t }) {
+    function SkillPickerPanel({ open, anchorRef, onClose, onPick, onExplore, onCreate, t, presetBinding }) {
       const tr = typeof t === "function" ? t : lookup;
       const panelRef = useRef(null);
       const tabsRef = useRef(null);
@@ -110,6 +110,15 @@
 
       useEffect(() => {
         if (!open) return undefined;
+        if (presetBinding && !presetBinding.useDefaultContentCatalog) {
+          const list = SkillShelf.filterPresetSkills(presetBinding.skills, tabId, debounced);
+          setItems(list);
+          setStatus("ready");
+          setErr("");
+          setRemoteDown(false);
+          setActiveIndex(0);
+          return undefined;
+        }
         let live = true;
         const payload = SkillShelf.buildSearchPayload(tabId, debounced);
         const cached = peekPickerCache(payload);
@@ -138,7 +147,7 @@
           setErr(e && e.message ? e.message : String(e || "error"));
         });
         return () => { live = false; };
-      }, [open, tabId, debounced]);
+      }, [open, tabId, debounced, presetBinding]);
 
       useLayoutEffect(() => {
         if (!open) return undefined;
@@ -183,7 +192,9 @@
         };
       }, [open, onClose, anchorRef]);
 
-      const visible = SkillShelf.filterPickerItems(items, tabId);
+      const visible = presetBinding && !presetBinding.useDefaultContentCatalog
+        ? SkillShelf.filterPickerItems(items, tabId, presetBinding)
+        : SkillShelf.filterPickerItems(items, tabId);
 
       const handlePick = (item) => {
         const ok = onPick(item);
@@ -209,6 +220,10 @@
 
       const emptyMine = tabId === "mine" && status === "ready" && !visible.length && !debounced.trim();
       const emptySearch = status === "ready" && !visible.length && !emptyMine;
+
+      const pickerTabs = presetBinding && Array.isArray(presetBinding.tabs)
+        ? presetBinding.tabs
+        : SkillShelf.PICKER_TABS;
 
       const node = h("div", {
         ref: panelRef,
@@ -236,14 +251,14 @@
         ),
         h("div", { className: "sh-picker-cats" },
           h("div", { className: "sh-picker-tabs", ref: tabsRef, role: "tablist" },
-            SkillShelf.PICKER_TABS.map((tab) => h("button", {
+            pickerTabs.map((tab) => h("button", {
               key: tab.id,
               type: "button",
               role: "tab",
               className: "sh-picker-tab" + (tabId === tab.id ? " on" : ""),
               "aria-selected": tabId === tab.id,
               onClick: () => { setTabId(tab.id); setActiveIndex(0); },
-            }, tr(tab.labelKey))),
+            }, (tab.labelKey && tr(tab.labelKey)) || tab.name || tab.id)),
           ),
           h("button", {
             type: "button",
@@ -313,6 +328,33 @@
       const draft = useInputHook ? (useInputHook((s) => (s && s.draft) || "") || "") : "";
       const sessionId = props && props.sessionId;
 
+      const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
+      const [currentPreset, setCurrentPreset] = useState(() => {
+        return SkillShelf.resolveActivePreset({
+          props,
+          sessions,
+        });
+      });
+
+      useEffect(() => {
+        const updatePreset = () => {
+          const s = typeof plazaSessions !== "undefined" ? plazaSessions : null;
+          const next = SkillShelf.resolveActivePreset({
+            props,
+            sessions: s,
+          });
+          setCurrentPreset((prev) => (prev !== next ? next : prev));
+        };
+        updatePreset();
+        const s = typeof plazaSessions !== "undefined" ? plazaSessions : null;
+        if (s && s.list && typeof s.list.subscribe === "function") {
+          return s.list.subscribe(updatePreset);
+        }
+        return undefined;
+      }, [sessionId, props]);
+
+      const presetBinding = SkillShelf.getPresetSkillBinding(currentPreset);
+
       useEffect(() => { setOpen(false); }, [sessionId]);
 
       useEffect(() => {
@@ -326,6 +368,11 @@
         window.addEventListener("dsh-product-stage", onPage);
         return () => window.removeEventListener("dsh-product-stage", onPage);
       }, [open]);
+
+      // 如果当前预设没有绑定 skill 则默认不显示 skill 按钮
+      if (!presetBinding) {
+        return null;
+      }
 
       const close = useCallback(() => setOpen(false), []);
 
@@ -379,6 +426,7 @@
             onExplore,
             onCreate,
             t: tr,
+            presetBinding,
           }),
         ),
       );
