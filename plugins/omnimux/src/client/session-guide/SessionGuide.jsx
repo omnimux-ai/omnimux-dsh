@@ -17,7 +17,11 @@ function StarterIcon({ icon }) {
 export function SessionGuide(props) {
   const session = props.useSession(value => value)
   const hasTargets = props.useConversation(value => value.activeTargets.size > 0)
-  if (!isBlankConversation(session, hasTargets)) return null
+  const panelOpen = useSyncExternalStore(props.workbench.subscribe, () => {
+    const snapshot = props.workbench.getSnapshot()
+    return snapshot?.sessionId === props.sessionId && snapshot.state.panelOpen === true
+  }, () => false)
+  if (panelOpen || !isBlankConversation(session, hasTargets)) return null
   return <BlankSessionGuide {...props} key={props.sessionId} />
 }
 
