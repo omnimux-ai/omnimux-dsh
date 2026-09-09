@@ -5,7 +5,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 ## Working agreements
 
 - Follow system, platform, and safety constraints. Within those bounds, current user instructions take precedence over skill guidelines, memory, and defaults; this file adds project-scoped rules.
-- Apply global Execution continuity within this repository; [Git/PR policy](docs/contracts/plugin-git-pr.md) defines local preparation, remote writing, merge, and materialization authorization. Missing paperwork does not transfer authorized work to the user.
+- Apply global Execution continuity and the [Git/PR task authorization policy](docs/contracts/plugin-git-pr.md): confirmed implementation covers ordinary PR, merge and Dev delivery without per-step approval; explicit local-only or unmerged-PR limits remain effective.
 - Default to concise Simplified Chinese prose, with English code and identifiers. Lead with impact and conclusion; include only useful actions, decisions, and evidence, without filler or unrequested comparisons.
 - Prioritize non-Alpha functionality; Alpha denotes internal testing, stays available in development, and is excluded from formal releases. Follow [Alpha release policy](docs/contracts/alpha-release.md); the existing MVP and authorization boundaries still apply.
 - Search with `rg` / `rg --files` and batch independent reads. Delegate independent work only when it saves time or improves quality; keep shared Git state and final integration with the coordinator. Give each delegate inputs, write scope, completion evidence, and an appropriate model/effort.

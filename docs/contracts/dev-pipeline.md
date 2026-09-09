@@ -60,7 +60,7 @@ L2 的 `start` 和 `restart-host` 均通过 CLI `--patch` 加载 [工作区浏�
 
 - L2 Host 属于任务私有环境，Agent 可用 `yarn omnimux:dev restart-host <task>` 原地重启并保持端口/数据身份。
 - Client 物化后优先在指定 Dev 页面或窗口刷新；Host 变更只有在目标进程重新加载后才生效。
-- 公共 App 重启必须先确认具体 App（Dev/Prod）和协调窗口。确认后由 Agent 执行指定重启并复核，不得把非付款操作交回用户，也不得默认 `pkill` 未确认目标。
+- Dev 重启按 [Git/PR 授权边界](plugin-git-pr.md#授权边界)执行：Agent 核实目标身份、状态可恢复性及占用冲突；无冲突时自主执行并复核，有冲突时只协调该冲突。Prod 保留生产授权边界，不得默认 `pkill` 未确认目标。
 - 只有壳层/平台门控改动需要额外 Electron renderer/CDP；普通 Web/Stage 仍以 L2 和合并后 45120 浏览器证据为主。
 
 ## 数据与诊断边界
