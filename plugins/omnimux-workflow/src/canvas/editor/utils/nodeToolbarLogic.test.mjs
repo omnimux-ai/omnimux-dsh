@@ -516,3 +516,20 @@ test('resolveVideoDeconstructPath：优先级 realPath > local-file URL > http U
   // 全空 → null
   assert.equal(resolveVideoDeconstructPath({}), null);
 });
+
+test('canRunVideoStoryboard / buildStoryboardVideoPillActionSpec：分镜表按钮契约', async () => {
+  const { canRunVideoStoryboard, buildStoryboardVideoPillActionSpec, resolveVideoStoryboardPath } =
+    await import('./nodeToolbarLogic.ts');
+
+  assert.equal(canRunVideoStoryboard({ materialType: 'video', realPath: '/test.mp4' }), true);
+  assert.equal(canRunVideoStoryboard({ materialType: 'image', realPath: '/test.mp4' }), false);
+  assert.equal(canRunVideoStoryboard({ materialType: 'video', isOffline: true, realPath: '/test.mp4' }), false);
+  assert.equal(canRunVideoStoryboard({ materialType: 'video', realPath: '/test.mp4', executionStatus: 'running' }), false);
+
+  const spec = buildStoryboardVideoPillActionSpec();
+  assert.equal(spec.id, 'storyboard-video');
+  assert.equal(spec.section, 'primary');
+  assert.equal(spec.width, 88);
+
+  assert.equal(resolveVideoStoryboardPath({ realPath: '/a.mp4' }), '/a.mp4');
+});

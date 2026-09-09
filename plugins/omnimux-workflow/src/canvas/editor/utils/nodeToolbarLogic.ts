@@ -164,6 +164,7 @@ export function resolveSpeechToTextAudioPath(
 // ============================================================================
 
 export const DECONSTRUCT_VIDEO_PILL_ACTION_ID = 'deconstruct-video';
+export const STORYBOARD_VIDEO_PILL_ACTION_ID = 'storyboard-video';
 
 export interface VideoDeconstructEligibilityInput {
   materialType?: string;
@@ -188,6 +189,11 @@ export function canRunVideoDeconstruct(input: VideoDeconstructEligibilityInput):
   );
 }
 
+/**
+ * 「做分镜表」按钮可见性：与「内容拆解」对称。
+ */
+export const canRunVideoStoryboard = canRunVideoDeconstruct;
+
 export function buildDeconstructVideoPillActionSpec(width: number = 88): ToolbarActionSpec {
   return {
     id: DECONSTRUCT_VIDEO_PILL_ACTION_ID,
@@ -195,6 +201,19 @@ export function buildDeconstructVideoPillActionSpec(width: number = 88): Toolbar
     width,
   };
 }
+
+export function buildStoryboardVideoPillActionSpec(width: number = 88): ToolbarActionSpec {
+  return {
+    id: STORYBOARD_VIDEO_PILL_ACTION_ID,
+    section: 'primary',
+    width,
+  };
+}
+
+/**
+ * 解析分镜表来源视频路径（复用 resolveVideoDeconstructPath）。
+ */
+export const resolveVideoStoryboardPath = resolveVideoDeconstructPath;
 
 /**
  * 解析视频节点的拆解来源路径：

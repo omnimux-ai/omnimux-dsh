@@ -76,6 +76,7 @@ import { createTableRoutes } from './tableRoutes';
 import { createSpeechToTextRoutes } from './speechToTextRoutes';
 import { createVideoExtractionRoutes } from './videoExtractionRoutes';
 import { createVideoDeconstructRoutes } from './videoDeconstructRoutes';
+import { createVideoStoryboardRoutes } from './videoStoryboardRoutes';
 
 export {
   MAX_JSON_BODY_BYTES,
@@ -164,6 +165,13 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     getTool: deps.getTool,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
   });
+  const videoStoryboardRoutes = createVideoStoryboardRoutes({
+    store,
+    mediaDir,
+    getSeam: deps.getSeam,
+    getTool: deps.getTool,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
+  });
 
   /**
    * Legacy M1 prefix compatibility: /dsh-workflow/* is rewritten (in-memory,
@@ -197,6 +205,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
 
       const fromVideoDeconstruct = await videoDeconstructRoutes.tryHandle(method, path, req);
       if (fromVideoDeconstruct) return fromVideoDeconstruct;
+
+      const fromVideoStoryboard = await videoStoryboardRoutes.tryHandle(method, path, req);
+      if (fromVideoStoryboard) return fromVideoStoryboard;
 
       if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
         try {
