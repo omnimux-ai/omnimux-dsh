@@ -13,8 +13,8 @@ export function FormField({ field, value, errors, disabled, editor, state, hub, 
     <NumberInput.Control><NumberInput.IncrementTrigger aria-label={`增加${field.label}`} /><NumberInput.DecrementTrigger aria-label={`减少${field.label}`} /></NumberInput.Control>
   </NumberInput.Root>
   if (field.type === 'slider') input = <Slider.Root id={id} min={field.min} max={field.max} step={field.step} value={[typeof value === 'number' ? value : field.min]} disabled={disabled} onValueChange={e => change(e.value[0])}>
-    <Flex justify="space-between"><Slider.Label>{field.label}</Slider.Label><Slider.ValueText /></Flex>
-    <Slider.Control paddingBlock="12px"><Slider.Track height="4px" bg="var(--dsw-alias-bg-layer-3)"><Slider.Range bg="var(--dsw-alias-label-primary)" /></Slider.Track><Slider.Thumb index={0} width="16px" height="16px" bg="var(--dsw-alias-label-primary)" borderColor="var(--dsw-alias-border-l3)"><Slider.HiddenInput aria-label={field.label} /></Slider.Thumb></Slider.Control>
+    <Flex justify="flex-end"><Slider.Label srOnly>{field.label}</Slider.Label><Slider.ValueText /></Flex>
+    <Slider.Control paddingBlock="12px"><Slider.Track height="4px" bg="var(--dsw-alias-bg-layer-3)"><Slider.Range bg="var(--dsw-alias-label-primary)" /></Slider.Track><Slider.Thumb index={0} aria-label={field.label} width="16px" height="16px" bg="var(--dsw-alias-label-primary)" borderColor="var(--dsw-alias-border-l3)"><Slider.HiddenInput aria-label={field.label} /></Slider.Thumb></Slider.Control>
   </Slider.Root>
   if (field.type === 'select' || field.type === 'aspect-ratio') input = <RadioCard.Root id={id} value={value ?? null} disabled={disabled} onValueChange={e => change(e.value ?? undefined)} aria-label={field.label}>
     <Flex gap="8px" wrap="wrap">{field.options.map(option => <RadioCard.Item key={option.value} value={option.value} cursor="pointer" border="1px solid var(--dsw-alias-border-l2)" borderRadius="8px" boxShadow="none" bg="var(--dsw-alias-bg-layer-1)" _checked={{ borderColor: 'var(--dsw-alias-label-primary)', bg: 'var(--dsw-alias-interactive-bg-active)' }} _focusWithin={{ outline: '2px solid var(--dsw-alias-brand-primary)', outlineOffset: '2px' }}>
@@ -36,7 +36,7 @@ export function FormField({ field, value, errors, disabled, editor, state, hub, 
     </Flex>)}
     {state.uploads.filter(u => u.fieldId === field.id).map(upload => <Flex key={upload.id} align="center" gap="8px" py="8px"><Box flex="1" minWidth="0"><Text fontSize="13px" overflowWrap="anywhere">{upload.file.name}</Text><Text role={upload.error ? 'alert' : 'status'} fontSize="12px">{upload.error || `导入中 ${Math.round(upload.progress * 100)}%`}</Text></Box>{upload.error && <Button {...secondary} onClick={() => editor.upload(upload)}>重试</Button>}<Button {...secondary} onClick={() => editor.removeUpload(upload.id)}>移除</Button></Flex>)}
   </Box>
-  return <Field.Root id={`${id}-field`} invalid={Boolean(error)} required={field.required} disabled={disabled} gap="8px" data-form-field={field.id}>
+  return <Field.Root id={id} invalid={Boolean(error)} required={field.required} disabled={disabled} gap="8px" data-form-field={field.id}>
     <Field.Label htmlFor={id} fontSize="14px" fontWeight="500">{field.label}<Field.RequiredIndicator /></Field.Label>
     {field.description && <Field.HelperText fontSize="13px" color="var(--dsw-alias-label-secondary)">{field.description}</Field.HelperText>}
     {input}<Field.ErrorText fontSize="13px" color="var(--dsw-alias-state-error-primary)">{error}</Field.ErrorText>

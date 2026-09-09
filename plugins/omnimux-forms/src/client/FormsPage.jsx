@@ -29,7 +29,7 @@ function ValidEditor({ definition, workspace, hub, onBack }) {
     if (!state.focusRevision || !state.errors.length) return
     const field = state.errors.find(e => e.path[0] === 'values')?.path[1]
     const root = document.querySelector(`[data-form-field="${field}"]`)
-    root?.querySelector('input:not([type="file"]):not([type="hidden"]),textarea,button,[tabindex="0"]')?.focus()
+    root?.querySelector('input:not([type="file"]):not([type="hidden"]):not([hidden]),textarea,button,[tabindex="0"]')?.focus()
   }, [state.focusRevision])
   return <Flex direction="column" height="100%" minHeight="0">
     <Flex align="center" justify="space-between" gap="12px" padding="20px 24px" borderBottom="1px solid var(--dsw-alias-border-l1)"><Button {...secondary} disabled={state.busy} onClick={onBack}>全部模板</Button><Text fontSize="13px" color="var(--dsw-alias-label-secondary)">{workspace.title || '当前工作区'}</Text></Flex>
