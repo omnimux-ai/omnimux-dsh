@@ -1,69 +1,79 @@
-/**
- * test-dx-pipeline.mjs — DX 流水线 L1 自动化单元测试套件
- *
- * 验证目标：
- * 1. CLI 命令路由与 help 提示完整性
- * 2. Agent 误杀桌面应用的 Fail-closed 拦截守卫
- * 3. build:all 全量构建调度器的一致性与快速失败
- * 4. dev-env.sh / watch-plugin.mjs 进程模型与参数合法性
- */
-
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
-const productDir = join(rootDir, 'product/omnimux-dsh')
-const cliPath = join(rootDir, 'scripts/omnimux.mjs')
-const buildAllPath = join(rootDir, 'scripts/build-all.mjs')
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const cli = join(root, 'scripts/omnimux.mjs')
+const run = (args, env = process.env) => spawnSync(process.execPath, [cli, ...args], { cwd: root, env, encoding: 'utf8' })
 
-test('TC-L1-01: omnimux.mjs help 输出必须包含 restart-host 与 build:all', () => {
-  const res = spawnSync(process.execPath, [cliPath, 'help'], { encoding: 'utf8' })
-  assert.equal(res.status, 0)
-  assert.match(res.stdout, /dev restart-host <task>/)
-  assert.match(res.stdout, /build:all/)
-  assert.match(res.stdout, /sync/)
+test('CLI help exposes sync/build/doctor without a task environment launcher', () => {
+  const result = run(['help'])
+  assert.equal(result.status, 0)
+  assert.match(result.stdout, /build:all/)
+  assert.match(result.stdout, /sync/)
+  assert.match(result.stdout, /doctor/)
+  assert.doesNotMatch(result.stdout, /L2|restart-host|dev <start/)
 })
 
-test('TC-L1-02: Agent 环境下执行桌面应用重启必须被 Fail-closed 严格拦截', () => {
-  const env = { ...process.env, DSH_AGENT_SESSION: '1' }
-  const res = spawnSync(process.execPath, [cliPath, 'restart', 'dev'], {
-    env,
-    encoding: 'utf8',
-  })
-  assert.equal(res.status, 1)
-  assert.match(res.stderr, /Agent 严禁强杀或重启任何桌面应用/)
+test('retired environment commands fail rather than launching a Host', () => {
+  const result = run(['dev', 'start', 'removed-task', 'omnimux-assets'])
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /未知命令: dev/)
+  for (const script of ['worktree.sh', 'git-wt.sh']) {
+    const legacy = spawnSync('bash', [join(root, 'scripts', script), 'dev', 'removed-task'], { cwd: root, encoding: 'utf8' })
+    assert.equal(legacy.status, 1, `${script}: ${legacy.stderr}`)
+  }
 })
 
-test('TC-L1-03: scripts/build-all.mjs 全量构建应能正常执行且退出码为 0', () => {
-  const res = spawnSync(process.execPath, [buildAllPath], {
-    cwd: rootDir,
-    encoding: 'utf8',
-  })
-  assert.equal(res.status, 0)
-  assert.match(res.stdout, /全量构建成功/)
+test('retired delivery flags are rejected rather than silently accepted', () => {
+  const result = spawnSync('bash', [join(root, 'scripts/git-wt.sh'), 'finish', 'removed-task', '--skip-l2'], { cwd: root, encoding: 'utf8' })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /未知参数: --skip-l2/)
 })
 
-test('TC-L1-04: watch-plugin.mjs 传入不存在插件必须优雅非零退出且无 uncaught 崩溃', () => {
-  const watchScript = join(productDir, 'scripts/watch-plugin.mjs')
-  const res = spawnSync(process.execPath, [watchScript, 'non-existent-plugin-xyz'], {
-    cwd: productDir,
-    encoding: 'utf8',
-  })
-  assert.equal(res.status, 1)
-  assert.match(res.stderr, /插件源码不存在/)
+test('Agent cannot use the bulk App kill/restart shortcut', () => {
+  const result = run(['restart', 'dev'], { ...process.env, DSH_AGENT_SESSION: '1' })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /Agent 严禁通过此批量命令强杀或重启/)
 })
 
-test('TC-L1-05: dev-env.sh 非法任务名输入必须立即阻断', () => {
-  const devEnvScript = join(productDir, 'scripts/dev-env.sh')
-  const res = spawnSync('bash', [devEnvScript, 'start', '../../bad-name', 'omnimux-assets'], {
-    cwd: productDir,
-    encoding: 'utf8',
+test('active hooks preserve worktree and UI guards without the removed guard', () => {
+  const hooks = JSON.parse(readFileSync(join(root, '.dsh/hooks.json'), 'utf8'))
+  assert.deepEqual(hooks.PreToolUse.flatMap(row => row.hooks.map(hook => hook.command)), [
+    'node scripts/guard-worktree.mjs',
+    'node scripts/guard-ui-design.mjs',
+  ])
+  const { scripts } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  assert.equal(scripts.dev, undefined)
+  assert.equal(scripts['dev:env'], undefined)
+  assert.ok(scripts['test:gates'])
+  assert.ok(scripts['verify:live'])
+})
+
+for (const code of [0, 1]) {
+  test(`build-all propagates plugin build exit ${code} using an isolated fixture`, () => {
+    const fixture = mkdtempSync(join(tmpdir(), 'omnimux-dx-'))
+    try {
+      mkdirSync(join(fixture, 'scripts'), { recursive: true })
+      const plugin = join(fixture, 'plugins/example')
+      mkdirSync(join(plugin, 'scripts'), { recursive: true })
+      copyFileSync(join(root, 'scripts/build-all.mjs'), join(fixture, 'scripts/build-all.mjs'))
+      writeFileSync(join(plugin, 'package.json'), '{"name":"example","type":"module"}\n')
+      writeFileSync(join(plugin, 'scripts/build-client.mjs'), `process.exit(${code})\n`)
+      const result = spawnSync(process.execPath, [join(fixture, 'scripts/build-all.mjs')], { encoding: 'utf8' })
+      assert.equal(result.status, code, result.stderr)
+      if (code === 0) assert.match(result.stdout, /全量构建成功/)
+      else assert.match(result.stderr, /构建失败/)
+    } finally { rmSync(fixture, { recursive: true, force: true }) }
   })
-  assert.equal(res.status, 1)
-  assert.match(res.stderr, /非法任务名/)
+}
+
+test('standalone build watcher rejects an unknown plugin without starting a process', () => {
+  const result = spawnSync(process.execPath, [join(root, 'scripts/watch-plugin.mjs'), 'non-existent-plugin-xyz'], { cwd: root, encoding: 'utf8' })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /插件源码不存在/)
 })

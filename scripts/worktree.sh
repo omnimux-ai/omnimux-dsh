@@ -14,9 +14,7 @@
 #   - Full worktree-ops compatibility (init, new, list, ship, remove, clean, prune).
 #   - GitHub Issue & PR integration (--issue <id>, --pr <number>, auto-new <id>).
 #   - Safe PR-First guard (verifies PR MERGED before destruction).
-#   - L2 Task Environment hooks (auto recycles dev-env.sh ports upon cleanup).
 #   - Backward-compatible detection for legacy sibling worktrees (../*-wt-*).
-#   - L2 Dev shortcut (worktree.sh dev <task>).
 # ==============================================================================
 
 set -euo pipefail
@@ -144,21 +142,6 @@ resolve_worktree_dir() {
 
   # Fallback to standard path
   echo "${WT_DIR}/${task}"
-}
-
-# -----------------------------------------------------------------------------
-# L2 Task Environment Lifecycle Hook
-# -----------------------------------------------------------------------------
-
-recycle_l2_environment() {
-  local task="$1"
-  local dev_env_script="${ROOT}/scripts/dev-env.sh"
-  if [ -f "${dev_env_script}" ]; then
-    if bash "${dev_env_script}" ls 2>/dev/null | grep -qE "(omnimux-dev-${task}[[:space:]])"; then
-      say "releasing L2 task environment: omnimux-dev-${task}"
-      bash "${dev_env_script}" rm "${task}" 2>&1 | tail -3 || true
-    fi
-  fi
 }
 
 # -----------------------------------------------------------------------------
@@ -414,7 +397,6 @@ cmd_ship() {
   git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
   git worktree prune
 
-  recycle_l2_environment "${task}"
   say "done: ${branch} shipped and worktree cleaned up"
 }
 
@@ -486,7 +468,6 @@ cmd_remove() {
   fi
 
   git worktree prune
-  recycle_l2_environment "${task}"
   say "done: ${task} removed"
 }
 
@@ -592,20 +573,6 @@ clean_one() {
   say "removing merged worktree: ${wt} (branch: ${branch})"
   git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
   git branch -d "${branch}" 2>/dev/null || true
-  local task_name="$(basename "${wt}" | sed "s/^$(basename "${ROOT}")-wt-//")"
-  recycle_l2_environment "${task_name}"
-}
-
-cmd_dev() {
-  local task="${1:-}"
-  local plugin="${2:-}"
-  [ -n "${task}" ] || die "usage: worktree.sh dev <task> [plugin]"
-
-  local dev_env_script="${ROOT}/scripts/dev-env.sh"
-  [ -f "${dev_env_script}" ] || die "scripts/dev-env.sh not found"
-
-  say "launching L2 task environment for ${task}..."
-  exec bash "${dev_env_script}" start "${task}" ${plugin}
 }
 
 usage() {
@@ -621,7 +588,6 @@ Usage:
   worktree.sh new <task> [base] [--type ...] create .worktrees/<task>
   worktree.sh auto-new <issue_id>            fetch GitHub Issue and create worktree automatically
   worktree.sh list                           show active worktrees and dirty counts
-  worktree.sh dev <task> [plugin]            launch isolated L2 task environment (port 44201+)
   worktree.sh ship <task> [--pr <num>]       finish & sync: merge to ${DEFAULT_BRANCH} or verify PR MERGED
   worktree.sh remove <task> [flags]          safely remove worktree (--discard, --abandon, --pr <num>)
   worktree.sh prune                          drop stale worktree records & list safe-to-delete branches
@@ -647,7 +613,6 @@ case "${cmd}" in
   new)      [ "$#" -ge 1 ] || die "usage: worktree.sh new <task> [base] [--type feat|fix|chore|agent] [--issue <id>]"; cmd_new "$@" ;;
   auto-new) [ "$#" -ge 1 ] || die "usage: worktree.sh auto-new <issue_id>"; cmd_auto_new "$@" ;;
   list)     cmd_list ;;
-  dev)      [ "$#" -ge 1 ] || die "usage: worktree.sh dev <task> [plugin]"; cmd_dev "$@" ;;
   ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> [--pr <num>]"; cmd_ship "$@" ;;
   finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> [--pr <num>]"; cmd_ship "$@" ;;
   remove)   [ "$#" -ge 1 ] || die "usage: worktree.sh remove <task> [--discard] [--abandon] [--pr <num>]"; cmd_remove "$@" ;;

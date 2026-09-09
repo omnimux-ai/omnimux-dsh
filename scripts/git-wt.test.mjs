@@ -129,30 +129,6 @@ describe('scripts/git-wt.sh finish lifecycle in isolated environment', () => {
     const syncScript = join(mainRepo, 'scripts', 'sync-to-app.sh')
     writeFileSync(syncScript, `#!/usr/bin/env bash\necho "MOCK SYNC: $1 synced"\nexit 0\n`, { mode: 0o755 })
 
-    // 创建 dev-env.sh 模拟脚本（L2 独立环境：start 打印 port/URL，ls/rm 可驱动）
-    // 供 wt dev / finish L2 门禁 / clean 回收测试使用。
-    const devEnvScript = join(mainRepo, 'scripts', 'dev-env.sh')
-    writeFileSync(devEnvScript, `#!/usr/bin/env bash
-cmd="\$1"; name="\${2:-}"
-case "\$cmd" in
-  start)
-    plugin="\${3:-}"
-    echo "✓ dev 环境已启动: omnimux-dev-\$name"
-    echo "  URL:   http://127.0.0.1:44201"
-    echo "  port:  44201"
-    echo "  link:  \$plugin"
-    echo "  source: \${OMNIMUX_PLUGINS_DIR:-<default>}"
-    ;;
-  ls)
-    if [ -n "\${MOCK_LS_TASKS_FILE}" ] && [ -f "\${MOCK_LS_TASKS_FILE}" ]; then cat "\${MOCK_LS_TASKS_FILE}"; fi
-    ;;
-  rm)
-    echo "✓ 已删除环境 omnimux-dev-\$name"
-    ;;
-esac
-exit 0
-`, { mode: 0o755 })
-
     // 提交主干并推送到 remote
     execSync(`git -C "${mainRepo}" add .`, { stdio: 'ignore' })
     execSync(`git -C "${mainRepo}" commit -m "chore: initial main commit"`, { stdio: 'ignore' })
@@ -266,7 +242,7 @@ exit 0
       execSync(`git -C "${wtDir}" add .`, { stdio: 'ignore' })
       execSync(`git -C "${wtDir}" commit -m "feat(workflow): implement table action"`, { stdio: 'ignore' })
 
-      const finishOut = execSync(`bash "${scriptCopy}" finish table-action 103 --skip-sync --skip-l2`, {
+      const finishOut = execSync(`bash "${scriptCopy}" finish table-action 103 --skip-sync`, {
         cwd: mainRepo,
         encoding: 'utf8'
       })
@@ -305,7 +281,7 @@ exit 0
       execSync(`git -C "${wtDir}" add .`, { stdio: 'ignore' })
       execSync(`git -C "${wtDir}" commit -m "fix(common): quick fix issue 104"`, { stdio: 'ignore' })
 
-      const finishOut = execSync(`bash "${scriptCopy}" finish quick-fix 104 --skip-test --skip-sync --skip-push --skip-l2`, {
+      const finishOut = execSync(`bash "${scriptCopy}" finish quick-fix 104 --skip-test --skip-sync --skip-push`, {
         cwd: mainRepo,
         encoding: 'utf8'
       })
@@ -315,95 +291,6 @@ exit 0
       assert.ok(finishOut.includes('未完成') || finishOut.includes('Worktree 与特性分支已保留'))
       assert.ok(existsSync(wtDir), 'Worktree must be preserved when not MERGED')
       assert.ok(!existsSync(join(mainRepo, 'quick-fix.txt')), 'Local main must not absorb unpushed work')
-    } finally {
-      cleanupSandbox()
-    }
-  })
-
-  it('finish blocks when L2 evidence is missing, unless --skip-l2 is explicit', () => {
-    setupSandbox()
-    try {
-      execSync(`bash "${scriptCopy}" start common l2missing 105`, {
-        cwd: mainRepo,
-        stdio: 'ignore'
-      })
-      const wtDir = join(testRoot, 'omnimux-dsh-wt-l2missing-105')
-      writeFileSync(join(wtDir, 'l2-feature.txt'), 'needs independent env')
-      execSync(`git -C "${wtDir}" add .`, { stdio: 'ignore' })
-      execSync(`git -C "${wtDir}" commit -m "feat(common): l2 gate test"`, { stdio: 'ignore' })
-
-      // 1. 无 .l2-dev.env → 阻断
-      try {
-        execSync(`bash "${scriptCopy}" finish l2missing 105 --skip-test --skip-sync --skip-push`, {
-          cwd: mainRepo, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']
-        })
-        assert.fail('should have blocked on missing L2 evidence')
-      } catch (err) {
-        const msg = `${err.stdout || ''}${err.stderr || ''}`
-        assert.ok(msg.includes('缺少 L2 独立环境验证记录'), `expected L2 gate block, got: ${msg}`)
-      }
-      assert.ok(existsSync(wtDir), 'Worktree preserved after L2 gate block')
-
-      // 2. --skip-l2 显式放行
-      const skipOut = execSync(`bash "${scriptCopy}" finish l2missing 105 --skip-test --skip-sync --skip-push --skip-l2`, {
-        cwd: mainRepo, encoding: 'utf8'
-      })
-      assert.ok(skipOut.includes('L2 验证门禁跳过 (--skip-l2)'))
-    } finally {
-      cleanupSandbox()
-    }
-  })
-
-  it('dev subcommand starts an L2 environment from the worktree source and writes .l2-dev.env', () => {
-    setupSandbox()
-    try {
-      execSync(`bash "${scriptCopy}" start workflow l2dev 106`, {
-        cwd: mainRepo,
-        stdio: 'ignore'
-      })
-      const wtDir = join(testRoot, 'omnimux-dsh-wt-l2dev-106')
-
-      const devOut = execSync(`bash "${scriptCopy}" dev l2dev 106`, {
-        cwd: mainRepo,
-        encoding: 'utf8'
-      })
-      assert.ok(devOut.includes('omnimux-dev-l2dev'), 'should start the L2 task env')
-      assert.ok(devOut.includes('44201'), 'should report the independent L2 port')
-      assert.ok(devOut.includes(wtDir), 'should point source into the worktree')
-
-      const envFile = join(wtDir, '.l2-dev.env')
-      assert.ok(existsSync(envFile), '.l2-dev.env must be written')
-      const env = readFileSync(envFile, 'utf8')
-      assert.ok(env.includes('PLUGIN=omnimux-workflow'))
-      assert.ok(env.includes('PORT=44201'))
-      assert.ok(env.includes('SOURCE='), 'must record the source path')
-    } finally {
-      cleanupSandbox()
-    }
-  })
-
-  it('clean recycles the matching L2 task environment', () => {
-    setupSandbox()
-    try {
-      execSync(`bash "${scriptCopy}" start common l2clean 107`, {
-        cwd: mainRepo,
-        stdio: 'ignore'
-      })
-      const wtDir = join(testRoot, 'omnimux-dsh-wt-l2clean-107')
-      writeFileSync(join(wtDir, 'l2-clean.txt'), 'recycle me')
-      execSync(`git -C "${wtDir}" add .`, { stdio: 'ignore' })
-      execSync(`git -C "${wtDir}" commit -m "feat(common): l2 clean test"`, { stdio: 'ignore' })
-
-      // 模拟存在 L2 任务环境
-      const tasksFile = join(testRoot, 'l2-tasks.txt')
-      writeFileSync(tasksFile, 'omnimux-dev-l2clean  [running]  port:44201\n')
-
-      // --force 跳过 MERGED 校验，专注回收逻辑
-      const cleanOut = execSync(
-        `bash "${scriptCopy}" clean l2clean 107 --force`,
-        { cwd: mainRepo, encoding: 'utf8', env: { ...process.env, MOCK_LS_TASKS_FILE: tasksFile } },
-      )
-      assert.ok(cleanOut.includes('L2 任务环境 omnimux-dev-l2clean 已回收'), `expected recycle, got: ${cleanOut}`)
     } finally {
       cleanupSandbox()
     }
