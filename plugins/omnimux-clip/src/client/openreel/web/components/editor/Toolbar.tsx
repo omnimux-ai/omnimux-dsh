@@ -76,7 +76,7 @@ export const Toolbar: React.FC = () => {
   const hostLocale = useHostLocale();
   const session = getActiveClipSession();
   const isCanvasMode = session?.source === "canvas";
-  const returnToCanvasText = hostLocale?.active === "en" ? "Back to canvas" : "返回画布";
+  const returnToCanvasText = hostLocale?.active === "en" ? "Exit editor" : "退出编辑";
 
   const handleReturnToCanvas = useCallback(() => {
     const activeSession = getActiveClipSession();
@@ -483,38 +483,11 @@ export const Toolbar: React.FC = () => {
         <ProjectSwitcher />
       </div>
 
-      {/* ─── Right: actions (return to canvas + export) ────────── */}
+      {/* ─── Right: actions (export + exit editor) ────────── */}
       <div
         data-toolbar-section="right"
         className="openreel-toolbar-right flex items-center justify-end shrink-0 gap-2.5"
       >
-        {isCanvasMode && (
-          <button
-            type="button"
-            onClick={handleReturnToCanvas}
-            aria-label={returnToCanvasText}
-            className="omnimux-clip-stage-close-btn flex items-center gap-1.5 h-[36px] px-3.5 py-[8px] rounded-[8px] bg-bg-2 hover:bg-hover border border-border hover:border-border-focus text-fg-2 hover:text-fg text-[13px] font-medium whitespace-nowrap transition-colors select-none"
-            style={{ WebkitAppRegion: "no-drag", pointerEvents: "auto" } as React.CSSProperties}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="shrink-0"
-              aria-hidden="true"
-            >
-              <path
-                d="M9 3L4 8L9 13M4 8H14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="whitespace-nowrap">{returnToCanvasText}</span>
-          </button>
-        )}
         {/* Export */}
         {exportState.isExporting ? (
           <button
@@ -650,6 +623,33 @@ export const Toolbar: React.FC = () => {
               </Text>
             </DropdownMenu>
           </div>
+        )}
+        {isCanvasMode && (
+          <button
+            type="button"
+            onClick={handleReturnToCanvas}
+            aria-label={returnToCanvasText}
+            className="omnimux-clip-stage-close-btn flex items-center gap-1.5 h-[36px] px-3.5 py-[8px] rounded-[8px] bg-bg-2 hover:bg-hover border border-border hover:border-border-focus text-fg-2 hover:text-fg text-[13px] font-medium whitespace-nowrap transition-colors select-none"
+            style={{ WebkitAppRegion: "no-drag", pointerEvents: "auto" } as React.CSSProperties}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                d="M9 3L4 8L9 13M4 8H14"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="whitespace-nowrap">{returnToCanvasText}</span>
+          </button>
         )}
       </div>
 

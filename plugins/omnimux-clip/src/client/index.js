@@ -29,7 +29,8 @@ const zh = {
   'tab.saveToNode': '保存草稿至节点',
   'tab.savedToNode': '已保存至节点',
   'tab.canvasMode': '画布联动模式',
-  'tab.returnToCanvas': '返回画布',
+  'tab.returnToCanvas': '退出编辑',
+  'tab.exitEditor': '退出编辑',
   'tab.close': '关闭',
 }
 
@@ -53,7 +54,8 @@ const en = {
   'tab.saveToNode': 'Save draft to node',
   'tab.savedToNode': 'Saved to node',
   'tab.canvasMode': 'Canvas Link Mode',
-  'tab.returnToCanvas': 'Back to canvas',
+  'tab.returnToCanvas': 'Exit editor',
+  'tab.exitEditor': 'Exit editor',
   'tab.close': 'Close',
 }
 

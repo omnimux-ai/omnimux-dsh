@@ -35,7 +35,7 @@ export default function App(){
   );
   const session = stage?.getSessionSnapshot();
   const isCanvasMode = session?.source === 'canvas';
-  const label = langSnap?.active === 'en' ? 'Back to canvas' : '返回画布';
+  const label = langSnap?.active === 'en' ? 'Exit editor' : '退出编辑';
   const handleClose = () => {
     if (session?.nodeId) globalThis.__clipQa.close.push({ nodeId: session.nodeId });
     stage?.set(false);
@@ -137,7 +137,7 @@ test('QA: return clears active session but preserves portal editor and translate
     await act(async()=>ui.lang.set('en'))
     await act(async()=>stage.openFromCanvas({nodeId:'A'}))
     assert.equal(document.querySelector('#editor-state'),editor)
-    assert.equal(document.querySelector('.omnimux-clip-stage-close-btn').textContent,'Back to canvas')
+    assert.equal(document.querySelector('.omnimux-clip-stage-close-btn').textContent,'Exit editor')
     assert.equal(fixture.mounts,1)
     assert.equal(fixture.unmounts,0)
   } finally {await ui.cleanup();stage.dispose()}
@@ -247,7 +247,7 @@ test('QA round 2: five canvas return/reopen cycles retain the same portal editor
       assert.equal(document.querySelector('#editor-state'), editor)
       assert.ok(host.contains(editor))
       const button = document.querySelector('.omnimux-clip-stage-close-btn')
-      assert.equal(button.textContent, cycle % 2 ? '返回画布' : 'Back to canvas')
+      assert.equal(button.textContent, cycle % 2 ? '退出编辑' : 'Exit editor')
       assert.equal(button.getAttribute('aria-label'), button.textContent)
       assert.equal(fixture.mounts, 1)
       assert.equal(fixture.unmounts, 0)
