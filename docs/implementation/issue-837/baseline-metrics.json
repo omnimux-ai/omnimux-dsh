@@ -1,0 +1,41 @@
+{
+  "url": "http://127.0.0.1:45120/",
+  "viewport": {
+    "width": 1920,
+    "height": 929,
+    "dpr": 2
+  },
+  "button": {
+    "x": 1308,
+    "y": 194,
+    "width": 32,
+    "height": 32,
+    "top": 194,
+    "right": 1340,
+    "bottom": 226,
+    "left": 1308
+  },
+  "tooltip": {
+    "x": 1565.5,
+    "y": 234,
+    "width": 79,
+    "height": 26,
+    "top": 234,
+    "right": 1644.5,
+    "bottom": 260,
+    "left": 1565.5
+  },
+  "tooltipStyle": "left: 1324px; top: 234px;",
+  "panel": {
+    "x": 280,
+    "y": 0,
+    "width": 1640,
+    "height": 929,
+    "top": 0,
+    "right": 1920,
+    "bottom": 929,
+    "left": 280
+  },
+  "contain": "layout style",
+  "svg": "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" class=\"omnimux-assets-icon\"><path d=\"m10 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2 3-1 1-3 3-1 1-3-2-2 1-3-3-2-3 1Z\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg>"
+}

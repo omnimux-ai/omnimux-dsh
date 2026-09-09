@@ -26,11 +26,6 @@ function Icon({ size = 14, children }) {
   )
 }
 
-/** Settings gear uses the same SVG geometry as the existing toolbar icons. */
-export function SettingsIcon(props) {
-  return <Icon {...props}><path d="m10 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2 3-1 1-3 3-1 1-3-2-2 1-3-3-2-3 1Z" /><circle cx="12" cy="12" r="3" /></Icon>
-}
-
 /** @param {{ size?: number }} props */
 export function FolderIcon(props) {
   return (

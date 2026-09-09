@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, DropdownSelect, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
-import { GridIcon, ImportIcon, ListIcon, PlusIcon, SettingsIcon } from './icons.jsx'
+import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
+import { StorageSettingsButton } from './StorageSettingsButton.jsx'
 import { StorageSettingsDialog } from './StorageSettingsDialog.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
@@ -139,7 +140,7 @@ function AssetsFilterBar(props) {
       }
       tools={
         <div className="omnimux-assets-tools-cluster">
-          <IconButton className="omnimux-assets-settings-button" aria-label={t('storage.settings')} title={t('storage.settings')} onClick={onStorageSettings}><SettingsIcon /></IconButton>
+          <StorageSettingsButton label={t('storage.settings')} onClick={onStorageSettings} />
           <div className="omnimux-assets-search-wrap">
             <SearchField
               placeholder={t('search.placeholder')}
