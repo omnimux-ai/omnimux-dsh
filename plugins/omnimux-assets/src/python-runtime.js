@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { lstatSync, readFileSync, readdirSync, readlinkSync, realpathSync } from 'node:fs'
-import { dirname, isAbsolute, join, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AssetsError } from './storage-types.js'
 
@@ -33,7 +33,15 @@ function resolvePrivateRuntime() {
   trusted(inventoryPath)
   const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'))
   if (inventory.arch !== process.arch || inventory.archiveSha256 !== artifact.sha256) throw denied('Python inventory does not match supply')
-  const expected = new Map(inventory.entries.map((entry) => [entry.path, entry]))
+  const entries = new Map(inventory.entries.map((entry) => [entry.path, entry]))
+  const expected = new Map(entries)
+  const linkTarget = (path, entry) => {
+    const target = resolve(dirname(path), entry.link)
+    if (isAbsolute(entry.link) || !target.startsWith(`${root}${sep}`)) throw denied('unsafe Python payload link')
+    const targetEntry = entries.get(relative(root, target).split(sep).join('/'))
+    if (!targetEntry || targetEntry.link !== undefined || targetEntry.bytes === undefined || !trusted(target).isFile()) throw denied('unsafe Python payload link target')
+    return targetEntry
+  }
   const visit = (directory) => {
     for (const name of readdirSync(directory)) {
       const path = join(directory, name)
@@ -42,12 +50,19 @@ function resolvePrivateRuntime() {
       const entry = expected.get(rel)
       if (!entry) throw denied('unlisted Python payload')
       expected.delete(rel)
-      if (info.isDirectory()) { trusted(path); visit(path); continue }
+      if (info.isDirectory()) {
+        if (entry.link !== undefined || entry.bytes !== undefined) throw denied('Python payload type mismatch')
+        trusted(path); visit(path); continue
+      }
       if (info.isSymbolicLink()) {
+        if (entry.link === undefined) throw denied('unlisted Python payload link')
+        linkTarget(path, entry)
         if (readlinkSync(path) !== entry.link || !realpathSync(path).startsWith(`${root}${sep}`)) throw denied('unsafe Python payload link')
       } else {
         trusted(path)
-        if (!info.isFile() || info.size !== entry.bytes || hash(readFileSync(path)) !== entry.sha256) throw denied('Python payload digest mismatch')
+        // rsync -aL materializes listed links as copies of their regular targets.
+        const content = entry.link === undefined ? entry : linkTarget(path, entry)
+        if (!info.isFile() || info.size !== content.bytes || hash(readFileSync(path)) !== content.sha256) throw denied('Python payload digest mismatch')
       }
     }
   }
