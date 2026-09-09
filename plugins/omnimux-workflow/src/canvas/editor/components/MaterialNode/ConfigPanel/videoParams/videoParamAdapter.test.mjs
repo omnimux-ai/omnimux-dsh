@@ -288,11 +288,11 @@ describe('videoParamAdapter - immediate combined-duration validation', () => {
   const params = {
     model: 'wan-3.0',
     operation: 'video_multi_ref',
-    operationLabel: '全能参考生视频',
+    operationLabel: '全能参考',
     effectiveOperations: [
       {
         id: 'video_multi_ref',
-        label: '全能参考生视频',
+        label: '全能参考',
         slots: [
           {
             slot: 'reference_videos',
@@ -344,10 +344,10 @@ describe('videoParamAdapter - document URL validation', () => {
   const baseParams = {
     model: 'wan-3.0',
     operation: 'document_to_video',
-    operationLabel: '文档参考生视频',
+    operationLabel: '文档参考',
     effectiveOperations: [{
       id: 'document_to_video',
-      label: '文档参考生视频',
+      label: '文档参考',
       slots: [{
         slot: 'file_url',
         type: 'document',

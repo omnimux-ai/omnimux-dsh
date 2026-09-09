@@ -84,7 +84,7 @@
     },
     {
       "id": "video_multi_ref",
-      "label": "全能参考生视频",
+      "label": "全能参考",
       "group": "video",
       "defaultOutputType": "video",
       "promptPolicy": "optional"
@@ -113,14 +113,14 @@
     },
     {
       "id": "document_to_video",
-      "label": "文档参考生视频",
+      "label": "文档参考",
       "group": "video",
       "defaultOutputType": "video",
       "promptPolicy": "optional"
     },
     {
       "id": "webpage_to_video",
-      "label": "网页参考生视频",
+      "label": "网页参考",
       "group": "video",
       "defaultOutputType": "video",
       "promptPolicy": "optional"

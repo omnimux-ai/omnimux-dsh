@@ -20,7 +20,7 @@ export function mockCatalog(): CapabilityCatalog {
     { id: 'mock-image-1', label: 'MockImage 1', operations: [op('text_to_image', '文生图', 'image'),
       op('image_to_image', '图生图', 'image', [imageSlot('reference_images', 'reference', 1, 4, 10)])] },
     { id: 'mock-video-1', label: 'MockVideo 1', operations: [op('text_to_video', '文生视频', 'video'),
-      op('first_last_frame', '首尾帧生视频', 'video', [imageSlot('start_frame', 'first_frame', 1, 1, 20),
+      op('first_last_frame', '首尾帧', 'video', [imageSlot('start_frame', 'first_frame', 1, 1, 20),
         imageSlot('end_frame', 'last_frame', 1, 1, 20)])] },
     { id: 'mock-audio-speech', label: 'MockSpeech', operations: [op('text_to_speech', '文本转语音', 'audio')] },
   ];

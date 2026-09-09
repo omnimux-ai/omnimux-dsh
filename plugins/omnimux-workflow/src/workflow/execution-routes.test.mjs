@@ -232,12 +232,12 @@ function urlRequiredCatalog() {
       },
       operations: [
         {
-          id: 'document_to_video', label: '文档参考生视频', listed: true, output: { type: 'video' }, inputs: [
+          id: 'document_to_video', label: '文档参考', listed: true, output: { type: 'video' }, inputs: [
             { slot: 'file_url', type: 'document', role: 'document', source: 'node_field', min: 1, max: 1 },
           ],
         },
         {
-          id: 'webpage_to_video', label: '网页参考生视频', listed: true, output: { type: 'video' }, inputs: [
+          id: 'webpage_to_video', label: '网页参考', listed: true, output: { type: 'video' }, inputs: [
             { slot: 'link_url', type: 'document', role: 'webpage', source: 'node_field', min: 1, max: 1 },
           ],
         },
