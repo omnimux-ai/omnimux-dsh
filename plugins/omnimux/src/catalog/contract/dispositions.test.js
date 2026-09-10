@@ -37,25 +37,25 @@ function runtimeIdsOf(index) {
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
-test('dispositions.json: exactly 71 rows, unique ids, all kinds valid, reasons present', () => {
+test('dispositions.json: exactly 69 rows, unique ids, all kinds valid, reasons present', () => {
   resetDispositionsCache();
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 71, `expected 71 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 69, `expected 69 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
-  assert.equal(ids.size, 71);
+  assert.equal(ids.size, 69);
   for (const row of rows) {
     assert.ok(DISPOSITION_KINDS.includes(row.disposition), row.id);
     assert.ok(typeof row.reason === 'string' && row.reason.trim(), row.id);
   }
 });
 
-test('71 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
+test('69 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 71);
+  assert.equal(runtimeIds.length, 69);
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });

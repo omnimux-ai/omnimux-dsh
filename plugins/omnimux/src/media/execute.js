@@ -154,10 +154,7 @@ export async function executeOmnimuxMedia(capability, input) {
   }
 
   let result
-  const effectiveModel = guardPlan.targetModelId || guardPlan.modelId
-  const candidates = (effectiveModel && effectiveModel !== route.modelId && route.providerId === 'omnimux')
-    ? gatewayCandidates(effectiveModel).slice(0, 2)
-    : route.candidates.slice(0, 2)
+  const candidates = route.candidates.slice(0, 2)
   for (const [attempt, candidate] of candidates.entries()) {
     let submitted = false
     const runtime = input.runtime ?? createProtocolRuntime(
