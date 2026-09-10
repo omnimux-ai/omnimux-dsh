@@ -181,7 +181,8 @@ test('T1 ProjectStore：扫描 list / Host mkdir+seed / remove 不 rm 项目根'
     assert.equal(projectRoot, join(libraryRoot, '项目甲'));
     assert.ok(existsSync(projectRoot));
     assert.ok(readFileSync(join(projectRoot, '.omnimux', 'project.json'), 'utf8').includes(created.id));
-    assert.ok(readFileSync(join(projectRoot, '说明.md'), 'utf8').includes('# 项目甲'));
+    assert.equal(existsSync(join(projectRoot, '说明.md')), false, '新建项目不自动生成无意义的说明.md');
+    writeFileSync(join(projectRoot, 'user-notes.txt'), 'hello');
 
     const renamedFolder = store.create('项目甲');
     assert.equal(renamedFolder.path, join(libraryRoot, '项目甲 (2)'));
@@ -211,7 +212,7 @@ test('T1 ProjectStore：扫描 list / Host mkdir+seed / remove 不 rm 项目根'
     store.remove(created.id);
     assert.throws(() => store.get(created.id), (e) => e.code === 'project-not-found');
     assert.equal(existsSync(projectRoot), true, '删除不得 rm 用户文件夹');
-    assert.equal(existsSync(join(projectRoot, '说明.md')), true);
+    assert.equal(existsSync(join(projectRoot, 'user-notes.txt')), true);
     assert.equal(existsSync(join(projectRoot, '.omnimux')), false);
     assert.equal(store.list().length, 2);
     assert.throws(() => store.get('../etc'), (e) => e.code === 'invalid-id');
@@ -272,7 +273,7 @@ test('T2 routes：GET library + 无 cwd list/create + 跨源写拒绝', async ()
     assert.equal(created.body.project.title, '路由项目');
     const projectRoot = created.body.project.path;
     assert.equal(projectRoot, join(library.body.libraryRoot, '路由项目'));
-    assert.equal(existsSync(join(projectRoot, '说明.md')), true);
+    assert.equal(existsSync(join(projectRoot, '说明.md')), false, '新建项目不自动生成无意义的说明.md');
 
     const listed = await call({ url: '/omnimux-workflow/api/projects' });
     assert.equal(listed.status, 200);

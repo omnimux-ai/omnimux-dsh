@@ -2,7 +2,7 @@
  * 项目落盘路径解析 + 写入 containment 断言。
  *
  * 红线（docs/contracts/gxgen-workflow-migration.md §5）：
- *   磁盘写只落「项目根」内（说明.md / .omnimux/project.json），
+ *   磁盘写只落「项目根」内（.omnimux/project.json），
  *   项目根必须落在默认库 `<videos>/OmniMux/Projects` 下。
  *   不再把当前会话 cwd 当项目库作用域。
  *
@@ -22,7 +22,7 @@ export class ProjectPathError extends Error {
   }
 }
 
-/** 人读种子文件名（规格拍板，避免假装已有完整 brief）。 */
+/** @deprecated 人读种子文件名（旧规格，不再自动生成 说明.md）。 */
 export const PROJECT_README_NAME = '说明.md';
 
 export interface ProjectPaths {
@@ -42,7 +42,7 @@ export interface ProjectPaths {
   artifactsDir: string;
   /** `<projectRoot>/.omnimux/canvases` — 绑定后的 DAG */
   canvasesDir: string;
-  /** `<projectRoot>/说明.md` */
+  /** `<projectRoot>/说明.md` (已废弃，新建项目不再自动生成) */
   readmeFile: string;
 }
 

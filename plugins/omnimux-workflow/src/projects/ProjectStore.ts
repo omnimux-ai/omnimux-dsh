@@ -5,7 +5,7 @@
  * `index.json` 停用主路径（写也不再维护）。
  *
  * 新建：Host 在默认库 mkdir 作品文件夹（桌面壳 picker 是 native，
- * 没有 workspaces.createDirectory），再写 说明.md + project.json。
+ * 没有 workspaces.createDirectory），再写 project.json。
  * 客户端也可先建好 projectRoot 再 POST 种子。
  *
  * 删除：只摘 json / 账本引用，**不 rm 用户文件夹**（与资产库同一红线）。
@@ -24,7 +24,6 @@ import { join } from 'node:path';
 import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName.ts';
 import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId.ts';
 import {
-  PROJECT_README_NAME,
   assertProjectInsideLibrary,
   assertProjectWriteSafe,
   resolveProjectPaths,
@@ -102,6 +101,7 @@ function readJsonFile(filePath: string): unknown {
   }
 }
 
+/** @deprecated 默认说明文档模板（已废弃，新建项目不再自动生成 说明.md） */
 export function defaultReadme(title: string): string {
   return `# ${title}\n\n本地项目不会自动与其他设备或用户共享。\n`;
 }
@@ -134,7 +134,7 @@ function toSummary(project: Project, path: string): ProjectSummary {
     sessionId: project.sessionId,
     path,
     pages: existingPages,
-    activePageId: project.activePageId || existingPages[0].id,
+    activePageId: project.activePageId || existingPages[0]?.id || '',
   };
 }
 
@@ -226,10 +226,6 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         activePageId: initialPage.id,
         pages: [initialPage],
       };
-      assertProjectWriteSafe(paths.readmeFile, paths.projectRoot);
-      if (!existsSync(paths.readmeFile)) {
-        writeFileSync(paths.readmeFile, defaultReadme(trimmed), 'utf8');
-      }
       return persistProject(paths.projectRoot, project);
     },
 
@@ -375,8 +371,7 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
       if (existsSync(metaDir)) {
         rmSync(metaDir, { recursive: true, force: true });
       }
-      // 用户文件夹、说明.md、生成物一律保留。
-      void PROJECT_README_NAME;
+      // 用户文件夹与生成物一律保留。
     },
   };
 }
