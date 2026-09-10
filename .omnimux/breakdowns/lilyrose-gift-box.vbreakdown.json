@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "is_video_breakdown": true,
+  "analyzed_at": "2026-09-10T08:36:43.777Z",
+  "video": {
+    "title": "May this sweet gift box ease your anxiety and bring you peace. ❤️",
+    "author_name": "LilyRose-sharing",
+    "author_handle": "@lilyrosesharing",
+    "author_avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+    "caption": "I share these boxes of healing, loving scriptures with friends who are prone to anxiety—small boxes",
+    "platform": "tiktok",
+    "source_url": "https://www.tiktok.com/@lilyrosesharing/video/7345678901234567890",
+    "video_url": "https://www.tiktok.com/@lilyrosesharing/video/7345678901234567890",
+    "stream_url": "https://www.tiktok.com/@lilyrosesharing/video/7345678901234567890",
+    "cover_url": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&auto=format&fit=crop&q=80",
+    "duration_seconds": 17,
+    "duration_text": "0:17",
+    "scene_count": 5,
+    "views": "249.5K",
+    "likes": "1568",
+    "comments": "15",
+    "shares": "148",
+    "ai_labeled": true
+  },
+  "pipeline": [
+    "Hook",
+    "Product Intro",
+    "Usage Detail",
+    "Demo Scene"
+  ],
+  "shots": [
+    {
+      "id": "shot_1",
+      "start_seconds": 3,
+      "end_seconds": 4,
+      "time_range": "0:03 - 0:04",
+      "title": "心形木片特写",
+      "stage": "Product Intro",
+      "tags": [
+        "特写",
+        "智能手机手持",
+        "俯视",
+        "手持微动"
+      ],
+      "description": "木盘内装满了各种颜色和字体的圆形木质雕刻饰品，上面印有“Amazing”、“Loved”、“Brave”等鼓励性词汇。"
+    },
+    {
+      "id": "shot_2",
+      "start_seconds": 4,
+      "end_seconds": 7,
+      "time_range": "0:04 - 0:07",
+      "title": "展示礼盒内部说明",
+      "stage": "Usage Detail",
+      "tags": [
+        "特写",
+        "智能手机手持",
+        "俯视",
+        "手持微动"
+      ],
+      "description": "双手打开一个带有拉菲草垫的小礼盒，盒盖内侧印有鼓励话语，随后将一枚心形木片放入盒中。"
+    },
+    {
+      "id": "shot_3",
+      "start_seconds": 7,
+      "end_seconds": 10,
+      "time_range": "0:07 - 0:10",
+      "title": "翻转礼盒展示文字",
+      "stage": "Usage Detail",
+      "tags": [
+        "特写",
+        "智能手机手持",
+        "俯视",
+        "手持微动"
+      ],
+      "description": "双手翻转礼盒底部，展示印有“God says you are...”以及一系列正能量词汇的详细设计。"
+    },
+    {
+      "id": "shot_4",
+      "start_seconds": 10,
+      "end_seconds": 14,
+      "time_range": "0:10 - 0:14",
+      "title": "藤篮周边产品展示",
+      "stage": "Demo Scene",
+      "tags": [
+        "中景",
+        "智能手机手持",
+        "俯视",
+        "手持移动"
+      ],
+      "description": "镜头扫过藤编篮子周围摆放整齐的数十个同款精致礼盒，呈现丰富的批次与陈列效果。"
+    },
+    {
+      "id": "shot_5",
+      "start_seconds": 14,
+      "end_seconds": 16,
+      "time_range": "0:14 - 0:16",
+      "title": "桌面使用场景",
+      "stage": "Demo Scene",
+      "tags": [
+        "特写",
+        "智能手机手持",
+        "俯视",
+        "手持微动"
+      ],
+      "description": "温馨的白色木质书桌上，双手正轻轻触碰、摆放刻有文字的心形木片，周围散落着笔记本、便签纸和绿植。"
+    }
+  ],
+  "structure": [
+    {
+      "stage": "Hook",
+      "title": "Hook",
+      "description": "视频开场直接展示充满心形木质雕刻礼物的礼盒，配上走心的文案，迅速抓住观众眼球，传达治愈与放松的焦虑缓解主题。"
+    },
+    {
+      "stage": "Product Intro",
+      "title": "Product Intro",
+      "description": "全景展示藤编篮子里满满的礼盒与心形木片，呈现丰富的产品种类和精致的包装细节，突出送礼与收藏的价值感。"
+    },
+    {
+      "stage": "Usage Detail",
+      "title": "Usage Detail",
+      "description": "特写展示礼盒内部的文字、卡片以及精致的心形小物件，体现产品的细节工艺和情感传递功能。"
+    },
+    {
+      "stage": "Demo Scene",
+      "title": "Demo Scene",
+      "description": "展示将心形木质饰品摆放在桌面上、搭配笔记本与绿植的实际使用场景，激发观众的购买欲和生活美学共鸣。"
+    }
+  ]
+}

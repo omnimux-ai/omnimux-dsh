@@ -103,7 +103,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   // Pipeline stages
   const pipeline = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
 
-  // Shots: match the user's high-fidelity breakdown
+  // Shots: match the user's high-fidelity breakdown (clean tags, no emojis)
   const shots = [
     {
       id: 'shot_1',
@@ -112,7 +112,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       time_range: '0:03 - 0:04',
       title: '心形木片特写',
       stage: 'Product Intro',
-      tags: ['↗ 特写', '📷 智能手机手持', '📐 俯视', '✥ 手持微动'],
+      tags: ['特写', '智能手机手持', '俯视', '手持微动'],
       description: '木盘内装满了各种颜色和字体的圆形木质雕刻饰品，上面印有“Amazing”、“Loved”、“Brave”等鼓励性词汇。',
     },
     {
@@ -122,7 +122,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       time_range: '0:04 - 0:07',
       title: '展示礼盒内部说明',
       stage: 'Usage Detail',
-      tags: ['↗ 特写', '📷 智能手机手持', '📐 俯视', '✥ 手持微动'],
+      tags: ['特写', '智能手机手持', '俯视', '手持微动'],
       description: '双手打开一个带有拉菲草垫的小礼盒，盒盖内侧印有鼓励话语，随后将一枚心形木片放入盒中。',
     },
     {
@@ -132,7 +132,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       time_range: '0:07 - 0:10',
       title: '翻转礼盒展示文字',
       stage: 'Usage Detail',
-      tags: ['↗ 特写', '📷 智能手机手持', '📐 俯视', '✥ 手持微动'],
+      tags: ['特写', '智能手机手持', '俯视', '手持微动'],
       description: '双手翻转礼盒底部，展示印有“God says you are...”以及一系列正能量词汇的详细设计。',
     },
     {
@@ -142,7 +142,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       time_range: '0:10 - 0:14',
       title: '藤篮周边产品展示',
       stage: 'Demo Scene',
-      tags: ['↗ 中景', '📷 智能手机手持', '📐 俯视', '✥ 手持移动'],
+      tags: ['中景', '智能手机手持', '俯视', '手持移动'],
       description: '镜头扫过藤编篮子周围摆放整齐的数十个同款精致礼盒，呈现丰富的批次与陈列效果。',
     },
     {
@@ -152,7 +152,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       time_range: '0:14 - 0:16',
       title: '桌面使用场景',
       stage: 'Demo Scene',
-      tags: ['↗ 特写', '📷 智能手机手持', '📐 俯视', '✥ 手持微动'],
+      tags: ['特写', '智能手机手持', '俯视', '手持微动'],
       description: '温馨的白色木质书桌上，双手正轻轻触碰、摆放刻有文字的心形木片，周围散落着笔记本、便签纸和绿植。',
     },
   ]

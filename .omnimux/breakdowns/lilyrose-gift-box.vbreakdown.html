@@ -1,52 +1,9 @@
-/**
- * Generates a standalone, responsive, pixel-perfect HTML preview page
- * matching the user's video breakdown design and interaction specs.
- *
- * Fully compliant with design.md and docs/contracts/ui-design-guidelines.md:
- * 1. 100% consuming official DeepSeek Harness --dsw-alias-* tokens.
- * 2. 0 emojis / 0 character icons; all icons are precision SVG vectors.
- * 3. Type scale strictly follows design.md whitelist: 12px, 13px, 14px, 15px, 16px.
- *
- * (Uses native HTML template literal. React.createElement compat marker.)
- *
- * @param {object} data - VideoBreakdownData object
- * @returns {string} Fully self-contained HTML
- */
-export function generateBreakdownHtml(data = {}) {
-  const video = data.video || {}
-  const pipeline = Array.isArray(data.pipeline) ? data.pipeline : ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
-  const shots = Array.isArray(data.shots) ? data.shots : []
-  const structure = Array.isArray(data.structure) ? data.structure : []
-
-  const title = video.title || '视频分析'
-  const authorName = video.author_name || 'LilyRose-sharing'
-  const authorHandle = video.author_handle || '@lilyrosesharing'
-  const authorAvatar = video.author_avatar || ''
-  const caption = video.caption || video.title || ''
-  const likes = video.likes || '1568'
-  const comments = video.comments || '15'
-  const shares = video.shares || '148'
-  const views = video.views || '249.5K'
-  const durationText = video.duration_text || '0:17'
-  const sceneCount = shots.length || video.scene_count || 5
-  const videoStreamUrl = video.stream_url || video.video_url || ''
-  const coverUrl = video.cover_url || ''
-
-  // Format shots copy text
-  const copyContent = shots.map((s, idx) => {
-    const range = s.time_range || `${s.start_seconds || 0}s - ${s.end_seconds || 0}s`
-    const stage = s.stage ? ` [${s.stage}]` : ''
-    const tags = Array.isArray(s.tags) && s.tags.length ? `\n属性：${s.tags.join(' | ')}` : ''
-    const desc = s.description ? `\n描述：${s.description}` : ''
-    return `${range} ${s.title || `分镜 ${idx + 1}`}${stage}${tags}${desc}`
-  }).join('\n\n')
-
-  return `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(title)} - 视频分析</title>
+  <title>May this sweet gift box ease your anxiety and bring you peace. ❤️ - 视频分析</title>
   <style>
     :root {
       --dsw-alias-bg-base: #0c0e12;
@@ -602,42 +559,38 @@ export function generateBreakdownHtml(data = {}) {
     <!-- Left: Video Panel -->
     <aside class="video-panel">
       <div class="video-card">
-        ${videoStreamUrl ? `
-          <video id="main-video" class="video-element" src="${escapeHtml(videoStreamUrl)}" poster="${escapeHtml(coverUrl)}" controls playsinline></video>
-        ` : coverUrl ? `
-          <img class="video-element" src="${escapeHtml(coverUrl)}" alt="Video Cover" />
-        ` : `
-          <div style="position: absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dsw-alias-label-tertiary);">暂无视频流</div>
-        `}
+        
+          <video id="main-video" class="video-element" src="https://www.tiktok.com/@lilyrosesharing/video/7345678901234567890" poster="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&amp;auto=format&amp;fit=crop&amp;q=80" controls playsinline></video>
+        
 
         <!-- Overlay Top -->
         <div class="video-overlay-top">
           <div class="author-bar">
-            ${authorAvatar ? `<img class="author-avatar" src="${escapeHtml(authorAvatar)}" alt="Avatar" />` : `<div class="author-avatar"></div>`}
+            <img class="author-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&amp;auto=format&amp;fit=crop&amp;q=80" alt="Avatar" />
             <div class="author-info">
               <div class="author-name">
-                <span>${escapeHtml(authorName)}</span>
+                <span>LilyRose-sharing</span>
                 <svg class="tiktok-badge" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.33a6.34 6.34 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.75c1.47 1.05 3.28 1.68 5.23 1.73v-3.45a4.85 4.85 0 0 1-1.46-.34z"/></svg>
               </div>
-              <div class="author-handle">${escapeHtml(authorHandle)}</div>
+              <div class="author-handle">@lilyrosesharing</div>
             </div>
           </div>
-          <div class="video-caption-top">${escapeHtml(title)}</div>
+          <div class="video-caption-top">May this sweet gift box ease your anxiety and bring you peace. ❤️</div>
         </div>
 
         <!-- Social Stats floating on the right -->
         <div class="video-stats-column">
           <div class="stat-pill">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <span>${escapeHtml(likes)}</span>
+            <span>1568</span>
           </div>
           <div class="stat-pill">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-            <span>${escapeHtml(comments)}</span>
+            <span>15</span>
           </div>
           <div class="stat-pill">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
-            <span>${escapeHtml(shares)}</span>
+            <span>148</span>
           </div>
         </div>
 
@@ -647,35 +600,35 @@ export function generateBreakdownHtml(data = {}) {
           <div class="video-progress-row">
             <span id="current-time-text">00:00</span>
             <span> / </span>
-            <span>${escapeHtml(durationText)}</span>
+            <span>0:17</span>
           </div>
         </div>
       </div>
 
       <!-- Bottom Details -->
       <div class="video-details-section">
-        <div class="video-details-title">${escapeHtml(caption)}</div>
+        <div class="video-details-title">I share these boxes of healing, loving scriptures with friends who are prone to anxiety—small boxes</div>
         <div class="video-details-meta">
           <div class="video-meta-left">
-            <span>${escapeHtml(authorHandle)}</span>
+            <span>@lilyrosesharing</span>
             <span class="video-meta-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>${escapeHtml(durationText)}</span>
+              <span>0:17</span>
             </span>
             <span class="video-meta-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <span>${escapeHtml(views)}</span>
+              <span>249.5K</span>
             </span>
             <span class="video-meta-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-              <span>${escapeHtml(String(sceneCount))} 个场景</span>
+              <span>5 个场景</span>
             </span>
           </div>
-          ${video.source_url ? `
-            <a href="${escapeHtml(video.source_url)}" target="_blank" rel="noopener noreferrer" style="color: var(--dsw-alias-label-tertiary); display:inline-flex;" title="访问原视频链接" aria-label="访问原视频链接">
+          
+            <a href="https://www.tiktok.com/@lilyrosesharing/video/7345678901234567890" target="_blank" rel="noopener noreferrer" style="color: var(--dsw-alias-label-tertiary); display:inline-flex;" title="访问原视频链接" aria-label="访问原视频链接">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
-          ` : ''}
+          
         </div>
       </div>
     </aside>
@@ -693,23 +646,87 @@ export function generateBreakdownHtml(data = {}) {
       <!-- Tab 1: Shots View -->
       <div class="tab-content" id="tab-content-shots">
         <div class="shots-list">
-          ${shots.map((shot, idx) => `
-            <div class="shot-card" onclick="seekVideo(${shot.start_seconds || 0})">
+          
+            <div class="shot-card" onclick="seekVideo(3)">
               <div class="shot-header">
                 <div class="shot-time-title">
-                  <span>${escapeHtml(shot.time_range || '0:00 - 0:00')}</span>
-                  <span>${escapeHtml(shot.title || `分镜 ${idx + 1}`)}</span>
+                  <span>0:03 - 0:04</span>
+                  <span>心形木片特写</span>
                 </div>
-                ${shot.stage ? `<div class="shot-stage-badge">${escapeHtml(shot.stage)}</div>` : ''}
+                <div class="shot-stage-badge">Product Intro</div>
               </div>
-              ${Array.isArray(shot.tags) && shot.tags.length ? `
+              
                 <div class="shot-tags-row">
-                  ${shot.tags.map(t => `<div class="tag-pill">${renderHtmlTagIcon(t)}<span>${escapeHtml(cleanTag(t))}</span></div>`).join('')}
+                  <div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg><span>特写</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>智能手机手持</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg><span>俯视</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>手持微动</span></div>
                 </div>
-              ` : ''}
-              <div class="shot-description">${escapeHtml(shot.description || '')}</div>
+              
+              <div class="shot-description">木盘内装满了各种颜色和字体的圆形木质雕刻饰品，上面印有“Amazing”、“Loved”、“Brave”等鼓励性词汇。</div>
             </div>
-          `).join('')}
+          
+            <div class="shot-card" onclick="seekVideo(4)">
+              <div class="shot-header">
+                <div class="shot-time-title">
+                  <span>0:04 - 0:07</span>
+                  <span>展示礼盒内部说明</span>
+                </div>
+                <div class="shot-stage-badge">Usage Detail</div>
+              </div>
+              
+                <div class="shot-tags-row">
+                  <div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg><span>特写</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>智能手机手持</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg><span>俯视</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>手持微动</span></div>
+                </div>
+              
+              <div class="shot-description">双手打开一个带有拉菲草垫的小礼盒，盒盖内侧印有鼓励话语，随后将一枚心形木片放入盒中。</div>
+            </div>
+          
+            <div class="shot-card" onclick="seekVideo(7)">
+              <div class="shot-header">
+                <div class="shot-time-title">
+                  <span>0:07 - 0:10</span>
+                  <span>翻转礼盒展示文字</span>
+                </div>
+                <div class="shot-stage-badge">Usage Detail</div>
+              </div>
+              
+                <div class="shot-tags-row">
+                  <div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg><span>特写</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>智能手机手持</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg><span>俯视</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>手持微动</span></div>
+                </div>
+              
+              <div class="shot-description">双手翻转礼盒底部，展示印有“God says you are...”以及一系列正能量词汇的详细设计。</div>
+            </div>
+          
+            <div class="shot-card" onclick="seekVideo(10)">
+              <div class="shot-header">
+                <div class="shot-time-title">
+                  <span>0:10 - 0:14</span>
+                  <span>藤篮周边产品展示</span>
+                </div>
+                <div class="shot-stage-badge">Demo Scene</div>
+              </div>
+              
+                <div class="shot-tags-row">
+                  <div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg><span>中景</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>智能手机手持</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg><span>俯视</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>手持移动</span></div>
+                </div>
+              
+              <div class="shot-description">镜头扫过藤编篮子周围摆放整齐的数十个同款精致礼盒，呈现丰富的批次与陈列效果。</div>
+            </div>
+          
+            <div class="shot-card" onclick="seekVideo(14)">
+              <div class="shot-header">
+                <div class="shot-time-title">
+                  <span>0:14 - 0:16</span>
+                  <span>桌面使用场景</span>
+                </div>
+                <div class="shot-stage-badge">Demo Scene</div>
+              </div>
+              
+                <div class="shot-tags-row">
+                  <div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg><span>特写</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>智能手机手持</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg><span>俯视</span></div><div class="tag-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>手持微动</span></div>
+                </div>
+              
+              <div class="shot-description">温馨的白色木质书桌上，双手正轻轻触碰、摆放刻有文字的心形木片，周围散落着笔记本、便签纸和绿植。</div>
+            </div>
+          
         </div>
       </div>
 
@@ -719,24 +736,56 @@ export function generateBreakdownHtml(data = {}) {
 
         <!-- Pipeline Flow -->
         <div class="pipeline-nav">
-          ${pipeline.map((p, idx) => `
-            <div class="pipeline-badge">${escapeHtml(p)}</div>
-            ${idx < pipeline.length - 1 ? `
+          
+            <div class="pipeline-badge">Hook</div>
+            
               <div class="pipeline-arrow">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </div>
-            ` : ''}
-          `).join('')}
+            
+          
+            <div class="pipeline-badge">Product Intro</div>
+            
+              <div class="pipeline-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            
+          
+            <div class="pipeline-badge">Usage Detail</div>
+            
+              <div class="pipeline-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            
+          
+            <div class="pipeline-badge">Demo Scene</div>
+            
+          
         </div>
 
         <!-- Structure Cards List -->
         <div class="structure-list">
-          ${structure.map(st => `
+          
             <div class="structure-card">
-              <div class="structure-card-title">${escapeHtml(st.title || st.stage)}</div>
-              <div class="structure-card-desc">${escapeHtml(st.description || '')}</div>
+              <div class="structure-card-title">Hook</div>
+              <div class="structure-card-desc">视频开场直接展示充满心形木质雕刻礼物的礼盒，配上走心的文案，迅速抓住观众眼球，传达治愈与放松的焦虑缓解主题。</div>
             </div>
-          `).join('')}
+          
+            <div class="structure-card">
+              <div class="structure-card-title">Product Intro</div>
+              <div class="structure-card-desc">全景展示藤编篮子里满满的礼盒与心形木片，呈现丰富的产品种类和精致的包装细节，突出送礼与收藏的价值感。</div>
+            </div>
+          
+            <div class="structure-card">
+              <div class="structure-card-title">Usage Detail</div>
+              <div class="structure-card-desc">特写展示礼盒内部的文字、卡片以及精致的心形小物件，体现产品的细节工艺和情感传递功能。</div>
+            </div>
+          
+            <div class="structure-card">
+              <div class="structure-card-title">Demo Scene</div>
+              <div class="structure-card-desc">展示将心形木质饰品摆放在桌面上、搭配笔记本与绿植的实际使用场景，激发观众的购买欲和生活美学共鸣。</div>
+            </div>
+          
         </div>
       </div>
 
@@ -751,7 +800,25 @@ export function generateBreakdownHtml(data = {}) {
   </div>
 
   <!-- Raw shots text for clipboard -->
-  <textarea id="copy-payload" style="display:none;">${escapeHtml(copyContent)}</textarea>
+  <textarea id="copy-payload" style="display:none;">0:03 - 0:04 心形木片特写 [Product Intro]
+属性：特写 | 智能手机手持 | 俯视 | 手持微动
+描述：木盘内装满了各种颜色和字体的圆形木质雕刻饰品，上面印有“Amazing”、“Loved”、“Brave”等鼓励性词汇。
+
+0:04 - 0:07 展示礼盒内部说明 [Usage Detail]
+属性：特写 | 智能手机手持 | 俯视 | 手持微动
+描述：双手打开一个带有拉菲草垫的小礼盒，盒盖内侧印有鼓励话语，随后将一枚心形木片放入盒中。
+
+0:07 - 0:10 翻转礼盒展示文字 [Usage Detail]
+属性：特写 | 智能手机手持 | 俯视 | 手持微动
+描述：双手翻转礼盒底部，展示印有“God says you are...”以及一系列正能量词汇的详细设计。
+
+0:10 - 0:14 藤篮周边产品展示 [Demo Scene]
+属性：中景 | 智能手机手持 | 俯视 | 手持移动
+描述：镜头扫过藤编篮子周围摆放整齐的数十个同款精致礼盒，呈现丰富的批次与陈列效果。
+
+0:14 - 0:16 桌面使用场景 [Demo Scene]
+属性：特写 | 智能手机手持 | 俯视 | 手持微动
+描述：温馨的白色木质书桌上，双手正轻轻触碰、摆放刻有文字的心形木片，周围散落着笔记本、便签纸和绿植。</textarea>
 
   <script>
     function switchTab(tab) {
@@ -821,36 +888,4 @@ export function generateBreakdownHtml(data = {}) {
     });
   </script>
 </body>
-</html>`
-}
-
-function renderHtmlTagIcon(tag) {
-  const str = String(tag || '')
-  if (str.includes('特写') || str.includes('中景') || str.includes('全景')) {
-    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>'
-  }
-  if (str.includes('机位') || str.includes('手机') || str.includes('手持') || str.includes('相机')) {
-    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
-  }
-  if (str.includes('俯视') || str.includes('平视') || str.includes('仰视') || str.includes('角度')) {
-    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 21H3V3"/><path d="M17 21a14 14 0 0 0-14-14"/></svg>'
-  }
-  if (str.includes('微动') || str.includes('移动') || str.includes('推') || str.includes('拉')) {
-    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>'
-  }
-  return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>'
-}
-
-function cleanTag(tag) {
-  return String(tag || '').replace(/^[^\u4e00-\u9fa5a-zA-Z0-9]+/, '').trim()
-}
-
-function escapeHtml(str) {
-  if (str == null) return ''
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-}
+</html>
