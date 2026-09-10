@@ -492,7 +492,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
           </div>
 
           {/* Bottom Footer Actions */}
-          <footer className="omnimux-video-breakdown-footer">
+          <footer className="omnimux-video-breakdown-bottom-bar">
             <CopyButton
               variant="outline"
               size="sm"

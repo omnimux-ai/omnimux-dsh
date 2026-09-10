@@ -303,7 +303,7 @@ export const VIDEO_BREAKDOWN_CSS = `
 .omnimux-video-breakdown-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 20px 68px;
+  padding: 18px 20px 24px;
   box-sizing: border-box;
 }
 
@@ -523,18 +523,18 @@ export const VIDEO_BREAKDOWN_CSS = `
   word-break: break-word;
 }
 
-/* Bottom Bar */
+/* Bottom Footer Bar */
+.omnimux-video-breakdown-footer,
 .omnimux-video-breakdown-bottom-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 52px;
+  flex-shrink: 0;
+  height: 54px;
   background: var(--dsw-alias-bg-elevated);
   border-top: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   padding: 0 20px;
+  box-sizing: border-box;
   z-index: 10;
 }
 
