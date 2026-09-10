@@ -542,11 +542,27 @@
             }),
           ];
 
+      const isEn = tr("locale") === "en";
+      const isExpertTab = mainTab === "experts-market";
+      const introHeading = isExpertTab
+        ? (tr("expertMarket.title") || (isEn ? "Experts Market" : "专家市场"))
+        : (tr("workshop.title") || "Skill");
+      const introSubtitle = isExpertTab
+        ? (tr("expertMarket.subtitle") || (isEn ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区"))
+        : tr("workshop.subtitle");
+
+      const displayedExperts = (expertMarketItems.length ? expertMarketItems : DEFAULT_MARKET_EXPERTS).filter((item) => {
+        if (!isExpertTab || !searchQuery.trim()) return true;
+        const q = searchQuery.trim().toLowerCase();
+        const hay = [item.name, item.nameEn, item.description, item.descriptionEn].filter(Boolean).join(" ").toLowerCase();
+        return hay.includes(q);
+      });
+
       return h("div", { className: "sh-mkt" },
-        mainTab === "experts-market" ? null : h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },
-          h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, tr("workshop.title")),
-          h("p", { className: "workshop-description" }, tr("workshop.subtitle")),
-          h("div", { className: "action-row" },
+        h("section", { className: "workshop-intro" + (isExpertTab ? " no-actions" : ""), "aria-label": introHeading },
+          h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, introHeading),
+          h("p", { className: "workshop-description" }, introSubtitle),
+          isExpertTab ? null : h("div", { className: "action-row" },
             h("button", { type: "button", className: "btn-create", onClick: () => createSkillSession({ text: "/skill-creator" }) },
               h(PlazaIcon, { size: 14 }), tr("workshop.create")),
             h("button", { type: "button", className: "btn-install", onClick: () => setOpenInstallModal(true) },
@@ -595,17 +611,19 @@
               className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""),
               onClick: () => setMainTab("experts-market"),
             },
-              h("span", null, tr("workshop.tabExpertsMarket") || (tr("locale") === "en" ? "Experts Market" : "专家市场")),
+              h("span", null, tr("workshop.tabExpertsMarket") || (isEn ? "Experts Market" : "专家市场")),
             ),
           ),
-          mainTab === "experts-market" ? null : h("div", { className: "search-box" },
+          h("div", { className: "search-box" },
             h("svg", { className: "search-icon", viewBox: "0 0 24 24" },
               h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" }),
             ),
             h("input", {
               type: "text",
               value: searchQuery,
-              placeholder: tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder"),
+              placeholder: isExpertTab
+                ? (tr("expertMarket.searchPlaceholder") || (isEn ? "Search all experts..." : "搜索全部专家"))
+                : tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder"),
               onChange: (e) => setSearchQuery(e.target.value),
               onKeyDown: (e) => {
                 if (e.key === "Enter") {
@@ -617,7 +635,7 @@
           ),
         ),
 
-        mainTab === "experts-market" ? null : h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
+        isExpertTab ? null : h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
           workshopCategories.map((c) => h("button", {
             key: c.id,
             type: "button",
@@ -627,13 +645,11 @@
           }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
         ),
         // 视图内容
-        mainTab === "experts-market" ? h("div", { className: "expert-market-container" },
-          h("div", { className: "expert-market-heading" },
-            h("h2", { className: "expert-market-title" }, tr("expertMarket.title") || (tr("locale") === "en" ? "Experts Market" : "专家市场")),
-            h("p", { className: "expert-market-subtitle" }, tr("expertMarket.subtitle") || (tr("locale") === "en" ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区")),
-          ),
-          h("div", { className: "expert-market-grid" },
-            (expertMarketItems.length ? expertMarketItems : DEFAULT_MARKET_EXPERTS).map((item) => {
+        isExpertTab ? h("div", { className: "expert-market-container" },
+          displayedExperts.length === 0
+            ? h("div", { className: "sh-mkt-empty" }, tr("expert.empty") || (isEn ? "No matching experts" : "没有匹配的专家"))
+            : h("div", { className: "expert-market-grid" },
+                displayedExperts.map((item) => {
               const isEn = tr("locale") === "en";
               const title = isEn ? (item.nameEn || item.name) : item.name;
               const desc = isEn ? (item.descriptionEn || item.description) : item.description;

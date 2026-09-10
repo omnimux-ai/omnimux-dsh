@@ -257,6 +257,8 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .sh-mkt{min-width:0;container-type:inline-size}
 .sh-plaza-body .sh-mkt{gap:0}
 .sh-mkt .workshop-intro{padding-bottom:20px;margin-bottom:20px;border-bottom:1px solid var(--dsw-alias-border-l2)}
+.sh-mkt .workshop-intro.no-actions{padding-bottom:16px;margin-bottom:18px}
+.sh-mkt .workshop-intro.no-actions .workshop-description{margin-bottom:0}
 .sh-mkt .workshop-heading{font-size:20px;line-height:28px;font-weight:600;color:var(--dsw-alias-label-primary);margin:0 0 6px}
 .sh-mkt .workshop-description{font-size:13px;line-height:18px;color:var(--dsw-alias-label-secondary);margin:0 0 16px}
 .action-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
