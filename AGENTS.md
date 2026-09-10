@@ -68,6 +68,7 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Instructions / Markdown | `git diff --check`; verify changed links, commands, skill metadata, and preserved boundaries |
 | Workflow contracts / gate scripts | `pnpm test:gates` plus tests for the changed script |
 | Plugin behavior | `pnpm --filter <package> test`; add relevant boundary/registry checks from [package.json](package.json) |
+| Plugin Agent Tools / Schema | `pnpm test:agent-tools` (all 4 layers: Schema Lint, isolated sandbox execution, intent eval & security gates passed) |
 | Model contracts | `pnpm verify:model-contracts` (offline, strict dispositions + auto-serving + cross-plugin alignment); no `verify:models` or `verify:image-live` probing |
 | Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 

@@ -296,6 +296,13 @@ cmd_finish() {
         exit 1
       fi
     fi
+    if [ -f "$wt_dir/scripts/test-agent-tools.mjs" ]; then
+      echo "==> 运行 DSH Agent 全局插件工具四层自动化测试套件 (工作区: $wt_dir)..."
+      if ! (cd "$wt_dir" && node scripts/test-agent-tools.mjs); then
+        echo "❌ DSH Agent 插件工具测试套件未通过！已阻断交付。Worktree 现场已保留供排障: $wt_dir" >&2
+        exit 1
+      fi
+    fi
     if [ -n "$target_pkg" ]; then
       echo "==> 运行插件 [$target_pkg] 单元测试 (工作区: $wt_dir)..."
       if ! (cd "$wt_dir" && pnpm --filter "$target_pkg" test); then
