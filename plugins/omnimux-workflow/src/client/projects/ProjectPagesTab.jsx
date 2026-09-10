@@ -53,7 +53,7 @@ export function ProjectPagesTab({
           return (
             <div
               key={page.id}
-              className={`omnimux-page-card ${page.id === activePageId ? 'omnimux-page-card--active' : ''}`}
+              className={`omnimux-page-card omnimux-workflow-card ${page.id === activePageId ? 'omnimux-page-card--active' : ''}`}
               onClick={() => onOpenPage(page)}
               title={`点击打开创作页：${page.title}`}
             >

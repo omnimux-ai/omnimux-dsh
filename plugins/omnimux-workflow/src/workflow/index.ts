@@ -141,17 +141,17 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
   // Headless execution seam for omnimux-apps & headless orchestration
   const headlessSeam = createHeadlessExecutionSeam({
     executionManager,
-    workspaceStore: store,
-    ensureProjectBound,
+    workspaceStore: store as any,
+    ensureProjectBound: ensureProjectBound as any,
     getCatalog: () => Promise.resolve(gateway.capabilities()),
     mediaDir: paths.mediaDir,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
   });
 
-  if (typeof ctx.provide === 'function') {
-    ctx.provide('omnimux-workflow', headlessSeam);
+  if (typeof (ctx as any).provide === 'function') {
+    (ctx as any).provide('omnimux-workflow', headlessSeam);
   }
-  ctx['omnimux-workflow'] = headlessSeam;
+  (ctx as Record<string, unknown>)['omnimux-workflow'] = headlessSeam;
 
   const disposers: Array<() => void> = [];
 

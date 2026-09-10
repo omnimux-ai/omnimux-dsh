@@ -458,7 +458,7 @@ export function ProjectLibraryPage(props) {
               <Tabs
                 variant="underline"
                 items={[
-                  { id: 'local', label: '本地项目' },
+                  { id: 'local', label: t('projects.localTab') || '本地项目' },
                   { id: 'featured', label: '共创项目' },
                 ]}
                 activeId={libraryTab}

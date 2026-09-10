@@ -165,8 +165,9 @@ export const CanvasPageHeader: React.FC<CanvasPageHeaderProps> = memo(({
           createdAt: new Date().toISOString(),
         };
 
-        const updatedPages = res.body.pages && Array.isArray(res.body.pages)
-          ? res.body.pages
+        const resBody = res.body as unknown as { pages?: ProjectPageDto[] };
+        const updatedPages = resBody?.pages && Array.isArray(resBody.pages)
+          ? resBody.pages
           : [...pages, newPage];
 
         setPages(updatedPages);
@@ -212,7 +213,7 @@ export const CanvasPageHeader: React.FC<CanvasPageHeaderProps> = memo(({
         <div ref={popoverRef} className="wf-page-dropdown-popover">
           {/* 页面列表直接展示，限高滚动 */}
           <div className="wf-page-dropdown-list">
-            {(pages.length > 0 ? pages : [{ id: 'page-default', title: displayTitle, canvasWorkspaceId: workspaceId || '' }]).map((p) => {
+            {(pages.length > 0 ? pages : [{ id: 'page-default', title: displayTitle, canvasWorkspaceId: workspaceId || '', createdAt: new Date().toISOString() }]).map((p) => {
               const isCurrent = p.id === activePageId;
               const isEditing = p.id === editingPageId;
 

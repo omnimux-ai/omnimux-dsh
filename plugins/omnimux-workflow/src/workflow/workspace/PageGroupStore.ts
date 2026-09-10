@@ -183,7 +183,7 @@ export class PageGroupStore {
 
     currentGroup.pages = currentGroup.pages.filter((p) => p.id !== pageId);
     if (currentGroup.activePageId === pageId) {
-      currentGroup.activePageId = currentGroup.pages[0].id;
+      currentGroup.activePageId = currentGroup.pages[0]?.id || '';
     }
     currentGroup.updatedAt = new Date().toISOString();
     this.saveData(data);
