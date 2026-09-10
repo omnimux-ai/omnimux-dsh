@@ -7,16 +7,16 @@ import { AUDIO_MODEL_SPECS, IMAGE_MODEL_SPECS, VIDEO_MODEL_SPECS, findMediaModel
 
 describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
-    assert.equal(IMAGE_MODEL_SPECS.length, 12) // 14 runtime − 2 hyphen aliases folded
+    assert.equal(IMAGE_MODEL_SPECS.length, 14)
     assert.equal(VIDEO_MODEL_SPECS.length, 19)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 
-  it('GPT Image 2 only lists auto, 1:1, 16:9, 9:16 aspect ratios', () => {
+  it('GPT Image 2 lists all 8 aspect ratios + auto', () => {
     const gpt = IMAGE_MODEL_SPECS.find((m) => m.id === 'gpt-image-2')
     assert.ok(gpt)
     const ratioValues = gpt.parameters.aspectRatio?.options.map((o) => o.value)
-    assert.deepEqual(ratioValues, ['auto', '1:1', '16:9', '9:16'])
+    assert.deepEqual(ratioValues, ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'])
     assert.equal(gpt.parameters.aspectRatio?.defaultValue, '16:9')
   })
 

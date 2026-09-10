@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 48)
+    assert.equal(catalog.models.length, 50)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-avatar')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'omni_flash')?.disposition, 'quarantine')
@@ -230,7 +230,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
-    assert.equal(IMAGE_MODEL_SPECS.length, 12)
+    assert.equal(IMAGE_MODEL_SPECS.length, 14)
     assert.equal(VIDEO_MODEL_SPECS.length, 19)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })

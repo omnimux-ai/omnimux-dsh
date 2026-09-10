@@ -191,6 +191,214 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
+  - id: "gpt-image-2.5"
+    label: "GPT Image 2.5"
+    family: "openai"
+    badge: "新品"
+    subtitle: "1k-4k"
+    aliases:
+      - "gpt-image-2-5"
+    operations:
+      - id: "text_to_image"
+        label: "文生图"
+        output:
+          type: "image"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+        research:
+          status: "draft"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 SubmitGuard 自适应参数分流与 OpenAI 图像协议映射"
+        execution:
+          status: "stub"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+      - id: "multi_reference"
+        label: "垫图参考"
+        output:
+          type: "image"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+          - slot: "reference_image"
+            type: "image"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            maxSizeMb: 10
+            limitSource:
+              kind: "policy_conservative"
+              note: "继承 runtime 表行 max1；官方审计前保守"
+        research:
+          status: "draft"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
+        execution:
+          status: "stub"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+    parameters:
+      aspectRatio:
+        options:
+          - { value: "auto", label: "自适应" }
+          - { value: "1:1", label: "1:1" }
+          - { value: "16:9", label: "16:9" }
+          - { value: "9:16", label: "9:16" }
+          - { value: "4:3", label: "4:3" }
+          - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
+          - { value: "21:9", label: "21:9" }
+        defaultValue: "16:9"
+      resolution:
+        options:
+          - { value: "1K", label: "1K" }
+          - { value: "2K", label: "2K" }
+          - { value: "4K", label: "4K" }
+        defaultValue: "1K"
+      quality:
+        options:
+          - { value: "standard", label: "标准" }
+          - { value: "hd", label: "高清 HD" }
+        defaultValue: "standard"
+      n:
+        options:
+          - { value: 1, label: "1 张" }
+          - { value: 2, label: "2 张" }
+          - { value: 4, label: "4 张" }
+        defaultValue: 1
+    research:
+      status: "draft"
+      notes: "网关新增；SubmitGuard 统一门面聚敛；待独立 dated live 证据上架"
+    implementation:
+      status: "ready"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+    execution:
+      status: "stub"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+
+  - id: "gpt-image-2.5-hd"
+    label: "GPT Image 2.5 HD"
+    family: "openai"
+    subtitle: "高清 4K"
+    aliases:
+      - "gpt-image-2-5-hd"
+    operations:
+      - id: "text_to_image"
+        label: "文生图"
+        output:
+          type: "image"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+        research:
+          status: "draft"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "上游 GoEasy 专属高清 2K/4K 大图与超分异步通道"
+        execution:
+          status: "stub"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+      - id: "multi_reference"
+        label: "垫图参考"
+        output:
+          type: "image"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+          - slot: "reference_image"
+            type: "image"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            maxSizeMb: 10
+            limitSource:
+              kind: "policy_conservative"
+              note: "继承 runtime 表行 max1；官方审计前保守"
+        research:
+          status: "draft"
+        implementation:
+          status: "ready"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+          notes: "已落地 Edits 路由与发包映射"
+        execution:
+          status: "stub"
+          profileId: "imageGenerate"
+          seam: "imageGenerate"
+    parameters:
+      aspectRatio:
+        options:
+          - { value: "auto", label: "自适应" }
+          - { value: "1:1", label: "1:1" }
+          - { value: "16:9", label: "16:9" }
+          - { value: "9:16", label: "9:16" }
+          - { value: "4:3", label: "4:3" }
+          - { value: "3:4", label: "3:4" }
+          - { value: "3:2", label: "3:2" }
+          - { value: "2:3", label: "2:3" }
+          - { value: "21:9", label: "21:9" }
+        defaultValue: "16:9"
+      resolution:
+        options:
+          - { value: "2K", label: "2K" }
+          - { value: "4K", label: "4K" }
+        defaultValue: "2K"
+      quality:
+        options:
+          - { value: "standard", label: "标准" }
+          - { value: "hd", label: "高清 HD" }
+        defaultValue: "hd"
+      n:
+        options:
+          - { value: 1, label: "1 张" }
+          - { value: 2, label: "2 张" }
+          - { value: 4, label: "4 张" }
+        defaultValue: 1
+    research:
+      status: "draft"
+      notes: "网关新增高清独立 SKU；待独立 dated live 证据上架"
+    implementation:
+      status: "ready"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+    execution:
+      status: "stub"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+
   - id: "grok-imagine-image-2"
     label: "Grok Imagine Image 2"
     family: "grok"
