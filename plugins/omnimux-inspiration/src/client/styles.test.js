@@ -386,4 +386,11 @@ describe('preview modal doc style and glass removal', () => {
     const descBlockCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc-block')
     assert.match(decl(descBlockCss, 'padding-left'), /12px|14px/)
   })
+
+  it('removes raw markdown button from deconstruction panel', () => {
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.doesNotMatch(preview, /modal\.deconstruction\.showRaw/)
+    assert.doesNotMatch(preview, /omnimux-inspiration-modal-raw/)
+    assert.doesNotMatch(preview, /setShowRaw/)
+  })
 })
