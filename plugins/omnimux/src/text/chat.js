@@ -245,7 +245,14 @@ async function discoverLocalChatProvider(opts) {
   let matchedProvider = undefined
   let mappedModel = undefined
 
-  for (const [key, p] of Object.entries(providers)) {
+  // 优先匹配本地端点 (如 cpa / localhost / 127.0.0.1)
+  const entries = Object.entries(providers).sort(([aKey, a], [bKey, b]) => {
+    const aLocal = aKey === 'cpa' || /localhost|127\.0\.0\.1/.test(a?.baseURL || '') ? 1 : 0
+    const bLocal = bKey === 'cpa' || /localhost|127\.0\.0\.1/.test(b?.baseURL || '') ? 1 : 0
+    return bLocal - aLocal
+  })
+
+  for (const [key, p] of entries) {
     if (!p || typeof p !== 'object' || !p.baseURL) continue
     const models = Array.isArray(p.models) ? p.models : []
     const hit = models.find(m => m && (m.id === model || m.id === `${model}-high` || m.id?.startsWith(model)))
