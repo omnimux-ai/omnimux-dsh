@@ -54,10 +54,10 @@ export function mountSpeechToText(ctx, opts) {
   ctx.tools.register({
     name: STT_TOOL_NAME,
     description:
-      'Transcribe one audio file to text with an OmniMux speech-to-text model (default whisper-1). audio is an absolute path, http(s) URL, or data:audio URI. Returns { mode: "live", model, text }. Uses OMNIMUX_API_KEY / OMNIMUX_TOKEN.',
+      'Transcribe one audio file to text with an OmniMux speech-to-text model (default doubao-asr-bigmodel). audio is an absolute path, http(s) URL, or data:audio URI. Returns { mode: "live", model, text }. Uses OMNIMUX_API_KEY / OMNIMUX_TOKEN.',
     parameters: objectParams({
       audio: { type: 'string', required: true, description: 'Absolute path, http(s) URL, or data:audio URI of the source audio' },
-      model: { type: 'string', description: 'Model ID (e.g. whisper-1). Omit to use the configured default.' },
+      model: { type: 'string', description: 'Model ID (e.g. doubao-asr-bigmodel). Omit to use the configured default.' },
       operation: {
         type: 'string',
         description: 'Contract operation id (default speech_to_text). Draft/unlisted models are rejected by SubmitGuard.',

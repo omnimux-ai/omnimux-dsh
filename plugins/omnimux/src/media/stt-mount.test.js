@@ -68,7 +68,7 @@ test('registered tool and seam reject bypassSubmitGuard before transcription HTT
   let calls = 0
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, jsonOut: JSON_TOOL_OUTPUT })
   const request = {
-    audio: '/tmp/omnimux-guard-never-reads.mp3', operation: 'speech_to_text', bypassSubmitGuard: true,
+    audio: '/tmp/omnimux-guard-never-reads.mp3', model: 'whisper-1', operation: 'speech_to_text', bypassSubmitGuard: true,
     env: {}, fetcher: async () => { calls++ },
   }
   await assert.rejects(() => tools[STT_TOOL_NAME].execute(request, {}), { code: 'omnimux-invalid-request' })
