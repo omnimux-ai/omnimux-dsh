@@ -92,6 +92,14 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     }).join('\n\n')
   }, [shots])
 
+  const structureCopyContent = useMemo(() => {
+    if (!structure.length) return ''
+    return structure.map((item) => {
+      const title = item.stage || item.title
+      return `【${title}】\n${item.description || ''}`
+    }).join('\n\n')
+  }, [structure])
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen?.().catch(() => {})
@@ -108,23 +116,77 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   }
 
   const renderTagIcon = (tagStr) => {
-    if (tagStr.includes('特写') || tagStr.includes('中景') || tagStr.includes('全景')) {
-      return <FramingIcon size={12} />
+    if (tagStr.includes('特写')) {
+      return <span className="omnimux-video-tag-sym">↖</span>
     }
-    if (tagStr.includes('机位') || tagStr.includes('手机') || tagStr.includes('手持') || tagStr.includes('相机')) {
+    if (tagStr.includes('中景')) {
+      return <span className="omnimux-video-tag-sym">↗</span>
+    }
+    if (tagStr.includes('全景')) {
+      return <span className="omnimux-video-tag-sym">⤢</span>
+    }
+    if (tagStr.includes('手机') || tagStr.includes('手持') || tagStr.includes('相机')) {
       return <CameraIcon size={12} />
     }
-    if (tagStr.includes('俯视') || tagStr.includes('平视') || tagStr.includes('仰视') || tagStr.includes('角度')) {
-      return <AngleIcon size={12} />
+    if (tagStr.includes('俯视')) {
+      return <span className="omnimux-video-tag-sym">▽</span>
     }
-    if (tagStr.includes('微动') || tagStr.includes('移动') || tagStr.includes('推') || tagStr.includes('拉')) {
-      return <MotionIcon size={12} />
+    if (tagStr.includes('仰视')) {
+      return <span className="omnimux-video-tag-sym">△</span>
+    }
+    if (tagStr.includes('平视')) {
+      return <span className="omnimux-video-tag-sym">▷</span>
+    }
+    if (tagStr.includes('微动')) {
+      return <span className="omnimux-video-tag-sym">✛</span>
+    }
+    if (tagStr.includes('平移') || tagStr.includes('移动')) {
+      return <span className="omnimux-video-tag-sym">⇋</span>
     }
     return <FramingIcon size={12} />
   }
 
   const cleanTagText = (tagStr) => {
     return String(tagStr || '').replace(/^[^\u4e00-\u9fa5a-zA-Z0-9]+/, '').trim()
+  }
+
+  const formatStructureDescription = (desc) => {
+    if (!desc || typeof desc !== 'string') return ''
+    const clean = desc.replace(/---\s*$/, '').trim()
+    const lines = clean.split('\n').map((l) => l.trim()).filter(Boolean)
+
+    const hasHeadings = lines.some((l) => l.startsWith('### '))
+    const hasKeyValues = lines.some((l) => l.includes(': ') || l.includes('：'))
+
+    if (!hasHeadings && !hasKeyValues) {
+      return <div className="omnimux-video-breakdown-desc-line">{clean}</div>
+    }
+
+    return lines.map((line, idx) => {
+      if (line.startsWith('### ')) {
+        return (
+          <div key={idx} className="omnimux-video-breakdown-desc-heading">
+            {line.replace(/^###\s*/, '')}
+          </div>
+        )
+      }
+      const colonIdx = line.indexOf(': ') !== -1 ? line.indexOf(': ') : line.indexOf('：')
+      if (colonIdx !== -1 && colonIdx < 35) {
+        const key = line.slice(0, colonIdx).trim()
+        const val = line.slice(colonIdx + 1).trim()
+        return (
+          <div key={idx} className="omnimux-video-breakdown-desc-row">
+            <span className="omnimux-video-breakdown-desc-label">{key}：</span>
+            <span className="omnimux-video-breakdown-desc-value">{val}</span>
+          </div>
+        )
+      }
+      return (
+        <div key={idx} className="omnimux-video-breakdown-desc-line">
+          {line}
+        </div>
+      )
+    })
   }
 
   const tabsItems = [
@@ -331,16 +393,20 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
         {/* Right: Analysis Column */}
         <main className="omnimux-video-breakdown-right">
-          {/* Tabs Bar */}
+          {/* Tabs Bar (Segmented Control matching Image 1 & 2) */}
           <div className="omnimux-video-breakdown-tabs-bar">
-            <Tabs
-              variant="pill"
-              size="sm"
-              items={tabsItems}
-              activeId={activeTab}
-              onChange={setActiveTab}
-              aria-label="视频分析视图切换"
-            />
+            <div className="omnimux-video-breakdown-tabs-container">
+              {tabsItems.map((tab) => (
+                <button // exempt-ui01 segmented tab pill button
+                  key={tab.id}
+                  type="button"
+                  className={`omnimux-video-breakdown-tab-btn${activeTab === tab.id ? ' is-active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Scroll Area */}
@@ -362,20 +428,18 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                     >
                       <div className="omnimux-video-breakdown-shot-header">
                         <div className="omnimux-video-breakdown-shot-title-box">
-                          <span>{shot.time_range || '0:00 - 0:00'}</span>
-                          <span>{shot.title || `分镜 ${idx + 1}`}</span>
+                          <span className="omnimux-video-breakdown-shot-time">{shot.time_range || '0:00 - 0:00'}</span>
+                          <span className="omnimux-video-breakdown-shot-title">{shot.title || `分镜 ${idx + 1}`}</span>
                         </div>
                         {shot.stage ? (
-                          <Badge size="sm" variant="warning" shape="capsule">
-                            {shot.stage}
-                          </Badge>
+                          <div className="omnimux-video-breakdown-stage-pill">{shot.stage}</div>
                         ) : null}
                       </div>
 
                       {Array.isArray(shot.tags) && shot.tags.length > 0 ? (
-                        <div className="omnimux-video-breakdown-tags-row">
+                        <div className="omnimux-video-breakdown-pills-row">
                           {shot.tags.map((tag, tIdx) => (
-                            <span key={tIdx} className="omnimux-video-breakdown-tag">
+                            <span key={tIdx} className="omnimux-video-breakdown-pill">
                               {renderTagIcon(tag)}
                               <span>{cleanTagText(tag)}</span>
                             </span>
@@ -393,29 +457,35 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             ) : (
               /* Narrative Structure Pipeline View */
               <div className="omnimux-video-breakdown-structure-view">
+                <div className="omnimux-video-breakdown-structure-hint">
+                  识别结构片段并进行内容分析，帮助你审视节奏、卖点顺序与脚本编排。
+                </div>
+
                 {/* 1. Stages Pipeline Breadcrumb */}
-                <div className="omnimux-video-breakdown-pipeline-bar">
+                <div className="omnimux-video-breakdown-pipeline-row">
                   {pipeline.map((stageName, pIdx) => (
                     <React.Fragment key={pIdx}>
-                      <span className="omnimux-video-breakdown-pipeline-node">{stageName}</span>
-                      {pIdx < pipeline.length - 1 ? <ArrowRightIcon size={11} /> : null}
+                      <span className="omnimux-video-breakdown-pipeline-item">{stageName}</span>
+                      {pIdx < pipeline.length - 1 ? (
+                        <span className="omnimux-video-breakdown-pipeline-arrow">→</span>
+                      ) : null}
                     </React.Fragment>
                   ))}
                 </div>
 
-                {/* 2. Structured Stage Cards */}
-                <div className="omnimux-video-breakdown-stage-cards">
-                  {structure.map((item, sIdx) => (
-                    <div key={sIdx} className="omnimux-video-breakdown-stage-card">
-                      <div className="omnimux-video-breakdown-stage-header">
-                        <Badge size="sm" variant="brand" shape="capsule">
-                          {item.stage || `阶段 ${sIdx + 1}`}
-                        </Badge>
-                        <span className="omnimux-video-breakdown-stage-title">{item.title || item.stage}</span>
+                {/* 2. Structured Stage Cards matching Image 2 */}
+                <div className="omnimux-video-breakdown-structure-cards">
+                  {structure.map((item, sIdx) => {
+                    const displayTitle = item.stage || item.title || `阶段 ${sIdx + 1}`
+                    return (
+                      <div key={sIdx} className="omnimux-video-breakdown-structure-card">
+                        <div className="omnimux-video-breakdown-structure-title">{displayTitle}</div>
+                        <div className="omnimux-video-breakdown-structure-desc">
+                          {formatStructureDescription(item.description)}
+                        </div>
                       </div>
-                      <div className="omnimux-video-breakdown-stage-desc">{item.description}</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -426,10 +496,10 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             <CopyButton
               variant="outline"
               size="sm"
-              text={shotsCopyContent}
-              successText="已复制分镜脚本"
+              text={activeTab === 'shots' ? shotsCopyContent : structureCopyContent}
+              successText={activeTab === 'shots' ? '已复制分镜脚本' : '已复制结构拆解'}
             >
-              复制分镜
+              {activeTab === 'shots' ? '复制分镜' : '复制结构拆解'}
             </CopyButton>
           </footer>
         </main>

@@ -251,15 +251,52 @@ export const VIDEO_BREAKDOWN_CSS = `
   position: relative;
 }
 
-/* Tabs Bar */
+/* Tabs Bar (Segmented Control matching Image 1 & 2) */
 .omnimux-video-breakdown-tabs-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-alias-bg-elevated);
   flex-shrink: 0;
+}
+
+.omnimux-video-breakdown-tabs-container {
+  display: flex;
+  width: 100%;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.omnimux-video-breakdown-tab-btn {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.omnimux-video-breakdown-tab-btn:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.omnimux-video-breakdown-tab-btn.is-active {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 3px var(--dsw-alias-border-focus);
 }
 
 /* Scroll Area */
@@ -270,7 +307,7 @@ export const VIDEO_BREAKDOWN_CSS = `
   box-sizing: border-box;
 }
 
-/* Shots List */
+/* Shots List (Image 1) */
 .omnimux-video-breakdown-shots-list {
   display: flex;
   flex-direction: column;
@@ -281,7 +318,7 @@ export const VIDEO_BREAKDOWN_CSS = `
   background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -291,11 +328,17 @@ export const VIDEO_BREAKDOWN_CSS = `
   background: var(--dsw-alias-bg-layer-2);
 }
 
+.omnimux-video-breakdown-shot-card.is-active {
+  border-color: var(--dsw-alias-state-warn-primary);
+  box-shadow: 0 0 0 1px var(--dsw-alias-border-focus);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
 .omnimux-video-breakdown-shot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .omnimux-video-breakdown-shot-title-box {
@@ -304,14 +347,37 @@ export const VIDEO_BREAKDOWN_CSS = `
   color: var(--dsw-alias-label-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.omnimux-video-breakdown-shot-time {
+  font-family: var(--dsw-font-mono, monospace);
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.omnimux-video-breakdown-shot-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.omnimux-video-breakdown-stage-pill {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-state-warn-primary);
+  border: 1px solid var(--dsw-alias-border-l2);
+  white-space: nowrap;
 }
 
 .omnimux-video-breakdown-pills-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .omnimux-video-breakdown-pill {
@@ -324,7 +390,15 @@ export const VIDEO_BREAKDOWN_CSS = `
   border: 1px solid var(--dsw-alias-border-l1);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+}
+
+.omnimux-video-tag-sym {
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omnimux-video-breakdown-shot-desc {
@@ -333,11 +407,17 @@ export const VIDEO_BREAKDOWN_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
-/* Structure Tab */
+/* Structure Tab (Image 2) */
+.omnimux-video-breakdown-structure-view {
+  display: flex;
+  flex-direction: column;
+}
+
 .omnimux-video-breakdown-structure-hint {
   font-size: 13px;
   color: var(--dsw-alias-label-tertiary);
   margin-bottom: 18px;
+  line-height: 1.5;
 }
 
 .omnimux-video-breakdown-pipeline-row {
@@ -345,48 +425,102 @@ export const VIDEO_BREAKDOWN_CSS = `
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
 .omnimux-video-breakdown-pipeline-item {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
+  padding: 0 14px;
+  border-radius: 9999px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-state-warn-primary);
   border: 1px solid var(--dsw-alias-border-l2);
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .omnimux-video-breakdown-pipeline-arrow {
   color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
   display: flex;
   align-items: center;
+  user-select: none;
+}
+
+.omnimux-video-breakdown-structure-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .omnimux-video-breakdown-structure-card {
   background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 18px 20px;
+  transition: all 0.15s ease;
+}
+
+.omnimux-video-breakdown-structure-card:hover {
+  border-color: var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
 }
 
 .omnimux-video-breakdown-structure-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .omnimux-video-breakdown-structure-desc {
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--dsw-alias-label-secondary);
+}
+
+.omnimux-video-breakdown-desc-line {
+  margin-bottom: 6px;
+}
+
+.omnimux-video-breakdown-desc-line:last-child {
+  margin-bottom: 0;
+}
+
+.omnimux-video-breakdown-desc-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.omnimux-video-breakdown-desc-heading:first-child {
+  margin-top: 0;
+}
+
+.omnimux-video-breakdown-desc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.omnimux-video-breakdown-desc-label {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  flex-shrink: 0;
+}
+
+.omnimux-video-breakdown-desc-value {
+  color: var(--dsw-alias-label-secondary);
+  word-break: break-word;
 }
 
 /* Bottom Bar */
