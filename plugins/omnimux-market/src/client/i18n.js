@@ -195,6 +195,48 @@
       "workshop.confirmInstall": "是否安装并启用此 Skill？",
       "workshop.emptyMine": "暂无已安装的 Skill",
       "workshop.uninstalled": "未安装",
+      "skill.name.html-report-templates": "HTML 报表模板",
+      "skill.desc.html-report-templates": "用于 html-writer 的复制即用 HTML 报表与仪表盘模板。",
+      "skill.name.shopee-market-analysis": "Shopee 市场分析",
+      "skill.desc.shopee-market-analysis": "使用 shopee-mcp 进行 Shopee 站点与品类市场机会分析。",
+      "skill.name.shopee-product-analysis": "Shopee 商品分析",
+      "skill.desc.shopee-product-analysis": "使用 shopee-mcp 进行 Shopee 商品排行、详情、趋势与热词分析。",
+      "skill.name.shopee-shop-analysis": "Shopee 店铺分析",
+      "skill.desc.shopee-shop-analysis": "使用 shopee-mcp 进行 Shopee 店铺排行、详情、趋势、选品与品牌组合分析。",
+      "skill.name.shopee-brand-analysis": "Shopee 品牌分析",
+      "skill.desc.shopee-brand-analysis": "使用 shopee-mcp 分析 Shopee 品牌排名、详情、趋势、商品组合及站点/类别分布。",
+      "skill.name.shopee-keyword-analysis": "Shopee 关键词分析",
+      "skill.desc.shopee-keyword-analysis": "使用 shopee-mcp 进行 Shopee 热搜词排名、详情、趋势及关联商品分析。",
+      "skill.name.video-generate-canvas": "视频生成画布",
+      "skill.desc.video-generate-canvas": "当用户表达任何视频创作意图时触发此技能，如在画布中生成或编辑视频。",
+      "skill.name.ecommerce-routing-policy": "电商路由策略",
+      "skill.desc.ecommerce-routing-policy": "电商运营 Agent 的共享任务路由规则与分流策略。",
+      "skill.name.ecommerce-output-spec": "电商输出规范",
+      "skill.desc.ecommerce-output-spec": "电商运营 Agent 的共享报表与文件输出交付规范。",
+      "skill.name.ecommerce-daily-review": "电商日报复盘",
+      "skill.desc.ecommerce-daily-review": "面向亚马逊和 TikTok Shop 运营的每日与每周复盘模板。",
+      "skill.name.amazon-market-analysis": "亚马逊市场分析",
+      "skill.desc.amazon-market-analysis": "使用 amazon-mcp 进行亚马逊品类与市场机会深度分析。",
+      "skill.name.amazon-product-analysis": "亚马逊产品分析",
+      "skill.desc.amazon-product-analysis": "使用 amazon-mcp 及输入文件进行亚马逊 ASIN、SKU 与竞品研究。",
+      "skill.name.amazon-listing-optimization": "亚马逊 Listing 优化",
+      "skill.desc.amazon-listing-optimization": "亚马逊 Listing 文案、A+ 页面规划与关键词覆盖度优化。",
+      "skill.name.amazon-keyword-traffic-analysis": "亚马逊关键词流量分析",
+      "skill.desc.amazon-keyword-traffic-analysis": "亚马逊关键词、流量来源、ABA 趋势与 PPC 广告机会分析。",
+      "skill.name.amazon-review-optimization": "亚马逊评论优化",
+      "skill.desc.amazon-review-optimization": "亚马逊买家书面评论、VOC 声量、QA 问答与用户痛点深度优化。",
+      "skill.name.amazon-trend-risk-monitor": "亚马逊趋势风险监控",
+      "skill.desc.amazon-trend-risk-monitor": "亚马逊热度趋势、BSR 榜单、销量预测与商标侵权风险监控。",
+      "skill.name.tiktok-market-trend-analysis": "TikTok 市场趋势分析",
+      "skill.desc.tiktok-market-trend-analysis": "使用 Topview td 工具分析 TikTok Shop 区域、品类、商品与卖家趋势。",
+      "skill.name.tiktok-product-selection": "TikTok 选品",
+      "skill.desc.tiktok-product-selection": "TikTok Shop 爆款潜力商品挖掘、筛选与综合评分。",
+      "skill.name.tiktok-material-breakdown": "TikTok 素材拆解",
+      "skill.desc.tiktok-material-breakdown": "TikTok 爆款短视频素材、开头黄金 Hook 与行动号召 CTA 逐秒拆解。",
+      "skill.name.tiktok-script-creation": "TikTok 脚本创作",
+      "skill.desc.tiktok-script-creation": "TikTok UGC 口播、达人种草、品牌广告与直播带货脚本生成。",
+      "skill.name.bggg-data-amazon": "BGGG Amazon 评论采集",
+      "skill.desc.bggg-data-amazon": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入。",
     };
     const EN = {
       locale: "en",
@@ -393,6 +435,48 @@
       "workshop.confirmInstall": "Install and enable this skill?",
       "workshop.emptyMine": "No skills installed yet",
       "workshop.uninstalled": "Uninstalled",
+      "skill.name.html-report-templates": "HTML Report Templates",
+      "skill.desc.html-report-templates": "Copy-and-fill HTML report and dashboard templates for html-writer.",
+      "skill.name.shopee-market-analysis": "Shopee Market Analysis",
+      "skill.desc.shopee-market-analysis": "Shopee site and category market opportunity analysis using shopee-mcp.",
+      "skill.name.shopee-product-analysis": "Shopee Product Analysis",
+      "skill.desc.shopee-product-analysis": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
+      "skill.name.shopee-shop-analysis": "Shopee Shop Analysis",
+      "skill.desc.shopee-shop-analysis": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
+      "skill.name.shopee-brand-analysis": "Shopee Brand Analysis",
+      "skill.desc.shopee-brand-analysis": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
+      "skill.name.shopee-keyword-analysis": "Shopee Keyword Analysis",
+      "skill.desc.shopee-keyword-analysis": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
+      "skill.name.video-generate-canvas": "video-generate-canvas",
+      "skill.desc.video-generate-canvas": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
+      "skill.name.ecommerce-routing-policy": "Ecommerce Routing Policy",
+      "skill.desc.ecommerce-routing-policy": "Shared routing rules for ecommerce operation agents.",
+      "skill.name.ecommerce-output-spec": "Ecommerce Output Spec",
+      "skill.desc.ecommerce-output-spec": "Shared report and file output rules for ecommerce operation agents.",
+      "skill.name.ecommerce-daily-review": "Ecommerce Daily Review",
+      "skill.desc.ecommerce-daily-review": "Daily and weekly review template for Amazon and TikTok Shop operations.",
+      "skill.name.amazon-market-analysis": "Amazon Market Analysis",
+      "skill.desc.amazon-market-analysis": "Amazon category and market opportunity analysis using amazon-mcp.",
+      "skill.name.amazon-product-analysis": "Amazon Product Analysis",
+      "skill.desc.amazon-product-analysis": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
+      "skill.name.amazon-listing-optimization": "Amazon Listing Optimization",
+      "skill.desc.amazon-listing-optimization": "Amazon listing, A+ and keyword coverage optimization.",
+      "skill.name.amazon-keyword-traffic-analysis": "Amazon Keyword Traffic Analysis",
+      "skill.desc.amazon-keyword-traffic-analysis": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
+      "skill.name.amazon-review-optimization": "Amazon Review Optimization",
+      "skill.desc.amazon-review-optimization": "Amazon review, VOC, QA and pain-point optimization.",
+      "skill.name.amazon-trend-risk-monitor": "Amazon Trend Risk Monitor",
+      "skill.desc.amazon-trend-risk-monitor": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
+      "skill.name.tiktok-market-trend-analysis": "TikTok Market Trend Analysis",
+      "skill.desc.tiktok-market-trend-analysis": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
+      "skill.name.tiktok-product-selection": "TikTok Product Selection",
+      "skill.desc.tiktok-product-selection": "TikTok Shop viral product selection and scoring.",
+      "skill.name.tiktok-material-breakdown": "TikTok Material Breakdown",
+      "skill.desc.tiktok-material-breakdown": "TikTok viral video, material, hook and CTA breakdown.",
+      "skill.name.tiktok-script-creation": "TikTok Script Creation",
+      "skill.desc.tiktok-script-creation": "TikTok UGC, creator, ad and live script generation.",
+      "skill.name.bggg-data-amazon": "BGGG Amazon Data · Review Scraper",
+      "skill.desc.bggg-data-amazon": "Collect public Amazon US reviews and normalize into auditable JSONL datasets for VOC.",
     };
 
     const I18nCtx = React.createContext(null);
@@ -429,3 +513,35 @@
       if (label && label !== key) return label;
       return (item && (item.categoryLabel || item.category)) || "";
     }
+    function skillTitle(item, tr) {
+      if (!item) return "";
+      const slug = item.slug || item.skill || item.id || "";
+      const trFn = typeof tr === "function" ? tr : lookup;
+      const isEn = trFn("locale") === "en";
+      const key = "skill.name." + slug;
+      const keyById = "skill.name." + (item.id || "");
+      const translated = trFn(key);
+      if (translated && translated !== key) return translated;
+      const translatedById = trFn(keyById);
+      if (translatedById && translatedById !== keyById) return translatedById;
+      if (isEn && (item.titleEn || item.nameEn)) return item.titleEn || item.nameEn;
+      if (!isEn && (item.titleZh || item.nameZh)) return item.titleZh || item.nameZh;
+      return item.name || item.title || slug;
+    }
+
+    function skillDesc(item, tr) {
+      if (!item) return "";
+      const slug = item.slug || item.skill || item.id || "";
+      const trFn = typeof tr === "function" ? tr : lookup;
+      const isEn = trFn("locale") === "en";
+      const key = "skill.desc." + slug;
+      const keyById = "skill.desc." + (item.id || "");
+      const translated = trFn(key);
+      if (translated && translated !== key) return translated;
+      const translatedById = trFn(keyById);
+      if (translatedById && translatedById !== keyById) return translatedById;
+      if (isEn && (item.descriptionEn || item.summaryEn)) return item.descriptionEn || item.summaryEn;
+      if (!isEn && (item.descriptionZh || item.summaryZh)) return item.descriptionZh || item.summaryZh;
+      return item.description || item.summary || "";
+    }
+

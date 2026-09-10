@@ -40,6 +40,26 @@
       return renderPlazaIcon(props);
     }
 
+    function resolveItemTitle(item, tr) {
+      if (typeof skillTitle === "function") return skillTitle(item, tr);
+      if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillTitle === "function") return SkillShelf.skillTitle(item, tr);
+      if (!item) return "";
+      const isEn = tr && (tr("locale") === "en" || tr.locale === "en");
+      if (isEn && (item.titleEn || item.nameEn)) return item.titleEn || item.nameEn;
+      if (!isEn && (item.titleZh || item.nameZh)) return item.titleZh || item.nameZh;
+      return item.name || item.title || item.slug || "";
+    }
+
+    function resolveItemDesc(item, tr) {
+      if (typeof skillDesc === "function") return skillDesc(item, tr);
+      if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillDesc === "function") return SkillShelf.skillDesc(item, tr);
+      if (!item) return "";
+      const isEn = tr && (tr("locale") === "en" || tr.locale === "en");
+      if (isEn && (item.descriptionEn || item.summaryEn)) return item.descriptionEn || item.summaryEn;
+      if (!isEn && (item.descriptionZh || item.summaryZh)) return item.descriptionZh || item.summaryZh;
+      return item.description || item.summary || "";
+    }
+
     function WorkshopSwitch({ checked, onChange, disabled }) {
       return h("div", {
         className: "toggle-wrap",
@@ -164,13 +184,14 @@
 
     function ConfirmInstallModal({ item, onConfirm, onClose, error = "", installing = false }) {
       if (!item) return null;
+      const tr = typeof useTr === "function" ? useTr() : lookup;
       return h(Overlay, { onClose },
         h("div", { className: "modal-dialog", style: { width: "400px" }, role: "dialog", "aria-modal": "true" },
           h("div", { className: "modal-header" },
             h("h3", { className: "modal-title" }, lookup("workshop.confirmInstall") || "是否安装并启用此 Skill？"),
           ),
           h("p", { style: { fontSize: "13px", color: "var(--dsw-alias-label-secondary, #d1d5db)", margin: "0 0 20px" } },
-            "即将安装「" + (item.name || item.title || item.slug) + "」，安装完成后将自动为您启用。"
+            "即将安装「" + resolveItemTitle(item, tr) + "」，安装完成后将自动为您启用。"
           ),
           error ? h("p", { className: "sh-err", role: "alert" }, error) : null,
           h("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
@@ -500,9 +521,9 @@
             },
               h("div", { className: "regular-card-info" },
                 h("div", { className: "regular-card-top" },
-                  h("div", { className: "regular-card-title", title: item.name || item.title }, item.name || item.title),
+                  h("div", { className: "regular-card-title", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
                 ),
-                h("div", { className: "regular-card-desc" }, item.description || item.summary || "暂无描述"),
+                h("div", { className: "regular-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
               ),
               h(WorkshopSwitch, {
                 checked: item.enabled !== false,
@@ -526,7 +547,7 @@
                   h("div", { className: "featured-cover-wrap" },
                     coverSrc ? h("img", {
                       src: coverSrc,
-                      alt: (item.cover && item.cover.alt) || item.name || item.title || "Cover",
+                      alt: (item.cover && item.cover.alt) || resolveItemTitle(item, tr) || "Cover",
                       loading: "lazy",
                       style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
                       onError: (e) => {
@@ -561,8 +582,8 @@
                     ),
                   ),
                   h("div", { className: "featured-content" },
-                    h("div", { className: "featured-card-name", title: item.name || item.title }, item.name || item.title),
-                    h("div", { className: "featured-card-desc" }, item.description || item.summary || "暂无描述"),
+                    h("div", { className: "featured-card-name", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
+                    h("div", { className: "featured-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
                   ),
                 );
               }),
@@ -600,10 +621,10 @@
               },
                 h("div", { className: "regular-card-info" },
                   h("div", { className: "regular-card-top" },
-                    h("div", { className: "regular-card-title", title: item.name || item.title }, item.name || item.title),
+                    h("div", { className: "regular-card-title", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
                     item.downloads ? h("span", { className: "regular-card-dl" }, fmt(item.downloads, tr)) : null,
                   ),
-                  h("div", { className: "regular-card-desc" }, item.description || item.summary || "暂无描述"),
+                  h("div", { className: "regular-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
                 ),
                 h(WorkshopSwitch, {
                   checked: item.installed && item.enabled !== false,
