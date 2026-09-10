@@ -27,9 +27,16 @@ test('folder glass has unique clips, one cover per card and unchanged actions', 
   const props = { onOpen() {}, onRename() {}, onDelete() {}, t: key => key }
   const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
     ...['empty', 'image', 'video'].map((kind, id) => React.createElement(ProjectFolderCard, { ...props, key: id, project: { id, title: kind, cover: { kind } } }))))
-  const ids = [...html.matchAll(/<clipPath id="([^"]+)"/g)].map(match => match[1])
+  const ids = [...html.matchAll(/<linearGradient id="([^"]+)"/g)].map(match => match[1])
   assert.equal(new Set(ids).size, 3)
-  for (const id of ids) assert.ok(html.includes(`clip-path:url(#${id})`))
+  for (const id of ids) assert.ok(html.includes(`stroke="url(#${id})"`))
+  assert.equal((html.match(/--stage-pocket-mask:/g) || []).length, 3)
+  assert.ok(html.includes('data:image/svg+xml,'))
+  assert.ok(!html.includes('clip-path:'))
+  const svg = decodeURIComponent(html.match(/data:image\/svg\+xml,([^&]+)&quot;/)[1])
+  assert.ok(svg.includes('viewBox="0 0 516 378"'))
+  assert.ok(svg.includes('fill="white"'))
+  assert.ok(!svg.includes('<rect'))
   assert.equal((html.match(/data-cover-probe="one"/g) || []).length, 3)
   assert.equal((html.match(/omnimux-folder-sheet--rear/g) || []).length, 3)
   assert.equal((html.match(/omnimux-folder-sheet--front/g) || []).length, 3)
