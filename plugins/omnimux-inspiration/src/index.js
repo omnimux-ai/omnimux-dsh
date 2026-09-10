@@ -31,6 +31,11 @@ function objectParams(fields) {
   }
 }
 
+function safeJsonOutput(val) {
+  if (val === undefined || val === null) return {}
+  return JSON.parse(JSON.stringify(val, (_k, v) => (v === undefined ? null : v)))
+}
+
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
@@ -180,13 +185,13 @@ export function apply(ctx) {
         url: item.source_url,
         tags: item.tags,
         is_favorite: item.is_favorite,
-        hook_summary: typeof item.deconstruction === 'object' ? item.deconstruction?.hook : undefined,
+        hook_summary: typeof item.deconstruction === 'object' ? (item.deconstruction?.hook || null) : null,
       }))
-      return {
+      return safeJsonOutput({
         count: mapped.length,
         items: mapped,
         inspirations: mapped,
-      }
+      })
     },
   })
 
@@ -200,13 +205,13 @@ export function apply(ctx) {
     async execute(args) {
       const item = store.get(args.id)
       if (!item) throw new Error(`Inspiration not found: ${args.id}`)
-      return { item }
+      return safeJsonOutput({ item })
     },
   })
 
   ctx.tools.register({
     name: 'inspiration_create',
-    description: 'Crawl and save a social media inspiration URL to local store with automatic media download and AI deconstruction.',
+    description: 'Save a social media video URL to the local inspiration library with automatic media download. For instant video breakdown, shots analysis, and live sidebar preview, use video_breakdown_analyze.',
     parameters: objectParams({
       url: { type: 'string', required: true, description: 'Social URL (TikTok, Instagram, YouTube, X)' },
       tags: { type: 'array', items: { type: 'string' }, description: 'Custom tags' },
@@ -224,7 +229,7 @@ export function apply(ctx) {
         },
       })
       if (result.status >= 400) throw new Error(result.body?.error || `HTTP ${result.status}`)
-      return result.body?.data
+      return safeJsonOutput(result.body?.data || {})
     },
   })
 
@@ -247,7 +252,7 @@ export function apply(ctx) {
       if (Array.isArray(args.tags)) patch.tags = args.tags
       if (typeof args.is_favorite === 'boolean') patch.is_favorite = args.is_favorite
       const item = store.update(id, patch)
-      return { ok: true, item }
+      return safeJsonOutput({ ok: true, item })
     },
   })
 
@@ -269,7 +274,7 @@ export function apply(ctx) {
       }
       const id = String(args.id)
       const removed = await store.delete(id)
-      return { ok: true, id: removed.id, deleted: true }
+      return safeJsonOutput({ ok: true, id: removed.id, deleted: true })
     },
   })
 
@@ -277,7 +282,7 @@ export function apply(ctx) {
     name: 'inspiration_favorite',
     description: 'Toggle or set the favorite status of an inspiration item.',
     parameters: objectParams({
-      id: { type: 'string', required: true, description: 'Inspiration item ID' },
+      id: { type: 'string', required: true, description: 'Favorite status to set (true or false)' },
       is_favorite: { type: 'boolean', required: true, description: 'Favorite status to set (true or false)' },
     }),
     output: jsonOut,
@@ -285,7 +290,7 @@ export function apply(ctx) {
       const id = String(args.id)
       const is_favorite = Boolean(args.is_favorite)
       const item = store.update(id, { is_favorite })
-      return { ok: true, id: item.id, is_favorite: item.is_favorite }
+      return safeJsonOutput({ ok: true, id: item.id, is_favorite: item.is_favorite })
     },
   })
 }
