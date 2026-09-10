@@ -37,6 +37,11 @@ export class InspirationError extends Error {
  * @property {Record<string, unknown>} [stats] likes, comments, shares, etc.
  * @property {Record<string, unknown>} [author] name, handle, avatar
  * @property {number} [duration] seconds
+ * @property {number} [views]
+ * @property {string} [country_code]
+ * @property {string} [category]
+ * @property {string} [traffic_type] ad | organic
+ * @property {string} [posted_at]
  * @property {string} [published_at]
  * @property {string} [favorited_at]
  * @property {{ lang?: string, text?: string, segments?: Array<{ id: string, text: string }> }} [script_translation]
@@ -47,6 +52,24 @@ export class InspirationError extends Error {
 /**
  * @param {{ paths?: ReturnType<typeof resolveInspirationPaths> }} [opts]
  */
+function rowDuration(row) {
+  if (typeof row?.duration === 'number' && Number.isFinite(row.duration)) return row.duration
+  if (row?.stats && typeof row.stats === 'object') {
+    const d = Number(row.stats.duration || row.stats.video_duration)
+    if (Number.isFinite(d)) return d
+  }
+  return 0
+}
+
+function rowViews(row) {
+  if (typeof row?.views === 'number' && Number.isFinite(row.views)) return row.views
+  if (row?.stats && typeof row.stats === 'object') {
+    const v = Number(row.stats.views)
+    if (Number.isFinite(v)) return v
+  }
+  return 0
+}
+
 export function createLocalStore(opts = {}) {
   const paths = opts.paths ?? resolveInspirationPaths()
 
@@ -139,6 +162,68 @@ export function createLocalStore(opts = {}) {
         items = items.filter((row) => Boolean(row.is_favorite) === fav)
       }
 
+      if (query.country) {
+        const c = String(query.country).toLowerCase().trim()
+        items = items.filter((row) => (row.country_code || '').toLowerCase() === c)
+      }
+
+      if (query.category) {
+        const cat = String(query.category).toLowerCase().trim()
+        items = items.filter((row) => (row.category || '').toLowerCase().includes(cat))
+      }
+
+      if (query.duration_min != null && query.duration_min !== '') {
+        const min = Number(query.duration_min)
+        if (Number.isFinite(min)) items = items.filter((row) => rowDuration(row) >= min)
+      }
+
+      if (query.duration_max != null && query.duration_max !== '') {
+        const max = Number(query.duration_max)
+        if (Number.isFinite(max)) items = items.filter((row) => rowDuration(row) <= max)
+      }
+
+      if (query.views_min != null && query.views_min !== '') {
+        const min = Number(query.views_min)
+        if (Number.isFinite(min)) items = items.filter((row) => rowViews(row) >= min)
+      }
+
+      if (query.views_max != null && query.views_max !== '') {
+        const max = Number(query.views_max)
+        if (Number.isFinite(max)) items = items.filter((row) => rowViews(row) <= max)
+      }
+
+      if (query.traffic_type) {
+        const tt = String(query.traffic_type).toLowerCase().trim()
+        items = items.filter((row) => (row.traffic_type || 'organic').toLowerCase() === tt)
+      }
+
+      if (query.posted_after) {
+        const afterMs = Date.parse(query.posted_after)
+        if (!Number.isNaN(afterMs)) {
+          items = items.filter((row) => {
+            const p = row.posted_at || row.published_at
+            if (!p) return false
+            const itemMs = Date.parse(p)
+            return !Number.isNaN(itemMs) && itemMs >= afterMs
+          })
+        }
+      }
+
+      if (query.posted_before) {
+        const beforeMs = Date.parse(query.posted_before)
+        if (!Number.isNaN(beforeMs)) {
+          const effectiveBefore = /^\d{4}-\d{2}-\d{2}$/.test(String(query.posted_before).trim())
+            ? beforeMs + 86400000 - 1
+            : beforeMs
+          items = items.filter((row) => {
+            const p = row.posted_at || row.published_at
+            if (!p) return false
+            const itemMs = Date.parse(p)
+            return !Number.isNaN(itemMs) && itemMs <= effectiveBefore
+          })
+        }
+      }
+
       const sortMode = query.sort || 'new'
       items.sort((a, b) => {
         if (sortMode === 'fav') {
@@ -150,6 +235,11 @@ export function createLocalStore(opts = {}) {
           const scoreA = typeof a.hot_score === 'number' ? a.hot_score : 0
           const scoreB = typeof b.hot_score === 'number' ? b.hot_score : 0
           if (scoreB !== scoreA) return scoreB - scoreA
+        }
+        if (sortMode === 'views') {
+          const viewsA = rowViews(a)
+          const viewsB = rowViews(b)
+          if (viewsB !== viewsA) return viewsB - viewsA
         }
         const timeA = new Date(a.created_at || 0).getTime()
         const timeB = new Date(b.created_at || 0).getTime()
@@ -218,6 +308,11 @@ export function createLocalStore(opts = {}) {
         stats: record.stats || {},
         author: record.author || {},
         duration: record.duration,
+        views: record.views,
+        country_code: record.country_code || '',
+        category: record.category || '',
+        traffic_type: record.traffic_type || 'organic',
+        posted_at: record.posted_at || null,
         published_at: record.published_at || '',
         favorited_at: record.favorited_at || (record.is_favorite ? now : ''),
         script_translation: record.script_translation,

@@ -96,6 +96,15 @@ export function handleList({ url, store }) {
   const sort = url.searchParams.get('sort') || undefined
   const page = parseInt(url.searchParams.get('page') || '1', 10)
   const pageSize = parseInt(url.searchParams.get('page_size') || '20', 10)
+  const country = url.searchParams.get('country') || undefined
+  const category = url.searchParams.get('category') || undefined
+  const duration_min = url.searchParams.get('duration_min') || undefined
+  const duration_max = url.searchParams.get('duration_max') || undefined
+  const views_min = url.searchParams.get('views_min') || undefined
+  const views_max = url.searchParams.get('views_max') || undefined
+  const traffic_type = url.searchParams.get('traffic_type') || undefined
+  const posted_after = url.searchParams.get('posted_after') || undefined
+  const posted_before = url.searchParams.get('posted_before') || undefined
   const result = store.list({
     q,
     platform,
@@ -105,6 +114,15 @@ export function handleList({ url, store }) {
     sort,
     page,
     pageSize,
+    country,
+    category,
+    duration_min,
+    duration_max,
+    views_min,
+    views_max,
+    traffic_type,
+    posted_after,
+    posted_before,
   })
   return { status: 200, body: { data: result } }
 }

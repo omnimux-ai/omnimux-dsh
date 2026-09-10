@@ -19,7 +19,7 @@ import { pathToFileURL } from 'node:url'
 
 export const PLAN_SCHEMA = 'omnimux.gxgen-inspiration-import-plan/v1'
 export const RECEIPTS_SCHEMA = 'omnimux.gxgen-inspiration-import-receipts/v1'
-const SOURCE_SELECT = 'id,title,assets,cover_r2_key,is_active,deleted_at'
+const SOURCE_SELECT = 'id,title,country_code,duration_seconds,published_at,assets,cover_r2_key,is_active,deleted_at'
 const DEFAULT_PAGE_SIZE = 100
 const DEFAULT_TIMEOUT_MS = 15_000
 const INSPECTOR_BATCH_SIZE = 200
@@ -314,6 +314,95 @@ function normalizedTikTokURL(row, assets, tiktokID, authorHandle) {
   return `https://www.tiktok.com/@${encodeURIComponent(authorHandle)}/video/${tiktokID}`
 }
 
+function extractCountryCode(row, assets) {
+  const candidates = [row?.country_code, assets?.country_code, assets?.country_zh]
+  for (const raw of candidates) {
+    if (typeof raw !== 'string') continue
+    const trimmed = raw.trim()
+    if (!trimmed) continue
+    if (/^[a-zA-Z]{2,8}$/.test(trimmed)) return trimmed.toUpperCase()
+    if (trimmed === '美国') return 'US'
+    if (trimmed === '英国') return 'GB'
+  }
+  return ''
+}
+
+function extractCategory(row, assets) {
+  const candidates = [
+    assets?.category_zh,
+    assets?.category_en,
+    assets?.raw_source?.industry,
+    assets?.industry,
+    assets?.raw_source?.category,
+    assets?.meta?.category,
+    Array.isArray(assets?.categories) ? assets.categories.find(nonempty) : null,
+    row?.product_type,
+    assets?.product_type,
+  ]
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) {
+      return c.trim().slice(0, 64)
+    }
+  }
+  return ''
+}
+
+function extractDuration(row, assets) {
+  const candidates = [
+    row?.duration_seconds,
+    assets?.duration,
+    assets?.raw_source?.duration,
+    assets?.duration_seconds,
+    assets?.meta?.original_duration,
+  ]
+  for (const val of candidates) {
+    if (val != null) {
+      const n = Number(val)
+      if (Number.isFinite(n) && n >= 0 && Number.isSafeInteger(Math.round(n))) {
+        return Math.min(Math.round(n), 4294967295)
+      }
+    }
+  }
+  return 0
+}
+
+function extractViews(assets) {
+  const candidates = [assets?.views_numeric, assets?.views, assets?.raw_source?.views]
+  for (const val of candidates) {
+    const parsed = metric(val)
+    if (parsed != null) return parsed
+  }
+  return 0
+}
+
+function extractTrafficType(row, assets) {
+  if (row?.source_type === 'ad' || assets?.raw_source?.is_ad === true) return 'ad'
+  if (assets?.meta?.source === 'tiktok_ads') return 'ad'
+  const tags = Array.isArray(assets?.tags) ? assets.tags : []
+  if (tags.some((t) => typeof t === 'string' && (t.toLowerCase() === 'tiktok_ad' || t.toLowerCase() === 'ad'))) {
+    return 'ad'
+  }
+  return 'organic'
+}
+
+function extractPostedAt(row, assets) {
+  const candidates = [
+    assets?.posted_at,
+    row?.published_at,
+    assets?.raw_source?.date_published,
+    assets?.analysis_completed_at,
+  ]
+  for (const val of candidates) {
+    if (typeof val === 'string' && val.trim()) {
+      const ms = Date.parse(val.trim())
+      if (!Number.isNaN(ms)) {
+        return new Date(ms).toISOString()
+      }
+    }
+  }
+  return null
+}
+
 function mappedCandidate(row) {
   if (!row || typeof row !== 'object' || Array.isArray(row) || !nonempty(String(row.id || ''))) throw new Error('source row has no ID')
   if (row.is_active !== true || row.deleted_at != null) throw new Error('source row is inactive or deleted')
@@ -349,6 +438,12 @@ function mappedCandidate(row) {
     hot_score: hotScore,
     is_favorite: false,
     tags,
+    country_code: extractCountryCode(row, assets),
+    category: extractCategory(row, assets),
+    duration: extractDuration(row, assets),
+    views: extractViews(assets),
+    traffic_type: extractTrafficType(row, assets),
+    posted_at: extractPostedAt(row, assets),
     analysis: {
       hook_highlight: analysis.attraction_analysis,
       target_goal: analysis.global_goal,
@@ -669,9 +764,28 @@ function recordSnapshotDigest(record) {
 
 function assertRecord(record, item) {
   const payload = item.payload
-  const fields = ['type', 'title', 'content', 'source_url', 'hot_score', 'is_favorite']
+  const fields = [
+    'type',
+    'title',
+    'content',
+    'source_url',
+    'hot_score',
+    'is_favorite',
+    'country_code',
+    'category',
+    'duration',
+    'views',
+    'traffic_type',
+  ]
   for (const field of fields) {
     if (!sameJSON(record?.[field], payload[field])) throw new Error(`field ${field} differs from plan`)
+  }
+  if (payload.posted_at == null) {
+    if (record?.posted_at != null && record?.posted_at !== '') throw new Error('field posted_at differs from plan')
+  } else {
+    const recordTime = record?.posted_at ? new Date(record.posted_at).getTime() : NaN
+    const payloadTime = new Date(payload.posted_at).getTime()
+    if (Number.isNaN(recordTime) || recordTime !== payloadTime) throw new Error('field posted_at differs from plan')
   }
   if (!sameJSON(record?.media_keys || [], payload.media_keys) || !sameJSON(record?.analysis, payload.analysis)) throw new Error('analysis or media_keys differ from plan')
   if (!sameJSON(comparableTags(record?.tags), comparableTags(payload.tags))) throw new Error('tags differ from plan')

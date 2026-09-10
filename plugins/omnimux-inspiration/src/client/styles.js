@@ -219,6 +219,40 @@ export const INSPIRATION_CSS = `
   font-size: 13px;
 }
 
+/* 二级复合筛选行 */
+.omnimux-inspiration-subfilter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 0 12px 0;
+  width: 100%;
+}
+
+.omnimux-inspiration-subfilter-select .dshUk-DropdownSelect-trigger,
+.omnimux-inspiration-subfilter-select > button {
+  min-width: 90px !important;
+  height: 32px;
+  background: var(--dsw-alias-bg-module-platform, #141414);
+  border: 1px solid var(--dsw-alias-border-l2, #242424);
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  transition: all 120ms ease;
+}
+
+.omnimux-inspiration-subfilter-select .dshUk-DropdownSelect-trigger:hover,
+.omnimux-inspiration-subfilter-select > button:hover {
+  border-color: var(--dsw-alias-border-hover, rgba(255, 255, 255, 0.4));
+  background: var(--dsw-alias-bg-layer-1, #1a1a1a);
+}
+
+.omnimux-inspiration-subfilter-select .dshUk-DropdownSelect-label {
+  font-size: 13px;
+}
+
 /* 9:16 原子化扫光骨架屏矩阵 */
 .omnimux-inspiration-skeleton {
   display: grid;

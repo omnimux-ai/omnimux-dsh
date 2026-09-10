@@ -17,7 +17,12 @@ import {
   toggleIdInSet,
   updateItemInList,
 } from './feed-helpers.js'
-import { useInspirationFeed } from './use-inspiration-feed.js'
+import {
+  resolveDateRange,
+  resolveDurationRange,
+  resolveViewsRange,
+  useInspirationFeed,
+} from './use-inspiration-feed.js'
 
 function jsonResponse(status, body) {
   return {
@@ -89,6 +94,47 @@ describe('use-inspiration-feed pure helpers', () => {
         favorite: '1',
       })
       assert.equal(key, 'insp:local:fashion:image:new:1')
+    })
+
+    it('appends multidimensional filter parameters when present', () => {
+      const key = cacheKeyOf({
+        tab: 'all',
+        country: 'US',
+        category: 'beauty',
+        duration_min: 15,
+        duration_max: 30,
+        views_min: 100000,
+        traffic_type: 'ad',
+        posted_after: '2026-09-01',
+      })
+      assert.equal(key, 'insp:all:::hot:0:c=US&cat=beauty&dmin=15&dmax=30&vmin=100000&tt=ad&pafter=2026-09-01')
+    })
+  })
+
+  describe('range resolution helpers', () => {
+    it('resolves duration ranges accurately', () => {
+      assert.deepEqual(resolveDurationRange('0-15'), { duration_min: undefined, duration_max: 15 })
+      assert.deepEqual(resolveDurationRange('15-30'), { duration_min: 15, duration_max: 30 })
+      assert.deepEqual(resolveDurationRange('30-60'), { duration_min: 30, duration_max: 60 })
+      assert.deepEqual(resolveDurationRange('60+'), { duration_min: 60, duration_max: undefined })
+      assert.deepEqual(resolveDurationRange(''), { duration_min: undefined, duration_max: undefined })
+    })
+
+    it('resolves views ranges accurately', () => {
+      assert.deepEqual(resolveViewsRange('10k+'), { views_min: 10000, views_max: undefined })
+      assert.deepEqual(resolveViewsRange('1m+'), { views_min: 1000000, views_max: undefined })
+      assert.deepEqual(resolveViewsRange(''), { views_min: undefined, views_max: undefined })
+    })
+
+    it('resolves date ranges accurately', () => {
+      const fixedNow = Date.parse('2026-09-10T12:00:00.000Z')
+      const r7 = resolveDateRange('last7', fixedNow)
+      assert.equal(r7.posted_after, '2026-09-03')
+      assert.equal(r7.posted_before, undefined)
+
+      const rCustom = resolveDateRange('2026-09-03:2026-09-09')
+      assert.equal(rCustom.posted_after, '2026-09-03')
+      assert.equal(rCustom.posted_before, '2026-09-09')
     })
   })
 

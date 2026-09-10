@@ -107,7 +107,7 @@ class Fixture {
     this.calls.push({ method, url: url.toString(), redirect: init.redirect, body: init.body })
     if (url.hostname === 'source.example') {
       assert.equal(method, 'GET')
-      assert.equal(url.searchParams.get('select'), 'id,title,assets,cover_r2_key,is_active,deleted_at')
+      assert.equal(url.searchParams.get('select'), 'id,title,country_code,duration_seconds,published_at,assets,cover_r2_key,is_active,deleted_at')
       assert.equal(url.searchParams.has('offset'), false)
       const after = url.searchParams.get('id')?.replace(/^gt\./, '')
       const limit = Number(url.searchParams.get('limit'))
@@ -455,6 +455,46 @@ const fs=require('node:fs');const a=process.argv.slice(2);const p=(n)=>a[a.index
   assert.equal(JSON.parse(verifiedRun.stdout).ok, true)
   assert.equal(existsSync(`${file}.receipts.json`), true)
   assert.ok(methods.every((method) => !['DELETE', 'PATCH'].includes(method)))
+})
+
+test('maps and verifies multidimensional filter fields from Gxgen row', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'gxgen-import-multidim-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const row = sourceRow(99)
+  row.country_code = 'US'
+  row.duration_seconds = 45
+  row.published_at = '2026-09-01T10:00:00.000Z'
+  row.assets.category_zh = '美妆护肤'
+  row.assets.views = '1.5M'
+  row.assets.tags.push('tiktok_ad')
+
+  const fixture = new Fixture([row])
+  let capturedPayload = null
+  fixture.post = async (payload) => {
+    capturedPayload = payload
+    const record = fixture.record(payload)
+    return json({ success: true, data: record, existed: false }, 201)
+  }
+  const { document } = await planned(root, fixture)
+  const item = document.items[0]
+  assert.equal(item.payload.country_code, 'US')
+  assert.equal(item.payload.category, '美妆护肤')
+  assert.equal(item.payload.duration, 45)
+  assert.equal(item.payload.views, 1500000)
+  assert.equal(item.payload.traffic_type, 'ad')
+  assert.equal(item.payload.posted_at, '2026-09-01T10:00:00.000Z')
+
+  const applied = await applyImport(config(root), deps(root, fixture))
+  assert.equal(applied.counts.created, 1)
+  assert.equal(capturedPayload.country_code, 'US')
+  assert.equal(capturedPayload.category, '美妆护肤')
+  assert.equal(capturedPayload.duration, 45)
+  assert.equal(capturedPayload.views, 1500000)
+  assert.equal(capturedPayload.traffic_type, 'ad')
+  assert.equal(capturedPayload.posted_at, '2026-09-01T10:00:00.000Z')
+
+  const verified = await verifyImport(config(root), deps(root, fixture))
+  assert.equal(verified.ok, true)
 })
 
 function send(response, body, status = 200) {

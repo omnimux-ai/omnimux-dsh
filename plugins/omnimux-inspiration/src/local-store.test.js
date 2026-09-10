@@ -89,6 +89,46 @@ describe('Local Inspiration Store', () => {
     assert.equal(again.favorited_at, faved.favorited_at)
   })
 
+  it('filters by multidimensional dimensions and sorts by views', () => {
+    const store = createLocalStore({ paths })
+    store.add({
+      title: 'US Ad Video',
+      source_platform: 'tiktok',
+      source_url: 'https://www.tiktok.com/@u/video/1',
+      country_code: 'US',
+      category: '美妆护肤',
+      duration: 15,
+      views: 500000,
+      traffic_type: 'ad',
+      posted_at: '2026-09-01T12:00:00.000Z',
+    })
+    store.add({
+      title: 'UK Organic Video',
+      source_platform: 'tiktok',
+      source_url: 'https://www.tiktok.com/@u/video/2',
+      country_code: 'GB',
+      category: '家居生活',
+      duration: 45,
+      views: 1200000,
+      traffic_type: 'organic',
+      posted_at: '2026-09-05T12:00:00.000Z',
+    })
+
+    assert.equal(store.list({ country: 'us' }).total, 1)
+    assert.equal(store.list({ country: 'GB' }).total, 1)
+    assert.equal(store.list({ category: '美妆' }).total, 1)
+    assert.equal(store.list({ traffic_type: 'ad' }).total, 1)
+    assert.equal(store.list({ duration_min: 20 }).total, 1)
+    assert.equal(store.list({ duration_max: 20 }).total, 1)
+    assert.equal(store.list({ views_min: 1000000 }).total, 1)
+    assert.equal(store.list({ posted_after: '2026-09-03' }).total, 1)
+    assert.equal(store.list({ posted_before: '2026-09-03' }).total, 1)
+
+    const viewsSorted = store.list({ sort: 'views' })
+    assert.equal(viewsSorted.items[0].title, 'UK Organic Video')
+    assert.equal(viewsSorted.items[1].title, 'US Ad Video')
+  })
+
   it('extracts structured markdown sections', () => {
     const sampleMd = `
 ## 一句话视频描述

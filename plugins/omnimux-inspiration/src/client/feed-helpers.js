@@ -7,13 +7,32 @@ import {
 
 /**
  * Construct SWR-style cache key for inspiration query parameters.
- * Shape: `insp:${tab}:${q}:${type}:${sort}:${favorite}`
+ * Shape: `insp:${tab}:${q}:${type}:${sort}:${favorite}(:${extra})*`
  */
 export function cacheKeyOf(...args) {
-  const [tab = 'all', q = '', type = '', sort = 'hot', favorite = '0'] = typeof args[0] === 'object' && args[0] !== null
-    ? [args[0].tab, args[0].q, args[0].type, args[0].sort, args[0].favorite]
-    : args
-  return `insp:${tab || 'all'}:${q || ''}:${type || ''}:${sort || 'hot'}:${favorite ?? '0'}`
+  const p = typeof args[0] === 'object' && args[0] !== null ? args[0] : {}
+  const tab = p.tab ?? args[0] ?? 'all'
+  const q = p.q ?? args[1] ?? ''
+  const type = p.type ?? args[2] ?? ''
+  const sort = p.sort ?? args[3] ?? 'hot'
+  const favorite = p.favorite ?? args[4] ?? '0'
+  const base = `insp:${tab || 'all'}:${q || ''}:${type || ''}:${sort || 'hot'}:${favorite ?? '0'}`
+
+  const extraParts = []
+  if (p.country) extraParts.push(`c=${p.country}`)
+  if (p.category) extraParts.push(`cat=${p.category}`)
+  if (p.duration_min != null && p.duration_min !== '') extraParts.push(`dmin=${p.duration_min}`)
+  if (p.duration_max != null && p.duration_max !== '') extraParts.push(`dmax=${p.duration_max}`)
+  if (p.views_min != null && p.views_min !== '') extraParts.push(`vmin=${p.views_min}`)
+  if (p.views_max != null && p.views_max !== '') extraParts.push(`vmax=${p.views_max}`)
+  if (p.traffic_type) extraParts.push(`tt=${p.traffic_type}`)
+  if (p.posted_after) extraParts.push(`pafter=${p.posted_after}`)
+  if (p.posted_before) extraParts.push(`pbefore=${p.posted_before}`)
+
+  if (extraParts.length > 0) {
+    return `${base}:${extraParts.join('&')}`
+  }
+  return base
 }
 
 /**
@@ -126,7 +145,11 @@ export async function executeBatchDelete(ids, setters) {
 }
 
 export async function fetchAndMergeInspirations(params, options) {
-  const { tab, q, type, sort, favorite, targetPage } = params
+  const {
+    tab, q, type, sort, favorite, targetPage,
+    country, category, duration_min, duration_max,
+    views_min, views_max, traffic_type, posted_after, posted_before,
+  } = params
   const { isNextPage, cacheKey, setters } = options
   const result = await loadInspirationsAtomic({
     tab,
@@ -134,6 +157,15 @@ export async function fetchAndMergeInspirations(params, options) {
     type,
     sort,
     favorite,
+    country,
+    category,
+    duration_min,
+    duration_max,
+    views_min,
+    views_max,
+    traffic_type,
+    posted_after,
+    posted_before,
     page: targetPage,
     pageSize: 20,
   })
@@ -155,10 +187,18 @@ export function checkCacheEarlyReturn(cacheKey, setters) {
 }
 
 export async function executeFeedLoad(params, setters) {
-  const { isNextPage, tab, q, type, sort, favorite, page, hasExistingItems } = params
+  const {
+    isNextPage, tab, q, type, sort, favorite, page, hasExistingItems,
+    country, category, duration_min, duration_max,
+    views_min, views_max, traffic_type, posted_after, posted_before,
+  } = params
   const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore } = setters
   const targetPage = isNextPage ? page + 1 : 1
-  const cacheKey = cacheKeyOf(tab, q, type, sort, favorite)
+  const cacheKey = cacheKeyOf({
+    tab, q, type, sort, favorite,
+    country, category, duration_min, duration_max,
+    views_min, views_max, traffic_type, posted_after, posted_before,
+  })
 
   if (!isNextPage) {
     const hitFresh = checkCacheEarlyReturn(cacheKey, { setItems, setHasMore, setPhase, setLoading })
@@ -169,7 +209,11 @@ export async function executeFeedLoad(params, setters) {
 
   try {
     await fetchAndMergeInspirations(
-      { tab, q, type, sort, favorite, targetPage },
+      {
+        tab, q, type, sort, favorite, targetPage,
+        country, category, duration_min, duration_max,
+        views_min, views_max, traffic_type, posted_after, posted_before,
+      },
       { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError } },
     )
   } catch (err) {

@@ -4,6 +4,8 @@ import {
   authGuard,
   extractTikTokVideoId,
   hostMediaSrc,
+  listInspirations,
+  listLocalInspirations,
   quotaGuard,
   resolveCreatorProfileUrl,
   resolveTikTokEmbedUrl,
@@ -226,5 +228,45 @@ describe('resolveTikTokEmbedUrl', () => {
     assert.equal(resolveTikTokEmbedUrl('not-a-valid-url'), null)
     assert.equal(resolveTikTokEmbedUrl('https://example.com/video/123'), null)
     assert.equal(resolveTikTokEmbedUrl('123'), null)
+  })
+})
+
+describe('listInspirations query params', () => {
+  it('encodes multidimensional filters for cloud and local requests', async () => {
+    const originalFetch = globalThis.fetch
+    const calls = []
+    globalThis.fetch = async (url) => {
+      calls.push(url.toString())
+      return { ok: true, status: 200, json: async () => ({ success: true, data: { items: [], total: 0 } }) }
+    }
+    try {
+      await listInspirations({
+        country: 'US',
+        category: 'beauty',
+        duration_min: 15,
+        duration_max: 30,
+        views_min: 100000,
+        traffic_type: 'ad',
+        sort: 'views',
+        posted_after: '2026-09-01',
+      })
+      assert.equal(
+        calls[0],
+        '/omnimux/inspiration?sort=views&country=US&category=beauty&duration_min=15&duration_max=30&views_min=100000&traffic_type=ad&posted_after=2026-09-01',
+      )
+
+      await listLocalInspirations({
+        country: 'GB',
+        category: 'home',
+        traffic_type: 'organic',
+        sort: 'views',
+      })
+      assert.equal(
+        calls[1],
+        '/omnimux/inspiration/local?sort=views&country=GB&category=home&traffic_type=organic',
+      )
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 })

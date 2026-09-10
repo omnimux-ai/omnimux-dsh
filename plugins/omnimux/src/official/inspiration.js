@@ -7,7 +7,11 @@ const API = '/api/inspiration/v1'
 const HOST_MEDIA = '/omnimux/inspiration/media/'
 const SITE_MEDIA = '/api/inspiration/v1/media/'
 
-const LIST_KEYS = ['type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size']
+const LIST_KEYS = [
+  'type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size',
+  'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
+  'traffic_type', 'posted_after', 'posted_before',
+]
 
 /**
  * Rewrite gateway media URLs so the browser loads covers through Host
