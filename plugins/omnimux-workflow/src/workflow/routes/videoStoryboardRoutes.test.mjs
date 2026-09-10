@@ -67,6 +67,14 @@ function harness(t, opts = {}) {
     async execute(args) {
       toolCalls.push({ tool: 'video_process', args });
       if (opts.processExecute) return opts.processExecute(args);
+      if (args.capability === 'video_thumbnail_extract') {
+        const dest = args.dest;
+        writeFileSync(dest, 'extracted real thumbnail frame bytes exceeding 500 bytes threshold to be considered valid ' + 'x'.repeat(600));
+        return { mode: 'live', files: [{ path: dest, kind: 'image' }] };
+      }
+      if (opts.noScenesDetected) {
+        return { mode: 'live', files: [], result: { scenes: [], count: 0 } };
+      }
       const dest = args.dest;
       mkdirSync(dest, { recursive: true });
       const f1 = join(dest, 'frame-001.jpg');
@@ -240,4 +248,30 @@ test('videoStoryboard: 请求参数缺失校验 (invalid-request)', async (t) =>
 
   const noVideo = await h.call({ nodeId: 'node_video_1' });
   assert.equal(noVideo.status, 400);
+});
+
+test('videoStoryboard: 当 scene_detect 未检测出切镜时，根据脚本时间点自动触发 video_thumbnail_extract 抽取真实分镜帧', async (t) => {
+  const h = harness(t, { noScenesDetected: true });
+  const res = await h.call({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '无切镜平滑视频分镜表',
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+
+  // 验证触发了 video_thumbnail_extract 抽帧能力
+  const thumbCalls = h.toolCalls.filter(
+    (c) => c.tool === 'video_process' && c.args.capability === 'video_thumbnail_extract',
+  );
+  assert.ok(thumbCalls.length >= 2, '应当针对每个分镜时间戳触发关键帧抽取');
+
+  // 校验生成的分镜表格内挂载了抽出的图片
+  const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
+  const doc = await TableStorageService.loadTable(absPath);
+  const imgCol = doc.columns.find((c) => c.title === '分镜画面');
+  assert.ok(imgCol);
+  assert.equal(doc.rows[0].cells[imgCol.id][0].name, 'frame-001.jpg');
+  assert.equal(doc.rows[1].cells[imgCol.id][0].name, 'frame-002.jpg');
 });

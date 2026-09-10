@@ -80,17 +80,36 @@ export function resolveBinaryPaths(ffmpegPath) {
 export function resolveBin({ ffmpegPath } = {}) {
   const { ffmpeg, ffprobe } = resolveBinaryPaths(ffmpegPath)
   const result = { ffmpeg, ffprobe, version: null, missing: true }
-  try {
-    const v = spawnSync(ffmpeg, ['-version'], { encoding: 'utf8', timeout: 15000 })
-    if (v.status !== 0) return result
-    const p = spawnSync(ffprobe, ['-version'], { encoding: 'utf8', timeout: 15000 })
-    if (p.status !== 0) return result
-    result.version = parseVersion(v.stdout)
-    result.missing = false
-    return result
-  } catch {
-    return result
+
+  const tryProbe = (f, pr) => {
+    try {
+      const v = spawnSync(f, ['-version'], { encoding: 'utf8', timeout: 15000 })
+      if (v.status !== 0) return null
+      const p = spawnSync(pr, ['-version'], { encoding: 'utf8', timeout: 15000 })
+      if (p.status !== 0) return null
+      return {
+        ffmpeg: f,
+        ffprobe: pr,
+        version: parseVersion(v.stdout),
+        missing: false,
+      }
+    } catch {
+      return null
+    }
   }
+
+  const primary = tryProbe(ffmpeg, ffprobe)
+  if (primary) return primary
+
+  // When ffmpegPath was not explicitly provided and PATH lookup failed (e.g. GUI Electron app on macOS without /opt/homebrew/bin in PATH):
+  if (!ffmpegPath) {
+    for (const binDir of ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin']) {
+      const hit = tryProbe(join(binDir, 'ffmpeg'), join(binDir, 'ffprobe'))
+      if (hit) return hit
+    }
+  }
+
+  return result
 }
 
 /**
