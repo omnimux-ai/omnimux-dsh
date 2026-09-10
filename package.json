@@ -61,6 +61,8 @@
     "verify:model-contracts": "node scripts/verify-model-contracts.mjs --strict",
     "verify:cross-plugin-models": "node scripts/verify-cross-plugin-model-alignment.mjs",
     "verify:tools": "node scripts/verify-plugin-agent-tools.mjs",
+    "test:agent-tools": "node scripts/test-agent-tools.mjs",
+    "test:agent-tools:unit": "node --test scripts/test-agent-tools.test.mjs",
     "verify:image-live": "node scripts/verify-omnimux-image-live.mjs",
     "verify:stages": "node scripts/verify-stage-contracts.mjs",
     "verify:slots": "node scripts/verify-slot-contracts.mjs",
