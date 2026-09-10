@@ -83,7 +83,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [translateError, setTranslateError] = useState(null)
   const [showTranslation, setShowTranslation] = useState(false)
   const [activeSegmentId, setActiveSegmentId] = useState('')
-  const [showRaw, setShowRaw] = useState(false)
 
   useEffect(() => setItem(row), [row])
   useEffect(() => {
@@ -355,20 +354,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         {renderDocAnalysis(value)}
                       </article>
                     ) : null)}
-                    {data.rawMarkdown ? (
-                      <div className="omnimux-inspiration-modal-raw">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="omnimux-inspiration-modal-copy"
-                          onClick={() => setShowRaw((value) => !value)}
-                        >
-                          {showRaw ? t('modal.deconstruction.hideRaw') : t('modal.deconstruction.showRaw')}
-                        </Button>
-                        {showRaw ? <pre>{data.rawMarkdown}</pre> : null}
-                      </div>
-                    ) : null}
                   </div>
                 ) : (
                   <div className="omnimux-inspiration-modal-empty">
