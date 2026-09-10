@@ -136,7 +136,7 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   if (hookMatch) {
     structure.push({
       stage: 'Hook',
-      title: 'Hook (黄金钩子)',
+      title: 'Hook',
       description: hookMatch[1].trim().replace(/^>\s*/, '').replace(/\*+/g, ''),
     })
   }
@@ -146,7 +146,7 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   if (goalMatch) {
     structure.push({
       stage: 'Product Intro',
-      title: 'Product Intro (核心展示)',
+      title: 'Product Intro',
       description: goalMatch[1].trim().replace(/\*+/g, ''),
     })
   }
@@ -156,7 +156,7 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   if (narrativeMatch) {
     structure.push({
       stage: 'Usage Detail',
-      title: 'Usage Detail (使用细节)',
+      title: 'Usage Detail',
       description: narrativeMatch[1].trim().replace(/\*+/g, ''),
     })
   }
@@ -164,10 +164,11 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   // Demo Scene / Visual
   const visualMatch = markdown.match(/##\s*IV\.\s*画面分析[^\n]*\n+([\s\S]*?)(?=\n##\s*V|$)/i)
   if (visualMatch) {
+    const cleanVisual = visualMatch[1].replace(/\|[\s\S]*$/, '').trim().replace(/\*+/g, '')
     structure.push({
       stage: 'Demo Scene',
-      title: 'Demo Scene (场景共鸣)',
-      description: visualMatch[1].trim().replace(/\*+/g, ''),
+      title: 'Demo Scene',
+      description: cleanVisual,
     })
   }
 
