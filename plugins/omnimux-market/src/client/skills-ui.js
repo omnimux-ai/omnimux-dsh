@@ -661,6 +661,40 @@
       );
     }
 
+    const overlayStack = [];
+    function Overlay({ children, onClose }) {
+      useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        overlayStack.push(onClose);
+        const onKey = (e) => {
+          if (e.key !== "Escape") return;
+          if (overlayStack[overlayStack.length - 1] !== onClose) return;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onClose();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => {
+          const i = overlayStack.lastIndexOf(onClose);
+          if (i >= 0) overlayStack.splice(i, 1);
+          document.body.style.overflow = overlayStack.length ? "hidden" : prev;
+          window.removeEventListener("keydown", onKey);
+        };
+      }, [onClose]);
+      const portaled = createPortal !== fallbackPortal;
+      const hostRef = React.useRef(null);
+      useEffect(() => {
+        if (portaled) return;
+        const el = hostRef.current;
+        if (!el) return;
+        document.body.appendChild(el);
+        return () => { el.remove(); };
+      }, [portaled]);
+      const overlay = h("div", { ref: portaled ? undefined : hostRef, className: "sh-overlay", onClick: (e) => { if (e.target === e.currentTarget) onClose(); } }, children);
+      return portaled && typeof document !== "undefined" ? createPortal(overlay, document.body) : overlay;
+    }
+
     function Drawer({ item, onClose, onInstalled, onUninstalled }) {
       return h(Overlay, { onClose },
         h(DetailCard, { item, onClose, onInstalled, onUninstalled }),
