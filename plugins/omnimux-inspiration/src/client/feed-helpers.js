@@ -2,6 +2,7 @@ import {
   batchDeleteLocalInspirations,
   getInspirationCache,
   loadInspirationsAtomic,
+  pickCoverSrc,
   setInspirationCache,
 } from './api.js'
 
@@ -144,6 +145,53 @@ export async function executeBatchDelete(ids, setters) {
   setPendingRemove(null)
 }
 
+export function preloadCover(url) {
+  if (!url || typeof Image === 'undefined') return Promise.resolve(true)
+  return new Promise((resolve) => {
+    try {
+      const img = new Image()
+      let settled = false
+      const done = (ok) => {
+        if (settled) return
+        settled = true
+        resolve(ok)
+      }
+      img.onload = () => {
+        if (typeof img.decode === 'function') {
+          img.decode().then(() => done(true)).catch(() => done(true))
+        } else {
+          done(true)
+        }
+      }
+      img.onerror = () => done(false)
+      img.src = url
+      if (img.complete) {
+        if (typeof img.decode === 'function') {
+          img.decode().then(() => done(true)).catch(() => done(true))
+        } else {
+          done(true)
+        }
+      }
+    } catch {
+      resolve(false)
+    }
+  })
+}
+
+export async function preloadBatchCovers(items, timeoutMs = 600) {
+  if (!items || !items.length || typeof Image === 'undefined') return
+  const promises = items.map((item) => {
+    const src = pickCoverSrc(item)
+    return preloadCover(src)
+  })
+  let timer
+  const timeoutPromise = new Promise((resolve) => {
+    timer = setTimeout(resolve, timeoutMs)
+  })
+  await Promise.race([Promise.allSettled(promises), timeoutPromise])
+  if (timer) clearTimeout(timer)
+}
+
 export async function fetchAndMergeInspirations(params, options) {
   const {
     tab, q, type, sort, favorite, targetPage,
@@ -167,8 +215,11 @@ export async function fetchAndMergeInspirations(params, options) {
     posted_after,
     posted_before,
     page: targetPage,
-    pageSize: 20,
+    pageSize: params.pageSize || 20,
   })
+  if (result?.items && result.items.length) {
+    await preloadBatchCovers(result.items, 600)
+  }
   mergeFetchResult({
     isNextPage,
     result,

@@ -31,15 +31,22 @@ function isolateInnerCardKey(e) {
 }
 
 export function InspirationCoverCard({ card }) {
-  const { row, t, onSelect, onReplicate, selected, onToggleSelect, selecting, replicateBusy } = card
+  const { row, t, onSelect, onReplicate, selected, onToggleSelect, selecting, replicateBusy, revealed } = card
   const title = String(row.title || row.source_url || row.id)
   const cover = pickCoverSrc(row)
   const [broken, setBroken] = useState(!cover)
-  useEffect(() => { setBroken(!cover) }, [cover])
+  const [loaded, setLoaded] = useState(false)
+  const isRevealed = revealed !== false
+
+  useEffect(() => {
+    setBroken(!cover)
+    setLoaded(false)
+  }, [cover])
 
   const platform = (row.source_platform || (row.is_local ? 'local' : 'tiktok')).toUpperCase()
   const isLocal = Boolean(row.is_local)
   const anyBusy = Boolean(replicateBusy)
+  const isShowCover = !broken && loaded && isRevealed
 
   const handleClick = () => {
     if (selecting && isLocal && onToggleSelect) {
@@ -101,6 +108,12 @@ export function InspirationCoverCard({ card }) {
         {isLocal ? '本地' : platform}
       </Badge>
 
+      {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示 */}
+      <div
+        className={`omnimux-inspiration-card-shimmer ${isShowCover || broken ? 'is-hidden' : ''}`}
+        aria-hidden="true"
+      />
+
       {broken ? (
         <div className="omnimux-inspiration-cover-fallback" aria-hidden="true">
           <div className="omnimux-inspiration-fallback-icon">
@@ -114,15 +127,22 @@ export function InspirationCoverCard({ card }) {
         </div>
       ) : (
         <img
-          className="omnimux-inspiration-cover-img"
+          className={`omnimux-inspiration-cover-img ${isShowCover ? 'is-loaded' : ''}`}
           src={cover}
           alt={title}
           loading="lazy"
           decoding="async"
-          onError={() => setBroken(true)}
+          onError={() => {
+            setBroken(true)
+            setLoaded(true)
+          }}
           onLoad={(event) => {
             const node = event.currentTarget
-            if (!isUsableCoverSize(node.naturalWidth, node.naturalHeight)) setBroken(true)
+            if (!isUsableCoverSize(node.naturalWidth, node.naturalHeight)) {
+              setBroken(true)
+            } else {
+              setLoaded(true)
+            }
           }}
         />
       )}
