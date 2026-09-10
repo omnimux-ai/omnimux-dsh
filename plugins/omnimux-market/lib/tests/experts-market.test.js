@@ -130,8 +130,12 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     assert.match(i18n, /"workshop\.tabExpertsMarket": "Experts Market"/);
     assert.match(i18n, /"expertMarket\.title": "专家市场"/);
     assert.match(i18n, /"expertMarket\.title": "Experts Market"/);
+    assert.match(i18n, /"expertMarket\.searchPlaceholder": "搜索全部专家"/);
+    assert.match(i18n, /"expertMarket\.searchPlaceholder": "Search all experts\.\.\."/);
     const plaza = readFileSync(new URL('../../src/client/skill-plaza.js', import.meta.url), 'utf8');
     assert.match(plaza, /mainTab === "experts-market"/);
+    assert.match(plaza, /introHeading/);
+    assert.match(plaza, /workshop-intro/);
     assert.match(plaza, /expert-market-grid/);
     assert.match(plaza, /expert-card/);
     assert.match(plaza, /expert-pill-btn/);
