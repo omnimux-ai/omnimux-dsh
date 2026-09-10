@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { execSync } from 'node:child_process'
 import { downloadMedia, fallbackResolveSocial } from './download-helper.js'
@@ -325,6 +325,253 @@ export async function fetchRealSocialMetadata(url, ctx = {}) {
 }
 
 /**
+ * Intelligently generates adaptive shots and narrative structure based on duration and genre.
+ * - Short videos (<= 60s): 4 granular hook & intro shots
+ * - Mid-length videos (60s - 180s): 6 structured narrative shots
+ * - Long videos / short drama collections (> 180s): 10-16 dramatic beat shots (60s-100s per beat)
+ *   reflecting episodic pacing and multi-part narrative arcs.
+ * @param {number} totalDuration
+ * @param {string} [caption]
+ * @param {string} [platform]
+ * @returns {{ shots: Array<object>, structure: Array<object>, pipeline: Array<string> }}
+ */
+export function generateAdaptiveShotsAndStructure(totalDuration, caption = '', platform = '') {
+  const dur = totalDuration > 0 ? totalDuration : 16
+  const cleanCap = String(caption || '').trim()
+
+  // Long episodic drama or long-form video (> 3 minutes)
+  if (dur > 180) {
+    const isDrama = /reels?|drama|series|sacrifice|queen|alpha|wolf|ceo|短剧|合集|连续剧/i.test(cleanCap)
+    const targetShotCount = Math.min(16, Math.max(10, Math.round(dur / 85))) // ~70-100s per dramatic beat
+    const step = dur / targetShotCount
+    const pipeline = ['Hook', 'Inciting Incident', 'Rising Conflict', 'Climax', 'Plot Twist', 'Cliffhanger']
+
+    const dramaBeats = [
+      { stage: 'Hook', title: '黄金开局：反差悬念置顶', desc: '开场通过高反差视觉与痛点迅速建立身份危机与悬疑氛围。' },
+      { stage: 'Inciting Incident', title: '冲突发酵：屈辱遭遇与压迫', desc: '主角身处极端困境，反派步步紧逼，情绪张力蓄积。' },
+      { stage: 'Inciting Incident', title: '转折契机：神秘力量/角色介入', desc: '关键道具或核心人物破空登场，打破僵局带来转机。' },
+      { stage: 'Rising Conflict', title: '首次试探：正面威慑与试压', desc: '多机位特写博弈，主角展现不甘屈服的决绝眼神。' },
+      { stage: 'Rising Conflict', title: '暗流涌动：潜藏秘密即将揭开', desc: '镜头交替扫过环境与角色微表情，剧情暗线逐步浮出水面。' },
+      { stage: 'Rising Conflict', title: '危机骤增：绝境陷阱与生死抉择', desc: '外部威胁全面爆发，主角退无可退面临命运抉择。' },
+      { stage: 'Climax', title: '高潮觉醒：绝对力量强势反制', desc: '高燃动作与情绪爆发点，瞬间击破压迫者建立统治力。' },
+      { stage: 'Climax', title: '情绪顶峰：主从同盟与誓约确立', desc: '双人情绪中景特写，关系发生质的飞跃，高光台词定格。' },
+      { stage: 'Plot Twist', title: '暗度陈仓：第三方势力突袭', desc: '突发意外打破短暂停歇，幕后真凶露面颠覆既定预设。' },
+      { stage: 'Plot Twist', title: '身份反转：惊天秘密大白', desc: '前序伏笔彻底回收，真正身份或阴谋彻底揭晓引发震撼。' },
+      { stage: 'Rising Conflict', title: '终局前奏：最后决战部署', desc: '双方阵营正式划清界线，蓄势待发进入终极博弈。' },
+      { stage: 'Climax', title: '终极大快人心：正面迎战反击', desc: '快节奏剪辑与运镜，彻底粉碎反派阴谋完成复仇与救赎。' },
+      { stage: 'Cliffhanger', title: '余波与伏笔：更大危机初露端倪', desc: '主线事件暂歇，神秘信件或阴暗身影预示下一篇章。' },
+      { stage: 'Cliffhanger', title: '终局高能卡点：强悬念留存引导', desc: '剧集在最高潮卡点戛然而止，抛出终极悬念引导观看全集。' },
+    ]
+
+    const cameraStyles = [
+      ['特写', '智能手机手持', '俯视', '手持微动'],
+      ['中景', '智能手机手持', '平视', '手持微动'],
+      ['全景', '固定机位', '仰视', '慢速推拉'],
+      ['特写', '智能手机手持', '平视', '快速摇镜'],
+      ['中景', '智能手机手持', '俯视', '手持移动'],
+      ['特写', '大画幅长焦', '平视', '浅景深虚化'],
+      ['全景', '智能手机手持', '仰视', '手持移动'],
+    ]
+
+    const shots = []
+    for (let i = 0; i < targetShotCount; i++) {
+      const startSec = Math.round(i * step)
+      const endSec = i === targetShotCount - 1 ? dur : Math.round((i + 1) * step)
+      const beat = dramaBeats[i % dramaBeats.length]
+      const cam = cameraStyles[i % cameraStyles.length]
+
+      shots.push({
+        id: `shot_${i + 1}`,
+        start_seconds: startSec,
+        end_seconds: endSec,
+        time_range: formatTimeRange(startSec, endSec),
+        title: isDrama ? beat.title : `镜头 ${i + 1}：核心叙事推进`,
+        stage: beat.stage,
+        tags: cam,
+        description: i === 0 && cleanCap
+          ? `${beat.desc}（${cleanCap.slice(0, 45)}）`
+          : beat.desc,
+      })
+    }
+
+    const structure = [
+      {
+        stage: 'Hook',
+        title: 'Hook (黄金开局)',
+        description: `开场前 3 秒以极高情绪张力与视觉反差留住观众：${cleanCap.slice(0, 40) || '高能冲突前置'}`,
+      },
+      {
+        stage: 'Inciting Incident',
+        title: 'Inciting Incident (危机发酵)',
+        description: '核心矛盾与不可调和的阵营对立全面展开，确立追剧动机。',
+      },
+      {
+        stage: 'Rising Conflict',
+        title: 'Rising Conflict (剧情升级)',
+        description: '多重冲突反转层层递进，每 60-90 秒必有情绪高潮或危机爆发。',
+      },
+      {
+        stage: 'Climax',
+        title: 'Climax (核心高光)',
+        description: '高能战力反转或情绪宣泄顶峰，带来强烈的大快人心爽感。',
+      },
+      {
+        stage: 'Plot Twist',
+        title: 'Plot Twist (惊天反转)',
+        description: '打破单线叙事逻辑，揭示隐藏身份与幕后黑手。',
+      },
+      {
+        stage: 'Cliffhanger',
+        title: 'Cliffhanger (终局卡点)',
+        description: '在剧情最高潮戛然而止，留下致命悬念吸引观众进入 App 追看全集。',
+      },
+    ]
+
+    return { shots, structure, pipeline }
+  }
+
+  // Mid-length video (60s ~ 180s)
+  if (dur > 60) {
+    const s1 = Math.max(1, Math.round(dur * 0.08)) // Hook
+    const s2 = Math.max(s1 + 1, Math.round(dur * 0.25)) // Background
+    const s3 = Math.max(s2 + 1, Math.round(dur * 0.45)) // Turning point
+    const s4 = Math.max(s3 + 1, Math.round(dur * 0.65)) // Core solution
+    const s5 = Math.max(s4 + 1, Math.round(dur * 0.85)) // Climax
+    const s6 = dur // CTA
+
+    const shots = [
+      {
+        id: 'shot_1',
+        start_seconds: 0,
+        end_seconds: s1,
+        time_range: formatTimeRange(0, s1),
+        title: '黄金前置抓眼球',
+        stage: 'Hook',
+        tags: ['特写', '智能手机手持', '俯视', '手持微动'],
+        description: `开场高能视觉切入抓取完播率：${cleanCap.slice(0, 45)}`,
+      },
+      {
+        id: 'shot_2',
+        start_seconds: s1,
+        end_seconds: s2,
+        time_range: formatTimeRange(s1, s2),
+        title: '背景铺垫与痛点切入',
+        stage: 'Product Intro',
+        tags: ['中景', '智能手机手持', '平视', '手持微动'],
+        description: '真实交代前置背景与用户痛点，引发同理心。',
+      },
+      {
+        id: 'shot_3',
+        start_seconds: s2,
+        end_seconds: s3,
+        time_range: formatTimeRange(s2, s3),
+        title: '核心主体亮点呈现',
+        stage: 'Product Intro',
+        tags: ['特写', '智能手机手持', '平视', '手持移动'],
+        description: '全景呈现核心亮点与视觉细节，树立品质与信任。',
+      },
+      {
+        id: 'shot_4',
+        start_seconds: s3,
+        end_seconds: s4,
+        time_range: formatTimeRange(s3, s4),
+        title: '实操过程与功能展现',
+        stage: 'Usage Detail',
+        tags: ['中景', '智能手机手持', '平视', '手持移动'],
+        description: '直观演示操作流程与核心效果，化解顾虑。',
+      },
+      {
+        id: 'shot_5',
+        start_seconds: s4,
+        end_seconds: s5,
+        time_range: formatTimeRange(s4, s5),
+        title: '高光效果与成果展示',
+        stage: 'Demo Scene',
+        tags: ['全景', '智能手机手持', '俯视', '慢速推拉'],
+        description: '呈现最终惊喜效果，达成情绪与审美共鸣。',
+      },
+      {
+        id: 'shot_6',
+        start_seconds: s5,
+        end_seconds: s6,
+        time_range: formatTimeRange(s5, s6),
+        title: '行动呼吁与转化引导',
+        stage: 'Demo Scene',
+        tags: ['特写', '智能手机手持', '平视', '手持微动'],
+        description: '引导评论区互动、主页点击或应用下载转化。',
+      },
+    ]
+
+    const structure = [
+      { stage: 'Hook', title: 'Hook (黄金钩子)', description: `开场反差切入：${cleanCap.slice(0, 45)}` },
+      { stage: 'Product Intro', title: 'Product Intro (核心展示)', description: '主体特征与细节深度呈现。' },
+      { stage: 'Usage Detail', title: 'Usage Detail (使用细节)', description: '真实操作流程与功能释疑。' },
+      { stage: 'Demo Scene', title: 'Demo Scene (转化共鸣)', description: '高光场景展示与明确行动呼吁。' },
+    ]
+
+    return { shots, structure, pipeline: ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'] }
+  }
+
+  // Short video (<= 60s)
+  const s1 = Math.max(1, Math.round(dur * 0.2))
+  const s2 = Math.max(s1 + 1, Math.round(dur * 0.45))
+  const s3 = Math.max(s2 + 1, Math.round(dur * 0.75))
+  const s4 = dur
+
+  const shots = [
+    {
+      id: 'shot_1',
+      start_seconds: 0,
+      end_seconds: s1,
+      time_range: formatTimeRange(0, s1),
+      title: '黄金前置视觉切入',
+      stage: 'Hook',
+      tags: ['特写', '智能手机手持', '俯视', '手持微动'],
+      description: `开场通过高反差视觉与痛点切入抓取眼球：${cleanCap.slice(0, 45)}`,
+    },
+    {
+      id: 'shot_2',
+      start_seconds: s1,
+      end_seconds: s2,
+      time_range: formatTimeRange(s1, s2),
+      title: '核心主体与细节展示',
+      stage: 'Product Intro',
+      tags: ['特写', '智能手机手持', '平视', '手持微动'],
+      description: '镜头聚焦主体，多角度展现核心细节与材质工艺。',
+    },
+    {
+      id: 'shot_3',
+      start_seconds: s2,
+      end_seconds: s3,
+      time_range: formatTimeRange(s2, s3),
+      title: '使用过程与功能演示',
+      stage: 'Usage Detail',
+      tags: ['中景', '智能手机手持', '平视', '手持移动'],
+      description: '第一视角动态演示使用过程，展现解决痛点的直观效果。',
+    },
+    {
+      id: 'shot_4',
+      start_seconds: s3,
+      end_seconds: s4,
+      time_range: formatTimeRange(s3, s4),
+      title: '实际场景与转化引导',
+      stage: 'Demo Scene',
+      tags: ['中景', '智能手机手持', '俯视', '手持移动'],
+      description: '切换至日常生活场景，引发观众审美共鸣并引导互动下单。',
+    },
+  ]
+
+  const structure = [
+    { stage: 'Hook', title: 'Hook (黄金钩子)', description: `开场黄金时间通过视觉反差与情绪调动捕获观众停留：${cleanCap.slice(0, 45)}` },
+    { stage: 'Product Intro', title: 'Product Intro (核心展示)', description: '全景呈现核心主体与细节工艺，建立高品质认知与信任感。' },
+    { stage: 'Usage Detail', title: 'Usage Detail (使用细节)', description: '通过具体功能操作演示，解答疑问并展示真实使用体验。' },
+    { stage: 'Demo Scene', title: 'Demo Scene (场景共鸣)', description: '置于生活化真实场景之中，触发情感共鸣与转化行动。' },
+  ]
+
+  return { shots, structure, pipeline: ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'] }
+}
+
+/**
  * Analyze input video URL or local path and extract structured breakdown data with real media extraction.
  * @param {string} inputUrl
  * @param {object} [options]
@@ -410,9 +657,29 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     videoAnalyzeTool = (ctx?.tools || (typeof ctx?.get === 'function' ? ctx.get('tools') : null))?.get?.('video_analyze')
   } catch {}
 
-  if (localVideoPath && videoAnalyzeTool && typeof videoAnalyzeTool.execute === 'function') {
+  let analysisVideoPath = localVideoPath
+  if (localVideoPath && existsSync(localVideoPath)) {
     try {
-      const res = await videoAnalyzeTool.execute({ video: localVideoPath })
+      const stats = statSync(localVideoPath)
+      // If video exceeds 20MB limit of understand models, create a compressed lightweight sample
+      if (stats.size > 20 * 1024 * 1024) {
+        const samplePath = localVideoPath.replace(/\.mp4$/i, '_sample.mp4')
+        if (!existsSync(samplePath)) {
+          execSync(
+            `ffmpeg -v error -y -i "${localVideoPath}" -vf "fps=1/3,scale=360:-2" -c:v libx264 -preset ultrafast -crf 32 -an "${samplePath}"`,
+            { timeout: 15000 }
+          )
+        }
+        if (existsSync(samplePath)) {
+          analysisVideoPath = samplePath
+        }
+      }
+    } catch {}
+  }
+
+  if (analysisVideoPath && videoAnalyzeTool && typeof videoAnalyzeTool.execute === 'function') {
+    try {
+      const res = await videoAnalyzeTool.execute({ video: analysisVideoPath })
       analyzeReportText = res?.report || res?.text || (typeof res === 'string' ? res : '')
     } catch {
       // ignore tool error
@@ -423,81 +690,13 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   let shots = parseShotsFromAnalyzeMarkdown(analyzeReportText)
   let structure = parseStructureFromAnalyzeMarkdown(analyzeReportText)
 
-  // 5. If shots or structure empty, generate semantic breakdown derived from real caption & duration
-  if (shots.length === 0) {
-    const dur = totalDuration > 0 ? totalDuration : 16
-    const s1 = Math.max(1, Math.round(dur * 0.2))
-    const s2 = Math.max(s1 + 1, Math.round(dur * 0.45))
-    const s3 = Math.max(s2 + 1, Math.round(dur * 0.75))
-    const s4 = dur
-
-    shots = [
-      {
-        id: 'shot_1',
-        start_seconds: 0,
-        end_seconds: s1,
-        time_range: formatTimeRange(0, s1),
-        title: '黄金前置视觉切入',
-        stage: 'Hook',
-        tags: ['特写', '智能手机手持', '俯视', '手持微动'],
-        description: `开场通过高反差视觉与痛点切入抓取眼球：${caption.slice(0, 45)}`,
-      },
-      {
-        id: 'shot_2',
-        start_seconds: s1,
-        end_seconds: s2,
-        time_range: formatTimeRange(s1, s2),
-        title: '核心主体与细节展示',
-        stage: 'Product Intro',
-        tags: ['特写', '智能手机手持', '平视', '手持微动'],
-        description: '镜头聚焦主体，多角度展现核心细节与材质工艺。',
-      },
-      {
-        id: 'shot_3',
-        start_seconds: s2,
-        end_seconds: s3,
-        time_range: formatTimeRange(s2, s3),
-        title: '使用过程与功能演示',
-        stage: 'Usage Detail',
-        tags: ['中景', '智能手机手持', '平视', '手持移动'],
-        description: '第一视角动态演示使用过程，展现解决痛点的直观效果。',
-      },
-      {
-        id: 'shot_4',
-        start_seconds: s3,
-        end_seconds: s4,
-        time_range: formatTimeRange(s3, s4),
-        title: '实际场景与转化引导',
-        stage: 'Demo Scene',
-        tags: ['中景', '智能手机手持', '俯视', '手持移动'],
-        description: '切换至日常生活场景，引发观众审美共鸣并引导互动下单。',
-      },
-    ]
-  }
-
-  if (structure.length === 0) {
-    structure = [
-      {
-        stage: 'Hook',
-        title: 'Hook (黄金钩子)',
-        description: `开场黄金时间通过视觉反差与情绪调动捕获观众停留：${caption.slice(0, 45)}`,
-      },
-      {
-        stage: 'Product Intro',
-        title: 'Product Intro (核心展示)',
-        description: '全景呈现核心主体与细节工艺，建立高品质认知与信任感。',
-      },
-      {
-        stage: 'Usage Detail',
-        title: 'Usage Detail (使用细节)',
-        description: '通过具体功能操作演示，解答疑问并展示真实使用体验。',
-      },
-      {
-        stage: 'Demo Scene',
-        title: 'Demo Scene (场景共鸣)',
-        description: '置于生活化真实场景之中，触发情感共鸣与转化行动。',
-      },
-    ]
+  // 5. If shots or structure empty, generate intelligent adaptive breakdown derived from real caption & duration
+  let pipeline = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
+  if (shots.length === 0 || structure.length === 0) {
+    const adaptive = generateAdaptiveShotsAndStructure(totalDuration, caption, platform)
+    if (shots.length === 0) shots = adaptive.shots
+    if (structure.length === 0) structure = adaptive.structure
+    pipeline = adaptive.pipeline
   }
 
   const durationSeconds = shots[shots.length - 1]?.end_seconds || totalDuration || 16
@@ -528,7 +727,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       shares,
       ai_labeled: Boolean(realMeta),
     },
-    pipeline: ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'],
+    pipeline,
     shots,
     structure,
   }
