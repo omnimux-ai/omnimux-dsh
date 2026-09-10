@@ -127,8 +127,12 @@ test('TC-MEDIA-MUTUAL-04: MaterialNode 源码中多模态空态导入、替换�
   assert.match(materialNodeSrc, /nodeKind:\s*'generate'/);
   assert.match(materialNodeSrc, /status:\s*'empty'/);
 
-  // 5. NodeEmptyState 对可点击导入的处理
-  assert.match(nodeEmptyStateSrc, /wf-node-empty--clickable nodrag/);
+  // 5. NodeEmptyState 对空态多模态卡片不添加 nodrag，保障按住卡片主体正常拖拽
+  assert.equal(
+    /wf-node-empty--(image|video|audio)[^>]*nodrag/.test(nodeEmptyStateSrc),
+    false,
+    '多模态媒体卡片空态主体不得添加 nodrag 阻断节点拖动',
+  );
 });
 
 test('TC-MEDIA-MUTUAL-05: 工作流执行调度契约：导入媒体节点路由至 material:import 静态透传', () => {
