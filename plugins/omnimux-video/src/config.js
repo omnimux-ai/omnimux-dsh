@@ -49,7 +49,7 @@ export function parseVideoConfig(value) {
 
   const defaultModel = typeof understandRaw.defaultModel === 'string' && understandRaw.defaultModel.trim()
     ? understandRaw.defaultModel.trim()
-    : 'gemini-3.7-flash'
+    : 'gemini-3.8-flash'
   const maxTokens = parsePositiveNumber(
     understandRaw.maxTokens === undefined ? 8000 : understandRaw.maxTokens,
     'Config.understand.maxTokens',

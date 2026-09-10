@@ -69,7 +69,7 @@ describe('video_analyze', () => {
             seen.push(req)
             return {
               mode: 'live',
-              model: 'gemini-3.7-flash',
+              model: 'gemini-3.8-flash',
               text: '## 一句话视频描述\n红底短片。\n## I. 核心目标 (Global Goal)\n测试',
             }
           },
@@ -80,7 +80,7 @@ describe('video_analyze', () => {
       assert.match(result.text, /一句话视频描述/)
       assert.equal(seen.length, 1)
       assert.equal(seen[0].video, video)
-      assert.equal(seen[0].model, 'gemini-3.7-flash')
+      assert.equal(seen[0].model, 'gemini-3.8-flash')
       assert.match(seen[0].system, /五维度|5-Dimension|核心目标/)
       assert.match(readFileSync(dest, 'utf8'), /核心目标/)
     } finally {
@@ -154,7 +154,7 @@ describe('video_reverse_prompt', () => {
           async execute() {
             return {
               mode: 'live',
-              model: 'gemini-3.7-flash',
+              model: 'gemini-3.8-flash',
               text: [
                 '<<<PROMPT>>>',
                 '以参考图像锁定外观，生成5秒9:16；人物全程不说话、禁止口播对白。',

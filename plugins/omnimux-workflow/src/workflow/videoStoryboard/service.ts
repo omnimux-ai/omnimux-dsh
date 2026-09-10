@@ -17,6 +17,7 @@ import {
 import { resolveTableAbsPath, resolveTableRelativePath } from '../storage/tablePath.ts';
 import { TableStorageService } from '../storage/TableStorageService.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
+import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
 import { resolveVideoAbsolutePath, extractMarkdownTables } from '../videoDeconstruct/service.ts';
@@ -76,6 +77,8 @@ function formatSeconds(sec: number): string {
   const s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+const logger = createWorkflowLogger('video-storyboard');
 
 export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
   return async (
@@ -189,7 +192,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
     let analyzeMarkdown = '';
     if (analyzeTool && typeof analyzeTool.execute === 'function') {
       try {
-        const res = await analyzeTool.execute({ video: absVideoPath });
+        const res = await analyzeTool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
         const text =
           res?.report ||
           res?.text ||
@@ -199,7 +202,11 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
         if (typeof text === 'string' && text.trim()) {
           analyzeMarkdown = text.trim();
         }
-      } catch {}
+      } catch (err) {
+        logger.warn('video_analyze invocation failed in storyboard, falling back to template', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     // 7. 解析 Markdown 中的分镜表格或使用保底脚本

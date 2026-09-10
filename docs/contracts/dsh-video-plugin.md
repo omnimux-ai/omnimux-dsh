@@ -41,7 +41,7 @@ OmniMux 已有"生成"（videoGenerate / imageGenerate）与本插件的"处理"
 | 3 | 插件位置 | `product/omnimux-dsh/plugins/omnimux-video` |
 | 4 | 验收重心 | 聊天直接可用；seam 供 vertical |
 | 5 | 理解落点（2026-08-22 拍板） | **本插件增补独立工具**；**不**塞进 `video_process` enum |
-| 6 | 理解输入（2026-08-22 拍板） | **直接喂本地视频**给 Gemini；默认 `gemini-3.7-flash` |
+| 6 | 理解输入（2026-08-22 拍板） | **直接喂本地视频**给 Gemini；默认 `gemini-3.8-flash` |
 | 7 | 视频打包协议（冒烟确认） | 将 `data:video/<mime>;base64,…` **塞进 `image_url`**（对齐 OPC）；**禁止**依赖 OpenAI 风格 `video_url`（3.7 幻觉 / 3.6 `NO_VIDEO`） |
 
 ## 3. 用户与场景
@@ -169,7 +169,7 @@ Config.video:
   env 覆盖：DSH_VIDEO_FFMPEG_PATH
 
 Config.understand:      # v2.1
-  defaultModel: 'gemini-3.7-flash'
+  defaultModel: 'gemini-3.8-flash'
   maxTokens: 8000
   maxVideoBytes: 20971520   # 约 20MB；超出先压缩/切段或失败
   analyzePromptPath: ''     # 空 = 包内 prompts/video-content-breakdown.md
