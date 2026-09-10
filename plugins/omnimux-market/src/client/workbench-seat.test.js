@@ -83,9 +83,10 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /preserveAspectRatio:\s*"xMidYMid meet"/)
   })
 
-  it('plaza title is Skills', () => {
+  it('plaza title is 技能/专家 / Skills/Experts', () => {
     const source = readFileSync(join(here, 'i18n.js'), 'utf8')
-    assert.match(source, /"plaza.title": "Skills"/)
+    assert.match(source, /"plaza.title": "技能\/专家"/)
+    assert.match(source, /"plaza.title": "Skills\/Experts"/)
     assert.doesNotMatch(source, /插件市场/)
     assert.doesNotMatch(source, /Plugin Market/)
     assert.doesNotMatch(source, /扩展市场/)

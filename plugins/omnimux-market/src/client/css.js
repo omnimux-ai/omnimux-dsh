@@ -396,6 +396,30 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .ws-detail-confirm{padding:10px 0}
 .ws-detail-confirm p{margin:0 0 10px;font-size:13px;color:var(--dsw-color-warning,#fbbf24)}
 
+/* 专家市场 / Experts Market */
+.expert-market-container{padding:0 0 32px 0;width:100%}
+.expert-market-heading{margin-bottom:24px}
+.expert-market-title{font-size:24px;font-weight:700;color:var(--dsw-alias-label-primary,#ffffff);margin:0 0 6px 0;letter-spacing:-0.01em}
+.expert-market-subtitle{font-size:14px;color:var(--dsw-alias-label-secondary,#9da1ab);margin:0}
+.expert-market-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+@media (max-width:1200px){.expert-market-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.expert-market-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:580px){.expert-market-grid{grid-template-columns:1fr}}
+.expert-card{background:var(--dsw-alias-bg-layer-2,#1e2023);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.07));border-radius:20px;padding:24px;display:flex;flex-direction:column;position:relative;transition:transform .2s ease,border-color .2s ease,background .2s ease;min-height:310px;box-sizing:border-box}
+.expert-card:hover{background:var(--dsw-alias-interactive-bg-hover,#24262b);border-color:var(--dsw-alias-border-subtle,rgba(255,255,255,.14))}
+.expert-card-avatar-wrap{width:68px;height:68px;border-radius:50%;overflow:hidden;margin-bottom:16px;background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.05));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.expert-card-avatar{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.expert-card-action{position:absolute;top:24px;right:24px}
+.expert-pill-btn{background:var(--dsw-alias-label-primary,#ffffff);color:var(--dsw-alias-label-primary-foreground,#111827);border:none;border-radius:9999px;padding:6px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s ease,transform .15s ease;box-shadow:var(--dsw-alias-shadow-overlay,0 1px 3px rgba(0,0,0,.25));line-height:1.2}
+.expert-pill-btn:hover{opacity:.92;transform:scale(1.02)}
+.expert-pill-btn:active{transform:scale(.98)}
+.expert-card-status{font-size:13px;font-weight:500;margin-bottom:12px;letter-spacing:.5px}
+.expert-card-status.enabled{color:var(--dsw-color-success,#10b981)}
+.expert-card-status.available{color:var(--dsw-alias-label-tertiary,#94a3b8)}
+.expert-card-status.coming_soon{color:var(--dsw-alias-label-caption,#6b7280)}
+.expert-card-title{font-size:18px;font-weight:700;color:var(--dsw-alias-label-primary,#ffffff);margin:0 0 10px 0;line-height:1.35}
+.expert-card-desc{font-size:13px;line-height:1.55;color:var(--dsw-alias-label-secondary,#9da1ab);margin:0;flex:1}
+
 `;
 
     const CSS_ID = "omnimux-market-style";
