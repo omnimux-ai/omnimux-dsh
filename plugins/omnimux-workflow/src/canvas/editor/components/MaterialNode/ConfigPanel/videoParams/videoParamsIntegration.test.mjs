@@ -165,3 +165,21 @@ test('Issue #986：ConfigPanel 为视频节点提供基于模型能力的卡槽�
   assert.match(source, /updateParam\('operation', targetOp\)/);
   assert.match(source, /updateParam\('operation', 'text_to_video'\)/);
 });
+
+test('Issue #1007：视频节点生成模式防退化长效保障，连线素材下生成模式选择器与底栏文字不可被误杀隐藏', () => {
+  assert.match(
+    source,
+    /VideoTriggerBar/,
+    '视频节点必须引入 VideoTriggerBar 作为四段式模式底栏',
+  );
+  assert.match(
+    source,
+    /VideoParamPopover/,
+    '视频节点必须挂载 VideoParamPopover 支持多模式切换',
+  );
+  assert.match(
+    source,
+    /shouldRenderModeUi\(opsState\)/,
+    '模式 UI 渲染必须严格遵循统一 opsState 判定，不造第二套硬编码白名单',
+  );
+});
