@@ -1208,7 +1208,7 @@ test('resolveWorkbenchTabTitle prefers opts, then getTab, then human fallback (#
   )
   assert.equal(
     resolveWorkbenchTabTitle('omnimux-market:plaza', undefined, undefined),
-    'Skill工坊',
+    'Skills',
   )
   assert.notEqual(
     resolveWorkbenchTabTitle('omnimux-publish:library', '', () => null),

@@ -397,9 +397,9 @@
 
           // 保持右侧侧边栏不关闭，显露中间对话栏（split 布局）
           const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
-          const plazaTitle = typeof lookup === "function" ? (lookup("plaza.title") || "Skill 工坊") : "Skill 工坊";
+          const plazaTitle = typeof lookup === "function" ? (lookup("plaza.title") || "Skills") : "Skills";
           try {
-            window.__omnimuxWorkbench?.open?.({ tabId: "omnimux-market:plaza", sessionId: sessionBId, title: typeof lookup === "function" ? lookup("plaza.title") : "Skill 工坊" });
+            window.__omnimuxWorkbench?.open?.({ tabId: "omnimux-market:plaza", sessionId: sessionBId, title: typeof lookup === "function" ? (lookup("plaza.title") || "Skills") : "Skills" });
           } catch {}
           try { wb?.setFocus?.("split"); } catch {}
           try { wb?.setConversationCollapsed?.(false, { sessionId: sessionBId }); } catch {}
