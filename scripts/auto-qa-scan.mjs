@@ -290,56 +290,13 @@ function isIgnoredTokenLine(trimmed, line) {
   return false
 }
 
-const OFFICIAL_DSW_TOKENS = new Set([
-  '--dsw-alias-bg-base',
-  '--dsw-alias-bg-primary',
-  '--dsw-alias-bg-layer-1',
-  '--dsw-alias-bg-layer-2',
-  '--dsw-alias-bg-layer-3',
-  '--dsw-alias-bg-secondary',
-  '--dsw-alias-bg-elevated',
-  '--dsw-alias-bg-mask-1',
-  '--dsw-alias-bg-module-platform',
-  '--dsw-alias-label-primary',
-  '--dsw-alias-label-secondary',
-  '--dsw-alias-label-tertiary',
-  '--dsw-alias-label-dimmed',
-  '--dsw-alias-label-primary-inverted',
-  '--dsw-alias-label-primary-foreground',
-  '--dsw-alias-border-l1',
-  '--dsw-alias-border',
-  '--dsw-alias-border-l2',
-  '--dsw-alias-border-l3',
-  '--dsw-alias-border-l4',
-  '--dsw-alias-border-hover',
-  '--dsw-alias-brand-primary',
-  '--dsw-alias-interactive-bg-hover',
-  '--dsw-alias-interactive-bg-active',
-  '--dsw-alias-button-primary-fill',
-  '--dsw-alias-button-primary-hover',
-  '--dsw-alias-state-business-tertiary',
-  '--dsw-alias-state-error-primary',
-  '--dsw-alias-state-warn-primary',
-  '--dsw-alias-status-success',
-  '--dsw-alias-label-danger',
-  '--dsw-alias-label-warning',
-  '--dsw-alias-label-success',
-])
-
 function findRawColorViolation(line) {
   const matches = line.match(RAW_COLOR_RE)
   if (!matches) return null
   const filtered = matches.filter((value) => !TRANSPARENT.has(value.toLowerCase()))
   if (filtered.length === 0) return null
-
-  // 严格校验 var(--dsw-*, ...) 回退形式：只有在官方白名单内的 --dsw-* Token 才豁免其 fallback 颜色
-  const varMatches = Array.from(line.matchAll(/var\(\s*(--dsw-[a-z0-9_-]+)/g))
-  if (varMatches.length > 0) {
-    const allValid = varMatches.every((m) => OFFICIAL_DSW_TOKENS.has(m[1]) || m[1].startsWith('--dsw-specific-'))
-    if (allValid) return null
-  }
-
-  // 杜绝只要行内出现 --dsw- 就盲目放行任何私造变量或裸色
+  if (/var\(\s*--dsw-[a-z0-9_-]+\s*,\s*[^)]+\)/.test(line)) return null
+  if (line.includes('--dsw-')) return null
   return filtered.join(', ')
 }
 
