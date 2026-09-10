@@ -131,7 +131,7 @@ function harness(t, opts = {}) {
       ...extra,
     });
 
-  return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
+  return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media'), dispatcher };
 }
 
 test('videoStoryboard: 成功生成分镜表并持久化 .htable 多模态数据', async (t) => {
@@ -274,4 +274,83 @@ test('videoStoryboard: 当 scene_detect 未检测出切镜时，根据脚本时�
   assert.ok(imgCol);
   assert.equal(doc.rows[0].cells[imgCol.id][0].name, 'frame-001.jpg');
   assert.equal(doc.rows[1].cells[imgCol.id][0].name, 'frame-002.jpg');
+});
+
+test('videoStoryboard & videoDeconstruct: 同一视频节点下各自拥有独立的下游表格节点且互不冲突覆盖', async (t) => {
+  const h = harness(t);
+
+  // 1. 先调用 video_storyboard 生成分镜表
+  const sbRes = await h.call({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '第一版分镜表',
+  });
+  assert.equal(sbRes.status, 200);
+  const sbTableId = sbRes.body.tableId;
+
+  // 2. 再对同一个视频节点调用 video_deconstruct 生成拆解表
+  const deconstructUrl = `/omnimux-workflow/api/workspaces/${h.workspace.id}/deconstruct-video`;
+  const dcRes = await h.dispatcher.dispatch({
+    method: 'POST',
+    url: deconstructUrl,
+    body: {
+      nodeId: 'node_video_1',
+      videoPath: h.dummyVideo,
+      title: '第一版拆解表',
+    },
+    origin: 'http://127.0.0.1:45120',
+  });
+  assert.equal(dcRes.status, 200);
+  const dcTableId = dcRes.body.tableId;
+
+  // 验证：两个表格具备不同的 tableId
+  assert.notEqual(sbTableId, dcTableId, '分镜表与拆解表必须拥有独立的 tableId');
+
+  // 验证：画布快照上同时存在两个独立的表格节点与两条连线
+  const wsAfterBoth = h.store.get(h.workspace.id);
+  const sbNode = wsAfterBoth.nodes.find((n) => n.data?.origin === 'video_storyboard');
+  const dcNode = wsAfterBoth.nodes.find((n) => n.data?.origin === 'video_deconstruct');
+  assert.ok(sbNode, '分镜表节点必须保留');
+  assert.ok(dcNode, '拆解表节点必须独立存在');
+  assert.equal(sbNode.data.tableId, sbTableId);
+  assert.equal(dcNode.data.tableId, dcTableId);
+
+  // 验证：连线有两条，分别连接到两个表格
+  const edgesFromVideo = wsAfterBoth.edges.filter((e) => e.source === 'node_video_1');
+  assert.equal(edgesFromVideo.length, 2, '源视频节点应分别连向两个下游表格');
+
+  // 3. 再次触发 video_storyboard，仅就地更新分镜表，不影响拆解表
+  const sbRes2 = await h.call({
+    nodeId: 'node_video_1',
+    videoPath: h.dummyVideo,
+    title: '更新版分镜表',
+  });
+  assert.equal(sbRes2.status, 200);
+  assert.equal(sbRes2.body.tableId, sbTableId, '再次做分镜应复用已有分镜表 tableId');
+
+  const wsAfterSbUpdate = h.store.get(h.workspace.id);
+  const sbNodeUpdated = wsAfterSbUpdate.nodes.find((n) => n.data?.origin === 'video_storyboard');
+  const dcNodeUntouched = wsAfterSbUpdate.nodes.find((n) => n.data?.origin === 'video_deconstruct');
+  assert.equal(sbNodeUpdated.data.title, '更新版分镜表');
+  assert.equal(dcNodeUntouched.data.title, '第一版拆解表', '更新分镜表绝不改变拆解表');
+
+  // 4. 再次触发 video_deconstruct，仅就地更新拆解表，不影响分镜表
+  const dcRes2 = await h.dispatcher.dispatch({
+    method: 'POST',
+    url: deconstructUrl,
+    body: {
+      nodeId: 'node_video_1',
+      videoPath: h.dummyVideo,
+      title: '更新版拆解表',
+    },
+    origin: 'http://127.0.0.1:45120',
+  });
+  assert.equal(dcRes2.status, 200);
+  assert.equal(dcRes2.body.tableId, dcTableId, '再次拆解应复用已有拆解表 tableId');
+
+  const wsFinal = h.store.get(h.workspace.id);
+  const sbFinal = wsFinal.nodes.find((n) => n.data?.origin === 'video_storyboard');
+  const dcFinal = wsFinal.nodes.find((n) => n.data?.origin === 'video_deconstruct');
+  assert.equal(sbFinal.data.title, '更新版分镜表');
+  assert.equal(dcFinal.data.title, '更新版拆解表');
 });

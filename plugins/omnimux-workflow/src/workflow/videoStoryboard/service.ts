@@ -20,7 +20,7 @@ import { TableStorageService } from '../storage/TableStorageService.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
-import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
+import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
 import { resolveVideoAbsolutePath, extractMarkdownTables, PLACEHOLDER_FRAME_BASE64 } from '../videoDeconstruct/service.ts';
 
 export interface VideoStoryboardServiceDeps {
@@ -177,8 +177,29 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
     // 2. 解析视频绝对路径
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
 
-    // 3. 准备分镜图片存储目录与 tableId
-    const tableId = `tbl_${randomUUID().slice(0, 8)}`;
+    // 3. 寻找源视频节点并检查是否已有专属分镜表节点（严格匹配 origin === 'video_storyboard' && sourceVideoNodeId === input.nodeId）
+    let existingNode: CanvasNode | undefined;
+    let videoNode: CanvasNode | undefined;
+    let currentEdges: SerializedCanvasEdge[] = [];
+    try {
+      const currentSnapshot = deps.store.get(workspaceId);
+      const currentNodes = (currentSnapshot.nodes || []) as CanvasNode[];
+      currentEdges = (currentSnapshot.edges || []) as SerializedCanvasEdge[];
+      videoNode = currentNodes.find((n) => n.id === input.nodeId);
+
+      existingNode = currentNodes.find((node) => {
+        if (node.type !== 'table') return false;
+        const d = node.data as Record<string, unknown> | undefined;
+        return d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.nodeId;
+      });
+    } catch {
+      // ignore
+    }
+
+    const existingTableId = (existingNode?.data as Record<string, unknown> | undefined)?.tableId;
+    const tableId = typeof existingTableId === 'string' && existingTableId.trim()
+      ? existingTableId.trim()
+      : (existingNode?.id || `tbl_${randomUUID().slice(0, 8)}`);
     const tablePath = resolveTableRelativePath(tableId);
     const tableAbsPath = resolveTableAbsPath(deps.store, workspaceId, tableId);
     const title = input.title?.trim() || '视频分镜表';
@@ -470,6 +491,8 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       columns,
       rows,
       rowHeight: 'low', // 默认标准行高 36px，微缩缩略图 + 鼠标悬停大图跟随预览
+      origin: 'video_storyboard',
+      sourceVideoNodeId: input.nodeId,
     };
 
     // 10. 持久化存储 .htable
@@ -506,20 +529,16 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       const rawWidth = (videoNode?.data as Record<string, unknown> | undefined)?.nodeWidth;
       const videoWidth = typeof rawWidth === 'number' && rawWidth > 0 ? rawWidth : 350;
 
-      // 查询是否已有下游分镜表
-      const connectedTableNodeIds = new Set(
-        currentEdges
-          .filter((edge) => edge.source === input.nodeId)
-          .map((edge) => edge.target),
-      );
-
       const existingNode = currentNodes.find((node) => {
         if (node.type !== 'table') return false;
         const d = node.data as Record<string, unknown> | undefined;
-        return (
-          d?.origin === 'video_storyboard' &&
-          (d?.sourceVideoNodeId === input.nodeId || connectedTableNodeIds.has(node.id))
-        );
+        if (d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.nodeId) {
+          return true;
+        }
+        if (node.id === tableId || d?.tableId === tableId) {
+          return true;
+        }
+        return false;
       });
 
       const nodeData: Record<string, unknown> = {
@@ -568,15 +587,10 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
         };
       } else {
         // 避免与可能已存在的内容拆解节点 (y + 0) 重叠：
-        // 若已有内容拆解节点，向下偏移 300px；否则在横向右侧偏移
-        const hasDeconstructDownstream = currentNodes.some((n) => {
-          const d = n.data as Record<string, unknown> | undefined;
-          return d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId;
-        });
-
+        // 分镜表默认放置在右下方偏移 320px 处，形成一上一下独立两行规整排列
         const position = {
           x: videoPos.x + videoWidth + 120,
-          y: hasDeconstructDownstream ? videoPos.y + 300 : videoPos.y,
+          y: videoPos.y + 320,
         };
 
         const newNode: CanvasNode = {

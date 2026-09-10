@@ -123,8 +123,10 @@ export function planVideoDeconstructDownstream(
     return null;
   }
 
-  // 强化已有节点判定（单一下游约束）：
-  // 优先找显式标记 origin 的，次选当前已连线的任意 table 节点
+  // 强化已有节点判定（单一下游约束与强类型防误判）：
+  // 1. 优先找显式标记 origin === 'video_deconstruct' 且所属 sourceVideoNodeId 的表格
+  // 2. 绝不跨类型匹配 origin === 'video_storyboard' 的分镜表节点（即使已连线）
+  // 3. 仅对完全没有 origin 标识的遗留通用表格做连线容错
   const connectedTableNodeIds = new Set(
     input.currentEdges
       .filter((edge) => edge.source === input.videoNodeId)
@@ -132,8 +134,9 @@ export function planVideoDeconstructDownstream(
   );
   const existingNode = input.currentNodes.find((node) => {
     if (node.type !== 'table') return false;
-    return isVideoDeconstructDownstreamNode(node, input.videoNodeId)
-      || connectedTableNodeIds.has(node.id);
+    if (isVideoDeconstructDownstreamNode(node, input.videoNodeId)) return true;
+    if (node.data?.origin === 'video_storyboard') return false;
+    return !node.data?.origin && connectedTableNodeIds.has(node.id);
   });
 
   const nodeLabel = tableResult.title || input.label || '视频拆解表';
@@ -174,12 +177,21 @@ export function planVideoDeconstructDownstream(
       ? input.videoNodeWidth
       : 350;
 
+  const hasStoryboardDownstream = input.currentNodes.some((n) => {
+    const d = n.data as Record<string, unknown> | undefined;
+    return d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.videoNodeId;
+  });
+  const storyboardNode = hasStoryboardDownstream
+    ? input.currentNodes.find((n) => (n.data as any)?.origin === 'video_storyboard' && (n.data as any)?.sourceVideoNodeId === input.videoNodeId)
+    : undefined;
+  const isStoryboardAtY = storyboardNode && Math.abs((storyboardNode.position?.y ?? 0) - input.videoPosition.y) < 50;
+
   const newNode: VideoDeconstructCreatedNode = {
     id: newNodeId,
     type: 'table',
     position: {
       x: input.videoPosition.x + width + VIDEO_DECONSTRUCT_DOWNSTREAM_GAP,
-      y: input.videoPosition.y,
+      y: isStoryboardAtY ? input.videoPosition.y - 320 : input.videoPosition.y,
     },
     selected: true,
     data: {

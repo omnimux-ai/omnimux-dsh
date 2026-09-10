@@ -318,9 +318,16 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       existingNode = currentNodes.find((node) => {
         if (node.type !== 'table') return false;
         const d = node.data as Record<string, unknown> | undefined;
-        const isDeconstructOrigin =
-          d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId;
-        return isDeconstructOrigin || connectedTableNodeIds.has(node.id);
+        // 1. 严格匹配自身来源 (origin === 'video_deconstruct' && sourceVideoNodeId === input.nodeId)
+        if (d?.origin === 'video_deconstruct' && d?.sourceVideoNodeId === input.nodeId) {
+          return true;
+        }
+        // 2. 绝不跨类型匹配分镜表节点（即便连线连接）
+        if (d?.origin === 'video_storyboard') {
+          return false;
+        }
+        // 3. 仅对完全没有 origin 标识的遗留通用表格做连线容错
+        return !d?.origin && connectedTableNodeIds.has(node.id);
       });
     } catch {
       // ignore
@@ -555,6 +562,8 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
       columns,
       rows,
       rowHeight: docRowHeight,
+      origin: 'video_deconstruct',
+      sourceVideoNodeId: input.nodeId,
     };
 
     // 10. 持久化存储 .htable（覆盖至已有文件或新建文件）
@@ -624,10 +633,19 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
               ],
         };
       } else {
-        // 新建节点：在视频节点右侧（横向偏移 nodeWidth + 120）插入，id 设为 tableId
+        // 新建节点：在视频节点右侧插入，如果已有分镜表在 y，则错开排布避免重叠
+        const hasStoryboardDownstream = currentNodes.some((n) => {
+          const d = n.data as Record<string, unknown> | undefined;
+          return d?.origin === 'video_storyboard' && d?.sourceVideoNodeId === input.nodeId;
+        });
+        const storyboardNode = hasStoryboardDownstream
+          ? currentNodes.find((n) => (n.data as any)?.origin === 'video_storyboard' && (n.data as any)?.sourceVideoNodeId === input.nodeId)
+          : undefined;
+        const isStoryboardAtY = storyboardNode && Math.abs((storyboardNode.position?.y ?? 0) - videoPos.y) < 50;
+
         const position = {
           x: videoPos.x + videoWidth + 120,
-          y: videoPos.y,
+          y: isStoryboardAtY ? videoPos.y - 320 : videoPos.y,
         };
         const newNode: CanvasNode = {
           id: tableId,
