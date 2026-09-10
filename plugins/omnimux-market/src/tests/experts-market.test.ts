@@ -163,6 +163,10 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
   assert.match(css, /\.expert-card/)
   assert.match(css, /\.expert-card-avatar-wrap/)
   assert.match(css, /\.expert-pill-btn/)
+
+  const apply = readFileSync(new URL('../../src/client/apply.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(apply, /plazaRemote\s*=\s*ctx\.remote/, 'must not synchronously access ctx.remote without inject')
+  assert.match(apply, /ctx\.inject\(\["remote"\],/, 'must safely inject remote service')
 })
 
 test('all 8 circular avatar images exist in catalog/covers/', () => {
