@@ -10,7 +10,7 @@ export const FOLDER_STYLES = `
 .omnimux-folder-glass-defs { position: absolute; pointer-events: none; }
 .omnimux-folder-pocket, .omnimux-folder-pocket-rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 /* The pocket samples the existing insert once; the caption stays outside its blur and clip. */
-.omnimux-folder-pocket { background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); }
+.omnimux-folder-pocket { -webkit-mask-image: var(--stage-pocket-mask); mask-image: var(--stage-pocket-mask); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mask-mode: alpha; background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); }
 .omnimux-folder-pocket::after { content: ''; position: absolute; inset: 0; border-radius: 9% / 12.3%; background: linear-gradient(150deg, color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent) 38%, transparent 64%); box-shadow: inset 0 -1px 1px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent), inset 0 -12px 22px color-mix(in srgb, var(--dsw-alias-bg-mask-1) 12%, transparent); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .omnimux-folder .omnimux-folder-pocket { background: linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 78%, transparent) 38%, color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent) 64%, color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)) 100%); -webkit-backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); }
