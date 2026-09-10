@@ -7,6 +7,10 @@ describe('omnimux-video-preview stream engine', () => {
     assert.equal(getMimeType('test.mp4'), 'video/mp4')
     assert.equal(getMimeType('test.webm'), 'video/webm')
     assert.equal(getMimeType('test.mov'), 'video/quicktime')
+    assert.equal(getMimeType('test.jpg'), 'image/jpeg')
+    assert.equal(getMimeType('test.jpeg'), 'image/jpeg')
+    assert.equal(getMimeType('test.png'), 'image/png')
+    assert.equal(getMimeType('test.webp'), 'image/webp')
     assert.equal(getMimeType('test.unknown'), 'application/octet-stream')
   })
 
