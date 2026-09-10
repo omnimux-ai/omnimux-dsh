@@ -54,8 +54,8 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(firstShot.time_range, '0:03 - 0:04')
     assert.equal(firstShot.title, '心形木片特写')
     assert.equal(firstShot.stage, 'Product Intro')
-    assert.ok(firstShot.tags.includes('↗ 特写'))
-    assert.ok(firstShot.tags.includes('📷 智能手机手持'))
+    assert.ok(firstShot.tags.includes('特写'))
+    assert.ok(firstShot.tags.includes('智能手机手持'))
     assert.ok(firstShot.description.includes('木盘内装满了各种颜色和字体'))
 
     // Verify structural stage content
