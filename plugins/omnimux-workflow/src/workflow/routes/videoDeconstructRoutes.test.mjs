@@ -15,6 +15,7 @@ buildSync({
       export { createWorkflowDispatcher } from './canvasRoutes.ts';
       export { TableStorageService } from '../storage/TableStorageService.ts';
       export { resolveTableAbsPath } from '../storage/tablePath.ts';
+      export { PLACEHOLDER_FRAME_BASE64 } from '../videoDeconstruct/service.ts';
     `,
     resolveDir: fileURLToPath(new URL('.', import.meta.url)),
   },
@@ -23,7 +24,7 @@ buildSync({
   format: 'esm',
   outfile: bundle,
 });
-const { createWorkspaceStore, createWorkflowDispatcher, TableStorageService, resolveTableAbsPath } =
+const { createWorkspaceStore, createWorkflowDispatcher, TableStorageService, resolveTableAbsPath, PLACEHOLDER_FRAME_BASE64 } =
   await import(pathToFileURL(bundle).href);
 after(() => rmSync(buildDir, { recursive: true, force: true }));
 
@@ -443,4 +444,13 @@ test('videoDeconstruct: 支持通过 video_process (capability: video_scene_dete
   assert.equal(row2Attach[0].name, 'scene_002.jpg');
   assert.equal(row2Attach[0].path, join(processCalls[0].dest, 'scene_002.jpg'));
   assert.equal(row2Attach[0].url, `/omnimux-workflow/media/deconstruct/${res.body.tableId}/scene_002.jpg`);
+});
+
+test('PLACEHOLDER_FRAME_BASE64: 占位图标准合规（非截断，带 EOI 标识，文件大小 > 500 字节）', () => {
+  const buf = Buffer.from(PLACEHOLDER_FRAME_BASE64, 'base64');
+  assert.ok(buf.length > 500, '占位图大小应大于 500 字节');
+  assert.equal(buf[0], 0xff);
+  assert.equal(buf[1], 0xd8); // SOI
+  assert.equal(buf[buf.length - 2], 0xff);
+  assert.equal(buf[buf.length - 1], 0xd9); // EOI
 });

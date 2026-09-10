@@ -238,6 +238,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
 }
 
 export { resolveWorkflowPaths };
+export { PLACEHOLDER_FRAME_BASE64 } from './videoDeconstruct/service.ts';
 export * from './execution/fingerprintCache';
 export * from './execution/stepCheckpoint';
 export * from './execution/HeadlessExecutionSeam';

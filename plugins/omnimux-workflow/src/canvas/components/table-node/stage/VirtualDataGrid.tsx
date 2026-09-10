@@ -558,11 +558,30 @@ export const VirtualDataGrid: React.FC = () => {
                   alt={hoveredAttachment.name}
                   onError={(e) => {
                     (e.currentTarget as HTMLElement).style.display = 'none';
+                    const fb = e.currentTarget.parentElement?.querySelector(
+                      '.wf-attachment-preview-error',
+                    ) as HTMLElement | null;
+                    if (fb) fb.style.display = 'flex';
                   }}
                 />
               ) : (
                 <div style={{ color: 'var(--wb-text-muted)', fontSize: 12 }}>暂无图片预览</div>
               )}
+              <div
+                className="wf-attachment-preview-error"
+                style={{
+                  display: 'none',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: 'var(--wb-text-muted)',
+                  fontSize: 12,
+                  padding: '32px 16px',
+                }}
+              >
+                <span>图片加载失败</span>
+              </div>
             </div>
           </div>,
           globalThis.document.body,

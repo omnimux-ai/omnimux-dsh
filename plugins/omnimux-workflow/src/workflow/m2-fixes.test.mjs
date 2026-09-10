@@ -219,13 +219,20 @@ test('QA③ media route resolves symlinks (realpath) -> escape refused', async (
     assert.equal(viaLink.status, 200);
     assert.equal(viaLink.raw, '<svg/>');
 
-    // Regular in-root file still works.
+    // Regular in-root file still works (GET + HEAD).
     const direct = await h.call({
       url: '/omnimux-workflow/media/ws_x/inside.svg',
       headers: h.localHeaders,
     });
     assert.equal(direct.status, 200);
     assert.equal(direct.raw, '<svg/>');
+
+    const directHead = await h.call({
+      method: 'HEAD',
+      url: '/omnimux-workflow/media/ws_x/inside.svg',
+      headers: h.localHeaders,
+    });
+    assert.equal(directHead.status, 200);
 
     // Missing file -> 404 (realpath failure path).
     const missing = await h.call({

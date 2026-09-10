@@ -21,7 +21,7 @@ import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot } from '../../shared/canvasTypes.ts';
-import { resolveVideoAbsolutePath, extractMarkdownTables } from '../videoDeconstruct/service.ts';
+import { resolveVideoAbsolutePath, extractMarkdownTables, PLACEHOLDER_FRAME_BASE64 } from '../videoDeconstruct/service.ts';
 
 export interface VideoStoryboardServiceDeps {
   store: WorkspaceStore;
@@ -378,12 +378,9 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
             thumbnailUrl: frame.url,
           };
         } else {
-          const tinyJpg = Buffer.from(
-            '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
-            'base64',
-          );
+          const placeholderJpg = Buffer.from(PLACEHOLDER_FRAME_BASE64, 'base64');
           try {
-            if (!existsSync(fpath)) writeFileSync(fpath, tinyJpg);
+            if (!existsSync(fpath)) writeFileSync(fpath, placeholderJpg);
             shotItem.imageAttachment = {
               assetId: `ast_${randomUUID().slice(0, 8)}`,
               name: fname,
