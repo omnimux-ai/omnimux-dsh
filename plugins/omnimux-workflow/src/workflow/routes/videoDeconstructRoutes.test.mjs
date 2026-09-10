@@ -98,7 +98,7 @@ function harness(t, opts = {}) {
   return { call, toolCalls, store, workspace, url, dummyVideo, root, mediaDir: join(root, 'media') };
 }
 
-test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含分镜画面附件列与保底关键帧）', async (t) => {
+test('videoDeconstruct: 成功拆解视频并持久化五维内容拆解表格（分析维度 + 分析内容）', async (t) => {
   const h = harness(t);
   const res = await h.call({
     nodeId: 'node_video_1',
@@ -111,46 +111,20 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含�
   assert.equal(res.body.title, '我的爆款视频拆解');
   assert.ok(res.body.tableId.startsWith('tbl_'));
   assert.equal(res.body.tablePath, `.omnimux/tables/${res.body.tableId}.htable`);
-  // 增加了「分镜画面」附件列：原 6 列文本 + 1 列附件 = 7 列
-  assert.equal(res.body.columnCount, 7);
-  assert.equal(res.body.rowCount, 2);
-  assert.equal(res.body.previewRows.length, 2);
-  assert.equal(res.body.previewRows[0], '第 1 镜: 开场反差视觉');
+  // 标准五维拆解表：2 列（分析维度 + 分析内容），6 行维度
+  assert.equal(res.body.columnCount, 2);
+  assert.equal(res.body.rowCount, 6);
+  assert.ok(res.body.previewRows.length >= 2);
 
   // 验证磁盘上的 .htable 物理文件是否真实存在且有效
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const savedDoc = await TableStorageService.loadTable(absPath);
   assert.equal(savedDoc.title, '我的爆款视频拆解');
-  assert.equal(savedDoc.columns.length, 7);
-  assert.equal(savedDoc.rows.length, 2);
+  assert.equal(savedDoc.columns.length, 2);
+  assert.equal(savedDoc.rows.length, 6);
   assert.equal(savedDoc.rowHeight, 'low');
-
-  // 验证分镜表格包含 type: 'attachment' 的「分镜画面」列，且排布在第 2 列
-  const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
-  assert.ok(colImage, '必须包含「分镜画面」列');
-  assert.equal(colImage.type, 'attachment');
-  assert.equal(colImage.width, 180);
-  assert.equal(colImage.visible, true, '「分镜画面」列 visible 必须为 true');
-  assert.equal(savedDoc.columns[1].id, colImage.id, '「分镜画面」附件列应紧随「镜头序号」排布在第 2 列');
-
-  // 验证每一行记录均包含合规的图片附件对象，且物理保底文件真实存在并具备合法 JPEG 头部
-  for (const row of savedDoc.rows) {
-    const attachList = row.cells[colImage.id];
-    assert.ok(Array.isArray(attachList), '分镜画面单元格应为附件数组');
-    assert.equal(attachList.length, 1);
-    const attach = attachList[0];
-    assert.ok(attach.assetId.startsWith('ast_'));
-    assert.equal(attach.kind, 'image');
-    assert.ok(typeof attach.name === 'string' && attach.name.endsWith('.jpg'));
-    assert.ok(typeof attach.path === 'string');
-    assert.ok(existsSync(attach.path), `保底关键帧图片必须真实存在: ${attach.path}`);
-    const fileBuf = readFileSync(attach.path);
-    assert.ok(fileBuf.length > 0, '保底关键帧文件内容不可为空');
-    assert.equal(fileBuf[0], 0xff, 'JPEG 文件头部第 1 字节必须是 0xFF');
-    assert.equal(fileBuf[1], 0xd8, 'JPEG 文件头部第 2 字节必须是 0xD8');
-    assert.ok(attach.url.startsWith(`/omnimux-workflow/media/deconstruct/${res.body.tableId}/`));
-    assert.equal(attach.thumbnailUrl, attach.url);
-  }
+  assert.equal(savedDoc.columns[0].title, '分析维度');
+  assert.equal(savedDoc.columns[1].title, '分析内容');
 
   assert.equal(h.toolCalls.length, 1);
   assert.equal(h.toolCalls[0].video, h.dummyVideo);
@@ -164,13 +138,14 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含�
   assert.equal(createdTable.type, 'table');
   assert.equal(createdTable.data.tableId, res.body.tableId);
   assert.equal(createdTable.data.title, '我的爆款视频拆解');
+  assert.equal(createdTable.data.origin, 'video_deconstruct');
   const edge = latestSnapshot.edges.find(
     (e) => e.source === 'node_video_1' && e.target === res.body.tableId,
   );
   assert.ok(edge, '视频节点到表格节点的连线应写入 canvas.json');
 });
 
-test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆解保底模板且具备保底分镜图', async (t) => {
+test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆解保底模板', async (t) => {
   const h = harness(t, { disableTool: true });
   const res = await h.call({
     nodeId: 'node_video_fallback',
@@ -182,30 +157,18 @@ test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆�
   assert.equal(res.body.ok, true);
   assert.equal(res.body.title, '保底拆解视频');
   assert.ok(res.body.tableId.startsWith('tbl_'));
-  assert.equal(res.body.columnCount, 7);
-  assert.equal(res.body.rowCount, 3);
+  assert.equal(res.body.columnCount, 2);
+  assert.equal(res.body.rowCount, 6);
   assert.ok(res.body.markdown.includes('逐镜头分解与五维分析报告'));
 
-  // 验证磁盘持久化有效且包含分镜画面列
+  // 验证磁盘持久化有效且为五维结构
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const savedDoc = await TableStorageService.loadTable(absPath);
   assert.equal(savedDoc.title, '保底拆解视频');
-  assert.equal(savedDoc.rows.length, 3);
+  assert.equal(savedDoc.rows.length, 6);
   assert.equal(savedDoc.rowHeight, 'low');
-
-  const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
-  assert.ok(colImage);
-  assert.equal(colImage.type, 'attachment');
-  assert.equal(colImage.width, 180);
-  assert.equal(colImage.visible, true);
-  assert.equal(savedDoc.columns[1].id, colImage.id);
-
-  for (const row of savedDoc.rows) {
-    const images = row.cells[colImage.id];
-    assert.ok(Array.isArray(images) && images.length === 1);
-    assert.equal(images[0].kind, 'image');
-    assert.ok(images[0].name.startsWith('frame-'));
-  }
+  assert.equal(savedDoc.columns[0].title, '分析维度');
+  assert.equal(savedDoc.columns[1].title, '分析内容');
 });
 
 test('videoDeconstruct: 无 Markdown 表格时，按五维分析维度构造结构化表格', async (t) => {
@@ -389,61 +352,25 @@ test('videoDeconstruct: 服务端原子持久化与单一下游约束（多次�
   assert.equal(snap2.edges[0].target, firstTableId);
 });
 
-test('videoDeconstruct: 支持通过 video_process (capability: video_scene_detect) 抽取真实关键帧并挂载为分镜画面附件', async (t) => {
-  const processCalls = [];
-  const videoProcessTool = {
-    async execute(args) {
-      processCalls.push(args);
-      // 模拟抽取出两个真实关键帧文件
-      const frame1Path = join(args.dest, 'scene_001.jpg');
-      const frame2Path = join(args.dest, 'scene_002.jpg');
-      writeFileSync(frame1Path, 'dummy image 1');
-      writeFileSync(frame2Path, 'dummy image 2');
-      return {
-        files: [
-          { path: frame1Path, meta: { timeSeconds: 0 } },
-          { path: frame2Path, meta: { timeSeconds: 3.5 } },
-        ],
-        result: {
-          scenes: [
-            { start: 0, end: 3.5 },
-            { start: 3.5, end: 10 },
-          ],
-        },
-      };
-    },
-  };
-
-  const h = harness(t, { videoProcessTool });
+test('videoDeconstruct: 纯净五维内容分析，不插入分镜画面附件列', async (t) => {
+  const h = harness(t);
   const res = await h.call({
-    nodeId: 'node_video_extract_real',
+    nodeId: 'node_video_pure_deconstruct',
     videoPath: h.dummyVideo,
-    title: '真实抽帧拆解测试',
+    title: '内容策略拆解',
   });
 
   assert.equal(res.status, 200);
   assert.equal(res.body.ok, true);
-  assert.equal(processCalls.length, 1);
-  assert.equal(processCalls[0].capability, 'video_scene_detect');
-  assert.equal(processCalls[0].input.videoUrl, h.dummyVideo);
-  assert.equal(processCalls[0].input.extractFrames, true);
-  assert.equal(processCalls[0].input.threshold, 0.35);
 
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const savedDoc = await TableStorageService.loadTable(absPath);
   const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
-  assert.ok(colImage);
-
-  // 验证两行数据分别对应抽取出的两张真实图片
-  const row1Attach = savedDoc.rows[0].cells[colImage.id];
-  assert.equal(row1Attach[0].name, 'scene_001.jpg');
-  assert.equal(row1Attach[0].path, join(processCalls[0].dest, 'scene_001.jpg'));
-  assert.equal(row1Attach[0].url, `/omnimux-workflow/media/deconstruct/${res.body.tableId}/scene_001.jpg`);
-
-  const row2Attach = savedDoc.rows[1].cells[colImage.id];
-  assert.equal(row2Attach[0].name, 'scene_002.jpg');
-  assert.equal(row2Attach[0].path, join(processCalls[0].dest, 'scene_002.jpg'));
-  assert.equal(row2Attach[0].url, `/omnimux-workflow/media/deconstruct/${res.body.tableId}/scene_002.jpg`);
+  assert.equal(colImage, undefined, '内容拆解表不应包含分镜画面附件列');
+  assert.equal(savedDoc.columns.length, 2);
+  assert.equal(savedDoc.columns[0].title, '分析维度');
+  assert.equal(savedDoc.columns[1].title, '分析内容');
+  assert.equal(savedDoc.rows.length, 6);
 });
 
 test('PLACEHOLDER_FRAME_BASE64: 占位图标准合规（非截断，带 EOI 标识，文件大小 > 500 字节）', () => {

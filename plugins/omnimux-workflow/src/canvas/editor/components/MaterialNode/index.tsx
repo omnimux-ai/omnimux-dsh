@@ -625,7 +625,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       const result = await deconstructVideo(workspaceId, {
         nodeId: id,
         videoPath,
-        title: label || t('deconstructVideo.nodeLabel'),
+        title: label ? `${label} 内容拆解表` : t('deconstructVideo.nodeLabel'),
       });
       if (!result.ok || !result.body?.tableId) {
         const message = result.body?.message || result.body?.error || t('deconstructVideo.toast.failed');
