@@ -84,14 +84,21 @@ export function readExplicitTargetSlot(
 ): string | undefined {
   const direct = typeof edgeData.targetSlot === 'string' ? edgeData.targetSlot.trim() : '';
   if (direct) return direct;
+  // Ordinary node-level input handles are NOT contract slots; do not let runtime slotBinding
+  // lock the connection into a single operation mode.
+  if (typeof targetHandle === 'string') {
+    const handle = targetHandle.trim();
+    if (handle === 'in' || handle === 'input') {
+      return undefined;
+    }
+    if (handle) return handle;
+  }
   const binding = edgeData.slotBinding;
   if (binding && typeof binding === 'object') {
     const slot = (binding as { slot?: unknown }).slot;
     if (typeof slot === 'string' && slot.trim()) return slot.trim();
   }
-  if (typeof targetHandle !== 'string') return undefined;
-  const slot = targetHandle.trim();
-  return slot && slot !== 'in' && slot !== 'input' ? slot : undefined;
+  return undefined;
 }
 
 // ============================================================================

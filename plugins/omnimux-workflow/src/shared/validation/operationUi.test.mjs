@@ -26,6 +26,7 @@ import {
   readOptionalMediaNumber,
   readOptionalMime,
 } from './operationUi.ts';
+import { readExplicitTargetSlot } from './compatKernel.ts';
 
 const catalog = createCompatTestCatalog();
 
@@ -604,5 +605,44 @@ describe('generation-node mode presentation', () => {
     assert.equal(state.reasonCode, 'prompt_required');
     assert.equal(state.reason.code, 'prompt_required');
     assert.equal(shouldRenderModeUi(state), false);
+  });
+
+  it('Issue #992: ordinary connection to "in" with runtime slotBinding does not lock video operations into a single mode', () => {
+    const videoCatalog = {
+      source: 'omnimux', text: [], image: [], video: [], audio: [],
+      models: [{
+        id: 'seedance-test', label: 'Seedance Test', listed: true,
+        operations: [
+          { id: 'first_frame', label: '首帧', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', role: 'first_frame', min: 1, max: 1 }] },
+          { id: 'first_last_frame', label: '首尾帧', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', role: 'first_frame', min: 1, max: 1 }, { slot: 'last_frame', type: 'image', role: 'last_frame', min: 1, max: 1 }] },
+          { id: 'video_multi_ref', label: '全能参考', listed: true, output: { type: 'video' }, inputs: [{ slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: 9 }] },
+        ],
+      }],
+    };
+
+    // 模拟连入普通 "in" 句柄且 edge.data 带有运行时 slotBinding
+    const edgeData = { slotBinding: { slot: 'reference_images', role: 'reference', type: 'image' } };
+    const targetSlot = readExplicitTargetSlot(edgeData, 'in');
+    assert.equal(targetSlot, undefined, '普通 in 句柄不应被判定为显式槽位约束');
+
+    const upstreams = [{
+      nodeId: 'img-1',
+      edgeId: 'e-1',
+      materialType: 'image',
+      hasMedia: true,
+      url: 'blob:test',
+      targetSlot,
+    }];
+    const fingerprint = buildUiUpstreamFingerprint({ prompt: '', upstreams });
+    const state = buildEffectiveOpsUiState({
+      catalog: videoCatalog,
+      modelId: 'seedance-test',
+      fingerprint,
+      outputType: 'video',
+    });
+
+    assert.equal(state.count, 3, '三个模式（首帧、首尾帧、全能参考）均应为有效模式');
+    assert.equal(shouldRenderModeUi(state), true, '有效模式数 ≥ 2 时必须展示生成模式选择器');
+    assert.deepEqual(state.effectiveOps.map(op => op.id), ['first_frame', 'first_last_frame', 'video_multi_ref']);
   });
 });
