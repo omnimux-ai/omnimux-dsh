@@ -52,7 +52,7 @@ related:
 | **已注册 Agent 工具总数** | 88 个 | 源码中实装并可在会话中调用的工具 (28+4+6+3+9+12+6+15+0+0+4+1)。Hub 规划 +2 `workbench_*`（`Planned`，见 [agent-workbench-sync.md](agent-workbench-sync.md)）落地后改此行。 |
 | **双面齐备标杆插件 (A+)** | 3 个 | `omnimux-workflow` (12 tools), `omnimux-publish` (9 tools), `omnimux-market` (15 tools) |
 | **需补齐写操作工具插件 (B)** | 4 个 | `omnimux-assets`, `omnimux-products`, `omnimux-inspiration`, `omnimux-accounts` |
-| **纯后端/纯中枢/纯视图插件** | 5 个 | `omnimux` (中枢 28 tools), `omnimux-video` (4 tools), `omnimux-video-preview` (1 tool), `omnimux-analytics` (0 tools), `omnimux-clip` (6 tools) |
+| **纯后端/纯中枢/纯视图插件** | 5 个 | `omnimux` (中枢 28 tools), `omnimux-video` (4 tools), `omnimux-video-preview` (2 tools), `omnimux-analytics` (0 tools), `omnimux-clip` (6 tools) |
 
 ---
 
@@ -274,12 +274,13 @@ related:
 ---
 
 ### 3.12 `omnimux-video-preview`（视频流媒体预览）
-- **功能域**：基于 HTTP 206 Range 的轻量本地视频流播放器。
-- **状态**：已实装 1 个元数据探测工具。
+- **功能域**：基于 HTTP 206 Range 的轻量本地视频流播放器，支持全功能视频分镜与结构拆解及侧边栏高保真预览。
+- **状态**：已实装 2 个工具。
 
 | 业务功能描述 | 对应 UI 交互 / HTTP 路由 | Agent 工具名称 (`Tool Name`) | 分级 | 状态 | 破坏性 confirm |
 |---|---|---|---|---|---|
 | 查询本地视频流元数据与播放 URL | 播放器组件加载 | `video_preview_info` | L3 | `Implemented` | 否 |
+| 分析视频分镜与结构拆解并自动打开侧边栏预览 | 视频分析侧边栏预览 | `video_breakdown_analyze` | L2 | `Implemented` | 否 |
 | 播放器全屏与音量拖拽控制 | 播放器控件条 | — | UI-Only | `UI-Only` | 豁免 (前端媒体交互) |
 
 ---
