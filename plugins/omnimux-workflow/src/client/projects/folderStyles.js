@@ -9,14 +9,14 @@ export const FOLDER_STYLES = `
 .omnimux-folder-sheet--front { width: 84%; height: 72%; left: 8%; top: 13%; transform: rotate(2deg); box-sizing: border-box; border: 5px solid var(--dsw-alias-bg-base); box-shadow: 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
 .omnimux-folder-glass-defs { position: absolute; pointer-events: none; }
 .omnimux-folder-pocket, .omnimux-folder-pocket-rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-/* The pocket samples the existing insert once; the caption stays outside its blur and clip. */
+/* Blur the shared thumbnail inside the mask: backdrop-filter leaks beyond nonrectangular clips. */
 .omnimux-folder-pocket { -webkit-mask-image: var(--stage-pocket-mask); mask-image: var(--stage-pocket-mask); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mask-mode: alpha; background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); }
 .omnimux-folder-pocket::after { content: ''; position: absolute; inset: 0; border-radius: 9% / 12.3%; background: linear-gradient(150deg, color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent) 38%, transparent 64%); box-shadow: inset 0 -1px 1px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent), inset 0 -12px 22px color-mix(in srgb, var(--dsw-alias-bg-mask-1) 12%, transparent); }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .omnimux-folder .omnimux-folder-pocket { background: linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 78%, transparent) 38%, color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent) 64%, color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)) 100%); -webkit-backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); }
-}
+.omnimux-folder-glass-image { filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); }
+.omnimux-folder-glass-shade { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 78%, transparent) 38%, color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent) 64%, color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)) 100%); }
 @media (prefers-reduced-transparency: reduce) {
-  .omnimux-folder .omnimux-folder-pocket { background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .omnimux-folder-glass-image { display: none; }
+  .omnimux-folder-glass-shade { background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); }
 }
 .omnimux-folder-caption { position: absolute; bottom: 8%; left: 8%; right: 16%; display: flex; flex-direction: column; gap: 4px; }
 .omnimux-folder-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: clamp(15px, 5.8cqw, 30px); line-height: 1.3; font-weight: 600; }

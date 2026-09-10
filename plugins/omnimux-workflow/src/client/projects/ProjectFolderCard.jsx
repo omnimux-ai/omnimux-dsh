@@ -27,7 +27,8 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
     <Button variant="ghost" className="omnimux-folder-open" onClick={() => onOpen(project)} aria-label={project.title}>
       <span className="omnimux-folder-back" aria-hidden="true" />
       <span className="omnimux-folder-sheet omnimux-folder-sheet--rear" aria-hidden="true" />
-      <span className="omnimux-folder-sheet omnimux-folder-sheet--front"><ProjectCover cover={project.cover} /></span>
+      <ProjectCover key={JSON.stringify([project.cover?.kind, project.cover?.sourceRevision || project.cover?.thumbnailUrl || project.cover?.mediaUrl])} cover={project.cover} renderFrame={(content, previewUrl) => <>
+      <span className="omnimux-folder-sheet omnimux-folder-sheet--front">{content}</span>
       <svg className="omnimux-folder-glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id={`${glassId}-rim`} x1="0" y1="0" x2="0.7" y2="1">
@@ -37,7 +38,11 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
           </linearGradient>
         </defs>
       </svg>
-      <span className="omnimux-folder-pocket" style={{ '--stage-pocket-mask': POCKET_MASK }} aria-hidden="true" />
+      <span className="omnimux-folder-pocket" style={{ '--stage-pocket-mask': POCKET_MASK }} aria-hidden="true">
+        {previewUrl && <span className="omnimux-folder-sheet omnimux-folder-sheet--front omnimux-folder-glass-image"><span className="omnimux-cover-content"><img src={previewUrl} alt="" /></span></span>}
+        <span className="omnimux-folder-glass-shade" />
+      </span>
+      </>} />
       <svg className="omnimux-folder-pocket-rim" viewBox="0 0 516 378" aria-hidden="true" focusable="false">
         <path d={POCKET_PATH} fill="none" stroke={`url(#${glassId}-rim)`} strokeWidth="1.25" />
       </svg>

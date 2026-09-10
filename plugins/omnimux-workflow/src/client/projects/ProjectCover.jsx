@@ -20,7 +20,7 @@ function AudioCover() {
   </svg>
 }
 /** Static cover only: media playback never starts in the project library. */
-export function ProjectCover({ cover }) {
+export function ProjectCover({ cover, renderFrame }) {
   const kind = cover?.kind || 'empty'
   const [url, setUrl] = useState(null)
   const [failedUrl, setFailedUrl] = useState(null)
@@ -55,10 +55,12 @@ export function ProjectCover({ cover }) {
     return () => { alive = false; clearTimeout(retryTimer); observer.disconnect(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
   }, [source, kind])
   const showImage = url && url !== failedUrl && (kind === 'image' || kind === 'video')
-  return <div ref={root} className={`omnimux-cover-content omnimux-cover-content--${kind}`} data-cover-kind={kind} data-cover-unavailable={Boolean(cover?.unavailable || failedUrl)}>
+  const content = <div ref={root} className={`omnimux-cover-content omnimux-cover-content--${kind}`} data-cover-kind={kind} data-cover-unavailable={Boolean(cover?.unavailable || failedUrl)}>
     {!showImage && (cover?.unavailable || failedUrl) && <span className="omnimux-cover-status" role="img" aria-label="Preview unavailable">!</span>}
     {!showImage && !failedUrl && !cover?.unavailable && (!cover || (source && ['image', 'video'].includes(kind))) && <span className="omnimux-cover-status" role="img" aria-label="Loading preview">•••</span>}
     {showImage ? <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
       : kind === 'audio' ? <AudioCover /> : <CoverGlyph kind={kind} />}
   </div>
+  // Decoration shares this loader's blob lifetime; remote fallbacks are never loaded twice.
+  return renderFrame ? renderFrame(content, showImage && url.startsWith('blob:') ? url : null) : content
 }

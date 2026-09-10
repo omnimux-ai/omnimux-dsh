@@ -18,7 +18,7 @@ test('folder glass has unique clips, one cover per card and unchanged actions', 
       builder.onResolve({ filter: /^(dsh-ui-kit|@deepseek-ai\/dsh-client-ui-primitives)$/ }, args => ({ path: args.path, namespace: 'seam' }))
       builder.onLoad({ filter: /.*/, namespace: 'seam' }, () => ({ contents: `const React=require('react'); exports.Button=exports.IconButton=({children,...props})=>React.createElement('button',props,children); exports.IconEditOutline16=exports.IconTrashOutline16=()=>null;` }))
       builder.onResolve({ filter: /ProjectCover\.jsx$/ }, () => ({ path: 'cover', namespace: 'cover' }))
-      builder.onLoad({ filter: /.*/, namespace: 'cover' }, () => ({ contents: `const React=require('react');exports.ProjectCover=()=>React.createElement('i',{'data-cover-probe':'one'});` }))
+      builder.onLoad({ filter: /.*/, namespace: 'cover' }, () => ({ contents: `const React=require('react');exports.ProjectCover=({renderFrame})=>renderFrame(React.createElement('i',{'data-cover-probe':'one'}),null);` }))
     } }],
   })
   const mod = { exports: {} }
