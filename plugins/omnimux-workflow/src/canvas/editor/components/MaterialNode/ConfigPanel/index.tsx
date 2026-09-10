@@ -137,14 +137,21 @@ function getModelVisuals(id: string) {
 
 interface ImportConfigPanelProps {
   nodeData: MaterialNodeData;
+  execBusy?: boolean;
   onOpenResourcePicker?: (requestOrMode?: 'add' | 'replace' | SlotPickRequest, targetSlotIndex?: number) => void;
 }
 
 const ImportConfigPanel: React.FC<ImportConfigPanelProps> = ({
   nodeData,
+  execBusy,
   onOpenResourcePicker,
 }) => {
   const t = useT();
+  const isNodeBusy =
+    Boolean(execBusy) ||
+    nodeData.executionStatus === 'running' ||
+    nodeData.executionStatus === 'pending' ||
+    nodeData.status === 'generating';
   return (
     <div className="wf-config-panel wf-config-panel--import">
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -168,7 +175,7 @@ const ImportConfigPanel: React.FC<ImportConfigPanelProps> = ({
             </span>
           )}
         </div>
-        {onOpenResourcePicker && (
+        {onOpenResourcePicker && !isNodeBusy && (
           <button
             type="button"
             className="wf-param-pill wf-param-pill--btn"
@@ -991,6 +998,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
       {kind === 'import' ? (
         <ImportConfigPanel
           nodeData={props.nodeData}
+          execBusy={props.execBusy}
           onOpenResourcePicker={props.onOpenResourcePicker}
         />
       ) : (
