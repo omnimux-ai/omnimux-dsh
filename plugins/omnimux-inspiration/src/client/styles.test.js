@@ -340,4 +340,26 @@ describe('preview modal doc style and glass removal', () => {
     assert.match(preview, /omnimux-inspiration-doc-quote/)
     assert.match(preview, /omnimux-inspiration-doc-analysis/)
   })
+
+  it('eliminates scroll jitter by decoupling heading from scroll container and containing overscroll', () => {
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.match(preview, /omnimux-inspiration-modal-deconstruction-body/)
+    assert.match(preview, /onWheel=\{\(e\) => e\.stopPropagation\(\)\}/)
+
+    const panelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel')
+    assert.equal(decl(panelCss, 'overscroll-behavior'), 'contain')
+    assert.equal(decl(panelCss, 'scrollbar-gutter'), 'stable')
+
+    const deconPanelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-panel')
+    assert.equal(decl(deconPanelCss, 'display'), 'flex')
+    assert.equal(decl(deconPanelCss, 'flex-direction'), 'column')
+
+    const deconHeadingCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-heading')
+    assert.doesNotMatch(deconHeadingCss, /position:\s*sticky/)
+
+    const deconBodyCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body')
+    assert.equal(decl(deconBodyCss, 'overflow-y'), 'auto')
+    assert.equal(decl(deconBodyCss, 'overscroll-behavior'), 'contain')
+    assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'stable')
+  })
 })
