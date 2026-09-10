@@ -93,6 +93,7 @@ export function apply(ctx) {
       title: '视频分析',
       icon: (size) => React.createElement(IconBreakdown, { size }),
       exts: [
+        'vbreakdown',
         'vbreakdown.json',
         'breakdown.json',
         'video-analysis.json',
@@ -100,7 +101,7 @@ export function apply(ctx) {
       priority: 50,
       fetchStrategy: 'fsRead',
       detect: (filePath, head) => {
-        if (filePath.endsWith('.vbreakdown.json') || filePath.endsWith('.video-analysis.json')) return true
+        if (filePath.endsWith('.vbreakdown') || filePath.endsWith('.vbreakdown.json') || filePath.endsWith('.video-analysis.json')) return true
         if (head && head.length > 0) {
           try {
             const sample = new TextDecoder().decode(head.slice(0, 500))
