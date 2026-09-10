@@ -1,6 +1,6 @@
 /**
  * 新建本地项目副作用（规格 2026-08-23，桌面壳补丁）：
- *   1. POST /api/projects { title } → Host mkdir 默认库 + 说明.md + project.json
+ *   1. POST /api/projects { title } → Host mkdir 默认库 + project.json
  *      （OmniMux.app 的 directoryPicker 是 native，没有 workspaces.createDirectory）
  *   2. workspaces.create({ path: projectRoot })
  *   3. sessions.create({ workspaceId }) 禁止 cwd

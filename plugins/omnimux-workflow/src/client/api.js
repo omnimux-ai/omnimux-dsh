@@ -57,7 +57,7 @@ export function listProjects() {
 }
 
 /**
- * Host 在默认库 mkdir + 写 说明.md / project.json。
+ * Host 在默认库 mkdir + 写 project.json。
  * 可选 projectRoot：已存在的作品包路径（打开已有文件夹时种子）。
  * @param {string} title
  * @param {string | null} [sessionId]

@@ -7,7 +7,6 @@
  *
  * 落盘布局（2026-08-23 改冻）：
  *   <videos>/OmniMux/Projects/<可读名>/
- *     说明.md
  *     .omnimux/project.json
  *
  * schemaVersion 仍从 1 起；字段增量向后兼容。读到更高版本拒绝（坏文件跳过不崩库）。
