@@ -1,5 +1,6 @@
 import React from 'react'
 import { VideoPlayer } from './VideoPlayer.js'
+import { VideoBreakdownViewer } from './VideoBreakdownViewer.jsx'
 
 export const name = 'omnimux-video-preview'
 export const inject = []
@@ -29,6 +30,26 @@ function IconVideo({ size = 16 }) {
   )
 }
 
+function IconBreakdown({ size = 16 }) {
+  return React.createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    },
+    React.createElement('rect', { x: 2, y: 3, width: 20, height: 14, rx: 2 }),
+    React.createElement('line', { x1: 8, y1: 21, x2: 16, y2: 21 }),
+    React.createElement('line', { x1: 12, y1: 17, x2: 12, y2: 21 }),
+    React.createElement('path', { d: 'm10 8 5 3-5 3V8z' })
+  )
+}
+
 /**
  * Client entry point for omnimux-video-preview.
  */
@@ -39,7 +60,8 @@ export function apply(ctx) {
     const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
     if (!sidebar || typeof sidebar.registerFileViewer !== 'function') return
 
-    const descriptor = {
+    // 1. Video files viewer
+    const videoDescriptor = {
       id: 'omnimux-video-preview',
       title: '视频',
       icon: (size) => React.createElement(IconVideo, { size }),
@@ -65,20 +87,52 @@ export function apply(ctx) {
       component: (props) => React.createElement(VideoPlayer, props),
     }
 
-    const unregister = sidebar.registerFileViewer(descriptor)
+    // 2. Video breakdown and shots analysis viewer
+    const breakdownDescriptor = {
+      id: 'omnimux-video-breakdown',
+      title: '视频分析',
+      icon: (size) => React.createElement(IconBreakdown, { size }),
+      exts: [
+        'vbreakdown.json',
+        'breakdown.json',
+        'video-analysis.json',
+      ],
+      priority: 50,
+      fetchStrategy: 'fsRead',
+      detect: (filePath, head) => {
+        if (filePath.endsWith('.vbreakdown.json') || filePath.endsWith('.video-analysis.json')) return true
+        if (head && head.length > 0) {
+          try {
+            const sample = new TextDecoder().decode(head.slice(0, 500))
+            if (sample.includes('"is_video_breakdown"') || (sample.includes('"shots"') && sample.includes('"structure"'))) {
+              return true
+            }
+          } catch {
+            // ignore
+          }
+        }
+        return false
+      },
+      component: (props) => React.createElement(VideoBreakdownViewer, props),
+    }
+
+    const unreg1 = sidebar.registerFileViewer(videoDescriptor)
+    const unreg2 = sidebar.registerFileViewer(breakdownDescriptor)
 
     const effectTarget = typeof inner.effect === 'function' ? inner : ctx
     if (typeof effectTarget.effect === 'function') {
       effectTarget.effect(
         () => () => {
           try {
-            unregister()
+            unreg1()
+            unreg2()
           } catch {
             // already disposed
           }
         },
-        'omnimux-video-preview: file-viewer'
+        'omnimux-video-preview: file-viewers'
       )
     }
   })
 }
+
