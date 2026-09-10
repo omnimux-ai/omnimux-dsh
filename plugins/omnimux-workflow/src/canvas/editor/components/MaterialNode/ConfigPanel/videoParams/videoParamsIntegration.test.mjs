@@ -153,3 +153,15 @@ test('不应存在待确认视频参数调整提示与确认/保留原值动作�
   assert.ok(!source.includes('保留原值'));
   assert.ok(!source.includes('Boolean(pendingVideoParamAdjustment)'));
 });
+
+test('Issue #982：ConfigPanel 为视频节点提供 first_frame 素材卡槽常驻兜底', () => {
+  assert.match(
+    source,
+    /materialType === 'video' && \(slotLayout\.preset === 'none' \|\| slotLayout\.slots\.length === 0\)/,
+    '视频节点应在空态或文生视频下提供常驻卡槽兜底',
+  );
+  assert.match(source, /opsState\.selectedOperationId \|\| 'text_to_video'/);
+  assert.match(source, /preset:\s*'strip'/);
+  assert.match(source, /addButton:\s*true/);
+  assert.match(source, /panel\.slot\.first_frame/);
+});
