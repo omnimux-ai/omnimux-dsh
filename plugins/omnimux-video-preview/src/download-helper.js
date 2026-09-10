@@ -1,4 +1,4 @@
-import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, unlinkSync, openSync, readSync, closeSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
@@ -24,6 +24,7 @@ export function detectExt(url, defaultExt = '.mp4') {
 
 /**
  * Download a remote URL into a target local destination safely.
+ * Rejects HTML error/anti-bot responses masquerading as media.
  * @param {string} url
  * @param {string} destDir
  * @param {{ prefix?: string, ext?: string, fetcher?: typeof fetch }} [opts]
@@ -43,6 +44,11 @@ export async function downloadMedia(url, destDir, opts = {}) {
     throw new Error(`Failed to download media: HTTP ${response.status} from ${url}`);
   }
 
+  const contentType = response.headers?.get?.('content-type') || '';
+  if (contentType.includes('text/html')) {
+    throw new Error(`Refused to download HTML content (${contentType}) as media file from ${url}`);
+  }
+
   try {
     if (response.body && typeof response.body.getReader === 'function') {
       const nodeStream = Readable.fromWeb(/** @type {any} */ (response.body));
@@ -52,6 +58,27 @@ export async function downloadMedia(url, destDir, opts = {}) {
       const { writeFileSync } = await import('node:fs');
       writeFileSync(tempPath, buf);
     }
+
+    // Inspect file header: fail fast if response was HTML anti-bot challenge
+    if (existsSync(tempPath)) {
+      let isHtml = false;
+      try {
+        const fd = openSync(tempPath, 'r');
+        const headBuf = Buffer.alloc(256);
+        readSync(fd, headBuf, 0, 256, 0);
+        closeSync(fd);
+        const headStr = headBuf.toString('utf8', 0, 100).toLowerCase();
+        if (headStr.includes('<!doctype') || headStr.includes('<html') || headStr.includes('<head')) {
+          isHtml = true;
+        }
+      } catch {}
+
+      if (isHtml) {
+        try { unlinkSync(tempPath); } catch {}
+        throw new Error(`Downloaded payload for ${url} is HTML page, not a valid media binary`);
+      }
+    }
+
     const { renameSync } = await import('node:fs');
     renameSync(tempPath, targetPath);
     return targetPath;

@@ -174,6 +174,117 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
 }
 
 /**
+ * Normalize raw social data from various upstream structures into unified metadata.
+ * Supports TikTok/Douyin aweme_detail, X/Twitter, YouTube, Instagram, and fallback objects.
+ * @param {object} raw
+ * @param {string} [fallbackUrl]
+ * @returns {object|null}
+ */
+export function normalizeSocialMetadata(raw, fallbackUrl = '') {
+  if (!raw || typeof raw !== 'object') return null
+
+  // 1. TikTok / Douyin aweme_detail envelope
+  const aweme = raw.aweme_detail || raw.data?.aweme_detail || (Array.isArray(raw.item_list) ? raw.item_list[0] : null) || (Array.isArray(raw.aweme_list) ? raw.aweme_list[0] : null)
+  if (aweme && typeof aweme === 'object') {
+    const desc = aweme.desc || aweme.title || ''
+    const author = aweme.author || {}
+    const authorName = author.nickname || author.unique_id || 'Creator'
+    const authorHandle = author.unique_id ? `@${author.unique_id.replace(/^@/, '')}` : (author.short_id ? `@${author.short_id}` : '@creator')
+    const authorAvatar = author.avatar_thumb?.url_list?.[0]
+      || author.avatar_medium?.url_list?.[0]
+      || author.avatar_larger?.url_list?.[0]
+      || ''
+
+    const videoObj = aweme.video || {}
+    const coverUrl = videoObj.cover?.url_list?.[0]
+      || videoObj.origin_cover?.url_list?.[0]
+      || videoObj.dynamic_cover?.url_list?.[0]
+      || ''
+
+    const playList = Array.isArray(videoObj.play_addr?.url_list) ? videoObj.play_addr.url_list : []
+    const downloadList = Array.isArray(videoObj.download_addr?.url_list) ? videoObj.download_addr.url_list : []
+    const bitRateList = Array.isArray(videoObj.bit_rate)
+      ? videoObj.bit_rate.map((b) => b?.play_addr?.url_list?.[0]).filter(Boolean)
+      : []
+    const allVideoCandidates = [...playList, ...downloadList, ...bitRateList]
+
+    // Prefer high-speed direct CDN URL
+    let videoUrl = allVideoCandidates.find((u) => typeof u === 'string' && u.startsWith('http') && !u.includes('tiktok.com/aweme/v1/play/'))
+      || allVideoCandidates.find((u) => typeof u === 'string' && u.startsWith('http'))
+      || ''
+
+    const stats = aweme.statistics || {}
+    const durationMs = typeof videoObj.duration === 'number' ? videoObj.duration : 0
+    const durationSec = durationMs > 1000 ? Math.round(durationMs / 1000) : (durationMs || 0)
+
+    return {
+      title: desc || '短视频分析',
+      text: desc || '',
+      caption: desc || '',
+      author: {
+        name: authorName,
+        handle: authorHandle,
+        avatar: authorAvatar,
+      },
+      cover_url: coverUrl,
+      video_url: videoUrl,
+      duration: durationSec,
+      stats: {
+        likes: stats.digg_count ?? stats.likes ?? 0,
+        comments: stats.comment_count ?? stats.comments ?? 0,
+        shares: stats.share_count ?? stats.shares ?? 0,
+        views: stats.play_count ?? stats.views ?? 0,
+      },
+    }
+  }
+
+  // 2. Flat standard / fallback structure
+  const data = raw.data && typeof raw.data === 'object' ? raw.data : raw
+  const title = data.title || data.text || data.caption || data.desc || ''
+  const author = data.author || data.user || data.owner || {}
+  const authorName = typeof author === 'string' ? author : (author.name || author.nickname || author.username || 'Creator')
+  const rawHandle = typeof author === 'string' ? author : (author.handle || author.screen_name || author.unique_id || 'creator')
+  const authorHandle = String(rawHandle).startsWith('@') ? String(rawHandle) : `@${rawHandle}`
+  const authorAvatar = typeof author === 'object' ? (author.avatar || author.image || author.profile_image_url || '') : ''
+
+  let videoUrl = data.video_url || data.videoUrl || ''
+  if (!videoUrl || !videoUrl.includes('.mp4')) {
+    const xVideo = data.media?.video?.[0]?.variants?.find((v) => v.url?.includes('.mp4'))?.url
+      || data.entities?.media?.[0]?.video_info?.variants?.find((v) => v.url?.includes('.mp4'))?.url
+    if (xVideo) videoUrl = xVideo
+  }
+
+  // Avoid using social webpage URLs as direct video links
+  if (videoUrl && /^(?:https?:\/\/)?(?:www\.)?(?:tiktok\.com\/@|instagram\.com\/p\/|youtube\.com\/watch|youtu\.be\/|twitter\.com\/|x\.com\/)/i.test(videoUrl)) {
+    videoUrl = ''
+  }
+
+  const coverUrl = data.cover_url || data.coverUrl || data.cover || data.display_url || ''
+  const stats = data.stats || data.statistics || data.engagement || {}
+  const duration = typeof data.duration === 'number' ? data.duration : (typeof data.duration_seconds === 'number' ? data.duration_seconds : 0)
+
+  return {
+    title: title || '短视频分析',
+    text: title || '',
+    caption: title || '',
+    author: {
+      name: authorName,
+      handle: authorHandle,
+      avatar: authorAvatar,
+    },
+    cover_url: coverUrl,
+    video_url: videoUrl,
+    duration: duration > 1000 ? Math.round(duration / 1000) : duration,
+    stats: {
+      likes: stats.likes ?? stats.digg_count ?? 0,
+      comments: stats.comments ?? stats.comment_count ?? 0,
+      shares: stats.shares ?? stats.share_count ?? 0,
+      views: stats.views ?? stats.play_count ?? 0,
+    },
+  }
+}
+
+/**
  * Fetch social metadata with real API or resilient fallback.
  * @param {string} url
  * @param {object} ctx
@@ -189,14 +300,21 @@ export async function fetchRealSocialMetadata(url, ctx = {}) {
   if (socialTool && typeof socialTool.execute === 'function') {
     try {
       const res = await socialTool.execute({ platform, capability: 'video', url })
-      if (res && res.data) return res.data
+      if (res && res.data) {
+        const normalized = normalizeSocialMetadata(res.data, url)
+        if (normalized && (normalized.video_url || normalized.title !== '短视频分析')) {
+          return normalized
+        }
+      }
     } catch {
       // Fall through to fallback
     }
   }
 
   const fallback = await fallbackResolveSocial({ platform, capability: 'video', url })
-  if (fallback && fallback.data) return fallback.data
+  if (fallback && fallback.data) {
+    return normalizeSocialMetadata(fallback.data, url)
+  }
 
   return null
 }
@@ -236,21 +354,24 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     realMeta = await fetchRealSocialMetadata(trimmed, ctx)
   }
 
+  const isDirectUrl = (url) => typeof url === 'string' && /^https?:\/\//i.test(url) && !/^(?:https?:\/\/)?(?:www\.)?(?:tiktok\.com\/@|instagram\.com\/p\/|youtube\.com\/watch|youtu\.be\/|twitter\.com\/|x\.com\/)/i.test(url)
+
   const authorName = realMeta?.author?.name || options.meta?.authorName || 'Creator'
   const authorHandle = realMeta?.author?.handle ? `@${realMeta.author.handle.replace(/^@/, '')}` : options.meta?.authorHandle || '@creator'
   const authorAvatar = realMeta?.author?.avatar || options.meta?.authorAvatar || ''
-  const caption = realMeta?.title || realMeta?.text || options.meta?.caption || '短视频分析'
+  const caption = realMeta?.caption || realMeta?.title || realMeta?.text || options.meta?.caption || '短视频分析'
   const title = caption.length > 50 ? `${caption.slice(0, 48)}…` : caption
-  const videoPlayUrl = realMeta?.video_url || options.meta?.videoUrl || trimmed
+  const videoPlayUrl = realMeta?.video_url || options.meta?.videoUrl || (isDirectUrl(trimmed) ? trimmed : '')
   const coverUrl = realMeta?.cover_url || options.meta?.coverUrl || ''
-  const likes = String(realMeta?.stats?.likes || options.meta?.likes || '0')
-  const comments = String(realMeta?.stats?.comments || options.meta?.comments || '0')
-  const shares = String(realMeta?.stats?.shares || options.meta?.shares || '0')
-  const views = String(realMeta?.stats?.views || options.meta?.views || '0')
+  const likes = String(realMeta?.stats?.likes ?? options.meta?.likes ?? '0')
+  const comments = String(realMeta?.stats?.comments ?? options.meta?.comments ?? '0')
+  const shares = String(realMeta?.stats?.shares ?? options.meta?.shares ?? '0')
+  const views = String(realMeta?.stats?.views ?? options.meta?.views ?? '0')
+  const totalDuration = realMeta?.duration || options.meta?.duration || 16
 
   // 2. Download video to local workspace cache for analysis
   let localVideoPath = isLocalFile ? resolve(trimmed) : null
-  if (videoPlayUrl && /^https?:\/\//i.test(videoPlayUrl)) {
+  if (!localVideoPath && videoPlayUrl && isDirectUrl(videoPlayUrl)) {
     try {
       const cwd = process.cwd()
       const cacheDir = join(cwd, '.omnimux', 'cache')
@@ -277,24 +398,30 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   let shots = parseShotsFromAnalyzeMarkdown(analyzeReportText)
   let structure = parseStructureFromAnalyzeMarkdown(analyzeReportText)
 
-  // 5. If shots or structure empty, generate semantic fallback from real caption/title
+  // 5. If shots or structure empty, generate semantic breakdown derived from real caption & duration
   if (shots.length === 0) {
+    const dur = totalDuration > 0 ? totalDuration : 16
+    const s1 = Math.max(1, Math.round(dur * 0.2))
+    const s2 = Math.max(s1 + 1, Math.round(dur * 0.45))
+    const s3 = Math.max(s2 + 1, Math.round(dur * 0.75))
+    const s4 = dur
+
     shots = [
       {
         id: 'shot_1',
         start_seconds: 0,
-        end_seconds: 3,
-        time_range: '0:00 - 0:03',
+        end_seconds: s1,
+        time_range: formatTimeRange(0, s1),
         title: '黄金前置视觉切入',
         stage: 'Hook',
         tags: ['特写', '智能手机手持', '俯视', '手持微动'],
-        description: `开场以高反差与痛点视觉迅速抓住观众眼球：${caption.slice(0, 40)}`,
+        description: `开场通过高反差视觉与痛点切入抓取眼球：${caption.slice(0, 45)}`,
       },
       {
         id: 'shot_2',
-        start_seconds: 3,
-        end_seconds: 7,
-        time_range: '0:03 - 0:07',
+        start_seconds: s1,
+        end_seconds: s2,
+        time_range: formatTimeRange(s1, s2),
         title: '核心主体与细节展示',
         stage: 'Product Intro',
         tags: ['特写', '智能手机手持', '平视', '手持微动'],
@@ -302,9 +429,9 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       },
       {
         id: 'shot_3',
-        start_seconds: 7,
-        end_seconds: 12,
-        time_range: '0:07 - 0:12',
+        start_seconds: s2,
+        end_seconds: s3,
+        time_range: formatTimeRange(s2, s3),
         title: '使用过程与功能演示',
         stage: 'Usage Detail',
         tags: ['中景', '智能手机手持', '平视', '手持移动'],
@@ -312,9 +439,9 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       },
       {
         id: 'shot_4',
-        start_seconds: 12,
-        end_seconds: 16,
-        time_range: '0:12 - 0:16',
+        start_seconds: s3,
+        end_seconds: s4,
+        time_range: formatTimeRange(s3, s4),
         title: '实际场景与转化引导',
         stage: 'Demo Scene',
         tags: ['中景', '智能手机手持', '俯视', '手持移动'],
@@ -328,7 +455,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       {
         stage: 'Hook',
         title: 'Hook (黄金钩子)',
-        description: `开场 0-3 秒通过视觉反差与情绪调动捕获观众停留：${caption.slice(0, 40)}`,
+        description: `开场黄金时间通过视觉反差与情绪调动捕获观众停留：${caption.slice(0, 45)}`,
       },
       {
         stage: 'Product Intro',
@@ -348,7 +475,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     ]
   }
 
-  const durationSeconds = shots[shots.length - 1]?.end_seconds || 16
+  const durationSeconds = shots[shots.length - 1]?.end_seconds || totalDuration || 16
 
   return {
     schema_version: '1.0.0',
@@ -363,7 +490,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       platform,
       source_url: isHttp ? trimmed : '',
       video_url: videoPlayUrl,
-      stream_url: localVideoPath ? `/omnimux/video-preview/stream?path=${encodeURIComponent(localVideoPath)}` : videoPlayUrl,
+      stream_url: localVideoPath ? `/omnimux/video-preview/stream?path=${encodeURIComponent(localVideoPath)}` : (videoPlayUrl || (isHttp ? trimmed : '')),
       cover_url: coverUrl,
       duration_seconds: durationSeconds,
       duration_text: formatTime(durationSeconds),
