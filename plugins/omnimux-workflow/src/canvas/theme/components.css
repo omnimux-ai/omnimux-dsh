@@ -1871,6 +1871,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
    .wf-canvas-root 之外，默认赋予现代化沉浸式暗色毛玻璃设计，无缝融入 OmniMux 工作台。 */
 .wf-context-menu,
 .wf-action-menu,
+.wf-floating-top-pill__more-menu,
 .ant-select-dropdown,
 .ant-dropdown,
 .ant-dropdown-menu {
@@ -1882,6 +1883,20 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   --wf-menu-accent: #679EFE;
   --wf-menu-accent-soft: rgba(65, 118, 230, 0.2);
   color-scheme: dark;
+}
+
+.wf-floating-top-pill__more-menu {
+  background: var(--wf-menu-surface) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--wf-menu-border) !important;
+  box-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  color: var(--wf-menu-text) !important;
+}
+
+.wf-floating-top-pill__more-item:hover {
+  background: var(--wf-menu-surface-hover) !important;
+  color: #ffffff !important;
 }
 
 /* ==================== Ant Design 下拉与菜单暗色覆盖 ==================== */
