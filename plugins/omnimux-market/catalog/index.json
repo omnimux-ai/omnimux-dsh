@@ -3906,7 +3906,7 @@
       "skill": "3d-animation-short-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/3d-animation-short-generator",
         "ref": "main"
       },
@@ -3948,7 +3948,7 @@
       "skill": "anime-design",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/anime-design",
         "ref": "main"
       }
@@ -3969,7 +3969,7 @@
       "skill": "anime-game-pv",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/anime-game-pv",
         "ref": "main"
       }
@@ -3989,7 +3989,7 @@
       "skill": "anime-pv-maker",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/anime-pv-maker",
         "ref": "main"
       }
@@ -4008,7 +4008,7 @@
       "skill": "anime-style-forge",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/anime-style-forge",
         "ref": "main"
       }
@@ -4028,7 +4028,7 @@
       "skill": "asmr-ambient",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/asmr-ambient",
         "ref": "main"
       },
@@ -4054,7 +4054,7 @@
       "skill": "audiobook",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/audiobook",
         "ref": "main"
       },
@@ -4079,7 +4079,7 @@
       "skill": "backrooms-dreamcore",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/backrooms-dreamcore",
         "ref": "main"
       }
@@ -4098,7 +4098,7 @@
       "skill": "beat-sync-editor",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/beat-sync-editor",
         "ref": "main"
       }
@@ -4119,7 +4119,7 @@
       "skill": "brand-ad",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/brand-ad",
         "ref": "main"
       }
@@ -4138,7 +4138,7 @@
       "skill": "brand-font-effect-editor",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/brand-font-effect-editor",
         "ref": "main"
       }
@@ -4158,7 +4158,7 @@
       "skill": "brand-promo-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/brand-promo-video-generator",
         "ref": "main"
       },
@@ -4184,7 +4184,7 @@
       "skill": "brand-stream-mg",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/brand-stream-mg",
         "ref": "main"
       },
@@ -4250,7 +4250,7 @@
       "skill": "chinese-style-short-drama-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/chinese-style-short-drama-generator",
         "ref": "main"
       },
@@ -4292,7 +4292,7 @@
       "skill": "cinematic-scenes",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/cinematic-scenes",
         "ref": "main"
       }
@@ -4313,7 +4313,7 @@
       "skill": "cinematic-title-sequence",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/cinematic-title-sequence",
         "ref": "main"
       }
@@ -4357,7 +4357,7 @@
       "skill": "co-op-game-intro-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/co-op-game-intro-generator",
         "ref": "main"
       },
@@ -4402,7 +4402,7 @@
       "skill": "cool-music-video",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/cool-music-video",
         "ref": "main"
       }
@@ -4422,7 +4422,7 @@
       "skill": "coordinate-camera-control-designer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/coordinate-camera-control-designer",
         "ref": "main"
       }
@@ -4441,7 +4441,7 @@
       "skill": "detail-page-skill-course",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/detail-page-skill-course",
         "ref": "main"
       }
@@ -4461,7 +4461,7 @@
       "skill": "digital-product-promo-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/digital-product-promo-generator",
         "ref": "main"
       },
@@ -4486,7 +4486,7 @@
       "skill": "documentary",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/documentary",
         "ref": "main"
       }
@@ -4505,7 +4505,7 @@
       "skill": "dodge-game-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/dodge-game-video-generator",
         "ref": "main"
       }
@@ -4525,7 +4525,7 @@
       "skill": "dot-matrix-brand-wordmark-motion",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/dot-matrix-brand-wordmark-motion",
         "ref": "main"
       },
@@ -4551,7 +4551,7 @@
       "skill": "drama-soundtrack",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/drama-soundtrack",
         "ref": "main"
       },
@@ -4594,7 +4594,7 @@
       "skill": "ecommerce-design",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ecommerce-design",
         "ref": "main"
       },
@@ -4644,7 +4644,7 @@
       "skill": "education-studio",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/education-studio",
         "ref": "main"
       },
@@ -4669,7 +4669,7 @@
       "skill": "face-warp",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/face-warp",
         "ref": "main"
       }
@@ -4689,7 +4689,7 @@
       "skill": "film-assets",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/film-assets",
         "ref": "main"
       }
@@ -4709,7 +4709,7 @@
       "skill": "film-reference-prompt-writer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/film-reference-prompt-writer",
         "ref": "main"
       },
@@ -4735,7 +4735,7 @@
       "skill": "film-shot",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/film-shot",
         "ref": "main"
       }
@@ -4754,7 +4754,7 @@
       "skill": "film-style-picker",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/film-style-picker",
         "ref": "main"
       }
@@ -4774,7 +4774,7 @@
       "skill": "fpv-tour-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/fpv-tour-video-generator",
         "ref": "main"
       },
@@ -4799,7 +4799,7 @@
       "skill": "frontend-slides",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/frontend-slides",
         "ref": "main"
       }
@@ -4819,7 +4819,7 @@
       "skill": "h3-prompt-expert",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/h3-prompt-expert",
         "ref": "main"
       },
@@ -4848,7 +4848,7 @@
       "skill": "h3-visual-design",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/h3-visual-design",
         "ref": "main"
       },
@@ -4875,7 +4875,7 @@
       "skill": "handdrawn-live-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/handdrawn-live-video-generator",
         "ref": "main"
       },
@@ -4901,7 +4901,7 @@
       "skill": "image-paint-edit",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/image-paint-edit",
         "ref": "main"
       }
@@ -4920,7 +4920,7 @@
       "skill": "image-remix",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/image-remix",
         "ref": "main"
       }
@@ -4941,7 +4941,7 @@
       "skill": "ip-toy-grid-motion",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ip-toy-grid-motion",
         "ref": "main"
       },
@@ -4968,7 +4968,7 @@
       "skill": "kling3-prompt-expert",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/kling3-prompt-expert",
         "ref": "main"
       }
@@ -4989,7 +4989,7 @@
       "skill": "koc-video",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/koc-video",
         "ref": "main"
       }
@@ -5009,7 +5009,7 @@
       "skill": "line-doodle-explainer-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/line-doodle-explainer-generator",
         "ref": "main"
       },
@@ -5035,7 +5035,7 @@
       "skill": "lip-product-ad-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/lip-product-ad-generator",
         "ref": "main"
       },
@@ -5060,7 +5060,7 @@
       "skill": "live-sketch-motion",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/live-sketch-motion",
         "ref": "main"
       }
@@ -5079,7 +5079,7 @@
       "skill": "mg-voiceover-animation-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/mg-voiceover-animation-generator",
         "ref": "main"
       }
@@ -5099,7 +5099,7 @@
       "skill": "micro-expression-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/micro-expression-video-generator",
         "ref": "main"
       },
@@ -5124,7 +5124,7 @@
       "skill": "minecraft-pixel-art",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/minecraft-pixel-art",
         "ref": "main"
       }
@@ -5145,7 +5145,7 @@
       "skill": "minimalist-product-ad-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/minimalist-product-ad-generator",
         "ref": "main"
       },
@@ -5170,7 +5170,7 @@
       "skill": "multi-shot",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/multi-shot",
         "ref": "main"
       }
@@ -5191,7 +5191,7 @@
       "skill": "music-video-subtitle-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/music-video-subtitle-generator",
         "ref": "main"
       },
@@ -5217,7 +5217,7 @@
       "skill": "mv-creator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/mv-creator",
         "ref": "main"
       }
@@ -5237,7 +5237,7 @@
       "skill": "n-storyboard",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/n-storyboard",
         "ref": "main"
       }
@@ -5256,7 +5256,7 @@
       "skill": "native-ad-mockup",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/native-ad-mockup",
         "ref": "main"
       }
@@ -5275,7 +5275,7 @@
       "skill": "niulai-movie-style",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/niulai-movie-style",
         "ref": "main"
       }
@@ -5297,7 +5297,7 @@
       "skill": "paper-collage-explainer-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/paper-collage-explainer-generator",
         "ref": "main"
       },
@@ -5325,7 +5325,7 @@
       "skill": "papercraft-stop-motion-explainer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/papercraft-stop-motion-explainer",
         "ref": "main"
       },
@@ -5350,7 +5350,7 @@
       "skill": "podcast-marketing",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/podcast-marketing",
         "ref": "main"
       }
@@ -5369,7 +5369,7 @@
       "skill": "podcast-studio",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/podcast-studio",
         "ref": "main"
       }
@@ -5388,7 +5388,7 @@
       "skill": "podcast-to-content-suite",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/podcast-to-content-suite",
         "ref": "main"
       }
@@ -5408,7 +5408,7 @@
       "skill": "poster-design",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/poster-design",
         "ref": "main"
       }
@@ -5427,7 +5427,7 @@
       "skill": "poster-motion-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/poster-motion-generator",
         "ref": "main"
       }
@@ -5491,7 +5491,7 @@
       "skill": "pov-short-film-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/pov-short-film-generator",
         "ref": "main"
       },
@@ -5517,7 +5517,7 @@
       "skill": "product-photography-brief",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/product-photography-brief",
         "ref": "main"
       }
@@ -5536,7 +5536,7 @@
       "skill": "promo-video",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/promo-video",
         "ref": "main"
       }
@@ -5555,7 +5555,7 @@
       "skill": "rap-avatar-mv",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/rap-avatar-mv",
         "ref": "main"
       }
@@ -5575,7 +5575,7 @@
       "skill": "relight",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/relight",
         "ref": "main"
       }
@@ -5596,7 +5596,7 @@
       "skill": "short-drama-multilingual-dubbing",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/short-drama-multilingual-dubbing",
         "ref": "main"
       },
@@ -5622,7 +5622,7 @@
       "skill": "short-drama-screenwriter",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/short-drama-screenwriter",
         "ref": "main"
       },
@@ -5648,7 +5648,7 @@
       "skill": "short-drama-series-writer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/short-drama-series-writer",
         "ref": "main"
       },
@@ -5675,7 +5675,7 @@
       "skill": "silkscreen-decorative-illustration-short",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/silkscreen-decorative-illustration-short",
         "ref": "main"
       },
@@ -5700,7 +5700,7 @@
       "skill": "skill-creator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/skill-creator",
         "ref": "main"
       }
@@ -5719,7 +5719,7 @@
       "skill": "skill-reviewer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/skill-reviewer",
         "ref": "main"
       }
@@ -5756,7 +5756,7 @@
       "skill": "sports-podcast-outline",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/sports-podcast-outline",
         "ref": "main"
       }
@@ -5776,7 +5776,7 @@
       "skill": "storyboard",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/storyboard",
         "ref": "main"
       }
@@ -5796,7 +5796,7 @@
       "skill": "storyboard-generation",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/storyboard-generation",
         "ref": "main"
       }
@@ -5816,7 +5816,7 @@
       "skill": "subtitle-correction",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/subtitle-correction",
         "ref": "main"
       },
@@ -5841,7 +5841,7 @@
       "skill": "surreal-spot",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/surreal-spot",
         "ref": "main"
       }
@@ -5861,7 +5861,7 @@
       "skill": "suspense-title-sequence-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/suspense-title-sequence-generator",
         "ref": "main"
       },
@@ -5886,7 +5886,7 @@
       "skill": "sword-dance",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/sword-dance",
         "ref": "main"
       }
@@ -5906,7 +5906,7 @@
       "skill": "transcript-broll-planner",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/transcript-broll-planner",
         "ref": "main"
       },
@@ -5931,7 +5931,7 @@
       "skill": "ugc-ad-production",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ugc-ad-production",
         "ref": "main"
       }
@@ -5952,7 +5952,7 @@
       "skill": "ui-motion",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ui-motion",
         "ref": "main"
       }
@@ -5975,7 +5975,7 @@
       "skill": "video-deconstruct",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/video-deconstruct",
         "ref": "main"
       },
@@ -6003,7 +6003,7 @@
       "skill": "video-deconstruct-analyzer",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/video-deconstruct-analyzer",
         "ref": "main"
       },
@@ -6028,7 +6028,7 @@
       "skill": "video-prompting",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/video-prompting",
         "ref": "main"
       }
@@ -6047,7 +6047,7 @@
       "skill": "video-transcript",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/video-transcript",
         "ref": "main"
       }
@@ -6066,7 +6066,7 @@
       "skill": "vinyl-print-graphics",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/vinyl-print-graphics",
         "ref": "main"
       }
@@ -6085,7 +6085,7 @@
       "skill": "voice-clone",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/voice-clone",
         "ref": "main"
       }
@@ -6104,7 +6104,7 @@
       "skill": "voice-design",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/voice-design",
         "ref": "main"
       }
@@ -6123,7 +6123,7 @@
       "skill": "voiceover-direction",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/voiceover-direction",
         "ref": "main"
       }
@@ -6144,7 +6144,7 @@
       "skill": "vox-style-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/vox-style-video-generator",
         "ref": "main"
       },
@@ -6169,7 +6169,7 @@
       "skill": "writing-fragments",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/writing-fragments",
         "ref": "main"
       }
@@ -6189,7 +6189,7 @@
       "skill": "youtube-creator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/youtube-creator",
         "ref": "main"
       }
@@ -6209,7 +6209,7 @@
       "skill": "zodiac-world",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/zodiac-world",
         "ref": "main"
       }
@@ -6230,7 +6230,7 @@
       "skill": "2d-animation-commentary-drama",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/2d-animation-commentary-drama",
         "ref": "main"
       },
@@ -6256,7 +6256,7 @@
       "skill": "3d-comic-commentary-drama",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/3d-comic-commentary-drama",
         "ref": "main"
       },
@@ -6282,7 +6282,7 @@
       "skill": "live-action-commentary-drama",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/live-action-commentary-drama",
         "ref": "main"
       },
@@ -6308,7 +6308,7 @@
       "skill": "wes-anderson-aesthetic-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/wes-anderson-aesthetic-generator",
         "ref": "main"
       },
@@ -6334,7 +6334,7 @@
       "skill": "sitcom-story-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/sitcom-story-video-generator",
         "ref": "main"
       },
@@ -6360,7 +6360,7 @@
       "skill": "scifi-cinematic-video-generator",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/scifi-cinematic-video-generator",
         "ref": "main"
       },
@@ -6386,7 +6386,7 @@
       "skill": "retro-city-cel-animation-short",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/retro-city-cel-animation-short",
         "ref": "main"
       },
@@ -6413,7 +6413,7 @@
       "skill": "felt-stop-motion-story-short",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/felt-stop-motion-story-short",
         "ref": "main"
       },
@@ -6440,7 +6440,7 @@
       "skill": "fashion-scene-showcase-video",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/fashion-scene-showcase-video",
         "ref": "main"
       },
@@ -6466,7 +6466,7 @@
       "skill": "product-kinetic-typography-tvc",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/product-kinetic-typography-tvc",
         "ref": "main"
       },
@@ -6523,7 +6523,7 @@
       "skill": "html-report-templates",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/html-report-templates",
         "ref": "main"
       },
@@ -6558,7 +6558,7 @@
       "skill": "shopee-market-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/shopee-market-analysis",
         "ref": "main"
       },
@@ -6593,7 +6593,7 @@
       "skill": "shopee-product-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/shopee-product-analysis",
         "ref": "main"
       },
@@ -6628,7 +6628,7 @@
       "skill": "shopee-shop-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/shopee-shop-analysis",
         "ref": "main"
       },
@@ -6663,7 +6663,7 @@
       "skill": "shopee-brand-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/shopee-brand-analysis",
         "ref": "main"
       },
@@ -6698,7 +6698,7 @@
       "skill": "shopee-keyword-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/shopee-keyword-analysis",
         "ref": "main"
       },
@@ -6733,7 +6733,7 @@
       "skill": "video-generate-canvas",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/video-generate-canvas",
         "ref": "main"
       },
@@ -6768,7 +6768,7 @@
       "skill": "ecommerce-routing-policy",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ecommerce-routing-policy",
         "ref": "main"
       },
@@ -6803,7 +6803,7 @@
       "skill": "ecommerce-output-spec",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ecommerce-output-spec",
         "ref": "main"
       },
@@ -6839,7 +6839,7 @@
       "skill": "ecommerce-daily-review",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/ecommerce-daily-review",
         "ref": "main"
       },
@@ -6874,7 +6874,7 @@
       "skill": "amazon-market-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-market-analysis",
         "ref": "main"
       },
@@ -6909,7 +6909,7 @@
       "skill": "amazon-product-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-product-analysis",
         "ref": "main"
       },
@@ -6944,7 +6944,7 @@
       "skill": "amazon-listing-optimization",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-listing-optimization",
         "ref": "main"
       },
@@ -6979,7 +6979,7 @@
       "skill": "amazon-keyword-traffic-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-keyword-traffic-analysis",
         "ref": "main"
       },
@@ -7015,7 +7015,7 @@
       "skill": "amazon-review-optimization",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-review-optimization",
         "ref": "main"
       },
@@ -7051,7 +7051,7 @@
       "skill": "amazon-trend-risk-monitor",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/amazon-trend-risk-monitor",
         "ref": "main"
       },
@@ -7087,7 +7087,7 @@
       "skill": "tiktok-market-trend-analysis",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/tiktok-market-trend-analysis",
         "ref": "main"
       },
@@ -7122,7 +7122,7 @@
       "skill": "tiktok-product-selection",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/tiktok-product-selection",
         "ref": "main"
       },
@@ -7158,7 +7158,7 @@
       "skill": "tiktok-material-breakdown",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/tiktok-material-breakdown",
         "ref": "main"
       },
@@ -7194,7 +7194,7 @@
       "skill": "tiktok-script-creation",
       "source": {
         "type": "git",
-        "repo": "infometa/OmniMux-skills",
+        "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/tiktok-script-creation",
         "ref": "main"
       },
@@ -7210,6 +7210,380 @@
       "homeCover": {
         "asset": "catalog/covers/home/tiktok-script-creation.png",
         "alt": "TikTok 脚本创作"
+      }
+    },
+    {
+      "id": "sk-omx-video-script-creation",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频脚本分幕创作",
+      "subtitle": "",
+      "summary": "一键生成结构化短视频分幕脚本，支持钩子、反转、正文与行动呼吁。",
+      "category": "sk-writing",
+      "tags": [
+        "视频",
+        "脚本",
+        "分镜",
+        "创作"
+      ],
+      "skill": "video-script-creation",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-script-creation",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-storyboard-planning",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频分镜视觉规划",
+      "subtitle": "",
+      "summary": "专业级分镜视觉规划，输出镜头语言、景别、运镜方式与生图提示词矩阵。",
+      "category": "sk-visual",
+      "tags": [
+        "视频",
+        "分镜",
+        "运镜",
+        "景别"
+      ],
+      "skill": "video-storyboard-planning",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-storyboard-planning",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-prompt-generation",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频通用提示词工程",
+      "subtitle": "",
+      "summary": "跨模型（Seedance/Kling/Sora/Veo）通用视频生成提示词工程与格式适配。",
+      "category": "sk-visual",
+      "tags": [
+        "视频",
+        "提示词",
+        "运镜",
+        "AI视频"
+      ],
+      "skill": "video-prompt-generation",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-prompt-generation",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-video-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "视频结构与节奏拆解",
+      "subtitle": "",
+      "summary": "深度拆解对标视频的节奏节点、镜头切换率、视觉Hook与脚本承接。",
+      "category": "sk-visual",
+      "tags": [
+        "视频",
+        "分析",
+        "拆解",
+        "爆款"
+      ],
+      "skill": "video-analysis",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-analysis",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-ugc-commerce-video-skill",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "电商UGC短视频生产",
+      "subtitle": "",
+      "summary": "原生感电商带货短视频全流程策划与分镜生成。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "UGC",
+        "带货",
+        "短视频"
+      ],
+      "skill": "ugc-commerce-video-skill",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ugc-commerce-video-skill",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-recreate-viral-video",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "爆款视频二创复刻",
+      "subtitle": "",
+      "summary": "结构化提取爆款母本模式，安全二创重构镜头与文案。",
+      "category": "sk-visual",
+      "tags": [
+        "二创",
+        "爆款",
+        "复刻",
+        "视频"
+      ],
+      "skill": "recreate-viral-video",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/recreate-viral-video",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-kling-v3-motion-control",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Kling轨迹运镜运动控制",
+      "subtitle": "",
+      "summary": "专精 Kling 运动轨迹控制、复杂运镜路径与物理惯性 Prompt 语法。",
+      "category": "sk-visual",
+      "tags": [
+        "Kling",
+        "运镜",
+        "轨迹控制",
+        "视频生成"
+      ],
+      "skill": "kling-v3-motion-control",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/kling-v3-motion-control",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-product-image-set",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "电商商品全套图生成",
+      "subtitle": "",
+      "summary": "自动化生成电商标准化白底主图、细节微距图、使用场景图与卖点对比图。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "商品图",
+        "套图",
+        "白底图"
+      ],
+      "skill": "product-image-set",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/product-image-set",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-multi-angle-product-image",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "商品多角度视角生成",
+      "subtitle": "",
+      "summary": "维持商品特征一致性，生成正面、侧面、45度、微距等多视角视图。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "多角度",
+        "商品图",
+        "视角控制"
+      ],
+      "skill": "multi-angle-product-image",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/multi-angle-product-image",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-a-plus-content",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "电商A+页面多图策划",
+      "subtitle": "",
+      "summary": "跨境电商 A+ 页面 / 详情页多模块排布规划与全套视觉图生成。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "A+",
+        "亚马逊",
+        "详情页"
+      ],
+      "skill": "a-plus-content",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/a-plus-content",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-infographic",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "营销长图与信息图表",
+      "subtitle": "",
+      "summary": "将密集信息转化为结构化可视化营销信息图表与信息流卡片。",
+      "category": "sk-marketing",
+      "tags": [
+        "营销",
+        "信息图",
+        "长图",
+        "海报"
+      ],
+      "skill": "infographic",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/infographic",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-ai-outfit-change",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "AI模特换装试衣",
+      "subtitle": "",
+      "summary": "高保真服饰保持与虚拟模特换装，支持多种场景背景融合。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "换装",
+        "模特",
+        "服装"
+      ],
+      "skill": "ai-outfit-change",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ai-outfit-change",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-image-recreation",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "图片二创与风格重绘",
+      "subtitle": "",
+      "summary": "提取参考图构图与光影精髓，保持主体一致性进行风格重塑与二创。",
+      "category": "sk-visual",
+      "tags": [
+        "二创",
+        "生图",
+        "风格重绘",
+        "视觉"
+      ],
+      "skill": "image-recreation",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/image-recreation",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-xiaohongshu-ops",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "小红书爆款图文运营",
+      "subtitle": "",
+      "summary": "小红书高点击封面构图、爆款标题公式、SEO正文与标签组合全套SOP。",
+      "category": "sk-marketing",
+      "tags": [
+        "小红书",
+        "爆款",
+        "图文",
+        "文案"
+      ],
+      "skill": "xiaohongshu-ops",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/xiaohongshu-ops",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-web-access",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "联网研究检索专家",
+      "subtitle": "",
+      "summary": "多引擎交叉检索、网页去噪提取与客观信息综合研报产出。",
+      "category": "sk-office",
+      "tags": [
+        "联网",
+        "检索",
+        "调研",
+        "信息提取"
+      ],
+      "skill": "web-access",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/web-access",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-product-manager",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "AI敏捷产品经理",
+      "subtitle": "",
+      "summary": "标准化 PRD 撰写、需求痛点分析、User Story 拆解与验收标准定义。",
+      "category": "sk-dev",
+      "tags": [
+        "产品经理",
+        "PRD",
+        "敏捷",
+        "需求拆解"
+      ],
+      "skill": "product-manager",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/product-manager",
+        "ref": "main"
+      }
+    },
+    {
+      "id": "sk-omx-software-dev-team",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "全栈软件工程开发团",
+      "subtitle": "",
+      "summary": "前后端架构设计、高质量代码编写、测试驱动开发与部署脚本编写。",
+      "category": "sk-dev",
+      "tags": [
+        "软件工程",
+        "架构",
+        "开发",
+        "团队"
+      ],
+      "skill": "software-dev-team",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/software-dev-team",
+        "ref": "main"
       }
     }
   ]
