@@ -832,34 +832,30 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       },
     };
 
-    if (kind === 'import' && materialType !== 'text') {
-      const actions: FloatingPillAction[] = [];
-      if (!isGenerating) {
-        actions.push({
-          key: 'replace-media',
-          label: t('pill.replace'),
-          icon: RefreshCw,
-          section: 'primary',
-          title: t('pill.replace'),
-          onClick: (event) => {
-            event.stopPropagation();
-            void resourcePicker.fillImportNode();
-          },
-        });
-        actions.push({
-          key: 'clear-media',
-          label: t('pill.clear'),
-          icon: Trash2,
-          section: 'secondary',
-          title: t('pill.clear'),
-          onClick: (event) => {
-            event.stopPropagation();
-            handleClearImportedMedia();
-          },
-        });
-      }
-      actions.push(chat);
-      return actions;
+    const importManagementActions: FloatingPillAction[] = [];
+    if (kind === 'import' && materialType !== 'text' && !isGenerating) {
+      importManagementActions.push({
+        key: 'replace-media',
+        label: t('pill.replace'),
+        icon: RefreshCw,
+        section: materialType === 'image' ? 'primary' : 'secondary',
+        title: t('pill.replace'),
+        onClick: (event) => {
+          event.stopPropagation();
+          void resourcePicker.fillImportNode();
+        },
+      });
+      importManagementActions.push({
+        key: 'clear-media',
+        label: t('pill.clear'),
+        icon: Trash2,
+        section: 'secondary',
+        title: t('pill.clear'),
+        onClick: (event) => {
+          event.stopPropagation();
+          handleClearImportedMedia();
+        },
+      });
     }
 
     if (materialType === 'text') {
@@ -918,20 +914,20 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       ];
     }
 
-    if (
-      materialType === 'audio'
-      && canRunSpeechToText({
-        materialType,
-        executionStatus,
-        isOffline,
-        realPath: nodeData.realPath,
-        relativePath: nodeData.relativePath,
-        mediaUrl,
-        previewUrl,
-      })
-    ) {
-      return [
-        {
+    if (materialType === 'audio') {
+      const actions: FloatingPillAction[] = [];
+      if (
+        canRunSpeechToText({
+          materialType,
+          executionStatus,
+          isOffline,
+          realPath: nodeData.realPath,
+          relativePath: nodeData.relativePath,
+          mediaUrl,
+          previewUrl,
+        })
+      ) {
+        actions.push({
           key: 'speech-to-text',
           label: t('pill.speechToText'),
           icon: AudioLines,
@@ -941,25 +937,26 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             event.stopPropagation();
             void handleSpeechToText();
           },
-        },
-        chat,
-      ];
+        });
+      }
+      actions.push(...importManagementActions, chat);
+      return actions;
     }
 
-    if (
-      materialType === 'video'
-      && canRunVideoDeconstruct({
-        materialType,
-        executionStatus,
-        isOffline,
-        realPath: nodeData.realPath,
-        relativePath: nodeData.relativePath,
-        mediaUrl,
-        previewUrl,
-      })
-    ) {
-      return [
-        {
+    if (materialType === 'video') {
+      const actions: FloatingPillAction[] = [];
+      if (
+        canRunVideoDeconstruct({
+          materialType,
+          executionStatus,
+          isOffline,
+          realPath: nodeData.realPath,
+          relativePath: nodeData.relativePath,
+          mediaUrl,
+          previewUrl,
+        })
+      ) {
+        actions.push({
           key: 'deconstruct-video',
           label: t('pill.deconstructVideo'),
           icon: FileSpreadsheet,
@@ -969,8 +966,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             event.stopPropagation();
             void handleDeconstructVideo();
           },
-        },
-        {
+        });
+        actions.push({
           key: 'storyboard-video',
           label: t('pill.storyboardVideo'),
           icon: Clapperboard,
@@ -980,9 +977,14 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             event.stopPropagation();
             void handleStoryboardVideo();
           },
-        },
-        chat,
-      ];
+        });
+      }
+      actions.push(...importManagementActions, chat);
+      return actions;
+    }
+
+    if (importManagementActions.length > 0) {
+      return [...importManagementActions, chat];
     }
 
     return [chat];
