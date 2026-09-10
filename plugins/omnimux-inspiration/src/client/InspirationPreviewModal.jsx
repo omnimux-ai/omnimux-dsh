@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
+import { Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
 import {
   pickCoverSrc,
   resolveTikTokEmbedUrl,
@@ -17,7 +17,38 @@ import {
 const ICON_CLOSE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
 const ICON_REPLICATE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" /></svg>
 const ICON_EXTERNAL = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 4h6v6M20 4 11 13" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>
-const ICON_CHEVRON = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+const ICON_CLAPPERBOARD = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m12.3 3.5 3 4" />
+    <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z" />
+    <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="m6.2 5.3 3.1 3.9" />
+  </svg>
+)
+
+function formatDocQuote(quote) {
+  const plain = renderPlainBreakdownText(quote).replace(/^["“]|["”]$/g, '').trim()
+  return plain ? `"${plain}"` : ''
+}
+
+function renderDocAnalysis(analysis) {
+  const plain = renderPlainBreakdownText(analysis)
+  if (!plain) return null
+  const lines = plain.split('\n').map((l) => l.trim()).filter(Boolean)
+  return (
+    <div className="omnimux-inspiration-doc-analysis">
+      {lines.map((line, idx) => {
+        const textWithoutBullet = line.replace(/^[•·*-]\s*/, '')
+        return (
+          <p key={idx} className="omnimux-inspiration-doc-bullet">
+            <span className="omnimux-inspiration-bullet-dot">•</span>
+            <span>{textWithoutBullet}</span>
+          </p>
+        )
+      })}
+    </div>
+  )
+}
 
 function translatedSegmentText(data, segment) {
   const hit = data.translationSegments.find((row) => row.id === segment.id)
@@ -33,7 +64,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [translateError, setTranslateError] = useState(null)
   const [showTranslation, setShowTranslation] = useState(false)
   const [activeSegmentId, setActiveSegmentId] = useState('')
-  const [collapsed, setCollapsed] = useState({})
   const [showRaw, setShowRaw] = useState(false)
 
   useEffect(() => setItem(row), [row])
@@ -120,8 +150,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const scriptValue = scriptCopyText(data, showTranslation)
   const deconValue = deconstructionCopyText(data)
-  const deconStatus = analyzing ? 'running' : analyzeError ? 'failed' : hasDeconstruction(data) ? 'done' : 'idle'
-  const deconStatusLabel = { done: 'status.breakdownReady', running: 'status.breakdownGenerating', failed: 'modal.deconstruction.error', idle: 'modal.deconstruction.empty' }[deconStatus]
 
   const mobileTabs = ['video', 'script', 'deconstruction'].map((tab) => ({
     id: tab,
@@ -265,16 +293,11 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
             </section>
 
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-deconstruction-panel ${activeTab === 'deconstruction' ? 'is-active' : ''}`}>
-              <div className="omnimux-inspiration-modal-panel-heading">
-                <h3>{t('modal.panel.deconstruction')}</h3>
-                <Badge
-                  size="sm"
-                  shape="capsule"
-                  variant={deconStatus === 'done' ? 'success' : deconStatus === 'failed' ? 'error' : deconStatus === 'running' ? 'warning' : 'default'}
-                  className={`omnimux-inspiration-status-badge ${deconStatus}`}
-                >
-                  {t(deconStatusLabel)}
-                </Badge>
+              <div className="omnimux-inspiration-modal-panel-heading omnimux-inspiration-deconstruct-heading">
+                <div className="omnimux-inspiration-deconstruct-title">
+                  {ICON_CLAPPERBOARD}
+                  <h3>{t('modal.panel.deconstruction')}</h3>
+                </div>
                 {deconValue ? <CopyButton
                   text={deconValue}
                   label={t('modal.deconstruction.copy')}
@@ -285,44 +308,25 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 /> : null}
               </div>
               {hasDeconstruction(data) ? (
-                <div className="omnimux-inspiration-modal-dimensions">
+                <div className="omnimux-inspiration-modal-dimensions is-doc-style">
                   {data.sections.length ? data.sections.map((section) => (
                     <article
                       key={section.id}
-                      className={section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}
+                      className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
                       onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="omnimux-inspiration-modal-fold"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setCollapsed((prev) => ({ ...prev, [section.id]: !prev[section.id] }))
-                        }}
-                      >
-                        <h4>{section.title}</h4>
-                      </Button>
-                      {collapsed[section.id] ? null : (
-                        <>
-                          {section.quote ? <blockquote>{renderPlainBreakdownText(section.quote)}</blockquote> : null}
-                          {section.analysis ? <p>{renderPlainBreakdownText(section.analysis)}</p> : null}
-                        </>
-                      )}
+                      <h4 className="omnimux-inspiration-doc-title">{section.title}</h4>
+                      {section.quote ? (
+                        <blockquote className="omnimux-inspiration-doc-quote">
+                          {formatDocQuote(section.quote)}
+                        </blockquote>
+                      ) : null}
+                      {section.analysis ? renderDocAnalysis(section.analysis) : null}
                     </article>
                   )) : dimensions.map(([key, label, value]) => value ? (
-                    <article key={key}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="omnimux-inspiration-modal-fold"
-                        onClick={() => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }))}
-                        aria-expanded={!collapsed[key]}
-                      >
-                        <h4>{label}</h4>
-                        <span className={`omnimux-inspiration-modal-chevron${collapsed[key] ? ' is-collapsed' : ''}`}>{ICON_CHEVRON}</span>
-                      </Button>
-                      {collapsed[key] ? null : <p>{renderPlainBreakdownText(value)}</p>}
+                    <article key={key} className="omnimux-inspiration-doc-section">
+                      <h4 className="omnimux-inspiration-doc-title">{label}</h4>
+                      {renderDocAnalysis(value)}
                     </article>
                   ) : null)}
                   {data.rawMarkdown ? (

@@ -312,3 +312,32 @@ describe('one-click replicate source isolation', () => {
     assert.match(section, /onReplicate=\{handleReplicate\}/)
   })
 })
+
+describe('preview modal doc style and glass removal', () => {
+  it('removes glass blur effect from modal backdrop and gives container solid background', () => {
+    const backdrop = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-backdrop')
+    assert.equal(decl(backdrop, 'backdrop-filter'), 'none')
+    const container = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-container')
+    assert.match(decl(container, 'background'), /#121212|#131313|var\(--dsw-alias-bg-module-platform/)
+  })
+
+  it('updates copy button labels to 复制 for both script and deconstruction', () => {
+    assert.equal(zh['modal.script.copy'], '复制')
+    assert.equal(zh['modal.deconstruction.copy'], '复制')
+    assert.equal(en['modal.script.copy'], 'Copy')
+    assert.equal(en['modal.deconstruction.copy'], 'Copy')
+  })
+
+  it('removes breakdown badge from deconstruction panel and renders document layout without accordion fold', () => {
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.doesNotMatch(preview, /omnimux-inspiration-status-badge/)
+    assert.doesNotMatch(preview, /omnimux-inspiration-modal-fold/)
+    assert.doesNotMatch(preview, /omnimux-inspiration-modal-chevron/)
+    assert.match(preview, /omnimux-inspiration-deconstruct-heading/)
+    assert.match(preview, /ICON_CLAPPERBOARD/)
+    assert.match(preview, /omnimux-inspiration-doc-section/)
+    assert.match(preview, /omnimux-inspiration-doc-title/)
+    assert.match(preview, /omnimux-inspiration-doc-quote/)
+    assert.match(preview, /omnimux-inspiration-doc-analysis/)
+  })
+})
