@@ -11,7 +11,7 @@
  */
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, relative } from 'node:path';
 
 const REPO_ROOT = resolve(process.cwd());
 const PLUGINS_DIR = join(REPO_ROOT, 'plugins');
@@ -75,12 +75,58 @@ function parseInventoryTools() {
   return { tools };
 }
 
+function extractCallObject(code, callIndex) {
+  const openParen = code.indexOf('(', callIndex);
+  if (openParen === -1) return null;
+  const firstBrace = code.indexOf('{', openParen);
+  if (firstBrace === -1) return null;
+
+  let depth = 0;
+  let inString = null;
+  let inComment = false;
+  const start = firstBrace;
+
+  for (let i = firstBrace; i < code.length; i++) {
+    const ch = code[i];
+    const prev = code[i - 1];
+
+    if (inComment) {
+      if (inComment === 'line' && ch === '\n') inComment = false;
+      else if (inComment === 'block' && prev === '*' && ch === '/') inComment = false;
+      continue;
+    }
+    if (!inString) {
+      if (ch === '/' && code[i + 1] === '/') { inComment = 'line'; i++; continue; }
+      if (ch === '/' && code[i + 1] === '*') { inComment = 'block'; i++; continue; }
+    }
+
+    if (inString) {
+      if (ch === inString && prev !== '\\') inString = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      inString = ch;
+      continue;
+    }
+
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        return code.slice(start, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
 function scanCodeRegisteredTools(pluginName) {
   const pluginDir = join(PLUGINS_DIR, pluginName);
   const srcDir = join(pluginDir, 'src');
-  if (!existsSync(srcDir)) return [];
+  if (!existsSync(srcDir)) return { tools: [], toolDetails: [] };
 
   const foundTools = new Set();
+  const toolDetails = [];
   
   function walk(dir) {
     const files = readdirSync(dir, { withFileTypes: true });
@@ -94,35 +140,73 @@ function scanCodeRegisteredTools(pluginName) {
         if (file.name.includes('.test.') || file.name.includes('.spec.')) continue;
 
         const code = readFileSync(fullPath, 'utf-8');
+        const relPath = relative(REPO_ROOT, fullPath).replace(/\\/g, '/');
         
-        // 匹配 ctx.tools.register({ name: 'xxx', ... })
-        const regRegex = /ctx\.tools(?:\.register|\?\.register\?\.)\s*\(\s*\{[\s\S]*?name:\s*['"`]([a-zA-Z0-9_-]+)['"`]/g;
-        let m;
-        while ((m = regRegex.exec(code)) !== null) {
-          foundTools.add(m[1]);
+        // 1. 结构化审计：提取通过 ctx.tools.register / defineTool 传入的工具配置对象
+        const callRegex = /(?:ctx\.tools(?:\.register|\?\.register\?\.)|defineTool)\s*\(/g;
+        let match;
+        while ((match = callRegex.exec(code)) !== null) {
+          const obj = extractCallObject(code, match.index);
+          if (!obj) continue;
+
+          const nameMatch = obj.match(/\bname:\s*['"`]([a-zA-Z0-9_-]+)['"`]/);
+          if (!nameMatch) continue;
+
+          const toolName = nameMatch[1];
+          foundTools.add(toolName);
+
+          const hasOutput = /\boutput\s*:/.test(obj);
+          let outputValid = true;
+          let outputError = '';
+
+          if (!hasOutput) {
+            outputValid = false;
+            outputError = '未声明 output 契约字段（DSH 要求工具必须显式声明 output { schema, render }）';
+          } else {
+            // 校验 output 内部定义或所指向的定义
+            const outputMatch = obj.match(/\boutput\s*:\s*([^,\n}]+)/);
+            const outputVal = outputMatch ? outputMatch[1].trim() : '';
+            if (outputVal.startsWith('{') && !obj.includes('render')) {
+              outputValid = false;
+              outputError = 'output 对象字面量缺失 render 函数';
+            }
+          }
+
+          toolDetails.push({
+            name: toolName,
+            file: relPath,
+            hasOutput,
+            outputValid,
+            outputError,
+          });
         }
 
-        // 匹配 defineTool({ name: 'xxx', ... })
-        const defRegex = /defineTool\s*\(\s*\{[\s\S]*?name:\s*['"`]([a-zA-Z0-9_-]+)['"`]/g;
-        while ((m = defRegex.exec(code)) !== null) {
-          foundTools.add(m[1]);
-        }
-
-        // 匹配 tool('xxx', ...) 辅助函数定义
+        // 2. 匹配 tool('xxx', ...) 辅助函数定义 (在 omnimux/src/official/mount.js 中统一声明 output: deps.jsonOut)
         const toolHelperRegex = /\btool\s*\(\s*['"`]([a-zA-Z0-9_-]+)['"`]/g;
-        while ((m = toolHelperRegex.exec(code)) !== null) {
-          if (!['test', 'it', 'describe'].includes(m[1])) {
-            foundTools.add(m[1]);
+        let thm;
+        while ((thm = toolHelperRegex.exec(code)) !== null) {
+          if (!['test', 'it', 'describe'].includes(thm[1])) {
+            const toolName = thm[1];
+            foundTools.add(toolName);
+            toolDetails.push({
+              name: toolName,
+              file: relPath,
+              hasOutput: true,
+              outputValid: true,
+              viaHelper: true,
+            });
           }
         }
 
-        // 匹配 name: 'workflow_*' | 'canvas_*' | 'clip_*' | 'plaza_*' | 'plugin_*' | 'connector_*' | 'skillhub_*'
+        // 3. 匹配通用导出名 (如 workflow 批量工具与 clip 批量工具)
         const rawToolNameRegex = /name:\s*['"`](workflow_[a-z0-9_]+|canvas_[a-z0-9_]+|clip_[a-z0-9_]+|plaza_[a-z0-9_]+|plugin_[a-z0-9_]+|connector_[a-z0-9_]+|skillhub_[a-z0-9_]+)['"`]/g;
-        while ((m = rawToolNameRegex.exec(code)) !== null) {
-          foundTools.add(m[1]);
+        let rm;
+        while ((rm = rawToolNameRegex.exec(code)) !== null) {
+          const toolName = rm[1];
+          foundTools.add(toolName);
         }
 
-        // 匹配动态模板字面量 omnimux_${kind}_submit
+        // 4. 匹配动态模板字面量 omnimux_${kind}_submit
         if (code.includes('omnimux_${kind}_submit')) {
           foundTools.add('omnimux_video_submit');
           foundTools.add('omnimux_image_submit');
@@ -133,7 +217,7 @@ function scanCodeRegisteredTools(pluginName) {
   }
 
   walk(srcDir);
-  return Array.from(foundTools);
+  return { tools: Array.from(foundTools), toolDetails };
 }
 
 // 主体审计流程
@@ -176,7 +260,7 @@ async function runAudits() {
     const pkgPath = join(pluginDir, 'package.json');
     if (!existsSync(pkgPath)) continue;
 
-    const codeTools = scanCodeRegisteredTools(plugin);
+    const { tools: codeTools, toolDetails } = scanCodeRegisteredTools(plugin);
     
     for (const t of codeTools) {
       allDiscoveredTools.set(t, plugin);
@@ -201,6 +285,23 @@ async function runAudits() {
       } else {
         log.pass(`[${plugin}] inject 契约已完整声明 'tools'`);
       }
+    }
+
+    // B. 工具 output 契约静态校验 (DSH Tool Output Contract Guard)
+    let pluginOutputErrors = 0;
+    for (const detail of toolDetails) {
+      if (!detail.hasOutput) {
+        log.fail(`[${plugin}] 工具 "${detail.name}" 致命错误: 未声明 output 契约字段！(${detail.file})`);
+        totalErrors++;
+        pluginOutputErrors++;
+      } else if (!detail.outputValid) {
+        log.fail(`[${plugin}] 工具 "${detail.name}" 致命错误: ${detail.outputError} (${detail.file})`);
+        totalErrors++;
+        pluginOutputErrors++;
+      }
+    }
+    if (pluginOutputErrors === 0 && toolDetails.length > 0) {
+      log.pass(`[${plugin}] 实装工具 (${toolDetails.length} 个) 100% 具备合法 output 契约`);
     }
 
     // D. 检查未登记工具
