@@ -95,7 +95,7 @@
           btn.className = "omnimux-sidebar-nav-entry omnimux-market-entry";
           btn.setAttribute("data-omnimux-market-entry", "");
           btn.setAttribute("data-omnimux-esc-entry", "");
-          const titleText = lookup("plaza.title") || "Skill 工坊";
+          const titleText = lookup("plaza.title") || "Skills";
           btn.setAttribute("aria-label", titleText);
           btn.title = titleText;
 
@@ -112,7 +112,7 @@
 
           btn.addEventListener("click", (e) => {
             e.preventDefault();
-            window.__omnimuxWorkbench?.open?.({ tabId: PLAZA_TAB_ID, title: lookup("plaza.title") || "Skill 工坊" });
+            window.__omnimuxWorkbench?.open?.({ tabId: PLAZA_TAB_ID, title: lookup("plaza.title") || "Skills" });
           });
 
           const syncActive = () => {
@@ -173,7 +173,7 @@
           } catch {}
           const registerPlazaTab = () => sidebar.registerTab({
             id: PLAZA_TAB_ID,
-            title: () => lookup("plaza.title") || "Skill 工坊",
+            title: () => lookup("plaza.title") || "Skills",
             icon: renderPlazaIcon,
             order: 25,
             hidden: false,

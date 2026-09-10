@@ -224,7 +224,7 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
           querySelector: (sel) => (sel.includes('textarea') ? fakeComposer : null),
           querySelectorAll: (sel) => (sel.includes('textarea') ? [fakeComposer] : []),
         },
-        lookup: () => 'Skill工坊',
+        lookup: () => 'Skills',
         api: async () => ({ ok: true }),
         plazaSessions: fakeSessions,
         plazaWorkspaces: {

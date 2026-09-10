@@ -107,7 +107,7 @@ export const Config: Schema<Config> = Schema.object({
   aggregateChannels: Schema.array(Schema.union(['custom', 'workbuddy', 'skillhub'] as const)).default(['custom', 'workbuddy', 'skillhub']).description('技能搜索默认聚合渠道'),
   workbuddySkillsMarketplace: Schema.string().default('').description('WorkBuddy 技能市场扩展目录；空则探测 ~/.workbuddy/skills-marketplace'),
   aggregateRemoteSoftFail: Schema.boolean().default(true).description('远程 SkillHub 失败时不阻断本地渠道'),
-  workshopOrigin: Schema.string().default('').description('Skill工坊只读入口的受信完整Origin；未配置拒绝请求'),
+  workshopOrigin: Schema.string().default('').description('Skills只读入口的受信完整Origin；未配置拒绝请求'),
 })
 
 export function apply(ctx: Context, config: Config): void {

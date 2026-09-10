@@ -169,15 +169,32 @@ export async function handleApi(req, res, cfg) {
             return sendJson(res, 200, { ok: true, items });
         }
         if (method === 'plugins') {
-            const result = await listPlugins(cfg, {
-                q: body.q ?? body.query ?? url.searchParams.get('q'),
-                scope: body.scope ?? url.searchParams.get('scope'),
-                category: body.category ?? url.searchParams.get('category'),
-                sort: body.sort ?? url.searchParams.get('sort'),
-                page: body.page ?? url.searchParams.get('page'),
-                pageSize: body.pageSize ?? body.limit ?? url.searchParams.get('page_size') ?? url.searchParams.get('pageSize'),
-            });
-            return sendJson(res, 200, { ok: true, ...result });
+            try {
+                const result = await listPlugins(cfg, {
+                    q: body.q ?? body.query ?? url.searchParams.get('q'),
+                    scope: body.scope ?? url.searchParams.get('scope'),
+                    category: body.category ?? url.searchParams.get('category'),
+                    sort: body.sort ?? url.searchParams.get('sort'),
+                    page: body.page ?? url.searchParams.get('page'),
+                    pageSize: body.pageSize ?? body.limit ?? url.searchParams.get('page_size') ?? url.searchParams.get('pageSize'),
+                });
+                return sendJson(res, 200, { ok: true, ...result });
+            }
+            catch (err) {
+                if (cfg.aggregateRemoteSoftFail) {
+                    return sendJson(res, 200, {
+                        ok: true,
+                        items: [],
+                        total: 0,
+                        page: 1,
+                        pageSize: 24,
+                        apiBase: cfg.apiBase,
+                        webBase: cfg.webBase,
+                        warning: err instanceof Error ? err.message : String(err),
+                    });
+                }
+                throw err;
+            }
         }
         if (method === 'pluginInstall') {
             if (!trustedRestartRequest(req))
