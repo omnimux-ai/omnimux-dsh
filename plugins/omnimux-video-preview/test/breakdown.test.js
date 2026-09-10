@@ -13,6 +13,7 @@ import {
   resolveWorkspaceDirectory,
   extractVideoBreakdown,
   saveVideoBreakdownArtifacts,
+  generateAdaptiveShotsAndStructure,
 } from '../src/breakdown.js'
 import { apply } from '../src/index.js'
 import { createTestToolContext } from '../../omnimux/src/test-support/tool-harness.js'
@@ -428,5 +429,43 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(result.success, true)
     assert.ok(existsSync(result.data_path))
     rmSync(result.data_path, { force: true })
+  })
+
+  it('generates 4 shots for short videos (<= 60s)', () => {
+    const { shots, structure, pipeline } = generateAdaptiveShotsAndStructure(15, 'Short promo')
+    assert.equal(shots.length, 4)
+    assert.equal(structure.length, 4)
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(shots[0].stage, 'Hook')
+    assert.equal(shots[shots.length - 1].end_seconds, 15)
+  })
+
+  it('generates 6 shots for mid-length videos (60s - 180s)', () => {
+    const { shots, structure, pipeline } = generateAdaptiveShotsAndStructure(120, 'Tutorial video')
+    assert.equal(shots.length, 6)
+    assert.equal(structure.length, 4)
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(shots[0].stage, 'Hook')
+    assert.equal(shots[shots.length - 1].end_seconds, 120)
+  })
+
+  it('generates 12-16 rich dramatic beat shots for long videos (> 180s, e.g. 20-min short drama)', () => {
+    const dur20Min = 1241 // ~20.6 minutes
+    const caption = '#SentAsASacrificeSheBecameTheQueen #MoboReels search for 254GLZ'
+    const { shots, structure, pipeline } = generateAdaptiveShotsAndStructure(dur20Min, caption, 'tiktok')
+
+    // Must have 10-16 shots rather than 4 static shots
+    assert.ok(shots.length >= 10 && shots.length <= 16, `expected 10-16 shots, got ${shots.length}`)
+    assert.ok(structure.length >= 6)
+    assert.ok(pipeline.includes('Inciting Incident'))
+    assert.ok(pipeline.includes('Plot Twist'))
+    assert.ok(pipeline.includes('Cliffhanger'))
+
+    // Pacing must be dramatic beats (around 60s-100s per shot), never 4-6 minutes per shot
+    const maxShotDuration = Math.max(...shots.map((s) => s.end_seconds - s.start_seconds))
+    assert.ok(maxShotDuration <= 120, `max shot duration should be <= 120s for dramatic beats, got ${maxShotDuration}s`)
+    assert.equal(shots[0].start_seconds, 0)
+    assert.equal(shots[shots.length - 1].end_seconds, dur20Min)
+    assert.match(shots[0].title, /黄金开局/)
   })
 })
