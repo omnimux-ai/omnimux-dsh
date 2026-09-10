@@ -10,10 +10,10 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Trash2, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
-import { resolveNodeKind } from '../../../types/materialNode';
+import { DEFAULT_MATERIAL_TOOL, resolveNodeKind } from '../../../types/materialNode';
 import { readCurrentText } from '../../../../shared/graph/nodeInputSource';
 import CanvasNodeHandle, { type CanvasNodeHandleSelectMeta } from '../CanvasNodeHandle';
 import GenerationStateContainer from '../GenerationStateContainer';
@@ -40,8 +40,12 @@ import {
   canRunSpeechToText,
   canRunVideoDeconstruct,
   canRunVideoStoryboard,
+  EMPTY_AUDIO_PILL_ACTION_ID,
+  EMPTY_IMAGE_PILL_ACTION_ID,
+  EMPTY_VIDEO_PILL_ACTION_ID,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
+  isEmptyMediaGenerateNode,
   pillMaxWidthForNode,
   resolveSpeechToTextAudioPath,
   resolveVideoDeconstructPath,
@@ -208,6 +212,13 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const generationStatus = isOffline
     ? null
     : mapNodeToGenerationStatus(executionStatus, status, hasResult);
+  const isEmptyMediaNode = isEmptyMediaGenerateNode({
+    materialType,
+    nodeKind: kind,
+    previewUrl,
+    mediaUrl,
+    generationStatus,
+  });
   const isEmptyImageNode = isEmptyImageGenerateNode({
     materialType,
     nodeKind: kind,
@@ -283,8 +294,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     [applyCanvasInputMutation, id, t],
   );
 
-  // 拖拽文件进入：导入素材节点与空状态生图节点均接受本地文件
-  const canAcceptDrop = kind === 'import' || isEmptyImageNode;
+  // 拖拽文件进入：导入素材节点与空状态生图节点均接受本地文件（兼容多模态媒体空态）
+  const canAcceptDrop = kind === 'import' || isEmptyImageNode || isEmptyMediaNode;
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     if (!canAcceptDrop) return;
@@ -433,7 +444,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     hovered: isHovered,
     selected,
     isMultiSelected,
-    allowEmpty: isEmptyImageNode || canExtractVideo,
+    allowEmpty: isEmptyImageNode || canExtractVideo || isEmptyMediaNode,
   });
 
   const { addToConversation } = useAddToConversation();
@@ -746,6 +757,24 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     if (payload) addToConversation(payload);
   }, [addToConversation, data, id, label, materialType, previewUrl]);
 
+  // 清空已导入的媒体素材，恢复为空态生成节点
+  const handleClearImportedMedia = useCallback(() => {
+    updateNodeData({
+      nodeKind: 'generate',
+      selectedTool: DEFAULT_MATERIAL_TOOL[materialType],
+      mediaUrl: undefined,
+      relativePath: undefined,
+      assetId: undefined,
+      realPath: undefined,
+      mediaAssets: undefined,
+      previewUrl: undefined,
+      status: 'empty',
+      isMissing: undefined,
+      errorMessage: undefined,
+      executionError: undefined,
+    });
+  }, [materialType, updateNodeData]);
+
   const pillActions: FloatingPillAction[] = useMemo(() => {
     if (isEmptyImageNode) {
       return [
@@ -763,6 +792,28 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       ];
     }
 
+    if (isEmptyMediaNode) {
+      const actionKey = materialType === 'video'
+        ? EMPTY_VIDEO_PILL_ACTION_ID
+        : EMPTY_AUDIO_PILL_ACTION_ID;
+      const labelText = materialType === 'video'
+        ? t('pill.importVideo')
+        : t('pill.importAudio');
+      return [
+        {
+          key: actionKey,
+          label: labelText,
+          icon: Upload,
+          section: 'primary',
+          title: labelText,
+          onClick: (event) => {
+            event.stopPropagation();
+            void resourcePicker.fillImportNode();
+          },
+        },
+      ];
+    }
+
     const chat: FloatingPillAction = {
       key: 'add-to-conversation',
       icon: MessageSquarePlus,
@@ -773,6 +824,34 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         handleAddToConversation();
       },
     };
+
+    if (kind === 'import' && materialType !== 'text') {
+      return [
+        {
+          key: 'replace-media',
+          label: t('pill.replace'),
+          icon: RefreshCw,
+          section: 'primary',
+          title: t('pill.replace'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void resourcePicker.fillImportNode();
+          },
+        },
+        {
+          key: 'clear-media',
+          label: t('pill.clear'),
+          icon: Trash2,
+          section: 'secondary',
+          title: t('pill.clear'),
+          onClick: (event) => {
+            event.stopPropagation();
+            handleClearImportedMedia();
+          },
+        },
+        chat,
+      ];
+    }
 
     if (materialType === 'text') {
       if (canExtractVideo) {
@@ -903,6 +982,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     copied,
     executionStatus,
     handleAddToConversation,
+    handleClearImportedMedia,
     handleCopyText,
     handleDeconstructVideo,
     handleExtractVideo,
@@ -910,7 +990,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleSpeechToText,
     handleSplitText,
     handleStoryboardVideo,
-    isEmptyImageNode,
+    isEmptyMediaNode,
     isOffline,
     kind,
     materialType,
@@ -1184,7 +1264,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     materialType={materialType}
                     nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
                     onApplyPreset={handleApplyPreset}
-                    onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
+                    onImport={kind === 'import' || isEmptyMediaNode ? () => { void resourcePicker.fillImportNode(); } : undefined}
                   />
                 )}
               </GenerationStateContainer>
@@ -1195,7 +1275,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 materialType={materialType}
                 nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
                 onApplyPreset={handleApplyPreset}
-                onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
+                onImport={kind === 'import' || isEmptyMediaNode ? () => { void resourcePicker.fillImportNode(); } : undefined}
               />
             </div>
           ))}

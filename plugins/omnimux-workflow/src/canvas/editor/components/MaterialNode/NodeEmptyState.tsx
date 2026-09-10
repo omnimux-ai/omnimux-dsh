@@ -121,7 +121,24 @@ const NodeEmptyState: React.FC<NodeEmptyStateProps> = ({
 
   if (materialType === 'image') {
     return (
-      <div className="wf-node-empty wf-node-empty--image">
+      <div
+        className={`wf-node-empty wf-node-empty--image ${onImport ? 'wf-node-empty--clickable nodrag' : ''}`}
+        role={onImport ? 'button' : undefined}
+        tabIndex={onImport ? 0 : undefined}
+        onClick={(e) => {
+          if (!onImport) return;
+          e.stopPropagation();
+          onImport();
+        }}
+        onKeyDown={(e) => {
+          if (!onImport) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onImport();
+          }
+        }}
+      >
         <div className="wf-node-empty__icon-box">
           <ImageIcon size={44} strokeWidth={1.5} className="wf-node-empty__icon" />
         </div>
@@ -131,7 +148,24 @@ const NodeEmptyState: React.FC<NodeEmptyStateProps> = ({
 
   if (materialType === 'video') {
     return (
-      <div className="wf-node-empty wf-node-empty--video">
+      <div
+        className={`wf-node-empty wf-node-empty--video ${onImport ? 'wf-node-empty--clickable nodrag' : ''}`}
+        role={onImport ? 'button' : undefined}
+        tabIndex={onImport ? 0 : undefined}
+        onClick={(e) => {
+          if (!onImport) return;
+          e.stopPropagation();
+          onImport();
+        }}
+        onKeyDown={(e) => {
+          if (!onImport) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onImport();
+          }
+        }}
+      >
         <div className="wf-node-empty__icon-box">
           <Play size={44} strokeWidth={1.5} className="wf-node-empty__icon" />
         </div>
@@ -141,7 +175,24 @@ const NodeEmptyState: React.FC<NodeEmptyStateProps> = ({
 
   if (materialType === 'audio') {
     return (
-      <div className="wf-node-empty wf-node-empty--audio">
+      <div
+        className={`wf-node-empty wf-node-empty--audio ${onImport ? 'wf-node-empty--clickable nodrag' : ''}`}
+        role={onImport ? 'button' : undefined}
+        tabIndex={onImport ? 0 : undefined}
+        onClick={(e) => {
+          if (!onImport) return;
+          e.stopPropagation();
+          onImport();
+        }}
+        onKeyDown={(e) => {
+          if (!onImport) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onImport();
+          }
+        }}
+      >
         <div className="wf-node-empty__icon-box">
           <Music size={44} strokeWidth={1.5} className="wf-node-empty__icon" />
         </div>

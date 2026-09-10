@@ -78,8 +78,8 @@ const zh = {
   // 顶部胶囊操作栏（pill.*）
   'pill.import': '导入素材',
   'pill.importImage': '导入图片',
-  'pill.importVideo': '导入素材',
-  'pill.importAudio': '导入素材',
+  'pill.importVideo': '导入视频',
+  'pill.importAudio': '导入音频',
   'pill.textEdit': '文本编辑',
   'pill.copy': '复制',
   'pill.structureSplit': '结构化拆分',
@@ -88,6 +88,7 @@ const zh = {
   'pill.edit': '编辑',
   'pill.split': '拆分',
   'pill.replace': '替换',
+  'pill.clear': '清空',
   'pill.fullscreen': '全屏',
   'pill.download': '下载',
   'pill.more': '更多',
