@@ -74,7 +74,8 @@ async function cdpEvaluate(expression, returnByValue = true) {
 }
 
 async function main() {
-  console.log(`[CDP QA] Connecting Dev App renderer via ${CDP_BASE} (host port ${TARGET_PORT})`);
+  const stage = process.argv[2] || 'all';
+  console.log(`[CDP QA] Connecting Dev App renderer via ${CDP_BASE} (host port ${TARGET_PORT}, stage: ${stage})`);
 
   // 1) Probe the panel; if absent, drive the minimal canvas path (创作 → 画布 → 选中节点).
   let state = await cdpEvaluate(`(() => {
@@ -90,6 +91,34 @@ async function main() {
     await new Promise((r) => setTimeout(r, 900));
     await cdpEvaluate(`(() => { const n=[...document.querySelectorAll('.react-flow__node-material')].find(x=>/视频|图片|文本/.test(x.innerText||'') && !/失败|offline/.test(x.innerText||''))||document.querySelector('.react-flow__node-material'); if(n){n.click(); return true;} return false; })()`);
     await new Promise((r) => setTimeout(r, 900));
+  }
+
+  // Probe video node mode selection if present
+  let videoModeReport = null;
+  try {
+    const videoCheck = await cdpEvaluate(`(() => {
+      const videoNode = [...document.querySelectorAll('.react-flow__node-material')].find(n => n.innerText.includes('视频') || n.innerText.includes('Seedance'));
+      if (!videoNode) return null;
+      videoNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const tb = document.querySelector('.wf-video-trigger-bar');
+      if (!tb) return { hasVideoNode: true, hasTriggerBar: false };
+      tb.click();
+      const popover = document.querySelector('.wf-video-param-popover');
+      const modeSec = popover ? popover.querySelector('[data-testid="wf-operation-mode-section"]') : null;
+      const modes = modeSec ? Array.from(modeSec.querySelectorAll('button')).map(b => b.innerText.trim()) : [];
+      return {
+        hasVideoNode: true,
+        hasTriggerBar: true,
+        showMode: tb.dataset.showMode === 'true',
+        triggerBarText: tb.innerText.trim(),
+        popoverOpen: Boolean(popover),
+        hasModeSection: Boolean(modeSec),
+        modes
+      };
+    })()`);
+    videoModeReport = videoCheck;
+  } catch (e) {
+    // optional stage probe
   }
 
   const measure = await cdpEvaluate(`(() => {
@@ -118,16 +147,20 @@ async function main() {
     };
   })()`);
 
-  const ok =
+  let ok =
     measure?.present &&
     measure.paddingTop === ASSERT_PADDING_TOP &&
     !measure.matchingPaddingRules?.some((r) => r.important === 'important' && r.paddingTop !== ASSERT_PADDING_TOP);
+
+  if (stage === 'video-mode' && videoModeReport?.hasVideoNode) {
+    ok = Boolean(videoModeReport.hasModeSection && videoModeReport.modes.length >= 2);
+  }
 
   const report = {
     timestamp: new Date().toISOString(),
     cdpPort: Number(CDP_PORT),
     targetPort: Number(TARGET_PORT),
-    stage: process.argv[2] || 'all',
+    stage,
     url: measure?.url ?? null,
     selector: TARGET_SELECTOR,
     expected: { paddingTop: ASSERT_PADDING_TOP },
@@ -138,6 +171,7 @@ async function main() {
       matchingPaddingRules: measure?.matchingPaddingRules ?? [],
       addTopRelCard: measure?.addTopRelCard ?? null,
     },
+    videoMode: videoModeReport,
     result: ok ? 'PASS' : 'FAIL',
   };
 

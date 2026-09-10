@@ -17,10 +17,16 @@ Workflow 在 [generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/gen
 | --- | --- | --- | --- |
 | 文本 | Claude Opus 4.6、Gemini 3.8 Flash、DeepSeek V4 Flash、GPT 5.5 | Gemini 3.8 Flash | 始终隐藏，按输入解析 |
 | 图片 | GPT Image 2、Grok Imagine Image | GPT Image 2 | 所选模型具有多种可用创作方式时显示 |
-| 视频 | 当前七款，顺序见策略源码 | Seedance 2.0 Fast | 保留生成方式选择 |
+| 视频 | 当前七款，顺序见策略源码 | Seedance 2.0 Fast | **保留生成方式选择（一等公民可见性，严禁因连线收缩隐藏）** |
 | 音频 | Suno、GPT 4o mini TTS | Suno | 仅多任务模型显示，不固定语音／音乐页签 |
 
 范围不代表已经接通。可用模型取产品范围与 Hub 已就绪目录的交集，再由共享兼容性内核按当前输入筛选。策略投影同时覆盖目录的模型列表、operation 和默认项；UI、Agent、连线和提交使用该投影。无 Hub 的测试桩目录仅用于离线测试，不证明实际模型能力。
+
+## 视频节点生成方式不可隐与连线解耦铁律（防退化长效机制）
+
+1. **一等公民可见性**：当视频模型具备多种生成模式（如文生视频、首帧、首尾帧、全能参考）时，生成方式选择器（`OperationSegment`）在参数浮层及底栏 `VideoTriggerBar` 中**必须始终保持可见并可自由切换**（`showModeUi: true`）。
+2. **连线与槽位严格解耦**：上游连线连接普通 `in` / `input` 句柄时，连线上的运行时 `slotBinding` 仅为当前模式下的瞬时装填缓存，**绝不得被 `readExplicitTargetSlot` 读取为硬性目标槽位约束**；严禁因连线带有历史槽名（如 `reference_images`）而将首帧、首尾帧误判为 `role_conflict` 从而将有效模式误杀为 1 种并自动隐藏模式选择器。
+3. **双场景覆盖验证（强制规范）**：任何涉及生成节点、配置面板或兼容性仲裁内核的改动，**严禁仅在「空白单节点」做单向验证**，必须同时覆盖**「无上游素材态」**与**「已连入历史素材态」**双场景，防止白板假阳性欺骗。
 
 ## 选择与历史数据
 
