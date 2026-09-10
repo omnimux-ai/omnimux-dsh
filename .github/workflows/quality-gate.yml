@@ -135,7 +135,7 @@ jobs:
         run: |
           node --test scripts/git-wt.test.mjs scripts/test-dx-pipeline.mjs scripts/worktree-delivery.test.mjs
           node --test scripts/impact-matrix.test.mjs scripts/authorization.test.mjs scripts/qa-label.test.mjs scripts/ci-verdict.test.mjs scripts/auto-pipeline.test.mjs scripts/auto-pipeline-qa.test.mjs scripts/check-tracked-artifacts.test.mjs scripts/live-runtime-proof.test.mjs scripts/ego-browser-page.test.mjs scripts/live-page-preparation.test.mjs scripts/ego-live-qa.test.mjs scripts/repair-inspiration-covers.test.mjs scripts/import-gxgen-inspirations.test.mjs
-          node --test scripts/sync-bypass.test.mjs scripts/resolve-omnimux-profile.test.mjs scripts/sync-plugin-scope.test.mjs scripts/sync-agent-presets-targets.test.mjs scripts/verify-cross-plugin-model-alignment.test.mjs
+          node --test scripts/sync-bypass.test.mjs scripts/resolve-omnimux-profile.test.mjs scripts/sync-plugin-scope.test.mjs scripts/sync-agent-presets-targets.test.mjs scripts/verify-cross-plugin-model-alignment.test.mjs scripts/test-agent-tools.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
         run: |
