@@ -393,197 +393,7 @@ export const WORKFLOW_CSS = `
   width: 398px;
 }
 .omx-apptab-label-row {
-
-
-/* ==================== 项目工程中心 / 文件夹视图 / 创作页 / 资产浏览器 ==================== */
-
-.omnimux-project-breadcrumb-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px 10px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-  min-height: 52px;
-  box-sizing: border-box;
-}
-
-.omnimux-project-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.omnimux-project-crumb-link {
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-  font-weight: 500;
-  transition: color 0.15s ease;
-}
-
-.omnimux-project-crumb-link:hover {
-  color: var(--dsw-alias-label-primary);
-}
-
-.omnimux-project-crumb-sep {
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 13px;
-}
-
-.omnimux-project-crumb-current {
-  color: var(--dsw-alias-label-primary);
-  font-weight: 600;
-}
-
-.omnimux-project-detail-tabs-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-
-.omnimux-project-folder-card {
-  position: relative;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  min-height: 180px;
-}
-
-.omnimux-project-folder-card:hover {
-  border-color: var(--dsw-alias-border-l3);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px var(--dsw-alias-bg-mask-1);
-}
-
-.omnimux-project-folder-cover {
-  position: relative;
-  height: 110px;
-  background: var(--dsw-alias-bg-layer-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-
-.omnimux-folder-tab-shape {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  right: 12px;
-  bottom: 0;
-  background: var(--dsw-alias-bg-base);
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-bottom: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.omnimux-folder-waveform-svg {
-  width: 80%;
-  height: 36px;
-  opacity: 0.85;
-}
-
-.omnimux-workflow-card-actions--visible {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.omnimux-project-folder-info {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--dsw-alias-bg-base);
-}
-
-.omnimux-project-folder-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.omnimux-project-folder-meta {
-  font-size: 12px;
-  color: var(--dsw-alias-label-tertiary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.omnimux-pages-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 20px;
-}
-
-.omnimux-page-card {
-  position: relative;
-  background: var(--dsw-alias-bg-base);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  height: 230px;
-}
-
-.omnimux-page-card:hover {
-  border-color: var(--dsw-alias-border-l3);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px var(--dsw-alias-bg-mask-1);
-}
-
-.omnimux-page-card-cover {
-  flex: 1;
-  min-height: 0;
-  background: var(--dsw-alias-bg-layer-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-  position: relative;
-  overflow: hidden;
-}
-
-.omnimux-page-card-info {
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--dsw-alias-bg-base);
-}
-
-.omnimux-page-card-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.omnimux-page-card-meta {
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);  display: flex;
   align-items: center;
   justify-content: space-between;
 }
@@ -769,120 +579,7 @@ export const WORKFLOW_CSS = `
   justify-content: space-between;
 }
 .omx-apptab-task-meta {
-
-
-.omnimux-assets-action-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 16px 20px;
-}
-
-.omnimux-assets-action-card {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.omnimux-assets-action-card:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  border-color: var(--dsw-alias-border-l2);
-}
-
-.omnimux-assets-card-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-base);
-  border: 1px solid var(--dsw-alias-border-l1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-primary);
-  flex-shrink: 0;
-}
-
-.omnimux-assets-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.omnimux-assets-card-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-primary);
-}
-
-.omnimux-assets-card-subtitle {
-  font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.omnimux-assets-browser {
-  padding: 0 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.omnimux-assets-filter-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-}
-
-.omnimux-assets-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.omnimux-assets-table th {
-  text-align: left;
-  padding: 8px 12px;
-  color: var(--dsw-alias-label-tertiary);
-  font-weight: 400;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-
-.omnimux-assets-table td {
-  padding: 10px 12px;
-  color: var(--dsw-alias-label-primary);
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-  vertical-align: middle;
-}
-
-.omnimux-assets-table tr:hover td {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.omnimux-file-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.omnimux-file-icon-folder {
-  color: var(--dsw-alias-brand-primary, #8b5cf6);
-  flex-shrink: 0;
-}
-
-.omnimux-file-icon-media {
-  color: var(--dsw-alias-label-secondary);
-  flex-shrink: 0;
-}
-
-.omnimux-assets-search-cluster {  display: flex;
   align-items: center;
   gap: 8px;
 }
@@ -999,7 +696,408 @@ export const WORKFLOW_CSS = `
   background: var(--dsw-alias-bg-surface, var(--dsw-alias-bg-elevated));
   display: flex;
   justify-content: center;
+}
 
+/* ==================== 项目工程中心 / 文件夹视图 / 创作页 / 资产浏览器 ==================== */
+
+.omnimux-project-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  box-sizing: border-box;
+  min-height: 52px;
+}
+
+.omnimux-project-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.omnimux-project-crumb-link {
+  color: var(--dsw-alias-label-secondary, #8e8e93);
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.omnimux-project-crumb-link:hover {
+  color: var(--dsw-alias-label-primary, #ffffff);
+}
+
+.omnimux-project-crumb-sep {
+  color: var(--dsw-alias-label-tertiary, #636366);
+  font-size: 14px;
+  user-select: none;
+}
+
+.omnimux-project-crumb-current {
+  color: var(--dsw-alias-label-primary, #ffffff);
+  font-weight: 600;
+}
+
+.omnimux-project-detail-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.omnimux-tab-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.omnimux-tab-info-icon {
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary, #636366);
+  opacity: 0.8;
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+.omnimux-create-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  margin-bottom: 6px;
+  background: var(--dsw-alias-interactive-bg-active, #e5e5ea);
+  color: var(--dsw-alias-label-inverse, #000000);
+  border: none;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+.omnimux-create-page-btn:hover {
+  background: var(--dsw-alias-interactive-primary, #ffffff);
+}
+
+.omnimux-create-page-btn:active {
+  transform: scale(0.97);
+}
+
+.omnimux-create-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.omnimux-pages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 260px));
+  gap: 24px;
+  padding: 24px 28px;
+}
+
+.omnimux-page-card {
+  position: relative;
+  background: var(--dsw-alias-bg-layer-1, #18181b);
+  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  padding: 10px 10px 14px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.omnimux-page-card:hover {
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.35));
+}
+
+.omnimux-page-card--active {
+  border-color: var(--dsw-alias-brand-primary, #6366f1);
+}
+
+.omnimux-page-card-cover {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2, #232326);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.omnimux-page-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 10px;
+}
+
+.omnimux-page-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--dsw-alias-bg-layer-2, #222226) 0%, var(--dsw-alias-bg-layer-1, #1a1a1d) 100%);
+  color: var(--dsw-alias-label-tertiary, #636366);
+}
+
+.omnimux-page-cover-icon {
+  width: 38px;
+  height: 38px;
+  opacity: 0.65;
+}
+
+.omnimux-page-card-info {
+  padding: 12px 4px 2px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.omnimux-page-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 20px;
+}
+
+.omnimux-page-card-meta {
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary, #8e8e93);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 18px;
+  min-height: 24px;
+}
+
+.omnimux-page-card-date {
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary, #8e8e93);
+}
+
+/* 顶层文件夹卡片 */
+.omnimux-project-folder-card {
+  position: relative;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+}
+
+.omnimux-project-folder-card:hover {
+  border-color: var(--dsw-alias-border-l3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px var(--dsw-alias-bg-mask-1);
+}
+
+.omnimux-project-folder-cover {
+  position: relative;
+  height: 110px;
+  background: var(--dsw-alias-bg-layer-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.omnimux-folder-tab-shape {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  background: var(--dsw-alias-bg-base);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.omnimux-folder-waveform-svg {
+  width: 80%;
+  height: 36px;
+  opacity: 0.85;
+}
+
+.omnimux-workflow-card-actions--visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.omnimux-project-folder-info {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--dsw-alias-bg-base);
+}
+
+.omnimux-project-folder-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.omnimux-project-folder-meta {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 项目资产浏览器 */
+.omnimux-assets-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.omnimux-assets-action-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.omnimux-assets-action-card:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l2);
+}
+
+.omnimux-assets-card-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-base);
+  border: 1px solid var(--dsw-alias-border-l1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-primary);
+  flex-shrink: 0;
+}
+
+.omnimux-assets-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.omnimux-assets-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.omnimux-assets-card-subtitle {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omnimux-assets-browser {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.omnimux-assets-filter-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.omnimux-assets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.omnimux-assets-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-weight: 400;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.omnimux-assets-table td {
+  padding: 10px 12px;
+  color: var(--dsw-alias-label-primary);
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  vertical-align: middle;
+}
+
+.omnimux-assets-table tr:hover td {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.omnimux-file-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.omnimux-file-icon-folder {
+  color: var(--dsw-alias-brand-primary, #8b5cf6);
+  flex-shrink: 0;
+}
+
+.omnimux-file-icon-media {
+  color: var(--dsw-alias-label-secondary);
+  flex-shrink: 0;
+}
+
+.omnimux-assets-search-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .omnimux-col-name {
   width: 55%;
@@ -1029,7 +1127,8 @@ export const WORKFLOW_CSS = `
 .omnimux-assets-empty-cell {
   text-align: center;
   padding: 32px 0;
-  color: var(--dsw-alias-label-tertiary);}
+  color: var(--dsw-alias-label-tertiary);
+}
 `
 
 export function injectWorkflowStyles() {

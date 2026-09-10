@@ -19,8 +19,8 @@ describe('ProjectLibraryPage Architectural Hierarchy', () => {
   });
 
   it('provides two tabs: 创作页 and 项目资产 in project detail', () => {
-    assert.match(pageSource, /创作页 \(\$\{currentProjectPages\.length\}\)/);
-    assert.match(pageSource, /项目资产 \(\$\{currentAssetsCount\}\)/);
+    assert.match(pageSource, /创作页/);
+    assert.match(pageSource, /项目资产/);
     assert.match(pageSource, /<ProjectPagesTab/);
     assert.match(pageSource, /<ProjectAssetsTab/);
   });
