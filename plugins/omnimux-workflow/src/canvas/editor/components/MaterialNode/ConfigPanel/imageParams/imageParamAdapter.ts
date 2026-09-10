@@ -111,15 +111,15 @@ export function resolveEffectiveImageParams(
     schema.aspectRatio?.defaultValue ?? DEFAULT_IMAGE_ASPECT_RATIO,
   ) ?? DEFAULT_IMAGE_ASPECT_RATIO;
 
-  // 无 resolution.options → undefined：摘要与浮层都不渲染清晰度槽
+  // resolution: 当存在 resolution.options 时解析
   const resolutionOptions = schema.resolution?.options ?? [];
   const resolution = resolutionOptions.length > 0
     ? resolveOptionValue(params?.resolution, resolutionOptions, schema.resolution?.defaultValue)
     : undefined;
 
-  // quality 仅当没有 resolution.options 时占据清晰度槽（避免 1K 与 quality 双排重复）
+  // quality: 当存在 quality.options 时解析（独立质量槽支持）
   const qualityOptions = schema.quality?.options ?? [];
-  const quality = resolution === undefined && qualityOptions.length > 0
+  const quality = qualityOptions.length > 0
     ? resolveOptionValue(params?.quality, qualityOptions, schema.quality?.defaultValue)
     : undefined;
 

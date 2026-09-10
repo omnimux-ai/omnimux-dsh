@@ -103,14 +103,16 @@ export function ImageParamPopover({
               ariaLabel="清晰度"
             />
           </section>
-        ) : qualityOptions.length > 0 ? (
-          <section className="wf-cfg-popover__section" data-testid="wf-image-clarity-section">
-            <h4 className="wf-cfg-popover__section-title">清晰度</h4>
+        ) : null}
+
+        {qualityOptions.length > 0 ? (
+          <section className="wf-cfg-popover__section" data-testid="wf-image-quality-section">
+            <h4 className="wf-cfg-popover__section-title">质量</h4>
             <CfgSegment
               options={qualityOptions.map((opt) => ({ value: opt.value, label: opt.label }))}
               value={params.quality}
               onChange={(v) => writeParam('quality', v)}
-              ariaLabel="清晰度"
+              ariaLabel="质量"
             />
           </section>
         ) : null}

@@ -48,12 +48,15 @@ test('ImageParamPopover 消费 cfg 控件族，写路径先 assertImageParamWrit
   assert.match(popoverSrc, /writeParam\('operation', operationId\)/);
   assert.match(popoverSrc, /writeParam\('aspectRatio', v\)/);
   assert.match(popoverSrc, /writeParam\('resolution', v\)/);
+  assert.match(popoverSrc, /writeParam\('quality', v\)/);
   // 分区标题（硬编码中文，与视频一致）
   assert.match(popoverSrc, /生成方式/);
   assert.match(popoverSrc, /比例/);
   assert.match(popoverSrc, /清晰度/);
-  // 清晰度仅在 resolution.options 存在时渲染（quality 补位）
+  assert.match(popoverSrc, /质量/);
+  // 清晰度在 resolution.options 存在时渲染，质量在 quality.options 存在时渲染
   assert.match(popoverSrc, /resolutionOptions\.length > 0/);
+  assert.match(popoverSrc, /qualityOptions\.length > 0/);
   // 无幽灵 Select / 原生 select / JS 主题分支
   assert.doesNotMatch(popoverSrc, /<select/);
   assert.doesNotMatch(popoverSrc, /isDark|theme\s*===|matchMedia/);
