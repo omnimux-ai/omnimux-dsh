@@ -128,7 +128,7 @@ test('cordis preset exists and includes native cordis capabilities and skills', 
 
 test('preset.yml metadata matches requirements for all four shipped presets', () => {
   const tiktokPreset = read('presets/tiktok-agent/preset.yml')
-  ok(tiktokPreset.includes('name: TikTokAgent'))
+  ok(tiktokPreset.includes('name: 全能社媒操盘手'))
   ok(tiktokPreset.includes('order: 1'))
 
   const standardPreset = read('presets/standard/preset.yml')
@@ -152,9 +152,9 @@ test('sync-agent-presets.sh maintains all four presets in KEEP array', () => {
   ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis') && syncScript.includes('content-creation-team)'))
 })
 
-test('tiktok-agent persona positions as TikTokAgent lead and forbids forced spawn', () => {
+test('tiktok-agent persona positions as universal social lead and forbids forced spawn', () => {
   const text = read('presets/tiktok-agent/agent.cordis.yml')
-  ok(text.includes('TikTokAgent'))
+  ok(text.includes('全能社媒操盘手'))
   ok(text.includes('不强行委派') || text.includes('禁止为了「显得专业」而 spawn'))
   ok(text.includes('不要尝试切换会话 preset'))
 })
