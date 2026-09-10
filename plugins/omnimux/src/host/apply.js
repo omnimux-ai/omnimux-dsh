@@ -3,6 +3,7 @@ import { registerHubEventStream } from '../events/stream.js'
 import { createWorkbenchMailbox } from '../workbench/mailbox.js'
 import { registerWorkbenchHttpRoutes } from '../workbench/http-routes.js'
 import { mountWorkbenchTools } from '../workbench/tools.js'
+import { mountWorkbenchContextInjector } from '../workbench/context-injector.js'
 import { executeOmnimuxAudio } from '../media/audio.js'
 import { executeOmnimuxImage } from '../media/image.js'
 import { executeOmnimuxVideo } from '../media/video.js'
@@ -195,6 +196,7 @@ export function apply(ctx, config = {}) {
     },
     jsonOut,
   })
+  mountWorkbenchContextInjector(ctx, { mailbox })
   if (typeof ctx.provide === 'function') {
     ctx.provide('modelCatalog', { list: listCatalog })
   }

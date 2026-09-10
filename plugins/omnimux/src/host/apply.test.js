@@ -4,7 +4,7 @@ import { apply, inject } from '../index.js'
 
 describe('hub apply composition', () => {
   it('declares every synchronously-read host service', () => {
-    assert.deepEqual(inject, ['tools', 'systemPrompt'])
+    assert.deepEqual(inject, ['tools', 'systemPrompt', 'agents'])
   })
 
   it('registers attachment entry commands only when the optional commands service is injected', () => {

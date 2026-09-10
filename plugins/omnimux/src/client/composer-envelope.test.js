@@ -29,7 +29,7 @@ describe('Composer Envelope', () => {
     assert.equal(getComposerText(fakeDiv), 'lexical input')
   })
 
-  it('attachComposerEnvelope prefixes compact block on contenteditable', () => {
+  it('attachComposerEnvelope does not tamper with contenteditable user text', () => {
     const fakeDiv = {
       isContentEditable: true,
       innerText: '帮我生一张图',
@@ -46,13 +46,7 @@ describe('Composer Envelope', () => {
     const formatBlock = () => '<ui_context schema="1">' + String.fromCharCode(10) + 'tab: omnimux-assets:library' + String.fromCharCode(10) + '</ui_context>'
 
     const attached = attachComposerEnvelope(fakeDiv, getUiContext, formatBlock)
-    assert.equal(attached, true)
-    assert.ok(fakeDiv.textContent.startsWith('<ui_context schema="1">'))
-    assert.ok(fakeDiv.textContent.includes('帮我生一张图'))
-
-    // Second call does not duplicate
-    fakeDiv.innerText = fakeDiv.textContent
-    const second = attachComposerEnvelope(fakeDiv, getUiContext, formatBlock)
-    assert.equal(second, false)
+    assert.equal(attached, false)
+    assert.equal(fakeDiv.textContent, '帮我生一张图')
   })
 })

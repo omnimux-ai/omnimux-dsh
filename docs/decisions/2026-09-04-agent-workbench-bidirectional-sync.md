@@ -106,3 +106,15 @@ PRD（许清楚，`docs/specs/2026-09-04-agent-workbench-bidirectional-sync-prd.
 4. Hub 注册 `workbench:viewport` systemPrompt；`workflow:ops` 明确「有当前 workspace 时不得 list/追问」。
 5. Hub 提供只读 `workbenchMailbox` seam（`getActiveView`），供垂直工具默认寻址；垂直包不得 import hub。
 6. 节点级 selection 仍属 P2；本 amendment 只提升 **workspace 寻址**。
+
+## Amendment · 2026-09-10 — 废除 Composer 前缀注入，迁移至 DSH 原生运行时上下文注入（Issue #1017）
+
+### 背景与问题
+原方案中认知面（G1）采用客户端 Composer 拦截并前缀写入 `<ui_context>` 文本块，依赖前端 CSS 隐藏。在 DSH 渲染流中，富文本渲染和转义导致 CSS 隐藏失效，底层 XML 协议块泄露在用户聊天气泡内；同时篡改了用户消息原始草稿。
+
+### 修订决策
+1. **废除前端文本篡改**：彻底移除 `composer-envelope.js` 与 `AttachmentSubmitBridge.jsx` 对用户草稿的 `<ui_context>` 前缀拼接。用户输入在客户端保持 100% 纯净。
+2. **迁移至 DSH 原生 Context Injection**：Hub 在 Host 侧挂载 `agent/pre-step` 监听器（`mountWorkbenchContextInjector`）。在每个 Turn 的第一步（`step === 1`），且面板处于打开态时，自动读取 Mailbox 视口快照，并注入规范的 DSH 原生上下文消息：
+   `source: { kind: 'plugin', plugin: 'omnimux-workbench', form: 'snapshot', sections: [{ name: 'workbench-viewport', text }] }`。
+3. **聊天界面呈现**：该消息被官方 `dsh-client-ui-chat` 识别为 `kind: 'context'`，呈现为折叠栏「`上下文注入 · omnimux-workbench`」，在 Compact 对话模式下自动收起，彻底杜绝气泡污染。
+4. **统一单一真源**：`formatCompactContextBlock` 迁移至 `plugins/omnimux/src/workbench/contract.js`，Client 与 Host 共享。
