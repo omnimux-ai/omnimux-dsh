@@ -13,33 +13,33 @@ test('AGENT_PRESETS_I18N exports accurate specification texts for zh and en', ()
   assert.equal(AGENT_PRESETS_I18N.zh.presetStandardName, '代码开发')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetStandardDescription,
-    '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
+    '全栈架构设计、代码编写与工程交付。',
   )
   assert.equal(AGENT_PRESETS_I18N.zh.presetDailyWorkName, '日常工作')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetDailyWorkDescription,
-    '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
+    '日常办公协同、文档拟定与事务闭环。',
   )
   assert.equal(AGENT_PRESETS_I18N.zh.presetCordisName, '创造模式')
   assert.equal(
     AGENT_PRESETS_I18N.zh.presetCordisDescription,
-    '具备标准模式的全部能力，并提供运行时检查、插件实验与 Agent 预设创作指导。',
+    '插件实验开发、运行时检查与团队搭建。',
   )
 
   assert.equal(AGENT_PRESETS_I18N.en.presetStandardName, 'CodeDev')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetStandardDescription,
-    'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
+    'Full-stack architecture, coding, and engineering delivery.',
   )
   assert.equal(AGENT_PRESETS_I18N.en.presetDailyWorkName, 'WorkAssistant')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetDailyWorkDescription,
-    'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
+    'Daily office collaboration, docs drafting, and task closure.',
   )
   assert.equal(AGENT_PRESETS_I18N.en.presetCordisName, 'Creator Mode')
   assert.equal(
     AGENT_PRESETS_I18N.en.presetCordisDescription,
-    'Full coding agent with runtime inspection, plugin experimentation, and preset authoring guidance.',
+    'Plugin development, runtime inspection, and team building.',
   )
 })
 
@@ -51,16 +51,20 @@ test('getPresetFallbackCopy returns localized fallback copy for all presets', ()
 
   const zhDailyWork = getPresetFallbackCopy('daily-work', 'zh')
   assert.equal(zhDailyWork.name, '日常工作')
-  assert.ok(zhDailyWork.description.includes('待办排期'))
+  assert.ok(zhDailyWork.description.includes('办公协同'))
 
   const enDailyWork = getPresetFallbackCopy('daily-work', 'en')
   assert.equal(enDailyWork.name, 'WorkAssistant')
-  assert.ok(enDailyWork.description.includes('task planning'))
+  assert.ok(enDailyWork.description.includes('office collaboration'))
 
   const zhCordis = getPresetFallbackCopy('cordis', 'zh')
   assert.equal(zhCordis.name, '创造模式')
   const enCordis = getPresetFallbackCopy('cordis', 'en')
   assert.equal(enCordis.name, 'Creator Mode')
+
+  const zhSocial = getPresetFallbackCopy('tiktok-agent', 'zh')
+  assert.equal(zhSocial.name, '全能社媒操盘手')
+  assert.ok(zhSocial.description.includes('矩阵运营增长'))
 
   assert.equal(getPresetFallbackCopy('unknown-preset', 'zh'), null)
 })
@@ -83,7 +87,7 @@ test('resolvePresetDisplayText handles translation and fallback cleanly', () => 
   // Fallback when t cannot translate custom daily-work preset in en
   const dailyWorkFallbackEn = resolvePresetDisplayText({ id: 'daily-work' }, null, 'en')
   assert.equal(dailyWorkFallbackEn.name, 'WorkAssistant')
-  assert.ok(dailyWorkFallbackEn.description.includes('General daily office'))
+  assert.ok(dailyWorkFallbackEn.description.includes('office collaboration'))
 })
 
 test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictionaries', () => {
@@ -122,7 +126,7 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
   assert.equal(zhDict.presetStandardName, '代码开发')
   assert.equal(
     zhDict.presetStandardDescription,
-    '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
+    '全栈架构设计、代码编写与工程交付。',
   )
   assert.equal(zhDict.presetDailyWorkName, '日常工作')
   assert.equal(zhDict.presetCordisName, '创造模式')
@@ -130,7 +134,7 @@ test('patchAgentPresetsLocaleDicts immediately patches existing zh and en dictio
   assert.equal(enDict.presetStandardName, 'CodeDev')
   assert.equal(
     enDict.presetStandardDescription,
-    'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
+    'Full-stack architecture, coding, and engineering delivery.',
   )
   assert.equal(enDict.presetDailyWorkName, 'WorkAssistant')
   assert.equal(enDict.presetCordisName, 'Creator Mode')
