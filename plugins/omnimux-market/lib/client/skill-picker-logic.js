@@ -441,3 +441,47 @@ export function loadPickerSearch(payload, opts) {
         inflight.set(key, pending);
     return pending.then((body) => ({ body, fromCache: false }));
 }
+export function skillTitle(item, tr) {
+    if (!item)
+        return '';
+    const trFn = typeof tr === 'function' ? tr : null;
+    const isEn = trFn ? trFn('locale') === 'en' : (typeof document !== 'undefined' && document.documentElement.lang === 'en');
+    const slug = item.slug || item.skill || item.id || '';
+    if (trFn) {
+        const key = 'skill.name.' + slug;
+        const translated = trFn(key);
+        if (translated && translated !== key)
+            return translated;
+        const keyById = 'skill.name.' + (item.id || '');
+        const translatedById = trFn(keyById);
+        if (translatedById && translatedById !== keyById)
+            return translatedById;
+    }
+    if (isEn && (item.titleEn || item.nameEn))
+        return item.titleEn || item.nameEn;
+    if (!isEn && (item.titleZh || item.nameZh))
+        return item.titleZh || item.nameZh;
+    return item.name || item.title || slug;
+}
+export function skillDesc(item, tr) {
+    if (!item)
+        return '';
+    const trFn = typeof tr === 'function' ? tr : null;
+    const isEn = trFn ? trFn('locale') === 'en' : (typeof document !== 'undefined' && document.documentElement.lang === 'en');
+    const slug = item.slug || item.skill || item.id || '';
+    if (trFn) {
+        const key = 'skill.desc.' + slug;
+        const translated = trFn(key);
+        if (translated && translated !== key)
+            return translated;
+        const keyById = 'skill.desc.' + (item.id || '');
+        const translatedById = trFn(keyById);
+        if (translatedById && translatedById !== keyById)
+            return translatedById;
+    }
+    if (isEn && (item.descriptionEn || item.summaryEn))
+        return item.descriptionEn || item.summaryEn;
+    if (!isEn && (item.descriptionZh || item.summaryZh))
+        return item.descriptionZh || item.summaryZh;
+    return item.description || item.summary || '';
+}

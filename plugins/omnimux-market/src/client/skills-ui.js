@@ -314,7 +314,8 @@
           item.installed = true;
           item.enabled = true;
           onInstalled?.(item);
-          setToast(tr("toast.installed", { name: view.name || view.title || item.name || slug }));
+          const displayName = typeof skillTitle === "function" ? skillTitle(view, tr) : (view.name || view.title || item.name || slug);
+          setToast(tr("toast.installed", { name: displayName }));
         } catch (e) {
           setToast(e.message || String(e));
         } finally {
@@ -330,7 +331,8 @@
           setView((cur) => ({ ...cur, installed: false }));
           item.installed = false;
           onUninstalled?.(item);
-          setToast(tr("toast.uninstalled", { name: view.name || view.title || item.name || slug }));
+          const displayName = typeof skillTitle === "function" ? skillTitle(view, tr) : (view.name || view.title || item.name || slug);
+          setToast(tr("toast.uninstalled", { name: displayName }));
           setConfirmUninstall(false);
         } catch (e) {
           setToast(e.message || String(e));
@@ -350,8 +352,8 @@
         onClose();
       };
 
-      const title = view.name || view.title || item.slug || "";
-      const desc = view.description || view.summary || "暂无描述";
+      const title = typeof skillTitle === "function" ? skillTitle(view, tr) : (view.name || view.title || item.slug || "");
+      const desc = typeof skillDesc === "function" ? skillDesc(view, tr) : (view.description || view.summary || "暂无描述");
       const source = view.source || view.origin || view.channel || "OmniMux";
       const category = catLabel(view, tr) || "通用";
       const version = view.version ? "v" + String(view.version).replace(/^v/i, "") : "v1.0.0";
