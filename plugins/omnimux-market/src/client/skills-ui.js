@@ -352,11 +352,16 @@
         onClose();
       };
 
-      const title = typeof skillTitle === "function" ? skillTitle(view, tr) : (view.name || view.title || item.slug || "");
-      const desc = typeof skillDesc === "function" ? skillDesc(view, tr) : (view.description || view.summary || "暂无描述");
-      const source = view.source || view.origin || view.channel || "OmniMux";
+      const rawTitle = typeof skillTitle === "function" ? skillTitle(view, tr) : (view.name || view.title || item.slug || "");
+      const title = typeof rawTitle === "object" ? (rawTitle.name || rawTitle.title || item.slug || "") : String(rawTitle || "");
+      const rawDesc = typeof skillDesc === "function" ? skillDesc(view, tr) : (view.description || view.summary || "暂无描述");
+      const desc = typeof rawDesc === "object" ? JSON.stringify(rawDesc) : String(rawDesc || "暂无描述");
+      const rawSource = view.source || view.origin || view.channel || "OmniMux";
+      const source = typeof rawSource === "object"
+        ? (rawSource.repo ? (String(rawSource.repo).split("/").pop() || String(rawSource.repo)) : (rawSource.type === "bundled" ? "OmniMux" : String(rawSource.type || "OmniMux")))
+        : String(rawSource || "OmniMux");
       const category = catLabel(view, tr) || "通用";
-      const version = view.version ? "v" + String(view.version).replace(/^v/i, "") : "v1.0.0";
+      const version = typeof view.version === "object" ? "v1.0.0" : (view.version ? "v" + String(view.version).replace(/^v/i, "") : "v1.0.0");
       const isInstalled = Boolean(view.installed);
       const isEnabled = view.enabled !== false;
 
