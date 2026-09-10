@@ -1,0 +1,17 @@
+{
+  "skill": "shopee-product-analysis",
+  "generatedAt": "2026-09-10T10:57:29.350Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A high-precision ecommerce product intelligence scene: floating transparent product cards showing 3D wireframe consumer goods, surrounding sales velocity graphs, search rank badges, and glowing tag ribbons. [Style & Aesthetics] Modern commercial product visualization, polished glass display podiums, matte porcelain, radiant Shopee orange and deep navy accents, photorealistic ray-tracing. [Lighting & Atmosphere] Crisp studio product illumination, soft ambient glows, elegant reflections. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, central focal point, clean composition, no text, no watermark."
+  },
+  "taskId": "task_IFKwLURCiYV4V97sfWKgHE1HAd6dyC4K",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037843_5b9c89b9c75a8a528702571bc7b245ef.png",
+  "output": "catalog/covers/home/shopee-product-analysis.png",
+  "width": 1280,
+  "height": 720
+}

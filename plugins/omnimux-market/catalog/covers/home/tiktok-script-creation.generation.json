@@ -1,0 +1,17 @@
+{
+  "skill": "tiktok-script-creation",
+  "generatedAt": "2026-09-10T10:57:38.944Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A creative scriptwriting concept scene: an illuminated transparent glass script clipboard floating above a creator desk, glowing storyline storyboard cards, audio microphone icon, soundwave particles, and radiant spark bursts of creative inspiration. [Style & Aesthetics] Modern cinematic 3D render, frosted crystal glass, brushed aluminum, warm sunset gold and lavender neon glows, ray-tracing, elegant studio setting. [Lighting & Atmosphere] Warm golden key light, soft purple ambient rim lighting, gentle cinematic bokeh. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, central hero composition, clean minimalist background, no text, no watermark."
+  },
+  "taskId": "task_AiGEYLJOtUbBhOQDpt2C0JRAqbBrNAaI",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037853_d11fba5b6a3112f1d63c3cc2661e9e45.png",
+  "output": "catalog/covers/home/tiktok-script-creation.png",
+  "width": 1280,
+  "height": 720
+}

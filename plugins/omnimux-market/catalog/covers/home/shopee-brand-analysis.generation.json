@@ -1,0 +1,17 @@
+{
+  "skill": "shopee-brand-analysis",
+  "generatedAt": "2026-09-10T10:58:19.679Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A prestigious brand performance intelligence showcase: a golden laurel emblem resting on a tiered marble pedestal, surrounded by holographic brand equity index rings and multi-site distribution pillar graphs. [Style & Aesthetics] Luxury commercial 3D render, white Carrara marble, polished brass, champagne gold and deep obsidian tones, hyper-detailed ray-tracing. [Lighting & Atmosphere] Dramatic top-down spot lighting, metallic specular highlights, premium editorial feel. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered majestic composition, no text, no watermark."
+  },
+  "taskId": "task_QPp0c3bLWkj69B6zdOsNEer4MkYPb2Jm",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037894_57c0bab9023b5a2c144c88bd8f447236.png",
+  "output": "catalog/covers/home/shopee-brand-analysis.png",
+  "width": 1280,
+  "height": 720
+}

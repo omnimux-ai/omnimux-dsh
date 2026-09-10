@@ -6535,7 +6535,11 @@
       "titleZh": "HTML 报表模板",
       "titleEn": "HTML Report Templates",
       "summaryZh": "用于 html-writer 的复制即用 HTML 报表与仪表盘模板。",
-      "summaryEn": "Copy-and-fill HTML report and dashboard templates for html-writer."
+      "summaryEn": "Copy-and-fill HTML report and dashboard templates for html-writer.",
+      "homeCover": {
+        "asset": "catalog/covers/home/html-report-templates.png",
+        "alt": "HTML 报表模板"
+      }
     },
     {
       "id": "sk-shopee-market-analysis",
@@ -6566,7 +6570,11 @@
       "titleZh": "Shopee 市场分析",
       "titleEn": "Shopee Market Analysis",
       "summaryZh": "使用 shopee-mcp 进行 Shopee 站点与品类市场机会分析。",
-      "summaryEn": "Shopee site and category market opportunity analysis using shopee-mcp."
+      "summaryEn": "Shopee site and category market opportunity analysis using shopee-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/shopee-market-analysis.png",
+        "alt": "Shopee 市场分析"
+      }
     },
     {
       "id": "sk-shopee-product-analysis",
@@ -6597,7 +6605,11 @@
       "titleZh": "Shopee 商品分析",
       "titleEn": "Shopee Product Analysis",
       "summaryZh": "使用 shopee-mcp 进行 Shopee 商品排行、详情、趋势与热词分析。",
-      "summaryEn": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp."
+      "summaryEn": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/shopee-product-analysis.png",
+        "alt": "Shopee 商品分析"
+      }
     },
     {
       "id": "sk-shopee-shop-analysis",
@@ -6628,7 +6640,11 @@
       "titleZh": "Shopee 店铺分析",
       "titleEn": "Shopee Shop Analysis",
       "summaryZh": "使用 shopee-mcp 进行 Shopee 店铺排行、详情、趋势、选品与品牌组合分析。",
-      "summaryEn": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp."
+      "summaryEn": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/shopee-shop-analysis.png",
+        "alt": "Shopee 店铺分析"
+      }
     },
     {
       "id": "sk-shopee-brand-analysis",
@@ -6659,7 +6675,11 @@
       "titleZh": "Shopee 品牌分析",
       "titleEn": "Shopee Brand Analysis",
       "summaryZh": "使用 shopee-mcp 分析 Shopee 品牌排名、详情、趋势、商品组合及站点/类别分布。",
-      "summaryEn": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp."
+      "summaryEn": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/shopee-brand-analysis.png",
+        "alt": "Shopee 品牌分析"
+      }
     },
     {
       "id": "sk-shopee-keyword-analysis",
@@ -6690,7 +6710,11 @@
       "titleZh": "Shopee 关键词分析",
       "titleEn": "Shopee Keyword Analysis",
       "summaryZh": "使用 shopee-mcp 进行 Shopee 热搜词排名、详情、趋势及关联商品分析。",
-      "summaryEn": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp."
+      "summaryEn": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/shopee-keyword-analysis.png",
+        "alt": "Shopee 关键词分析"
+      }
     },
     {
       "id": "sk-video-generate-canvas",
@@ -6721,7 +6745,11 @@
       "titleZh": "视频生成画布",
       "titleEn": "video-generate-canvas",
       "summaryZh": "当用户表达任何视频创作意图时触发此技能，如在画布中生成或编辑视频。",
-      "summaryEn": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas."
+      "summaryEn": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
+      "homeCover": {
+        "asset": "catalog/covers/home/video-generate-canvas.png",
+        "alt": "视频生成画布"
+      }
     },
     {
       "id": "sk-ecommerce-routing-policy",
@@ -6752,7 +6780,11 @@
       "titleZh": "电商路由策略",
       "titleEn": "Ecommerce Routing Policy",
       "summaryZh": "电商运营 Agent 的共享任务路由规则与分流策略。",
-      "summaryEn": "Shared routing rules for ecommerce operation agents."
+      "summaryEn": "Shared routing rules for ecommerce operation agents.",
+      "homeCover": {
+        "asset": "catalog/covers/home/ecommerce-routing-policy.png",
+        "alt": "电商路由策略"
+      }
     },
     {
       "id": "sk-ecommerce-output-spec",
@@ -6783,7 +6815,11 @@
       "titleZh": "电商输出规范",
       "titleEn": "Ecommerce Output Spec",
       "summaryZh": "电商运营 Agent 的共享报表与文件输出交付规范。",
-      "summaryEn": "Shared report and file output rules for ecommerce operation agents."
+      "summaryEn": "Shared report and file output rules for ecommerce operation agents.",
+      "homeCover": {
+        "asset": "catalog/covers/home/ecommerce-output-spec.png",
+        "alt": "电商输出规范"
+      }
     },
     {
       "id": "sk-ecommerce-daily-review",
@@ -6815,7 +6851,11 @@
       "titleZh": "电商日报复盘",
       "titleEn": "Ecommerce Daily Review",
       "summaryZh": "面向亚马逊和 TikTok Shop 运营的每日与每周复盘模板。",
-      "summaryEn": "Daily and weekly review template for Amazon and TikTok Shop operations."
+      "summaryEn": "Daily and weekly review template for Amazon and TikTok Shop operations.",
+      "homeCover": {
+        "asset": "catalog/covers/home/ecommerce-daily-review.png",
+        "alt": "电商日报复盘"
+      }
     },
     {
       "id": "sk-amazon-market-analysis",
@@ -6846,7 +6886,11 @@
       "titleZh": "亚马逊市场分析",
       "titleEn": "Amazon Market Analysis",
       "summaryZh": "使用 amazon-mcp 进行亚马逊品类与市场机会深度分析。",
-      "summaryEn": "Amazon category and market opportunity analysis using amazon-mcp."
+      "summaryEn": "Amazon category and market opportunity analysis using amazon-mcp.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-market-analysis.png",
+        "alt": "亚马逊市场分析"
+      }
     },
     {
       "id": "sk-amazon-product-analysis",
@@ -6877,7 +6921,11 @@
       "titleZh": "亚马逊产品分析",
       "titleEn": "Amazon Product Analysis",
       "summaryZh": "使用 amazon-mcp 及输入文件进行亚马逊 ASIN、SKU 与竞品研究。",
-      "summaryEn": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files."
+      "summaryEn": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-product-analysis.png",
+        "alt": "亚马逊产品分析"
+      }
     },
     {
       "id": "sk-amazon-listing-optimization",
@@ -6908,7 +6956,11 @@
       "titleZh": "亚马逊 Listing 优化",
       "titleEn": "Amazon Listing Optimization",
       "summaryZh": "亚马逊 Listing 文案、A+ 页面规划与关键词覆盖度优化。",
-      "summaryEn": "Amazon listing, A+ and keyword coverage optimization."
+      "summaryEn": "Amazon listing, A+ and keyword coverage optimization.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-listing-optimization.png",
+        "alt": "亚马逊 Listing 优化"
+      }
     },
     {
       "id": "sk-amazon-keyword-traffic-analysis",
@@ -6939,7 +6991,11 @@
       "titleZh": "亚马逊关键词流量分析",
       "titleEn": "Amazon Keyword Traffic Analysis",
       "summaryZh": "亚马逊关键词、流量来源、ABA 趋势与 PPC 广告机会分析。",
-      "summaryEn": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis."
+      "summaryEn": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-keyword-traffic-analysis.png",
+        "alt": "亚马逊关键词流量分析"
+      }
     },
     {
       "id": "sk-amazon-review-optimization",
@@ -6971,7 +7027,11 @@
       "titleZh": "亚马逊评论优化",
       "titleEn": "Amazon Review Optimization",
       "summaryZh": "亚马逊买家书面评论、VOC 声量、QA 问答与用户痛点深度优化。",
-      "summaryEn": "Amazon review, VOC, QA and pain-point optimization."
+      "summaryEn": "Amazon review, VOC, QA and pain-point optimization.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-review-optimization.png",
+        "alt": "亚马逊评论优化"
+      }
     },
     {
       "id": "sk-amazon-trend-risk-monitor",
@@ -7003,7 +7063,11 @@
       "titleZh": "亚马逊趋势风险监控",
       "titleEn": "Amazon Trend Risk Monitor",
       "summaryZh": "亚马逊热度趋势、BSR 榜单、销量预测与商标侵权风险监控。",
-      "summaryEn": "Amazon trend, BSR, sales prediction and trademark/risk monitoring."
+      "summaryEn": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
+      "homeCover": {
+        "asset": "catalog/covers/home/amazon-trend-risk-monitor.png",
+        "alt": "亚马逊趋势风险监控"
+      }
     },
     {
       "id": "sk-tiktok-market-trend-analysis",
@@ -7035,7 +7099,11 @@
       "titleZh": "TikTok 市场趋势分析",
       "titleEn": "TikTok Market Trend Analysis",
       "summaryZh": "使用 Topview td 工具分析 TikTok Shop 区域、品类、商品与卖家趋势。",
-      "summaryEn": "TikTok Shop region, category, item and seller trend analysis using Topview td tools."
+      "summaryEn": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
+      "homeCover": {
+        "asset": "catalog/covers/home/tiktok-market-trend-analysis.png",
+        "alt": "TikTok 市场趋势分析"
+      }
     },
     {
       "id": "sk-tiktok-product-selection",
@@ -7066,7 +7134,11 @@
       "titleZh": "TikTok 选品",
       "titleEn": "TikTok Product Selection",
       "summaryZh": "TikTok Shop 爆款潜力商品挖掘、筛选与综合评分。",
-      "summaryEn": "TikTok Shop viral product selection and scoring."
+      "summaryEn": "TikTok Shop viral product selection and scoring.",
+      "homeCover": {
+        "asset": "catalog/covers/home/tiktok-product-selection.png",
+        "alt": "TikTok 选品"
+      }
     },
     {
       "id": "sk-tiktok-material-breakdown",
@@ -7098,7 +7170,11 @@
       "titleZh": "TikTok 素材拆解",
       "titleEn": "TikTok Material Breakdown",
       "summaryZh": "TikTok 爆款短视频素材、开头黄金 Hook 与行动号召 CTA 逐秒拆解。",
-      "summaryEn": "TikTok viral video, material, hook and CTA breakdown."
+      "summaryEn": "TikTok viral video, material, hook and CTA breakdown.",
+      "homeCover": {
+        "asset": "catalog/covers/home/tiktok-material-breakdown.png",
+        "alt": "TikTok 素材拆解"
+      }
     },
     {
       "id": "sk-tiktok-script-creation",
@@ -7130,7 +7206,11 @@
       "titleZh": "TikTok 脚本创作",
       "titleEn": "TikTok Script Creation",
       "summaryZh": "TikTok UGC 口播、达人种草、品牌广告与直播带货脚本生成。",
-      "summaryEn": "TikTok UGC, creator, ad and live script generation."
+      "summaryEn": "TikTok UGC, creator, ad and live script generation.",
+      "homeCover": {
+        "asset": "catalog/covers/home/tiktok-script-creation.png",
+        "alt": "TikTok 脚本创作"
+      }
     }
   ]
 }

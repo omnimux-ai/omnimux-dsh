@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-review-optimization",
+  "generatedAt": "2026-09-10T11:00:18.238Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Amazon customer VOC and review sentiment transformation: customer feedback cards with star badges passing through an AI filter lens, converting raw user feedback into glowing golden feature improvement gems. [Style & Aesthetics] Conceptual 3D metaphorical art, polished amber crystal, frosted glass prisms, clean matte pedestal, Octane ray-tracing. [Lighting & Atmosphere] Warm golden refraction lights, soft cinematic glow, uplifting atmosphere. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered storytelling composition, no text, no watermark."
+  },
+  "taskId": "task_MUYoWI3bJzwSC00isje2BmnEmeGDjMX5",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789038012_216ce18f86aa525bd79d4edf58ab2b82.png",
+  "output": "catalog/covers/home/amazon-review-optimization.png",
+  "width": 1280,
+  "height": 720
+}

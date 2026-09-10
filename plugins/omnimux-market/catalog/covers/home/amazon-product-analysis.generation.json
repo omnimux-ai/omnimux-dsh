@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-product-analysis",
+  "generatedAt": "2026-09-10T10:59:43.636Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Deep Amazon ASIN and competitor product dissection: an illuminated high-tech inspection platform with a floating product bounding cube, surrounded by competitor comparison telemetry rings and attribute breakdown prisms. [Style & Aesthetics] Advanced industrial design laboratory, matte black anodized aluminum, glowing amber and cyan laser grids, crystal clear optical lenses. [Lighting & Atmosphere] Sharp technical spotlights, subtle haze, high-contrast studio environment. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered hero focus, no text, no watermark."
+  },
+  "taskId": "task_B5OYhYMbfbYMKGNpAdv6MbgzLgaPdeyF",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037976_25ca0412645389ed8f6e6aa6ed7f4be0.png",
+  "output": "catalog/covers/home/amazon-product-analysis.png",
+  "width": 1280,
+  "height": 720
+}

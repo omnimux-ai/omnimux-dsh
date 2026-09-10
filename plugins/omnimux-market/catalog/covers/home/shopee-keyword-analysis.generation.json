@@ -1,0 +1,17 @@
+{
+  "skill": "shopee-keyword-analysis",
+  "generatedAt": "2026-09-10T10:58:24.545Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A search volume and keyword discovery matrix: a glowing search lens hovering above a field of floating illuminated keyword spheres of varying sizes, connected by radiant search trend curves and related product link vectors. [Style & Aesthetics] Abstract information visualization, translucent crystal bubbles, vibrant orange and electric violet energy threads, sleek dark pedestal. [Lighting & Atmosphere] Radiant self-illuminated nodes, glowing particle trails, atmospheric dark background. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, balanced spatial depth, no text, no watermark."
+  },
+  "taskId": "task_Sm3Dp6TJ5U0djakfSPtgOJD8NOySmqJ4",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037899_81f50fd855a0f34d97f6d07ee190924e.png",
+  "output": "catalog/covers/home/shopee-keyword-analysis.png",
+  "width": 1280,
+  "height": 720
+}

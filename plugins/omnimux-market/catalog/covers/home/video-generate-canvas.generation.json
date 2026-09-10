@@ -1,0 +1,17 @@
+{
+  "skill": "video-generate-canvas",
+  "generatedAt": "2026-09-10T10:58:32.963Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] An infinite digital creative canvas workstation: floating nodes representing video generation, text prompts, image keyframes, and motion tracks connected by luminous golden spline curves, glowing preview windows showing abstract cinematic landscape footage. [Style & Aesthetics] Sleek creative software universe, dark glassmorphism, iridescent gradient glowing cables, deep cosmic indigo and electric violet studio environment, Octane render. [Lighting & Atmosphere] Brilliant glowing node pulses, volumetric fog, high-contrast cinematic mood. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, expansive canvas perspective, clean composition, no text, no watermark."
+  },
+  "taskId": "task_F1lzVXN4A8wuflzE5NMxhrhVww8WiyJf",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037905_2f673ab3fa8795d34446a221e3ff66c3.png",
+  "output": "catalog/covers/home/video-generate-canvas.png",
+  "width": 1280,
+  "height": 720
+}

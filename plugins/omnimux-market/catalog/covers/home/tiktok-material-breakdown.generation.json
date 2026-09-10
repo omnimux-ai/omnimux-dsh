@@ -1,0 +1,17 @@
+{
+  "skill": "tiktok-material-breakdown",
+  "generatedAt": "2026-09-10T10:57:56.155Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A futuristic digital video editor's workstation dissecting TikTok viral video materials: floating 3D holographic video film frames broken down layer by layer, glowing hook timing markers, visual CTA burst icons, and segmented soundwave audio tracks. [Style & Aesthetics] Cybernetic studio aesthetic, translucent holographic screens, matte dark slate surfaces, electric turquoise and neon coral laser accents, Octane 3D render. [Lighting & Atmosphere] Volumetric light shafts, glowing screen reflections, dramatic moody atmosphere. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered balanced layout, 8k resolution, no text, no gibberish characters, no watermark."
+  },
+  "taskId": "task_nTnAW8arPyWPXdzMcq1EBBPTnrlODiMq",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037870_8826ebb02b6a4efd97ec8708d9c8d1aa.png",
+  "output": "catalog/covers/home/tiktok-material-breakdown.png",
+  "width": 1280,
+  "height": 720
+}

@@ -1,0 +1,17 @@
+{
+  "skill": "shopee-shop-analysis",
+  "generatedAt": "2026-09-10T10:58:25.528Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] An architectural visualization of digital storefront analysis: a stylized glass miniature store pavilion surrounded by floating assortment mix rings, brand share pie charts, and customer traffic light trails. [Style & Aesthetics] Contemporary architectural 3D render, frosted acrylic walls, warm timber bases, glowing orange and sapphire accent beams, Octane render. [Lighting & Atmosphere] Cozy interior warm glow combined with modern architectural studio lighting. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered hero perspective, no text, no watermark."
+  },
+  "taskId": "task_DSCv2SQyYwaxckxhIHLdPVmcz9YFsaW7",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037897_0f2c813db5d8c1de707b9c4c5af79448.png",
+  "output": "catalog/covers/home/shopee-shop-analysis.png",
+  "width": 1280,
+  "height": 720
+}

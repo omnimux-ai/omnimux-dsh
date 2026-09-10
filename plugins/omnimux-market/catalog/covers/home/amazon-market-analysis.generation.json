@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-market-analysis",
+  "generatedAt": "2026-09-10T10:59:19.386Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Amazon category and market opportunity discovery: a grand architectural 3D atrium with soaring data pillars representing product categories, floating market size spheres, and ascending opportunity arrows. [Style & Aesthetics] Monumental data architecture, matte white marble, brushed bronze accents, deep slate blue ambient lighting, Octane render. [Lighting & Atmosphere] Dramatic celestial light beam from above, soft ambient fill, dignified corporate atmosphere. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, epic perspective with clear central focus, no text, no watermark."
+  },
+  "taskId": "task_WdoXG8n20eo9RlCdlWhvAtjW7ZJwTVqt",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037948_01c38a8acca5eaf09b3990b67a1599de.png",
+  "output": "catalog/covers/home/amazon-market-analysis.png",
+  "width": 1280,
+  "height": 720
+}
