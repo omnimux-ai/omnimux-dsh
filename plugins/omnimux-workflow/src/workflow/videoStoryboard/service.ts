@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, basename } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import type { StoryboardVideoRequest, StoryboardVideoResult } from './schema.ts';
@@ -76,6 +77,91 @@ function formatSeconds(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * 解析分镜时间段字符串并返回中心截图秒数
+ * 支持格式：00:00 - 00:02, 02-05s, 05-08, 00:05 等
+ */
+export function parseTimeRangeSeconds(timeRange: string, fallbackSec = 0): number {
+  if (!timeRange || typeof timeRange !== 'string') return fallbackSec;
+  const cleaned = timeRange.trim();
+
+  // 匹配 MM:SS - MM:SS 或 M:SS - M:SS
+  const rangeColonMatch = /(\d{1,2}):(\d{2})(?:\.(\d+))?\s*[-~至到]\s*(\d{1,2}):(\d{2})(?:\.(\d+))?/.exec(cleaned);
+  if (rangeColonMatch) {
+    const s1 = Number(rangeColonMatch[1]) * 60 + Number(rangeColonMatch[2]) + (rangeColonMatch[3] ? Number('0.' + rangeColonMatch[3]) : 0);
+    const s2 = Number(rangeColonMatch[4]) * 60 + Number(rangeColonMatch[5]) + (rangeColonMatch[6] ? Number('0.' + rangeColonMatch[6]) : 0);
+    return Math.max(0, (s1 + s2) / 2);
+  }
+
+  // 匹配单纯数字区间，如 00-02s, 03-05s, 00-02
+  const rangeSecMatch = /(\d+(?:\.\d+)?)\s*[-~至到]\s*(\d+(?:\.\d+)?)/.exec(cleaned);
+  if (rangeSecMatch) {
+    const s1 = Number(rangeSecMatch[1]);
+    const s2 = Number(rangeSecMatch[2]);
+    return Math.max(0, (s1 + s2) / 2);
+  }
+
+  // 单个时间点 MM:SS
+  const singleColonMatch = /(\d{1,2}):(\d{2})(?:\.(\d+))?/.exec(cleaned);
+  if (singleColonMatch) {
+    return Number(singleColonMatch[1]) * 60 + Number(singleColonMatch[2]) + (singleColonMatch[3] ? Number('0.' + singleColonMatch[3]) : 0);
+  }
+
+  const singleSecMatch = /^(\d+(?:\.\d+)?)/.exec(cleaned);
+  if (singleSecMatch) {
+    return Number(singleSecMatch[1]);
+  }
+
+  return fallbackSec;
+}
+
+/**
+ * 抽取视频指定时间秒数处的一帧作为分镜画面图片
+ */
+export async function extractVideoFrame(
+  videoPath: string,
+  timeSec: number,
+  destPath: string,
+  videoProcess?: { execute?: (args: Record<string, unknown>) => Promise<any> },
+): Promise<boolean> {
+  // 1. 优先调用 videoProcess 服务
+  if (videoProcess && typeof videoProcess.execute === 'function') {
+    try {
+      await videoProcess.execute({
+        capability: 'video_thumbnail_extract',
+        input: {
+          videoUrl: videoPath,
+          timeSeconds: Math.max(0, timeSec),
+          maxEdge: 640,
+        },
+        dest: destPath,
+      });
+      if (existsSync(destPath) && statSync(destPath).size > 500) {
+        return true;
+      }
+    } catch {}
+  }
+
+  // 2. 宿主直接探测执行 ffmpeg (检查标准 brew/usr 目录)
+  const candidateBins = ['ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg'];
+  for (const bin of candidateBins) {
+    try {
+      const res = spawnSync(bin, [
+        '-ss', String(Math.max(0, timeSec)),
+        '-i', videoPath,
+        '-frames:v', '1',
+        '-q:v', '2',
+        '-y', destPath,
+      ], { timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] });
+      if (res.status === 0 && existsSync(destPath) && statSync(destPath).size > 500) {
+        return true;
+      }
+    } catch {}
+  }
+
+  return false;
 }
 
 const logger = createWorkflowLogger('video-storyboard');
@@ -162,29 +248,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       }
     }
 
-    // 5. 若未检测出关键帧，生成保底帧图片以保证分镜卡片展示完整性
-    if (detectedFrames.length === 0) {
-      const fallbackFrameNames = ['frame-001.jpg', 'frame-002.jpg', 'frame-003.jpg'];
-      // 写入微型有效占位 JPEG 文件
-      const tinyJpg = Buffer.from(
-        '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
-        'base64',
-      );
-      fallbackFrameNames.forEach((fname, idx) => {
-        const fpath = join(framesDir, fname);
-        try {
-          if (!existsSync(fpath)) writeFileSync(fpath, tinyJpg);
-          detectedFrames.push({
-            path: fpath,
-            filename: fname,
-            url: getMediaUrl(fname),
-            timeSeconds: idx * 3,
-          });
-        } catch {}
-      });
-    }
-
-    // 6. 调用 video_analyze 工具获取逐镜头脚本分析
+    // 5. 调用 video_analyze 工具获取逐镜头脚本分析
     const analyzeTool = (deps.getTool?.('video_analyze') ?? deps.getSeam?.('videoAnalyze')) as
       | { execute?: (args: Record<string, unknown>) => Promise<any> }
       | undefined;
@@ -209,7 +273,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       }
     }
 
-    // 7. 解析 Markdown 中的分镜表格或使用保底脚本
+    // 6. 解析 Markdown 中的分镜表格或使用保底脚本
     const parsedTables = analyzeMarkdown ? extractMarkdownTables(analyzeMarkdown) : [];
     let scriptShots: ExtractedShotItem[] = [];
 
@@ -244,12 +308,12 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       scriptShots = getFallbackStoryboardShots(input.title);
     }
 
-    // 8. 图文对齐：合并分镜图片与画面脚本记录
+    // 7. 图文对齐与精确抽帧：确保每个分镜镜头都有对应时间段的高清视频画面
     const rowCount = Math.max(detectedFrames.length, scriptShots.length);
     const finalShots: ExtractedShotItem[] = [];
 
     for (let i = 0; i < rowCount; i++) {
-      const frame = detectedFrames[i] ?? detectedFrames[detectedFrames.length - 1];
+      const frame = detectedFrames[i];
       const script = scriptShots[i];
 
       let timeRange = script?.timeRange;
@@ -259,15 +323,24 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
         timeRange = `${formatSeconds(startSec)} - ${formatSeconds(endSec)}`;
       }
 
+      const defaultTime = `00:${String(i * 3).padStart(2, '0')} - 00:${String((i + 1) * 3).padStart(2, '0')}`;
+      const effectiveTimeRange = timeRange || defaultTime;
+
       const shotItem: ExtractedShotItem = {
         shotNo: i + 1,
-        timeRange: timeRange || `00:${String(i * 3).padStart(2, '0')} - 00:${String((i + 1) * 3).padStart(2, '0')}`,
+        timeRange: effectiveTimeRange,
         shotType: script?.shotType || (i === 0 ? '特写 (Close-up)' : '中景 (Medium Shot)'),
         description: script?.description || `镜头 ${i + 1} 画面与动作展开`,
         dialogue: script?.dialogue || '“点击查看更多精彩”',
       };
 
-      if (frame) {
+      const fname = `frame-${String(i + 1).padStart(3, '0')}.jpg`;
+      const fpath = join(framesDir, fname);
+
+      let hasValidFrame = false;
+      // 1. 若 scene_detect 抽出的 frame 存在且有效 (> 500 bytes)，优先复用
+      if (frame && existsSync(frame.path) && statSync(frame.path).size > 500) {
+        hasValidFrame = true;
         shotItem.imageAttachment = {
           assetId: `ast_${randomUUID().slice(0, 8)}`,
           name: frame.filename,
@@ -276,6 +349,51 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
           url: frame.url,
           thumbnailUrl: frame.url,
         };
+      } else {
+        // 2. 按照分镜时间区间计算最佳中心截取秒数并抽取真实视频关键帧
+        const captureSec = parseTimeRangeSeconds(effectiveTimeRange, i * 3 + 1);
+        const extracted = await extractVideoFrame(absVideoPath, captureSec, fpath, videoProcess);
+        if (extracted && existsSync(fpath) && statSync(fpath).size > 500) {
+          hasValidFrame = true;
+          shotItem.imageAttachment = {
+            assetId: `ast_${randomUUID().slice(0, 8)}`,
+            name: fname,
+            kind: 'image',
+            path: fpath,
+            url: getMediaUrl(fname),
+            thumbnailUrl: getMediaUrl(fname),
+          };
+        }
+      }
+
+      // 3. 保底：若所有抽帧均失败（如无解码器或假文件），保留已有路径或写入占位文件保证渲染
+      if (!hasValidFrame) {
+        if (frame && existsSync(frame.path)) {
+          shotItem.imageAttachment = {
+            assetId: `ast_${randomUUID().slice(0, 8)}`,
+            name: frame.filename,
+            kind: 'image',
+            path: frame.path,
+            url: frame.url,
+            thumbnailUrl: frame.url,
+          };
+        } else {
+          const tinyJpg = Buffer.from(
+            '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+            'base64',
+          );
+          try {
+            if (!existsSync(fpath)) writeFileSync(fpath, tinyJpg);
+            shotItem.imageAttachment = {
+              assetId: `ast_${randomUUID().slice(0, 8)}`,
+              name: fname,
+              kind: 'image',
+              path: fpath,
+              url: getMediaUrl(fname),
+              thumbnailUrl: getMediaUrl(fname),
+            };
+          } catch {}
+        }
       }
 
       finalShots.push(shotItem);

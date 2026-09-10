@@ -776,6 +776,36 @@
   user-select: none;
 }
 
+/* extraTall 120px 行高下的高清分镜预览卡片 (16:9 比例微缩卡) */
+.wf-grid-row--extraTall .wf-grid-attachment-thumb-wrapper {
+  width: 140px;
+  height: 84px;
+  min-width: 140px;
+  border-radius: 6px;
+}
+
+.wf-grid-row--extraTall .wf-grid-attachment-add-btn {
+  width: 28px;
+  height: 84px;
+  min-width: 28px;
+  border-radius: 6px;
+}
+
+/* tall 72px 行高下的分镜中卡片 */
+.wf-grid-row--tall .wf-grid-attachment-thumb-wrapper {
+  width: 72px;
+  height: 48px;
+  min-width: 72px;
+  border-radius: 5px;
+}
+
+.wf-grid-row--tall .wf-grid-attachment-add-btn {
+  width: 24px;
+  height: 48px;
+  min-width: 24px;
+  border-radius: 5px;
+}
+
 .wf-grid-attachment-thumb-img {
   width: 100%;
   height: 100%;
