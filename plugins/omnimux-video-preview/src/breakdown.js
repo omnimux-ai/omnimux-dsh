@@ -274,7 +274,7 @@ export function normalizeSocialMetadata(raw, fallbackUrl = '') {
     },
     cover_url: coverUrl,
     video_url: videoUrl,
-    duration: duration > 1000 ? Math.round(duration / 1000) : duration,
+    duration: duration > 60000 ? Math.round(duration / 1000) : duration,
     stats: {
       likes: stats.likes ?? stats.digg_count ?? 0,
       comments: stats.comments ?? stats.comment_count ?? 0,
