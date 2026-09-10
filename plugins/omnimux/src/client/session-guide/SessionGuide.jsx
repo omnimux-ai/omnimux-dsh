@@ -72,13 +72,13 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   return (
     <section ref={guideRef} className="omnimux-starter-guide" data-omnimux-starter-guide="" data-session-id={sessionId} aria-label={t('guide.title')}>
       {notice && <div className="omnimux-starter-notice" role="status">{t(`guide.${notice}`)}
-        {notice === 'unavailable' && <button type="button" onClick={() => { setNotice(null); focusEditor() }}>{t('guide.retry')}</button>}
+        {notice === 'unavailable' && <button type="button" onClick={() => { setNotice(null); focusEditor() }}>{t('guide.retry')}</button> /* exempt-ui01: session starter button */}
       </div>}
       <div className="omnimux-starter-groups">
         {STARTER_GROUPS.map(group => <section key={group} className="omnimux-starter-group" data-starter-group={group} aria-label={t(`guide.${group}`)}>
           <h2>{t(`guide.${group}`)}</h2>
           <div className="omnimux-starter-cards">
-            {STARTERS.filter(card => card.group === group).map(card => <button key={card.id} type="button"
+            {STARTERS.filter(card => card.group === group).map(card => <button key={card.id} type="button" /* exempt-ui01: session starter card button */
               data-starter-id={card.id} aria-pressed={state.selectedId === card.id} onClick={() => choose(card)}>
               <span className="omnimux-starter-icon"><StarterIcon icon={card.icon} /></span>
               <span className="omnimux-starter-label">{t(`guide.${card.id}.title`)}</span>

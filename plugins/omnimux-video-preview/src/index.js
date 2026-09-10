@@ -46,7 +46,7 @@ export function apply(ctx) {
   // 2. Register video breakdown & shots analysis tool
   ctx.tools?.register?.({
     name: 'video_breakdown_analyze',
-    description: 'Understand and deconstruct a video or video URL into granular shots (景别/机位/角度/动态/描述) and structural stages (Hook/Product Intro/Usage Detail/Demo Scene). Generates structured .vbreakdown.json and interactive .vbreakdown.html preview, and automatically opens the right sidebar preview.',
+    description: 'Understand and deconstruct a video or video URL into granular shots (景别/机位/角度/动态/描述) and structural stages (Hook/Product Intro/Usage Detail/Demo Scene). Generates structured .vbreakdown data, and automatically opens the right sidebar preview.',
     parameters: {
       type: 'object',
       properties: {
@@ -66,11 +66,11 @@ export function apply(ctx) {
       required: ['url'],
     },
     execute: async ({ url, dest, auto_open = true }, execCtx) => {
-      // Step 1: Extract high-fidelity shots and structural breakdown
-      const breakdownData = await extractVideoBreakdown(url)
+      // Step 1: Extract high-fidelity shots and structural breakdown using real social data / multimodal analysis
+      const breakdownData = await extractVideoBreakdown(url, { ctx })
 
-      // Step 2: Save dual artifacts (.vbreakdown.json and .vbreakdown.html)
-      const { jsonPath, htmlPath } = saveVideoBreakdownArtifacts(breakdownData, dest)
+      // Step 2: Save native .vbreakdown artifact
+      const { dataPath } = saveVideoBreakdownArtifacts(breakdownData, dest)
 
       // Step 3: Trigger sidebar preview automatically
       let previewOpened = false
@@ -78,10 +78,10 @@ export function apply(ctx) {
         try {
           const sidebarOpenTool = ctx.tools?.get?.('sidebar_open')
           if (sidebarOpenTool && typeof sidebarOpenTool.execute === 'function') {
-            await sidebarOpenTool.execute({ target: htmlPath, title: '视频分析' }, execCtx)
+            await sidebarOpenTool.execute({ target: dataPath, title: '视频分析' }, execCtx)
             previewOpened = true
           } else if (sidebarService && typeof sidebarService.openTab === 'function') {
-            sidebarService.openTab({ path: htmlPath, title: '视频分析' })
+            sidebarService.openTab({ path: dataPath, title: '视频分析' })
             previewOpened = true
           }
         } catch {
@@ -92,8 +92,7 @@ export function apply(ctx) {
       return {
         success: true,
         preview_opened: previewOpened,
-        json_path: jsonPath,
-        html_path: htmlPath,
+        data_path: dataPath,
         video: breakdownData.video,
         pipeline: breakdownData.pipeline,
         shots_count: breakdownData.shots.length,
