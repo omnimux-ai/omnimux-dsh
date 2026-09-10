@@ -11,8 +11,11 @@ let esbuild
 try {
   esbuild = await import('esbuild')
 } catch {
-  const rootRepo = resolve(here, '../../../node_modules/esbuild')
-  esbuild = await import(rootRepo)
+  try {
+    esbuild = await import(resolve(here, '../../../node_modules/esbuild/lib/main.js'))
+  } catch {
+    esbuild = await import('/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/esbuild/lib/main.js')
+  }
 }
 
 mkdirSync(outDir, { recursive: true })
@@ -22,6 +25,9 @@ const result = await esbuild.build({
   bundle: true,
   format: 'cjs',
   target: 'es2022',
+  alias: {
+    'dsh-ui-kit': resolve(root, '../../../../personal/dsh-ui-kit/lib/index.js'),
+  },
   external: ['react', 'react-dom', '@deepseek-ai/*'],
   write: false,
 })
