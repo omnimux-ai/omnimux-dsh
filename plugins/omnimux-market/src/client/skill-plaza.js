@@ -559,10 +559,19 @@
       });
 
       return h("div", { className: "sh-mkt" },
-        h("section", { className: "workshop-intro" + (isExpertTab ? " no-actions" : ""), "aria-label": introHeading },
+        h("section", { className: "workshop-intro", "aria-label": introHeading },
           h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, introHeading),
           h("p", { className: "workshop-description" }, introSubtitle),
-          isExpertTab ? null : h("div", { className: "action-row" },
+          isExpertTab ? h("div", { className: "action-row" },
+            h("button", {
+              type: "button",
+              className: "btn-create",
+              onClick: () => createSkillSession({ mode: "expert-creator", preset: "cordis", text: "" }),
+            },
+              h(PlazaIcon, { size: 14 }),
+              tr("expertMarket.createExpert") || (isEn ? "Create Expert" : "创建专家"),
+            ),
+          ) : h("div", { className: "action-row" },
             h("button", { type: "button", className: "btn-create", onClick: () => createSkillSession({ text: "/skill-creator" }) },
               h(PlazaIcon, { size: 14 }), tr("workshop.create")),
             h("button", { type: "button", className: "btn-install", onClick: () => setOpenInstallModal(true) },

@@ -270,13 +270,13 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .btn-create svg{width:14px;height:14px;fill:currentColor}
 .btn-install{background:var(--dsw-alias-bg-subtle,var(--dsw-alias-bg-layer-3,rgba(255,255,255,.08)));color:var(--dsw-alias-label-primary,#fff);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.14));border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;transition:background .15s}
 .btn-install:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.14))}
-.nav-bar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;margin-bottom:18px;gap:16px;min-width:0;border-bottom:1px solid var(--dsw-alias-border-l2);padding-bottom:2px}
+.nav-bar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;margin-bottom:18px;gap:16px;min-width:0;padding-bottom:2px}
 .nav-tabs{display:flex;align-items:center;gap:24px;flex:none;white-space:nowrap}
 @container (max-width:380px){.nav-bar{flex-wrap:wrap;gap:8px}.sh-mkt .search-box{flex-basis:100%;max-width:none}.nav-tabs{gap:16px}}
 .nav-tab{position:relative;display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;font-family:inherit;font-size:14px;color:var(--dsw-alias-label-tertiary,#84878f);cursor:pointer;user-select:none;padding:6px 0 10px;transition:color .15s}
 .nav-tab:hover{color:var(--dsw-alias-label-primary,#ffffff)}
 .nav-tab.active{color:var(--dsw-alias-label-primary,#ffffff);font-weight:600}
-.nav-tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--dsw-alias-label-primary,#ffffff);border-radius:1px}
+.nav-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--dsw-alias-label-primary,#ffffff);border-radius:1px}
 .tab-info-icon{width:14px;height:14px;flex-shrink:0;color:currentColor}
 .search-box{position:relative;flex:1 1 200px;min-width:140px;max-width:260px}
 .search-box input{width:100%;height:32px;box-sizing:border-box;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:0 12px 0 32px;color:var(--dsw-alias-label-primary);font-size:13px;outline:none}
