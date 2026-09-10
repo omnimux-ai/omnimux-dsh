@@ -428,4 +428,51 @@ describe('omnimux_text_complete tool', () => {
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
     )
   })
+
+  it('completeTextViaChat prioritizes local provider over remote cloud provider for direct video completion', async () => {
+    const { completeTextViaChat } = await import('./chat.js')
+    let capturedRequest = null
+    const fakeFetcher = async (url, opts) => {
+      capturedRequest = { url, opts }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [{ message: { content: 'local cpa completion result' } }]
+        })
+      }
+    }
+    const res = await completeTextViaChat({
+      prompt: 'test prompt',
+      model: 'gemini-3.8-flash',
+      videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } },
+      settings: {
+        get: (section) => {
+          if (section === 'llm-pi-ai') {
+            return {
+              providers: {
+                omnimux: {
+                  baseURL: 'https://api.omnimux.ai/v1',
+                  models: [{ id: 'gemini-3.8-flash' }],
+                },
+                cpa: {
+                  baseURL: 'http://127.0.0.1:8317/v1',
+                  apiKeyEnv: 'CPA_API_KEY',
+                  models: [{ id: 'gemini-3.8-flash-high' }],
+                },
+              },
+            }
+          }
+          return undefined
+        },
+      },
+      credentials: {
+        resolve: async (ref) => ref === 'CPA_API_KEY' ? { value: 'sk-cpa-test' } : undefined,
+      },
+      fetcher: fakeFetcher,
+    })
+    assert.equal(res.text, 'local cpa completion result')
+    assert.ok(capturedRequest.url.startsWith('http://127.0.0.1:8317/v1'))
+    assert.equal(capturedRequest.opts.headers.authorization, 'Bearer sk-cpa-test')
+  })
 })
