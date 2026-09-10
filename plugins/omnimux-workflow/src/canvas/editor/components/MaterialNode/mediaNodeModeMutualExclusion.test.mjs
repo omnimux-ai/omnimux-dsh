@@ -109,7 +109,7 @@ test('TC-MEDIA-MUTUAL-03: 多模态空态胶囊动作与判定规范（图/视/�
   );
 });
 
-test('TC-MEDIA-MUTUAL-04: MaterialNode 源码中多模态空态导入、替换与清空恢复闭环契约', () => {
+test('TC-MEDIA-MUTUAL-04: MaterialNode 源码中多模态空态导入与极简单向流转契约（不设冗余清空重置）', () => {
   // 1. 源码中通过 isEmptyMediaNode 判定图片/视频/音频空态
   assert.match(materialNodeSrc, /const isEmptyMediaNode = isEmptyMediaGenerateNode\(/);
 
@@ -118,16 +118,19 @@ test('TC-MEDIA-MUTUAL-04: MaterialNode 源码中多模态空态导入、替换�
   assert.match(materialNodeSrc, /EMPTY_AUDIO_PILL_ACTION_ID/);
   assert.match(materialNodeSrc, /EMPTY_IMAGE_PILL_ACTION_ID/);
 
-  // 3. 已导入素材节点提供替换与清空操作
-  assert.match(materialNodeSrc, /key:\s*'replace-media'/);
-  assert.match(materialNodeSrc, /key:\s*'clear-media'/);
+  // 3. 极简单向流转设计：已导入节点不提供冗余清空操作（用户更换素材直接删除节点重建，避免复杂重置状态）
+  assert.equal(
+    /key:\s*'clear-media'/.test(materialNodeSrc),
+    false,
+    '已导入节点不得挂载 clear-media 冗余重置操作',
+  );
+  assert.equal(
+    /handleClearImportedMedia/.test(materialNodeSrc),
+    false,
+    '源码中不得残留 handleClearImportedMedia 重置逻辑',
+  );
 
-  // 4. 清空回调 handleClearImportedMedia 将节点复位为 generate 模式并清空媒体引用
-  assert.match(materialNodeSrc, /const handleClearImportedMedia = useCallback\(/);
-  assert.match(materialNodeSrc, /nodeKind:\s*'generate'/);
-  assert.match(materialNodeSrc, /status:\s*'empty'/);
-
-  // 5. NodeEmptyState 对空态多模态卡片不添加 nodrag，保障按住卡片主体正常拖拽
+  // 4. NodeEmptyState 对空态多模态卡片不添加 nodrag，保障按住卡片主体正常拖拽
   assert.equal(
     /wf-node-empty--(image|video|audio)[^>]*nodrag/.test(nodeEmptyStateSrc),
     false,
@@ -173,10 +176,10 @@ test('TC-MEDIA-MUTUAL-05: 工作流执行调度契约：导入媒体节点路由
 });
 
 test('TC-MEDIA-MUTUAL-06: 已导入媒体节点（视频/音频）必须完整保留核心下游工具（内容拆解/分镜表/语音识别）', () => {
-  // 1. 源码中 import 状态下的视频节点依然执行 canRunVideoDeconstruct 挂载拆解与分镜表，并合并 importManagementActions（chat 居前）
+  // 1. 源码中 import 状态下的视频节点依然执行 canRunVideoDeconstruct 挂载拆解与分镜表，次区挂载 chat
   assert.match(materialNodeSrc, /canRunVideoDeconstruct/);
-  assert.match(materialNodeSrc, /actions\.push\(chat,\s*\.\.\.importManagementActions\)/);
+  assert.match(materialNodeSrc, /actions\.push\(chat\)/);
 
-  // 2. 音频节点在挂载 speech-to-text 后同样合并 importManagementActions（chat 居前）
+  // 2. 音频节点在挂载 speech-to-text 后同样挂载 chat
   assert.match(materialNodeSrc, /canRunSpeechToText/);
 });
