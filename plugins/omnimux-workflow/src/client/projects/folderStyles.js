@@ -1,13 +1,23 @@
 export const FOLDER_STYLES = `
 .omnimux-folder { position: relative; aspect-ratio: 516 / 378; min-width: 0; isolation: isolate; container-type: inline-size; }
 .omnimux-folder[data-cover-kind=empty] .omnimux-folder-back { background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 88%, var(--dsw-alias-brand-primary)); }
-.omnimux-folder[data-cover-kind=empty] .omnimux-folder-pocket { fill: color-mix(in srgb, var(--dsw-alias-bg-overlay) 91%, var(--dsw-alias-brand-primary)); }
+.omnimux-folder[data-cover-kind=empty] .omnimux-folder-pocket { background-color: color-mix(in srgb, var(--dsw-alias-bg-base) 97%, var(--dsw-alias-brand-primary)); }
 .omnimux-folder .omnimux-folder-open { position: absolute; inset: 0; width: 100%; height: 100%; display: block; padding: 0; border: 0; background: transparent; text-align: left; white-space: normal; border-radius: 9% / 12.3%; overflow: hidden; color: var(--dsw-alias-label-primary); }
-.omnimux-folder-back { position: absolute; inset: 0; border-radius: inherit; background: var(--dsw-alias-bg-layer-2); border: 1px solid var(--dsw-alias-border-l2); }
-.omnimux-folder-sheet { position: absolute; display: block; overflow: hidden; border-radius: 9%; background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); }
+.omnimux-folder-back { position: absolute; inset: 0; border-radius: inherit; background: var(--dsw-alias-bg-layer-2); border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent); }
+.omnimux-folder-sheet { position: absolute; display: block; overflow: hidden; border-radius: 9%; background: var(--dsw-alias-bg-base); border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent); }
 .omnimux-folder-sheet--rear { width: 76%; height: 70%; left: 12%; top: 6%; transform: rotate(-3deg); }
-.omnimux-folder-sheet--front { width: 84%; height: 72%; left: 8%; top: 13%; transform: rotate(2deg); box-sizing: border-box; border: 5px solid var(--dsw-alias-bg-base); box-shadow: 0 0 0 1px var(--dsw-alias-border-l2); }
-.omnimux-folder-pocket { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--dsw-alias-bg-overlay); stroke: var(--dsw-alias-border-l2); stroke-width: 1.5; }
+.omnimux-folder-sheet--front { width: 84%; height: 72%; left: 8%; top: 13%; transform: rotate(2deg); box-sizing: border-box; border: 5px solid var(--dsw-alias-bg-base); box-shadow: 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
+.omnimux-folder-glass-defs { position: absolute; pointer-events: none; }
+.omnimux-folder-pocket, .omnimux-folder-pocket-rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* The pocket samples the existing insert once; the caption stays outside its blur and clip. */
+.omnimux-folder-pocket { background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); }
+.omnimux-folder-pocket::after { content: ''; position: absolute; inset: 0; border-radius: 9% / 12.3%; background: linear-gradient(150deg, color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent) 38%, transparent 64%); box-shadow: inset 0 -1px 1px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent), inset 0 -12px 22px color-mix(in srgb, var(--dsw-alias-bg-mask-1) 12%, transparent); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .omnimux-folder .omnimux-folder-pocket { background: linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 78%, transparent) 38%, color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent) 64%, color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)) 100%); -webkit-backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); backdrop-filter: blur(clamp(12px, 4cqw, 24px)) saturate(1.15); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .omnimux-folder .omnimux-folder-pocket { background: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, var(--dsw-alias-label-primary)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 .omnimux-folder-caption { position: absolute; bottom: 8%; left: 8%; right: 16%; display: flex; flex-direction: column; gap: 4px; }
 .omnimux-folder-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: clamp(15px, 5.8cqw, 30px); line-height: 1.3; font-weight: 600; }
 .omnimux-folder-date { font-size: clamp(12px, 4.65cqw, 24px); line-height: 1.4; color: var(--dsw-alias-label-secondary); }
