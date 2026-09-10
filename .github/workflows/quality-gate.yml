@@ -57,6 +57,7 @@ jobs:
           const formRuntime = JSON.parse(readFileSync('plugins/omnimux-forms/package.json', 'utf8')).devDependencies;
           writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
             private: true,
+            overrides: { 'whatwg-url': '17.1.0' },
             dependencies: { ...formContract.dependencies, ...formContract.devDependencies, '@chakra-ui/react': formRuntime['@chakra-ui/react'], '@emotion/react': formRuntime['@emotion/react'], acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
           }));
           JS
