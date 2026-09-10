@@ -37,14 +37,7 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       const attachments = attachmentStore.getSnapshot(sessionId)
       const previous = attachmentDrafts.get(sessionId) || ''
       if (!value.draft.trim() && !attachments.length) return true
-      let draft = value.draft
-      const workbench = doc.defaultView?.__omnimuxWorkbench
-      if (value.phase === 'plain' && !value.occurrences?.length && !draft.trimStart().startsWith('/') && !draft.includes('<ui_context') && workbench?.getUiContext && workbench?.formatCompactContextBlock) {
-        const context = workbench.getUiContext()
-        const block = context?.ok && context.surface?.tabId && context.surface.panelOpen
-          ? workbench.formatCompactContextBlock(context) : ''
-        if (block) draft = `${block}\n\n${draft}`
-      }
+      const draft = value.draft
       const result = reconcileAttachmentDraft(draft, previous, attachments)
       const attachmentsChanged = result.status === 'synced'
       if (result.status === 'ready' && result.draft !== value.draft) result.status = 'synced'

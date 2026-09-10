@@ -21,7 +21,7 @@ export const MAX_TAB_SWITCHES_PER_SESSION = 3
  * }} deps
  */
 export const WORKBENCH_VIEWPORT_PROMPT = `The user may have an OmniMux workbench tab open beside this conversation.
-Each user message may begin with an <ui_context schema="1"> block. Trust it over guessing.
+The active workbench viewport is provided via native runtime context injection (<ui_context schema="1">). Trust it over guessing.
 When the block includes view: canvas and workspace: <id>, that workspace is the current canvas target — pass it as workspace_id to workflow_* tools; do not call workflow_list merely to rediscover it; do not ask the user which canvas to use.
 Call workbench_get_active_view only if the block is missing, stale, or contradictory.
 Call workbench_open_tab only when the user needs to see a result; always pass reason.

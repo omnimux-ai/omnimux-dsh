@@ -93,74 +93,15 @@ export function setComposerValue(field, text, globals = {}) {
 }
 
 export function injectUiContextStyle(doc = (typeof document !== 'undefined' ? document : null)) {
-  if (!doc || typeof doc.createElement !== 'function') return
-  const id = 'omnimux-ui-context-style'
-  if (doc.getElementById?.(id)) return
-  const style = doc.createElement('style')
-  style.id = id
-  style.textContent = `
-    ui_context, .omnimux-ui-context-hidden {
-      display: none !important;
-    }
-  `
-  doc.head?.appendChild(style)
+  // Deprecated: UI context now uses native DSH context injection rows.
 }
 
 export function attachComposerEnvelope(composerEl, getUiContext, formatCompactBlock, globals = {}) {
-  if (!composerEl || typeof getUiContext !== 'function' || typeof formatCompactBlock !== 'function') return false
-  const currentVal = getComposerText(composerEl)
-  if (currentVal.includes('<ui_context')) return false
-
-  try {
-    const envelope = getUiContext()
-    if (!envelope || !envelope.ok) return false
-    const block = formatCompactBlock(envelope)
-    if (!block) return false
-    const nextVal = block + String.fromCharCode(10, 10) + currentVal
-    return setComposerValue(composerEl, nextVal, globals)
-  } catch (err) {
-    console.error('[composer-envelope] attach failed:', err)
-    return false
-  }
+  // Deprecated: UI context is injected natively via Host agent/pre-step; user message is preserved intact.
+  return false
 }
 
 export function installComposerEnvelopeCapture(doc = (typeof document !== 'undefined' ? document : null), options = {}) {
-  if (!doc || typeof doc.addEventListener !== 'function') return () => {}
-
-  injectUiContextStyle(doc)
-
-  const getWorkbench = options.getWorkbench || (() => globalThis.window?.__omnimuxWorkbench)
-
-  const handleKeydown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !e.ctrlKey && !e.metaKey) {
-      const composer = findComposer(doc)
-      if (composer && (e.target === composer || composer.contains?.(e.target))) {
-        const wb = getWorkbench()
-        if (wb && typeof wb.getUiContext === 'function' && typeof wb.formatCompactContextBlock === 'function') {
-          attachComposerEnvelope(composer, wb.getUiContext, wb.formatCompactContextBlock, options.globals)
-        }
-      }
-    }
-  }
-
-  const handlePointerDown = (e) => {
-    const sendBtn = findSendButton(doc)
-    if (sendBtn && (e.target === sendBtn || sendBtn.contains?.(e.target))) {
-      const composer = findComposer(doc)
-      if (composer) {
-        const wb = getWorkbench()
-        if (wb && typeof wb.getUiContext === 'function' && typeof wb.formatCompactContextBlock === 'function') {
-          attachComposerEnvelope(composer, wb.getUiContext, wb.formatCompactContextBlock, options.globals)
-        }
-      }
-    }
-  }
-
-  doc.addEventListener('keydown', handleKeydown, { capture: true })
-  doc.addEventListener('pointerdown', handlePointerDown, { capture: true })
-
-  return () => {
-    doc.removeEventListener('keydown', handleKeydown, { capture: true })
-    doc.removeEventListener('pointerdown', handlePointerDown, { capture: true })
-  }
+  // Deprecated: No composer event interception or text prefixing needed.
+  return () => {}
 }
