@@ -294,12 +294,10 @@ export function guardSubmit(request, opts = {}) {
     })
   }
 
-  const effectiveModelId = mapped.targetModelId || modelAdmit.modelId
   return {
     ok: true,
-    modelId: effectiveModelId,
+    modelId: modelAdmit.modelId,
     requestedModelId: modelAdmit.requestedModelId,
-    targetModelId: effectiveModelId,
     operationId: opAdmit.operationId,
     operationInferred,
     operation: opAdmit.operation,

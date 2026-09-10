@@ -241,14 +241,6 @@ export function mapValidatedPlanToVendor(args) {
         logical.resolution = extras.resolution
       }
       // 严禁向 vendor 注入 aspect_ratio
-
-      // SubmitGuard 聚敛自适应分流：针对 gpt-image-2.5 依据 resolution / quality 动态适配至相应物理端点
-      const reqId = String(args.modelId ?? '')
-      if (reqId === 'gpt-image-2.5' || reqId === 'gpt-image-2-5') {
-        const isHd = extras.resolution === '4K' || (extras.resolution === '2K' && extras.quality === 'hd')
-        targetModelId = isHd ? 'gpt-image-2.5-hd' : 'gpt-image-2.5'
-        logical.model = targetModelId
-      }
     } else {
       if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
         vendor.aspect_ratio = extras.aspectRatio
@@ -409,6 +401,5 @@ export function mapValidatedPlanToVendor(args) {
     ok: true,
     vendorPayload: vendor,
     logicalPayload: logical,
-    ...(targetModelId ? { targetModelId } : {}),
   }
 }

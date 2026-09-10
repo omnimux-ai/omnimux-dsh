@@ -21,7 +21,7 @@ test('gpt-image-2.5 mapOpenAiImageSize supports 4K alongside 1K and 2K', () => {
   assert.deepEqual(mapOpenAiImageSize('auto', '4K'), { size: '3840x2160', quality: 'hd' })
 })
 
-test('gpt-image-2.5 routes 1K and standard 2K to base gpt-image-2.5 endpoint', () => {
+test('gpt-image-2.5 routes 1K and standard 2K to unified gpt-image-2.5 endpoint', () => {
   const t1 = guardSubmit(
     {
       model: canonical,
@@ -57,7 +57,7 @@ test('gpt-image-2.5 routes 1K and standard 2K to base gpt-image-2.5 endpoint', (
   assert.equal('aspect_ratio' in t2.vendorPayload, false)
 })
 
-test('gpt-image-2.5 adaptively routes 4K and 2K-HD to gpt-image-2.5-hd endpoint', () => {
+test('gpt-image-2.5 natively supports 4K on the unified gpt-image-2.5 endpoint', () => {
   const ratios = [
     { ratio: '16:9', expectedSize: '3840x2160' },
     { ratio: '9:16', expectedSize: '2160x3840' },
@@ -77,31 +77,15 @@ test('gpt-image-2.5 adaptively routes 4K and 2K-HD to gpt-image-2.5-hd endpoint'
       { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
     )
     assert.equal(plan.ok, true, `Failed for ratio ${ratio}: ${plan.message}`)
-    assert.equal(plan.modelId, 'gpt-image-2.5-hd', 'modelId must be adaptively rewritten to HD SKU')
+    assert.equal(plan.modelId, 'gpt-image-2.5', 'Unified single endpoint; no longer rewritten to HD SKU')
     assert.equal(plan.vendorPayload.size, expectedSize)
     assert.equal(plan.vendorPayload.quality, 'hd')
     assert.equal('model' in plan.vendorPayload, false)
     assert.equal('aspect_ratio' in plan.vendorPayload, false, 'aspect_ratio must not leak to vendor')
   }
-
-  // 2K with explicit quality=hd also routes to HD SKU
-  const plan2kHd = guardSubmit(
-    {
-      model: canonical,
-      operation: 'text_to_image',
-      prompt: 'sharp detailed macro photo',
-      aspectRatio: '1:1',
-      resolution: '2K',
-      quality: 'hd',
-    },
-    { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
-  )
-  assert.equal(plan2kHd.ok, true)
-  assert.equal(plan2kHd.modelId, 'gpt-image-2.5-hd')
-  assert.equal(plan2kHd.vendorPayload.quality, 'hd')
 })
 
-test('gpt-image-2-5 alias preserves adaptive routing to gpt-image-2.5 and gpt-image-2.5-hd', () => {
+test('gpt-image-2-5 alias transparently resolves to unified gpt-image-2.5', () => {
   const plan1k = guardSubmit(
     {
       model: 'gpt-image-2-5',
@@ -124,5 +108,5 @@ test('gpt-image-2-5 alias preserves adaptive routing to gpt-image-2.5 and gpt-im
     { index, seam: 'imageGenerate', outputType: 'image', requireListed: false },
   )
   assert.equal(plan4k.ok, true)
-  assert.equal(plan4k.modelId, 'gpt-image-2.5-hd')
+  assert.equal(plan4k.modelId, 'gpt-image-2.5')
 })
