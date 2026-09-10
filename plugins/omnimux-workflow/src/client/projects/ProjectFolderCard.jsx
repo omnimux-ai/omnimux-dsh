@@ -1,72 +1,51 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Button, IconButton } from 'dsh-ui-kit'
 import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { IconButton } from 'dsh-ui-kit'
-
-/** 拟物文件夹卡片顶部声波纹理 SVG */
-function WaveformTexture() {
-  return (
-    <svg viewBox="0 0 200 48" fill="none" className="omnimux-folder-waveform-svg" aria-hidden="true">
-      <path
-        d="M10 24L15 14L20 34L25 18L30 30L35 8L40 40L45 16L50 32L55 20L60 28L65 10L70 38L75 22L80 26L85 14L90 34L95 18L100 30L105 12L110 36L115 16L120 32L125 24L130 24L135 14L140 34L145 18L150 30L155 8L160 40L165 16L170 32L175 24L180 24L185 18L190 30"
-        stroke="var(--dsw-alias-brand-primary, #8b5cf6)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
+import { ProjectCover } from './ProjectCover.jsx'
+import { injectFolderStyles } from './folderStyles.js'
 
 export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
-  const dateStr = project.updatedAt
-    ? new Date(project.updatedAt).toLocaleDateString().replace(/\//g, '.')
-    : ''
-
-  return (
-    <div
-      className="omnimux-project-folder-card omnimux-workflow-card"
-      onClick={() => onOpen(project)}
-      title={`点击打开项目：${project.title}`}
-    >
-      {/* 上部：拟物文件夹内衬封套 */}
-      <div className="omnimux-project-folder-cover">
-        <div className="omnimux-folder-tab-shape">
-          <WaveformTexture />
-        </div>
-      </div>
-
-      {/* 下部：项目信息 */}
-      <div className="omnimux-project-folder-info">
-        <div className="omnimux-project-folder-title" title={project.title}>
-          {project.title}
-        </div>
-        <div className="omnimux-project-folder-meta">
-          <span>{dateStr || '2026.9.9'}</span>
-          <div
-            className="omnimux-workflow-card-actions omnimux-workflow-card-actions--visible"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <IconButton
-              variant="ghost"
-              size="xs"
-              title={t('projects.rename') || '重命名'}
-              aria-label={t('projects.rename') || '重命名'}
-              onClick={() => onRename(project)}
-            >
-              <IconEditOutline16 size={14} />
-            </IconButton>
-            <IconButton
-              variant="ghost"
-              size="xs"
-              title={t('projects.delete') || '删除'}
-              aria-label={t('projects.delete') || '删除'}
-              onClick={() => onDelete(project)}
-            >
-              <IconTrashOutline16 size={14} />
-            </IconButton>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  const [menu, setMenu] = useState(false)
+  const root = useRef(null)
+  useEffect(() => { injectFolderStyles() }, [])
+  useEffect(() => {
+    if (!menu) return undefined
+    root.current?.querySelector('[role="menuitem"]')?.focus()
+    const outside = (event) => { if (!root.current?.contains(event.target)) setMenu(false) }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [menu])
+  const date = new Date(project.updatedAt)
+  const dateStr = Number.isFinite(date.getTime()) ? `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}` : ''
+  const closeMenu = () => { setMenu(false); root.current?.querySelector('[aria-haspopup="menu"]')?.focus() }
+  return <article ref={root} className="omnimux-folder" data-cover-kind={project.cover?.kind || 'empty'}>
+    <Button variant="ghost" className="omnimux-folder-open" onClick={() => onOpen(project)} aria-label={project.title}>
+      <span className="omnimux-folder-back" aria-hidden="true" />
+      <span className="omnimux-folder-sheet omnimux-folder-sheet--rear" aria-hidden="true" />
+      <span className="omnimux-folder-sheet omnimux-folder-sheet--front"><ProjectCover cover={project.cover} /></span>
+      <svg className="omnimux-folder-pocket" viewBox="0 0 516 378" aria-hidden="true">
+        <path d="M1 199C1 171 20 150 48 150H142C171 150 185 163 191 187H467C494 187 515 208 515 237V330C515 356 495 377 467 377H49C22 377 1 356 1 330Z" />
+      </svg>
+      <span className="omnimux-folder-caption">
+        <span className="omnimux-folder-name" title={project.title}>{project.title}</span>
+        <span className="omnimux-folder-date">{dateStr}</span>
+      </span>
+    </Button>
+    <IconButton variant="ghost" className="omnimux-folder-more" aria-label={t('projects.more')} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+    </IconButton>
+    {menu && <div className="omnimux-folder-menu" role="menu" onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.preventDefault(); closeMenu() }
+      if (event.key === 'Tab') setMenu(false)
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]')]
+        const index = items.indexOf(document.activeElement)
+        items[event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length]?.focus()
+      }
+    }}>
+      <Button variant="ghost" role="menuitem" onClick={() => { closeMenu(); onRename(project) }}><IconEditOutline16 size={16}/>{t('projects.rename')}</Button>
+      <Button variant="ghost" role="menuitem" onClick={() => { closeMenu(); onDelete(project) }}><IconTrashOutline16 size={16}/>{t('projects.delete')}</Button>
+    </div>}
+  </article>
 }

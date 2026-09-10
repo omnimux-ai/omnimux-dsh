@@ -27,8 +27,9 @@ describe('ProjectLibraryPage Architectural Hierarchy', () => {
 
   it('renders ProjectFolderCard for top level grid', () => {
     assert.match(pageSource, /<ProjectFolderCard/);
-    assert.match(folderCardSource, /omnimux-project-folder-card/);
-    assert.match(folderCardSource, /omnimux-folder-tab-shape/);
+    assert.match(folderCardSource, /className="omnimux-folder"/);
+    assert.match(folderCardSource, /omnimux-folder-pocket/);
+    assert.match(folderCardSource, /<ProjectCover/);
   });
 
   it('renders ProjectPagesTab with creation CTA in header and page cards in grid', () => {

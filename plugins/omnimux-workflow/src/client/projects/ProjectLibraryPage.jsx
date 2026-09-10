@@ -97,6 +97,7 @@ export function ProjectLibraryPage(props) {
       const res = await getProject(project.id)
       if (res.ok && res.body?.project) {
         setProjectDetail(res.body.project)
+        setProjects((current) => current.map((item) => item.id === project.id ? { ...item, cover: res.body.project.cover, pages: res.body.project.pages } : item))
       } else {
         setProjectDetail(project)
       }

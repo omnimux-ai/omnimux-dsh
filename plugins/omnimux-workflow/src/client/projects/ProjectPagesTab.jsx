@@ -1,19 +1,7 @@
 import React from 'react'
 import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { IconButton } from 'dsh-ui-kit'
-
-/** 缺省创作页占位封面 */
-function PageCoverDefault() {
-  return (
-    <div className="omnimux-page-cover-placeholder" aria-hidden="true">
-      <svg viewBox="0 0 48 48" fill="none" className="omnimux-page-cover-icon">
-        <rect x="6" y="8" width="36" height="32" rx="6" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
-        <circle cx="17" cy="19" r="3.5" fill="currentColor" fillOpacity="0.4" />
-        <path d="M10 34L20 23L30 33L36 27L42 34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.5" />
-      </svg>
-    </div>
-  )
-}
+import { ProjectCover } from './ProjectCover.jsx'
 
 export function ProjectPagesTab({
   pages = [],
@@ -38,8 +26,6 @@ export function ProjectPagesTab({
                 .replace(/\//g, '.')
             : '2026.9.10'
 
-          const coverSrc = page.coverUrl || page.thumbnailUrl || page.previewUrl || page.image || ''
-
           return (
             <div
               key={page.id}
@@ -49,11 +35,7 @@ export function ProjectPagesTab({
             >
               {/* 卡片封面：首选真实缩略图/封面，无则展示优美占位图 */}
               <div className="omnimux-page-card-cover">
-                {coverSrc ? (
-                  <img src={coverSrc} alt={page.title} className="omnimux-page-card-img" />
-                ) : (
-                  <PageCoverDefault />
-                )}
+                <ProjectCover cover={page.cover} />
               </div>
 
               {/* 卡片下部信息 */}
