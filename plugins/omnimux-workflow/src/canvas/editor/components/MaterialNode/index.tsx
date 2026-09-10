@@ -1264,7 +1264,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     materialType={materialType}
                     nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
                     onApplyPreset={handleApplyPreset}
-                    onImport={kind === 'import' || isEmptyMediaNode ? () => { void resourcePicker.fillImportNode(); } : undefined}
+                    onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
                   />
                 )}
               </GenerationStateContainer>
@@ -1275,7 +1275,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 materialType={materialType}
                 nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
                 onApplyPreset={handleApplyPreset}
-                onImport={kind === 'import' || isEmptyMediaNode ? () => { void resourcePicker.fillImportNode(); } : undefined}
+                onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
               />
             </div>
           ))}
