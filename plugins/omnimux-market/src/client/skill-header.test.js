@@ -67,3 +67,35 @@ test('failed installation retains dialog and reports error without installed cal
   assert.equal(closed, false)
   assert.ok(writes.includes('installation-rejected'))
 })
+
+test('Drawer safely renders with Overlay defined in skills-ui', () => {
+  const skillsUiSource = readFileSync(new URL('./skills-ui.js', import.meta.url), 'utf8')
+  const ReactMock = {
+    useContext: () => (k) => k,
+    useState: (init) => [init, () => {}],
+    useEffect: () => {},
+    useRef: () => ({ current: null }),
+    createContext: () => ({ Provider: 'Provider' }),
+  }
+  const context = {
+    h,
+    React: ReactMock,
+    useState: ReactMock.useState,
+    useEffect: ReactMock.useEffect,
+    useRef: ReactMock.useRef,
+    createPortal: (node) => node,
+    fallbackPortal: null,
+    document: { body: { style: {} } },
+    window: { addEventListener: () => {}, removeEventListener: () => {} },
+    useTr: () => (k) => k,
+    lookup: (k) => k,
+    catLabel: () => '通用',
+    api: async () => ({ ok: true }),
+    Button: 'Button',
+    Toast: 'Toast',
+  }
+  const renderDrawer = runInNewContext(`${skillsUiSource}\nDrawer`, context)
+  const node = renderDrawer({ item: { slug: 'test-skill', name: '测试技能' }, onClose: () => {} })
+  assert.ok(node)
+  assert.equal(node.type.name, 'Overlay')
+})
