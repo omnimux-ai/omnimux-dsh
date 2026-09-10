@@ -1,5 +1,6 @@
     var inflightSessionCreation = null;
     var plazaWorkspaces = null;
+    var plazaRemote = null;
 
     const SESSION_MENU_RE = /新会话|新建会话|new session|新对话|新建对话/i;
     const PROJECT_MENU_RE = /新建项目|create project|new project/i;
@@ -212,6 +213,36 @@
     }
 
     /**
+     * 辅助将新会话界面切换至目标 Agent Preset（如创造模式 cordis）
+     */
+    async function switchHeroChipPreset(presetId) {
+      if (typeof document === "undefined" || !presetId) return;
+      const targetText = presetId === "cordis" ? "创造模式" : presetId;
+      const start = Date.now();
+      while (Date.now() - start < 3000) {
+        const chip = document.querySelector('[data-slot="conversation.hero.agentPreset"] button, button[aria-haspopup="listbox"], button[class*="seat"]');
+        if (chip) {
+          const currentLabel = (chip.innerText || chip.textContent || "").trim();
+          if (currentLabel.includes(targetText) || currentLabel.includes("Creator Mode")) {
+            return;
+          }
+          try { chip.click(); } catch {}
+          await new Promise((r) => setTimeout(r, 80));
+          const options = Array.from(document.querySelectorAll('[role="option"], [role="menuitem"], [class*="item"]'));
+          const targetOpt = options.find((opt) => {
+            const txt = (opt.innerText || opt.textContent || "").trim();
+            return txt.includes(targetText) || txt.includes("Creator Mode");
+          });
+          if (targetOpt) {
+            try { targetOpt.click(); } catch {}
+            return;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 60));
+      }
+    }
+
+    /**
      * 兜底解析合法工作区 ID：从当前会话、workspaces 服务或 sessions 历史中获取。
      */
     function resolveFallbackWorkspaceId(sessions, workspaces) {
@@ -358,12 +389,14 @@
           const sessionAId = snapshot?.current;
 
           // 2. 准备 skill-creator 目标
-          const targetSlug = opts.slug || "skill-creator";
-          const targetCatalogId = opts.catalogId || "sk-omx-skill-creator";
-          try {
-            await api("install", { slug: targetSlug, catalogId: targetCatalogId });
-          } catch {
-            // 已安装或静默继续
+          if (!opts.preset) {
+            const targetSlug = opts.slug || "skill-creator";
+            const targetCatalogId = opts.catalogId || "sk-omx-skill-creator";
+            try {
+              await api("install", { slug: targetSlug, catalogId: targetCatalogId });
+            } catch {
+              // 已安装或静默继续
+            }
           }
 
           // 3. 优先通过 DOM 寻找并点击官方新对话按钮，触发官方完整新对话事件
@@ -395,6 +428,22 @@
             sessions.open(sessionBId);
           }
 
+          // 若指定了 preset（例如专家市场要求切换到「创造模式」cordis）
+          if (opts.preset) {
+            const targetPreset = opts.preset;
+            try {
+              const remote = plazaRemote || (typeof window !== "undefined" ? (window.__dshRemote || window.__omnimuxRemote) : null);
+              if (remote?.agentPresets?.select) {
+                await remote.agentPresets.select(sessionBId, targetPreset);
+              }
+            } catch (err) {
+              console.warn("remote.agentPresets.select error:", err);
+            }
+            try {
+              switchHeroChipPreset(targetPreset);
+            } catch {}
+          }
+
           // 保持右侧侧边栏不关闭，显露中间对话栏（split 布局）
           const wb = typeof window !== "undefined" ? window.__omnimuxWorkbench : undefined;
           const plazaTitle = typeof lookup === "function" ? (lookup("plaza.title") || "Skills") : "Skills";
@@ -405,76 +454,80 @@
           try { wb?.setConversationCollapsed?.(false, { sessionId: sessionBId }); } catch {}
 
           // 5. 预填内容（严格无损，禁止自动发送）
-          const prefillText = opts.text || "/skill-creator\n帮我使用它来创建一个新的技能。首先询问我这个技能应该做什么。";
+          const prefillText = typeof opts.text === "string"
+            ? opts.text
+            : "/skill-creator\n帮我使用它来创建一个新的技能。首先询问我这个技能应该做什么。";
 
-          // 有界等待 B 输入框就绪（最长 10 秒）
-          const maxWait = 10000;
-          const start = Date.now();
           let prefilled = false;
+          if (prefillText && prefillText.trim().length > 0) {
+            // 有界等待 B 输入框就绪（最长 10 秒）
+            const maxWait = 10000;
+            const start = Date.now();
 
-          while (Date.now() - start < maxWait) {
-            // 检查当前会话是否已被用户切换到 C
-            const currentActive = sessions.list?.getSnapshot?.()?.current;
-            if (currentActive && currentActive !== sessionBId) {
-              break;
-            }
-
-            const composer = findComposer();
-            if (composer) {
-              const isContentEditable = Boolean(composer.isContentEditable || (typeof composer.getAttribute === "function" && composer.getAttribute("contenteditable") === "true"));
-              const currentText = (composer.value && composer.value.trim().length > 0)
-                ? composer.value
-                : (isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || ""));
-
-              // 安全 CAS：已有用户输入严禁覆盖
-              if (currentText && currentText.trim().length > 0) {
-                prefilled = true;
+            while (Date.now() - start < maxWait) {
+              // 检查当前会话是否已被用户切换到 C
+              const currentActive = sessions.list?.getSnapshot?.()?.current;
+              if (currentActive && currentActive !== sessionBId) {
                 break;
               }
 
-              if (isContentEditable) {
-                try {
-                  composer.focus?.();
-                  if (typeof window !== "undefined" && window.getSelection && document.createRange) {
-                    const sel = window.getSelection();
-                    const range = document.createRange();
-                    range.selectNodeContents(composer);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                  }
-                  const success = typeof document.execCommand === "function"
-                    ? document.execCommand("insertText", false, prefillText)
-                    : false;
-                  if (!success) {
+              const composer = findComposer();
+              if (composer) {
+                const isContentEditable = Boolean(composer.isContentEditable || (typeof composer.getAttribute === "function" && composer.getAttribute("contenteditable") === "true"));
+                const currentText = (composer.value && composer.value.trim().length > 0)
+                  ? composer.value
+                  : (isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || ""));
+
+                // 安全 CAS：已有用户输入严禁覆盖
+                if (currentText && currentText.trim().length > 0) {
+                  prefilled = true;
+                  break;
+                }
+
+                if (isContentEditable) {
+                  try {
+                    composer.focus?.();
+                    if (typeof window !== "undefined" && window.getSelection && document.createRange) {
+                      const sel = window.getSelection();
+                      const range = document.createRange();
+                      range.selectNodeContents(composer);
+                      sel.removeAllRanges();
+                      sel.addRange(range);
+                    }
+                    const success = typeof document.execCommand === "function"
+                      ? document.execCommand("insertText", false, prefillText)
+                      : false;
+                    if (!success) {
+                      composer.innerText = prefillText;
+                    }
+                  } catch {
                     composer.innerText = prefillText;
                   }
-                } catch {
-                  composer.innerText = prefillText;
+                } else {
+                  const proto = typeof HTMLTextAreaElement === "function" && composer instanceof HTMLTextAreaElement
+                    ? HTMLTextAreaElement.prototype
+                    : typeof HTMLInputElement === "function" && composer instanceof HTMLInputElement
+                      ? HTMLInputElement.prototype
+                      : Object.getPrototypeOf(composer);
+                  const setter = proto ? Object.getOwnPropertyDescriptor(proto, "value")?.set : undefined;
+                  if (setter) setter.call(composer, prefillText);
+                  else composer.value = prefillText;
                 }
-              } else {
-                const proto = typeof HTMLTextAreaElement === "function" && composer instanceof HTMLTextAreaElement
-                  ? HTMLTextAreaElement.prototype
-                  : typeof HTMLInputElement === "function" && composer instanceof HTMLInputElement
-                    ? HTMLInputElement.prototype
-                    : Object.getPrototypeOf(composer);
-                const setter = proto ? Object.getOwnPropertyDescriptor(proto, "value")?.set : undefined;
-                if (setter) setter.call(composer, prefillText);
-                else composer.value = prefillText;
-              }
 
-              const Input = typeof InputEvent === "function"
-                ? InputEvent
-                : (typeof Event === "function" ? Event : function(type, opts) { this.type = type; Object.assign(this, opts); });
-              composer.dispatchEvent(new Input("input", { bubbles: true, inputType: "insertText", data: prefillText }));
-              composer.focus?.();
+                const Input = typeof InputEvent === "function"
+                  ? InputEvent
+                  : (typeof Event === "function" ? Event : function(type, opts) { this.type = type; Object.assign(this, opts); });
+                composer.dispatchEvent(new Input("input", { bubbles: true, inputType: "insertText", data: prefillText }));
+                composer.focus?.();
 
-              const updatedText = isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || "");
-              if (updatedText.includes(prefillText) || updatedText.trim().length > 0) {
-                prefilled = true;
-                break;
+                const updatedText = isContentEditable ? (composer.innerText || composer.textContent || "") : (composer.value || "");
+                if (updatedText.includes(prefillText) || updatedText.trim().length > 0) {
+                  prefilled = true;
+                  break;
+                }
               }
+              await new Promise((r) => setTimeout(r, 100));
             }
-            await new Promise((r) => setTimeout(r, 100));
           }
 
           return { ok: true, sessionId: sessionBId, prefilled };

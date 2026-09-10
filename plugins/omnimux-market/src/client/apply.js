@@ -10,7 +10,13 @@
       const slots = ctx.slots;
       const sessions = ctx.sessions;
       plazaSessions = sessions;
+      plazaRemote = ctx.remote ?? ctx.get?.("remote");
       if (typeof ctx.inject === "function") {
+        ctx.inject(["remote"], (c) => {
+          try {
+            plazaRemote = c.remote ?? c.get?.("remote") ?? plazaRemote;
+          } catch {}
+        });
         ctx.inject(["workspaces"], (c) => {
           try {
             plazaWorkspaces = c.workspaces ?? c.get?.("workspaces");
