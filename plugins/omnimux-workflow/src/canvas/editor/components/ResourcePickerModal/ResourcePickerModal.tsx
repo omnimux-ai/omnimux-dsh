@@ -20,6 +20,7 @@ import LocalUploadPane from './LocalUploadPane';
 export interface ResourcePickerModalProps {
   open: boolean;
   nodeId: string;
+  title?: string;
   initialTab?: ResourcePickerTab;
   /** T03：卡槽装填会话——预过滤素材类型、允许选中已连入供给、提交时 pinned 进 slot。 */
   slotTarget?: ResourcePickerSlotTarget | null;
@@ -146,9 +147,10 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   );
 
   const modalTitle =
-    mode === 'replace'
+    title ||
+    (mode === 'replace'
       ? t('picker.replaceTitle') || '替换素材'
-      : t('picker.title');
+      : t('picker.title'));
 
   return (
     <CustomModal

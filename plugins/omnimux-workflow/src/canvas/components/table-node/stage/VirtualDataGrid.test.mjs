@@ -91,3 +91,69 @@ test('VirtualDataGrid drag calculation logic', () => {
   const rows = useTableStore.getState().document.rows.map((r) => r.cells['c1']);
   assert.deepEqual(rows, ['Item 1', 'Item 2', 'Item 0', 'Item 3']);
 });
+
+test('VirtualDataGrid attachment cell logic: append and remove attachments', () => {
+  useTableStore.setState({
+    document: {
+      version: 1,
+      title: '分镜表',
+      rowHeight: 'low',
+      columns: [
+        { id: 'c1', title: '镜号', type: 'text', visible: true, width: 80 },
+        { id: 'c2', title: '图片', type: 'attachment', visible: true, width: 220 },
+      ],
+      rows: [
+        {
+          id: 'r1',
+          cells: {
+            c1: '1',
+            c2: [
+              {
+                assetId: 'img-dog-1',
+                name: 'golden-retriever.jpg',
+                kind: 'image',
+                thumbnailUrl: 'https://example.com/dog.jpg',
+                url: 'https://example.com/dog.jpg',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    selectedRowIndices: [],
+    undoStack: [],
+    redoStack: [],
+  });
+
+  const state = useTableStore.getState();
+  const initialRow = state.document.rows[0];
+  const initialAttachments = initialRow.cells['c2'];
+  assert.ok(Array.isArray(initialAttachments));
+  assert.equal(initialAttachments.length, 1);
+  assert.equal(initialAttachments[0].name, 'golden-retriever.jpg');
+
+  // 1. 模拟扩充：点击加号调出添加资源窗口后提交新资源
+  const newAttachment = {
+    assetId: 'img-dog-2',
+    name: 'golden-retriever-2.jpg',
+    kind: 'image',
+    thumbnailUrl: 'https://example.com/dog2.jpg',
+    url: 'https://example.com/dog2.jpg',
+  };
+  const expandedList = [...initialAttachments, newAttachment];
+  useTableStore.getState().updateCell(0, 'c2', expandedList);
+
+  const updatedDoc = useTableStore.getState().document;
+  const updatedAttachments = updatedDoc.rows[0].cells['c2'];
+  assert.equal(updatedAttachments.length, 2);
+  assert.equal(updatedAttachments[1].name, 'golden-retriever-2.jpg');
+
+  // 2. 模拟删除第一个缩略图
+  const afterRemoveList = updatedAttachments.filter((_, idx) => idx !== 0);
+  useTableStore.getState().updateCell(0, 'c2', afterRemoveList);
+
+  const finalDoc = useTableStore.getState().document;
+  const finalAttachments = finalDoc.rows[0].cells['c2'];
+  assert.equal(finalAttachments.length, 1);
+  assert.equal(finalAttachments[0].name, 'golden-retriever-2.jpg');
+});
