@@ -28,7 +28,7 @@ export function getPresetSkillBinding(presetId) {
 
   const entry = AGENT_PRESET_SKILL_BINDINGS[presetId] ||
     AGENT_PRESET_SKILL_BINDINGS[norm] ||
-    (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok'
+    (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok' || norm === '全能社媒操盘手' || presetId === '全能社媒操盘手'
       ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
       : null) ||
     (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null)

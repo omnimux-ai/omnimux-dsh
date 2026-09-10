@@ -1,7 +1,7 @@
 {
   "presetId": "tiktok-agent",
-  "name": "TikTokAgent",
-  "description": "TikTokAgent 专属技能与分类集",
+  "name": "全能社媒操盘手",
+  "description": "全能社媒操盘手专属技能与分类集",
   "categories": [
     { "id": "选品", "name": "选品" },
     { "id": "搜索爆款视频", "name": "搜索爆款视频" },

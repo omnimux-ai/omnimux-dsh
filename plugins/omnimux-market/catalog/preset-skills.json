@@ -1,7 +1,7 @@
 {
   "tiktok-agent": {
     "presetId": "tiktok-agent",
-    "name": "TikTokAgent",
+    "name": "全能社媒操盘手",
     "categories": [
       { "id": "选品", "name": "选品" },
       { "id": "搜索爆款视频", "name": "搜索爆款视频" },

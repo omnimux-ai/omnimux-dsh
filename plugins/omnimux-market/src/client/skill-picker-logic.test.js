@@ -284,12 +284,13 @@ describe('agent preset skill bindings', () => {
     assert.equal(AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'].presetId, 'tiktok-agent')
   })
 
-  it('getPresetSkillBinding resolves tiktok-agent and TikTokAgent', () => {
+  it('getPresetSkillBinding resolves tiktok-agent, TikTokAgent and 全能社媒操盘手', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     assert.ok(binding)
-    assert.equal(binding.name, 'TikTokAgent')
+    assert.equal(binding.name, '全能社媒操盘手')
     assert.equal(getPresetSkillBinding('TikTokAgent')?.presetId, 'tiktok-agent')
     assert.equal(getPresetSkillBinding('tiktok')?.presetId, 'tiktok-agent')
+    assert.equal(getPresetSkillBinding('全能社媒操盘手')?.presetId, 'tiktok-agent')
   })
 
   it('unbound presets return null and hasPresetSkillBinding is false', () => {
@@ -299,6 +300,7 @@ describe('agent preset skill bindings', () => {
     }
     assert.equal(hasPresetSkillBinding('tiktok-agent'), true)
     assert.equal(hasPresetSkillBinding('TikTokAgent'), true)
+    assert.equal(hasPresetSkillBinding('全能社媒操盘手'), true)
   })
 
   it('tiktok-agent contains the 6 categories from the screenshots', () => {
