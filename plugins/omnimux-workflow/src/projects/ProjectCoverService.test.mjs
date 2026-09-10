@@ -30,6 +30,25 @@ test('summaries are shared, versioned, survive restart and preserve stable order
     assert.deepEqual(enrich(project).cover, { kind: 'empty', unavailable: true });
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('source versions refresh independently of canvas and missing posters preserve video fallback', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cover-source-'));
+  try {
+    const file = join(dir, 'canvas.json'); writeFileSync(file, '1');
+    let reads = 0, revision = 'one', missingPoster = false;
+    const store = { workspacesDir: dir, canvasFileOf: () => file, get: () => { reads++; return { nodes: [{ id: 'video', data: { materialType: 'video', mediaUrl: 'https://e.test/body.mp4', thumbnailUrl: 'https://e.test/poster.png' } }] }; } };
+    const enrich = createProjectCoverService(store, (url) => { if (missingPoster && url.endsWith('png')) throw new Error('missing'); return revision; });
+    const project = { pages: [{ id: 'page', canvasWorkspaceId: 'ws_a' }] };
+    const first = enrich(project).cover;
+    revision = 'two';
+    assert.notEqual(enrich(project).cover.sourceRevision, first.sourceRevision);
+    assert.equal(reads, 1);
+    missingPoster = true;
+    const cover = enrich(project).cover;
+    assert.equal(cover.thumbnailUrl, undefined);
+    assert.equal(cover.mediaUrl, 'https://e.test/body.mp4');
+    assert.equal(cover.unavailable, undefined);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 test('corrupt cached fields never escape into a response', () => {
   const dir = mkdtempSync(join(tmpdir(), 'cover-corrupt-'));
   try {

@@ -65,7 +65,7 @@ export async function loadCoverThumbnail(cover) {
       request = new Request(`${location.origin}/omnimux-cover-cache/${hash}`)
       cache = await caches.open(CACHE)
       const existing = await cache.match(request)
-      if (existing) {
+      if (existing && Date.now() - Number(existing.headers.get('x-cover-created') || 0) < 3600000) {
         const cachedBlob = await existing.blob()
         try {
           const bitmap = await createImageBitmap(cachedBlob)
@@ -82,7 +82,7 @@ export async function loadCoverThumbnail(cover) {
     }
     if (cache && request) {
       try {
-        await cache.put(request, new Response(blob))
+        await cache.put(request, new Response(blob, { headers: { 'x-cover-created': String(Date.now()) } }))
         const keys = await cache.keys()
         await Promise.all(keys.slice(0, Math.max(0, keys.length - 128)).map((entry) => cache.delete(entry)))
       } catch { /* Storage failures must not hide a successfully decoded cover. */ }

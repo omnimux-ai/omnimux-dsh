@@ -125,13 +125,14 @@ export function ProjectLibraryPage(props) {
   }, [])
 
   useEffect(() => {
+    if (!visible) return
     if (selectedProject) {
       void loadProjectDetail(selectedProject)
     } else {
       setProjectDetail(null)
       setAssetsDoc(null)
     }
-  }, [selectedProject, loadProjectDetail])
+  }, [selectedProject, loadProjectDetail, visible])
 
   // 3. 点击进入某个项目文件夹
   const handleSelectFolder = (project) => {

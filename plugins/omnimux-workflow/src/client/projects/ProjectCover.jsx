@@ -42,7 +42,9 @@ export function ProjectCover({ cover }) {
         setFailedUrl(null)
       }).catch(() => {
         if (!alive) return
-        setFailedUrl(source)
+        const fallback = kind === 'image' ? cover?.mediaUrl : cover?.thumbnailUrl
+        if (fallback) setUrl(fallback)
+        else setFailedUrl(source)
         if (++attempts < 3) retryTimer = setTimeout(load, 31000)
       })
     }

@@ -138,6 +138,21 @@ test('generated artifact metadata reaches node.data, unlocks vision compatibilit
   assert.equal(vision.data.compat.status, 'ok');
 });
 
+test('video output retains prior media during status updates and clears stale poster on replacement', () => {
+  useCanvasStore.getState().hydrateGraph([{ id: 'video-output', type: 'material', position: { x: 0, y: 0 }, data: {
+    materialType: 'video', mediaUrl: '/old.mp4', thumbnailUrl: '/old.png', outputThumbnailUrl: '/old.png', coverUrl: '/old.png',
+  } }], []);
+  for (const executionStatus of ['running', 'error', 'cancelled']) {
+    applyExecutionNodeOutput('video-output', {}, { executionStatus });
+    const data = useCanvasStore.getState().nodes[0].data;
+    assert.equal(data.mediaUrl, '/old.mp4'); assert.equal(data.thumbnailUrl, '/old.png');
+  }
+  applyExecutionNodeOutput('video-output', { mediaAssets: [{ type: 'video', url: '/new.mp4' }] }, { executionStatus: 'completed' });
+  const data = useCanvasStore.getState().nodes[0].data;
+  assert.equal(data.mediaUrl, '/new.mp4');
+  for (const key of ['thumbnailUrl', 'outputThumbnailUrl', 'coverUrl']) assert.equal(data[key], undefined);
+});
+
 test('simulated output is persisted into node data and a later real result clears the marker', () => {
   const store = useCanvasStore.getState();
   store.hydrateGraph([
