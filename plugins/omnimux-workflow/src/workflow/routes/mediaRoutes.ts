@@ -16,7 +16,7 @@ export function createMediaRoutes(mediaDir: string): { tryHandle: RouteTry } {
   const mediaApiPath = `${WORKFLOW_ROUTE_PREFIX}/media/`;
 
   const tryHandle: RouteTry = (method, path) => {
-    if (!(method === 'GET' && path.startsWith(mediaApiPath))) return null;
+    if (!((method === 'GET' || method === 'HEAD') && path.startsWith(mediaApiPath))) return null;
     const rel = path.slice(mediaApiPath.length);
     // Explicit '..' segment check: attempts to escape -> 403 (the
     // normalize() clamp below additionally prevents silent escapes).
