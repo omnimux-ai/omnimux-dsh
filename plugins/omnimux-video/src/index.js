@@ -7,7 +7,7 @@ import { executeVideoAnalyze } from './understand/analyze.js'
 import { executeVideoReversePrompt, IDENTITY_MODES } from './understand/reverse.js'
 
 export const name = 'omnimux-video'
-export const inject = ['tools']
+export const inject = ['tools', 'textComplete']
 export { Config }
 
 /**
@@ -212,7 +212,7 @@ export function apply(ctx, config = {}) {
    * @returns {{ execute: Function } | undefined}
    */
   const getTextComplete = () => {
-    const api = ctx.get?.('textComplete')
+    const api = ctx.textComplete ?? ctx.get?.('textComplete')
     if (api && typeof api === 'object' && typeof /** @type {any} */ (api).execute === 'function') {
       return /** @type {{ execute: Function }} */ (api)
     }

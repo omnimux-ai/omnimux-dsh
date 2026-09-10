@@ -214,4 +214,36 @@ describe('tool registration', () => {
     assert.ok(tools.video_process.parameters.properties.capability.enum.includes('video_depth'))
     assert.ok(tools.video_reverse_prompt.parameters.properties.identity_mode.enum.includes('A'))
   })
+
+  it('declares inject with tools and textComplete, and resolves textComplete via ctx.textComplete', async () => {
+    const { inject } = await import('../index.js')
+    assert.ok(Array.isArray(inject))
+    assert.ok(inject.includes('tools'))
+    assert.ok(inject.includes('textComplete'), 'omnimux-video must inject textComplete')
+
+    let calledWith = null
+    const mockTextComplete = {
+      async execute(req) {
+        calledWith = req
+        return { text: 'mocked markdown analysis', model: req.model }
+      }
+    }
+
+    const tools = {}
+    const { apply } = await import('../index.js')
+    apply({
+      tools: { register(tool) { tools[tool.name] = tool } },
+      provide() {},
+      get(name) { return name === 'textComplete' ? mockTextComplete : undefined },
+      textComplete: mockTextComplete,
+    })
+
+    assert.ok(tools.video_analyze)
+    const result = await tools.video_analyze.execute({
+      video: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t',
+      model: 'gemini-3.8-flash',
+    })
+    assert.equal(result.text, 'mocked markdown analysis')
+    assert.equal(calledWith.model, 'gemini-3.8-flash')
+  })
 })
