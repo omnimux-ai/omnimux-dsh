@@ -76,7 +76,7 @@ test('H2: 处置表 69 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 65);
+  assert.equal(index.listedOperations.length, 66);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {

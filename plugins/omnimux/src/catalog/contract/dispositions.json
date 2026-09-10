@@ -39,7 +39,10 @@
       "id": "gpt-image-2.5",
       "disposition": "canonical",
       "batch": "B",
-      "reason": "官方统一端点；原生支持 1K/2K/4K；待 live 补证",
+      "reason": "官方统一端点；原生支持 1K/2K/4K；已入库 dated live 证据",
+      "evidence": [
+        "docs/evidence/2026-09-10-omnimux-image-2-5.md"
+      ],
       "notes": "中枢统一端点，原生支持 1K/2K/4K 聚合调度"
     },
     {

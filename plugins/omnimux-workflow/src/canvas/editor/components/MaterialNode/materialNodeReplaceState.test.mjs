@@ -37,7 +37,7 @@ test('MaterialNode 契约：音频节点操作栏的替换按钮在生成状态�
 
 test('MaterialNode 契约：顶部操作栏（pillActions）在生成状态下不提供 replace-media', () => {
   // 4. pillActions 导入节点在 isGenerating 时不放入 replace-media
-  assert.match(materialNodeSrc, /if \(kind === 'import' && materialType !== 'text'\) \{[\s\S]*?if \(!isGenerating\) \{[\s\S]*?key: 'replace-media'/);
+  assert.match(materialNodeSrc, /if \(kind === 'import' && materialType === 'image' && !isGenerating\) \{[\s\S]*?key: 'replace-media'/);
   // 5. pillActions 的 useMemo 依赖列表中包含 isGenerating
   assert.match(materialNodeSrc, /isEmptyMediaNode,\s*isGenerating,\s*isOffline/);
 });

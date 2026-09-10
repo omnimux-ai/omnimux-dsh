@@ -49,7 +49,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.models.find((m) => m.id === 'nano_banana_2')?.aliases?.includes('nanobanana-2'), true)
 
     // four lists derive ONLY from listed ops' output.type
-    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2', 'grok-imagine-image-2'])
+    assert.deepEqual(catalog.image.map((row) => row.id).sort(), ['gpt-image-2', 'gpt-image-2.5', 'grok-imagine-image-2'])
     const grokImage = catalog.image.find((row) => row.id === 'grok-imagine-image-2')
     assert.equal(grokImage.label, 'Grok Imagine Image 2')
     assert.equal(grokImage.subtitle, 'xAI Grok 2')
@@ -95,11 +95,11 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
     // Config defaults survive where listed, including synchronous speech.
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
-    assert.equal(catalog.defaults.image, 'gpt-image-2')
+    assert.equal(catalog.defaults.image, 'gpt-image-2.5')
     assert.equal(catalog.defaults.video, 'seedance-2-0-fast')
     assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
     assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-0-fast')
-    assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2')
+    assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2.5')
     assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
 
     assert.equal(catalog.text.length, 12)

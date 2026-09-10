@@ -58,6 +58,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.listedOperationCount > 0, 'H2 lists evidence-backed ops');
   assert.ok(cov.listedOperations.includes('seedance-2-0-fast#text_to_video'));
   assert.ok(cov.listedOperations.includes('gpt-image-2#text_to_image'));
+  assert.ok(cov.listedOperations.includes('gpt-image-2.5#text_to_image'));
   assert.ok(cov.listedOperations.includes('grok-imagine-image-2#text_to_image'));
 
   // alias missing rows produce no issues; strict has zero coverage errors

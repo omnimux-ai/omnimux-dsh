@@ -34,7 +34,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.ok(index.get('whisper-1'));
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 65);
+  assert.equal(index.listedOperations.length, 66);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const key of [
     'seedance-2-0#first_last_frame',

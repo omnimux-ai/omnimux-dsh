@@ -19,7 +19,7 @@ export const DEFAULT_MEDIA = Object.freeze({
       apiKeyEnv: 'OMNIMUX_API_KEY',
       models: Object.freeze({
         video: 'seedance-2-0-fast',
-        image: 'gpt-image-2',
+        image: 'gpt-image-2.5',
         audio: 'seed-audio-1.0',
         stt: 'whisper-1',
       }),

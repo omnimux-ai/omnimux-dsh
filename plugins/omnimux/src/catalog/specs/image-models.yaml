@@ -211,14 +211,16 @@ models:
             min: 1
             max: 1
         research:
-          status: "draft"
+          status: "verified"
+          docUrl: "docs/evidence/2026-09-10-omnimux-image-2-5.md"
+          verifiedAt: "2026-09-10"
         implementation:
           status: "ready"
           profileId: "imageGenerate"
           seam: "imageGenerate"
-          notes: "已落地 SubmitGuard 自适应参数分流与 OpenAI 图像协议映射"
+          notes: "官方统一端点；已落地 OpenAI 图像协议映射"
         execution:
-          status: "stub"
+          status: "live"
           profileId: "imageGenerate"
           seam: "imageGenerate"
       - id: "multi_reference"
@@ -285,14 +287,16 @@ models:
           - { value: 4, label: "4 张" }
         defaultValue: 1
     research:
-      status: "draft"
-      notes: "官方统一端点；原生支持 1K/2K/4K；待独立 dated live 证据上架"
+      status: "verified"
+      docUrl: "docs/evidence/2026-09-10-omnimux-image-2-5.md"
+      verifiedAt: "2026-09-10"
+      notes: "官方统一端点；原生支持 1K/2K/4K；已入库 dated live 证据"
     implementation:
       status: "ready"
       profileId: "imageGenerate"
       seam: "imageGenerate"
     execution:
-      status: "stub"
+      status: "live"
       profileId: "imageGenerate"
       seam: "imageGenerate"
 

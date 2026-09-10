@@ -42,7 +42,7 @@
       "kind": "image",
       "priority": "P0",
       "gatewayIds": ["gpt-image-2.5", "gpt-image-2-5"],
-      "requiredInAuto": false
+      "requiredInAuto": true
     },
     {
       "productId": "grok-imagine-image-2",
