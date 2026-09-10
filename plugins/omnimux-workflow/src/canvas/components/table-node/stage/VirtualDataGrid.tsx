@@ -10,7 +10,7 @@ import type { HTableCellValue, HTableAttachment } from '../../../../shared/types
 
 export const VirtualDataGrid: React.FC = () => {
   const {
-    document,
+    document: tableDoc,
     selectedRowIndices,
     activeTableId,
     toggleRowSelection,
@@ -23,13 +23,13 @@ export const VirtualDataGrid: React.FC = () => {
     openColumnModal,
   } = useTableStore();
 
-  const visibleColumns = document.columns.filter((c) => c.visible);
-  const rowHeightMode = document.rowHeight || 'low';
+  const visibleColumns = tableDoc.columns.filter((c) => c.visible);
+  const rowHeightMode = tableDoc.rowHeight || 'low';
   const rowHeightClass = `wf-grid-row--${rowHeightMode}`;
 
   // 表头全选/半选 Checkbox 状态管理
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
-  const totalRows = document.rows.length;
+  const totalRows = tableDoc.rows.length;
   const selectedCount = selectedRowIndices.length;
   const isAllSelected = totalRows > 0 && selectedCount === totalRows;
   const isIndeterminate = selectedCount > 0 && selectedCount < totalRows;
@@ -187,7 +187,7 @@ export const VirtualDataGrid: React.FC = () => {
 
   // 移除附件
   const handleRemoveAttachment = (rowIdx: number, colId: string, attIdx: number) => {
-    const row = document.rows[rowIdx];
+    const row = tableDoc.rows[rowIdx];
     if (!row) return;
     const currentVal = row.cells[colId];
     if (!Array.isArray(currentVal)) return;
@@ -248,7 +248,7 @@ export const VirtualDataGrid: React.FC = () => {
         return false;
       }
 
-      const row = document.rows[pickerTarget.rowIdx];
+      const row = tableDoc.rows[pickerTarget.rowIdx];
       if (row) {
         const currentVal = row.cells[pickerTarget.colId];
         const currentList = Array.isArray(currentVal) ? (currentVal as HTableAttachment[]) : [];
@@ -259,7 +259,7 @@ export const VirtualDataGrid: React.FC = () => {
       setPickerTarget(null);
       return true;
     },
-    [document.rows, pickerTarget, updateCell],
+    [tableDoc.rows, pickerTarget, updateCell],
   );
 
   return (
@@ -306,7 +306,7 @@ export const VirtualDataGrid: React.FC = () => {
 
               {/* 动态字段列 */}
               {visibleColumns.map((col) => {
-                const colIdx = document.columns.findIndex((c) => c.id === col.id);
+                const colIdx = tableDoc.columns.findIndex((c) => c.id === col.id);
                 const isEditing = editingColId === col.id;
 
                 return (
@@ -370,7 +370,7 @@ export const VirtualDataGrid: React.FC = () => {
           </thead>
 
           <tbody>
-            {document.rows.map((row, rowIdx) => {
+            {tableDoc.rows.map((row, rowIdx) => {
               const isSelected = selectedRowIndices.includes(rowIdx);
               const isDragging = draggedRowIdx === rowIdx;
               const isDropTarget = dropTargetIdx === rowIdx && draggedRowIdx !== rowIdx;
@@ -533,9 +533,10 @@ export const VirtualDataGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* 附件放大预览悬浮卡片 (经 createPortal 传送至 document.body，彻底杜绝父容器 transform/containing block 错位) */}
+      {/* 附件放大预览悬浮卡片 (经 createPortal 传送至 globalThis.document.body，彻底杜绝父容器 transform/containing block 错位) */}
       {hoveredAttachment &&
-        typeof document !== 'undefined' &&
+        typeof globalThis.document !== 'undefined' &&
+        globalThis.document.body &&
         createPortal(
           <div
             className="wf-attachment-preview-card"
@@ -564,7 +565,7 @@ export const VirtualDataGrid: React.FC = () => {
               )}
             </div>
           </div>,
-          document.body,
+          globalThis.document.body,
         )}
 
       {/* 调出“添加资源”窗口，可以在里面附加附件 */}

@@ -168,7 +168,7 @@ test('VirtualDataGrid 附件悬停大图预览契约：createPortal 挂载 docum
 
   // 1. 验证引入 createPortal 并挂载到 document.body（杜绝父容器 transform/containing block 错位）
   assert.match(vdgSrc, /import \{[^}]*createPortal[^}]*\} from 'react-dom';/);
-  assert.match(vdgSrc, /createPortal\([\s\S]*?wf-attachment-preview-card[\s\S]*?document\.body/);
+  assert.match(vdgSrc, /createPortal\([\s\S]*?wf-attachment-preview-card[\s\S]*?(?:globalThis\.)?document\.body/);
 
   // 2. 验证缩略图容器绑定了 onMouseMove 实时跟踪鼠标位置
   assert.match(vdgSrc, /onMouseMove=\{handleThumbMouseMove\}/);
