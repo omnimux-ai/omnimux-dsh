@@ -10,6 +10,7 @@ import {
   deconstructionCopyText,
   getInspirationPreviewData,
   hasDeconstruction,
+  parseDocAnalysis,
   scriptCopyText,
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
@@ -32,20 +33,38 @@ function formatDocQuote(quote) {
 }
 
 function renderDocAnalysis(analysis) {
-  const plain = renderPlainBreakdownText(analysis)
-  if (!plain) return null
-  const lines = plain.split('\n').map((l) => l.trim()).filter(Boolean)
+  if (!analysis) return null
+  const groups = parseDocAnalysis(analysis)
+  if (!groups.length) return null
   return (
     <div className="omnimux-inspiration-doc-analysis">
-      {lines.map((line, idx) => {
-        const textWithoutBullet = line.replace(/^[•·*-]\s*/, '')
-        return (
-          <p key={idx} className="omnimux-inspiration-doc-bullet">
-            <span className="omnimux-inspiration-bullet-dot">•</span>
-            <span>{textWithoutBullet}</span>
-          </p>
-        )
-      })}
+      {groups.map((group, gIdx) => (
+        <div key={gIdx} className="omnimux-inspiration-doc-group">
+          {group.title ? (
+            <div className="omnimux-inspiration-doc-item-title">
+              <span className="omnimux-inspiration-doc-item-indicator" aria-hidden="true" />
+              <span>{group.title}</span>
+            </div>
+          ) : null}
+          <div className={group.title ? 'omnimux-inspiration-doc-desc-block' : undefined}>
+            {group.entries.map((entry, eIdx) => {
+              if (entry.type === 'labeled') {
+                return (
+                  <div key={eIdx} className="omnimux-inspiration-doc-labeled-row">
+                    <span className="omnimux-inspiration-doc-label">{entry.label}:</span>
+                    <span className="omnimux-inspiration-doc-desc">{entry.desc}</span>
+                  </div>
+                )
+              }
+              return (
+                <p key={eIdx} className="omnimux-inspiration-doc-desc">
+                  {entry.text}
+                </p>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -316,7 +335,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                         className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
                         onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
                       >
-                        <h4 className="omnimux-inspiration-doc-title">{section.title}</h4>
+                        <h4 className="omnimux-inspiration-doc-title">
+                          <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                          <span>{section.title}</span>
+                        </h4>
                         {section.quote ? (
                           <blockquote className="omnimux-inspiration-doc-quote">
                             {formatDocQuote(section.quote)}
@@ -326,7 +348,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                       </article>
                     )) : dimensions.map(([key, label, value]) => value ? (
                       <article key={key} className="omnimux-inspiration-doc-section">
-                        <h4 className="omnimux-inspiration-doc-title">{label}</h4>
+                        <h4 className="omnimux-inspiration-doc-title">
+                          <span className="omnimux-inspiration-doc-title-bar" aria-hidden="true" />
+                          <span>{label}</span>
+                        </h4>
                         {renderDocAnalysis(value)}
                       </article>
                     ) : null)}

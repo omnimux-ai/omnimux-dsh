@@ -1785,33 +1785,63 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-dimensions.is-doc-style {
   display: flex;
   flex-direction: column;
+  padding: 16px;
+  gap: 12px;
 }
 .omnimux-inspiration-doc-section,
 .omnimux-inspiration-modal-dimensions.is-doc-style article {
-  padding: 20px 20px !important;
+  padding: 18px 20px !important;
   margin: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, #262626);
+  border-radius: 8px !important;
+  background: var(--dsw-alias-bg-module-platform, rgba(255, 255, 255, 0.02)) !important;
+  border: 1px solid var(--dsw-alias-border-l2, #262626) !important;
   cursor: default;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.omnimux-inspiration-doc-section:hover,
+.omnimux-inspiration-modal-dimensions.is-doc-style article:hover {
+  border-color: var(--dsw-alias-border-l3, #3f3f46) !important;
 }
 .omnimux-inspiration-doc-section.is-active {
-  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.03)) !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.04)) !important;
+  border-color: var(--dsw-alias-state-business-primary, rgba(76, 141, 255, 0.5)) !important;
 }
-.omnimux-inspiration-doc-title,
-.omnimux-inspiration-modal-dimensions.is-doc-style h4 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
+/* 一级标题：板块大标题 (15px / 600) */
+.omnimux-inspiration-doc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px 0;
+  font-size: 15px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary, #ffffff);
   text-align: left;
   line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+.omnimux-inspiration-modal-dimensions.is-doc-style h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #ffffff);
+  text-align: left;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+.omnimux-inspiration-doc-title-bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--dsw-alias-state-business-primary, #4c8dff);
+  flex-shrink: 0;
 }
 .omnimux-inspiration-doc-quote,
 .omnimux-inspiration-modal-dimensions.is-doc-style blockquote {
   margin: 0 0 14px 0;
-  padding: 2px 0 2px 12px;
+  padding: 4px 0 4px 12px;
   border-left: 2px solid var(--dsw-alias-border-l3, #3f3f46);
   color: var(--dsw-alias-label-tertiary, #a1a1aa);
   font-style: italic;
@@ -1823,7 +1853,62 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-doc-analysis {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+.omnimux-inspiration-doc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* 二级项目：项目/维度小标题 (14px / 600，不带圆点) */
+.omnimux-inspiration-doc-item-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary-dimmed, #f4f4f5);
+  line-height: 1.4;
+}
+.omnimux-inspiration-doc-group:first-child .omnimux-inspiration-doc-item-title {
+  margin-top: 0;
+}
+.omnimux-inspiration-doc-item-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  background: var(--dsw-alias-label-tertiary, #71717a);
+  flex-shrink: 0;
+}
+.omnimux-inspiration-doc-labeled-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+.omnimux-inspiration-doc-label {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary-dimmed, #f4f4f5);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* 三级描述：说明文本与缩进块 (13px / 400) */
+.omnimux-inspiration-doc-desc-block {
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.omnimux-inspiration-doc-desc {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--dsw-alias-label-secondary, #a1a1aa);
 }
 .omnimux-inspiration-doc-bullet {
   display: flex;

@@ -4,6 +4,7 @@ import {
   deconstructionCopyText,
   getInspirationPreviewData,
   hasDeconstruction,
+  parseDocAnalysis,
   scriptCopyText,
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
@@ -75,5 +76,30 @@ describe('inspiration preview data', () => {
     assert.equal(data.sections[0].quote, 'hook line')
     assert.match(scriptCopyText(data, false), /0:00/)
     assert.match(deconstructionCopyText(data), /hook line/)
+  })
+
+  it('parses markdown analysis into clear 2-level item and 3-level description hierarchy', () => {
+    const raw = `### 明线价值 (Explicit Value)
+提供改善皮肤、增强肌肉、增加骨密度的营养补充方案。
+
+### 暗线价值 (Implicit Value)
+- 强调第三方测试 (Third Party Tested)。
+- 强调草饲 (Grass Fed)。
+
+* **转化目标**: 强化品牌功效心智
+* **情绪基调**: 惊喜、种草`
+
+    const parsed = parseDocAnalysis(raw)
+    assert.equal(parsed.length, 2)
+    assert.equal(parsed[0].title, '明线价值 (Explicit Value)')
+    assert.equal(parsed[0].entries[0].type, 'desc')
+    assert.equal(parsed[0].entries[0].text, '提供改善皮肤、增强肌肉、增加骨密度的营养补充方案。')
+
+    assert.equal(parsed[1].title, '暗线价值 (Implicit Value)')
+    assert.equal(parsed[1].entries[0].text, '强调第三方测试 (Third Party Tested)。')
+    assert.equal(parsed[1].entries[1].text, '强调草饲 (Grass Fed)。')
+    assert.equal(parsed[1].entries[2].type, 'labeled')
+    assert.equal(parsed[1].entries[2].label, '转化目标')
+    assert.equal(parsed[1].entries[2].desc, '强化品牌功效心智')
   })
 })
