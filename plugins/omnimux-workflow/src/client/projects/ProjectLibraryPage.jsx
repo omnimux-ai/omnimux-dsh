@@ -357,45 +357,58 @@ export function ProjectLibraryPage(props) {
       {/* 视图分支 A：项目详情页 (图 2 & 图 3 模式) */}
       {selectedProject ? (
         <>
-          {/* 面包屑导航栏 */}
+          {/* 面包屑导航栏 (对齐设计参考：项目库 › {title}，无冗余刷新按钮) */}
           <div className="omnimux-project-breadcrumb-bar">
             <div className="omnimux-project-breadcrumbs">
               <span
                 className="omnimux-project-crumb-link"
                 onClick={() => setSelectedProject(null)}
+                title="返回项目库"
               >
                 项目库
               </span>
-              <span className="omnimux-project-crumb-sep">&gt;</span>
+              <span className="omnimux-project-crumb-sep">›</span>
               <span className="omnimux-project-crumb-current">{selectedProject.title}</span>
-            </div>
-            <div>
-              <Button variant="ghost" size="sm" onClick={() => void loadProjectDetail(selectedProject)}>
-                {t('projects.refresh') || '刷新'}
-              </Button>
             </div>
           </div>
 
-          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs，右侧「+ 新建创作页」，对齐图 2) */}
+          {/* 创作页 / 项目资产 选项卡栏 (左侧 Tabs：创作页 ⓘ / 项目资产 ⓘ，右侧白色胶囊「+ 新建创作页」，严格对齐设计参考) */}
           <div className="omnimux-project-detail-tabs-bar">
             <Tabs
               variant="underline"
               items={[
-                { id: 'pages', label: `创作页 (${currentProjectPages.length})` },
-                { id: 'assets', label: `项目资产 (${currentAssetsCount})` },
+                {
+                  id: 'pages',
+                  label: (
+                    <span className="omnimux-tab-label-wrap">
+                      创作页
+                      <span className="omnimux-tab-info-icon" title="查看并管理项目的所有创作页">ⓘ</span>
+                    </span>
+                  ),
+                },
+                {
+                  id: 'assets',
+                  label: (
+                    <span className="omnimux-tab-label-wrap">
+                      项目资产
+                      <span className="omnimux-tab-info-icon" title="查看并管理项目的所有资产文件">ⓘ</span>
+                    </span>
+                  ),
+                },
               ]}
               activeId={detailTab}
               onChange={setDetailTab}
             />
             {detailTab === 'pages' && (
-              <Button
-                variant="primary"
-                leadingIcon={<IconPlusOutline16 />}
+              <button
+                type="button"
+                className="omnimux-create-page-btn"
                 disabled={busy}
                 onClick={handleCreatePageInProject}
+                title="新建创作页"
               >
                 + 新建创作页
-              </Button>
+              </button>
             )}
           </div>
 

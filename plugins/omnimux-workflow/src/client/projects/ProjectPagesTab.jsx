@@ -1,30 +1,17 @@
 import React from 'react'
-import { IconEditOutline16, IconPlusOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, IconButton } from 'dsh-ui-kit'
+import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconButton } from 'dsh-ui-kit'
 
-/** 创作页卡片上的三栏波形缩略图 (对应截图 2 封面风格) */
-function PageCoverWaveform() {
+/** 缺省创作页占位封面 */
+function PageCoverDefault() {
   return (
-    <div className="omnimux-page-cover-strips" aria-hidden="true">
-      <div className="omnimux-page-cover-strip">
-        <svg viewBox="0 0 40 100" fill="none" className="omnimux-page-strip-svg">
-          <path d="M20 10V90M12 25V75M28 30V70M4 40V60M36 42V58" stroke="var(--dsw-alias-brand-primary, #8b5cf6)" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-      </div>
-      <div className="omnimux-page-cover-strip">
-        <svg viewBox="0 0 40 100" fill="none" className="omnimux-page-strip-svg">
-          <path d="M20 5V95M12 20V80M28 22V78M4 35V65M36 38V62" stroke="var(--dsw-alias-brand-primary, #8b5cf6)" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-      </div>
-      <div className="omnimux-page-cover-strip omnimux-page-cover-strip--placeholder" />
+    <div className="omnimux-page-cover-placeholder" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none" className="omnimux-page-cover-icon">
+        <rect x="6" y="8" width="36" height="32" rx="6" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
+        <circle cx="17" cy="19" r="3.5" fill="currentColor" fillOpacity="0.4" />
+        <path d="M10 34L20 23L30 33L36 27L42 34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.5" />
+      </svg>
     </div>
-  )
-}
-
-/** 空白占位图 (对应截图 2 虚线框) */
-function PageCoverPlaceholder() {
-  return (
-    <div className="omnimux-page-placeholder-box" aria-hidden="true" />
   )
 }
 
@@ -44,11 +31,14 @@ export function ProjectPagesTab({
     <div className="omnimux-project-pages-tab">
       {/* 创作页卡片网格 */}
       <div className="omnimux-pages-grid">
-        {displayPages.map((page, index) => {
-          const isFirst = index === 0
+        {displayPages.map((page) => {
           const dateStr = page.createdAt || page.updatedAt
-            ? new Date(page.createdAt || page.updatedAt).toLocaleDateString().replace(/\//g, '.')
-            : '2026.9.9'
+            ? new Date(page.createdAt || page.updatedAt)
+                .toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' })
+                .replace(/\//g, '.')
+            : '2026.9.10'
+
+          const coverSrc = page.coverUrl || page.thumbnailUrl || page.previewUrl || page.image || ''
 
           return (
             <div
@@ -57,9 +47,13 @@ export function ProjectPagesTab({
               onClick={() => onOpenPage(page)}
               title={`点击打开创作页：${page.title}`}
             >
-              {/* 卡片封面：首卡展示波形条，其余展示虚线占位框 */}
+              {/* 卡片封面：首选真实缩略图/封面，无则展示优美占位图 */}
               <div className="omnimux-page-card-cover">
-                {isFirst ? <PageCoverWaveform /> : <PageCoverPlaceholder />}
+                {coverSrc ? (
+                  <img src={coverSrc} alt={page.title} className="omnimux-page-card-img" />
+                ) : (
+                  <PageCoverDefault />
+                )}
               </div>
 
               {/* 卡片下部信息 */}
@@ -68,16 +62,16 @@ export function ProjectPagesTab({
                   {page.title}
                 </div>
                 <div className="omnimux-page-card-meta">
-                  <span>{dateStr}</span>
+                  <span className="omnimux-page-card-date">{dateStr}</span>
                   <div
-                    className="omnimux-workflow-card-actions omnimux-workflow-card-actions--visible"
+                    className="omnimux-workflow-card-actions omnimux-page-card-actions"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <IconButton
                       variant="ghost"
                       size="xs"
-                      title={t('projects.rename') || '重命名'}
-                      aria-label={t('projects.rename') || '重命名'}
+                      title={t?.('projects.rename') || '重命名'}
+                      aria-label={t?.('projects.rename') || '重命名'}
                       onClick={() => onRenamePage(page)}
                     >
                       <IconEditOutline16 size={13} />
@@ -85,8 +79,8 @@ export function ProjectPagesTab({
                     <IconButton
                       variant="ghost"
                       size="xs"
-                      title={t('projects.delete') || '删除'}
-                      aria-label={t('projects.delete') || '删除'}
+                      title={t?.('projects.delete') || '删除'}
+                      aria-label={t?.('projects.delete') || '删除'}
                       onClick={() => onDeletePage(page)}
                     >
                       <IconTrashOutline16 size={13} />
