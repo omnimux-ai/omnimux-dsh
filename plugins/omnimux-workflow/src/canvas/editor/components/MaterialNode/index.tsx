@@ -212,6 +212,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const generationStatus = isOffline
     ? null
     : mapNodeToGenerationStatus(executionStatus, status, hasResult);
+  const isGenerating =
+    generationStatus === 'generating' ||
+    generationStatus === 'pending' ||
+    executionStatus === 'running' ||
+    executionStatus === 'pending' ||
+    status === 'generating';
   const isEmptyMediaNode = isEmptyMediaGenerateNode({
     materialType,
     nodeKind: kind,
@@ -407,6 +413,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     effectiveKind,
     isMultiSelected,
     contentFormat,
+    status,
   );
 
   const loadingAspectRatio =
@@ -826,8 +833,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     };
 
     if (kind === 'import' && materialType !== 'text') {
-      return [
-        {
+      const actions: FloatingPillAction[] = [];
+      if (!isGenerating) {
+        actions.push({
           key: 'replace-media',
           label: t('pill.replace'),
           icon: RefreshCw,
@@ -837,8 +845,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             event.stopPropagation();
             void resourcePicker.fillImportNode();
           },
-        },
-        {
+        });
+        actions.push({
           key: 'clear-media',
           label: t('pill.clear'),
           icon: Trash2,
@@ -848,9 +856,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             event.stopPropagation();
             handleClearImportedMedia();
           },
-        },
-        chat,
-      ];
+        });
+      }
+      actions.push(chat);
+      return actions;
     }
 
     if (materialType === 'text') {
@@ -991,6 +1000,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleSplitText,
     handleStoryboardVideo,
     isEmptyMediaNode,
+    isGenerating,
     isOffline,
     kind,
     materialType,
@@ -1003,6 +1013,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   ]);
 
   const showReplaceButton =
+    !isGenerating &&
     materialType !== 'text' &&
     !isOffline &&
     Boolean(previewUrl) &&
@@ -1257,7 +1268,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     isMissing={nodeData.isMissing === true}
                     onMediaSizeChange={handleMediaSizeChange}
                     onSaveAudio={audioWorkspaceId ? handleSaveAudio : undefined}
-                    onReplaceAudio={!isMultiSelected ? () => { void resourcePicker.fillImportNode(); } : undefined}
+                    onReplaceAudio={!isMultiSelected && !isGenerating ? () => { void resourcePicker.fillImportNode(); } : undefined}
                   />
                 ) : (
                   <NodeEmptyState

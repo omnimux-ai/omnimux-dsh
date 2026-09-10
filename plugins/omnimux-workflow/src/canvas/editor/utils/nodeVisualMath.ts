@@ -34,8 +34,10 @@ export function isConfigPanelVisible(
   nodeKind?: 'generate' | 'import',
   isMultiSelected?: boolean,
   contentFormat?: string,
+  localStatus?: MaterialStatus,
 ): boolean {
   if (isMultiSelected || nodeKind === 'import' || contentFormat === 'srt') return false;
+  if (localStatus === 'generating') return false;
   return Boolean(selected) && executionStatus !== 'running';
 }
 
