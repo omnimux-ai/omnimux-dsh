@@ -210,6 +210,39 @@ test('单一下游约束：只要存在已连线的 table 节点（即使无 ori
   assert.equal(plan.nodePatches[0].data.tableId, 'tbl_test123');
 });
 
+test('已连线的分镜表节点（origin === video_storyboard）不被误认为是拆解表，必须创建新的拆解表节点', () => {
+  const storyboardTable = {
+    id: 'tbl_storyboard',
+    type: 'table',
+    position: { x: 570, y: 520 },
+    data: {
+      label: '视频分镜表',
+      origin: 'video_storyboard',
+      sourceVideoNodeId: 'video_1',
+      tableId: 'tbl_sb_999',
+    },
+  };
+  const edge = {
+    id: 'edge_sb',
+    source: 'video_1',
+    target: 'tbl_storyboard',
+  };
+
+  const plan = planVideoDeconstructDownstream(
+    baseInput({
+      currentNodes: [VIDEO_NODE, storyboardTable],
+      currentEdges: [edge],
+    }),
+  );
+
+  assert.ok(plan);
+  assert.equal(plan.mode, 'create');
+  assert.equal(plan.targetNodeId, 'tbl_test123');
+  assert.equal(plan.addNodes.length, 1);
+  assert.equal(plan.addNodes[0].data.origin, VIDEO_DECONSTRUCT_ORIGIN);
+  assert.equal(plan.nodePatches.length, 0);
+});
+
 test('未与该视频连线的普通表格节点不被判定为下游，创建新节点且 id 默认对齐 tableId', () => {
   const genericTable = {
     id: 'tbl_unrelated',

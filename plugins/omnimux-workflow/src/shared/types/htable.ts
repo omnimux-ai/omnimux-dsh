@@ -92,6 +92,9 @@ export const HTableDocumentSchema = z.object({
   rows: z.array(HTableRowSchema),
   filter: HTableFilterSchema.optional(),
   rowHeight: HTableRowHeightSchema.default('low').optional(),
+  origin: z.string().optional(),
+  sourceVideoNodeId: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 export type HTableDocument = z.infer<typeof HTableDocumentSchema>;
 
@@ -246,6 +249,9 @@ export function migrateLegacyTableDocument(raw: unknown): HTableDocument {
     ...(filter ? { filter } : {}),
     // 兼容历史老数据：旧版分镜曾误写入 extraTall（120px 巨型行高），统一收敛回标准默认行高 low (36px)
     rowHeight: doc.rowHeight === 'extraTall' ? 'low' : (doc.rowHeight && ['low', 'medium', 'tall'].includes(doc.rowHeight) ? doc.rowHeight : 'low'),
+    ...(doc.origin ? { origin: String(doc.origin) } : {}),
+    ...(doc.sourceVideoNodeId ? { sourceVideoNodeId: String(doc.sourceVideoNodeId) } : {}),
+    ...(doc.metadata && typeof doc.metadata === 'object' ? { metadata: doc.metadata } : {}),
   };
 }
 
