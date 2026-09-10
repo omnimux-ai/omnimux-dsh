@@ -76,5 +76,6 @@ Browser-required acceptance MUST use ego-browser and the shared `verify:live` pr
 ## Delivery
 
 - For implementation or shipping, load the [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md). [Git/PR policy](docs/contracts/plugin-git-pr.md) owns risk, merge authority, and Merge Queue; [Issue lifecycle](docs/contracts/agent-issue-lifecycle.md) owns task metadata. Never push directly to `main` or bypass required checks.
+- Delivery completeness: 物化（sync）成功不等于交付完成。凡涉及插件物化或 Host 运行时变更的任务，必须取得 Host 真实运行与探活证据（如调用 Host 状态探针、HTTP 探活端口或 `verify:live` / `verify-dev-cdp.mjs` 验证，取得 200/OK 或有效探针回执）。拿不到 Host 正常运行证据，不得在交接日志中宣布收尾。
 - Report actual check results and reasons for skipped/inapplicable checks. Keep code, PR merge, App materialization, and runtime acceptance as distinct states.
 - Remove only task-owned temporary files and confirmed-merged worktrees after saving evidence. [Briefing](docs/briefing.md) is memory, not current code or runtime proof.

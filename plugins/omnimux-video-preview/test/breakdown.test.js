@@ -13,6 +13,7 @@ import {
   saveVideoBreakdownArtifacts,
 } from '../src/breakdown.js'
 import { apply } from '../src/index.js'
+import { createTestToolContext } from '../../omnimux/src/test-support/tool-harness.js'
 
 describe('video breakdown & shots analysis engine', () => {
   it('formats seconds into mm:ss accurately', () => {
@@ -119,17 +120,12 @@ describe('video breakdown & shots analysis engine', () => {
   })
 
   it('registers and executes video_breakdown_analyze tool with native preview', async () => {
-    const registeredTools = new Map()
     let sidebarOpenedWith = null
+    const toolHarness = createTestToolContext()
 
     const mockCtx = {
       tools: {
-        register: (tool) => {
-          if (!tool.output || typeof tool.output !== 'object' || typeof tool.output.render !== 'function') {
-            throw new TypeError(`tool "${tool.name}" must declare output { schema, render, presentationMeta? }`)
-          }
-          registeredTools.set(tool.name, tool)
-        },
+        register: (tool) => toolHarness.ctx.tools.register(tool),
         get: (name) => {
           if (name === 'sidebar_open') {
             return {
@@ -139,7 +135,7 @@ describe('video breakdown & shots analysis engine', () => {
               },
             }
           }
-          return registeredTools.get(name)
+          return toolHarness.ctx.tools.get(name)
         },
       },
       inject: (deps, callback) => {
@@ -155,13 +151,13 @@ describe('video breakdown & shots analysis engine', () => {
 
     apply(mockCtx)
 
-    assert.ok(registeredTools.has('video_preview_info'))
-    const previewInfoTool = registeredTools.get('video_preview_info')
+    assert.ok(toolHarness.tools.has('video_preview_info'))
+    const previewInfoTool = toolHarness.tools.get('video_preview_info')
     assert.ok(previewInfoTool.output)
     assert.equal(typeof previewInfoTool.output.render, 'function')
 
-    assert.ok(registeredTools.has('video_breakdown_analyze'))
-    const tool = registeredTools.get('video_breakdown_analyze')
+    assert.ok(toolHarness.tools.has('video_breakdown_analyze'))
+    const tool = toolHarness.tools.get('video_breakdown_analyze')
     assert.ok(tool.output)
     assert.equal(typeof tool.output.render, 'function')
 

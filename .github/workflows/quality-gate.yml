@@ -84,6 +84,7 @@ jobs:
           node --check scripts/live-qa-request.mjs
           node --check scripts/live-browser-utils.mjs
           bash -n scripts/materialize-with-rollback.sh
+          node scripts/verify-plugin-agent-tools.mjs
 
       - name: Forbid tracked omnimux-workflow artifacts
         run: node scripts/check-tracked-artifacts.mjs

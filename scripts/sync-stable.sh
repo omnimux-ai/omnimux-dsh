@@ -761,6 +761,14 @@ EOF
     echo "✗ profile 依赖刷新后的物化核验失败；已恢复本轮暂存的 file: 安装入口。" >&2
     exit 1
   fi
+
+  # 执行物化后启动演练预检（Materialize Pre-flight / Dry Run）：模拟真实 apply(ctx) 执行与工具契约校验
+  if ! node "$ROOT/scripts/verify-profile-preflight.mjs" "$PROFILE"; then
+    restore_refresh_entries
+    echo "✗ Profile 启动预检演练失败（apply(ctx) 抛错或工具契约不合规）；已恢复暂存的安装入口，中止物化。" >&2
+    exit 1
+  fi
+
   if [ -n "$REFRESH_BACKUP_DIR" ]; then
     rm -rf "$REFRESH_BACKUP_DIR"
     REFRESH_BACKUP_DIR=""
