@@ -1,13 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, GripVertical } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Plus, GripVertical, X } from 'lucide-react';
 import { useTableStore } from '../../../store/tableStore.ts';
+import { useCanvasStore } from '../../../store/canvasStore.ts';
 import { renderFieldTypeIcon } from './popovers/PopoverFieldConfig.tsx';
-import type { HTableCellValue } from '../../../../shared/types/htable.ts';
+import ResourcePickerModal from '../../../editor/components/ResourcePickerModal/ResourcePickerModal.tsx';
+import type { LocalFileDraft } from '../../../editor/utils/resourcePickerPolicy.ts';
+import type { HTableCellValue, HTableAttachment } from '../../../../shared/types/htable.ts';
 
 export const VirtualDataGrid: React.FC = () => {
   const {
     document,
     selectedRowIndices,
+    activeTableId,
     toggleRowSelection,
     selectAllRows,
     clearRowSelection,
@@ -120,9 +124,136 @@ export const VirtualDataGrid: React.FC = () => {
     handleDragEnd();
   };
 
+  // 附件“添加资源”窗口目标行与列
+  const [pickerTarget, setPickerTarget] = useState<{ rowIdx: number; colId: string } | null>(null);
+
+  // 附件悬停大图预览浮层状态
+  const [hoveredAttachment, setHoveredAttachment] = useState<{
+    name: string;
+    previewUrl: string;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  // 提取附件有效预览 URL / 路径
+  const getAttachmentPreviewUrl = (att: HTableAttachment): string => {
+    return att.thumbnailUrl || att.url || att.path || '';
+  };
+
+  // 鼠标悬停进入缩略图：计算居中/视口保护位置并展示预览大图
+  const handleThumbMouseEnter = (att: HTableAttachment, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    const cardWidth = 320;
+    const cardHeight = 280;
+
+    let left = rect.left;
+    if (left + cardWidth > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - cardWidth - 16);
+    }
+
+    let top = rect.bottom + 6;
+    if (top + cardHeight > window.innerHeight - 16) {
+      top = Math.max(16, rect.top - cardHeight - 6);
+    }
+
+    const previewUrl = getAttachmentPreviewUrl(att);
+    setHoveredAttachment({
+      name: att.name || '附件预览',
+      previewUrl,
+      top,
+      left,
+    });
+  };
+
+  const handleThumbMouseLeave = () => {
+    setHoveredAttachment(null);
+  };
+
+  // 移除附件
+  const handleRemoveAttachment = (rowIdx: number, colId: string, attIdx: number) => {
+    const row = document.rows[rowIdx];
+    if (!row) return;
+    const currentVal = row.cells[colId];
+    if (!Array.isArray(currentVal)) return;
+    const nextList = (currentVal as HTableAttachment[]).filter((_, idx) => idx !== attIdx);
+    updateCell(rowIdx, colId, nextList);
+    setHoveredAttachment(null);
+  };
+
+  // 提交选中的资源入单元格
+  const handleCommitResource = useCallback(
+    (payload: {
+      selectedCanvasNodeIds: string[];
+      localFiles: LocalFileDraft[];
+    }) => {
+      if (!pickerTarget) return false;
+
+      const nodes = useCanvasStore.getState().nodes;
+      const canvasAttachments: HTableAttachment[] = payload.selectedCanvasNodeIds
+        .map((nodeId) => {
+          const node = nodes.find((n) => n.id === nodeId);
+          if (!node) return null;
+          const nodeData = (node.data || {}) as Record<string, any>;
+          const materialType = (nodeData.materialType as string) || '';
+          const kind = materialType === 'video' ? 'video' : materialType === 'audio' ? 'audio' : 'image';
+          const previewUrl =
+            nodeData.previewUrl ||
+            nodeData.imageUrl ||
+            nodeData.thumbnailUrl ||
+            nodeData.outputUrl ||
+            nodeData.coverUrl ||
+            nodeData.mediaUrl ||
+            '';
+          const name = nodeData.label || nodeData.title || nodeData.name || '画布资源';
+          return {
+            assetId: node.id,
+            name: String(name),
+            kind,
+            thumbnailUrl: previewUrl ? String(previewUrl) : undefined,
+            url: previewUrl ? String(previewUrl) : undefined,
+            path: typeof nodeData.realPath === 'string' ? nodeData.realPath : typeof nodeData.mediaUrl === 'string' ? nodeData.mediaUrl : undefined,
+          } as HTableAttachment;
+        })
+        .filter((x): x is HTableAttachment => Boolean(x));
+
+      const localAttachments: HTableAttachment[] = (payload.localFiles || []).map((file) => ({
+        assetId: file.id,
+        name: file.name,
+        kind: file.materialType === 'video' ? 'video' : file.materialType === 'audio' ? 'audio' : 'image',
+        thumbnailUrl: file.previewUrl,
+        url: file.previewUrl,
+        path: file.realPath,
+        size: file.size,
+        mimeType: file.mime,
+      }));
+
+      const allNew = [...canvasAttachments, ...localAttachments];
+      if (allNew.length === 0) {
+        return false;
+      }
+
+      const row = document.rows[pickerTarget.rowIdx];
+      if (row) {
+        const currentVal = row.cells[pickerTarget.colId];
+        const currentList = Array.isArray(currentVal) ? (currentVal as HTableAttachment[]) : [];
+        const nextList = [...currentList, ...allNew];
+        updateCell(pickerTarget.rowIdx, pickerTarget.colId, nextList);
+      }
+
+      setPickerTarget(null);
+      return true;
+    },
+    [document.rows, pickerTarget, updateCell],
+  );
+
   return (
     <div className="wf-grid-container">
-      <div className="wf-grid-scroll-pane">
+      <div
+        className="wf-grid-scroll-pane"
+        onScroll={() => {
+          if (hoveredAttachment) setHoveredAttachment(null);
+        }}
+      >
         <table className="wf-grid-table">
           <colgroup>
             {/* 首列：行号与多选 */}
@@ -273,17 +404,73 @@ export const VirtualDataGrid: React.FC = () => {
 
                     const renderCellContent = () => {
                       if (col.type === 'attachment') {
-                        const attachments = Array.isArray(cellVal) ? cellVal : [];
+                        const attachments: HTableAttachment[] = Array.isArray(cellVal)
+                          ? (cellVal as HTableAttachment[])
+                          : [];
+
                         return (
                           <div className="wf-grid-cell-attachment">
-                            {attachments.map((att, attIdx) => (
-                              <span key={attIdx} className="wf-grid-attachment-tag">
-                                📎 {att.name}
-                              </span>
-                            ))}
-                            {attachments.length === 0 && (
-                              <span className="wf-grid-attachment-empty">+ 上传附件</span>
-                            )}
+                            {attachments.map((att, attIdx) => {
+                              const previewUrl = getAttachmentPreviewUrl(att);
+                              const hasPreview = Boolean(previewUrl);
+
+                              return (
+                                <div
+                                  key={att.assetId ? `${att.assetId}_${attIdx}` : attIdx}
+                                  className="wf-grid-attachment-thumb-wrapper"
+                                  onMouseEnter={(e) => handleThumbMouseEnter(att, e.currentTarget)}
+                                  onMouseLeave={handleThumbMouseLeave}
+                                >
+                                  {hasPreview ? (
+                                    <img
+                                      src={previewUrl}
+                                      alt={att.name || '缩略图'}
+                                      className="wf-grid-attachment-thumb-img"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLElement).style.display = 'none';
+                                        const fb = e.currentTarget.parentElement?.querySelector(
+                                          '.wf-grid-attachment-thumb-fallback',
+                                        ) as HTMLElement | null;
+                                        if (fb) fb.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  <div
+                                    className="wf-grid-attachment-thumb-fallback"
+                                    style={{ display: hasPreview ? 'none' : 'flex' }}
+                                  >
+                                    {att.kind === 'video' ? '视' : att.kind === 'audio' ? '音' : '📎'}
+                                  </div>
+
+                                  {/* 删除按钮 (对齐图二右上角 x) */}
+                                  <button
+                                    type="button"
+                                    className="wf-grid-attachment-remove-btn"
+                                    title="删除附件"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveAttachment(rowIdx, col.id, attIdx);
+                                    }}
+                                  >
+                                    <X size={10} strokeWidth={2.5} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+
+                            {/* 手动扩充加号按钮 (对齐图一与图二的右侧 + 按钮) */}
+                            <button
+                              type="button"
+                              className="wf-grid-attachment-add-btn"
+                              title="添加资源"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPickerTarget({ rowIdx, colId: col.id });
+                              }}
+                            >
+                              <Plus size={14} />
+                            </button>
                           </div>
                         );
                       }
@@ -328,6 +515,52 @@ export const VirtualDataGrid: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* 附件放大预览悬浮卡片 (对齐参考图一与图二交互) */}
+      {hoveredAttachment && (
+        <div
+          className="wf-attachment-preview-card"
+          style={{
+            position: 'fixed',
+            top: hoveredAttachment.top,
+            left: hoveredAttachment.left,
+            zIndex: 99999,
+            pointerEvents: 'none',
+          }}
+        >
+          <div className="wf-attachment-preview-header" title={hoveredAttachment.name}>
+            {hoveredAttachment.name}
+          </div>
+          <div className="wf-attachment-preview-body">
+            {hoveredAttachment.previewUrl ? (
+              <img
+                src={hoveredAttachment.previewUrl}
+                alt={hoveredAttachment.name}
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div style={{ color: 'var(--wb-text-muted)', fontSize: 12 }}>暂无图片预览</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 调出“添加资源”窗口，可以在里面附加附件 */}
+      {pickerTarget && (
+        <ResourcePickerModal
+          open={Boolean(pickerTarget)}
+          nodeId={activeTableId || 'table-node'}
+          title="添加资源"
+          slotTarget={{
+            slot: 'attachment',
+            acceptedTypes: ['image', 'video', 'audio'],
+          }}
+          onCancel={() => setPickerTarget(null)}
+          onCommit={handleCommitResource}
+        />
+      )}
     </div>
   );
 };
