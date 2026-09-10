@@ -244,7 +244,8 @@ export function migrateLegacyTableDocument(raw: unknown): HTableDocument {
     columns,
     rows,
     ...(filter ? { filter } : {}),
-    rowHeight: doc.rowHeight && ['low', 'medium', 'tall', 'extraTall'].includes(doc.rowHeight) ? doc.rowHeight : 'low',
+    // 兼容历史老数据：旧版分镜曾误写入 extraTall（120px 巨型行高），统一收敛回标准默认行高 low (36px)
+    rowHeight: doc.rowHeight === 'extraTall' ? 'low' : (doc.rowHeight && ['low', 'medium', 'tall'].includes(doc.rowHeight) ? doc.rowHeight : 'low'),
   };
 }
 

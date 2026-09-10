@@ -151,4 +151,13 @@ test('migrateLegacyTableDocument: 新建节点/空文档兜底默认「文本」
   assert.equal(withCols.columns.length, 1);
   assert.equal(withCols.columns[0].id, 'col_x');
   assert.equal(withCols.columns[0].title, '已有列');
+
+  // 5. 历史 extraTall 巨型行高自动收敛为标准默认 low
+  const legacyExtraTall = migrateLegacyTableDocument({
+    title: '分镜表',
+    columns: [{ id: 'col_img', title: '分镜画面', type: 'attachment' }],
+    rows: [],
+    rowHeight: 'extraTall',
+  });
+  assert.equal(legacyExtraTall.rowHeight, 'low', '历史 extraTall 行高必须自动平滑收敛为默认标准 low (36px)');
 });
