@@ -1,6 +1,6 @@
 import React from 'react'
 import { IconEditOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { IconButton } from 'dsh-ui-kit'
+import { Button, IconButton } from 'dsh-ui-kit'
 import { ProjectCover } from './ProjectCover.jsx'
 
 export function ProjectPagesTab({
@@ -35,7 +35,9 @@ export function ProjectPagesTab({
             >
               {/* 卡片封面：首选真实缩略图/封面，无则展示优美占位图 */}
               <div className="omnimux-page-card-cover">
-                <ProjectCover cover={page.cover} />
+                <Button variant="ghost" className="omnimux-page-open" aria-label={`${t?.('projects.open') || '打开'} ${page.title}`} onClick={(event) => { event.stopPropagation(); onOpenPage(page) }}>
+                  <ProjectCover cover={page.cover} />
+                </Button>
               </div>
 
               {/* 卡片下部信息 */}
