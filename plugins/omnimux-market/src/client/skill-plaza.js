@@ -43,9 +43,19 @@
     function WorkshopSwitch({ checked, onChange, disabled }) {
       return h("div", {
         className: "toggle-wrap",
+        role: "switch",
+        "aria-checked": Boolean(checked),
+        tabIndex: disabled ? -1 : 0,
         onClick: (e) => {
           e.stopPropagation();
           if (!disabled && onChange) onChange(!checked);
+        },
+        onKeyDown: (e) => {
+          if ((e.key === "Enter" || e.key === " ") && !disabled && onChange) {
+            e.preventDefault();
+            e.stopPropagation();
+            onChange(!checked);
+          }
         },
       },
         h("div", { className: "switch-bg" + (checked ? " on" : "") },
