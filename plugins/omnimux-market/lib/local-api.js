@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { clamp, fetchSkillCard, parseSlug } from './api.js';
 import { parseCategory } from './categories.js';
@@ -289,6 +289,30 @@ export async function handleApi(req, res, cfg) {
                 catch { }
             }
             return sendJson(res, 200, { ok: true, found: false });
+        }
+        if (method === 'homeCustomOrder') {
+            const configPath = join(packageRoot(), 'catalog', 'skill-recommendations.json');
+            if (req.method === 'POST') {
+                const order = Array.isArray(body.order) ? body.order.map(String) : [];
+                try {
+                    if (existsSync(configPath) && order.length > 0) {
+                        const raw = JSON.parse(readFileSync(configPath, 'utf8'));
+                        raw.homeRecommendations = order;
+                        writeFileSync(configPath, JSON.stringify(raw, null, 2) + '\n');
+                    }
+                }
+                catch { }
+                return sendJson(res, 200, { ok: true, order });
+            }
+            let currentOrder = [];
+            try {
+                if (existsSync(configPath)) {
+                    const raw = JSON.parse(readFileSync(configPath, 'utf8'));
+                    currentOrder = Array.isArray(raw.homeRecommendations) ? raw.homeRecommendations : [];
+                }
+            }
+            catch { }
+            return sendJson(res, 200, { ok: true, order: currentOrder });
         }
         if (method === 'experts') {
             const doc = decorateCatalog(loadCatalog(), expertRoots());

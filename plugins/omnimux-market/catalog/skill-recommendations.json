@@ -71,6 +71,10 @@
     "sk-tiktok-script-creation"
   ],
   "homeRecommendations": [
+    "sk-tiktok-market-trend-analysis",
+    "sk-tiktok-product-selection",
+    "sk-tiktok-material-breakdown",
+    "sk-tiktok-script-creation",
     "sk-html-report-templates",
     "sk-shopee-market-analysis",
     "sk-shopee-product-analysis",
@@ -86,10 +90,6 @@
     "sk-amazon-listing-optimization",
     "sk-amazon-keyword-traffic-analysis",
     "sk-amazon-review-optimization",
-    "sk-amazon-trend-risk-monitor",
-    "sk-tiktok-market-trend-analysis",
-    "sk-tiktok-product-selection",
-    "sk-tiktok-material-breakdown",
-    "sk-tiktok-script-creation"
+    "sk-amazon-trend-risk-monitor"
   ]
 }
