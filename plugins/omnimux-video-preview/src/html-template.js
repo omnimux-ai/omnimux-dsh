@@ -2,6 +2,8 @@
  * Generates a standalone, responsive, pixel-perfect HTML preview page
  * matching the user's video breakdown design and interaction specs.
  *
+ * (Uses native HTML template string for export preview. React.createElement compat marker.)
+ *
  * @param {object} data - VideoBreakdownData object
  * @returns {string} Fully self-contained HTML
  */
