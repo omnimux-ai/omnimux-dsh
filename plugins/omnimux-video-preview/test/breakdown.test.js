@@ -374,4 +374,59 @@ describe('video breakdown & shots analysis engine', () => {
 
     rmSync(dummyVideoPath, { force: true })
   })
+
+  it('does not throw "cannot get property sessions without inject" when called with un-injected context', async () => {
+    const toolHarness = createTestToolContext()
+
+    // Create a strict Cordis-like proxy that throws when accessing un-injected properties
+    const strictCtx = new Proxy(
+      {
+        tools: toolHarness.ctx.tools,
+        get: (name) => {
+          if (name === 'tools') return toolHarness.ctx.tools
+          return null
+        },
+      },
+      {
+        get(target, prop) {
+          if (prop === 'sessions') {
+            throw new Error('cannot get property "sessions" without inject')
+          }
+          if (prop === 'webServer') {
+            throw new Error('cannot get property "webServer" without inject')
+          }
+          return target[prop]
+        },
+      },
+    )
+
+    apply(strictCtx)
+
+    const tool = toolHarness.tools.get('video_breakdown_analyze')
+    assert.ok(tool)
+
+    const outPrefix = join(tmpdir(), `test-inject-guard-${Date.now()}`)
+    const execCtx = {
+      agent: {
+        session: {
+          id: 'test-session',
+          header: { cwd: tmpdir() },
+        },
+      },
+    }
+
+    // Must execute successfully without throwing cannot get property "sessions" without inject
+    const result = await tool.execute(
+      {
+        url: 'https://www.tiktok.com/@test/video/1',
+        dest: outPrefix,
+        auto_open: false,
+      },
+      execCtx,
+    )
+
+    assert.equal(result.success, true)
+    assert.ok(existsSync(result.data_path))
+    rmSync(result.data_path, { force: true })
+  })
 })

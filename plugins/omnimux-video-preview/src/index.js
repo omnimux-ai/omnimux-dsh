@@ -83,7 +83,8 @@ export function apply(ctx) {
       let previewOpened = false
       if (auto_open !== false) {
         try {
-          const sidebarOpenTool = ctx.tools?.get?.('sidebar_open')
+          const toolsService = ctx.tools || (typeof ctx.get === 'function' ? ctx.get('tools') : null)
+          const sidebarOpenTool = toolsService?.get?.('sidebar_open')
           if (sidebarOpenTool && typeof sidebarOpenTool.execute === 'function') {
             await sidebarOpenTool.execute({ target: dataPath, title: '视频分析' }, execCtx)
             previewOpened = true
@@ -138,8 +139,8 @@ export function apply(ctx) {
     ctx.inject(['webServer'], (inner) => {
       mountHttp(inner.webServer ?? inner)
     })
-  } else if (ctx.webServer) {
-    mountHttp(ctx.webServer)
+  } else if (typeof ctx.get === 'function' && ctx.get('webServer')) {
+    mountHttp(ctx.get('webServer'))
   }
 }
 
