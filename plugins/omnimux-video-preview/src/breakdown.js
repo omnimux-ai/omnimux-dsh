@@ -291,7 +291,11 @@ export function normalizeSocialMetadata(raw, fallbackUrl = '') {
  * @returns {Promise<object>}
  */
 export async function fetchRealSocialMetadata(url, ctx = {}) {
-  const socialTool = ctx.tools?.get?.('omnimux_social_data')
+  let socialTool = null
+  try {
+    socialTool = (ctx?.tools || (typeof ctx?.get === 'function' ? ctx.get('tools') : null))?.get?.('omnimux_social_data')
+  } catch {}
+
   let platform = 'tiktok'
   if (/instagram\.com/i.test(url)) platform = 'instagram'
   else if (/youtube\.com|youtu\.be/i.test(url)) platform = 'youtube'
@@ -386,7 +390,11 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
 
   // 3. Execute multimodal video analysis
   let analyzeReportText = ''
-  const videoAnalyzeTool = ctx.tools?.get?.('video_analyze')
+  let videoAnalyzeTool = null
+  try {
+    videoAnalyzeTool = (ctx?.tools || (typeof ctx?.get === 'function' ? ctx.get('tools') : null))?.get?.('video_analyze')
+  } catch {}
+
   if (localVideoPath && videoAnalyzeTool && typeof videoAnalyzeTool.execute === 'function') {
     try {
       const res = await videoAnalyzeTool.execute({ video: localVideoPath })
@@ -524,15 +532,22 @@ export function resolveWorkspaceDirectory(options = {}) {
   if (execCtx?.workspace && typeof execCtx.workspace === 'string') return resolve(execCtx.workspace)
   if (execCtx?.cwd && typeof execCtx.cwd === 'string') return resolve(execCtx.cwd)
 
-  const sessionId = execCtx?.agent?.session?.id || execCtx?.sessionId
-  if (sessionId && ctx?.sessions?.get) {
-    const sessionObj = ctx.sessions.get(sessionId)
-    const headerCwd = sessionObj?.header?.cwd
+  // 1. Safe resolution via session on agent/exec context
+  try {
+    const headerCwd = execCtx?.agent?.session?.header?.cwd || execCtx?.session?.header?.cwd
     if (headerCwd && typeof headerCwd === 'string') return resolve(headerCwd)
-  }
-  if (execCtx?.agent?.session?.header?.cwd) {
-    return resolve(execCtx.agent.session.header.cwd)
-  }
+  } catch {}
+
+  // 2. Safe resolution via ctx.get('sessions') without triggering property inject guard
+  try {
+    const sessionsService = typeof ctx?.get === 'function' ? ctx.get('sessions') : null
+    const sessionId = execCtx?.agent?.session?.id || execCtx?.sessionId
+    if (sessionId && sessionsService && typeof sessionsService.get === 'function') {
+      const sessionObj = sessionsService.get(sessionId)
+      const headerCwd = sessionObj?.header?.cwd
+      if (headerCwd && typeof headerCwd === 'string') return resolve(headerCwd)
+    }
+  } catch {}
 
   if (process.env.DSH_WORKSPACE && typeof process.env.DSH_WORKSPACE === 'string') {
     return resolve(process.env.DSH_WORKSPACE)
