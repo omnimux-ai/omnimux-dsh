@@ -183,7 +183,7 @@ test('catalog-defaults.json: byOperation values are canonical with existing ops 
   const issues = validateCatalogDefaults(cfg, { index, dispositions: doc, registry, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
   assert.equal(cfg.byOperation.text_to_video, 'seedance-2-0-fast');
-  assert.equal(cfg.byOperation.text_to_image, 'gpt-image-2');
+  assert.equal(cfg.byOperation.text_to_image, 'gpt-image-2.5');
 });
 
 test('negative: catalog defaults pointing at a non-canonical id fails (D7)', () => {

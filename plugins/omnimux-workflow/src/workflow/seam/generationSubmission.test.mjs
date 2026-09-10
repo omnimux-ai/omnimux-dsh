@@ -56,3 +56,29 @@ test('text seam forwards ordered references and operation without duplicating le
       references, audioTrack: references[2] }]);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test('canvas image node successfully submits with gpt-image-2.5', async () => {
+  const { buildModelCatalog } = await import('../../../../omnimux/src/catalog/list.js');
+  const rawCatalog = buildModelCatalog();
+  const received = [];
+  const gateway = createOmnimuxSeamClient({
+    getSeam: (name) => name === 'modelCatalog'
+      ? { list: () => rawCatalog }
+      : name === 'imageGenerate' ? { execute: async (req) => { received.push(req); return { type: 'image', taskId: 'img_test_2_5', mode: 'submitted' }; } } : undefined,
+  });
+  const res = await gateway.submit({
+    capability: 'image',
+    model: 'gpt-image-2.5',
+    operation: 'text_to_image',
+    prompt: 'a cinematic portrait in 4k',
+    aspectRatio: '16:9',
+    resolution: '4K',
+    dest: '/tmp/test.png',
+  });
+  assert.equal(res.taskId, 'img_test_2_5');
+  assert.equal(received.length, 1);
+  assert.equal(received[0].model, 'gpt-image-2.5');
+  assert.equal(received[0].operation, 'text_to_image');
+  assert.equal(received[0].aspectRatio, '16:9');
+  assert.equal(received[0].resolution, '4K');
+});

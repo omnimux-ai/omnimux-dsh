@@ -9,10 +9,10 @@ import { mapOmnimuxInput, pickMediaUrl } from './vendors/omnimux.js'
 import { resolveMediaRoute, parseMediaConfig } from './route.js'
 
 describe('omnimux image helpers', () => {
-  it('defaults to gpt-image-2 on the openai-media row', () => {
+  it('defaults to gpt-image-2.5 on the openai-media row', () => {
     const config = readOmnimuxImageConfig({})
     assert.equal(config.baseUrl, 'https://api.omnimux.ai/v1')
-    assert.equal(config.modelId, 'gpt-image-2')
+    assert.equal(config.modelId, 'gpt-image-2.5')
     assert.equal(config.apiKey, '')
   })
 

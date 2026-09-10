@@ -20,7 +20,7 @@ test('manifest registers all 19 whitelist IDs without claiming online supply', (
   assert.equal(report.ok, true, JSON.stringify(report.issues))
   assert.equal(report.exitCode, 0)
   assert.equal(report.registeredCount, 19)
-  assert.equal(report.requiredCount, 16)
+  assert.equal(report.requiredCount, 17)
   assert.equal(report.onlineVerified, false)
 })
 

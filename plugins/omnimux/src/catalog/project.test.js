@@ -124,7 +124,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
   assert.equal(dto.schemaVersion, '1.1');
   assert.equal(dto.source, 'omnimux');
-  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2', 'grok-imagine-image-2']);
+  assert.deepEqual(dto.image.map((r) => r.id).sort(), ['gpt-image-2', 'gpt-image-2.5', 'grok-imagine-image-2']);
   assert.deepEqual(dto.video.map((r) => r.id), [
     'grok-imagine-video-1-5',
     'minimax-h3',
