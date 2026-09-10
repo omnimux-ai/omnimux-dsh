@@ -87,6 +87,8 @@ export function hasNodeMaterial(input: HasNodeMaterialInput): boolean {
 }
 
 export const EMPTY_IMAGE_PILL_ACTION_ID = 'import-image';
+export const EMPTY_VIDEO_PILL_ACTION_ID = 'import-video';
+export const EMPTY_AUDIO_PILL_ACTION_ID = 'import-audio';
 
 // ============================================================================
 // 语音识别胶囊操作（Issue 744 T04）
@@ -298,28 +300,48 @@ export function buildExtractVideoPillActionSpec(width: number = 88): ToolbarActi
 
 
 
-export interface EmptyImageGenerateNodeInput {
+export interface EmptyMediaGenerateNodeInput {
   materialType?: string;
   nodeKind?: string;
   previewUrl?: string;
+  mediaUrl?: string;
   generationStatus?: string | null;
 }
 
-export function isEmptyImageGenerateNode(input: EmptyImageGenerateNodeInput): boolean {
+export type EmptyImageGenerateNodeInput = EmptyMediaGenerateNodeInput;
+
+export function isEmptyMediaGenerateNode(input: EmptyMediaGenerateNodeInput): boolean {
   return (
-    input.materialType === 'image' &&
+    (input.materialType === 'image' || input.materialType === 'video' || input.materialType === 'audio') &&
     input.nodeKind === 'generate' &&
     !input.previewUrl &&
+    !input.mediaUrl &&
     !input.generationStatus
   );
 }
 
-export function buildEmptyImagePillActionSpec(width: number = 88): ToolbarActionSpec {
+export function isEmptyImageGenerateNode(input: EmptyImageGenerateNodeInput): boolean {
+  return input.materialType === 'image' && isEmptyMediaGenerateNode(input);
+}
+
+export function buildEmptyMediaPillActionSpec(
+  materialType: 'image' | 'video' | 'audio' | string,
+  width: number = 88,
+): ToolbarActionSpec {
+  const id = materialType === 'video'
+    ? EMPTY_VIDEO_PILL_ACTION_ID
+    : materialType === 'audio'
+      ? EMPTY_AUDIO_PILL_ACTION_ID
+      : EMPTY_IMAGE_PILL_ACTION_ID;
   return {
-    id: EMPTY_IMAGE_PILL_ACTION_ID,
+    id,
     section: 'primary',
     width,
   };
+}
+
+export function buildEmptyImagePillActionSpec(width: number = 88): ToolbarActionSpec {
+  return buildEmptyMediaPillActionSpec('image', width);
 }
 
 export function shouldShowNodeToolbar(input: {

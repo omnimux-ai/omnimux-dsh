@@ -5,12 +5,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_PILL_MAX_WIDTH,
+  EMPTY_AUDIO_PILL_ACTION_ID,
   EMPTY_IMAGE_PILL_ACTION_ID,
+  EMPTY_VIDEO_PILL_ACTION_ID,
   PILL_NODE_GUTTER,
   buildConversationPayloadFromNode,
   buildEmptyImagePillActionSpec,
+  buildEmptyMediaPillActionSpec,
   hasNodeMaterial,
   isEmptyImageGenerateNode,
+  isEmptyMediaGenerateNode,
   partitionToolbarActions,
   pillMaxWidthForNode,
   shouldShowNodeToolbar,
@@ -314,6 +318,33 @@ test('buildEmptyImagePillActionSpec：生成符合契约的【导入图片】主
   assert.equal(action.id, 'import-image');
   assert.equal(action.section, 'primary');
   assert.equal(action.width, 88);
+});
+
+test('isEmptyMediaGenerateNode / buildEmptyMediaPillActionSpec：图片、视频、音频空态判定与胶囊契约', () => {
+  // 图片、视频、音频空态判定为 true
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'image', nodeKind: 'generate' }), true);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'video', nodeKind: 'generate' }), true);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'audio', nodeKind: 'generate' }), true);
+
+  // 文本节点或非生成节点判定为 false
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'text', nodeKind: 'generate' }), false);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'video', nodeKind: 'import' }), false);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'video', nodeKind: 'generate', previewUrl: 'http://video.mp4' }), false);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'audio', nodeKind: 'generate', mediaUrl: 'http://audio.mp3' }), false);
+  assert.equal(isEmptyMediaGenerateNode({ materialType: 'image', nodeKind: 'generate', generationStatus: 'generating' }), false);
+
+  // 胶囊动作 spec
+  const imageAction = buildEmptyMediaPillActionSpec('image');
+  assert.equal(imageAction.id, EMPTY_IMAGE_PILL_ACTION_ID);
+  assert.equal(imageAction.id, 'import-image');
+
+  const videoAction = buildEmptyMediaPillActionSpec('video');
+  assert.equal(videoAction.id, EMPTY_VIDEO_PILL_ACTION_ID);
+  assert.equal(videoAction.id, 'import-video');
+
+  const audioAction = buildEmptyMediaPillActionSpec('audio');
+  assert.equal(audioAction.id, EMPTY_AUDIO_PILL_ACTION_ID);
+  assert.equal(audioAction.id, 'import-audio');
 });
 
 // ============================================================================
