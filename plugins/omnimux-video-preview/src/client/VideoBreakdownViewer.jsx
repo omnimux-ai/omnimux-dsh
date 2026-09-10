@@ -382,12 +382,6 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 </div>
               </div>
             </div>
-
-            {/* Local playback status banner */}
-            <div className="omnimux-video-cache-badge">
-              <span className="omnimux-video-cache-dot" />
-              <span>本地 MP4 视频流服务已就绪（支持分段拖拽与精准分镜跳转）</span>
-            </div>
           </div>
         </aside>
 

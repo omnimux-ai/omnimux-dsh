@@ -659,25 +659,6 @@ export const VIDEO_BREAKDOWN_CSS = `
   gap: 3px;
 }
 
-.omnimux-video-cache-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--dsw-alias-success);
-  background: var(--dsw-alias-bg-base);
-  border: 1px solid var(--dsw-alias-border-l2);
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-
-.omnimux-video-cache-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--dsw-alias-success);
-}
-
 .omnimux-video-breakdown-shot-card.is-active {
   border-color: var(--dsw-alias-brand-accent);
   box-shadow: 0 0 0 1px var(--dsw-alias-brand-accent);
