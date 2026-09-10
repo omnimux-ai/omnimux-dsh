@@ -17,11 +17,19 @@ import {
   MessageCircleIcon,
   ShareIcon,
   TikTokIcon,
+  PlayIcon,
+  PauseIcon,
+  VolumeIcon,
+  VolumeXIcon,
 } from './icons.jsx'
 
 export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const [activeTab, setActiveTab] = useState('shots')
   const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [activeShotId, setActiveShotId] = useState(null)
   const videoRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -49,10 +57,27 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const coverUrl = video.cover_url || ''
   const durationText = video.duration_text || '0:17'
 
+  const togglePlay = () => {
+    if (!videoRef.current) return
+    if (videoRef.current.paused) {
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {})
+    } else {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  const toggleMute = () => {
+    if (!videoRef.current) return
+    const next = !videoRef.current.muted
+    videoRef.current.muted = next
+    setIsMuted(next)
+  }
+
   const handleSeek = (sec) => {
     if (videoRef.current && Number.isFinite(sec)) {
       videoRef.current.currentTime = sec
-      videoRef.current.play().catch(() => {})
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {})
     }
   }
 
@@ -148,85 +173,106 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
       {/* 2. Main Body Container */}
       <div className="omnimux-video-breakdown-body">
-        {/* Left: Video Player Column */}
+        {/* Left: Video Player & Metadata Column */}
         <aside className="omnimux-video-breakdown-left">
+          {/* Native Local Video Player Card */}
           <div className="omnimux-video-breakdown-player-card">
             {streamUrl ? (
-              <video
-                ref={videoRef}
-                className="omnimux-video-breakdown-video-el"
-                src={streamUrl}
-                poster={coverUrl}
-                controls
-                playsInline
-                onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-              />
+              <div className="omnimux-video-player-wrapper" onClick={togglePlay}>
+                <video
+                  ref={videoRef}
+                  className="omnimux-video-breakdown-video-el"
+                  src={streamUrl}
+                  poster={coverUrl}
+                  playsInline
+                  preload="metadata"
+                  onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onLoadedMetadata={(e) => {
+                    if (e.target.duration && Number.isFinite(e.target.duration)) {
+                      setDuration(e.target.duration)
+                    }
+                  }}
+                />
+
+                {/* Central Play Badge when paused */}
+                {!isPlaying ? (
+                  <div
+                    className="omnimux-video-play-center-btn"
+                    title="播放视频"
+                    aria-label="播放视频"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      togglePlay()
+                    }}
+                  >
+                    <PlayIcon size={28} />
+                  </div>
+                ) : null}
+
+                {/* Native Custom Controls Bar */}
+                <div className="omnimux-video-controls-bar" onClick={(e) => e.stopPropagation()}>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={togglePlay}
+                    title={isPlaying ? '暂停' : '播放'}
+                    aria-label={isPlaying ? '暂停' : '播放'}
+                  >
+                    {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
+                  </IconButton>
+
+                  <div className="omnimux-video-time-display">
+                    <span>{formatCurrentTime(currentTime)}</span>
+                    <span className="omnimux-video-time-sep">/</span>
+                    <span>{durationText}</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    className="omnimux-video-progress-slider"
+                    min={0}
+                    max={duration || video.duration_seconds || 100}
+                    step={0.1}
+                    value={currentTime}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value)
+                      setCurrentTime(val)
+                      if (videoRef.current) videoRef.current.currentTime = val
+                    }}
+                    aria-label="视频播放进度"
+                  />
+
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleMute}
+                    title={isMuted ? '取消静音' : '静音'}
+                    aria-label={isMuted ? '取消静音' : '静音'}
+                  >
+                    {isMuted ? <VolumeXIcon size={14} /> : <VolumeIcon size={14} />}
+                  </IconButton>
+                </div>
+              </div>
             ) : coverUrl ? (
               <img className="omnimux-video-breakdown-video-el" src={coverUrl} alt="Video Cover" />
             ) : null}
-
-            {/* Overlay Top */}
-            <div className="omnimux-video-breakdown-overlay-top">
-              <div className="omnimux-video-breakdown-author-row">
-                {video.author_avatar ? (
-                  <img className="omnimux-video-breakdown-avatar" src={video.author_avatar} alt="Avatar" />
-                ) : null}
-                <div>
-                  <div className="omnimux-video-breakdown-author-name">
-                    <span>{video.author_name || 'Creator'}</span>
-                    <TikTokIcon size={13} />
-                  </div>
-                  <div className="omnimux-video-breakdown-author-handle">{video.author_handle || '@creator'}</div>
-                </div>
-              </div>
-              <div className="omnimux-video-breakdown-overlay-caption">{video.title || ''}</div>
-            </div>
-
-            {/* Right Floating Stats */}
-            <div className="omnimux-video-breakdown-stats-col">
-              <div className="omnimux-video-breakdown-stat-item">
-                <HeartIcon size={20} />
-                <span>{video.likes || '0'}</span>
-              </div>
-              <div className="omnimux-video-breakdown-stat-item">
-                <MessageCircleIcon size={20} />
-                <span>{video.comments || '0'}</span>
-              </div>
-              <div className="omnimux-video-breakdown-stat-item">
-                <ShareIcon size={20} />
-                <span>{video.shares || '0'}</span>
-              </div>
-            </div>
-
-            {/* Bottom Overlay on Player */}
-            <div className="omnimux-video-breakdown-overlay-bottom">
-              <div className="omnimux-video-breakdown-ai-label">Creator labeled as AI-generated</div>
-              <div className="omnimux-video-breakdown-timecode">
-                <span>{formatCurrentTime(currentTime)}</span>
-                <span> / </span>
-                <span>{durationText}</span>
-              </div>
-            </div>
           </div>
 
-          {/* Details below player */}
-          <div className="omnimux-video-breakdown-details">
-            <div className="omnimux-video-breakdown-caption">{video.caption || video.title || ''}</div>
-            <div className="omnimux-video-breakdown-meta-bar">
-              <div className="omnimux-video-breakdown-meta-group">
-                <span>{video.author_handle || ''}</span>
-                <span className="omnimux-video-breakdown-meta-item">
-                  <ClockIcon size={12} />
-                  <span>{durationText}</span>
-                </span>
-                <span className="omnimux-video-breakdown-meta-item">
-                  <EyeIcon size={12} />
-                  <span>{video.views || '0'}</span>
-                </span>
-                <span className="omnimux-video-breakdown-meta-item">
-                  <LayersIcon size={12} />
-                  <span>{shots.length} 个场景</span>
-                </span>
+          {/* Structured Video Metadata Card */}
+          <div className="omnimux-video-breakdown-meta-card">
+            {/* Author Header */}
+            <div className="omnimux-video-breakdown-author-row">
+              {video.author_avatar ? (
+                <img className="omnimux-video-breakdown-avatar" src={video.author_avatar} alt="Avatar" />
+              ) : null}
+              <div className="omnimux-video-author-info-box">
+                <div className="omnimux-video-breakdown-author-name">
+                  <span>{video.author_name || 'Creator'}</span>
+                  <TikTokIcon size={13} />
+                </div>
+                <div className="omnimux-video-breakdown-author-handle">{video.author_handle || '@creator'}</div>
               </div>
               {video.source_url ? (
                 <a
@@ -240,6 +286,45 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                   <ExternalLinkIcon size={12} />
                 </a>
               ) : null}
+            </div>
+
+            {/* Caption / Title */}
+            <div className="omnimux-video-breakdown-caption">
+              {video.caption || video.title || ''}
+            </div>
+
+            {/* Engagement Metrics Stats Grid */}
+            <div className="omnimux-video-metrics-grid">
+              <div className="omnimux-video-metric-item">
+                <div className="omnimux-video-metric-val">{video.views || '0'}</div>
+                <div className="omnimux-video-metric-lbl">
+                  <EyeIcon size={11} /> 播放量
+                </div>
+              </div>
+              <div className="omnimux-video-metric-item">
+                <div className="omnimux-video-metric-val">{video.likes || '0'}</div>
+                <div className="omnimux-video-metric-lbl">
+                  <HeartIcon size={11} /> 点赞
+                </div>
+              </div>
+              <div className="omnimux-video-metric-item">
+                <div className="omnimux-video-metric-val">{video.comments || '0'}</div>
+                <div className="omnimux-video-metric-lbl">
+                  <MessageCircleIcon size={11} /> 评论
+                </div>
+              </div>
+              <div className="omnimux-video-metric-item">
+                <div className="omnimux-video-metric-val">{video.shares || '0'}</div>
+                <div className="omnimux-video-metric-lbl">
+                  <ShareIcon size={11} /> 分享
+                </div>
+              </div>
+            </div>
+
+            {/* Local playback status banner */}
+            <div className="omnimux-video-cache-badge">
+              <span className="omnimux-video-cache-dot" />
+              <span>本地 MP4 视频流服务已就绪（支持分段拖拽与精准分镜跳转）</span>
             </div>
           </div>
         </aside>
@@ -263,66 +348,72 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             {activeTab === 'shots' ? (
               /* Shots List View */
               <div className="omnimux-video-breakdown-shots-list">
-                {shots.map((shot, idx) => (
-                  <div
-                    key={shot.id || idx}
-                    className="omnimux-video-breakdown-shot-card"
-                    onClick={() => handleSeek(shot.start_seconds || 0)}
-                  >
-                    <div className="omnimux-video-breakdown-shot-header">
-                      <div className="omnimux-video-breakdown-shot-title-box">
-                        <span>{shot.time_range || '0:00 - 0:00'}</span>
-                        <span>{shot.title || `分镜 ${idx + 1}`}</span>
+                {shots.map((shot, idx) => {
+                  const isCurrent = activeShotId === (shot.id || idx) ||
+                    (currentTime >= (shot.start_seconds || 0) && currentTime < (shot.end_seconds || 999999))
+                  return (
+                    <div
+                      key={shot.id || idx}
+                      className={`omnimux-video-breakdown-shot-card${isCurrent ? ' is-active' : ''}`}
+                      onClick={() => {
+                        handleSeek(shot.start_seconds || 0)
+                        setActiveShotId(shot.id || idx)
+                      }}
+                    >
+                      <div className="omnimux-video-breakdown-shot-header">
+                        <div className="omnimux-video-breakdown-shot-title-box">
+                          <span>{shot.time_range || '0:00 - 0:00'}</span>
+                          <span>{shot.title || `分镜 ${idx + 1}`}</span>
+                        </div>
+                        {shot.stage ? (
+                          <Badge size="sm" variant="warning" shape="capsule">
+                            {shot.stage}
+                          </Badge>
+                        ) : null}
                       </div>
-                      {shot.stage ? (
-                        <Badge size="sm" variant="warning" shape="capsule">
-                          {shot.stage}
-                        </Badge>
-                      ) : null}
-                    </div>
 
-                    {Array.isArray(shot.tags) && shot.tags.length ? (
-                      <div className="omnimux-video-breakdown-pills-row">
-                        {shot.tags.map((tag, tIdx) => (
-                          <div key={tIdx} className="omnimux-video-breakdown-pill">
-                            {renderTagIcon(tag)}
-                            <span>{cleanTagText(tag)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <div className="omnimux-video-breakdown-shot-desc">{shot.description || ''}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Structure View */
-              <div>
-                <div className="omnimux-video-breakdown-structure-hint">
-                  识别结构片断并进行内容分析，帮助你审视节奏、卖点顺序与脚本编排。
-                </div>
-
-                {/* Pipeline Flow */}
-                <div className="omnimux-video-breakdown-pipeline-row">
-                  {pipeline.map((p, idx) => (
-                    <React.Fragment key={p}>
-                      <div className="omnimux-video-breakdown-pipeline-item">{p}</div>
-                      {idx < pipeline.length - 1 ? (
-                        <div className="omnimux-video-breakdown-pipeline-arrow">
-                          <ArrowRightIcon size={12} />
+                      {Array.isArray(shot.tags) && shot.tags.length > 0 ? (
+                        <div className="omnimux-video-breakdown-tags-row">
+                          {shot.tags.map((tag, tIdx) => (
+                            <span key={tIdx} className="omnimux-video-breakdown-tag">
+                              {renderTagIcon(tag)}
+                              <span>{cleanTagText(tag)}</span>
+                            </span>
+                          ))}
                         </div>
                       ) : null}
+
+                      {shot.description ? (
+                        <div className="omnimux-video-breakdown-shot-desc">{shot.description}</div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              /* Narrative Structure Pipeline View */
+              <div className="omnimux-video-breakdown-structure-view">
+                {/* 1. Stages Pipeline Breadcrumb */}
+                <div className="omnimux-video-breakdown-pipeline-bar">
+                  {pipeline.map((stageName, pIdx) => (
+                    <React.Fragment key={pIdx}>
+                      <span className="omnimux-video-breakdown-pipeline-node">{stageName}</span>
+                      {pIdx < pipeline.length - 1 ? <ArrowRightIcon size={11} /> : null}
                     </React.Fragment>
                   ))}
                 </div>
 
-                {/* Structure Cards */}
-                <div>
-                  {structure.map((st, idx) => (
-                    <div key={st.stage || idx} className="omnimux-video-breakdown-structure-card">
-                      <div className="omnimux-video-breakdown-structure-title">{st.title || st.stage}</div>
-                      <div className="omnimux-video-breakdown-structure-desc">{st.description || ''}</div>
+                {/* 2. Structured Stage Cards */}
+                <div className="omnimux-video-breakdown-stage-cards">
+                  {structure.map((item, sIdx) => (
+                    <div key={sIdx} className="omnimux-video-breakdown-stage-card">
+                      <div className="omnimux-video-breakdown-stage-header">
+                        <Badge size="sm" variant="brand" shape="capsule">
+                          {item.stage || `阶段 ${sIdx + 1}`}
+                        </Badge>
+                        <span className="omnimux-video-breakdown-stage-title">{item.title || item.stage}</span>
+                      </div>
+                      <div className="omnimux-video-breakdown-stage-desc">{item.description}</div>
                     </div>
                   ))}
                 </div>
@@ -330,18 +421,17 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             )}
           </div>
 
-          {/* Bottom Bar for Shots Tab */}
-          {activeTab === 'shots' ? (
-            <div className="omnimux-video-breakdown-bottom-bar">
-              <CopyButton
-                text={shotsCopyContent}
-                label="复制分镜"
-                copiedLabel="已复制分镜"
-                size="sm"
-                variant="outline"
-              />
-            </div>
-          ) : null}
+          {/* Bottom Footer Actions */}
+          <footer className="omnimux-video-breakdown-footer">
+            <CopyButton
+              variant="outline"
+              size="sm"
+              text={shotsCopyContent}
+              successText="已复制分镜脚本"
+            >
+              复制分镜
+            </CopyButton>
+          </footer>
         </main>
       </div>
     </div>

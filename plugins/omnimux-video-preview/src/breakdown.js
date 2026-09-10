@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { execSync } from 'node:child_process'
 import { downloadMedia, fallbackResolveSocial } from './download-helper.js'
 
 /**
@@ -388,6 +389,20 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     }
   }
 
+  // Extract a real frame JPEG cover from the local video so browsers can preview cleanly
+  let localCoverPath = null
+  if (localVideoPath && existsSync(localVideoPath)) {
+    try {
+      const candidateCover = localVideoPath.replace(/\.mp4$/i, '_cover.jpg')
+      if (!existsSync(candidateCover)) {
+        execSync(`ffmpeg -v error -y -ss 00:00:01 -i "${localVideoPath}" -vframes 1 "${candidateCover}"`, { timeout: 5000 })
+      }
+      if (existsSync(candidateCover)) {
+        localCoverPath = candidateCover
+      }
+    } catch {}
+  }
+
   // 3. Execute multimodal video analysis
   let analyzeReportText = ''
   let videoAnalyzeTool = null
@@ -501,7 +516,9 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       source_url: isHttp ? trimmed : '',
       video_url: videoPlayUrl,
       stream_url: localVideoPath ? `/omnimux/video-preview/stream?path=${encodeURIComponent(localVideoPath)}` : (videoPlayUrl || (isHttp ? trimmed : '')),
-      cover_url: coverUrl,
+      cover_url: localCoverPath
+        ? `/omnimux/video-preview/stream?path=${encodeURIComponent(localCoverPath)}`
+        : (coverUrl && !coverUrl.includes('.heic') ? coverUrl : ''),
       duration_seconds: durationSeconds,
       duration_text: formatTime(durationSeconds),
       scene_count: shots.length,
