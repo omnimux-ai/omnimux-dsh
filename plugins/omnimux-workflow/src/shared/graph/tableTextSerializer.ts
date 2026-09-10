@@ -127,6 +127,7 @@ export function resolveTableDocument(tableId: string): Partial<HTableDocument> |
 export function serializeTableNodeToText(
   data: Record<string, unknown> | null | undefined,
   doc?: Partial<HTableDocument> | null,
+  fallbackTableId?: string,
 ): string {
   if (!data && !doc) return '';
   const nodeTitle = typeof data?.label === 'string' && data.label.trim()
@@ -139,7 +140,9 @@ export function serializeTableNodeToText(
     ? data.tableId.trim()
     : typeof data?.id === 'string' && data.id.trim()
       ? data.id.trim()
-      : undefined;
+      : typeof fallbackTableId === 'string' && fallbackTableId.trim()
+        ? fallbackTableId.trim()
+        : undefined;
 
   // 1. 优先使用传入的 doc 或 data.document，其次使用已注册的全局 resolver
   const document = doc

@@ -44,3 +44,9 @@ test('handleApplyPreset 通过 planSelectAndPatchNode 单选当前节点并同�
   assert.match(emptyStateSrc, /wf-node-empty__actions nodrag/);
   assert.match(emptyStateSrc, /onMouseDown=\{\(e\) => e\.stopPropagation\(\)\}/);
 });
+
+test('文本节点上游连入表格或文本输入时展示关联提示，不再显示通用空态', () => {
+  assert.match(nodeSrc, /upstreamTableOrText/);
+  assert.match(nodeSrc, /已关联表格输入/);
+  assert.match(nodeSrc, /已关联文本输入/);
+});

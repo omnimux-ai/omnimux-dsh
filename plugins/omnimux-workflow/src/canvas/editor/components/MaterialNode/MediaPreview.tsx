@@ -24,6 +24,7 @@ export interface MediaPreviewProps {
   status?: string;
   isMissing?: boolean;
   onMediaSizeChange?: (width: number, height: number) => void;
+  onDurationChange?: (durationSec: number) => void;
   onSaveAudio?: () => Promise<void>;
   onReplaceAudio?: () => void;
 }
@@ -37,6 +38,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
   status,
   isMissing,
   onMediaSizeChange,
+  onDurationChange,
   onSaveAudio,
   onReplaceAudio,
 }) => {
@@ -61,8 +63,11 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
       if (v.videoWidth > 0 && v.videoHeight > 0) {
         onMediaSizeChange?.(v.videoWidth, v.videoHeight);
       }
+      if (Number.isFinite(v.duration) && v.duration > 0) {
+        onDurationChange?.(Math.round(v.duration * 100) / 100);
+      }
     },
-    [onMediaSizeChange],
+    [onMediaSizeChange, onDurationChange],
   );
 
   if (status === 'offline' || isMissing) return null;

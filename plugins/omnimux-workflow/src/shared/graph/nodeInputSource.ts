@@ -106,7 +106,7 @@ export function readNodeInputSource(
   if (materialType === 'text') {
     text = readCurrentText(data);
   } else if (materialType === 'table') {
-    const raw = serializeTableNodeToText(data);
+    const raw = serializeTableNodeToText(data, undefined, node.id);
     text = raw.trim() ? raw : undefined;
   }
   const media = materialType === 'image' || materialType === 'video' || materialType === 'audio'
