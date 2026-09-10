@@ -1,7 +1,7 @@
     /** Client L1 soft cache: method+payload → last ok body. Soft TTL ~90s. */
     const apiCache = new Map();
     const API_CACHE_TTL_MS = 90_000;
-    const API_CACHE_READ = new Set(["search", "plugins", "pluginCategories", "experts", "connectors"]);
+    const API_CACHE_READ = new Set(["search", "plugins", "pluginCategories", "experts", "connectors", "expertMarketList"]);
 
     function apiCacheKey(method, payload) {
       const { refresh, ...rest } = payload || {};
@@ -30,12 +30,13 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.ok === false) throw new Error(body.error || "HTTP " + res.status);
       if (API_CACHE_READ.has(method)) apiCache.set(key, { at: Date.now(), body });
-      if (method === "install" || method === "uninstall" || method === "pluginInstall" || method === "catalogInstall" || method === "catalogUninstall" || method === "catalogSummon") {
+      if (method === "install" || method === "uninstall" || method === "pluginInstall" || method === "catalogInstall" || method === "catalogUninstall" || method === "catalogSummon" || method === "expertMarketInstall" || method === "expertMarketDisable") {
         invalidateApiCache("search:");
         invalidateApiCache("plugins:");
         invalidateApiCache("experts:");
         invalidateApiCache("connectors:");
         invalidateApiCache("pluginCategories:");
+        invalidateApiCache("expertMarketList:");
       }
       return body;
     }

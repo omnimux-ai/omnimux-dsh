@@ -208,6 +208,81 @@
       "短剧漫剧", "专业影视", "动画", "商业广告", "电商", "教育", "创意实验", "音频音乐", "平台工具",
     ];
 
+    const DEFAULT_MARKET_EXPERTS = [
+      {
+        id: "shopee-ops-expert",
+        name: "Shopee运营专家",
+        nameEn: "Shopee Ops Expert",
+        description: "负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。",
+        descriptionEn: "Shopee operation specialist for market, product, shop, brand and keyword analysis.",
+        avatar: "catalog/covers/expert-shopee-ops.png",
+        status: "enabled",
+      },
+      {
+        id: "youtube-creator-expert",
+        name: "YouTube创作者专家",
+        nameEn: "YouTube Creator Expert",
+        description: "帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。",
+        descriptionEn: "Help merchants find and evaluate YouTube creators using Topview self-owned creator... pool data.",
+        avatar: "catalog/covers/expert-youtube-creator.png",
+        status: "enabled",
+      },
+      {
+        id: "amazon-ops-expert",
+        name: "亚马逊运营专家",
+        nameEn: "Amazon Ops Expert",
+        description: "亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。",
+        descriptionEn: "Amazon operation specialist for market, product, listing, keyword, review and risk... analysis.",
+        avatar: "catalog/covers/expert-amazon-ops.png",
+        status: "enabled",
+      },
+      {
+        id: "tiktok-shop-ops-expert",
+        name: "TikTok Shop运营专家",
+        nameEn: "TikTok Shop Ops Expert",
+        description: "负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。",
+        descriptionEn: "TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live... ops.",
+        avatar: "catalog/covers/expert-tiktok-shop-ops.png",
+        status: "enabled",
+      },
+      {
+        id: "media-creator",
+        name: "媒体创作者",
+        nameEn: "Media Creator",
+        description: "AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。",
+        descriptionEn: "AI content generation: videos, images, digital avatars, background removal, TTS, and... voice cloning using Topview AI",
+        avatar: "catalog/covers/expert-media-creator.png",
+        status: "available",
+      },
+      {
+        id: "html-generator",
+        name: "HTML生成器",
+        nameEn: "HTML Generator",
+        description: "根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示",
+        descriptionEn: "根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示",
+        avatar: "catalog/covers/expert-html-generator.png",
+        status: "available",
+      },
+      {
+        id: "amazon-operations-expert",
+        name: "亚马逊运营专家",
+        nameEn: "Amazon Operations Expert",
+        description: "专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。",
+        descriptionEn: "Focused on Amazon store operations, listing optimization, advertising, and competitor... analysis to improve conversion",
+        avatar: "catalog/covers/expert-amazon-operations.png",
+        status: "coming_soon",
+      },
+      {
+        id: "tiktok-ecommerce-expert",
+        name: "TikTok电商专家",
+        nameEn: "TikTok Ecommerce Expert",
+        description: "擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。",
+        descriptionEn: "Expert in TikTok short-video selling, creator partnerships, and growth strategies to help... brands launch on TikTok Shop.",
+        avatar: "catalog/covers/expert-tiktok-ecommerce.png",
+        status: "coming_soon",
+      },
+    ];
+
     function SkillPlaza(props) {
       const tr = useTr();
       const pageSize = 80;
@@ -242,6 +317,47 @@
         }
         return null;
       });
+
+      const [expertMarketItems, setExpertMarketItems] = useState(DEFAULT_MARKET_EXPERTS);
+      const [expertMarketToggling, setExpertMarketToggling] = useState("");
+
+      const loadExpertMarket = useCallback(() => {
+        api("expertMarketList")
+          .then((d) => {
+            if (d && Array.isArray(d.items)) {
+              setExpertMarketItems(d.items);
+            }
+          })
+          .catch(() => {});
+      }, []);
+
+      useEffect(() => {
+        if (mainTab === "experts-market") {
+          loadExpertMarket();
+        }
+      }, [mainTab, loadExpertMarket]);
+
+      const handleToggleExpert = async (item) => {
+        if (expertMarketToggling) return;
+        const isEnabled = item.status === "enabled";
+        const actionMethod = isEnabled ? "expertMarketDisable" : "expertMarketInstall";
+        const nextStatus = isEnabled ? "available" : "enabled";
+
+        setExpertMarketItems((cur) =>
+          cur.map((it) => (it.id === item.id ? { ...it, status: nextStatus } : it))
+        );
+        setExpertMarketToggling(item.id);
+
+        try {
+          await api(actionMethod, { id: item.id });
+        } catch {
+          setExpertMarketItems((cur) =>
+            cur.map((it) => (it.id === item.id ? { ...it, status: item.status } : it))
+          );
+        } finally {
+          setExpertMarketToggling("");
+        }
+      };
 
       const loadInstalled = useCallback(() => {
         api("list")
@@ -427,7 +543,7 @@
           ];
 
       return h("div", { className: "sh-mkt" },
-        h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },
+        mainTab === "experts-market" ? null : h("section", { className: "workshop-intro", "aria-label": tr("workshop.title") },
           h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, tr("workshop.title")),
           h("p", { className: "workshop-description" }, tr("workshop.subtitle")),
           h("div", { className: "action-row" },
@@ -473,8 +589,16 @@
             },
               h("span", null, tr("workshop.tabMine") || "我的 Skill"),
             ),
+            h("button", {
+              type: "button",
+              "aria-pressed": mainTab === "experts-market",
+              className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""),
+              onClick: () => setMainTab("experts-market"),
+            },
+              h("span", null, tr("workshop.tabExpertsMarket") || (tr("locale") === "en" ? "Experts Market" : "专家市场")),
+            ),
           ),
-          h("div", { className: "search-box" },
+          mainTab === "experts-market" ? null : h("div", { className: "search-box" },
             h("svg", { className: "search-icon", viewBox: "0 0 24 24" },
               h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" }),
             ),
@@ -493,7 +617,7 @@
           ),
         ),
 
-        h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
+        mainTab === "experts-market" ? null : h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
           workshopCategories.map((c) => h("button", {
             key: c.id,
             type: "button",
@@ -503,7 +627,60 @@
           }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
         ),
         // 视图内容
-        mainTab === "mine" ? h("div", null,
+        mainTab === "experts-market" ? h("div", { className: "expert-market-container" },
+          h("div", { className: "expert-market-heading" },
+            h("h2", { className: "expert-market-title" }, tr("expertMarket.title") || (tr("locale") === "en" ? "Experts Market" : "专家市场")),
+            h("p", { className: "expert-market-subtitle" }, tr("expertMarket.subtitle") || (tr("locale") === "en" ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区")),
+          ),
+          h("div", { className: "expert-market-grid" },
+            (expertMarketItems.length ? expertMarketItems : DEFAULT_MARKET_EXPERTS).map((item) => {
+              const isEn = tr("locale") === "en";
+              const title = isEn ? (item.nameEn || item.name) : item.name;
+              const desc = isEn ? (item.descriptionEn || item.description) : item.description;
+              const isEnabled = item.status === "enabled";
+              const isAvailable = item.status === "available";
+              const isComingSoon = item.status === "coming_soon";
+
+              let statusText = "";
+              if (isEnabled) statusText = "[ " + (tr("expertMarket.enabled") || (isEn ? "Enabled" : "已启用")) + " ]";
+              else if (isAvailable) statusText = "[ " + (tr("expertMarket.available") || (isEn ? "Available" : "可用")) + " ]";
+              else if (isComingSoon) statusText = "[ " + (tr("expertMarket.comingSoon") || (isEn ? "Coming soon" : "即将推出")) + " ]";
+
+              const btnText = isEnabled
+                ? (tr("expertMarket.disable") || (isEn ? "Disable" : "禁用"))
+                : (tr("expertMarket.install") || (isEn ? "Install" : "安装"));
+
+              const showButton = isEnabled || isAvailable;
+
+              return h("div", { key: item.id, className: "expert-card" },
+                h("div", { className: "expert-card-avatar-wrap" },
+                  h("img", {
+                    className: "expert-card-avatar",
+                    src: iconSrc(item.avatar),
+                    alt: title,
+                    loading: "lazy",
+                  }),
+                ),
+                showButton ? h("div", { className: "expert-card-action" },
+                  h("button", {
+                    type: "button",
+                    className: "expert-pill-btn",
+                    disabled: expertMarketToggling === item.id,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleToggleExpert(item);
+                    },
+                  }, expertMarketToggling === item.id ? "..." : btnText),
+                ) : null,
+                h("div", {
+                  className: "expert-card-status " + (item.status || ""),
+                }, statusText),
+                h("div", { className: "expert-card-title" }, title),
+                h("p", { className: "expert-card-desc" }, desc),
+              );
+            }),
+          ),
+        ) : mainTab === "mine" ? h("div", null,
           // 「我的 Skill」专属工具行
           h("div", { className: "mine-toolbar" },
             h("button", {
