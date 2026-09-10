@@ -39,6 +39,7 @@ export interface ResourcePickerModalProps {
 const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   open,
   nodeId,
+  title,
   initialTab = 'canvas',
   slotTarget = null,
   mode = 'add',

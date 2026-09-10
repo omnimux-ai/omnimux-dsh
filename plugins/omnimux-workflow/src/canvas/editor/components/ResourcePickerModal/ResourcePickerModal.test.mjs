@@ -159,3 +159,10 @@ test('画布面板与本地面板接入 PreviewThumb', () => {
   assert.match(canvasPaneSrc, /PreviewThumb/);
   assert.match(localPaneSrc, /PreviewThumb/);
 });
+
+test('ResourcePickerModal 属性契约：解构声明包含 title，杜绝未定义变量运行时异常', () => {
+  assert.match(modalSrc, /title\?: string;/);
+  // 核心防线：必须在参数中正确解构 title，严禁遗漏导致 ReferenceError: title is not defined
+  assert.match(modalSrc, /const ResourcePickerModal: React\.FC<ResourcePickerModalProps> = \(\{\s*[\s\S]*?\btitle\b[\s\S]*?\}\) =>/);
+  assert.match(modalSrc, /const modalTitle =\s*title \|\|/);
+});
