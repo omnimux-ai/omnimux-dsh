@@ -639,6 +639,7 @@ export const INSPIRATION_CSS = `
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overscroll-behavior: contain;
   animation: omni-fade-in 120ms ease;
 }
 @keyframes omni-fade-in {
@@ -1461,6 +1462,7 @@ export const INSPIRATION_CSS = `
   max-height: none;
   min-height: 420px;
   overflow: hidden;
+  overscroll-behavior: contain;
   background: var(--dsw-alias-bg-module-platform, #121212);
   border-radius: 16px;
 }
@@ -1545,6 +1547,9 @@ export const INSPIRATION_CSS = `
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   border-right: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
@@ -1716,20 +1721,32 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-bg-layer-1);
 }
 .omnimux-inspiration-modal-deconstruction-panel {
+  display: flex;
+  flex-direction: column;
   padding: 0 !important;
+  overflow: hidden !important;
   background: var(--dsw-alias-bg-base, #111111);
 }
 .omnimux-inspiration-deconstruct-heading {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
   margin: 0 !important;
   border-bottom: 1px solid var(--dsw-alias-border-l2, #262626);
-  position: sticky;
-  top: 0;
   background: var(--dsw-alias-bg-base, #111111);
   z-index: 5;
+}
+.omnimux-inspiration-modal-deconstruction-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
 }
 .omnimux-inspiration-deconstruct-title {
   display: inline-flex;
@@ -1950,6 +1967,10 @@ export const INSPIRATION_CSS = `
     border-right: 0;
   }
   .omnimux-inspiration-modal-panel.is-active { display: block; }
+  .omnimux-inspiration-modal-deconstruction-panel.is-active {
+    display: flex;
+    flex-direction: column;
+  }
 }
 `
 

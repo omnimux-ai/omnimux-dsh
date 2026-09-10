@@ -157,9 +157,9 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   }))
 
   return (
-    <div className="omnimux-inspiration-modal-backdrop" onClick={onClose}>
-      <div className="omnimux-inspiration-modal-wrapper" onClick={(event) => event.stopPropagation()}>
-        <div className="omnimux-inspiration-modal-container">
+    <div className="omnimux-inspiration-modal-backdrop" onClick={onClose} onWheel={(e) => e.stopPropagation()}>
+      <div className="omnimux-inspiration-modal-wrapper" onClick={(event) => event.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+        <div className="omnimux-inspiration-modal-container" onWheel={(e) => e.stopPropagation()}>
           <header className="omnimux-inspiration-modal-header">
             <div className="omnimux-inspiration-modal-heading">
               <h2 title={data.title}>{data.title}</h2>
@@ -307,50 +307,52 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   className="omnimux-inspiration-modal-copy"
                 /> : null}
               </div>
-              {hasDeconstruction(data) ? (
-                <div className="omnimux-inspiration-modal-dimensions is-doc-style">
-                  {data.sections.length ? data.sections.map((section) => (
-                    <article
-                      key={section.id}
-                      className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
-                      onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
-                    >
-                      <h4 className="omnimux-inspiration-doc-title">{section.title}</h4>
-                      {section.quote ? (
-                        <blockquote className="omnimux-inspiration-doc-quote">
-                          {formatDocQuote(section.quote)}
-                        </blockquote>
-                      ) : null}
-                      {section.analysis ? renderDocAnalysis(section.analysis) : null}
-                    </article>
-                  )) : dimensions.map(([key, label, value]) => value ? (
-                    <article key={key} className="omnimux-inspiration-doc-section">
-                      <h4 className="omnimux-inspiration-doc-title">{label}</h4>
-                      {renderDocAnalysis(value)}
-                    </article>
-                  ) : null)}
-                  {data.rawMarkdown ? (
-                    <div className="omnimux-inspiration-modal-raw">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="omnimux-inspiration-modal-copy"
-                        onClick={() => setShowRaw((value) => !value)}
+              <div className="omnimux-inspiration-modal-deconstruction-body">
+                {hasDeconstruction(data) ? (
+                  <div className="omnimux-inspiration-modal-dimensions is-doc-style">
+                    {data.sections.length ? data.sections.map((section) => (
+                      <article
+                        key={section.id}
+                        className={`omnimux-inspiration-doc-section ${section.source_segment_ids.includes(activeSegmentId) ? 'is-active' : ''}`}
+                        onClick={() => section.source_segment_ids[0] && highlightSegment(section.source_segment_ids[0])}
                       >
-                        {showRaw ? t('modal.deconstruction.hideRaw') : t('modal.deconstruction.showRaw')}
-                      </Button>
-                      {showRaw ? <pre>{data.rawMarkdown}</pre> : null}
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="omnimux-inspiration-modal-empty">
-                  <p>{analyzing ? t('modal.deconstruction.analyzing') : t('modal.deconstruction.empty')}</p>
-                  {analyzeError ? <div className="omnimux-inspiration-error-text">{analyzeError}</div> : null}
-                  <Button variant="primary" onClick={handleAnalyze} loading={analyzing} disabled={analyzing}>{t('modal.deconstruction.analyze')}</Button>
-                </div>
-              )}
+                        <h4 className="omnimux-inspiration-doc-title">{section.title}</h4>
+                        {section.quote ? (
+                          <blockquote className="omnimux-inspiration-doc-quote">
+                            {formatDocQuote(section.quote)}
+                          </blockquote>
+                        ) : null}
+                        {section.analysis ? renderDocAnalysis(section.analysis) : null}
+                      </article>
+                    )) : dimensions.map(([key, label, value]) => value ? (
+                      <article key={key} className="omnimux-inspiration-doc-section">
+                        <h4 className="omnimux-inspiration-doc-title">{label}</h4>
+                        {renderDocAnalysis(value)}
+                      </article>
+                    ) : null)}
+                    {data.rawMarkdown ? (
+                      <div className="omnimux-inspiration-modal-raw">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="omnimux-inspiration-modal-copy"
+                          onClick={() => setShowRaw((value) => !value)}
+                        >
+                          {showRaw ? t('modal.deconstruction.hideRaw') : t('modal.deconstruction.showRaw')}
+                        </Button>
+                        {showRaw ? <pre>{data.rawMarkdown}</pre> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="omnimux-inspiration-modal-empty">
+                    <p>{analyzing ? t('modal.deconstruction.analyzing') : t('modal.deconstruction.empty')}</p>
+                    {analyzeError ? <div className="omnimux-inspiration-error-text">{analyzeError}</div> : null}
+                    <Button variant="primary" onClick={handleAnalyze} loading={analyzing} disabled={analyzing}>{t('modal.deconstruction.analyze')}</Button>
+                  </div>
+                )}
+              </div>
             </section>
           </main>
 
