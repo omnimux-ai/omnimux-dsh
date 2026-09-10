@@ -188,6 +188,7 @@ export const CanvasPageHeader: React.FC<CanvasPageHeaderProps> = memo(({
   return (
     <div
       className="wf-page-header-controls nodrag nopan"
+      data-open={isOpen ? 'true' : undefined}
       onPointerDown={stopToolbarNativeEvent}
       onMouseDown={stopToolbarNativeEvent}
     >
@@ -257,7 +258,7 @@ export const CanvasPageHeader: React.FC<CanvasPageHeaderProps> = memo(({
                     )}
                     {/* 选中打勾图标 */}
                     {isCurrent && !isEditing && (
-                      <Check size={13} style={{ color: 'var(--dsw-alias-brand-primary)', flexShrink: 0 }} />
+                      <Check size={13} style={{ color: 'var(--dsw-alias-brand-primary, var(--wb-accent, #4176E6))', flexShrink: 0 }} />
                     )}
                   </div>
                 </div>
