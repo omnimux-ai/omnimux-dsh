@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { clamp, fetchSkillCard, parseSlug } from './api.js'
 import { parseCategory } from './categories.js'
@@ -235,6 +235,50 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, cfg: 
       if (!tab) return sendJson(res, 400, { ok: false, error: '缺少 tab' })
       const result = await fetchSkillTab(slug, tab, cfg)
       return sendJson(res, 200, { ok: true, slug, ...result })
+    }
+    if (method === 'skillContent') {
+      const slug = parseSlug(String(body.slug || url.searchParams.get('slug') || ''))
+      const candidates = [
+        join(cfg.skillsDir, slug),
+        join(process.env.HOME || '', '.omnimux-dev/skills', slug),
+        join(process.env.HOME || '', '.dsh/skills', slug),
+        join(packageRoot(), 'catalog/skills', slug),
+        join(packageRoot(), 'catalog/experts', slug),
+        join('/Users/x/Desktop/Project/Github/OmniMux-skills/skills', slug),
+        join('/Users/x/Desktop/Project/OPC/资产库/skills', 'OmniMux-skills-' + slug),
+        join('/Users/x/Desktop/Project/OPC/资产库/skills', slug),
+        join('/Users/x/Desktop/Project/Github/workbuddyskills/skills', slug),
+      ]
+      let skillDir = ''
+      for (const c of candidates) {
+        if (existsSync(join(c, 'SKILL.md'))) {
+          skillDir = c
+          break
+        }
+      }
+      if (skillDir) {
+        try {
+          const files = readdirSync(skillDir, { withFileTypes: true })
+          const tree: Array<{ name: string, isDir: boolean, children?: string[] }> = []
+          for (const f of files) {
+            if (f.name.startsWith('.')) continue
+            if (f.isDirectory()) {
+              let children: string[] = []
+              try { children = readdirSync(join(skillDir, f.name)).filter((c) => !c.startsWith('.')) } catch {}
+              tree.push({ name: f.name, isDir: true, children })
+            } else {
+              tree.push({ name: f.name, isDir: false })
+            }
+          }
+          const skillMd = readFileSync(join(skillDir, 'SKILL.md'), 'utf8')
+          let metaYaml = ''
+          if (existsSync(join(skillDir, 'meta.yaml'))) {
+            metaYaml = readFileSync(join(skillDir, 'meta.yaml'), 'utf8')
+          }
+          return sendJson(res, 200, { ok: true, found: true, tree, skillMd, metaYaml })
+        } catch {}
+      }
+      return sendJson(res, 200, { ok: true, found: false })
     }
     if (method === 'experts') {
       const doc = decorateCatalog(loadCatalog(), expertRoots())
