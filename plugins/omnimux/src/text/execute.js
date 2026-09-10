@@ -40,6 +40,8 @@ import { normalizeTextReferences } from './references.js'
  *   fetcher?: typeof fetch,
  *   apiKey?: string,
  *   baseUrl?: string,
+ *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
+ *   settings?: { get: (section: string) => any },
  *   assetMeta?: object,
  * }} input
  */
@@ -113,6 +115,8 @@ export async function executeOmnimuxText(input) {
       signal: input.signal,
       apiKey: input.apiKey,
       baseUrl: input.baseUrl,
+      credentials: input.credentials,
+      settings: input.settings,
     })
     assertGuardOutput(guardPlan, result, { capability: 'text' })
     return result

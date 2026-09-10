@@ -20,19 +20,56 @@ const DEFAULT_UA =
  *   signal?: AbortSignal,
  *   apiKey?: string,
  *   baseUrl?: string,
+ *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
+ *   settings?: { get: (section: string) => any },
  * }} input
  */
 export async function completeTextViaChat(input) {
   const env = input.env ?? process.env
-  const apiKey = (typeof input.apiKey === 'string' && input.apiKey.trim())
-    || String(env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN || '').trim()
+  let apiKey = (typeof input.apiKey === 'string' && input.apiKey.trim()) || ''
+  let baseUrl = (typeof input.baseUrl === 'string' && input.baseUrl.trim()) || ''
+  let targetModel = input.model
+
+  if (!apiKey) {
+    apiKey = String(env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN || '').trim()
+  }
+  if (!baseUrl && env.OMNIMUX_BASE_URL) {
+    baseUrl = String(env.OMNIMUX_BASE_URL).trim()
+  }
+
+  // 若未直接提供 key，尝试从 credentials 解析官方 key
+  if (!apiKey && input.credentials && typeof input.credentials.resolve === 'function') {
+    for (const ref of ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']) {
+      try {
+        const hit = await input.credentials.resolve(ref)
+        const val = hit && typeof hit.value === 'string' ? hit.value.trim() : ''
+        if (val) {
+          apiKey = val
+          break
+        }
+      } catch {}
+    }
+  }
+
+  // 若仍缺少 key 或 baseUrl，自适应读取本地/中枢配置好的模型提供商 (如 cpa)
+  if (!apiKey || !baseUrl) {
+    const discovered = await discoverLocalChatProvider({
+      env,
+      credentials: input.credentials,
+      settings: input.settings,
+      model: targetModel,
+    })
+    if (discovered) {
+      if (!baseUrl && discovered.baseUrl) baseUrl = discovered.baseUrl
+      if (!apiKey && discovered.apiKey) apiKey = discovered.apiKey
+      if (discovered.model) targetModel = discovered.model
+    }
+  }
+
   if (!apiKey) {
     throw new OmnimuxError('omnimux-unconfigured', 'set OMNIMUX_API_KEY or OMNIMUX_TOKEN')
   }
-  const baseUrl = normalizeBaseUrl(
-    (typeof input.baseUrl === 'string' && input.baseUrl.trim())
-      || String(env.OMNIMUX_BASE_URL || DEFAULT_CHAT_BASE),
-  )
+  baseUrl = normalizeBaseUrl(baseUrl || DEFAULT_CHAT_BASE)
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : ''
   if (!prompt) {
     throw new OmnimuxError('omnimux-invalid-request', 'prompt is required')
@@ -56,7 +93,7 @@ export async function completeTextViaChat(input) {
     ],
   })
   const body = {
-    model: input.model,
+    model: targetModel,
     max_tokens: input.maxTokens,
     messages,
   }
@@ -147,4 +184,117 @@ function pickErrorMessage(json) {
     return /** @type {any} */ (err).message
   }
   return String(row.message || '')
+}
+
+/**
+ * Discover a configured LLM provider from settings / credentials / disk
+ * when OMNIMUX_API_KEY is not directly exported.
+ * @param {{
+ *   env: Record<string, string | undefined>,
+ *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
+ *   settings?: { get: (section: string) => any },
+ *   model: string,
+ * }} opts
+ */
+async function discoverLocalChatProvider(opts) {
+  const { env, credentials, settings, model } = opts
+
+  let providers = undefined
+  try {
+    if (settings && typeof settings.get === 'function') {
+      const piAi = settings.get('llm-pi-ai')
+      if (piAi && typeof piAi === 'object' && piAi.providers && typeof piAi.providers === 'object') {
+        providers = piAi.providers
+      }
+    }
+  } catch {}
+
+  if (!providers && (env.DSH_HOME || settings || credentials)) {
+    try {
+      const { readFileSync, existsSync } = await import('node:fs')
+      const { join } = await import('node:path')
+      const { homedir } = await import('node:os')
+      const { parse } = await import('yaml')
+      const candidates = [
+        env.DSH_HOME ? join(env.DSH_HOME, 'settings.yaml') : '',
+        join(homedir(), '.omnimux-dev', 'settings.yaml'),
+        join(homedir(), '.dsh', 'settings.yaml'),
+      ].filter(Boolean)
+      for (const p of candidates) {
+        if (existsSync(p)) {
+          const content = readFileSync(p, 'utf8')
+          const doc = parse(content)
+          if (doc?.['llm-pi-ai']?.providers) {
+            providers = doc['llm-pi-ai'].providers
+            break
+          }
+        }
+      }
+    } catch {}
+  }
+
+  if (!providers || typeof providers !== 'object') return undefined
+
+  let matchedProvider = undefined
+  let mappedModel = undefined
+
+  for (const [key, p] of Object.entries(providers)) {
+    if (!p || typeof p !== 'object' || !p.baseURL) continue
+    const models = Array.isArray(p.models) ? p.models : []
+    const hit = models.find(m => m && (m.id === model || m.id === `${model}-high` || m.id?.startsWith(model)))
+    if (hit) {
+      matchedProvider = p
+      mappedModel = hit.id
+      break
+    }
+    if (key === 'cpa' || p.api === 'openai-completions') {
+      if (!matchedProvider) matchedProvider = p
+    }
+  }
+
+  if (!matchedProvider || !matchedProvider.baseURL) return undefined
+
+  const apiKeyEnv = matchedProvider.apiKeyEnv || 'CPA_API_KEY'
+  let resolvedKey = String(env[apiKeyEnv] || '').trim()
+
+  if (!resolvedKey && credentials && typeof credentials.resolve === 'function') {
+    try {
+      const hit = await credentials.resolve(apiKeyEnv)
+      if (hit && typeof hit.value === 'string') resolvedKey = hit.value.trim()
+    } catch {}
+  }
+
+  if (!resolvedKey && matchedProvider.apiKey) {
+    resolvedKey = String(matchedProvider.apiKey).trim()
+  }
+
+  if (!resolvedKey) {
+    try {
+      const { readFileSync, existsSync } = await import('node:fs')
+      const { join } = await import('node:path')
+      const { homedir } = await import('node:os')
+      const { parse } = await import('yaml')
+      const candidates = [
+        env.DSH_HOME ? join(env.DSH_HOME, '.credentials.yaml') : '',
+        join(homedir(), '.omnimux-dev', '.credentials.yaml'),
+        join(homedir(), '.dsh', '.credentials.yaml'),
+      ].filter(Boolean)
+      for (const p of candidates) {
+        if (existsSync(p)) {
+          const doc = parse(readFileSync(p, 'utf8'))
+          const refVal = doc?.refs?.[apiKeyEnv] || doc?.refs?.OMNIMUX_API_KEY
+          if (typeof refVal === 'string' && refVal.trim()) {
+            resolvedKey = refVal.trim()
+            break
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return {
+    baseUrl: String(matchedProvider.baseURL).trim(),
+    apiKey: resolvedKey || 'local-key',
+    model: mappedModel || model,
+  }
 }

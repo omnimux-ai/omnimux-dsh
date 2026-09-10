@@ -279,6 +279,53 @@ describe('textComplete execute', () => {
     assert.equal(part.type, 'image_url')
     assert.match(part.image_url.url, /^data:video\/webm;base64,/)
   })
+
+  it('discovers local provider endpoint and adapts model when OMNIMUX_API_KEY is absent', async () => {
+    let capturedUrl = ''
+    let capturedBody = null
+    const fetcher = async (url, init) => {
+      capturedUrl = url
+      capturedBody = JSON.parse(init.body)
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'video analyzed successfully' } }] }),
+      }
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'describe video',
+      video: `data:video/mp4;base64,${MP4.toString('base64')}`,
+      model: 'gemini-3.8-flash',
+      env: {},
+      settings: {
+        get(key) {
+          if (key === 'llm-pi-ai') {
+            return {
+              providers: {
+                cpa: {
+                  api: 'openai-completions',
+                  baseURL: 'http://127.0.0.1:8317/v1',
+                  apiKeyEnv: 'CPA_API_KEY',
+                  models: [{ id: 'gemini-3.8-flash-high' }],
+                },
+              },
+            }
+          }
+          return undefined
+        },
+      },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'CPA_API_KEY') return { value: 'cpa-secret-token' }
+          return undefined
+        },
+      },
+      fetcher,
+    })
+    assert.equal(capturedUrl, 'http://127.0.0.1:8317/v1/chat/completions')
+    assert.equal(capturedBody.model, 'gemini-3.8-flash-high')
+    assert.equal(result.text, 'video analyzed successfully')
+  })
 })
 
 describe('omnimux_text_complete tool', () => {
