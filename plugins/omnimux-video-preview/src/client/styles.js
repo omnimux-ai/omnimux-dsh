@@ -551,6 +551,20 @@ export const VIDEO_BREAKDOWN_CSS = `
   user-select: none;
 }
 
+.omnimux-video-player-wrapper.is-embed {
+  cursor: default;
+  background: var(--dsw-alias-bg-surface-1, #000000);
+  overflow: hidden;
+}
+
+.omnimux-video-breakdown-embed-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: transparent;
+}
+
 .omnimux-video-play-center-btn {
   position: absolute;
   top: 50%;

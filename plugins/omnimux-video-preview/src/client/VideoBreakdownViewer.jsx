@@ -57,6 +57,19 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const coverUrl = video.cover_url || ''
   const durationText = video.duration_text || '0:17'
 
+  // Extract TikTok video ID and construct official embed URL
+  const embedUrl = useMemo(() => {
+    const raw = video.source_url || video.video_url || ''
+    if (!raw) return null
+    const m = String(raw).match(/tiktok\.com\/@?[^/]+\/video\/(\d{15,25})/i) ||
+      String(raw).match(/tiktok\.com\/v\/(\d{15,25})/i) ||
+      String(raw).match(/tiktok\.com\/player\/v1\/(\d{15,25})/i)
+    if (m && m[1]) {
+      return `https://www.tiktok.com/player/v1/${m[1]}`
+    }
+    return null
+  }, [video.source_url, video.video_url])
+
   const togglePlay = () => {
     if (!videoRef.current) return
     if (videoRef.current.paused) {
@@ -237,9 +250,19 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       <div className="omnimux-video-breakdown-body">
         {/* Left: Video Player & Metadata Column */}
         <aside className="omnimux-video-breakdown-left">
-          {/* Native Local Video Player Card */}
+          {/* Video Player Card (TikTok Official Embed Player preferred) */}
           <div className="omnimux-video-breakdown-player-card">
-            {streamUrl ? (
+            {embedUrl ? (
+              <div className="omnimux-video-player-wrapper is-embed">
+                <iframe
+                  title={video.title || 'TikTok Video Player'}
+                  src={embedUrl}
+                  className="omnimux-video-breakdown-embed-frame"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            ) : streamUrl ? (
               <div className="omnimux-video-player-wrapper" onClick={togglePlay}>
                 <video
                   ref={videoRef}
