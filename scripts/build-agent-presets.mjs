@@ -177,11 +177,6 @@ const targets = [
     fragment: bothFrag,
     persona: 'tiktok',
   },
-  {
-    file: 'presets/content-creation-team/agent.cordis.yml',
-    fragment: contentFrag,
-    persona: 'content-creation',
-  },
 ]
 
 for (const t of targets) {
