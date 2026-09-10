@@ -92,7 +92,15 @@ export function applyExecutionNodeOutput(
   const first = output.mediaAssets?.[0];
   if (output.mediaAssets && output.mediaAssets.length > 0 && first) {
     patch.mediaAssets = output.mediaAssets;
-    if (first.url) patch.mediaUrl = first.url;
+    if (first.url) {
+      patch.mediaUrl = first.url;
+      // A new video output must not inherit a poster from the previous output.
+      if (first.type === 'video') {
+        patch.thumbnailUrl = undefined;
+        patch.outputThumbnailUrl = undefined;
+        patch.coverUrl = undefined;
+      }
+    }
     const relativePath = output.relativePath || first.relativePath;
     const assetId = output.assetId || first.assetId;
     if (relativePath) patch.relativePath = relativePath;

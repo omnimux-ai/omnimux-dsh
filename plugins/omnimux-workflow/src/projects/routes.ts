@@ -24,6 +24,8 @@ import {
 import { displayHomePath, ensureLibraryRoot, resolveVideosDir } from './library';
 import { ProjectPathError } from './paths';
 import { createProjectStore, ProjectStoreError } from './ProjectStore';
+import type { WorkspaceStore } from '../workflow/workspace/WorkspaceStore.ts';
+import { createProjectCoverService } from './ProjectCoverService.ts';
 
 export const PROJECT_ROUTE_PREFIX = '/omnimux-workflow/api/projects';
 export const PROJECT_LIBRARY_PATH = `${PROJECT_ROUTE_PREFIX}/library`;
@@ -85,7 +87,9 @@ export interface ProjectDispatcher {
 }
 
 /** 项目路由无状态：库根由 host 解析，不跟当前会话 cwd。 */
-export function createProjectDispatcher(opts: { libraryRoot?: string } = {}): ProjectDispatcher {
+export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceStore?: WorkspaceStore; mediaRevision?: (url: string) => string } = {}): ProjectDispatcher {
+  const coverService = opts.workspaceStore ? createProjectCoverService(opts.workspaceStore, opts.mediaRevision) : undefined;
+  const enrich = <T extends { pages?: Array<{ id: string; canvasWorkspaceId?: string }> }>(project: T) => coverService ? coverService(project) : project;
   const collectionRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}$`);
   const libraryRe = new RegExp(`^${PROJECT_LIBRARY_PATH}$`);
   const itemRe = new RegExp(`^${PROJECT_ROUTE_PREFIX}/([^/]+)$`);
@@ -131,7 +135,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string } = {}): Pr
       if (collectionRe.exec(path)) {
         if (method === 'GET') {
           const { store } = scopedStore(opts.libraryRoot);
-          return { status: 200, body: { projects: store.list() } };
+          return { status: 200, body: { projects: store.list().map((project) => enrich(project)) } };
         }
         if (method === 'POST') {
           const problem = jsonBodyProblem(req.body);
@@ -309,7 +313,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string } = {}): Pr
         }
         const { store } = scopedStore(opts.libraryRoot);
         if (method === 'GET') {
-          return { status: 200, body: { project: store.get(id) } };
+          return { status: 200, body: { project: enrich(store.get(id)) } };
         }
         if (method === 'PATCH') {
           const problem = jsonBodyProblem(req.body);

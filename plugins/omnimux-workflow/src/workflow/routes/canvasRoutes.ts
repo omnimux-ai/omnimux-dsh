@@ -52,6 +52,7 @@ import {
 import { WorkflowStoreError } from '../workspace/WorkspaceStore';
 import { ProjectPathError } from '../../projects/paths';
 import { createSSEPublisher } from '../execution/ExecutionSSE';
+import { createMediaRevision } from '../../projects/mediaRevision.ts';
 import { createProjectDispatcher } from '../../projects/routes';
 import type {
   DispatchResult,
@@ -123,7 +124,7 @@ const PLUGIN_ROOT = resolvePluginRoot();
 
 export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const { store, gateway, mediaDir, executionManager, picker, templates, libraryRoot } = deps;
-  const projectDispatcher = createProjectDispatcher(libraryRoot ? { libraryRoot } : {});
+
   const projectStore = deps.projectStore
     ?? createProjectStore({ libraryRoot: libraryRoot ?? ensureLibraryRoot() });
   const staticRoutes = createStaticRoutes({ pluginRoot: PLUGIN_ROOT, gateway });
@@ -136,6 +137,9 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     resolveProjectRoot: (workspaceId) => projectStore.findByCanvasWorkspaceId(workspaceId),
     fetchLibraryDetail: libraryHttp.fetchLibraryDetail,
     promoteToLibrary: libraryHttp.promoteToLibrary,
+  });
+  const projectDispatcher = createProjectDispatcher({ libraryRoot, workspaceStore: store,
+    mediaRevision: createMediaRevision(mediaDir, (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath)),
   });
   const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore);
   const executionRoutes = createExecutionRoutes({
