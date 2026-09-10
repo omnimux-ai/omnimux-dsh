@@ -32,6 +32,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
         gate,
         llm: ctx.get?.('llm'),
         attachments: ctx.get?.('attachments'),
+        credentials: ctx.get?.('credentials'),
+        settings: ctx.get?.('settings'),
         env: process.env,
       })
     },
@@ -113,6 +115,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           gate,
           llm: ctx.get?.('llm'),
           attachments: ctx.get?.('attachments'),
+          credentials: ctx.get?.('credentials'),
+          settings: ctx.get?.('settings'),
           env: process.env,
         })
       } catch (error) {
