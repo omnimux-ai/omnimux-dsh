@@ -21,7 +21,7 @@ export const DEFAULT_MEDIA = Object.freeze({
         video: 'seedance-2-0-fast',
         image: 'gpt-image-2.5',
         audio: 'seed-audio-1.0',
-        stt: 'whisper-1',
+        stt: 'doubao-asr-bigmodel',
       }),
     }),
   }),

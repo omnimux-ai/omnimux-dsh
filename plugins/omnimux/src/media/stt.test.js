@@ -46,7 +46,7 @@ test('STT requires audio and rejects draft whisper before HTTP despite bypassSub
   await assert.rejects(() => executeOmnimuxSpeechToText({}), { code: 'omnimux-invalid-request' })
   let calls = 0
   await assert.rejects(() => executeOmnimuxSpeechToText({
-    audio: tempAudio(t), operation: 'speech_to_text', bypassSubmitGuard: true,
+    audio: tempAudio(t), model: 'whisper-1', operation: 'speech_to_text', bypassSubmitGuard: true,
     env: {}, fetcher: async () => { calls++ },
   }), { code: 'omnimux-invalid-request' })
   assert.equal(calls, 0)
