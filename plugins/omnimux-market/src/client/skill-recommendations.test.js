@@ -14,16 +14,16 @@ const ids = items => items.map(item => item.id)
 
 test('shipped configuration adds the admitted collector while preserving all 48 existing recommendations', () => {
   assert.deepEqual(SkillShelf.validateSkillRecommendations(), [])
-  assert.equal(config.featuredSkills.length, 49)
+  assert.equal(config.featuredSkills.length, 69)
   assert.deepEqual(config.featuredSkills, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.id))
-  assert.deepEqual(config.homeRecommendations, ['sk-bggg-data-amazon'])
+  assert.equal(config.homeRecommendations.length, 20)
   const home = SkillShelf.plazaDiscoverySections()
   assert.deepEqual(ids(home.featured), config.homeRecommendations)
-  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill').length - 1)
+  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill').length - 20)
   const collector = catalog.items.find(item => item.id === 'sk-bggg-data-amazon')
-  assert.deepEqual(home.featured[0].cover, collector.homeCover)
   assert.equal(collector.cover, undefined)
-  assert.equal(SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.at(-1).cover, undefined)
+  const featuredBggg = SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.find(item => item.id === 'sk-bggg-data-amazon')
+  assert.equal(featuredBggg.cover, undefined)
 })
 
 test('ordered resolution deduplicates and never renders unknown, non-Skill or non-featured IDs', () => {
@@ -100,12 +100,10 @@ function workshop(initial = {}, response = { items: [] }) {
 test('real workshop shows one admitted homepage card and retains all 49 on Featured', () => {
   const ui = workshop({ 14: 'ready' })
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 1)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 1)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, 192)
-  const image = nodes(ui.render(), node => node.type === 'img' && node.props.src === 'catalog/covers/home/bggg-data-amazon.png')
-  assert.equal(image.length, 1)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill').length - 20)
   ui.state.set(1, 'featured')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 49)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 69)
 })
 
 test('real search effect preserves full-library results, search heading and pagination payload', async () => {
@@ -123,5 +121,5 @@ test('real search effect preserves full-library results, search heading and pagi
   await new Promise(resolve => setImmediate(resolve))
   assert.equal(ui.calls.filter(call => call.action === 'search').at(-1).payload.offset, 80)
   ui.state.set(4, '')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 1)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
 })

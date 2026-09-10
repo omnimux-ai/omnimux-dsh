@@ -6485,7 +6485,11 @@
       "subtitle": "Python 3.10+ · 标准库 · 网络与端点可用性待运行时核实",
       "summary": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入；不含评论优化报告，不保证全部评论。需环境提供 Python 3.10+ 与命令执行能力，不自动配置依赖。",
       "category": "sk-commerce",
-      "tags": ["电商", "评论采集", "精选"],
+      "tags": [
+        "电商",
+        "评论采集",
+        "精选"
+      ],
       "skill": "bggg-data-amazon",
       "source": {
         "type": "bundled",
@@ -6495,6 +6499,553 @@
       "homeCover": {
         "asset": "catalog/covers/home/bggg-data-amazon.png",
         "alt": "评论卡与可追溯数据归档，Amazon 书面评论采集"
+      }
+    },
+    {
+      "id": "sk-html-report-templates",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "HTML Report Templates",
+      "subtitle": "HTML 报表与仪表盘模板 · html-writer",
+      "summary": "Copy-and-fill HTML report and dashboard templates for html-writer.",
+      "category": "sk-office",
+      "tags": [
+        "电商",
+        "报表",
+        "模板",
+        "HTML",
+        "精选"
+      ],
+      "skill": "html-report-templates",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/html-report-templates",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/transcript-broll-planner.png",
+        "alt": "HTML Report Templates"
+      }
+    },
+    {
+      "id": "sk-shopee-market-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Shopee Market Analysis",
+      "subtitle": "Shopee 市场分析 · shopee-mcp",
+      "summary": "Shopee site and category market opportunity analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "市场分析",
+        "精选"
+      ],
+      "skill": "shopee-market-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/shopee-market-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "Shopee Market Analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-product-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Shopee Product Analysis",
+      "subtitle": "Shopee 商品分析 · shopee-mcp",
+      "summary": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "商品分析",
+        "精选"
+      ],
+      "skill": "shopee-product-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/shopee-product-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-image.png",
+        "alt": "Shopee Product Analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-shop-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Shopee Shop Analysis",
+      "subtitle": "Shopee 店铺分析 · shopee-mcp",
+      "summary": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "店铺分析",
+        "精选"
+      ],
+      "skill": "shopee-shop-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/shopee-shop-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "Shopee Shop Analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-brand-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Shopee Brand Analysis",
+      "subtitle": "Shopee 品牌分析 · shopee-mcp",
+      "summary": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "品牌分析",
+        "精选"
+      ],
+      "skill": "shopee-brand-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/shopee-brand-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-image.png",
+        "alt": "Shopee Brand Analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-keyword-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Shopee Keyword Analysis",
+      "subtitle": "Shopee 关键词分析 · shopee-mcp",
+      "summary": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "关键词分析",
+        "精选"
+      ],
+      "skill": "shopee-keyword-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/shopee-keyword-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "Shopee Keyword Analysis"
+      }
+    },
+    {
+      "id": "sk-video-generate-canvas",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "video-generate-canvas",
+      "subtitle": "视频生成画布 · 创作路由",
+      "summary": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
+      "category": "sk-video",
+      "tags": [
+        "视频",
+        "画布",
+        "视频生成",
+        "精选"
+      ],
+      "skill": "video-generate-canvas",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/video-generate-canvas",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/brand-promo-video-generator.png",
+        "alt": "video-generate-canvas"
+      }
+    },
+    {
+      "id": "sk-ecommerce-routing-policy",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Ecommerce Routing Policy",
+      "subtitle": "电商路由策略 · 运营中枢",
+      "summary": "Shared routing rules for ecommerce operation agents.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "路由策略",
+        "运营",
+        "精选"
+      ],
+      "skill": "ecommerce-routing-policy",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/ecommerce-routing-policy",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/product-kinetic-typography-tvc.png",
+        "alt": "Ecommerce Routing Policy"
+      }
+    },
+    {
+      "id": "sk-ecommerce-output-spec",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Ecommerce Output Spec",
+      "subtitle": "电商输出规范 · 报表交付",
+      "summary": "Shared report and file output rules for ecommerce operation agents.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "输出规范",
+        "报表",
+        "精选"
+      ],
+      "skill": "ecommerce-output-spec",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/ecommerce-output-spec",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/product-kinetic-typography-tvc.png",
+        "alt": "Ecommerce Output Spec"
+      }
+    },
+    {
+      "id": "sk-ecommerce-daily-review",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Ecommerce Daily Review",
+      "subtitle": "电商日报复盘 · Amazon & TikTok Shop",
+      "summary": "Daily and weekly review template for Amazon and TikTok Shop operations.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "日报复盘",
+        "Amazon",
+        "TikTok",
+        "精选"
+      ],
+      "skill": "ecommerce-daily-review",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/ecommerce-daily-review",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/home/bggg-data-amazon.png",
+        "alt": "Ecommerce Daily Review"
+      }
+    },
+    {
+      "id": "sk-amazon-market-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Market Analysis",
+      "subtitle": "亚马逊市场分析 · amazon-mcp",
+      "summary": "Amazon category and market opportunity analysis using amazon-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "市场分析",
+        "精选"
+      ],
+      "skill": "amazon-market-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-market-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "Amazon Market Analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-product-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Product Analysis",
+      "subtitle": "亚马逊产品分析 · ASIN SKU 竞品研究",
+      "summary": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "竞品研究",
+        "精选"
+      ],
+      "skill": "amazon-product-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-product-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-image.png",
+        "alt": "Amazon Product Analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-listing-optimization",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Listing Optimization",
+      "subtitle": "亚马逊 Listing 优化 · A+ 页面",
+      "summary": "Amazon listing, A+ and keyword coverage optimization.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "Listing优化",
+        "精选"
+      ],
+      "skill": "amazon-listing-optimization",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-listing-optimization",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-image.png",
+        "alt": "Amazon Listing Optimization"
+      }
+    },
+    {
+      "id": "sk-amazon-keyword-traffic-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Keyword Traffic Analysis",
+      "subtitle": "亚马逊关键词流量分析 · ABA 趋势 PPC 机会",
+      "summary": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "关键词流量",
+        "精选"
+      ],
+      "skill": "amazon-keyword-traffic-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-keyword-traffic-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/ecommerce-design.png",
+        "alt": "Amazon Keyword Traffic Analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-review-optimization",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Review Optimization",
+      "subtitle": "亚马逊评论优化 · VOC QA 痛点分析",
+      "summary": "Amazon review, VOC, QA and pain-point optimization.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "评论优化",
+        "VOC",
+        "精选"
+      ],
+      "skill": "amazon-review-optimization",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-review-optimization",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/home/bggg-data-amazon.png",
+        "alt": "Amazon Review Optimization"
+      }
+    },
+    {
+      "id": "sk-amazon-trend-risk-monitor",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Amazon Trend Risk Monitor",
+      "subtitle": "亚马逊趋势风险监控 · BSR 销量预测 商标风控",
+      "summary": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "趋势风险",
+        "BSR",
+        "精选"
+      ],
+      "skill": "amazon-trend-risk-monitor",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/amazon-trend-risk-monitor",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/digital-product-promo-generator.png",
+        "alt": "Amazon Trend Risk Monitor"
+      }
+    },
+    {
+      "id": "sk-tiktok-market-trend-analysis",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "TikTok Market Trend Analysis",
+      "subtitle": "TikTok 市场趋势分析 · Topview td 工具",
+      "summary": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
+      "category": "sk-commerce",
+      "tags": [
+        "TikTok",
+        "电商",
+        "市场趋势",
+        "Topview",
+        "精选"
+      ],
+      "skill": "tiktok-market-trend-analysis",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/tiktok-market-trend-analysis",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/digital-product-promo-generator.png",
+        "alt": "TikTok Market Trend Analysis"
+      }
+    },
+    {
+      "id": "sk-tiktok-product-selection",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "TikTok Product Selection",
+      "subtitle": "TikTok 选品 · Shop 爆款选择与评分",
+      "summary": "TikTok Shop viral product selection and scoring.",
+      "category": "sk-commerce",
+      "tags": [
+        "TikTok",
+        "电商",
+        "爆款选品",
+        "精选"
+      ],
+      "skill": "tiktok-product-selection",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/tiktok-product-selection",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/digital-product-promo-generator.png",
+        "alt": "TikTok Product Selection"
+      }
+    },
+    {
+      "id": "sk-tiktok-material-breakdown",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "TikTok Material Breakdown",
+      "subtitle": "TikTok 素材拆解 · 爆款视频 Hook CTA 拆解",
+      "summary": "TikTok viral video, material, hook and CTA breakdown.",
+      "category": "sk-video",
+      "tags": [
+        "TikTok",
+        "视频",
+        "素材拆解",
+        "Hook",
+        "精选"
+      ],
+      "skill": "tiktok-material-breakdown",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/tiktok-material-breakdown",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/video-deconstruct.png",
+        "alt": "TikTok Material Breakdown"
+      }
+    },
+    {
+      "id": "sk-tiktok-script-creation",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "TikTok Script Creation",
+      "subtitle": "TikTok 脚本创作 · UGC 广告 直播脚本",
+      "summary": "TikTok UGC, creator, ad and live script generation.",
+      "category": "sk-video",
+      "tags": [
+        "TikTok",
+        "脚本创作",
+        "UGC",
+        "短视频",
+        "精选"
+      ],
+      "skill": "tiktok-script-creation",
+      "source": {
+        "type": "git",
+        "repo": "infometa/OmniMux-skills",
+        "path": "skills/tiktok-script-creation",
+        "ref": "main"
+      },
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/film-reference-prompt-writer.png",
+        "alt": "TikTok Script Creation"
       }
     }
   ]
