@@ -373,8 +373,10 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   let localVideoPath = isLocalFile ? resolve(trimmed) : null
   if (!localVideoPath && videoPlayUrl && isDirectUrl(videoPlayUrl)) {
     try {
-      const cwd = process.cwd()
-      const cacheDir = join(cwd, '.omnimux', 'cache')
+      const wsDir = resolveWorkspaceDirectory(options)
+      const cacheDir = wsDir
+        ? join(wsDir, '.omnimux', 'cache')
+        : join(process.env.HOME || process.cwd(), '.omnimux', 'cache')
       mkdirSync(cacheDir, { recursive: true })
       localVideoPath = await downloadMedia(videoPlayUrl, cacheDir, { prefix: 'vid_' })
     } catch {
@@ -508,19 +510,60 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
 }
 
 /**
+ * Resolves current workspace directory from execution context or environment.
+ * @param {object} [options]
+ * @returns {string|null}
+ */
+export function resolveWorkspaceDirectory(options = {}) {
+  const { execCtx, ctx, workspace, workdir } = options
+
+  if (workdir && typeof workdir === 'string') return resolve(workdir)
+  if (workspace && typeof workspace === 'string') return resolve(workspace)
+
+  if (execCtx?.workdir && typeof execCtx.workdir === 'string') return resolve(execCtx.workdir)
+  if (execCtx?.workspace && typeof execCtx.workspace === 'string') return resolve(execCtx.workspace)
+  if (execCtx?.cwd && typeof execCtx.cwd === 'string') return resolve(execCtx.cwd)
+
+  const sessionId = execCtx?.agent?.session?.id || execCtx?.sessionId
+  if (sessionId && ctx?.sessions?.get) {
+    const sessionObj = ctx.sessions.get(sessionId)
+    const headerCwd = sessionObj?.header?.cwd
+    if (headerCwd && typeof headerCwd === 'string') return resolve(headerCwd)
+  }
+  if (execCtx?.agent?.session?.header?.cwd) {
+    return resolve(execCtx.agent.session.header.cwd)
+  }
+
+  if (process.env.DSH_WORKSPACE && typeof process.env.DSH_WORKSPACE === 'string') {
+    return resolve(process.env.DSH_WORKSPACE)
+  }
+
+  const cwd = process.cwd()
+  const home = process.env.HOME || ''
+  if (cwd && cwd !== '/' && cwd !== home && cwd !== resolve(home)) {
+    return cwd
+  }
+
+  return null
+}
+
+/**
  * Save breakdown result to native .vbreakdown JSON data file.
  * (Completely removes HTML generation and iframe sandbox).
  * @param {object} breakdownData
  * @param {string} [customDest]
+ * @param {object} [options]
  * @returns {{ dataPath: string }}
  */
-export function saveVideoBreakdownArtifacts(breakdownData, customDest) {
+export function saveVideoBreakdownArtifacts(breakdownData, customDest, options = {}) {
   const ts = Date.now()
   let basePath = customDest
 
   if (!basePath) {
-    const cwd = process.cwd()
-    const outDir = join(cwd, '.omnimux', 'breakdowns')
+    const wsDir = resolveWorkspaceDirectory(options)
+    const outDir = wsDir
+      ? join(wsDir, '.omnimux', 'breakdowns')
+      : join(process.env.HOME || process.cwd(), '.omnimux', 'breakdowns')
     mkdirSync(outDir, { recursive: true })
     basePath = join(outDir, `video-analysis-${ts}`)
   } else {
