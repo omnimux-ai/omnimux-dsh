@@ -134,6 +134,16 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     [nodeData.nodeHeight, nodeWidth, updateNodeData],
   );
 
+  // 媒体素材时长自愈回填（修复视频节点 durationSec 恒为 null 导致下游模型校验拦截）
+  const handleDurationChange = useCallback(
+    (duration: number) => {
+      if (Number.isFinite(duration) && duration > 0 && (nodeData.durationSec !== duration || nodeData.duration !== duration)) {
+        updateNodeData({ durationSec: duration, duration });
+      }
+    },
+    [nodeData.duration, nodeData.durationSec, updateNodeData],
+  );
+
   const handleGenerate = useCallback(() => {
     const kind = resolveNodeKind(nodeData);
     if (kind === 'generate') {
@@ -1024,6 +1034,13 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     generationStatus === 'generating' ||
     generationStatus === 'failed';
 
+  // 检查是否有上游表格或文本连线输入
+  const upstreamTableOrText = useMemo(() => {
+    return upstreams.find(
+      (u) => ((u.materialType as string) === 'table' || u.materialType === 'text') && (u.hasMedia || Boolean(u.textContent)),
+    );
+  }, [upstreams]);
+
   const textBody =
     effectiveTextContent || textEditing ? (
       <textarea
@@ -1063,6 +1080,33 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           }
         }}
       />
+    ) : upstreamTableOrText ? (
+      <div className="wf-node-empty wf-node-empty--text nodrag" style={{ padding: '20px 16px', boxSizing: 'border-box' }}>
+        <div className="wf-node-empty__icon-box">
+          <FileSpreadsheet size={32} strokeWidth={1.75} className="wf-node-empty__icon" style={{ color: 'var(--dsw-alias-brand-primary, #C8F135)' }} />
+        </div>
+        <div className="wf-node-empty__try-label" style={{ color: 'var(--dsw-alias-brand-primary, #C8F135)', fontWeight: 600, fontSize: '12px' }}>
+          {(upstreamTableOrText.materialType as string) === 'table'
+            ? `已关联表格输入: ${upstreamTableOrText.label || '表格'}`
+            : `已关联文本输入: ${upstreamTableOrText.label || '文本'}`}
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--wb-text-muted)', textAlign: 'center', marginTop: 4, lineHeight: 1.4 }}>
+          在下方底栏输入生成要求（可选），或直接点击生成执行
+        </div>
+        <div
+          className="wf-node-empty__actions"
+          style={{ marginTop: 12 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="wf-node-empty__pill-btn"
+            onClick={() => setTextEditing(true)}
+          >
+            <span>手动改写内容</span>
+          </button>
+        </div>
+      </div>
     ) : (
       <NodeEmptyState
         materialType="text"
@@ -1240,6 +1284,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     status={status}
                     isMissing={nodeData.isMissing === true}
                     onMediaSizeChange={handleMediaSizeChange}
+                    onDurationChange={handleDurationChange}
                     onSaveAudio={audioWorkspaceId ? handleSaveAudio : undefined}
                     onReplaceAudio={!isMultiSelected && !isGenerating ? () => { void resourcePicker.fillImportNode(); } : undefined}
                   />

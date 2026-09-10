@@ -124,3 +124,28 @@ test('invalid text output is rejected before creating a text file', async () => 
   await assert.rejects(gateway.awaitTask(submitted.taskId, join(root, 'text.txt')), { code: 'omnimux-invalid-response' });
   assert.equal(existsSync(join(root, 'text.txt')), false);
 });
+
+test('local-file video URL automatically self-heals duration and size via ffprobe when omitted', async () => {
+  const samplePath = '/Users/x/Downloads/whirly-park-adventure.mp4';
+  if (existsSync(samplePath)) {
+    const localUrl = `/omnimux-workflow/api/local-file?path=${encodeURIComponent(samplePath)}`;
+    const limited = catalogFor('video', 'minimax-h3', [operation('video_multi_ref', 'video', [{
+      ...slot('video', 'reference', 0, 3, 'reference_videos'), maxSizeMb: 100, totalMinDurationSec: 1.8, totalMaxDurationSec: 15.2, allowedMimes: ['video/mp4'],
+    }])]);
+    const req = request({
+      model: 'minimax-h3',
+      operation: 'video_multi_ref',
+      references: [{
+        type: 'video',
+        role: 'reference',
+        targetSlot: 'reference_videos',
+        pathOrUrl: localUrl,
+        sourceNodeId: 'vid-19e3aa82',
+        // durationSec and sizeBytes omitted!
+      }],
+    });
+    const resolved = resolveCanvasSubmission(req, limited);
+    assert.equal(resolved.references[0].durationSec, 8);
+    assert.ok(resolved.references[0].sizeBytes > 1000000);
+  }
+});

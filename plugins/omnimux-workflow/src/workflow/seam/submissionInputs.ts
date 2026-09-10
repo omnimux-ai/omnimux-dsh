@@ -1,9 +1,25 @@
+import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
-import { detectMimeFromFile, mimeFromFilename } from '../../shared/localMedia.ts';
+import { detectMimeFromFile, localFilePathFromUrl, mimeFromFilename } from '../../shared/localMedia.ts';
 import { buildUpstreamFingerprint } from '../../shared/validation/compatKernel.ts';
 import type { ReferenceAssetPayload, SubmitRequest } from './gateway.ts';
 import { SeamGatewayError } from './SeamGatewayError.ts';
+
+function probeLocalMediaDuration(filePath: string): number | undefined {
+  try {
+    const out = execFileSync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const val = Number.parseFloat(out.trim());
+    return Number.isFinite(val) && val >= 0 ? Math.round(val * 100) / 100 : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Legacy mirrors must not add a second asset or lose an explicit frame role. */
 export function submissionReferences(req: SubmitRequest): ReferenceAssetPayload[] {
@@ -43,15 +59,21 @@ function validateReference(ref: ReferenceAssetPayload): ReferenceAssetPayload {
   let mimeType = ref.mimeType?.trim().toLowerCase() || undefined;
   if (mimeType === 'application/octet-stream' || mimeType === 'unknown') mimeType = undefined;
   let sizeBytes = ref.sizeBytes;
-  if (isAbsolute(path)) {
+  let durationSec = ref.durationSec ?? ref.duration;
+  const resolvedDiskPath = localFilePathFromUrl(path) || (isAbsolute(path) ? path : null);
+  if (resolvedDiskPath && isAbsolute(resolvedDiskPath)) {
     try {
-      const stat = statSync(path);
+      const stat = statSync(resolvedDiskPath);
       if (!stat.isFile() || stat.size === 0) fail('素材文件为空或不可用');
       sizeBytes = stat.size;
-      const detected = detectMimeFromFile(path, '');
+      const detected = detectMimeFromFile(resolvedDiskPath, '');
       if (detected && !detected.startsWith(`${ref.type}/`)) fail('素材文件的实际类型与声明不一致');
       mimeType = detected || mimeType;
-    } catch {
+      if ((ref.type === 'video' || ref.type === 'audio') && (durationSec === undefined || durationSec === null)) {
+        durationSec = probeLocalMediaDuration(resolvedDiskPath);
+      }
+    } catch (err) {
+      if (err instanceof SeamGatewayError) throw err;
       fail('素材文件不可用，请替换素材或移除引用');
     }
   } else if (path.startsWith('data:')) {
@@ -73,14 +95,14 @@ function validateReference(ref: ReferenceAssetPayload): ReferenceAssetPayload {
   if (mimeType && !mimeType.toLowerCase().startsWith(`${ref.type}/`)) {
     throw new SeamGatewayError('mime_unsupported', '素材类型与 MIME 不一致，请重新读取素材');
   }
-  for (const value of [sizeBytes, ref.durationSec ?? ref.duration]) {
+  for (const value of [sizeBytes, durationSec]) {
     if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
       throw new SeamGatewayError('metadata_required', '素材大小或时长无效，请重新读取素材');
     }
   }
   return { ...ref, pathOrUrl: path, ...(mimeType ? { mimeType } : {}),
     ...(sizeBytes !== undefined ? { sizeBytes } : {}),
-    ...(ref.durationSec === undefined && ref.duration !== undefined ? { durationSec: ref.duration } : {}) };
+    ...(durationSec !== undefined ? { durationSec } : {}) };
 }
 
 /** Freeze and validate the exact input population used by operation matching. */
