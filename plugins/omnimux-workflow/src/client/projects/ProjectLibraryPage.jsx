@@ -472,7 +472,11 @@ export function ProjectLibraryPage(props) {
                 variant="underline"
                 items={[
                   { id: 'local', label: t('projects.localTab') || '本地项目' },
-                  { id: 'featured', label: '共创项目' },
+                  {
+                    id: 'featured',
+                    label: t('workflow.tab.featured') || '共创项目（即将上线）',
+                    disabled: true,
+                  },
                 ]}
                 activeId={libraryTab}
                 onChange={setLibraryTab}
