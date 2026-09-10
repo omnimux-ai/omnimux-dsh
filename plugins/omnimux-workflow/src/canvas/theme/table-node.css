@@ -777,42 +777,6 @@
   user-select: none;
 }
 
-/* medium 48px 行高下的附件缩略图 */
-.wf-grid-row--medium .wf-grid-attachment-thumb-wrapper,
-.wf-grid-row--medium .wf-grid-attachment-thumb-img {
-  height: 34px;
-  max-width: 60px;
-}
-.wf-grid-row--medium .wf-grid-attachment-add-btn {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-}
-
-/* tall 72px 行高下的附件缩略图 */
-.wf-grid-row--tall .wf-grid-attachment-thumb-wrapper,
-.wf-grid-row--tall .wf-grid-attachment-thumb-img {
-  height: 52px;
-  max-width: 92px;
-}
-.wf-grid-row--tall .wf-grid-attachment-add-btn {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-}
-
-/* extraTall 120px 行高下的附件缩略图 */
-.wf-grid-row--extraTall .wf-grid-attachment-thumb-wrapper,
-.wf-grid-row--extraTall .wf-grid-attachment-thumb-img {
-  height: 84px;
-  max-width: 140px;
-}
-.wf-grid-row--extraTall .wf-grid-attachment-add-btn {
-  width: 84px;
-  height: 84px;
-  min-width: 84px;
-}
-
 .wf-grid-attachment-thumb-img {
   width: auto;
   height: 100%;
