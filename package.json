@@ -59,6 +59,7 @@
     "accept:apps": "bash scripts/accept-apps-install.sh",
     "verify:models": "node scripts/verify-models.mjs",
     "verify:model-contracts": "node scripts/verify-model-contracts.mjs --strict",
+    "verify:cross-plugin-models": "node scripts/verify-cross-plugin-model-alignment.mjs",
     "verify:tools": "node scripts/verify-plugin-agent-tools.mjs",
     "verify:image-live": "node scripts/verify-omnimux-image-live.mjs",
     "verify:stages": "node scripts/verify-stage-contracts.mjs",
