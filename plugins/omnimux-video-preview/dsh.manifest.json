@@ -15,6 +15,13 @@
         "category": "media",
         "isWriteOperation": false,
         "requiresAuth": false
+      },
+      {
+        "name": "video_breakdown_analyze",
+        "summary": "分析视频链接并提取结构化分镜列表与阶段拆解，自动在右侧侧边栏打开预览",
+        "category": "media",
+        "isWriteOperation": true,
+        "requiresAuth": false
       }
     ],
     "seamsProvided": [
