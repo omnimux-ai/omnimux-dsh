@@ -326,6 +326,54 @@ describe('textComplete execute', () => {
     assert.equal(capturedBody.model, 'gemini-3.8-flash-high')
     assert.equal(result.text, 'video analyzed successfully')
   })
+
+  it('pairs local provider apiKey when credentials also contain an external OMNIMUX_API_KEY', async () => {
+    let capturedAuth = ''
+    let capturedUrl = ''
+    const fetcher = async (url, init) => {
+      capturedUrl = String(url)
+      capturedAuth = init?.headers?.authorization || init?.headers?.Authorization || ''
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'local key paired' } }] }),
+      }
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'describe video',
+      video: `data:video/mp4;base64,${MP4.toString('base64')}`,
+      model: 'gemini-3.8-flash',
+      env: {},
+      settings: {
+        get(key) {
+          if (key === 'llm-pi-ai') {
+            return {
+              providers: {
+                cpa: {
+                  api: 'openai-completions',
+                  baseURL: 'http://127.0.0.1:8317/v1',
+                  apiKeyEnv: 'CPA_API_KEY',
+                  models: [{ id: 'gemini-3.8-flash-high' }],
+                },
+              },
+            }
+          }
+          return undefined
+        },
+      },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_API_KEY') return { value: 'sk-external-omnimux-key' }
+          if (ref === 'CPA_API_KEY') return { value: 'sk-cpa-local-secret' }
+          return undefined
+        },
+      },
+      fetcher,
+    })
+    assert.equal(capturedUrl, 'http://127.0.0.1:8317/v1/chat/completions')
+    assert.equal(capturedAuth, 'Bearer sk-cpa-local-secret', 'must pair CPA_API_KEY when baseUrl defaults to CPA')
+    assert.equal(result.text, 'local key paired')
+  })
 })
 
 describe('omnimux_text_complete tool', () => {

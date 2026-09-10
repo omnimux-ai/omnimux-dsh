@@ -26,6 +26,8 @@ const DEFAULT_UA =
  */
 export async function completeTextViaChat(input) {
   const env = input.env ?? process.env
+  const explicitBaseUrl = Boolean(input.baseUrl || env.OMNIMUX_BASE_URL)
+  const explicitInputKey = typeof input.apiKey === 'string' && input.apiKey.trim().length > 0
   let apiKey = (typeof input.apiKey === 'string' && input.apiKey.trim()) || ''
   let baseUrl = (typeof input.baseUrl === 'string' && input.baseUrl.trim()) || ''
   let targetModel = input.model
@@ -60,8 +62,13 @@ export async function completeTextViaChat(input) {
       model: targetModel,
     })
     if (discovered) {
-      if (!baseUrl && discovered.baseUrl) baseUrl = discovered.baseUrl
-      if (!apiKey && discovered.apiKey) apiKey = discovered.apiKey
+      const adoptedLocalBase = !explicitBaseUrl && Boolean(discovered.baseUrl)
+      if (adoptedLocalBase) baseUrl = discovered.baseUrl
+      // 关键修复：当 baseUrl 采用本地发现的提供商时，apiKey 必须配套使用该本地提供商的 key，
+      // 避免携带 credentials 中外部的 OMNIMUX_API_KEY 打到本地导致 401 Invalid API key。
+      if (adoptedLocalBase || !apiKey) {
+        if (!explicitInputKey && discovered.apiKey) apiKey = discovered.apiKey
+      }
       if (discovered.model) targetModel = discovered.model
     }
   }
