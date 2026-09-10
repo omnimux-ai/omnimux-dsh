@@ -556,6 +556,7 @@ export const VirtualDataGrid: React.FC = () => {
           slotTarget={{
             slot: 'attachment',
             acceptedTypes: ['image', 'video', 'audio'],
+            max: null,
           }}
           onCancel={() => setPickerTarget(null)}
           onCommit={handleCommitResource}

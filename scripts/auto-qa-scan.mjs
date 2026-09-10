@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { extname, relative } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { extname, join, relative } from 'node:path'
 
 const JS_SYNTAX_EXTENSIONS = new Set(['.js', '.mjs', '.cjs'])
 const TEST_RE = /(?:^|[./\\])[^/\\]*\.(?:test|spec)\.[^/\\]+$/
@@ -363,6 +363,38 @@ function formatDimensionCheck(message, fileCount) {
   return message
 }
 
+function scanTypeScriptSyntax(report, files, root) {
+  const hasWorkflowTsChange = files.some((file) => {
+    const rel = normalizedRelative(root, file)
+    return rel.startsWith('plugins/omnimux-workflow/src/') && (rel.endsWith('.ts') || rel.endsWith('.tsx'))
+  })
+  if (!hasWorkflowTsChange) return
+  const tscBin = join(root, 'plugins/omnimux-workflow/node_modules/typescript/bin/tsc')
+  if (!existsSync(tscBin)) return
+  const resCanvas = spawnSync(process.execPath, [tscBin, '-p', 'tsconfig.canvas.json', '--noEmit'], {
+    cwd: join(root, 'plugins/omnimux-workflow'),
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  if (resCanvas.status !== 0) {
+    addError(report, 'syntax', {
+      file: 'plugins/omnimux-workflow/tsconfig.canvas.json',
+      message: `TypeScript (canvas) 类型/语法检查未通过：\n${(resCanvas.stderr || resCanvas.stdout || '').trim().slice(0, 500)}`,
+    })
+  }
+  const resHost = spawnSync(process.execPath, [tscBin, '-p', 'tsconfig.host.json', '--noEmit'], {
+    cwd: join(root, 'plugins/omnimux-workflow'),
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  if (resHost.status !== 0) {
+    addError(report, 'syntax', {
+      file: 'plugins/omnimux-workflow/tsconfig.host.json',
+      message: `TypeScript (host) 类型/语法检查未通过：\n${(resHost.stderr || resHost.stdout || '').trim().slice(0, 500)}`,
+    })
+  }
+}
+
 export function staticScan(report, files, root) {
   for (const file of files) {
     const rel = normalizedRelative(root, file)
@@ -376,6 +408,8 @@ export function staticScan(report, files, root) {
     scanTokens(report, file, rel, content)
     scanGuards(report, rel, content)
   }
+
+  scanTypeScriptSyntax(report, files, root)
 
   for (const [dimension, message] of DIMENSION_CHECKS) {
     if (!report.dimensions[dimension].pass) continue
