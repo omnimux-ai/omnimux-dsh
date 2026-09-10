@@ -16,23 +16,23 @@
 export const AGENT_PRESETS_I18N = {
   zh: {
     presetStandardName: '代码开发',
-    presetStandardDescription: '全功能代码开发与工程实现 Agent：支持架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工作流。',
+    presetStandardDescription: '全栈架构设计、代码编写与工程交付。',
     presetDailyWorkName: '日常工作',
-    presetDailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
+    presetDailyWorkDescription: '日常办公协同、文档拟定与事务闭环。',
     presetCordisName: '创造模式',
-    presetCordisDescription: '具备标准模式的全部能力，并提供运行时检查、插件实验与 Agent 预设创作指导。',
+    presetCordisDescription: '插件实验开发、运行时检查与团队搭建。',
     dailyWorkName: '日常工作',
-    dailyWorkDescription: '通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环。',
+    dailyWorkDescription: '日常办公协同、文档拟定与事务闭环。',
   },
   en: {
     presetStandardName: 'CodeDev',
-    presetStandardDescription: 'Full-featured code development and engineering agent: system architecture, code authoring, shell execution, code review, testing, and workflows.',
+    presetStandardDescription: 'Full-stack architecture, coding, and engineering delivery.',
     presetDailyWorkName: 'WorkAssistant',
-    presetDailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
+    presetDailyWorkDescription: 'Daily office collaboration, docs drafting, and task closure.',
     presetCordisName: 'Creator Mode',
-    presetCordisDescription: 'Full coding agent with runtime inspection, plugin experimentation, and preset authoring guidance.',
+    presetCordisDescription: 'Plugin development, runtime inspection, and team building.',
     dailyWorkName: 'WorkAssistant',
-    dailyWorkDescription: 'General daily office and workflow assistant: task planning, status reports, document drafting, meeting summaries, web research, and operational follow-ups.',
+    dailyWorkDescription: 'Daily office collaboration, docs drafting, and task closure.',
   },
 }
 
@@ -77,8 +77,17 @@ export function getPresetFallbackCopy(presetId, locale = 'zh') {
       name: lang === 'en' ? 'Content Creation' : '内容创作',
       description:
         lang === 'en'
-          ? 'Multimodal content creation team: creative planning, ad copywriting, visual design, and video production.'
-          : 'AI驱动的多模态内容生产团队：专注创意策划、广告创意、二次元设计、短剧影视、动漫制作与音视频内容创作。',
+          ? 'Multimodal creative planning, scripts, and video production.'
+          : '多模态创意策划、脚本分镜与视听制作。',
+    }
+  }
+  if (presetId === 'tiktok-agent' || presetId === 'tiktokagent' || presetId === '全能社媒操盘手') {
+    return {
+      name: lang === 'en' ? 'Social Media Lead' : '全能社媒操盘手',
+      description:
+        lang === 'en'
+          ? 'Cross-platform social media creation and matrix growth.'
+          : '全域社媒爆款创作与矩阵运营增长。',
     }
   }
   return null

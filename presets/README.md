@@ -4,11 +4,11 @@
 
 | id | 显示名（中 / 英） | order | 说明 |
 |---|---|---|---|
-| `tiktok-agent` | TikTokAgent / TikTokAgent | 1 | 出厂默认主力 Agent：专注 TikTok 营销内容自动化，整合账号运营、爆款文案、口播配音、视觉生图、视频分镜、BGM 配乐、剪辑成片与评论互动增长（挂载 10 位垂直专家） |
-| `standard` | 代码开发 / CodeDev | 2 | 全功能代码开发与工程实现 Agent：专注架构设计、代码编写、Shell 命令执行、代码审查、测试验证与工程闭环交付 |
-| `daily-work` | 日常工作 / WorkAssistant | 3 | 通用日常办公与工作协同 Agent：专注待办排期、工作周报、文档与方案拟定、会议纪要提炼、信息搜集整理与综合事务闭环 |
-| `cordis` | 创造模式 / Creator Mode | 4 | 原生创造模式 Agent：具备标准模式的全部能力，并提供运行时检查、插件实验与 Agent 预设创作指导 |
-| `content-creation-team` | 内容创作 / Content Creation | 5 | AI驱动的多模态创意内容生产 Agent：专注创意策划、广告创意、文案创作、二次元设计、短剧影视、动漫制作与音视频内容创作 |
+| `tiktok-agent` | 全能社媒操盘手 / Social Media Lead | 1 | 全域社媒爆款创作与矩阵运营增长。 |
+| `standard` | 代码开发 / CodeDev | 2 | 全栈架构设计、代码编写与工程交付。 |
+| `daily-work` | 日常工作 / WorkAssistant | 3 | 日常办公协同、文档拟定与事务闭环。 |
+| `cordis` | 创造模式 / Creator Mode | 4 | 插件实验开发、运行时检查与团队搭建。 |
+| `content-creation-team` | 内容创作 / Content Creation | 5 | 多模态创意策划、脚本分镜与视听制作。 |
 
 ## 产品化机制
 
