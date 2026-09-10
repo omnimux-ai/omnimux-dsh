@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { downloadMedia } from '../../omnimux-inspiration/src/downloader.js'
-import { fallbackResolveSocial } from '../../omnimux-inspiration/src/scraper-fallback.js'
+import { downloadMedia, fallbackResolveSocial } from './download-helper.js'
 
 /**
  * Normalizes seconds into mm:ss format.

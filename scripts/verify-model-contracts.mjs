@@ -18,6 +18,7 @@
 import { dirname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { verifyAutoServing } from './verify-auto-serving.mjs';
+import { verifyCrossPluginModelAlignment } from './verify-cross-plugin-model-alignment.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contractEntry = join(root, 'plugins/omnimux/src/catalog/contract/index.js');
@@ -265,6 +266,10 @@ export async function runVerify(opts = {}, deps = {}) {
     strict: Boolean(opts.strict) || opts.mode === 'strict',
   });
   const autoServing = (deps.verifyAutoServing ?? verifyAutoServing)({ specsDir: opts.specsDir });
+  const crossPlugin = (deps.verifyCrossPluginModelAlignment ?? verifyCrossPluginModelAlignment)({
+    specsDir: opts.specsDir,
+    strict: Boolean(opts.strict) || opts.mode === 'strict',
+  });
 
   let extraGateIssues = [];
   try {
@@ -281,7 +286,12 @@ export async function runVerify(opts = {}, deps = {}) {
   }
 
   const hasGateError = extraGateIssues.some((i) => i.level === 'error');
-  const mergedIssues = [...(contractReport.issues ?? []), ...autoServing.issues, ...extraGateIssues];
+  const mergedIssues = [
+    ...(contractReport.issues ?? []),
+    ...autoServing.issues,
+    ...crossPlugin.issues,
+    ...extraGateIssues,
+  ];
   const seenKeys = new Set();
   const dedupedIssues = [];
   for (const iss of mergedIssues) {
@@ -292,7 +302,7 @@ export async function runVerify(opts = {}, deps = {}) {
     }
   }
 
-  const isOverallOk = contractReport.ok && autoServing.ok && !hasGateError;
+  const isOverallOk = contractReport.ok && autoServing.ok && crossPlugin.ok && !hasGateError;
   const resolvedExitCode = !isOverallOk ? EXIT_FAIL : (contractReport.exitCode ?? EXIT_OK);
 
   const report = {
@@ -300,6 +310,7 @@ export async function runVerify(opts = {}, deps = {}) {
     ok: isOverallOk,
     exitCode: resolvedExitCode,
     autoServing,
+    crossPlugin,
     issues: dedupedIssues,
   };
 
@@ -318,6 +329,7 @@ export async function runVerify(opts = {}, deps = {}) {
       contentFingerprint: report.contentFingerprint,
       exitCode: report.exitCode,
       autoServing,
+      crossPlugin,
       admission: {
         ok: report.admission?.ok,
         errorCount: report.admission?.errorCount ?? 0,
@@ -358,10 +370,14 @@ export async function runVerify(opts = {}, deps = {}) {
     const cov = report.coverage ?? {};
     const adm = report.admission ?? {};
     const disp = report.dispositions ?? {};
+    if (crossPlugin.notice) {
+      process.stdout.write(`${crossPlugin.notice}\n`);
+    }
     process.stdout.write(
       [
         `model-contracts mode=${report.mode} ok=${report.ok}`,
         `auto-serving offline ok=${autoServing.ok} registered=${autoServing.registeredCount} required=${autoServing.requiredCount}`,
+        `cross-plugin offline ok=${crossPlugin.ok} whitelistChecked=${crossPlugin.alignment?.whitelistModelsChecked ?? 0}`,
         `schemaVersion=${schemaVersion}`,
         `fingerprint=${report.contentFingerprint}`,
         `admission errors=${adm.errorCount ?? 0} warnings=${adm.warningCount ?? 0}`,
