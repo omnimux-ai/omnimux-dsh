@@ -1,0 +1,61 @@
+[
+  {
+    "id": "tc_video_generate",
+    "description": "测试视频生成工具意图诱发",
+    "prompt": "帮我生成一段 5 秒钟的科幻飞船穿越虫洞的短视频，要求画面逼真、带有电影质感。",
+    "expectedTool": "omnimux_video_submit",
+    "expectedArgs": {
+      "prompt": "虫洞"
+    }
+  },
+  {
+    "id": "tc_image_generate",
+    "description": "测试图片生成工具意图诱发",
+    "prompt": "请画一张未来赛博朋克城市雨夜霓虹灯的插画，比例使用 16:9。",
+    "expectedTool": "omnimux_image_submit",
+    "expectedArgs": {
+      "prompt": "赛博朋克"
+    }
+  },
+  {
+    "id": "tc_inspiration_search",
+    "description": "测试灵感搜索意图诱发",
+    "prompt": "在灵感库里搜索一下关于‘美食探店’爆款视频的脚本参考案例。",
+    "expectedTool": "inspiration_search",
+    "expectedArgs": {
+      "query": "美食探店"
+    }
+  },
+  {
+    "id": "tc_market_search",
+    "description": "测试插件市场搜索意图诱发",
+    "prompt": "我想在 DSH 插件市场里找一下有没有支持批量剪辑的插件。",
+    "expectedTool": "plugin_search",
+    "expectedArgs": {
+      "query": "剪辑"
+    }
+  },
+  {
+    "id": "tc_clip_get",
+    "description": "测试视频剪辑轨道详情查询意图诱发",
+    "prompt": "查看当前剪辑项目 demo_proj 的时间线轨道信息与视频片段时长。",
+    "expectedTool": "clip_get",
+    "expectedArgs": {
+      "projectId": "demo_proj"
+    }
+  },
+  {
+    "id": "tc_workflow_list",
+    "description": "测试工作流模板查询意图诱发",
+    "prompt": "列出当前工作区中所有可用的多模态生成工作流画布列表。",
+    "expectedTool": "workflow_list",
+    "expectedArgs": {}
+  },
+  {
+    "id": "tc_negative_pure_chat",
+    "description": "负向控制用例：纯文本知识问答，不得误触发任何插件工具",
+    "prompt": "请简要解释一下快速排序算法的时间复杂度与空间复杂度。",
+    "expectedTool": null,
+    "expectedArgs": {}
+  }
+]
