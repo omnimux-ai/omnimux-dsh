@@ -1465,6 +1465,8 @@ export const INSPIRATION_CSS = `
   overscroll-behavior: contain;
   background: var(--dsw-alias-bg-module-platform, #121212);
   border-radius: 16px;
+  isolation: isolate;
+  contain: paint;
 }
 .omnimux-inspiration-modal-header {
   height: 60px;
@@ -1725,7 +1727,11 @@ export const INSPIRATION_CSS = `
   flex-direction: column;
   padding: 0 !important;
   overflow: hidden !important;
-  background: var(--dsw-alias-bg-base, #111111);
+  scrollbar-gutter: auto !important;
+  background: var(--dsw-alias-bg-base, #111111) !important;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .omnimux-inspiration-deconstruct-heading {
   flex: 0 0 auto;
@@ -1741,12 +1747,28 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-modal-deconstruction-body {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
+  background: var(--dsw-alias-bg-base, #111111) !important;
+  contain: paint;
+}
+.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar {
+  width: 6px;
+}
+.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb {
+  background: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.18));
+  border-radius: 9999px;
+}
+.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb:hover {
+  background: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.3));
 }
 .omnimux-inspiration-deconstruct-title {
   display: inline-flex;
