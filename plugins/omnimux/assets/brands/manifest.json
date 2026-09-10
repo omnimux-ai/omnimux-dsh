@@ -7,7 +7,7 @@
       "company": "OpenAI",
       "series": { "zh": "Sora / GPT", "en": "Sora / GPT" },
       "primaryColor": "#10A37F",
-      "models": ["gpt-5.5", "gpt-4o", "gpt-image-2", "sora-2", "sora-2-standard", "sora2", "dall-e-3"]
+      "models": ["gpt-5.5", "gpt-4o", "gpt-image-2", "gpt-image-2.5", "gpt-image-2.5-hd", "sora-2", "sora-2-standard", "sora2", "dall-e-3"]
     },
     "anthropic": {
       "id": "anthropic",

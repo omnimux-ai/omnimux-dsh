@@ -24,6 +24,29 @@ export function mapOpenAiImageSize(aspectRatio = '16:9', resolution = '2K') {
   const ratio = typeof aspectRatio === 'string' && aspectRatio.trim() ? aspectRatio.trim() : '16:9'
   const res = typeof resolution === 'string' && resolution.trim() ? resolution.trim().toUpperCase() : '2K'
 
+  if (res === '4K') {
+    if (ratio === '1:1') {
+      return { size: '2048x2048', quality: 'hd' }
+    }
+    if (ratio === '9:16' || ratio === '3:4' || ratio === '2:3' || ratio === '4:5') {
+      return { size: '2160x3840', quality: 'hd' }
+    }
+    if (ratio === '16:9' || ratio === '4:3' || ratio === '3:2' || ratio === '21:9' || ratio === 'auto') {
+      return { size: '3840x2160', quality: 'hd' }
+    }
+    const parts = ratio.split(':')
+    if (parts.length === 2) {
+      const w = parseFloat(parts[0])
+      const h = parseFloat(parts[1])
+      if (!Number.isNaN(w) && !Number.isNaN(h) && h > 0) {
+        if (w < h) return { size: '2160x3840', quality: 'hd' }
+        if (w > h) return { size: '3840x2160', quality: 'hd' }
+        return { size: '2048x2048', quality: 'hd' }
+      }
+    }
+    return { size: '3840x2160', quality: 'hd' }
+  }
+
   if (ratio === '1:1') {
     return {
       size: '1024x1024',
@@ -83,6 +106,7 @@ export function mapValidatedPlanToVendor(args) {
   let vendor = {}
   /** @type {Record<string, unknown>} */
   const logical = {}
+  let targetModelId
   const prompt = typeof args.prompt === 'string' ? args.prompt : ''
   if (prompt && profileId !== 'speechToText') {
     vendor[speech ? 'input' : 'prompt'] = prompt
@@ -217,6 +241,14 @@ export function mapValidatedPlanToVendor(args) {
         logical.resolution = extras.resolution
       }
       // 严禁向 vendor 注入 aspect_ratio
+
+      // SubmitGuard 聚敛自适应分流：针对 gpt-image-2.5 依据 resolution / quality 动态适配至相应物理端点
+      const reqId = String(args.modelId ?? '')
+      if (reqId === 'gpt-image-2.5' || reqId === 'gpt-image-2-5') {
+        const isHd = extras.resolution === '4K' || (extras.resolution === '2K' && extras.quality === 'hd')
+        targetModelId = isHd ? 'gpt-image-2.5-hd' : 'gpt-image-2.5'
+        logical.model = targetModelId
+      }
     } else {
       if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
         vendor.aspect_ratio = extras.aspectRatio
@@ -373,5 +405,10 @@ export function mapValidatedPlanToVendor(args) {
   if (vendor.file_url !== undefined && vendor.link_url !== undefined) {
     return { ok: false, code: GUARD_CODES.VENDOR_FIELD_FORBIDDEN, message: 'file_url and link_url must not coexist', profileId }
   }
-  return { ok: true, vendorPayload: vendor, logicalPayload: logical }
+  return {
+    ok: true,
+    vendorPayload: vendor,
+    logicalPayload: logical,
+    ...(targetModelId ? { targetModelId } : {}),
+  }
 }

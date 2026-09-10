@@ -36,6 +36,31 @@
       "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft"
     },
     {
+      "id": "gpt-image-2.5",
+      "disposition": "canonical",
+      "batch": "B",
+      "reason": "网关新增 GPT Image 2.5 标准档；SubmitGuard 统一门面聚敛；待 live 补证",
+      "notes": "中枢对齐标准档位，支持 1K/2K/4K 聚合调度"
+    },
+    {
+      "id": "gpt-image-2-5",
+      "disposition": "alias",
+      "target": "gpt-image-2.5",
+      "reason": "规范无点号别名映射至 gpt-image-2.5"
+    },
+    {
+      "id": "gpt-image-2.5-hd",
+      "disposition": "canonical",
+      "reason": "网关新增 GPT Image 2.5 HD 高清档；SubmitGuard 自适应分流目标端点；待 live 补证",
+      "notes": "GoEasy 专用高清大图/超分异步通道"
+    },
+    {
+      "id": "gpt-image-2-5-hd",
+      "disposition": "alias",
+      "target": "gpt-image-2.5-hd",
+      "reason": "规范无点号别名映射至 gpt-image-2.5-hd"
+    },
+    {
       "id": "grok-imagine-image-2",
       "disposition": "canonical",
       "batch": "A",

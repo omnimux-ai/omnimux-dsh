@@ -38,6 +38,13 @@
       "requiredInAuto": true
     },
     {
+      "productId": "gpt-image-2.5",
+      "kind": "image",
+      "priority": "P0",
+      "gatewayIds": ["gpt-image-2.5", "gpt-image-2-5"],
+      "requiredInAuto": false
+    },
+    {
       "productId": "grok-imagine-image-2",
       "kind": "image",
       "priority": "P0",
