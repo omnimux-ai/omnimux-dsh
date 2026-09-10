@@ -1,0 +1,17 @@
+{
+  "skill": "tiktok-market-trend-analysis",
+  "generatedAt": "2026-09-10T10:32:42.968Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A cinematic visualization of TikTok Shop global market trend analysis: a luminous holographic 3D globe surrounded by floating trend charts, rising sales volume velocity bars, viral product category rank badges, and glowing upward trajectory curves. [Style & Aesthetics] Futuristic fintech and social commerce aesthetic, photorealistic 3D render, frosted acrylic cards, sleek obsidian desk, vibrant neon cyan, electric violet, and warm amber accents, Octane render, ray-tracing. [Lighting & Atmosphere] Dynamic neon rim lighting, cool ambient studio backlight, volumetric atmospheric dust, high contrast, clean premium feel. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered balanced composition, clean modern studio background, masterwork, 8k resolution, no text, no gibberish letters, no watermark."
+  },
+  "taskId": "task_2ZNish1gvtT4H9O430yIRE5kGm18cY5Z",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789036358_46befc3193427064987a0a18570a95fa.png",
+  "output": "catalog/covers/home/tiktok-market-trend-analysis.png",
+  "width": 1280,
+  "height": 720
+}

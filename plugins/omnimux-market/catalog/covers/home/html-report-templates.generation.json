@@ -1,0 +1,17 @@
+{
+  "skill": "html-report-templates",
+  "generatedAt": "2026-09-10T10:32:45.347Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A high-tech digital workspace with modular dashboard reporting templates: clean floating glass panels displaying structured data layouts, KPI stat widgets, interactive chart blocks, and organized executive report sheets. [Style & Aesthetics] Elegant Bauhaus-inspired tech minimalism, matte white and deep slate gray materials, electric cobalt blue and emerald accents, crisp geometry, photorealistic 3D Octane render. [Lighting & Atmosphere] Balanced studio illumination, subtle shadows, crisp reflections on glass edges. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, symmetric clean layout, ample negative space, no text, no words, no watermark."
+  },
+  "taskId": "task_QpPDOlIfeNvJOFU1SIkfxMcIPaBlJhUp",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789036355_352ae90b1f948366b4c6553497aa8ee4.png",
+  "output": "catalog/covers/home/html-report-templates.png",
+  "width": 1280,
+  "height": 720
+}

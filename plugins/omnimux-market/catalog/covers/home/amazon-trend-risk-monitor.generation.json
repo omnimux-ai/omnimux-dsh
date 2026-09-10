@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-trend-risk-monitor",
+  "generatedAt": "2026-09-10T11:00:13.992Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Amazon BSR trend and trademark risk monitoring sentinel: a sleek holographic radar shield scanning a 3D terrain of sales rank peaks and valleys, with protective green security forcefields detecting risk anomalies. [Style & Aesthetics] Cyber-security meets fintech, dark obsidian command pedestal, holographic emerald shield with warning amber telemetry lines, Octane render. [Lighting & Atmosphere] Vivid luminescent security glow, dramatic low-key studio lighting. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, strong protective central motif, no text, no watermark."
+  },
+  "taskId": "task_gMuR0UtRYFnXbai8B6Pi1LvxTxSB4Jzr",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789038007_e80e80b4ee719869eafdb73f7b306ce3.png",
+  "output": "catalog/covers/home/amazon-trend-risk-monitor.png",
+  "width": 1280,
+  "height": 720
+}

@@ -1,0 +1,17 @@
+{
+  "skill": "tiktok-product-selection",
+  "generatedAt": "2026-09-10T10:57:28.896Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A pristine 3D scene of viral TikTok Shop product selection: an illuminated translucent pedestal showcasing floating top-selling consumer gadgets, glowing score rating badges, golden analytical spark particles, and algorithmic product comparison matrices. [Style & Aesthetics] Premium commercial 3D render, frosted glass display cases, polished titanium, pastel mint green and rich magenta neon illumination, raytraced refractions. [Lighting & Atmosphere] Studio product lighting with soft shadows, radiant ambient glow, crisp highlights on glass edges. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, central focus, spacious clean background, no text, no watermark, masterwork quality."
+  },
+  "taskId": "task_9y6uUmxrDJwJ7x4iBdVoCTio8V6Ppy7P",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037842_2821a05b3ce50c3fecadc2cee74ed5d1.png",
+  "output": "catalog/covers/home/tiktok-product-selection.png",
+  "width": 1280,
+  "height": 720
+}

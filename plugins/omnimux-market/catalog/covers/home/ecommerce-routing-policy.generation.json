@@ -1,0 +1,17 @@
+{
+  "skill": "ecommerce-routing-policy",
+  "generatedAt": "2026-09-10T10:58:45.975Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] An intelligent routing and policy nexus: a central glowing prism core routing colored data streams into distinct operational agent channels, surrounded by floating logic gate rings and automated workflow tracks. [Style & Aesthetics] Futuristic algorithmic data hub, polished obsidian and frosted quartz, laser-sharp light paths in gold, cyan, and emerald, raytraced refractions. [Lighting & Atmosphere] Vivid luminescent fiber-optic glow, dark minimalist cyber-studio setting. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, radial symmetrical composition, no text, no watermark."
+  },
+  "taskId": "task_uTX034NbRDDiyDfu1ttb9PGBDH3b7nvC",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037922_ac2b4255d0e8d0272bcf75f462245ada.png",
+  "output": "catalog/covers/home/ecommerce-routing-policy.png",
+  "width": 1280,
+  "height": 720
+}

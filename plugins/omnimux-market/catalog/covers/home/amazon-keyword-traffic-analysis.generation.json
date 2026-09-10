@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-keyword-traffic-analysis",
+  "generatedAt": "2026-09-10T10:59:53.029Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Amazon PPC search traffic and ABA trend dynamics: glowing river-like streams of search volume flowing into a funnel, with keyword ranking elevation waves and PPC cost-per-click optimization spheres. [Style & Aesthetics] Fluid data visualization, luminescent glass ribbons, amber and rich violet fluids, dark reflective infinity floor. [Lighting & Atmosphere] Vibrant self-emitting light waves, high-energy particle glow, dark atmospheric backdrop. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, dynamic horizontal flow, no text, no watermark."
+  },
+  "taskId": "task_u78MspLU2Mm5lLHx6mgzUM0HaMwXDg5p",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037987_e5a3d456c3dac664fc694295cb7de04e.png",
+  "output": "catalog/covers/home/amazon-keyword-traffic-analysis.png",
+  "width": 1280,
+  "height": 720
+}

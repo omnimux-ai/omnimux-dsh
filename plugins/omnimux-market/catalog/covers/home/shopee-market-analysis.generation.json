@@ -1,0 +1,17 @@
+{
+  "skill": "shopee-market-analysis",
+  "generatedAt": "2026-09-10T10:57:31.553Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] A vibrant Southeast Asian cross-border ecommerce market analysis concept: an isometric 3D landscape of digital islands representing marketplace sites, connected by luminous sea-route trade lines, floating product category radar charts, and glowing opportunity flags. [Style & Aesthetics] Stylized low-poly meets hyper-detailed 3D render, translucent orange and tropical cyan acrylic materials, smooth ceramic textures, Octane ray-tracing. [Lighting & Atmosphere] Warm tropical golden hour lighting, soft ambient fill, radiant glowing data streams. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, centered composition, clean studio backdrop, no text, no watermark."
+  },
+  "taskId": "task_Jn0xyFgLJ3S8tRafnKTVQ7F4pKgbIype",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037846_b071b739da839e26b5797011592ecb81.png",
+  "output": "catalog/covers/home/shopee-market-analysis.png",
+  "width": 1280,
+  "height": 720
+}

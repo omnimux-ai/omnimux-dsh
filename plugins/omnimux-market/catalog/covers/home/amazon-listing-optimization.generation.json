@@ -1,0 +1,17 @@
+{
+  "skill": "amazon-listing-optimization",
+  "generatedAt": "2026-09-10T10:59:41.135Z",
+  "tool": "omnimux_cli_gpt_image_2.5",
+  "request": {
+    "provider": "omnimux",
+    "model": "gpt-image-2.5",
+    "size": "1536x1024",
+    "quality": "high",
+    "prompt": "[Subject & Action] Amazon listing and A+ content visual architecture: floating modular A+ story cards displaying product lifestyle imagery layout modules, keyword density heatmaps, and golden conversion rate stars. [Style & Aesthetics] Premium brand merchandising studio, elegant ivory and champagne gold palette, frosted glass layout grids, clean modern luxury feel. [Lighting & Atmosphere] Flattering soft studio portrait illumination, warm specular reflections. [Composition & Constraints] Widescreen 16:9 landscape aspect ratio, clean editorial arrangement, no text, no watermark."
+  },
+  "taskId": "task_2qRTlo7t15XJp0N9FYPGFUjUJD7xHfua",
+  "imageUrl": "https://img.pinest.xyz/amg/images/2026/09/10/1789037972_0b47713681693f56c18f1de0e8820329.png",
+  "output": "catalog/covers/home/amazon-listing-optimization.png",
+  "width": 1280,
+  "height": 720
+}
