@@ -18,6 +18,7 @@ import {
 import { resolveTableAbsPath, resolveTableRelativePath } from '../storage/tablePath.ts';
 import { TableStorageService } from '../storage/TableStorageService.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
+import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
 
@@ -279,6 +280,8 @@ export function resolveVideoAbsolutePath(
   return isAbsolute(cleanPath) ? cleanPath : join(deps.store.workspacesDir, workspaceId, cleanPath);
 }
 
+const logger = createWorkflowLogger('video-deconstruct');
+
 export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps) {
   return async (
     workspaceId: string,
@@ -416,7 +419,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
     let markdown = '';
     if (tool && typeof tool.execute === 'function') {
       try {
-        const res = await tool.execute({ video: absVideoPath });
+        const res = await tool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
         const text =
           res?.report ||
           res?.text ||
@@ -426,8 +429,10 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
         if (typeof text === 'string' && text.trim()) {
           markdown = text.trim();
         }
-      } catch {
-        // 工具调用抛错时降级为内置保底模板
+      } catch (err) {
+        logger.warn('video_analyze invocation failed, falling back to template', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
