@@ -435,12 +435,39 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-button-primary-hover, #ebebeb);
   border-color: var(--dsw-alias-button-primary-hover, #ebebeb);
 }
+.omnimux-inspiration-card-shimmer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  background: var(--dsw-alias-bg-module-platform, #141414);
+  overflow: hidden;
+  z-index: 1;
+  transition: opacity 0.26s ease-out;
+}
+.omnimux-inspiration-card-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--dsw-alias-bg-secondary, rgba(255, 255, 255, 0.05)) 50%, transparent 100%);
+  animation: omni-shimmer 1.4s infinite;
+}
+.omnimux-inspiration-card-shimmer.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   background: var(--dsw-alias-bg-layer-1, #181818);
+  opacity: 0;
+  transition: opacity 0.26s ease-out;
+}
+.omnimux-inspiration-cover-img.is-loaded {
+  opacity: 1;
 }
 
 /* Fallback 占位卡片 */

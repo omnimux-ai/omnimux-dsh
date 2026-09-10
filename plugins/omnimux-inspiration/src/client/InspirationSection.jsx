@@ -311,6 +311,9 @@ export function InspirationSection({ t, active }) {
               }}
             />
           ))}
+          {loadingMore ? Array.from({ length: 8 }).map((_, i) => (
+            <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
+          )) : null}
         </div>
       ) : null}
 
@@ -324,12 +327,6 @@ export function InspirationSection({ t, active }) {
       </div>
 
       <div ref={sentinelRef} />
-      {loadingMore ? (
-        <div className="omnimux-inspiration-scroll-loader">
-          <div className="omnimux-inspiration-spinner" />
-          <span>正在加载更多灵感…</span>
-        </div>
-      ) : null}
 
       {selectedItem ? (
         <InspirationPreviewModal

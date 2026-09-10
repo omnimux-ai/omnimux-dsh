@@ -394,3 +394,39 @@ describe('preview modal doc style and glass removal', () => {
     assert.doesNotMatch(preview, /setShowRaw/)
   })
 })
+
+describe('card reveal shimmer and batch loading UX', () => {
+  it('implements card-level shimmer layer and progressive reveal styles', () => {
+    const cardSrc = readFileSync(join(here, 'InspirationCoverCard.jsx'), 'utf8')
+    assert.match(cardSrc, /omnimux-inspiration-card-shimmer/)
+    assert.match(cardSrc, /is-hidden/)
+    assert.match(cardSrc, /is-loaded/)
+
+    const shimmerCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-shimmer')
+    assert.equal(decl(shimmerCss, 'aspect-ratio'), '9 / 16')
+    assert.equal(decl(shimmerCss, 'position'), 'absolute')
+
+    const shimmerHiddenCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-shimmer.is-hidden')
+    assert.equal(decl(shimmerHiddenCss, 'opacity'), '0')
+
+    const coverLoadedCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-cover-img.is-loaded')
+    assert.equal(decl(coverLoadedCss, 'opacity'), '1')
+  })
+
+  it('renders 8 batch skeleton cards on loadMore instead of plain text spinner', () => {
+    const sectionSrc = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
+    assert.doesNotMatch(sectionSrc, /omnimux-inspiration-scroll-loader/)
+    assert.match(sectionSrc, /loadingMore \? Array\.from\(\{ length: 8 \}\)/)
+    assert.match(sectionSrc, /key=\{`skel_more_\$\{i\}`\}/)
+  })
+
+  it('exports preloadBatchCovers and preloadCover for concurrent media readiness with timeout fallback', async () => {
+    const { preloadCover, preloadBatchCovers } = await import('./feed-helpers.js')
+    assert.equal(typeof preloadCover, 'function')
+    assert.equal(typeof preloadBatchCovers, 'function')
+
+    // Empty or non-browser fallback should resolve cleanly
+    await assert.doesNotReject(() => preloadBatchCovers([], 100))
+    await assert.doesNotReject(() => preloadCover(''))
+  })
+})
