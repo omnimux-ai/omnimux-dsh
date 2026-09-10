@@ -9,6 +9,7 @@ import {
   formatShotsCopyText,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
+  normalizeSocialMetadata,
   extractVideoBreakdown,
   saveVideoBreakdownArtifacts,
 } from '../src/breakdown.js'
@@ -178,5 +179,105 @@ describe('video breakdown & shots analysis engine', () => {
 
     // Cleanup
     rmSync(result.data_path, { force: true })
+  })
+
+  it('normalizes TikTok aweme_detail structure into unified metadata', () => {
+    const rawAweme = {
+      aweme_detail: {
+        desc: '#SentAsASacrificeSheBecameTheQueen 🌟 Continue the story here',
+        author: {
+          nickname: 'Chelsea',
+          unique_id: 'jamiezdac1v',
+          avatar_thumb: {
+            url_list: ['https://p19.tiktokcdn-us.com/avatar.jpeg'],
+          },
+        },
+        video: {
+          duration: 22000,
+          cover: {
+            url_list: ['https://p19.tiktokcdn-us.com/cover.jpeg'],
+          },
+          play_addr: {
+            url_list: ['https://v16m.tiktokcdn-us.com/video.mp4'],
+          },
+        },
+        statistics: {
+          digg_count: 12364,
+          comment_count: 92,
+          share_count: 2234,
+          play_count: 948734,
+        },
+      },
+    }
+
+    const normalized = normalizeSocialMetadata(rawAweme)
+    assert.ok(normalized)
+    assert.equal(normalized.title, '#SentAsASacrificeSheBecameTheQueen 🌟 Continue the story here')
+    assert.equal(normalized.author.name, 'Chelsea')
+    assert.equal(normalized.author.handle, '@jamiezdac1v')
+    assert.equal(normalized.author.avatar, 'https://p19.tiktokcdn-us.com/avatar.jpeg')
+    assert.equal(normalized.cover_url, 'https://p19.tiktokcdn-us.com/cover.jpeg')
+    assert.equal(normalized.video_url, 'https://v16m.tiktokcdn-us.com/video.mp4')
+    assert.equal(normalized.duration, 22)
+    assert.equal(normalized.stats.likes, 12364)
+    assert.equal(normalized.stats.comments, 92)
+    assert.equal(normalized.stats.shares, 2234)
+    assert.equal(normalized.stats.views, 948734)
+  })
+
+  it('extracts breakdown accurately when omnimux_social_data provides aweme_detail', async () => {
+    const rawAwemeData = {
+      aweme_detail: {
+        desc: 'Viral Product Showcase',
+        author: {
+          nickname: 'TechReviewer',
+          unique_id: 'tech_reviewer',
+          avatar_thumb: { url_list: ['https://example.com/avatar.jpg'] },
+        },
+        video: {
+          duration: 20000,
+          cover: { url_list: ['https://example.com/cover.jpg'] },
+          play_addr: { url_list: ['https://example.com/video.mp4'] },
+        },
+        statistics: {
+          digg_count: 8888,
+          comment_count: 66,
+          share_count: 120,
+          play_count: 500000,
+        },
+      },
+    }
+
+    const mockCtx = {
+      tools: {
+        get: (name) => {
+          if (name === 'omnimux_social_data') {
+            return {
+              execute: async () => ({
+                platform: 'tiktok',
+                capability: 'video',
+                data: rawAwemeData,
+              }),
+            }
+          }
+          return null
+        },
+      },
+    }
+
+    const result = await extractVideoBreakdown('https://www.tiktok.com/@tech_reviewer/video/789', {
+      ctx: mockCtx,
+    })
+
+    assert.equal(result.is_video_breakdown, true)
+    assert.equal(result.video.title, 'Viral Product Showcase')
+    assert.equal(result.video.author_name, 'TechReviewer')
+    assert.equal(result.video.author_handle, '@tech_reviewer')
+    assert.equal(result.video.views, '500000')
+    assert.equal(result.video.likes, '8888')
+    assert.equal(result.video.duration_seconds, 20)
+    assert.equal(result.video.duration_text, '0:20')
+    assert.ok(result.shots.length >= 4)
+    assert.match(result.shots[0].description, /Viral Product Showcase/)
   })
 })
