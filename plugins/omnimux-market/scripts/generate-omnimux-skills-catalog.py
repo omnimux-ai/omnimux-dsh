@@ -144,7 +144,7 @@ for skill_dir in sorted(skills_root.iterdir()):
         "skill": skill_name,
         "source": {
             "type": "git",
-            "repo": "infometa/OmniMux-skills",
+            "repo": "omnimux-ai/OmniMux-skills",
             "path": f"skills/{skill_name}",
             "ref": "main"
         }
