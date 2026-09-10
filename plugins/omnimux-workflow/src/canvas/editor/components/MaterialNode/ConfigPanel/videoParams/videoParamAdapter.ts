@@ -152,9 +152,12 @@ export function resolveEffectiveVideoParams(
     ?? (typeof params?.model === 'string' ? params.model : '');
   const opsState = buildOpsState(args);
   const preferredOperation = readPreferredOperationId((params ?? {}) as Record<string, unknown>);
+  const defaultFallbackOp = opsState.effectiveOps.find((op) => op.id === 'text_to_video')
+    ?? opsState.effectiveOps.find((op) => op.ready)
+    ?? opsState.effectiveOps[0];
   const operationOption = preferredOperation
     ? opsState.effectiveOps.find((option) => option.id === preferredOperation)
-    : selectedOperation(opsState);
+    : (selectedOperation(opsState) ?? defaultFallbackOp);
   const operation = preferredOperation ?? operationOption?.id ?? '';
   const schema = mergeVideoParameterSchema(args.schema, operationOption?.parameters);
 

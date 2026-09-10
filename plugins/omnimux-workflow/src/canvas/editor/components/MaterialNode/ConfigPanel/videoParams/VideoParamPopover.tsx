@@ -142,7 +142,8 @@ export function VideoParamPopover({
             className="wf-video-param-popover__section"
             data-testid="wf-operation-mode-section"
           >
-            <h4 className="wf-video-param-popover__section-title">生成方式</h4>
+            {/* 生成模式 / 生成方式对齐 */}
+            <h4 className="wf-video-param-popover__section-title">生成模式</h4>
             <OperationSegment
               value={params.operation}
               operations={params.effectiveOperations}
