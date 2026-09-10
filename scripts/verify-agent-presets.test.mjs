@@ -142,14 +142,11 @@ test('preset.yml metadata matches requirements for all four shipped presets', ()
   const cordisPreset = read('presets/cordis/preset.yml')
   ok(cordisPreset.includes('name: 创造模式') || cordisPreset.includes('name: 组建团队'))
   ok(cordisPreset.includes('order: 4'))
-
-  const contentCreationPreset = read('presets/content-creation-team/preset.yml')
-  ok(contentCreationPreset.includes('name: 内容创作'))
 })
 
 test('sync-agent-presets.sh maintains all four presets in KEEP array', () => {
   const syncScript = read('scripts/sync-agent-presets.sh')
-  ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis') && syncScript.includes('content-creation-team)'))
+  ok(syncScript.includes('KEEP=(tiktok-agent standard daily-work cordis)'))
 })
 
 test('tiktok-agent persona positions as universal social lead and forbids forced spawn', () => {
@@ -159,30 +156,13 @@ test('tiktok-agent persona positions as universal social lead and forbids forced
   ok(text.includes('不要尝试切换会话 preset'))
 })
 
-test('content-creation-team agent.cordis.yml is structurally valid and mounts all 6 content experts', () => {
-  const rel = 'presets/content-creation-team/agent.cordis.yml'
-  ok(existsSync(join(root, rel)), rel)
-  const text = read(rel)
-  ok(!text.includes("name: '@deepseek-ai/dsh-tool-subagent    #"), 'mangled subagent line')
-  ok(!text.includes("name: '@deepseek-ai/dsh-tool-s    #"), 'mangled fork line')
-  ok(text.includes(FORK_END), 'complete tool-subagent-fork block')
-  deepEqual(toolNames(text), CONTENT)
-  ok(text.includes('内容创作'))
-  ok(text.includes('omnimux-workflow') || text.includes('workflow_create'))
-  const rows = parseWithPython(rel)
-  ok(rows >= 8, `content-creation-team parsed ${rows} top-level rows`)
-})
-
 test('build-agent-presets is idempotent', () => {
   const beforeTikTok = read('presets/tiktok-agent/agent.cordis.yml')
-  const beforeContent = read('presets/content-creation-team/agent.cordis.yml')
   const res = spawnSync('node', [join(root, 'scripts/build-agent-presets.mjs')], {
     cwd: root,
     encoding: 'utf8',
   })
   equal(res.status, 0, res.stderr || res.stdout)
   const afterTikTok = read('presets/tiktok-agent/agent.cordis.yml')
-  const afterContent = read('presets/content-creation-team/agent.cordis.yml')
   equal(afterTikTok, beforeTikTok)
-  equal(afterContent, beforeContent)
 })
