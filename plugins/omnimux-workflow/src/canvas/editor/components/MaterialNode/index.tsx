@@ -834,17 +834,20 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
     const importManagementActions: FloatingPillAction[] = [];
     if (kind === 'import' && materialType !== 'text' && !isGenerating) {
-      importManagementActions.push({
-        key: 'replace-media',
-        label: t('pill.replace'),
-        icon: RefreshCw,
-        section: materialType === 'image' ? 'primary' : 'secondary',
-        title: t('pill.replace'),
-        onClick: (event) => {
-          event.stopPropagation();
-          void resourcePicker.fillImportNode();
-        },
-      });
+      // 仅在图片节点提供胶囊栏替换（图片卡片上无内侧替换按钮）；视频与音频卡片内侧已有专用替换按钮，此处不重复注入避免操作冗余
+      if (materialType === 'image') {
+        importManagementActions.push({
+          key: 'replace-media',
+          label: t('pill.replace'),
+          icon: RefreshCw,
+          section: 'primary',
+          title: t('pill.replace'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void resourcePicker.fillImportNode();
+          },
+        });
+      }
       importManagementActions.push({
         key: 'clear-media',
         label: t('pill.clear'),
@@ -939,7 +942,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           },
         });
       }
-      actions.push(...importManagementActions, chat);
+      actions.push(chat, ...importManagementActions);
       return actions;
     }
 
@@ -979,12 +982,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           },
         });
       }
-      actions.push(...importManagementActions, chat);
+      actions.push(chat, ...importManagementActions);
       return actions;
     }
 
     if (importManagementActions.length > 0) {
-      return [...importManagementActions, chat];
+      return [chat, ...importManagementActions];
     }
 
     return [chat];

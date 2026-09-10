@@ -173,10 +173,10 @@ test('TC-MEDIA-MUTUAL-05: 工作流执行调度契约：导入媒体节点路由
 });
 
 test('TC-MEDIA-MUTUAL-06: 已导入媒体节点（视频/音频）必须完整保留核心下游工具（内容拆解/分镜表/语音识别）', () => {
-  // 1. 源码中 import 状态下的视频节点依然执行 canRunVideoDeconstruct 挂载拆解与分镜表，并合并 importManagementActions
+  // 1. 源码中 import 状态下的视频节点依然执行 canRunVideoDeconstruct 挂载拆解与分镜表，并合并 importManagementActions（chat 居前）
   assert.match(materialNodeSrc, /canRunVideoDeconstruct/);
-  assert.match(materialNodeSrc, /actions\.push\(\.\.\.importManagementActions,\s*chat\)/);
+  assert.match(materialNodeSrc, /actions\.push\(chat,\s*\.\.\.importManagementActions\)/);
 
-  // 2. 音频节点在挂载 speech-to-text 后同样合并 importManagementActions
+  // 2. 音频节点在挂载 speech-to-text 后同样合并 importManagementActions（chat 居前）
   assert.match(materialNodeSrc, /canRunSpeechToText/);
 });
