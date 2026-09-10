@@ -10,6 +10,82 @@ function text(value) {
 }
 
 /**
+ * Parse markdown analysis text into structured Level-2 items and Level-3 descriptions.
+ * Separates section headers, key-value labels and bullet descriptions.
+ */
+export function parseDocAnalysis(rawValue) {
+  if (!rawValue || typeof rawValue !== 'string') return []
+  const lines = rawValue.split('\n').map((l) => l.trim()).filter(Boolean)
+  const groups = []
+  let currentGroup = null
+
+  for (const rawLine of lines) {
+    if (/^\|?\s*[-:]+[-| :]+\|?$/.test(rawLine)) continue
+
+    const headerMatch = rawLine.match(/^#{2,4}\s+(.+)$/)
+    if (headerMatch) {
+      currentGroup = { title: headerMatch[1].replace(/[*_]{2}/g, '').trim(), entries: [] }
+      groups.push(currentGroup)
+      continue
+    }
+
+    const bracketMatch = rawLine.match(/^([【\[][^】\]]+[】\]])\s*(.*)$/)
+    if (bracketMatch && !rawLine.startsWith('*') && !rawLine.startsWith('-')) {
+      currentGroup = { title: bracketMatch[1], entries: [] }
+      groups.push(currentGroup)
+      if (bracketMatch[2]) {
+        currentGroup.entries.push({ type: 'desc', text: bracketMatch[2].replace(/[*_]{2}/g, '').trim() })
+      }
+      continue
+    }
+
+    const keyValMatch = rawLine.match(/^[•·*-]?\s*[*_]{2}(.+?)[*_]{2}[:：]\s*(.*)$/)
+    if (keyValMatch) {
+      const label = keyValMatch[1].trim()
+      const desc = keyValMatch[2].replace(/[*_]{2}/g, '').trim()
+      if (!currentGroup) {
+        currentGroup = { title: '', entries: [] }
+        groups.push(currentGroup)
+      }
+      currentGroup.entries.push({ type: 'labeled', label, desc })
+      continue
+    }
+
+    const colonMatch = rawLine.match(/^[•·*-]?\s*([^\s:：]{2,16})[:：]\s*(.*)$/)
+    if (colonMatch && !rawLine.includes('http://') && !rawLine.includes('https://') && !colonMatch[1].toLowerCase().includes('pov') && !colonMatch[1].includes('00:')) {
+      const label = colonMatch[1].trim()
+      const desc = colonMatch[2].replace(/[*_]{2}/g, '').trim()
+      if (!currentGroup) {
+        currentGroup = { title: '', entries: [] }
+        groups.push(currentGroup)
+      }
+      currentGroup.entries.push({ type: 'labeled', label, desc })
+      continue
+    }
+
+    const cleanText = rawLine.replace(/^[•·*-]\s*/, '').replace(/[*_]{2}/g, '').trim()
+    if (!cleanText) continue
+
+    const isHeaderLike = !cleanText.endsWith('。') && !cleanText.endsWith('.') && !cleanText.endsWith(';') &&
+      cleanText.length <= 36 &&
+      (cleanText.includes('(') || cleanText.includes('（') || cleanText.includes('/') || (!cleanText.includes('，') && !cleanText.includes(',')))
+
+    if (isHeaderLike && !rawLine.startsWith('*') && !rawLine.startsWith('-') && !rawLine.startsWith('•')) {
+      currentGroup = { title: cleanText, entries: [] }
+      groups.push(currentGroup)
+      continue
+    }
+
+    if (!currentGroup) {
+      currentGroup = { title: '', entries: [] }
+      groups.push(currentGroup)
+    }
+    currentGroup.entries.push({ type: 'desc', text: cleanText })
+  }
+  return groups
+}
+
+/**
  * Convert common Markdown list and emphasis markers into readable plain text.
  * The preview intentionally keeps raw Markdown available behind the raw toggle,
  * while rendered breakdown content stays free of formatting syntax.

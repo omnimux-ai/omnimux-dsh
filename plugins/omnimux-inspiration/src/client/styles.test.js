@@ -362,4 +362,28 @@ describe('preview modal doc style and glass removal', () => {
     assert.equal(decl(deconBodyCss, 'overscroll-behavior'), 'contain')
     assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'stable')
   })
+
+  it('establishes clear 3-level visual hierarchy: title (15px) -> item (14px) -> description (13px)', () => {
+    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
+    assert.match(preview, /omnimux-inspiration-doc-title-bar/)
+    assert.match(preview, /omnimux-inspiration-doc-item-title/)
+    assert.match(preview, /omnimux-inspiration-doc-item-indicator/)
+    assert.match(preview, /omnimux-inspiration-doc-desc-block/)
+    assert.match(preview, /omnimux-inspiration-doc-desc/)
+
+    const titleCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-title')
+    assert.equal(decl(titleCss, 'font-size'), '15px')
+    assert.equal(decl(titleCss, 'font-weight'), '600')
+
+    const itemCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-item-title')
+    assert.equal(decl(itemCss, 'font-size'), '14px')
+    assert.equal(decl(itemCss, 'font-weight'), '600')
+
+    const descCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc')
+    assert.equal(decl(descCss, 'font-size'), '13px')
+    assert.equal(decl(descCss, 'font-weight'), '400')
+
+    const descBlockCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc-block')
+    assert.match(decl(descBlockCss, 'padding-left'), /12px|14px/)
+  })
 })
