@@ -125,6 +125,9 @@ describe('video breakdown & shots analysis engine', () => {
     const mockCtx = {
       tools: {
         register: (tool) => {
+          if (!tool.output || typeof tool.output !== 'object' || typeof tool.output.render !== 'function') {
+            throw new TypeError(`tool "${tool.name}" must declare output { schema, render, presentationMeta? }`)
+          }
           registeredTools.set(tool.name, tool)
         },
         get: (name) => {
@@ -152,8 +155,15 @@ describe('video breakdown & shots analysis engine', () => {
 
     apply(mockCtx)
 
+    assert.ok(registeredTools.has('video_preview_info'))
+    const previewInfoTool = registeredTools.get('video_preview_info')
+    assert.ok(previewInfoTool.output)
+    assert.equal(typeof previewInfoTool.output.render, 'function')
+
     assert.ok(registeredTools.has('video_breakdown_analyze'))
     const tool = registeredTools.get('video_breakdown_analyze')
+    assert.ok(tool.output)
+    assert.equal(typeof tool.output.render, 'function')
 
     const outPrefix = join(tmpdir(), `test-tool-run-${Date.now()}`)
     const result = await tool.execute({

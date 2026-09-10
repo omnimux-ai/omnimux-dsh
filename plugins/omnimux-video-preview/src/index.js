@@ -6,6 +6,11 @@ import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText
 export const name = 'omnimux-video-preview'
 export const inject = ['tools']
 
+const jsonOut = {
+  schema: { type: 'object', additionalProperties: true },
+  render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+}
+
 /**
  * Host plugin entry for omnimux-video-preview.
  * Exposes local video streaming route, metadata inspection tool,
@@ -30,6 +35,7 @@ export function apply(ctx) {
       },
       required: ['path'],
     },
+    output: jsonOut,
     execute: async ({ path: filePath }) => {
       const abs = resolve(filePath)
       if (!existsSync(abs)) throw new Error(`File not found: ${filePath}`)
@@ -65,6 +71,7 @@ export function apply(ctx) {
       },
       required: ['url'],
     },
+    output: jsonOut,
     execute: async ({ url, dest, auto_open = true }, execCtx) => {
       // Step 1: Extract high-fidelity shots and structural breakdown using real social data / multimodal analysis
       const breakdownData = await extractVideoBreakdown(url, { ctx })
