@@ -117,7 +117,7 @@ describe('imageParamAdapter - 读侧清洗回退', () => {
     assert.equal(kept.resolution, '1K');
   });
 
-  it('quality 仅当无 resolution.options 时解析（清晰度槽避让）', () => {
+  it('quality 独立于 resolution 解析并支持合法值保留与回退', () => {
     const withResolution = resolveEffectiveImageParams({
       params: { model: 'img-prompt-only', quality: 'hd' },
       schema: {
@@ -129,7 +129,7 @@ describe('imageParamAdapter - 读侧清洗回退', () => {
       upstreams: [],
       prompt: '',
     });
-    assert.equal(withResolution.quality, undefined);
+    assert.equal(withResolution.quality, 'hd');
 
     const noResolution = resolveEffectiveImageParams({
       params: { model: 'img-prompt-only', quality: 'bogus' },

@@ -37,7 +37,7 @@ export interface EffectiveImageParams {
   aspectRatio: string;
   /** 无 schema.resolution.options 时为 undefined（摘要与浮层均不渲染该槽） */
   resolution?: string;
-  /** 仅当无 resolution.options 且存在 quality.options 时解析（清晰度槽避让） */
+  /** 无 schema.quality.options 时为 undefined（独立质量槽支持） */
   quality?: string;
   seed?: number;
 }
