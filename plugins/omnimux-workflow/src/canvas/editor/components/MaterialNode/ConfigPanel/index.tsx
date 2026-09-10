@@ -496,6 +496,41 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         implementationGaps: [],
       };
     }
+    // 视频节点与图片、音频一致，素材卡槽常驻（首帧/参考图 first_frame）。
+    if (materialType === 'video' && (slotLayout.preset === 'none' || slotLayout.slots.length === 0)) {
+      const contractView = buildContractView(activeCatalog);
+      const model = resolveModelView(contractView, modelValue);
+      const firstFrameOp = model?.operations.find(
+        (op) => op.listed && (op.id === 'first_frame' || op.id === 'first_last_frame' || op.id === 'image_to_video'),
+      );
+      const multiRefOp = model?.operations.find(
+        (op) => op.listed && (op.id === 'video_multi_ref' || op.id === 'multi_reference'),
+      );
+      const imageSlot = firstFrameOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt')
+        || multiRefOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt');
+
+      const targetSlot = imageSlot?.slot || 'first_frame';
+      const targetRole = imageSlot?.role || 'first_frame';
+      const labelKey = targetSlot === 'first_frame'
+        ? 'panel.slot.first_frame'
+        : 'panel.slot.reference_image';
+
+      return {
+        operationId: opsState.selectedOperationId || 'text_to_video',
+        preset: 'strip',
+        slots: [{
+          slot: targetSlot,
+          role: targetRole,
+          type: 'image',
+          min: 0,
+          max: 10,
+          labelKey,
+        }],
+        swap: false,
+        addButton: true,
+        implementationGaps: [],
+      };
+    }
     if (materialType === 'text') {
       if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
         return slotLayout;
