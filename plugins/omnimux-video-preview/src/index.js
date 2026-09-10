@@ -74,10 +74,10 @@ export function apply(ctx) {
     output: jsonOut,
     execute: async ({ url, dest, auto_open = true }, execCtx) => {
       // Step 1: Extract high-fidelity shots and structural breakdown using real social data / multimodal analysis
-      const breakdownData = await extractVideoBreakdown(url, { ctx })
+      const breakdownData = await extractVideoBreakdown(url, { ctx, execCtx })
 
-      // Step 2: Save native .vbreakdown artifact
-      const { dataPath } = saveVideoBreakdownArtifacts(breakdownData, dest)
+      // Step 2: Save native .vbreakdown artifact (prioritizing active workspace directory)
+      const { dataPath } = saveVideoBreakdownArtifacts(breakdownData, dest, { ctx, execCtx })
 
       // Step 3: Trigger sidebar preview automatically
       let previewOpened = false
@@ -110,46 +110,36 @@ export function apply(ctx) {
     },
   })
 
-  // 3. Mount WebServer routes if webServer service is available
-  const mountServer = (server) => {
-    if (!server) return
+  // 3. Mount WebServer routes via official DSH webServer.register contract
+  const mountHttp = (server) => {
+    const webServer = server?.webServer ?? server
+    if (!webServer || typeof webServer.register !== 'function') return () => {}
 
     const streamRoute = '/omnimux/video-preview/stream'
-    const handler = (req, res) => {
-      const url = new URL(req.url, 'http://localhost')
-      const targetPath = url.searchParams.get('path')
-      handleVideoStream(req, res, targetPath)
-    }
-
-    if (typeof server.get === 'function') {
-      server.get(streamRoute, (c) => {
-        const targetPath = c.req.query('path')
-        const nodeReq = c.req.raw ?? c.env?.incoming
-        const nodeRes = c.res?.raw ?? c.env?.outgoing
-        if (nodeReq && nodeRes) {
-          handleVideoStream(nodeReq, nodeRes, targetPath)
-        } else {
-          return c.text('Node stream bridge unavailable', 500)
+    return webServer.register({
+      kind: 'prefix',
+      path: streamRoute,
+      async handler(req, res) {
+        try {
+          const url = new URL(req.url || '', 'http://localhost')
+          const targetPath = url.searchParams.get('path')
+          handleVideoStream(req, res, targetPath)
+        } catch (err) {
+          try {
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: err?.message || 'Video stream error' }))
+          } catch {}
         }
-      })
-    } else if (typeof server.use === 'function') {
-      server.use((req, res, next) => {
-        if (req.url && req.url.startsWith(streamRoute)) {
-          handler(req, res)
-        } else if (typeof next === 'function') {
-          next()
-        }
-      })
-    }
+      },
+    })
   }
 
   if (typeof ctx.inject === 'function') {
     ctx.inject(['webServer'], (inner) => {
-      const s = inner.webServer ?? inner.get?.('webServer')
-      if (s) mountServer(s)
+      mountHttp(inner.webServer ?? inner)
     })
   } else if (ctx.webServer) {
-    mountServer(ctx.webServer)
+    mountHttp(ctx.webServer)
   }
 }
 

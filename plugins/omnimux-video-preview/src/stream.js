@@ -100,8 +100,8 @@ export function handleVideoStream(req, res, targetPath) {
         'Access-Control-Allow-Origin': '*',
       })
       const stream = createReadStream(absolutePath)
-      req.on('close', () => stream.destroy())
-      stream.pipe(res)
+      if (typeof req.on === 'function') req.on('close', () => stream.destroy())
+      if (typeof stream.pipe === 'function') stream.pipe(res)
       return
     }
 
@@ -129,8 +129,8 @@ export function handleVideoStream(req, res, targetPath) {
     })
 
     const stream = createReadStream(absolutePath, { start, end })
-    req.on('close', () => stream.destroy())
-    stream.pipe(res)
+    if (typeof req.on === 'function') req.on('close', () => stream.destroy())
+    if (typeof stream.pipe === 'function') stream.pipe(res)
   } catch (error) {
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'application/json' })

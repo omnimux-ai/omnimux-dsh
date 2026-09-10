@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
@@ -10,6 +10,7 @@ import {
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
   normalizeSocialMetadata,
+  resolveWorkspaceDirectory,
   extractVideoBreakdown,
   saveVideoBreakdownArtifacts,
 } from '../src/breakdown.js'
@@ -279,5 +280,98 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(result.video.duration_text, '0:20')
     assert.ok(result.shots.length >= 4)
     assert.match(result.shots[0].description, /Viral Product Showcase/)
+  })
+
+  it('saves breakdown artifact to workspace directory when workspace context exists', () => {
+    const fakeWorkspaceDir = join(tmpdir(), `test-ws-${Date.now()}`)
+    mkdirSync(fakeWorkspaceDir, { recursive: true })
+
+    const sampleData = {
+      is_video_breakdown: true,
+      video: { title: 'Workspace Test Video' },
+      shots: [],
+    }
+
+    const resolved = resolveWorkspaceDirectory({ execCtx: { workdir: fakeWorkspaceDir } })
+    assert.equal(resolved, fakeWorkspaceDir)
+
+    const { dataPath } = saveVideoBreakdownArtifacts(sampleData, null, {
+      execCtx: { workdir: fakeWorkspaceDir },
+    })
+
+    assert.ok(dataPath.startsWith(fakeWorkspaceDir))
+    assert.ok(dataPath.includes('.omnimux/breakdowns'))
+    assert.ok(existsSync(dataPath))
+
+    rmSync(fakeWorkspaceDir, { recursive: true, force: true })
+  })
+
+  it('mounts webServer video stream route using standard DSH webServer.register contract', async () => {
+    let registeredRoute = null
+    const toolHarness = createTestToolContext()
+
+    const mockCtx = {
+      tools: {
+        register: (tool) => toolHarness.ctx.tools.register(tool),
+        get: () => null,
+      },
+      inject: (deps, callback) => {
+        if (deps.includes('webServer')) {
+          callback({
+            webServer: {
+              register: (routeSpec) => {
+                registeredRoute = routeSpec
+                return () => {}
+              },
+            },
+          })
+        }
+      },
+    }
+
+    apply(mockCtx)
+
+    assert.ok(registeredRoute)
+    assert.equal(registeredRoute.kind, 'prefix')
+    assert.equal(registeredRoute.path, '/omnimux/video-preview/stream')
+    assert.equal(typeof registeredRoute.handler, 'function')
+
+    // Verify handler responds to mock stream request
+    const dummyVideoPath = join(tmpdir(), `test-stream-${Date.now()}.mp4`)
+    writeFileSync(dummyVideoPath, Buffer.alloc(1024, 0x42))
+
+    let responseStatusCode = 0
+    const responseHeaders = {}
+    let finishPromiseResolve
+    const finishPromise = new Promise((res) => { finishPromiseResolve = res })
+
+    const mockRes = {
+      writeHead: (code, headers) => {
+        responseStatusCode = code
+        Object.assign(responseHeaders, headers)
+      },
+      write: () => {},
+      end: () => finishPromiseResolve?.(),
+      on: (event, cb) => {
+        if (event === 'finish' || event === 'close') finishPromiseResolve?.()
+      },
+      once: () => {},
+      emit: () => {},
+    }
+
+    const mockReq = {
+      url: `/omnimux/video-preview/stream?path=${encodeURIComponent(dummyVideoPath)}`,
+      headers: { range: 'bytes=0-100' },
+      on: () => {},
+    }
+
+    await registeredRoute.handler(mockReq, mockRes)
+    await Promise.race([finishPromise, new Promise((r) => setTimeout(r, 200))])
+
+    assert.equal(responseStatusCode, 206)
+    assert.equal(responseHeaders['Content-Range'], 'bytes 0-100/1024')
+    assert.equal(responseHeaders['Content-Type'], 'video/mp4')
+
+    rmSync(dummyVideoPath, { force: true })
   })
 })
