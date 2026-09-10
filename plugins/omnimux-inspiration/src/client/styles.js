@@ -256,15 +256,33 @@ export const INSPIRATION_CSS = `
 /* 9:16 原子化扫光骨架屏矩阵 */
 .omnimux-inspiration-skeleton {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
   max-width: 100%;
 }
 @media (min-width: 1600px) {
   .omnimux-inspiration-skeleton {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 18px;
+  }
+}
+@media (max-width: 1100px) {
+  .omnimux-inspiration-skeleton {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+@media (max-width: 840px) {
+  .omnimux-inspiration-skeleton {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (max-width: 640px) {
+  .omnimux-inspiration-skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 }
 .omnimux-inspiration-skel {
@@ -287,7 +305,7 @@ export const INSPIRATION_CSS = `
 /* 统一卡片网格 */
 .omnimux-inspiration-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
   max-width: 100%;
@@ -295,13 +313,25 @@ export const INSPIRATION_CSS = `
 }
 @media (min-width: 1600px) {
   .omnimux-inspiration-grid {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 18px;
+  }
+}
+@media (max-width: 1100px) {
+  .omnimux-inspiration-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+@media (max-width: 840px) {
+  .omnimux-inspiration-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
   }
 }
 @media (max-width: 640px) {
   .omnimux-inspiration-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 }

@@ -413,11 +413,24 @@ describe('card reveal shimmer and batch loading UX', () => {
     assert.equal(decl(coverLoadedCss, 'opacity'), '1')
   })
 
-  it('renders 8 batch skeleton cards on loadMore instead of plain text spinner', () => {
+  it('renders batch skeleton cards on loadMore instead of plain text spinner', () => {
     const sectionSrc = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
     assert.doesNotMatch(sectionSrc, /omnimux-inspiration-scroll-loader/)
-    assert.match(sectionSrc, /loadingMore \? Array\.from\(\{ length: 8 \}\)/)
+    assert.match(sectionSrc, /loadingMore \? Array\.from\(\{ length: 10 \}\)/)
     assert.match(sectionSrc, /key=\{`skel_more_\$\{i\}`\}/)
+  })
+
+  it('configures self-adaptive 5-column grid layout for cards and skeleton', () => {
+    const gridCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-grid')
+    assert.equal(decl(gridCss, 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))')
+    assert.equal(decl(gridCss, 'display'), 'grid')
+
+    const skelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-skeleton')
+    assert.equal(decl(skelCss, 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))')
+
+    const cardPureCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-pure')
+    assert.equal(decl(cardPureCss, 'width'), '100%')
+    assert.equal(decl(cardPureCss, 'aspect-ratio'), '9 / 16')
   })
 
   it('exports preloadBatchCovers and preloadCover for concurrent media readiness with timeout fallback', async () => {
