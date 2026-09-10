@@ -149,9 +149,57 @@ export function resolveSkillRecommendations(ids = [], entries = catalog.items) {
   })
 }
 
+export function resolveHomeRecommendationIds(config = recommendations, customOrder = null) {
+  let list = Array.isArray(customOrder) && customOrder.length ? customOrder : null
+  if (!list && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = window.localStorage.getItem('omnimux-market:home-recommendations-order')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length) list = parsed
+      }
+    } catch {}
+  }
+  if (Array.isArray(list) && list.length) {
+    const base = Array.isArray(config?.homeRecommendations) ? config.homeRecommendations : []
+    const validCustom = list.filter(id => typeof id === 'string' && id)
+    const seen = new Set(validCustom)
+    const rest = base.filter(id => !seen.has(id))
+    return [...validCustom, ...rest]
+  }
+  return config?.homeRecommendations || []
+}
+
+export function getHomeCustomOrder() {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = window.localStorage.getItem('omnimux-market:home-recommendations-order')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+  }
+  return null
+}
+
+export function saveHomeCustomOrder(ids) {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (Array.isArray(ids)) {
+        window.localStorage.setItem('omnimux-market:home-recommendations-order', JSON.stringify(ids))
+        return true
+      }
+      window.localStorage.removeItem('omnimux-market:home-recommendations-order')
+      return true
+    } catch {}
+  }
+  return false
+}
+
 /** Split only displayed recommendations out of discovery; full-library search stays independent. */
 export function plazaDiscoverySections(items = [], { category = '', query = '', uninstalledOnly = false,
-  installedItems = [], config = recommendations, entries = catalog.items, presetBinding = null } = {}) {
+  installedItems = [], config = recommendations, entries = catalog.items, presetBinding = null, customOrder = null } = {}) {
   const key = item => item.slug || item.skill || item.catalogId || item.id
   const matches = item => {
     if (!category || category === 'featured') return true
@@ -167,7 +215,8 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
   const installed = new Map(installedItems.map(item => [key(item), item]))
   const live = new Map(items.map(item => [item.catalogId || item.id, item]))
   const hasQuery = Boolean(String(query).trim())
-  const ids = category ? config.featuredSkills : config.homeRecommendations
+  const homeIds = resolveHomeRecommendationIds(config, customOrder)
+  const ids = category ? config.featuredSkills : homeIds
   const featured = hasQuery ? [] : resolveSkillRecommendations(ids || [], entries)
     .filter(item => category || config.featuredSkills?.includes(item.id))
     .map(item => {

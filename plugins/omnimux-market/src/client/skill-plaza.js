@@ -236,6 +236,12 @@
       const [confirmInstallItem, setConfirmInstallItem] = useState(null);
       const [confirmInstallError, setConfirmInstallError] = useState("");
       const [confirmInstalling, setConfirmInstalling] = useState(false);
+      const [customOrder, setCustomOrder] = useState(() => {
+        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.getHomeCustomOrder === "function") {
+          return SkillShelf.getHomeCustomOrder();
+        }
+        return null;
+      });
 
       const loadInstalled = useCallback(() => {
         api("list")
@@ -357,8 +363,27 @@
 
       const hasQuery = Boolean(submitted.trim());
       const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(items, {
-        category, query: submitted, uninstalledOnly, installedItems, presetBinding,
+        category, query: submitted, uninstalledOnly, installedItems, presetBinding, customOrder,
       });
+
+      const handleMoveToTop = (targetId) => {
+        const currentList = featuredItems.map((it) => it.id);
+        const filtered = currentList.filter((id) => id !== targetId);
+        const newOrder = [targetId, ...filtered];
+        setCustomOrder(newOrder);
+        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.saveHomeCustomOrder === "function") {
+          SkillShelf.saveHomeCustomOrder(newOrder);
+        }
+        api("homeCustomOrder", { order: newOrder }).catch(() => {});
+      };
+
+      const handleResetOrder = () => {
+        setCustomOrder(null);
+        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.saveHomeCustomOrder === "function") {
+          SkillShelf.saveHomeCustomOrder(null);
+        }
+        api("homeCustomOrder", { order: [] }).catch(() => {});
+      };
 
       // 我的 Skill 过滤
       const filteredMine = installedItems.filter((item) => {
@@ -535,7 +560,23 @@
 
           // 官方精选（结果大于等于 1 项才显示，否则完全隐藏）
           featuredItems.length > 0 ? h("section", { className: "featured-section" },
-            h("h2", { className: "featured-title" }, tr("workshop.featuredTitle") || "官方精选"),
+            h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
+              h("h2", { className: "featured-title", style: { margin: 0 } }, tr("workshop.featuredTitle") || "官方精选"),
+              customOrder && customOrder.length ? h("button", {
+                type: "button",
+                className: "btn-reset-order",
+                style: {
+                  background: "transparent",
+                  border: "1px solid var(--dsw-alias-border-subtle, rgba(255,255,255,.12))",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  color: "var(--dsw-alias-label-secondary, #cbd5e1)",
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                },
+                onClick: handleResetOrder,
+              }, tr("workshop.resetOrder") || "恢复默认排序") : null,
+            ),
             h("div", { className: "featured-grid" },
               featuredItems.map((item) => {
                 const coverSrc = item.cover && item.cover.asset ? iconSrc(item.cover.asset) : (item.coverUrl || "");
@@ -569,6 +610,12 @@
                       h("text", { x: "160", y: "96", textAnchor: "middle", fill: "var(--dsw-alias-brand-primary, #6f59ff)", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
                     ),
                     h("div", { className: "featured-hover-actions" },
+                      h("button", {
+                        type: "button",
+                        className: "hover-btn hover-btn-pin",
+                        title: tr("workshop.pinToTop") || "置顶",
+                        onClick: (e) => { e.stopPropagation(); handleMoveToTop(item.id); },
+                      }, tr("workshop.pinToTop") || "置顶"),
                       h("button", {
                         type: "button",
                         className: "hover-btn hover-btn-detail",

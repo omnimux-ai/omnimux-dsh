@@ -302,6 +302,8 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .hover-btn{flex:1;height:34px;border-radius:6px;border:0;display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;padding:0 6px;transition:filter .15s ease}
 .hover-btn:hover{filter:brightness(1.1)}
 .hover-btn-detail{background:var(--dsw-alias-bg-surface,rgba(45,48,56,.85));backdrop-filter:blur(8px);color:var(--dsw-alias-label-primary,#fff);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.14))}
+.hover-btn-pin{background:var(--dsw-alias-bg-layer-2,rgba(37,39,46,.85));backdrop-filter:blur(8px);color:var(--dsw-alias-label-secondary,#cbd5e1);border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12))}
+.hover-btn-pin:hover{color:var(--dsw-alias-label-primary,#ffffff);background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.1))}
 .hover-btn-try{background:var(--dsw-alias-brand-primary,#6f59ff);color:var(--dsw-alias-label-primary-foreground,#fff)}
 .featured-content{padding:10px 12px;display:grid;grid-template-rows:40px 32px;gap:4px}
 .featured-card-name{font-size:14px;line-height:20px;font-weight:600;color:var(--dsw-alias-label-primary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
