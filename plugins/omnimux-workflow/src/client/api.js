@@ -74,6 +74,11 @@ export function createProject(title, sessionId = null, projectRoot) {
   })
 }
 
+/** 获取单个项目详情 (含全部 pages 及 activePageId) */
+export function getProject(id) {
+  return workflowRequest(`/omnimux-workflow/api/projects/${id}`)
+}
+
 /** 重命名项目（展示名；不改文件夹名）。 */
 export function renameProject(id, title) {
   return workflowRequest(`/omnimux-workflow/api/projects/${id}`, {
@@ -117,5 +122,27 @@ export function updateProjectPage(projectId, pageId, updates = {}) {
 export function deleteProjectPage(projectId, pageId) {
   return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/pages/${pageId}`, {
     method: 'DELETE',
+  })
+}
+
+/** 浏览工作区真实物理文件列表 */
+export function fetchProjectFiles(projectId, subpath = '') {
+  const query = subpath ? `?subpath=${encodeURIComponent(subpath)}` : ''
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/files${query}`)
+}
+
+/** 在工作区物理目录下新建文件夹 */
+export function mkdirProjectFile(projectId, name, subpath = '') {
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/mkdir`, {
+    method: 'POST',
+    body: { name, subpath },
+  })
+}
+
+/** 上传本地物理文件到工作区目录 */
+export function uploadProjectFiles(projectId, paths = [], subpath = '') {
+  return workflowRequest(`/omnimux-workflow/api/projects/${projectId}/upload`, {
+    method: 'POST',
+    body: { paths, subpath },
   })
 }

@@ -4,8 +4,8 @@
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { assertProjectInsideLibrary, ProjectPathError } from './paths';
-import { MAX_PROJECT_TITLE_LENGTH } from './schema';
+import { assertProjectInsideLibrary, ProjectPathError } from './paths.ts';
+import { MAX_PROJECT_TITLE_LENGTH } from './schema.ts';
 
 export const MAX_DIRECTORY_ATTEMPTS = 64;
 

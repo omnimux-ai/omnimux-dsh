@@ -10,7 +10,7 @@
  * 冲突条仍保留，日常保存态不再占 chrome。
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import CanvasEditor from './editor/CanvasEditor';
 import { CanvasErrorBoundary } from './ui/CanvasErrorBoundary';
 import { useExecutionController } from './hooks/useExecutionController';
@@ -29,16 +29,32 @@ export interface CanvasAppProps {
   workspaceId?: string;
 }
 
-const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
+const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId }) => {
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState(propWorkspaceId);
+
+  useEffect(() => {
+    setCurrentWorkspaceId(propWorkspaceId);
+  }, [propWorkspaceId]);
+
   const t = useT();
   // persist 第一轮尚未挂上时 no-op；cleanup 时 flushRef 已指向同步 capture
   const flushRef = useRef(() => {});
   const { boot, setBoot, catalog } = useCanvasBoot({
-    workspaceId,
+    workspaceId: currentWorkspaceId,
     beforeReset: () => {
       flushRef.current();
     },
   });
+
+  const handleSwitchWorkspace = useCallback((newWorkspaceId: string) => {
+    flushRef.current();
+    setCurrentWorkspaceId(newWorkspaceId);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+        detail: { workspaceId: newWorkspaceId },
+      }));
+    }
+  }, []);
 
   // 宿主 → island 语言通道：locale prop 变化时下发（live 切换走
   // updateCanvas 重 render，W4 接入宿主 subscribe）。
@@ -134,6 +150,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId }) => {
             onResumeExecution={() => void execution.resume()}
             onCancelExecution={() => void execution.cancel()}
             onResetExecution={execution.reset}
+            onSwitchWorkspaceId={handleSwitchWorkspace}
           />
         </CanvasErrorBoundary>
       </main>

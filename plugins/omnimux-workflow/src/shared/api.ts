@@ -94,6 +94,12 @@ export const WORKFLOW_API_ROUTES = {
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */
   template: (id: string) => `${WORKFLOW_ROUTE_PREFIX}/api/templates/${id}`,
+  /** GET/POST: project pages associated with a canvas workspace. */
+  workspaceProjectPages: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/project-pages`,
+  /** PATCH/DELETE: one project page associated with a canvas workspace. */
+  workspaceProjectPageItem: (workspaceId: string, pageId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/project-pages/${pageId}`,
 } as const;
 
 /** GET /api/manifest response. */

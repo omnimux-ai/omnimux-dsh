@@ -124,11 +124,11 @@ const PLUGIN_ROOT = resolvePluginRoot();
 export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const { store, gateway, mediaDir, executionManager, picker, templates, libraryRoot } = deps;
   const projectDispatcher = createProjectDispatcher(libraryRoot ? { libraryRoot } : {});
-  const staticRoutes = createStaticRoutes({ pluginRoot: PLUGIN_ROOT, gateway });
-  const workspaceRoutes = createWorkspaceRoutes(store);
-  const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
   const projectStore = deps.projectStore
     ?? createProjectStore({ libraryRoot: libraryRoot ?? ensureLibraryRoot() });
+  const staticRoutes = createStaticRoutes({ pluginRoot: PLUGIN_ROOT, gateway });
+  const workspaceRoutes = createWorkspaceRoutes(store, projectStore);
+  const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
   const ensureProjectBound = deps.ensureProjectBound ?? bindEnsureProjectBound(projectStore);
   const libraryHttp = createLibraryHttpClient();
   const assetsStore = deps.assetsStore ?? createProjectAssetsStore({

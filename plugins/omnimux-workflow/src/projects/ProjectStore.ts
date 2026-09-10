@@ -21,14 +21,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName';
-import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId';
+import { allocateUniqueProjectFolder, sanitizeFolderName } from './folderName.ts';
+import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId.ts';
 import {
   PROJECT_README_NAME,
   assertProjectInsideLibrary,
   assertProjectWriteSafe,
   resolveProjectPaths,
-} from './paths';
+} from './paths.ts';
 import {
   MAX_PROJECT_TITLE_LENGTH,
   PROJECT_SCHEMA_VERSION,
@@ -36,7 +36,7 @@ import {
   type Project,
   type ProjectPage,
   type ProjectSummary,
-} from './schema';
+} from './schema.ts';
 
 export class ProjectStoreError extends Error {
   readonly code: string;
@@ -118,12 +118,23 @@ function validateTitle(title: unknown): string {
 }
 
 function toSummary(project: Project, path: string): ProjectSummary {
+  const existingPages = project.pages && project.pages.length > 0
+    ? project.pages
+    : [{
+        id: 'page-default',
+        title: project.title || '创作页 1',
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+        canvasWorkspaceId: project.canvasWorkspaceIds?.[0] || `ws_${project.id.replace(/-/g, '').slice(0, 12)}`,
+      }];
   return {
     id: project.id,
     title: project.title,
     updatedAt: project.updatedAt,
     sessionId: project.sessionId,
     path,
+    pages: existingPages,
+    activePageId: project.activePageId || existingPages[0].id,
   };
 }
 
@@ -196,6 +207,14 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         throw new ProjectStoreError('project-exists', `project already seeded at ${paths.projectRoot}`);
       }
       const now = new Date().toISOString();
+      const defaultWsId = createOpts.canvasWorkspaceIds?.[0] || `ws_${newProjectId().replace(/-/g, '').slice(0, 12)}`;
+      const initialPage: ProjectPage = {
+        id: 'page-default',
+        title: trimmed,
+        createdAt: now,
+        updatedAt: now,
+        canvasWorkspaceId: defaultWsId,
+      };
       const project: Project = {
         schemaVersion: PROJECT_SCHEMA_VERSION,
         id: newProjectId(),
@@ -203,7 +222,9 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
         createdAt: now,
         updatedAt: now,
         sessionId: createOpts.sessionId ?? null,
-        canvasWorkspaceIds: createOpts.canvasWorkspaceIds ?? [],
+        canvasWorkspaceIds: createOpts.canvasWorkspaceIds ?? [defaultWsId],
+        activePageId: initialPage.id,
+        pages: [initialPage],
       };
       assertProjectWriteSafe(paths.readmeFile, paths.projectRoot);
       if (!existsSync(paths.readmeFile)) {
@@ -214,6 +235,27 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
 
     get(id: string): ProjectRecord {
       const found = requireProject(id);
+      const existingPages = found.project.pages && found.project.pages.length > 0 ? found.project.pages : [];
+      if (existingPages.length === 0) {
+        const defaultWsId = found.project.canvasWorkspaceIds?.[0] || `ws_${found.project.id.replace(/-/g, '').slice(0, 12)}`;
+        const initialPage: ProjectPage = {
+          id: 'page-default',
+          title: found.project.title || '创作页 1',
+          createdAt: found.project.createdAt,
+          updatedAt: found.project.updatedAt,
+          canvasWorkspaceId: defaultWsId,
+        };
+        const updatedProject: Project = {
+          ...found.project,
+          canvasWorkspaceIds: found.project.canvasWorkspaceIds?.includes(defaultWsId)
+            ? found.project.canvasWorkspaceIds
+            : [...(found.project.canvasWorkspaceIds ?? []), defaultWsId],
+          pages: [initialPage],
+          activePageId: initialPage.id,
+          updatedAt: found.project.updatedAt,
+        };
+        return persistProject(found.dir, updatedProject);
+      }
       return { ...found.project, path: found.dir };
     },
 

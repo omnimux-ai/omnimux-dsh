@@ -36,6 +36,7 @@ import type { MaterialType } from '../types/materialNode';
 import AnimatedEdge from './components/AnimatedEdge';
 import Toolbar, { type CanvasPointerMode } from './components/Toolbar';
 import HeaderControls from './components/HeaderControls';
+import { CanvasPageHeader } from './components/CanvasPageHeader';
 import AssetsDrawer, { type AssetRecord } from './components/AssetsDrawer';
 import ShortcutsModal from './components/ShortcutsModal';
 import PublishWizardModal from './components/publish/PublishWizardModal.tsx';
@@ -164,6 +165,7 @@ interface CanvasEditorProps {
   onResumeExecution?: () => void;
   onCancelExecution?: () => void;
   onResetExecution?: () => void;
+  onSwitchWorkspaceId?: (newWorkspaceId: string) => void;
 }
 
 const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
@@ -175,6 +177,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
   onResumeExecution,
   onCancelExecution,
   onResetExecution,
+  onSwitchWorkspaceId,
 }) => {
   const t = useT();
   const importGuard = useAsyncInstanceGuard(workspaceId);
@@ -805,6 +808,12 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
       >
         <Background color="var(--wb-grid-dot, #C9CBD6)" gap={48} size={3.5} variant={BackgroundVariant.Dots} />
       </ReactFlow>
+
+      {/* 顶部左侧创作页切换与管理胶囊 */}
+      <CanvasPageHeader
+        workspaceId={workspaceId ?? null}
+        onSwitchWorkspaceId={onSwitchWorkspaceId}
+      />
 
       {/* 顶部右侧控制栏胶囊 */}
       <HeaderControls
