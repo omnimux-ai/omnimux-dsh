@@ -274,7 +274,7 @@ export function InspirationSection({ t, active }) {
 
       {loading && items.length === 0 ? (
         <div className="omnimux-inspiration-skeleton">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="omnimux-inspiration-skel" />
           ))}
         </div>
@@ -311,7 +311,7 @@ export function InspirationSection({ t, active }) {
               }}
             />
           ))}
-          {loadingMore ? Array.from({ length: 8 }).map((_, i) => (
+          {loadingMore ? Array.from({ length: 10 }).map((_, i) => (
             <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
           )) : null}
         </div>
