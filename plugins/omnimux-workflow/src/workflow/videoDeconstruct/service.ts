@@ -508,7 +508,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
         };
       });
 
-      docRowHeight = 'extraTall';
+      docRowHeight = 'low';
     } else {
       // 无 Markdown 表格：提取五维分析维度构造标准行记录
       const dimensions = extractFiveDimensions(markdown);

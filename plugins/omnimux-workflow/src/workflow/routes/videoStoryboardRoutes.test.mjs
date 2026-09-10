@@ -154,7 +154,7 @@ test('videoStoryboard: 成功生成分镜表并持久化 .htable 多模态数据
   assert.ok(existsSync(absPath));
   const doc = await TableStorageService.loadTable(absPath);
   assert.equal(doc.title, '商品营销分镜表');
-  assert.equal(doc.rowHeight, 'extraTall');
+  assert.equal(doc.rowHeight, 'low');
 
   // 校验包含分镜画面附件列
   const imgCol = doc.columns.find((c) => c.title === '分镜画面');
@@ -223,7 +223,7 @@ test('videoStoryboard: 离线/无工具时自动启用保底生成，稳定返�
 
   const absPath = resolveTableAbsPath(h.store, h.workspace.id, res.body.tableId);
   const doc = await TableStorageService.loadTable(absPath);
-  assert.equal(doc.rowHeight, 'extraTall');
+  assert.equal(doc.rowHeight, 'low');
   const imgCol = doc.columns.find((c) => c.title === '分镜画面');
   assert.ok(imgCol);
   // 保底帧也应生成有效占位图片附件

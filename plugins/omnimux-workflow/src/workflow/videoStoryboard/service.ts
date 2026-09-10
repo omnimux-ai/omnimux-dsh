@@ -472,7 +472,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
       title,
       columns,
       rows,
-      rowHeight: 'extraTall', // 超高 120px，完美卡片展示分镜图片附件
+      rowHeight: 'low', // 默认标准行高 36px，微缩缩略图 + 鼠标悬停大图跟随预览
     };
 
     // 10. 持久化存储 .htable
