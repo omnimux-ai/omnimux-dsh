@@ -11,6 +11,19 @@ describe('inspiration query + rewrite', () => {
   it('encodes list filters and skips empties', () => {
     assert.equal(listQueryString({}), '')
     assert.equal(listQueryString({ type: 'video', q: '猫', page: 2, tag: '' }), '?type=video&q=%E7%8C%AB&page=2')
+    assert.equal(
+      listQueryString({
+        country: 'US',
+        category: '美妆护肤',
+        duration_min: 15,
+        duration_max: 30,
+        views_min: 100000,
+        traffic_type: 'ad',
+        sort: 'views',
+        posted_after: '2026-09-01',
+      }),
+      '?sort=views&country=US&category=%E7%BE%8E%E5%A6%86%E6%8A%A4%E8%82%A4&duration_min=15&duration_max=30&views_min=100000&traffic_type=ad&posted_after=2026-09-01',
+    )
   })
 
   it('rewrites gateway media URLs onto the Host prefix', () => {

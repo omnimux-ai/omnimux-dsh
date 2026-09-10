@@ -113,12 +113,24 @@ export function invalidateInspirationCache() {
   memoryCache.clear()
 }
 
+const CLOUD_FILTER_KEYS = [
+  'type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size',
+  'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
+  'traffic_type', 'posted_after', 'posted_before',
+]
+
+const LOCAL_FILTER_KEYS = [
+  'type', 'tag', 'tags', 'q', 'platform', 'is_favorite', 'sort', 'page', 'page_size',
+  'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
+  'traffic_type', 'posted_after', 'posted_before',
+]
+
 /**
- * @param {{ type?: string, tag?: string, tags?: string, q?: string, is_favorite?: string, sort?: string, page?: number, page_size?: number }} [filters]
+ * @param {{ type?: string, tag?: string, tags?: string, q?: string, is_favorite?: string, sort?: string, page?: number, page_size?: number, country?: string, category?: string, duration_min?: number | string, duration_max?: number | string, views_min?: number | string, views_max?: number | string, traffic_type?: string, posted_after?: string, posted_before?: string }} [filters]
  */
 export function listInspirations(filters = {}) {
   const query = new URLSearchParams()
-  for (const key of ['type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size']) {
+  for (const key of CLOUD_FILTER_KEYS) {
     const value = filters[/** @type {keyof typeof filters} */ (key)]
     if (value == null || value === '') continue
     query.set(key, String(value))
@@ -131,11 +143,11 @@ export const listInspirationsGuarded = quotaGuard(authGuard(listInspirations), {
 
 /**
  * Local library calls
- * @param {{ type?: string, tag?: string, tags?: string, q?: string, platform?: string, is_favorite?: string, sort?: string, page?: number, page_size?: number }} [filters]
+ * @param {{ type?: string, tag?: string, tags?: string, q?: string, platform?: string, is_favorite?: string, sort?: string, page?: number, page_size?: number, country?: string, category?: string, duration_min?: number | string, duration_max?: number | string, views_min?: number | string, views_max?: number | string, traffic_type?: string, posted_after?: string, posted_before?: string }} [filters]
  */
 export function listLocalInspirations(filters = {}) {
   const query = new URLSearchParams()
-  for (const key of ['type', 'tag', 'tags', 'q', 'platform', 'is_favorite', 'sort', 'page', 'page_size']) {
+  for (const key of LOCAL_FILTER_KEYS) {
     const value = filters[/** @type {keyof typeof filters} */ (key)]
     if (value == null || value === '') continue
     query.set(key, String(value))
@@ -146,15 +158,41 @@ export function listLocalInspirations(filters = {}) {
 
 /**
  * Atomic multi-source loader with SWR cache support
- * @param {{ tab: string, q?: string, type?: string, sort?: string, favorite?: string, page?: number, pageSize?: number }} params
+ * @param {{ tab: string, q?: string, type?: string, sort?: string, favorite?: string, page?: number, pageSize?: number, country?: string, category?: string, duration_min?: number | string, duration_max?: number | string, views_min?: number | string, views_max?: number | string, traffic_type?: string, posted_after?: string, posted_before?: string }} params
  */
 export async function loadInspirationsAtomic(params) {
-  const { tab = 'all', q = '', type = '', sort = 'hot', favorite = '0', page = 1, pageSize = 20 } = params
+  const {
+    tab = 'all',
+    q = '',
+    type = '',
+    sort = 'hot',
+    favorite = '0',
+    page = 1,
+    pageSize = 20,
+    country = '',
+    category = '',
+    duration_min = '',
+    duration_max = '',
+    views_min = '',
+    views_max = '',
+    traffic_type = '',
+    posted_after = '',
+    posted_before = '',
+  } = params
   const filterArgs = {
     q: q.trim() || undefined,
     type: type || undefined,
     sort: sort || undefined,
     is_favorite: favorite === '1' ? '1' : undefined,
+    country: country.trim() || undefined,
+    category: category.trim() || undefined,
+    duration_min: duration_min !== '' && duration_min != null ? duration_min : undefined,
+    duration_max: duration_max !== '' && duration_max != null ? duration_max : undefined,
+    views_min: views_min !== '' && views_min != null ? views_min : undefined,
+    views_max: views_max !== '' && views_max != null ? views_max : undefined,
+    traffic_type: traffic_type.trim() || undefined,
+    posted_after: posted_after.trim() || undefined,
+    posted_before: posted_before.trim() || undefined,
     page,
     page_size: pageSize,
   }

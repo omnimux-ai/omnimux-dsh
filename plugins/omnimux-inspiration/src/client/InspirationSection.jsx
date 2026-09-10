@@ -43,6 +43,12 @@ export function InspirationSection({ t, active }) {
     type, setType,
     sort, setSort,
     favorite, setFavorite,
+    country, setCountry,
+    category, setCategory,
+    duration, setDuration,
+    views, setViews,
+    trafficType, setTrafficType,
+    dateRange, setDateRange,
     items,
     loading,
     loadingMore,
@@ -137,6 +143,7 @@ export function InspirationSection({ t, active }) {
                 { value: 'hot', label: t('sort.hot') },
                 { value: 'new', label: t('sort.new') },
                 { value: 'fav', label: t('sort.fav') },
+                { value: 'views', label: t('sort.views') },
               ]}
             />
             <DropdownSelect
@@ -152,6 +159,94 @@ export function InspirationSection({ t, active }) {
           </>
         )}
       />
+
+      <div className="omnimux-inspiration-subfilter-row">
+        <DropdownSelect
+          value={country}
+          aria-label={t('filter.country')}
+          onChange={setCountry}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('country.all') },
+            { value: 'US', label: t('country.us') },
+            { value: 'GB', label: t('country.gb') },
+            { value: 'ID', label: t('country.id') },
+            { value: 'TH', label: t('country.th') },
+            { value: 'MY', label: t('country.my') },
+            { value: 'VN', label: t('country.vn') },
+            { value: 'PH', label: t('country.ph') },
+          ]}
+        />
+        <DropdownSelect
+          value={category}
+          aria-label={t('filter.category')}
+          onChange={setCategory}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('category.all') },
+            { value: '美妆护肤', label: '美妆护肤' },
+            { value: '厨房用品', label: '厨房用品' },
+            { value: '家居生活', label: '家居生活' },
+            { value: '健康保健', label: '健康保健' },
+            { value: '服装服饰', label: '服装服饰' },
+            { value: '母婴玩具', label: '母婴玩具' },
+            { value: '数码科技', label: '数码科技' },
+            { value: '食品饮料', label: '食品饮料' },
+            { value: '汽车与户外', label: '汽车与户外' },
+          ]}
+        />
+        <DropdownSelect
+          value={duration}
+          aria-label={t('filter.duration')}
+          onChange={setDuration}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('duration.all') },
+            { value: '0-15', label: t('duration.under15') },
+            { value: '15-30', label: t('duration.15to30') },
+            { value: '30-60', label: t('duration.30to60') },
+            { value: '60+', label: t('duration.over60') },
+          ]}
+        />
+        <DropdownSelect
+          value={views}
+          aria-label={t('filter.views')}
+          onChange={setViews}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('views.all') },
+            { value: '10k+', label: t('views.10k') },
+            { value: '100k+', label: t('views.100k') },
+            { value: '500k+', label: t('views.500k') },
+            { value: '1m+', label: t('views.1m') },
+            { value: '5m+', label: t('views.5m') },
+            { value: '10m+', label: t('views.10m') },
+          ]}
+        />
+        <DropdownSelect
+          value={trafficType}
+          aria-label={t('filter.trafficType')}
+          onChange={setTrafficType}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('traffic.all') },
+            { value: 'ad', label: t('traffic.ad') },
+            { value: 'organic', label: t('traffic.organic') },
+          ]}
+        />
+        <DropdownSelect
+          value={dateRange}
+          aria-label={t('filter.dateRange')}
+          onChange={setDateRange}
+          className="omnimux-inspiration-subfilter-select"
+          options={[
+            { value: '', label: t('date.all') },
+            { value: 'last7', label: t('date.last7') },
+            { value: 'last30', label: t('date.last30') },
+            { value: 'last90', label: t('date.last90') },
+          ]}
+        />
+      </div>
 
       {selecting ? (
         <div className="omnimux-inspiration-selection-bar">
