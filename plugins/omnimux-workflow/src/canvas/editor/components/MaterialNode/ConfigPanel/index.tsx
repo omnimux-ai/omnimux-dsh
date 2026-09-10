@@ -449,15 +449,21 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
 
+  // 综合考虑保存的 params.operation 与当前 opsState 判定的 operationId
+  const savedOperationId = typeof (params as Record<string, unknown>)?.operation === 'string'
+    ? ((params as Record<string, unknown>).operation as string).trim()
+    : undefined;
+  const currentOperationId = savedOperationId || opsState.selectedOperationId;
+
   // ---- Feed-Slot 卡槽（T03）：preset 驱动，slotBindings 为消费真源 ----
   const slotLayout = useMemo(
     () => deriveSlotLayout(
       activeCatalog,
       modelValue || undefined,
-      opsState.selectedOperationId || undefined,
+      currentOperationId || undefined,
       materialType,
     ),
-    [activeCatalog, modelValue, opsState.selectedOperationId, materialType],
+    [activeCatalog, modelValue, currentOperationId, materialType],
   );
 
   const effectiveSlotLayout = useMemo<SlotLayout>(() => {
@@ -496,8 +502,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         implementationGaps: [],
       };
     }
-    // 视频节点与图片、音频一致，素材卡槽常驻（首帧/参考图 first_frame）。
-    if (materialType === 'video' && (slotLayout.preset === 'none' || slotLayout.slots.length === 0)) {
+    // 视频节点：基于当前生成模式与模型支持情况智能呈现卡槽
+    if (materialType === 'video') {
+      // 1. 如果当前选中的生成模式已有原生卡槽（如首帧 named、首尾帧 pair、全能参考 strip、数字人 named），直接遵循真实业务卡槽契约！
+      if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
+        return slotLayout;
+      }
+      // 2. 如果当前处于无槽模式（如文生视频 text_to_video 或未指定模式）：
+      // 检查当前模型是否具备图生视频/素材输入能力（首帧 first_frame、多参考 video_multi_ref 等）
       const contractView = buildContractView(activeCatalog);
       const model = resolveModelView(contractView, modelValue);
       const firstFrameOp = model?.operations.find(
@@ -509,27 +521,30 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       const imageSlot = firstFrameOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt')
         || multiRefOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt');
 
-      const targetSlot = imageSlot?.slot || 'first_frame';
-      const targetRole = imageSlot?.role || 'first_frame';
-      const labelKey = targetSlot === 'first_frame'
-        ? 'panel.slot.first_frame'
-        : 'panel.slot.reference_image';
+      if (imageSlot || firstFrameOp || multiRefOp) {
+        const targetSlot = imageSlot?.slot || 'first_frame';
+        const targetRole = imageSlot?.role || 'first_frame';
+        const labelKey = targetSlot === 'first_frame'
+          ? 'panel.slot.first_frame'
+          : 'panel.slot.reference_image';
 
-      return {
-        operationId: opsState.selectedOperationId || 'text_to_video',
-        preset: 'strip',
-        slots: [{
-          slot: targetSlot,
-          role: targetRole,
-          type: 'image',
-          min: 0,
-          max: 10,
-          labelKey,
-        }],
-        swap: false,
-        addButton: true,
-        implementationGaps: [],
-      };
+        return {
+          operationId: currentOperationId || 'text_to_video',
+          preset: 'strip',
+          slots: [{
+            slot: targetSlot,
+            role: targetRole,
+            type: 'image',
+            min: 0,
+            max: imageSlot?.max ?? 10,
+            labelKey,
+          }],
+          swap: false,
+          addButton: true,
+          implementationGaps: [],
+        };
+      }
+      return slotLayout;
     }
     if (materialType === 'text') {
       if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
@@ -664,6 +679,36 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     }
     modeConsumptionRef.current = { key, bound: boundEdgeIds };
   }, [modelValue, opsState.selectedOperationId, boundEdgeIds, t]);
+
+  // 视频节点业务状态机：素材与模式双向自动流转（从产品经理视角保证零摩擦体验）
+  useEffect(() => {
+    if (materialType === 'video') {
+      const hasImageUpstream = upstreams.some((u) => u.materialType === 'image' && u.hasMedia);
+      const savedOp = typeof (params as Record<string, unknown>)?.operation === 'string'
+        ? ((params as Record<string, unknown>).operation as string).trim()
+        : undefined;
+      const currentOp = savedOp || opsState.selectedOperationId;
+      const contractView = buildContractView(activeCatalog);
+      const model = resolveModelView(contractView, modelValue);
+      if (!model) return;
+
+      // 场景 1：当前在纯文生视频（或未设模式），但检测到有图片素材连入/装填 → 自动升迁至模型支持的首帧/图生模式
+      if ((!currentOp || currentOp === 'text_to_video') && hasImageUpstream) {
+        const targetOp = model.operations.find((op) => op.listed && op.id === 'first_frame')?.id
+          || model.operations.find((op) => op.listed && (op.id === 'image_to_video' || op.id === 'video_multi_ref'))?.id;
+        if (targetOp && targetOp !== currentOp) {
+          updateParam('operation', targetOp);
+        }
+      }
+      // 场景 2：当前在首帧或首尾帧模式，但图片素材被全部移除且无任何上游媒体 → 自动平滑回退至文生视频
+      else if ((currentOp === 'first_frame' || currentOp === 'first_last_frame') && !hasImageUpstream && upstreams.length === 0) {
+        const hasTextToVideo = model.operations.some((op) => op.listed && op.id === 'text_to_video');
+        if (hasTextToVideo) {
+          updateParam('operation', 'text_to_video');
+        }
+      }
+    }
+  }, [materialType, upstreams, params, opsState.selectedOperationId, activeCatalog, modelValue, updateParam]);
 
   const placeholder = useMemo(() => {
     if (isAsrTool) return t('panel.promptPlaceholder');
