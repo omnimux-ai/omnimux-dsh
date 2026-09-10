@@ -24,7 +24,7 @@ export function ProjectFolderCard({ project, onOpen, onRename, onDelete, t }) {
 
   return (
     <div
-      className="omnimux-project-folder-card"
+      className="omnimux-project-folder-card omnimux-workflow-card"
       onClick={() => onOpen(project)}
       title={`点击打开项目：${project.title}`}
     >

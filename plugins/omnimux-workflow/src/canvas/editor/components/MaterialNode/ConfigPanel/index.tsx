@@ -135,7 +135,55 @@ function getModelVisuals(id: string) {
   return { icon };
 }
 
-const ConfigPanel: React.FC<ConfigPanelProps> = ({
+interface ImportConfigPanelProps {
+  nodeData: MaterialNodeData;
+  onOpenResourcePicker?: (requestOrMode?: 'add' | 'replace' | SlotPickRequest, targetSlotIndex?: number) => void;
+}
+
+const ImportConfigPanel: React.FC<ImportConfigPanelProps> = ({
+  nodeData,
+  onOpenResourcePicker,
+}) => {
+  const t = useT();
+  return (
+    <div className="wf-config-panel wf-config-panel--import">
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--dsw-alias-label-secondary, var(--wb-text-secondary))' }}>
+            {t('panel.hintImportNode')}
+          </span>
+          {Boolean(nodeData.realPath) && (
+            <span
+              style={{
+                fontSize: '11px',
+                color: 'var(--dsw-alias-label-tertiary, var(--wb-text-muted))',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '240px',
+              }}
+              title={String(nodeData.realPath)}
+            >
+              {String(nodeData.realPath).split('/').pop()}
+            </span>
+          )}
+        </div>
+        {onOpenResourcePicker && (
+          <button
+            type="button"
+            className="wf-param-pill wf-param-pill--btn"
+            style={{ padding: '4px 10px', height: '28px' }}
+            onClick={() => onOpenResourcePicker('replace')}
+          >
+            <span>{t('node.replace')}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   nodeId,
   nodeData,
   catalog,
@@ -147,7 +195,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const t = useT();
   const { materialType, selectedTool, prompt } = nodeData;
   const params = (nodeData.params && typeof nodeData.params === 'object') ? nodeData.params : {};
-  const kind = resolveNodeKind(nodeData);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [videoPopoverOpen, setVideoPopoverOpen] = useState(false);
@@ -184,46 +231,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   const upstreams = useUpstreamMedia(nodeId);
   const upstreamSnapshots = useMemo(() => toUpstreamSnapshots(upstreams), [upstreams]);
   const activeCatalog = catalog ?? getCachedCatalog();
-
-  // 导入类节点：仅资源概览与替换入口
-  if (kind === 'import') {
-    return (
-      <div className="wf-config-panel wf-config-panel--import">
-        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--dsw-alias-label-secondary, var(--wb-text-secondary))' }}>
-              {t('panel.hintImportNode')}
-            </span>
-            {Boolean(nodeData.realPath) && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--dsw-alias-label-tertiary, var(--wb-text-muted))',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: '240px',
-                }}
-                title={String(nodeData.realPath)}
-              >
-                {String(nodeData.realPath).split('/').pop()}
-              </span>
-            )}
-          </div>
-          {onOpenResourcePicker && (
-            <button
-              type="button"
-              className="wf-param-pill wf-param-pill--btn"
-              style={{ padding: '4px 10px', height: '28px' }}
-              onClick={() => onOpenResourcePicker?.('replace')}
-            >
-              <span>{t('node.replace')}</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   const isAsrTool = selectedTool === 'audio-transcription';
 
@@ -622,7 +629,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     if (materialType === 'video') return t('panel.videoPromptPlaceholder');
     if (
       materialType !== 'audio' &&
-      upstreams.some((item) => (item.materialType === 'text' || item.materialType === 'table') && item.hasMedia)
+      upstreams.some((item) => (item.materialType === 'text' || (item.materialType as string) === 'table') && item.hasMedia)
     )
       return t('panel.supplementOptional');
     switch (materialType) {
@@ -917,6 +924,79 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
         />
       ) : null}
     </div>
+  );
+};
+
+export interface ConfigPanelErrorBoundaryProps {
+  children: React.ReactNode;
+  nodeId: string;
+}
+
+interface ConfigPanelErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ConfigPanelErrorBoundary extends React.Component<
+  ConfigPanelErrorBoundaryProps,
+  ConfigPanelErrorBoundaryState
+> {
+  constructor(props: ConfigPanelErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): Partial<ConfigPanelErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    console.error(`[ConfigPanel ErrorBoundary] 节点 ${this.props.nodeId} 配置面板渲染异常:`, error, errorInfo);
+  }
+
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div
+          className="wf-config-panel wf-config-panel--error"
+          style={{
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '12px',
+            color: 'var(--dsw-alias-state-danger)',
+          }}
+        >
+          <span>配置面板局部加载异常</span>
+          <button
+            type="button"
+            className="wf-param-pill wf-param-pill--btn"
+            style={{ padding: '2px 8px', height: '24px' }}
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
+  const kind = resolveNodeKind(props.nodeData);
+  return (
+    <ConfigPanelErrorBoundary nodeId={props.nodeId}>
+      {kind === 'import' ? (
+        <ImportConfigPanel
+          nodeData={props.nodeData}
+          onOpenResourcePicker={props.onOpenResourcePicker}
+        />
+      ) : (
+        <GenerationConfigPanel {...props} />
+      )}
+    </ConfigPanelErrorBoundary>
   );
 };
 

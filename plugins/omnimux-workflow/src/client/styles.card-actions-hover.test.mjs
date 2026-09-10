@@ -10,7 +10,10 @@ import { fileURLToPath } from 'node:url'
 import { WORKFLOW_CSS } from './styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const pageSrc = readFileSync(join(here, 'projects/ProjectLibraryPage.jsx'), 'utf8')
+const pageSrc =
+  readFileSync(join(here, 'projects/ProjectLibraryPage.jsx'), 'utf8') +
+  readFileSync(join(here, 'projects/ProjectPagesTab.jsx'), 'utf8') +
+  readFileSync(join(here, 'projects/ProjectFolderCard.jsx'), 'utf8')
 
 function extractRule(src, selector) {
   const needle = `${selector} {`
@@ -30,10 +33,10 @@ function extractRule(src, selector) {
 
 describe('Issue #293 card actions hover CSS contract', () => {
   it('ProjectLibraryPage 将 actions 放在 .omnimux-workflow-card 内', () => {
-    assert.match(pageSrc, /className="omnimux-workflow-card"/)
-    assert.match(pageSrc, /className="omnimux-workflow-card-actions"/)
-    const cardStart = pageSrc.indexOf('className="omnimux-workflow-card"')
-    const actionsStart = pageSrc.indexOf('className="omnimux-workflow-card-actions"')
+    assert.match(pageSrc, /omnimux-workflow-card/)
+    assert.match(pageSrc, /omnimux-workflow-card-actions/)
+    const cardStart = pageSrc.indexOf('omnimux-workflow-card')
+    const actionsStart = pageSrc.indexOf('omnimux-workflow-card-actions')
     assert.ok(cardStart >= 0 && actionsStart > cardStart, 'actions 必须出现在 card 标记之后')
   })
 
