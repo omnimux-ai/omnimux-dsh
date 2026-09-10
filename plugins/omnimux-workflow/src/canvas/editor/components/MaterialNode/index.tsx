@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Trash2, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { DEFAULT_MATERIAL_TOOL, resolveNodeKind } from '../../../types/materialNode';
@@ -764,24 +764,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     if (payload) addToConversation(payload);
   }, [addToConversation, data, id, label, materialType, previewUrl]);
 
-  // 清空已导入的媒体素材，恢复为空态生成节点
-  const handleClearImportedMedia = useCallback(() => {
-    updateNodeData({
-      nodeKind: 'generate',
-      selectedTool: DEFAULT_MATERIAL_TOOL[materialType],
-      mediaUrl: undefined,
-      relativePath: undefined,
-      assetId: undefined,
-      realPath: undefined,
-      mediaAssets: undefined,
-      previewUrl: undefined,
-      status: 'empty',
-      isMissing: undefined,
-      errorMessage: undefined,
-      executionError: undefined,
-    });
-  }, [materialType, updateNodeData]);
-
   const pillActions: FloatingPillAction[] = useMemo(() => {
     if (isEmptyImageNode) {
       return [
@@ -833,30 +815,17 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     };
 
     const importManagementActions: FloatingPillAction[] = [];
-    if (kind === 'import' && materialType !== 'text' && !isGenerating) {
-      // 仅在图片节点提供胶囊栏替换（图片卡片上无内侧替换按钮）；视频与音频卡片内侧已有专用替换按钮，此处不重复注入避免操作冗余
-      if (materialType === 'image') {
-        importManagementActions.push({
-          key: 'replace-media',
-          label: t('pill.replace'),
-          icon: RefreshCw,
-          section: 'primary',
-          title: t('pill.replace'),
-          onClick: (event) => {
-            event.stopPropagation();
-            void resourcePicker.fillImportNode();
-          },
-        });
-      }
+    if (kind === 'import' && materialType === 'image' && !isGenerating) {
+      // 仅在图片节点提供胶囊栏替换（图片卡片上无内侧替换按钮）；视频与音频卡片内侧已有专用替换按钮
       importManagementActions.push({
-        key: 'clear-media',
-        label: t('pill.clear'),
-        icon: Trash2,
-        section: 'secondary',
-        title: t('pill.clear'),
+        key: 'replace-media',
+        label: t('pill.replace'),
+        icon: RefreshCw,
+        section: 'primary',
+        title: t('pill.replace'),
         onClick: (event) => {
           event.stopPropagation();
-          handleClearImportedMedia();
+          void resourcePicker.fillImportNode();
         },
       });
     }
@@ -942,7 +911,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           },
         });
       }
-      actions.push(chat, ...importManagementActions);
+      actions.push(chat);
       return actions;
     }
 
@@ -982,12 +951,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           },
         });
       }
-      actions.push(chat, ...importManagementActions);
+      actions.push(chat);
       return actions;
     }
 
     if (importManagementActions.length > 0) {
-      return [chat, ...importManagementActions];
+      return [...importManagementActions, chat];
     }
 
     return [chat];
@@ -996,7 +965,6 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     copied,
     executionStatus,
     handleAddToConversation,
-    handleClearImportedMedia,
     handleCopyText,
     handleDeconstructVideo,
     handleExtractVideo,
