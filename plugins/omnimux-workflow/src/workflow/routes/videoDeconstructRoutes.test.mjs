@@ -122,7 +122,7 @@ test('videoDeconstruct: 成功拆解视频并持久化 .htable 表格（包含�
   assert.equal(savedDoc.title, '我的爆款视频拆解');
   assert.equal(savedDoc.columns.length, 7);
   assert.equal(savedDoc.rows.length, 2);
-  assert.equal(savedDoc.rowHeight, 'extraTall');
+  assert.equal(savedDoc.rowHeight, 'low');
 
   // 验证分镜表格包含 type: 'attachment' 的「分镜画面」列，且排布在第 2 列
   const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
@@ -190,7 +190,7 @@ test('videoDeconstruct: 工具未配置或抛错时，降级为内置五维拆�
   const savedDoc = await TableStorageService.loadTable(absPath);
   assert.equal(savedDoc.title, '保底拆解视频');
   assert.equal(savedDoc.rows.length, 3);
-  assert.equal(savedDoc.rowHeight, 'extraTall');
+  assert.equal(savedDoc.rowHeight, 'low');
 
   const colImage = savedDoc.columns.find((c) => c.title === '分镜画面');
   assert.ok(colImage);

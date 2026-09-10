@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, GripVertical, X } from 'lucide-react';
 import { useTableStore } from '../../../store/tableStore.ts';
 import { useCanvasStore } from '../../../store/canvasStore.ts';
@@ -127,7 +128,7 @@ export const VirtualDataGrid: React.FC = () => {
   // 附件“添加资源”窗口目标行与列
   const [pickerTarget, setPickerTarget] = useState<{ rowIdx: number; colId: string } | null>(null);
 
-  // 附件悬停大图预览浮层状态
+  // 附件悬停大图预览浮层状态（跟随鼠标坐标）
   const [hoveredAttachment, setHoveredAttachment] = useState<{
     name: string;
     previewUrl: string;
@@ -140,29 +141,44 @@ export const VirtualDataGrid: React.FC = () => {
     return att.thumbnailUrl || att.url || att.path || '';
   };
 
-  // 鼠标悬停进入缩略图：计算居中/视口保护位置并展示预览大图
-  const handleThumbMouseEnter = (att: HTableAttachment, el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
+  // 鼠标悬停/移动实时计算居中对齐鼠标光标位置并展示预览大图
+  const computePreviewPosition = (clientX: number, clientY: number) => {
     const cardWidth = 320;
-    const cardHeight = 280;
+    const cardHeight = 340;
+    const margin = 12;
 
-    let left = rect.left;
-    if (left + cardWidth > window.innerWidth - 16) {
-      left = Math.max(16, window.innerWidth - cardWidth - 16);
+    // 水平方向：以鼠标所在水平点居中对齐，并限制在视口边界内
+    let left = clientX - cardWidth / 2;
+    if (left < margin) {
+      left = margin;
+    } else if (left + cardWidth > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - cardWidth - margin);
     }
 
-    let top = rect.bottom + 6;
-    if (top + cardHeight > window.innerHeight - 16) {
-      top = Math.max(16, rect.top - cardHeight - 6);
+    // 垂直方向：默认展示在鼠标光标下方 14px 处；若视口下方空间不足则翻转展示在鼠标上方
+    let top = clientY + 14;
+    if (top + cardHeight > window.innerHeight - margin) {
+      top = Math.max(margin, clientY - cardHeight - 14);
     }
 
+    return { top, left };
+  };
+
+  const handleThumbMouseEnter = (att: HTableAttachment, e: React.MouseEvent) => {
     const previewUrl = getAttachmentPreviewUrl(att);
+    const { top, left } = computePreviewPosition(e.clientX, e.clientY);
     setHoveredAttachment({
       name: att.name || '附件预览',
       previewUrl,
       top,
       left,
     });
+  };
+
+  const handleThumbMouseMove = (e: React.MouseEvent) => {
+    if (!hoveredAttachment) return;
+    const { top, left } = computePreviewPosition(e.clientX, e.clientY);
+    setHoveredAttachment((prev) => (prev ? { ...prev, top, left } : null));
   };
 
   const handleThumbMouseLeave = () => {
@@ -418,7 +434,8 @@ export const VirtualDataGrid: React.FC = () => {
                                 <div
                                   key={att.assetId ? `${att.assetId}_${attIdx}` : attIdx}
                                   className="wf-grid-attachment-thumb-wrapper"
-                                  onMouseEnter={(e) => handleThumbMouseEnter(att, e.currentTarget)}
+                                  onMouseEnter={(e) => handleThumbMouseEnter(att, e)}
+                                  onMouseMove={handleThumbMouseMove}
                                   onMouseLeave={handleThumbMouseLeave}
                                 >
                                   {hasPreview ? (
@@ -516,36 +533,39 @@ export const VirtualDataGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* 附件放大预览悬浮卡片 (对齐参考图一与图二交互) */}
-      {hoveredAttachment && (
-        <div
-          className="wf-attachment-preview-card"
-          style={{
-            position: 'fixed',
-            top: hoveredAttachment.top,
-            left: hoveredAttachment.left,
-            zIndex: 99999,
-            pointerEvents: 'none',
-          }}
-        >
-          <div className="wf-attachment-preview-header" title={hoveredAttachment.name}>
-            {hoveredAttachment.name}
-          </div>
-          <div className="wf-attachment-preview-body">
-            {hoveredAttachment.previewUrl ? (
-              <img
-                src={hoveredAttachment.previewUrl}
-                alt={hoveredAttachment.name}
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div style={{ color: 'var(--wb-text-muted)', fontSize: 12 }}>暂无图片预览</div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* 附件放大预览悬浮卡片 (经 createPortal 传送至 document.body，彻底杜绝父容器 transform/containing block 错位) */}
+      {hoveredAttachment &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="wf-attachment-preview-card"
+            style={{
+              position: 'fixed',
+              top: hoveredAttachment.top,
+              left: hoveredAttachment.left,
+              zIndex: 99999,
+              pointerEvents: 'none',
+            }}
+          >
+            <div className="wf-attachment-preview-header" title={hoveredAttachment.name}>
+              {hoveredAttachment.name}
+            </div>
+            <div className="wf-attachment-preview-body">
+              {hoveredAttachment.previewUrl ? (
+                <img
+                  src={hoveredAttachment.previewUrl}
+                  alt={hoveredAttachment.name}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div style={{ color: 'var(--wb-text-muted)', fontSize: 12 }}>暂无图片预览</div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* 调出“添加资源”窗口，可以在里面附加附件 */}
       {pickerTarget && (

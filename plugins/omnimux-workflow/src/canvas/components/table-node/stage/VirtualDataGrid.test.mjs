@@ -157,3 +157,60 @@ test('VirtualDataGrid attachment cell logic: append and remove attachments', () 
   assert.equal(finalAttachments.length, 1);
   assert.equal(finalAttachments[0].name, 'golden-retriever-2.jpg');
 });
+
+test('VirtualDataGrid 附件悬停大图预览契约：createPortal 挂载 document.body 且坐标跟随鼠标与视口边界保护', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { dirname, resolve } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const here = dirname(fileURLToPath(import.meta.url));
+  const vdgSrc = readFileSync(resolve(here, 'VirtualDataGrid.tsx'), 'utf8');
+  const cssSrc = readFileSync(resolve(here, '../../../theme/table-node.css'), 'utf8');
+
+  // 1. 验证引入 createPortal 并挂载到 document.body（杜绝父容器 transform/containing block 错位）
+  assert.match(vdgSrc, /import \{[^}]*createPortal[^}]*\} from 'react-dom';/);
+  assert.match(vdgSrc, /createPortal\([\s\S]*?wf-attachment-preview-card[\s\S]*?document\.body/);
+
+  // 2. 验证缩略图容器绑定了 onMouseMove 实时跟踪鼠标位置
+  assert.match(vdgSrc, /onMouseMove=\{handleThumbMouseMove\}/);
+  assert.match(vdgSrc, /onMouseEnter=\{\(e\) => handleThumbMouseEnter\(att, e\)\}/);
+
+  // 3. 验证浮层坐标计算逻辑：水平居中、左右安全边距、垂直防溢出翻转
+  const computePos = (clientX, clientY, winW = 1920, winH = 1080) => {
+    const cardWidth = 320;
+    const cardHeight = 340;
+    const margin = 12;
+    let left = clientX - cardWidth / 2;
+    if (left < margin) {
+      left = margin;
+    } else if (left + cardWidth > winW - margin) {
+      left = Math.max(margin, winW - cardWidth - margin);
+    }
+    let top = clientY + 14;
+    if (top + cardHeight > winH - margin) {
+      top = Math.max(margin, clientY - cardHeight - 14);
+    }
+    return { top, left };
+  };
+
+  // 正常情况：居中在鼠标下方
+  const normal = computePos(300, 200);
+  assert.equal(normal.left, 140);
+  assert.equal(normal.top, 214);
+
+  // 靠左边缘限制
+  const leftClamped = computePos(50, 200);
+  assert.equal(leftClamped.left, 12);
+
+  // 靠右边缘限制
+  const rightClamped = computePos(1900, 200, 1920);
+  assert.equal(rightClamped.left, 1920 - 320 - 12);
+
+  // 靠底边缘翻转到鼠标上方
+  const bottomFlipped = computePos(500, 900, 1920, 1000);
+  assert.equal(bottomFlipped.top, 900 - 340 - 14);
+
+  // 4. 验证 CSS 中缩略图默认行高紧凑设计（高度 26px 贴合 36px 默认行高）
+  assert.match(cssSrc, /\.wf-grid-attachment-thumb-wrapper\s*\{[^}]*height:\s*26px;/);
+  assert.match(cssSrc, /\.wf-grid-attachment-thumb-img\s*\{[^}]*max-width:\s*48px;/);
+  assert.match(cssSrc, /\.wf-attachment-preview-card\s*\{[^}]*width:\s*320px;/);
+});

@@ -764,9 +764,10 @@
 
 .wf-grid-attachment-thumb-wrapper {
   position: relative;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+  height: 26px;
+  width: auto;
+  min-width: 22px;
+  max-width: 48px;
   border-radius: 4px;
   overflow: visible;
   display: inline-flex;
@@ -776,39 +777,46 @@
   user-select: none;
 }
 
-/* extraTall 120px 行高下的高清分镜预览卡片 (16:9 比例微缩卡) */
-.wf-grid-row--extraTall .wf-grid-attachment-thumb-wrapper {
-  width: 140px;
-  height: 84px;
-  min-width: 140px;
-  border-radius: 6px;
+/* medium 48px 行高下的附件缩略图 */
+.wf-grid-row--medium .wf-grid-attachment-thumb-wrapper,
+.wf-grid-row--medium .wf-grid-attachment-thumb-img {
+  height: 34px;
+  max-width: 60px;
+}
+.wf-grid-row--medium .wf-grid-attachment-add-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
 }
 
-.wf-grid-row--extraTall .wf-grid-attachment-add-btn {
-  width: 28px;
-  height: 84px;
-  min-width: 28px;
-  border-radius: 6px;
+/* tall 72px 行高下的附件缩略图 */
+.wf-grid-row--tall .wf-grid-attachment-thumb-wrapper,
+.wf-grid-row--tall .wf-grid-attachment-thumb-img {
+  height: 52px;
+  max-width: 92px;
 }
-
-/* tall 72px 行高下的分镜中卡片 */
-.wf-grid-row--tall .wf-grid-attachment-thumb-wrapper {
-  width: 72px;
-  height: 48px;
-  min-width: 72px;
-  border-radius: 5px;
-}
-
 .wf-grid-row--tall .wf-grid-attachment-add-btn {
-  width: 24px;
-  height: 48px;
-  min-width: 24px;
-  border-radius: 5px;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+}
+
+/* extraTall 120px 行高下的附件缩略图 */
+.wf-grid-row--extraTall .wf-grid-attachment-thumb-wrapper,
+.wf-grid-row--extraTall .wf-grid-attachment-thumb-img {
+  height: 84px;
+  max-width: 140px;
+}
+.wf-grid-row--extraTall .wf-grid-attachment-add-btn {
+  width: 84px;
+  height: 84px;
+  min-width: 84px;
 }
 
 .wf-grid-attachment-thumb-img {
-  width: 100%;
+  width: auto;
   height: 100%;
+  max-width: 48px;
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -817,8 +825,9 @@
 }
 
 .wf-grid-attachment-thumb-fallback {
-  width: 100%;
+  width: 26px;
   height: 100%;
+  min-width: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -861,9 +870,9 @@
 }
 
 .wf-grid-attachment-add-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
@@ -923,6 +932,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 320px;
   max-width: 360px;
   pointer-events: none;
   animation: wf-attachment-preview-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -956,13 +966,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   min-height: 120px;
 }
 
 .wf-attachment-preview-body img {
-  max-width: 340px;
-  max-height: 280px;
+  max-width: 304px;
+  max-height: 320px;
   width: auto;
   height: auto;
   object-fit: contain;
