@@ -201,6 +201,7 @@ const en: Record<DictKey, string> = {
     'Content safety review did not pass. Please adjust the prompt or reference image and try again.',
   'error.generationProviderFailed': 'Generation service failed. Please try again later.',
   'error.channelUnavailable': 'This model channel is temporarily unavailable. Please switch to another model.',
+  'error.assetUrlMustBeHttp': 'Invalid reference asset format: This model requires a public HTTP/HTTPS URL and does not support local offline files.',
   'edge.disconnect': 'Disconnect',
   'menu.generateFromNode': 'Generate from this node',
   'edge.reject.selfConnection': 'Cannot connect a node to itself',

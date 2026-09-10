@@ -94,7 +94,7 @@ export const HTableDocumentSchema = z.object({
   rowHeight: HTableRowHeightSchema.default('low').optional(),
   origin: z.string().optional(),
   sourceVideoNodeId: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type HTableDocument = z.infer<typeof HTableDocumentSchema>;
 

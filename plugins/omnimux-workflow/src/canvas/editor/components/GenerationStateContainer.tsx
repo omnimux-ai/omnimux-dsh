@@ -45,18 +45,53 @@ export interface GenerationStateContainerProps {
 function useUserFacingErrorMessage(errorMessage: string | undefined): string | undefined {
   const t = useT();
   if (!errorMessage) return undefined;
-  const normalized = errorMessage.toLowerCase();
-  // 渠道不可用（hub channel-classifier 归一为 CHANNEL_UNAVAILABLE；此处兜底
-  // 拦截 distributor / adapter openai-compatible / 无可用渠道 等底层行话，
-  // 彻底阻止 [omnimux:ADAPTER_FAILED] / 分组 auto 原文裸露在卡片上）。
+
+  // 1. 从复合包装报错中提取最内层业务错误信息（兼容未转义的嵌套 JSON）
+  let cleanMsg = errorMessage;
+  const allMessages = [...errorMessage.matchAll(/"message"\s*:\s*"([^"]+)"/g)];
+  if (allMessages.length > 0) {
+    const lastMsg = allMessages[allMessages.length - 1];
+    if (lastMsg && typeof lastMsg[1] === 'string') {
+      cleanMsg = lastMsg[1];
+    }
+  } else {
+    const jsonMatch = /\{[\s\S]*"error"[\s\S]*\}/.exec(errorMessage);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (typeof parsed?.error?.message === 'string' && parsed.error.message.trim()) {
+          cleanMsg = parsed.error.message.trim();
+        }
+      } catch {}
+    }
+  }
+
+  const normalized = cleanMsg.toLowerCase();
+
+  // 2. 识别素材链接不合规错误（如云端 API 拒绝本地虚拟路径）
+  if (
+    normalized.includes('invalid format for image_urls') ||
+    normalized.includes('invalid format for video_urls') ||
+    normalized.includes('invalid format for audio_urls') ||
+    normalized.includes('invalid format for image_with_roles') ||
+    normalized.includes('input_video_probe_failed') ||
+    (normalized.includes('only http/https') && (normalized.includes('supported') || normalized.includes('url')))
+  ) {
+    return t('error.assetUrlMustBeHttp');
+  }
+
+  // 3. 真正的渠道不可用（hub channel-classifier 归一为 CHANNEL_UNAVAILABLE，或网关明确提示无可用渠道/分发器失败）
+  // 注意：绝不能无脑匹配 adapter openai-compatible，否则会导致参数格式错误被全部遮罩为通道维护！
   if (
     normalized.includes('channel_unavailable') ||
-    errorMessage.includes('无可用渠道') ||
-    normalized.includes('distributor') ||
-    normalized.includes('adapter openai-compatible')
+    cleanMsg.includes('无可用渠道') ||
+    cleanMsg.includes('可用渠道不存在') ||
+    normalized.includes('get_channel_failed') ||
+    cleanMsg.includes('(distributor)')
   ) {
     return t('error.channelUnavailable');
   }
+
   if (
     normalized.includes('content_policy_violation') ||
     normalized.includes('inappropriate content') ||
@@ -70,7 +105,13 @@ function useUserFacingErrorMessage(errorMessage: string | undefined): string | u
   ) {
     return t('error.generationProviderFailed');
   }
-  return errorMessage;
+
+  // 4. 清理底层技术前缀
+  if (cleanMsg.startsWith('[omnimux:ADAPTER_FAILED]')) {
+    cleanMsg = cleanMsg.replace(/^\[omnimux:ADAPTER_FAILED\]\s*(Adapter\s+[a-z0-9_-]+\s+failed:\s*)?/i, '').trim();
+  }
+
+  return cleanMsg;
 }
 
 const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
