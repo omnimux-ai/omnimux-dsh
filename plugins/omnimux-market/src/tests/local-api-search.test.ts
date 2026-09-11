@@ -123,3 +123,50 @@ test('ratings method returns scores independently', async () => {
   }
 })
 
+test('skillContent and exploreFile alias resolve bundled catalog skill and return structure', async () => {
+  const cfg = withDefaults({ skillsDir: '/tmp/omnimux-market-no-skills', timeoutMs: 5000, userAgent: 't' })
+  for (const method of ['skillContent', 'exploreFile']) {
+    const req = {
+      method: 'POST',
+      url: '/omnimux-market',
+      [Symbol.asyncIterator]: async function* () {
+        yield Buffer.from(JSON.stringify({ method, slug: 'esc-demo-note' }))
+      },
+    } as unknown as IncomingMessage
+    const res = mockRes()
+    await handleApi(req, res, cfg)
+    assert.equal(res._status, 200)
+    const body = JSON.parse(res._body)
+    assert.equal(body.ok, true)
+    assert.equal(body.found, true)
+    assert.ok(Array.isArray(body.tree))
+    assert.ok(typeof body.skillMd === 'string' && body.skillMd.length > 0)
+  }
+})
+
+test('skillTab method returns requested tab payload', async () => {
+  const orig = globalThis.fetch
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    versions: [{ version: '1.0.0', changelog: 'Init release', createdAt: Date.now() }],
+  }), { status: 200, headers: { 'content-type': 'application/json' } })
+  try {
+    const cfg = withDefaults({ skillsDir: '/tmp/omnimux-market-no-skills', timeoutMs: 5000, userAgent: 't' })
+    const req = {
+      method: 'POST',
+      url: '/omnimux-market',
+      [Symbol.asyncIterator]: async function* () {
+        yield Buffer.from(JSON.stringify({ method: 'skillTab', slug: 'demo', tab: 'versions' }))
+      },
+    } as unknown as IncomingMessage
+    const res = mockRes()
+    await handleApi(req, res, cfg)
+    assert.equal(res._status, 200)
+    const body = JSON.parse(res._body)
+    assert.equal(body.ok, true)
+    assert.equal(body.tab, 'versions')
+    assert.ok(Array.isArray(body.versions))
+  } finally {
+    globalThis.fetch = orig
+  }
+})
+
