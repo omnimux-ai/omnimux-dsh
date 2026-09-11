@@ -23,6 +23,22 @@ const BASE_CSS = `
 [data-composer-card]:has(.omx-video-token-capsule) [data-composer-placeholder] {
   display: none !important;
 }
+[data-composer-card]:has(.omx-video-token-capsule) [class*="grow"] {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px 8px !important;
+}
+[data-composer-card]:has(.omx-video-token-capsule) [contenteditable="true"] {
+  display: inline-block !important;
+  flex: 1 1 140px !important;
+  min-width: 100px !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
 .omx-btn-insert-link {
   display: inline-flex;
   align-items: center;
