@@ -119,4 +119,19 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(hostSrc, /getSessionModel/)
     assert.match(hostSrc, /【会话模型锁定】/)
   })
+
+  it('reuses workflow brand icon system and conforms to visual design guidelines', () => {
+    // 品牌图标库复用
+    assert.match(modelPickerSrc, /BRAND_SVGS/)
+    assert.match(modelPickerSrc, /resolveModelBrand/)
+    assert.match(modelPickerSrc, /renderBrandIcon/)
+    assert.match(modelPickerSrc, /sh-model-brand-icon/)
+    assert.match(modelPickerSrc, /dangerouslySetInnerHTML/)
+
+    // 视觉规范检查：浮层采用规范的深浅自适应背景 Token 与 12px 圆角
+    assert.match(cssSrc, /\.sh-model-picker\{[^}]*background:var\(--dsw-alias-bg-layer-2/)
+    assert.match(cssSrc, /\.sh-model-picker\{[^}]*border-radius:12px/)
+    assert.match(cssSrc, /\.sh-model-tabs\{[^}]*background:var\(--dsw-alias-bg-base/)
+    assert.match(cssSrc, /\.sh-model-tab\.active\{[^}]*background:var\(--dsw-alias-bg-layer-3/)
+  })
 })
