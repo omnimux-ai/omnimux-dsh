@@ -583,6 +583,32 @@ export const VIDEO_BREAKDOWN_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
+/* Blockquote vertical line container matching Image 1 */
+.omnimux-video-breakdown-structure-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.omnimux-video-breakdown-quote-bar {
+  width: 2px;
+  min-height: 18px;
+  align-self: stretch;
+  background: var(--dsw-alias-border-l3);
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.omnimux-video-breakdown-quote-text {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .omnimux-video-breakdown-desc-line {
   margin-bottom: 6px;
 }

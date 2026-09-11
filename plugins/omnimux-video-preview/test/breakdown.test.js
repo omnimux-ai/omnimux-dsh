@@ -911,4 +911,69 @@ Hook
     assert.ok(ruRes.translations.shot_1)
     assert.ok(ruRes.translations.shot_2)
   })
+
+  it('accurately parses 5-stage pipeline with blockquote quotes matching Image 1', () => {
+    const md = `
+## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Proof Effect → Cta
+
+## 2. 结构阶段解构 (Stage Breakdown)
+
+### Hook
+> What happened? Where'd she go?
+以偷窥情景剧形式戏剧化呈现隐私暴露痛点，瞬间抓住用户注意力并引出隐私贴膜解决方案。
+
+### Product Intro
+> If my neighbor's husband hadn't told me about it, I would never have discovered this incredible product.
+通过邻居推荐的情景口吻，引出单向透光隔热窗膜产品，建立信任感与好奇心。
+
+### Usage Detail
+> just measure, cut the film, remove the clear backing, stick it to the glass and adjust the edges.
+分步演示测量、裁剪、贴膜及刮平过程，展示产品极低的操作门槛与DIY便利性。
+
+### Proof Effect
+> From the inside you see everything with total clarity, but from the outside no one can see in. Privacy guaranteed, plus it blocks the sun's heat and now I spend much less on air conditioning.
+直观对比内外视角效果，强调单向透视的防窥私密性与防晒隔热、节能省电的双重核心价值。
+
+### Cta
+> The best part, if you place your order today, you get a 50% discount and free home shipping, take advantage now.
+通过50%折扣和包邮优惠激发紧迫感，强力促单转化。
+
+## 3. 逐镜头分镜脚本表
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:00 - 0:04 | 窗外偷窥惊吓 | Hook | 全景, 固定机位, 平视, 固定镜头 | 女生在洗手间准备脱裤，窗外突然出现男子贴窗拍照偷窥，女生受惊大叫。 | What happened? Where'd she go? |
+| 0:04 - 0:10 | 紧急贴膜防护 | Hook | 中景, 智能手机手持, 平视, 手持微动 | 男伴迅速冲入，裁剪单向透视膜直接贴于窗户阻隔视线。 | What happened? |
+| 0:11 - 0:19 | 产品展开介绍 | Product Intro | 中景, 智能手机手持, 平视, 手持微晃 | 女博主在户外露台和室内厨房台面展开整卷单向反光膜，展示材质与质感。 | If my neighbor's husband hadn't told me about it... |
+| 0:19 - 0:24 | 测量裁剪贴膜 | Usage Detail | 特写, 智能手机手持, 俯视, 手持微动 | 特写展示用卷尺测量、剪刀裁剪、撕去透明保护膜，并在窗户上用刮板贴平调整边缘。 | just measure, cut the film... |
+| 0:24 - 0:30 | 内外视角对比 | Proof Effect | 全景, 智能手机手持, 平视, 手持微动 | 从室内看窗外草坪清晰透明；转至室外观察，窗户呈镜面反光，完全看不见室内。 | From the inside you see everything with total clarity... |
+| 0:31 - 0:41 | 优惠促销促单 | Cta | 中景, 智能手机手持, 平视, 手持微动 | 女子在舒适明亮的窗边办公与生活，呼吁用户抓住限时半价与包邮优惠下单。 | The best part, if you place your order today... |
+`
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Proof Effect', 'Cta'])
+    assert.equal(structure.length, 5)
+
+    assert.equal(structure[0].stage, 'Hook')
+    assert.equal(structure[0].quote, "What happened? Where'd she go?")
+    assert.match(structure[0].description, /以偷窥情景剧形式/)
+
+    assert.equal(structure[1].stage, 'Product Intro')
+    assert.match(structure[1].quote, /If my neighbor's husband/)
+    assert.match(structure[1].description, /通过邻居推荐的情景口吻/)
+
+    assert.equal(structure[2].stage, 'Usage Detail')
+    assert.match(structure[2].quote, /just measure/)
+    assert.match(structure[2].description, /分步演示测量/)
+
+    assert.equal(structure[3].stage, 'Proof Effect')
+    assert.match(structure[3].quote, /From the inside you see everything/)
+    assert.match(structure[3].description, /直观对比内外视角效果/)
+
+    assert.equal(structure[4].stage, 'Cta')
+    assert.match(structure[4].quote, /The best part, if you place your order today/)
+    assert.match(structure[4].description, /通过50%折扣和包邮优惠/)
+
+    assert.equal(shots.length, 6)
+  })
 })
