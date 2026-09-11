@@ -26,7 +26,7 @@ test('createSafeT: fallbacks to DEFAULT_STRINGS when custom t returns raw key or
   const hostMockT = (key) => key; // 宿主遇到未注册的 key 时返回 key 本身
   const safeT = createSafeT(hostMockT);
   assert.equal(safeT('productPicker.title'), '从产品库选择');
-  assert.equal(safeT('productPicker.searchPlaceholder'), '搜索产品名称、描述、SKU…');
+  assert.equal(safeT('productPicker.searchPlaceholder'), '搜索产品名称、描述、SKU、标签…');
   assert.equal(safeT('productPicker.cat.all'), '全部');
   assert.equal(safeT('productPicker.unselectedHint'), '请选择一件商品');
 

@@ -50,6 +50,11 @@ export function ProductPickerCard({
   const priceText = formatPrice(product.price);
   const glyph = (product.name || '?').trim().slice(0, 1).toUpperCase();
 
+  // 提取有效标签（最多展示 3 个）
+  const tags = Array.isArray(product.categories)
+    ? product.categories.filter((c) => typeof c === 'string' && c.trim()).slice(0, 3)
+    : [];
+
   return (
     <article
       className="omx-product-pick-card"
@@ -123,6 +128,15 @@ export function ProductPickerCard({
         <div className="omx-product-pick-card__desc" title={product.description}>
           {product.description || '暂无产品描述'}
         </div>
+        {tags.length > 0 ? (
+          <div className="omx-product-pick-card__tags">
+            {tags.map((tag) => (
+              <span key={tag} className="omx-product-pick-card__tag">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   );

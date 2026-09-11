@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BASE_CATEGORIES,
+  PRODUCT_CATEGORIES,
   collectCategories,
+  computeCategoryCounts,
   filterProducts,
   formatPrice,
 } from './picker-model.js';
@@ -17,29 +18,28 @@ test('formatPrice: formats various price values correctly', () => {
   assert.equal(formatPrice(''), '');
 });
 
-test('collectCategories: extracts base categories and unique custom categories', () => {
+test('collectCategories: strictly locks to all, physical, and digital with accurate counts', () => {
   const products = [
     { id: 'p1', name: '降噪耳机', kind: 'physical', categories: ['数码', '音频'] },
     { id: 'p2', name: 'UI 设计模板', kind: 'digital', categories: ['设计', '数码'] },
-    { id: 'p3', name: '极简背包', kind: 'physical', categories: [] },
+    { id: 'p3', name: '极简背包', kind: 'physical', categories: ['儿童服饰', '万圣节'] },
   ];
 
   const categories = collectCategories(products);
 
-  // 基础分类: all, physical, digital
+  // 严格只有 3 项分类，杜绝业务 tags 污染左侧一级导航
+  assert.equal(categories.length, 3);
   assert.equal(categories[0].id, 'all');
-  assert.equal(categories[1].id, 'physical');
-  assert.equal(categories[2].id, 'digital');
+  assert.equal(categories[0].count, 3);
 
-  // 自定义分类去重合并: 数码, 音频, 设计
-  const customIds = categories.slice(3).map((c) => c.id);
-  assert.ok(customIds.includes('数码'));
-  assert.ok(customIds.includes('音频'));
-  assert.ok(customIds.includes('设计'));
-  assert.equal(customIds.length, 3);
+  assert.equal(categories[1].id, 'physical');
+  assert.equal(categories[1].count, 2);
+
+  assert.equal(categories[2].id, 'digital');
+  assert.equal(categories[2].count, 1);
 });
 
-test('filterProducts: filters by kind, custom category, and search query', () => {
+test('filterProducts: filters by kind, custom tags, and search query', () => {
   const products = [
     {
       id: 'p1',
@@ -81,9 +81,9 @@ test('filterProducts: filters by kind, custom category, and search query', () =>
   assert.equal(digitals.length, 1);
   assert.equal(digitals[0].id, 'p3');
 
-  // 按自定义分类过滤
-  const audioList = filterProducts(products, { category: '音频' });
-  assert.equal(audioList.length, 2);
+  // 关键词搜索: 支持搜商品标签 categories
+  const searchAudio = filterProducts(products, { query: '音频' });
+  assert.equal(searchAudio.length, 2);
 
   // 关键词搜索: 名称
   const searchBose = filterProducts(products, { query: 'bose' });

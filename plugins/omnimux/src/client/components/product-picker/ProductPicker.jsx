@@ -1,29 +1,44 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
-import { collectCategories, filterProducts, createSafeT, DEFAULT_STRINGS } from './picker-model.js';
+import { collectCategories, filterProducts, createSafeT } from './picker-model.js';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
 .omx-product-pick {
-  display: flex; min-height: 460px; max-height: 70vh;
+  display: flex; min-height: 440px; max-height: 70vh;
 }
 .omx-product-pick__nav {
-  width: 140px; flex: none; display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 8px 8px 0; border-right: 1px solid var(--dsw-alias-border-l2);
-  overflow-y: auto;
+  width: 146px; flex: none; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 10px 8px 0; border-right: 1px solid var(--dsw-alias-border-l2);
+  overflow-y: auto; box-sizing: border-box;
+}
+.omx-product-pick__nav-header {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary); padding: 4px 10px 6px;
+  letter-spacing: 0.5px;
 }
 .omx-product-pick__tab {
   appearance: none; font: inherit; text-align: left; cursor: pointer;
-  height: 34px; border: none; border-radius: 8px; padding: 0 12px;
+  height: 34px; border: none; border-radius: 8px; padding: 0 10px;
   background: transparent; color: var(--dsw-alias-label-secondary);
   font-size: 13px; font-weight: 500; transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.omx-product-pick__tab-left {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.omx-product-pick__tab-icon {
+  display: flex; align-items: center; flex-shrink: 0;
+  color: var(--dsw-alias-label-secondary);
 }
 .omx-product-pick__tab:hover {
   background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-product-pick__tab:hover .omx-product-pick__tab-icon {
   color: var(--dsw-alias-label-primary);
 }
 .omx-product-pick__tab[data-active="true"] {
@@ -31,12 +46,24 @@ const CSS = `
   color: var(--dsw-alias-label-primary);
   font-weight: 600;
 }
+.omx-product-pick__tab[data-active="true"] .omx-product-pick__tab-icon {
+  color: var(--dsw-alias-label-primary);
+}
+.omx-product-pick__tab-badge {
+  font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 999px;
+  background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary);
+  font-weight: 500;
+}
+.omx-product-pick__tab[data-active="true"] .omx-product-pick__tab-badge {
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
 .omx-product-pick__main {
   flex: 1; min-width: 0; display: flex; flex-direction: column;
   padding: 0 0 0 16px; overflow: hidden;
 }
 .omx-product-pick__toolbar {
-  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
 }
 .omx-product-pick__search-wrap {
   position: relative; flex: 1; display: flex; align-items: center;
@@ -67,7 +94,10 @@ const CSS = `
   flex: 1; overflow-y: auto; padding-right: 6px;
 }
 .omx-product-pick__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 260px)); gap: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
+}
+.omx-product-pick__grid.is-single-product {
+  grid-template-columns: minmax(280px, 340px);
 }
 .omx-product-pick__empty {
   border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 220px;
@@ -89,7 +119,7 @@ const CSS = `
   box-shadow: 0 0 0 1.5px var(--dsw-alias-label-primary);
 }
 .omx-product-pick-card__thumb {
-  height: 140px; background: var(--dsw-alias-bg-module-platform); position: relative;
+  height: 148px; background: var(--dsw-alias-bg-module-platform); position: relative;
   display: flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary);
   overflow: hidden;
 }
@@ -128,7 +158,7 @@ const CSS = `
   display: flex; align-items: center; gap: 8px;
 }
 .omx-product-pick-card__price {
-  font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); line-height: 18px;
+  font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); line-height: 18px;
 }
 .omx-product-pick-card__sku {
   font-size: 11px; color: var(--dsw-alias-label-tertiary);
@@ -136,6 +166,14 @@ const CSS = `
 .omx-product-pick-card__desc {
   font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-product-pick-card__tags {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+}
+.omx-product-pick-card__tag {
+  font-size: 10px; line-height: 14px; padding: 1px 6px; border-radius: 4px;
+  background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-secondary);
+  border: 1px solid var(--dsw-alias-border-l1);
 }
 .omx-product-pick__footer {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%;
@@ -146,7 +184,7 @@ const CSS = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .omx-product-pick__meta-highlight {
-  color: var(--dsw-alias-label-primary); font-weight: 500; margin-left: 4px;
+  color: var(--dsw-alias-label-primary); font-weight: 600; margin-left: 4px;
 }
 .omx-product-pick__actions {
   display: flex; align-items: center; gap: 10px; flex-shrink: 0;
@@ -155,6 +193,37 @@ const CSS = `
   color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 0 8px;
 }
 `;
+
+function CategoryIcon({ kind, size = 14 }: { kind: string, size?: number }) {
+  if (kind === 'box') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </svg>
+    );
+  }
+  if (kind === 'file') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
   if (!doc || doc.getElementById(STYLE_ID)) return;
@@ -266,7 +335,7 @@ export function ProductPicker({
       open={open}
       onClose={onClose}
       title={safeT('productPicker.title')}
-      width={800}
+      width={700}
       footer={
         <div className="omx-product-pick__footer">
           <div className="omx-product-pick__meta">
@@ -298,6 +367,9 @@ export function ProductPicker({
     >
       <div className="omx-product-pick">
         <nav className="omx-product-pick__nav" aria-label={safeT('productPicker.categories')}>
+          <div className="omx-product-pick__nav-header">
+            {safeT('productPicker.categories')}
+          </div>
           {categories.map((cat) => {
             const label = cat.key ? safeT(cat.key) : cat.label;
             return (
@@ -309,7 +381,13 @@ export function ProductPicker({
                 onClick={() => setActiveCategory(cat.id)}
                 title={label}
               >
-                {label}
+                <span className="omx-product-pick__tab-left">
+                  <span className="omx-product-pick__tab-icon">
+                    <CategoryIcon kind={cat.icon} size={14} />
+                  </span>
+                  <span>{label}</span>
+                </span>
+                <span className="omx-product-pick__tab-badge">{cat.count}</span>
               </button>
             );
           })}
@@ -395,7 +473,11 @@ export function ProductPicker({
                 ) : null}
               </div>
             ) : (
-              <div className="omx-product-pick__grid">
+              <div
+                className={`omx-product-pick__grid ${
+                  filteredProducts.length === 1 ? 'is-single-product' : ''
+                }`}
+              >
                 {filteredProducts.map((product) => {
                   const firstCategory = Array.isArray(product.categories) && product.categories[0];
                   const typeLabel = firstCategory || (
