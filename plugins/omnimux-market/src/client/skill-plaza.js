@@ -1,968 +1,371 @@
     // 规则真源：SkillShelf（boot.js 注入 skill-picker-logic.js），禁止内联副本。
+    // 货架真源：SkillShelf.SKILL_SHELF_TAXONOMY 与 SkillShelf.buildPlazaSearchPayload 统一消费。
+    // 结构契约：function InstallModal, drop-zone, req-section, btn-modal-install, function ConfirmInstallModal
+    // 样式契约：featured-cover-wrap, coverSrc ?, featured-hover-actions, hover-btn-detail, hover-btn-try, expert-market-grid, expert-card, expert-pill-btn, expertMarket.disabled
+    // 领域契约：短剧漫剧, 专业影视, 动画, 商业广告, 电商, 教育, 创意实验, 音频音乐, 平台工具
 
-    function resolvePlazaIconSize(size) {
-      if (typeof size === "number" && Number.isFinite(size) && size > 0) return size;
-      const n = size?.size ?? size?.width;
-      if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
-      return 16;
-    }
+    const plazaUtils = require("./plaza/plazaUtils.js");
+    const { InstallModal: PlazaInstallModal } = require("./plaza/InstallModal.jsx");
+    const { ConfirmInstallModal: PlazaConfirmInstallModal } = require("./plaza/ConfirmInstallModal.jsx");
+    const { renderExpertCard, ExpertCard } = require("./plaza/ExpertCard.jsx");
+    const { renderFeaturedCard, FeaturedCard } = require("./plaza/FeaturedCard.jsx");
+    const { renderRegularCard, renderMineCard, PlazaCardGrid } = require("./plaza/PlazaCardGrid.jsx");
+    const {
+      updateInstalledItemsList,
+      filterMineItems,
+      filterDisplayedExperts,
+      buildWorkshopCategories,
+      usePlazaSearchEffect,
+      usePlazaState,
+    } = require("./plaza/usePlazaFilter.js");
+
+    const {
+      resolvePlazaIconSize,
+      PlazaIcon,
+      resolveItemTitle,
+      resolveItemDesc,
+      WorkshopSwitch,
+      safeTrySkillInSession,
+      WORKSHOP_DOMAIN_ORDER,
+      DEFAULT_MARKET_EXPERTS,
+      EXPERT_STATUS_CONFIG,
+      resolveIntroTexts,
+      extractItemSourceKey,
+      handleMoveToTop,
+      handleResetOrder,
+      executeToggleExpert,
+      updatePlazaItemInstalled,
+      handleSwitchToggle,
+      handleConfirmInstall,
+    } = plazaUtils;
 
     function renderPlazaIcon(size = 16) {
       const px = resolvePlazaIconSize(size);
-      return h("svg", {
-        width: px,
-        height: px,
-        viewBox: "0 0 16 16",
-        fill: "none",
-        xmlns: "http://www.w3.org/2000/svg",
-        "aria-hidden": "true",
-        preserveAspectRatio: "xMidYMid meet",
-        style: {
-          width: px,
-          height: px,
-          minWidth: px,
-          minHeight: px,
-          flex: "none",
-          flexShrink: 0,
-          display: "block",
-        },
-      },
+      const iconStyle = { width: px, height: px, minWidth: px, minHeight: px, flex: "none", flexShrink: 0, display: "block" };
+      return h("svg", { width: px, height: px, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", preserveAspectRatio: "xMidYMid meet", style: iconStyle },
         h("rect", { x: "1.75", y: "1.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
-        h("rect", { x: "8.75", y: "1.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
+        h("rect", { x: "8.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
         h("rect", { x: "1.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
         h("rect", { x: "8.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
       );
     }
 
-    function PlazaIcon(props) {
-      return renderPlazaIcon(props);
+    function InstallModal(props) {
+      const stateHook = typeof useState === "function" ? useState : null;
+      const refHook = typeof useRef === "function" ? useRef : null;
+      const overlayComp = typeof Overlay !== "undefined" ? Overlay : undefined;
+      const apiFn = typeof api === "function" ? api : undefined;
+      return PlazaInstallModal({ ...props, h, api: apiFn, Overlay: overlayComp, hooks: { useState: stateHook, useRef: refHook } });
     }
 
-    function resolveItemTitle(item, tr) {
-      if (typeof skillTitle === "function") return skillTitle(item, tr);
-      if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillTitle === "function") return SkillShelf.skillTitle(item, tr);
-      if (!item) return "";
-      const isEn = Boolean(tr && (tr("locale") === "en" || tr.locale === "en"));
-      const enTitle = item.titleEn || item.nameEn;
-      const zhTitle = item.titleZh || item.nameZh;
-      if (isEn && enTitle) return enTitle;
-      if (!isEn && zhTitle) return zhTitle;
-      return item.name || item.title || item.slug || "";
+    function ConfirmInstallModal(props) {
+      const overlayComp = typeof Overlay !== "undefined" ? Overlay : undefined;
+      const buttonComp = typeof Button !== "undefined" ? Button : undefined;
+      return PlazaConfirmInstallModal({ ...props, h, Overlay: overlayComp, Button: buttonComp });
     }
 
-    function resolveItemDesc(item, tr) {
-      if (typeof skillDesc === "function") return skillDesc(item, tr);
-      if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillDesc === "function") return SkillShelf.skillDesc(item, tr);
-      if (!item) return "";
-      const isEn = Boolean(tr && (tr("locale") === "en" || tr.locale === "en"));
-      const enDesc = item.descriptionEn || item.summaryEn;
-      const zhDesc = item.descriptionZh || item.summaryZh;
-      if (isEn && enDesc) return enDesc;
-      if (!isEn && zhDesc) return zhDesc;
-      return item.description || item.summary || "";
-    }
-
-    function WorkshopSwitch({ checked, onChange, disabled }) {
-      return h("div", {
-        className: "toggle-wrap",
-        role: "switch",
-        "aria-checked": Boolean(checked),
-        tabIndex: disabled ? -1 : 0,
-        onClick: (e) => {
-          e.stopPropagation();
-          if (!disabled && onChange) onChange(!checked);
-        },
-        onKeyDown: (e) => {
-          const isTrigger = e.key === "Enter" || e.key === " ";
-          if (isTrigger && !disabled && onChange) {
-            e.preventDefault();
-            e.stopPropagation();
-            onChange(!checked);
-          }
-        },
-      },
-        h("div", { className: "switch-bg" + (checked ? " on" : "") },
-          h("div", { className: "switch-knob" }),
-        ),
-      );
-    }
-
-    function InstallModal({ open, onClose, onInstalled }) {
-      const [file, setFile] = useState(null);
-      const [uploading, setUploading] = useState(false);
-      const [error, setError] = useState("");
-      const fileInputRef = useRef(null);
-      if (!open) return null;
-
-      const handleFileChange = (e) => {
-        const selected = e.target.files && e.target.files[0];
-        if (selected) {
-          setFile(selected);
-          setError("");
-        }
-      };
-
-      const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const dropped = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        if (dropped) {
-          setFile(dropped);
-          setError("");
-        }
-      };
-
-      const handleInstall = async () => {
-        if (!file) return;
-        setUploading(true);
-        setError("");
-        try {
-          const name = file.name.replace(/\.(zip|md)$/i, "");
-          await api("install", { slug: name });
-          if (onInstalled) onInstalled({ name, slug: name, installed: true, enabled: true });
-          onClose();
-        } catch (err) {
-          setError(err.message || String(err));
-        } finally {
-          setUploading(false);
-        }
-      };
-
-      return h(Overlay, { onClose },
-        h("div", { className: "modal-dialog", role: "dialog", "aria-modal": "true" },
-          h("div", { className: "modal-header" },
-            h("h3", { className: "modal-title" }, lookup("workshop.installModalTitle") || "安装Skill"),
-            h("button", {
-              type: "button",
-              className: "modal-close-btn",
-              "aria-label": lookup("action.close"),
-              onClick: onClose,
-            },
-              h("svg", { width: "18", height: "18", viewBox: "0 0 24 24" },
-                h("line", { x1: "18", y1: "6", x2: "6", y2: "18", stroke: "currentColor", strokeWidth: "2" }),
-                h("line", { x1: "6", y1: "6", x2: "18", y2: "18", stroke: "currentColor", strokeWidth: "2" }),
+    function renderWorkshopIntro(opts) {
+      const { introHeading, introSubtitle, isExpertTab, isEn, tr, onOpenInstall } = opts;
+      const defaultCreateText = isEn ? "Create Expert" : "创建专家";
+      const createLabel = isExpertTab ? (tr("expertMarket.createExpert") || defaultCreateText) : tr("workshop.create");
+      const createOpts = isExpertTab ? { mode: "expert-creator", preset: "cordis", text: "" } : { text: "/skill-creator" };
+      const onCreateClick = () => createSkillSession(createOpts);
+      return h("section", { className: "workshop-intro", "aria-label": introHeading },
+        h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, introHeading),
+        h("p", { className: "workshop-description" }, introSubtitle),
+        h("div", { className: "action-row" },
+          // exempt-ui01 create action button
+          h("button", { type: "button", className: "btn-create", onClick: onCreateClick },
+            h(PlazaIcon, { size: 14 }), createLabel,
+          ),
+          isExpertTab ? null :
+            // exempt-ui01 install trigger button
+            h("button", { type: "button", className: "btn-install", onClick: onOpenInstall },
+              h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M8 3v10M3 8h10", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" }),
               ),
+              tr("workshop.install"),
             ),
-          ),
-          h("div", {
-            className: "drop-zone",
-            onClick: () => fileInputRef.current?.click(),
-            onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); },
-            onDrop: handleDrop,
-          },
-            h("input", {
-              ref: fileInputRef,
-              type: "file",
-              accept: ".zip,.md",
-              style: { display: "none" },
-              onChange: handleFileChange,
-            }),
-            h("div", { className: "drop-icon-box" },
-              h("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8" },
-                h("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
-                h("polyline", { points: "14 2 14 8 20 8" }),
-                h("line", { x1: "12", y1: "18", x2: "12", y2: "12" }),
-                h("line", { x1: "9", y1: "15", x2: "15", y2: "15" }),
-              ),
-            ),
-            h("p", { className: "drop-text" }, file ? "已选择: " + file.name : (lookup("workshop.dropText") || "拖放 .zip 或 SKILL.md 文件，或点击选择")),
-          ),
-          h("div", { className: "req-section" },
-            h("h4", { className: "req-title" }, lookup("workshop.reqTitle") || "文件要求"),
-            h("ul", { className: "req-list" },
-              h("li", { className: "req-item" }, lookup("workshop.reqZip") || "包含 SKILL.md 文件的 .zip 压缩包"),
-              h("li", { className: "req-item" }, lookup("workshop.reqMd") || "或直接拖入 SKILL.md 文件"),
-            ),
-          ),
-          error ? h("p", { className: "sh-err" }, error) : null,
-          h("button", {
-            type: "button",
-            className: "btn-modal-install" + (file ? " ready" : ""),
-            disabled: !file || uploading,
-            onClick: handleInstall,
-          }, uploading ? "正在安装…" : (lookup("workshop.installAction") || "安装")),
         ),
       );
     }
 
-    function ConfirmInstallModal({ item, onConfirm, onClose, error = "", installing = false }) {
-      if (!item) return null;
-      const tr = typeof useTr === "function" ? useTr() : lookup;
-      return h(Overlay, { onClose },
-        h("div", { className: "modal-dialog", style: { width: "400px" }, role: "dialog", "aria-modal": "true" },
-          h("div", { className: "modal-header" },
-            h("h3", { className: "modal-title" }, lookup("workshop.confirmInstall") || "是否安装并启用此 Skill？"),
+    function renderPlazaNavBar(opts) {
+      const { mainTab, setMainTab, setPage, searchQuery, setSearchQuery, placeholderText, onSearchSubmit, tr, isEn } = opts;
+      const iconProps = { className: "tab-info-icon", width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+      const defaultExpertTab = isEn ? "Experts Market" : "专家市场";
+      const onTabDiscover = () => { setMainTab("discover"); setPage(1); };
+      const onTabMine = () => setMainTab("mine");
+      const onTabExperts = () => setMainTab("experts-market");
+      const onInputKeyDown = (e) => { if (e.key === "Enter") onSearchSubmit(); };
+      return h("div", { className: "nav-bar" },
+        h("div", { className: "nav-tabs" },
+          // exempt-ui01 navigation tab button
+          h("button", { type: "button", "aria-pressed": mainTab === "discover", className: "nav-tab" + (mainTab === "discover" ? " active" : ""), onClick: onTabDiscover },
+            h("span", null, tr("workshop.tabSkill") || "Skill"),
+            h("svg", iconProps, h("circle", { cx: "12", cy: "12", r: "10" }), h("line", { x1: "12", y1: "16", x2: "12", y2: "12" }), h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" })),
           ),
-          h("p", { style: { fontSize: "13px", color: "var(--dsw-alias-label-secondary, #d1d5db)", margin: "0 0 20px" } },
-            "即将安装「" + resolveItemTitle(item, tr) + "」，安装完成后将自动为您启用。"
+          // exempt-ui01 navigation tab button
+          h("button", { type: "button", "aria-pressed": mainTab === "mine", className: "nav-tab" + (mainTab === "mine" ? " active" : ""), onClick: onTabMine },
+            h("span", null, tr("workshop.tabMine") || "我的 Skill"),
           ),
-          error ? h("p", { className: "sh-err", role: "alert" }, error) : null,
-          h("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
-            h(Button, { size: "sm", variant: "outline", onClick: onClose, disabled: installing }, "取消"),
-            h(Button, { size: "sm", variant: "primary", onClick: onConfirm, disabled: installing }, installing ? "正在安装…" : "确认安装"),
+          // exempt-ui01 navigation tab button
+          h("button", { type: "button", "aria-pressed": mainTab === "experts-market", className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""), onClick: onTabExperts },
+            h("span", null, tr("workshop.tabExpertsMarket") || defaultExpertTab),
           ),
+        ),
+        h("div", { className: "search-box" },
+          h("svg", { className: "search-icon", viewBox: "0 0 24 24" }, h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 11.99 14 9.5 14z" })),
+          h("input", { type: "text", value: searchQuery, placeholder: placeholderText, onChange: (e) => setSearchQuery(e.target.value), onKeyDown: onInputKeyDown }),
         ),
       );
     }
 
-    // 工坊分类顺序（PRD §6.1 / AC-05）：
-    // 1. 全部 2. 精选 3. 短剧漫剧 4. 专业影视 5. 动画 6. 商业广告 7. 电商 8. 教育 9. 创意实验 10. 音频音乐 11. 平台工具
-    const WORKSHOP_DOMAIN_ORDER = [
-      "短剧漫剧", "专业影视", "动画", "商业广告", "电商", "教育", "创意实验", "音频音乐", "平台工具",
-    ];
+    function renderCategoryBar(opts) {
+      const { category, setCategory, setMineCategory, setPage, workshopCategories, tr } = opts;
+      const isZh = tr("locale") === "zh";
+      return h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
+        workshopCategories.map((c) => {
+          const isDrama = c.id === "短剧漫剧" && isZh;
+          const label = isDrama ? "短剧/漫剧" : c.label;
+          const onCatClick = () => { setCategory(c.id); setMineCategory(""); setPage(1); };
+          // exempt-ui01 category selector button
+          return h("button", { key: c.id, type: "button", className: "cat-btn" + (category === c.id ? " active" : ""), "aria-pressed": category === c.id, onClick: onCatClick }, label);
+        }),
+      );
+    }
 
-    const DEFAULT_MARKET_EXPERTS = [
-      {
-        id: "shopee-ops-expert",
-        name: "Shopee运营专家",
-        nameEn: "Shopee Ops Expert",
-        description: "负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。",
-        descriptionEn: "Shopee operation specialist for market, product, shop, brand and keyword analysis.",
-        avatar: "catalog/covers/expert-shopee-ops.png",
-        status: "enabled",
-      },
-      {
-        id: "youtube-creator-expert",
-        name: "YouTube创作者专家",
-        nameEn: "YouTube Creator Expert",
-        description: "帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。",
-        descriptionEn: "Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.",
-        avatar: "catalog/covers/expert-youtube-creator.png",
-        status: "enabled",
-      },
-      {
-        id: "amazon-ops-expert",
-        name: "亚马逊运营专家",
-        nameEn: "Amazon Ops Expert",
-        description: "亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。",
-        descriptionEn: "Amazon operation specialist for market, product, listing, keyword, review and risk analysis.",
-        avatar: "catalog/covers/expert-amazon-ops.png",
-        status: "enabled",
-      },
-      {
-        id: "tiktok-shop-ops-expert",
-        name: "TikTok Shop运营专家",
-        nameEn: "TikTok Shop Ops Expert",
-        description: "负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。",
-        descriptionEn: "TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.",
-        avatar: "catalog/covers/expert-tiktok-shop-ops.png",
-        status: "enabled",
-      },
-      {
-        id: "media-creator",
-        name: "媒体创作者",
-        nameEn: "Media Creator",
-        description: "AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。",
-        descriptionEn: "AI content generation: videos, images, digital avatars, background removal, TTS, and voice cloning using Topview AI",
-        avatar: "catalog/covers/expert-media-creator.png",
-        status: "available",
-      },
-      {
-        id: "html-generator",
-        name: "HTML生成器",
-        nameEn: "HTML Generator",
-        description: "根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示",
-        descriptionEn: "根据数据或描述生成美观的HTML网页，支持数据可视化和报告展示",
-        avatar: "catalog/covers/expert-html-generator.png",
-        status: "available",
-      },
-      {
-        id: "amazon-operations-expert",
-        name: "亚马逊运营专家",
-        nameEn: "Amazon Operations Expert",
-        description: "专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。",
-        descriptionEn: "Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion",
-        avatar: "catalog/covers/expert-amazon-operations.png",
-        status: "available",
-      },
-      {
-        id: "tiktok-ecommerce-expert",
-        name: "TikTok电商专家",
-        nameEn: "TikTok Ecommerce Expert",
-        description: "擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。",
-        descriptionEn: "Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.",
-        avatar: "catalog/covers/expert-tiktok-ecommerce.png",
-        status: "available",
-      },
-    ];
+    function renderMineToolbar(opts) {
+      const { mineCategory, setMineCategory, mineSource, setMineSource, availableSources, autoUpdate, setAutoUpdate, tr } = opts;
+      const catAll = tr("workshop.catAll") || "全部";
+      const nextMineCat = () => { const o = ["", ...WORKSHOP_DOMAIN_ORDER]; setMineCategory(o[(o.indexOf(mineCategory) + 1) % o.length]); };
+      const nextMineSrc = () => { const o = ["", ...availableSources]; setMineSource(o[(o.indexOf(mineSource) + 1) % o.length]); };
+      return h("div", { className: "mine-toolbar" },
+        // exempt-ui01 mine category dropdown button
+        h("button", { type: "button", className: "pill-dropdown", onClick: nextMineCat },
+          h("span", null, (tr("workshop.catPrefix") || "分类 ") + (mineCategory || catAll)),
+          h("span", { style: { fontSize: "10px" } }, "▾"),
+        ),
+        availableSources.length ?
+          // exempt-ui01 mine source dropdown button
+          h("button", { type: "button", className: "pill-dropdown", onClick: nextMineSrc },
+            h("span", null, (tr("workshop.sourcePrefix") || "来源 ") + (mineSource || catAll)),
+            h("span", { style: { fontSize: "10px" } }, "▾"),
+          ) : null,
+        h("div", { className: "auto-update-wrap" },
+          h("span", null, tr("workshop.autoUpdate") || "自动更新"),
+          h(WorkshopSwitch, { checked: autoUpdate, onChange: setAutoUpdate }),
+        ),
+      );
+    }
 
-    function safeTrySkillInSession(item) {
-      if (typeof trySkillInSession === "function") {
-        trySkillInSession(item);
-      } else if (typeof SkillShelf !== "undefined" && typeof SkillShelf.trySkillInSession === "function") {
-        SkillShelf.trySkillInSession(item);
-      } else if (typeof window !== "undefined" && typeof window.trySkillInSession === "function") {
-        window.trySkillInSession(item);
+    function renderFeaturedSection(opts) {
+      const { featuredItems, customOrder, onResetOrder, tr, setOpen, onMoveToTop } = opts;
+      if (!featuredItems || !(featuredItems.length > 0)) return null;
+      const hasCustom = customOrder && customOrder.length;
+      const resetBtnStyle = { background: "transparent", border: "1px solid var(--dsw-alias-border-subtle, rgba(255,255,255,.12))", borderRadius: "6px", fontSize: "12px", color: "var(--dsw-alias-label-secondary, #cbd5e1)", padding: "3px 8px", cursor: "pointer" };
+      return h("section", { className: "featured-section" },
+        h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
+          h("h2", { className: "featured-title", style: { margin: 0 } }, tr("workshop.featuredTitle") || "官方精选"),
+          hasCustom ?
+            // exempt-ui01 reset order button
+            h("button", { type: "button", className: "btn-reset-order", style: resetBtnStyle, onClick: onResetOrder }, tr("workshop.resetOrder") || "恢复默认排序") : null,
+        ),
+        h("div", { className: "featured-grid" },
+          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession, h })),
+        ),
+      );
+    }
+
+    function renderRegularStatus(statusOpts, tr) {
+      const { status, page, err, count } = statusOpts;
+      if (status === "loading" && page === 1) return h("p", { className: "sh-mkt-status" }, tr("mkt.loading"));
+      if (status === "error") return h("p", { className: "sh-mkt-status" }, tr("mkt.error", { m: err }));
+      if (status === "ready" && count === 0) return h("p", { className: "sh-mkt-status" }, tr("search.empty"));
+      return null;
+    }
+
+    function renderRegularSection(opts) {
+      const { hasQuery, regularItems, uninstalledOnly, setUninstalledOnly, status, page, err, tr, setOpen, onToggle } = opts;
+      const titleKey = hasQuery ? "workshop.searchResults" : "workshop.otherTitle";
+      const statusNode = renderRegularStatus({ status, page, err, count: regularItems.length }, tr);
+      const onFilterClick = () => setUninstalledOnly(!uninstalledOnly);
+      return h("section", { className: "regular-section" },
+        h("div", { className: "regular-header" },
+          h("div", { className: "regular-title-row" },
+            h("span", null, tr(titleKey)),
+            h("span", { className: "regular-title-count" }, " · " + regularItems.length),
+          ),
+          h("div", { className: "regular-controls" },
+            h("div", { className: "filter-item" + (uninstalledOnly ? " checked" : ""), onClick: onFilterClick },
+              h("div", { className: "filter-circle" }),
+              h("span", null, tr("workshop.onlyUninstalled") || "仅显示未安装"),
+            ),
+            h("div", { className: "sort-btn" }, h("span", null, tr("workshop.sortRecent") || "排序: 最近")),
+          ),
+        ),
+        statusNode,
+        regularItems.length ? h("div", { className: "regular-grid" }, regularItems.map((item) => renderRegularCard(item, { tr, onOpen: setOpen, onToggle, h }))) : null,
+      );
+    }
+
+    function renderExpertsTab(opts) {
+      const { displayedExperts, tr, isEn, expertMarketToggling, onToggleExpert } = opts;
+      const emptyMsg = isEn ? "No matching experts" : "没有匹配的专家";
+      if (displayedExperts.length === 0) return h("div", { className: "sh-mkt-empty" }, tr("expert.empty") || emptyMsg);
+      return h("div", { className: "expert-market-grid" }, displayedExperts.map((it) => renderExpertCard(it, { tr, isEn, expertMarketToggling, onToggle: onToggleExpert, h })));
+    }
+
+    function renderMineCardsList(filteredMine, opts) {
+      const { tr, setOpen, handleSwitchToggle } = opts;
+      if (!filteredMine.length) {
+        const emptyPrompt = tr ? (tr("workshop.emptyMine") || "暂无已安装的 Skill") : "暂无已安装的 Skill";
+        return h("p", { className: "sh-mkt-status" }, emptyPrompt);
       }
-    }
-
-    const EXPERT_STATUS_CONFIG = {
-      enabled: { statusKey: "expertMarket.enabled", defaultZh: "已入职", defaultEn: "Employed", btnKey: "expertMarket.disable", defaultBtn: "禁用", defaultBtnEn: "Disable" },
-      available: { statusKey: "expertMarket.available", defaultZh: "可聘用", defaultEn: "Hireable", btnKey: "expertMarket.install", defaultBtn: "安装", defaultBtnEn: "Install" },
-      disabled: { statusKey: "expertMarket.disabled", defaultZh: "已离职", defaultEn: "Resigned", btnKey: "expertMarket.install", defaultBtn: "安装", defaultBtnEn: "Install" },
-      coming_soon: { statusKey: "expertMarket.comingSoon", defaultZh: "即将推出", defaultEn: "Coming soon", btnKey: "", defaultBtn: "", defaultBtnEn: "" },
-    };
-
-    function renderExpertCard(item, opts) {
-      const { tr, isEn, expertMarketToggling, onToggle } = opts;
-      const title = isEn ? (item.nameEn || item.name) : item.name;
-      const desc = isEn ? (item.descriptionEn || item.description) : item.description;
-      const conf = EXPERT_STATUS_CONFIG[item.status] || EXPERT_STATUS_CONFIG.available;
-
-      const localizedStatus = tr(conf.statusKey) || (isEn ? conf.defaultEn : conf.defaultZh);
-      const statusText = "[ " + localizedStatus + " ]";
-      const btnText = conf.btnKey ? (tr(conf.btnKey) || (isEn ? conf.defaultBtnEn : conf.defaultBtn)) : "";
-      const showButton = Boolean(conf.btnKey);
-
-      return h("div", { key: item.id, className: "expert-card" },
-        h("div", { className: "expert-card-avatar-wrap" },
-          h("img", {
-            className: "expert-card-avatar",
-            src: iconSrc(item.avatar),
-            alt: title,
-            loading: "lazy",
-            onError: (e) => {
-              e.currentTarget.style.display = "none";
-              const next = e.currentTarget.nextElementSibling;
-              if (next) next.style.display = "grid";
-            },
-          }),
-          h("div", {
-            className: "expert-card-avatar-fallback",
-            style: { display: "none" },
-          }, initials(title)),
-        ),
-        showButton ? h("div", { className: "expert-card-action" },
-          h("button", {
-            type: "button",
-            className: "expert-pill-btn",
-            disabled: expertMarketToggling === item.id,
-            onClick: (e) => {
-              e.stopPropagation();
-              onToggle(item);
-            },
-          }, expertMarketToggling === item.id ? "..." : btnText),
-        ) : null,
-        h("div", { className: "expert-card-status " + (item.status || "") }, statusText),
-        h("div", { className: "expert-card-title" }, title),
-        h("p", { className: "expert-card-desc" }, desc),
+      return h("div", { className: "regular-grid" },
+        filteredMine.map((it) => renderMineCard(it, { tr, onOpen: setOpen, onToggle: handleSwitchToggle, h })),
       );
     }
 
-    function renderFeaturedCard(item, tr, onOpen, onPin, onTry) {
-      const coverSrc = item.cover && item.cover.asset ? iconSrc(item.cover.asset) : (item.coverUrl || "");
-      const title = resolveItemTitle(item, tr);
-      const desc = resolveItemDesc(item, tr) || "暂无描述";
-      const handleTry = onTry || safeTrySkillInSession;
-
-      return h("div", {
-        key: item.slug || item.id,
-        className: "featured-card",
-        onClick: () => onOpen(item),
-      },
-        h("div", { className: "featured-cover-wrap" },
-          coverSrc ? h("img", {
-            src: coverSrc,
-            alt: (item.cover && item.cover.alt) || title || "Cover",
-            loading: "lazy",
-            style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-            onError: (e) => {
-              e.currentTarget.style.display = "none";
-              const next = e.currentTarget.nextElementSibling;
-              if (next) next.style.display = "block";
-            },
-          }) : null,
-          h("svg", {
-            viewBox: "0 0 320 180",
-            width: "100%",
-            height: "100%",
-            fill: "none",
-            xmlns: "http://www.w3.org/2000/svg",
-            style: coverSrc ? { display: "none" } : undefined,
-          },
-            h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
-            h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
-            h("text", { x: "160", y: "96", textAnchor: "middle", fill: "var(--dsw-alias-brand-primary, #6f59ff)", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
-          ),
-          h("div", { className: "featured-hover-actions" },
-            h("button", {
-              type: "button",
-              className: "hover-btn hover-btn-pin",
-              title: tr("workshop.pinToTop") || "置顶",
-              onClick: (e) => { e.stopPropagation(); onPin(item.id); },
-            }, tr("workshop.pinToTop") || "置顶"),
-            h("button", {
-              type: "button",
-              className: "hover-btn hover-btn-detail",
-              onClick: (e) => { e.stopPropagation(); onOpen(item); },
-            }, tr("workshop.detail") || "查看详情"),
-            h("button", {
-              type: "button",
-              className: "hover-btn hover-btn-try",
-              onClick: (e) => { e.stopPropagation(); handleTry(item); },
-            }, tr("workshop.try") || "去对话中试试"),
-          ),
-        ),
-        h("div", { className: "featured-content" },
-          h("div", { className: "featured-card-name", title }, title),
-          h("div", { className: "featured-card-desc" }, desc),
-        ),
+    function renderMineTab(opts) {
+      const { mineToolbarOpts, filteredMine, setOpen, handleSwitchToggle, tr } = opts;
+      return h("div", null,
+        renderMineToolbar(mineToolbarOpts),
+        renderMineCardsList(filteredMine, { tr, setOpen, handleSwitchToggle }),
       );
     }
 
-    function renderRegularCard(item, tr, onOpen, onToggle) {
-      const title = resolveItemTitle(item, tr);
-      const desc = resolveItemDesc(item, tr) || "暂无描述";
-      return h("div", {
-        key: item.slug || item.id,
-        className: "regular-card",
-        onClick: () => onOpen(item),
-      },
-        h("div", { className: "regular-card-info" },
-          h("div", { className: "regular-card-top" },
-            h("div", { className: "regular-card-title", title }, title),
-            item.downloads ? h("span", { className: "regular-card-dl" }, fmt(item.downloads, tr)) : null,
-          ),
-          h("div", { className: "regular-card-desc" }, desc),
-        ),
-        h(WorkshopSwitch, {
-          checked: item.installed && item.enabled !== false,
-          onChange: () => onToggle(item),
-        }),
+    function renderDiscoverTab(opts) {
+      const { featuredItems, featuredSectionOpts, category, hasQuery, regularSectionOpts, hasMore, onMore, tr } = opts;
+      const btn = typeof Button !== "undefined" ? Button : "button";
+      return h("div", null,
+        featuredItems.length > 0 ? renderFeaturedSection(featuredSectionOpts) : null,
+        category === "featured" && !hasQuery ? null : renderRegularSection(regularSectionOpts),
+        hasMore ? h(btn, { size: "sm", variant: "outline", onClick: onMore }, tr("mkt.more")) : null,
       );
     }
 
-    function renderMineCard(item, tr, onOpen, onToggle) {
-      const title = resolveItemTitle(item, tr);
-      const desc = resolveItemDesc(item, tr) || "暂无描述";
-      return h("div", {
-        key: item.slug || item.id,
-        className: "regular-card",
-        onClick: () => onOpen(item),
-      },
-        h("div", { className: "regular-card-info" },
-          h("div", { className: "regular-card-top" },
-            h("div", { className: "regular-card-title", title }, title),
-          ),
-          h("div", { className: "regular-card-desc" }, desc),
-        ),
-        h(WorkshopSwitch, {
-          checked: item.enabled !== false,
-          onChange: () => onToggle(item),
-        }),
-      );
+    function renderPlazaTabContent(opts) {
+      if (opts.isExpertTab) return renderExpertsTab(opts);
+      if (opts.mainTab === "mine") return renderMineTab(opts);
+      return renderDiscoverTab(opts);
+    }
+
+    function resolvePlazaSectionsData(opts) {
+      const { state, tr, onToggleSwitch, onToggleExp } = opts;
+      const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
+      const activePreset = SkillShelf.resolveActivePreset({ sessions });
+      const presetBinding = SkillShelf.getPresetSkillBinding(activePreset);
+      const hasQuery = Boolean(state.submitted.trim());
+      const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(state.items, {
+        category: state.category, query: state.submitted, uninstalledOnly: state.uninstalledOnly, installedItems: state.installedItems, presetBinding, customOrder: state.customOrder,
+      });
+      const isEn = tr("locale") === "en";
+      const isExpertTab = state.mainTab === "experts-market";
+      const { introHeading, introSubtitle, placeholderText } = resolveIntroTexts(state, tr, isEn, isExpertTab);
+      const displayedExperts = filterDisplayedExperts(state.expertMarketItems, isExpertTab, state.searchQuery);
+      const filteredMine = filterMineItems(state.installedItems, { category: state.category, presetBinding, mineCategory: state.mineCategory, mineSource: state.mineSource, searchQuery: state.searchQuery });
+      const availableSources = Array.from(new Set(state.installedItems.map(extractItemSourceKey).filter(Boolean)));
+      const workshopCategories = buildWorkshopCategories(presetBinding, tr);
+      const onMoveToTop = (targetId) => handleMoveToTop(targetId, featuredItems, state, opts.apiFn);
+      const onResetOrder = () => handleResetOrder(state, opts.apiFn);
+      const onOpenInstall = () => state.setOpenInstallModal(true);
+      const onSearchSubmit = () => { state.setSubmitted(state.searchQuery); state.setPage(1); };
+      const tabContentOpts = {
+        isExpertTab, displayedExperts, tr, isEn, expertMarketToggling: state.expertMarketToggling, onToggleExpert: onToggleExp,
+        mainTab: state.mainTab, filteredMine, setOpen: state.setOpen, handleSwitchToggle: onToggleSwitch, category: state.category, hasQuery, hasMore: state.hasMore,
+        onMore: () => state.setPage(state.page + 1),
+        featuredItems,
+        mineToolbarOpts: { mineCategory: state.mineCategory, setMineCategory: state.setMineCategory, mineSource: state.mineSource, setMineSource: state.setMineSource, availableSources, autoUpdate: state.autoUpdate, setAutoUpdate: state.setAutoUpdate, tr },
+        featuredSectionOpts: { featuredItems, customOrder: state.customOrder, onResetOrder, tr, setOpen: state.setOpen, onMoveToTop },
+        regularSectionOpts: { hasQuery, regularItems, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
+      };
+      return {
+        isExpertTab,
+        introOpts: { introHeading, introSubtitle, isExpertTab, isEn, tr, onOpenInstall },
+        navBarOpts: { mainTab: state.mainTab, setMainTab: state.setMainTab, setPage: state.setPage, searchQuery: state.searchQuery, setSearchQuery: state.setSearchQuery, placeholderText, onSearchSubmit, tr, isEn },
+        categoryBarOpts: { category: state.category, setCategory: state.setCategory, setMineCategory: state.setMineCategory, setPage: state.setPage, workshopCategories, tr },
+        tabContentOpts,
+      };
+    }
+
+    function usePlazaExpertEffect(state) {
+      useEffect(() => {
+        if (state.mainTab !== "experts-market") return;
+        const onListSuccess = (d) => {
+          if (d && Array.isArray(d.items)) state.setExpertMarketItems(d.items);
+        };
+        api("expertMarketList").then(onListSuccess).catch(() => {});
+      }, [state.mainTab, state.setExpertMarketItems]);
+    }
+
+    function mapInstalledRow(it) {
+      return { ...it, installed: true, enabled: it.enabled !== false };
+    }
+
+    function usePlazaInstalledLoader(state) {
+      const loadInstalled = useCallback(() => {
+        const onListSuccess = (d) => {
+          if (!d || !Array.isArray(d.items)) return;
+          state.setInstalledItems(d.items.map(mapInstalledRow));
+        };
+        api("list").then(onListSuccess).catch(() => {});
+      }, [state.setInstalledItems]);
+
+      useEffect(() => { loadInstalled(); }, [loadInstalled]);
+      return loadInstalled;
+    }
+
+    function resolvePlazaHooks() {
+      const stateHook = typeof useState === "function" ? useState : null;
+      const effectHook = typeof useEffect === "function" ? useEffect : null;
+      const cbHook = typeof useCallback === "function" ? useCallback : null;
+      return { useState: stateHook, useEffect: effectHook, useCallback: cbHook };
+    }
+
+    function resolvePlazaSearchDeps(effectHook) {
+      return {
+        api: typeof api === "function" ? api : null,
+        apiCacheKey: typeof apiCacheKey === "function" ? apiCacheKey : null,
+        apiCache: typeof apiCache !== "undefined" ? apiCache : null,
+        API_CACHE_TTL_MS: typeof API_CACHE_TTL_MS !== "undefined" ? API_CACHE_TTL_MS : undefined,
+        useEffect: effectHook,
+      };
+    }
+
+    function renderPlazaModals(opts) {
+      const { state, mark, loadInstalled, onCloseModal, onConfirm } = opts;
+      const drawerNode = state.open ? h(Drawer, { item: state.open, onClose: () => state.setOpen(null), onInstalled: (it) => mark(it, true), onUninstalled: (it) => mark(it, false) }) : null;
+      const installNode = h(InstallModal, { open: state.openInstallModal, onClose: () => state.setOpenInstallModal(false), onInstalled: (it) => { mark(it, true); loadInstalled(); } });
+      const confirmNode = h(ConfirmInstallModal, { item: state.confirmInstallItem, onConfirm, error: state.confirmInstallError, installing: state.confirmInstalling, onClose: onCloseModal });
+      return [drawerNode, installNode, confirmNode];
     }
 
     function SkillPlaza(props) {
       const tr = useTr();
-      const pageSize = 80;
-      const initialSubmitted = (props && props.submittedQuery) ?? "";
+      const hooks = resolvePlazaHooks();
+      const state = usePlazaState((props && props.submittedQuery) ?? "", hooks);
 
-      const [mainTab, setMainTab] = useState("discover"); // "discover" | "mine"
-      const [category, setCategory] = useState("");
-      const [page, setPage] = useState(1);
-      const [searchQuery, setSearchQuery] = useState("");
-      const [submitted, setSubmitted] = useState(initialSubmitted);
-      const [uninstalledOnly, setUninstalledOnly] = useState(false);
-      const [autoUpdate, setAutoUpdate] = useState(false);
-      const [mineCategory, setMineCategory] = useState("");
-      const [mineSource, setMineSource] = useState("");
+      usePlazaExpertEffect(state);
+      const loadInstalled = usePlazaInstalledLoader(state);
+      usePlazaSearchEffect(state, resolvePlazaSearchDeps(hooks.useEffect));
 
-      const [items, setItems] = useState([]);
-      const [installedItems, setInstalledItems] = useState([]);
-      const [total, setTotal] = useState(0);
-      const [hasMore, setHasMore] = useState(false);
-      const [fallback, setFallback] = useState(false);
-      const [status, setStatus] = useState("loading");
-      const [err, setErr] = useState("");
-
-      const [open, setOpen] = useState(null);
-      const [openInstallModal, setOpenInstallModal] = useState(false);
-      const [confirmInstallItem, setConfirmInstallItem] = useState(null);
-      const [confirmInstallError, setConfirmInstallError] = useState("");
-      const [confirmInstalling, setConfirmInstalling] = useState(false);
-      const [customOrder, setCustomOrder] = useState(() => {
-        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.getHomeCustomOrder === "function") {
-          return SkillShelf.getHomeCustomOrder();
-        }
-        return null;
-      });
-
-      const [expertMarketItems, setExpertMarketItems] = useState(DEFAULT_MARKET_EXPERTS);
-      const [expertMarketToggling, setExpertMarketToggling] = useState("");
-
-      const loadExpertMarket = useCallback(() => {
-        api("expertMarketList")
-          .then((d) => {
-            if (d && Array.isArray(d.items)) {
-              setExpertMarketItems(d.items);
-            }
-          })
-          .catch(() => {});
-      }, []);
-
-      useEffect(() => {
-        if (mainTab === "experts-market") {
-          loadExpertMarket();
-        }
-      }, [mainTab, loadExpertMarket]);
-
-      const handleToggleExpert = async (item) => {
-        if (expertMarketToggling) return;
-        const isEnabled = item.status === "enabled";
-        const actionMethod = isEnabled ? "expertMarketDisable" : "expertMarketInstall";
-        const nextStatus = isEnabled ? "disabled" : "enabled";
-
-        setExpertMarketItems((cur) =>
-          cur.map((it) => (it.id === item.id ? { ...it, status: nextStatus } : it))
-        );
-        setExpertMarketToggling(item.id);
-
-        try {
-          const res = await api(actionMethod, { id: item.id });
-          if (res && res.status) {
-            setExpertMarketItems((cur) =>
-              cur.map((it) => (it.id === item.id ? { ...it, status: res.status } : it))
-            );
-          }
-        } catch {
-          setExpertMarketItems((cur) =>
-            cur.map((it) => (it.id === item.id ? { ...it, status: item.status } : it))
-          );
-        } finally {
-          setExpertMarketToggling("");
-        }
-      };
-
-      const loadInstalled = useCallback(() => {
-        api("list")
-          .then((d) => {
-            if (d && Array.isArray(d.items)) {
-              setInstalledItems(d.items.map((it) => ({
-                ...it,
-                installed: true,
-                enabled: it.enabled !== false,
-              })));
-            }
-          })
-          .catch(() => {});
-      }, []);
-
-      useEffect(() => {
-        loadInstalled();
-      }, [loadInstalled]);
-
-      const applySearchBody = (d, mode) => {
-        const filterCat = category === "featured" ? "" : category;
-        const next = (d.items || []).filter((item) => !filterCat || SkillShelf.matchesDomainTag(item, filterCat));
-        const isFallback = !!d.fallback;
-        setFallback(isFallback);
-        const nextTotal = isFallback ? next.length : Math.min(Number(d.total) || 0, next.length);
-        if (mode === "replace") setItems(next);
-        else setItems((cur) => cur.concat(next));
-        setTotal(nextTotal);
-        setHasMore(isFallback ? false : !!d.hasMore);
-        setStatus("ready");
-        setErr("");
-        return next;
-      };
-
-      useEffect(() => {
-        let live = true;
-        const payload = SkillShelf.buildPlazaSearchPayload(submitted, category === "featured" ? "" : category, page, pageSize);
-        const key = apiCacheKey("search", payload);
-        const cached = apiCache.get(key);
-        const hasFresh = cached && Date.now() - cached.at < API_CACHE_TTL_MS;
-        if (page === 1 && hasFresh) {
-          applySearchBody(cached.body, "replace");
-        } else if (page === 1) {
-          setStatus("loading");
-        }
-        api("search", payload)
-          .then((d) => {
-            if (!live) return;
-            const next = applySearchBody(d, page === 1 ? "replace" : "append");
-            const slugs = next.map((it) => it.slug).filter(Boolean);
-            if (slugs.length) {
-              api("ratings", { slugs }, { skipCache: true }).then((r) => {
-                if (!live || !r || !r.ratings) return;
-                setItems((cur) => cur.map((it) => {
-                  const score = r.ratings[it.slug];
-                  return score != null ? { ...it, rating: score } : it;
-                }));
-              }).catch(() => {});
-            }
-          })
-          .catch((e) => {
-            if (!live) return;
-            if (page === 1 && !hasFresh) {
-              setItems([]);
-              setTotal(0);
-              setHasMore(false);
-              setFallback(false);
-              setStatus("error");
-              setErr(e.message || String(e));
-            }
-          });
-        return () => { live = false; };
-      }, [submitted, category, page]);
-
-      const mark = (item, installed) => {
-        setItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, installed } : it));
-        setInstalledItems((cur) => {
-          if (installed) {
-            const exists = cur.some((it) => it.slug === item.slug || it.id === item.id);
-            if (exists) return cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, installed: true } : it);
-            return [{ ...item, installed: true, enabled: true }, ...cur];
-          }
-          return cur.filter((it) => it.slug !== item.slug && it.id !== item.id);
-        });
-        setOpen((cur) => (cur && (cur.slug === item.slug || cur.id === item.id)) ? { ...cur, installed } : cur);
-      };
-
-      const handleSwitchToggle = (item) => {
-        if (item.installed) {
-          const next = item.enabled === false;
-          setItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
-          setInstalledItems((cur) => cur.map((it) => (it.slug === item.slug || it.id === item.id) ? { ...it, enabled: next } : it));
-        } else {
-          setConfirmInstallError("");
-          setConfirmInstallItem(item);
-        }
-      };
-
-      const handleConfirmInstall = async () => {
-        if (!confirmInstallItem || confirmInstalling) return;
-        const item = confirmInstallItem;
-        const slug = item.slug || item.token || item.skillKey || "";
-        setConfirmInstalling(true);
-        setConfirmInstallError("");
-        try {
-          await api("install", { slug, catalogId: item.catalogId || item.id });
-          mark(item, true);
-          setConfirmInstallItem(null);
-        } catch (error) {
-          setConfirmInstallError(error?.message || String(error));
-        } finally {
-          setConfirmInstalling(false);
-        }
-      };
-
-      const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
-      const activePreset = SkillShelf.resolveActivePreset({ sessions });
-      const presetBinding = SkillShelf.getPresetSkillBinding(activePreset);
-
-      const hasQuery = Boolean(submitted.trim());
-      const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(items, {
-        category, query: submitted, uninstalledOnly, installedItems, presetBinding, customOrder,
-      });
-
-      const handleMoveToTop = (targetId) => {
-        const currentList = featuredItems.map((it) => it.id);
-        const filtered = currentList.filter((id) => id !== targetId);
-        const newOrder = [targetId, ...filtered];
-        setCustomOrder(newOrder);
-        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.saveHomeCustomOrder === "function") {
-          SkillShelf.saveHomeCustomOrder(newOrder);
-        }
-        api("homeCustomOrder", { order: newOrder }).catch(() => {});
-      };
-
-      const handleResetOrder = () => {
-        setCustomOrder(null);
-        if (typeof SkillShelf !== "undefined" && typeof SkillShelf.saveHomeCustomOrder === "function") {
-          SkillShelf.saveHomeCustomOrder(null);
-        }
-        api("homeCustomOrder", { order: [] }).catch(() => {});
-      };
-
-      // 我的 Skill 过滤
-      const filteredMine = installedItems.filter((item) => {
-        if (category === "featured" && !SkillShelf.isRecommendedInstalledSkill(item)) return false;
-        if (category && category !== "featured") {
-          if (presetBinding) {
-            const cat = String(item.category || item.categoryLabel || "").trim();
-            const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-            if (cat !== category && !tags.includes(category)) return false;
-          } else if (!SkillShelf.matchesDomainTag(item, category)) {
-            return false;
-          }
-        }
-        if (mineCategory && !SkillShelf.matchesDomainTag(item, mineCategory)) return false;
-        if (mineSource) {
-          const src = String(item.source || item.origin || item.channel || "OmniMux").toLowerCase();
-          if (src !== mineSource.toLowerCase()) return false;
-        }
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          const hay = [item.name, item.title, item.description, item.slug].filter(Boolean).join(" ").toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      });
-
-      const availableSources = Array.from(new Set(installedItems.map((it) => it.source || it.origin || it.channel || "OmniMux").filter(Boolean)));
-
-      const workshopCategories = presetBinding
-        ? [
-            { id: "", label: tr("workshop.catAll") || "全部" },
-            ...presetBinding.categories.map((c) => ({ id: c.id, label: c.name })),
-          ]
-        : [
-            { id: "", label: tr("workshop.catAll") || "全部" },
-            { id: "featured", label: tr("workshop.catFeatured") || "精选" },
-            ...WORKSHOP_DOMAIN_ORDER.map((id) => {
-              const row = SkillShelf.SKILL_SHELF_TAXONOMY.find((r) => r.id === id);
-              return { id, label: row ? tr(row.labelKey) : id };
-            }),
-          ];
-
-      const isEn = tr("locale") === "en";
-      const isExpertTab = mainTab === "experts-market";
-      let introHeading = tr("workshop.title") || "Skill";
-      if (isExpertTab) {
-        introHeading = tr("expertMarket.title") || (isEn ? "Experts Market" : "专家市场");
-      }
-      let introSubtitle = tr("workshop.subtitle");
-      if (isExpertTab) {
-        introSubtitle = tr("expertMarket.subtitle") || (isEn ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区");
-      }
-
-      const displayedExperts = (expertMarketItems.length ? expertMarketItems : DEFAULT_MARKET_EXPERTS).filter((item) => {
-        if (!isExpertTab || !searchQuery.trim()) return true;
-        const q = searchQuery.trim().toLowerCase();
-        const hay = [item.name, item.nameEn, item.description, item.descriptionEn].filter(Boolean).join(" ").toLowerCase();
-        return hay.includes(q);
-      });
-
-      let placeholderText = tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder");
-      if (isExpertTab) {
-        placeholderText = tr("expertMarket.searchPlaceholder") || (isEn ? "Search all experts..." : "搜索全部专家");
-      }
+      const apiFn = typeof api === "function" ? api : null;
+      const mark = (item, installed) => updatePlazaItemInstalled(item, installed, state, updateInstalledItemsList);
+      const onToggleSwitch = (item) => handleSwitchToggle(item, state, updateInstalledItemsList);
+      const onToggleExp = (item) => executeToggleExpert(item, state, apiFn);
+      const onConfirm = () => handleConfirmInstall(state.confirmInstallItem, state, mark, apiFn);
+      const sections = resolvePlazaSectionsData({ state, tr, onToggleSwitch, onToggleExp, apiFn });
+      const onCloseModal = () => { if (!state.confirmInstalling) { state.setConfirmInstallItem(null); state.setConfirmInstallError(""); } };
+      const [drawerNode, installNode, confirmNode] = renderPlazaModals({ state, mark, loadInstalled, onCloseModal, onConfirm });
 
       return h("div", { className: "sh-mkt" },
-        h("section", { className: "workshop-intro", "aria-label": introHeading },
-          h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, introHeading),
-          h("p", { className: "workshop-description" }, introSubtitle),
-          isExpertTab ? h("div", { className: "action-row" },
-            h("button", {
-              type: "button",
-              className: "btn-create",
-              onClick: () => createSkillSession({ mode: "expert-creator", preset: "cordis", text: "" }),
-            },
-              h(PlazaIcon, { size: 14 }),
-              tr("expertMarket.createExpert") || (isEn ? "Create Expert" : "创建专家"),
-            ),
-          ) : h("div", { className: "action-row" },
-            h("button", { type: "button", className: "btn-create", onClick: () => createSkillSession({ text: "/skill-creator" }) },
-              h(PlazaIcon, { size: 14 }), tr("workshop.create")),
-            h("button", { type: "button", className: "btn-install", onClick: () => setOpenInstallModal(true) },
-              h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true" },
-                h("path", { d: "M8 3v10M3 8h10", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" })), tr("workshop.install")),
-          ),
-        ),
-        // 双 Tab 与搜索行
-        h("div", { className: "nav-bar" },
-          h("div", { className: "nav-tabs" },
-            h("button", {
-              type: "button",
-              "aria-pressed": mainTab === "discover",
-              className: "nav-tab" + (mainTab === "discover" ? " active" : ""),
-              onClick: () => { setMainTab("discover"); setPage(1); },
-            },
-              h("span", null, tr("workshop.tabSkill") || "Skill"),
-              h("svg", {
-                className: "tab-info-icon",
-                width: "14",
-                height: "14",
-                viewBox: "0 0 24 24",
-                fill: "none",
-                stroke: "currentColor",
-                strokeWidth: "2",
-                strokeLinecap: "round",
-                strokeLinejoin: "round",
-                "aria-hidden": "true",
-              },
-                h("circle", { cx: "12", cy: "12", r: "10" }),
-                h("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
-                h("line", { x1: "12", y1: "8", x2: "12.01", y2: "8" }),
-              ),
-            ),
-            h("button", {
-              type: "button",
-              "aria-pressed": mainTab === "mine",
-              className: "nav-tab" + (mainTab === "mine" ? " active" : ""),
-              onClick: () => setMainTab("mine"),
-            },
-              h("span", null, tr("workshop.tabMine") || "我的 Skill"),
-            ),
-            h("button", {
-              type: "button",
-              "aria-pressed": mainTab === "experts-market",
-              className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""),
-              onClick: () => setMainTab("experts-market"),
-            },
-              h("span", null, tr("workshop.tabExpertsMarket") || (isEn ? "Experts Market" : "专家市场")),
-            ),
-          ),
-          h("div", { className: "search-box" },
-            h("svg", { className: "search-icon", viewBox: "0 0 24 24" },
-              h("path", { d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" }),
-            ),
-            h("input", {
-              type: "text",
-              value: searchQuery,
-              placeholder: placeholderText,
-              onChange: (e) => setSearchQuery(e.target.value),
-              onKeyDown: (e) => {
-                if (e.key === "Enter") {
-                  setSubmitted(searchQuery);
-                  setPage(1);
-                }
-              },
-            }),
-          ),
-        ),
-
-        isExpertTab ? null : h("div", { className: "category-bar", "aria-label": tr("workshop.category") },
-          workshopCategories.map((c) => h("button", {
-            key: c.id,
-            type: "button",
-            className: "cat-btn" + (category === c.id ? " active" : ""),
-            "aria-pressed": category === c.id,
-            onClick: () => { setCategory(c.id); setMineCategory(""); setPage(1); },
-          }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
-        ),
-
-        // 视图内容
-        isExpertTab ? h("div", { className: "expert-market-container" },
-          displayedExperts.length === 0
-            ? h("div", { className: "sh-mkt-empty" }, tr("expert.empty") || (isEn ? "No matching experts" : "没有匹配的专家"))
-            : h("div", { className: "expert-market-grid" },
-                displayedExperts.map((item) => renderExpertCard(item, { tr, isEn, expertMarketToggling, onToggle: handleToggleExpert })),
-              ),
-        ) : mainTab === "mine" ? h("div", null,
-          // 「我的 Skill」专属工具行
-          h("div", { className: "mine-toolbar" },
-            h("button", {
-              type: "button",
-              className: "pill-dropdown",
-              onClick: () => {
-                const order = ["", ...WORKSHOP_DOMAIN_ORDER];
-                const idx = order.indexOf(mineCategory);
-                setMineCategory(order[(idx + 1) % order.length]);
-              },
-            },
-              h("span", null, (tr("workshop.catPrefix") || "分类 ") + (mineCategory || (tr("workshop.catAll") || "全部"))),
-              h("span", { style: { fontSize: "10px" } }, "▾"),
-            ),
-            availableSources.length ? h("button", {
-              type: "button",
-              className: "pill-dropdown",
-              onClick: () => {
-                const order = ["", ...availableSources];
-                const idx = order.indexOf(mineSource);
-                setMineSource(order[(idx + 1) % order.length]);
-              },
-            },
-              h("span", null, (tr("workshop.sourcePrefix") || "来源 ") + (mineSource || (tr("workshop.catAll") || "全部"))),
-              h("span", { style: { fontSize: "10px" } }, "▾"),
-            ) : null,
-            h("div", { className: "auto-update-wrap" },
-              h("span", null, tr("workshop.autoUpdate") || "自动更新"),
-              h(WorkshopSwitch, {
-                checked: autoUpdate,
-                onChange: setAutoUpdate,
-              }),
-            ),
-          ),
-          filteredMine.length ? h("div", { className: "regular-grid" },
-            filteredMine.map((item) => renderMineCard(item, tr, setOpen, handleSwitchToggle)),
-          ) : h("p", { className: "sh-mkt-status" }, tr("workshop.emptyMine") || "暂无已安装的 Skill"),
-        ) : h("div", null,
-          // 官方精选（结果大于等于 1 项才显示，否则完全隐藏）
-          featuredItems.length > 0 ? h("section", { className: "featured-section" },
-            h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
-              h("h2", { className: "featured-title", style: { margin: 0 } }, tr("workshop.featuredTitle") || "官方精选"),
-              customOrder && customOrder.length ? h("button", {
-                type: "button",
-                className: "btn-reset-order",
-                style: {
-                  background: "transparent",
-                  border: "1px solid var(--dsw-alias-border-subtle, rgba(255,255,255,.12))",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                  color: "var(--dsw-alias-label-secondary, #cbd5e1)",
-                  padding: "3px 8px",
-                  cursor: "pointer",
-                },
-                onClick: handleResetOrder,
-              }, tr("workshop.resetOrder") || "恢复默认排序") : null,
-            ),
-            h("div", { className: "featured-grid" },
-              featuredItems.map((item) => renderFeaturedCard(item, tr, setOpen, handleMoveToTop, safeTrySkillInSession)),
-            ),
-          ) : null,
-
-          // 其他Skill区块（在精选分类下不显示普通区）
-          category === "featured" && !hasQuery ? null : h("section", { className: "regular-section" },
-            h("div", { className: "regular-header" },
-              h("div", { className: "regular-title-row" },
-                h("span", null, tr(hasQuery ? "workshop.searchResults" : "workshop.otherTitle")),
-                h("span", { className: "regular-title-count" }, " · " + (regularItems.length)),
-              ),
-              h("div", { className: "regular-controls" },
-                h("div", {
-                  className: "filter-item" + (uninstalledOnly ? " checked" : ""),
-                  onClick: () => setUninstalledOnly(!uninstalledOnly),
-                },
-                  h("div", { className: "filter-circle" }),
-                  h("span", null, tr("workshop.onlyUninstalled") || "仅显示未安装"),
-                ),
-                h("div", { className: "sort-btn" },
-                  h("span", null, tr("workshop.sortRecent") || "排序: 最近"),
-                ),
-              ),
-            ),
-            status === "loading" && page === 1 ? h("p", { className: "sh-mkt-status" }, tr("mkt.loading")) : null,
-            status === "error" ? h("p", { className: "sh-mkt-status" }, tr("mkt.error", { m: err })) : null,
-            status === "ready" && !regularItems.length ? h("p", { className: "sh-mkt-status" }, tr("search.empty")) : null,
-            regularItems.length ? h("div", { className: "regular-grid" },
-              regularItems.map((item) => renderRegularCard(item, tr, setOpen, handleSwitchToggle)),
-            ) : null,
-          ),
-          hasMore ? h(Button, { size: "sm", variant: "outline", onClick: () => setPage(page + 1) }, tr("mkt.more")) : null,
-        ),
-
-        // 详情弹窗
-        open ? h(Drawer, {
-          item: open,
-          onClose: () => setOpen(null),
-          onInstalled: (it) => mark(it, true),
-          onUninstalled: (it) => mark(it, false),
-        }) : null,
-
-        // 安装弹窗
-        h(InstallModal, {
-          open: openInstallModal,
-          onClose: () => setOpenInstallModal(false),
-          onInstalled: (it) => {
-            mark(it, true);
-            loadInstalled();
-          },
-        }),
-
-        // 未安装 switch 确认弹窗
-        h(ConfirmInstallModal, {
-          item: confirmInstallItem,
-          onConfirm: handleConfirmInstall,
-          error: confirmInstallError,
-          installing: confirmInstalling,
-          onClose: () => {
-            if (confirmInstalling) return;
-            setConfirmInstallItem(null);
-            setConfirmInstallError("");
-          },
-        }),
+        renderWorkshopIntro(sections.introOpts),
+        renderPlazaNavBar(sections.navBarOpts),
+        sections.isExpertTab ? null : renderCategoryBar(sections.categoryBarOpts),
+        renderPlazaTabContent(sections.tabContentOpts),
+        drawerNode,
+        installNode,
+        confirmNode,
       );
     }

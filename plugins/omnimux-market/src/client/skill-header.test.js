@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { test } from 'node:test'
 import { runInNewContext } from 'node:vm'
 import * as SkillShelf from './skill-picker-logic.js'
 
+const req = createRequire(import.meta.url)
 const source = readFileSync(new URL('./skill-plaza.js', import.meta.url), 'utf8')
 const h = (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity) })
 const walk = (node, predicate) => {
@@ -21,6 +23,7 @@ function renderWorkshop() {
   const stateWrites = []
   let index = 0
   const context = {
+    require: req,
     h, fmt: value => String(value), iconSrc: value => value, useTr: () => (key) => key,
     useState: (initial) => { const key = index++; return [initial, (value) => stateWrites.push([key, value])] },
     useCallback: (fn) => fn, useEffect: () => {},
@@ -57,6 +60,7 @@ test('failed installation retains dialog and reports error without installed cal
   let installed = false
   let closed = false
   const render = runInNewContext(`${source}\nInstallModal`, {
+    require: req,
     h, useState: (value) => [state++ === 0 ? { name: 'example.zip' } : value, (next) => writes.push(next)],
     useRef: () => ({ current: null }), Overlay: 'Overlay', lookup: (key) => key,
     api: async () => { throw new Error('installation-rejected') },
