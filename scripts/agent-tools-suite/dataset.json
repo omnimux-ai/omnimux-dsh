@@ -20,7 +20,7 @@
   {
     "id": "tc_inspiration_search",
     "description": "测试灵感搜索意图诱发",
-    "prompt": "在灵感库里搜索一下关于‘美食探店’爆款视频的脚本参考案例。",
+    "prompt": "在灵感社区里搜索一下关于‘美食探店’爆款视频的脚本参考案例。",
     "expectedTool": "inspiration_search",
     "expectedArgs": {
       "query": "美食探店"

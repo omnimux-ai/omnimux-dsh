@@ -21,7 +21,7 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
   'omnimux-products:library': '产品库',
   'omnimux-forms:tasks': '任务表单',
   'omnimux-accounts:library': '账号',
-  'omnimux-inspiration:library': '灵感库',
+  'omnimux-inspiration:library': '灵感社区',
   'omnimux-publish:library': '发布',
   'omnimux-analytics:library': '数据分析',
   'omnimux-workflow:library': '项目',

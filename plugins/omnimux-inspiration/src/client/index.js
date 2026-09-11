@@ -53,7 +53,7 @@ export function apply(ctx) {
           const value = t('nav')
           if (value && value !== 'nav') return value
         } catch {}
-        return '灵感库'
+        return '灵感社区'
       },
       icon: renderInspirationIcon,
       order: 18,

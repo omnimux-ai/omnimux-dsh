@@ -11,7 +11,7 @@ export type AttachmentKind =
   | 'canvas'        // 画布 DAG (.json)
   | 'asset'         // 资产库实体
   | 'product'       // 产品库货品
-  | 'inspiration';  // 灵感库条目
+  | 'inspiration';  // 灵感社区条目
 
 export type AttachmentSourcePlugin =
   | 'omnimux'

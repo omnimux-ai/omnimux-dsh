@@ -13,7 +13,7 @@
         "tierId": "tier-1-app",
         "name": "官方一级商业应用",
         "rootDirectory": "plugins/omnimux-*",
-        "description": "OmniMux 核心一级功能矩阵：市场、工作流、资产库、商品库、账号池与灵感库"
+        "description": "OmniMux 核心一级功能矩阵：市场、工作流、资产库、商品库、账号池与灵感社区"
       },
       {
         "tierId": "tier-2-vertical",
