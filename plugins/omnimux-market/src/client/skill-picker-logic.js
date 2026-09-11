@@ -36,6 +36,11 @@ export function getPresetSkillBinding(presetId, mode) {
     presetId === '短剧制作人' ||
     presetId === '短剧专精'
 
+  const isAgentDefault =
+    mode === 'agent' ||
+    norm === 'agent' ||
+    norm === 'default'
+
   const entry =
     (isDrama ? AGENT_PRESET_SKILL_BINDINGS['drama-agent'] : null) ||
     AGENT_PRESET_SKILL_BINDINGS[presetId] ||
@@ -43,7 +48,8 @@ export function getPresetSkillBinding(presetId, mode) {
     (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok' || norm === '全能社媒操盘手' || presetId === '全能社媒操盘手'
       ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
       : null) ||
-    (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null)
+    (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null) ||
+    (isAgentDefault ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] : null)
 
   if (!entry) return null
 

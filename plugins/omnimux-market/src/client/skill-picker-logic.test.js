@@ -306,6 +306,14 @@ describe('agent preset skill bindings', () => {
     assert.equal(modeBinding.name, '短剧制作人')
   })
 
+  it('mode === agent resolves tiktok-agent as original skill shelf fallback', () => {
+    const agentBinding = getPresetSkillBinding(null, 'agent')
+    assert.ok(agentBinding)
+    assert.equal(agentBinding.presetId, 'tiktok-agent')
+    assert.equal(agentBinding.name, '全能社媒操盘手')
+    assert.equal(agentBinding.skills.length, 44)
+  })
+
   it('drama-agent contains the 6 short drama categories and 23 skills', () => {
     const binding = getPresetSkillBinding('drama-agent')
     const catIds = binding.categories.map((c) => c.id)
