@@ -27,7 +27,7 @@ test('theme emits no document reset or html/body base styling',()=>{
 test('browser page embeds the real templates and contract without a runtime source dependency',async()=>{
  const result=await build({entryPoints:[`${root}src/client/FormsPage.jsx`],bundle:true,write:false,format:'cjs',platform:'browser',jsx:'automatic',alias:{'@omnimux/form-contract':`${root}../../packages/form-contract/src/index.ts`},external:['react','react/jsx-runtime','react-dom'],define:{'process.env.NODE_ENV':'"production"'}})
  const client=result.outputFiles[0].text
- for(const id of ['video-deconstruct','structure-replication','element-replacement']) assert.ok(client.includes(id))
+ for(const id of ['marketing-insight','video-deconstruct','structure-replication','element-replacement']) assert.ok(client.includes(id))
  assert.ok(!client.includes('require("@omnimux/form-contract")'))
 })
 test('packaging copies real example bytes and fails if required sources are missing',async t=>{

@@ -98,3 +98,69 @@ test('session guide switches drafts without a reference panel or send intercepti
     globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
   }
 })
+
+test('popular starters render 4 cards and marketing insight modal flows draft into input', async () => {
+  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  let draft = ''
+  let writes = 0
+  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
+  const props = () => ({
+    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
+    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => key,
+  })
+  const render = () => act(async () => root.render(React.createElement(SessionGuide, props())))
+  const click = async sel => act(async () => document.querySelector(sel).click())
+
+  try {
+    await render()
+    // 1. 验证 4 个卡片均已呈现
+    const popularCards = document.querySelectorAll('[data-popular-starter-id]')
+    assert.equal(popularCards.length, 4)
+    assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
+    assert.equal(popularCards[1].dataset.popularStarterId, 'url-to-video')
+    assert.equal(popularCards[2].dataset.popularStarterId, 'recreate-viral-ads')
+    assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
+
+    // 2. 点击占位卡片触发提示，未修改草稿
+    await click('[data-popular-starter-id="url-to-video"]')
+    await render()
+    assert.ok(document.querySelector('.omnimux-toast-pill'))
+    assert.equal(writes, 0)
+
+    // 3. 点击营销洞察卡片打开模态框
+    await click('[data-popular-starter-id="marketing-insight"]')
+    await render()
+    const modal = document.querySelector('.omnimux-insight-modal')
+    assert.ok(modal, 'modal should open')
+    const items = document.querySelectorAll('[data-insight-id]')
+    assert.equal(items.length, 6)
+
+    // 4. 切换到第2项（广告ROAS分析）
+    await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
+    await render()
+    const textarea = document.querySelector('.omnimux-insight-textarea')
+    assert.ok(textarea.value.includes('Analyze performance on [platform]'))
+
+    // 5. 点击“开始洞察 ->”按钮，提交草稿
+    await click('.omnimux-insight-submit')
+    await render()
+    assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
+    assert.ok(draft.includes('Analyze performance on [platform]'))
+    assert.equal(writes, 1)
+  } finally {
+    await act(async () => root.unmount())
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
