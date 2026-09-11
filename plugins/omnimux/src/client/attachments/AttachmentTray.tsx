@@ -478,10 +478,13 @@ function isVideoCategory(cat?: string | null): boolean {
 
 function insertVideoToken(doc: Document): boolean {
   if (!doc) return false;
-  const editor = doc.querySelector(
-    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+  // Try locating the active input area: scroll container or contenteditable
+  const scroll = doc.querySelector(
+    '[data-input-scroll], [data-composer-card] [class*="scroll"], [data-composer-card] [class*="grow"]'
   );
-  if (!editor) return false;
+  const editor = doc.querySelector(
+    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"], [data-composer-card] textarea'
+  );
 
   const existing = doc.querySelector('[data-omx-video-token="true"]');
   if (existing) {
@@ -539,39 +542,70 @@ function insertVideoToken(doc: Document): boolean {
     if (typeof window !== 'undefined') {
       (window as any).__omnimuxVideoToken = null;
     }
-    (editor as HTMLElement).focus?.();
+    if (editor && typeof (editor as HTMLElement).focus === 'function') {
+      (editor as HTMLElement).focus();
+    }
   });
 
+  let inserted = false;
+
+  // Strategy 1: insert directly into editor selection if possible
   const sel = doc.defaultView?.getSelection?.();
-  if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
-    const range = sel.getRangeAt(0);
-    range.insertNode(token);
-    range.setStartAfter(token);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } else {
-    if (editor.firstChild) {
-      editor.insertBefore(token, editor.firstChild);
-    } else {
-      editor.appendChild(token);
+  if (editor && sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+    try {
+      const range = sel.getRangeAt(0);
+      range.insertNode(token);
+      range.setStartAfter(token);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      inserted = true;
+    } catch {}
+  }
+
+  // Strategy 2: prepend inside editor container
+  if (!inserted && editor) {
+    try {
+      if (editor.firstChild) {
+        editor.insertBefore(token, editor.firstChild);
+      } else {
+        editor.appendChild(token);
+      }
+      inserted = true;
+    } catch {}
+  }
+
+  // Strategy 3: insert inside scroll / grow container right before editor
+  if (!inserted && scroll) {
+    try {
+      if (editor && editor.parentNode === scroll) {
+        scroll.insertBefore(token, editor);
+      } else if (scroll.firstChild) {
+        scroll.insertBefore(token, scroll.firstChild);
+      } else {
+        scroll.appendChild(token);
+      }
+      inserted = true;
+    } catch {}
+  }
+
+  // Strategy 4: fallback inside data-composer-card
+  if (!inserted) {
+    const card = doc.querySelector('[data-composer-card]');
+    if (card) {
+      card.insertBefore(token, card.firstChild);
+      inserted = true;
     }
   }
 
-  const space = doc.createTextNode(' ');
-  if (token.nextSibling) {
-    editor.insertBefore(space, token.nextSibling);
-  } else {
-    editor.appendChild(space);
+  if (inserted) {
+    setTimeout(() => {
+      inputEl?.focus();
+    }, 50);
+    return true;
   }
 
-  try {
-    const Input = typeof InputEvent === 'function' ? InputEvent : Event;
-    editor.dispatchEvent(new Input('input', { bubbles: true, cancelable: true }));
-  } catch {}
-
-  inputEl?.focus();
-  return true;
+  return false;
 }
 
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
@@ -621,10 +655,13 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     };
   }, []);
 
+  const [fallbackTokenVisible, setFallbackTokenVisible] = useState(false);
+
   const handleInsertVideoToken = useCallback(() => {
     if (typeof document === 'undefined') return;
     const ok = insertVideoToken(document);
     if (!ok) {
+      setFallbackTokenVisible(true);
       setHasVideoToken(true);
     }
   }, []);
@@ -797,7 +834,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               </button>
             </div>
           )}
-          {hasVideoToken && (
+          {fallbackTokenVisible && hasVideoToken && (
             <div className="omx-video-token-capsule" title="单击进行链接编辑、修改与删除">
               <div className="omx-video-token-prefix">
                 <LinkIcon size={13} />
@@ -826,6 +863,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
                 title="删除视频链接 Token"
                 onClick={() => {
                   setHasVideoToken(false);
+                  setFallbackTokenVisible(false);
                   setVideoUrl('');
                   if (typeof window !== 'undefined') {
                     (window as any).__omnimuxVideoToken = null;
