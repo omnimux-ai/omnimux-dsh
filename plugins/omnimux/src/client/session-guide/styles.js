@@ -82,9 +82,9 @@ export const GUIDE_CSS = `
 /* ==================== 热门入门方式 (Popular Starters) ==================== */
 .omnimux-popular-section {
   width: 100%;
-  margin-top: 36px;
-  padding-top: 24px;
-  border-top: 1px solid var(--dsw-alias-border-l1);
+  margin-top: 24px;
+  padding-top: 0;
+  border-top: 0;
 }
 .omnimux-popular-title {
   font-size: 16px;
