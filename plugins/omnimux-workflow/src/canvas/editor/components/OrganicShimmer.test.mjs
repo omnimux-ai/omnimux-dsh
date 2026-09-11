@@ -82,3 +82,11 @@ test('MaterialNode 契约：文本节点生成态也接入 GenerationStateContai
   assert.match(cssSrc, /\.wf-material-node__text-shell--gsc/);
   assert.match(cssSrc, /\.wf-material-node__text-shell > \.wf-gsc/);
 });
+
+test('MaterialNode 契约：音频节点生成态动画铺满整张卡片（消除内边距、上下黑底与双重边框）', () => {
+  const freshCss = readFileSync(join(here, '../../theme/components.css'), 'utf8');
+  assert.match(freshCss, /\.wf-material-node--audio \.wf-gsc/);
+  assert.match(freshCss, /\.wf-material-node--audio \.wf-gsc__skeleton-card/);
+  assert.match(freshCss, /\.wf-material-node--audio \.wf-organic-shimmer/);
+  assert.doesNotMatch(freshCss, /\.wf-gsc__box--audio \{ padding-top: 48px/);
+});
