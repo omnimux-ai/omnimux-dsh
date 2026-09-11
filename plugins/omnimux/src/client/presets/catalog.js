@@ -1,4 +1,10 @@
 // Auto-generated immutable creative presets catalog
+import {
+  GXGEN_NEW_HOOKS,
+  GXGEN_NEW_FORMATS,
+  GXGEN_NEW_STYLES,
+} from './gxgen-presets.js'
+
 export const CREATIVE_HOOKS = Object.freeze([
   {
     "id": "pippit-hook-01-mkh_3823948847620",
@@ -974,7 +980,8 @@ export const CREATIVE_HOOKS = Object.freeze([
     "durationSeconds": 3,
     "videoPath": "hooks/standout-styles/75_polaroid-highlights.mp4",
     "posterPath": "hooks/standout-styles/75_polaroid-highlights_poster.jpg"
-  }
+  },
+  ...GXGEN_NEW_HOOKS,
 ]);
 export const CREATIVE_VISUAL_STYLES = Object.freeze([
   {
@@ -1196,7 +1203,8 @@ export const CREATIVE_VISUAL_STYLES = Object.freeze([
     "description": "Romantic palace luxury with graceful ornament",
     "videoPath": "visual-styles/premium-aesthetics/20_european-rococo-palace.mp4",
     "posterPath": "visual-styles/premium-aesthetics/20_european-rococo-palace_poster.jpg"
-  }
+  },
+  ...GXGEN_NEW_STYLES,
 ]);
 export const CREATIVE_VIDEO_FORMATS = Object.freeze([
   {
@@ -2350,5 +2358,6 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: LoopZip Organizer Pouch\nKey Selling Points: Multiple smooth zipper tracks, quilted nylon texture, compact storage for travel, cosmetics, cables, and daily carry items.",
     "videoPath": "asmr/96_miniature-world-asmr-product-interaction_v1.mp4",
     "posterPath": "asmr/96_miniature-world-asmr-product-interaction_cover.jpg"
-  }
+  },
+  ...GXGEN_NEW_FORMATS,
 ]);

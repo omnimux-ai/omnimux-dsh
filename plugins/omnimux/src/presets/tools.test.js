@@ -7,36 +7,47 @@ import {
 } from './tools.js'
 
 test('Marketing Presets Tool: queryMarketingPresets 各维度与筛选检索逻辑', () => {
-  // 1. 维度总计验证
+  // 1. 维度总计验证（包含 Gxgen 合并后的全量规格）
   const totalFormats = PRESET_DIMENSIONS.format.items.length
   const totalHooks = PRESET_DIMENSIONS.hook.items.length
   const totalStyles = PRESET_DIMENSIONS.style.items.length
-  assert.equal(totalFormats, 96, '广告格式应为 96 款')
-  assert.equal(totalHooks, 75, '开场亮点应为 75 款')
-  assert.equal(totalStyles, 20, '视觉风格应为 20 款')
+  assert.equal(totalFormats, 104, '广告格式应为 104 款（含 Gxgen 8款）')
+  assert.equal(totalHooks, 84, '开场亮点应为 84 款（含 Gxgen 9款）')
+  assert.equal(totalStyles, 34, '视觉风格应为 34 款（含 Gxgen 14款）')
 
   // 2. 默认全量检索 (all)
   const allRes = queryMarketingPresets({ dimension: 'all', limit: 10 })
-  assert.equal(allRes.total, totalFormats + totalHooks + totalStyles, '全量维度总计应为 191 款')
+  assert.equal(allRes.total, totalFormats + totalHooks + totalStyles, '全量维度总计应为 222 款')
   assert.equal(allRes.items.length, 10, '默认受 limit: 10 约束')
 
   // 3. 按广告格式检索 (format)
   const formatRes = queryMarketingPresets({ dimension: 'format', limit: 50 })
-  assert.equal(formatRes.total, 96)
+  assert.equal(formatRes.total, 104)
   assert.equal(formatRes.dimension, 'format')
   assert.ok(formatRes.items.every((it) => it.dimension === 'format'))
 
   // 4. 按开场亮点检索 (hook)
   const hookRes = queryMarketingPresets({ dimension: 'hook', limit: 50 })
-  assert.equal(hookRes.total, 75)
+  assert.equal(hookRes.total, 84)
   assert.equal(hookRes.dimension, 'hook')
   assert.ok(hookRes.items.every((it) => it.dimension === 'hook'))
 
   // 5. 按视觉风格检索 (style)
   const styleRes = queryMarketingPresets({ dimension: 'style', limit: 50 })
-  assert.equal(styleRes.total, 20)
+  assert.equal(styleRes.total, 34)
   assert.equal(styleRes.dimension, 'style')
   assert.ok(styleRes.items.every((it) => it.dimension === 'style'))
+
+  // 5.1 验证来自 Gxgen 的代表性预设命中
+  const gxgenHookHit = queryMarketingPresets({ query: '翻车反差' })
+  assert.ok(gxgenHookHit.total >= 1, '应能检索到 Gxgen 史诗级翻车反差 Hook')
+  assert.ok(gxgenHookHit.items.some((it) => it.id.startsWith('gxgen-')))
+
+  const gxgenFormatHit = queryMarketingPresets({ query: '痛点到解决方案' })
+  assert.ok(gxgenFormatHit.total >= 1, '应能检索到 Gxgen 痛点到解决方案框架')
+
+  const gxgenStyleHit = queryMarketingPresets({ query: '机翼高空' })
+  assert.ok(gxgenStyleHit.total >= 1, '应能检索到 Gxgen 飞行机翼高空测评场景')
 
   // 6. 分类过滤测试 (category)
   const catRes = queryMarketingPresets({
