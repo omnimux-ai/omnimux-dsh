@@ -113,10 +113,21 @@ export const GUIDE_CSS = `
   align-items: center;
   justify-content: center;
 }
-.omnimux-popular-cover svg {
+.omnimux-popular-cover svg,
+.omnimux-popular-cover img,
+.omnimux-popular-cover-img {
   width: 100%;
   height: 100%;
   display: block;
+}
+.omnimux-popular-cover img,
+.omnimux-popular-cover-img {
+  object-fit: cover;
+  transition: transform 180ms ease;
+}
+.omnimux-popular-card:hover .omnimux-popular-cover img,
+.omnimux-popular-card:hover .omnimux-popular-cover-img {
+  transform: scale(1.04);
 }
 .omnimux-popular-footer {
   padding: 12px 14px;

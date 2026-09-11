@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { STARTER_COVER_IMAGES } from './starter-covers.js'
 
 function MarketingInsightCover() {
   return (
@@ -99,6 +100,20 @@ const COVER_MAP = {
  * Render cover graphics for popular starter cards.
  */
 export function PopularCardCover({ id }) {
+  const [imgError, setImgError] = useState(false)
+  const coverSrc = STARTER_COVER_IMAGES[id]
+
+  if (coverSrc && !imgError) {
+    return (
+      <img
+        src={coverSrc}
+        alt={id}
+        className="omnimux-popular-cover-img"
+        onError={() => setImgError(true)}
+      />
+    )
+  }
+
   const Component = COVER_MAP[id] || DefaultBatchAdsCover
   return <Component />
 }
