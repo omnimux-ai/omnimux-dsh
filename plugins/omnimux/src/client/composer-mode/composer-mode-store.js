@@ -20,9 +20,17 @@ export const COMPOSER_MODES = Object.freeze([
 
 export const DEFAULT_COMPOSER_MODE = MODE_AGENT
 
+/** 默认的空模式缓存 */
+const EMPTY_CACHE = Object.freeze({
+  draft: '',
+  presets: null,
+})
+
 class ComposerModeStore {
   constructor() {
     this.sessionModes = new Map()
+    /** @type {Map<string, Map<string, { draft: string, presets: any }>>} */
+    this.sessionCaches = new Map()
     this.listeners = new Map()
     this.globalListeners = new Set()
   }
@@ -50,6 +58,72 @@ class ComposerModeStore {
 
     this.sessionModes.set(key, targetMode)
     this._notify(key)
+  }
+
+  /**
+   * 获取指定会话在特定模式下的输入与选择状态缓存
+   * @param {string} sessionId
+   * @param {string} [mode] 默认为当前模式
+   * @returns {{ draft: string, presets: any }}
+   */
+  getModeCache(sessionId = 'default', mode) {
+    const key = sessionId || 'default'
+    const targetMode = mode || this.getMode(key)
+    const modeMap = this.sessionCaches.get(key)
+    if (!modeMap || !modeMap.has(targetMode)) {
+      return { ...EMPTY_CACHE }
+    }
+    const cached = modeMap.get(targetMode)
+    return {
+      draft: typeof cached.draft === 'string' ? cached.draft : '',
+      presets: cached.presets || null,
+    }
+  }
+
+  /**
+   * 保存指定会话在特定模式下的输入与选择状态缓存
+   * @param {string} sessionId
+   * @param {string} mode
+   * @param {{ draft?: string, presets?: any }} data
+   */
+  saveModeCache(sessionId = 'default', mode, data = {}) {
+    const key = sessionId || 'default'
+    const targetMode = COMPOSER_MODES.some((m) => m.id === mode) ? mode : DEFAULT_COMPOSER_MODE
+    if (!this.sessionCaches.has(key)) {
+      this.sessionCaches.set(key, new Map())
+    }
+    const modeMap = this.sessionCaches.get(key)
+    const existing = modeMap.get(targetMode) || { ...EMPTY_CACHE }
+    const next = {
+      draft: typeof data.draft === 'string' ? data.draft : existing.draft,
+      presets: data.presets !== undefined ? data.presets : existing.presets,
+    }
+    modeMap.set(targetMode, next)
+  }
+
+  /**
+   * 切换模式并自动保存当前模式状态、返回目标模式缓存
+   * @param {string} sessionId
+   * @param {string} nextMode
+   * @param {{ draft?: string, presets?: any }} [currentData]
+   * @returns {{ draft: string, presets: any }} 目标模式的缓存数据
+   */
+  switchMode(sessionId = 'default', nextMode, currentData = {}) {
+    const key = sessionId || 'default'
+    const targetMode = COMPOSER_MODES.some((m) => m.id === nextMode) ? nextMode : DEFAULT_COMPOSER_MODE
+    const prevMode = this.getMode(key)
+
+    // 1. 保存前一模式的状态
+    this.saveModeCache(key, prevMode, currentData)
+
+    // 2. 切换当前模式
+    if (prevMode !== targetMode) {
+      this.sessionModes.set(key, targetMode)
+      this._notify(key)
+    }
+
+    // 3. 返回目标模式的缓存数据
+    return this.getModeCache(key, targetMode)
   }
 
   /**
@@ -103,10 +177,12 @@ class ComposerModeStore {
     if (sessionId) {
       const key = sessionId || 'default'
       this.sessionModes.delete(key)
+      this.sessionCaches.delete(key)
       this._notify(key)
     } else {
-      const keys = Array.from(this.sessionModes.keys())
+      const keys = Array.from(new Set([...this.sessionModes.keys(), ...this.sessionCaches.keys()]))
       this.sessionModes.clear()
+      this.sessionCaches.clear()
       for (const key of keys) {
         this._notify(key)
       }

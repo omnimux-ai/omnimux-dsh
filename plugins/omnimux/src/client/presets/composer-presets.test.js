@@ -109,4 +109,15 @@ test('Submission Context Assembly: compiles presets into system prompt and clear
   // 模拟发送成功后消费清空
   store.clearPresets(sid)
   assert.equal(store.hasAnyPreset(sid), false)
+
+  // 验证 setAllPresets 批量恢复
+  store.setAllPresets(sid, { format, hook, style })
+  assert.equal(store.hasAnyPreset(sid), true)
+  assert.equal(store.getSnapshot(sid).format, format)
+  assert.equal(store.getSnapshot(sid).hook, hook)
+  assert.equal(store.getSnapshot(sid).style, style)
+
+  // 批量设置为 null 清空
+  store.setAllPresets(sid, null)
+  assert.equal(store.hasAnyPreset(sid), false)
 })
