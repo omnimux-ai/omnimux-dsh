@@ -95,9 +95,6 @@ export function PresetCard({
           </div>
         )}
 
-        {/* 分类标签徽章 */}
-        <span className="omnimux-preset-badge">{category}</span>
-
         {/* 选中勾选角标 */}
         {isSelected && (
           <div className="omnimux-preset-check-badge" aria-label="Selected">
@@ -108,12 +105,11 @@ export function PresetCard({
         )}
       </div>
 
-      {/* 文本信息区 */}
+      {/* 文本信息区 (1:1 对标图 2 纯净排版) */}
       <div className="omnimux-preset-info">
-        <div className="omnimux-preset-title-row">
-          <span className="omnimux-preset-title" title={title}>{title}</span>
-          {subTitle && <span className="omnimux-preset-subtitle" title={subTitle}>{subTitle}</span>}
-        </div>
+        <h4 className="omnimux-preset-title" title={title}>
+          {title}
+        </h4>
         {item.description && (
           <p className="omnimux-preset-desc" title={item.description}>
             {item.description}
