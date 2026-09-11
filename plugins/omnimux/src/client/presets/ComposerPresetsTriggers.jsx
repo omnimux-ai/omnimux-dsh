@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getCreativePresetsStore } from './presets-store.js'
+import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { CreativeDimensionModal } from './CreativeDimensionModal.jsx'
 import { ensurePresetsStyles } from './styles.js'
 import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
@@ -8,9 +9,11 @@ import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
  * 营销视频三大创意预设 —— 工具栏 3 独立触发按钮组件
  * 注册于官方标准槽位 `conversation.input.left` (order: 30)
  * 水平紧随加号(+)、技能(order 10)、模型(order 20)之后，与它们平级并列
+ * 默认在 'agent' / 'drama' 模式下隐藏，仅在 'marketing' (营销) 模式下展开
  */
 export function ComposerPresetsTriggers(props) {
   const store = useMemo(() => getCreativePresetsStore(), [])
+  const modeStore = useMemo(() => getComposerModeStore(), [])
   const sessionId =
     props?.sessionId ||
     props?.session?.id ||
@@ -34,6 +37,23 @@ export function ComposerPresetsTriggers(props) {
   )
 
   const presets = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+
+  const modeSubscribe = useCallback(
+    (callback) => modeStore.subscribe(sessionId, callback),
+    [modeStore, sessionId]
+  )
+
+  const modeSnapshot = useCallback(
+    () => modeStore.getMode(sessionId),
+    [modeStore, sessionId]
+  )
+
+  const activeMode = useSyncExternalStore(modeSubscribe, modeSnapshot, modeSnapshot)
+
+  // 默认 Agent 模式与短剧模式不显示营销预设按钮；仅在营销模式下显式呈现
+  if (activeMode !== 'marketing') {
+    return null
+  }
 
   const handleOpenDimension = (dimension) => {
     setActiveModal(dimension)

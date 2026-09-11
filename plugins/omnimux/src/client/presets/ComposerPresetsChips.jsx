@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getCreativePresetsStore } from './presets-store.js'
+import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { CreativeDimensionModal } from './CreativeDimensionModal.jsx'
 import { ensurePresetsStyles } from './styles.js'
 import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
@@ -7,9 +8,11 @@ import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
 /**
  * 营销视频三大创意预设 —— 输入框上方已选 Chips 胶囊组件
  * 当 format / hook / style 任意一项被选中时浮现于输入框内壁上方
+ * 仅在 'marketing' (营销) 模式下展开显示
  */
 export function ComposerPresetsChips(props) {
   const store = useMemo(() => getCreativePresetsStore(), [])
+  const modeStore = useMemo(() => getComposerModeStore(), [])
   const sessionId =
     props?.sessionId ||
     props?.session?.id ||
@@ -33,6 +36,23 @@ export function ComposerPresetsChips(props) {
   )
 
   const presets = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+
+  const modeSubscribe = useCallback(
+    (callback) => modeStore.subscribe(sessionId, callback),
+    [modeStore, sessionId]
+  )
+
+  const modeSnapshot = useCallback(
+    () => modeStore.getMode(sessionId),
+    [modeStore, sessionId]
+  )
+
+  const activeMode = useSyncExternalStore(modeSubscribe, modeSnapshot, modeSnapshot)
+
+  // 仅在营销模式下呈现预设 Chips
+  if (activeMode !== 'marketing') {
+    return null
+  }
 
   const hasAny = Boolean(presets.format || presets.hook || presets.style)
 

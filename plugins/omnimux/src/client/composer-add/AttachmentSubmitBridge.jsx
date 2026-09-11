@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
 import { getCreativePresetsStore } from '../presets/presets-store.js'
+import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
 import { compileCreativePrompt } from '../presets/compiler.js'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
@@ -78,23 +79,27 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
         tokenNode?.remove?.()
       }
 
-      // Reconcile creative presets (Format, Hook, Style) into structured system context
+      // Reconcile creative presets (Format, Hook, Style) into structured system context (only in marketing mode)
       try {
-        const presetsStore = getCreativePresetsStore()
-        const currentPresets = presetsStore.getSnapshot(sessionId)
-        if (currentPresets && (currentPresets.format || currentPresets.hook || currentPresets.style)) {
-          draft = compileCreativePrompt({
-            format: currentPresets.format,
-            hook: currentPresets.hook,
-            style: currentPresets.style,
-            userQuery: draft,
-            language: 'zh-CN',
-          })
-          try {
-            actions?.setDraft?.(draft)
-            // 提交后清空当前预设，避免后续会话状态污染
-            presetsStore.clearPresets(sessionId)
-          } catch {}
+        const modeStore = getComposerModeStore()
+        const currentMode = modeStore.getMode(sessionId)
+        if (currentMode === 'marketing') {
+          const presetsStore = getCreativePresetsStore()
+          const currentPresets = presetsStore.getSnapshot(sessionId)
+          if (currentPresets && (currentPresets.format || currentPresets.hook || currentPresets.style)) {
+            draft = compileCreativePrompt({
+              format: currentPresets.format,
+              hook: currentPresets.hook,
+              style: currentPresets.style,
+              userQuery: draft,
+              language: 'zh-CN',
+            })
+            try {
+              actions?.setDraft?.(draft)
+              // 提交后清空当前预设，避免后续会话状态污染
+              presetsStore.clearPresets(sessionId)
+            } catch {}
+          }
         }
       } catch (err) {
         console.error('[CreativePresets] Failed to compile prompt:', err)

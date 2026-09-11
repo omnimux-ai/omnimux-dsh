@@ -32,6 +32,7 @@ import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
 import { ComposerPresetsTriggers } from './presets/index.js'
+import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -158,6 +159,12 @@ export function apply(ctx) {
     name: 'conversation.input.dock', id: 'omnimux:session-guide', order: 110,
     locale: 'omnimux-session-guide', inject: () => guideFace,
   }, SessionGuide))
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock',
+    id: 'omnimux-composer-mode-tabs',
+    order: 115,
+    locale: NS,
+  }, ComposerModeTabs))
   // 全平台通用「添加到会话」附件附着槽 (挂载至输入框内侧 conversation.input.attachments)
   // Official `dsh-client-ui-attachment` already occupies this single cell at
   // default priority 0. Shadow it with a lower priority so OmniMux wins
