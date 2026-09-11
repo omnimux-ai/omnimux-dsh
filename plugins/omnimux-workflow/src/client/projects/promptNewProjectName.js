@@ -67,7 +67,7 @@ export function promptNewProjectName(t, opts = {}) {
     const closeBtn = document.createElement('button')
     closeBtn.type = 'button'
     closeBtn.setAttribute('aria-label', t('projects.close'))
-    closeBtn.textContent = '×'
+    closeBtn.textContent = '×' // exempt-ui04: 历史存量待迁移为矢量SVG
     css(closeBtn, {
       border: 'none', background: 'transparent', cursor: 'pointer',
       width: '28px', height: '28px', borderRadius: '8px', color: 'inherit', fontSize: '18px',

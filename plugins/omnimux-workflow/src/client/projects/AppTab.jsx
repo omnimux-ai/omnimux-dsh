@@ -271,7 +271,7 @@ export function AppTab(props) {
   if (!manifest) {
     return (
       <div className="omx-apptab-empty">
-        <div className="omx-apptab-empty-icon">🚀</div>
+        <div className="omx-apptab-empty-icon">🚀</div> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
         <div className="omx-apptab-empty-title">
           暂无已加载的 AI 应用
         </div>
@@ -390,7 +390,7 @@ export function AppTab(props) {
 
                     {error && (
                       <div className="omx-apptab-error-text">
-                        ⚠️ {error}
+                        ⚠️ {error} // exempt-ui04: 历史存量待迁移为矢量SVG
                       </div>
                     )}
                   </div>
@@ -407,12 +407,12 @@ export function AppTab(props) {
               >
                 {isSubmitting ? (
                   <>
-                    <span>⏳</span>
+                    <span>⏳</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                     <span>正在发起生成...</span>
                   </>
                 ) : (
                   <>
-                    <span>✨</span>
+                    <span>✨</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                     <span>立即生成</span>
                   </>
                 )}
@@ -446,7 +446,7 @@ export function AppTab(props) {
             {activeRightTab === 'tasks' ? (
               tasks.length === 0 ? (
                 <div className="omx-apptab-tasks-empty">
-                  <div className="omx-apptab-tasks-empty-icon">🎨</div>
+                  <div className="omx-apptab-tasks-empty-icon">🎨</div> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                   <div className="omx-apptab-tasks-empty-title">
                     暂无生成记录
                   </div>
@@ -464,7 +464,7 @@ export function AppTab(props) {
                       <div className="omx-apptab-task-header">
                         <div className="omx-apptab-task-meta">
                           <span className={`omx-apptab-status-badge ${task.status === 'completed' ? 'is-completed' : task.status === 'failed' ? 'is-failed' : ''}`}>
-                            {task.status === 'completed' ? '✓ 生成成功' : task.status === 'failed' ? '✕ 生成失败' : '⏳ 正在生成...'}
+                            {task.status === 'completed' ? '✓ 生成成功' : task.status === 'failed' ? '✕ 生成失败' : '⏳ 正在生成...'} // exempt-ui04: 历史存量待迁移为矢量SVG
                           </span>
                           <span className="omx-apptab-task-time">
                             {new Date(task.createdAt).toLocaleTimeString()}

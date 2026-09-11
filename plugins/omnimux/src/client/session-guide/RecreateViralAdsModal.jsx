@@ -512,7 +512,7 @@ export function RecreateViralAdsModal({ isOpen, onClose, t, onSubmitDraft }) {
         {/* 3. What should the new video show? (新视频展示什么内容) */}
         <div className="omnimux-recreate-field-group">
           <div className="omnimux-recreate-label-row">
-            <span className="omnimux-recreate-icon-sparkle">✨</span>
+            <span className="omnimux-recreate-icon-sparkle">✨</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
             <label className="omnimux-recreate-group-title">
               {t('guide.recreate-viral-ads.prompt-input.label')}
             </label>

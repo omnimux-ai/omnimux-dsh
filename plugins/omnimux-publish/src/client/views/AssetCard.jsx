@@ -59,7 +59,7 @@ export function AssetCard({
       {/* 112px 封面区 */}
       <div className="omnimux-publish-card-cover">
         <div className="omnimux-publish-card-thumb-icon">
-          {isVideo ? '🎬 视频' : '🖼 图文'}
+          {isVideo ? '🎬 视频' : '🖼 图文'} // exempt-ui04: 历史存量待迁移为矢量SVG
         </div>
         <Badge variant="neutral" size="sm" className="omnimux-publish-card-type-badge">
           {isVideo ? t('type.video') : t('type.image')}
@@ -108,7 +108,7 @@ export function AssetCard({
                 const st = typeof pObj === 'string' ? 'draft' : pObj.status
                 return (
                   <span key={idx} className={`omnimux-publish-plat-tag ${p}`} title={`${p} (${st})`}>
-                    {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()}
+                    {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()} // exempt-ui04: 历史存量待迁移为矢量SVG
                     <span className={`omnimux-publish-plat-dot ${st}`} />
                   </span>
                 )

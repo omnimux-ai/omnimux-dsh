@@ -224,6 +224,28 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // UI04: 严禁使用 Emoji / 字符充当图标 (design.md §2.5, ui-design-guidelines.md §2)
+    // ─────────────────────────────────────────────────────────────
+    const isExcludedDataFile = filePath.includes('presets/catalog') || filePath.includes('locales.')
+    if (!isExcludedDataFile && !lineText.includes('exempt-ui04')) {
+      const emojiMatch = lineText.match(/\p{Extended_Pictographic}/u)
+      const symbolIconMatch = lineText.match(/(?:>[ \t]*[×✕↑↓↗↘▶⏸⏹✓✔][ \t]*<|['"][×✕↑↓↗↘▶⏸⏹✓✔]['"]|^[ \t]*[×✕↑↓↗↘▶⏸⏹✓✔][ \t]*$)/)
+
+      if (emojiMatch || symbolIconMatch) {
+        const detected = emojiMatch ? emojiMatch[0] : symbolIconMatch[0].trim()
+        violations.push({
+          ruleCode: 'UI04',
+          ruleName: '严禁使用 Emoji / 字符充当图标',
+          lineNum,
+          lineText,
+          message: `检测到使用 Emoji 表情或 Unicode 字符 [${detected}] 充当图标/状态，必须统一使用矢量 SVG 图标`,
+          fix: "改用 `@deepseek-ai/dsh-client-ui-primitives` 原生图标（如 `IconCloseOutline16`）或 `lucide-react` 矢量 SVG 组件；特化场景添加 `// exempt-ui04 <业务原因>`",
+          designSection: '[design.md](design.md) §2.5 (严禁使用字符与 Emoji 充当图标) & [docs/contracts/icon-design-standards.md](docs/contracts/icon-design-standards.md)',
+        })
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // UI10: 合规字阶白名单校验
     // ─────────────────────────────────────────────────────────────
     if (!lineText.includes('exempt-ui10')) {

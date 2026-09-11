@@ -33,7 +33,8 @@ export function formatDenyReason(violations, filePath) {
   parts.push('👉 修复示范：')
   parts.push("  - 控件替代: 导入并使用 dsh-ui-kit (如 `import { Button, DropdownSelect } from 'dsh-ui-kit'`)")
   parts.push("  - 色彩 Token: 强制消费官方语义 Token `var(--dsw-alias-bg-base)` 与 `var(--dsw-alias-label-primary)`")
-  parts.push("  - 规范豁免: 如属特殊特化场景，在违规行添加显式豁免注释 (如 `// exempt-ui01 <业务原因>`, `// exempt-ui03 <业务原因>`, `// exempt-ui10 <业务原因>`)")
+  parts.push("  - 图标规范: 严禁使用 Emoji / 文本字符充当图标，统一使用 `@deepseek-ai/dsh-client-ui-primitives` 或 `lucide-react` 矢量 SVG")
+  parts.push("  - 规范豁免: 如属特殊特化场景，在违规行添加显式豁免注释 (如 `// exempt-ui01 <业务原因>`, `// exempt-ui03 <业务原因>`, `// exempt-ui04 <业务原因>`, `// exempt-ui10 <业务原因>`)")
 
   return parts.join('\n')
 }

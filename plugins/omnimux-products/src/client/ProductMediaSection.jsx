@@ -59,7 +59,7 @@ export function MediaItem(props) {
         aria-label={t('remove.confirm')}
         onClick={onRemove}
       >
-        ×
+        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
       </IconButton>
     </li>
   )
@@ -105,7 +105,7 @@ export function CategoriesEditor(props) {
               aria-label={t('remove.confirm')}
               onClick={() => actions.onRemoveTag(tag)}
             >
-              ×
+              × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
             </IconButton>
           </span>
         ))}

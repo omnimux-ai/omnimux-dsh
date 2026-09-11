@@ -252,7 +252,7 @@ export function CreativeDimensionModal({
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
               >
-                ✕
+                ✕ {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
               </button>
             )}
           </div>

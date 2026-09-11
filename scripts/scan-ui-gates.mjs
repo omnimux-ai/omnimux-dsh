@@ -212,6 +212,23 @@ for (const file of clientFiles) {
       }
     }
 
+    // UI04: Prohibit Emoji and character icons (design.md §2.5, ui-design-guidelines.md §2)
+    const isExcludedDataFile = file.includes('presets/catalog') || file.includes('locales.')
+    if (!isExcludedDataFile && !lineText.includes('exempt-ui04')) {
+      const emojiMatch = lineText.match(/\p{Extended_Pictographic}/u)
+      const symbolIconMatch = lineText.match(/(?:>[ \t]*[×✕↑↓↗↘▶⏸⏹✓✔][ \t]*<|['"][×✕↑↓↗↘▶⏸⏹✓✔]['"]|^[ \t]*[×✕↑↓↗↘▶⏸⏹✓✔][ \t]*$)/)
+
+      if (emojiMatch || symbolIconMatch) {
+        const detected = emojiMatch ? emojiMatch[0] : symbolIconMatch[0].trim()
+        reportError(
+          'UI04',
+          file,
+          lineNum,
+          `检测到使用 Emoji 表情或 Unicode 字符 [${detected}] 充当图标/状态，必须统一使用矢量 SVG 图标 (参见 [design.md](design.md) §2.5 & [docs/contracts/icon-design-standards.md](docs/contracts/icon-design-standards.md))；特化场景请加 // exempt-ui04 <原因>`,
+        )
+      }
+    }
+
     // UI07: Idempotent Sidebar Navigation Gate (Prohibit stage.toggle() in sidebar entries)
     if (file.includes('sidebar-entry') && /stage\.toggle\s*\(/i.test(lineText)) {
       reportError('UI07', file, lineNum, `侧边栏条目严禁使用 stage.toggle() 非幂等反选，必须使用 stageStore.open() 保证幂等激活`)
