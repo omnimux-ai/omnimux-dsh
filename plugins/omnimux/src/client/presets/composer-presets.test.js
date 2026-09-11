@@ -9,8 +9,9 @@ test('PresetsStore: handles multi-session isolated state, subscription, and rese
   const s1 = 'session-1'
   const s2 = 'session-2'
 
-  // 1. 默认快照为空
+  // 1. 默认快照为空且引用稳定
   assert.deepEqual(store.getSnapshot(s1), { format: null, hook: null, style: null })
+  assert.equal(store.getSnapshot(s1), store.getSnapshot(s1), 'getSnapshot must return stable cached reference')
   assert.equal(store.hasAnyPreset(s1), false)
 
   let notifyCount = 0

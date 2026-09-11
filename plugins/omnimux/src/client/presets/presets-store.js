@@ -1,6 +1,7 @@
 /**
  * 营销视频创意预设（格式、亮点、视觉风格）状态管理 Store
  * 会话级隔离，支持响应式订阅与一次性消费
+ * 严格保证 getSnapshot 返回不可变引用，杜绝 useSyncExternalStore React 185 死循环
  */
 
 /**
@@ -12,11 +13,11 @@
  * @property {any | null} style 选中的视觉风格
  */
 
-const DEFAULT_STATE = {
+const DEFAULT_STATE = Object.freeze({
   format: null,
   hook: null,
   style: null,
-}
+})
 
 class CreativePresetsStore {
   constructor() {
@@ -27,7 +28,7 @@ class CreativePresetsStore {
   }
 
   /**
-   * 获取指定会话的预设快照
+   * 获取指定会话的预设快照（返回不可变稳定引用）
    * @param {string} [sessionId]
    * @returns {PresetsState}
    */
@@ -35,9 +36,9 @@ class CreativePresetsStore {
     const key = sessionId || 'default'
     const state = this.sessionStates.get(key)
     if (!state) {
-      return { ...DEFAULT_STATE }
+      return DEFAULT_STATE
     }
-    return { ...state }
+    return state
   }
 
   /**
@@ -95,10 +96,12 @@ class CreativePresetsStore {
   setPreset(sessionId = 'default', dimension, item) {
     const key = sessionId || 'default'
     const current = this.getSnapshot(key)
-    this.sessionStates.set(key, {
+    if (current[dimension] === item) return
+    const next = Object.freeze({
       ...current,
       [dimension]: item,
     })
+    this.sessionStates.set(key, next)
     this._notify(key)
   }
 
@@ -117,7 +120,9 @@ class CreativePresetsStore {
    */
   clearPresets(sessionId = 'default') {
     const key = sessionId || 'default'
-    this.sessionStates.set(key, { ...DEFAULT_STATE })
+    const current = this.getSnapshot(key)
+    if (current === DEFAULT_STATE) return
+    this.sessionStates.set(key, DEFAULT_STATE)
     this._notify(key)
   }
 
