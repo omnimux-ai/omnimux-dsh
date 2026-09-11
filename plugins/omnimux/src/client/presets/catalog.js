@@ -1208,8 +1208,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "拍摄与投放揭示",
     "description": "Hook viewers with a surprise product drop.",
     "prompt": "Based on the uploaded product image and info, create a video.\n\n**Product Name:** CONCEPT A — MINERAL SUN STICK\n\n**Key Selling Points:** Make the compact rigid stick rotate once during the fall, land softly on its broad face, and settle with the CONCEPT A / MINERAL SUN STICK label facing camera. Preserve the protective shell and do not add SPF, water-resistance, safety, or efficacy claims.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/01_shot-and-drop-reveal_v1.mp4",
+    "posterPath": "trending-ads/01_shot-and-drop-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-02-mksg_4068008247556",
@@ -1220,8 +1220,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "秘密货架测试",
     "description": "Pair a hidden gem with proof that sells.",
     "prompt": "Based on the uploaded product image and information, create a \"Don't Let Them See This\" 15-second vertical video.\nProduct Name: Hydra Mist Face Spray 300ml\nTarget Identity: skincare girl\nOpening Caption: skincare girl\nKey Selling Points:\n- Fine refreshing mist\n- Dewy finish\n- Easy on-the-go use\nScene Direction: Use a drugstore skincare aisle, hide the product until the delayed reveal, spray a fine mist near the store mirror, show dewy proof, then quietly put it in the basket.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/02_secret-shelf-test_v1.mp4",
+    "posterPath": "trending-ads/02_secret-shelf-test_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-03-mksg_4126025587972",
@@ -1232,8 +1232,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "活体服装交换揭秘",
     "description": "Grab attention as the outfit comes alive.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Cloud-Fleece Cropped Zip Hoodie\nKey Selling Points: Plush cloud-fleece texture; cropped viral silhouette; high-quality metal zipper.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/03_living-garment-swap-reveal_v1.mp4",
+    "posterPath": "trending-ads/03_living-garment-swap-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-04-mksg_4138758785028",
@@ -1244,8 +1244,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "光标下载展示",
     "description": "Pixel clicks turn blurry previews into crisp products.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Cloud Matcha Latte\nKey Selling Points: creamy ceremonial-style matcha, soft whipped topping, refreshing iced texture, café-ready treat.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/04_cursor-download-reveal_v1.mp4",
+    "posterPath": "trending-ads/04_cursor-download-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-05-mksg_4143507176708",
@@ -1256,8 +1256,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "产品旋转揭秘",
     "description": "Hand spins make tables fill with products.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Sunny Table Brunch Box\nKey Selling Points: hand-held coaster trigger, empty box builder reveal, latte, iced matcha, croissant, muffin, cozy cafe brunch spread.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/05_product-spin-reveal_v1.mp4",
+    "posterPath": "trending-ads/05_product-spin-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-06-mksg_4118682544388",
@@ -1268,8 +1268,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "文件夹穿搭演示",
     "description": "Build and compare looks through folders.",
     "prompt": "Based on the uploaded product image and info, create a video.\n\n**Product Name:** CONCEPT A — URBAN LILAC CAPSULE\n\n**Key Selling Points:** Uploaded Image 1 is the lilac cropped jacket; Image 2 the ivory ribbed tank; Image 3 the charcoal wide-leg trousers; Image 4 the matched silver sneaker pair; Image 5 the lilac shoulder bag; Image 6 the matched smoke-gray sunglasses. Use every supplied product exactly once across three cumulative drag-and-snap rounds, preserve each appearance, and derive an original casting, room, folder styling, lighting, and pose language from this urban-lilac product world. Keep the locked 29.5-second rhythm and finish by dragging the fully dressed person into Folder 3. Do not add logos, claims, prices, brands, or products.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/06_folder-outfit-demo_v1.mp4",
+    "posterPath": "trending-ads/06_folder-outfit-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-07-mksg_4186939225348",
@@ -1280,8 +1280,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "假劫案公文包揭秘",
     "description": "A fake robbery turns into a product hero reveal.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Compact Precision Screwdriver Kit\nKey Selling Points: Pocket-sized repair kit with multiple precision bits, non-slip handle, organized case, and accurate small-screw repair for phones, glasses, laptops, toys, and home electronics.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/07_robbery-bag-reveal_v1.mp4",
+    "posterPath": "trending-ads/07_robbery-bag-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-08-mksg_4160721870340",
@@ -1292,8 +1292,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "单图定格细节串联",
     "description": "One product image becomes a STOP detail chain.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Onyx Silver Detail Set\nKey Selling Points: Black onyx pendant necklace, matching huggie earrings, cuff bracelet, and ring stack for one sharp monochrome outfit.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/08_single-image-detail-stop_v1.mp4",
+    "posterPath": "trending-ads/08_single-image-detail-stop_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-09-mksg_4043167517956",
@@ -1304,8 +1304,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "热门人群实测演示",
     "description": "Pair visible demand with useful proof.",
     "prompt": "Based on the uploaded product image and info, create a 15-second video.\nProduct Name: Pippit OrbitClean Smart Robot Vacuum\nKey Selling Points:\n- LiDAR obstacle avoidance for smooth autonomous navigation.\n- High-suction turbo mode lifts crumbs, dust, and pet hair.\n- Self-emptying dock reduces hands-on cleaning.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/09_viral-crowd-demo_v1.mp4",
+    "posterPath": "trending-ads/09_viral-crowd-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-10-mksg_4170394360836",
@@ -1316,8 +1316,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "面纱揭示寻宝",
     "description": "A hidden product becomes a must-have.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: PawSip Travel Bottle\nKey Selling Points: Leakproof bottle with a fold-out bowl for quick outdoor hydration.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/10_veil-reveal-find_v1.mp4",
+    "posterPath": "trending-ads/10_veil-reveal-find_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-11-mksg_4134071342596",
@@ -1328,8 +1328,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "涂鸦绽放首饰揭秘",
     "description": "Make doodles bloom into desirable jewelry.",
     "prompt": "Based on the uploaded reference image and product information, create a Healing Doodle Jewelry Reveal short video.\nProduct Name: Citrus Blossom Bracelet\nCategory: Jewelry / Bracelet\nKey Visual Features: Fine gold bracelet with orange fruit, green leaf, and white flower charms\nThe first uploaded image is the authoritative reference for all visible people, products, garments, and accessories shown in that case.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/11_doodle-bloom-reveal_v1.mp4",
+    "posterPath": "trending-ads/11_doodle-bloom-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-12-mksg_4108160955140",
@@ -1340,8 +1340,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "活体服装跟随展示",
     "description": "Hook viewers with a garment that follows.",
     "prompt": "Execute the complete fixed-script Animated Outfit Companion chain for this product. Do not stop at a plan, storyboard, image, markdown file, or confirmation request; generate the final usable 15-second 9:16 video artifact after completing Stage A.\n\nProduct Name: Cloud-Fleece Cropped Zip Hoodie\nTarget Identity: New York cozy-streetwear adult woman, clearly 27–35, healthy average-to-softly-curvy body type, not extremely thin\nStage A Location and Light: Nolita flower-shop frontage with cast-iron storefront reflections and pale sidewalk bounce; real New York mid-afternoon 2–4 p.m. sunlight, cool sky fill, warm-neutral highlights, real skin texture, no white background, no studio, no oily/plastic AI look.\nProduct Proof Priorities: plush fleece, cropped silhouette, metal zipper, functional pockets, hood, rib cuffs\n\nUploaded image role:\n- The single uploaded image is the product authority. Preserve exact product category, silhouette, color, fabric, seams, zipper, pockets, hood/ties/collar/cuffs, labels, and visible branding.\n\nMandatory chain:\n1. First generate one original 9:16 New York creator-in-scene image matching the Target Identity and Stage A Location and Light.\n2. Then use that generated scene image plus the uploaded product image to generate the final video.\n3. Follow the Fixed Shot List below exactly. Do not rewrite it into general fashion B-roll.\n\nFixed Shot List:\n- 0.00–0.28: Creator action: Medium-wide: creator stands screen-left outside a Nolita flower shop; the empty hoodie stands screen-right at matching height. Garment action: Right sleeve snaps upward like it is saying 'hey'. Camera/edit: Immediate hard cut in; both subjects readable. Product proof: Fantasy hook starts on frame one.\n- 0.28–0.62: Creator action: Creator jerks her head toward the hoodie, amused but startled. Garment action: Hoodie bounces its hem twice toward her. Camera/edit: Snap punch-in then back. Product proof: Real fleece weight and contact shadow.\n- 0.62–1.05: Creator action: Creator reaches toward the sleeve. Garment action: Sleeve dodges left, then taps her wrist. Camera/edit: Fast hand-level insert. Product proof: Sleeve construction stays realistic.\n- 1.05–1.55: Creator action: Creator points at herself like 'me?'. Garment action: Zipper jiggles and the hood nods yes. Camera/edit: Quick rack to zipper, hard cut back. Product proof: Metal zipper detail.\n- 1.55–2.15: Creator action: Creator side-steps to avoid it. Garment action: Hoodie fake-outs the wrong way, then whips toward her. Camera/edit: Whip-pan accent. Product proof: Cropped silhouette stays readable.\n- 2.15–2.85: Creator action: Creator laughs and raises both hands. Garment action: One sleeve catches her forearm and the hem wraps across frame. Camera/edit: Match-on-action cloth wipe begins. Product proof: Visible sleeve contact.\n- 2.85–4.00: Creator action: The cloth wipe clears to reveal the same creator already wearing the hoodie. Garment action: Hood flips up, then drops back naturally. Camera/edit: Fast reveal, no sparkle pause. Product proof: Transformation payoff complete.\n- 4.00–4.55: Creator action: Creator tries to walk away. Garment action: Pocket flap taps her hand and opens itself. Camera/edit: Tactile close-up motivated by hand. Product proof: Functional pocket.\n- 4.55–5.20: Creator action: Creator stuffs one hand in pocket with a quick impressed look. Garment action: Other sleeve points at the zipper. Camera/edit: Hard cut to half-body. Product proof: Pocket depth plus fit.\n- 5.20–5.85: Creator action: Creator pulls the zipper halfway. Garment action: Zipper pulls itself the last inch. Camera/edit: Macro insert with zipper click. Product proof: Metal zipper quality.\n- 5.85–6.55: Creator action: Creator spins once to show cropped length. Garment action: Hem kicks outward then settles. Camera/edit: Fast orbit half-turn. Product proof: Cropped silhouette.\n- 6.55–7.20: Creator action: Creator rubs the sleeve fabric against her cheek then reacts with a laugh. Garment action: Sleeve gently boops her cheek. Camera/edit: Quick plush texture insert. Product proof: Cloud-fleece softness.\n- 7.20–8.00: Creator action: Creator pushes hood back. Garment action: Hood pops up again for one beat. Camera/edit: Snap zoom to face and hood. Product proof: Hood function.\n- 8.00–8.75: Creator action: Creator tugs both cuffs into place. Garment action: Cuffs bounce to the beat. Camera/edit: Rhythmic hand insert. Product proof: Rib cuffs.\n- 8.75–10.20: Creator action: Creator leans to camera, amused, then steps across the sidewalk. Garment action: Sleeves swing with independent attitude. Camera/edit: Two fast cuts, slight handheld. Product proof: Wearable movement.\n- 10.20–12.00: Creator action: Creator does a quick styling recovery, hands on pockets. Garment action: Zipper gives one tiny final jiggle. Camera/edit: Medium shot with street depth. Product proof: Full outfit clarity.\n- 12.00–15.00: Creator action: Final gag: creator poses, sleeve blocks the lens for one frame, then drops to reveal a short hero hold. Garment action: Sleeve wave ends the joke. Camera/edit: Fabric wipe into 0.7s hero hold. Product proof: Product clear, interaction maintained.\n\nOutput rule: return the final video artifact. If an internal confirmation step appears, treat this message as full approval of the Stage A image, fixed script, and final video generation.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/12_living-garment-reveal_v1.mp4",
+    "posterPath": "trending-ads/12_living-garment-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-13-mksg_4047280402436",
@@ -1352,8 +1352,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "出租车擦镜转场换装",
     "description": "Hold attention with quick cab wipes.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: SwitchSide Cab-Yellow City Bag\nKey Selling Points: Compact structured black crossbody bag with an interchangeable taxi-yellow strap, premium leather texture, and small gold hardware.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/13_taxi-wipe-outfit-reveal_v1.mp4",
+    "posterPath": "trending-ads/13_taxi-wipe-outfit-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-14-mksg_4138206161924",
@@ -1364,8 +1364,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "手机屏幕试戴",
     "description": "Show accessory fit on an onscreen face.",
     "prompt": "Based on the uploaded product image and info, create a video.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/14_phone-screen-try-on_v1.mp4",
+    "posterPath": "trending-ads/14_phone-screen-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-15-mksg_4071692101124",
@@ -1376,8 +1376,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "路人擦镜转场揭秘",
     "description": "Keep viewers watching with passerby wipes.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Blue Floral Midi Dress\nKey Selling Points: Refined navy floral print; flattering belted midi silhouette; vacation-ready styling\nScene Direction: Use pedestrians and tote bags as full lens wipes to reveal three tasteful street-vacation looks built around the navy floral midi dress.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/15_passerby-wipe-reveal_v1.mp4",
+    "posterPath": "trending-ads/15_passerby-wipe-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-16-mksg_4059039220996",
@@ -1388,8 +1388,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "萌宠测评实测",
     "description": "Win attention with cute product testers.",
     "prompt": "Based on the uploaded product image and info, create a 9:16 TikTok-style marketing video.\nProduct Name: SnugglePaws Calm Quilt\nCategory: Washable toddler-and-pet comfort blanket\nKey Selling Points: soft quilted texture; pet-friendly washable fabric; bedtime comfort cue; gentle sage-and-cream nursery palette\nTarget Audience: US and UK parents of toddlers who also have friendly family pets\nUsage Scenarios: bedtime wind-down, nap time, cozy reading time, toddler and pet cuddle moments\nBrand Tone: warm, safe, premium, emotionally soft, family-friendly\nUse the uploaded product image as @Product Image 1. Keep the product visually identical. The toddler and pet should discover the product together, use it safely in a cozy home setting, and end on a warm cute reaction. All visible text must be English.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/16_cute-tester-demo_v1.mp4",
+    "posterPath": "trending-ads/16_cute-tester-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-17-mksg_4071114510084",
@@ -1400,8 +1400,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "微缩团队巨物实测",
     "description": "Let tiny crews spotlight a giant product.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: 3-in-1 Magnetic Wireless Charging Station\nKey Selling Points: Magnetic alignment; multi-device charging; tidy nightstand setup\nScene Direction: Tiny electronics technicians route three devices to their exact charging zones, guide the phone into a magnetic snap, light up watch and earbuds, then stamp the nightstand as powered and tidy.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/17_tiny-crew-scale-demo_v1.mp4",
+    "posterPath": "trending-ads/17_tiny-crew-scale-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-18-mksg_4138201878020",
@@ -1412,8 +1412,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "桌面文件夹穿搭选款",
     "description": "Turn folder clicks into outfit choices.",
     "prompt": "Based on the uploaded reference image and product information, create a Folder Outfit Picker short video.\nProduct Name: Cobalt / Cream / Dusty Pink Wardrobe\nCategory: Fashion\nKey Visual Features: Three coordinated outfit groups with shoes, bags, and accessories\nThe first uploaded image is the authoritative reference for all visible people, products, garments, and accessories shown in that case.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/18_desktop-outfit-picker-demo_v1.mp4",
+    "posterPath": "trending-ads/18_desktop-outfit-picker-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-19-mksg_4059039326980",
@@ -1424,8 +1424,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "门后惊喜礼盒揭秘",
     "description": "Build desire with a magical gift reveal.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Summer Scent Discovery Box\nKey Selling Points: Discovery set; giftable packaging; scent ritual",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/19_doorway-gift-reveal_v1.mp4",
+    "posterPath": "trending-ads/19_doorway-gift-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-20-mksg_4048938464772",
@@ -1436,8 +1436,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "手机实时人脸配饰试戴",
     "description": "Use live reactions to show accessory fit.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Metro Loop City Bag\nKey Selling Points: compact structured crossbody, clean black leather, bright accent strap, easy daily styling",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/20_phone-face-accessory-try-on_v1.mp4",
+    "posterPath": "trending-ads/20_phone-face-accessory-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-21-mksg_4118682544644",
@@ -1448,8 +1448,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "对齐屏幕试穿",
     "description": "Show fit with precise phone alignment.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Pearl White Earbuds\nKey Selling Points: Premium white wireless earbuds with brushed silver accents, soft silicone ear tips, compact clean silhouette, and strong ear-alignment potential for the Screen-to-Reality Fit play.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/21_screen-aligned-try-on_v1.mp4",
+    "posterPath": "trending-ads/21_screen-aligned-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-22-mksg_4082159910916",
@@ -1460,8 +1460,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "拥抱初见舒适故事",
     "description": "Make comfort appealing with a welcome hug.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Crescent Nest Body Pillow\nKey Selling Points: Oversized U-shaped body pillow with long wraparound arms, premium teddy-fleece texture, and supportive full-body comfort. Make it the final object the creator dives onto and tightly embraces after throwing away every outside belonging.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/22_hug-first-comfort-story_v1.mp4",
+    "posterPath": "trending-ads/22_hug-first-comfort-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-23-mksg_4047625770244",
@@ -1472,8 +1472,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "街头惊喜大改造",
     "description": "Spark curiosity with a street makeover.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Portable Handheld Garment Steamer\nKey Selling Points: Fast steam; works hanging; travel-friendly",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/23_surprise-makeover-demo_v1.mp4",
+    "posterPath": "trending-ads/23_surprise-makeover-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-24-mksg_4085341119748",
@@ -1484,8 +1484,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "双指捏合缩放特写揭秘",
     "description": "Pull details closer with a pinch zoom.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Metro Loop City Bag\nKey Selling Points: Compact structured crossbody, clean black leather, bright accent strap, easy daily styling.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "trending-ads/24_pinch-zoom-product-reveal_v1.mp4",
+    "posterPath": "trending-ads/24_pinch-zoom-product-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-25-mksg_4170563342596",
@@ -1496,8 +1496,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "街头麦克风真实试用",
     "description": "Street mic demos trigger natural double-takes.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Spot Skipper Wipes\nKey Selling Points: Travel-size stain remover wipes in a resealable pouch for quick small-stain touch-ups on the go.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/25_street-mic-real-try_v1.mp4",
+    "posterPath": "ugc-ads/25_street-mic-real-try_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-26-mksg_4112620019204",
@@ -1508,8 +1508,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "手持创作者真实测评",
     "description": "Earn trust with natural creator reactions.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: Low-Sugar Oat & Nut Energy Bites\nKey Selling Points: Low-sugar oat-and-nut snack bites; portable single-serve pack; satisfying texture; suitable for commute, desk snack, or pre-workout routines.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/26_handheld-creator-review_v1.mp4",
+    "posterPath": "ugc-ads/26_handheld-creator-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-27-mksg_4179131593220",
@@ -1520,8 +1520,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "创作者产品实测速通",
     "description": "Fast creator demos prove real product use.",
     "prompt": "Based on the uploaded product image and info, create a Creator Product Truth Sprint short video.\nProduct Name: CleanFlow Touch-Free Soap Dispenser\nKey Selling Points:\nSP1: touch-free dispensing avoids pressing a pump with messy hands\nSP2: the visible refill window shows when soap is running low\nSP3: the slim white countertop design looks neat beside the sink\nSP4: useful in both kitchen and bathroom sink routines\nSP5: simple hand-wave operation makes everyday sink use feel easier\nRequired logic: map SP1/SP2/SP3/SP4/SP5 to different shot groups. Every 1-2 adjacent shots must prove a different selling point with a concrete visual action.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/27_creator-product-truth-sprint_v1.mp4",
+    "posterPath": "ugc-ads/27_creator-product-truth-sprint_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-28-mksg_3823949145860",
@@ -1532,8 +1532,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "创作者虚拟试穿",
     "description": "Compare looks with quick virtual swaps.",
     "prompt": "Based on the uploaded product image and product information, create a UGC Virtual Try-On short video.\nProduct Name: Blue Ditsy-Floral V-Neck Midi Slip Dress\nKey Selling Points: Summer-ready styling; clear fit proof; easy mix-and-match value",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/28_creator-virtual-try-on_v1.mp4",
+    "posterPath": "product-demos/28_creator-virtual-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-29-mksg_3843994149892",
@@ -1544,8 +1544,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "自拍即时第一反应测评",
     "description": "Build trust with a genuine first reaction.",
     "prompt": "Using the uploaded product image and product info, create a \"Selfie Testimonial\" style short video.\nProduct Name: Mirror-Shine Lip Glaze\nKey Selling Points: Glassy mirror shine; non-sticky lightweight feel; long-lasting color",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/29_instant-selfie-review_v1.mp4",
+    "posterPath": "ugc-ads/29_instant-selfie-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-30-mksg_3815900509188",
@@ -1556,8 +1556,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "微距产品细节展示",
     "description": "Show texture and function in macro detail.",
     "prompt": "Based on the uploaded product image and info, create a Product Showcase short video.\nProduct Name: Amber Woods Eau de Parfum\nKey Selling Points: Heavy glass bottle with premium feel; 8-hour longevity; warm amber wood notes",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/30_close-up-product-showcase_v1.mp4",
+    "posterPath": "visual-effects/30_close-up-product-showcase_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-31-mksg_4144090427908",
@@ -1568,8 +1568,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "新手保姆级使用教程",
     "description": "Teach correct product use in simple steps.",
     "prompt": "Based on the uploaded product image and info, create a Tutorial short video.\nProduct Name: True Wireless Noise-Canceling Earbuds\nKey Selling Points: One-tap pairing; clearer calls with noise reduction; touch controls for music/calls; all-day battery with case",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/31_how-to-product-demo_v1.mp4",
+    "posterPath": "ugc-ads/31_how-to-product-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-32-mksg_3843994147844",
@@ -1580,8 +1580,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "多角度穿搭试穿",
     "description": "Show fit and drape from multiple angles.",
     "prompt": "Based on the uploaded product image and product information, create a Outfit Try-On short video.\nProduct Name: Blue Floral Midi Dress\nKey Selling Points: Lightweight chiffon drape; A-line flattering silhouette; perfect for summer vacation",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/32_multi-angle-outfit-try-on_v1.mp4",
+    "posterPath": "product-demos/32_multi-angle-outfit-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-33-mksg_3823949147140",
@@ -1592,8 +1592,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "巨型城市级缩放特效",
     "description": "Make the product unmissable at city scale.",
     "prompt": "Referring to the uploaded product image, make a Giant Product Spectacle brand film for the \"Retro Orange Soda\".\nProduct Name: Retro Orange Soda\nBrand Tone: Retro, joyful, iconic\nKey Selling Points: Classic contour glass bottle / real orange flavor / crisp bubbles",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/33_giant-city-scale-effect_v1.mp4",
+    "posterPath": "visual-effects/33_giant-city-scale-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-34-mksg_3823949145348",
@@ -1604,8 +1604,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "极速运动冲击特效",
     "description": "Grab eyes with speed and burst effects.",
     "prompt": "Create a short video in the “Hyper Motion” playbook style using the uploaded product image and product information.\nProduct Name: Lime Burst Energy Drink\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/34_high-speed-motion-effect_v1.mp4",
+    "posterPath": "visual-effects/34_high-speed-motion-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-35-mksg_4147387604996",
@@ -1616,8 +1616,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "前后效果对比实测",
     "description": "Prove results with matched before-afters.",
     "prompt": "Based on the uploaded product image and info, create a Before & After short video.\nProduct Name: Kitchen Heavy-Duty Degreaser Spray\nKey Selling Points: Dissolves stubborn grease fast; clinging foam; safe on stovetops/counters; wipe-clean finish",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/35_before-and-after-demo_v1.mp4",
+    "posterPath": "ugc-ads/35_before-and-after-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-36-mksg_3838479873284",
@@ -1628,8 +1628,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "萌趣水果动画微短剧",
     "description": "Hold viewers with playful fruit drama.",
     "prompt": "Based on the uploaded product image and product information, create a Anthropomorphic Fruit Drama short video.\nProduct Name: SunKissed Farm Fresh Strawberries\nKey Selling Points: Extra-sweet high brix; jumbo ruby-red berries; picked-and-shipped within 24 hours",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/36_animated-fruit-mini-story_v1.mp4",
+    "posterPath": "story-driven-ads/36_animated-fruit-mini-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-37-mksg_4120864537348",
@@ -1640,8 +1640,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "轻触即换配色演示",
     "description": "Let shoppers scan colors with quick taps.",
     "prompt": "Create a \"Tap-to-Switch Color Matrix\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/37_tap-to-swap-color-demo_v1.mp4",
+    "posterPath": "seedance-2-5/37_tap-to-swap-color-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-38-mksg_3843994150660",
@@ -1652,8 +1652,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "高频复购生活循环种草",
     "description": "Signal lasting appeal through repeat use.",
     "prompt": "Based on the uploaded product image and product information, create a Addictive UGC short video.\nProduct Name: Ice-Gloss Lip Tint\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/38_repeat-use-ugc-loop_v1.mp4",
+    "posterPath": "ugc-ads/38_repeat-use-ugc-loop_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-39-mksg_3838479872260",
@@ -1664,8 +1664,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "隐藏用法冷知识教程",
     "description": "Tease a hidden use to build watch time.",
     "prompt": "Create a short video in the “Secret Hack Reveal” playbook style using the uploaded product image and product information.\nProduct Name: ChillSip Commuter Tumbler\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/39_hidden-usage-tutorial_v1.mp4",
+    "posterPath": "ugc-ads/39_hidden-usage-tutorial_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-40-mksg_3823949146372",
@@ -1676,8 +1676,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "出门准备日常护肤穿搭",
     "description": "Weave products into a genuine routine.",
     "prompt": "Create a short video in the “Get Ready With Me” playbook style using the uploaded real summer fashion product image and product information.\nProduct Name: Red Floral Square-Neck Short-Sleeve Tea Dress\nKey Selling Points: Summer-ready styling; clear fit proof; easy mix-and-match value",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/40_get-ready-routine-tutorial_v1.mp4",
+    "posterPath": "ugc-ads/40_get-ready-routine-tutorial_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-41-mksg_4107530676740",
@@ -1688,8 +1688,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "投掷屏幕时空换装",
     "description": "Open an outfit portal with a playful toss.",
     "prompt": "Create a \"Screen-Throw Outfit Portal\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/41_screen-throw-outfit-reveal_v1.mp4",
+    "posterPath": "seedance-2-5/41_screen-throw-outfit-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-42-mksg_3838479872772",
@@ -1700,8 +1700,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "达人逛街血拼战利品开箱",
     "description": "Build desire with a creator shopping haul.",
     "prompt": "Create a short video in the “Shopping Haul” playbook style using the uploaded real summer fashion product image and product information.\nProduct Name: Blue Ditsy-Floral Cami Vacation Maxi Dress\nKey Selling Points: Summer-ready styling; clear fit proof; easy mix-and-match value",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/42_creator-shopping-haul_v1.mp4",
+    "posterPath": "ugc-ads/42_creator-shopping-haul_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-43-mksg_3838479870980",
@@ -1712,8 +1712,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "动画卖点可视化演示",
     "description": "Turn AI scenes into clear feature stories.",
     "prompt": "Based on the uploaded product image and info, create a Creative Animation short video.\nProduct Name: 3-in-1 Magnetic Wireless Charging Station\nKey Selling Points: Charge phone/earbuds/watch at once; magnetic alignment for effortless drop-and-charge; cleaner desk setup; stable fast charging",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/43_animated-feature-demo_v1.mp4",
+    "posterPath": "visual-effects/43_animated-feature-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-44-mksg_4086991382020",
@@ -1724,8 +1724,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "鱼眼镜头潮流穿搭特效",
     "description": "Grab attention with neon fisheye warps.",
     "prompt": "Based on the uploaded product image(s) and product information, create a Cyber Fisheye Outfit Warp short video.\nProduct Name: Y2K Multi-Look Outfit Set\nKey Selling Points: multiple coordinated looks; fisheye camera energy; cyber color mood; smooth outfit warp\nTarget Market: United States\nTarget Audience: Gen Z shoppers who like Y2K fashion and bold short-form visuals\nLanguage: English\nMaterial Note: The uploaded images are ordered product/look references for this same case.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/44_fisheye-outfit-warp-effect_v1.mp4",
+    "posterPath": "seedance-2-5/44_fisheye-outfit-warp-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-45-mksg_3823949143812",
@@ -1736,8 +1736,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "极度解压沉浸式ASMR",
     "description": "Keep viewers watching with tactile sounds.",
     "prompt": "Based on the uploaded product image and info, create a ASMR short video.\n\nProduct Name:\npippit Botanical Renewal Hand & Body Care Collection\n\nCore Selling Points:\nGentle daily cleansing for hands and body without over-drying\nHydrating, skin-softening formula that helps leave skin smooth and comfortable\nBotanical-inspired aromatic experience for a refined, spa-like routine\nMinimalist premium packaging that elevates any bathroom or vanity space\nComplete care set featuring hand wash, hand balm, facial concentrate, and cleansing soap\nDesigned for everyday luxury, combining function, scent, and aesthetic appeal",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "asmr/45_satisfying-asmr-demo_v1.mp4",
+    "posterPath": "asmr/45_satisfying-asmr-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-46-mksg_4115250307588",
@@ -1748,8 +1748,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "3D破框海报视觉动效",
     "description": "Break the frame so the product stands out.",
     "prompt": "Create a \"3D Breakout Poster\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/46_3d-pop-out-poster-effect_v1.mp4",
+    "posterPath": "seedance-2-5/46_3d-pop-out-poster-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-47-mksg_3815900509444",
@@ -1760,8 +1760,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "街头随机采访口碑实测",
     "description": "Build app trust with street reactions.",
     "prompt": "Based on the uploaded product image and info, create a Street Interview short video.\nProduct Name: Bone Conduction Sport Headphones (Open-Ear)\nKey Selling Points: Open-ear safety awareness; comfortable for running/cycling; sweat-resistant; stable fit; long battery life",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/47_street-interview-review_v1.mp4",
+    "posterPath": "ugc-ads/47_street-interview-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-48-mksg_4107532404484",
@@ -1772,8 +1772,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "草图绘制成真揭秘",
     "description": "Redraw reality with a glowing visual hook.",
     "prompt": "Create a \"Magic Sketch Reality\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/48_sketch-to-reality-reveal_v1.mp4",
+    "posterPath": "seedance-2-5/48_sketch-to-reality-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-49-mksg_3843994147588",
@@ -1784,8 +1784,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "核心功效实证展示",
     "description": "Build confidence with on-camera proof.",
     "prompt": "Based on the uploaded product image and info, create an Effect & Feature Demo short video.\nProduct Name: No-Rinse Sneaker Cleaning Foam (with Soft Brush)\nKey Selling Points: Foam lifts stains instantly; no-rinse convenience; built-in soft brush won’t damage uppers; works on canvas/leather/mesh\nGenerate a localized creator/persona internally based on the product category, key selling points, and target audience. No user portrait image is provided. Use English only. Produce a 15-second 9:16 video.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/49_benefit-proof-demo_v1.mp4",
+    "posterPath": "product-demos/49_benefit-proof-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-50-mksg_3823949145604",
@@ -1796,8 +1796,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "第一人称POV产品体验",
     "description": "Show the product journey in first person.",
     "prompt": "Create a short video in the “Camera POV” playbook style using the uploaded product image and product information.\nProduct Name: MagLock Car Phone Mount\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/50_product-pov-demo_v1.mp4",
+    "posterPath": "product-demos/50_product-pov-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-51-mksg_4115250513412",
@@ -1808,8 +1808,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "波普艺术快切混剪",
     "description": "Spotlight the product with pop-art cuts.",
     "prompt": "Create a \"Surreal Pop Montage\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/51_pop-art-product-montage_v1.mp4",
+    "posterPath": "seedance-2-5/51_pop-art-product-montage_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-52-mksg_3838479871236",
@@ -1820,8 +1820,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "卡点节奏变装秀",
     "description": "Drive replays with beat-synced look swaps.",
     "prompt": "Based on the uploaded product image and info, create a 15-second video.\nProduct Name: Women's Square-Neck Fit-and-Flare Mini Dress\nKey Selling Points: Flattering square neckline, body-skimming ruched waist, soft stretch fabric, playful double-layer flared skirt, and versatile styling from casual daytime looks to date-night and party outfits.\nUse Seedance 2.0 for video generation and Image 2.0 for persona image generation. Use no hook and no preset visual style. Keep all visible text in English.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/52_beat-synced-outfit-reveal_v1.mp4",
+    "posterPath": "product-demos/52_beat-synced-outfit-reveal_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-53-mksg_4120806998276",
@@ -1832,8 +1832,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "复古拼贴海报动效",
     "description": "Hook viewers with cutouts and stickers.",
     "prompt": "Create a \"Dynamic Collage Poster\" video based on the uploaded product image.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "seedance-2-5/53_collage-poster-effect_v1.mp4",
+    "posterPath": "seedance-2-5/53_collage-poster-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-54-mksg_3838479873028",
@@ -1844,8 +1844,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "对称构图复古电影感广告",
     "description": "Frame the product in polished retro charm.",
     "prompt": "Based on the uploaded product image and product information, create a Wes Anderson Brand Film short video.\nProduct Name: Pastel Parisian Macaron Gift Box\nBrand Tone: Retro, refined, sweet\nKey Selling Points: Pastel-palette assortment / delicate crisp shells / precious gift box",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/54_symmetrical-retro-film_v1.mp4",
+    "posterPath": "story-driven-ads/54_symmetrical-retro-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-55-mksg_3815900509956",
@@ -1856,8 +1856,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "达人沉浸式开箱",
     "description": "Build desire through unboxing suspense.",
     "prompt": "Based on the uploaded product image and info, create an Unboxing short video.\nProduct Name: Smartwatch (Fitness & Health Tracking)\nKey Selling Points: Heart rate + sleep + workout tracking; notifications; water resistance; long battery life",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/55_creator-led-unboxing_v1.mp4",
+    "posterPath": "product-demos/55_creator-led-unboxing_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-56-mksg_3815900510212",
@@ -1868,8 +1868,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "左右分屏双向对比测评",
     "description": "Compare key tradeoffs to simplify the buy.",
     "prompt": "Based on the uploaded product image and info, create a Review & Compare short video.\nProduct Name: Magnetic Fast-Charge Power Bank (10,000mAh)\nKey Selling Points: Snap-on magnetic alignment; fast charging (up to 20W); slim and pocketable; multi-layer safety protection",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/56_side-by-side-buyer-review_v1.mp4",
+    "posterPath": "product-demos/56_side-by-side-buyer-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-57-mksg_3838479871492",
@@ -1880,8 +1880,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "巨物超现实CGI特效",
     "description": "Use impossible scale to grab attention.",
     "prompt": "Based on the uploaded product image and info, create a Giant Object short video.\nProduct Name: Extra-Large Bubble Milk Tea (Iced)\nKey Selling Points: Chewy brown sugar boba; creamy milk tea without being too heavy; best served iced; fun “loaded” vibe",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/57_giant-scale-cgi-effect_v1.mp4",
+    "posterPath": "visual-effects/57_giant-scale-cgi-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-58-mksg_4125522521092",
@@ -1892,8 +1892,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "10秒快速上手技巧",
     "description": "Share a quick shortcut shoppers can use.",
     "prompt": "Based on the uploaded product image and product information, create a Tips & Tricks short video.\nProduct Name: Bamboo Wall-Mounted Magnetic Knife Rack\nKey Selling Points: Strong magnets hold every blade in one strip; frees up counter drawers; no-drill peel-and-stick option",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/58_quick-how-to-demo_v1.mp4",
+    "posterPath": "ugc-ads/58_quick-how-to-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-59-mksg_3823949144068",
@@ -1904,8 +1904,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "线下探店打卡沉浸走访",
     "description": "Build trust through a real tour and taste.",
     "prompt": "Based on the uploaded product image and product information, create a Restaurant & Store Review short video.\nProduct Name: Rich Matcha Ice Cream (Matcha Lover Pick)\nKey Selling Points: Deep matcha aroma with a slight bitter finish; ultra-creamy texture; refreshing when iced; highly photogenic",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/59_venue-walkthrough-review_v1.mp4",
+    "posterPath": "ugc-ads/59_venue-walkthrough-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-60-mksg_3815900512772",
@@ -1916,8 +1916,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "童话反转创意剧情",
     "description": "Save the reveal for a fairy-tale twist.",
     "prompt": "Based on the uploaded product image and product information, create a family-friendly Fairy Tale Twist Product Drama short video.\nProduct Name: VelvetNoir Handmade Belgian Truffle Gift Box\nKey Selling Points: Imported Belgian cocoa; silky ganache center; hand-decorated presentation",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/60_fairy-tale-twist-story_v1.mp4",
+    "posterPath": "story-driven-ads/60_fairy-tale-twist-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-61-mksg_4138889956100",
@@ -1928,8 +1928,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "痛点唤醒与救场方案",
     "description": "Show the pain, then make the fix clear.",
     "prompt": "Using the uploaded product image and product info, create a \"Problem-Solution\" style short video.\nProduct Name: Instant-Cool Sports Neck Scarf\nKey Selling Points: Cool-on-contact for 2 hours after soaking; UPF50+ sun protection; lightweight, quick-drying, non-stuffy",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/61_problem-solution-demo_v1.mp4",
+    "posterPath": "ugc-ads/61_problem-solution-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-62-mksg_3823949144324",
@@ -1940,8 +1940,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "AI会说话宠物趣味测评",
     "description": "Use a talking pet to catch attention.",
     "prompt": "Based on the uploaded product image and product information, create a AI Talking Pet short video.\nProduct Name: Silent Circulating Automatic Pet Water Fountain\nKey Selling Points: Fresh flowing water they love; ultra-quiet motor; large capacity triple filtration",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/62_ai-talking-pet-review_v1.mp4",
+    "posterPath": "story-driven-ads/62_ai-talking-pet-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-63-mksg_4144090430468",
@@ -1952,8 +1952,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "脏乱逆袭焕新清洁实测",
     "description": "Prove cleaning power as the mess lifts.",
     "prompt": "Create a tidy before-and-after organization video.\nProduct Name: Modular Drawer Organizer Bin Set\nKey Selling Points: Creates clear compartments; mix-and-match sizes fit most drawers; sturdy and stackable; makes items easy to find",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/63_mess-to-fresh-demo_v1.mp4",
+    "posterPath": "ugc-ads/63_mess-to-fresh-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-64-mksg_3843994149124",
@@ -1964,8 +1964,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "品牌挑战答题综艺",
     "description": "Use timed rules and prizes to hold views.",
     "prompt": "Using the uploaded product image and product info, create a \"Challenge\" style short video.\nProduct Name: Charge-Up Energy Drink\nKey Selling Points: Instant refuel and focus; ice-cold kick; zero sugar low burden",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/64_branded-game-show-challenge_v1.mp4",
+    "posterPath": "story-driven-ads/64_branded-game-show-challenge_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-65-mksg_3843994148612",
@@ -1976,8 +1976,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "惬意生活Vlog软植入",
     "description": "Make daily-use recommendations feel real.",
     "prompt": "Based on the uploaded product image and product information, create a Vlog-Style Review short video.\nProduct Name: Freshly-Ground Drip Coffee Bags\nKey Selling Points: Freeze-dried freshness, fresh-ground aroma; brews in three seconds; multiple flavors",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/65_lifestyle-vlog-review_v1.mp4",
+    "posterPath": "ugc-ads/65_lifestyle-vlog-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-66-mksg_3815900510724",
@@ -1988,8 +1988,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "卡点九宫格穿搭矩阵",
     "description": "Organize every outfit in a scannable grid.",
     "prompt": "Based on the uploaded product image and product information, create a Grid Outfit Reveal short video.\nProduct Name: Summer Dresses 4-Grid Collection (4 different summer dresses)\nKey Selling Points: Same locked model identity; 4 cells switch on one screen; one dress family, many styles\nMaterial Order: All uploaded images are outfit/product reference images. No portrait reference is provided; generate one localized creator persona internally and keep that identity consistent.\nGenerate a localized creator/persona internally based on the product category, key selling points, and target audience. No user portrait image is provided. Use English only. Produce a 15-second 9:16 video.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/66_beat-synced-outfit-grid-demo_v1.mp4",
+    "posterPath": "product-demos/66_beat-synced-outfit-grid-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-67-mksg_3843994149380",
@@ -2000,8 +2000,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "情侣日常真实分享",
     "description": "Build trust through authentic couple use.",
     "prompt": "Based on the uploaded product image and product information, create a Couple Vlog short video.\nProduct Name: Couples 2-Person Self-Heating Hot Pot Set\nKey Selling Points: No stove, no fire — heats itself in 15 minutes; two-flavor pot for spicy & mild; premium meat + veggies + noodles included",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/67_couple-lifestyle-review_v1.mp4",
+    "posterPath": "ugc-ads/67_couple-lifestyle-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-68-mksg_3815900510980",
@@ -2012,8 +2012,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "真实买家纯享评价",
     "description": "Build trust with raw customer footage.",
     "prompt": "Using the uploaded product image and product info, create an \"Authentic UGC\" style short video.\nProduct Name: Overnight Oats Ready-to-Eat Cup\nKey Selling Points: Whole rolled oats + real fruit chunks; just add milk, no cooking needed; high fiber, low sugar",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/68_authentic-buyer-review_v1.mp4",
+    "posterPath": "ugc-ads/68_authentic-buyer-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-69-mksg_3815900511236",
@@ -2024,8 +2024,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "最后一秒紧急救场",
     "description": "Turn stress relief into buying intent.",
     "prompt": "Using the uploaded product image and product info, create a \"This Gadget Saved Me\" style short video.\nProduct Name: Portable Handheld Garment Steamer\nKey Selling Points: Heats up in 30 seconds with strong steam; flat and hanging use; compact for travel",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/69_last-second-rescue-demo_v1.mp4",
+    "posterPath": "ugc-ads/69_last-second-rescue-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-70-mksg_3823949144836",
@@ -2036,8 +2036,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "开箱即试穿一站式种草",
     "description": "Pair unboxing with convincing fit proof.",
     "prompt": "Based on the uploaded product image and product information, create a Virtual Try-On Unboxing short video.\nProduct Name: Pink Floral Smocked-Waist Summer Dress\nKey Selling Points: Chiffon drape flatters the figure; A-line hides the hips; sweet summer vacation vibe",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/70_unbox-and-try-on-demo_v1.mp4",
+    "posterPath": "product-demos/70_unbox-and-try-on-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-71-mksg_3838479872004",
@@ -2048,8 +2048,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "沉浸式ASMR撕膜开箱",
     "description": "Make every peel and tap worth watching.",
     "prompt": "Based on the uploaded product image and info, create a ASMR short video.\n\nProduct Name:\npippit Botanical Renewal Hand & Body Care Collection\n\nCore Selling Points:\nGentle daily cleansing for hands and body without over-drying\nHydrating, skin-softening formula that helps leave skin smooth and comfortable\nBotanical-inspired aromatic experience for a refined, spa-like routine\nMinimalist premium packaging that elevates any bathroom or vanity space\nComplete care set featuring hand wash, hand balm, facial concentrate, and cleansing soap\nDesigned for everyday luxury, combining function, scent, and aesthetic appeal",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "asmr/71_immersive-asmr-unboxing_v1.mp4",
+    "posterPath": "asmr/71_immersive-asmr-unboxing_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-72-mksg_3815900511492",
@@ -2060,8 +2060,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "球鞋上脚慢动作特写",
     "description": "Show sneaker shape and color in motion.",
     "prompt": "Based on the uploaded product image and product information, create a Sneaker Virtual Try-On short video.\nProduct Name: White Chunky Dad Sneakers\nKey Selling Points: Chunky sole adds height and lengthens legs; pure white goes with everything; soft bouncy cushioning",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/72_on-foot-sneaker-try-on_v1.mp4",
+    "posterPath": "product-demos/72_on-foot-sneaker-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-73-mksg_3843994149636",
@@ -2072,8 +2072,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "居家温馨情侣共用测评",
     "description": "Earn trust with cozy, unscripted use.",
     "prompt": "Based on the uploaded product image and product information, create a At-Home Couple Vlog short video.\nProduct Name: Silent Ultrasonic Aroma Diffuser\nKey Selling Points: Whisper-quiet ultrasonic mist; ambient mood light; auto shut-off for safety",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "ugc-ads/73_at-home-couple-review_v1.mp4",
+    "posterPath": "ugc-ads/73_at-home-couple-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-74-mksg_3823949145092",
@@ -2084,8 +2084,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "硬核暴力抗压摔落测试",
     "description": "Prove durability in crush and drop tests.",
     "prompt": "Create a safe product durability demonstration.\nProduct Name: TrailTitan Sport Bottle\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/74_extreme-durability-test_v1.mp4",
+    "posterPath": "product-demos/74_extreme-durability-test_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-75-mksg_3815900511748",
@@ -2096,8 +2096,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "复古旧时光遇见现代科技",
     "description": "Place modern products in vintage scenes.",
     "prompt": "Create a short video in the “Classic Meets Modern” playbook style using the uploaded product image and product information.\nProduct Name: Cream Retro Instant Camera\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/75_modern-in-vintage-story_v1.mp4",
+    "posterPath": "story-driven-ads/75_modern-in-vintage-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-76-mksg_3838479872516",
@@ -2108,8 +2108,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "盲盒拆箱悬念期待感",
     "description": "Build suspense to keep viewers watching.",
     "prompt": "Create a short video in the “Mystery Box” playbook style using the uploaded product image and product information.\nProduct Name: Summer Scent Discovery Box\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/76_mystery-box-unboxing_v1.mp4",
+    "posterPath": "story-driven-ads/76_mystery-box-unboxing_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-77-mksg_3815900512004",
@@ -2120,8 +2120,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "极度治愈的完美装盒收纳",
     "description": "Make precise reboxing satisfying to watch.",
     "prompt": "Create a short video in the “Reboxing” playbook style using the uploaded product image and product information.\nProduct Name: Compression Packing Cubes\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/77_satisfying-reboxing-demo_v1.mp4",
+    "posterPath": "product-demos/77_satisfying-reboxing-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-78-mksg_3843994151428",
@@ -2132,8 +2132,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "电影级品牌态度主张大片",
     "description": "Build appeal with cast, score, and voice.",
     "prompt": "Referring to the uploaded product image, make a Cinematic Anthem Film for the \"Trailburner Performance Running Shoes\".\nProduct Name: Trailburner Performance Running Shoes\nBrand Tone: Grit, drive, self-transcendence\nKey Selling Points: Engineered flyknit upper / high-rebound cushioning midsole / grippy outsole",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/78_cinematic-brand-anthem-film_v1.mp4",
+    "posterPath": "story-driven-ads/78_cinematic-brand-anthem-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-79-mksg_3823949146628",
@@ -2144,8 +2144,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "星际宇宙奢感视觉大片",
     "description": "Create premium appeal with starlit motion.",
     "prompt": "Referring to the uploaded product image, make a Cosmic Luxury Brand Film for the \"Stellar Amber Haute Parfum\".\nProduct Name: Stellar Amber Haute Parfum\nBrand Tone: Mysterious, opulent, celestial\nKey Selling Points: Warm amber-oud accord / faceted crystal flacon / long-lasting sillage",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/79_cosmic-luxury-ad-film_v1.mp4",
+    "posterPath": "visual-effects/79_cosmic-luxury-ad-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-80-mksg_3843994151684",
@@ -2156,8 +2156,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "裸眼3D地标户外大屏特效",
     "description": "Make giant landmark CGI the visual hook.",
     "prompt": "Based on the uploaded product image and product information, create a Faux OOH Brand Film short video.\nProduct Name: AeroCrisp Smart Air Fryer\nBrand Tone: Smart, healthy, homey\nKey Selling Points: Large visible frying basket / smart touch-screen presets / oil-free fast heating",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/80_faux-ooh-cgi-effect_v1.mp4",
+    "posterPath": "visual-effects/80_faux-ooh-cgi-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-81-mksg_3823949146884",
@@ -2168,8 +2168,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "层叠构图高街时尚短片",
     "description": "Layer fashion frames for closer viewing.",
     "prompt": "Based on the uploaded product image and product information, create a Film-Within-a-Film Fashion Ad short video.\nProduct Name: Rust Floral Off-Shoulder Maxi Sundress\nBrand Tone: French, fresh, cinematic\nKey Selling Points: Airy shirred off-shoulder bodice / all-over floral print / flowing high-slit maxi skirt",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/81_layered-fashion-ad-film_v1.mp4",
+    "posterPath": "story-driven-ads/81_layered-fashion-ad-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-82-mksg_3815900512260",
@@ -2180,8 +2180,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "标志性品牌符号叙事",
     "description": "Use a familiar icon to show brand value.",
     "prompt": "Based on the uploaded product image and product information, create a Brand Asset Amplifier short video.\nProduct Name: Contour Classic Cola\nBrand Tone: Timeless, warm, energetic\nKey Selling Points: Signature contour bottle / classic recipe / crisp bubbles",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/82_signature-brand-story_v1.mp4",
+    "posterPath": "visual-effects/82_signature-brand-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-83-mksg_3815900512516",
@@ -2192,8 +2192,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "流动材质形变超现实转场",
     "description": "Reveal texture with fluid material morphs.",
     "prompt": "Based on the uploaded product image and product information, create a Material Morph Film short video.\nProduct Name: Savoré Enamel Cast-Iron Dutch Oven\nBrand Tone: Crafted, tactile, warm home\nKey Selling Points: Thick cast iron for even heat retention / glossy easy-clean enamel interior / one-piece gradient-red casting",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/83_material-morph-effect_v1.mp4",
+    "posterPath": "visual-effects/83_material-morph-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-84-mksg_3843994151940",
@@ -2204,8 +2204,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "微缩景观与巨型产品童话",
     "description": "Put a giant product in a tiny world.",
     "prompt": "Referring to the uploaded product image, make a Miniature Product World film for the \"Sunrise Specialty Coffee Gift Set\".\nProduct Name: Sunrise Specialty Coffee Gift Set\nBrand Tone: Aromatic, artisanal, lifestyle\nKey Selling Points: Single-origin beans / fresh roasted / rich body",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/84_miniature-product-story_v1.mp4",
+    "posterPath": "visual-effects/84_miniature-product-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-85-mksg_3843994152196",
@@ -2216,8 +2216,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "自由旷野旅行灵感故事",
     "description": "Build desire with bold scenes of freedom.",
     "prompt": "Referring to the uploaded product image, make a Spirit of Travel Brand Film for the \"Voyager Aluminum Suitcase\".\nProduct Name: Voyager Aluminum Suitcase\nBrand Tone: Quality, freedom, exploration\nKey Selling Points: Magnesium-aluminum shell / silent spinner wheels / crush-resistant capacity",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/85_travel-inspired-story_v1.mp4",
+    "posterPath": "story-driven-ads/85_travel-inspired-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-86-mksg_3843994152452",
@@ -2228,8 +2228,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "梦境幻觉奢雅格调片",
     "description": "Build luxury appeal with dreamlike scenes.",
     "prompt": "Referring to the uploaded product image, make a Surreal Luxury World brand film for the \"Aurora Over-Ear Noise-Cancelling Headphones\".\nProduct Name: Aurora Over-Ear Noise-Cancelling Headphones\nBrand Tone: Serene, elevated, immersive\nKey Selling Points: Immersive active noise cancellation / champagne-gold luxe design / plush protein-leather earcups",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/86_dreamlike-luxury-film_v1.mp4",
+    "posterPath": "visual-effects/86_dreamlike-luxury-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-87-mksg_3823949147652",
@@ -2240,8 +2240,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "办公室伪纪录片式反差幽默",
     "description": "Use dry humor to make product claims real.",
     "prompt": "Please use the uploaded product image to make a mockumentary product drama in the style of \"The Office\" for Brookline Smallbatch Hot Sauce.\nProduct Name: Brookline Smallbatch Hot Sauce\nKey Selling Points: Stone-milled fresh chilies; a dozen hand-toasted spices; deep heat without harsh burn",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/87_office-mockumentary-review_v1.mp4",
+    "posterPath": "story-driven-ads/87_office-mockumentary-review_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-88-mksg_3843994148100",
@@ -2252,8 +2252,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "鼓点同频材质形变转场",
     "description": "Hold viewers with beat-synced changes.",
     "prompt": "Based on the uploaded product image and info, create an AI Effect Transformation short video.\nProduct Name: Wearable Neck Fan (Hands-Free Turbo Airflow)\nKey Selling Points: Dual-turbine strong airflow; 3 speed levels; low-noise, long battery life; hands-free for commuting and workouts",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/88_beat-synced-morph-effect_v1.mp4",
+    "posterPath": "visual-effects/88_beat-synced-morph-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-89-mksg_3823949147908",
@@ -2264,8 +2264,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "动漫蓄力爆发高能特效",
     "description": "Power up products with anime-style energy.",
     "prompt": "Please use the uploaded product image to make an anime transformation product drama for the VoltEdge RGB Mechanical Gaming Keyboard.\nProduct Name: VoltEdge RGB Mechanical Gaming Keyboard\nKey Selling Points: Per-key RGB backlight; fast-actuation mechanical switches; full N-key rollover anti-ghosting",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/89_anime-power-up-effect_v1.mp4",
+    "posterPath": "story-driven-ads/89_anime-power-up-effect_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-90-mksg_3843994152708",
@@ -2276,8 +2276,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "西部决斗对峙悬念反转",
     "description": "Build standoff tension before the reveal.",
     "prompt": "Create a cinematic desert product story with no weapons, conflict, dangerous actions, or stunts.\nProduct Name: One-Tap Flip Straw Sports Bottle\nKey Selling Points: One-handed flip-open straw; large capacity; leak-proof and drop-resistant",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/90_western-showdown-story_v1.mp4",
+    "posterPath": "story-driven-ads/90_western-showdown-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-91-mksg_3815900513028",
@@ -2288,8 +2288,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "韩剧唯美浪漫雨中相遇",
     "description": "Use romantic suspense to hold viewers.",
     "prompt": "Language: EN\nCreate one 15-second 9:16 K-Drama Romance Skit marketing video now. Use the uploaded product image as the only visual reference. Do not only write a prompt; generate the video artifact directly.\nProduct Name: GlassLip Mirror Water-Gloss Tint\nKey Selling Points: Mirror water-gloss finish; non-transfer long wear; skin-brightening cherry-blossom shade",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "story-driven-ads/91_k-drama-romance-story_v1.mp4",
+    "posterPath": "story-driven-ads/91_k-drama-romance-story_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-92-mksg_3843994150916",
@@ -2300,8 +2300,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "前卫先锋概念脑洞演示",
     "description": "Use one visual surprise to stand out.",
     "prompt": "Create a short video in the “Wild Card” playbook style using the uploaded product image and product information.\nProduct Name: Glow Party Energy Jelly\nKey Selling Points: Clear hero benefit; creator-friendly proof point; easy daily adoption",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/92_bold-concept-demo_v1.mp4",
+    "posterPath": "visual-effects/92_bold-concept-demo_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-93-mksg_3823949147396",
@@ -2312,8 +2312,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "高燃快剪潮流品牌节拍",
     "description": "Race through product moments to grab eyes.",
     "prompt": "Referring to the uploaded product image, make a Hyper Motion Brand Film for the \"Sonic Wave True Wireless Earbuds\".\nProduct Name: Sonic Wave True Wireless Earbuds\nBrand Tone: Dynamic, cool, tech-forward\nKey Selling Points: Active noise cancellation / low latency / all-day battery",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/93_fast-cut-brand-film_v1.mp4",
+    "posterPath": "visual-effects/93_fast-cut-brand-film_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-94-mksg_3823949146116",
@@ -2324,8 +2324,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "时尚大片级虚拟试衣",
     "description": "Give virtual try-ons an editorial finish.",
     "prompt": "Based on the uploaded product image and product information, create a Pro Virtual Try-On short video.\nProduct Name: Blue Floral High-Slit Cami Vacation Midi Dress\nKey Selling Points: Summer-ready styling; clear fit proof; easy mix-and-match value",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "visual-effects/94_editorial-virtual-try-on_v1.mp4",
+    "posterPath": "visual-effects/94_editorial-virtual-try-on_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-95-mksg_3815900510468",
@@ -2336,8 +2336,8 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "洗脑魔性舞蹈挑战教程",
     "description": "Teach easy dance moves viewers can replay.",
     "prompt": "Using the uploaded product image and product info, create a \"Dance Challenge\" style short video.\nProduct Name: True Wireless Sports Earbuds\nKey Selling Points: Secure in-ear fit won't fall out; low-latency on-beat sync; long battery life",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "product-demos/95_dance-challenge-tutorial_v1.mp4",
+    "posterPath": "product-demos/95_dance-challenge-tutorial_cover.jpg"
   },
   {
     "id": "pippit-marketing-agent-96-mksg_4145807008772",
@@ -2348,7 +2348,7 @@ export const CREATIVE_VIDEO_FORMATS = Object.freeze([
     "titleZh": "微缩世界触觉ASMR互动",
     "description": "Giant tiny-world products sell through ASMR touch.",
     "prompt": "Based on the uploaded product image and info, create a video.\nProduct Name: LoopZip Organizer Pouch\nKey Selling Points: Multiple smooth zipper tracks, quilted nylon texture, compact storage for travel, cosmetics, cables, and daily carry items.",
-    "videoPath": null,
-    "posterPath": null
+    "videoPath": "asmr/96_miniature-world-asmr-product-interaction_v1.mp4",
+    "posterPath": "asmr/96_miniature-world-asmr-product-interaction_cover.jpg"
   }
 ]);
