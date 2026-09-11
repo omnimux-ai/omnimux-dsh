@@ -148,14 +148,29 @@ function createToastElement(doc) {
   return toast
 }
 
+let toastTimer = null
+
+function clearToastTimer() {
+  if (toastTimer == null) return
+  const win = hostWindow()
+  if (win && typeof win.clearTimeout === 'function') {
+    win.clearTimeout(toastTimer)
+  } else {
+    clearTimeout(toastTimer)
+  }
+  toastTimer = null
+}
+
 function scheduleToastDismissal(win, toast) {
+  clearToastTimer()
   if (win && typeof win.setTimeout === 'function') {
-    win.setTimeout(() => {
+    toastTimer = win.setTimeout(() => {
       try {
         toast.remove()
       } catch {
         // ignore
       }
+      toastTimer = null
     }, 3200)
   }
 }
