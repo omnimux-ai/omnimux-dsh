@@ -1,12 +1,18 @@
 /**
  * 产品选择器逻辑模型
+ * 遵循系统产品形态标准：分类严格限定为实体商品 (physical) 与数字产品 (digital)。
  */
 
-export const BASE_CATEGORIES = Object.freeze([
-  { id: 'all', key: 'productPicker.cat.all', defaultLabel: '全部' },
-  { id: 'physical', key: 'productPicker.cat.physical', defaultLabel: '实体商品' },
-  { id: 'digital', key: 'productPicker.cat.digital', defaultLabel: '数字产品' },
+export const PRODUCT_CATEGORIES = Object.freeze([
+  { id: 'all', key: 'productPicker.cat.all', defaultLabel: '全部', icon: 'grid' },
+  { id: 'physical', key: 'productPicker.cat.physical', defaultLabel: '实体商品', icon: 'box' },
+  { id: 'digital', key: 'productPicker.cat.digital', defaultLabel: '数字产品', icon: 'file' },
 ]);
+
+/**
+ * 兼容旧导出
+ */
+export const BASE_CATEGORIES = PRODUCT_CATEGORIES;
 
 /**
  * 格式化价格
@@ -21,27 +27,39 @@ export function formatPrice(price) {
 }
 
 /**
- * 提取所有可用分类（包含基础分类和自定义标签分类）
+ * 计算各核心分类下的商品数量
  * @param {any[]} products
- * @returns {{ id: string, label: string }[]}
+ * @returns {Record<string, number>}
  */
-export function collectCategories(products = []) {
-  const customCats = new Set();
+export function computeCategoryCounts(products = []) {
+  const counts = { all: 0, physical: 0, digital: 0 };
+  if (!Array.isArray(products)) return counts;
+
+  counts.all = products.length;
   for (const p of products) {
-    if (Array.isArray(p.categories)) {
-      for (const cat of p.categories) {
-        if (typeof cat === 'string' && cat.trim()) {
-          customCats.add(cat.trim());
-        }
-      }
+    if (p.kind === 'digital') {
+      counts.digital += 1;
+    } else {
+      counts.physical += 1;
     }
   }
+  return counts;
+}
 
-  const result = BASE_CATEGORIES.map((c) => ({ id: c.id, label: c.defaultLabel, key: c.key }));
-  for (const cat of customCats) {
-    result.push({ id: cat, label: cat });
-  }
-  return result;
+/**
+ * 提取核心可用分类（固定为全部、实体商品、数字产品，杜绝业务标签污染一级分类）
+ * @param {any[]} products
+ * @returns {{ id: string, label: string, key: string, icon: string, count: number }[]}
+ */
+export function collectCategories(products = []) {
+  const counts = computeCategoryCounts(products);
+  return PRODUCT_CATEGORIES.map((c) => ({
+    id: c.id,
+    label: c.defaultLabel,
+    key: c.key,
+    icon: c.icon,
+    count: counts[c.id] ?? 0,
+  }));
 }
 
 /**
@@ -54,21 +72,20 @@ export function filterProducts(products = [], { category = 'all', query = '' } =
   const cleanQuery = query.trim().toLowerCase();
 
   return products.filter((p) => {
-    // 1. 分类匹配
+    // 1. 核心分类匹配 (all / physical / digital)
     if (category && category !== 'all') {
-      const matchKind = p.kind === category;
-      const matchCustom = Array.isArray(p.categories) && p.categories.includes(category);
-      if (!matchKind && !matchCustom) {
-        return false;
-      }
+      const isDigital = p.kind === 'digital';
+      if (category === 'digital' && !isDigital) return false;
+      if (category === 'physical' && isDigital) return false;
     }
 
-    // 2. 关键词匹配
+    // 2. 关键词匹配 (匹配名称、描述、SKU、品牌、卖点以及商品的自定义标签)
     if (cleanQuery) {
       const name = String(p.name || '').toLowerCase();
       const desc = String(p.description || '').toLowerCase();
       const sku = String(p.sku || '').toLowerCase();
       const brand = String(p.brand || '').toLowerCase();
+      const categoriesText = Array.isArray(p.categories) ? p.categories.join(' ').toLowerCase() : '';
       const sellingPoints = Array.isArray(p.selling_points)
         ? p.selling_points.join(' ').toLowerCase()
         : String(p.selling_points || '').toLowerCase();
@@ -78,6 +95,7 @@ export function filterProducts(products = [], { category = 'all', query = '' } =
         desc.includes(cleanQuery) ||
         sku.includes(cleanQuery) ||
         brand.includes(cleanQuery) ||
+        categoriesText.includes(cleanQuery) ||
         sellingPoints.includes(cleanQuery);
 
       if (!matched) return false;
@@ -92,15 +110,15 @@ export const DEFAULT_STRINGS = Object.freeze({
   'productPicker.title': '从产品库选择',
   'productPicker.cancel': '取消',
   'productPicker.confirm': '确认选择',
-  'productPicker.searchPlaceholder': '搜索产品名称、描述、SKU…',
+  'productPicker.searchPlaceholder': '搜索产品名称、描述、SKU、标签…',
   'productPicker.categories': '产品分类',
   'productPicker.cat.all': '全部',
   'productPicker.cat.physical': '实体商品',
   'productPicker.cat.digital': '数字产品',
   'productPicker.loading': '正在加载产品库…',
-  'productPicker.empty': '产品库还是空的。先去添加商品，再回到这里选择。',
+  'productPicker.empty': '暂无商品数据。先前往产品库添加，再回到这里选择。',
   'productPicker.emptySearch': '未找到匹配的产品',
-  'productPicker.goLibrary': '前往产品库',
+  'productPicker.goLibrary': '前往产品库管理',
   'productPicker.selectedMeta': '已选择：',
   'productPicker.unselectedHint': '请选择一件商品',
 });
