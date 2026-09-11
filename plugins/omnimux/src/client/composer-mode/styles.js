@@ -1,7 +1,7 @@
 /**
  * @file styles.js
  * 输入框创作模式切换栏（Agent / 营销 / 短剧）样式表
- * 严格遵循 100% --dsw-* 设计令牌规范
+ * 1:1 像素级复刻参考图微光 Rim Light 光影质感与通透暗底
  */
 
 export const COMPOSER_MODE_STYLES_ID = 'omnimux-composer-mode-styles'
@@ -19,12 +19,12 @@ export const COMPOSER_MODE_CSS = `
   z-index: 2;
 }
 
-/* 胶囊分段选择器壳体 (1:1 像素级复刻参考图) */
+/* 胶囊分段选择器壳体 (1:1 像素级复刻参考图通透暗色外壳) */
 .omnimux-composer-mode-pill {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
+  gap: 3px;
+  padding: 3px 4px;
   border-radius: 9999px;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
@@ -34,15 +34,16 @@ export const COMPOSER_MODE_CSS = `
   box-sizing: border-box;
 }
 
-/* 单个模式 Tab 按钮 */
+/* 单个模式 Tab 按钮基础态 (未激活状态: 纯透明底、无边框、次级灰白字) */
 .omnimux-composer-mode-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 28px;
   padding: 0 16px;
   border-radius: 9999px;
-  border: none;
+  border: 1px solid transparent;
   outline: none;
   background: transparent;
   color: var(--dsw-alias-text-secondary);
@@ -52,8 +53,8 @@ export const COMPOSER_MODE_CSS = `
   font-family: inherit;
   letter-spacing: 0.2px;
   cursor: pointer;
-  transition: background 0.18s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
   white-space: nowrap;
@@ -61,16 +62,31 @@ export const COMPOSER_MODE_CSS = `
 
 .omnimux-composer-mode-tab:hover:not(.active) {
   color: var(--dsw-alias-text-strong);
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: transparent;
 }
 
-/* 激活态 Tab (1:1 对标参考图高亮胶囊) */
+/* 激活态 Tab (1:1 复刻参考图：空白通透底色 + 精致拟物微光边框 Rim Light) */
 .omnimux-composer-mode-tab.active {
-  background: var(--dsw-alias-bg-layer-4);
+  background: transparent;
   color: var(--dsw-alias-text-strong);
-  font-weight: 600;
-  box-shadow: var(--dsw-alias-shadow-sm);
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.16); /* exempt-ui03 1:1复刻胶囊拟物玻璃态轮廓 */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), /* exempt-ui03 胶囊顶部内高光微反光 */
+              0 2px 6px rgba(0, 0, 0, 0.4);            /* exempt-ui03 胶囊外环境微阴影 */
   cursor: default;
+}
+
+/* 激活态胶囊底部的弧形漫反射月牙微光 (1:1 像素级复刻参考图底部下发光) */
+.omnimux-composer-mode-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.65) 50%, rgba(255, 255, 255, 0) 100%); /* exempt-ui03 胶囊底部微白漫反射月牙弧光 */
+  filter: blur(0.5px);
+  pointer-events: none;
 }
 
 .omnimux-composer-mode-tab:focus-visible {
