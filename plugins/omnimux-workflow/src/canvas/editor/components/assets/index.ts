@@ -11,3 +11,4 @@ export * from './views/CanvasOutlineView';
 export * from './views/ProjectAssetsView';
 export * from './views/SubjectLibraryView';
 export * from './views/HoverInspector';
+export * from './drawer';
