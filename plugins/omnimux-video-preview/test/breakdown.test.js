@@ -10,6 +10,8 @@ import {
   formatScriptCopyText,
   canonicalizeCameraTags,
   mapToCanonicalStage,
+  localizeStage,
+  METADATA_HEADING_REGEX,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
   parsePipelineAndStructureFromMarkdown,
@@ -675,5 +677,70 @@ Hook → Product Intro → Usage Detail → Demo Scene
     assert.deepEqual(shots[0].tags, ['全景', '固定机位', '平视', '固定镜头'])
     assert.deepEqual(shots[1].tags, ['中景', '智能手机手持', '俯视', '手持微动'])
     assert.deepEqual(shots[2].tags, ['中景', '车载机位', '仰视', '手持微动'])
+  })
+
+  it('localizes stage names cleanly according to DSH locale (zh vs en)', () => {
+    // 1. Chinese locale
+    assert.equal(localizeStage('Hook', true), '黄金钩子')
+    assert.equal(localizeStage('Product Intro', true), '产品引入')
+    assert.equal(localizeStage('Usage Detail', true), '使用细节')
+    assert.equal(localizeStage('Demo Scene', true), '场景演示')
+    assert.equal(localizeStage('Call to Action', true), '行动号召')
+    assert.equal(localizeStage('Climax', true), '剧情高潮')
+
+    // 2. English locale
+    assert.equal(localizeStage('Hook', false), 'Hook')
+    assert.equal(localizeStage('Product Intro', false), 'Product Intro')
+    assert.equal(localizeStage('黄金钩子', false), 'Hook')
+    assert.equal(localizeStage('产品引入', false), 'Product Intro')
+    assert.equal(localizeStage('使用细节', false), 'Usage Detail')
+    assert.equal(localizeStage('场景演示', false), 'Demo Scene')
+  })
+
+  it('filters out metadata section headings from structure and pipeline', () => {
+    const mdWithMeta = `
+## 1. 叙事结构链路
+Hook → Product Intro → Usage Detail → Demo Scene
+
+## 2. 结构阶段解构
+### 叙事结构链路
+Hook → Product Intro → Usage Detail → Demo Scene
+
+### 结构阶段解构
+### Hook
+展示爱犬在车座上酣睡，背上配有自动安抚拍打器，配合趣味文案吸引宠物主人的注意。
+
+### Product Intro
+切换至户外场景，展示产品固定在宠物肚皮上持续轻柔拍打的形态，引出产品核心功能。
+
+### Usage Detail
+展示产品在不同日常场景（室内沙发、阳台垫子）中的佩戴与自动拍打安抚细节。
+
+### Demo Scene
+综合展示多场景下爱犬在拍打器安抚中舒适熟睡的画面，并引导观众互动评论。
+
+## 3. 逐镜头分镜脚本表
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| 0:00 - 0:01 | 车载熟睡安抚 | Hook | 中近景 / 车载机位 / 俯视 / 手持微动 | 小狗蜷缩在汽车副驾座椅上安睡。 |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(mdWithMeta)
+
+    // Must NOT contain metadata titles like "叙事结构链路" or "结构阶段解构"
+    assert.ok(!pipeline.includes('叙事结构链路'))
+    assert.ok(!pipeline.includes('结构阶段解构'))
+    assert.ok(!structure.some((s) => s.stage === '叙事结构链路' || s.title === '叙事结构链路'))
+    assert.ok(!structure.some((s) => s.stage === '结构阶段解构' || s.title === '结构阶段解构'))
+
+    // Must cleanly have the 4 stages
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(structure.length, 4)
+    assert.equal(structure[0].stage, 'Hook')
+    assert.equal(structure[1].stage, 'Product Intro')
+    assert.equal(structure[2].stage, 'Usage Detail')
+    assert.equal(structure[3].stage, 'Demo Scene')
+
+    assert.equal(shots.length, 1)
+    assert.deepEqual(shots[0].tags, ['中近景', '车载机位', '俯视', '手持微动'])
   })
 })
