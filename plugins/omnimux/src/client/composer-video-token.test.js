@@ -47,3 +47,18 @@ test('video token markdown assembly does not duplicate existing URL', () => {
   const occurrences = draft.split(tokenUrl).length - 1
   assert.equal(occurrences, 1)
 })
+
+test('transparently prepends active skill gesture to draft without UI pollution', () => {
+  const activeSkill = { slug: 'video-hook-analysis', name: '视频分析' }
+  const draft = '请帮我分析拆解这个视频。'
+  const gesture = `/${activeSkill.slug}`
+
+  let finalDraft = draft
+  if (!finalDraft.includes(gesture)) {
+    finalDraft = `${gesture} ${finalDraft.trim()}`
+  }
+
+  assert.equal(finalDraft, '/video-hook-analysis 请帮我分析拆解这个视频。')
+  // Original draft stays clean for UI
+  assert.equal(draft, '请帮我分析拆解这个视频。')
+})

@@ -383,7 +383,6 @@
       const close = useCallback(() => setOpen(false), []);
 
       const clearActiveSkill = useCallback(() => {
-        const current = activeSkill;
         setActiveSkill(null);
         if (typeof window !== "undefined") {
           window.__omnimuxActiveSkill = null;
@@ -393,20 +392,9 @@
             }));
           } catch {}
         }
-        if (current && inputActions && typeof inputActions.setDraft === "function") {
-          const gesture = SkillShelf.skillGesture(current);
-          if (gesture && draft && draft.includes(gesture.trim())) {
-            const next = draft.replace(gesture.trim(), "").trim();
-            inputActions.setDraft(next);
-          }
-        }
-      }, [activeSkill, draft, inputActions]);
+      }, []);
 
       const applyItem = useCallback((item) => {
-        const gesture = SkillShelf.skillGesture(item);
-        if (!gesture) return false;
-        if (!inputActions || typeof inputActions.setDraft !== "function") return false;
-        inputActions.setDraft(SkillShelf.appendSkillGesture(draft, gesture));
         focusComposerCard();
         setActiveSkill(item);
         if (typeof window !== "undefined") {
@@ -426,7 +414,7 @@
         }
         setOpen(false);
         return true;
-      }, [draft, inputActions]);
+      }, []);
 
       const onExplore = useCallback(() => {
         writePlazaSkillsIntent();
@@ -472,15 +460,24 @@
             h("button", {
               type: "button",
               className: "sh-chip-close",
-              title: "取消选择",
+              title: "移除技能",
+              "aria-label": "移除技能",
               onClick: (e) => {
                 e.stopPropagation();
                 clearActiveSkill();
               },
             },
-              h("svg", { width: 10, height: 10, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5 },
-                h("line", { x1: 18, y1: 6, x2: 6, y2: 18 }),
-                h("line", { x1: 6, y1: 18, x2: 18, y2: 18 }),
+              h("svg", {
+                width: 10,
+                height: 10,
+                viewBox: "0 0 10 10",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: 1.5,
+                strokeLinecap: "round",
+                style: { display: "block" },
+              },
+                h("path", { d: "M2 2L8 8M8 2L2 8" }),
               ),
             ),
           ) : null,
