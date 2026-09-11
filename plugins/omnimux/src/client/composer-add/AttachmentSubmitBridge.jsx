@@ -54,18 +54,26 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       }
 
       // Reconcile video link token to [视频](url) markdown syntax
+      const doc = root?.ownerDocument || (typeof document !== 'undefined' ? document : null)
+      const tokenNode = doc?.querySelector?.('[data-omx-video-token="true"]')
+      const tokenInput = tokenNode?.querySelector?.('input')
+      const liveUrl = tokenInput?.value?.trim() || ''
       const videoToken = typeof window !== 'undefined' ? window.__omnimuxVideoToken : null
-      if (videoToken && typeof videoToken.url === 'string' && videoToken.url.trim()) {
-        const url = videoToken.url.trim()
+      const url = liveUrl || (videoToken && typeof videoToken.url === 'string' ? videoToken.url.trim() : '')
+
+      if (url) {
         if (!draft.includes(url)) {
           const videoBlock = `[视频](${url})`
           draft = draft.trim() ? `${draft.trim()}\n\n${videoBlock}` : videoBlock
           try {
             actions?.setDraft?.(draft)
-            window.__omnimuxVideoToken = null
-            window.dispatchEvent(new CustomEvent('omnimux:video-token:cleared'))
+            if (typeof window !== 'undefined') {
+              window.__omnimuxVideoToken = null
+              window.dispatchEvent(new CustomEvent('omnimux:video-token:cleared'))
+            }
           } catch {}
         }
+        tokenNode?.remove?.()
       }
 
       if (!draft.trim() && !attachments.length) return true
