@@ -355,21 +355,23 @@ export function planAudioExtractDownstream(
     extractResult,
   });
 
-  if (provision.mode === 'create') {
+  if (provision.mode === 'create' && provision.addNodes[0]) {
     const createdNode = provision.addNodes[0];
     const settlementData = settlement.nodePatches[0]?.data || {};
+    const mergedNode: AudioExtractCreatedNode = {
+      id: createdNode.id,
+      type: 'material',
+      position: createdNode.position,
+      selected: createdNode.selected,
+      data: {
+        ...createdNode.data,
+        ...settlementData,
+      },
+    };
     return {
       mode: 'create',
       targetNodeId: provision.targetNodeId,
-      addNodes: [
-        {
-          ...createdNode,
-          data: {
-            ...createdNode.data,
-            ...settlementData,
-          },
-        },
-      ],
+      addNodes: [mergedNode],
       addEdges: provision.addEdges,
       nodePatches: [],
     };
