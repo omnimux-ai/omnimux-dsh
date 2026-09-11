@@ -129,13 +129,19 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
     assert.equal(popularCards[1].dataset.popularStarterId, 'url-to-video')
     assert.equal(popularCards[2].dataset.popularStarterId, 'recreate-viral-ads')
-    assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
+    assert.equal(popularCards[3].dataset.popularStarterId, 'creative-presets')
 
-    // 2. 点击占位卡片触发提示，未修改草稿
-    await click('[data-popular-starter-id="bulk-create-ads"]')
+    // 2. 点击创意营销预设卡片打开全功能模态框
+    await click('[data-popular-starter-id="creative-presets"]')
     await render(guideZh)
-    assert.ok(document.querySelector('.omnimux-toast-pill'))
-    assert.equal(writes, 0)
+    assert.ok(document.querySelector('.omnimux-creative-presets-modal'))
+    // 点击模态框提交按钮回填草稿
+    await click('.omnimux-preset-card')
+    await click('.omnimux-presets-submit-btn')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-creative-presets-modal'), null)
+    assert.ok(draft.includes('营销视频创意指令'))
+    assert.equal(writes, 1)
 
     // 3. 点击营销洞察卡片打开模态框，验证中文 Prompt 预填
     await click('[data-popular-starter-id="marketing-insight"]')
@@ -158,7 +164,7 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     await render(guideZh)
     assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
     assert.ok(draft.includes('结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]'))
-    assert.equal(writes, 1)
+    assert.equal(writes, 2)
 
     // 6. 英文语言环境自适应验证
     await render(guideEn)
