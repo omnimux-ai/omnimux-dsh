@@ -429,6 +429,14 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .expert-card-title{font-size:18px;font-weight:700;color:var(--dsw-alias-label-primary,#ffffff);margin:0 0 10px 0;line-height:1.35}
 .expert-card-desc{font-size:13px;line-height:1.55;color:var(--dsw-alias-label-secondary,#9da1ab);margin:0;flex:1}
 
+/* Hide permission preset selector in composer input bar */
+[data-composer-card] button[aria-label*="访问模式"],
+[data-composer-card] button[aria-label*="Access mode"],
+[data-composer-card] [class*="modes"] > button:has([class*="triggerIcon"]),
+[data-composer-card] [class*="modes"] > button[class*="trigger"]:first-child {
+  display: none !important;
+}
+
 `;
 
     const CSS_ID = "omnimux-market-style";
