@@ -38,6 +38,21 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       const previous = attachmentDrafts.get(sessionId) || ''
       let draft = value.draft
 
+      // Reconcile active skill gesture without polluting input UI
+      const activeSkill = typeof window !== 'undefined' ? window.__omnimuxActiveSkill : null
+      if (activeSkill) {
+        const slug = activeSkill.slug || activeSkill.skill || (activeSkill.id ? String(activeSkill.id).replace(/^sk-tk-/, '') : '')
+        if (slug) {
+          const gesture = `/${slug}`
+          if (!draft.includes(gesture)) {
+            draft = draft.trim() ? `${gesture} ${draft.trim()}` : `${gesture} `
+            try {
+              actions?.setDraft?.(draft)
+            } catch {}
+          }
+        }
+      }
+
       // Reconcile video link token to [视频](url) markdown syntax
       const videoToken = typeof window !== 'undefined' ? window.__omnimuxVideoToken : null
       if (videoToken && typeof videoToken.url === 'string' && videoToken.url.trim()) {
