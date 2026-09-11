@@ -1,23 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
-import { collectCategories, filterProducts } from './picker-model.js';
+import { collectCategories, filterProducts, createSafeT, DEFAULT_STRINGS } from './picker-model.js';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
-.omx-product-pick { display: flex; min-height: 440px; max-height: 72vh; }
+.omx-product-pick {
+  display: flex; min-height: 460px; max-height: 70vh;
+}
 .omx-product-pick__nav {
-  width: 148px; flex: none; display: flex; flex-direction: column; gap: 4px;
+  width: 140px; flex: none; display: flex; flex-direction: column; gap: 4px;
   padding: 8px 8px 8px 0; border-right: 1px solid var(--dsw-alias-border-l2);
   overflow-y: auto;
 }
 .omx-product-pick__tab {
   appearance: none; font: inherit; text-align: left; cursor: pointer;
-  height: 32px; border: none; border-radius: 8px; padding: 0 10px;
+  height: 34px; border: none; border-radius: 8px; padding: 0 12px;
   background: transparent; color: var(--dsw-alias-label-secondary);
-  font-size: 13px; transition: background 0.15s ease, color 0.15s ease;
+  font-size: 13px; font-weight: 500; transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center;
 }
 .omx-product-pick__tab:hover {
   background: var(--dsw-alias-interactive-bg-hover);
@@ -26,14 +29,14 @@ const CSS = `
 .omx-product-pick__tab[data-active="true"] {
   background: var(--dsw-alias-interactive-bg-hover-solid);
   color: var(--dsw-alias-label-primary);
-  font-weight: 500;
+  font-weight: 600;
 }
 .omx-product-pick__main {
   flex: 1; min-width: 0; display: flex; flex-direction: column;
-  padding: 0 0 0 14px; overflow: hidden;
+  padding: 0 0 0 16px; overflow: hidden;
 }
 .omx-product-pick__toolbar {
-  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
 .omx-product-pick__search-wrap {
   position: relative; flex: 1; display: flex; align-items: center;
@@ -48,6 +51,7 @@ const CSS = `
   background: var(--dsw-alias-bg-module-platform);
   padding: 0 10px 0 32px; font-size: 13px; color: var(--dsw-alias-label-primary);
   outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 .omx-product-pick__search-input:focus {
   border-color: var(--dsw-alias-label-primary);
@@ -60,20 +64,21 @@ const CSS = `
 }
 .omx-product-pick__search-clear:hover { color: var(--dsw-alias-label-primary); }
 .omx-product-pick__scroll {
-  flex: 1; overflow-y: auto; padding-right: 4px;
+  flex: 1; overflow-y: auto; padding-right: 6px;
 }
 .omx-product-pick__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 260px)); gap: 14px;
 }
 .omx-product-pick__empty {
-  border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 200px;
+  border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 220px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   color: var(--dsw-alias-label-tertiary); font-size: 13px; padding: 24px; text-align: center;
 }
 .omx-product-pick-card {
   border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; overflow: hidden; cursor: pointer;
   background: var(--dsw-alias-bg-base, var(--dsw-bg)); display: flex; flex-direction: column;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 .omx-product-pick-card:hover {
   border-color: var(--dsw-alias-border-l3);
@@ -81,10 +86,10 @@ const CSS = `
 }
 .omx-product-pick-card[data-selected="true"] {
   border-color: var(--dsw-alias-label-primary) !important;
-  box-shadow: 0 0 0 1px var(--dsw-alias-label-primary);
+  box-shadow: 0 0 0 1.5px var(--dsw-alias-label-primary);
 }
 .omx-product-pick-card__thumb {
-  height: 112px; background: var(--dsw-alias-bg-module-platform); position: relative;
+  height: 140px; background: var(--dsw-alias-bg-module-platform); position: relative;
   display: flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary);
   overflow: hidden;
 }
@@ -92,15 +97,16 @@ const CSS = `
   width: 100%; height: 100%; object-fit: cover;
 }
 .omx-product-pick-card__placeholder {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 .omx-product-pick-card__glyph {
-  font-size: 18px; font-weight: 600; opacity: 0.6;
+  font-size: 20px; font-weight: 600; opacity: 0.6;
 }
 .omx-product-pick-card__check {
   position: absolute; top: 8px; left: 8px; width: 22px; height: 22px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center; z-index: 2;
-  border: 1px solid var(--dsw-alias-border-l3); background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  border: 1px solid var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .omx-product-pick-card__check[data-selected="true"] {
@@ -112,7 +118,7 @@ const CSS = `
   border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary);
 }
 .omx-product-pick-card__body {
-  padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 76px;
+  padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 80px;
 }
 .omx-product-pick-card__title {
   font-size: 14px; font-weight: 500; line-height: 20px; overflow: hidden;
@@ -132,12 +138,22 @@ const CSS = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .omx-product-pick__footer {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%;
+  box-sizing: border-box; padding: 2px 0;
 }
-.omx-product-pick__meta { font-size: 13px; color: var(--dsw-alias-label-secondary); }
-.omx-product-pick__meta-highlight { color: var(--dsw-alias-label-primary); font-weight: 500; }
-.omx-product-pick__actions { display: flex; align-items: center; gap: 8px; }
-.omx-product-pick__error { color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 0 8px; }
+.omx-product-pick__meta {
+  flex: 1; min-width: 0; font-size: 13px; color: var(--dsw-alias-label-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-product-pick__meta-highlight {
+  color: var(--dsw-alias-label-primary); font-weight: 500; margin-left: 4px;
+}
+.omx-product-pick__actions {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.omx-product-pick__error {
+  color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 0 8px;
+}
 `;
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
@@ -146,28 +162,6 @@ function ensureStyles(doc = (typeof document !== 'undefined' ? document : null))
   style.id = STYLE_ID;
   style.textContent = CSS;
   doc.head?.appendChild(style);
-}
-
-/** 默认 zh-CN 兜底文案 */
-const DEFAULT_STRINGS = {
-  'productPicker.title': '从产品库选择',
-  'productPicker.cancel': '取消',
-  'productPicker.confirm': '确认选择',
-  'productPicker.searchPlaceholder': '搜索产品名称、描述、SKU…',
-  'productPicker.categories': '产品分类',
-  'productPicker.cat.all': '全部',
-  'productPicker.cat.physical': '实体商品',
-  'productPicker.cat.digital': '数字产品',
-  'productPicker.loading': '正在加载产品库…',
-  'productPicker.empty': '产品库还是空的。先去添加商品，再回到这里选择。',
-  'productPicker.emptySearch': '未找到匹配的产品',
-  'productPicker.goLibrary': '前往产品库',
-  'productPicker.selectedMeta': '已选择：',
-  'productPicker.unselectedHint': '请选择一件商品',
-};
-
-function defaultT(key) {
-  return DEFAULT_STRINGS[key] || key;
 }
 
 async function defaultFetchProducts() {
@@ -190,7 +184,7 @@ async function defaultFetchProducts() {
  *   onConfirm: (product: any) => void,
  *   initialProductId?: string,
  *   fetchProducts?: () => Promise<any[]>,
- *   t?: (key: string) => string,
+ *   t?: (key: string, vars?: any) => string,
  * }} props
  */
 export function ProductPicker({
@@ -199,8 +193,10 @@ export function ProductPicker({
   onConfirm,
   initialProductId,
   fetchProducts = defaultFetchProducts,
-  t = defaultT,
+  t,
 }) {
+  const safeT = useMemo(() => createSafeT(t), [t]);
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -269,50 +265,54 @@ export function ProductPicker({
     <ModalDialog
       open={open}
       onClose={onClose}
-      title={t('productPicker.title')}
-      width={820}
+      title={safeT('productPicker.title')}
+      width={800}
       footer={
         <div className="omx-product-pick__footer">
           <div className="omx-product-pick__meta">
             {selectedProduct ? (
               <>
-                {t('productPicker.selectedMeta')}
+                {safeT('productPicker.selectedMeta')}
                 <span className="omx-product-pick__meta-highlight">
                   {selectedProduct.name || selectedProduct.id}
                 </span>
               </>
             ) : (
-              t('productPicker.unselectedHint')
+              safeT('productPicker.unselectedHint')
             )}
           </div>
           <div className="omx-product-pick__actions">
             <Button variant="secondary" onClick={onClose}>
-              {t('productPicker.cancel')}
+              {safeT('productPicker.cancel')}
             </Button>
             <Button
               variant="primary"
               disabled={!selectedProduct}
               onClick={() => handleConfirm()}
             >
-              {t('productPicker.confirm')}
+              {safeT('productPicker.confirm')}
             </Button>
           </div>
         </div>
       }
     >
       <div className="omx-product-pick">
-        <nav className="omx-product-pick__nav" aria-label={t('productPicker.categories')}>
-          {categories.map((cat) => (
-            <button /* exempt-ui01: 产品分类切换 tab */
-              key={cat.id}
-              type="button"
-              className="omx-product-pick__tab"
-              data-active={activeCategory === cat.id ? 'true' : 'false'}
-              onClick={() => setActiveCategory(cat.id)}
-            >
-              {cat.key ? t(cat.key) : cat.label}
-            </button>
-          ))}
+        <nav className="omx-product-pick__nav" aria-label={safeT('productPicker.categories')}>
+          {categories.map((cat) => {
+            const label = cat.key ? safeT(cat.key) : cat.label;
+            return (
+              <button /* exempt-ui01: 产品分类切换 tab */
+                key={cat.id}
+                type="button"
+                className="omx-product-pick__tab"
+                data-active={activeCategory === cat.id ? 'true' : 'false'}
+                onClick={() => setActiveCategory(cat.id)}
+                title={label}
+              >
+                {label}
+              </button>
+            );
+          })}
         </nav>
 
         <section className="omx-product-pick__main">
@@ -336,7 +336,7 @@ export function ProductPicker({
               <input
                 type="text"
                 className="omx-product-pick__search-input"
-                placeholder={t('productPicker.searchPlaceholder')}
+                placeholder={safeT('productPicker.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -367,13 +367,13 @@ export function ProductPicker({
 
           <div className="omx-product-pick__scroll">
             {loading ? (
-              <div className="omx-product-pick__empty">{t('productPicker.loading')}</div>
+              <div className="omx-product-pick__empty">{safeT('productPicker.loading')}</div>
             ) : filteredProducts.length === 0 ? (
               <div className="omx-product-pick__empty">
                 <p>
                   {searchQuery
-                    ? t('productPicker.emptySearch')
-                    : t('productPicker.empty')}
+                    ? safeT('productPicker.emptySearch')
+                    : safeT('productPicker.empty')}
                 </p>
                 {!searchQuery ? (
                   <Button
@@ -390,17 +390,19 @@ export function ProductPicker({
                       }
                     }}
                   >
-                    {t('productPicker.goLibrary')}
+                    {safeT('productPicker.goLibrary')}
                   </Button>
                 ) : null}
               </div>
             ) : (
               <div className="omx-product-pick__grid">
                 {filteredProducts.map((product) => {
-                  const typeLabel =
+                  const firstCategory = Array.isArray(product.categories) && product.categories[0];
+                  const typeLabel = firstCategory || (
                     product.kind === 'digital'
-                      ? t('productPicker.cat.digital')
-                      : t('productPicker.cat.physical');
+                      ? safeT('productPicker.cat.digital')
+                      : safeT('productPicker.cat.physical')
+                  );
                   return (
                     <ProductPickerCard
                       key={product.id}

@@ -86,3 +86,44 @@ export function filterProducts(products = [], { category = 'all', query = '' } =
     return true;
   });
 }
+
+/** 默认 zh-CN 完整兜底文案字典 */
+export const DEFAULT_STRINGS = Object.freeze({
+  'productPicker.title': '从产品库选择',
+  'productPicker.cancel': '取消',
+  'productPicker.confirm': '确认选择',
+  'productPicker.searchPlaceholder': '搜索产品名称、描述、SKU…',
+  'productPicker.categories': '产品分类',
+  'productPicker.cat.all': '全部',
+  'productPicker.cat.physical': '实体商品',
+  'productPicker.cat.digital': '数字产品',
+  'productPicker.loading': '正在加载产品库…',
+  'productPicker.empty': '产品库还是空的。先去添加商品，再回到这里选择。',
+  'productPicker.emptySearch': '未找到匹配的产品',
+  'productPicker.goLibrary': '前往产品库',
+  'productPicker.selectedMeta': '已选择：',
+  'productPicker.unselectedHint': '请选择一件商品',
+});
+
+/**
+ * 构造安全稳固的 i18n 解析器：
+ * 只要传入的 customT 返回值为原始 key 或为空，一律强制回退到内置 DEFAULT_STRINGS 字典，杜绝暴露 raw key。
+ * @param {((key: string, vars?: any) => string) | undefined} customT
+ */
+export function createSafeT(customT) {
+  return (key, vars) => {
+    if (typeof customT === 'function') {
+      try {
+        const res = customT(key, vars);
+        if (typeof res === 'string' && res.trim() && res !== key) {
+          return res;
+        }
+      } catch {
+        // ignore error and fallback
+      }
+    }
+    const template = DEFAULT_STRINGS[key] || key;
+    if (!vars) return template;
+    return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
+  };
+}
