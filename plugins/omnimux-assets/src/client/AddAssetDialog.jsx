@@ -150,7 +150,7 @@ export function AddAssetDialog({ t, busy, presetType = 'character', error, onCan
                   aria-label={t('mapping.remove')}
                   onClick={() => { setFiles((current) => current.filter((row) => row.real_path !== file.real_path)) }}
                 >
-                  ×
+                  × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                 </IconButton>
               </li>
             ))}
@@ -172,7 +172,7 @@ export function AddAssetDialog({ t, busy, presetType = 'character', error, onCan
                       aria-label={t('mapping.remove')}
                       onClick={() => { setTags(tags.filter((item) => item !== tag)) }}
                     >
-                      ×
+                      × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                     </IconButton>
                   </Badge>
                 ))}

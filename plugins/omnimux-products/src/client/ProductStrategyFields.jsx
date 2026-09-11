@@ -202,7 +202,7 @@ export function AngleRow(props) {
           aria-label={t('remove.confirm')}
           onClick={onRemove}
         >
-          ×
+          × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
         </IconButton>
       </div>
       <textarea
@@ -283,7 +283,7 @@ export function SegmentRow(props) {
         aria-label={t('remove.confirm')}
         onClick={onRemove}
       >
-        ×
+        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
       </IconButton>
     </div>
   )
@@ -319,7 +319,7 @@ export function CompetitorRow(props) {
         aria-label={t('remove.confirm')}
         onClick={onRemove}
       >
-        ×
+        × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
       </IconButton>
     </div>
   )

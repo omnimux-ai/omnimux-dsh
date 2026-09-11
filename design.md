@@ -48,9 +48,10 @@
 - WebKit 与 macOS Electron 环境下原生 `<select>` 会触发系统级蓝白相间菜单，严重破坏暗黑质感与主题一致性。
 - **必须**使用定制 React Popover 下拉浮层（基于毛玻璃浮层面板）或统一引入 `@deepseek-ai/dsh-client-ui-primitives` / `dsh-ui-kit` 中的 `DropdownSelect`。
 
-### 2.5 严禁使用字符与 Emoji 充当图标
-- 严禁在按钮或标签中使用 `↑`、`↓`、`×`、`🔍`、`⚙️`、`✅`、`🗑️`、`🎬`、`⚡` 等 Unicode 字符或 Emoji。
+### 2.5 严禁使用字符与 Emoji 充当图标 (UI04 硬门禁)
+- 严禁在按钮或标签中使用 `↑`、`↓`、`×`、`✕`、`🔍`、`⚙️`、`✅`、`🗑️`、`🎬`、`⚡` 等 Unicode 字符或 Emoji。
 - **必须**统一使用矢量 SVG 图标（优先使用 `@deepseek-ai/dsh-client-ui-primitives` 内置图标，缺省时使用 `lucide-react`）。
+- **硬性门禁卡点 (UI04)**：由 `scripts/guard-ui-rules.mjs` 与 CI `scripts/scan-ui-gates.mjs` 自动强校验，违规代码在编辑时被 PreToolUse Hook 打断，在 CI 时直接阻断构建。特化场景须使用 `// exempt-ui04 <业务原因>`。
 
 ### 2.6 WCAG AA 无障碍对比度（Accessibility & Contrast）
 - 正文及关键交互文本对背景的对比度必须 ≥ **4.5:1**。

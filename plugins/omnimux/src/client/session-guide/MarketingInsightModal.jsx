@@ -97,7 +97,7 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
           <button key={item.id} type="button" role="tab" className="omnimux-insight-item" data-insight-id={item.id} aria-selected={selectedItem === item.id} onClick={() => handleSelect(item.id)}> {/* // exempt-ui01: insight item selection button */}
             <div className="omnimux-insight-item-header">
               <StarterIcon icon={item.icon} />
-              <span className="omnimux-insight-arrow">↗</span>
+              <span className="omnimux-insight-arrow">↗</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
             </div>
             <span className="omnimux-insight-item-title">
               {t(`guide.insight.${item.id}.title`)}

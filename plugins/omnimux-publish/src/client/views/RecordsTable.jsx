@@ -153,9 +153,9 @@ export function RecordsTable({
                   <div className="omnimux-publish-td-content">
                     <div className="omnimux-publish-td-thumb">
                       {isVideo ? (
-                        <span className="omnimux-publish-type-icon">🎬</span>
+                        <span className="omnimux-publish-type-icon">🎬</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                       ) : (
-                        <span className="omnimux-publish-type-icon">🖼</span>
+                        <span className="omnimux-publish-type-icon">🖼</span> {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                       )}
                     </div>
                     <div className="omnimux-publish-td-title-wrap">
@@ -170,7 +170,7 @@ export function RecordsTable({
                     {platforms.length > 0 ? (
                       platforms.map((p, idx) => (
                         <span key={idx} className={`omnimux-publish-plat-tag ${p}`} title={p}>
-                          {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()}
+                          {p === 'tiktok' ? '🎵' : p === 'xiaohongshu' || p === 'xhs' ? '小' : p === 'wechat_channels' || p === 'sph' ? '视' : p.slice(0, 1).toUpperCase()} // exempt-ui04: 历史存量待迁移为矢量SVG
                         </span>
                       ))
                     ) : (

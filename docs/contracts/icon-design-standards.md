@@ -12,7 +12,8 @@ subsystem: "omnimux"
 # OmniMux 图标组件选型与迁移规范 (Icon Standards Contract)
 
 > **生效范围**：OmniMux 产品矩阵（`product/omnimux-dsh/plugins/*`）以及所有官方/三方扩展客户端界面。  
-> **核心目标**：彻底淘汰 Emoji 表情与 Unicode 字符图标，确立矢量 SVG 格式、原生主题自适应与统一设计语言。
+> **核心目标**：彻底淘汰 Emoji 表情与 Unicode 字符图标，确立矢量 SVG 格式、原生主题自适应与统一设计语言。  
+> **硬性门禁 (UI04)**：受 `scripts/guard-ui-rules.mjs` PreToolUse Hook 与 `scripts/scan-ui-gates.mjs` CI 静态扫描双重拦截，违规代码编辑即打断，CI 物理阻断合并。特化场景须添加 `// exempt-ui04 <业务原因>`。
 
 ---
 

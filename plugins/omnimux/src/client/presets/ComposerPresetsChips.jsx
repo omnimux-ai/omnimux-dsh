@@ -93,7 +93,7 @@ export function ComposerPresetsChips(props) {
             onClick={(e) => handleRemoveDimension(e, 'format')}
             aria-label="移除广告格式预设"
           >
-            ✕
+            ✕ {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
           </button>
         </div>
       )}
@@ -116,7 +116,7 @@ export function ComposerPresetsChips(props) {
             onClick={(e) => handleRemoveDimension(e, 'hook')}
             aria-label="移除开场亮点预设"
           >
-            ✕
+            ✕ {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
           </button>
         </div>
       )}
@@ -139,7 +139,7 @@ export function ComposerPresetsChips(props) {
             onClick={(e) => handleRemoveDimension(e, 'style')}
             aria-label="移除视觉风格预设"
           >
-            ✕
+            ✕ {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
           </button>
         </div>
       )}

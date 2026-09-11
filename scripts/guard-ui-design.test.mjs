@@ -87,6 +87,41 @@ describe('PreToolUse UI Design Guard (guard-ui-design.mjs)', () => {
       assert.ok(out.permissionReason.includes('--dsw-alias-*'), '应引导使用官方 Token')
     })
 
+    it('UI04: 拦截 Emoji 表情充当图标 (如 🚀, 🎬, ✨)', () => {
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: UI_TARGET_FILE,
+          content: 'export function Header() {\n  return <div className="icon">🚀</div>\n}',
+        },
+      })
+      const result = handle(payload)
+      const out = result.hookSpecificOutput
+
+      assert.equal(out.permissionDecision, 'deny')
+      assert.ok(out.permissionReason.includes('UI04'), '应包含 UI04 规则码')
+      assert.ok(out.permissionReason.includes('Emoji'), '应提示禁止使用 Emoji 表情')
+      assert.ok(out.permissionReason.includes('icon-design-standards.md'), '应包含图标规范契约链接')
+    })
+
+    it('UI04: 拦截 Unicode 字符充当图标 (如 ✕, ×, ↗)', () => {
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: UI_TARGET_FILE,
+          content: 'export function CloseBtn() {\n  return <button>✕</button>\n}',
+        },
+      })
+      const result = handle(payload)
+      const out = result.hookSpecificOutput
+
+      assert.equal(out.permissionDecision, 'deny')
+      assert.ok(out.permissionReason.includes('UI04'), '应包含 UI04 规则码')
+      assert.ok(out.permissionReason.includes('Unicode 字符'), '应提示禁止使用 Unicode 字符充当图标')
+    })
+
     it('UI10: 拦截非标字阶 (如 17px, 22px 等不在白名单的字号)', () => {
       const payload = JSON.stringify({
         hook_event_name: 'PreToolUse',
@@ -188,6 +223,34 @@ export function SafeComponent() {
 
     it('行内带 // exempt-ui03 豁免裸色', () => {
       const code = 'const BRAND_COLOR = "#7961f2"; // exempt-ui03: 极光紫品牌锁扣专属色'
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: UI_TARGET_FILE,
+          content: code,
+        },
+      })
+      const result = handle(payload)
+      assert.equal(result.hookSpecificOutput.permissionDecision, 'allow')
+    })
+
+    it('行内带 // exempt-ui04 豁免字符图标', () => {
+      const code = '<div>✕</div> // exempt-ui04: 既有历史组件待统一迁移'
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: UI_TARGET_FILE,
+          content: code,
+        },
+      })
+      const result = handle(payload)
+      assert.equal(result.hookSpecificOutput.permissionDecision, 'allow')
+    })
+
+    it('普通尺寸乘号 (如 72×72px) 与 i18n 字典不误拦截', () => {
+      const code = 'const dim = "72×72px";\nconst time = "7×24h";'
       const payload = JSON.stringify({
         hook_event_name: 'PreToolUse',
         tool_name: 'write',

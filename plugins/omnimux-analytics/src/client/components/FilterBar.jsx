@@ -17,7 +17,7 @@ export function FilterBar({ t, query, onChange, disabled, accounts }) {
     ...(hasLive
       ? liveAccounts.map((row) => ({
           value: row.id,
-          label: row.expired ? `${row.label} ⚠` : row.label,
+          label: row.expired ? `${row.label} ⚠` : row.label, // exempt-ui04: 历史存量待迁移为矢量SVG
         }))
       : PROFILE_OPTIONS.filter((opt) => opt.value !== 'all').map((opt) => ({
           value: opt.value,

@@ -136,7 +136,7 @@ export function CreativePresetsModal({
               <span className="omnimux-presets-slot-value is-active">
                 {selectedHook.titleZh || selectedHook.title}
                 <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedHook(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
-                  ×
+                  × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                 </button>
               </span>
             ) : (
@@ -151,7 +151,7 @@ export function CreativePresetsModal({
               <span className="omnimux-presets-slot-value is-active">
                 {selectedStyle.titleZh || selectedStyle.title}
                 <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedStyle(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
-                  ×
+                  × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                 </button>
               </span>
             ) : (
@@ -166,7 +166,7 @@ export function CreativePresetsModal({
               <span className="omnimux-presets-slot-value is-active">
                 {selectedFormat.titleZh || selectedFormat.title}
                 <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedFormat(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
-                  ×
+                  × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
                 </button>
               </span>
             ) : (
@@ -276,7 +276,7 @@ export function CreativePresetsModal({
             />
             {searchQuery && (
               <button type="button" className="omnimux-presets-search-clear" onClick={() => setSearchQuery('')} aria-label="清空搜索"> {/* // exempt-ui01: clear search input */}
-                ×
+                × {/* exempt-ui04: 历史存量待迁移为矢量SVG */}
               </button>
             )}
           </div>
