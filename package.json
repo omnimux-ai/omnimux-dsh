@@ -68,7 +68,7 @@
     "verify:slots": "node scripts/verify-slot-contracts.mjs",
     "verify:smoke": "node scripts/verify-dev-smoke.mjs",
     "verify:live": "node scripts/agent-live-qa.mjs",
-    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm test:agent-tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm test:gates && corepack pnpm verify:forms",
+    "verify:gates": "corepack pnpm note:lint && corepack pnpm doc:pairing && corepack pnpm archived:verify && corepack pnpm check:boundaries && corepack pnpm check:package-files && corepack pnpm verify:tools && corepack pnpm test:agent-tools && corepack pnpm verify:stages && corepack pnpm verify:slots && corepack pnpm test:ui && corepack pnpm test:gates && corepack pnpm verify:forms && corepack pnpm test:craft",
     "verify:all": "corepack pnpm verify:gates && corepack pnpm test && corepack pnpm registry:verify && corepack pnpm doctor",
     "sync:presets": "bash scripts/sync-agent-presets.sh",
     "presets:build": "node scripts/build-agent-presets.mjs",
@@ -76,7 +76,9 @@
     "verify:cdp": "node scripts/verify-dev-cdp.mjs",
     "check:package-files": "node scripts/verify-package-files.mjs",
     "form:": "node packages/form-contract/scripts/cli.mjs",
-    "verify:forms": "node packages/form-contract/scripts/verify.mjs"
+    "verify:forms": "node packages/form-contract/scripts/verify.mjs",
+    "test:craft": "node --test packages/craft/tests/*.test.mjs && node scripts/verify-craft.mjs",
+    "verify:craft": "node scripts/verify-craft.mjs"
   },
   "devDependencies": {
     "acorn": "8.15.0",

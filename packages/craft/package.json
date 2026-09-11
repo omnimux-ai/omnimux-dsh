@@ -1,0 +1,28 @@
+{
+  "name": "@omnimux/craft",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Universal craft knowledge, prompt assembler, and deterministic artifact linter",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./assembler": "./src/assembler.ts",
+    "./linter": "./src/linter.ts",
+    "./rules/*": "./rules/*"
+  },
+  "files": [
+    "src",
+    "rules",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
