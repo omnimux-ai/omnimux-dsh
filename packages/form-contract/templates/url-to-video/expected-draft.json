@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "templateId": "url-to-video",
+  "templateVersion": "1.0.0",
+  "prompt": "请根据以下产品页面信息与要求，将其转化为可直接投放的高转化率视频广告制作方案：\n产品网址：https://www.amazon.com/dp/B09XYZ1234\n目标受众：年轻白领、数码爱好者与通勤人群\n核心卖点：主动降噪、超轻佩戴与长达 40 小时续航\n视觉风格：clean-studio\n目标时长：15 秒\n画幅比例：9:16\n请深入挖掘产品痛点与优势，输出 3 秒 Hook、场景分镜脚本、运镜视觉引导以及结尾行动号召（CTA）。",
+  "attachments": []
+}

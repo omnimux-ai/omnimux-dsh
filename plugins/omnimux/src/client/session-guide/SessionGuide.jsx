@@ -1,5 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { STARTERS, STARTER_GROUPS, POPULAR_STARTERS, MARKETING_INSIGHT_ITEMS } from './catalog.js'
+import {
+  STARTERS,
+  STARTER_GROUPS,
+  POPULAR_STARTERS,
+  MARKETING_INSIGHT_ITEMS,
+  URL_TO_VIDEO_STYLES,
+  URL_TO_VIDEO_RATIOS,
+  URL_TO_VIDEO_EXAMPLES,
+} from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 
 function StarterIcon({ icon }) {
@@ -18,22 +26,17 @@ function PopularCardCover({ id }) {
     return (
       <svg viewBox="0 0 240 135" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect width="240" height="135" className="cover-bg-mesh" />
-        {/* Computer Screen */}
         <rect x="45" y="20" width="150" height="85" rx="6" className="cover-screen" strokeWidth="1.5" />
         <rect x="52" y="27" width="136" height="62" rx="3" className="cover-display" />
-        {/* Screen Content: Mindmap & Title */}
         <rect x="75" y="38" width="90" height="18" rx="4" className="cover-brand-badge" />
         <text x="120" y="50" className="cover-text-white" fontSize="9" fontWeight="700" textAnchor="middle">MARKETING INSIGHT</text>
-        {/* Nodes */}
         <circle cx="68" cy="70" r="7" className="cover-node-purple" strokeWidth="1" />
         <text x="68" y="73" className="cover-text-muted" fontSize="9" textAnchor="middle">Market</text>
         <circle cx="120" cy="74" r="8" className="cover-node-pink" strokeWidth="1" />
         <text x="120" y="77" className="cover-text-muted" fontSize="9" textAnchor="middle">Audience</text>
         <circle cx="172" cy="70" r="7" className="cover-node-blue" strokeWidth="1" />
         <text x="172" y="73" className="cover-text-muted" fontSize="9" textAnchor="middle">ROAS</text>
-        {/* Connecting lines */}
         <path d="M75 68 L95 56 M120 66 L120 56 M165 68 L145 56" className="cover-line" strokeWidth="0.8" strokeDasharray="2 2" />
-        {/* Stand */}
         <path d="M110 105 L130 105 L125 116 L115 116 Z" className="cover-stand" />
         <rect x="95" y="116" width="50" height="3" rx="1.5" className="cover-stand-base" />
       </svg>
@@ -44,7 +47,6 @@ function PopularCardCover({ id }) {
       <svg viewBox="0 0 240 135" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect width="240" height="135" className="cover-bg-alt" />
         <circle cx="120" cy="55" r="32" className="cover-circle-halo" />
-        {/* URL Input Bar */}
         <rect x="30" y="85" width="180" height="28" rx="14" className="cover-url-bar" strokeWidth="1.2" />
         <circle cx="45" cy="99" r="6" className="cover-url-icon" strokeWidth="1.2" />
         <path d="M41 99 H49 M45 95 V103" className="cover-url-icon" strokeWidth="1" />
@@ -58,10 +60,8 @@ function PopularCardCover({ id }) {
     return (
       <svg viewBox="0 0 240 135" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect width="240" height="135" className="cover-bg-alt" />
-        {/* Laptop & Viral Banner */}
         <rect x="50" y="32" width="140" height="70" rx="6" className="cover-screen" strokeWidth="1" />
         <rect x="58" y="38" width="124" height="50" rx="3" className="cover-display" />
-        {/* Badge */}
         <rect x="68" y="48" width="104" height="20" rx="4" className="cover-brand-badge" strokeWidth="1" />
         <text x="120" y="62" className="cover-text-white" fontSize="9" fontWeight="700" textAnchor="middle">RECREATE VIRAL ADS</text>
         <polygon points="116,74 126,80 116,86" className="cover-play-triangle" />
@@ -71,12 +71,49 @@ function PopularCardCover({ id }) {
   return (
     <svg viewBox="0 0 240 135" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <rect width="240" height="135" className="cover-bg-mesh" />
-      {/* Multi-ratio ad grid */}
       <rect x="40" y="24" width="48" height="68" rx="4" className="cover-grid-card" strokeWidth="1" />
       <rect x="94" y="24" width="52" height="42" rx="4" className="cover-grid-card" strokeWidth="1" />
       <rect x="152" y="24" width="48" height="68" rx="4" className="cover-grid-card" strokeWidth="1" />
       <rect x="94" y="72" width="52" height="20" rx="4" className="cover-brand-badge" strokeWidth="1" />
       <text x="120" y="85" className="cover-text-muted" fontSize="9" fontWeight="600" textAnchor="middle">Batch Ads</text>
+    </svg>
+  )
+}
+
+/** 轮播内真实示例卡片封面渲染 */
+function ExampleMediaCover({ id }) {
+  if (id === 'unboxing') {
+    return (
+      <svg viewBox="0 0 210 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="210" height="280" className="cover-bg-mesh" />
+        <rect x="45" y="80" width="120" height="90" rx="8" className="cover-screen" strokeWidth="1.5" />
+        <path d="M45 105 L105 135 L165 105 M105 135 V170" className="cover-line" strokeWidth="1.5" />
+        <circle cx="105" cy="65" r="22" className="cover-node-purple" strokeWidth="1" />
+        <text x="105" y="69" className="cover-text-white" fontSize="10" textAnchor="middle">UGC</text>
+        <circle cx="105" cy="220" r="16" className="cover-circle-btn" />
+        <polygon points="102,213 111,220 102,227" className="cover-text-white" />
+      </svg>
+    )
+  }
+  if (id === 'food-snack') {
+    return (
+      <svg viewBox="0 0 210 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="210" height="280" className="cover-bg-alt" />
+        <rect x="55" y="110" width="100" height="110" rx="6" className="cover-brand-badge" strokeWidth="1.5" />
+        <path d="M70 110 L75 40 M90 110 L92 35 M105 110 L105 30 M120 110 L118 35 M135 110 L140 45" className="cover-line" strokeWidth="8" strokeLinecap="round" />
+        <circle cx="105" cy="220" r="16" className="cover-circle-btn" />
+        <polygon points="102,213 111,220 102,227" className="cover-text-white" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 210 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="210" height="280" className="cover-bg-mesh" />
+      <path d="M105 50 Q125 30 145 60 T105 160 Q85 130 105 50 Z" className="cover-node-pink" strokeWidth="1.5" />
+      <rect x="75" y="150" width="60" height="80" rx="4" className="cover-screen" strokeWidth="1" />
+      <circle cx="105" cy="40" r="14" className="cover-node-purple" strokeWidth="1" />
+      <circle cx="105" cy="220" r="16" className="cover-circle-btn" />
+      <polygon points="102,213 111,220 102,227" className="cover-text-white" />
     </svg>
   )
 }
@@ -122,22 +159,18 @@ function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
   return (
     <div className="omnimux-insight-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('guide.insight.modal.title')}>
       <div className="omnimux-insight-modal" onClick={e => e.stopPropagation()}>
-        {/* Close button */}
         <button type="button" className="omnimux-insight-close" onClick={onClose} aria-label="Close" /* exempt-ui01: modal close icon button */>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
 
-        {/* Modal Header */}
         <header className="omnimux-insight-header">
           <h1>{t('guide.insight.modal.title')}</h1>
           <p>{t('guide.insight.modal.subtitle')}</p>
         </header>
 
-        {/* Modal Body: Left and Right */}
         <div className="omnimux-insight-body">
-          {/* Left: Suggested for you */}
           <section className="omnimux-insight-left" aria-label={t('guide.insight.suggested')}>
             <div className="omnimux-insight-left-top">
               <h2>{t('guide.insight.suggested')}</h2>
@@ -161,7 +194,6 @@ function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
             </div>
           </section>
 
-          {/* Right: What would you like to explore? */}
           <section className="omnimux-insight-right" aria-label={t('guide.insight.explore.title')}>
             <h2>{t('guide.insight.explore.title')}</h2>
             <div className="omnimux-insight-textarea-box">
@@ -176,6 +208,201 @@ function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
             <div className="omnimux-insight-actions">
               <button type="button" className="omnimux-insight-submit" onClick={handleSubmit} /* exempt-ui01: start insight submit button */>
                 <span>{t('guide.insight.start-btn')}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** 视频网址（URL to Video）全功能模态框 */
+function UrlToVideoModal({ isOpen, onClose, t, onSubmitDraft }) {
+  const [activeSlide, setActiveSlide] = useState(1)
+  const [productUrl, setProductUrl] = useState('')
+  const [targetAudience, setTargetAudience] = useState('')
+  const [keySellingPoint, setKeySellingPoint] = useState('')
+  const [selectedStyle, setSelectedStyle] = useState(URL_TO_VIDEO_STYLES[0].id)
+  const [isAutoDuration, setIsAutoDuration] = useState(true)
+  const [duration, setDuration] = useState(15)
+  const [selectedRatio, setSelectedRatio] = useState('9:16')
+  const [errorNotice, setErrorNotice] = useState(null)
+  const urlInputRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  function handlePrev() {
+    setActiveSlide(prev => (prev - 1 + URL_TO_VIDEO_EXAMPLES.length) % URL_TO_VIDEO_EXAMPLES.length)
+  }
+
+  function handleNext() {
+    setActiveSlide(prev => (prev + 1) % URL_TO_VIDEO_EXAMPLES.length)
+  }
+
+  function handleSubmit() {
+    if (!productUrl.trim()) {
+      setErrorNotice(t('guide.url-to-video.url-required'))
+      urlInputRef.current?.focus()
+      return
+    }
+    const styleObj = URL_TO_VIDEO_STYLES.find(s => s.id === selectedStyle)
+    const styleLabel = styleObj?.labelZh || styleObj?.label || selectedStyle
+    const durationText = isAutoDuration ? '自动（模型推荐）' : `${duration} 秒`
+
+    const prompt = `请根据以下产品页面信息，将其转化为可直接投放的带货短视频广告制作方案：
+产品网址：${productUrl.trim()}
+${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${keySellingPoint.trim() ? `核心卖点：${keySellingPoint.trim()}\n` : ''}视觉风格：${styleLabel}
+目标时长：${durationText}
+画幅比例：${selectedRatio}
+请深入挖掘该产品核心价值、痛点与使用场景，输出黄金 3 秒 Hook、场景分镜脚本、画面视觉与运镜指引、以及强有力的结尾行动号召（CTA）。`
+
+    onSubmitDraft(prompt)
+  }
+
+  return (
+    <div className="omnimux-u2v-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('guide.url-to-video.modal.title')}>
+      <div className="omnimux-u2v-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="omnimux-insight-close" onClick={onClose} aria-label="Close" /* exempt-ui01: modal close icon button */>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <header className="omnimux-u2v-header">
+          <h1>{t('guide.url-to-video.modal.title')}</h1>
+          <p>{t('guide.url-to-video.modal.subtitle')}</p>
+        </header>
+
+        <div className="omnimux-u2v-body">
+          {/* Left: 3D Carousel */}
+          <section className="omnimux-u2v-left" aria-label="示例展示">
+            <div className="omnimux-u2v-carousel">
+              {URL_TO_VIDEO_EXAMPLES.map((ex, index) => {
+                let pos = 'center'
+                if (index === (activeSlide - 1 + URL_TO_VIDEO_EXAMPLES.length) % URL_TO_VIDEO_EXAMPLES.length) pos = 'left'
+                else if (index === (activeSlide + 1) % URL_TO_VIDEO_EXAMPLES.length) pos = 'right'
+                else if (index !== activeSlide) pos = 'hidden'
+                if (pos === 'hidden') return null
+                return (
+                  <div key={ex.id} className="omnimux-u2v-card" data-pos={pos}>
+                    <span className="omnimux-u2v-card-badge">{ex.tag}</span>
+                    <div className="omnimux-u2v-card-media">
+                      <ExampleMediaCover id={ex.id} />
+                    </div>
+                    <div className="omnimux-u2v-card-info">
+                      <div className="omnimux-u2v-card-title">{ex.title}</div>
+                      <div className="omnimux-u2v-card-desc">{ex.desc}</div>
+                    </div>
+                  </div>
+                )
+              })}
+              <button type="button" className="omnimux-u2v-nav-btn prev" onClick={handlePrev} aria-label="Previous example" /* exempt-ui01: carousel nav button */>
+                ‹
+              </button>
+              <button type="button" className="omnimux-u2v-nav-btn next" onClick={handleNext} aria-label="Next example" /* exempt-ui01: carousel nav button */>
+                ›
+              </button>
+            </div>
+            <div className="omnimux-u2v-dots">
+              {URL_TO_VIDEO_EXAMPLES.map((ex, index) => (
+                <span key={ex.id} className={`omnimux-u2v-dot ${index === activeSlide ? 'active' : ''}`} onClick={() => setActiveSlide(index)} />
+              ))}
+            </div>
+          </section>
+
+          {/* Right: Form Flow */}
+          <section className="omnimux-u2v-right" aria-label="视频网址配置表单">
+            <div className="omnimux-u2v-form-flow">
+              {/* Product URL */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <span>{t('guide.url-to-video.product-url.label')}</span>
+                </label>
+                <input ref={urlInputRef} type="text" className="omnimux-u2v-input" value={productUrl} onChange={e => { setProductUrl(e.target.value); setErrorNotice(null) }} placeholder={t('guide.url-to-video.product-url.placeholder')} />
+                {errorNotice && <span className="omnimux-u2v-error">{errorNotice}</span>}
+              </div>
+
+              {/* Target audience */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                  <span>{t('guide.url-to-video.target-audience.label')}</span>
+                </label>
+                <input type="text" className="omnimux-u2v-input" value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder={t('guide.url-to-video.target-audience.placeholder')} />
+              </div>
+
+              {/* Key selling point */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                  <span>{t('guide.url-to-video.key-selling-point.label')}</span>
+                </label>
+                <input type="text" className="omnimux-u2v-input" value={keySellingPoint} onChange={e => setKeySellingPoint(e.target.value)} placeholder={t('guide.url-to-video.key-selling-point.placeholder')} />
+              </div>
+
+              {/* Visual style */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <span>{t('guide.url-to-video.visual-style.label')}</span>
+                </label>
+                <div className="omnimux-u2v-styles-grid" role="radiogroup">
+                  {URL_TO_VIDEO_STYLES.map(style => (
+                    <button key={style.id} type="button" role="radio" aria-checked={selectedStyle === style.id} className="omnimux-u2v-style-btn" onClick={() => setSelectedStyle(style.id)} /* exempt-ui01: style radio button */>
+                      {t(`guide.url-to-video.style.${style.id}`) || style.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>{t('guide.url-to-video.duration.label')}</span>
+                </label>
+                <div className="omnimux-u2v-duration-row">
+                  <button type="button" aria-pressed={isAutoDuration} className="omnimux-u2v-auto-btn" onClick={() => setIsAutoDuration(!isAutoDuration)} /* exempt-ui01: auto duration toggle */>
+                    {t('guide.url-to-video.duration.auto')}
+                  </button>
+                  <div className="omnimux-u2v-slider-track">
+                    <input type="range" min="4" max="180" value={isAutoDuration ? 15 : duration} disabled={isAutoDuration} onChange={e => { setDuration(Number(e.target.value)); setIsAutoDuration(false) }} className="omnimux-u2v-slider" />
+                  </div>
+                  <span className="omnimux-u2v-duration-label">{isAutoDuration ? t('guide.url-to-video.duration.auto') : `${duration}s`}</span>
+                </div>
+                <span className="omnimux-u2v-hint">{t('guide.url-to-video.duration.hint')}</span>
+              </div>
+
+              {/* Aspect ratio */}
+              <div className="omnimux-u2v-field">
+                <label className="omnimux-u2v-field-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                  <span>{t('guide.url-to-video.aspect-ratio.label')}</span>
+                </label>
+                <div className="omnimux-u2v-ratios-grid" role="radiogroup">
+                  {URL_TO_VIDEO_RATIOS.map(ratio => (
+                    <button key={ratio.id} type="button" role="radio" aria-checked={selectedRatio === ratio.id} className="omnimux-u2v-ratio-btn" onClick={() => setSelectedRatio(ratio.id)} /* exempt-ui01: ratio radio button */>
+                      <div className="omnimux-u2v-ratio-box" style={{ '--ratio-w': `${ratio.width}px`, '--ratio-h': `${ratio.height}px` }} />
+                      <span className="omnimux-u2v-ratio-text">{ratio.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="omnimux-u2v-actions">
+              <button type="button" className="omnimux-u2v-submit" onClick={handleSubmit} /* exempt-ui01: url-to-video submit button */>
+                <span>{t('guide.url-to-video.submit-btn')}</span>
               </button>
             </div>
           </section>
@@ -202,7 +429,9 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   const state = useSyncExternalStore(store.subscribe, () => store.get(sessionId), () => store.get(sessionId))
   const [notice, setNotice] = useState(null)
   const [toastText, setToastText] = useState(null)
+  const toastTimer = useRef(null)
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
+  const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
@@ -223,12 +452,14 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
     return () => {
       mounted.current = false
       root?.removeAttribute('data-omnimux-starter-host')
+      clearTimeout(toastTimer.current)
     }
   }, [])
 
   function showToast(text) {
     setToastText(text)
-    setTimeout(() => {
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => {
       if (mounted.current) setToastText(null)
     }, 2200)
   }
@@ -249,15 +480,20 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
   }
 
   function handlePopularClick(starter) {
-    if (starter.type === 'modal' && starter.id === 'marketing-insight') {
+    if (starter.id === 'marketing-insight') {
       setIsInsightModalOpen(true)
+      return
+    }
+    if (starter.id === 'url-to-video') {
+      setIsUrlToVideoOpen(true)
       return
     }
     showToast(t('guide.popular.placeholder-notice'))
   }
 
-  function handleSubmitInsight(prompt) {
+  function handleSubmitDraft(prompt) {
     setIsInsightModalOpen(false)
+    setIsUrlToVideoOpen(false)
     if (!current() || !inputActions?.setDraft) {
       setNotice('unavailable')
       return
@@ -323,7 +559,15 @@ function BlankSessionGuide({ sessionId, useInput, inputActions, store, t, getCur
         isOpen={isInsightModalOpen}
         onClose={() => setIsInsightModalOpen(false)}
         t={t}
-        onSubmitDraft={handleSubmitInsight}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* URL to Video Modal */}
+      <UrlToVideoModal
+        isOpen={isUrlToVideoOpen}
+        onClose={() => setIsUrlToVideoOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
       />
 
       {/* Centered Toast Feedback */}
