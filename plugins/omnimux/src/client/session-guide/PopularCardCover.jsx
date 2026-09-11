@@ -91,6 +91,8 @@ const COVER_MAP = {
   'marketing-insight': MarketingInsightCover,
   'url-to-video': UrlToVideoCover,
   'recreate-viral-ads': RecreateViralAdsCover,
+  'creative-presets': DefaultBatchAdsCover,
+  'bulk-create-ads': DefaultBatchAdsCover,
 }
 
 /**

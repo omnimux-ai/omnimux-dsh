@@ -6,6 +6,7 @@ import { PopularCardCover } from './PopularCardCover.jsx'
 import { MarketingInsightModal } from './MarketingInsightModal.jsx'
 import { UrlToVideoModal } from './UrlToVideoModal.jsx'
 import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
+import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 
 function copyText(text) {
   const clip = typeof navigator !== 'undefined' ? navigator?.clipboard : null
@@ -122,6 +123,7 @@ function BlankSessionGuide({
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
   const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
   const [isRecreateModalOpen, setIsRecreateModalOpen] = useState(false)
+  const [isCreativePresetsOpen, setIsCreativePresetsOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
@@ -195,6 +197,10 @@ function BlankSessionGuide({
       setIsRecreateModalOpen(true)
       return
     }
+    if (starter.id === 'creative-presets' || starter.id === 'bulk-create-ads') {
+      setIsCreativePresetsOpen(true)
+      return
+    }
     showToast(t('guide.popular.placeholder-notice'))
   }
 
@@ -202,6 +208,7 @@ function BlankSessionGuide({
     setIsInsightModalOpen(false)
     setIsUrlToVideoOpen(false)
     setIsRecreateModalOpen(false)
+    setIsCreativePresetsOpen(false)
     if (!isSessionActive() || !inputActions?.setDraft) {
       setNotice('unavailable')
       return
@@ -273,6 +280,14 @@ function BlankSessionGuide({
       <RecreateViralAdsModal
         isOpen={isRecreateModalOpen}
         onClose={() => setIsRecreateModalOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Creative Presets Modal */}
+      <CreativePresetsModal
+        isOpen={isCreativePresetsOpen}
+        onClose={() => setIsCreativePresetsOpen(false)}
         t={t}
         onSubmitDraft={handleSubmitDraft}
       />
