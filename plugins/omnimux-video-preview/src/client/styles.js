@@ -775,10 +775,10 @@ export const VIDEO_BREAKDOWN_CSS = `
   max-width: 620px;
 }
 .omx-rich-video-card:hover {
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08));
-  border-color: var(--omx-token-cyan-border, rgba(56, 189, 248, 0.42));
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-brand-primary);
   transform: translateY(-1px);
-  box-shadow: var(--dsw-alias-shadow-overlay, 0 6px 20px rgba(0, 0, 0, 0.3)); // exempt-ui03: 浮起阴影
+  box-shadow: var(--dsw-alias-shadow-overlay);
 }
 
 .omx-rich-card-thumb {
@@ -788,8 +788,8 @@ export const VIDEO_BREAKDOWN_CSS = `
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
-  background: var(--dsw-alias-bg-layer-3, #1e293b); // exempt-ui03: 暗房视听缩略图底色
-  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -816,13 +816,13 @@ export const VIDEO_BREAKDOWN_CSS = `
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.72));
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omx-tiktok-badge-icon {
   width: 16px;
   height: 16px;
-  background: var(--dsw-alias-bg-base, #000000); // exempt-ui03: TikTok 官方纯黑标志底色
+  background: var(--dsw-alias-bg-base);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -833,7 +833,7 @@ export const VIDEO_BREAKDOWN_CSS = `
 .omx-rich-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--dsw-alias-label-primary, #ffffff);
+  color: var(--dsw-alias-label-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -842,16 +842,16 @@ export const VIDEO_BREAKDOWN_CSS = `
 
 .omx-rich-card-author {
   font-size: 12px;
-  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .omx-rich-card-action-icon {
-  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
+  color: var(--dsw-alias-label-tertiary);
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
 .omx-rich-video-card:hover .omx-rich-card-action-icon {
-  color: var(--dsw-alias-label-primary, #ffffff);
+  color: var(--dsw-alias-label-primary);
 }
 `
 
