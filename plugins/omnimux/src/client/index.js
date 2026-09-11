@@ -33,6 +33,7 @@ import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
 import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
+import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -57,6 +58,7 @@ export const inject = ['slots', 'locale']
  */
 export function apply(ctx) {
   const t = installHubChrome(ctx)
+  registerLinkTriggerSource(ctx)
   installAgentPresetsI18n(ctx)
   installSessionCopyI18n(ctx)
   installCommandsI18n(ctx, primitives)
