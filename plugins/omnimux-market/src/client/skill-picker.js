@@ -29,7 +29,7 @@
       if (el && typeof el.focus === "function") el.focus();
     }
 
-    function renderPuzzleIcon(size = 16) {
+    function renderBookOpenIcon(size = 16) {
       const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 16;
       return h("svg", {
         width: px,
@@ -39,6 +39,7 @@
         xmlns: "http://www.w3.org/2000/svg",
         "aria-hidden": "true",
         preserveAspectRatio: "xMidYMid meet",
+        className: "lucide lucide-book-open",
         style: {
           width: px,
           height: px,
@@ -50,7 +51,14 @@
         },
       },
         h("path", {
-          d: "M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z",
+          d: "M12 5v16",
+          stroke: "currentColor",
+          strokeWidth: "2",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+        }),
+        h("path", {
+          d: "M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z",
           stroke: "currentColor",
           strokeWidth: "2",
           strokeLinecap: "round",
@@ -58,6 +66,7 @@
         }),
       );
     }
+    const renderPuzzleIcon = renderBookOpenIcon;
 
     function PickerInfoIcon() {
       return h("svg", {
@@ -441,7 +450,7 @@
             "data-omnimux-skill-picker": "",
             onClick: () => setOpen((v) => !v),
           },
-            renderPuzzleIcon(16),
+            renderBookOpenIcon(16),
             h("span", { className: "sh-picker-trigger-label" }, tr("picker.title")),
           ),
           activeSkill ? h("div", {
