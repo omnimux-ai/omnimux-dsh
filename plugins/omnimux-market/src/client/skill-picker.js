@@ -368,8 +368,6 @@
         return undefined;
       }, [sessionId, props]);
 
-      const presetBinding = SkillShelf.getPresetSkillBinding(currentPreset);
-
       useEffect(() => { setOpen(false); }, [sessionId]);
 
       useEffect(() => {
@@ -423,6 +421,10 @@
       if (composerMode === "marketing") {
         return null;
       }
+
+      // 核心业务规则：短剧创作模式 (drama) 自动接入短剧制作人专精货架 (drama-agent)
+      const activePresetId = composerMode === "drama" ? "drama-agent" : currentPreset;
+      const presetBinding = SkillShelf.getPresetSkillBinding(activePresetId, composerMode);
 
       // 如果当前预设没有绑定 skill 则默认不显示 skill 按钮
       if (!presetBinding) {

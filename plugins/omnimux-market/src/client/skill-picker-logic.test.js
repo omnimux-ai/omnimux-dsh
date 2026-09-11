@@ -285,6 +285,52 @@ describe('agent preset skill bindings', () => {
     assert.equal(AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'].presetId, 'tiktok-agent')
   })
 
+  it('exposes AGENT_PRESET_SKILL_BINDINGS containing drama-agent', () => {
+    assert.ok(AGENT_PRESET_SKILL_BINDINGS['drama-agent'])
+    assert.equal(AGENT_PRESET_SKILL_BINDINGS['drama-agent'].presetId, 'drama-agent')
+    assert.equal(AGENT_PRESET_SKILL_BINDINGS['drama-agent'].name, '短剧制作人')
+  })
+
+  it('getPresetSkillBinding resolves drama-agent, drama, 短剧 and mode === drama', () => {
+    const binding1 = getPresetSkillBinding('drama-agent')
+    assert.ok(binding1)
+    assert.equal(binding1.name, '短剧制作人')
+    assert.equal(getPresetSkillBinding('drama')?.presetId, 'drama-agent')
+    assert.equal(getPresetSkillBinding('短剧')?.presetId, 'drama-agent')
+    assert.equal(getPresetSkillBinding('短剧制作人')?.presetId, 'drama-agent')
+
+    // 验证 mode === 'drama' 时无缝解析短剧货架
+    const modeBinding = getPresetSkillBinding(null, 'drama')
+    assert.ok(modeBinding)
+    assert.equal(modeBinding.presetId, 'drama-agent')
+    assert.equal(modeBinding.name, '短剧制作人')
+  })
+
+  it('drama-agent contains the 6 short drama categories and 23 skills', () => {
+    const binding = getPresetSkillBinding('drama-agent')
+    const catIds = binding.categories.map((c) => c.id)
+    assert.deepEqual(catIds, ['剧本与拆镜', '角色与场景', '分镜视频生成', '配音与音效', '剪辑与后期', '出海与分发'])
+    assert.equal(binding.tabs.length, 7)
+    assert.equal(binding.tabs[0].id, 'all')
+    assert.equal(binding.skills.length, 23)
+
+    // 验证核心短剧技能存在
+    const slugs = new Set(binding.skills.map((s) => s.slug))
+    assert.ok(slugs.has('short-drama-series-writer'))
+    assert.ok(slugs.has('novel-storyboard'))
+    assert.ok(slugs.has('character-scene-storyboard'))
+    assert.ok(slugs.has('chinese-style-short-drama-generator'))
+    assert.ok(slugs.has('short-drama-voiceover'))
+    assert.ok(slugs.has('jianying-draft-export'))
+    assert.ok(slugs.has('tiktok-drama-center'))
+
+    // 验证分类过滤
+    const scriptSkills = filterPresetSkills(binding.skills, '剧本与拆镜')
+    assert.ok(scriptSkills.length >= 4)
+    const exportSkills = filterPresetSkills(binding.skills, '出海与分发')
+    assert.ok(exportSkills.length >= 3)
+  })
+
   it('getPresetSkillBinding resolves tiktok-agent, TikTokAgent and 全能社媒操盘手', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     assert.ok(binding)

@@ -601,5 +601,273 @@
         "installed": false
       }
     ]
+  },
+  "drama-agent": {
+    "presetId": "drama-agent",
+    "name": "短剧制作人",
+    "description": "专为爆款短剧与微短剧制作打造的端到端创作平台，涵盖选题剧本、小说拆镜、角色场景、分镜出片、音效配音与出海分发。",
+    "categories": [
+      { "id": "剧本与拆镜", "name": "剧本与拆镜" },
+      { "id": "角色与场景", "name": "角色与场景" },
+      { "id": "分镜视频生成", "name": "分镜视频生成" },
+      { "id": "配音与音效", "name": "配音与音效" },
+      { "id": "剪辑与后期", "name": "剪辑与后期" },
+      { "id": "出海与分发", "name": "出海与分发" }
+    ],
+    "skills": [
+      {
+        "id": "sk-drama-series-writer",
+        "slug": "short-drama-series-writer",
+        "skill": "short-drama-series-writer",
+        "name": "微短剧剧集编剧",
+        "title": "微短剧剧集编剧",
+        "category": "剧本与拆镜",
+        "description": "一键短剧全流程剧本创作。按集规划黄金3秒钩子、情绪冲突升级、反转与绝地留钩卡点，支持战神、豪门、逆袭等题材。",
+        "summary": "一键短剧全流程剧本创作。按集规划黄金3秒钩子、情绪冲突升级、反转与绝地留钩卡点，支持战神、豪门、逆袭等题材。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-screenwriter",
+        "slug": "short-drama-screenwriter",
+        "skill": "short-drama-screenwriter",
+        "name": "短剧编剧助手",
+        "title": "短剧编剧助手",
+        "category": "剧本与拆镜",
+        "description": "按指定故事选题与角色人设撰写连续竖屏短剧剧本，结构化产出场景定义、人物动作指示与高情绪张力对白。",
+        "summary": "按指定故事选题与角色人设撰写连续竖屏短剧剧本，结构化产出场景定义、人物动作指示与高情绪张力对白。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-novel-storyboard",
+        "slug": "novel-storyboard",
+        "skill": "novel-storyboard",
+        "name": "网文小说改短剧拆镜",
+        "title": "网文小说改短剧拆镜",
+        "category": "剧本与拆镜",
+        "description": "长篇小说或网文一键转短剧分镜表，自动提取高能戏剧冲突、删减冗长铺垫，输出包含景别、机位、画面的分镜脚本。",
+        "summary": "长篇小说或网文一键转短剧分镜表，自动提取高能戏剧冲突、删减冗长铺垫，输出包含景别、机位、画面的分镜脚本。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-n-storyboard",
+        "slug": "n-storyboard",
+        "skill": "n-storyboard",
+        "name": "多宫格分镜故事板",
+        "title": "多宫格分镜故事板",
+        "category": "剧本与拆镜",
+        "description": "把剧本场景拆解为4宫格/9宫格连续分镜故事板，直观预览镜头叙事节奏与画面连贯性。",
+        "summary": "把剧本场景拆解为4宫格/9宫格连续分镜故事板，直观预览镜头叙事节奏与画面连贯性。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-storyboard-gen",
+        "slug": "storyboard-generation",
+        "skill": "storyboard-generation",
+        "name": "短剧工业级分镜生成",
+        "title": "短剧工业级分镜生成",
+        "category": "剧本与拆镜",
+        "description": "电影级分镜板生成，带严格景别、时间线、运镜角度与机位叠加指示，对标院线与影视工业规范。",
+        "summary": "电影级分镜板生成，带严格景别、时间线、运镜角度与机位叠加指示，对标院线与影视工业规范。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-character-consistency",
+        "slug": "ip-character-consistency-studio",
+        "skill": "ip-character-consistency-studio",
+        "name": "短剧主角一致性设计",
+        "title": "短剧主角一致性设计",
+        "category": "角色与场景",
+        "description": "制作可持续复用的短剧角色形象包。锁定主角面部特征与发型，生成正侧背三视图、情绪特写卡，保证跨集换装不崩脸。",
+        "summary": "制作可持续复用的短剧角色形象包。锁定主角面部特征与发型，生成正侧背三视图、情绪特写卡，保证跨集换装不崩脸。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-character-scene",
+        "slug": "character-scene-storyboard",
+        "skill": "character-scene-storyboard",
+        "name": "角色场景综合设定图",
+        "title": "角色场景综合设定图",
+        "category": "角色与场景",
+        "description": "由参考图与剧本描述综合生成短剧核心空间场景（豪华宴会厅、总裁办公室、破旧出租屋、宗门大殿等）。",
+        "summary": "由参考图与剧本描述综合生成短剧核心空间场景（豪华宴会厅、总裁办公室、破旧出租屋、宗门大殿等）。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-micro-expression",
+        "slug": "micro-expression-video-generator",
+        "skill": "micro-expression-video-generator",
+        "name": "角色微表情与情绪卡",
+        "title": "角色微表情与情绪卡",
+        "category": "角色与场景",
+        "description": "设计短剧高冲突时刻的角色微表情（冷笑、眼角泛泪、隐忍咬牙、愤怒咆哮），塑造极具说服力的戏剧表演张力。",
+        "summary": "设计短剧高冲突时刻的角色微表情（冷笑、眼角泛泪、隐忍咬牙、愤怒咆哮），塑造极具说服力的戏剧表演张力。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-cinematic-scenes",
+        "slug": "cinematic-scenes",
+        "skill": "cinematic-scenes",
+        "name": "电影感光影场景生成",
+        "title": "电影感光影场景生成",
+        "category": "角色与场景",
+        "description": "从单张参考图提炼机位与光线动线，打造胶片美学、大光比与强动机光短剧场景，告别塑料廉价感。",
+        "summary": "从单张参考图提炼机位与光线动线，打造胶片美学、大光比与强动机光短剧场景，告别塑料廉价感。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-chinese-style",
+        "slug": "chinese-style-short-drama-generator",
+        "skill": "chinese-style-short-drama-generator",
+        "name": "国风短剧成片生成器",
+        "title": "国风短剧成片生成器",
+        "category": "分镜视频生成",
+        "description": "国风修仙、古风权谋类短剧全流程成片，集成古装服化道、玄幻法术对决、轻功飞跃与影视级运镜调度。",
+        "summary": "国风修仙、古风权谋类短剧全流程成片，集成古装服化道、玄幻法术对决、轻功飞跃与影视级运镜调度。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-kling3-prompt",
+        "slug": "kling3-prompt-expert",
+        "skill": "kling3-prompt-expert",
+        "name": "可灵3短剧提示词专家",
+        "title": "可灵3短剧提示词专家",
+        "category": "分镜视频生成",
+        "description": "专为可灵3等视频大模型打造的9字段公式提示词系统，精准锁定主体动作、镜头景别、动态幅度与运镜速度。",
+        "summary": "专为可灵3等视频大模型打造的9字段公式提示词系统，精准锁定主体动作、镜头景别、动态幅度与运镜速度。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-motion-language",
+        "slug": "cinematic-motion-language",
+        "skill": "cinematic-motion-language",
+        "name": "电影运动语言与运镜",
+        "title": "电影运动语言与运镜",
+        "category": "分镜视频生成",
+        "description": "影视级运镜控制：推拉摇移、甩镜跟随、低机位俯冲、希区柯克变焦，为平淡画面注入剧烈电影张力。",
+        "summary": "影视级运镜控制：推拉摇移、甩镜跟随、低机位俯冲、希区柯克变焦，为平淡画面注入剧烈电影张力。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-pov-short-film",
+        "slug": "pov-short-film-generator",
+        "skill": "pov-short-film-generator",
+        "name": "第一视角短片生成",
+        "title": "第一视角短片生成",
+        "category": "分镜视频生成",
+        "description": "主角第一人称主观视角镜头方案，极具代入感与压迫感，适合悬疑探案、暗黑复仇与沉浸恋爱短剧。",
+        "summary": "主角第一人称主观视角镜头方案，极具代入感与压迫感，适合悬疑探案、暗黑复仇与沉浸恋爱短剧。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-live-action",
+        "slug": "live-action-narrative-drama",
+        "skill": "live-action-narrative-drama",
+        "name": "半解说真人短剧成片",
+        "title": "半解说真人短剧成片",
+        "category": "分镜视频生成",
+        "description": "真人短剧半解说成片助手，强化剧情叙事节奏、黄金3秒抓人开场与强反转旁白设计。",
+        "summary": "真人短剧半解说成片助手，强化剧情叙事节奏、黄金3秒抓人开场与强反转旁白设计。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-voiceover",
+        "slug": "short-drama-voiceover",
+        "skill": "short-drama-voiceover",
+        "name": "短剧角色情绪配音",
+        "title": "短剧角色情绪配音",
+        "category": "配音与音效",
+        "description": "为霸总、反派恶女、白月光、战神定制AI情绪配音，语调自然抑扬顿挫，支持愤怒咆哮与哽咽耳语切换。",
+        "summary": "为霸总、反派恶女、白月光、战神定制AI情绪配音，语调自然抑扬顿挫，支持愤怒咆哮与哽咽耳语切换。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-soundtrack",
+        "slug": "drama-soundtrack",
+        "skill": "drama-soundtrack",
+        "name": "短剧高潮影视配乐",
+        "title": "短剧高潮影视配乐",
+        "category": "配音与音效",
+        "description": "分析剧集戏剧节拍，在反转、打脸时刻精准生成高燃管弦交响或悬疑重低音BGM，渲染紧张刺激氛围。",
+        "summary": "分析剧集戏剧节拍，在反转、打脸时刻精准生成高燃管弦交响或悬疑重低音BGM，渲染紧张刺激氛围。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-foley",
+        "slug": "drama-foley-effects",
+        "skill": "drama-foley-effects",
+        "name": "短剧拟音与爆点音效",
+        "title": "短剧拟音与爆点音效",
+        "category": "配音与音效",
+        "description": "短剧高频爆点音效智能匹配：清脆打耳光、摔杯碎裂、重拳出击、急踩刹车、心跳重音与剑气破空声。",
+        "summary": "短剧高频爆点音效智能匹配：清脆打耳光、摔杯碎裂、重拳出击、急踩刹车、心跳重音与剑气破空声。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-jianying-export",
+        "slug": "jianying-draft-export",
+        "skill": "jianying-draft-export",
+        "name": "剪映短剧草稿一键导出",
+        "title": "剪映短剧草稿一键导出",
+        "category": "剪辑与后期",
+        "description": "自动生成剪映/CapCut 工程草稿文件，一键对齐 9:16 竖屏轨道、分镜视频切片、配音音轨与BGM卡点。",
+        "summary": "自动生成剪映/CapCut 工程草稿文件，一键对齐 9:16 竖屏轨道、分镜视频切片、配音音轨与BGM卡点。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-subtitle",
+        "slug": "drama-subtitle-effects",
+        "skill": "drama-subtitle-effects",
+        "name": "短剧爆款花字与字幕",
+        "title": "短剧爆款花字与字幕",
+        "category": "剪辑与后期",
+        "description": "生成强视觉冲击力的短剧动态花字字幕，关键台词放大颤动、戏剧反转打脸提示框，大幅提升完播率。",
+        "summary": "生成强视觉冲击力的短剧动态花字字幕，关键台词放大颤动、戏剧反转打脸提示框，大幅提升完播率。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-cover",
+        "slug": "drama-cover-creator",
+        "skill": "drama-cover-creator",
+        "name": "短剧三联屏爆款封面",
+        "title": "短剧三联屏爆款封面",
+        "category": "剪辑与后期",
+        "description": "制作高点击率短剧单封与跨屏三联封面，主配角戏剧张力对峙画面设计，配超大悬念字体引发好奇点击。",
+        "summary": "制作高点击率短剧单封与跨屏三联封面，主配角戏剧张力对峙画面设计，配超大悬念字体引发好奇点击。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-multilingual-dubbing",
+        "slug": "short-drama-multilingual-dubbing",
+        "skill": "short-drama-multilingual-dubbing",
+        "name": "短剧多语言出海配音",
+        "title": "短剧多语言出海配音",
+        "category": "出海与分发",
+        "description": "短剧一站式出海翻译与配音本地化，支持英语、印尼语、泰语、西班牙语对白转换，保持戏剧原声情绪。",
+        "summary": "短剧一站式出海翻译与配音本地化，支持英语、印尼语、泰语、西班牙语对白转换，保持戏剧原声情绪。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-tiktok-center",
+        "slug": "tiktok-drama-center",
+        "skill": "tiktok-drama-center",
+        "name": "TikTok短剧平台出海指南",
+        "title": "TikTok短剧平台出海指南",
+        "category": "出海与分发",
+        "description": "TikTok Drama Center 创作者入驻、企业认证、原剧批量上传、剧集定价解锁与海外分成变现指导。",
+        "summary": "TikTok Drama Center 创作者入驻、企业认证、原剧批量上传、剧集定价解锁与海外分成变现指导。",
+        "installed": true
+      },
+      {
+        "id": "sk-drama-highlights",
+        "slug": "viral-drama-highlights-cutter",
+        "skill": "viral-drama-highlights-cutter",
+        "name": "短剧引流高光切片提取",
+        "title": "短剧引流高光切片提取",
+        "category": "出海与分发",
+        "description": "智能分析全剧冲突高峰，自动提取前5集最吸睛的30秒投放短视频素材与绝地断点，高效引流付费观看。",
+        "summary": "智能分析全剧冲突高峰，自动提取前5集最吸睛的30秒投放短视频素材与绝地断点，高效引流付费观看。",
+        "installed": true
+      }
+    ]
   }
 }
