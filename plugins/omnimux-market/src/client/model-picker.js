@@ -1,5 +1,28 @@
     // 模型选择器：默认自动，可手动选择模型。
     // 勾选模型后关闭自动，并在输入框胶囊展示「模型图标 + 名称」。
+    // 复用画布插件（omnimux-workflow）的模型品牌图标系统与设计规范。
+
+    const BRAND_SVGS = {
+      openai: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.6 8.3829l2.02-1.1638a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.1408 1.6465 4.4708 4.4708 0 0 1 .5765 3.0137zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997z"/></svg>`,
+      bytedance: `<svg width="24" height="24" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.0004 4.62844L18.542 3.75781V21.2425L22.0004 20.3278V4.62844Z" fill="currentColor"/><path d="M1.99902 20.1939L5.42937 19.3073L5.44542 5.56984L1.99902 4.69922V20.1939Z" fill="currentColor"/><path d="M16.1213 9.26561C15.2507 9.43412 14.2998 9.75509 13.4252 9.97174C13.3048 10.0038 13.0962 9.93563 13.0521 10.068L13.04 17.5947L16.4985 18.4613V9.27765C16.4985 9.17735 16.1895 9.25358 16.1213 9.26561Z" fill="currentColor"/><path d="M7.49609 11.582V20.7336L7.60041 20.7657L10.9264 19.9312L10.9465 12.3925L7.80904 11.6583L7.49609 11.582Z" fill="currentColor"/></svg>`,
+      google: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="currentColor"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor"/></svg>`,
+      dreamina: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M4 14C8 13.5 10 11.5 11 3.5C12.5 9 15.5 11.5 21 12.5C15 14.5 13 17 11.5 21C10.5 17 8 15 4 14Z"/></svg>`,
+      nanobanana: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 17.5a7.5 7.5 0 1 1 7.5-7.5 7.5 7.5 0 0 1-7.5 7.5zm0-11a3.5 3.5 0 1 0 3.5 3.5A3.5 3.5 0 0 0 12 8.5zm0 5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/></svg>`,
+      seedream: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="4.5" y="8" width="3.5" height="10" rx="1.75"/><rect x="10.25" y="4" width="3.5" height="16" rx="1.75"/><rect x="16" y="8" width="3.5" height="10" rx="1.75"/></svg>`,
+    };
+
+    function resolveModelBrand(modelId) {
+      if (!modelId || typeof modelId !== "string") return "bytedance";
+      const id = modelId.trim().toLowerCase();
+      if (BRAND_SVGS[id]) return id;
+      if (/(^seedance|^dreamina)/i.test(id)) return "dreamina";
+      if (/(^seedream)/i.test(id)) return "seedream";
+      if (/(^nanobanana|nano[- ]?banana)/i.test(id)) return "nanobanana";
+      if (/(^gpt|^openai)/i.test(id)) return "openai";
+      if (/(^google|^gemini)/i.test(id)) return "google";
+      if (/(^seed|doubao|豆包|即梦|bytedance)/i.test(id)) return "bytedance";
+      return "bytedance";
+    }
 
     const MODEL_CATALOG = {
       video: [
@@ -141,55 +164,22 @@
       );
     }
 
-    function renderModelIcon(iconType, size = 16) {
+    function renderBrandIcon(iconOrId, size = 16) {
       const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 16;
-      if (iconType === "dreamina") {
-        return h("svg", {
-          width: px,
-          height: px,
-          viewBox: "0 0 24 24",
-          fill: "currentColor",
-          style: { width: px + "px", height: px + "px", flex: "none", display: "block" },
+      const brandKey = resolveModelBrand(iconOrId);
+      const svgRaw = BRAND_SVGS[brandKey] || BRAND_SVGS.bytedance;
+      return h("span", {
+        className: "sh-model-brand-icon",
+        style: {
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: px + "px",
+          height: px + "px",
+          flexShrink: 0,
         },
-          h("path", { d: "M6 16.5C8.5 14 11 11.5 12 3.5C13.5 9.5 17 12 21 13C15 15.5 13 18.5 11.5 21C10 18 8 17 6 16.5Z" }),
-        );
-      }
-      if (iconType === "openai") {
-        return h("svg", {
-          width: px,
-          height: px,
-          viewBox: "0 0 24 24",
-          fill: "currentColor",
-          style: { width: px + "px", height: px + "px", flex: "none", display: "block" },
-        },
-          h("path", { d: "M22.28 9.82a6 6 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.5-2.9A6.07 6.07 0 0 0 4.98 4.18a6 6 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 6 6 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.51 2.9A6 6 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.2 6 6 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.08zM13.26 22.43a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.8.8 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.59a4.5 4.5 0 0 1-4.5 4.49zm-9.66-4.13a4.47 4.47 0 0 1-.53-3l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.85-3.37v2.33a.08.08 0 0 1-.03.06l-4.84 2.79a4.5 4.5 0 0 1-6.15-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .38.68l5.82 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.1 3.85L12.6 8.38l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.67 8.1v-5.67a.8.8 0 0 0-.41-.67zm2.01-3.02l-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.14 1.65 4.47 4.47 0 0 1 .58 3.01zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08-4.78 2.76a.8.8 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z" }),
-        );
-      }
-      if (iconType === "nanobanana") {
-        return h("svg", {
-          width: px,
-          height: px,
-          viewBox: "0 0 24 24",
-          fill: "currentColor",
-          style: { width: px + "px", height: px + "px", flex: "none", display: "block" },
-        },
-          h("path", { d: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 17.5a7.5 7.5 0 1 1 7.5-7.5 7.5 7.5 0 0 1-7.5 7.5zm0-11a3.5 3.5 0 1 0 3.5 3.5A3.5 3.5 0 0 0 12 8.5zm0 5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z" }),
-        );
-      }
-      if (iconType === "seedream") {
-        return h("svg", {
-          width: px,
-          height: px,
-          viewBox: "0 0 24 24",
-          fill: "currentColor",
-          style: { width: px + "px", height: px + "px", flex: "none", display: "block" },
-        },
-          h("rect", { x: "4.5", y: "8", width: "3.5", height: "10", rx: "1.75" }),
-          h("rect", { x: "10.25", y: "4", width: "3.5", height: "16", rx: "1.75" }),
-          h("rect", { x: "16", y: "8", width: "3.5", height: "10", rx: "1.75" }),
-        );
-      }
-      return renderModelLayersIcon(px);
+        dangerouslySetInnerHTML: { __html: svgRaw },
+      });
     }
 
     function ModelPickerPanel({ open, anchorRef, auto, selectedModel, onToggleAuto, onSelectModel, onClose, t }) {
@@ -296,7 +286,7 @@
               onClick: () => onSelectModel(model),
             },
               h("div", { className: "sh-model-row-left" },
-                h("div", { className: "sh-model-icon-box" }, renderModelIcon(model.icon, 20)),
+                h("div", { className: "sh-model-icon-box" }, renderBrandIcon(model.icon || model.id, 20)),
                 h("div", { className: "sh-model-row-info" },
                   h("div", { className: "sh-model-row-title-row" },
                     h("span", { className: "sh-model-name" }, model.name),
@@ -453,7 +443,7 @@
           "data-omnimux-model-capsule": "",
           onClick: () => setOpen((v) => !v),
         },
-          renderModelIcon(selectedModel.icon, 16),
+          renderBrandIcon(selectedModel.icon || selectedModel.id, 14),
           h("span", { className: "sh-model-capsule-name" }, selectedModel.capsuleName || selectedModel.name),
         ) : h("button", {
           ref: btnRef,
