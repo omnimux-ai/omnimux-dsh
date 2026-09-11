@@ -827,4 +827,40 @@ Hook
       assert.notEqual(item.description, '---')
     }
   })
+
+  it('handles tables directly following ### headings without confusing table rows as stage names', () => {
+    const md = `
+### Hook
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:00 - 0:04 | 窗外偷窥惊魂 | Hook | 全景, 固定机位, 平视, 固定镜头 | 女生在卫生间准备如厕，窗外男子贴近玻璃举手机偷窥，女生受惊尖叫。 | |
+| 0:05 - 0:10 | 应急粘贴窗膜 | Hook | 中景, 智能手机手持, 平视, 手持微动 | 男伴闻声冲入，快速裁切一段单向防窥膜贴在窗户上。 | |
+| 0:11 - 0:14 | 外部视线受阻 | Hook | 中景, 智能手机手持, 仰视, 手持微动 | 窗外男子凑近张望，玻璃呈镜面反光无法看清内部，困惑离开。 | Where'd she go? |
+### Product Intro
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:15 - 0:16 | 露台展开卷膜 | Product Intro | 全景, 固定机位, 仰视, 固定镜头 | 女子在户外露台自然展开整卷单向透视窗膜。 | If my neighbor's husband hadn't told me about it, |
+| 0:17 - 0:20 | 桌面质感展示 | Product Intro | 中景, 智能手机手持, 俯视, 固定镜头 | 女子在操作台平铺窗膜，展示表面镜面反射质感。 | I would never have discovered this incredible product. |
+### Usage Detail
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:21 - 0:22 | 撕开保护薄膜 | Usage Detail | 特写, 智能手机手持, 俯视, 固定镜头 | 撕开透明保护背胶膜，准备喷水。 | If you also have this issue, check this out. |
+| 0:23 - 0:24 | 贴合刮平气泡 | Usage Detail | 中景, 智能手机手持, 平视, 手持微动 | 将膜覆在玻璃上，手持粉色刮板由内向外刮除气泡与水分。 | stick it to the glass and adjust the edges. |
+### Demo Scene
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:25 - 0:26 | 室内清晰视野 | Demo Scene | 中景, 智能手机手持, 平视, 固定镜头 | 从室内向外看，视野清晰通透，自然采光良好。 | You can see everything outside clearly. |
+`
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(structure.length, 4)
+    for (const item of structure) {
+      assert.ok(!item.stage.includes('|'))
+      assert.ok(!item.title.includes('|'))
+      assert.ok(!item.description.startsWith('###'))
+      assert.ok(item.description.length > 5)
+    }
+
+    // Must have 8 real shots and 0 phantom rows
+    assert.equal(shots.length, 8)
+    assert.ok(!shots.some((s) => s.title === '分镜标题' || s.stage === '所属阶段'))
+  })
 })

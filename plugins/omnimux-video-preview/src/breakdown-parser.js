@@ -83,6 +83,15 @@ export function mapToCanonicalStage(rawStage, index = 0) {
   const s = String(rawStage).trim()
   if (METADATA_HEADING_REGEX.test(s)) return ''
 
+  // If rawStage contains '|' or is a markdown table fragment, extract canonical stage or fallback
+  if (s.includes('|') || s.length > 30) {
+    const m = s.match(/\b(Hook|Product\s*Intro|Usage\s*Detail|Demo\s*Scene|Inciting\s*Incident|Rising\s*Conflict|Climax|Cliffhanger|Call\s*to\s*Action|Cta|CTA|黄金钩子|产品引入|核心产品|使用细节|功能演示|场景演示|转化共鸣|行动号召)\b/i)
+    if (m) {
+      return mapToCanonicalStage(m[1], index)
+    }
+    return CANONICAL_STAGE_KEYS[index] || `Stage ${index + 1}`
+  }
+
   if (/^hook$/i.test(s)) return 'Hook'
   if (/^product\s*intro$/i.test(s)) return 'Product Intro'
   if (/^usage\s*detail$/i.test(s)) return 'Usage Detail'
@@ -485,12 +494,18 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
     if (!tableStarted) continue
     if (line.includes('---')) continue
 
+    // Unconditional guard against phantom header rows (regardless of time info)
+    const isPhantomHeader = rawCols.some((c) => /^(?:分镜标题|所属阶段|画面与动作描述|镜头属性标签)$/i.test(c.trim()))
+      || (rawCols[1] && /^(?:分镜标题|标题)$/i.test(rawCols[1].trim()))
+      || (rawCols[2] && /^(?:所属阶段|阶段|stage)$/i.test(rawCols[2].trim()))
+    if (isPhantomHeader) {
+      continue
+    }
+
     const timeInfo = extractTimeRange(rawCols)
-    // Filter out phantom rows that have no valid time and match header words
-    if (timeInfo.startSec === 0 && timeInfo.endSec === 0 && !timeInfo.timeCol) {
-      if (rawCols.some((c) => /^(?:分镜标题|所属阶段|画面与动作描述|镜头属性标签)$/i.test(c))) {
-        continue
-      }
+    // Filter out phantom rows that have no valid time and invalid title
+    if (timeInfo.startSec === 0 && timeInfo.endSec === 0 && (!rawCols[1] || rawCols[1] === '-' || rawCols[1] === '分镜')) {
+      continue
     }
 
     const nextIndex = shots.length + 1
@@ -561,12 +576,18 @@ function extractStagesFromHeaders(markdown) {
   let idx = 0
   while (match !== null) {
     const rawHeading = match[1].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim()
+    // Ignore lines that contain markdown table delimiters
+    if (rawHeading.includes('|')) {
+      match = stageRegex.exec(stageBlockText)
+      continue
+    }
+
     const descText = match[2].replace(/\|[\s\S]*$/, '').replace(/```[\s\S]*?```/g, '').trim().replace(/\*+/g, '')
 
-    if (rawHeading && descText) {
+    if (rawHeading) {
       if (METADATA_HEADING_REGEX.test(rawHeading)) {
         const subMatch = descText.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
-        if (subMatch && !METADATA_HEADING_REGEX.test(subMatch[1].trim())) {
+        if (subMatch && !METADATA_HEADING_REGEX.test(subMatch[1].trim()) && !subMatch[1].includes('|')) {
           const canonicalStage = mapToCanonicalStage(subMatch[1].trim(), idx)
           if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
             structure.push({ stage: canonicalStage, title: canonicalStage, description: subMatch[2].trim() })
@@ -588,11 +609,17 @@ function extractStagesFromHeaders(markdown) {
 
 function extractStagesFromChineseList(markdown) {
   const structure = []
-  const listStageRegex = /(?:[\*\-\s]*)(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+)\s*[:：]?\s*([^\n（(：:\*]+)(?:[（(][^\n）)]+[）)])?\s*\n+([\s\S]*?)(?=(?:[\*\-\s]*(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+))|\n##|二、|三、|---|$)/g
-  let match = listStageRegex.exec(markdown)
+  const cleanMarkdown = typeof markdown === 'string' ? markdown.replace(/^\|[^\n]*$/gm, '') : ''
+  const listStageRegex = /(?:[\*\-\s]*)(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+)\s*[:：]?\s*([^\n（(：:\*|]+)(?:[（(][^\n）)]+[）)])?\s*\n+([\s\S]*?)(?=(?:[\*\-\s]*(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+))|\n##|二、|三、|---|$)/g
+  let match = listStageRegex.exec(cleanMarkdown)
   let idx = 0
   while (match !== null) {
     const stageName = match[1].trim()
+    // Explicitly reject if stageName contains table pipe
+    if (stageName.includes('|')) {
+      match = listStageRegex.exec(cleanMarkdown)
+      continue
+    }
     const stageDesc = match[2].trim().replace(/\|[\s\S]*$/, '').replace(/\*+/g, '')
     if (stageName && stageDesc && !METADATA_HEADING_REGEX.test(stageName)) {
       const canonicalStage = mapToCanonicalStage(stageName, idx)
@@ -601,7 +628,7 @@ function extractStagesFromChineseList(markdown) {
         idx++
       }
     }
-    match = listStageRegex.exec(markdown)
+    match = listStageRegex.exec(cleanMarkdown)
   }
   return structure
 }
@@ -612,7 +639,7 @@ function enrichShotsFromStructure(shots, structure) {
     const isShort = !shot.description || shot.description.length <= 15
     const isMeta = /^[A-Za-z0-9\s·\(\)]+$/.test(shot.description || '')
     if (isShort || isMeta) {
-      const matched = structure.find((st) => st.stage === shot.stage) || structure[0]
+      const matched = structure.find((st) => st.stage === shot.stage && st.description && !st.description.startsWith('###') && st.description !== '---')
       if (matched?.description) {
         shot.description = `${shot.title}。${matched.description.slice(0, 80)}`
       }
@@ -647,6 +674,10 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     let stage = item.stage || item.title || ''
     let desc = item.description || ''
 
+    if (stage.includes('|')) {
+      stage = mapToCanonicalStage(stage, cleanedStructure.length)
+    }
+
     if (METADATA_HEADING_REGEX.test(stage)) {
       const m = desc.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
       if (m && !METADATA_HEADING_REGEX.test(m[1].trim())) {
@@ -657,13 +688,14 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
       }
     }
 
-    if (!stage || seenStages.has(stage) || METADATA_HEADING_REGEX.test(stage)) {
+    if (!stage || seenStages.has(stage) || METADATA_HEADING_REGEX.test(stage) || stage.includes('|')) {
       continue
     }
 
     const cleanDesc = desc
       .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
       .replace(/^---\s*$/, '')
+      .replace(/^###[\s\S]*$/, '')
       .trim()
 
     seenStages.add(stage)
@@ -676,11 +708,13 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
 
   const shots = parseShotsFromAnalyzeMarkdown(markdown)
 
-  // If structure is degenerate (empty, or only 1 item with empty/trivial desc), repair from shots!
-  const isDegenerate = cleanedStructure.length === 0 || (cleanedStructure.length === 1 && (!cleanedStructure[0].description || cleanedStructure[0].description === '---' || cleanedStructure[0].description.length <= 5))
+  // If structure is degenerate (empty, 1 item with trivial desc, or all descriptions empty), repair from shots!
+  const isDegenerate = cleanedStructure.length === 0
+    || (cleanedStructure.length === 1 && (!cleanedStructure[0].description || cleanedStructure[0].description === '---' || cleanedStructure[0].description.length <= 5))
+    || cleanedStructure.every((s) => !s.description || s.description === '---' || s.description.length <= 5)
 
   if (isDegenerate && shots.length > 0) {
-    const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !METADATA_HEADING_REGEX.test(s)))]
+    const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !s.includes('|') && !METADATA_HEADING_REGEX.test(s)))]
     if (shotStages.length >= 2) {
       structure = shotStages.map((stageName) => {
         const existing = cleanedStructure.find((s) => s.stage === stageName)

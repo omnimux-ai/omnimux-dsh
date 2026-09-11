@@ -88,10 +88,12 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   // Filter out any phantom header shots (e.g. "分镜标题", "所属阶段")
   const shots = useMemo(() => {
     return rawShots.filter((s) => {
-      const isPhantomTitle = /^(?:分镜标题|所属阶段|镜头属性标签|画面与动作描述)$/i.test(s.title || '')
-      const isPhantomStage = s.stage === '所属阶段'
+      if (!s) return false
+      const isPhantomTitle = /^(?:分镜标题|所属阶段|镜头属性标签|画面与动作描述)$/i.test(String(s.title || '').trim())
+      const isPhantomStage = /^(?:所属阶段|阶段|stage)$/i.test(String(s.stage || '').trim())
+      if (isPhantomTitle || isPhantomStage) return false
       const isZeroTime = s.time_range === '0:00 - 0:00' && s.start_seconds === 0 && s.end_seconds === 0
-      if ((isPhantomTitle || isPhantomStage) && isZeroTime) return false
+      if (isZeroTime && (!s.title || s.title === '-' || s.title === '分镜')) return false
       return true
     })
   }, [rawShots])
@@ -104,6 +106,9 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     for (const item of rawList) {
       let stage = item.stage || item.title || ''
       let desc = item.description || ''
+      if (stage.includes('|')) {
+        stage = mapToCanonicalStage(stage, cleaned.length)
+      }
       if (METADATA_HEADING_REGEX.test(stage)) {
         const m = desc.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
         if (m && !METADATA_HEADING_REGEX.test(m[1].trim())) {
@@ -114,11 +119,12 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
         }
       }
       stage = mapToCanonicalStage(stage, cleaned.length)
-      if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage)) continue
+      if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage) || stage.includes('|')) continue
       seen.add(stage)
       const cleanDesc = desc
         .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
         .replace(/^---\s*$/, '')
+        .replace(/^###[\s\S]*$/, '')
         .trim()
       cleaned.push({
         ...item,
@@ -128,16 +134,22 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       })
     }
 
-    // If structure is degenerate (only 1 item with empty/trivial desc), repair from shots!
-    const isDegenerate = cleaned.length === 0 || (cleaned.length === 1 && (!cleaned[0].description || cleaned[0].description.length <= 5))
+    // If structure is degenerate (empty, 1 item, or all descriptions empty/dash), repair from shots!
+    const isDegenerate = cleaned.length <= 1
+      || cleaned.every((s) => !s.description || s.description === '---' || s.description.startsWith('###') || s.description.length <= 5)
+
     if (isDegenerate && shots.length > 0) {
-      const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !METADATA_HEADING_REGEX.test(s)))]
+      const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !s.includes('|') && !METADATA_HEADING_REGEX.test(s)))]
       if (shotStages.length >= 2) {
         return shotStages.map((stageName) => {
+          const existing = cleaned.find((s) => s.stage === stageName)
+          if (existing && existing.description && existing.description !== '---' && !existing.description.startsWith('###') && existing.description.trim().length > 10) {
+            return existing
+          }
           const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === stageName)
           const details = stageShots
             .map((s) => {
-              if (s.description && s.description.length > 5 && s.description !== '---') {
+              if (s.description && s.description.length > 5 && s.description !== '---' && !s.description.startsWith('###')) {
                 return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
               }
               return s.title
@@ -152,6 +164,24 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       }
     }
 
+    // Enrich any single stage whose description is empty or dash
+    for (const item of cleaned) {
+      if (!item.description || item.description === '---' || item.description.startsWith('###') || item.description.length <= 5) {
+        const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
+        const details = stageShots
+          .map((s) => {
+            if (s.description && s.description.length > 5 && s.description !== '---' && !s.description.startsWith('###')) {
+              return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
+            }
+            return s.title
+          })
+          .filter(Boolean)
+        if (details.length > 0) {
+          item.description = details.join('；')
+        }
+      }
+    }
+
     return cleaned
   }, [data?.structure, shots])
 
@@ -163,7 +193,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     return raw
       .filter((name) => !METADATA_HEADING_REGEX.test(name))
       .map((name, idx) => mapToCanonicalStage(name, idx))
-      .filter(Boolean)
+      .filter((s) => s && !s.includes('|') && !METADATA_HEADING_REGEX.test(s))
   }, [cleanStructure, data?.pipeline])
 
   const structure = cleanStructure

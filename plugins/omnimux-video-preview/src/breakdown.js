@@ -594,7 +594,9 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   let pipeline = parsed.pipeline
 
   // 5. If shots or structure empty or degenerate, generate intelligent adaptive breakdown derived from real caption & duration
-  const isStructureDegenerate = structure.length === 0 || (structure.length <= 1 && (!structure[0]?.description || structure[0]?.description === '---' || structure[0]?.description.trim().length <= 5))
+  const isStructureDegenerate = structure.length === 0
+    || (structure.length <= 1 && (!structure[0]?.description || structure[0]?.description === '---' || structure[0]?.description.trim().length <= 5))
+    || structure.every((s) => !s.description || s.description === '---' || s.description.length <= 5 || s.stage.includes('|'))
   if (shots.length === 0 || isStructureDegenerate) {
     const adaptive = generateAdaptiveShotsAndStructure(totalDuration, caption, platform)
     if (shots.length === 0) shots = adaptive.shots
