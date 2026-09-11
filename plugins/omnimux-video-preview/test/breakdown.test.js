@@ -546,4 +546,42 @@ Hook → Product Intro → Usage Detail → Demo Scene
     assert.notEqual(shots[0].description, '固定')
     assert.match(shots[0].description, /细节与核心动作/)
   })
+
+  it('accurately parses Chinese multi-stage lists and Cut numbered shot tables without falling back to raw scales', () => {
+    const md = `
+一、叙事结构拆解
+ 第一阶段：身份引入与场景确立（00:00 - 00:05）
+  主角在停车场搬动座椅并坐下，自我介绍并宣布入选“雄鹿县先生”提名，通过快速跳切的多角度画面建立轻松幽默的基调。
+ 第二阶段：公益宣传与行动号召（00:05 - 00:15）
+  背景皮卡反复驶过制造荒诞感，主角说明支持乳腺癌公益高尔夫活动，最后直视镜头呼吁观众点击链接支持。
+
+二、逐镜头分镜脚本表
+| 时间 | 镜头 | 景别 | 运镜方式 |
+| 00:00 - 00:01 | **Cut 1** | 全景 | 手持微动 |
+| 00:01 - 00:03 | **Cut 2** | 中景 | 手持微动 |
+| 00:03 - 00:05 | **Cut 3** | 远景 | 手持微动 |
+| 00:05 - 00:06 | **Cut 4** | 大远景 | 手持微动 |
+| 00:06 - 00:08 | **Cut 5** | 中景 | 手持微动 |
+| 00:08 - 00:09 | **Cut 6** | 中景 | 手持微动 |
+| 00:09 - 00:11 | **Cut 7** | 中远景 | 手持微动 |
+| 00:11 - 00:13 | **Cut 8** | 远景 | 手持微动 |
+| 00:13 - 00:15 | **Cut 9** | 中景 | 手持微动 |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+    assert.equal(structure.length, 2)
+    assert.equal(structure[0].stage, '身份引入与场景确立')
+    assert.match(structure[0].description, /搬动座椅并坐下/)
+    assert.equal(structure[1].stage, '公益宣传与行动号召')
+    assert.match(structure[1].description, /乳腺癌公益高尔夫活动/)
+    assert.deepEqual(pipeline, ['身份引入与场景确立', '公益宣传与行动号召'])
+
+    assert.equal(shots.length, 9)
+    // Must NOT keep raw "**Cut 4**" or "大远景" as description
+    assert.notEqual(shots[3].title, '**Cut 4**')
+    assert.notEqual(shots[3].description, '大远景')
+    assert.ok(shots[3].tags.includes('大远景'))
+    assert.ok(shots[3].tags.includes('手持微动'))
+    assert.ok(shots[3].description.length >= 20)
+  })
 })

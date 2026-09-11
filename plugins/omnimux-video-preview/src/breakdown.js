@@ -140,20 +140,41 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
         const descCols = cols.filter((c) => c !== timeCol && !/^\d+$/.test(c))
         let visualCol = descCols[0] || ''
         let actionCol = descCols[1] || ''
+        let extraCol = descCols[2] || ''
 
-        // Infer camera tags from visual description
+        // Guard against Cut labels (e.g. **Cut 1**, Cut 4, 镜头 2)
+        const isCutIndexWord = /^(\*\*)?(?:cut|镜头|镜号|shot)\s*\d+(\*\*)?$/i.test(visualCol.trim())
+        if (isCutIndexWord) {
+          visualCol = descCols[1] || ''
+          actionCol = descCols[2] || ''
+          extraCol = descCols[3] || ''
+        }
+
+        // Infer camera tags from visual description & extra columns
         const tags = []
-        if (visualCol.includes('特写') || visualCol.includes('Close-up')) tags.push('特写')
-        else if (visualCol.includes('中景') || visualCol.includes('Medium')) tags.push('中景')
-        else if (visualCol.includes('全景') || visualCol.includes('Wide')) tags.push('全景')
+        for (const candidate of [visualCol, actionCol, extraCol]) {
+          if (!candidate) continue
+          if (candidate.includes('特写') || candidate.includes('Close-up')) { if (!tags.includes('特写')) tags.push('特写') }
+          else if (candidate.includes('大远景')) { if (!tags.includes('大远景')) tags.push('大远景') }
+          else if (candidate.includes('远景')) { if (!tags.includes('远景')) tags.push('远景') }
+          else if (candidate.includes('中远景')) { if (!tags.includes('中远景')) tags.push('中远景') }
+          else if (candidate.includes('中景') || candidate.includes('Medium')) { if (!tags.includes('中景')) tags.push('中景') }
+          else if (candidate.includes('全景') || candidate.includes('Wide')) { if (!tags.includes('全景')) tags.push('全景') }
 
-        if (visualCol.includes('手持') || visualCol.includes('手机')) tags.push('智能手机手持')
-        if (visualCol.includes('俯视')) tags.push('俯视')
-        else if (visualCol.includes('平视')) tags.push('平视')
-        else if (visualCol.includes('仰视')) tags.push('仰视')
+          if (candidate.includes('手持') || candidate.includes('手机')) { if (!tags.includes('智能手机手持')) tags.push('智能手机手持') }
+          if (candidate.includes('俯视')) { if (!tags.includes('俯视')) tags.push('俯视') }
+          else if (candidate.includes('平视')) { if (!tags.includes('平视')) tags.push('平视') }
+          else if (candidate.includes('仰视')) { if (!tags.includes('仰视')) tags.push('仰视') }
 
-        if (visualCol.includes('移动') || visualCol.includes('运镜') || visualCol.includes('扫过')) tags.push('手持移动')
-        else tags.push('手持微动')
+          if (candidate.includes('手持微动')) { if (!tags.includes('手持微动')) tags.push('手持微动') }
+          else if (candidate.includes('手持平移')) { if (!tags.includes('手持平移')) tags.push('手持平移') }
+          else if (candidate.includes('慢速推拉')) { if (!tags.includes('慢速推拉')) tags.push('慢速推拉') }
+          else if (candidate.includes('固定')) { if (!tags.includes('固定机位')) tags.push('固定机位') }
+        }
+
+        if (tags.length === 0) {
+          tags.push('特写', '智能手机手持', '俯视', '手持微动')
+        }
 
         // Infer stage
         let stage = 'Product Intro'
@@ -161,22 +182,32 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
         else if (endSec > 12) stage = 'Demo Scene'
         else if (startSec >= 7) stage = 'Usage Detail'
 
-        // Guard against pure scale words as title (e.g. "全景", "远景")
+        // Guard against pure scale words as title (e.g. "全景", "大远景", "中景")
         const isShotTypeWord = /^(全景|远景|大远景|大特写|特写|中景|中全景|中近景|近景)$/i.test(visualCol.trim())
         const isMotionWord = /^(固定|正面固定|俯角固定|手持微动|手持平移|慢速推拉|快速摇镜)$/i.test(actionCol.trim())
 
-        if (isShotTypeWord) {
-          if (!tags.includes(visualCol.trim())) tags.unshift(visualCol.trim())
-          if (actionCol && !isMotionWord) {
-            visualCol = actionCol.slice(0, 20)
-          } else {
-            visualCol = `${stage} 核心呈现`
-          }
-        }
+        let shotTitle = visualCol
+        let shotDesc = actionCol
 
-        if (isMotionWord || !actionCol || actionCol === '固定') {
-          if (actionCol && !tags.includes(actionCol.trim())) tags.push(actionCol.trim())
-          actionCol = `${visualCol}，镜头结合${tags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
+        if (isShotTypeWord || !shotTitle) {
+          if (!tags.includes(visualCol.trim()) && visualCol.trim()) tags.unshift(visualCol.trim())
+          if (actionCol && !isMotionWord && !isShotTypeWord) {
+            shotTitle = actionCol.slice(0, 20)
+            shotDesc = extraCol || `${shotTitle}，镜头采用${tags.slice(0, 3).join('、')}，细腻展现关键细节与核心动作。`
+          } else {
+            const stageNameMap = {
+              'Hook': '黄金开局视觉切入',
+              'Product Intro': '核心主体与细节呈现',
+              'Usage Detail': '实操过程与功能展示',
+              'Demo Scene': '实际场景与转化共鸣',
+            }
+            shotTitle = `${stageNameMap[stage] || stage} (${shots.length + 1})`
+            shotDesc = extraCol && !isMotionWord
+              ? extraCol
+              : `${shotTitle}，画面结合${tags.slice(0, 3).join('、')}呈现生动的细节与核心动作。`
+          }
+        } else if (isMotionWord || !shotDesc || shotDesc === '固定') {
+          shotDesc = `${shotTitle}，镜头结合${tags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
         }
 
         shots.push({
@@ -184,10 +215,10 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
           start_seconds: startSec,
           end_seconds: endSec,
           time_range: formatTimeRange(startSec, endSec),
-          title: visualCol.slice(0, 20) || `分镜 ${shots.length + 1}`,
+          title: shotTitle,
           stage,
-          tags: tags.length > 0 ? tags : ['特写', '智能手机手持', '俯视', '手持微动'],
-          description: actionCol || visualCol,
+          tags,
+          description: shotDesc,
         })
       }
     }
@@ -302,6 +333,26 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     }
   }
 
+  // 2.1 Extract Stage Descriptions from Chinese list items (e.g. 第一阶段：xxx、阶段一：xxx)
+  if (structure.length === 0) {
+    const listStageRegex = /(?:[\*\-\s]*)(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+)\s*[:：]?\s*([^\n（(：:\*]+)(?:[（(][^\n）)]+[）)])?\s*\n+([\s\S]*?)(?=(?:[\*\-\s]*(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+))|\n##|二、|三、|---|$)/g
+    let match2
+    while ((match2 = listStageRegex.exec(markdown)) !== null) {
+      const stageName = match2[1].trim()
+      const stageDesc = match2[2].trim().replace(/\|[\s\S]*$/, '').replace(/\*+/g, '')
+      if (stageName && stageDesc && !/^(叙事结构|逐镜头|分镜|核心目标)/.test(stageName)) {
+        structure.push({
+          stage: stageName,
+          title: stageName,
+          description: stageDesc,
+        })
+        if (!pipeline.includes(stageName)) {
+          pipeline.push(stageName)
+        }
+      }
+    }
+  }
+
   // Fallback to legacy parser if no structure was matched via ###
   if (structure.length === 0) {
     const legacy = parseStructureFromAnalyzeMarkdown(markdown)
@@ -323,6 +374,18 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
 
   // 3. Extract Shots Table
   const shots = parseShotsFromAnalyzeMarkdown(markdown)
+
+  // 4. Enrich shots description using structure stages if shot description was empty or too brief
+  if (shots.length > 0 && structure.length > 0) {
+    for (const shot of shots) {
+      if (!shot.description || shot.description.length <= 15 || /^[A-Za-z0-9\s·\(\)]+$/.test(shot.description)) {
+        const matchedStage = structure.find((st) => st.stage === shot.stage) || structure[0]
+        if (matchedStage?.description) {
+          shot.description = `${shot.title}。${matchedStage.description.slice(0, 80)}`
+        }
+      }
+    }
+  }
 
   return { pipeline, structure, shots }
 }
@@ -358,11 +421,14 @@ export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal 
     return ''
   }
 
+  const userPrompt = `${systemPrompt}\n\n---\n【任务执行指令】：\n请仔细观看上传的视频，严格按照上述“两阶段结构拆解与逐镜头分镜”格式输出：\n1. 必须输出“## 1. 叙事结构链路”；\n2. 必须输出“## 2. 结构阶段解构”且每一阶段使用 ### 标头；\n3. 必须输出“## 3. 逐镜头分镜脚本表”，表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |”，严禁将机位词用作标题，严禁输出单一词汇描述！`
+
   try {
     const res = await textComplete.execute({
-      prompt: '请对上传的视频进行两阶段叙事结构拆解与逐镜头分镜脚本输出，严格遵循 system prompt 的输出结构规范。',
+      prompt: userPrompt,
       system: systemPrompt,
       video: videoPath,
+      reason: 'video_breakdown_structure_analyze',
       maxTokens: 4096,
       signal,
     })
