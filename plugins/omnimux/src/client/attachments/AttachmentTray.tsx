@@ -20,25 +20,6 @@ const BASE_CSS = `
   padding: 2px 0 6px 0;
   box-sizing: border-box;
 }
-[data-composer-card]:has(.omx-video-token-capsule) [data-composer-placeholder] {
-  display: none !important;
-}
-[data-composer-card]:has(.omx-video-token-capsule) [class*="grow"] {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-  gap: 4px 8px !important;
-}
-[data-composer-card]:has(.omx-video-token-capsule) [contenteditable="true"] {
-  display: inline-block !important;
-  flex: 1 1 140px !important;
-  min-width: 100px !important;
-  width: auto !important;
-  margin: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
 .omx-btn-insert-link {
   display: inline-flex;
   align-items: center;
@@ -63,79 +44,160 @@ const BASE_CSS = `
   background: rgba(14, 116, 144, 0.16); /* exempt-ui03: 悬浮青蓝背景 */
   transform: translateY(-0.5px);
 }
-.omx-video-token-capsule {
-  display: inline-flex !important;
-  align-items: center !important;
-  box-sizing: border-box !important;
-  height: 32px !important;
-  max-width: 320px !important;
-  padding: 0 10px 0 12px !important;
-  border-radius: 9999px !important;
-  background: rgba(14, 116, 144, 0.22) !important; /* exempt-ui03: 视频青蓝半透底色 */
-  border: 1px solid rgba(56, 189, 248, 0.45) !important; /* exempt-ui03: 视频青蓝微光描边 */
-  color: #38bdf8 !important; /* exempt-ui03: 视频青蓝文字 */
-  margin: 2px 8px 4px 0 !important;
-  transition: all 0.15s ease;
-  user-select: none;
-  vertical-align: middle !important;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25) !important; /* exempt-ui03: 胶囊阴影微光 */
+.omx-video-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--dsw-alias-bg-mask-1); /* exempt-ui03: 弹窗遮罩背景 */
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: omx-fade-in 0.15s ease-out;
 }
-.omx-video-token-capsule:focus-within {
-  border-color: #38bdf8 !important; /* exempt-ui03: 聚焦青蓝 */
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35) !important; /* exempt-ui03: 聚焦青蓝光晕 */
+@keyframes omx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.omx-video-token-prefix {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #38bdf8 !important; /* exempt-ui03: 视频前缀文字 */
-  flex-shrink: 0 !important;
+.omx-video-popover-card {
+  box-sizing: border-box;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  background: var(--dsw-alias-bg-elevated);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: var(--dsw-alias-shadow-l3, 0 16px 36px rgba(0, 0, 0, 0.45)); /* exempt-ui03: 弹窗卡片阴影 */
+  animation: omx-popover-zoom 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.omx-video-token-divider {
-  width: 1px !important;
-  height: 12px !important;
-  background: rgba(56, 189, 248, 0.35) !important; /* exempt-ui03: 细分割线 */
-  margin: 0 8px !important;
-  flex-shrink: 0 !important;
+@keyframes omx-popover-zoom {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
-.omx-video-token-input {
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: #38bdf8 !important; /* exempt-ui03: 输入框青蓝文字 */
-  font-family: inherit !important;
-  font-size: 13px !important;
-  width: 140px !important;
-  min-width: 60px !important;
-  max-width: 180px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+.omx-video-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
-.omx-video-token-input::placeholder {
-  color: rgba(56, 189, 248, 0.65) !important; /* exempt-ui03: 占位符青蓝 */
+.omx-video-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
 }
-.omx-video-token-remove {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 50% !important;
-  border: none !important;
-  background: transparent !important;
-  color: rgba(56, 189, 248, 0.7) !important; /* exempt-ui03: 关闭按钮 */
-  cursor: pointer !important;
-  margin-left: 6px !important;
-  padding: 0 !important;
-  flex-shrink: 0 !important;
+.omx-video-popover-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
   transition: all 0.12s ease;
 }
-.omx-video-token-remove:hover {
-  background: rgba(56, 189, 248, 0.25) !important; /* exempt-ui03: 悬浮背景 */
-  color: #ffffff !important; /* exempt-ui03: 白色高亮图标 */
+.omx-video-popover-close:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-video-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.omx-video-popover-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 8px;
+  padding: 0 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.omx-video-popover-input-wrap:focus-within {
+  border-color: #38bdf8; /* exempt-ui03: 聚焦青蓝 */
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); /* exempt-ui03: 聚焦微光 */
+}
+.omx-video-popover-input-icon {
+  color: #38bdf8; /* exempt-ui03: 链接青蓝 */
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.omx-video-popover-input {
+  flex: 1;
+  height: 36px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+}
+.omx-video-popover-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-video-popover-hint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  line-height: 1.4;
+  padding: 0 2px;
+}
+.omx-video-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.omx-video-popover-btn-cancel {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.omx-video-popover-btn-cancel:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+.omx-video-popover-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.4); /* exempt-ui03: 确认按钮边框 */
+  background: rgba(14, 116, 144, 0.4); /* exempt-ui03: 确认按钮底色 */
+  color: #38bdf8; /* exempt-ui03: 确认按钮文字 */
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.omx-video-popover-btn-confirm:hover {
+  background: rgba(14, 116, 144, 0.6); /* exempt-ui03: 悬浮底色 */
+  border-color: #38bdf8; /* exempt-ui03: 悬浮高亮 */
+  color: #ffffff; /* exempt-ui03: 白色文字 */
+  transform: translateY(-0.5px);
+}
+.omx-video-popover-btn-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
 }
 .omx-attachment-tray {
   box-sizing: border-box;
@@ -427,8 +489,8 @@ function translate(
   return interpolate(fallback, vars);
 }
 
-const CloseIcon = () => (
-  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+const CloseIcon = ({ size = 8 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <path d="M18 6L6 18M6 6l12 12" />
   </svg>
 );
@@ -495,123 +557,48 @@ function isVideoCategory(cat?: string | null): boolean {
   );
 }
 
-function insertVideoToken(doc: Document): boolean {
-  if (!doc) return false;
-  // Try locating the active input area: scroll container or contenteditable
-  const scroll = doc.querySelector(
-    '[data-input-scroll], [data-composer-card] [class*="scroll"], [data-composer-card] [class*="grow"]'
-  );
-  const editor = doc.querySelector(
-    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"], [data-composer-card] textarea'
-  );
+function insertMarkdownAtCursor(markdownText: string, savedRange?: Range | null): boolean {
+  if (typeof document === 'undefined') return false;
 
-  const existing = doc.querySelector('[data-omx-video-token="true"]');
-  if (existing) {
-    const input = existing.querySelector('input');
-    input?.focus();
-    return true;
-  }
+  const editorEl = document.querySelector(
+    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+  ) as HTMLElement | null;
 
-  const token = doc.createElement('span');
-  token.className = 'omx-video-token-capsule';
-  token.setAttribute('contenteditable', 'false');
-  token.setAttribute('data-omx-video-token', 'true');
-  token.setAttribute('title', '单击进行链接编辑、修改与删除');
+  if (!editorEl) return false;
 
-  token.innerHTML = `
-    <span class="omx-video-token-prefix">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-      </svg>
-      <span>视频</span>
-    </span>
-    <span class="omx-video-token-divider"></span>
-    <input
-      type="text"
-      class="omx-video-token-input"
-      placeholder="粘贴 TikTok 视频链接"
-      title="单击输入或粘贴链接"
-    />
-    <button /* exempt-ui01: 移除按钮 */
-      type="button"
-      class="omx-video-token-remove"
-      title="删除视频链接 Token"
-      aria-label="删除视频链接 Token"
-    >
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <path d="M2 2L8 8M8 2L2 8" />
-      </svg>
-    </button>
-  `;
+  editorEl.focus();
 
-  const inputEl = token.querySelector('input') as HTMLInputElement;
-  const removeBtn = token.querySelector('button') as HTMLButtonElement;
-
-  inputEl?.addEventListener('input', () => {
-    if (typeof window !== 'undefined') {
-      (window as any).__omnimuxVideoToken = { url: inputEl.value.trim(), label: '视频' };
-    }
-  });
-
-  removeBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    token.remove();
-    if (typeof window !== 'undefined') {
-      (window as any).__omnimuxVideoToken = null;
-    }
-    if (editor && typeof (editor as HTMLElement).focus === 'function') {
-      (editor as HTMLElement).focus();
-    }
-  });
-
-  let inserted = false;
-
-  // Primary Strategy: Insert directly into the grow container (before the Lexical editor).
-  // This keeps the token inside the input box layout without being wiped by Lexical's internal reconciliation.
-  const grow = doc.querySelector(
-    '[data-input-scroll] [class*="grow"], [data-composer-card] [class*="grow"], [class*="grow"]'
-  );
-
-  if (grow) {
+  // Restore saved selection if it is inside this editor
+  if (savedRange && editorEl.contains(savedRange.commonAncestorContainer)) {
     try {
-      grow.insertBefore(token, grow.firstChild);
-      inserted = true;
-    } catch {}
-  }
-
-  // Fallback Strategy 1: insert inside scroll container
-  if (!inserted && scroll) {
-    try {
-      if (editor && editor.parentNode === scroll) {
-        scroll.insertBefore(token, editor);
-      } else if (scroll.firstChild) {
-        scroll.insertBefore(token, scroll.firstChild);
-      } else {
-        scroll.appendChild(token);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
       }
-      inserted = true;
     } catch {}
   }
 
-  // Fallback Strategy 2: fallback inside data-composer-card
+  // 1. Primary: document.execCommand('insertText') which Lexical handles natively via beforeinput
+  let inserted = false;
+  try {
+    inserted = document.execCommand('insertText', false, markdownText);
+  } catch {}
+
+  // 2. Fallback: dispatch synthetic beforeinput event if execCommand failed
   if (!inserted) {
-    const card = doc.querySelector('[data-composer-card]');
-    if (card) {
-      card.insertBefore(token, card.firstChild);
-      inserted = true;
-    }
+    try {
+      const ev = new InputEvent('beforeinput', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertText',
+        data: markdownText,
+      });
+      inserted = editorEl.dispatchEvent(ev);
+    } catch {}
   }
 
-  if (inserted) {
-    setTimeout(() => {
-      inputEl?.focus();
-    }, 50);
-    return true;
-  }
-
-  return false;
+  return inserted;
 }
 
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
@@ -639,8 +626,11 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     }
     return false;
   });
-  const [hasVideoToken, setHasVideoToken] = useState<boolean>(false);
-  const [videoUrl, setVideoUrl] = useState<string>('');
+
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [popoverUrl, setPopoverUrl] = useState('');
+  const savedRangeRef = useRef<Range | null>(null);
+  const popoverInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -649,28 +639,49 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
       const cat = customEvent.detail?.category || '';
       setVideoSkillActive(isVideoCategory(cat));
     };
-    const onTokenClear = () => {
-      setHasVideoToken(false);
-      setVideoUrl('');
-    };
     window.addEventListener('omnimux:skill:changed', onSkillChange);
-    window.addEventListener('omnimux:video-token:cleared', onTokenClear);
     return () => {
       window.removeEventListener('omnimux:skill:changed', onSkillChange);
-      window.removeEventListener('omnimux:video-token:cleared', onTokenClear);
     };
   }, []);
 
-  const [fallbackTokenVisible, setFallbackTokenVisible] = useState(false);
-
-  const handleInsertVideoToken = useCallback(() => {
+  const handleOpenPopover = useCallback(() => {
     if (typeof document === 'undefined') return;
-    const ok = insertVideoToken(document);
-    if (!ok) {
-      setFallbackTokenVisible(true);
-      setHasVideoToken(true);
+    const editorEl = document.querySelector(
+      '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+    );
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorEl && editorEl.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    } else {
+      savedRangeRef.current = null;
+    }
+    setPopoverUrl('');
+    setIsPopoverOpen(true);
+    setTimeout(() => {
+      popoverInputRef.current?.focus();
+    }, 50);
+  }, []);
+
+  const handleClosePopover = useCallback(() => {
+    setIsPopoverOpen(false);
+    setPopoverUrl('');
+    if (typeof document !== 'undefined') {
+      const editorEl = document.querySelector(
+        '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+      ) as HTMLElement | null;
+      editorEl?.focus();
     }
   }, []);
+
+  const handleConfirmInsert = useCallback(() => {
+    const trimmed = popoverUrl.trim();
+    if (!trimmed) return;
+    const markdown = `[视频](${trimmed}) `;
+    insertMarkdownAtCursor(markdown, savedRangeRef.current);
+    setIsPopoverOpen(false);
+    setPopoverUrl('');
+  }, [popoverUrl]);
 
   useEffect(() => {
     ensureStylesInjected();
@@ -794,7 +805,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   const hasOmnimux = Boolean(omnimuxAttachments && omnimuxAttachments.length > 0);
   const hasNative = nativeAttachments.length > 0;
-  const hasVideoContent = videoSkillActive || hasVideoToken;
+  const hasVideoContent = videoSkillActive;
   if (!hasOmnimux && !hasNative && !dragActive && !preview && !hasVideoContent) {
     return null;
   }
@@ -825,6 +836,80 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         </div>,
         document.body,
       )}
+      {isPopoverOpen && typeof document !== 'undefined' && document.body && createPortal(
+        <div
+          className="omx-video-popover-backdrop"
+          onClick={handleClosePopover}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="omx-video-popover-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="omx-video-popover-header">
+              <div className="omx-video-popover-title">
+                <LinkIcon size={16} />
+                <span>插入视频链接</span>
+              </div>
+              <button /* exempt-ui01: 弹窗关闭按钮 */
+                type="button"
+                className="omx-video-popover-close"
+                onClick={handleClosePopover}
+                title="关闭"
+                aria-label="关闭"
+              >
+                <CloseIcon size={12} />
+              </button>
+            </div>
+            <div className="omx-video-popover-body">
+              <div className="omx-video-popover-input-wrap">
+                <span className="omx-video-popover-input-icon">
+                  <LinkIcon size={14} />
+                </span>
+                <input
+                  ref={popoverInputRef}
+                  type="text"
+                  className="omx-video-popover-input"
+                  placeholder="粘贴视频链接 (TikTok / 抖音 / YouTube 等)"
+                  value={popoverUrl}
+                  onChange={(e) => setPopoverUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleConfirmInsert();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      handleClosePopover();
+                    }
+                  }}
+                />
+              </div>
+              <div className="omx-video-popover-hint">
+                确认后将在输入框当前光标处插入标准 Markdown 格式 <code>[视频](url)</code>，可与文字自由混排并随时删除。
+              </div>
+            </div>
+            <div className="omx-video-popover-footer">
+              <button /* exempt-ui01: 取消按钮 */
+                type="button"
+                className="omx-video-popover-btn-cancel"
+                onClick={handleClosePopover}
+              >
+                取消
+              </button>
+              <button /* exempt-ui01: 确认插入按钮 */
+                type="button"
+                className="omx-video-popover-btn-confirm"
+                onClick={handleConfirmInsert}
+                disabled={!popoverUrl.trim()}
+              >
+                <span>插入到光标处</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
       {(hasOmnimux || hasNative || hasVideoContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
           {videoSkillActive && (
@@ -832,51 +917,11 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               <button /* exempt-ui01: 视频链接插入按钮 */
                 type="button"
                 className="omx-btn-insert-link"
-                onClick={handleInsertVideoToken}
-                title="点击在输入框插入视频链接 Token 组件"
+                onClick={handleOpenPopover}
+                title="点击在输入框光标位置插入视频链接"
               >
                 <LinkIcon size={14} />
                 <span>视频链接</span>
-              </button>
-            </div>
-          )}
-          {fallbackTokenVisible && hasVideoToken && (
-            <div className="omx-video-token-capsule" title="单击进行链接编辑、修改与删除">
-              <div className="omx-video-token-prefix">
-                <LinkIcon size={13} />
-                <span>视频</span>
-              </div>
-              <div className="omx-video-token-divider" />
-              <input
-                type="text"
-                className="omx-video-token-input"
-                placeholder="粘贴 TikTok 视频链接"
-                value={videoUrl}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setVideoUrl(val);
-                  if (typeof window !== 'undefined') {
-                    (window as any).__omnimuxVideoToken = {
-                      url: val,
-                      label: '视频',
-                    };
-                  }
-                }}
-              />
-              <button /* exempt-ui01: 视频 Token 删除按钮 */
-                type="button"
-                className="omx-video-token-remove"
-                title="删除视频链接 Token"
-                onClick={() => {
-                  setHasVideoToken(false);
-                  setFallbackTokenVisible(false);
-                  setVideoUrl('');
-                  if (typeof window !== 'undefined') {
-                    (window as any).__omnimuxVideoToken = null;
-                  }
-                }}
-              >
-                <CloseIcon />
               </button>
             </div>
           )}
