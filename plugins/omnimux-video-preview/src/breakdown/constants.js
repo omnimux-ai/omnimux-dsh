@@ -3,11 +3,12 @@
  * Video breakdown domain constants, dictionaries, and regex rules.
  */
 
-import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-export const BUNDLED_STRUCTURE_PROMPT = join(HERE, '../../prompts/video-structure-breakdown.md')
+// Safe prompt path for Node runtime, non-blocking fallback for browser bundling
+const HERE = typeof import.meta.url === 'string' ? dirname(fileURLToPath(import.meta.url)) : ''
+export const BUNDLED_STRUCTURE_PROMPT = HERE ? join(HERE, '../../prompts/video-structure-breakdown.md') : ''
 
 export const STAGE_NAME_MAP = Object.freeze({
   Hook: '黄金开局视觉切入',

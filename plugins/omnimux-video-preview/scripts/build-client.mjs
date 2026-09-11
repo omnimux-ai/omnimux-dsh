@@ -25,10 +25,13 @@ const result = await esbuild.build({
   bundle: true,
   format: 'cjs',
   target: 'es2022',
-  alias: {
-    'dsh-ui-kit': resolve(root, '../../../../personal/dsh-ui-kit/lib/index.js'),
-  },
-  external: ['react', 'react-dom', '@deepseek-ai/*'],
+  external: [
+    'react',
+    'react-dom',
+    '@deepseek-ai/*',
+    'dsh-ui-kit',
+    'node:*',
+  ],
   write: false,
 })
 
