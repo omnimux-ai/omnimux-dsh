@@ -44,42 +44,51 @@ export function ComposerPresetsTriggers(props) {
   }
 
   return (
-    <div className="omnimux-composer-presets-row" role="toolbar" aria-label="营销创意预设选项">
-      {/* 1. 广告格式按钮 */}
-      <button /* exempt-ui01: Composer工具栏广告格式触发按钮 */
-        type="button"
-        className={`omnimux-composer-preset-trigger ${presets.format ? 'has-active' : ''}`}
-        onClick={() => handleOpenDimension('format')}
-        title="选择广告视频叙事格式 (共 96 款)"
-      >
-        <FormatIcon size={14} />
-        <span>{presets.format ? (presets.format.titleZh || presets.format.title) : '广告格式'}</span>
-        {presets.format && <span className="omnimux-composer-preset-trigger-dot" />}
-      </button>
+    <>
+      {/* 1. 广告格式按钮 (严格复用同位置工具栏 .sh-picker-trigger 规范) */}
+      <div className="sh-picker-wrap">
+        <button /* exempt-ui01: Composer工具栏广告格式触发按钮 */
+          type="button"
+          className={`sh-picker-trigger omnimux-composer-preset-trigger ${presets.format ? 'on has-active' : ''}`}
+          onClick={() => handleOpenDimension('format')}
+          title="选择广告视频叙事格式 (共 96 款)"
+        >
+          <FormatIcon size={14} />
+          <span className="sh-picker-trigger-label">
+            {presets.format ? (presets.format.titleZh || presets.format.title) : '广告格式'}
+          </span>
+        </button>
+      </div>
 
-      {/* 2. 开场亮点按钮 */}
-      <button /* exempt-ui01: Composer工具栏开场亮点触发按钮 */
-        type="button"
-        className={`omnimux-composer-preset-trigger ${presets.hook ? 'has-active' : ''}`}
-        onClick={() => handleOpenDimension('hook')}
-        title="选择黄金 3 秒开场抓手 Hook (共 75 款)"
-      >
-        <HookIcon size={14} />
-        <span>{presets.hook ? (presets.hook.titleZh || presets.hook.title) : '亮点'}</span>
-        {presets.hook && <span className="omnimux-composer-preset-trigger-dot" />}
-      </button>
+      {/* 2. 开场亮点按钮 (严格复用同位置工具栏 .sh-picker-trigger 规范) */}
+      <div className="sh-picker-wrap">
+        <button /* exempt-ui01: Composer工具栏开场亮点触发按钮 */
+          type="button"
+          className={`sh-picker-trigger omnimux-composer-preset-trigger ${presets.hook ? 'on has-active' : ''}`}
+          onClick={() => handleOpenDimension('hook')}
+          title="选择黄金 3 秒开场抓手 Hook (共 75 款)"
+        >
+          <HookIcon size={14} />
+          <span className="sh-picker-trigger-label">
+            {presets.hook ? (presets.hook.titleZh || presets.hook.title) : '亮点'}
+          </span>
+        </button>
+      </div>
 
-      {/* 3. 视觉风格按钮 */}
-      <button /* exempt-ui01: Composer工具栏视觉风格触发按钮 */
-        type="button"
-        className={`omnimux-composer-preset-trigger ${presets.style ? 'has-active' : ''}`}
-        onClick={() => handleOpenDimension('style')}
-        title="选择画面视觉美学与光影调色 (共 20 款)"
-      >
-        <StyleIcon size={14} />
-        <span>{presets.style ? (presets.style.titleZh || presets.style.title) : '视觉风格'}</span>
-        {presets.style && <span className="omnimux-composer-preset-trigger-dot" />}
-      </button>
+      {/* 3. 视觉风格按钮 (严格复用同位置工具栏 .sh-picker-trigger 规范) */}
+      <div className="sh-picker-wrap">
+        <button /* exempt-ui01: Composer工具栏视觉风格触发按钮 */
+          type="button"
+          className={`sh-picker-trigger omnimux-composer-preset-trigger ${presets.style ? 'on has-active' : ''}`}
+          onClick={() => handleOpenDimension('style')}
+          title="选择画面视觉美学与光影调色 (共 20 款)"
+        >
+          <StyleIcon size={14} />
+          <span className="sh-picker-trigger-label">
+            {presets.style ? (presets.style.titleZh || presets.style.title) : '视觉风格'}
+          </span>
+        </button>
+      </div>
 
       {/* 专属独立弹窗渲染 */}
       {activeModal && (
@@ -90,6 +99,6 @@ export function ComposerPresetsTriggers(props) {
           sessionId={sessionId}
         />
       )}
-    </div>
+    </>
   )
 }
