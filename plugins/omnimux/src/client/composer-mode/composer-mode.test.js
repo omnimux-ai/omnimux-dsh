@@ -96,12 +96,12 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     'ComposerPresetsTriggers 必须在非 marketing 模式下静默隐藏'
   )
 
-  // 3. 验证 ComposerPresetsChips 在非 marketing 模式下 return null
+  // 3. 验证 ComposerPresetsChips 彻底收敛为 return null，输入框左上角不渲染多余选项胶囊
   const chipsPath = path.resolve(import.meta.dirname, '../presets/ComposerPresetsChips.jsx')
   const chipsContent = fs.readFileSync(chipsPath, 'utf-8')
   assert.ok(
-    chipsContent.includes("if (activeMode !== 'marketing')"),
-    'ComposerPresetsChips 必须在非 marketing 模式下静默隐藏'
+    chipsContent.includes('return null'),
+    'ComposerPresetsChips 必须返回 null 彻底移除输入框左上角多余选项元素'
   )
 
   // 4. 验证 AttachmentSubmitBridge 仅在 marketing 模式下编译预设
