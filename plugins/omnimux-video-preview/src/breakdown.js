@@ -5,7 +5,6 @@
  */
 
 export {
-  BUNDLED_STRUCTURE_PROMPT,
   METADATA_HEADING_REGEX,
   STAGE_I18N,
   STAGE_NAME_MAP,
@@ -60,4 +59,5 @@ export {
 export {
   executeDedicatedStructureAnalyze,
   extractVideoBreakdown,
+  BUNDLED_STRUCTURE_PROMPT,
 } from './breakdown/analyzerPipeline.js'

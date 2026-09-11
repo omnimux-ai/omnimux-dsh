@@ -1,19 +1,16 @@
 /**
  * @file plugins/omnimux-video-preview/src/breakdown/constants.js
  * Video breakdown domain constants, dictionaries, and regex rules.
+ * Pure isomorphic module safe for both Node.js host and browser client bundle.
  */
-
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const HERE = dirname(fileURLToPath(import.meta.url))
-export const BUNDLED_STRUCTURE_PROMPT = join(HERE, '../../prompts/video-structure-breakdown.md')
 
 export const STAGE_NAME_MAP = Object.freeze({
   Hook: '黄金开局视觉切入',
   'Product Intro': '核心主体与细节呈现',
   'Usage Detail': '实操过程与功能展示',
+  'Proof Effect': '效果验证与价值实锤',
   'Demo Scene': '实际场景与转化共鸣',
+  Cta: '优惠促销与促单号召',
 })
 
 export const DEFAULT_CAMERA_TAGS = Object.freeze(['特写', '智能手机手持', '俯视', '手持微动'])

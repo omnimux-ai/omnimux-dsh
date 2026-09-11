@@ -4,16 +4,19 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { downloadMedia } from '../download-helper.js'
 import { detectPhysicalScenes } from '../scene-detect.js'
-import { BUNDLED_STRUCTURE_PROMPT } from './constants.js'
 import { formatTime } from './timeUtils.js'
 import { parsePipelineAndStructureFromMarkdown } from './structureParser.js'
 import { detectSocialPlatform, fetchRealSocialMetadata } from './socialMetadata.js'
 import { generateAdaptiveShotsAndStructure } from './adaptiveGenerator.js'
 import { resolveWorkspaceDirectory } from './artifactStorage.js'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+export const BUNDLED_STRUCTURE_PROMPT = join(HERE, '../../prompts/video-structure-breakdown.md')
 
 /**
  * Safely load bundled structure breakdown system prompt.
@@ -71,12 +74,12 @@ function resolveTextCompleteService(ctx) {
 }
 
 /**
- * Build structured user instruction for multimodal video analysis.
+ * Build structured user instruction for multimodal video analysis using Chain-of-Thought principles.
  * @param {string} systemPrompt
  * @returns {string}
  */
 function buildStructureInstruction(systemPrompt) {
-  return `${systemPrompt}\n\n---\n【任务执行指令（严格遵守）】：\n1. 【叙事结构链路】：标准五阶段推荐为：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头，且标头下方必须包含一条以 > 开头的英文原声核心台词引用，随后紧跟一段专业中文策略意图解析！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：中景, 智能手机手持, 平视, 手持微晃），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“卫生间偷窥情景”、“窗外视角无法透视”、“产品展开介绍”），严禁出现 Shot 1、全景等机械词！`
+  return `${systemPrompt}\n\n---\n【思维链 (CoT) 深度拉片任务执行指令（严格遵守）】：\n请在内心严格执行 5 步思维链（音画全景扫描与台词完整转写 -> 商业漏斗五阶段对齐 -> 核心台词原声锚定 -> 操盘手心理学与转化策略深度解构 -> 逐镜头 4 维正交分镜表征），严格按照上述格式规范输出：\n1. 【叙事结构链路】：带货好物类视频标准五阶段严格为：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头，且标头下方必须包含一条以 > 开头的英文原声核心完整台词引用（严禁截取半句、严禁只写环境音！），随后紧跟一段 40~80 字专业中文策略意图与爆款心理机制解析！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：中景, 智能手机手持, 平视, 手持微晃），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“卫生间偷窥情景”、“窗外视角无法透视”、“产品展开介绍”），严禁出现 Shot 1、全景等机械词！`
 }
 
 /**
