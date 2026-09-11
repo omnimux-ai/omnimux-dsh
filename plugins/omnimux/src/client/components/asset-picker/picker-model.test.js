@@ -84,4 +84,13 @@ describe('picker-model generalized max', () => {
     assert.equal(isAlreadyAdded(['x'], 'y'), false)
     assert.equal(isAlreadyAdded([], ''), false)
   })
+
+  it('AssetPicker enforces fixed 760 width and fixed card dimensions', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./AssetPicker.jsx', import.meta.url), 'utf8')
+    assert.ok(source.includes('width={760}'), 'locks modal width to 760')
+    assert.ok(source.includes('height: 480px'), 'locks modal height to 480px')
+    assert.ok(source.includes('repeat(auto-fill, 264px)'), 'uses fixed 264px grid columns')
+    assert.ok(source.includes('width: 264px'), 'card has fixed 264px width')
+  })
 })

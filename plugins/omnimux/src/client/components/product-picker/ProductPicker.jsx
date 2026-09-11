@@ -7,10 +7,11 @@ const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
 .omx-product-pick {
-  display: flex; min-height: 440px; max-height: 70vh;
+  display: flex; width: 100%; height: 480px; min-height: 480px; max-height: 480px;
+  box-sizing: border-box;
 }
 .omx-product-pick__nav {
-  width: 146px; flex: none; display: flex; flex-direction: column; gap: 4px;
+  width: 148px; flex: none; display: flex; flex-direction: column; gap: 4px;
   padding: 8px 10px 8px 0; border-right: 1px solid var(--dsw-alias-border-l2);
   overflow-y: auto; box-sizing: border-box;
 }
@@ -94,21 +95,18 @@ const CSS = `
   flex: 1; overflow-y: auto; padding-right: 6px;
 }
 .omx-product-pick__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
-}
-.omx-product-pick__grid.is-single-product {
-  grid-template-columns: minmax(280px, 340px);
+  display: grid; grid-template-columns: repeat(auto-fill, 264px); gap: 14px;
 }
 .omx-product-pick__empty {
-  border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 220px;
+  border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 200px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   color: var(--dsw-alias-label-tertiary); font-size: 13px; padding: 24px; text-align: center;
 }
 .omx-product-pick-card {
+  width: 264px; box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; overflow: hidden; cursor: pointer;
   background: var(--dsw-alias-bg-base, var(--dsw-bg)); display: flex; flex-direction: column;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  box-sizing: border-box;
 }
 .omx-product-pick-card:hover {
   border-color: var(--dsw-alias-border-l3);
@@ -119,7 +117,7 @@ const CSS = `
   box-shadow: 0 0 0 1.5px var(--dsw-alias-label-primary);
 }
 .omx-product-pick-card__thumb {
-  height: 148px; background: var(--dsw-alias-bg-module-platform); position: relative;
+  height: 136px; background: var(--dsw-alias-bg-module-platform); position: relative;
   display: flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary);
   overflow: hidden;
 }
@@ -335,7 +333,7 @@ export function ProductPicker({
       open={open}
       onClose={onClose}
       title={safeT('productPicker.title')}
-      width={700}
+      width={760}
       footer={
         <div className="omx-product-pick__footer">
           <div className="omx-product-pick__meta">
@@ -473,11 +471,7 @@ export function ProductPicker({
                 ) : null}
               </div>
             ) : (
-              <div
-                className={`omx-product-pick__grid ${
-                  filteredProducts.length === 1 ? 'is-single-product' : ''
-                }`}
-              >
+              <div className="omx-product-pick__grid">
                 {filteredProducts.map((product) => {
                   const firstCategory = Array.isArray(product.categories) && product.categories[0];
                   const typeLabel = firstCategory || (
