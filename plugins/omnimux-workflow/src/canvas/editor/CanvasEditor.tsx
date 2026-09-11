@@ -114,8 +114,8 @@ class DrawerErrorBoundary extends React.Component<
             style={{
               padding: '4px 12px',
               borderRadius: '6px',
-              background: '#3b82f6',
-              color: '#fff',
+              background: 'var(--dsw-alias-button-primary-fill, #fff)',
+              color: 'var(--dsw-alias-label-primary-inverted, #000)',
               border: 'none',
               cursor: 'pointer',
             }}
