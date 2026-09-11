@@ -1,4 +1,7 @@
 export { CreativePresetsModal } from './CreativePresetsModal.jsx'
+export { CreativeDimensionModal, DIMENSION_CONFIG } from './CreativeDimensionModal.jsx'
+export { ComposerCreativePresets } from './ComposerCreativePresets.jsx'
+export { getCreativePresetsStore } from './presets-store.js'
 export { PresetCard } from './PresetCard.jsx'
 export { compileCreativePrompt } from './compiler.js'
 export { resolveMediaUrl, hasVideoPreview, hasPosterPreview } from './media-resolver.js'

@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
+import { getCreativePresetsStore, compileCreativePrompt } from '../presets/index.js'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
 export function reconcileAttachmentDraft(draft, previous, attachments) {
@@ -74,6 +75,28 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
           } catch {}
         }
         tokenNode?.remove?.()
+      }
+
+      // Reconcile creative presets (Format, Hook, Style) into structured system context
+      try {
+        const presetsStore = getCreativePresetsStore()
+        const currentPresets = presetsStore.getSnapshot(sessionId)
+        if (currentPresets && (currentPresets.format || currentPresets.hook || currentPresets.style)) {
+          draft = compileCreativePrompt({
+            format: currentPresets.format,
+            hook: currentPresets.hook,
+            style: currentPresets.style,
+            userQuery: draft,
+            language: 'zh-CN',
+          })
+          try {
+            actions?.setDraft?.(draft)
+            // 提交后清空当前预设，避免后续会话状态污染
+            presetsStore.clearPresets(sessionId)
+          } catch {}
+        }
+      } catch (err) {
+        console.error('[CreativePresets] Failed to compile prompt:', err)
       }
 
       if (!draft.trim() && !attachments.length) return true

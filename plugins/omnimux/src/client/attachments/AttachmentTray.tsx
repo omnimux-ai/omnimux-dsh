@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AttachmentCard } from './AttachmentCard.tsx';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
+import { ComposerCreativePresets } from '../presets/index.js';
 
 const ATTACHMENTS_STYLE_ID = 'omnimux-attachments-styles';
 
@@ -910,6 +911,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         </div>,
         document.body,
       )}
+      <ComposerCreativePresets sessionId={currentSessionId} />
       {(hasOmnimux || hasNative || hasVideoContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
           {videoSkillActive && (
