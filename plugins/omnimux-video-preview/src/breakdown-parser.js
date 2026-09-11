@@ -305,13 +305,43 @@ function inferStageFromSeconds(startSec, endSec) {
   return 'Product Intro'
 }
 
+function isSpeechContent(text) {
+  if (!text) return false
+  const s = text.trim()
+  if (SPEECH_PREFIX_REGEX.test(s)) return true
+  if (/^[🗣️☊\"'“‘]/.test(s)) return true
+  if (s.includes('🗣️') || s.includes('☊')) return true
+  if (/^(?:hold on|surprise|look at|every book|comenta|hey|hi|hello|check this|protect your)/i.test(s)) return true
+  return false
+}
+
+function isVisualActionContent(text) {
+  if (!text) return false
+  const s = text.trim()
+  return /[\u4e00-\u9fa5]/.test(s) && /(?:画面|镜头|双手|倒计时|特写|展示|取出|摆放|切入|手持|推入|呈现|全景|中景|主角|男主|小狗|幼犬|俯视|平视|仰视|背景|翻转|拉开|坐下|坐定|按压|闭眼|趴卧|仰卧)/.test(s)
+}
+
 function resolveStructuredSpeechAndDesc(cols) {
   let speech = ''
   let desc = ''
   if (cols.length >= 6) {
-    const isFirstDesc = cols[4].length > 35 || /^(Hold on|Surprise|随着|男子|室内|镜头|门外)/i.test(cols[5])
-    desc = isFirstDesc ? cols[4] || '' : cols[5] || ''
-    speech = isFirstDesc ? cols[5] || '' : cols[4] || ''
+    const colA = cols[4] || ''
+    const colB = cols[5] || ''
+    const aIsSpeech = isSpeechContent(colA)
+    const bIsSpeech = isSpeechContent(colB)
+    const aIsDesc = isVisualActionContent(colA)
+    const bIsDesc = isVisualActionContent(colB)
+
+    if (aIsSpeech || bIsDesc) {
+      speech = colA
+      desc = colB
+    } else if (bIsSpeech || aIsDesc) {
+      desc = colA
+      speech = colB
+    } else {
+      desc = colA
+      speech = colB
+    }
   } else {
     desc = cols[4] || cols[3] || ''
   }
@@ -421,6 +451,13 @@ function parseLegacyShotRow(cols, timeCol, shotIndex, timeInfo) {
   }
 }
 
+const HEADER_KEYWORD_REGEX = /^(?:时间|时间跨度|时间戳|time|时段|分镜标题|分镜|标题|所属阶段|阶段|stage|镜头属性标签|镜头属性|属性|景别|运镜|机位|拍摄视角|拍摄机位|视角|画面与动作描述|画面描述|动作描述|视觉画面|画面|台词\/字幕|台词|字幕|台词字幕|镜头序号|序号|cut|shot|提示词参考|提示词)$/i
+
+function isTableHeaderRow(rawCols) {
+  const matchingHeaderCols = rawCols.filter((c) => HEADER_KEYWORD_REGEX.test(c.trim()))
+  return matchingHeaderCols.length >= 2
+}
+
 /**
  * Parse markdown table from video_analyze into structured shots.
  */
@@ -435,29 +472,35 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
     const line = rawLine.trim()
     if (!line.startsWith('|')) continue
 
-    if (!tableStarted) {
-      const isHeader = line.includes('时间') || line.includes('画面') || line.includes('镜头')
-      if (isHeader) {
-        tableStarted = true
-        hasStageHeader = line.includes('阶段') || line.includes('Stage')
-      }
+    const rawCols = line.split('|').map((c) => c.trim()).filter((_c, i, a) => i > 0 && i < a.length - 1)
+    if (rawCols.length < 2) continue
+
+    // Detect header row even if table was already started (in case model outputs multiple table headers)
+    if (isTableHeaderRow(rawCols)) {
+      tableStarted = true
+      hasStageHeader = line.includes('阶段') || line.includes('Stage')
       continue
     }
 
+    if (!tableStarted) continue
     if (line.includes('---')) continue
 
-    const cols = line.split('|').map((c) => c.trim()).filter((_c, i, a) => i > 0 && i < a.length - 1)
-    if (cols.length < 2) continue
+    const timeInfo = extractTimeRange(rawCols)
+    // Filter out phantom rows that have no valid time and match header words
+    if (timeInfo.startSec === 0 && timeInfo.endSec === 0 && !timeInfo.timeCol) {
+      if (rawCols.some((c) => /^(?:分镜标题|所属阶段|画面与动作描述|镜头属性标签)$/i.test(c))) {
+        continue
+      }
+    }
 
-    const timeInfo = extractTimeRange(cols)
     const nextIndex = shots.length + 1
-    const isStageKeyword = cols[2] && STAGE_KEYWORD_REGEX.test(cols[2].trim())
-    const isStructured = cols.length >= 4 && (hasStageHeader || isStageKeyword)
+    const isStageKeyword = rawCols[2] && STAGE_KEYWORD_REGEX.test(rawCols[2].trim())
+    const isStructured = rawCols.length >= 4 && (hasStageHeader || isStageKeyword)
 
     if (isStructured) {
-      shots.push(parseStructuredShotRow(cols, nextIndex, timeInfo))
+      shots.push(parseStructuredShotRow(rawCols, nextIndex, timeInfo))
     } else {
-      shots.push(parseLegacyShotRow(cols, timeInfo.timeCol, nextIndex, timeInfo))
+      shots.push(parseLegacyShotRow(rawCols, timeInfo.timeCol, nextIndex, timeInfo))
     }
   }
 
@@ -618,15 +661,70 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
       continue
     }
 
+    const cleanDesc = desc
+      .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
+      .replace(/^---\s*$/, '')
+      .trim()
+
     seenStages.add(stage)
     cleanedStructure.push({
       stage,
       title: stage,
-      description: desc,
+      description: cleanDesc,
     })
   }
 
-  structure = cleanedStructure
+  const shots = parseShotsFromAnalyzeMarkdown(markdown)
+
+  // If structure is degenerate (empty, or only 1 item with empty/trivial desc), repair from shots!
+  const isDegenerate = cleanedStructure.length === 0 || (cleanedStructure.length === 1 && (!cleanedStructure[0].description || cleanedStructure[0].description === '---' || cleanedStructure[0].description.length <= 5))
+
+  if (isDegenerate && shots.length > 0) {
+    const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !METADATA_HEADING_REGEX.test(s)))]
+    if (shotStages.length >= 2) {
+      structure = shotStages.map((stageName) => {
+        const existing = cleanedStructure.find((s) => s.stage === stageName)
+        if (existing && existing.description && existing.description !== '---' && existing.description.trim().length > 10) {
+          return existing
+        }
+        const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === stageName)
+        const details = stageShots
+          .map((s) => {
+            if (s.description && s.description.length > 5 && s.description !== '---') {
+              return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
+            }
+            return s.title
+          })
+          .filter(Boolean)
+        return {
+          stage: stageName,
+          title: stageName,
+          description: details.join('；'),
+        }
+      })
+    } else {
+      structure = cleanedStructure
+    }
+  } else {
+    // Enrich any stage in structure whose description is empty or dash
+    for (const item of cleanedStructure) {
+      if (!item.description || item.description === '---' || item.description.length <= 5) {
+        const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
+        const details = stageShots
+          .map((s) => {
+            if (s.description && s.description.length > 5 && s.description !== '---') {
+              return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
+            }
+            return s.title
+          })
+          .filter(Boolean)
+        if (details.length > 0) {
+          item.description = details.join('；')
+        }
+      }
+    }
+    structure = cleanedStructure
+  }
 
   // Pipeline strictly 1:1 mirrors the extracted structure stages
   let pipeline = []
@@ -643,7 +741,6 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     }
   }
 
-  const shots = parseShotsFromAnalyzeMarkdown(markdown)
   enrichShotsFromStructure(shots, structure)
 
   return { pipeline, structure, shots }
