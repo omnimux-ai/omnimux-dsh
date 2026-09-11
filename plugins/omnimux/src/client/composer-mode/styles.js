@@ -19,6 +19,22 @@ export const COMPOSER_MODE_CSS = `
   z-index: 2;
 }
 
+/* Hero 阶段大标题正下方专属锚点 */
+#omnimux-composer-mode-anchor {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+#omnimux-composer-mode-anchor .omnimux-composer-mode-wrap {
+  margin: 0;
+}
+
 /* 胶囊分段选择器壳体 (1:1 像素级复刻参考图通透暗色外壳) */
 .omnimux-composer-mode-pill {
   display: inline-flex;
