@@ -31,6 +31,7 @@ import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.js
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
+import { ComposerPresetsTriggers } from './presets/index.js'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -61,6 +62,12 @@ export function apply(ctx) {
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+    name: 'conversation.input.left',
+    id: 'omnimux-creative-presets-triggers',
+    order: 30,
+    locale: NS,
+  }, ComposerPresetsTriggers))
   // Optional session warmup: fill the status cache so the first sidebar
   // click can take the sync short path. Not a startup gate — fire-and-forget,
   // never setState, never block apply().

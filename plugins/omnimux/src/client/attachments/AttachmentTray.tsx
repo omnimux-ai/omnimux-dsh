@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AttachmentCard } from './AttachmentCard.tsx';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
-import { ComposerCreativePresets } from '../presets/index.js';
+import { ComposerPresetsChips, getCreativePresetsStore } from '../presets/index.js';
 
 const ATTACHMENTS_STYLE_ID = 'omnimux-attachments-styles';
 
@@ -906,7 +906,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const hasOmnimux = Boolean(omnimuxAttachments && omnimuxAttachments.length > 0);
   const hasNative = nativeAttachments.length > 0;
   const hasVideoContent = videoSkillActive;
-  if (!hasOmnimux && !hasNative && !dragActive && !preview && !hasVideoContent) {
+  const hasPresets = getCreativePresetsStore().hasAnyPreset(currentSessionId);
+  if (!hasOmnimux && !hasNative && !dragActive && !preview && !hasVideoContent && !hasPresets) {
     return null;
   }
 
@@ -1010,7 +1011,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         </div>,
         document.body,
       )}
-      <ComposerCreativePresets sessionId={currentSessionId} />
+      <ComposerPresetsChips sessionId={currentSessionId} />
       {(hasOmnimux || hasNative || hasVideoContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
           {videoSkillActive && (
