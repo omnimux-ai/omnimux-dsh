@@ -145,4 +145,20 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(hostSrc, /modelCatalog/)
     assert.match(hostSrc, /setModelCatalogResolver/)
   })
+
+  it('aligns Seedance and ByteDance models with canvas bytedance logo (Issue #1202)', () => {
+    // 验证所有 Seedance 系列模型在预设和默认目录中均采用 bytedance 图标
+    assert.match(modelPickerSrc, /"seedance-2-5"[\s\S]*?icon:\s*"bytedance"/)
+    assert.match(modelPickerSrc, /"seedance-2-0-fast"[\s\S]*?icon:\s*"bytedance"/)
+    assert.match(modelPickerSrc, /"seedance-2-0"[\s\S]*?icon:\s*"bytedance"/)
+    assert.match(modelPickerSrc, /"seedance-2-0-mini-trial"[\s\S]*?icon:\s*"bytedance"/)
+    assert.match(modelPickerSrc, /"seedance-2-0-mini"[\s\S]*?icon:\s*"bytedance"/)
+
+    // 验证品牌解析规则将 seed / seedance / seedream / doubao / 即梦 统一解析为 bytedance
+    assert.match(modelPickerSrc, /seedance/i)
+    assert.match(modelPickerSrc, /\(\^seed\|seedance\|seedream\|doubao\|豆包\|即梦\|dreamina\|bytedance\)/i)
+
+    // 验证 BRAND_SVGS 包含完整的字节跳动四柱波形图标
+    assert.match(modelPickerSrc, /bytedance:\s*`<svg[^>]*>[\s\S]*?22\.0004 4\.62844[\s\S]*?1\.99902 20\.1939[\s\S]*?16\.1213 9\.26561[\s\S]*?7\.49609 11\.582V20\.7336/)
+  })
 })
