@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
 
-describe('nativeVideoChip insertion and caret position', () => {
-  it('inserts chip and trailing spacer via selection.insertNodes to keep caret at tail', () => {
+describe('nativeVideoChip insertion without trailing space', () => {
+  it('inserts chip directly via selection.insertNodes without trailing spacer space', () => {
     let insertedNodes: any[] = [];
     let editorFocused = false;
 
@@ -11,13 +11,6 @@ describe('nativeVideoChip insertion and caret position', () => {
       config: any;
       constructor(config: any) {
         this.config = config;
-      }
-    }
-
-    class MockTextNode {
-      text: string;
-      constructor(text: string) {
-        this.text = text;
       }
       selectEnd() {}
     }
@@ -31,7 +24,6 @@ describe('nativeVideoChip insertion and caret position', () => {
     const mockLexicalEditor = {
       _nodes: new Map([
         ['reference-chip', { klass: MockChipNode }],
-        ['text', { klass: MockTextNode }],
       ]),
       _editorState: {
         _selection: mockSelection,
@@ -69,17 +61,15 @@ describe('nativeVideoChip insertion and caret position', () => {
     const result = insertNativeVideoChip(testUrl);
 
     assert.equal(result, true);
-    assert.equal(insertedNodes.length, 2, 'Should insert both chip and trailing spacer');
+    assert.equal(insertedNodes.length, 1, 'Should insert only chip, without trailing spacer space');
     assert.ok(insertedNodes[0] instanceof MockChipNode);
     assert.equal(insertedNodes[0].config.source, 'link');
     assert.equal(insertedNodes[0].config.ref, testUrl);
     assert.equal(insertedNodes[0].config.label, 'TikTok');
-    assert.ok(insertedNodes[1] instanceof MockTextNode);
-    assert.equal(insertedNodes[1].text, ' ');
     assert.equal(editorFocused, true);
   });
 
-  it('falls back to append and selects spacer end when selection is null', () => {
+  it('falls back to append and calls selectEnd on chip when selection is null', () => {
     let selectEndCalled = false;
     let appendedNodes: any[] = [];
 
@@ -87,13 +77,6 @@ describe('nativeVideoChip insertion and caret position', () => {
       config: any;
       constructor(config: any) {
         this.config = config;
-      }
-    }
-
-    class MockTextNode {
-      text: string;
-      constructor(text: string) {
-        this.text = text;
       }
       selectEnd() {
         selectEndCalled = true;
@@ -126,7 +109,6 @@ describe('nativeVideoChip insertion and caret position', () => {
     const mockLexicalEditor = {
       _nodes: new Map([
         ['reference-chip', { klass: MockChipNode }],
-        ['text', { klass: MockTextNode }],
       ]),
       _editorState: {
         _selection: null, // No active selection
@@ -153,11 +135,34 @@ describe('nativeVideoChip insertion and caret position', () => {
     const result = insertNativeVideoChip(testUrl);
 
     assert.equal(result, true);
-    assert.equal(appendedNodes.length, 2);
+    assert.equal(appendedNodes.length, 1, 'Should append only chip without extra space node');
     assert.ok(appendedNodes[0] instanceof MockChipNode);
     assert.equal(appendedNodes[0].config.label, 'YouTube');
-    assert.ok(appendedNodes[1] instanceof MockTextNode);
-    assert.equal(appendedNodes[1].text, ' ');
-    assert.equal(selectEndCalled, true, 'selectEnd must be called on trailing spacer to position caret');
+    assert.equal(selectEndCalled, true, 'selectEnd must be called on chip to position caret');
+  });
+
+  it('insertFallbackText does not append trailing space', () => {
+    let insertedText = '';
+    (globalThis as any).document = {
+      querySelector(sel: string) {
+        if (sel.includes('contenteditable')) {
+          return {
+            focus() {},
+            // No lexicalEditor instance to trigger fallback text insertion
+          };
+        }
+        return null;
+      },
+      execCommand(_cmd: string, _ui: boolean, text: string) {
+        insertedText = text;
+        return true;
+      },
+    };
+
+    const testUrl = 'https://www.tiktok.com/@test/video/999';
+    const result = insertNativeVideoChip(testUrl);
+    assert.equal(result, true);
+    assert.equal(insertedText, '[视频](https://www.tiktok.com/@test/video/999)');
+    assert.doesNotMatch(insertedText, /\s$/);
   });
 });

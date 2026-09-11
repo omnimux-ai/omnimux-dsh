@@ -42,15 +42,6 @@ function getChipConstructor(lexicalEditor: any): any {
   return chipReg ? chipReg.klass : null;
 }
 
-function getTextConstructor(lexicalEditor: any): any {
-  const nodes = lexicalEditor ? lexicalEditor._nodes : null;
-  if (!nodes || typeof nodes.get !== 'function') {
-    return null;
-  }
-  const textReg = nodes.get('text');
-  return textReg ? textReg.klass : null;
-}
-
 function appendChipToRoot(lexicalEditor: any, chip: any): void {
   const activeState = lexicalEditor._pendingEditorState || lexicalEditor._editorState;
   const nodeMap = activeState ? activeState._nodeMap : null;
@@ -81,7 +72,6 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
   if (!ChipKlass) {
     return false;
   }
-  const TextKlass = getTextConstructor(lexicalEditor);
 
   const isVideo = isVideoUrl(trimmedUrl);
   const markdownTag = isVideo ? '视频' : '链接';
@@ -99,19 +89,14 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
         appearance: 'link',
         clipboardText: `[${markdownTag}](${trimmedUrl})`,
       });
-      const spacer = TextKlass ? new TextKlass(' ') : null;
-      const nodesToInsert = spacer ? [chip, spacer] : [chip];
 
       if (selection && typeof selection.insertNodes === 'function') {
-        selection.insertNodes(nodesToInsert);
+        selection.insertNodes([chip]);
         inserted = true;
       } else {
         appendChipToRoot(lexicalEditor, chip);
-        if (spacer) {
-          appendChipToRoot(lexicalEditor, spacer);
-          if (typeof spacer.selectEnd === 'function') {
-            spacer.selectEnd();
-          }
+        if (typeof chip.selectEnd === 'function') {
+          chip.selectEnd();
         }
         inserted = true;
       }
@@ -133,7 +118,7 @@ function insertFallbackText(trimmedUrl: string): boolean {
   try {
     const isVideo = isVideoUrl(trimmedUrl);
     const markdownTag = isVideo ? '视频' : '链接';
-    return document.execCommand('insertText', false, `[${markdownTag}](${trimmedUrl}) `);
+    return document.execCommand('insertText', false, `[${markdownTag}](${trimmedUrl})`);
   } catch {
     return false;
   }
