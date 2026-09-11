@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { downloadMedia, fallbackResolveSocial } from './download-helper.js'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+export const BUNDLED_STRUCTURE_PROMPT = join(HERE, '../prompts/video-structure-breakdown.md')
 
 /**
  * Normalizes seconds into mm:ss format.
@@ -53,6 +57,7 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
   const lines = markdown.split('\n')
   const shots = []
   let tableStarted = false
+  let hasStageHeader = false
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
@@ -60,6 +65,9 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
     if (!tableStarted) {
       if (line.includes('时间') || line.includes('画面') || line.includes('镜头')) {
         tableStarted = true
+        if (line.includes('阶段') || line.includes('Stage')) {
+          hasStageHeader = true
+        }
       }
       continue
     }
@@ -70,16 +78,54 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
         let timeCol = ''
         let startSec = 0
         let endSec = 0
+
+        // Support mm:ss - mm:ss and pure seconds
         for (const col of cols) {
-          const m = col.match(/(\d+)\s*[-~至到]\s*(\d+)/)
-          if (m) {
+          const mColon = col.match(/(?:(\d+):)?(\d+)\s*[-~至到]\s*(?:(\d+):)?(\d+)/)
+          if (mColon) {
             timeCol = col
-            startSec = parseInt(m[1], 10)
-            endSec = parseInt(m[2], 10)
+            if (mColon[1] !== undefined || mColon[3] !== undefined) {
+              const m1 = mColon[1] ? parseInt(mColon[1], 10) : 0
+              const s1 = parseInt(mColon[2], 10)
+              const m2 = mColon[3] ? parseInt(mColon[3], 10) : 0
+              const s2 = parseInt(mColon[4], 10)
+              startSec = m1 * 60 + s1
+              endSec = m2 * 60 + s2
+            } else {
+              startSec = parseInt(mColon[2], 10)
+              endSec = parseInt(mColon[4], 10)
+            }
             break
           }
         }
 
+        // New 5-column format: | 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+        const isStageKeyword = cols[2] && /^(hook|product intro|usage detail|demo scene|inciting incident|rising conflict|climax|plot twist|cliffhanger|cta)$/i.test(cols[2].trim())
+        if (cols.length >= 4 && (hasStageHeader || isStageKeyword)) {
+          const titleCol = cols[1] || `分镜 ${shots.length + 1}`
+          const stageCol = cols[2].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim() || 'Product Intro'
+          const tagsCol = cols[3] || ''
+          const descCol = cols[4] || cols[3] || ''
+
+          let parsedTags = tagsCol.split(/[,，|、]/).map((t) => t.trim()).filter(Boolean)
+          if (parsedTags.length === 0) {
+            parsedTags = ['特写', '智能手机手持', '俯视', '手持微动']
+          }
+
+          shots.push({
+            id: `shot_${shots.length + 1}`,
+            start_seconds: startSec,
+            end_seconds: endSec,
+            time_range: formatTimeRange(startSec, endSec),
+            title: titleCol,
+            stage: stageCol,
+            tags: parsedTags,
+            description: descCol,
+          })
+          continue
+        }
+
+        // Legacy format fallback
         const descCols = cols.filter((c) => c !== timeCol && !/^\d+$/.test(c))
         const visualCol = descCols[0] || ''
         const actionCol = descCols[1] || ''
@@ -173,6 +219,120 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   }
 
   return structure
+}
+
+/**
+ * Parse two-step narrative structure & pipeline from dedicated structure breakdown markdown.
+ * Step 1: Dynamic Narrative Pipeline (e.g. Hook → Product Intro → Usage Detail → Demo Scene)
+ * Step 2: Stage-by-Stage Structured Descriptions
+ * @param {string} markdown
+ * @returns {{ pipeline: string[], structure: Array<object>, shots: Array<object> }}
+ */
+export function parsePipelineAndStructureFromMarkdown(markdown) {
+  if (typeof markdown !== 'string' || !markdown.trim()) {
+    return { pipeline: [], structure: [], shots: [] }
+  }
+
+  // 1. Extract Pipeline Sequence
+  let pipeline = []
+  const pipelineMatch = markdown.match(/##\s*1\.\s*叙事结构链路[^\n]*\n+([^\n]+)/i)
+    || markdown.match(/(?:Narrative Pipeline|结构链路|叙事链路|流程链路)[^\n:]*[:：]?\s*\n*([^\n]+)/i)
+  if (pipelineMatch && pipelineMatch[1]) {
+    pipeline = pipelineMatch[1]
+      .split(/[→\->\>]/)
+      .map((s) => s.replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim())
+      .filter(Boolean)
+  }
+
+  // 2. Extract Stage Descriptions (Section 2)
+  const structure = []
+  const stageSectionMatch = markdown.match(/##\s*2\.\s*结构阶段解构[\s\S]*?(?=\n##\s*3|$)/i)
+  const stageBlockText = stageSectionMatch ? stageSectionMatch[0] : markdown
+
+  const stageRegex = /###\s*([^\n]+)\n+([\s\S]*?)(?=\n###|\n##|$)/g
+  let match
+  while ((match = stageRegex.exec(stageBlockText)) !== null) {
+    const rawHeading = match[1].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim()
+    const descText = match[2]
+      .replace(/\|[\s\S]*$/, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .trim()
+      .replace(/\*+/g, '')
+
+    if (rawHeading && descText) {
+      const stageKeyMatch = rawHeading.match(/^([a-zA-Z\s]+)/)
+      const stageKey = stageKeyMatch ? stageKeyMatch[1].trim() : rawHeading
+      structure.push({
+        stage: stageKey,
+        title: stageKey,
+        description: descText,
+      })
+      if (!pipeline.includes(stageKey)) {
+        pipeline.push(stageKey)
+      }
+    }
+  }
+
+  // Fallback to legacy parser if no structure was matched via ###
+  if (structure.length === 0) {
+    const legacy = parseStructureFromAnalyzeMarkdown(markdown)
+    if (legacy.length > 0) {
+      structure.push(...legacy)
+      if (pipeline.length === 0) {
+        pipeline = structure.map((s) => s.stage)
+      }
+    }
+  }
+
+  // 3. Extract Shots Table
+  const shots = parseShotsFromAnalyzeMarkdown(markdown)
+
+  return { pipeline, structure, shots }
+}
+
+/**
+ * Execute dedicated video structure breakdown using Hub textComplete.
+ * Completely independent of legacy 5D video_analyze.
+ * @param {{
+ *   videoPath: string,
+ *   ctx?: object,
+ *   signal?: AbortSignal,
+ * }} options
+ * @returns {Promise<string>}
+ */
+export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal }) {
+  if (!videoPath || !existsSync(videoPath)) return ''
+
+  let systemPrompt = ''
+  try {
+    if (existsSync(BUNDLED_STRUCTURE_PROMPT)) {
+      systemPrompt = readFileSync(BUNDLED_STRUCTURE_PROMPT, 'utf8')
+    }
+  } catch {}
+
+  let textComplete = null
+  try {
+    textComplete = ctx?.get?.('textComplete')
+      || ctx?.tools?.get?.('omnimux_text_complete')
+      || ctx?.get?.('tools')?.get?.('omnimux_text_complete')
+  } catch {}
+
+  if (!textComplete || typeof textComplete.execute !== 'function') {
+    return ''
+  }
+
+  try {
+    const res = await textComplete.execute({
+      prompt: '请对上传的视频进行两阶段叙事结构拆解与逐镜头分镜脚本输出，严格遵循 system prompt 的输出结构规范。',
+      system: systemPrompt,
+      video: videoPath,
+      maxTokens: 4096,
+      signal,
+    })
+    return typeof res?.text === 'string' ? res.text.trim() : (typeof res === 'string' ? res.trim() : '')
+  } catch {
+    return ''
+  }
 }
 
 /**
@@ -398,32 +558,32 @@ export function generateAdaptiveShotsAndStructure(totalDuration, caption = '', p
     const structure = [
       {
         stage: 'Hook',
-        title: 'Hook (黄金开局)',
-        description: `开场前 3 秒以极高情绪张力与视觉反差留住观众：${cleanCap.slice(0, 40) || '高能冲突前置'}`,
+        title: 'Hook',
+        description: `开场通过高反差视觉与悬疑痛点迅速建立身份危机与悬念：${cleanCap.slice(0, 40) || '高能冲突前置'}`,
       },
       {
         stage: 'Inciting Incident',
-        title: 'Inciting Incident (危机发酵)',
+        title: 'Inciting Incident',
         description: '核心矛盾与不可调和的阵营对立全面展开，确立追剧动机。',
       },
       {
         stage: 'Rising Conflict',
-        title: 'Rising Conflict (剧情升级)',
+        title: 'Rising Conflict',
         description: '多重冲突反转层层递进，每 60-90 秒必有情绪高潮或危机爆发。',
       },
       {
         stage: 'Climax',
-        title: 'Climax (核心高光)',
+        title: 'Climax',
         description: '高能战力反转或情绪宣泄顶峰，带来强烈的大快人心爽感。',
       },
       {
         stage: 'Plot Twist',
-        title: 'Plot Twist (惊天反转)',
+        title: 'Plot Twist',
         description: '打破单线叙事逻辑，揭示隐藏身份与幕后黑手。',
       },
       {
         stage: 'Cliffhanger',
-        title: 'Cliffhanger (终局卡点)',
+        title: 'Cliffhanger',
         description: '在剧情最高潮戛然而止，留下致命悬念吸引观众进入 App 追看全集。',
       },
     ]
@@ -504,10 +664,10 @@ export function generateAdaptiveShotsAndStructure(totalDuration, caption = '', p
     ]
 
     const structure = [
-      { stage: 'Hook', title: 'Hook (黄金钩子)', description: `开场反差切入：${cleanCap.slice(0, 45)}` },
-      { stage: 'Product Intro', title: 'Product Intro (核心展示)', description: '主体特征与细节深度呈现。' },
-      { stage: 'Usage Detail', title: 'Usage Detail (使用细节)', description: '真实操作流程与功能释疑。' },
-      { stage: 'Demo Scene', title: 'Demo Scene (转化共鸣)', description: '高光场景展示与明确行动呼吁。' },
+      { stage: 'Hook', title: 'Hook', description: `开场通过高视觉吸引力与反差切入抓住观众眼球：${cleanCap.slice(0, 45)}` },
+      { stage: 'Product Intro', title: 'Product Intro', description: '主体特征与视觉细节深度呈现，树立品质与信任。' },
+      { stage: 'Usage Detail', title: 'Usage Detail', description: '真实操作流程演示与细节释疑，展现直观解决效果。' },
+      { stage: 'Demo Scene', title: 'Demo Scene', description: '高光场景展示与生活美学共鸣，自然驱动转化行动。' },
     ]
 
     return { shots, structure, pipeline: ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'] }
@@ -563,10 +723,10 @@ export function generateAdaptiveShotsAndStructure(totalDuration, caption = '', p
   ]
 
   const structure = [
-    { stage: 'Hook', title: 'Hook (黄金钩子)', description: `开场黄金时间通过视觉反差与情绪调动捕获观众停留：${cleanCap.slice(0, 45)}` },
-    { stage: 'Product Intro', title: 'Product Intro (核心展示)', description: '全景呈现核心主体与细节工艺，建立高品质认知与信任感。' },
-    { stage: 'Usage Detail', title: 'Usage Detail (使用细节)', description: '通过具体功能操作演示，解答疑问并展示真实使用体验。' },
-    { stage: 'Demo Scene', title: 'Demo Scene (场景共鸣)', description: '置于生活化真实场景之中，触发情感共鸣与转化行动。' },
+    { stage: 'Hook', title: 'Hook', description: `视频开场直接展示产品/主体，配上走心的文案，迅速抓住观众眼球：${cleanCap.slice(0, 45)}` },
+    { stage: 'Product Intro', title: 'Product Intro', description: '全景展示主体与丰富细节，呈现精致质感与设计亮点，突出送礼与收藏的价值感。' },
+    { stage: 'Usage Detail', title: 'Usage Detail', description: '特写展示内部细节、质感工艺与关键交互，直观呈现产品细节功能与真实情感传递。' },
+    { stage: 'Demo Scene', title: 'Demo Scene', description: '置于真实生活场景之中，展现搭配与实际使用氛围，激发观众的情感共鸣与行动意愿。' },
   ]
 
   return { shots, structure, pipeline: ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'] }
@@ -651,13 +811,8 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     } catch {}
   }
 
-  // 3. Execute multimodal video analysis
+  // 3. Execute dedicated multimodal video structure analysis (independent of legacy 5D video_analyze)
   let analyzeReportText = ''
-  let videoAnalyzeTool = null
-  try {
-    videoAnalyzeTool = (ctx?.tools || (typeof ctx?.get === 'function' ? ctx.get('tools') : null))?.get?.('video_analyze')
-  } catch {}
-
   let analysisVideoPath = localVideoPath
   if (localVideoPath && existsSync(localVideoPath)) {
     try {
@@ -678,26 +833,30 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     } catch {}
   }
 
-  if (analysisVideoPath && videoAnalyzeTool && typeof videoAnalyzeTool.execute === 'function') {
+  if (analysisVideoPath) {
     try {
-      const res = await videoAnalyzeTool.execute({ video: analysisVideoPath })
-      analyzeReportText = res?.report || res?.text || (typeof res === 'string' ? res : '')
+      analyzeReportText = await executeDedicatedStructureAnalyze({
+        videoPath: analysisVideoPath,
+        ctx,
+        signal: options.signal,
+      })
     } catch {
-      // ignore tool error
+      // ignore
     }
   }
 
-  // 4. Extract shots and structure from real analyze markdown
-  let shots = parseShotsFromAnalyzeMarkdown(analyzeReportText)
-  let structure = parseStructureFromAnalyzeMarkdown(analyzeReportText)
+  // 4. Extract dynamic pipeline, structure and shots from dedicated analyze markdown
+  const parsed = parsePipelineAndStructureFromMarkdown(analyzeReportText)
+  let shots = parsed.shots
+  let structure = parsed.structure
+  let pipeline = parsed.pipeline
 
   // 5. If shots or structure empty, generate intelligent adaptive breakdown derived from real caption & duration
-  let pipeline = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
   if (shots.length === 0 || structure.length === 0) {
     const adaptive = generateAdaptiveShotsAndStructure(totalDuration, caption, platform)
     if (shots.length === 0) shots = adaptive.shots
     if (structure.length === 0) structure = adaptive.structure
-    pipeline = adaptive.pipeline
+    if (pipeline.length === 0) pipeline = adaptive.pipeline
   }
 
   const durationSeconds = shots[shots.length - 1]?.end_seconds || totalDuration || 16
