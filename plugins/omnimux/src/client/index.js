@@ -34,6 +34,7 @@ import { installCommandsI18n } from './composer-commands-i18n.js'
 import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
+import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -204,6 +205,7 @@ export function apply(ctx) {
   if (typeof document !== 'undefined') {
     ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
     ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
+    ctx.effect(() => installUserMessageLinkEnhancer(document), 'omnimux: user message link pill enhancer')
     ctx.inject(['commandUi', 'sessions'], (inner) => {
       guideSessions = inner.sessions
       inner.effect(() => {

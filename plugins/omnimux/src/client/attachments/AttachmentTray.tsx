@@ -5,6 +5,7 @@ import type { ConversationAttachment } from './types.ts';
 import { ComposerPresetsChips } from '../presets/index.js';
 import { PromptSlotChips } from './PromptSlotChips.tsx';
 import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
+import { useUserMessageLinkEnhancer } from './userMessageLinkEnhancer.ts';
 import { ensureStylesInjected } from './trayStyles.ts';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
 import { useDragDrop } from './useDragDrop.ts';
@@ -149,6 +150,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const savedRangeRef = useRef<Range | null>(null);
 
   usePasteVideoInterceptor();
+  useUserMessageLinkEnhancer();
   const { slots, activeSlotIndex, selectSlot, replaceSlot } = usePromptSlotEnhancer();
   const dragActive = useDragDrop({
     canAcceptDrop,
