@@ -4,6 +4,7 @@ import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
+import { PlusIcon } from './icons.jsx'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 
@@ -82,12 +83,7 @@ export function InspirationSection({ t, active }) {
       <div className="omnimux-inspiration-action-row">
         <Button
           variant="primary"
-          className="omnimux-inspiration-btn-add"
-          leadingIcon={(
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          )}
+          leadingIcon={<PlusIcon />}
           onClick={() => setImportOpen(true)}
         >
           {t('add.btn')}
