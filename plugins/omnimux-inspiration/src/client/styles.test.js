@@ -145,7 +145,7 @@ describe('inspiration triptych modal', () => {
     assert.doesNotMatch(header, /modal\.header\.reanalyze/)
     assert.doesNotMatch(header, /modal-header-meta/)
     assert.doesNotMatch(header, /modal-actions/)
-    assert.match(header, /omnimux-inspiration-modal-close/)
+    assert.match(section, /omnimux-inspiration-modal-close/)
   })
 
   it('supports optional timecode columns and quote blocks without fabricating timestamps', () => {

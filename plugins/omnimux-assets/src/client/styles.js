@@ -573,6 +573,27 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-modal-close {
   flex: none;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: var(--dsw-alias-bg-layer-2) !important;
+  border: 1px solid var(--dsw-alias-border-l1) !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease, border-color 140ms ease !important;
+  box-shadow: 0 2px 8px var(--dsw-alias-bg-base);
+}
+.omnimux-assets-modal-close:hover {
+  background: var(--dsw-alias-bg-layer-3) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  border-color: var(--dsw-alias-border-l2) !important;
+  transform: scale(1.08) !important;
+}
+.omnimux-assets-modal-close:active {
+  transform: scale(0.96) !important;
 }
 .omnimux-assets-modal-body {
   flex: 1;
