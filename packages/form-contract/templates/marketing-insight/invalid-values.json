@@ -1,0 +1,18 @@
+{
+  "values": {
+    "topic": "tiktok-creators",
+    "target": "",
+    "platform": "TikTok",
+    "market": "美国市场",
+    "requirements": "寻找受众匹配健身与数码博主的候选创作者。"
+  },
+  "expectedErrors": [
+    {
+      "code": "REQUIRED",
+      "path": [
+        "values",
+        "target"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "templateId": "marketing-insight",
+  "templateVersion": "1.0.0",
+  "prompt": "请针对以下营销需求进行专业洞察与方案输出：\n洞察方向：tiktok-creators\n目标产品或品类：智能运动手表\n目标平台：TikTok\n目标市场：美国市场\n具体背景与要求：寻找受众匹配健身与数码博主的候选创作者，评估互动质量与合作潜力。\n请明确区分客观事实、数据推断与分析假设，输出清晰且可落地的策略建议。",
+  "attachments": []
+}

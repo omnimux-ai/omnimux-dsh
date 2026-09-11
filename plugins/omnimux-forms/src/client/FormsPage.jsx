@@ -3,12 +3,13 @@ import { Box, Button, ChakraProvider, Flex, Heading, Text } from '@chakra-ui/rea
 import deconstruct from '../../../../packages/form-contract/templates/video-deconstruct/definition.json'
 import replication from '../../../../packages/form-contract/templates/structure-replication/definition.json'
 import replacement from '../../../../packages/form-contract/templates/element-replacement/definition.json'
+import marketingInsight from '../../../../packages/form-contract/templates/marketing-insight/definition.json'
 import { validateDefinition } from '@omnimux/form-contract'
 import { createEditor } from './model.js'
 import { FormField } from './Fields.jsx'
 import { formSystem, primary, secondary } from './theme.js'
 
-export const templates = [deconstruct, replication, replacement]
+export const templates = [marketingInsight, deconstruct, replication, replacement]
 export function checkedTemplates(raw = templates) {
   const results = raw.map(validateDefinition)
   return results.some(result => !result.ok) ? null : results.map(result => result.value)

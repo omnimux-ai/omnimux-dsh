@@ -1,4 +1,4 @@
-/** Topview AI Marketer quick actions, captured 2026-09-09; draft-only. */
+/** Topview AI Marketer quick actions & popular starters, captured 2026-09-09. */
 export const STARTER_GROUPS = ['market-insights', 'listing-reviews', 'content-creators', 'ad-analytics']
 export const STARTERS = [
   { id: 'category-opportunity', group: 'market-insights', icon: 'chart-column' },
@@ -11,6 +11,60 @@ export const STARTERS = [
   { id: 'recreate-viral-ads', group: 'content-creators', icon: 'wand-sparkles' },
   { id: 'search-terms', group: 'ad-analytics', icon: 'chart-column' },
   { id: 'roas-analysis', group: 'ad-analytics', icon: 'chart-line' },
+]
+
+/** 热门入门方式 (4个大卡片) */
+export const POPULAR_STARTERS = [
+  {
+    id: 'marketing-insight',
+    type: 'modal',
+  },
+  {
+    id: 'url-to-video',
+    type: 'placeholder',
+  },
+  {
+    id: 'recreate-viral-ads',
+    type: 'placeholder',
+  },
+  {
+    id: 'bulk-create-ads',
+    type: 'placeholder',
+  },
+]
+
+/** 营销洞察模态框内的 6 项推荐 */
+export const MARKETING_INSIGHT_ITEMS = [
+  {
+    id: 'tiktok-creators',
+    icon: 'clapperboard',
+    prompt: 'Find and shortlist TikTok creators for [product/brand] in [target market]. Evaluate audience fit, content style, engagement quality, brand safety, and collaboration potential, then recommend campaign roles and outreach angles.',
+  },
+  {
+    id: 'ads-roas',
+    icon: 'chart-line',
+    prompt: '[Drop or upload your Ads report in CSV or XLSX format]\n\nAnalyze performance on [platform] for [date range] against [target ROAS/CPA], considering [attribution window] and [product margin]. Evaluate campaign, ad group or ad set, and ad-level spend, revenue, ROAS, CPA, CTR, CPC, and conversion rate; identify budget, audience, bidding, creative, and landing-page issues; and prioritize what to pause, scale, or test next. Distinguish data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.',
+  },
+  {
+    id: 'amazon-a-plus',
+    icon: 'file-pen',
+    prompt: 'Create an Amazon A+ Content brief for [product], including the content structure, key messages, module recommendations, and visual direction.',
+  },
+  {
+    id: 'amazon-search-terms',
+    icon: 'chart-column',
+    prompt: 'Analyze [uploaded search term report] from [platform] for [date range], using [attribution settings] and [target metrics]. Identify high-performing queries, wasted ad spend, negative-keyword opportunities, and bid or budget actions. Separate data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.',
+  },
+  {
+    id: 'category-market',
+    icon: 'chart-column',
+    prompt: 'Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.',
+  },
+  {
+    id: 'title-optimization',
+    icon: 'file-pen',
+    prompt: 'Optimize [current product title] for [ecommerce platform] using [product details or target keywords]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide the recommended title with a concise rationale. If context is missing, ask an open follow-up question about useful product information.',
+  },
 ]
 
 export const guideZh = {
@@ -39,8 +93,33 @@ export const guideZh = {
   "guide.search-terms.prompt": "根据[归因设置]和[目标指标]，分析[平台]在[日期范围]内的[已上传搜索词报告]。找出表现优秀的搜索词、浪费的广告支出、否定关键词机会，以及出价或预算调整措施。区分有数据支持的发现与假设。如果缺少背景信息，请用开放式问题追问有用的报告资料。",
   "guide.roas-analysis.title": "广告支出回报率分析",
   "guide.roas-analysis.prompt": "[拖入或上传 CSV 或 XLSX 格式的广告报告]\n\n结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]分析[平台]在[日期范围]内的表现。评估广告系列、广告组和单条广告层级的支出、收入、广告支出回报率（ROAS）、单次转化成本（CPA）、点击率（CTR）、单次点击成本（CPC）和转化率；找出预算、受众、出价、创意及落地页问题；并按优先级给出接下来应暂停、扩大投放或测试的项目。区分有数据支持的发现与假设。如果缺少背景信息，请用开放式问题追问有用的报告资料。",
-  'guide.unavailable': '输入框尚未准备好，请稍后重试。',
-  'guide.retry': '重试',
+  "guide.unavailable": "输入框尚未准备好，请稍后重试。",
+  "guide.retry": "重试",
+
+  // 热门入门方式文案
+  "guide.popular.title": "热门入门方式",
+  "guide.popular.marketing-insight.title": "营销洞察",
+  "guide.popular.url-to-video.title": "视频网址",
+  "guide.popular.recreate-viral-ads.title": "重现病毒式广告",
+  "guide.popular.bulk-create-ads.title": "批量创建广告",
+  "guide.popular.placeholder-notice": "该功能正在接入中，敬请期待！",
+
+  // 营销洞察模态框文案
+  "guide.insight.modal.title": "营销洞察",
+  "guide.insight.modal.subtitle": "选择您想要探索的内容，并为代理提供足够的背景信息，使其能够将其转化为一项专注的营销任务。",
+  "guide.insight.suggested": "为您推荐",
+  "guide.insight.explore.title": "您想要探索什么？",
+  "guide.insight.start-btn": "开始洞察 →",
+  "guide.insight.copied": "已添加到剪贴板",
+  "guide.insight.applied": "已填入会话输入框，可直接发送",
+
+  // 6个洞察子项标题
+  "guide.insight.tiktok-creators.title": "TikTok创作者与网红研究",
+  "guide.insight.ads-roas.title": "广告ROAS分析",
+  "guide.insight.amazon-a-plus.title": "亚马逊A+内容简介",
+  "guide.insight.amazon-search-terms.title": "亚马逊搜索词报告分析",
+  "guide.insight.category-market.title": "品类市场分析",
+  "guide.insight.title-optimization.title": "产品列表标题优化",
 }
 
 export const guideEn = {
@@ -69,6 +148,30 @@ export const guideEn = {
   "guide.search-terms.prompt": "Analyze [uploaded search term report] from [platform] for [date range], using [attribution settings] and [target metrics]. Identify high-performing queries, wasted ad spend, negative-keyword opportunities, and bid or budget actions. Separate data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
   "guide.roas-analysis.title": "ROAS Analysis",
   "guide.roas-analysis.prompt": "[Drop or upload your Ads report in CSV or XLSX format]\n\nAnalyze performance on [platform] for [date range] against [target ROAS/CPA], considering [attribution window] and [product margin]. Evaluate campaign, ad group or ad set, and ad-level spend, revenue, ROAS, CPA, CTR, CPC, and conversion rate; identify budget, audience, bidding, creative, and landing-page issues; and prioritize what to pause, scale, or test next. Distinguish data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
-  'guide.unavailable': 'The editor is not ready. Please retry shortly.',
-  'guide.retry': 'Retry',
+  "guide.unavailable": "The editor is not ready. Please retry shortly.",
+  "guide.retry": "Retry",
+
+  // Popular starters
+  "guide.popular.title": "Popular Ways to Get Started",
+  "guide.popular.marketing-insight.title": "Marketing Insight",
+  "guide.popular.url-to-video.title": "URL to Video",
+  "guide.popular.recreate-viral-ads.title": "Recreate Viral Ads",
+  "guide.popular.bulk-create-ads.title": "Bulk Create Ads",
+  "guide.popular.placeholder-notice": "This feature is coming soon!",
+
+  // Marketing insight modal
+  "guide.insight.modal.title": "Marketing Insight",
+  "guide.insight.modal.subtitle": "Choose what you want to explore and add enough context for the agent to turn it into a focused marketing task.",
+  "guide.insight.suggested": "Suggested for you",
+  "guide.insight.explore.title": "What would you like to explore?",
+  "guide.insight.start-btn": "Start insight →",
+  "guide.insight.copied": "Copied to clipboard",
+  "guide.insight.applied": "Draft applied to conversation input",
+
+  "guide.insight.tiktok-creators.title": "TikTok Creator & Influencer Research",
+  "guide.insight.ads-roas.title": "Ads ROAS Analysis",
+  "guide.insight.amazon-a-plus.title": "Amazon A+ Content Brief",
+  "guide.insight.amazon-search-terms.title": "Amazon Search Term Report Analysis",
+  "guide.insight.category-market.title": "Category Market Analysis",
+  "guide.insight.title-optimization.title": "Product Listing Title Optimization",
 }

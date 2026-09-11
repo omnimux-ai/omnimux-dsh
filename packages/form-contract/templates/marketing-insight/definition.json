@@ -1,0 +1,100 @@
+{
+  "protocolVersion": 1,
+  "id": "marketing-insight",
+  "templateVersion": "1.0.0",
+  "title": "营销洞察",
+  "description": "选择想要探索的营销方向，为 Agent 提供充分背景与分析维度，生成结构化洞察任务。",
+  "examples": [
+    {
+      "ref": "/api/omnimux/forms/examples/replication-demo.mp4",
+      "title": "营销洞察任务示例",
+      "kind": "video"
+    }
+  ],
+  "fields": [
+    {
+      "id": "topic",
+      "type": "select",
+      "label": "洞察方向",
+      "required": true,
+      "options": [
+        {
+          "value": "tiktok-creators",
+          "label": "TikTok创作者与网红研究"
+        },
+        {
+          "value": "ads-roas",
+          "label": "广告ROAS分析"
+        },
+        {
+          "value": "amazon-a-plus",
+          "label": "亚马逊A+内容简介"
+        },
+        {
+          "value": "amazon-search-terms",
+          "label": "亚马逊搜索词报告分析"
+        },
+        {
+          "value": "category-market",
+          "label": "品类市场分析"
+        },
+        {
+          "value": "title-optimization",
+          "label": "产品列表标题优化"
+        }
+      ],
+      "default": "category-market"
+    },
+    {
+      "id": "target",
+      "type": "text",
+      "label": "目标产品或品类",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    {
+      "id": "platform",
+      "type": "select",
+      "label": "目标平台",
+      "required": true,
+      "options": [
+        {
+          "value": "TikTok",
+          "label": "TikTok"
+        },
+        {
+          "value": "Amazon",
+          "label": "Amazon"
+        },
+        {
+          "value": "Instagram",
+          "label": "Instagram"
+        },
+        {
+          "value": "Shopify/独立站",
+          "label": "Shopify/独立站"
+        }
+      ],
+      "default": "TikTok"
+    },
+    {
+      "id": "market",
+      "type": "text",
+      "label": "目标市场",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100
+    },
+    {
+      "id": "requirements",
+      "type": "textarea",
+      "label": "具体背景与要求",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 2000
+    }
+  ],
+  "prompt": "请针对以下营销需求进行专业洞察与方案输出：\n洞察方向：{{topic}}\n目标产品或品类：{{target}}\n目标平台：{{platform}}\n目标市场：{{market}}\n具体背景与要求：{{requirements}}\n请明确区分客观事实、数据推断与分析假设，输出清晰且可落地的策略建议。",
+  "attachments": []
+}
