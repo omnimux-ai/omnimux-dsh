@@ -28,9 +28,9 @@ const BASE_CSS = `
   box-sizing: border-box;
   padding: 0 12px;
   border-radius: 9999px;
-  border: 1px dashed var(--dsw-alias-border-l3);
+  border: 1px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.22)); /* exempt-ui03: 虚线胶囊边框 */
   background: transparent;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-label-secondary, inherit);
   font: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -39,9 +39,9 @@ const BASE_CSS = `
   user-select: none;
 }
 .omx-btn-insert-link:hover {
-  border-color: var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-brand-primary);
-  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l3, rgba(56, 189, 248, 0.45)); /* exempt-ui03: 悬浮青蓝边框 */
+  color: var(--dsw-alias-label-primary, #38bdf8); /* exempt-ui03: 悬浮青蓝文字 */
+  background: var(--dsw-alias-bg-module-platform, rgba(14, 116, 144, 0.16)); /* exempt-ui03: 悬浮青蓝背景 */
   transform: translateY(-0.5px);
 }
 .omx-video-token-capsule {
@@ -52,17 +52,18 @@ const BASE_CSS = `
   max-width: 320px;
   padding: 0 10px 0 12px;
   border-radius: 9999px;
-  background: var(--dsw-alias-state-business-tertiary);
-  border: 1px solid var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-brand-primary);
-  margin: 2px 0 6px 0;
+  background: var(--dsw-alias-bg-module-platform, rgba(14, 116, 144, 0.18)); /* exempt-ui03: 视频青蓝半透底色 */
+  border: 1px solid var(--dsw-alias-border-l3, rgba(56, 189, 248, 0.45)); /* exempt-ui03: 视频青蓝微光描边 */
+  color: var(--dsw-alias-label-primary, #38bdf8); /* exempt-ui03: 视频青蓝文字 */
+  margin: 2px 6px 2px 0;
   transition: all 0.15s ease;
   user-select: none;
-  box-shadow: var(--dsw-alias-shadow-overlay);
+  vertical-align: middle;
+  box-shadow: var(--dsw-alias-shadow-overlay, 0 1px 4px rgba(0, 0, 0, 0.1)); /* exempt-ui03: 胶囊阴影 */
 }
 .omx-video-token-capsule:focus-within {
-  border-color: var(--dsw-alias-brand-primary);
-  box-shadow: var(--dsw-alias-shadow-overlay);
+  border-color: var(--dsw-alias-brand-primary, #38bdf8); /* exempt-ui03: 聚焦青蓝 */
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35); /* exempt-ui03: 聚焦青蓝光晕 */
 }
 .omx-video-token-prefix {
   display: flex;
@@ -70,13 +71,13 @@ const BASE_CSS = `
   gap: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary, #38bdf8); /* exempt-ui03: 视频前缀文字 */
   flex-shrink: 0;
 }
 .omx-video-token-divider {
   width: 1px;
   height: 12px;
-  background: var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-border-l3, rgba(56, 189, 248, 0.35)); /* exempt-ui03: 细分割线 */
   margin: 0 8px;
   flex-shrink: 0;
 }
@@ -84,7 +85,7 @@ const BASE_CSS = `
   background: transparent;
   border: none;
   outline: none;
-  color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary, #38bdf8); /* exempt-ui03: 输入框青蓝文字 */
   font-family: inherit;
   font-size: 13px;
   width: 140px;
@@ -95,7 +96,7 @@ const BASE_CSS = `
   text-overflow: ellipsis;
 }
 .omx-video-token-input::placeholder {
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-alias-label-tertiary, rgba(56, 189, 248, 0.65)); /* exempt-ui03: 占位符青蓝 */
 }
 .omx-video-token-remove {
   display: inline-flex;
@@ -106,7 +107,7 @@ const BASE_CSS = `
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-alias-label-tertiary, rgba(56, 189, 248, 0.7)); /* exempt-ui03: 关闭按钮 */
   cursor: pointer;
   margin-left: 6px;
   padding: 0;
@@ -114,8 +115,8 @@ const BASE_CSS = `
   transition: all 0.12s ease;
 }
 .omx-video-token-remove:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover, rgba(56, 189, 248, 0.25)); /* exempt-ui03: 悬浮背景 */
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 .omx-attachment-tray {
   box-sizing: border-box;
@@ -462,6 +463,117 @@ function nativeTitle(attachment: NativeComposerAttachment): string {
   return 'image';
 }
 
+function isVideoCategory(cat?: string | null): boolean {
+  if (!cat || typeof cat !== 'string') return false;
+  const lower = cat.toLowerCase();
+  return (
+    cat === '创作视频' ||
+    cat === 'video-creation' ||
+    cat === '搜索爆款视频' ||
+    cat === 'search-viral-video' ||
+    lower.includes('视频') ||
+    lower.includes('video')
+  );
+}
+
+function insertVideoToken(doc: Document): boolean {
+  if (!doc) return false;
+  const editor = doc.querySelector(
+    '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
+  );
+  if (!editor) return false;
+
+  const existing = doc.querySelector('[data-omx-video-token="true"]');
+  if (existing) {
+    const input = existing.querySelector('input');
+    input?.focus();
+    return true;
+  }
+
+  const token = doc.createElement('span');
+  token.className = 'omx-video-token-capsule';
+  token.setAttribute('contenteditable', 'false');
+  token.setAttribute('data-omx-video-token', 'true');
+  token.setAttribute('title', '单击进行链接编辑、修改与删除');
+
+  token.innerHTML = `
+    <span class="omx-video-token-prefix">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+      <span>视频</span>
+    </span>
+    <span class="omx-video-token-divider"></span>
+    <input
+      type="text"
+      class="omx-video-token-input"
+      placeholder="粘贴 TikTok 视频链接"
+      title="单击输入或粘贴链接"
+    />
+    <button /* exempt-ui01: 移除按钮 */
+      type="button"
+      class="omx-video-token-remove"
+      title="删除视频链接 Token"
+      aria-label="删除视频链接 Token"
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M2 2L8 8M8 2L2 8" />
+      </svg>
+    </button>
+  `;
+
+  const inputEl = token.querySelector('input') as HTMLInputElement;
+  const removeBtn = token.querySelector('button') as HTMLButtonElement;
+
+  inputEl?.addEventListener('input', () => {
+    if (typeof window !== 'undefined') {
+      (window as any).__omnimuxVideoToken = { url: inputEl.value.trim(), label: '视频' };
+    }
+  });
+
+  removeBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    token.remove();
+    if (typeof window !== 'undefined') {
+      (window as any).__omnimuxVideoToken = null;
+    }
+    (editor as HTMLElement).focus?.();
+  });
+
+  const sel = doc.defaultView?.getSelection?.();
+  if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+    const range = sel.getRangeAt(0);
+    range.insertNode(token);
+    range.setStartAfter(token);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    if (editor.firstChild) {
+      editor.insertBefore(token, editor.firstChild);
+    } else {
+      editor.appendChild(token);
+    }
+  }
+
+  const space = doc.createTextNode(' ');
+  if (token.nextSibling) {
+    editor.insertBefore(space, token.nextSibling);
+  } else {
+    editor.appendChild(space);
+  }
+
+  try {
+    const Input = typeof InputEvent === 'function' ? InputEvent : Event;
+    editor.dispatchEvent(new Input('input', { bubbles: true, cancelable: true }));
+  } catch {}
+
+  inputEl?.focus();
+  return true;
+}
+
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const store = getGlobalAttachmentStore();
   const currentSessionId =
@@ -483,7 +595,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const [videoSkillActive, setVideoSkillActive] = useState<boolean>(() => {
     if (typeof window !== 'undefined' && (window as any).__omnimuxActiveSkill) {
       const cat = (window as any).__omnimuxActiveSkill.category || '';
-      return cat === '创作视频' || cat === 'video-creation';
+      return isVideoCategory(cat);
     }
     return false;
   });
@@ -495,7 +607,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     const onSkillChange = (e: Event) => {
       const customEvent = e as CustomEvent<{ skill?: unknown; category?: string }>;
       const cat = customEvent.detail?.category || '';
-      setVideoSkillActive(cat === '创作视频' || cat === 'video-creation');
+      setVideoSkillActive(isVideoCategory(cat));
     };
     const onTokenClear = () => {
       setHasVideoToken(false);
@@ -507,6 +619,14 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
       window.removeEventListener('omnimux:skill:changed', onSkillChange);
       window.removeEventListener('omnimux:video-token:cleared', onTokenClear);
     };
+  }, []);
+
+  const handleInsertVideoToken = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const ok = insertVideoToken(document);
+    if (!ok) {
+      setHasVideoToken(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -669,7 +789,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               <button /* exempt-ui01: 视频链接插入按钮 */
                 type="button"
                 className="omx-btn-insert-link"
-                onClick={() => setHasVideoToken(true)}
+                onClick={handleInsertVideoToken}
                 title="点击在输入框插入视频链接 Token 组件"
               >
                 <LinkIcon size={14} />
