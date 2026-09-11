@@ -95,7 +95,7 @@ export function renderFeaturedSection(opts) {
         h('button', { type: 'button', className: 'btn-reset-order', style: resetBtnStyle, onClick: onResetOrder }, tr('workshop.resetOrder') || '恢复默认排序') : null,
     ),
     h('div', { className: 'featured-grid' },
-      featuredItems.map((item) => renderFeaturedCard(item, tr, setOpen, onMoveToTop, safeTrySkillInSession)),
+      featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession })),
     ),
   );
 }

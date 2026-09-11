@@ -18,15 +18,49 @@ export function renderPlazaIcon(size = 16) {
   const px = resolvePlazaIconSize(size);
   const iconStyle = { width: px, height: px, minWidth: px, minHeight: px, flex: 'none', flexShrink: 0, display: 'block' };
   return h('svg', { width: px, height: px, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet', style: iconStyle },
-    h('rect', { x: '1.75', y: '1.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4' }),
-    h('rect', { x: '8.75', y: '8.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4' }),
-    h('rect', { x: '1.75', y: '8.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4' }),
-    h('rect', { x: '8.75', y: '8.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4' }),
+    h('rect', { x: '1.75', y: '1.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4', fill: 'none' }),
+    h('rect', { x: '8.75', y: '1.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4', fill: 'none' }),
+    h('rect', { x: '1.75', y: '8.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4', fill: 'none' }),
+    h('rect', { x: '8.75', y: '8.75', width: '5.5', height: '5.5', rx: '1.2', stroke: 'currentColor', strokeWidth: '1.4', fill: 'none' }),
   );
 }
 
 export function PlazaIcon(props) {
   return renderPlazaIcon(props);
+}
+
+export function resolvePlazaPluginUrl(path) {
+  const suffix = String(path || '').replace(/^\/+/, '');
+  const sub = './omnimux-market' + (suffix ? '/' + suffix : '');
+  try {
+    const base = typeof document !== 'undefined' && document.baseURI ? document.baseURI : 'http://localhost/';
+    return new URL(sub, base).toString();
+  } catch {
+    return '/' + sub.replace(/^\.\//, '');
+  }
+}
+
+export function resolveIconSrc(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (typeof globalThis !== 'undefined' && typeof globalThis.iconSrc === 'function') {
+    try {
+      const res = globalThis.iconSrc(url);
+      if (res) return res;
+    } catch {}
+  }
+  return resolvePlazaPluginUrl('icon?url=' + encodeURIComponent(url));
+}
+
+export function resolveInitials(name) {
+  if (typeof initials === 'function') {
+    try {
+      const res = initials(name);
+      if (res) return res;
+    } catch {}
+  }
+  const t = String(name || '').replace(/[a-zA-Z0-9._-]/g, '');
+  return (t.slice(0, 3) || String(name || 'SK').slice(0, 2)).toUpperCase();
 }
 
 export function getIsLocaleEn(tr) {

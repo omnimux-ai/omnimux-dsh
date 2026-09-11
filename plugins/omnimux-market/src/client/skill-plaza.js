@@ -43,10 +43,10 @@
       const px = resolvePlazaIconSize(size);
       const iconStyle = { width: px, height: px, minWidth: px, minHeight: px, flex: "none", flexShrink: 0, display: "block" };
       return h("svg", { width: px, height: px, viewBox: "0 0 16 16", fill: "none", "aria-hidden": "true", preserveAspectRatio: "xMidYMid meet", style: iconStyle },
-        h("rect", { x: "1.75", y: "1.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
-        h("rect", { x: "8.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
-        h("rect", { x: "1.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
-        h("rect", { x: "8.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4" }),
+        h("rect", { x: "1.75", y: "1.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4", fill: "none" }),
+        h("rect", { x: "8.75", y: "1.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4", fill: "none" }),
+        h("rect", { x: "1.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4", fill: "none" }),
+        h("rect", { x: "8.75", y: "8.75", width: "5.5", height: "5.5", rx: "1.2", stroke: "currentColor", strokeWidth: "1.4", fill: "none" }),
       );
     }
 
@@ -172,7 +172,7 @@
             h("button", { type: "button", className: "btn-reset-order", style: resetBtnStyle, onClick: onResetOrder }, tr("workshop.resetOrder") || "恢复默认排序") : null,
         ),
         h("div", { className: "featured-grid" },
-          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession, h })),
+          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession, iconSrc, h })),
         ),
       );
     }

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  resolveIconSrc,
   resolveItemDesc,
   resolveItemTitle,
   safeTrySkillInSession,
@@ -7,19 +8,16 @@ import {
 
 const h = React.createElement;
 
-function getIconSrc(asset) {
-  if (typeof iconSrc === 'function') return iconSrc(asset);
-  return asset || '';
-}
-
-function renderFeaturedCoverSvg(item) {
+function renderFeaturedCoverSvg(item, isHidden) {
   const letters = (item.name || item.title || 'SK').slice(0, 4);
   return h('svg', {
+    className: 'featured-cover-svg',
     viewBox: '0 0 320 180',
     width: '100%',
     height: '100%',
     fill: 'none',
     xmlns: 'http://www.w3.org/2000/svg',
+    style: isHidden ? { display: 'none' } : undefined,
   },
     h('rect', { width: '320', height: '180', fill: 'var(--dsw-alias-bg-layer-1, #1a1c24)' }),
     h('circle', { cx: '160', cy: '90', r: '36', fill: 'var(--dsw-alias-bg-layer-2, #272a38)' }),
@@ -28,26 +26,28 @@ function renderFeaturedCoverSvg(item) {
 }
 
 function renderFeaturedCover(coverSrc, item, title, hoverNode) {
-  const altText = item.cover?.alt || title || 'Cover';
+  const altText = item.cover?.alt || item.homeCover?.alt || title || 'Cover';
   const onCoverErr = (e) => {
     e.currentTarget.style.display = 'none';
     const n = e.currentTarget.nextElementSibling;
-    if (n) n.style.display = 'block';
+    if (n && n.classList && n.classList.contains('featured-cover-svg')) {
+      n.style.display = 'block';
+    }
   };
   return h('div', { className: 'featured-cover-wrap' },
     coverSrc ? h('img', {
       src: coverSrc, alt: altText, loading: 'lazy', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
       onError: onCoverErr,
     }) : null,
-    coverSrc ? null : renderFeaturedCoverSvg(item),
+    renderFeaturedCoverSvg(item, Boolean(coverSrc)),
     hoverNode,
   );
 }
 
 function renderFeaturedHoverActions(item, opts) {
   const { tr, onPin, onOpen, onTry } = opts;
-  const onPinClick = (e) => { e.stopPropagation(); onPin(item.id); };
-  const onOpenClick = (e) => { e.stopPropagation(); onOpen(item); };
+  const onPinClick = (e) => { e.stopPropagation(); onPin && onPin(item.id); };
+  const onOpenClick = (e) => { e.stopPropagation(); onOpen && onOpen(item); };
   const onTryClick = (e) => { e.stopPropagation(); (onTry || safeTrySkillInSession)(item); };
   const pinTitle = tr ? (tr('workshop.pinToTop') || '置顶') : '置顶';
   const detailTitle = tr ? (tr('workshop.detail') || '查看详情') : '查看详情';
@@ -63,18 +63,26 @@ function renderFeaturedHoverActions(item, opts) {
   );
 }
 
-export function renderFeaturedCard(item, opts) {
-  const safeOpts = opts && typeof opts === 'object' ? opts : {};
+export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
+  let safeOpts = {};
+  if (typeof opts === 'function') {
+    safeOpts = { tr: opts, onOpen: onOpenArg, onPin: onPinArg, onTry: onTryArg };
+  } else if (opts && typeof opts === 'object') {
+    safeOpts = opts;
+  }
   const { tr, onOpen } = safeOpts;
-  const coverAsset = item.cover?.asset;
-  const coverSrc = coverAsset ? getIconSrc(coverAsset) : (item.coverUrl || '');
+  const iconSrcFn = typeof safeOpts.iconSrc === 'function'
+    ? safeOpts.iconSrc
+    : (typeof iconSrc === 'function' ? iconSrc : resolveIconSrc);
+  const coverAsset = item.homeCover?.asset || item.cover?.asset || (typeof item.cover === 'string' ? item.cover : '');
+  const coverSrc = coverAsset ? iconSrcFn(coverAsset) : (item.coverUrl || item.avatarUrl || '');
   const title = resolveItemTitle(item, tr);
   const desc = resolveItemDesc(item, tr) || '暂无描述';
 
   const hoverNode = renderFeaturedHoverActions(item, safeOpts);
   const coverNode = renderFeaturedCover(coverSrc, item, title, hoverNode);
 
-  return h('div', { key: item.slug || item.id, className: 'featured-card', onClick: () => onOpen(item) },
+  return h('div', { key: item.slug || item.id, className: 'featured-card', onClick: () => onOpen && onOpen(item) },
     coverNode,
     h('div', { className: 'featured-content' },
       h('div', { className: 'featured-card-name', title }, title),
