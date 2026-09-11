@@ -213,11 +213,11 @@
         "id": "sk-tk-selling-hook-analysis",
         "slug": "video-hook-analysis",
         "skill": "video-hook-analysis",
-        "name": "视频分析",
-        "title": "视频分析",
+        "name": "视频拆解",
+        "title": "视频拆解",
         "category": "创作视频",
-        "description": "拆解钩子、结构与卖点。",
-        "summary": "拆解钩子、结构与卖点。",
+        "description": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+        "summary": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
         "installed": true
       },
       {

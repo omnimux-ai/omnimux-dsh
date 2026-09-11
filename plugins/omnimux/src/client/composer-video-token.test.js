@@ -49,7 +49,7 @@ test('video token markdown assembly does not duplicate existing URL', () => {
 })
 
 test('transparently prepends active skill gesture to draft without UI pollution', () => {
-  const activeSkill = { slug: 'video-hook-analysis', name: '视频分析' }
+  const activeSkill = { slug: 'video-hook-analysis', name: '视频拆解' }
   const draft = '请帮我分析拆解这个视频。'
   const gesture = `/${activeSkill.slug}`
 
