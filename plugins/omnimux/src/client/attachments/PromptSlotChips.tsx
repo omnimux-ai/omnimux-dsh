@@ -1,13 +1,69 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import type { PromptSlot } from './promptSlotDetector.ts';
+import { AssetPickerModal } from '../composer-add/AssetPickerModal.jsx';
 
 export interface PromptSlotChipsProps {
   readonly slots: readonly PromptSlot[];
   readonly activeSlotIndex?: number | null;
   readonly onSelectSlot: (slot: PromptSlot, index: number) => void;
+  readonly onReplaceSlot?: (slot: PromptSlot, newRaw: string) => void;
+  readonly onAddImages?: (files: readonly File[]) => void;
+  readonly t?: (key: string, vars?: any) => string;
 }
 
-const SlotTagIcon = ({ size = 13 }: { size?: number }) => (
+const FileUploadIcon = ({ size = 13 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
+
+const AssetFolderIcon = ({ size = 13 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    <polygon points="12 11 12 17 16 14" />
+  </svg>
+);
+
+const LinkSlotIcon = ({ size = 13 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const TextEditIcon = ({ size = 13 }: { size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -24,33 +80,160 @@ const SlotTagIcon = ({ size = 13 }: { size?: number }) => (
   </svg>
 );
 
+const CheckIcon = ({ size = 12 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+function renderSlotIcon(protocol: PromptSlot['protocol'], size = 13) {
+  switch (protocol) {
+    case 'file':
+      return <FileUploadIcon size={size} />;
+    case 'assets':
+      return <AssetFolderIcon size={size} />;
+    case 'url':
+      return <LinkSlotIcon size={size} />;
+    case 'text':
+    default:
+      return <TextEditIcon size={size} />;
+  }
+}
+
 export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   slots,
   activeSlotIndex,
   onSelectSlot,
+  onReplaceSlot,
+  onAddImages,
+  t = (key) => key,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
+  const [pendingAssetSlot, setPendingAssetSlot] = useState<PromptSlot | null>(null);
+  const [pendingFileSlot, setPendingFileSlot] = useState<PromptSlot | null>(null);
+
   if (!slots || slots.length === 0) {
     return null;
   }
 
+  const handleSlotClick = (slot: PromptSlot, index: number) => {
+    if (slot.protocol === 'file') {
+      setPendingFileSlot(slot);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+      return;
+    }
+
+    if (slot.protocol === 'assets') {
+      setPendingAssetSlot(slot);
+      setIsAssetPickerOpen(true);
+      return;
+    }
+
+    onSelectSlot(slot, index);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && pendingFileSlot) {
+      if (typeof onAddImages === 'function') {
+        onAddImages([file]);
+      }
+      if (typeof onReplaceSlot === 'function') {
+        onReplaceSlot(pendingFileSlot, `[${pendingFileSlot.placeholder}: ${file.name}]`);
+      }
+      setPendingFileSlot(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleAssetConfirm = (selectedAssets: any[]) => {
+    const asset = selectedAssets?.[0];
+    if (asset && pendingAssetSlot) {
+      const assetName = asset.title || asset.name || '已选资产';
+      if (typeof onReplaceSlot === 'function') {
+        onReplaceSlot(pendingAssetSlot, `[${pendingAssetSlot.placeholder}: ${assetName}]`);
+      }
+    }
+    setIsAssetPickerOpen(false);
+    setPendingAssetSlot(null);
+  };
+
   return (
-    <div className="omx-prompt-slots-dock" role="status" aria-label="Prompt 变量槽位选项">
-      {slots.map((slot, index) => {
-        const isActive = activeSlotIndex === index;
-        const displayText = slot.placeholder || '输入内容';
-        return (
-          <button /* exempt-ui01: prompt 变量槽位胶囊按钮 */
-            key={slot.id}
-            type="button"
-            className={`omx-prompt-slot-chip ${isActive ? 'is-active' : ''}`}
-            onClick={() => onSelectSlot(slot, index)}
-            title={`点击在输入框中定位并修改: ${displayText}`}
-          >
-            <SlotTagIcon size={13} />
-            <span className="omx-prompt-slot-chip-text">{displayText}</span>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      <div className="omx-prompt-slots-dock" role="status" aria-label="Prompt 变量槽位选项">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+          aria-hidden="true"
+        />
+        {slots.map((slot, index) => {
+          const isActive = activeSlotIndex === index;
+          const isFilled = Boolean(slot.selectedValue);
+          const displayText = isFilled
+            ? `${slot.placeholder}: ${slot.selectedValue}`
+            : slot.placeholder || '输入内容';
+
+          let actionTitle = `点击在输入框中定位并修改: ${displayText}`;
+          if (slot.protocol === 'file') {
+            actionTitle = isFilled
+              ? `已选择文件: ${slot.selectedValue}，点击可重新选择替换`
+              : `点击选择本地文件上传: ${displayText}`;
+          } else if (slot.protocol === 'assets') {
+            actionTitle = isFilled
+              ? `已关联资产: ${slot.selectedValue}，点击可重新选择替换`
+              : `点击从资产库导入: ${displayText}`;
+          }
+
+          return (
+            <button /* exempt-ui01: prompt 变量槽位胶囊按钮 */
+              key={slot.id}
+              type="button"
+              className={`omx-prompt-slot-chip ${isActive ? 'is-active' : ''} ${isFilled ? 'has-value' : ''}`}
+              onClick={() => handleSlotClick(slot, index)}
+              title={actionTitle}
+            >
+              {renderSlotIcon(slot.protocol, 13)}
+              <span className="omx-prompt-slot-chip-text">{displayText}</span>
+              {isFilled && (
+                <span className="omx-prompt-slot-check" aria-hidden="true">
+                  <CheckIcon size={11} />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {isAssetPickerOpen && (
+        <AssetPickerModal
+          open={isAssetPickerOpen}
+          onClose={() => {
+            setIsAssetPickerOpen(false);
+            setPendingAssetSlot(null);
+          }}
+          t={t}
+          occupied={0}
+          alreadyIds={[]}
+          onConfirm={handleAssetConfirm}
+        />
+      )}
+    </>
   );
 };

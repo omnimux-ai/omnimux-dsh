@@ -149,7 +149,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const savedRangeRef = useRef<Range | null>(null);
 
   usePasteVideoInterceptor();
-  const { slots, activeSlotIndex, selectSlot } = usePromptSlotEnhancer();
+  const { slots, activeSlotIndex, selectSlot, replaceSlot } = usePromptSlotEnhancer();
   const dragActive = useDragDrop({
     canAcceptDrop,
     onAddImages: props.onAddImages,
@@ -254,6 +254,9 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         slots={slots}
         activeSlotIndex={activeSlotIndex}
         onSelectSlot={selectSlot}
+        onReplaceSlot={replaceSlot}
+        onAddImages={props.onAddImages}
+        t={props.t}
       />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">

@@ -145,6 +145,18 @@ export const DOCK_STYLES = `
   background: rgba(255, 255, 255, 0.12) !important; /* exempt-ui03: 选中底色 */
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important; /* exempt-ui03: 选中文光晕 */
 }
+.omx-prompt-slot-chip.has-value {
+  border-style: solid !important;
+  border-color: rgba(255, 255, 255, 0.4) !important; /* exempt-ui03: 已填槽位边框 */
+  background: rgba(255, 255, 255, 0.08) !important; /* exempt-ui03: 已填底色 */
+  color: #ffffff !important; /* exempt-ui03: 已填纯白文字 */
+}
+.omx-prompt-slot-check {
+  display: inline-flex !important;
+  align-items: center !important;
+  color: #4ade80 !important; /* exempt-ui03: 柔和绿勾标示完成 */
+  opacity: 0.9 !important;
+}
 .omx-prompt-slot-chip svg {
   flex-shrink: 0 !important;
   color: currentColor !important;
