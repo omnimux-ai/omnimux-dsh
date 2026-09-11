@@ -1,5 +1,7 @@
 export { CreativePresetsModal } from './CreativePresetsModal.jsx'
 export { CreativeDimensionModal, DIMENSION_CONFIG } from './CreativeDimensionModal.jsx'
+export { ComposerPresetsTriggers } from './ComposerPresetsTriggers.jsx'
+export { ComposerPresetsChips } from './ComposerPresetsChips.jsx'
 export { ComposerCreativePresets } from './ComposerCreativePresets.jsx'
 export { getCreativePresetsStore } from './presets-store.js'
 export { PresetCard } from './PresetCard.jsx'
