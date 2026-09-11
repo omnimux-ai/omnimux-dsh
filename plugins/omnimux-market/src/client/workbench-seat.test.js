@@ -38,13 +38,15 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /SkillPickerButton/)
   })
 
-  it('Skill trigger uses a puzzle icon and has no border', () => {
+  it('Skill trigger uses a book-open icon and has no border', () => {
     const picker = readFileSync(join(here, 'skill-picker.js'), 'utf8')
     const css = readFileSync(join(here, 'css.js'), 'utf8')
-    assert.match(picker, /function renderPuzzleIcon/)
-    assert.match(picker, /renderPuzzleIcon\(16\)/)
+    assert.match(picker, /function renderBookOpenIcon/)
+    assert.match(picker, /renderBookOpenIcon\(16\)/)
     assert.match(picker, /viewBox: "0 0 24 24"/)
-    assert.match(picker, /M15\.39 4\.39a1 1 0 0 0 1\.68-\.474/)
+    assert.match(picker, /lucide-book-open/)
+    assert.match(picker, /M12 5v16/)
+    assert.match(picker, /renderBookOpenIcon\(16\)/)
     assert.doesNotMatch(picker, /renderPlazaIcon\(16\)/)
     assert.match(picker, /let left = r\.left/)
     assert.doesNotMatch(picker, /r\.right - width/)
@@ -55,6 +57,12 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(picker, /SkillShelf\.PICKER_TABS/)
     assert.match(picker, /SkillShelf\.filterPickerItems/)
     assert.doesNotMatch(picker, /const SKILL_SHELF_TAGS = \[/)
+  })
+
+  it('skill button adapts to locale: 技能 in zh and Skill in en', () => {
+    const i18n = readFileSync(join(here, 'i18n.js'), 'utf8')
+    assert.match(i18n, /"picker\.title":\s*"技能"/)
+    assert.match(i18n, /"picker\.title":\s*"Skill"/)
   })
 
   it('skill plaza consumes SkillShelf rules instead of SkillHub categories', () => {
