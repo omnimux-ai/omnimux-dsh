@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { downloadMedia, fallbackResolveSocial } from './download-helper.js'
+import { detectPhysicalScenes } from './scene-detect.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const BUNDLED_STRUCTURE_PROMPT = join(HERE, '../prompts/video-structure-breakdown.md')
@@ -39,7 +40,7 @@ import {
  * }} options
  * @returns {Promise<string>}
  */
-export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal }) {
+export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal, physicalScenes = [] }) {
   if (!videoPath || !existsSync(videoPath)) return ''
 
   let systemPrompt = ''
@@ -60,7 +61,12 @@ export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal 
     return ''
   }
 
-  const userPrompt = `${systemPrompt}\n\n---\n【任务执行指令（严格遵守）】：\n请仔细拉片观看上传的视频，严格按照上述格式规范输出：\n1. 【叙事结构链路】：对于电商好物/产品带货视频，标准四阶段必须为：Hook → Product Intro → Usage Detail → Demo Scene，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头（即 ### Hook、### Product Intro、### Usage Detail、### Demo Scene），严禁写成“第一阶段：xxx”！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：特写, 智能手机手持, 俯视, 手持微动），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“敲门准备”、“开门瞬间”），严禁出现 Shot 1、全景等机械词！`
+  let sceneConstraint = ''
+  if (Array.isArray(physicalScenes) && physicalScenes.length >= 2) {
+    sceneConstraint = `\n6. 【物理镜头切片硬约束（系统已通过底层机器视觉精确探测出客观镜头切点，必须严格对齐真实镜头边界）】：\n本次视频共探测出以下 ${physicalScenes.length} 个物理镜头时间段：\n${physicalScenes.map((s, i) => `镜头 ${i + 1}: ${s.timeRange}`).join('\n')}\n逐镜头分镜表必须严格按照上述时间跨度展开并补齐视听解析与台词，严禁随意编造碎片时间区间！`
+  }
+
+  const userPrompt = `${systemPrompt}\n\n---\n【任务执行指令（严格遵守）】：\n请仔细拉片观看上传的视频，严格按照上述格式规范输出：\n1. 【叙事结构链路】：标准五阶段推荐为：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头，且标头下方必须包含一条以 > 开头的英文原声核心台词引用，随后紧跟一段专业中文策略意图解析！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：中景, 智能手机手持, 平视, 手持微晃），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“卫生间偷窥情景”、“窗外视角无法透视”、“产品展开介绍”），严禁出现 Shot 1、全景等机械词！${sceneConstraint}`
 
   try {
     const res = await textComplete.execute({
@@ -553,8 +559,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     } catch {}
   }
 
-  // 3. Execute dedicated multimodal video structure analysis (independent of legacy 5D video_analyze)
-  let analyzeReportText = ''
+  // 3. Prepare analysis video sample if oversized
   let analysisVideoPath = localVideoPath
   if (localVideoPath && existsSync(localVideoPath)) {
     try {
@@ -575,23 +580,46 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
     } catch {}
   }
 
+  // 4. Detect physical scenes using ffmpeg scene cut detection
+  let physicalScenes = []
+  if (localVideoPath && existsSync(localVideoPath)) {
+    try {
+      physicalScenes = detectPhysicalScenes(localVideoPath, { threshold: 0.35, minDuration: 3.5 })
+    } catch {}
+  }
+
+  // 5. Execute dedicated multimodal video structure analysis constrained by physical cuts
+  let analyzeReportText = ''
   if (analysisVideoPath) {
     try {
       analyzeReportText = await executeDedicatedStructureAnalyze({
         videoPath: analysisVideoPath,
         ctx,
         signal: options.signal,
+        physicalScenes,
       })
     } catch {
       // ignore
     }
   }
 
-  // 4. Extract dynamic pipeline, structure and shots from dedicated analyze markdown
+  // 5. Extract dynamic pipeline, structure and shots from dedicated analyze markdown
   const parsed = parsePipelineAndStructureFromMarkdown(analyzeReportText)
   let shots = parsed.shots
   let structure = parsed.structure
   let pipeline = parsed.pipeline
+
+  // Align shots with physical scene cut boundaries when physical scenes are detected
+  if (physicalScenes.length >= 3 && shots.length > 0) {
+    if (shots.length === physicalScenes.length) {
+      shots.forEach((s, idx) => {
+        const ps = physicalScenes[idx]
+        s.start_seconds = ps.startSec
+        s.end_seconds = ps.endSec
+        s.time_range = ps.timeRange
+      })
+    }
+  }
 
   // 5. If shots or structure empty or degenerate, generate intelligent adaptive breakdown derived from real caption & duration
   const isStructureDegenerate = structure.length === 0

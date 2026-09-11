@@ -976,4 +976,12 @@ Hook → Product Intro → Usage Detail → Proof Effect → Cta
 
     assert.equal(shots.length, 6)
   })
+
+  it('detects physical video scenes safely with graceful fallback', async () => {
+    const { detectPhysicalScenes } = await import('../src/scene-detect.js')
+
+    // Safe handling of non-existent files
+    const emptyRes = detectPhysicalScenes('/tmp/non-existent-video.mp4')
+    assert.deepEqual(emptyRes, [])
+  })
 })
