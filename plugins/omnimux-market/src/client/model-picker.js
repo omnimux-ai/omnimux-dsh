@@ -18,12 +18,10 @@
       if (!modelId || typeof modelId !== "string") return "bytedance";
       const id = modelId.trim().toLowerCase();
       if (BRAND_SVGS[id]) return id;
-      if (/(^seedance|^dreamina)/i.test(id)) return "dreamina";
-      if (/(^seedream)/i.test(id)) return "seedream";
+      if (/(^seed|seedance|seedream|doubao|豆包|即梦|dreamina|bytedance)/i.test(id)) return "bytedance";
       if (/(^nanobanana|nano[- ]?banana)/i.test(id)) return "nanobanana";
       if (/(^gpt|^openai)/i.test(id)) return "openai";
       if (/(^google|^gemini)/i.test(id)) return "google";
-      if (/(^seed|doubao|豆包|即梦|bytedance)/i.test(id)) return "bytedance";
       if (/(^wan|\bwan\b|wanxiang|万相|通义|alibaba)/i.test(id)) return "alibaba";
       if (/(^minimax|\bminimax\b|hailuo|海螺)/i.test(id)) return "minimax";
       if (/(^grok|\bgrok\b|xai)/i.test(id)) return "grok";
@@ -36,7 +34,7 @@
         capsuleName: "Dreamina Seedance 2.5",
         subtitle: "30秒视频生成，精准片段编辑",
         pro: true,
-        icon: "dreamina",
+        icon: "bytedance",
       },
       "seedance-2-0-fast": {
         name: "Dreamina Seedance 2.0 快速版",
@@ -44,14 +42,14 @@
         subtitle: "细节和质量提升，成本更低",
         pro: true,
         badge: { text: "高达43%折扣", type: "purple" },
-        icon: "dreamina",
+        icon: "bytedance",
       },
       "seedance-2-0": {
         name: "Dreamina Seedance 2.0",
         capsuleName: "Dreamina Seedance 2.0",
         subtitle: "更精准的参考，更真实，高达4K",
         pro: true,
-        icon: "dreamina",
+        icon: "bytedance",
       },
       "seedance-2-0-mini-trial": {
         name: "Dreamina Seedance 2.0 Mini (试用版)",
@@ -59,7 +57,7 @@
         subtitle: "最适合快速生成，仅需7积分/秒",
         pro: true,
         badge: { text: "新增", type: "green" },
-        icon: "dreamina",
+        icon: "bytedance",
       },
       "seedance-2-0-mini": {
         name: "Dreamina Seedance 2.0 Mini",
@@ -67,7 +65,7 @@
         subtitle: "轻量级推理，最具成本效益",
         pro: true,
         badge: { text: "最高可享58折优惠", type: "purple" },
-        icon: "dreamina",
+        icon: "bytedance",
       },
       "wan-3.0": {
         name: "Wan 3.0",
@@ -151,7 +149,7 @@
           subtitle: "30秒视频生成，精准片段编辑",
           pro: true,
           badge: null,
-          icon: "dreamina",
+          icon: "bytedance",
         },
         {
           id: "seedance-2-0-fast",
@@ -161,7 +159,7 @@
           subtitle: "细节和质量提升，成本更低",
           pro: true,
           badge: { text: "高达43%折扣", type: "purple" },
-          icon: "dreamina",
+          icon: "bytedance",
         },
         {
           id: "seedance-2-0",
@@ -171,7 +169,7 @@
           subtitle: "更精准的参考，更真实，高达4K",
           pro: true,
           badge: null,
-          icon: "dreamina",
+          icon: "bytedance",
         },
         {
           id: "seedance-2-0-mini-trial",
@@ -181,7 +179,7 @@
           subtitle: "最适合快速生成，仅需7积分/秒",
           pro: true,
           badge: { text: "新增", type: "green" },
-          icon: "dreamina",
+          icon: "bytedance",
         },
         {
           id: "seedance-2-0-mini",
@@ -191,7 +189,7 @@
           subtitle: "轻量级推理，最具成本效益",
           pro: true,
           badge: { text: "最高可享58折优惠", type: "purple" },
-          icon: "dreamina",
+          icon: "bytedance",
         },
       ],
       image: [
