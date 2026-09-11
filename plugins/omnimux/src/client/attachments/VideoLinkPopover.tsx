@@ -53,8 +53,11 @@ export const VideoLinkPopover: React.FC<VideoLinkPopoverProps> = (props) => {
   }, [isOpen]);
 
   const handleConfirm = useCallback(() => {
-    const trimmed = url.trim();
+    let trimmed = url.trim();
     if (!trimmed) return;
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = `https://${trimmed}`;
+    }
     onConfirm(trimmed);
     setUrl('');
   }, [url, onConfirm]);
@@ -79,7 +82,7 @@ export const VideoLinkPopover: React.FC<VideoLinkPopoverProps> = (props) => {
         <div className="omx-video-popover-header">
           <div className="omx-video-popover-title">
             <LinkIcon size={16} />
-            <span>插入视频链接</span>
+            <span>插入链接</span>
           </div>
           <button /* exempt-ui01: 弹窗关闭按钮 */
             type="button"
@@ -100,14 +103,11 @@ export const VideoLinkPopover: React.FC<VideoLinkPopoverProps> = (props) => {
               ref={inputRef}
               type="text"
               className="omx-video-popover-input"
-              placeholder="粘贴视频链接 (TikTok / 抖音 / YouTube 等)"
+              placeholder="粘贴或输入链接 (HTTP / HTTPS)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, handleConfirm, onClose)}
             />
-          </div>
-          <div className="omx-video-popover-hint">
-            确认后将在输入框当前光标处插入标准 Markdown 格式 <code>[视频](url)</code>，可与文字自由混排并随时删除。
           </div>
         </div>
         <div className="omx-video-popover-footer">
@@ -124,7 +124,7 @@ export const VideoLinkPopover: React.FC<VideoLinkPopoverProps> = (props) => {
             onClick={handleConfirm}
             disabled={isConfirmDisabled}
           >
-            <span>插入到光标处</span>
+            <span>确认</span>
           </button>
         </div>
       </div>

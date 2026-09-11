@@ -1,18 +1,19 @@
 import { useEffect } from 'react';
-import { isVideoUrl } from './mediaUrlDetector.ts';
+import { isValidUrl } from './mediaUrlDetector.ts';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
 
 const COMPOSER_EDITOR_SELECTORS = [
   '[data-composer-card] [contenteditable="true"]',
   '[data-lexical-editor="true"]',
   '[data-composer-input="true"]',
+  'div[role="textbox"][contenteditable="true"]',
 ].join(', ');
 
 function handlePasteEvent(event: ClipboardEvent): void {
   const clipboardData = event.clipboardData;
   if (!clipboardData) return;
   const text = clipboardData.getData('text');
-  if (!isVideoUrl(text)) {
+  if (!isValidUrl(text)) {
     return;
   }
   const editor = document.querySelector(COMPOSER_EDITOR_SELECTORS);
