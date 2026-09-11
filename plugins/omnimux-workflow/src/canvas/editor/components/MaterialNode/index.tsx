@@ -540,7 +540,11 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // 语音识别（Issue 744 T04）：音频节点转写并派生下游 SRT 字幕节点。
   // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
   const handleSpeechToText = useCallback(async () => {
-    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    const workspaceId =
+      (typeof nodeData.__workspaceId === 'string' && nodeData.__workspaceId.trim()) ||
+      (typeof nodeData.workspaceId === 'string' && nodeData.workspaceId.trim()) ||
+      (useCanvasStore.getState().nodes.find((n) => n.id === id)?.data as any)?.__workspaceId ||
+      '';
     if (!workspaceId) {
       toast.error(t('stt.noWorkspace'));
       return;
@@ -552,6 +556,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         mediaUrl,
         previewUrl,
         workspaceId,
+        audioPath: typeof nodeData.audioPath === 'string' ? nodeData.audioPath : undefined,
+        filePath: typeof nodeData.filePath === 'string' ? nodeData.filePath : undefined,
+        url: typeof (nodeData as any).url === 'string' ? (nodeData as any).url : undefined,
+        mediaAssetsUrl: mediaAssets?.[0]?.url,
       },
       { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
     );
@@ -1118,6 +1126,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           relativePath: nodeData.relativePath,
           mediaUrl,
           previewUrl,
+          audioPath: typeof nodeData.audioPath === 'string' ? nodeData.audioPath : undefined,
+          filePath: typeof nodeData.filePath === 'string' ? nodeData.filePath : undefined,
+          url: typeof (nodeData as any).url === 'string' ? (nodeData as any).url : undefined,
+          mediaAssetsUrl: mediaAssets?.[0]?.url,
         })
       ) {
         actions.push({

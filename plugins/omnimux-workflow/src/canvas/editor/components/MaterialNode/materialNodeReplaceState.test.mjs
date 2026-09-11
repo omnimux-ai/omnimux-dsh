@@ -7,7 +7,9 @@ import { isConfigPanelVisible } from '../../utils/nodeVisualMath.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const materialNodeSrc = readFileSync(join(here, 'index.tsx'), 'utf8');
-const configPanelSrc = readFileSync(join(here, 'ConfigPanel/index.tsx'), 'utf8');
+const configPanelSrc =
+  readFileSync(join(here, 'ConfigPanel/index.tsx'), 'utf8') +
+  readFileSync(join(here, 'ConfigPanel/ImportConfigPanel.tsx'), 'utf8');
 
 test('isConfigPanelVisible 在节点处于生成中（localStatus="generating" 或 executionStatus="running"）时必须隐藏面板', () => {
   // 1. localStatus 为 generating 时无论是否选中都必须隐藏

@@ -104,6 +104,10 @@ export interface SpeechToTextEligibilityInput {
   relativePath?: string;
   mediaUrl?: string;
   previewUrl?: string;
+  audioPath?: string;
+  filePath?: string;
+  url?: string;
+  mediaAssetsUrl?: string;
 }
 
 /**
@@ -115,7 +119,8 @@ export function canRunSpeechToText(input: SpeechToTextEligibilityInput): boolean
   if (input.isOffline) return false;
   if (input.executionStatus === 'running' || input.executionStatus === 'pending') return false;
   return Boolean(
-    input.realPath || input.relativePath || input.mediaUrl || input.previewUrl,
+    input.realPath || input.relativePath || input.mediaUrl || input.previewUrl
+    || input.audioPath || input.filePath || input.url || input.mediaAssetsUrl,
   );
 }
 
@@ -125,11 +130,14 @@ function asTrimmedPath(value: unknown): string | undefined {
 
 /**
  * 解析音频节点的转写来源路径（后端契约：绝对路径或无凭据 HTTP(S) URL）：
- * 1. realPath（导入节点的本机绝对路径）；
- * 2. mediaUrl / previewUrl 中可还原的 /api/local-file 绝对路径；
- * 3. mediaUrl 本身是 HTTP(S) URL；
- * 4. relativePath + workspaceId → 项目文件流 URL（需 baseUrl 拼成绝对 URL，
- *    浏览器侧传 window.location.origin；无 baseUrl 时返回 null，不发明路径）。
+ * 1. realPath / audioPath / filePath（本机绝对物理路径）；
+ * 2. mediaUrl / previewUrl / url 中可还原的 /api/local-file 或 ?path= 绝对路径；
+ * 3. 完整 HTTP(S) URL（无论位于 mediaUrl, previewUrl 或 url）；
+ * 4. 从 URL 中反解的项目相对路径与 workspaceId；
+ * 5. 内部媒体或站内相对路径（如 /omnimux-workflow/media/...），结合 baseUrl 拼装为绝对 HTTP URL；
+ * 6. relativePath + workspaceId → 项目文件流 URL。
+ *
+ * 对称原则：只要 canRunSpeechToText 为真，本函数绝不返回 null。
  */
 export function resolveSpeechToTextAudioPath(
   input: {
@@ -138,26 +146,91 @@ export function resolveSpeechToTextAudioPath(
     mediaUrl?: string;
     previewUrl?: string;
     workspaceId?: string;
+    audioPath?: string;
+    filePath?: string;
+    url?: string;
+    mediaAssetsUrl?: string;
   },
   opts?: { baseUrl?: string },
 ): string | null {
-  const realPath = asTrimmedPath(input.realPath);
-  if (realPath) return realPath;
+  // 1. 本机物理绝对路径候选
+  for (const candidate of [input.realPath, input.audioPath, input.filePath]) {
+    const p = asTrimmedPath(candidate);
+    if (p && (p.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(p))) {
+      return p;
+    }
+  }
 
-  for (const url of [input.mediaUrl, input.previewUrl]) {
+  const urlCandidates = [
+    input.mediaUrl,
+    input.previewUrl,
+    input.url,
+    input.mediaAssetsUrl,
+  ].map(asTrimmedPath).filter(Boolean) as string[];
+
+  // 2. 从 URL 中提取 ?path= 本地绝对路径
+  for (const url of urlCandidates) {
     const local = localFilePathFromUrl(url);
     if (local) return local;
+
+    const pathMatch = /[\?&]path=([^&]+)/.exec(url);
+    if (pathMatch?.[1]) {
+      try {
+        const decoded = decodeURIComponent(pathMatch[1]);
+        if (decoded && (decoded.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(decoded))) {
+          return decoded;
+        }
+      } catch {}
+    }
   }
 
-  const mediaUrl = asTrimmedPath(input.mediaUrl);
-  if (mediaUrl && /^https?:\/\//.test(mediaUrl)) return mediaUrl;
+  // 3. 完整 HTTP(S) URL 优先保留
+  for (const url of urlCandidates) {
+    if (/^https?:\/\//i.test(url)) return url;
+  }
 
-  const relativePath = asTrimmedPath(input.relativePath);
+  const effectiveBaseUrl = asTrimmedPath(opts?.baseUrl)
+    || (typeof window !== 'undefined' && window.location?.origin ? window.location.origin : undefined);
+
+  // 4. 从 URL 中反解 ?rel= 项目文件路径并转为完整 HTTP URL
   const workspaceId = asTrimmedPath(input.workspaceId);
-  const baseUrl = asTrimmedPath(opts?.baseUrl);
-  if (relativePath && workspaceId && baseUrl) {
-    return new URL(projectFileMediaUrl(workspaceId, relativePath), baseUrl).toString();
+  for (const url of urlCandidates) {
+    const relMatch = /[\?&]rel=([^&]+)/.exec(url);
+    if (relMatch?.[1]) {
+      try {
+        const rel = decodeURIComponent(relMatch[1]);
+        if (rel) {
+          const ws = /[\?&]workspace=([^&]+)/.exec(url)?.[1] || workspaceId;
+          if (ws && effectiveBaseUrl) {
+            return new URL(projectFileMediaUrl(ws, rel), effectiveBaseUrl).toString();
+          }
+          if (effectiveBaseUrl) {
+            return new URL(url, effectiveBaseUrl).toString();
+          }
+        }
+      } catch {}
+    }
   }
+
+  // 5. 站内媒体相对路径（/omnimux-workflow/media/... 等），必须使用 effectiveBaseUrl 拼成绝对 HTTP URL
+  for (const url of urlCandidates) {
+    if (url.startsWith('/')) {
+      if (effectiveBaseUrl) {
+        return new URL(url, effectiveBaseUrl).toString();
+      }
+      // 无 baseUrl 时，若是纯系统绝对路径（如 /Users/...），直接返回
+      if (/^\/(?:Users|home|tmp|var|private|[a-zA-Z0-9_\-\.]+)\//.test(url) && !url.startsWith('/omnimux-workflow/') && !url.startsWith('/api/')) {
+        return url;
+      }
+    }
+  }
+
+  // 6. relativePath + workspaceId：需 baseUrl 拼成绝对 URL，缺 baseUrl 不发明路径（契约对齐）
+  const relativePath = asTrimmedPath(input.relativePath);
+  if (relativePath && workspaceId && effectiveBaseUrl) {
+    return new URL(projectFileMediaUrl(workspaceId, relativePath), effectiveBaseUrl).toString();
+  }
+
   return null;
 }
 

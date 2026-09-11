@@ -397,6 +397,32 @@ test('resolveSpeechToTextAudioPath：优先级 realPath > local-file URL > http 
     ),
     'http://127.0.0.1:45120/omnimux-workflow/api/workspaces/ws%201/file?rel=assets%2Fimported%2Fd.mp3',
   );
+  // previewUrl 为 http(s) 直出（即使 mediaUrl 为空）
+  assert.equal(
+    resolveSpeechToTextAudioPath({ previewUrl: 'https://example.com/stream.mp3' }),
+    'https://example.com/stream.mp3',
+  );
+  // audioPath / filePath 绝对路径直接还原
+  assert.equal(
+    resolveSpeechToTextAudioPath({ audioPath: '/var/data/extracted_audio.wav' }),
+    '/var/data/extracted_audio.wav',
+  );
+  // 提取音频产生的内部媒体路径（/omnimux-workflow/media/...），结合 baseUrl 拼成绝对 HTTP URL
+  assert.equal(
+    resolveSpeechToTextAudioPath(
+      { previewUrl: '/omnimux-workflow/media/extracted-audio/ws1/audio_123.mp3' },
+      { baseUrl: 'http://127.0.0.1:45120' },
+    ),
+    'http://127.0.0.1:45120/omnimux-workflow/media/extracted-audio/ws1/audio_123.mp3',
+  );
+  // 从 previewUrl 项目文件 URL 反解 ?rel= 路径
+  assert.equal(
+    resolveSpeechToTextAudioPath(
+      { previewUrl: '/omnimux-workflow/api/workspaces/ws1/file?rel=assets%2Fbgm.mp3' },
+      { baseUrl: 'http://127.0.0.1:45120' },
+    ),
+    'http://127.0.0.1:45120/omnimux-workflow/api/workspaces/ws1/file?rel=assets%2Fbgm.mp3',
+  );
   // 缺 baseUrl 不发明路径
   assert.equal(
     resolveSpeechToTextAudioPath({ relativePath: 'assets/d.mp3', workspaceId: 'ws1' }),

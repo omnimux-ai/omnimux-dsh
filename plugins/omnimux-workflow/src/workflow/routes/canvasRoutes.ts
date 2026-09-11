@@ -155,7 +155,12 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const localFileRoutes = createLocalFileRoutes(picker ? { picker } : {});
   const templateRoutes = createTemplateRoutes(templates);
   const tableRoutes = createTableRoutes(store);
-  const speechToTextRoutes = createSpeechToTextRoutes({ store, getSeam: deps.getSeam });
+  const speechToTextRoutes = createSpeechToTextRoutes({
+    store,
+    mediaDir,
+    getSeam: deps.getSeam,
+    resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
+  });
   const videoExtractionRoutes = createVideoExtractionRoutes({
     store,
     mediaDir,

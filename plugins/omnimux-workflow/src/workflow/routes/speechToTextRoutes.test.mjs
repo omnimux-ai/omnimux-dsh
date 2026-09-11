@@ -161,4 +161,11 @@ test('mounted workflow Host registers the route and resolves ctx.get speechToTex
   assert.equal(response.status, 200);
   assert.equal(response.body.text, text);
   assert.deepEqual(calls, [{ model, audio: request.audioPath, response_format: 'srt' }]);
+
+  // 验证 local-file URL 成功还原为物理绝对路径传递给 seam
+  calls.length = 0;
+  const localFileReq = { ...request, audioPath: `http://localhost:45120/api/local-file?path=${encodeURIComponent('/tmp/audio_voice.mp3')}` };
+  const localResp = await call(url, localFileReq);
+  assert.equal(localResp.status, 200);
+  assert.deepEqual(calls, [{ model, audio: '/tmp/audio_voice.mp3', response_format: 'srt' }]);
 });
