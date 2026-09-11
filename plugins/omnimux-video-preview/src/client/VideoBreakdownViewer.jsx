@@ -25,7 +25,10 @@ import {
   HeadphonesIcon,
   TranslateIcon,
   ChevronDownIcon,
+  CheckIcon,
+  MicIcon,
 } from './icons.jsx'
+import { TRANSLATE_LANGUAGES } from '../languages.js'
 import {
   localizeStage,
   METADATA_HEADING_REGEX,
@@ -59,7 +62,11 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const isZh = useIsZh()
   const [activeTab, setActiveTab] = useState('shots')
   const [playerMode, setPlayerMode] = useState('native') // 'native' | 'embed'
-  const [isTranslated, setIsTranslated] = useState(false)
+  const [selectedLang, setSelectedLang] = useState('original')
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false)
+  const [translations, setTranslations] = useState({})
+  const [isTranslating, setIsTranslating] = useState(false)
+  const translateMenuRef = useRef(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -71,6 +78,18 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     ensureBreakdownStyles()
   }, [])
 
+  // Close translate menu on outside click
+  useEffect(() => {
+    if (!isLangMenuOpen) return
+    const handleOutsideClick = (e) => {
+      if (translateMenuRef.current && !translateMenuRef.current.contains(e.target)) {
+        setIsLangMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [isLangMenuOpen])
+
   // Parse breakdown json content
   const data = useMemo(() => {
     if (!content) return null
@@ -81,6 +100,13 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       return null
     }
   }, [content])
+
+  // Sync translations from incoming data
+  useEffect(() => {
+    if (data?.translations && typeof data.translations === 'object') {
+      setTranslations((prev) => ({ ...prev, ...data.translations }))
+    }
+  }, [data?.translations])
 
   const video = data?.video || {}
   const rawShots = Array.isArray(data?.shots) ? data.shots : []
@@ -240,6 +266,47 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     }
   }
 
+  const handleSelectLanguage = async (langCode) => {
+    setSelectedLang(langCode)
+    setIsLangMenuOpen(false)
+
+    if (langCode === 'original') return
+
+    // If already translated, reuse cached result
+    if (translations[langCode] && Object.keys(translations[langCode]).length > 0) {
+      return
+    }
+
+    const validShots = shots.filter((s) => s.speech && String(s.speech).trim())
+    if (validShots.length === 0) return
+
+    setIsTranslating(true)
+    try {
+      const response = await fetch('/omnimux/video-preview/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetLang: langCode,
+          shots: validShots.map((s) => ({ id: s.id, speech: s.speech })),
+          filePath: path || data?.filePath || '',
+        }),
+      })
+      if (response.ok) {
+        const res = await response.json()
+        if (res.translations) {
+          setTranslations((prev) => ({
+            ...prev,
+            [langCode]: res.translations,
+          }))
+        }
+      }
+    } catch {
+      // Soft-fail without blocking preview
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
   const shotsCopyContent = useMemo(() => {
     if (!shots.length) return ''
     return shots.map((s, idx) => {
@@ -248,11 +315,14 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       const stage = stageName ? ` [${stageName}]` : ''
       const tags = Array.isArray(s.tags) && s.tags.length ? `\n${isZh ? '属性' : 'Tags'}：${s.tags.join(' | ')}` : ''
       const speech = s.speech ? `\n${isZh ? '台词' : 'Speech'}：${s.speech}` : ''
+      const trans = (selectedLang !== 'original' && translations[selectedLang]?.[s.id])
+        ? `\n${isZh ? '翻译' : 'Translation'}：${translations[selectedLang][s.id]}`
+        : ''
       const desc = s.description ? `\n${isZh ? '描述' : 'Description'}：${s.description}` : ''
       const defaultTitle = `${isZh ? '分镜' : 'Shot'} ${idx + 1}`
-      return `${range} ${s.title || defaultTitle}${stage}${tags}${speech}${desc}`
+      return `${range} ${s.title || defaultTitle}${stage}${tags}${speech}${trans}${desc}`
     }).join('\n\n')
-  }, [shots, isZh])
+  }, [shots, isZh, selectedLang, translations])
 
   const scriptCopyContent = useMemo(() => {
     if (!shots.length) return ''
@@ -260,12 +330,16 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       .map((s) => {
         const speech = s.speech || s.dialogue || s.subtitle || ''
         const time = s.time_range || `${s.start_seconds || 0}s`
-        return speech ? `${time} ${speech}` : null
+        if (!speech) return null
+        const trans = (selectedLang !== 'original' && translations[selectedLang]?.[s.id])
+          ? `\n${time} [${selectedLang}] ${translations[selectedLang][s.id]}`
+          : ''
+        return `${time} ${speech}${trans}`
       })
       .filter(Boolean)
     if (lines.length > 0) return lines.join('\n\n')
     return shots.map((s, idx) => `${s.time_range || (isZh ? `分镜 ${idx + 1}` : `Shot ${idx + 1}`)} ${s.description || ''}`).join('\n\n')
-  }, [shots, isZh])
+  }, [shots, isZh, selectedLang, translations])
 
   const structureCopyContent = useMemo(() => {
     if (!structure.length) return ''
@@ -678,11 +752,27 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                       ) : null}
 
                       {shot.speech ? (
-                        <div className="omnimux-video-breakdown-shot-speech">
-                          <HeadphonesIcon size={13} />
-                          <span className="omnimux-video-shot-speech-text">
-                            {isTranslated && shot.speech_zh ? shot.speech_zh : shot.speech}
-                          </span>
+                        <div className="omnimux-video-breakdown-shot-speech-container">
+                          {/* 1. 原文台词 (带麦克风图标，对标图5) */}
+                          <div className="omnimux-video-breakdown-shot-speech">
+                            <span className="omnimux-video-shot-speech-icon">
+                              <MicIcon size={13} />
+                            </span>
+                            <span className="omnimux-video-shot-speech-text">{shot.speech}</span>
+                          </div>
+
+                          {/* 2. 翻译台词 (带文A翻译图标，对标图5) */}
+                          {selectedLang !== 'original' ? (
+                            <div className="omnimux-video-breakdown-shot-translated-speech">
+                              <span className="omnimux-video-shot-speech-icon">
+                                <TranslateIcon size={13} />
+                              </span>
+                              <span className="omnimux-video-shot-speech-text">
+                                {translations[selectedLang]?.[shot.id]
+                                  || (isTranslating ? (isZh ? '翻译中...' : 'Translating...') : '')}
+                              </span>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -728,22 +818,46 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             )}
           </div>
 
-          {/* Bottom Footer Actions (1:1 with Image 1) */}
+          {/* Bottom Footer Actions (1:1 with Image 4: Aligned Left) */}
           <footer className="omnimux-video-breakdown-bottom-bar">
             <div className="omnimux-video-breakdown-footer-left">
-              <button // exempt-ui01 translate action button
-                type="button"
-                className={`omnimux-video-footer-btn${isTranslated ? ' is-active' : ''}`}
-                onClick={() => setIsTranslated(!isTranslated)}
-                title={isTranslated ? (isZh ? '切换为原文' : 'Switch to Original') : (isZh ? '翻译为中文' : 'Translate')}
-              >
-                <TranslateIcon size={14} />
-                <span>{isTranslated ? (isZh ? '原文' : 'Original') : (isZh ? '翻译' : 'Translate')}</span>
-                <ChevronDownIcon size={11} />
-              </button>
-            </div>
+              {/* 1. Multilingual Translation Dropdown Menu (Matching Image 3) */}
+              <div className="omnimux-video-translate-wrapper" ref={translateMenuRef}>
+                <button // exempt-ui01 translate action button
+                  type="button"
+                  className={`omnimux-video-footer-btn${selectedLang !== 'original' ? ' is-active' : ''}`}
+                  onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                  title={isZh ? '选择翻译语言' : 'Select Translation Language'}
+                >
+                  <TranslateIcon size={14} />
+                  <span>{isZh ? '翻译' : 'Translate'}</span>
+                  <ChevronDownIcon size={11} />
+                </button>
 
-            <div className="omnimux-video-breakdown-footer-right">
+                {isLangMenuOpen ? (
+                  <div className="omnimux-video-translate-menu">
+                    {TRANSLATE_LANGUAGES.map((lang) => {
+                      const isSelected = selectedLang === lang.code
+                      return (
+                        <div
+                          key={lang.code}
+                          className={`omnimux-video-translate-item${isSelected ? ' is-selected' : ''}`}
+                          onClick={() => handleSelectLanguage(lang.code)}
+                        >
+                          <span>{lang.label}</span>
+                          {isSelected ? (
+                            <span className="omnimux-video-translate-item-check">
+                              <CheckIcon size={14} />
+                            </span>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* 2. Copy Actions Aligned on the Left matching Image 4 */}
               {activeTab === 'shots' ? (
                 <>
                   <CopyButton

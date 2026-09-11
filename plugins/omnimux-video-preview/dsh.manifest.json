@@ -22,6 +22,13 @@
         "category": "media",
         "isWriteOperation": true,
         "requiresAuth": false
+      },
+      {
+        "name": "video_breakdown_translate",
+        "summary": "调用大模型统一通道将视频分镜台词/口播翻译为多语言并持久化缓存",
+        "category": "media",
+        "isWriteOperation": true,
+        "requiresAuth": false
       }
     ],
     "seamsProvided": [

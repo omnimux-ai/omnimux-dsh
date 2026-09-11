@@ -2,6 +2,7 @@ import { existsSync, statSync } from 'node:fs'
 import { extname, resolve } from 'node:path'
 import { handleVideoStream, getMimeType } from './stream.js'
 import { extractVideoBreakdown, saveVideoBreakdownArtifacts, formatShotsCopyText } from './breakdown.js'
+import { translateBreakdownShots, TRANSLATE_LANGUAGES } from './translate.js'
 
 export const name = 'omnimux-video-preview'
 export const inject = ['tools']
@@ -111,15 +112,53 @@ export function apply(ctx) {
     },
   })
 
-  // 3. Mount WebServer routes via official DSH webServer.register contract
+  // 3. Register video breakdown speech translation tool
+  ctx.tools?.register?.({
+    name: 'video_breakdown_translate',
+    description: 'Translate video breakdown voiceover/speech lines into one of 18 languages using unified Hub LLM channel.',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetLang: {
+          type: 'string',
+          description: 'Target language code (e.g. "zh-CN", "ru", "en", "ja", "ko", "es", "fr", "de", "original").',
+        },
+        shots: {
+          type: 'array',
+          description: 'List of shots with id and speech to translate.',
+          items: { type: 'object' },
+        },
+        filePath: {
+          type: 'string',
+          description: 'Optional path to .vbreakdown file to persist cached translations.',
+        },
+      },
+      required: ['targetLang'],
+    },
+    output: jsonOut,
+    execute: async ({ targetLang, shots = [], filePath = '' }, execCtx) => {
+      const result = await translateBreakdownShots({
+        shots,
+        targetLang,
+        filePath,
+        ctx,
+        signal: execCtx?.signal,
+      })
+      return result
+    },
+  })
+
+  // 4. Mount WebServer routes via official DSH webServer.register contract
   const mountHttp = (server) => {
     const webServer = server?.webServer ?? server
     if (!webServer || typeof webServer.register !== 'function') return () => {}
 
-    const streamRoute = '/omnimux/video-preview/stream'
-    return webServer.register({
+    const unregisters = []
+
+    // Route 1: Video stream
+    const unregStream = webServer.register({
       kind: 'prefix',
-      path: streamRoute,
+      path: '/omnimux/video-preview/stream',
       async handler(req, res) {
         try {
           const url = new URL(req.url || '', 'http://localhost')
@@ -133,6 +172,70 @@ export function apply(ctx) {
         }
       },
     })
+    if (typeof unregStream === 'function') unregisters.push(unregStream)
+
+    // Route 2: Multilingual Speech Translation
+    const unregTranslate = webServer.register({
+      kind: 'prefix',
+      path: '/omnimux/video-preview/translate',
+      async handler(req, res) {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          })
+          return res.end()
+        }
+
+        if (req.method === 'GET') {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ supported_languages: TRANSLATE_LANGUAGES }))
+        }
+
+        if (req.method !== 'POST') {
+          res.writeHead(405, { 'Content-Type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'Method Not Allowed' }))
+        }
+
+        let body = ''
+        req.on('data', (chunk) => {
+          body += chunk
+        })
+        req.on('end', async () => {
+          try {
+            const payload = body ? JSON.parse(body) : {}
+            const { targetLang, shots = [], filePath = '' } = payload
+            const result = await translateBreakdownShots({
+              shots,
+              targetLang,
+              filePath,
+              ctx,
+            })
+            res.writeHead(200, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            })
+            res.end(JSON.stringify(result))
+          } catch (err) {
+            res.writeHead(500, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            })
+            res.end(JSON.stringify({ error: err?.message || 'Translation error' }))
+          }
+        })
+      },
+    })
+    if (typeof unregTranslate === 'function') unregisters.push(unregTranslate)
+
+    return () => {
+      unregisters.forEach((fn) => {
+        try {
+          fn()
+        } catch {}
+      })
+    }
   }
 
   if (typeof ctx.inject === 'function') {
