@@ -162,19 +162,24 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /bytedance:\s*`<svg[^>]*>[\s\S]*?22\.0004 4\.62844[\s\S]*?1\.99902 20\.1939[\s\S]*?16\.1213 9\.26561[\s\S]*?7\.49609 11\.582V20\.7336/)
   })
 
-  it('unifies composer buttons style and compacts spacing (Issue #1211)', () => {
+  it('unifies composer buttons style and compacts spacing (Issue #1211, #1220)', () => {
     // 1. 验证工具栏紧凑间距与空容器塌陷
     assert.match(cssSrc, /div\[class\*="tools"\],\.Q7WfXG_tools\{gap:6px !important\}/)
     assert.match(cssSrc, /div\[class\*="modes"\]:empty,\.Q7WfXG_modes:empty\{display:none !important\}/)
     assert.match(cssSrc, /\[data-slot\*="conversation\.input\.left"\]/)
 
-    // 2. 验证按钮高度统一为 28px、胶囊圆角 9999px、背景采用 selector Token
+    // 2. 验证未激活状态下按钮无背景（transparent），尺寸对齐右侧文本模型（高度 28px、圆角 24px）
     assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*height:28px/)
-    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*border-radius:9999px/)
-    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*background:var\(--dsw-specific-selector/)
+    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*border-radius:24px/)
+    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*background:transparent/)
+
+    // 3. 验证图标大小对齐右侧文本模型（14px），交互 Hover/Active 对齐
+    assert.match(cssSrc, /\.sh-picker-trigger svg\{[^}]*width:14px/)
+    assert.match(cssSrc, /\.sh-picker-trigger:hover\{[^}]*background:var\(--dsw-alias-interactive-bg-hover\)/)
+    assert.match(cssSrc, /\.sh-picker-trigger:focus-visible\{[^}]*box-shadow:0 0 0 2px var\(--dsw-alias-border-l3\)/)
+
+    // 4. 验证激活模型胶囊和技能 Chip
     assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*height:28px/)
-    assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*border-radius:9999px/)
     assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*height:28px/)
-    assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*border-radius:9999px/)
   })
 })
