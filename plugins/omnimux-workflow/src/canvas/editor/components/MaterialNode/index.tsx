@@ -115,7 +115,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const sizeCategory = getNodeSizeCategory(materialType);
   const defaultCalculatedHeight = calculateNodeHeight(nodeWidth, sizeCategory);
   const nodeHeight = materialType === 'audio'
-    ? Math.max(150, nodeData.nodeHeight ?? defaultCalculatedHeight)
+    ? Math.max(126, nodeData.nodeHeight ?? defaultCalculatedHeight)
     : mediaAspectHeight ?? nodeData.nodeHeight ?? defaultCalculatedHeight;
 
   const updateNodeData = useCallback(
@@ -1359,10 +1359,11 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       {/* 输入 Handle */}
       <CanvasNodeHandle side="left" nodeHovered={isHovered} />
 
-      {/* 节点标题：导入节点统一显示「导入素材」（非文本节点） */}
+      {/* 节点标题：导入节点统一显示「导入素材」（非文本节点，音频优先展示专属音乐图标） */}
       <NodeHeader
         label={label}
         materialType={kind === 'import' && materialType !== 'text' ? 'import_asset' : materialType}
+        customIcon={materialType === 'audio' ? Music : undefined}
         onLabelChange={(newLabel) => updateNodeData({ label: newLabel })}
         isDegraded={isDegraded}
         degradedWarning={degradedWarning}
