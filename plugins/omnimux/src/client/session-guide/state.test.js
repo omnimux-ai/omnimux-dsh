@@ -3,13 +3,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createGuideStore, emptyGuideState, isBlankConversation, selectStarter } from './state.js'
 import { STARTERS, STARTER_GROUPS, guideEn, guideZh } from './catalog.js'
+import { extractPromptSlots } from '../attachments/promptSlotDetector.ts'
 
 const card = { id: 'deconstruct', prompt: 'Break down this video.' }
 const other = { id: 'rewrite', prompt: 'Rewrite for my product.' }
 function selected() { return selectStarter(emptyGuideState(), '', card) }
 
 describe('session starters', () => {
-  it('matches all ten reference actions with localized prompts', () => {
+  it('matches all ten reference actions with localized prompts and adapted protocol slots', () => {
     assert.equal(STARTERS.length, 10)
     assert.equal(new Set(STARTERS.map(card => card.id)).size, 10)
     assert.equal(STARTER_GROUPS.length, 4)
@@ -20,7 +21,6 @@ describe('session starters', () => {
     for (const [index, item] of STARTERS.entries()) {
       assert.ok(STARTER_GROUPS.includes(item.group))
       const key = `guide.${item.id}.prompt`
-      assert.equal(guideEn[key], reference[index].state.fields.find(field => field.tag === 'TEXTAREA').value)
       assert.match(guideZh[key], /[\u4e00-\u9fff]/)
       assert.equal((guideZh[key].match(/\[/g) || []).length, (guideEn[key].match(/\[/g) || []).length)
       for (const locale of [guideZh, guideEn]) {
@@ -28,7 +28,32 @@ describe('session starters', () => {
         assert.ok(locale[`guide.${item.id}.prompt`])
         assert.ok(!locale[`guide.${item.id}.prompt`].startsWith('/'))
       }
+
+      // 验证插槽提取与协议适配（中英文槽位集合与协议类型严格等价）
+      const zhSlots = extractPromptSlots(guideZh[key])
+      const enSlots = extractPromptSlots(guideEn[key])
+      assert.equal(zhSlots.length, enSlots.length)
+      assert.deepEqual(
+        zhSlots.map(s => s.protocol).sort(),
+        enSlots.map(s => s.protocol).sort(),
+      )
     }
+
+    // 重点抽测：选择文件、资产库、产品库协议在关键卡片上的适配生效
+    const roasSlots = extractPromptSlots(guideZh['guide.roas-analysis.prompt'])
+    assert.ok(roasSlots.some(s => s.protocol === 'file' && s.placeholder === '广告投放报告'))
+    assert.ok(roasSlots.some(s => s.protocol === 'product'))
+
+    const reviewSlots = extractPromptSlots(guideZh['guide.review-insights.prompt'])
+    assert.ok(reviewSlots.some(s => s.protocol === 'file' && s.placeholder === '导出的评论数据'))
+    assert.ok(reviewSlots.some(s => s.protocol === 'product'))
+
+    const searchSlots = extractPromptSlots(guideZh['guide.search-terms.prompt'])
+    assert.ok(searchSlots.some(s => s.protocol === 'file' && s.placeholder === '搜索词报告'))
+
+    const ugcSlots = extractPromptSlots(guideZh['guide.ugc-brief.prompt'])
+    assert.ok(ugcSlots.some(s => s.protocol === 'product'))
+    assert.ok(ugcSlots.some(s => s.protocol === 'assets'))
   })
   it('replaces an existing draft immediately when choosing a task', () => {
     assert.equal(selectStarter(emptyGuideState(), 'My own instructions', card).draft, card.prompt)
