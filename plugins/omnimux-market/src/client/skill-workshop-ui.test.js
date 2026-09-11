@@ -334,4 +334,18 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.ok(!cssSrc.includes('.h3-badge'), '.h3-badge CSS should be removed')
     assert.match(cssSrc, /font-size:\s*20px/)
   })
+
+  it('Issue #1370: PlazaIcon renders proper 4-quadrant outline and FeaturedCard safely routes covers without breaking hover actions', () => {
+    // 1. renderPlazaIcon 具有完整四个象限，且包含右上象限 (8.75, 1.75)
+    assert.match(skillPlazaSrc, /x:\s*"8.75",\s*y:\s*"1.75"/)
+    assert.match(skillPlazaSrc, /fill:\s*"none"/)
+    assert.match(cssSrc, /\.btn-create svg rect\{fill:none\}/)
+
+    // 2. FeaturedCard 与 plazaUtils 支持 homeCover 及独立代理路径
+    const featuredSrc = readFileSync(join(here, 'plaza/FeaturedCard.jsx'), 'utf8')
+    assert.match(featuredSrc, /resolveIconSrc/)
+    assert.match(featuredSrc, /item\.homeCover/)
+    assert.match(featuredSrc, /featured-cover-svg/)
+    assert.match(cssSrc, /\.featured-hover-actions\{[^}]*flex-direction:row/)
+  })
 })

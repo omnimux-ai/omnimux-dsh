@@ -4,18 +4,18 @@ import {
   getExpertButtonText,
   getExpertLocalizedNames,
   getExpertStatusText,
+  resolveIconSrc,
+  resolveInitials,
 } from './plazaUtils.js';
 
 const h = React.createElement;
 
 function getIconSrc(avatar) {
-  if (typeof iconSrc === 'function') return iconSrc(avatar);
-  return avatar || '';
+  return resolveIconSrc(avatar);
 }
 
 function getInitials(name) {
-  if (typeof initials === 'function') return initials(name);
-  return (name || '').slice(0, 2);
+  return resolveInitials(name);
 }
 
 export function renderExpertCard(item, opts) {
