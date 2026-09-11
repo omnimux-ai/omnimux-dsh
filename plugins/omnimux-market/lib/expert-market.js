@@ -102,7 +102,7 @@ export function getMarketExpertStatus(home, exp) {
         }
         catch { }
     }
-    return 'available';
+    return exp.initialStatus;
 }
 function resolveExpertPersonaText(exp) {
     if (exp.id === 'amazon-operations-expert') {

@@ -25,3 +25,30 @@ test('actual icon handler serves the independent home cover and rejects traversa
     assert.equal((await requestCover(target)).status, 400)
   }
 })
+
+test('icon handler serves all 8 default market expert avatars locally without network', async () => {
+  const expertAvatars = [
+    'catalog/covers/expert-shopee-ops.png',
+    'catalog/covers/expert-youtube-creator.png',
+    'catalog/covers/expert-amazon-ops.png',
+    'catalog/covers/expert-tiktok-shop-ops.png',
+    'catalog/covers/expert-media-creator.png',
+    'catalog/covers/expert-html-generator.png',
+    'catalog/covers/expert-amazon-operations.png',
+    'catalog/covers/expert-tiktok-ecommerce.png',
+  ]
+  for (const avatar of expertAvatars) {
+    const res = await requestCover(avatar)
+    assert.equal(res.status, 200, `avatar status 200: ${avatar}`)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.ok(Buffer.isBuffer(res.body) && res.body.length > 0, `avatar has bytes: ${avatar}`)
+  }
+})
+
+test('icon handler maps remote workbuddyskills avatar URL directly to local disk without cloud fetch', async () => {
+  const remoteUrl = 'https://raw.githubusercontent.com/infometa/workbuddyskills/main/experts/ad-creative-strategist/avatars/expert.png'
+  const res = await requestCover(remoteUrl)
+  assert.equal(res.status, 200)
+  assert.equal(res.headers['content-type'], 'image/png')
+  assert.ok(Buffer.isBuffer(res.body) && res.body.length > 0)
+})

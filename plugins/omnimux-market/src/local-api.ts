@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { clamp, fetchSkillCard, parseSlug } from './api.js'
 import { parseCategory } from './categories.js'
@@ -571,6 +573,104 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, cfg: 
   }
 }
 
+function detectImageContentType(fileName: string): string {
+  const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase()
+  if (ext === '.webp') return 'image/webp'
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg'
+  if (ext === '.svg') return 'image/svg+xml'
+  if (ext === '.gif') return 'image/gif'
+  return 'image/png'
+}
+
+function resolveLocalCoverOrAvatar(target: string): { path: string; contentType: string } | null {
+  // 1. 本地 catalog 封面图与专家头像 catalog/covers/<filename>
+  if (target.startsWith('catalog/covers/')) {
+    const fileName = target.slice('catalog/covers/'.length)
+    if (/^(?:home\/)?[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(fileName)) {
+      const coverPath = join(packageRoot(), 'catalog', 'covers', fileName)
+      if (existsSync(coverPath)) {
+        return { path: coverPath, contentType: detectImageContentType(fileName) }
+      }
+    }
+  }
+
+  // 2. 本地 catalog 专家头像 catalog/avatars/<path>
+  if (target.startsWith('catalog/avatars/')) {
+    const rel = target.slice('catalog/avatars/'.length)
+    if (/^[a-zA-Z0-9._/-]+\.(png|jpg|jpeg|webp)$/i.test(rel) && !rel.includes('..')) {
+      const avatarPath = join(packageRoot(), 'catalog', 'avatars', rel)
+      if (existsSync(avatarPath)) {
+        return { path: avatarPath, contentType: detectImageContentType(rel) }
+      }
+    }
+  }
+
+  // 3. 映射 workbuddyskills 远程 URL 到本地已有专家库真源，零云端请求
+  const wbMatch = target.match(/^https:\/\/raw\.githubusercontent\.com\/infometa\/workbuddyskills\/(?:main|master)\/experts\/([a-zA-Z0-9._-]+)\/avatars\/([a-zA-Z0-9._-]+\.(?:png|jpg|jpeg|webp))$/)
+  if (wbMatch) {
+    const [, expertId, fileName] = wbMatch
+    const candidates = [
+      join(packageRoot(), 'catalog', 'avatars', expertId, fileName),
+      join(packageRoot(), 'catalog', 'experts', expertId, 'avatars', fileName),
+      join(packageRoot(), 'catalog', 'covers', `${expertId}-${fileName}`),
+      join(packageRoot(), 'catalog', 'covers', fileName),
+      join('/Users/x/Desktop/Project/Github/workbuddyskills/experts', expertId, 'avatars', fileName),
+    ]
+    for (const c of candidates) {
+      if (existsSync(c)) {
+        return { path: c, contentType: detectImageContentType(fileName) }
+      }
+    }
+    const wbCacheDir = join(homedir(), '.workbuddy', 'plugins', 'cache', 'experts', expertId)
+    if (existsSync(wbCacheDir)) {
+      try {
+        const versions = readdirSync(wbCacheDir)
+        for (const v of versions) {
+          const candidate = join(wbCacheDir, v, 'avatars', fileName)
+          if (existsSync(candidate)) {
+            return { path: candidate, contentType: detectImageContentType(fileName) }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  return null
+}
+
+function getAvatarCacheDir(): string {
+  const dir = join(dshHome(), 'cache', 'market-avatars')
+  try {
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+  } catch {}
+  return dir
+}
+
+function resolveAvatarDiskCache(targetUrl: string): { path: string; contentType: string } | null {
+  try {
+    const cacheDir = getAvatarCacheDir()
+    const hash = createHash('sha256').update(targetUrl).digest('hex')
+    const filePath = join(cacheDir, `${hash}.bin`)
+    const metaPath = join(cacheDir, `${hash}.meta.json`)
+    if (existsSync(filePath) && existsSync(metaPath)) {
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8'))
+      return { path: filePath, contentType: meta.contentType || 'image/png' }
+    }
+  } catch {}
+  return null
+}
+
+function saveAvatarDiskCache(targetUrl: string, body: Buffer, contentType: string): void {
+  try {
+    const cacheDir = getAvatarCacheDir()
+    const hash = createHash('sha256').update(targetUrl).digest('hex')
+    const filePath = join(cacheDir, `${hash}.bin`)
+    const metaPath = join(cacheDir, `${hash}.meta.json`)
+    writeFileSync(filePath, body)
+    writeFileSync(metaPath, JSON.stringify({ url: targetUrl, contentType, savedAt: Date.now() }))
+  } catch {}
+}
+
 export async function handleIcon(req: IncomingMessage, res: ServerResponse, cfg: PluginConfig): Promise<void> {
   try {
     const url = new URL(req.url || '/', 'http://127.0.0.1')
@@ -588,6 +688,28 @@ export async function handleIcon(req: IncomingMessage, res: ServerResponse, cfg:
       }
     }
 
+    // 1. 本地真源（内置 covers、avatars、本地专家库镜像）优先，零网络开销
+    const local = resolveLocalCoverOrAvatar(target)
+    if (local) {
+      const bytes = readFileSync(local.path)
+      res.statusCode = 200
+      res.setHeader('content-type', local.contentType)
+      res.setHeader('cache-control', 'public, max-age=86400')
+      res.end(bytes)
+      return
+    }
+
+    // 2. 本地持久化磁盘缓存命中，直接从本地磁盘加载，不走云端
+    const cached = resolveAvatarDiskCache(target)
+    if (cached) {
+      const bytes = readFileSync(cached.path)
+      res.statusCode = 200
+      res.setHeader('content-type', cached.contentType)
+      res.setHeader('cache-control', 'public, max-age=86400')
+      res.end(bytes)
+      return
+    }
+
     if (!/^https:\/\//i.test(target)) {
       res.statusCode = 400
       res.end('bad url')
@@ -595,9 +717,14 @@ export async function handleIcon(req: IncomingMessage, res: ServerResponse, cfg:
     }
 
     const { body, contentType } = await fetchBytes(target, { timeoutMs: Math.min(cfg.timeoutMs, 15000), userAgent: cfg.userAgent })
+    const finalType = contentType.startsWith('image/') ? contentType : 'image/png'
+
+    // 3. 首次拉取后持久化存入本地磁盘缓存，后续请求均本地加载
+    saveAvatarDiskCache(target, body, finalType)
+
     res.statusCode = 200
-    res.setHeader('content-type', contentType.startsWith('image/') ? contentType : 'image/png')
-    res.setHeader('cache-control', 'public, max-age=3600')
+    res.setHeader('content-type', finalType)
+    res.setHeader('cache-control', 'public, max-age=86400')
     res.end(body)
   } catch (err) {
     res.statusCode = 502

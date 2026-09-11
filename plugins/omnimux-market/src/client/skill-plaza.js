@@ -319,7 +319,16 @@
             src: iconSrc(item.avatar),
             alt: title,
             loading: "lazy",
+            onError: (e) => {
+              e.currentTarget.style.display = "none";
+              const next = e.currentTarget.nextElementSibling;
+              if (next) next.style.display = "grid";
+            },
           }),
+          h("div", {
+            className: "expert-card-avatar-fallback",
+            style: { display: "none" },
+          }, initials(title)),
         ),
         showButton ? h("div", { className: "expert-card-action" },
           h("button", {
