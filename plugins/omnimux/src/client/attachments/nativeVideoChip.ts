@@ -42,8 +42,9 @@ function getChipConstructor(lexicalEditor: any): any {
   return chipReg ? chipReg.klass : null;
 }
 
-function appendChipToRoot(editorState: any, chip: any): void {
-  const nodeMap = editorState ? editorState._nodeMap : null;
+function appendChipToRoot(lexicalEditor: any, chip: any): void {
+  const activeState = lexicalEditor._pendingEditorState || lexicalEditor._editorState;
+  const nodeMap = activeState ? activeState._nodeMap : null;
   if (!nodeMap || typeof nodeMap.get !== 'function') {
     return;
   }
@@ -51,11 +52,13 @@ function appendChipToRoot(editorState: any, chip: any): void {
   if (!root) {
     return;
   }
-  const getLast = root.getLastChild;
-  const getFirst = root.getFirstChild;
-  const target = typeof getLast === 'function' ? getLast.call(root) : null;
-  const fallback = typeof getFirst === 'function' ? getFirst.call(root) : null;
-  const targetBlock = target || fallback;
+  const writableRoot = typeof root.getWritable === 'function' ? root.getWritable() : root;
+  const getLast = typeof writableRoot.getLastChild === 'function' ? writableRoot.getLastChild() : null;
+  const getFirst = typeof writableRoot.getFirstChild === 'function' ? writableRoot.getFirstChild() : null;
+  let targetBlock = getLast || getFirst || writableRoot;
+  if (targetBlock && typeof targetBlock.getWritable === 'function') {
+    targetBlock = targetBlock.getWritable();
+  }
   if (targetBlock && typeof targetBlock.append === 'function') {
     targetBlock.append(chip);
   }
@@ -74,6 +77,7 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
   const markdownTag = isVideo ? '视频' : '链接';
 
   try {
+    let inserted = false;
     lexicalEditor.update(() => {
       const chip = new ChipKlass({
         source: 'link',
@@ -82,9 +86,10 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
         appearance: 'link',
         clipboardText: `[${markdownTag}](${trimmedUrl})`,
       });
-      appendChipToRoot(lexicalEditor._editorState, chip);
-    });
-    return true;
+      appendChipToRoot(lexicalEditor, chip);
+      inserted = true;
+    }, { discrete: true });
+    return inserted;
   } catch (err) {
     console.warn('[omnimux] Lexical chip insert failed, falling back:', err);
     return false;
