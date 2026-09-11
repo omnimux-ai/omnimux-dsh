@@ -629,6 +629,58 @@
   background: #000; /* 内容色：视频黑底，不随主题翻转 */
 }
 
+/* 音频节点生成中/运行态动效铺满整张卡片（彻底消除内边距、上下黑底与双层边框） */
+.wf-material-node--audio .wf-material-node__media {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.wf-material-node--audio .wf-gsc {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.wf-material-node--audio .wf-gsc.wf-gsc__box--audio,
+.wf-material-node--audio .wf-gsc__box--audio {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding: 0;
+  height: 100%;
+  min-height: 100%;
+}
+
+.wf-material-node--audio .wf-gsc__skeleton {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wf-material-node--audio .wf-gsc__skeleton-card {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+}
+
+.wf-material-node--audio .wf-organic-shimmer {
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+}
+
+.wf-material-node--audio .wf-gsc__failed {
+  height: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: inherit;
+}
+
 .wf-material-node--audio .wf-gsc > div:has(> .wf-audio) {
   height: 100%;
 }
@@ -1111,7 +1163,7 @@
 
 .wf-gsc__box--square { aspect-ratio: 1 / 1; }
 .wf-gsc__box--video { aspect-ratio: 16 / 9; }
-.wf-gsc__box--audio { padding-top: 48px; padding-bottom: 48px; }
+.wf-gsc__box--audio { min-height: 120px; height: 100%; }
 .wf-gsc__box--auto {
   min-height: 120px;
   height: 100%;
