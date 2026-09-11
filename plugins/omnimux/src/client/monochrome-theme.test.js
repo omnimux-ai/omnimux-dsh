@@ -31,6 +31,11 @@ describe('Monochrome Theme Refinement (Blue Only)', () => {
     assert.match(HUB_CSS, /:focus-visible\s*\{[\s\S]*?var\(--dsw-alias-border-l3\)/, 'focus-visible should use neutral border')
   })
 
+  it('HUB_CSS overrides send button contrast and ensures visible arrows in both themes', () => {
+    assert.match(HUB_CSS, /\[class\*="InputBar"\][\s\S]*?button\[class\*="primary"\]/, 'must style primary send button')
+    assert.match(HUB_CSS, /body\[data-ds-dark-theme\][\s\S]*?button\[class\*="primary"\]:not\(:disabled\)[\s\S]*?var\(--dsw-alias-bg-base,\s*#000000\)/, 'active send button in dark mode must have high contrast dark arrow')
+  })
+
   it('HUB_CSS parses cleanly into real CSS rules without syntax errors', () => {
     const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>')
     const { document } = dom.window
