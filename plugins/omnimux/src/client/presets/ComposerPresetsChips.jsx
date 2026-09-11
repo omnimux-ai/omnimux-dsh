@@ -31,11 +31,7 @@ export function ComposerPresetsChips(props) {
     [store, sessionId]
   )
 
-  const presets = useSyncExternalStore(subscribe, getSnapshot, () => ({
-    format: null,
-    hook: null,
-    style: null,
-  }))
+  const presets = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   const hasAny = Boolean(presets.format || presets.hook || presets.style)
 

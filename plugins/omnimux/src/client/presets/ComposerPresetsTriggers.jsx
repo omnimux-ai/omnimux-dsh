@@ -32,11 +32,7 @@ export function ComposerPresetsTriggers(props) {
     [store, sessionId]
   )
 
-  const presets = useSyncExternalStore(subscribe, getSnapshot, () => ({
-    format: null,
-    hook: null,
-    style: null,
-  }))
+  const presets = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   const handleOpenDimension = (dimension) => {
     setActiveModal(dimension)
