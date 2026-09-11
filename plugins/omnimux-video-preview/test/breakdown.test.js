@@ -531,4 +531,19 @@ Hook → Product Intro → Usage Detail → Demo Scene
     assert.ok(shots[0].tags.includes('特写'))
     assert.ok(shots[0].tags.includes('智能手机手持'))
   })
+
+  it('guards against pure camera scale title and single-word motion description', () => {
+    const rawTable = `
+| 时间跨度 | 画面 | 运镜 |
+| :--- | :--- | :--- |
+| 0:00 - 0:02 | 全景 | 固定 |
+| 0:02 - 0:05 | 特写 | 手持微动 |
+    `
+    const shots = parseShotsFromAnalyzeMarkdown(rawTable)
+    assert.equal(shots.length, 2)
+    assert.notEqual(shots[0].title, '全景')
+    assert.ok(shots[0].tags.includes('全景'))
+    assert.notEqual(shots[0].description, '固定')
+    assert.match(shots[0].description, /细节与核心动作/)
+  })
 })

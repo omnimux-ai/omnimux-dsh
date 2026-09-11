@@ -102,12 +102,23 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
         // New 5-column format: | 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
         const isStageKeyword = cols[2] && /^(hook|product intro|usage detail|demo scene|inciting incident|rising conflict|climax|plot twist|cliffhanger|cta)$/i.test(cols[2].trim())
         if (cols.length >= 4 && (hasStageHeader || isStageKeyword)) {
-          const titleCol = cols[1] || `分镜 ${shots.length + 1}`
+          let titleCol = cols[1] || `分镜 ${shots.length + 1}`
           const stageCol = cols[2].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim() || 'Product Intro'
           const tagsCol = cols[3] || ''
-          const descCol = cols[4] || cols[3] || ''
+          let descCol = cols[4] || cols[3] || ''
 
           let parsedTags = tagsCol.split(/[,，|、]/).map((t) => t.trim()).filter(Boolean)
+          if (/^(全景|远景|大远景|大特写|特写|中景|中全景|中近景|近景)$/i.test(titleCol.trim())) {
+            if (!parsedTags.includes(titleCol.trim())) parsedTags.unshift(titleCol.trim())
+            titleCol = descCol && !/^(固定|正面固定|俯角固定|手持微动)$/i.test(descCol.trim())
+              ? descCol.slice(0, 20)
+              : `${stageCol} 核心呈现`
+          }
+
+          if (/^(固定|正面固定|俯角固定|手持微动)$/i.test(descCol.trim()) || !descCol) {
+            descCol = `${titleCol}，镜头结合${parsedTags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
+          }
+
           if (parsedTags.length === 0) {
             parsedTags = ['特写', '智能手机手持', '俯视', '手持微动']
           }
@@ -127,8 +138,8 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
 
         // Legacy format fallback
         const descCols = cols.filter((c) => c !== timeCol && !/^\d+$/.test(c))
-        const visualCol = descCols[0] || ''
-        const actionCol = descCols[1] || ''
+        let visualCol = descCols[0] || ''
+        let actionCol = descCols[1] || ''
 
         // Infer camera tags from visual description
         const tags = []
@@ -149,6 +160,24 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
         if (startSec === 0 || endSec <= 3) stage = 'Hook'
         else if (endSec > 12) stage = 'Demo Scene'
         else if (startSec >= 7) stage = 'Usage Detail'
+
+        // Guard against pure scale words as title (e.g. "全景", "远景")
+        const isShotTypeWord = /^(全景|远景|大远景|大特写|特写|中景|中全景|中近景|近景)$/i.test(visualCol.trim())
+        const isMotionWord = /^(固定|正面固定|俯角固定|手持微动|手持平移|慢速推拉|快速摇镜)$/i.test(actionCol.trim())
+
+        if (isShotTypeWord) {
+          if (!tags.includes(visualCol.trim())) tags.unshift(visualCol.trim())
+          if (actionCol && !isMotionWord) {
+            visualCol = actionCol.slice(0, 20)
+          } else {
+            visualCol = `${stage} 核心呈现`
+          }
+        }
+
+        if (isMotionWord || !actionCol || actionCol === '固定') {
+          if (actionCol && !tags.includes(actionCol.trim())) tags.push(actionCol.trim())
+          actionCol = `${visualCol}，镜头结合${tags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
+        }
 
         shots.push({
           id: `shot_${shots.length + 1}`,
@@ -241,7 +270,7 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     pipeline = pipelineMatch[1]
       .split(/[→\->\>]/)
       .map((s) => s.replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim())
-      .filter(Boolean)
+      .filter((s) => Boolean(s) && !/^(第一阶段|第二阶段|第三阶段|第四阶段|阶段一|步骤一|第一步|第二步|叙事结构|第一部分)/.test(s))
   }
 
   // 2. Extract Stage Descriptions (Section 2)
@@ -281,6 +310,14 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
       if (pipeline.length === 0) {
         pipeline = structure.map((s) => s.stage)
       }
+    }
+  }
+
+  // Ensure pipeline is valid and not containing meta-sentences
+  if (structure.length > 0) {
+    const validStages = Array.from(new Set(structure.map((s) => s.stage).filter(Boolean)))
+    if (pipeline.length === 0 || (pipeline.length === 1 && /阶段|步骤|拆解|结构/i.test(pipeline[0]))) {
+      pipeline = validStages
     }
   }
 

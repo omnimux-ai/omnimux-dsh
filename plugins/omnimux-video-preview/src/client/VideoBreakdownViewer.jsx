@@ -31,7 +31,6 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
-  const [activeShotId, setActiveShotId] = useState(null)
   const videoRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -484,8 +483,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
               /* Shots List View */
               <div className="omnimux-video-breakdown-shots-list">
                 {shots.map((shot, idx) => {
-                  const isPlayingThisShot = (currentTime >= (shot.start_seconds || 0) && currentTime < (shot.end_seconds || 999999))
-                  const isCurrent = isPlayingThisShot || (activeShotId === (shot.id || idx))
+                  const isPlayingThisShot = idx === currentPlayingShotIndex
+                  const isCurrent = isPlayingThisShot
                   return (
                     <div
                       id={`omnimux-shot-card-${idx}`}
@@ -496,7 +495,6 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                           setPlayerMode('native')
                         }
                         handleSeek(shot.start_seconds || 0)
-                        setActiveShotId(shot.id || idx)
                       }}
                       title="点击跳转并从该分镜开始播放"
                     >
