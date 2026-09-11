@@ -137,7 +137,8 @@ export const GUIDE_CSS = `
 }
 
 /* ==================== 营销洞察模态框 (Marketing Insight Modal) ==================== */
-.omnimux-insight-overlay {
+/* ==================== 通用左右分栏弹窗 (Split Modal Dialog) ==================== */
+.omnimux-split-modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 99999;
@@ -150,27 +151,10 @@ export const GUIDE_CSS = `
   box-sizing: border-box;
   animation: omnimuxFadeIn 160ms ease;
 }
-.omnimux-insight-modal {
-  position: relative;
-  width: 1040px;
-  max-width: 95vw;
-  height: 660px;
-  max-height: 90vh;
-  background: var(--dsw-alias-bg-elevated);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 24px 64px var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-family: inherit;
-  animation: omnimuxScaleUp 180ms ease;
-}
-.omnimux-insight-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+.omnimux-split-modal-close {
+  position: fixed;
+  top: 20px;
+  right: 24px;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -181,47 +165,136 @@ export const GUIDE_CSS = `
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
-  z-index: 10;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
+  z-index: 100002;
+  pointer-events: auto;
 }
-.omnimux-insight-close:hover {
+.omnimux-split-modal-close:hover {
   background: var(--dsw-alias-bg-layer-3);
   color: var(--dsw-alias-label-primary);
+  transform: scale(1.05);
 }
-.omnimux-insight-header {
-  padding: 24px 32px 16px;
-  text-align: center;
-  flex: none;
+.omnimux-split-modal-close svg {
+  pointer-events: none;
 }
-.omnimux-insight-header h1 {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--dsw-alias-label-primary);
-  margin: 0 0 6px;
-}
-.omnimux-insight-header p {
-  font-size: 13px;
-  color: var(--dsw-alias-label-secondary);
-  margin: 0 auto;
-  max-width: 600px;
-  line-height: 1.5;
-}
-.omnimux-insight-body {
+.omnimux-split-modal-container {
+  position: relative;
+  width: 1040px;
+  max-width: 95vw;
+  height: 640px;
+  max-height: 90vh;
+  background: var(--dsw-alias-bg-elevated);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
   display: flex;
-  flex: 1;
-  min-height: 0;
-  border-top: 1px solid var(--dsw-alias-border-l1);
+  flex-direction: row;
+  overflow: hidden;
+  box-shadow: 0 24px 64px var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  animation: omnimuxScaleUp 180ms ease;
 }
-.omnimux-insight-left {
+.omnimux-split-modal-left {
   width: 440px;
   flex: none;
   border-right: 1px solid var(--dsw-alias-border-l1);
-  padding: 20px 24px;
+  padding: 28px 24px 20px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   box-sizing: border-box;
+  background: var(--dsw-alias-bg-layer-1);
 }
+.omnimux-split-modal-left-header {
+  margin-bottom: 20px;
+  flex: none;
+}
+.omnimux-split-modal-left-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+  margin: 0 0 6px;
+}
+.omnimux-split-modal-left-header p {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+.omnimux-split-modal-left-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.omnimux-split-modal-right {
+  flex: 1;
+  padding: 28px 28px 20px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-elevated);
+}
+.omnimux-split-modal-right-header {
+  margin-bottom: 14px;
+  flex: none;
+}
+.omnimux-split-modal-right-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  margin: 0;
+}
+.omnimux-split-modal-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-right: 4px;
+}
+.omnimux-split-modal-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  margin-top: auto;
+}
+.omnimux-split-modal-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-inverted);
+  font-size: 14px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms ease;
+  box-shadow: 0 2px 8px var(--dsw-alias-state-business-tertiary);
+}
+.omnimux-split-modal-submit:hover {
+  background: var(--dsw-alias-button-primary-hover);
+  transform: translateY(-1px);
+}
+.omnimux-split-modal-submit:active {
+  transform: translateY(0);
+}
+
+/* 兼容类名 */
+.omnimux-insight-overlay { position: fixed; inset: 0; z-index: 99999; }
+.omnimux-insight-modal { position: relative; }
+.omnimux-insight-close { display: none; }
+.omnimux-insight-submit { display: inline-flex; }
 .omnimux-insight-left-top {
   display: flex;
   align-items: center;
