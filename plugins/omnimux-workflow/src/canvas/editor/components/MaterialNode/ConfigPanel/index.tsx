@@ -28,7 +28,6 @@ import {
   AudioLines,
   ShieldCheck,
   Percent,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { ModelRoutingModal, type ModelRoutingValue } from './ModelRoutingModal';
 import { ModelCascadeMenu } from './ModelCascadeMenu';
@@ -798,6 +797,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
             >
               {t(reasonCode === 'catalog_unavailable' ? 'panel.reason.catalog_unavailable' : isAsrTool ? 'panel.noTranscriptionModel' : 'panel.noCompatibleModel')}
             </div>
+          ) : isAsrTool ? (
+            <CustomSelect
+              className="wf-param-bar__select wf-param-bar__select--model"
+              value={modelValue}
+              options={modelOptions}
+              popupMatchSelectWidth={false}
+              onChange={(value) => handleModelChange(String(value))}
+            />
           ) : (
             <ModelCascadeMenu
               modelValue={modelValue}
