@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  node-pty: true
 minimumReleaseAge: 0
 minimumReleaseAgeExclude:
   - aigc-provider-runtime-kit@0.2.0

@@ -284,4 +284,28 @@ describe('resolveMediaAuth (dual-track auth)', () => {
       },
     )
   })
+
+  it('resolves channel candidates by cost_first and stability_first strategy', () => {
+    const media = parseMediaConfig(undefined)
+    const costRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'cost_first' }, media)
+    assert.equal(costRoute.strategy, 'cost_first')
+    assert.ok(costRoute.candidates[0].includes('@seedance-cheap'))
+
+    const stabRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'stability_first' }, media)
+    assert.equal(stabRoute.strategy, 'stability_first')
+    assert.ok(stabRoute.candidates[0].includes('@seedance-pro'))
+  })
+
+  it('resolves explicit group from model@group or request.group', () => {
+    const media = parseMediaConfig(undefined)
+    const inlineRoute = resolveMediaRoute('video', { model: 'seedance-2-0@standard' }, media)
+    assert.equal(inlineRoute.modelId, 'seedance-2-0')
+    assert.equal(inlineRoute.group, 'standard')
+    assert.equal(inlineRoute.candidates[0], 'seedance-2-0@standard')
+
+    const fieldRoute = resolveMediaRoute('video', { model: 'seedance-2-0', group: 'pro' }, media)
+    assert.equal(fieldRoute.group, 'pro')
+    assert.equal(fieldRoute.candidates[0], 'seedance-2-0@seedance-pro')
+  })
 })
+

@@ -166,7 +166,9 @@ export async function executeOmnimuxMedia(capability, input) {
     : mappedInput
 
   let result
-  const candidates = route.candidates.slice(0, 2)
+  const isChannelRouting = Boolean(route.group || route.candidates?.some((c) => c.includes('@')))
+  const candidates = (route.candidates && route.candidates.length > 0 ? route.candidates : [route.modelId])
+    .slice(0, isChannelRouting ? 4 : 2)
   for (const [attempt, candidate] of candidates.entries()) {
     let submitted = false
     const runtime = input.runtime ?? createProtocolRuntime(
@@ -189,6 +191,12 @@ export async function executeOmnimuxMedia(capability, input) {
         throw new OmnimuxError('quota-exceeded', classified.message)
       }
       const channelUnavailable = unwrapped?.code === 'CHANNEL_UNAVAILABLE'
+        || (typeof unwrapped?.message === 'string' && (
+          unwrapped.message.includes('无可用渠道')
+          || unwrapped.message.includes('无权访问该分组')
+          || unwrapped.message.includes('channel_unavailable')
+          || unwrapped.message.includes('model_not_found')
+        ))
       if (channelUnavailable && classified.kind === 'needs-omnimux') {
         throw new OmnimuxError(classified.code, classified.message)
       }

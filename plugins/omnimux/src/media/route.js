@@ -1,7 +1,14 @@
 import { OmnimuxError } from './errors.js'
-import { gatewayCandidates, PRODUCT_ID_ALIASES, toProductId } from '../catalog/serving/id-universe.js'
+import {
+  gatewayCandidates,
+  PRODUCT_ID_ALIASES,
+  toProductId,
+  parseModelAndGroup,
+  resolveChannelCandidates,
+  ROUTING_STRATEGIES,
+} from '../catalog/serving/id-universe.js'
 
-export { gatewayCandidates, toProductId }
+export { gatewayCandidates, toProductId, parseModelAndGroup, resolveChannelCandidates, ROUTING_STRATEGIES }
 export const PROTOCOLS = Object.freeze(['openai-media'])
 export const AUTH_MODES = Object.freeze(['auto', 'token', 'custom'])
 
@@ -129,10 +136,22 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   const catalogModelId = (typeof request.model === 'string' && request.model.trim()
     ? request.model.trim()
     : (envModel || row.models[capability] || ''))
-  const modelId = toProductId(catalogModelId)
+  const { modelId, group: inlineGroup } = parseModelAndGroup(catalogModelId)
   if (!modelId) {
     throw new OmnimuxError('unknown-model', `no model configured for ${providerId}/${capability}`)
   }
+  const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
+  const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
+  const explicitGroup = Boolean(group)
+  const allowedGroups = Array.isArray(request.allowedGroups) ? request.allowedGroups : undefined
+  const strategy = explicitStrategy ? request.strategy : (explicitGroup || allowedGroups ? 'auto' : undefined)
+
+  const candidates = providerId === 'omnimux'
+    ? (strategy || explicitGroup || allowedGroups
+      ? resolveChannelCandidates(modelId, { strategy: strategy || 'auto', group, allowedGroups })
+      : gatewayCandidates(modelId))
+    : [modelId]
+
   const apiKey = readProviderKey(providerId, row.apiKeyEnv, row.apiKey, env)
   return {
     providerId,
@@ -142,7 +161,9 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
     apiKeyEnv: row.apiKeyEnv,
     authMode: media.authMode || 'auto',
     modelId,
-    candidates: providerId === 'omnimux' ? gatewayCandidates(modelId) : [modelId],
+    group,
+    strategy: strategy || 'auto',
+    candidates,
     capability,
   }
 }

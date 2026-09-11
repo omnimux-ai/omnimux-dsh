@@ -24,7 +24,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
     execute(req) {
       assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
       if (req.model) {
-        assertCapabilityEnabled(gate, req.model, 'model')
+        const baseModel = String(req.model).split('@')[0].trim()
+        assertCapabilityEnabled(gate, baseModel || req.model, 'model')
       }
       return executeOmnimuxText({
         ...req,
@@ -88,6 +89,20 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
       reason: { type: 'string', required: true, description: 'Which missing capability, or which user / contract line authorizes this call.' },
       system: { type: 'string', description: 'Optional system text for this one request only.' },
       max_tokens: { type: 'number', description: 'Optional output cap. Defaults to Config.text.maxTokens.' },
+      strategy: {
+        type: 'string',
+        enum: ['auto', 'stability_first', 'cost_first'],
+        description: 'Routing strategy: auto (balanced default), stability_first (highest 24h stability SLA), cost_first (lowest points cost).',
+      },
+      group: {
+        type: 'string',
+        description: 'Explicit channel group name (e.g. pro, standard, official, deepseek-official).',
+      },
+      allowed_groups: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional list of allowed channel groups to filter the candidate pool.',
+      },
     }),
     output: jsonOut,
     async execute(args, exec) {
@@ -98,7 +113,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
       try {
         assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
         if (args.model) {
-          assertCapabilityEnabled(gate, args.model, 'model')
+          const baseModel = String(args.model).split('@')[0].trim()
+          assertCapabilityEnabled(gate, baseModel || args.model, 'model')
         }
         return await executeOmnimuxText({
           prompt: args.prompt,
@@ -109,6 +125,9 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           video: args.video,
           system: args.system,
           maxTokens: args.max_tokens,
+          strategy: args.strategy,
+          group: args.group,
+          allowedGroups: args.allowed_groups,
           signal: exec?.signal,
           sessionId: exec?.agent?.session?.id,
           text: hub.text,
