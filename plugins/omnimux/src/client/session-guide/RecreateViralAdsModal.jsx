@@ -337,11 +337,6 @@ export function RecreateViralAdsModal({ isOpen, onClose, t, onSubmitDraft }) {
           </svg>
         </button>
       </div>
-
-      <div className="omnimux-recreate-card-caption">
-        <p className="omnimux-recreate-card-title">{currentExample.title}</p>
-        <p className="omnimux-recreate-card-desc">{currentExample.desc}</p>
-      </div>
     </div>
   )
 
