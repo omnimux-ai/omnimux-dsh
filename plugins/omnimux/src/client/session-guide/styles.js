@@ -528,6 +528,104 @@ export const GUIDE_CSS = `
   color: var(--dsw-alias-label-primary);
   margin: 0 0 12px;
 }
+.omnimux-insight-form-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-sizing: border-box;
+}
+.omnimux-insight-header-banner {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.omnimux-insight-scenario-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-insight-scenario-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.5;
+}
+.omnimux-insight-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  margin-bottom: 14px;
+  animation: omnimuxFadeIn 120ms ease;
+}
+.omnimux-insight-fields-flow {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 4px;
+  padding-bottom: 16px;
+}
+.omnimux-insight-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omnimux-insight-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-insight-required-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dsw-alias-state-error-primary);
+}
+.omnimux-insight-optional-tag {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-insight-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  outline: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.omnimux-insight-input:focus {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-insight-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-insight-text-field {
+  height: 38px;
+}
+.omnimux-insight-textarea-field {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.5;
+}
 .omnimux-insight-textarea-box {
   flex: 1;
   display: flex;
