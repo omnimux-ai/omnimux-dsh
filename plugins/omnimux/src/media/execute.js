@@ -10,7 +10,9 @@ import {
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
 import { generateSpeech } from './speech.js'
+import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 export { probeMediaAssets } from './asset-probe.js'
+export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
 
 const CAPABILITY_SEAM = Object.freeze({
   video: 'videoGenerate',
@@ -153,6 +155,16 @@ export async function executeOmnimuxMedia(capability, input) {
     })
   }
 
+  const shouldHost = (input.uploadLocalAssets ?? !input.runtime) && isRemoteGateway(route.baseUrl) && Boolean(auth.apiKey)
+  const finalInput = shouldHost
+    ? await hostLocalAssetsIfNeeded(mappedInput, {
+      baseUrl: route.baseUrl,
+      apiKey: auth.apiKey,
+      fetcher: input.fetcher,
+      signal: input.signal,
+    })
+    : mappedInput
+
   let result
   const candidates = route.candidates.slice(0, 2)
   for (const [attempt, candidate] of candidates.entries()) {
@@ -164,7 +176,7 @@ export async function executeOmnimuxMedia(capability, input) {
       result = await runtime.execute({
         providerId: route.providerId,
         modelId: `${route.providerId}-${capability}`,
-        input: { ...mappedInput, model: candidate },
+        input: { ...finalInput, model: candidate },
         timeoutMs: 10 * 60_000,
         metadata: { wait },
         ...(input.signal ? { signal: input.signal } : {}),
