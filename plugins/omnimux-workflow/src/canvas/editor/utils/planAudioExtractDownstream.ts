@@ -1,11 +1,15 @@
 /**
  * 视频节点「提取音频」下游音频素材节点规划纯函数。
  *
- * 契约规范（对齐 planSpeechToTextDownstream / planVideoDeconstructDownstream）：
- * - 画布中已存在与本视频节点关联的 `origin === 'audio_extract'` 音频节点
- *   → 仅就地补丁音频路径与元数据（多次提取不产生冗余重复节点），缺连线时补线；
- * - 否则在视频节点右侧派生新的 material 音频节点并创建 video.out -> audio.in 连线；
- * - 自动进行 Y 轴智能避让：若右侧已有拆解表或分镜表，顺延落位在下方空闲槽位。
+ * 契约规范（先建新节点，隔离执行收敛）：
+ * 1. 阶段一：乐观预建（planAudioExtractProvisioning）
+ *    - 点击「提取音频」后，立即在视频右侧安全槽位规划并创建/激活下游音频节点（Running 态），
+ *      建立从源视频到音频节点的连线；源视频节点零侵入（不设 running、不设 error）；
+ * 2. 阶段二：结果结算（planAudioExtractSettlement）
+ *    - 提取成功：就地将下游音频节点补丁为 completed 态，回填音频路径、时长与播放器；
+ *    - 提取失败/无音轨：就地将下游音频节点置为 error 态，展示报错卡片与重试按钮；源视频不受影响；
+ * 3. 向后兼容（planAudioExtractDownstream）
+ *    - 组合预建与结算两步，满足传统一次性全量规划场景。
  */
 
 export const AUDIO_EXTRACT_ORIGIN = 'audio_extract';
@@ -38,18 +42,6 @@ export interface AudioExtractOutputData {
   title?: string;
 }
 
-export interface PlanAudioExtractDownstreamInput {
-  videoNodeId: string;
-  videoPosition: { x: number; y: number };
-  videoNodeWidth: number;
-  extractResult: AudioExtractOutputData;
-  /** 新节点标题（调用方传 i18n 文案），缺省「视频原声」。 */
-  label?: string;
-  currentNodes: AudioExtractGraphNode[];
-  currentEdges: AudioExtractGraphEdge[];
-  createNodeId?: () => string;
-}
-
 export interface AudioExtractNodePatch {
   nodeId: string;
   data: Record<string, unknown>;
@@ -61,6 +53,49 @@ export interface AudioExtractCreatedNode {
   position: { x: number; y: number };
   selected: boolean;
   data: Record<string, unknown>;
+}
+
+export interface AudioExtractProvisionPlan {
+  mode: 'create' | 'update' | 'noop';
+  targetNodeId: string;
+  addNodes: AudioExtractCreatedNode[];
+  addEdges: AudioExtractGraphEdge[];
+  nodePatches: AudioExtractNodePatch[];
+}
+
+export interface PlanAudioExtractProvisioningInput {
+  videoNodeId: string;
+  videoPosition: { x: number; y: number };
+  videoNodeWidth: number;
+  label?: string;
+  currentNodes: AudioExtractGraphNode[];
+  currentEdges: AudioExtractGraphEdge[];
+  createNodeId?: () => string;
+}
+
+export interface PlanAudioExtractSettlementInput {
+  targetNodeId: string;
+  label?: string;
+  extractResult?: AudioExtractOutputData;
+  error?: string;
+  noAudioStream?: boolean;
+}
+
+export interface AudioExtractSettlementPlan {
+  targetNodeId: string;
+  nodePatches: AudioExtractNodePatch[];
+}
+
+export interface PlanAudioExtractDownstreamInput {
+  videoNodeId: string;
+  videoPosition: { x: number; y: number };
+  videoNodeWidth: number;
+  extractResult: AudioExtractOutputData;
+  /** 新节点标题（调用方传 i18n 文案），缺省「视频原声」。 */
+  label?: string;
+  currentNodes: AudioExtractGraphNode[];
+  currentEdges: AudioExtractGraphEdge[];
+  createNodeId?: () => string;
 }
 
 export interface AudioExtractDownstreamPlan {
@@ -110,30 +145,39 @@ function hasDrawableEdge(
   );
 }
 
-export function planAudioExtractDownstream(
-  input: PlanAudioExtractDownstreamInput,
-): AudioExtractDownstreamPlan | null {
-  const extractResult = input.extractResult;
-  if (!input.videoNodeId || !extractResult || !extractResult.audioPath) {
-    return null;
-  }
-
-  // 1. 查找已有专属提取音频节点
+/**
+ * 阶段一：乐观预建占位规划（点击提取音频立即调用）
+ * 在源视频右侧创建或激活下游音频节点（Running 态），源视频本身不做任何状态修改。
+ */
+export function planAudioExtractProvisioning(
+  input: PlanAudioExtractProvisioningInput,
+): AudioExtractProvisionPlan {
   const connectedAudioNodeIds = new Set(
     input.currentEdges
       .filter((edge) => edge.source === input.videoNodeId)
       .map((edge) => edge.target),
   );
+
   const existingNode = input.currentNodes.find((node) => {
     if (node.data?.materialType !== 'audio') return false;
     if (isAudioExtractDownstreamNode(node, input.videoNodeId)) return true;
     return !node.data?.origin && connectedAudioNodeIds.has(node.id);
   });
 
-  const nodeLabel = extractResult.title || input.label || '视频原声';
+  const nodeLabel = input.label || '视频原声';
 
-  // 2. 就地更新模式 (update mode)
   if (existingNode) {
+    // 若已有下游音频节点正处于 running 态，返回 noop 防抖
+    if (existingNode.data?.executionStatus === 'running') {
+      return {
+        mode: 'noop',
+        targetNodeId: existingNode.id,
+        addNodes: [],
+        addEdges: [],
+        nodePatches: [],
+      };
+    }
+
     return {
       mode: 'update',
       targetNodeId: existingNode.id,
@@ -150,21 +194,18 @@ export function planAudioExtractDownstream(
             nodeKind: 'import',
             tool: 'import',
             selectedTool: 'import',
-            status: 'ready',
+            status: 'generating',
+            executionStatus: 'running',
+            executionError: undefined,
+            audioExtractActive: true,
             origin: AUDIO_EXTRACT_ORIGIN,
             sourceVideoNodeId: input.videoNodeId,
-            realPath: extractResult.audioPath,
-            mediaUrl: extractResult.mediaUrl,
-            previewUrl: extractResult.previewUrl,
-            duration: extractResult.duration,
-            format: extractResult.format,
           },
         },
       ],
     };
   }
 
-  // 3. 新建节点模式 (create mode)
   const newNodeId =
     input.createNodeId?.() ??
     `node_audio_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -173,8 +214,6 @@ export function planAudioExtractDownstream(
       ? input.videoNodeWidth
       : 350;
 
-  // 智能 Y 轴避让算法：
-  // 检查视频节点关联的其他下游节点（拆解表、分镜表等）的位置
   const targetX = input.videoPosition.x + width + AUDIO_EXTRACT_DOWNSTREAM_GAP;
   const isOccupiedAtY = input.currentNodes.some((node) => {
     if (!node.position) return false;
@@ -185,7 +224,6 @@ export function planAudioExtractDownstream(
     return Math.abs(node.position.y - input.videoPosition.y) < 60;
   });
 
-  // 如果水平位置已有下游节点（通常是拆解表在 y 轴与视频对齐），音频节点落位在下方 +360px
   const targetY = isOccupiedAtY
     ? input.videoPosition.y + 360
     : input.videoPosition.y;
@@ -204,14 +242,12 @@ export function planAudioExtractDownstream(
       nodeKind: 'import',
       tool: 'import',
       selectedTool: 'import',
-      status: 'ready',
+      status: 'generating',
+      executionStatus: 'running',
+      executionError: undefined,
+      audioExtractActive: true,
       origin: AUDIO_EXTRACT_ORIGIN,
       sourceVideoNodeId: input.videoNodeId,
-      realPath: extractResult.audioPath,
-      mediaUrl: extractResult.mediaUrl,
-      previewUrl: extractResult.previewUrl,
-      duration: extractResult.duration,
-      format: extractResult.format,
     },
   };
 
@@ -221,5 +257,129 @@ export function planAudioExtractDownstream(
     addNodes: [newNode],
     addEdges: [edgeBetween(input.videoNodeId, newNodeId)],
     nodePatches: [],
+  };
+}
+
+/**
+ * 阶段二：结果结算规划（后端返回成功、无音轨或失败时调用）
+ * 仅 patch 下游音频节点自身，源视频不受影响。
+ */
+export function planAudioExtractSettlement(
+  input: PlanAudioExtractSettlementInput,
+): AudioExtractSettlementPlan {
+  if (input.noAudioStream) {
+    return {
+      targetNodeId: input.targetNodeId,
+      nodePatches: [
+        {
+          nodeId: input.targetNodeId,
+          data: {
+            executionStatus: 'error',
+            executionError: input.error || '视频未检测到有效音频轨',
+            audioExtractActive: true,
+            status: 'failed',
+          },
+        },
+      ],
+    };
+  }
+
+  if (input.error || !input.extractResult?.audioPath) {
+    return {
+      targetNodeId: input.targetNodeId,
+      nodePatches: [
+        {
+          nodeId: input.targetNodeId,
+          data: {
+            executionStatus: 'error',
+            executionError: input.error || '音频提取失败',
+            audioExtractActive: true,
+            status: 'failed',
+          },
+        },
+      ],
+    };
+  }
+
+  const res = input.extractResult;
+  return {
+    targetNodeId: input.targetNodeId,
+    nodePatches: [
+      {
+        nodeId: input.targetNodeId,
+        data: {
+          label: res.title || input.label || '视频原声',
+          materialType: 'audio',
+          nodeKind: 'import',
+          tool: 'import',
+          selectedTool: 'import',
+          status: 'ready',
+          executionStatus: 'completed',
+          executionError: undefined,
+          audioExtractActive: undefined,
+          realPath: res.audioPath,
+          mediaUrl: res.mediaUrl,
+          previewUrl: res.previewUrl,
+          duration: res.duration,
+          format: res.format,
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * 一次性全量规划（兼容旧有调用模式）
+ */
+export function planAudioExtractDownstream(
+  input: PlanAudioExtractDownstreamInput,
+): AudioExtractDownstreamPlan | null {
+  const extractResult = input.extractResult;
+  if (!input.videoNodeId || !extractResult || !extractResult.audioPath) {
+    return null;
+  }
+
+  const provision = planAudioExtractProvisioning({
+    videoNodeId: input.videoNodeId,
+    videoPosition: input.videoPosition,
+    videoNodeWidth: input.videoNodeWidth,
+    label: extractResult.title || input.label,
+    currentNodes: input.currentNodes,
+    currentEdges: input.currentEdges,
+    createNodeId: input.createNodeId,
+  });
+
+  const settlement = planAudioExtractSettlement({
+    targetNodeId: provision.targetNodeId,
+    label: extractResult.title || input.label,
+    extractResult,
+  });
+
+  if (provision.mode === 'create') {
+    const createdNode = provision.addNodes[0];
+    const settlementData = settlement.nodePatches[0]?.data || {};
+    return {
+      mode: 'create',
+      targetNodeId: provision.targetNodeId,
+      addNodes: [
+        {
+          ...createdNode,
+          data: {
+            ...createdNode.data,
+            ...settlementData,
+          },
+        },
+      ],
+      addEdges: provision.addEdges,
+      nodePatches: [],
+    };
+  }
+
+  return {
+    mode: 'update',
+    targetNodeId: provision.targetNodeId,
+    addNodes: [],
+    addEdges: provision.addEdges,
+    nodePatches: settlement.nodePatches,
   };
 }

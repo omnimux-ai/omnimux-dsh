@@ -2,10 +2,159 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   planAudioExtractDownstream,
+  planAudioExtractProvisioning,
+  planAudioExtractSettlement,
   AUDIO_EXTRACT_ORIGIN,
   AUDIO_EXTRACT_SOURCE_HANDLE,
   AUDIO_EXTRACT_TARGET_HANDLE,
 } from './planAudioExtractDownstream.ts';
+
+test('planAudioExtractProvisioning: 点击提取时立即创建 Running 态占位音频节点与连线', () => {
+  const plan = planAudioExtractProvisioning({
+    videoNodeId: 'video_1',
+    videoPosition: { x: 100, y: 200 },
+    videoNodeWidth: 360,
+    label: '原视频 原声',
+    currentNodes: [
+      { id: 'video_1', type: 'material', data: { materialType: 'video', status: 'ready' }, position: { x: 100, y: 200 } },
+    ],
+    currentEdges: [],
+    createNodeId: () => 'audio_provision_1',
+  });
+
+  assert.equal(plan.mode, 'create');
+  assert.equal(plan.targetNodeId, 'audio_provision_1');
+  assert.equal(plan.addNodes.length, 1);
+  assert.equal(plan.addEdges.length, 1);
+
+  const newNode = plan.addNodes[0];
+  assert.equal(newNode.id, 'audio_provision_1');
+  assert.equal(newNode.data.materialType, 'audio');
+  assert.equal(newNode.data.executionStatus, 'running');
+  assert.equal(newNode.data.status, 'generating');
+  assert.equal(newNode.data.audioExtractActive, true);
+  assert.equal(newNode.data.origin, AUDIO_EXTRACT_ORIGIN);
+  assert.equal(newNode.data.sourceVideoNodeId, 'video_1');
+
+  const edge = plan.addEdges[0];
+  assert.equal(edge.source, 'video_1');
+  assert.equal(edge.target, 'audio_provision_1');
+});
+
+test('planAudioExtractProvisioning: 已有下游音频节点时就地置为 running 态', () => {
+  const existingAudioNode = {
+    id: 'audio_exist',
+    type: 'material',
+    position: { x: 580, y: 200 },
+    data: {
+      materialType: 'audio',
+      origin: AUDIO_EXTRACT_ORIGIN,
+      sourceVideoNodeId: 'video_1',
+      executionStatus: 'error',
+    },
+  };
+
+  const plan = planAudioExtractProvisioning({
+    videoNodeId: 'video_1',
+    videoPosition: { x: 100, y: 200 },
+    videoNodeWidth: 360,
+    currentNodes: [
+      { id: 'video_1', type: 'material', data: { materialType: 'video' }, position: { x: 100, y: 200 } },
+      existingAudioNode,
+    ],
+    currentEdges: [{ source: 'video_1', target: 'audio_exist' }],
+  });
+
+  assert.equal(plan.mode, 'update');
+  assert.equal(plan.targetNodeId, 'audio_exist');
+  assert.equal(plan.nodePatches.length, 1);
+  assert.equal(plan.nodePatches[0].nodeId, 'audio_exist');
+  assert.equal(plan.nodePatches[0].data.executionStatus, 'running');
+  assert.equal(plan.nodePatches[0].data.status, 'generating');
+  assert.equal(plan.nodePatches[0].data.executionError, undefined);
+});
+
+test('planAudioExtractProvisioning: 下游音频节点已处于 running 态时返回 noop 防抖', () => {
+  const runningAudioNode = {
+    id: 'audio_running',
+    type: 'material',
+    position: { x: 580, y: 200 },
+    data: {
+      materialType: 'audio',
+      origin: AUDIO_EXTRACT_ORIGIN,
+      sourceVideoNodeId: 'video_1',
+      executionStatus: 'running',
+    },
+  };
+
+  const plan = planAudioExtractProvisioning({
+    videoNodeId: 'video_1',
+    videoPosition: { x: 100, y: 200 },
+    videoNodeWidth: 360,
+    currentNodes: [
+      { id: 'video_1', type: 'material', data: { materialType: 'video' }, position: { x: 100, y: 200 } },
+      runningAudioNode,
+    ],
+    currentEdges: [{ source: 'video_1', target: 'audio_running' }],
+  });
+
+  assert.equal(plan.mode, 'noop');
+  assert.equal(plan.targetNodeId, 'audio_running');
+  assert.equal(plan.addNodes.length, 0);
+  assert.equal(plan.nodePatches.length, 0);
+});
+
+test('planAudioExtractSettlement: 成功时回填音频产物数据并完成态收敛', () => {
+  const settlement = planAudioExtractSettlement({
+    targetNodeId: 'audio_node_1',
+    extractResult: {
+      audioPath: '/abs/path/audio.mp3',
+      mediaUrl: '/media/audio.mp3',
+      previewUrl: '/preview/audio.mp3',
+      duration: 12.5,
+      format: 'mp3',
+      title: '精彩原声',
+    },
+  });
+
+  assert.equal(settlement.targetNodeId, 'audio_node_1');
+  assert.equal(settlement.nodePatches.length, 1);
+  const patch = settlement.nodePatches[0].data;
+  assert.equal(patch.executionStatus, 'completed');
+  assert.equal(patch.status, 'ready');
+  assert.equal(patch.realPath, '/abs/path/audio.mp3');
+  assert.equal(patch.mediaUrl, '/media/audio.mp3');
+  assert.equal(patch.duration, 12.5);
+  assert.equal(patch.format, 'mp3');
+  assert.equal(patch.label, '精彩原声');
+});
+
+test('planAudioExtractSettlement: 失败时回填错误态，源节点不受影响', () => {
+  const settlement = planAudioExtractSettlement({
+    targetNodeId: 'audio_node_1',
+    error: '未找到指定视频文件',
+  });
+
+  assert.equal(settlement.targetNodeId, 'audio_node_1');
+  const patch = settlement.nodePatches[0].data;
+  assert.equal(patch.executionStatus, 'error');
+  assert.equal(patch.executionError, '未找到指定视频文件');
+  assert.equal(patch.status, 'failed');
+  assert.equal(patch.audioExtractActive, true);
+});
+
+test('planAudioExtractSettlement: 无音轨时明确报错提示并支持重试', () => {
+  const settlement = planAudioExtractSettlement({
+    targetNodeId: 'audio_node_1',
+    noAudioStream: true,
+    error: '视频未检测到音轨',
+  });
+
+  const patch = settlement.nodePatches[0].data;
+  assert.equal(patch.executionStatus, 'error');
+  assert.equal(patch.executionError, '视频未检测到音轨');
+  assert.equal(patch.status, 'failed');
+});
 
 test('planAudioExtractDownstream: 初次提取时创建新音频节点与连线', () => {
   const plan = planAudioExtractDownstream({
