@@ -882,7 +882,7 @@ export const GUIDE_CSS = `
   display: flex;
   flex-direction: column;
   height: 100%;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   position: relative;
   padding: 10px 0;
@@ -954,7 +954,7 @@ export const GUIDE_CSS = `
 .omnimux-recreate-compare-card {
   position: relative;
   width: 100%;
-  height: 250px;
+  height: 280px;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l2);
@@ -1048,22 +1048,6 @@ export const GUIDE_CSS = `
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px var(--dsw-alias-bg-base);
-}
-.omnimux-recreate-card-caption {
-  margin-top: 14px;
-  text-align: center;
-}
-.omnimux-recreate-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary);
-  margin: 0 0 4px;
-}
-.omnimux-recreate-card-desc {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
-  margin: 0;
-  line-height: 1.4;
 }
 
 /* 右栏表单结构 */
