@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -20,6 +20,10 @@ export function SplitModalDialog({
   containerClassName = '',
 }) {
   const visible = isOpen ?? open ?? false
+  const [isRightScrolling, setIsRightScrolling] = useState(false)
+  const [isLeftScrolling, setIsLeftScrolling] = useState(false)
+  const rightScrollTimerRef = useRef(null)
+  const leftScrollTimerRef = useRef(null)
 
   useEffect(() => {
     if (!visible) return
@@ -30,7 +34,30 @@ export function SplitModalDialog({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [visible, onClose])
 
+  useEffect(() => {
+    return () => {
+      if (rightScrollTimerRef.current) clearTimeout(rightScrollTimerRef.current)
+      if (leftScrollTimerRef.current) clearTimeout(leftScrollTimerRef.current)
+    }
+  }, [])
+
   if (!visible) return null
+
+  const handleRightScroll = () => {
+    setIsRightScrolling(true)
+    if (rightScrollTimerRef.current) clearTimeout(rightScrollTimerRef.current)
+    rightScrollTimerRef.current = setTimeout(() => {
+      setIsRightScrolling(false)
+    }, 800)
+  }
+
+  const handleLeftScroll = () => {
+    setIsLeftScrolling(true)
+    if (leftScrollTimerRef.current) clearTimeout(leftScrollTimerRef.current)
+    leftScrollTimerRef.current = setTimeout(() => {
+      setIsLeftScrolling(false)
+    }, 800)
+  }
 
   const modalNode = (
     <div
@@ -43,7 +70,7 @@ export function SplitModalDialog({
       aria-label={ariaLabel || leftTitle || 'Dialog'}
     >
       {/* 顶层右上角固定关闭按钮 */}
-      <button key="close-btn" type="button" className="omnimux-split-modal-close omnimux-insight-close" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose?.() }} aria-label="Close" /* exempt-ui01: modal close icon button */>
+      <button key="close-btn" type="button" className="omnimux-split-modal-close omnimux-insight-close" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose?.() }} aria-label="Close"> {/* // exempt-ui01: modal close icon button */}
         <svg
           width="16"
           height="16"
@@ -63,7 +90,11 @@ export function SplitModalDialog({
       {/* 左右分栏核心容器 */}
       <div className={`omnimux-split-modal-container ${containerClassName}`} onClick={(e) => e.stopPropagation()}>
         {/* 左栏 */}
-        <section className="omnimux-split-modal-left" aria-label={leftTitle || 'Left pane'}>
+        <section
+          className={`omnimux-split-modal-left ${isLeftScrolling ? 'is-scrolling' : ''}`}
+          onScroll={handleLeftScroll}
+          aria-label={leftTitle || 'Left pane'}
+        >
           {(leftTitle || leftSubtitle) && (
             <header className="omnimux-split-modal-left-header">
               {leftTitle && <h1>{leftTitle}</h1>}
@@ -82,7 +113,10 @@ export function SplitModalDialog({
               <h2>{rightTitle}</h2>
             </header>
           )}
-          <div className="omnimux-split-modal-content">
+          <div
+            className={`omnimux-split-modal-content ${isRightScrolling ? 'is-scrolling' : ''}`}
+            onScroll={handleRightScroll}
+          >
             {children}
           </div>
           {footer && (
