@@ -982,7 +982,53 @@ Hook → Product Intro → Usage Detail → Proof Effect → Cta
     const { detectPhysicalScenes } = await import('../src/scene-detect.js')
 
     // Safe handling of non-existent files
-    const emptyRes = detectPhysicalScenes('/tmp/non-existent-video.mp4')
+    const emptyRes = await detectPhysicalScenes('/tmp/non-existent-video.mp4')
     assert.deepEqual(emptyRes, [])
+  })
+
+  it('unifies scene detection via professional videoProcess capability and unbinds model prompt', async () => {
+    const { detectPhysicalScenes } = await import('../src/scene-detect.js')
+    const { writeFileSync, unlinkSync } = await import('node:fs')
+
+    const dummyVideo = join(tmpdir(), `dummy-video-${Date.now()}.mp4`)
+    writeFileSync(dummyVideo, 'dummy')
+
+    // Mock professional omnimux-video videoProcess capability
+    const mockCtx = {
+      get: (name) => {
+        if (name === 'videoProcess') {
+          return {
+            execute: async ({ capability, input }) => {
+              assert.equal(capability, 'video_scene_detect')
+              assert.equal(input.videoUrl, dummyVideo)
+              return {
+                result: {
+                  scenes: [
+                    { start: 0 },
+                    { start: 2.1 },
+                    { start: 3.4 },
+                    { start: 6.3 },
+                  ],
+                },
+              }
+            },
+          }
+        }
+        return null
+      },
+    }
+
+    const scenes = await detectPhysicalScenes(dummyVideo, { threshold: 0.35, minDuration: 1.2, ctx: mockCtx })
+    assert.ok(Array.isArray(scenes))
+    assert.equal(scenes.length, 4)
+    assert.equal(scenes[0].timeRange, '0:00 - 0:02')
+    assert.equal(scenes[1].timeRange, '0:02 - 0:03')
+    assert.equal(scenes[2].timeRange, '0:03 - 0:06')
+
+    // Verify unbinding prompt instruction
+    const pipelineMod = await import('../src/breakdown/analyzerPipeline.js')
+    assert.ok(typeof pipelineMod.executeDedicatedStructureAnalyze === 'function')
+
+    unlinkSync(dummyVideo)
   })
 })

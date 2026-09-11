@@ -88,9 +88,9 @@ function buildStructureInstruction(systemPrompt) {
  * @returns {string}
  */
 function buildPhysicalSceneConstraint(physicalScenes) {
-  if (!Array.isArray(physicalScenes) || physicalScenes.length < 2) return ''
-  const list = physicalScenes.map((s, i) => `镜头 ${i + 1}: ${s.timeRange}`).join('\n')
-  return `\n6. 【物理镜头切片硬约束（系统已通过底层机器视觉精确探测出客观镜头切点，必须严格对齐真实镜头边界）】：\n本次视频共探测出以下 ${physicalScenes.length} 个物理镜头时间段：\n${list}\n逐镜头分镜表必须严格按照上述时间跨度展开并补齐视听解析与台词，严禁随意编造碎片时间区间！`
+  if (!Array.isArray(physicalScenes) || physicalScenes.length === 0) return ''
+  const list = physicalScenes.map((s, i) => `参考分镜切点 ${i + 1}: ${s.timeRange}`).join('\n')
+  return `\n6. 【物理切镜参考基准与时间锚点】：\n底层机器视觉探测到的关键镜头切换时间点如下（供参考定位）：\n${list}\n【解绑说明与分镜指导】：\n上述切点为机器视觉物理切片参考，请作为视觉转换的关键时间锚点。请结合实际画面情节、动作起止与台词语意，输出饱满、连贯的逐镜头分镜脚本表（通常短视频有 3~6 个分镜）。允许在镜头区间内基于故事情节与动作转换合理细分对齐，严禁为了机械合并而丢失关键动作与视听细节！`
 }
 
 /**
@@ -304,26 +304,28 @@ function prepareAnalysisSampleVideo(localVideoPath) {
 }
 
 /**
- * Detect physical scenes using ffmpeg scene detection helper.
+ * Detect physical scenes using ffmpeg scene detection helper or omnimux-video process.
  * @param {string|null} localVideoPath
- * @returns {Array<object>}
+ * @param {object} [ctx]
+ * @returns {Promise<Array<object>>}
  */
-function tryDetectPhysicalScenes(localVideoPath) {
+async function tryDetectPhysicalScenes(localVideoPath, ctx) {
   if (!localVideoPath || !existsSync(localVideoPath)) return []
   try {
-    return detectPhysicalScenes(localVideoPath, { threshold: 0.35, minDuration: 3.5 }) || []
+    return (await detectPhysicalScenes(localVideoPath, { threshold: 0.35, minDuration: 1.2, ctx })) || []
   } catch {
     return []
   }
 }
 
 /**
- * Align shot time boundaries with detected physical scenes.
+ * Align shot time boundaries with detected physical scenes when count exactly matches.
+ * Preserves model's granular story beats if model extracted more detailed shots.
  * @param {Array<object>} shots
  * @param {Array<object>} physicalScenes
  */
 function alignPhysicalScenesToShots(shots, physicalScenes) {
-  if (!Array.isArray(physicalScenes) || physicalScenes.length < 3) return
+  if (!Array.isArray(physicalScenes) || physicalScenes.length < 2) return
   if (!Array.isArray(shots) || shots.length !== physicalScenes.length) return
   shots.forEach((s, idx) => {
     const ps = physicalScenes[idx]
@@ -595,7 +597,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const localVideoPath = await resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options)
   const localCoverPath = extractVideoCoverFrame(localVideoPath)
   const analysisVideoPath = prepareAnalysisSampleVideo(localVideoPath)
-  const physicalScenes = tryDetectPhysicalScenes(localVideoPath)
+  const physicalScenes = await tryDetectPhysicalScenes(localVideoPath, ctx)
 
   const { shots, structure, pipeline } = await resolveBreakdownData({
     analysisVideoPath,
