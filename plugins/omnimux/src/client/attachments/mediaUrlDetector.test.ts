@@ -47,5 +47,6 @@ test('MODAL_STYLES: ensures popover card has solid opaque background', () => {
 test('DOCK_STYLES: provides brand purple link icon mask for composer chip', () => {
   assert.ok(DOCK_STYLES.includes('[data-composer-chip="link"]'));
   assert.ok(DOCK_STYLES.includes('-webkit-mask: url('));
-  assert.ok(DOCK_STYLES.includes('margin: 0 6px !important;'));
+  assert.ok(DOCK_STYLES.includes('padding: 0 6px !important;'));
+  assert.ok(DOCK_STYLES.includes('margin: 0 2px !important;'));
 });

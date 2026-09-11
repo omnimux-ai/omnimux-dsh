@@ -49,7 +49,9 @@ export const DOCK_STYLES = `
 [data-composer-chip="video"] {
   display: inline-flex !important;
   vertical-align: middle !important;
-  margin: 0 6px !important;
+  box-sizing: border-box !important;
+  margin: 0 2px !important;
+  padding: 0 6px !important;
 }
 [data-composer-chip="link"] > span,
 [data-composer-chip="video"] > span {
