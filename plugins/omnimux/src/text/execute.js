@@ -55,7 +55,13 @@ export async function executeOmnimuxText(input) {
   const hasImage = references.some((asset) => asset.type === 'image')
   const hasVideo = references.some((asset) => asset.type === 'video')
   const gate = input.gate ?? input.hub?.gate
-  const route = resolveTextRoute({ model: input.model, references }, text, input.env, gate)
+  const route = resolveTextRoute({
+    model: input.model,
+    references,
+    strategy: input.strategy,
+    group: input.group,
+    allowedGroups: input.allowedGroups,
+  }, text, input.env, gate)
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
     : route.maxTokens
@@ -106,6 +112,7 @@ export async function executeOmnimuxText(input) {
   if (hasVideo) {
     const result = await completeTextViaChat({
       model: route.modelId,
+      candidates: route.candidates,
       prompt,
       system,
       maxTokens,

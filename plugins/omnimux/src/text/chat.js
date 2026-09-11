@@ -31,6 +31,7 @@ export async function completeTextViaChat(input) {
   let apiKey = (typeof input.apiKey === 'string' && input.apiKey.trim()) || ''
   let baseUrl = (typeof input.baseUrl === 'string' && input.baseUrl.trim()) || ''
   let targetModel = input.model
+  let hasDiscoveredLocalModel = false
 
   if (!apiKey) {
     apiKey = String(env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN || '').trim()
@@ -69,7 +70,10 @@ export async function completeTextViaChat(input) {
       if (adoptedLocalBase || !apiKey) {
         if (!explicitInputKey && discovered.apiKey) apiKey = discovered.apiKey
       }
-      if (discovered.model) targetModel = discovered.model
+      if (discovered.model) {
+        targetModel = discovered.model
+        hasDiscoveredLocalModel = true
+      }
     }
   }
 
@@ -99,52 +103,79 @@ export async function completeTextViaChat(input) {
       input.videoPart,
     ],
   })
-  const body = {
-    model: targetModel,
-    max_tokens: input.maxTokens,
-    messages,
-  }
   const fetcher = input.fetcher ?? fetch
-  let response
-  try {
-    response = await fetcher(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        'content-type': 'application/json',
-        accept: 'application/json',
-        'user-agent': DEFAULT_UA,
-      },
-      body: JSON.stringify(body),
-      ...(input.signal ? { signal: input.signal } : {}),
-    })
-  } catch (error) {
-    if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
-      throw new OmnimuxError('omnimux-aborted', 'text complete aborted')
+  const candidates = (hasDiscoveredLocalModel && targetModel !== input.model)
+    ? [targetModel]
+    : (Array.isArray(input.candidates) && input.candidates.length > 0
+      ? input.candidates.slice(0, 4)
+      : [targetModel])
+
+  let lastError
+  for (const [attempt, candidateModel] of candidates.entries()) {
+    const body = {
+      model: candidateModel,
+      max_tokens: input.maxTokens,
+      messages,
     }
-    throw new OmnimuxError(
-      'omnimux-failed',
-      `text complete transport failed: ${error instanceof Error ? error.message : String(error)}`,
-    )
-  }
-  let payload
-  try {
-    payload = await response.json()
-  } catch {
-    payload = {}
-  }
-  if (!response.ok) {
-    const message = pickErrorMessage(payload) || `text complete HTTP ${response.status}`
-    if (response.status === 401 || response.status === 403) {
-      throw new OmnimuxError('omnimux-unconfigured', message)
+    let response
+    try {
+      response = await fetcher(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          'content-type': 'application/json',
+          accept: 'application/json',
+          'user-agent': DEFAULT_UA,
+        },
+        body: JSON.stringify(body),
+        ...(input.signal ? { signal: input.signal } : {}),
+      })
+    } catch (error) {
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
+        throw new OmnimuxError('omnimux-aborted', 'text complete aborted')
+      }
+      if (attempt + 1 < candidates.length && !input.signal?.aborted) {
+        continue
+      }
+      throw new OmnimuxError(
+        'omnimux-failed',
+        `text complete transport failed: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
-    throw new OmnimuxError('omnimux-failed', message)
+
+    let payload
+    try {
+      payload = await response.json()
+    } catch {
+      payload = {}
+    }
+    if (!response.ok) {
+      const message = pickErrorMessage(payload) || `text complete HTTP ${response.status}`
+      if (response.status === 401) {
+        throw new OmnimuxError('omnimux-unconfigured', message)
+      }
+      const canFailover = response.status === 503 || response.status === 429
+        || message.includes('无可用渠道')
+        || message.includes('无权访问该分组')
+        || message.includes('model_not_found')
+      if (canFailover && attempt + 1 < candidates.length && !input.signal?.aborted) {
+        continue
+      }
+      if (response.status === 403) {
+        throw new OmnimuxError('omnimux-unconfigured', message)
+      }
+      throw new OmnimuxError('omnimux-failed', message)
+    }
+    const text = extractAssistantText(payload)
+    if (!text.trim()) {
+      throw new OmnimuxError('omnimux-invalid-response', 'text complete produced no text')
+    }
+    const out = { mode: 'live', model: input.model, text }
+    if (candidateModel !== input.model) {
+      out.routedModel = candidateModel
+    }
+    return out
   }
-  const text = extractAssistantText(payload)
-  if (!text.trim()) {
-    throw new OmnimuxError('omnimux-invalid-response', 'text complete produced no text')
-  }
-  return { mode: 'live', model: input.model, text }
 }
 
 /**

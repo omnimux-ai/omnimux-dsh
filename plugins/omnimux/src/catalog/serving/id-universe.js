@@ -1,5 +1,12 @@
 import manifest from '../contract/auto-serving-manifest.json' with { type: 'json' }
 import dispositions from '../contract/dispositions.json' with { type: 'json' }
+export {
+  getModelChannelGroups,
+  MODEL_CHANNEL_GROUPS,
+  parseModelAndGroup,
+  resolveChannelCandidates,
+  ROUTING_STRATEGIES,
+} from './channel-groups.js'
 
 /** Documented aliases only; gateway IDs are case-sensitive. */
 export const PRODUCT_ID_ALIASES = Object.freeze(Object.fromEntries(
@@ -11,8 +18,11 @@ const registrations = new Map(manifest.models.map((row) => [row.productId, row.g
 
 /** @param {unknown} modelId @returns {string} */
 export function toProductId(modelId) {
-  const id = typeof modelId === 'string' ? modelId.trim() : ''
-  return Object.hasOwn(PRODUCT_ID_ALIASES, id) ? PRODUCT_ID_ALIASES[id] : id
+  if (typeof modelId !== 'string') return ''
+  const trimmed = modelId.trim()
+  const atIndex = trimmed.indexOf('@')
+  const baseId = atIndex > 0 ? trimmed.slice(0, atIndex).trim() : trimmed
+  return Object.hasOwn(PRODUCT_ID_ALIASES, baseId) ? PRODUCT_ID_ALIASES[baseId] : baseId
 }
 
 /**

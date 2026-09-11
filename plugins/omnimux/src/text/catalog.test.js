@@ -161,4 +161,20 @@ describe('text whitelist', () => {
     assert.equal(DEFAULT_TEXT.models.find((row) => row.id === 'grok-4.6')?.id, 'grok-4.6')
     assert.equal(DEFAULT_TEXT.defaultModel, 'gemini-3.8-flash')
   })
+
+  it('resolves model@group and strategy in text route', () => {
+    const route = resolveTextRoute({ model: 'claude-opus-4-6@claude-plus' }, parseTextConfig(undefined))
+    assert.equal(route.modelId, 'claude-opus-4-6')
+    assert.equal(route.group, 'claude-plus')
+    assert.equal(route.candidates[0], 'claude-opus-4-6@claude-plus')
+
+    const costRoute = resolveTextRoute({ model: 'claude-opus-4-6', strategy: 'cost_first' }, parseTextConfig(undefined))
+    assert.equal(costRoute.strategy, 'cost_first')
+    assert.equal(costRoute.candidates[0], 'claude-opus-4-6@standard')
+
+    const stabRoute = resolveTextRoute({ model: 'claude-opus-4-6', strategy: 'stability_first' }, parseTextConfig(undefined))
+    assert.equal(stabRoute.strategy, 'stability_first')
+    assert.ok(stabRoute.candidates[0].includes('@claude-max-open'))
+  })
 })
+

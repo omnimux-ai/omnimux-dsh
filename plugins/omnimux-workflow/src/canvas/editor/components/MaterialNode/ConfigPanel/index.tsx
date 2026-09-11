@@ -26,7 +26,11 @@ import {
   X,
   AlertTriangle,
   AudioLines,
+  ShieldCheck,
+  Percent,
+  SlidersHorizontal,
 } from 'lucide-react';
+import { ModelRoutingModal, type ModelRoutingValue } from './ModelRoutingModal';
 import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
@@ -128,7 +132,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
   // T04：音色选择弹窗（schema 提供音色选项时由底栏 VoiceTrigger 唤起）
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  const [routingModalOpen, setRoutingModalOpen] = useState(false);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
+
+  const routing = (params.routing && typeof params.routing === 'object')
+    ? (params.routing as { strategy?: 'auto' | 'stability_first' | 'cost_first'; allowedGroups?: string[] })
+    : undefined;
 
   const slotState = nodeData.slotState as NodeSlotEngineState | undefined;
 
@@ -798,6 +807,44 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
             />
           )}
 
+          {/* 渠道策略与高级路由触发按钮 */}
+          <button
+            type="button"
+            className="wf-routing-trigger"
+            data-testid="wf-routing-trigger"
+            disabled={execBusy}
+            title={routing?.strategy ? `渠道策略：${routing.strategy === 'cost_first' ? '低价优先' : routing.strategy === 'stability_first' ? '稳定性优先' : '自动策略'}` : '配置渠道策略与分组'}
+            onClick={() => setRoutingModalOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              height: 32,
+              padding: '0 8px',
+              borderRadius: 8,
+              background: routing?.strategy ? 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))' : 'transparent',
+              border: routing?.strategy ? '1px solid var(--dsw-alias-brand-primary, currentColor)' : '1px solid var(--dsw-alias-border-subtle, transparent)',
+              color: routing?.strategy ? 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))' : 'var(--dsw-alias-label-secondary)',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 500,
+              flexShrink: 0,
+            }}
+          >
+            {routing?.strategy === 'cost_first' ? (
+              <Percent size={13} strokeWidth={2.2} />
+            ) : (
+              <ShieldCheck size={13} strokeWidth={2.2} />
+            )}
+            <span>
+              {routing?.strategy === 'cost_first'
+                ? '低价优先'
+                : routing?.strategy === 'stability_first'
+                  ? '稳定优先'
+                  : '策略'}
+            </span>
+          </button>
+
           {/* T04：音色触发入口（模型下拉右侧），唤起 VoicePickerDialog */}
           {showVoicePicker ? (
             <button
@@ -903,6 +950,29 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           onSelect={handleSelectVoice}
         />
       ) : null}
+
+      {/* 品牌-型号-渠道策略三级选择器弹窗 */}
+      <ModelRoutingModal
+        open={routingModalOpen}
+        onCancel={() => setRoutingModalOpen(false)}
+        onConfirm={(val: ModelRoutingValue) => {
+          handleModelChange(val.modelId);
+          onUpdateNodeData({
+            params: {
+              ...params,
+              model: val.modelId,
+              routing: {
+                strategy: val.strategy,
+                allowedGroups: val.allowedGroups,
+              },
+            },
+          });
+        }}
+        currentModelId={modelValue}
+        currentRouting={routing}
+        catalog={activeCatalog}
+        materialType={materialType}
+      />
     </div>
   );
 };

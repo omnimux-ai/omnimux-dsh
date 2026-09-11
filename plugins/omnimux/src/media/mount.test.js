@@ -101,6 +101,9 @@ describe('mountMedia capability gate', () => {
     assert.equal(tools.length, 1)
     assert.equal(tools[0].name, 'omnimux_video_submit')
     assert.ok(provided.videoGenerate)
+    assert.ok(tools[0].parameters.properties.strategy)
+    assert.ok(tools[0].parameters.properties.group)
+    assert.ok(tools[0].parameters.properties.allowed_groups)
   })
 
   it('mounts the complete workflow media shape through both tool and seam', async () => {

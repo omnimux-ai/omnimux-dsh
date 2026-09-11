@@ -1,6 +1,11 @@
 import { isModelEnabled } from '../gate/guard.js'
 import { OmnimuxError } from '../media/errors.js'
 import { getHealthyContractIndex, projectChatRows } from '../catalog/project.js'
+import {
+  parseModelAndGroup,
+  resolveChannelCandidates,
+  ROUTING_STRATEGIES,
+} from '../catalog/serving/id-universe.js'
 import { normalizeTextReferences } from './references.js'
 
 /**
@@ -94,10 +99,11 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
     throw new OmnimuxError('omnimux-invalid-request', 'pass image or video, not both')
   }
   const requested = typeof request.model === 'string' ? request.model.trim() : ''
-  const modelId = requested || resolveDefaultModel(enabled, text.defaultModel, env)
-  const row = enabled.find((item) => item.id === modelId)
+  const { modelId: baseModelId, group: inlineGroup } = parseModelAndGroup(requested)
+  const targetBaseModel = baseModelId || resolveDefaultModel(enabled, text.defaultModel, env)
+  const row = enabled.find((item) => item.id === targetBaseModel)
   if (!row) {
-    throw new OmnimuxError('unknown-model', `model '${modelId}' is not on the enabled text whitelist`)
+    throw new OmnimuxError('unknown-model', `model '${targetBaseModel}' is not on the enabled text whitelist`)
   }
   const chat = CHAT_BY_ID.get(row.id)
   const input = chat?.input ?? ['text']
@@ -106,9 +112,19 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
       throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept ${type} input`)
     }
   }
+  const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
+  const strategy = (typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy))
+    ? request.strategy
+    : 'auto'
+  const allowedGroups = Array.isArray(request.allowedGroups) ? request.allowedGroups : undefined
+  const candidates = resolveChannelCandidates(row.id, { strategy, group, allowedGroups })
+
   return {
     providerId: text.defaultProvider,
     modelId: row.id,
+    group,
+    strategy,
+    candidates,
     input,
     maxTokens: text.maxTokens,
   }
