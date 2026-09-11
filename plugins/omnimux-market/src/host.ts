@@ -258,98 +258,100 @@ export function apply(ctx: Context, config: Config): void {
   registerPluginTools(ctx, cfg)
   registerConnectorTools(ctx, cfg)
 
-  // 监听工具执行门禁，当用户在会话中手动锁定模型时，禁用其他视频/图像生成工具
-  ctx.on('tools/pre-execute' as any, async (exec: any, next: () => Promise<any>) => {
-    const sessionId = sessionIdFromExec(exec)
-    if (!sessionId) return next()
-    const sel = getSessionModel(sessionId)
-    if (!sel || sel.auto || !sel.selectedModel) return next()
+  if (typeof ctx.on === 'function') {
+    // 监听工具执行门禁，当用户在会话中手动锁定模型时，禁用其他视频/图像生成工具
+    ctx.on('tools/pre-execute' as any, async (exec: any, next: () => Promise<any>) => {
+      const sessionId = sessionIdFromExec(exec)
+      if (!sessionId) return next()
+      const sel = getSessionModel(sessionId)
+      if (!sel || sel.auto || !sel.selectedModel) return next()
 
-    const toolName = exec.tool?.name || ''
-    const isVideoTool = ['video_generate', 'omnimux_video_submit'].includes(toolName)
-    const isImageTool = ['image_generate', 'omnimux_image_submit'].includes(toolName)
+      const toolName = exec.tool?.name || ''
+      const isVideoTool = ['video_generate', 'omnimux_video_submit'].includes(toolName)
+      const isImageTool = ['image_generate', 'omnimux_image_submit'].includes(toolName)
 
-    if (!isVideoTool && !isImageTool) return next()
+      if (!isVideoTool && !isImageTool) return next()
 
-    const chosen = sel.selectedModel
-    if (chosen.type === 'video') {
-      if (isImageTool) {
-        return {
-          kind: 'deny',
-          reason: `当前会话已手动选择视频模型【${chosen.name}】，图像生成工具已被禁用。`,
-        }
-      }
-      if (toolName === 'video_generate') {
-        return {
-          kind: 'deny',
-          reason: `当前会话已手动选择模型【${chosen.name}】，Grok 视频生成工具已被禁用，请使用已选中的模型。`,
-        }
-      }
-      if (toolName === 'omnimux_video_submit' && exec.arguments && typeof exec.arguments === 'object') {
-        if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
-          exec.arguments.model = chosen.id
-        }
-      }
-    } else if (chosen.type === 'image') {
-      if (isVideoTool) {
-        return {
-          kind: 'deny',
-          reason: `当前会话已手动选择图像模型【${chosen.name}】，视频生成工具已被禁用。`,
-        }
-      }
-      if (chosen.id === 'gpt-image-2') {
-        if (toolName === 'omnimux_image_submit' && exec.arguments && typeof exec.arguments === 'object') {
-          if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
-            exec.arguments.model = chosen.id
-          }
-        }
-      } else {
-        if (toolName === 'image_generate') {
+      const chosen = sel.selectedModel
+      if (chosen.type === 'video') {
+        if (isImageTool) {
           return {
             kind: 'deny',
-            reason: `当前会话已手动选择图像模型【${chosen.name}】，请使用对应的图像生成工具 omnimux_image_submit。`,
+            reason: `当前会话已手动选择视频模型【${chosen.name}】，图像生成工具已被禁用。`,
           }
         }
-        if (toolName === 'omnimux_image_submit' && exec.arguments && typeof exec.arguments === 'object') {
+        if (toolName === 'video_generate') {
+          return {
+            kind: 'deny',
+            reason: `当前会话已手动选择模型【${chosen.name}】，Grok 视频生成工具已被禁用，请使用已选中的模型。`,
+          }
+        }
+        if (toolName === 'omnimux_video_submit' && exec.arguments && typeof exec.arguments === 'object') {
           if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
             exec.arguments.model = chosen.id
           }
         }
+      } else if (chosen.type === 'image') {
+        if (isVideoTool) {
+          return {
+            kind: 'deny',
+            reason: `当前会话已手动选择图像模型【${chosen.name}】，视频生成工具已被禁用。`,
+          }
+        }
+        if (chosen.id === 'gpt-image-2') {
+          if (toolName === 'omnimux_image_submit' && exec.arguments && typeof exec.arguments === 'object') {
+            if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
+              exec.arguments.model = chosen.id
+            }
+          }
+        } else {
+          if (toolName === 'image_generate') {
+            return {
+              kind: 'deny',
+              reason: `当前会话已手动选择图像模型【${chosen.name}】，请使用对应的图像生成工具 omnimux_image_submit。`,
+            }
+          }
+          if (toolName === 'omnimux_image_submit' && exec.arguments && typeof exec.arguments === 'object') {
+            if (!exec.arguments.model || exec.arguments.model !== chosen.id) {
+              exec.arguments.model = chosen.id
+            }
+          }
+        }
       }
-    }
-    return next()
-  })
+      return next()
+    })
 
-  // 当会话启动时，通过 tools.restrict 动态屏蔽不相关的多模态生成工具，实现“不显示”
-  ctx.on('agent/session-start' as any, ({ agent }: { agent: any }) => {
-    const sessionId = sessionIdFromExec(agent)
-    if (!sessionId) return
-    const sel = getSessionModel(sessionId)
-    if (!sel || sel.auto || !sel.selectedModel) return
+    // 当会话启动时，通过 tools.restrict 动态屏蔽不相关的多模态生成工具，实现“不显示”
+    ctx.on('agent/session-start' as any, ({ agent }: { agent: any }) => {
+      const sessionId = sessionIdFromExec(agent)
+      if (!sessionId) return
+      const sel = getSessionModel(sessionId)
+      if (!sel || sel.auto || !sel.selectedModel) return
 
-    const chosen = sel.selectedModel
-    const deniedTools: string[] = []
-    if (chosen.type === 'video') {
-      deniedTools.push('image_generate', 'omnimux_image_submit', 'video_generate')
-    } else if (chosen.type === 'image') {
-      deniedTools.push('video_generate', 'omnimux_video_submit')
-      if (chosen.id !== 'gpt-image-2') {
-        deniedTools.push('image_generate')
+      const chosen = sel.selectedModel
+      const deniedTools: string[] = []
+      if (chosen.type === 'video') {
+        deniedTools.push('image_generate', 'omnimux_image_submit', 'video_generate')
+      } else if (chosen.type === 'image') {
+        deniedTools.push('video_generate', 'omnimux_video_submit')
+        if (chosen.id !== 'gpt-image-2') {
+          deniedTools.push('image_generate')
+        }
       }
-    }
 
-    try {
-      const restrictable = agent.ctx?.tools?.view?.(agent)?.restrictableNames
-      const validDenies = restrictable
-        ? deniedTools.filter((t: string) => restrictable.has(t))
-        : deniedTools
-      if (validDenies.length > 0 && typeof agent.ctx?.tools?.restrict === 'function') {
-        agent.ctx.tools.restrict({ deny: validDenies })
+      try {
+        const restrictable = agent.ctx?.tools?.view?.(agent)?.restrictableNames
+        const validDenies = restrictable
+          ? deniedTools.filter((t: string) => restrictable.has(t))
+          : deniedTools
+        if (validDenies.length > 0 && typeof agent.ctx?.tools?.restrict === 'function') {
+          agent.ctx.tools.restrict({ deny: validDenies })
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-  })
+    })
+  }
 
   ctx.inject(['systemPrompt'], (c) => {
     const prompt = (c as unknown as {
