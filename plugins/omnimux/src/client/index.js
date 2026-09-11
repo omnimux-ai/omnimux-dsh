@@ -31,6 +31,7 @@ import { AttachmentSubmitBridge } from './composer-add/AttachmentSubmitBridge.js
 import { installAgentPresetsI18n } from './agent-presets-i18n.js'
 import { installSessionCopyI18n } from './session-copy-i18n.js'
 import { installCommandsI18n } from './composer-commands-i18n.js'
+import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
 export const inject = ['slots', 'locale']
@@ -56,7 +57,7 @@ export function apply(ctx) {
   const t = installHubChrome(ctx)
   installAgentPresetsI18n(ctx)
   installSessionCopyI18n(ctx)
-  installCommandsI18n(ctx)
+  installCommandsI18n(ctx, primitives)
   installQuotaGlobal(typeof window !== 'undefined' ? window : undefined)
   installHeroBrandSlot(ctx, HeroBrandMark)
   installStatsLineShadow(ctx)
