@@ -489,8 +489,9 @@ describe('video breakdown & shots analysis engine', () => {
     assert.ok(existsSync(BUNDLED_STRUCTURE_PROMPT), 'dedicated prompt file must exist')
     const promptContent = readFileSync(BUNDLED_STRUCTURE_PROMPT, 'utf8')
     assert.match(promptContent, /Video Narrative Structure Architect/)
-    assert.match(promptContent, /动态结构提炼/)
-    assert.match(promptContent, /针对每个结构阶段深度描述/)
+    assert.match(promptContent, /Chain of Thought/)
+    assert.match(promptContent, /商业转化漏斗五阶段对齐/)
+    assert.match(promptContent, /核心台词原声锚定/)
     assert.match(promptContent, /逐镜头分镜脚本表/)
   })
 
