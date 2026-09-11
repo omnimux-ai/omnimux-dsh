@@ -107,19 +107,20 @@ export const GUIDE_CSS = `
   flex-direction: column;
   background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 20px;
   cursor: pointer;
   text-align: left;
-  padding: 0;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  padding: 14px 14px 18px 14px;
+  box-sizing: border-box;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
   position: relative;
   outline: none;
 }
 .omnimux-popular-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--dsw-alias-border-l3);
-  box-shadow: 0 8px 24px var(--dsw-alias-bg-base);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-base);
+  background: var(--dsw-alias-bg-layer-2);
 }
 .omnimux-popular-card:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary);
@@ -129,6 +130,7 @@ export const GUIDE_CSS = `
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   display: flex;
@@ -145,21 +147,32 @@ export const GUIDE_CSS = `
 .omnimux-popular-cover img,
 .omnimux-popular-cover-img {
   object-fit: cover;
-  transition: transform 180ms ease;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omnimux-popular-card:hover .omnimux-popular-cover img,
 .omnimux-popular-card:hover .omnimux-popular-cover-img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 .omnimux-popular-footer {
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-primary);
+  padding: 0 4px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--dsw-alias-bg-layer-1);
+  justify-content: flex-start;
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
+}
+.omnimux-popular-card-title,
+.omnimux-popular-footer > span:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .omnimux-popular-tag {
   font-size: 10px;
@@ -167,6 +180,7 @@ export const GUIDE_CSS = `
   border-radius: 4px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
+  margin-left: auto;
 }
 
 /* ==================== 营销洞察模态框 (Marketing Insight Modal) ==================== */

@@ -65,7 +65,7 @@ function PopularStarterCard({ starter, t, onCardClick }) {
         <PopularCardCover id={starter.id} />
       </div>
       <div className="omnimux-popular-footer">
-        <span>{t(`guide.popular.${starter.id}.title`)}</span>
+        <span className="omnimux-popular-card-title">{t(`guide.popular.${starter.id}.title`)}</span>
         {starter.type === 'placeholder' && (
           <span className="omnimux-popular-tag">Coming</span>
         )}
