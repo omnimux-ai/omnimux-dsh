@@ -90,6 +90,9 @@ export const WORKFLOW_API_ROUTES = {
   /** POST: generate video storyboard table with keyframe image attachments and scripts. */
   storyboardVideo: (workspaceId: string) =>
     `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/storyboard-video`,
+  /** POST: extract audio track from video and generate material audio node. */
+  extractAudio: (workspaceId: string) =>
+    `${WORKFLOW_ROUTE_PREFIX}/api/workspaces/${workspaceId}/extract-audio`,
   /** GET: list templates. POST: create template. */
   templates: `${WORKFLOW_ROUTE_PREFIX}/api/templates`,
   /** GET/DELETE one template. */

@@ -90,6 +90,14 @@ const en: Record<DictKey, string> = {
   'pill.extractVideo': 'Extract Video',
   'pill.deconstructVideo': 'Deconstruct',
   'pill.storyboardVideo': 'Storyboard',
+  'pill.extractAudio': 'Extract Audio',
+  // Video audio extraction (extractAudio.*)
+  'extractAudio.nodeLabel': 'Video Audio',
+  'extractAudio.toast.success': 'Audio extracted into audio node',
+  'extractAudio.toast.failed': 'Audio extraction failed, please retry',
+  'extractAudio.toast.noAudioStream': 'No audio track detected in this video',
+  'extractAudio.noWorkspace': 'Workspace not ready',
+  'extractAudio.noVideo': 'No video file found',
   // Video deconstruction (deconstructVideo.*)
   'deconstructVideo.nodeLabel': 'Video Breakdown',
   'deconstructVideo.toast.success': 'Video deconstructed into table node',

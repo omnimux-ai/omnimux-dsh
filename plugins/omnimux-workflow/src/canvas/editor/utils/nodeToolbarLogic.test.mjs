@@ -564,3 +564,20 @@ test('canRunVideoStoryboard / buildStoryboardVideoPillActionSpec：分镜表按�
 
   assert.equal(resolveVideoStoryboardPath({ realPath: '/a.mp4' }), '/a.mp4');
 });
+
+test('canExtractAudioFromVideoNode / buildExtractAudioPillActionSpec：提取音频按钮契约', async () => {
+  const { canExtractAudioFromVideoNode, buildExtractAudioPillActionSpec, resolveVideoAudioExtractPath } =
+    await import('./nodeToolbarLogic.ts');
+
+  assert.equal(canExtractAudioFromVideoNode({ materialType: 'video', realPath: '/test.mp4' }), true);
+  assert.equal(canExtractAudioFromVideoNode({ materialType: 'image', realPath: '/test.mp4' }), false);
+  assert.equal(canExtractAudioFromVideoNode({ materialType: 'video', isOffline: true, realPath: '/test.mp4' }), false);
+  assert.equal(canExtractAudioFromVideoNode({ materialType: 'video', realPath: '/test.mp4', executionStatus: 'running' }), false);
+
+  const spec = buildExtractAudioPillActionSpec();
+  assert.equal(spec.id, 'extract-audio');
+  assert.equal(spec.section, 'primary');
+  assert.equal(spec.width, 88);
+
+  assert.equal(resolveVideoAudioExtractPath({ realPath: '/a.mp4' }), '/a.mp4');
+});

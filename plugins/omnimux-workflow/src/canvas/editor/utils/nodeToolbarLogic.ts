@@ -167,6 +167,7 @@ export function resolveSpeechToTextAudioPath(
 
 export const DECONSTRUCT_VIDEO_PILL_ACTION_ID = 'deconstruct-video';
 export const STORYBOARD_VIDEO_PILL_ACTION_ID = 'storyboard-video';
+export const EXTRACT_AUDIO_PILL_ACTION_ID = 'extract-audio';
 
 export interface VideoDeconstructEligibilityInput {
   materialType?: string;
@@ -196,6 +197,11 @@ export function canRunVideoDeconstruct(input: VideoDeconstructEligibilityInput):
  */
 export const canRunVideoStoryboard = canRunVideoDeconstruct;
 
+/**
+ * 「提取音频」按钮可见性：与「内容拆解」/「分镜表」对称，视频非空且在线且未执行中。
+ */
+export const canExtractAudioFromVideoNode = canRunVideoDeconstruct;
+
 export function buildDeconstructVideoPillActionSpec(width: number = 88): ToolbarActionSpec {
   return {
     id: DECONSTRUCT_VIDEO_PILL_ACTION_ID,
@@ -212,10 +218,23 @@ export function buildStoryboardVideoPillActionSpec(width: number = 88): ToolbarA
   };
 }
 
+export function buildExtractAudioPillActionSpec(width: number = 88): ToolbarActionSpec {
+  return {
+    id: EXTRACT_AUDIO_PILL_ACTION_ID,
+    section: 'primary',
+    width,
+  };
+}
+
 /**
  * 解析分镜表来源视频路径（复用 resolveVideoDeconstructPath）。
  */
 export const resolveVideoStoryboardPath = resolveVideoDeconstructPath;
+
+/**
+ * 解析音频提取来源视频路径（复用 resolveVideoDeconstructPath）。
+ */
+export const resolveVideoAudioExtractPath = resolveVideoDeconstructPath;
 
 /**
  * 解析视频节点的拆解来源路径：
