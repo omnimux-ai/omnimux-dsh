@@ -571,8 +571,8 @@
 
 .wf-row-height-item--selected {
   font-weight: 600;
-  background: rgba(65, 118, 230, 0.15);
-  color: var(--wb-accent, #4176E6);
+  background: color-mix(in srgb, var(--wb-node-ring) 12%, transparent);
+  color: var(--wb-text-primary);
 }
 
 
@@ -743,8 +743,8 @@
 }
 
 .wf-grid-cell-input:focus {
-  background: rgba(65, 118, 230, 0.08);
-  box-shadow: inset 0 0 0 2px var(--wb-accent, #4176E6);
+  background: color-mix(in srgb, var(--wb-node-ring) 8%, transparent);
+  box-shadow: inset 0 0 0 2px var(--wb-node-ring);
 }
 
 .wf-grid-cell-input::placeholder {
@@ -850,9 +850,9 @@
 }
 
 .wf-grid-attachment-add-btn:hover {
-  border-color: var(--wb-accent, #4176E6);
-  color: #ffffff;
-  background: rgba(65, 118, 230, 0.2);
+  border-color: var(--wb-node-ring);
+  color: var(--wb-text-primary);
+  background: color-mix(in srgb, var(--wb-node-ring) 14%, transparent);
 }
 
 .wf-grid-attachment-tag {
@@ -1030,8 +1030,8 @@
 }
 
 .wf-modal-select-wrapper .wf-custom-select-trigger--open {
-  border-color: var(--wb-accent, #4176E6);
-  box-shadow: 0 0 0 2px rgba(65, 118, 230, 0.25);
+  border-color: var(--wb-node-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wb-node-ring) 20%, transparent);
 }
 
 .wf-modal-btn-primary {

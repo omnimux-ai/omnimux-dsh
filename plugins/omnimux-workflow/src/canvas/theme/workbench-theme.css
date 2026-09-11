@@ -56,6 +56,13 @@
   --wb-beam-glow-secondary: rgba(86, 68, 214, 0.4);
   --wb-beam-track: rgba(0, 0, 0, 0.08);
 
+  /* 鼠标框选（全选）品牌视觉紫色 token：双主题自适应（参考设计，无描边虚线） */
+  --wb-selection-marquee-border: var(--dsw-alias-brand-purple, #7961f2);
+  --wb-selection-marquee-bg: color-mix(in srgb, var(--wb-selection-marquee-border) 8%, transparent);
+  /* React Flow 节点多选包裹框：DSH 黑白主题色 */
+  --xy-selection-background-color: color-mix(in srgb, var(--wb-node-ring) 4%, transparent);
+  --xy-selection-border: 1px solid var(--wb-node-ring);
+
   /* Modern Floating Dock & Capsule Header tokens */
   --wb-dock-bg: rgba(255, 255, 255, 0.88);
   --wb-dock-blur: blur(16px);
@@ -170,6 +177,9 @@ body[data-ds-dark-theme] .wf-canvas-root {
   --wb-beam-track: rgba(255, 255, 255, 0.12);
   /* 节点选中/高亮边框线暗色自适应：白色边框 */
   --wb-node-ring: var(--dsw-alias-label-primary, #ffffff);
+  /* 鼠标框选（全选）品牌视觉紫色暗色翻转：香芋浅紫/极光紫 (#978fd8) */
+  --wb-selection-marquee-border: var(--dsw-alias-brand-purple, #978fd8);
+  --wb-selection-marquee-bg: color-mix(in srgb, var(--wb-selection-marquee-border) 10%, transparent);
 
   /* Organic Shimmer dark cascade */
   --wf-shimmer-stage-bg: var(--wb-surface-raised, #222226);
@@ -249,7 +259,7 @@ body[data-ds-dark-theme] .wf-canvas-root {
 }
 
 .wf-canvas-root .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--wb-accent);
+  stroke: var(--wb-node-ring);
   stroke-width: 2.5;
 }
 
@@ -258,12 +268,12 @@ body[data-ds-dark-theme] .wf-canvas-root {
   height: 12px;
   border-radius: 50%;
   background: var(--wb-surface);
-  border: 2px solid var(--wb-accent);
+  border: 2px solid var(--wb-node-ring);
   transition: transform 120ms ease, background 120ms ease;
 }
 
 .wf-canvas-root .react-flow__handle:hover {
-  background: var(--wb-accent);
+  background: var(--wb-node-ring);
   transform: scale(1.25);
 }
 
@@ -313,13 +323,29 @@ body[data-ds-dark-theme] .wf-canvas-root {
 }
 
 .wf-canvas-root .react-flow__minimap-node {
-  fill: var(--wb-accent-soft);
-  stroke: var(--wb-accent);
+  fill: color-mix(in srgb, var(--wb-node-ring) 12%, transparent);
+  stroke: var(--wb-node-ring);
 }
 
+/* 鼠标全选/框选高亮：使用品牌视觉紫色（对齐设计，实线无虚线） */
 .wf-canvas-root .react-flow__selection {
-  background: var(--wb-accent-soft);
-  border: 1px dashed var(--wb-accent);
+  background: var(--wb-selection-marquee-bg);
+  border: 1px solid var(--wb-selection-marquee-border);
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+/* 多节点选中后外层包裹框：遵循 DSH 黑白主题色 */
+.wf-canvas-root .react-flow__nodesselection-rect {
+  background: color-mix(in srgb, var(--wb-node-ring) 4%, transparent);
+  border: 1px solid var(--wb-node-ring);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.wf-canvas-root .react-flow__nodesselection-rect:focus,
+.wf-canvas-root .react-flow__nodesselection-rect:focus-visible {
+  outline: none;
 }
 
 /* ==================== toolbar / bottom floating dock ==================== */
