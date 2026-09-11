@@ -5,6 +5,7 @@ import { StarterIcon } from './StarterIcon.jsx'
 import { PopularCardCover } from './PopularCardCover.jsx'
 import { MarketingInsightModal } from './MarketingInsightModal.jsx'
 import { UrlToVideoModal } from './UrlToVideoModal.jsx'
+import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 
 function copyText(text) {
   const clip = typeof navigator !== 'undefined' ? navigator?.clipboard : null
@@ -120,6 +121,7 @@ function BlankSessionGuide({
   const toastTimer = useRef(null)
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
   const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
+  const [isRecreateModalOpen, setIsRecreateModalOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
@@ -189,12 +191,17 @@ function BlankSessionGuide({
       setIsUrlToVideoOpen(true)
       return
     }
+    if (starter.id === 'recreate-viral-ads') {
+      setIsRecreateModalOpen(true)
+      return
+    }
     showToast(t('guide.popular.placeholder-notice'))
   }
 
   function handleSubmitDraft(prompt) {
     setIsInsightModalOpen(false)
     setIsUrlToVideoOpen(false)
+    setIsRecreateModalOpen(false)
     if (!isSessionActive() || !inputActions?.setDraft) {
       setNotice('unavailable')
       return
@@ -258,6 +265,14 @@ function BlankSessionGuide({
       <UrlToVideoModal
         isOpen={isUrlToVideoOpen}
         onClose={() => setIsUrlToVideoOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Recreate Viral Ads Modal */}
+      <RecreateViralAdsModal
+        isOpen={isRecreateModalOpen}
+        onClose={() => setIsRecreateModalOpen(false)}
         t={t}
         onSubmitDraft={handleSubmitDraft}
       />
