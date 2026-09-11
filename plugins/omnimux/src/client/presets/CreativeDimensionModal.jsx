@@ -393,4 +393,3 @@ function itemTitle(item, isZh) {
   if (!item) return ''
   return isZh ? (item.titleZh || item.title) : item.title
 }
-}
