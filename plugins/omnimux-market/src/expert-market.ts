@@ -113,7 +113,7 @@ export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'ena
       }
     } catch {}
   }
-  return 'available'
+  return exp.initialStatus
 }
 
 function resolveExpertPersonaText(exp: MarketExpertItem): string {

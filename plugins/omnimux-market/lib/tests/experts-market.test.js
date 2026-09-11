@@ -12,7 +12,7 @@ function cleanRetiredTestExperts() {
         try {
             const files = readdirSync(retired);
             for (const f of files) {
-                if (f.startsWith('amazon-operations-expert') || f.startsWith('tiktok-ecommerce-expert') || f.startsWith('html-generator')) {
+                if (DEFAULT_MARKET_EXPERTS.some((exp) => f === exp.id || f.startsWith(`${exp.id}-`))) {
                     rmSync(join(retired, f), { recursive: true, force: true });
                 }
             }
