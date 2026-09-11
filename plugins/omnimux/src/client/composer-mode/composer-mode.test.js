@@ -183,6 +183,16 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     marketSkillPickerContent.includes('if (composerMode === "marketing")'),
     'SkillPickerButton 必须在 marketing 模式下直接返回 null 隐藏技能按钮'
   )
+
+  // 10. 验证会话对话过程中彻底隐藏模式 Tab (仅在未提交 Hero 阶段展示)
+  assert.ok(
+    stylesContent.includes("[data-phase='active'] .omnimux-composer-mode-wrap"),
+    'styles.js 必须包含 active 对话阶段隐藏模式 Tab 的规则'
+  )
+  assert.ok(
+    tabsContent.includes('return null') && !tabsContent.includes('return content'),
+    'ComposerModeTabs 在非 Hero 阶段必须返回 null，不得退化渲染在输入框上方'
+  )
 })
 
 test('ComposerModeStore: 独立缓存、状态隔离与 Tab 切换恢复 (Agent 1111 -> 营销 2222 -> 短剧 空 -> 切回恢复)', () => {

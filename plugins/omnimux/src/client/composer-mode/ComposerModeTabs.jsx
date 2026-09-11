@@ -249,9 +249,10 @@ export function ComposerModeTabs(props) {
     </div>
   )
 
+  // 核心约束 2：仅在未提交的新会话 Hero 阶段挂载于大标题正下方；进入会话对话过程中彻底隐藏
   if (heroMount) {
     return createPortal(content, heroMount)
   }
 
-  return content
+  return null
 }
