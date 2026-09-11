@@ -5,23 +5,45 @@ export const GUIDE_CSS = `
   flex:1 0 auto!important; min-height:100%; display:flex; flex-direction:column;
   justify-content:center!important; padding-block:32px; box-sizing:border-box;
 }
+/* 宿主内容总栈：大屏下拓展至 1200px，让下方内容与卡片网格从容展开、更有商业大作底气 */
 [data-omnimux-starter-host] [class*="composerStack"] {
   flex:0 0 auto!important; display:flex; flex-direction:column; justify-content:center!important;
-  gap:16px; padding-bottom:0!important;
+  gap:18px; padding-bottom:0!important;
+  width:100%!important;
+  max-width:min(1200px, calc(100% - 32px))!important;
+  margin-inline:auto!important;
 }
 [data-omnimux-starter-host] [class*="composerHero"] > :first-child {
   margin-top:0!important; margin-bottom:4px!important;
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
-.omnimux-starter-guide { order:3; }
-.omnimux-starter-guide {
-  width:calc(100% - 2 * var(--dsh-composer-side-clearance,16px));
-  max-width:var(--dsh-chat-content-width); box-sizing:border-box; margin-inline:auto;
-  min-width:0; color:var(--dsw-alias-label-primary); font-family:inherit; font-size:13px; line-height:1.5;
+
+/* 输入框与工作区选择行独立收敛：优雅居中，760px~780px 舒适打字宽度，不与下方内容区生硬对齐两侧，形成清晰视觉层次 */
+[data-omnimux-starter-host] [data-composer-card],
+[data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
+  width:100%!important;
+  max-width:min(780px, calc(100% - 24px))!important;
+  margin-inline:auto!important;
 }
-.omnimux-starter-guide { container-type:inline-size; container-name:starter-guide; padding-top:8px; max-width:928px; }
-.omnimux-starter-groups { display:flex; justify-content:center; flex-wrap:wrap; row-gap:24px; width:max-content; max-width:100%; margin-inline:auto; }
-.omnimux-starter-group { position:relative; min-width:0; padding-inline:20px; }
+
+/* 热门入门方式与任务指引内容区：自适应宽屏 1200px，舒展大气，层次分明 */
+.omnimux-starter-guide {
+  order:3;
+  width:100%!important;
+  max-width:1200px!important;
+  box-sizing:border-box;
+  margin-inline:auto;
+  min-width:0;
+  color:var(--dsw-alias-label-primary);
+  font-family:inherit;
+  font-size:13px;
+  line-height:1.5;
+  container-type:inline-size;
+  container-name:starter-guide;
+  padding-top:12px;
+}
+.omnimux-starter-groups { display:flex; justify-content:center; flex-wrap:wrap; row-gap:20px; width:100%; max-width:100%; margin-inline:auto; }
+.omnimux-starter-group { position:relative; min-width:0; padding-inline:24px; }
 .omnimux-starter-group:first-child { padding-left:4px; }
 .omnimux-starter-group:last-child { padding-right:4px; }
 .omnimux-starter-group:not(:last-child)::after {
@@ -60,7 +82,7 @@ export const GUIDE_CSS = `
 /* ==================== 热门入门方式 (Popular Starters) ==================== */
 .omnimux-popular-section {
   width: 100%;
-  margin-top: 32px;
+  margin-top: 36px;
   padding-top: 24px;
   border-top: 1px solid var(--dsw-alias-border-l1);
 }
@@ -68,7 +90,7 @@ export const GUIDE_CSS = `
   font-size: 16px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
-  margin: 0 0 16px 2px;
+  margin: 0 0 18px 2px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -76,7 +98,7 @@ export const GUIDE_CSS = `
 .omnimux-popular-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1935,10 +1957,10 @@ export const GUIDE_CSS = `
   to { opacity: 1; transform: scale(1); }
 }
 
-@container starter-guide (max-width:871px) {
+@container starter-guide (max-width:920px) {
   .omnimux-starter-group, .omnimux-starter-group:first-child, .omnimux-starter-group:last-child { padding-inline:12px; }
   .omnimux-starter-group::after { display:none; }
-  .omnimux-popular-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .omnimux-popular-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .omnimux-insight-modal { height: 92vh; }
   .omnimux-insight-body { flex-direction: column; }
   .omnimux-insight-left { width: 100%; border-right: 0; border-bottom: 1px solid var(--dsw-alias-border-l1); max-height: 240px; }
