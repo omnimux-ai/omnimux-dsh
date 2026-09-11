@@ -235,7 +235,7 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
     assert.ok(document.querySelector('.omnimux-u2v-error'))
     assert.equal(writes, 0)
 
-    // 4. 输入 URL 并切换风格与画幅
+    // 4. 输入 URL 并切换风格、画幅与时长
     const input = document.querySelector('.omnimux-u2v-input')
     await act(async () => {
       const propKey = Object.keys(input).find(k => k.startsWith('__reactProps$'))
@@ -243,6 +243,25 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
         input[propKey].onChange({ target: { value: 'https://www.amazon.com/dp/B09XYZ1234' } })
       }
     })
+
+    // 验证目标时长滑块默认不处于禁用态，可直接拖动并自动解除自动状态
+    const autoBtn = document.querySelector('.omnimux-u2v-auto-btn')
+    const slider = document.querySelector('.omnimux-u2v-slider')
+    const durationLabel = document.querySelector('.omnimux-u2v-duration-label')
+    assert.equal(slider.disabled, false, 'slider must never be disabled in auto mode')
+    assert.equal(autoBtn.getAttribute('aria-pressed'), 'true')
+    assert.equal(durationLabel.textContent.trim(), '自动')
+
+    // 模拟用户直接拖拽滑块至 30 秒
+    await act(async () => {
+      const sliderProps = Object.keys(slider).find(k => k.startsWith('__reactProps$'))
+      if (sliderProps && slider[sliderProps]?.onChange) {
+        slider[sliderProps].onChange({ target: { value: '30' } })
+      }
+    })
+    await render(guideZh)
+    assert.equal(autoBtn.getAttribute('aria-pressed'), 'false', 'auto mode should be toggled off after dragging slider')
+    assert.equal(durationLabel.textContent.trim(), '30s', 'duration label should update to 30s')
 
     // 选择 UGC 风格
     const styleBtns = document.querySelectorAll('.omnimux-u2v-style-btn')

@@ -259,7 +259,7 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
             <span>{t('guide.url-to-video.duration.label')}</span>
           </label>
           <div className="omnimux-u2v-duration-row">
-            <button key="auto-btn" type="button" aria-pressed={isAutoDuration} className="omnimux-u2v-auto-btn" onClick={() => setIsAutoDuration(!isAutoDuration)} /* exempt-ui01: auto duration toggle */>
+            <button key="auto-btn" type="button" aria-pressed={isAutoDuration} className="omnimux-u2v-auto-btn" onClick={() => setIsAutoDuration(!isAutoDuration)}> {/* // exempt-ui01: auto duration toggle */}
               {t('guide.url-to-video.duration.auto')}
             </button>
             <div className="omnimux-u2v-slider-track">
@@ -267,13 +267,18 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
                 type="range"
                 min="4"
                 max="180"
+                step="1"
                 value={isAutoDuration ? 15 : duration}
-                disabled={isAutoDuration}
                 onChange={(e) => {
                   setDuration(Number(e.target.value))
                   setIsAutoDuration(false)
                 }}
-                className="omnimux-u2v-slider"
+                onInput={(e) => {
+                  setDuration(Number(e.target.value))
+                  setIsAutoDuration(false)
+                }}
+                className={`omnimux-u2v-slider ${isAutoDuration ? 'is-auto' : ''}`}
+                aria-label={t('guide.url-to-video.duration.label')}
               />
             </div>
             <span className="omnimux-u2v-duration-label">
