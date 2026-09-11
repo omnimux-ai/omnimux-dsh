@@ -473,6 +473,26 @@ export const VIDEO_BREAKDOWN_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
+.omnimux-video-breakdown-shot-speech {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.5;
+}
+
+.omnimux-video-breakdown-shot-speech svg {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.omnimux-video-shot-speech-text {
+  font-style: italic;
+  color: var(--dsw-alias-label-secondary);
+}
+
 /* Structure Tab (Image 2) */
 .omnimux-video-breakdown-structure-view {
   display: flex;
@@ -598,10 +618,50 @@ export const VIDEO_BREAKDOWN_CSS = `
   border-top: none;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   padding: 0 20px;
   box-sizing: border-box;
   z-index: 10;
+}
+
+.omnimux-video-breakdown-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.omnimux-video-breakdown-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.omnimux-video-footer-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.omnimux-video-footer-btn:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l2);
+}
+
+.omnimux-video-footer-btn.is-active {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-brand-accent);
+  border-color: var(--dsw-alias-border-focus);
 }
 
 /* Native Local Player Styles */

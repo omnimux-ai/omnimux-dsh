@@ -7,6 +7,7 @@ import {
   formatTime,
   formatTimeRange,
   formatShotsCopyText,
+  formatScriptCopyText,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
   parsePipelineAndStructureFromMarkdown,
@@ -583,5 +584,29 @@ Hook → Product Intro → Usage Detail → Demo Scene
     assert.ok(shots[3].tags.includes('大远景'))
     assert.ok(shots[3].tags.includes('手持微动'))
     assert.ok(shots[3].description.length >= 20)
+  })
+
+  it('parses 6-column markdown table with speech and formats script copy text', () => {
+    const md = `
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:01 | 敲门准备 | Hook | 中景, 智能手机手持, 平视, 手持微动 | 室内玄关，灰色大门紧闭，地面有门垫。一名男子身穿深蓝色长袖T恤和卡其色裤子，正走向房门准备开门。 | Hold on, I'm coming! |
+| 0:01 - 0:02 | 开门瞬间 | Hook | 中景, 智能手机手持, 平视, 手持微动 | 男子猛地拉开大门，门后密密麻麻堆满了标有'CELLULAR DASH CAM'的蓝色快递纸箱。 | (无) |
+| 0:04 - 0:05 | 朋友出现 | Demo Scene | 中景, 智能手机手持, 平视, 手持微动 | 门外出现四位朋友（两男两女），微笑着看着满地的纸箱，其中一名女子张开双臂。 | Surprise! |
+    `
+    const { shots } = parsePipelineAndStructureFromMarkdown(md)
+    assert.equal(shots.length, 3)
+    assert.equal(shots[0].title, '敲门准备')
+    assert.equal(shots[0].speech, "Hold on, I'm coming!")
+    assert.equal(shots[1].speech, '')
+    assert.equal(shots[2].speech, 'Surprise!')
+
+    const scriptText = formatScriptCopyText(shots)
+    assert.match(scriptText, /Hold on, I'm coming!/)
+    assert.match(scriptText, /Surprise!/)
+
+    const shotsText = formatShotsCopyText(shots)
+    assert.match(shotsText, /台词：Hold on, I'm coming!/)
   })
 })

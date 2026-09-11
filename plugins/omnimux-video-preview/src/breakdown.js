@@ -41,10 +41,29 @@ export function formatShotsCopyText(shots = []) {
       const timeStr = shot.time_range || formatTimeRange(shot.start_seconds, shot.end_seconds)
       const stageStr = shot.stage ? ` [${shot.stage}]` : ''
       const tagsLine = Array.isArray(shot.tags) && shot.tags.length > 0 ? `属性：${shot.tags.join(' | ')}` : ''
+      const speechLine = shot.speech ? `台词：${shot.speech}` : ''
       const descLine = shot.description ? `描述：${shot.description}` : ''
-      return [`${timeStr} ${shot.title || `分镜 ${idx + 1}`}${stageStr}`, tagsLine, descLine].filter(Boolean).join('\n')
+      return [`${timeStr} ${shot.title || `分镜 ${idx + 1}`}${stageStr}`, tagsLine, speechLine, descLine].filter(Boolean).join('\n')
     })
     .join('\n\n')
+}
+
+/**
+ * Generate formatted plain script / dialogue text for one-click copy.
+ * @param {Array<object>} shots
+ * @returns {string}
+ */
+export function formatScriptCopyText(shots = []) {
+  if (!Array.isArray(shots) || shots.length === 0) return ''
+  const lines = shots
+    .map((s) => {
+      const speech = s.speech || ''
+      const time = s.time_range || `${s.start_seconds || 0}s`
+      return speech ? `${time} ${speech}` : null
+    })
+    .filter(Boolean)
+  if (lines.length > 0) return lines.join('\n\n')
+  return shots.map((s, idx) => `${s.time_range || `分镜 ${idx + 1}`} ${s.description || ''}`).join('\n\n')
 }
 
 /**
@@ -99,13 +118,39 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
           }
         }
 
-        // New 5-column format: | 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+        // New 5/6-column format: | 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | [台词/字幕] | 画面与动作描述 |
         const isStageKeyword = cols[2] && /^(hook|product intro|usage detail|demo scene|inciting incident|rising conflict|climax|plot twist|cliffhanger|cta)$/i.test(cols[2].trim())
         if (cols.length >= 4 && (hasStageHeader || isStageKeyword)) {
           let titleCol = cols[1] || `分镜 ${shots.length + 1}`
           const stageCol = cols[2].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim() || 'Product Intro'
           const tagsCol = cols[3] || ''
-          let descCol = cols[4] || cols[3] || ''
+          let speechCol = ''
+          let descCol = ''
+
+          if (cols.length >= 6) {
+            // Check if cols[4] or cols[5] is speech vs description
+            if (cols[4].length > 35 || /^(Hold on|Surprise|随着|男子|室内|镜头|门外)/i.test(cols[5])) {
+              descCol = cols[4] || ''
+              speechCol = cols[5] || ''
+            } else {
+              speechCol = cols[4] || ''
+              descCol = cols[5] || ''
+            }
+          } else {
+            descCol = cols[4] || cols[3] || ''
+          }
+
+          speechCol = speechCol.replace(/^[\(（]?(?:无|none|无台词|none)[\)）]?$/i, '').trim()
+          if (speechCol.startsWith('☊')) speechCol = speechCol.slice(1).trim()
+
+          if (!speechCol && descCol) {
+            const mSpeech = descCol.match(/(?:台词|口播|字幕|语音|Speech|Dialogue)[:：]\s*([^\n]+)/i)
+              || descCol.match(/[☊\u260a]\s*([^\n]+)/)
+            if (mSpeech) {
+              speechCol = mSpeech[1].trim()
+              descCol = descCol.replace(mSpeech[0], '').trim()
+            }
+          }
 
           let parsedTags = tagsCol.split(/[,，|、]/).map((t) => t.trim()).filter(Boolean)
           if (/^(全景|远景|大远景|大特写|特写|中景|中全景|中近景|近景)$/i.test(titleCol.trim())) {
@@ -131,6 +176,7 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
             title: titleCol,
             stage: stageCol,
             tags: parsedTags,
+            speech: speechCol,
             description: descCol,
           })
           continue
@@ -210,6 +256,16 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
           shotDesc = `${shotTitle}，镜头结合${tags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
         }
 
+        let speechCol = ''
+        if (shotDesc) {
+          const mSpeech = shotDesc.match(/(?:台词|口播|字幕|语音|Speech|Dialogue)[:：]\s*([^\n]+)/i)
+            || shotDesc.match(/[☊\u260a]\s*([^\n]+)/)
+          if (mSpeech) {
+            speechCol = mSpeech[1].trim()
+            shotDesc = shotDesc.replace(mSpeech[0], '').trim()
+          }
+        }
+
         shots.push({
           id: `shot_${shots.length + 1}`,
           start_seconds: startSec,
@@ -218,6 +274,7 @@ export function parseShotsFromAnalyzeMarkdown(markdown) {
           title: shotTitle,
           stage,
           tags,
+          speech: speechCol,
           description: shotDesc,
         })
       }

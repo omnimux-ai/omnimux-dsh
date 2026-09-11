@@ -22,11 +22,15 @@ import {
   PauseIcon,
   VolumeIcon,
   VolumeXIcon,
+  HeadphonesIcon,
+  TranslateIcon,
+  ChevronDownIcon,
 } from './icons.jsx'
 
 export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const [activeTab, setActiveTab] = useState('shots')
   const [playerMode, setPlayerMode] = useState('native') // 'native' | 'embed'
+  const [isTranslated, setIsTranslated] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -101,9 +105,23 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       const range = s.time_range || `${s.start_seconds || 0}s - ${s.end_seconds || 0}s`
       const stage = s.stage ? ` [${s.stage}]` : ''
       const tags = Array.isArray(s.tags) && s.tags.length ? `\n属性：${s.tags.join(' | ')}` : ''
+      const speech = s.speech ? `\n台词：${s.speech}` : ''
       const desc = s.description ? `\n描述：${s.description}` : ''
-      return `${range} ${s.title || `分镜 ${idx + 1}`}${stage}${tags}${desc}`
+      return `${range} ${s.title || `分镜 ${idx + 1}`}${stage}${tags}${speech}${desc}`
     }).join('\n\n')
+  }, [shots])
+
+  const scriptCopyContent = useMemo(() => {
+    if (!shots.length) return ''
+    const lines = shots
+      .map((s) => {
+        const speech = s.speech || s.dialogue || s.subtitle || ''
+        const time = s.time_range || `${s.start_seconds || 0}s`
+        return speech ? `${time} ${speech}` : null
+      })
+      .filter(Boolean)
+    if (lines.length > 0) return lines.join('\n\n')
+    return shots.map((s, idx) => `${s.time_range || `分镜 ${idx + 1}`} ${s.description || ''}`).join('\n\n')
   }, [shots])
 
   const structureCopyContent = useMemo(() => {
@@ -165,32 +183,24 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   }, [currentPlayingShotIndex, activeTab, isPlaying])
 
   const renderTagIcon = (tagStr) => {
-    if (tagStr.includes('特写')) {
+    const s = String(tagStr || '')
+    if (s.includes('特写')) {
       return <span className="omnimux-video-tag-sym">↖</span>
     }
-    if (tagStr.includes('中景')) {
+    if (s.includes('中景') || s.includes('远景') || s.includes('全景')) {
       return <span className="omnimux-video-tag-sym">↗</span>
     }
-    if (tagStr.includes('全景')) {
-      return <span className="omnimux-video-tag-sym">⤢</span>
-    }
-    if (tagStr.includes('手机') || tagStr.includes('手持') || tagStr.includes('相机')) {
+    if (s.includes('手机') || s.includes('手持') || s.includes('相机') || s.includes('机位')) {
       return <CameraIcon size={12} />
     }
-    if (tagStr.includes('俯视')) {
+    if (s.includes('俯视') || s.includes('平视')) {
       return <span className="omnimux-video-tag-sym">▽</span>
     }
-    if (tagStr.includes('仰视')) {
+    if (s.includes('仰视')) {
       return <span className="omnimux-video-tag-sym">△</span>
     }
-    if (tagStr.includes('平视')) {
-      return <span className="omnimux-video-tag-sym">▷</span>
-    }
-    if (tagStr.includes('微动')) {
-      return <span className="omnimux-video-tag-sym">✛</span>
-    }
-    if (tagStr.includes('平移') || tagStr.includes('移动')) {
-      return <span className="omnimux-video-tag-sym">⇋</span>
+    if (s.includes('微动') || s.includes('平移') || s.includes('移动') || s.includes('推拉') || s.includes('摇镜')) {
+      return <span className="omnimux-video-tag-sym">✥</span>
     }
     return <FramingIcon size={12} />
   }
@@ -528,6 +538,15 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                       {shot.description ? (
                         <div className="omnimux-video-breakdown-shot-desc">{shot.description}</div>
                       ) : null}
+
+                      {shot.speech ? (
+                        <div className="omnimux-video-breakdown-shot-speech">
+                          <HeadphonesIcon size={13} />
+                          <span className="omnimux-video-shot-speech-text">
+                            {isTranslated && shot.speech_zh ? shot.speech_zh : shot.speech}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   )
                 })}
@@ -569,16 +588,52 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             )}
           </div>
 
-          {/* Bottom Footer Actions */}
+          {/* Bottom Footer Actions (1:1 with Image 1) */}
           <footer className="omnimux-video-breakdown-bottom-bar">
-            <CopyButton
-              variant="outline"
-              size="sm"
-              text={activeTab === 'shots' ? shotsCopyContent : structureCopyContent}
-              successText={activeTab === 'shots' ? '已复制分镜脚本' : '已复制结构拆解'}
-            >
-              {activeTab === 'shots' ? '复制分镜' : '复制结构拆解'}
-            </CopyButton>
+            <div className="omnimux-video-breakdown-footer-left">
+              <button // exempt-ui01 translate action button
+                type="button"
+                className={`omnimux-video-footer-btn${isTranslated ? ' is-active' : ''}`}
+                onClick={() => setIsTranslated(!isTranslated)}
+                title={isTranslated ? '切换为原文' : '翻译为中文'}
+              >
+                <TranslateIcon size={14} />
+                <span>{isTranslated ? '原文' : '翻译'}</span>
+                <ChevronDownIcon size={11} />
+              </button>
+            </div>
+
+            <div className="omnimux-video-breakdown-footer-right">
+              {activeTab === 'shots' ? (
+                <>
+                  <CopyButton
+                    variant="outline"
+                    size="sm"
+                    text={scriptCopyContent}
+                    successText="已复制脚本"
+                  >
+                    复制脚本
+                  </CopyButton>
+                  <CopyButton
+                    variant="outline"
+                    size="sm"
+                    text={shotsCopyContent}
+                    successText="已复制分镜"
+                  >
+                    复制分镜
+                  </CopyButton>
+                </>
+              ) : (
+                <CopyButton
+                  variant="outline"
+                  size="sm"
+                  text={structureCopyContent}
+                  successText="已复制结构拆解"
+                >
+                  复制结构拆解
+                </CopyButton>
+              )}
+            </div>
           </footer>
         </main>
       </div>
