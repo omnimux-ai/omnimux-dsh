@@ -26,8 +26,9 @@ export const STAGE_I18N = {
   'Product Intro': { zh: '产品引入', en: 'Product Intro' },
   'Usage Detail': { zh: '使用细节', en: 'Usage Detail' },
   'Demo Scene': { zh: '场景演示', en: 'Demo Scene' },
-  'Call to Action': { zh: '行动号召', en: 'Call to Action' },
-  CTA: { zh: '行动号召', en: 'Call to Action' },
+  'Call to Action': { zh: '行动号召', en: 'Cta' },
+  CTA: { zh: '行动号召', en: 'Cta' },
+  Cta: { zh: '行动号召', en: 'Cta' },
   'Inciting Incident': { zh: '开端引发', en: 'Inciting Incident' },
   'Rising Conflict': { zh: '冲突升级', en: 'Rising Conflict' },
   Climax: { zh: '剧情高潮', en: 'Climax' },
@@ -92,7 +93,7 @@ export function mapToCanonicalStage(rawStage, index = 0) {
   if (/^rising\s*conflict$/i.test(s)) return 'Rising Conflict'
   if (/^climax$/i.test(s)) return 'Climax'
   if (/^cliffhanger$/i.test(s)) return 'Cliffhanger'
-  if (/^call\s*to\s*action$|^cta$/i.test(s)) return 'Call to Action'
+  if (/^call\s*to\s*action$|^cta$/i.test(s)) return 'Cta'
 
   // Strip prefixes like "第一阶段：", "阶段一："
   const clean = s
@@ -107,7 +108,8 @@ export function mapToCanonicalStage(rawStage, index = 0) {
   if (/^(?:hook|黄金钩子|吸睛|悬念|开场|趣味吸睛)/i.test(clean)) return 'Hook'
   if (/^(?:product\s*intro|产品引入|核心产品|产品展示|开箱|拆箱|硬件外观|实机展示|实机)/i.test(clean)) return 'Product Intro'
   if (/^(?:usage\s*detail|使用细节|功能演示|实车安装|实时画面|功能|实操|监控)/i.test(clean)) return 'Usage Detail'
-  if (/^(?:demo\s*scene|场景演示|转化共鸣|行动号召|产品定格|品牌展示|实际场景|定格)/i.test(clean)) return 'Demo Scene'
+  if (/^(?:demo\s*scene|场景演示|转化共鸣|实际场景|产品定格|品牌展示|定格)/i.test(clean)) return 'Demo Scene'
+  if (/^(?:call\s*to\s*action|cta|行动号召|引导互动|互动提示)/i.test(clean)) return 'Cta'
 
   if (index === 0 && (/身份引入/i.test(clean) || /确立/i.test(clean))) return clean
   if (index === 1 && (/公益宣传/i.test(clean) || /行动号召/i.test(clean))) return clean

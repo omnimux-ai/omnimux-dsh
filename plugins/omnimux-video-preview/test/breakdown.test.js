@@ -743,4 +743,47 @@ Hook → Product Intro → Usage Detail → Demo Scene
     assert.equal(shots.length, 1)
     assert.deepEqual(shots[0].tags, ['中近景', '车载机位', '俯视', '手持微动'])
   })
+
+  it('parses and standardizes 3-stage dynamic pipeline matching benchmark Image 1', () => {
+    const md = `
+## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Demo Scene → Cta
+
+## 2. 结构阶段解构 (Stage Breakdown)
+
+### Hook
+视频开场通过对比文字抛出一个引人共鸣的话题，结合可爱的小腊肠犬背着绿色小背包睡觉的画面，迅速抓取观众的注意力，激发宠物爱好者的情感共鸣。
+
+### Demo Scene
+展示小狗在不同场景下（车内、沙发上、地毯上）使用绿色小背包的各种可爱睡姿，直观展现产品的可爱外观与伴侣属性，加深用户的情感连接。
+
+### Cta
+通过屏幕上显眼的互动提示，引导观众在评论区输入特定关键词，从而提高视频的互动率和评论量，促进转化。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:00 - 0:01 | 车载熟睡安抚 | Hook | 中近景, 车载机位, 俯视, 手持微动 | 画面描述 | 🗣️: Es solamente un perro... |
+| 0:01 - 0:05 | 户外仰卧拍抚 | Demo Scene | 特写, 固定机位, 平视, 固定镜头 | 画面描述 | 🗣️: Es solamente un perro... |
+| 0:05 - 0:06 | 沙发安抚引导 | Cta | 中景, 固定机位, 平视, 固定镜头 | 画面描述 | ¡Comenta "perro" si a tu mascota le gustaría esto! 🥹❤️ |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+
+    assert.deepEqual(pipeline, ['Hook', 'Demo Scene', 'Cta'])
+    assert.equal(structure.length, 3)
+    assert.equal(structure[0].stage, 'Hook')
+    assert.equal(structure[0].title, 'Hook')
+    assert.match(structure[0].description, /视频开场通过对比文字抛出/)
+    assert.equal(structure[1].stage, 'Demo Scene')
+    assert.equal(structure[1].title, 'Demo Scene')
+    assert.match(structure[1].description, /展示小狗在不同场景下/)
+    assert.equal(structure[2].stage, 'Cta')
+    assert.equal(structure[2].title, 'Cta')
+    assert.match(structure[2].description, /通过屏幕上显眼的互动提示/)
+
+    assert.equal(shots.length, 3)
+    assert.equal(shots[0].stage, 'Hook')
+    assert.equal(shots[1].stage, 'Demo Scene')
+    assert.equal(shots[2].stage, 'Cta')
+  })
 })

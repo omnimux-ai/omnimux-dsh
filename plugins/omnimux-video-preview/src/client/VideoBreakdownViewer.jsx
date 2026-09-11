@@ -102,13 +102,15 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
           continue
         }
       }
+      stage = mapToCanonicalStage(stage, cleaned.length)
       if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage)) continue
       seen.add(stage)
+      const cleanDesc = desc.replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '').trim()
       cleaned.push({
         ...item,
         stage,
         title: stage,
-        description: desc,
+        description: cleanDesc,
       })
     }
     return cleaned
@@ -119,7 +121,10 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       return cleanStructure.map((s) => s.stage)
     }
     const raw = Array.isArray(data?.pipeline) ? data.pipeline : []
-    return raw.filter((name) => !METADATA_HEADING_REGEX.test(name))
+    return raw
+      .filter((name) => !METADATA_HEADING_REGEX.test(name))
+      .map((name, idx) => mapToCanonicalStage(name, idx))
+      .filter(Boolean)
   }, [cleanStructure, data?.pipeline])
 
   const structure = cleanStructure
@@ -170,8 +175,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     if (!shots.length) return ''
     return shots.map((s, idx) => {
       const range = s.time_range || `${s.start_seconds || 0}s - ${s.end_seconds || 0}s`
-      const localizedStage = localizeStage(s.stage, isZh)
-      const stage = localizedStage ? ` [${localizedStage}]` : ''
+      const stageName = mapToCanonicalStage(s.stage, idx)
+      const stage = stageName ? ` [${stageName}]` : ''
       const tags = Array.isArray(s.tags) && s.tags.length ? `\n${isZh ? '属性' : 'Tags'}：${s.tags.join(' | ')}` : ''
       const speech = s.speech ? `\n${isZh ? '台词' : 'Speech'}：${s.speech}` : ''
       const desc = s.description ? `\n${isZh ? '描述' : 'Description'}：${s.description}` : ''
@@ -195,11 +200,11 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
   const structureCopyContent = useMemo(() => {
     if (!structure.length) return ''
-    return structure.map((item) => {
-      const title = localizeStage(item.stage || item.title, isZh)
+    return structure.map((item, idx) => {
+      const title = mapToCanonicalStage(item.stage || item.title, idx)
       return `【${title}】\n${item.description || ''}`
     }).join('\n\n')
-  }, [structure, isZh])
+  }, [structure])
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -584,7 +589,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                           ) : null}
                         </div>
                         {shot.stage ? (
-                          <div className="omnimux-video-breakdown-stage-pill">{localizeStage(shot.stage, isZh)}</div>
+                          <div className="omnimux-video-breakdown-stage-pill">{mapToCanonicalStage(shot.stage, idx)}</div>
                         ) : null}
                       </div>
 
@@ -628,7 +633,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 <div className="omnimux-video-breakdown-pipeline-row">
                   {pipeline.map((stageName, pIdx) => (
                     <React.Fragment key={pIdx}>
-                      <span className="omnimux-video-breakdown-pipeline-item">{localizeStage(stageName, isZh)}</span>
+                      <span className="omnimux-video-breakdown-pipeline-item">{mapToCanonicalStage(stageName, pIdx)}</span>
                       {pIdx < pipeline.length - 1 ? (
                         <span className="omnimux-video-breakdown-pipeline-arrow">→</span>
                       ) : null}
@@ -636,13 +641,13 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                   ))}
                 </div>
 
-                {/* 2. Structured Stage Cards matching Image 2 */}
+                {/* 2. Structured Stage Cards matching Image 1 */}
                 <div className="omnimux-video-breakdown-structure-cards">
                   {structure.map((item, sIdx) => {
-                    const displayTitle = item.stage || item.title || `${isZh ? '阶段' : 'Stage'} ${sIdx + 1}`
+                    const displayTitle = mapToCanonicalStage(item.stage || item.title, sIdx)
                     return (
                       <div key={sIdx} className="omnimux-video-breakdown-structure-card">
-                        <div className="omnimux-video-breakdown-structure-title">{localizeStage(displayTitle, isZh)}</div>
+                        <div className="omnimux-video-breakdown-structure-title">{displayTitle}</div>
                         <div className="omnimux-video-breakdown-structure-desc">
                           {formatStructureDescription(item.description)}
                         </div>
