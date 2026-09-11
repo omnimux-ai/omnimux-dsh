@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createGuideStore } from './state.js'
+import { guideZh, guideEn } from './catalog.js'
 
 const output = await build({ entryPoints: [new URL('./SessionGuide.jsx', import.meta.url).pathname], bundle: true, write: false, format: 'cjs', platform: 'node', external: ['react'] })
 const module = { exports: {} }
@@ -111,17 +112,18 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
   let writes = 0
   const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
   const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
-  const props = () => ({
+  const props = (localeMap = guideZh) => ({
     sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
     useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
-    getCurrentSessionId: () => 'A', store, workbench, t: key => key,
+    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
   })
-  const render = () => act(async () => root.render(React.createElement(SessionGuide, props())))
+  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
   const click = async sel => act(async () => document.querySelector(sel).click())
 
   try {
-    await render()
-    // 1. 验证 4 个卡片均已呈现
+    // 1. 中文环境渲染与验证
+    await render(guideZh)
+    // 验证 4 个卡片均已呈现
     const popularCards = document.querySelectorAll('[data-popular-starter-id]')
     assert.equal(popularCards.length, 4)
     assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
@@ -131,30 +133,43 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
 
     // 2. 点击占位卡片触发提示，未修改草稿
     await click('[data-popular-starter-id="url-to-video"]')
-    await render()
+    await render(guideZh)
     assert.ok(document.querySelector('.omnimux-toast-pill'))
     assert.equal(writes, 0)
 
-    // 3. 点击营销洞察卡片打开模态框
+    // 3. 点击营销洞察卡片打开模态框，验证中文 Prompt 预填
     await click('[data-popular-starter-id="marketing-insight"]')
-    await render()
+    await render(guideZh)
     const modal = document.querySelector('.omnimux-insight-modal')
     assert.ok(modal, 'modal should open')
     const items = document.querySelectorAll('[data-insight-id]')
     assert.equal(items.length, 6)
+    const initialTextarea = document.querySelector('.omnimux-insight-textarea')
+    assert.ok(initialTextarea.value.includes('请为[目标市场]中的[产品/品牌]寻找并筛选候选 TikTok 创作者'))
 
-    // 4. 切换到第2项（广告ROAS分析）
+    // 4. 切换到第2项（广告ROAS分析），验证中文 Prompt 动态切换
     await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
-    await render()
+    await render(guideZh)
     const textarea = document.querySelector('.omnimux-insight-textarea')
-    assert.ok(textarea.value.includes('Analyze performance on [platform]'))
+    assert.ok(textarea.value.includes('结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]'))
 
     // 5. 点击“开始洞察 ->”按钮，提交草稿
     await click('.omnimux-insight-submit')
-    await render()
+    await render(guideZh)
     assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
-    assert.ok(draft.includes('Analyze performance on [platform]'))
+    assert.ok(draft.includes('结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]'))
     assert.equal(writes, 1)
+
+    // 6. 英文语言环境自适应验证
+    await render(guideEn)
+    await click('[data-popular-starter-id="marketing-insight"]')
+    await render(guideEn)
+    await click('[data-insight-id="tiktok-creators"]')
+    await render(guideEn)
+    const enTextarea = document.querySelector('.omnimux-insight-textarea')
+    assert.ok(enTextarea.value.includes('Find and shortlist TikTok creators for [product/brand] in [target market]'))
+    await click('.omnimux-insight-close')
+    await render(guideEn)
   } finally {
     await act(async () => root.unmount())
     store.dispose()

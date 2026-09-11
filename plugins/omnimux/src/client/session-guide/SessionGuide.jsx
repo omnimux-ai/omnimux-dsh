@@ -89,8 +89,9 @@ function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
   useEffect(() => {
     if (!isOpen) return
     const item = MARKETING_INSIGHT_ITEMS.find(it => it.id === selectedItem) || MARKETING_INSIGHT_ITEMS[0]
-    setPromptValue(item.prompt)
-  }, [isOpen, selectedItem])
+    const localizedPrompt = t(`guide.insight.${item.id}.prompt`) || item.prompt
+    setPromptValue(localizedPrompt)
+  }, [isOpen, selectedItem, t])
 
   useEffect(() => {
     if (!isOpen) return
@@ -106,7 +107,10 @@ function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
   function handleSelect(id) {
     setSelectedItem(id)
     const item = MARKETING_INSIGHT_ITEMS.find(it => it.id === id)
-    if (item) setPromptValue(item.prompt)
+    if (item) {
+      const localizedPrompt = t(`guide.insight.${item.id}.prompt`) || item.prompt
+      setPromptValue(localizedPrompt)
+    }
   }
 
   function handleSubmit() {
