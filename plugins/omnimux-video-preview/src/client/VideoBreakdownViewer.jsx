@@ -681,28 +681,25 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                     variant="outline"
                     size="sm"
                     text={scriptCopyContent}
-                    successText={isZh ? '已复制脚本' : 'Script Copied'}
-                  >
-                    {isZh ? '复制脚本' : 'Copy Script'}
-                  </CopyButton>
+                    label={isZh ? '复制脚本' : 'Copy Script'}
+                    copiedLabel={isZh ? '已复制脚本' : 'Script Copied'}
+                  />
                   <CopyButton
                     variant="outline"
                     size="sm"
                     text={shotsCopyContent}
-                    successText={isZh ? '已复制分镜' : 'Shots Copied'}
-                  >
-                    {isZh ? '复制分镜' : 'Copy Shots'}
-                  </CopyButton>
+                    label={isZh ? '复制分镜' : 'Copy Shots'}
+                    copiedLabel={isZh ? '已复制分镜' : 'Shots Copied'}
+                  />
                 </>
               ) : (
                 <CopyButton
                   variant="outline"
                   size="sm"
                   text={structureCopyContent}
-                  successText={isZh ? '已复制结构拆解' : 'Structure Copied'}
-                >
-                  {isZh ? '复制结构拆解' : 'Copy Structure'}
-                </CopyButton>
+                  label={isZh ? '复制结构拆解' : 'Copy Structure'}
+                  copiedLabel={isZh ? '已复制结构拆解' : 'Structure Copied'}
+                />
               )}
             </div>
           </footer>
