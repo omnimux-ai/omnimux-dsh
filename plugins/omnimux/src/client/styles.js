@@ -9,146 +9,104 @@ const LOGIN_GATE_JELLY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
 
 export const HUB_CSS = `
-/* ── OmniMux 全局黑白极简主题系统 (Monochrome Black & White System) ── */
+/* ── OmniMux 原生蓝色元素中性化重构 (精准覆盖原生蓝色，保留 DSH 原生黑白底色与层次) ── */
 :root,
 body {
-  /* 纯正无偏色中性灰体系 (Neutral / Zinc) 替代带冷蓝倾向的 neutral-bluish */
-  --dsw-static-neutral-bluish-00: #ffffff;
-  --dsw-static-neutral-bluish-50: #fafafa;
-  --dsw-static-neutral-bluish-60: #f4f4f5;
-  --dsw-static-neutral-bluish-75: #ebebeb;
-  --dsw-static-neutral-bluish-100: #e4e4e7;
-  --dsw-static-neutral-bluish-150: #dcdce0;
-  --dsw-static-neutral-bluish-200: #d4d4d8;
-  --dsw-static-neutral-bluish-300: #a1a1aa;
-  --dsw-static-neutral-bluish-400: #71717a;
-  --dsw-static-neutral-bluish-500: #52525b;
-  --dsw-static-neutral-bluish-600: #3f3f46;
-  --dsw-static-neutral-bluish-700: #27272a;
-  --dsw-static-neutral-bluish-750: #202023;
-  --dsw-static-neutral-bluish-800: #18181b;
-  --dsw-static-neutral-bluish-850: #141416;
-  --dsw-static-neutral-bluish-875: #111113;
-  --dsw-static-neutral-bluish-900: #0d0d0f;
-  --dsw-static-neutral-bluish-950: #09090b;
-  --dsw-static-neutral-bluish-1000: #000000;
+  /* DeepSeek 蓝系列全面中性化 (浅色模式复用原生深色中性灰阶) */
+  --dsw-static-deepseek-50: var(--dsw-static-neutral-bluish-50);
+  --dsw-static-deepseek-100: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-deepseek-200: var(--dsw-static-neutral-bluish-200);
+  --dsw-static-deepseek-300: var(--dsw-static-neutral-bluish-300);
+  --dsw-static-deepseek-400: var(--dsw-static-neutral-bluish-600);
+  --dsw-static-deepseek-450: var(--dsw-static-neutral-bluish-700);
+  --dsw-static-deepseek-500: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-deepseek-600: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-deepseek-700-delete: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-deepseek-800: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-deepseek-900: var(--dsw-static-neutral-bluish-1000);
 
-  /* DeepSeek 蓝系列全面黑白化 (浅色模式下映射为深黑炭灰阶梯) */
-  --dsw-static-deepseek-50: #fafafa;
-  --dsw-static-deepseek-100: #f4f4f5;
-  --dsw-static-deepseek-200: #e4e4e7;
-  --dsw-static-deepseek-300: #d4d4d8;
-  --dsw-static-deepseek-400: #71717a;
-  --dsw-static-deepseek-450: #3f3f46;
-  --dsw-static-deepseek-500: #18181b;
-  --dsw-static-deepseek-600: #09090b;
-  --dsw-static-deepseek-700-delete: #09090b;
-  --dsw-static-deepseek-800: #09090b;
-  --dsw-static-deepseek-900: #000000;
+  /* 常规蓝色系列全面中性化 */
+  --dsw-static-blue-50: var(--dsw-static-neutral-bluish-50);
+  --dsw-static-blue-50p: var(--dsw-static-neutral-bluish-50);
+  --dsw-static-blue-75: var(--dsw-static-neutral-bluish-75);
+  --dsw-static-blue-100: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-blue-300: var(--dsw-static-neutral-bluish-300);
+  --dsw-static-blue-400: var(--dsw-static-neutral-bluish-600);
+  --dsw-static-blue-450: var(--dsw-static-neutral-bluish-700);
+  --dsw-static-blue-500: var(--dsw-static-neutral-bluish-800);
+  --dsw-static-blue-600: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-blue-800: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-blue-900: var(--dsw-static-neutral-bluish-1000);
+  --dsw-static-blue-950: var(--dsw-static-neutral-bluish-1000);
 
-  /* 常规蓝色系列全面黑白化 */
-  --dsw-static-blue-50: #fafafa;
-  --dsw-static-blue-50p: #fafafa;
-  --dsw-static-blue-75: #f4f4f5;
-  --dsw-static-blue-100: #e4e4e7;
-  --dsw-static-blue-300: #d4d4d8;
-  --dsw-static-blue-400: #71717a;
-  --dsw-static-blue-450: #52525b;
-  --dsw-static-blue-500: #27272a;
-  --dsw-static-blue-600: #18181b;
-  --dsw-static-blue-800: #141416;
-  --dsw-static-blue-900: #09090b;
-  --dsw-static-blue-950: #000000;
-
-  /* 语义与特定组件黑白映射 */
-  --dsw-alias-brand-primary-new-colorprimary-new-color: #18181b;
-  --dsw-alias-button-info-fill: #18181b;
-  --dsw-alias-button-info-hover: #27272a;
-  --dsw-alias-state-business-primary: #18181b;
-  --dsw-alias-state-business-tertiary: #f4f4f5;
-  --dsw-alias-label-primary-bluish: #18181b;
-  --dsw-alias-primary: #18181b;
-  --dsw-alias-primary-hover: #27272a;
-  --dsw-alias-brand: #18181b;
-  --dsw-alias-brand-primary: #18181b;
-  --dsw-alias-brand-accent: #18181b;
-  --dsw-alias-accent-primary: #18181b;
-  --dsw-alias-state-publishing: #18181b;
-  --dsw-alias-link: #18181b;
-  --wb-accent: var(--dsw-alias-label-primary, #18181b);
-  --dsw-specific-bubble-highlight: #e4e4e7;
-  --dsw-specific-bubble: #fafafa;
-  --dsw-specific-sidebar-nav-item-active-accent: #f4f4f5;
+  /* 消除原生蓝色语义关联 */
+  --dsw-alias-brand-primary-new-colorprimary-new-color: var(--dsw-alias-label-primary);
+  --dsw-alias-button-info-fill: var(--dsw-alias-label-primary);
+  --dsw-alias-button-info-hover: var(--dsw-alias-interactive-bg-hover);
+  --dsw-alias-state-business-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-state-business-tertiary: var(--dsw-alias-bg-layer-2);
+  --dsw-alias-label-primary-bluish: var(--dsw-alias-label-primary);
+  --dsw-alias-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-primary-hover: var(--dsw-alias-interactive-bg-hover);
+  --dsw-alias-brand: var(--dsw-alias-label-primary);
+  --dsw-alias-brand-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-brand-accent: var(--dsw-alias-label-primary);
+  --dsw-alias-accent-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-state-publishing: var(--dsw-alias-label-primary);
+  --dsw-alias-link: var(--dsw-alias-label-primary);
+  --wb-accent: var(--dsw-alias-label-primary);
+  --dsw-specific-bubble-highlight: var(--dsw-alias-bg-layer-2);
+  --dsw-specific-bubble: var(--dsw-alias-bg-layer-1);
+  --dsw-specific-sidebar-nav-item-active-accent: var(--dsw-alias-bg-layer-2);
 }
 
 body[data-ds-dark-theme] {
-  /* 纯正无偏色中性灰体系 (深色模式：纯黑底色与银白阶梯) */
-  --dsw-static-neutral-bluish-00: #ffffff;
-  --dsw-static-neutral-bluish-50: #fafafa;
-  --dsw-static-neutral-bluish-60: #f4f4f5;
-  --dsw-static-neutral-bluish-75: #e4e4e7;
-  --dsw-static-neutral-bluish-100: #d4d4d8;
-  --dsw-static-neutral-bluish-150: #a1a1aa;
-  --dsw-static-neutral-bluish-200: #8e8e93;
-  --dsw-static-neutral-bluish-300: #71717a;
-  --dsw-static-neutral-bluish-400: #52525b;
-  --dsw-static-neutral-bluish-500: #3f3f46;
-  --dsw-static-neutral-bluish-600: #2f2f32;
-  --dsw-static-neutral-bluish-700: #27272a;
-  --dsw-static-neutral-bluish-750: #202023;
-  --dsw-static-neutral-bluish-800: #18181b;
-  --dsw-static-neutral-bluish-850: #141416;
-  --dsw-static-neutral-bluish-875: #111113;
-  --dsw-static-neutral-bluish-900: #0d0d0f;
-  --dsw-static-neutral-bluish-950: #09090b; /* 纯粹极黑底色 */
-  --dsw-static-neutral-bluish-1000: #000000;
+  /* DeepSeek 蓝系列全面中性化 (深色模式复用原生高质感浅色灰阶与纯白) */
+  --dsw-static-deepseek-50: var(--dsw-static-neutral-bluish-850);
+  --dsw-static-deepseek-100: var(--dsw-static-neutral-bluish-800);
+  --dsw-static-deepseek-200: var(--dsw-static-neutral-bluish-750);
+  --dsw-static-deepseek-300: var(--dsw-static-neutral-bluish-600);
+  --dsw-static-deepseek-400: var(--dsw-static-neutral-bluish-300);
+  --dsw-static-deepseek-450: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-deepseek-500: var(--dsw-static-neutral-bluish-00);
+  --dsw-static-deepseek-600: var(--dsw-static-neutral-bluish-00);
+  --dsw-static-deepseek-700-delete: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-deepseek-800: var(--dsw-static-neutral-bluish-850);
+  --dsw-static-deepseek-900: var(--dsw-static-neutral-bluish-900);
 
-  /* DeepSeek 蓝系列全面黑白化 (深色模式映射为高质感银白阶梯) */
-  --dsw-static-deepseek-50: #141416;
-  --dsw-static-deepseek-100: #1f1f23;
-  --dsw-static-deepseek-200: #2e2e33;
-  --dsw-static-deepseek-300: #52525b;
-  --dsw-static-deepseek-400: #a1a1aa;
-  --dsw-static-deepseek-450: #d4d4d8;
-  --dsw-static-deepseek-500: #ffffff;
-  --dsw-static-deepseek-600: #f4f4f5;
-  --dsw-static-deepseek-700-delete: #e4e4e7;
-  --dsw-static-deepseek-800: #27272a;
-  --dsw-static-deepseek-900: #18181b;
+  /* 常规蓝色系列全面中性化 */
+  --dsw-static-blue-50: var(--dsw-static-neutral-bluish-850);
+  --dsw-static-blue-50p: var(--dsw-static-neutral-bluish-850);
+  --dsw-static-blue-75: var(--dsw-static-neutral-bluish-800);
+  --dsw-static-blue-100: var(--dsw-static-neutral-bluish-800);
+  --dsw-static-blue-300: var(--dsw-static-neutral-bluish-600);
+  --dsw-static-blue-400: var(--dsw-static-neutral-bluish-300);
+  --dsw-static-blue-450: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-blue-500: var(--dsw-static-neutral-bluish-50);
+  --dsw-static-blue-600: var(--dsw-static-neutral-bluish-00);
+  --dsw-static-blue-800: var(--dsw-static-neutral-bluish-100);
+  --dsw-static-blue-900: var(--dsw-static-neutral-bluish-200);
+  --dsw-static-blue-950: var(--dsw-static-neutral-bluish-300);
 
-  /* 常规蓝色系列全面黑白化 */
-  --dsw-static-blue-50: #141416;
-  --dsw-static-blue-50p: #141416;
-  --dsw-static-blue-75: #1f1f23;
-  --dsw-static-blue-100: #27272a;
-  --dsw-static-blue-300: #52525b;
-  --dsw-static-blue-400: #a1a1aa;
-  --dsw-static-blue-450: #d4d4d8;
-  --dsw-static-blue-500: #f4f4f5;
-  --dsw-static-blue-600: #ffffff;
-  --dsw-static-blue-800: #e4e4e7;
-  --dsw-static-blue-900: #d4d4d8;
-  --dsw-static-blue-950: #a1a1aa;
-
-  /* 语义与特定组件黑白映射 */
-  --dsw-alias-brand-primary-new-colorprimary-new-color: #ffffff;
-  --dsw-alias-button-info-fill: #ffffff;
-  --dsw-alias-button-info-hover: #e4e4e7;
-  --dsw-alias-state-business-primary: #ffffff;
-  --dsw-alias-state-business-tertiary: #27272a;
-  --dsw-alias-label-primary-bluish: #ffffff;
-  --dsw-alias-primary: #ffffff;
-  --dsw-alias-primary-hover: #e4e4e7;
-  --dsw-alias-brand: #ffffff;
-  --dsw-alias-brand-primary: #ffffff;
-  --dsw-alias-brand-accent: #ffffff;
-  --dsw-alias-accent-primary: #ffffff;
-  --dsw-alias-state-publishing: #ffffff;
-  --dsw-alias-link: #ffffff;
-  --wb-accent: var(--dsw-alias-label-primary, #ffffff);
-  --dsw-specific-bubble-highlight: #27272a;
-  --dsw-specific-bubble: #141416;
-  --dsw-specific-sidebar-nav-item-active-accent: #27272a;
+  /* 消除原生蓝色语义关联 */
+  --dsw-alias-brand-primary-new-colorprimary-new-color: var(--dsw-alias-label-primary);
+  --dsw-alias-button-info-fill: var(--dsw-alias-label-primary);
+  --dsw-alias-button-info-hover: var(--dsw-alias-interactive-bg-hover);
+  --dsw-alias-state-business-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-state-business-tertiary: var(--dsw-alias-bg-layer-2);
+  --dsw-alias-label-primary-bluish: var(--dsw-alias-label-primary);
+  --dsw-alias-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-primary-hover: var(--dsw-alias-interactive-bg-hover);
+  --dsw-alias-brand: var(--dsw-alias-label-primary);
+  --dsw-alias-brand-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-brand-accent: var(--dsw-alias-label-primary);
+  --dsw-alias-accent-primary: var(--dsw-alias-label-primary);
+  --dsw-alias-state-publishing: var(--dsw-alias-label-primary);
+  --dsw-alias-link: var(--dsw-alias-label-primary);
+  --wb-accent: var(--dsw-alias-label-primary);
+  --dsw-specific-bubble-highlight: var(--dsw-alias-bg-layer-2);
+  --dsw-specific-bubble: var(--dsw-alias-bg-layer-1);
+  --dsw-specific-sidebar-nav-item-active-accent: var(--dsw-alias-bg-layer-2);
 }
 
 /* 3. DSH 原生特异组件黑白化 */
