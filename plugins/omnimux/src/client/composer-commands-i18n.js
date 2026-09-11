@@ -367,13 +367,194 @@ export function syncMenuIcons(root) {
 }
 
 /**
- * Automatically observe DOM for slash menu appearance and synchronize icons.
+ * Ensure static CSS rules for downward menu placement in full-stage/hero mode.
+ * @param {Document} doc
+ */
+export function ensurePlacementStyles(doc) {
+  if (!doc || !doc.head) return
+  const STYLE_ID = 'dsh-omnimux-menu-placement'
+  if (doc.getElementById(STYLE_ID)) return
+
+  const style = doc.createElement('style')
+  style.id = STYLE_ID
+  style.textContent = `
+    /* OmniMux Adaptive Composer Menu Placement */
+    [data-menu-placement="bottom"] [class*="overlayAnchor"],
+    [data-composer-card][data-menu-placement="bottom"] [class*="overlayAnchor"],
+    [class*="overlayAnchor"][data-overlay-placement="bottom"] {
+      inset: 0 !important;
+      height: 100% !important;
+      pointer-events: none !important;
+    }
+    [data-menu-placement="bottom"] [data-trigger-menu],
+    [data-menu-placement="bottom"] [class*="iRJKyq_menu"],
+    [data-menu-placement="bottom"] [class*="_1q_ULW_card"],
+    [data-trigger-menu][data-placement="bottom"],
+    [class*="iRJKyq_menu"][data-placement="bottom"],
+    [class*="_1q_ULW_card"][data-placement="bottom"] {
+      top: calc(100% + 4px) !important;
+      bottom: auto !important;
+      pointer-events: auto !important;
+    }
+  `
+  doc.head.appendChild(style)
+}
+
+/**
+ * Determine whether the candidate menu should be placed below the input box.
+ * Rule:
+ * 1. If the input box is near the bottom of the page (spaceBelow < 220px),
+ *    keep the original behavior (place above).
+ * 2. If in Hero/centered/full-stage mode with sufficient space below (spaceBelow >= 220px),
+ *    place below so it doesn't obstruct headers and feels natural.
+ * 3. Fallback geometric check: if spaceBelow >= 280px and spaceBelow > spaceAbove,
+ *    place below.
+ * @param {HTMLElement|null} card - The [data-composer-card] element
+ * @param {HTMLElement|null} menu - The candidate menu element
+ * @param {Window} [windowObj]
+ * @returns {boolean} True if menu should be placed below the composer card
+ */
+export function shouldPlaceMenuBelow(card, menu, windowObj = (typeof window !== 'undefined' ? window : null)) {
+  if (!card || !windowObj) return false
+
+  const cardRect = typeof card.getBoundingClientRect === 'function' ? card.getBoundingClientRect() : null
+  if (!cardRect) return false
+
+  const viewportHeight = windowObj.innerHeight || windowObj.document?.documentElement?.clientHeight || 800
+  const spaceBelow = viewportHeight - cardRect.bottom
+  const spaceAbove = cardRect.top
+
+  // Strict lower bound: if space below is too tight, always keep above
+  if (spaceBelow < 220) {
+    return false
+  }
+
+  // Hero / Centered state check (New chat / full-stage hero mode)
+  const isHero = Boolean(
+    card.closest?.('[class*="hero"]') ||
+    card.closest?.('[class*="Hero"]') ||
+    card.closest?.('[data-phase="hero"]') ||
+    card.closest?.('[class*="composerHero"]') ||
+    card.closest?.('[class*="Q7WfXG_hero"]')
+  )
+  if (isHero && spaceBelow >= 220) {
+    return true
+  }
+
+  // Geometric adaptive check: if space below is substantially larger than space above
+  if (spaceBelow >= 280 && spaceBelow > spaceAbove) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Synchronize placement and maximum height for a single composer menu.
+ * @param {HTMLElement} menu
+ * @param {Document} [doc]
+ * @returns {boolean} True if placed below
+ */
+export function syncMenuPlacement(menu, doc) {
+  if (!menu) return false
+  const d = doc || menu.ownerDocument || (typeof document !== 'undefined' ? document : null)
+  if (!d) return false
+
+  const card = menu.closest?.('[data-composer-card]') || d.querySelector?.('[data-composer-card]')
+  const anchor = menu.parentElement
+  const win = d.defaultView || (typeof window !== 'undefined' ? window : null)
+
+  const placeBelow = shouldPlaceMenuBelow(card, menu, win)
+
+  if (placeBelow) {
+    if (anchor) {
+      anchor.dataset.overlayPlacement = 'bottom'
+      anchor.style.position = 'absolute'
+      anchor.style.inset = '0'
+      anchor.style.height = '100%'
+      anchor.style.pointerEvents = 'none'
+    }
+    if (card) {
+      card.dataset.menuPlacement = 'bottom'
+    }
+    menu.dataset.placement = 'bottom'
+    menu.style.bottom = 'auto'
+    menu.style.top = 'calc(100% + 4px)'
+    menu.style.pointerEvents = 'auto'
+
+    // Compute and constrain max-height based on available viewport space below card
+    if (win && card) {
+      const cardRect = card.getBoundingClientRect()
+      const vHeight = win.innerHeight || d.documentElement?.clientHeight || 800
+      const available = vHeight - cardRect.bottom - 16
+      const maxHeight = Math.min(320, Math.max(160, Math.floor(available)))
+      menu.style.setProperty('max-height', `${maxHeight}px`, 'important')
+    }
+  } else {
+    // Keep current state (place above input box)
+    if (anchor && anchor.dataset.overlayPlacement === 'bottom') {
+      delete anchor.dataset.overlayPlacement
+      anchor.style.position = ''
+      anchor.style.inset = ''
+      anchor.style.height = ''
+      anchor.style.pointerEvents = ''
+    }
+    if (card && card.dataset.menuPlacement === 'bottom') {
+      delete card.dataset.menuPlacement
+    }
+    if (menu.dataset.placement === 'bottom') {
+      delete menu.dataset.placement
+      menu.style.bottom = ''
+      menu.style.top = ''
+      menu.style.pointerEvents = ''
+      menu.style.removeProperty('max-height')
+    }
+  }
+
+  return placeBelow
+}
+
+/**
+ * Synchronize both icons and placement for all active candidate menus.
+ * @param {Document} [doc]
+ * @returns {{ patchedIcons: number, placedBelowCount: number }}
+ */
+export function syncAllComposerMenus(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc) return { patchedIcons: 0, placedBelowCount: 0 }
+  ensurePlacementStyles(doc)
+  const patchedIcons = syncMenuIcons(doc)
+
+  const menus = Array.from(doc.querySelectorAll('[data-trigger-menu], [class*="iRJKyq_menu"], [class*="_1q_ULW_card"]'))
+  let placedBelowCount = 0
+  for (const menu of menus) {
+    if (syncMenuPlacement(menu, doc)) {
+      placedBelowCount++
+    }
+  }
+
+  // If menu is not yet open, but card is in hero mode, pre-tag card so first frame has zero jitter
+  const card = doc.querySelector?.('[data-composer-card]')
+  if (card && shouldPlaceMenuBelow(card, null, doc.defaultView)) {
+    card.dataset.menuPlacement = 'bottom'
+    const anchor = card.querySelector?.('[class*="overlayAnchor"]')
+    if (anchor) {
+      anchor.dataset.overlayPlacement = 'bottom'
+    }
+  }
+
+  return { patchedIcons, placedBelowCount }
+}
+
+/**
+ * Automatically observe DOM for slash menu appearance, icons, and adaptive placement.
  * @param {Document} [doc]
  * @returns {() => void} Disposer
  */
-export function installMenuIconsAutoSync(doc = (typeof document !== 'undefined' ? document : null)) {
+export function installMenuAutoSync(doc = (typeof document !== 'undefined' ? document : null)) {
   const ObserverClass = doc?.defaultView?.MutationObserver || (typeof MutationObserver !== 'undefined' ? MutationObserver : null)
-  if (!doc || !doc.body || !ObserverClass) return () => {}
+  if (!doc || !doc.body) return () => {}
+
+  ensurePlacementStyles(doc)
 
   let rafId = null
   const requestFrame = doc.defaultView?.requestAnimationFrame || (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => setTimeout(cb, 16))
@@ -383,35 +564,81 @@ export function installMenuIconsAutoSync(doc = (typeof document !== 'undefined' 
     if (rafId) return
     rafId = requestFrame(() => {
       rafId = null
-      syncMenuIcons(doc)
+      syncAllComposerMenus(doc)
     })
   }
 
-  const observer = new ObserverClass((mutations) => {
-    for (const m of mutations) {
-      if (m.addedNodes.length > 0) {
-        scheduleSync()
-        return
+  let observer = null
+  if (ObserverClass) {
+    observer = new ObserverClass((mutations) => {
+      for (const m of mutations) {
+        if (m.addedNodes.length > 0 || m.type === 'attributes') {
+          scheduleSync()
+          return
+        }
       }
-    }
-  })
+    })
 
-  observer.observe(doc.body, {
-    childList: true,
-    subtree: true,
-  })
+    observer.observe(doc.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-phase', 'style'],
+    })
+  }
+
+  // Viewport resize & scroll listeners to dynamically adjust placement and max-height
+  const onViewportChange = () => scheduleSync()
+  const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (win) {
+    win.addEventListener('resize', onViewportChange, { passive: true })
+    win.addEventListener('scroll', onViewportChange, { capture: true, passive: true })
+  }
+
+  // Pre-sync on "+" button pointerdown/click to preemptively set placement mode
+  const onTriggerPointerDown = (e) => {
+    const target = e.target
+    if (target && target.closest?.('button[aria-label="指令"], button[class*="add"], [class*="Q7WfXG_add"]')) {
+      const card = target.closest?.('[data-composer-card]') || doc.querySelector?.('[data-composer-card]')
+      if (card && shouldPlaceMenuBelow(card, null, win)) {
+        card.dataset.menuPlacement = 'bottom'
+        const anchor = card.querySelector?.('[class*="overlayAnchor"]')
+        if (anchor) {
+          anchor.dataset.overlayPlacement = 'bottom'
+          anchor.style.position = 'absolute'
+          anchor.style.inset = '0'
+          anchor.style.height = '100%'
+          anchor.style.pointerEvents = 'none'
+        }
+      }
+      scheduleSync()
+    }
+  }
+  doc.addEventListener('pointerdown', onTriggerPointerDown, true)
 
   // Initial sync attempt
   scheduleSync()
 
   return () => {
-    observer.disconnect()
+    if (observer) observer.disconnect()
     if (rafId) {
       cancelFrame(rafId)
       rafId = null
     }
+    if (win) {
+      win.removeEventListener('resize', onViewportChange)
+      win.removeEventListener('scroll', onViewportChange, true)
+    }
+    doc.removeEventListener('pointerdown', onTriggerPointerDown, true)
   }
 }
+
+/**
+ * Backward-compatible alias for installMenuAutoSync.
+ * @param {Document} [doc]
+ * @returns {() => void}
+ */
+export const installMenuIconsAutoSync = installMenuAutoSync
 
 // ==========================================
 // 3. Dictionary & Copy Specifications
