@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   URL_TO_VIDEO_STYLES,
   URL_TO_VIDEO_RATIOS,
@@ -43,7 +44,7 @@ export function UrlToVideoModal({ isOpen, onClose, t, onSubmitDraft }) {
   function handleSubmit() {
     if (!productUrl.trim()) {
       setErrorNotice(t('guide.url-to-video.url-required'))
-      urlInputRef.current?.focus()
+      try { urlInputRef.current?.focus() } catch { /* ignore jsdom */ }
       return
     }
     const styleObj = URL_TO_VIDEO_STYLES.find((s) => s.id === selectedStyle)
@@ -60,16 +61,34 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
     onSubmitDraft(prompt)
   }
 
-  return (
-    <div className="omnimux-u2v-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t('guide.url-to-video.modal.title')}>
-      <div className="omnimux-u2v-modal" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="omnimux-insight-close" onClick={onClose} aria-label="Close" /* exempt-ui01: modal close icon button */>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+  const modalNode = (
+    <div
+      className="omnimux-u2v-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('guide.url-to-video.modal.title')}
+    >
+      <button key="close-btn" type="button" className="omnimux-insight-close" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose() }} aria-label="Close" /* exempt-ui01: modal close icon button */>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
 
+      <div className="omnimux-u2v-modal" onClick={(e) => e.stopPropagation()}>
         <header className="omnimux-u2v-header">
           <h1>{t('guide.url-to-video.modal.title')}</h1>
           <p>{t('guide.url-to-video.modal.subtitle')}</p>
@@ -102,10 +121,10 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
                   </div>
                 )
               })}
-              <button type="button" className="omnimux-u2v-nav-btn prev" onClick={handlePrev} aria-label="Previous example" /* exempt-ui01: carousel nav button */>
+              <button key="prev-btn" type="button" className="omnimux-u2v-nav-btn prev" onClick={handlePrev} aria-label="Previous example" /* exempt-ui01: carousel nav button */>
                 ‹
               </button>
-              <button type="button" className="omnimux-u2v-nav-btn next" onClick={handleNext} aria-label="Next example" /* exempt-ui01: carousel nav button */>
+              <button key="next-btn" type="button" className="omnimux-u2v-nav-btn next" onClick={handleNext} aria-label="Next example" /* exempt-ui01: carousel nav button */>
                 ›
               </button>
             </div>
@@ -126,7 +145,16 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               {/* Product URL */}
               <div className="omnimux-u2v-field">
                 <label className="omnimux-u2v-field-label">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                   </svg>
@@ -149,7 +177,16 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               {/* Target audience */}
               <div className="omnimux-u2v-field">
                 <label className="omnimux-u2v-field-label">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <circle cx="12" cy="12" r="6" />
                     <circle cx="12" cy="12" r="2" />
@@ -168,7 +205,16 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               {/* Key selling point */}
               <div className="omnimux-u2v-field">
                 <label className="omnimux-u2v-field-label">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="m3 11 18-5v12L3 14v-3z" />
                     <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
                   </svg>
@@ -200,14 +246,23 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               {/* Duration */}
               <div className="omnimux-u2v-field">
                 <label className="omnimux-u2v-field-label">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
                   <span>{t('guide.url-to-video.duration.label')}</span>
                 </label>
                 <div className="omnimux-u2v-duration-row">
-                  <button type="button" aria-pressed={isAutoDuration} className="omnimux-u2v-auto-btn" onClick={() => setIsAutoDuration(!isAutoDuration)} /* exempt-ui01: auto duration toggle */>
+                  <button key="auto-btn" type="button" aria-pressed={isAutoDuration} className="omnimux-u2v-auto-btn" onClick={() => setIsAutoDuration(!isAutoDuration)} /* exempt-ui01: auto duration toggle */>
                     {t('guide.url-to-video.duration.auto')}
                   </button>
                   <div className="omnimux-u2v-slider-track">
@@ -228,13 +283,24 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
                     {isAutoDuration ? t('guide.url-to-video.duration.auto') : `${duration}s`}
                   </span>
                 </div>
-                <span className="omnimux-u2v-hint">{t('guide.url-to-video.duration.hint')}</span>
+                <span className="omnimux-u2v-hint">
+                  {t('guide.url-to-video.duration.hint')}
+                </span>
               </div>
 
               {/* Aspect ratio */}
               <div className="omnimux-u2v-field">
                 <label className="omnimux-u2v-field-label">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <rect width="20" height="14" x="2" y="5" rx="2" />
                     <line x1="2" x2="22" y1="10" y2="10" />
                   </svg>
@@ -245,7 +311,10 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
                     <button key={ratio.id} type="button" role="radio" aria-checked={selectedRatio === ratio.id} className="omnimux-u2v-ratio-btn" onClick={() => setSelectedRatio(ratio.id)} /* exempt-ui01: ratio radio button */>
                       <div
                         className="omnimux-u2v-ratio-box"
-                        style={{ '--ratio-w': `${ratio.width}px`, '--ratio-h': `${ratio.height}px` }}
+                        style={{
+                          '--ratio-w': `${ratio.width}px`,
+                          '--ratio-h': `${ratio.height}px`,
+                        }}
                       />
                       <span className="omnimux-u2v-ratio-text">{ratio.label}</span>
                     </button>
@@ -255,7 +324,7 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
             </div>
 
             <div className="omnimux-u2v-actions">
-              <button type="button" className="omnimux-u2v-submit" onClick={handleSubmit} /* exempt-ui01: url-to-video submit button */>
+              <button key="u2v-submit-btn" type="button" className="omnimux-u2v-submit" onClick={handleSubmit} /* exempt-ui01: url-to-video submit button */>
                 <span>{t('guide.url-to-video.submit-btn')}</span>
               </button>
             </div>
@@ -264,4 +333,9 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modalNode, document.body)
+  }
+  return modalNode
 }
