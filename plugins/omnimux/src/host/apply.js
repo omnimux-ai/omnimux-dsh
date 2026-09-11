@@ -30,6 +30,7 @@ import { mountHubHttp } from './http.js'
 import { mountComposerCommands } from './composer-commands.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
 import { mountWebSocketHmr } from '../hmr/host.js'
+import { mountPresetsTools } from '../presets/tools.js'
 
 /**
  * @param {{
@@ -197,6 +198,7 @@ export function apply(ctx, config = {}) {
     },
     jsonOut,
   })
+  mountPresetsTools(ctx)
   mountWorkbenchContextInjector(ctx, { mailbox })
   mountContractsPrompt(ctx)
   if (typeof ctx.provide === 'function') {
