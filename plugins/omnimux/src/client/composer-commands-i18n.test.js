@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { JSDOM } from 'jsdom'
 import {
   isZhLocale,
   getActiveLang,
@@ -20,6 +21,8 @@ import {
   renderPermissionIcon,
   renderFeedbackIcon,
   renderExportIcon,
+  syncMenuIcons,
+  installMenuIconsAutoSync,
   COMMAND_ICONS,
   COMMAND_I18N,
   ZH_NAME_TO_RAW,
@@ -249,3 +252,70 @@ test('wrapCommandUi hooks candidates, dispatch, matchSpace, matchEnter and unwra
   assert.equal(fakeCommandUi.dispatch({ candidate: { name: '添加文件' } }), 'handled')
   assert.equal(dispatchedPick.candidate.name, '添加文件')
 })
+
+test('syncMenuIcons injects matching SVG icons to menu option buttons', () => {
+  const dom = new JSDOM(`
+    <div class="menu">
+      <button role="option">
+        <span class="iRJKyq_itemIcon" aria-hidden="true"></span>
+        <span class="iRJKyq_itemName">添加文件</span>
+        <span class="iRJKyq_itemDescription">从本地选择文件或图片</span>
+      </button>
+      <button role="option">
+        <span class="iRJKyq_itemName">从资产库添加</span>
+      </button>
+      <button role="option">
+        <span class="iRJKyq_itemName">未知命令</span>
+      </button>
+    </div>
+  `)
+  const doc = dom.window.document
+
+  const patched = syncMenuIcons(doc)
+  assert.equal(patched, 2)
+
+  const buttons = doc.querySelectorAll('button[role="option"]')
+  // Button 1: existing icon span had SVG injected
+  const icon1 = buttons[0].querySelector('.iRJKyq_itemIcon')
+  assert.ok(icon1)
+  assert.ok(icon1.innerHTML.includes('<svg'))
+  assert.equal(icon1.dataset.iconCommand, '添加文件')
+
+  // Button 2: missing icon span was automatically created before itemName
+  const icon2 = buttons[1].querySelector('.iRJKyq_itemIcon')
+  assert.ok(icon2)
+  assert.ok(icon2.innerHTML.includes('<svg'))
+  assert.equal(icon2.dataset.iconCommand, '从资产库添加')
+
+  // Button 3: unknown command remains untouched
+  const icon3 = buttons[2].querySelector('.iRJKyq_itemIcon')
+  assert.equal(icon3, null)
+
+  // Subsequent call is idempotent
+  const secondRun = syncMenuIcons(doc)
+  assert.equal(secondRun, 0)
+})
+
+test('installMenuIconsAutoSync observes DOM and cleans up', (t, done) => {
+  const dom = new JSDOM(`<div id="root"></div>`)
+  const doc = dom.window.document
+  const cleanup = installMenuIconsAutoSync(doc)
+  assert.equal(typeof cleanup, 'function')
+
+  // Simulate menu row addition
+  const root = doc.getElementById('root')
+  const btn = doc.createElement('button')
+  btn.setAttribute('role', 'option')
+  btn.innerHTML = '<span class="iRJKyq_itemName">计划模式</span>'
+  root.appendChild(btn)
+
+  // Wait a tick
+  setTimeout(() => {
+    const icon = btn.querySelector('.iRJKyq_itemIcon')
+    assert.ok(icon)
+    assert.ok(icon.innerHTML.includes('<svg'))
+    cleanup()
+    done()
+  }, 30)
+})
+
