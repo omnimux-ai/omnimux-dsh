@@ -1019,6 +1019,14 @@ export const HUB_CSS = `
 .FJxK0a_root {
   display: none !important;
 }
+
+/* ── Hide permission preset selector in composer input bar ── */
+[data-composer-card] button[aria-label*="访问模式"],
+[data-composer-card] button[aria-label*="Access mode"],
+[data-composer-card] [class*="modes"] > button:has([class*="triggerIcon"]),
+[data-composer-card] [class*="modes"] > button[class*="trigger"]:first-child {
+  display: none !important;
+}
 `
 
 export function injectHubStyles() {
