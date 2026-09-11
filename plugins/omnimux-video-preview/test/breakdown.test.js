@@ -9,6 +9,9 @@ import {
   formatShotsCopyText,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
+  parsePipelineAndStructureFromMarkdown,
+  executeDedicatedStructureAnalyze,
+  BUNDLED_STRUCTURE_PROMPT,
   normalizeSocialMetadata,
   resolveWorkspaceDirectory,
   extractVideoBreakdown,
@@ -467,5 +470,65 @@ describe('video breakdown & shots analysis engine', () => {
     assert.equal(shots[0].start_seconds, 0)
     assert.equal(shots[shots.length - 1].end_seconds, dur20Min)
     assert.match(shots[0].title, /黄金开局/)
+  })
+
+  it('loads dedicated structure breakdown prompt and verifies system rules', () => {
+    assert.ok(existsSync(BUNDLED_STRUCTURE_PROMPT), 'dedicated prompt file must exist')
+    const promptContent = readFileSync(BUNDLED_STRUCTURE_PROMPT, 'utf8')
+    assert.match(promptContent, /Video Narrative Structure Architect/)
+    assert.match(promptContent, /动态结构提炼/)
+    assert.match(promptContent, /针对每个结构阶段深度描述/)
+    assert.match(promptContent, /逐镜头分镜脚本表/)
+  })
+
+  it('parses two-step narrative pipeline and stage breakdown from dedicated prompt output', () => {
+    const md = `
+## 1. 叙事结构链路 (Narrative Pipeline)
+Hook → Product Intro → Usage Detail → Demo Scene
+
+## 2. 结构阶段解构 (Stage Breakdown)
+
+### Hook
+视频开场直接展示充满心形木质雕刻礼物的礼盒，配上走心的文案，迅速抓住观众眼球，传达治愈与放松的焦虑缓解主题。
+
+### Product Intro
+全景展示藤编篮子里满满的礼盒与心形木片，呈现丰富的产品种类和精致的包装细节，突出送礼与收藏的价值感。
+
+### Usage Detail
+特写展示礼盒内部的文字、卡片以及精致的心形小物件，体现产品的细节工艺和情感传递功能。
+
+### Demo Scene
+展示将心形木质饰品摆放在桌面上、搭配笔记本与绿植的实际使用场景，激发观众的购买欲和生活美学共鸣。
+
+## 3. 逐镜头分镜脚本表 (Shot Breakdown Table)
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0:00 - 0:01 | 开场礼盒展示 | Hook | 特写, 智能手机手持, 俯视, 手持微动 | 温暖色调的背景中，一只双手正缓缓打开纸质礼盒... |
+| 0:01 - 0:03 | 礼盒全景与藤篮 | Product Intro | 中景, 智能手机手持, 俯视, 手持平移 | 镜头切换到一个摆放着大量精致包装礼盒的白色藤编篮子... |
+| 0:03 - 0:04 | 心形木片特写 | Product Intro | 特写, 智能手机手持, 俯视, 手持微动 | 木盘内装满了各种颜色和字体的心形木质雕刻饰品... |
+| 0:04 - 0:07 | 展示礼盒内部说明 | Usage Detail | 特写, 智能手机手持, 俯视, 手持微动 | 双手打开一个带有拉菲草垫的小礼盒，盒盖内侧印有鼓励话语... |
+| 0:07 - 0:10 | 翻转礼盒展示文字 | Demo Scene | 特写, 智能手机手持, 俯视, 手持微动 | 双手翻转礼盒底部，展示印有诗篇与正能量词汇的设计... |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(structure.length, 4)
+    assert.equal(structure[0].stage, 'Hook')
+    assert.match(structure[0].description, /视频开场直接展示/)
+    assert.equal(structure[1].stage, 'Product Intro')
+    assert.match(structure[1].description, /全景展示藤编篮子/)
+    assert.equal(structure[2].stage, 'Usage Detail')
+    assert.match(structure[2].description, /特写展示礼盒内部/)
+    assert.equal(structure[3].stage, 'Demo Scene')
+    assert.match(structure[3].description, /展示将心形木质饰品摆放/)
+
+    assert.equal(shots.length, 5)
+    assert.equal(shots[0].start_seconds, 0)
+    assert.equal(shots[0].end_seconds, 1)
+    assert.equal(shots[0].time_range, '0:00 - 0:01')
+    assert.equal(shots[0].title, '开场礼盒展示')
+    assert.equal(shots[0].stage, 'Hook')
+    assert.ok(shots[0].tags.includes('特写'))
+    assert.ok(shots[0].tags.includes('智能手机手持'))
   })
 })
