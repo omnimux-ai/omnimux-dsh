@@ -255,6 +255,12 @@ async function handleSkillDetail(ctx) {
 function resolveExploreDirectory(slug, skillsDir) {
     const candidates = [
         join(skillsDir, slug),
+        join(process.env.HOME || '', '.omnimux-dev/skills', slug),
+        join(process.env.HOME || '', '.dsh/skills', slug),
+        join(packageRoot(), 'catalog/skills', slug),
+        join(packageRoot(), 'catalog/experts', slug),
+        join('/Users/x/Desktop/Project/Github/OmniMux-skills/skills', slug),
+        join('/Users/x/Desktop/Project/OPC/资产库/skills', 'OmniMux-skills-' + slug),
         join('/Users/x/Desktop/Project/OPC/资产库/skills', slug),
         join('/Users/x/Desktop/Project/Github/workbuddyskills/skills', slug),
     ];
@@ -264,7 +270,7 @@ function resolveExploreDirectory(slug, skillsDir) {
     }
     return '';
 }
-function handleExploreFile(ctx) {
+function handleSkillContent(ctx) {
     const { body, url, cfg, res } = ctx;
     const slug = parseSlug(String(body.slug || url.searchParams.get('slug') || ''));
     if (!slug)
@@ -299,6 +305,15 @@ function handleExploreFile(ctx) {
     }
     catch { }
     return sendJson(res, 200, { ok: true, found: false });
+}
+async function handleSkillTab(ctx) {
+    const { body, url, cfg, res } = ctx;
+    const slug = parseSlug(String(body.slug || url.searchParams.get('slug') || ''));
+    const tab = String(body.tab || url.searchParams.get('tab') || '').trim();
+    if (!tab)
+        return sendJson(res, 400, { ok: false, error: '缺少 tab' });
+    const result = await fetchSkillTab(slug, tab, cfg);
+    return sendJson(res, 200, { ok: true, slug, ...result });
 }
 function handleHomeCustomOrder(ctx) {
     const { req, res, body } = ctx;
@@ -471,7 +486,9 @@ const API_ROUTE_TABLE = {
     pluginInstallStatus: handlePluginInstallStatusRoute,
     pluginRestart: handlePluginRestartRoute,
     detail: handleSkillDetail,
-    exploreFile: handleExploreFile,
+    skillTab: handleSkillTab,
+    skillContent: handleSkillContent,
+    exploreFile: handleSkillContent,
     homeCustomOrder: handleHomeCustomOrder,
     expertMarketList: handleExpertMarketList,
     expertMarketInstall: handleExpertMarketInstall,

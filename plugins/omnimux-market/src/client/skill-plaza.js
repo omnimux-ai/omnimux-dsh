@@ -291,6 +291,8 @@
         trySkillInSession(item);
       } else if (typeof SkillShelf !== "undefined" && typeof SkillShelf.trySkillInSession === "function") {
         SkillShelf.trySkillInSession(item);
+      } else if (typeof window !== "undefined" && typeof window.trySkillInSession === "function") {
+        window.trySkillInSession(item);
       }
     }
 
@@ -347,10 +349,11 @@
       );
     }
 
-    function renderFeaturedCard(item, tr, onOpen, onPin) {
+    function renderFeaturedCard(item, tr, onOpen, onPin, onTry) {
       const coverSrc = item.cover && item.cover.asset ? iconSrc(item.cover.asset) : (item.coverUrl || "");
       const title = resolveItemTitle(item, tr);
       const desc = resolveItemDesc(item, tr) || "暂无描述";
+      const handleTry = onTry || safeTrySkillInSession;
 
       return h("div", {
         key: item.slug || item.id,
@@ -396,7 +399,7 @@
             h("button", {
               type: "button",
               className: "hover-btn hover-btn-try",
-              onClick: (e) => { e.stopPropagation(); safeTrySkillInSession(item); },
+              onClick: (e) => { e.stopPropagation(); handleTry(item); },
             }, tr("workshop.try") || "去对话中试试"),
           ),
         ),
@@ -897,7 +900,7 @@
               }, tr("workshop.resetOrder") || "恢复默认排序") : null,
             ),
             h("div", { className: "featured-grid" },
-              featuredItems.map((item) => renderFeaturedCard(item, tr, setOpen, handleMoveToTop)),
+              featuredItems.map((item) => renderFeaturedCard(item, tr, setOpen, handleMoveToTop, safeTrySkillInSession)),
             ),
           ) : null,
 
