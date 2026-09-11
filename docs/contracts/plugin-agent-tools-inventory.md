@@ -71,14 +71,14 @@ related:
 | 社媒发布媒体文件预签名 | 发布中心上传 | `omnimux_publish_presign` | L2 | `Implemented` | 否 |
 | 向指定社媒平台创建发布任务 | 发布中心一键发布 | `omnimux_publish_create` | L1 | `Implemented` | 否 |
 | 查询社媒发布任务状态与流水 | 发布中心状态卡片 | `omnimux_publish_get` | L1 | `Implemented` | 否 |
-| 灵感库列表多维查询 | 灵感库一级页瀑布流 | `omnimux_inspiration_list` | L1 | `Implemented` | 否 |
+| 灵感社区列表多维查询 | 灵感社区一级页瀑布流 | `omnimux_inspiration_list` | L1 | `Implemented` | 否 |
 | 获取单条灵感详情与 5D 拆解 | 灵感详情弹窗 | `omnimux_inspiration_get` | L1 | `Implemented` | 否 |
 | 采集/新建灵感记录 | URL 抓取导入弹窗 | `omnimux_inspiration_create` | L1 | `Implemented` | 否 |
 | 更新灵感元数据与标签 | 灵感详情编辑 | `omnimux_inspiration_update` | L1 | `Implemented` | 否 |
 | 删除指定灵感记录 | 灵感卡片删除按钮 | `omnimux_inspiration_delete` | L1 | `Implemented` | 是 (`confirm: true`) |
 | 上传灵感封面/媒体素材 | 灵感上传组件 | `omnimux_inspiration_upload_media` | L2 | `Implemented` | 否 |
 | 查询灵感全量标签分类 | 灵感筛选栏 | `omnimux_inspiration_tags` | L2 | `Implemented` | 否 |
-| 查询灵感库服务与抓取状态 | 灵感库状态指示 | `omnimux_inspiration_status` | L2 | `Implemented` | 否 |
+| 查询灵感社区服务与抓取状态 | 灵感社区状态指示 | `omnimux_inspiration_status` | L2 | `Implemented` | 否 |
 | 提交视频生成任务 | 工作流视频生成节点 | `omnimux_video_submit` | L1 | `Implemented` | 否 |
 | 提交图片生成任务 | 工作流生图节点 | `omnimux_image_submit` | L1 | `Implemented` | 否 |
 | 提交音频生成任务 | 工作流生音频节点 | `omnimux_audio_submit` | L1 | `Implemented` | 否 |
@@ -133,14 +133,14 @@ related:
 
 ---
 
-### 3.4 `omnimux-inspiration`（灵感库）
+### 3.4 `omnimux-inspiration`（灵感社区）
 - **功能域**：爆款短视频/图文采集、5D 结构化拆解、复刻至工作流。
 - **存储**：`$DSH_HOME/omnimux/inspiration/local/`。
 - **状态**：已实装 3 个工具，需补齐更新、删除与收藏操作。
 
 | 业务功能描述 | 对应 UI 交互 / HTTP 路由 | Agent 工具名称 (`Tool Name`) | 分级 | 状态 | 破坏性 confirm |
 |---|---|---|---|---|---|
-| 模糊搜索与标签过滤灵感 | 灵感库一级页瀑布流 | `inspiration_search` | L1 | `Implemented` | 否 |
+| 模糊搜索与标签过滤灵感 | 灵感社区一级页瀑布流 | `inspiration_search` | L1 | `Implemented` | 否 |
 | 获取指定灵感 5D 结构化拆解详情 | 灵感详情模态框 | `inspiration_get` | L1 | `Implemented` | 否 |
 | 从社媒 URL 抓取并入库新灵感 | 采集导入弹窗 | `inspiration_create` | L1 | `Implemented` | 否 |
 | 更新灵感笔记、标签与结构化字段 | 灵感编辑面板 | `inspiration_update` | L1 | `Implemented` | 否 |

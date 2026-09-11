@@ -93,7 +93,7 @@ describe('Workbench Context Injector', () => {
           schemaVersion: 1,
           ok: true,
           capturedAt: Date.now(),
-          surface: { tabId: 'omnimux-inspiration:library', title: '灵感库', panelOpen: true, focus: 'split' },
+          surface: { tabId: 'omnimux-inspiration:library', title: '灵感社区', panelOpen: true, focus: 'split' },
           view: { kind: 'grid' },
         },
       }),
@@ -114,7 +114,7 @@ describe('Workbench Context Injector', () => {
     assert.equal(contextMsg.source.kind, 'plugin')
     assert.equal(contextMsg.source.plugin, 'omnimux-workbench')
     assert.equal(contextMsg.source.form, 'snapshot')
-    assert.ok(contextMsg.content[0].text.includes('tab: omnimux-inspiration:library (灵感库)'))
+    assert.ok(contextMsg.content[0].text.includes('tab: omnimux-inspiration:library (灵感社区)'))
     assert.ok(contextMsg.content[0].text.includes('panel: open | focus: split'))
   })
 })

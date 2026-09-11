@@ -1,5 +1,5 @@
 /**
- * 灵感库 row under 新会话, placed by the single sidebar coordinator.
+ * 灵感社区 row under 新会话, placed by the single sidebar coordinator.
  * Consumes standardized createSidebarEntry from dsh-ui-kit with idempotent activation.
  */
 import { createSidebarEntry } from 'dsh-ui-kit'
@@ -16,7 +16,7 @@ function resolveWorkbenchTitle(t) {
     const val = typeof t === 'function' ? t('nav') : undefined
     if (val && val !== 'nav') return val
   } catch {}
-  return '灵感库'
+  return '灵感社区'
 }
 
 function createWorkbenchStageStore(t, tabId) {

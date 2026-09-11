@@ -37,7 +37,7 @@ MUST NOT register plugin config, plugin install, or social-account management as
 | `settings.plugin.item` | `web-search` | official `ui-settings-plugins` | DeepSeek search key via credentials |
 | `settings.plugin.item` | `omnimux` | `omnimux` | Canvas default models (`defaultTextModel` / `defaultImageModel` / `defaultVideoModel` / `defaultAudioModel`) plus `allowAgentSwitchTab`（允许 Agent 切换工作台页面，默认开；见 [agent-workbench-sync.md](./agent-workbench-sync.md)） |
 | Workbench Tab | `omnimux-accounts:library` | `omnimux-accounts` | Accounts page registered with `ctx.betterSidebar.registerTab`, not a Settings seat or Apps shelf |
-| Workbench Tab | `omnimux-inspiration:library` | `omnimux-inspiration` | 灵感库 page registered with `ctx.betterSidebar.registerTab`; Host `/omnimux/inspiration` |
+| Workbench Tab | `omnimux-inspiration:library` | `omnimux-inspiration` | 灵感社区 page registered with `ctx.betterSidebar.registerTab`; Host `/omnimux/inspiration` |
 
 Official Settings plugin tabs already occupy `configurable` (order 0) and `all` (order 10). Product `settings.plugins.tab` entries use order ≥ 20 so they sit after the official ones; this ordering does not apply to Workbench Tabs.
 

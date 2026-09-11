@@ -8,6 +8,6 @@ Install:
 dsh plugin --profile omnimux add ./plugins/omnimux-inspiration
 ```
 
-After install, restart the Host. The **灵感库** row appears under 新会话 (placed by the shared sidebar coordinator, rank 7) and opens the inspiration stage directly. Filter by type / favorite / sort, search, or open a source URL. Unsigned users see a sign-in hint; login stays on the hub Profile page. Placement: repo `docs/contracts/settings-ui.md`.
+After install, restart the Host. The **灵感社区** row appears under 新会话 (placed by the shared sidebar coordinator, rank 7) and opens the inspiration stage directly. Filter by type / favorite / sort, search, or open a source URL. Unsigned users see a sign-in hint; login stays on the hub Profile page. Placement: repo `docs/contracts/settings-ui.md`.
 
 v1 is read-first. Creating / bulk import stays on the microservice CLI and hub tools (`omnimux_inspiration_*`).
