@@ -19,22 +19,110 @@ const CUT_INDEX_REGEX = /^(\*\*)?(?:cut|镜头|镜号|shot)\s*\d+(\*\*)?$/i
 const SPEECH_PREFIX_REGEX = /^[\(（]?(?:无|none|无台词|none)[\)）]?$/i
 const STAGE_KEYWORD_REGEX = /^(hook|product intro|usage detail|demo scene|inciting incident|rising conflict|climax|plot twist|cliffhanger|cta)$/i
 
-const CAMERA_TAG_RULES = [
-  { match: (s) => s.includes('特写') || s.includes('Close-up'), tag: '特写' },
-  { match: (s) => s.includes('大远景'), tag: '大远景' },
-  { match: (s) => s.includes('远景'), tag: '远景' },
-  { match: (s) => s.includes('中远景'), tag: '中远景' },
-  { match: (s) => s.includes('中景') || s.includes('Medium'), tag: '中景' },
-  { match: (s) => s.includes('全景') || s.includes('Wide'), tag: '全景' },
-  { match: (s) => s.includes('手持') || s.includes('手机'), tag: '智能手机手持' },
-  { match: (s) => s.includes('俯视'), tag: '俯视' },
-  { match: (s) => s.includes('平视'), tag: '平视' },
-  { match: (s) => s.includes('仰视'), tag: '仰视' },
-  { match: (s) => s.includes('手持微动'), tag: '手持微动' },
-  { match: (s) => s.includes('手持平移'), tag: '手持平移' },
-  { match: (s) => s.includes('慢速推拉'), tag: '慢速推拉' },
-  { match: (s) => s.includes('固定'), tag: '固定机位' },
-]
+const CANONICAL_STAGE_KEYS = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
+
+/**
+ * Maps any raw stage heading/text to a clean canonical stage name (Hook, Product Intro, etc.).
+ * Strips verbose prefixes ("第一阶段：") and avoids sentence titles.
+ * @param {string} rawStage
+ * @param {number} [index]
+ * @returns {string}
+ */
+export function mapToCanonicalStage(rawStage, index = 0) {
+  if (!rawStage) return CANONICAL_STAGE_KEYS[index] || `Stage ${index + 1}`
+  const s = String(rawStage).trim()
+  if (/^hook$/i.test(s)) return 'Hook'
+  if (/^product\s*intro$/i.test(s)) return 'Product Intro'
+  if (/^usage\s*detail$/i.test(s)) return 'Usage Detail'
+  if (/^demo\s*scene$/i.test(s)) return 'Demo Scene'
+
+  // Drama / Narrative stages
+  if (/^inciting\s*incident$/i.test(s)) return 'Inciting Incident'
+  if (/^rising\s*conflict$/i.test(s)) return 'Rising Conflict'
+  if (/^climax$/i.test(s)) return 'Climax'
+  if (/^cliffhanger$/i.test(s)) return 'Cliffhanger'
+  if (/^call\s*to\s*action$|^cta$/i.test(s)) return 'Call to Action'
+
+  // Strip prefixes like "第一阶段：", "阶段一："
+  const clean = s
+    .replace(/^第[一二三四五六七八九十\d]+阶段[:：\s]*/, '')
+    .replace(/^阶段[一二三四五六七八九十\d]+[:：\s]*/, '')
+    .replace(/^步骤[一二三四五六七八九十\d]+[:：\s]*/, '')
+    .replace(/^[0-9]+[、\.\s]+/, '')
+    .trim()
+
+  if (/^(?:hook|黄金钩子|吸睛|悬念|开场|趣味吸睛)/i.test(clean)) return 'Hook'
+  if (/^(?:product\s*intro|产品引入|核心产品|产品展示|开箱|拆箱|硬件外观|实机展示|实机)/i.test(clean)) return 'Product Intro'
+  if (/^(?:usage\s*detail|使用细节|功能演示|实车安装|实时画面|功能|实操|监控)/i.test(clean)) return 'Usage Detail'
+  if (/^(?:demo\s*scene|场景演示|转化共鸣|行动号召|产品定格|品牌展示|实际场景|定格)/i.test(clean)) return 'Demo Scene'
+
+  if (index === 0 && (/身份引入/i.test(clean) || /确立/i.test(clean))) return clean
+  if (index === 1 && (/公益宣传/i.test(clean) || /行动号召/i.test(clean))) return clean
+
+  return clean || CANONICAL_STAGE_KEYS[index] || `Stage ${index + 1}`
+}
+
+/**
+ * Canonicalizes any raw camera tag string or array into 4 orthogonal dimensions:
+ * [Scale (景别), Device (机位设备), Angle (拍摄视角), Motion (运镜方式)]
+ * Eliminates slashes (/), combines split fragments, strips non-camera locations,
+ * and guarantees returning exactly 4 standard camera parameter tags.
+ *
+ * @param {string|Array<string>} rawTags
+ * @param {string} [contextText]
+ * @returns {Array<string>} [scale, device, angle, motion]
+ */
+export function canonicalizeCameraTags(rawTags, contextText = '') {
+  const tokens = (Array.isArray(rawTags) ? rawTags : [rawTags])
+    .filter(Boolean)
+    .flatMap((item) => String(item).split(/[,，|、/／;；\s]+/))
+    .map((t) => t.trim())
+    .filter(Boolean)
+
+  const combined = `${tokens.join(' ')} ${contextText || ''}`
+
+  // 1. Scale / Framing (景别)
+  let scale = ''
+  if (/大特写|极特写/i.test(combined)) scale = '大特写'
+  else if (/特写|Close-up/i.test(combined)) scale = '特写'
+  else if (/大远景/i.test(combined)) scale = '大远景'
+  else if (/远景/i.test(combined)) scale = '远景'
+  else if (/中远景/i.test(combined)) scale = '中远景'
+  else if (/中近景/i.test(combined)) scale = '中近景'
+  else if (/中景|Medium/i.test(combined)) scale = '中景'
+  else if (/全景|Wide/i.test(combined)) scale = '全景'
+  else scale = '中景'
+
+  // 2. Device / Rig (机位设备)
+  let device = ''
+  if (/车载|车内|车侧/i.test(combined)) device = '车载机位'
+  else if (/航拍|无人机/i.test(combined)) device = '航拍机位'
+  else if (/云台/i.test(combined)) device = '云台机位'
+  else if (/固定|三脚架/i.test(combined)) device = '固定机位'
+  else if (/手机|手持/i.test(combined)) device = '智能手机手持'
+  else device = '智能手机手持'
+
+  // 3. Angle (拍摄视角)
+  let angle = ''
+  if (/微俯|轻微俯视/i.test(combined)) angle = '微俯视'
+  else if (/俯视|俯角|俯拍/i.test(combined)) angle = '俯视'
+  else if (/低角|仰视|仰角|仰拍/i.test(combined)) angle = '仰视'
+  else if (/顶视|鸟瞰/i.test(combined)) angle = '顶视'
+  else if (/平视|平拍/i.test(combined)) angle = '平视'
+  else angle = '平视'
+
+  // 4. Motion (运镜方式)
+  let motion = ''
+  if (/微动/i.test(combined)) motion = '手持微动'
+  else if (/平移|横摇/i.test(combined)) motion = '手持平移'
+  else if (/推拉|慢速推拉|推进|拉出/i.test(combined)) motion = '慢速推拉'
+  else if (/摇镜|快摇/i.test(combined)) motion = '快速摇镜'
+  else if (/跟随/i.test(combined)) motion = '跟随镜头'
+  else if (/固定/i.test(combined) && device === '固定机位') motion = '固定镜头'
+  else motion = '手持微动'
+
+  return [scale, device, angle, motion]
+}
 
 /**
  * Normalizes seconds into mm:ss format.
@@ -186,25 +274,22 @@ function resolveStructuredSpeechAndDesc(cols) {
 
 function normalizeStructuredTitleAndTags(rawTitle, stageCol, tagsCol, desc) {
   let title = rawTitle
-  let tags = tagsCol.split(/[,，|、]/).map((t) => t.trim()).filter(Boolean)
+  const tags = canonicalizeCameraTags(tagsCol, `${rawTitle} ${desc}`)
 
   if (SHOT_TYPE_REGEX.test(title.trim())) {
-    if (!tags.includes(title.trim())) tags.unshift(title.trim())
     title = desc && !MOTION_WORD_REGEX.test(desc.trim()) ? desc.slice(0, 20) : `${stageCol} 核心呈现`
   }
   let finalDesc = desc
   if (MOTION_WORD_REGEX.test(desc.trim()) || !desc) {
     finalDesc = `${title}，镜头结合${tags.slice(0, 3).join('、')}，细腻展现画面细节与核心动作。`
   }
-  if (tags.length === 0) {
-    tags = [...DEFAULT_CAMERA_TAGS]
-  }
   return { title, tags, desc: finalDesc }
 }
 
 function parseStructuredShotRow(cols, shotIndex, timeInfo) {
   const initialTitle = cols[1] || `分镜 ${shotIndex}`
-  const stageCol = cols[2].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim() || 'Product Intro'
+  const rawStage = cols[2].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim() || 'Product Intro'
+  const stageCol = mapToCanonicalStage(rawStage, shotIndex - 1)
   const tagsCol = cols[3] || ''
 
   const { speech, desc } = resolveStructuredSpeechAndDesc(cols)
@@ -230,7 +315,6 @@ function normalizeLegacyTitleAndDesc(visualCol, actionCol, extraCol, stage, tags
   let desc = actionCol
 
   if (isShotTypeWord || !title) {
-    if (!tags.includes(visualCol.trim()) && visualCol.trim()) tags.unshift(visualCol.trim())
     if (actionCol && !isMotionWord && !isShotTypeWord) {
       title = actionCol.slice(0, 20)
       desc = extraCol || `${title}，镜头采用${tags.slice(0, 3).join('、')}，细腻展现关键细节与核心动作。`
@@ -264,8 +348,9 @@ function parseLegacyShotRow(cols, timeCol, shotIndex, timeInfo) {
     extraCol = descCols[3] || ''
   }
 
-  const tags = inferCameraTags([visualCol, actionCol, extraCol])
-  const stage = inferStageFromSeconds(timeInfo.startSec, timeInfo.endSec)
+  const tags = canonicalizeCameraTags([visualCol, actionCol, extraCol])
+  const rawStage = inferStageFromSeconds(timeInfo.startSec, timeInfo.endSec)
+  const stage = mapToCanonicalStage(rawStage, shotIndex - 1)
   const normalized = normalizeLegacyTitleAndDesc(visualCol, actionCol, extraCol, stage, tags, shotIndex)
 
   return {
@@ -368,38 +453,40 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   return structure
 }
 
-function extractStagesFromHeaders(markdown, pipeline) {
+function extractStagesFromHeaders(markdown) {
   const structure = []
   const stageSectionMatch = markdown.match(/##\s*2\.\s*结构阶段解构[\s\S]*?(?=\n##\s*3|$)/i)
   const stageBlockText = stageSectionMatch ? stageSectionMatch[0] : markdown
 
   const stageRegex = /###\s*([^\n]+)\n+([\s\S]*?)(?=\n###|\n##|$)/g
   let match = stageRegex.exec(stageBlockText)
+  let idx = 0
   while (match !== null) {
     const rawHeading = match[1].replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim()
     const descText = match[2].replace(/\|[\s\S]*$/, '').replace(/```[\s\S]*?```/g, '').trim().replace(/\*+/g, '')
 
     if (rawHeading && descText) {
-      const stageKeyMatch = rawHeading.match(/^([a-zA-Z\s]+)/)
-      const stageKey = stageKeyMatch ? stageKeyMatch[1].trim() : rawHeading
-      structure.push({ stage: stageKey, title: stageKey, description: descText })
-      if (!pipeline.includes(stageKey)) pipeline.push(stageKey)
+      const canonicalStage = mapToCanonicalStage(rawHeading, idx)
+      structure.push({ stage: canonicalStage, title: canonicalStage, description: descText })
+      idx++
     }
     match = stageRegex.exec(stageBlockText)
   }
   return structure
 }
 
-function extractStagesFromChineseList(markdown, pipeline) {
+function extractStagesFromChineseList(markdown) {
   const structure = []
   const listStageRegex = /(?:[\*\-\s]*)(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+)\s*[:：]?\s*([^\n（(：:\*]+)(?:[（(][^\n）)]+[）)])?\s*\n+([\s\S]*?)(?=(?:[\*\-\s]*(?:第[一二三四五六七八九十\d]+阶段|阶段[一二三四五六七八九十\d]+|[一二三四五六七八九十\d]+[、\.\s]+))|\n##|二、|三、|---|$)/g
   let match = listStageRegex.exec(markdown)
+  let idx = 0
   while (match !== null) {
     const stageName = match[1].trim()
     const stageDesc = match[2].trim().replace(/\|[\s\S]*$/, '').replace(/\*+/g, '')
     if (stageName && stageDesc && !/^(叙事结构|逐镜头|分镜|核心目标)/.test(stageName)) {
-      structure.push({ stage: stageName, title: stageName, description: stageDesc })
-      if (!pipeline.includes(stageName)) pipeline.push(stageName)
+      const canonicalStage = mapToCanonicalStage(stageName, idx)
+      structure.push({ stage: canonicalStage, title: canonicalStage, description: stageDesc })
+      idx++
     }
     match = listStageRegex.exec(markdown)
   }
@@ -428,32 +515,38 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     return { pipeline: [], structure: [], shots: [] }
   }
 
-  let pipeline = []
-  const pipelineMatch = markdown.match(/##\s*1\.\s*叙事结构链路[^\n]*\n+([^\n]+)/i)
-    || markdown.match(/(?:Narrative Pipeline|结构链路|叙事链路|流程链路)[^\n:]*[:：]?\s*\n*([^\n]+)/i)
-  if (pipelineMatch && pipelineMatch[1]) {
-    pipeline = pipelineMatch[1]
-      .split(/[→\->\>]/)
-      .map((s) => s.replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, '').trim())
-      .filter((s) => Boolean(s) && !/^(第一阶段|第二阶段|第三阶段|第四阶段|阶段一|步骤一|第一步|第二步|叙事结构|第一部分)/.test(s))
-  }
-
-  let structure = extractStagesFromHeaders(markdown, pipeline)
+  let structure = extractStagesFromHeaders(markdown)
   if (structure.length === 0) {
-    structure = extractStagesFromChineseList(markdown, pipeline)
+    structure = extractStagesFromChineseList(markdown)
   }
   if (structure.length === 0) {
     const legacy = parseStructureFromAnalyzeMarkdown(markdown)
     if (legacy.length > 0) {
       structure.push(...legacy)
-      if (pipeline.length === 0) pipeline = structure.map((s) => s.stage)
     }
   }
 
+  // Deduplicate structure by stage
+  const seenStages = new Set()
+  structure = structure.filter((item) => {
+    if (!item.stage || seenStages.has(item.stage)) return false
+    seenStages.add(item.stage)
+    return true
+  })
+
+  // Pipeline strictly 1:1 mirrors the extracted structure stages
+  let pipeline = []
   if (structure.length > 0) {
-    const validStages = Array.from(new Set(structure.map((s) => s.stage).filter(Boolean)))
-    const isMeta = pipeline.length === 1 && /阶段|步骤|拆解|结构/i.test(pipeline[0])
-    if (pipeline.length === 0 || isMeta) pipeline = validStages
+    pipeline = structure.map((s) => s.stage)
+  } else {
+    const pipelineMatch = markdown.match(/##\s*1\.\s*叙事结构链路[^\n]*\n+([^\n]+)/i)
+      || markdown.match(/(?:Narrative Pipeline|结构链路|叙事链路|流程链路)[^\n:]*[:：]?\s*\n*([^\n]+)/i)
+    if (pipelineMatch && pipelineMatch[1]) {
+      pipeline = pipelineMatch[1]
+        .split(/[→\->\>]/)
+        .map((s, idx) => mapToCanonicalStage(s.replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, ''), idx))
+        .filter(Boolean)
+    }
   }
 
   const shots = parseShotsFromAnalyzeMarkdown(markdown)

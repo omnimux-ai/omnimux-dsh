@@ -184,23 +184,17 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
   const renderTagIcon = (tagStr) => {
     const s = String(tagStr || '')
-    if (s.includes('特写')) {
-      return <span className="omnimux-video-tag-sym">↖</span>
+    if (/特写|远景|全景|中景|近景|景别/i.test(s)) {
+      return <FramingIcon size={12} />
     }
-    if (s.includes('中景') || s.includes('远景') || s.includes('全景')) {
-      return <span className="omnimux-video-tag-sym">↗</span>
-    }
-    if (s.includes('手机') || s.includes('手持') || s.includes('相机') || s.includes('机位')) {
+    if (/手机|相机|机位|车载|设备|航拍|云台|固定/i.test(s)) {
       return <CameraIcon size={12} />
     }
-    if (s.includes('俯视') || s.includes('平视')) {
-      return <span className="omnimux-video-tag-sym">▽</span>
+    if (/俯视|平视|仰视|顶视|角度|俯角|仰角|视点/i.test(s)) {
+      return <AngleIcon size={12} />
     }
-    if (s.includes('仰视')) {
-      return <span className="omnimux-video-tag-sym">△</span>
-    }
-    if (s.includes('微动') || s.includes('平移') || s.includes('移动') || s.includes('推拉') || s.includes('摇镜')) {
-      return <span className="omnimux-video-tag-sym">✥</span>
+    if (/微动|平移|移动|推拉|摇镜|运镜|跟随|旋转|环绕/i.test(s)) {
+      return <MotionIcon size={12} />
     }
     return <FramingIcon size={12} />
   }

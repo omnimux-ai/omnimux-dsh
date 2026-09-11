@@ -12,6 +12,8 @@ export {
   formatTimeRange,
   formatShotsCopyText,
   formatScriptCopyText,
+  canonicalizeCameraTags,
+  mapToCanonicalStage,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
   parsePipelineAndStructureFromMarkdown,
@@ -55,7 +57,7 @@ export async function executeDedicatedStructureAnalyze({ videoPath, ctx, signal 
     return ''
   }
 
-  const userPrompt = `${systemPrompt}\n\n---\n【任务执行指令】：\n请仔细观看上传的视频，严格按照上述“两阶段结构拆解与逐镜头分镜”格式输出：\n1. 必须输出“## 1. 叙事结构链路”；\n2. 必须输出“## 2. 结构阶段解构”且每一阶段使用 ### 标头；\n3. 必须输出“## 3. 逐镜头分镜脚本表”，表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |”，严禁将机位词用作标题，严禁输出单一词汇描述！`
+  const userPrompt = `${systemPrompt}\n\n---\n【任务执行指令（严格遵守）】：\n请仔细拉片观看上传的视频，严格按照上述格式规范输出：\n1. 【叙事结构链路】：对于电商好物/产品带货视频，标准四阶段必须为：Hook → Product Intro → Usage Detail → Demo Scene，严禁自行编造长句或加序数前缀！\n2. 【结构阶段解构】：每一个阶段必须使用对应的标准英文阶段名作为 ### 标头（即 ### Hook、### Product Intro、### Usage Detail、### Demo Scene），严禁写成“第一阶段：xxx”！\n3. 【逐镜头分镜脚本表】：表头严格为“| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |”；\n4. 【4维正交标签规范】：第 4 列“镜头属性标签”必须由 4 个正交维度的标准参数组成（以逗号分隔）：[景别], [机位设备], [拍摄视角], [运镜方式]（例如：特写, 智能手机手持, 俯视, 手持微动），绝对严禁使用斜杠“/”，绝对严禁将环境地点塞入标签！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件（如“敲门准备”、“开门瞬间”），严禁出现 Shot 1、全景等机械词！`
 
   try {
     const res = await textComplete.execute({
