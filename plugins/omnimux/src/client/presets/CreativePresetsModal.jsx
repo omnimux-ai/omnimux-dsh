@@ -131,7 +131,7 @@ export function CreativePresetsModal({
         <div className="omnimux-presets-blueprint-slots">
           {/* 亮点 Hook 槽位 */}
           <div className="omnimux-presets-slot-item">
-            <span className="omnimux-presets-slot-label">🎯 黄金亮点 (Hook):</span>
+            <span className="omnimux-presets-slot-label">黄金亮点 (Hook):</span>
             {selectedHook ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedHook.titleZh || selectedHook.title}
@@ -146,7 +146,7 @@ export function CreativePresetsModal({
 
           {/* 视觉风格槽位 */}
           <div className="omnimux-presets-slot-item">
-            <span className="omnimux-presets-slot-label">🎨 视觉风格 (Style):</span>
+            <span className="omnimux-presets-slot-label">视觉风格 (Style):</span>
             {selectedStyle ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedStyle.titleZh || selectedStyle.title}
@@ -161,7 +161,7 @@ export function CreativePresetsModal({
 
           {/* 广告格式槽位 */}
           <div className="omnimux-presets-slot-item">
-            <span className="omnimux-presets-slot-label">🎬 广告格式 (Format):</span>
+            <span className="omnimux-presets-slot-label">广告格式 (Format):</span>
             {selectedFormat ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedFormat.titleZh || selectedFormat.title}
@@ -244,17 +244,17 @@ export function CreativePresetsModal({
         {/* 一级选项卡 */}
         <div className="omnimux-presets-tabs-bar" role="tablist">
           <button type="button" role="tab" aria-selected={activeTab === 'hooks'} className={`omnimux-presets-tab ${activeTab === 'hooks' ? 'is-active' : ''}`} onClick={() => { setActiveTab('hooks'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
-            🎯 黄金亮点 / Hook
+            黄金亮点 / Hook
             <span className="omnimux-presets-tab-badge">{CREATIVE_HOOKS.length}</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'styles'} className={`omnimux-presets-tab ${activeTab === 'styles' ? 'is-active' : ''}`} onClick={() => { setActiveTab('styles'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
-            🎨 视觉风格 / Style
+            视觉风格 / Style
             <span className="omnimux-presets-tab-badge">{CREATIVE_VISUAL_STYLES.length}</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'formats'} className={`omnimux-presets-tab ${activeTab === 'formats' ? 'is-active' : ''}`} onClick={() => { setActiveTab('formats'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
-            🎬 广告格式 / Format
+            广告格式 / Format
             <span className="omnimux-presets-tab-badge">{CREATIVE_VIDEO_FORMATS.length}</span>
           </button>
         </div>

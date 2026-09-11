@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore 
 import { getCreativePresetsStore } from './presets-store.js'
 import { CreativeDimensionModal } from './CreativeDimensionModal.jsx'
 import { ensurePresetsStyles } from './styles.js'
+import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
 
 /**
  * 营销视频三大创意预设 —— 输入框上方已选 Chips 胶囊组件
@@ -56,7 +57,10 @@ export function ComposerPresetsChips(props) {
     <div className="omnimux-composer-chips-dock" role="status" aria-label="已选创意预设">
       {presets.format && (
         <div className="omnimux-composer-preset-chip" title="点击更改视频格式">
-          <span className="omnimux-composer-chip-tag">⭐ 格式:</span>
+          <span className="omnimux-composer-chip-tag">
+            <FormatIcon size={12} />
+            <span>格式:</span>
+          </span>
           <span
             className="omnimux-composer-chip-val"
             onClick={() => handleOpenDimension('format')}
@@ -76,7 +80,10 @@ export function ComposerPresetsChips(props) {
 
       {presets.hook && (
         <div className="omnimux-composer-preset-chip" title="点击更改开场亮点">
-          <span className="omnimux-composer-chip-tag">🎯 亮点:</span>
+          <span className="omnimux-composer-chip-tag">
+            <HookIcon size={12} />
+            <span>亮点:</span>
+          </span>
           <span
             className="omnimux-composer-chip-val"
             onClick={() => handleOpenDimension('hook')}
@@ -96,7 +103,10 @@ export function ComposerPresetsChips(props) {
 
       {presets.style && (
         <div className="omnimux-composer-preset-chip" title="点击更改视觉风格">
-          <span className="omnimux-composer-chip-tag">🎨 风格:</span>
+          <span className="omnimux-composer-chip-tag">
+            <StyleIcon size={12} />
+            <span>风格:</span>
+          </span>
           <span
             className="omnimux-composer-chip-val"
             onClick={() => handleOpenDimension('style')}

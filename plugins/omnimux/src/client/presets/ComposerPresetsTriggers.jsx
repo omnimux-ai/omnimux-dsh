@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore 
 import { getCreativePresetsStore } from './presets-store.js'
 import { CreativeDimensionModal } from './CreativeDimensionModal.jsx'
 import { ensurePresetsStyles } from './styles.js'
+import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
 
 /**
  * 营销视频三大创意预设 —— 工具栏 3 独立触发按钮组件
@@ -51,7 +52,7 @@ export function ComposerPresetsTriggers(props) {
         onClick={() => handleOpenDimension('format')}
         title="选择广告视频叙事格式 (共 96 款)"
       >
-        <span>⭐</span>
+        <FormatIcon size={14} />
         <span>{presets.format ? (presets.format.titleZh || presets.format.title) : '广告格式'}</span>
         {presets.format && <span className="omnimux-composer-preset-trigger-dot" />}
       </button>
@@ -63,7 +64,7 @@ export function ComposerPresetsTriggers(props) {
         onClick={() => handleOpenDimension('hook')}
         title="选择黄金 3 秒开场抓手 Hook (共 75 款)"
       >
-        <span>🎯</span>
+        <HookIcon size={14} />
         <span>{presets.hook ? (presets.hook.titleZh || presets.hook.title) : '亮点'}</span>
         {presets.hook && <span className="omnimux-composer-preset-trigger-dot" />}
       </button>
@@ -75,7 +76,7 @@ export function ComposerPresetsTriggers(props) {
         onClick={() => handleOpenDimension('style')}
         title="选择画面视觉美学与光影调色 (共 20 款)"
       >
-        <span>🎨</span>
+        <StyleIcon size={14} />
         <span>{presets.style ? (presets.style.titleZh || presets.style.title) : '视觉风格'}</span>
         {presets.style && <span className="omnimux-composer-preset-trigger-dot" />}
       </button>

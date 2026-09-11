@@ -5,13 +5,14 @@ import { CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES, CREATIVE_VIDEO_FORMATS } from '
 import { PresetCard } from './PresetCard.jsx'
 import { ensurePresetsStyles } from './styles.js'
 import { getCreativePresetsStore } from './presets-store.js'
+import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
 
 export const DIMENSION_CONFIG = {
   format: {
     key: 'format',
     label: '广告格式',
     title: '选择视频广告格式',
-    icon: '⭐',
+    IconComponent: FormatIcon,
     items: CREATIVE_VIDEO_FORMATS,
     placeholder: '搜索广告格式或应用场景 (如 前后对比、开箱、痛点)...',
   },
@@ -19,7 +20,7 @@ export const DIMENSION_CONFIG = {
     key: 'hook',
     label: '开场亮点',
     title: '选择开场亮点 (Hook)',
-    icon: '🎯',
+    IconComponent: HookIcon,
     items: CREATIVE_HOOKS,
     placeholder: '搜索黄金 3 秒吸睛抓手 (如 碰撞、反差、音效)...',
   },
@@ -27,7 +28,7 @@ export const DIMENSION_CONFIG = {
     key: 'style',
     label: '视觉风格',
     title: '选择画面视觉风格',
-    icon: '🎨',
+    IconComponent: StyleIcon,
     items: CREATIVE_VISUAL_STYLES,
     placeholder: '搜索光影质感与美学体系 (如 静奢、极简、国潮)...',
   },
@@ -161,7 +162,7 @@ export function CreativeDimensionModal({
         <header className="omnimux-dimension-modal-header">
           <div className="omnimux-dimension-header-left">
             <span className="omnimux-dimension-header-icon" aria-hidden="true">
-              {config.icon}
+              {config.IconComponent ? <config.IconComponent size={18} /> : null}
             </span>
             <div className="omnimux-dimension-header-titles">
               <h2 className="omnimux-dimension-header-title">{config.title}</h2>
@@ -175,7 +176,10 @@ export function CreativeDimensionModal({
             {/* 搜索框 */}
             <div className="omnimux-dimension-search-wrap">
               <span className="omnimux-dimension-search-icon" aria-hidden="true">
-                🔍
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
               </span>
               <input
                 ref={searchInputRef}
@@ -232,7 +236,13 @@ export function CreativeDimensionModal({
         <div className="omnimux-dimension-grid-wrap">
           {filteredItems.length === 0 ? (
             <div className="omnimux-dimension-empty-state">
-              <span className="omnimux-dimension-empty-icon">📂</span>
+              <span className="omnimux-dimension-empty-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <line x1="8" y1="11" x2="14" y2="11" />
+                </svg>
+              </span>
               <p className="omnimux-dimension-empty-text">未找到与“{searchQuery}”匹配的创意预设</p>
               <button /* exempt-ui01: 空态重置筛选纯文本按钮 */
                 type="button"
@@ -293,7 +303,7 @@ export function CreativeDimensionModal({
               </div>
             ) : (
               <span className="omnimux-dimension-footer-hint">
-                💡 点击上方卡片进行选择，双击可直接应用
+                点击上方卡片进行选择，双击可直接应用
               </span>
             )}
           </div>
