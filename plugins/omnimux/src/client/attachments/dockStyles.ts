@@ -102,7 +102,7 @@ export const DOCK_STYLES = `
   align-items: center !important;
   flex-wrap: wrap !important;
   gap: 8px !important;
-  padding: 2px 0 6px 0 !important;
+  padding: 4px 16px 6px 16px !important;
   box-sizing: border-box !important;
 }
 .omx-prompt-slot-chip {
