@@ -28,4 +28,22 @@ describe('products workbench seat (sidebar must not claim overlay)', () => {
     assert.doesNotMatch(stage, /omnimux-workbench-focus/)
     assert.doesNotMatch(stage, /claimProductStage/)
   })
+
+  it('stage ActionRow contains secondary "add in chat" button that reveals middle conversation column', () => {
+    const stage = readFileSync(join(here, 'ProductsStage.jsx'), 'utf8')
+    const locales = readFileSync(join(here, 'locales.js'), 'utf8')
+
+    // Locales must define add.chatButton
+    assert.match(locales, /'add\.chatButton':\s*'对话中添加'/)
+    assert.match(locales, /'add\.chatButton':\s*'Add in Chat'/)
+
+    // Button must exist in ActionRow with secondary variant and ChatIcon
+    assert.match(stage, /variant="secondary"[\s\S]*?leadingIcon=\{<ChatIcon\s*\/>\}[\s\S]*?onClick=\{handleOpenConversation\}/)
+    assert.match(stage, /t\('add\.chatButton'\)/)
+
+    // handleOpenConversation uncollapses conversation and sets focus to split
+    assert.match(stage, /api\.setConversationCollapsed\(false\)/)
+    assert.match(stage, /api\.setFocus\('split'\)/)
+  })
 })
+
