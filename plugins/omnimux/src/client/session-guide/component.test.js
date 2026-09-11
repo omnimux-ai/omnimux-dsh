@@ -132,7 +132,7 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
 
     // 2. 点击占位卡片触发提示，未修改草稿
-    await click('[data-popular-starter-id="recreate-viral-ads"]')
+    await click('[data-popular-starter-id="bulk-create-ads"]')
     await render(guideZh)
     assert.ok(document.querySelector('.omnimux-toast-pill'))
     assert.equal(writes, 0)
@@ -248,6 +248,122 @@ test('url to video modal renders carousel and submits video ad prompt', async ()
     assert.equal(document.querySelector('.omnimux-u2v-modal'), null, 'modal should close')
     assert.ok(draft.includes('https://www.amazon.com/dp/B09XYZ1234'))
     assert.ok(draft.includes('16:9'))
+    assert.equal(writes, 1)
+  } finally {
+    await act(async () => root.unmount())
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+test('recreate viral ads modal allows mode selection, handles file selection and submits prompt', async () => {
+  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  let draft = ''
+  let writes = 0
+  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
+  const props = (localeMap = guideZh) => ({
+    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
+    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
+  })
+  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  const click = async sel => act(async () => document.querySelector(sel).click())
+
+  try {
+    await render(guideZh)
+    // 1. 点击“重现病毒式广告”卡片打开弹窗
+    await click('[data-popular-starter-id="recreate-viral-ads"]')
+    await render(guideZh)
+    const modal = document.querySelector('.omnimux-recreate-modal')
+    assert.ok(modal, 'recreate viral ads modal should open')
+
+    // 2. 验证弹窗外侧独立右上角关闭按钮存在，点击可关闭
+    const closeBtn = document.querySelector('.omnimux-split-modal-close')
+    assert.ok(closeBtn, 'external close button should be present')
+    await click('.omnimux-split-modal-close')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-recreate-modal'), null, 'modal should close on close button click')
+
+    // 3. 再次打开弹窗并测试交互流程
+    await click('[data-popular-starter-id="recreate-viral-ads"]')
+    await render(guideZh)
+
+    // 4. 轮播切换测试
+    const navDown = document.querySelector('.omnimux-recreate-nav-down')
+    assert.ok(navDown)
+    await click('.omnimux-recreate-nav-down')
+    await render(guideZh)
+
+    // 5. 克隆模式切换测试
+    const modeCards = document.querySelectorAll('.omnimux-clone-mode-card')
+    assert.equal(modeCards.length, 2)
+    // 切换到“重现结构”
+    await click('.omnimux-clone-mode-card:nth-child(1)')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-clone-mode-card:nth-child(1)').classList.contains('active'))
+
+    // 6. 未选视频点击提交，被拦截并提示
+    await click('.omnimux-recreate-submit-btn')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-recreate-error-msg'))
+    assert.equal(writes, 0)
+
+    // 7. 模拟目标视频文件选择
+    const videoInput = document.querySelector('input[type="file"][accept*="video"]')
+    assert.ok(videoInput)
+    const fakeVideoFile = new dom.window.File(['video bytes'], 'viral-hook-sample.mp4', { type: 'video/mp4' })
+    await act(async () => {
+      const propKey = Object.keys(videoInput).find(k => k.startsWith('__reactProps$'))
+      if (propKey && videoInput[propKey]?.onChange) {
+        videoInput[propKey].onChange({ target: { files: [fakeVideoFile], value: '' } })
+      }
+    })
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-recreate-selected-file-card'))
+    assert.ok(document.querySelector('.omnimux-recreate-file-name').textContent.includes('viral-hook-sample.mp4'))
+
+    // 8. 输入新视频内容描述
+    const textarea = document.querySelector('.omnimux-recreate-textarea')
+    assert.ok(textarea)
+    await act(async () => {
+      const propKey = Object.keys(textarea).find(k => k.startsWith('__reactProps$'))
+      if (propKey && textarea[propKey]?.onChange) {
+        textarea[propKey].onChange({ target: { value: '替换为轻奢女装产品展示，突出优雅剪裁与面料垂坠感' } })
+      }
+    })
+    await render(guideZh)
+
+    // 9. 模拟添加参考素材文件
+    const refInput = document.querySelectorAll('input[type="file"]')[1]
+    assert.ok(refInput)
+    const fakeImageFile = new dom.window.File(['img bytes'], 'dress-ref-1.jpg', { type: 'image/jpeg' })
+    await act(async () => {
+      const propKey = Object.keys(refInput).find(k => k.startsWith('__reactProps$'))
+      if (propKey && refInput[propKey]?.onChange) {
+        refInput[propKey].onChange({ target: { files: [fakeImageFile], value: '' } })
+      }
+    })
+    await render(guideZh)
+    assert.equal(document.querySelectorAll('.omnimux-recreate-ref-pill').length, 1)
+
+    // 10. 点击提交按钮
+    await click('.omnimux-recreate-submit-btn')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-recreate-modal'), null, 'modal should close')
+    assert.ok(draft.includes('viral-hook-sample.mp4'))
+    assert.ok(draft.includes('重现结构'))
+    assert.ok(draft.includes('替换为轻奢女装产品展示'))
+    assert.ok(draft.includes('dress-ref-1.jpg'))
     assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())

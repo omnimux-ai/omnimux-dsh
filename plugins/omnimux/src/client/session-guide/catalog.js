@@ -25,7 +25,7 @@ export const POPULAR_STARTERS = [
   },
   {
     id: 'recreate-viral-ads',
-    type: 'placeholder',
+    type: 'modal', // 复刻爆款视频（重现病毒式广告）全功能模态框已激活落地
   },
   {
     id: 'bulk-create-ads',
@@ -127,6 +127,49 @@ export const URL_TO_VIDEO_EXAMPLES = [
   },
 ]
 
+/** 复刻爆款视频（Recreate Viral Ads）示例对比卡片数据 (默认对齐灵感社区真实爆款样本) */
+export const RECREATE_VIRAL_ADS_EXAMPLES = [
+  {
+    id: 'ugc-comparison',
+    title: '重现病毒式广告：美妆开箱',
+    titleEn: 'Beauty UGC Review Recreation',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    originalTitle: '原视频：桌面美妆好物测评',
+    recreatedTitle: '复刻生成：新品牌口红礼盒',
+    coverLeft: '/omnimux/inspiration/local/media/covers/cover_bb720927.jpeg',
+    coverRight: '/omnimux/inspiration/local/media/covers/cover_3bc9ec01.jpeg',
+    desc: '重现视频结构，或替换人物和产品，同时保留原始创意。',
+    descEn: 'Recreate video structure, or swap people and products while keeping the original idea.',
+  },
+  {
+    id: 'food-commercial',
+    title: '重现病毒式广告：香脆薯条',
+    titleEn: 'Crispy Snack Commercial Ad',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    originalTitle: '原视频：餐厅经典薯条特写',
+    recreatedTitle: '复刻生成：坚果零食解馋场景',
+    coverLeft: '/omnimux/inspiration/local/media/covers/cover_987b8524.jpeg',
+    coverRight: '/omnimux/inspiration/local/media/covers/cover_bb720927.jpeg',
+    desc: '保留黄金3秒吸睛镜头与让人垂涎的食欲特写。',
+    descEn: 'Preserve the golden 3-second hook and appetizing food close-ups.',
+  },
+  {
+    id: 'street-fashion',
+    title: '重现病毒式广告：街头穿搭',
+    titleEn: 'Street Style Apparel Showcase',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    originalTitle: '原视频：欧美街拍连帽衫',
+    recreatedTitle: '复刻生成：新潮撞色运动外套',
+    coverLeft: '/omnimux/inspiration/local/media/covers/cover_3bc9ec01.jpeg',
+    coverRight: '/omnimux/inspiration/local/media/covers/cover_987b8524.jpeg',
+    desc: '卡点变装与动感运镜节奏完整继承，无缝替换服饰产品。',
+    descEn: 'Keep the beat-matched transition rhythm and seamlessly replace apparel.',
+  },
+]
+
 export const guideZh = {
   "guide.title": "开始一个营销任务",
   "guide.market-insights": "市场洞察",
@@ -217,6 +260,31 @@ export const guideZh = {
   "guide.url-to-video.style.ugc-style": "真实口播",
   "guide.url-to-video.style.unboxing": "开箱测评",
   "guide.url-to-video.style.street-style": "街头潮流",
+
+  // 复刻爆款视频（重现病毒式广告）模态框文案
+  "guide.recreate-viral-ads.modal.title": "重现病毒式广告",
+  "guide.recreate-viral-ads.modal.subtitle": "重现视频结构，或替换人物和产品，同时保留原始创意。",
+  "guide.recreate-viral-ads.clone-mode.label": "克隆模式",
+  "guide.recreate-viral-ads.mode.recreate-structure.title": "重现结构",
+  "guide.recreate-viral-ads.mode.recreate-structure.desc": "保留分镜、节奏与结构，创作全新内容。",
+  "guide.recreate-viral-ads.mode.replace-elements.title": "替换元素",
+  "guide.recreate-viral-ads.mode.replace-elements.desc": "替换人物或产品，其余部分保持不变。",
+  "guide.recreate-viral-ads.target-video.label": "目标视频",
+  "guide.recreate-viral-ads.target-video.required": "必填",
+  "guide.recreate-viral-ads.target-video.add": "添加目标视频",
+  "guide.recreate-viral-ads.target-video.hint": "仅限 MP4 · 最大 50 MB · 2-60 秒",
+  "guide.recreate-viral-ads.prompt-input.label": "新视频展示什么内容？",
+  "guide.recreate-viral-ads.prompt-input.placeholder": "描述新的主体、场景、信息或需要替换的元素...",
+  "guide.recreate-viral-ads.reference-materials.label": "其他参考素材",
+  "guide.recreate-viral-ads.reference-materials.optional": "可选",
+  "guide.recreate-viral-ads.reference-materials.add": "添加其他参考素材",
+  "guide.recreate-viral-ads.reference-materials.hint": "添加产品、人物、品牌或视觉参考素材。",
+  "guide.recreate-viral-ads.reference-materials.limit": "最多 6 个文件",
+  "guide.recreate-viral-ads.submit-btn": "开始制作 →",
+  "guide.recreate-viral-ads.video-required": "请先添加目标视频",
+  "guide.recreate-viral-ads.video-format-error": "仅支持 MP4 格式视频文件",
+  "guide.recreate-viral-ads.video-size-error": "视频文件大小不能超过 50 MB",
+  "guide.recreate-viral-ads.applied": "已生成病毒式广告复刻任务草稿",
 }
 
 export const guideEn = {
@@ -309,4 +377,29 @@ export const guideEn = {
   "guide.url-to-video.style.ugc-style": "UGC style",
   "guide.url-to-video.style.unboxing": "Unboxing",
   "guide.url-to-video.style.street-style": "Street style",
+
+  // Recreate Viral Ads modal
+  "guide.recreate-viral-ads.modal.title": "Recreate Viral Ads",
+  "guide.recreate-viral-ads.modal.subtitle": "Recreate video structure, or swap people and products while keeping the original idea.",
+  "guide.recreate-viral-ads.clone-mode.label": "Clone mode",
+  "guide.recreate-viral-ads.mode.recreate-structure.title": "Recreate structure",
+  "guide.recreate-viral-ads.mode.recreate-structure.desc": "Keep the shots, pacing, and structure. Create new content.",
+  "guide.recreate-viral-ads.mode.replace-elements.title": "Replace elements",
+  "guide.recreate-viral-ads.mode.replace-elements.desc": "Swap people or products. Leave the rest unchanged.",
+  "guide.recreate-viral-ads.target-video.label": "Target video",
+  "guide.recreate-viral-ads.target-video.required": "REQUIRED",
+  "guide.recreate-viral-ads.target-video.add": "Add target video",
+  "guide.recreate-viral-ads.target-video.hint": "MP4 only · up to 50 MB · 2-60 seconds",
+  "guide.recreate-viral-ads.prompt-input.label": "What should the new video show?",
+  "guide.recreate-viral-ads.prompt-input.placeholder": "Describe the new subject, scenes, message, or elements to replace...",
+  "guide.recreate-viral-ads.reference-materials.label": "Other reference materials",
+  "guide.recreate-viral-ads.reference-materials.optional": "OPTIONAL",
+  "guide.recreate-viral-ads.reference-materials.add": "Add other reference materials",
+  "guide.recreate-viral-ads.reference-materials.hint": "Add product, character, brand, or visual references.",
+  "guide.recreate-viral-ads.reference-materials.limit": "Up to 6 files",
+  "guide.recreate-viral-ads.submit-btn": "Start creating →",
+  "guide.recreate-viral-ads.video-required": "Please add a target video first",
+  "guide.recreate-viral-ads.video-format-error": "Only MP4 video files are supported",
+  "guide.recreate-viral-ads.video-size-error": "Video file size cannot exceed 50 MB",
+  "guide.recreate-viral-ads.applied": "Viral ad recreation draft applied to conversation input",
 }
