@@ -382,45 +382,48 @@
         return () => window.removeEventListener("dsh-product-stage", onPage);
       }, [open]);
 
-      // 订阅创作模式：营销模式 (marketing) 下隐藏技能按钮
-      const [composerMode, setComposerMode] = useState(() => {
+      // 订阅创作模式：营销模式 (marketing) 下隐藏技能按钮，短剧 (drama) 下接入短剧货架，Agent 下显示原版货架
+      const getComposerMode = () => {
         if (typeof window !== "undefined") {
+          const htmlAttr = document.documentElement.getAttribute("data-omnimux-composer-mode");
+          if (htmlAttr) return htmlAttr;
           if (window.__omnimuxComposerModeStore) {
             return window.__omnimuxComposerModeStore.getMode(sessionId);
           }
           return window.__omnimuxComposerMode || "agent";
         }
         return "agent";
-      });
+      };
+
+      const [composerMode, setComposerMode] = useState(getComposerMode);
 
       useEffect(() => {
         if (typeof window === "undefined") return undefined;
         const updateMode = () => {
-          const m = window.__omnimuxComposerModeStore
-            ? window.__omnimuxComposerModeStore.getMode(sessionId)
-            : (window.__omnimuxComposerMode || "agent");
-          setComposerMode(m);
+          setComposerMode(getComposerMode());
         };
         updateMode();
         const onModeEvent = (e) => {
-          const m = (e && e.detail && e.detail.mode) || window.__omnimuxComposerMode || "agent";
+          const m = (e && e.detail && e.detail.mode) || getComposerMode();
           setComposerMode(m);
         };
         window.addEventListener("omnimux:composer-mode:changed", onModeEvent);
-        let unsub = undefined;
-        if (window.__omnimuxComposerModeStore && typeof window.__omnimuxComposerModeStore.subscribe === "function") {
-          unsub = window.__omnimuxComposerModeStore.subscribe(sessionId, updateMode);
+        let unsubGlobal = undefined;
+        let unsubSession = undefined;
+        if (window.__omnimuxComposerModeStore) {
+          if (typeof window.__omnimuxComposerModeStore.subscribeGlobal === "function") {
+            unsubGlobal = window.__omnimuxComposerModeStore.subscribeGlobal(updateMode);
+          }
+          if (typeof window.__omnimuxComposerModeStore.subscribe === "function") {
+            unsubSession = window.__omnimuxComposerModeStore.subscribe(sessionId, updateMode);
+          }
         }
         return () => {
           window.removeEventListener("omnimux:composer-mode:changed", onModeEvent);
-          if (typeof unsub === "function") unsub();
+          if (typeof unsubGlobal === "function") unsubGlobal();
+          if (typeof unsubSession === "function") unsubSession();
         };
       }, [sessionId]);
-
-      // 核心业务规则：营销模式下不显示技能按钮
-      if (composerMode === "marketing") {
-        return null;
-      }
 
       // 核心业务规则：
       // 1. 短剧模式 (drama) 自动接入短剧制作人专精货架 (drama-agent)
@@ -436,10 +439,7 @@
         SkillShelf.getPresetSkillBinding(activePresetId, composerMode) ||
         SkillShelf.getPresetSkillBinding("tiktok-agent");
 
-      // 如果当前预设没有绑定 skill 且不是营销模式，保底使用全量/默认技能
-      if (!presetBinding && composerMode === "marketing") {
-        return null;
-      }
+      const isMarketingMode = composerMode === "marketing";
 
       const close = useCallback(() => setOpen(false), []);
 
@@ -491,7 +491,10 @@
       }, [applyItem]);
 
       return h(I18nProvider, { t: tr },
-        h("div", { className: "sh-picker-wrap" },
+        h("div", {
+          className: "sh-picker-wrap" + (isMarketingMode ? " omnimux-hidden-marketing" : ""),
+          style: isMarketingMode ? { display: "none" } : undefined,
+        },
           h("button", {
             ref: btnRef,
             type: "button",

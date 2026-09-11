@@ -180,8 +180,8 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
   )
   const marketSkillPickerContent = fs.readFileSync(marketSkillPickerPath, 'utf-8')
   assert.ok(
-    marketSkillPickerContent.includes('if (composerMode === "marketing")'),
-    'SkillPickerButton 必须在 marketing 模式下直接返回 null 隐藏技能按钮'
+    marketSkillPickerContent.includes('isMarketingMode'),
+    'SkillPickerButton 必须包含营销模式响应式隐藏逻辑'
   )
 
   // 10. 验证会话对话过程中彻底隐藏模式 Tab (仅在未提交 Hero 阶段展示)
