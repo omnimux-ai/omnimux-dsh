@@ -422,12 +422,22 @@
         return null;
       }
 
-      // 核心业务规则：短剧创作模式 (drama) 自动接入短剧制作人专精货架 (drama-agent)
-      const activePresetId = composerMode === "drama" ? "drama-agent" : currentPreset;
-      const presetBinding = SkillShelf.getPresetSkillBinding(activePresetId, composerMode);
+      // 核心业务规则：
+      // 1. 短剧模式 (drama) 自动接入短剧制作人专精货架 (drama-agent)
+      // 2. Agent 模式显示原来的技能货架 (优先使用当前绑定的 preset，保底使用 tiktok-agent 全能社媒操盘手)
+      let activePresetId = currentPreset;
+      if (composerMode === "drama") {
+        activePresetId = "drama-agent";
+      } else if (!activePresetId || activePresetId === "standard" || activePresetId === "default") {
+        activePresetId = "tiktok-agent";
+      }
 
-      // 如果当前预设没有绑定 skill 则默认不显示 skill 按钮
-      if (!presetBinding) {
+      const presetBinding =
+        SkillShelf.getPresetSkillBinding(activePresetId, composerMode) ||
+        SkillShelf.getPresetSkillBinding("tiktok-agent");
+
+      // 如果当前预设没有绑定 skill 且不是营销模式，保底使用全量/默认技能
+      if (!presetBinding && composerMode === "marketing") {
         return null;
       }
 
