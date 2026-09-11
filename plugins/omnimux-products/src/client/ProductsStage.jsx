@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { PlusIcon, RefreshIcon } from './icons.jsx'
+import { ChatIcon, PlusIcon, RefreshIcon } from './icons.jsx'
 import { ProductFormDialog } from './ProductFormDialog.jsx'
 import { ProductGrid } from './ProductGrid.jsx'
 import { injectProductsStyles } from './styles.js'
@@ -243,6 +243,26 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
+  const handleOpenConversation = () => {
+    const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+    if (api) {
+      if (typeof api.setConversationCollapsed === 'function') {
+        try { api.setConversationCollapsed(false) } catch { /* ignore */ }
+      }
+      if (typeof api.setFocus === 'function') {
+        try { api.setFocus('split') } catch { /* ignore */ }
+      }
+      if (typeof setTimeout === 'function') {
+        const replay = () => {
+          try { api.setConversationCollapsed?.(false) } catch { /* ignore */ }
+          try { api.setFocus?.('split') } catch { /* ignore */ }
+        }
+        setTimeout(replay, 0)
+        setTimeout(replay, 50)
+      }
+    }
+  }
+
   return (
     <div
       role="region"
@@ -279,6 +299,13 @@ export function ProductsStage({ t, stage, store, visible = true }) {
           onClick={handleCreate}
         >
           {t('add.button')}
+        </Button>
+        <Button
+          variant="secondary"
+          leadingIcon={<ChatIcon />}
+          onClick={handleOpenConversation}
+        >
+          {t('add.chatButton') || '对话中添加'}
         </Button>
       </div>
 
