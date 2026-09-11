@@ -126,4 +126,18 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     stylesContent.includes("html[data-omnimux-composer-density='short'] .omnimux-composer-mode-wrap"),
     'styles.js 必须包含非全屏模式下的 CSS 隐藏规则'
   )
+
+  // 6. 验证 Hero 阶段位置重定向至大标题正下方、heroWorkspaceRow 上方
+  assert.ok(
+    tabsContent.includes('heroWorkspaceRow'),
+    'ComposerModeTabs 必须包含 heroWorkspaceRow 锚点探测'
+  )
+  assert.ok(
+    tabsContent.includes('createPortal'),
+    'ComposerModeTabs 必须使用 createPortal 实现大标题正下方精准定位'
+  )
+  assert.ok(
+    stylesContent.includes('#omnimux-composer-mode-anchor'),
+    'styles.js 必须包含 #omnimux-composer-mode-anchor 样式声明'
+  )
 })
