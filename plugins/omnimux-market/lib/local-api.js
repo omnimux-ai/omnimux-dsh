@@ -86,6 +86,7 @@ export const MUTATING_METHODS = new Set([
     'catalogUninstall',
     'expertMarketInstall',
     'expertMarketDisable',
+    'setModelSelection',
 ]);
 export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
 import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
@@ -415,6 +416,27 @@ async function handleCatalogUninstall(ctx) {
     });
     return sendJson(res, 200, { ok: true, id, installed: false, kind: 'connector' });
 }
+export const sessionModelStore = new Map();
+export function getSessionModel(sessionId) {
+    return sessionModelStore.get(sessionId);
+}
+export function setSessionModel(sessionId, choice) {
+    sessionModelStore.set(sessionId, choice);
+}
+async function handleGetModelSelection(ctx) {
+    const { res, url, body } = ctx;
+    const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim() || 'default';
+    const choice = sessionModelStore.get(sessionId) || { auto: true, selectedModel: null };
+    return sendJson(res, 200, { ok: true, sessionId, ...choice });
+}
+async function handleSetModelSelection(ctx) {
+    const { res, body } = ctx;
+    const sessionId = String(body.sessionId || '').trim() || 'default';
+    const auto = body.auto !== false;
+    const selectedModel = auto ? null : (body.selectedModel || null);
+    sessionModelStore.set(sessionId, { auto, selectedModel });
+    return sendJson(res, 200, { ok: true, sessionId, auto, selectedModel });
+}
 const API_ROUTE_TABLE = {
     search: handleSearch,
     ratings: handleRatings,
@@ -440,6 +462,8 @@ const API_ROUTE_TABLE = {
     catalogInstall: handleCatalogInstall,
     catalogSummon: handleCatalogSummon,
     catalogUninstall: handleCatalogUninstall,
+    getModelSelection: handleGetModelSelection,
+    setModelSelection: handleSetModelSelection,
 };
 export async function handleApi(req, res, cfg) {
     try {

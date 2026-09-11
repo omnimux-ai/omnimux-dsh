@@ -65,6 +65,17 @@
         },
         SkillPickerButton,
       ));
+      slots.inject("conversation.input.left", () => registerSlot(
+        slots,
+        {
+          name: "conversation.input.left",
+          id: "omnimux-market-model-picker",
+          order: 20,
+          label: () => lookup("modelPicker.title") || "Model",
+          locale: "omnimux-market",
+        },
+        ModelPickerButton,
+      ));
 
       function mountSidebarEntry() {
         const SIDEBAR_ENTRY_STYLES = `

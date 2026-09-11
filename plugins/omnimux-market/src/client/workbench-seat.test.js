@@ -38,6 +38,14 @@ describe('market workbench seat (sidebar must not claim overlay)', () => {
     assert.match(source, /SkillPickerButton/)
   })
 
+  it('registers the composer Model picker on conversation.input.left to the right of Skill picker', () => {
+    const source = readFileSync(join(here, 'apply.js'), 'utf8')
+    assert.match(source, /conversation\.input\.left/)
+    assert.match(source, /omnimux-market-model-picker/)
+    assert.match(source, /ModelPickerButton/)
+    assert.match(source, /order:\s*20/)
+  })
+
   it('Skill trigger uses a book-open icon and has no border', () => {
     const picker = readFileSync(join(here, 'skill-picker.js'), 'utf8')
     const css = readFileSync(join(here, 'css.js'), 'utf8')
