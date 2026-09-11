@@ -116,6 +116,14 @@ html[data-omnimux-composer-density='icon'] .omnimux-composer-mode-wrap {
   display: none !important;
 }
 
+/* 阶段专属展示规则：仅在未提交的新会话 (hero) 阶段展示；进入会话对话过程 (active/settling) 彻底隐藏 */
+[data-phase='active'] .omnimux-composer-mode-wrap,
+[data-phase='settling'] .omnimux-composer-mode-wrap,
+[data-phase='active'] #omnimux-composer-mode-anchor,
+[data-phase='settling'] #omnimux-composer-mode-anchor {
+  display: none !important;
+}
+
 /* 营销模式下隐藏技能按钮 (SkillPicker) 双重保障规则 */
 html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-skill-picker]),
 html[data-omnimux-composer-mode='marketing'] button[data-omnimux-skill-picker] {
