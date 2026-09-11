@@ -582,19 +582,6 @@ function nativeTitle(attachment: NativeComposerAttachment): string {
   return 'image';
 }
 
-function isVideoCategory(cat?: string | null): boolean {
-  if (!cat || typeof cat !== 'string') return false;
-  const lower = cat.toLowerCase();
-  return (
-    cat === '创作视频' ||
-    cat === 'video-creation' ||
-    cat === '搜索爆款视频' ||
-    cat === 'search-viral-video' ||
-    lower.includes('视频') ||
-    lower.includes('video')
-  );
-}
-
 function isVideoUrl(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
   const trimmed = text.trim();
@@ -705,14 +692,6 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const dragDepth = useRef(0);
 
-  const [videoSkillActive, setVideoSkillActive] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && (window as any).__omnimuxActiveSkill) {
-      const cat = (window as any).__omnimuxActiveSkill.category || '';
-      return isVideoCategory(cat);
-    }
-    return false;
-  });
-
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [popoverUrl, setPopoverUrl] = useState('');
   const savedRangeRef = useRef<Range | null>(null);
@@ -720,11 +699,6 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const onSkillChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ skill?: unknown; category?: string }>;
-      const cat = customEvent.detail?.category || '';
-      setVideoSkillActive(isVideoCategory(cat));
-    };
     const onPaste = (e: ClipboardEvent) => {
       const text = e.clipboardData?.getData('text') || '';
       if (isVideoUrl(text)) {
@@ -738,10 +712,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         }
       }
     };
-    window.addEventListener('omnimux:skill:changed', onSkillChange);
     window.addEventListener('paste', onPaste, true);
     return () => {
-      window.removeEventListener('omnimux:skill:changed', onSkillChange);
       window.removeEventListener('paste', onPaste, true);
     };
   }, []);
@@ -905,11 +877,6 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   const hasOmnimux = Boolean(omnimuxAttachments && omnimuxAttachments.length > 0);
   const hasNative = nativeAttachments.length > 0;
-  const hasVideoContent = videoSkillActive;
-  const hasPresets = getCreativePresetsStore().hasAnyPreset(currentSessionId);
-  if (!hasOmnimux && !hasNative && !dragActive && !preview && !hasVideoContent && !hasPresets) {
-    return null;
-  }
 
   const railLabel = translate(props.t, 'attachments.rail', '会话关联附件导轨');
   const dropTitle = canAcceptDrop
@@ -1012,72 +979,68 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         document.body,
       )}
       <ComposerPresetsChips sessionId={currentSessionId} />
-      {(hasOmnimux || hasNative || hasVideoContent) && (
-        <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
-          {videoSkillActive && (
-            <div className="omx-video-token-action-row">
-              <button /* exempt-ui01: 视频链接插入按钮 */
-                type="button"
-                className="omx-btn-insert-link"
-                onClick={handleOpenPopover}
-                title="点击在输入框光标位置插入视频链接"
-              >
-                <LinkIcon size={14} />
-                <span>视频链接</span>
-              </button>
-            </div>
-          )}
-          {(hasOmnimux || hasNative) && (
-            <div className="omx-attachment-tray" role="list" aria-label={railLabel}>
-            {omnimuxAttachments.map((att) => (
-              <AttachmentCard
-                key={att.id}
-                attachment={att}
-                onRemove={handleRemoveOmnimux}
-                onOpen={att.previewUrl ? handleOpenOmnimux : undefined}
-              />
-            ))}
-            {nativeAttachments.map((att) => {
-              const title = nativeTitle(att);
-              return (
-                <div
-                  key={`native-${att.id}`}
-                  className="omx-att-card omx-att-card--media"
-                  role="listitem"
-                  title={title}
-                  onClick={() => handleOpenNative(att)}
-                >
-                  <div className="omx-att-card__media-frame">
-                    {att.previewUrl ? (
-                      <img
-                        src={att.previewUrl}
-                        alt={title}
-                        className="omx-att-card__media-thumb"
-                      />
-                    ) : (
-                      <div className="omx-att-card__media-placeholder">
-                        <MediaPlaceholderIcon />
-                      </div>
-                    )}
-                  </div>
-                  <button /* exempt-ui01: 附件托盘删除按钮 */
-                    type="button"
-                    className="omx-att-card__remove-btn omx-att-card__remove-btn--media"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleRemoveNative(att.id);
-                    }}
-                    aria-label={translate(props.t, 'attachments.removeNative', '移除 {name}', { name: title })}
-                  >
-                    <CloseIcon />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          )}
+      <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
+        <div className="omx-video-token-action-row">
+          <button /* exempt-ui01: 视频链接插入按钮 */
+            type="button"
+            className="omx-btn-insert-link"
+            onClick={handleOpenPopover}
+            title="点击在输入框光标位置插入视频链接"
+          >
+            <LinkIcon size={14} />
+            <span>视频链接</span>
+          </button>
         </div>
-      )}
+        {(hasOmnimux || hasNative) && (
+          <div className="omx-attachment-tray" role="list" aria-label={railLabel}>
+          {omnimuxAttachments.map((att) => (
+            <AttachmentCard
+              key={att.id}
+              attachment={att}
+              onRemove={handleRemoveOmnimux}
+              onOpen={att.previewUrl ? handleOpenOmnimux : undefined}
+            />
+          ))}
+          {nativeAttachments.map((att) => {
+            const title = nativeTitle(att);
+            return (
+              <div
+                key={`native-${att.id}`}
+                className="omx-att-card omx-att-card--media"
+                role="listitem"
+                title={title}
+                onClick={() => handleOpenNative(att)}
+              >
+                <div className="omx-att-card__media-frame">
+                  {att.previewUrl ? (
+                    <img
+                      src={att.previewUrl}
+                      alt={title}
+                      className="omx-att-card__media-thumb"
+                    />
+                  ) : (
+                    <div className="omx-att-card__media-placeholder">
+                      <MediaPlaceholderIcon />
+                    </div>
+                  )}
+                </div>
+                <button /* exempt-ui01: 附件托盘删除按钮 */
+                  type="button"
+                  className="omx-att-card__remove-btn omx-att-card__remove-btn--media"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleRemoveNative(att.id);
+                  }}
+                  aria-label={translate(props.t, 'attachments.removeNative', '移除 {name}', { name: title })}
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        )}
+      </div>
       {preview && typeof document !== 'undefined' && document.body && createPortal(
         <div
           className="omx-att-preview"
