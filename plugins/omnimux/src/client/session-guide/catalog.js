@@ -90,7 +90,7 @@ export const URL_TO_VIDEO_RATIOS = [
   { id: '9:16', label: '9:16', width: 16, height: 28 },
 ]
 
-/** 视频网址（URL to Video）示例轮播数据（源自素材库/资产库/gxgen） */
+/** 视频网址（URL to Video）示例轮播数据（默认对齐灵感社区真实爆款样本） */
 export const URL_TO_VIDEO_EXAMPLES = [
   {
     id: 'unboxing',
@@ -100,6 +100,8 @@ export const URL_TO_VIDEO_EXAMPLES = [
     tagEn: 'EXAMPLE',
     badge: 'UGC',
     desc: '开箱特写、配件展示与实机演示',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_bb720927.jpeg',
+    videoUrl: '/omnimux/inspiration/local/media/videos/video_0437e3fa.mp4',
   },
   {
     id: 'food-snack',
@@ -109,6 +111,8 @@ export const URL_TO_VIDEO_EXAMPLES = [
     tagEn: 'EXAMPLE',
     badge: 'Food',
     desc: '酥脆质感、诱人色泽与情绪反应',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_987b8524.jpeg',
+    videoUrl: '/omnimux/inspiration/local/media/videos/video_a5edfaab.mp4',
   },
   {
     id: 'fashion-model',
@@ -118,6 +122,8 @@ export const URL_TO_VIDEO_EXAMPLES = [
     tagEn: 'EXAMPLE',
     badge: 'Fashion',
     desc: '自然光影、版型剪裁与动态垂坠感',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_3bc9ec01.jpeg',
+    videoUrl: '/omnimux/inspiration/local/media/videos/video_211675ca.mp4',
   },
 ]
 
