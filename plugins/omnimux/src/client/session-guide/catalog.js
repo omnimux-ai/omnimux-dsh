@@ -21,7 +21,7 @@ export const POPULAR_STARTERS = [
   },
   {
     id: 'url-to-video',
-    type: 'placeholder',
+    type: 'modal', // 视频网址全功能弹窗已激活落地
   },
   {
     id: 'recreate-viral-ads',
@@ -64,6 +64,60 @@ export const MARKETING_INSIGHT_ITEMS = [
     id: 'title-optimization',
     icon: 'file-pen',
     prompt: 'Optimize [current product title] for [ecommerce platform] using [product details or target keywords]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide the recommended title with a concise rationale. If context is missing, ask an open follow-up question about useful product information.',
+  },
+]
+
+/** 视频网址（URL to Video）视觉风格选项 */
+export const URL_TO_VIDEO_STYLES = [
+  { id: 'clean-studio', label: 'Clean studio', labelZh: '清新影棚' },
+  { id: 'cinematic-luxury', label: 'Cinematic luxury', labelZh: '电影感奢华' },
+  { id: 'minimalist-premium', label: 'Minimalist premium', labelZh: '极简高级' },
+  { id: 'natural-lifestyle', label: 'Natural lifestyle', labelZh: '自然生活' },
+  { id: 'bold-colorful', label: 'Bold & colorful', labelZh: '鲜亮大胆' },
+  { id: 'futuristic-tech', label: 'Futuristic tech', labelZh: '未来科技' },
+  { id: 'ugc-style', label: 'UGC style', labelZh: '真实口播' },
+  { id: 'unboxing', label: 'Unboxing', labelZh: '开箱测评' },
+  { id: 'street-style', label: 'Street style', labelZh: '街头潮流' },
+]
+
+/** 视频网址（URL to Video）画幅比例选项 */
+export const URL_TO_VIDEO_RATIOS = [
+  { id: '21:9', label: '21:9', width: 30, height: 13 },
+  { id: '16:9', label: '16:9', width: 28, height: 16 },
+  { id: '4:3', label: '4:3', width: 24, height: 18 },
+  { id: '1:1', label: '1:1', width: 20, height: 20 },
+  { id: '3:4', label: '3:4', width: 18, height: 24 },
+  { id: '9:16', label: '9:16', width: 16, height: 28 },
+]
+
+/** 视频网址（URL to Video）示例轮播数据（源自素材库/资产库/gxgen） */
+export const URL_TO_VIDEO_EXAMPLES = [
+  {
+    id: 'unboxing',
+    title: '开箱测评：多功能料理机',
+    titleEn: 'Kitchen Appliance UGC Demo',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    badge: 'UGC',
+    desc: '开箱特写、配件展示与实机演示',
+  },
+  {
+    id: 'food-snack',
+    title: '美食快消：香脆薯条零食',
+    titleEn: 'Crispy Fries Snack Commercial',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    badge: 'Food',
+    desc: '酥脆质感、诱人色泽与情绪反应',
+  },
+  {
+    id: 'fashion-model',
+    title: '时尚穿搭：法式优雅风衣',
+    titleEn: 'Autumn Trench Coat Showcase',
+    tag: '示例',
+    tagEn: 'EXAMPLE',
+    badge: 'Fashion',
+    desc: '自然光影、版型剪裁与动态垂坠感',
   },
 ]
 
@@ -128,6 +182,24 @@ export const guideZh = {
   "guide.insight.amazon-search-terms.prompt": "根据[归因设置]和[目标核心指标]，深入分析[平台]在[日期范围]内的[已上传搜索词报告]：\n1. 筛选出高点击率、高转化率的高效搜索词（Golden Keywords）；\n2. 识别出高消耗低转化的浪费型搜索词，并提供否定关键词（Negative Keywords）清单；\n3. 给出精准竞价调整策略与广告活动预算优化建议。\n请严格基于真实数据分析，明确区分事实与推断。若关键报表数据缺失，请向我追问。",
   "guide.insight.category-market.prompt": "请全面分析[产品品类]在[目标市场]的[电商/社媒平台]上的商业机会与增长潜力：\n1. 评估市场需求规模、季节性特征与增长信号；\n2. 剖析现有主要竞争对手格局与定价带区间；\n3. 挖掘目标消费者的核心痛点、未满足需求与进入壁垒；\n4. 明确给出是否建议入场以及具体的差异化切入策略。\n请明确区分客观事实、行业推断与假设。如果缺少背景信息，请向我提出开放式问题以获取补充材料。",
   "guide.insight.title-optimization.prompt": "请根据[产品核心参数/目标关键词/卖点]，为[电商平台]深度优化[当前商品标题]：\n1. 严格遵守平台的字符限制与排版规则（避免违规堆砌）；\n2. 最大化提升核心大词与长尾词的搜索权重与搜索可见度；\n3. 兼顾高可读性、产品差异化与点击转化吸引力；\n4. 提供 3 个不同侧重点（如搜索权重优先型、卖点吸引型、品牌调性型）的推荐标题，并附带简要修改理由。\n如果缺少必要的产品参数，请向我追问。",
+
+  // 视频网址（URL to Video）模态框文案
+  "guide.url-to-video.modal.title": "视频网址",
+  "guide.url-to-video.modal.subtitle": "将产品页面转化为可直接投放的视频广告。",
+  "guide.url-to-video.product-url.label": "产品网址",
+  "guide.url-to-video.product-url.placeholder": "输入或粘贴产品页面网址...",
+  "guide.url-to-video.target-audience.label": "目标受众",
+  "guide.url-to-video.target-audience.placeholder": "这条广告主要面向哪些人群？",
+  "guide.url-to-video.key-selling-point.label": "核心卖点",
+  "guide.url-to-video.key-selling-point.placeholder": "最希望突出的核心优势是什么？",
+  "guide.url-to-video.visual-style.label": "视觉风格",
+  "guide.url-to-video.duration.label": "目标时长",
+  "guide.url-to-video.duration.auto": "自动",
+  "guide.url-to-video.duration.hint": "让模型根据产品内容自动选择适宜时长",
+  "guide.url-to-video.aspect-ratio.label": "画幅比例",
+  "guide.url-to-video.submit-btn": "开始制作 →",
+  "guide.url-to-video.url-required": "请先输入产品页面网址",
+  "guide.url-to-video.applied": "已生成视频广告制作任务草稿",
 }
 
 export const guideEn = {
@@ -191,4 +263,22 @@ export const guideEn = {
   "guide.insight.amazon-search-terms.prompt": "Analyze [uploaded search term report] from [platform] for [date range], using [attribution settings] and [target metrics]. Identify high-performing queries, wasted ad spend, negative-keyword opportunities, and bid or budget actions. Separate data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
   "guide.insight.category-market.prompt": "Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
   "guide.insight.title-optimization.prompt": "Optimize [current product title] for [ecommerce platform] using [product details or target keywords]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide 3 recommended titles with concise rationales. If context is missing, ask an open follow-up question about useful product information.",
+
+  // URL to Video modal
+  "guide.url-to-video.modal.title": "URL to Video",
+  "guide.url-to-video.modal.subtitle": "Turn a product page into a ready-to-run video ad.",
+  "guide.url-to-video.product-url.label": "Product URL",
+  "guide.url-to-video.product-url.placeholder": "Enter or paste a product page URL...",
+  "guide.url-to-video.target-audience.label": "Target audience",
+  "guide.url-to-video.target-audience.placeholder": "Who should this ad speak to?",
+  "guide.url-to-video.key-selling-point.label": "Key selling point",
+  "guide.url-to-video.key-selling-point.placeholder": "What benefit should stand out first?",
+  "guide.url-to-video.visual-style.label": "Visual style",
+  "guide.url-to-video.duration.label": "Duration",
+  "guide.url-to-video.duration.auto": "Auto",
+  "guide.url-to-video.duration.hint": "Let the model choose a natural length",
+  "guide.url-to-video.aspect-ratio.label": "Aspect ratio",
+  "guide.url-to-video.submit-btn": "Start creating →",
+  "guide.url-to-video.url-required": "Please enter a product page URL first",
+  "guide.url-to-video.applied": "Video ad draft applied to conversation input",
 }

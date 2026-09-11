@@ -132,7 +132,7 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
 
     // 2. 点击占位卡片触发提示，未修改草稿
-    await click('[data-popular-starter-id="url-to-video"]')
+    await click('[data-popular-starter-id="recreate-viral-ads"]')
     await render(guideZh)
     assert.ok(document.querySelector('.omnimux-toast-pill'))
     assert.equal(writes, 0)
@@ -170,6 +170,85 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.ok(enTextarea.value.includes('Find and shortlist TikTok creators for [product/brand] in [target market]'))
     await click('.omnimux-insight-close')
     await render(guideEn)
+  } finally {
+    await act(async () => root.unmount())
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+test('url to video modal renders carousel and submits video ad prompt', async () => {
+  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  dom.window.HTMLInputElement.prototype.attachEvent = () => {}
+  dom.window.HTMLTextAreaElement.prototype.attachEvent = () => {}
+  dom.window.HTMLElement.prototype.attachEvent = () => {}
+  dom.window.Element.prototype.attachEvent = () => {}
+  dom.window.Element.prototype.detachEvent = () => {}
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  let draft = ''
+  let writes = 0
+  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
+  const props = (localeMap = guideZh) => ({
+    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
+    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
+  })
+  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  const click = async sel => act(async () => document.querySelector(sel).click())
+
+  try {
+    await render(guideZh)
+    // 1. 点击“视频网址”卡片打开弹窗
+    await click('[data-popular-starter-id="url-to-video"]')
+    await render(guideZh)
+    const modal = document.querySelector('.omnimux-u2v-modal')
+    assert.ok(modal, 'url-to-video modal should open')
+
+    // 2. 验证左侧轮播卡片与右侧表单输入项
+    const cards = document.querySelectorAll('.omnimux-u2v-card')
+    assert.ok(cards.length >= 1)
+
+    // 3. 未输入 URL 点击提交，触发错误提示
+    await click('.omnimux-u2v-submit')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-u2v-error'))
+    assert.equal(writes, 0)
+
+    // 4. 输入 URL 并切换风格与画幅
+    const input = document.querySelector('.omnimux-u2v-input')
+    await act(async () => {
+      const propKey = Object.keys(input).find(k => k.startsWith('__reactProps$'))
+      if (propKey && input[propKey]?.onChange) {
+        input[propKey].onChange({ target: { value: 'https://www.amazon.com/dp/B09XYZ1234' } })
+      }
+    })
+
+    // 选择 UGC 风格
+    const styleBtns = document.querySelectorAll('.omnimux-u2v-style-btn')
+    assert.equal(styleBtns.length, 9)
+    await click('.omnimux-u2v-style-btn:nth-child(7)')
+
+    // 选择 16:9 比例
+    const ratioBtns = document.querySelectorAll('.omnimux-u2v-ratio-btn')
+    assert.equal(ratioBtns.length, 6)
+    await click('.omnimux-u2v-ratio-btn:nth-child(2)')
+
+    // 5. 点击提交
+    await click('.omnimux-u2v-submit')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-u2v-modal'), null, 'modal should close')
+    assert.ok(draft.includes('https://www.amazon.com/dp/B09XYZ1234'))
+    assert.ok(draft.includes('16:9'))
+    assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())
     store.dispose()

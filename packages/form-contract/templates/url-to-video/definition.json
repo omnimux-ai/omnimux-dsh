@@ -1,0 +1,130 @@
+{
+  "protocolVersion": 1,
+  "id": "url-to-video",
+  "templateVersion": "1.0.0",
+  "title": "视频网址",
+  "description": "将产品页面转化为可直接投放的视频广告，智能提取核心卖点并匹配视觉风格。",
+  "examples": [
+    {
+      "ref": "/api/omnimux/forms/examples/replication-demo.mp4",
+      "title": "产品网址转视频广告示例",
+      "kind": "video"
+    }
+  ],
+  "fields": [
+    {
+      "id": "product_url",
+      "type": "text",
+      "label": "产品网址",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 500
+    },
+    {
+      "id": "target_audience",
+      "type": "text",
+      "label": "目标受众",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    {
+      "id": "key_selling_point",
+      "type": "text",
+      "label": "核心卖点",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 300
+    },
+    {
+      "id": "visual_style",
+      "type": "select",
+      "label": "视觉风格",
+      "required": true,
+      "options": [
+        {
+          "value": "clean-studio",
+          "label": "Clean studio (清新影棚)"
+        },
+        {
+          "value": "cinematic-luxury",
+          "label": "Cinematic luxury (电影感奢华)"
+        },
+        {
+          "value": "minimalist-premium",
+          "label": "Minimalist premium (极简高级)"
+        },
+        {
+          "value": "natural-lifestyle",
+          "label": "Natural lifestyle (自然生活)"
+        },
+        {
+          "value": "bold-colorful",
+          "label": "Bold & colorful (鲜亮大胆)"
+        },
+        {
+          "value": "futuristic-tech",
+          "label": "Futuristic tech (未来科技)"
+        },
+        {
+          "value": "ugc-style",
+          "label": "UGC style (真实口播/UGC)"
+        },
+        {
+          "value": "unboxing",
+          "label": "Unboxing (开箱测评)"
+        },
+        {
+          "value": "street-style",
+          "label": "Street style (街头潮流)"
+        }
+      ],
+      "default": "clean-studio"
+    },
+    {
+      "id": "duration",
+      "type": "slider",
+      "label": "目标时长（秒）",
+      "required": true,
+      "min": 4,
+      "max": 180,
+      "step": 1,
+      "default": 15
+    },
+    {
+      "id": "aspect_ratio",
+      "type": "aspect-ratio",
+      "label": "画幅比例",
+      "required": true,
+      "options": [
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "1:1",
+          "label": "1:1"
+        },
+        {
+          "value": "3:4",
+          "label": "3:4"
+        },
+        {
+          "value": "9:16",
+          "label": "9:16"
+        }
+      ],
+      "default": "9:16"
+    }
+  ],
+  "prompt": "请根据以下产品页面信息与要求，将其转化为可直接投放的高转化率视频广告制作方案：\n产品网址：{{product_url}}\n目标受众：{{target_audience}}\n核心卖点：{{key_selling_point}}\n视觉风格：{{visual_style}}\n目标时长：{{duration}} 秒\n画幅比例：{{aspect_ratio}}\n请深入挖掘产品痛点与优势，输出 3 秒 Hook、场景分镜脚本、运镜视觉引导以及结尾行动号召（CTA）。",
+  "attachments": []
+}

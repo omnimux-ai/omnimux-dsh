@@ -1,0 +1,19 @@
+{
+  "values": {
+    "product_url": "",
+    "target_audience": "年轻白领",
+    "key_selling_point": "超长续航",
+    "visual_style": "clean-studio",
+    "duration": 15,
+    "aspect_ratio": "9:16"
+  },
+  "expectedErrors": [
+    {
+      "code": "REQUIRED",
+      "path": [
+        "values",
+        "product_url"
+      ]
+    }
+  ]
+}
