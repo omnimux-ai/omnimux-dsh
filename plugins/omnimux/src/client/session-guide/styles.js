@@ -159,10 +159,9 @@ export const GUIDE_CSS = `
   max-width: 96vw;
   max-height: 92vh;
 }
+.omnimux-modal-close-btn,
 .omnimux-split-modal-close {
   position: absolute;
-  top: 0px;
-  right: -50px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -173,25 +172,56 @@ export const GUIDE_CSS = `
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease, border-color 140ms ease;
   z-index: 100002;
   pointer-events: auto;
   box-shadow: 0 4px 16px var(--dsw-alias-bg-base);
+  box-sizing: border-box;
+  padding: 0;
 }
+.omnimux-modal-close-btn:hover,
 .omnimux-split-modal-close:hover {
   background: var(--dsw-alias-bg-layer-3);
   color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l2);
   transform: scale(1.08);
 }
+.omnimux-modal-close-btn:active,
+.omnimux-split-modal-close:active {
+  transform: scale(0.96);
+}
+.omnimux-modal-close-btn svg,
 .omnimux-split-modal-close svg {
   pointer-events: none;
+  display: block;
+}
+
+/* 外悬浮定位 (SplitModalDialog 默认) */
+.omnimux-modal-close-btn.is-external,
+.omnimux-split-modal-close {
+  top: 0px;
+  right: -50px;
 }
 @media (max-width: 1280px) {
+  .omnimux-modal-close-btn.is-external,
   .omnimux-split-modal-close {
     top: 14px;
     right: 14px;
     background: var(--dsw-alias-bg-layer-3);
   }
+}
+
+/* 内部右上角定位 (用于单栏/普通弹窗) */
+.omnimux-modal-close-btn.is-top-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* 行内模式 */
+.omnimux-modal-close-btn.is-inline {
+  position: static;
+  flex-shrink: 0;
 }
 .omnimux-split-modal-container {
   position: relative;

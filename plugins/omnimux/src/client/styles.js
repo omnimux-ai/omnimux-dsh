@@ -276,23 +276,63 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
     0 0 40px color-mix(in srgb, var(--dsw-alias-brand-primary, #7c3aed) 18%, transparent);
   color: var(--dsw-alias-label-primary, inherit);
 }
+.omnimux-modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease, border-color 140ms ease;
+  z-index: 100002;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px var(--dsw-alias-bg-base);
+  box-sizing: border-box;
+  padding: 0;
+}
+.omnimux-modal-close-btn:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l2);
+  transform: scale(1.08);
+}
+.omnimux-modal-close-btn:active {
+  transform: scale(0.96);
+}
+.omnimux-modal-close-btn svg {
+  pointer-events: none;
+  display: block;
+}
+.omnimux-modal-close-btn.is-external {
+  position: absolute;
+  top: 0px;
+  right: -50px;
+}
+@media (max-width: 1280px) {
+  .omnimux-modal-close-btn.is-external {
+    top: 14px;
+    right: 14px;
+    background: var(--dsw-alias-bg-layer-3);
+  }
+}
+.omnimux-modal-close-btn.is-top-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+.omnimux-modal-close-btn.is-inline {
+  position: static;
+  flex-shrink: 0;
+}
 .omnimux-login-gate-close {
   position: absolute;
   top: 18px;
   right: 18px;
   z-index: 20;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
-  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.65));
-}
-.omnimux-login-gate-close:hover {
-  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.14));
-  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.25));
-  color: var(--dsw-alias-label-primary, #fff);
-  transform: scale(1.06);
 }
 .omnimux-login-gate-hero {
   position: relative;

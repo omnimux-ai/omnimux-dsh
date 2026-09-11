@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { ModalCloseButton } from './ModalCloseButton.jsx'
 
 /**
  * 通用左右分栏弹窗组件 (SplitModalDialog)
@@ -71,23 +72,8 @@ export function SplitModalDialog({
     >
       {/* 左右分栏核心容器外层定位包装 */}
       <div className="omnimux-split-modal-wrapper" onClick={(e) => e.stopPropagation()}>
-        {/* 弹窗外侧右上方独立圆形关闭按钮 (1:1 对标设计) */}
-        <button key="close-btn" type="button" className="omnimux-split-modal-close omnimux-insight-close" onClick={(e) => { e.stopPropagation(); onClose?.() }} aria-label="Close"> {/* // exempt-ui01: modal close icon button */}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        {/* 弹窗外侧右上方独立圆形关闭按钮 (全局统一 ModalCloseButton 共享组件) */}
+        <ModalCloseButton key="close-btn" onClose={onClose} placement="external" ariaLabel="Close" />
 
         {/* 左右分栏核心容器 */}
         <div className={`omnimux-split-modal-container ${containerClassName}`}>
