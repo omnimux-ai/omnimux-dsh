@@ -1,59 +1,349 @@
+import { createElement } from 'react'
+
 /**
- * Injects and maintains adaptive localized copy and smart search for slash commands.
+ * Injects and maintains adaptive localized copy, icons, and smart search for slash commands.
  *
  * Resolves:
- * 1. Command name (item.name) adaptive localization:
+ * 1. Visual Icon Matching (Referencing UI Figure 1):
+ *    - Paperclip (📎) for `add-file`
+ *    - Layered Media Stack (🗂️) for `add-from-library`
+ *    - Dartboard Target (🎯) for `goal`
+ *    - Glowing Lightbulb (💡) for `plan`
+ *    - Horizontal Squeeze Arrows (🗜️) for `compact`
+ *    - Shield Badge (🛡️) for `permission`
+ *    - Feedback Bubble (💬) for `feedback`
+ *    - Tray Download (📥) for `export`
+ * 2. Command name (item.name) adaptive localization:
  *    - In Chinese locale (zh), renders Chinese command names (e.g. "add-file" -> "添加文件")
  *    - In English locale (en), retains canonical English command names (e.g. "add-file")
- * 2. Command description adaptive localization:
+ * 3. Command description adaptive localization:
  *    - In Chinese locale (zh), renders concise Chinese descriptions (e.g. "从本地选择文件或图片")
  *    - In English locale (en), renders canonical English descriptions
- * 3. Bidirectional transparent mapping:
+ * 4. Bidirectional transparent mapping:
  *    - Intercepts `dispatch`, `matchSpace`, and `matchEnter` so that selecting or entering
  *      Chinese command names transparently resolves and executes the underlying native Host command.
- * 4. Smart multi-modal query matching:
+ * 5. Smart multi-modal query matching:
  *    - Typing Chinese keywords, pinyin, or English tokens all match and prioritize seamlessly.
  */
+
+// ==========================================
+// 1. High-fidelity Vector Icon Renderers (Ref: Figure 1)
+// ==========================================
+
+export function renderPaperclipIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z',
+      fill: 'currentColor',
+    })
+  )
+}
+
+export function renderLibraryIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('rect', {
+      x: 1.5,
+      y: 3.5,
+      width: 11,
+      height: 9,
+      rx: 1.5,
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+    }),
+    createElement('path', {
+      d: 'M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+    }),
+    createElement('circle', {
+      cx: 5,
+      cy: 6.5,
+      r: 1,
+      fill: 'currentColor',
+    }),
+    createElement('path', {
+      d: 'M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2',
+      stroke: 'currentColor',
+      strokeWidth: 1.2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    })
+  )
+}
+
+export function renderGoalIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M8 0C8.31 0 8.62 0.02 8.93 0.05C8.48 0.4 8.1 0.83 7.79 1.3C4.19 1.42 1.3 4.37 1.3 8C1.3 11.7 4.3 14.7 8 14.7C11.63 14.7 14.58 11.81 14.69 8.21C15.17 7.9 15.6 7.52 15.94 7.07C15.98 7.37 16 7.69 16 8C16 12.42 12.42 16 8 16C3.58 16 0 12.42 0 8C0 3.58 3.58 0 8 0ZM7.02 3.61C7.01 3.74 7 3.87 7 4C7 4.32 7.03 4.63 7.09 4.93C5.76 5.32 4.8 6.55 4.8 8C4.8 9.77 6.23 11.2 8 11.2C9.45 11.2 10.67 10.23 11.07 8.91C11.37 8.97 11.68 9 12 9C12.13 9 12.26 8.99 12.39 8.98C11.94 10.99 10.15 12.5 8 12.5C5.51 12.5 3.5 10.49 3.5 8C3.5 5.85 5 4.06 7.02 3.61Z',
+      fill: 'currentColor',
+    }),
+    createElement('path', {
+      d: 'M7.5 8.62L9.12 7',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+    }),
+    createElement('path', {
+      d: 'M9.08 3.36L11.87 0.58C11.9 0.55 11.95 0.56 11.95 0.61L12.24 3.7C12.24 3.72 12.26 3.74 12.28 3.74L15.37 4.03C15.41 4.03 15.43 4.08 15.4 4.11L12.62 6.89C12.61 6.9 12.6 6.91 12.58 6.91L9.12 6.91C9.09 6.91 9.07 6.89 9.07 6.86L9.07 3.39C9.07 3.38 9.07 3.37 9.08 3.36Z',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+    })
+  )
+}
+
+export function renderPlanIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M8 3.2C6.12 3.2 4.6 4.72 4.6 6.6C4.6 7.82 5.25 8.9 6.2 9.5V11C6.2 11.22 6.38 11.4 6.6 11.4H9.4C9.62 11.4 9.8 11.22 9.8 11V9.5C10.75 8.9 11.4 7.82 11.4 6.6C11.4 4.72 9.88 3.2 8 3.2Z',
+      stroke: 'currentColor',
+      strokeWidth: 1.25,
+      strokeLinejoin: 'round',
+    }),
+    createElement('path', {
+      d: 'M6.8 12.8H9.2',
+      stroke: 'currentColor',
+      strokeWidth: 1.25,
+      strokeLinecap: 'round',
+    }),
+    createElement('path', {
+      d: 'M7 7.5L8 6.5L9 7.5',
+      stroke: 'currentColor',
+      strokeWidth: 1.1,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    }),
+    createElement('path', {
+      d: 'M8 1V2M3.1 3.1L3.9 3.9M12.9 3.1L12.1 3.9M1.8 6.6H2.8M14.2 6.6H13.2',
+      stroke: 'currentColor',
+      strokeWidth: 1.2,
+      strokeLinecap: 'round',
+    })
+  )
+}
+
+export function renderCompactIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M3.5 2H12.5M3.5 14H12.5',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+    }),
+    createElement('path', {
+      d: 'M8 3.8V6.8M8 12.2V9.2',
+      stroke: 'currentColor',
+      strokeWidth: 1.2,
+      strokeLinecap: 'round',
+    }),
+    createElement('path', {
+      d: 'M5.8 5.6L8 7.2L10.2 5.6',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    }),
+    createElement('path', {
+      d: 'M5.8 10.4L8 8.8L10.2 10.4',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    })
+  )
+}
+
+export function renderPermissionIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M8 1.5L2.8 3.6V7.2C2.8 10.8 5.1 13.7 8 14.5C10.9 13.7 13.2 10.8 13.2 7.2V3.6L8 1.5Z',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinejoin: 'round',
+    }),
+    createElement('path', {
+      d: 'M8 5V8.2M8 10.8H8.01',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+    })
+  )
+}
+
+export function renderFeedbackIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5.5L2.5 14.5V3.5Z',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinejoin: 'round',
+    }),
+    createElement('path', {
+      d: 'M5.5 5.8H10.5M5.5 8.2H8.8',
+      stroke: 'currentColor',
+      strokeWidth: 1.2,
+      strokeLinecap: 'round',
+    })
+  )
+}
+
+export function renderExportIcon(size = 16, className) {
+  return createElement(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      className,
+      'aria-hidden': true,
+    },
+    createElement('path', {
+      d: 'M15.37 11.41L15.12 12.89C14.89 14.3 13.66 15.34 12.22 15.34H3.78C2.34 15.34 1.11 14.3 0.88 12.89L0.63 11.41L2.05 11.17L2.3 12.65C2.42 13.37 3.04 13.9 3.78 13.9H12.22C12.96 13.9 13.58 13.37 13.7 12.65L13.95 11.17L15.37 11.41ZM8.72 8.99C8.78 8.94 8.84 8.88 8.9 8.82L12.48 5.23L13.5 6.26L9.92 9.84C9.64 10.12 9.39 10.37 9.16 10.56C8.92 10.75 8.64 10.92 8.29 10.98C8.1 11.01 7.9 11.01 7.71 10.98C7.36 10.92 7.08 10.75 6.84 10.56C6.61 10.37 6.36 10.12 6.08 9.84L2.5 6.26L3.52 5.23L7.1 8.82C7.16 8.88 7.22 8.94 7.28 8.99V1.31H8.72V8.99Z',
+      fill: 'currentColor',
+    })
+  )
+}
+
+export const COMMAND_ICONS = {
+  'add-file': renderPaperclipIcon,
+  'paperclip': renderPaperclipIcon,
+  'add-from-library': renderLibraryIcon,
+  'library': renderLibraryIcon,
+  'compact': renderCompactIcon,
+  'compress': renderCompactIcon,
+  'feedback': renderFeedbackIcon,
+  'goal': renderGoalIcon,
+  'target': renderGoalIcon,
+  'permission': renderPermissionIcon,
+  'shield': renderPermissionIcon,
+  'plan': renderPlanIcon,
+  'lightbulb': renderPlanIcon,
+  'export': renderExportIcon,
+  'download': renderExportIcon,
+}
+
+// ==========================================
+// 2. Dictionary & Copy Specifications
+// ==========================================
 
 export const COMMAND_I18N = {
   zh: {
     'add-file': {
       name: '添加文件',
+      icon: 'add-file',
       description: '从本地选择文件或图片',
       keywords: ['文件', '添加', 'wenjian', 'tianjia', 'file', 'upload', 'add-file', 'addfile', 'add'],
     },
     'add-from-library': {
       name: '从资产库添加',
+      icon: 'add-from-library',
       description: '从统一资产库选择素材',
       keywords: ['资产', '素材', '资产库', '素材库', 'zichan', 'sucai', 'library', 'add-from-library'],
     },
     'compact': {
       name: '压缩历史',
+      icon: 'compact',
       description: '压缩较早的历史对话上下文',
       keywords: ['压缩', '清理', '历史', '会话', '上下文', 'yashuo', 'compact', 'history'],
     },
     'feedback': {
       name: '会话反馈',
+      icon: 'feedback',
       description: '记录本轮会话评价或问题',
       keywords: ['反馈', '评价', '建议', 'fankui', 'feedback'],
     },
     'goal': {
       name: '任务目标',
+      icon: 'goal',
       description: '设定或查看长任务执行目标',
       keywords: ['目标', '任务', 'mubiao', 'renwu', 'goal', 'task'],
     },
     'permission': {
       name: '权限预设',
+      icon: 'permission',
       description: '切换运行权限预设 (沙箱/免审批)',
       keywords: ['权限', '沙箱', '审批', 'quanxian', 'shaxiang', 'permission'],
     },
     'plan': {
       name: '计划模式',
+      icon: 'plan',
       description: '开启或退出长任务计划模式',
       keywords: ['计划', '方案', '模式', 'jihua', 'plan', 'mode'],
     },
     'export': {
       name: '导出日志',
+      icon: 'export',
       description: '下载当前会话完整日志 (ZIP)',
       keywords: ['导出', '下载', '日志', 'daochu', 'xiazai', 'export', 'log', 'zip'],
     },
@@ -61,41 +351,49 @@ export const COMMAND_I18N = {
   en: {
     'add-file': {
       name: 'add-file',
+      icon: 'add-file',
       description: 'Add files',
       keywords: ['file', 'upload', 'add'],
     },
     'add-from-library': {
       name: 'add-from-library',
+      icon: 'add-from-library',
       description: 'Add from library',
       keywords: ['library', 'asset', 'add'],
     },
     'compact': {
       name: 'compact',
+      icon: 'compact',
       description: 'Compact older conversation history',
       keywords: ['compact', 'history', 'clean'],
     },
     'feedback': {
       name: 'feedback',
+      icon: 'feedback',
       description: 'Record feedback about this session',
       keywords: ['feedback', 'session', 'report'],
     },
     'goal': {
       name: 'goal',
+      icon: 'goal',
       description: 'Set or view the goal for a long-running task',
       keywords: ['goal', 'task', 'objective'],
     },
     'permission': {
       name: 'permission',
+      icon: 'permission',
       description: 'Switch the permission preset (sandbox, approval)',
       keywords: ['permission', 'sandbox', 'preset'],
     },
     'plan': {
       name: 'plan',
+      icon: 'plan',
       description: 'Enter or leave plan mode',
       keywords: ['plan', 'mode', 'planning'],
     },
     'export': {
       name: 'export',
+      icon: 'export',
       description: 'Download this Session log as a ZIP archive',
       keywords: ['export', 'download', 'log', 'archive', 'zip'],
     },
@@ -244,25 +542,28 @@ export function scoreCommandCandidate(candidate, rawQuery, lang) {
 }
 
 /**
- * Enhance command candidates by localizing names & descriptions and ranking with smart search.
- * @param {Array<{ name: string, rawName?: string, description?: string, hint?: string }>} allRows
+ * Enhance command candidates by localizing names, descriptions, and binding icons.
+ * @param {Array<{ name: string, rawName?: string, icon?: string, description?: string, hint?: string }>} allRows
  * @param {{ query?: string }} req
  * @param {any} locale
- * @returns {Array<{ name: string, rawName: string, description?: string, hint?: string }>}
+ * @returns {Array<{ name: string, rawName: string, icon?: string, description?: string, hint?: string }>}
  */
 export function enhanceCommandCandidates(allRows, req, locale) {
   if (!Array.isArray(allRows)) return []
   const lang = getActiveLang(locale)
 
-  // 1. Localize both name and description for each candidate
+  // 1. Localize name, description and assign matching icon
   const localized = allRows.map((row) => {
     const rawName = row.rawName || row.name
+    const config = COMMAND_I18N[lang]?.[rawName]
     const displayName = resolveCommandDisplayName(rawName, locale)
     const displayDesc = resolveCommandDescription(rawName, row.description, locale)
+    const iconKind = row.icon || config?.icon || (COMMAND_ICONS[rawName] ? rawName : undefined)
     return {
       ...row,
       name: displayName,
       rawName,
+      icon: iconKind,
       description: displayDesc,
     }
   })
@@ -287,6 +588,30 @@ export function enhanceCommandCandidates(allRows, req, locale) {
 }
 
 /**
+ * Patch primitives.ReferenceIcon to seamlessly render command icons.
+ * @param {any} primitives
+ * @returns {() => void} Disposer to restore original ReferenceIcon
+ */
+export function patchPrimitivesReferenceIcon(primitives) {
+  if (!primitives || typeof primitives.ReferenceIcon !== 'function') return () => {}
+  const originalRefIcon = primitives.ReferenceIcon
+  const enhancedRefIcon = function EnhancedReferenceIcon(props) {
+    const kind = props?.kind
+    const renderCustom = COMMAND_ICONS[kind]
+    if (typeof renderCustom === 'function') {
+      return renderCustom(props?.size ?? 16, props?.className)
+    }
+    return originalRefIcon(props)
+  }
+  primitives.ReferenceIcon = enhancedRefIcon
+  return () => {
+    if (primitives.ReferenceIcon === enhancedRefIcon) {
+      primitives.ReferenceIcon = originalRefIcon
+    }
+  }
+}
+
+/**
  * Method-wrap `commandUi` methods (candidates, dispatch, matchSpace, matchEnter) in-place safely.
  * @param {any} commandUi
  * @param {any} locale
@@ -307,7 +632,7 @@ export function wrapCommandUi(commandUi, locale) {
   const boundMatchSpace = originalMatchSpace ? originalMatchSpace.bind(commandUi) : null
   const boundMatchEnter = originalMatchEnter ? originalMatchEnter.bind(commandUi) : null
 
-  // 1. Wrap candidates to yield adaptive names and descriptions
+  // 1. Wrap candidates to yield adaptive names, descriptions, and icons
   const wrappedCandidates = async function (session, req) {
     try {
       const baseReq = req ? { ...req, query: '' } : { query: '' }
@@ -376,16 +701,30 @@ export function wrapCommandUi(commandUi, locale) {
 }
 
 /**
- * Install the adaptive command localization into client runtime.
+ * Install the adaptive command localization and icons into client runtime.
  * @param {{ inject?: Function }} ctx
  */
 export function installCommandsI18n(ctx) {
   if (!ctx || typeof ctx.inject !== 'function') return
+
+  // 1. Try to patch primitives.ReferenceIcon early
+  let unpatchPrimitives = null
+  try {
+    const primitives = typeof require === 'function' ? require('@deepseek-ai/dsh-client-ui-primitives') : null
+    if (primitives) {
+      unpatchPrimitives = patchPrimitivesReferenceIcon(primitives)
+    }
+  } catch {}
+
   ctx.inject(['commandUi', 'locale'], (inner) => {
     inner.effect?.(() => {
       const commandUi = inner.commandUi || inner.get?.('commandUi')
       const locale = inner.locale || inner.get?.('locale')
-      return wrapCommandUi(commandUi, locale)
+      const unwrap = wrapCommandUi(commandUi, locale)
+      return () => {
+        unwrap?.()
+        unpatchPrimitives?.()
+      }
     }, 'omnimux: command i18n & query enhancement')
   })
 }
