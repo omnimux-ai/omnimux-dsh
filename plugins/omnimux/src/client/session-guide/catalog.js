@@ -28,8 +28,8 @@ export const POPULAR_STARTERS = [
     type: 'modal', // 复刻爆款视频（重现病毒式广告）全功能模态框已激活落地
   },
   {
-    id: 'creative-presets',
-    type: 'modal', // 创意预设（广告格式/亮点Hook/视觉风格）全功能模态框
+    id: 'bulk-create-ads',
+    type: 'modal', // 批量创建广告（Bulk Create Ads）全功能模态框已激活落地
   },
 ]
 
@@ -170,6 +170,43 @@ export const RECREATE_VIRAL_ADS_EXAMPLES = [
   },
 ]
 
+/** 批量创建广告（Bulk Create Ads）画幅比例选项 */
+export const BULK_CREATE_RATIOS = [
+  { id: '16:9', label: '16:9', width: 28, height: 16 },
+  { id: '4:3', label: '4:3', width: 24, height: 18 },
+  { id: '1:1', label: '1:1', width: 20, height: 20 },
+  { id: '3:4', label: '3:4', width: 18, height: 24 },
+  { id: '9:16', label: '9:16', width: 16, height: 28 },
+]
+
+/** 批量创建广告（Bulk Create Ads）扇形展开轮播示例卡片 */
+export const BULK_CREATE_ADS_EXAMPLES = [
+  {
+    id: 'headphones',
+    title: '智能降噪发光耳机',
+    titleEn: 'Smart Glowing Headphones',
+    tag: 'EXAMPLE',
+    tagZh: '示例',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_bb720927.jpeg',
+  },
+  {
+    id: 'streetwear',
+    title: '街头复古穿搭系列',
+    titleEn: 'Vintage Streetwear Collection',
+    tag: 'EXAMPLE',
+    tagZh: '示例',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_3bc9ec01.jpeg',
+  },
+  {
+    id: 'snack-drink',
+    title: '元气快消饮品特写',
+    titleEn: 'Energy Drink Commercial',
+    tag: 'EXAMPLE',
+    tagZh: '示例',
+    coverUrl: '/omnimux/inspiration/local/media/covers/cover_987b8524.jpeg',
+  },
+]
+
 export const guideZh = {
   "guide.title": "开始一个营销任务",
   "guide.market-insights": "市场洞察",
@@ -286,6 +323,24 @@ export const guideZh = {
   "guide.recreate-viral-ads.video-format-error": "仅支持 MP4 格式视频文件",
   "guide.recreate-viral-ads.video-size-error": "视频文件大小不能超过 50 MB",
   "guide.recreate-viral-ads.applied": "已生成病毒式广告复刻任务草稿",
+
+  // 批量创建广告（Bulk Create Ads）模态框文案
+  "guide.bulk-create-ads.modal.title": "批量创建广告",
+  "guide.bulk-create-ads.modal.subtitle": "针对不同格式、时长和创意角度，批量生成多条广告变体。",
+  "guide.bulk-create-ads.creative-brief.label": "创意简报",
+  "guide.bulk-create-ads.creative-brief.placeholder": "描述产品、开头钩子、卖点优势和行动号召...",
+  "guide.bulk-create-ads.references.label": "参考素材",
+  "guide.bulk-create-ads.references.optional": "可选",
+  "guide.bulk-create-ads.references.add": "添加参考素材",
+  "guide.bulk-create-ads.references.hint": "上传产品图片、包装或简短参考片段。",
+  "guide.bulk-create-ads.references.limit": "最多 6 个文件",
+  "guide.bulk-create-ads.aspect-ratio.label": "画幅比例",
+  "guide.bulk-create-ads.duration.label": "目标时长",
+  "guide.bulk-create-ads.video-count.label": "生成视频数量",
+  "guide.bulk-create-ads.video-count.desc": "基于同一份创意简报生成 1~10 条创意变体广告方案。",
+  "guide.bulk-create-ads.submit-btn": "生成批量创意方案 →",
+  "guide.bulk-create-ads.brief-required": "请先填写创意简报",
+  "guide.bulk-create-ads.applied": "已生成批量广告制作任务草稿",
 }
 
 export const guideEn = {
@@ -404,4 +459,22 @@ export const guideEn = {
   "guide.recreate-viral-ads.video-format-error": "Only MP4 video files are supported",
   "guide.recreate-viral-ads.video-size-error": "Video file size cannot exceed 50 MB",
   "guide.recreate-viral-ads.applied": "Viral ad recreation draft applied to conversation input",
+
+  // Bulk Create Ads modal
+  "guide.bulk-create-ads.modal.title": "Bulk Create Ads",
+  "guide.bulk-create-ads.modal.subtitle": "Generate multiple ad variations with controlled format, duration, and creative angles.",
+  "guide.bulk-create-ads.creative-brief.label": "Creative brief",
+  "guide.bulk-create-ads.creative-brief.placeholder": "Describe the product, hook, benefits, and call to action...",
+  "guide.bulk-create-ads.references.label": "References",
+  "guide.bulk-create-ads.references.optional": "OPTIONAL",
+  "guide.bulk-create-ads.references.add": "Add references",
+  "guide.bulk-create-ads.references.hint": "Upload product photos, packaging, or short reference clips.",
+  "guide.bulk-create-ads.references.limit": "Up to 6 files",
+  "guide.bulk-create-ads.aspect-ratio.label": "Aspect ratio",
+  "guide.bulk-create-ads.duration.label": "Duration",
+  "guide.bulk-create-ads.video-count.label": "Number of videos",
+  "guide.bulk-create-ads.video-count.desc": "Generate 1~10 variations from the same brief.",
+  "guide.bulk-create-ads.submit-btn": "Generate creative plans →",
+  "guide.bulk-create-ads.brief-required": "Please describe your creative brief first",
+  "guide.bulk-create-ads.applied": "Bulk ad creation draft applied to conversation input",
 }
