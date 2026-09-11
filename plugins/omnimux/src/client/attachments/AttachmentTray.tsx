@@ -245,14 +245,14 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
       <ComposerPresetsChips sessionId={currentSessionId} />
       <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
         <div className="omx-video-token-action-row">
-          <button /* exempt-ui01: 视频链接插入按钮 */
+          <button /* exempt-ui01: 链接插入按钮 */
             type="button"
             className="omx-btn-insert-link"
             onClick={handleOpenPopover}
-            title="点击在输入框光标位置插入视频链接"
+            title="点击在输入框光标位置插入链接"
           >
             <LinkIcon size={14} />
-            <span>视频链接</span>
+            <span>插入链接</span>
           </button>
         </div>
         {hasRailContent && (

@@ -36,6 +36,12 @@ export function isVideoCategory(category?: string | null): boolean {
   );
 }
 
+export function isValidUrl(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  return /^https?:\/\/[^\s]+$/i.test(trimmed);
+}
+
 export function isVideoUrl(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
   const trimmed = text.trim();
@@ -45,7 +51,19 @@ export function isVideoUrl(text: string): boolean {
 }
 
 export function resolvePlatformName(url: string): string {
+  if (!url || typeof url !== 'string') return '链接';
   const lower = url.toLowerCase();
   const match = PLATFORM_MAP.find(([domain]) => lower.includes(domain));
-  return match ? match[1] : '视频';
+  if (match) return match[1];
+
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    const host = parsed.hostname.replace(/^www\./, '');
+    if (!host || !host.includes('.')) {
+      return '链接';
+    }
+    return host;
+  } catch {
+    return '链接';
+  }
 }

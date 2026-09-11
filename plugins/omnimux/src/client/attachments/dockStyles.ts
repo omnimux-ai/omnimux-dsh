@@ -45,12 +45,17 @@ export const DOCK_STYLES = `
   background: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 悬浮紫色背景 */
   transform: translateY(-0.5px) !important;
 }
+[data-composer-chip="link"],
 [data-composer-chip="video"] {
   display: inline-flex !important;
   vertical-align: middle !important;
   margin: 0 6px !important;
 }
+[data-composer-chip="link"] > span,
 [data-composer-chip="video"] > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
   background: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 极光紫半透底色 */
   border: 1px solid rgba(140, 111, 247, 0.45) !important; /* exempt-ui03: 极光紫微光描边 */
   color: #c4b5fd !important; /* exempt-ui03: 浅亮紫文字 */
@@ -59,13 +64,30 @@ export const DOCK_STYLES = `
   padding: 2px 8px !important;
   transition: all 0.15s ease !important;
 }
+[data-composer-chip="link"] > span:hover,
 [data-composer-chip="video"] > span:hover {
   background: rgba(121, 97, 242, 0.25) !important; /* exempt-ui03: 悬浮底色 */
   border-color: #a78bfa !important; /* exempt-ui03: 悬浮高亮描边 */
   color: #ffffff !important; /* exempt-ui03: 悬浮高亮文字 */
 }
+[data-composer-chip="link"] > span::before,
+[data-composer-chip="video"] > span::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 13px !important;
+  height: 13px !important;
+  flex-shrink: 0 !important;
+  background-color: #a78bfa !important; /* exempt-ui03: 极光紫图标 */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain !important;
+}
+[data-composer-chip="link"] > span:hover::before,
+[data-composer-chip="video"] > span:hover::before {
+  background-color: #ffffff !important; /* exempt-ui03: 悬浮高亮白色图标 */
+}
+[data-composer-chip="link"] svg,
 [data-composer-chip="video"] svg {
-  color: #a78bfa !important; /* exempt-ui03: 极光紫图标 */
+  display: none !important;
 }
 .omx-attachment-tray {
   box-sizing: border-box;

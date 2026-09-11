@@ -1,4 +1,4 @@
-import { resolvePlatformName } from './mediaUrlDetector.ts';
+import { isVideoUrl, resolvePlatformName } from './mediaUrlDetector.ts';
 
 const EDITOR_SELECTORS = [
   '[data-composer-card] [contenteditable="true"]',
@@ -70,14 +70,17 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
     return false;
   }
 
+  const isVideo = isVideoUrl(trimmedUrl);
+  const markdownTag = isVideo ? '视频' : '链接';
+
   try {
     lexicalEditor.update(() => {
       const chip = new ChipKlass({
-        source: 'video',
+        source: 'link',
         ref: trimmedUrl,
-        label: `视频 · ${platform}`,
-        appearance: 'file',
-        clipboardText: `[视频](${trimmedUrl})`,
+        label: platform,
+        appearance: 'link',
+        clipboardText: `[${markdownTag}](${trimmedUrl})`,
       });
       appendChipToRoot(lexicalEditor._editorState, chip);
     });
@@ -90,7 +93,9 @@ function insertLexicalChip(lexicalEditor: any, trimmedUrl: string, platform: str
 
 function insertFallbackText(trimmedUrl: string): boolean {
   try {
-    return document.execCommand('insertText', false, `[视频](${trimmedUrl}) `);
+    const isVideo = isVideoUrl(trimmedUrl);
+    const markdownTag = isVideo ? '视频' : '链接';
+    return document.execCommand('insertText', false, `[${markdownTag}](${trimmedUrl}) `);
   } catch {
     return false;
   }
