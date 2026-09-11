@@ -31,6 +31,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { ModelRoutingModal, type ModelRoutingValue } from './ModelRoutingModal';
+import { ModelCascadeMenu } from './ModelCascadeMenu';
 import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
@@ -798,52 +799,24 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               {t(reasonCode === 'catalog_unavailable' ? 'panel.reason.catalog_unavailable' : isAsrTool ? 'panel.noTranscriptionModel' : 'panel.noCompatibleModel')}
             </div>
           ) : (
-            <CustomSelect
-              className="wf-param-bar__select wf-param-bar__select--model"
-              value={modelValue}
-              options={modelOptions}
-              popupMatchSelectWidth={false}
-              onChange={(value) => handleModelChange(String(value))}
+            <ModelCascadeMenu
+              modelValue={modelValue}
+              routing={routing}
+              catalog={activeCatalog}
+              materialType={materialType}
+              execBusy={execBusy}
+              onSelect={({ modelId, strategy, allowedGroups }) => {
+                handleModelChange(modelId);
+                onUpdateNodeData({
+                  params: {
+                    ...params,
+                    model: modelId,
+                    routing: { strategy, allowedGroups },
+                  },
+                });
+              }}
             />
           )}
-
-          {/* 渠道策略与高级路由触发按钮 */}
-          <button
-            type="button"
-            className="wf-routing-trigger"
-            data-testid="wf-routing-trigger"
-            disabled={execBusy}
-            title={routing?.strategy ? `渠道策略：${routing.strategy === 'cost_first' ? '低价优先' : routing.strategy === 'stability_first' ? '稳定性优先' : '自动策略'}` : '配置渠道策略与分组'}
-            onClick={() => setRoutingModalOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              height: 32,
-              padding: '0 8px',
-              borderRadius: 8,
-              background: routing?.strategy ? 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))' : 'transparent',
-              border: routing?.strategy ? '1px solid var(--dsw-alias-brand-primary, currentColor)' : '1px solid var(--dsw-alias-border-subtle, transparent)',
-              color: routing?.strategy ? 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))' : 'var(--dsw-alias-label-secondary)',
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 500,
-              flexShrink: 0,
-            }}
-          >
-            {routing?.strategy === 'cost_first' ? (
-              <Percent size={13} strokeWidth={2.2} />
-            ) : (
-              <ShieldCheck size={13} strokeWidth={2.2} />
-            )}
-            <span>
-              {routing?.strategy === 'cost_first'
-                ? '低价优先'
-                : routing?.strategy === 'stability_first'
-                  ? '稳定优先'
-                  : '策略'}
-            </span>
-          </button>
 
           {/* T04：音色触发入口（模型下拉右侧），唤起 VoicePickerDialog */}
           {showVoicePicker ? (
