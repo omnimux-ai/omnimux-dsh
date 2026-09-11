@@ -111,4 +111,19 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     bridgeContent.includes("if (currentMode === 'marketing')"),
     'AttachmentSubmitBridge 必须仅在 marketing 模式下拼装预设上下文'
   )
+
+  // 5. 验证全屏规则：当处于分屏紧凑状态 (short/icon 密度) 或 panelOpen 为 true 时隐藏
+  const tabsPath = path.resolve(import.meta.dirname, './ComposerModeTabs.jsx')
+  const tabsContent = fs.readFileSync(tabsPath, 'utf-8')
+  assert.ok(
+    tabsContent.includes('if (isPanelOpen)'),
+    'ComposerModeTabs 必须在分屏/侧边栏打开 (isPanelOpen) 时返回 null'
+  )
+
+  const stylesPath = path.resolve(import.meta.dirname, './styles.js')
+  const stylesContent = fs.readFileSync(stylesPath, 'utf-8')
+  assert.ok(
+    stylesContent.includes("html[data-omnimux-composer-density='short'] .omnimux-composer-mode-wrap"),
+    'styles.js 必须包含非全屏模式下的 CSS 隐藏规则'
+  )
 })

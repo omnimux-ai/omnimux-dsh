@@ -77,6 +77,12 @@ export const COMPOSER_MODE_CSS = `
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: 1px;
 }
+
+/* 全屏专属展示规则：仅在全屏宽屏模式 (full 密度) 下呈现；分屏/窄屏紧凑状态下自动隐藏 */
+html[data-omnimux-composer-density='short'] .omnimux-composer-mode-wrap,
+html[data-omnimux-composer-density='icon'] .omnimux-composer-mode-wrap {
+  display: none !important;
+}
 `
 
 export function ensureComposerModeStyles() {

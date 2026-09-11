@@ -164,6 +164,7 @@ export function apply(ctx) {
     id: 'omnimux-composer-mode-tabs',
     order: 115,
     locale: NS,
+    inject: () => ({ workbench: guideFace.workbench }),
   }, ComposerModeTabs))
   // 全平台通用「添加到会话」附件附着槽 (挂载至输入框内侧 conversation.input.attachments)
   // Official `dsh-client-ui-attachment` already occupies this single cell at
