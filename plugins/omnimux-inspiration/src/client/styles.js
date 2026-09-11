@@ -110,30 +110,6 @@ export const INSPIRATION_CSS = `
   box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.4));
 }
 
-.omnimux-inspiration-btn-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 16px;
-  border-radius: 9999px;
-  border: 1px solid var(--dsw-alias-border, rgba(255, 255, 255, 0.15));
-  background: var(--dsw-alias-button-primary-fill, #ffffff);
-  color: var(--dsw-alias-label-primary-foreground, #000000);
-  font: 550 13px/16px inherit;
-  cursor: pointer;
-  box-shadow: 0 1px 4px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.2));
-  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.omnimux-inspiration-btn-add:hover {
-  background: var(--dsw-alias-button-primary-hover, #ebebeb);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.35));
-}
-.omnimux-inspiration-btn-add:active {
-  transform: translateY(0);
-}
-
 /* 极简发丝线工具栏 */
 .omnimux-inspiration-toolbar {
   width: 100%;
