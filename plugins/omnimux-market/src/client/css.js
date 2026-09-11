@@ -210,6 +210,10 @@
 .sh-plaza-skip:hover{color:var(--dsw-alias-label-secondary,#4b5563)}
 .sh-plaza-status{margin:8px 0 0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#4b5563)}
 .sh-picker-wrap{display:inline-flex;align-items:center;flex:none}
+.sh-active-skill-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px 0 10px;border-radius:9999px;background:var(--omx-skill-purple-bg,rgba(121,97,242,.16));border:1px solid var(--omx-skill-purple-border,rgba(121,97,242,.42));color:var(--omx-skill-purple-text,#c4b5fd);font-size:12px;font-weight:500;margin-left:6px;animation:sh-chip-in .15s cubic-bezier(.16,1,.3,1)}
+.sh-active-skill-chip .sh-chip-close{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:none;background:transparent;color:inherit;cursor:pointer;padding:0;opacity:.75;transition:opacity .12s}
+.sh-active-skill-chip .sh-chip-close:hover{opacity:1}
+@keyframes sh-chip-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 .sh-picker-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;box-sizing:border-box;padding:0 10px;border:0;box-shadow:none;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,inherit);font:inherit;font-size:13px;line-height:20px;cursor:pointer}
 .sh-picker-trigger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06))}
 .sh-picker-trigger:focus{outline:none}

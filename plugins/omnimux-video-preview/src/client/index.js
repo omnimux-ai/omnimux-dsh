@@ -1,6 +1,8 @@
 import React from 'react'
 import { VideoPlayer } from './VideoPlayer.js'
 import { VideoBreakdownViewer } from './VideoBreakdownViewer.jsx'
+import { installRichVideoLinkTransformer } from './message-link-card.js'
+import { ensureBreakdownStyles } from './styles.js'
 
 export const name = 'omnimux-video-preview'
 export const inject = []
@@ -56,9 +58,20 @@ function IconBreakdown({ size = 16 }) {
 export function apply(ctx) {
   if (typeof ctx.inject !== 'function') return
 
+  if (typeof document !== 'undefined') {
+    ensureBreakdownStyles()
+  }
+
   ctx.inject(['betterSidebar'], (inner) => {
     const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
     if (!sidebar || typeof sidebar.registerFileViewer !== 'function') return
+
+    if (typeof document !== 'undefined') {
+      const stopTransformer = installRichVideoLinkTransformer(document, sidebar)
+      if (typeof ctx.effect === 'function') {
+        ctx.effect(() => () => stopTransformer(), 'omnimux-video-preview: link-transformer')
+      }
+    }
 
     // 1. Video files viewer
     const videoDescriptor = {
