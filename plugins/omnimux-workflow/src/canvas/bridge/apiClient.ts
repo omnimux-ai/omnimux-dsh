@@ -330,6 +330,17 @@ export function storyboardVideo(
   );
 }
 
+/** 视频节点：提取音频并派生下游音频素材节点 */
+export function extractAudioFromVideo(
+  workspaceId: string,
+  payload: { nodeId: string; videoPath: string; outputFormat?: 'mp3' | 'm4a'; title?: string },
+): Promise<ApiResult<import('../../workflow/audioExtract/schema.ts').ExtractAudioResponse>> {
+  return request<import('../../workflow/audioExtract/schema.ts').ExtractAudioResponse>(
+    WORKFLOW_API_ROUTES.extractAudio(encodeURIComponent(workspaceId)),
+    { method: 'POST', body: payload },
+  );
+}
+
 export interface ProjectPageDto {
   id: string;
   title: string;

@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, Music, RefreshCw, Unlink, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { DEFAULT_MATERIAL_TOOL, resolveNodeKind } from '../../../types/materialNode';
@@ -40,6 +40,7 @@ import {
   canRunSpeechToText,
   canRunVideoDeconstruct,
   canRunVideoStoryboard,
+  canExtractAudioFromVideoNode,
   EMPTY_AUDIO_PILL_ACTION_ID,
   EMPTY_IMAGE_PILL_ACTION_ID,
   EMPTY_VIDEO_PILL_ACTION_ID,
@@ -48,6 +49,7 @@ import {
   isEmptyMediaGenerateNode,
   pillMaxWidthForNode,
   resolveSpeechToTextAudioPath,
+  resolveVideoAudioExtractPath,
   resolveVideoDeconstructPath,
   resolveVideoStoryboardPath,
   shouldShowNodeToolbar,
@@ -56,7 +58,8 @@ import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
 import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
-import { deconstructVideo, extractVideoFromUrl, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
+import { planAudioExtractDownstream } from '../../utils/planAudioExtractDownstream.ts';
+import { deconstructVideo, extractAudioFromVideo, extractVideoFromUrl, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
 import { createMaterialNode } from '../../utils/nodeFactory';
@@ -760,6 +763,92 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, previewUrl, setNodes, t, updateNodeData]);
 
+  // 视频提取音频：提取原声音频轨，派生下游独立音频素材节点 (materialType === 'audio')
+  const handleExtractAudio = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('extractAudio.noWorkspace'));
+      return;
+    }
+    const videoPath = resolveVideoAudioExtractPath(
+      {
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        workspaceId,
+      },
+      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+    );
+    if (!videoPath) {
+      toast.error(t('extractAudio.noVideo'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, audioExtractActive: true });
+    try {
+      const result = await extractAudioFromVideo(workspaceId, {
+        nodeId: id,
+        videoPath,
+        title: label ? `${label} 原声` : t('extractAudio.nodeLabel'),
+      });
+      if (!result.ok || !result.body?.data) {
+        const message = result.body?.message || result.body?.error || t('extractAudio.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message, audioExtractActive: undefined });
+        toast.error(message);
+        return;
+      }
+
+      // 无音轨边界处理
+      if (result.body.data.noAudioStream) {
+        updateNodeData({ executionStatus: 'completed', executionError: undefined, audioExtractActive: undefined });
+        toast.info(t('extractAudio.toast.noAudioStream'));
+        return;
+      }
+
+      const store = useCanvasStore.getState();
+      const videoNode = store.nodes.find((n) => n.id === id);
+      const plan = planAudioExtractDownstream({
+        videoNodeId: id,
+        videoPosition: videoNode?.position ?? { x: 0, y: 0 },
+        videoNodeWidth: nodeWidth,
+        extractResult: {
+          audioPath: result.body.data.audioPath,
+          mediaUrl: result.body.data.mediaUrl,
+          previewUrl: result.body.data.previewUrl,
+          duration: result.body.data.duration,
+          format: result.body.data.format,
+          title: result.body.data.title,
+        },
+        label: result.body.data.title || t('extractAudio.nodeLabel'),
+        currentNodes: store.nodes as any,
+        currentEdges: store.edges as any,
+      });
+
+      updateNodeData({ executionStatus: 'completed', executionError: undefined, audioExtractActive: undefined });
+
+      if (!plan) {
+        toast.error(t('extractAudio.toast.failed'));
+        return;
+      }
+
+      applyCanvasInputMutation({
+        addNodes: plan.addNodes as any,
+        addEdges: plan.addEdges as any,
+        nodePatches: plan.nodePatches as any,
+      });
+
+      // 自动聚焦选中下游音频节点
+      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
+      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
+
+      toast.success(t('extractAudio.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('extractAudio.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message, audioExtractActive: undefined });
+      toast.error(message);
+    }
+  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
       nodeType: 'material',
@@ -960,6 +1049,17 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             void handleStoryboardVideo();
           },
         });
+        actions.push({
+          key: 'extract-audio',
+          label: t('pill.extractAudio'),
+          icon: Music,
+          section: 'primary',
+          title: t('pill.extractAudio'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void handleExtractAudio();
+          },
+        });
       }
       actions.push(chat);
       return actions;
@@ -977,6 +1077,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleAddToConversation,
     handleCopyText,
     handleDeconstructVideo,
+    handleExtractAudio,
     handleExtractVideo,
     handleOpenTextStage,
     handleSpeechToText,
@@ -1271,7 +1372,11 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                     ? () => { void handleSpeechToText(); }
                     : materialType === 'video' && nodeData.videoDeconstructActive === true
                       ? () => { void handleDeconstructVideo(); }
-                      : handleGenerate
+                      : materialType === 'video' && nodeData.videoStoryboardActive === true
+                        ? () => { void handleStoryboardVideo(); }
+                        : materialType === 'video' && nodeData.audioExtractActive === true
+                          ? () => { void handleExtractAudio(); }
+                          : handleGenerate
                 }
               >
                 {previewUrl ? (
