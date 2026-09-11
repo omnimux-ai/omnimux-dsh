@@ -1,9 +1,31 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import test from 'node:test';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import test, { beforeEach, afterEach } from 'node:test';
 import { Readable } from 'node:stream';
-import { withDefaults } from '../config-store.js';
+import { dshHome, withDefaults } from '../config-store.js';
 import { handleApi, DEFAULT_MARKET_EXPERTS } from '../local-api.js';
+function cleanRetiredTestExperts() {
+    const home = dshHome();
+    const retired = join(home, '.agent-presets', '.retired');
+    if (existsSync(retired)) {
+        try {
+            const files = readdirSync(retired);
+            for (const f of files) {
+                if (f.startsWith('amazon-operations-expert') || f.startsWith('tiktok-ecommerce-expert') || f.startsWith('html-generator')) {
+                    rmSync(join(retired, f), { recursive: true, force: true });
+                }
+            }
+        }
+        catch { }
+    }
+}
+beforeEach(() => {
+    cleanRetiredTestExperts();
+});
+afterEach(() => {
+    cleanRetiredTestExperts();
+});
 function mockReq(method, url, headers = {}, body) {
     const bodyStr = body !== undefined ? JSON.stringify(body) : '';
     const stream = new Readable({
