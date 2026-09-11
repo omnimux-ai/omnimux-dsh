@@ -103,11 +103,11 @@
         "id": "sk-tk-video-analysis",
         "slug": "video-analysis",
         "skill": "video-analysis",
-        "name": "视频分析",
-        "title": "视频分析",
+        "name": "竞品爆款复盘",
+        "title": "竞品爆款复盘",
         "category": "搜索爆款视频",
-        "description": "自动识别TK视频脚本和画面，提炼视频的核心结构与卖点，助你吃透爆款逻辑。",
-        "summary": "自动识别TK视频脚本和画面，提炼视频的核心结构与卖点，助你吃透爆款逻辑。",
+        "description": "从商业说服机制、受众心理痛点与评论区舆情宏观复盘爆款视频，助你吃透带货商业逻辑。",
+        "summary": "从商业说服机制、受众心理痛点与评论区舆情宏观复盘爆款视频，助你吃透带货商业逻辑。",
         "installed": true
       },
       {
