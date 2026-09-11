@@ -588,13 +588,32 @@ export function enhanceCommandCandidates(allRows, req, locale) {
 }
 
 /**
+ * Extract unproxied native primitives exports if available.
+ * @param {any} [fallbackPrimitives]
+ * @returns {any}
+ */
+export function getRawPrimitives(fallbackPrimitives) {
+  if (typeof window !== 'undefined' && typeof window.__dshClientRequire__ === 'function') {
+    try {
+      const raw = window.__dshClientRequire__('@deepseek-ai/dsh-client-ui-primitives')
+      if (raw && typeof raw.ReferenceIcon === 'function') return raw
+    } catch {}
+  }
+  if (fallbackPrimitives?.default && typeof fallbackPrimitives.default.ReferenceIcon === 'function') {
+    return fallbackPrimitives.default
+  }
+  return fallbackPrimitives
+}
+
+/**
  * Patch primitives.ReferenceIcon to seamlessly render command icons.
  * @param {any} primitives
  * @returns {() => void} Disposer to restore original ReferenceIcon
  */
 export function patchPrimitivesReferenceIcon(primitives) {
-  if (!primitives || typeof primitives.ReferenceIcon !== 'function') return () => {}
-  const originalRefIcon = primitives.ReferenceIcon
+  const target = getRawPrimitives(primitives)
+  if (!target || typeof target.ReferenceIcon !== 'function') return () => {}
+  const originalRefIcon = target.ReferenceIcon
   const enhancedRefIcon = function EnhancedReferenceIcon(props) {
     const kind = props?.kind
     const renderCustom = COMMAND_ICONS[kind]
@@ -603,10 +622,20 @@ export function patchPrimitivesReferenceIcon(primitives) {
     }
     return originalRefIcon(props)
   }
-  primitives.ReferenceIcon = enhancedRefIcon
+  try {
+    target.ReferenceIcon = enhancedRefIcon
+  } catch {
+    try {
+      Object.defineProperty(target, 'ReferenceIcon', {
+        value: enhancedRefIcon,
+        writable: true,
+        configurable: true,
+      })
+    } catch {}
+  }
   return () => {
-    if (primitives.ReferenceIcon === enhancedRefIcon) {
-      primitives.ReferenceIcon = originalRefIcon
+    if (target.ReferenceIcon === enhancedRefIcon) {
+      target.ReferenceIcon = originalRefIcon
     }
   }
 }
@@ -703,18 +732,16 @@ export function wrapCommandUi(commandUi, locale) {
 /**
  * Install the adaptive command localization and icons into client runtime.
  * @param {{ inject?: Function }} ctx
+ * @param {any} [primitives]
  */
-export function installCommandsI18n(ctx) {
+export function installCommandsI18n(ctx, primitives) {
   if (!ctx || typeof ctx.inject !== 'function') return
 
-  // 1. Try to patch primitives.ReferenceIcon early
+  // 1. Patch primitives.ReferenceIcon immediately with provided module
   let unpatchPrimitives = null
-  try {
-    const primitives = typeof require === 'function' ? require('@deepseek-ai/dsh-client-ui-primitives') : null
-    if (primitives) {
-      unpatchPrimitives = patchPrimitivesReferenceIcon(primitives)
-    }
-  } catch {}
+  if (primitives && typeof primitives.ReferenceIcon === 'function') {
+    unpatchPrimitives = patchPrimitivesReferenceIcon(primitives)
+  }
 
   ctx.inject(['commandUi', 'locale'], (inner) => {
     inner.effect?.(() => {

@@ -96,6 +96,18 @@ test('patchPrimitivesReferenceIcon enhances ReferenceIcon and restores cleanly',
   // 3. Unpatch restores original
   unpatch()
   assert.equal(fakePrimitives.ReferenceIcon, originalRefIcon)
+
+  // 4. Handles proxy objects with read-only getters
+  let backingRefIcon = originalRefIcon
+  const getterPrimitives = {}
+  Object.defineProperty(getterPrimitives, 'ReferenceIcon', {
+    get: () => backingRefIcon,
+    configurable: true,
+  })
+  const unpatchGetter = patchPrimitivesReferenceIcon(getterPrimitives)
+  assert.equal(typeof getterPrimitives.ReferenceIcon, 'function')
+  assert.notEqual(getterPrimitives.ReferenceIcon, originalRefIcon)
+  unpatchGetter()
 })
 
 test('resolveCommandDisplayName localizes command names on the left', () => {

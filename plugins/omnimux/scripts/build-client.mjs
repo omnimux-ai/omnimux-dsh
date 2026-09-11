@@ -38,6 +38,7 @@ const wrapped = `window.__ModuleLoader__.load({
   factory: (require) => {
     var module = { exports: {} };
     var exports = module.exports;
+    if (typeof window !== "undefined") window.__dshClientRequire__ = require;
 ${code}
     return module.exports;
   }
