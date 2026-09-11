@@ -795,49 +795,56 @@ export const PRESETS_CSS = `
 
 /* ────────────────────────────────────────────────────────
    Composer 底部 3 独立触发按钮与已选 Chips 胶囊栏
+   严格复用同位置工具栏 (.sh-picker-trigger) 交互样式规范
    ──────────────────────────────────────────────────────── */
 
-.omnimux-composer-presets-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .omnimux-composer-preset-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  user-select: none;
-  transition: all 120ms ease;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  height: 28px !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 24px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary, inherit) !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  cursor: pointer !important;
+  outline: none !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease !important;
 }
 
-.omnimux-composer-preset-trigger:hover {
-  background: var(--dsw-alias-interactive-bg-hover-solid, var(--dsw-alias-bg-layer-2));
-  color: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-border-l3);
+.omnimux-composer-preset-trigger:hover,
+.omnimux-composer-preset-trigger.on {
+  background: var(--dsw-alias-interactive-bg-hover) !important;
+  color: var(--dsw-alias-label-primary, inherit) !important;
+}
+
+.omnimux-composer-preset-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3) !important;
+  outline: none !important;
+}
+
+.omnimux-composer-preset-trigger svg {
+  flex: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  display: block !important;
 }
 
 .omnimux-composer-preset-trigger.has-active {
-  color: var(--dsw-alias-brand-primary);
-  border-color: var(--dsw-alias-brand-primary);
-  background: var(--dsw-alias-bg-layer-1);
-  font-weight: 600;
-}
-
-.omnimux-composer-preset-trigger-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary) !important;
+  font-weight: 600 !important;
 }
 
 /* 已选 Chips 浮动标签容器 */
