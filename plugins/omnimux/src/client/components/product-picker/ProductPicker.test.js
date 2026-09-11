@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createSafeT } from './picker-model.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pickerSource = readFileSync(join(here, 'ProductPicker.jsx'), 'utf8');
@@ -12,12 +13,37 @@ const modalSource = readFileSync(
   'utf8',
 );
 
+test('createSafeT: fallbacks to DEFAULT_STRINGS when custom t returns raw key or empty', () => {
+  // 1. 无 customT
+  const defaultT = createSafeT(undefined);
+  assert.equal(defaultT('productPicker.title'), '从产品库选择');
+  assert.equal(defaultT('productPicker.cancel'), '取消');
+  assert.equal(defaultT('productPicker.confirm'), '确认选择');
+  assert.equal(defaultT('productPicker.cat.physical'), '实体商品');
+  assert.equal(defaultT('productPicker.unselectedHint'), '请选择一件商品');
+
+  // 2. 模拟宿主 t 遇到未知 key 返回原始 key
+  const hostMockT = (key) => key; // 宿主遇到未注册的 key 时返回 key 本身
+  const safeT = createSafeT(hostMockT);
+  assert.equal(safeT('productPicker.title'), '从产品库选择');
+  assert.equal(safeT('productPicker.searchPlaceholder'), '搜索产品名称、描述、SKU…');
+  assert.equal(safeT('productPicker.cat.all'), '全部');
+  assert.equal(safeT('productPicker.unselectedHint'), '请选择一件商品');
+
+  // 3. 宿主自定义命中
+  const customMockT = (key) => (key === 'productPicker.title' ? '自定义选择商品' : key);
+  const safeCustomT = createSafeT(customMockT);
+  assert.equal(safeCustomT('productPicker.title'), '自定义选择商品');
+  assert.equal(safeCustomT('productPicker.cancel'), '取消');
+});
+
 test('ProductPicker: follows design system, contains search, nav, empty states and dialog', () => {
   assert.ok(pickerSource.includes('ModalDialog'), 'uses ModalDialog from dsh-ui-kit');
   assert.ok(pickerSource.includes('ProductPickerCard'), 'renders ProductPickerCard');
   assert.ok(pickerSource.includes('omx-product-pick__search-input'), 'contains search input');
   assert.ok(pickerSource.includes('collectCategories'), 'uses collectCategories');
   assert.ok(pickerSource.includes('filterProducts'), 'uses filterProducts');
+  assert.ok(pickerSource.includes('flex-shrink: 0'), 'actions protected against overflow squeeze');
   assert.doesNotMatch(pickerSource, /📦/, 'contains no box emoji');
   assert.doesNotMatch(pickerSource, /🔍/, 'contains no search emoji');
 });
