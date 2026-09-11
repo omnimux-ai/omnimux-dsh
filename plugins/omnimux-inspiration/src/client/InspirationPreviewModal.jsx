@@ -15,7 +15,12 @@ import {
   renderPlainBreakdownText,
 } from './inspiration-preview-data.js'
 
-const ICON_CLOSE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+const ICON_CLOSE = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
 const ICON_REPLICATE = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" /></svg>
 const ICON_EXTERNAL = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 4h6v6M20 4 11 13" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>
 const ICON_CLAPPERBOARD = (
@@ -177,6 +182,16 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   return (
     <div className="omnimux-inspiration-modal-backdrop" onClick={onClose} onWheel={(e) => e.stopPropagation()}>
       <div className="omnimux-inspiration-modal-wrapper" onClick={(event) => event.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+        {/* 全局统一外悬浮圆形关闭按钮 */}
+        <IconButton
+          className="omnimux-modal-close-btn is-external omnimux-inspiration-modal-close"
+          variant="ghost"
+          aria-label={t('close') || 'Close'}
+          onClick={(e) => { e.stopPropagation(); onClose?.() }}
+        >
+          {ICON_CLOSE}
+        </IconButton>
+
         <div className="omnimux-inspiration-modal-container" onWheel={(e) => e.stopPropagation()}>
           <header className="omnimux-inspiration-modal-header">
             <div className="omnimux-inspiration-modal-heading">
@@ -192,9 +207,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 className="omnimux-inspiration-modal-copy is-icon-only"
               />
             </div>
-            <IconButton className="omnimux-inspiration-modal-close" variant="ghost" size="sm" aria-label={t('close')} onClick={onClose}>
-              {ICON_CLOSE}
-            </IconButton>
           </header>
 
           <Tabs
