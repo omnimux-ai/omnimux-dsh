@@ -194,7 +194,7 @@ const CSS = `
 }
 `;
 
-function CategoryIcon({ kind, size = 14 }: { kind: string, size?: number }) {
+function CategoryIcon({ kind, size = 14 }) {
   if (kind === 'box') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
