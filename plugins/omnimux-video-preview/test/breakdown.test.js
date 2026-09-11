@@ -786,4 +786,45 @@ Hook → Demo Scene → Cta
     assert.equal(shots[1].stage, 'Demo Scene')
     assert.equal(shots[2].stage, 'Cta')
   })
+
+  it('accurately recovers from degenerate single-header and filters repeated phantom table headers', () => {
+    const md = `
+## 1. 叙事结构链路
+Hook
+
+## 2. 结构阶段解构
+### Hook
+---
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:00 - 0:03 | 揭布倒计时悬念 | Hook | 中景, 固定机位, 平视, 固定镜头 | 倒计时数字跳动，双手迅速掀开托盘上的粉色绸布，露出“Book Guardian”产品盒。 | Every book lover needs this to protect their libraries 😂📚<br>3, 2, 1 |
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:03 - 0:05 | 开盒取出骑士雕像 | Product Intro | 特写, 智能手机手持, 俯视, 手持微动 | 伸手从黑色礼盒与衬纸中取出看书姿态的金属质感骑士雕塑。 | Every book lover needs this to protect their libraries 😂📚 |
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:05 - 0:07 | 靠书摆放调试位置 | Usage Detail | 特写, 智能手机手持, 平视, 手持微动 | 手持骑士雕塑将其置于白色书架，倚靠在整齐排列的书籍侧面。 | Every book lover needs this to protect their libraries 😂📚 |
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 | 台词/字幕 |
+| 0:07 - 0:10 | 多风格书架场景陈列 | Demo Scene | 中景, 智能手机手持, 平视, 手持微动 | 连续展示骑士雕塑在浅色系与复古暗调暖光书架上的静物装饰氛围。 | Every book lover needs this to protect their libraries 😂📚 |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+
+    // Must filter phantom header rows and have exactly 4 shots
+    assert.equal(shots.length, 4)
+    assert.ok(!shots.some(s => s.title === '分镜标题' || s.stage === '所属阶段'))
+    assert.equal(shots[0].title, '揭布倒计时悬念')
+    assert.equal(shots[0].stage, 'Hook')
+    assert.equal(shots[1].title, '开盒取出骑士雕像')
+    assert.equal(shots[1].stage, 'Product Intro')
+    assert.equal(shots[2].title, '靠书摆放调试位置')
+    assert.equal(shots[2].stage, 'Usage Detail')
+    assert.equal(shots[3].title, '多风格书架场景陈列')
+    assert.equal(shots[3].stage, 'Demo Scene')
+
+    // Must reconstruct all 4 stages in pipeline and structure, with rich non-empty descriptions
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(structure.length, 4)
+    for (const item of structure) {
+      assert.ok(item.description && item.description.length > 5)
+      assert.notEqual(item.description, '---')
+    }
+  })
 })

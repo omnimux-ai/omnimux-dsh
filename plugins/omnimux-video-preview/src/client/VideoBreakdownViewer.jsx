@@ -83,14 +83,25 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   }, [content])
 
   const video = data?.video || {}
-  const shots = Array.isArray(data?.shots) ? data.shots : []
+  const rawShots = Array.isArray(data?.shots) ? data.shots : []
+
+  // Filter out any phantom header shots (e.g. "分镜标题", "所属阶段")
+  const shots = useMemo(() => {
+    return rawShots.filter((s) => {
+      const isPhantomTitle = /^(?:分镜标题|所属阶段|镜头属性标签|画面与动作描述)$/i.test(s.title || '')
+      const isPhantomStage = s.stage === '所属阶段'
+      const isZeroTime = s.time_range === '0:00 - 0:00' && s.start_seconds === 0 && s.end_seconds === 0
+      if ((isPhantomTitle || isPhantomStage) && isZeroTime) return false
+      return true
+    })
+  }, [rawShots])
 
   // Filter out any metadata headings ("叙事结构链路", "结构阶段解构") and unpack sub-stages
   const cleanStructure = useMemo(() => {
-    if (!Array.isArray(data?.structure)) return []
+    const rawList = Array.isArray(data?.structure) ? data.structure : []
     const cleaned = []
     const seen = new Set()
-    for (const item of data.structure) {
+    for (const item of rawList) {
       let stage = item.stage || item.title || ''
       let desc = item.description || ''
       if (METADATA_HEADING_REGEX.test(stage)) {
@@ -105,7 +116,10 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       stage = mapToCanonicalStage(stage, cleaned.length)
       if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage)) continue
       seen.add(stage)
-      const cleanDesc = desc.replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '').trim()
+      const cleanDesc = desc
+        .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
+        .replace(/^---\s*$/, '')
+        .trim()
       cleaned.push({
         ...item,
         stage,
@@ -113,8 +127,33 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
         description: cleanDesc,
       })
     }
+
+    // If structure is degenerate (only 1 item with empty/trivial desc), repair from shots!
+    const isDegenerate = cleaned.length === 0 || (cleaned.length === 1 && (!cleaned[0].description || cleaned[0].description.length <= 5))
+    if (isDegenerate && shots.length > 0) {
+      const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !METADATA_HEADING_REGEX.test(s)))]
+      if (shotStages.length >= 2) {
+        return shotStages.map((stageName) => {
+          const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === stageName)
+          const details = stageShots
+            .map((s) => {
+              if (s.description && s.description.length > 5 && s.description !== '---') {
+                return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
+              }
+              return s.title
+            })
+            .filter(Boolean)
+          return {
+            stage: stageName,
+            title: stageName,
+            description: details.join('；'),
+          }
+        })
+      }
+    }
+
     return cleaned
-  }, [data?.structure])
+  }, [data?.structure, shots])
 
   const cleanPipeline = useMemo(() => {
     if (cleanStructure.length > 0) {
