@@ -45,11 +45,14 @@ export function hasPromptSlots(text?: string | null): boolean {
 }
 
 /**
- * 替换指定索引的槽位为新文本。
+ * 替换指定索引的槽位为新文本，保持 [] 符号的存在。
+ * 例如 原内容：[商品名称]，替换确认后：[苹果 iPhone16]。
  */
 export function replacePromptSlot(text: string, targetIndex: number, newValue: string): string {
   const slots = extractPromptSlots(text);
   const target = slots[targetIndex];
   if (!target) return text;
-  return text.slice(0, target.start) + newValue + text.slice(target.end);
+  const hasBrackets = newValue.startsWith('[') && newValue.endsWith(']');
+  const formattedValue = hasBrackets ? newValue : `[${newValue}]`;
+  return text.slice(0, target.start) + formattedValue + text.slice(target.end);
 }

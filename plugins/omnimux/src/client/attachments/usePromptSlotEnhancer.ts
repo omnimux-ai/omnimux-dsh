@@ -65,8 +65,11 @@ export function selectSlotInEditor(slot: PromptSlot): boolean {
     if (idx !== -1) {
       try {
         const range = document.createRange();
-        range.setStart(node, idx);
-        range.setEnd(node, idx + slot.raw.length);
+        const hasBrackets = slot.raw.startsWith('[') && slot.raw.endsWith(']');
+        const startOffset = hasBrackets ? idx + 1 : idx;
+        const endOffset = hasBrackets ? idx + slot.raw.length - 1 : idx + slot.raw.length;
+        range.setStart(node, startOffset);
+        range.setEnd(node, endOffset);
         const sel = window.getSelection();
         if (sel) {
           sel.removeAllRanges();
