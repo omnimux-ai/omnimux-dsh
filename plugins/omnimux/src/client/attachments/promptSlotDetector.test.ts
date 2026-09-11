@@ -31,8 +31,11 @@ test('hasPromptSlots: identifies whether string has slot brackets', () => {
   assert.equal(hasPromptSlots('输入 [] 立即强化'), true);
 });
 
-test('replacePromptSlot: replaces target slot accurately', () => {
-  const text = '分析[目标市场]中的[产品]';
-  const updated = replacePromptSlot(text, 0, '北美市场');
-  assert.equal(updated, '分析北美市场中的[产品]');
+test('replacePromptSlot: replaces target slot accurately while preserving brackets', () => {
+  const text = '分析[商品名称]的卖点';
+  const updated = replacePromptSlot(text, 0, '苹果 iPhone16');
+  assert.equal(updated, '分析[苹果 iPhone16]的卖点');
+
+  const alreadyWithBrackets = replacePromptSlot(text, 0, '[苹果 iPhone16]');
+  assert.equal(alreadyWithBrackets, '分析[苹果 iPhone16]的卖点');
 });

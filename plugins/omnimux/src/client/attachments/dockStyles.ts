@@ -91,8 +91,13 @@ export const DOCK_STYLES = `
 [data-composer-chip="video"] svg {
   display: none !important;
 }
+[data-composer-input="true"] ::selection,
+[data-composer-card] [contenteditable="true"] ::selection {
+  background-color: rgba(121, 97, 242, 0.38) !important; /* exempt-ui03: 极光亮紫 #7961F2 品牌选中色 (design.md §3.6) */
+  color: #ffffff !important; /* exempt-ui03: 选中高亮纯白文字 */
+}
 ::highlight(omx-prompt-slot) {
-  background-color: rgba(255, 255, 255, 0.1) !important; /* exempt-ui03: 槽位低调微亮背景 */
+  background-color: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 极光紫 #7961F2 槽位底色 (design.md §3.6) */
   color: inherit !important;
   text-decoration: none !important;
 }
