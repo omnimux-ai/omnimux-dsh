@@ -196,7 +196,12 @@
       "category": "创作视频",
       "description": "参考爆款视频结构，为你的产品一键生成同款带货视频。",
       "summary": "参考爆款视频结构，为你的产品一键生成同款带货视频。",
-      "installed": true
+      "installed": true,
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/replicate-viral-video.png",
+        "alt": "复刻爆款视频"
+      }
     },
     {
       "id": "sk-tk-create-selling-video",
@@ -207,18 +212,28 @@
       "category": "创作视频",
       "description": "从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。",
       "summary": "从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。",
-      "installed": true
+      "installed": true,
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/create-selling-video.png",
+        "alt": "创作带货视频"
+      }
     },
     {
       "id": "sk-tk-selling-hook-analysis",
       "slug": "video-hook-analysis",
       "skill": "video-hook-analysis",
-      "name": "视频分析",
-      "title": "视频分析",
+      "name": "视频拆解",
+      "title": "视频拆解",
       "category": "创作视频",
-      "description": "拆解钩子、结构与卖点。",
-      "summary": "拆解钩子、结构与卖点。",
-      "installed": true
+      "description": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+      "summary": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+      "installed": true,
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/video-hook-analysis.png",
+        "alt": "视频拆解"
+      }
     },
     {
       "id": "sk-tk-script-creation",
@@ -251,7 +266,12 @@
       "category": "创作视频",
       "description": "将分镜或提示词渲染为成片视频。",
       "summary": "将分镜或提示词渲染为成片视频。",
-      "installed": true
+      "installed": true,
+      "recommended": true,
+      "cover": {
+        "asset": "catalog/covers/video-generation.png",
+        "alt": "视频生成"
+      }
     },
     {
       "id": "sk-tk-image-translation",
