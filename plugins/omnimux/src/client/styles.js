@@ -9,6 +9,191 @@ const LOGIN_GATE_JELLY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
 
 export const HUB_CSS = `
+/* ── OmniMux 全局黑白极简主题系统 (Monochrome Black & White System) ── */
+:root,
+body {
+  /* 纯正无偏色中性灰体系 (Neutral / Zinc) 替代带冷蓝倾向的 neutral-bluish */
+  --dsw-static-neutral-bluish-00: #ffffff;
+  --dsw-static-neutral-bluish-50: #fafafa;
+  --dsw-static-neutral-bluish-60: #f4f4f5;
+  --dsw-static-neutral-bluish-75: #ebebeb;
+  --dsw-static-neutral-bluish-100: #e4e4e7;
+  --dsw-static-neutral-bluish-150: #dcdce0;
+  --dsw-static-neutral-bluish-200: #d4d4d8;
+  --dsw-static-neutral-bluish-300: #a1a1aa;
+  --dsw-static-neutral-bluish-400: #71717a;
+  --dsw-static-neutral-bluish-500: #52525b;
+  --dsw-static-neutral-bluish-600: #3f3f46;
+  --dsw-static-neutral-bluish-700: #27272a;
+  --dsw-static-neutral-bluish-750: #202023;
+  --dsw-static-neutral-bluish-800: #18181b;
+  --dsw-static-neutral-bluish-850: #141416;
+  --dsw-static-neutral-bluish-875: #111113;
+  --dsw-static-neutral-bluish-900: #0d0d0f;
+  --dsw-static-neutral-bluish-950: #09090b;
+  --dsw-static-neutral-bluish-1000: #000000;
+
+  /* DeepSeek 蓝系列全面黑白化 (浅色模式下映射为深黑炭灰阶梯) */
+  --dsw-static-deepseek-50: #fafafa;
+  --dsw-static-deepseek-100: #f4f4f5;
+  --dsw-static-deepseek-200: #e4e4e7;
+  --dsw-static-deepseek-300: #d4d4d8;
+  --dsw-static-deepseek-400: #71717a;
+  --dsw-static-deepseek-450: #3f3f46;
+  --dsw-static-deepseek-500: #18181b;
+  --dsw-static-deepseek-600: #09090b;
+  --dsw-static-deepseek-700-delete: #09090b;
+  --dsw-static-deepseek-800: #09090b;
+  --dsw-static-deepseek-900: #000000;
+
+  /* 常规蓝色系列全面黑白化 */
+  --dsw-static-blue-50: #fafafa;
+  --dsw-static-blue-50p: #fafafa;
+  --dsw-static-blue-75: #f4f4f5;
+  --dsw-static-blue-100: #e4e4e7;
+  --dsw-static-blue-300: #d4d4d8;
+  --dsw-static-blue-400: #71717a;
+  --dsw-static-blue-450: #52525b;
+  --dsw-static-blue-500: #27272a;
+  --dsw-static-blue-600: #18181b;
+  --dsw-static-blue-800: #141416;
+  --dsw-static-blue-900: #09090b;
+  --dsw-static-blue-950: #000000;
+
+  /* 语义与特定组件黑白映射 */
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #18181b;
+  --dsw-alias-button-info-fill: #18181b;
+  --dsw-alias-button-info-hover: #27272a;
+  --dsw-alias-state-business-primary: #18181b;
+  --dsw-alias-state-business-tertiary: #f4f4f5;
+  --dsw-alias-label-primary-bluish: #18181b;
+  --dsw-alias-primary: #18181b;
+  --dsw-alias-primary-hover: #27272a;
+  --dsw-alias-brand: #18181b;
+  --dsw-alias-brand-primary: #18181b;
+  --dsw-alias-brand-accent: #18181b;
+  --dsw-alias-accent-primary: #18181b;
+  --dsw-alias-state-publishing: #18181b;
+  --dsw-alias-link: #18181b;
+  --wb-accent: var(--dsw-alias-label-primary, #18181b);
+  --dsw-specific-bubble-highlight: #e4e4e7;
+  --dsw-specific-bubble: #fafafa;
+  --dsw-specific-sidebar-nav-item-active-accent: #f4f4f5;
+}
+
+body[data-ds-dark-theme] {
+  /* 纯正无偏色中性灰体系 (深色模式：纯黑底色与银白阶梯) */
+  --dsw-static-neutral-bluish-00: #ffffff;
+  --dsw-static-neutral-bluish-50: #fafafa;
+  --dsw-static-neutral-bluish-60: #f4f4f5;
+  --dsw-static-neutral-bluish-75: #e4e4e7;
+  --dsw-static-neutral-bluish-100: #d4d4d8;
+  --dsw-static-neutral-bluish-150: #a1a1aa;
+  --dsw-static-neutral-bluish-200: #8e8e93;
+  --dsw-static-neutral-bluish-300: #71717a;
+  --dsw-static-neutral-bluish-400: #52525b;
+  --dsw-static-neutral-bluish-500: #3f3f46;
+  --dsw-static-neutral-bluish-600: #2f2f32;
+  --dsw-static-neutral-bluish-700: #27272a;
+  --dsw-static-neutral-bluish-750: #202023;
+  --dsw-static-neutral-bluish-800: #18181b;
+  --dsw-static-neutral-bluish-850: #141416;
+  --dsw-static-neutral-bluish-875: #111113;
+  --dsw-static-neutral-bluish-900: #0d0d0f;
+  --dsw-static-neutral-bluish-950: #09090b; /* 纯粹极黑底色 */
+  --dsw-static-neutral-bluish-1000: #000000;
+
+  /* DeepSeek 蓝系列全面黑白化 (深色模式映射为高质感银白阶梯) */
+  --dsw-static-deepseek-50: #141416;
+  --dsw-static-deepseek-100: #1f1f23;
+  --dsw-static-deepseek-200: #2e2e33;
+  --dsw-static-deepseek-300: #52525b;
+  --dsw-static-deepseek-400: #a1a1aa;
+  --dsw-static-deepseek-450: #d4d4d8;
+  --dsw-static-deepseek-500: #ffffff;
+  --dsw-static-deepseek-600: #f4f4f5;
+  --dsw-static-deepseek-700-delete: #e4e4e7;
+  --dsw-static-deepseek-800: #27272a;
+  --dsw-static-deepseek-900: #18181b;
+
+  /* 常规蓝色系列全面黑白化 */
+  --dsw-static-blue-50: #141416;
+  --dsw-static-blue-50p: #141416;
+  --dsw-static-blue-75: #1f1f23;
+  --dsw-static-blue-100: #27272a;
+  --dsw-static-blue-300: #52525b;
+  --dsw-static-blue-400: #a1a1aa;
+  --dsw-static-blue-450: #d4d4d8;
+  --dsw-static-blue-500: #f4f4f5;
+  --dsw-static-blue-600: #ffffff;
+  --dsw-static-blue-800: #e4e4e7;
+  --dsw-static-blue-900: #d4d4d8;
+  --dsw-static-blue-950: #a1a1aa;
+
+  /* 语义与特定组件黑白映射 */
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #ffffff;
+  --dsw-alias-button-info-fill: #ffffff;
+  --dsw-alias-button-info-hover: #e4e4e7;
+  --dsw-alias-state-business-primary: #ffffff;
+  --dsw-alias-state-business-tertiary: #27272a;
+  --dsw-alias-label-primary-bluish: #ffffff;
+  --dsw-alias-primary: #ffffff;
+  --dsw-alias-primary-hover: #e4e4e7;
+  --dsw-alias-brand: #ffffff;
+  --dsw-alias-brand-primary: #ffffff;
+  --dsw-alias-brand-accent: #ffffff;
+  --dsw-alias-accent-primary: #ffffff;
+  --dsw-alias-state-publishing: #ffffff;
+  --dsw-alias-link: #ffffff;
+  --wb-accent: var(--dsw-alias-label-primary, #ffffff);
+  --dsw-specific-bubble-highlight: #27272a;
+  --dsw-specific-bubble: #141416;
+  --dsw-specific-sidebar-nav-item-active-accent: #27272a;
+}
+
+/* 3. DSH 原生特异组件黑白化 */
+/* 会话中思考/回复流光动画：由原先的蓝光转变为高质感金属银白流光 */
+.turnStatus,
+[class*="turnStatus"] {
+  background: linear-gradient(
+    90deg,
+    var(--dsw-alias-label-secondary) 0%,
+    var(--dsw-alias-label-secondary) 40%,
+    var(--dsw-alias-label-primary) 50%,
+    var(--dsw-alias-label-secondary) 60%,
+    var(--dsw-alias-label-secondary) 100%
+  ) !important;
+  background-position: 100% 0 !important;
+  background-size: 250% 100% !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* 进行中状态指示点：纯净高亮白呼吸光 */
+[class*="StateDot"],
+[class*="stateDot"],
+.dsh-state-ongoing {
+  --dsh-state-ongoing: var(--dsw-alias-label-primary) !important;
+}
+
+/* 上下文容量计量条：黑白灰高对比 */
+[class*="ContextMeter"],
+[class*="contextMeter"],
+.context-meter-fill {
+  --meter-tint: var(--dsw-alias-label-secondary) !important;
+}
+
+/* 全局文字选区与 Focus Ring：去除浏览器默认蓝 */
+::selection {
+  background: var(--dsw-alias-label-primary) !important;
+  color: var(--dsw-alias-bg-base) !important;
+}
+
+:focus-visible {
+  outline: 1px solid var(--dsw-alias-border-l3) !important;
+  outline-offset: 1px;
+}
+
 /* Accounts and Inspiration already inset their entire content root by 20px. */
 :is(.omnimux-assets-stage, .omnimux-products-stage, .omnimux-publish-stage,
     .omnimux-analytics-stage, .omnimux-workflow-library-page)
@@ -606,7 +791,7 @@ export const HUB_CSS = `
   width: var(--quota-used);
   height: 100%;
   border-radius: 2px;
-  background: var(--dsw-alias-button-primary-fill, #3b82f6);
+  background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-label-primary, #fff));
 }
 .omnimux-profile-row {
   display: flex;
@@ -654,8 +839,8 @@ export const HUB_CSS = `
   justify-content: center;
   font-size: 18px;
   font-weight: 600;
-  background: var(--dsw-alias-button-primary-fill, #3b82f6);
-  color: var(--dsw-alias-label-primary-inverted, #fff);
+  background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-label-primary, #fff));
+  color: var(--dsw-alias-label-primary-inverted, #000);
 }
 .omnimux-profile-avatar-img {
   display: block;
@@ -779,8 +964,8 @@ export const HUB_CSS = `
   color: var(--dsw-alias-state-success-primary, #4caf7d);
 }
 .omnimux-plugins-badge[data-state="update"] {
-  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4c8dff) 16%, transparent);
-  color: var(--dsw-alias-state-business-primary, #4c8dff);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary, #fff) 14%, transparent);
+  color: var(--dsw-alias-label-primary, inherit);
 }
 .omnimux-plugins-badge[data-state="available"] {
   background: var(--dsw-alias-interactive-bg-hover, rgba(255,255,255,0.08));
@@ -893,7 +1078,7 @@ export const HUB_CSS = `
   height: 28px;
 }
 .omnimux-update-action-btn[data-status="readyToRestart"] {
-  box-shadow: 0 0 10px color-mix(in srgb, var(--dsw-alias-button-primary-fill, #2563EB) 80%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--dsw-alias-button-primary-fill, var(--dsw-alias-label-primary, #fff)) 70%, transparent);
 }
 .omnimux-update-action-icon {
   display: inline-flex;
@@ -977,7 +1162,8 @@ export const HUB_CSS = `
   color: var(--dsw-alias-label-primary, inherit);
 }
 .omnimux-chat-toggle-btn[data-active="true"] {
-  color: var(--dsw-alias-accent-primary, #3b82f6);
+  color: var(--dsw-alias-label-primary, inherit);
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.12));
 }
 
 .omnimux-quota-gate-backdrop,
