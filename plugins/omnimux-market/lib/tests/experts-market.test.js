@@ -111,8 +111,8 @@ test('expertMarketInstall and expertMarketDisable toggle preset lifecycle', asyn
     await handleApi(reqDisable, resDisable, cfg);
     assert.equal(resDisable._status, 200);
     assert.equal(resDisable._json?.ok, true);
-    assert.equal(resDisable._json?.status, 'available');
-    // Verify list reflects available
+    assert.equal(resDisable._json?.status, 'disabled');
+    // Verify list reflects disabled (已离职)
     const reqList2 = mockReq('POST', '/api', {
         origin: 'http://127.0.0.1:3080',
         'sec-fetch-site': 'same-origin',
@@ -120,7 +120,16 @@ test('expertMarketInstall and expertMarketDisable toggle preset lifecycle', asyn
     const resList2 = mockRes();
     await handleApi(reqList2, resList2, cfg);
     const itemAfterDisable = resList2._json?.items?.find((it) => it.id === testId);
-    assert.equal(itemAfterDisable?.status, 'available');
+    assert.equal(itemAfterDisable?.status, 'disabled');
+    // Re-install after disabled
+    const reqReinstall = mockReq('POST', '/api', {
+        origin: 'http://127.0.0.1:3080',
+        'sec-fetch-site': 'same-origin',
+    }, { method: 'expertMarketInstall', id: testId });
+    const resReinstall = mockRes();
+    await handleApi(reqReinstall, resReinstall, cfg);
+    assert.equal(resReinstall._status, 200);
+    assert.equal(resReinstall._json?.status, 'enabled');
 });
 test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     const i18n = readFileSync(new URL('../../src/client/i18n.js', import.meta.url), 'utf8');
@@ -134,6 +143,12 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     assert.match(i18n, /"expertMarket\.searchPlaceholder": "Search all experts\.\.\."/);
     assert.match(i18n, /"expertMarket\.createExpert": "创建专家"/);
     assert.match(i18n, /"expertMarket\.createExpert": "Create Expert"/);
+    assert.match(i18n, /"expertMarket\.enabled": "已入职"/);
+    assert.match(i18n, /"expertMarket\.enabled": "Employed"/);
+    assert.match(i18n, /"expertMarket\.available": "可聘用"/);
+    assert.match(i18n, /"expertMarket\.available": "Hireable"/);
+    assert.match(i18n, /"expertMarket\.disabled": "已离职"/);
+    assert.match(i18n, /"expertMarket\.disabled": "Resigned"/);
     assert.match(i18n, /"workshop\.title": "技能\/专家"/);
     assert.match(i18n, /"workshop\.title": "Skills\/Experts"/);
     const plaza = readFileSync(new URL('../../src/client/skill-plaza.js', import.meta.url), 'utf8');
@@ -145,11 +160,13 @@ test('i18n and UI contracts for 技能/专家 and 专家市场', () => {
     assert.match(plaza, /expert-market-grid/);
     assert.match(plaza, /expert-card/);
     assert.match(plaza, /expert-pill-btn/);
+    assert.match(plaza, /expertMarket\.disabled/);
     const css = readFileSync(new URL('../../src/client/css.js', import.meta.url), 'utf8');
     assert.match(css, /\.expert-market-grid/);
     assert.match(css, /\.expert-card/);
     assert.match(css, /\.expert-card-avatar-wrap/);
     assert.match(css, /\.expert-pill-btn/);
+    assert.match(css, /\.expert-card-status\.disabled/);
     const apply = readFileSync(new URL('../../src/client/apply.js', import.meta.url), 'utf8');
     assert.doesNotMatch(apply, /plazaRemote\s*=\s*ctx\.remote/, 'must not synchronously access ctx.remote without inject');
     assert.match(apply, /ctx\.inject\(\["remote"\],/, 'must safely inject remote service');
