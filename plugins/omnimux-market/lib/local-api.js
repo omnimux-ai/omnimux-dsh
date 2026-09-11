@@ -141,7 +141,7 @@ export const DEFAULT_MARKET_EXPERTS = [
         description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。',
         descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor... analysis to improve conversion',
         avatar: 'catalog/covers/expert-amazon-operations.png',
-        initialStatus: 'coming_soon',
+        initialStatus: 'available',
         order: 18,
     },
     {
@@ -151,7 +151,7 @@ export const DEFAULT_MARKET_EXPERTS = [
         description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。',
         descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help... brands launch on TikTok Shop.',
         avatar: 'catalog/covers/expert-tiktok-ecommerce.png',
-        initialStatus: 'coming_soon',
+        initialStatus: 'available',
         order: 19,
     },
 ];
@@ -178,12 +178,19 @@ export function installMarketExpertPreset(home, exp) {
     mkdirSync(dir, { recursive: true });
     const presetYml = `name: ${exp.name}\ndescription: ${exp.description}\norder: ${exp.order}\n`;
     writeFileSync(join(dir, 'preset.yml'), presetYml, 'utf8');
+    let personaText = `你是「${exp.name}」AI Agent专家。${exp.description}，工作目录 {{cwd}}。`;
+    if (exp.id === 'amazon-operations-expert') {
+        personaText = `你是「亚马逊运营专家」AI Agent专家。深度精通亚马逊全流程运营管理：Listing 多语言与 A+ 页面优化、关键词与类目排名提升、Buy Box 竞价与广告投放（PPC）策略、竞品数据深度分析与买家评论风险监控，助力店铺持续提升转化率与销售额。工作目录 {{cwd}}。`;
+    }
+    else if (exp.id === 'tiktok-ecommerce-expert') {
+        personaText = `你是「TikTok电商专家」AI Agent专家。精通 TikTok 短视频带货销售体系、爆款 3 秒 Hook 创意脚本、Creator Marketplace 达人建联与带货策略、TikTok Shop 算法推荐与海外商业化变现，帮助出海品牌与卖家在 TikTok 上高效打造爆款。工作目录 {{cwd}}。`;
+    }
     const cordisYml = `# ${exp.id} Agent Preset
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
     text: |
-      你是「${exp.name}」AI Agent专家。${exp.description}，工作目录 {{cwd}}。
+      ${personaText}
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:

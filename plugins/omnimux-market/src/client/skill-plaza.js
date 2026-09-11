@@ -270,7 +270,7 @@
         description: "专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。",
         descriptionEn: "Focused on Amazon store operations, listing optimization, advertising, and competitor... analysis to improve conversion",
         avatar: "catalog/covers/expert-amazon-operations.png",
-        status: "coming_soon",
+        status: "available",
       },
       {
         id: "tiktok-ecommerce-expert",
@@ -279,7 +279,7 @@
         description: "擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。",
         descriptionEn: "Expert in TikTok short-video selling, creator partnerships, and growth strategies to help... brands launch on TikTok Shop.",
         avatar: "catalog/covers/expert-tiktok-ecommerce.png",
-        status: "coming_soon",
+        status: "available",
       },
     ];
 
