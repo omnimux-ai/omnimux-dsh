@@ -4,6 +4,7 @@ import { ensureBreakdownStyles } from './styles.js'
 import {
   ClockIcon,
   EyeIcon,
+  UserIcon,
   LayersIcon,
   FramingIcon,
   CameraIcon,
@@ -126,6 +127,21 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     const m = Math.floor(total / 60)
     const s = total % 60
     return `${m}:${String(s).padStart(2, '0')}`
+  }
+
+  const formatViews = (rawViews) => {
+    if (!rawViews) return '0'
+    const str = String(rawViews).trim()
+    if (/[kmb]$/i.test(str)) return str
+    const num = Number(str)
+    if (!Number.isFinite(num) || num === 0) return str
+    if (num >= 1_000_000) {
+      return `${(num / 1_000_000).toFixed(1)}M`.replace('.0M', 'M')
+    }
+    if (num >= 1_000) {
+      return `${(num / 1_000).toFixed(1)}K`.replace('.0K', 'K')
+    }
+    return String(num)
   }
 
   const renderTagIcon = (tagStr) => {
@@ -345,65 +361,46 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             ) : null}
           </div>
 
-          {/* Structured Video Metadata Card */}
-          <div className="omnimux-video-breakdown-meta-card">
-            {/* Author Header */}
-            <div className="omnimux-video-breakdown-author-row">
-              {video.author_avatar ? (
-                <img className="omnimux-video-breakdown-avatar" src={video.author_avatar} alt="Avatar" />
-              ) : null}
-              <div className="omnimux-video-author-info-box">
-                <div className="omnimux-video-breakdown-author-name">
-                  <span>{video.author_name || 'Creator'}</span>
-                  <TikTokIcon size={13} />
-                </div>
-                <div className="omnimux-video-breakdown-author-handle">{video.author_handle || '@creator'}</div>
-              </div>
+          {/* Video Metadata Section (1:1 matching Reference Image 2) */}
+          <div className="omnimux-video-info-box">
+            {/* 1. Title/Caption with External Link */}
+            <div className="omnimux-video-info-title-row">
+              <span className="omnimux-video-info-caption">
+                {video.caption || video.title || ''}
+              </span>
               {video.source_url ? (
                 <a
                   href={video.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="omnimux-video-breakdown-ext-link"
+                  className="omnimux-video-info-ext-link"
                   title="访问原视频链接"
                   aria-label="访问原视频链接"
                 >
-                  <ExternalLinkIcon size={12} />
+                  <ExternalLinkIcon size={14} />
                 </a>
               ) : null}
             </div>
 
-            {/* Caption / Title */}
-            <div className="omnimux-video-breakdown-caption">
-              {video.caption || video.title || ''}
+            {/* 2. Inline Metadata: Author, Duration, Views */}
+            <div className="omnimux-video-info-meta-row">
+              <span className="omnimux-video-info-meta-item">
+                <UserIcon size={13} />
+                <span>{video.author_handle || (video.author_name ? `@${video.author_name}` : '@creator')}</span>
+              </span>
+              <span className="omnimux-video-info-meta-item">
+                <ClockIcon size={13} />
+                <span>{durationText}</span>
+              </span>
+              <span className="omnimux-video-info-meta-item">
+                <EyeIcon size={13} />
+                <span>{formatViews(video.views)}</span>
+              </span>
             </div>
 
-            {/* Engagement Metrics Stats Grid */}
-            <div className="omnimux-video-metrics-grid">
-              <div className="omnimux-video-metric-item">
-                <div className="omnimux-video-metric-val">{video.views || '0'}</div>
-                <div className="omnimux-video-metric-lbl">
-                  <EyeIcon size={11} /> 播放量
-                </div>
-              </div>
-              <div className="omnimux-video-metric-item">
-                <div className="omnimux-video-metric-val">{video.likes || '0'}</div>
-                <div className="omnimux-video-metric-lbl">
-                  <HeartIcon size={11} /> 点赞
-                </div>
-              </div>
-              <div className="omnimux-video-metric-item">
-                <div className="omnimux-video-metric-val">{video.comments || '0'}</div>
-                <div className="omnimux-video-metric-lbl">
-                  <MessageCircleIcon size={11} /> 评论
-                </div>
-              </div>
-              <div className="omnimux-video-metric-item">
-                <div className="omnimux-video-metric-val">{video.shares || '0'}</div>
-                <div className="omnimux-video-metric-lbl">
-                  <ShareIcon size={11} /> 分享
-                </div>
-              </div>
+            {/* 3. Scene Count */}
+            <div className="omnimux-video-info-scenes">
+              <span>{video.scene_count || shots.length || 0} 个场景</span>
             </div>
           </div>
         </aside>
