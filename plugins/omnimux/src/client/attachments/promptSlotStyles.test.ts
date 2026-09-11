@@ -12,6 +12,7 @@ test('DOCK_STYLES: provides subtle black/white theme slot capsule styles and rem
   assert.ok(DOCK_STYLES.includes('::highlight(omx-prompt-slot)'), 'contains CSS highlight selector for prompt slot');
   assert.doesNotMatch(DOCK_STYLES, /underline wavy/, 'ensures wavy underline is removed');
   assert.ok(DOCK_STYLES.includes('.omx-prompt-slots-dock'), 'contains slots dock container');
+  assert.ok(DOCK_STYLES.includes('padding: 4px 16px 6px 16px'), 'ensures left and right safety padding');
   assert.ok(DOCK_STYLES.includes('.omx-prompt-slot-chip'), 'contains slot capsule chip style');
   assert.ok(DOCK_STYLES.includes('border-radius: 9999px'), 'uses pill capsule border-radius');
   assert.ok(DOCK_STYLES.includes('.omx-prompt-slot-chip.is-active'), 'contains active/focused state style');
