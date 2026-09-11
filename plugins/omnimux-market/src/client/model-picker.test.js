@@ -161,4 +161,20 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     // 验证 BRAND_SVGS 包含完整的字节跳动四柱波形图标
     assert.match(modelPickerSrc, /bytedance:\s*`<svg[^>]*>[\s\S]*?22\.0004 4\.62844[\s\S]*?1\.99902 20\.1939[\s\S]*?16\.1213 9\.26561[\s\S]*?7\.49609 11\.582V20\.7336/)
   })
+
+  it('unifies composer buttons style and compacts spacing (Issue #1211)', () => {
+    // 1. 验证工具栏紧凑间距与空容器塌陷
+    assert.match(cssSrc, /div\[class\*="tools"\],\.Q7WfXG_tools\{gap:6px !important\}/)
+    assert.match(cssSrc, /div\[class\*="modes"\]:empty,\.Q7WfXG_modes:empty\{display:none !important\}/)
+    assert.match(cssSrc, /\[data-slot\*="conversation\.input\.left"\]/)
+
+    // 2. 验证按钮高度统一为 28px、胶囊圆角 9999px、背景采用 selector Token
+    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*height:28px/)
+    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*border-radius:9999px/)
+    assert.match(cssSrc, /\.sh-picker-trigger\{[^}]*background:var\(--dsw-specific-selector/)
+    assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*height:28px/)
+    assert.match(cssSrc, /\.sh-model-capsule-btn\{[^}]*border-radius:9999px/)
+    assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*height:28px/)
+    assert.match(cssSrc, /\.sh-active-skill-chip\{[^}]*border-radius:9999px/)
+  })
 })
