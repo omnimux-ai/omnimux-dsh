@@ -21,6 +21,12 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-11 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合。 |
+| `living` | [omnimux-baseline-contract.md](omnimux-baseline-contract.md) | OmniMux 通用底线与交互契约 (Baseline Contract) | `global` | 2026-09-11 | 资产物理路径不可变性、最多 3 次异参重试熔断与 `working_language` 级联裁决协议栈。 |
+| `living` | [omnimux-anti-loop-contract.md](omnimux-anti-loop-contract.md) | OmniMux 防死循环自检与 LoopGuard 契约 (Anti-Loop Contract) | `global` | 2026-09-11 | 调用前自查清单、典型死循环替代策略表与 Hub 底层 `LoopGuard` 5 步 3 击硬门禁熔断。 |
+| `living` | [omnimux-semantic-judgment-contract.md](omnimux-semantic-judgment-contract.md) | OmniMux 多模态语义分配与 Prompt 编译契约 (Semantic Judgment) | `global` | 2026-09-11 | 意图四级优先级、素材 5 维输入角色、五维决策（take/adapt/ignore/block/ask）与 Prompt 纯净度铁律。 |
+| `living` | [omnimux-timeline-discipline-contract.md](omnimux-timeline-discipline-contract.md) | OmniMux 分镜与时间线协同纪律契约 (Timeline & Storyboard Discipline) | `omnimux-clip` | 2026-09-11 | 媒体生成即资产自动入库、分镜与时间线局部 Hunk 增量修改（禁全量重写）与 Stage 阶段执行隔离。 |
+| `living` | [omnimux-batch-grouping-contract.md](omnimux-batch-grouping-contract.md) | OmniMux 批量产物自动栅格化成组契约 (Batch Grouping Contract) | `global` | 2026-09-11 | 单轮多产物自动栅格化成组聚合展示与显式成组/解组状态机。 |
 | `living` | [workflow-app-boundary.md](workflow-app-boundary.md) | Canvas / AI 应用协作契约 | `omnimux-workflow` | 2026-09-09 | 目标：Canvas 调度、Hub 凭证/provider HTTP/路由、Apps 注册存储与 schema/UI 发布规范；fail closed、有效输入/版本核验、事件与产物适配。另列固定 SHA 源码缺口；不是现有 API 或运行通过证明。 |
 | `living` | [ai-app-ui-spec.md](ai-app-ui-spec.md) | OmniMux AI 应用 UI 布局与表单交互标准规范 | `omnimux-apps` | 2026-09-09 | 目标：视频/图片/音频三类、通用表单、单个左右大卡片、真实历史与多媒体示例隔离；448−2−48=398px、compact tabs 等特定例外；媒体依自身比例。固定旧 SHA 的 mock/内存原型尚未完成真实运行验收，不随本文合入 main。 |
 | `living` | [node-input-submission.md](node-input-submission.md) | 节点有效输入与提交 | `omnimux-workflow` | 2026-09-06 | 上游与本地内容组合、创建/连接/提交分层、任务角色、动态状态与请求一致性。 |
