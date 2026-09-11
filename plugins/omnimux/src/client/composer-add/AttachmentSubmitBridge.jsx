@@ -27,6 +27,36 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
   const anchor = useRef(null)
   const [notice, setNotice] = useState(null)
   live.current = { input, inputActions }
+
+  // 跨组件输入框草稿同步桥接 (供 ComposerModeTabs 模式切换时清空/恢复输入框)
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+    window.__omnimuxComposerActions = {
+      setDraft: (text) => {
+        try {
+          live.current?.inputActions?.setDraft?.(text)
+        } catch (err) {
+          console.warn('[AttachmentSubmitBridge] setDraft failed:', err)
+        }
+      },
+      getDraft: () => live.current?.input?.draft || '',
+    }
+    const handleSetDraftEvent = (e) => {
+      const { sessionId: targetSessionId, draft } = e.detail || {}
+      if (!targetSessionId || targetSessionId === sessionId) {
+        try {
+          live.current?.inputActions?.setDraft?.(draft || '')
+        } catch {}
+      }
+    }
+    window.addEventListener('omnimux:composer:set-draft', handleSetDraftEvent)
+    return () => {
+      window.removeEventListener('omnimux:composer:set-draft', handleSetDraftEvent)
+      if (window.__omnimuxComposerActions?.setDraft) {
+        window.__omnimuxComposerActions = null
+      }
+    }
+  }, [sessionId])
   useLayoutEffect(() => {
     const root = anchor.current?.closest('[data-phase]')
     if (!root) return

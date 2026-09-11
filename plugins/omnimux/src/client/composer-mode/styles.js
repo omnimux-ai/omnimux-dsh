@@ -35,12 +35,12 @@ export const COMPOSER_MODE_CSS = `
   margin: 0;
 }
 
-/* 胶囊分段选择器壳体 (1:1 像素级复刻参考图通透暗色外壳) */
+/* 胶囊分段选择器壳体 (1:1 像素级复刻参考图通透暗色外壳，适度放大提升点击体验) */
 .omnimux-composer-mode-pill {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 4px;
+  gap: 4px;
+  padding: 4px 5px;
   border-radius: 9999px;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
@@ -56,15 +56,15 @@ export const COMPOSER_MODE_CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 16px;
+  height: 32px;
+  padding: 0 18px;
   border-radius: 9999px;
   border: 1px solid transparent;
   outline: none;
   background: transparent;
   color: var(--dsw-alias-text-secondary);
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 14px;
+  line-height: 22px;
   font-weight: 500;
   font-family: inherit;
   letter-spacing: 0.2px;

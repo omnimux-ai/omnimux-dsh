@@ -140,4 +140,72 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     stylesContent.includes('#omnimux-composer-mode-anchor'),
     'styles.js 必须包含 #omnimux-composer-mode-anchor 样式声明'
   )
+
+  // 7. 验证视觉微调：Tab 按钮适当调大 (height: 32px, padding: 0 18px, font-size: 14px)
+  assert.ok(stylesContent.includes('height: 32px;'), 'Tab 按钮高度必须调大为 32px')
+  assert.ok(stylesContent.includes('padding: 0 18px;'), 'Tab 按钮水平 padding 必须调大为 18px')
+  assert.ok(stylesContent.includes('font-size: 14px;'), 'Tab 按钮字号必须调大为 14px')
+
+  // 8. 验证输入框重启与状态隔离恢复机制
+  assert.ok(
+    tabsContent.includes('switchMode'),
+    'ComposerModeTabs 必须调用 store.switchMode 原子切换'
+  )
+  assert.ok(
+    tabsContent.includes('setComposerDraft'),
+    'ComposerModeTabs 必须包含 setComposerDraft 输入框重启设值能力'
+  )
+  assert.ok(
+    tabsContent.includes('setAllPresets'),
+    'ComposerModeTabs 必须使用 setAllPresets 恢复营销预设状态'
+  )
+})
+
+test('ComposerModeStore: 独立缓存、状态隔离与 Tab 切换恢复 (Agent 1111 -> 营销 2222 -> 短剧 空 -> 切回恢复)', () => {
+  const store = getComposerModeStore()
+  const s1 = 'session-isolated-cache-test'
+
+  // 初始：进入新会话，默认 Agent 模式，缓存为空
+  assert.equal(store.getMode(s1), 'agent')
+  assert.deepEqual(store.getModeCache(s1, 'agent'), { draft: '', presets: null })
+
+  // 1. 在 Agent 输入 1111，随后点击切换到 营销
+  const marketingCache = store.switchMode(s1, 'marketing', { draft: '1111', presets: null })
+  // 切换后：模式为 marketing，返回的营销模式缓存为空
+  assert.equal(store.getMode(s1), 'marketing')
+  assert.equal(marketingCache.draft, '', '首次切换到营销模式，缓存内容应为空')
+  assert.equal(marketingCache.presets, null)
+
+  // 2. 在 营销 输入 2222 并选择广告格式预设，随后点击切换到 短剧
+  const dramaCache = store.switchMode(s1, 'drama', {
+    draft: '2222',
+    presets: { format: 'ugc_hook', hook: null, style: null },
+  })
+  // 切换后：模式为 drama，返回的短剧模式缓存为空
+  assert.equal(store.getMode(s1), 'drama')
+  assert.equal(dramaCache.draft, '', '首次切换到短剧模式，缓存内容应为空')
+
+  // 3. 点击切换回 Agent
+  const agentRestored = store.switchMode(s1, 'agent', { draft: '' })
+  assert.equal(store.getMode(s1), 'agent')
+  assert.equal(agentRestored.draft, '1111', '切回 Agent 应恢复之前输入的 1111')
+
+  // 4. 点击切换回 营销
+  const marketingRestored = store.switchMode(s1, 'marketing', { draft: '1111' })
+  assert.equal(store.getMode(s1), 'marketing')
+  assert.equal(marketingRestored.draft, '2222', '切回营销应恢复之前输入的 2222')
+  assert.deepEqual(
+    marketingRestored.presets,
+    { format: 'ugc_hook', hook: null, style: null },
+    '切回营销应恢复之前选择的广告格式'
+  )
+
+  // 5. 多会话隔离验证
+  const s2 = 'session-other'
+  assert.equal(store.getMode(s2), 'agent')
+  assert.equal(store.getModeCache(s2, 'agent').draft, '')
+
+  // 清理
+  store.reset(s1)
+  store.reset(s2)
 })

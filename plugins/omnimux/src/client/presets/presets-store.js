@@ -115,6 +115,30 @@ class CreativePresetsStore {
   }
 
   /**
+   * 批量恢复/设置预设快照
+   * @param {string} sessionId
+   * @param {Partial<PresetsState> | null} state
+   */
+  setAllPresets(sessionId = 'default', state) {
+    const key = sessionId || 'default'
+    if (!state) {
+      this.clearPresets(key)
+      return
+    }
+    const next = Object.freeze({
+      format: state.format || null,
+      hook: state.hook || null,
+      style: state.style || null,
+    })
+    const current = this.getSnapshot(key)
+    if (current.format === next.format && current.hook === next.hook && current.style === next.style) {
+      return
+    }
+    this.sessionStates.set(key, next)
+    this._notify(key)
+  }
+
+  /**
    * 清空所有维度的预设
    * @param {string} sessionId
    */
