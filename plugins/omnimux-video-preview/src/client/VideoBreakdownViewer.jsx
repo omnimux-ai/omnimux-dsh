@@ -26,6 +26,7 @@ import {
 
 export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const [activeTab, setActiveTab] = useState('shots')
+  const [playerMode, setPlayerMode] = useState('native') // 'native' | 'embed'
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -143,6 +144,26 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     }
     return String(num)
   }
+
+  // Calculate which shot is currently playing based on currentTime
+  const currentPlayingShotIndex = useMemo(() => {
+    if (typeof currentTime !== 'number' || shots.length === 0) return -1
+    return shots.findIndex((s) => {
+      const start = s.start_seconds || 0
+      const end = s.end_seconds || (start + 3)
+      return currentTime >= start && currentTime < end
+    })
+  }, [shots, currentTime])
+
+  // Automatically scroll active playing shot card into view gently while playing
+  useEffect(() => {
+    if (activeTab === 'shots' && isPlaying && currentPlayingShotIndex >= 0) {
+      const el = document.getElementById(`omnimux-shot-card-${currentPlayingShotIndex}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [currentPlayingShotIndex, activeTab, isPlaying])
 
   const renderTagIcon = (tagStr) => {
     if (tagStr.includes('特写')) {
@@ -266,9 +287,33 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       <div className="omnimux-video-breakdown-body">
         {/* Left: Video Player & Metadata Column */}
         <aside className="omnimux-video-breakdown-left">
-          {/* Video Player Card (TikTok Official Embed Player preferred) */}
+          {/* Video Player Mode Switcher (when both interactive stream & TikTok embed exist) */}
+          {embedUrl && streamUrl ? (
+            <div className="omnimux-video-player-mode-bar">
+              <div className="omnimux-video-player-mode-switch">
+                <button // exempt-ui01 player mode pill
+                  type="button"
+                  className={`omnimux-video-player-mode-btn${playerMode === 'native' ? ' is-active' : ''}`}
+                  onClick={() => setPlayerMode('native')}
+                  title="分镜毫秒级双向联动播放"
+                >
+                  分镜联动
+                </button>
+                <button // exempt-ui01 player mode pill
+                  type="button"
+                  className={`omnimux-video-player-mode-btn${playerMode === 'embed' ? ' is-active' : ''}`}
+                  onClick={() => setPlayerMode('embed')}
+                  title="TikTok 官方内嵌播放器"
+                >
+                  TikTok 原版
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Video Player Card */}
           <div className="omnimux-video-breakdown-player-card">
-            {embedUrl ? (
+            {embedUrl && playerMode === 'embed' ? (
               <div className="omnimux-video-player-wrapper is-embed">
                 <iframe
                   title={video.title || 'TikTok Video Player'}
@@ -356,6 +401,16 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                   </IconButton>
                 </div>
               </div>
+            ) : embedUrl ? (
+              <div className="omnimux-video-player-wrapper is-embed">
+                <iframe
+                  title={video.title || 'TikTok Video Player'}
+                  src={embedUrl}
+                  className="omnimux-video-breakdown-embed-frame"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
             ) : coverUrl ? (
               <img className="omnimux-video-breakdown-video-el" src={coverUrl} alt="Video Cover" />
             ) : null}
@@ -429,21 +484,32 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
               /* Shots List View */
               <div className="omnimux-video-breakdown-shots-list">
                 {shots.map((shot, idx) => {
-                  const isCurrent = activeShotId === (shot.id || idx) ||
-                    (currentTime >= (shot.start_seconds || 0) && currentTime < (shot.end_seconds || 999999))
+                  const isPlayingThisShot = (currentTime >= (shot.start_seconds || 0) && currentTime < (shot.end_seconds || 999999))
+                  const isCurrent = isPlayingThisShot || (activeShotId === (shot.id || idx))
                   return (
                     <div
+                      id={`omnimux-shot-card-${idx}`}
                       key={shot.id || idx}
                       className={`omnimux-video-breakdown-shot-card${isCurrent ? ' is-active' : ''}`}
                       onClick={() => {
+                        if (playerMode !== 'native' && streamUrl) {
+                          setPlayerMode('native')
+                        }
                         handleSeek(shot.start_seconds || 0)
                         setActiveShotId(shot.id || idx)
                       }}
+                      title="点击跳转并从该分镜开始播放"
                     >
                       <div className="omnimux-video-breakdown-shot-header">
                         <div className="omnimux-video-breakdown-shot-title-box">
                           <span className="omnimux-video-breakdown-shot-time">{shot.time_range || '0:00 - 0:00'}</span>
                           <span className="omnimux-video-breakdown-shot-title">{shot.title || `分镜 ${idx + 1}`}</span>
+                          {isPlayingThisShot && isPlaying ? (
+                            <span className="omnimux-video-shot-playing-badge">
+                              <span className="omnimux-video-shot-playing-dot" />
+                              播放中
+                            </span>
+                          ) : null}
                         </div>
                         {shot.stage ? (
                           <div className="omnimux-video-breakdown-stage-pill">{shot.stage}</div>
