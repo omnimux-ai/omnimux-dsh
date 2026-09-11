@@ -275,3 +275,55 @@ describe('mapFollowers', () => {
     assert.equal(mapped.timeline[0].breakdown.twitter, 148)
   })
 })
+
+describe('analytics modular index exports & submodules', () => {
+  it('verifies all expected modules are exported via index.js', async () => {
+    const analytics = await import('./analytics/index.js')
+    assert.equal(analytics.SCHEMA_VERSION, '1.0.0')
+    assert.equal(typeof analytics.unwrap, 'function')
+    assert.equal(typeof analytics.emptyDashboard, 'function')
+    assert.equal(typeof analytics.mapDailyMetrics, 'function')
+    assert.equal(typeof analytics.mapPosts, 'function')
+    assert.equal(typeof analytics.mapHeatmap, 'function')
+    assert.equal(typeof analytics.mapCadence, 'function')
+    assert.equal(typeof analytics.mapDecay, 'function')
+    assert.equal(typeof analytics.mapFollowers, 'function')
+    assert.equal(typeof analytics.aggregateOverview, 'function')
+    assert.equal(typeof analytics.aggregateSync, 'function')
+  })
+
+  it('unwraps nested cloud payload envelopes cleanly without deep boolean complexity', async () => {
+    const { unwrap } = await import('./analytics/formatters.js')
+    const rawWithData = {
+      data: {
+        posts: [{ id: 'p1' }],
+      },
+    }
+    const unwrapped = unwrap(rawWithData)
+    assert.deepEqual(unwrapped, { posts: [{ id: 'p1' }] })
+    assert.equal(unwrap(null), null)
+    assert.deepEqual(unwrap({ normal: true }), { normal: true })
+  })
+
+  it('correctly formats account handles without nested ternary issues', async () => {
+    const { accountLabel } = await import('./analytics/emptyStates.js')
+    assert.equal(accountLabel({ username: 'alice', platform: 'tiktok' }), '@alice（TikTok）')
+    assert.equal(accountLabel({ username: '@bob', platform: 'twitter' }), '@bob（X）')
+    assert.equal(accountLabel({ display_name: 'Charlie', platform: 'youtube' }), 'Charlie（YouTube）')
+    assert.equal(accountLabel({ id: 'acc_123' }), 'acc_123')
+  })
+
+  it('stamps incremental sync timestamps in aggregateSync', async () => {
+    const { aggregateSync } = await import('./analytics/cloudPipeline.js')
+    const client = {
+      async withPat() {
+        return { lastSyncedAt: 1700000000000, syncIntervalMs: 1800000 }
+      },
+    }
+    const res = await aggregateSync(client, { profileId: 'acc_01' }, { now: 1700000000000 })
+    assert.equal(res.ok, true)
+    assert.equal(res.syncStatus.lastSyncedAt, 1700000000000)
+    assert.equal(res.syncStatus.nextSyncAt, 1700000000000 + 1800000)
+    assert.equal(res.syncStatus.syncIntervalMs, 1800000)
+  })
+})
