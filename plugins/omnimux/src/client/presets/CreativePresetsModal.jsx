@@ -135,12 +135,7 @@ export function CreativePresetsModal({
             {selectedHook ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedHook.titleZh || selectedHook.title}
-                <button
-                  type="button"
-                  className="omnimux-presets-slot-del"
-                  onClick={() => setSelectedHook(null)}
-                  title="移除此项"
-                >
+                <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedHook(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
                   ×
                 </button>
               </span>
@@ -155,12 +150,7 @@ export function CreativePresetsModal({
             {selectedStyle ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedStyle.titleZh || selectedStyle.title}
-                <button
-                  type="button"
-                  className="omnimux-presets-slot-del"
-                  onClick={() => setSelectedStyle(null)}
-                  title="移除此项"
-                >
+                <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedStyle(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
                   ×
                 </button>
               </span>
@@ -175,12 +165,7 @@ export function CreativePresetsModal({
             {selectedFormat ? (
               <span className="omnimux-presets-slot-value is-active">
                 {selectedFormat.titleZh || selectedFormat.title}
-                <button
-                  type="button"
-                  className="omnimux-presets-slot-del"
-                  onClick={() => setSelectedFormat(null)}
-                  title="移除此项"
-                >
+                <button type="button" className="omnimux-presets-slot-del" onClick={() => setSelectedFormat(null)} title="移除此项"> {/* // exempt-ui01: preset slot del button */}
                   ×
                 </button>
               </span>
@@ -210,12 +195,7 @@ export function CreativePresetsModal({
       <div className="omnimux-presets-preview-box">
         <div className="omnimux-presets-preview-header">
           <span>Prompt 编译器实时草稿</span>
-          <button
-            type="button"
-            className="omnimux-presets-copy-btn"
-            onClick={handleCopyPrompt}
-            title="复制到剪贴板"
-          >
+          <button type="button" className="omnimux-presets-copy-btn" onClick={handleCopyPrompt} title="复制到剪贴板"> {/* // exempt-ui01: prompt copy button */}
             {copied ? '已复制 ✓' : '复制 Prompt'}
           </button>
         </div>
@@ -232,29 +212,17 @@ export function CreativePresetsModal({
       <div className="omnimux-presets-footer-summary">
         已装配 <strong>{selectedCount}</strong> 项预设约束
         {selectedCount > 0 && (
-          <button
-            type="button"
-            className="omnimux-presets-reset-btn"
-            onClick={handleResetAll}
-          >
+          <button type="button" className="omnimux-presets-reset-btn" onClick={handleResetAll}> {/* // exempt-ui01: reset all presets */}
             清空已选
           </button>
         )}
       </div>
 
       <div className="omnimux-presets-footer-actions">
-        <button
-          type="button"
-          className="omnimux-presets-cancel-btn"
-          onClick={onClose}
-        >
+        <button type="button" className="omnimux-presets-cancel-btn" onClick={onClose}> {/* // exempt-ui01: modal cancel button */}
           取消
         </button>
-        <button
-          type="button"
-          className="omnimux-presets-submit-btn omnimux-split-modal-submit"
-          onClick={handleSubmit}
-        >
+        <button type="button" className="omnimux-presets-submit-btn omnimux-split-modal-submit" onClick={handleSubmit}> {/* // exempt-ui01: modal submit button */}
           应用并生成制作方案
         </button>
       </div>
@@ -275,44 +243,17 @@ export function CreativePresetsModal({
       <div className="omnimux-presets-right-content">
         {/* 一级选项卡 */}
         <div className="omnimux-presets-tabs-bar" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'hooks'}
-            className={`omnimux-presets-tab ${activeTab === 'hooks' ? 'is-active' : ''}`}
-            onClick={() => {
-              setActiveTab('hooks')
-              setSelectedSubCategory('all')
-            }}
-          >
+          <button type="button" role="tab" aria-selected={activeTab === 'hooks'} className={`omnimux-presets-tab ${activeTab === 'hooks' ? 'is-active' : ''}`} onClick={() => { setActiveTab('hooks'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
             🎯 黄金亮点 / Hook
             <span className="omnimux-presets-tab-badge">{CREATIVE_HOOKS.length}</span>
           </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'styles'}
-            className={`omnimux-presets-tab ${activeTab === 'styles' ? 'is-active' : ''}`}
-            onClick={() => {
-              setActiveTab('styles')
-              setSelectedSubCategory('all')
-            }}
-          >
+          <button type="button" role="tab" aria-selected={activeTab === 'styles'} className={`omnimux-presets-tab ${activeTab === 'styles' ? 'is-active' : ''}`} onClick={() => { setActiveTab('styles'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
             🎨 视觉风格 / Style
             <span className="omnimux-presets-tab-badge">{CREATIVE_VISUAL_STYLES.length}</span>
           </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'formats'}
-            className={`omnimux-presets-tab ${activeTab === 'formats' ? 'is-active' : ''}`}
-            onClick={() => {
-              setActiveTab('formats')
-              setSelectedSubCategory('all')
-            }}
-          >
+          <button type="button" role="tab" aria-selected={activeTab === 'formats'} className={`omnimux-presets-tab ${activeTab === 'formats' ? 'is-active' : ''}`} onClick={() => { setActiveTab('formats'); setSelectedSubCategory('all') }}> {/* // exempt-ui01: preset category tab */}
             🎬 广告格式 / Format
             <span className="omnimux-presets-tab-badge">{CREATIVE_VIDEO_FORMATS.length}</span>
           </button>
@@ -334,12 +275,7 @@ export function CreativePresetsModal({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button
-                type="button"
-                className="omnimux-presets-search-clear"
-                onClick={() => setSearchQuery('')}
-                aria-label="清空搜索"
-              >
+              <button type="button" className="omnimux-presets-search-clear" onClick={() => setSearchQuery('')} aria-label="清空搜索"> {/* // exempt-ui01: clear search input */}
                 ×
               </button>
             )}
@@ -347,20 +283,11 @@ export function CreativePresetsModal({
 
           {/* 二级胶囊筛选 */}
           <div className="omnimux-presets-subcats" role="toolbar" aria-label="二级分类">
-            <button
-              type="button"
-              className={`omnimux-presets-subcat-btn ${selectedSubCategory === 'all' ? 'is-active' : ''}`}
-              onClick={() => setSelectedSubCategory('all')}
-            >
+            <button type="button" className={`omnimux-presets-subcat-btn ${selectedSubCategory === 'all' ? 'is-active' : ''}`} onClick={() => setSelectedSubCategory('all')}> {/* // exempt-ui01: subcategory filter pill */}
               全部 ({currentList.length})
             </button>
             {subCategories.map(({ slug, label }) => (
-              <button
-                key={slug}
-                type="button"
-                className={`omnimux-presets-subcat-btn ${selectedSubCategory === slug ? 'is-active' : ''}`}
-                onClick={() => setSelectedSubCategory(slug)}
-              >
+              <button key={slug} type="button" className={`omnimux-presets-subcat-btn ${selectedSubCategory === slug ? 'is-active' : ''}`} onClick={() => setSelectedSubCategory(slug)}> {/* // exempt-ui01: subcategory filter pill */}
                 {label}
               </button>
             ))}

@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, IconButton } from 'dsh-ui-kit'
+import { Button } from 'dsh-ui-kit'
+import { ModalCloseButton } from './components/ModalCloseButton.jsx'
 import { begin, cancel, getSnapshot, retry, subscribe } from './auth-gate.js'
 import { parseLogoSvg, resolveHeroLogoSvg } from './hero-brand.js'
 import {
@@ -79,15 +79,13 @@ export function LoginGate({ t }) {
           aria-labelledby="omnimux-login-gate-headline"
           onClick={(event) => { event.stopPropagation() }}
         >
-          <IconButton
-            variant="ghost"
+          <ModalCloseButton
+            placement="top-right"
             className="omnimux-login-gate-close"
-            aria-label={t(COPY.close)}
+            ariaLabel={t(COPY.close)}
             title={t(COPY.close)}
-            onClick={() => { cancel() }}
-          >
-            <IconCloseOutline16 size={14} />
-          </IconButton>
+            onClose={() => { cancel() }}
+          />
 
           <section className="omnimux-login-gate-hero" aria-hidden="true">
             <div className="omnimux-login-gate-hero-glow" />
