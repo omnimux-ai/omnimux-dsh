@@ -313,3 +313,23 @@ test('reference_images and reference_videos aliases match expected variants', ()
     assert.equal(l.slots[0].slot, slotName);
   }
 });
+
+test('Issue #1104: 卡槽装填过滤 — 不支持格式与超量素材不进入卡槽，仅展示非空就绪素材', () => {
+  // 1. 首帧模式卡槽（仅支持 1 张图片）
+  const firstFrameLayout = layout('first_frame');
+  const imageReady = { ...feed(1, 'image'), availability: 'ready', url: 'https://test.com/frame.png' };
+  const imageExtra = { ...feed(2, 'image'), availability: 'ready', url: 'https://test.com/extra.png' };
+  const videoFeed = { ...feed(3, 'video'), availability: 'ready', url: 'https://test.com/video.mp4' };
+
+  // 连入 2 张图片和 1 个视频：卡槽只接受第 1 张图片，超量图片与视频不进入卡槽
+  const fillFirstFrame = autoFillSlots([imageReady, imageExtra, videoFeed], firstFrameLayout, {});
+  assert.equal(fillFirstFrame.bindings.first_frame.length, 1, '首帧卡槽仅应装填 1 张图片');
+  assert.equal(fillFirstFrame.bindings.first_frame[0].sourceNodeId, 's1');
+  assert.equal(fillFirstFrame.unusedFeed.length, 2, '超量图片与不匹配视频应保留在未消费池（Feed）');
+
+  // 2. 全能参考卡槽（支持图片）
+  const multiRefLayout = layout('video_multi_ref');
+  const fillMultiRef = autoFillSlots([imageReady, imageExtra, videoFeed], multiRefLayout, {});
+  assert.equal(fillMultiRef.bindings.reference.length, 1, '满足容量上限的图片进入参考卡槽');
+  assert.equal(fillMultiRef.unusedFeed.length, 2, '超量与不匹配格式保留在 Feed');
+});

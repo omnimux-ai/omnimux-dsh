@@ -584,7 +584,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const feedAssets = useMemo<FeedAsset[]>(
     () => upstreams
-      .filter((item) => item.materialType !== 'text')
+      // 契约与业务规范（Issue #1104）：卡槽的预览与加载始终只显示和加载上游节点状态为非空的（已就绪且有媒体 URL），且格式与数量受当前模式卡槽支持的素材。
+      .filter((item) => item.materialType !== 'text' && item.availability === 'ready' && item.hasMedia && Boolean(item.url))
       .map((item, ordinal) => ({
         edgeId: item.edgeId ?? `feed-${item.nodeId}-${ordinal}`,
         sourceNodeId: item.nodeId,
@@ -602,10 +603,9 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const storedSlotBindings = nodeData.slotBindings as SlotBindings | undefined;
   const slotBindings = useMemo<SlotBindings>(() => {
-    if (storedSlotBindings) return storedSlotBindings;
-    // 展示兜底：尚未经 gateway 重算的旧节点按内核自动装填派生。
     if (effectiveSlotLayout.preset === 'none' || effectiveSlotLayout.slots.length === 0) return {};
-    return autoFillSlots(feedAssets, effectiveSlotLayout).bindings;
+    // 卡槽与生成模式强关联：严格遵循当前 effectiveSlotLayout 进行装填与清洗，不支持的格式和超量素材绝不进入卡槽
+    return autoFillSlots(feedAssets, effectiveSlotLayout, storedSlotBindings ?? {}).bindings;
   }, [storedSlotBindings, effectiveSlotLayout, feedAssets]);
   const slotConflicts = (nodeData.slotConflicts ?? []) as SlotConflict[];
 
@@ -692,8 +692,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       const model = resolveModelView(contractView, modelValue);
       if (!model) return;
 
-      // 场景 1：当前在纯文生视频（或未设模式），但检测到有图片素材连入/装填 → 自动升迁至模型支持的首帧/图生模式
-      if ((!currentOp || currentOp === 'text_to_video') && hasImageUpstream) {
+      // 场景 1：仅当用户尚未显式保存过模式（!savedOp）时，检测到图片素材连入才进行初始首帧智能推荐
+      if (!savedOp && hasImageUpstream) {
         const targetOp = model.operations.find((op) => op.listed && op.id === 'first_frame')?.id
           || model.operations.find((op) => op.listed && (op.id === 'image_to_video' || op.id === 'video_multi_ref'))?.id;
         if (targetOp && targetOp !== currentOp) {

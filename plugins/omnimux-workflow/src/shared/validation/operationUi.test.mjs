@@ -645,4 +645,82 @@ describe('generation-node mode presentation', () => {
     assert.equal(shouldRenderModeUi(state), true, '有效模式数 ≥ 2 时必须展示生成模式选择器');
     assert.deepEqual(state.effectiveOps.map(op => op.id), ['first_frame', 'first_last_frame', 'video_multi_ref']);
   });
+
+  it('Issue #1104: 上游同时连入图片和视频时，模型生成模式不收缩，模式选择器始终可见且允许自由切换', () => {
+    const seedanceCatalog = {
+      source: 'omnimux', text: [], image: [], video: [], audio: [],
+      models: [{
+        id: 'seedance-2-0', label: 'Seedance 2.0', listed: true,
+        operations: [
+          { id: 'text_to_video', label: '文生视频', listed: true, output: { type: 'video' }, inputs: [] },
+          { id: 'first_frame', label: '首帧生视频', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', role: 'first_frame', min: 1, max: 1 }] },
+          { id: 'first_last_frame', label: '首尾帧生视频', listed: true, output: { type: 'video' }, inputs: [{ slot: 'first_frame', type: 'image', role: 'first_frame', min: 1, max: 1 }, { slot: 'last_frame', type: 'image', role: 'last_frame', min: 1, max: 1 }] },
+          { id: 'video_multi_ref', label: '参考生视频', listed: true, output: { type: 'video' }, inputs: [{ slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: 9 }, { slot: 'reference_videos', type: 'video', role: 'reference', min: 0, max: 3 }] },
+        ],
+      }],
+    };
+
+    // 上游同时供给 1 张图片与 1 个视频
+    const upstreams = [
+      { nodeId: 'img-node', edgeId: 'e-img', materialType: 'image', hasMedia: true, url: 'https://example.test/frame.png' },
+      { nodeId: 'vid-node', edgeId: 'e-vid', materialType: 'video', hasMedia: true, url: 'https://example.test/ref.mp4' },
+    ];
+    const fingerprint = buildUiUpstreamFingerprint({ prompt: 'cinematic shot', upstreams });
+
+    // 1. 未显式选择模式时：4 个模式全部保留，模式选择器必须展示（绝不因连入视频收缩并隐藏模式选择器）
+    const baseState = buildEffectiveOpsUiState({
+      catalog: seedanceCatalog,
+      modelId: 'seedance-2-0',
+      fingerprint,
+      outputType: 'video',
+    });
+    assert.equal(baseState.count, 4, '4 个模式（文生视频、首帧、首尾帧、参考生视频）均应为有效可选模式');
+    assert.equal(shouldRenderModeUi(baseState), true, '有效模式数 ≥ 2 时必须展示生成模式选择器');
+    assert.deepEqual(baseState.effectiveOps.map((op) => op.id), ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref']);
+
+    // 2. 用户在弹窗中主动选择首帧生视频：首帧槽装填图片，连入的视频作为未消费素材不阻断首帧任务
+    const firstFrameState = buildEffectiveOpsUiState({
+      catalog: seedanceCatalog,
+      modelId: 'seedance-2-0',
+      fingerprint,
+      preferredOperationId: 'first_frame',
+      outputType: 'video',
+    });
+    assert.equal(firstFrameState.selectedOperationId, 'first_frame');
+    assert.equal(firstFrameState.blockGenerate, false, '首帧槽位有就绪图片，不应因连入视频而被阻断生成');
+
+    // 3. 用户在弹窗中主动选择全能参考：图片与视频同时被吸收
+    const multiRefState = buildEffectiveOpsUiState({
+      catalog: seedanceCatalog,
+      modelId: 'seedance-2-0',
+      fingerprint,
+      preferredOperationId: 'video_multi_ref',
+      outputType: 'video',
+    });
+    assert.equal(multiRefState.selectedOperationId, 'video_multi_ref');
+    assert.equal(multiRefState.blockGenerate, false, '全能参考吸收图和视频，直接允许生成');
+
+    // 4. 用户在弹窗中主动选择文生视频：不消费媒体素材，直接允许文生视频
+    const textState = buildEffectiveOpsUiState({
+      catalog: seedanceCatalog,
+      modelId: 'seedance-2-0',
+      fingerprint,
+      preferredOperationId: 'text_to_video',
+      outputType: 'video',
+    });
+    assert.equal(textState.selectedOperationId, 'text_to_video');
+    assert.equal(textState.blockGenerate, false, '文生视频只需要文本，连入素材保留在 Feed 不阻断文生视频');
+
+    // 5. 用户在弹窗中主动选择首尾帧：缺少尾帧时精准阻断并提示缺尾帧
+    const firstLastState = buildEffectiveOpsUiState({
+      catalog: seedanceCatalog,
+      modelId: 'seedance-2-0',
+      fingerprint,
+      preferredOperationId: 'first_last_frame',
+      outputType: 'video',
+    });
+    assert.equal(firstLastState.selectedOperationId, 'first_last_frame');
+    assert.equal(firstLastState.blockGenerate, true, '首尾帧缺少尾帧时应阻断生成');
+    assert.equal(firstLastState.reasonCode, 'min_unsatisfied');
+  });
 });
