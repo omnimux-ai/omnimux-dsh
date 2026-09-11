@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { getCreativePresetsStore } from './presets-store.js'
 import { compileCreativePrompt } from './compiler.js'
 import { CREATIVE_VIDEO_FORMATS, CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES } from './catalog.js'
@@ -120,4 +122,35 @@ test('Submission Context Assembly: compiles presets into system prompt and clear
   // 批量设置为 null 清空
   store.setAllPresets(sid, null)
   assert.equal(store.hasAnyPreset(sid), false)
+})
+
+test('CreativeDimensionModal i18n & one-click select contract verification', () => {
+  const modalPath = path.resolve(import.meta.dirname, './CreativeDimensionModal.jsx')
+  const modalContent = fs.readFileSync(modalPath, 'utf-8')
+
+  // 1. 验证三大维度中英文多语言配置完整性
+  assert.ok(modalContent.includes('modalTitle: \'广告格式\''), '必须包含广告格式中文标题')
+  assert.ok(modalContent.includes('modalTitleEn: \'Ad formats\''), '必须包含广告格式英文标题')
+  assert.ok(modalContent.includes('heroTitle: \'热门创意灵感，开箱即用\''), '必须包含热门创意灵感中文横幅')
+  assert.ok(modalContent.includes('modalTitle: \'开场亮点\''), '必须包含开场亮点中文标题')
+  assert.ok(modalContent.includes('modalTitle: \'视觉风格\''), '必须包含视觉风格中文标题')
+
+  // 2. 验证多语言自适应逻辑与 Tab 中文标签优先
+  assert.ok(modalContent.includes('const isZh = useMemo('), '必须包含 isZh 多语言动态推断')
+  assert.ok(modalContent.includes('sub.labelZh || sub.label'), 'Tab 必须优先消费中文分类名称')
+  assert.ok(modalContent.includes('itemTitle(tempSelected, isZh)'), '已选预设标题必须支持中文解析')
+
+  // 3. 验证一键选择交互升级（单击卡片直接生效并关闭弹窗，无需二次确认）
+  assert.ok(
+    modalContent.includes('store.setPreset(sessionId, dimension, item)'),
+    '单击卡片必须直接写入 store 预设'
+  )
+  assert.ok(
+    modalContent.includes('onConfirm?.(item)') && modalContent.includes('onClose?.()'),
+    '单击卡片必须触发确认并立即关闭弹窗，实现一键选用'
+  )
+  assert.ok(
+    modalContent.includes('单击任意卡片一键选用'),
+    '底部操作栏必须清晰展示单击一键选用引导提示'
+  )
 })
