@@ -81,9 +81,33 @@ test('expertMarketList returns 8 items with status', async () => {
   const shopee = items.find((it: any) => it.id === 'shopee-ops-expert')
   assert.ok(shopee)
   assert.equal(shopee.status, 'enabled')
-  const comingSoon = items.find((it: any) => it.id === 'amazon-operations-expert')
-  assert.ok(comingSoon)
-  assert.equal(comingSoon.status, 'coming_soon')
+  const amazonOps = items.find((it: any) => it.id === 'amazon-operations-expert')
+  assert.ok(amazonOps)
+  assert.equal(amazonOps.status, 'available')
+  const tiktokEcom = items.find((it: any) => it.id === 'tiktok-ecommerce-expert')
+  assert.ok(tiktokEcom)
+  assert.equal(tiktokEcom.status, 'available')
+})
+
+test('amazon-operations-expert and tiktok-ecommerce-expert install with specialized presets', async () => {
+  const cfg = withDefaults({})
+  const req = mockReq('POST', '/api', {
+    origin: 'http://127.0.0.1:3080',
+    'sec-fetch-site': 'same-origin',
+  }, { method: 'expertMarketInstall', id: 'amazon-operations-expert' })
+  const res = mockRes()
+  await handleApi(req, res, cfg)
+  assert.equal(res._status, 200)
+  assert.equal(res._json?.status, 'enabled')
+
+  // Clean up
+  const reqDis = mockReq('POST', '/api', {
+    origin: 'http://127.0.0.1:3080',
+    'sec-fetch-site': 'same-origin',
+  }, { method: 'expertMarketDisable', id: 'amazon-operations-expert' })
+  const resDis = mockRes()
+  await handleApi(reqDis, resDis, cfg)
+  assert.equal(resDis._json?.status, 'disabled')
 })
 
 test('expertMarketInstall and expertMarketDisable toggle preset lifecycle', async () => {
