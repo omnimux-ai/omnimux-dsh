@@ -6,6 +6,7 @@ import { PopularCardCover } from './PopularCardCover.jsx'
 import { MarketingInsightModal } from './MarketingInsightModal.jsx'
 import { UrlToVideoModal } from './UrlToVideoModal.jsx'
 import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
+import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 
 function copyText(text) {
@@ -123,6 +124,7 @@ function BlankSessionGuide({
   const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
   const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
   const [isRecreateModalOpen, setIsRecreateModalOpen] = useState(false)
+  const [isBulkCreateAdsOpen, setIsBulkCreateAdsOpen] = useState(false)
   const [isCreativePresetsOpen, setIsCreativePresetsOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
@@ -197,7 +199,11 @@ function BlankSessionGuide({
       setIsRecreateModalOpen(true)
       return
     }
-    if (starter.id === 'creative-presets' || starter.id === 'bulk-create-ads') {
+    if (starter.id === 'bulk-create-ads') {
+      setIsBulkCreateAdsOpen(true)
+      return
+    }
+    if (starter.id === 'creative-presets') {
       setIsCreativePresetsOpen(true)
       return
     }
@@ -208,6 +214,7 @@ function BlankSessionGuide({
     setIsInsightModalOpen(false)
     setIsUrlToVideoOpen(false)
     setIsRecreateModalOpen(false)
+    setIsBulkCreateAdsOpen(false)
     setIsCreativePresetsOpen(false)
     if (!isSessionActive() || !inputActions?.setDraft) {
       setNotice('unavailable')
@@ -280,6 +287,14 @@ function BlankSessionGuide({
       <RecreateViralAdsModal
         isOpen={isRecreateModalOpen}
         onClose={() => setIsRecreateModalOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Bulk Create Ads Modal */}
+      <BulkCreateAdsModal
+        isOpen={isBulkCreateAdsOpen}
+        onClose={() => setIsBulkCreateAdsOpen(false)}
         t={t}
         onSubmitDraft={handleSubmitDraft}
       />

@@ -129,18 +129,24 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.equal(popularCards[0].dataset.popularStarterId, 'marketing-insight')
     assert.equal(popularCards[1].dataset.popularStarterId, 'url-to-video')
     assert.equal(popularCards[2].dataset.popularStarterId, 'recreate-viral-ads')
-    assert.equal(popularCards[3].dataset.popularStarterId, 'creative-presets')
+    assert.equal(popularCards[3].dataset.popularStarterId, 'bulk-create-ads')
 
-    // 2. 点击创意营销预设卡片打开全功能模态框
-    await click('[data-popular-starter-id="creative-presets"]')
+    // 2. 点击批量创建广告卡片打开全功能模态框
+    await click('[data-popular-starter-id="bulk-create-ads"]')
     await render(guideZh)
-    assert.ok(document.querySelector('.omnimux-creative-presets-modal'))
-    // 点击模态框提交按钮回填草稿
-    await click('.omnimux-preset-card')
-    await click('.omnimux-presets-submit-btn')
+    assert.ok(document.querySelector('.omnimux-bulk-modal'))
+    // 输入简报并提交
+    const briefInput = document.querySelector('.omnimux-bulk-textarea')
+    await act(async () => {
+      const propKey = Object.keys(briefInput).find(k => k.startsWith('__reactProps$'))
+      if (propKey && briefInput[propKey]?.onChange) {
+        briefInput[propKey].onChange({ target: { value: '智能发光降噪耳机快速开箱测评' } })
+      }
+    })
+    await click('.omnimux-bulk-submit-btn')
     await render(guideZh)
-    assert.equal(document.querySelector('.omnimux-creative-presets-modal'), null)
-    assert.ok(draft.includes('营销视频创意指令'))
+    assert.equal(document.querySelector('.omnimux-bulk-modal'), null)
+    assert.ok(draft.includes('智能发光降噪耳机快速开箱测评'))
     assert.equal(writes, 1)
 
     // 3. 点击营销洞察卡片打开模态框，验证中文 Prompt 预填
@@ -370,6 +376,111 @@ test('recreate viral ads modal allows mode selection, handles file selection and
     assert.ok(draft.includes('重现结构'))
     assert.ok(draft.includes('替换为轻奢女装产品展示'))
     assert.ok(draft.includes('dress-ref-1.jpg'))
+    assert.equal(writes, 1)
+  } finally {
+    await act(async () => root.unmount())
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+test('bulk create ads modal allows brief, references, ratio, duration, stepper and submits prompt', async () => {
+  const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>', { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  let draft = ''
+  let writes = 0
+  const workbenchSnapshot = { sessionId: 'A', state: { panelOpen: false } }
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
+  const props = (localeMap = guideZh) => ({
+    sessionId: 'A', useSession: s => s({ blank: true }), useConversation: s => s({ activeTargets: new Set() }),
+    useInput: s => s({ draft, phase: 'plain' }), inputActions: { setDraft(v) { draft = v; writes++ } },
+    getCurrentSessionId: () => 'A', store, workbench, t: key => localeMap[key] || key,
+  })
+  const render = (localeMap = guideZh) => act(async () => root.render(React.createElement(SessionGuide, props(localeMap))))
+  const click = async sel => act(async () => document.querySelector(sel).click())
+
+  try {
+    await render(guideZh)
+    // 1. 点击卡片打开批量创建广告模态框
+    await click('[data-popular-starter-id="bulk-create-ads"]')
+    await render(guideZh)
+    const modal = document.querySelector('.omnimux-bulk-modal')
+    assert.ok(modal, 'bulk create ads modal should open')
+
+    // 2. 验证右上角外侧关闭按钮并测试点击关闭
+    const closeBtn = document.querySelector('.omnimux-split-modal-close')
+    assert.ok(closeBtn)
+    await click('.omnimux-split-modal-close')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-bulk-modal'), null)
+
+    // 3. 再次打开
+    await click('[data-popular-starter-id="bulk-create-ads"]')
+    await render(guideZh)
+
+    // 4. 扇形轮播切换
+    await click('.omnimux-bulk-nav-next')
+    await render(guideZh)
+
+    // 5. 空简报提交应被阻断
+    await click('.omnimux-bulk-submit-btn')
+    await render(guideZh)
+    assert.ok(document.querySelector('.omnimux-bulk-error-msg'))
+    assert.equal(writes, 0)
+
+    // 6. 填写创意简报
+    const textarea = document.querySelector('.omnimux-bulk-textarea')
+    assert.ok(textarea)
+    await act(async () => {
+      const propKey = Object.keys(textarea).find(k => k.startsWith('__reactProps$'))
+      if (propKey && textarea[propKey]?.onChange) {
+        textarea[propKey].onChange({ target: { value: '智能温感保温杯，突出长效锁温与极简外观' } })
+      }
+    })
+    await render(guideZh)
+
+    // 7. 模拟添加参考素材
+    const fileInput = document.querySelector('input[type="file"]')
+    assert.ok(fileInput)
+    const fakeFile = new dom.window.File(['ref'], 'cup-spec.png', { type: 'image/png' })
+    await act(async () => {
+      const propKey = Object.keys(fileInput).find(k => k.startsWith('__reactProps$'))
+      if (propKey && fileInput[propKey]?.onChange) {
+        fileInput[propKey].onChange({ target: { files: [fakeFile], value: '' } })
+      }
+    })
+    await render(guideZh)
+    assert.equal(document.querySelectorAll('.omnimux-bulk-ref-pill').length, 1)
+
+    // 8. 切换画幅比例为 16:9
+    const ratioBtns = document.querySelectorAll('.omnimux-bulk-ratio-btn')
+    assert.equal(ratioBtns.length, 5)
+    await click('.omnimux-bulk-ratio-btn:nth-child(1)')
+    await render(guideZh)
+
+    // 9. 操作步进器增加视频生成数量至 5
+    const stepperPlus = document.querySelectorAll('.omnimux-bulk-stepper-btn')[1]
+    assert.ok(stepperPlus)
+    await click('.omnimux-bulk-stepper-btn:nth-child(3)')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-bulk-stepper-value').textContent, '5')
+
+    // 10. 点击生成批量创意方案
+    await click('.omnimux-bulk-submit-btn')
+    await render(guideZh)
+    assert.equal(document.querySelector('.omnimux-bulk-modal'), null, 'modal should close')
+    assert.ok(draft.includes('智能温感保温杯'))
+    assert.ok(draft.includes('16:9'))
+    assert.ok(draft.includes('5 条独立创意变体'))
+    assert.ok(draft.includes('cup-spec.png'))
     assert.equal(writes, 1)
   } finally {
     await act(async () => root.unmount())

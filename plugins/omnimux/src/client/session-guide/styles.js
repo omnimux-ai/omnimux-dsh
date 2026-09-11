@@ -1404,6 +1404,487 @@ export const GUIDE_CSS = `
   transform: translateY(-1px);
 }
 
+/* ==================== 批量创建广告（Bulk Create Ads）模态框 ==================== */
+.omnimux-bulk-left-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 10px 0;
+}
+.omnimux-bulk-fan-stage {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-bulk-cards-fan {
+  position: relative;
+  width: 220px;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-bulk-fan-slot {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: all 260ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+.omnimux-bulk-fan-left {
+  transform: translateX(-46px) rotate(-7deg) scale(0.88);
+  z-index: 1;
+  opacity: 0.65;
+  filter: brightness(0.72);
+}
+.omnimux-bulk-fan-center {
+  transform: translateX(0) rotate(0deg) scale(1.02);
+  z-index: 3;
+  opacity: 1;
+  filter: none;
+}
+.omnimux-bulk-fan-right {
+  transform: translateX(46px) rotate(7deg) scale(0.88);
+  z-index: 1;
+  opacity: 0.65;
+  filter: brightness(0.72);
+}
+.omnimux-bulk-fan-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  box-shadow: 0 16px 40px var(--dsw-alias-bg-base);
+  position: relative;
+  box-sizing: border-box;
+}
+.omnimux-bulk-sample-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  border: 1px solid var(--dsw-alias-border-l1);
+  letter-spacing: 0.6px;
+}
+.omnimux-bulk-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.omnimux-bulk-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+.omnimux-bulk-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 140ms ease;
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-base);
+}
+.omnimux-bulk-nav-prev {
+  left: 6px;
+}
+.omnimux-bulk-nav-next {
+  right: 6px;
+}
+.omnimux-bulk-nav-btn:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  transform: translateY(-50%) scale(1.08);
+}
+.omnimux-bulk-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+.omnimux-bulk-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-border-l2);
+  transition: all 160ms ease;
+}
+.omnimux-bulk-dot.active {
+  background: var(--dsw-alias-label-primary);
+  width: 16px;
+  border-radius: 3px;
+}
+
+/* 右栏表单流 */
+.omnimux-bulk-form-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.omnimux-bulk-field-group {
+  display: flex;
+  flex-direction: column;
+}
+.omnimux-bulk-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-bulk-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.omnimux-bulk-icon-prefix {
+  display: flex;
+  align-items: center;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-bulk-optional-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-bulk-textarea {
+  width: 100%;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+  margin-top: 8px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.omnimux-bulk-textarea:focus {
+  border-color: var(--dsw-alias-brand-primary);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary);
+}
+.omnimux-bulk-textarea::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 上传卡片与素材列表 */
+.omnimux-bulk-upload-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-1);
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.omnimux-bulk-upload-dropzone:hover {
+  border-color: var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-bulk-upload-add-btn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-bulk-upload-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.omnimux-bulk-upload-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-bulk-upload-sub {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-bulk-ref-limit-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  margin-top: 6px;
+}
+.omnimux-bulk-ref-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.omnimux-bulk-ref-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  max-width: 240px;
+}
+.omnimux-bulk-ref-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.omnimux-bulk-ref-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-bulk-ref-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.omnimux-bulk-ref-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omnimux-bulk-ref-size {
+  font-size: 10px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-bulk-ref-del-btn {
+  background: transparent;
+  border: 0;
+  padding: 2px;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 120ms ease;
+}
+.omnimux-bulk-ref-del-btn:hover {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* 画幅比例网格 */
+.omnimux-bulk-ratios-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.omnimux-bulk-ratio-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.omnimux-bulk-ratio-btn:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-bulk-ratio-btn.active {
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1.5px solid var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--dsw-alias-bg-base);
+}
+.omnimux-bulk-ratio-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnimux-bulk-ratio-text {
+  font-size: 12px;
+}
+
+/* 时长滑块 */
+.omnimux-bulk-duration-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omnimux-bulk-duration-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l1);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-bulk-slider-box {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+.omnimux-bulk-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-bg-layer-2);
+  accent-color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+  margin: 0;
+}
+.omnimux-bulk-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  margin-top: 6px;
+}
+
+/* 步进计数器 */
+.omnimux-bulk-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.omnimux-bulk-stepper-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.omnimux-bulk-stepper-desc {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  margin: 0;
+}
+.omnimux-bulk-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  padding: 2px;
+}
+.omnimux-bulk-stepper-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 120ms ease;
+}
+.omnimux-bulk-stepper-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-bg-layer-3);
+}
+.omnimux-bulk-stepper-btn:disabled {
+  color: var(--dsw-alias-label-tertiary);
+  cursor: not-allowed;
+}
+.omnimux-bulk-stepper-value {
+  min-width: 32px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* 底部操作栏 */
+.omnimux-bulk-footer-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.omnimux-bulk-submit-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--dsw-alias-brand-primary) !important;
+  color: var(--dsw-alias-button-primary-text) !important;
+  font-size: 15px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  transition: opacity 140ms ease, transform 120ms ease;
+  box-shadow: 0 4px 16px var(--dsw-alias-interactive-bg-active) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.omnimux-bulk-submit-btn:hover {
+  opacity: 0.94;
+  transform: translateY(-1px);
+}
+.omnimux-bulk-error-msg {
+  font-size: 13px;
+  color: var(--dsw-alias-state-error-primary);
+  font-weight: 500;
+}
+
 @keyframes omnimuxFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
