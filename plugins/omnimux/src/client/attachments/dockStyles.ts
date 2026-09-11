@@ -91,6 +91,77 @@ export const DOCK_STYLES = `
 [data-composer-chip="video"] svg {
   display: none !important;
 }
+::highlight(omx-prompt-slot) {
+  background-color: rgba(121, 97, 242, 0.22) !important; /* exempt-ui03: 极光紫高亮底色 */
+  color: #c4b5fd !important; /* exempt-ui03: 浅亮紫文字 */
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.45) !important; /* exempt-ui03: 极光紫微光晕 */
+  text-decoration: underline wavy rgba(168, 85, 247, 0.7) !important; /* exempt-ui03: 紫色波浪线 */
+}
+.omx-prompt-slots-dock {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 4px 0 6px 0 !important;
+  box-sizing: border-box !important;
+}
+.omx-prompt-slots-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #a78bfa !important; /* exempt-ui03: 极光紫标签文字 */
+  margin-right: 2px !important;
+  user-select: none !important;
+}
+.omx-prompt-slot-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  height: 24px !important;
+  box-sizing: border-box !important;
+  background: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 极光紫半透底色 */
+  border: 1px dashed rgba(140, 111, 247, 0.55) !important; /* exempt-ui03: 极光紫虚线描边 */
+  color: #c4b5fd !important; /* exempt-ui03: 浅亮紫文字 */
+  box-shadow: 0 0 0 1px rgba(121, 97, 242, 0.2) !important; /* exempt-ui03: 极光紫微光晕 */
+  border-radius: 9999px !important;
+  padding: 0 10px !important;
+  font: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+}
+.omx-prompt-slot-chip:hover {
+  background: rgba(121, 97, 242, 0.28) !important; /* exempt-ui03: 悬浮紫色背景 */
+  border-color: #a78bfa !important; /* exempt-ui03: 悬浮紫色描边 */
+  border-style: solid !important;
+  color: #ffffff !important; /* exempt-ui03: 悬浮高亮白色文字 */
+  transform: translateY(-0.5px) !important;
+  box-shadow: 0 0 0 1px rgba(140, 111, 247, 0.4), 0 2px 8px rgba(121, 97, 242, 0.3) !important; /* exempt-ui03: 悬浮紫色光晕 */
+}
+.omx-prompt-slot-chip.is-active {
+  background: rgba(121, 97, 242, 0.36) !important; /* exempt-ui03: 激活紫色背景 */
+  border-style: solid !important;
+  border-color: #c084fc !important; /* exempt-ui03: 激活紫色描边 */
+  color: #ffffff !important; /* exempt-ui03: 激活白色文字 */
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5), 0 0 10px rgba(140, 111, 247, 0.4) !important; /* exempt-ui03: 激活紫色光晕 */
+}
+.omx-prompt-slot-chip-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 11px !important;
+  opacity: 0.85 !important;
+}
+.omx-prompt-slot-chip-text {
+  white-space: nowrap !important;
+  max-width: 220px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
 .omx-attachment-tray {
   box-sizing: border-box;
   display: flex;

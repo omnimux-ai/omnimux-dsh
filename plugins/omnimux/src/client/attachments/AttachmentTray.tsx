@@ -3,6 +3,8 @@ import { AttachmentCard } from './AttachmentCard.tsx';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
 import { ComposerPresetsChips } from '../presets/index.js';
+import { PromptSlotChips } from './PromptSlotChips.tsx';
+import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
 import { ensureStylesInjected } from './trayStyles.ts';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
 import { useDragDrop } from './useDragDrop.ts';
@@ -147,6 +149,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const savedRangeRef = useRef<Range | null>(null);
 
   usePasteVideoInterceptor();
+  const { slots, activeSlotIndex, selectSlot } = usePromptSlotEnhancer();
   const dragActive = useDragDrop({
     canAcceptDrop,
     onAddImages: props.onAddImages,
@@ -247,6 +250,11 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         />
       )}
       <ComposerPresetsChips sessionId={currentSessionId} />
+      <PromptSlotChips
+        slots={slots}
+        activeSlotIndex={activeSlotIndex}
+        onSelectSlot={selectSlot}
+      />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
           {SHOW_MANUAL_LINK_BUTTON && (
