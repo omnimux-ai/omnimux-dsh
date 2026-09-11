@@ -316,7 +316,7 @@ describe('video breakdown & shots analysis engine', () => {
   })
 
   it('mounts webServer video stream route using standard DSH webServer.register contract', async () => {
-    let registeredRoute = null
+    const registeredRoutes = []
     const toolHarness = createTestToolContext()
 
     const mockCtx = {
@@ -329,7 +329,7 @@ describe('video breakdown & shots analysis engine', () => {
           callback({
             webServer: {
               register: (routeSpec) => {
-                registeredRoute = routeSpec
+                registeredRoutes.push(routeSpec)
                 return () => {}
               },
             },
@@ -340,10 +340,18 @@ describe('video breakdown & shots analysis engine', () => {
 
     apply(mockCtx)
 
-    assert.ok(registeredRoute)
-    assert.equal(registeredRoute.kind, 'prefix')
-    assert.equal(registeredRoute.path, '/omnimux/video-preview/stream')
-    assert.equal(typeof registeredRoute.handler, 'function')
+    const streamRoute = registeredRoutes.find((r) => r.path === '/omnimux/video-preview/stream')
+    const translateRoute = registeredRoutes.find((r) => r.path === '/omnimux/video-preview/translate')
+
+    assert.ok(streamRoute)
+    assert.equal(streamRoute.kind, 'prefix')
+    assert.equal(streamRoute.path, '/omnimux/video-preview/stream')
+    assert.equal(typeof streamRoute.handler, 'function')
+
+    assert.ok(translateRoute)
+    assert.equal(translateRoute.kind, 'prefix')
+    assert.equal(translateRoute.path, '/omnimux/video-preview/translate')
+    assert.equal(typeof translateRoute.handler, 'function')
 
     // Verify handler responds to mock stream request
     const dummyVideoPath = join(tmpdir(), `test-stream-${Date.now()}.mp4`)
@@ -374,7 +382,7 @@ describe('video breakdown & shots analysis engine', () => {
       on: () => {},
     }
 
-    await registeredRoute.handler(mockReq, mockRes)
+    await streamRoute.handler(mockReq, mockRes)
     await Promise.race([finishPromise, new Promise((r) => setTimeout(r, 200))])
 
     assert.equal(responseStatusCode, 206)
@@ -862,5 +870,45 @@ Hook
     // Must have 8 real shots and 0 phantom rows
     assert.equal(shots.length, 8)
     assert.ok(!shots.some((s) => s.title === '分镜标题' || s.stage === '所属阶段'))
+  })
+
+  it('verifies 18 translation languages list matching Image 3 and speech translation engine', async () => {
+    const { TRANSLATE_LANGUAGES, translateBreakdownShots, parseTranslationResponse } = await import('../src/translate.js')
+
+    assert.equal(TRANSLATE_LANGUAGES.length, 18)
+    const codes = TRANSLATE_LANGUAGES.map(l => l.code)
+    assert.ok(codes.includes('original'))
+    assert.ok(codes.includes('en'))
+    assert.ok(codes.includes('ja'))
+    assert.ok(codes.includes('ko'))
+    assert.ok(codes.includes('de'))
+    assert.ok(codes.includes('es'))
+    assert.ok(codes.includes('fr'))
+    assert.ok(codes.includes('it'))
+    assert.ok(codes.includes('ru'))
+    assert.ok(codes.includes('zh-CN'))
+    assert.ok(codes.includes('zh-TW'))
+
+    // Test parseTranslationResponse
+    const jsonStr = '{"translations":{"shot_1":"Привет, мир","shot_2":"Второй кадр"}}'
+    const parsed = parseTranslationResponse(jsonStr)
+    assert.equal(parsed.shot_1, 'Привет, мир')
+    assert.equal(parsed.shot_2, 'Второй кадр')
+
+    // Test translateBreakdownShots with fallback offline mode
+    const shots = [
+      { id: 'shot_1', speech: 'Where did she go?' },
+      { id: 'shot_2', speech: 'I would never have discovered this product.' },
+    ]
+
+    const originalRes = await translateBreakdownShots({ shots, targetLang: 'original' })
+    assert.equal(originalRes.targetLang, 'original')
+    assert.deepEqual(originalRes.translations, {})
+
+    const ruRes = await translateBreakdownShots({ shots, targetLang: 'ru' })
+    assert.equal(ruRes.success, true)
+    assert.equal(ruRes.targetLang, 'ru')
+    assert.ok(ruRes.translations.shot_1)
+    assert.ok(ruRes.translations.shot_2)
   })
 })
