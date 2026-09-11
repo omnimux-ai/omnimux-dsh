@@ -853,8 +853,42 @@ export const GUIDE_CSS = `
 }
 .omnimux-u2v-slider {
   width: 100%;
-  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-bg-layer-2);
   accent-color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+  outline: none;
+  margin: 0;
+  transition: opacity 120ms ease;
+}
+.omnimux-u2v-slider.is-auto {
+  opacity: 0.75;
+}
+.omnimux-u2v-slider:hover,
+.omnimux-u2v-slider:active {
+  opacity: 1;
+}
+.omnimux-u2v-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-u2v-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-primary);
+  border: 2px solid var(--dsw-alias-brand-primary);
+  cursor: pointer;
+  margin-top: -5px;
+  box-shadow: 0 1px 4px var(--dsw-alias-bg-base);
+  transition: transform 120ms ease;
+}
+.omnimux-u2v-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
 }
 .omnimux-u2v-duration-label {
   font-size: 12px;
