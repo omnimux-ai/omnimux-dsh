@@ -752,6 +752,107 @@ export const VIDEO_BREAKDOWN_CSS = `
   border-color: var(--dsw-alias-brand-accent);
   box-shadow: 0 0 0 1px var(--dsw-alias-brand-accent);
 }
+
+/* ==========================================================================
+   Figure 3: Rich Social Media Video Link Card (Contract: spec-composer-video-link-token)
+   ========================================================================== */
+.omx-rich-video-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  padding: 10px 14px 10px 10px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+  box-sizing: border-box;
+  max-width: 620px;
+}
+.omx-rich-video-card:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-brand-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--dsw-alias-shadow-overlay);
+}
+
+.omx-rich-card-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omx-rich-card-thumb svg,
+.omx-rich-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.omx-rich-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.omx-rich-card-platform {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omx-tiktok-badge-icon {
+  width: 16px;
+  height: 16px;
+  background: var(--dsw-alias-bg-base);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.omx-rich-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+.omx-rich-card-author {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.omx-rich-card-action-icon {
+  color: var(--dsw-alias-label-tertiary);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.omx-rich-video-card:hover .omx-rich-card-action-icon {
+  color: var(--dsw-alias-label-primary);
+}
 `
 
 export function ensureBreakdownStyles() {

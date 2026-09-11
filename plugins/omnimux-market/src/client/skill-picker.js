@@ -327,6 +327,12 @@
       const useInputHook = props && typeof props.useInput === "function" ? props.useInput : null;
       const draft = useInputHook ? (useInputHook((s) => (s && s.draft) || "") || "") : "";
       const sessionId = props && props.sessionId;
+      const [activeSkill, setActiveSkill] = useState(() => {
+        if (typeof window !== "undefined" && window.__omnimuxActiveSkill) {
+          return window.__omnimuxActiveSkill;
+        }
+        return null;
+      });
 
       const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
       const [currentPreset, setCurrentPreset] = useState(() => {
@@ -376,12 +382,44 @@
 
       const close = useCallback(() => setOpen(false), []);
 
+      const clearActiveSkill = useCallback(() => {
+        const current = activeSkill;
+        setActiveSkill(null);
+        if (typeof window !== "undefined") {
+          window.__omnimuxActiveSkill = null;
+          try {
+            window.dispatchEvent(new CustomEvent("omnimux:skill:changed", {
+              detail: { skill: null, category: "" },
+            }));
+          } catch {}
+        }
+        if (current && inputActions && typeof inputActions.setDraft === "function") {
+          const gesture = SkillShelf.skillGesture(current);
+          if (gesture && draft && draft.includes(gesture.trim())) {
+            const next = draft.replace(gesture.trim(), "").trim();
+            inputActions.setDraft(next);
+          }
+        }
+      }, [activeSkill, draft, inputActions]);
+
       const applyItem = useCallback((item) => {
         const gesture = SkillShelf.skillGesture(item);
         if (!gesture) return false;
         if (!inputActions || typeof inputActions.setDraft !== "function") return false;
         inputActions.setDraft(SkillShelf.appendSkillGesture(draft, gesture));
         focusComposerCard();
+        setActiveSkill(item);
+        if (typeof window !== "undefined") {
+          window.__omnimuxActiveSkill = item;
+          try {
+            window.dispatchEvent(new CustomEvent("omnimux:skill:changed", {
+              detail: {
+                skill: item,
+                category: item.category || (item.categories && item.categories[0]) || "",
+              },
+            }));
+          } catch {}
+        }
         const payload = SkillShelf.installPayload(item);
         if (payload) {
           api("install", payload).catch(() => {});
@@ -418,6 +456,34 @@
             renderPuzzleIcon(16),
             h("span", { className: "sh-picker-trigger-label" }, tr("picker.title")),
           ),
+          activeSkill ? h("div", {
+            className: "sh-active-skill-chip",
+            title: activeSkill.description || activeSkill.summary || "",
+          },
+            h("svg", {
+              width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2,
+              style: { flexShrink: 0 },
+            },
+              h("line", { x1: 3, y1: 6, x2: 21, y2: 6 }),
+              h("line", { x1: 3, y1: 12, x2: 15, y2: 12 }),
+              h("line", { x1: 3, y1: 18, x2: 9, y2: 18 }),
+            ),
+            h("span", null, activeSkill.name || activeSkill.title || activeSkill.slug),
+            h("button", {
+              type: "button",
+              className: "sh-chip-close",
+              title: "取消选择",
+              onClick: (e) => {
+                e.stopPropagation();
+                clearActiveSkill();
+              },
+            },
+              h("svg", { width: 10, height: 10, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5 },
+                h("line", { x1: 18, y1: 6, x2: 6, y2: 18 }),
+                h("line", { x1: 6, y1: 18, x2: 18, y2: 18 }),
+              ),
+            ),
+          ) : null,
           h(SkillPickerPanel, {
             open,
             anchorRef: btnRef,

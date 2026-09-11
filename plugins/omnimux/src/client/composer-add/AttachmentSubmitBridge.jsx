@@ -36,8 +36,24 @@ export function AttachmentSubmitBridge({ sessionId, useInput, inputActions, atta
       const { input: value, inputActions: actions } = live.current
       const attachments = attachmentStore.getSnapshot(sessionId)
       const previous = attachmentDrafts.get(sessionId) || ''
-      if (!value.draft.trim() && !attachments.length) return true
-      const draft = value.draft
+      let draft = value.draft
+
+      // Reconcile video link token to [视频](url) markdown syntax
+      const videoToken = typeof window !== 'undefined' ? window.__omnimuxVideoToken : null
+      if (videoToken && typeof videoToken.url === 'string' && videoToken.url.trim()) {
+        const url = videoToken.url.trim()
+        if (!draft.includes(url)) {
+          const videoBlock = `[视频](${url})`
+          draft = draft.trim() ? `${draft.trim()}\n\n${videoBlock}` : videoBlock
+          try {
+            actions?.setDraft?.(draft)
+            window.__omnimuxVideoToken = null
+            window.dispatchEvent(new CustomEvent('omnimux:video-token:cleared'))
+          } catch {}
+        }
+      }
+
+      if (!draft.trim() && !attachments.length) return true
       const result = reconcileAttachmentDraft(draft, previous, attachments)
       const attachmentsChanged = result.status === 'synced'
       if (result.status === 'ready' && result.draft !== value.draft) result.status = 'synced'

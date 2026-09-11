@@ -13,6 +13,110 @@ const BASE_CSS = `
   padding: 6px 12px 2px 12px;
   margin: 0;
 }
+.omx-video-token-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 6px 0;
+  box-sizing: border-box;
+}
+.omx-btn-insert-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.omx-btn-insert-link:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  transform: translateY(-0.5px);
+}
+.omx-video-token-capsule {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 32px;
+  max-width: 320px;
+  padding: 0 10px 0 12px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-state-business-tertiary);
+  border: 1px solid var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+  margin: 2px 0 6px 0;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-shadow: var(--dsw-alias-shadow-overlay);
+}
+.omx-video-token-capsule:focus-within {
+  border-color: var(--dsw-alias-brand-primary);
+  box-shadow: var(--dsw-alias-shadow-overlay);
+}
+.omx-video-token-prefix {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-brand-primary);
+  flex-shrink: 0;
+}
+.omx-video-token-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--dsw-alias-border-l3);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+.omx-video-token-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--dsw-alias-brand-primary);
+  font-family: inherit;
+  font-size: 13px;
+  width: 140px;
+  min-width: 60px;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omx-video-token-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+.omx-video-token-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+.omx-video-token-remove:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
 .omx-attachment-tray {
   box-sizing: border-box;
   display: flex;
@@ -317,6 +421,13 @@ const MediaPlaceholderIcon = () => (
   </svg>
 );
 
+const LinkIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
 interface NativeComposerAttachment {
   id: string;
   kind?: string;
@@ -368,6 +479,35 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const dragDepth = useRef(0);
+
+  const [videoSkillActive, setVideoSkillActive] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && (window as any).__omnimuxActiveSkill) {
+      const cat = (window as any).__omnimuxActiveSkill.category || '';
+      return cat === '创作视频' || cat === 'video-creation';
+    }
+    return false;
+  });
+  const [hasVideoToken, setHasVideoToken] = useState<boolean>(false);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onSkillChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ skill?: unknown; category?: string }>;
+      const cat = customEvent.detail?.category || '';
+      setVideoSkillActive(cat === '创作视频' || cat === 'video-creation');
+    };
+    const onTokenClear = () => {
+      setHasVideoToken(false);
+      setVideoUrl('');
+    };
+    window.addEventListener('omnimux:skill:changed', onSkillChange);
+    window.addEventListener('omnimux:video-token:cleared', onTokenClear);
+    return () => {
+      window.removeEventListener('omnimux:skill:changed', onSkillChange);
+      window.removeEventListener('omnimux:video-token:cleared', onTokenClear);
+    };
+  }, []);
 
   useEffect(() => {
     ensureStylesInjected();
@@ -491,7 +631,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   const hasOmnimux = Boolean(omnimuxAttachments && omnimuxAttachments.length > 0);
   const hasNative = nativeAttachments.length > 0;
-  if (!hasOmnimux && !hasNative && !dragActive && !preview) {
+  const hasVideoContent = videoSkillActive || hasVideoToken;
+  if (!hasOmnimux && !hasNative && !dragActive && !preview && !hasVideoContent) {
     return null;
   }
 
@@ -521,9 +662,62 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         </div>,
         document.body,
       )}
-      {(hasOmnimux || hasNative) && (
+      {(hasOmnimux || hasNative || hasVideoContent) && (
         <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
-          <div className="omx-attachment-tray" role="list" aria-label={railLabel}>
+          {videoSkillActive && (
+            <div className="omx-video-token-action-row">
+              <button /* exempt-ui01: 视频链接插入按钮 */
+                type="button"
+                className="omx-btn-insert-link"
+                onClick={() => setHasVideoToken(true)}
+                title="点击在输入框插入视频链接 Token 组件"
+              >
+                <LinkIcon size={14} />
+                <span>视频链接</span>
+              </button>
+            </div>
+          )}
+          {hasVideoToken && (
+            <div className="omx-video-token-capsule" title="单击进行链接编辑、修改与删除">
+              <div className="omx-video-token-prefix">
+                <LinkIcon size={13} />
+                <span>视频</span>
+              </div>
+              <div className="omx-video-token-divider" />
+              <input
+                type="text"
+                className="omx-video-token-input"
+                placeholder="粘贴 TikTok 视频链接"
+                value={videoUrl}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setVideoUrl(val);
+                  if (typeof window !== 'undefined') {
+                    (window as any).__omnimuxVideoToken = {
+                      url: val,
+                      label: '视频',
+                    };
+                  }
+                }}
+              />
+              <button /* exempt-ui01: 视频 Token 删除按钮 */
+                type="button"
+                className="omx-video-token-remove"
+                title="删除视频链接 Token"
+                onClick={() => {
+                  setHasVideoToken(false);
+                  setVideoUrl('');
+                  if (typeof window !== 'undefined') {
+                    (window as any).__omnimuxVideoToken = null;
+                  }
+                }}
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          )}
+          {(hasOmnimux || hasNative) && (
+            <div className="omx-attachment-tray" role="list" aria-label={railLabel}>
             {omnimuxAttachments.map((att) => (
               <AttachmentCard
                 key={att.id}
@@ -570,6 +764,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               );
             })}
           </div>
+          )}
         </div>
       )}
       {preview && typeof document !== 'undefined' && document.body && createPortal(
