@@ -206,6 +206,17 @@ export const guideZh = {
   "guide.url-to-video.submit-btn": "开始制作 →",
   "guide.url-to-video.url-required": "请先输入产品页面网址",
   "guide.url-to-video.applied": "已生成视频广告制作任务草稿",
+
+  // 9 种视觉风格字典
+  "guide.url-to-video.style.clean-studio": "清新影棚",
+  "guide.url-to-video.style.cinematic-luxury": "电影感奢华",
+  "guide.url-to-video.style.minimalist-premium": "极简高级",
+  "guide.url-to-video.style.natural-lifestyle": "自然生活",
+  "guide.url-to-video.style.bold-colorful": "鲜亮大胆",
+  "guide.url-to-video.style.futuristic-tech": "未来科技",
+  "guide.url-to-video.style.ugc-style": "真实口播",
+  "guide.url-to-video.style.unboxing": "开箱测评",
+  "guide.url-to-video.style.street-style": "街头潮流",
 }
 
 export const guideEn = {
@@ -287,4 +298,15 @@ export const guideEn = {
   "guide.url-to-video.submit-btn": "Start creating →",
   "guide.url-to-video.url-required": "Please enter a product page URL first",
   "guide.url-to-video.applied": "Video ad draft applied to conversation input",
+
+  // 9 Visual Styles (English)
+  "guide.url-to-video.style.clean-studio": "Clean studio",
+  "guide.url-to-video.style.cinematic-luxury": "Cinematic luxury",
+  "guide.url-to-video.style.minimalist-premium": "Minimalist premium",
+  "guide.url-to-video.style.natural-lifestyle": "Natural lifestyle",
+  "guide.url-to-video.style.bold-colorful": "Bold & colorful",
+  "guide.url-to-video.style.futuristic-tech": "Futuristic tech",
+  "guide.url-to-video.style.ugc-style": "UGC style",
+  "guide.url-to-video.style.unboxing": "Unboxing",
+  "guide.url-to-video.style.street-style": "Street style",
 }
