@@ -152,6 +152,46 @@ body[data-ds-dark-theme] {
   outline-offset: 1px;
 }
 
+/* ── 发送/停止按钮 黑白主题高对比反色重构（根除官方写死白字导致的白底白字失真） ── */
+/* 浅色模式 */
+[class*="InputBar"] [class*="trailing"] button[class*="primary"],
+[data-composer-card] [class*="trailing"] button[class*="primary"] {
+  background: var(--dsw-specific-selector, rgba(0, 0, 0, 0.06)) !important;
+  color: var(--dsw-alias-label-secondary, #71717a) !important;
+  opacity: 1 !important;
+  transition: background-color 150ms ease, color 150ms ease !important;
+}
+
+[class*="InputBar"] [class*="trailing"] button[class*="primary"]:not(:disabled),
+[data-composer-card] [class*="trailing"] button[class*="primary"]:not(:disabled) {
+  background: var(--dsw-alias-label-primary, #000000) !important;
+  color: var(--dsw-alias-bg-base, #ffffff) !important;
+}
+
+[class*="InputBar"] [class*="trailing"] button[class*="primary"]:not(:disabled):hover,
+[data-composer-card] [class*="trailing"] button[class*="primary"]:not(:disabled):hover {
+  background: var(--dsw-alias-label-secondary, #27272a) !important;
+}
+
+/* 深色模式 */
+body[data-ds-dark-theme] [class*="InputBar"] [class*="trailing"] button[class*="primary"],
+body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*="primary"] {
+  background: var(--dsw-specific-selector, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--dsw-alias-label-secondary, #a1a1aa) !important;
+  opacity: 1 !important;
+}
+
+body[data-ds-dark-theme] [class*="InputBar"] [class*="trailing"] button[class*="primary"]:not(:disabled),
+body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*="primary"]:not(:disabled) {
+  background: var(--dsw-alias-label-primary, #ffffff) !important;
+  color: var(--dsw-alias-bg-base, #000000) !important;
+}
+
+body[data-ds-dark-theme] [class*="InputBar"] [class*="trailing"] button[class*="primary"]:not(:disabled):hover,
+body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*="primary"]:not(:disabled):hover {
+  background: var(--dsw-alias-label-secondary, #e4e4e7) !important;
+}
+
 /* Accounts and Inspiration already inset their entire content root by 20px. */
 :is(.omnimux-assets-stage, .omnimux-products-stage, .omnimux-publish-stage,
     .omnimux-analytics-stage, .omnimux-workflow-library-page)
