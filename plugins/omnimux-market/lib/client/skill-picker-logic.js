@@ -205,7 +205,19 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
         if (presetBinding && Array.isArray(presetBinding.skills)) {
             const cat = String(item.category || item.categoryLabel || '').trim();
             const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-            return cat === category || tags.includes(category);
+            if (cat === category || tags.includes(category))
+                return true;
+            if (category === '创作视频') {
+                const videoDomains = ['短剧漫剧', '专业影视', '动画'];
+                if (tags.some(t => videoDomains.includes(t)) || videoDomains.includes(cat))
+                    return true;
+                if (tags.some(t => ['视频', '多模态', '二创', '分镜', '运镜', '剪辑', 'AI视频'].includes(t)))
+                    return true;
+                const text = [item.name, item.title, item.slug, item.skill, item.description, item.summary].join(' ');
+                if (/(视频|短剧|分镜|运镜|剪映|宣传片|成片|TVC|MV|FPV|提示词专家)/i.test(text) && !/(会议|总结网页|微信|企业微信)/i.test(text))
+                    return true;
+            }
+            return false;
         }
         return matchesDomainTag(item, category);
     };
@@ -216,7 +228,23 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
     const hasQuery = Boolean(String(query).trim());
     const homeIds = resolveHomeRecommendationIds(config, customOrder);
     const ids = category ? config.featuredSkills : homeIds;
-    const featured = hasQuery ? [] : resolveSkillRecommendations(ids || [], entries)
+    const isPresetCategory = Boolean(presetBinding && category && presetBinding.categories?.some(c => c.id === category));
+    const presetFeatured = (!hasQuery && isPresetCategory && Array.isArray(presetBinding.skills))
+        ? presetBinding.skills
+            .filter(item => item.recommended === true)
+            .filter(item => {
+            const cat = String(item.category || item.categoryLabel || '').trim();
+            const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+            return cat === category || tags.includes(category);
+        })
+            .map(item => {
+            const current = live.get(item.id);
+            const local = installed.get(key(item));
+            return { ...item, ...(current ? { rating: current.rating, installed: current.installed, enabled: current.enabled } : {}),
+                ...(local ? { installed: true, enabled: local.enabled !== false } : {}) };
+        }).filter(available)
+        : [];
+    const baseFeatured = hasQuery ? [] : resolveSkillRecommendations(ids || [], entries)
         .filter(item => category || config.featuredSkills?.includes(item.id))
         .map(item => {
         const current = live.get(item.id);
@@ -225,6 +253,7 @@ export function plazaDiscoverySections(items = [], { category = '', query = '', 
             ...(current ? { rating: current.rating, installed: current.installed, enabled: current.enabled } : {}),
             ...(local ? { installed: true, enabled: local.enabled !== false } : {}) };
     }).filter(matches).filter(available);
+    const featured = isPresetCategory && presetFeatured.length > 0 ? presetFeatured : unique([...presetFeatured, ...baseFeatured]);
     const featuredKeys = new Set(featured.map(key));
     const catalogFeatured = new Set(entries.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.skill));
     const localCards = hasQuery ? [] : entries.filter(item => item.kind === 'skill').map(item => ({

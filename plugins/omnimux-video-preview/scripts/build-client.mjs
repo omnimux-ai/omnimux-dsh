@@ -28,7 +28,7 @@ const result = await esbuild.build({
   alias: {
     'dsh-ui-kit': resolve(root, '../../../../personal/dsh-ui-kit/lib/index.js'),
   },
-  external: ['react', 'react-dom', '@deepseek-ai/*'],
+  external: ['react', 'react-dom', '@deepseek-ai/*', 'node:path', 'node:url'],
   write: false,
 })
 

@@ -31,6 +31,7 @@ import {
   hasPresetSkillBinding,
   resolveActivePreset,
   filterPresetSkills,
+  plazaDiscoverySections,
 } from './skill-picker-logic.js'
 
 describe('skill shelf taxonomy', () => {
@@ -455,5 +456,44 @@ describe('agent preset skill bindings', () => {
     assert.equal(hasPresetSkillBinding('content-creation-team'), true)
     assert.equal(hasPresetSkillBinding('内容创作'), true)
     assert.equal(hasPresetSkillBinding('内容创作专家团'), true)
+  })
+
+  it('Issue #1280: tiktok-agent 创作视频 category features 4 viral video skills with covers and displays MiniMax video skills under other skills', () => {
+    const binding = getPresetSkillBinding('tiktok-agent')
+    assert.ok(binding)
+    const { featured, regular } = plazaDiscoverySections([], {
+      category: '创作视频',
+      presetBinding: binding,
+    })
+
+    // 1. 4 个技能设为精选
+    const featuredNames = featured.map((s) => s.name || s.title)
+    assert.ok(featuredNames.includes('复刻爆款视频'))
+    assert.ok(featuredNames.includes('创作带货视频'))
+    assert.ok(featuredNames.includes('视频拆解'))
+    assert.ok(featuredNames.includes('视频生成'))
+    assert.equal(featured.length, 4)
+
+    // 2. 全部配上封面图
+    for (const item of featured) {
+      assert.ok(item.cover && item.cover.asset, `${item.name} must have cover asset`)
+      assert.ok(item.cover.asset.startsWith('catalog/covers/'), `cover asset path invalid: ${item.cover.asset}`)
+    }
+
+    // 3. 精选项目不重复出现在其他 Skill 中
+    const regularSlugs = new Set(regular.map((s) => s.slug || s.skill || s.id))
+    for (const item of featured) {
+      assert.ok(!regularSlugs.has(item.slug || item.skill || item.id), `${item.name} should not duplicate in regular`)
+    }
+
+    // 4. MiniMax Design 的视频技能在其他 Skill 中完整展示
+    const regularNames = new Set(regular.map((s) => s.name || s.title))
+    assert.ok(regularNames.has('3D动画短片'))
+    assert.ok(regularNames.has('电影运动语言'))
+    assert.ok(regularNames.has('剪映导出'))
+    assert.ok(regularNames.has('H3 提示词专家'))
+    assert.ok(regularNames.has('2D动画半解说短剧'))
+    assert.ok(regularNames.has('分镜板'))
+    assert.ok(regular.length >= 80, `MiniMax Design video skills should be populated, got ${regular.length}`)
   })
 })
