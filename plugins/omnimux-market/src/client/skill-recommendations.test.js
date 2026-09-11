@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { test } from 'node:test'
 import { runInNewContext } from 'node:vm'
 import catalog from '../../catalog/index.json' with { type: 'json' }
 import config from '../../catalog/skill-recommendations.json' with { type: 'json' }
 import * as SkillShelf from './skill-picker-logic.js'
 
+const req = createRequire(import.meta.url)
 const entry = (id, extra = {}) => ({ id, kind: 'skill', skill: id, title: id, summary: id, recommended: true, tags: ['动画'], ...extra })
 const entries = [entry('a'), entry('b'), entry('c', { recommended: false }), entry('expert', { kind: 'expert' })]
 const settings = { featuredSkills: ['b', 'a'], homeRecommendations: ['a'] }
@@ -83,6 +85,7 @@ function workshop(initial = {}, response = { items: [] }) {
   let effects = []
   const calls = []
   const render = runInNewContext(`${source}\nSkillPlaza`, {
+    require: req,
     h, SkillShelf, fmt: value => String(value), Button: 'Button', Drawer: 'Drawer', iconSrc: value => value,
     useTr: () => key => key, lookup: key => key,
     useState: initialValue => {

@@ -9,8 +9,8 @@ export const AGENT_PRESET_SKILL_BINDINGS = Object.freeze(presetSkillsMap);
 export function normalizePresetId(presetId) {
     return String(presetId || '').trim().toLowerCase().replace(/_/g, '-');
 }
-export function getPresetSkillBinding(presetId) {
-    if (!presetId)
+export function getPresetSkillBinding(presetId, mode) {
+    if (!presetId && !mode)
         return null;
     const norm = normalizePresetId(presetId);
     const isContentTeam = norm === 'content-creation-team' ||
@@ -21,12 +21,25 @@ export function getPresetSkillBinding(presetId) {
         norm === 'content-creator' ||
         presetId === '内容创作' ||
         presetId === '内容创作专家团';
-    const entry = AGENT_PRESET_SKILL_BINDINGS[presetId] ||
+    const isDrama = mode === 'drama' ||
+        norm === 'drama' ||
+        norm === 'drama-agent' ||
+        norm === 'short-drama' ||
+        norm === 'short-drama-creator' ||
+        presetId === '短剧' ||
+        presetId === '短剧制作人' ||
+        presetId === '短剧专精';
+    const isAgentDefault = mode === 'agent' ||
+        norm === 'agent' ||
+        norm === 'default';
+    const entry = (isDrama ? AGENT_PRESET_SKILL_BINDINGS['drama-agent'] : null) ||
+        AGENT_PRESET_SKILL_BINDINGS[presetId] ||
         AGENT_PRESET_SKILL_BINDINGS[norm] ||
         (norm === 'tiktok-agent' || norm === 'tiktokagent' || norm === 'tiktok' || norm === '全能社媒操盘手' || presetId === '全能社媒操盘手'
             ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent']
             : null) ||
-        (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null);
+        (isContentTeam ? AGENT_PRESET_SKILL_BINDINGS['content-creation-team'] : null) ||
+        (isAgentDefault ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'] : null);
     if (!entry)
         return null;
     if (entry.useDefaultContentCatalog) {

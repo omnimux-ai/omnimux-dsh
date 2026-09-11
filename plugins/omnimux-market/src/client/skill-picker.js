@@ -439,6 +439,11 @@
         SkillShelf.getPresetSkillBinding(activePresetId, composerMode) ||
         SkillShelf.getPresetSkillBinding("tiktok-agent");
 
+      // 如果当前预设没有绑定 skill 则默认不显示 skill 按钮
+      if (!presetBinding) {
+        return null;
+      }
+
       const isMarketingMode = composerMode === "marketing";
 
       const close = useCallback(() => setOpen(false), []);
