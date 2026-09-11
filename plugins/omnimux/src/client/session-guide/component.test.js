@@ -149,39 +149,57 @@ test('popular starters render 4 cards and marketing insight modal flows draft in
     assert.ok(draft.includes('智能发光降噪耳机快速开箱测评'))
     assert.equal(writes, 1)
 
-    // 3. 点击营销洞察卡片打开模态框，验证中文 Prompt 预填
+    // 3. 点击营销洞察卡片打开模态框，验证结构化表单与必填/选填标识
     await click('[data-popular-starter-id="marketing-insight"]')
     await render(guideZh)
     const modal = document.querySelector('.omnimux-insight-modal')
     assert.ok(modal, 'modal should open')
     const items = document.querySelectorAll('[data-insight-id]')
     assert.equal(items.length, 6)
-    const initialTextarea = document.querySelector('.omnimux-insight-textarea')
-    assert.ok(initialTextarea.value.includes('请为[目标市场]中的[产品/品牌]寻找并筛选候选 TikTok 创作者'))
+    
+    // 验证当前选中的 TikTok 创作者场景表单渲染
+    assert.ok(document.querySelector('.omnimux-insight-form-container'))
+    const productField = document.querySelector('[data-insight-field="product"]')
+    assert.ok(productField, 'product input field should be present')
+    const reqTags = document.querySelectorAll('.omnimux-insight-required-tag')
+    assert.ok(reqTags.length >= 1, 'required tags should be rendered')
+    const optTags = document.querySelectorAll('.omnimux-insight-optional-tag')
+    assert.ok(optTags.length >= 1, 'optional tags should be rendered')
 
-    // 4. 切换到第2项（广告ROAS分析），验证中文 Prompt 动态切换
-    await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
+    // 4. 未填必填项直接提交，触发校验提示
+    await click('.omnimux-insight-submit')
     await render(guideZh)
-    const textarea = document.querySelector('.omnimux-insight-textarea')
-    assert.ok(textarea.value.includes('结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]'))
+    assert.ok(document.querySelector('.omnimux-insight-error-banner'), 'validation error banner should be visible')
+    assert.equal(writes, 1, 'no draft write should happen on validation failure')
 
-    // 5. 点击“开始洞察 ->”按钮，提交草稿
+    // 5. 填写必填项并提交
+    await act(async () => {
+      const prodProps = Object.keys(productField).find(k => k.startsWith('__reactProps$'))
+      if (prodProps && productField[prodProps]?.onChange) {
+        productField[prodProps].onChange({ target: { value: '智能骨传导运动耳机' } })
+      }
+      const marketField = document.querySelector('[data-insight-field="market"]')
+      const mktProps = Object.keys(marketField).find(k => k.startsWith('__reactProps$'))
+      if (mktProps && marketField[mktProps]?.onChange) {
+        marketField[mktProps].onChange({ target: { value: '欧美市场' } })
+      }
+    })
     await click('.omnimux-insight-submit')
     await render(guideZh)
     assert.equal(document.querySelector('.omnimux-insight-modal'), null, 'modal should close')
-    assert.ok(draft.includes('结合[归因窗口]和[产品利润率]，按照[目标 ROAS/CPA]'))
+    assert.ok(draft.includes('智能骨传导运动耳机'), 'draft should contain entered product')
+    assert.ok(draft.includes('欧美市场'), 'draft should contain entered market')
     assert.equal(writes, 2)
 
-    // 6. 英文语言环境自适应验证
-    await render(guideEn)
+    // 6. 再次打开并切换到第2项（广告ROAS分析），验证场景表单字段联动切换
     await click('[data-popular-starter-id="marketing-insight"]')
-    await render(guideEn)
-    await click('[data-insight-id="tiktok-creators"]')
-    await render(guideEn)
-    const enTextarea = document.querySelector('.omnimux-insight-textarea')
-    assert.ok(enTextarea.value.includes('Find and shortlist TikTok creators for [product/brand] in [target market]'))
+    await render(guideZh)
+    await click(`[data-insight-id="${items[1].dataset.insightId}"]`)
+    await render(guideZh)
+    const platformField = document.querySelector('[data-insight-field="platform"]')
+    assert.ok(platformField, 'platform input should be present for ads-roas')
     await click('.omnimux-insight-close')
-    await render(guideEn)
+    await render(guideZh)
   } finally {
     await act(async () => root.unmount())
     store.dispose()
