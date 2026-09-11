@@ -489,72 +489,15 @@ export const GUIDE_CSS = `
 }
 
 /* ==================== 视频网址模态框 (URL to Video Modal) ==================== */
-.omnimux-u2v-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: var(--dsw-alias-bg-mask-1);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  box-sizing: border-box;
-  animation: omnimuxFadeIn 160ms ease;
-}
-.omnimux-u2v-modal {
-  position: relative;
-  width: 1040px;
-  max-width: 95vw;
-  height: 680px;
-  max-height: 90vh;
-  background: var(--dsw-alias-bg-elevated);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 16px;
+.omnimux-u2v-overlay { position: fixed; inset: 0; z-index: 99999; }
+.omnimux-u2v-modal { position: relative; }
+.omnimux-u2v-carousel-wrap {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 24px 64px var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-family: inherit;
-  animation: omnimuxScaleUp 180ms ease;
-}
-.omnimux-u2v-header {
-  padding: 24px 32px 16px;
-  text-align: center;
-  flex: none;
-}
-.omnimux-u2v-header h1 {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--dsw-alias-label-primary);
-  margin: 0 0 6px;
-}
-.omnimux-u2v-header p {
-  font-size: 13px;
-  color: var(--dsw-alias-label-secondary);
-  margin: 0 auto;
-  max-width: 600px;
-  line-height: 1.5;
-}
-.omnimux-u2v-body {
-  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  min-height: 0;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-}
-.omnimux-u2v-left {
-  width: 440px;
-  flex: none;
-  border-right: 1px solid var(--dsw-alias-border-l1);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-sizing: border-box;
-  background: var(--dsw-alias-bg-layer-1);
+  width: 100%;
 }
 .omnimux-u2v-carousel {
   position: relative;
@@ -691,15 +634,6 @@ export const GUIDE_CSS = `
   background: var(--dsw-alias-brand-primary);
 }
 
-.omnimux-u2v-right {
-  flex: 1;
-  padding: 20px 28px;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  box-sizing: border-box;
-  min-width: 0;
-}
 .omnimux-u2v-form-flow {
   display: flex;
   flex-direction: column;
@@ -883,14 +817,6 @@ export const GUIDE_CSS = `
   font-weight: 500;
 }
 
-.omnimux-u2v-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: 14px;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-  flex: none;
-}
 .omnimux-u2v-submit {
   display: inline-flex;
   align-items: center;
