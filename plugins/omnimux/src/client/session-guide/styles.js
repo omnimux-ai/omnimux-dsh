@@ -107,10 +107,10 @@ export const GUIDE_CSS = `
   flex-direction: column;
   background: var(--dsw-alias-bg-layer-1);
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 20px;
+  border-radius: 16px;
   cursor: pointer;
   text-align: left;
-  padding: 14px 14px 18px 14px;
+  padding: 8px 8px 10px 8px;
   box-sizing: border-box;
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
   position: relative;
@@ -130,7 +130,7 @@ export const GUIDE_CSS = `
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   display: flex;
@@ -154,8 +154,8 @@ export const GUIDE_CSS = `
   transform: scale(1.03);
 }
 .omnimux-popular-footer {
-  padding: 0 4px;
-  margin-top: 14px;
+  padding: 0 2px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
