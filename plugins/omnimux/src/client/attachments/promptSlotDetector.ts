@@ -1,4 +1,4 @@
-export type PromptSlotProtocol = 'text' | 'file' | 'assets' | 'url';
+export type PromptSlotProtocol = 'text' | 'file' | 'assets' | 'product' | 'url';
 
 export interface PromptSlot {
   readonly id: string;
@@ -18,6 +18,42 @@ export interface PromptSlot {
  */
 export const PROMPT_SLOT_REGEX = /(?:\[([^\]\n]*)\]|\{([^\}\n]*)\})/g;
 
+export function inferProtocolByName(
+  fieldName: string,
+  value?: string,
+): PromptSlotProtocol {
+  const lowerName = fieldName.toLowerCase();
+  const lowerVal = (value || '').toLowerCase();
+
+  // 1. 优先判定文件类：包含图、照、视频、文件或文件名具有媒体后缀
+  if (
+    lowerName.includes('图') ||
+    lowerName.includes('照') ||
+    lowerName.includes('视频') ||
+    lowerName.includes('文件') ||
+    lowerName.includes('file') ||
+    /\.(png|jpe?g|gif|webp|svg|mp4|mov|mkv)$/i.test(lowerVal)
+  ) {
+    return 'file';
+  }
+
+  // 2. 资产类判定
+  if (lowerName.includes('资产') || lowerName.includes('asset')) {
+    return 'assets';
+  }
+
+  // 3. 商品/产品判定
+  if (
+    lowerName.includes('商品') ||
+    lowerName.includes('产品') ||
+    lowerName.includes('product')
+  ) {
+    return 'product';
+  }
+
+  return 'text';
+}
+
 export function parseSlotContent(
   raw: string,
   inner: string,
@@ -25,50 +61,53 @@ export function parseSlotContent(
 ): { protocol: PromptSlotProtocol; placeholder: string; selectedValue?: string } {
   const trimmed = inner.trim();
 
-  // 1. 检查是否为已填充态：形如 "商品图: 主图.png" 或 "角色: 角色-01.png"
-  const colonSplit = trimmed.split(/:\s*(.+)/);
-  if (
-    colonSplit.length >= 2 &&
-    !trimmed.startsWith('file:') &&
-    !trimmed.startsWith('assets:') &&
-    !trimmed.startsWith('asset:') &&
-    !trimmed.startsWith('url:')
-  ) {
+  // 1. 提取显式协议前缀（若存在）
+  let explicitProtocol: PromptSlotProtocol | null = null;
+  let withoutProtocol = trimmed;
+
+  if (/^file:(?:\/\/)?/i.test(trimmed)) {
+    explicitProtocol = 'file';
+    withoutProtocol = trimmed.replace(/^file:(?:\/\/)?/i, '').trim();
+  } else if (/^assets?:(?:\/\/)?/i.test(trimmed)) {
+    explicitProtocol = 'assets';
+    withoutProtocol = trimmed.replace(/^assets?:(?:\/\/)?/i, '').trim();
+  } else if (/^products?:(?:\/\/)?/i.test(trimmed)) {
+    explicitProtocol = 'product';
+    withoutProtocol = trimmed.replace(/^products?:(?:\/\/)?/i, '').trim();
+  } else if (/^url:(?:\/\/)?/i.test(trimmed)) {
+    explicitProtocol = 'url';
+    withoutProtocol = trimmed.replace(/^url:(?:\/\/)?/i, '').trim();
+  }
+
+  // 2. 检查是否为已填充态：形如 "商品图: 主图.png" 或 "product://商品名称: 耳机X1"
+  const colonSplit = withoutProtocol.split(/:\s*(.+)/);
+  if (colonSplit.length >= 2) {
     const fieldName = colonSplit[0].trim();
     const value = colonSplit[1].trim();
+    const resolvedProtocol = explicitProtocol || inferProtocolByName(fieldName, value);
     return {
-      protocol: 'text',
+      protocol: resolvedProtocol,
       placeholder: fieldName,
       selectedValue: value,
     };
   }
 
-  // 2. 检查显式协议前缀
-  if (/^file:(?:\/\/)?/i.test(trimmed)) {
-    const clean = trimmed.replace(/^file:(?:\/\/)?/i, '').trim();
+  // 3. 显式协议未填充态
+  if (explicitProtocol) {
+    const defaultPlaceholderMap: Record<PromptSlotProtocol, string> = {
+      file: '选择文件',
+      assets: '从资产库导入',
+      product: '从产品库选择',
+      url: '链接',
+      text: '输入内容',
+    };
     return {
-      protocol: 'file',
-      placeholder: clean || '选择文件',
+      protocol: explicitProtocol,
+      placeholder: withoutProtocol || defaultPlaceholderMap[explicitProtocol],
     };
   }
 
-  if (/^assets?:(?:\/\/)?/i.test(trimmed)) {
-    const clean = trimmed.replace(/^assets?:(?:\/\/)?/i, '').trim();
-    return {
-      protocol: 'assets',
-      placeholder: clean || '从资产库导入',
-    };
-  }
-
-  if (/^url:(?:\/\/)?/i.test(trimmed)) {
-    const clean = trimmed.replace(/^url:(?:\/\/)?/i, '').trim();
-    return {
-      protocol: 'url',
-      placeholder: clean || '链接',
-    };
-  }
-
-  // 3. 大括号语法 {} 无显式前缀时，默认适配为文件上传槽位
+  // 4. 大括号语法 {} 无显式前缀时，默认适配为文件上传槽位
   if (delimiter === '{') {
     return {
       protocol: 'file',
@@ -76,7 +115,7 @@ export function parseSlotContent(
     };
   }
 
-  // 4. 常规方括号纯文本槽位
+  // 5. 常规方括号纯文本槽位
   return {
     protocol: 'text',
     placeholder: trimmed,

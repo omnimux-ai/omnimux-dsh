@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { PromptSlot } from './promptSlotDetector.ts';
 import { AssetPickerModal } from '../composer-add/AssetPickerModal.jsx';
+import { ProductPickerModal } from '../composer-add/ProductPickerModal.jsx';
 
 export interface PromptSlotChipsProps {
   readonly slots: readonly PromptSlot[];
@@ -43,6 +44,24 @@ const AssetFolderIcon = ({ size = 13 }: { size?: number }) => (
   >
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     <polygon points="12 11 12 17 16 14" />
+  </svg>
+);
+
+const ProductBoxIcon = ({ size = 13 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
   </svg>
 );
 
@@ -102,6 +121,8 @@ function renderSlotIcon(protocol: PromptSlot['protocol'], size = 13) {
       return <FileUploadIcon size={size} />;
     case 'assets':
       return <AssetFolderIcon size={size} />;
+    case 'product':
+      return <ProductBoxIcon size={size} />;
     case 'url':
       return <LinkSlotIcon size={size} />;
     case 'text':
@@ -120,7 +141,9 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
   const [pendingAssetSlot, setPendingAssetSlot] = useState<PromptSlot | null>(null);
+  const [pendingProductSlot, setPendingProductSlot] = useState<PromptSlot | null>(null);
   const [pendingFileSlot, setPendingFileSlot] = useState<PromptSlot | null>(null);
 
   if (!slots || slots.length === 0) {
@@ -140,6 +163,12 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
     if (slot.protocol === 'assets') {
       setPendingAssetSlot(slot);
       setIsAssetPickerOpen(true);
+      return;
+    }
+
+    if (slot.protocol === 'product') {
+      setPendingProductSlot(slot);
+      setIsProductPickerOpen(true);
       return;
     }
 
@@ -172,6 +201,17 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
     setPendingAssetSlot(null);
   };
 
+  const handleProductConfirm = (product: any) => {
+    if (product && pendingProductSlot) {
+      const productName = product.name || product.title || '已选产品';
+      if (typeof onReplaceSlot === 'function') {
+        onReplaceSlot(pendingProductSlot, `[${pendingProductSlot.placeholder}: ${productName}]`);
+      }
+    }
+    setIsProductPickerOpen(false);
+    setPendingProductSlot(null);
+  };
+
   return (
     <>
       <div className="omx-prompt-slots-dock" role="status" aria-label="Prompt 变量槽位选项">
@@ -199,6 +239,10 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
             actionTitle = isFilled
               ? `已关联资产: ${slot.selectedValue}，点击可重新选择替换`
               : `点击从资产库导入: ${displayText}`;
+          } else if (slot.protocol === 'product') {
+            actionTitle = isFilled
+              ? `已关联产品: ${slot.selectedValue}，点击可重新选择替换`
+              : `点击从产品库选择: ${displayText}`;
           }
 
           return (
@@ -232,6 +276,18 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
           occupied={0}
           alreadyIds={[]}
           onConfirm={handleAssetConfirm}
+        />
+      )}
+
+      {isProductPickerOpen && (
+        <ProductPickerModal
+          open={isProductPickerOpen}
+          onClose={() => {
+            setIsProductPickerOpen(false);
+            setPendingProductSlot(null);
+          }}
+          t={t}
+          onConfirm={handleProductConfirm}
         />
       )}
     </>
