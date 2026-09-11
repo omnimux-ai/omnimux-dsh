@@ -58,7 +58,11 @@ import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
 import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
-import { planAudioExtractDownstream } from '../../utils/planAudioExtractDownstream.ts';
+import {
+  planAudioExtractDownstream,
+  planAudioExtractProvisioning,
+  planAudioExtractSettlement,
+} from '../../utils/planAudioExtractDownstream.ts';
 import { deconstructVideo, extractAudioFromVideo, extractVideoFromUrl, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
 import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
@@ -100,6 +104,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [textEditing, setTextEditing] = useState(false);
   const [mediaAspectHeight, setMediaAspectHeight] = useState<number | null>(null);
+  const [isExtractingAudio, setIsExtractingAudio] = useState(false);
 
   const { setNodes } = useReactFlow();
 
@@ -763,8 +768,76 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, previewUrl, setNodes, t, updateNodeData]);
 
-  // 视频提取音频：提取原声音频轨，派生下游独立音频素材节点 (materialType === 'audio')
+  // 音频节点自身重试提取音频（就地在下游音频节点执行，源视频完全零侵入）
+  const handleRetryAudioExtract = useCallback(async () => {
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('extractAudio.noWorkspace'));
+      return;
+    }
+    let videoPath = typeof (nodeData as any).sourceVideoPath === 'string' ? (nodeData as any).sourceVideoPath : '';
+    if (!videoPath && (nodeData as any).sourceVideoNodeId) {
+      const store = useCanvasStore.getState();
+      const sourceNode = store.nodes.find((n) => n.id === (nodeData as any).sourceVideoNodeId);
+      if (sourceNode?.data) {
+        videoPath = resolveVideoAudioExtractPath(
+          {
+            realPath: (sourceNode.data as any).realPath,
+            relativePath: (sourceNode.data as any).relativePath,
+            mediaUrl: (sourceNode.data as any).mediaUrl,
+            previewUrl: (sourceNode.data as any).previewUrl,
+            workspaceId,
+          },
+          { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+        ) || '';
+      }
+    }
+    if (!videoPath) {
+      toast.error(t('extractAudio.noVideo'));
+      return;
+    }
+    updateNodeData({ executionStatus: 'running', executionError: undefined, status: 'generating' });
+    try {
+      const result = await extractAudioFromVideo(workspaceId, {
+        nodeId: id,
+        videoPath,
+        title: label || t('extractAudio.nodeLabel'),
+      });
+      if (!result.ok || !result.body?.data) {
+        const message = result.body?.message || result.body?.error || t('extractAudio.toast.failed');
+        updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed', audioExtractActive: true });
+        toast.error(message);
+        return;
+      }
+      if (result.body.data.noAudioStream) {
+        const message = t('extractAudio.toast.noAudioStream');
+        updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed', audioExtractActive: true });
+        toast.info(message);
+        return;
+      }
+      updateNodeData({
+        executionStatus: 'completed',
+        executionError: undefined,
+        audioExtractActive: undefined,
+        status: 'ready',
+        realPath: result.body.data.audioPath,
+        mediaUrl: result.body.data.mediaUrl,
+        previewUrl: result.body.data.previewUrl,
+        duration: result.body.data.duration,
+        format: result.body.data.format,
+        title: result.body.data.title,
+      });
+      toast.success(t('extractAudio.toast.success'));
+    } catch (err) {
+      const message = err instanceof Error && err.message ? err.message : t('extractAudio.toast.failed');
+      updateNodeData({ executionStatus: 'error', executionError: message, status: 'failed', audioExtractActive: true });
+      toast.error(message);
+    }
+  }, [id, label, nodeData, t, updateNodeData]);
+
+  // 视频提取音频：激活后立即在右侧创建下游音频节点（Running 态），在音频节点中执行与收敛，源视频节点零侵入
   const handleExtractAudio = useCallback(async () => {
+    if (isExtractingAudio) return;
     const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
     if (!workspaceId) {
       toast.error(t('extractAudio.noWorkspace'));
@@ -784,33 +857,90 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       toast.error(t('extractAudio.noVideo'));
       return;
     }
-    updateNodeData({ executionStatus: 'running', executionError: undefined, audioExtractActive: true });
+
+    // 1. 乐观预建/激活下游音频节点（置为 running 态），源视频节点绝不写 running / error！
+    const store = useCanvasStore.getState();
+    const videoNode = store.nodes.find((n) => n.id === id);
+    const audioLabel = label ? `${label} 原声` : t('extractAudio.nodeLabel');
+    const provision = planAudioExtractProvisioning({
+      videoNodeId: id,
+      videoPosition: videoNode?.position ?? { x: 0, y: 0 },
+      videoNodeWidth: nodeWidth,
+      label: audioLabel,
+      currentNodes: store.nodes as any,
+      currentEdges: store.edges as any,
+    });
+
+    if (provision.mode === 'noop') {
+      return;
+    }
+
+    const targetNodeId = provision.targetNodeId;
+    const nodesToAdd = provision.addNodes.map((n) => ({
+      ...n,
+      data: {
+        ...n.data,
+        sourceVideoPath: videoPath,
+        __workspaceId: workspaceId,
+      },
+    }));
+    const patchesToApply = provision.nodePatches.map((p) => ({
+      ...p,
+      data: {
+        ...p.data,
+        sourceVideoPath: videoPath,
+        __workspaceId: workspaceId,
+      },
+    }));
+
+    applyCanvasInputMutation({
+      addNodes: nodesToAdd as any,
+      addEdges: provision.addEdges as any,
+      nodePatches: patchesToApply as any,
+    });
+
+    // 自动聚焦选中下游目标音频节点
+    setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
+    useCanvasStore.getState().setSelectedElement('node', targetNodeId);
+
+    setIsExtractingAudio(true);
     try {
       const result = await extractAudioFromVideo(workspaceId, {
         nodeId: id,
         videoPath,
-        title: label ? `${label} 原声` : t('extractAudio.nodeLabel'),
+        title: audioLabel,
       });
+
       if (!result.ok || !result.body?.data) {
         const message = result.body?.message || result.body?.error || t('extractAudio.toast.failed');
-        updateNodeData({ executionStatus: 'error', executionError: message, audioExtractActive: undefined });
+        const settlement = planAudioExtractSettlement({
+          targetNodeId,
+          error: message,
+        });
+        applyCanvasInputMutation({
+          nodePatches: settlement.nodePatches as any,
+        });
         toast.error(message);
         return;
       }
 
-      // 无音轨边界处理
       if (result.body.data.noAudioStream) {
-        updateNodeData({ executionStatus: 'completed', executionError: undefined, audioExtractActive: undefined });
-        toast.info(t('extractAudio.toast.noAudioStream'));
+        const message = t('extractAudio.toast.noAudioStream');
+        const settlement = planAudioExtractSettlement({
+          targetNodeId,
+          noAudioStream: true,
+          error: message,
+        });
+        applyCanvasInputMutation({
+          nodePatches: settlement.nodePatches as any,
+        });
+        toast.info(message);
         return;
       }
 
-      const store = useCanvasStore.getState();
-      const videoNode = store.nodes.find((n) => n.id === id);
-      const plan = planAudioExtractDownstream({
-        videoNodeId: id,
-        videoPosition: videoNode?.position ?? { x: 0, y: 0 },
-        videoNodeWidth: nodeWidth,
+      const settlement = planAudioExtractSettlement({
+        targetNodeId,
+        label: result.body.data.title || audioLabel,
         extractResult: {
           audioPath: result.body.data.audioPath,
           mediaUrl: result.body.data.mediaUrl,
@@ -819,35 +949,27 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           format: result.body.data.format,
           title: result.body.data.title,
         },
-        label: result.body.data.title || t('extractAudio.nodeLabel'),
-        currentNodes: store.nodes as any,
-        currentEdges: store.edges as any,
       });
-
-      updateNodeData({ executionStatus: 'completed', executionError: undefined, audioExtractActive: undefined });
-
-      if (!plan) {
-        toast.error(t('extractAudio.toast.failed'));
-        return;
-      }
 
       applyCanvasInputMutation({
-        addNodes: plan.addNodes as any,
-        addEdges: plan.addEdges as any,
-        nodePatches: plan.nodePatches as any,
+        nodePatches: settlement.nodePatches as any,
       });
-
-      // 自动聚焦选中下游音频节点
-      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
-      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
 
       toast.success(t('extractAudio.toast.success'));
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : t('extractAudio.toast.failed');
-      updateNodeData({ executionStatus: 'error', executionError: message, audioExtractActive: undefined });
+      const settlement = planAudioExtractSettlement({
+        targetNodeId,
+        error: message,
+      });
+      applyCanvasInputMutation({
+        nodePatches: settlement.nodePatches as any,
+      });
       toast.error(message);
+    } finally {
+      setIsExtractingAudio(false);
     }
-  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+  }, [applyCanvasInputMutation, id, isExtractingAudio, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t]);
 
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
@@ -1054,9 +1176,11 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           label: t('pill.extractAudio'),
           icon: Music,
           section: 'primary',
-          title: t('pill.extractAudio'),
+          disabled: isExtractingAudio,
+          title: isExtractingAudio ? '正在提取音频...' : t('pill.extractAudio'),
           onClick: (event) => {
             event.stopPropagation();
+            if (isExtractingAudio) return;
             void handleExtractAudio();
           },
         });
@@ -1086,6 +1210,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     isEmptyMediaNode,
     isGenerating,
     isOffline,
+    isExtractingAudio,
     kind,
     materialType,
     mediaUrl,
@@ -1368,14 +1493,14 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
                 errorMessage={executionError ?? errorMessage}
                 taskId={nodeData.taskId}
                 onRetry={
-                  materialType === 'audio' && nodeData.sttActive === true
-                    ? () => { void handleSpeechToText(); }
-                    : materialType === 'video' && nodeData.videoDeconstructActive === true
-                      ? () => { void handleDeconstructVideo(); }
-                      : materialType === 'video' && nodeData.videoStoryboardActive === true
-                        ? () => { void handleStoryboardVideo(); }
-                        : materialType === 'video' && nodeData.audioExtractActive === true
-                          ? () => { void handleExtractAudio(); }
+                  materialType === 'audio' && (nodeData.origin === 'audio_extract' || nodeData.audioExtractActive === true)
+                    ? () => { void handleRetryAudioExtract(); }
+                    : materialType === 'audio' && nodeData.sttActive === true
+                      ? () => { void handleSpeechToText(); }
+                      : materialType === 'video' && nodeData.videoDeconstructActive === true
+                        ? () => { void handleDeconstructVideo(); }
+                        : materialType === 'video' && nodeData.videoStoryboardActive === true
+                          ? () => { void handleStoryboardVideo(); }
                           : handleGenerate
                 }
               >
