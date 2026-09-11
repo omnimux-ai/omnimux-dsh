@@ -28,11 +28,11 @@ test('extractPromptSlots: detects brackets with text and empty brackets []', () 
   assert.equal(emptySlots[0].raw, '[]');
 });
 
-test('extractPromptSlots: parses file://, assets://, url:// and {} protocol slots', () => {
-  const text = '参考[file://商品图]与[assets://主角色]，配合同款{file:背景图}和[url://参考视频]与{}';
+test('extractPromptSlots: parses file://, assets://, product://, url:// and {} protocol slots', () => {
+  const text = '参考[file://商品图]与[assets://主角色]，绑定[product://主推耳机]、[products://数码相机]、{product:运动手环}和[url://参考视频]与{}';
   const slots = extractPromptSlots(text);
 
-  assert.equal(slots.length, 5);
+  assert.equal(slots.length, 7);
   // [file://商品图]
   assert.equal(slots[0].protocol, 'file');
   assert.equal(slots[0].placeholder, '商品图');
@@ -43,31 +43,47 @@ test('extractPromptSlots: parses file://, assets://, url:// and {} protocol slot
   assert.equal(slots[1].placeholder, '主角色');
   assert.equal(slots[1].raw, '[assets://主角色]');
 
-  // {file:背景图}
-  assert.equal(slots[2].protocol, 'file');
-  assert.equal(slots[2].placeholder, '背景图');
-  assert.equal(slots[2].raw, '{file:背景图}');
+  // [product://主推耳机]
+  assert.equal(slots[2].protocol, 'product');
+  assert.equal(slots[2].placeholder, '主推耳机');
+  assert.equal(slots[2].raw, '[product://主推耳机]');
+
+  // [products://数码相机]
+  assert.equal(slots[3].protocol, 'product');
+  assert.equal(slots[3].placeholder, '数码相机');
+  assert.equal(slots[3].raw, '[products://数码相机]');
+
+  // {product:运动手环}
+  assert.equal(slots[4].protocol, 'product');
+  assert.equal(slots[4].placeholder, '运动手环');
+  assert.equal(slots[4].raw, '{product:运动手环}');
 
   // [url://参考视频]
-  assert.equal(slots[3].protocol, 'url');
-  assert.equal(slots[3].placeholder, '参考视频');
-  assert.equal(slots[3].raw, '[url://参考视频]');
+  assert.equal(slots[5].protocol, 'url');
+  assert.equal(slots[5].placeholder, '参考视频');
+  assert.equal(slots[5].raw, '[url://参考视频]');
 
   // {} 默认文件上传
-  assert.equal(slots[4].protocol, 'file');
-  assert.equal(slots[4].placeholder, '选择文件');
-  assert.equal(slots[4].raw, '{}');
+  assert.equal(slots[6].protocol, 'file');
+  assert.equal(slots[6].placeholder, '选择文件');
+  assert.equal(slots[6].raw, '{}');
 });
 
-test('extractPromptSlots: recognizes filled slot values', () => {
-  const text = '参考[商品图: 主图.png]和[角色: 角色A]';
+test('extractPromptSlots: recognizes filled slot values and retains protocol', () => {
+  const text = '参考[商品图: 主图.png]和[角色: 角色A]与[product://商品名称: 智能降噪耳机 X1]';
   const slots = extractPromptSlots(text);
 
-  assert.equal(slots.length, 2);
+  assert.equal(slots.length, 3);
   assert.equal(slots[0].placeholder, '商品图');
   assert.equal(slots[0].selectedValue, '主图.png');
+  assert.equal(slots[0].protocol, 'file');
+
   assert.equal(slots[1].placeholder, '角色');
   assert.equal(slots[1].selectedValue, '角色A');
+
+  assert.equal(slots[2].placeholder, '商品名称');
+  assert.equal(slots[2].selectedValue, '智能降噪耳机 X1');
+  assert.equal(slots[2].protocol, 'product');
 });
 
 test('hasPromptSlots: identifies whether string has slot brackets or braces', () => {

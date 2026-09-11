@@ -24,9 +24,12 @@ test('DOCK_STYLES: provides subtle black/white theme slot capsule styles and bra
 test('PromptSlotChips: removes "变量槽位" text, removes brackets from text, uses SVG icon instead of emoji', () => {
   assert.doesNotMatch(chipsSource, /变量槽位:/, 'removes 变量槽位: label text');
   assert.doesNotMatch(chipsSource, /✏️/, 'removes pencil emoji');
+  assert.doesNotMatch(chipsSource, /📦/, 'does not use box emoji');
   assert.ok(chipsSource.includes('FileUploadIcon'), 'uses clean SVG file upload icon');
   assert.ok(chipsSource.includes('AssetFolderIcon'), 'uses clean SVG asset folder icon');
+  assert.ok(chipsSource.includes('ProductBoxIcon'), 'uses clean SVG product box icon');
   assert.ok(chipsSource.includes('AssetPickerModal'), 'integrates AssetPickerModal for assets slots');
+  assert.ok(chipsSource.includes('ProductPickerModal'), 'integrates ProductPickerModal for product slots');
   assert.ok(chipsSource.includes('type="file"'), 'integrates file input for file slots');
 });
 
