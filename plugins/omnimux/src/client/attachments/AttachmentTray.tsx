@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { AttachmentCard } from './AttachmentCard.tsx';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
-import { ComposerPresetsChips } from '../presets/index.js';
 import { PromptSlotChips } from './PromptSlotChips.tsx';
 import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
 import { useUserMessageLinkEnhancer } from './userMessageLinkEnhancer.ts';
@@ -251,7 +250,6 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
           onConfirm={handleConfirmInsert}
         />
       )}
-      <ComposerPresetsChips sessionId={currentSessionId} />
       <PromptSlotChips
         slots={slots}
         activeSlotIndex={activeSlotIndex}
