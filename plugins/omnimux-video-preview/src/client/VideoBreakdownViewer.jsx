@@ -26,8 +26,37 @@ import {
   TranslateIcon,
   ChevronDownIcon,
 } from './icons.jsx'
+import {
+  localizeStage,
+  METADATA_HEADING_REGEX,
+  mapToCanonicalStage,
+} from '../breakdown-parser.js'
+
+function useIsZh() {
+  const [isZh, setIsZh] = useState(() => {
+    if (typeof document !== 'undefined') {
+      const l = (document.documentElement.lang || '').toLowerCase()
+      if (l.startsWith('en')) return false
+    }
+    return true
+  })
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const update = () => {
+      const l = (document.documentElement.lang || '').toLowerCase()
+      setIsZh(!l.startsWith('en'))
+    }
+    const observer = new MutationObserver(update)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] })
+    return () => observer.disconnect()
+  }, [])
+
+  return isZh
+}
 
 export function VideoBreakdownViewer({ content, path, title, onClose }) {
+  const isZh = useIsZh()
   const [activeTab, setActiveTab] = useState('shots')
   const [playerMode, setPlayerMode] = useState('native') // 'native' | 'embed'
   const [isTranslated, setIsTranslated] = useState(false)
@@ -55,8 +84,46 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
   const video = data?.video || {}
   const shots = Array.isArray(data?.shots) ? data.shots : []
-  const structure = Array.isArray(data?.structure) ? data.structure : []
-  const pipeline = Array.isArray(data?.pipeline) ? data.pipeline : ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
+
+  // Filter out any metadata headings ("叙事结构链路", "结构阶段解构") and unpack sub-stages
+  const cleanStructure = useMemo(() => {
+    if (!Array.isArray(data?.structure)) return []
+    const cleaned = []
+    const seen = new Set()
+    for (const item of data.structure) {
+      let stage = item.stage || item.title || ''
+      let desc = item.description || ''
+      if (METADATA_HEADING_REGEX.test(stage)) {
+        const m = desc.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
+        if (m && !METADATA_HEADING_REGEX.test(m[1].trim())) {
+          stage = mapToCanonicalStage(m[1].trim(), cleaned.length)
+          desc = m[2].trim()
+        } else {
+          continue
+        }
+      }
+      if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage)) continue
+      seen.add(stage)
+      cleaned.push({
+        ...item,
+        stage,
+        title: stage,
+        description: desc,
+      })
+    }
+    return cleaned
+  }, [data?.structure])
+
+  const cleanPipeline = useMemo(() => {
+    if (cleanStructure.length > 0) {
+      return cleanStructure.map((s) => s.stage)
+    }
+    const raw = Array.isArray(data?.pipeline) ? data.pipeline : []
+    return raw.filter((name) => !METADATA_HEADING_REGEX.test(name))
+  }, [cleanStructure, data?.pipeline])
+
+  const structure = cleanStructure
+  const pipeline = cleanPipeline.length > 0 ? cleanPipeline : ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
 
   const streamUrl = video.stream_url || video.video_url || ''
   const coverUrl = video.cover_url || ''
@@ -103,13 +170,15 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     if (!shots.length) return ''
     return shots.map((s, idx) => {
       const range = s.time_range || `${s.start_seconds || 0}s - ${s.end_seconds || 0}s`
-      const stage = s.stage ? ` [${s.stage}]` : ''
-      const tags = Array.isArray(s.tags) && s.tags.length ? `\n属性：${s.tags.join(' | ')}` : ''
-      const speech = s.speech ? `\n台词：${s.speech}` : ''
-      const desc = s.description ? `\n描述：${s.description}` : ''
-      return `${range} ${s.title || `分镜 ${idx + 1}`}${stage}${tags}${speech}${desc}`
+      const localizedStage = localizeStage(s.stage, isZh)
+      const stage = localizedStage ? ` [${localizedStage}]` : ''
+      const tags = Array.isArray(s.tags) && s.tags.length ? `\n${isZh ? '属性' : 'Tags'}：${s.tags.join(' | ')}` : ''
+      const speech = s.speech ? `\n${isZh ? '台词' : 'Speech'}：${s.speech}` : ''
+      const desc = s.description ? `\n${isZh ? '描述' : 'Description'}：${s.description}` : ''
+      const defaultTitle = `${isZh ? '分镜' : 'Shot'} ${idx + 1}`
+      return `${range} ${s.title || defaultTitle}${stage}${tags}${speech}${desc}`
     }).join('\n\n')
-  }, [shots])
+  }, [shots, isZh])
 
   const scriptCopyContent = useMemo(() => {
     if (!shots.length) return ''
@@ -121,16 +190,16 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       })
       .filter(Boolean)
     if (lines.length > 0) return lines.join('\n\n')
-    return shots.map((s, idx) => `${s.time_range || `分镜 ${idx + 1}`} ${s.description || ''}`).join('\n\n')
-  }, [shots])
+    return shots.map((s, idx) => `${s.time_range || (isZh ? `分镜 ${idx + 1}` : `Shot ${idx + 1}`)} ${s.description || ''}`).join('\n\n')
+  }, [shots, isZh])
 
   const structureCopyContent = useMemo(() => {
     if (!structure.length) return ''
     return structure.map((item) => {
-      const title = item.stage || item.title
+      const title = localizeStage(item.stage || item.title, isZh)
       return `【${title}】\n${item.description || ''}`
     }).join('\n\n')
-  }, [structure])
+  }, [structure, isZh])
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -243,14 +312,14 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   }
 
   const tabsItems = [
-    { id: 'shots', label: '分镜' },
-    { id: 'structure', label: '结构拆解' },
+    { id: 'shots', label: isZh ? '分镜' : 'Shots' },
+    { id: 'structure', label: isZh ? '结构拆解' : 'Structure' },
   ]
 
   if (!data) {
     return (
       <div className="omnimux-video-breakdown-empty">
-        <span>正在加载或未找到有效视频拆解数据</span>
+        <span>{isZh ? '正在加载或未找到有效视频拆解数据' : 'Loading or no valid video breakdown data found'}</span>
       </div>
     )
   }
@@ -260,14 +329,14 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       {/* 1. Header */}
       <header className="omnimux-video-breakdown-header">
         <div className="omnimux-video-breakdown-header-title">
-          <span>视频分析</span>
+          <span>{isZh ? '视频分析' : 'Video Breakdown'}</span>
         </div>
         <div className="omnimux-video-breakdown-header-actions">
           <IconButton
             variant="ghost"
             size="sm"
-            title="全屏切换"
-            aria-label="全屏切换"
+            title={isZh ? '全屏切换' : 'Toggle Fullscreen'}
+            aria-label={isZh ? '全屏切换' : 'Toggle Fullscreen'}
             onClick={toggleFullscreen}
           >
             <ExpandIcon size={14} />
@@ -276,8 +345,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             <IconButton
               variant="ghost"
               size="sm"
-              title="关闭"
-              aria-label="关闭"
+              title={isZh ? '关闭' : 'Close'}
+              aria-label={isZh ? '关闭' : 'Close'}
               onClick={onClose}
             >
               <CloseIcon size={14} />
@@ -432,8 +501,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="omnimux-video-info-ext-link"
-                  title="访问原视频链接"
-                  aria-label="访问原视频链接"
+                  title={isZh ? '访问原视频链接' : 'Visit original video link'}
+                  aria-label={isZh ? '访问原视频链接' : 'Visit original video link'}
                 >
                   <ExternalLinkIcon size={14} />
                 </a>
@@ -458,7 +527,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
 
             {/* 3. Scene Count */}
             <div className="omnimux-video-info-scenes">
-              <span>{video.scene_count || shots.length || 0} 个场景</span>
+              <span>{video.scene_count || shots.length || 0} {isZh ? '个场景' : 'scenes'}</span>
             </div>
           </div>
         </aside>
@@ -489,6 +558,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 {shots.map((shot, idx) => {
                   const isPlayingThisShot = idx === currentPlayingShotIndex
                   const isCurrent = isPlayingThisShot
+                  const defaultTitle = `${isZh ? '分镜' : 'Shot'} ${idx + 1}`
                   return (
                     <div
                       id={`omnimux-shot-card-${idx}`}
@@ -500,21 +570,21 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                         }
                         handleSeek(shot.start_seconds || 0)
                       }}
-                      title="点击跳转并从该分镜开始播放"
+                      title={isZh ? '点击跳转并从该分镜开始播放' : 'Click to seek and play from this shot'}
                     >
                       <div className="omnimux-video-breakdown-shot-header">
                         <div className="omnimux-video-breakdown-shot-title-box">
                           <span className="omnimux-video-breakdown-shot-time">{shot.time_range || '0:00 - 0:00'}</span>
-                          <span className="omnimux-video-breakdown-shot-title">{shot.title || `分镜 ${idx + 1}`}</span>
+                          <span className="omnimux-video-breakdown-shot-title">{shot.title || defaultTitle}</span>
                           {isPlayingThisShot && isPlaying ? (
                             <span className="omnimux-video-shot-playing-badge">
                               <span className="omnimux-video-shot-playing-dot" />
-                              播放中
+                              {isZh ? '播放中' : 'Playing'}
                             </span>
                           ) : null}
                         </div>
                         {shot.stage ? (
-                          <div className="omnimux-video-breakdown-stage-pill">{shot.stage}</div>
+                          <div className="omnimux-video-breakdown-stage-pill">{localizeStage(shot.stage, isZh)}</div>
                         ) : null}
                       </div>
 
@@ -549,14 +619,16 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
               /* Narrative Structure Pipeline View */
               <div className="omnimux-video-breakdown-structure-view">
                 <div className="omnimux-video-breakdown-structure-hint">
-                  识别结构片段并进行内容分析，帮助你审视节奏、卖点顺序与脚本编排。
+                  {isZh
+                    ? '识别结构片段并进行内容分析，帮助你审视节奏、卖点顺序与脚本编排。'
+                    : 'Identify structural segments and analyze content pacing, selling points, and script narrative.'}
                 </div>
 
                 {/* 1. Stages Pipeline Breadcrumb */}
                 <div className="omnimux-video-breakdown-pipeline-row">
                   {pipeline.map((stageName, pIdx) => (
                     <React.Fragment key={pIdx}>
-                      <span className="omnimux-video-breakdown-pipeline-item">{stageName}</span>
+                      <span className="omnimux-video-breakdown-pipeline-item">{localizeStage(stageName, isZh)}</span>
                       {pIdx < pipeline.length - 1 ? (
                         <span className="omnimux-video-breakdown-pipeline-arrow">→</span>
                       ) : null}
@@ -567,10 +639,10 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 {/* 2. Structured Stage Cards matching Image 2 */}
                 <div className="omnimux-video-breakdown-structure-cards">
                   {structure.map((item, sIdx) => {
-                    const displayTitle = item.stage || item.title || `阶段 ${sIdx + 1}`
+                    const displayTitle = item.stage || item.title || `${isZh ? '阶段' : 'Stage'} ${sIdx + 1}`
                     return (
                       <div key={sIdx} className="omnimux-video-breakdown-structure-card">
-                        <div className="omnimux-video-breakdown-structure-title">{displayTitle}</div>
+                        <div className="omnimux-video-breakdown-structure-title">{localizeStage(displayTitle, isZh)}</div>
                         <div className="omnimux-video-breakdown-structure-desc">
                           {formatStructureDescription(item.description)}
                         </div>
@@ -589,10 +661,10 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 type="button"
                 className={`omnimux-video-footer-btn${isTranslated ? ' is-active' : ''}`}
                 onClick={() => setIsTranslated(!isTranslated)}
-                title={isTranslated ? '切换为原文' : '翻译为中文'}
+                title={isTranslated ? (isZh ? '切换为原文' : 'Switch to Original') : (isZh ? '翻译为中文' : 'Translate')}
               >
                 <TranslateIcon size={14} />
-                <span>{isTranslated ? '原文' : '翻译'}</span>
+                <span>{isTranslated ? (isZh ? '原文' : 'Original') : (isZh ? '翻译' : 'Translate')}</span>
                 <ChevronDownIcon size={11} />
               </button>
             </div>
@@ -604,17 +676,17 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                     variant="outline"
                     size="sm"
                     text={scriptCopyContent}
-                    successText="已复制脚本"
+                    successText={isZh ? '已复制脚本' : 'Script Copied'}
                   >
-                    复制脚本
+                    {isZh ? '复制脚本' : 'Copy Script'}
                   </CopyButton>
                   <CopyButton
                     variant="outline"
                     size="sm"
                     text={shotsCopyContent}
-                    successText="已复制分镜"
+                    successText={isZh ? '已复制分镜' : 'Shots Copied'}
                   >
-                    复制分镜
+                    {isZh ? '复制分镜' : 'Copy Shots'}
                   </CopyButton>
                 </>
               ) : (
@@ -622,9 +694,9 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                   variant="outline"
                   size="sm"
                   text={structureCopyContent}
-                  successText="已复制结构拆解"
+                  successText={isZh ? '已复制结构拆解' : 'Structure Copied'}
                 >
-                  复制结构拆解
+                  {isZh ? '复制结构拆解' : 'Copy Structure'}
                 </CopyButton>
               )}
             </div>

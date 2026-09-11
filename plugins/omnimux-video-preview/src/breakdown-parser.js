@@ -19,6 +19,55 @@ const CUT_INDEX_REGEX = /^(\*\*)?(?:cut|镜头|镜号|shot)\s*\d+(\*\*)?$/i
 const SPEECH_PREFIX_REGEX = /^[\(（]?(?:无|none|无台词|none)[\)）]?$/i
 const STAGE_KEYWORD_REGEX = /^(hook|product intro|usage detail|demo scene|inciting incident|rising conflict|climax|plot twist|cliffhanger|cta)$/i
 
+export const METADATA_HEADING_REGEX = /^(?:[#\d\.\s*、\-\(\)（）]*)(?:叙事结构|结构阶段|逐镜头|分镜脚本|两阶段|结构拆解|流程链路|核心目标|内容总览|基本信息|分段目录|场景数据|关键表达|优化建议|风险与备注|结论)/i
+
+export const STAGE_I18N = {
+  Hook: { zh: '黄金钩子', en: 'Hook' },
+  'Product Intro': { zh: '产品引入', en: 'Product Intro' },
+  'Usage Detail': { zh: '使用细节', en: 'Usage Detail' },
+  'Demo Scene': { zh: '场景演示', en: 'Demo Scene' },
+  'Call to Action': { zh: '行动号召', en: 'Call to Action' },
+  CTA: { zh: '行动号召', en: 'Call to Action' },
+  'Inciting Incident': { zh: '开端引发', en: 'Inciting Incident' },
+  'Rising Conflict': { zh: '冲突升级', en: 'Rising Conflict' },
+  Climax: { zh: '剧情高潮', en: 'Climax' },
+  Cliffhanger: { zh: '悬念钩子', en: 'Cliffhanger' },
+}
+
+/**
+ * Localizes a stage name based on whether current DSH language is Chinese or English.
+ * @param {string} stage
+ * @param {boolean} [isZh=true]
+ * @returns {string}
+ */
+export function localizeStage(stage, isZh = true) {
+  if (!stage) return ''
+  const s = String(stage).trim()
+  const found = STAGE_I18N[s]
+  if (found) {
+    return isZh ? found.zh : found.en
+  }
+
+  const lower = s.toLowerCase()
+  for (const [enKey, item] of Object.entries(STAGE_I18N)) {
+    if (enKey.toLowerCase() === lower) {
+      return isZh ? item.zh : item.en
+    }
+  }
+
+  if (!isZh) {
+    for (const item of Object.values(STAGE_I18N)) {
+      if (item.zh === s || s.includes(item.zh)) return item.en
+    }
+  } else {
+    for (const [enKey, item] of Object.entries(STAGE_I18N)) {
+      if (s.includes(item.zh) || s.includes(enKey)) return item.zh
+    }
+  }
+
+  return s
+}
+
 const CANONICAL_STAGE_KEYS = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene']
 
 /**
@@ -31,6 +80,8 @@ const CANONICAL_STAGE_KEYS = ['Hook', 'Product Intro', 'Usage Detail', 'Demo Sce
 export function mapToCanonicalStage(rawStage, index = 0) {
   if (!rawStage) return CANONICAL_STAGE_KEYS[index] || `Stage ${index + 1}`
   const s = String(rawStage).trim()
+  if (METADATA_HEADING_REGEX.test(s)) return ''
+
   if (/^hook$/i.test(s)) return 'Hook'
   if (/^product\s*intro$/i.test(s)) return 'Product Intro'
   if (/^usage\s*detail$/i.test(s)) return 'Usage Detail'
@@ -50,6 +101,8 @@ export function mapToCanonicalStage(rawStage, index = 0) {
     .replace(/^步骤[一二三四五六七八九十\d]+[:：\s]*/, '')
     .replace(/^[0-9]+[、\.\s]+/, '')
     .trim()
+
+  if (METADATA_HEADING_REGEX.test(clean)) return ''
 
   if (/^(?:hook|黄金钩子|吸睛|悬念|开场|趣味吸睛)/i.test(clean)) return 'Hook'
   if (/^(?:product\s*intro|产品引入|核心产品|产品展示|开箱|拆箱|硬件外观|实机展示|实机)/i.test(clean)) return 'Product Intro'
@@ -455,7 +508,7 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
 
 function extractStagesFromHeaders(markdown) {
   const structure = []
-  const stageSectionMatch = markdown.match(/##\s*2\.\s*结构阶段解构[\s\S]*?(?=\n##\s*3|$)/i)
+  const stageSectionMatch = markdown.match(/##\s*(?:\d+[\.\s、]*)?结构阶段解构[\s\S]*?(?=\n##\s*(?:\d+[\.\s、]*)?(?:逐镜头|分镜)|$)/i)
   const stageBlockText = stageSectionMatch ? stageSectionMatch[0] : markdown
 
   const stageRegex = /###\s*([^\n]+)\n+([\s\S]*?)(?=\n###|\n##|$)/g
@@ -466,9 +519,22 @@ function extractStagesFromHeaders(markdown) {
     const descText = match[2].replace(/\|[\s\S]*$/, '').replace(/```[\s\S]*?```/g, '').trim().replace(/\*+/g, '')
 
     if (rawHeading && descText) {
-      const canonicalStage = mapToCanonicalStage(rawHeading, idx)
-      structure.push({ stage: canonicalStage, title: canonicalStage, description: descText })
-      idx++
+      if (METADATA_HEADING_REGEX.test(rawHeading)) {
+        const subMatch = descText.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
+        if (subMatch && !METADATA_HEADING_REGEX.test(subMatch[1].trim())) {
+          const canonicalStage = mapToCanonicalStage(subMatch[1].trim(), idx)
+          if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
+            structure.push({ stage: canonicalStage, title: canonicalStage, description: subMatch[2].trim() })
+            idx++
+          }
+        }
+      } else {
+        const canonicalStage = mapToCanonicalStage(rawHeading, idx)
+        if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
+          structure.push({ stage: canonicalStage, title: canonicalStage, description: descText })
+          idx++
+        }
+      }
     }
     match = stageRegex.exec(stageBlockText)
   }
@@ -483,10 +549,12 @@ function extractStagesFromChineseList(markdown) {
   while (match !== null) {
     const stageName = match[1].trim()
     const stageDesc = match[2].trim().replace(/\|[\s\S]*$/, '').replace(/\*+/g, '')
-    if (stageName && stageDesc && !/^(叙事结构|逐镜头|分镜|核心目标)/.test(stageName)) {
+    if (stageName && stageDesc && !METADATA_HEADING_REGEX.test(stageName)) {
       const canonicalStage = mapToCanonicalStage(stageName, idx)
-      structure.push({ stage: canonicalStage, title: canonicalStage, description: stageDesc })
-      idx++
+      if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
+        structure.push({ stage: canonicalStage, title: canonicalStage, description: stageDesc })
+        idx++
+      }
     }
     match = listStageRegex.exec(markdown)
   }
@@ -526,13 +594,37 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     }
   }
 
-  // Deduplicate structure by stage
+  // Filter out any metadata headings and unpack embedded sub-headings if present
+  const cleanedStructure = []
   const seenStages = new Set()
-  structure = structure.filter((item) => {
-    if (!item.stage || seenStages.has(item.stage)) return false
-    seenStages.add(item.stage)
-    return true
-  })
+
+  for (const item of structure) {
+    let stage = item.stage || item.title || ''
+    let desc = item.description || ''
+
+    if (METADATA_HEADING_REGEX.test(stage)) {
+      const m = desc.match(/###?\s*([A-Za-z\s]+|[^\n]+)\n+([\s\S]*)/)
+      if (m && !METADATA_HEADING_REGEX.test(m[1].trim())) {
+        stage = mapToCanonicalStage(m[1].trim(), cleanedStructure.length)
+        desc = m[2].trim()
+      } else {
+        continue
+      }
+    }
+
+    if (!stage || seenStages.has(stage) || METADATA_HEADING_REGEX.test(stage)) {
+      continue
+    }
+
+    seenStages.add(stage)
+    cleanedStructure.push({
+      stage,
+      title: stage,
+      description: desc,
+    })
+  }
+
+  structure = cleanedStructure
 
   // Pipeline strictly 1:1 mirrors the extracted structure stages
   let pipeline = []
@@ -545,7 +637,7 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
       pipeline = pipelineMatch[1]
         .split(/[→\->\>]/)
         .map((s, idx) => mapToCanonicalStage(s.replace(/^[\[\(（【\s]+|[\]\)）】\s]+$/g, ''), idx))
-        .filter(Boolean)
+        .filter((s) => Boolean(s) && !METADATA_HEADING_REGEX.test(s))
     }
   }
 
