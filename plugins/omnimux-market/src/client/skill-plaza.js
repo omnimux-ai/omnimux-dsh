@@ -2,10 +2,8 @@
 
     function resolvePlazaIconSize(size) {
       if (typeof size === "number" && Number.isFinite(size) && size > 0) return size;
-      if (size && typeof size === "object") {
-        const n = size.size ?? size.width;
-        if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
-      }
+      const n = size?.size ?? size?.width;
+      if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
       return 16;
     }
 
@@ -44,9 +42,11 @@
       if (typeof skillTitle === "function") return skillTitle(item, tr);
       if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillTitle === "function") return SkillShelf.skillTitle(item, tr);
       if (!item) return "";
-      const isEn = tr && (tr("locale") === "en" || tr.locale === "en");
-      if (isEn && (item.titleEn || item.nameEn)) return item.titleEn || item.nameEn;
-      if (!isEn && (item.titleZh || item.nameZh)) return item.titleZh || item.nameZh;
+      const isEn = Boolean(tr && (tr("locale") === "en" || tr.locale === "en"));
+      const enTitle = item.titleEn || item.nameEn;
+      const zhTitle = item.titleZh || item.nameZh;
+      if (isEn && enTitle) return enTitle;
+      if (!isEn && zhTitle) return zhTitle;
       return item.name || item.title || item.slug || "";
     }
 
@@ -54,9 +54,11 @@
       if (typeof skillDesc === "function") return skillDesc(item, tr);
       if (typeof SkillShelf !== "undefined" && typeof SkillShelf.skillDesc === "function") return SkillShelf.skillDesc(item, tr);
       if (!item) return "";
-      const isEn = tr && (tr("locale") === "en" || tr.locale === "en");
-      if (isEn && (item.descriptionEn || item.summaryEn)) return item.descriptionEn || item.summaryEn;
-      if (!isEn && (item.descriptionZh || item.summaryZh)) return item.descriptionZh || item.summaryZh;
+      const isEn = Boolean(tr && (tr("locale") === "en" || tr.locale === "en"));
+      const enDesc = item.descriptionEn || item.summaryEn;
+      const zhDesc = item.descriptionZh || item.summaryZh;
+      if (isEn && enDesc) return enDesc;
+      if (!isEn && zhDesc) return zhDesc;
       return item.description || item.summary || "";
     }
 
@@ -71,7 +73,8 @@
           if (!disabled && onChange) onChange(!checked);
         },
         onKeyDown: (e) => {
-          if ((e.key === "Enter" || e.key === " ") && !disabled && onChange) {
+          const isTrigger = e.key === "Enter" || e.key === " ";
+          if (isTrigger && !disabled && onChange) {
             e.preventDefault();
             e.stopPropagation();
             onChange(!checked);
@@ -223,7 +226,7 @@
         name: "YouTube创作者专家",
         nameEn: "YouTube Creator Expert",
         description: "帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。",
-        descriptionEn: "Help merchants find and evaluate YouTube creators using Topview self-owned creator... pool data.",
+        descriptionEn: "Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.",
         avatar: "catalog/covers/expert-youtube-creator.png",
         status: "enabled",
       },
@@ -232,7 +235,7 @@
         name: "亚马逊运营专家",
         nameEn: "Amazon Ops Expert",
         description: "亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。",
-        descriptionEn: "Amazon operation specialist for market, product, listing, keyword, review and risk... analysis.",
+        descriptionEn: "Amazon operation specialist for market, product, listing, keyword, review and risk analysis.",
         avatar: "catalog/covers/expert-amazon-ops.png",
         status: "enabled",
       },
@@ -241,7 +244,7 @@
         name: "TikTok Shop运营专家",
         nameEn: "TikTok Shop Ops Expert",
         description: "负责TikTok Shop趋势、产品、素材、内容、联盟、广告和直播运营的专家。",
-        descriptionEn: "TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live... ops.",
+        descriptionEn: "TikTok Shop operation specialist for trends, products, materials, content, affiliates, ads and live ops.",
         avatar: "catalog/covers/expert-tiktok-shop-ops.png",
         status: "enabled",
       },
@@ -250,7 +253,7 @@
         name: "媒体创作者",
         nameEn: "Media Creator",
         description: "AI内容生成：使用Topview AI创意工具生成视频、图像、数字替身、背景移除、文本转语音和语音克隆。",
-        descriptionEn: "AI content generation: videos, images, digital avatars, background removal, TTS, and... voice cloning using Topview AI",
+        descriptionEn: "AI content generation: videos, images, digital avatars, background removal, TTS, and voice cloning using Topview AI",
         avatar: "catalog/covers/expert-media-creator.png",
         status: "available",
       },
@@ -268,7 +271,7 @@
         name: "亚马逊运营专家",
         nameEn: "Amazon Operations Expert",
         description: "专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。",
-        descriptionEn: "Focused on Amazon store operations, listing optimization, advertising, and competitor... analysis to improve conversion",
+        descriptionEn: "Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion",
         avatar: "catalog/covers/expert-amazon-operations.png",
         status: "available",
       },
@@ -277,11 +280,166 @@
         name: "TikTok电商专家",
         nameEn: "TikTok Ecommerce Expert",
         description: "擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。",
-        descriptionEn: "Expert in TikTok short-video selling, creator partnerships, and growth strategies to help... brands launch on TikTok Shop.",
+        descriptionEn: "Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.",
         avatar: "catalog/covers/expert-tiktok-ecommerce.png",
         status: "available",
       },
     ];
+
+    function safeTrySkillInSession(item) {
+      if (typeof trySkillInSession === "function") {
+        trySkillInSession(item);
+      } else if (typeof SkillShelf !== "undefined" && typeof SkillShelf.trySkillInSession === "function") {
+        SkillShelf.trySkillInSession(item);
+      }
+    }
+
+    const EXPERT_STATUS_CONFIG = {
+      enabled: { statusKey: "expertMarket.enabled", defaultZh: "已入职", defaultEn: "Employed", btnKey: "expertMarket.disable", defaultBtn: "禁用", defaultBtnEn: "Disable" },
+      available: { statusKey: "expertMarket.available", defaultZh: "可聘用", defaultEn: "Hireable", btnKey: "expertMarket.install", defaultBtn: "安装", defaultBtnEn: "Install" },
+      disabled: { statusKey: "expertMarket.disabled", defaultZh: "已离职", defaultEn: "Resigned", btnKey: "expertMarket.install", defaultBtn: "安装", defaultBtnEn: "Install" },
+      coming_soon: { statusKey: "expertMarket.comingSoon", defaultZh: "即将推出", defaultEn: "Coming soon", btnKey: "", defaultBtn: "", defaultBtnEn: "" },
+    };
+
+    function renderExpertCard(item, opts) {
+      const { tr, isEn, expertMarketToggling, onToggle } = opts;
+      const title = isEn ? (item.nameEn || item.name) : item.name;
+      const desc = isEn ? (item.descriptionEn || item.description) : item.description;
+      const conf = EXPERT_STATUS_CONFIG[item.status] || EXPERT_STATUS_CONFIG.available;
+
+      const localizedStatus = tr(conf.statusKey) || (isEn ? conf.defaultEn : conf.defaultZh);
+      const statusText = "[ " + localizedStatus + " ]";
+      const btnText = conf.btnKey ? (tr(conf.btnKey) || (isEn ? conf.defaultBtnEn : conf.defaultBtn)) : "";
+      const showButton = Boolean(conf.btnKey);
+
+      return h("div", { key: item.id, className: "expert-card" },
+        h("div", { className: "expert-card-avatar-wrap" },
+          h("img", {
+            className: "expert-card-avatar",
+            src: iconSrc(item.avatar),
+            alt: title,
+            loading: "lazy",
+          }),
+        ),
+        showButton ? h("div", { className: "expert-card-action" },
+          h("button", {
+            type: "button",
+            className: "expert-pill-btn",
+            disabled: expertMarketToggling === item.id,
+            onClick: (e) => {
+              e.stopPropagation();
+              onToggle(item);
+            },
+          }, expertMarketToggling === item.id ? "..." : btnText),
+        ) : null,
+        h("div", { className: "expert-card-status " + (item.status || "") }, statusText),
+        h("div", { className: "expert-card-title" }, title),
+        h("p", { className: "expert-card-desc" }, desc),
+      );
+    }
+
+    function renderFeaturedCard(item, tr, onOpen, onPin) {
+      const coverSrc = item.cover && item.cover.asset ? iconSrc(item.cover.asset) : (item.coverUrl || "");
+      const title = resolveItemTitle(item, tr);
+      const desc = resolveItemDesc(item, tr) || "暂无描述";
+
+      return h("div", {
+        key: item.slug || item.id,
+        className: "featured-card",
+        onClick: () => onOpen(item),
+      },
+        h("div", { className: "featured-cover-wrap" },
+          coverSrc ? h("img", {
+            src: coverSrc,
+            alt: (item.cover && item.cover.alt) || title || "Cover",
+            loading: "lazy",
+            style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+            onError: (e) => {
+              e.currentTarget.style.display = "none";
+              const next = e.currentTarget.nextElementSibling;
+              if (next) next.style.display = "block";
+            },
+          }) : null,
+          h("svg", {
+            viewBox: "0 0 320 180",
+            width: "100%",
+            height: "100%",
+            fill: "none",
+            xmlns: "http://www.w3.org/2000/svg",
+            style: coverSrc ? { display: "none" } : undefined,
+          },
+            h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
+            h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
+            h("text", { x: "160", y: "96", textAnchor: "middle", fill: "var(--dsw-alias-brand-primary, #6f59ff)", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
+          ),
+          h("div", { className: "featured-hover-actions" },
+            h("button", {
+              type: "button",
+              className: "hover-btn hover-btn-pin",
+              title: tr("workshop.pinToTop") || "置顶",
+              onClick: (e) => { e.stopPropagation(); onPin(item.id); },
+            }, tr("workshop.pinToTop") || "置顶"),
+            h("button", {
+              type: "button",
+              className: "hover-btn hover-btn-detail",
+              onClick: (e) => { e.stopPropagation(); onOpen(item); },
+            }, tr("workshop.detail") || "查看详情"),
+            h("button", {
+              type: "button",
+              className: "hover-btn hover-btn-try",
+              onClick: (e) => { e.stopPropagation(); safeTrySkillInSession(item); },
+            }, tr("workshop.try") || "去对话中试试"),
+          ),
+        ),
+        h("div", { className: "featured-content" },
+          h("div", { className: "featured-card-name", title }, title),
+          h("div", { className: "featured-card-desc" }, desc),
+        ),
+      );
+    }
+
+    function renderRegularCard(item, tr, onOpen, onToggle) {
+      const title = resolveItemTitle(item, tr);
+      const desc = resolveItemDesc(item, tr) || "暂无描述";
+      return h("div", {
+        key: item.slug || item.id,
+        className: "regular-card",
+        onClick: () => onOpen(item),
+      },
+        h("div", { className: "regular-card-info" },
+          h("div", { className: "regular-card-top" },
+            h("div", { className: "regular-card-title", title }, title),
+            item.downloads ? h("span", { className: "regular-card-dl" }, fmt(item.downloads, tr)) : null,
+          ),
+          h("div", { className: "regular-card-desc" }, desc),
+        ),
+        h(WorkshopSwitch, {
+          checked: item.installed && item.enabled !== false,
+          onChange: () => onToggle(item),
+        }),
+      );
+    }
+
+    function renderMineCard(item, tr, onOpen, onToggle) {
+      const title = resolveItemTitle(item, tr);
+      const desc = resolveItemDesc(item, tr) || "暂无描述";
+      return h("div", {
+        key: item.slug || item.id,
+        className: "regular-card",
+        onClick: () => onOpen(item),
+      },
+        h("div", { className: "regular-card-info" },
+          h("div", { className: "regular-card-top" },
+            h("div", { className: "regular-card-title", title }, title),
+          ),
+          h("div", { className: "regular-card-desc" }, desc),
+        ),
+        h(WorkshopSwitch, {
+          checked: item.enabled !== false,
+          onChange: () => onToggle(item),
+        }),
+      );
+    }
 
     function SkillPlaza(props) {
       const tr = useTr();
@@ -549,12 +707,14 @@
 
       const isEn = tr("locale") === "en";
       const isExpertTab = mainTab === "experts-market";
-      const introHeading = isExpertTab
-        ? (tr("expertMarket.title") || (isEn ? "Experts Market" : "专家市场"))
-        : (tr("workshop.title") || "Skill");
-      const introSubtitle = isExpertTab
-        ? (tr("expertMarket.subtitle") || (isEn ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区"))
-        : tr("workshop.subtitle");
+      let introHeading = tr("workshop.title") || "Skill";
+      if (isExpertTab) {
+        introHeading = tr("expertMarket.title") || (isEn ? "Experts Market" : "专家市场");
+      }
+      let introSubtitle = tr("workshop.subtitle");
+      if (isExpertTab) {
+        introSubtitle = tr("expertMarket.subtitle") || (isEn ? "Discover and install AI Agents to extend your workspace" : "发现并安装AI代理以扩展您的工作区");
+      }
 
       const displayedExperts = (expertMarketItems.length ? expertMarketItems : DEFAULT_MARKET_EXPERTS).filter((item) => {
         if (!isExpertTab || !searchQuery.trim()) return true;
@@ -562,6 +722,11 @@
         const hay = [item.name, item.nameEn, item.description, item.descriptionEn].filter(Boolean).join(" ").toLowerCase();
         return hay.includes(q);
       });
+
+      let placeholderText = tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder");
+      if (isExpertTab) {
+        placeholderText = tr("expertMarket.searchPlaceholder") || (isEn ? "Search all experts..." : "搜索全部专家");
+      }
 
       return h("div", { className: "sh-mkt" },
         h("section", { className: "workshop-intro", "aria-label": introHeading },
@@ -635,9 +800,7 @@
             h("input", {
               type: "text",
               value: searchQuery,
-              placeholder: isExpertTab
-                ? (tr("expertMarket.searchPlaceholder") || (isEn ? "Search all experts..." : "搜索全部专家"))
-                : tr(mainTab === "mine" ? "workshop.searchMinePlaceholder" : "workshop.searchPlaceholder"),
+              placeholder: placeholderText,
               onChange: (e) => setSearchQuery(e.target.value),
               onKeyDown: (e) => {
                 if (e.key === "Enter") {
@@ -658,60 +821,14 @@
             onClick: () => { setCategory(c.id); setMineCategory(""); setPage(1); },
           }, c.id === "短剧漫剧" && tr("locale") === "zh" ? "短剧/漫剧" : c.label)),
         ),
+
         // 视图内容
         isExpertTab ? h("div", { className: "expert-market-container" },
           displayedExperts.length === 0
             ? h("div", { className: "sh-mkt-empty" }, tr("expert.empty") || (isEn ? "No matching experts" : "没有匹配的专家"))
             : h("div", { className: "expert-market-grid" },
-                displayedExperts.map((item) => {
-              const isEn = tr("locale") === "en";
-              const title = isEn ? (item.nameEn || item.name) : item.name;
-              const desc = isEn ? (item.descriptionEn || item.description) : item.description;
-              const isEnabled = item.status === "enabled";
-              const isAvailable = item.status === "available";
-              const isDisabled = item.status === "disabled";
-              const isComingSoon = item.status === "coming_soon";
-
-              let statusText = "";
-              if (isEnabled) statusText = "[ " + (tr("expertMarket.enabled") || (isEn ? "Employed" : "已入职")) + " ]";
-              else if (isAvailable) statusText = "[ " + (tr("expertMarket.available") || (isEn ? "Hireable" : "可聘用")) + " ]";
-              else if (isDisabled) statusText = "[ " + (tr("expertMarket.disabled") || (isEn ? "Resigned" : "已离职")) + " ]";
-              else if (isComingSoon) statusText = "[ " + (tr("expertMarket.comingSoon") || (isEn ? "Coming soon" : "即将推出")) + " ]";
-
-              const btnText = isEnabled
-                ? (tr("expertMarket.disable") || (isEn ? "Disable" : "禁用"))
-                : (tr("expertMarket.install") || (isEn ? "Install" : "安装"));
-
-              const showButton = isEnabled || isAvailable || isDisabled;
-
-              return h("div", { key: item.id, className: "expert-card" },
-                h("div", { className: "expert-card-avatar-wrap" },
-                  h("img", {
-                    className: "expert-card-avatar",
-                    src: iconSrc(item.avatar),
-                    alt: title,
-                    loading: "lazy",
-                  }),
-                ),
-                showButton ? h("div", { className: "expert-card-action" },
-                  h("button", {
-                    type: "button",
-                    className: "expert-pill-btn",
-                    disabled: expertMarketToggling === item.id,
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      handleToggleExpert(item);
-                    },
-                  }, expertMarketToggling === item.id ? "..." : btnText),
-                ) : null,
-                h("div", {
-                  className: "expert-card-status " + (item.status || ""),
-                }, statusText),
-                h("div", { className: "expert-card-title" }, title),
-                h("p", { className: "expert-card-desc" }, desc),
-              );
-            }),
-          ),
+                displayedExperts.map((item) => renderExpertCard(item, { tr, isEn, expertMarketToggling, onToggle: handleToggleExpert })),
+              ),
         ) : mainTab === "mine" ? h("div", null,
           // 「我的 Skill」专属工具行
           h("div", { className: "mine-toolbar" },
@@ -748,25 +865,9 @@
             ),
           ),
           filteredMine.length ? h("div", { className: "regular-grid" },
-            filteredMine.map((item) => h("div", {
-              key: item.slug || item.id,
-              className: "regular-card",
-              onClick: () => setOpen(item),
-            },
-              h("div", { className: "regular-card-info" },
-                h("div", { className: "regular-card-top" },
-                  h("div", { className: "regular-card-title", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
-                ),
-                h("div", { className: "regular-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
-              ),
-              h(WorkshopSwitch, {
-                checked: item.enabled !== false,
-                onChange: () => handleSwitchToggle(item),
-              }),
-            )),
+            filteredMine.map((item) => renderMineCard(item, tr, setOpen, handleSwitchToggle)),
           ) : h("p", { className: "sh-mkt-status" }, tr("workshop.emptyMine") || "暂无已安装的 Skill"),
         ) : h("div", null,
-
           // 官方精选（结果大于等于 1 项才显示，否则完全隐藏）
           featuredItems.length > 0 ? h("section", { className: "featured-section" },
             h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
@@ -787,62 +888,7 @@
               }, tr("workshop.resetOrder") || "恢复默认排序") : null,
             ),
             h("div", { className: "featured-grid" },
-              featuredItems.map((item) => {
-                const coverSrc = item.cover && item.cover.asset ? iconSrc(item.cover.asset) : (item.coverUrl || "");
-                return h("div", {
-                  key: item.slug || item.id,
-                  className: "featured-card",
-                  onClick: () => setOpen(item),
-                },
-                  h("div", { className: "featured-cover-wrap" },
-                    coverSrc ? h("img", {
-                      src: coverSrc,
-                      alt: (item.cover && item.cover.alt) || resolveItemTitle(item, tr) || "Cover",
-                      loading: "lazy",
-                      style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-                      onError: (e) => {
-                        e.currentTarget.style.display = "none";
-                        const next = e.currentTarget.nextElementSibling;
-                        if (next) next.style.display = "block";
-                      },
-                    }) : null,
-                    h("svg", {
-                      viewBox: "0 0 320 180",
-                      width: "100%",
-                      height: "100%",
-                      fill: "none",
-                      xmlns: "http://www.w3.org/2000/svg",
-                      style: coverSrc ? { display: "none" } : undefined,
-                    },
-                      h("rect", { width: "320", height: "180", fill: "var(--dsw-alias-bg-layer-1, #1a1c24)" }),
-                      h("circle", { cx: "160", cy: "90", r: "36", fill: "var(--dsw-alias-bg-layer-2, #272a38)" }),
-                      h("text", { x: "160", y: "96", textAnchor: "middle", fill: "var(--dsw-alias-brand-primary, #6f59ff)", fontSize: "16", fontWeight: "600" }, (item.name || item.title || "SK").slice(0, 4)),
-                    ),
-                    h("div", { className: "featured-hover-actions" },
-                      h("button", {
-                        type: "button",
-                        className: "hover-btn hover-btn-pin",
-                        title: tr("workshop.pinToTop") || "置顶",
-                        onClick: (e) => { e.stopPropagation(); handleMoveToTop(item.id); },
-                      }, tr("workshop.pinToTop") || "置顶"),
-                      h("button", {
-                        type: "button",
-                        className: "hover-btn hover-btn-detail",
-                        onClick: (e) => { e.stopPropagation(); setOpen(item); },
-                      }, tr("workshop.detail") || "查看详情"),
-                      h("button", {
-                        type: "button",
-                        className: "hover-btn hover-btn-try",
-                        onClick: (e) => { e.stopPropagation(); trySkillInSession(item); },
-                      }, tr("workshop.try") || "去对话中试试"),
-                    ),
-                  ),
-                  h("div", { className: "featured-content" },
-                    h("div", { className: "featured-card-name", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
-                    h("div", { className: "featured-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
-                  ),
-                );
-              }),
+              featuredItems.map((item) => renderFeaturedCard(item, tr, setOpen, handleMoveToTop)),
             ),
           ) : null,
 
@@ -870,23 +916,7 @@
             status === "error" ? h("p", { className: "sh-mkt-status" }, tr("mkt.error", { m: err })) : null,
             status === "ready" && !regularItems.length ? h("p", { className: "sh-mkt-status" }, tr("search.empty")) : null,
             regularItems.length ? h("div", { className: "regular-grid" },
-              regularItems.map((item) => h("div", {
-                key: item.slug || item.id,
-                className: "regular-card",
-                onClick: () => setOpen(item),
-              },
-                h("div", { className: "regular-card-info" },
-                  h("div", { className: "regular-card-top" },
-                    h("div", { className: "regular-card-title", title: resolveItemTitle(item, tr) }, resolveItemTitle(item, tr)),
-                    item.downloads ? h("span", { className: "regular-card-dl" }, fmt(item.downloads, tr)) : null,
-                  ),
-                  h("div", { className: "regular-card-desc" }, resolveItemDesc(item, tr) || "暂无描述"),
-                ),
-                h(WorkshopSwitch, {
-                  checked: item.installed && item.enabled !== false,
-                  onChange: () => handleSwitchToggle(item),
-                }),
-              )),
+              regularItems.map((item) => renderRegularCard(item, tr, setOpen, handleSwitchToggle)),
             ) : null,
           ),
           hasMore ? h(Button, { size: "sm", variant: "outline", onClick: () => setPage(page + 1) }, tr("mkt.more")) : null,
