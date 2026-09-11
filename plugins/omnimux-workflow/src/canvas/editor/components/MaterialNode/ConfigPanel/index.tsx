@@ -46,6 +46,7 @@ import SlotWells from './SlotWells/SlotWells';
 import type { SlotPickRequest } from './SlotWells/types.ts';
 import { VideoTriggerBar } from './videoParams/VideoTriggerBar';
 import { VideoParamPopover } from './videoParams/VideoParamPopover';
+import { resolveVideoSlotLayout } from './videoParams/videoSlotLayout';
 import { filterWrite } from './videoParams/paramSchemaFilter.ts';
 import { ImageTriggerBar } from './imageParams/ImageTriggerBar';
 import { ImageParamPopover } from './imageParams/ImageParamPopover';
@@ -102,93 +103,10 @@ export interface ConfigPanelProps {
   onOpenResourcePicker?: (requestOrMode?: SlotPickRequest | 'add' | 'replace', targetSlotIndex?: number) => void;
 }
 
-function getModelVisuals(id: string) {
-  const icon = <ModelBrandIcon modelId={id} size={15} />;
+import { getModelVisuals } from './modelVisuals';
+import { ImportConfigPanelImpl, type ImportConfigPanelProps } from './ImportConfigPanel';
 
-  if (id.startsWith('nanobanana')) {
-    return { icon, badge: 'Yearly -20%', subtitle: 'auto-4K' };
-  }
-  if (id.startsWith('seedream')) {
-    const subtitle = id.includes('5.0') || id.includes('5-0') ? '1K-2K' : '2K-4K';
-    return { icon, badge: 'Yearly -20%', subtitle };
-  }
-  if (id.startsWith('midjourney')) {
-    const subtitle = id.includes('8.1') || id.includes('8-1') ? '2K' : '1080P';
-    return { icon, badge: 'Yearly -20%', subtitle };
-  }
-  if (id.startsWith('gpt-image') || id.startsWith('openai')) {
-    return { icon, badge: 'Yearly -20%', subtitle: '1k-4k' };
-  }
-  if (id.startsWith('kling')) {
-    let subtitle = '1080P · 3-10s';
-    if (id === 'kling-o3') subtitle = '4K · 3-15s';
-    else if (id === 'kling-avatar') subtitle = 'Digital Human';
-    else if (id === 'kling-motion-control') subtitle = '1080P';
-    return { icon, subtitle };
-  }
-  if (id.startsWith('wan')) {
-    return { icon, subtitle: '720P-1080P · 5-15s' };
-  }
-  if (id.startsWith('veo')) {
-    return { icon, subtitle: '720p-1080p · 8s' };
-  }
-  return { icon };
-}
-
-interface ImportConfigPanelProps {
-  nodeData: MaterialNodeData;
-  execBusy?: boolean;
-  onOpenResourcePicker?: (requestOrMode?: 'add' | 'replace' | SlotPickRequest, targetSlotIndex?: number) => void;
-}
-
-const ImportConfigPanel: React.FC<ImportConfigPanelProps> = ({
-  nodeData,
-  execBusy,
-  onOpenResourcePicker,
-}) => {
-  const t = useT();
-  const isNodeBusy =
-    Boolean(execBusy) ||
-    nodeData.executionStatus === 'running' ||
-    nodeData.executionStatus === 'pending' ||
-    nodeData.status === 'generating';
-  return (
-    <div className="wf-config-panel wf-config-panel--import">
-      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--dsw-alias-label-secondary, var(--wb-text-secondary))' }}>
-            {t('panel.hintImportNode')}
-          </span>
-          {Boolean(nodeData.realPath) && (
-            <span
-              style={{
-                fontSize: '11px',
-                color: 'var(--dsw-alias-label-tertiary, var(--wb-text-muted))',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: '240px',
-              }}
-              title={String(nodeData.realPath)}
-            >
-              {String(nodeData.realPath).split('/').pop()}
-            </span>
-          )}
-        </div>
-        {onOpenResourcePicker && !isNodeBusy && (
-          <button
-            type="button"
-            className="wf-param-pill wf-param-pill--btn"
-            style={{ padding: '4px 10px', height: '28px' }}
-            onClick={() => onOpenResourcePicker('replace')}
-          >
-            <span>{t('node.replace')}</span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
+const ImportConfigPanel: React.FC<ImportConfigPanelProps> = (props) => <ImportConfigPanelImpl {...props} />;
 
 const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   nodeId,
@@ -234,6 +152,24 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const handleOpenReplacePicker = useCallback((slotIndex: number) => {
     onOpenResourcePicker?.('replace', slotIndex);
   }, [onOpenResourcePicker]);
+
+  const handleCommitReference = useCallback((token: { nodeId: string }, nextPrompt: string) => {
+    const store = useCanvasStore.getState();
+    store.pushHistory();
+    const plan = store.applyCanvasInputMutation(referenceMutation(nodeId, token.nodeId, nextPrompt, store.edges));
+    if (plan.status !== 'allowed') {
+      toast.error(t(rejectReasonKey(plan.reasonCode)));
+      return false;
+    }
+    store.pushHistory(true);
+    return true;
+  }, [nodeId, t]);
+
+  const handleHistoryStep = useCallback((redo: boolean) => {
+    const store = useCanvasStore.getState();
+    store.pushHistory();
+    if (redo) store.redo(); else store.undo();
+  }, []);
 
   const upstreams = useUpstreamMedia(nodeId);
   const upstreamSnapshots = useMemo(() => toUpstreamSnapshots(upstreams), [upstreams]);
@@ -302,6 +238,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const updateParam = useCallback(
     (key: string, value: unknown) => {
       if (key === 'operation') {
+        const nextOpId = typeof value === 'string' ? value : undefined;
         if (materialType === 'video' && modelItem) {
           const transition = buildVideoParamTransition(
             params as Record<string, unknown>,
@@ -310,17 +247,17 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               catalog: activeCatalog,
               upstreams: upstreamSnapshots,
               prompt: localPrompt,
-              nextOperationId: typeof value === 'string' ? value : undefined,
+              nextOperationId: nextOpId,
             },
           );
           onUpdateNodeData({ params: transition.params });
-        } else {
-          const next = setParamsOperation(
-            params as Record<string, unknown>,
-            typeof value === 'string' ? value : undefined,
-          );
-          onUpdateNodeData({ params: next });
+          return;
         }
+        const next = setParamsOperation(
+          params as Record<string, unknown>,
+          nextOpId,
+        );
+        onUpdateNodeData({ params: next });
         return;
       }
       // T04：视频参数写入经声明式白名单过滤（hidden / 非白名单键被剥离）。
@@ -331,6 +268,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       onUpdateNodeData({ params: { ...params, ...patch } });
     },
     [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots],
+  );
+
+  const handleSelectVoice = useCallback(
+    (voiceType: string) => {
+      updateParam('voice', voiceType);
+      setVoicePickerOpen(false);
+    },
+    [updateParam],
   );
 
   // Effective ops for the currently selected model (all modalities).
@@ -434,11 +379,9 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           fingerprint,
           outputType: outputTypeForCompat,
         });
-        onUpdateNodeData({ params: setParamsOperation(
-          { ...params, model: newModelId },
-          nextOps.effectiveOps.find((op) => op.id === preferredOperationId && op.ready)?.id
-            ?? nextOps.selectedOperationId,
-        ) });
+        const matchedOp = nextOps.effectiveOps.find((op) => op.id === preferredOperationId && op.ready);
+        const nextOperation = matchedOp?.id ?? nextOps.selectedOperationId;
+        onUpdateNodeData({ params: setParamsOperation({ ...params, model: newModelId }, nextOperation) });
       }
       void rememberGenerationModel(materialType, newModelId).catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
@@ -504,47 +447,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     }
     // 视频节点：基于当前生成模式与模型支持情况智能呈现卡槽
     if (materialType === 'video') {
-      // 1. 如果当前选中的生成模式已有原生卡槽（如首帧 named、首尾帧 pair、全能参考 strip、数字人 named），直接遵循真实业务卡槽契约！
-      if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
-        return slotLayout;
-      }
-      // 2. 如果当前处于无槽模式（如文生视频 text_to_video 或未指定模式）：
-      // 检查当前模型是否具备图生视频/素材输入能力（首帧 first_frame、多参考 video_multi_ref 等）
-      const contractView = buildContractView(activeCatalog);
-      const model = resolveModelView(contractView, modelValue);
-      const firstFrameOp = model?.operations.find(
-        (op) => op.listed && (op.id === 'first_frame' || op.id === 'first_last_frame' || op.id === 'image_to_video'),
-      );
-      const multiRefOp = model?.operations.find(
-        (op) => op.listed && (op.id === 'video_multi_ref' || op.id === 'multi_reference'),
-      );
-      const imageSlot = firstFrameOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt')
-        || multiRefOp?.inputs.find((s) => s.type === 'image' && s.role !== 'prompt');
-
-      if (imageSlot || firstFrameOp || multiRefOp) {
-        const targetSlot = imageSlot?.slot || 'first_frame';
-        const targetRole = imageSlot?.role || 'first_frame';
-        const labelKey = targetSlot === 'first_frame'
-          ? 'panel.slot.first_frame'
-          : 'panel.slot.reference_image';
-
-        return {
-          operationId: currentOperationId || 'text_to_video',
-          preset: 'strip',
-          slots: [{
-            slot: targetSlot,
-            role: targetRole,
-            type: 'image',
-            min: 0,
-            max: imageSlot?.max ?? 10,
-            labelKey,
-          }],
-          swap: false,
-          addButton: true,
-          implementationGaps: [],
-        };
-      }
-      return slotLayout;
+      const fallbackOp = currentOperationId || 'text_to_video';
+      return resolveVideoSlotLayout(slotLayout, activeCatalog, modelValue, fallbackOp);
     }
     if (materialType === 'text') {
       if (slotLayout.preset !== 'none' && slotLayout.slots.length > 0) {
@@ -668,44 +572,50 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   useEffect(() => {
     const key = `${modelValue}::${opsState.selectedOperationId || ''}`;
     const prev = modeConsumptionRef.current;
-    if (prev && prev.key !== key && prev.bound.length > 0) {
-      const lost = prev.bound.filter((edgeId) => !boundEdgeIds.includes(edgeId));
-      if (lost.length > 0) {
-        canvasNoticeService.publish({
-          kind: 'mode_consumption_changed',
-          message: t('notice.modeConsumptionChanged'),
-        });
-      }
+    if (!prev || prev.key === key || prev.bound.length === 0) {
+      modeConsumptionRef.current = { key, bound: boundEdgeIds };
+      return;
+    }
+    const lost = prev.bound.filter((edgeId) => !boundEdgeIds.includes(edgeId));
+    if (lost.length > 0) {
+      canvasNoticeService.publish({
+        kind: 'mode_consumption_changed',
+        message: t('notice.modeConsumptionChanged'),
+      });
     }
     modeConsumptionRef.current = { key, bound: boundEdgeIds };
   }, [modelValue, opsState.selectedOperationId, boundEdgeIds, t]);
 
   // 视频节点业务状态机：素材与模式双向自动流转（从产品经理视角保证零摩擦体验）
   useEffect(() => {
-    if (materialType === 'video') {
-      const hasImageUpstream = upstreams.some((u) => u.materialType === 'image' && u.hasMedia);
-      const savedOp = typeof (params as Record<string, unknown>)?.operation === 'string'
-        ? ((params as Record<string, unknown>).operation as string).trim()
-        : undefined;
-      const currentOp = savedOp || opsState.selectedOperationId;
-      const contractView = buildContractView(activeCatalog);
-      const model = resolveModelView(contractView, modelValue);
-      if (!model) return;
+    if (materialType !== 'video') return;
 
-      // 场景 1：仅当用户尚未显式保存过模式（!savedOp）时，检测到图片素材连入才进行初始首帧智能推荐
-      if (!savedOp && hasImageUpstream) {
-        const targetOp = model.operations.find((op) => op.listed && op.id === 'first_frame')?.id
-          || model.operations.find((op) => op.listed && (op.id === 'image_to_video' || op.id === 'video_multi_ref'))?.id;
-        if (targetOp && targetOp !== currentOp) {
-          updateParam('operation', targetOp);
-        }
+    const hasImageUpstream = upstreams.some((u) => u.materialType === 'image' && u.hasMedia);
+    const savedOp = typeof (params as Record<string, unknown>)?.operation === 'string'
+      ? ((params as Record<string, unknown>).operation as string).trim()
+      : undefined;
+    const currentOp = savedOp || opsState.selectedOperationId;
+    const contractView = buildContractView(activeCatalog);
+    const model = resolveModelView(contractView, modelValue);
+    if (!model) return;
+
+    // 场景 1：仅当用户尚未显式保存过模式（!savedOp）时，检测到图片素材连入才进行初始首帧智能推荐
+    if (!savedOp && hasImageUpstream) {
+      const targetOp = model.operations.find((op) => op.listed && op.id === 'first_frame')?.id
+        || model.operations.find((op) => op.listed && (op.id === 'image_to_video' || op.id === 'video_multi_ref'))?.id;
+      if (targetOp && targetOp !== currentOp) {
+        updateParam('operation', targetOp);
       }
-      // 场景 2：当前在首帧或首尾帧模式，但图片素材被全部移除且无任何上游媒体 → 自动平滑回退至文生视频
-      else if ((currentOp === 'first_frame' || currentOp === 'first_last_frame') && !hasImageUpstream && upstreams.length === 0) {
-        const hasTextToVideo = model.operations.some((op) => op.listed && op.id === 'text_to_video');
-        if (hasTextToVideo) {
-          updateParam('operation', 'text_to_video');
-        }
+      return;
+    }
+
+    // 场景 2：当前在首帧或首尾帧模式，但图片素材被全部移除且无任何上游媒体 → 自动平滑回退至文生视频
+    const isFrameMode = currentOp === 'first_frame' || currentOp === 'first_last_frame';
+    const hasNoUpstream = !hasImageUpstream && upstreams.length === 0;
+    if (isFrameMode && hasNoUpstream) {
+      const hasTextToVideo = model.operations.some((op) => op.listed && op.id === 'text_to_video');
+      if (hasTextToVideo) {
+        updateParam('operation', 'text_to_video');
       }
     }
   }, [materialType, upstreams, params, opsState.selectedOperationId, activeCatalog, modelValue, updateParam]);
@@ -837,22 +747,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           slotState={slotState}
           currentReferences={currentReferenceCandidates(upstreams, slotBindings)}
           canvasReferences={canvasReferenceCandidates(nodeId, useCanvasStore.getState().nodes ?? [], useCanvasStore.getState().edges)}
-          onCommitReference={(token, nextPrompt) => {
-            const store = useCanvasStore.getState();
-            store.pushHistory();
-            const plan = store.applyCanvasInputMutation(referenceMutation(nodeId, token.nodeId, nextPrompt, store.edges));
-            if (plan.status !== 'allowed') {
-              toast.error(t(rejectReasonKey(plan.reasonCode)));
-              return false;
-            }
-            store.pushHistory(true);
-            return true;
-          }}
-          onHistoryStep={(redo) => {
-            const store = useCanvasStore.getState();
-            store.pushHistory();
-            if (redo) store.redo(); else store.undo();
-          }}
+          onCommitReference={handleCommitReference}
+          onHistoryStep={handleHistoryStep}
           materialType={materialType}
           maxLength={audioPromptGate ? AUDIO_PROMPT_MAX_CHARS : undefined}
           countOverride={audioPromptGate ? audioPromptGate.count : undefined}
@@ -1004,10 +900,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           options={voiceCatalogOptions}
           {...(audioEffectiveParams?.voice ? { value: audioEffectiveParams.voice } : {})}
           onClose={() => setVoicePickerOpen(false)}
-          onSelect={(voiceType) => {
-            updateParam('voice', voiceType);
-            setVoicePickerOpen(false);
-          }}
+          onSelect={handleSelectVoice}
         />
       ) : null}
     </div>
@@ -1041,6 +934,10 @@ export class ConfigPanelErrorBoundary extends React.Component<
     console.error(`[ConfigPanel ErrorBoundary] 节点 ${this.props.nodeId} 配置面板渲染异常:`, error, errorInfo);
   }
 
+  private handleResetError = (): void => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render(): React.ReactNode {
     if (this.state.hasError) {
       return (
@@ -1060,7 +957,7 @@ export class ConfigPanelErrorBoundary extends React.Component<
             type="button"
             className="wf-param-pill wf-param-pill--btn"
             style={{ padding: '2px 8px', height: '24px' }}
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={this.handleResetError}
           >
             重试
           </button>
