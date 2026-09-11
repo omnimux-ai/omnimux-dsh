@@ -159,6 +159,30 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
     tabsContent.includes('setAllPresets'),
     'ComposerModeTabs 必须使用 setAllPresets 恢复营销预设状态'
   )
+
+  // 9. 验证营销模式下隐藏技能按钮 (SkillPicker) 联动契约
+  assert.ok(
+    stylesContent.includes("html[data-omnimux-composer-mode='marketing']"),
+    'styles.js 必须包含营销模式专属选择器'
+  )
+  assert.ok(
+    stylesContent.includes('[data-omnimux-skill-picker]'),
+    'styles.js 必须声明针对技能按钮的隐藏规则'
+  )
+  assert.ok(
+    tabsContent.includes("document.documentElement.setAttribute('data-omnimux-composer-mode'"),
+    'ComposerModeTabs 必须同步根节点 data-omnimux-composer-mode 属性'
+  )
+
+  const marketSkillPickerPath = path.resolve(
+    import.meta.dirname,
+    '../../../../omnimux-market/src/client/skill-picker.js'
+  )
+  const marketSkillPickerContent = fs.readFileSync(marketSkillPickerPath, 'utf-8')
+  assert.ok(
+    marketSkillPickerContent.includes('if (composerMode === "marketing")'),
+    'SkillPickerButton 必须在 marketing 模式下直接返回 null 隐藏技能按钮'
+  )
 })
 
 test('ComposerModeStore: 独立缓存、状态隔离与 Tab 切换恢复 (Agent 1111 -> 营销 2222 -> 短剧 空 -> 切回恢复)', () => {

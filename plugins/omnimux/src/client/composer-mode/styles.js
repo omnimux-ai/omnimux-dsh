@@ -115,6 +115,12 @@ html[data-omnimux-composer-density='short'] .omnimux-composer-mode-wrap,
 html[data-omnimux-composer-density='icon'] .omnimux-composer-mode-wrap {
   display: none !important;
 }
+
+/* 营销模式下隐藏技能按钮 (SkillPicker) 双重保障规则 */
+html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-skill-picker]),
+html[data-omnimux-composer-mode='marketing'] button[data-omnimux-skill-picker] {
+  display: none !important;
+}
 `
 
 export function ensureComposerModeStyles() {
