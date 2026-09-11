@@ -90,4 +90,9 @@ describe('composer inner attachment slot', () => {
     assert.match(cardSource, /omx-att-card--media/)
     assert.match(cardSource, /omx-att-card--file/)
   })
+
+  it('registers link trigger source to serialize URL chips on message submit', () => {
+    assert.match(indexSource, /import \{ registerLinkTriggerSource \} from '\.\/attachments\/linkTriggerSource\.ts'/)
+    assert.match(indexSource, /registerLinkTriggerSource\(ctx\)/)
+  })
 })
