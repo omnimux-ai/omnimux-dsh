@@ -6,6 +6,12 @@ import { ASSET_CATEGORIES, isAlreadyAdded, remainingQuota, toggleSelect } from '
 const STYLE_ID = 'omx-composer-add-asset-picker'
 
 const CSS = `
+div:has(> .omx-asset-pick),
+div:has(> * > .omx-asset-pick),
+.dshUk-Dialog-dialog:has(.omx-asset-pick) {
+  width: 800px !important;
+  max-width: 92vw !important;
+}
 .omx-asset-pick {
   display: flex; width: 100%; height: 480px; min-height: 480px; max-height: 480px;
   box-sizing: border-box;
@@ -35,7 +41,7 @@ const CSS = `
   box-sizing: border-box;
 }
 .omx-asset-pick__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, 264px); gap: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
 }
 .omx-asset-pick__empty {
   border: 1px dashed var(--dsw-alias-border-l4); border-radius: 12px; min-height: 200px;
@@ -43,7 +49,7 @@ const CSS = `
   color: var(--dsw-alias-label-tertiary); font-size: 13px;
 }
 .omx-asset-pick-card {
-  width: 264px; box-sizing: border-box;
+  width: 100%; max-width: 320px; box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; overflow: hidden; cursor: pointer;
   background: var(--dsw-alias-bg-base, var(--dsw-bg)); display: flex; flex-direction: column;
   transition: transform 0.15s ease, border-color 0.15s ease;
@@ -255,7 +261,7 @@ export function AssetPicker({
       open={open}
       onClose={onClose}
       title={title || tt('composerAdd.fromLibrary')}
-      width={760}
+      width={800}
       closeLabel={tt('composerAdd.cancel')}
       footer={(
         <div className="omx-asset-pick__footer">

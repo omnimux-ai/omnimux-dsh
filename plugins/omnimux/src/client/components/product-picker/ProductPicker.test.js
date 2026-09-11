@@ -39,7 +39,7 @@ test('createSafeT: fallbacks to DEFAULT_STRINGS when custom t returns raw key or
 
 test('ProductPicker: follows design system, contains search, nav, empty states and dialog', () => {
   assert.ok(pickerSource.includes('ModalDialog'), 'uses ModalDialog from dsh-ui-kit');
-  assert.ok(pickerSource.includes('width={760}'), 'locks fixed width to 760');
+  assert.ok(pickerSource.includes('width: 800px !important'), 'penetrates dialog width to 800px');
   assert.ok(pickerSource.includes('height: 480px'), 'locks fixed height to 480px');
   assert.ok(pickerSource.includes('ProductPickerCard'), 'renders ProductPickerCard');
   assert.ok(pickerSource.includes('omx-product-pick__search-input'), 'contains search input');
