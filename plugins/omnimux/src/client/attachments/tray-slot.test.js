@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const indexSource = readFileSync(join(here, '../index.js'), 'utf8')
 const traySource = readFileSync(join(here, 'AttachmentTray.tsx'), 'utf8')
+const dockStylesSource = readFileSync(join(here, 'dockStyles.ts'), 'utf8')
 const cardSource = readFileSync(join(here, 'AttachmentCard.tsx'), 'utf8')
 const detectorSource = readFileSync(join(here, 'media-detector.ts'), 'utf8')
 const cssSource = readFileSync(join(here, 'styles.css'), 'utf8')
@@ -40,7 +41,7 @@ describe('composer inner attachment slot', () => {
   })
 
   it('compacts the inner rail to the 44×44 / 40px spec', () => {
-    for (const source of [traySource, cssSource]) {
+    for (const source of [dockStylesSource, cssSource]) {
       assert.match(source, /padding: 6px 12px 2px 12px/)
       assert.match(source, /width: 44px/)
       assert.match(source, /height: 44px/)
@@ -57,6 +58,17 @@ describe('composer inner attachment slot', () => {
       assert.doesNotMatch(source, /width: 56px/)
       assert.doesNotMatch(source, /height: 56px/)
     }
+  })
+
+  it('decomposes attachment tray into modular sub-components and hooks', () => {
+    assert.match(traySource, /import \{ ensureStylesInjected \} from '\.\/trayStyles\.ts'/)
+    assert.match(traySource, /import \{ insertNativeVideoChip \} from '\.\/nativeVideoChip\.ts'/)
+    assert.match(traySource, /import \{ useDragDrop \} from '\.\/useDragDrop\.ts'/)
+    assert.match(traySource, /import \{ usePasteVideoInterceptor \} from '\.\/usePasteVideoInterceptor\.ts'/)
+    assert.match(traySource, /import \{ VideoLinkPopover \} from '\.\/VideoLinkPopover\.tsx'/)
+    assert.match(traySource, /import \{ DropOverlay \} from '\.\/DropOverlay\.tsx'/)
+    assert.match(traySource, /import \{ AttachmentPreviewModal/)
+    assert.match(traySource, /import \{[\s\S]*NativeAttachmentCard[\s\S]*\} from '\.\/NativeAttachmentCard\.tsx'/)
   })
 
   it('keeps compact vector file icons without emoji', () => {
