@@ -128,10 +128,21 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /sh-model-brand-icon/)
     assert.match(modelPickerSrc, /dangerouslySetInnerHTML/)
 
-    // 视觉规范检查：浮层采用规范的深浅自适应背景 Token 与 12px 圆角
+    // 视觉规范检查：浮层采用规范的深浅自适应背景 Token 与 12px 圆角，宽度拓宽至 480px 完整展示模型名
+    assert.match(cssSrc, /\.sh-model-picker\{[^}]*width:480px/)
     assert.match(cssSrc, /\.sh-model-picker\{[^}]*background:var\(--dsw-alias-bg-layer-2/)
     assert.match(cssSrc, /\.sh-model-picker\{[^}]*border-radius:12px/)
     assert.match(cssSrc, /\.sh-model-tabs\{[^}]*background:var\(--dsw-alias-bg-base/)
     assert.match(cssSrc, /\.sh-model-tab\.active\{[^}]*background:var\(--dsw-alias-bg-layer-3/)
+    // 水晶切面钻石
+    assert.match(modelPickerSrc, /polygon/)
+    assert.match(modelPickerSrc, /sh-model-diamond/)
+  })
+
+  it('dynamically merges active catalog visible in plugin environment', () => {
+    assert.match(modelPickerSrc, /mergeDynamicCatalog/)
+    assert.match(modelPickerSrc, /getModelCatalog/)
+    assert.match(hostSrc, /modelCatalog/)
+    assert.match(hostSrc, /setModelCatalogResolver/)
   })
 })

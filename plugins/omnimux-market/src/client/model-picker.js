@@ -9,6 +9,9 @@
       dreamina: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M4 14C8 13.5 10 11.5 11 3.5C12.5 9 15.5 11.5 21 12.5C15 14.5 13 17 11.5 21C10.5 17 8 15 4 14Z"/></svg>`,
       nanobanana: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 17.5a7.5 7.5 0 1 1 7.5-7.5 7.5 7.5 0 0 1-7.5 7.5zm0-11a3.5 3.5 0 1 0 3.5 3.5A3.5 3.5 0 0 0 12 8.5zm0 5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/></svg>`,
       seedream: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="4.5" y="8" width="3.5" height="10" rx="1.75"/><rect x="10.25" y="4" width="3.5" height="16" rx="1.75"/><rect x="16" y="8" width="3.5" height="10" rx="1.75"/></svg>`,
+      alibaba: `<svg width="24" height="24" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.3746 20.1092L5.16567 20.1062C5.04656 20.1039 4.94147 20.0419 4.85439 19.9666L3.4196 17.4835C3.34553 17.3048 3.33903 17.2085 3.41084 17.0267C3.72813 16.3438 4.29864 15.6458 4.59266 14.9689C4.61142 14.9256 4.6427 14.888 4.62468 14.8358L2.04987 10.351C1.95954 10.1332 2.00132 10.0117 2.10016 9.81354C2.50302 9.0051 3.06378 8.21279 3.49091 7.41191C3.588 7.3194 3.70561 7.26697 3.84098 7.26092L6.30019 7.25764L8.95533 2.64194C9.04466 2.57237 9.12649 2.53632 9.24034 2.52598C10.1537 2.4438 11.1886 2.58825 12.1144 2.5285C12.239 2.56455 12.3501 2.63766 12.4245 2.74505L13.6708 4.88929L18.8415 4.89307C18.9691 4.90189 19.0967 4.95786 19.1773 5.05844C19.5929 5.85554 20.1662 6.64381 20.557 7.44595C20.6321 7.59997 20.6796 7.68543 20.6416 7.86718L19.3815 10.1385L21.9971 14.7338L22.0006 14.9778C21.598 15.7376 21.1793 16.5127 20.7322 17.2508C20.5875 17.4896 20.5097 17.7099 20.1914 17.7386C19.4285 17.8074 18.5632 17.6864 17.789 17.7361L17.7157 17.7631L15.0668 22.3473C14.9838 22.4277 14.9062 22.4622 14.7918 22.473C13.8893 22.5585 12.8563 22.406 11.9398 22.4733C11.8124 22.4637 11.6805 22.3863 11.608 22.2787L10.3746 20.109V20.1092ZM9.27862 7.76509L10.6266 5.38514L9.30339 3.03066L6.73458 7.50468L8.22017 10.1032L8.89002 10.1334L18.7864 10.1284L20.1527 7.76509H9.27862ZM6.57894 7.76509H3.87926L9.27862 17.2591H6.55392L5.22898 19.601C5.57454 19.6073 5.9216 19.5937 6.26741 19.6003C6.33297 19.6015 6.39378 19.6265 6.46509 19.6277C7.7565 19.6474 9.05242 19.6252 10.3416 19.6033L10.3806 19.5851L11.8482 17.0161L6.57894 7.76509ZM18.8152 14.8669H21.5024L18.9486 10.3883L15.9524 10.3964L10.6631 19.6013L12.0278 21.9684L17.428 12.4995L18.815 14.8666L18.8152 14.8669Z" fill="currentColor"/></svg>`,
+      minimax: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="currentColor"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">M</text></svg>`,
+      grok: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M4.94 4.96a9.97 9.97 0 0 1 10.835-2.182a8.7 8.7 0 0 1 2.033 1.11l-3.006 1.39C12.003 4.101 8.797 4.9 6.84 6.86c-2.564 2.565-3.146 6.954-.36 9.922l.278.284L.124 23c1.875-1.973 3.771-4.427 2.636-7.19c-1.52-3.698-.635-8.03 2.18-10.85M23.9.1c-2.264 3.174-3.184 5.389-2.197 9.64l-.007-.007c.753 3.201-.052 6.75-2.653 9.355c-3.279 3.285-8.526 4.016-12.847 1.06L9.21 18.75c2.758 1.084 5.775.607 7.943-1.564c2.169-2.17 2.655-5.332 1.566-7.963c-.207-.5-.828-.625-1.263-.304L8.59 15.472l12.7-12.77v.01z"/></svg>`,
     };
 
     function resolveModelBrand(modelId) {
@@ -21,10 +24,124 @@
       if (/(^gpt|^openai)/i.test(id)) return "openai";
       if (/(^google|^gemini)/i.test(id)) return "google";
       if (/(^seed|doubao|豆包|即梦|bytedance)/i.test(id)) return "bytedance";
+      if (/(^wan|\bwan\b|wanxiang|万相|通义|alibaba)/i.test(id)) return "alibaba";
+      if (/(^minimax|\bminimax\b|hailuo|海螺)/i.test(id)) return "minimax";
+      if (/(^grok|\bgrok\b|xai)/i.test(id)) return "grok";
       return "bytedance";
     }
 
-    const MODEL_CATALOG = {
+    const MODEL_METADATA_PRESETS = {
+      "seedance-2-5": {
+        name: "Dreamina Seedance 2.5",
+        capsuleName: "Dreamina Seedance 2.5",
+        subtitle: "30秒视频生成，精准片段编辑",
+        pro: true,
+        icon: "dreamina",
+      },
+      "seedance-2-0-fast": {
+        name: "Dreamina Seedance 2.0 快速版",
+        capsuleName: "Dreamina Seedance 2.0 Fast",
+        subtitle: "细节和质量提升，成本更低",
+        pro: true,
+        badge: { text: "高达43%折扣", type: "purple" },
+        icon: "dreamina",
+      },
+      "seedance-2-0": {
+        name: "Dreamina Seedance 2.0",
+        capsuleName: "Dreamina Seedance 2.0",
+        subtitle: "更精准的参考，更真实，高达4K",
+        pro: true,
+        icon: "dreamina",
+      },
+      "seedance-2-0-mini-trial": {
+        name: "Dreamina Seedance 2.0 Mini (试用版)",
+        capsuleName: "Dreamina Seedance 2.0 Mini",
+        subtitle: "最适合快速生成，仅需7积分/秒",
+        pro: true,
+        badge: { text: "新增", type: "green" },
+        icon: "dreamina",
+      },
+      "seedance-2-0-mini": {
+        name: "Dreamina Seedance 2.0 Mini",
+        capsuleName: "Dreamina Seedance 2.0 Mini",
+        subtitle: "轻量级推理，最具成本效益",
+        pro: true,
+        badge: { text: "最高可享58折优惠", type: "purple" },
+        icon: "dreamina",
+      },
+      "wan-3.0": {
+        name: "Wan 3.0",
+        capsuleName: "Wan 3.0",
+        subtitle: "通义万相电影级视效与长镜头生成",
+        pro: false,
+        icon: "alibaba",
+      },
+      "minimax-h3": {
+        name: "MiniMax H3",
+        capsuleName: "MiniMax H3",
+        subtitle: "电影感画质，原生高帧率动态生成",
+        pro: true,
+        icon: "minimax",
+      },
+      "grok-imagine-video-1-5": {
+        name: "Grok Imagine Video 1.5",
+        capsuleName: "Grok Video 1.5",
+        subtitle: "极速拟真运镜与多画幅自适应",
+        pro: false,
+        icon: "grok",
+      },
+      "nanobanana-pro": {
+        name: "Nano Banana Pro",
+        capsuleName: "Nano Banana Pro",
+        subtitle: "专业图像质量和文本布局",
+        pro: true,
+        icon: "nanobanana",
+      },
+      "gpt-image-2": {
+        name: "GPT图像2",
+        capsuleName: "GPT图像2",
+        subtitle: "精准文本渲染，更强的推理能力",
+        pro: false,
+        icon: "openai",
+      },
+      "nanobanana": {
+        name: "Nano Banana",
+        capsuleName: "Nano Banana",
+        subtitle: "图像质量可靠，价格更实惠",
+        pro: false,
+        icon: "nanobanana",
+      },
+      "seedream-5-0-pro": {
+        name: "Seedream 5.0 Pro",
+        capsuleName: "Seedream 5.0 Pro",
+        subtitle: "更精确、更可控的编辑",
+        pro: true,
+        icon: "seedream",
+      },
+      "seedream-5-0-lite": {
+        name: "Seedream 5.0 Lite",
+        capsuleName: "Seedream 5.0 Lite",
+        subtitle: "卓越的提示遵循和推理能力",
+        pro: false,
+        icon: "seedream",
+      },
+      "gpt-image-2.5": {
+        name: "GPT Image 2.5",
+        capsuleName: "GPT Image 2.5",
+        subtitle: "高精细节渲染与指令遵循",
+        pro: true,
+        icon: "openai",
+      },
+      "grok-imagine-image-2": {
+        name: "Grok Imagine Image 2",
+        capsuleName: "Grok Image 2",
+        subtitle: "极致写实摄影感与敏捷生图",
+        pro: false,
+        icon: "grok",
+      },
+    };
+
+    const DEFAULT_MODEL_CATALOG = {
       video: [
         {
           id: "seedance-2-5",
@@ -131,6 +248,42 @@
       ],
     };
 
+    function mergeDynamicCatalog(baseCatalog, dynamicCatalog) {
+      if (!dynamicCatalog || typeof dynamicCatalog !== "object") return baseCatalog;
+      const next = {
+        video: [...(baseCatalog.video || [])],
+        image: [...(baseCatalog.image || [])],
+      };
+
+      const normalizeList = (dynList, type) => {
+        if (!Array.isArray(dynList) || dynList.length === 0) return;
+        dynList.forEach((row) => {
+          if (!row || !row.id) return;
+          const existingIdx = next[type].findIndex((m) => m.id === row.id);
+          const meta = MODEL_METADATA_PRESETS[row.id] || {};
+          const item = {
+            id: row.id,
+            name: meta.name || row.label || row.id,
+            capsuleName: meta.capsuleName || row.label || row.id,
+            type,
+            subtitle: meta.subtitle || row.subtitle || (type === "video" ? "多模态高质量视频生成" : "高精细节渲染"),
+            pro: typeof meta.pro === "boolean" ? meta.pro : Boolean(row.pro),
+            badge: meta.badge || (row.badge ? { text: row.badge, type: "purple" } : null),
+            icon: meta.icon || resolveModelBrand(row.id),
+          };
+          if (existingIdx >= 0) {
+            next[type][existingIdx] = { ...next[type][existingIdx], ...item };
+          } else {
+            next[type].push(item);
+          }
+        });
+      };
+
+      normalizeList(dynamicCatalog.video, "video");
+      normalizeList(dynamicCatalog.image, "image");
+      return next;
+    }
+
     function renderModelLayersIcon(size = 16) {
       const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 16;
       return h("svg", {
@@ -150,17 +303,23 @@
       );
     }
 
-    function renderPurpleDiamond(size = 13) {
-      const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 13;
+    function renderPurpleDiamond(size = 14) {
+      const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? size : 14;
       return h("svg", {
         width: px,
         height: px,
-        viewBox: "0 0 24 24",
-        fill: "currentColor",
+        viewBox: "0 0 16 16",
+        fill: "none",
+        xmlns: "http://www.w3.org/2000/svg",
         className: "sh-model-diamond",
         style: { width: px + "px", height: px + "px", flexShrink: 0, display: "inline-block" },
       },
-        h("path", { d: "M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2Z" }),
+        h("polygon", { points: "5.5,2 10.5,2 9.2,5.5 6.8,5.5", fill: "currentColor", opacity: "0.95" }),
+        h("polygon", { points: "2,5.5 5.5,2 6.8,5.5", fill: "currentColor", opacity: "0.75" }),
+        h("polygon", { points: "10.5,2 14,5.5 9.2,5.5", fill: "currentColor", opacity: "0.85" }),
+        h("polygon", { points: "6.8,5.5 9.2,5.5 8,14", fill: "currentColor", opacity: "0.9" }),
+        h("polygon", { points: "2,5.5 6.8,5.5 8,14", fill: "currentColor", opacity: "0.6" }),
+        h("polygon", { points: "9.2,5.5 14,5.5 8,14", fill: "currentColor", opacity: "0.7" }),
       );
     }
 
@@ -182,11 +341,11 @@
       });
     }
 
-    function ModelPickerPanel({ open, anchorRef, auto, selectedModel, onToggleAuto, onSelectModel, onClose, t }) {
+    function ModelPickerPanel({ open, anchorRef, auto, selectedModel, modelsData, onToggleAuto, onSelectModel, onClose, t }) {
       const tr = typeof t === "function" ? t : lookup;
       const panelRef = useRef(null);
       const [tab, setTab] = useState("video");
-      const [pos, setPos] = useState({ left: 0, top: 0, width: 380 });
+      const [pos, setPos] = useState({ left: 0, top: 0, width: 480 });
 
       useLayoutEffect(() => {
         if (!open) return undefined;
@@ -195,8 +354,8 @@
           const panel = panelRef.current;
           if (!anchor || typeof anchor.getBoundingClientRect !== "function") return;
           const r = anchor.getBoundingClientRect();
-          const width = Math.min(400, Math.max(360, Math.min(380, window.innerWidth - 16)));
-          const height = panel ? panel.offsetHeight : 440;
+          const width = Math.min(520, Math.max(400, Math.min(480, window.innerWidth - 16)));
+          const height = panel ? panel.offsetHeight : 460;
           let left = r.left;
           if (left + width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - width - 8);
           if (left < 8) left = 8;
@@ -233,7 +392,8 @@
 
       if (!open) return null;
 
-      const items = MODEL_CATALOG[tab] || [];
+      const currentCatalog = modelsData || DEFAULT_MODEL_CATALOG;
+      const items = currentCatalog[tab] || [];
 
       const node = h("div", {
         ref: panelRef,
@@ -290,7 +450,7 @@
                 h("div", { className: "sh-model-row-info" },
                   h("div", { className: "sh-model-row-title-row" },
                     h("span", { className: "sh-model-name" }, model.name),
-                    model.pro ? renderPurpleDiamond(13) : null,
+                    model.pro ? renderPurpleDiamond(14) : null,
                     model.badge ? h("span", { className: "sh-model-badge " + (model.badge.type || "purple") }, model.badge.text) : null,
                   ),
                   h("div", { className: "sh-model-row-desc" }, model.subtitle),
@@ -349,6 +509,36 @@
         } catch {}
         return null;
       });
+
+      const [modelsData, setModelsData] = useState(() => DEFAULT_MODEL_CATALOG);
+
+      useEffect(() => {
+        let live = true;
+        const loadModels = async () => {
+          try {
+            if (typeof api === "function") {
+              const res = await api("getModelCatalog");
+              if (live && res && res.catalog) {
+                setModelsData((prev) => mergeDynamicCatalog(prev, res.catalog));
+                return;
+              }
+            }
+          } catch {}
+          if (typeof fetch === "function") {
+            try {
+              const resp = await fetch("/omnimux/model-catalog");
+              if (resp.ok) {
+                const cat = await resp.json();
+                if (live && cat) {
+                  setModelsData((prev) => mergeDynamicCatalog(prev, cat));
+                }
+              }
+            } catch {}
+          }
+        };
+        loadModels();
+        return () => { live = false; };
+      }, []);
 
       useEffect(() => {
         const updateSession = () => {
@@ -464,6 +654,7 @@
           anchorRef: btnRef,
           auto,
           selectedModel,
+          modelsData,
           onToggleAuto: handleToggleAuto,
           onSelectModel: handleSelectModel,
           onClose: () => setOpen(false),

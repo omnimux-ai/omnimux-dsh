@@ -423,6 +423,23 @@ export function getSessionModel(sessionId) {
 export function setSessionModel(sessionId, choice) {
     sessionModelStore.set(sessionId, choice);
 }
+let activeModelCatalogResolver = null;
+export function setModelCatalogResolver(resolver) {
+    activeModelCatalogResolver = resolver;
+}
+async function handleGetModelCatalog(ctx) {
+    const { res } = ctx;
+    try {
+        let catalog = null;
+        if (activeModelCatalogResolver) {
+            catalog = await activeModelCatalogResolver();
+        }
+        return sendJson(res, 200, { ok: true, catalog });
+    }
+    catch (err) {
+        return sendJson(res, 200, { ok: true, catalog: null });
+    }
+}
 async function handleGetModelSelection(ctx) {
     const { res, url, body } = ctx;
     const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim() || 'default';
@@ -462,6 +479,7 @@ const API_ROUTE_TABLE = {
     catalogInstall: handleCatalogInstall,
     catalogSummon: handleCatalogSummon,
     catalogUninstall: handleCatalogUninstall,
+    getModelCatalog: handleGetModelCatalog,
     getModelSelection: handleGetModelSelection,
     setModelSelection: handleSetModelSelection,
 };

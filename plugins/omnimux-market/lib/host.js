@@ -12,7 +12,7 @@ import { packageRoot, profileDir } from './expert/paths.js';
 import { configureHttpJsonCache } from './http.js';
 import { installSkill, installedSlugs, listInstalled, uninstallSkill } from './install.js';
 import { aggregateSkillSearch } from './skill-aggregate.js';
-import { getSessionModel, handleApi, handleIcon, handleWorkshopApi } from './local-api.js';
+import { getSessionModel, setModelCatalogResolver, handleApi, handleIcon, handleWorkshopApi } from './local-api.js';
 import { InventoryService } from './workshop-inventory.js';
 import { QueryService, createWorkshopSources } from './workshop-sources.js';
 import { RequestGuard, canonicalWorkshopOrigin, WORKSHOP_READ_METHODS } from './workshop-request-guard.js';
@@ -213,6 +213,20 @@ export function apply(ctx, config) {
     registerPlazaTools(ctx);
     registerPluginTools(ctx, cfg);
     registerConnectorTools(ctx, cfg);
+    if (typeof ctx.inject === 'function') {
+        ctx.inject(['modelCatalog'], (c) => {
+            if (c.modelCatalog && typeof c.modelCatalog.list === 'function') {
+                setModelCatalogResolver(async () => {
+                    try {
+                        return c.modelCatalog.list();
+                    }
+                    catch {
+                        return null;
+                    }
+                });
+            }
+        });
+    }
     if (typeof ctx.on === 'function') {
         // 监听工具执行门禁，当用户在会话中手动锁定模型时，禁用其他视频/图像生成工具
         ctx.on('tools/pre-execute', async (exec, next) => {

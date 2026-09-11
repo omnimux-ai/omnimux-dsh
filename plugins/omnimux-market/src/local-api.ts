@@ -479,6 +479,25 @@ export function setSessionModel(sessionId: string, choice: SessionModelChoice): 
   sessionModelStore.set(sessionId, choice)
 }
 
+let activeModelCatalogResolver: (() => Promise<{ video?: any[]; image?: any[] } | null>) | null = null
+
+export function setModelCatalogResolver(resolver: () => Promise<{ video?: any[]; image?: any[] } | null>): void {
+  activeModelCatalogResolver = resolver
+}
+
+async function handleGetModelCatalog(ctx: ApiContext): Promise<void> {
+  const { res } = ctx
+  try {
+    let catalog: any = null
+    if (activeModelCatalogResolver) {
+      catalog = await activeModelCatalogResolver()
+    }
+    return sendJson(res, 200, { ok: true, catalog })
+  } catch (err) {
+    return sendJson(res, 200, { ok: true, catalog: null })
+  }
+}
+
 async function handleGetModelSelection(ctx: ApiContext): Promise<void> {
   const { res, url, body } = ctx
   const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim() || 'default'
@@ -520,6 +539,7 @@ const API_ROUTE_TABLE: Record<string, ApiMethodHandler> = {
   catalogInstall: handleCatalogInstall,
   catalogSummon: handleCatalogSummon,
   catalogUninstall: handleCatalogUninstall,
+  getModelCatalog: handleGetModelCatalog,
   getModelSelection: handleGetModelSelection,
   setModelSelection: handleSetModelSelection,
 }
