@@ -125,6 +125,8 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
   );
 };
 
+const SHOW_MANUAL_LINK_BUTTON = false;
+
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const store = getGlobalAttachmentStore();
   const sessionObj = props.session;
@@ -237,37 +239,43 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   return (
     <>
       <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} />
-      <VideoLinkPopover
-        isOpen={isPopoverOpen}
-        onClose={handleClosePopover}
-        onConfirm={handleConfirmInsert}
-      />
+      {SHOW_MANUAL_LINK_BUTTON && (
+        <VideoLinkPopover
+          isOpen={isPopoverOpen}
+          onClose={handleClosePopover}
+          onConfirm={handleConfirmInsert}
+        />
+      )}
       <ComposerPresetsChips sessionId={currentSessionId} />
-      <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
-        <div className="omx-video-token-action-row">
-          <button /* exempt-ui01: 链接插入按钮 */
-            type="button"
-            className="omx-btn-insert-link"
-            onClick={handleOpenPopover}
-            title="点击在输入框光标位置插入链接"
-          >
-            <LinkIcon size={14} />
-            <span>插入链接</span>
-          </button>
+      {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
+        <div className="omx-attachment-dock" data-omnimux-attachments-dock="true">
+          {SHOW_MANUAL_LINK_BUTTON && (
+            <div className="omx-video-token-action-row">
+              <button /* exempt-ui01: 链接插入按钮 */
+                type="button"
+                className="omx-btn-insert-link"
+                onClick={handleOpenPopover}
+                title="点击在输入框光标位置插入链接"
+              >
+                <LinkIcon size={14} />
+                <span>插入链接</span>
+              </button>
+            </div>
+          )}
+          {hasRailContent && (
+            <AttachmentTrayRail
+              label={railLabel}
+              omnimuxAttachments={omnimuxAttachments}
+              nativeAttachments={nativeAttachments}
+              onRemoveOmnimux={handleRemoveOmnimux}
+              onOpenOmnimux={handleOpenOmnimux}
+              onRemoveNative={handleRemoveNative}
+              onOpenNative={handleOpenNative}
+              t={props.t}
+            />
+          )}
         </div>
-        {hasRailContent && (
-          <AttachmentTrayRail
-            label={railLabel}
-            omnimuxAttachments={omnimuxAttachments}
-            nativeAttachments={nativeAttachments}
-            onRemoveOmnimux={handleRemoveOmnimux}
-            onOpenOmnimux={handleOpenOmnimux}
-            onRemoveNative={handleRemoveNative}
-            onOpenNative={handleOpenNative}
-            t={props.t}
-          />
-        )}
-      </div>
+      )}
       <AttachmentPreviewModal
         preview={preview}
         onClose={closePreview}
