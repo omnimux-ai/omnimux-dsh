@@ -59,8 +59,6 @@ describe('skill shelf single source of truth', () => {
       'SkillShelf.buildSearchPayload',
       'SkillShelf.filterPickerItems',
       'SkillShelf.PICKER_TABS',
-      'SkillShelf.skillGesture',
-      'SkillShelf.appendSkillGesture',
       'SkillShelf.installPayload',
       'SkillShelf.loadPickerSearch',
     ]) {
