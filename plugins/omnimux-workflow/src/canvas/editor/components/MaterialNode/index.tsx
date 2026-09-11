@@ -10,12 +10,11 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, Music, RefreshCw, Unlink, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, Music, RefreshCw, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
-import { DEFAULT_MATERIAL_TOOL, resolveNodeKind } from '../../../types/materialNode';
+import { resolveNodeKind } from '../../../types/materialNode';
 import { readCurrentText } from '../../../../shared/graph/nodeInputSource';
-import CanvasNodeHandle, { type CanvasNodeHandleSelectMeta } from '../CanvasNodeHandle';
 import GenerationStateContainer from '../GenerationStateContainer';
 import NodeHeader from './NodeHeader';
 import StatusBadge from './StatusBadge';
@@ -40,7 +39,6 @@ import {
   canRunSpeechToText,
   canRunVideoDeconstruct,
   canRunVideoStoryboard,
-  canExtractAudioFromVideoNode,
   EMPTY_AUDIO_PILL_ACTION_ID,
   EMPTY_IMAGE_PILL_ACTION_ID,
   EMPTY_VIDEO_PILL_ACTION_ID,
@@ -48,30 +46,20 @@ import {
   isEmptyImageGenerateNode,
   isEmptyMediaGenerateNode,
   pillMaxWidthForNode,
-  resolveSpeechToTextAudioPath,
   resolveVideoAudioExtractPath,
-  resolveVideoDeconstructPath,
-  resolveVideoStoryboardPath,
   shouldShowNodeToolbar,
 } from '../../utils/nodeToolbarLogic';
 import { extractSocialVideoUrl } from '../../utils/socialMediaVideoUrl.ts';
-import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import { planVideoExtractionDownstream } from '../../utils/planVideoExtractionDownstream.ts';
-import { planVideoDeconstructDownstream } from '../../utils/planVideoDeconstructDownstream.ts';
 import {
-  planAudioExtractDownstream,
   planAudioExtractProvisioning,
   planAudioExtractSettlement,
 } from '../../utils/planAudioExtractDownstream.ts';
-import { deconstructVideo, extractAudioFromVideo, extractVideoFromUrl, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
-import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
-import { getOutputOptionSpecs, parseOutputOptionKey } from '../../utils/connectionMenuOptions';
-import { createMaterialNode } from '../../utils/nodeFactory';
+import { extractAudioFromVideo, extractVideoFromUrl } from '../../../bridge/apiClient.ts';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
 import { useExecutionStore } from '../../../store/executionStore';
 import { useCanvasStore, useIsMultiSelected } from '../../../store/canvasStore';
 import { useTextStageStore } from '../../../store/textStageStore';
-import { tableDocumentCache } from '../../../store/tableDocumentCache.ts';
 import { useT } from '../../../i18n';
 import { toast } from '../../../ui';
 import type { CapabilityCatalog, NodeExecutionApiStatus } from '../../../../shared/api';
@@ -79,6 +67,56 @@ import { draftFromRealPath, nativePathOf } from '../../utils/localFileDraft.ts';
 import { planImportNodeFill } from '../../utils/resourcePickerPolicy.ts';
 import { resolveModelInputCapability } from '../../../../shared/validation/modelCompatibilityEvaluator.ts';
 import type { NodeSlotEngineState } from '../../../../shared/graph/slotContractTypes.ts';
+import type { SlotPickRequest } from './ConfigPanel/SlotWells/types.ts';
+import { MediaCardBody } from './CardBody/MediaCardBody';
+import { NodeCornerMarkers } from './StatusMask/NodeCornerMarkers';
+import { MaterialNodeHandles } from './NodeHandles/MaterialNodeHandles';
+import {
+  executeDeconstructVideo,
+  executeSpeechToText,
+  executeStoryboardVideo,
+} from './nodeMediaOperations';
+
+const DEFAULT_GEN_TOOLS: Record<MaterialType, MaterialTool> = {
+  text: 'text-to-text',
+  image: 'text-to-image',
+  video: 'video-generation',
+  audio: 'text-to-audio',
+};
+
+function selectTargetNode(
+  nodeId: string,
+  setNodes: (updater: (nodes: any[]) => any[]) => void,
+): void {
+  setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === nodeId })));
+  useCanvasStore.getState().setSelectedElement('node', nodeId);
+}
+
+function patchNodeData(nodes: any[], targetId: string, updates: Partial<MaterialNodeData>) {
+  return nodes.map((n) => (n.id === targetId ? { ...n, data: { ...n.data, ...updates } } : n));
+}
+
+function extractDraftsFromFiles(files: File[]) {
+  const drafts = [];
+  for (const file of files) {
+    const path = nativePathOf(file);
+    if (!path) continue;
+    const draft = draftFromRealPath(path, { name: file.name, mime: file.type, size: file.size });
+    if (draft) drafts.push(draft);
+  }
+  return drafts;
+}
+
+function attachVideoSourceToNodes(items: any[], videoPath: string, workspaceId: string) {
+  return items.map((item) => ({
+    ...item,
+    data: {
+      ...item.data,
+      sourceVideoPath: videoPath,
+      __workspaceId: workspaceId,
+    },
+  }));
+}
 
 // ==================== 主组件 ====================
 
@@ -120,9 +158,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   const updateNodeData = useCallback(
     (updates: Partial<MaterialNodeData>) => {
-      setNodes((nodes) =>
-        nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...updates } } : n)),
-      );
+      setNodes((nodes) => patchNodeData(nodes, id, updates));
     },
     [id, setNodes],
   );
@@ -130,13 +166,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // 媒体素材宽高自适应计算
   const handleMediaSizeChange = useCallback(
     (naturalWidth: number, naturalHeight: number) => {
-      if (naturalWidth > 0 && naturalHeight > 0) {
-        const aspect = naturalWidth / naturalHeight;
-        const targetHeight = Math.max(80, Math.min(800, Math.round(nodeWidth / aspect)));
-        setMediaAspectHeight(targetHeight);
-        if (nodeData.nodeHeight !== targetHeight) {
-          updateNodeData({ nodeHeight: targetHeight });
-        }
+      if (naturalWidth <= 0 || naturalHeight <= 0) return;
+      const aspect = naturalWidth / naturalHeight;
+      const targetHeight = Math.max(80, Math.min(800, Math.round(nodeWidth / aspect)));
+      setMediaAspectHeight(targetHeight);
+      if (nodeData.nodeHeight !== targetHeight) {
+        updateNodeData({ nodeHeight: targetHeight });
       }
     },
     [nodeData.nodeHeight, nodeWidth, updateNodeData],
@@ -145,7 +180,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // 媒体素材时长自愈回填（修复视频节点 durationSec 恒为 null 导致下游模型校验拦截）
   const handleDurationChange = useCallback(
     (duration: number) => {
-      if (Number.isFinite(duration) && duration > 0 && (nodeData.durationSec !== duration || nodeData.duration !== duration)) {
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      if (nodeData.durationSec !== duration || nodeData.duration !== duration) {
         updateNodeData({ durationSec: duration, duration });
       }
     },
@@ -153,65 +189,27 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   );
 
   const handleGenerate = useCallback(() => {
-    const kind = resolveNodeKind(nodeData);
-    if (kind === 'generate') {
-      const currentTool = nodeData.selectedTool;
-      const defaultGenTools: Record<MaterialType, MaterialTool> = {
-        text: 'text-to-text',
-        image: 'text-to-image',
-        video: 'video-generation',
-        audio: 'text-to-audio',
-      };
-      if (!currentTool || currentTool === 'text-editor') {
-        updateNodeData({
-          selectedTool: defaultGenTools[materialType],
-        });
-      }
+    const nodeKind = resolveNodeKind(nodeData);
+    const needDefaultTool = nodeKind === 'generate' && (!nodeData.selectedTool || nodeData.selectedTool === 'text-editor');
+    if (needDefaultTool) {
+      updateNodeData({ selectedTool: DEFAULT_GEN_TOOLS[materialType] });
     }
+
     const quota = typeof window !== 'undefined' ? window.__omnimuxQuota : undefined;
-    if (quota && typeof quota.ensureQuota === 'function') {
-      void Promise.resolve(quota.ensureQuota({ capability: 'canvas', correlationId: id })).then((gate: { ok?: boolean } | undefined) => {
-        if (gate && gate.ok === false) return;
-        useExecutionStore.getState().startNodeExecution?.(id);
-      });
+    if (!quota || typeof quota.ensureQuota !== 'function') {
+      useExecutionStore.getState().startNodeExecution?.(id);
       return;
     }
-    useExecutionStore.getState().startNodeExecution?.(id);
+    void Promise.resolve(quota.ensureQuota({ capability: 'canvas', correlationId: id })).then((gate: { ok?: boolean } | undefined) => {
+      if (gate && gate.ok === false) return;
+      useExecutionStore.getState().startNodeExecution?.(id);
+    });
   }, [id, materialType, nodeData, updateNodeData]);
 
   const t = useT();
   const applyCanvasInputMutation = useCanvasStore((state) => state.applyCanvasInputMutation);
   const resourcePicker = useResourcePicker(id, typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : null);
   const kind = resolveNodeKind(nodeData);
-
-  const outputMenuOptions = useMemo(
-    () =>
-      getOutputOptionSpecs(materialType).map((spec) => ({
-        key: spec.key,
-        label: t(spec.labelKey),
-        description: t(spec.descKey),
-        icon: spec.icon,
-      })),
-    [materialType, t],
-  );
-
-  const handleOutputMenuSelect = useCallback(
-    (key: string, meta?: CanvasNodeHandleSelectMeta) => {
-      const parsed = parseOutputOptionKey(key);
-      const position = meta?.flowPosition;
-      if (!parsed || !position) return;
-      const result = createMaterialNode(parsed.targetMaterialType, position);
-      const newNode = result.nodes[0];
-      if (!newNode) return;
-      applyCanvasInputMutation({
-        addNodes: result.nodes,
-        addEdges: [
-          { source: id, sourceHandle: 'out', target: newNode.id, targetHandle: 'in' },
-        ],
-      });
-    },
-    [applyCanvasInputMutation, id],
-  );
 
   const effectiveTextContent = readCurrentText(data as Record<string, unknown>);
   const isOffline = status === 'offline' || nodeData.isMissing === true;
@@ -253,27 +251,26 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // 预设注入：写 prompt + 单选当前节点（空态按钮 nodrag 拦掉了 RF 选中手势）
   const handleApplyPreset = useCallback(
     (presetKey: string) => {
-      if (materialType === 'text') {
-        let injected = '';
-        if (presetKey === 'script') {
-          injected = '请创作一个[时长]的[类型]剧本。\n\n主题：[一句话描述]\n\n情绪基调：[温暖/悬疑/搞笑/热血]\n\n特殊要求：[如有]';
-        } else if (presetKey === 'planning') {
-          injected = '请撰写一份[项目类型]策划案。\n\n项目背景：[简述]\n\n核心目标：[希望达成什么]\n\n目标受众：[人群描述]';
-        } else if (presetKey === 'prompt') {
-          injected = '根据以下创意需求，生成一组适用于[目标工具]的高质量提示词。\n\n创意需求：[描述你想要的画面/音乐/视频]\n\n风格偏好：[写实/插画/3D/动漫/其他]';
-        } else if (presetKey === 'storyboard') {
-          injected = '镜头1：全景，城市天际线鸟瞰（缓慢下推 3s）\n镜头2：中景，主角推门走进咖啡馆（特写手部 2s）\n镜头3：特写，桌上的老式黑白照片（静止 2s）';
-        }
-        const updates: Record<string, unknown> = {
-          prompt: injected,
-          selectedTool: 'text-to-text',
-          nodeKind: 'generate',
-          content: undefined,
-          generatedContent: undefined,
-        };
-        setNodes((nodes) => planSelectAndPatchNode(nodes, id, updates));
-        useCanvasStore.getState().setSelectedElement('node', id);
+      if (materialType !== 'text') return;
+      let injected = '';
+      if (presetKey === 'script') {
+        injected = '请创作一个[时长]的[类型]剧本。\n\n主题：[一句话描述]\n\n情绪基调：[温暖/悬疑/搞笑/热血]\n\n特殊要求：[如有]';
+      } else if (presetKey === 'planning') {
+        injected = '请撰写一份[项目类型]策划案。\n\n项目背景：[简述]\n\n核心目标：[希望达成什么]\n\n目标受众：[人群描述]';
+      } else if (presetKey === 'prompt') {
+        injected = '根据以下创意需求，生成一组适用于[目标工具]的高质量提示词。\n\n创意需求：[描述你想要的画面/音乐/视频]\n\n风格偏好：[写实/插画/3D/动漫/其他]';
+      } else if (presetKey === 'storyboard') {
+        injected = '镜头1：全景，城市天际线鸟瞰（缓慢下推 3s）\n镜头2：中景，主角推门走进咖啡馆（特写手部 2s）\n镜头3：特写，桌上的老式黑白照片（静止 2s）';
       }
+      const updates: Record<string, unknown> = {
+        prompt: injected,
+        selectedTool: 'text-to-text',
+        nodeKind: 'generate',
+        content: undefined,
+        generatedContent: undefined,
+      };
+      setNodes((nodes) => planSelectAndPatchNode(nodes, id, updates));
+      useCanvasStore.getState().setSelectedElement('node', id);
     },
     [id, materialType, setNodes],
   );
@@ -346,14 +343,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         handleImportFile(files[0]);
         return;
       }
-      const drafts = files
-        .map((file) => {
-          const path = nativePathOf(file);
-          return path
-            ? draftFromRealPath(path, { name: file.name, mime: file.type, size: file.size })
-            : null;
-        })
-        .filter((draft): draft is NonNullable<typeof draft> => Boolean(draft));
+      const drafts = extractDraftsFromFiles(files);
       if (drafts.length === 0) {
         if (files.length > 0) toast.warning(t('picker.needPath'));
         return;
@@ -393,11 +383,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyText = useCallback(() => {
-    if (effectiveTextContent) {
-      navigator.clipboard.writeText(effectiveTextContent).catch(() => {});
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    }
+    if (!effectiveTextContent) return;
+    navigator.clipboard.writeText(effectiveTextContent).catch(() => {});
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
   }, [effectiveTextContent]);
 
   const handleSplitText = useCallback(() => {
@@ -537,244 +526,58 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [applyCanvasInputMutation, effectiveTextContent, id, nodeData.__workspaceId, nodeWidth, setNodes, t, updateNodeData]);
 
-  // 语音识别（Issue 744 T04）：音频节点转写并派生下游 SRT 字幕节点。
-  // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
-  const handleSpeechToText = useCallback(async () => {
-    const workspaceId =
+  // 语音识别（Issue 744 T04 / Issue 1176）：音频节点转写并派生下游 SRT 字幕节点。
+  const handleSpeechToText = useCallback(() => {
+    const wsId =
       (typeof nodeData.__workspaceId === 'string' && nodeData.__workspaceId.trim()) ||
       (typeof nodeData.workspaceId === 'string' && nodeData.workspaceId.trim()) ||
       (useCanvasStore.getState().nodes.find((n) => n.id === id)?.data as any)?.__workspaceId ||
       '';
-    if (!workspaceId) {
-      toast.error(t('stt.noWorkspace'));
-      return;
-    }
-    const audioPath = resolveSpeechToTextAudioPath(
-      {
-        realPath: nodeData.realPath,
-        relativePath: nodeData.relativePath,
-        mediaUrl,
-        previewUrl,
-        workspaceId,
-        audioPath: typeof nodeData.audioPath === 'string' ? nodeData.audioPath : undefined,
-        filePath: typeof nodeData.filePath === 'string' ? nodeData.filePath : undefined,
-        url: typeof (nodeData as any).url === 'string' ? (nodeData as any).url : undefined,
-        mediaAssetsUrl: mediaAssets?.[0]?.url,
-      },
-      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
-    );
-    if (!audioPath) {
-      toast.error(t('stt.noAudio'));
-      return;
-    }
-    updateNodeData({ executionStatus: 'running', executionError: undefined, sttActive: true });
-    try {
-      const result = await transcribeAudio(workspaceId, {
-        nodeId: id,
-        audioPath,
-        model: 'doubao-asr-bigmodel',
-        responseFormat: 'srt',
-      });
-      if (!result.ok || !result.body?.text?.trim()) {
-        const message = result.body?.message || result.body?.error || t('stt.toast.failed');
-        // 保留 sttActive：GSC failed 态的原生重试按钮可再次触发转写
-        updateNodeData({ executionStatus: 'error', executionError: message });
-        toast.error(message);
-        return;
-      }
-      const store = useCanvasStore.getState();
-      const audioNode = store.nodes.find((n) => n.id === id);
-      const plan = planSpeechToTextDownstream({
-        audioNodeId: id,
-        audioPosition: audioNode?.position ?? { x: 0, y: 0 },
-        audioNodeWidth: nodeWidth,
-        srtText: result.body.text,
-        label: t('stt.nodeLabel'),
-        currentNodes: store.nodes,
-        currentEdges: store.edges,
-      });
-      updateNodeData({ executionStatus: 'completed', executionError: undefined, sttActive: undefined });
-      if (!plan) {
-        toast.error(t('stt.toast.failed'));
-        return;
-      }
-      applyCanvasInputMutation({
-        addNodes: plan.addNodes,
-        addEdges: plan.addEdges,
-        nodePatches: plan.nodePatches,
-      });
-      // 自动聚焦字幕节点（exclusive select）
-      setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
-      useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
-      toast.success(t('stt.toast.success'));
-    } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : t('stt.toast.failed');
-      updateNodeData({ executionStatus: 'error', executionError: message });
-      toast.error(message);
-    }
-  }, [applyCanvasInputMutation, id, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+    void executeSpeechToText({
+      workspaceId: wsId,
+      id,
+      nodeData,
+      mediaUrl,
+      previewUrl,
+      nodeWidth,
+      t,
+      updateNodeData,
+      applyCanvasInputMutation,
+      setNodes,
+    });
+  }, [applyCanvasInputMutation, id, mediaUrl, nodeData, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
 
   // 视频内容拆解：视频节点拆解并派生下游表格节点。
-  // 运行态直接复用本节点的 GSC 遮罩，不新建节点、不切工具、不弹确认框。
-  const handleDeconstructVideo = useCallback(async () => {
-    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
-    if (!workspaceId) {
-      toast.error(t('deconstructVideo.noWorkspace'));
-      return;
-    }
-    const videoPath = resolveVideoDeconstructPath(
-      {
-        realPath: nodeData.realPath,
-        relativePath: nodeData.relativePath,
-        mediaUrl,
-        previewUrl,
-        workspaceId,
-      },
-      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
-    );
-    if (!videoPath) {
-      toast.error(t('deconstructVideo.noVideo'));
-      return;
-    }
-    updateNodeData({ executionStatus: 'running', executionError: undefined, videoDeconstructActive: true });
-    try {
-      const result = await deconstructVideo(workspaceId, {
-        nodeId: id,
-        videoPath,
-        title: label ? `${label} 内容拆解表` : t('deconstructVideo.nodeLabel'),
-      });
-      if (!result.ok || !result.body?.tableId) {
-        const message = result.body?.message || result.body?.error || t('deconstructVideo.toast.failed');
-        updateNodeData({ executionStatus: 'error', executionError: message });
-        toast.error(message);
-        return;
-      }
-      updateNodeData({ executionStatus: 'completed', executionError: undefined, videoDeconstructActive: undefined });
-
-      const serverWorkspace = result.body.workspace;
-      const returnedTableId = result.body.tableId;
-
-      if (serverWorkspace && Array.isArray(serverWorkspace.nodes) && Array.isArray(serverWorkspace.edges)) {
-        // 后端原子持久化到 canvas.json 成功：直接灌入最新快照并触发 onSaved 对齐，消除可能的版本冲突
-        useCanvasStore.getState().hydrateGraph(serverWorkspace.nodes as any, serverWorkspace.edges as any);
-        notifyWorkspaceSaved(serverWorkspace);
-
-        // 自动聚焦并选中新建/更新的表格节点
-        const targetNodeId = serverWorkspace.nodes.find(
-          (n: any) => n.id === returnedTableId || (n.data as any)?.tableId === returnedTableId,
-        )?.id || returnedTableId;
-
-        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
-        useCanvasStore.getState().setSelectedElement('node', targetNodeId);
-      } else {
-        // 降级回退：走前端本地 planVideoDeconstructDownstream
-        const store = useCanvasStore.getState();
-        const videoNode = store.nodes.find((n) => n.id === id);
-        const plan = planVideoDeconstructDownstream({
-          videoNodeId: id,
-          videoPosition: videoNode?.position ?? { x: 0, y: 0 },
-          videoNodeWidth: nodeWidth,
-          tableResult: {
-            tableId: returnedTableId,
-            tablePath: result.body.tablePath || `.omnimux/tables/${returnedTableId}.htable`,
-            title: result.body.title || t('deconstructVideo.nodeLabel'),
-            rowCount: result.body.rowCount ?? 0,
-            columnCount: result.body.columnCount ?? 0,
-            previewRows: result.body.previewRows ?? [],
-          },
-          label: result.body.title || t('deconstructVideo.nodeLabel'),
-          currentNodes: store.nodes,
-          currentEdges: store.edges,
-        });
-        if (!plan) {
-          toast.error(t('deconstructVideo.toast.failed'));
-          return;
-        }
-        applyCanvasInputMutation({
-          addNodes: plan.addNodes,
-          addEdges: plan.addEdges,
-          nodePatches: plan.nodePatches,
-        });
-        // 自动聚焦并选中新建的表格节点
-        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === plan.targetNodeId })));
-        useCanvasStore.getState().setSelectedElement('node', plan.targetNodeId);
-      }
-
-      // 拆解完成后主动强制刷新该表格的前端缓存，确保画布卡片和全屏舞台即刻同步呈现拆解出的全部数据
-      if (returnedTableId && workspaceId) {
-        try {
-          await tableDocumentCache.ensure(workspaceId, returnedTableId, { forceReload: true });
-        } catch (err) {
-          console.warn('[MaterialNode] failed to force reload tableDocumentCache:', err);
-        }
-      }
-
-      toast.success(t('deconstructVideo.toast.success'));
-    } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : t('deconstructVideo.toast.failed');
-      updateNodeData({ executionStatus: 'error', executionError: message, videoDeconstructActive: undefined });
-      toast.error(message);
-    }
-  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
+  const handleDeconstructVideo = useCallback(() => {
+    void executeDeconstructVideo({
+      workspaceId: typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '',
+      id,
+      label,
+      nodeData,
+      mediaUrl,
+      previewUrl,
+      nodeWidth,
+      t,
+      updateNodeData,
+      applyCanvasInputMutation,
+      setNodes,
+    });
+  }, [applyCanvasInputMutation, id, label, mediaUrl, nodeData, nodeWidth, previewUrl, setNodes, t, updateNodeData]);
 
   // 视频做分镜表：提取逐镜头分镜图与脚本，派生下游表格节点 (.htable，含多模态图片附件)
-  const handleStoryboardVideo = useCallback(async () => {
-    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
-    if (!workspaceId) {
-      toast.error(t('storyboardVideo.noWorkspace'));
-      return;
-    }
-    const videoPath = resolveVideoStoryboardPath(
-      {
-        realPath: nodeData.realPath,
-        relativePath: nodeData.relativePath,
-        mediaUrl,
-        previewUrl,
-        workspaceId,
-      },
-      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
-    );
-    if (!videoPath) {
-      toast.error(t('storyboardVideo.noVideo'));
-      return;
-    }
-    updateNodeData({ executionStatus: 'running', executionError: undefined, videoStoryboardActive: true });
-    try {
-      const result = await storyboardVideo(workspaceId, {
-        nodeId: id,
-        videoPath,
-        title: label ? `${label} 分镜表` : t('storyboardVideo.nodeLabel'),
-      });
-      if (!result.ok || !result.body?.tableId) {
-        const message = result.body?.message || result.body?.error || t('storyboardVideo.toast.failed');
-        updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
-        toast.error(message);
-        return;
-      }
-      updateNodeData({ executionStatus: 'completed', executionError: undefined, videoStoryboardActive: undefined });
-
-      const serverWorkspace = result.body.workspace;
-      const returnedTableId = result.body.tableId;
-
-      if (serverWorkspace && Array.isArray(serverWorkspace.nodes) && Array.isArray(serverWorkspace.edges)) {
-        useCanvasStore.getState().hydrateGraph(serverWorkspace.nodes as any, serverWorkspace.edges as any);
-        notifyWorkspaceSaved(serverWorkspace);
-
-        const targetNodeId = serverWorkspace.nodes.find(
-          (n: any) => n.id === returnedTableId || (n.data as any)?.tableId === returnedTableId,
-        )?.id || returnedTableId;
-
-        setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
-        useCanvasStore.getState().setSelectedElement('node', targetNodeId);
-      }
-
-      toast.success(t('storyboardVideo.toast.success'));
-    } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : t('storyboardVideo.toast.failed');
-      updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
-      toast.error(message);
-    }
-  }, [id, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, previewUrl, setNodes, t, updateNodeData]);
+  const handleStoryboardVideo = useCallback(() => {
+    void executeStoryboardVideo({
+      workspaceId: typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '',
+      id,
+      label,
+      nodeData,
+      mediaUrl,
+      previewUrl,
+      t,
+      updateNodeData,
+      setNodes,
+    });
+  }, [id, label, mediaUrl, nodeData, previewUrl, setNodes, t, updateNodeData]);
 
   // 音频节点自身重试提取音频（就地在下游音频节点执行，源视频完全零侵入）
   const handleRetryAudioExtract = useCallback(async () => {
@@ -884,22 +687,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
 
     const targetNodeId = provision.targetNodeId;
-    const nodesToAdd = provision.addNodes.map((n) => ({
-      ...n,
-      data: {
-        ...n.data,
-        sourceVideoPath: videoPath,
-        __workspaceId: workspaceId,
-      },
-    }));
-    const patchesToApply = provision.nodePatches.map((p) => ({
-      ...p,
-      data: {
-        ...p.data,
-        sourceVideoPath: videoPath,
-        __workspaceId: workspaceId,
-      },
-    }));
+    const nodesToAdd = attachVideoSourceToNodes(provision.addNodes, videoPath, workspaceId);
+    const patchesToApply = attachVideoSourceToNodes(provision.nodePatches, videoPath, workspaceId);
 
     applyCanvasInputMutation({
       addNodes: nodesToAdd as any,
@@ -907,9 +696,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       nodePatches: patchesToApply as any,
     });
 
-    // 自动聚焦选中下游目标音频节点
-    setNodes((nodes) => nodes.map((n) => ({ ...n, selected: n.id === targetNodeId })));
-    useCanvasStore.getState().setSelectedElement('node', targetNodeId);
+    selectTargetNode(targetNodeId, setNodes);
 
     setIsExtractingAudio(true);
     try {
@@ -1043,40 +830,24 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       },
     };
 
-    const importManagementActions: FloatingPillAction[] = [];
-    if (kind === 'import' && materialType === 'image' && !isGenerating) {
-      // 仅在图片节点提供胶囊栏替换（图片卡片上无内侧替换按钮）；视频与音频卡片内侧已有专用替换按钮
-      importManagementActions.push({
-        key: 'replace-media',
-        label: t('pill.replace'),
-        icon: RefreshCw,
-        section: 'primary',
-        title: t('pill.replace'),
-        onClick: (event) => {
-          event.stopPropagation();
-          void resourcePicker.fillImportNode();
+    if (materialType === 'text' && canExtractVideo) {
+      return [
+        {
+          key: 'extract-video',
+          label: t('pill.extractVideo'),
+          icon: Film,
+          section: 'primary',
+          title: t('pill.extractVideo'),
+          onClick: (event) => {
+            event.stopPropagation();
+            void handleExtractVideo();
+          },
         },
-      });
+        chat,
+      ];
     }
 
     if (materialType === 'text') {
-      if (canExtractVideo) {
-        return [
-          {
-            key: 'extract-video',
-            label: t('pill.extractVideo'),
-            icon: Film,
-            section: 'primary',
-            title: t('pill.extractVideo'),
-            onClick: (event) => {
-              event.stopPropagation();
-              void handleExtractVideo();
-            },
-          },
-          chat,
-        ];
-      }
-
       return [
         {
           key: 'edit',
@@ -1117,21 +888,20 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
     if (materialType === 'audio') {
       const actions: FloatingPillAction[] = [];
-      if (
-        canRunSpeechToText({
-          materialType,
-          executionStatus,
-          isOffline,
-          realPath: nodeData.realPath,
-          relativePath: nodeData.relativePath,
-          mediaUrl,
-          previewUrl,
-          audioPath: typeof nodeData.audioPath === 'string' ? nodeData.audioPath : undefined,
-          filePath: typeof nodeData.filePath === 'string' ? nodeData.filePath : undefined,
-          url: typeof (nodeData as any).url === 'string' ? (nodeData as any).url : undefined,
-          mediaAssetsUrl: mediaAssets?.[0]?.url,
-        })
-      ) {
+      const allowSpeechToText = canRunSpeechToText({
+        materialType,
+        executionStatus,
+        isOffline,
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        audioPath: typeof nodeData.audioPath === 'string' ? nodeData.audioPath : undefined,
+        filePath: typeof nodeData.filePath === 'string' ? nodeData.filePath : undefined,
+        url: typeof (nodeData as any).url === 'string' ? (nodeData as any).url : undefined,
+        mediaAssetsUrl: mediaAssets?.[0]?.url,
+      });
+      if (allowSpeechToText) {
         actions.push({
           key: 'speech-to-text',
           label: t('pill.speechToText'),
@@ -1150,17 +920,16 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
     if (materialType === 'video') {
       const actions: FloatingPillAction[] = [];
-      if (
-        canRunVideoDeconstruct({
-          materialType,
-          executionStatus,
-          isOffline,
-          realPath: nodeData.realPath,
-          relativePath: nodeData.relativePath,
-          mediaUrl,
-          previewUrl,
-        })
-      ) {
+      const allowVideoTools = canRunVideoDeconstruct({
+        materialType,
+        executionStatus,
+        isOffline,
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+      });
+      if (allowVideoTools) {
         actions.push({
           key: 'deconstruct-video',
           label: t('pill.deconstructVideo'),
@@ -1201,6 +970,21 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       return actions;
     }
 
+    const importManagementActions: FloatingPillAction[] = [];
+    if (kind === 'import' && materialType === 'image' && !isGenerating) {
+      importManagementActions.push({
+        key: 'replace-media',
+        label: t('pill.replace'),
+        icon: RefreshCw,
+        section: 'primary',
+        title: t('pill.replace'),
+        onClick: (event) => {
+          event.stopPropagation();
+          void resourcePicker.fillImportNode();
+        },
+      });
+    }
+
     if (importManagementActions.length > 0) {
       return [...importManagementActions, chat];
     }
@@ -1225,7 +1009,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     isExtractingAudio,
     kind,
     materialType,
+    mediaAssets,
     mediaUrl,
+    nodeData.audioPath,
+    nodeData.filePath,
     nodeData.realPath,
     nodeData.relativePath,
     previewUrl,
@@ -1279,6 +1066,60 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     );
   }, [upstreams]);
 
+  const handleTextChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const val = e.target.value;
+      const trimmed = val.trim();
+      if (trimmed) {
+        updateNodeData({
+          content: val,
+          status: 'ready',
+          nodeKind: 'import',
+          selectedTool: 'text-editor',
+          prompt: undefined,
+          generatedContent: undefined,
+        });
+        return;
+      }
+      updateNodeData({
+        content: '',
+        status: 'empty',
+        nodeKind: 'generate',
+        generatedContent: undefined,
+      });
+    },
+    [updateNodeData],
+  );
+
+  const handleTextPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (textEditing) return;
+      const pasted = e.clipboardData?.getData('text');
+      if (!pasted) return;
+
+      const trimmed = pasted.trim();
+      if (trimmed) {
+        updateNodeData({
+          content: pasted,
+          status: 'ready',
+          nodeKind: 'import',
+          selectedTool: 'text-editor',
+          prompt: undefined,
+          generatedContent: undefined,
+        });
+      } else {
+        updateNodeData({
+          content: '',
+          status: 'empty',
+          nodeKind: 'generate',
+          generatedContent: undefined,
+        });
+      }
+      setTextEditing(true);
+    },
+    [textEditing, updateNodeData],
+  );
+
   const textBody =
     effectiveTextContent || textEditing ? (
       <textarea
@@ -1296,27 +1137,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         }}
         onFocus={() => setTextEditing(true)}
         onBlur={() => setTextEditing(false)}
-        onChange={(e) => {
-          const val = e.target.value;
-          const trimmed = val.trim();
-          if (trimmed) {
-            updateNodeData({
-              content: val,
-              status: 'ready',
-              nodeKind: 'import',
-              selectedTool: 'text-editor',
-              prompt: undefined,
-              generatedContent: undefined,
-            });
-          } else {
-            updateNodeData({
-              content: '',
-              status: 'empty',
-              nodeKind: 'generate',
-              generatedContent: undefined,
-            });
-          }
-        }}
+        onChange={handleTextChange}
       />
     ) : upstreamTableOrText ? (
       <div className="wf-node-empty wf-node-empty--text nodrag" style={{ padding: '20px 16px', boxSizing: 'border-box' }}>
@@ -1353,6 +1174,52 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       />
     );
 
+  const handleMediaRetry = useCallback(() => {
+    const isAudioExtract = materialType === 'audio' && (nodeData.origin === 'audio_extract' || nodeData.audioExtractActive === true);
+    if (isAudioExtract) {
+      void handleRetryAudioExtract();
+      return;
+    }
+    if (materialType === 'audio' && nodeData.sttActive === true) {
+      handleSpeechToText();
+      return;
+    }
+    if (materialType === 'video' && nodeData.videoDeconstructActive === true) {
+      handleDeconstructVideo();
+      return;
+    }
+    if (materialType === 'video' && nodeData.videoStoryboardActive === true) {
+      handleStoryboardVideo();
+      return;
+    }
+    handleGenerate();
+  }, [handleDeconstructVideo, handleGenerate, handleRetryAudioExtract, handleSpeechToText, handleStoryboardVideo, materialType, nodeData]);
+
+  const handleOpenResourcePicker = useCallback(
+    (requestOrMode?: SlotPickRequest | 'add' | 'replace', targetSlotIndex?: number) => {
+      if (kind === 'import') {
+        void resourcePicker.fillImportNode();
+        return;
+      }
+      if (typeof requestOrMode === 'object' && requestOrMode !== null) {
+        resourcePicker.openPicker('canvas', {
+          slot: requestOrMode.targetSlot,
+          acceptedTypes: requestOrMode.acceptedTypes,
+          max: requestOrMode.max,
+          replaceEdgeId: requestOrMode.replaceEdgeId,
+        });
+        return;
+      }
+      const pickerMode = typeof requestOrMode === 'string' ? requestOrMode : 'add';
+      if (pickerMode === 'add' && targetSlotIndex === undefined) {
+        resourcePicker.openPicker('canvas');
+        return;
+      }
+      resourcePicker.openPicker('canvas', pickerMode, targetSlotIndex);
+    },
+    [kind, resourcePicker],
+  );
+
   return (
     <div
       className={`wf-material-node ${materialType === 'audio' ? 'wf-material-node--audio' : ''} ${selected ? 'wf-material-node--selected' : ''}`}
@@ -1368,8 +1235,12 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         />
       )}
 
-      {/* 输入 Handle */}
-      <CanvasNodeHandle side="left" nodeHovered={isHovered} />
+      {/* 左右两端连线桩与连线输出菜单 */}
+      <MaterialNodeHandles
+        nodeId={id}
+        materialType={materialType}
+        nodeHovered={isHovered}
+      />
 
       {/* 节点标题：导入节点统一显示「导入素材」（非文本节点，音频优先展示专属音乐图标） */}
       <NodeHeader
@@ -1405,14 +1276,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         onDrop={handleDrop}
       >
         {/* 四角缩放定位点 */}
-        {selected && (
-          <>
-            <span className="wf-node-corner wf-node-corner--tl" />
-            <span className="wf-node-corner wf-node-corner--tr" />
-            <span className="wf-node-corner wf-node-corner--bl" />
-            <span className="wf-node-corner wf-node-corner--br" />
-          </>
-        )}
+        <NodeCornerMarkers selected={Boolean(selected)} />
 
         {/* 媒体节点卡片内侧右上角「替换」按钮 */}
         {showReplaceButton && materialType !== 'audio' && (
@@ -1440,31 +1304,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
               e.stopPropagation();
               handleOpenTextStage();
             }}
-            onPaste={(e) => {
-              if (textEditing) return;
-              const pasted = e.clipboardData?.getData('text');
-              if (pasted) {
-                const trimmed = pasted.trim();
-                if (trimmed) {
-                  updateNodeData({
-                    content: pasted,
-                    status: 'ready',
-                    nodeKind: 'import',
-                    selectedTool: 'text-editor',
-                    prompt: undefined,
-                    generatedContent: undefined,
-                  });
-                } else {
-                  updateNodeData({
-                    content: '',
-                    status: 'empty',
-                    nodeKind: 'generate',
-                    generatedContent: undefined,
-                  });
-                }
-                setTextEditing(true);
-              }
-            }}
+            onPaste={handleTextPaste}
           >
             {generationStatus ? (
               <GenerationStateContainer
@@ -1483,74 +1323,34 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         )}
 
         {/* 2. 媒体节点渲染 */}
-        {materialType !== 'text' && isOffline && (
-          <div className="wf-material-node__media wf-media-offline">
-            <Unlink size={22} className="wf-media-offline__icon" />
-            <div className="wf-media-offline__title">{t('node.offline')}</div>
-            <div className="wf-media-offline__hint">{t('node.offlineHint')}</div>
-            <button
-              type="button"
-              className="wf-media-offline__relink nodrag"
-              onClick={() => void resourcePicker.relinkLocalFile(materialType)}
-            >
-              {t('node.relink')}
-            </button>
-          </div>
+        {materialType !== 'text' && (
+          <MediaCardBody
+            materialType={materialType}
+            nodeData={nodeData}
+            isOffline={isOffline}
+            generationStatus={generationStatus}
+            loadingAspectRatio={loadingAspectRatio}
+            executionError={executionError}
+            errorMessage={errorMessage}
+            previewUrl={previewUrl}
+            mediaAssets={mediaAssets}
+            mediaUrl={mediaUrl}
+            label={label}
+            status={status}
+            audioWorkspaceId={audioWorkspaceId}
+            isMultiSelected={isMultiSelected}
+            isGenerating={isGenerating}
+            kind={kind}
+            onMediaSizeChange={handleMediaSizeChange}
+            onDurationChange={handleDurationChange}
+            onSaveAudio={audioWorkspaceId ? handleSaveAudio : undefined}
+            onRetry={handleMediaRetry}
+            onApplyPreset={handleApplyPreset}
+            onReplaceAudio={!isMultiSelected && !isGenerating ? () => { void resourcePicker.fillImportNode(); } : undefined}
+            onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
+            onRelink={(mType) => void resourcePicker.relinkLocalFile(mType)}
+          />
         )}
-        {materialType !== 'text' && !isOffline &&
-          (generationStatus ? (
-            <div className="wf-material-node__media">
-              <GenerationStateContainer
-                status={generationStatus}
-                loadingAspectRatio={loadingAspectRatio}
-                errorMessage={executionError ?? errorMessage}
-                taskId={nodeData.taskId}
-                onRetry={
-                  materialType === 'audio' && (nodeData.origin === 'audio_extract' || nodeData.audioExtractActive === true)
-                    ? () => { void handleRetryAudioExtract(); }
-                    : materialType === 'audio' && nodeData.sttActive === true
-                      ? () => { void handleSpeechToText(); }
-                      : materialType === 'video' && nodeData.videoDeconstructActive === true
-                        ? () => { void handleDeconstructVideo(); }
-                        : materialType === 'video' && nodeData.videoStoryboardActive === true
-                          ? () => { void handleStoryboardVideo(); }
-                          : handleGenerate
-                }
-              >
-                {previewUrl ? (
-                  <MediaPreview
-                    materialType={materialType}
-                    mediaAssets={mediaAssets}
-                    mediaUrl={mediaUrl}
-                    workspaceId={typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : undefined}
-                    label={label}
-                    status={status}
-                    isMissing={nodeData.isMissing === true}
-                    onMediaSizeChange={handleMediaSizeChange}
-                    onDurationChange={handleDurationChange}
-                    onSaveAudio={audioWorkspaceId ? handleSaveAudio : undefined}
-                    onReplaceAudio={!isMultiSelected && !isGenerating ? () => { void resourcePicker.fillImportNode(); } : undefined}
-                  />
-                ) : (
-                  <NodeEmptyState
-                    materialType={materialType}
-                    nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
-                    onApplyPreset={handleApplyPreset}
-                    onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
-                  />
-                )}
-              </GenerationStateContainer>
-            </div>
-          ) : (
-            <div className="wf-material-node__media">
-              <NodeEmptyState
-                materialType={materialType}
-                nodeKind={nodeData.nodeKind ?? (nodeData.selectedTool === 'import' ? 'import' : 'generate')}
-                onApplyPreset={handleApplyPreset}
-                onImport={kind === 'import' ? () => { void resourcePicker.fillImportNode(); } : undefined}
-              />
-            </div>
-          ))}
 
         {/* 文本节点错误提示：GSC failed 分支已自带错误 UI，仅兜底未进 GSC 的残差 */}
         {materialType === 'text' &&
@@ -1570,38 +1370,10 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             onUpdateNodeData={updateNodeData}
             onGenerate={handleGenerate}
             execBusy={execBusy}
-            onOpenResourcePicker={(requestOrMode, targetSlotIndex) => {
-              if (kind === 'import') {
-                void resourcePicker.fillImportNode();
-                return;
-              }
-              if (typeof requestOrMode === 'object' && requestOrMode !== null) {
-                resourcePicker.openPicker('canvas', {
-                  slot: requestOrMode.targetSlot,
-                  acceptedTypes: requestOrMode.acceptedTypes,
-                  max: requestOrMode.max,
-                  replaceEdgeId: requestOrMode.replaceEdgeId,
-                });
-                return;
-              }
-              const pickerMode = typeof requestOrMode === 'string' ? requestOrMode : 'add';
-              if (pickerMode === 'add' && targetSlotIndex === undefined) {
-                resourcePicker.openPicker('canvas');
-                return;
-              }
-              resourcePicker.openPicker('canvas', pickerMode, targetSlotIndex);
-            }}
+            onOpenResourcePicker={handleOpenResourcePicker}
           />
         </ConfigPanelShell>
       )}
-
-      {/* 输出 Handle */}
-      <CanvasNodeHandle
-        side="right"
-        nodeHovered={isHovered}
-        options={outputMenuOptions}
-        onSelect={handleOutputMenuSelect}
-      />
 
       <ResourcePickerModal
         key={JSON.stringify([nodeData.__workspaceId, id, resourcePicker.sessionId])}
