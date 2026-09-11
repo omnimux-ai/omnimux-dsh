@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
 import { buildAttachedContextBlock } from '../attachments/prompt-assembly.ts'
-import { getCreativePresetsStore, compileCreativePrompt } from '../presets/index.js'
+import { getCreativePresetsStore } from '../presets/presets-store.js'
+import { compileCreativePrompt } from '../presets/compiler.js'
 
 /** Reconcile only the exact block this session wrote; preserve manual edits. */
 export function reconcileAttachmentDraft(draft, previous, attachments) {

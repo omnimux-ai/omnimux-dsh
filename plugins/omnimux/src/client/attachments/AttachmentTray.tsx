@@ -49,10 +49,32 @@ const BASE_CSS = `
   display: inline-block !important;
 }
 .omx-btn-insert-link:hover {
-  border-color: rgba(56, 189, 248, 0.45) !important; /* exempt-ui03: 悬浮青蓝边框 */
-  color: #38bdf8 !important; /* exempt-ui03: 悬浮青蓝文字 */
-  background: rgba(14, 116, 144, 0.16) !important; /* exempt-ui03: 悬浮青蓝背景 */
+  border-color: rgba(140, 111, 247, 0.5) !important; /* exempt-ui03: 悬浮紫色边框 */
+  color: #c4b5fd !important; /* exempt-ui03: 悬浮紫色文字 */
+  background: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 悬浮紫色背景 */
   transform: translateY(-0.5px) !important;
+}
+[data-composer-chip="video"] {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin: 0 6px !important;
+}
+[data-composer-chip="video"] > span {
+  background: rgba(121, 97, 242, 0.16) !important; /* exempt-ui03: 极光紫半透底色 */
+  border: 1px solid rgba(140, 111, 247, 0.45) !important; /* exempt-ui03: 极光紫微光描边 */
+  color: #c4b5fd !important; /* exempt-ui03: 浅亮紫文字 */
+  box-shadow: 0 0 0 1px rgba(121, 97, 242, 0.2) !important; /* exempt-ui03: 极光紫微光晕 */
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  transition: all 0.15s ease !important;
+}
+[data-composer-chip="video"] > span:hover {
+  background: rgba(121, 97, 242, 0.25) !important; /* exempt-ui03: 悬浮紫 */
+  border-color: #a78bfa !important; /* exempt-ui03: 悬浮高亮描边 */
+  color: #ffffff !important; /* exempt-ui03: 高亮白色文字 */
+}
+[data-composer-chip="video"] svg {
+  color: #a78bfa !important; /* exempt-ui03: 极光紫图标 */
 }
 .omx-video-popover-backdrop {
   position: fixed;
@@ -131,11 +153,11 @@ const BASE_CSS = `
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .omx-video-popover-input-wrap:focus-within {
-  border-color: #38bdf8; /* exempt-ui03: 聚焦青蓝 */
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); /* exempt-ui03: 聚焦微光 */
+  border-color: #8c6ff7; /* exempt-ui03: 聚焦品牌紫 */
+  box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25); /* exempt-ui03: 聚焦微光 */
 }
 .omx-video-popover-input-icon {
-  color: #38bdf8; /* exempt-ui03: 链接青蓝 */
+  color: #a78bfa; /* exempt-ui03: 链接品牌紫 */
   margin-right: 8px;
   display: flex;
   align-items: center;
@@ -190,17 +212,17 @@ const BASE_CSS = `
   height: 30px;
   padding: 0 14px;
   border-radius: 6px;
-  border: 1px solid rgba(56, 189, 248, 0.4); /* exempt-ui03: 确认按钮边框 */
-  background: rgba(14, 116, 144, 0.4); /* exempt-ui03: 确认按钮底色 */
-  color: #38bdf8; /* exempt-ui03: 确认按钮文字 */
+  border: 1px solid rgba(140, 111, 247, 0.4); /* exempt-ui03: 确认按钮边框 */
+  background: rgba(121, 97, 242, 0.4); /* exempt-ui03: 确认按钮底色 */
+  color: #c4b5fd; /* exempt-ui03: 确认按钮文字 */
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .omx-video-popover-btn-confirm:hover {
-  background: rgba(14, 116, 144, 0.6); /* exempt-ui03: 悬浮底色 */
-  border-color: #38bdf8; /* exempt-ui03: 悬浮高亮 */
+  background: rgba(121, 97, 242, 0.65); /* exempt-ui03: 悬浮底色 */
+  border-color: #a78bfa; /* exempt-ui03: 悬浮高亮 */
   color: #ffffff; /* exempt-ui03: 白色文字 */
   transform: translateY(-0.5px);
 }
