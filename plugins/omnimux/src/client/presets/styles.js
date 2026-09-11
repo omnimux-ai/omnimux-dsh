@@ -19,8 +19,8 @@ export const PRESETS_CSS = `
 }
 
 .omnimux-presets-blueprint-card {
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1));
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
   padding: 14px;
 }
@@ -29,7 +29,7 @@ export const PRESETS_CSS = `
   margin: 0 0 10px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--dsw-alias-label-primary, #fff);
+  color: var(--dsw-alias-label-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -48,20 +48,20 @@ export const PRESETS_CSS = `
   font-size: 12px;
   padding: 6px 8px;
   border-radius: 8px;
-  background: var(--dsw-alias-bg-base, rgba(0, 0, 0, 0.2));
+  background: var(--dsw-alias-bg-base);
 }
 
 .omnimux-presets-slot-label {
-  color: var(--dsw-alias-label-secondary, #999);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omnimux-presets-slot-empty {
-  color: var(--dsw-alias-label-tertiary, #666);
+  color: var(--dsw-alias-label-tertiary);
   font-style: italic;
 }
 
 .omnimux-presets-slot-value.is-active {
-  color: var(--dsw-alias-accent, #a855f7);
+  color: var(--dsw-alias-brand-primary);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -71,14 +71,14 @@ export const PRESETS_CSS = `
 .omnimux-presets-slot-del {
   background: transparent;
   border: none;
-  color: var(--dsw-alias-label-secondary, #999);
+  color: var(--dsw-alias-label-secondary);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
   padding: 0 2px;
 }
 .omnimux-presets-slot-del:hover {
-  color: #ef4444;
+  color: var(--dsw-alias-state-error-primary);
 }
 
 /* 用户输入文本域 */
@@ -91,17 +91,17 @@ export const PRESETS_CSS = `
 .omnimux-presets-input-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--dsw-alias-label-secondary, #aaa);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omnimux-presets-textarea {
   width: 100%;
   box-sizing: border-box;
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1));
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   padding: 8px 10px;
-  color: var(--dsw-alias-label-primary, #fff);
+  color: var(--dsw-alias-label-primary);
   font-size: 12px;
   line-height: 1.5;
   resize: vertical;
@@ -109,7 +109,7 @@ export const PRESETS_CSS = `
   transition: border-color 150ms ease;
 }
 .omnimux-presets-textarea:focus {
-  border-color: var(--dsw-alias-accent, #a855f7);
+  border-color: var(--dsw-alias-brand-primary);
 }
 
 /* 实时 Prompt 预览区 */
@@ -117,8 +117,8 @@ export const PRESETS_CSS = `
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-base, #111);
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  background: var(--dsw-alias-bg-base);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
   overflow: hidden;
   min-height: 140px;
@@ -129,25 +129,25 @@ export const PRESETS_CSS = `
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.03));
-  border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  background: var(--dsw-alias-bg-layer-2);
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
   font-size: 11px;
   font-weight: 600;
-  color: var(--dsw-alias-label-secondary, #888);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .omnimux-presets-copy-btn {
   background: transparent;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 6px;
-  color: var(--dsw-alias-label-primary, #fff);
+  color: var(--dsw-alias-label-primary);
   font-size: 11px;
   padding: 2px 8px;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: background-color 120ms ease;
 }
 .omnimux-presets-copy-btn:hover {
-  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.1));
+  background: var(--dsw-alias-bg-layer-3);
 }
 
 .omnimux-presets-preview-code {
@@ -158,7 +158,7 @@ export const PRESETS_CSS = `
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   line-height: 1.5;
-  color: var(--dsw-alias-label-secondary, #ccc);
+  color: var(--dsw-alias-label-secondary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -176,7 +176,7 @@ export const PRESETS_CSS = `
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
   padding-bottom: 10px;
 }
 
@@ -188,29 +188,29 @@ export const PRESETS_CSS = `
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--dsw-alias-label-secondary, #999);
+  color: var(--dsw-alias-label-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 .omnimux-presets-tab:hover {
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04));
-  color: var(--dsw-alias-label-primary, #fff);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
 }
 .omnimux-presets-tab.is-active {
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08));
-  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15));
-  color: var(--dsw-alias-label-primary, #fff);
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
   font-weight: 600;
 }
 
 .omnimux-presets-tab-badge {
   font-size: 11px;
-  background: var(--dsw-alias-bg-base, rgba(0, 0, 0, 0.3));
+  background: var(--dsw-alias-bg-base);
   padding: 1px 6px;
   border-radius: 10px;
-  color: var(--dsw-alias-label-tertiary, #888);
+  color: var(--dsw-alias-label-tertiary);
 }
 
 /* 过滤与搜索行 */
@@ -230,7 +230,7 @@ export const PRESETS_CSS = `
 .omnimux-presets-search-box svg {
   position: absolute;
   left: 10px;
-  color: var(--dsw-alias-label-tertiary, #666);
+  color: var(--dsw-alias-label-tertiary);
   pointer-events: none;
 }
 .omnimux-presets-search-input {
@@ -239,20 +239,20 @@ export const PRESETS_CSS = `
   padding: 6px 28px 6px 30px;
   font-size: 12px;
   border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1));
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.03));
-  color: var(--dsw-alias-label-primary, #fff);
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
   outline: none;
 }
 .omnimux-presets-search-input:focus {
-  border-color: var(--dsw-alias-accent, #a855f7);
+  border-color: var(--dsw-alias-brand-primary);
 }
 .omnimux-presets-search-clear {
   position: absolute;
   right: 8px;
   background: transparent;
   border: none;
-  color: var(--dsw-alias-label-tertiary, #888);
+  color: var(--dsw-alias-label-tertiary);
   font-size: 14px;
   cursor: pointer;
 }
@@ -267,21 +267,21 @@ export const PRESETS_CSS = `
 .omnimux-presets-subcat-btn {
   padding: 4px 10px;
   border-radius: 14px;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--dsw-alias-border-l2);
   background: transparent;
-  color: var(--dsw-alias-label-secondary, #888);
+  color: var(--dsw-alias-label-secondary);
   font-size: 11px;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .omnimux-presets-subcat-btn:hover {
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.05));
-  color: var(--dsw-alias-label-primary, #fff);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
 }
 .omnimux-presets-subcat-btn.is-active {
-  background: var(--dsw-alias-label-primary, #fff);
-  color: var(--dsw-alias-bg-base, #000);
-  border-color: var(--dsw-alias-label-primary, #fff);
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  border-color: var(--dsw-alias-label-primary);
   font-weight: 600;
 }
 
@@ -302,8 +302,8 @@ export const PRESETS_CSS = `
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
@@ -311,19 +311,19 @@ export const PRESETS_CSS = `
 }
 .omnimux-preset-card:hover {
   transform: translateY(-2px);
-  border-color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.25));
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border-color: var(--dsw-alias-border-l3);
+  box-shadow: var(--dsw-alias-shadow-md, none);
 }
 .omnimux-preset-card.is-selected {
-  border-color: var(--dsw-alias-accent, #a855f7);
-  box-shadow: 0 0 0 1px var(--dsw-alias-accent, #a855f7), 0 6px 20px rgba(168, 85, 247, 0.25);
+  border-color: var(--dsw-alias-brand-primary);
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 
 .omnimux-preset-media-box {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: var(--dsw-alias-bg-base, #0a0a0a);
+  background: var(--dsw-alias-bg-base);
   overflow: hidden;
 }
 
@@ -343,8 +343,8 @@ export const PRESETS_CSS = `
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
-  color: var(--dsw-alias-label-secondary, #aaa);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
 }
 .omnimux-preset-fallback-tag {
   font-size: 10px;
@@ -356,13 +356,12 @@ export const PRESETS_CSS = `
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
+  background: var(--dsw-alias-bg-base);
   padding: 2px 7px;
   border-radius: 6px;
   font-size: 10px;
   font-weight: 500;
-  color: #fff;
+  color: var(--dsw-alias-label-primary);
   pointer-events: none;
 }
 
@@ -373,12 +372,12 @@ export const PRESETS_CSS = `
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--dsw-alias-accent, #a855f7);
-  color: #fff;
+  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-bg-base);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--dsw-alias-shadow-sm, none);
 }
 
 .omnimux-preset-info {
@@ -396,7 +395,7 @@ export const PRESETS_CSS = `
 .omnimux-preset-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--dsw-alias-label-primary, #fff);
+  color: var(--dsw-alias-label-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -404,7 +403,7 @@ export const PRESETS_CSS = `
 
 .omnimux-preset-subtitle {
   font-size: 10px;
-  color: var(--dsw-alias-label-tertiary, #777);
+  color: var(--dsw-alias-label-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -414,7 +413,7 @@ export const PRESETS_CSS = `
   margin: 0;
   font-size: 11px;
   line-height: 1.4;
-  color: var(--dsw-alias-label-secondary, #aaa);
+  color: var(--dsw-alias-label-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -428,7 +427,7 @@ export const PRESETS_CSS = `
   align-items: center;
   justify-content: center;
   padding: 48px 0;
-  color: var(--dsw-alias-label-tertiary, #666);
+  color: var(--dsw-alias-label-tertiary);
   font-size: 13px;
   gap: 6px;
 }
@@ -443,26 +442,26 @@ export const PRESETS_CSS = `
 
 .omnimux-presets-footer-summary {
   font-size: 12px;
-  color: var(--dsw-alias-label-secondary, #999);
+  color: var(--dsw-alias-label-secondary);
   display: flex;
   align-items: center;
   gap: 10px;
 }
 .omnimux-presets-footer-summary strong {
-  color: var(--dsw-alias-accent, #a855f7);
+  color: var(--dsw-alias-brand-primary);
 }
 
 .omnimux-presets-reset-btn {
   background: transparent;
   border: none;
-  color: var(--dsw-alias-label-secondary, #888);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12px;
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
 }
 .omnimux-presets-reset-btn:hover {
-  color: #ef4444;
+  color: var(--dsw-alias-state-error-primary);
 }
 
 .omnimux-presets-footer-actions {
@@ -473,23 +472,23 @@ export const PRESETS_CSS = `
 
 .omnimux-presets-cancel-btn {
   background: transparent;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  color: var(--dsw-alias-label-secondary, #999);
+  color: var(--dsw-alias-label-secondary);
   padding: 0 16px;
   height: 40px;
   font-size: 13px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 .omnimux-presets-cancel-btn:hover {
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.05));
-  color: var(--dsw-alias-label-primary, #fff);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
 }
 
 .omnimux-presets-submit-btn {
-  background: var(--dsw-alias-label-primary, #fff);
-  color: var(--dsw-alias-bg-base, #000);
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
   border: none;
   border-radius: 10px;
   padding: 0 24px;
@@ -498,7 +497,7 @@ export const PRESETS_CSS = `
   font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms ease, transform 120ms ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--dsw-alias-shadow-md, none);
 }
 .omnimux-presets-submit-btn:hover {
   opacity: 0.92;
