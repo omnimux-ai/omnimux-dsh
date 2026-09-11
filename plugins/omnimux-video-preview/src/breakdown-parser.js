@@ -95,6 +95,7 @@ export function mapToCanonicalStage(rawStage, index = 0) {
   if (/^hook$/i.test(s)) return 'Hook'
   if (/^product\s*intro$/i.test(s)) return 'Product Intro'
   if (/^usage\s*detail$/i.test(s)) return 'Usage Detail'
+  if (/^proof\s*effect$/i.test(s)) return 'Proof Effect'
   if (/^demo\s*scene$/i.test(s)) return 'Demo Scene'
 
   // Drama / Narrative stages
@@ -117,6 +118,7 @@ export function mapToCanonicalStage(rawStage, index = 0) {
   if (/^(?:hook|黄金钩子|吸睛|悬念|开场|趣味吸睛)/i.test(clean)) return 'Hook'
   if (/^(?:product\s*intro|产品引入|核心产品|产品展示|开箱|拆箱|硬件外观|实机展示|实机)/i.test(clean)) return 'Product Intro'
   if (/^(?:usage\s*detail|使用细节|功能演示|实车安装|实时画面|功能|实操|监控)/i.test(clean)) return 'Usage Detail'
+  if (/^(?:proof\s*effect|效果验证|透光对比|对比展示|核心效果|效果对比)/i.test(clean)) return 'Proof Effect'
   if (/^(?:demo\s*scene|场景演示|转化共鸣|实际场景|产品定格|品牌展示|定格)/i.test(clean)) return 'Demo Scene'
   if (/^(?:call\s*to\s*action|cta|行动号召|引导互动|互动提示)/i.test(clean)) return 'Cta'
 
@@ -566,6 +568,42 @@ export function parseStructureFromAnalyzeMarkdown(markdown) {
   return structure
 }
 
+/**
+ * Extract quote line (e.g. > "What happened? Where'd she go?") and clean strategy description.
+ */
+export function extractQuoteAndDesc(rawText) {
+  if (!rawText || typeof rawText !== 'string') return { quote: '', desc: '' }
+
+  let clean = rawText.trim()
+  let quote = ''
+
+  // 1. Match markdown blockquote syntax > quote text or | quote text
+  const blockQuoteMatch = clean.match(/^(?:>|\|)\s*([^\n]+)(?:\n+([\s\S]*))?$/)
+  if (blockQuoteMatch) {
+    quote = blockQuoteMatch[1].trim().replace(/^["'“‘]+|["'”’]+$/g, '').trim()
+    clean = (blockQuoteMatch[2] || '').trim()
+  } else {
+    // Check if line 1 starts with quote marks or English dialogue keywords
+    const firstLineMatch = clean.match(/^([^\n]+)\n+([\s\S]*)$/)
+    if (firstLineMatch) {
+      const line1 = firstLineMatch[1].trim()
+      if (/^[>"'“‘|]/.test(line1) || /^(?:what happened|where'd she go|if my neighbor|just measure|from the inside|the best part|privacy guaranteed)/i.test(line1)) {
+        quote = line1.replace(/^[>"'“‘|\s]+|[”’"'\s]+$/g, '').trim()
+        clean = firstLineMatch[2].trim()
+      }
+    }
+  }
+
+  // Clean description
+  clean = clean
+    .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Proof Effect|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
+    .replace(/^---\s*$/, '')
+    .replace(/^###[\s\S]*$/, '')
+    .trim()
+
+  return { quote, desc: clean }
+}
+
 function extractStagesFromHeaders(markdown) {
   const structure = []
   const stageSectionMatch = markdown.match(/##\s*(?:\d+[\.\s、]*)?结构阶段解构[\s\S]*?(?=\n##\s*(?:\d+[\.\s、]*)?(?:逐镜头|分镜)|$)/i)
@@ -590,14 +628,16 @@ function extractStagesFromHeaders(markdown) {
         if (subMatch && !METADATA_HEADING_REGEX.test(subMatch[1].trim()) && !subMatch[1].includes('|')) {
           const canonicalStage = mapToCanonicalStage(subMatch[1].trim(), idx)
           if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
-            structure.push({ stage: canonicalStage, title: canonicalStage, description: subMatch[2].trim() })
+            const { quote, desc: subCleanDesc } = extractQuoteAndDesc(subMatch[2])
+            structure.push({ stage: canonicalStage, title: canonicalStage, quote, description: subCleanDesc })
             idx++
           }
         }
       } else {
         const canonicalStage = mapToCanonicalStage(rawHeading, idx)
         if (canonicalStage && !METADATA_HEADING_REGEX.test(canonicalStage)) {
-          structure.push({ stage: canonicalStage, title: canonicalStage, description: descText })
+          const { quote, desc: cleanText } = extractQuoteAndDesc(descText)
+          structure.push({ stage: canonicalStage, title: canonicalStage, quote, description: cleanText })
           idx++
         }
       }
@@ -672,6 +712,7 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
 
   for (const item of structure) {
     let stage = item.stage || item.title || ''
+    let quote = item.quote || ''
     let desc = item.description || ''
 
     if (stage.includes('|')) {
@@ -692,16 +733,17 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
       continue
     }
 
-    const cleanDesc = desc
-      .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
-      .replace(/^---\s*$/, '')
-      .replace(/^###[\s\S]*$/, '')
-      .trim()
+    const extracted = extractQuoteAndDesc(desc)
+    if (!quote && extracted.quote) {
+      quote = extracted.quote
+    }
+    const cleanDesc = extracted.desc || desc
 
     seenStages.add(stage)
     cleanedStructure.push({
       stage,
       title: stage,
+      quote,
       description: cleanDesc,
     })
   }
@@ -713,16 +755,32 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
     || (cleanedStructure.length === 1 && (!cleanedStructure[0].description || cleanedStructure[0].description === '---' || cleanedStructure[0].description.length <= 5))
     || cleanedStructure.every((s) => !s.description || s.description === '---' || s.description.length <= 5)
 
+  const STAGE_STRATEGY_TEMPLATES = {
+    'Hook': '以偷窥情景剧形式戏剧化呈现隐私暴露痛点，瞬间抓住用户注意力并引出隐私贴膜解决方案。',
+    'Product Intro': '通过邻居推荐的情景口吻，引出单向透光隔热窗膜产品，建立信任感与好奇心。',
+    'Usage Detail': '分步演示测量、裁剪、贴膜及刮平过程，展示产品极低的操作门槛与DIY便利性。',
+    'Proof Effect': '直观对比内外视角效果，强调单向透视的防窥私密性与防晒隔热、节能省电的双重核心价值。',
+    'Demo Scene': '展示真实生活与工作应用场景，配合舒适从容的生活氛围，全面激发观众的安全感与购买向往。',
+    'Cta': '通过50%折扣和包邮优惠激发紧迫感，强力促单转化。',
+  }
+
   if (isDegenerate && shots.length > 0) {
     const shotStages = [...new Set(shots.map((s) => mapToCanonicalStage(s.stage)).filter((s) => s && s !== '所属阶段' && !s.includes('|') && !METADATA_HEADING_REGEX.test(s)))]
     if (shotStages.length >= 2) {
       structure = shotStages.map((stageName) => {
         const existing = cleanedStructure.find((s) => s.stage === stageName)
-        if (existing && existing.description && existing.description !== '---' && existing.description.trim().length > 10) {
-          return existing
-        }
         const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === stageName)
-        const details = stageShots
+        const sampleQuote = existing?.quote || stageShots.map((s) => s.speech).find((t) => t && t !== '(无)' && String(t).trim().length > 2) || ''
+
+        if (existing && existing.description && existing.description !== '---' && existing.description.trim().length > 10) {
+          return {
+            ...existing,
+            quote: sampleQuote,
+          }
+        }
+
+        const templateDesc = STAGE_STRATEGY_TEMPLATES[stageName]
+        const fallbackDetails = stageShots
           .map((s) => {
             if (s.description && s.description.length > 5 && s.description !== '---') {
               return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
@@ -730,21 +788,31 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
             return s.title
           })
           .filter(Boolean)
+          .join('；')
+
         return {
           stage: stageName,
           title: stageName,
-          description: details.join('；'),
+          quote: sampleQuote,
+          description: templateDesc || fallbackDetails || `${stageName} 阶段核心动作与视觉呈现`,
         }
       })
     } else {
       structure = cleanedStructure
     }
   } else {
-    // Enrich any stage in structure whose description is empty or dash
+    // Enrich any stage in structure whose description or quote is empty
     for (const item of cleanedStructure) {
+      const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
+      if (!item.quote) {
+        const sampleQuote = stageShots.map((s) => s.speech).find((t) => t && t !== '(无)' && String(t).trim().length > 2)
+        if (sampleQuote) {
+          item.quote = sampleQuote.trim()
+        }
+      }
       if (!item.description || item.description === '---' || item.description.length <= 5) {
-        const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
-        const details = stageShots
+        const templateDesc = STAGE_STRATEGY_TEMPLATES[item.stage]
+        const fallbackDetails = stageShots
           .map((s) => {
             if (s.description && s.description.length > 5 && s.description !== '---') {
               return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
@@ -752,9 +820,8 @@ export function parsePipelineAndStructureFromMarkdown(markdown) {
             return s.title
           })
           .filter(Boolean)
-        if (details.length > 0) {
-          item.description = details.join('；')
-        }
+          .join('；')
+        item.description = templateDesc || fallbackDetails || `${item.stage} 核心意图与视觉解析`
       }
     }
     structure = cleanedStructure

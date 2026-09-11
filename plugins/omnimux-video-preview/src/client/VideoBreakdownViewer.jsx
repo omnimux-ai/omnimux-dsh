@@ -33,6 +33,7 @@ import {
   localizeStage,
   METADATA_HEADING_REGEX,
   mapToCanonicalStage,
+  extractQuoteAndDesc,
 } from '../breakdown-parser.js'
 
 function useIsZh() {
@@ -132,6 +133,7 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     for (const item of rawList) {
       let stage = item.stage || item.title || ''
       let desc = item.description || ''
+      let quote = item.quote || ''
       if (stage.includes('|')) {
         stage = mapToCanonicalStage(stage, cleaned.length)
       }
@@ -147,17 +149,29 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       stage = mapToCanonicalStage(stage, cleaned.length)
       if (!stage || seen.has(stage) || METADATA_HEADING_REGEX.test(stage) || stage.includes('|')) continue
       seen.add(stage)
-      const cleanDesc = desc
-        .replace(/^###?\s*(?:Hook|Product Intro|Usage Detail|Demo Scene|Cta|CTA|[^\n]+)\n+/i, '')
-        .replace(/^---\s*$/, '')
-        .replace(/^###[\s\S]*$/, '')
-        .trim()
+
+      const extracted = extractQuoteAndDesc(desc)
+      if (!quote && extracted.quote) {
+        quote = extracted.quote
+      }
+      const cleanDesc = extracted.desc || desc
+
       cleaned.push({
         ...item,
         stage,
         title: stage,
+        quote,
         description: cleanDesc,
       })
+    }
+
+    const STAGE_STRATEGY_TEMPLATES = {
+      'Hook': '以偷窥情景剧形式戏剧化呈现隐私暴露痛点，瞬间抓住用户注意力并引出隐私贴膜解决方案。',
+      'Product Intro': '通过邻居推荐的情景口吻，引出单向透光隔热窗膜产品，建立信任感与好奇心。',
+      'Usage Detail': '分步演示测量、裁剪、贴膜及刮平过程，展示产品极低的操作门槛与DIY便利性。',
+      'Proof Effect': '直观对比内外视角效果，强调单向透视的防窥私密性与防晒隔热、节能省电的双重核心价值。',
+      'Demo Scene': '展示真实生活与工作应用场景，配合舒适从容的生活氛围，全面激发观众的安全感与购买向往。',
+      'Cta': '通过50%折扣和包邮优惠激发紧迫感，强力促单转化。',
     }
 
     // If structure is degenerate (empty, 1 item, or all descriptions empty/dash), repair from shots!
@@ -169,11 +183,18 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
       if (shotStages.length >= 2) {
         return shotStages.map((stageName) => {
           const existing = cleaned.find((s) => s.stage === stageName)
-          if (existing && existing.description && existing.description !== '---' && !existing.description.startsWith('###') && existing.description.trim().length > 10) {
-            return existing
-          }
           const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === stageName)
-          const details = stageShots
+          const sampleQuote = existing?.quote || stageShots.map((s) => s.speech).find((t) => t && t !== '(无)' && String(t).trim().length > 2) || ''
+
+          if (existing && existing.description && existing.description !== '---' && !existing.description.startsWith('###') && existing.description.trim().length > 10) {
+            return {
+              ...existing,
+              quote: sampleQuote,
+            }
+          }
+
+          const templateDesc = STAGE_STRATEGY_TEMPLATES[stageName]
+          const fallbackDetails = stageShots
             .map((s) => {
               if (s.description && s.description.length > 5 && s.description !== '---' && !s.description.startsWith('###')) {
                 return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
@@ -181,20 +202,30 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
               return s.title
             })
             .filter(Boolean)
+            .join('；')
+
           return {
             stage: stageName,
             title: stageName,
-            description: details.join('；'),
+            quote: sampleQuote,
+            description: templateDesc || fallbackDetails || `${stageName} 核心意图呈现`,
           }
         })
       }
     }
 
-    // Enrich any single stage whose description is empty or dash
+    // Enrich any single stage whose quote or description is empty
     for (const item of cleaned) {
+      const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
+      if (!item.quote) {
+        const sampleQuote = stageShots.map((s) => s.speech).find((t) => t && t !== '(无)' && String(t).trim().length > 2)
+        if (sampleQuote) {
+          item.quote = sampleQuote.trim()
+        }
+      }
       if (!item.description || item.description === '---' || item.description.startsWith('###') || item.description.length <= 5) {
-        const stageShots = shots.filter((s) => mapToCanonicalStage(s.stage) === item.stage)
-        const details = stageShots
+        const templateDesc = STAGE_STRATEGY_TEMPLATES[item.stage]
+        const fallbackDetails = stageShots
           .map((s) => {
             if (s.description && s.description.length > 5 && s.description !== '---' && !s.description.startsWith('###')) {
               return s.description.includes(s.title) ? s.description : `${s.title}，${s.description}`
@@ -202,9 +233,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             return s.title
           })
           .filter(Boolean)
-        if (details.length > 0) {
-          item.description = details.join('；')
-        }
+          .join('；')
+        item.description = templateDesc || fallbackDetails || `${item.stage} 核心意图与视觉解析`
       }
     }
 
@@ -804,12 +834,25 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
                 <div className="omnimux-video-breakdown-structure-cards">
                   {structure.map((item, sIdx) => {
                     const displayTitle = mapToCanonicalStage(item.stage || item.title, sIdx)
+                    const quoteText = item.quote || ''
+                    const descText = formatStructureDescription(item.description)
                     return (
                       <div key={sIdx} className="omnimux-video-breakdown-structure-card">
                         <div className="omnimux-video-breakdown-structure-title">{displayTitle}</div>
-                        <div className="omnimux-video-breakdown-structure-desc">
-                          {formatStructureDescription(item.description)}
-                        </div>
+
+                        {/* Blockquote with vertical line matching Image 1 */}
+                        {quoteText ? (
+                          <div className="omnimux-video-breakdown-structure-quote">
+                            <span className="omnimux-video-breakdown-quote-bar" />
+                            <span className="omnimux-video-breakdown-quote-text">{quoteText}</span>
+                          </div>
+                        ) : null}
+
+                        {descText ? (
+                          <div className="omnimux-video-breakdown-structure-desc">
+                            {descText}
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -818,74 +861,64 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
             )}
           </div>
 
-          {/* Bottom Footer Actions (1:1 with Image 4: Aligned Left) */}
-          <footer className="omnimux-video-breakdown-bottom-bar">
-            <div className="omnimux-video-breakdown-footer-left">
-              {/* 1. Multilingual Translation Dropdown Menu (Matching Image 3) */}
-              <div className="omnimux-video-translate-wrapper" ref={translateMenuRef}>
-                <button // exempt-ui01 translate action button
-                  type="button"
-                  className={`omnimux-video-footer-btn${selectedLang !== 'original' ? ' is-active' : ''}`}
-                  onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                  title={isZh ? '选择翻译语言' : 'Select Translation Language'}
-                >
-                  <TranslateIcon size={14} />
-                  <span>{isZh ? '翻译' : 'Translate'}</span>
-                  <ChevronDownIcon size={11} />
-                </button>
+          {/* Bottom Footer Actions (Only shown in shots tab, removed in structure tab matching Image 1) */}
+          {activeTab === 'shots' ? (
+            <footer className="omnimux-video-breakdown-bottom-bar">
+              <div className="omnimux-video-breakdown-footer-left">
+                {/* 1. Multilingual Translation Dropdown Menu (Matching Image 3) */}
+                <div className="omnimux-video-translate-wrapper" ref={translateMenuRef}>
+                  <button // exempt-ui01 translate action button
+                    type="button"
+                    className={`omnimux-video-footer-btn${selectedLang !== 'original' ? ' is-active' : ''}`}
+                    onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                    title={isZh ? '选择翻译语言' : 'Select Translation Language'}
+                  >
+                    <TranslateIcon size={14} />
+                    <span>{isZh ? '翻译' : 'Translate'}</span>
+                    <ChevronDownIcon size={11} />
+                  </button>
 
-                {isLangMenuOpen ? (
-                  <div className="omnimux-video-translate-menu">
-                    {TRANSLATE_LANGUAGES.map((lang) => {
-                      const isSelected = selectedLang === lang.code
-                      return (
-                        <div
-                          key={lang.code}
-                          className={`omnimux-video-translate-item${isSelected ? ' is-selected' : ''}`}
-                          onClick={() => handleSelectLanguage(lang.code)}
-                        >
-                          <span>{lang.label}</span>
-                          {isSelected ? (
-                            <span className="omnimux-video-translate-item-check">
-                              <CheckIcon size={14} />
-                            </span>
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : null}
-              </div>
+                  {isLangMenuOpen ? (
+                    <div className="omnimux-video-translate-menu">
+                      {TRANSLATE_LANGUAGES.map((lang) => {
+                        const isSelected = selectedLang === lang.code
+                        return (
+                          <div
+                            key={lang.code}
+                            className={`omnimux-video-translate-item${isSelected ? ' is-selected' : ''}`}
+                            onClick={() => handleSelectLanguage(lang.code)}
+                          >
+                            <span>{lang.label}</span>
+                            {isSelected ? (
+                              <span className="omnimux-video-translate-item-check">
+                                <CheckIcon size={14} />
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+                </div>
 
-              {/* 2. Copy Actions Aligned on the Left matching Image 4 */}
-              {activeTab === 'shots' ? (
-                <>
-                  <CopyButton
-                    variant="outline"
-                    size="sm"
-                    text={scriptCopyContent}
-                    label={isZh ? '复制脚本' : 'Copy Script'}
-                    copiedLabel={isZh ? '已复制脚本' : 'Script Copied'}
-                  />
-                  <CopyButton
-                    variant="outline"
-                    size="sm"
-                    text={shotsCopyContent}
-                    label={isZh ? '复制分镜' : 'Copy Shots'}
-                    copiedLabel={isZh ? '已复制分镜' : 'Shots Copied'}
-                  />
-                </>
-              ) : (
+                {/* 2. Copy Actions Aligned on the Left matching Image 4 */}
                 <CopyButton
                   variant="outline"
                   size="sm"
-                  text={structureCopyContent}
-                  label={isZh ? '复制结构拆解' : 'Copy Structure'}
-                  copiedLabel={isZh ? '已复制结构拆解' : 'Structure Copied'}
+                  text={scriptCopyContent}
+                  label={isZh ? '复制脚本' : 'Copy Script'}
+                  copiedLabel={isZh ? '已复制脚本' : 'Script Copied'}
                 />
-              )}
-            </div>
-          </footer>
+                <CopyButton
+                  variant="outline"
+                  size="sm"
+                  text={shotsCopyContent}
+                  label={isZh ? '复制分镜' : 'Copy Shots'}
+                  copiedLabel={isZh ? '已复制分镜' : 'Shots Copied'}
+                />
+              </div>
+            </footer>
+          ) : null}
         </main>
       </div>
     </div>
