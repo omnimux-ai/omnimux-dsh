@@ -85,7 +85,7 @@ export interface MarketExpertItem {
   description: string
   descriptionEn: string
   avatar: string
-  initialStatus: 'enabled' | 'available' | 'coming_soon'
+  initialStatus: 'enabled' | 'available' | 'disabled' | 'coming_soon'
   order: number
 }
 
@@ -172,10 +172,19 @@ export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
   },
 ]
 
-export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'enabled' | 'available' | 'coming_soon' {
+export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'enabled' | 'available' | 'disabled' | 'coming_soon' {
   if (exp.initialStatus === 'coming_soon') return 'coming_soon'
   const presetDir = join(home, '.agent-presets', exp.id)
   if (existsSync(join(presetDir, 'preset.yml'))) return 'enabled'
+  const retiredDir = join(home, '.agent-presets', '.retired')
+  if (existsSync(retiredDir)) {
+    try {
+      const files = readdirSync(retiredDir)
+      if (files.some((f) => f === exp.id || f.startsWith(`${exp.id}-`))) {
+        return 'disabled'
+      }
+    } catch {}
+  }
   return 'available'
 }
 
@@ -214,6 +223,17 @@ export function installMarketExpertPreset(home: string, exp: MarketExpertItem): 
     backgroundMode: continuable
 `
   writeFileSync(join(dir, 'agent.cordis.yml'), cordisYml, 'utf8')
+  const retiredDir = join(home, '.agent-presets', '.retired')
+  if (existsSync(retiredDir)) {
+    try {
+      const files = readdirSync(retiredDir)
+      for (const f of files) {
+        if (f === exp.id || f.startsWith(`${exp.id}-`)) {
+          rmSync(join(retiredDir, f), { recursive: true, force: true })
+        }
+      }
+    } catch {}
+  }
 }
 
 export function disableMarketExpertPreset(home: string, id: string): void {
@@ -228,6 +248,10 @@ export function disableMarketExpertPreset(home: string, id: string): void {
     } catch {
       rmSync(dir, { recursive: true, force: true })
     }
+  } else {
+    try {
+      writeFileSync(join(retiredDir, `${id}-${Date.now()}`), '', 'utf8')
+    } catch {}
   }
 }
 
@@ -495,7 +519,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, cfg: 
       if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
       const home = expertRoots().home
       disableMarketExpertPreset(home, id)
-      return sendJson(res, 200, { ok: true, id, status: 'available' })
+      return sendJson(res, 200, { ok: true, id, status: 'disabled' })
     }
     if (method === 'experts') {
       const doc = decorateCatalog(loadCatalog(), expertRoots())

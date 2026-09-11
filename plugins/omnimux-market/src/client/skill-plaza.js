@@ -341,7 +341,7 @@
         if (expertMarketToggling) return;
         const isEnabled = item.status === "enabled";
         const actionMethod = isEnabled ? "expertMarketDisable" : "expertMarketInstall";
-        const nextStatus = isEnabled ? "available" : "enabled";
+        const nextStatus = isEnabled ? "disabled" : "enabled";
 
         setExpertMarketItems((cur) =>
           cur.map((it) => (it.id === item.id ? { ...it, status: nextStatus } : it))
@@ -349,7 +349,12 @@
         setExpertMarketToggling(item.id);
 
         try {
-          await api(actionMethod, { id: item.id });
+          const res = await api(actionMethod, { id: item.id });
+          if (res && res.status) {
+            setExpertMarketItems((cur) =>
+              cur.map((it) => (it.id === item.id ? { ...it, status: res.status } : it))
+            );
+          }
         } catch {
           setExpertMarketItems((cur) =>
             cur.map((it) => (it.id === item.id ? { ...it, status: item.status } : it))
@@ -664,18 +669,20 @@
               const desc = isEn ? (item.descriptionEn || item.description) : item.description;
               const isEnabled = item.status === "enabled";
               const isAvailable = item.status === "available";
+              const isDisabled = item.status === "disabled";
               const isComingSoon = item.status === "coming_soon";
 
               let statusText = "";
-              if (isEnabled) statusText = "[ " + (tr("expertMarket.enabled") || (isEn ? "Enabled" : "已启用")) + " ]";
-              else if (isAvailable) statusText = "[ " + (tr("expertMarket.available") || (isEn ? "Available" : "可用")) + " ]";
+              if (isEnabled) statusText = "[ " + (tr("expertMarket.enabled") || (isEn ? "Employed" : "已入职")) + " ]";
+              else if (isAvailable) statusText = "[ " + (tr("expertMarket.available") || (isEn ? "Hireable" : "可聘用")) + " ]";
+              else if (isDisabled) statusText = "[ " + (tr("expertMarket.disabled") || (isEn ? "Resigned" : "已离职")) + " ]";
               else if (isComingSoon) statusText = "[ " + (tr("expertMarket.comingSoon") || (isEn ? "Coming soon" : "即将推出")) + " ]";
 
               const btnText = isEnabled
                 ? (tr("expertMarket.disable") || (isEn ? "Disable" : "禁用"))
                 : (tr("expertMarket.install") || (isEn ? "Install" : "安装"));
 
-              const showButton = isEnabled || isAvailable;
+              const showButton = isEnabled || isAvailable || isDisabled;
 
               return h("div", { key: item.id, className: "expert-card" },
                 h("div", { className: "expert-card-avatar-wrap" },

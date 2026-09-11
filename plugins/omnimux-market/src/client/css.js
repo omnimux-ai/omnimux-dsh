@@ -419,6 +419,7 @@ html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none
 .expert-card-status{font-size:13px;font-weight:500;margin-bottom:12px;letter-spacing:.5px}
 .expert-card-status.enabled{color:var(--dsw-color-success,#10b981)}
 .expert-card-status.available{color:var(--dsw-alias-label-tertiary,#94a3b8)}
+.expert-card-status.disabled{color:var(--dsw-alias-label-tertiary,#94a3b8)}
 .expert-card-status.coming_soon{color:var(--dsw-alias-label-caption,#6b7280)}
 .expert-card-title{font-size:18px;font-weight:700;color:var(--dsw-alias-label-primary,#ffffff);margin:0 0 10px 0;line-height:1.35}
 .expert-card-desc{font-size:13px;line-height:1.55;color:var(--dsw-alias-label-secondary,#9da1ab);margin:0;flex:1}
