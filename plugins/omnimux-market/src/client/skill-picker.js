@@ -384,6 +384,46 @@
         return () => window.removeEventListener("dsh-product-stage", onPage);
       }, [open]);
 
+      // 订阅创作模式：营销模式 (marketing) 下隐藏技能按钮
+      const [composerMode, setComposerMode] = useState(() => {
+        if (typeof window !== "undefined") {
+          if (window.__omnimuxComposerModeStore) {
+            return window.__omnimuxComposerModeStore.getMode(sessionId);
+          }
+          return window.__omnimuxComposerMode || "agent";
+        }
+        return "agent";
+      });
+
+      useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+        const updateMode = () => {
+          const m = window.__omnimuxComposerModeStore
+            ? window.__omnimuxComposerModeStore.getMode(sessionId)
+            : (window.__omnimuxComposerMode || "agent");
+          setComposerMode(m);
+        };
+        updateMode();
+        const onModeEvent = (e) => {
+          const m = (e && e.detail && e.detail.mode) || window.__omnimuxComposerMode || "agent";
+          setComposerMode(m);
+        };
+        window.addEventListener("omnimux:composer-mode:changed", onModeEvent);
+        let unsub = undefined;
+        if (window.__omnimuxComposerModeStore && typeof window.__omnimuxComposerModeStore.subscribe === "function") {
+          unsub = window.__omnimuxComposerModeStore.subscribe(sessionId, updateMode);
+        }
+        return () => {
+          window.removeEventListener("omnimux:composer-mode:changed", onModeEvent);
+          if (typeof unsub === "function") unsub();
+        };
+      }, [sessionId]);
+
+      // 核心业务规则：营销模式下不显示技能按钮
+      if (composerMode === "marketing") {
+        return null;
+      }
+
       // 如果当前预设没有绑定 skill 则默认不显示 skill 按钮
       if (!presetBinding) {
         return null;

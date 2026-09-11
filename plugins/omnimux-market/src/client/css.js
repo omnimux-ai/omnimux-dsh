@@ -232,6 +232,7 @@ button[class*="add"] svg,.Q7WfXG_add svg,
 .sh-picker-trigger-label{white-space:nowrap}
 html[data-omnimux-composer-density='icon'] .sh-picker-trigger{width:28px !important;min-width:28px !important;padding:0 !important}
 html[data-omnimux-composer-density='icon'] .sh-picker-trigger-label{display:none !important}
+html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-skill-picker]),html[data-omnimux-composer-mode='marketing'] [data-omnimux-skill-picker]{display:none !important}
 .sh-picker{position:fixed;z-index:2147482000;display:flex;flex-direction:column;max-height:480px;box-sizing:border-box;background:var(--dsw-alias-bg-elevated,#1c1c1f);color:var(--dsw-alias-label-primary,inherit);border:1px solid var(--dsw-alias-border-l2,#2a2a2e);border-radius:12px;box-shadow:var(--dsw-alias-shadow-overlay,0 18px 50px rgba(15,23,42,.28));overflow:hidden}
 .sh-picker-head{display:flex;align-items:center;gap:10px;flex:none;padding:10px 12px 8px;flex-wrap:nowrap}
 .sh-picker-title{display:inline-flex;align-items:center;gap:6px;flex:none;font-size:13px;font-weight:650;color:var(--dsw-alias-label-primary,inherit)}

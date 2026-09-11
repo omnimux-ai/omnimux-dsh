@@ -190,6 +190,18 @@ class ComposerModeStore {
   }
 
   _notify(sessionId) {
+    const targetMode = this.getMode(sessionId)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-omnimux-composer-mode', targetMode)
+    }
+    if (typeof window !== 'undefined') {
+      window.__omnimuxComposerMode = targetMode
+      window.dispatchEvent(
+        new CustomEvent('omnimux:composer-mode:changed', {
+          detail: { mode: targetMode, sessionId },
+        })
+      )
+    }
     const set = this.listeners.get(sessionId)
     if (set) {
       for (const listener of set) {
@@ -215,6 +227,14 @@ let storeInstance = null
 export function getComposerModeStore() {
   if (!storeInstance) {
     storeInstance = new ComposerModeStore()
+    if (typeof window !== 'undefined') {
+      window.__omnimuxComposerModeStore = storeInstance
+      const initialMode = storeInstance.getMode()
+      window.__omnimuxComposerMode = initialMode
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-omnimux-composer-mode', initialMode)
+      }
+    }
   }
   return storeInstance
 }

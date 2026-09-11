@@ -48,6 +48,13 @@ export function ComposerModeTabs(props) {
 
   const activeMode = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
+  // 同步全局 html 根节点模式标识
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-omnimux-composer-mode', activeMode)
+    }
+  }, [activeMode])
+
   // 2. 订阅分屏工作台状态 (当右侧侧边栏打开时 panelOpen === true)
   const subscribeWorkbench = useCallback(
     (callback) => {
