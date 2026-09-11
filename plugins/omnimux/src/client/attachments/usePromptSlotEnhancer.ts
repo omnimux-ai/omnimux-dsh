@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { extractPromptSlots, type PromptSlot, PROMPT_SLOT_REGEX } from './promptSlotDetector.ts';
+import {
+  extractPromptSlots,
+  type PromptSlot,
+  PROMPT_SLOT_REGEX,
+} from './promptSlotDetector.ts';
 
 const COMPOSER_EDITOR_SELECTORS = [
   '[data-composer-card] [contenteditable="true"]',
@@ -65,7 +69,9 @@ export function selectSlotInEditor(slot: PromptSlot): boolean {
     if (idx !== -1) {
       try {
         const range = document.createRange();
-        const hasBrackets = slot.raw.startsWith('[') && slot.raw.endsWith(']');
+        const hasBrackets =
+          (slot.raw.startsWith('[') && slot.raw.endsWith(']')) ||
+          (slot.raw.startsWith('{') && slot.raw.endsWith('}'));
         const startOffset = hasBrackets ? idx + 1 : idx;
         const endOffset = hasBrackets ? idx + slot.raw.length - 1 : idx + slot.raw.length;
         range.setStart(node, startOffset);
@@ -74,6 +80,36 @@ export function selectSlotInEditor(slot: PromptSlot): boolean {
         if (sel) {
           sel.removeAllRanges();
           sel.addRange(range);
+          return true;
+        }
+      } catch {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+export function replaceSlotTextInEditor(slot: PromptSlot, newRaw: string): boolean {
+  const editor = findComposerEditor();
+  if (!editor) return false;
+  editor.focus();
+
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let node: Text | null;
+  while ((node = walker.nextNode() as Text | null)) {
+    const nodeText = node.nodeValue || '';
+    const idx = nodeText.indexOf(slot.raw);
+    if (idx !== -1) {
+      try {
+        const range = document.createRange();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + slot.raw.length);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+          document.execCommand('insertText', false, newRaw);
           return true;
         }
       } catch {
@@ -114,10 +150,21 @@ export function usePromptSlotEnhancer() {
     selectSlotInEditor(slot);
   }, []);
 
-  const handleFillSlot = useCallback((slot: PromptSlot, value: string) => {
-    fillSlotInEditor(slot, value);
-    refreshSlots();
-  }, [refreshSlots]);
+  const handleReplaceSlot = useCallback(
+    (slot: PromptSlot, newRaw: string) => {
+      replaceSlotTextInEditor(slot, newRaw);
+      refreshSlots();
+    },
+    [refreshSlots],
+  );
+
+  const handleFillSlot = useCallback(
+    (slot: PromptSlot, value: string) => {
+      fillSlotInEditor(slot, value);
+      refreshSlots();
+    },
+    [refreshSlots],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -157,6 +204,7 @@ export function usePromptSlotEnhancer() {
     slots,
     activeSlotIndex,
     selectSlot: handleSelectSlot,
+    replaceSlot: handleReplaceSlot,
     fillSlot: handleFillSlot,
     refreshSlots,
   };
