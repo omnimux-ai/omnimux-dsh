@@ -549,33 +549,20 @@ function insertVideoToken(doc: Document): boolean {
 
   let inserted = false;
 
-  // Strategy 1: insert directly into editor selection if possible
-  const sel = doc.defaultView?.getSelection?.();
-  if (editor && sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+  // Primary Strategy: Insert directly into the grow container (before the Lexical editor).
+  // This keeps the token inside the input box layout without being wiped by Lexical's internal reconciliation.
+  const grow = doc.querySelector(
+    '[data-input-scroll] [class*="grow"], [data-composer-card] [class*="grow"], [class*="grow"]'
+  );
+
+  if (grow) {
     try {
-      const range = sel.getRangeAt(0);
-      range.insertNode(token);
-      range.setStartAfter(token);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
+      grow.insertBefore(token, grow.firstChild);
       inserted = true;
     } catch {}
   }
 
-  // Strategy 2: prepend inside editor container
-  if (!inserted && editor) {
-    try {
-      if (editor.firstChild) {
-        editor.insertBefore(token, editor.firstChild);
-      } else {
-        editor.appendChild(token);
-      }
-      inserted = true;
-    } catch {}
-  }
-
-  // Strategy 3: insert inside scroll / grow container right before editor
+  // Fallback Strategy 1: insert inside scroll container
   if (!inserted && scroll) {
     try {
       if (editor && editor.parentNode === scroll) {
@@ -589,7 +576,7 @@ function insertVideoToken(doc: Document): boolean {
     } catch {}
   }
 
-  // Strategy 4: fallback inside data-composer-card
+  // Fallback Strategy 2: fallback inside data-composer-card
   if (!inserted) {
     const card = doc.querySelector('[data-composer-card]');
     if (card) {
