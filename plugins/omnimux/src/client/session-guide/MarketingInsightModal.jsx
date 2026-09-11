@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MARKETING_INSIGHT_ITEMS } from './catalog.js'
 import { StarterIcon } from './StarterIcon.jsx'
 
@@ -42,33 +43,35 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
     }
   }
 
-  return (
+  const modalNode = (
     <div
       className="omnimux-insight-overlay"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={t('guide.insight.modal.title')}
     >
-      <div className="omnimux-insight-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Close button */}
-        <button type="button" className="omnimux-insight-close" onClick={onClose} aria-label="Close"> {/* // exempt-ui01: modal close icon button */}
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+      {/* Top-right close button placed at viewport level */}
+      <button key="close-btn" type="button" className="omnimux-insight-close" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose() }} aria-label="Close" /* exempt-ui01: modal close icon button */>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
 
+      <div className="omnimux-insight-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <header className="omnimux-insight-header">
           <h1>{t('guide.insight.modal.title')}</h1>
@@ -81,7 +84,7 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
           <section className="omnimux-insight-left" aria-label={t('guide.insight.suggested')}>
             <div className="omnimux-insight-left-top">
               <h2>{t('guide.insight.suggested')}</h2>
-              <button type="button" className="omnimux-insight-refresh" aria-label="Refresh items"> {/* // exempt-ui01: refresh items button */}
+              <button key="refresh-btn" type="button" className="omnimux-insight-refresh" aria-label="Refresh items" /* exempt-ui01: refresh items button */>
                 <svg
                   width="16"
                   height="16"
@@ -103,7 +106,7 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
 
             <div className="omnimux-insight-grid" role="tablist">
               {MARKETING_INSIGHT_ITEMS.map((item) => (
-                <button key={item.id} type="button" role="tab" className="omnimux-insight-item" data-insight-id={item.id} aria-selected={selectedItem === item.id} onClick={() => handleSelect(item.id)}> {/* // exempt-ui01: insight item selection button */}
+                <button key={item.id} type="button" role="tab" className="omnimux-insight-item" data-insight-id={item.id} aria-selected={selectedItem === item.id} onClick={() => handleSelect(item.id)} /* exempt-ui01: insight item selection button */>
                   <div className="omnimux-insight-item-header">
                     <StarterIcon icon={item.icon} />
                     <span className="omnimux-insight-arrow">↗</span>
@@ -129,7 +132,7 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
               />
             </div>
             <div className="omnimux-insight-actions">
-              <button type="button" className="omnimux-insight-submit" onClick={handleSubmit}> {/* // exempt-ui01: start insight submit button */}
+              <button key="submit-btn" type="button" className="omnimux-insight-submit" onClick={handleSubmit} /* exempt-ui01: start insight submit button */>
                 <span>{t('guide.insight.start-btn')}</span>
               </button>
             </div>
@@ -138,4 +141,9 @@ export function MarketingInsightModal({ isOpen, onClose, t, onSubmitDraft }) {
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modalNode, document.body)
+  }
+  return modalNode
 }
