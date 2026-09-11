@@ -8,6 +8,8 @@ import {
   formatTimeRange,
   formatShotsCopyText,
   formatScriptCopyText,
+  canonicalizeCameraTags,
+  mapToCanonicalStage,
   parseShotsFromAnalyzeMarkdown,
   parseStructureFromAnalyzeMarkdown,
   parsePipelineAndStructureFromMarkdown,
@@ -608,5 +610,70 @@ Hook → Product Intro → Usage Detail → Demo Scene
 
     const shotsText = formatShotsCopyText(shots)
     assert.match(shotsText, /台词：Hold on, I'm coming!/)
+  })
+
+  it('canonicalizes slash-separated or compound tags into 4 orthogonal dimensions', () => {
+    // 1. Slash compound tags
+    const tags1 = canonicalizeCameraTags(['全景 / 固定镜头'])
+    assert.deepEqual(tags1, ['全景', '固定机位', '平视', '固定镜头'])
+
+    const tags2 = canonicalizeCameraTags(['中景 / 车内仰拍'])
+    assert.deepEqual(tags2, ['中景', '车载机位', '仰视', '手持微动'])
+
+    const tags3 = canonicalizeCameraTags(['特写 / 快速俯拍'])
+    assert.deepEqual(tags3, ['特写', '智能手机手持', '俯视', '手持微动'])
+
+    const tags4 = canonicalizeCameraTags(['全景 / 平视跟随 / 室内玄关'])
+    assert.deepEqual(tags4, ['全景', '智能手机手持', '平视', '跟随镜头'])
+
+    // 2. Standard 4 comma-separated tags
+    const tags5 = canonicalizeCameraTags('特写, 智能手机手持, 俯视, 手持微动')
+    assert.deepEqual(tags5, ['特写', '智能手机手持', '俯视', '手持微动'])
+  })
+
+  it('accurately normalizes Chinese verbose stages into canonical 4-stage structure with 1:1 pipeline alignment', () => {
+    const md = `
+## 1. 叙事结构链路 (Narrative Pipeline)
+吸睛引发惊喜（多盒产品堆叠倒塌 → 产品开箱与实车安装 → 手机端实时画面体验与惊叹 → 核心卖点演示与产品特写定格
+
+## 2. 结构阶段解构 (Stage Breakdown)
+
+第一阶段：趣味吸睛与场景引入
+通过敲门和开门后整堵行车记录仪包装盒墙倒塌的夸张惊喜场景，迅速抓住观众注意力，引出核心产品。
+
+第二阶段：开箱与实车安装
+男主角拆箱并与好友一同查看安装在汽车后视镜旁的行车记录仪，好友引导其打开手机 App 体验。
+
+第三阶段：功能演示与实时监控
+男主角在车内通过手机 App 查看实时多路车况监控画面，直观展现多角度远程查看功能。
+
+第四阶段：产品定格与品牌展示
+手机端界面特写与行车记录仪硬件特写呈现，配合旁白传达产品型号（DC22）与核心价值。
+
+## 3. 逐镜头分镜脚本表
+| 时间跨度 | 分镜标题 | 所属阶段 | 镜头属性标签 | 画面与动作描述 |
+| 0:00 - 0:05 | 惊喜整蛊入场 | 第一阶段：趣味吸睛与场景引入 | 全景 / 固定镜头 | 男主听到敲门开门，门后堆叠成墙的行车记录仪包装盒倾倒，门外好友齐呼惊喜。 |
+| 0:05 - 0:06 | 拆箱查看硬件 | 第二阶段：开箱与实车安装 | 中景 / 快速俯拍 | 男主坐在地上的包装堆中，快速拆开行车记录仪包装盒检查产品。 |
+| 0:06 - 0:08 | 实车安装与提示 | 第二阶段：开箱与实车安装 | 中景 / 车内仰拍 | 安装在挡风玻璃上的记录仪与车外三人，好友伸手示意并提醒男主查看手机App。 |
+    `
+
+    const { pipeline, structure, shots } = parsePipelineAndStructureFromMarkdown(md)
+
+    // Pipeline must be exactly 4 clean items, no duplicates, matching Image 1
+    assert.deepEqual(pipeline, ['Hook', 'Product Intro', 'Usage Detail', 'Demo Scene'])
+    assert.equal(structure.length, 4)
+    assert.equal(structure[0].stage, 'Hook')
+    assert.equal(structure[0].title, 'Hook')
+    assert.match(structure[0].description, /包装盒墙倒塌/)
+    assert.equal(structure[1].stage, 'Product Intro')
+    assert.equal(structure[2].stage, 'Usage Detail')
+    assert.equal(structure[3].stage, 'Demo Scene')
+
+    // Shots must have 4 orthogonal tags each
+    assert.equal(shots.length, 3)
+    assert.equal(shots[0].stage, 'Hook')
+    assert.deepEqual(shots[0].tags, ['全景', '固定机位', '平视', '固定镜头'])
+    assert.deepEqual(shots[1].tags, ['中景', '智能手机手持', '俯视', '手持微动'])
+    assert.deepEqual(shots[2].tags, ['中景', '车载机位', '仰视', '手持微动'])
   })
 })

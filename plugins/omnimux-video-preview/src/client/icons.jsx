@@ -31,7 +31,10 @@ export function LayersIcon({ size = 12 }) {
 export function FramingIcon({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7 17L17 7M17 7H7M17 7V17" />
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
     </svg>
   )
 }
@@ -48,8 +51,7 @@ export function CameraIcon({ size = 12 }) {
 export function AngleIcon({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 21H3V3" />
-      <path d="M17 21a14 14 0 0 0-14-14" />
+      <polygon points="3 11 22 2 13 21 11 13 3 11" />
     </svg>
   )
 }
