@@ -25,4 +25,5 @@ test('filterPresetSkills returns viral video search skills under 搜索爆款视
   const binding = getPresetSkillBinding('tiktok-agent')
   const searchSkills = filterPresetSkills(binding.skills, '搜索爆款视频')
   assert.ok(searchSkills.length > 0)
+  assert.ok(searchSkills.some((s) => s.slug === 'video-analysis' && s.name === '竞品爆款复盘'))
 })
