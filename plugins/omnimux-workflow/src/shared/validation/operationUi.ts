@@ -12,6 +12,8 @@ import {
   buildUpstreamFingerprint,
   evaluateCatalogCompat,
   evaluateModelCompat,
+  isMediaInputType,
+  matchOperationInputs,
   resolveModelView,
   type CompatReasonCode,
   type CompatRejection,
@@ -324,34 +326,55 @@ export function buildEffectiveOpsUiState(args: {
     typeof args.preferredOperationId === 'string' && args.preferredOperationId.trim()
       ? args.preferredOperationId.trim()
       : undefined;
-  const verdict = evaluateModelCompat(model, args.fingerprint, {
-    ...(preferred ? { operationId: preferred } : {}),
-    ...(args.outputType ? { outputType: args.outputType } : {}),
-  });
 
-  const effectiveOps = verdict.effectiveOperations.map((match) => matchToOption(match, model));
-  const count = effectiveOps.length;
-  // Explicit image/audio/video creative choices remain selected until a transition;
-  // text input adaptation is automatic below.
-  const preferredIsEffective = !preferred || effectiveOps.some((op) => op.id === preferred);
+  const listedOps = model.operations.filter((op) => op.listed);
+  const candidateOps = args.outputType
+    ? listedOps.filter((op) => op.output.type === args.outputType)
+    : listedOps;
 
-  if (count === 0) {
-    const primary = verdict.rejections[0] as CompatRejection | undefined;
+  if (listedOps.length === 0) {
     return {
       effectiveOps: [],
       count: 0,
       visibility: 'hidden',
       blockGenerate: true,
-      reasonCode: primary?.code ?? 'operation_incompatible',
-      reasonMessage:
-        primary?.message
-        ?? `当前模型 ${modelId} 无法处理这些输入素材`,
-      ...(primary ? { reason: primary } : {}),
-      ...(preferred ? { selectedOperationId: preferred } : {}),
+      reasonCode: 'not_listed',
+      reasonMessage: `模型 ${modelId} 没有已上架 operation`,
     };
   }
 
+  if (candidateOps.length === 0) {
+    return {
+      effectiveOps: [],
+      count: 0,
+      visibility: 'hidden',
+      blockGenerate: true,
+      reasonCode: 'operation_incompatible',
+      reasonMessage: `模型 ${modelId} 没有产出类型为 ${args.outputType ?? '?'} 的已上架 operation`,
+    };
+  }
+
+  // 1. 文本任务使用既有的自动推断自适应逻辑
   if (args.outputType === 'text') {
+    const verdict = evaluateModelCompat(model, args.fingerprint, {
+      ...(preferred ? { operationId: preferred } : {}),
+      outputType: 'text',
+    });
+    const effectiveOps = verdict.effectiveOperations.map((match) => matchToOption(match, model));
+    const count = effectiveOps.length;
+    if (count === 0) {
+      const primary = verdict.rejections[0] as CompatRejection | undefined;
+      return {
+        effectiveOps: [],
+        count: 0,
+        visibility: 'hidden',
+        blockGenerate: true,
+        reasonCode: primary?.code ?? 'operation_incompatible',
+        reasonMessage: primary?.message ?? `当前模型 ${modelId} 无法处理这些输入素材`,
+        ...(primary ? { reason: primary } : {}),
+        ...(preferred ? { selectedOperationId: preferred } : {}),
+      };
+    }
     const preferredOp = effectiveOps.find((op) => op.id === preferred);
     const selected = (preferredOp?.ready ? preferredOp : undefined)
       ?? effectiveOps.find((op) => op.ready)
@@ -369,9 +392,30 @@ export function buildEffectiveOpsUiState(args: {
     };
   }
 
-  if (count === 1) {
+  // 2. 单模式模型（candidateOps.length === 1）：走严格匹配，无法吸收素材时归零（如纯文生图模型连入参考图）
+  if (candidateOps.length === 1) {
+    const verdict = evaluateModelCompat(model, args.fingerprint, {
+      ...(preferred ? { operationId: preferred } : {}),
+      ...(args.outputType ? { outputType: args.outputType } : {}),
+    });
+    const effectiveOps = verdict.effectiveOperations.map((match) => matchToOption(match, model));
+    const count = effectiveOps.length;
+    if (count === 0) {
+      const primary = verdict.rejections[0] as CompatRejection | undefined;
+      return {
+        effectiveOps: [],
+        count: 0,
+        visibility: 'hidden',
+        blockGenerate: true,
+        reasonCode: primary?.code ?? 'operation_incompatible',
+        reasonMessage: primary?.message ?? `当前模型 ${modelId} 无法处理这些输入素材`,
+        ...(primary ? { reason: primary } : {}),
+        ...(preferred ? { selectedOperationId: preferred } : {}),
+      };
+    }
     const sole = effectiveOps[0]!;
     const pending = sole.pending[0];
+    const preferredIsEffective = !preferred || preferred === sole.id;
     if (!preferredIsEffective) {
       return {
         effectiveOps,
@@ -395,6 +439,27 @@ export function buildEffectiveOpsUiState(args: {
     };
   }
 
+  // 3. 多模式模型（candidateOps.length >= 2，如视频/多模态图像模型）：
+  // 解耦原则（Issue #1104 / contract-node-input-submission §3）：
+  // 每个模型的生成模式由模型能力固定决定，上游连线仅作为供给池（Feed）。
+  // 禁止因异构连线素材收缩 candidateOps 并隐藏生成模式选择器；各模式按自身支持槽位独立装填与评估。
+  const effectiveOps: OperationUiOption[] = candidateOps.map((op) => {
+    const allowedMediaTypes = new Set(op.inputs.map((slot) => slot.type));
+    const opFingerprint = buildUpstreamFingerprint({
+      ...args.fingerprint,
+      assets: args.fingerprint.assets.filter((asset) => {
+        if (!isMediaInputType(asset.type)) return true;
+        return allowedMediaTypes.has(asset.type);
+      }),
+    });
+    const match = matchOperationInputs(op, opFingerprint);
+    return matchToOption(match, model);
+  });
+
+  const count = effectiveOps.length;
+  const preferredOp = effectiveOps.find((op) => op.id === preferred);
+  const preferredIsEffective = !preferred || Boolean(preferredOp);
+
   // ≥2: a stale requested operation remains blocked until the user chooses
   // one of the effective operations; never auto-select a replacement.
   if (!preferredIsEffective) {
@@ -408,8 +473,8 @@ export function buildEffectiveOpsUiState(args: {
       reasonMessage: '当前模型不支持已保存的生成方式，请重新选择',
     };
   }
-  // This stricter gate belongs to video only. Other modality callers retain
-  // their established first-effective behavior unless they opt in.
+
+  // 视频空节点初态：若未指定 preferred，且有多个模式，提示请选择生成方式
   if (!preferred && args.outputType === 'video') {
     return {
       effectiveOps,
@@ -420,8 +485,13 @@ export function buildEffectiveOpsUiState(args: {
       reasonMessage: '请选择生成方式',
     };
   }
-  const selected =
-    (preferred ? effectiveOps.find((op) => op.id === preferred) : undefined)
+
+  const mediaTypesInFeed = new Set(args.fingerprint.mediaAssets.map((a) => a.type));
+  const absorbingOp = effectiveOps.find((op) =>
+    op.slots.some((slot) => mediaTypesInFeed.has(slot.type)),
+  );
+  const selected = preferredOp
+    ?? (mediaTypesInFeed.size > 0 ? absorbingOp : undefined)
     ?? effectiveOps.find((op) => op.ready)
     ?? effectiveOps[0]!;
   const pending = selected.pending[0];
