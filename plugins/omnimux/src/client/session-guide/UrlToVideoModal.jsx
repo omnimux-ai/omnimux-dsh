@@ -7,11 +7,27 @@ import {
 } from './catalog.js'
 import { ExampleMediaCover } from './PopularCardCover.jsx'
 
+function CarouselMedia({ example }) {
+  const [imgBroken, setImgBroken] = useState(false)
+  if (example.coverUrl && !imgBroken) {
+    return (
+      <img
+        src={example.coverUrl}
+        alt={example.title}
+        onError={() => setImgBroken(true)}
+        className="omnimux-u2v-cover-img"
+      />
+    )
+  }
+  return <ExampleMediaCover id={example.id} />
+}
+
 /**
  * Full-featured modal for URL to video generation.
  */
 export function UrlToVideoModal({ isOpen, onClose, t, onSubmitDraft }) {
   const [activeSlide, setActiveSlide] = useState(1)
+  const [examples, setExamples] = useState(URL_TO_VIDEO_EXAMPLES)
   const [productUrl, setProductUrl] = useState('')
   const [targetAudience, setTargetAudience] = useState('')
   const [keySellingPoint, setKeySellingPoint] = useState('')
@@ -21,6 +37,47 @@ export function UrlToVideoModal({ isOpen, onClose, t, onSubmitDraft }) {
   const [selectedRatio, setSelectedRatio] = useState('9:16')
   const [errorNotice, setErrorNotice] = useState(null)
   const urlInputRef = useRef(null)
+
+  // 每次打开弹窗时，从灵感社区 (omnimux/inspiration/local) 动态匹配 3 条作为真实轮播示例
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+
+    async function fetchInspirations() {
+      try {
+        const res = await fetch('/omnimux/inspiration/local?page_size=20')
+        if (!res.ok) return
+        const json = await res.json()
+        const items = json?.data?.items || json?.items || []
+        const videoItems = items.filter(it => it.cover_url || (it.media_urls && it.media_urls.length > 0))
+        if (videoItems.length >= 3) {
+          // 随机打乱并挑选 3 条
+          const shuffled = [...videoItems].sort(() => 0.5 - Math.random())
+          const selected = shuffled.slice(0, 3).map((item, idx) => ({
+            id: item.id || `insp-${idx}`,
+            title: item.title ? (item.title.length > 20 ? item.title.slice(0, 20) + '...' : item.title) : '灵感视频示例',
+            titleEn: item.title ? (item.title.length > 20 ? item.title.slice(0, 20) + '...' : item.title) : 'Inspiration Video',
+            tag: '示例',
+            tagEn: 'EXAMPLE',
+            badge: item.source_platform ? item.source_platform.toUpperCase() : 'TikTok',
+            desc: item.deconstruction?.hook_highlight || item.content || '爆款节奏与画面视觉参考',
+            coverUrl: item.cover_url,
+            videoUrl: item.media_urls?.[0] || '',
+          }))
+          if (active) {
+            setExamples(selected)
+          }
+        }
+      } catch {
+        // 网络/离线容错保持 URL_TO_VIDEO_EXAMPLES
+      }
+    }
+
+    void fetchInspirations()
+    return () => {
+      active = false
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -34,11 +91,11 @@ export function UrlToVideoModal({ isOpen, onClose, t, onSubmitDraft }) {
   if (!isOpen) return null
 
   function handlePrev() {
-    setActiveSlide((prev) => (prev - 1 + URL_TO_VIDEO_EXAMPLES.length) % URL_TO_VIDEO_EXAMPLES.length)
+    setActiveSlide((prev) => (prev - 1 + examples.length) % examples.length)
   }
 
   function handleNext() {
-    setActiveSlide((prev) => (prev + 1) % URL_TO_VIDEO_EXAMPLES.length)
+    setActiveSlide((prev) => (prev + 1) % examples.length)
   }
 
   function handleSubmit() {
@@ -98,11 +155,11 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
           {/* Left: 3D Carousel */}
           <section className="omnimux-u2v-left" aria-label="示例展示">
             <div className="omnimux-u2v-carousel">
-              {URL_TO_VIDEO_EXAMPLES.map((ex, index) => {
+              {examples.map((ex, index) => {
                 let pos = 'center'
-                if (index === (activeSlide - 1 + URL_TO_VIDEO_EXAMPLES.length) % URL_TO_VIDEO_EXAMPLES.length) {
+                if (index === (activeSlide - 1 + examples.length) % examples.length) {
                   pos = 'left'
-                } else if (index === (activeSlide + 1) % URL_TO_VIDEO_EXAMPLES.length) {
+                } else if (index === (activeSlide + 1) % examples.length) {
                   pos = 'right'
                 } else if (index !== activeSlide) {
                   pos = 'hidden'
@@ -112,7 +169,7 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
                   <div key={ex.id} className="omnimux-u2v-card" data-pos={pos}>
                     <span className="omnimux-u2v-card-badge">{ex.tag}</span>
                     <div className="omnimux-u2v-card-media">
-                      <ExampleMediaCover id={ex.id} />
+                      <CarouselMedia example={ex} />
                     </div>
                     <div className="omnimux-u2v-card-info">
                       <div className="omnimux-u2v-card-title">{ex.title}</div>
@@ -129,7 +186,7 @@ ${targetAudience.trim() ? `目标受众：${targetAudience.trim()}\n` : ''}${key
               </button>
             </div>
             <div className="omnimux-u2v-dots">
-              {URL_TO_VIDEO_EXAMPLES.map((ex, index) => (
+              {examples.map((ex, index) => (
                 <span
                   key={ex.id}
                   className={`omnimux-u2v-dot ${index === activeSlide ? 'active' : ''}`}

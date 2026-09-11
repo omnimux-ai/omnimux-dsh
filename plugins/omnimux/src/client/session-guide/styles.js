@@ -548,9 +548,11 @@ export const GUIDE_CSS = `
   overflow: hidden;
   position: relative;
 }
-.omnimux-u2v-card-media svg {
+.omnimux-u2v-card-media svg,
+.omnimux-u2v-cover-img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   display: block;
 }
 .omnimux-u2v-card-info {
