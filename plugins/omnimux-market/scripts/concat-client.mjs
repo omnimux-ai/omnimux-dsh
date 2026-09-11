@@ -35,6 +35,7 @@ const FRAGMENTS = [
   'marketplace.js',
   'skill-plaza.js',
   'skill-picker.js',
+  'model-picker.js',
   'composer.js',
   'experts.js',
   'connectors.js',

@@ -101,6 +101,7 @@ export const MUTATING_METHODS = new Set([
   'catalogUninstall',
   'expertMarketInstall',
   'expertMarketDisable',
+  'setModelSelection',
 ])
 
 export {
@@ -456,6 +457,44 @@ async function handleCatalogUninstall(ctx: ApiContext): Promise<void> {
   return sendJson(res, 200, { ok: true, id, installed: false, kind: 'connector' })
 }
 
+export interface SessionModelChoice {
+  auto: boolean
+  selectedModel: {
+    id: string
+    name: string
+    capsuleName?: string
+    type: 'video' | 'image'
+    icon?: string
+    subtitle?: string
+  } | null
+}
+
+export const sessionModelStore = new Map<string, SessionModelChoice>()
+
+export function getSessionModel(sessionId: string): SessionModelChoice | undefined {
+  return sessionModelStore.get(sessionId)
+}
+
+export function setSessionModel(sessionId: string, choice: SessionModelChoice): void {
+  sessionModelStore.set(sessionId, choice)
+}
+
+async function handleGetModelSelection(ctx: ApiContext): Promise<void> {
+  const { res, url, body } = ctx
+  const sessionId = String(body.sessionId || url.searchParams.get('sessionId') || '').trim() || 'default'
+  const choice = sessionModelStore.get(sessionId) || { auto: true, selectedModel: null }
+  return sendJson(res, 200, { ok: true, sessionId, ...choice })
+}
+
+async function handleSetModelSelection(ctx: ApiContext): Promise<void> {
+  const { res, body } = ctx
+  const sessionId = String(body.sessionId || '').trim() || 'default'
+  const auto = body.auto !== false
+  const selectedModel = auto ? null : ((body.selectedModel as SessionModelChoice['selectedModel']) || null)
+  sessionModelStore.set(sessionId, { auto, selectedModel })
+  return sendJson(res, 200, { ok: true, sessionId, auto, selectedModel })
+}
+
 const API_ROUTE_TABLE: Record<string, ApiMethodHandler> = {
   search: handleSearch,
   ratings: handleRatings,
@@ -481,6 +520,8 @@ const API_ROUTE_TABLE: Record<string, ApiMethodHandler> = {
   catalogInstall: handleCatalogInstall,
   catalogSummon: handleCatalogSummon,
   catalogUninstall: handleCatalogUninstall,
+  getModelSelection: handleGetModelSelection,
+  setModelSelection: handleSetModelSelection,
 }
 
 export async function handleApi(req: IncomingMessage, res: ServerResponse, cfg: PluginConfig): Promise<void> {
