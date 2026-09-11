@@ -23,6 +23,11 @@ import {
   renderExportIcon,
   syncMenuIcons,
   installMenuIconsAutoSync,
+  ensurePlacementStyles,
+  shouldPlaceMenuBelow,
+  syncMenuPlacement,
+  syncAllComposerMenus,
+  installMenuAutoSync,
   COMMAND_ICONS,
   COMMAND_I18N,
   ZH_NAME_TO_RAW,
@@ -319,3 +324,145 @@ test('installMenuIconsAutoSync observes DOM and cleans up', (t, done) => {
   }, 30)
 })
 
+test('ensurePlacementStyles injects idempotent placement CSS stylesheet into document head', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body></body></html>`)
+  const doc = dom.window.document
+
+  ensurePlacementStyles(doc)
+  const style1 = doc.getElementById('dsh-omnimux-menu-placement')
+  assert.ok(style1)
+  assert.ok(style1.textContent.includes('data-menu-placement="bottom"'))
+
+  // Second run is idempotent
+  ensurePlacementStyles(doc)
+  const styles = doc.querySelectorAll('#dsh-omnimux-menu-placement')
+  assert.equal(styles.length, 1)
+})
+
+test('shouldPlaceMenuBelow correctly identifies hero/bottom/middle states', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><body>
+    <div class="container Q7WfXG_hero">
+      <div data-composer-card></div>
+    </div>
+    <div class="normal-session">
+      <div id="bottom-card" data-composer-card></div>
+    </div>
+  </body></html>`)
+  const win = dom.window
+  win.innerHeight = 1000
+
+  const heroCard = dom.window.document.querySelector('.Q7WfXG_hero [data-composer-card]')
+  const bottomCard = dom.window.document.getElementById('bottom-card')
+
+  // 1. Hero card in middle of screen (spaceBelow = 600 >= 220) -> true
+  heroCard.getBoundingClientRect = () => ({ top: 300, bottom: 400, height: 100 })
+  assert.equal(shouldPlaceMenuBelow(heroCard, null, win), true)
+
+  // 2. Card at bottom of screen (spaceBelow = 50 < 220) -> false (keep above)
+  bottomCard.getBoundingClientRect = () => ({ top: 850, bottom: 950, height: 100 })
+  assert.equal(shouldPlaceMenuBelow(bottomCard, null, win), false)
+
+  // 3. Normal session, but card in middle with spaceBelow > spaceAbove (top: 200, bottom: 300, spaceBelow: 700) -> true
+  bottomCard.getBoundingClientRect = () => ({ top: 200, bottom: 300, height: 100 })
+  assert.equal(shouldPlaceMenuBelow(bottomCard, null, win), true)
+
+  // 4. Edge cases: null card or window
+  assert.equal(shouldPlaceMenuBelow(null, null, win), false)
+  assert.equal(shouldPlaceMenuBelow(heroCard, null, null), false)
+})
+
+test('syncMenuPlacement applies bottom placement in hero mode and restores in bottom mode', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><body>
+    <div class="Q7WfXG_hero">
+      <div data-composer-card>
+        <div class="overlayAnchor">
+          <div data-trigger-menu class="iRJKyq_menu"></div>
+        </div>
+      </div>
+    </div>
+  </body></html>`)
+  const doc = dom.window.document
+  const win = dom.window
+  win.innerHeight = 1000
+
+  const card = doc.querySelector('[data-composer-card]')
+  const anchor = doc.querySelector('.overlayAnchor')
+  const menu = doc.querySelector('[data-trigger-menu]')
+
+  // A. Hero mode with plenty of room below
+  card.getBoundingClientRect = () => ({ top: 300, bottom: 420, height: 120 })
+  const result1 = syncMenuPlacement(menu, doc)
+  assert.equal(result1, true)
+  assert.equal(card.dataset.menuPlacement, 'bottom')
+  assert.equal(anchor.dataset.overlayPlacement, 'bottom')
+  assert.equal(menu.dataset.placement, 'bottom')
+  assert.equal(menu.style.top, 'calc(100% + 4px)')
+  assert.equal(menu.style.bottom, 'auto')
+  assert.equal(menu.style.maxHeight, '320px')
+
+  // B. Switch card to bottom mode (e.g. user scrolled or session with messages)
+  card.getBoundingClientRect = () => ({ top: 880, bottom: 980, height: 100 })
+  card.parentElement.className = 'normal-session' // remove hero class
+  const result2 = syncMenuPlacement(menu, doc)
+  assert.equal(result2, false)
+  assert.equal(card.dataset.menuPlacement, undefined)
+  assert.equal(anchor.dataset.overlayPlacement, undefined)
+  assert.equal(menu.dataset.placement, undefined)
+  assert.equal(menu.style.top, '')
+  assert.equal(menu.style.bottom, '')
+  assert.equal(menu.style.maxHeight, '')
+})
+
+test('syncAllComposerMenus updates icons, placement, and pre-tags card', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+    <div class="Q7WfXG_hero">
+      <div data-composer-card>
+        <div class="overlayAnchor">
+          <div data-trigger-menu>
+            <button role="option">
+              <span class="iRJKyq_itemName">添加文件</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body></html>`)
+  const doc = dom.window.document
+  dom.window.innerHeight = 1000
+  const card = doc.querySelector('[data-composer-card]')
+  card.getBoundingClientRect = () => ({ top: 280, bottom: 400, height: 120 })
+
+  const res = syncAllComposerMenus(doc)
+  assert.equal(res.patchedIcons, 1)
+  assert.equal(res.placedBelowCount, 1)
+  assert.equal(card.dataset.menuPlacement, 'bottom')
+})
+
+test('installMenuAutoSync handles pointerdown on add button and cleans up', () => {
+  const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+    <div class="Q7WfXG_hero">
+      <div data-composer-card>
+        <button class="Q7WfXG_add" aria-label="指令"></button>
+        <div class="overlayAnchor"></div>
+      </div>
+    </div>
+  </body></html>`)
+  const doc = dom.window.document
+  dom.window.innerHeight = 1000
+  const card = doc.querySelector('[data-composer-card]')
+  card.getBoundingClientRect = () => ({ top: 280, bottom: 400, height: 120 })
+
+  const cleanup = installMenuAutoSync(doc)
+  assert.equal(typeof cleanup, 'function')
+
+  const btn = doc.querySelector('.Q7WfXG_add')
+  // Trigger pointerdown on add button
+  const ev = new dom.window.Event('pointerdown', { bubbles: true })
+  btn.dispatchEvent(ev)
+
+  assert.equal(card.dataset.menuPlacement, 'bottom')
+  const anchor = doc.querySelector('.overlayAnchor')
+  assert.equal(anchor.dataset.overlayPlacement, 'bottom')
+
+  cleanup()
+})
