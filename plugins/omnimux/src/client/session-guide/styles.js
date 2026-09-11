@@ -179,10 +179,10 @@ export const GUIDE_CSS = `
 }
 .omnimux-split-modal-container {
   position: relative;
-  width: 1040px;
-  max-width: 95vw;
-  height: 640px;
-  max-height: 90vh;
+  width: 1140px;
+  max-width: 96vw;
+  height: 700px;
+  max-height: 92vh;
   background: var(--dsw-alias-bg-elevated);
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 16px;
@@ -195,15 +195,37 @@ export const GUIDE_CSS = `
   animation: omnimuxScaleUp 180ms ease;
 }
 .omnimux-split-modal-left {
-  width: 440px;
+  width: 480px;
   flex: none;
   border-right: 1px solid var(--dsw-alias-border-l1);
-  padding: 28px 24px 20px;
+  padding: 32px 28px 24px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   box-sizing: border-box;
   background: var(--dsw-alias-bg-layer-1);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 260ms ease;
+}
+.omnimux-split-modal-left::-webkit-scrollbar {
+  width: 6px;
+}
+.omnimux-split-modal-left::-webkit-scrollbar-track {
+  background: transparent;
+}
+.omnimux-split-modal-left::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background-color 260ms ease;
+}
+.omnimux-split-modal-left.is-scrolling,
+.omnimux-split-modal-left:hover {
+  scrollbar-color: var(--dsw-alias-border-l3) transparent;
+}
+.omnimux-split-modal-left.is-scrolling::-webkit-scrollbar-thumb,
+.omnimux-split-modal-left:hover::-webkit-scrollbar-thumb {
+  background: var(--dsw-alias-border-l3);
 }
 .omnimux-split-modal-left-header {
   margin-bottom: 20px;
@@ -230,7 +252,7 @@ export const GUIDE_CSS = `
 
 .omnimux-split-modal-right {
   flex: 1;
-  padding: 28px 28px 20px;
+  padding: 32px 36px 20px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -252,41 +274,73 @@ export const GUIDE_CSS = `
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding-right: 4px;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 260ms ease;
+}
+.omnimux-split-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+.omnimux-split-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.omnimux-split-modal-content::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background-color 260ms ease;
+}
+.omnimux-split-modal-content.is-scrolling,
+.omnimux-split-modal-content:hover {
+  scrollbar-color: var(--dsw-alias-border-l3) transparent;
+}
+.omnimux-split-modal-content.is-scrolling::-webkit-scrollbar-thumb,
+.omnimux-split-modal-content:hover::-webkit-scrollbar-thumb {
+  background: var(--dsw-alias-border-l3);
+}
+.omnimux-split-modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--dsw-alias-label-tertiary);
 }
 .omnimux-split-modal-footer {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 14px;
+  padding-top: 18px;
   border-top: 1px solid var(--dsw-alias-border-l1);
-  margin-top: auto;
+  margin-top: 16px;
 }
-.omnimux-split-modal-submit {
+.omnimux-split-modal-submit,
+.omnimux-insight-submit,
+.omnimux-u2v-submit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 32px;
-  padding: 0 20px;
-  border-radius: 8px;
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-inverted);
-  font-size: 14px;
+  height: 40px;
+  padding: 0 28px;
+  border-radius: 10px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+  font-size: 15px;
   font-weight: 600;
   border: 0;
   cursor: pointer;
-  transition: background-color 150ms ease, transform 120ms ease;
-  box-shadow: 0 2px 8px var(--dsw-alias-state-business-tertiary);
+  transition: opacity 140ms ease, transform 120ms ease;
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-base);
 }
-.omnimux-split-modal-submit:hover {
-  background: var(--dsw-alias-button-primary-hover);
+.omnimux-split-modal-submit:hover,
+.omnimux-insight-submit:hover,
+.omnimux-u2v-submit:hover {
+  opacity: 0.92;
   transform: translateY(-1px);
 }
-.omnimux-split-modal-submit:active {
+.omnimux-split-modal-submit:active,
+.omnimux-insight-submit:active,
+.omnimux-u2v-submit:active {
   transform: translateY(0);
 }
 
@@ -422,37 +476,6 @@ export const GUIDE_CSS = `
   line-height: 1.6;
   color: var(--dsw-alias-label-primary);
   box-sizing: border-box;
-}
-.omnimux-insight-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex: none;
-}
-.omnimux-insight-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 20px;
-  border-radius: 8px;
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-inverted);
-  font-size: 14px;
-  font-weight: 600;
-  border: 0;
-  cursor: pointer;
-  transition: background-color 150ms ease, transform 120ms ease;
-  box-shadow: 0 2px 8px var(--dsw-alias-state-business-tertiary);
-}
-.omnimux-insight-submit:hover {
-  background: var(--dsw-alias-button-primary-hover);
-  transform: translateY(-1px);
-}
-.omnimux-insight-submit:active {
-  transform: translateY(0);
 }
 
 /* ==================== 浮层提示 (Toast Pill) ==================== */
@@ -815,31 +838,6 @@ export const GUIDE_CSS = `
 .omnimux-u2v-ratio-text {
   font-size: 11px;
   font-weight: 500;
-}
-
-.omnimux-u2v-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 20px;
-  border-radius: 8px;
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-inverted);
-  font-size: 14px;
-  font-weight: 600;
-  border: 0;
-  cursor: pointer;
-  transition: background-color 150ms ease, transform 120ms ease;
-  box-shadow: 0 2px 8px var(--dsw-alias-state-business-tertiary);
-}
-.omnimux-u2v-submit:hover {
-  background: var(--dsw-alias-button-primary-hover);
-  transform: translateY(-1px);
-}
-.omnimux-u2v-submit:active {
-  transform: translateY(0);
 }
 
 /* Popular Card Cover Illustrations */
