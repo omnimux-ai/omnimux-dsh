@@ -14,35 +14,44 @@ const BASE_CSS = `
   margin: 0;
 }
 .omx-video-token-action-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0 6px 0;
-  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 2px 0 6px 0 !important;
+  box-sizing: border-box !important;
 }
 .omx-btn-insert-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border-radius: 9999px;
-  border: 1px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.22)); /* exempt-ui03: 虚线胶囊边框 */
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, inherit);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 28px !important;
+  box-sizing: border-box !important;
+  padding: 0 12px !important;
+  border-radius: 9999px !important;
+  border: 1px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.22)) !important; /* exempt-ui03: 虚线胶囊边框 */
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary, inherit) !important;
+  font: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+}
+.omx-btn-insert-link span {
+  white-space: nowrap !important;
+  display: inline-block !important;
 }
 .omx-btn-insert-link:hover {
-  border-color: rgba(56, 189, 248, 0.45); /* exempt-ui03: 悬浮青蓝边框 */
-  color: #38bdf8; /* exempt-ui03: 悬浮青蓝文字 */
-  background: rgba(14, 116, 144, 0.16); /* exempt-ui03: 悬浮青蓝背景 */
-  transform: translateY(-0.5px);
+  border-color: rgba(56, 189, 248, 0.45) !important; /* exempt-ui03: 悬浮青蓝边框 */
+  color: #38bdf8 !important; /* exempt-ui03: 悬浮青蓝文字 */
+  background: rgba(14, 116, 144, 0.16) !important; /* exempt-ui03: 悬浮青蓝背景 */
+  transform: translateY(-0.5px) !important;
 }
 .omx-video-popover-backdrop {
   position: fixed;
@@ -468,6 +477,12 @@ function ensureStylesInjected() {
   document.head.appendChild(styleEl);
 }
 
+if (typeof document !== 'undefined') {
+  try {
+    ensureStylesInjected();
+  } catch {}
+}
+
 function interpolate(template: string, vars?: Record<string, unknown>): string {
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (_match, key: string) => {
@@ -557,19 +572,40 @@ function isVideoCategory(cat?: string | null): boolean {
   );
 }
 
-function insertMarkdownAtCursor(markdownText: string, savedRange?: Range | null): boolean {
-  if (typeof document === 'undefined') return false;
+function isVideoUrl(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return false;
+  const lower = trimmed.toLowerCase();
+  return (
+    lower.includes('tiktok.com') ||
+    lower.includes('douyin.com') ||
+    lower.includes('youtube.com') ||
+    lower.includes('youtu.be') ||
+    lower.includes('bilibili.com') ||
+    lower.includes('instagram.com') ||
+    lower.includes('xiaohongshu.com') ||
+    lower.includes('xhslink.com') ||
+    lower.includes('.mp4') ||
+    lower.includes('.mov') ||
+    lower.includes('.webm')
+  );
+}
 
-  const editorEl = document.querySelector(
+function insertNativeVideoChip(url: string, savedRange?: Range | null): boolean {
+  if (typeof document === 'undefined') return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+
+  const editor = document.querySelector(
     '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"], div[role="textbox"][contenteditable="true"]'
   ) as HTMLElement | null;
 
-  if (!editorEl) return false;
+  if (!editor) return false;
+  editor.focus();
 
-  editorEl.focus();
-
-  // Restore saved selection if it is inside this editor
-  if (savedRange && editorEl.contains(savedRange.commonAncestorContainer)) {
+  // Restore saved range if provided
+  if (savedRange && editor.contains(savedRange.commonAncestorContainer)) {
     try {
       const sel = window.getSelection();
       if (sel) {
@@ -579,26 +615,53 @@ function insertMarkdownAtCursor(markdownText: string, savedRange?: Range | null)
     } catch {}
   }
 
-  // 1. Primary: document.execCommand('insertText') which Lexical handles natively via beforeinput
-  let inserted = false;
-  try {
-    inserted = document.execCommand('insertText', false, markdownText);
-  } catch {}
+  const lexicalKey = Object.keys(editor).find((k) => k.startsWith('__lexicalEditor'));
+  const lexicalEditor = lexicalKey ? (editor as any)[lexicalKey] : null;
 
-  // 2. Fallback: dispatch synthetic beforeinput event if execCommand failed
-  if (!inserted) {
-    try {
-      const ev = new InputEvent('beforeinput', {
-        bubbles: true,
-        cancelable: true,
-        inputType: 'insertText',
-        data: markdownText,
-      });
-      inserted = editorEl.dispatchEvent(ev);
-    } catch {}
+  let platform = '视频';
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('tiktok.com')) platform = 'TikTok';
+  else if (lower.includes('douyin.com')) platform = '抖音';
+  else if (lower.includes('youtube.com') || lower.includes('youtu.be')) platform = 'YouTube';
+  else if (lower.includes('bilibili.com')) platform = 'B站';
+  else if (lower.includes('instagram.com')) platform = 'Instagram';
+  else if (lower.includes('xiaohongshu.com') || lower.includes('xhslink.com')) platform = '小红书';
+
+  if (lexicalEditor && typeof lexicalEditor.update === 'function') {
+    const chipReg = lexicalEditor._nodes?.get('reference-chip');
+    const ChipKlass = chipReg?.klass;
+
+    if (ChipKlass) {
+      try {
+        lexicalEditor.update(() => {
+          const chip = new ChipKlass({
+            source: 'video',
+            ref: trimmed,
+            label: `视频 · ${platform}`,
+            appearance: 'file',
+            clipboardText: `[视频](${trimmed})`,
+          });
+
+          // Insert into current selection or append to root paragraph
+          const root = lexicalEditor._editorState?._nodeMap?.get('root');
+          const targetBlock = root?.getLastChild?.() || root?.getFirstChild?.();
+          if (targetBlock) {
+            targetBlock.append(chip);
+          }
+        });
+        return true;
+      } catch (err) {
+        console.warn('[omnimux] Lexical chip insert failed, falling back:', err);
+      }
+    }
   }
 
-  return inserted;
+  // Fallback: document.execCommand insertText
+  try {
+    return document.execCommand('insertText', false, `[视频](${trimmed}) `);
+  } catch {
+    return false;
+  }
 }
 
 export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
@@ -639,9 +702,24 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
       const cat = customEvent.detail?.category || '';
       setVideoSkillActive(isVideoCategory(cat));
     };
+    const onPaste = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text') || '';
+      if (isVideoUrl(text)) {
+        const editor = document.querySelector(
+          '[data-composer-card] [contenteditable="true"], [data-lexical-editor="true"], [data-composer-input="true"]'
+        );
+        if (editor && editor.contains(e.target as Node)) {
+          e.preventDefault();
+          e.stopPropagation();
+          insertNativeVideoChip(text.trim());
+        }
+      }
+    };
     window.addEventListener('omnimux:skill:changed', onSkillChange);
+    window.addEventListener('paste', onPaste, true);
     return () => {
       window.removeEventListener('omnimux:skill:changed', onSkillChange);
+      window.removeEventListener('paste', onPaste, true);
     };
   }, []);
 
@@ -677,8 +755,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const handleConfirmInsert = useCallback(() => {
     const trimmed = popoverUrl.trim();
     if (!trimmed) return;
-    const markdown = `[视频](${trimmed}) `;
-    insertMarkdownAtCursor(markdown, savedRangeRef.current);
+    insertNativeVideoChip(trimmed, savedRangeRef.current);
     setIsPopoverOpen(false);
     setPopoverUrl('');
   }, [popoverUrl]);
