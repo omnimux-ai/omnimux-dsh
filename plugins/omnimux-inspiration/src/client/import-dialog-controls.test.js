@@ -121,10 +121,12 @@ describe('import dialog UX locales', () => {
     assert.equal(en['add.submit'], 'Import')
     assert.equal(zh['add.tagsToggle'], '+ 添加自定义标签')
     assert.equal(en['add.tagsToggle'], '+ Add custom tags')
-    // Import runs as a background job now, so the copy no longer promises the
-    // dialog will stay open while the crawl and the breakdown happen.
-    assert.equal(zh['add.importing'], '已转后台导入，可关闭此窗口')
-    assert.equal(en['add.importing'], 'Running in background — you can close this')
+    // The label rides the submit button while the POST is in flight, and the
+    // dialog closes itself as soon as the background job answers 202 — so it must
+    // describe the import, never ask the user to dismiss a dialog that is already
+    // closing.
+    assert.equal(zh['add.importing'], '导入中…')
+    assert.equal(en['add.importing'], 'Importing…')
   })
 })
 

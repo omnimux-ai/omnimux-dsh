@@ -18,10 +18,13 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
   if (!open) return null
 
   /**
-   * Close the dialog, handing its item back to the list first.
+   * Close the dialog from a control that is not submitting — the footer buttons
+   * and the backdrop.
    *
-   * Both notices below keep the dialog open so the user actually reads them: a
-   * degraded import and a re-resolvable duplicate look like successes otherwise.
+   * The degraded notice is the one state that carries an item to hand back: it
+   * says what was stored without a video and has no other action. It is handed
+   * over here rather than at the moment it was set, so dismissing the dialog is
+   * what adds the item, exactly as before.
    */
   const finishClose = () => {
     const pending = notice
@@ -50,10 +53,16 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
       })
       if (res.ok && res.body?.data) {
         if (res.status === 202) {
-          // The job runs on the server, so the dialog has nothing left to do
-          // except hand the placeholder over and close. It uses the same notice
-          // carrier as the degraded path so the item still reaches the list.
-          setNotice({ item: res.body.data, tone: 'background', messageKey: 'add.importing' })
+          // The job runs on the server, so the dialog is finished the moment the
+          // placeholder exists: the row it publishes *is* the progress report and
+          // the grid already polls it. Handing the row over and closing in the
+          // same turn is what makes the import "background" from the user's side —
+          // stopping here to make them press a second button would reintroduce
+          // exactly the wait the background job exists to remove. The degraded
+          // case a background import can still hit is discovered later, by the
+          // poll, and is reported on the card (`add.degradedNotice`).
+          onImported(res.body.data)
+          onClose()
           return
         }
         if (res.body.media_degraded) {
@@ -89,10 +98,10 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
     void submitImport(false)
   }
 
-  const degraded = notice?.tone === 'degraded'
-  // A background import has nothing more to ask the user, so its notice is just
-  // an acknowledgement with a single way out — like the degraded notice.
-  const acknowledged = degraded || notice?.tone === 'background'
+  // The degraded notice is the only one that closes on a plain "close": it says
+  // what was stored and has nothing to ask, while the duplicate notice carries
+  // the re-resolve button that is its whole point.
+  const acknowledged = notice?.tone === 'degraded'
   const inputsDisabled = loading || Boolean(notice)
 
   return (

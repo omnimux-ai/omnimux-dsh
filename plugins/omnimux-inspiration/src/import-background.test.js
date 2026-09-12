@@ -260,6 +260,36 @@ describe('background import — placeholder and completion', { concurrency: 1 },
     releaseMedia()
     await waitForSettled(ctx, id)
   })
+
+  it('publishes every stage exactly once, in order, and never after the write', async () => {
+    const ctx = makeDispatcher(paths, async () => X_VIDEO_ENVELOPE)
+    ctx.dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
+      localStore: ctx.store,
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      fetcher: mockFetcher,
+      analyzeInspiration: async () => ({ deconstruction: null, error: '' }),
+    })
+    /** @type {string[]} */
+    const published = []
+    const update = ctx.store.update.bind(ctx.store)
+    ctx.store.update = (id, patch) => {
+      if (patch.import_stage !== undefined) published.push(patch.import_stage)
+      return update(id, patch)
+    }
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled(ctx, started.body.data.id)
+
+    // The card renders `import_stage` verbatim, so the sequence is a user-visible
+    // contract: a repeated stage shows a stale label, and a stage published after
+    // its step finished shows a label for work that is already done. `persisting`
+    // was written twice — once while the completion was being written and again
+    // after it was already on disk — which left finished rows reading "写入中…".
+    assert.deepEqual(published, ['downloading', 'analyzing', 'persisting', null])
+    assert.equal(settled.import_status, 'ready')
+    assert.equal(settled.import_stage, null)
+  })
 })
 
 describe('background import — idempotency and duplicates', { concurrency: 1 }, () => {

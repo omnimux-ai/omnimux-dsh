@@ -1,13 +1,29 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import { JSDOM } from 'jsdom'
-import React, { act } from 'react'
-import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
+
+/**
+ * A document has to exist before react-dom is evaluated.
+ *
+ * `react-dom` snapshots its "is there a DOM" answer in module scope and, when it
+ * says no, replaces its `onChange` support with the branch meant for browsers
+ * without an `input` event (IE9). In that branch a dispatched `input` event never
+ * reaches a handler at all, which is exactly what happened while this file
+ * imported react-dom before jsdom existed: clicks worked, typing silently did
+ * nothing. Bootstrapping a document first keeps react-dom on its normal path.
+ */
+const bootstrap = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost:3000' })
+globalThis.window = bootstrap.window
+globalThis.document = bootstrap.window.document
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+const React = await import('react')
+const { createRoot } = await import('react-dom/client')
 
 /**
  * Render gates for the inspiration card and preview player.
@@ -59,6 +75,19 @@ async function bundle(entryFile) {
 }
 
 /**
+ * Mounted environments this suite has not released yet.
+ *
+ * An assertion that throws skips the rest of its test, including the `finally`
+ * that unmounts. A jsdom window left mounted with a live React root is a handle
+ * the process then has to wait on, which turns a clear failure into a hang — the
+ * worst possible outcome for a gate whose whole job is to fail loudly. Every mount
+ * registers here (before its first render, so a component that throws on mount is
+ * covered too) and `after` releases whatever the failure left behind.
+ * @type {Array<() => Promise<void>>}
+ */
+const pendingTeardowns = []
+
+/**
  * @param {string} entryFile
  * @param {object} props
  * @returns {Promise<{ container: HTMLElement, document: Document, window: any, unmount: () => Promise<void>, close: () => void }>}
@@ -81,24 +110,43 @@ async function mount(entryFile, props, exportName) {
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
+  let root = null
+  const teardown = async () => {
+    if (root) {
+      const mounted = root
+      root = null
+      await React.act(async () => mounted.unmount())
+    }
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+    dom.window.close()
+  }
+  pendingTeardowns.push(teardown)
+
   const container = dom.window.document.getElementById('host')
-  const root = createRoot(container)
-  await act(async () => {
-    root.render(React.createElement(Component, props))
-  })
+  try {
+    root = createRoot(container)
+    await React.act(async () => {
+      root.render(React.createElement(Component, props))
+    })
+  } catch (error) {
+    await teardown()
+    throw error
+  }
 
   return {
     container,
     document: dom.window.document,
     window: dom.window,
     async unmount() {
-      await act(async () => root.unmount())
-      globalThis.window = previous.window
-      globalThis.document = previous.document
-      globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+      const index = pendingTeardowns.indexOf(teardown)
+      if (index !== -1) pendingTeardowns.splice(index, 1)
+      await teardown()
     },
     close() {
-      dom.window.close()
+      // The window is closed by `teardown`, which both this test and the
+      // after-failure release run.
     },
   }
 }
@@ -110,6 +158,24 @@ const t = (key) => zh[key] || key
 process.on('exit', () => {
   rmSync(cacheDir, { recursive: true, force: true })
 })
+
+/** Release whatever the suite mounted, whether its tests passed or not. */
+after(async () => {
+  while (pendingTeardowns.length > 0) {
+    await pendingTeardowns.pop()()
+  }
+  // Bundling runs in a child process. Stopping it here keeps a failing gate from
+  // leaving that child behind for the process exit to wait on.
+  await esbuild.stop()
+})
+
+// A recorded failure must never become a hang: the runner already knows the exit
+// code, so a 10s ceiling only bounds how long the process may take to reach it.
+// `unref()` keeps the timer from holding the loop open in a healthy run.
+const exitGuard = setTimeout(() => {
+  process.exit(process.exitCode ?? 0)
+}, 10_000)
+exitGuard.unref()
 
 describe('InspirationPreviewModal render gate — media source chain', () => {
   const LOCAL_VIDEO_URL = '/omnimux/inspiration/local/media/videos/video_ab12.mp4'
@@ -156,7 +222,7 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
       const video = mounted.container.querySelector('video')
       assert.ok(video, 'the player starts as a <video>')
 
-      await act(async () => {
+      await React.act(async () => {
         video.dispatchEvent(new mounted.window.Event('error', { bubbles: false }))
       })
 
@@ -436,7 +502,7 @@ describe('InspirationCoverCard render gate — running status', () => {
       assert.equal(pill.textContent, zh['add.status.failed'])
       assert.equal(pill.getAttribute('data-variant'), 'danger')
 
-      await act(async () => {
+      await React.act(async () => {
         mounted.container.querySelector('.omnimux-inspiration-card-pure')?.dispatchEvent(
           new mounted.window.MouseEvent('click', { bubbles: true }),
         )
@@ -564,13 +630,139 @@ describe('InspirationCoverCard render gate — running status', () => {
       assert.equal(primary.disabled, true, 'replicating an unfinished import must be refused')
       assert.equal(primary.getAttribute('aria-disabled'), 'true')
 
-      await act(async () => {
+      await React.act(async () => {
         primary.dispatchEvent(new mounted.window.MouseEvent('click', { bubbles: true }))
       })
       assert.equal(replicated, 0)
     } finally {
       await mounted.unmount()
       mounted.close()
+    }
+  })
+})
+
+describe('InspirationInlineImportDialog render gate — background import hand-off', () => {
+  /** The exact request the dialog makes once the user submits a URL. */
+  function stubFetch(handler) {
+    const previous = globalThis.fetch
+    const calls = []
+    globalThis.fetch = async (path, init) => {
+      calls.push({ path: String(path), body: JSON.parse(init?.body ?? '{}') })
+      return handler(calls.length)
+    }
+    return {
+      calls,
+      restore() {
+        globalThis.fetch = previous
+      },
+    }
+  }
+
+  /**
+   * Type a URL into the real dialog and submit it, then let every resulting
+   * promise settle.
+   *
+   * The value goes in through the prototype's setter because React tracks the
+   * node's value and ignores an event that appears to change nothing, and the
+   * submit is dispatched on the form because the dialog's submit handler lives
+   * there — a bare click on the submit button would not reach it.
+   * @param {any} mounted
+   */
+  async function submit(mounted) {
+    const input = mounted.container.querySelector('input')
+    assert.ok(input, 'the dialog must render its URL field')
+    const form = mounted.container.querySelector('form')
+    assert.ok(form, 'the dialog must render its form')
+    await React.act(async () => {
+      Object.getOwnPropertyDescriptor(mounted.window.HTMLInputElement.prototype, 'value').set
+        .call(input, 'https://x.com/a/status/1')
+      input.dispatchEvent(new mounted.window.Event('input', { bubbles: true }))
+    })
+    assert.ok(
+      [...mounted.container.querySelectorAll('button')].some((node) => node.textContent === zh['add.submit']),
+      'the dialog must render its submit button',
+    )
+    await React.act(async () => {
+      form.dispatchEvent(new mounted.window.Event('submit', { bubbles: true, cancelable: true }))
+    })
+    await React.act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  }
+
+  it('closes the dialog and hands the placeholder over as soon as the job answers 202', async () => {
+    const placeholder = {
+      id: 'insp_bg_1',
+      title: 'https://x.com/a/status/1',
+      source_url: 'https://x.com/a/status/1',
+      import_status: 'importing',
+      import_stage: 'resolving',
+    }
+    const fetchStub = stubFetch(() => ({
+      ok: true,
+      status: 202,
+      json: async () => ({ data: placeholder }),
+    }))
+    /** @type {any[]} */
+    const imported = []
+    let closed = 0
+    let mounted
+    try {
+      mounted = await mount('InspirationInlineImportDialog.jsx', {
+        open: true,
+        t,
+        onClose() { closed += 1 },
+        onImported(item) { imported.push(item) },
+      }, 'InspirationInlineImportDialog')
+      await submit(mounted)
+
+      // "Click import → the dialog closes → a new card with a running status".
+      // Both halves have to happen on the 202 itself: the published row is the
+      // progress report, so a second press to dismiss the dialog would only add
+      // back the wait the background job removes.
+      assert.equal(closed, 1, 'a 202 must close the dialog in the same turn')
+      assert.deepEqual(imported.map((item) => item.id), ['insp_bg_1'])
+      assert.equal(fetchStub.calls.length, 1)
+      assert.equal(fetchStub.calls[0].body.background, true)
+      // The dialog is gone, so the acknowledgement copy has nothing left to say.
+      assert.equal(mounted.container.textContent.includes(zh['add.importing']), false)
+    } finally {
+      await mounted?.unmount()
+      mounted?.close()
+      fetchStub.restore()
+    }
+  })
+
+  it('keeps the dialog open and shows the reason when the import is rejected', async () => {
+    const fetchStub = stubFetch(() => ({
+      ok: false,
+      status: 422,
+      json: async () => ({ error: '未从该链接解析到可入库的内容' }),
+    }))
+    /** @type {any[]} */
+    const imported = []
+    let closed = 0
+    let mounted
+    try {
+      mounted = await mount('InspirationInlineImportDialog.jsx', {
+        open: true,
+        t,
+        onClose() { closed += 1 },
+        onImported(item) { imported.push(item) },
+      }, 'InspirationInlineImportDialog')
+      await submit(mounted)
+
+      // The synchronous failure path is untouched by the background hand-off: the
+      // user is told why, in the dialog they are still looking at.
+      assert.equal(closed, 0)
+      assert.deepEqual(imported, [])
+      const alert = mounted.container.querySelector('[role="alert"]')
+      assert.ok(alert, 'the failure must be rendered in the dialog')
+      assert.match(alert.textContent, /未从该链接解析到可入库的内容/)
+    } finally {
+      await mounted?.unmount()
+      mounted?.close()
+      fetchStub.restore()
     }
   })
 })

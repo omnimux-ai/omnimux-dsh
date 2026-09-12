@@ -1,1 +1,4 @@
 lib/client.js
+
+# Bundles the render gates write before mounting them in jsdom.
+/src/client/.esbuild-cache/

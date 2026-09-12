@@ -99,6 +99,55 @@ describe('local store — import status fields survive the row whitelist', () =>
     assert.equal(persisted.import_error, '导入中断或超时，请重试')
   })
 
+  it('keeps the start timestamp through replace()', async () => {
+    const store = createLocalStore({ paths })
+    const startedAt = '2026-09-12T08:00:00.000Z'
+    const created = store.add({
+      title: 'https://x.com/creator/status/5',
+      source_url: 'https://x.com/creator/status/5',
+      import_status: 'importing',
+      import_stage: 'resolving',
+      import_started_at: startedAt,
+    })
+
+    // The replacement is the *completion* of the same import, and the record the
+    // background job writes carries no start timestamp. `buildRow` is a whitelist,
+    // so without the merge in `replace` the field the placeholder persisted is
+    // dropped the moment the import finishes — leaving a settled row with no
+    // record of when its import began.
+    await store.replace(created.id, {
+      title: '已完成',
+      type: 'video',
+      source_url: 'https://x.com/creator/status/5',
+      import_status: 'ready',
+      import_stage: null,
+    })
+
+    const persisted = createLocalStore({ paths }).get(created.id)
+    assert.equal(persisted.import_status, 'ready')
+    assert.equal(persisted.import_started_at, startedAt)
+  })
+
+  it('lets a replacement state its own start timestamp', async () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: 'https://x.com/creator/status/6',
+      source_url: 'https://x.com/creator/status/6',
+      import_status: 'importing',
+      import_started_at: '2026-09-12T08:00:00.000Z',
+    })
+
+    const restartedAt = '2026-09-12T09:30:00.000Z'
+    await store.replace(created.id, {
+      title: '重试',
+      source_url: 'https://x.com/creator/status/6',
+      import_status: 'ready',
+      import_started_at: restartedAt,
+    })
+
+    assert.equal(createLocalStore({ paths }).get(created.id).import_started_at, restartedAt)
+  })
+
   it('keeps a row written before the field existed readable', () => {
     const store = createLocalStore({ paths })
     const created = store.add({ title: 'legacy', source_url: 'https://x.com/creator/status/4' })

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { describe, it, beforeEach } from 'node:test'
+import { after, describe, it, beforeEach } from 'node:test'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -558,5 +558,63 @@ describe('Local Inspiration Store — replace() upgrade path (P1-3 / P3-5)', () 
 
     assert.equal(await store.replace('insp_missing', { title: 'x' }), null)
     assert.equal(store.list().total, 0)
+  })
+})
+
+describe('local store — read snapshots', () => {
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-store-snapshot-'))
+    paths = {
+      dir: tmp,
+      libraryFile: join(tmp, 'library.json'),
+      mediaDir: join(tmp, 'media'),
+      coversDir: join(tmp, 'media', 'covers'),
+      videosDir: join(tmp, 'media', 'videos'),
+      imagesDir: join(tmp, 'media', 'images'),
+    }
+  })
+
+  after(() => {
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  it('serves a get() from a snapshot the caller already read', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({ title: 'row', source_url: 'https://x.com/a/status/1' })
+
+    // The poll path reads the library twice per request — once for the stale
+    // sweep, once for the row lookup. The second read is what the snapshot
+    // removes, so a snapshot has to answer exactly what a fresh read would.
+    const snapshot = store.snapshotForRead()
+    store.cacheReadSnapshot(snapshot)
+
+    assert.equal(store.get(created.id, snapshot).id, created.id)
+    assert.equal(store.get('insp_missing', snapshot), null)
+  })
+
+  it('ignores a snapshot the library has moved on from', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({ title: 'row', source_url: 'https://x.com/a/status/2' })
+    const snapshot = store.snapshotForRead()
+    store.cacheReadSnapshot(snapshot)
+
+    // A second store stands in for any other writer: the snapshot no longer
+    // matches the file it was taken from, so the answer has to come from a fresh
+    // read rather than from rows that were true a moment ago.
+    const second = createLocalStore({ paths })
+    second.add({ title: 'other', source_url: 'https://x.com/b/status/3' })
+
+    assert.equal(store.get(created.id, snapshot).id, created.id)
+    assert.equal(store.list().total, 2)
+  })
+
+  it('reads the file itself when no snapshot is passed', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({ title: 'row', source_url: 'https://x.com/a/status/4' })
+
+    assert.equal(store.get(created.id).id, created.id)
   })
 })

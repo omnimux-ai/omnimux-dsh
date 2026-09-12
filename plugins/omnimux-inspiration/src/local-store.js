@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveInspirationPaths } from './paths.js'
@@ -211,10 +211,58 @@ export function createLocalStore(opts = {}) {
   }
 
   /**
+   * Reading the library costs a `statSync` even when it throws, which is what a
+   * read-heavy caller (`readAll` on every `get`, twice per poll) pays for.
+   * @returns {import('node:fs').Stats | null}
+   */
+  function statOf() {
+    try {
+      return statSync(paths.libraryFile)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Snapshot a caller can hand back to a later read of the same request.
+   *
+   * The poll endpoint reads the library twice per request — once for the stale
+   * sweep and once for the row lookup — and a running import is polled every
+   * 2.5s per row. The snapshot carries the file identity the items were parsed
+   * from, so reusing it is only ever an optimization: a file that changed since
+   * (another process, or a write between the two reads) fails the identity check
+   * and is read again.
+   */
+  let cachedSnapshot = null
+
+  /**
+   * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+   */
+  function snapshotForRead() {
+    return { items: readAll(), stat: statOf() }
+  }
+
+  /**
+   * @param {unknown} snapshot
+   * @returns {LocalInspirationRecord[] | null} the snapshot's items, or null when they are stale
+   */
+  function snapshotItems(snapshot) {
+    const usable = snapshot && typeof snapshot === 'object' && Array.isArray(snapshot.items)
+    if (!usable) return null
+    if (snapshot !== cachedSnapshot) return null
+    const current = statOf()
+    const asOf = snapshot.stat ?? null
+    if (current === null && asOf === null) return snapshot.items
+    if (current === null || asOf === null) return null
+    if (current.mtimeMs !== asOf.mtimeMs || current.size !== asOf.size) return null
+    return snapshot.items
+  }
+
+  /**
    * @returns {LocalInspirationRecord[]}
    */
   function readAll() {
-    if (!existsSync(paths.libraryFile)) return []
+    if (!statOf()) return []
     try {
       const raw = readFileSync(paths.libraryFile, 'utf8')
       const parsed = JSON.parse(raw)
@@ -247,6 +295,23 @@ export function createLocalStore(opts = {}) {
      * @returns {LocalInspirationRecord[]}
      */
     readAll,
+
+    /**
+     * Read the library once, as a snapshot a later read in the same request can
+     * reuse. Optional for callers: `get(id)` without it reads the file itself.
+     * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+     */
+    snapshotForRead,
+
+    /**
+     * Make a snapshot reusable. Only the caller that took the snapshot can know
+     * whether anything has written the library since — the sweep endpoint does,
+     * and passes it only when the sweep itself changed nothing.
+     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} snapshot
+     */
+    cacheReadSnapshot(snapshot) {
+      cachedSnapshot = snapshot && typeof snapshot === 'object' ? snapshot : null
+    },
 
     /**
      * Resolve once every queued media move has finished.
@@ -441,9 +506,14 @@ export function createLocalStore(opts = {}) {
 
     /**
      * @param {string} id
+     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} [snapshot]
+     *   a library read the caller already paid for (see `snapshotForRead`); ignored
+     *   when it is stale, which keeps the parameter a pure optimization
+     * @returns {LocalInspirationRecord | null}
      */
-    get(id) {
-      const items = readAll()
+    get(id, snapshot) {
+      const cached = snapshot === undefined ? null : snapshotItems(snapshot)
+      const items = cached || readAll()
       return items.find((item) => item.id === id) || null
     },
 
@@ -494,6 +564,13 @@ export function createLocalStore(opts = {}) {
           is_favorite: record.is_favorite ?? previous.is_favorite,
           favorited_at: record.favorited_at ?? previous.favorited_at,
           tags: Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : (previous.tags || []),
+          // A replacement is the *completion* of the import the previous row
+          // started — the background job's placeholder today, an upgraded
+          // degraded row before that. The completion record carries no start
+          // timestamp of its own, so without this the field the placeholder
+          // persisted is dropped by the whitelist and the finished row loses the
+          // only record of when its import began.
+          import_started_at: record.import_started_at ?? previous.import_started_at,
         }, { id: previous.id, created_at: previous.created_at })
         items[index] = row
         writeAll(items)

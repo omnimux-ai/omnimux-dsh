@@ -796,7 +796,12 @@ async function runBackgroundImport(ctx, placeholder) {
     }
     const settled = row.import_status
       || (result.body?.media_degraded ? IMPORT_STATUS_DEGRADED : IMPORT_STATUS_READY)
-    await progress('persisting')
+    // The `persisting` stage was already published while the completion was being
+    // written (`persistImportedItem` reports it before `persistImportedRecord`),
+    // and the row this lands on already carries the settled status, stage and
+    // reason from `buildImportRecord`. Re-publishing the stage here would land
+    // *after* the record is on disk, which is the one thing a stage must not do:
+    // the card would still read "写入中…" for a write that already finished.
     await safeUpdate(ctx.store, id, {
       import_status: settled,
       import_stage: null,
@@ -1330,8 +1335,16 @@ export function handleGetItem({ id, store }) {
   // Single-row reads are what the client polls, so they carry the sweep too:
   // otherwise a row whose job died would answer `importing` forever to a client
   // that never lists.
+  //
+  // Both halves of this poll — the sweep and the row lookup — read the same
+  // library file, and a poll fires every 2.5s per running row. The snapshot makes
+  // them share one read: taken before the sweep, kept only when the sweep changed
+  // nothing (a sweep that failed a row already answered the lookup with the row it
+  // patched).
+  const snapshot = store.snapshotForRead ? store.snapshotForRead() : null
   const failed = sweepStaleImports(store)
-  const item = failed?.get(String(id)) || store.get(id)
+  if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
+  const item = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
   if (!item) return fail(404, 'not found')
   return { status: 200, body: { data: item } }
 }
