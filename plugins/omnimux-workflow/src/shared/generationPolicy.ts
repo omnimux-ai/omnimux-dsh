@@ -25,7 +25,7 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'model',
   },
   audio: {
-    allowedModelIds: ['seed-audio-1.0', 'suno', 'gpt-4o-mini-tts'],
+    allowedModelIds: ['seed-audio-1.0', 'suno'],
     defaultModelId: 'seed-audio-1.0',
     modeSelection: 'model',
   },

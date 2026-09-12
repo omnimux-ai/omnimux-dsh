@@ -290,6 +290,7 @@ export function verifyCrossPluginModelAlignment(options = {}) {
         compare('wireGroup', hubGroup.wireGroup, pickerGroup.wireGroup);
         compare('pointsEstimate', hubGroup.pricing?.pointsEstimate ?? null, pickerGroup.pricing?.pointsEstimate ?? null);
         compare('discountRate', hubGroup.pricing?.discountRate ?? null, pickerGroup.pricing?.discountRate ?? null);
+        compare('priceRatio', hubGroup.pricing?.priceRatio ?? null, pickerGroup.pricing?.priceRatio ?? null);
         compare('billingMode', hubGroup.pricing?.billingMode ?? null, pickerGroup.pricing?.billingMode ?? null);
         compare('stability24h', hubGroup.sla?.stability24h ?? null, pickerGroup.sla?.stability24h ?? null);
         compare('avgWaitTimeSec', hubGroup.sla?.avgWaitTimeSec ?? null, pickerGroup.sla?.avgWaitTimeSec ?? null);

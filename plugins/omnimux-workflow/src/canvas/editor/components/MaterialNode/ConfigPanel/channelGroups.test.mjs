@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   formatBillingLabel,
-  formatDiscountLabel,
-  formatPointsLabel,
+  formatPriceChip,
+  formatPriceLabel,
   getModelChannelGroups,
   parseModelAndGroup,
   resolveShortModelName,
@@ -47,7 +47,8 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
   it('offers no channels for a model the hub has no pool for', () => {
     // Inventing channels and prices here would promise routing the hub cannot do.
     assert.deepEqual(getModelChannelGroups('unknown-custom-model'), []);
-    assert.deepEqual(getModelChannelGroups('gpt-image-2.5'), []);
+    // 网关定价表未收录该模型 → 没有可依据的分组，画布不得凭空给渠道。
+    assert.deepEqual(getModelChannelGroups('grok-imagine-image-2'), []);
   });
 
   it('mirrors the hub routing table exactly (model keys, ids and every routing field)', () => {
@@ -69,6 +70,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.equal(pickerGroup.wireGroup, hubGroup.wireGroup, `${modelId}@${hubGroup.id} wireGroup`);
         assert.equal(pickerGroup.pricing?.pointsEstimate, hubGroup.pricing?.pointsEstimate, `${modelId}@${hubGroup.id} points`);
         assert.equal(pickerGroup.pricing?.discountRate, hubGroup.pricing?.discountRate, `${modelId}@${hubGroup.id} discount`);
+        assert.equal(pickerGroup.pricing?.priceRatio ?? null, hubGroup.pricing?.priceRatio ?? null, `${modelId}@${hubGroup.id} ratio`);
         assert.equal(pickerGroup.pricing?.billingMode, hubGroup.pricing?.billingMode, `${modelId}@${hubGroup.id} billing`);
         assert.equal(pickerGroup.sla?.stability24h, hubGroup.sla?.stability24h, `${modelId}@${hubGroup.id} stability`);
         assert.equal(pickerGroup.sla?.avgWaitTimeSec, hubGroup.sla?.avgWaitTimeSec, `${modelId}@${hubGroup.id} wait`);
@@ -77,28 +79,47 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     }
   });
 
-  it('derives the discount, billing and points chips from pricing only', () => {
-    assert.equal(formatDiscountLabel(0.52), '5.2折');
-    assert.equal(formatDiscountLabel(0.97), '9.7折');
-    assert.equal(formatDiscountLabel(1), '');
-    assert.equal(formatDiscountLabel(undefined), '');
+  it('derives the price chip and label from the real pricing fields', () => {
+    assert.equal(formatPriceChip(0.52), '5.2折');
+    assert.equal(formatPriceChip(0.97), '9.7折');
+    assert.equal(formatPriceChip(1), '');
+    assert.equal(formatPriceChip(undefined), '');
+    // 加价组（倍率 > 1）照实显示，不再静默隐藏。
+    assert.equal(formatPriceChip(1.428571), '×1.43');
     assert.equal(formatBillingLabel('per_second'), '按秒计费');
     assert.equal(formatBillingLabel('per_task'), '按条计费');
     assert.equal(formatBillingLabel('per_token'), '按量计费');
     assert.equal(formatBillingLabel(undefined), '');
-    assert.equal(formatPointsLabel(1040), '≈1040 积分');
-    assert.equal(formatPointsLabel(null), '当前参数不支持报价');
-    assert.equal(formatPointsLabel(undefined), '当前参数不支持报价');
+    assert.equal(formatPriceLabel({ pointsEstimate: 1040 }), '≈1040 积分');
+    // 只有真实倍率时给倍率，不折算成积分。
+    assert.equal(formatPriceLabel({ pointsEstimate: null, priceRatio: 0.5 }), '×0.5 倍率');
+    assert.equal(formatPriceLabel({ pointsEstimate: null, priceRatio: null }), '当前参数不支持报价');
+    assert.equal(formatPriceLabel(undefined), '当前参数不支持报价');
+  });
+
+  it('never invents an SLA for groups the gateway does not publish one for', () => {
+    for (const [modelId, groups] of Object.entries(MODEL_CHANNEL_GROUPS)) {
+      for (const group of groups) {
+        if (!group.sla) continue;
+        assert.equal(typeof group.sla.stability24h, 'number', `${modelId}@${group.id} SLA 必须是真实数值`);
+      }
+    }
+    // 网关公开定价接口不提供 SLA，所以这批新条目必须整体缺省。
+    for (const modelId of ['gemini-3.8-flash', 'gpt-5.5', 'gpt-image-2.5', 'wan-3.0', 'suno']) {
+      for (const group of MODEL_CHANNEL_GROUPS[modelId]) {
+        assert.equal(group.sla, undefined, `${modelId}@${group.id} 不应凭空带 SLA`);
+      }
+    }
   });
 
   it('never repeats the discount inside a feature badge', () => {
     for (const [modelId, groups] of Object.entries(MODEL_CHANNEL_GROUPS)) {
       for (const group of groups) {
-        const discount = formatDiscountLabel(group.pricing?.discountRate);
-        if (!discount) continue;
+        const chip = formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate);
+        if (!chip) continue;
         assert.ok(
-          !group.badge?.includes(discount),
-          `${modelId}@${group.id} badge duplicates the discount chip (${discount})`,
+          !group.badge?.includes(chip),
+          `${modelId}@${group.id} badge duplicates the price chip (${chip})`,
         );
       }
     }
