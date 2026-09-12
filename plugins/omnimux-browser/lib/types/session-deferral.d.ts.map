@@ -1,1 +1,0 @@
-{"version":3,"file":"session-deferral.d.ts","sourceRoot":"","sources":["../../src/session-deferral.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;GAYG;AAEH,OAAO,KAAK,EAAE,qBAAqB,EAAE,MAAM,6BAA6B,CAAA;AACxE,OAAO,KAAK,EAAE,cAAc,EAA8B,MAAM,eAAe,CAAA;AAY/E;;;;;;;;;;GAUG;AACH,wBAAgB,mBAAmB,CACjC,GAAG,EAAE,cAAc,EACnB,OAAO,EAAE,OAAO,EAChB,WAAW,CAAC,EAAE,qBAAqB,GAClC,cAAc,CAoEhB"}
