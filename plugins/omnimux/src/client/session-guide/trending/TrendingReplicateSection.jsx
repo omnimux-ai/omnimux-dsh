@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { DockedComposer } from './DockedComposer.jsx'
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
-import { emptyTrendingFilters, selectTrendingVideos } from './trending-data.js'
+import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
 
 /** 宿主上标记「吸底输入框接管中」，用于顶部 Hero 输入框让位。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
@@ -20,14 +20,14 @@ export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
  * }} props
  */
 export function TrendingReplicateSection({ t, onApplyPrompt, modelLabel }) {
-  const [filters, setFilters] = useState(emptyTrendingFilters)
+  const [filters, setFilters] = useState(defaultTrendingFilters)
   const [dockedItem, setDockedItem] = useState(null)
   const sectionRef = useRef(null)
 
   const items = useMemo(() => selectTrendingVideos(filters), [filters])
 
   const patchFilters = (patch) => setFilters((prev) => ({ ...prev, ...patch }))
-  const resetFilters = () => setFilters(emptyTrendingFilters())
+  const resetFilters = () => setFilters(defaultTrendingFilters())
 
   // 吸底输入框接管期间，让顶部 Hero 输入框让位，形成「输入框迁移到底部」的观感
   useLayoutEffect(() => {
@@ -51,16 +51,19 @@ export function TrendingReplicateSection({ t, onApplyPrompt, modelLabel }) {
     onApplyPrompt?.(prompt, item)
   }
 
+  // 始终保留最后一次点击的样本，作为底部输入框的唯一内容源
+  const handleRecreate = (item) => setDockedItem(item)
+
   return (
     <section
       ref={sectionRef}
-      className="omx-trending"
+      className="omnimux-trending"
       data-omnimux-trending=""
       aria-label={t('trending.title')}
     >
-      <header className="omx-trending-head">
-        <h2 className="omx-trending-title">{t('trending.title')}</h2>
-        <p className="omx-trending-subtitle">{t('trending.subtitle')}</p>
+      <header className="omnimux-trending-head">
+        <h2 className="omnimux-trending-title">{t('trending.title')}</h2>
+        <p className="omnimux-trending-subtitle">{t('trending.subtitle')}</p>
       </header>
 
       <TrendingFilterBar
@@ -72,23 +75,23 @@ export function TrendingReplicateSection({ t, onApplyPrompt, modelLabel }) {
       />
 
       {items.length > 0 ? (
-        <div className="omx-trending-grid">
+        <div className="omnimux-trending-grid">
           {items.map((item) => (
             <TrendingVideoCard
               key={item.id}
               item={item}
               t={t}
-              busy={Boolean(dockedItem)}
-              onRecreate={setDockedItem}
+              active={dockedItem?.id === item.id}
+              onRecreate={handleRecreate}
             />
           ))}
         </div>
       ) : (
-        <div className="omx-trending-empty">
+        <div className="omnimux-trending-empty">
           <p>{t('trending.empty')}</p>
           <button /* exempt-ui01: 空态复位属于轻量文本动作，非标准控件位 */
             type="button"
-            className="omx-trending-reset"
+            className="omnimux-trending-reset"
             onClick={resetFilters}
           >
             {t('trending.filter.reset')}

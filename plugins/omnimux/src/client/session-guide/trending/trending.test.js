@@ -15,7 +15,7 @@ import {
   TRENDING_VIEW_BUCKETS,
   accentIndex,
   buildClonePrompt,
-  emptyTrendingFilters,
+  defaultTrendingFilters,
   filterTrendingVideos,
   findTrendingVideo,
   formatCompactCurrency,
@@ -35,6 +35,33 @@ test('trending: 紧凑数字与货币格式化对齐参考站读数', () => {
   assert.equal(formatCompactNumber(9530000), '9.53M')
   assert.equal(formatCompactNumber(2400), '2.4K')
   assert.equal(formatCompactNumber(0), '0')
+})
+
+test('trending: 格式化跨档必须进位，不得出现 1000K/1000M/1000B', () => {
+  // 回归护栏：先除档再四舍五入会把 999_999 推成 999.999K → 1000K
+  assert.equal(formatCompactCurrency(999999), '$1M')
+  assert.equal(formatCompactCurrency(999999999), '$1B')
+  assert.equal(formatCompactCurrency(999999999999), '$1T')
+  assert.equal(formatCompactNumber(999999), '1M')
+  assert.equal(formatCompactNumber(999999999), '1B')
+
+  // 档位边界两侧各自取正确的单位
+  assert.equal(formatCompactCurrency(999), '$999')
+  assert.equal(formatCompactCurrency(1000), '$1K')
+  assert.equal(formatCompactCurrency(999499), '$999.5K')
+  assert.equal(formatCompactCurrency(1000000), '$1M')
+
+  // 任何输入都不得产出四位数读数
+  for (const value of [
+    999, 1000, 999499, 999999, 1000000, 999999999, 1000000000, 999999999999,
+  ]) {
+    for (const text of [formatCompactCurrency(value), formatCompactNumber(value)]) {
+      assert.ok(
+        !/^\$?1000(\.[0-9]+)?[KMBT]$/.test(text),
+        `${value} 产出了未归一的读数 ${text}`,
+      )
+    }
+  }
 })
 
 test('trending: 样本库结构自洽（唯一 id、必填字段、合法枚举）', () => {
@@ -61,9 +88,14 @@ test('trending: 样本库结构自洽（唯一 id、必填字段、合法枚举�
 })
 
 test('trending: 各维度筛选与组合筛选', () => {
-  const base = emptyTrendingFilters()
+  // 默认态带「近 7 天」窗口，因此基线不是全量；多维度组合测试用全开基线
+  const base = { ...defaultTrendingFilters(), range: '' }
 
-  assert.equal(filterTrendingVideos(TRENDING_VIDEOS, base).length, TRENDING_VIDEOS.length, '空筛选即全量')
+  assert.equal(filterTrendingVideos(TRENDING_VIDEOS, base).length, TRENDING_VIDEOS.length, '全开筛选即全量')
+  assert.ok(
+    filterTrendingVideos(TRENDING_VIDEOS, defaultTrendingFilters()).length < TRENDING_VIDEOS.length,
+    '默认态带近 7 天窗口，应比全量少',
+  )
 
   const us = filterTrendingVideos(TRENDING_VIDEOS, { ...base, region: 'US' })
   assert.ok(us.length > 0)
@@ -123,7 +155,7 @@ test('trending: 排序为降序、稳定且不改动入参', () => {
 })
 
 test('trending: selectTrendingVideos 先筛后排并可组合扫描器', () => {
-  const list = selectTrendingVideos({ ...emptyTrendingFilters(), region: 'ID', sort: 'revenue' })
+  const list = selectTrendingVideos({ ...defaultTrendingFilters(), region: 'ID', sort: 'revenue' })
   assert.ok(list.length > 0)
   assert.ok(list.every((it) => it.region === 'ID'))
   for (let i = 1; i < list.length; i += 1) {
@@ -209,7 +241,7 @@ test('trending: 输入框迁移契约（顶部让位 / 吸底接管 / 提交回�
   // 3. 吸底输入框：挂载缩略图、可编辑 Prompt、清空与提交齐备
   assert.ok(dock.includes('buildClonePrompt(item)'), '吸底输入框必须自动灌装克隆指令')
   assert.ok(dock.includes('<textarea'), '吸底输入框必须提供可编辑输入区')
-  assert.ok(dock.includes('omx-trending-dock-thumb'), '吸底输入框必须挂载对标视频缩略图')
+  assert.ok(dock.includes('omnimux-trending-dock-thumb'), '吸底输入框必须挂载对标视频缩略图')
   assert.ok(dock.includes('onSubmit?.('), '吸底输入框必须提供提交通道')
   assert.ok(dock.includes('onCancel?.()'), '吸底输入框必须提供取消通道')
   assert.ok(dock.includes("'--omnimux-dock-left'"), '吸底输入框必须按宿主矩形横向对齐')

@@ -20,10 +20,10 @@ const ICON_REPLICATE = (
  *   item: object,
  *   t: (key: string, fallback?: string) => string,
  *   onRecreate: (item: object) => void,
- *   busy?: boolean,
+ *   active?: boolean,
  * }} props
  */
-export function TrendingVideoCard({ item, t, onRecreate, busy = false }) {
+export function TrendingVideoCard({ item, t, onRecreate, active = false }) {
   if (!item) return null
 
   const region = String(item.region || '').toUpperCase()
@@ -31,44 +31,45 @@ export function TrendingVideoCard({ item, t, onRecreate, busy = false }) {
 
   return (
     <article
-      className="omx-trending-card"
+      className={`omnimux-trending-card${active ? ' is-active' : ''}`}
       data-trending-id={item.id}
+      data-trending-active={active ? 'true' : 'false'}
       aria-label={title}
     >
-      <div className="omx-trending-card-media">
+      <div className="omnimux-trending-card-media">
         <TrendingCover item={item} />
       </div>
 
-      <div className="omx-trending-card-topshade" aria-hidden="true" />
+      <div className="omnimux-trending-card-topshade" aria-hidden="true" />
 
       {region ? (
-        <span className="omx-trending-card-region">{region}</span>
+        <span className="omnimux-trending-card-region">{region}</span>
       ) : null}
 
-      <div className="omx-trending-card-shade" aria-hidden="true" />
+      <div className="omnimux-trending-card-shade" aria-hidden="true" />
 
-      <div className="omx-trending-card-body">
-        <div className="omx-trending-card-metrics">
-          <div className="omx-trending-card-metric">
-            <p className="omx-trending-card-metric-value">{formatCompactCurrency(item.revenue)}</p>
-            <span className="omx-trending-card-metric-label">{t('trending.metric.revenue')}</span>
+      <div className="omnimux-trending-card-body">
+        <div className="omnimux-trending-card-metrics">
+          <div className="omnimux-trending-card-metric">
+            <p className="omnimux-trending-card-metric-value">{formatCompactCurrency(item.revenue)}</p>
+            <span className="omnimux-trending-card-metric-label">{t('trending.metric.revenue')}</span>
           </div>
-          <div className="omx-trending-card-metric is-divider">
-            <p className="omx-trending-card-metric-value">{formatCompactNumber(item.views)}</p>
-            <span className="omx-trending-card-metric-label">{t('trending.metric.views')}</span>
+          <div className="omnimux-trending-card-metric is-divider">
+            <p className="omnimux-trending-card-metric-value">{formatCompactNumber(item.views)}</p>
+            <span className="omnimux-trending-card-metric-label">{t('trending.metric.views')}</span>
           </div>
         </div>
-        <p className="omx-trending-card-title">{title}</p>
+        <p className="omnimux-trending-card-title">{title}</p>
 
-        <div className="omx-trending-card-action">
+        <div className="omnimux-trending-card-action">
           <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生卡片动作按钮 */
             type="button"
-            className="omx-trending-recreate-btn"
-            aria-label={t('trending.card.recreate')}
-            disabled={busy}
+            className="omnimux-trending-recreate-btn"
+            aria-label={`${t('trending.card.recreate')}：${title}`}
+            aria-pressed={active ? 'true' : 'false'}
             onClick={() => onRecreate?.(item)}
           >
-            <span className="omx-trending-recreate-icon" aria-hidden="true">{ICON_REPLICATE}</span>
+            <span className="omnimux-trending-recreate-icon" aria-hidden="true">{ICON_REPLICATE}</span>
             <span>{t('trending.card.recreate')}</span>
           </button>
         </div>
