@@ -47,6 +47,35 @@ function readBoolean(source: Record<string, unknown> | undefined, key: string): 
   return typeof value === 'boolean' ? value : undefined;
 }
 
+const ROUTING_STRATEGIES = ['auto', 'stability_first', 'cost_first'] as const;
+
+/**
+ * Channel routing stored on the node by the model picker. Only well-formed
+ * values travel: an unknown strategy or an empty pool must not reach the hub as
+ * a routing request, or it would narrow (or fail) a generation the user never
+ * constrained.
+ */
+function readRouting(source: Record<string, unknown> | undefined): {
+  strategy?: 'auto' | 'stability_first' | 'cost_first';
+  allowedGroups?: string[];
+} {
+  const routing = source?.routing;
+  if (!routing || typeof routing !== 'object' || Array.isArray(routing)) return {};
+  const row = routing as Record<string, unknown>;
+  const out: { strategy?: 'auto' | 'stability_first' | 'cost_first'; allowedGroups?: string[] } = {};
+  if (typeof row.strategy === 'string'
+    && (ROUTING_STRATEGIES as readonly string[]).includes(row.strategy)) {
+    out.strategy = row.strategy as 'auto' | 'stability_first' | 'cost_first';
+  }
+  if (Array.isArray(row.allowedGroups)) {
+    const groups = row.allowedGroups
+      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      .map((id) => id.trim());
+    if (groups.length > 0) out.allowedGroups = groups;
+  }
+  return out;
+}
+
 function readMaterialType(nodeData: Record<string, unknown>): 'text' | 'image' | 'video' | 'audio' {
   const value = nodeData.materialType;
   if (value === 'image' || value === 'video' || value === 'audio') return value;
@@ -250,6 +279,7 @@ export function createMaterialGatewayExecutor(opts: {
         nsfwCheck: readBoolean(params, 'nsfwCheck'),
         fileUrl: readString(params, 'fileUrl'),
         linkUrl: readString(params, 'linkUrl'),
+        ...readRouting(params),
         dest,
         signal: ctx.signal,
         mockFail: readMockFail(data),

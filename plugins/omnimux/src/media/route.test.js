@@ -307,5 +307,31 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     assert.equal(fieldRoute.group, 'pro')
     assert.equal(fieldRoute.candidates[0], 'seedance-2-0@seedance-pro')
   })
+
+  it('reports no strategy on a legacy request that never asked for one', () => {
+    const media = parseMediaConfig(undefined)
+    const legacy = resolveMediaRoute('video', { model: 'seedance-2-0' }, media)
+    assert.equal(legacy.strategy, undefined)
+    assert.deepEqual(legacy.unresolvedGroups, [])
+    assert.ok(legacy.candidates.every((id) => !id.includes('@')))
+  })
+
+  it('refuses a routing request whose pool matches no configured channel', () => {
+    const media = parseMediaConfig(undefined)
+    // Widening this into the full channel set would silently escalate cost.
+    assert.throws(
+      () => resolveMediaRoute('video', { model: 'seedance-2-0', allowedGroups: ['premium-v9'] }, media),
+      (error) => error instanceof OmnimuxError
+        && error.code === 'unknown-group'
+        && /premium-v9/.test(error.message),
+    )
+  })
+
+  it('keeps a model without a channel pool but records the unusable channel intent', () => {
+    const media = parseMediaConfig(undefined)
+    const route = resolveMediaRoute('image', { model: 'gpt-image-2.5', allowedGroups: ['standard'] }, media)
+    assert.deepEqual(route.unresolvedGroups, ['standard'])
+    assert.ok(route.candidates.includes('gpt-image-2.5'))
+  })
 })
 

@@ -84,4 +84,61 @@ describe('Channel Group Routing & Failover', () => {
     assert.equal(result.text, 'hello from standard')
     assert.deepEqual(attempts, ['claude-opus-4-6@pro', 'claude-opus-4-6@standard'])
   })
+
+  it('switches groups when this key may not use the selected group', async () => {
+    const attempts = []
+    const fetcher = async (_url, init) => {
+      attempts.push(JSON.parse(init.body).model)
+      if (attempts.length === 1) {
+        return {
+          ok: false,
+          status: 403,
+          json: async () => ({ error: { message: '无权访问该分组' } }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { role: 'assistant', content: 'ok' } }] }),
+      };
+    };
+
+    const result = await completeTextViaChat({
+      model: 'claude-opus-4-6',
+      candidates: ['claude-opus-4-6@claude-max-open', 'claude-opus-4-6@standard'],
+      prompt: 'say hi',
+      maxTokens: 10,
+      videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } },
+      apiKey: 'sk-test',
+      fetcher,
+    });
+
+    assert.equal(result.routedModel, 'claude-opus-4-6@standard');
+    assert.deepEqual(attempts, ['claude-opus-4-6@claude-max-open', 'claude-opus-4-6@standard']);
+  })
+
+  it('a single-model request still refuses a 403 instead of retrying itself', async () => {
+    let calls = 0;
+    const fetcher = async () => {
+      calls++;
+      return {
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: '无权访问该分组' } }),
+      };
+    };
+
+    await assert.rejects(
+      () => completeTextViaChat({
+        model: 'claude-opus-4-6',
+        prompt: 'say hi',
+        maxTokens: 10,
+        videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } },
+        apiKey: 'sk-test',
+        fetcher,
+      }),
+      (error) => error.code === 'omnimux-unconfigured',
+    );
+    assert.equal(calls, 1);
+  })
 })

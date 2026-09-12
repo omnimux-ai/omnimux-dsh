@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { inspect } from 'node:util'
 import { test } from 'node:test'
-import { classifyChannelFailure, hasChannelEvidence, SAFE_CHANNEL_MESSAGE } from './channel-classifier.js'
+import { classifyChannelFailure, hasChannelEvidence, hasGroupFailoverEvidence, SAFE_CHANNEL_MESSAGE } from './channel-classifier.js'
 import { OmnimuxError, unwrapAdapterError } from '../media/errors.js'
 
 const raw = '[omnimux:ADAPTER_FAILED] Adapter openai-compatible failed: 分组 auto 下模型 grok-imagine-image-2 无可用渠道 (distributor) (request id: secret-id)'
@@ -35,6 +35,24 @@ test('accepts structured, JSON, Error cause and cyclic envelopes without leaking
 test('does not classify unrelated failures, status codes or user prompt content', () => {
   for (const error of [null, undefined, '', 503, { status: 503 }, { status: 429 }, new Error('network timeout'), new Error('quota exceeded'), new Error('Invalid token'), { code: 'ADAPTER_FAILED' }, { prompt: raw }, { message: 'model not found' }]) {
     assert.equal(classifyChannelFailure(error), null)
+  }
+})
+
+test('group failover evidence covers permission and unknown-model wording a routing plan can outlive', () => {
+  for (const message of ['无权访问该分组', 'model_not_found', 'Model not found', '无可用渠道']) {
+    assert.equal(hasGroupFailoverEvidence({ message }), true, message)
+    assert.equal(hasGroupFailoverEvidence({ error: { body: JSON.stringify({ error: { code: message } }) } }), true, message)
+  }
+  // Without these wordings the callers must not widen a plan (status codes stay evidence-free).
+  for (const error of [null, undefined, '', { status: 503 }, { status: 429 }, new Error('Invalid token'), new Error('quota exceeded')]) {
+    assert.equal(hasGroupFailoverEvidence(error), false)
+  }
+})
+
+test('the narrow channel classifier is unaffected by group failover wording', () => {
+  for (const message of ['无权访问该分组', 'model_not_found']) {
+    assert.equal(hasChannelEvidence({ message }), false, message)
+    assert.equal(classifyChannelFailure({ message }), null, message)
   }
 })
 

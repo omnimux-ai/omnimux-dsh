@@ -3,7 +3,7 @@ import { OmnimuxError } from '../media/errors.js'
 import { getHealthyContractIndex, projectChatRows } from '../catalog/project.js'
 import {
   parseModelAndGroup,
-  resolveChannelCandidates,
+  resolveChannelPlan,
   ROUTING_STRATEGIES,
 } from '../catalog/serving/id-universe.js'
 import { normalizeTextReferences } from './references.js'
@@ -113,18 +113,31 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
     }
   }
   const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
-  const strategy = (typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy))
-    ? request.strategy
-    : 'auto'
-  const allowedGroups = Array.isArray(request.allowedGroups) ? request.allowedGroups : undefined
-  const candidates = resolveChannelCandidates(row.id, { strategy, group, allowedGroups })
+  const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
+  const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
+    ? request.allowedGroups
+    : undefined
+  // Only the direct chat-completions path can carry a group; the streaming path
+  // (`llm.stream`) resolves a declared session model, so its plan stays the base
+  // gateway candidates. `unresolvedGroups` reports intent a model cannot honor.
+  const plan = resolveChannelPlan(row.id, {
+    strategy: explicitStrategy ? request.strategy : 'auto',
+    group,
+    allowedGroups,
+  })
+  const hasRoutingIntent = Boolean(group || allowedGroups || explicitStrategy)
+  if (hasRoutingIntent && plan.candidates.length === 0) {
+    const detail = plan.unresolvedGroups.length > 0 ? plan.unresolvedGroups.join(', ') : 'no enabled channel group'
+    throw new OmnimuxError('unknown-group', `所选渠道分组不可用于 ${row.id}（${detail}）`)
+  }
 
   return {
     providerId: text.defaultProvider,
     modelId: row.id,
     group,
-    strategy,
-    candidates,
+    strategy: hasRoutingIntent ? (explicitStrategy ? request.strategy : 'auto') : undefined,
+    candidates: plan.candidates,
+    unresolvedGroups: plan.unresolvedGroups,
     input,
     maxTokens: text.maxTokens,
   }

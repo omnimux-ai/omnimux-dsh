@@ -1,4 +1,5 @@
 import { OmnimuxError, unwrapAdapterError } from './errors.js'
+import { hasChannelEvidence, hasGroupFailoverEvidence } from '../errors/channel-classifier.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { downloadMediaFile } from './job.js'
 import { createOpenAiMediaRuntime, pollOpenAiMediaTask } from './protocols/openai-media.js'
@@ -199,13 +200,12 @@ export async function executeOmnimuxMedia(capability, input) {
       if (classified.kind === 'quota-exceeded') {
         throw new OmnimuxError('quota-exceeded', classified.message)
       }
+      // A group plan may still succeed on its next group when this one is
+      // forbidden or does not serve the model. A plain alias fallback must not:
+      // "model not found" tells the alias nothing new, so it keeps the narrow
+      // channel-evidence rule.
       const channelUnavailable = unwrapped?.code === 'CHANNEL_UNAVAILABLE'
-        || (typeof unwrapped?.message === 'string' && (
-          unwrapped.message.includes('无可用渠道')
-          || unwrapped.message.includes('无权访问该分组')
-          || unwrapped.message.includes('channel_unavailable')
-          || unwrapped.message.includes('model_not_found')
-        ))
+        || (isChannelRouting ? hasGroupFailoverEvidence(unwrapped) : hasChannelEvidence(unwrapped))
       if (channelUnavailable && classified.kind === 'needs-omnimux') {
         throw new OmnimuxError(classified.code, classified.message)
       }

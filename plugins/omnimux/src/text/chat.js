@@ -1,4 +1,5 @@
 import { OmnimuxError } from '../media/errors.js'
+import { hasChannelEvidence, hasGroupFailoverEvidence } from '../errors/channel-classifier.js'
 
 const DEFAULT_CHAT_BASE = 'https://api.omnimux.ai/v1'
 const DEFAULT_UA =
@@ -151,14 +152,18 @@ export async function completeTextViaChat(input) {
     }
     if (!response.ok) {
       const message = pickErrorMessage(payload) || `text complete HTTP ${response.status}`
+      // 401 pins the credential, not the channel; a group switch cannot fix it.
       if (response.status === 401) {
         throw new OmnimuxError('omnimux-unconfigured', message)
       }
-      const canFailover = response.status === 503 || response.status === 429
-        || message.includes('无可用渠道')
-        || message.includes('无权访问该分组')
-        || message.includes('model_not_found')
-      if (canFailover && attempt + 1 < candidates.length && !input.signal?.aborted) {
+      // One chat completion carries no task handle, so a retry cannot double-charge.
+      // A grouped plan may switch groups on permission/unknown-model wording; a
+      // single-model request keeps the narrower channel-evidence rule.
+      const groupSwitch = candidates.some((candidate) => candidate.includes('@'))
+        ? hasGroupFailoverEvidence({ status: response.status, body: payload, message })
+        : hasChannelEvidence({ status: response.status, body: payload, message })
+      const retryableStatus = response.status === 503 || response.status === 429
+      if ((groupSwitch || retryableStatus) && attempt + 1 < candidates.length && !input.signal?.aborted) {
         continue
       }
       if (response.status === 403) {

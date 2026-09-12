@@ -1,11 +1,13 @@
 /**
- * ModelCascadeMenu — 画布节点三级级联浮层选择菜单 (品牌 -> 型号 -> 渠道策略与多选池)
+ * ModelCascadeMenu — 画布节点三级级联浮层选择菜单（品牌 → 型号 → 渠道策略）。
  *
- * 1:1 还原参考设计规范：
- * 1. 触发药丸：[品牌Icon] [型号短名] [策略Icon] [渠道数] [向下箭头]
- * 2. 第一级浮层：选择品牌 (Brand)
- * 3. 第二级浮层：模型版本 (Model Variant)
- * 4. 第三级浮层：选择渠道策略 (稳定性优先 vs 低价优先) 与渠道池卡片多选列表 (含点阵稳定率与折扣标签)
+ * 数据真源：`./channelGroups`（与中枢渠道路由表镜像，由 verify:model-contracts 门禁锁定）。
+ * 选择结果经 `onSelect` 写回 `node.data.params.model` 与 `params.routing`，由
+ * `materialGatewayExecutor` 透传给中枢；中枢按 `strategy` 排序、按 `allowedGroups`
+ * 收窄候选池，并在无法满足时 fail-closed。
+ *
+ * 文本节点走会话模型路由（`llm.stream`），请求无法携带分组，因此第三栏给出明确的
+ * 不可用说明，而不是可点击的假选项。
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -14,7 +16,10 @@ import { Check, ShieldCheck, Percent, ChevronDown } from 'lucide-react';
 import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import {
-  getOrGenerateModelChannelGroups,
+  formatBillingLabel,
+  formatDiscountLabel,
+  formatPointsLabel,
+  getModelChannelGroups,
   parseModelAndGroup,
   resolveShortModelName,
   type ChannelGroupItem,
@@ -25,6 +30,7 @@ export type RouteStrategy = 'auto' | 'stability_first' | 'cost_first';
 export interface ModelCascadeSelectValue {
   modelId: string;
   strategy: RouteStrategy;
+  /** Omitted when the node cannot carry channel routing (text nodes). */
   allowedGroups?: string[];
 }
 
@@ -46,7 +52,13 @@ interface BrandDef {
   iconModelId: string;
 }
 
-// 预置核心品牌定义
+/** Catalog rows are projected to the two fields the picker renders. */
+interface PickerRow {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 const ALL_BRANDS: BrandDef[] = [
   { id: 'all_omni', name: '全能视频 Omni', iconModelId: 'seedance-2-0' },
   { id: 'all_x', name: '全能模型 X', iconModelId: 'gpt-5.5' },
@@ -61,32 +73,171 @@ const ALL_BRANDS: BrandDef[] = [
   { id: 'midjourney', name: 'Midjourney', iconModelId: 'midjourney' },
 ];
 
-/**
- * 24h 稳定率 20 点阵指示器组件
- */
+const BRAND_MATCHERS: ReadonlyArray<{ brand: string; fragments: readonly string[] }> = [
+  { brand: 'bytedance', fragments: ['seed'] },
+  { brand: 'minimax', fragments: ['minimax', 'hailuo'] },
+  { brand: 'kling', fragments: ['kling'] },
+  { brand: 'alibaba', fragments: ['wan'] },
+  { brand: 'anthropic', fragments: ['claude', 'opus', 'sonnet'] },
+  { brand: 'deepseek', fragments: ['deepseek'] },
+  { brand: 'google', fragments: ['gemini', 'banana', 'veo'] },
+  { brand: 'midjourney', fragments: ['midjourney'] },
+  { brand: 'all_x', fragments: ['gpt', 'o1', 'o3'] },
+];
+
+const BRANDS_BY_MATERIAL = {
+  text: ['all_x', 'anthropic', 'deepseek', 'google', 'minimax'],
+  image: ['all_omni', 'midjourney', 'all_x', 'bytedance', 'kling'],
+  video: ['all_omni', 'all_x', 'bytedance', 'minimax', 'kling', 'alibaba', 'happyhorse'],
+} as const;
+
+const FALLBACK_MODELS_BY_BRAND: Readonly<Record<string, readonly PickerRow[]>> = {
+  bytedance: [
+    { id: 'seedance-2-5', name: 'Seedance 2.5', description: '全新 2.5 旗舰全能视频大模型' },
+    { id: 'seedance-2-0', name: 'Seedance 2.0', description: '支持文生、首帧、首尾帧、多参考图' },
+    { id: 'seedance-2-0-mini', name: 'Seedance 2.0 Mini', description: '轻量视频模型，支持文生与首帧' },
+    { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '快速版，极速出片，支持多参考图' },
+  ],
+};
+
+/** Brand column contents for a modality. */
+function allowedBrandsFor(materialType: string): readonly string[] {
+  if (materialType === 'text') return BRANDS_BY_MATERIAL.text;
+  if (materialType === 'image') return BRANDS_BY_MATERIAL.image;
+  return BRANDS_BY_MATERIAL.video;
+}
+
+/** Model shown before the user picks one. */
+function defaultModelFor(materialType: string): string {
+  if (materialType === 'image') return 'gpt-image-2.5';
+  if (materialType === 'text') return 'claude-opus-4-6';
+  return 'seedance-2-0-fast';
+}
+
+/** Catalog rows carry no display name contract, so project them once, defensively. */
+function toPickerRows(list: readonly CapabilityModelItem[] | undefined): PickerRow[] {
+  return (list ?? []).map((item) => {
+    const row = item as unknown as Record<string, unknown>;
+    return {
+      id: item.id,
+      name: typeof row.name === 'string' && row.name ? row.name : item.id,
+      ...(typeof row.description === 'string' && row.description ? { description: row.description } : {}),
+    };
+  });
+}
+
+/** 推导模型所属品牌；用于初值与外部同步。 */
+function brandForModel(modelId: string, allowed: readonly string[]): string {
+  const id = modelId.toLowerCase();
+  for (const { brand, fragments } of BRAND_MATCHERS) {
+    if (allowed.includes(brand) && fragments.some((fragment) => id.includes(fragment))) return brand;
+  }
+  return allowed[0] ?? 'bytedance';
+}
+
+/** 24h 稳定率点阵指示器（总点数固定，点亮比例跟随稳定率）。 */
 const StabilityDotBar: React.FC<{ rate: number }> = ({ rate }) => {
-  const totalDots = 18;
-  const activeDots = Math.round((rate / 100) * totalDots);
+  const totalDots = 20;
+  const activeDots = Math.round((Math.max(0, Math.min(100, rate)) / 100) * totalDots);
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-      {Array.from({ length: totalDots }).map((_, idx) => {
-        const isLit = idx < activeDots;
-        return (
-          <span
-            key={idx}
-            style={{
-              width: 3.5,
-              height: 3.5,
-              borderRadius: '50%',
-              background: isLit
-                ? 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))'
-                : 'var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.15))',
-              display: 'inline-block',
-            }}
-          />
-        );
-      })}
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }} aria-hidden="true">
+      {Array.from({ length: totalDots }).map((_, idx) => (
+        <span
+          key={idx}
+          style={{
+            width: 3.5,
+            height: 3.5,
+            borderRadius: '50%',
+            background: idx < activeDots
+              ? 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))'
+              : 'var(--dsw-alias-border-subtle)',
+            display: 'inline-block',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> = ({ tone = 'muted', children }) => (
+  <span
+    style={{
+      fontSize: 10,
+      padding: '1px 5px',
+      borderRadius: 4,
+      background: tone === 'danger' ? 'var(--dsw-alias-state-danger-bg)' : 'var(--dsw-alias-badge-bg)',
+      color: tone === 'danger' ? 'var(--dsw-alias-state-danger)' : 'var(--dsw-alias-label-secondary)',
+      fontWeight: tone === 'danger' ? 600 : 400,
+    }}
+  >
+    {children}
+  </span>
+);
+
+const PANEL_STYLE: React.CSSProperties = {
+  background: 'var(--dsw-alias-bg-elevated)',
+  backdropFilter: 'blur(16px)',
+  borderRadius: 14,
+  border: '1px solid var(--dsw-alias-border-subtle)',
+  boxShadow: '0 16px 36px var(--dsw-alias-shadow-strong, rgba(0, 0, 0, 0.6))',
+  height: 480,
+  overflowY: 'auto',
+};
+
+const ChannelRow: React.FC<{
+  group: ChannelGroupItem;
+  checked: boolean;
+  onToggle: () => void;
+}> = ({ group, checked, onToggle }) => {
+  const discount = formatDiscountLabel(group.pricing?.discountRate);
+  const billing = formatBillingLabel(group.pricing?.billingMode);
+  const stability = group.sla?.stability24h ?? 100;
+  const waitSec = group.sla?.avgWaitTimeSec;
+
+  return (
+    <div
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
+      style={{
+        padding: '10px 12px',
+        borderRadius: 8,
+        cursor: 'pointer',
+        background: checked ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
+        border: checked ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
+          <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+            {formatPointsLabel(group.pricing?.pointsEstimate)}
+          </span>
+          {discount ? <Chip tone="danger">{discount}</Chip> : null}
+          {group.badge ? <Chip>{group.badge}</Chip> : null}
+          {billing ? <Chip>{billing}</Chip> : null}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--dsw-alias-label-secondary)' }}>
+          <StabilityDotBar rate={stability} />
+          <span>24h 稳定率 {stability}%</span>
+          {typeof waitSec === 'number' && waitSec > 0 ? <span>约{Math.round(waitSec / 60)}min</span> : null}
+        </div>
+      </div>
+      <div style={{ paddingLeft: 10 }}>
+        {checked ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}
+      </div>
     </div>
   );
 };
@@ -100,223 +251,173 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   onSelect,
 }) => {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 1. 规范化当前模型和分组
+  const allowedBrands = allowedBrandsFor(materialType);
+  const brandList = useMemo(
+    () => ALL_BRANDS.filter((brand) => allowedBrands.includes(brand.id)),
+    [allowedBrands],
+  );
+
   const { modelId: canonicalModel } = parseModelAndGroup(modelValue);
-  const currentModelId = canonicalModel || (materialType === 'video' ? 'seedance-2-0-fast' : materialType === 'image' ? 'gpt-image-2.5' : 'claude-opus-4-6');
-  const currentStrategy: RouteStrategy = routing?.strategy || 'stability_first';
+  const currentModelId = canonicalModel || defaultModelFor(materialType);
 
-  // 2. 解析当前模型所属品牌
-  const initialBrandId = useMemo(() => {
-    const id = currentModelId.toLowerCase();
-    if (id.includes('seed')) return 'bytedance';
-    if (id.includes('minimax') || id.includes('hailuo')) return 'minimax';
-    if (id.includes('kling')) return 'kling';
-    if (id.includes('wan') || id.includes('happyhorse')) return 'alibaba';
-    if (id.includes('claude') || id.includes('opus') || id.includes('sonnet')) return 'anthropic';
-    if (id.includes('deepseek')) return 'deepseek';
-    if (id.includes('gemini') || id.includes('banana') || id.includes('veo')) return 'google';
-    if (id.includes('midjourney')) return 'midjourney';
-    if (id.includes('gpt') || id.includes('o1') || id.includes('o3')) return 'all_x';
-    return 'bytedance';
-  }, [currentModelId]);
-
-  const [activeBrandId, setActiveBrandId] = useState<string>(initialBrandId);
+  const [activeBrandId, setActiveBrandId] = useState<string>(() => brandForModel(currentModelId, allowedBrands));
   const [activeModelId, setActiveModelId] = useState<string>(currentModelId);
-  const [activeStrategy, setActiveStrategy] = useState<RouteStrategy>(currentStrategy);
+  const [activeStrategy, setActiveStrategy] = useState<RouteStrategy>(routing?.strategy ?? 'stability_first');
 
-  // 当外部 modelValue 或 routing 变化时同步
+  const channelGroups = useMemo(() => getModelChannelGroups(activeModelId), [activeModelId]);
+  // 文本节点走会话模型路由，请求无法携带分组；第三栏只做说明，不提供假选项。
+  const canRouteChannels = materialType !== 'text' && channelGroups.length > 0;
+
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
+    () => (routing?.allowedGroups?.length ? routing.allowedGroups : channelGroups.map((group) => group.id)),
+  );
+
+  // 外部数据变化（撤销/重做、快照重载、切换节点）后重新对齐品牌与勾选，
+  // 否则勾选状态与胶囊计数会停留在上一个节点的记忆里。
   useEffect(() => {
-    if (canonicalModel) {
-      setActiveModelId(canonicalModel);
-    }
-  }, [canonicalModel]);
+    setActiveModelId(currentModelId);
+    setActiveBrandId(brandForModel(currentModelId, allowedBrands));
+  }, [currentModelId, allowedBrands]);
 
   useEffect(() => {
-    if (routing?.strategy) {
-      setActiveStrategy(routing.strategy);
-    }
+    if (routing?.strategy) setActiveStrategy(routing.strategy);
   }, [routing?.strategy]);
 
-  // 3. 当前模态适用的品牌列表
-  const brandList = useMemo(() => {
-    if (materialType === 'text') {
-      return ALL_BRANDS.filter((b) => ['all_x', 'anthropic', 'deepseek', 'google', 'minimax'].includes(b.id));
-    }
-    if (materialType === 'image') {
-      return ALL_BRANDS.filter((b) => ['all_omni', 'midjourney', 'all_x', 'bytedance', 'kling'].includes(b.id));
-    }
-    // 默认视频
-    return ALL_BRANDS.filter((b) => ['all_omni', 'all_x', 'bytedance', 'minimax', 'kling', 'alibaba', 'happyhorse'].includes(b.id));
-  }, [materialType]);
+  const persistedGroups = routing?.allowedGroups;
+  useEffect(() => {
+    const groups = getModelChannelGroups(currentModelId);
+    setSelectedGroupIds(persistedGroups?.length ? persistedGroups : groups.map((group) => group.id));
+  }, [currentModelId, persistedGroups]);
 
-  // 4. 当前品牌下的模型型号列表
-  const modelListInBrand = useMemo(() => {
-    const rawList = (materialType === 'video'
+  const modelListInBrand = useMemo<PickerRow[]>(() => {
+    const rawList = materialType === 'video'
       ? catalog?.video
       : materialType === 'image'
         ? catalog?.image
         : materialType === 'text'
           ? catalog?.text
-          : catalog?.models) || [];
+          : catalog?.models;
 
-    const items = (rawList as CapabilityModelItem[]).filter((m) => {
-      const id = m.id.toLowerCase();
-      if (activeBrandId === 'bytedance') return id.includes('seed');
-      if (activeBrandId === 'minimax') return id.includes('minimax') || id.includes('hailuo');
-      if (activeBrandId === 'kling') return id.includes('kling');
-      if (activeBrandId === 'alibaba') return id.includes('wan');
-      if (activeBrandId === 'happyhorse') return id.includes('happyhorse') || id.includes('wan');
-      if (activeBrandId === 'anthropic') return id.includes('claude');
-      if (activeBrandId === 'deepseek') return id.includes('deepseek');
-      if (activeBrandId === 'google') return id.includes('gemini') || id.includes('veo') || id.includes('banana');
-      if (activeBrandId === 'midjourney') return id.includes('midjourney');
-      if (activeBrandId === 'all_x') return id.includes('gpt') || id.includes('o1') || id.includes('o3');
+    const matchers = BRAND_MATCHERS.find((entry) => entry.brand === activeBrandId)?.fragments ?? [];
+    const items = toPickerRows(rawList).filter((model) => {
+      const id = model.id.toLowerCase();
       if (activeBrandId === 'all_omni') return true;
-      return false;
+      return matchers.some((fragment) => id.includes(fragment));
     });
-
     if (items.length > 0) return items;
-
-    // 默认 Seedance 兜底备选列表
-    if (activeBrandId === 'bytedance') {
-      return [
-        { id: 'seedance-2-5', name: 'Seedance 2.5', description: '全新 2.5 旗舰全能视频大模型' },
-        { id: 'seedance-2-0', name: 'Seedance 2.0', description: '官方 Seedance 2.0 全能视频模型，支持文生、首帧、首尾帧、多参考图' },
-        { id: 'seedance-2-0-mini', name: 'Seedance 2.0 Mini', description: '官方 Seedance 2.0 Mini，轻量视频模型，支持文生、首帧、首尾帧' },
-        { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '官方 Seedance 2.0 快速版，支持文生、首帧、首尾帧、多参考图，极速出片' },
-      ] as CapabilityModelItem[];
-    }
-
-    return [{ id: activeModelId, name: activeModelId, description: '全功能模型' }] as CapabilityModelItem[];
+    const fallback = FALLBACK_MODELS_BY_BRAND[activeBrandId];
+    if (fallback) return [...fallback];
+    return [{ id: activeModelId, name: activeModelId, description: '全功能模型' }];
   }, [catalog, materialType, activeBrandId, activeModelId]);
 
-  // 5. 当前选中模型的渠道分组池
-  const channelGroups = useMemo(() => {
-    return getOrGenerateModelChannelGroups(activeModelId);
-  }, [activeModelId]);
-
-  // 6. 已选渠道池列表 (多选状态)
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(() => {
-    if (routing?.allowedGroups && routing.allowedGroups.length > 0) {
-      return routing.allowedGroups;
-    }
-    return channelGroups.map((g) => g.id);
-  });
-
-  // 当切换模型时，重置并选中该模型的全部渠道
-  const handleSelectModel = useCallback((modelId: string) => {
-    setActiveModelId(modelId);
-    const groups = getOrGenerateModelChannelGroups(modelId);
-    const groupIds = groups.map((g) => g.id);
-    setSelectedGroupIds(groupIds);
+  const emit = useCallback((modelId: string, strategy: RouteStrategy, groupIds: string[]) => {
     onSelect({
       modelId,
-      strategy: activeStrategy,
-      allowedGroups: groupIds,
+      strategy,
+      ...(materialType === 'text' || groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
     });
-  }, [activeStrategy, onSelect]);
+  }, [materialType, onSelect]);
 
-  const handleStrategyChange = useCallback((strat: RouteStrategy) => {
-    setActiveStrategy(strat);
-    onSelect({
-      modelId: activeModelId,
-      strategy: strat,
-      allowedGroups: selectedGroupIds,
-    });
-  }, [activeModelId, selectedGroupIds, onSelect]);
+  const handleSelectModel = useCallback((modelId: string) => {
+    setActiveModelId(modelId);
+    const groupIds = getModelChannelGroups(modelId).map((group) => group.id);
+    setSelectedGroupIds(groupIds);
+    emit(modelId, activeStrategy, groupIds);
+  }, [activeStrategy, emit]);
+
+  const handleStrategyChange = useCallback((strategy: RouteStrategy) => {
+    setActiveStrategy(strategy);
+    emit(activeModelId, strategy, selectedGroupIds);
+  }, [activeModelId, selectedGroupIds, emit]);
 
   const toggleGroupSelection = useCallback((groupId: string) => {
     setSelectedGroupIds((prev) => {
-      let next: string[];
+      // 至少保留一个渠道：清空会让中枢只能 fail-closed。
       if (prev.includes(groupId)) {
-        if (prev.length <= 1) return prev; // 至少保留 1 个
-        next = prev.filter((id) => id !== groupId);
-      } else {
-        next = [...prev, groupId];
+        if (prev.length <= 1) return prev;
+        const next = prev.filter((id) => id !== groupId);
+        emit(activeModelId, activeStrategy, next);
+        return next;
       }
-      onSelect({
-        modelId: activeModelId,
-        strategy: activeStrategy,
-        allowedGroups: next,
-      });
+      const next = [...prev, groupId];
+      emit(activeModelId, activeStrategy, next);
       return next;
     });
-  }, [activeModelId, activeStrategy, onSelect]);
+  }, [activeModelId, activeStrategy, emit]);
 
-  const handleClear = useCallback(() => {
-    if (channelGroups.length > 0) {
-      const single = [channelGroups[0].id];
-      setSelectedGroupIds(single);
-      onSelect({
-        modelId: activeModelId,
-        strategy: activeStrategy,
-        allowedGroups: single,
-      });
-    }
-  }, [channelGroups, activeModelId, activeStrategy, onSelect]);
+  const applyGroupSelection = useCallback((groupIds: string[]) => {
+    setSelectedGroupIds(groupIds);
+    emit(activeModelId, activeStrategy, groupIds);
+  }, [activeModelId, activeStrategy, emit]);
 
-  const handleSelectAll = useCallback(() => {
-    const all = channelGroups.map((g) => g.id);
-    setSelectedGroupIds(all);
-    onSelect({
-      modelId: activeModelId,
-      strategy: activeStrategy,
-      allowedGroups: all,
-    });
-  }, [channelGroups, activeModelId, activeStrategy, onSelect]);
-
-  // 计算浮层弹出定位坐标（紧贴底栏触发按钮上方）
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
+  const panelWidth = materialType === 'text' ? 646 : channelGroups.length > 0 ? 786 : 406;
 
-  useEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const bottom = window.innerHeight - rect.top + 8;
-    const left = Math.max(12, Math.min(rect.left, window.innerWidth - 820));
-    setPopoverPos({ bottom, left });
-  }, [isOpen]);
-
-  // 点击外部自动关闭
   useEffect(() => {
     if (!isOpen) return;
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (triggerRef.current?.contains(target)) return;
-      const popoverEl = document.querySelector('.wf-model-cascade-popover');
-      if (popoverEl && popoverEl.contains(target)) return;
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPopoverPos({
+        bottom: Math.max(8, window.innerHeight - rect.top + 8),
+        left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - panelWidth - 12))),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [isOpen, panelWidth]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
       setIsOpen(false);
     };
-    window.addEventListener('mousedown', handleDocumentClick, true);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('mousedown', onPointerDown, true);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener('mousedown', handleDocumentClick, true);
+      window.removeEventListener('mousedown', onPointerDown, true);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen]);
 
-  // 触发胶囊展示文案
   const shortName = resolveShortModelName(activeModelId);
   const selectedCount = selectedGroupIds.length;
+  const strategyLabel = activeStrategy === 'cost_first' ? '低价优先' : '稳定性优先';
 
   return (
     <>
-      {/* 底部触发器胶囊：[品牌Icon] [型号名称] [策略Icon] [渠道数] [向下展开箭头] */}
       <button
         ref={triggerRef}
         type="button"
         className="wf-model-cascade-capsule"
         data-testid="wf-model-cascade-trigger"
         disabled={execBusy}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title={canRouteChannels ? `渠道策略：${strategyLabel}` : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          height: 30,
+          height: 32,
           padding: '0 10px',
           borderRadius: 8,
-          background: isOpen ? 'var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.12))' : 'var(--dsw-alias-control-bg, rgba(255, 255, 255, 0.05))',
-          border: isOpen ? '1px solid var(--dsw-alias-brand-primary, rgba(255, 255, 255, 0.2))' : '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
+          background: isOpen ? 'var(--dsw-alias-control-bg-hover)' : 'var(--dsw-alias-control-bg)',
+          border: isOpen ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
           color: 'var(--dsw-alias-text-primary)',
           cursor: 'pointer',
           fontSize: 12,
@@ -329,26 +430,25 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         <ModelBrandIcon modelId={activeModelId} size={15} />
         <span style={{ fontWeight: 600 }}>{shortName}</span>
 
-        {/* 策略小标识与渠道数 */}
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 3,
-            padding: '1px 5px',
-            borderRadius: 4,
-            background: 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))',
-            color: 'var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))',
-            fontSize: 11,
-          }}
-        >
-          {activeStrategy === 'cost_first' ? (
-            <Percent size={11} strokeWidth={2.4} />
-          ) : (
-            <ShieldCheck size={11} strokeWidth={2.4} />
-          )}
-          <span>{selectedCount}</span>
-        </span>
+        {canRouteChannels ? (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              padding: '1px 5px',
+              borderRadius: 4,
+              background: 'var(--dsw-alias-badge-bg)',
+              color: 'var(--dsw-alias-brand-primary)',
+              fontSize: 11,
+            }}
+          >
+            {activeStrategy === 'cost_first'
+              ? <Percent size={11} strokeWidth={2.4} />
+              : <ShieldCheck size={11} strokeWidth={2.4} />}
+            <span>{selectedCount}</span>
+          </span>
+        ) : null}
 
         <ChevronDown
           size={12}
@@ -360,334 +460,227 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         />
       </button>
 
-      {/* 向上展开的三栏级联浮层 (Cascade Popover Menu) */}
       {isOpen && typeof document !== 'undefined'
         ? createPortal(
-            <div
-              className="wf-model-cascade-popover nodrag nopan"
-              style={{
-                position: 'fixed',
-                bottom: popoverPos.bottom,
-                left: popoverPos.left,
-                display: 'flex',
-                gap: 8,
-                zIndex: 10000,
-                alignItems: 'flex-start',
-                userSelect: 'none',
-                animation: 'wfFadeIn 0.15s ease',
-              }}
-            >
-              {/* 栏 1：选择品牌 (Brand) */}
+          <div
+            ref={popoverRef}
+            className="wf-model-cascade-popover wf-model-cascade-fade nodrag nopan"
+            role="menu"
+            aria-label="选择模型与渠道策略"
+            style={{
+              position: 'fixed',
+              bottom: popoverPos.bottom,
+              left: popoverPos.left,
+              display: 'flex',
+              gap: 8,
+              zIndex: 10000,
+              alignItems: 'flex-start',
+              userSelect: 'none',
+            }}
+          >
+            {/* 栏 1：品牌 */}
+            <div role="group" aria-label="选择品牌" style={{ ...PANEL_STYLE, width: 160, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ padding: '4px 8px', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', fontWeight: 500 }}>
+                选择模型
+              </div>
+              {brandList.map((brand) => {
+                const isSelected = activeBrandId === brand.id;
+                return (
+                  <button
+                    key={brand.id}
+                    type="button"
+                    role="menuitem"
+                    aria-current={isSelected}
+                    onClick={() => setActiveBrandId(brand.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: isSelected ? 600 : 400,
+                      color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)',
+                      background: isSelected ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
+                      border: isSelected ? '1px solid var(--dsw-alias-border-subtle)' : '1px solid transparent',
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                  >
+                    <ModelBrandIcon modelId={brand.iconModelId} size={16} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</span>
+                    {isSelected ? <Check size={14} color="var(--dsw-alias-brand-primary)" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 栏 2：型号 */}
+            <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {modelListInBrand.map((item) => {
+                const isSelected = activeModelId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="menuitem"
+                    aria-current={isSelected}
+                    onClick={() => handleSelectModel(item.id)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      background: isSelected ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
+                      border: isSelected ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)' }}>
+                        {item.name || item.id}
+                      </span>
+                      {isSelected ? <Check size={14} color="var(--dsw-alias-brand-primary)" /> : null}
+                    </div>
+                    {item.description ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--dsw-alias-label-secondary)',
+                          lineHeight: 1.35,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {item.description}
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 栏 3：渠道策略 */}
+            {materialType === 'text' ? (
               <div
-                style={{
-                  width: 160,
-                  height: 480,
-                  background: 'var(--dsw-alias-bg-elevated, rgba(24, 24, 27, 0.96))',
-                  backdropFilter: 'blur(16px)',
-                  borderRadius: 14,
-                  border: '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
-                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6)',
-                  padding: '10px 6px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  overflowY: 'auto',
-                }}
+                role="group"
+                aria-label="渠道策略不可用"
+                style={{ ...PANEL_STYLE, width: 240, padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 10, color: 'var(--dsw-alias-label-secondary)' }}
               >
-                <div style={{ padding: '4px 8px', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', fontWeight: 500 }}>
-                  选择模型
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>渠道策略</div>
+                <div style={{ fontSize: 11, lineHeight: 1.6 }}>
+                  文本节点通过会话模型路由（llm.stream）执行，请求不携带渠道分组，因此这里不提供渠道选择。
                 </div>
-                {brandList.map((brand) => {
-                  const isSelected = activeBrandId === brand.id;
-                  return (
+              </div>
+            ) : (
+              <div
+                role="group"
+                aria-label="选择渠道策略"
+                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
+
+                {channelGroups.length === 0 ? (
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
+                    该模型尚未配置渠道分组，请求将按模型默认通道执行。
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {([
+                        { id: 'stability_first' as const, label: '稳定性优先', icon: <ShieldCheck size={15} /> },
+                        { id: 'cost_first' as const, label: '低价优先', icon: <Percent size={14} /> },
+                      ]).map((option) => {
+                        const isActive = activeStrategy === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                            onClick={() => handleStrategyChange(option.id)}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: 8,
+                              cursor: 'pointer',
+                              background: isActive ? 'var(--dsw-alias-badge-bg)' : 'transparent',
+                              border: isActive ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              color: 'var(--dsw-alias-text-primary)',
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ color: isActive ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)', display: 'inline-flex' }}>
+                                {option.icon}
+                              </span>
+                              {option.label}
+                            </span>
+                            {isActive ? <Check size={13} color="var(--dsw-alias-brand-primary)" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+                      {channelGroups.map((group) => (
+                        <ChannelRow
+                          key={group.id}
+                          group={group}
+                          checked={selectedGroupIds.includes(group.id)}
+                          onToggle={() => toggleGroupSelection(group.id)}
+                        />
+                      ))}
+                    </div>
+
                     <div
-                      key={brand.id}
-                      onClick={() => setActiveBrandId(brand.id)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
-                        padding: '8px 10px',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: isSelected ? 600 : 400,
-                        color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)',
-                        background: isSelected ? 'var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.08))' : 'transparent',
-                        border: isSelected ? '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.1))' : '1px solid transparent',
-                        transition: 'all 0.15s ease',
+                        justifyContent: 'space-between',
+                        paddingTop: 8,
+                        borderTop: '1px solid var(--dsw-alias-border-subtle)',
                       }}
                     >
-                      <ModelBrandIcon modelId={brand.iconModelId} size={16} />
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {brand.name}
-                      </span>
-                      {isSelected && <Check size={14} color="var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))" />}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 栏 2：模型型号版本列表 (Variant) */}
-              <div
-                style={{
-                  width: 230,
-                  height: 480,
-                  background: 'var(--dsw-alias-bg-elevated, rgba(24, 24, 27, 0.96))',
-                  backdropFilter: 'blur(16px)',
-                  borderRadius: 14,
-                  border: '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
-                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6)',
-                  padding: '10px 8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  overflowY: 'auto',
-                }}
-              >
-                {modelListInBrand.map((item) => {
-                  const isSelected = activeModelId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleSelectModel(item.id)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        background: isSelected ? 'var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.08))' : 'transparent',
-                        border: isSelected ? '1px solid var(--dsw-alias-brand-primary, rgba(255, 255, 255, 0.2))' : '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.04))',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)' }}>
-                          {item.name || item.id}
-                        </span>
-                        {isSelected && <Check size={14} color="var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))" />}
+                      <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+                        已选 {selectedCount}/{channelGroups.length} 个
                       </div>
-                      {item.description && (
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: 'var(--dsw-alias-label-secondary)',
-                            lineHeight: 1.35,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const firstGroup = channelGroups[0];
+                            if (firstGroup) applyGroupSelection([firstGroup.id]);
                           }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                         >
-                          {item.description}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 栏 3：选择渠道策略与渠道列表 (Channel Groups & Strategy) */}
-              <div
-                style={{
-                  width: 380,
-                  height: 480,
-                  background: 'var(--dsw-alias-bg-elevated, rgba(24, 24, 27, 0.96))',
-                  backdropFilter: 'blur(16px)',
-                  borderRadius: 14,
-                  border: '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
-                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6)',
-                  padding: '12px 14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 10,
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>
-                  选择渠道策略
-                </div>
-
-                {/* 策略切换双卡片 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {/* 稳定性优先 */}
-                  <div
-                    onClick={() => handleStrategyChange('stability_first')}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      background: activeStrategy === 'stability_first' ? 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))' : 'transparent',
-                      border: activeStrategy === 'stability_first' ? '1px solid var(--dsw-alias-brand-primary, currentColor)' : '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>
-                      <ShieldCheck size={15} color={activeStrategy === 'stability_first' ? 'var(--dsw-alias-brand-primary, currentColor)' : 'var(--dsw-alias-label-secondary)'} />
-                      <span>稳定性优先</span>
-                    </div>
-                    {activeStrategy === 'stability_first' && <Check size={13} color="var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))" />}
-                  </div>
-
-                  {/* 低价优先 */}
-                  <div
-                    onClick={() => handleStrategyChange('cost_first')}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      background: activeStrategy === 'cost_first' ? 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))' : 'transparent',
-                      border: activeStrategy === 'cost_first' ? '1px solid var(--dsw-alias-brand-primary, currentColor)' : '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.08))',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>
-                      <Percent size={14} color={activeStrategy === 'cost_first' ? 'var(--dsw-alias-brand-primary, currentColor)' : 'var(--dsw-alias-label-secondary)'} />
-                      <span>低价优先</span>
-                    </div>
-                    {activeStrategy === 'cost_first' && <Check size={13} color="var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))" />}
-                  </div>
-                </div>
-
-                {/* 渠道列表卡片流 (垂直滚动) */}
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
-                  {channelGroups.map((group: ChannelGroupItem) => {
-                    const isChecked = selectedGroupIds.includes(group.id);
-                    const stabilityRate = group.sla?.stability24h ?? 100;
-                    return (
-                      <div
-                        key={group.id}
-                        onClick={() => toggleGroupSelection(group.id)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          background: isChecked ? 'var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.06))' : 'transparent',
-                          border: isChecked ? '1px solid var(--dsw-alias-brand-primary, rgba(255, 255, 255, 0.15))' : '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.04))',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
-                          {/* 第一行：标题 + 积分 + 徽标 */}
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>
-                              {group.label}
-                            </span>
-                            <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                              {typeof group.pricing?.pointsEstimate === 'number'
-                                ? `≈${group.pricing.pointsEstimate} 积分`
-                                : group.pricing?.pointsEstimate || ''}
-                            </span>
-                            {group.pricing?.discountRate && group.pricing.discountRate < 1 && (
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  padding: '1px 5px',
-                                  borderRadius: 4,
-                                  background: 'var(--dsw-alias-state-danger-bg, rgba(239, 68, 68, 0.2))',
-                                  color: 'var(--dsw-alias-state-danger)',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {Math.round(group.pricing.discountRate * 100) / 10}折
-                              </span>
-                            )}
-                            {group.badge && (
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  padding: '1px 5px',
-                                  borderRadius: 4,
-                                  background: 'var(--dsw-alias-badge-bg, rgba(255, 255, 255, 0.08))',
-                                  color: 'var(--dsw-alias-label-secondary)',
-                                }}
-                              >
-                                {group.badge}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* 第二行：点阵指示条 + 稳定率 + 排队时间 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--dsw-alias-label-secondary)' }}>
-                            <StabilityDotBar rate={stabilityRate} />
-                            <span>24h 稳定率 {stabilityRate}%</span>
-                            {group.sla?.avgWaitTimeSec && (
-                              <span>约{Math.round(group.sla.avgWaitTimeSec / 60)}min</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 右侧选中对勾标识 */}
-                        <div style={{ paddingLeft: 10 }}>
-                          {isChecked ? (
-                            <Check size={15} color="var(--dsw-alias-brand-primary, var(--dsw-alias-state-success))" strokeWidth={2.5} />
-                          ) : (
-                            <span style={{ display: 'inline-block', width: 15 }} />
-                          )}
-                        </div>
+                          清空
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-text-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                        >
+                          全选
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* 底部信息栏：已选 X/N 个 + 清空 / 全选 */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: 8,
-                    borderTop: '1px solid var(--dsw-alias-border-subtle, rgba(255, 255, 255, 0.06))',
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                    已选 {selectedGroupIds.length}/{channelGroups.length} 个
-                  </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <button
-                      type="button"
-                      onClick={handleClear}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--dsw-alias-label-secondary)',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
-                    >
-                      清空
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSelectAll}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--dsw-alias-text-primary)',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
-                    >
-                      全选
-                    </button>
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </div>
-            </div>,
-            document.body,
-          )
+            )}
+          </div>,
+          document.body,
+        )
         : null}
     </>
   );
