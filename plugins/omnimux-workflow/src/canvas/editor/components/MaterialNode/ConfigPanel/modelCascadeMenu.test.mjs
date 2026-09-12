@@ -81,13 +81,16 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(cascadeSrc, /const handlePopoverLeave = useCallback\(\(\) => \{/);
   });
 
-  it('renders the popover on an opaque canvas surface inside the canvas theme scope', () => {
-    // 画布主题 token 作用域在 .wf-canvas-root；portal 到 body 会退回宿主的半透明面，
-    // 浮层就会透出底下的画布内容（用户报的缺陷）。
-    assert.match(cascadeSrc, /anchor\?\.closest\('\.wf-canvas-root'\)/);
-    assert.match(cascadeSrc, /canvasPortalHost\(triggerRef\.current\)/);
-    assert.doesNotMatch(cascadeSrc, /backdropFilter/, '不透明面板不再需要背景模糊');
-    assert.match(cascadeSrc, /var\(--wb-surface-elevated, var\(--dsw-alias-bg-elevated\)\)/);
+  it('keeps the popover on the viewport anchor and paints it with the resolved canvas surface', () => {
+    // portal 必须挂 document.body：画布宿主面板带 contain: layout，会成为 position:fixed
+    // 的包含块，portal 进画布内会让 left/bottom（按视口算）整体错位。
+    assert.match(cascadeSrc, /document\.body,\n\s*\)/);
+    assert.doesNotMatch(cascadeSrc, /canvasPortalHost/);
+    // 底色来自打开时解析的画布真实表面色，不依赖主题作用域、也不再需要模糊。
+    assert.match(cascadeSrc, /resolvePopoverSurface\(triggerRef\.current\)/);
+    assert.match(cascadeSrc, /--wb-surface-elevated/);
+    assert.match(cascadeSrc, /background: popoverSurface/);
+    assert.doesNotMatch(cascadeSrc, /backdropFilter/);
   });
 
   it('renders the catalog display fields, not raw ids', () => {
