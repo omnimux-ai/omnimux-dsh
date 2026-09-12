@@ -181,12 +181,24 @@ const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> =
   </span>
 );
 
+/**
+ * 浮层的 portal 目标。画布主题 token（`--wb-*` 与 `--dsw-alias-bg-elevated` 的画布覆盖）
+ * 作用域限定在 `.wf-canvas-root`；portal 到 `document.body` 会落到宿主的半透明面上。
+ * 画布根没有 transform / filter / contain，`position: fixed` 的语义不受影响。
+ */
+function canvasPortalHost(anchor: HTMLElement | null): HTMLElement {
+  const root = anchor?.closest('.wf-canvas-root');
+  if (root instanceof HTMLElement) return root;
+  return document.body;
+}
+
 /** 三列全开时的最大宽度；定位锚点固定按它钳制，避免列数变化导致浮层横移。 */
 const POPOVER_MAX_WIDTH = 786;
 
 const PANEL_STYLE: React.CSSProperties = {
-  background: 'var(--dsw-alias-bg-elevated)',
-  backdropFilter: 'blur(16px)',
+  // 画布岛把 --dsw-alias-bg-elevated 覆盖成不透明面；宿主的同名 token 是配 backdrop-blur
+  // 用的半透明磨砂层，浮层必须显式取画布岛的面，否则会透出底下的画布内容。
+  background: 'var(--wb-surface-elevated, var(--dsw-alias-bg-elevated))',
   borderRadius: 14,
   border: '1px solid var(--dsw-alias-border-subtle)',
   boxShadow: '0 16px 36px var(--dsw-alias-shadow-strong, rgba(0, 0, 0, 0.6))',
@@ -546,6 +558,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             onMouseLeave={handlePopoverLeave}
             style={{
               position: 'fixed',
+              background: 'var(--wb-surface-elevated, var(--dsw-alias-bg-elevated))',
               bottom: popoverPos.bottom,
               left: popoverPos.left,
               display: 'flex',
@@ -763,7 +776,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               </div>
             ) : null}
           </div>,
-          document.body,
+          canvasPortalHost(triggerRef.current),
         )
         : null}
     </>
