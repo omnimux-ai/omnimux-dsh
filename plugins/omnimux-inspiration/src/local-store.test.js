@@ -1,11 +1,28 @@
 import assert from 'node:assert/strict'
 import { describe, it, beforeEach } from 'node:test'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createLocalStore } from './local-store.js'
 import { extractStructuredBreakdown } from './analyzer.js'
 import { createLocalInspirationDispatcher, detectPlatformFromUrl } from './http-routes.js'
+
+/**
+ * Offline `dns.lookup` stand-in for the download target check.
+ *
+ * `downloadMedia` resolves the target host, so every dispatcher built in a test
+ * injects this instead of letting the real resolver run — the suite must issue no
+ * DNS queries at all. Any host answers with a public address.
+ * @type {Array<string>}
+ */
+export const testResolvedHosts = []
+
+/** @param {string} hostname @returns {Promise<Array<{ address: string, family: number }>>} */
+export async function offlineResolver(hostname) {
+  testResolvedHosts.push(hostname)
+  return [{ address: '93.184.216.34', family: 4 }]
+}
+
 
 describe('Local Inspiration Store', () => {
   let tmp
@@ -260,6 +277,7 @@ describe('Local Inspiration Store', () => {
     }
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       socialFetcher: mockSocialFetcher,
       videoAnalyzeTool: mockVideoAnalyzeTool,
@@ -305,6 +323,7 @@ describe('Local Inspiration Store', () => {
     const mockFetcher = async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from('fake-cover') })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       socialFetcher: mockSocialFetcher,
       fetcher: mockFetcher,
@@ -364,6 +383,7 @@ Ecolchi 发膜核心拆解。
     }
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       videoAnalyzeTool: mockVideoAnalyzeTool,
     })
@@ -389,6 +409,7 @@ Ecolchi 发膜核心拆解。
     })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
     })
 
@@ -426,6 +447,7 @@ Ecolchi 发膜核心拆解。
     })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
     })
 
@@ -445,5 +467,96 @@ Ecolchi 发膜核心拆解。
     const remaining = store.list()
     assert.equal(remaining.total, 1)
     assert.equal(remaining.items[0].id, item3.id)
+  })
+})
+
+describe('Local Inspiration Store — replace() upgrade path (P1-3 / P3-5)', () => {
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-insp-replace-'))
+    paths = {
+      dir: tmp,
+      libraryFile: join(tmp, 'library.json'),
+      mediaDir: join(tmp, 'media'),
+      coversDir: join(tmp, 'media', 'covers'),
+      videosDir: join(tmp, 'media', 'videos'),
+      imagesDir: join(tmp, 'media', 'images'),
+    }
+  })
+
+  it('keeps the row identity and recycles media the replacement no longer references', async () => {
+    const store = createLocalStore({ paths })
+    mkdirSync(paths.videosDir, { recursive: true })
+    mkdirSync(paths.coversDir, { recursive: true })
+    const oldVideo = join(paths.videosDir, 'video_old.mp4')
+    const oldCover = join(paths.coversDir, 'cover_old.jpg')
+    writeFileSync(oldVideo, 'old-video')
+    writeFileSync(oldCover, 'old-cover')
+
+    const created = store.add({
+      title: 'Degraded row',
+      type: 'link',
+      source_url: 'https://x.com/creator/status/5',
+      local_paths: { video: oldVideo, cover: oldCover },
+      tags: ['keep-me'],
+      is_favorite: true,
+    })
+
+    const newVideo = join(paths.videosDir, 'video_new.mp4')
+    writeFileSync(newVideo, 'new-video')
+    const replaced = await store.replace(created.id, {
+      title: 'Upgraded row',
+      type: 'video',
+      source_url: 'https://x.com/creator/status/5',
+      local_paths: { video: newVideo },
+      tags: [],
+    })
+
+    assert.equal(replaced.id, created.id)
+    assert.equal(replaced.created_at, created.created_at)
+    assert.equal(replaced.title, 'Upgraded row')
+    assert.equal(replaced.type, 'video')
+    assert.equal(replaced.is_favorite, true)
+    // An empty incoming tag list keeps the tags the user already set.
+    assert.deepEqual(replaced.tags, ['keep-me'])
+    assert.equal(store.list().total, 1)
+
+    // Superseded media is recycled; the referenced file survives.
+    assert.equal(existsSync(oldVideo), false)
+    assert.equal(existsSync(oldCover), false)
+    assert.equal(existsSync(newVideo), true)
+  })
+
+  it('keeps a media file the replacement still references', async () => {
+    const store = createLocalStore({ paths })
+    mkdirSync(paths.coversDir, { recursive: true })
+    const cover = join(paths.coversDir, 'cover_keep.jpg')
+    writeFileSync(cover, 'cover')
+
+    const created = store.add({
+      title: 'Photo post',
+      type: 'image',
+      source_url: 'https://www.instagram.com/p/C1/',
+      local_paths: { cover },
+    })
+
+    const replaced = await store.replace(created.id, {
+      title: 'Photo post (re-imported)',
+      type: 'image',
+      source_url: 'https://www.instagram.com/p/C1/',
+      local_paths: { cover },
+    })
+
+    assert.equal(replaced.id, created.id)
+    assert.equal(existsSync(cover), true)
+  })
+
+  it('returns null instead of creating a row when the id is gone', async () => {
+    const store = createLocalStore({ paths })
+
+    assert.equal(await store.replace('insp_missing', { title: 'x' }), null)
+    assert.equal(store.list().total, 0)
   })
 })

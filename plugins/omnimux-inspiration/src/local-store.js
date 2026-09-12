@@ -70,6 +70,63 @@ function rowViews(row) {
   return 0
 }
 
+/**
+ * Normalize an incoming record into the persisted row shape.
+ * @param {Partial<LocalInspirationRecord> & { title?: string }} record
+ * @param {{ id?: string, created_at?: string }} [identity] values an existing row keeps
+ * @returns {LocalInspirationRecord}
+ */
+function buildRow(record, identity = {}) {
+  const now = new Date().toISOString()
+  const canonical = record.source_url ? getCanonicalItemKey(record.source_url) : null
+  return {
+    id: identity.id || record.id || `insp_${randomUUID().slice(0, 8)}`,
+    title: record.title || 'Untitled',
+    type: record.type || 'video',
+    source_platform: record.source_platform || canonical?.platform,
+    source_url: record.source_url,
+    cover_url: record.cover_url,
+    media_urls: record.media_urls || [],
+    local_paths: record.local_paths || {},
+    tags: Array.isArray(record.tags) ? record.tags : [],
+    is_favorite: Boolean(record.is_favorite),
+    hot_score: typeof record.hot_score === 'number' ? record.hot_score : 0,
+    content: record.content || '',
+    deconstruction: record.deconstruction,
+    stats: record.stats || {},
+    author: record.author || {},
+    duration: record.duration,
+    views: record.views,
+    country_code: record.country_code || '',
+    category: record.category || '',
+    traffic_type: record.traffic_type || 'organic',
+    posted_at: record.posted_at || null,
+    published_at: record.published_at || '',
+    favorited_at: record.favorited_at || (record.is_favorite ? now : ''),
+    script_translation: record.script_translation,
+    created_at: identity.created_at || record.created_at || now,
+    updated_at: now,
+  }
+}
+
+/**
+ * Recycle media files of a replaced row that the replacement does not reference,
+ * so re-importing never leaves orphaned downloads behind.
+ * @param {LocalInspirationRecord} previous
+ * @param {LocalInspirationRecord} next
+ */
+async function trashReplacedMedia(previous, next) {
+  const kept = new Set(
+    [next.local_paths?.video, next.local_paths?.cover].filter(Boolean).map(String),
+  )
+  for (const filePath of [previous.local_paths?.video, previous.local_paths?.cover]) {
+    if (!filePath) continue
+    const target = String(filePath)
+    if (kept.has(target)) continue
+    await moveToTrash(target)
+  }
+}
+
 export function createLocalStore(opts = {}) {
   const paths = opts.paths ?? resolveInspirationPaths()
 
@@ -314,39 +371,36 @@ export function createLocalStore(opts = {}) {
         const existing = items.find((item) => item.source_url && isSameSocialContent(item.source_url, record.source_url))
         if (existing) return existing
       }
-      const now = new Date().toISOString()
-      const canonical = record.source_url ? getCanonicalItemKey(record.source_url) : null
-      /** @type {LocalInspirationRecord} */
-      const row = {
-        id: record.id || `insp_${randomUUID().slice(0, 8)}`,
-        title: record.title || 'Untitled',
-        type: record.type || 'video',
-        source_platform: record.source_platform || canonical?.platform,
-        source_url: record.source_url,
-        cover_url: record.cover_url,
-        media_urls: record.media_urls || [],
-        local_paths: record.local_paths || {},
-        tags: Array.isArray(record.tags) ? record.tags : [],
-        is_favorite: Boolean(record.is_favorite),
-        hot_score: typeof record.hot_score === 'number' ? record.hot_score : 0,
-        content: record.content || '',
-        deconstruction: record.deconstruction,
-        stats: record.stats || {},
-        author: record.author || {},
-        duration: record.duration,
-        views: record.views,
-        country_code: record.country_code || '',
-        category: record.category || '',
-        traffic_type: record.traffic_type || 'organic',
-        posted_at: record.posted_at || null,
-        published_at: record.published_at || '',
-        favorited_at: record.favorited_at || (record.is_favorite ? now : ''),
-        script_translation: record.script_translation,
-        created_at: record.created_at || now,
-        updated_at: now,
-      }
+      const row = buildRow(record)
       items.unshift(row)
       writeAll(items)
+      return row
+    },
+
+    /**
+     * Replace an existing row in place, keeping its id and creation time.
+     *
+     * Used by the re-import/upgrade path: the previous row's media files that the
+     * new row does not reference are moved to the system trash, which is what
+     * keeps a degraded → video upgrade from orphaning the old download.
+     * @param {string} id
+     * @param {Partial<LocalInspirationRecord> & { title?: string }} record
+     * @returns {Promise<LocalInspirationRecord | null>} the new row, or null when the id is gone
+     */
+    async replace(id, record) {
+      const items = readAll()
+      const index = items.findIndex((item) => item.id === id)
+      if (index === -1) return null
+      const previous = items[index]
+      const row = buildRow({
+        ...record,
+        is_favorite: record.is_favorite ?? previous.is_favorite,
+        favorited_at: record.favorited_at ?? previous.favorited_at,
+        tags: Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : (previous.tags || []),
+      }, { id: previous.id, created_at: previous.created_at })
+      items[index] = row
+      writeAll(items)
+      await trashReplacedMedia(previous, row)
       return row
     },
 

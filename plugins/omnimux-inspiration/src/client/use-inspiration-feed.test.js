@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom'
 import { invalidateInspirationCache } from './api.js'
 import {
   applyCachedPage,
+  buildPlatformFilterOptions,
   cacheKeyOf,
   checkCacheEarlyReturn,
   createReplicateStatusHandler,
@@ -15,9 +16,11 @@ import {
   mergeFetchResult,
   removeIdsFromSet,
   resetReplicateBusy,
+  shouldShowPlatformFilter,
   toggleIdInSet,
   updateItemInList,
 } from './feed-helpers.js'
+import { en, zh } from './locales.js'
 import {
   resolveDateRange,
   resolveDurationRange,
@@ -471,10 +474,16 @@ describe('formatPlatformName', () => {
     assert.equal(formatPlatformName('tiktok'), 'TikTok')
     assert.equal(formatPlatformName('instagram'), 'Instagram')
     assert.equal(formatPlatformName('youtube'), 'YouTube')
-    assert.equal(formatPlatformName('x'), 'X')
-    assert.equal(formatPlatformName('twitter'), 'X')
     assert.equal(formatPlatformName('facebook'), 'Facebook')
     assert.equal(formatPlatformName('threads'), 'Threads')
+  })
+
+  it('takes the x / twitter label from the locale table, not from a second table', () => {
+    // The backend reads the same entry, so naming a platform two ways is impossible.
+    assert.equal(formatPlatformName('x'), zh['platform.x'])
+    assert.equal(formatPlatformName('twitter'), zh['platform.x'])
+    assert.equal(zh['platform.x'], '推特 (X)')
+    assert.equal(formatPlatformName('x', (key) => en[key] || key), 'Twitter (X)')
   })
 
   it('keeps the first-letter rule for self-registered platforms', () => {
@@ -490,5 +499,18 @@ describe('formatPlatformName', () => {
     assert.equal(formatPlatformName('x', translate), 'Twitter (X)')
     assert.equal(formatPlatformName('twitter', translate), 'Twitter (X)')
     assert.equal(formatPlatformName('facebook', translate), 'Facebook')
+  })
+
+  it('gates and builds the platform filter options', () => {
+    const translate = (key) => zh[key] || key
+
+    assert.equal(shouldShowPlatformFilter(['tiktok']), false)
+    assert.equal(shouldShowPlatformFilter(['tiktok', 'x']), true)
+    assert.equal(buildPlatformFilterOptions(['tiktok'], translate), null)
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'x'], translate), [
+      { value: '', label: zh['platform.all'] },
+      { value: 'tiktok', label: 'TikTok' },
+      { value: 'x', label: zh['platform.x'] },
+    ])
   })
 })

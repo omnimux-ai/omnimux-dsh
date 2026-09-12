@@ -4,7 +4,7 @@ import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
-import { formatPlatformName } from './feed-helpers.js'
+import { buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
 import { PlusIcon } from './icons.jsx'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
@@ -79,6 +79,9 @@ export function InspirationSection({ t, active }) {
     handleItemUpdated,
   } = feed
 
+  // Platform filter gate: null (no dropdown) while a single platform is known.
+  const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
+
   useEffect(() => {
     injectInspirationStyles()
   }, [])
@@ -123,21 +126,15 @@ export function InspirationSection({ t, active }) {
         )}
         tools={(
           <>
-            {availablePlatforms.length > 1 && (
+            {platformOptions ? (
               <DropdownSelect
                 value={platform}
                 aria-label={t('filter.platform')}
                 onChange={setPlatform}
                 className="omnimux-inspiration-filter-select"
-                options={[
-                  { value: '', label: t('platform.all') },
-                  ...availablePlatforms.map((plat) => ({
-                    value: plat,
-                    label: formatPlatformName(plat, t),
-                  })),
-                ]}
+                options={platformOptions}
               />
-            )}
+            ) : null}
             <DropdownSelect
               value={type}
               aria-label={t('filter.type')}

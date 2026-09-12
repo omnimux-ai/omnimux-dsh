@@ -254,4 +254,183 @@ describe('parseSocialMeta — bounded unwrap and TikTok compatibility', () => {
     assert.equal(meta.video_url, '')
     assert.equal(socialPayloadLayers({}).length, 1)
   })
+
+  it('reports the hub empty sentinel as content-free (P0-1 regression)', () => {
+    // `pickSocialPayload` answers `{ text: null }` when the hub has no content.
+    for (const sentinel of [{ text: null }, { text: null, video_url: null }, { title: '', text: null }]) {
+      const meta = parseSocialMeta(sentinel)
+      assert.equal(meta.has_metadata, false, `${JSON.stringify(sentinel)} must carry no metadata`)
+      assert.equal(meta.video_url, '')
+    }
+  })
+
+  it('unwraps the nested gateway containers one level (P2-4 regression)', () => {
+    const cases = [
+      { data: { result: { video_url: 'https://cdn.example.com/a.mp4' } } },
+      { result: { data: { video_url: 'https://cdn.example.com/a.mp4' } } },
+      { data: { items: [{ data: { video_url: 'https://cdn.example.com/a.mp4' } }] } },
+      { data: { aweme_list: [{ video_url: 'https://cdn.example.com/a.mp4' }] } },
+      { data: { contents: [{ video_url: 'https://cdn.example.com/a.mp4' }] } },
+    ]
+
+    for (const payload of cases) {
+      assert.equal(
+        parseSocialMeta(payload).video_url,
+        'https://cdn.example.com/a.mp4',
+        `${JSON.stringify(payload)} must resolve its direct link`,
+      )
+    }
+    // Still bounded: a layer nested two fields deep is not searched.
+    assert.equal(parseSocialMeta({ data: { result: { data: { video_url: 'https://cdn.example.com/a.mp4' } } } }).video_url, '')
+  })
+
+  it('reads image entries that are objects instead of strings (P2-5 regression)', () => {
+    const meta = parseSocialMeta({
+      text: '图文帖',
+      images: [{ url: 'https://cdn.example.com/one.jpg' }, { src: 'https://cdn.example.com/two.jpg' }, 'https://cdn.example.com/three.jpg'],
+    })
+
+    assert.deepEqual(meta.images, [
+      'https://cdn.example.com/one.jpg',
+      'https://cdn.example.com/two.jpg',
+      'https://cdn.example.com/three.jpg',
+    ])
+  })
+})
+
+describe('parseSocialMeta — download-target policy (P0-2 regression)', () => {
+  const DIRECT_LINK_FIELDS = ['video_url', 'video', 'play_url', 'play', 'download_url', 'url']
+
+  it('never produces a video_url for loopback, metadata, private or file targets', () => {
+    const blocked = [
+      'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+      'http://127.0.0.1:45120/omnimux/inspiration/local/items',
+      'http://127.0.0.1:1234/a.webm',
+      'http://10.0.0.5/a.mp4',
+      'http://172.20.0.5/a.mp4',
+      'http://192.168.1.5/a.mp4',
+      'http://[::1]/a.mp4',
+      'http://printer.local/a.mp4',
+      'file:///etc/passwd',
+    ]
+
+    for (const field of DIRECT_LINK_FIELDS) {
+      for (const target of blocked) {
+        const meta = parseSocialMeta({ title: 'blocked', [field]: target })
+        assert.equal(meta.video_url, '', `${field}=${target} must not become a download target`)
+      }
+    }
+  })
+
+  it('never produces a video_url for manifest or page containers', () => {
+    for (const target of [
+      'https://cdn.example.com/stream.m3u8',
+      'https://cdn.example.com/manifest.mpd',
+      'https://cdn.example.com/article.html',
+      'https://cdn.example.com/article.htm',
+      'https://cdn.example.com/stream.m3u8?token=abc',
+    ]) {
+      for (const field of DIRECT_LINK_FIELDS) {
+        assert.equal(parseSocialMeta({ [field]: target }).video_url, '', `${field}=${target} must be rejected`)
+      }
+    }
+  })
+
+  it('keeps playable public direct links working', () => {
+    for (const target of [
+      'https://cdn.example.com/stream.mp4',
+      'https://cdn.example.com/stream.mp4?token=abc',
+      'https://v16-webapp.tiktokcdn.com/video.mp4',
+      'https://rr1---sn-x.googlevideo.com/videoplayback?itag=18',
+    ]) {
+      assert.equal(parseSocialMeta({ video_url: target }).video_url, target)
+    }
+  })
+
+  it('applies the same policy when the direct link hides behind a wrapper layer', () => {
+    const meta = parseSocialMeta({ data: { items: [{ video_url: 'http://169.254.169.254/x.mp4' }] } })
+
+    assert.equal(meta.video_url, '')
+    assert.equal(meta.has_metadata, false)
+  })
+})
+
+describe('parseSocialMeta — has_metadata counts content only (P2-A regression)', () => {
+  it('treats an envelope of attached metadata alone as content-free', () => {
+    const attachedOnly = [
+      { author: { id: '123' } },
+      { stats: { likes: 0, comments: 0, shares: 0, views: 0 } },
+      { duration: 0 },
+      { create_time: 0 },
+      { author: { name: '只有作者' }, stats: { likes: 5 }, duration: 12, create_time: 1700000000 },
+    ]
+
+    for (const payload of attachedOnly) {
+      const meta = parseSocialMeta(payload)
+      assert.equal(
+        meta.has_metadata,
+        false,
+        `${JSON.stringify(payload)} must not count as content: author/stats/duration/published_at are attached metadata`,
+      )
+      assert.equal(meta.video_url, '')
+    }
+  })
+
+  it('still counts each substantive content field as content', () => {
+    const substantive = [
+      { title: '只有标题' },
+      { text: '只有文案' },
+      { display_text: '映射来源的文案' },
+      { cover_url: 'https://cdn.example.com/cover.jpg' },
+      { images: ['https://cdn.example.com/one.jpg'] },
+      { video_url: 'https://cdn.example.com/stream.mp4' },
+    ]
+
+    for (const payload of substantive) {
+      assert.equal(
+        parseSocialMeta(payload).has_metadata,
+        true,
+        `${JSON.stringify(payload)} carries content and must not be treated as empty`,
+      )
+    }
+  })
+
+  it('reports the resolved page url alone as content-free', () => {
+    // A permalink is where the post lives, not what it contains: the point of
+    // `has_metadata` is to decide whether the fallback resolver should still run.
+    assert.equal(parseSocialMeta({ url: 'https://x.com/a/status/1' }).has_metadata, false)
+  })
+})
+
+describe('parseSocialMeta — nested extraction layers stay inside the policy (P2-C regression)', () => {
+  it('rejects a private address in every nested layer instead of returning it', () => {
+    const nested = [
+      { play_addr: { url_list: ['http://169.254.169.254/x.mp4'] } },
+      { video: { play_addr: { url_list: ['http://169.254.169.254/x.mp4'] } } },
+      { video_versions: [{ url: 'http://127.0.0.1:45120/x.mp4' }] },
+      { media: { video: [{ variants: [{ content_type: 'video/mp4', url: 'http://10.0.0.5/x.mp4' }] }] } },
+      { formats: [{ mimeType: 'video/mp4', url: 'http://169.254.169.254/x.mp4' }] },
+      { entities: { media: [{ video_info: { variants: [{ content_type: 'video/mp4', url: 'http://192.168.1.9/x.mp4' }] } }] } },
+      { data: { aweme_list: [{ play_addr: { url_list: ['http://169.254.169.254/x.mp4'] } }] } },
+    ]
+
+    for (const payload of nested) {
+      const meta = parseSocialMeta(payload)
+      assert.equal(meta.video_url, '', `${JSON.stringify(payload)} must not yield a private download target`)
+      assert.equal(meta.has_metadata, false, `${JSON.stringify(payload)} carries no usable content`)
+    }
+  })
+
+  it('keeps extension-less public CDN streams from the nested layers', () => {
+    // TikTok `play_addr.url_list` and Instagram scontent links carry no file
+    // extension, so the nested layers must NOT be subjected to the downloadability
+    // rule — only the private/protocol refusal. Applying the whitelist here would
+    // drop the main TikTok import path.
+    const playUrl = 'https://v16-webapp.tiktokcdn.com/aweme/v1/play/?video_id=v0d00fg10000'
+    const scontent = 'https://scontent.cdninstagram.com/o1/v/t2/f2/m86/abc'
+
+    assert.equal(parseSocialMeta({ play_addr: { url_list: [playUrl] } }).video_url, playUrl)
+    assert.equal(parseSocialMeta({ video: { play_addr: { url_list: [playUrl] } } }).video_url, playUrl)
+    assert.equal(parseSocialMeta({ video_versions: [{ url: scontent }] }).video_url, scontent)
+  })
 })

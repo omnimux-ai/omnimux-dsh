@@ -273,6 +273,9 @@ export function createLocalInspirationDispatcher(deps) {
     videoAnalyzeTool: deps.videoAnalyzeTool,
     textComplete: deps.textComplete,
     fetcher,
+    // Forwarded to the download target check. Left undefined in production so the
+    // real `dns.lookup` is used; tests inject a stub to stay offline.
+    resolver: deps.resolver,
     detectPlatformFromUrl,
     formatErrorMessage,
   }

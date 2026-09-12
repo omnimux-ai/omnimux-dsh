@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { downloadMedia } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
+import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
   buildTranslatePrompt,
   extractScriptStructure,
@@ -16,6 +17,12 @@ export const importLocks = new Set()
 const DUPLICATE_ERROR = '该灵感素材已在库中，请勿重复导入'
 const HTTP_URL_RE = /^https?:\/\//i
 const DEGRADE_REASON = '该平台/该内容未提供可下载的视频直链，已按链接类型入库'
+/** Directly playable containers a bare `video_url`-style field may point at. */
+const MEDIA_CONTAINER_RE = /\.(mp4|m4v|webm|mov)$/i
+/** Manifest and page containers that are never a downloadable video file. */
+const NON_MEDIA_CONTAINER_RE = /\.(m3u8|mpd|html?)$/i
+/** Video CDNs whose stream URL carries no media file extension. */
+const VIDEO_CDN_HOST_RE = /(^|\.)googlevideo\.com$/i
 
 /** Cloud `capability` pair per platform (`omnimux_social_data` contract). */
 export const CAPABILITY = { x: 'tweet', instagram: 'post', youtube: 'video', tiktok: 'video' }
@@ -39,7 +46,12 @@ function okExisting(existing) {
 }
 
 function conflictExisting(existing) {
-  const body = { error: DUPLICATE_ERROR, data: existing, is_duplicate: true }
+  const body = {
+    error: DUPLICATE_ERROR,
+    data: existing,
+    is_duplicate: true,
+    upgradable: needsVideoUpgrade(existing),
+  }
   return { status: 409, body }
 }
 
@@ -48,9 +60,44 @@ function duplicateBody(existing, returnExisting) {
   return conflictExisting(existing)
 }
 
+/**
+ * A record that holds no video is a degraded import: `resolveImportType` only
+ * returns `video` when a local video file was written, so `link`/`image` is the
+ * persisted marker of "no direct video link was available". Re-importing the
+ * same URL must be allowed to upgrade such a record — otherwise the 409 lock
+ * makes a degraded item impossible to ever turn into a video.
+ * @param {Record<string, any> | null | undefined} item
+ * @returns {boolean}
+ */
+function needsVideoUpgrade(item) {
+  if (!item || typeof item !== 'object') return false
+  return item.type !== 'video'
+}
+
 function firstHttpUrl(values) {
   for (const value of values) {
     if (typeof value === 'string' && HTTP_URL_RE.test(value)) return value
+  }
+  return ''
+}
+
+/**
+ * First candidate that is a public http(s) URL.
+ *
+ * The structural extractor reads fields that deliberately carry no file
+ * extension — TikTok `play_addr.url_list`, Instagram `video_versions[]`, X
+ * `variants[]`, YouTube `formats[]` — so the downloadability rule (which needs a
+ * recognizable media path or a known CDN host) must NOT be applied here: it would
+ * drop those real streams. Only the private/protocol refusal applies, which is
+ * what keeps `http://169.254.169.254/x.mp4` out of `video_url` without breaking
+ * the extension-less CDN paths.
+ * @param {unknown[]} values
+ * @returns {string}
+ */
+function firstPublicHttpUrl(values) {
+  for (const value of values) {
+    const url = httpText(value)
+    if (url && isPublicHttpUrl(url)) return url
   }
   return ''
 }
@@ -127,7 +174,15 @@ function isMp4Variant(url, contentType) {
   return /\.mp4$/i.test(urlPathname(url))
 }
 
-/** Highest-bitrate mp4 among `variants[]` (X tweet video variants, Instagram versions). */
+/**
+ * Best mp4 among `variants[]` (X tweet video variants, Instagram versions).
+ *
+ * Ranking is by a single scalar read per variant in the order
+ * `bitrate` → `bit_rate` → `height`, first present wins. The ladder therefore
+ * compares bitrates for envelopes that publish bitrates (X) and pixel heights
+ * for envelopes that publish only sizes (Instagram). Variants from the two
+ * families are never compared with each other, because no envelope mixes them.
+ */
 function bestVariantUrl(variants) {
   let bestUrl = ''
   let bestBitrate = -1
@@ -145,19 +200,34 @@ function bestVariantUrl(variants) {
   return bestUrl
 }
 
-/** mp4 stream inside `media.video[]`, `entities.media[].video_info` or Instagram `video_versions[]`. */
+/**
+ * mp4 stream inside `media.video[]`, `entities.media[].video_info` or Instagram
+ * `video_versions[]`.
+ *
+ * The chosen url still has to pass the policy: the variant ranking only looks at
+ * the container type, so it would happily return a link-local or loopback URL
+ * that the envelope put in `variants[]`.
+ * @param {unknown} list
+ * @returns {string}
+ */
 function videoFromMediaList(list) {
   for (const item of asArray(list)) {
     const media = asObject(item)
     const url = bestVariantUrl(media.variants)
       || bestVariantUrl(asObject(media.video_info).variants)
       || bestVariantUrl([item])
-    if (url) return url
+    if (url) return firstPublicHttpUrl([url])
   }
   return ''
 }
 
-/** Poster image inside `media[].media_url_https` / `display_url`. */
+/**
+ * Poster image inside `media[].media_url_https` / `display_url`. A cover is
+ * fetched by the cover downloader too, so it gets the same private-target
+ * refusal as a stream.
+ * @param {unknown} list
+ * @returns {string}
+ */
 function coverFromMediaList(list) {
   for (const item of asArray(list)) {
     const media = asObject(item)
@@ -165,7 +235,7 @@ function coverFromMediaList(list) {
       || httpText(media.media_url)
       || httpText(media.display_url)
       || httpText(media.url)
-    if (url) return url
+    if (url) return firstPublicHttpUrl([url])
   }
   return ''
 }
@@ -181,7 +251,7 @@ function videoFromFormatList(layer) {
   for (const raw of [...asArray(layer.formats), ...asArray(layer.adaptive_formats)]) {
     if (!isPlainObject(raw)) continue
     if (asText(raw.signatureCipher) || asText(raw.cipher)) continue
-    const url = httpText(raw.url)
+    const url = firstPublicHttpUrl([raw.url])
     if (!url) continue
     const mime = firstText([raw.mimeType, raw.mime_type]).toLowerCase()
     if (mime ? !mime.includes('video/mp4') : !/\.mp4$/i.test(urlPathname(url))) continue
@@ -196,29 +266,35 @@ function videoFromFormatList(layer) {
 
 /** Instagram `image_versions2.candidates[].url`. */
 function instagramCandidateUrl(versions) {
-  return firstHttpUrl(asArray(asObject(versions).candidates).map((item) => asObject(item).url))
+  return firstPublicHttpUrl(asArray(asObject(versions).candidates).map((item) => asObject(item).url))
 }
 
 /** YouTube `thumbnails[]` — the last entry is the largest. */
 function lastThumbnailUrl(thumbnails) {
   const items = asArray(thumbnails)
   for (let index = items.length - 1; index >= 0; index -= 1) {
-    const url = httpText(asObject(items[index]).url)
+    const url = firstPublicHttpUrl([asObject(items[index]).url])
     if (url) return url
   }
   return ''
 }
 
 /**
- * A bare `url` field only counts as the video stream when it points at a media
- * file or a known video CDN, never when it points at a page.
+ * A bare `url`-style field only counts as the video stream when it points at a
+ * downloadable public media file or a known video CDN — never at a page, an HLS
+ * manifest, a local-network host or the cloud metadata service.
+ * @param {unknown} value
+ * @returns {string} the url when it may be downloaded, otherwise ''
  */
 function mediaLikeUrl(value) {
   const url = httpText(value)
   if (!url) return ''
-  if (/\.(mp4|m4v|webm|mov)(\?|$)/i.test(url)) return url
+  if (!isDownloadableHttpUrl(url)) return ''
+  const pathname = urlPathname(url)
+  if (NON_MEDIA_CONTAINER_RE.test(pathname)) return ''
+  if (MEDIA_CONTAINER_RE.test(pathname)) return url
   try {
-    return /(^|\.)googlevideo\.com$/i.test(new URL(url).hostname) ? url : ''
+    return VIDEO_CDN_HOST_RE.test(new URL(url).hostname) ? url : ''
   } catch {
     return ''
   }
@@ -236,15 +312,21 @@ function videoUrlFromLayer(layer) {
     videoFromMediaList(asObject(layer.extended_entities).media),
     // `video_versions[]` is one clip's quality ladder (ascending), not a list of
     // clips: rank it so the highest quality wins instead of the first entry.
-    bestVariantUrl(layer.video_versions) || videoFromMediaList(layer.video_versions),
+    firstPublicHttpUrl([bestVariantUrl(layer.video_versions)]),
+    firstPublicHttpUrl(asArray(layer.video_versions).map((item) => asObject(item).url || item)),
     videoFromFormatList(layer),
-    layer.video_url,
-    layer.video,
-    layer.play_url,
-    layer.play,
-    layer.download_url,
-    firstHttpUrl(asArray(asObject(layer.play_addr).url_list)),
-    firstHttpUrl(asArray(asObject(asObject(layer.video).play_addr).url_list)),
+    // Bare direct-link fields are attacker-influenced envelope data, so each one
+    // must pass the media-url policy before it can become the download target.
+    mediaLikeUrl(layer.video_url),
+    mediaLikeUrl(layer.video),
+    mediaLikeUrl(layer.play_url),
+    mediaLikeUrl(layer.play),
+    mediaLikeUrl(layer.download_url),
+    // Nested `url_list` streams carry no file extension on TikTok/Instagram, so
+    // only the private/protocol layer applies here — the download entry point
+    // still enforces the full policy.
+    firstPublicHttpUrl(asArray(asObject(layer.play_addr).url_list)),
+    firstPublicHttpUrl(asArray(asObject(asObject(layer.video).play_addr).url_list)),
     mediaLikeUrl(layer.url),
   ])
 }
@@ -366,14 +448,32 @@ function publishedAtFromLayer(layer) {
     || parsePublishedAt(normalizeDateValue(layer.taken_at))
 }
 
+/**
+ * Image urls may arrive as plain strings or as `{ url }` / `{ src }` objects
+ * (`images: [{ url: '…jpg' }]` is the common gateway shape), so both are read
+ * instead of silently dropping the entry and degrading the post to `link`.
+ * @param {Record<string, any>} layer
+ * @returns {string[]}
+ */
 function imagesFromLayer(layer) {
   return [...asArray(layer.images), ...asArray(layer.image_urls), layer.image_url]
-    .map((value) => httpText(value))
+    .map((value) => httpText(value) || httpText(value?.url) || httpText(value?.src))
     .filter(Boolean)
 }
 
 function resolvedUrlFromLayer(layer) {
   return firstHttpUrl([layer.url, layer.canonical_url, layer.permalink])
+}
+
+/** The object held by `container[key]` when that field is a list of layers. */
+function firstLayerItem(container, key) {
+  const first = asArray(asObject(container)[key])[0]
+  return isPlainObject(first) ? first : null
+}
+
+/** `wrapper.data` when the field is itself a wrapper layer. */
+function wrappedData(wrapper) {
+  return isPlainObject(wrapper) && isPlainObject(wrapper.data) ? wrapper.data : null
 }
 
 /**
@@ -385,14 +485,22 @@ function resolvedUrlFromLayer(layer) {
  */
 export function socialPayloadLayers(data) {
   const root = asObject(data)
-  const nested = root.data
+  const nested = isPlainObject(root.data) ? root.data : null
+  const rootFirstItem = firstLayerItem(root, 'items')
+  const nestedFirstItem = firstLayerItem(nested, 'items')
   const candidates = [
-    asArray(root.items)[0],
-    isPlainObject(nested) ? nested : null,
-    isPlainObject(nested) ? asArray(nested.items)[0] : null,
-    root.result,
+    rootFirstItem,
+    wrappedData(rootFirstItem),
+    nested,
+    nestedFirstItem,
+    wrappedData(nestedFirstItem),
+    isPlainObject(root.result) ? root.result : null,
+    wrappedData(root.result),
+    nested ? nested.result : null,
+    firstLayerItem(nested, 'aweme_list'),
+    firstLayerItem(nested, 'contents'),
     root.aweme_detail,
-    asArray(root.item_list)[0],
+    firstLayerItem(root, 'item_list'),
   ]
   const layers = [root]
   for (const candidate of candidates) {
@@ -422,7 +530,8 @@ const isBlankObject = (value) => Object.keys(value).length === 0
  * Instagram `video_versions[]` / `image_versions2` / `caption`,
  * YouTube `formats[]` / `adaptive_formats[]` / `thumbnails[]`, plus the flat
  * TikTok shape and a bounded one-level unwrap of `items[0]` / `data.items[0]` /
- * `result` / `aweme_detail` / `item_list[0]`.
+ * `data.result` / `result.data` / `data.aweme_list[0]` / `data.contents[0]` /
+ * `aweme_detail` / `item_list[0]`.
  *
  * @param {unknown} data raw `data` envelope from the cloud tool or the fallback resolver
  * @returns {{
@@ -444,16 +553,18 @@ export function parseSocialMeta(data) {
   const duration = pickLayerValue(layers, durationFromLayer, isBlankNumber)
   const published_at = pickLayerValue(layers, publishedAtFromLayer, isBlankText)
   const resolvedUrl = pickLayerValue(layers, resolvedUrlFromLayer, isBlankText)
+  // Only *substantive* content counts as metadata: a title, body text, cover,
+  // image list or video stream. Author, stats, duration and publication time are
+  // attached metadata — an envelope that carries nothing but
+  // `{ author: { id } }`, `{ stats: { likes: 0 } }`, `{ duration: 0 }` or
+  // `{ create_time: 0 }` has no content, and counting it here would skip the
+  // local fallback resolver and end up persisting an empty `link` row.
   const has_metadata = Boolean(
     video_url
     || cover_url
     || text
     || title
-    || images.length > 0
-    || Object.keys(author).length > 0
-    || Object.keys(stats).length > 0
-    || duration != null
-    || published_at,
+    || images.length > 0,
   )
   return {
     title,
@@ -535,8 +646,13 @@ export async function handleImportUrl(ctx) {
   const parsed = parseImportBody(ctx)
   if (!parsed.rawUrl) return fail(400, 'url is required')
   const existing = ctx.store.findByUrl(parsed.rawUrl)
-  if (existing && !parsed.force) return duplicateBody(existing, parsed.returnExisting)
-  return withImportLock(parsed.rawUrl, () => runImport({ ...ctx, ...parsed }))
+  // Only a record that already holds a video is a true duplicate. A degraded
+  // record is re-resolved so a later-available direct link can upgrade it.
+  if (existing && !parsed.force && !needsVideoUpgrade(existing)) {
+    return duplicateBody(existing, parsed.returnExisting)
+  }
+  const upgradeId = existing ? existing.id : ''
+  return withImportLock(parsed.rawUrl, () => runImport({ ...ctx, ...parsed, upgradeId }))
 }
 
 async function withImportLock(rawUrl, work) {
@@ -582,7 +698,7 @@ async function persistImportedItem(args, meta) {
     : await downloadImportCover(args, meta)
   if (media.error) return media.error
   const deconstruction = await maybeAnalyze(args, media, meta)
-  const record = args.store.add(buildImportRecord(args, meta, media, deconstruction))
+  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, deconstruction))
   if (videoUrl) return { status: 200, body: { data: record } }
   return {
     status: 200,
@@ -592,6 +708,22 @@ async function persistImportedItem(args, meta) {
       degrade_reason: DEGRADE_REASON,
     },
   }
+}
+
+/**
+ * Write the imported record.
+ *
+ * A re-import that resolves an existing degraded row replaces it in place, so
+ * the upgraded row keeps its id while the media it no longer references is
+ * recycled instead of being orphaned on disk.
+ * @param {{ store: any, upgradeId?: string }} args
+ * @param {Record<string, any>} record
+ * @returns {Promise<Record<string, any>>}
+ */
+async function persistImportedRecord(args, record) {
+  if (!args.upgradeId) return args.store.add(record)
+  const replaced = await args.store.replace(args.upgradeId, record)
+  return replaced || args.store.add(record)
 }
 
 async function maybeAnalyze(args, media, meta) {
@@ -672,6 +804,8 @@ function checkResolvedDuplicate(args, meta) {
   if (!resolvedUrl || resolvedUrl === args.rawUrl || args.force) return null
   const secondExisting = args.store.findByUrl(resolvedUrl)
   if (!secondExisting) return null
+  // The degraded row being upgraded is not a duplicate of itself.
+  if (args.upgradeId && secondExisting.id === args.upgradeId) return null
   return duplicateBody(secondExisting, args.returnExisting)
 }
 
@@ -683,6 +817,7 @@ async function downloadImportMedia(args, meta, rawVideoUrl) {
     localVideoPath = await downloadMedia(rawVideoUrl, args.paths.videosDir, {
       prefix: 'video_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     localPaths.video = localVideoPath
   } catch (downErr) {
@@ -699,6 +834,7 @@ async function downloadCoverBestEffort(args, meta, localPaths) {
     const saved = await downloadMedia(meta.cover_url, args.paths.coversDir, {
       prefix: 'cover_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     localPaths.cover = saved
     return saved
@@ -720,7 +856,7 @@ export async function handleAnalyze(ctx) {
   const videoPath = await resolveAnalyzeVideo({ ...ctx, item })
   if (videoPath.error) return videoPath.error
   if (!videoPath.path || !existsSync(videoPath.path)) {
-    return fail(422, '未找到本地视频文件，请重新导入以完成视频下载与解析')
+    return fail(422, '该链接未取得可下载的视频文件，暂不支持拆解')
   }
   return persistAnalysis(ctx, item, videoPath.path)
 }
@@ -822,6 +958,7 @@ async function downloadAnalyzeVideo(args) {
     const videoPath = await downloadMedia(vUrl, args.paths.videosDir, {
       prefix: 'video_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     args.item.local_paths = { ...(args.item.local_paths || {}), video: videoPath }
     return { path: videoPath }

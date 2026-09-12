@@ -109,6 +109,48 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     assert.equal(detectPlatformFromUrl('https://news.bbc.co.uk/story'), 'bbc')
   })
 
+  it('matches known platforms on the hostname, never on a substring (P2-1 regression)', () => {
+    // Domains that merely end in a platform name used to be misread as that platform.
+    for (const [url, expected] of [
+      ['https://www.netflix.com/watch/1', 'netflix'],
+      ['https://box.com/s/abc', 'box'],
+      ['https://max.com/watch/1', 'max'],
+      ['https://myfb.com/post/1', 'myfb'],
+      ['https://tiktok.com.evil.com/@a/video/1', 'evil'],
+      ['https://notyoutube.com/watch', 'notyoutube'],
+      ['https://x.com.evil.net/a/status/1', 'evil'],
+    ]) {
+      const detected = detectPlatformFromUrl(url)
+      assert.equal(detected, expected, `${url} must self-register as ${expected}`)
+      assert.notEqual(detected, 'x')
+    }
+    assert.notEqual(detectPlatformFromUrl('https://www.netflix.com/watch/1'), 'x')
+    assert.notEqual(detectPlatformFromUrl('https://box.com/x'), 'x')
+    assert.notEqual(detectPlatformFromUrl('https://tiktok.com.evil.com/video/1'), 'tiktok')
+
+    // A platform name inside the path or query is not a platform either.
+    assert.equal(detectPlatformFromUrl('https://example.com/redirect?to=tiktok.com'), 'example')
+    assert.equal(detectPlatformFromUrl('https://example.com/twitter.com/status/1'), 'example')
+  })
+
+  it('still recognizes platform domains and their subdomains', () => {
+    for (const [url, expected] of [
+      ['https://www.tiktok.com/@a/video/1', 'tiktok'],
+      ['https://m.tiktok.com/v/1.html', 'tiktok'],
+      ['https://vt.tiktok.com/abc/', 'tiktok'],
+      ['https://x.com/a/status/1', 'x'],
+      ['https://mobile.twitter.com/a/status/1', 'x'],
+      ['https://youtu.be/abc', 'youtube'],
+      ['https://www.youtube.com/watch?v=abc', 'youtube'],
+      ['https://www.instagram.com/reel/C1/', 'instagram'],
+      ['https://fb.watch/abc123/', 'facebook'],
+      ['https://www.threads.net/@a/post/xyz', 'threads'],
+      ['https://threads.com/t/xyz', 'threads'],
+    ]) {
+      assert.equal(detectPlatformFromUrl(url), expected, `${url} must resolve to ${expected}`)
+    }
+  })
+
   it('extracts canonical keys from Facebook video URLs', () => {
     const watchUrl = 'https://www.facebook.com/watch/?v=1234567890&ref=share'
     const mobileUrl = 'https://m.facebook.com/reel/1234567890/'
