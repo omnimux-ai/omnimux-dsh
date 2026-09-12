@@ -5,6 +5,7 @@ export {
   MODEL_CHANNEL_GROUPS,
   parseModelAndGroup,
   resolveChannelCandidates,
+  resolveChannelPlan,
   ROUTING_STRATEGIES,
 } from './channel-groups.js'
 

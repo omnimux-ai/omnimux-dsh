@@ -255,81 +255,135 @@ export function getModelChannelGroups(modelId) {
   return structuredClone(MODEL_CHANNEL_GROUPS[canonical] ?? [])
 }
 
+/** Points used for ranking when a group publishes no numeric estimate. */
+const UNPRICED_RANKING_POINTS = 1000
+
+/**
+ * Numeric point estimate only. Display-only notes (`当前参数不支持报价`) never
+ * participate in ranking, so a note can never reorder the failover plan.
+ * @param {{ pricing?: { pointsEstimate?: number | string } }} group
+ * @returns {number | null}
+ */
+function pointsOf(group) {
+  const points = group.pricing?.pointsEstimate
+  return typeof points === 'number' && Number.isFinite(points) ? points : null
+}
+
 /**
  * Calculate auto ranking score for a channel group (stability weight 70%, cost weight 30%).
  * Higher score = higher priority.
  */
 function calculateAutoScore(group) {
   const stabilityPart = (group.sla?.stability24h ?? 80) * 0.7
-  const price = group.pricing?.pointsEstimate ?? 1000
+  const price = pointsOf(group) ?? UNPRICED_RANKING_POINTS
   // Normalized inverse price score (0..30)
   const pricePart = Math.max(0, 30 - (price / 200))
   return stabilityPart + pricePart
 }
 
 /**
- * Resolve ordered gateway model candidates considering strategy and channel groups.
+ * @param {string} strategy
+ * @returns {(a: object, b: object) => number}
+ */
+function comparatorFor(strategy) {
+  if (strategy === 'stability_first') {
+    return (a, b) => {
+      const stabDiff = (b.sla?.stability24h ?? 0) - (a.sla?.stability24h ?? 0)
+      if (stabDiff !== 0) return stabDiff
+      return (a.sla?.avgWaitTimeSec ?? 0) - (b.sla?.avgWaitTimeSec ?? 0)
+    }
+  }
+  if (strategy === 'cost_first') {
+    // Unpriced groups sort last: an unknown price must not win a cheapest-first race.
+    return (a, b) => (pointsOf(a) ?? Number.POSITIVE_INFINITY) - (pointsOf(b) ?? Number.POSITIVE_INFINITY)
+  }
+  return (a, b) => calculateAutoScore(b) - calculateAutoScore(a)
+}
+
+/**
+ * @param {unknown} allowedGroups
+ * @returns {Set<string> | null}
+ */
+function normalizeAllowed(allowedGroups) {
+  if (!Array.isArray(allowedGroups) || allowedGroups.length === 0) return null
+  const allowed = new Set(allowedGroups.map((id) => String(id).trim().toLowerCase()).filter(Boolean))
+  return allowed.size > 0 ? allowed : null
+}
+
+/**
+ * Resolve the ordered channel plan for a model.
+ *
+ * Routing intent (`group`, `allowedGroups`, or `strategy`) makes the plan
+ * fail-closed: only configured groups are tried, the caller's pool is never
+ * silently widened, and an exhausted pool surfaces as an error instead of
+ * falling back to an unbounded channel. Without intent the plan is exactly
+ * `gatewayCandidates`, i.e. the pre-routing behavior.
+ *
  * @param {string} modelId
  * @param {{
  *   strategy?: 'auto' | 'stability_first' | 'cost_first' | string,
  *   group?: string,
  *   allowedGroups?: string[],
  * }} [options]
- * @returns {string[]}
+ * @returns {{ candidates: string[], unresolvedGroups: string[] }}
  */
-export function resolveChannelCandidates(modelId, options = {}) {
+export function resolveChannelPlan(modelId, options = {}) {
   const { modelId: canonicalModel, group: inlineGroup } = parseModelAndGroup(modelId)
-  if (!canonicalModel) return []
+  if (!canonicalModel) return { candidates: [], unresolvedGroups: [] }
 
   const requestedGroup = inlineGroup || (typeof options.group === 'string' ? options.group.trim() : '')
   const strategy = ROUTING_STRATEGIES.includes(options.strategy) ? options.strategy : 'auto'
+  const allowed = normalizeAllowed(options.allowedGroups)
+  const hasIntent = Boolean(requestedGroup || allowed || ROUTING_STRATEGIES.includes(options.strategy))
+
+  if (!hasIntent) return { candidates: gatewayCandidates(canonicalModel), unresolvedGroups: [] }
+
   const groups = getModelChannelGroups(canonicalModel)
-
-  // 1. If an explicit group is requested, put target group first
-  if (requestedGroup) {
-    const matched = groups.find((g) => g.id === requestedGroup || g.wireGroup === requestedGroup)
-    const targetWire = matched ? (matched.wireGroup || matched.id) : requestedGroup
-    const primary = `${canonicalModel}@${targetWire}`
-
-    // Failover fallbacks from remaining groups
-    const remaining = groups
-      .filter((g) => g.id !== requestedGroup && g.wireGroup !== requestedGroup && g.enabled)
-      .map((g) => `${canonicalModel}@${g.wireGroup || g.id}`)
-
-    return [...new Set([primary, ...remaining, canonicalModel])]
-  }
-
-  // 2. If no configured groups exist for this model, fall back to base gateway candidates
   if (groups.length === 0) {
-    return gatewayCandidates(canonicalModel)
+    // No pool is configured for this model, so the intent cannot be honored.
+    // Report the ids that could not be resolved instead of pretending they applied.
+    const unresolvedGroups = allowed ? [...options.allowedGroups].map((id) => String(id).trim()).filter(Boolean) : (requestedGroup ? [requestedGroup] : [])
+    return { candidates: gatewayCandidates(canonicalModel), unresolvedGroups }
   }
 
-  // 3. Filter allowed groups if specified
-  let candidatePool = groups.filter((g) => g.enabled)
-  if (Array.isArray(options.allowedGroups) && options.allowedGroups.length > 0) {
-    const allowed = new Set(options.allowedGroups.map((g) => String(g).trim().toLowerCase()))
-    const filtered = candidatePool.filter((g) => allowed.has(g.id.toLowerCase()) || (g.wireGroup && allowed.has(g.wireGroup.toLowerCase())))
-    if (filtered.length > 0) {
-      candidatePool = filtered
+  const isAllowed = (group) => !allowed
+    || allowed.has(String(group.id).toLowerCase())
+    || (group.wireGroup ? allowed.has(String(group.wireGroup).toLowerCase()) : false)
+  const wireOf = (group) => `${canonicalModel}@${group.wireGroup || group.id}`
+  const enabled = groups.filter((group) => group.enabled)
+
+  if (requestedGroup) {
+    const matched = groups.find((group) => group.id === requestedGroup || group.wireGroup === requestedGroup)
+    const tail = enabled.filter((group) => group.id !== requestedGroup && group.wireGroup !== requestedGroup)
+    // The pool restricts the failover tail too: naming one group is not a licence
+    // to try the caller's excluded (often pricier) groups.
+    const orderedTail = tail.filter(isAllowed).sort(comparatorFor(strategy))
+    const unresolvedGroups = matched ? [] : [requestedGroup]
+    return {
+      candidates: [...new Set([`${canonicalModel}@${matched ? (matched.wireGroup || matched.id) : requestedGroup}`, ...orderedTail.map(wireOf)])],
+      unresolvedGroups,
     }
   }
 
-  // 4. Sort according to strategy
-  const pool = [...candidatePool]
-  if (strategy === 'stability_first') {
-    pool.sort((a, b) => {
-      const stabDiff = (b.sla?.stability24h ?? 0) - (a.sla?.stability24h ?? 0)
-      if (stabDiff !== 0) return stabDiff
-      return (a.sla?.avgWaitTimeSec ?? 0) - (b.sla?.avgWaitTimeSec ?? 0)
-    })
-  } else if (strategy === 'cost_first') {
-    pool.sort((a, b) => (a.pricing?.pointsEstimate ?? 0) - (b.pricing?.pointsEstimate ?? 0))
-  } else {
-    // 'auto': composite score
-    pool.sort((a, b) => calculateAutoScore(b) - calculateAutoScore(a))
+  const pool = enabled.filter(isAllowed)
+  if (pool.length === 0) {
+    const unresolvedGroups = allowed
+      ? [...allowed]
+      : []
+    // Fail closed: an unmatched pool must not widen into the full channel set.
+    return { candidates: [], unresolvedGroups }
   }
 
-  const result = pool.map((g) => `${canonicalModel}@${g.wireGroup || g.id}`)
-  // Add base canonical model as final fallback
-  return [...new Set([...result, canonicalModel])]
+  return { candidates: pool.sort(comparatorFor(strategy)).map(wireOf), unresolvedGroups: [] }
+}
+
+/**
+ * Ordered gateway candidates for a request. Kept as the array-shaped API for
+ * callers that do not need the unresolved-pool report.
+ * @param {string} modelId
+ * @param {{ strategy?: string, group?: string, allowedGroups?: string[] }} [options]
+ * @returns {string[]}
+ */
+export function resolveChannelCandidates(modelId, options = {}) {
+  return resolveChannelPlan(modelId, options).candidates
 }

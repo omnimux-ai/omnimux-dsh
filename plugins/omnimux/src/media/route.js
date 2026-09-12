@@ -2,13 +2,21 @@ import { OmnimuxError } from './errors.js'
 import {
   gatewayCandidates,
   PRODUCT_ID_ALIASES,
-  toProductId,
   parseModelAndGroup,
   resolveChannelCandidates,
+  resolveChannelPlan,
   ROUTING_STRATEGIES,
+  toProductId,
 } from '../catalog/serving/id-universe.js'
 
-export { gatewayCandidates, toProductId, parseModelAndGroup, resolveChannelCandidates, ROUTING_STRATEGIES }
+export {
+  gatewayCandidates,
+  parseModelAndGroup,
+  resolveChannelCandidates,
+  resolveChannelPlan,
+  ROUTING_STRATEGIES,
+  toProductId,
+}
 export const PROTOCOLS = Object.freeze(['openai-media'])
 export const AUTH_MODES = Object.freeze(['auto', 'token', 'custom'])
 
@@ -142,15 +150,20 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   }
   const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
   const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
-  const explicitGroup = Boolean(group)
-  const allowedGroups = Array.isArray(request.allowedGroups) ? request.allowedGroups : undefined
-  const strategy = explicitStrategy ? request.strategy : (explicitGroup || allowedGroups ? 'auto' : undefined)
+  const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
+    ? request.allowedGroups
+    : undefined
+  const hasRoutingIntent = Boolean(group || allowedGroups || explicitStrategy)
 
-  const candidates = providerId === 'omnimux'
-    ? (strategy || explicitGroup || allowedGroups
-      ? resolveChannelCandidates(modelId, { strategy: strategy || 'auto', group, allowedGroups })
-      : gatewayCandidates(modelId))
-    : [modelId]
+  const plan = providerId === 'omnimux' && hasRoutingIntent
+    ? resolveChannelPlan(modelId, { strategy: explicitStrategy ? request.strategy : 'auto', group, allowedGroups })
+    : { candidates: providerId === 'omnimux' ? gatewayCandidates(modelId) : [modelId], unresolvedGroups: [] }
+  if (hasRoutingIntent && plan.candidates.length === 0) {
+    // Fail closed: an empty plan means every requested channel was excluded or
+    // unknown. Falling back to the bare model would silently widen the pool.
+    const detail = plan.unresolvedGroups.length > 0 ? plan.unresolvedGroups.join(', ') : 'no enabled channel group'
+    throw new OmnimuxError('unknown-group', `所选渠道分组不可用于 ${modelId}（${detail}）`)
+  }
 
   const apiKey = readProviderKey(providerId, row.apiKeyEnv, row.apiKey, env)
   return {
@@ -162,8 +175,12 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
     authMode: media.authMode || 'auto',
     modelId,
     group,
-    strategy: strategy || 'auto',
-    candidates,
+    // Reported only when the caller actually asked for a policy, so a legacy
+    // request can never be mistaken for an explicit strategy choice.
+    strategy: hasRoutingIntent ? (explicitStrategy ? request.strategy : 'auto') : undefined,
+    candidates: plan.candidates,
+    // Channel ids the plan could not resolve (unknown group, or a model with no pool).
+    unresolvedGroups: plan.unresolvedGroups,
     capability,
   }
 }

@@ -26,10 +26,7 @@ import {
   X,
   AlertTriangle,
   AudioLines,
-  ShieldCheck,
-  Percent,
 } from 'lucide-react';
-import { ModelRoutingModal, type ModelRoutingValue } from './ModelRoutingModal';
 import { ModelCascadeMenu } from './ModelCascadeMenu';
 import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
 import { resolveNodeKind } from '../../../../types/materialNode';
@@ -132,7 +129,6 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
   // T04：音色选择弹窗（schema 提供音色选项时由底栏 VoiceTrigger 唤起）
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
-  const [routingModalOpen, setRoutingModalOpen] = useState(false);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
 
   const routing = (params.routing && typeof params.routing === 'object')
@@ -814,13 +810,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               execBusy={execBusy}
               onSelect={({ modelId, strategy, allowedGroups }) => {
                 handleModelChange(modelId);
-                onUpdateNodeData({
-                  params: {
-                    ...params,
-                    model: modelId,
-                    routing: { strategy, allowedGroups },
-                  },
-                });
+                // Only a modality that can carry a group persists routing; a
+                // stale selection from another node must not survive the switch.
+                const nextParams: Record<string, unknown> = { ...params, model: modelId };
+                if (allowedGroups && allowedGroups.length > 0) nextParams.routing = { strategy, allowedGroups };
+                else delete nextParams.routing;
+                onUpdateNodeData({ params: nextParams });
               }}
             />
           )}
@@ -930,29 +925,6 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           onSelect={handleSelectVoice}
         />
       ) : null}
-
-      {/* 品牌-型号-渠道策略三级选择器弹窗 */}
-      <ModelRoutingModal
-        open={routingModalOpen}
-        onCancel={() => setRoutingModalOpen(false)}
-        onConfirm={(val: ModelRoutingValue) => {
-          handleModelChange(val.modelId);
-          onUpdateNodeData({
-            params: {
-              ...params,
-              model: val.modelId,
-              routing: {
-                strategy: val.strategy,
-                allowedGroups: val.allowedGroups,
-              },
-            },
-          });
-        }}
-        currentModelId={modelValue}
-        currentRouting={routing}
-        catalog={activeCatalog}
-        materialType={materialType}
-      />
     </div>
   );
 };

@@ -101,6 +101,14 @@ export interface SubmitRequest {
   linkUrl?: string;
   /** Model id from the capability catalog; omit for hub default. */
   model?: string;
+  /**
+   * Channel routing policy for a model served by several groups. `strategy`
+   * orders the group pool ('auto' | 'stability_first' | 'cost_first') and
+   * `allowedGroups` restricts which groups may be tried; the hub fails closed
+   * when the pool cannot be honoured.
+   */
+  strategy?: 'auto' | 'stability_first' | 'cost_first';
+  allowedGroups?: string[];
   /** Absolute download destination (plugin-owned media dir). */
   dest: string;
   /** Cooperative cancel. */

@@ -93,7 +93,7 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
         && structured.some((ref) => ref.type === (key === 'speech' ? 'audio' : key) && ref.pathOrUrl === value);
       if (req.capability === 'text') {
         const request: Record<string, unknown> = { prompt: req.prompt ?? '', model: req.model, operation: req.operation };
-        for (const key of ['video', 'image', 'references', 'audioTrack', 'fileUrl', 'linkUrl'] as const) {
+        for (const key of ['video', 'image', 'references', 'audioTrack', 'fileUrl', 'linkUrl', 'strategy', 'allowedGroups'] as const) {
           if (req[key] !== undefined && !isMirror(key, req[key])) request[key] = req[key];
         }
         // The text seam is one-shot; defer execution until awaitTask, but guard now.
@@ -106,7 +106,7 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
         'image', 'video', 'references', 'audioTrack', 'duration', 'operation', 'resolution', 'aspectRatio',
         'speech', 'audio', 'voice', 'style', 'instrumental', 'speed', 'sound', 'seed', 'watermark',
         'outputFormat', 'referenceTaskType', 'generationType', 'returnLastFrame', 'webSearch',
-        'nsfwCheck', 'fileUrl', 'linkUrl', 'model', 'signal',
+        'nsfwCheck', 'fileUrl', 'linkUrl', 'model', 'strategy', 'allowedGroups', 'signal',
       ] as const) {
         if (req[key] !== undefined && !isMirror(key, req[key])) request[key] = req[key];
       }
