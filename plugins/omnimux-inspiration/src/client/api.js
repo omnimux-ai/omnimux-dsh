@@ -359,6 +359,35 @@ export function pickCoverSrc(row) {
 }
 
 /**
+ * Playable video source of a row, or `''` when it has none.
+ *
+ * `media_urls` is the single source of truth for a local record's video: the
+ * import pipeline writes the host-relative play path there, and only when a real
+ * video file was saved.
+ *
+ * `local_paths.video` is deliberately NOT read here. It holds an absolute
+ * filesystem path (`/Users/…/videos/video_ab12.mp4`), so running it through
+ * `hostMediaSrc` produces a malformed request such as
+ * `/omnimux/inspiration/media//Users/…` — the same class of bug as the
+ * hand-built `/local/media/<id>/video.mp4` route, which never existed. A value
+ * that is neither http(s) nor already a host media path yields `''`, which the
+ * caller renders as a cover instead of a permanently blank player.
+ * @param {unknown} row
+ * @returns {string}
+ */
+export function pickVideoSrc(row) {
+  if (!row || typeof row !== 'object') return ''
+  const rec = /** @type {Record<string, unknown>} */ (row)
+  const first = Array.isArray(rec.media_urls)
+    ? rec.media_urls.find((url) => typeof url === 'string' && url)
+    : ''
+  if (!first) return ''
+  if (/^https?:\/\//i.test(first)) return first
+  if (first.startsWith('/omnimux/inspiration/local/media/')) return first
+  return ''
+}
+
+/**
  * Gateway seed covers are 1×1 JPEG stubs. Treat those as empty.
  * @param {number} width
  * @param {number} height

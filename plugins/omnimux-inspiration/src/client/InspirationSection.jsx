@@ -77,6 +77,8 @@ export function InspirationSection({ t, active }) {
     handleConfirmBatchRemove,
     handleImportSuccess,
     handleItemUpdated,
+    importFailed,
+    clearImportFailed,
   } = feed
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
@@ -338,6 +340,18 @@ export function InspirationSection({ t, active }) {
       >
         {ctaStatus ? t(ctaStatus) : ''}
       </div>
+
+      {/* 后台导入结算通知：降级或失败时告知结果，点击即清除 */}
+      {importFailed ? (
+        <div
+          className="omnimux-inspiration-import-notice"
+          role="status"
+          onClick={() => clearImportFailed?.(null)}
+        >
+          {t(importFailed.key)}
+          {importFailed.detail ? `：${importFailed.detail}` : ''}
+        </div>
+      ) : null}
 
       <div ref={sentinelRef} />
 

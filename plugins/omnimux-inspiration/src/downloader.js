@@ -69,6 +69,36 @@ function isHtmlContentType(contentType) {
 }
 
 /**
+ * Whether the URL names an HLS manifest.
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isManifestUrl(url) {
+  try {
+    return /\.m3u8$/i.test(new URL(url).pathname)
+  } catch {
+    return /\.m3u8(\?|#|$)/i.test(url)
+  }
+}
+
+/**
+ * @param {unknown} contentType
+ * @returns {boolean}
+ */
+function isManifestContentType(contentType) {
+  const type = typeof contentType === 'string' ? contentType.trim().toLowerCase() : ''
+  return type.includes('mpegurl')
+}
+
+/**
+ * @param {string} url
+ * @returns {Error}
+ */
+function manifestResponseError(url) {
+  return new Error(`下载目标不是可播放的视频文件，而是 HLS/m3u8 播放列表，已中止 (${url})`)
+}
+
+/**
  * Sniff the head of a body for a document prefix.
  * @param {Buffer} buffer
  * @returns {boolean} true when the payload is a document rather than media
@@ -174,14 +204,21 @@ function createMediaSniff(url) {
 
 /**
  * Reject an obviously non-media response before anything is written: the header
- * must not declare an HTML document, and the body must not open with a document
- * marker. A 200 that carries a challenge page would otherwise be stored as a
- * playable-looking `insp_*.mp4`.
+ * must not declare an HTML document or an HLS manifest, and the body must not
+ * open with a document marker. A 200 that carries a challenge page would
+ * otherwise be stored as a playable-looking `insp_*.mp4`.
+ *
+ * A manifest is refused for a different reason: it is a valid media *playlist*,
+ * but saving it as a media file produces a player that can never render a frame.
+ * Callers turn this into the degraded import instead of persisting it.
  * @param {Response} response
  * @param {string} url
  * @returns {void}
  */
 function assertMediaResponse(response, url) {
+  if (isManifestUrl(url) || isManifestContentType(response.headers?.get?.('content-type'))) {
+    throw manifestResponseError(url)
+  }
   if (isHtmlContentType(response.headers?.get?.('content-type'))) {
     throw new Error(`下载目标返回的不是媒体内容 (content-type: text/html)，已中止 (${url})`)
   }

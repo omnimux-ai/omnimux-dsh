@@ -34,7 +34,7 @@ import { zh } from './locales.js'
 const here = fileURLToPath(new URL('.', import.meta.url))
 const sourceEntry = join(here, 'InspirationSection.jsx')
 const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
-const cacheDir = join(here, '.esbuild-cache')
+const cacheDir = join(here, '.esbuild-cache', 'section')
 
 /** aria-label the section puts on the platform dropdown (`filter.platform`). */
 const PLATFORM_LABEL = zh['filter.platform']

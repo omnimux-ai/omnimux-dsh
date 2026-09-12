@@ -67,11 +67,11 @@ export const DropdownSelect = ({ value, options, className, 'aria-label': ariaLa
 
 export const ConfirmModal = ({ children, ...rest }) => h('div', rest, children)
 
-export const Badge = ({ children }) => h('span', null, children)
+export const Badge = ({ children, variant, ...rest }) => h('span', { 'data-variant': variant, ...rest }, children)
 
 export const IconButton = ({ children, ...rest }) => h('button', { type: 'button', ...rest }, children)
 
-export const MediaCard = ({ children, ...rest }) => h('div', rest, children)
+export const MediaCard = ({ children, coverNode, ...rest }) => h('div', rest, coverNode, children)
 
 export const InputField = (props) => h('input', {
   'aria-label': props['aria-label'],

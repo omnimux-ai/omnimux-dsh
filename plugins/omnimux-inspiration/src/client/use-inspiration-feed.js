@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { whenAuthReady } from './api.js'
+import { getLocalInspiration, whenAuthReady } from './api.js'
+import { createImportPoller } from './import-poller.js'
+import { isImportingRow } from './import-status.js'
 import {
   applyCachedPage,
   cacheKeyOf,
@@ -289,6 +291,58 @@ function useFeedData(options) {
 }
 
 /**
+ * Watch background imports until they settle.
+ *
+ * Two ways a row enters the watch set: the 202 that started the job, and any row
+ * a feed load reports as still importing. The second is what makes the feature
+ * survive a reload — the page rebuilds its watch set from persisted rows alone,
+ * so a job started before the tab was closed is still picked up.
+ *
+ * When a row settles the list is patched in place by id. A full reload would
+ * work too, but it would drop the user's scroll position and page for an event
+ * that changes exactly one card. A `404` means the user deleted the row, so it is
+ * dropped from the grid instead of being left to poll a gone id forever.
+ * @param {{ setItems: Function }} options
+ */
+function useImportWatch(options) {
+  const { setItems } = options
+  const pollerRef = useRef(null)
+  const setItemsRef = useRef(setItems)
+  const [importFailed, setImportFailed] = useState(null)
+
+  useEffect(() => {
+    setItemsRef.current = setItems
+  }, [setItems])
+
+  if (pollerRef.current === null) {
+    pollerRef.current = createImportPoller({
+      deps: {
+        fetchItem: (id) => getLocalInspiration(id),
+        onItem: (item) => {
+          setItemsRef.current((prev) => updateItemInList(prev, item))
+        },
+        onRemove: (id) => {
+          setItemsRef.current((prev) => filterOutItemsByIds(prev, [id]))
+        },
+        onDegraded: () => setImportFailed({ key: 'add.degradedNotice' }),
+        onFailed: (item) => {
+          if (item) setItemsRef.current((prev) => updateItemInList(prev, item))
+          setImportFailed({ key: 'add.status.failed', detail: item?.import_error || '' })
+        },
+      },
+    })
+  }
+
+  useEffect(() => {
+    const poller = pollerRef.current
+    poller.start()
+    return () => poller.dispose()
+  }, [])
+
+  return { pollerRef, importFailed, setImportFailed }
+}
+
+/**
  * Pagination, tab/filter loading, selection and replicate busy state
  * for the inspiration grid. Extracted from InspirationSection.
  */
@@ -304,18 +358,26 @@ export function useInspirationFeed({ active }) {
 
   const replicate = useReplicateToChat()
   const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems })
+  const watch = useImportWatch({ setItems })
 
   useSentinelObserver({ sentinelRef, hasMore, loading, loadingMore, loadData })
+
+  // Rebuild the watch set from whatever the feed actually holds, so a page that
+  // was closed while an import ran resumes watching it on its very first load.
+  useEffect(() => {
+    watch.pollerRef.current?.sync(items)
+  }, [items, watch.pollerRef])
 
   const handleImportSuccess = useCallback((newItem) => {
     setItems((prev) => [newItem, ...prev])
     setSelectedItem(newItem)
+    if (isImportingRow(newItem)) watch.pollerRef.current?.track([newItem.id])
     const plat = (newItem?.source_platform || newItem?.platform || '').trim().toLowerCase()
     if (plat && plat !== 'unknown') {
       const canonical = plat === 'twitter' ? 'x' : plat
       setImportedPlatforms((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]))
     }
-  }, [setItems])
+  }, [setItems, watch.pollerRef])
 
   const handleItemUpdated = useCallback((updatedItem) => {
     setItems((prev) => updateItemInList(prev, updatedItem))
@@ -381,6 +443,8 @@ export function useInspirationFeed({ active }) {
     ...replicate,
     handleImportSuccess,
     handleItemUpdated,
+    importFailed: watch.importFailed,
+    clearImportFailed: watch.setImportFailed,
     ...selection,
   }
 }

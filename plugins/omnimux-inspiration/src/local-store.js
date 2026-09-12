@@ -45,6 +45,10 @@ export class InspirationError extends Error {
  * @property {string} [published_at]
  * @property {string} [favorited_at]
  * @property {{ lang?: string, text?: string, segments?: Array<{ id: string, text: string }> }} [script_translation]
+ * @property {'importing' | 'ready' | 'degraded' | 'failed'} [import_status] absent means `ready` (legacy rows)
+ * @property {'resolving' | 'downloading' | 'analyzing' | 'persisting' | null} [import_stage] phase a running import is in
+ * @property {string | null} [import_error] failure detail, set only for `failed`
+ * @property {string} [import_started_at] ISO timestamp the running import began at
  * @property {string} created_at
  * @property {string} updated_at
  */
@@ -104,31 +108,96 @@ function buildRow(record, identity = {}) {
     published_at: record.published_at || '',
     favorited_at: record.favorited_at || (record.is_favorite ? now : ''),
     script_translation: record.script_translation,
+    import_status: record.import_status || 'ready',
+    import_stage: record.import_stage ?? null,
+    import_error: record.import_error ?? null,
+    import_started_at: record.import_started_at,
     created_at: identity.created_at || record.created_at || now,
     updated_at: now,
   }
 }
 
 /**
- * Recycle media files of a replaced row that the replacement does not reference,
- * so re-importing never leaves orphaned downloads behind.
+ * Media files of a replaced row that the replacement does not reference, so
+ * re-importing never leaves orphaned downloads behind.
+ *
+ * A path the new row still points at is never recycled: the upgrade path passes
+ * the same `local_paths` through, and trashing it would delete live media.
  * @param {LocalInspirationRecord} previous
  * @param {LocalInspirationRecord} next
+ * @returns {string[]}
  */
-async function trashReplacedMedia(previous, next) {
+function orphanedMedia(previous, next) {
   const kept = new Set(
     [next.local_paths?.video, next.local_paths?.cover].filter(Boolean).map(String),
   )
-  for (const filePath of [previous.local_paths?.video, previous.local_paths?.cover]) {
-    if (!filePath) continue
-    const target = String(filePath)
-    if (kept.has(target)) continue
-    await moveToTrash(target)
-  }
+  return [previous.local_paths?.video, previous.local_paths?.cover]
+    .filter(Boolean)
+    .map(String)
+    .filter((filePath) => !kept.has(filePath))
 }
 
 export function createLocalStore(opts = {}) {
   const paths = opts.paths ?? resolveInspirationPaths()
+
+  /**
+   * Tail of the store's exclusive-work chain.
+   *
+   * Serialization scope: operations that mutate the library *across an await*
+   * (`replace`, which recycles the previous row's media before answering). Two
+   * background imports finishing at the same moment used to interleave their
+   * read-modify-write windows and lose one another's rows; chaining them keeps
+   * the window between `readAll()` and `writeAll()` free of other completions.
+   *
+   * Single-tick mutations (`add`, `update`, `delete`, `deleteBatch`) need no
+   * chain: Node runs each of them from `readAll()` to `writeAll()` without
+   * yielding, so they are already atomic with respect to every other operation.
+   * Chaining them too would mean making them asynchronous, which would change the
+   * call contract for every existing caller that consumes a returned row.
+   * @type {Promise<unknown>}
+   */
+  let exclusiveTail = Promise.resolve()
+
+  /**
+   * @template T
+   * @param {() => T | Promise<T>} work
+   * @returns {Promise<T>}
+   */
+  function runExclusive(work) {
+    const result = exclusiveTail.then(() => work())
+    exclusiveTail = result.then(() => undefined, () => undefined)
+    return result
+  }
+
+  /**
+   * Tail of the store's media-recycling chain.
+   *
+   * Trashing is deliberately off the mutation path — it is a filesystem move
+   * whose outcome cannot change a caller's return value — but it is not
+   * fire-and-forget either: the moves are serialized and their tail is reachable
+   * through `settled()`, so "the row is gone" and "its files are gone" stay
+   * distinguishable facts instead of a race.
+   * @type {Promise<unknown>}
+   */
+  let trashTail = Promise.resolve()
+
+  /**
+   * Recycle media off the request path.
+   * @param {string[]} filePaths
+   */
+  function queueTrash(filePaths) {
+    const pending = filePaths.filter(Boolean).map(String)
+    if (pending.length === 0) return
+    trashTail = trashTail.then(async () => {
+      for (const filePath of pending) {
+        try {
+          await moveToTrash(filePath)
+        } catch (err) {
+          console.error(`Failed to move ${filePath} to trash:`, err)
+        }
+      }
+    })
+  }
 
   function ensureDirs() {
     if (!existsSync(paths.dir)) mkdirSync(paths.dir, { recursive: true })
@@ -164,6 +233,29 @@ export function createLocalStore(opts = {}) {
 
   return {
     paths,
+
+    /**
+     * Every stored row, unfiltered and unsorted.
+     *
+     * Exposed for the read-side import sweep, which has to look at rows a query
+     * would have filtered away (a stale row is found by status, not by any of the
+     * list filters). Callers that want a page use `list()`.
+     * @returns {LocalInspirationRecord[]}
+     */
+    readAll,
+
+    /**
+     * Resolve once every queued media move has finished.
+     *
+     * Callers that only need the library to be consistent do not have to await
+     * this: `delete` and `replace` answer as soon as the row change is durable.
+     * It exists for the callers that also assert on the filesystem, and for
+     * shutdown paths that want to let the remaining moves drain.
+     * @returns {Promise<void>}
+     */
+    settled() {
+      return trashTail.then(() => undefined, () => undefined)
+    },
 
     /**
      * Read all items and extract unique valid platforms with their item counts.
@@ -387,21 +479,32 @@ export function createLocalStore(opts = {}) {
      * @param {Partial<LocalInspirationRecord> & { title?: string }} record
      * @returns {Promise<LocalInspirationRecord | null>} the new row, or null when the id is gone
      */
-    async replace(id, record) {
-      const items = readAll()
-      const index = items.findIndex((item) => item.id === id)
-      if (index === -1) return null
-      const previous = items[index]
-      const row = buildRow({
-        ...record,
-        is_favorite: record.is_favorite ?? previous.is_favorite,
-        favorited_at: record.favorited_at ?? previous.favorited_at,
-        tags: Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : (previous.tags || []),
-      }, { id: previous.id, created_at: previous.created_at })
-      items[index] = row
-      writeAll(items)
-      await trashReplacedMedia(previous, row)
-      return row
+    replace(id, record) {
+      const outcome = runExclusive(() => {
+        const items = readAll()
+        const index = items.findIndex((item) => item.id === id)
+        if (index === -1) return { row: null, trash: Promise.resolve() }
+        const previous = items[index]
+        const row = buildRow({
+          ...record,
+          is_favorite: record.is_favorite ?? previous.is_favorite,
+          favorited_at: record.favorited_at ?? previous.favorited_at,
+          tags: Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : (previous.tags || []),
+        }, { id: previous.id, created_at: previous.created_at })
+        items[index] = row
+        writeAll(items)
+        queueTrash(orphanedMedia(previous, row))
+        // Snapshot the queue tail inside the lock, so the answer covers the
+        // recycling this replacement caused and not a later caller's.
+        return { row, trash: trashTail }
+      })
+      // Resolves once the row change *and* its media recycling are done, which is
+      // the contract `replace` has always had. Returning earlier would make the
+      // library consistent while the filesystem still held the old files.
+      return outcome.then(async (settled) => {
+        await settled.trash
+        return settled.row
+      })
     },
 
     /**
@@ -432,6 +535,12 @@ export function createLocalStore(opts = {}) {
 
     /**
      * Delete single item and move its associated media files to the OS system trash.
+     *
+     * The row is removed and the library rewritten in one tick, so a concurrent
+     * import completion cannot read the pre-delete library and write the row back
+     * from under the user. The media moves are queued behind that critical
+     * section and awaited before answering, which is what the previous
+     * `await moveToTrash()` sequence did.
      * @param {string} id
      */
     async delete(id) {
@@ -439,14 +548,9 @@ export function createLocalStore(opts = {}) {
       const index = items.findIndex((item) => item.id === id)
       if (index === -1) throw new InspirationError('not-found', `inspiration ${id} not found`, 404)
       const [removed] = items.splice(index, 1)
-
-      // Move associated local media files to trash
-      if (removed.local_paths) {
-        if (removed.local_paths.video) await moveToTrash(String(removed.local_paths.video))
-        if (removed.local_paths.cover) await moveToTrash(String(removed.local_paths.cover))
-      }
-
       writeAll(items)
+      queueTrash([removed.local_paths?.video, removed.local_paths?.cover])
+      await this.settled()
       return removed
     },
 
@@ -464,16 +568,14 @@ export function createLocalStore(opts = {}) {
       for (const item of items) {
         if (idSet.has(item.id)) {
           removed.push(item)
-          if (item.local_paths) {
-            if (item.local_paths.video) await moveToTrash(String(item.local_paths.video))
-            if (item.local_paths.cover) await moveToTrash(String(item.local_paths.cover))
-          }
         } else {
           remaining.push(item)
         }
       }
 
       writeAll(remaining)
+      queueTrash(removed.flatMap((item) => [item.local_paths?.video, item.local_paths?.cover]))
+      await this.settled()
       return { deleted: removed.map((it) => it.id), count: removed.length }
     },
 

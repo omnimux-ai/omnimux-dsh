@@ -42,9 +42,20 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
         url: url.trim(),
         tags: tagList,
         auto_analyze: autoAnalyze,
+        // Opt in to the background job: the request answers 202 with a
+        // placeholder row instead of holding the dialog open for the download and
+        // the AI breakdown. The grid then polls that row to completion.
+        background: true,
         ...(force ? { force: true } : {}),
       })
       if (res.ok && res.body?.data) {
+        if (res.status === 202) {
+          // The job runs on the server, so the dialog has nothing left to do
+          // except hand the placeholder over and close. It uses the same notice
+          // carrier as the degraded path so the item still reaches the list.
+          setNotice({ item: res.body.data, tone: 'background', messageKey: 'add.importing' })
+          return
+        }
         if (res.body.media_degraded) {
           // Stored as a link/image: the video was not obtained, and the user must
           // be told instead of the dialog closing as if the download succeeded.
@@ -79,6 +90,9 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
   }
 
   const degraded = notice?.tone === 'degraded'
+  // A background import has nothing more to ask the user, so its notice is just
+  // an acknowledgement with a single way out — like the degraded notice.
+  const acknowledged = degraded || notice?.tone === 'background'
   const inputsDisabled = loading || Boolean(notice)
 
   return (
@@ -88,7 +102,7 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
       title={t('add.dialogTitle')}
       closeLabel={t('close')}
       footer={(
-        degraded ? (
+        acknowledged ? (
           <Button variant="primary" onClick={finishClose}>{t('close')}</Button>
         ) : (
           <>
