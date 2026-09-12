@@ -18,14 +18,14 @@ export const PICKER_ROOT_CLASSES = Object.freeze(['.omx-product-pick', '.omx-ass
  */
 export const PICKER_DIALOG_CSS = `
 .${PICKER_DIALOG_CLASS} {
-  --omx-pick-nav-w: 148px;      /* 左侧分类栏宽度，与 .omx-*-pick__nav 保持一致 */
-  --omx-pick-main-pad: 16px;    /* 正文区左内边距 .omx-*-pick__main padding-left */
-  --omx-pick-card-w: 264px;     /* 单张卡片目标宽度 */
-  --omx-pick-gap: 16px;         /* 网格列间距 .omx-*-pick__grid gap */
-  --omx-pick-body-pad: 48px;    /* 底座正文容器左右内边距 24×2 */
+  --omnimux-pick-nav-w: 148px;      /* 左侧分类栏宽度，与 .omx-*-pick__nav 保持一致 */
+  --omnimux-pick-main-pad: 16px;    /* 正文区左内边距 .omx-*-pick__main padding-left */
+  --omnimux-pick-card-w: 264px;     /* 单张卡片目标宽度 */
+  --omnimux-pick-gap: 16px;         /* 网格列间距 .omx-*-pick__grid gap */
+  --omnimux-pick-body-pad: 48px;    /* 底座正文容器左右内边距 24×2 */
   width: min(92vw, calc(
-    var(--omx-pick-nav-w) + var(--omx-pick-main-pad)
-    + (2 * var(--omx-pick-card-w)) + var(--omx-pick-gap) + var(--omx-pick-body-pad)
+    var(--omnimux-pick-nav-w) + var(--omnimux-pick-main-pad)
+    + (2 * var(--omnimux-pick-card-w)) + var(--omnimux-pick-gap) + var(--omnimux-pick-body-pad)
   )) !important;
   max-width: 92vw !important;
 }

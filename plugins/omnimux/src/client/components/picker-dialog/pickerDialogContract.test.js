@@ -15,11 +15,11 @@ function varPx(name) {
 }
 
 test('contract width derives from the layout factors instead of a magic number', () => {
-  const nav = varPx('--omx-pick-nav-w');
-  const mainPad = varPx('--omx-pick-main-pad');
-  const card = varPx('--omx-pick-card-w');
-  const gap = varPx('--omx-pick-gap');
-  const bodyPad = varPx('--omx-pick-body-pad');
+  const nav = varPx('--omnimux-pick-nav-w');
+  const mainPad = varPx('--omnimux-pick-main-pad');
+  const card = varPx('--omnimux-pick-card-w');
+  const gap = varPx('--omnimux-pick-gap');
+  const bodyPad = varPx('--omnimux-pick-body-pad');
 
   // 分类栏 + 正文左内边距 + 两列卡片 + 列间距 + 底座正文左右内边距
   const expected = nav + mainPad + 2 * card + gap + bodyPad;
@@ -34,7 +34,7 @@ test('contract width derives from the layout factors instead of a magic number',
     !/width:\s*\d+px\s*!important/.test(PICKER_DIALOG_CSS),
     'no hardcoded pixel width remains',
   );
-  for (const name of ['--omx-pick-nav-w', '--omx-pick-main-pad', '--omx-pick-card-w', '--omx-pick-gap', '--omx-pick-body-pad']) {
+  for (const name of ['--omnimux-pick-nav-w', '--omnimux-pick-main-pad', '--omnimux-pick-card-w', '--omnimux-pick-gap', '--omnimux-pick-body-pad']) {
     assert.ok(PICKER_DIALOG_CSS.includes(`var(${name})`), `width must consume ${name}`);
   }
 });
