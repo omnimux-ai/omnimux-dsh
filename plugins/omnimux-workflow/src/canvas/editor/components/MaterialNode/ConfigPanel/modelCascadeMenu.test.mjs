@@ -81,6 +81,15 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(cascadeSrc, /const handlePopoverLeave = useCallback\(\(\) => \{/);
   });
 
+  it('renders the popover on an opaque canvas surface inside the canvas theme scope', () => {
+    // 画布主题 token 作用域在 .wf-canvas-root；portal 到 body 会退回宿主的半透明面，
+    // 浮层就会透出底下的画布内容（用户报的缺陷）。
+    assert.match(cascadeSrc, /anchor\?\.closest\('\.wf-canvas-root'\)/);
+    assert.match(cascadeSrc, /canvasPortalHost\(triggerRef\.current\)/);
+    assert.doesNotMatch(cascadeSrc, /backdropFilter/, '不透明面板不再需要背景模糊');
+    assert.match(cascadeSrc, /var\(--wb-surface-elevated, var\(--dsw-alias-bg-elevated\)\)/);
+  });
+
   it('renders the catalog display fields, not raw ids', () => {
     // CapabilityModelItem 的显示契约是 label / subtitle；读不存在的 name 会退回裸 id。
     assert.match(cascadeSrc, /typeof row\.label === 'string' && row\.label \? row\.label : item\.id/);
