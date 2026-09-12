@@ -11,8 +11,64 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import * as nodeModule from 'node:module';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+/**
+ * 宿主自带包（`@deepseek-ai/*`）只存在于桌面 App 的 `app.asar` 内：Profile 不落地它们，
+ * 旧的安装级软链树也已按「受管源必须是物理树」原则清理。普通 Node 从 Profile 目录往上找
+ * 必然解析不到，但预检要在真实 Profile 树上演练 `apply(ctx)`，于是这里按官方
+ * `module.registerHooks()` 在**解析不到时**把它们重定向到一个最小替身。
+ *
+ * 只在该包确实解析不到时介入，因此不会掩盖任何真实可解析的依赖；替身只保证签名
+ * （`defineTool` 返回带 `name` 与 `output.render` 的工具对象），不做真包的 schema 编译与参数校验。
+ */
+const HOST_PACKAGE_PREFIX = '@deepseek-ai/';
+
+const HOST_PACKAGE_STUB_SOURCE = [
+  'export function defineTool(options) {',
+  '  const output = options && options.output ? options.output : {};',
+  '  return {',
+  '    name: options && options.name,',
+  '    description: options && options.description,',
+  '    parameters: options && options.parameters,',
+  '    output: {',
+  '      schema: output.schema,',
+  '      render: typeof output.render === "function" ? output.render : () => "",',
+  '    },',
+  '  };',
+  '}',
+  'export default { defineTool };',
+].join('\n');
+
+const HOST_PACKAGE_STUB_URL = `data:text/javascript;charset=utf-8,${encodeURIComponent(HOST_PACKAGE_STUB_SOURCE)}`;
+
+let hostStubHits = 0;
+
+function installHostPackageStub() {
+  if (typeof nodeModule.registerHooks !== 'function') {
+    console.warn('⚠ [Pre-flight] 当前 Node 不支持 module.registerHooks，宿主包缺失的插件仍会加载失败');
+    return;
+  }
+  nodeModule.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      try {
+        return nextResolve(specifier, context);
+      } catch (error) {
+        if (typeof specifier === 'string'
+          && specifier.startsWith(HOST_PACKAGE_PREFIX)
+          && error?.code === 'ERR_MODULE_NOT_FOUND') {
+          hostStubHits += 1;
+          return { url: HOST_PACKAGE_STUB_URL, shortCircuit: true };
+        }
+        throw error;
+      }
+    },
+  });
+}
+
+installHostPackageStub();
 
 const targetProfile = process.argv[2] ? resolve(process.argv[2]) : null;
 
@@ -28,7 +84,7 @@ if (!existsSync(pkgPath)) {
 }
 
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const plugins = Object.keys(pkg.dependencies || {}).filter(k => k.startsWith('omnimux'));
+const plugins = Object.keys(pkg.dependencies || {}).filter((k) => k.startsWith('omnimux'));
 
 console.log(`\n🚀 [Pre-flight] 启动 Profile 物化演练校验: ${targetProfile}`);
 console.log(`ℹ 检测到待预检物化插件 (${plugins.length} 个): ${plugins.join(', ')}`);
@@ -123,10 +179,14 @@ for (const name of plugins) {
   }
 }
 
+const stubNote = hostStubHits > 0
+  ? `；其中 ${hostStubHits} 次宿主包解析使用最小替身（仅保签名）`
+  : '';
+
 if (totalErrors > 0) {
-  console.error(`\n❌ [Pre-flight] 物化演练预检失败: 发现 ${totalErrors} 个异常！已阻断提交并触发回滚。`);
+  console.error(`\n❌ [Pre-flight] 物化演练预检失败: 发现 ${totalErrors} 个异常！已阻断提交并触发回滚${stubNote}。`);
   process.exit(1);
 }
 
-console.log(`\n✔ [Pre-flight] 物化演练预检 100% 通过: 全部 ${plugins.length} 个插件加载正常，共核验 ${totalToolsVerified} 个工具契约`);
+console.log(`\n✔ [Pre-flight] 物化演练预检 100% 通过: 全部 ${plugins.length} 个插件加载正常，共核验 ${totalToolsVerified} 个工具契约${stubNote}`);
 process.exit(0);

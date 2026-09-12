@@ -16,7 +16,7 @@ subsystem: "global"
 
 ## 开发与交付顺序
 
-隔离 worktree 中的相关自动化测试、静态检查与独立评审 → PR required CI / Merge Queue → 合入 `main` → 按变更面物化 Dev、运行与验收。**不存在合并前独立 App/Host 测试环境，不得换名保留。** 自动化测试可使用进程、临时目录和合成 fixture；这些不是独立部署环境，也不证明 Dev 通过。物化（sync）成功不等于交付完成：凡涉及插件物化或 Host 改动的任务，必须在物化中通过内置启动演练预检（`verify-profile-preflight.mjs`）并取得 Host 真实运行与探活证据（如 HTTP 探活或 `verify:live` / CDP 探针），拿不到 Host 正常运行证据，不得在交接日志中宣布收尾。
+隔离 worktree 中的相关自动化测试、静态检查与独立评审 → PR required CI / Merge Queue → 合入 `main` → 按变更面物化 Dev、运行与验收。**不存在合并前独立 App/Host 测试环境，不得换名保留。** 自动化测试可使用进程、临时目录和合成 fixture；这些不是独立部署环境，也不证明 Dev 通过。物化（sync）成功不等于交付完成：凡涉及插件物化或 Host 改动的任务，必须在物化中通过内置启动演练预检（`verify-profile-preflight.mjs`）并取得 Host 真实运行与探活证据（如 HTTP 探活或 `verify:live` / CDP 探针），拿不到 Host 正常运行证据，不得在交接日志中宣布收尾。预检以普通 Node 运行，而宿主自带包（`@deepseek-ai/*`）只存在于桌面 App 的 `app.asar` 内：预检在解析不到这些包时按 `module.registerHooks()` 注入只保签名的最小替身，并在摘要中如实标注替身介入次数。
 
 | 位置 | 用途 | 载体 | 代码形态 |
 |---|---|---|---|
