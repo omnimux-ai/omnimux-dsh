@@ -145,7 +145,8 @@
       "priority": "P1",
       "gatewayIds": ["gpt-4o-mini-tts"],
       "requiredInAuto": false,
-      "note": "No listed audio operation; registration is not a serving claim."
+      "canvasExcluded": true,
+      "note": "No listed audio operation; registration is not a serving claim. canvasExcluded: draft+stub 无 listed 操作，不得出现在画布白名单里。"
     }
   ]
 }

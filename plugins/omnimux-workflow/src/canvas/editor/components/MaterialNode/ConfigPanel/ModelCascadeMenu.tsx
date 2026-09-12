@@ -21,8 +21,8 @@ import { ModelBrandIcon } from '../../../../ui/ModelBrandIcon';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import {
   formatBillingLabel,
-  formatDiscountLabel,
-  formatPointsLabel,
+  formatPriceChip,
+  formatPriceLabel,
   getModelChannelGroups,
   parseModelAndGroup,
   resolveShortModelName,
@@ -200,9 +200,13 @@ const ChannelRow: React.FC<{
   disabled?: boolean;
   onToggle: () => void;
 }> = ({ group, checked, disabled = false, onToggle }) => {
-  const discount = formatDiscountLabel(group.pricing?.discountRate);
+  const priceChip = formatPriceChip(group.pricing?.priceRatio ?? group.pricing?.discountRate);
+  const chipIsMarkup = typeof group.pricing?.priceRatio === 'number'
+    ? group.pricing.priceRatio > 1
+    : typeof group.pricing?.discountRate === 'number' && group.pricing.discountRate > 1;
   const billing = formatBillingLabel(group.pricing?.billingMode);
-  const stability = group.sla?.stability24h ?? 100;
+  // 网关不公布 SLA 的分组照实显示「暂无数据」，不用默认 100% 冒充。
+  const stability = group.sla?.stability24h;
   const waitSec = group.sla?.avgWaitTimeSec;
 
   return (
@@ -236,15 +240,21 @@ const ChannelRow: React.FC<{
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>{group.label}</span>
           <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-            {formatPointsLabel(group.pricing?.pointsEstimate)}
+            {formatPriceLabel(group.pricing)}
           </span>
-          {discount ? <Chip tone="danger">{discount}</Chip> : null}
+          {priceChip ? <Chip tone={chipIsMarkup ? 'muted' : 'danger'}>{priceChip}</Chip> : null}
           {group.badge ? <Chip>{group.badge}</Chip> : null}
           {billing ? <Chip>{billing}</Chip> : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--dsw-alias-label-secondary)' }}>
-          <StabilityDotBar rate={stability} />
-          <span>24h 稳定率 {stability}%</span>
+          {typeof stability === 'number' ? (
+            <>
+              <StabilityDotBar rate={stability} />
+              <span>24h 稳定率 {stability}%</span>
+            </>
+          ) : (
+            <span>稳定性暂无数据</span>
+          )}
           {typeof waitSec === 'number' && waitSec > 0 ? <span>约{Math.round(waitSec / 60)}min</span> : null}
         </div>
       </div>

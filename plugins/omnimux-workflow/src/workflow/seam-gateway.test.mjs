@@ -762,7 +762,8 @@ test('capabilities：hub 目录按画布白名单投影，不继承画布外默�
       'gpt-5.5',
     ]);
     assert.ok(caps.body.audio.some((row) => row.id === 'suno'));
-    assert.ok(caps.body.audio.some((row) => row.id === 'gpt-4o-mini-tts'));
+    // 白名单外的模型不得被投影进来：gpt-4o-mini-tts 只有 draft+stub，已在 manifest 标记 canvasExcluded。
+    assert.equal(caps.body.audio.some((row) => row.id === 'gpt-4o-mini-tts'), false);
   } finally {
     h.dispose();
     rmSync(h.root, { recursive: true, force: true });

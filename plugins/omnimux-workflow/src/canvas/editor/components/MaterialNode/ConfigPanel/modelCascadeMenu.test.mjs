@@ -28,9 +28,12 @@ describe('ModelCascadeMenu source contracts', () => {
   });
 
   it('uses derived chips so the discount is never rendered twice', () => {
-    assert.match(cascadeSrc, /formatDiscountLabel/);
+    assert.match(cascadeSrc, /formatPriceChip/);
     assert.match(cascadeSrc, /formatBillingLabel/);
-    assert.match(cascadeSrc, /formatPointsLabel/);
+    assert.match(cascadeSrc, /formatPriceLabel/);
+    // 无 SLA 的分组显示「暂无数据」，不用默认 100% 冒充。
+    assert.match(cascadeSrc, /稳定性暂无数据/);
+    assert.doesNotMatch(cascadeSrc, /group\.sla\?\.stability24h \?\? 100/);
     assert.match(configSrc, /ModelCascadeMenu/);
   });
 

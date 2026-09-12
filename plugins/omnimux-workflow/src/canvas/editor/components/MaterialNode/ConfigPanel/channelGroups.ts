@@ -21,6 +21,8 @@ export interface ChannelGroupItem {
     /** Numeric estimate; `null` when the parameter set has no published price. */
     pointsEstimate: number | null;
     discountRate?: number;
+    /** 网关真实分组倍率（相对官方组的相对价），SLA 缺失时的价格口径。 */
+    priceRatio?: number | null;
     billingMode?: string;
   };
   sla?: {
@@ -236,6 +238,258 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       enabled: true,
     },
   ],
+  // ---- 以下 8 个模型的渠道分组来自网关公开定价元数据 ----
+  // 来源：GET https://api.omnimux.ai/api/pricing（公开，无需鉴权）
+  // 取数：model.enable_groups（去掉 auto）+ group_ratio + usable_group 中文名
+  // 说明：pointsEstimate 置空（网关不提供积分口径），价格以 priceRatio 表示；
+  //      SLA（24h 稳定率 / 等待时间）该接口不提供，故整体缺省，UI 显示「暂无数据」。
+  'gemini-3.8-flash': [
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+    {
+      id: 'cheap',
+      label: '特惠版',
+      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_token' },
+      wireGroup: 'cheap',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'gemini-cheap',
+      label: 'Gemini 特惠版',
+      pricing: { pointsEstimate: null, priceRatio: 0.3, billingMode: 'per_token' },
+      wireGroup: 'gemini-cheap',
+      enabled: true,
+    },
+  ],
+  'gpt-5.5': [
+    {
+      id: 'codex-pro-open',
+      label: 'Codex Pro',
+      pricing: { pointsEstimate: null, priceRatio: 0.857143, billingMode: 'per_token' },
+      wireGroup: 'codex-pro-open',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+  ],
+  'gpt-image-2.5': [
+    {
+      id: 'cheap',
+      label: '特惠版',
+      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_task' },
+      wireGroup: 'cheap',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+  ],
+  'seedance-2-0-mini': [
+    {
+      id: 'minimax-pro',
+      label: '海螺 MiniMax 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
+      wireGroup: 'minimax-pro',
+      enabled: true,
+    },
+    {
+      id: 'sd-standard',
+      label: 'sd-standard',
+      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
+      wireGroup: 'sd-standard',
+      enabled: true,
+    },
+    {
+      id: 'sd-pro',
+      label: 'sd-pro',
+      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
+      wireGroup: 'sd-pro',
+      enabled: true,
+    },
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'kling-pro',
+      label: '可灵 Kling 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
+      wireGroup: 'kling-pro',
+      enabled: true,
+    },
+    {
+      id: 'kling-standard',
+      label: '可灵 Kling 标准版',
+      pricing: { pointsEstimate: null, priceRatio: 0.85, billingMode: 'per_task' },
+      wireGroup: 'kling-standard',
+      enabled: true,
+    },
+  ],
+  'wan-3.0': [
+    {
+      id: 'cheap',
+      label: '特惠版',
+      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_task' },
+      wireGroup: 'cheap',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'kling-pro',
+      label: '可灵 Kling 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
+      wireGroup: 'kling-pro',
+      enabled: true,
+    },
+    {
+      id: 'minimax-pro',
+      label: '海螺 MiniMax 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
+      wireGroup: 'minimax-pro',
+      enabled: true,
+    },
+    {
+      id: 'sd-pro',
+      label: 'sd-pro',
+      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
+      wireGroup: 'sd-pro',
+      enabled: true,
+    },
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+  ],
+  'grok-imagine-video-1-5': [
+    {
+      id: 'minimax-pro',
+      label: '海螺 MiniMax 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
+      wireGroup: 'minimax-pro',
+      enabled: true,
+    },
+    {
+      id: 'sd-pro',
+      label: 'sd-pro',
+      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
+      wireGroup: 'sd-pro',
+      enabled: true,
+    },
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'kling-pro',
+      label: '可灵 Kling 进阶版',
+      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
+      wireGroup: 'kling-pro',
+      enabled: true,
+    },
+  ],
+  'seed-audio-1.0': [
+    {
+      id: 'default',
+      label: '标准版',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'official',
+      label: '官转版',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
+      wireGroup: 'official',
+      enabled: true,
+    },
+  ],
+  'suno': [
+    {
+      id: 'default',
+      label: '标准版 · default',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'default',
+      enabled: true,
+    },
+    {
+      id: 'kling-standard',
+      label: '可灵 Kling 标准版',
+      pricing: { pointsEstimate: null, priceRatio: 0.85, billingMode: 'per_task' },
+      wireGroup: 'kling-standard',
+      enabled: true,
+    },
+    {
+      id: 'sd-standard',
+      label: 'sd-standard',
+      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
+      wireGroup: 'sd-standard',
+      enabled: true,
+    },
+    {
+      id: 'standard',
+      label: '标准版 · standard',
+      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
+      wireGroup: 'standard',
+      enabled: true,
+    },
+  ],
 }
 
 export function parseModelAndGroup(input?: string): { modelId: string; group: string | null } {
@@ -261,10 +515,20 @@ export function getModelChannelGroups(modelId: string): ChannelGroupItem[] {
   return MODEL_CHANNEL_GROUPS[canonical] ? [...MODEL_CHANNEL_GROUPS[canonical]] : [];
 }
 
-/** `0.52` → `5.2折`; undiscounted groups produce no chip. */
-export function formatDiscountLabel(discountRate?: number): string {
-  if (typeof discountRate !== 'number' || !Number.isFinite(discountRate) || discountRate >= 1) return '';
-  return `${Math.round(discountRate * 100) / 10}折`;
+/** `0.52` → `5.2折`；`1.43` → `×1.43`（加价组）；1 或缺失不出 chip。 */
+export function formatPriceChip(rate?: number | null): string {
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate === 1) return '';
+  if (rate < 1) return `${Math.round(rate * 100) / 10}折`;
+  return `×${Math.round(rate * 100) / 100}`;
+}
+
+/** 价格展示：有积分给积分，只有倍率给倍率，两者都无则明确说明不报价。 */
+export function formatPriceLabel(pricing?: { pointsEstimate?: number | null, priceRatio?: number | null }): string {
+  const points = pricing?.pointsEstimate;
+  if (typeof points === 'number' && Number.isFinite(points)) return `≈${points} 积分`;
+  const ratio = pricing?.priceRatio;
+  if (typeof ratio === 'number' && Number.isFinite(ratio)) return `×${Math.round(ratio * 100) / 100} 倍率`;
+  return '当前参数不支持报价';
 }
 
 /** Billing chip derived from the same field the hub ranks on. */

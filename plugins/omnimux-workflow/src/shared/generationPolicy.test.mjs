@@ -55,7 +55,9 @@ test('audio policy admits listed seed-audio-1.0 as the canvas default (Issue #74
     text: [], image: [], video: [], audio: models.map(({ id, label }) => ({ id, label })),
     defaults: { audio: 'suno' } };
   const view = projectCanvasCatalog(raw);
-  assert.deepEqual(view.audio.map((m) => m.id), ['seed-audio-1.0', 'suno', 'gpt-4o-mini-tts']);
+  // gpt-4o-mini-tts 在中枢只有 draft+stub（无 listed 操作），不得进入画布白名单。
+  assert.deepEqual(view.audio.map((m) => m.id), ['seed-audio-1.0', 'suno']);
+  assert.ok(!view.audio.some((m) => m.id === 'gpt-4o-mini-tts'), '未列出的 stub 模型不得出现在画布');
   assert.equal(view.defaults.audio, 'seed-audio-1.0');
   assert.ok(view.models.some((m) => m.id === 'seed-audio-1.0'
     && m.operations.some((op) => op.id === 'text_to_speech')));
