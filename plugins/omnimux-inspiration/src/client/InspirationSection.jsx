@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
+import { RivalAccountsPanel } from './RivalAccountsPanel.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -88,6 +89,16 @@ export function InspirationSection({ t, active }) {
     injectInspirationStyles()
   }, [])
 
+  // The rival workbench renders instead of the inspiration grid: the two have
+  // unrelated toolbars, and sharing one would mean hiding half of it by tab.
+  if (tab === 'rivals') {
+    return (
+      <div className="omnimux-inspiration-root">
+        <RivalAccountsPanel t={t} active={active !== false} />
+      </div>
+    )
+  }
+
   return (
     <div className="omnimux-inspiration-root">
       <div className="omnimux-inspiration-action-row">
@@ -111,6 +122,7 @@ export function InspirationSection({ t, active }) {
               { id: 'all', label: t('tab.all') },
               { id: 'local', label: t('tab.local') },
               { id: 'public', label: t('tab.public') },
+              { id: 'rivals', label: t('tab.rivals') },
             ]}
             activeId={tab}
             onChange={setTab}
