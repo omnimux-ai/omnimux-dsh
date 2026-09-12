@@ -149,7 +149,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   return createPortal(
     <div
       ref={menuRef}
-      className={`wf-context-menu ${view === 'add-node' ? 'wf-add-node-menu-host' : ''}`}
+      className={`wf-context-menu ${view === 'add-node' ? 'wf-node-menu-host' : ''}`}
       style={{ left, top }}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -180,7 +180,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               ) : null}
               <span className="wf-context-menu__label">{item.label}</span>
               {item.action === 'open-add-node' ? (
-                <ChevronRight size={14} className="wf-add-node-menu__arrow" />
+                <ChevronRight size={14} className="wf-node-menu__arrow" />
               ) : item.shortcut ? (
                 <span className="wf-context-menu__shortcut">{item.shortcut}</span>
               ) : null}

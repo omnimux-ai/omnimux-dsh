@@ -39,8 +39,12 @@ test('createSafeT: fallbacks to DEFAULT_STRINGS when custom t returns raw key or
 
 test('ProductPicker: follows design system, contains search, nav, empty states and dialog', () => {
   assert.ok(pickerSource.includes('ModalDialog'), 'uses ModalDialog from dsh-ui-kit');
-  assert.ok(pickerSource.includes('width: 800px !important'), 'penetrates dialog width to 800px');
-  assert.ok(pickerSource.includes('height: 480px'), 'locks fixed height to 480px');
+  assert.ok(pickerSource.includes('size="lg"'), 'sits on the kit lg tier instead of an invalid width prop');
+  assert.ok(pickerSource.includes('className={PICKER_DIALOG_CLASS}'), 'owns the dialog width via the official className seam');
+  assert.ok(!/width=\{\d+\}/.test(pickerSource), 'no dead width prop (ModalDialog has none)');
+  assert.ok(pickerSource.includes('max-height: calc(80vh - 190px)'), 'caps height by viewport to avoid dialog overflow');
+  assert.ok(pickerSource.includes('ensurePickerDialogStyles'), 'injects the shared dialog geometry contract');
+  assert.ok(!pickerSource.includes('min-height: 480px'), 'drops the rigid min-height that overflowed the dialog body');
   assert.ok(pickerSource.includes('ProductPickerCard'), 'renders ProductPickerCard');
   assert.ok(pickerSource.includes('omx-product-pick__search-input'), 'contains search input');
   assert.ok(pickerSource.includes('collectCategories'), 'uses collectCategories');

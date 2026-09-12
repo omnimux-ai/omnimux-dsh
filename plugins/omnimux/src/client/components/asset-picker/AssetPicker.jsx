@@ -2,18 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { AssetPickerCard } from './AssetPickerCard.jsx'
 import { ASSET_CATEGORIES, isAlreadyAdded, remainingQuota, toggleSelect } from './picker-model.js'
+import { PICKER_DIALOG_CLASS, ensurePickerDialogStyles } from '../picker-dialog/pickerDialogContract.js'
 
 const STYLE_ID = 'omx-composer-add-asset-picker'
 
 const CSS = `
-div:has(> .omx-asset-pick),
-div:has(> * > .omx-asset-pick),
-.dshUk-Dialog-dialog:has(.omx-asset-pick) {
-  width: 800px !important;
-  max-width: 92vw !important;
-}
 .omx-asset-pick {
-  display: flex; width: 100%; height: 480px; min-height: 480px; max-height: 480px;
+  display: flex; width: 100%; height: 480px; min-height: 0;
+  max-height: calc(80vh - 190px);
   box-sizing: border-box;
 }
 .omx-asset-pick__nav {
@@ -101,6 +97,7 @@ div:has(> * > .omx-asset-pick),
 `
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
+  ensurePickerDialogStyles(doc)
   if (!doc || doc.getElementById(STYLE_ID)) return
   const style = doc.createElement('style')
   style.id = STYLE_ID
@@ -261,7 +258,8 @@ export function AssetPicker({
       open={open}
       onClose={onClose}
       title={title || tt('composerAdd.fromLibrary')}
-      width={800}
+      size="lg"
+      className={PICKER_DIALOG_CLASS}
       closeLabel={tt('composerAdd.cancel')}
       footer={(
         <div className="omx-asset-pick__footer">

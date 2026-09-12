@@ -3,11 +3,15 @@
  *
  * 数据真源：`./channelGroups`（与中枢渠道路由表镜像，由 verify:model-contracts 门禁锁定）。
  * 选择结果经 `onSelect` 写回 `node.data.params.model` 与 `params.routing`，由
- * `materialGatewayExecutor` 透传给中枢；中枢按 `strategy` 排序、按 `allowedGroups`
- * 收窄候选池，并在无法满足时 fail-closed。
+ * `materialGatewayExecutor` 透传给中枢。
  *
- * 三种模态（文本/图片/视频）都可选择渠道：文本请求带路由意图时中枢会改走直连
- * chat completions，因为 `llm.stream` 只能解析已声明的模型 ID，无法携带 `model@group`。
+ * 交互约定（Issue #1402）：
+ * 1. 品牌列只显示产品真名（OpenAI / Google / Claude …），不出现「全能模型 X」这类聚合名；
+ *    品牌由当前模态的目录推导，只列真有型号的品牌。
+ * 2. 悬停即切换子菜单与高亮，不需要点击；**点击才写入节点**（悬停只预览，鼠标扫过不会改配置）。
+ * 3. 渐进展开：当前选中链默认显示三级；悬停到非选中品牌时只显示二级（型号），
+ *    悬停到某个型号后才显示三级（渠道）——即「选中激活显示三级，悬停激活只显示下级」。
+ * 4. 预览态（悬停到非选中型号）的渠道列只读：勾选属于已提交型号，预览时不给假交互。
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -59,9 +63,9 @@ interface PickerRow {
   description?: string;
 }
 
+/** 品牌列：只写产品真名，不做「全能模型 X」这类聚合命名。 */
 const ALL_BRANDS: BrandDef[] = [
-  { id: 'all_omni', name: '全能视频 Omni', iconModelId: 'seedance-2-0' },
-  { id: 'all_x', name: '全能模型 X', iconModelId: 'gpt-5.5' },
+  { id: 'openai', name: 'OpenAI', iconModelId: 'gpt-5.5' },
   { id: 'bytedance', name: 'Seedance', iconModelId: 'seedance-2-0' },
   { id: 'minimax', name: 'MiniMax', iconModelId: 'minimax-h3' },
   { id: 'kling', name: 'Kling', iconModelId: 'kling' },
@@ -69,31 +73,33 @@ const ALL_BRANDS: BrandDef[] = [
   { id: 'happyhorse', name: 'HappyHorse', iconModelId: 'wan-3.0' },
   { id: 'anthropic', name: 'Claude', iconModelId: 'claude-opus-4-6' },
   { id: 'deepseek', name: 'DeepSeek', iconModelId: 'deepseek-v4-flash-vision-exp' },
-  { id: 'google', name: 'Google Gemini', iconModelId: 'gemini-3.8-flash' },
+  { id: 'google', name: 'Google', iconModelId: 'gemini-3.8-flash' },
   { id: 'midjourney', name: 'Midjourney', iconModelId: 'midjourney' },
 ];
 
 const BRAND_MATCHERS: ReadonlyArray<{ brand: string; fragments: readonly string[] }> = [
+  { brand: 'openai', fragments: ['gpt', 'o1', 'o3', 'o4'] },
   { brand: 'bytedance', fragments: ['seed'] },
   { brand: 'minimax', fragments: ['minimax', 'hailuo'] },
   { brand: 'kling', fragments: ['kling'] },
   { brand: 'alibaba', fragments: ['wan'] },
+  { brand: 'happyhorse', fragments: ['horse'] },
   { brand: 'anthropic', fragments: ['claude', 'opus', 'sonnet'] },
   { brand: 'deepseek', fragments: ['deepseek'] },
-  { brand: 'google', fragments: ['gemini', 'banana', 'veo'] },
-  { brand: 'midjourney', fragments: ['midjourney'] },
-  { brand: 'all_x', fragments: ['gpt', 'o1', 'o3'] },
+  { brand: 'google', fragments: ['gemini', 'banana', 'imagen', 'veo'] },
+  { brand: 'midjourney', fragments: ['midjourney', 'mj'] },
 ];
 
 const BRANDS_BY_MATERIAL = {
-  text: ['all_x', 'anthropic', 'deepseek', 'google', 'minimax'],
-  image: ['all_omni', 'midjourney', 'all_x', 'bytedance', 'kling'],
-  video: ['all_omni', 'all_x', 'bytedance', 'minimax', 'kling', 'alibaba', 'happyhorse'],
+  text: ['openai', 'anthropic', 'google', 'deepseek', 'minimax'],
+  image: ['openai', 'google', 'bytedance', 'kling', 'midjourney'],
+  video: ['bytedance', 'openai', 'minimax', 'kling', 'alibaba', 'happyhorse', 'google'],
 } as const;
 
+/** 目录不可用（尚未加载）时的兜底，避免品牌列整列空白。 */
 const FALLBACK_MODELS_BY_BRAND: Readonly<Record<string, readonly PickerRow[]>> = {
   bytedance: [
-    { id: 'seedance-2-5', name: 'Seedance 2.5', description: '全新 2.5 旗舰全能视频大模型' },
+    { id: 'seedance-2-5', name: 'Seedance 2.5', description: '全新 2.5 旗舰视频大模型' },
     { id: 'seedance-2-0', name: 'Seedance 2.0', description: '支持文生、首帧、首尾帧、多参考图' },
     { id: 'seedance-2-0-mini', name: 'Seedance 2.0 Mini', description: '轻量视频模型，支持文生与首帧' },
     { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '快速版，极速出片，支持多参考图' },
@@ -114,14 +120,14 @@ function defaultModelFor(materialType: string): string {
   return 'seedance-2-0-fast';
 }
 
-/** Catalog rows carry no display name contract, so project them once, defensively. */
+/** 目录行的显示契约是 `label` / `subtitle`；缺失时退回 id，避免出现空白行。 */
 function toPickerRows(list: readonly CapabilityModelItem[] | undefined): PickerRow[] {
   return (list ?? []).map((item) => {
     const row = item as unknown as Record<string, unknown>;
     return {
       id: item.id,
-      name: typeof row.name === 'string' && row.name ? row.name : item.id,
-      ...(typeof row.description === 'string' && row.description ? { description: row.description } : {}),
+      name: typeof row.label === 'string' && row.label ? row.label : item.id,
+      ...(typeof row.subtitle === 'string' && row.subtitle ? { description: row.subtitle } : {}),
     };
   });
 }
@@ -175,6 +181,9 @@ const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> =
   </span>
 );
 
+/** 三列全开时的最大宽度；定位锚点固定按它钳制，避免列数变化导致浮层横移。 */
+const POPOVER_MAX_WIDTH = 786;
+
 const PANEL_STYLE: React.CSSProperties = {
   background: 'var(--dsw-alias-bg-elevated)',
   backdropFilter: 'blur(16px)',
@@ -188,8 +197,9 @@ const PANEL_STYLE: React.CSSProperties = {
 const ChannelRow: React.FC<{
   group: ChannelGroupItem;
   checked: boolean;
+  disabled?: boolean;
   onToggle: () => void;
-}> = ({ group, checked, onToggle }) => {
+}> = ({ group, checked, disabled = false, onToggle }) => {
   const discount = formatDiscountLabel(group.pricing?.discountRate);
   const billing = formatBillingLabel(group.pricing?.billingMode);
   const stability = group.sla?.stability24h ?? 100;
@@ -199,9 +209,11 @@ const ChannelRow: React.FC<{
     <div
       role="menuitemcheckbox"
       aria-checked={checked}
-      tabIndex={0}
-      onClick={onToggle}
+      aria-disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onClick={disabled ? undefined : onToggle}
       onKeyDown={(event) => {
+        if (disabled) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onToggle();
@@ -210,9 +222,10 @@ const ChannelRow: React.FC<{
       style={{
         padding: '10px 12px',
         borderRadius: 8,
-        cursor: 'pointer',
-        background: checked ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
-        border: checked ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        background: checked && !disabled ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
+        border: checked && !disabled ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -236,7 +249,7 @@ const ChannelRow: React.FC<{
         </div>
       </div>
       <div style={{ paddingLeft: 10 }}>
-        {checked ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}
+        {checked && !disabled ? <Check size={15} color="var(--dsw-alias-brand-primary)" strokeWidth={2.5} /> : null}
       </div>
     </div>
   );
@@ -255,28 +268,71 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const allowedBrands = allowedBrandsFor(materialType);
-  const brandList = useMemo(
-    () => ALL_BRANDS.filter((brand) => allowedBrands.includes(brand.id)),
-    [allowedBrands],
-  );
-
   const { modelId: canonicalModel } = parseModelAndGroup(modelValue);
   const currentModelId = canonicalModel || defaultModelFor(materialType);
 
   const [activeBrandId, setActiveBrandId] = useState<string>(() => brandForModel(currentModelId, allowedBrands));
   const [activeModelId, setActiveModelId] = useState<string>(currentModelId);
   const [activeStrategy, setActiveStrategy] = useState<RouteStrategy>(routing?.strategy ?? 'stability_first');
+  const [hoverBrandId, setHoverBrandId] = useState<string | null>(null);
+  const [hoverModelId, setHoverModelId] = useState<string | null>(null);
 
-  const channelGroups = useMemo(() => getModelChannelGroups(activeModelId), [activeModelId]);
-  // 文本节点走会话模型路由，请求无法携带分组；第三栏只做说明，不提供假选项。
-  const canRouteChannels = channelGroups.length > 0;
+  const catalogRows = useMemo<PickerRow[]>(() => {
+    const rawList = materialType === 'video'
+      ? catalog?.video
+      : materialType === 'image'
+        ? catalog?.image
+        : materialType === 'text'
+          ? catalog?.text
+          : catalog?.models;
+    return toPickerRows(rawList);
+  }, [catalog, materialType]);
+
+  const modelsForBrand = useCallback((brandId: string): PickerRow[] => {
+    const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
+    const rows = catalogRows.filter((row) => fragments.some((fragment) => row.id.toLowerCase().includes(fragment)));
+    if (rows.length > 0) return rows;
+    const fallback = FALLBACK_MODELS_BY_BRAND[brandId];
+    return fallback ? [...fallback] : [];
+  }, [catalogRows]);
+
+  // 品牌列由目录推导：只列真有型号的品牌，避免点进去没有型号的死项。
+  const brandList = useMemo(() => {
+    const ordered = ALL_BRANDS.filter((brand) => allowedBrands.includes(brand.id));
+    const withModels = ordered.filter((brand) => modelsForBrand(brand.id).length > 0);
+    const usable = withModels.length > 0
+      ? withModels
+      : ordered.filter((brand) => FALLBACK_MODELS_BY_BRAND[brand.id]);
+    // 当前选中型号所属品牌必须可见，否则当前选择会被藏起来。
+    const activeBrand = brandForModel(currentModelId, allowedBrands);
+    const activeDef = ordered.find((brand) => brand.id === activeBrand);
+    if (activeDef && !usable.some((brand) => brand.id === activeBrand)) return [activeDef, ...usable];
+    return usable;
+  }, [allowedBrands, modelsForBrand, currentModelId]);
+
+  const shownBrandId = hoverBrandId ?? activeBrandId;
+  const shownModels = useMemo(() => {
+    const rows = modelsForBrand(shownBrandId);
+    // 已提交的型号即使不在目录里也要显示，避免出现「已选中但列表里没有」。
+    const needsActive = shownBrandId === activeBrandId
+      && activeModelId
+      && !rows.some((row) => row.id === activeModelId);
+    return needsActive ? [{ id: activeModelId, name: activeModelId }, ...rows] : rows;
+  }, [modelsForBrand, shownBrandId, activeBrandId, activeModelId]);
+
+  // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
+  const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
+  const showChannelColumn = hoveringOtherBrand ? hoverModelId !== null : true;
+
+  const channelModelId = hoverModelId ?? activeModelId;
+  const channelGroups = useMemo(() => getModelChannelGroups(channelModelId), [channelModelId]);
+  const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId;
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
-    () => (routing?.allowedGroups?.length ? routing.allowedGroups : channelGroups.map((group) => group.id)),
+    () => (routing?.allowedGroups?.length ? routing.allowedGroups : getModelChannelGroups(currentModelId).map((group) => group.id)),
   );
 
-  // 外部数据变化（撤销/重做、快照重载、切换节点）后重新对齐品牌与勾选，
-  // 否则勾选状态与胶囊计数会停留在上一个节点的记忆里。
+  // 外部数据变化（撤销/重做、快照重载、切换节点）后重新对齐品牌与勾选。
   useEffect(() => {
     setActiveModelId(currentModelId);
     setActiveBrandId(brandForModel(currentModelId, allowedBrands));
@@ -292,41 +348,43 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setSelectedGroupIds(persistedGroups?.length ? persistedGroups : groups.map((group) => group.id));
   }, [currentModelId, persistedGroups]);
 
-  const modelListInBrand = useMemo<PickerRow[]>(() => {
-    const rawList = materialType === 'video'
-      ? catalog?.video
-      : materialType === 'image'
-        ? catalog?.image
-        : materialType === 'text'
-          ? catalog?.text
-          : catalog?.models;
-
-    const matchers = BRAND_MATCHERS.find((entry) => entry.brand === activeBrandId)?.fragments ?? [];
-    const items = toPickerRows(rawList).filter((model) => {
-      const id = model.id.toLowerCase();
-      if (activeBrandId === 'all_omni') return true;
-      return matchers.some((fragment) => id.includes(fragment));
-    });
-    if (items.length > 0) return items;
-    const fallback = FALLBACK_MODELS_BY_BRAND[activeBrandId];
-    if (fallback) return [...fallback];
-    return [{ id: activeModelId, name: activeModelId, description: '全功能模型' }];
-  }, [catalog, materialType, activeBrandId, activeModelId]);
-
   const emit = useCallback((modelId: string, strategy: RouteStrategy, groupIds: string[]) => {
     onSelect({
       modelId,
       strategy,
       ...(groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
     });
-  }, [materialType, onSelect]);
+  }, [onSelect]);
+
+  /** 悬停只切换预览；写入节点只发生在点击与渠道勾选。 */
+  const handleBrandHover = useCallback((brandId: string) => {
+    setHoverBrandId(brandId);
+    setHoverModelId(null);
+  }, []);
+
+  const handleModelHover = useCallback((modelId: string) => {
+    setHoverModelId(modelId);
+  }, []);
+
+  const handlePopoverLeave = useCallback(() => {
+    setHoverBrandId(null);
+    setHoverModelId(null);
+  }, []);
+
+  const handleBrandClick = useCallback((brandId: string) => {
+    setActiveBrandId(brandId);
+    setHoverBrandId(brandId);
+  }, []);
 
   const handleSelectModel = useCallback((modelId: string) => {
     setActiveModelId(modelId);
+    setActiveBrandId(brandForModel(modelId, allowedBrands));
     const groupIds = getModelChannelGroups(modelId).map((group) => group.id);
     setSelectedGroupIds(groupIds);
+    setHoverBrandId(null);
+    setHoverModelId(null);
     emit(modelId, activeStrategy, groupIds);
-  }, [activeStrategy, emit]);
+  }, [activeStrategy, allowedBrands, emit]);
 
   const handleStrategyChange = useCallback((strategy: RouteStrategy) => {
     setActiveStrategy(strategy);
@@ -354,7 +412,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [activeModelId, activeStrategy, emit]);
 
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
-  const panelWidth = channelGroups.length > 0 ? 786 : 406;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -363,7 +420,9 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
       if (!rect) return;
       setPopoverPos({
         bottom: Math.max(8, window.innerHeight - rect.top + 8),
-        left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - panelWidth - 12))),
+        // 锚点按最大宽度钳制：三列出现/隐藏时浮层不得横向跳动，
+        // 否则悬停展开第三列的瞬间菜单会从光标下移走。
+        left: Math.max(12, Math.min(rect.left, Math.max(12, window.innerWidth - POPOVER_MAX_WIDTH - 12))),
       });
     };
     place();
@@ -373,7 +432,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [isOpen, panelWidth]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -393,6 +452,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     };
   }, [isOpen]);
 
+  // 关闭时丢弃悬停态，下次打开回到「选中链三级全显」的默认视图。
+  useEffect(() => {
+    if (isOpen) return;
+    setHoverBrandId(null);
+    setHoverModelId(null);
+  }, [isOpen]);
+
   const shortName = resolveShortModelName(activeModelId);
   const selectedCount = selectedGroupIds.length;
   const strategyLabel = activeStrategy === 'cost_first' ? '低价优先' : '稳定性优先';
@@ -407,7 +473,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         disabled={execBusy}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title={canRouteChannels ? `渠道策略：${strategyLabel}` : undefined}
+        title={channelGroups.length > 0 ? `渠道策略：${strategyLabel}` : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
           display: 'inline-flex',
@@ -430,7 +496,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         <ModelBrandIcon modelId={activeModelId} size={15} />
         <span style={{ fontWeight: 600 }}>{shortName}</span>
 
-        {canRouteChannels ? (
+        {channelGroups.length > 0 ? (
           <span
             style={{
               display: 'inline-flex',
@@ -467,6 +533,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             className="wf-model-cascade-popover wf-model-cascade-fade nodrag nopan"
             role="menu"
             aria-label="选择模型与渠道策略"
+            onMouseLeave={handlePopoverLeave}
             style={{
               position: 'fixed',
               bottom: popoverPos.bottom,
@@ -478,7 +545,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               userSelect: 'none',
             }}
           >
-            {/* 栏 1：品牌 */}
+            {/* 栏 1：品牌（悬停即切换二级，点击固定当前列） */}
             <div role="group" aria-label="选择品牌" style={{ ...PANEL_STYLE, width: 160, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ padding: '4px 8px', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', fontWeight: 500 }}>
                 选择模型
@@ -491,7 +558,10 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     type="button"
                     role="menuitem"
                     aria-current={isSelected}
-                    onClick={() => setActiveBrandId(brand.id)}
+                    data-testid={`wf-cascade-brand-${brand.id}`}
+                    onMouseEnter={() => handleBrandHover(brand.id)}
+                    onClick={() => handleBrandClick(brand.id)}
+                    className="wf-cascade-row"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -516,9 +586,9 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 2：型号 */}
+            {/* 栏 2：型号（悬停即预览三级） */}
             <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {modelListInBrand.map((item) => {
+              {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
                 return (
                   <button
@@ -526,7 +596,10 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     type="button"
                     role="menuitem"
                     aria-current={isSelected}
+                    data-testid={`wf-cascade-model-${item.id}`}
+                    onMouseEnter={() => handleModelHover(item.id)}
                     onClick={() => handleSelectModel(item.id)}
+                    className="wf-cascade-row"
                     style={{
                       padding: '10px 12px',
                       borderRadius: 10,
@@ -566,19 +639,20 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 3：渠道策略 */}
-            <div
-              role="group"
-              aria-label="选择渠道策略"
-              style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
-            >
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
+            {/* 栏 3：渠道策略（选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {showChannelColumn ? (
+              <div
+                role="group"
+                aria-label="选择渠道策略"
+                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
 
-              {channelGroups.length === 0 ? (
-                <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
-                  该模型尚未配置渠道分组，请求将按模型默认通道执行。
-                </div>
-              ) : (
+                {channelGroups.length === 0 ? (
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
+                    该模型尚未配置渠道分组，请求将按模型默认通道执行。
+                  </div>
+                ) : (
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {([
@@ -592,11 +666,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                             type="button"
                             role="menuitemradio"
                             aria-checked={isActive}
+                            aria-disabled={isChannelPreview}
+                            disabled={isChannelPreview}
                             onClick={() => handleStrategyChange(option.id)}
                             style={{
                               padding: '8px 10px',
                               borderRadius: 8,
-                              cursor: 'pointer',
+                              cursor: isChannelPreview ? 'default' : 'pointer',
+                              opacity: isChannelPreview ? 0.6 : 1,
                               background: isActive ? 'var(--dsw-alias-badge-bg)' : 'transparent',
                               border: isActive ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
                               display: 'flex',
@@ -624,7 +701,8 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                         <ChannelRow
                           key={group.id}
                           group={group}
-                          checked={selectedGroupIds.includes(group.id)}
+                          checked={isChannelPreview ? true : selectedGroupIds.includes(group.id)}
+                          disabled={isChannelPreview}
                           onToggle={() => toggleGroupSelection(group.id)}
                         />
                       ))}
@@ -639,32 +717,41 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                         borderTop: '1px solid var(--dsw-alias-border-subtle)',
                       }}
                     >
-                      <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                        已选 {selectedCount}/{channelGroups.length} 个
-                      </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const firstGroup = channelGroups[0];
-                            if (firstGroup) applyGroupSelection([firstGroup.id]);
-                          }}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                        >
-                          清空
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-text-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                        >
-                          全选
-                        </button>
-                      </div>
+                      {isChannelPreview ? (
+                        <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+                          预览中 · 点击该型号后即可调整渠道
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+                            已选 {selectedCount}/{channelGroups.length} 个
+                          </div>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const firstGroup = channelGroups[0];
+                                if (firstGroup) applyGroupSelection([firstGroup.id]);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                            >
+                              清空
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-text-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                            >
+                              全选
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </>
                 )}
-            </div>
+              </div>
+            ) : null}
           </div>,
           document.body,
         )

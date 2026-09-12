@@ -50,15 +50,15 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
 
   return (
     <div
-      className={`wf-add-node-menu wf-add-node-menu--${scope}`}
+      className={`wf-node-menu wf-node-menu--${scope}`}
       onContextMenu={stopMenuEvent}
     >
-      <div className="wf-add-node-menu__container">
-        <div className="wf-add-node-menu__header">
+      <div className="wf-node-menu__container">
+        <div className="wf-node-menu__header">
           {scope === 'context' ? (
             <button
               type="button"
-              className="wf-add-node-menu__back-btn"
+              className="wf-node-menu__back-btn"
               onClick={(event) => {
                 event.stopPropagation();
                 onBack?.();
@@ -68,29 +68,29 @@ const AddNodeMenu: FC<AddNodeMenuProps> = ({ scope, onSelect, onBack }) => {
               <ChevronLeft size={16} />
             </button>
           ) : null}
-          <span className="wf-add-node-menu__title">{t('menu.addNode')}</span>
-          {scope === 'dock' ? <kbd className="wf-add-node-menu__kbd">N</kbd> : null}
+          <span className="wf-node-menu__title">{t('menu.addNode')}</span>
+          {scope === 'dock' ? <kbd className="wf-node-menu__kbd">N</kbd> : null}
         </div>
-        <div className="wf-add-node-menu__list">
+        <div className="wf-node-menu__list">
           {items.map((item) => {
             const Icon = ICON_MAP[item.icon];
             return (
               <button
                 key={item.type}
                 type="button"
-                className="wf-add-node-menu__item"
+                className="wf-node-menu__item"
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelect(item.type);
                 }}
               >
-                <div className="wf-add-node-menu__icon-box">
+                <div className="wf-node-menu__icon-box">
                   <Icon size={18} />
                 </div>
-                <span className="wf-add-node-menu__label">{t(item.labelKey)}</span>
+                <span className="wf-node-menu__label">{t(item.labelKey)}</span>
                 {item.badge ? (
                   <span
-                    className={`wf-add-node-menu__badge wf-add-node-menu__badge--${item.badge.variant}`}
+                    className={`wf-node-menu__badge wf-node-menu__badge--${item.badge.variant}`}
                   >
                     {item.badge.text}
                   </span>

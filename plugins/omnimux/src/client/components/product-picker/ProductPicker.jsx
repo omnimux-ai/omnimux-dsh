@@ -2,18 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
 import { collectCategories, filterProducts, createSafeT } from './picker-model.js';
+import { PICKER_DIALOG_CLASS, ensurePickerDialogStyles } from '../picker-dialog/pickerDialogContract.js';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
-div:has(> .omx-product-pick),
-div:has(> * > .omx-product-pick),
-.dshUk-Dialog-dialog:has(.omx-product-pick) {
-  width: 800px !important;
-  max-width: 92vw !important;
-}
 .omx-product-pick {
-  display: flex; width: 100%; height: 480px; min-height: 480px; max-height: 480px;
+  display: flex; width: 100%; height: 480px; min-height: 0;
+  max-height: calc(80vh - 190px);
   box-sizing: border-box;
 }
 .omx-product-pick__nav {
@@ -230,6 +226,7 @@ function CategoryIcon({ kind, size = 14 }) {
 }
 
 function ensureStyles(doc = (typeof document !== 'undefined' ? document : null)) {
+  ensurePickerDialogStyles(doc);
   if (!doc || doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
@@ -339,7 +336,8 @@ export function ProductPicker({
       open={open}
       onClose={onClose}
       title={safeT('productPicker.title')}
-      width={760}
+      size="lg"
+      className={PICKER_DIALOG_CLASS}
       footer={
         <div className="omx-product-pick__footer">
           <div className="omx-product-pick__meta">
