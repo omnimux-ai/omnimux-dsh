@@ -92,6 +92,12 @@ export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器通过**弹窗�
   margin-top: 0 !important;
   padding: 0 !important;
 }
+/* 共享的 external 关闭按钮定位在弹窗右外侧（right:-50px），而底座弹窗自带 overflow: hidden 会把它裁出可视区
+   （真机实测：几何在弹窗外，但元素命中测试落到遮罩层，按钮既看不见也点不到）。这里放开裁剪让共享按钮真正可见可点。
+   该变体原本服务于无裁剪的 SplitModalDialog，本弹窗需显式放开。 */
+.${PICKER_DIALOG_CLASS} {
+  overflow: visible !important;
+}
 /* 关闭按钮统一使用共享组件 ModalCloseButton(placement="external")，隐藏底座标题栏内置的 X。
    底座关闭按钮只有 CSS-module 哈希类名，故按结构定位：正文滚动容器第一个子元素（标题栏）内的按钮。 */
 .${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button {

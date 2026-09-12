@@ -197,6 +197,14 @@ function measureExpression() {
       // 关闭按钮统一：外部共享按钮存在且落在弹窗右外侧；底座内置 X 已隐藏
       externalClosePresent: Boolean(externalClose),
       externalCloseOutside: externalCloseRect ? externalCloseRect.left >= dialogRect.right - 4 : null,
+      // 仅几何在外侧不够：底座 overflow:hidden 会裁掉它（可见但点不到），必须做命中测试
+      externalCloseHittable: (() => {
+        if (!externalCloseRect) return null;
+        const cx = Math.round(externalCloseRect.left + externalCloseRect.width / 2);
+        const cy = Math.round(externalCloseRect.top + externalCloseRect.height / 2);
+        const hit = document.elementFromPoint(cx, cy);
+        return Boolean(hit) && (hit === externalClose || externalClose.contains(hit));
+      })(),
       kitCloseHidden: kitClose ? getComputedStyle(kitClose).display === 'none' : true,
       // 信息降噪：圈选元素不应再存在
       navHeaderPresent: Boolean(document.querySelector('${SELECTORS.root}__nav-header')),
@@ -283,8 +291,11 @@ async function main() {
       }
       record(
         `viewport ${viewportHeight}: shared external close button`,
-        Boolean(m.externalClosePresent) && Boolean(m.externalCloseOutside) && Boolean(m.kitCloseHidden),
-        `present=${m.externalClosePresent} outside=${m.externalCloseOutside} kitCloseHidden=${m.kitCloseHidden}`,
+        Boolean(m.externalClosePresent)
+        && Boolean(m.externalCloseOutside)
+        && Boolean(m.externalCloseHittable)
+        && Boolean(m.kitCloseHidden),
+        `present=${m.externalClosePresent} outside=${m.externalCloseOutside} hittable=${m.externalCloseHittable} kitCloseHidden=${m.kitCloseHidden}`,
       )
       record(
         `viewport ${viewportHeight}: circled noise removed`,
