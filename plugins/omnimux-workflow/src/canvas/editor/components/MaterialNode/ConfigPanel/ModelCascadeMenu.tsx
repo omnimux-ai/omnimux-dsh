@@ -248,18 +248,7 @@ const ChannelRow: React.FC<{
           onToggle();
         }
       }}
-      style={{
-        padding: '10px 12px',
-        borderRadius: 8,
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
-        background: checked && !disabled ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
-        border: checked && !disabled ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        transition: 'all 0.15s ease',
-      }}
+      className={`wf-cascade-row wf-cascade-channel-row ${checked && !disabled ? 'is-checked' : ''} ${disabled ? 'is-disabled' : ''}`}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
@@ -590,6 +579,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               </div>
               {brandList.map((brand) => {
                 const isSelected = activeBrandId === brand.id;
+                const isHovered = shownBrandId === brand.id && hoverBrandId !== null;
                 return (
                   <button
                     key={brand.id}
@@ -599,21 +589,9 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     data-testid={`wf-cascade-brand-${brand.id}`}
                     onMouseEnter={() => handleBrandHover(brand.id)}
                     onClick={() => handleBrandClick(brand.id)}
-                    className="wf-cascade-row"
+                    className={`wf-cascade-row wf-cascade-brand-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      fontSize: 13,
                       fontWeight: isSelected ? 600 : 400,
-                      color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)',
-                      background: isSelected ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
-                      border: isSelected ? '1px solid var(--dsw-alias-border-subtle)' : '1px solid transparent',
-                      textAlign: 'left',
-                      width: '100%',
                     }}
                   >
                     <ModelBrandIcon modelId={brand.iconModelId} size={16} />
@@ -628,6 +606,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8, background: popoverSurface }}>
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
+                const isHovered = hoverModelId === item.id;
                 return (
                   <button
                     key={item.id}
@@ -637,38 +616,16 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     data-testid={`wf-cascade-model-${item.id}`}
                     onMouseEnter={() => handleModelHover(item.id)}
                     onClick={() => handleSelectModel(item.id)}
-                    className="wf-cascade-row"
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      cursor: 'pointer',
-                      background: isSelected ? 'var(--dsw-alias-control-bg-hover)' : 'transparent',
-                      border: isSelected ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                      textAlign: 'left',
-                      width: '100%',
-                    }}
+                    className={`wf-cascade-row wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--dsw-alias-text-primary)' : 'var(--dsw-alias-label-secondary)' }}>
+                      <span className="wf-cascade-model-item__title">
                         {item.name || item.id}
                       </span>
                       {isSelected ? <Check size={14} color="var(--dsw-alias-brand-primary)" /> : null}
                     </div>
                     {item.description ? (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: 'var(--dsw-alias-label-secondary)',
-                          lineHeight: 1.35,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
+                      <div className="wf-cascade-model-item__desc">
                         {item.description}
                       </div>
                     ) : null}
@@ -707,20 +664,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                             aria-disabled={isChannelPreview}
                             disabled={isChannelPreview}
                             onClick={() => handleStrategyChange(option.id)}
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: 8,
-                              cursor: isChannelPreview ? 'default' : 'pointer',
-                              opacity: isChannelPreview ? 0.6 : 1,
-                              background: isActive ? 'var(--dsw-alias-badge-bg)' : 'transparent',
-                              border: isActive ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-subtle)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              color: 'var(--dsw-alias-text-primary)',
-                              fontSize: 12,
-                              fontWeight: 600,
-                            }}
+                            className={`wf-cascade-strategy-btn ${isActive ? 'is-active' : ''}`}
                           >
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ color: isActive ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)', display: 'inline-flex' }}>
