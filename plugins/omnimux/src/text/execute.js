@@ -5,7 +5,7 @@ import {
 } from '../catalog/contract/submit-guard/index.js'
 import { parseTextConfig, resolveTextRoute } from './catalog.js'
 import { completeTextViaChat } from './chat.js'
-import { probeTextImage, saveProbedTextImage } from './image.js'
+import { probeTextImage, saveProbedTextImage, toImageUrlPart } from './image.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
 import { normalizeTextReferences } from './references.js'
 
@@ -109,14 +109,28 @@ export async function executeOmnimuxText(input) {
     },
   )
 
-  if (hasVideo) {
+  // A channel selection cannot ride `ctx.llm.stream`: the harness resolves the
+  // model id against the provider's declared list, so `model@group` fails before
+  // any request. Routing intent therefore uses the same direct chat path as a
+  // video input, which carries the group and its failover candidates.
+  const wantsChannels = route.routed && route.candidates.length > 0
+  if (hasVideo || wantsChannels) {
+    const mediaParts = []
+    for (const [index, asset] of references.entries()) {
+      // `probed` mirrors `references` by index; the probed entries carry the
+      // payload (bytes / packed data URI), the assets carry the input type.
+      const media = probed[index]
+      if (!media) continue
+      if (asset.type === 'video') mediaParts.push(toVideoImageUrlPart(media))
+      else if (asset.type === 'image') mediaParts.push(toImageUrlPart(media))
+    }
     const result = await completeTextViaChat({
       model: route.modelId,
       candidates: route.candidates,
       prompt,
       system,
       maxTokens,
-      videoPart: toVideoImageUrlPart(probed[0]),
+      mediaParts,
       env: input.env,
       fetcher: input.fetcher,
       signal: input.signal,

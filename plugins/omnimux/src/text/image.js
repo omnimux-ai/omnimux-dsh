@@ -75,6 +75,28 @@ export function saveProbedTextImage(image, attachments) {
 }
 
 /**
+ * Pack a previously probed image as a chat-completions `image_url` part. Mirrors
+ * `toVideoImageUrlPart` so a routed text request can carry its images through
+ * the direct path instead of falling back to `llm.stream`.
+ * @param {{ data: Uint8Array, mediaType: string }} image
+ * @returns {{ type: 'image_url', image_url: { url: string } }}
+ */
+export function toImageUrlPart(image) {
+  const bytes = image?.data
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) {
+    throw new OmnimuxError('omnimux-invalid-request', 'image pack requires probed bytes')
+  }
+  const mediaType = typeof image.mediaType === 'string' ? image.mediaType : ''
+  if (!mediaType.startsWith('image/')) {
+    throw new OmnimuxError('omnimux-invalid-request', 'image pack requires an image media type')
+  }
+  return {
+    type: 'image_url',
+    image_url: { url: `data:${mediaType};base64,${Buffer.from(bytes).toString('base64')}` },
+  }
+}
+
+/**
  * @param {string} uri
  */
 export function decodeDataUri(uri) {

@@ -810,8 +810,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               execBusy={execBusy}
               onSelect={({ modelId, strategy, allowedGroups }) => {
                 handleModelChange(modelId);
-                // Only a modality that can carry a group persists routing; a
-                // stale selection from another node must not survive the switch.
+                // Persist routing only when a channel pool resolved; a stale
+                // selection from another node must not survive the switch.
                 const nextParams: Record<string, unknown> = { ...params, model: modelId };
                 if (allowedGroups && allowedGroups.length > 0) nextParams.routing = { strategy, allowedGroups };
                 else delete nextParams.routing;

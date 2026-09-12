@@ -6,8 +6,8 @@
  * `materialGatewayExecutor` 透传给中枢；中枢按 `strategy` 排序、按 `allowedGroups`
  * 收窄候选池，并在无法满足时 fail-closed。
  *
- * 文本节点走会话模型路由（`llm.stream`），请求无法携带分组，因此第三栏给出明确的
- * 不可用说明，而不是可点击的假选项。
+ * 三种模态（文本/图片/视频）都可选择渠道：文本请求带路由意图时中枢会改走直连
+ * chat completions，因为 `llm.stream` 只能解析已声明的模型 ID，无法携带 `model@group`。
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -269,7 +269,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
 
   const channelGroups = useMemo(() => getModelChannelGroups(activeModelId), [activeModelId]);
   // 文本节点走会话模型路由，请求无法携带分组；第三栏只做说明，不提供假选项。
-  const canRouteChannels = materialType !== 'text' && channelGroups.length > 0;
+  const canRouteChannels = channelGroups.length > 0;
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
     () => (routing?.allowedGroups?.length ? routing.allowedGroups : channelGroups.map((group) => group.id)),
@@ -317,7 +317,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     onSelect({
       modelId,
       strategy,
-      ...(materialType === 'text' || groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
+      ...(groupIds.length === 0 ? {} : { allowedGroups: groupIds }),
     });
   }, [materialType, onSelect]);
 
@@ -354,7 +354,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [activeModelId, activeStrategy, emit]);
 
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
-  const panelWidth = materialType === 'text' ? 646 : channelGroups.length > 0 ? 786 : 406;
+  const panelWidth = channelGroups.length > 0 ? 786 : 406;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -567,30 +567,18 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             </div>
 
             {/* 栏 3：渠道策略 */}
-            {materialType === 'text' ? (
-              <div
-                role="group"
-                aria-label="渠道策略不可用"
-                style={{ ...PANEL_STYLE, width: 240, padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 10, color: 'var(--dsw-alias-label-secondary)' }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>渠道策略</div>
-                <div style={{ fontSize: 11, lineHeight: 1.6 }}>
-                  文本节点通过会话模型路由（llm.stream）执行，请求不携带渠道分组，因此这里不提供渠道选择。
-                </div>
-              </div>
-            ) : (
-              <div
-                role="group"
-                aria-label="选择渠道策略"
-                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
+            <div
+              role="group"
+              aria-label="选择渠道策略"
+              style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
 
-                {channelGroups.length === 0 ? (
-                  <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
-                    该模型尚未配置渠道分组，请求将按模型默认通道执行。
-                  </div>
-                ) : (
+              {channelGroups.length === 0 ? (
+                <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
+                  该模型尚未配置渠道分组，请求将按模型默认通道执行。
+                </div>
+              ) : (
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {([
@@ -676,8 +664,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     </div>
                   </>
                 )}
-              </div>
-            )}
+            </div>
           </div>,
           document.body,
         )

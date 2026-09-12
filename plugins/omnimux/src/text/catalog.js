@@ -117,9 +117,9 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
   const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
     ? request.allowedGroups
     : undefined
-  // Only the direct chat-completions path can carry a group; the streaming path
-  // (`llm.stream`) resolves a declared session model, so its plan stays the base
-  // gateway candidates. `unresolvedGroups` reports intent a model cannot honor.
+  // A channel selection cannot ride the streaming path: `llm.stream` resolves a
+  // declared session model id, so `model@group` never reaches the gateway.
+  // `routed` tells the executor to use the direct chat path instead.
   const plan = resolveChannelPlan(row.id, {
     strategy: explicitStrategy ? request.strategy : 'auto',
     group,
@@ -138,6 +138,8 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
     strategy: hasRoutingIntent ? (explicitStrategy ? request.strategy : 'auto') : undefined,
     candidates: plan.candidates,
     unresolvedGroups: plan.unresolvedGroups,
+    // A routed request must not use the streaming path: it would drop the group.
+    routed: hasRoutingIntent,
     input,
     maxTokens: text.maxTokens,
   }

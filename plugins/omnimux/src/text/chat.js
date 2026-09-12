@@ -6,16 +6,18 @@ const DEFAULT_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 /**
- * One-shot chat-completions call used when `textComplete` carries a `video`
- * input. Bypasses `ctx.llm.stream` / attachments because harness ImageMediaType
- * cannot store video MIME. Still not a parallel chat tool: no tools, no parent
- * history, same whitelist + return shape as the stream path.
+ * One-shot chat-completions call used when `textComplete` cannot use
+ * `ctx.llm.stream`: a `video` input (harness ImageMediaType cannot store video
+ * MIME) or an explicit channel-group selection (`llm.stream` resolves a
+ * declared model id, so it cannot carry `model@group`). Still not a parallel
+ * chat tool: no tools, no parent history, same whitelist + return shape as the
+ * stream path.
  * @param {{
  *   model: string,
  *   prompt: string,
  *   system?: string,
  *   maxTokens: number,
- *   videoPart: { type: 'image_url', image_url: { url: string } },
+ *   mediaParts?: Array<{ type: 'image_url', image_url: { url: string } }>,
  *   env?: Record<string, string | undefined>,
  *   fetcher?: typeof fetch,
  *   signal?: AbortSignal,
@@ -86,12 +88,12 @@ export async function completeTextViaChat(input) {
   if (!prompt) {
     throw new OmnimuxError('omnimux-invalid-request', 'prompt is required')
   }
-  if (!input.videoPart || input.videoPart.type !== 'image_url') {
-    throw new OmnimuxError('omnimux-invalid-request', 'video part must be image_url')
-  }
-  const url = input.videoPart.image_url?.url
-  if (typeof url !== 'string' || !url.startsWith('data:video/')) {
-    throw new OmnimuxError('omnimux-invalid-request', 'video part url must be data:video/…')
+  const mediaParts = Array.isArray(input.mediaParts) ? input.mediaParts : []
+  for (const part of mediaParts) {
+    const partUrl = part?.type === 'image_url' ? part.image_url?.url : undefined
+    if (typeof partUrl !== 'string' || !/^data:(?:image|video)\//.test(partUrl)) {
+      throw new OmnimuxError('omnimux-invalid-request', 'media part url must be a data:image or data:video URI')
+    }
   }
   const system = typeof input.system === 'string' ? input.system.trim() : ''
   /** @type {Array<{ role: string, content: unknown }>} */
@@ -101,7 +103,7 @@ export async function completeTextViaChat(input) {
     role: 'user',
     content: [
       { type: 'text', text: prompt },
-      input.videoPart,
+      ...mediaParts,
     ],
   })
   const fetcher = input.fetcher ?? fetch
