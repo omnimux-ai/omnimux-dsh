@@ -46,7 +46,17 @@ export const DEFAULT_POLL_INTERVAL_MS = 1500
 /** Timeout of one poll GET. */
 export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000
 
-/** Wall-clock budget for one poll GET including its internal retries. */
+/**
+ * Wall-clock budget for the backoff waits of one poll GET (its internal
+ * retries), **not** for the in-flight request.
+ *
+ * A retrying poll spends up to this budget sleeping between attempts, and the
+ * request that finally goes out is bounded separately by
+ * `DEFAULT_REQUEST_TIMEOUT_MS`. The two do not overlap and must not be added
+ * up: the real overshoot past a task deadline is one per-request timeout (see
+ * the module docstring), which is why this budget being *below* the request
+ * timeout costs nothing in correctness.
+ */
 export const DEFAULT_RETRY_BUDGET_MS = 7_000
 
 /**
@@ -65,11 +75,28 @@ export const POLL_RETRY_POLICY = Object.freeze({
  * Workflow-side whole-run timeout (`EXECUTION_TIMEOUT_MS`,
  * `omnimux-workflow/src/workflow/execution/executionTypes.ts`).
  *
- * INVARIANT: every hub deadline must be strictly shorter than this, otherwise
- * a single stuck task would be masked by the whole-run timeout and the node
- * would report a weaker error than `omnimux-task-timeout`. Both plugins assert
- * their own side of this invariant (the hub cannot import the workflow's
- * constant across the hub/domain boundary).
+ * Two different budgets are named here, and conflating them is a mistake this
+ * comment used to make (#1386): this constant is the **whole-run** budget the
+ * workflow applies to one execution, whereas `DEFAULT_TASK_DEADLINE_MS` bounds
+ * **one task's poll window**. They are not two views of one thing.
+ *
+ * Comparing them still has a use, but only a narrow one, and the granularity
+ * has to be stated with it: a *single-node* run cannot have its task-level
+ * `omnimux-task-timeout` masked, because 20 minutes of polling ends before the
+ * 30-minute run budget does. That is the whole guarantee.
+ *
+ * It does **not** generalize to multi-node graphs. The run budget is shared by
+ * every node, so with several nodes — sequential or under `maxParallel` — the
+ * 30 minutes can arrive while an individual task is still well inside its own
+ * 20-minute window. When it does, the run is terminated first, the task-level
+ * error code never appears, and the node fails with the run-level timeout
+ * instead. Two consequences follow for a multi-node graph worth naming:
+ * upstream work may keep running (and billing) after the local run is gone,
+ * and its artifact is discarded rather than collected.
+ *
+ * Both plugins assert their own side of the comparison (the hub cannot import
+ * the workflow's constant across the hub/domain boundary), and each assertion
+ * covers only the single-node guarantee above.
  */
 export const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000
 
@@ -81,8 +108,11 @@ export const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000
  * whole adapter execution against `timeoutMs` and reports its own
  * `EXECUTION_ABORTED`, so an outer budget equal to (or below) the poll window
  * would replace the task-level `omnimux-task-timeout` with a weaker error —
- * exactly the two-layers-masking-each-other case D7 warns about. The slack is
- * also 30 minutes' worth of room below `EXECUTION_TIMEOUT_MS`.
+ * exactly the two-layers-masking-each-other case D7 warns about.
+ *
+ * The remaining slack below `EXECUTION_TIMEOUT_MS` is 9 minutes
+ * (`30min - 21min`), not "30 minutes' worth" — an earlier wording here
+ * overstated it by subtracting nothing.
  *
  * Before #1382 this was hardcoded to 10 minutes, which silently capped the
  * synchronous path below the poll deadline it was supposed to allow.

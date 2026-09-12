@@ -329,8 +329,22 @@ test('#1382 常量与不变式', () => {
   assert.equal(DEFAULT_POLL_INTERVAL_MS, 1500)
   assert.equal(DEFAULT_REQUEST_TIMEOUT_MS, 10_000)
   assert.equal(DEFAULT_RETRY_BUDGET_MS, 7000)
-  // INVARIANT: a hub task deadline must stay strictly below the workflow's
-  // whole-run timeout, otherwise the weaker error would mask the task-level one.
+  // #1386 — what this comparison does and does not cover.
+  //
+  // It compares two constants at DIFFERENT granularities: the task poll window
+  // (per task) against the workflow's whole-run budget (per execution). Reading
+  // it as "a hub task always fails with the task-level code before the run
+  // times out" is wrong.
+  //
+  // Covered: a single-node run. 20 minutes of polling elapse before the
+  // 30-minute run budget, so `omnimux-task-timeout` surfaces as intended.
+  //
+  // NOT covered: multi-node graphs. The run budget is shared, so several nodes
+  // — sequential or under maxParallel — can exhaust the 30 minutes while one
+  // task is still inside its own 20-minute window. Then the run dies first, the
+  // task-level code never appears, and upstream work may keep billing while its
+  // artifact is discarded. This assertion cannot see that: it only knows two
+  // numbers, not how many nodes share the budget.
   assert.ok(DEFAULT_TASK_DEADLINE_MS < WORKFLOW_EXECUTION_TIMEOUT_MS)
   assert.ok(SPEECH_TASK_DEADLINE_MS < WORKFLOW_EXECUTION_TIMEOUT_MS)
   // The outer submit+poll budget must sit above the poll deadline (so the poll
