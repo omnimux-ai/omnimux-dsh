@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { whenAuthReady } from './api.js'
 import {
   applyCachedPage,
@@ -176,6 +176,7 @@ export function resolveDateRange(dateKey, nowMs = Date.now()) {
 function useInspirationFilters() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
+  const [platform, setPlatform] = useState('')
   const [type, setType] = useState('')
   const [sort, setSort] = useState('hot')
   const [favorite, setFavorite] = useState('0')
@@ -189,6 +190,7 @@ function useInspirationFilters() {
   return {
     tab, setTab,
     q, setQ,
+    platform, setPlatform,
     type, setType,
     sort, setSort,
     favorite, setFavorite,
@@ -204,10 +206,11 @@ function useInspirationFilters() {
 function useFeedData(options) {
   const { active, filters } = options || {}
   const {
-    tab, q, type, sort, favorite,
+    tab, q, platform, type, sort, favorite,
     country, category, duration, views, trafficType, dateRange,
   } = filters || {}
   const [items, setItems] = useState([])
+  const [backendPlatforms, setBackendPlatforms] = useState([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -239,6 +242,7 @@ function useFeedData(options) {
         isNextPage,
         tab,
         q,
+        platform,
         type,
         sort,
         favorite,
@@ -254,9 +258,9 @@ function useFeedData(options) {
         page: pageRef.current,
         hasExistingItems: itemsRef.current.length > 0,
       },
-      { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore },
+      { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms: setBackendPlatforms },
     )
-  }, [tab, q, type, sort, favorite, country, category, duration, views, trafficType, dateRange])
+  }, [tab, q, platform, type, sort, favorite, country, category, duration, views, trafficType, dateRange])
 
   useEffect(() => {
     if (!active) return
@@ -272,6 +276,8 @@ function useFeedData(options) {
   return {
     items,
     setItems,
+    backendPlatforms,
+    setBackendPlatforms,
     page,
     hasMore,
     loading,
@@ -289,10 +295,11 @@ function useFeedData(options) {
 export function useInspirationFeed({ active }) {
   const filters = useInspirationFilters()
   const data = useFeedData({ active, filters })
-  const { items, setItems, hasMore, loading, loadingMore, loadData } = data
+  const { items, setItems, backendPlatforms, hasMore, loading, loadingMore, loadData } = data
 
   const [selectedItem, setSelectedItem] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [importedPlatforms, setImportedPlatforms] = useState([])
   const sentinelRef = useRef(null)
 
   const replicate = useReplicateToChat()
@@ -303,6 +310,11 @@ export function useInspirationFeed({ active }) {
   const handleImportSuccess = useCallback((newItem) => {
     setItems((prev) => [newItem, ...prev])
     setSelectedItem(newItem)
+    const plat = (newItem?.source_platform || newItem?.platform || '').trim().toLowerCase()
+    if (plat && plat !== 'unknown') {
+      const canonical = plat === 'twitter' ? 'x' : plat
+      setImportedPlatforms((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]))
+    }
   }, [setItems])
 
   const handleItemUpdated = useCallback((updatedItem) => {
@@ -310,9 +322,57 @@ export function useInspirationFeed({ active }) {
     setSelectedItem(updatedItem)
   }, [setItems])
 
+  // Track all unique platforms seen in items across fetches
+  const [discoveredPlatforms, setDiscoveredPlatforms] = useState([])
+  useEffect(() => {
+    if (!items || items.length === 0) return
+    setDiscoveredPlatforms((prev) => {
+      const set = new Set(prev)
+      let changed = false
+      for (const item of items) {
+        let plat = (item?.source_platform || item?.platform || '').trim().toLowerCase()
+        if (plat === 'twitter') plat = 'x'
+        if (plat && plat !== 'unknown' && !set.has(plat)) {
+          set.add(plat)
+          changed = true
+        }
+      }
+      return changed ? Array.from(set) : prev
+    })
+  }, [items])
+
+  const availablePlatforms = useMemo(() => {
+    const set = new Set()
+    for (const item of items) {
+      let plat = (item?.source_platform || item?.platform || '').trim().toLowerCase()
+      if (plat === 'twitter') plat = 'x'
+      if (plat && plat !== 'unknown') set.add(plat)
+    }
+    for (const p of discoveredPlatforms) {
+      let plat = String(p || '').trim().toLowerCase()
+      if (plat === 'twitter') plat = 'x'
+      if (plat && plat !== 'unknown') set.add(plat)
+    }
+    for (const p of backendPlatforms || []) {
+      const name = typeof p === 'object' && p !== null ? p.name : p
+      let plat = String(name || '').trim().toLowerCase()
+      if (plat === 'twitter') plat = 'x'
+      if (plat && plat !== 'unknown') set.add(plat)
+    }
+    for (const p of importedPlatforms) {
+      let plat = String(p || '').trim().toLowerCase()
+      if (plat === 'twitter') plat = 'x'
+      if (plat && plat !== 'unknown') set.add(plat)
+    }
+    return Array.from(set)
+  }, [items, discoveredPlatforms, backendPlatforms, importedPlatforms])
+
   return {
     ...filters,
     ...data,
+    platform: filters.platform,
+    setPlatform: filters.setPlatform,
+    availablePlatforms,
     selectedItem,
     setSelectedItem,
     importOpen,

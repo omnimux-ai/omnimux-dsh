@@ -124,7 +124,8 @@ export function handleList({ url, store }) {
     posted_after,
     posted_before,
   })
-  return { status: 200, body: { data: result } }
+  const platforms = typeof store.platforms === 'function' ? store.platforms() : []
+  return { status: 200, body: { data: { ...result, platforms } } }
 }
 
 export function handleCreate({ req, store }) {

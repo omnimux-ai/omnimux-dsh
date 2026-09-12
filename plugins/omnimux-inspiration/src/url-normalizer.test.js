@@ -54,4 +54,29 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     const video2 = 'https://www.tiktok.com/@user/video/7222222222222222222'
     assert.equal(isSameSocialContent(video1, video2), false)
   })
+
+  it('extracts canonical key and self-registers unknown platforms dynamically', () => {
+    const biliUrl = 'https://www.bilibili.com/video/BV1xx411c7mD?utm_source=copy'
+    const keyBili = getCanonicalItemKey(biliUrl)
+    assert.equal(keyBili.platform, 'bilibili')
+    assert.equal(keyBili.key, 'bilibili:url:https://www.bilibili.com/video/BV1xx411c7mD')
+
+    const threadsUrl = 'https://threads.net/@zuck/post/Cx12345'
+    const keyThreads = getCanonicalItemKey(threadsUrl)
+    assert.equal(keyThreads.platform, 'threads')
+    assert.equal(keyThreads.key, 'threads:url:https://threads.net/@zuck/post/Cx12345')
+
+    const douyinUrl = 'https://v.douyin.com/iJabc12/'
+    const keyDouyin = getCanonicalItemKey(douyinUrl)
+    assert.equal(keyDouyin.platform, 'douyin')
+    assert.equal(keyDouyin.key, 'douyin:url:https://v.douyin.com/iJabc12')
+
+    const invalidKey = getCanonicalItemKey('not-a-valid-url')
+    assert.equal(invalidKey.platform, 'unknown')
+    assert.equal(invalidKey.key, 'url:not-a-valid-url')
+
+    const emptyKey = getCanonicalItemKey('')
+    assert.equal(emptyKey.platform, 'unknown')
+    assert.equal(emptyKey.key, '')
+  })
 })
