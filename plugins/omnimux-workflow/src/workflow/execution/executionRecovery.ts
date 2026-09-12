@@ -20,7 +20,7 @@ import {
   type ExecutionEventLogEntry,
 } from './executionTypes';
 import { createDispatchingNodeExecutor } from './nodeExecutors';
-import { persistDagState } from './executionTimers';
+import { persistDagState, persistRecord } from './executionTimers';
 import type { GenerationGateway } from '../seam/gateway';
 import { createWorkflowLogger } from './logger';
 
@@ -73,20 +73,38 @@ function handleTimedOutExecution(
   return null;
 }
 
+/**
+ * Re-pend the nodes that were in flight when the process died.
+ *
+ * `#1379` established this semantic: a restart must not leave a node stuck at
+ * `running` forever, so it goes back to `pending` and the scheduler picks it up
+ * again. `#1382` keeps that exactly as it is and only refuses to throw away the
+ * upstream task reference while doing it — replacing the whole snapshot would
+ * erase the one piece of evidence that the hub is already working on this node,
+ * so the recovered run would resubmit (and rebill) it.
+ *
+ * @returns How many re-pended nodes carry a reference, i.e. how many will
+ *   reconcile instead of submitting. Reported, not outcome-asserted: whether a
+ *   reconcile finishes or falls back is the executor's call.
+ */
 function resetInFlightNodeStates(
   context: ExecutionContext,
   dagState: Partial<DagState>,
-): void {
+): { reconcilable: number } {
+  let reconcilable = 0;
   for (const nodeId of dagState.runningNodes || []) {
     const state = context.nodeStates.get(nodeId);
     if (!state || state.status !== 'running') continue;
+    if (state.upstreamTask) reconcilable += 1;
     context.nodeStates.set(nodeId, {
       status: 'pending',
       startedAt: null,
       completedAt: null,
       error: null,
+      ...(state.upstreamTask ? { upstreamTask: state.upstreamTask } : {}),
     });
   }
+  return { reconcilable };
 }
 
 function filterValidReplayLog(eventLog: PersistedEventLogEntry[]): ExecutionEventLogEntry[] {
@@ -205,9 +223,11 @@ export async function recoverExecution(
     executionsDir: deps.executionsDir,
   });
 
-  resetInFlightNodeStates(context, dagState);
+  const { reconcilable } = resetInFlightNodeStates(context, dagState);
 
   const entry = assembleRecoveredEntry(record, context, scheduler, abortController);
+  // #1382: write a reference change immediately rather than at the next sync.
+  entry.context.onPersistRequested = () => persistRecord(deps.executionsDir, entry);
   deps.entries.set(record.id, entry);
   deps.onSetupEntry(entry);
 
@@ -216,6 +236,9 @@ export async function recoverExecution(
     status: record.status,
     pending: scheduler.getProgress().pending,
     completed: scheduler.getProgress().completed,
+    // #1382: nodes that came back with an upstream task reference and will
+    // therefore reconcile instead of resubmitting.
+    reconcilable,
   });
   return entry;
 }

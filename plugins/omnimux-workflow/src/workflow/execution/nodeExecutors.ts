@@ -126,6 +126,16 @@ export function createDispatchingNodeExecutor(
       workspaceId: opts.workspaceId,
       toPublicUrl,
       persistGenerated: opts.persistGenerated,
+      // #1382: the executor reports the upstream task it just created and reads
+      // back any reference a recovered node was re-pended with. Both are thin
+      // closures over the execution context, which owns the persisted state.
+      //
+      // Guarded on purpose: a context double (tests, embedding code) need not
+      // implement a bookkeeping channel that only affects post-restart behavior.
+      // Losing it means "resubmit after a restart", never a failed generation.
+      recordUpstreamTask: (ref) => context.setNodeUpstreamTask?.(node.id, ref),
+      readUpstreamTask: () => context.readNodeUpstreamTask?.(node.id),
+      clearUpstreamTask: () => context.clearNodeUpstreamTask?.(node.id),
       reportProgress: (progress, message) => {
         context.reportProgress(node.id, progress, message ?? '');
       },

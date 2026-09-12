@@ -136,11 +136,48 @@ export interface AwaitTaskResult {
   simulated?: boolean;
 }
 
+/**
+ * #1382: the upstream (hub) task a node is currently waiting on.
+ *
+ * Persisted with the node state so a host restart can ask the hub about a task
+ * the *previous* process submitted, instead of blindly resubmitting it — which
+ * would discard an artifact the hub may already hold and can bill twice.
+ *
+ * The hub never sees this type: it only recognizes `{ taskId, dest }`.
+ */
+export interface UpstreamTaskRef {
+  /** Task id returned by the hub on submit. */
+  taskId: string;
+  /** Capability domain; selects which seam a reconcile goes through. */
+  capability: GenerationCapability;
+  /**
+   * First submit time (epoch ms) — the deadline anchor. A restart must not
+   * reset it, otherwise every restart would hand the task a fresh window and
+   * the whole-run timeout would become a meaningless ceiling.
+   */
+  submittedAt: number;
+}
+
 export interface GenerationGateway {
   /** Submit a generation task (wait:false semantics). */
   submit(req: SubmitRequest): Promise<SubmitResult>;
   /** Poll a task and download the artifact to its dest. */
   awaitTask(taskId: string, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult>;
+  /**
+   * #1382: finish (or fail) a task from a *persisted* reference, without
+   * requiring in-process bookkeeping.
+   *
+   * `awaitTask` cannot carry this: it is defined over the client's own task
+   * table, so an unknown id is its contractual error ("resubmit") — the exact
+   * opposite of what a reconcile needs. Reconciling also needs `capability`
+   * (which seam) and `submittedAt` (the deadline anchor), neither of which has a
+   * place in the `awaitTask` signature.
+   *
+   * An implementation that cannot reconcile across processes (the mock gateway:
+   * its tasks live in memory only) throws instead of pretending, so the caller
+   * falls back to resubmitting — today's behavior, never worse.
+   */
+  reconcileTask(ref: UpstreamTaskRef, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult>;
   /** Capability catalog for the config panel (model lists). */
   capabilities(): Promise<import('../../shared/api.ts').CapabilityCatalog>;
 }

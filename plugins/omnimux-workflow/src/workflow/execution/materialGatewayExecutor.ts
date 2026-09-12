@@ -11,9 +11,10 @@ import type { ResolveExecutionProjectFile } from './executionMediaSource.ts';
 import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
 import { compileMultimodalPrompt } from './multimodalCompiler.ts';
-import type { GenerationGateway, SubmitRequest } from '../seam/gateway';
+import type { AwaitTaskResult, GenerationGateway, SubmitRequest } from '../seam/gateway';
 import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
 import { validateGeneratedResult } from '../seam/generatedResult.ts';
+import { reconcileUpstreamTask } from './upstreamReconcile.ts';
 import type {
   NodeExecutor,
   NodeOutput,
@@ -80,6 +81,94 @@ export function createMaterialGatewayExecutor(opts: {
         throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
       }
       const rawPrompt = resolveGenerationPrompt(data, upstream.texts);
+      const dest = join(ctx.mediaDir, `${node.id}.${extFor(capability)}`);
+
+      /**
+       * Shared tail of both paths: validate the settled result, hand it to the
+       * project store and describe the node output.
+       *
+       * @param record.prompt Prompt recorded with the artifact. The reconcile
+       *   path records the resolved prompt without multimodal recompilation,
+       *   because its request was compiled and submitted by another process.
+       */
+      const finalizeMedia = async (
+        settled: AwaitTaskResult,
+        record: { prompt: string; modelId?: string },
+      ): Promise<NodeOutput> => {
+        const metadata = validateGeneratedResult(settled, capability, dest);
+        ctx.reportProgress?.(90, '生成完成');
+        const simulated = settled.simulated === true;
+
+        if (capability === 'text') {
+          return {
+            text: settled.text!,
+            ...(simulated ? { simulated: true } : {}),
+          };
+        }
+
+        if (ctx.persistGenerated) {
+          const persisted = await ctx.persistGenerated({
+            nodeId: node.id,
+            nodeType: node.type,
+            tmpAbs: dest,
+            materialType: capability,
+            prompt: record.prompt,
+            modelId: record.modelId,
+          });
+          return {
+            relativePath: persisted.relativePath,
+            assetId: persisted.assetId,
+            ...(simulated ? { simulated: true } : {}),
+            mediaAssets: [{
+              type: capability,
+              url: persisted.url,
+              relativePath: persisted.relativePath,
+              assetId: persisted.assetId,
+              ...metadata,
+              ...(persisted.mimeType ? { mimeType: persisted.mimeType } : {}),
+              ...(persisted.sizeBytes != null ? { sizeBytes: persisted.sizeBytes } : {}),
+              ...(persisted.durationSec != null ? { durationSec: persisted.durationSec } : {}),
+            }],
+          };
+        }
+
+        const url = ctx.toPublicUrl ? ctx.toPublicUrl(settled.url) : settled.url;
+        return {
+          ...(simulated ? { simulated: true } : {}),
+          ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
+          ...(settled.assetId ? { assetId: settled.assetId } : {}),
+          mediaAssets: [{ type: capability, url, ...metadata,
+            ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
+            ...(settled.assetId ? { assetId: settled.assetId } : {}),
+          }],
+        };
+      };
+
+      // #1382: a recovered node may already own an upstream task. Reconciling it
+      // reuses that work; preparing the request instead would re-validate inputs
+      // the hub no longer needs (and may no longer have), and submitting again
+      // would discard a finished artifact and bill a second time.
+      const upstreamTaskRef = ctx.readUpstreamTask?.();
+      if (upstreamTaskRef) {
+        const outcome = await reconcileUpstreamTask({
+          gateway,
+          ref: upstreamTaskRef,
+          dest,
+          signal: ctx.signal,
+          capability,
+        });
+        if (outcome.kind === 'downloaded') {
+          ctx.clearUpstreamTask?.();
+          return finalizeMedia(outcome.result, {
+            prompt: rawPrompt,
+            modelId: upstream.modelId ?? readString(params, 'model'),
+          });
+        }
+        // Either the hub cannot tell us about that task (resubmit, as before) or
+        // the task genuinely failed. Both are terminal for this reference.
+        ctx.clearUpstreamTask?.();
+        if (outcome.kind === 'failed') throw outcome.error;
+      }
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
       const references = [...upstream.references];
@@ -131,7 +220,6 @@ export function createMaterialGatewayExecutor(opts: {
       const image = references.find((r) => r.type === 'image')?.pathOrUrl || undefined;
       const audio = references.find((r) => r.type === 'audio')?.pathOrUrl || audioTrack?.pathOrUrl;
 
-      const dest = join(ctx.mediaDir, `${node.id}.${extFor(capability)}`);
       const request: SubmitRequest = {
         capability,
         prompt,
@@ -177,56 +265,31 @@ export function createMaterialGatewayExecutor(opts: {
       const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);
       ctx.reportProgress?.(10, '已提交生成任务');
-
-      ctx.reportProgress?.(40, '生成中…');
-      const settled = await gateway.awaitTask(submitted.taskId, dest, ctx.signal);
-      const metadata = validateGeneratedResult(settled, capability, dest);
-      ctx.reportProgress?.(90, '生成完成');
-      const simulated = settled.simulated === true;
-
-      if (capability === 'text') {
-        return {
-          text: settled.text!,
-          ...(simulated ? { simulated: true } : {}),
-        };
-      }
-
-      if (ctx.persistGenerated) {
-        const persisted = await ctx.persistGenerated({
-          nodeId: node.id,
-          nodeType: node.type,
-          tmpAbs: dest,
-          materialType: capability,
-          prompt,
-          modelId: resolved.model,
+      // #1382: record the moment the hub owns a task, before any polling. The
+      // record is written immediately (not at the next sync tick): a crash in
+      // this window is exactly what would otherwise force a resubmit of a task
+      // that is already running — and billable — upstream.
+      if (submitted.mode === 'submitted') {
+        ctx.recordUpstreamTask?.({
+          taskId: submitted.taskId,
+          capability,
+          submittedAt: Date.now(),
         });
-        return {
-          relativePath: persisted.relativePath,
-          assetId: persisted.assetId,
-          ...(simulated ? { simulated: true } : {}),
-          mediaAssets: [{
-            type: capability,
-            url: persisted.url,
-            relativePath: persisted.relativePath,
-            assetId: persisted.assetId,
-            ...metadata,
-            ...(persisted.mimeType ? { mimeType: persisted.mimeType } : {}),
-            ...(persisted.sizeBytes != null ? { sizeBytes: persisted.sizeBytes } : {}),
-            ...(persisted.durationSec != null ? { durationSec: persisted.durationSec } : {}),
-          }],
-        };
       }
-
-      const url = ctx.toPublicUrl ? ctx.toPublicUrl(settled.url) : settled.url;
-      return {
-        ...(simulated ? { simulated: true } : {}),
-        ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
-        ...(settled.assetId ? { assetId: settled.assetId } : {}),
-        mediaAssets: [{ type: capability, url, ...metadata,
-          ...(settled.relativePath ? { relativePath: settled.relativePath } : {}),
-          ...(settled.assetId ? { assetId: settled.assetId } : {}),
-        }],
-      };
+      try {
+        ctx.reportProgress?.(40, '生成中…');
+        const settled = await gateway.awaitTask(submitted.taskId, dest, ctx.signal);
+        const output = await finalizeMedia(settled, { prompt, modelId: resolved.model });
+        // Terminal: a finished node must not leave a stale reference for the next
+        // recovery to chase.
+        ctx.clearUpstreamTask?.();
+        return output;
+      } catch (error) {
+        // The node is about to go terminal, so the reference must not survive:
+        // its window is either already closed or the hub gave a final answer.
+        ctx.clearUpstreamTask?.();
+        throw error;
+      }
     },
   };
 }
