@@ -217,6 +217,45 @@ function measureExpression() {
   })()`
 }
 
+/**
+ * 槽位胶囊只在**活跃会话**中挂载（hero/空会话状态下没有附件导轨与槽位 UI）。
+ * 脚本开头会 reload 以加载最新 client bundle，而刷新会把应用打回 hero，
+ * 因此必须在刷新之后显式进入一个会话，否则会误报「弹窗打不开」。
+ */
+async function ensureActiveSession(session) {
+  const readPhase = () =>
+    session.evaluate(
+      "([...document.querySelectorAll('[data-phase]')].map(e => e.getAttribute('data-phase'))[0]) || null",
+    )
+
+  if ((await readPhase()) === 'active') return 'already-active'
+
+  const rect = await session.evaluate(`(() => {
+    const row = document.querySelector('.ozLDBG_sessionRow');
+    if (!row) return null;
+    const r = row.getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  })()`)
+
+  if (!rect) {
+    throw new Error(
+      `当前处于 hero（空会话）状态，且侧栏没有可打开的会话行，槽位胶囊不会挂载。`
+      + `当前 phase=${await readPhase()}。请先在 App 中创建或打开一个会话后重试。`,
+    )
+  }
+
+  // React 只信任真实鼠标事件，合成 click 无效
+  await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
+  await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
+  await sleep(2000)
+
+  const phase = await readPhase()
+  if (phase !== 'active') {
+    throw new Error(`点击侧栏会话行后仍未进入活跃会话（phase=${phase}），无法验证弹窗。`)
+  }
+  return 'opened-existing-session'
+}
+
 async function main() {
   const session = await cdpSession()
   const failures = []
@@ -228,6 +267,9 @@ async function main() {
   }
 
   try {
+    const sessionState = await ensureActiveSession(session)
+    record('composer has an active session', true, `state=${sessionState}`)
+
     const opened = await openPicker(session)
     record('picker opens from the slot capsule', opened, `selector=${SELECTORS.root}`)
     if (!opened) throw new Error('picker did not open; cannot measure')
