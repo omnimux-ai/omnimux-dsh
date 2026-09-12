@@ -132,9 +132,14 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('keeps a model without a channel pool on its base candidates and reports the intent', () => {
-      const plan = resolveChannelPlan('gpt-image-2.5', { allowedGroups: ['standard'] })
+      const plan = resolveChannelPlan('grok-imagine-image-2', { allowedGroups: ['standard'] })
       // The alias keeps the pre-routing candidate list intact.
-      assert.deepEqual(plan.candidates, ['gpt-image-2.5', 'gpt-image-2-5'])
+      assert.deepEqual(plan.candidates, [
+        'grok-imagine-image-2',
+        'grok-imagine-image',
+        'grok-imagine-image-2-0',
+        'grok-imagine-image-2.0',
+      ])
       assert.deepEqual(plan.unresolvedGroups, ['standard'])
     })
 

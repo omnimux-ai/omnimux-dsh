@@ -121,7 +121,9 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
   // declared session model id, so `model@group` never reaches the gateway.
   // `routed` tells the executor to use the direct chat path instead.
   const plan = resolveChannelPlan(row.id, {
-    strategy: explicitStrategy ? request.strategy : 'auto',
+    // 只有调用方显式给了策略才算"有意图"；否则不能传 'auto'，
+    // 否则会把「没选渠道」的请求当成按 auto 排名自动选组。
+    ...(explicitStrategy ? { strategy: request.strategy } : {}),
     group,
     allowedGroups,
   })

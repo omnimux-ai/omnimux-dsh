@@ -329,9 +329,9 @@ describe('resolveMediaAuth (dual-track auth)', () => {
 
   it('keeps a model without a channel pool but records the unusable channel intent', () => {
     const media = parseMediaConfig(undefined)
-    const route = resolveMediaRoute('image', { model: 'gpt-image-2.5', allowedGroups: ['standard'] }, media)
+    const route = resolveMediaRoute('image', { model: 'grok-imagine-image-2', allowedGroups: ['standard'] }, media)
     assert.deepEqual(route.unresolvedGroups, ['standard'])
-    assert.ok(route.candidates.includes('gpt-image-2.5'))
+    assert.ok(route.candidates.includes('grok-imagine-image-2'))
   })
 })
 
