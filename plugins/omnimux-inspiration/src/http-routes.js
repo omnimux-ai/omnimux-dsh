@@ -11,6 +11,9 @@ import {
   handlePatchItem,
   handleTranslate,
 } from './http-handlers.js'
+import { detectPlatformFromUrl } from './url-normalizer.js'
+
+export { detectPlatformFromUrl } from './url-normalizer.js'
 
 export const LOCAL_PREFIX = '/omnimux/inspiration/local'
 
@@ -18,15 +21,6 @@ const CODE_MESSAGES = {
   'omnimux-unconfigured': 'OmniMux 未配置 API Key，请在 设置 → 个人资料 或凭据库中配置 OMNIMUX_API_KEY',
   'needs-omnimux': '需要登录 OmniMux 账号，请在 设置 → 个人资料 中登录',
 }
-
-const PLATFORM_PATTERNS = [
-  { test: 'tiktok.com', platform: 'tiktok' },
-  { test: 'instagram.com', platform: 'instagram' },
-  { test: 'youtube.com', platform: 'youtube' },
-  { test: 'youtu.be', platform: 'youtube' },
-  { test: 'x.com', platform: 'x' },
-  { test: 'twitter.com', platform: 'x' },
-]
 
 const MEDIA_TYPES = {
   mp4: 'video/mp4',
@@ -84,13 +78,6 @@ export function formatErrorMessage(err) {
   return String(err)
 }
 
-/** Detect social platform from URL. */
-export function detectPlatformFromUrl(url) {
-  if (!url || typeof url !== 'string') return 'unknown'
-  const lower = url.toLowerCase()
-  const hit = PLATFORM_PATTERNS.find((entry) => lower.includes(entry.test))
-  return hit ? hit.platform : 'unknown'
-}
 
 function parseJsonChunk(raw, resolve) {
   if (!raw.trim()) {

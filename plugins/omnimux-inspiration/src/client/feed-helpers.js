@@ -20,6 +20,7 @@ export function cacheKeyOf(...args) {
   const base = `insp:${tab || 'all'}:${q || ''}:${type || ''}:${sort || 'hot'}:${favorite ?? '0'}`
 
   const extraParts = []
+  if (p.platform) extraParts.push(`plat=${p.platform}`)
   if (p.country) extraParts.push(`c=${p.country}`)
   if (p.category) extraParts.push(`cat=${p.category}`)
   if (p.duration_min != null && p.duration_min !== '') extraParts.push(`dmin=${p.duration_min}`)
@@ -58,11 +59,12 @@ function applyNextPageResult(result, targetPage, setters) {
 }
 
 function applyFirstPageResult(result, cacheKey, setters) {
-  const { setItems, setPage, setHasMore, setPhase } = setters
+  const { setItems, setPage, setHasMore, setPhase, setPlatforms } = setters
   if (setItems) setItems(result.items || [])
   if (setPage) setPage(1)
   if (setHasMore) setHasMore(Boolean(result.hasMore))
   if (setPhase && result.phase) setPhase(result.phase)
+  if (setPlatforms && Array.isArray(result.platforms)) setPlatforms(result.platforms)
   if (cacheKey) setInspirationCache(cacheKey, result)
 }
 
@@ -106,6 +108,47 @@ export function filterOutItemsByIds(items, idsToRemove) {
 
 export function extractLocalItemIds(items) {
   return (items || []).filter((it) => it.is_local).map((it) => it.id)
+}
+
+const PLATFORM_DISPLAY_NAMES = {
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  x: 'X',
+  twitter: 'X',
+  facebook: 'Facebook',
+  threads: 'Threads',
+}
+
+/** Canonical locale key for a platform slug; `twitter` is an alias of `x`. */
+const PLATFORM_LOCALE_KEYS = {
+  x: 'x',
+  twitter: 'x',
+}
+
+/**
+ * Human-readable platform label.
+ *
+ * Known platforms use their canonical casing; anything self-registered keeps the
+ * first-letter-capitalized rule. A `translate` function (the section's `t`) may
+ * override the label through the `platform.<name>` locale key; the `twitter`
+ * alias resolves to the same entry as `x`.
+ * @param {unknown} platform
+ * @param {(key: string) => string} [translate]
+ * @returns {string}
+ */
+export function formatPlatformName(platform, translate) {
+  const raw = typeof platform === 'string' ? platform.trim() : ''
+  if (!raw) return ''
+  const key = raw.toLowerCase()
+  const localeKey = PLATFORM_LOCALE_KEYS[key] || key
+  if (typeof translate === 'function') {
+    const messageKey = `platform.${localeKey}`
+    const localized = translate(messageKey)
+    if (typeof localized === 'string' && localized && localized !== messageKey) return localized
+  }
+  if (PLATFORM_DISPLAY_NAMES[key]) return PLATFORM_DISPLAY_NAMES[key]
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
 }
 
 export function updateItemInList(items, updatedItem) {
@@ -194,7 +237,7 @@ export async function preloadBatchCovers(items, timeoutMs = 600) {
 
 export async function fetchAndMergeInspirations(params, options) {
   const {
-    tab, q, type, sort, favorite, targetPage,
+    tab, q, platform, type, sort, favorite, targetPage,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   } = params
@@ -202,6 +245,7 @@ export async function fetchAndMergeInspirations(params, options) {
   const result = await loadInspirationsAtomic({
     tab,
     q,
+    platform,
     type,
     sort,
     favorite,
@@ -239,14 +283,14 @@ export function checkCacheEarlyReturn(cacheKey, setters) {
 
 export async function executeFeedLoad(params, setters) {
   const {
-    isNextPage, tab, q, type, sort, favorite, page, hasExistingItems,
+    isNextPage, tab, q, platform, type, sort, favorite, page, hasExistingItems,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   } = params
-  const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore } = setters
+  const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms } = setters
   const targetPage = isNextPage ? page + 1 : 1
   const cacheKey = cacheKeyOf({
-    tab, q, type, sort, favorite,
+    tab, q, platform, type, sort, favorite,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   })
@@ -261,11 +305,11 @@ export async function executeFeedLoad(params, setters) {
   try {
     await fetchAndMergeInspirations(
       {
-        tab, q, type, sort, favorite, targetPage,
+        tab, q, platform, type, sort, favorite, targetPage,
         country, category, duration_min, duration_max,
         views_min, views_max, traffic_type, posted_after, posted_before,
       },
-      { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError } },
+      { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError, setPlatforms } },
     )
   } catch (err) {
     setError(String(err?.message || err))

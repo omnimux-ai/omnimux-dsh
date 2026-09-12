@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc } from './api.js'
+import { formatPlatformName } from './feed-helpers.js'
 
 const ICON_EYE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -43,7 +44,7 @@ export function InspirationCoverCard({ card }) {
     setLoaded(false)
   }, [cover])
 
-  const platform = (row.source_platform || (row.is_local ? 'local' : 'tiktok')).toUpperCase()
+  const platform = formatPlatformName(row.source_platform || (row.is_local ? 'local' : 'tiktok'), t)
   const isLocal = Boolean(row.is_local)
   const anyBusy = Boolean(replicateBusy)
   const isShowCover = !broken && loaded && isRevealed

@@ -4,9 +4,12 @@ import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
+import { formatPlatformName } from './feed-helpers.js'
 import { PlusIcon } from './icons.jsx'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
+
+export { formatPlatformName }
 
 function LoginGate({ t }) {
   const login = () => {
@@ -41,6 +44,8 @@ export function InspirationSection({ t, active }) {
   const {
     tab, setTab,
     q, setQ,
+    platform, setPlatform,
+    availablePlatforms = [],
     type, setType,
     sort, setSort,
     favorite, setFavorite,
@@ -118,6 +123,21 @@ export function InspirationSection({ t, active }) {
         )}
         tools={(
           <>
+            {availablePlatforms.length > 1 && (
+              <DropdownSelect
+                value={platform}
+                aria-label={t('filter.platform')}
+                onChange={setPlatform}
+                className="omnimux-inspiration-filter-select"
+                options={[
+                  { value: '', label: t('platform.all') },
+                  ...availablePlatforms.map((plat) => ({
+                    value: plat,
+                    label: formatPlatformName(plat, t),
+                  })),
+                ]}
+              />
+            )}
             <DropdownSelect
               value={type}
               aria-label={t('filter.type')}

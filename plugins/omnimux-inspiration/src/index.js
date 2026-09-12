@@ -1,6 +1,7 @@
 import { resolveInspirationPaths } from './paths.js'
 import { createLocalStore } from './local-store.js'
-import { createLocalInspirationDispatcher, readJsonBody, sendJson } from './http-routes.js'
+import { createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
+import { capabilityOf } from './http-handlers.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
 
 export const name = 'omnimux-inspiration'
@@ -41,6 +42,104 @@ const jsonOut = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
 }
 
+/** Platforms the OmniMux cloud catalog has no (platform, capability) pair for. */
+const CLOUD_UNSUPPORTED_PLATFORMS = new Set(['facebook', 'threads'])
+
+/**
+ * Display names for Chinese-language failure messages. Must stay aligned with
+ * the client's `platform.<key>` locale entries so one product does not name a
+ * platform two ways.
+ */
+const PLATFORM_DISPLAY_NAMES = {
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  x: '推特 (X)',
+  facebook: 'Facebook',
+  threads: 'Threads',
+}
+
+const SUPPORTED_PLATFORM_HINT = 'TikTok / Instagram / YouTube / X'
+
+/**
+ * Human-readable label for a platform slug, falling back to the slug itself.
+ * @param {string} platform
+ * @returns {string}
+ */
+export function platformDisplayName(platform) {
+  const key = typeof platform === 'string' ? platform.trim().toLowerCase() : ''
+  if (!key) return ''
+  return PLATFORM_DISPLAY_NAMES[key] || key
+}
+
+/**
+ * A cloud/fallback social response carries usable metadata when `data` is a
+ * non-empty object. Field-level validity is judged in `parseSocialMeta`, so no
+ * field sniffing happens here (platform envelopes are not flat).
+ * @param {unknown} data
+ * @returns {boolean}
+ */
+function hasSocialPayload(data) {
+  return Boolean(data) && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0
+}
+
+async function runFallback(fallback, params) {
+  if (typeof fallback !== 'function') return null
+  try {
+    return await fallback(params)
+  } catch {
+    return null
+  }
+}
+
+function socialFailureMessage({ platform, cloudUnsupported, cloudError, toolReady }) {
+  if (!platform || platform === 'unknown') {
+    return `未能识别该链接所属平台，请确认链接来自 ${SUPPORTED_PLATFORM_HINT}、Facebook 或 Threads`
+  }
+  if (cloudUnsupported) {
+    const name = platformDisplayName(platform) || platform
+    // No import path accepts a bare media URL as `video_url`, so suggesting one
+    // would send the user into a guaranteed-failing cloud call.
+    return `${name} 暂不支持云端解析，请改用受支持平台（${SUPPORTED_PLATFORM_HINT}）的链接导入`
+  }
+  if (cloudError) return `OmniMux 云端社媒解析失败: ${formatErrorMessage(cloudError)}`
+  if (!toolReady) return 'OmniMux 社媒解析工具 (omnimux_social_data) 未就绪，请检查 omnimux 插件是否加载'
+  return '未从该链接解析到内容，请确认链接是公开可访问的帖子/视频'
+}
+
+/**
+ * Build the social fetcher consumed by the import pipeline.
+ *
+ * Order: cloud `omnimux_social_data` (skipped for platforms the catalog does
+ * not serve) → public no-key fallback resolver → actionable error that names
+ * the real reason instead of a generic "check the link or network".
+ * @param {{ getTool?: (name: string) => any, fallback?: Function }} [deps]
+ */
+export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial } = {}) {
+  return async function socialFetcher({ platform, capability, url }) {
+    const cloudUnsupported = CLOUD_UNSUPPORTED_PLATFORMS.has(platform)
+    const cloudSkipped = cloudUnsupported || !platform || platform === 'unknown'
+    const resolvedCapability = capability || capabilityOf(platform)
+    const socialDataTool = cloudSkipped || typeof getTool !== 'function' ? undefined : getTool('omnimux_social_data')
+    const toolReady = Boolean(socialDataTool && typeof socialDataTool.execute === 'function')
+    let cloudError = null
+
+    if (toolReady) {
+      try {
+        const res = await socialDataTool.execute({ platform, capability: resolvedCapability, url })
+        if (res && hasSocialPayload(res.data)) return res
+      } catch (err) {
+        cloudError = err
+      }
+    }
+
+    const fallbackRes = await runFallback(fallback, { platform, capability: resolvedCapability, url })
+    if (fallbackRes && hasSocialPayload(fallbackRes.data)) return fallbackRes
+
+    throw new Error(socialFailureMessage({ platform, cloudUnsupported, cloudError, toolReady }))
+  }
+}
+
 /**
  * @param {{
  *   tools: { register: (tool: object) => unknown, get?: (name: string) => any },
@@ -61,28 +160,7 @@ export function apply(ctx) {
     return undefined
   }
 
-  // Social fetcher: consumes OmniMux tool omnimux_social_data with intelligent resilient fallback
-  const socialFetcher = async ({ platform, capability, url }) => {
-    const socialDataTool = getTool('omnimux_social_data')
-    if (socialDataTool && typeof socialDataTool.execute === 'function') {
-      try {
-        const res = await socialDataTool.execute({ platform, capability, url })
-        if (res && res.data && (res.data.video_url || res.data.play_url || res.data.video || res.data.cover_url || res.data.title)) {
-          return res
-        }
-      } catch (err) {
-        // Fall through to fallback resolver
-      }
-    }
-
-    // Resilient fallback extraction
-    const fallbackRes = await fallbackResolveSocial({ platform, capability, url })
-    if (fallbackRes && fallbackRes.data) {
-      return fallbackRes
-    }
-
-    throw new Error('社媒解析未提取到有效视频元数据，请检查链接或网络')
-  }
+  const socialFetcher = createSocialFetcher({ getTool })
 
   // Video analyze tool: exclusively consumes omnimux-video tool video_analyze
   const videoAnalyzeTool = {
@@ -229,7 +307,13 @@ export function apply(ctx) {
         },
       })
       if (result.status >= 400) throw new Error(result.body?.error || `HTTP ${result.status}`)
-      return safeJsonOutput(result.body?.data || {})
+      const payload = result.body?.data || {}
+      if (!result.body?.media_degraded) return safeJsonOutput(payload)
+      return safeJsonOutput({
+        ...payload,
+        media_degraded: true,
+        degrade_reason: result.body.degrade_reason,
+      })
     },
   })
 

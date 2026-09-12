@@ -15,9 +15,17 @@ export const importLocks = new Set()
 
 const DUPLICATE_ERROR = '该灵感素材已在库中，请勿重复导入'
 const HTTP_URL_RE = /^https?:\/\//i
-const CAPABILITY = { x: 'tweet', instagram: 'post' }
+const DEGRADE_REASON = '该平台/该内容未提供可下载的视频直链，已按链接类型入库'
 
-function capabilityOf(platform) {
+/** Cloud `capability` pair per platform (`omnimux_social_data` contract). */
+export const CAPABILITY = { x: 'tweet', instagram: 'post', youtube: 'video', tiktok: 'video' }
+
+/**
+ * Resolve the cloud capability pair for a platform (defaults to `video`).
+ * @param {string} platform
+ * @returns {string}
+ */
+export function capabilityOf(platform) {
   return CAPABILITY[platform] || 'video'
 }
 
@@ -40,14 +48,6 @@ function duplicateBody(existing, returnExisting) {
   return conflictExisting(existing)
 }
 
-function firstFilled(obj, keys, fallback = '') {
-  for (const key of keys) {
-    const value = obj[key]
-    if (value) return value
-  }
-  return fallback
-}
-
 function firstHttpUrl(values) {
   for (const value of values) {
     if (typeof value === 'string' && HTTP_URL_RE.test(value)) return value
@@ -55,35 +55,418 @@ function firstHttpUrl(values) {
   return ''
 }
 
-function parseSocialMeta(data, rawUrl) {
-  const videos = Array.isArray(data.videos) ? data.videos[0] : ''
-  const author = data.author || { name: data.author_name, handle: data.author_handle }
-  const stats = data.stats || {
-    likes: data.likes || data.digg_count,
-    comments: data.comments || data.comment_count,
-    shares: data.shares || data.share_count,
-    duration: data.duration || data.video_duration,
+/* -------------------------------------------------------------------------- *
+ * Structural social envelope extraction
+ *
+ * Every platform returns a different envelope: X nests the stream in
+ * `media.video[].variants[]`, YouTube in `formats[]`/`adaptive_formats[]`,
+ * Instagram in `video_versions[]`. Each field is therefore resolved through an
+ * ordered candidate list over a bounded set of wrapper layers. A field that
+ * cannot be resolved stays empty; a direct url is never guessed from an
+ * unrelated `*.url` (avatars, covers, tracking pixels).
+ * -------------------------------------------------------------------------- */
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function asObject(value) {
+  return isPlainObject(value) ? value : {}
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function asText(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function httpText(value) {
+  const text = asText(value)
+  return HTTP_URL_RE.test(text) ? text : ''
+}
+
+function firstText(values) {
+  for (const value of values) {
+    const text = asText(value)
+    if (text) return text
   }
-  const duration = parseDurationSeconds(data.duration)
-    ?? parseDurationSeconds(data.video_duration)
-    ?? parseDurationSeconds(stats.duration)
-    ?? parseDurationSeconds(stats.video_duration)
-  const published_at = parsePublishedAt(data.create_time)
-    || parsePublishedAt(data.createTime)
-    || parsePublishedAt(data.published_at)
-    || parsePublishedAt(data.upload_date)
-    || parsePublishedAt(data.created_at)
+  return ''
+}
+
+function firstNumber(values) {
+  for (const value of values) {
+    const num = typeof value === 'string' ? Number(value) : value
+    if (typeof num === 'number' && Number.isFinite(num)) return num
+  }
+  return null
+}
+
+function urlPathname(url) {
+  try {
+    return new URL(url).pathname
+  } catch {
+    return url
+  }
+}
+
+function assignMissing(target, key, value) {
+  const current = target[key]
+  const hasCurrent = current !== undefined && current !== null && current !== ''
+  if (!hasCurrent && value !== undefined && value !== null && value !== '') target[key] = value
+}
+
+/**
+ * A variant is usable when it is a directly playable mp4. A declared content
+ * type wins; otherwise the url suffix decides.
+ */
+function isMp4Variant(url, contentType) {
+  const type = contentType.toLowerCase()
+  if (type) return type.includes('mp4')
+  return /\.mp4$/i.test(urlPathname(url))
+}
+
+/** Highest-bitrate mp4 among `variants[]` (X tweet video variants, Instagram versions). */
+function bestVariantUrl(variants) {
+  let bestUrl = ''
+  let bestBitrate = -1
+  for (const raw of asArray(variants)) {
+    const variant = isPlainObject(raw) ? raw : {}
+    const url = httpText(variant.url) || httpText(raw)
+    if (!url) continue
+    if (!isMp4Variant(url, firstText([variant.content_type, variant.contentType]))) continue
+    const bitrate = firstNumber([variant.bitrate, variant.bit_rate, variant.height]) ?? 0
+    if (bitrate > bestBitrate) {
+      bestUrl = url
+      bestBitrate = bitrate
+    }
+  }
+  return bestUrl
+}
+
+/** mp4 stream inside `media.video[]`, `entities.media[].video_info` or Instagram `video_versions[]`. */
+function videoFromMediaList(list) {
+  for (const item of asArray(list)) {
+    const media = asObject(item)
+    const url = bestVariantUrl(media.variants)
+      || bestVariantUrl(asObject(media.video_info).variants)
+      || bestVariantUrl([item])
+    if (url) return url
+  }
+  return ''
+}
+
+/** Poster image inside `media[].media_url_https` / `display_url`. */
+function coverFromMediaList(list) {
+  for (const item of asArray(list)) {
+    const media = asObject(item)
+    const url = httpText(media.media_url_https)
+      || httpText(media.media_url)
+      || httpText(media.display_url)
+      || httpText(media.url)
+    if (url) return url
+  }
+  return ''
+}
+
+/**
+ * YouTube `formats[]` / `adaptive_formats[]`: highest quality mp4 that carries a
+ * usable `url`. Entries with `signatureCipher`/`cipher` need a signature this
+ * plugin cannot compute, so they are skipped instead of guessed.
+ */
+function videoFromFormatList(layer) {
+  let bestUrl = ''
+  let bestQuality = -1
+  for (const raw of [...asArray(layer.formats), ...asArray(layer.adaptive_formats)]) {
+    if (!isPlainObject(raw)) continue
+    if (asText(raw.signatureCipher) || asText(raw.cipher)) continue
+    const url = httpText(raw.url)
+    if (!url) continue
+    const mime = firstText([raw.mimeType, raw.mime_type]).toLowerCase()
+    if (mime ? !mime.includes('video/mp4') : !/\.mp4$/i.test(urlPathname(url))) continue
+    const quality = firstNumber([raw.height, raw.bitrate]) ?? 0
+    if (quality > bestQuality) {
+      bestUrl = url
+      bestQuality = quality
+    }
+  }
+  return bestUrl
+}
+
+/** Instagram `image_versions2.candidates[].url`. */
+function instagramCandidateUrl(versions) {
+  return firstHttpUrl(asArray(asObject(versions).candidates).map((item) => asObject(item).url))
+}
+
+/** YouTube `thumbnails[]` — the last entry is the largest. */
+function lastThumbnailUrl(thumbnails) {
+  const items = asArray(thumbnails)
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const url = httpText(asObject(items[index]).url)
+    if (url) return url
+  }
+  return ''
+}
+
+/**
+ * A bare `url` field only counts as the video stream when it points at a media
+ * file or a known video CDN, never when it points at a page.
+ */
+function mediaLikeUrl(value) {
+  const url = httpText(value)
+  if (!url) return ''
+  if (/\.(mp4|m4v|webm|mov)(\?|$)/i.test(url)) return url
+  try {
+    return /(^|\.)googlevideo\.com$/i.test(new URL(url).hostname) ? url : ''
+  } catch {
+    return ''
+  }
+}
+
+function edgeCaptionText(layer) {
+  const edges = asArray(asObject(layer.edge_media_to_caption).edges)
+  return firstText([asObject(asObject(edges[0]).node).text])
+}
+
+function videoUrlFromLayer(layer) {
+  return firstHttpUrl([
+    videoFromMediaList(asObject(layer.media).video),
+    videoFromMediaList(asObject(layer.entities).media),
+    videoFromMediaList(asObject(layer.extended_entities).media),
+    // `video_versions[]` is one clip's quality ladder (ascending), not a list of
+    // clips: rank it so the highest quality wins instead of the first entry.
+    bestVariantUrl(layer.video_versions) || videoFromMediaList(layer.video_versions),
+    videoFromFormatList(layer),
+    layer.video_url,
+    layer.video,
+    layer.play_url,
+    layer.play,
+    layer.download_url,
+    firstHttpUrl(asArray(asObject(layer.play_addr).url_list)),
+    firstHttpUrl(asArray(asObject(asObject(layer.video).play_addr).url_list)),
+    mediaLikeUrl(layer.url),
+  ])
+}
+
+function coverUrlFromLayer(layer) {
+  return firstHttpUrl([
+    layer.cover_url,
+    layer.cover,
+    layer.thumbnail_url,
+    layer.thumbnail,
+    layer.origin_cover,
+    layer.dynamic_cover,
+    coverFromMediaList(asObject(layer.media).video),
+    coverFromMediaList(asObject(layer.entities).media),
+    coverFromMediaList(asObject(layer.extended_entities).media),
+    layer.display_url,
+    layer.thumbnail_src,
+    layer.display_src,
+    layer.image_url,
+    instagramCandidateUrl(layer.image_versions2),
+    lastThumbnailUrl(layer.thumbnails),
+    firstHttpUrl(asArray(asObject(layer.cover).url_list)),
+    firstHttpUrl(asArray(asObject(asObject(layer.video).cover).url_list)),
+    firstHttpUrl(asArray(asObject(asObject(layer.video).origin_cover).url_list)),
+  ])
+}
+
+function textFromLayer(layer) {
+  return firstText([
+    layer.text,
+    layer.display_text,
+    layer.full_text,
+    asObject(layer.legacy).full_text,
+    asObject(asObject(asObject(layer.note_tweet).note_tweet_results).result).text,
+    asObject(layer.caption).text,
+    typeof layer.caption === 'string' ? layer.caption : '',
+    edgeCaptionText(layer),
+    layer.desc,
+    layer.description,
+    layer.content,
+  ])
+}
+
+function titleFromLayer(layer) {
+  return firstText([layer.title, layer.desc, layer.description, layer.name]) || textFromLayer(layer)
+}
+
+function authorFromLayer(layer) {
+  const author = isPlainObject(layer.author) ? { ...layer.author } : {}
+  for (const candidate of [layer.author, layer.user, layer.owner, layer.channel, layer.uploader]) {
+    if (typeof candidate === 'string') {
+      assignMissing(author, 'name', asText(candidate))
+      continue
+    }
+    if (!isPlainObject(candidate)) continue
+    assignMissing(author, 'name', firstText([
+      candidate.name,
+      candidate.nickname,
+      candidate.full_name,
+      candidate.screen_name,
+      candidate.username,
+    ]))
+    assignMissing(author, 'handle', firstText([
+      candidate.handle,
+      candidate.screen_name,
+      candidate.unique_id,
+      candidate.username,
+    ]))
+    assignMissing(author, 'avatar', firstHttpUrl([
+      candidate.avatar,
+      candidate.image,
+      candidate.profile_image_url,
+      candidate.profile_pic_url,
+      candidate.avatar_url,
+    ]))
+  }
+  assignMissing(author, 'name', firstText([layer.author_name]))
+  assignMissing(author, 'handle', firstText([layer.author_handle]))
+  return author
+}
+
+function statsFromLayer(layer) {
+  const stats = isPlainObject(layer.stats) ? { ...layer.stats } : {}
+  const engagement = asObject(layer.engagement)
+  assignMissing(stats, 'likes', firstNumber([engagement.likes, layer.favorite_count, layer.like_count, layer.digg_count, layer.likes]))
+  assignMissing(stats, 'comments', firstNumber([engagement.replies, layer.reply_count, layer.comment_count, layer.comments]))
+  assignMissing(stats, 'shares', firstNumber([engagement.retweets, layer.retweet_count, layer.share_count, layer.shares]))
+  assignMissing(stats, 'views', firstNumber([engagement.views, layer.view_count, layer.play_count, layer.views]))
+  assignMissing(stats, 'bookmarks', firstNumber([engagement.bookmarks, layer.bookmark_count]))
+  return stats
+}
+
+function durationFromLayer(layer) {
+  return parseDurationSeconds(layer.duration)
+    ?? parseDurationSeconds(layer.video_duration)
+    ?? parseDurationSeconds(layer.lengthSeconds)
+    ?? parseDurationSeconds(asObject(layer.stats).duration)
+    ?? parseDurationSeconds(asObject(layer.stats).video_duration)
+}
+
+/** `upload_date` style `YYYYMMDD` needs normalizing before Date parsing. */
+function normalizeDateValue(value) {
+  if (typeof value !== 'string') return value
+  const text = value.trim()
+  if (/^\d{8}$/.test(text)) {
+    return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}T00:00:00.000Z`
+  }
+  return text
+}
+
+function publishedAtFromLayer(layer) {
+  return parsePublishedAt(normalizeDateValue(layer.create_time))
+    || parsePublishedAt(normalizeDateValue(layer.createTime))
+    || parsePublishedAt(normalizeDateValue(layer.published_at))
+    || parsePublishedAt(normalizeDateValue(layer.upload_date))
+    || parsePublishedAt(normalizeDateValue(layer.publishDate))
+    || parsePublishedAt(normalizeDateValue(layer.timestamp))
+    || parsePublishedAt(normalizeDateValue(layer.created_at))
+    || parsePublishedAt(normalizeDateValue(layer.taken_at))
+}
+
+function imagesFromLayer(layer) {
+  return [...asArray(layer.images), ...asArray(layer.image_urls), layer.image_url]
+    .map((value) => httpText(value))
+    .filter(Boolean)
+}
+
+function resolvedUrlFromLayer(layer) {
+  return firstHttpUrl([layer.url, layer.canonical_url, layer.permalink])
+}
+
+/**
+ * Bounded one-level unwrap of the common gateway envelopes. Only these known
+ * containers are inspected — never a recursive search — so unrelated urls can
+ * never be mistaken for the video stream.
+ * @param {unknown} data
+ * @returns {Array<Record<string, any>>}
+ */
+export function socialPayloadLayers(data) {
+  const root = asObject(data)
+  const nested = root.data
+  const candidates = [
+    asArray(root.items)[0],
+    isPlainObject(nested) ? nested : null,
+    isPlainObject(nested) ? asArray(nested.items)[0] : null,
+    root.result,
+    root.aweme_detail,
+    asArray(root.item_list)[0],
+  ]
+  const layers = [root]
+  for (const candidate of candidates) {
+    if (isPlainObject(candidate) && !layers.includes(candidate)) layers.push(candidate)
+  }
+  return layers
+}
+
+function pickLayerValue(layers, read, isBlank) {
+  for (const layer of layers) {
+    const value = read(layer)
+    if (!isBlank(value)) return value
+  }
+  return read({})
+}
+
+const isBlankText = (value) => !value
+const isBlankArray = (value) => value.length === 0
+const isBlankNumber = (value) => value === null || value === undefined
+const isBlankObject = (value) => Object.keys(value).length === 0
+
+/**
+ * Map any supported platform envelope onto the flat metadata contract used by
+ * the import pipeline.
+ *
+ * Supported shapes: X/Twitter `media.video[].variants[]` + `entities.media[]`,
+ * Instagram `video_versions[]` / `image_versions2` / `caption`,
+ * YouTube `formats[]` / `adaptive_formats[]` / `thumbnails[]`, plus the flat
+ * TikTok shape and a bounded one-level unwrap of `items[0]` / `data.items[0]` /
+ * `result` / `aweme_detail` / `item_list[0]`.
+ *
+ * @param {unknown} data raw `data` envelope from the cloud tool or the fallback resolver
+ * @returns {{
+ *   title: string, text: string, cover_url: string, video_url: string,
+ *   images: string[], author: Record<string, any>, stats: Record<string, any>,
+ *   duration: number | null, published_at: string, resolvedUrl: string,
+ *   has_metadata: boolean,
+ * }}
+ */
+export function parseSocialMeta(data) {
+  const layers = socialPayloadLayers(data)
+  const text = pickLayerValue(layers, textFromLayer, isBlankText)
+  const title = pickLayerValue(layers, titleFromLayer, isBlankText)
+  const cover_url = pickLayerValue(layers, coverUrlFromLayer, isBlankText)
+  const video_url = pickLayerValue(layers, videoUrlFromLayer, isBlankText)
+  const images = pickLayerValue(layers, imagesFromLayer, isBlankArray)
+  const author = pickLayerValue(layers, authorFromLayer, isBlankObject)
+  const stats = pickLayerValue(layers, statsFromLayer, isBlankObject)
+  const duration = pickLayerValue(layers, durationFromLayer, isBlankNumber)
+  const published_at = pickLayerValue(layers, publishedAtFromLayer, isBlankText)
+  const resolvedUrl = pickLayerValue(layers, resolvedUrlFromLayer, isBlankText)
+  const has_metadata = Boolean(
+    video_url
+    || cover_url
+    || text
+    || title
+    || images.length > 0
+    || Object.keys(author).length > 0
+    || Object.keys(stats).length > 0
+    || duration != null
+    || published_at,
+  )
   return {
-    title: firstFilled(data, ['title', 'desc', 'text'], rawUrl),
-    text: firstFilled(data, ['text', 'desc', 'content']),
-    cover_url: firstFilled(data, ['cover_url', 'cover', 'thumbnail', 'thumbnail_url', 'origin_cover']),
-    video_url: firstFilled(data, ['video_url', 'video', 'play_url', 'play', 'download_url'], videos),
-    images: Array.isArray(data.images) ? data.images : [],
+    title,
+    text,
+    cover_url,
+    video_url,
+    images,
     author,
     stats,
     duration,
     published_at,
-    resolvedUrl: data.url || data.canonical_url,
+    resolvedUrl,
+    has_metadata,
   }
 }
 
@@ -124,7 +507,8 @@ export function handleList({ url, store }) {
     posted_after,
     posted_before,
   })
-  return { status: 200, body: { data: result } }
+  const platforms = typeof store.platforms === 'function' ? store.platforms() : []
+  return { status: 200, body: { data: { ...result, platforms } } }
 }
 
 export function handleCreate({ req, store }) {
@@ -176,26 +560,45 @@ async function runImport(args) {
   if (social.error) return social.error
   const dup = checkResolvedDuplicate(args, social.meta)
   if (dup) return dup
-  return persistImportedVideo(args, social.meta)
+  return persistImportedItem(args, social.meta)
 }
 
-async function persistImportedVideo(args, meta) {
-  const rawVideoUrl = meta.video_url
-  if (!rawVideoUrl || !HTTP_URL_RE.test(rawVideoUrl)) {
-    return fail(422, '社媒解析未提取到有效无水印视频直链，无法完成视频下载入库')
+/**
+ * Persist a resolved social item.
+ *
+ * A downloadable direct video link keeps the full pipeline (download video +
+ * cover, `type: 'video'`, AI deconstruction). Without one — a photo post, a
+ * YouTube page, a platform without a public stream — the item is still imported
+ * as `link`/`image` with the metadata that was resolved, flagged as degraded so
+ * callers can tell the difference. Only a completely empty envelope fails.
+ */
+async function persistImportedItem(args, meta) {
+  const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
+  if (!videoUrl && !meta.has_metadata) {
+    return fail(422, '未从该链接解析到可入库的内容（标题、文案、封面与视频直链均为空）')
   }
-  const media = await downloadImportMedia(args, meta, rawVideoUrl)
+  const media = videoUrl
+    ? await downloadImportMedia(args, meta, videoUrl)
+    : await downloadImportCover(args, meta)
   if (media.error) return media.error
   const deconstruction = await maybeAnalyze(args, media, meta)
   const record = args.store.add(buildImportRecord(args, meta, media, deconstruction))
-  return { status: 200, body: { data: record } }
+  if (videoUrl) return { status: 200, body: { data: record } }
+  return {
+    status: 200,
+    body: {
+      data: record,
+      media_degraded: true,
+      degrade_reason: DEGRADE_REASON,
+    },
+  }
 }
 
 async function maybeAnalyze(args, media, meta) {
   if (!args.autoAnalyze || !media.localVideoPath) return null
   const analysisResult = await analyzeInspirationVideo({
     videoPath: media.localVideoPath,
-    title: meta.title,
+    title: meta.title || args.rawUrl,
     content: meta.text,
     tags: args.customTags,
     platform: args.platform,
@@ -204,20 +607,34 @@ async function maybeAnalyze(args, media, meta) {
   return analysisResult.deconstruction
 }
 
+/**
+ * Item type for a degraded import: image-only content becomes `image`,
+ * anything else keeps its metadata as a `link`.
+ * @param {Record<string, any>} meta
+ * @param {{ localVideoPath: string }} media
+ * @returns {'video' | 'image' | 'link'}
+ */
+function resolveImportType(meta, media) {
+  if (media.localVideoPath) return 'video'
+  if (meta.images.length > 0) return 'image'
+  if (!meta.title && !meta.text && meta.cover_url) return 'image'
+  return 'link'
+}
+
 function buildImportRecord(args, meta, media, deconstruction) {
   const coverName = media.localCoverPath ? media.localCoverPath.split('/').pop() : ''
-  const videoName = media.localVideoPath.split('/').pop()
+  const videoName = media.localVideoPath ? media.localVideoPath.split('/').pop() : ''
   const cover_url = coverName
     ? `/omnimux/inspiration/local/media/covers/${coverName}`
     : meta.cover_url
   return {
-    title: meta.title,
+    title: meta.title || args.rawUrl,
     content: meta.text,
-    type: 'video',
+    type: resolveImportType(meta, media),
     source_platform: args.platform,
     source_url: args.rawUrl,
     cover_url,
-    media_urls: [`/omnimux/inspiration/local/media/videos/${videoName}`],
+    media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : [],
     local_paths: media.localPaths,
     tags: args.customTags,
     author: meta.author,
@@ -228,6 +645,12 @@ function buildImportRecord(args, meta, media, deconstruction) {
   }
 }
 
+/** Keep the fetcher's own actionable reason instead of prefixing it twice. */
+function describeFetchFailure(args, fetchErr) {
+  const detail = args.formatErrorMessage(fetchErr)
+  return /^OmniMux/.test(detail) ? detail : `OmniMux 社媒解析调用失败: ${detail}`
+}
+
 async function fetchSocialMeta(args) {
   try {
     const fetched = await args.socialFetcher({
@@ -236,12 +659,11 @@ async function fetchSocialMeta(args) {
       url: args.rawUrl,
     })
     if (!fetched || !fetched.data) {
-      return { error: fail(502, 'OmniMux 社媒解析接口未返回有效数据，请检查链接或网络') }
+      return { error: fail(502, 'OmniMux 社媒解析接口未返回有效数据，请稍后重试') }
     }
-    return { meta: parseSocialMeta(fetched.data, args.rawUrl) }
+    return { meta: parseSocialMeta(fetched.data) }
   } catch (fetchErr) {
-    const message = `OmniMux 社媒解析调用失败: ${args.formatErrorMessage(fetchErr)}`
-    return { error: fail(502, message) }
+    return { error: fail(502, describeFetchFailure(args, fetchErr)) }
   }
 }
 
@@ -283,6 +705,13 @@ async function downloadCoverBestEffort(args, meta, localPaths) {
   } catch {
     return ''
   }
+}
+
+/** Degraded import: no video stream, so only the poster image is cached. */
+async function downloadImportCover(args, meta) {
+  const localPaths = {}
+  const localCoverPath = await downloadCoverBestEffort(args, meta, localPaths)
+  return { localPaths, localVideoPath: '', localCoverPath }
 }
 
 export async function handleAnalyze(ctx) {
@@ -375,9 +804,9 @@ async function resolveAnalyzeVideo(args) {
   return downloadAnalyzeVideo(args)
 }
 
+/** Re-resolve the direct video link with the same structural mapper as the import path. */
 function videoUrlFromFetched(fetched) {
-  const data = fetched && fetched.data ? fetched.data : {}
-  return firstHttpUrl([data.video_url, data.video, data.play_url, data.play])
+  return parseSocialMeta(fetched && fetched.data ? fetched.data : {}).video_url
 }
 
 async function downloadAnalyzeVideo(args) {
