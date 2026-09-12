@@ -89,7 +89,7 @@ describe('picker-model generalized max', () => {
     const { readFileSync } = await import('node:fs')
     const source = readFileSync(new URL('./AssetPicker.jsx', import.meta.url), 'utf8')
     assert.ok(source.includes('size="lg"'), 'sits on the kit lg tier')
-    assert.ok(source.includes('className={PICKER_DIALOG_CLASS}'), 'owns the dialog width via the official className seam')
+    assert.ok(source.includes("className={pickerDialogClassName('assets')}"), '弹窗样式通过官方 className 接口注入（含布局变体类）')
     assert.ok(source.includes('ensurePickerDialogStyles'), 'injects the shared dialog geometry contract')
     assert.ok(!/width=\{\d+\}/.test(source), 'no dead width prop (ModalDialog has none)')
     assert.ok(source.includes('repeat(auto-fill, minmax(240px, 1fr))'), 'uses responsive grid columns')

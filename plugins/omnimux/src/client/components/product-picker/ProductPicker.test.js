@@ -40,7 +40,7 @@ test('createSafeT: fallbacks to DEFAULT_STRINGS when custom t returns raw key or
 test('ProductPicker: follows design system, contains search, nav, empty states and dialog', () => {
   assert.ok(pickerSource.includes('ModalDialog'), 'uses ModalDialog from dsh-ui-kit');
   assert.ok(pickerSource.includes('size="lg"'), 'sits on the kit lg tier instead of an invalid width prop');
-  assert.ok(pickerSource.includes('className={PICKER_DIALOG_CLASS}'), 'owns the dialog width via the official className seam');
+  assert.ok(pickerSource.includes("className={pickerDialogClassName('product')}"), '弹窗样式通过官方 className 接口注入（含布局变体类）');
   assert.ok(!/width=\{\d+\}/.test(pickerSource), 'no dead width prop (ModalDialog has none)');
   assert.ok(pickerSource.includes('max-height: calc(80vh - 190px)'), 'caps height by viewport to avoid dialog overflow');
   assert.ok(pickerSource.includes('ensurePickerDialogStyles'), 'injects the shared dialog geometry contract');
@@ -52,7 +52,14 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.ok(pickerSource.includes('flex-shrink: 0'), 'actions protected against overflow squeeze');
   assert.ok(pickerSource.includes('omx-product-pick__tabs'), '分类改为顶部 Tab（参考稿布局）');
   assert.ok(!pickerSource.includes('omx-product-pick__nav'), '不再有左侧分类栏');
-  assert.ok(pickerSource.includes('--omnimux-pick-dialog-width'), '弹窗宽度由契约提供的变量装配');
+  assert.ok(
+    /\$\{PICKER_DIALOG_VARIANT_CLASS\.product\}\s*\{[^}]*--omnimux-pick-dialog-width/.test(pickerSource),
+    '宽度变量必须挂在弹窗自身的变体类上（挂到子元素会退化为 3 列）',
+  );
+  assert.ok(
+    !/\.omx-product-pick\s*\{[^}]*--omnimux-pick-dialog-width/.test(pickerSource),
+    '宽度变量不得写在不被弹窗读取的根元素上',
+  );
   assert.ok(pickerSource.includes('aspect-ratio: 1 / 1'), '卡片缩略图为 1:1');
   assert.ok(!pickerSource.includes('__nav-header'), '分类栏目标题已移除（信息降噪）');
   assert.ok(!pickerSource.includes('__tab-badge'), '分类数量徽标已移除');

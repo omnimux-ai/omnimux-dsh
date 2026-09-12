@@ -11,6 +11,26 @@
 /** 挂到 ModalDialog 的 className（宽度覆盖只用自有类名，不依赖底座类名） */
 export const PICKER_DIALOG_CLASS = 'omx-pick-dialog';
 
+/**
+ * 变体类：宽度变量必须挂在**弹窗自身**上。
+ * CSS 自定义属性只沿 DOM 向上解析——若把变量写在弹窗的子元素（.omx-*-pick）上，
+ * 弹窗上的 width 规则读不到它，会落到兜底默认值（产品库会从 4 列退化为 3 列）。
+ */
+export const PICKER_DIALOG_VARIANT_CLASS = Object.freeze({
+  product: 'omx-pick-dialog--product',
+  assets: 'omx-pick-dialog--assets',
+});
+
+/**
+ * 组装 ModalDialog 的 className（基础类 + 变体类）。
+ * @param {'product' | 'assets'} kind
+ */
+export function pickerDialogClassName(kind) {
+  const variant = PICKER_DIALOG_VARIANT_CLASS[kind];
+  if (!variant) throw new Error(`unknown picker variant: ${kind}`);
+  return `${PICKER_DIALOG_CLASS} ${variant}`;
+}
+
 /** 两个选择器各自的根类名，用于 :has() 定位正文滚动容器 */
 export const PICKER_ROOT_CLASSES = Object.freeze(['.omx-product-pick', '.omx-asset-pick']);
 
@@ -51,7 +71,8 @@ export function pickerExpectedWidth(kind) {
 }
 
 /** 只依赖外壳、与布局无关的共享样式 */
-export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器按自有几何提供；此处只负责视口上限与装配 */
+export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器通过**弹窗自身的变体类**提供（见 PICKER_DIALOG_VARIANT_CLASS）；
+   变量必须与消费它的 width 规则处在同一元素上，否则父元素读不到子元素的定义。此处只负责视口上限与装配 */
 .${PICKER_DIALOG_CLASS} {
   width: min(92vw, var(--omnimux-pick-dialog-width, ${pickerDialogWidth({ columns: 3 })})) !important;
   max-width: 92vw !important;
