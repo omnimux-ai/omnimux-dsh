@@ -216,44 +216,98 @@ function read(rel) {
   return fs.readFileSync(path.resolve(import.meta.dirname, rel), 'utf-8')
 }
 
-test('trending: 输入框迁移契约（顶部让位 / 吸底接管 / 提交回写）', () => {
+test('trending: 复刻接管契约（搬迁原生输入框 / 只预填不代发）', () => {
   const section = read('./TrendingReplicateSection.jsx')
-  const dock = read('./DockedComposer.jsx')
   const sessionGuide = read('../SessionGuide.jsx')
   const styles = read('../styles.js')
 
   // 1. 板块必须落在 Hero 会话宿主内并标记接管态
   assert.ok(section.includes("closest?.('[data-phase]')"), '板块必须探测 Hero 宿主根节点')
-  assert.ok(section.includes("setAttribute(DOCK_OPEN_ATTR, '')"), '接管时必须写入让位标记')
-  assert.ok(section.includes('removeAttribute(DOCK_OPEN_ATTR)'), '退出接管时必须清除让位标记')
+  assert.ok(section.includes("setAttribute(DOCK_OPEN_ATTR, '')"), '接管时必须写入停靠标记')
+  assert.ok(section.includes('removeAttribute(DOCK_OPEN_ATTR)'), '退出接管时必须清除停靠标记')
   assert.ok(section.includes("export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'"))
 
-  // 2. 让位样式必须同时作用于输入框卡片与工作区行
-  assert.ok(
-    styles.includes("[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]"),
-    '让位样式必须隐藏官方输入框卡片',
+  // 2. 必须搬运官方原生输入框，不得再复制一个仿制品
+  assert.equal(
+    fs.existsSync(path.resolve(import.meta.dirname, 'DockedComposer.jsx')),
+    false,
+    '自绘吸底输入框组件必须删除，输入框只能用官方那一个',
   )
-  assert.ok(
-    styles.includes('[class*="heroWorkspaceRow"]'),
-    '让位样式必须同时隐藏工作区选择行',
-  )
+  assert.ok(!section.includes('DockedComposer'), '板块不得再引用自绘吸底输入框')
+  assert.ok(!section.includes('<textarea'), '板块不得自造输入区')
+  assert.ok(!section.includes('onSubmit'), '板块不得自建提交通道')
+  assert.ok(section.includes('buildClonePrompt(item)'), '复刻必须把克隆指令灌进原生输入框')
+  assert.ok(section.includes("querySelector?.('[data-composer-card]')"), '停靠几何必须取自原生输入框卡片')
 
-  // 3. 吸底输入框：挂载缩略图、可编辑 Prompt、清空与提交齐备
-  assert.ok(dock.includes('buildClonePrompt(item)'), '吸底输入框必须自动灌装克隆指令')
-  assert.ok(dock.includes('<textarea'), '吸底输入框必须提供可编辑输入区')
-  assert.ok(dock.includes('omnimux-trending-dock-thumb'), '吸底输入框必须挂载对标视频缩略图')
-  assert.ok(dock.includes('onSubmit?.('), '吸底输入框必须提供提交通道')
-  assert.ok(dock.includes('onCancel?.()'), '吸底输入框必须提供取消通道')
-  assert.ok(dock.includes("'--omnimux-dock-left'"), '吸底输入框必须按宿主矩形横向对齐')
-  assert.ok(dock.includes("'--omnimux-dock-width'"), '吸底输入框必须按宿主矩形控制宽度')
+  // 3. 停靠样式必须直接作用于官方输入框卡片（搬位置，不复制控件）
+  assert.match(
+    styles,
+    /\[data-omnimux-starter-host\]\[data-omnimux-dock-open\] \[data-composer-card\] \{[^}]*position:fixed!important/,
+    '接管时必须把原生输入框卡片固定到会话视口底部',
+  )
+  assert.ok(styles.includes('--omnimux-dock-left'), '必须按 Hero 栏给出停靠横向几何')
+  assert.ok(styles.includes('--omnimux-dock-width'), '必须按 Hero 栏给出停靠宽度')
+  assert.ok(styles.includes('[class*="heroWorkspaceRow"]'), '工作区行必须随接管让位')
 
   // 4. 会话指南必须挂载该板块并只预填、不代发
   assert.ok(sessionGuide.includes('<TrendingReplicateSection'), 'BlankSessionGuide 必须渲染爆款对标板块')
   assert.ok(sessionGuide.includes('handleTrendingApply'), '必须提供复刻指令落地处理器')
+  assert.ok(sessionGuide.includes('inputActions.setDraft'), '复刻只能走官方输入框 API 预填')
   assert.ok(
     !sessionGuide.includes('clickSend'),
     '不得代用户发送：仅预填输入框，发送权归用户',
   )
+})
+
+test('trending: 下拉浮层底色不得依赖未定义 Token（透明菜单回归护栏）', () => {
+  const styles = read('../styles.js')
+  const menu = styles.match(/\.omnimux-trending-select-menu \{[\s\S]*?\n\}/)
+  assert.ok(menu, '必须存在下拉菜单样式块')
+
+  assert.ok(
+    !/background:var\(--dsw-alias-bg-elevated\);/.test(menu[0]),
+    '浮层底色不得裸用 var(--dsw-alias-bg-elevated)：该 Token 在本 Host 主题未定义，会退化成全透明',
+  )
+  assert.ok(
+    menu[0].includes('--omnimux-trending-menu-bg'),
+    '浮层底色必须走带兜底的 Token 链',
+  )
+  assert.ok(
+    styles.includes('--omnimux-trending-menu-bg:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-3'),
+    '浮层底色必须有不透明兜底 Token',
+  )
+
+  // 同一根因、同一文件：其余浮层（弹窗主体 / 分栏 / 提示条 / 卡片）也不得裸用该未定义 Token
+  assert.ok(
+    !/background:\s*var\(--dsw-alias-bg-elevated\)/.test(styles),
+    'session-guide 内任何 background 都不得裸用 --dsw-alias-bg-elevated（计算值会退化成 transparent）',
+  )
+  assert.ok(
+    styles.includes('--omnimux-surface-dialog:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2'),
+    '弹窗/浮层底色必须有不透明兜底 Token',
+  )
+})
+
+test('trending: 默认档位文案不带「不限」，工具栏不显示命中计数', () => {
+  const catalog = read('../catalog.js')
+  const bar = read('./TrendingFilterBar.jsx')
+  const styles = read('../styles.js')
+
+  for (const key of [
+    'trending.views.all',
+    'trending.revenue.all',
+    'trending.engagement.all',
+    'trending.roas.all',
+  ]) {
+    const line = catalog.split('\n').find((entry) => entry.includes(`"${key}":`))
+    assert.ok(line, `缺少默认档位键位 ${key}`)
+    assert.ok(!line.includes('不限'), `${key} 不应再带「不限」前缀：${line.trim()}`)
+  }
+  assert.ok(!catalog.includes('不限'), '中文档位不得再出现「不限」')
+  assert.ok(!catalog.includes('命中'), '不得再出现命中计数文案')
+  assert.ok(!bar.includes('omnimux-trending-count'), '工具栏不得再渲染命中计数')
+  assert.ok(!bar.includes('total'), '工具栏不得再接收计数入参')
+  assert.ok(!styles.includes('omnimux-trending-count'), '命中计数样式必须随组件一并删除')
 })
 
 test('trending: i18n 双语键位齐全', () => {
@@ -266,11 +320,8 @@ test('trending: i18n 双语键位齐全', () => {
     'trending.metric.views',
     'trending.empty',
     'trending.applied',
-    'trending.dock.title',
-    'trending.dock.submit',
-    'trending.dock.cancel',
+    'trending.undock',
     'trending.filter.reset',
-    'trending.filter.count',
   ]
   for (const key of keys) {
     const occurrences = catalog.split(`"${key}":`).length - 1

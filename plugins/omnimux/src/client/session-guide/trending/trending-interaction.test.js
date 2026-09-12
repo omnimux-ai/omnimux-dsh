@@ -247,14 +247,23 @@ test('TrendingSelect：方向键打开与移动、Enter 选中、Escape 关闭�
 })
 
 // ─────────────────────────────────────────────────────────────
-// 3. 吸底输入框集成：Recreate → 接管 → 提交/取消
+// 3. 复刻接管集成：把**原生**输入框搬到视口底部，不复制任何控件
 // ─────────────────────────────────────────────────────────────
 
-test('TrendingReplicateSection：复刻点击接管输入、提交回写、取消复原', async () => {
+const SECTION_FIXTURE = [
+  '<div id="root" data-omnimux-starter-host data-phase="hero">',
+  '<div data-composer-seat><div class="band"><div data-composer-card>',
+  '<button data-send-button>Send</button>',
+  '</div></div></div>',
+  '<div id="seat"></div>',
+  '</div>',
+].join('')
+
+test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠，再点同一张卡片即归还', async () => {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
-  const env = withDom('<div id="root" data-omnimux-starter-host data-phase="hero"><div data-composer-card></div></div>')
+  const env = withDom(SECTION_FIXTURE)
   const host = document.querySelector('#root')
-  const root = createRoot(host.querySelector('[data-composer-card]').parentElement)
+  const root = createRoot(host.querySelector('#seat'))
 
   const applied = []
   await act(async () => {
@@ -264,66 +273,65 @@ test('TrendingReplicateSection：复刻点击接管输入、提交回写、取�
     }))
   })
 
-  const dock = () => host.querySelector('[data-omnimux-trending-dock]')
   const cards = () => Array.from(host.querySelectorAll('[data-trending-id]'))
-
-  // 初始：无吸底框、无接管标记
   assert.ok(cards().length > 0, '应渲染出可复刻样本')
-  assert.equal(dock(), null)
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false)
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '初始不应接管输入框')
 
-  // 点击第二张卡片 → 接管
+  // 点击第二张卡片 → 接管：原生输入框被标记停靠，指令交回输入框所有权方
   const target = cards()[1]
   const targetId = target.getAttribute('data-trending-id')
   await click(target.querySelector('.omnimux-trending-recreate-btn'))
-  assert.ok(dock(), '点击复刻应挂载吸底输入框')
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '应写入输入框让位标记')
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '应给宿主打上停靠标记')
+  assert.equal(applied.length, 1, '复刻应把指令交回输入框所有权方')
+  assert.equal(applied[0].id, targetId)
+  assert.ok(applied[0].prompt.startsWith('Clone the attached viral ad'), '应写入克隆指令模板')
   assert.equal(target.getAttribute('data-trending-active'), 'true', '被接管的卡片应标记 active')
   assert.equal(cards()[0].getAttribute('data-trending-active'), 'false')
 
-  // 其余卡片保持可点（不再被禁用），可直接换片
-  const otherBtn = cards()[0].querySelector('.omnimux-trending-recreate-btn')
-  assert.equal(otherBtn.disabled, false, '吸底框打开时其它卡片不应被禁用')
+  // 板块不再自造输入框：底部那一个就是原生输入框本身
+  assert.equal(host.querySelector('[data-omnimux-trending-dock]'), null, '不应再挂载自绘吸底输入框')
+  assert.equal(host.querySelectorAll('textarea').length, 0, '板块不得自造 textarea')
 
-  const textarea = dock().querySelector('textarea')
-  assert.ok(textarea.value.startsWith('Clone the attached viral ad'), '应自动灌装克隆指令模板')
-  const firstPrompt = textarea.value
-
-  // 换片：改选第三张，内容随之替换
-  // （JSDOM 下 React 的 input 值追踪会在聚焦节点被卸载时报 detachEvent 噪声，先失焦规避）
-  await act(async () => { textarea.blur() })
+  // 换片：改选第三张，指令随之替换，写入的仍是同一个原生输入框
   const thirdId = cards()[2].getAttribute('data-trending-id')
   await click(cards()[2].querySelector('.omnimux-trending-recreate-btn'))
   assert.equal(cards()[2].getAttribute('data-trending-active'), 'true')
   assert.equal(cards()[1].getAttribute('data-trending-active'), 'false', '旧卡片应让出 active')
-  const secondPrompt = dock().querySelector('textarea').value
-  assert.notEqual(secondPrompt, firstPrompt, '换片应重灌指令')
-  assert.ok(secondPrompt.includes('Zipper Resleting'), '重灌后应换成新样本的原始文案')
+  assert.equal(applied.length, 2)
+  assert.equal(applied[1].id, thirdId)
+  assert.notEqual(applied[1].prompt, applied[0].prompt, '换片应重灌指令')
 
-  // 提交：回写草稿并复原
-  await click(dock().querySelector('.omnimux-trending-dock-send'))
-  assert.equal(dock(), null, '提交后应卸载吸底框')
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '提交后应清除让位标记')
-  assert.equal(applied.length, 1)
-  assert.equal(applied[0].id, thirdId)
-  assert.ok(applied[0].prompt.startsWith('Clone the attached viral ad'))
+  // 接管期间其余卡片保持可点，可直接换片
+  assert.equal(cards()[0].querySelector('.omnimux-trending-recreate-btn').disabled, false)
 
-  // 取消：Esc 复原，且不产生回写
+  // 再点同一张卡片 → 归还输入框，且不再产生写入
+  await click(cards()[2].querySelector('.omnimux-trending-recreate-btn'))
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '再点同一张卡片应归还输入框')
+  assert.equal(cards()[2].getAttribute('data-trending-active'), 'false')
+  assert.equal(applied.length, 2, '归还输入框不应再写入指令')
+
+  // 「收起输入框」同样只归还位置，不改草稿
   await click(cards()[0].querySelector('.omnimux-trending-recreate-btn'))
-  assert.ok(dock())
-  await keydown(dock(), 'Escape')
-  assert.equal(dock(), null, 'Esc 应关闭吸底框')
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, 'Esc 后应清除让位标记')
-  assert.equal(applied.length, 1, '取消不应触发回写')
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+  await click(host.querySelector('.omnimux-trending-undock'))
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '收起按钮应归还输入框')
+  assert.equal(applied.length, 3, '收起不应额外写入')
 
   await act(async () => root.unmount())
   env.restore()
 })
 
-test('TrendingReplicateSection：卸载时回收接管标记，避免输入框永久隐身', async () => {
+test('TrendingReplicateSection：停靠几何按 Hero 栏居中换算，卸载后连同标记一并回收', async () => {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
-  const env = withDom('<div id="root" data-omnimux-starter-host data-phase="hero"><div id="seat"></div></div>')
+  const env = withDom(SECTION_FIXTURE)
   const host = document.querySelector('#root')
+  // JSDOM 不做布局，给 Hero 栏一个真实矩形，停靠几何才可断言
+  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
+    return {
+      x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
+      right: 1594, bottom: 266, toJSON() { return this },
+    }
+  }
   const root = createRoot(host.querySelector('#seat'))
 
   await act(async () => {
@@ -332,9 +340,16 @@ test('TrendingReplicateSection：卸载时回收接管标记，避免输入框�
 
   await click(host.querySelector('.omnimux-trending-recreate-btn'))
   assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+  // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
 
   await act(async () => root.unmount())
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收让位标记')
+  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
+  assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
 
   env.restore()
 })
