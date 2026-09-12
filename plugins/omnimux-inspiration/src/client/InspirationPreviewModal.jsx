@@ -9,6 +9,7 @@ import {
 } from './api.js'
 import {
   importErrorText,
+  importSettledNotice,
   importStageLabel,
   isFailedRow,
   isImportingRow,
@@ -138,6 +139,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const cover = pickCoverSrc(data.safeItem)
   const importing = isImportingRow(data.safeItem)
   const failed = isFailedRow(data.safeItem)
+  // A settled row that carries an `import_error` imported fine but could not be
+  // broken down; `importSettledNotice` is empty for a clean completion and for a
+  // row already covered by the failure alert above.
+  const settledNotice = importSettledNotice(data.safeItem, t)
   const dimensions = [
     ['hook', t('modal.deconstruction.hook'), data.hook],
     ['goal', t('modal.deconstruction.goal'), data.targetGoal],
@@ -316,6 +321,12 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 <p className="omnimux-inspiration-error-text" role="alert">
                   {importErrorText(data.safeItem, t) || t('add.status.failed')}
                 </p>
+              ) : null}
+              {/* A completed import that is only missing its AI breakdown. Not an
+                  error state: the item is here, and this says which part is not
+                  and that re-running the breakdown is enough. */}
+              {!failed && settledNotice ? (
+                <p className="omnimux-inspiration-player-status" role="status">{settledNotice}</p>
               ) : null}
             </section>
 

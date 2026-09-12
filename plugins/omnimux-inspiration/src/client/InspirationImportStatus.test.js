@@ -328,6 +328,60 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
       failed.close()
     }
   })
+
+  it('names the missing AI breakdown on a row that did store its video', async () => {
+    const detail = 'AI 视频拆解失败，请确保大模型视觉分析服务可用'
+    const mounted = await mount('InspirationPreviewModal.jsx', {
+      row: {
+        id: 'insp_8',
+        title: '已入库但未拆解',
+        type: 'video',
+        source_platform: 'x',
+        source_url: 'https://x.com/a/status/3',
+        media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'],
+        import_status: 'ready',
+        import_error: detail,
+      },
+      t,
+      onClose() {},
+    }, 'InspirationPreviewModal')
+    try {
+      // The player still renders: the item is playable, and the notice explains
+      // the one part of it that is missing.
+      assert.ok(mounted.container.querySelector('video'), 'the stored video must still play')
+      const notice = [...mounted.container.querySelectorAll('p')]
+        .find((node) => node.textContent === zh['add.analysisFailed'].replace('{error}', detail))
+      assert.ok(notice, 'the preview must say which part is missing and how to get it')
+      // It must not be dressed up as an import failure.
+      assert.equal(mounted.container.querySelector('[role="alert"]'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('says nothing extra about a clean completion', async () => {
+    const mounted = await mount('InspirationPreviewModal.jsx', {
+      row: {
+        id: 'insp_9',
+        title: '正常行',
+        type: 'video',
+        source_platform: 'x',
+        source_url: 'https://x.com/a/status/4',
+        media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'],
+        import_status: 'ready',
+      },
+      t,
+      onClose() {},
+    }, 'InspirationPreviewModal')
+    try {
+      assert.equal(mounted.container.querySelector('[role="alert"]'), null)
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-player-status'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 })
 
 describe('InspirationCoverCard render gate — running status', () => {
@@ -388,6 +442,82 @@ describe('InspirationCoverCard render gate — running status', () => {
         )
       })
       assert.equal(clicked, 1, 'a failed card must still open its preview')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('puts the failure reason on the failed card, not just the word "failed"', async () => {
+    // A card that only says "导入失败" is not actionable: the reason is the one
+    // thing the user needs in order to decide whether retrying is worth it.
+    const detail = 'OmniMux 社媒解析调用失败: request-failed'
+    const mounted = await mount('InspirationCoverCard.jsx', cardProps({
+      id: 'insp_2b',
+      title: '失败的行',
+      is_local: true,
+      source_platform: 'x',
+      import_status: 'failed',
+      import_error: detail,
+    }), 'InspirationCoverCard')
+    try {
+      const detailNode = mounted.container.querySelector('.omnimux-inspiration-card-error')
+      assert.ok(detailNode, 'a failed card must render its reason')
+      assert.equal(
+        detailNode.textContent,
+        zh['add.failedDetail'].replace('{error}', detail),
+        'the reason must reach the card as rendered text',
+      )
+      // The card text as a whole carries both the state and the reason.
+      assert.ok(mounted.container.textContent.includes(detail))
+      assert.ok(mounted.container.textContent.includes(zh['add.status.failed']))
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('reports a completed import whose AI breakdown failed', async () => {
+    // `ready` with an `import_error` is the row the background fix produces: the
+    // video is stored, only the breakdown is missing. The card must say so rather
+    // than render nothing (a silent row) or claim the import failed (a false one).
+    const detail = 'AI 视频拆解失败，请确保大模型视觉分析服务可用'
+    const mounted = await mount('InspirationCoverCard.jsx', cardProps({
+      id: 'insp_2c',
+      title: '已入库但未拆解',
+      is_local: true,
+      source_platform: 'x',
+      type: 'video',
+      media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'],
+      import_status: 'ready',
+      import_error: detail,
+    }), 'InspirationCoverCard')
+    try {
+      const detailNode = mounted.container.querySelector('.omnimux-inspiration-card-error')
+      assert.ok(detailNode, 'a settled row with a missing breakdown must say so')
+      assert.equal(detailNode.textContent, zh['add.analysisFailed'].replace('{error}', detail))
+      assert.equal(detailNode.className.includes('is-failed'), false, 'this row did not fail')
+      // No failure pill: the import itself succeeded.
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('renders nothing extra for a clean completion', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', cardProps({
+      id: 'insp_2d',
+      title: '正常行',
+      is_local: true,
+      source_platform: 'x',
+      type: 'video',
+      media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'],
+      import_status: 'ready',
+    }), 'InspirationCoverCard')
+    try {
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null)
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null)
     } finally {
       await mounted.unmount()
       mounted.close()

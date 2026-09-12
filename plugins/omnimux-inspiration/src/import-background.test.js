@@ -562,6 +562,201 @@ describe('stale import sweep', () => {
   })
 })
 
+describe('background import — an AI failure never discards the item', { concurrency: 1 }, () => {
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-bg-analyze-'))
+    paths = makePaths(tmp)
+  })
+
+  after(() => {
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  /**
+   * Dispatcher with a stubbed analysis tool.
+   *
+   * `analyzeInspirationVideo` swallows a throwing tool and degrades to its local
+   * semantic generator, so this is the *partial* failure a real AI outage
+   * produces: a breakdown is stored, but never the model's. Both branches must end
+   * in a stored item — the point of these cases is that nothing the analysis does
+   * may discard the download.
+   * @param {{ execute?: (args: object) => Promise<any> }} videoAnalyzeTool
+   * @param {object} [extra] additional dispatcher dependencies
+   */
+  function dispatcherWithAnalyzer(videoAnalyzeTool, extra = {}) {
+    const store = createLocalStore({ paths })
+    const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
+      localStore: store,
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      fetcher: mockFetcher,
+      videoAnalyzeTool,
+      ...extra,
+    })
+    return { store, dispatcher }
+  }
+
+  it('keeps the item and records the reason when the AI reports no breakdown', async () => {
+    // The analysis stage answering "no breakdown" is the failure this ruling is
+    // about. It must not take the download with it: the video, the cover and the
+    // metadata are already on disk, and re-importing to get them back is a waste
+    // of the user's time. A `failed` row would do exactly that — this one stays
+    // `ready` with the reason written down.
+    const reason = 'AI 视频拆解失败，请确保大模型视觉分析服务可用'
+    const ctx = dispatcherWithAnalyzer({ execute: async () => '' }, {
+      analyzeInspiration: async () => ({ deconstruction: null, error: reason }),
+    })
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled(ctx, started.body.data.id)
+
+    assert.equal(ctx.store.list().total, 1, 'the item must still be in the library')
+    assert.equal(settled.type, 'video')
+    assert.equal(settled.media_urls.length, 1, 'the download must be kept')
+    assert.match(settled.media_urls[0], /^\/omnimux\/inspiration\/local\/media\/videos\//)
+    assert.equal(settled.import_status, 'ready', 'a stored item is a completion, not a failure')
+    assert.equal(settled.import_stage, null)
+    assert.equal(settled.import_error, reason, 'the reason must reach the row')
+    assert.equal(settled.deconstruction ?? null, null)
+
+    // The user can still get the breakdown afterwards — on the row they kept.
+    const analyzed = await ctx.dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux/inspiration/local/${started.body.data.id}/analyze`,
+      body: {},
+    })
+    assert.equal(analyzed.status, 200, `re-analysis must succeed (${analyzed.body?.error || ''})`)
+    assert.ok(analyzed.body?.data?.deconstruction, 'the row must come back with a breakdown')
+  })
+
+  it('settles a failed breakdown as degraded, not failed, when there is no video', async () => {
+    const store = createLocalStore({ paths })
+    const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
+      localStore: store,
+      socialFetcher: async () => X_PHOTO_ENVELOPE,
+      fetcher: mockFetcher,
+      // A photo post never reaches the model, so this must not be called.
+      analyzeInspiration: async () => { throw new Error('不该被调用') },
+    })
+
+    const started = await postImport(dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled({ store }, started.body.data.id)
+
+    assert.equal(settled.import_status, 'degraded')
+    assert.deepEqual(settled.media_urls, [])
+    assert.equal(settled.import_error, null, 'nothing was attempted, so nothing failed')
+  })
+
+  it('keeps the downloaded video when the AI tool fails', async () => {
+    const ctx = dispatcherWithAnalyzer({
+      execute: async () => { throw new Error('AI 视觉分析服务不可用') },
+    })
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled(ctx, started.body.data.id)
+
+    // The item is stored and playable: the download, the cover and the metadata
+    // were all obtained before the model was ever called, so nothing in the
+    // analysis stage may throw them away.
+    assert.equal(ctx.store.list().total, 1)
+    assert.equal(settled.type, 'video')
+    assert.equal(settled.media_urls.length, 1)
+    assert.match(settled.media_urls[0], /^\/omnimux\/inspiration\/local\/media\/videos\//)
+    assert.ok(settled.cover_url)
+    // A stored item is a completion, never `failed`: `failed` would hide the video
+    // the user already paid for in download time, leaving re-import as the only
+    // way back to it.
+    assert.equal(settled.import_status, 'ready')
+    assert.equal(settled.import_stage, null)
+  })
+
+  it('settles as degraded, never failed, when the import has no video at all', async () => {
+    const store = createLocalStore({ paths })
+    const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
+      localStore: store,
+      socialFetcher: async () => X_PHOTO_ENVELOPE,
+      fetcher: mockFetcher,
+      videoAnalyzeTool: { execute: async () => { throw new Error('不该被调用') } },
+    })
+
+    const started = await postImport(dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled({ store }, started.body.data.id)
+
+    assert.equal(settled.import_status, 'degraded')
+    assert.deepEqual(settled.media_urls, [])
+    // Never reached the model, so there is nothing to report as a failure.
+    assert.equal(settled.import_error, null)
+  })
+
+  it('still leaves the row analyzable afterwards', async () => {
+    const ctx = dispatcherWithAnalyzer({
+      execute: async () => { throw new Error('AI 视觉分析服务不可用') },
+    })
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const id = started.body.data.id
+    const settled = await waitForSettled(ctx, id)
+
+    // A row the user can still act on is what makes keeping it worthwhile: the
+    // local file is on disk, so the analyze route re-runs without re-downloading.
+    assert.ok(existsSync(settled.local_paths.video), 'the downloaded file must still exist')
+
+    const analyzed = await ctx.dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux/inspiration/local/${id}/analyze`,
+      body: {},
+    })
+
+    assert.equal(analyzed.status, 200, `analysis on the kept row must succeed (${analyzed.body?.error || ''})`)
+    assert.ok(analyzed.body?.data?.deconstruction, 'the row must come back with a breakdown')
+  })
+
+  it('runs the model when auto_analyze is requested', async () => {
+    const calls = []
+    const ctx = dispatcherWithAnalyzer({
+      execute: async () => {
+        calls.push(1)
+        return { report: '## 一句话视频描述\n开场三秒反杀\n## I. 核心目标\n拉高完播' }
+      },
+    })
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
+    const settled = await waitForSettled(ctx, started.body.data.id)
+
+    assert.ok(calls.length >= 1, 'auto_analyze: true must reach the analysis tool')
+    // The model's own report beats the local fallback: this is the value only the
+    // model could have produced, so seeing it proves the tool really ran.
+    assert.equal(settled.deconstruction.summary, '开场三秒反杀')
+    assert.equal(settled.auto_analyze, true, 'the stored flag must survive the completion')
+  })
+
+  it('never calls the model when auto_analyze is false', async () => {
+    const calls = []
+    const ctx = dispatcherWithAnalyzer({
+      execute: async () => {
+        calls.push(1)
+        return { report: 'x' }
+      },
+    })
+
+    const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: false })
+    const settled = await waitForSettled(ctx, started.body.data.id)
+
+    assert.deepEqual(calls, [], 'the user asked for no AI, so none may run')
+    assert.equal(settled.import_status, 'ready')
+    // The stored choice has to survive the completion, or a later retry of the
+    // same URL would run the model the user turned off.
+    assert.equal(settled.auto_analyze, false)
+    // No AI was attempted, so nothing failed: this is a clean completion.
+    assert.equal(settled.import_error, null)
+  })
+})
+
 describe('analyze guard while an import runs', { concurrency: 1 }, () => {
   let tmp
   let paths

@@ -76,6 +76,7 @@ function makeHarness(options = {}) {
   const removed = []
   const failed = []
   const degraded = []
+  const settled = []
   /** @type {Map<string, () => any>} */
   const answers = new Map()
   const poller = createImportPoller({
@@ -93,10 +94,11 @@ function makeHarness(options = {}) {
       onRemove: (id) => removed.push(id),
       onFailed: (item, id) => failed.push({ id, item }),
       onDegraded: (item) => degraded.push(item),
+      onSettled: (item) => settled.push(item),
     },
   })
   void options
-  return { poller, clock, doc, calls, seen, removed, failed, degraded, answers }
+  return { poller, clock, doc, calls, seen, removed, failed, degraded, settled, answers }
 }
 
 function rowFor(id, status, extra = {}) {
@@ -215,6 +217,44 @@ describe('createImportPoller — completion poll', () => {
 
     assert.equal(harness.degraded.length, 1)
     assert.equal(harness.seen.at(-1).import_status, 'degraded')
+  })
+
+  it('surfaces a completed import whose AI breakdown failed', async () => {
+    // The row settles as `ready` — the video is in the library — and only carries
+    // an `import_error`. Without `onSettled` the user would never learn that the
+    // breakdown they asked for is missing, because the row is not `failed`.
+    const harness = makeHarness()
+    harness.answers.set('a', () => ({
+      ok: true,
+      status: 200,
+      body: {
+        data: rowFor('a', 'ready', {
+          media_urls: ['/omnimux/inspiration/local/media/videos/v.mp4'],
+          import_error: 'AI 视频拆解失败',
+        }),
+      },
+    }))
+
+    harness.poller.start()
+    harness.poller.track(['a'])
+    await harness.clock.tick()
+
+    assert.equal(harness.settled.length, 1, 'a settled row with a reason must be reported')
+    assert.equal(harness.settled[0].import_error, 'AI 视频拆解失败')
+    assert.equal(harness.failed.length, 0, 'it is not an import failure')
+    assert.equal(harness.seen.at(-1).import_status, 'ready')
+  })
+
+  it('stays silent for a clean completion', async () => {
+    const harness = makeHarness()
+    harness.answers.set('a', () => ({ ok: true, status: 200, body: { data: rowFor('a', 'ready') } }))
+
+    harness.poller.start()
+    harness.poller.track(['a'])
+    await harness.clock.tick()
+
+    assert.deepEqual(harness.settled, [])
+    assert.deepEqual(harness.degraded, [])
   })
 
   it('keeps polling after a transient failure', async () => {

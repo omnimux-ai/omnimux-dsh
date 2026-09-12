@@ -4,36 +4,81 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pickVideoSrc } from './api.js'
-import { importLocaleKeys, importPillLabel, importStageKey, importStageLabel, importingIds } from './import-status.js'
+import {
+  importErrorText,
+  importLocaleKeys,
+  importPillLabel,
+  importRetryHint,
+  importSettledNotice,
+  importStageKey,
+  importStageLabel,
+  importingIds,
+} from './import-status.js'
 import { canAnalyzeInspiration } from './inspiration-preview-data.js'
 import { en, zh } from './locales.js'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 
 /**
- * Gate for the local video source contract.
+ * Gate for the video source contract — all three prefix forms.
  *
  * The player used to build `/omnimux/inspiration/local/media/<id>/video.mp4` by
  * hand. No such route exists: `streamLocalMedia` maps
  * `/omnimux/inspiration/local/media/<subpath>` onto `join(mediaDir, subpath)`, so
  * the request was a guaranteed 404 and every local video rendered a blank
- * `<video>`. `media_urls[0]` is what `buildImportRecord` actually writes, and it
+ * `<video>`. `media_urls[0]` is what the import pipeline actually writes, and it
  * is the only field the client may turn into a source.
+ *
+ * Three forms are legitimate and each must survive verbatim:
+ * 1. absolute `http(s)://` — a public CDN link;
+ * 2. `/omnimux/inspiration/local/media/…` — a file downloaded on this machine;
+ * 3. `/omnimux/inspiration/media/…` — the Host-media form a cloud catalogue row
+ *    carries (the hub's social adapter rewrites cloud media onto this prefix, and
+ *    `hostMediaSrc` accepts it).
+ *
+ * Form 3 used to be rejected, which made every cloud item's video fall back to a
+ * cover with no error anywhere. It must never be confused with form 2: neither
+ * prefix contains the other, so no branch can swallow the other's row.
  */
-describe('pickVideoSrc — local video source contract', () => {
+describe('pickVideoSrc — video source contract (http / local media / cloud hub media)', () => {
+  const LOCAL_MEDIA = '/omnimux/inspiration/local/media/videos/video_ab12cd34.mp4'
+  const CLOUD_MEDIA = '/omnimux/inspiration/media/videos/cloud_ab12cd34.mp4'
+
   it('returns media_urls[0] verbatim for a local record', () => {
     const row = {
       id: 'insp_1',
       type: 'video',
-      media_urls: ['/omnimux/inspiration/local/media/videos/video_ab12cd34.mp4'],
+      media_urls: [LOCAL_MEDIA],
       local_paths: { video: '/Users/x/.omnimux/media/videos/video_ab12cd34.mp4' },
     }
-    assert.equal(pickVideoSrc(row), '/omnimux/inspiration/local/media/videos/video_ab12cd34.mp4')
+    assert.equal(pickVideoSrc(row), LOCAL_MEDIA)
   })
 
   it('passes an absolute http(s) source through', () => {
     const row = { media_urls: ['https://cdn.example.com/clips/a.mp4'] }
     assert.equal(pickVideoSrc(row), 'https://cdn.example.com/clips/a.mp4')
+  })
+
+  it('returns the cloud hub media path verbatim', () => {
+    // Without this branch a cloud row's video could never play: the player would
+    // fall through to the cover for every cloud item in the catalogue.
+    const row = { id: 'cloud_1', type: 'video', media_urls: [CLOUD_MEDIA] }
+    assert.equal(pickVideoSrc(row), CLOUD_MEDIA)
+  })
+
+  it('keeps the cloud and local prefixes distinct', () => {
+    assert.equal(CLOUD_MEDIA.startsWith('/omnimux/inspiration/local/media/'), false)
+    assert.equal(LOCAL_MEDIA.startsWith('/omnimux/inspiration/media/'), false)
+    assert.equal(pickVideoSrc({ media_urls: [CLOUD_MEDIA] }), CLOUD_MEDIA)
+    assert.equal(pickVideoSrc({ media_urls: [LOCAL_MEDIA] }), LOCAL_MEDIA)
+    assert.notEqual(pickVideoSrc({ media_urls: [CLOUD_MEDIA] }), LOCAL_MEDIA)
+  })
+
+  it('accepts a cloud prefix with a nested subpath and a query string', () => {
+    // Cloud media is not always a flat `videos/<name>` path, and a presign query
+    // string is part of the URL the Host expects back unchanged.
+    const nested = '/omnimux/inspiration/media/catalog/2026/09/clip.mp4?token=abc.def'
+    assert.equal(pickVideoSrc({ media_urls: [nested] }), nested)
   })
 
   it('returns an empty string for a record with no media', () => {
@@ -61,7 +106,7 @@ describe('pickVideoSrc — local video source contract', () => {
   })
 
   it('ignores a non-string or empty first entry', () => {
-    assert.equal(pickVideoSrc({ media_urls: [null, '/omnimux/inspiration/local/media/videos/v.mp4'] }), '/omnimux/inspiration/local/media/videos/v.mp4')
+    assert.equal(pickVideoSrc({ media_urls: [null, LOCAL_MEDIA] }), LOCAL_MEDIA)
     assert.equal(pickVideoSrc({ media_urls: [{ url: 'x' }] }), '')
     assert.equal(pickVideoSrc({ media_urls: ['', 'https://cdn.example.com/a.mp4'] }), 'https://cdn.example.com/a.mp4')
   })
@@ -188,6 +233,59 @@ describe('import status locale mapping', () => {
     ]
     assert.deepEqual(importingIds(items), ['a', 'd'])
     assert.deepEqual(importingIds(null), [])
+  })
+})
+
+describe('import error presentation — non-terminal failures are still visible', () => {
+  const t = (key) => zh[key] || key
+
+  it('renders the reason for a failed row', () => {
+    const row = { import_status: 'failed', import_error: '云端解析失败' }
+    assert.equal(importErrorText(row, t), zh['add.failedDetail'].replace('{error}', '云端解析失败'))
+    assert.equal(importRetryHint(row, t), zh['add.retryHint'])
+  })
+
+  it('refuses a failed row with no reason instead of inventing one', () => {
+    assert.equal(importErrorText({ import_status: 'failed' }, t), '')
+    assert.equal(importRetryHint({ import_status: 'failed' }, t), '')
+  })
+
+  it('reports a completed import that is only missing its breakdown', () => {
+    // The row is `ready`: the video, cover and metadata are all in the library.
+    // Reading `import_error` as "the import failed" is exactly the mistake these
+    // helpers exist to prevent, so the notice must not say that.
+    const row = {
+      import_status: 'ready',
+      media_urls: ['/omnimux/inspiration/local/media/videos/video_ab12.mp4'],
+      import_error: 'AI 视频拆解失败，请确保大模型视觉分析服务可用',
+    }
+    const notice = importSettledNotice(row, t)
+    assert.equal(
+      notice,
+      zh['add.analysisFailed'].replace('{error}', 'AI 视频拆解失败，请确保大模型视觉分析服务可用'),
+    )
+    // It is not the failure wording, and it is not offered as a retryable import.
+    assert.notEqual(notice, zh['add.status.failed'])
+    assert.equal(importRetryHint(row, t), '')
+  })
+
+  it('says nothing for a clean completion or a row the failure alert covers', () => {
+    assert.equal(importSettledNotice({ import_status: 'ready' }, t), '')
+    assert.equal(importSettledNotice({ import_status: 'degraded' }, t), '')
+    assert.equal(importSettledNotice({}, t), '')
+    assert.equal(importSettledNotice(null, t), '')
+    // A failed row's reason is already rendered by `importErrorText`.
+    assert.equal(importSettledNotice({ import_status: 'failed', import_error: 'x' }, t), '')
+  })
+
+  it('renders the analysis notice in both locales without leaving the placeholder', () => {
+    const row = { import_status: 'ready', import_error: 'boom' }
+    for (const dict of [zh, en]) {
+      const render = (key) => dict[key] || key
+      assert.equal(importErrorText(row, render).includes('{error}'), false)
+      assert.equal(importSettledNotice(row, render).includes('{error}'), false)
+      assert.ok(importSettledNotice(row, render).includes('boom'))
+    }
   })
 })
 

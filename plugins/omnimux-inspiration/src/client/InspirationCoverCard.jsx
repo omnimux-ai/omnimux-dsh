@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
-import { importPillLabel, isFailedRow, isImportingRow } from './import-status.js'
+import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isImportingRow } from './import-status.js'
 
 const ICON_EYE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -55,6 +55,14 @@ export function InspirationCoverCard({ card }) {
   // existed before imports had a status, so a success pill would decorate the
   // whole library. Only work in progress and failures are worth announcing.
   const statusPill = importPillLabel(row, t)
+  // The pill says "failed"; this says *why*. Without it the card reports a
+  // problem the user cannot act on, because the reason never leaves the server.
+  //
+  // The order matters. A row that settled carries a reason too — its AI breakdown
+  // is missing, not its video — and `importErrorText` renders that same reason as
+  // "导入失败", which would be false. The settled wording therefore gets first
+  // refusal, and `importSettledNotice` answers `''` for a `failed` row.
+  const errorDetail = importSettledNotice(row, t) || importErrorText(row, t)
 
   const handleClick = () => {
     if (selecting && isLocal && onToggleSelect) {
@@ -133,6 +141,16 @@ export function InspirationCoverCard({ card }) {
         >
           {statusPill}
         </Badge>
+      ) : null}
+
+      {/* 失败原因：卡片本身要能说清「为什么」，否则用户只看到一个无法处置的结果 */}
+      {errorDetail ? (
+        <div
+          className={`omnimux-inspiration-card-error ${failed ? 'is-failed' : ''}`}
+          role="status"
+        >
+          {errorDetail}
+        </div>
       ) : null}
 
       {broken ? (

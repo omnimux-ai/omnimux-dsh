@@ -78,7 +78,13 @@ export function importStageKey(stage) {
  * @returns {string[]}
  */
 export function importLocaleKeys() {
-  return [...Object.values(STAGE_KEYS), 'add.status.failed', 'add.failedDetail']
+  return [
+    ...Object.values(STAGE_KEYS),
+    'add.status.failed',
+    'add.failedDetail',
+    'add.retryHint',
+    'add.analysisFailed',
+  ]
 }
 
 /**
@@ -109,16 +115,73 @@ export function importPillLabel(item, translate) {
 }
 
 /**
- * Failure detail for a failed row, or `''` when it has none.
+ * Failure detail for a row that carries an `import_error`, or `''` when it has
+ * none.
+ *
+ * Keyed off the field and not off `import_status`: `import_error` is a
+ * non-terminal marker, so a row that imported fine but could not be broken down
+ * carries one too. Gating this on `failed` would hide exactly the reason the user
+ * needs — why the breakdown the import promised is missing.
  * @param {unknown} item
  * @param {(key: string) => string} translate
  * @returns {string}
  */
 export function importErrorText(item, translate) {
-  const row = item && typeof item === 'object' ? /** @type {Record<string, any>} */ (item) : {}
-  const detail = typeof row.import_error === 'string' ? row.import_error.trim() : ''
+  const detail = importErrorDetail(item)
   if (!detail) return ''
   return translate('add.failedDetail').replace('{error}', detail)
+}
+
+/**
+ * Whether this row's error means the import stored nothing, as opposed to a
+ * completed import that is missing one part of itself.
+ * @param {unknown} item
+ * @returns {boolean}
+ */
+export function isImportFailure(item) {
+  return isFailedRow(item) && importErrorDetail(item) !== ''
+}
+
+/**
+ * What the user can do about a row's error, or `''` when there is no advice to
+ * give. A failed import is retryable by importing the same URL again — the
+ * server reuses the row's id and restarts the job in place.
+ * @param {unknown} item
+ * @param {(key: string) => string} translate
+ * @returns {string}
+ */
+export function importRetryHint(item, translate) {
+  return isImportFailure(item) ? translate('add.retryHint') : ''
+}
+
+/**
+ * Notice text for a background import that stored its item but could not produce
+ * the AI breakdown, or `''` when the row has nothing to report.
+ *
+ * A row with no `import_error` is a clean completion. A `failed` row is left to
+ * `importErrorText`, which already says the import itself did not happen.
+ * @param {unknown} item
+ * @param {(key: string) => string} translate
+ * @returns {string}
+ */
+export function importSettledNotice(item, translate) {
+  const detail = importErrorDetail(item)
+  if (!detail || isFailedRow(item)) return ''
+  return translate('add.analysisFailed').replace('{error}', detail)
+}
+
+/**
+ * Raw `import_error` of a row, trimmed, or `''`.
+ *
+ * Exported because the poller needs the same "is there anything on this row to
+ * report" test and reimplementing it there would be a second definition of the
+ * field to keep in sync.
+ * @param {unknown} item
+ * @returns {string}
+ */
+export function importErrorDetail(item) {
+  const row = item && typeof item === 'object' ? /** @type {Record<string, any>} */ (item) : {}
+  return typeof row.import_error === 'string' ? row.import_error.trim() : ''
 }
 
 /**

@@ -485,6 +485,30 @@ export const INSPIRATION_CSS = `
   color: var(--dsw-alias-state-error-primary, #f26d6d);
   border-color: var(--dsw-alias-state-error-primary, #f26d6d);
 }
+/* 卡片上的失败/降级原因：贴在封面顶部，与居中的状态胶囊分层，不遮挡 CTA */
+.omnimux-inspiration-card-error {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 3;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-secondary, rgba(0, 0, 0, 0.62));
+  color: var(--dsw-alias-label-secondary, #d4d4d4);
+  font-size: 11px;
+  line-height: 15px;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: none;
+}
+.omnimux-inspiration-card-error.is-failed {
+  background: var(--dsw-alias-state-error-secondary, rgba(220, 68, 68, 0.28));
+  color: var(--dsw-alias-state-error-primary, #f26d6d);
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;

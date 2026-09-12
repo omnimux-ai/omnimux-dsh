@@ -769,6 +769,14 @@ async function startBackgroundImport(ctx, placeholder) {
  * Every outcome is written to the row: a degraded completion, a failure with its
  * reason, and an unexpected throw alike. Nothing is left to a floating rejection,
  * because a rejected job would leave the row reading "importing" forever.
+ *
+ * A job that completed even though the AI breakdown did not is *not* a failure:
+ * the row keeps its video, its cover and its metadata, and the reason travels on
+ * `import_error` while `import_status` says what was actually stored. Only a job
+ * that produced no item at all fails. The re-stamp below writes the same verdict
+ * back — it exists for the case where the completion could not replace the row
+ * (the user deleted it mid-flight), and it preserves the breakdown reason instead
+ * of clearing it.
  * @param {Record<string, any>} ctx
  * @param {Record<string, any>} placeholder
  */
@@ -776,7 +784,7 @@ async function runBackgroundImport(ctx, placeholder) {
   const id = String(placeholder.id)
   const progress = createProgressReporter(ctx.store, id)
   try {
-    const result = await runImport({ ...ctx, progress, throwOnAnalysisFailure: true })
+    const result = await runImport({ ...ctx, progress })
     if (result.status >= 400) {
       await markImportFailed(ctx.store, id, result.body?.error || `HTTP ${result.status}`)
       return
@@ -786,15 +794,13 @@ async function runBackgroundImport(ctx, placeholder) {
       await markImportFailed(ctx.store, id, IMPORT_STALE_ERROR)
       return
     }
-    // `runImport` already replaced the placeholder in place; re-stamping the
-    // settled status keeps the row honest even if the replacement was skipped
-    // because the row was deleted while the job ran.
-    const settled = result.body?.media_degraded ? IMPORT_STATUS_DEGRADED : IMPORT_STATUS_READY
+    const settled = row.import_status
+      || (result.body?.media_degraded ? IMPORT_STATUS_DEGRADED : IMPORT_STATUS_READY)
     await progress('persisting')
     await safeUpdate(ctx.store, id, {
       import_status: settled,
       import_stage: null,
-      import_error: null,
+      import_error: row.import_error ?? null,
     })
   } catch (error) {
     await markImportFailed(ctx.store, id, describeImportError(ctx, error))
@@ -939,7 +945,7 @@ async function runImport(args) {
   if (social.error) return social.error
   const dup = checkResolvedDuplicate(args, social.meta)
   if (dup) return dup
-  return persistImportedItem(args, social.meta, { throwOnFail: args.throwOnAnalysisFailure === true })
+  return persistImportedItem(args, social.meta)
 }
 
 /**
@@ -962,8 +968,11 @@ async function reportStage(args, stage) {
  * YouTube page, a platform without a public stream — the item is still imported
  * as `link`/`image` with the metadata that was resolved, flagged as degraded so
  * callers can tell the difference. Only a completely empty envelope fails.
+ *
+ * An AI breakdown that fails does not fail the import either: the item is stored
+ * whole with the reason on `import_error`, and the caller sees it on the row.
  */
-async function persistImportedItem(args, meta, options = {}) {
+async function persistImportedItem(args, meta) {
   const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
   if (!videoUrl && !meta.has_metadata) {
     return fail(422, '未从该链接解析到可入库的内容（标题、文案、封面与视频直链均为空）')
@@ -973,11 +982,9 @@ async function persistImportedItem(args, meta, options = {}) {
     ? await downloadImportMedia(args, meta, videoUrl)
     : await downloadImportCover(args, meta)
   if (media.error) return media.error
-  const deconstruction = await maybeAnalyze(args, media, meta, {
-    throwOnFail: options?.throwOnFail === true,
-  })
+  const analysis = await maybeAnalyze(args, media, meta)
   await reportStage(args, IMPORT_STAGES.PERSISTING)
-  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, deconstruction))
+  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
   if (videoUrl) return { status: 200, body: { data: record } }
   return {
     status: 200,
@@ -1012,19 +1019,27 @@ async function persistImportedRecord(args, record) {
  * to run — the same guard the analysis itself uses. A degraded import that never
  * reaches the model must not claim the AI is working on it.
  *
- * A failure here fails the whole import when the caller is a background job
- * (`throwOnFail`): the row would otherwise be stored complete but permanently
- * missing the breakdown the user asked for, with nothing saying so. The
- * synchronous path keeps its historical behaviour of importing without one.
+ * A failure is returned, never thrown: the video, the cover and the metadata are
+ * already on disk by this point, so failing the whole import over the breakdown
+ * would throw away a complete item the user has already waited for and make them
+ * import it again to get it back. The caller decides how to record it — the
+ * background job keeps the row and stores the reason, and the synchronous path
+ * has always imported without a breakdown.
  * @param {Record<string, any>} args
  * @param {{ localVideoPath?: string }} media
  * @param {Record<string, any>} meta
- * @param {{ throwOnFail?: boolean }} [options]
+ * @returns {Promise<{ deconstruction: Record<string, any> | null, error: string }>}
  */
-async function maybeAnalyze(args, media, meta, options = {}) {
-  if (!args.autoAnalyze || !media.localVideoPath) return null
+async function maybeAnalyze(args, media, meta) {
+  if (!args.autoAnalyze || !media.localVideoPath) return { deconstruction: null, error: '' }
   await reportStage(args, IMPORT_STAGES.ANALYZING)
-  const analysisResult = await analyzeInspirationVideo({
+  // `args.analyzeInspiration` is undefined in production, so the real analyzer
+  // runs. The dispatcher forwards an injected one for tests, which is the only
+  // seam that reaches the failure branch below: the analyzer degrades to a local
+  // breakdown rather than reporting failure, so no other input can produce a
+  // failed analysis.
+  const analyze = args.analyzeInspiration || analyzeInspirationVideo
+  const analysisResult = await analyze({
     videoPath: media.localVideoPath,
     title: meta.title || args.rawUrl,
     content: meta.text,
@@ -1032,10 +1047,11 @@ async function maybeAnalyze(args, media, meta, options = {}) {
     platform: args.platform,
     videoAnalyzeTool: args.videoAnalyzeTool,
   })
-  if (options.throwOnFail && !analysisResult.deconstruction) {
-    throw new Error(analysisResult.error || 'AI 视频拆解失败，请确保大模型视觉分析服务可用')
+  if (analysisResult.deconstruction) return { deconstruction: analysisResult.deconstruction, error: '' }
+  return {
+    deconstruction: null,
+    error: analysisResult.error || 'AI 视频拆解失败，请确保大模型视觉分析服务可用',
   }
-  return analysisResult.deconstruction
 }
 
 /**
@@ -1052,7 +1068,24 @@ function resolveImportType(meta, media) {
   return 'link'
 }
 
-function buildImportRecord(args, meta, media, deconstruction) {
+/**
+ * The row an import settles as.
+ *
+ * `import_error` carries a failure the import survived — a breakdown that could
+ * not be produced — and is `null` otherwise. It is deliberately not a synonym
+ * for `import_status: failed`: this row holds a complete item, and the field is
+ * what tells the user which part is missing.
+ *
+ * `auto_analyze` is re-stamped from the request so the stored choice survives the
+ * completion. The placeholder carried it, but this record *replaces* that row
+ * through `buildRow`, so leaving it out would reset the flag to its `true`
+ * default and a retry would run the AI again for a user who asked it not to.
+ * @param {Record<string, any>} args
+ * @param {Record<string, any>} meta
+ * @param {Record<string, any>} media
+ * @param {{ deconstruction?: Record<string, any> | null, error?: string }} [analysis]
+ */
+function buildImportRecord(args, meta, media, analysis = {}) {
   const coverName = media.localCoverPath ? media.localCoverPath.split('/').pop() : ''
   const videoName = media.localVideoPath ? media.localVideoPath.split('/').pop() : ''
   const cover_url = coverName
@@ -1068,18 +1101,19 @@ function buildImportRecord(args, meta, media, deconstruction) {
     media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : [],
     local_paths: media.localPaths,
     tags: args.customTags,
+    auto_analyze: args.autoAnalyze !== false,
     author: meta.author,
     stats: meta.stats,
     duration: meta.duration,
     published_at: meta.published_at,
-    deconstruction,
+    deconstruction: analysis.deconstruction ?? null,
     // This record is the completion of an import, so it settles the placeholder
     // the background path published: `degraded` when no video stream was
-    // obtained, `ready` otherwise. Leaving `import_stage`/`import_error` at
-    // null is what stops a finished row from rendering a running stage.
+    // obtained, `ready` otherwise. Leaving `import_stage` at null is what stops a
+    // finished row from rendering a running stage.
     import_status: media.localVideoPath ? IMPORT_STATUS_READY : IMPORT_STATUS_DEGRADED,
     import_stage: null,
-    import_error: null,
+    import_error: analysis.error || null,
   }
 }
 

@@ -116,3 +116,85 @@ describe('local store — import status fields survive the row whitelist', () =>
     assert.equal('import_status' in reread, false)
   })
 })
+
+/**
+ * Gate for `auto_analyze` surviving the same whitelist.
+ *
+ * The field is what a retry consults to decide whether to run the AI breakdown
+ * again, so losing it does not merely drop data — it silently runs an expensive
+ * model call the user turned off. `false` is the value under test: a default that
+ * is applied with `||` rather than `??` would turn the user's explicit "no" back
+ * into the `true` default on every write.
+ */
+describe('local store — auto_analyze is stored, not recomputed', () => {
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-store-auto-analyze-'))
+    paths = {
+      dir: tmp,
+      libraryFile: join(tmp, 'library.json'),
+      mediaDir: join(tmp, 'media'),
+      coversDir: join(tmp, 'media', 'covers'),
+      videosDir: join(tmp, 'media', 'videos'),
+      imagesDir: join(tmp, 'media', 'images'),
+    }
+  })
+
+  after(() => {
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  it('reads back an explicit false rather than defaulting it away', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: 'https://x.com/creator/status/5',
+      source_url: 'https://x.com/creator/status/5',
+      auto_analyze: false,
+    })
+
+    assert.equal(created.auto_analyze, false, 'the constructor must not widen false to true')
+    const persisted = createLocalStore({ paths }).get(created.id)
+    assert.equal(persisted.auto_analyze, false, 'a re-read must still see the stored false')
+  })
+
+  it('defaults to true when the field is absent', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({ title: 'row', source_url: 'https://x.com/creator/status/6' })
+    assert.equal(created.auto_analyze, true)
+    assert.equal(createLocalStore({ paths }).get(created.id).auto_analyze, true)
+  })
+
+  it('keeps the value the placeholder was written with through update()', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: 'row',
+      source_url: 'https://x.com/creator/status/7',
+      auto_analyze: false,
+    })
+    store.update(created.id, { import_stage: 'analyzing' })
+    assert.equal(createLocalStore({ paths }).get(created.id).auto_analyze, false)
+  })
+
+  it('keeps an explicit false across replace(), the path a job completion takes', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: 'row',
+      source_url: 'https://x.com/creator/status/8',
+      auto_analyze: false,
+    })
+    // The completion record re-stamps the flag it was imported with; a missing
+    // field here is what would reset the user's choice.
+    const replaced = store.replace(created.id, {
+      title: 'row',
+      source_url: 'https://x.com/creator/status/8',
+      auto_analyze: false,
+      import_status: 'ready',
+      media_urls: ['/omnimux/inspiration/local/media/videos/video_ab12.mp4'],
+    })
+    return replaced.then(() => {
+      assert.equal(createLocalStore({ paths }).get(created.id).auto_analyze, false)
+    })
+  })
+})

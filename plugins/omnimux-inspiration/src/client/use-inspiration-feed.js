@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getLocalInspiration, whenAuthReady } from './api.js'
 import { createImportPoller } from './import-poller.js'
-import { isImportingRow } from './import-status.js'
+import { importErrorDetail, isImportingRow } from './import-status.js'
 import {
   applyCachedPage,
   cacheKeyOf,
@@ -302,6 +302,9 @@ function useFeedData(options) {
  * work too, but it would drop the user's scroll position and page for an event
  * that changes exactly one card. A `404` means the user deleted the row, so it is
  * dropped from the grid instead of being left to poll a gone id forever.
+ *
+ * The notice is stored as a locale key plus its parameters, never as formatted
+ * text: the wording — and the language — is decided at render time by the page.
  * @param {{ setItems: Function }} options
  */
 function useImportWatch(options) {
@@ -325,9 +328,18 @@ function useImportWatch(options) {
           setItemsRef.current((prev) => filterOutItemsByIds(prev, [id]))
         },
         onDegraded: () => setImportFailed({ key: 'add.degradedNotice' }),
+        // The item itself was stored and only the AI breakdown failed, so this is
+        // not an import failure: it says what is missing and that re-running the
+        // breakdown is enough.
+        onSettled: (item) => {
+          const detail = importErrorDetail(item)
+          if (detail) setImportFailed({ key: 'add.analysisFailed', detail })
+        },
         onFailed: (item) => {
           if (item) setItemsRef.current((prev) => updateItemInList(prev, item))
-          setImportFailed({ key: 'add.status.failed', detail: item?.import_error || '' })
+          // Retryable by design: importing the same URL again reuses this row's id
+          // and restarts the job in place, so the notice may say so.
+          setImportFailed({ key: 'add.status.failed', detail: importErrorDetail(item), retryable: true })
         },
       },
     })

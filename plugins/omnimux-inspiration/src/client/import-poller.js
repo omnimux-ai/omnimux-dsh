@@ -2,6 +2,7 @@ import {
   IMPORT_POLL_INTERVAL_MS,
   IMPORT_STATUS_FAILED,
   IMPORT_STATUS_IMPORTING,
+  importErrorDetail,
   importStatusOf,
   isImportingRow,
 } from './import-status.js'
@@ -77,6 +78,7 @@ function documentVisible(doc) {
  *     onRemove?: (id: string) => void,
  *     onFailed?: (item: Record<string, any> | null, id: string) => void,
  *     onDegraded?: (item: Record<string, any>) => void,
+ *     onSettled?: (item: Record<string, any>) => void,
  *     setTimeout?: (fn: () => void, ms: number) => any,
  *     clearTimeout?: (handle: any) => void,
  *     getDocument?: () => any,
@@ -116,6 +118,11 @@ export function createImportPoller(options = {}) {
       pending.delete(id)
       const item = outcome.item || null
       if (item && importStatusOf(item) === 'degraded') deps.onDegraded?.(item)
+      // A completion that stored its item but could not produce the breakdown
+      // still has something to say: it settles as `ready`/`degraded` rather than
+      // `failed`, so without this the user would never learn the part that is
+      // missing, nor that re-running the breakdown is all it takes.
+      if (item && importErrorDetail(item)) deps.onSettled?.(item)
       if (item) deps.onItem?.(item)
       return
     }

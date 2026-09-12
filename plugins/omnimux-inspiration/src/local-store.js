@@ -47,7 +47,8 @@ export class InspirationError extends Error {
  * @property {{ lang?: string, text?: string, segments?: Array<{ id: string, text: string }> }} [script_translation]
  * @property {'importing' | 'ready' | 'degraded' | 'failed'} [import_status] absent means `ready` (legacy rows)
  * @property {'resolving' | 'downloading' | 'analyzing' | 'persisting' | null} [import_stage] phase a running import is in
- * @property {string | null} [import_error] failure detail, set only for `failed`
+ * @property {string | null} [import_error] reason a step could not finish; a non-terminal marker, so it also appears on `ready`/`degraded` rows (the import succeeded, one part of it — the AI breakdown — did not). Only `failed` means nothing was stored. Never read this as "the import failed": check `import_status` first.
+ * @property {boolean} [auto_analyze] whether a retry of this URL should re-run the AI breakdown; absent means `true`
  * @property {string} [import_started_at] ISO timestamp the running import began at
  * @property {string} created_at
  * @property {string} updated_at
@@ -111,6 +112,9 @@ function buildRow(record, identity = {}) {
     import_status: record.import_status || 'ready',
     import_stage: record.import_stage ?? null,
     import_error: record.import_error ?? null,
+    // `??` and not `||`: an explicit `false` is the user's choice to skip the AI
+    // breakdown, and `||` would silently turn it back into `true` on the way out.
+    auto_analyze: record.auto_analyze ?? true,
     import_started_at: record.import_started_at,
     created_at: identity.created_at || record.created_at || now,
     updated_at: now,
