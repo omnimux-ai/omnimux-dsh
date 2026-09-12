@@ -67,22 +67,41 @@ export function configFromWindow(win) {
 export function startOverlay(document, config) {
   const restores = []
   let applying = false
+  let queued = false
+  const view = document.defaultView
+  /**
+   * Apply one pass with the observer detached. Official chrome mutates
+   * constantly at boot and the covers this pass writes are themselves childList
+   * changes, so watching while writing made every pass schedule the next one
+   * (the callback runs as a microtask, after `applying` was reset) and the
+   * renderer burned CPU without ever settling.
+   */
   const paint = () => {
     if (applying) return
     applying = true
+    observer.disconnect()
     try {
       applyOverlay(document, config, restores)
     } finally {
+      observer.takeRecords()
+      observer.observe(document.documentElement, {
+        subtree: true,
+        childList: true,
+      })
       applying = false
     }
   }
+  /** Collapse a burst of chrome mutations into a single microtask pass. */
+  const schedule = () => {
+    if (queued || applying) return
+    queued = true
+    queueMicrotask(() => {
+      queued = false
+      paint()
+    })
+  }
+  const observer = new view.MutationObserver(schedule)
   paint()
-  const view = document.defaultView
-  const observer = new view.MutationObserver(paint)
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-  })
   return () => {
     observer.disconnect()
     while (restores.length > 0) restores.pop()()
