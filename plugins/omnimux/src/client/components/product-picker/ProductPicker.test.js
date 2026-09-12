@@ -65,7 +65,7 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.ok(!pickerSource.includes('__tab-badge'), '分类数量徽标已移除');
   assert.ok(!pickerSource.includes('unselectedHint'), '未选中时的页脚提示已移除');
   assert.ok(pickerSource.includes('ModalCloseButton'), '关闭按钮改用全局共享组件');
-  assert.ok(pickerSource.includes('placement="inline"'), '共享关闭按钮内嵌在顶栏右侧（对齐参考稿）');
+  assert.ok(pickerSource.includes('placement="external"'), '共享关闭按钮固定在弹窗外侧右上方');
   assert.doesNotMatch(pickerSource, /📦/, 'contains no box emoji');
   assert.doesNotMatch(pickerSource, /🔍/, 'contains no search emoji');
 });

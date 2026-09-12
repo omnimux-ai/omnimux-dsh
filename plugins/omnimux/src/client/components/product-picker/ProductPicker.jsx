@@ -25,7 +25,7 @@ const CSS = `
   box-sizing: border-box;
 }
 .omx-product-pick__header {
-  flex: none; display: flex; align-items: center; justify-content: space-between;
+  flex: none; display: flex; align-items: center; justify-content: flex-start;
   padding: 16px 24px 0;
 }
 .omx-product-pick__tabs {
@@ -340,7 +340,10 @@ export function ProductPicker({
       }
     >
       <div className="omx-product-pick">
-        {/* 单层顶栏：Tab 顶替传统标题栏，右侧内嵌标准关闭按钮（对齐参考设计 Figure 2） */}
+        {/* 全局统一：弹窗外侧右上方圆形关闭按钮（ModalCloseButton external） */}
+        <ModalCloseButton onClose={onClose} placement="external" ariaLabel={safeT('productPicker.cancel')} />
+
+        {/* 单层顶栏：Tab 顶替传统标题栏 */}
         <div className="omx-product-pick__header">
           <div className="omx-product-pick__tabs" role="tablist" aria-label={safeT('productPicker.categories')}>
             {categories.map((cat) => {
@@ -361,7 +364,6 @@ export function ProductPicker({
               );
             })}
           </div>
-          <ModalCloseButton onClose={onClose} placement="inline" ariaLabel={safeT('productPicker.cancel')} />
         </div>
 
         {/* 次级工具栏：左侧分类/标签胶囊，右侧紧凑搜索框 */}

@@ -350,14 +350,14 @@ async function main() {
           `aspect=${m.thumbAspect}`,
         )
       }
-      const closePositionOk = PICKER === 'assets' ? m.closeOutside : m.closeInside
+      const closePositionOk = m.closeOutside
       record(
         `viewport ${viewportHeight}: shared close button`,
         Boolean(m.closePresent)
         && Boolean(closePositionOk)
         && Boolean(m.closeHittable)
         && Boolean(m.kitCloseHidden),
-        `present=${m.closePresent} positionOk=${closePositionOk} hittable=${m.closeHittable} kitCloseHidden=${m.kitCloseHidden}`,
+        `present=${m.closePresent} outside=${closePositionOk} hittable=${m.closeHittable} kitCloseHidden=${m.kitCloseHidden}`,
       )
       record(
         `viewport ${viewportHeight}: circled noise removed`,
