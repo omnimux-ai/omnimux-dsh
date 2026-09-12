@@ -2256,25 +2256,28 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   opacity: 0.85;
 }
 
-.wf-add-node-menu-host {
+.wf-node-menu-host {
   min-width: 230px;
   padding: 8px;
 }
 
-/* ==================== Add Node Menu（Dock + Context 共用，零裸色） ==================== */
+/* ==================== Add Node Menu（Dock + Context 共用，零裸色） ====================
+ * 类名刻意不含 "add"：宿主注入的样式表用 `button[class*="add"]` 做子串匹配
+ * （特异性 (0,1,1)），会把这里的行压成 28×28 的加号按钮、内容居中溢出。行布局
+ * 因此显式声明全部几何属性，不依赖任何外部默认值。 */
 
-.wf-add-node-menu {
-  --wf-add-icon-bg: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
-  --wf-add-icon-border: var(--dsw-alias-border-l1, var(--wb-border));
-  --wf-add-icon-fg: var(--dsw-alias-label-primary, var(--wb-text-primary));
-  --wf-add-badge-primary-bg: var(--dsw-alias-brand-primary, var(--wb-accent));
-  --wf-add-badge-primary-fg: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
-  --wf-add-badge-new-bg: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
-  --wf-add-badge-new-fg: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
-  --wf-add-badge-new-border: var(--dsw-alias-border-l1, var(--wb-border));
+.wf-node-menu {
+  --wf-node-icon-bg: var(--dsw-alias-bg-layer-2, var(--wb-surface-raised));
+  --wf-node-icon-border: var(--dsw-alias-border-l1, var(--wb-border));
+  --wf-node-icon-fg: var(--dsw-alias-label-primary, var(--wb-text-primary));
+  --wf-node-badge-primary-bg: var(--dsw-alias-brand-primary, var(--wb-accent));
+  --wf-node-badge-primary-fg: var(--dsw-alias-label-primary-foreground, var(--dsw-alias-label-primary));
+  --wf-node-badge-new-bg: var(--dsw-alias-bg-layer-1, var(--wb-surface-raised));
+  --wf-node-badge-new-fg: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  --wf-node-badge-new-border: var(--dsw-alias-border-l1, var(--wb-border));
 }
 
-.wf-add-node-menu--dock {
+.wf-node-menu--dock {
   position: absolute;
   bottom: calc(100% + 12px);
   left: 0;
@@ -2291,17 +2294,17 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   animation: wf-dock-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.wf-add-node-menu--context {
+.wf-node-menu--context {
   min-width: 214px;
   padding: 0;
 }
 
-.wf-add-node-menu__container {
+.wf-node-menu__container {
   display: flex;
   flex-direction: column;
 }
 
-.wf-add-node-menu__header {
+.wf-node-menu__header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2310,7 +2313,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   margin-bottom: 6px;
 }
 
-.wf-add-node-menu__back-btn {
+.wf-node-menu__back-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2325,12 +2328,12 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   padding: 0;
 }
 
-.wf-add-node-menu__back-btn:hover {
+.wf-node-menu__back-btn:hover {
   background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
   color: var(--dsw-alias-label-primary, var(--wf-menu-text, var(--wb-text-primary)));
 }
 
-.wf-add-node-menu__title {
+.wf-node-menu__title {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
@@ -2338,7 +2341,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   letter-spacing: 0.2px;
 }
 
-.wf-add-node-menu__kbd {
+.wf-node-menu__kbd {
   font-size: 11px;
   font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -2350,17 +2353,22 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   border: 1px solid var(--dsw-alias-border-l1, var(--wb-border));
 }
 
-.wf-add-node-menu__list {
+.wf-node-menu__list {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.wf-add-node-menu__item {
+.wf-node-menu__item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+  height: auto;
+  box-sizing: border-box;
   padding: 6px 8px;
   border: none;
   border-radius: 8px;
@@ -2371,35 +2379,40 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   text-align: left;
 }
 
-.wf-add-node-menu__item:hover {
+.wf-node-menu__item:hover {
   background: var(--dsw-alias-interactive-bg-hover, var(--wf-menu-surface-hover, var(--wb-dock-item-hover)));
 }
 
-.wf-add-node-menu__icon-box {
+.wf-node-menu__icon-box {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--wf-add-icon-bg);
-  border: 1px solid var(--wf-add-icon-border);
-  color: var(--wf-add-icon-fg);
+  background: var(--wf-node-icon-bg);
+  border: 1px solid var(--wf-node-icon-border);
+  color: var(--wf-node-icon-fg);
   flex-shrink: 0;
 }
 
-.wf-add-node-menu__label {
-  flex: 1;
+.wf-node-menu__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   font-weight: 500;
   color: inherit;
   white-space: nowrap;
 }
 
-.wf-add-node-menu__badge {
+.wf-node-menu__badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -2407,18 +2420,18 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   border-radius: 6px;
 }
 
-.wf-add-node-menu__badge--primary {
-  background: var(--wf-add-badge-primary-bg);
-  color: var(--wf-add-badge-primary-fg);
+.wf-node-menu__badge--primary {
+  background: var(--wf-node-badge-primary-bg);
+  color: var(--wf-node-badge-primary-fg);
 }
 
-.wf-add-node-menu__badge--new {
-  background: var(--wf-add-badge-new-bg);
-  color: var(--wf-add-badge-new-fg);
-  border: 1px solid var(--wf-add-badge-new-border);
+.wf-node-menu__badge--new {
+  background: var(--wf-node-badge-new-bg);
+  color: var(--wf-node-badge-new-fg);
+  border: 1px solid var(--wf-node-badge-new-border);
 }
 
-.wf-add-node-menu__arrow {
+.wf-node-menu__arrow {
   color: var(--dsw-alias-label-tertiary, var(--wf-menu-text-muted, var(--wb-text-muted)));
   margin-left: 2px;
 }
