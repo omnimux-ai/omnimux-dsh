@@ -186,15 +186,19 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
         if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
           card.style.transition = 'none'
           card.style.transform = `translate(${dx}px, ${dy}px)`
-          card.style.opacity = '0.85'
+          card.style.opacity = '0.92'
           const raf = scheduleFrame(() => {
-            card.style.transition = 'transform 200ms cubic-bezier(0.2,0.9,0.3,1), opacity 160ms ease-out'
+            card.style.transition = 'transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease-out'
             card.style.transform = ''
             card.style.opacity = ''
           })
           const timer = setTimeout(() => {
-            if (card) card.style.transition = ''
-          }, 240)
+            if (card) {
+              card.style.transition = ''
+              card.style.transform = ''
+              card.style.opacity = ''
+            }
+          }, 420)
           cancelAnim = () => {
             cancelFrame(raf)
             clearTimeout(timer)
@@ -244,11 +248,15 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       // 没有布局信息（JSDOM / 尚未挂载）时不猜，保持吸底
       if (!rect || (rect.width <= 0 && rect.height <= 0)) return
       const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-      const visible = rect.bottom > 0 && rect.top < viewportH
+      // 归还判定：原位槽位顶边已真实进入视口可见区时才切回 inline，
+      // 绝不在仅露出一丝下边缘甚至还在视口上方时提前起飞
+      const slotVisibleAtTop = rect.top >= 0 && rect.top < viewportH - 80
+      // 吸底判定：离开视口 24px 以上（含上方滑出与下方滑出）迟滞切回吸底
+      const slotScrolledOut = rect.bottom < -24 || rect.top > viewportH + 24
+
       setPlacement((prev) => {
-        if (prev === 'docked') return visible ? 'inline' : prev
-        // 离开视口 24px 以上才切回吸底
-        return (rect.top > viewportH + 24 || rect.bottom < -24) ? 'docked' : prev
+        if (prev === 'docked') return slotVisibleAtTop ? 'inline' : prev
+        return slotScrolledOut ? 'docked' : prev
       })
     }
 
@@ -300,7 +308,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     const band = card?.parentElement
     const rect = band?.getBoundingClientRect?.()
     const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-    if (rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < viewportH) {
+    if (rect && rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.top < viewportH - 80) {
       setPlacement('inline')
     } else {
       setPlacement('docked')
@@ -319,7 +327,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     const band = card?.parentElement
     const rect = band?.getBoundingClientRect?.()
     const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-    if (rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < viewportH) {
+    if (rect && rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.top < viewportH - 80) {
       setPlacement('inline')
     } else {
       setPlacement('docked')
