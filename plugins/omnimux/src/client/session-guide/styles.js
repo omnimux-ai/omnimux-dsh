@@ -2163,7 +2163,7 @@ export const GUIDE_CSS = `
   margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em;
   color:var(--dsw-alias-label-primary);
 }
-.omnimux-trending-sample-badge {
+.omnimux-trending-source-badge {
   display:inline-flex; align-items:center; flex:none; padding:1px 7px; border-radius:999px;
   font-size:11px; font-weight:600; letter-spacing:0;
   color:var(--dsw-alias-label-secondary);
@@ -2370,6 +2370,7 @@ export const GUIDE_CSS = `
   color:var(--dsw-alias-label-tertiary);
 }
 .omnimux-trending-empty > p { margin:0; font-size:13px; }
+.omnimux-trending-empty-hint { font-size:12px; opacity:0.75; max-width:520px; text-align:center; }
 
 /* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
    附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。 */
