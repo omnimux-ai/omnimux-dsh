@@ -76,9 +76,16 @@ test('prompt 输入框展开样式与 8pt 内外间距规范', () => {
   // T03：卡槽 32px 基准（含 strip 末尾虚线 + 槽位）
   assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?width:\s*32px/);
   assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?height:\s*32px/);
-  // 未激活态虚线框；button. 前缀用于稳压宿主 button[class*="add"]（0,1,1）。
-  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--add \{[\s\S]*?border:\s*1\.5px dashed/);
-  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--add:hover \{[\s\S]*?border-style:\s*solid/);
+  // 宿主对任意 class 含 add 的按钮注入 !important 规则（height/border/border-radius），
+  // 提高特异性无效 → 画布按钮类名一律避开 add 子串。以下类名一旦回归，按钮会被压成 28×28。
+  const tableCss = readFileSync(join(here, '../../../theme/table-node.css'), 'utf8');
+  for (const banned of ['wf-slot-well--add', 'wf-grid-add-row-btn', 'wf-grid-attachment-add-btn']) {
+    assert.ok(!cssSrc.includes(banned), `${banned} 会命中宿主 button[class*="add"] 的 !important 规则`);
+    assert.ok(!tableCss.includes(banned), `${banned} 会命中宿主 button[class*="add"] 的 !important 规则`);
+  }
+  // 未激活态虚线框（改名后不再需要 !important 对抗宿主）。
+  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--append \{[\s\S]*?border:\s*1\.5px dashed/);
+  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--append:hover \{[\s\S]*?border-style:\s*solid/);
 });
 
 test('展开 / 收起文案入典', () => {

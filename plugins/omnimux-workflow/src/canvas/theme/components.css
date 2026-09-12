@@ -1433,7 +1433,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 }
 
 .wf-slot-well--empty:hover,
-.wf-slot-well--add:hover {
+.wf-slot-well--append:hover {
   border-color: var(--dsw-alias-control-primary, #ffffff);
   color: var(--dsw-alias-label-primary, #ffffff);
   background: rgba(255, 255, 255, 0.06);
@@ -1607,10 +1607,12 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   color: var(--dsw-alias-label-danger, var(--wb-text-primary));
 }
 
-/* 添加槽位未激活态：虚线框让孤立的 + 自解释为「可添加素材」。
-   选择器带 button. 前缀（特异性 0,2,1）用来稳压宿主注入的 button[class*="add"]（0,1,1），
-   否则本类名含 "add" 会被宿主通用 add 按钮样式改写尺寸。 */
-button.wf-slot-well.wf-slot-well--add {
+/* 追加槽位未激活态：虚线框让孤立的 + 自解释为「可添加素材」。
+   类名刻意避开 'add' 子串：宿主会对任意 class 含 add 的按钮注入
+   `button[class*="add"]{height:28px!important;border:0!important;border-radius:24px!important;…}`，
+   靠提高特异性无法取胜（!important 压过普通声明），只能改名规避。
+   本仓先例：.wf-add-node-menu* → .wf-node-menu*。 */
+button.wf-slot-well.wf-slot-well--append {
   width: 44px;
   height: 44px;
   min-width: 44px;
@@ -1628,7 +1630,7 @@ button.wf-slot-well.wf-slot-well--add {
 }
 
 /* 悬停：虚线转实线高亮，与静止态形成「可点击」对比。 */
-button.wf-slot-well.wf-slot-well--add:hover {
+button.wf-slot-well.wf-slot-well--append:hover {
   border-style: solid;
   border-color: var(--dsw-alias-control-primary, var(--wb-accent));
   background: var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.06));

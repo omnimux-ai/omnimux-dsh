@@ -439,7 +439,7 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
   );
   const { renderSlotWells } = mod.exports;
 
-  it('TC-T05-01: 多模态文本模型空态时，SlotWells 渲染出虚线加号框 wf-slot-well--add', () => {
+  it('TC-T05-01: 多模态文本模型空态时，SlotWells 渲染出虚线加号框 wf-slot-well--append', () => {
     const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'chat', 'text');
     const html = renderSlotWells({
       layout,
@@ -454,7 +454,7 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
 
     // 空态下必须呈现添加按钮（44x44px 虚线加号框）
     assert.match(html, /wf-slot-wells/);
-    assert.match(html, /wf-slot-well--add/);
+    assert.match(html, /wf-slot-well--append/);
     assert.doesNotMatch(html, /data-slot-state="filled"/);
   });
 
@@ -487,6 +487,6 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
     assert.match(html, /src="https:\/\/example\.test\/scene\.png"/);
     assert.match(html, /aria-label="scene\.png"/);
     // 因为 max 为 10，已填入 1，所以尾部添加加号框依然保留
-    assert.match(html, /wf-slot-well--add/);
+    assert.match(html, /wf-slot-well--append/);
   });
 });
