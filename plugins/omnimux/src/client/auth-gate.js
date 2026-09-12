@@ -162,6 +162,7 @@ function resolveAll(profile) {
   rememberLoggedInStatus(profile)
   const pending = intents
   intents = []
+  setState({ phase: 'closed' })
   for (const intent of pending) {
     try {
       if (intent.onSuccess) intent.onSuccess(profile)
@@ -169,7 +170,6 @@ function resolveAll(profile) {
       // a caller's onSuccess must never wedge the gate
     }
   }
-  setState({ phase: 'closed' })
 }
 
 /**

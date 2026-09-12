@@ -9,8 +9,11 @@
  * Authority: docs/contracts/ai-app-ui-spec.md & docs/contracts/workflow-app-boundary.md
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { injectWorkflowStyles } from '../styles.js'
+
+const EMPTY_PROPS = Object.freeze({})
+const EMPTY_REQUIRED = Object.freeze([])
 
 /**
  * Reads manifest from localStorage cache by appId or gets the newest manifest.
@@ -105,7 +108,14 @@ export function AppTab(props) {
   // Sync if explicitManifest arrives later
   useEffect(() => {
     if (explicitManifest) {
-      setManifest(explicitManifest)
+      setManifest((prev) => {
+        if (!prev) return explicitManifest
+        if (prev === explicitManifest) return prev
+        if (prev.appId === explicitManifest.appId && prev.version === explicitManifest.version && prev.updatedAt === explicitManifest.updatedAt) {
+          return prev
+        }
+        return explicitManifest
+      })
     } else if (!manifest && targetAppId) {
       const cached = readCachedManifest(targetAppId)
       if (cached) setManifest(cached)
@@ -113,8 +123,8 @@ export function AppTab(props) {
   }, [explicitManifest, targetAppId])
 
   // Form schema and default values
-  const properties = useMemo(() => manifest?.formSchema?.properties || {}, [manifest])
-  const requiredList = useMemo(() => manifest?.formSchema?.required || [], [manifest])
+  const properties = useMemo(() => manifest?.formSchema?.properties || EMPTY_PROPS, [manifest?.formSchema?.properties])
+  const requiredList = useMemo(() => manifest?.formSchema?.required || EMPTY_REQUIRED, [manifest?.formSchema?.required])
 
   const initialFormValues = useMemo(() => {
     const vals = {}
@@ -134,17 +144,19 @@ export function AppTab(props) {
       }
     }
     return vals
-  }, [properties, manifest])
+  }, [properties, manifest?.demoSnapshot, manifest?.fieldMappings])
 
   const [formValues, setFormValues] = useState(initialFormValues)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeRightTab, setActiveRightTab] = useState('tasks')
   const [tasks, setTasks] = useState(() => readCachedTasks(manifest?.appId))
+  const loadedAppIdRef = useRef(null)
 
   // Update tasks and formValues when manifest changes
   useEffect(() => {
-    if (manifest?.appId) {
+    if (manifest?.appId && loadedAppIdRef.current !== manifest.appId) {
+      loadedAppIdRef.current = manifest.appId
       setTasks(readCachedTasks(manifest.appId))
       setFormValues(initialFormValues)
       setErrors({})

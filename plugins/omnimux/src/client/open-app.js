@@ -13,6 +13,24 @@ export const APP_OPEN_EVENT = 'omnimux-app-open'
  */
 export function openApp(id, target = window) {
   target.dispatchEvent(new CustomEvent(APP_OPEN_EVENT, { detail: { id } }))
+  if (typeof window !== 'undefined') {
+    const win = window
+    if (typeof win.__omnimuxOpenAppTab === 'function') {
+      try {
+        win.__omnimuxOpenAppTab({ appId: id }, { appId: id, title: id })
+      } catch {}
+    } else if (win.__omnimuxBetterSidebar && typeof win.__omnimuxBetterSidebar.openTab === 'function') {
+      try {
+        win.__omnimuxBetterSidebar.openTab({
+          type: 'omnimux-workflow:app',
+          id: `app_${id}`,
+          title: id,
+          path: `app://${id}`,
+          extra: { appId: id },
+        })
+      } catch {}
+    }
+  }
 }
 
 /**
@@ -29,6 +47,10 @@ export function waitForStageClaim(readStage, timeoutMs = 600) {
     const poll = () => {
       const stage = readStage()
       if (typeof stage === 'string' && stage !== '' && stage !== 'omnimux-apps') {
+        resolve(true)
+        return
+      }
+      if (typeof window !== 'undefined' && (typeof window.__omnimuxOpenAppTab === 'function' || window.__omnimuxBetterSidebar)) {
         resolve(true)
         return
       }

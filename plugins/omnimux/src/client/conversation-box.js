@@ -88,30 +88,30 @@ body[data-dsh-desktop-platform="darwin"] [class*="sidebarCol"] [class*="logoRow"
 body[data-dsh-desktop-platform="darwin"] [class*="sidebarCol"] [class*="logoRow"] *{
   position:relative;z-index:11;-webkit-app-region:no-drag!important;pointer-events:auto!important;
 }
-html[data-dsh-product-stage] [data-dsh-better-sidebar],
-html[data-dsh-product-stage] [data-dsh-better-sidebar] [class*="_panel"],
-html[data-dsh-product-stage] [data-dsh-better-sidebar] [class*="_bottomPanel"],
-html[data-dsh-product-stage] [data-dsh-panel-host],
-html[data-dsh-product-stage] [class*="toggleCluster"],
-html[data-dsh-product-stage] [data-slot="shell.sidebar.auxiliary"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-html[data-dsh-product-stage]{--dsh-sidebar-width:0px!important;--dsh-sidebar-height:0px!important;}
-html[data-dsh-product-stage] #root{margin-right:0px!important;}
-html[data-dsh-product-stage] #dsh-window-drag{-webkit-app-region:no-drag!important;pointer-events:none!important;}
-html[data-dsh-product-stage] header{-webkit-app-region:drag!important;}
-html[data-dsh-product-stage] header button,
-html[data-dsh-product-stage] header input,
-html[data-dsh-product-stage] header a,
-html[data-dsh-product-stage] header select,
-html[data-dsh-product-stage] header [role="button"],
-html[data-dsh-product-stage] header [role="tab"],
-html[data-dsh-product-stage] header [class*="controls"],
-html[data-dsh-product-stage] header [class*="tabsContainer"]{-webkit-app-region:no-drag!important;}
-html[data-dsh-product-stage] [data-slot="conversation.session.header"],
-html[data-dsh-product-stage] [data-slot="conversation"] > header {display:none!important;}
-html[data-dsh-product-stage] [role="treeitem"][aria-selected="true"]{background:transparent!important;}
-html[data-dsh-product-stage] .dshDesktopConversationSurface > *:not([data-slot="shell.overlay"]),
-html[data-dsh-product-stage] [data-slot="conversation.content"],
-html[data-dsh-product-stage] [data-slot="input.trigger"] {visibility:hidden!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar] [class*="_panel"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar] [class*="_bottomPanel"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-panel-host],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [class*="toggleCluster"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="shell.sidebar.auxiliary"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]){--dsh-sidebar-width:0px!important;--dsh-sidebar-height:0px!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) #root{margin-right:0px!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) #dsh-window-drag{-webkit-app-region:no-drag!important;pointer-events:none!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header{-webkit-app-region:drag!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header button,
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header input,
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header a,
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header select,
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header [role="button"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header [role="tab"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header [class*="controls"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header [class*="tabsContainer"]{-webkit-app-region:no-drag!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="conversation.session.header"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="conversation"] > header {display:none!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [role="treeitem"][aria-selected="true"]{background:transparent!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) .dshDesktopConversationSurface > *:not([data-slot="shell.overlay"]),
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="conversation.content"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="input.trigger"] {visibility:hidden!important;}
 /* Shared topbar geometry; native window gutters come from the host-aware layout. */
 html[data-omnimux-sidebar-toggle-topbar]{
   --omnimux-topbar-toggle-left:8px;

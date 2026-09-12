@@ -19,6 +19,11 @@ export function createAppsStore() {
   if (open) {
     const restore = () => {
       try {
+        if (typeof document !== 'undefined' && typeof document.querySelector === 'function' && !document.querySelector('.omnimux-apps-stage')) {
+          try { window.localStorage?.removeItem('omnimux_active_product_stage') } catch {}
+          open = false
+          return
+        }
         claimProductStage(STAGE_ID)
       } catch {}
     }
