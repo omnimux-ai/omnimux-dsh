@@ -121,11 +121,30 @@ export interface SubmitRequest {
   mockFail?: boolean;
 }
 
+/**
+ * #1386: which backend owns a task.
+ *
+ * The owner decides who must be asked to reconcile the task after a restart.
+ * `'auto'` is a gateway *mode*, never an owner: it is resolved at submit time
+ * and the backend that actually took the task is what gets recorded.
+ */
+export type UpstreamTaskOwner = 'mock' | 'omnimux';
+
 export interface SubmitResult {
   taskId: string;
   /** Submitted-only (no immediate local file yet). */
   mode: 'live' | 'submitted';
   url?: string;
+  /**
+   * #1386: the backend that actually took this task.
+   *
+   * The auto-switch wrapper reads the owner off the *result* rather than its own
+   * submit-time bookkeeping, so provenance rides on the same value that carries
+   * the `taskId` — and therefore survives being persisted and reloaded by a
+   * later process. Optional: a backend that does not set it keeps the pre-#1386
+   * default (`omnimux`, see `UpstreamTaskRef.owner`).
+   */
+  owner?: UpstreamTaskOwner;
 }
 
 export interface AwaitTaskResult {
@@ -164,6 +183,22 @@ export interface UpstreamTaskRef {
    * the whole-run timeout would become a meaningless ceiling.
    */
   submittedAt: number;
+  /**
+   * #1386: the backend that submitted the task, carried across the restart
+   * together with the id.
+   *
+   * Reconciliation runs in a process that never called `submit`, so the
+   * gateway's in-memory task table is empty by construction and cannot say which
+   * backend to ask. Without this field the only defensible default is the hub —
+   * which is wrong for a mock-owned task: the hub's error (`needs-provider`) is
+   * neither a task failure nor the mock's honest "cannot reconcile" answer, so
+   * the node was reported as failed instead of falling back to resubmitting.
+   *
+   * Optional, and absent means `omnimux`: every reference persisted before
+   * #1386 was written by a real hub submit, and a record written by an older
+   * build must keep loading unchanged.
+   */
+  owner?: UpstreamTaskOwner;
 }
 
 export interface GenerationGateway {

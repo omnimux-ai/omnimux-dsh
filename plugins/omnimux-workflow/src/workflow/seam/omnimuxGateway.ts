@@ -120,13 +120,15 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
         const localId = hubTaskId || `live_${randomUUID().slice(0, 12)}`;
         tasks.set(localId, { kind: 'media', capability: req.capability, hubTaskId: localId,
           settled: { url: req.dest, type: req.capability, ...metadata } });
-        return { taskId: localId, mode: 'live', url: result.url ?? undefined };
+        return { taskId: localId, mode: 'live', url: result.url ?? undefined, owner: 'omnimux' };
       }
       if (result.mode !== 'submitted' || !hubTaskId) {
         throw new SeamGatewayError('omnimux-invalid-response', '提交结果无效或缺少 taskId（无法轮询）');
       }
       tasks.set(hubTaskId, { kind: 'media', capability: req.capability, hubTaskId });
-      return { taskId: hubTaskId, mode: 'submitted' };
+      // #1386: name the owner explicitly so the persisted reference says "the
+      // hub" rather than relying on the absent-field default.
+      return { taskId: hubTaskId, mode: 'submitted', owner: 'omnimux' };
     },
     async awaitTask(taskId: string, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult> {
       const record = tasks.get(taskId);

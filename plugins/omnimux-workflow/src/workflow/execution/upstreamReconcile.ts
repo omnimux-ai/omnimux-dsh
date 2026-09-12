@@ -24,10 +24,15 @@ import { SeamGatewayError } from '../seam/SeamGatewayError.ts';
  * assert the invariant below in their own tests — the hub cannot import this
  * constant across the hub/domain boundary.
  *
- * INVARIANT: strictly shorter than `EXECUTION_TIMEOUT_MS` (30 minutes), so a
- * stuck task always fails as a task-level timeout before the whole run is
- * cancelled and the real cause is replaced by a weaker one. The rule is pinned
- * by a test here and by its mirror in the hub's `task-deadline.js`.
+ * INVARIANT (single-node runs only): strictly shorter than
+ * `EXECUTION_TIMEOUT_MS` (30 minutes), so on a run with one node a stuck task
+ * fails as a task-level timeout before the whole run ends and the real cause is
+ * replaced by a weaker one.
+ *
+ * The 30-minute budget is per *run*, not per task, so this does not extend to
+ * multi-node graphs — see `WORKFLOW_EXECUTION_TIMEOUT_MS` in the hub's
+ * `task-deadline.js` for the full statement of what the comparison covers. The
+ * assertion here covers the single-node case, mirroring the hub's own test.
  */
 export const UPSTREAM_TASK_DEADLINE_MS = 20 * 60 * 1000;
 

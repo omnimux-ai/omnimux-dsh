@@ -13,7 +13,11 @@
  *    in-flight mock task keeps its mock owner).
  */
 
-import type { GenerationGateway } from './gateway';
+import type {
+  GenerationGateway,
+  UpstreamTaskOwner,
+  UpstreamTaskRef,
+} from './gateway';
 import { createMockGateway } from './mockGateway';
 import {
   createOmnimuxSeamClient,
@@ -75,6 +79,19 @@ export type AutoSwitchGateway = GenerationGateway & {
   /** Currently active backend ('mock' until the hub seam shows up). */
   currentMode(): 'mock' | 'omnimux';
 };
+
+/**
+ * #1386: read the persisted owner off a reference without trusting its type.
+ *
+ * A reference crosses `toJSON` / `fromJSON` / the on-disk record, so the field
+ * arrives as unchecked JSON. An unrecognized value is not an error: it means
+ * "no provenance recorded" and falls through to the same hub default as a
+ * reference written before #1386.
+ */
+function readRefOwner(ref: UpstreamTaskRef): UpstreamTaskOwner | undefined {
+  const owner = (ref as { owner?: unknown }).owner;
+  return owner === 'mock' || owner === 'omnimux' ? owner : undefined;
+}
 
 function hasModelCatalog(getSeam: SeamGetter): boolean {
   const catalog = getSeam('modelCatalog');
@@ -138,7 +155,10 @@ export function createAutoSwitchGateway(opts: AutoSwitchGatewayOptions): AutoSwi
       const backend = backendOf();
       const result = await backend.submit(req);
       taskOwners.set(result.taskId, backend === omnimux ? 'omnimux' : 'mock');
-      return result;
+      // #1386: stamp the resolved owner onto the result. The executor persists it
+      // with the reference, so a later process can route the reconcile without
+      // this process's (necessarily empty) task table.
+      return { ...result, owner: result.owner ?? (backend === omnimux ? 'omnimux' : 'mock') };
     },
 
     async awaitTask(taskId, dest, signal) {
@@ -152,17 +172,22 @@ export function createAutoSwitchGateway(opts: AutoSwitchGatewayOptions): AutoSwi
     },
 
     /**
-     * #1382: route a reconcile by whichever backend owned the task, defaulting to
-     * the hub.
+     * #1386: route a reconcile by the reference's persisted owner.
      *
-     * Reconciliation happens after a restart, when `taskOwners` is empty by
-     * construction and the task was therefore submitted to the real hub. Falling
-     * back to `backendOf()` would hand an auto-mode run without hub seams to the
-     * mock, whose honest answer ("nothing to reconcile") is a downgrade: the
-     * finished upstream work would be regenerated instead of reused.
+     * `taskOwners` is empty after a restart by construction, so it can only
+     * corroborate a same-process reconcile; the routing decision has to come
+     * from `ref.owner`. An absent owner keeps the pre-#1386 default (the hub):
+     * those references were all written by a real hub submit, and the hub stays
+     * the right answer for any writer that does not declare provenance.
+     *
+     * Routing a mock-owned task to the hub was the #1386 defect: the auto-mode
+     * mock is reachable only when no hub seam exists, so the hub leg answers
+     * `needs-provider`, which no reconcile classifier reads as "cannot
+     * reconcile" — the node was reported failed instead of resubmitting.
      */
     async reconcileTask(ref, dest, signal) {
-      const backend = taskOwners.get(ref.taskId) === 'mock' ? mock : omnimux;
+      const owner = readRefOwner(ref) ?? taskOwners.get(ref.taskId);
+      const backend = owner === 'mock' ? mock : omnimux;
       try {
         return await backend.reconcileTask(ref, dest, signal);
       } finally {

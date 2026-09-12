@@ -69,7 +69,7 @@
 | `DEFAULT_RETRY_BUDGET_MS` | `7_000` | ms | `media/task-deadline.js` | 每请求覆盖 |
 
 **理由**
-1. **媒体 20 分钟**：慢视频模型常态超过 10 分钟；把媒体也压到语音的 10 分钟会让「昨天能完成的任务今天超时」，是本次改动最需要避免的回归。语音路径保持既有 10 分钟不动（`speech.js` 改为引用 `SPEECH_TASK_DEADLINE_MS`），媒体走 20 分钟，两条路径的超时值只在这一个模块里定义。**不变式：hub deadline（20min）必须严格小于 `EXECUTION_TIMEOUT_MS`（30min）**——由两侧各自的测试断言（hub 侧 `poll-lifecycle.test.js`、workflow 侧 `upstreamTask.test.mjs`）。
+1. **媒体 20 分钟**：慢视频模型常态超过 10 分钟；把媒体也压到语音的 10 分钟会让「昨天能完成的任务今天超时」，是本次改动最需要避免的回归。语音路径保持既有 10 分钟不动（`speech.js` 改为引用 `SPEECH_TASK_DEADLINE_MS`），媒体走 20 分钟，两条路径的超时值只在这一个模块里定义。**比较关系：hub deadline（20min）严格小于 `EXECUTION_TIMEOUT_MS`（30min）**——由两侧各自的测试断言（hub 侧 `poll-lifecycle.test.js`、workflow 侧 `upstreamTask.test.mjs`）。⚠️ **该比较的粒度见 §11.6：它只保证「单节点运行」不被整轮超时掩盖，多节点下整轮预算会先到。**
 2. **按能力区分（视频更长）的选项被否决**：`execute.js:182` 已向 runtime 传 `timeoutMs: 10*60_000`，30 分钟这类长尾应由 catalog / 每请求覆盖承担，而不是在轮询层硬编码一套按能力的旁路表——那会成为第二个真相源。
 3. **不读环境变量**：hub 的 `omnimux tokens exec` 与 Settings seat 才是配置面；轮询 deadline 属实现细节，暴露成 env 会污染部署面且难以在跨插件契约里表达。**需要变更时走每请求覆盖**（`finishMediaTask` / `executeOmnimuxMedia` 的 `deadlineMs`），由上游（工作流 / 工具）决定。
 4. **不设独立尝试上限**：deadline 与尝试上限是同一件事的两种表达，同时设两个会互相掩盖。**唯一权威是 deadline**；`sleep` 以「距 deadline 的剩余时间」为上限，使循环在 `deadline/interval ≈ 400` 次（默认参数）时自然终止，无需第二个计数器。若调用方注入的 `sleep` 抛错（既有测试用此招，见 `h3-contract.test.js:60`），循环照旧以该错误退出——与现状兼容。
@@ -293,13 +293,13 @@ export interface GenerationGateway {
 | 轮询单次 GET `requestTimeoutMs` | hub | 10000ms | 一次 HTTP 请求 | 计入轮询层重试预算 |
 
 **为什么工作流侧不需要再加节点级超时**
-1. hub deadline（20min，见 §11.1 与 `plugins/omnimux/src/media/task-deadline.js`）**严格短于** `EXECUTION_TIMEOUT_MS`（30min），所以单任务必然先于整轮执行超时被 hub 截断并给出**任务级**错误码。工作流再套一层只会得到一个语义更弱的「节点超时」错误，掩盖真实原因（`omnimux-task-timeout` / `quota-exceeded`）。
+1. hub deadline（20min，见 §11.1 与 `plugins/omnimux/src/media/task-deadline.js`）**严格短于** `EXECUTION_TIMEOUT_MS`（30min），所以**单节点运行**下该任务必然先于整轮执行超时被 hub 截断并给出**任务级**错误码。工作流再套一层只会得到一个语义更弱的「节点超时」错误，掩盖真实原因（`omnimux-task-timeout` / `quota-exceeded`）。⚠️ 这里比较的是两个**不同粒度**的预算（单任务窗口 vs 整轮预算），**多节点 / 并行**下整轮 30 分钟会先到、任务级错误码不出现——完整表述见 §11.6。
 2. 工作流的 `ExecutionScheduler` **今天没有节点超时**（已 grep 确认：`ExecutionScheduler.ts` 里只有 `dagStateFlushTimer` 与 `COMPLETION_POLL_MS`，没有 per-node timeout），新增会是一处**推测性抽象**。
 3. `maxParallel` 并发下多节点共享 `EXECUTION_TIMEOUT_MS` 预算，节点级超时必须重算剩余预算才能有意义——复杂且收益低。
 
 **为避免两层互相掩盖，设计上加两条约束**
 - **约束 1（锚点）**：复核的 deadline 锚点是持久化的 `ref.submittedAt`，**不是恢复时刻**（见 D5）。否则「重启」会把 hub 的 20 分钟预算重置一次，让 30 分钟的整轮超时成为无意义的上界。
-- **约束 2（D1 已含）**：hub deadline 必须严格小于 `EXECUTION_TIMEOUT_MS`。在 `task-deadline.js` 里以注释固定该不变式，并在测试中断言 `DEFAULT_TASK_DEADLINE_MS < 30*60_000`（防止未来有人把 deadline 调到 40 分钟而静默让整轮超时先触发）。
+- **约束 2（D1 已含）**：hub deadline 必须严格小于 `EXECUTION_TIMEOUT_MS`。在 `task-deadline.js` 里以注释固定该不变式，并在测试中断言 `DEFAULT_TASK_DEADLINE_MS < 30*60_000`（防止未来有人把 deadline 调到 40 分钟而静默让整轮超时先触发）。⚠️ **该不变式只在「单节点运行」下有保证**：多节点 / `maxParallel` 共享整轮 30 分钟预算，整轮超时可以先到，此时任务级错误码不出现（完整表述见 §11.6）。
 
 ### D8 文档影响 → **有影响，属主为两个插件的 README/CHANGELOG；`docs/contracts/` 无需改动**
 
@@ -319,7 +319,7 @@ export interface GenerationGateway {
 
 | 路径（仓库相对） | 职责 |
 |---|---|
-| `plugins/omnimux/src/media/task-deadline.js` | 轮询生命周期常量与策略单一真相源：`DEFAULT_TASK_DEADLINE_MS` / `DEFAULT_POLL_INTERVAL_MS` / `DEFAULT_REQUEST_TIMEOUT_MS` / `DEFAULT_RETRY_BUDGET_MS` / `isRetryablePollError()` / `resolveDeadline()`；并固定「deadline < 30min」不变式注释 |
+| `plugins/omnimux/src/media/task-deadline.js` | 轮询生命周期常量与策略单一真相源：`DEFAULT_TASK_DEADLINE_MS` / `DEFAULT_POLL_INTERVAL_MS` / `DEFAULT_REQUEST_TIMEOUT_MS` / `DEFAULT_RETRY_BUDGET_MS` / `isRetryablePollError()` / `resolveDeadline()`；并固定「deadline < 30min」不变式注释（**仅单节点运行**成立：多节点 / `maxParallel` 下整轮预算可能先到，见 §11.6） |
 | `plugins/omnimux/src/media/poll-lifecycle.test.js` | P1 回归：deadline 到点、单请求超时被约束（挂死 server）、重试分类、终态不重试、取消不重试、「修复前失败」复现 |
 | `plugins/omnimux-workflow/src/workflow/execution/upstreamTask.ts` | `UpstreamTaskRef` 读写工具：`setNodeUpstreamTask()` / `clearNodeUpstreamTask()` / `readNodeUpstreamTask()` |
 | `plugins/omnimux-workflow/src/workflow/execution/upstreamReconcile.ts` | 复核状态机：按 `ref` 决定「下载回填 / 续等 / 标错 / 回退重投」，含剩余 deadline 计算 |
@@ -385,8 +385,9 @@ export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000
 export const DEFAULT_RETRY_BUDGET_MS = 7_000
 
 /**
- * 不变式：hub 任务截止必须严格小于工作流整轮执行超时
+ * 不变式（**仅单节点运行**）：hub 任务截止严格小于工作流整轮执行超时
  * (EXECUTION_TIMEOUT_MS = 30min)，否则单任务失败会被整轮超时掩盖。
+ * 多节点 / maxParallel 下整轮预算共享、30 分钟可能先到，该保证不成立。
  */
 export const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000
 
@@ -862,7 +863,7 @@ flowchart LR
 - 工作流侧**不新增**错误包装：hub 的 `code` 经 `toSeamError` 保留 → `SeamGatewayError` 呈现为 `[omnimux:<code>] <message>`。测试断言用 `error.code`，不要断言完整 message。
 
 ### 8.3 常量与不变式
-- `DEFAULT_TASK_DEADLINE_MS = 1200000`（媒体；语音 `SPEECH_TASK_DEADLINE_MS = 600000`），**必须** `< EXECUTION_TIMEOUT_MS = 1800000`（在 `task-deadline.js` 注释固定，两侧各有测试断言）。
+- `DEFAULT_TASK_DEADLINE_MS = 1200000`（媒体；语音 `SPEECH_TASK_DEADLINE_MS = 600000`），**必须** `< EXECUTION_TIMEOUT_MS = 1800000`（在 `task-deadline.js` 注释固定，两侧各有测试断言）。该不变式**只在单节点运行**下保证任务级错误码先出现；多节点 / `maxParallel` 共享整轮预算，30 分钟可能先到（见 §11.6）。
 - `DEFAULT_REQUEST_TIMEOUT_MS = 10000`、`DEFAULT_RETRY_BUDGET_MS = 7000`，二者之和**必须** `<< DEFAULT_TASK_DEADLINE_MS`。
 - `DEFAULT_POLL_INTERVAL_MS = 1500`（保持现状值，不改变上游压力）。
 - `RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504}` 是「可重试状态」的唯一集合，hub 与测试共用。
@@ -1021,7 +1022,7 @@ pnpm --config.verify-deps-before-run=false --filter omnimux test
 
 | # | 事项 | 我的建议默认值 | 影响面 |
 |---|---|---|---|
-| 1 | `DEFAULT_TASK_DEADLINE_MS` 取 10 分钟（对齐语音）还是 15/20 分钟（给长视频）？ | **主理人拍板：媒体 20 分钟**。理由：避免慢视频模型「以前能完成、现在超时」的回归；语音路径保持 10 分钟不变；不变式 hub deadline(20min) < `EXECUTION_TIMEOUT_MS`(30min) 成立并有测试断言 | 已定案，见 §11.1 |
+| 1 | `DEFAULT_TASK_DEADLINE_MS` 取 10 分钟（对齐语音）还是 15/20 分钟（给长视频）？ | **主理人拍板：媒体 20 分钟**。理由：避免慢视频模型「以前能完成、现在超时」的回归；语音路径保持 10 分钟不变；不变式 hub deadline(20min) < `EXECUTION_TIMEOUT_MS`(30min) 成立并有测试断言（**仅单节点运行**下保证任务级错误码先出现，见 §11.6） | 已定案，见 §11.1 |
 | 2 | hub 任务超时对节点是**改判 error** 还是**可重试**？ | **直接 error**（受既有 `failStrategy` 支配，不改 `failStrategy`）。理由：超过 20 分钟的任务重投大概率重复计费 | 若希望自动重投，需要单独评估计费重复风险，属新范围 |
 | 3 | 单请求超时 10 秒是否过短（部分网关首字节较慢）？ | **10 秒 + 4 次重试**（总预算 7 秒内，最坏含 4 次 GET 约 47 秒上限） | 若上游首字节常态 > 10 秒，会退化为「每次轮询都超时重试」，日志噪声上升但不失败（deadline 兜底） |
 | 4 | `reconcileTask` 是否要同步落到**其他 domain 插件**（`omnimux-video` 等自有执行路径）？ | **本次不动**。它们不实现 `GenerationGateway`，`reconcileTask` 是 workflow 的 seam 契约，新增方法对它们无影响 | 若其它插件也有「重启后盲目重投」问题，需另开 Issue（它们有自己的执行路径） |
@@ -1042,7 +1043,7 @@ pnpm --config.verify-deps-before-run=false --filter omnimux test
 | D4 | `NodeStateSnapshot.upstreamTask`；`schemaVersion` 不升；执行器经 `ctx.recordUpstreamTask` 写；submit 成功后立即写、终态清除 |
 | D5 | completed→下载回填 / 未完成→保持 running 续等 / failed→标错；无引用或未知任务→回退重投；deadline 锚定 `submittedAt` 不重置；与 P0 共存靠「保留引用 + 仍回 pending」 |
 | D6 | `GenerationGateway` 新增 `reconcileTask`；mock 显式抛错；auto-switch 补路由；hub seam 方法集不变，边界未破 |
-| D7 | 工作流**不新增**节点级超时；hub deadline < `EXECUTION_TIMEOUT_MS` 是不变式；复核锚点防两层掩盖 |
+| D7 | 工作流**不新增**节点级超时；hub deadline < `EXECUTION_TIMEOUT_MS` 是不变式（**仅单节点运行**成立，多节点下整轮预算先到，见 §11.6）；复核锚点防两层掩盖 |
 | D8 | 改 `plugins/omnimux/README.md`、`plugins/omnimux-workflow/README.md`（第 199 行）、`plugins/omnimux-workflow/docs/CHANGELOG.md`；`docs/contracts/` 与仓库级 `docs/*.mermaid` 不动 |
 
 ---
@@ -1076,7 +1077,7 @@ pnpm --config.verify-deps-before-run=false --filter omnimux test
 | 8 | T01 用本地挂死 HTTP server 直接测「signal 传进 fetch」 | 该用例放进**子进程探针** `src/media/fixtures/poll-lifecycle-probe.mjs`（`raw` / `hang` / `finish` 三模式），由 `poll-lifecycle-crossprocess.test.js` 驱动 | hub 测试由 `scripts/test-network-guard.mjs` 以 `--import` 预加载，连同 loopback 一起拦截；进程内无法发真实 fetch |
 | 9 | 复核向 hub 传 `deadlineMs` 覆盖 | workflow 侧 `UPSTREAM_TASK_DEADLINE_MS`（20min）只用于**本地短路**；`reconcileTask` 实际只送 `{ taskId, dest, submittedAt }` | hub 默认值同为 20 分钟，且锚点由 `submittedAt` 决定——少一个可漂移的参数 |
 | 10 | 文档内嵌时序图 + 独立 `.mermaid` | 文档只留指针，独立 `.mermaid` 为唯一真源 | 同一张图两处存放必然漂移（Mermaid 已内嵌在 md 里，按协调者指示去重） |
-| 11 | 设计未提 `execute.js` 传给 runtime 的 `timeoutMs: 10 * 60_000` | 改为新增常量 `MEDIA_EXECUTION_BUDGET_MS = DEFAULT_TASK_DEADLINE_MS + 60s`（21 分钟） | **实现期发现的真缺陷**：runtime-kit 用该值 race 整个 adapter 执行（含 `metadata.wait` 为真时的轮询），因此同步提交路径的轮询会被 10 分钟的外层 abort 提前掐断——既让 20 分钟默认对该路径失效，又会用更弱的 `EXECUTION_ABORTED` 掩盖 `omnimux-task-timeout`。外层预算改为**严格大于**轮询 deadline 且**严格小于** `EXECUTION_TIMEOUT_MS`（不变式有测试断言） |
+| 11 | 设计未提 `execute.js` 传给 runtime 的 `timeoutMs: 10 * 60_000` | 改为新增常量 `MEDIA_EXECUTION_BUDGET_MS = DEFAULT_TASK_DEADLINE_MS + 60s`（21 分钟） | **实现期发现的真缺陷**：runtime-kit 用该值 race 整个 adapter 执行（含 `metadata.wait` 为真时的轮询），因此同步提交路径的轮询会被 10 分钟的外层 abort 提前掐断——既让 20 分钟默认对该路径失效，又会用更弱的 `EXECUTION_ABORTED` 掩盖 `omnimux-task-timeout`。外层预算改为**严格大于**轮询 deadline 且**严格小于** `EXECUTION_TIMEOUT_MS`（不变式有测试断言）；⚠️ 与约束 2 同理，该「小于整轮超时」只在**单节点运行**下有效，多节点下整轮 30 分钟可能先到 |
 
 ### 11.3 最终文件清单
 
@@ -1153,5 +1154,132 @@ cd plugins/omnimux-workflow && node node_modules/typescript/bin/tsc -p tsconfig.
 
 1. **超时后重投的重复计费**：节点因 `omnimux-task-timeout` 报错时引用被清除（设计 D5 的终态清除），用户手动重试会重新提交。此时窗口已关闭，保留引用也只会立刻再判超时，因此清除是正确选择；若要「超时自动重投」需单独评估计费。
 2. **`upstreamTask` 只覆盖 material 生成节点**：文本/表格/合成节点的执行器不产出上游任务引用，行为不变。
-3. **auto 模式下 hub 缺席时的复核**：会以 `needs-provider` 失败（诚实报错），而不是伪造成 mock 的成功。该组合在现实中不可达（无 hub 就不会有已提交的上游任务）。
-4. **`reconcileContract.test.mjs` 不覆盖「mock 拥有在飞任务时复核仍走 mock」**：`taskOwners` 只在同进程内为非空，重启后必为空，该分支无法端到端构造；已由 `reconcileTask` 的实现注释与代码评审覆盖。
+3. **auto 模式下 hub 缺席时的复核**：会以 `needs-provider` 失败（诚实报错），而不是伪造成 mock 的成功。**罕见但可达**（原表述「现实中不可达」过于乐观）：一旦「提交时有 hub、重启后 hub 未加载」——插件被禁用/未安装，或 auto 模式解析不到 seam——这条组合就会命中，`isNotReconcilableError` 不认 `needs-provider`，节点因此**永久判 failed 且不再回退重投**。该行为与 base 一致（非 #1386 引入），此处只更正可达性描述，未改判。
+4. ~~**`reconcileContract.test.mjs` 不覆盖「mock 拥有在飞任务时复核仍走 mock」**：`taskOwners` 只在同进程内为非空，重启后必为空，该分支无法端到端构造；已由 `reconcileTask` 的实现注释与代码评审覆盖。~~ **已由 #1386 解决，见 §11.6**：该「无法构造」的判断是错的——把归属持久化到引用上之后，新建网关实例（=重启）即可端到端复现，而这条缺口正是 #1386 缺陷此前全绿通过的原因。
+
+### 11.6 #1386 回填（代码评审发现 F1/F2/F3/F4/F5/F6/F7）
+
+> Issue #1386 修复跨代任务生命周期的代码评审发现。本节按代码事实回填；与前文冲突处以前文标注的 ⚠️ 与本节的表述为准。
+
+**F1（Major，本次引入的回归）——复核必须确定性地回到原后端**
+
+现状缺陷：`gatewaySelection.ts` 的 `reconcileTask` 只按进程内的 `taskOwners` 判断，重启后该表**必为空** → 一律硬路由到 hub。而 auto 模式下 mock 拥有的任务在 hub 缺席时由 `requireSeam` 抛 `needs-provider`，`isNotReconcilableError` 只认 `omnimux-invalid-request` 与 404/410 → 判 `failed` → 节点报错；mock 自己的复核本会答 `omnimux-invalid-request`（正确导向回退重投）。
+
+最终做法：把任务归属变成**可持久化的来源（provenance）**并据此路由。
+
+| 位置 | 改动 |
+|---|---|
+| `src/workflow/seam/gateway.ts` | 新增 `UpstreamTaskOwner = 'mock' \| 'omnimux'`；`SubmitResult.owner?`；`UpstreamTaskRef.owner?`（可选，**缺省 = `omnimux`**） |
+| `src/workflow/seam/mockGateway.ts` | `submit` 返回 `owner: 'mock'` |
+| `src/workflow/seam/omnimuxGateway.ts` | `submit` 两条返回路径均带 `owner: 'omnimux'` |
+| `src/workflow/seam/gatewaySelection.ts` | `submit` 把解析后的归属**盖在结果上**（读结果而非自己的簿记）；`reconcileTask` 按 `readRefOwner(ref) ?? taskOwners.get(...)` 路由；新增 `readRefOwner`（不信任 JSON 类型，未知值 = 无 provenance） |
+| `src/workflow/execution/materialGatewayExecutor.ts` | `recordUpstreamTask` 带上 `submitted.owner` |
+| `src/workflow/execution/upstreamTask.ts` | `readUpstreamTaskRef` 归一化 `owner`；未知值不报错、等价于无 provenance |
+
+向后兼容：无 `owner` 的旧引用（#1382 写下的记录全是 hub 提交）按 hub 处理，行为与改前一致；`schemaVersion` 保持 `1`，无迁移步骤。
+
+测试必须走**真实装配**（只测 mock 后端本身正是该缺陷此前全绿的原因）：`reconcileContract.test.mjs` 新增 5 例，其中 `#1386 修复前失败…` 一例用 `createAutoSwitchGateway({ getSeam: () => undefined })` + mock 提交 + **新建网关实例模拟重启**，断言复核走「不可复核 → 回退重投」（`omnimux-invalid-request` 且 `isNotReconcilableError === true`）而非 `needs-provider` 失败。
+
+**F2（Major）——30 分钟超时必须有统一的超时语义**
+
+现状缺陷：同一事件两条路径不一致——进程内超时（`executionTimers` → `context.cancel()`）记为 `cancelled` + 节点 `skipped` + 无文案；重启后的同一事件（`executionRecovery.handleTimedOutExecution`）记为 `error` + `Execution timed out after restart (>30min)`。用户主动取消与「跑超时了」因此共用一种表述，且「cancelled」在没人取消时是错误信息。
+
+最终做法：`executionTypes.ts` 新增 `EXECUTION_TIMEOUT_MESSAGE`（`执行超时（超过 30 分钟）`，中文与画布一致）；`cleanupExecution` 增显式 `CleanupReason`（`'cancelled' | 'timed-out'`，默认 `'cancelled'`，因此 `ExecutionManager` 暴露的 `cleanupExecution(id)` API 语义不变）；两条超时回调传 `'timed-out'` → `context.fail(EXECUTION_TIMEOUT_MESSAGE)`；`executionRecovery` 引用同一常量。**用户主动取消仍为 `cancelled`**（有独立回归用例守护）。
+
+> ⚠️ **本项在第二轮复验中被判定未闭环**：只把终态写成 `error` 还不够——调度循环退出时还会再调一次 `context.cancel()` 把它改回 `cancelled`。补上终态守卫后 F2 才真正成立，见 §11.7 P1。
+
+**F3（Major）——只修声明与文档，不做机制改造**
+
+现状缺陷：`task-deadline.js`、本文档与 `poll-lifecycle.test.js` 声称「hub deadline(20min) < `EXECUTION_TIMEOUT_MS`(30min)」，但两者是**不同粒度**：单任务轮询窗口 vs 整轮执行预算。
+
+如实表述（不改 `EXECUTION_TIMEOUT_MS`、不引入派生机制）：
+
+- **覆盖**：**单节点运行**——20 分钟轮询先于 30 分钟整轮预算结束，`omnimux-task-timeout` 如期出现。
+- **不覆盖**：**多节点图**（顺序或 `maxParallel` 并行）——30 分钟被共享，可在某个任务仍处于自身 20 分钟窗口内时先到；此时整轮先终止，**任务级错误码不出现**，节点以整轮超时失败，且上游可能**继续计费而其产物被丢弃**。
+- 断言保留但注明覆盖范围：`poll-lifecycle.test.js`（hub 侧）与 `upstreamTask.test.mjs`（workflow 侧）各带该说明。
+
+**F4（Minor）——`wasRunning` 排除 PAUSED**
+
+`cleanupExecution` 原先只认 `RUNNING`，因此 PAUSED + 在飞节点的执行超时后不 abort、不取消调度器、不收敛，记录定格 `paused` + 节点 `running`。改为 `RUNNING || PAUSED`（终态条目仍无事可做）。
+
+**F5（Minor）——`execution_complete` 不收敛在飞节点**
+
+`useExecutionController.ts` 三个终态分支原先只有 `error` / `cancelled` 收敛在飞节点；`complete` 也收敛为 `completed`，语义与另两支对称（`settleInFlightNodes` 的 `status` 联合类型加 `'completed'`）。仅覆盖「`node_complete` 丢失」这一窄窗口，不改画布 UI 交互。
+
+**F6（Minor）——取消后仍可能 `completeNode`**
+
+`ExecutionScheduler` 成功路径原先不检查 `isCancelled`（catch 分支有）。P0 提前执行的 `context.cancel()` 已把节点在磁盘上收敛为 `skipped`，成功路径再 `completeNode` 形成**两个写者** → 磁盘 `cancelled/skipped` 与内存 `completed` 分叉。改为与 catch 分支对称（释放槽位并返回，让循环观察取消），并补并发用例（executor 在 abort 前已 resolve 的竞态）。
+
+**F7（Nit）——注释与算术**
+
+- `DEFAULT_RETRY_BUDGET_MS`：7s 预算只约束**退避等待**，不含在飞请求（后者由 `DEFAULT_REQUEST_TIMEOUT_MS` 单独约束，两者不可相加）。
+- `MEDIA_EXECUTION_BUDGET_MS`：21min 与 30min 的余量是 **9 分钟**（`30 - 21`），原「30 minutes' worth」的表述多算了。
+
+**#1386 真实验证**
+
+```bash
+cd /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-review-findings
+corepack pnpm --filter omnimux --config.verify-deps-before-run=false test           # 1612 pass / 0 fail（与基线一致，本项无新增 hub 用例）
+corepack pnpm --filter omnimux-workflow --config.verify-deps-before-run=false build # exit 0
+corepack pnpm --filter omnimux-workflow --config.verify-deps-before-run=false test  # 1638 pass / 0 fail（基线 1628 + 10）
+corepack pnpm --config.verify-deps-before-run=false check:boundaries                # 2543 source file(s) verified
+cd plugins/omnimux-workflow && node node_modules/typescript/bin/tsc -p tsconfig.host.json --noEmit  # exit 0
+```
+
+「修复前失败」实测（把源码临时回退到 `origin/main`、只保留新用例）：
+
+| 缺陷 | 改前行为 | 复现证据 |
+|---|---|---|
+| F1 mock 归属丢失 | 复核走 hub → `needs-provider` | `reconcileContract.test.mjs`：`AssertionError: 必须是 mock 的「不可复核」答案 + actual 'needs-provider'` |
+| F2 超时语义分叉 | `cleanupExecution` 记 `cancelled`/`skipped` | `nodeStatusConvergence.test.mjs` 超时清理例失败（期望 `error` + 超时文案） |
+| F4 PAUSED 不收敛 | PAUSED 下不 abort / 不取消 / 不收敛 | `nodeStatusConvergence.test.mjs` PAUSED 例失败 |
+| F5 `complete` 不收敛 | 在飞节点留在飞态 | `executionTerminalConvergence.test.mjs` complete 终态例失败 |
+| F6 取消后被写回 | `AssertionError: a 应保持取消收敛的 skipped… + actual 'completed' - expected 'skipped'` | `execution-scheduler.test.mjs` `#1386 竞态` 例（需用改前 `dist`） |
+
+> 遗留（本轮未做，属非目标）：**多节点下整轮预算先到导致上游继续计费而产物被丢弃**（F3 所述的多节点分支）。修它需要任务级/节点级预算的重新设计，超出「只修声明」的范围。
+
+### 11.7 #1386 复验回填（QA 第二轮：P1/P2/P3/P4）
+
+> 独立复验用**真实 `ExecutionContext` + 真实 `ExecutionScheduler`** 驱动生产时序，发现 §11.6 的 F2 **并未闭环**，并附带三项文档/健壮性问题。本节记录收敛结果。
+
+**P1（Major，F2 未闭环）——调度回路把超时的 `error` 覆写回 `cancelled`**
+
+复验步骤：`scheduler.cancel()` → `abortController.abort()` → `context.fail(TIMEOUT)`，随后调度循环退出时命中 `ExecutionScheduler.ts:313-314` 的 `else if (this.isCancelled) this.context.cancel()`。`cancel()` 当时只对 `CANCELLED` 幂等，于是把 `ERROR` 覆写成 `CANCELLED`；实测持久化记录为 `status='cancelled'`、`error='执行超时（超过 30 分钟）'`、节点 `error`——**同一事件两种终态依旧存在**（进程内 `cancelled` vs 重启后 `error`），正是 F2 要消除的问题。
+
+根因：`ExecutionContext.cancel()` 缺少终态守卫（上一轮的回归用例用的是 stub scheduler 或未被循环驱动的 context，因此漏过）。
+
+最终做法：`ExecutionContext` 新增私有 `isTerminal()`，三个终态迁移一律「**先到的终态获胜**」——`cancel()` / `complete()` / `fail()` 都在非终态时才生效。`TERMINAL_STATUSES` 的唯一定义随之移到 `ExecutionContext.ts`（`executionTypes.ts` 原样转出，`Set<string>` 签名不变，`executionRecovery` 等既有 importer 无需改动），避免 `executionTypes → ExecutionContext` 方向之外再引入反向 import。判断依据：`complete()` 与 `fail()` 存在同类覆写风险（取消已落盘后被循环改写成 `completed`；超时文案被 abort 产生的次级错误覆盖），因此三者对齐为同一条不变式，而不是只给 `cancel()` 打补丁。
+
+**P4（Nit）——终态回路的 deadline 定时器未停**
+
+`onTerminal` 原先只 `stopSyncTimer`。补 `stopTimeoutTimer(entry)`（终态后 `entry.timeoutTimer === null`）。
+
+附带发现（必须一起处理，否则 P4 会引入更严重的问题）：那个 deadline 定时器同时是**终态条目唯一的回收者**——`startTimeout` 在创建时挂上，对已终态的条目它 30 分钟后的唯一效果就是 `cleanupExecution` 里的 `entries.delete`。直接停掉会让每个已结束的执行永久留在内存表（`listExecutions` 无限增长）。因此把「回收」拆成显式的 `retentionTimer`：终态时挂上，到期走 `cleanupExecution(entries, id, 'retired')`（新增的 `CleanupReason`，此时 `wasRunning === false`，只删条目不重写状态）。回收窗口仍等于 `EXECUTION_TIMEOUT_MS`，只是从「创建时刻」改为「终态时刻」起算。
+
+**P2（Minor）——F3 声明修正的残留**：`plugins/omnimux-workflow/docs/CHANGELOG.md:21`、本文件 §11.2 约束 2、§4.1 内嵌代码片段、§11.2 第 11 行，以及 `plugins/omnimux/README.md` 第 9 段其余措辞，一律补上「仅单节点运行」的粒度限定（`task-deadline.js` 源码注释上一轮已改，此处是文档侧的残留）。未改任何常量数值、未做 F3 机制改造。
+
+**P3（Nit）——§11.5 的「不可达」偏乐观**：改为**罕见但可达**并写明触发条件——「提交时有 hub、重启后 hub 未加载」（插件被禁用/未安装，或 auto 模式解析不到 seam）即命中，`isNotReconcilableError` 不认 `needs-provider`，节点永久判 failed。行为与 base 一致（非 #1386 引入），本轮只更正可达性描述。
+
+**本轮新增/加强的回归用例**
+
+| 用例 | 覆盖 |
+|---|---|
+| `executionTimeoutConvergence.test.mjs`（新增，3 例） | 真实 `ExecutionManager` + 真实 `ExecutionScheduler` + 真实 30 分钟 deadline 回调（只替换触发时刻）；断言进程内超时记录 `status='error'` / `error=EXECUTION_TIMEOUT_MESSAGE` / 节点 `error`，并与真实 `recoverExecution` 重启路径**逐字段比对一致**；同文件另一例断言用户取消仍是 `cancelled` |
+| 同上（P4 例） | 终态后 `timeoutTimer === null`、`retentionTimer !== null`，并真跑一次 retention 回调确认条目被回收且终态记录不变 |
+| `nodeStatusConvergence.test.mjs` | 超时清理例补 `startTimeout` + 终态后 `timeoutTimer === null` 断言 |
+| `upstreamTask.test.mjs`（+2） | **F1 owner 的真实落盘往返**（`setNodeUpstreamTask` → `toJSON` → `execution.json` → `readUpstreamTaskRef`，含 `fromJSON` 重建）；`readUpstreamTaskRef` 的 owner 归一化四态（`mock` / `omnimux` / 缺省 / 未知 → 无 provenance） |
+
+**P1/P4「修复前失败」实测**（把 `cancel()` 守卫与 `onTerminal` 的 `stopTimeoutTimer` 临时回退）：
+
+```
+✖ #1386 P1：进程内超时终态必须是 error…
+  AssertionError: 进程内超时必须记为 error（修复前被调度循环的 cancel() 覆写成 cancelled）：
+  {"status":"cancelled","error":"执行超时（超过 30 分钟）","nodes":{"n1":{"status":"error","error":"执行超时（超过 30 分钟）"}}}
+✖ #1386 P4：终态后 deadline 定时器已停…
+  AssertionError: 终态后不得再挂着 30 分钟 deadline 定时器
+  + actual: Timeout { … } - expected: null
+```
+
+回退前记录与 QA 复验结论完全一致（`cancelled` + 超时文案 + 节点 `error`）。
+
+> 遗留（本轮未做）：§11.5 第 3 条的 `needs-provider` 永久 failed 分支仍未改判（属 base 行为，需单独评估）；多节点预算共享问题同 §11.6 遗留。

@@ -163,11 +163,11 @@ const IN_FLIGHT_STATUSES = new Set<NodeExecutionApiStatus>(['pending', 'running'
  * Writes follow the existing `node_error` / `node_skipped` branches.
  *
  * @param status Terminal node status: `skipped` for a cancelled run, `error`
- *   for a failed one.
+ *   for a failed one, `completed` for one that finished.
  * @param error Error message recorded on the `error` convergence.
  * @returns The converged node ids (assertions / logging).
  */
-export function settleInFlightNodes(status: 'skipped' | 'error', error?: string): string[] {
+export function settleInFlightNodes(status: 'skipped' | 'error' | 'completed', error?: string): string[] {
   const exec = useExecutionStore.getState();
   const nodeIds = new Set<string>();
   for (const [nodeId, nodeStatus] of Object.entries(exec.nodeStatuses)) {
@@ -320,6 +320,11 @@ export function dispatchExecutionEvent(
     }
     case 'execution_complete': {
       applyTerminalStatus('completed', null);
+      // #1386: symmetric with the error / cancelled branches. A node still marked
+      // in flight when the run completed has no executor left (the run is over),
+      // so leaving the marker is the same permanent 「生成中…」 those branches
+      // already prevent — just through a narrower window (a lost `node_complete`).
+      settleInFlightNodes('completed');
       closeStream();
       break;
     }

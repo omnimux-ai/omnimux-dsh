@@ -22,7 +22,8 @@ const bundle = buildSync({
     contents: [
       "export { ExecutionContext, ExecutionStatus, NodeStatus } from './ExecutionContext.ts';",
       "export { ExecutionScheduler } from './ExecutionScheduler.ts';",
-      "export { cleanupExecution, setupExecutionListeners } from './executionTimers.ts';",
+      "export { cleanupExecution, setupExecutionListeners, startTimeout } from './executionTimers.ts';",
+      "export { EXECUTION_TIMEOUT_MESSAGE } from './executionTypes.ts';",
       "export { loadExecutionRecord, saveExecutionRecord } from './executionStore.ts';",
       "export { recoverExecution } from './executionRecovery.ts';",
     ].join('\n'),
@@ -41,6 +42,8 @@ const {
   ExecutionScheduler,
   cleanupExecution,
   setupExecutionListeners,
+  startTimeout,
+  EXECUTION_TIMEOUT_MESSAGE,
   loadExecutionRecord,
   saveExecutionRecord,
   recoverExecution,
@@ -62,6 +65,32 @@ function runningStates(context) {
   return Object.entries(context.toJSON().nodeStates)
     .filter(([, state]) => state.status === NODE.RUNNING || state.status === NODE.PENDING)
     .map(([nodeId]) => nodeId);
+}
+
+/** Minimal ExecutionEntry double for the teardown paths (scheduler is a stub). */
+function makeEntry({ context, abortController, cancelScheduler }) {
+  return {
+    context,
+    scheduler: {
+      cancel: cancelScheduler,
+      getProgress: () => ({ total: 2, completed: 0, running: 1, pending: 0, percentage: 0 }),
+    },
+    abortController,
+    nodes: [
+      { id: 'n1', type: 'material', data: {} },
+      { id: 'n2', type: 'material', data: {} },
+    ],
+    edges: [],
+    maxParallel: 2,
+    createdAt: new Date().toISOString(),
+    syncTimer: null,
+    timeoutTimer: null,
+    retentionTimer: null,
+    loopRunning: true,
+    isRecovered: false,
+    eventLog: [],
+    disposers: [],
+  };
 }
 
 test('取消：在飞节点与重 pend 节点收敛为 skipped，快照无 running 残留', () => {
@@ -210,7 +239,11 @@ test('重载超时：恢复路径把持久化记录里的在飞节点收敛为 e
     assert.ok(record, 'execution.json 应仍在磁盘上');
     assert.equal(record.status, 'error');
     assert.equal(record.nodeStates.n1.status, 'error');
-    assert.match(record.nodeStates.n1.error, /timed out after restart/);
+    // #1386: this recovery path and the in-process deadline now share one
+    // wording, so the same event no longer reads as an English error here and a
+    // message-less `cancelled` there.
+    assert.equal(record.error, EXECUTION_TIMEOUT_MESSAGE);
+    assert.equal(record.nodeStates.n1.error, EXECUTION_TIMEOUT_MESSAGE);
     // 已完成的节点不被误改。
     assert.equal(record.nodeStates.n2.status, 'completed');
     assert.equal(
@@ -232,47 +265,112 @@ test('超时清理：cleanupExecution 收敛在飞节点并把终态写进持久
     context.startNode('n1');
     context.startNode('n2');
 
-    const entry = {
+    const entry = makeEntry({
       context,
-      scheduler: {
-        cancel: () => { schedulerCancelled = true; },
-        getProgress: () => ({ total: 2, completed: 0, running: 2, pending: 0, percentage: 0 }),
-      },
       abortController,
-      nodes: [
-        { id: 'n1', type: 'material', data: {} },
-        { id: 'n2', type: 'material', data: {} },
-      ],
-      edges: [],
-      maxParallel: 2,
-      createdAt: new Date().toISOString(),
-      syncTimer: null,
-      timeoutTimer: null,
-      loopRunning: true,
-      isRecovered: false,
-      eventLog: [],
-      disposers: [],
-    };
+      cancelScheduler: () => { schedulerCancelled = true; },
+    });
     const entries = new Map([[context.id, entry]]);
     setupExecutionListeners(executionsDir, entry);
+    // #1386 P4: the live deadline the manager arms at creation.
+    startTimeout(entry, () => {});
+    assert.notEqual(entry.timeoutTimer, null);
 
-    // EXECUTION_TIMEOUT_MS 到点：取消 + abort，条目随即离开内存表。
-    cleanupExecution(entries, context.id);
+    // #1386: the deadline is a timeout, not a cancel. Before the fix this
+    // asserted `cancelled` + `skipped` — the same event the post-restart path
+    // recorded as `error` + `执行超时（超过 30 分钟）`, so the same deadline read
+    // two ways depending on whether the host was alive.
+    cleanupExecution(entries, context.id, 'timed-out');
 
     assert.equal(schedulerCancelled, true);
     assert.equal(abortController.signal.aborted, true);
     assert.equal(entries.size, 0);
-    assert.equal(context.status, ExecutionStatus.CANCELLED);
+    // #1386 P4: a finished run must not keep the 30-minute deadline armed.
+    assert.equal(entry.timeoutTimer, null, '终态后 deadline 定时器必须已停');
+    assert.equal(context.status, ExecutionStatus.ERROR);
+    assert.equal(context.error, EXECUTION_TIMEOUT_MESSAGE);
 
     const record = loadExecutionRecord(executionsDir, context.id);
     assert.ok(record, 'execution.json 应已落盘');
-    assert.equal(record.status, 'cancelled');
-    assert.equal(record.nodeStates.n1.status, 'skipped');
-    assert.equal(record.nodeStates.n2.status, 'skipped');
+    assert.equal(record.status, 'error');
+    assert.equal(record.error, EXECUTION_TIMEOUT_MESSAGE);
+    assert.equal(record.nodeStates.n1.status, 'error');
+    assert.equal(record.nodeStates.n2.status, 'error');
+    assert.equal(record.nodeStates.n1.error, EXECUTION_TIMEOUT_MESSAGE);
     assert.equal(
       Object.values(record.nodeStates).some((state) => state.status === NODE.RUNNING),
       false,
     );
+  } finally {
+    rmSync(executionsDir, { recursive: true, force: true });
+  }
+});
+
+test('#1386 超时清理：PAUSED 的执行同样 abort / 取消调度器 / 收敛在飞节点', () => {
+  const executionsDir = mkdtempSync(join(tmpdir(), 'omnimux-node-convergence-'));
+  try {
+    const context = new ExecutionContext({ workflowId: 'ws_timeout_paused' });
+    const abortController = new AbortController();
+    let schedulerCancelled = false;
+    context.start(1);
+    context.startNode('n1');
+    // Pause with the node still in flight: the executor is alive, so nothing
+    // about the teardown may be skipped.
+    context.pause();
+    assert.equal(context.status, ExecutionStatus.PAUSED);
+
+    const entry = makeEntry({ context, abortController, cancelScheduler: () => { schedulerCancelled = true; } });
+    const entries = new Map([[context.id, entry]]);
+    setupExecutionListeners(executionsDir, entry);
+
+    // Before #1386 `wasRunning` only recognized RUNNING, so a paused run took
+    // none of these steps and its record froze at `paused` with a node `running`.
+    cleanupExecution(entries, context.id, 'timed-out');
+
+    assert.equal(schedulerCancelled, true, 'PAUSED 也必须取消调度器');
+    assert.equal(abortController.signal.aborted, true, 'PAUSED 也必须 abort 在飞执行器');
+    assert.equal(entries.size, 0);
+    assert.equal(context.status, ExecutionStatus.ERROR);
+
+    const record = loadExecutionRecord(executionsDir, context.id);
+    assert.ok(record, 'execution.json 应已落盘');
+    assert.equal(record.status, 'error');
+    assert.equal(record.nodeStates.n1.status, 'error');
+    assert.notEqual(record.status, 'paused', '记录不能定格在 paused');
+    assert.equal(
+      Object.values(record.nodeStates).some((state) => state.status === NODE.RUNNING),
+      false,
+    );
+  } finally {
+    rmSync(executionsDir, { recursive: true, force: true });
+  }
+});
+
+test('#1386 用户主动取消仍记为 cancelled（超时语义没有污染取消路径）', () => {
+  const executionsDir = mkdtempSync(join(tmpdir(), 'omnimux-node-convergence-'));
+  try {
+    const context = new ExecutionContext({ workflowId: 'ws_cancel' });
+    const abortController = new AbortController();
+    let schedulerCancelled = false;
+    context.start(1);
+    context.startNode('n1');
+
+    const entry = makeEntry({ context, abortController, cancelScheduler: () => { schedulerCancelled = true; } });
+    const entries = new Map([[context.id, entry]]);
+    setupExecutionListeners(executionsDir, entry);
+
+    // The manager's public cleanupExecution(id) keeps its "cancel" meaning.
+    cleanupExecution(entries, context.id);
+
+    assert.equal(schedulerCancelled, true);
+    assert.equal(abortController.signal.aborted, true);
+    assert.equal(context.status, ExecutionStatus.CANCELLED);
+    assert.equal(context.error, null, '取消不是失败，不能带超时文案');
+
+    const record = loadExecutionRecord(executionsDir, context.id);
+    assert.equal(record.status, 'cancelled');
+    assert.equal(record.nodeStates.n1.status, 'skipped');
+    assert.notEqual(record.error, EXECUTION_TIMEOUT_MESSAGE);
   } finally {
     rmSync(executionsDir, { recursive: true, force: true });
   }

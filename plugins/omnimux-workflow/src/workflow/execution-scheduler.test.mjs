@@ -192,6 +192,43 @@ test('cancel stops the run with cancelled status', async () => {
   assert.deepEqual(gate.started, ['a'], 'downstream nodes must not start after cancel');
 });
 
+test('#1386 竞态：executor 在 abort 前已 resolve，取消后不得把它写成 completed', async () => {
+  // Two writers on one node: `cancel()` converges the in-flight node to
+  // `skipped` (the state the persisted record is built from), while the success
+  // path called `completeNode` whenever the executor resolved — the catch branch
+  // checked `isCancelled`, this one did not. Resolving the gate with no await in
+  // between is the window where that happens: the executor's promise is already
+  // settled when the abort lands, so the loop's cancel check never runs first.
+  const gate = makeDeferredExecutor();
+  const context = new ExecutionContext({ workflowId: 'ws_cancel_race' });
+  const scheduler = new ExecutionScheduler({
+    nodes: linearNodes,
+    edges: linearEdges,
+    context,
+    nodeExecutor: gate.executor,
+  });
+
+  const running = scheduler.execute();
+  await waitUntil(() => gate.started.includes('a'));
+
+  scheduler.cancel();
+  gate.resolveNode('a');
+  await running;
+
+  assert.equal(context.status, 'cancelled');
+  assert.equal(
+    context.nodeStates.get('a').status,
+    'skipped',
+    'a 应保持取消收敛的 skipped，而不是被成功路径改写成 completed',
+  );
+  assert.equal(
+    Object.values(context.toJSON().nodeStates).some((state) => state.status === 'completed'),
+    false,
+    '取消的执行不能留下 completed 节点（磁盘 cancelled/skipped 与内存 completed 会分叉）',
+  );
+  assert.deepEqual(gate.started, ['a'], 'downstream nodes must not start after cancel');
+});
+
 // ============================================================================
 // Failure strategies
 // ============================================================================
