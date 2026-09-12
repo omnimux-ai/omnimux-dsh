@@ -198,6 +198,13 @@ function measureExpression() {
       outerOverflow: Math.round(body.scrollHeight - body.clientHeight),
       gridColumns: columns,
       dialogInViewport: dialogRect.top >= 0 && dialogRect.bottom <= innerHeight,
+      // 弹窗操作按钮必须右下对齐（页脚左侧提示是条件渲染的，曾导致按钮挤到左下）
+      footerRightGap: (() => {
+        const buttons = [...document.querySelectorAll('.dshUk-Dialog-dialog button')]
+          .filter((b) => /取消|确认/.test(b.textContent || ''));
+        if (buttons.length === 0) return null;
+        return Math.round(dialogRect.right - Math.max(...buttons.map((b) => b.getBoundingClientRect().right)));
+      })(),
       footerVisible: footerRect ? footerRect.bottom <= innerHeight && footerRect.top >= 0 : null,
       viewportHeight: innerHeight,
       // 通高分割线：分类栏应填满正文可用高度
@@ -321,6 +328,11 @@ async function main() {
         `viewport ${viewportHeight}: ${EXPECTED_COLUMNS}-column grid`,
         m.gridColumns === EXPECTED_COLUMNS,
         `columns=${m.gridColumns}`,
+      )
+      record(
+        `viewport ${viewportHeight}: footer buttons right-aligned`,
+        typeof m.footerRightGap === 'number' && m.footerRightGap >= 0 && m.footerRightGap <= 32,
+        `gap=${m.footerRightGap}px (expected 0..32)`,
       )
       record(
         `viewport ${viewportHeight}: dialog and footer visible`,

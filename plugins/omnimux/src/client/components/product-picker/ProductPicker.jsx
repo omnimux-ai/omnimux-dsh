@@ -136,12 +136,13 @@ const CSS = `
   font-size: 13px; color: var(--dsw-alias-label-tertiary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* 页脚恒为「按钮右下对齐」：左侧提示是条件渲染的，用 space-between 时单子项会被推到行首（真机实测按钮挤在左下） */
 .omx-product-pick__footer {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%;
+  display: flex; align-items: center; justify-content: flex-end; gap: 16px; width: 100%;
   box-sizing: border-box; padding: 2px 0;
 }
 .omx-product-pick__meta {
-  flex: 1; min-width: 0; font-size: 13px; color: var(--dsw-alias-label-secondary);
+  margin-right: auto; min-width: 0; font-size: 13px; color: var(--dsw-alias-label-secondary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .omx-product-pick__meta-highlight {
