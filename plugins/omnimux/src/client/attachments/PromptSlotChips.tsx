@@ -8,7 +8,7 @@ export interface PromptSlotChipsProps {
   readonly activeSlotIndex?: number | null;
   readonly onSelectSlot: (slot: PromptSlot, index: number) => void;
   readonly onReplaceSlot?: (slot: PromptSlot, newRaw: string) => void;
-  readonly onAddImages?: (files: readonly File[]) => void;
+  readonly onAddFiles?: (files: readonly File[]) => void;
   readonly t?: (key: string, vars?: any) => string;
 }
 
@@ -136,7 +136,7 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   activeSlotIndex,
   onSelectSlot,
   onReplaceSlot,
-  onAddImages,
+  onAddFiles,
   t = (key) => key,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -178,8 +178,8 @@ export const PromptSlotChips: React.FC<PromptSlotChipsProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && pendingFileSlot) {
-      if (typeof onAddImages === 'function') {
-        onAddImages([file]);
+      if (typeof onAddFiles === 'function') {
+        onAddFiles([file]);
       }
       if (typeof onReplaceSlot === 'function') {
         onReplaceSlot(pendingFileSlot, `[${pendingFileSlot.placeholder}: ${file.name}]`);

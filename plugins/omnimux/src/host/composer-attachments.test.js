@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
 import {
   ComposerAttachmentError,
-  copyDirectoryIntoImported,
   copyFileIntoImported,
   forbiddenSourcePathCode,
   inferKindFromExtension,
@@ -57,7 +56,7 @@ describe('composer-attachments path guards', () => {
 })
 
 describe('materializePaths', () => {
-  it('rejects directories and application bundles before creating imported files in filesOnly mode', async () => {
+  it('rejects directories and application bundles before creating imported files', async () => {
     const cwd = tempDir('omx-att-files-only-cwd-')
     const src = tempDir('omx-att-files-only-src-')
     const paths = [join(src, 'folder'), join(src, 'Example.app')]
@@ -66,7 +65,7 @@ describe('materializePaths', () => {
       writeFileSync(join(path, 'keep.txt'), 'original')
     }
     const { results } = await materializePaths({
-      sessionId: 'ses_files', paths, filesOnly: true, resolveCwd: async () => cwd,
+      sessionId: 'ses_files', paths, resolveCwd: async () => cwd,
       fs: { mkdirSync() { assert.fail('rejected directories must not create destinations') } },
     })
     assert.deepEqual(results.map(({ sourcePath, ok, error }) => ({ sourcePath, ok, error })),
@@ -75,13 +74,13 @@ describe('materializePaths', () => {
     for (const path of paths) assert.equal(readFileSync(join(path, 'keep.txt'), 'utf8'), 'original')
   })
 
-  it('copies ordinary files and preserves sourcePath with filesOnly enabled', async () => {
+  it('copies ordinary files and preserves sourcePath', async () => {
     const cwd = tempDir('omx-att-files-cwd-')
     const src = tempDir('omx-att-files-src-')
     const paths = [join(src, 'one.txt'), join(src, 'two.txt')]
     paths.forEach((path, index) => writeFileSync(path, `file ${index}`))
     const { results } = await materializePaths({
-      sessionId: 'ses_files', paths, filesOnly: true, resolveCwd: async () => cwd,
+      sessionId: 'ses_files', paths, resolveCwd: async () => cwd,
     })
     assert.deepEqual(results.map((item) => item.sourcePath), paths)
     results.forEach((item, index) => {
@@ -91,18 +90,9 @@ describe('materializePaths', () => {
     })
   })
 
-  it('rejects invalid filesOnly values before session lookup', async () => {
-    for (const filesOnly of ['true', 1, null, {}]) {
-      await assert.rejects(materializePaths({
-        sessionId: 'ses_files', paths: [], filesOnly,
-        resolveCwd() { assert.fail('invalid payload must not resolve the session') },
-      }), (error) => error.code === 'invalid-payload')
-    }
-  })
-
-  it('copies one file and reports not-a-file for a missing sibling', async () => {
-    const cwd = tempDir('omx-att-cwd-')
-    const srcDir = tempDir('omx-att-src-')
+  it('rejects a missing sibling as not-a-file', async () => {
+    const cwd = tempDir('omx-att-missing-cwd-')
+    const srcDir = tempDir('omx-att-missing-src-')
     const good = join(srcDir, 'note.md')
     writeFileSync(good, '# hi')
     const missing = join(srcDir, 'gone.pdf')
@@ -132,82 +122,6 @@ describe('materializePaths', () => {
     assert.equal(copied.relativePath, 'assets/imported/a (1).txt')
     assert.equal(readFileSync(join(cwd, 'assets/imported/a.txt'), 'utf8'), 'keep')
     assert.equal(readFileSync(copied.destAbs, 'utf8'), 'new')
-  })
-
-  it('recursively copies a directory tree into assets/imported/<name>/', async () => {
-    const cwd = tempDir('omx-att-dir-cwd-')
-    const srcRoot = tempDir('omx-att-dir-src-')
-    const folder = join(srcRoot, 'Pack')
-    mkdirSync(join(folder, 'nested'), { recursive: true })
-    writeFileSync(join(folder, 'readme.md'), '# pack')
-    writeFileSync(join(folder, 'nested', 'shot.png'), 'img')
-    const { results } = await materializePaths({
-      sessionId: 'ses_dir',
-      paths: [folder],
-      resolveCwd: async () => cwd,
-    })
-    assert.equal(results.length, 1)
-    assert.equal(results[0].ok, true)
-    assert.equal(results[0].extension, 'DIR')
-    assert.equal(results[0].kind, 'document')
-    assert.equal(results[0].relativePath, 'assets/imported/Pack')
-    assert.equal(results[0].title, 'Pack')
-    assert.deepEqual(results[0].files.sort(), [
-      'assets/imported/Pack/nested/shot.png',
-      'assets/imported/Pack/readme.md',
-    ].sort())
-    assert.equal(readFileSync(join(cwd, 'assets/imported/Pack/readme.md'), 'utf8'), '# pack')
-    assert.equal(readFileSync(join(cwd, 'assets/imported/Pack/nested/shot.png'), 'utf8'), 'img')
-  })
-
-  it('materializes a mix of file and directory paths', async () => {
-    const cwd = tempDir('omx-att-mix-cwd-')
-    const srcRoot = tempDir('omx-att-mix-src-')
-    const file = join(srcRoot, 'solo.txt')
-    const folder = join(srcRoot, 'Bundle')
-    writeFileSync(file, 'solo')
-    mkdirSync(folder, { recursive: true })
-    writeFileSync(join(folder, 'a.md'), 'a')
-    const { results } = await materializePaths({
-      sessionId: 'ses_mix',
-      paths: [file, folder],
-      resolveCwd: async () => cwd,
-    })
-    assert.equal(results.length, 2)
-    assert.equal(results[0].ok, true)
-    assert.equal(results[0].relativePath, 'assets/imported/solo.txt')
-    assert.equal(results[1].ok, true)
-    assert.equal(results[1].extension, 'DIR')
-    assert.equal(results[1].relativePath, 'assets/imported/Bundle')
-    assert.deepEqual(results[1].files, ['assets/imported/Bundle/a.md'])
-  })
-
-  it('preserves empty roots and nested empty directories without adding fake files', async () => {
-    const cwd = tempDir('omx-att-empty-cwd-')
-    const source = tempDir('omx-att-empty-src-')
-    mkdirSync(join(source, 'Empty'))
-    mkdirSync(join(source, 'Nested', 'inner', 'empty'), { recursive: true })
-    const { results } = await materializePaths({
-      sessionId: 'ses_empty',
-      paths: [join(source, 'Empty'), join(source, 'Nested')],
-      resolveCwd: async () => cwd,
-    })
-    assert.equal(results.every((item) => item.ok && item.extension === 'DIR'), true)
-    assert.deepEqual(results.map((item) => item.files), [[], []])
-    assert.deepEqual(readdirSync(join(cwd, 'assets/imported/Empty')), [])
-    assert.deepEqual(readdirSync(join(cwd, 'assets/imported/Nested/inner/empty')), [])
-    assert.deepEqual(readdirSync(join(source, 'Nested/inner/empty')), [])
-  })
-
-  it('copyDirectoryIntoImported rejects a regular file', async () => {
-    const cwd = tempDir('omx-att-dir-reject-cwd-')
-    const srcDir = tempDir('omx-att-dir-reject-src-')
-    const file = join(srcDir, 'x.txt')
-    writeFileSync(file, 'x')
-    await assert.rejects(
-      () => copyDirectoryIntoImported({ cwd, sourceAbs: file }),
-      (error) => error instanceof ComposerAttachmentError && error.code === 'not-a-directory',
-    )
   })
 })
 
@@ -249,15 +163,15 @@ describe('createComposerAttachmentsDispatcher', () => {
     const dispatcher = createComposerAttachmentsDispatcher({ sessionQuery: null })
     const result = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
-      body: { sessionId: 'ses_missing', paths: ['/tmp/a.txt'] },
+      url: '/omnimux/composer/attachments/instantiate',
+      body: { sessionId: 'ses_missing', assetIds: [] },
     })
     assert.equal(result.status, 404)
     assert.equal(result.body.error, 'session-not-found')
   })
 
-  it('returns 400 blob-url-forbidden as a per-item result', async () => {
-    const cwd = tempDir('omx-att-blob-')
+  it('reports a missing library asset as a per-item result', async () => {
+    const cwd = tempDir('omx-att-missing-asset-')
     const dispatcher = createComposerAttachmentsDispatcher({
       sessionQuery: {
         observeSession: async () => ({
@@ -265,23 +179,24 @@ describe('createComposerAttachmentsDispatcher', () => {
           [Symbol.dispose]() {},
         }),
       },
+      fetchAsset: async () => { throw new Error('asset not found') },
     })
     const result = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
-      body: { sessionId: 'ses_ok', paths: ['blob:https://x/1'] },
+      url: '/omnimux/composer/attachments/instantiate',
+      body: { sessionId: 'ses_ok', assetIds: ['ast_gone'] },
     })
     assert.equal(result.status, 200)
     assert.equal(result.body.results[0].ok, false)
-    assert.equal(result.body.results[0].error, 'blob-url-forbidden')
+    assert.equal(result.body.results[0].error, 'internal')
   })
 
   it('refuses cross-origin writes', async () => {
     const dispatcher = createComposerAttachmentsDispatcher({})
     const result = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
-      body: { sessionId: 'ses', paths: [] },
+      url: '/omnimux/composer/attachments/instantiate',
+      body: { sessionId: 'ses', assetIds: [] },
       origin: 'https://evil.example',
     })
     assert.equal(result.status, 403)
@@ -290,17 +205,20 @@ describe('createComposerAttachmentsDispatcher', () => {
 
   it('reads sessionQuery at request time so a late inject is visible', async () => {
     const cwd = tempDir('omx-att-late-')
-    const srcDir = tempDir('omx-att-late-src-')
-    const src = join(srcDir, 'late.md')
-    writeFileSync(src, 'late')
     const holder = { sessionQuery: null }
     const dispatcher = createComposerAttachmentsDispatcher({
       getSessionQuery: () => holder.sessionQuery,
+      fetchAsset: async (id) => ({
+        id,
+        name: 'late',
+        files: [{ id: 'fil_late', real_path: join(cwd, 'late.md'), original_name: 'late.md', visible: true }],
+      }),
     })
+    writeFileSync(join(cwd, 'late.md'), 'late')
     const before = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
-      body: { sessionId: 'ses_late', paths: [src] },
+      url: '/omnimux/composer/attachments/instantiate',
+      body: { sessionId: 'ses_late', assetIds: ['ast_late'] },
     })
     assert.equal(before.status, 404)
     holder.sessionQuery = {
@@ -308,12 +226,12 @@ describe('createComposerAttachmentsDispatcher', () => {
     }
     const after = await dispatcher.dispatch({
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
-      body: { sessionId: 'ses_late', paths: [src] },
+      url: '/omnimux/composer/attachments/instantiate',
+      body: { sessionId: 'ses_late', assetIds: ['ast_late'] },
     })
     assert.equal(after.status, 200)
     assert.equal(after.body.results[0].ok, true)
-    assert.equal(after.body.results[0].relativePath, 'assets/imported/late.md')
+    assert.equal(after.body.results[0].relativePath, 'assets/imported/ast_late/late.md')
   })
 })
 

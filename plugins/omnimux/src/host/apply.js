@@ -118,7 +118,6 @@ export function apply(ctx, config = {}) {
     sessionQuery: null,
     getWorkspaceRegistry: () => ctx.get?.('workspaceRegistry'),
     getConnection: () => ctx.get?.('connection'),
-    getDesktopRuntime: () => ctx.get?.('desktopRuntime'),
   }
   mountComposerCommands(ctx)
   const mountHttp = (httpCtx) => mountHubHttp(httpCtx, httpDeps)

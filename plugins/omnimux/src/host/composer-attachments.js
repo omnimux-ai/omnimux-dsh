@@ -1,5 +1,5 @@
 /**
- * Conversation-local file materialization for composer add-file / add-from-library.
+ * Conversation-local file materialization for composer attachments.
  * Copies into `<session cwd>/assets/imported/` so @path is workspace-relative.
  * Never unlinks, renames, or moves the user's original file.
  */
@@ -8,7 +8,6 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
-  readdirSync,
   realpathSync,
   renameSync,
   statSync,
@@ -27,7 +26,6 @@ const DEFAULT_FS = {
   createWriteStream,
   existsSync,
   mkdirSync,
-  readdirSync,
   realpathSync,
   renameSync,
   statSync,
@@ -231,160 +229,6 @@ export async function copyFileIntoImported(opts) {
 }
 
 /**
- * Walk a directory tree; retain directories, regular files and total byte size.
- * Symlinks and special nodes are skipped (never followed).
- * @param {string} rootAbs
- * @param {typeof DEFAULT_FS} fs
- * @returns {{ files: Array<{ abs: string, rel: string }>, directories: string[], totalBytes: number }}
- */
-function collectDirectoryFiles(rootAbs, fs) {
-  const files = []
-  const directories = []
-  let totalBytes = 0
-  /** @param {string} dirAbs @param {string} relPrefix */
-  const walk = (dirAbs, relPrefix) => {
-    let entries
-    try {
-      entries = fs.readdirSync(dirAbs, { withFileTypes: true })
-    } catch (error) {
-      throw new ComposerAttachmentError(
-        'internal',
-        error instanceof Error ? error.message : 'readdir failed',
-      )
-    }
-    for (const entry of entries) {
-      const name = entry.name
-      if (!name || name === '.' || name === '..') continue
-      const childAbs = join(dirAbs, name)
-      const childRel = relPrefix ? posix.join(relPrefix, name) : name
-      let isDir = false
-      let isFile = false
-      try {
-        if (typeof entry.isSymbolicLink === 'function' && entry.isSymbolicLink()) continue
-        isDir = entry.isDirectory()
-        isFile = entry.isFile()
-      } catch {
-        continue
-      }
-      if (isDir) {
-        directories.push(childRel)
-        walk(childAbs, childRel)
-        continue
-      }
-      if (!isFile) continue
-      let size = 0
-      try {
-        size = Number(fs.statSync(childAbs).size) || 0
-      } catch {
-        continue
-      }
-      totalBytes += size
-      files.push({ abs: childAbs, rel: childRel })
-    }
-  }
-  walk(rootAbs, '')
-  return { files, directories, totalBytes }
-}
-
-/**
- * Recursively copy a directory tree into `<cwd>/assets/imported/<uniqueName>/`.
- * One attachment row points at the directory root; `files` lists every copied
- * relative path under that root for prompt expansion.
- * @param {{
- *   cwd: string,
- *   sourceAbs: string,
- *   originalName?: string,
- *   fs?: Partial<typeof DEFAULT_FS>,
- *   statfs?: typeof statfsSync,
- * }} opts
- */
-export async function copyDirectoryIntoImported(opts) {
-  const fs = { ...DEFAULT_FS, ...opts.fs }
-  const sourceCode = forbiddenSourcePathCode(opts.sourceAbs)
-  if (sourceCode) {
-    throw new ComposerAttachmentError(sourceCode, 'source path is invalid')
-  }
-  let stat
-  try {
-    stat = fs.statSync(opts.sourceAbs)
-  } catch {
-    throw new ComposerAttachmentError('not-a-file', `path not found: ${opts.sourceAbs}`)
-  }
-  if (!stat.isDirectory()) {
-    throw new ComposerAttachmentError('not-a-directory', 'path is not a directory')
-  }
-  const cwd = resolve(opts.cwd)
-  const importedRoot = join(cwd, ...IMPORTED_REL.split('/'))
-  assertDestInsideCwd(importedRoot, cwd)
-  fs.mkdirSync(importedRoot, { recursive: true })
-  const { files, directories, totalBytes } = collectDirectoryFiles(opts.sourceAbs, fs)
-  assertDiskSpace(cwd, totalBytes, opts.statfs ?? statfsSync)
-  const name = uniqueImportedName(
-    importedRoot,
-    opts.originalName || basename(opts.sourceAbs.replace(/[\\/]+$/, '') || opts.sourceAbs),
-    (p) => fs.existsSync(p),
-  )
-  const destRoot = join(importedRoot, name)
-  assertDestInsideCwd(destRoot, cwd)
-  fs.mkdirSync(destRoot, { recursive: true })
-  for (const relativeDirectory of directories) {
-    const destDirectory = join(destRoot, ...relativeDirectory.split('/'))
-    assertDestInsideCwd(destDirectory, cwd)
-    fs.mkdirSync(destDirectory, { recursive: true })
-  }
-  const copiedRels = []
-  let copiedBytes = 0
-  for (const file of files) {
-    const destAbs = join(destRoot, ...file.rel.split('/'))
-    assertDestInsideCwd(destAbs, cwd)
-    fs.mkdirSync(join(destAbs, '..'), { recursive: true })
-    const tmp = `${destAbs}.tmp-${process.pid}-${Date.now()}`
-    try {
-      await pipeline(fs.createReadStream(file.abs), fs.createWriteStream(tmp))
-      assertDestInsideCwd(tmp, cwd)
-      fs.renameSync(tmp, destAbs)
-    } catch (error) {
-      try {
-        if (fs.existsSync(tmp)) fs.unlinkSync(tmp)
-      } catch {
-        // tmp cleanup is best-effort
-      }
-      if (error instanceof ComposerAttachmentError) throw error
-      throw new ComposerAttachmentError('internal', error instanceof Error ? error.message : 'copy failed')
-    }
-    const relUnderImported = toPosixRelative(cwd, destAbs) || posix.join(IMPORTED_REL, name, file.rel)
-    copiedRels.push(relUnderImported)
-    try {
-      copiedBytes += Number(fs.statSync(destAbs).size) || 0
-    } catch {
-      // size is best-effort
-    }
-  }
-  let destReal = destRoot
-  try {
-    destReal = fs.realpathSync(destRoot)
-  } catch {
-    destReal = destRoot
-  }
-  let cwdReal = cwd
-  try {
-    cwdReal = fs.realpathSync(cwd)
-  } catch {
-    cwdReal = cwd
-  }
-  if (!isInsideDir(destReal, cwdReal)) {
-    throw new ComposerAttachmentError('path-denied', 'destination escapes workspace')
-  }
-  return {
-    destAbs: destReal,
-    relativePath: toPosixRelative(cwdReal, destReal) || posix.join(IMPORTED_REL, name),
-    size: copiedBytes,
-    name,
-    files: copiedRels,
-  }
-}
-
-/**
  * @param {string} ext
  */
 export function inferKindFromExtension(ext) {
@@ -408,10 +252,11 @@ function itemError(sourcePath, error) {
 }
 
 /**
+ * Copy regular files into `<session cwd>/assets/imported/`; directories are
+ * rejected per item as `not-a-file`.
  * @param {{
  *   sessionId: string,
  *   paths: unknown,
- *   filesOnly?: boolean,
  *   sessionQuery?: { observeSession?: Function } | null,
  *   fs?: Partial<typeof DEFAULT_FS>,
  *   statfs?: typeof statfsSync,
@@ -422,61 +267,29 @@ export async function materializePaths(opts) {
   if (!Array.isArray(opts.paths)) {
     throw new ComposerAttachmentError('invalid-payload', 'paths must be an array')
   }
-  if (opts.filesOnly !== undefined && typeof opts.filesOnly !== 'boolean') {
-    throw new ComposerAttachmentError('invalid-payload', 'filesOnly must be a boolean')
-  }
   const cwd = opts.resolveCwd
     ? await opts.resolveCwd(opts.sessionId)
     : await resolveSessionCwd(opts.sessionId, opts.sessionQuery)
-  const fs = { ...DEFAULT_FS, ...opts.fs }
   const results = []
   for (const raw of opts.paths) {
     const sourcePath = typeof raw === 'string' ? raw : ''
     try {
-      let isDirectory = false
-      try {
-        isDirectory = fs.statSync(sourcePath).isDirectory()
-      } catch {
-        isDirectory = false
-      }
-      if (isDirectory) {
-        if (opts.filesOnly) {
-          throw new ComposerAttachmentError('not-a-file', 'path is not a regular file')
-        }
-        const copied = await copyDirectoryIntoImported({
-          cwd,
-          sourceAbs: sourcePath,
-          fs: opts.fs,
-          statfs: opts.statfs,
-        })
-        results.push({
-          ok: true,
-          sourcePath,
-          relativePath: copied.relativePath,
-          title: copied.name,
-          extension: 'DIR',
-          kind: 'document',
-          size: copied.size,
-          files: copied.files,
-        })
-      } else {
-        const copied = await copyFileIntoImported({
-          cwd,
-          sourceAbs: sourcePath,
-          fs: opts.fs,
-          statfs: opts.statfs,
-        })
-        const extension = extname(copied.name).replace(/^\./, '').toUpperCase() || 'FILE'
-        results.push({
-          ok: true,
-          sourcePath,
-          relativePath: copied.relativePath,
-          title: copied.name,
-          extension,
-          kind: inferKindFromExtension(extension),
-          size: copied.size,
-        })
-      }
+      const copied = await copyFileIntoImported({
+        cwd,
+        sourceAbs: sourcePath,
+        fs: opts.fs,
+        statfs: opts.statfs,
+      })
+      const extension = extname(copied.name).replace(/^\./, '').toUpperCase() || 'FILE'
+      results.push({
+        ok: true,
+        sourcePath,
+        relativePath: copied.relativePath,
+        title: copied.name,
+        extension,
+        kind: inferKindFromExtension(extension),
+        size: copied.size,
+      })
     } catch (error) {
       results.push(itemError(sourcePath, error))
     }

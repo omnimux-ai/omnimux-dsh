@@ -100,7 +100,7 @@ export function createFormAttachmentService({ root, getWorkspaceRegistry, getSes
         const named = join(root, assetId, `form-${randomUUID()}${mediaExtensions[record.mimeType]}`)
         await writeFile(named, await readFile(path), { mode: 0o600 })
         let item
-        try { item = (await materializePaths({ sessionId, paths: [named], filesOnly: true, sessionQuery: getSessionQuery() })).results[0] }
+        try { item = (await materializePaths({ sessionId, paths: [named], sessionQuery: getSessionQuery() })).results[0] }
         finally { await rm(named, { force: true }) }
         if (!item?.ok) throw new Error(item?.error || 'materialize-failed')
         const next = { ...publicRecord(record), relativePath: item.relativePath, kind: item.kind }

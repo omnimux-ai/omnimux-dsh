@@ -3,10 +3,10 @@ import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 /**
  * @typedef {import('../attachments/store.ts').AttachmentStore} AttachmentStore
  * @typedef {{ ok: boolean, status: number, body: object }} JsonResponse
- * @typedef {{ id: number, sessionId: string, kind: 'file' | 'library', importing: boolean, selection: AbortController }} Operation
+ * @typedef {{ id: number, sessionId: string, kind: 'library', importing: boolean, selection: AbortController }} Operation
  */
 
-/** The picker cancellation signal only cancels selection, never an admitted copy. */
+/** Reads JSON through the Host attachment seam without assuming a response shape. */
 export async function requestComposerJson(path, body, signal) {
   const response = await fetch(path, {
     method: 'POST',
@@ -50,9 +50,6 @@ export function createComposerAddController(options) {
     && getCurrentSessionId() === operation.sessionId
   const rowsFor = (sessionId) => store.getSnapshot(sessionId)
   const entityIds = (sessionId) => new Set(rowsFor(sessionId).map(row => row.entityId).filter(Boolean))
-  const localPaths = (sessionId) => new Set(rowsFor(sessionId)
-    .filter(row => row.sourcePlugin === 'omnimux' && typeof row.metadata?.sourcePath === 'string')
-    .map(row => row.metadata.sourcePath))
 
   function summary(counts) {
     const parts = []
@@ -75,7 +72,7 @@ export function createComposerAddController(options) {
   }
 
   function render(operation) {
-    if (!visible(operation) || operation.kind !== 'library') return
+    if (!visible(operation)) return
     renderLibrary({
       key: operation.id,
       occupied: rowsFor(operation.sessionId).length,
@@ -85,7 +82,7 @@ export function createComposerAddController(options) {
     })
   }
 
-  function begin(kind, sessionId) {
+  function begin(sessionId) {
     if (disposed) return null
     if (!sessionId || sessionId === 'default') {
       notify(text('composerAdd.needSession'))
@@ -100,42 +97,28 @@ export function createComposerAddController(options) {
       notify(text('composerAdd.toast.quota'))
       return null
     }
-    const operation = { id: ++revision, sessionId, kind, importing: false, selection: new AbortController() }
+    const operation = { id: ++revision, sessionId, kind: 'library', importing: false, selection: new AbortController() }
     owner = operation
     options.onBegin?.()
     stopAttachments = store.subscribe(sessionId, () => render(operation))
     return operation
   }
 
-  function responseError(response) {
-    if (response.status === 501) return text('composerAdd.pickerUnsupported')
-    if (response.body.error === 'native-picker-busy') return text('composerAdd.busy')
-    return response.body.message || text('composerAdd.toast.failed', { n: 1 })
-  }
-
-  function results(response) {
-    if (!Array.isArray(response.body.results)) {
-      throw new Error(response.ok ? text('composerAdd.invalidResponse') : responseError(response))
-    }
-    return response.body.results
-  }
-
-  function addResults(operation, items, local, counts) {
+  function addResults(operation, items, counts) {
     if (disposed) return counts
-    const known = local ? localPaths(operation.sessionId) : entityIds(operation.sessionId)
+    const known = entityIds(operation.sessionId)
     for (const item of items) {
       if (!item || item.ok !== true) {
         counts.failed += 1
         continue
       }
-      const id = local ? item.sourcePath : item.entityId || item.sourcePath
+      const id = item.entityId || item.sourcePath
       if (id && known.has(id)) {
         counts.duplicate += 1
         continue
       }
       const metadata = {
         ...(Array.isArray(item.files) ? { files: item.files } : {}),
-        ...(local && item.sourcePath ? { sourcePath: item.sourcePath } : {}),
       }
       const result = store.addAttachment(operation.sessionId, {
         sourcePlugin: 'omnimux',
@@ -157,60 +140,6 @@ export function createComposerAddController(options) {
     return counts
   }
 
-  async function addFiles(sessionId) {
-    const operation = begin('file', sessionId)
-    if (!operation) return
-    const counts = { added: 0, duplicate: 0, quota: 0, failed: 0 }
-    try {
-      let picked = await request('/omnimux/composer/attachments/pick-files', { sessionId }, operation.selection.signal)
-      if (!visible(operation)) return
-      if (picked.status === 501 && picked.body.error === 'native-picker-unavailable') {
-        picked = await request('/omnimux/assets/pick', { kind: 'file' }, operation.selection.signal)
-      }
-      if (!visible(operation)) return
-      if (!picked.ok) throw new Error(responseError(picked))
-      if (!Array.isArray(picked.body.paths)) throw new Error(text('composerAdd.invalidResponse'))
-      const known = localPaths(sessionId)
-      const paths = []
-      const remaining = Math.max(0, MAX_ATTACHMENTS - rowsFor(sessionId).length)
-      for (const path of picked.body.paths) {
-        if (typeof path !== 'string' || !path) {
-          counts.failed += 1
-        } else if (known.has(path)) {
-          counts.duplicate += 1
-        } else {
-          known.add(path)
-          if (paths.length < remaining) paths.push(path)
-          else counts.quota += 1
-        }
-      }
-      if (paths.length) {
-        operation.importing = true
-        importingSessions.add(sessionId)
-        const response = await request('/omnimux/composer/attachments/materialize', {
-          sessionId, paths, filesOnly: true,
-        })
-        const items = results(response)
-        if (items.length === 0) throw new Error(text('composerAdd.invalidResponse'))
-        addResults(operation, items, true, counts)
-        const detail = items.find(item => item?.ok === false)?.message
-        if (visible(operation) && detail) {
-          notify(summary(counts) + ' · ' + detail)
-          return
-        }
-      }
-      if (visible(operation)) {
-        const message = summary(counts)
-        if (message) notify(message)
-      }
-    } catch (error) {
-      if (visible(operation)) notify(error instanceof Error ? error.message : text('composerAdd.toast.failed', { n: 1 }))
-    } finally {
-      if (operation.importing) importingSessions.delete(sessionId)
-      close(operation, true)
-    }
-  }
-
   async function confirmLibrary(operation, picked) {
     if (!visible(operation) || operation.importing) return
     const known = entityIds(operation.sessionId)
@@ -223,8 +152,11 @@ export function createComposerAddController(options) {
       const response = await request('/omnimux/composer/attachments/instantiate', {
         sessionId: operation.sessionId, assetIds,
       })
-      const items = results(response)
-      const counts = addResults(operation, items, false, { added: 0, duplicate: 0, quota: 0, failed: 0 })
+      if (!Array.isArray(response.body.results)) {
+        throw new Error(text('composerAdd.invalidResponse'))
+      }
+      const items = response.body.results
+      const counts = addResults(operation, items, { added: 0, duplicate: 0, quota: 0, failed: 0 })
       if (!visible(operation)) return
       if (!counts.added && !counts.duplicate) {
         const failed = items.find(item => item?.ok === false)
@@ -243,9 +175,8 @@ export function createComposerAddController(options) {
   })
 
   return {
-    addFiles,
     openLibrary(sessionId) {
-      const operation = begin('library', sessionId)
+      const operation = begin(sessionId)
       if (operation) render(operation)
     },
     dispose() {
