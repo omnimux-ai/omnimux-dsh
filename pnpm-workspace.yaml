@@ -1,6 +1,7 @@
 packages:
   - plugins/*
   - packages/*
+  - plugins/omnimux-browser/extension
 allowBuilds:
   esbuild: true
   node-pty: true
