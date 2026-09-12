@@ -232,14 +232,22 @@ export function usePlazaSearchEffect(state, deps) {
     const { cached, hasFresh } = getCachedSearchEntry(payload, deps);
 
     if (page === 1 && hasFresh) {
+      // A fresh cache hit already answers this page. Applying it and returning
+      // keeps this effect from re-issuing the same request on every run.
       applyPlazaSearchData(cached.body, 'replace', category, state);
-    } else if (page === 1) {
+      return () => { liveRef.live = false; };
+    }
+    if (page === 1) {
       state.setStatus('loading');
     }
 
     performSearchQuery(payload, { liveRef, page, hasFresh, state, category }, deps);
     return () => { liveRef.live = false; };
-  }, [submitted, category, page, state]);
+    // `state` is deliberately absent: it is rebuilt on every render, so having it
+    // here re-ran this effect (and its request) forever. Only these scalars
+    // change what is searched, and the setters reached through `state` are
+    // stable useState dispatchers.
+  }, [submitted, category, page]);
 }
 
 function getCustomOrderDefault() {
