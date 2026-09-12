@@ -5,15 +5,15 @@
      it. Only type scales: the px-based spacing and icon sizes stay put, which
      keeps the narrow panel's layout intact at large sizes. */
   --ui-scale: 1;
-  --canvas: #f4f6fa;
-  --canvas-deep: #edf0f6;
+  --canvas: #f8fafc;
+  --canvas-deep: #f1f5f9;
   --surface: #ffffff;
-  --ink: #182033;
-  --ink-strong: #101828;
-  --muted: #667085;
-  --faint: #98a2b3;
-  --line: #dce2ec;
-  --line-strong: #cbd3e1;
+  --ink: #0f172a;
+  --ink-strong: #020617;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
   --blue: #7c3aed;
   --blue-hover: #6d28d9;
   --blue-ink: #5b21b6;
@@ -33,6 +33,60 @@
   font-size: calc(14px * var(--ui-scale));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="dark"],
+:root[data-theme="dark"] body {
+  color-scheme: dark;
+  --canvas: #0b0b0e;
+  --canvas-deep: #111115;
+  --surface: #16161b;
+  --ink: #e2e8f0;
+  --ink-strong: #ffffff;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --blue: #8b5cf6;
+  --blue-hover: #7c3aed;
+  --blue-ink: #c4b5fd;
+  --blue-soft: rgba(139, 92, 246, 0.18);
+  --blue-wash: rgba(139, 92, 246, 0.08);
+  --navy: #0b0b0e;
+  --danger: #f87171;
+  --danger-soft: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.25);
+  --warning: #fbbf24;
+  --security: #f59e0b;
+  --security-soft: rgba(245, 158, 11, 0.12);
+  --security-border: rgba(245, 158, 11, 0.25);
+  --shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+  --focus-ring: 0 0 0 3px rgba(139, 92, 246, 0.35);
+}
+
+:root[data-theme="dark"] .topbar {
+  background: rgba(16, 16, 21, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .composer-box {
+  background: #141419;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .composer-box:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+:root[data-theme="dark"] .session-picker,
+:root[data-theme="dark"] .workspace-dropdown-menu,
+:root[data-theme="dark"] .settings-panel {
+  background: #16161b;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
 }
 
 * {
@@ -109,14 +163,14 @@ textarea:focus-visible {
 
 .topbar {
   display: flex;
-  min-height: 52px;
+  min-height: 48px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(203, 211, 225, 0.72);
-  background: rgba(255, 255, 255, 0.92);
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .tab-affinity {
@@ -388,48 +442,31 @@ textarea:focus-visible {
 .session-menu-trigger {
   display: inline-flex;
   min-width: 0;
-  max-width: 140px;
-  flex: 1 1 auto;
-  min-height: 32px;
+  max-width: 150px;
+  flex: 0 1 auto;
+  height: 32px;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   outline: none;
-  background: transparent;
+  background: var(--canvas);
   color: var(--ink-strong);
   cursor: pointer;
-  font-size: calc(13px * var(--ui-scale));
-  font-weight: 680;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
-}
-
-.session-menu-trigger > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.session-menu-trigger svg {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 auto;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
-  transition: transform 150ms ease;
+  font-size: calc(12.5px * var(--ui-scale));
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  transition: all 150ms ease;
 }
 
 .session-menu-trigger:hover:not(:disabled),
 .session-menu-trigger[aria-expanded="true"] {
-  border-color: var(--line);
-  background: var(--canvas);
+  border-color: var(--blue);
+  background: var(--blue-wash);
+  color: var(--blue);
 }
 
 .session-menu-trigger[aria-expanded="true"] svg {
@@ -505,28 +542,43 @@ textarea:focus-visible {
   background: transparent;
 }
 
+.icon-button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--ink-strong);
+  background: var(--canvas-deep);
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-self: end;
+  flex: 0 0 auto;
 }
 
 .new-session-trigger {
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.new-session-trigger:hover:not(:disabled) {
-  border-color: var(--line-strong);
-  background: var(--surface);
-  color: var(--ink-strong);
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 
 .new-session-trigger svg {
@@ -2468,15 +2520,19 @@ textarea:focus-visible {
 
 /* Session history picker */
 .session-picker {
-  flex: 0 0 auto;
-  max-height: 260px;
+  position: absolute;
+  top: 48px;
+  left: 10px;
+  right: 10px;
+  z-index: 1200;
+  max-height: 320px;
   overflow-y: auto;
-  margin: 8px 12px 10px;
+  margin: 0;
   padding: 10px 12px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
 }
 
 .session-picker-head {
@@ -2964,6 +3020,10 @@ textarea:focus-visible {
   margin-top: 4px;
 }
 .refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 5px 8px;
   border: none;

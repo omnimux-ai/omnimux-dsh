@@ -1,4 +1,5 @@
 import { memo, useState } from 'react'
+import { ImageIcon } from './icons.tsx'
 
 export interface SniffedMediaItem {
   id: string
@@ -36,7 +37,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   return (
     <div className="media-sniffer-bar">
       <div className="media-sniffer-title">
-        <span className="sniffer-icon">🖼️</span>
+        <span className="sniffer-icon"><ImageIcon size={13} /></span>
         <span>{isEn ? `Page Media (${items.length})` : `页面媒体感知 (${items.length})`}</span>
       </div>
       <div className="media-sniffer-pills">

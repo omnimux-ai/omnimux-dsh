@@ -21,6 +21,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
+import { SunIcon, MoonIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
@@ -618,6 +619,12 @@ const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy:
 })
 
 export function App(): React.JSX.Element {
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    const saved = safeGetStorage('omnimux_theme_mode')
+    if (saved === 'dark' || saved === 'light') return saved
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
+    return 'light'
+  })
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
@@ -731,6 +738,19 @@ export function App(): React.JSX.Element {
       }
     }
   }, [isFloatMode])
+
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute('data-theme', themeMode)
+      document.documentElement.style.colorScheme = themeMode
+    } catch {}
+  }, [themeMode])
+
+  const toggleThemeMode = () => {
+    const next = themeMode === 'dark' ? 'light' : 'dark'
+    setThemeMode(next)
+    safeSetStorage('omnimux_theme_mode', next)
+  }
 
   useEffect(() => {
     if (caps?.locale && (caps.locale === 'zh' || caps.locale === 'en')) {
@@ -2055,14 +2075,23 @@ export function App(): React.JSX.Element {
   return (
     <><div className="app">
       <header className="topbar">
-        <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
         <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
           aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
           onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
           <span>{sessionMenuTitle}</span>
           <ChevronDownIcon />
         </button>
+        <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
         <div className="topbar-actions">
+          <button
+            type="button"
+            className="icon-button theme-toggle-trigger"
+            onClick={toggleThemeMode}
+            aria-label={themeMode === 'dark' ? (locale === 'en' ? 'Switch to light mode' : '切换为浅色主题') : (locale === 'en' ? 'Switch to dark mode' : '切换为深色主题')}
+            title={themeMode === 'dark' ? (locale === 'en' ? 'Light mode' : '浅色主题') : (locale === 'en' ? 'Dark mode' : '深色主题')}
+          >
+            {themeMode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+          </button>
           <button className="icon-button new-session-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
             onClick={() => { void startNewSession() }}
             aria-label={copy.app.newSession} title={copy.app.newSession}>
@@ -2098,7 +2127,7 @@ export function App(): React.JSX.Element {
                 }}
                 title={locale === 'en' ? "Collapse workstation (Esc)" : "收起大工作台 (Esc)"}
               >
-                ✕
+                <CloseIcon size={11} />
               </button>
             </div>
           )}
