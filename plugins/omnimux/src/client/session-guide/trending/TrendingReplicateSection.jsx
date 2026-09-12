@@ -2,6 +2,8 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
 import { buildClonePrompt, defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
+import { SkillsPanel } from '../skills/SkillsPanel.jsx'
+import { buildSkillPrompt } from '../skills/featured-skills-data.js'
 import {
   EMPTY_CAPABILITIES,
   TRENDING_SOURCE_STATUS,
@@ -63,6 +65,20 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   // 接管意图（dockedItem）与实际摆位（placement）分开：
   // 意图由「复刻」决定，摆位由滚动位置决定——滚回原位就让原生输入框回到流内。
   const [placement, setPlacement] = useState('docked')
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return sessionStorage.getItem('omnimux-guide-tab') || 'trending'
+    } catch {
+      return 'trending'
+    }
+  })
+
+  const handleSwitchTab = (tab) => {
+    setActiveTab(tab)
+    try {
+      sessionStorage.setItem('omnimux-guide-tab', tab)
+    } catch {}
+  }
   const prevDockedItemRef = useRef(null)
   const sectionRef = useRef(null)
   // 生效过的宿主根节点。卸载清理必须用它，而不是已被 React 解绑的 DOM ref。
@@ -100,9 +116,10 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
 
   // 被接管的卡片一旦不在当前结果里（换地区/换阈值），输入框要归还，
   // 不能让它停在一个屏幕上已经不存在的片子上。
+  // 注意：技能卡片不受对标视频筛选影响（带 skill 标记），不得误归还。
   useEffect(() => {
     if (refreshing || !dockedItem) return
-    if (!items.some((item) => item.id === dockedItem.id)) setDockedItem(null)
+    if (!dockedItem.skill && !items.some((item) => item.id === dockedItem.id)) setDockedItem(null)
   }, [items, dockedItem, refreshing])
 
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
@@ -292,6 +309,25 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     onApplyPrompt?.(buildClonePrompt(item), item)
   }
 
+  const handleSelectSkill = (skill) => {
+    if (dockedItem?.id === skill.id) {
+      setDockedItem(null)
+      return
+    }
+    const root = dockHostRef.current || sectionRef.current?.closest?.('[data-phase]')
+    const card = root?.querySelector?.('[data-composer-card]')
+    const band = card?.parentElement
+    const rect = band?.getBoundingClientRect?.()
+    const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
+    if (rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < viewportH) {
+      setPlacement('inline')
+    } else {
+      setPlacement('docked')
+    }
+    setDockedItem(skill)
+    onApplyPrompt?.(buildSkillPrompt(skill), skill)
+  }
+
   return (
     <section
       ref={sectionRef}
@@ -301,76 +337,116 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       aria-label={t('trending.title')}
     >
       <header className="omnimux-trending-head">
-        <h2 className="omnimux-trending-title">
-          {t('trending.title')}
-          {status === TRENDING_SOURCE_STATUS.ready ? (
-            <span className="omnimux-trending-source-badge" title={t('trending.source.hint')}>
-              {t('trending.source.badge')}
-            </span>
-          ) : null}
-        </h2>
-        <p className="omnimux-trending-subtitle">{t('trending.subtitle')}</p>
-      </header>
-
-      {showToolbar ? (
-        <TrendingFilterBar
-          filters={filters}
-          t={t}
-          onChange={patchFilters}
-          onReset={resetFilters}
-          dimensions={dimensions}
-          regionOptions={regionOptions}
-          industryOptions={industryOptions}
-          viewOptions={viewOptions}
-        />
-      ) : null}
-
-      {showGrid ? (
-        <div className="omnimux-trending-grid">
-          {items.map((item) => (
-            <TrendingVideoCard
-              key={item.id}
-              item={item}
-              t={t}
-              active={dockedItem?.id === item.id}
-              onRecreate={handleRecreate}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {showFilteredEmpty ? (
-        <div className="omnimux-trending-empty" data-omnimux-trending-empty="filtered">
-          <p>{t('trending.empty')}</p>
-          <button /* exempt-ui01: 空态复位属于轻量文本动作，非标准控件位 */
+        <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
+          <button /* exempt-ui01: session-guide 导航双 Tab */
             type="button"
-            className="omnimux-trending-reset"
-            onClick={resetFilters}
+            role="tab"
+            id="tab-trending"
+            aria-selected={activeTab === 'trending'}
+            aria-controls="tabpanel-trending"
+            className={`omnimux-guide-tab${activeTab === 'trending' ? ' is-active' : ''}`}
+            onClick={() => handleSwitchTab('trending')}
           >
-            {t('trending.filter.reset')}
+            {t('guide.tab.trending')}
+            {status === TRENDING_SOURCE_STATUS.ready && activeTab === 'trending' ? (
+              <span className="omnimux-trending-source-badge" title={t('trending.source.hint')}>
+                {t('trending.source.badge')}
+              </span>
+            ) : null}
+          </button>
+          <button /* exempt-ui01: session-guide 导航双 Tab */
+            type="button"
+            role="tab"
+            id="tab-skills"
+            aria-selected={activeTab === 'skills'}
+            aria-controls="tabpanel-skills"
+            className={`omnimux-guide-tab${activeTab === 'skills' ? ' is-active' : ''}`}
+            onClick={() => handleSwitchTab('skills')}
+          >
+            {t('guide.tab.skills')}
+            {activeTab === 'skills' ? (
+              <span className="omnimux-trending-source-badge">
+                {t('skills.source.badge')}
+              </span>
+            ) : null}
           </button>
         </div>
-      ) : null}
+        <p className="omnimux-trending-subtitle">
+          {activeTab === 'skills' ? t('skills.subtitle') : t('trending.subtitle')}
+        </p>
+      </header>
 
-      {refreshing ? (
-        <div className="omnimux-trending-empty" data-omnimux-trending-empty="loading">
-          <p>{t('trending.loading')}</p>
+      {activeTab === 'skills' ? (
+        <div id="tabpanel-skills" role="tabpanel" aria-labelledby="tab-skills">
+          <SkillsPanel
+            t={t}
+            onSelectSkill={handleSelectSkill}
+            activeSkillId={dockedItem?.id}
+          />
         </div>
-      ) : null}
+      ) : (
+        <div id="tabpanel-trending" role="tabpanel" aria-labelledby="tab-trending">
+          {showToolbar ? (
+            <TrendingFilterBar
+              filters={filters}
+              t={t}
+              onChange={patchFilters}
+              onReset={resetFilters}
+              dimensions={dimensions}
+              regionOptions={regionOptions}
+              industryOptions={industryOptions}
+              viewOptions={viewOptions}
+            />
+          ) : null}
 
-      {status === TRENDING_SOURCE_STATUS.empty ? (
-        <div className="omnimux-trending-empty" data-omnimux-trending-empty="library">
-          <p>{t('trending.library.empty')}</p>
-          <p className="omnimux-trending-empty-hint">{t('trending.library.emptyHint')}</p>
-        </div>
-      ) : null}
+          {showGrid ? (
+            <div className="omnimux-trending-grid">
+              {items.map((item) => (
+                <TrendingVideoCard
+                  key={item.id}
+                  item={item}
+                  t={t}
+                  active={dockedItem?.id === item.id}
+                  onRecreate={handleRecreate}
+                />
+              ))}
+            </div>
+          ) : null}
 
-      {status === TRENDING_SOURCE_STATUS.unavailable ? (
-        <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
-          <p>{t('trending.library.unavailable')}</p>
-          <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>
+          {showFilteredEmpty ? (
+            <div className="omnimux-trending-empty" data-omnimux-trending-empty="filtered">
+              <p>{t('trending.empty')}</p>
+              <button /* exempt-ui01: 空态复位属于轻量文本动作，非标准控件位 */
+                type="button"
+                className="omnimux-trending-reset"
+                onClick={resetFilters}
+              >
+                {t('trending.filter.reset')}
+              </button>
+            </div>
+          ) : null}
+
+          {refreshing ? (
+            <div className="omnimux-trending-empty" data-omnimux-trending-empty="loading">
+              <p>{t('trending.loading')}</p>
+            </div>
+          ) : null}
+
+          {status === TRENDING_SOURCE_STATUS.empty ? (
+            <div className="omnimux-trending-empty" data-omnimux-trending-empty="library">
+              <p>{t('trending.library.empty')}</p>
+              <p className="omnimux-trending-empty-hint">{t('trending.library.emptyHint')}</p>
+            </div>
+          ) : null}
+
+          {status === TRENDING_SOURCE_STATUS.unavailable ? (
+            <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
+              <p>{t('trending.library.unavailable')}</p>
+              <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
 
       {dockedItem && placement === 'docked' ? (
         <button /* exempt-ui01: 归还原生输入框属于轻量文本动作，非标准控件位 */

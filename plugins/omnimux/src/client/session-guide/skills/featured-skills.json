@@ -1,0 +1,1272 @@
+{
+  "schema": "omnimux.session-guide.featured-skills/v1",
+  "catalogGeneratedAt": "2026-09-02T13:24:03.000Z",
+  "source": "plugins/omnimux-market/catalog/index.json",
+  "skills": [
+    {
+      "id": "sk-amazon-keyword-traffic-analysis",
+      "title": "Amazon Keyword Traffic Analysis",
+      "summary": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "关键词流量",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-keyword-traffic-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-keyword-traffic-analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-listing-optimization",
+      "title": "Amazon Listing Optimization",
+      "summary": "Amazon listing, A+ and keyword coverage optimization.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "Listing优化",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-listing-optimization",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-listing-optimization"
+      }
+    },
+    {
+      "id": "sk-amazon-market-analysis",
+      "title": "Amazon Market Analysis",
+      "summary": "Amazon category and market opportunity analysis using amazon-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "市场分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-market-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-market-analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-product-analysis",
+      "title": "Amazon Product Analysis",
+      "summary": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "竞品研究",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-product-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-product-analysis"
+      }
+    },
+    {
+      "id": "sk-amazon-review-optimization",
+      "title": "Amazon Review Optimization",
+      "summary": "Amazon review, VOC, QA and pain-point optimization.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "评论优化",
+        "VOC",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-review-optimization",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-review-optimization"
+      }
+    },
+    {
+      "id": "sk-amazon-trend-risk-monitor",
+      "title": "Amazon Trend Risk Monitor",
+      "summary": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Amazon",
+        "趋势风险",
+        "BSR",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "amazon-trend-risk-monitor",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/amazon-trend-risk-monitor"
+      }
+    },
+    {
+      "id": "sk-bggg-data-amazon",
+      "title": "BGGG Amazon Data · Amazon 评论采集",
+      "summary": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入；不含评论优化报告，不保证全部评论。需环境提供 Python 3.10+ 与命令执行能力，不自动配置依赖。",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "评论采集",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "bggg-data-amazon",
+      "sourceRef": {
+        "repo": "",
+        "path": "catalog/skills/bggg-data-amazon"
+      }
+    },
+    {
+      "id": "sk-ecommerce-daily-review",
+      "title": "Ecommerce Daily Review",
+      "summary": "Daily and weekly review template for Amazon and TikTok Shop operations.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "日报复盘",
+        "Amazon",
+        "TikTok",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ecommerce-daily-review",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ecommerce-daily-review"
+      }
+    },
+    {
+      "id": "sk-ecommerce-output-spec",
+      "title": "Ecommerce Output Spec",
+      "summary": "Shared report and file output rules for ecommerce operation agents.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "输出规范",
+        "报表",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ecommerce-output-spec",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ecommerce-output-spec"
+      }
+    },
+    {
+      "id": "sk-ecommerce-routing-policy",
+      "title": "Ecommerce Routing Policy",
+      "summary": "Shared routing rules for ecommerce operation agents.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "路由策略",
+        "运营",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ecommerce-routing-policy",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ecommerce-routing-policy"
+      }
+    },
+    {
+      "id": "sk-html-report-templates",
+      "title": "HTML Report Templates",
+      "summary": "Copy-and-fill HTML report and dashboard templates for html-writer.",
+      "category": "sk-office",
+      "tags": [
+        "电商",
+        "报表",
+        "模板",
+        "HTML",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "html-report-templates",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/html-report-templates"
+      }
+    },
+    {
+      "id": "sk-omx-2d-animation-commentary-drama",
+      "title": "2D动画半解说短剧",
+      "summary": "结合2D二次元画风与解说旁白的短剧生成器，支持分镜画面、情绪旁白与节奏剪辑一键输出",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "动画",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "2d-animation-commentary-drama",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/2d-animation-commentary-drama"
+      }
+    },
+    {
+      "id": "sk-omx-3d-animation-short-generator",
+      "title": "3D动画短片",
+      "summary": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "3d-animation-short-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/3d-animation-short-generator"
+      }
+    },
+    {
+      "id": "sk-omx-3d-comic-commentary-drama",
+      "title": "3D漫剧半解说",
+      "summary": "专为3D漫剧打造的半解说视频生成工作流，自动完成分镜调度、角色动作与解说音轨合成",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "3d-comic-commentary-drama",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/3d-comic-commentary-drama"
+      }
+    },
+    {
+      "id": "sk-omx-asmr-ambient",
+      "title": "助眠音频",
+      "summary": "生成助眠冥想与ASMR音频",
+      "category": "sk-office",
+      "tags": [
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "asmr-ambient",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/asmr-ambient"
+      }
+    },
+    {
+      "id": "sk-omx-audiobook",
+      "title": "有声书",
+      "summary": "把书籍转化为多角色有声书",
+      "category": "sk-office",
+      "tags": [
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "audiobook",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/audiobook"
+      }
+    },
+    {
+      "id": "sk-omx-brand-promo-video-generator",
+      "title": "品牌宣传短片生成器",
+      "summary": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "brand-promo-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/brand-promo-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-brand-stream-mg",
+      "title": "品牌流线 MG 动效",
+      "summary": "基于Logo与主题生成IP领航的品牌流线MG动效视频，适合新品发布预热与社媒传播。",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "brand-stream-mg",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/brand-stream-mg"
+      }
+    },
+    {
+      "id": "sk-omx-chinese-style-short-drama-generator",
+      "title": "国风短剧成片生成器",
+      "summary": "国风短剧全流程成片",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "chinese-style-short-drama-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/chinese-style-short-drama-generator"
+      }
+    },
+    {
+      "id": "sk-omx-clip-export",
+      "title": "剪映导出",
+      "summary": "把视频推送到剪映或CapCut草稿",
+      "category": "sk-visual",
+      "tags": [
+        "平台工具",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "clip-export",
+      "sourceRef": {
+        "repo": "",
+        "path": "catalog/skills/clip-export"
+      }
+    },
+    {
+      "id": "sk-omx-co-op-game-intro-generator",
+      "title": "双人游戏开场视频生成器",
+      "summary": "根据玩家名称、视觉风格和角色参考图，经首图确认后生成双人游戏菜单开场视频。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "co-op-game-intro-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/co-op-game-intro-generator"
+      }
+    },
+    {
+      "id": "sk-omx-digital-product-promo-generator",
+      "title": "数字产品宣传片生成",
+      "summary": "把真实产品页面、前端项目与用户动效参考转成可审片的电影感宣传片，准确呈现界面、运镜、节奏和声音。",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "digital-product-promo-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/digital-product-promo-generator"
+      }
+    },
+    {
+      "id": "sk-omx-dot-matrix-brand-wordmark-motion",
+      "title": "点阵品牌字形动效",
+      "summary": "根据用户提供的品牌 Logo、品牌名与标语生成点阵品牌字形动效，输出横版品牌图、改写后的动效提示词与点阵品牌字形动效视频。",
+      "category": "sk-visual",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "dot-matrix-brand-wordmark-motion",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/dot-matrix-brand-wordmark-motion"
+      }
+    },
+    {
+      "id": "sk-omx-drama-soundtrack",
+      "title": "影视配乐",
+      "summary": "创作角色主题曲与场景配乐",
+      "category": "sk-visual",
+      "tags": [
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "drama-soundtrack",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/drama-soundtrack"
+      }
+    },
+    {
+      "id": "sk-omx-ecommerce-design",
+      "title": "电商图设计",
+      "summary": "覆盖14品类的电商图设计",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ecommerce-design",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ecommerce-design"
+      }
+    },
+    {
+      "id": "sk-omx-ecommerce-image",
+      "title": "电商商品图",
+      "summary": "从实拍图生成平台合规的电商组图",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ecommerce-image",
+      "sourceRef": {
+        "repo": "",
+        "path": "catalog/skills/ecommerce-image"
+      }
+    },
+    {
+      "id": "sk-omx-education-studio",
+      "title": "教育内容工作室",
+      "summary": "教育内容与教育视频的一体化创作入口。仅当用户明确要解决教学、学习或评量问题，明确要制作课程、知识讲解、培训、科普、教案、课件、讲义、练习、测验或教学视频，或明确要把课堂、课程、教材、试题等教育素材加工成可教学、可学习或可评量的内容时使用。支持学习目标与路径设计、讲解和例题、课堂活动、题组与答案解析、课件与讲义结构，以及教育视频从 Brief、逐字旁白、...",
+      "category": "sk-visual",
+      "tags": [
+        "教育",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "education-studio",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/education-studio"
+      }
+    },
+    {
+      "id": "sk-omx-fashion-scene-showcase-video",
+      "title": "时装场景展示视频",
+      "summary": "高定服装与潮牌模特动态展示短视频生成器，支持秀场T台走秀、自然街拍与面料光影细节",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "电商",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "fashion-scene-showcase-video",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/fashion-scene-showcase-video"
+      }
+    },
+    {
+      "id": "sk-omx-felt-stop-motion-story-short",
+      "title": "羊毛毡故事短片",
+      "summary": "温暖治愈的定格毛毡动画短片生成器，支持柔软织物纹理质感、微动镜头与治愈童话音效配乐",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "felt-stop-motion-story-short",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/felt-stop-motion-story-short"
+      }
+    },
+    {
+      "id": "sk-omx-film-reference-prompt-writer",
+      "title": "电影质感提示词大师",
+      "summary": "从电影名称、剧照或截图提炼可复用的视觉与镜头规则，生成可直接执行的图像或视频提示词。",
+      "category": "sk-visual",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "film-reference-prompt-writer",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/film-reference-prompt-writer"
+      }
+    },
+    {
+      "id": "sk-omx-fpv-tour-video-generator",
+      "title": "第一视角 FPV 穿越生成",
+      "summary": "先确认时长和画幅，再按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
+      "category": "sk-visual",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "fpv-tour-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/fpv-tour-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-h3-prompt-expert",
+      "title": "H3 提示词专家",
+      "summary": "判断视频需求与参考素材，将零散输入整理成可控的多模态视频生成指令。",
+      "category": "sk-visual",
+      "tags": [
+        "平台工具",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "h3-prompt-expert",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/h3-prompt-expert"
+      }
+    },
+    {
+      "id": "sk-omx-h3-visual-design",
+      "title": "H3 Visual Design",
+      "summary": "MiniMax H3 单点动态视觉设计与包装入口。仅当两个条件同时成立时使用：用户明确要制作或加工一条短视频，并且在文字请求或同一任务已确认的上下文中明确提出至少一种可见的动态技法。支持三类专业工作流：字体、Logo、标题、口播字幕或图形的动态版式与空间包装；追踪框、拓扑线、数字 ID、局部负片等跟随主体运动的 TouchDesigner / TD /...",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "商业广告",
+        "动画",
+        "精选",
+        "创意实验"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "h3-visual-design",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/h3-visual-design"
+      }
+    },
+    {
+      "id": "sk-omx-handdrawn-live-video-generator",
+      "title": "手绘实拍融合视频生成器",
+      "summary": "基于场景创意，生成手绘动画与实拍接触变形的15秒视频，适用于创意短片制作。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "handdrawn-live-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/handdrawn-live-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-ip-toy-grid-motion",
+      "title": "IP潮玩六宫格动态海报",
+      "summary": "基于用户上传的角色形象，生成3D潮玩六宫格竖版动态视频，适合IP提案与社媒展示。",
+      "category": "sk-marketing",
+      "tags": [
+        "电商",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "ip-toy-grid-motion",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/ip-toy-grid-motion"
+      }
+    },
+    {
+      "id": "sk-omx-line-doodle-explainer-generator",
+      "title": "线条图解科普视频生成",
+      "summary": "根据知识主题或教材内容，生成线条小人图解科普视频方案与成片素材，适用于知识讲解短视频。",
+      "category": "sk-visual",
+      "tags": [
+        "教育",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "line-doodle-explainer-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/line-doodle-explainer-generator"
+      }
+    },
+    {
+      "id": "sk-omx-lip-product-ad-generator",
+      "title": "唇部彩妆广告生成",
+      "summary": "按固定顺序生成横屏30秒唇部彩妆TVC，先完成模特图、3×3静物图和脚本文件再生成视频，并强化自然的人物与产品、道具互动。",
+      "category": "sk-commerce",
+      "tags": [
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "lip-product-ad-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/lip-product-ad-generator"
+      }
+    },
+    {
+      "id": "sk-omx-live-action-commentary-drama",
+      "title": "半解说真人短剧",
+      "summary": "真人短剧半解说成片助手，拆解剧情爽点、黄金3秒抓人开场与强反转旁白设计",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "live-action-commentary-drama",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/live-action-commentary-drama"
+      }
+    },
+    {
+      "id": "sk-omx-micro-expression-video-generator",
+      "title": "人物微表情视频生成",
+      "summary": "根据角色图、剧本或情绪短语设计分时微表情提示词，用于塑造自然可信的角色表演。",
+      "category": "sk-writing",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "micro-expression-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/micro-expression-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-minimalist-product-ad-generator",
+      "title": "极简产品广告生成器",
+      "summary": "基于产品图片和广告需求，完成卖点提炼、英文文案与节拍分镜设计，输出极简产品广告短片，适用于电商推广与新品发布。",
+      "category": "sk-commerce",
+      "tags": [
+        "商业广告",
+        "电商",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "minimalist-product-ad-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/minimalist-product-ad-generator"
+      }
+    },
+    {
+      "id": "sk-omx-music-video-subtitle-generator",
+      "title": "音乐MV动态字幕生成器",
+      "summary": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案，适用于人工智能音乐视频创作。",
+      "category": "sk-writing",
+      "tags": [
+        "创意实验",
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "music-video-subtitle-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/music-video-subtitle-generator"
+      }
+    },
+    {
+      "id": "sk-omx-paper-collage-explainer-generator",
+      "title": "纸拼贴讲解动画",
+      "summary": "将文案、故事节点或抽象概念转成可确认的纸拼贴讲解动画，并保留触感音效。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "教育",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "paper-collage-explainer-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/paper-collage-explainer-generator"
+      }
+    },
+    {
+      "id": "sk-omx-papercraft-stop-motion-explainer",
+      "title": "纸艺定格科普视频生成器",
+      "summary": "根据知识主题，完成纸偶、分层布景、分镜与提示词设计，输出可执行的纸艺定格科普视频创作包。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "教育",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "papercraft-stop-motion-explainer",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/papercraft-stop-motion-explainer"
+      }
+    },
+    {
+      "id": "sk-omx-pov-short-film-generator",
+      "title": "第一视角短片生成",
+      "summary": "将创意、剧本或参考素材规划为严格主角眼睛视角的沉浸式短片制作方案。",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "pov-short-film-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/pov-short-film-generator"
+      }
+    },
+    {
+      "id": "sk-omx-product-kinetic-typography-tvc",
+      "title": "产品贴字动画TVC",
+      "summary": "商业广告级产品贴字与动效排版TVC生成器，融合动态文字跟拍与快节奏产品卖点打底",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "product-kinetic-typography-tvc",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/product-kinetic-typography-tvc"
+      }
+    },
+    {
+      "id": "sk-omx-retro-city-cel-animation-short",
+      "title": "复古都市赛璐璐短片",
+      "summary": "90年代复古都市赛璐璐动画生成器，包含颗粒噪点、霓虹色调与CityPop氛围感镜头语言",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "retro-city-cel-animation-short",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/retro-city-cel-animation-short"
+      }
+    },
+    {
+      "id": "sk-omx-scifi-cinematic-video-generator",
+      "title": "未来科幻质感影视生成器",
+      "summary": "赛博朋克与硬科幻质感影视生成器，强化光影粒子、体积雾与未来机械细节表现",
+      "category": "sk-visual",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "scifi-cinematic-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/scifi-cinematic-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-short-drama-multilingual-dubbing",
+      "title": "短剧多语言出海配音",
+      "summary": "分离人声与背景音并逐句复刻音色和节奏，输出目标语言配音视频与字幕文件。",
+      "category": "sk-writing",
+      "tags": [
+        "创意实验",
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "short-drama-multilingual-dubbing",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/short-drama-multilingual-dubbing"
+      }
+    },
+    {
+      "id": "sk-omx-short-drama-screenwriter",
+      "title": "短剧编剧助手",
+      "summary": "按选题撰写完整短剧剧本",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "short-drama-screenwriter",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/short-drama-screenwriter"
+      }
+    },
+    {
+      "id": "sk-omx-short-drama-series-writer",
+      "title": "微短剧剧集编剧",
+      "summary": "一键短剧全流程剧本",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "short-drama-series-writer",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/short-drama-series-writer"
+      }
+    },
+    {
+      "id": "sk-omx-silkscreen-decorative-illustration-short",
+      "title": "丝印装饰插画风格短片",
+      "summary": "将丝印装饰插画主题转成同步音效短片，并可追加同等时长的器乐BGM版，适合奢华叙事广告。",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "silkscreen-decorative-illustration-short",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/silkscreen-decorative-illustration-short"
+      }
+    },
+    {
+      "id": "sk-omx-sitcom-story-video-generator",
+      "title": "情景喜剧故事视频",
+      "summary": "美剧情景喜剧风格故事视频生成助手，涵盖多机位切换、罐头笑声节奏与生活喜剧冲突提示词",
+      "category": "sk-writing",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "sitcom-story-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/sitcom-story-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-subtitle-correction",
+      "title": "字幕修正",
+      "summary": "修正 SRT 字幕语音识别错误，严格保留时间轴和编号。",
+      "category": "sk-writing",
+      "tags": [
+        "平台工具",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "subtitle-correction",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/subtitle-correction"
+      }
+    },
+    {
+      "id": "sk-omx-suspense-title-sequence-generator",
+      "title": "悬疑电影片头生成",
+      "summary": "根据电影设定与参考素材锚定关键帧和英文署名，生成十五秒复古悬疑美学片头成片。",
+      "category": "sk-visual",
+      "tags": [
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "suspense-title-sequence-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/suspense-title-sequence-generator"
+      }
+    },
+    {
+      "id": "sk-omx-transcript-broll-planner",
+      "title": "口播视频B-roll规划器",
+      "summary": "把口播逐字稿按语义拆成可审片的 B-roll 镜头方案，并在用户确认后生成已批准的视频素材。",
+      "category": "sk-writing",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "transcript-broll-planner",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/transcript-broll-planner"
+      }
+    },
+    {
+      "id": "sk-omx-video-deconstruct",
+      "title": "视频拆解与复刻",
+      "summary": "拆解用户提供的视频、关键帧或详细视频描述，将可验证的镜头、运动、声音和连续性证据编译为可复刻的最终视频 Prompt 与编辑计划。适用于“用 H3 复刻这个视频”“逐镜拆解并反推提示词”“保持原片结构做一版”、recreate this video、reverse engineer this video prompt、shot-by-shot vide...",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "商业广告",
+        "动画",
+        "精选",
+        "OmniMux"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "video-deconstruct",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-deconstruct"
+      }
+    },
+    {
+      "id": "sk-omx-video-deconstruct-analyzer",
+      "title": "视频拆解分析师",
+      "summary": "高密度拆解AI视频",
+      "category": "sk-visual",
+      "tags": [
+        "短剧漫剧",
+        "商业广告",
+        "动画",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "video-deconstruct-analyzer",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-deconstruct-analyzer"
+      }
+    },
+    {
+      "id": "sk-omx-vox-style-video-generator",
+      "title": "Vox风格科普动画",
+      "summary": "根据主题、文章或报告生成带字幕、旁白与背景音乐的拼贴风格科普动画成片。",
+      "category": "sk-writing",
+      "tags": [
+        "教育",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "vox-style-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/vox-style-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-wes-anderson-aesthetic-generator",
+      "title": "韦斯·安德森美学短片生成器",
+      "summary": "严格对齐韦斯·安德森对称构图、复古调色与平移运镜美学的专业电影感短片生成器",
+      "category": "sk-visual",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "wes-anderson-aesthetic-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/wes-anderson-aesthetic-generator"
+      }
+    },
+    {
+      "id": "sk-shopee-brand-analysis",
+      "title": "Shopee Brand Analysis",
+      "summary": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "品牌分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "shopee-brand-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/shopee-brand-analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-keyword-analysis",
+      "title": "Shopee Keyword Analysis",
+      "summary": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "关键词分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "shopee-keyword-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/shopee-keyword-analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-market-analysis",
+      "title": "Shopee Market Analysis",
+      "summary": "Shopee site and category market opportunity analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "市场分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "shopee-market-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/shopee-market-analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-product-analysis",
+      "title": "Shopee Product Analysis",
+      "summary": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "商品分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "shopee-product-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/shopee-product-analysis"
+      }
+    },
+    {
+      "id": "sk-shopee-shop-analysis",
+      "title": "Shopee Shop Analysis",
+      "summary": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
+      "category": "sk-commerce",
+      "tags": [
+        "电商",
+        "Shopee",
+        "店铺分析",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "shopee-shop-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/shopee-shop-analysis"
+      }
+    },
+    {
+      "id": "sk-tiktok-market-trend-analysis",
+      "title": "TikTok Market Trend Analysis",
+      "summary": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
+      "category": "sk-commerce",
+      "tags": [
+        "TikTok",
+        "电商",
+        "市场趋势",
+        "Topview",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "tiktok-market-trend-analysis",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/tiktok-market-trend-analysis"
+      }
+    },
+    {
+      "id": "sk-tiktok-material-breakdown",
+      "title": "TikTok Material Breakdown",
+      "summary": "TikTok viral video, material, hook and CTA breakdown.",
+      "category": "sk-video",
+      "tags": [
+        "TikTok",
+        "视频",
+        "素材拆解",
+        "Hook",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "tiktok-material-breakdown",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/tiktok-material-breakdown"
+      }
+    },
+    {
+      "id": "sk-tiktok-product-selection",
+      "title": "TikTok Product Selection",
+      "summary": "TikTok Shop viral product selection and scoring.",
+      "category": "sk-commerce",
+      "tags": [
+        "TikTok",
+        "电商",
+        "爆款选品",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "tiktok-product-selection",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/tiktok-product-selection"
+      }
+    },
+    {
+      "id": "sk-tiktok-script-creation",
+      "title": "TikTok Script Creation",
+      "summary": "TikTok UGC, creator, ad and live script generation.",
+      "category": "sk-video",
+      "tags": [
+        "TikTok",
+        "脚本创作",
+        "UGC",
+        "短视频",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "tiktok-script-creation",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/tiktok-script-creation"
+      }
+    },
+    {
+      "id": "sk-video-generate-canvas",
+      "title": "video-generate-canvas",
+      "summary": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
+      "category": "sk-video",
+      "tags": [
+        "视频",
+        "画布",
+        "视频生成",
+        "精选"
+      ],
+      "cover": "",
+      "avatar": "",
+      "skill": "video-generate-canvas",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/video-generate-canvas"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "sk-commerce",
+      "title": "电商变现"
+    },
+    {
+      "id": "sk-marketing",
+      "title": "营销增长"
+    },
+    {
+      "id": "sk-office",
+      "title": "协作办公"
+    },
+    {
+      "id": "sk-visual",
+      "title": "视觉与视频"
+    },
+    {
+      "id": "sk-writing",
+      "title": "内容创作"
+    }
+  ]
+}
