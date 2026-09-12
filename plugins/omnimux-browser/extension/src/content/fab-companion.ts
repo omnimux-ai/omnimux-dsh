@@ -264,14 +264,15 @@ export function initFabCompanion(): void {
   })
 
   // Press ESC to collapse
-  window.addEventListener('keydown', (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isExpanded) {
       collapseWorkstation()
     }
-  })
+  }
+  window.addEventListener('keydown', handleKeyDown)
 
   // Listen for messages from workstation iframe
-  window.addEventListener('message', async (e: MessageEvent) => {
+  const handleMessage = async (e: MessageEvent) => {
     if (!e.data || typeof e.data !== 'object') return
     const { type, text } = e.data
 
@@ -305,7 +306,15 @@ export function initFabCompanion(): void {
       }, '*')
       return
     }
-  })
+  }
+  window.addEventListener('message', handleMessage)
+
+  // Unsubscribe and remove global event listeners
+  const unsubscribe = () => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('message', handleMessage)
+  }
+  (window as unknown as { __omnimux_fab_unsubscribe?: () => void }).__omnimux_fab_unsubscribe = unsubscribe
 
   // Also respond to runtime messages from native side panel
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
