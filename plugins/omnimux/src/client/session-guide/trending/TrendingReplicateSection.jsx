@@ -333,7 +333,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       setPlacement('docked')
     }
     setDockedItem(skill)
-    onApplyPrompt?.(buildSkillPrompt(skill), skill)
+    onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
   }
 
   return (

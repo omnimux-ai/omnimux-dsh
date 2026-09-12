@@ -6,7 +6,11 @@
     {
       "id": "sk-omx-3d-animation-short-generator",
       "title": "3D动画短片",
+      "titleZh": "3D动画短片",
+      "titleEn": "3D Animation Short Film",
       "summary": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
+      "summaryZh": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
+      "summaryEn": "Generate unified 3D animation shorts with character & scene setup, shot planning, and storyboard video synthesis.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -25,7 +29,11 @@
     {
       "id": "sk-omx-brand-promo-video-generator",
       "title": "品牌宣传短片生成器",
+      "titleZh": "品牌宣传短片生成器",
+      "titleEn": "Brand Promo Video Generator",
       "summary": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
+      "summaryZh": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
+      "summaryEn": "Create presentation-ready brand promo videos with creative direction, storyboarding, and audiovisual synthesis.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -44,7 +52,11 @@
     {
       "id": "sk-omx-minimalist-product-ad-generator",
       "title": "极简产品广告生成器",
+      "titleZh": "极简产品广告生成器",
+      "titleEn": "Minimalist Product Ad Generator",
       "summary": "基于产品图片和广告需求，完成卖点提炼、英文文案与节拍分镜设计，输出极简产品广告短片，适用于电商推广与新品发布。",
+      "summaryZh": "完成卖点提炼与节拍分镜设计，输出极简美学产品广告短片。",
+      "summaryEn": "Create clean, minimalist product commercial videos highlighting core selling points and aesthetics.",
       "category": "sk-commerce",
       "tags": [
         "商业广告",
@@ -64,7 +76,11 @@
     {
       "id": "sk-omx-music-video-subtitle-generator",
       "title": "音乐MV动态字幕生成器",
+      "titleZh": "音乐MV动态字幕生成器",
+      "titleEn": "Music Video Dynamic Subtitle Generator",
       "summary": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案，适用于人工智能音乐视频创作。",
+      "summaryZh": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案。",
+      "summaryEn": "Synchronize dynamic rhythm-matched motion typography and stylized subtitles for AI music videos.",
       "category": "sk-writing",
       "tags": [
         "创意实验",
@@ -84,7 +100,11 @@
     {
       "id": "sk-omx-paper-collage-explainer-generator",
       "title": "纸拼贴讲解动画",
+      "titleZh": "纸拼贴讲解动画",
+      "titleEn": "Paper Collage Explainer Animation",
       "summary": "将文案、故事节点或抽象概念转成可确认的纸拼贴讲解动画，并保留触感音效。",
+      "summaryZh": "将文案与抽象概念转成触感质感的纸拼贴定格讲解动画。",
+      "summaryEn": "Transform scripts and ideas into tactile, artistic paper collage stop-motion explainer animations.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -105,7 +125,11 @@
     {
       "id": "sk-omx-fpv-tour-video-generator",
       "title": "第一视角 FPV 穿越生成",
+      "titleZh": "第一视角 FPV 穿越生成",
+      "titleEn": "FPV Tour Video Generator",
       "summary": "先确认时长和画幅，再按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
+      "summaryZh": "按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
+      "summaryEn": "Generate thrilling, continuous first-person FPV drone one-take walkthroughs through 3D spaces.",
       "category": "sk-visual",
       "tags": [
         "专业影视",
@@ -124,7 +148,11 @@
     {
       "id": "sk-omx-pov-short-film-generator",
       "title": "第一视角短片生成",
+      "titleZh": "第一视角短片生成",
+      "titleEn": "POV Short Film Generator",
       "summary": "将创意、剧本或参考素材规划为严格主角眼睛视角的沉浸式短片制作方案。",
+      "summaryZh": "规划主角第一人称视角的沉浸式短片制作方案。",
+      "summaryEn": "Direct immersive point-of-view (POV) cinematic short stories from the protagonist’s eyes.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -143,7 +171,11 @@
     {
       "id": "sk-omx-suspense-title-sequence-generator",
       "title": "悬疑电影片头生成",
+      "titleZh": "悬疑电影片头生成",
+      "titleEn": "Suspense Film Title Sequence",
       "summary": "根据电影设定与参考素材锚定关键帧和英文署名，生成十五秒复古悬疑美学片头成片。",
+      "summaryZh": "锚定关键帧和艺术署名，生成复古悬疑美学电影片头成片。",
+      "summaryEn": "Generate retro thriller and noir title sequences with atmospheric typography and moody lighting.",
       "category": "sk-visual",
       "tags": [
         "创意实验",
@@ -162,7 +194,11 @@
     {
       "id": "sk-amazon-keyword-traffic-analysis",
       "title": "Amazon Keyword Traffic Analysis",
+      "titleZh": "亚马逊关键词流量分析",
+      "titleEn": "Amazon Keyword Traffic Analysis",
       "summary": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
+      "summaryZh": "亚马逊关键词、流量来源、ABA 趋势与 PPC 广告机会分析。",
+      "summaryEn": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -183,7 +219,11 @@
     {
       "id": "sk-amazon-listing-optimization",
       "title": "Amazon Listing Optimization",
+      "titleZh": "亚马逊 Listing 优化",
+      "titleEn": "Amazon Listing Optimization",
       "summary": "Amazon listing, A+ and keyword coverage optimization.",
+      "summaryZh": "亚马逊 Listing 文案、A+ 页面规划与关键词覆盖度优化。",
+      "summaryEn": "Amazon listing, A+ and keyword coverage optimization.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -204,7 +244,11 @@
     {
       "id": "sk-amazon-market-analysis",
       "title": "Amazon Market Analysis",
+      "titleZh": "亚马逊市场分析",
+      "titleEn": "Amazon Market Analysis",
       "summary": "Amazon category and market opportunity analysis using amazon-mcp.",
+      "summaryZh": "使用 amazon-mcp 进行亚马逊品类与市场机会深度分析。",
+      "summaryEn": "Amazon category and market opportunity analysis using amazon-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -225,7 +269,11 @@
     {
       "id": "sk-amazon-product-analysis",
       "title": "Amazon Product Analysis",
+      "titleZh": "亚马逊产品分析",
+      "titleEn": "Amazon Product Analysis",
       "summary": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
+      "summaryZh": "使用 amazon-mcp 及输入文件进行亚马逊 ASIN、SKU 与竞品研究。",
+      "summaryEn": "Amazon ASIN, SKU and competitor product research using amazon-mcp and files.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -246,7 +294,11 @@
     {
       "id": "sk-amazon-review-optimization",
       "title": "Amazon Review Optimization",
+      "titleZh": "亚马逊评论优化",
+      "titleEn": "Amazon Review Optimization",
       "summary": "Amazon review, VOC, QA and pain-point optimization.",
+      "summaryZh": "亚马逊买家书面评论、VOC 声量、QA 问答与用户痛点深度优化。",
+      "summaryEn": "Amazon review, VOC, QA and pain-point optimization.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -268,7 +320,11 @@
     {
       "id": "sk-amazon-trend-risk-monitor",
       "title": "Amazon Trend Risk Monitor",
+      "titleZh": "亚马逊趋势风险监控",
+      "titleEn": "Amazon Trend Risk Monitor",
       "summary": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
+      "summaryZh": "亚马逊热度趋势、BSR 榜单、销量预测与商标侵权风险监控。",
+      "summaryEn": "Amazon trend, BSR, sales prediction and trademark/risk monitoring.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -290,7 +346,11 @@
     {
       "id": "sk-bggg-data-amazon",
       "title": "BGGG Amazon Data · Amazon 评论采集",
+      "titleZh": "BGGG Amazon 评论采集",
+      "titleEn": "BGGG Amazon Data · Review Scraper",
       "summary": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入；不含评论优化报告，不保证全部评论。需环境提供 Python 3.10+ 与命令执行能力，不自动配置依赖。",
+      "summaryZh": "采集 Amazon US 公开书面评论，保留尝试与错误记录并归一化为可追溯 JSONL，为 VOC 分析提供输入。",
+      "summaryEn": "Collect public Amazon US reviews and normalize into auditable JSONL datasets for VOC.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -310,7 +370,11 @@
     {
       "id": "sk-ecommerce-daily-review",
       "title": "Ecommerce Daily Review",
+      "titleZh": "电商日报复盘",
+      "titleEn": "Ecommerce Daily Review",
       "summary": "Daily and weekly review template for Amazon and TikTok Shop operations.",
+      "summaryZh": "面向亚马逊和 TikTok Shop 运营的每日与每周复盘模板。",
+      "summaryEn": "Daily and weekly review template for Amazon and TikTok Shop operations.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -332,7 +396,11 @@
     {
       "id": "sk-ecommerce-output-spec",
       "title": "Ecommerce Output Spec",
+      "titleZh": "电商输出规范",
+      "titleEn": "Ecommerce Output Spec",
       "summary": "Shared report and file output rules for ecommerce operation agents.",
+      "summaryZh": "电商运营 Agent 的共享报表与文件输出交付规范。",
+      "summaryEn": "Shared report and file output rules for ecommerce operation agents.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -353,7 +421,11 @@
     {
       "id": "sk-ecommerce-routing-policy",
       "title": "Ecommerce Routing Policy",
+      "titleZh": "电商路由策略",
+      "titleEn": "Ecommerce Routing Policy",
       "summary": "Shared routing rules for ecommerce operation agents.",
+      "summaryZh": "电商运营 Agent 的共享任务路由规则与分流策略。",
+      "summaryEn": "Shared routing rules for ecommerce operation agents.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -374,7 +446,11 @@
     {
       "id": "sk-html-report-templates",
       "title": "HTML Report Templates",
+      "titleZh": "HTML 报表模板",
+      "titleEn": "HTML Report Templates",
       "summary": "Copy-and-fill HTML report and dashboard templates for html-writer.",
+      "summaryZh": "用于 html-writer 的复制即用 HTML 报表与仪表盘模板。",
+      "summaryEn": "Copy-and-fill HTML report and dashboard templates for html-writer.",
       "category": "sk-office",
       "tags": [
         "电商",
@@ -396,7 +472,11 @@
     {
       "id": "sk-omx-2d-animation-commentary-drama",
       "title": "2D动画半解说短剧",
+      "titleZh": "2D动画半解说短剧",
+      "titleEn": "2D Animation Commentary Drama",
       "summary": "结合2D二次元画风与解说旁白的短剧生成器，支持分镜画面、情绪旁白与节奏剪辑一键输出",
+      "summaryZh": "结合2D二次元画风与解说旁白的短剧生成器，支持分镜与节奏剪辑一键输出。",
+      "summaryEn": "Generate 2D anime commentary short dramas combining stylized visuals with dramatic voiceover.",
       "category": "sk-visual",
       "tags": [
         "短剧漫剧",
@@ -416,7 +496,11 @@
     {
       "id": "sk-omx-3d-comic-commentary-drama",
       "title": "3D漫剧半解说",
+      "titleZh": "3D漫剧半解说",
+      "titleEn": "3D Comic Commentary Drama",
       "summary": "专为3D漫剧打造的半解说视频生成工作流，自动完成分镜调度、角色动作与解说音轨合成",
+      "summaryZh": "3D漫剧半解说视频生成工作流，自动完成分镜调度、动作与音轨合成。",
+      "summaryEn": "Produce 3D dynamic webtoon commentary videos with choreographed action and character dialogue.",
       "category": "sk-visual",
       "tags": [
         "短剧漫剧",
@@ -435,7 +519,11 @@
     {
       "id": "sk-omx-asmr-ambient",
       "title": "助眠音频",
+      "titleZh": "助眠音频",
+      "titleEn": "ASMR Ambient Audio",
       "summary": "生成助眠冥想与ASMR音频",
+      "summaryZh": "生成助眠冥想与ASMR音频。",
+      "summaryEn": "Generate sleep aid, meditation, and immersive ASMR ambient audio tracks.",
       "category": "sk-office",
       "tags": [
         "音频音乐",
@@ -454,7 +542,11 @@
     {
       "id": "sk-omx-audiobook",
       "title": "有声书",
+      "titleZh": "有声书",
+      "titleEn": "Multi-Voice Audiobook",
       "summary": "把书籍转化为多角色有声书",
+      "summaryZh": "把书籍转化为多角色有声书。",
+      "summaryEn": "Convert books and manuscripts into multi-character audiobooks with expressive narration.",
       "category": "sk-office",
       "tags": [
         "音频音乐",
@@ -473,7 +565,11 @@
     {
       "id": "sk-omx-brand-stream-mg",
       "title": "品牌流线 MG 动效",
+      "titleZh": "品牌流线 MG 动效",
+      "titleEn": "Brand Stream Motion Graphics",
       "summary": "基于Logo与主题生成IP领航的品牌流线MG动效视频，适合新品发布预热与社媒传播。",
+      "summaryZh": "基于Logo与主题生成IP领航的品牌流线MG动效视频，适合新品发布预热与社媒传播。",
+      "summaryEn": "Generate IP-led brand stream motion graphic videos for new product launches and social media buzz.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -492,7 +588,11 @@
     {
       "id": "sk-omx-chinese-style-short-drama-generator",
       "title": "国风短剧成片生成器",
+      "titleZh": "国风短剧成片生成器",
+      "titleEn": "Chinese Style Drama Generator",
       "summary": "国风短剧全流程成片",
+      "summaryZh": "国风短剧全流程成片创作。",
+      "summaryEn": "Full-pipeline production for traditional Chinese style cinematic short dramas.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -511,7 +611,11 @@
     {
       "id": "sk-omx-clip-export",
       "title": "剪映导出",
+      "titleZh": "剪映导出",
+      "titleEn": "CapCut / JianYing Export",
       "summary": "把视频推送到剪映或CapCut草稿",
+      "summaryZh": "把视频推送到剪映或CapCut草稿。",
+      "summaryEn": "Export and push ready-to-edit video projects directly into JianYing or CapCut drafts.",
       "category": "sk-visual",
       "tags": [
         "平台工具",
@@ -530,7 +634,11 @@
     {
       "id": "sk-omx-co-op-game-intro-generator",
       "title": "双人游戏开场视频生成器",
+      "titleZh": "双人游戏开场视频生成器",
+      "titleEn": "Co-Op Game Intro Generator",
       "summary": "根据玩家名称、视觉风格和角色参考图，经首图确认后生成双人游戏菜单开场视频。",
+      "summaryZh": "根据玩家名称、视觉风格和角色参考图，生成双人游戏菜单开场视频。",
+      "summaryEn": "Generate stylized 2-player co-op game title and menu intro videos from character references.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -549,7 +657,11 @@
     {
       "id": "sk-omx-digital-product-promo-generator",
       "title": "数字产品宣传片生成",
+      "titleZh": "数字产品宣传片生成",
+      "titleEn": "Digital Product Promo Video",
       "summary": "把真实产品页面、前端项目与用户动效参考转成可审片的电影感宣传片，准确呈现界面、运镜、节奏和声音。",
+      "summaryZh": "把真实产品页面、前端项目与用户动效参考转成可审片的电影感宣传片，准确呈现界面、运镜、节奏和声音。",
+      "summaryEn": "Transform web apps, software interfaces, and UI motion into review-ready cinematic product promo videos.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -568,7 +680,11 @@
     {
       "id": "sk-omx-dot-matrix-brand-wordmark-motion",
       "title": "点阵品牌字形动效",
+      "titleZh": "点阵品牌字形动效",
+      "titleEn": "Dot Matrix Wordmark Motion",
       "summary": "根据用户提供的品牌 Logo、品牌名与标语生成点阵品牌字形动效，输出横版品牌图、改写后的动效提示词与点阵品牌字形动效视频。",
+      "summaryZh": "根据品牌 Logo、品牌名与标语生成点阵品牌字形动效视频与横版品牌图。",
+      "summaryEn": "Generate futuristic dot-matrix wordmark motion videos and branding graphics from logos and slogans.",
       "category": "sk-visual",
       "tags": [
         "商业广告",
@@ -587,7 +703,11 @@
     {
       "id": "sk-omx-drama-soundtrack",
       "title": "影视配乐",
+      "titleZh": "影视配乐",
+      "titleEn": "Drama Soundtrack Composer",
       "summary": "创作角色主题曲与场景配乐",
+      "summaryZh": "创作角色主题曲与场景配乐。",
+      "summaryEn": "Compose emotive character theme songs and immersive background soundtracks for films and dramas.",
       "category": "sk-visual",
       "tags": [
         "音频音乐",
@@ -606,7 +726,11 @@
     {
       "id": "sk-omx-ecommerce-design",
       "title": "电商图设计",
+      "titleZh": "电商图设计",
+      "titleEn": "E-Commerce Graphic Design",
       "summary": "覆盖14品类的电商图设计",
+      "summaryZh": "覆盖多品类的专业电商详情页与主图设计。",
+      "summaryEn": "Design conversion-focused e-commerce product detail pages, hero banners, and promotional cards.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -625,7 +749,11 @@
     {
       "id": "sk-omx-ecommerce-image",
       "title": "电商商品图",
+      "titleZh": "电商商品图",
+      "titleEn": "E-Commerce Product Image",
       "summary": "从实拍图生成平台合规的电商组图",
+      "summaryZh": "从实拍图生成平台合规的高品质电商组图。",
+      "summaryEn": "Generate platform-compliant, commercial-grade product photography sets from real product shots.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -644,7 +772,11 @@
     {
       "id": "sk-omx-education-studio",
       "title": "教育内容工作室",
+      "titleZh": "教育内容工作室",
+      "titleEn": "Education Content Studio",
       "summary": "教育内容与教育视频的一体化创作入口。仅当用户明确要解决教学、学习或评量问题，明确要制作课程、知识讲解、培训、科普、教案、课件、讲义、练习、测验或教学视频，或明确要把课堂、课程、教材、试题等教育素材加工成可教学、可学习或可评量的内容时使用。支持学习目标与路径设计、讲解和例题、课堂活动、题组与答案解析、课件与讲义结构，以及教育视频从 Brief、逐字旁白、...",
+      "summaryZh": "教育内容与教育视频的一体化创作入口，覆盖讲解、课件与教学视频。",
+      "summaryEn": "All-in-one studio for instructional content, explainer videos, courseware, and learning materials.",
       "category": "sk-visual",
       "tags": [
         "教育",
@@ -663,7 +795,11 @@
     {
       "id": "sk-omx-fashion-scene-showcase-video",
       "title": "时装场景展示视频",
+      "titleZh": "时装场景展示视频",
+      "titleEn": "Fashion Scene Showcase Video",
       "summary": "高定服装与潮牌模特动态展示短视频生成器，支持秀场T台走秀、自然街拍与面料光影细节",
+      "summaryZh": "高定服装与潮牌模特动态展示短视频生成器，支持秀场T台走秀与面料光影细节。",
+      "summaryEn": "Generate high-fashion runway walks and editorial streetwear showcase videos with realistic drape.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -683,7 +819,11 @@
     {
       "id": "sk-omx-felt-stop-motion-story-short",
       "title": "羊毛毡故事短片",
+      "titleZh": "羊毛毡故事短片",
+      "titleEn": "Felt Stop-Motion Story Short",
       "summary": "温暖治愈的定格毛毡动画短片生成器，支持柔软织物纹理质感、微动镜头与治愈童话音效配乐",
+      "summaryZh": "温暖治愈的定格毛毡动画短片生成器，支持柔软织物纹理与治愈童话配乐。",
+      "summaryEn": "Produce cozy felt needlecraft stop-motion stories featuring soft fabric textures and fairytale charm.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -703,7 +843,11 @@
     {
       "id": "sk-omx-film-reference-prompt-writer",
       "title": "电影质感提示词大师",
+      "titleZh": "电影质感提示词大师",
+      "titleEn": "Cinematic Prompt Master",
       "summary": "从电影名称、剧照或截图提炼可复用的视觉与镜头规则，生成可直接执行的图像或视频提示词。",
+      "summaryZh": "从电影名称、剧照或截图提炼可复用的视觉与镜头规则，生成专业图像与视频提示词。",
+      "summaryEn": "Extract lighting, lenses, and composition rules from movie references into high-precision production prompts.",
       "category": "sk-visual",
       "tags": [
         "专业影视",
@@ -722,7 +866,11 @@
     {
       "id": "sk-omx-h3-prompt-expert",
       "title": "H3 提示词专家",
+      "titleZh": "H3 提示词专家",
+      "titleEn": "H3 Video Prompt Expert",
       "summary": "判断视频需求与参考素材，将零散输入整理成可控的多模态视频生成指令。",
+      "summaryZh": "将零散需求与参考素材整理成可控的多模态视频生成精准指令。",
+      "summaryEn": "Turn loose creative ideas and media references into structured, high-control multimodal video prompts.",
       "category": "sk-visual",
       "tags": [
         "平台工具",
@@ -741,7 +889,11 @@
     {
       "id": "sk-omx-h3-visual-design",
       "title": "H3 Visual Design",
+      "titleZh": "H3 视觉动态设计",
+      "titleEn": "H3 Visual Motion Design",
       "summary": "MiniMax H3 单点动态视觉设计与包装入口。仅当两个条件同时成立时使用：用户明确要制作或加工一条短视频，并且在文字请求或同一任务已确认的上下文中明确提出至少一种可见的动态技法。支持三类专业工作流：字体、Logo、标题、口播字幕或图形的动态版式与空间包装；追踪框、拓扑线、数字 ID、局部负片等跟随主体运动的 TouchDesigner / TD /...",
+      "summaryZh": "字体、Logo、版式与空间动态包装设计。",
+      "summaryEn": "Professional motion typography, dynamic packaging, and spatial graphic visual effects.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -763,7 +915,11 @@
     {
       "id": "sk-omx-handdrawn-live-video-generator",
       "title": "手绘实拍融合视频生成器",
+      "titleZh": "手绘实拍融合视频生成器",
+      "titleEn": "Hand-Drawn & Live Fusion Video",
       "summary": "基于场景创意，生成手绘动画与实拍接触变形的15秒视频，适用于创意短片制作。",
+      "summaryZh": "生成手绘动画与实拍接触变形的创意短片视频。",
+      "summaryEn": "Blend 2D hand-drawn doodle animation seamlessly with live-action footage for creative viral clips.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -783,7 +939,11 @@
     {
       "id": "sk-omx-ip-toy-grid-motion",
       "title": "IP潮玩六宫格动态海报",
+      "titleZh": "IP潮玩六宫格动态海报",
+      "titleEn": "IP Toy 6-Grid Motion Poster",
       "summary": "基于用户上传的角色形象，生成3D潮玩六宫格竖版动态视频，适合IP提案与社媒展示。",
+      "summaryZh": "基于角色形象生成3D潮玩六宫格竖版动态视频，适合IP提案与社媒展示。",
+      "summaryEn": "Turn character designs into dynamic 3D collectible toy 6-grid motion posters for social media.",
       "category": "sk-marketing",
       "tags": [
         "电商",
@@ -803,7 +963,11 @@
     {
       "id": "sk-omx-line-doodle-explainer-generator",
       "title": "线条图解科普视频生成",
+      "titleZh": "线条图解科普视频生成",
+      "titleEn": "Line Doodle Explainer Video",
       "summary": "根据知识主题或教材内容，生成线条小人图解科普视频方案与成片素材，适用于知识讲解短视频。",
+      "summaryZh": "根据知识主题或教材内容，生成线条小人图解科普视频方案与成片素材。",
+      "summaryEn": "Generate fun line-doodle explainer videos and storyboard assets from educational concepts.",
       "category": "sk-visual",
       "tags": [
         "教育",
@@ -822,7 +986,11 @@
     {
       "id": "sk-omx-lip-product-ad-generator",
       "title": "唇部彩妆广告生成",
+      "titleZh": "唇部彩妆广告生成",
+      "titleEn": "Lipstick & Lip Product Ad",
       "summary": "按固定顺序生成横屏30秒唇部彩妆TVC，先完成模特图、3×3静物图和脚本文件再生成视频，并强化自然的人物与产品、道具互动。",
+      "summaryZh": "生成唇部彩妆高质感商业广告TVC，强化人物与产品的自然互动。",
+      "summaryEn": "Produce luxury commercial TVC videos for lipstick and cosmetic beauty products.",
       "category": "sk-commerce",
       "tags": [
         "创意实验",
@@ -841,7 +1009,11 @@
     {
       "id": "sk-omx-live-action-commentary-drama",
       "title": "半解说真人短剧",
+      "titleZh": "半解说真人短剧",
+      "titleEn": "Live-Action Commentary Drama",
       "summary": "真人短剧半解说成片助手，拆解剧情爽点、黄金3秒抓人开场与强反转旁白设计",
+      "summaryZh": "真人短剧半解说成片助手，拆解剧情爽点、黄金3秒开场与强反转旁白设计。",
+      "summaryEn": "Craft high-retention live-action drama recaps with instant hook voiceovers and rapid pacing.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -860,7 +1032,11 @@
     {
       "id": "sk-omx-micro-expression-video-generator",
       "title": "人物微表情视频生成",
+      "titleZh": "人物微表情视频生成",
+      "titleEn": "Micro-Expression Video Generator",
       "summary": "根据角色图、剧本或情绪短语设计分时微表情提示词，用于塑造自然可信的角色表演。",
+      "summaryZh": "根据角色图与剧本设计分时微表情提示词，塑造自然可信的人物表演。",
+      "summaryEn": "Design nuanced facial micro-expressions and emotional shifts for photorealistic character acting.",
       "category": "sk-writing",
       "tags": [
         "专业影视",
@@ -879,7 +1055,11 @@
     {
       "id": "sk-omx-papercraft-stop-motion-explainer",
       "title": "纸艺定格科普视频生成器",
+      "titleZh": "纸艺定格科普视频生成器",
+      "titleEn": "Papercraft Stop-Motion Explainer",
       "summary": "根据知识主题，完成纸偶、分层布景、分镜与提示词设计，输出可执行的纸艺定格科普视频创作包。",
+      "summaryZh": "设计纸偶、分层布景与分镜，输出纸艺定格科普短片。",
+      "summaryEn": "Craft whimsical paper cutout puppets, layered stages, and stop-motion educational explainer videos.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -900,7 +1080,11 @@
     {
       "id": "sk-omx-product-kinetic-typography-tvc",
       "title": "产品贴字动画TVC",
+      "titleZh": "产品贴字动画TVC",
+      "titleEn": "Kinetic Typography Product TVC",
       "summary": "商业广告级产品贴字与动效排版TVC生成器，融合动态文字跟拍与快节奏产品卖点打底",
+      "summaryZh": "商业广告级产品贴字与动效排版TVC生成器，融合动态文字跟拍与快节奏卖点展示。",
+      "summaryEn": "Generate high-energy commercial TVCs merging 3D kinetic typography tracked to moving products.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -919,7 +1103,11 @@
     {
       "id": "sk-omx-retro-city-cel-animation-short",
       "title": "复古都市赛璐璐短片",
+      "titleZh": "复古都市赛璐璐短片",
+      "titleEn": "Retro City Cel Animation Short",
       "summary": "90年代复古都市赛璐璐动画生成器，包含颗粒噪点、霓虹色调与CityPop氛围感镜头语言",
+      "summaryZh": "90年代复古都市赛璐璐动画生成器，包含颗粒噪点、霓虹色调与CityPop氛围感。",
+      "summaryEn": "Create 90s vintage anime cel animation clips bathed in neon nostalgia and City Pop aesthetic.",
       "category": "sk-visual",
       "tags": [
         "动画",
@@ -938,7 +1126,11 @@
     {
       "id": "sk-omx-scifi-cinematic-video-generator",
       "title": "未来科幻质感影视生成器",
+      "titleZh": "未来科幻质感影视生成器",
+      "titleEn": "Sci-Fi Cinematic Video Generator",
       "summary": "赛博朋克与硬科幻质感影视生成器，强化光影粒子、体积雾与未来机械细节表现",
+      "summaryZh": "赛博朋克与硬科幻质感影视生成器，强化光影粒子、体积雾与未来机械细节。",
+      "summaryEn": "Render epic cyberpunk and hard sci-fi cinematic footage with volumetric fog and intricate mechanical detail.",
       "category": "sk-visual",
       "tags": [
         "专业影视",
@@ -957,7 +1149,11 @@
     {
       "id": "sk-omx-short-drama-multilingual-dubbing",
       "title": "短剧多语言出海配音",
+      "titleZh": "短剧多语言出海配音",
+      "titleEn": "Short Drama Multilingual Dubbing",
       "summary": "分离人声与背景音并逐句复刻音色和节奏，输出目标语言配音视频与字幕文件。",
+      "summaryZh": "分离人声与背景音并复刻音色节奏，输出多语言出海配音视频与字幕。",
+      "summaryEn": "Localize drama clips into multiple languages with voice clone preservation and synchronized captions.",
       "category": "sk-writing",
       "tags": [
         "创意实验",
@@ -977,7 +1173,11 @@
     {
       "id": "sk-omx-short-drama-screenwriter",
       "title": "短剧编剧助手",
+      "titleZh": "短剧编剧助手",
+      "titleEn": "Short Drama Screenwriter Assistant",
       "summary": "按选题撰写完整短剧剧本",
+      "summaryZh": "按选题与爆款节奏撰写完整短剧剧本。",
+      "summaryEn": "Write high-tension, fast-paced episodic drama scripts optimized for short video platforms.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -996,7 +1196,11 @@
     {
       "id": "sk-omx-short-drama-series-writer",
       "title": "微短剧剧集编剧",
+      "titleZh": "微短剧剧集编剧",
+      "titleEn": "Micro-Drama Series Writer",
       "summary": "一键短剧全流程剧本",
+      "summaryZh": "一键生成微短剧全流程系列剧本与角色设定。",
+      "summaryEn": "Develop full episodic series bibles, cliffhangers, and character arcs for serialized micro-dramas.",
       "category": "sk-writing",
       "tags": [
         "短剧漫剧",
@@ -1015,7 +1219,11 @@
     {
       "id": "sk-omx-silkscreen-decorative-illustration-short",
       "title": "丝印装饰插画风格短片",
+      "titleZh": "丝印装饰插画风格短片",
+      "titleEn": "Silkscreen Illustration Short Video",
       "summary": "将丝印装饰插画主题转成同步音效短片，并可追加同等时长的器乐BGM版，适合奢华叙事广告。",
+      "summaryZh": "将丝印装饰插画转成艺术音效短片，适合高端奢华叙事。",
+      "summaryEn": "Animate silkscreen decorative prints and vintage graphics into elegant luxury aesthetic video ads.",
       "category": "sk-marketing",
       "tags": [
         "商业广告",
@@ -1035,7 +1243,11 @@
     {
       "id": "sk-omx-sitcom-story-video-generator",
       "title": "情景喜剧故事视频",
+      "titleZh": "情景喜剧故事视频",
+      "titleEn": "Sitcom Story Video Generator",
       "summary": "美剧情景喜剧风格故事视频生成助手，涵盖多机位切换、罐头笑声节奏与生活喜剧冲突提示词",
+      "summaryZh": "情景喜剧风格故事视频生成助手，涵盖多机位切换与喜剧冲突。",
+      "summaryEn": "Generate multi-cam episodic sitcom story clips complete with humorous timing and banter.",
       "category": "sk-writing",
       "tags": [
         "专业影视",
@@ -1054,7 +1266,11 @@
     {
       "id": "sk-omx-subtitle-correction",
       "title": "字幕修正",
+      "titleZh": "字幕修正",
+      "titleEn": "SRT Subtitle Correction",
       "summary": "修正 SRT 字幕语音识别错误，严格保留时间轴和编号。",
+      "summaryZh": "修正 SRT 字幕语音识别错误，严格保留时间轴和编号。",
+      "summaryEn": "Fix ASR transcript typos, homophones, and terminology while preserving exact SRT timing.",
       "category": "sk-writing",
       "tags": [
         "平台工具",
@@ -1073,7 +1289,11 @@
     {
       "id": "sk-omx-transcript-broll-planner",
       "title": "口播视频B-roll规划器",
+      "titleZh": "口播视频B-roll规划器",
+      "titleEn": "Talking Head B-Roll Planner",
       "summary": "把口播逐字稿按语义拆成可审片的 B-roll 镜头方案，并在用户确认后生成已批准的视频素材。",
+      "summaryZh": "把口播逐字稿按语义拆成精准的 B-roll 画面方案并生成素材。",
+      "summaryEn": "Break speaking scripts into scene-by-scene B-roll visual lists and generate complementary video footage.",
       "category": "sk-writing",
       "tags": [
         "专业影视",
@@ -1092,7 +1312,11 @@
     {
       "id": "sk-omx-video-deconstruct",
       "title": "视频拆解与复刻",
+      "titleZh": "视频拆解与复刻",
+      "titleEn": "Video Deconstruction & Replication",
       "summary": "拆解用户提供的视频、关键帧或详细视频描述，将可验证的镜头、运动、声音和连续性证据编译为可复刻的最终视频 Prompt 与编辑计划。适用于“用 H3 复刻这个视频”“逐镜拆解并反推提示词”“保持原片结构做一版”、recreate this video、reverse engineer this video prompt、shot-by-shot vide...",
+      "summaryZh": "拆解爆款视频镜头、运镜、声音并编译为可复刻的最终 Prompt 与制作计划。",
+      "summaryEn": "Reverse-engineer reference videos into shot-by-shot prompt recipes and reproducible editing blueprints.",
       "category": "sk-visual",
       "tags": [
         "短剧漫剧",
@@ -1114,7 +1338,11 @@
     {
       "id": "sk-omx-video-deconstruct-analyzer",
       "title": "视频拆解分析师",
+      "titleZh": "视频拆解分析师",
+      "titleEn": "Video Deconstruction Analyst",
       "summary": "高密度拆解AI视频",
+      "summaryZh": "高密度深度拆解 AI 视频的镜头语言与生成参数。",
+      "summaryEn": "Deeply analyze AI-generated video rhythm, camera movements, prompt dynamics, and audio cues.",
       "category": "sk-visual",
       "tags": [
         "短剧漫剧",
@@ -1135,7 +1363,11 @@
     {
       "id": "sk-omx-vox-style-video-generator",
       "title": "Vox风格科普动画",
+      "titleZh": "Vox风格科普动画",
+      "titleEn": "Vox-Style Explainer Animation",
       "summary": "根据主题、文章或报告生成带字幕、旁白与背景音乐的拼贴风格科普动画成片。",
+      "summaryZh": "生成带字幕、旁白与背景音乐的剪贴拼贴风格科普动画成片。",
+      "summaryEn": "Create iconic Vox-style collage documentary explainer animations with maps, photos, and animated charts.",
       "category": "sk-writing",
       "tags": [
         "教育",
@@ -1155,7 +1387,11 @@
     {
       "id": "sk-omx-wes-anderson-aesthetic-generator",
       "title": "韦斯·安德森美学短片生成器",
+      "titleZh": "韦斯·安德森美学短片生成器",
+      "titleEn": "Wes Anderson Aesthetic Generator",
       "summary": "严格对齐韦斯·安德森对称构图、复古调色与平移运镜美学的专业电影感短片生成器",
+      "summaryZh": "严格对齐韦斯·安德森对称构图、复古调色与平移运镜美学的电影感短片生成器。",
+      "summaryEn": "Produce distinctive Wes Anderson style videos with symmetrical framing, pastel palettes, and whip pans.",
       "category": "sk-visual",
       "tags": [
         "专业影视",
@@ -1174,7 +1410,11 @@
     {
       "id": "sk-shopee-brand-analysis",
       "title": "Shopee Brand Analysis",
+      "titleZh": "Shopee 品牌分析",
+      "titleEn": "Shopee Brand Analysis",
       "summary": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
+      "summaryZh": "使用 shopee-mcp 分析 Shopee 品牌排名、详情、趋势、商品组合及站点/类别分布。",
+      "summaryEn": "Shopee brand ranking, detail, trend, assortment and site/category distribute using shopee-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -1195,7 +1435,11 @@
     {
       "id": "sk-shopee-keyword-analysis",
       "title": "Shopee Keyword Analysis",
+      "titleZh": "Shopee 关键词分析",
+      "titleEn": "Shopee Keyword Analysis",
       "summary": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
+      "summaryZh": "使用 shopee-mcp 进行 Shopee 热搜词排名、详情、趋势及关联商品分析。",
+      "summaryEn": "Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -1216,7 +1460,11 @@
     {
       "id": "sk-shopee-market-analysis",
       "title": "Shopee Market Analysis",
+      "titleZh": "Shopee 市场分析",
+      "titleEn": "Shopee Market Analysis",
       "summary": "Shopee site and category market opportunity analysis using shopee-mcp.",
+      "summaryZh": "使用 shopee-mcp 进行 Shopee 站点与品类市场机会分析。",
+      "summaryEn": "Shopee site and category market opportunity analysis using shopee-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -1237,7 +1485,11 @@
     {
       "id": "sk-shopee-product-analysis",
       "title": "Shopee Product Analysis",
+      "titleZh": "Shopee 商品分析",
+      "titleEn": "Shopee Product Analysis",
       "summary": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
+      "summaryZh": "使用 shopee-mcp 进行 Shopee 商品排行、详情、趋势与热词分析。",
+      "summaryEn": "Shopee item ranking, detail, trend and hot-word analysis using shopee-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -1258,7 +1510,11 @@
     {
       "id": "sk-shopee-shop-analysis",
       "title": "Shopee Shop Analysis",
+      "titleZh": "Shopee 店铺分析",
+      "titleEn": "Shopee Shop Analysis",
       "summary": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
+      "summaryZh": "使用 shopee-mcp 进行 Shopee 店铺排行、详情、趋势、选品与品牌组合分析。",
+      "summaryEn": "Shopee shop ranking, detail, trend, assortment and brand mix analysis using shopee-mcp.",
       "category": "sk-commerce",
       "tags": [
         "电商",
@@ -1279,7 +1535,11 @@
     {
       "id": "sk-tiktok-market-trend-analysis",
       "title": "TikTok Market Trend Analysis",
+      "titleZh": "TikTok 市场趋势分析",
+      "titleEn": "TikTok Market Trend Analysis",
       "summary": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
+      "summaryZh": "使用 Topview td 工具分析 TikTok Shop 区域、品类、商品与卖家趋势。",
+      "summaryEn": "TikTok Shop region, category, item and seller trend analysis using Topview td tools.",
       "category": "sk-commerce",
       "tags": [
         "TikTok",
@@ -1301,7 +1561,11 @@
     {
       "id": "sk-tiktok-material-breakdown",
       "title": "TikTok Material Breakdown",
+      "titleZh": "TikTok 素材拆解",
+      "titleEn": "TikTok Material Breakdown",
       "summary": "TikTok viral video, material, hook and CTA breakdown.",
+      "summaryZh": "TikTok 爆款短视频素材、开头黄金 Hook 与行动号召 CTA 逐秒拆解。",
+      "summaryEn": "TikTok viral video, material, hook and CTA breakdown.",
       "category": "sk-video",
       "tags": [
         "TikTok",
@@ -1323,7 +1587,11 @@
     {
       "id": "sk-tiktok-product-selection",
       "title": "TikTok Product Selection",
+      "titleZh": "TikTok 选品",
+      "titleEn": "TikTok Product Selection",
       "summary": "TikTok Shop viral product selection and scoring.",
+      "summaryZh": "TikTok Shop 爆款潜力商品挖掘、筛选与综合评分。",
+      "summaryEn": "TikTok Shop viral product selection and scoring.",
       "category": "sk-commerce",
       "tags": [
         "TikTok",
@@ -1344,7 +1612,11 @@
     {
       "id": "sk-tiktok-script-creation",
       "title": "TikTok Script Creation",
+      "titleZh": "TikTok 脚本创作",
+      "titleEn": "TikTok Script Creation",
       "summary": "TikTok UGC, creator, ad and live script generation.",
+      "summaryZh": "TikTok UGC 口播、达人种草、品牌广告与直播带货脚本生成。",
+      "summaryEn": "TikTok UGC, creator, ad and live script generation.",
       "category": "sk-video",
       "tags": [
         "TikTok",
@@ -1366,7 +1638,11 @@
     {
       "id": "sk-video-generate-canvas",
       "title": "video-generate-canvas",
+      "titleZh": "视频生成画布",
+      "titleEn": "video-generate-canvas",
       "summary": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
+      "summaryZh": "当用户表达任何视频创作意图时触发此技能，如在画布中生成或编辑视频。",
+      "summaryEn": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
       "category": "sk-video",
       "tags": [
         "视频",

@@ -56,7 +56,11 @@ export function buildSnapshot(catalog) {
       return {
         id: String(item.id || ''),
         title: String(item.title || ''),
+        titleZh: String(item.titleZh || item.nameZh || item.title || ''),
+        titleEn: String(item.titleEn || item.nameEn || item.title || ''),
         summary: String(item.summary || ''),
+        summaryZh: String(item.summaryZh || item.descriptionZh || item.summary || ''),
+        summaryEn: String(item.summaryEn || item.descriptionEn || item.summary || ''),
         category: String(item.category || ''),
         tags: Array.isArray(item.tags) ? item.tags.filter((tag) => typeof tag === 'string' && tag !== '') : [],
         cover: coverAsset,
