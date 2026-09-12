@@ -95,5 +95,7 @@ describe('picker-model generalized max', () => {
     assert.ok(source.includes('repeat(auto-fill, minmax(240px, 1fr))'), 'uses responsive grid columns')
     assert.ok(source.includes('max-height: calc(80vh - 190px)'), 'caps height by viewport to avoid dialog overflow')
     assert.ok(!source.includes('min-height: 480px'), 'drops the rigid min-height that overflowed the dialog body')
+    assert.ok(source.includes('ModalCloseButton'), '关闭按钮改用全局共享组件')
+    assert.ok(source.includes('placement="external"'), '共享关闭按钮固定在弹窗外侧')
   })
 })

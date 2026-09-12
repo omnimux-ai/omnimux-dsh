@@ -3,6 +3,7 @@ import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
 import { collectCategories, filterProducts, createSafeT } from './picker-model.js';
 import { PICKER_DIALOG_CLASS, ensurePickerDialogStyles } from '../picker-dialog/pickerDialogContract.js';
+import { ModalCloseButton } from '../ModalCloseButton.jsx';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
 
@@ -16,11 +17,6 @@ const CSS = `
   width: 148px; flex: none; display: flex; flex-direction: column; gap: 4px;
   padding: 8px 10px 8px 0; border-right: 1px solid var(--dsw-alias-border-l2);
   overflow-y: auto; box-sizing: border-box;
-}
-.omx-product-pick__nav-header {
-  font-size: 11px; font-weight: 600; text-transform: uppercase;
-  color: var(--dsw-alias-label-tertiary); padding: 4px 10px 6px;
-  letter-spacing: 0.5px;
 }
 .omx-product-pick__tab {
   appearance: none; font: inherit; text-align: left; cursor: pointer;
@@ -51,15 +47,6 @@ const CSS = `
 }
 .omx-product-pick__tab[data-active="true"] .omx-product-pick__tab-icon {
   color: var(--dsw-alias-label-primary);
-}
-.omx-product-pick__tab-badge {
-  font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 999px;
-  background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary);
-  font-weight: 500;
-}
-.omx-product-pick__tab[data-active="true"] .omx-product-pick__tab-badge {
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-foreground);
 }
 .omx-product-pick__main {
   flex: 1; min-width: 0; display: flex; flex-direction: column;
@@ -340,18 +327,14 @@ export function ProductPicker({
       className={PICKER_DIALOG_CLASS}
       footer={
         <div className="omx-product-pick__footer">
-          <div className="omx-product-pick__meta">
-            {selectedProduct ? (
-              <>
-                {safeT('productPicker.selectedMeta')}
-                <span className="omx-product-pick__meta-highlight">
-                  {selectedProduct.name || selectedProduct.id}
-                </span>
-              </>
-            ) : (
-              safeT('productPicker.unselectedHint')
-            )}
-          </div>
+          {selectedProduct ? (
+            <div className="omx-product-pick__meta">
+              {safeT('productPicker.selectedMeta')}
+              <span className="omx-product-pick__meta-highlight">
+                {selectedProduct.name || selectedProduct.id}
+              </span>
+            </div>
+          ) : null}
           <div className="omx-product-pick__actions">
             <Button variant="secondary" onClick={onClose}>
               {safeT('productPicker.cancel')}
@@ -368,10 +351,9 @@ export function ProductPicker({
       }
     >
       <div className="omx-product-pick">
+        {/* 全局统一：弹窗外侧右上方圆形关闭按钮（ModalCloseButton external） */}
+        <ModalCloseButton onClose={onClose} placement="external" ariaLabel={safeT('productPicker.cancel')} />
         <nav className="omx-product-pick__nav" aria-label={safeT('productPicker.categories')}>
-          <div className="omx-product-pick__nav-header">
-            {safeT('productPicker.categories')}
-          </div>
           {categories.map((cat) => {
             const label = cat.key ? safeT(cat.key) : cat.label;
             return (
@@ -389,7 +371,6 @@ export function ProductPicker({
                   </span>
                   <span>{label}</span>
                 </span>
-                <span className="omx-product-pick__tab-badge">{cat.count}</span>
               </button>
             );
           })}

@@ -3,6 +3,7 @@ import { Button, ModalDialog } from 'dsh-ui-kit'
 import { AssetPickerCard } from './AssetPickerCard.jsx'
 import { ASSET_CATEGORIES, isAlreadyAdded, remainingQuota, toggleSelect } from './picker-model.js'
 import { PICKER_DIALOG_CLASS, ensurePickerDialogStyles } from '../picker-dialog/pickerDialogContract.js'
+import { ModalCloseButton } from '../ModalCloseButton.jsx'
 
 const STYLE_ID = 'omx-composer-add-asset-picker'
 
@@ -277,6 +278,8 @@ export function AssetPicker({
       )}
     >
       <div className="omx-asset-pick">
+        {/* 全局统一：弹窗外侧右上方圆形关闭按钮（ModalCloseButton external） */}
+        <ModalCloseButton onClose={onClose} placement="external" ariaLabel={tt('composerAdd.cancel')} />
         <nav className="omx-asset-pick__nav" aria-label={tt('composerAdd.categories')}>
           {tabs.map((id) => (
             <button /* exempt-ui01: 资产分类Tab */
