@@ -76,7 +76,9 @@ test('prompt 输入框展开样式与 8pt 内外间距规范', () => {
   // T03：卡槽 32px 基准（含 strip 末尾虚线 + 槽位）
   assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?width:\s*32px/);
   assert.match(cssSrc, /\.wf-slot-well \{[\s\S]*?height:\s*32px/);
-  assert.match(cssSrc, /\.wf-slot-well--add \{[\s\S]*?border:\s*1\.5px dashed/);
+  // 未激活态虚线框；button. 前缀用于稳压宿主 button[class*="add"]（0,1,1）。
+  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--add \{[\s\S]*?border:\s*1\.5px dashed/);
+  assert.match(cssSrc, /button\.wf-slot-well\.wf-slot-well--add:hover \{[\s\S]*?border-style:\s*solid/);
 });
 
 test('展开 / 收起文案入典', () => {

@@ -1427,7 +1427,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 
 .wf-slot-well--empty {
   border-style: dashed;
-  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2));
+  border-color: var(--wb-border-strong, var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2)));
   background: transparent;
   color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
 }
@@ -1607,11 +1607,15 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   color: var(--dsw-alias-label-danger, var(--wb-text-primary));
 }
 
-.wf-slot-well--add {
+/* 添加槽位未激活态：虚线框让孤立的 + 自解释为「可添加素材」。
+   选择器带 button. 前缀（特异性 0,2,1）用来稳压宿主注入的 button[class*="add"]（0,1,1），
+   否则本类名含 "add" 会被宿主通用 add 按钮样式改写尺寸。 */
+button.wf-slot-well.wf-slot-well--add {
   width: 44px;
   height: 44px;
+  min-width: 44px;
   border-radius: 10px;
-  border: 1.5px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2));
+  border: 1.5px dashed var(--wb-border-strong, var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.2)));
   background: transparent;
   color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
   display: inline-flex;
@@ -1621,6 +1625,14 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
   flex-shrink: 0;
   padding: 0;
   transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+/* 悬停：虚线转实线高亮，与静止态形成「可点击」对比。 */
+button.wf-slot-well.wf-slot-well--add:hover {
+  border-style: solid;
+  border-color: var(--dsw-alias-control-primary, var(--wb-accent));
+  background: var(--dsw-alias-control-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--dsw-alias-label-primary, var(--wb-text-primary));
 }
 
 .wf-slot-wells__swap {
