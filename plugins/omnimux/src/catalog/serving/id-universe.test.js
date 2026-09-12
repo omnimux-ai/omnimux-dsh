@@ -35,7 +35,8 @@ test('IDs without registrations or aliases never guess another model', () => {
 })
 
 test('documented aliases outside the auto manifest remain normalized', () => {
-  assert.deepEqual(gatewayCandidates('nanobanana-2'), ['nano_banana_2', 'nanobanana-2'])
+  assert.deepEqual(gatewayCandidates('nanobanana-2'), ['nano_banana_2', 'nanobanana-2', 'nano-banana-2'])
+  assert.deepEqual(gatewayCandidates('nano-banana-2'), ['nano_banana_2', 'nanobanana-2', 'nano-banana-2'])
 })
 
 test('callers cannot mutate the candidate registry', () => {

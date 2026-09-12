@@ -10,11 +10,23 @@ export {
 } from './channel-groups.js'
 
 /** Documented aliases only; gateway IDs are case-sensitive. */
-export const PRODUCT_ID_ALIASES = Object.freeze(Object.fromEntries(
-  dispositions.dispositions
-    .filter((row) => row.disposition === 'alias')
-    .map((row) => [row.id, row.target]),
-))
+export const PRODUCT_ID_ALIASES = Object.freeze({
+  ...Object.fromEntries(
+    dispositions.dispositions
+      .filter((row) => row.disposition === 'alias')
+      .map((row) => [row.id, row.target]),
+  ),
+  'nano-banana-2': 'nano_banana_2',
+  'nano-banana-pro': 'nano_banana_pro',
+  'mj-v8-1': 'midjourney-8.1',
+  'midjourney-8-1': 'midjourney-8.1',
+  'mj-v7': 'midjourney-7',
+  'seedance-2-0-task': 'seedance-2-0',
+  'seedance-2-5-task': 'seedance-2-5',
+  'seedance-2-0-fast-task': 'seedance-2-0-fast',
+  'minimax-h3-task': 'minimax-h3',
+  'grok-imagine-video-1-5-task': 'grok-imagine-video-1-5',
+})
 const registrations = new Map(manifest.models.map((row) => [row.productId, row.gatewayIds]))
 
 /** @param {unknown} modelId @returns {string} */

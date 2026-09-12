@@ -43,8 +43,8 @@ describe('Channel Group Routing & Failover', () => {
     assert.equal(result.mode, 'live')
     assert.equal(result.taskId, 'task-success')
     assert.ok(attempts.length >= 2, 'should have attempted at least two candidates')
-    assert.equal(attempts[0], 'seedance-2-0@seedance-cheap')
-    assert.equal(attempts[1], 'seedance-2-0@standard')
+    assert.equal(attempts[0], 'seedance-2-0@cheap')
+    assert.equal(attempts[1], 'seedance-2-0@default')
   })
 
   it('completeTextViaChat falls over to next candidate when first candidate returns 503', async () => {

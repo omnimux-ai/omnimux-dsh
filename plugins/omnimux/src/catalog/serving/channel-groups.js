@@ -13,466 +13,427 @@ export const ROUTING_STRATEGIES = Object.freeze(['auto', 'stability_first', 'cos
  * Metadata aligns with production gateway GroupRatio, pricing, and SLA metrics.
  */
 export const MODEL_CHANNEL_GROUPS = Object.freeze({
-  // Seedance 2.0 / 2.5 Family
-  'seedance-2-0': [
+  "seedance-2-0": [
     {
-      id: 'pro',
-      label: '进阶版',
-      badge: '9.7折 · 满血真人 · 专属素材库',
-      pricing: { pointsEstimate: 3476, discountRate: 0.97, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 60 },
-      wireGroup: 'seedance-pro',
-      enabled: true,
+      "id": "pro",
+      "label": "进阶版",
+      "badge": "按次高价专线 · Pidoi 满血",
+      "pricing": {
+        "pointsEstimate": 3476,
+        "discountRate": 3.333,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 45
+      },
+      "wireGroup": "seedance-2-0-task-pro",
+      "enabled": true
     },
     {
-      id: 'official',
-      label: '官方版',
-      badge: '原生态不加价',
-      pricing: { pointsEstimate: 3568, discountRate: 1.0, billingMode: 'per_second' },
-      sla: { stability24h: 67, avgWaitTimeSec: 90 },
-      wireGroup: 'official',
-      enabled: true,
+      "id": "official",
+      "label": "官方版",
+      "badge": "官方原厂直签 · 极稳高画质",
+      "pricing": {
+        "pointsEstimate": 3568,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 67,
+        "avgWaitTimeSec": 90
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'preferred',
-      label: '优选版',
-      badge: '5.8折 · 限时特惠',
-      pricing: { pointsEstimate: 1560, discountRate: 0.58, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 180 },
-      wireGroup: 'seedance-standard',
-      enabled: true,
+      "id": "preferred",
+      "label": "优选版",
+      "badge": "官转专线 · 极稳高画质",
+      "pricing": {
+        "pointsEstimate": 1560,
+        "discountRate": 1.178,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 60
+      },
+      "wireGroup": "seedance-standard",
+      "enabled": true
     },
     {
-      id: 'standard',
-      label: '标准版',
-      badge: '5.2折 · 限时特惠',
-      pricing: { pointsEstimate: 1040, discountRate: 0.52, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 180 },
-      wireGroup: 'standard',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "主流专线 · 官方原生",
+      "pricing": {
+        "pointsEstimate": 1040,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 98,
+        "avgWaitTimeSec": 90
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'cheap',
-      label: '特惠版',
-      badge: '按条计费 · 时长同价',
-      pricing: { pointsEstimate: 800, discountRate: 0.25, billingMode: 'per_task' },
-      sla: { stability24h: 100, avgWaitTimeSec: 120 },
-      wireGroup: 'seedance-cheap',
-      enabled: true,
-    },
+      "id": "cheap",
+      "label": "特惠版",
+      "badge": "限时特惠 · 按条计费",
+      "pricing": {
+        "pointsEstimate": 800,
+        "discountRate": 0.5,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 90,
+        "avgWaitTimeSec": 120
+      },
+      "wireGroup": "cheap",
+      "enabled": true
+    }
   ],
-  'seedance-2-0-fast': [
+  "seedance-2-0-fast": [
     {
-      id: 'pro',
-      label: '进阶版',
-      badge: '极速出片 · 满血真人',
-      pricing: { pointsEstimate: 2900, discountRate: 0.95, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 30 },
-      wireGroup: 'seedance-pro',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "极速出片 · 官方专线",
+      "pricing": {
+        "pointsEstimate": 950,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 30
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'official',
-      label: '官方版',
-      badge: '官方原生通道',
-      pricing: { pointsEstimate: 3000, discountRate: 1.0, billingMode: 'per_second' },
-      sla: { stability24h: 85, avgWaitTimeSec: 45 },
-      wireGroup: 'official',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版',
-      badge: '5.2折 · 高性价比',
-      pricing: { pointsEstimate: 950, discountRate: 0.52, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 60 },
-      wireGroup: 'standard',
-      enabled: true,
-    },
-    {
-      id: 'cheap',
-      label: '特惠版',
-      badge: '排队约2min',
-      pricing: { pointsEstimate: 750, discountRate: 0.25, billingMode: 'per_task' },
-      sla: { stability24h: 98, avgWaitTimeSec: 120 },
-      wireGroup: 'seedance-cheap',
-      enabled: true,
-    },
+      "id": "cheap",
+      "label": "特惠版",
+      "badge": "特惠走量 · 按条计费",
+      "pricing": {
+        "pointsEstimate": 750,
+        "discountRate": 0.5,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 90,
+        "avgWaitTimeSec": 120
+      },
+      "wireGroup": "cheap",
+      "enabled": true
+    }
   ],
-  'seedance-2-5': [
+  "seedance-2-5": [
     {
-      id: 'pro',
-      label: '进阶版',
-      badge: '全新2.5旗舰 · 满血画质',
-      pricing: { pointsEstimate: 4200, discountRate: 0.95, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 60 },
-      wireGroup: 'seedance-pro',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "全新 2.5 旗舰 · 官方原生专线",
+      "pricing": {
+        "pointsEstimate": 1800,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 60
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'official',
-      label: '官方版',
-      badge: '官方原生通道',
-      pricing: { pointsEstimate: 4400, discountRate: 1.0, billingMode: 'per_second' },
-      sla: { stability24h: 80, avgWaitTimeSec: 90 },
-      wireGroup: 'official',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版',
-      badge: '限时特惠',
-      pricing: { pointsEstimate: 1800, discountRate: 0.55, billingMode: 'per_second' },
-      sla: { stability24h: 99, avgWaitTimeSec: 150 },
-      wireGroup: 'seedance-standard',
-      enabled: true,
-    },
+      "id": "cheap",
+      "label": "特惠版",
+      "badge": "特惠走量 · 按条计费",
+      "pricing": {
+        "pointsEstimate": 900,
+        "discountRate": 0.5,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 90,
+        "avgWaitTimeSec": 120
+      },
+      "wireGroup": "cheap",
+      "enabled": true
+    }
   ],
-  // Claude Family
-  'claude-opus-4-6': [
+  "claude-opus-4-6": [
     {
-      id: 'claude-max-open',
-      label: '顶配满血版',
-      badge: '高优先级专线 · 无限速',
-      pricing: { pointsEstimate: 3140, discountRate: 3.14, billingMode: 'per_token' },
-      sla: { stability24h: 100, avgWaitTimeSec: 3 },
-      wireGroup: 'claude-max-open',
-      enabled: true,
+      "id": "claude-max-open",
+      "label": "顶配满血版",
+      "badge": "Claude Max 外接版",
+      "pricing": { "pointsEstimate": 2000, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 100, "avgWaitTimeSec": 8 },
+      "wireGroup": "claude-max-open",
+      "enabled": true
     },
     {
-      id: 'claude-plus',
-      label: '进阶增强版',
-      badge: '快速响应 · 专属企业池',
-      pricing: { pointsEstimate: 1430, discountRate: 1.43, billingMode: 'per_token' },
-      sla: { stability24h: 100, avgWaitTimeSec: 5 },
-      wireGroup: 'claude-plus',
-      enabled: true,
+      "id": "claude-plus",
+      "label": "进阶增强版",
+      "badge": "Claude Plus 精品专线",
+      "pricing": { "pointsEstimate": 1000, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 99, "avgWaitTimeSec": 10 },
+      "wireGroup": "claude-plus",
+      "enabled": true
     },
     {
-      id: 'standard',
-      label: '标准版',
-      badge: '标准公网池 · 高性价比',
-      pricing: { pointsEstimate: 1000, discountRate: 1.0, billingMode: 'per_token' },
-      sla: { stability24h: 98, avgWaitTimeSec: 10 },
-      wireGroup: 'standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "主流高品质专线",
+      "pricing": { "pointsEstimate": 500, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 98, "avgWaitTimeSec": 12 },
+      "wireGroup": "standard",
+      "enabled": true
+    }
   ],
-  // DeepSeek Family
-  'deepseek-v4-flash-vision-exp': [
+  "deepseek-v4-flash-vision-exp": [
     {
-      id: 'deepseek-official',
-      label: '官方直连版',
-      badge: '满血低延时 · 官方通道',
-      pricing: { pointsEstimate: 1430, discountRate: 1.43, billingMode: 'per_token' },
-      sla: { stability24h: 100, avgWaitTimeSec: 2 },
-      wireGroup: 'deepseek-official',
-      enabled: true,
+      "id": "deepseek-official",
+      "label": "官方直连版",
+      "badge": "官方满血直签",
+      "pricing": { "pointsEstimate": 100, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 100, "avgWaitTimeSec": 4 },
+      "wireGroup": "deepseek-official",
+      "enabled": true
     },
     {
-      id: 'default',
-      label: '标准版',
-      badge: '基础费率 · 极速分流',
-      pricing: { pointsEstimate: 1000, discountRate: 1.0, billingMode: 'per_token' },
-      sla: { stability24h: 99, avgWaitTimeSec: 4 },
-      wireGroup: 'default',
-      enabled: true,
-    },
+      "id": "default",
+      "label": "标准版",
+      "badge": "DeepSeek 官方专线",
+      "pricing": { "pointsEstimate": 50, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 99, "avgWaitTimeSec": 5 },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  // Kling Family
-  'kling': [
+  "kling": [
     {
-      id: 'pro',
-      label: '专业版',
-      badge: '极速生成 · 高清专线',
-      pricing: { pointsEstimate: 2400, discountRate: 1.2, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 40 },
-      wireGroup: 'kling-pro',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版',
-      badge: '8.5折 · 稳定经济',
-      pricing: { pointsEstimate: 1700, discountRate: 0.85, billingMode: 'per_second' },
-      sla: { stability24h: 98, avgWaitTimeSec: 80 },
-      wireGroup: 'kling-standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "可灵商业专线",
+      "pricing": {
+        "pointsEstimate": 1200,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 98,
+        "avgWaitTimeSec": 60
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  // MiniMax Family
-  'minimax-h3': [
+  "minimax-h3": [
     {
-      id: 'pro',
-      label: '专业版',
-      badge: '专属通道 · 优先排队',
-      pricing: { pointsEstimate: 2200, discountRate: 1.1, billingMode: 'per_second' },
-      sla: { stability24h: 100, avgWaitTimeSec: 50 },
-      wireGroup: 'minimax-pro',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版',
-      badge: '8.0折 · 经济普惠',
-      pricing: { pointsEstimate: 1600, discountRate: 0.8, billingMode: 'per_second' },
-      sla: { stability24h: 99, avgWaitTimeSec: 90 },
-      wireGroup: 'minimax-standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "海螺 MiniMax 官方专线",
+      "pricing": {
+        "pointsEstimate": 1100,
+        "discountRate": 1,
+        "billingMode": "per_second"
+      },
+      "sla": {
+        "stability24h": 99,
+        "avgWaitTimeSec": 50
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  // ---- 以下 8 个模型的渠道分组来自网关公开定价元数据 ----
-  // 来源：GET https://api.omnimux.ai/api/pricing（公开，无需鉴权）
-  // 取数：model.enable_groups（去掉 auto）+ group_ratio + usable_group 中文名
-  // 说明：pointsEstimate 置空（网关不提供积分口径），价格以 priceRatio 表示；
-  //      SLA（24h 稳定率 / 等待时间）该接口不提供，故整体缺省，UI 显示「暂无数据」。
-  'gemini-3.8-flash': [
+  "gemini-3.8-flash": [
     {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'standard',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "Google 官方专线",
+      "pricing": {
+        "pointsEstimate": 100,
+        "discountRate": 1,
+        "billingMode": "per_token"
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'cheap',
-      label: '特惠版',
-      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_token' },
-      wireGroup: 'cheap',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'gemini-cheap',
-      label: 'Gemini 特惠版',
-      pricing: { pointsEstimate: null, priceRatio: 0.3, billingMode: 'per_token' },
-      wireGroup: 'gemini-cheap',
-      enabled: true,
-    },
+      "id": "cheap",
+      "label": "特惠版",
+      "badge": "经济走量特惠池",
+      "pricing": {
+        "pointsEstimate": 80,
+        "discountRate": 1.111,
+        "billingMode": "per_token"
+      },
+      "wireGroup": "gemini-cheap",
+      "enabled": true
+    }
   ],
-  'gpt-5.5': [
+  "gpt-5.5": [
     {
-      id: 'codex-pro-open',
-      label: 'Codex Pro',
-      pricing: { pointsEstimate: null, priceRatio: 0.857143, billingMode: 'per_token' },
-      wireGroup: 'codex-pro-open',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "OpenAI 官方专线",
+      "pricing": {
+        "pointsEstimate": 600,
+        "discountRate": 1,
+        "billingMode": "per_token"
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  'gpt-image-2.5': [
+  "gpt-image-2.5": [
     {
-      id: 'cheap',
-      label: '特惠版',
-      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_task' },
-      wireGroup: 'cheap',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'default',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "官方最新生图专线",
+      "pricing": {
+        "pointsEstimate": 200,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  'seedance-2-0-mini': [
+  "nano-banana-2": [
     {
-      id: 'minimax-pro',
-      label: '海螺 MiniMax 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
-      wireGroup: 'minimax-pro',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "Google 官方生图专线",
+      "pricing": {
+        "pointsEstimate": 150,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 15
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'sd-standard',
-      label: 'sd-standard',
-      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
-      wireGroup: 'sd-standard',
-      enabled: true,
-    },
-    {
-      id: 'sd-pro',
-      label: 'sd-pro',
-      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
-      wireGroup: 'sd-pro',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'standard',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'kling-pro',
-      label: '可灵 Kling 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
-      wireGroup: 'kling-pro',
-      enabled: true,
-    },
-    {
-      id: 'kling-standard',
-      label: '可灵 Kling 标准版',
-      pricing: { pointsEstimate: null, priceRatio: 0.85, billingMode: 'per_task' },
-      wireGroup: 'kling-standard',
-      enabled: true,
-    },
+      "id": "pro",
+      "label": "高价档",
+      "badge": "Evolink 全档高清专线",
+      "pricing": {
+        "pointsEstimate": 260,
+        "discountRate": 1.714,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 10
+      },
+      "wireGroup": "nano-banana-2-pro",
+      "enabled": true
+    }
   ],
-  'wan-3.0': [
+  "seedance-2-0-mini": [
     {
-      id: 'cheap',
-      label: '特惠版',
-      pricing: { pointsEstimate: null, priceRatio: 0.5, billingMode: 'per_task' },
-      wireGroup: 'cheap',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'kling-pro',
-      label: '可灵 Kling 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
-      wireGroup: 'kling-pro',
-      enabled: true,
-    },
-    {
-      id: 'minimax-pro',
-      label: '海螺 MiniMax 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
-      wireGroup: 'minimax-pro',
-      enabled: true,
-    },
-    {
-      id: 'sd-pro',
-      label: 'sd-pro',
-      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
-      wireGroup: 'sd-pro',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "轻量视频官方专线",
+      "pricing": {
+        "pointsEstimate": 600,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 45
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  'grok-imagine-video-1-5': [
+  "wan-3.0": [
     {
-      id: 'minimax-pro',
-      label: '海螺 MiniMax 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.1, billingMode: 'per_task' },
-      wireGroup: 'minimax-pro',
-      enabled: true,
-    },
-    {
-      id: 'sd-pro',
-      label: 'sd-pro',
-      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
-      wireGroup: 'sd-pro',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'standard',
-      enabled: true,
-    },
-    {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'kling-pro',
-      label: '可灵 Kling 进阶版',
-      pricing: { pointsEstimate: null, priceRatio: 1.2, billingMode: 'per_task' },
-      wireGroup: 'kling-pro',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "Wan 官方专线",
+      "pricing": {
+        "pointsEstimate": 1000,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
-  'seed-audio-1.0': [
+  "grok-imagine-video-1-5": [
     {
-      id: 'default',
-      label: '标准版',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'default',
-      enabled: true,
+      "id": "standard",
+      "label": "标准版",
+      "badge": "xAI 官方视频专线",
+      "pricing": {
+        "pointsEstimate": 1500,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 30
+      },
+      "wireGroup": "default",
+      "enabled": true
     },
     {
-      id: 'official',
-      label: '官转版',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_token' },
-      wireGroup: 'official',
-      enabled: true,
-    },
+      "id": "pool",
+      "label": "号池版",
+      "badge": "自建号池 · 随心用",
+      "pricing": {
+        "pointsEstimate": 450,
+        "discountRate": 0.2857,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 88,
+        "avgWaitTimeSec": 90
+      },
+      "wireGroup": "pool",
+      "enabled": true
+    }
   ],
-  'suno': [
+  "seed-audio-1.0": [
     {
-      id: 'default',
-      label: '标准版 · default',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'default',
-      enabled: true,
-    },
-    {
-      id: 'kling-standard',
-      label: '可灵 Kling 标准版',
-      pricing: { pointsEstimate: null, priceRatio: 0.85, billingMode: 'per_task' },
-      wireGroup: 'kling-standard',
-      enabled: true,
-    },
-    {
-      id: 'sd-standard',
-      label: 'sd-standard',
-      pricing: { pointsEstimate: null, priceRatio: null, billingMode: 'per_task' },
-      wireGroup: 'sd-standard',
-      enabled: true,
-    },
-    {
-      id: 'standard',
-      label: '标准版 · standard',
-      pricing: { pointsEstimate: null, priceRatio: 1, billingMode: 'per_task' },
-      wireGroup: 'standard',
-      enabled: true,
-    },
+      "id": "standard",
+      "label": "标准版",
+      "badge": "豆包语音官方专线",
+      "pricing": {
+        "pointsEstimate": 50,
+        "discountRate": 1,
+        "billingMode": "per_token"
+      },
+      "sla": {
+        "stability24h": 100,
+        "avgWaitTimeSec": 5
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
   ],
+  "suno": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "Suno 音乐生成官方专线",
+      "pricing": {
+        "pointsEstimate": 800,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "default",
+      "enabled": true
+    }
+  ]
 })
 
 /**
