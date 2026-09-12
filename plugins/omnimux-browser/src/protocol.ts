@@ -68,6 +68,8 @@ export interface BridgeCaps {
   snapshotMaxChars: number
   /** Upper bound on interactive inventory items per snapshot (plugin config). */
   maxInteractiveItems: number
+  /** Host DSH language preference ('zh' | 'en') read from settings.yaml. */
+  locale?: 'zh' | 'en'
 }
 
 /** Frames sent by the extension to the bridge plugin. */
@@ -235,6 +237,7 @@ function isCaps(value: unknown): value is BridgeCaps {
     && Number.isInteger(caps.snapshotMaxChars)
     && caps.snapshotMaxChars >= MIN_SNAPSHOT_MAX_CHARS
     && typeof caps.maxInteractiveItems === 'number' && caps.maxInteractiveItems > 0
+    && (caps.locale === undefined || caps.locale === 'zh' || caps.locale === 'en')
 }
 
 function isToolError(value: unknown): value is ToolError {

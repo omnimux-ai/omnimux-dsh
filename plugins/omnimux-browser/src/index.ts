@@ -18,6 +18,9 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-attachment'
@@ -210,6 +213,28 @@ function mountBridge(
     await purgeSessionFiles(deps, sessionId)
   }
 
+  function getDshHostLocale(): 'zh' | 'en' {
+    try {
+      const candidates = [
+        process.env.DSH_HOME ? join(process.env.DSH_HOME, 'settings.yaml') : '',
+        join(homedir(), '.dsh', 'settings.yaml'),
+        join(homedir(), '.omnimux-dev', 'settings.yaml'),
+      ].filter(Boolean)
+      for (const p of candidates) {
+        if (existsSync(p)) {
+          const text = readFileSync(p, 'utf8')
+          const m = /locale:\s*\n\s*preference:\s*["']?(zh|en)["']?/i.exec(text)
+          if (m?.[1]) {
+            return m[1].toLowerCase() as 'zh' | 'en'
+          }
+        }
+      }
+    } catch {}
+    return 'zh'
+  }
+
+  const hostLocale = getDshHostLocale()
+
   const server = new BridgeServer({
     token: tokenRes.token,
     api,
@@ -218,6 +243,7 @@ function mountBridge(
       textOnly: true,
       snapshotMaxChars: resolved.snapshotMaxChars,
       maxInteractiveItems: resolved.maxInteractiveItems,
+      locale: hostLocale,
     },
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
@@ -240,7 +266,10 @@ function mountBridge(
     path: BRIDGE_CONFIG_PATH,
     handler: (_req, res) => {
       res.writeHead(200, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ wsUrl: `ws://127.0.0.1:${ctx.webServer.port}${BRIDGE_PATH}` }))
+      res.end(JSON.stringify({
+        wsUrl: `ws://127.0.0.1:${ctx.webServer.port}${BRIDGE_PATH}`,
+        locale: hostLocale,
+      }))
     },
   }
   ctx.effect(() => ctx.webServer.register(configRoute), 'bridge-browser: /ext/bridge-config route')

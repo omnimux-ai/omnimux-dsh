@@ -10,11 +10,14 @@ export interface SniffedMediaItem {
 
 export const MediaSnifferBar = memo(function MediaSnifferBar({
   items,
+  locale = 'zh',
   onAttachMedia
 }: {
   items: SniffedMediaItem[]
+  locale?: 'zh' | 'en'
   onAttachMedia: (item: SniffedMediaItem) => void
 }) {
+  const isEn = locale === 'en'
   const [attachedIds, setAttachedIds] = useState<Set<string>>(new Set())
 
   if (!items || items.length === 0) return null
@@ -34,21 +37,25 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
     <div className="media-sniffer-bar">
       <div className="media-sniffer-title">
         <span className="sniffer-icon">🖼️</span>
-        <span>页面媒体感知 ({items.length})</span>
+        <span>{isEn ? `Page Media (${items.length})` : `页面媒体感知 (${items.length})`}</span>
       </div>
       <div className="media-sniffer-pills">
         {items.map((item) => {
           const isAttached = attachedIds.has(item.id)
+          const tag = item.type === 'video' ? (isEn ? 'Video' : '视频') : (isEn ? 'Image' : '图片')
+          const title = isAttached
+            ? (isEn ? 'Attached to conversation' : '已作为附件附加到对话')
+            : (isEn ? 'Click to attach image' : '点击将此图片作为多模态附件附加')
           return (
             <button
               key={item.id}
               type="button"
               className={`media-pill-btn ${isAttached ? 'active' : ''}`}
               onClick={() => handleToggle(item)}
-              title={isAttached ? '已作为附件附加到对话' : '点击将此图片作为多模态附件附加'}
+              title={title}
             >
               <img src={item.previewSrc} alt="" className="media-pill-thumb" />
-              <span className="media-pill-tag">{item.type === 'video' ? '视频' : '图片'}</span>
+              <span className="media-pill-tag">{tag}</span>
               <span className="media-pill-check">{isAttached ? '✓' : '+'}</span>
             </button>
           )

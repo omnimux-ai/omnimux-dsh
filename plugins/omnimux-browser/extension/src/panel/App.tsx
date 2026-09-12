@@ -22,7 +22,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
-import { getUiLocale } from '../i18n.ts'
+import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
 import {
   applyUiScale,
@@ -551,11 +551,13 @@ const MessageBody = memo(function MessageBody({
   sessionId,
   api,
   copy,
+  locale = 'zh',
 }: {
   row: Row
   sessionId: string
   api: PanelApi
   copy: PanelCopy
+  locale?: UiLocale
 }): React.JSX.Element {
   if (row.kind === 'user' || row.kind === 'assistant') {
     // A user message may carry a page quote; show the quote, not its fence.
@@ -580,7 +582,7 @@ const MessageBody = memo(function MessageBody({
         {text.trim() !== '' && <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />}
         {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && (
           <div className="dom-fill-actions">
-            <DomFillButton textToFill={text} />
+            <DomFillButton textToFill={text} locale={locale} />
           </div>
         )}
       </div>
@@ -616,7 +618,8 @@ const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy:
 })
 
 export function App(): React.JSX.Element {
-  const locale = useMemo(() => getUiLocale(), [])
+  const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
+  const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
   const [api] = useState<PanelApi>(() => connectPanel())
   const [state, setState] = useState<BridgeState>('stopped')
@@ -728,6 +731,39 @@ export function App(): React.JSX.Element {
       }
     }
   }, [isFloatMode])
+
+  useEffect(() => {
+    if (caps?.locale && (caps.locale === 'zh' || caps.locale === 'en')) {
+      safeSetStorage('dsh_configured_locale', caps.locale)
+      if (manualLocale === 'auto') {
+        setLocale(caps.locale)
+      }
+    }
+  }, [caps, manualLocale])
+
+  useEffect(() => {
+    const probe = async () => {
+      if (manualLocale !== 'auto') return
+      for (const port of [43120, 45120, 43128]) {
+        try {
+          const res = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
+            signal: AbortSignal.timeout(1000),
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.locale && (data.locale === 'zh' || data.locale === 'en')) {
+              safeSetStorage('dsh_configured_locale', data.locale)
+              setLocale(data.locale)
+              break
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    void probe()
+  }, [manualLocale])
 
   async function attachMediaAsImage(item: SniffedMediaItem): Promise<void> {
     try {
@@ -1814,6 +1850,29 @@ export function App(): React.JSX.Element {
               <option value="off">{copy.settings.sharingOff}</option>
             </select>
           </label>
+          <label>
+            <span>{copy.settings.language}</span>
+            <small>{copy.settings.languageHelp}</small>
+            <select
+              value={manualLocale}
+              onChange={(e) => {
+                const val = e.target.value
+                setManualLocale(val)
+                if (val === 'zh' || val === 'en') {
+                  safeSetStorage('omnimux_manual_locale', val)
+                  setLocale(val)
+                } else {
+                  safeRemoveStorage('omnimux_manual_locale')
+                  const dshPref = safeGetStorage('dsh_configured_locale') as UiLocale | null
+                  setLocale(dshPref || getUiLocale())
+                }
+              }}
+            >
+              <option value="auto">{copy.settings.languageFollowDsh}</option>
+              <option value="zh">{copy.settings.languageZh}</option>
+              <option value="en">{copy.settings.languageEn}</option>
+            </select>
+          </label>
         </div>
         <div className="settings-panel preference-toggles">
           <label className="setting-toggle">
@@ -1996,7 +2055,7 @@ export function App(): React.JSX.Element {
   return (
     <><div className="app">
       <header className="topbar">
-        <WorkspaceSelector bridgeConnected={state === 'connected'} />
+        <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
         <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
           aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
           onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
@@ -2027,9 +2086,9 @@ export function App(): React.JSX.Element {
                     // Fallback
                   }
                 }}
-                title="切换到 Chrome 原生右侧边栏"
+                title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
               >
-                ↗ 侧栏
+                {locale === 'en' ? '↗ Panel' : '↗ 侧栏'}
               </button>
               <button
                 type="button"
@@ -2037,7 +2096,7 @@ export function App(): React.JSX.Element {
                 onClick={() => {
                   window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION' }, '*')
                 }}
-                title="收起大工作台 (Esc)"
+                title={locale === 'en' ? "Collapse workstation (Esc)" : "收起大工作台 (Esc)"}
               >
                 ✕
               </button>
@@ -2045,7 +2104,7 @@ export function App(): React.JSX.Element {
           )}
         </div>
       </header>
-      <SceneBadge scene={pageScene} onClearContext={() => setPageScene(null)} />
+      <SceneBadge scene={pageScene} locale={locale} onClearContext={() => setPageScene(null)} />
       {showTextSize && (
         <TextSizePanel scale={uiScale} copy={copy}
           onStep={(direction) => changeUiScale(stepUiScale(uiScaleRef.current, direction))}
@@ -2113,13 +2172,13 @@ export function App(): React.JSX.Element {
             {row.kind === 'assistant' && <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>}
             {row.kind === 'tool'
               ? <ToolActivity row={row} copy={copy} />
-              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} />}
+              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />}
           </div>
         ))}
         {streamRow !== null && (
           <div className="row assistant" aria-live="polite">
             <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>
-            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} />
+            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />
           </div>
         )}
         {working && streamRow === null && question === null && rows[rows.length - 1]?.status !== 'running' && (
@@ -2142,8 +2201,8 @@ export function App(): React.JSX.Element {
       )}
       {error !== null && <div className="error">{error}</div>}
       <footer className="composer">
-        <MediaSnifferBar items={detectedMedia} onAttachMedia={(m) => { void attachMediaAsImage(m) }} />
-        <PresetChips scene={pageScene} onSelectPrompt={(p) => setDraft((c) => ({ ...c, text: p }))} />
+        <MediaSnifferBar items={detectedMedia} locale={locale} onAttachMedia={(m) => { void attachMediaAsImage(m) }} />
+        <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => setDraft((c) => ({ ...c, text: p }))} />
         <div className="composer-box">
           {selection !== null && (
             <SelectionQuote
