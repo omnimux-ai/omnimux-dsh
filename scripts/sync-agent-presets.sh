@@ -155,6 +155,8 @@ materialize_into() {
     return 0
   fi
   echo "==> 物化 Agent Presets → $dest"
+  # 只管理 KEEP 名单内的条目。目标目录里可能还有本脚本不拥有的预设——上游内置的
+  # minimal / ptc 就孵在同名的包目录下——删掉它们会让 asar 头列表跟着丢内置预设。
   for child in "$dest"/*; do
     [ -e "$child" ] || continue
     base=$(basename "$child")
@@ -163,8 +165,7 @@ materialize_into() {
       if [ "$base" = "$k" ]; then keep=1; break; fi
     done
     if [ "$keep" -eq 0 ]; then
-      rm -rf "$child"
-      echo "  - removed $base"
+      echo "  · kept $base"
     fi
   done
   for k in "${KEEP[@]}"; do
