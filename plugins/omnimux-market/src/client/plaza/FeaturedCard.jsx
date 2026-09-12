@@ -45,17 +45,13 @@ function renderFeaturedCover(coverSrc, item, title, hoverNode) {
 }
 
 function renderFeaturedHoverActions(item, opts) {
-  const { tr, onPin, onOpen, onTry } = opts;
-  const onPinClick = (e) => { e.stopPropagation(); onPin && onPin(item.id); };
+  const { tr, onOpen, onTry } = opts;
   const onOpenClick = (e) => { e.stopPropagation(); onOpen && onOpen(item); };
   const onTryClick = (e) => { e.stopPropagation(); (onTry || safeTrySkillInSession)(item); };
-  const pinTitle = tr ? (tr('workshop.pinToTop') || '置顶') : '置顶';
   const detailTitle = tr ? (tr('workshop.detail') || '查看详情') : '查看详情';
   const tryTitle = tr ? (tr('workshop.try') || '去对话中试试') : '去对话中试试';
 
   return h('div', { className: 'featured-hover-actions' },
-    // exempt-ui01 pin to top hover button
-    h('button', { type: 'button', className: 'hover-btn hover-btn-pin', title: pinTitle, onClick: onPinClick }, pinTitle),
     // exempt-ui01 open detail hover button
     h('button', { type: 'button', className: 'hover-btn hover-btn-detail', onClick: onOpenClick }, detailTitle),
     // exempt-ui01 try in session hover button
@@ -66,7 +62,9 @@ function renderFeaturedHoverActions(item, opts) {
 export function renderFeaturedCard(item, opts, onOpenArg, onPinArg, onTryArg) {
   let safeOpts = {};
   if (typeof opts === 'function') {
-    safeOpts = { tr: opts, onOpen: onOpenArg, onPin: onPinArg, onTry: onTryArg };
+    // 兼容历史调用签名 (item, tr, onOpen, onPin, onTry) 或 (item, tr, onOpen, onTry)
+    const onTry = typeof onPinArg === 'function' && typeof onTryArg === 'function' ? onTryArg : onPinArg;
+    safeOpts = { tr: opts, onOpen: onOpenArg, onTry };
   } else if (opts && typeof opts === 'object') {
     safeOpts = opts;
   }

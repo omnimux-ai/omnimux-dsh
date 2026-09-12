@@ -341,11 +341,14 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(skillPlazaSrc, /fill:\s*"none"/)
     assert.match(cssSrc, /\.btn-create svg rect\{fill:none\}/)
 
-    // 2. FeaturedCard 与 plazaUtils 支持 homeCover 及独立代理路径
+    // 2. FeaturedCard 与 plazaUtils 支持 homeCover 及独立代理路径，彻底移除置顶按钮与相关功能
     const featuredSrc = readFileSync(join(here, 'plaza/FeaturedCard.jsx'), 'utf8')
     assert.match(featuredSrc, /resolveIconSrc/)
     assert.match(featuredSrc, /item\.homeCover/)
     assert.match(featuredSrc, /featured-cover-svg/)
+    assert.ok(!featuredSrc.includes('hover-btn-pin'), 'hover-btn-pin should be removed')
+    assert.match(featuredSrc, /hover-btn-detail/)
+    assert.match(featuredSrc, /hover-btn-try/)
     assert.match(cssSrc, /\.featured-hover-actions\{[^}]*flex-direction:row/)
   })
 })
