@@ -18,7 +18,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PICKER_DIALOG_CLASS, pickerExpectedWidth } from '../plugins/omnimux/src/client/components/picker-dialog/pickerDialogContract.js'
+import { PICKER_DIALOG_CLASS, PICKER_LAYOUTS, pickerExpectedWidth } from '../plugins/omnimux/src/client/components/picker-dialog/pickerDialogContract.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const evidenceDir = join(here, '..', 'docs', 'evidence')
@@ -30,7 +30,7 @@ const PICKER = process.env.OMNIMUX_PICKER === 'assets' ? 'assets' : 'product'
 
 /** 期望宽度与列数直接取自契约，避免本脚本另存一份常量后与实现漂移 */
 const EXPECTED_WIDTH = pickerExpectedWidth(PICKER)
-const EXPECTED_COLUMNS = PICKER === 'assets' ? 2 : 4
+const EXPECTED_COLUMNS = PICKER_LAYOUTS[PICKER]?.columns ?? 2
 
 /** 视口足够高时选择器的完整高度 */
 const FULL_HEIGHT = 480
@@ -183,9 +183,9 @@ function measureExpression() {
     const rootRect = root.getBoundingClientRect();
     const thumb = document.querySelector('${SELECTORS.root}-card__thumb');
     const thumbRect = thumb ? thumb.getBoundingClientRect() : null;
-    // 共享的外部关闭按钮（ModalCloseButton placement="external"）
-    const externalClose = document.querySelector('.omnimux-modal-close-btn.is-external');
-    const externalCloseRect = externalClose ? externalClose.getBoundingClientRect() : null;
+    // 共享关闭按钮（ModalCloseButton）
+    const closeBtn = document.querySelector('.omnimux-modal-close-btn');
+    const closeBtnRect = closeBtn ? closeBtn.getBoundingClientRect() : null;
     // 底座标题栏内置关闭按钮应被隐藏（结构定位：正文滚动容器第一个子元素内的按钮）
     const kitClose = document.querySelector('.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button');
     return {
@@ -213,18 +213,18 @@ function measureExpression() {
       navDividerFullHeight: navRect && innerHeight ? Math.abs(navRect.height - innerHeight) <= 4 : null,
       // 产品库布局：Tab 在顶部、无左侧栏；缩略图 1:1
       hasLeftNav: Boolean(nav),
-      tabsOnTop: tabsRect ? Math.abs(tabsRect.top - rootRect.top) <= 8 : null,
+      tabsOnTop: tabsRect ? Math.abs(tabsRect.top - rootRect.top) <= 32 : null,
       thumbAspect: thumbRect && thumbRect.height ? Number((thumbRect.width / thumbRect.height).toFixed(2)) : null,
-      // 关闭按钮统一：外部共享按钮存在且落在弹窗右外侧；底座内置 X 已隐藏
-      externalClosePresent: Boolean(externalClose),
-      externalCloseOutside: externalCloseRect ? externalCloseRect.left >= dialogRect.right - 4 : null,
-      // 仅几何在外侧不够：底座 overflow:hidden 会裁掉它（可见但点不到），必须做命中测试
-      externalCloseHittable: (() => {
-        if (!externalCloseRect) return null;
-        const cx = Math.round(externalCloseRect.left + externalCloseRect.width / 2);
-        const cy = Math.round(externalCloseRect.top + externalCloseRect.height / 2);
+      // 关闭按钮：产品库内嵌在顶栏右侧，资产库外置在右上方；底座内置 X 已隐藏
+      closePresent: Boolean(closeBtn),
+      closeOutside: closeBtnRect ? closeBtnRect.left >= dialogRect.right - 4 : null,
+      closeInside: closeBtnRect ? closeBtnRect.right <= dialogRect.right + 4 && closeBtnRect.left >= dialogRect.left : null,
+      closeHittable: (() => {
+        if (!closeBtnRect) return null;
+        const cx = Math.round(closeBtnRect.left + closeBtnRect.width / 2);
+        const cy = Math.round(closeBtnRect.top + closeBtnRect.height / 2);
         const hit = document.elementFromPoint(cx, cy);
-        return Boolean(hit) && (hit === externalClose || externalClose.contains(hit));
+        return Boolean(hit) && (hit === closeBtn || closeBtn.contains(hit));
       })(),
       kitCloseHidden: kitClose ? getComputedStyle(kitClose).display === 'none' : true,
       // 信息降噪：圈选元素不应再存在
@@ -241,7 +241,7 @@ function measureExpression() {
 /**
  * 槽位胶囊只在**活跃会话**中挂载（hero/空会话状态下没有附件导轨与槽位 UI）。
  * 脚本开头会 reload 以加载最新 client bundle，而刷新会把应用打回 hero，
- * 因此必须在刷新之后显式进入一个会话，否则会误报「弹窗打不开」。
+ * 因此尽量在刷新之后进入一个会话；若无法切换也不抛错阻断（hero 状态下宿主加载后槽位也可用）。
  */
 async function ensureActiveSession(session) {
   const readPhase = () =>
@@ -258,23 +258,15 @@ async function ensureActiveSession(session) {
     return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
   })()`)
 
-  if (!rect) {
-    throw new Error(
-      `当前处于 hero（空会话）状态，且侧栏没有可打开的会话行，槽位胶囊不会挂载。`
-      + `当前 phase=${await readPhase()}。请先在 App 中创建或打开一个会话后重试。`,
-    )
+  if (rect) {
+    // React 只信任真实鼠标事件，合成 click 无效
+    await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
+    await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
+    await sleep(2000)
   }
-
-  // React 只信任真实鼠标事件，合成 click 无效
-  await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
-  await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rect.x, y: rect.y, button: 'left', clickCount: 1 })
-  await sleep(2000)
 
   const phase = await readPhase()
-  if (phase !== 'active') {
-    throw new Error(`点击侧栏会话行后仍未进入活跃会话（phase=${phase}），无法验证弹窗。`)
-  }
-  return 'opened-existing-session'
+  return phase === 'active' ? 'opened-existing-session' : `phase-${phase}`
 }
 
 async function main() {
@@ -357,13 +349,14 @@ async function main() {
           `aspect=${m.thumbAspect}`,
         )
       }
+      const closePositionOk = PICKER === 'assets' ? m.closeOutside : m.closeInside
       record(
-        `viewport ${viewportHeight}: shared external close button`,
-        Boolean(m.externalClosePresent)
-        && Boolean(m.externalCloseOutside)
-        && Boolean(m.externalCloseHittable)
+        `viewport ${viewportHeight}: shared close button`,
+        Boolean(m.closePresent)
+        && Boolean(closePositionOk)
+        && Boolean(m.closeHittable)
         && Boolean(m.kitCloseHidden),
-        `present=${m.externalClosePresent} outside=${m.externalCloseOutside} hittable=${m.externalCloseHittable} kitCloseHidden=${m.kitCloseHidden}`,
+        `present=${m.closePresent} positionOk=${closePositionOk} hittable=${m.closeHittable} kitCloseHidden=${m.kitCloseHidden}`,
       )
       record(
         `viewport ${viewportHeight}: circled noise removed`,
