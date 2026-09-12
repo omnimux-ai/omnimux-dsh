@@ -1,0 +1,94 @@
+sequenceDiagram
+    autonumber
+    participant WF as 工作流节点执行器
+    participant GW as 接缝客户端
+    participant HUB as hub 媒体执行
+    participant POLL as pollOpenAiMediaTask
+    participant GET as getJson
+    participant UP as 上游 provider
+
+    rect rgb(238, 244, 255)
+    note over WF,UP: 首次提交（P1 deadline 生效范围）
+    WF->>GW: submit(req)
+    GW->>HUB: seam.execute(req, wait:false)
+    HUB->>UP: POST 创建任务
+    UP-->>HUB: taskId
+    HUB-->>GW: mode=submitted, taskId
+    GW-->>WF: SubmitResult(taskId)
+    WF->>WF: recordUpstreamTask(taskId, capability, submittedAt)
+    end
+
+    rect rgb(240, 255, 240)
+    note over WF,UP: 轮询（deadline 内）
+    WF->>GW: awaitTask(taskId, dest, signal)
+    GW->>HUB: seam.execute(taskId, dest)
+    HUB->>POLL: pollOpenAiMediaTask(taskId, deadlineMs)
+    loop 直到 deadline 或终态
+        POLL->>POLL: 检查 deadline（唯一权威，不设独立尝试上限）
+        POLL->>GET: GET 任务状态
+        GET->>UP: fetch(url, signal=any(caller, timeout))
+        alt 上游返回 processing
+            UP-->>GET: 200 processing
+            GET-->>POLL: json
+            POLL->>POLL: sleep(min(interval, 剩余 deadline))
+        else 瞬态失败（抖动 / 5xx / 429）
+            UP-->>GET: 可重试错误
+            GET-->>POLL: retryable 错误
+            POLL->>POLL: withRetry 退避重试（maxAttempts 4）
+            note over POLL: 重试预算耗尽只算「一次失败尝试」，继续轮询到 deadline
+        else 单请求超时
+            GET->>GET: per-request signal 到期
+            GET-->>POLL: TimeoutError
+            POLL->>POLL: 计入可重试预算
+        else 上游 404/410（任务不存在）
+            UP-->>GET: HTTP 404
+            GET-->>POLL: omnimux-request-failed(404)
+            POLL-->>WF: omnimux-invalid-request（不可复核）
+        else 上游终态 failed
+            UP-->>GET: 200 failed
+            GET-->>POLL: json
+            POLL->>POLL: classifyQuotaFailure
+            POLL-->>WF: omnimux-failed / quota-exceeded / CHANNEL_UNAVAILABLE
+        end
+    end
+    alt 到达 deadline
+        POLL-->>WF: OmnimuxError(omnimux-task-timeout)
+    else completed
+        POLL-->>HUB: json（含产物 URL）
+        HUB->>UP: GET 产物字节
+        UP-->>HUB: 字节
+        HUB->>HUB: downloadMediaFile(dest)
+        HUB-->>GW: mode=live, url
+        GW-->>WF: AwaitTaskResult
+        WF->>WF: 节点 complete，清理上游引用
+    end
+    end
+
+    rect rgb(255, 246, 235)
+    note over WF,UP: 重启后复核（P2）
+    WF->>WF: 恢复时读 nodeStates[id].upstreamTask
+    note over WF: resetInFlightNodeStates 与 startNode 都必须保留该引用
+    alt 无引用
+        WF->>WF: 按现状盲目重投（既有语义）
+    else 有引用
+        WF->>WF: 剩余 deadline = ref.submittedAt + 20min − now
+        alt 已越过截止
+            WF->>WF: 立即以 omnimux-task-timeout 结算（不发出任何请求）
+        else 窗口仍开
+            WF->>GW: reconcileTask(ref, dest, signal)
+            GW->>HUB: seam.execute({ taskId, dest, submittedAt })
+            HUB->>POLL: 按已持久化 submittedAt 锚定剩余 deadline
+            alt 上游 completed
+                POLL-->>WF: 下载并回填产物
+                WF->>WF: 节点 complete，清理引用
+            else 上游未完成
+                POLL-->>WF: 在剩余 deadline 内继续等待（节点保持 running）
+            else 上游 failed
+                POLL-->>WF: 节点标错，清理引用
+            else hub 返回未知任务
+                GW-->>WF: omnimux-invalid-request
+                WF->>WF: 清理引用并回退重新提交
+            end
+        end
+    end
+    end

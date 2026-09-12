@@ -1,0 +1,242 @@
+classDiagram
+    direction LR
+
+    class OmnimuxError {
+        +string name = 'OmnimuxError'
+        +string code
+        +number status
+        +unknown details
+        +boolean retryable
+        +constructor(code, message, options)
+    }
+
+    class TaskDeadline {
+        <<module plugins/omnimux/src/media/task-deadline.js>>
+        +number DEFAULT_TASK_DEADLINE_MS = 1200000
+        +number SPEECH_TASK_DEADLINE_MS = 600000
+        +number DEFAULT_POLL_INTERVAL_MS = 1500
+        +number DEFAULT_REQUEST_TIMEOUT_MS = 10000
+        +number DEFAULT_RETRY_BUDGET_MS = 7000
+        +number MEDIA_EXECUTION_BUDGET_MS = 1260000
+        +number WORKFLOW_EXECUTION_TIMEOUT_MS = 1800000
+        +Set~number~ RETRYABLE_STATUS
+        +string TASK_TIMEOUT_CODE = 'omnimux-task-timeout'
+        +string TASK_UNKNOWN_CODE = 'omnimux-invalid-request'
+        +Object POLL_RETRY_POLICY
+        +remainingMs(deadlineAt, now) number
+        +resolveDeadline(deadlineMs) number
+        +resolveDeadlineFromSubmit(submittedAt, deadlineMs) number
+        +resolveDeadlineAt(options) number
+        +isRetryablePollError(error) boolean
+        +isUnknownTaskError(error) boolean
+        +taskTimeout(capability, taskId, deadlineMs, cause) OmnimuxError
+        +unknownTask(capability, taskId, cause) OmnimuxError
+    }
+
+    class JobModule {
+        <<module plugins/omnimux/src/media/job.js>>
+        +getJson(fetcher, url, apiKey, callerSignal, options) unknown
+        +downloadMediaFile(options) void
+        +assertDownloadedMediaType(contentType, capability) void
+    }
+
+    class OpenAiMediaProtocol {
+        <<module plugins/omnimux/src/media/protocols/openai-media.js>>
+        +pollOpenAiMediaTask(options) unknown
+        +createOpenAiMediaRuntime(options) runtime
+        -pollOnceWithRetry(options, url, budgetMs) unknown
+    }
+
+    class MediaExecute {
+        <<module plugins/omnimux/src/media/execute.js>>
+        +executeOmnimuxMedia(capability, input) MediaResult
+        +finishMediaTask(capability, route, input) MediaResult
+    }
+
+    class Speech {
+        <<module plugins/omnimux/src/media/speech.js>>
+        +generateSpeech(input) SpeechResult
+    }
+
+    class GenerationGateway {
+        <<interface plugins/omnimux-workflow/src/workflow/seam/gateway.ts>>
+        +submit(req) SubmitResult
+        +awaitTask(taskId, dest, signal) AwaitTaskResult
+        +reconcileTask(ref, dest, signal) AwaitTaskResult
+        +capabilities() CapabilityCatalog
+    }
+
+    class UpstreamTaskRef {
+        <<interface>>
+        +string taskId
+        +GenerationCapability capability
+        +number submittedAt
+    }
+
+    class SubmitRequest {
+        <<interface>>
+        +GenerationCapability capability
+        +string dest
+        +AbortSignal signal
+        +string operation
+        +boolean mockFail
+    }
+
+    class SubmitResult {
+        <<interface>>
+        +string taskId
+        +live_or_submitted mode
+        +string url
+    }
+
+    class AwaitTaskResult {
+        <<interface>>
+        +string url
+        +string text
+        +GenerationCapability type
+        +boolean simulated
+    }
+
+    class OmnimuxSeamClient {
+        <<class plugins/omnimux-workflow/src/workflow/seam/omnimuxGateway.ts>>
+        -Map~string,TaskRecord~ tasks
+        +submit(req) SubmitResult
+        +awaitTask(taskId, dest, signal) AwaitTaskResult
+        +reconcileTask(ref, dest, signal) AwaitTaskResult
+        +capabilities() CapabilityCatalog
+        -guarded(fn) unknown
+    }
+
+    class MockGateway {
+        <<class plugins/omnimux-workflow/src/workflow/seam/mockGateway.ts>>
+        -Map~string,MockTask~ tasks
+        +submit(req) SubmitResult
+        +awaitTask(taskId, dest, signal) AwaitTaskResult
+        +reconcileTask(ref, dest, signal) AwaitTaskResult
+    }
+
+    class AutoSwitchGateway {
+        <<class plugins/omnimux-workflow/src/workflow/seam/gatewaySelection.ts>>
+        -Map~string,string~ taskOwners
+        +submit(req) SubmitResult
+        +awaitTask(taskId, dest, signal) AwaitTaskResult
+        +reconcileTask(ref, dest, signal) AwaitTaskResult
+        +currentMode() string
+    }
+
+    class NodeStateSnapshot {
+        <<interface plugins/omnimux-workflow/src/workflow/execution/ExecutionContext.ts>>
+        +NodeStatusValue status
+        +number startedAt
+        +number completedAt
+        +string error
+        +string skipReason
+        +UpstreamTaskRef upstreamTask
+    }
+
+    class ExecutionContext {
+        <<class>>
+        -Map~string,NodeStateSnapshot~ nodeStates
+        -Map~string,unknown~ nodeOutputs
+        +setNodeUpstreamTask(nodeId, ref) void
+        +clearNodeUpstreamTask(nodeId) void
+        +readNodeUpstreamTask(nodeId) UpstreamTaskRef
+        +reportProgress(nodeId, progress, message) void
+        +completeNode(nodeId, output) void
+        +failNode(nodeId, error) void
+        +toJSON() SerializedContext
+    }
+
+    class UpstreamReconcile {
+        <<module plugins/omnimux-workflow/src/workflow/execution/upstreamReconcile.ts>>
+        +number UPSTREAM_TASK_DEADLINE_MS = 1200000
+        +upstreamTaskDeadlineAt(ref, deadlineMs) number
+        +reconcileUpstreamTask(input) ReconcileOutcome
+        +isNotReconcilableError(error) boolean
+    }
+
+    class UpstreamTaskModule {
+        <<module plugins/omnimux-workflow/src/workflow/execution/upstreamTask.ts>>
+        +readUpstreamTaskRef(value) UpstreamTaskRef
+    }
+
+    class ReconcileOutcome {
+        <<union 三态（无 still-running：复核调用阻塞到终态或截止）>>
+        +downloaded$
+        +failed$
+        +notReconcilable$
+    }
+
+    class MaterialGatewayExecutor {
+        <<module plugins/omnimux-workflow/src/workflow/execution/materialGatewayExecutor.ts>>
+        +execute(node, ctx) NodeOutput
+    }
+
+    class ExecutorRegistryContext {
+        <<interface plugins/omnimux-workflow/src/workflow/executors/registry.ts>>
+        +AbortSignal signal
+        +string mediaDir
+        +recordUpstreamTask(ref) void
+        +persistGenerated(input) PersistedAsset
+        +reportProgress(progress, message) void
+    }
+
+    class ExecutionRecovery {
+        <<module plugins/omnimux-workflow/src/workflow/execution/executionRecovery.ts>>
+        +recoverExecution(deps, executionId) ExecutionEntry
+        +recoverAll(params) RecoveryStats
+        -resetInFlightNodeStates(context, dagState) reconcilable
+    }
+
+    class ExecutionStore {
+        <<module plugins/omnimux-workflow/src/workflow/execution/executionStore.ts>>
+        +saveExecutionRecord(dir, record) void
+        +loadExecutionRecord(dir, id) PersistedExecutionRecord
+        +buildExecutionRecord(input) PersistedExecutionRecord
+    }
+
+    class PersistedExecutionRecord {
+        <<interface>>
+        +number schemaVersion
+        +string id
+        +Record nodeStates
+        +Record nodeOutputs
+        +ExecutableNode[] nodes
+        +ExecutableEdge[] edges
+    }
+
+    OpenAiMediaProtocol ..> TaskDeadline : 用常量与重试判定
+    OpenAiMediaProtocol ..> JobModule : getJson 每轮一次
+    MediaExecute ..> OpenAiMediaProtocol : 轮询
+    MediaExecute ..> TaskDeadline : resolveDeadlineFromSubmit 复核锚点
+    Speech ..> TaskDeadline : DEFAULT_TASK_DEADLINE_MS
+    JobModule ..> OmnimuxError : 抛出
+    TaskDeadline ..> OmnimuxError : taskTimeout 构造
+
+    GenerationGateway <|.. OmnimuxSeamClient : 实现
+    GenerationGateway <|.. MockGateway : 实现
+    GenerationGateway <|.. AutoSwitchGateway : 实现
+    GenerationGateway ..> UpstreamTaskRef : reconcileTask 入参
+    GenerationGateway ..> SubmitRequest : submit 入参
+    GenerationGateway ..> SubmitResult : submit 返回
+    GenerationGateway ..> AwaitTaskResult : awaitTask 与 reconcileTask 返回
+    AutoSwitchGateway o-- OmnimuxSeamClient : 委派
+    AutoSwitchGateway o-- MockGateway : 委派
+
+    NodeStateSnapshot *-- UpstreamTaskRef : upstreamTask 持久化载体
+    ExecutionContext o-- NodeStateSnapshot : nodeStates
+    ExecutionContext ..> UpstreamTaskRef : 登记与读取
+    ExecutorRegistryContext ..> UpstreamTaskRef : recordUpstreamTask
+
+    MaterialGatewayExecutor ..> GenerationGateway : submit 与 reconcileTask
+    MaterialGatewayExecutor ..> ExecutorRegistryContext : 读 recordUpstreamTask
+    UpstreamReconcile ..> GenerationGateway : reconcileTask
+    UpstreamReconcile ..> ReconcileOutcome : 返回
+
+    ExecutionRecovery ..> ExecutionContext : 保留 upstreamTask 后回 pending
+    ExecutionRecovery ..> UpstreamReconcile : 触发复核（经执行器）
+    ExecutionRecovery ..> ExecutionStore : 装载与持久化
+    ExecutionContext ..> UpstreamTaskModule : fromJSON 校验持久化引用
+    UpstreamTaskModule ..> UpstreamTaskRef : 归一或判为无引用
+    ExecutionStore o-- PersistedExecutionRecord : 读写
+    PersistedExecutionRecord o-- NodeStateSnapshot : nodeStates 快照
