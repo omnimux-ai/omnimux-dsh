@@ -50,6 +50,10 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.ok(pickerSource.includes('collectCategories'), 'uses collectCategories');
   assert.ok(pickerSource.includes('filterProducts'), 'uses filterProducts');
   assert.ok(pickerSource.includes('flex-shrink: 0'), 'actions protected against overflow squeeze');
+  assert.ok(pickerSource.includes('omx-product-pick__tabs'), '分类改为顶部 Tab（参考稿布局）');
+  assert.ok(!pickerSource.includes('omx-product-pick__nav'), '不再有左侧分类栏');
+  assert.ok(pickerSource.includes('--omnimux-pick-dialog-width'), '弹窗宽度由契约提供的变量装配');
+  assert.ok(pickerSource.includes('aspect-ratio: 1 / 1'), '卡片缩略图为 1:1');
   assert.ok(!pickerSource.includes('__nav-header'), '分类栏目标题已移除（信息降噪）');
   assert.ok(!pickerSource.includes('__tab-badge'), '分类数量徽标已移除');
   assert.ok(!pickerSource.includes('unselectedHint'), '未选中时的页脚提示已移除');
@@ -59,12 +63,16 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.doesNotMatch(pickerSource, /🔍/, 'contains no search emoji');
 });
 
-test('ProductPickerCard: contains check, thumb, badge, price and accessibility hooks', () => {
+test('ProductPickerCard: 参考稿样式（方形缩略图 + 勾选 + 价格胶囊 + 卡下名称）', () => {
   assert.ok(cardSource.includes('omx-product-pick-card'), 'has card class name');
   assert.ok(cardSource.includes('omx-product-pick-card__check'), 'has checkmark container');
-  assert.ok(cardSource.includes('omx-product-pick-card__price'), 'displays formatted price');
+  assert.ok(cardSource.includes('omx-product-pick-card__badge'), 'has price badge');
+  assert.ok(cardSource.includes('formatPrice'), 'displays formatted price');
+  assert.ok(cardSource.includes('omx-product-pick-card__title'), 'shows product name below the thumb');
   assert.ok(cardSource.includes('ProductPlaceholderIcon'), 'uses SVG vector placeholder icon');
   assert.ok(cardSource.includes('role="radio"'), 'declares radio role for single-select');
+  assert.ok(!cardSource.includes('__desc'), 'drops the description line（保持简洁）');
+  assert.ok(!cardSource.includes('__tags'), 'drops the tag chips（保持简洁）');
 });
 
 test('ProductPickerModal: exposes thin adapter contract with onConfirm, onClose, open and t', () => {

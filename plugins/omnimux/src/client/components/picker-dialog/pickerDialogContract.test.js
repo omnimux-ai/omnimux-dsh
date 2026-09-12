@@ -1,96 +1,88 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PICKER_COLUMNS,
+  PICKER_CARD_WIDTH,
   PICKER_DIALOG_CLASS,
-  PICKER_DIALOG_CSS,
+  PICKER_DIALOG_SHELL_CSS,
+  PICKER_GRID_GAP,
+  PICKER_LAYOUTS,
   PICKER_ROOT_CLASSES,
   ensurePickerDialogStyles,
+  pickerDialogWidth,
+  pickerExpectedWidth,
 } from './pickerDialogContract.js';
 
-/** 从契约 CSS 里取回一个变量值（px 数字） */
-function varPx(name) {
-  const match = PICKER_DIALOG_CSS.match(new RegExp(`${name}:\\s*(\\d+)px`));
-  assert.ok(match, `contract must declare ${name}`);
-  return Number(match[1]);
-}
+test('each picker derives its width from its own layout geometry', () => {
+  // 产品库：顶部 Tab，无左侧栏，4 列
+  assert.equal(PICKER_LAYOUTS.product.columns, 4, '产品库需至少展示 3 列（取 4 列）');
+  assert.equal(PICKER_LAYOUTS.product.leading, 0, '顶部 Tab 布局没有左侧栏');
+  assert.equal(pickerExpectedWidth('product'), 4 * PICKER_CARD_WIDTH + 3 * PICKER_GRID_GAP);
+  assert.equal(pickerExpectedWidth('product'), 1104);
 
-test('contract width derives from the layout factors instead of a magic number', () => {
-  const nav = varPx('--omnimux-pick-nav-w');
-  const mainPad = varPx('--omnimux-pick-main-pad');
-  const card = varPx('--omnimux-pick-card-w');
-  const gap = varPx('--omnimux-pick-gap');
+  // 资产库：左侧分类栏 148 + 正文左内边距 16 + 2 列
+  assert.equal(PICKER_LAYOUTS.assets.columns, 2);
+  assert.equal(PICKER_LAYOUTS.assets.leading, 148 + 16);
+  assert.equal(pickerExpectedWidth('assets'), 164 + 2 * PICKER_CARD_WIDTH + PICKER_GRID_GAP);
+  assert.equal(pickerExpectedWidth('assets'), 708);
 
-  assert.equal(PICKER_COLUMNS, 3, 'picker must show at least three cards side by side');
-
-  // 分类栏 + 正文左内边距 + 列数×卡片 + (列数-1)×列间距（选择器贴边，无正文内边距项）
-  const expected = nav + mainPad + PICKER_COLUMNS * card + (PICKER_COLUMNS - 1) * gap;
-  assert.equal(expected, 988, 'derived dialog width must match the geometry contract');
-
-  assert.ok(
-    !PICKER_DIALOG_CSS.includes('--omnimux-pick-body-pad'),
-    'edge-to-edge picker has no body padding term',
-  );
-  assert.match(
-    PICKER_DIALOG_CSS,
-    /width:\s*min\(92vw,\s*calc\(/,
-    'width must be viewport-capped and computed from the variables',
-  );
-  assert.ok(
-    !/width:\s*\d+px\s*!important/.test(PICKER_DIALOG_CSS),
-    'no hardcoded pixel width remains',
-  );
-  for (const name of ['--omnimux-pick-nav-w', '--omnimux-pick-main-pad', '--omnimux-pick-card-w', '--omnimux-pick-gap', '--omnimux-pick-columns']) {
-    assert.ok(PICKER_DIALOG_CSS.includes(`var(${name})`), `width must consume ${name}`);
-  }
+  assert.throws(() => pickerExpectedWidth('nope'), /unknown picker layout/);
 });
 
-test('contract keeps exactly one primitive-class dependency, documented', () => {
-  const primitiveRefs = PICKER_DIALOG_CSS.match(/\.dshUk-[A-Za-z-]+/g) || [];
+test('pickerDialogWidth emits a leading-less calc for the top-tab layout', () => {
+  assert.equal(pickerDialogWidth({ columns: 4 }), 'calc(4 * 264px + 3 * 16px)');
+  assert.equal(pickerDialogWidth({ columns: 2, leading: 164 }), 'calc(164px + 2 * 264px + 1 * 16px)');
+  assert.equal(pickerDialogWidth({ columns: 1 }), 'calc(1 * 264px)', '单列不产生列间距项');
+});
+
+test('shell css stays layout agnostic and consumes the per-picker width variable', () => {
+  assert.ok(
+    PICKER_DIALOG_SHELL_CSS.includes('min(92vw, var(--omnimux-pick-dialog-width'),
+    'shell assembles width from the per-picker variable, capped by viewport',
+  );
+  assert.ok(
+    !/--omnimux-pick-(nav-w|columns|card-w|gap)\s*:/.test(PICKER_DIALOG_SHELL_CSS),
+    'geometric factors moved into each picker, not the shared shell',
+  );
+  assert.ok(
+    !PICKER_DIALOG_SHELL_CSS.includes('--omx-'),
+    'deprecated --omx-* prefix must never come back',
+  );
+});
+
+test('shell lifts the primitive body cap and documented why', () => {
+  const primitiveRefs = PICKER_DIALOG_SHELL_CSS.match(/\.dshUk-[A-Za-z-]+/g) || [];
   assert.deepEqual(
     [...new Set(primitiveRefs)],
     ['.dshUk-Dialog-body'],
     'only the primitive scroll container is addressed by class name',
   );
   assert.ok(
-    PICKER_DIALOG_CSS.includes('contentClassName'),
+    PICKER_DIALOG_SHELL_CSS.includes('contentClassName'),
     'comment must explain why contentClassName cannot reach that container',
   );
-  assert.ok(PICKER_DIALOG_CSS.includes('verify:picker'), 'comment must point at the runtime drift alarm');
-});
-
-test('contract lifts the body cap for both picker roots and keeps the dialog class single-sourced', () => {
+  assert.ok(
+    PICKER_DIALOG_SHELL_CSS.includes('verify:picker'),
+    'comment must point at the runtime drift alarm',
+  );
   for (const root of PICKER_ROOT_CLASSES) {
     assert.ok(
-      PICKER_DIALOG_CSS.includes(`.dshUk-Dialog-body:has(${root})`),
+      PICKER_DIALOG_SHELL_CSS.includes(`.dshUk-Dialog-body:has(${root})`),
       `body cap must be lifted for ${root}`,
     );
-  }
-  assert.equal(PICKER_DIALOG_CLASS, 'omx-pick-dialog');
-  assert.match(PICKER_DIALOG_CSS, /\.omx-pick-dialog\s*\{/);
-});
-
-test('contract lets the picker run edge to edge so the nav divider is full height', () => {
-  for (const root of PICKER_ROOT_CLASSES) {
     assert.ok(
-      PICKER_DIALOG_CSS.includes(`.dshUk-Dialog-body:has(${root}) > *:last-child`),
+      PICKER_DIALOG_SHELL_CSS.includes(`.dshUk-Dialog-body:has(${root}) > *:last-child`),
       `inner body padding/margin must be cleared for ${root}`,
     );
   }
-  assert.match(
-    PICKER_DIALOG_CSS,
-    /> \*:last-child\s*\{[^}]*margin-top: 0 !important;[^}]*padding: 0 !important;/s,
-    'inner body must lose its top margin and side padding',
-  );
 });
 
-test('contract hides the kit built-in close in favour of the shared external button', () => {
+test('shell hides the kit built-in close in favour of the shared external button', () => {
   assert.ok(
-    PICKER_DIALOG_CSS.includes(`.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button`),
+    PICKER_DIALOG_SHELL_CSS.includes(`.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button`),
     'kit header close must be structurally targeted (it only has a hashed class)',
   );
   assert.match(
-    PICKER_DIALOG_CSS,
+    PICKER_DIALOG_SHELL_CSS,
     /\*:first-child > button\s*\{\s*display: none !important;/,
     'kit header close must be hidden',
   );
@@ -113,5 +105,5 @@ test('ensurePickerDialogStyles injects once and is idempotent', () => {
 
   assert.equal(created.length, 1, 'injects a single style tag across repeated calls');
   assert.equal(created[0].id, 'omx-picker-dialog-contract');
-  assert.equal(created[0].textContent, PICKER_DIALOG_CSS);
+  assert.equal(created[0].textContent, PICKER_DIALOG_SHELL_CSS);
 });
