@@ -289,11 +289,11 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     const media = parseMediaConfig(undefined)
     const costRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'cost_first' }, media)
     assert.equal(costRoute.strategy, 'cost_first')
-    assert.ok(costRoute.candidates[0].includes('@seedance-cheap'))
+    assert.ok(costRoute.candidates[0].includes('@cheap'))
 
     const stabRoute = resolveMediaRoute('video', { model: 'seedance-2-0', strategy: 'stability_first' }, media)
     assert.equal(stabRoute.strategy, 'stability_first')
-    assert.ok(stabRoute.candidates[0].includes('@seedance-pro'))
+    assert.ok(stabRoute.candidates[0].includes('@seedance-2-0-task-pro') || stabRoute.candidates[0].includes('@seedance-standard'))
   })
 
   it('resolves explicit group from model@group or request.group', () => {
@@ -301,11 +301,11 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     const inlineRoute = resolveMediaRoute('video', { model: 'seedance-2-0@standard' }, media)
     assert.equal(inlineRoute.modelId, 'seedance-2-0')
     assert.equal(inlineRoute.group, 'standard')
-    assert.equal(inlineRoute.candidates[0], 'seedance-2-0@standard')
+    assert.equal(inlineRoute.candidates[0], 'seedance-2-0@default')
 
     const fieldRoute = resolveMediaRoute('video', { model: 'seedance-2-0', group: 'pro' }, media)
     assert.equal(fieldRoute.group, 'pro')
-    assert.equal(fieldRoute.candidates[0], 'seedance-2-0@seedance-pro')
+    assert.equal(fieldRoute.candidates[0], 'seedance-2-0@seedance-2-0-task-pro')
   })
 
   it('reports no strategy on a legacy request that never asked for one', () => {

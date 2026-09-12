@@ -75,6 +75,7 @@ const ALL_BRANDS: BrandDef[] = [
   { id: 'deepseek', name: 'DeepSeek', iconModelId: 'deepseek-v4-flash-vision-exp' },
   { id: 'google', name: 'Google', iconModelId: 'gemini-3.8-flash' },
   { id: 'midjourney', name: 'Midjourney', iconModelId: 'midjourney' },
+  { id: 'xai', name: 'xAI', iconModelId: 'grok-imagine-video-1-5' },
 ];
 
 const BRAND_MATCHERS: ReadonlyArray<{ brand: string; fragments: readonly string[] }> = [
@@ -88,12 +89,13 @@ const BRAND_MATCHERS: ReadonlyArray<{ brand: string; fragments: readonly string[
   { brand: 'deepseek', fragments: ['deepseek'] },
   { brand: 'google', fragments: ['gemini', 'banana', 'imagen', 'veo'] },
   { brand: 'midjourney', fragments: ['midjourney', 'mj'] },
+  { brand: 'xai', fragments: ['grok', 'xai'] },
 ];
 
 const BRANDS_BY_MATERIAL = {
   text: ['openai', 'anthropic', 'google', 'deepseek', 'minimax'],
   image: ['openai', 'google', 'bytedance', 'kling', 'midjourney'],
-  video: ['bytedance', 'openai', 'minimax', 'kling', 'alibaba', 'happyhorse', 'google'],
+  video: ['bytedance', 'openai', 'minimax', 'kling', 'alibaba', 'happyhorse', 'google', 'xai'],
 } as const;
 
 /** 目录不可用（尚未加载）时的兜底，避免品牌列整列空白。 */
