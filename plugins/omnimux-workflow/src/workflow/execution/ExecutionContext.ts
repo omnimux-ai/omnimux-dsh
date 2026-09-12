@@ -40,6 +40,19 @@ export const ExecutionStatus = {
 
 export type ExecutionStatusValue = (typeof ExecutionStatus)[keyof typeof ExecutionStatus];
 
+/**
+ * #1386: the run statuses that end a run — a terminal status is final.
+ *
+ * Declared next to the statuses it names and re-exported by `executionTypes`
+ * (which is where its existing consumers import it from); `ExecutionContext`
+ * itself must not import `executionTypes`, so the canonical set lives here.
+ */
+export const TERMINAL_STATUSES = new Set<string>([
+  ExecutionStatus.COMPLETED,
+  ExecutionStatus.ERROR,
+  ExecutionStatus.CANCELLED,
+]);
+
 export const NodeStatus = {
   PENDING: 'pending',
   RUNNING: 'running',
@@ -301,6 +314,23 @@ export class ExecutionContext {
   // Execution state machine
   // ========================================================================
 
+  /**
+   * #1386: has this run already been stamped with a terminal status?
+   *
+   * The three terminal transitions — {@link complete}, {@link fail} and
+   * {@link cancel} — are mutually exclusive: whichever reaches the run first
+   * wins and the others become no-ops. Without that rule the same event could
+   * be spelled two ways, because two writers reach a run on its way out: the
+   * teardown path (`cleanupExecution`) stamps the terminal state, and the
+   * scheduler loop then reaches its own `cancel()` while unwinding. A timeout
+   * therefore failed the run as `error` and the loop's `cancel()` immediately
+   * overwrote it with `cancelled` — the in-memory and the persisted record
+   * disagreed with what a post-restart recovery wrote for the same deadline.
+   */
+  private isTerminal(): boolean {
+    return TERMINAL_STATUSES.has(this.status);
+  }
+
   start(totalNodes: number): void {
     this.status = ExecutionStatus.RUNNING;
     this.startedAt = Date.now();
@@ -353,6 +383,11 @@ export class ExecutionContext {
   }
 
   complete(): void {
+    // #1386: the first terminal transition wins. Completing a run that was
+    // already cancelled or failed would flip a decision the caller (and the
+    // persisted record) has already acted on.
+    if (this.isTerminal()) return;
+
     this.status = ExecutionStatus.COMPLETED;
     this.completedAt = Date.now();
     const durationMs = this.completedAt - (this.startedAt ?? this.completedAt);
@@ -374,6 +409,12 @@ export class ExecutionContext {
   }
 
   fail(error: unknown, nodeId: string | null = null): void {
+    // #1386: same rule as complete()/cancel(). The timeout teardown fails the
+    // run, and the scheduler's own failure path may then fire while the abort
+    // unwinds; the cause recorded first (`执行超时…`) is the one worth keeping,
+    // not the aborted executor's secondary error.
+    if (this.isTerminal()) return;
+
     this.status = ExecutionStatus.ERROR;
     this.completedAt = Date.now();
     this.error = error instanceof Error ? error.message : String(error);
@@ -399,9 +440,13 @@ export class ExecutionContext {
   }
 
   cancel(): void {
-    // Idempotent: a timeout cleanup cancels the run before the scheduler loop
-    // observes the abort, and only the first caller may stamp the terminal state.
-    if (this.status === ExecutionStatus.CANCELLED) return;
+    // #1386: idempotent, and — more than that — never overwrites another
+    // terminal state. A timeout cleanup cancels the scheduler before the loop
+    // observes the abort, and the loop's own cancel() arrives afterwards; if
+    // this only guarded against CANCELLED it turned the recorded `error` (with
+    // the timeout message) back into `cancelled`, so the same deadline read as
+    // `cancelled` in memory and as `error` after a restart.
+    if (this.isTerminal()) return;
 
     this.status = ExecutionStatus.CANCELLED;
     this.completedAt = Date.now();

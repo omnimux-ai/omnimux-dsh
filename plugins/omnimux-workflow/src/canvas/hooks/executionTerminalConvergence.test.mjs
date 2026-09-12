@@ -138,6 +138,45 @@ test('单节点模式：pending 标记同样随终态收敛', () => {
   assert.equal(nodeData('n3').executionStatus, 'skipped');
 });
 
+test('#1386 完成终态：execution_complete 同样收敛在飞节点（三个终态分支对称）', () => {
+  // Before the fix only error / cancelled converged, so a node whose
+  // `node_complete` was lost stayed 「生成中…」 on a run that had already
+  // finished — the same permanent marker #1379 removed for the other two.
+  arrangeCanvas(['n6'], 'running');
+  useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_6' });
+
+  let closed = 0;
+  dispatchExecutionEvent(
+    'execution_complete',
+    JSON.stringify({ executionId: 'exec_6', completedAt: Date.now() }),
+    () => { closed += 1; },
+  );
+
+  const exec = useExecutionStore.getState();
+  assert.equal(exec.status, 'completed');
+  assert.equal(closed, 1);
+  assert.equal(exec.nodeStatuses.n6, 'completed');
+  assert.equal(nodeData('n6').executionStatus, 'completed');
+  assert.notEqual(
+    mapNodeToGenerationStatus(nodeData('n6').executionStatus, undefined, false),
+    'generating',
+    'n6 不应继续显示「生成中…」',
+  );
+});
+
+test('#1386 完成终态：已完成节点不被改写（收敛只碰在飞态）', () => {
+  arrangeCanvas(['n7'], 'completed');
+  useExecutionStore.getState().setExecution({ status: 'running', executionId: 'exec_7' });
+
+  dispatchExecutionEvent(
+    'execution_complete',
+    JSON.stringify({ executionId: 'exec_7', completedAt: Date.now() }),
+    () => {},
+  );
+
+  assert.equal(nodeData('n7').executionStatus, 'completed');
+});
+
 test('重载：无存活执行时收敛画布文档里残留的在飞态', () => {
   arrangeCanvas(['n4'], 'running');
 

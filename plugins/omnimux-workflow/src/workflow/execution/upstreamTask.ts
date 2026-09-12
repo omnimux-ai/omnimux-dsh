@@ -11,7 +11,7 @@
  * The read/write operations themselves live on `ExecutionContext`, which owns
  * the node-state map and the persistence hook.
  */
-import type { GenerationCapability, UpstreamTaskRef } from '../seam/gateway.ts';
+import type { GenerationCapability, UpstreamTaskOwner, UpstreamTaskRef } from '../seam/gateway.ts';
 
 const CAPABILITIES: ReadonlySet<string> = new Set(['text', 'image', 'video', 'audio']);
 
@@ -28,13 +28,25 @@ const CAPABILITIES: ReadonlySet<string> = new Set(['text', 'image', 'video', 'au
  */
 export function readUpstreamTaskRef(value: unknown): UpstreamTaskRef | undefined {
   if (!value || typeof value !== 'object') return undefined;
-  const candidate = value as { taskId?: unknown; capability?: unknown; submittedAt?: unknown };
+  const candidate = value as {
+    taskId?: unknown;
+    capability?: unknown;
+    submittedAt?: unknown;
+    owner?: unknown;
+  };
   if (typeof candidate.taskId !== 'string' || candidate.taskId.trim() === '') return undefined;
   if (typeof candidate.capability !== 'string' || !CAPABILITIES.has(candidate.capability)) return undefined;
   if (typeof candidate.submittedAt !== 'number' || !Number.isFinite(candidate.submittedAt)) return undefined;
+  const owner = candidate.owner;
+  const usableOwner: UpstreamTaskOwner | undefined = owner === 'mock' || owner === 'omnimux'
+    ? owner
+    : undefined;
   return {
     taskId: candidate.taskId.trim(),
     capability: candidate.capability as GenerationCapability,
     submittedAt: Math.max(0, Math.trunc(candidate.submittedAt)),
+    // #1386: an unknown owner is not a broken record — it means "no provenance",
+    // which routes exactly like a reference written before #1386.
+    ...(usableOwner ? { owner: usableOwner } : {}),
   };
 }

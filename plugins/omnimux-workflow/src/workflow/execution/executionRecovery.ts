@@ -14,6 +14,7 @@ import {
 } from './executionStore';
 import {
   ALL_EVENT_NAMES,
+  EXECUTION_TIMEOUT_MESSAGE,
   EXECUTION_TIMEOUT_MS,
   TERMINAL_STATUSES,
   type ExecutionEntry,
@@ -54,7 +55,11 @@ function handleTimedOutExecution(
   executionsDir: string,
   record: PersistedExecutionRecord,
 ): null {
-  const error = `Execution timed out after restart (>${Math.round(EXECUTION_TIMEOUT_MS / 60000)}min)`;
+  // #1386: one wording with the in-process timeout path, which records the same
+  // deadline (`EXECUTION_TIMEOUT_MESSAGE`). Before this, the same event read as
+  // an English `error` after a restart but as a message-less `cancelled` while
+  // the host stayed alive.
+  const error = EXECUTION_TIMEOUT_MESSAGE;
   // The crashed run's in-flight nodes must not survive as running in the record
   // a client reads back through the snapshot endpoint.
   const settled = Object.values(record.nodeStates).filter((state) =>
@@ -170,6 +175,7 @@ function assembleRecoveredEntry(
     createdAt: record.createdAt,
     syncTimer: null,
     timeoutTimer: null,
+    retentionTimer: null,
     loopRunning: false,
     isRecovered: true,
     eventLog: filterValidReplayLog(record.eventLog),

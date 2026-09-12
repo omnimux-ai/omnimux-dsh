@@ -304,6 +304,10 @@ export function createMaterialGatewayExecutor(opts: {
           taskId: submitted.taskId,
           capability,
           submittedAt: Date.now(),
+          // #1386: persist which backend owns the task alongside its id, so the
+          // recovery in a later process routes the reconcile back to that same
+          // backend instead of assuming the hub.
+          ...(submitted.owner ? { owner: submitted.owner } : {}),
         });
       }
       try {

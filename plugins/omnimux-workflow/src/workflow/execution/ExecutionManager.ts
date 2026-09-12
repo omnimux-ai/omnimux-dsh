@@ -77,6 +77,7 @@ function buildNewExecutionEntry(
     createdAt: new Date().toISOString(),
     syncTimer: null,
     timeoutTimer: null,
+    retentionTimer: null,
     loopRunning: false,
     isRecovered: false,
     eventLog: [],
@@ -157,8 +158,8 @@ function setupAndRunExecution(
   // of a task the hub is already running.
   entry.context.onPersistRequested = () => persistRecord(executionsDir, entry);
   persistRecord(executionsDir, entry);
-  setupExecutionListeners(executionsDir, entry);
-  startTimeout(entry, () => cleanupExecution(entries, entry.context.id));
+  setupExecutionListeners(executionsDir, entry, () => retireEntry(entries, entry));
+  startTimeout(entry, () => cleanupExecution(entries, entry.context.id, 'timed-out'));
   continueExecutionLoop(entry, { isRecovery: false });
 }
 
@@ -265,6 +266,18 @@ function lookupEntryById(
   return found;
 }
 
+/**
+ * #1386 P4: reap a finished entry from the in-memory table.
+ *
+ * Reached only through the terminal retention timer, i.e. after the run has
+ * ended and its replay buffer has been kept long enough for a late SSE
+ * subscriber. `cleanupExecution` sees a non-active entry, so this deletes it
+ * without restamping anything.
+ */
+function retireEntry(entries: Map<string, ExecutionEntry>, entry: ExecutionEntry): void {
+  cleanupExecution(entries, entry.context.id, 'retired');
+}
+
 export function createExecutionManager(deps: ExecutionManagerDeps) {
   const { executionsDir, gateway, mediaDir } = deps;
   const entries = new Map<string, ExecutionEntry>();
@@ -274,8 +287,8 @@ export function createExecutionManager(deps: ExecutionManagerDeps) {
   registerExecutor(createVideoCompositionExecutor());
 
   const handleEntrySetup = (entry: ExecutionEntry): void => {
-    setupExecutionListeners(executionsDir, entry);
-    startTimeout(entry, () => cleanupExecution(entries, entry.context.id));
+    setupExecutionListeners(executionsDir, entry, () => retireEntry(entries, entry));
+    startTimeout(entry, () => cleanupExecution(entries, entry.context.id, 'timed-out'));
   };
 
   const recoveryDeps = {

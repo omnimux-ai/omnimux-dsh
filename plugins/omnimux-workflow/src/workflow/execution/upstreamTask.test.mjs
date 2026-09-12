@@ -208,6 +208,57 @@ test('startNode 保留已恢复的引用（否则调度器会抹掉复核依据�
   assert.deepEqual(context.readNodeUpstreamTask('n1'), REF);
 });
 
+test('#1386 F1：owner 经真实的落盘往返保真（setNodeUpstreamTask → toJSON → readUpstreamTaskRef）', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'omnimux-1386-owner-'));
+  try {
+    const { context } = persistedContext(dir, 'exec_owner');
+    context.start(1);
+    context.startNode('n1');
+    // What the executor records after a submit: the gateway's resolved backend
+    // rides along, because after a restart the process-local task table is empty
+    // and the reference is the only routing evidence left.
+    context.setNodeUpstreamTask('n1', { ...REF, owner: 'mock' });
+
+    // (a) In-memory snapshot → normalized read.
+    assert.deepEqual(
+      readUpstreamTaskRef(context.toJSON().nodeStates.n1.upstreamTask),
+      { ...REF, owner: 'mock' },
+    );
+    // (b) Real disk round trip (execution.json → loadExecutionRecord).
+    const record = loadExecutionRecord(dir, 'exec_owner');
+    assert.deepEqual(
+      readUpstreamTaskRef(record.nodeStates.n1.upstreamTask),
+      { ...REF, owner: 'mock' },
+      'owner 必须在 execution.json 往返后仍然可用（这正是重启后的路由依据）',
+    );
+    // (c) The rebuilt context reads the same reference — the restart path.
+    const restored = ExecutionContext.fromJSON(context.toJSON());
+    assert.deepEqual(restored.readNodeUpstreamTask('n1'), { ...REF, owner: 'mock' });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('#1386：readUpstreamTaskRef 的 owner 归一化四态', () => {
+  // ①/② Known owners survive as themselves.
+  assert.equal(readUpstreamTaskRef({ ...REF, owner: 'mock' }).owner, 'mock');
+  assert.equal(readUpstreamTaskRef({ ...REF, owner: 'omnimux' }).owner, 'omnimux');
+  // ③ Absent (a pre-#1386 reference): no provenance, routed as the hub.
+  assert.equal('owner' in readUpstreamTaskRef(REF), false);
+  // ④ Unknown value: the reference stays usable and degrades to "no
+  // provenance" — it is not a broken record, so the node still reconciles.
+  for (const unknown of ['not-a-backend', 'MOCK', 'hub', '', 0, null, {}, []]) {
+    const ref = readUpstreamTaskRef({ ...REF, owner: unknown });
+    assert.ok(ref, `未知 owner ${JSON.stringify(unknown)} 不能使整个引用不可用`);
+    assert.equal(
+      'owner' in ref,
+      false,
+      `未知 owner ${JSON.stringify(unknown)} 必须降级为「无 provenance」`,
+    );
+    assert.deepEqual(ref, REF);
+  }
+});
+
 test('节点终态与快照都不丢字段', () => {
   const context = new ExecutionContext({ workflowId: 'ws_terminal' });
   context.start(1);
@@ -220,9 +271,15 @@ test('节点终态与快照都不丢字段', () => {
   assert.equal(context.toJSON().nodeStates.n1.upstreamTask, undefined);
 });
 
-test('#1382 不变式：复核用的 deadline 严格小于整轮执行超时', () => {
+test('#1382 不变式（仅单节点执行）：复核用的 deadline 严格小于整轮执行超时', () => {
   assert.equal(UPSTREAM_TASK_DEADLINE_MS, 20 * 60 * 1000);
   assert.equal(EXECUTION_TIMEOUT_MS, 30 * 60 * 1000);
+  // #1386 — coverage of this comparison, stated so it is not read as more than
+  // it is. The two constants measure different things: a per-TASK poll window vs
+  // a per-RUN budget. A single-node run is the only case where "20 < 30" implies
+  // the task-level `omnimux-task-timeout` surfaces first. With several nodes the
+  // shared 30 minutes can elapse while one task is still inside its own window,
+  // so the run ends first and the task-level code never appears.
   assert.ok(UPSTREAM_TASK_DEADLINE_MS < EXECUTION_TIMEOUT_MS);
   // The deadline is anchored at the persisted submit time, never at "now".
   assert.equal(upstreamTaskDeadlineAt(REF), REF.submittedAt + UPSTREAM_TASK_DEADLINE_MS);

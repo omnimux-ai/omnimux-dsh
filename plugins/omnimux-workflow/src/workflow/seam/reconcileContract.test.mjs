@@ -164,3 +164,97 @@ test('auto-switch：hub 缺席时复核如实报 needs-provider，不伪装成�
     (error) => error.code === 'needs-provider',
   );
 });
+
+// ============================================================================
+// #1386: provenance — a reconcile must return to the backend that took the task
+// ============================================================================
+
+/** The request the seam-less auto-mode mock accepts and owns. */
+function mockSubmitRequest(dest) {
+  return { capability: 'video', prompt: 'a cat', operation: 'text_to_video', dest, wait: false };
+}
+
+test('#1386：submit 结果自带 owner，落盘的就是路由依据', async () => {
+  const gateway = createAutoSwitchGateway({ getSeam: () => undefined });
+  const result = await gateway.submit(mockSubmitRequest(DEST));
+  assert.equal(result.mode, 'submitted');
+  assert.equal(result.owner, 'mock', 'auto 模式解析到 mock 就必须在结果上说明');
+});
+
+test('#1386 修复前失败：重启后 mock 拥有的任务须回退重投，而非 needs-provider 失败', async () => {
+  // The real assembly path, not the mock backend in isolation — testing only the
+  // mock is exactly why this defect shipped green. Auto mode without hub seams,
+  // the task submitted through instance #1, the reconcile run by instance #2: a
+  // fresh object whose `taskOwners` is empty, i.e. a host restart.
+  const before = createAutoSwitchGateway({ getSeam: () => undefined });
+  const submitted = await before.submit(mockSubmitRequest(DEST));
+
+  const afterRestart = createAutoSwitchGateway({ getSeam: () => undefined });
+  const ref = {
+    taskId: submitted.taskId,
+    capability: 'video',
+    submittedAt: Date.now(),
+    ...(submitted.owner ? { owner: submitted.owner } : {}),
+  };
+
+  // Before the fix this rejected with `needs-provider`: the empty task table
+  // defaulted to the hub, auto mode had no hub seam, and `isNotReconcilableError`
+  // does not recognize that code — so the node was reported failed instead of
+  // resubmitting.
+  let error;
+  try {
+    await afterRestart.reconcileTask(ref, DEST);
+  } catch (caught) {
+    error = caught;
+  }
+
+  assert.ok(error, 'mock 的任务不跨进程存活，复核必须抛错而不是假装成功');
+  assert.equal(error.code, 'omnimux-invalid-request', '必须是 mock 的「不可复核」答案');
+  assert.notEqual(error.code, 'needs-provider', '不能是 hub 缺席的错误码');
+  assert.equal(
+    isNotReconcilableError(error),
+    true,
+    '调用方必须把它读成「不可复核 → 回退重投」',
+  );
+});
+
+test('#1386：无 owner 的旧引用仍默认走 hub（向后兼容）', async () => {
+  const seam = hubSeam();
+  const gateway = createAutoSwitchGateway({
+    getSeam: getSeamWith(seam),
+    omnimuxGateway: createOmnimuxSeamClient({ getSeam: getSeamWith(seam) }),
+  });
+
+  // A reference written before #1386 has no `owner` at all; the added field must
+  // not change what such a record does — it still routes to the hub.
+  const result = await gateway.reconcileTask(REF, DEST);
+
+  assert.equal(seam.requests.length, 1);
+  assert.equal(result.url, DEST);
+});
+
+test('#1386：owner 为未知值时不报错，按无 provenance 处理（默认 hub）', async () => {
+  const seam = hubSeam();
+  const gateway = createAutoSwitchGateway({
+    getSeam: getSeamWith(seam),
+    omnimuxGateway: createOmnimuxSeamClient({ getSeam: getSeamWith(seam) }),
+  });
+
+  const result = await gateway.reconcileTask({ ...REF, owner: 'not-a-backend' }, DEST);
+
+  assert.equal(seam.requests.length, 1, '未知 owner 不能中断复核');
+  assert.equal(result.url, DEST);
+});
+
+test('#1386：owner=omnimux 的引用显式走 hub，不依赖缺省值', async () => {
+  const seam = hubSeam();
+  const gateway = createAutoSwitchGateway({
+    getSeam: getSeamWith(seam),
+    omnimuxGateway: createOmnimuxSeamClient({ getSeam: getSeamWith(seam) }),
+  });
+
+  const result = await gateway.reconcileTask({ ...REF, owner: 'omnimux' }, DEST);
+
+  assert.equal(seam.requests.length, 1);
+  assert.equal(result.url, DEST);
+});

@@ -429,6 +429,17 @@ export class ExecutionScheduler {
     try {
       const output = await this.nodeExecutor(node, this.context);
 
+      // #1386: a cancel that lands while this executor is in flight must not be
+      // overwritten by its success. `cancel()` already converged the node to
+      // `skipped` on disk, so completing it here left the persisted record
+      // saying `cancelled/skipped` while the in-memory context said `completed`
+      // — two writers, two answers. Release the slot and let the loop observe
+      // the cancel, exactly as the catch branch below does.
+      if (this.isCancelled) {
+        this.runningNodes.delete(nodeId);
+        return;
+      }
+
       this.context.completeNode(nodeId, output);
       this.runningNodes.delete(nodeId);
       this.completedNodes.add(nodeId);

@@ -53,7 +53,10 @@ export function createMockGateway(opts: MockGatewayOptions = {}): GenerationGate
       const taskId = `mock_${randomUUID().slice(0, 12)}`;
       const latencyMs = minLatency + Math.floor(Math.random() * (maxLatency - minLatency + 1));
       tasks.set(taskId, { req, latencyMs });
-      return { taskId, mode: 'submitted' };
+      // #1386: declare provenance so a restart routes this task's reconcile back
+      // to the mock (whose "cannot reconcile" answer means resubmit) instead of
+      // to the hub, whose `needs-provider` no caller reads as a fallback signal.
+      return { taskId, mode: 'submitted', owner: 'mock' };
     },
     async awaitTask(taskId: string, dest: string, signal?: AbortSignal) {
       const task = tasks.get(taskId);
