@@ -176,7 +176,7 @@ function measureExpression() {
     const navRect = nav ? nav.getBoundingClientRect() : null;
     // 正文滚动容器同时装着标题栏与内容区，比较分类栏高度时要用「内容区」而不是整个正文
     const inner = body.lastElementChild;
-    const innerHeight = inner ? inner.getBoundingClientRect().height : null;
+    const innerContentHeight = inner ? inner.getBoundingClientRect().height : null;
     // 产品库：顶部 Tab（无左侧栏）；资产库：左侧分类栏
     const tabs = document.querySelector('${SELECTORS.root}__tabs');
     const tabsRect = tabs ? tabs.getBoundingClientRect() : null;
@@ -188,6 +188,7 @@ function measureExpression() {
     const closeBtnRect = closeBtn ? closeBtn.getBoundingClientRect() : null;
     // 底座标题栏内置关闭按钮应被隐藏（结构定位：正文滚动容器第一个子元素内的按钮）
     const kitClose = document.querySelector('.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button');
+    const winHeight = window.innerHeight || 900;
     return {
       present: true,
       rootHeight: Math.round(root.getBoundingClientRect().height),
@@ -197,7 +198,7 @@ function measureExpression() {
       bodyScrollHeight: body.scrollHeight,
       outerOverflow: Math.round(body.scrollHeight - body.clientHeight),
       gridColumns: columns,
-      dialogInViewport: dialogRect.top >= 0 && dialogRect.bottom <= innerHeight,
+      dialogInViewport: dialogRect.top >= 0 && dialogRect.bottom <= winHeight,
       // 弹窗操作按钮必须右下对齐（页脚左侧提示是条件渲染的，曾导致按钮挤到左下）
       footerRightGap: (() => {
         const buttons = [...document.querySelectorAll('.dshUk-Dialog-dialog button')]
@@ -205,12 +206,12 @@ function measureExpression() {
         if (buttons.length === 0) return null;
         return Math.round(dialogRect.right - Math.max(...buttons.map((b) => b.getBoundingClientRect().right)));
       })(),
-      footerVisible: footerRect ? footerRect.bottom <= innerHeight && footerRect.top >= 0 : null,
-      viewportHeight: innerHeight,
+      footerVisible: footerRect ? footerRect.bottom <= winHeight && footerRect.top >= 0 : null,
+      viewportHeight: winHeight,
       // 通高分割线：分类栏应填满正文可用高度
       navHeight: navRect ? Math.round(navRect.height) : null,
-      innerHeight,
-      navDividerFullHeight: navRect && innerHeight ? Math.abs(navRect.height - innerHeight) <= 4 : null,
+      innerHeight: innerContentHeight,
+      navDividerFullHeight: navRect && innerContentHeight ? Math.abs(navRect.height - innerContentHeight) <= 4 : null,
       // 产品库布局：Tab 在顶部、无左侧栏；缩略图 1:1
       hasLeftNav: Boolean(nav),
       tabsOnTop: tabsRect ? Math.abs(tabsRect.top - rootRect.top) <= 32 : null,
