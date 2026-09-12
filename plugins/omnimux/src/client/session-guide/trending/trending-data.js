@@ -2,14 +2,22 @@
  * Trending Videos, Ready to Replicate — 数据集与纯函数筛选/排序/克隆 Prompt 组装。
  *
  * 逆向自 TopView AI Marketer 的 Trending 板块（2026-09-12 ego-browser 实测）：
- * 卡片以 9:16 竖屏承载「国家/地区 + 预估营收 + 播放量 + 2 行文案」，
+ * 卡片以 9:16 竖屏承载「国家/地区 + 互动率 + 播放量 + 2 行文案」，
  * 点击 Recreate 后由吸底输入框接管复刻意图。
  *
  * 数据保持纯声明：所有派生（筛选、排序、格式化、Prompt 组装）都是可单测的纯函数。
+ *
+ * 这里的样本是**示例数据**，不是实时榜单：卡片字段只保留有真实数据源可对齐的
+ * 维度（地区 / 行业 / 播放量 / 互动率）。营收与 ROAS 没有任何数据源，已随 v2
+ * 下线，接入真源前不得再出现在卡片与档位里。
  */
 
-/** 数据契约版本，随字段结构调整，便于缓存与灰度判别。 */
-export const TRENDING_DATA_VERSION = 1
+/**
+ * 数据契约版本，随字段结构调整，便于缓存与灰度判别。
+ *
+ * v2：下线 `revenue` / `roas` 两个无数据源维度（卡片指标、筛选档位、排序档位）。
+ */
+export const TRENDING_DATA_VERSION = 2
 
 /** 国家/地区筛选档位（对应卡片左上角胶囊）。 */
 export const TRENDING_REGIONS = [
@@ -42,28 +50,12 @@ export const TRENDING_VIEW_BUCKETS = [
   { value: '10000000', labelKey: 'trending.views.10m' },
 ]
 
-/** 预估营收档位（含下界，单位：美元）。 */
-export const TRENDING_REVENUE_BUCKETS = [
-  { value: '', labelKey: 'trending.revenue.all' },
-  { value: '100000', labelKey: 'trending.revenue.100k' },
-  { value: '1000000', labelKey: 'trending.revenue.1m' },
-  { value: '10000000', labelKey: 'trending.revenue.10m' },
-]
-
 /** 互动率档位（含下界，单位：百分比）。 */
 export const TRENDING_ENGAGEMENT_BUCKETS = [
   { value: '', labelKey: 'trending.engagement.all' },
   { value: '4', labelKey: 'trending.engagement.4' },
   { value: '6', labelKey: 'trending.engagement.6' },
   { value: '8', labelKey: 'trending.engagement.8' },
-]
-
-/** ROAS 档位（含下界，单位：倍）。 */
-export const TRENDING_ROAS_BUCKETS = [
-  { value: '', labelKey: 'trending.roas.all' },
-  { value: '2', labelKey: 'trending.roas.2' },
-  { value: '4', labelKey: 'trending.roas.4' },
-  { value: '6', labelKey: 'trending.roas.6' },
 ]
 
 /** 统计时间窗档位。 */
@@ -76,9 +68,7 @@ export const TRENDING_RANGES = [
 /** 排序档位。 */
 export const TRENDING_SORTS = [
   { value: 'views', labelKey: 'trending.sort.views' },
-  { value: 'revenue', labelKey: 'trending.sort.revenue' },
   { value: 'engagement', labelKey: 'trending.sort.engagement' },
-  { value: 'roas', labelKey: 'trending.sort.roas' },
 ]
 
 /**
@@ -92,9 +82,7 @@ export function defaultTrendingFilters() {
     region: '',
     industry: '',
     views: '',
-    revenue: '',
     engagement: '',
-    roas: '',
     range: '7',
     sort: 'views',
   }
@@ -112,9 +100,7 @@ export const TRENDING_VIDEOS = [
     industry: 'apparel',
     archetype: 'figure',
     views: 14520000,
-    revenue: 129000,
     engagement: 7.4,
-    roas: 5.1,
     days: 3,
     title: 'Finally some stylish cotton shirts made for the big guys #mensfashion #acidwashtshirts',
     product: '大码男士水洗棉衬衫',
@@ -126,9 +112,7 @@ export const TRENDING_VIDEOS = [
     industry: 'home',
     archetype: 'comparison',
     views: 11870000,
-    revenue: 155000,
     engagement: 6.8,
-    roas: 4.6,
     days: 5,
     title: 'the bamboo makes all the difference #mattresstopper',
     product: '竹纤维床垫软垫',
@@ -140,9 +124,7 @@ export const TRENDING_VIDEOS = [
     industry: 'apparel',
     archetype: 'macro',
     views: 11200000,
-    revenue: 58200000,
     engagement: 9.1,
-    roas: 7.2,
     days: 2,
     title: 'Zipper Resleting Universal #resleting #resletinguniversal #resletingsebaguna',
     product: '万能拉链修复套件',
@@ -154,9 +136,7 @@ export const TRENDING_VIDEOS = [
     industry: 'apparel',
     archetype: 'figure',
     views: 9530000,
-    revenue: 52500000,
     engagement: 8.3,
-    roas: 6.4,
     days: 4,
     title: 'Simpel manis dan secakep ini — Pants Knit Celana Panjang Korean Adem Melar',
     product: '韩版冰丝弹力针织长裤',
@@ -168,9 +148,7 @@ export const TRENDING_VIDEOS = [
     industry: 'home',
     archetype: 'before-after',
     views: 8940000,
-    revenue: 1300000,
     engagement: 7.9,
-    roas: 5.5,
     days: 6,
     title: 'คราบผ้าพับจากเป็นผ้าใหญ่มาก — น้ำยาซักผ้าเข้มข้นสูตรใหม่',
     product: '高浓缩护色洗衣液',
@@ -182,9 +160,7 @@ export const TRENDING_VIDEOS = [
     industry: 'digital',
     archetype: 'product-hero',
     views: 7320000,
-    revenue: 480000,
     engagement: 6.5,
-    roas: 4.2,
     days: 3,
     title: 'Máy hút bụi cầm tay nhỏ gọn cho mọi ngóc ngách trong xe hơi',
     product: '车载手持迷你吸尘器',
@@ -196,9 +172,7 @@ export const TRENDING_VIDEOS = [
     industry: 'kitchen',
     archetype: 'unboxing',
     views: 6180000,
-    revenue: 340000,
     engagement: 8.8,
-    roas: 3.9,
     days: 8,
     title: 'Mystery Dumpling Box — 24 Überraschungen zum Selbermachen',
     product: '盲盒式手工饺子套装',
@@ -210,9 +184,7 @@ export const TRENDING_VIDEOS = [
     industry: 'beauty',
     archetype: 'macro',
     views: 5640000,
-    revenue: 275000,
     engagement: 9.4,
-    roas: 5.8,
     days: 2,
     title: 'The lip oil that replaced my entire lip routine #lipgloss #glowup',
     product: '唇部精华油',
@@ -224,9 +196,7 @@ export const TRENDING_VIDEOS = [
     industry: 'outdoor',
     archetype: 'before-after',
     views: 4890000,
-    revenue: 610000,
     engagement: 5.9,
-    roas: 3.4,
     days: 11,
     title: 'Grip tested on wet slate — the trail shoe that does not slip',
     product: '越野跑湿滑抓地跑鞋',
@@ -238,9 +208,7 @@ export const TRENDING_VIDEOS = [
     industry: 'digital',
     archetype: 'product-hero',
     views: 4210000,
-    revenue: 198000,
     engagement: 6.1,
-    roas: 4.8,
     days: 7,
     title: 'My desk went from chaos to calm in 90 seconds #desksetup',
     product: '模块化桌面理线收纳',
@@ -252,9 +220,7 @@ export const TRENDING_VIDEOS = [
     industry: 'home',
     archetype: 'before-after',
     views: 3760000,
-    revenue: 152000,
     engagement: 7.2,
-    roas: 4.4,
     days: 9,
     title: 'กลิ่นห้องเปลี่ยนทันทีใน 10 วินาที — เครื่องพ่นหอมอโรม่า',
     product: '冷雾香薰机',
@@ -266,9 +232,7 @@ export const TRENDING_VIDEOS = [
     industry: 'beauty',
     archetype: 'product-hero',
     views: 3120000,
-    revenue: 1240000,
     engagement: 8.6,
-    roas: 6.1,
     days: 1,
     title: 'Sunscreen stick yang nggak bikin lengket — ringan banget!',
     product: '便携防晒棒',
@@ -277,20 +241,18 @@ export const TRENDING_VIDEOS = [
 ]
 
 /**
- * 紧凑金额格式化：129000 → $129K，58200000 → $58.2M。
+ * 互动率读数：7.4 → "7.4%"，8 → "8%"。
  *
- * 先按档缩放到 [1, 1000) 区间再取有效位；缩放值四舍五入后一旦回到 1000
- * （例如 999_999 → 999.999K），必须向上一档进位，否则会输出 `$1000K` 这种
- * 未归一的读数。
+ * 展示口径是百分比数值而不是小数比例；非有限值与非正值一律按 0 处理，
+ * 不足 0.05 的读数四舍五入后同样显示 0%，不会渲染出 `NaN%`。
  *
  * @param {number} value
  * @returns {string}
  */
-export function formatCompactCurrency(value) {
+export function formatEngagementPercent(value) {
   const n = Number(value)
-  if (!Number.isFinite(n) || n <= 0) return '$0'
-  const scaled = scaleToUnit(n)
-  return `$${trimZero(scaled.value)}${scaled.unit}`
+  if (!Number.isFinite(n) || n <= 0) return '0%'
+  return `${Number(n.toFixed(1))}%`
 }
 
 /**
@@ -349,8 +311,9 @@ function toLowerBound(raw) {
 /**
  * 按筛选条件过滤。
  *
- * 七个维度必须全部真实参与过滤：地区、行业、播放量、预估营收、互动率、ROAS、
- * 统计时间窗（range ↔ 样本 days）。少一个就会出现「控件能点、数据不变」的假控件。
+ * 每个在册维度都必须真实参与过滤：地区、行业、播放量、互动率、统计时间窗
+ * （range ↔ 样本 days）。少一个就会出现「控件能点、数据不变」的假控件；
+ * 反过来，没有数据源的维度不得留在档位里（营收 / ROAS 已随 v2 下线）。
  *
  * @param {Array<object>} videos
  * @param {object} filters
@@ -360,9 +323,7 @@ export function filterTrendingVideos(videos, filters) {
   const list = Array.isArray(videos) ? videos : []
   const f = filters && typeof filters === 'object' ? filters : {}
   const minViews = toLowerBound(f.views)
-  const minRevenue = toLowerBound(f.revenue)
   const minEngagement = toLowerBound(f.engagement)
-  const minRoas = toLowerBound(f.roas)
   const maxDays = toLowerBound(f.range)
 
   return list.filter((item) => {
@@ -370,9 +331,7 @@ export function filterTrendingVideos(videos, filters) {
     if (f.region && item.region !== f.region) return false
     if (f.industry && item.industry !== f.industry) return false
     if (minViews && !(Number(item.views) >= minViews)) return false
-    if (minRevenue && !(Number(item.revenue) >= minRevenue)) return false
     if (minEngagement && !(Number(item.engagement) >= minEngagement)) return false
-    if (minRoas && !(Number(item.roas) >= minRoas)) return false
     // 时间窗是「上限」语义：样本距今天数超过窗口即排除
     if (maxDays && !(Number(item.days) <= maxDays)) return false
     return true

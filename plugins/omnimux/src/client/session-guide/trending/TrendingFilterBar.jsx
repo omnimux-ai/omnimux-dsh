@@ -5,8 +5,6 @@ import {
   TRENDING_INDUSTRIES,
   TRENDING_RANGES,
   TRENDING_REGIONS,
-  TRENDING_REVENUE_BUCKETS,
-  TRENDING_ROAS_BUCKETS,
   TRENDING_SORTS,
   TRENDING_VIEW_BUCKETS,
 } from './trending-data.js'
@@ -48,8 +46,8 @@ function InfoMark({ label }) {
 /**
  * 爆款对标筛选工具栏。
  *
- * 1:1 对齐 TopView 实测的七个筛选项与右对齐排序：
- * 地区 / 行业 / 播放量 / 预估营收 / 互动率 / ROAS / 时间窗 + Sort。
+ * 对齐 TopView 实测的工具栏结构与右对齐排序，但只保留有数据源的维度：
+ * 地区 / 行业 / 播放量 / 互动率 / 时间窗 + Sort（预估营收与 ROAS 已随 v2 下线）。
  *
  * @param {{
  *   filters: object,
@@ -65,9 +63,7 @@ export function TrendingFilterBar({ filters, t, onChange, onReset }) {
     filters.region
     || filters.industry
     || filters.views
-    || filters.revenue
     || filters.engagement
-    || filters.roas
   )
 
   return (
@@ -102,18 +98,6 @@ export function TrendingFilterBar({ filters, t, onChange, onReset }) {
 
         <span className="omnimux-trending-select-with-info">
           <TrendingSelect
-            value={filters.revenue}
-            ariaLabel={t('trending.filter.revenue')}
-            onChange={set('revenue')}
-            className="omnimux-trending-select-field"
-            placeholder={t('trending.revenue.all')}
-            options={toOptions(TRENDING_REVENUE_BUCKETS, t)}
-          />
-          <InfoMark label={t('trending.info.revenue')} />
-        </span>
-
-        <span className="omnimux-trending-select-with-info">
-          <TrendingSelect
             value={filters.engagement}
             ariaLabel={t('trending.filter.engagement')}
             onChange={set('engagement')}
@@ -122,18 +106,6 @@ export function TrendingFilterBar({ filters, t, onChange, onReset }) {
             options={toOptions(TRENDING_ENGAGEMENT_BUCKETS, t)}
           />
           <InfoMark label={t('trending.info.engagement')} />
-        </span>
-
-        <span className="omnimux-trending-select-with-info">
-          <TrendingSelect
-            value={filters.roas}
-            ariaLabel={t('trending.filter.roas')}
-            onChange={set('roas')}
-            className="omnimux-trending-select-field"
-            placeholder={t('trending.roas.all')}
-            options={toOptions(TRENDING_ROAS_BUCKETS, t)}
-          />
-          <InfoMark label={t('trending.info.roas')} />
         </span>
 
         <span className="omnimux-trending-range">

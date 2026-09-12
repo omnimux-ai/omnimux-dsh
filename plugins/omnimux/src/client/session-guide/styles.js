@@ -2142,6 +2142,10 @@ export const GUIDE_CSS = `
   --omnimux-trending-menu-bg:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-3, var(--dsw-static-neutral-800)));
   --omnimux-trending-menu-ring:var(--dsw-alias-border-l2);
   --omnimux-trending-menu-shadow:color-mix(in srgb, var(--dsw-static-neutral-1000) 55%, transparent);
+  /* 示例数据标注：底色同样必须不透明；描边用标签色混合，浅色主题下也可见。
+     封面用的 cover-line 是「白 16%」，只适用于深色封面之上，不能拿来当页面底上的描边。 */
+  --omnimux-trending-chip-bg:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-3, var(--dsw-static-neutral-800)));
+  --omnimux-trending-chip-line:color-mix(in srgb, var(--dsw-alias-label-tertiary) 42%, transparent);
   width:100%!important;
   max-width:1200px!important;
   box-sizing:border-box;
@@ -2155,8 +2159,16 @@ export const GUIDE_CSS = `
 }
 .omnimux-trending-head { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
 .omnimux-trending-title {
+  display:flex; align-items:center; gap:8px;
   margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em;
   color:var(--dsw-alias-label-primary);
+}
+.omnimux-trending-sample-badge {
+  display:inline-flex; align-items:center; flex:none; padding:1px 7px; border-radius:999px;
+  font-size:11px; font-weight:600; letter-spacing:0;
+  color:var(--dsw-alias-label-secondary);
+  background:var(--omnimux-trending-chip-bg);
+  border:1px solid var(--omnimux-trending-chip-line);
 }
 .omnimux-trending-subtitle {
   margin:0; font-size:13px; color:var(--dsw-alias-label-tertiary); max-width:760px;

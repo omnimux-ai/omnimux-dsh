@@ -134,7 +134,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       aria-label={t('trending.title')}
     >
       <header className="omnimux-trending-head">
-        <h2 className="omnimux-trending-title">{t('trending.title')}</h2>
+        <h2 className="omnimux-trending-title">
+          {t('trending.title')}
+          <span className="omnimux-trending-sample-badge" title={t('trending.sample.hint')}>
+            {t('trending.sample.badge')}
+          </span>
+        </h2>
         <p className="omnimux-trending-subtitle">{t('trending.subtitle')}</p>
       </header>
 

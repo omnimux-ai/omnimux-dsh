@@ -1,6 +1,6 @@
 import React from 'react'
 import { TrendingCover } from './TrendingCover.jsx'
-import { formatCompactCurrency, formatCompactNumber } from './trending-data.js'
+import { formatCompactNumber, formatEngagementPercent } from './trending-data.js'
 
 const ICON_REPLICATE = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -14,7 +14,7 @@ const ICON_REPLICATE = (
  *
  * 1:1 对齐 TopView 实测结构：
  *   9:16 深色底 → 顶部地区胶囊 → 底部 48% 渐变遮罩 →
- *   营收/播放量双指标 → 两行文案 → Hover 上移并浮出 Recreate。
+ *   互动率/播放量双指标 → 两行文案 → Hover 上移并浮出 Recreate。
  *
  * @param {{
  *   item: object,
@@ -51,8 +51,8 @@ export function TrendingVideoCard({ item, t, onRecreate, active = false }) {
       <div className="omnimux-trending-card-body">
         <div className="omnimux-trending-card-metrics">
           <div className="omnimux-trending-card-metric">
-            <p className="omnimux-trending-card-metric-value">{formatCompactCurrency(item.revenue)}</p>
-            <span className="omnimux-trending-card-metric-label">{t('trending.metric.revenue')}</span>
+            <p className="omnimux-trending-card-metric-value">{formatEngagementPercent(item.engagement)}</p>
+            <span className="omnimux-trending-card-metric-label">{t('trending.metric.engagement')}</span>
           </div>
           <div className="omnimux-trending-card-metric is-divider">
             <p className="omnimux-trending-card-metric-value">{formatCompactNumber(item.views)}</p>
