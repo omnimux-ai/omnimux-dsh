@@ -23,6 +23,7 @@ import {
   QUOTA_EXHAUSTED_MESSAGE,
   RIVAL_TOOL_NAMES,
   registerRivalTools,
+  resolveAccountId,
   toToolError,
 } from './rival-agent-tools.js'
 import { INSPIRATION_TOOL_NAMES } from '../index.js'
@@ -212,6 +213,23 @@ describe('G5: tool behaviour', () => {
     const result = await world.registered.get('inspiration_rival_posts').execute({ platform: 'youtube', handle: '@foo' })
     assert.equal(result.count, 2)
     assert.equal(account.platform, 'youtube')
+  })
+
+  it('resolves a handle whichever way the `@` is written', async () => {
+    // The comparison strips the `@` on both sides, so the caller does not have
+    // to know which form the row holds. This used to be papered over with a
+    // second lookup for the bare form; both spellings have to keep working now
+    // that the lookup is a single call.
+    const world = makeTools({ limits: WIDE })
+    const atRow = await seedAccount(world, { platform: 'youtube', external_id: '@bar', handle: '@bar' })
+    const bareRow = world.store.addAccount({ platform: 'tiktok', external_id: 'bar', handle: '@bar', refresh_interval_hours: 24 })
+
+    for (const handle of ['@bar', 'bar']) {
+      assert.equal(resolveAccountId(world.service, { platform: 'youtube', handle }), atRow.id, handle)
+      assert.equal(resolveAccountId(world.service, { platform: 'tiktok', handle }), bareRow.id, handle)
+    }
+    // An account that does not exist is still a not-found, not a silent match.
+    assert.throws(() => resolveAccountId(world.service, { platform: 'tiktok', handle: '@nobody' }), /account not found/)
   })
 
   it('returns one post together with its account', async () => {

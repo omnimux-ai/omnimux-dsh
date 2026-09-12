@@ -306,6 +306,11 @@ export function registerRivalTools(tools, service) {
 
 /**
  * Resolve `account_id`, or look the account up by `platform` + `handle`.
+ *
+ * The handle is passed through as the caller wrote it. `findAccount` compares
+ * on `identityKey`, which strips the `@` decoration from both sides, so `@bar`
+ * and `bar` resolve to the same row without the caller having to guess which
+ * form the row was stored in.
  * @param {any} service
  * @param {{ account_id?: string, platform?: string, handle?: string }} args
  * @returns {string}
@@ -315,8 +320,7 @@ export function resolveAccountId(service, args) {
   const platform = String(args.platform || '').trim().toLowerCase()
   const handle = String(args.handle || '').trim()
   if (platform && handle) {
-    const found = service.store.findAccount(platform, handle.startsWith('@') ? handle : `@${handle}`)
-      || service.store.findAccount(platform, handle)
+    const found = service.store.findAccount(platform, handle)
     if (found) return found.id
   }
   throw new RivalServiceError(RIVAL_ERROR_CODES.ACCOUNT_NOT_FOUND, `对标账号不存在 (account not found): ${handle || platform || ''}`, 404)

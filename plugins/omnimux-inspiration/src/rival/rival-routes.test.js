@@ -166,6 +166,30 @@ describe('E1/E2/E3 + G4: import, dedup and classification', () => {
     assert.equal(world.store.listAccounts().length, 1)
   })
 
+  it('matches a bare-value row written before the import path used the `@` form', async () => {
+    // Regression (requirement 2): rows predating the `@`-prefixed convention
+    // hold `bar`, and re-importing `x.com/@bar` did not match one — the module
+    // grew a second row for an account it already monitored, splitting the post
+    // cache and the metrics history across two ids.
+    const world = makeWorld()
+    const legacy = world.store.addAccount({
+      platform: 'x',
+      external_id: 'bar',
+      handle: '@bar',
+      refresh_interval_hours: 24,
+    })
+    const callsBefore = world.cloud.calls.length
+
+    const result = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://x.com/@bar' })
+    assert.equal(result.status, 200)
+    assert.equal(result.body.existing, true)
+    assert.equal(result.body.is_duplicate, true)
+    assert.equal(result.body.data.id, legacy.id)
+    assert.equal(world.store.listAccounts().length, 1)
+    // A duplicate answers without spending cloud budget on the profile again.
+    assert.equal(world.cloud.calls.length, callsBefore)
+  })
+
   it('answers unrecognized-url for facebook, threads and any other domain (E3)', async () => {
     // Regression (requirement 2): these used to answer 200 with
     // `{ kind: 'content' }`, so the dialog's `rivalAccounts.import.unrecognized`
@@ -182,8 +206,11 @@ describe('E1/E2/E3 + G4: import, dedup and classification', () => {
       const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/classify`, { url })
       assert.equal(result.status, 400, url)
       assert.equal(result.body.code, RIVAL_ERROR_CODES.UNRECOGNIZED_URL, url)
-      assert.equal(typeof result.body.error, 'string', url)
-      assert.ok(result.body.error.length > 0, url)
+      // The refusal is the payload the dialog renders, so the message has to
+      // survive the trip: `RivalImportDialog` shows `body.error` for a failed
+      // classify, and an empty or generic string here would leave the user with
+      // no explanation for the link the module just refused.
+      assert.equal(result.body.error, '无法识别的链接，请输入社媒主页或内容链接', url)
     }
     assert.equal(world.cloud.calls.length, callsBefore)
     assert.deepEqual(world.store.listAccounts(), [])

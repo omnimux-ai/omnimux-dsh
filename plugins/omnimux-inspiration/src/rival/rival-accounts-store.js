@@ -291,9 +291,25 @@ function buildBudget(value, dayOverride) {
   }
 }
 
-/** @param {string} iso */
+/**
+ * The *local* calendar date of an instant, as `YYYY-MM-DD`.
+ *
+ * A day here is the day the user is living in: the ledger's `day`, and the
+ * rollover that lifts the daily-cap pauses, both turn over at local midnight.
+ * Deriving the date from `toISOString()` gives the UTC date instead, so east of
+ * Greenwich the cap would not lift until the zone's offset into the new day —
+ * 08:00 for a UTC+8 user, who would keep reading "out of allowance" all morning
+ * after the day that reason described had already ended.
+ *
+ * The components are read off a `Date` rather than reformatted from a string,
+ * which is what applies the local zone; an ISO input carrying its own offset is
+ * converted to that zone before its date is taken.
+ * @param {string} iso
+ * @returns {string}
+ */
 function localDay(iso) {
-  return new Date(iso).toISOString().slice(0, 10)
+  const at = new Date(iso)
+  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`
 }
 
 /**
@@ -311,7 +327,7 @@ function localDay(iso) {
  * @returns {string}
  */
 function identityKey(value) {
-  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return typeof value === 'string' ? value.trim().replace(/^@+/, '').toLowerCase() : ''
 }
 
 /**
@@ -802,10 +818,19 @@ export function createRivalAccountsStore(opts = {}) {
      * enqueue path prefers "out of allowance" over "you asked too soon", and it
      * must not consume budget to find that out.
      *
-     * **A refusal writes nothing.** A per-account cap is not a global pause, and
-     * having this non-mutating probe raise one is how an account that merely ran
-     * out of its own allowance would stop every *other* account from refreshing.
-     * Only `reserve` records a refusal, and only for the ledger it is about.
+     * **Only a global refusal is recorded.** A global daily cap is a fact about
+     * the day, and the user has to be told: the ledger's `paused` is what the
+     * status endpoint reports and what draws the UI's standing banner, so a
+     * probe that answered "refused" without writing it would leave the module
+     * silent about the only reason it can no longer do any work — which is the
+     * silent failure the `paused` state exists to prevent.
+     *
+     * A per-account refusal is *not* recorded, because it is not the same fact:
+     * the global pause would stop every other account too, and one account that
+     * merely ran out of its own allowance must not stall the rest. The account
+     * is parked by the caller, and its own ledger entry is the refusal's record.
+     *
+     * A granted probe still writes nothing — no budget is spent by asking.
      * @param {{ accountId?: string }} [opts]
      * @returns {{ allowed: boolean, reason: string | null, budget: Record<string, any> }}
      */
@@ -817,7 +842,11 @@ export function createRivalAccountsStore(opts = {}) {
         return { allowed: false, reason: budget.paused.reason || BUDGET_REASONS.GLOBAL_DAILY_CAP, budget }
       }
       if (budget.global_calls + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_global_per_day) {
-        return { allowed: false, reason: BUDGET_REASONS.GLOBAL_DAILY_CAP, budget }
+        const paused = writeBudget({
+          ...budget,
+          paused: { global: true, reason: BUDGET_REASONS.GLOBAL_DAILY_CAP, paused_at: nowIso() },
+        })
+        return { allowed: false, reason: BUDGET_REASONS.GLOBAL_DAILY_CAP, budget: paused }
       }
       if (accountId) {
         const used = finiteNumber(budget.per_account[accountId]?.calls, 0)

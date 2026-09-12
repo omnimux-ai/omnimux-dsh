@@ -277,6 +277,58 @@ describe('rival-accounts-store: budget ledger', () => {
     assert.equal(store.readBudget().paused.global, true)
   })
 
+  it('records the global cap when the non-mutating probe is the one that refuses', () => {
+    // Regression: `enqueue` asks `canReserve` *before* it reserves, so once the
+    // arithmetic alone says the day is spent, `reserve` is never reached. A
+    // probe that refused without writing `paused` left `paused.global` false
+    // forever — the status endpoint reported no reason and the UI's standing
+    // banner never rendered, which is the silent failure the pause exists to
+    // prevent (design §5.3: 暂停必须持续提示).
+    const { store } = sandbox()
+    const granted = Math.floor(LIMIT_CALLS_GLOBAL_DAY / LIMIT_CALLS_PER_ACCOUNT_CYCLE)
+    for (let index = 0; index < granted; index += 1) {
+      assert.equal(store.reserve({ accountId: `riv_${index}` }).allowed, true)
+    }
+    // The last granted cycle did not set it: the pause is raised by the refusal.
+    assert.equal(store.readBudget().paused.global, false)
+
+    const probe = store.canReserve({ accountId: 'riv_next' })
+    assert.equal(probe.allowed, false)
+    assert.equal(probe.reason, 'global-daily-cap')
+    assert.equal(probe.budget.paused.global, true)
+    assert.equal(probe.budget.paused.reason, 'global-daily-cap')
+
+    // Persisted, not merely returned: the status endpoint reads it back off disk.
+    const stored = store.readBudget().paused
+    assert.equal(stored.global, true)
+    assert.equal(stored.reason, 'global-daily-cap')
+
+    // Every account is stopped now, not just the one that asked last.
+    assert.equal(store.canReserve({ accountId: 'riv_other' }).allowed, false)
+    assert.equal(store.reserve({ accountId: 'riv_other' }).allowed, false)
+  })
+
+  it('leaves the global pause clear when the probe refuses on the account cap', () => {
+    // The other half of the same regression: raising the *global* pause for a
+    // per-account refusal would stop every other account from refreshing, which
+    // is why the two branches must not be collapsed back together.
+    const { store } = sandbox()
+    assert.equal(store.reserve({ accountId: 'riv_a' }).allowed, true)
+    assert.equal(store.reserve({ accountId: 'riv_a' }).allowed, true)
+    assert.equal(store.readBudget().per_account.riv_a.calls, LIMIT_CALLS_PER_ACCOUNT_DAY)
+
+    const probe = store.canReserve({ accountId: 'riv_a' })
+    assert.equal(probe.allowed, false)
+    assert.equal(probe.reason, 'account-daily-cap')
+    assert.equal(probe.budget.paused.global, false)
+    assert.equal(probe.budget.paused.reason, null)
+    assert.equal(store.readBudget().paused.global, false)
+
+    // The refusal is that account's alone: another account still has allowance.
+    assert.equal(store.canReserve({ accountId: 'riv_b' }).allowed, true)
+    assert.equal(store.reserve({ accountId: 'riv_b' }).allowed, true)
+  })
+
   it('resets the ledger when the local day rolls over (injected clock)', () => {
     let clock = FIXED_NOW
     const { store } = sandbox({ nowMs: () => clock })
@@ -286,7 +338,50 @@ describe('rival-accounts-store: budget ledger', () => {
     const next = store.readBudget()
     assert.equal(next.per_account.riv_a, undefined)
     assert.equal(next.global_calls, 0)
-    assert.equal(next.day, new Date(clock).toISOString().slice(0, 10))
+    // The ledger's day is the *local* calendar date of the clock, not its UTC
+    // date: the rollover is what lifts the cap, and it has to happen at local
+    // midnight or the allowance keeps reading as spent into the next morning.
+    const rolled = new Date(clock)
+    assert.equal(
+      next.day,
+      `${rolled.getFullYear()}-${String(rolled.getMonth() + 1).padStart(2, '0')}-${String(rolled.getDate()).padStart(2, '0')}`,
+    )
+  })
+
+  it('dates the ledger by the local day at an instant whose UTC date differs', () => {
+    // The defect this pins: `localDay` used `toISOString()`, so the ledger's day
+    // was the UTC date. For a UTC+8 user the rollover — and with it the release
+    // of every paused account and the refund of the daily allowance — happened
+    // at 08:00 local, eight hours after the promise the state machine and the UI
+    // copy make. 16:30 UTC is 00:30 the next day at UTC+8, exactly the window
+    // where the two dates disagree, and one where the instant itself is
+    // unambiguous: it is 2026-09-13 in every zone from UTC+8 eastward to UTC+14,
+    // so the assertion holds in any zone that shares the reported behaviour
+    // while a UTC-dated ledger still answers 2026-09-12.
+    const clock = Date.parse('2026-09-12T16:30:00.000Z')
+    const { store } = sandbox({ nowMs: () => clock })
+    assert.equal(store.readBudget().day, '2026-09-13')
+    assert.notEqual(store.readBudget().day, new Date(clock).toISOString().slice(0, 10))
+  })
+
+  it('does not roll the ledger over at UTC midnight when the local day has not changed', () => {
+    // The invariant, in whatever zone the suite runs: the stored day always
+    // equals the local calendar date of the clock, and advancing the clock a
+    // local day moves it. Comparing against the computed local date rather than
+    // a hardcoded string keeps a UTC-semantics implementation red everywhere.
+    const clock = Date.parse('2026-09-12T16:30:00.000Z')
+    const localDateOf = (ms) => {
+      const at = new Date(ms)
+      return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`
+    }
+    const { store } = sandbox({ nowMs: () => clock })
+    store.reserve({ accountId: 'riv_a' })
+    assert.equal(store.readBudget().day, localDateOf(clock))
+
+    const later = sandbox({ nowMs: () => clock + 86_400_000 })
+    assert.equal(later.store.readBudget().day, localDateOf(clock + 86_400_000))
+    assert.notEqual(store.readBudget().day, later.store.readBudget().day)
+    assert.equal(later.store.readBudget().per_account.riv_a, undefined)
   })
 
   it('releases the accounts a daily cap parked when the day rolls over', () => {

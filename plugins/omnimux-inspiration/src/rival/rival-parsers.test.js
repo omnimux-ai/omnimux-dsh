@@ -121,9 +121,8 @@ describe('rival-identity: content URLs stay with the existing pipeline', () => {
 
   it('refuses a host outside the four platforms instead of calling it content', () => {
     // Regression (requirement 2): facebook/threads/any other domain used to fall
-    // through to `kind: 'content'`, so the dialog never reached the
-    // `rivalAccounts.import.unrecognized` branch and the content import was
-    // attempted for a link this pipeline has no parser for.
+    // through to `kind: 'content'`, so the refusal was never reached and the
+    // content import was attempted for a link this pipeline has no parser for.
     for (const url of [
       'https://www.facebook.com/somepage',
       'https://fb.watch/abc123/',
@@ -133,7 +132,11 @@ describe('rival-identity: content URLs stay with the existing pipeline', () => {
     ]) {
       const result = detectInputKind(url)
       assert.equal(result.kind, 'unknown', url)
-      assert.equal(result.hint_key, 'rivalAccounts.import.unrecognized', url)
+      // The refusal carries no locale key of its own: `classifyInput` turns an
+      // `unknown` into a 400 and the dialog renders that error's `body.error`,
+      // so a key returned here could never be read. This asserts the value stays
+      // empty rather than that a key was renamed.
+      assert.equal(result.hint_key, undefined, url)
       assert.equal(parseRivalIdentity(url), null, url)
     }
   })

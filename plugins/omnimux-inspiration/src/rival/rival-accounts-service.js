@@ -166,6 +166,10 @@ export function createRivalAccountsService(deps) {
 
   /**
    * Classify a pasted URL for the import dialog (E3).
+   *
+   * The refusal is the *error*, not a field on the answer: the dialog shows an
+   * `unknown` URL by rendering this error's `body.error`, so nothing about the
+   * refusal needs to survive into a successful return value.
    * @param {unknown} url
    */
   function classifyInput(url) {
@@ -178,7 +182,6 @@ export function createRivalAccountsService(deps) {
       platform: result.platform,
       ...(result.identity ? { external_id: result.identity.external_id } : {}),
       ...(result.identity ? { handle: result.identity.handle } : {}),
-      ...(result.hint_key ? { hint_key: result.hint_key } : {}),
     }
   }
 

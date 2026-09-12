@@ -90,7 +90,7 @@ function externalIdFor(platform, handle) {
  * `content` — a post/video page, i.e. the existing import pipeline's input.
  * `unknown` — the URL could not be parsed at all.
  * @param {unknown} url
- * @returns {{ kind: 'account' | 'content' | 'unknown', platform: string, identity?: RivalIdentity, hint_key?: string }}
+ * @returns {{ kind: 'account' | 'content' | 'unknown', platform: string, identity?: RivalIdentity }}
  */
 export function detectInputKind(url) {
   const raw = typeof url === 'string' ? url.trim() : ''
@@ -143,11 +143,13 @@ export function detectInputKind(url) {
     }
   }
   // facebook / threads / any other host has no content parser here and no
-  // monitorable identity, so it is refused — the dialog then shows
-  // `rivalAccounts.import.unrecognized` instead of falling through to a content
-  // import that cannot succeed.
+  // monitorable identity, so it is refused. The message the user sees is not
+  // carried on this value: `classifyInput` turns an `unknown` into the
+  // `unrecognized-url` service error, and the dialog renders that error's
+  // `body.error` — a key returned here would only ever be overwritten by the
+  // throw before any caller could read it.
   if (!CONTENT_PLATFORMS.has(platform)) {
-    return { kind: 'unknown', platform, hint_key: 'rivalAccounts.import.unrecognized' }
+    return { kind: 'unknown', platform }
   }
   return { kind: 'content', platform }
 }
