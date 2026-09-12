@@ -1,9 +1,17 @@
 import { resolveInspirationPaths } from './paths.js'
 import { createLocalStore } from './local-store.js'
-import { createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
+import { LOCAL_PREFIX, createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
 import { capabilityOf, parseSocialMeta } from './http-handlers.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
 import { zh } from './client/locales.js'
+import { resolveRivalPaths } from './rival/rival-paths.js'
+import { createRivalAccountsStore } from './rival/rival-accounts-store.js'
+import { createRivalRemote } from './rival/rival-remote.js'
+import { createRivalRefreshScheduler } from './rival/rival-refresh.js'
+import { createRivalAccountsService } from './rival/rival-accounts-service.js'
+import { createRivalDispatcher } from './rival/rival-routes.js'
+import { registerRivalTools, RIVAL_TOOL_NAMES } from './rival/rival-agent-tools.js'
+import { RIVAL_MEDIA_DIR_NAME } from './rival/constants.js'
 
 export const name = 'omnimux-inspiration'
 export const inject = ['tools']
@@ -15,7 +23,10 @@ export const INSPIRATION_TOOL_NAMES = [
   'inspiration_update',
   'inspiration_delete',
   'inspiration_favorite',
+  ...RIVAL_TOOL_NAMES,
 ]
+
+export { RIVAL_TOOL_NAMES }
 
 function objectParams(fields) {
   const properties = {}
@@ -149,6 +160,7 @@ export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial 
 export function apply(ctx) {
   const paths = resolveInspirationPaths()
   const store = createLocalStore({ paths })
+  void RIVAL_MEDIA_DIR_NAME
 
   const getTool = (toolName) => {
     const toolsService = ctx.tools ?? (typeof ctx.get === 'function' ? /** @type {any} */ (ctx.get('tools')) : undefined)
@@ -188,6 +200,48 @@ export function apply(ctx) {
     textComplete,
   })
 
+  // ── 对标账号 (rival accounts) ─────────────────────────────────────────────
+  // Wired here, at the single assembly point, so the module's dependencies are
+  // visible in one place: the cloud seam is the hub's social-data tool, and the
+  // import link is the plugin's own import endpoint.
+  const rivalPaths = resolveRivalPaths({ paths })
+  const rivalStore = createRivalAccountsStore({ paths: rivalPaths })
+  const rivalRemote = createRivalRemote({ getTool })
+  let rivalService = null
+  const rivalScheduler = createRivalRefreshScheduler({
+    store: rivalStore,
+    remote: rivalRemote,
+    runCycle: (input) => rivalService.runCycle(input),
+  })
+  rivalService = createRivalAccountsService({
+    store: rivalStore,
+    remote: rivalRemote,
+    scheduler: rivalScheduler,
+    paths: rivalPaths,
+    importUrl: (payload) => dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration/local/import-url',
+      body: { ...payload, background: true },
+    }),
+  })
+  const rivalDispatcher = createRivalDispatcher({
+    service: rivalService,
+    paths: rivalPaths,
+    formatErrorMessage,
+  })
+
+  /** Start the refresh tick, and stop it when the host tears the plugin down. */
+  const startRivalScheduler = (host) => {
+    rivalScheduler.start()
+    if (host && typeof host.effect === 'function') {
+      host.effect(() => () => rivalScheduler.stop(), 'omnimux-inspiration-rival-scheduler')
+    }
+  }
+  if (typeof ctx.effect === 'function') {
+    ctx.effect(() => () => rivalScheduler.stop(), 'omnimux-inspiration-rival-scheduler')
+  }
+  void startRivalScheduler
+
   // Mount HTTP server routes for /omnimux/inspiration/local
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
@@ -199,7 +253,25 @@ export function apply(ctx) {
         try {
           const url = new URL(req.url || '/omnimux/inspiration/local', 'http://127.0.0.1')
           if (url.pathname.startsWith('/omnimux/inspiration/local/media/')) {
+            // The rival media tree is a real subdirectory of `mediaDir`, so the
+            // *existing* stream endpoint serves it (E14) and no second route for
+            // files exists to drift out of date.
             await dispatcher.streamLocalMedia(req, res)
+            return
+          }
+          if (url.pathname.startsWith(`${LOCAL_PREFIX}/rival-accounts`)) {
+            const wantsJsonBody = req.method === 'POST' || req.method === 'PATCH'
+            const rivalBody = wantsJsonBody ? await readJsonBody(req) : undefined
+            if (wantsJsonBody && rivalBody === null) {
+              sendJson(res, 400, { error: 'invalid json' })
+              return
+            }
+            const result = await rivalDispatcher.dispatch({
+              method: req.method || 'GET',
+              url: req.url || LOCAL_PREFIX,
+              body: rivalBody,
+            })
+            sendJson(res, result.status, result.body)
             return
           }
           const wantsBody = req.method === 'POST' || req.method === 'PATCH'
@@ -375,4 +447,8 @@ export function apply(ctx) {
       return safeJsonOutput({ ok: true, id: item.id, is_favorite: item.is_favorite })
     },
   })
+
+  // The rival tools are registered last so the six original tools keep their
+  // registration order — an order some callers already depend on.
+  registerRivalTools(ctx.tools, rivalService)
 }

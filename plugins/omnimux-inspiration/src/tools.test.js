@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { INSPIRATION_TOOL_NAMES, apply } from './index.js'
 
 describe('inspiration tools registration', () => {
-  it('registers all 6 tools including update, delete, favorite', () => {
+  it('registers every name in INSPIRATION_TOOL_NAMES, including update, delete and favorite', () => {
     const registered = []
     const mockCtx = {
       tools: {

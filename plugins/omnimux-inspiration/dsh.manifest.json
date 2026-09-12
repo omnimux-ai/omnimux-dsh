@@ -20,6 +20,30 @@
       {
         "name": "inspiration_create",
         "summary": "Create and crawl inspiration from social media URLs (TikTok, Instagram, YouTube, X), download media and trigger AI analysis."
+      },
+      {
+        "name": "inspiration_rival_accounts",
+        "summary": "List monitored rival accounts with platform, handle, followers, refresh state and potential post count."
+      },
+      {
+        "name": "inspiration_rival_posts",
+        "summary": "List the cached posts of one rival account, optionally filtered to the potential-flagged ones only."
+      },
+      {
+        "name": "inspiration_rival_post",
+        "summary": "Get one rival post with its account, including media urls, stats and library status."
+      },
+      {
+        "name": "inspiration_rival_posts_add_to_session",
+        "summary": "Build the session attachment payload of one rival post so the workbench can mount it into the active conversation."
+      },
+      {
+        "name": "inspiration_rival_to_inspiration",
+        "summary": "Import one rival post into the local inspiration library through the existing import-url pipeline."
+      },
+      {
+        "name": "inspiration_rival_refresh",
+        "summary": "Queue a refresh of one or all rival accounts, bounded by the per-account cloud call budget."
       }
     ],
     "seamsProvided": [],

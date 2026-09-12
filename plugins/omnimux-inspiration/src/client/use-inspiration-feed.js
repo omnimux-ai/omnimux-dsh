@@ -175,6 +175,13 @@ export function resolveDateRange(dateKey, nowMs = Date.now()) {
   return { posted_after: undefined, posted_before: undefined }
 }
 
+/**
+ * Tab identifiers the feed knows about. `rivals` is the 对标账号 workbench: it
+ * renders its own panel instead of the inspiration grid, so the feed simply
+ * stops issuing requests for it and leaves every other branch untouched.
+ */
+export const INSPIRATION_TABS = ['all', 'local', 'public', 'rivals']
+
 function useInspirationFilters() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
@@ -211,6 +218,9 @@ function useFeedData(options) {
     tab, q, platform, type, sort, favorite,
     country, category, duration, views, trafficType, dateRange,
   } = filters || {}
+  // The rival workbench owns its own data path; the inspiration feed stays idle
+  // while it is on screen, so switching back does not re-query twice.
+  const rivalTab = tab === 'rivals'
   const [items, setItems] = useState([])
   const [backendPlatforms, setBackendPlatforms] = useState([])
   const [page, setPage] = useState(1)

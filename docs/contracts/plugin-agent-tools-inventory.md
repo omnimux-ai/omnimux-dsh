@@ -146,6 +146,12 @@ related:
 | 更新灵感笔记、标签与结构化字段 | 灵感编辑面板 | `inspiration_update` | L1 | `Implemented` | 否 |
 | 删除指定灵感条目及其本地缓存 | 灵感卡片删除操作 | `inspiration_delete` | L1 | `Implemented` | 是 (`confirm: true`) |
 | 收藏/取消收藏灵感条目 | 卡片爱心图标点赞 | `inspiration_favorite` | L2 | `Implemented` | 否 |
+| 查询对标账号列表 | 对标账号工作台左栏 | `inspiration_rival_accounts` | L1 | `Implemented` | 否 |
+| 查询对标账号帖子（可按潜力筛选） | 对标账号工作台右栏 | `inspiration_rival_posts` | L1 | `Implemented` | 否 |
+| 获取单条对标帖子与所属账号 | 帖子卡片详情 | `inspiration_rival_post` | L1 | `Implemented` | 否 |
+| 组装帖子到当前会话的附件载荷 | 帖子卡片「添加到会话」 | `inspiration_rival_posts_add_to_session` | L2 | `Implemented` | 否 |
+| 将对标帖子转入灵感库 | 帖子卡片「转成灵感」 | `inspiration_rival_to_inspiration` | L2 | `Implemented` | 否 |
+| 触发对标账号刷新（受云端配额约束） | 工作台「刷新 / 全部刷新」 | `inspiration_rival_refresh` | L2 | `Implemented` | 否 |
 | 瀑布流列宽与滚动锚定 | 界面自适应容器 | — | UI-Only | `UI-Only` | 豁免 (前端排版状态) |
 
 ---
