@@ -56,10 +56,9 @@ function InfoMark({ label }) {
  *   t: (key: string, fallback?: string) => string,
  *   onChange: (patch: object) => void,
  *   onReset: () => void,
- *   total: number,
  * }} props
  */
-export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
+export function TrendingFilterBar({ filters, t, onChange, onReset }) {
   const set = (key) => (value) => onChange?.({ [key]: value })
 
   const isFiltered = Boolean(
@@ -160,9 +159,6 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
       </div>
 
       <div className="omnimux-trending-toolbar-right">
-        <span className="omnimux-trending-count">
-          {t('trending.filter.count').replace('{count}', String(total))}
-        </span>
         <TrendingSelect
           value={filters.sort}
           ariaLabel={t('trending.filter.sort')}

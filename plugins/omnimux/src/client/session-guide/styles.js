@@ -1,5 +1,10 @@
 export const GUIDE_STYLE_ID = 'omnimux-session-guide-style'
 export const GUIDE_CSS = `
+/* 浮层底色必须不透明：本 Host 主题没有定义 --dsw-alias-bg-elevated，
+   裸用 var() 会把这个属性算成 transparent，浮层与弹窗会整片透出底层内容。 */
+[data-omnimux-starter-host] {
+  --omnimux-surface-dialog:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, var(--dsw-static-neutral-800)));
+}
 [data-omnimux-starter-host] [data-conversation-scroll] { justify-content:flex-start!important; }
 [data-omnimux-starter-host] [data-composer-seat] {
   flex:1 0 auto!important; min-height:100%; display:flex; flex-direction:column;
@@ -276,7 +281,7 @@ export const GUIDE_CSS = `
   max-width: 96vw;
   height: 700px;
   max-height: 92vh;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--omnimux-surface-dialog);
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 16px;
   display: flex;
@@ -351,7 +356,7 @@ export const GUIDE_CSS = `
   min-width: 0;
   height: 100%;
   box-sizing: border-box;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--omnimux-surface-dialog);
 }
 .omnimux-split-modal-right-header {
   margin-bottom: 14px;
@@ -675,7 +680,7 @@ export const GUIDE_CSS = `
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--omnimux-surface-dialog);
   border: 1px solid var(--dsw-alias-border-l3);
   border-radius: 12px;
   padding: 16px 24px;
@@ -728,7 +733,7 @@ export const GUIDE_CSS = `
   height: 360px;
   border-radius: 14px;
   overflow: hidden;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--omnimux-surface-dialog);
   transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 320ms ease, box-shadow 320ms ease;
   display: flex;
   flex-direction: column;
@@ -787,7 +792,7 @@ export const GUIDE_CSS = `
 }
 .omnimux-u2v-card-info {
   padding: 10px 12px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--omnimux-surface-dialog);
   border-top: 1px solid var(--dsw-alias-border-l1);
   flex: none;
 }
@@ -2132,10 +2137,11 @@ export const GUIDE_CSS = `
   --omnimux-trending-card-scrim-strong:color-mix(in srgb, var(--dsw-static-neutral-1000) 92%, transparent);
   --omnimux-trending-region-bg:color-mix(in srgb, var(--dsw-static-neutral-1000) 45%, transparent);
   --omnimux-trending-metric-muted:color-mix(in srgb, var(--dsw-static-neutral-00) 45%, transparent);
-  --omnimux-trending-dock-bg:color-mix(in srgb, var(--dsw-static-neutral-800) 92%, transparent);
-  --omnimux-trending-dock-ring:var(--dsw-alias-border-l2);
-  --omnimux-trending-dock-highlight:color-mix(in srgb, var(--dsw-static-neutral-00) 20%, transparent);
-  --omnimux-trending-dock-rim:color-mix(in srgb, var(--dsw-static-neutral-1000) 85%, transparent);
+  /* 浮层底色必须不透明：--dsw-alias-bg-elevated 在本 Host 主题未定义，
+     裸用 var() 会让整个下拉菜单的计算值退化成 transparent。 */
+  --omnimux-trending-menu-bg:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-3, var(--dsw-static-neutral-800)));
+  --omnimux-trending-menu-ring:var(--dsw-alias-border-l2);
+  --omnimux-trending-menu-shadow:color-mix(in srgb, var(--dsw-static-neutral-1000) 55%, transparent);
   width:100%!important;
   max-width:1200px!important;
   box-sizing:border-box;
@@ -2194,9 +2200,9 @@ export const GUIDE_CSS = `
   position:absolute; top:calc(100% + 6px); z-index:60;
   left:0; min-width:100%; max-height:280px; overflow-y:auto;
   margin:0; padding:4px; list-style:none;
-  border:1px solid var(--dsw-alias-border-l2); border-radius:12px;
-  background:var(--dsw-alias-bg-elevated);
-  box-shadow:0 12px 32px var(--omnimux-trending-dock-rim);
+  border:1px solid var(--omnimux-trending-menu-ring); border-radius:12px;
+  background:var(--omnimux-trending-menu-bg);
+  box-shadow:0 12px 32px var(--omnimux-trending-menu-shadow);
 }
 .omnimux-trending-select.is-end .omnimux-trending-select-menu { left:auto; right:0; }
 .omnimux-trending-select-option {
@@ -2207,7 +2213,6 @@ export const GUIDE_CSS = `
 }
 .omnimux-trending-select-option:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary); }
 .omnimux-trending-select-option.is-active { color:var(--dsw-alias-brand-primary); font-weight:600; }
-.omnimux-trending-count { font-size:12px; color:var(--dsw-alias-label-tertiary); white-space:nowrap; }
 .omnimux-trending-reset {
   appearance:none; border:0; background:transparent; cursor:pointer; padding:4px 6px;
   font:inherit; font-size:12px; color:var(--dsw-alias-brand-primary); border-radius:8px;
@@ -2354,109 +2359,38 @@ export const GUIDE_CSS = `
 }
 .omnimux-trending-empty > p { margin:0; font-size:13px; }
 
-/* 吸底浮动输入框：视口底部接管输入，顶部 Hero 输入框让位 */
-.omnimux-trending-dock {
-  position:fixed; bottom:0; z-index:45;
-  left:var(--omnimux-dock-left, 0px);
-  width:var(--omnimux-dock-width, 100vw);
-  box-sizing:border-box;
-  padding:56px 20px 20px;
-  pointer-events:none;
-  display:flex; justify-content:center;
-  animation:omxTrendingDockIn 180ms ease-out both;
+/* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
+   附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。 */
+[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {
+  position:fixed!important;
+  left:var(--omnimux-dock-left, 0px)!important;
+  width:var(--omnimux-dock-width, 100%)!important;
+  max-width:none!important;
+  margin:0!important;
+  bottom:var(--omnimux-dock-bottom, 20px)!important;
+  z-index:45!important;
 }
-.omnimux-trending-dock-card {
-  pointer-events:auto;
-  width:100%; max-width:800px;
-  box-sizing:border-box;
-  display:flex; flex-direction:column; gap:10px;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid var(--omnimux-trending-dock-ring);
-  background:var(--omnimux-trending-dock-bg);
-  backdrop-filter:blur(24px);
-  box-shadow:inset 0 1px 0 0 var(--omnimux-trending-dock-highlight), inset 0 -1px 0 0 var(--omnimux-trending-dock-rim), 0 18px 48px var(--omnimux-trending-dock-rim);
-}
-.omnimux-trending-dock-chips { display:flex; align-items:center; gap:8px; min-width:0; }
-.omnimux-trending-dock-thumb {
-  position:relative; display:inline-block; flex:0 0 auto;
-  width:36px; height:64px; overflow:hidden; border-radius:8px;
-  border:1px solid var(--omnimux-trending-dock-ring); background:var(--omnimux-trending-cover-base);
-}
-.omnimux-trending-dock-chip {
-  display:inline-flex; align-items:center; gap:8px; min-width:0;
-  padding:5px 10px; border-radius:10px;
-  border:1px solid var(--omnimux-trending-dock-ring);
-  background:var(--omnimux-trending-cover-soft);
-  max-width:100%;
-}
-.omnimux-trending-dock-chip-region {
-  flex:0 0 auto; font-size:9px; font-weight:600; letter-spacing:0.06em;
-  color:var(--dsw-alias-label-tertiary);
-}
-.omnimux-trending-dock-chip-label {
-  font-size:12px; font-weight:500; color:var(--dsw-alias-label-primary);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.omnimux-trending-dock-input {
-  width:100%; box-sizing:border-box; resize:none;
-  border:0; outline:none; background:transparent;
-  font:inherit; font-size:13px; line-height:1.6;
-  color:var(--dsw-alias-label-primary);
-  padding:2px 4px;
-}
-.omnimux-trending-dock-input::placeholder { color:var(--dsw-alias-label-tertiary); }
-.omnimux-trending-dock-footer {
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-}
-.omnimux-trending-dock-footer-left, .omnimux-trending-dock-footer-right {
-  display:flex; align-items:center; gap:8px; min-width:0;
-}
-.omnimux-trending-dock-icon {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; box-sizing:border-box; cursor:pointer;
-  border:0; border-radius:8px; background:transparent;
-  color:var(--dsw-alias-label-secondary);
-  transition:background-color 160ms ease-out, color 160ms ease-out;
-}
-.omnimux-trending-dock-icon:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary); }
-.omnimux-trending-dock-icon > svg { width:16px; height:16px; }
-.omnimux-trending-dock-expert {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:4px 10px; border-radius:10px; font-size:12px;
-  border:1px solid var(--dsw-alias-border-l2);
-  color:var(--dsw-alias-label-secondary);
-}
-.omnimux-trending-dock-expert-icon { display:inline-flex; width:14px; height:14px; }
-.omnimux-trending-dock-expert-icon > svg { width:14px; height:14px; }
-.omnimux-trending-dock-model {
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:12px; color:var(--dsw-alias-label-secondary); white-space:nowrap;
-}
-.omnimux-trending-dock-model-caret { display:inline-flex; width:14px; height:14px; }
-.omnimux-trending-dock-model-caret > svg { width:14px; height:14px; }
-.omnimux-trending-dock-send {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:32px; height:32px; box-sizing:border-box; cursor:pointer;
-  border:0; border-radius:999px;
-  background:var(--dsw-alias-button-primary-fill);
-  color:var(--dsw-alias-button-primary-text);
-  transition:opacity 160ms ease-out;
-}
-.omnimux-trending-dock-send:hover:not(:disabled) { opacity:0.88; }
-.omnimux-trending-dock-send:disabled { cursor:not-allowed; opacity:0.45; }
-.omnimux-trending-dock-send > svg { width:16px; height:16px; }
-
-/* 接管期间顶部 Hero 输入框让位，形成「输入框迁移到底部」的连续观感 */
-[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card],
+/* 工作区行留在 Hero：输入框已经搬走，它不该继续悬空显示 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [class*="heroWorkspaceRow"] {
   opacity:0!important; pointer-events:none!important;
 }
-
-@keyframes omxTrendingDockIn {
-  from { opacity:0; transform:translateY(14px); }
-  to { opacity:1; transform:translateY(0); }
+/* 归还原生输入框。原生输入框没有「取消」概念，这是接管期间唯一的自绘控件。 */
+.omnimux-trending-undock {
+  position:fixed; z-index:46;
+  left:calc(var(--omnimux-dock-left, 0px) + var(--omnimux-dock-width, 100%));
+  bottom:calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 8px);
+  transform:translateX(calc(-100% - 4px));
+  display:inline-flex; align-items:center; gap:4px;
+  height:26px; box-sizing:border-box; padding:0 10px; cursor:pointer;
+  font:inherit; font-size:12px; white-space:nowrap;
+  border:1px solid var(--omnimux-trending-menu-ring); border-radius:999px;
+  background:var(--omnimux-trending-menu-bg);
+  color:var(--dsw-alias-label-secondary);
+  transition:color 160ms ease-out;
 }
+.omnimux-trending-undock:hover { color:var(--dsw-alias-label-primary); }
+.omnimux-trending-undock-icon { display:inline-flex; width:12px; height:12px; }
+.omnimux-trending-undock-icon > svg { width:12px; height:12px; }
 
 @container trending (min-width:640px) {
   .omnimux-trending-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
@@ -2470,11 +2404,9 @@ export const GUIDE_CSS = `
 @container trending (max-width:639px) {
   .omnimux-trending-toolbar { align-items:stretch; }
   .omnimux-trending-toolbar-right { margin-left:0; }
-  .omnimux-trending-dock { padding:48px 12px 12px; }
 }
 @media (prefers-reduced-motion:reduce) {
   .omnimux-trending-card-media, .omnimux-trending-card-body, .omnimux-trending-card-action { transition:none; }
-  .omnimux-trending-dock { animation:none; }
 }
 `
 
