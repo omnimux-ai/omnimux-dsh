@@ -237,7 +237,6 @@ export function inferKindFromExtension(ext) {
   if (['mp4', 'webm', 'mov'].includes(lower)) return 'video'
   if (['mp3', 'wav', 'm4a', 'aac'].includes(lower)) return 'audio'
   if (['htable', 'csv', 'xlsx'].includes(lower)) return 'table'
-  if (lower === 'dir' || lower === 'folder') return 'document'
   return 'document'
 }
 

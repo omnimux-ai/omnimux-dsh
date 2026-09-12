@@ -324,7 +324,9 @@ export const DOCK_STYLES = `
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.omx-att-card--uploading .omx-att-card__file-ext,
+.omx-att-card--uploading .omx-att-card__file-ext {
+  text-transform: none;
+}
 .omx-att-card--failed .omx-att-card__file-ext {
   text-transform: none;
   color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-tertiary));

@@ -63,6 +63,14 @@ export function resolveNativeTitle(attachment: NativeComposerAttachment): string
   return attachment.kind === 'file' ? FALLBACK_LABELS.file : 'image';
 }
 
+/** 只有失败态才把重试回调交给卡片；uploading / ready / 无回执一律不提供重试。 */
+export function resolveRetryHandler(
+  upload: NativeAttachmentUpload | undefined,
+  onRetry: ((id: string) => void) | undefined,
+): ((id: string) => void) | undefined {
+  return upload?.status === 'error' && typeof onRetry === 'function' ? onRetry : undefined;
+}
+
 const MediaPlaceholderIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />

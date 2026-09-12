@@ -14,6 +14,7 @@ import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewM
 import {
   NativeAttachmentCard,
   resolveNativeTitle,
+  resolveRetryHandler,
   type NativeAttachmentUpload,
   type NativeComposerAttachment,
 } from './NativeAttachmentCard.tsx';
@@ -140,7 +141,7 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
             onOpen={onOpenNative}
             onRemove={onRemoveNative}
             upload={upload}
-            onRetry={upload?.status === 'error' ? onRetryFile : undefined}
+            onRetry={resolveRetryHandler(upload, onRetryFile)}
             removeAriaLabel={translate(t, 'attachments.removeNative', '移除 {name}', {
               name: resolveNativeTitle(att),
             })}
@@ -265,7 +266,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   return (
     <>
-      <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} />
+      <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} disabled={!canAcceptDrop} />
       {SHOW_MANUAL_LINK_BUTTON && (
         <VideoLinkPopover
           isOpen={isPopoverOpen}

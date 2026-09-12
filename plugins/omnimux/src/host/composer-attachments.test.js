@@ -179,7 +179,7 @@ describe('createComposerAttachmentsDispatcher', () => {
           [Symbol.dispose]() {},
         }),
       },
-      fetchAsset: async () => { throw new Error('asset not found') },
+      fetchAsset: async () => { throw new ComposerAttachmentError('asset-not-found', 'asset not found') },
     })
     const result = await dispatcher.dispatch({
       method: 'POST',
@@ -188,7 +188,7 @@ describe('createComposerAttachmentsDispatcher', () => {
     })
     assert.equal(result.status, 200)
     assert.equal(result.body.results[0].ok, false)
-    assert.equal(result.body.results[0].error, 'internal')
+    assert.equal(result.body.results[0].error, 'asset-not-found')
   })
 
   it('refuses cross-origin writes', async () => {

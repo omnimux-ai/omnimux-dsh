@@ -180,6 +180,10 @@ export const MODAL_STYLES = `
   color: var(--dsw-alias-label-tertiary);
   white-space: pre-wrap;
 }
+.omx-att-drop-mask--blocked .omx-att-drop-wrap {
+  opacity: 0.72;
+  color: var(--dsw-alias-label-tertiary);
+}
 .omx-att-preview {
   position: fixed;
   inset: 0;

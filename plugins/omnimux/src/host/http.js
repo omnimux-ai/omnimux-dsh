@@ -17,6 +17,8 @@ import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes }
  *   get?: Function,
  *   effect?: Function,
  * }} httpCtx
+ * deps.getConnection is only forwarded to the form-attachment mount, which uses it as
+ * the auth hook; mountHubHttp itself never calls it.
  * @param {{
  *   store: object,
  *   identity: object,
