@@ -489,11 +489,65 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
   }
 })
 
-test('TrendingReplicateSection：停靠几何按 Hero 栏居中换算，卸载后连同标记一并回收', async () => {
+test('TrendingReplicateSection：原位在视口外才吸底，滚回原位自动归还（含几何与回收）', async () => {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
   const env = withDom(SECTION_FIXTURE)
   const host = document.querySelector('#root')
-  // JSDOM 不做布局，给 Hero 栏一个真实矩形，停靠几何才可断言
+  // JSDOM 不做布局，这里给 Hero 栏一个可控矩形：bandTop 决定它在视口内还是视口外
+  let bandTop = 1000
+  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
+    return {
+      x: 394, y: bandTop, left: 394, top: bandTop, width: 1200, height: 166,
+      right: 1594, bottom: bandTop + 166, toJSON() { return this },
+    }
+  }
+  const stub = stubFetch(SOURCE_ROWS)
+  const root = createRoot(host.querySelector('#seat'))
+  const scroll = async () => {
+    await act(async () => {
+      window.dispatchEvent(new window.Event('scroll'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  }
+
+  try {
+    await act(async () => {
+      root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
+    })
+    await flush()
+
+    await click(host.querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '原位在视口外时必须吸底')
+    // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
+
+    // 滚回原位：输入框回流动内，底部那个让位
+    bandTop = 100
+    await scroll()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '原位进入视口后必须把输入框放回流内')
+
+    // 再滑开：重新吸底（迟滞要求离开视口 24px 以上）
+    bandTop = 1000
+    await scroll()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '再次滑出视口应当重新吸底')
+
+    await act(async () => root.unmount())
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
+  } finally {
+    stub.restore()
+    env.restore()
+  }
+})
+
+test('TrendingReplicateSection：复刻时若原位已在视口内，首帧即为 inline，不发生吸底闪烁', async () => {
+  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
+  const env = withDom(SECTION_FIXTURE)
+  const host = document.querySelector('#root')
   env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
     return {
       x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
@@ -510,17 +564,8 @@ test('TrendingReplicateSection：停靠几何按 Hero 栏居中换算，卸载�
     await flush()
 
     await click(host.querySelector('.omnimux-trending-recreate-btn'))
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
-    // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
-
-    await act(async () => root.unmount())
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '原位在视口内时首帧直接保留在行内，不得吸底闪烁')
+    assert.equal(host.querySelector('.omnimux-trending-undock'), null, '行内时不显示底部的悬浮收起按钮')
   } finally {
     stub.restore()
     env.restore()
