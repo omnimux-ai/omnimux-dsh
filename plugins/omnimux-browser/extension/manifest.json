@@ -61,7 +61,8 @@
       "resources": [
         "welcome/*",
         "images/*",
-        "assets/*"
+        "assets/*",
+        "panel/*"
       ],
       "matches": [
         "<all_urls>"
