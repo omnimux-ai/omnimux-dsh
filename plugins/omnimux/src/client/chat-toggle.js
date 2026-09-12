@@ -141,49 +141,108 @@ export function createChatToggleButton(doc = hostDocument()) {
   return btn
 }
 
+let isEnsuringChatToggle = false
+
 export function ensureChatToggle(doc = hostDocument()) {
+  if (isEnsuringChatToggle) return null
   const cluster = findToggleCluster(doc)
   if (!cluster) return null
-  let existing = cluster.querySelector(CHAT_TOGGLE_SELECTOR)
-  if (existing) {
-    if (cluster.firstChild !== existing) {
-      cluster.insertBefore(existing, cluster.firstChild)
+
+  isEnsuringChatToggle = true
+  try {
+    let existing = cluster.querySelector(CHAT_TOGGLE_SELECTOR)
+    if (existing) {
+      if (cluster.firstChild !== existing) {
+        cluster.insertBefore(existing, cluster.firstChild)
+      }
+      syncChatToggleState(existing)
+      return existing
     }
-    syncChatToggleState(existing)
-    return existing
+    const btn = createChatToggleButton(doc)
+    if (!btn) return null
+    cluster.insertBefore(btn, cluster.firstChild)
+    return btn
+  } finally {
+    isEnsuringChatToggle = false
   }
-  const btn = createChatToggleButton(doc)
-  if (!btn) return null
-  cluster.insertBefore(btn, cluster.firstChild)
-  return btn
 }
 
 /**
- * Installs an observer on the document body to maintain the toggle button
- * in the toggle cluster across dynamic DOM updates.
+ * Installs an observer strictly scoped to the toggle cluster (never doc.body)
+ * to maintain the toggle button at the first position across dynamic updates.
  * @returns {() => void} cleanup function
  */
 export function installChatToggleObserver(doc = hostDocument()) {
   if (!doc) return () => {}
-  ensureChatToggle(doc)
+
+  let clusterObserver = null
+  let currentCluster = null
+
+  const attachClusterObserver = (cluster) => {
+    if (!cluster || cluster === currentCluster) return
+    if (clusterObserver) {
+      try { clusterObserver.disconnect() } catch { /* ignore */ }
+      clusterObserver = null
+    }
+    currentCluster = cluster
+    const Observer = doc.defaultView?.MutationObserver || (typeof MutationObserver !== 'undefined' ? MutationObserver : undefined)
+    if (Observer) {
+      clusterObserver = new Observer(() => {
+        if (isEnsuringChatToggle) return
+        const existing = cluster.querySelector(CHAT_TOGGLE_SELECTOR)
+        if (!existing || cluster.firstChild !== existing) {
+          ensureChatToggle(doc)
+        }
+      })
+      clusterObserver.observe(cluster, { childList: true })
+    }
+  }
+
+  const sync = () => {
+    const btn = ensureChatToggle(doc)
+    const cluster = findToggleCluster(doc)
+    if (cluster) {
+      attachClusterObserver(cluster)
+    }
+    return btn
+  }
+
+  sync()
 
   const api = getWorkbenchApi()
   const unsubWorkbench = api?.subscribe?.(() => {
-    ensureChatToggle(doc)
+    sync()
   })
 
-  let observer = null
-  if (typeof MutationObserver !== 'undefined' && doc.body) {
-    observer = new MutationObserver(() => {
-      ensureChatToggle(doc)
-    })
-    observer.observe(doc.body, { childList: true, subtree: true })
+  // Bounded probe if cluster is not yet rendered in the DOM
+  let probeTimer = null
+  let probeCount = 0
+  const maxProbes = 10
+  const probeCluster = () => {
+    if (currentCluster) return
+    const cluster = findToggleCluster(doc)
+    if (cluster) {
+      sync()
+      return
+    }
+    probeCount++
+    if (probeCount < maxProbes) {
+      probeTimer = setTimeout(probeCluster, 200)
+    }
+  }
+  if (!currentCluster && typeof setTimeout !== 'undefined') {
+    probeTimer = setTimeout(probeCluster, 200)
   }
 
   return () => {
+    if (probeTimer) clearTimeout(probeTimer)
     if (typeof unsubWorkbench === 'function') unsubWorkbench()
-    if (observer) observer.disconnect()
-    const btn = doc.querySelector(CHAT_TOGGLE_SELECTOR)
+    if (clusterObserver) {
+      try { clusterObserver.disconnect() } catch { /* ignore */ }
+      clusterObserver = null
+    }
+    currentCluster = null
+    const btn = doc.querySelector?.(CHAT_TOGGLE_SELECTOR)
     if (btn) btn.remove()
   }
 }
