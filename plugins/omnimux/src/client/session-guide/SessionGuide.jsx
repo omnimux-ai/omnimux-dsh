@@ -8,6 +8,7 @@ import { UrlToVideoModal } from './UrlToVideoModal.jsx'
 import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
+import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 
 function copyText(text) {
   const clip = typeof navigator !== 'undefined' ? navigator?.clipboard : null
@@ -232,6 +233,27 @@ function BlankSessionGuide({
     }
   }
 
+  /**
+   * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
+   * 与上方模态框同源语义——只预填、不代发，用户保有最终发送权。
+   */
+  function handleTrendingApply(prompt) {
+    if (!isSessionActive() || !inputActions?.setDraft) {
+      setNotice('unavailable')
+      return
+    }
+    try {
+      inputActions.setDraft(prompt)
+      attachmentDrafts?.delete(sessionId)
+      live.current = { ...live.current, input: { ...input, draft: prompt } }
+      setNotice(null)
+      showToast(t('trending.applied'))
+      focusEditor()
+    } catch {
+      setNotice('unavailable')
+    }
+  }
+
   return (
     <section
       ref={guideRef}
@@ -266,6 +288,9 @@ function BlankSessionGuide({
         t={t}
         onCardClick={handlePopularClick}
       />
+
+      {/* Trending Videos, Ready to Replicate */}
+      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} />
 
       {/* Marketing Insight Modal */}
       <MarketingInsightModal
