@@ -5080,7 +5080,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   z-index: 10000;
   align-items: flex-start;
   user-select: none;
-  animation: wfModelCascadeFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .wf-loomi-col {
