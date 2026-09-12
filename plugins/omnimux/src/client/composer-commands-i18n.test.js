@@ -11,6 +11,7 @@ import {
   scoreCommandCandidate,
   enhanceCommandCandidates,
   wrapCommandUi,
+  readServiceMethod,
   normalizeCommandContribution,
   repairRegisteredCommandContributions,
   installCommandsI18n,
@@ -598,4 +599,141 @@ test('wrapCommandUi leaves compliant contributions and non-contract failures alo
   )
   disposeBroken()
   dispose()
+})
+
+// ---------------------------------------------------------------------------
+// #1432 receiver contract
+//
+// A context hands every service access back as a fresh proxy over the service.
+// Reading a method off that proxy yields a callable that substitutes its own
+// receiver, and the substituted receiver carries the *accessing* scope: for the
+// dotted service lookup the host performs (`this.ctx.remote.commands.execute`,
+// reached from dispatch → execute), cordis drops the service-owner shadow and
+// resolves against that scope, which cannot see `remote.commands` — the
+// production error is `cannot get property "remote.commands" without inject`.
+//
+// The fixture models that dotted-lookup outcome; it deliberately does not model
+// the plain single-name lookups that resolve from the owner shadow. What it
+// pins is the contract the wrapper must keep: the host method runs with the
+// receiver the runtime handed it, never with a copy rebound to the access proxy.
+// ---------------------------------------------------------------------------
+function createCordisLikeService() {
+  const ownerCtx = { remote: { commands: { execute: (name) => `executed:${name}` } } }
+  const narrowScope = {
+    remote: {
+      get commands() {
+        throw new Error('cannot get property "remote.commands" without inject')
+      },
+    },
+  }
+  const seenReceivers = []
+
+  class HostCommandUi {
+    constructor(ctx) {
+      this.ctx = ctx
+    }
+    async candidates() {
+      seenReceivers.push(this)
+      return [
+        { name: 'add-from-library', description: 'Add from library' },
+        { name: 'compact', description: 'Compact older conversation history' },
+      ]
+    }
+    dispatch(pick) {
+      seenReceivers.push(this)
+      return this.ctx.remote.commands.execute(pick.candidate.name)
+    }
+    matchSpace() {
+      seenReceivers.push(this)
+      return undefined
+    }
+    matchEnter() {
+      seenReceivers.push(this)
+      return 'enter'
+    }
+    register() {
+      seenReceivers.push(this)
+      return () => {}
+    }
+  }
+
+  const instance = new HostCommandUi(ownerCtx)
+  // What a copy rebound through the access proxy runs with.
+  const shadowReceiver = { ctx: narrowScope }
+  const proxy = new Proxy(instance, {
+    get(target, prop, receiver) {
+      if (prop === 'ctx') return narrowScope
+      const value = Reflect.get(target, prop, receiver)
+      if (typeof value !== 'function') return value
+      return function (...args) {
+        return value.apply(this === proxy ? shadowReceiver : this, args)
+      }
+    },
+  })
+  return { HostCommandUi, proxy, instance, ownerCtx, shadowReceiver, seenReceivers }
+}
+
+test('readServiceMethod reads the service method, never the access-proxy copy (#1432)', () => {
+  const { HostCommandUi, proxy, instance } = createCordisLikeService()
+  const captured = readServiceMethod(proxy, 'dispatch')
+  assert.equal(captured.own, false)
+  assert.equal(captured.value, HostCommandUi.prototype.dispatch)
+
+  const plain = createHostLikeCommandUi()
+  const ownCaptured = readServiceMethod(plain, 'dispatch')
+  assert.equal(ownCaptured.own, true)
+  assert.equal(ownCaptured.value, plain.dispatch)
+
+  assert.equal(readServiceMethod(proxy, 'missingMethod'), null)
+  assert.equal(readServiceMethod(null, 'dispatch'), null)
+  // Fixture premise: the access proxy reports the narrow scope while the
+  // service instance keeps its own context.
+  assert.notEqual(proxy.ctx, instance.ctx)
+})
+
+test('wrapCommandUi keeps the host receiver so dispatch resolves its own dotted services (#1432)', async () => {
+  const { proxy, instance, ownerCtx, shadowReceiver, seenReceivers } = createCordisLikeService()
+
+  // Sensitivity control: the pre-fix shape — a copy rebound to the access proxy
+  // — hands the host a foreign receiver and reproduces the production failure.
+  const rebound = proxy.dispatch.bind(proxy)
+  assert.throws(
+    () => rebound({ candidate: { name: 'compact' } }),
+    /cannot get property "remote\.commands" without inject/u,
+  )
+  assert.equal(seenReceivers.at(-1), shadowReceiver)
+
+  const dispose = wrapCommandUi(proxy, fakeZhLocale)
+
+  // The host picks a row from its own service object (`onPick: pick => this.dispatch(pick)`).
+  seenReceivers.length = 0
+  assert.equal(instance.dispatch({ candidate: { name: '压缩历史', rawName: 'compact' } }), 'executed:compact')
+  assert.equal(seenReceivers[0], instance)
+  assert.equal(seenReceivers[0].ctx, ownerCtx)
+
+  // Localization and pinyin/English search still come from the candidate pass,
+  // and the dispatch mapping still unwraps the localized name.
+  const rows = await instance.candidates({ sessionId: 's1' }, { query: 'zichan' })
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加'])
+  assert.equal(rows[0].rawName, 'add-from-library')
+
+  // The candidate pass itself must run against the host receiver as well.
+  const all = await instance.candidates({ sessionId: 's1' }, { query: '' })
+  assert.deepEqual(all.map((row) => row.name), ['从资产库添加', '压缩历史'])
+
+  // Every wrapper forwards the host receiver — each host method still sees the service.
+  seenReceivers.length = 0
+  await instance.candidates({ sessionId: 's1' }, { query: '' })
+  instance.matchSpace({ sessionId: 's1' }, '/从资产库添加')
+  assert.equal(await instance.matchEnter({ sessionId: 's1' }, '/计划模式 off'), 'enter')
+  instance.register({ name: 'probe', description: () => '' })
+  assert.deepEqual(seenReceivers, [instance, instance, instance, instance])
+
+  // Disposal removes the own-property wrappers; the prototype methods are live again.
+  dispose()
+  assert.equal(Object.getOwnPropertyDescriptor(instance, 'dispatch'), undefined)
+  assert.equal(Object.getOwnPropertyDescriptor(instance, 'candidates'), undefined)
+  seenReceivers.length = 0
+  assert.equal(instance.dispatch({ candidate: { name: 'compact' } }), 'executed:compact')
+  assert.equal(seenReceivers[0], instance)
 })
