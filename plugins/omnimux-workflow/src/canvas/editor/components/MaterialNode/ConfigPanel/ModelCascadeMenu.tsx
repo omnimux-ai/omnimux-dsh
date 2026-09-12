@@ -182,23 +182,36 @@ const Chip: React.FC<{ tone?: 'danger' | 'muted'; children: React.ReactNode }> =
 );
 
 /**
- * 浮层的 portal 目标。画布主题 token（`--wb-*` 与 `--dsw-alias-bg-elevated` 的画布覆盖）
- * 作用域限定在 `.wf-canvas-root`；portal 到 `document.body` 会落到宿主的半透明面上。
- * 画布根没有 transform / filter / contain，`position: fixed` 的语义不受影响。
+ * 读取浮层要用的不透明表面色。
+ *
+ * 浮层必须 portal 到 `document.body`：画布所在的宿主面板带 `contain: layout`，
+ * 它会让该面板成为 `position: fixed` 后代的包含块，portal 进画布内会让
+ * `left/bottom`（相对视口计算）整体错位。
+ *
+ * 代价是拿不到画布主题 token（`.wf-canvas-root` 作用域的 `--wb-*`），
+ * 所以这里在打开时把画布的真实表面色解析出来内联使用。
  */
-function canvasPortalHost(anchor: HTMLElement | null): HTMLElement {
+function resolvePopoverSurface(anchor: HTMLElement | null): string {
   const root = anchor?.closest('.wf-canvas-root');
-  if (root instanceof HTMLElement) return root;
-  return document.body;
+  if (root) {
+    const token = getComputedStyle(root).getPropertyValue('--wb-surface-elevated').trim();
+    if (token) return token;
+  }
+  const panel = anchor?.closest('.wf-config-panel');
+  if (panel) {
+    const painted = getComputedStyle(panel).backgroundColor;
+    if (painted && painted !== 'rgba(0, 0, 0, 0)') return painted;
+  }
+  return 'var(--dsw-alias-bg-elevated)';
 }
 
 /** 三列全开时的最大宽度；定位锚点固定按它钳制，避免列数变化导致浮层横移。 */
 const POPOVER_MAX_WIDTH = 786;
 
 const PANEL_STYLE: React.CSSProperties = {
-  // 画布岛把 --dsw-alias-bg-elevated 覆盖成不透明面；宿主的同名 token 是配 backdrop-blur
-  // 用的半透明磨砂层，浮层必须显式取画布岛的面，否则会透出底下的画布内容。
-  background: 'var(--wb-surface-elevated, var(--dsw-alias-bg-elevated))',
+  // 底色由调用处按画布真实表面色覆盖（见 resolvePopoverSurface）；
+  // 这里的宿主 token 只是兜底，它是配 backdrop-blur 用的半透明层。
+  background: 'var(--dsw-alias-bg-elevated)',
   borderRadius: 14,
   border: '1px solid var(--dsw-alias-border-subtle)',
   boxShadow: '0 16px 36px var(--dsw-alias-shadow-strong, rgba(0, 0, 0, 0.6))',
@@ -434,12 +447,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [activeModelId, activeStrategy, emit]);
 
   const [popoverPos, setPopoverPos] = useState<{ bottom: number; left: number }>({ bottom: 44, left: 16 });
+  const [popoverSurface, setPopoverSurface] = useState<string>('var(--dsw-alias-bg-elevated)');
 
   useEffect(() => {
     if (!isOpen) return;
     const place = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
       if (!rect) return;
+      setPopoverSurface(resolvePopoverSurface(triggerRef.current));
       setPopoverPos({
         bottom: Math.max(8, window.innerHeight - rect.top + 8),
         // 锚点按最大宽度钳制：三列出现/隐藏时浮层不得横向跳动，
@@ -569,7 +584,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             }}
           >
             {/* 栏 1：品牌（悬停即切换二级，点击固定当前列） */}
-            <div role="group" aria-label="选择品牌" style={{ ...PANEL_STYLE, width: 160, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div role="group" aria-label="选择品牌" style={{ ...PANEL_STYLE, width: 160, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 4, background: popoverSurface }}>
               <div style={{ padding: '4px 8px', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', fontWeight: 500 }}>
                 选择模型
               </div>
@@ -610,7 +625,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
             </div>
 
             {/* 栏 2：型号（悬停即预览三级） */}
-            <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8, background: popoverSurface }}>
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
                 return (
@@ -667,7 +682,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               <div
                 role="group"
                 aria-label="选择渠道策略"
-                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}
+                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, background: popoverSurface }}
               >
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
 
@@ -776,7 +791,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               </div>
             ) : null}
           </div>,
-          canvasPortalHost(triggerRef.current),
+          document.body,
         )
         : null}
     </>
