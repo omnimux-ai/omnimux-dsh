@@ -7,6 +7,13 @@
 ### 变更
 - **源码唯一真相**：停止跟踪 `dist/index.js`、`lib/client.js`、`lib/canvas.js`。入口仍由 build 生成（`prepare` + `sync-to-app` 现场 build）；CI 拒绝把这些文件重新提交进 Git。画布 island 在 `canvasHash` 变化时替换 `<script>`，避免 Dev App 吃到过期 IIFE。
 
+### 修复
+- **执行终止后节点状态不再残留在飞态（Issue #1379）**：取消 / 超时 / 中断 / 失败后，仍在飞的节点不再永久停留在「生成中…」，重载画布也能恢复。
+  - `src/workflow/execution/ExecutionContext.ts`：新增私有 `settleInFlightNodes()`；`cancel()` 把 `nodeStates` 里仍为 `running`（含恢复重 pend 的 `pending`）的节点收敛为 `skipped`（`skipReason: 执行已取消`），`fail()` 收敛为 `error` + 失败信息。`cancel()` 改为幂等，避免超时清理与调度循环重复落终态事件。`toJSON()` 快照与 `execution.json` 因此不再出现 running 残留。
+  - `src/workflow/execution/executionControl.ts`、`src/workflow/execution/executionTimers.ts`：取消 API 与执行超时清理在 `abort()` 之后立即收敛并落盘终态记录——超时路径上条目已离开内存表，只剩持久化记录可供快照读取，不能再等调度循环观察到取消。
+  - `src/canvas/hooks/useExecutionController.ts`：`execution_cancelled` / `execution_error` 收敛 UI 状态与节点数据里的 `executionStatus`（写法沿用 `node_error` / `node_skipped`），GSC 不再停留在 `generating`；岛屿重载且无存活执行时，同样收敛画布文档里残留的在飞态，守卫（`shouldConvergeInFlightOnReload`）同时排除「启动在飞」窗口——`startExecution` 等 `createExecution` 返回期间 store 仍是 `idle`，只看状态会把该窗口误判成无存活执行。SSE 事件分发提取为模块级 `dispatchExecutionEvent()`，使事件处理可无头测试。
+  - 回归测试：`src/workflow/execution/nodeStatusConvergence.test.mjs`（6 例）、`src/canvas/hooks/executionTerminalConvergence.test.mjs`（9 例，含重载守卫的 4 例）。修复前：服务端 6 例全失败，前端用例模块不可加载（`dispatchExecutionEvent` / `settleInFlightNodes` / `shouldConvergeInFlightOnReload` 尚不存在）；修复后：15 例全通过 / 0 fail。
+
 ## [1.0.0-rc.1] - 2026-08-22 — M5 产品化收官
 
 ### 新增
