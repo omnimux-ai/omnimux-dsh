@@ -663,18 +663,23 @@ const alphaPlugins = alphaPluginsCsv ? alphaPluginsCsv.split(',') : []
 const manifest = JSON.parse(fs.readFileSync(path.join(profile, 'package.json'), 'utf8'))
 const fingerprint = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
 const packedFiles = root => {
-  const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts', '--loglevel', 'silent'], {
+  // npm runs `prepare` even for `npm pack --dry-run --ignore-scripts`, and a
+  // managed plugin's prepare needs devDependencies the packaged source tree does
+  // not carry (omnimux builds its client with esbuild), so the verification
+  // failed on every Profile. pnpm's pack honours --config.ignore-scripts.
+  const result = spawnSync('corepack', ['pnpm', '--config.ignore-scripts=true', 'pack', '--dry-run', '--json'], {
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 8 * 1024 * 1024,
   })
   if (result.status !== 0) {
     const detail = (result.stderr || result.stdout || '').trim() || `exit ${result.status}`
-    throw new Error(`npm pack 物化核验失败: ${root}: ${detail}`)
+    throw new Error(`pnpm pack 物化核验失败: ${root}: ${detail}`)
   }
   const records = JSON.parse(result.stdout)
-  const files = Array.isArray(records) ? records.flatMap(record => record?.files || []) : []
-  return files.map(item => typeof item === 'string' ? item : item?.path).filter(item => typeof item === 'string')
+  // npm returns an array of records; pnpm returns one record object.
+  const entries = Array.isArray(records) ? records.flatMap(record => record?.files || []) : (records?.files || [])
+  return entries.map(item => typeof item === 'string' ? item : item?.path).filter(item => typeof item === 'string')
 }
 const isFile = file => {
   try {
