@@ -13,6 +13,12 @@
  */
 
 import type { ExecutionManager } from './ExecutionManager.ts';
+// #1390: `ExecutionStatusValue` — the engine's execution-state union — is the
+// source of truth for the mapping below, and typing the table against it is what
+// makes the mapping total. Type-only on purpose: the seam needs those *states*,
+// not the state machine, so it must not pull `ExecutionContext` (and with it
+// `node:crypto`) into its runtime graph.
+import type { ExecutionStatusValue } from './ExecutionContext.ts';
 import { prepareExecutionSlotGraph } from '../../shared/graph/feedSlot/prepareExecutionSlotGraph.ts';
 import {
   resolveExecutionSubgraph,
@@ -42,6 +48,83 @@ export class HeadlessExecutionError extends Error {
 }
 
 export type TaskStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
+
+/**
+ * Engine execution state → task status reported to polling callers (#1390).
+ *
+ * `TaskStatus` answers one question for every one of its consumers: *is this
+ * run over, and if so how did it end?* The Apps execution bridge is the only
+ * one — `queryExecutionStatus` (`plugins/omnimux-apps/src/host/executionBridge.ts`)
+ * feeding the polling loop in `AppWorkspaceView.tsx` — and it stops on
+ * COMPLETED/FAILED/CANCELED while it keeps polling on QUEUED/RUNNING until its
+ * own attempt budget runs out. (The workflow Agent tools and the execution HTTP
+ * routes read the record's raw status instead, so they never went through this
+ * mapping.)
+ *
+ * Before #1390 that question was answered by an if/else chain over four
+ * hard-coded strings with a silent `QUEUED` default, and one of the four —
+ * `'failed'` — is not an engine state at all: the failure terminal is `error`.
+ * So every failed *and every timed-out* run fell through to the default and was
+ * reported as `QUEUED`, leaving a caller unable to tell it should stop waiting,
+ * while `paused` and `pending` were equally indistinguishable from a queued run.
+ *
+ * Declared `satisfies Record<ExecutionStatusValue, TaskStatus>`, so stating a
+ * new engine state without deciding its task-level meaning is a compile error
+ * instead of another silent default.
+ *
+ * Per-state reasoning:
+ * - `pending`   → `QUEUED`   has not started; "not yet running" is literal.
+ * - `running`   → `RUNNING`  executing.
+ * - `paused`    → `RUNNING`  the truest non-terminal answer available. The run
+ *                            was admitted, it is resumable, and it is still
+ *                            deadline-bound: #1386 F4 made `cleanupExecution`
+ *                            treat PAUSED as in flight, and the canvas keeps it
+ *                            in `LIVE_STATUSES`. `QUEUED` would instead claim it
+ *                            had not started — and would read as the run moving
+ *                            *backwards*, since `executeHeadless` reports
+ *                            `RUNNING` at creation and `pauseExecution` only
+ *                            accepts an already-running run. Callers that need
+ *                            the exact state read `rawStatus` (`'paused'`).
+ * - `completed` → `COMPLETED` finished, artifacts available.
+ * - `error`     → `FAILED`   terminal failure, including the #1386 timeout that
+ *                            records `error` plus `EXECUTION_TIMEOUT_MESSAGE`.
+ * - `cancelled` → `CANCELED` an explicit user cancel stays distinct from a
+ *                            failure so a timeout can never be read as "the
+ *                            cancel succeeded".
+ */
+export const TASK_STATUS_BY_EXECUTION_STATUS = {
+  pending: 'QUEUED',
+  running: 'RUNNING',
+  paused: 'RUNNING',
+  completed: 'COMPLETED',
+  error: 'FAILED',
+  cancelled: 'CANCELED',
+} satisfies Record<ExecutionStatusValue, TaskStatus>;
+
+/**
+ * Translate a persisted execution status into the task status of a job report.
+ *
+ * An unrecognized status reports `QUEUED`, the only claim the seam can still
+ * defend: the value is not one of the engine's states, so no terminal outcome
+ * may be asserted. Reporting a live run as FAILED/COMPLETED/CANCELED makes the
+ * caller stop waiting on a run that is still producing and cannot be recovered
+ * by the caller, whereas an over-cautious `QUEUED` only keeps waiting a caller
+ * that has its own deadline anyway (`workflow_run`'s `timeout_ms`, the Apps
+ * bridge's `maxAttempts`). `rawStatus` carries the value verbatim and this
+ * warning keeps it diagnosable.
+ *
+ * `'failed'` is deliberately not special-cased: no engine path, store, or
+ * fixture in this repository produces it (the failure terminal is `error`), and
+ * that dead branch is exactly what let the real terminal fall through to the
+ * default (#1390). A foreign record carrying it lands here, with a warning,
+ * instead of being blessed as a second spelling of "failed".
+ */
+export function toTaskStatus(rawStatus: string): TaskStatus {
+  const mapped = (TASK_STATUS_BY_EXECUTION_STATUS as Record<string, TaskStatus | undefined>)[rawStatus];
+  if (mapped !== undefined) return mapped;
+  logger.warn('execution status has no task-level mapping; reporting QUEUED', { rawStatus });
+  return 'QUEUED';
+}
 
 export interface WorkflowExecutionParams {
   workspaceId: string;
@@ -321,11 +404,7 @@ export function createHeadlessExecutionSeam(deps: HeadlessExecutionSeamDeps): He
         return null;
       }
 
-      let status: TaskStatus = 'QUEUED';
-      if (snap.status === 'running') status = 'RUNNING';
-      else if (snap.status === 'completed') status = 'COMPLETED';
-      else if (snap.status === 'failed') status = 'FAILED';
-      else if (snap.status === 'cancelled') status = 'CANCELED';
+      const status = toTaskStatus(snap.status);
 
       // Accurately unpack multi-node multi-artifact arrays from ExecutionContext
       // Contract: snap.mediaAssets is Record<string, Array<MediaAsset>>
