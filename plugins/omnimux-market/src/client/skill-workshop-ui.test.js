@@ -351,4 +351,11 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
     assert.match(featuredSrc, /hover-btn-try/)
     assert.match(cssSrc, /\.featured-hover-actions\{[^}]*flex-direction:row/)
   })
+
+  it('featured-grid limits to max 4 columns by default with responsive breakpoints', () => {
+    assert.match(cssSrc, /\.featured-grid\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/)
+    assert.match(cssSrc, /@media\s*\(max-width:1200px\)\{\.featured-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/)
+    assert.match(cssSrc, /@media\s*\(max-width:860px\)\{\.featured-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/)
+    assert.match(cssSrc, /@media\s*\(max-width:540px\)\{\.featured-grid\{grid-template-columns:1fr\}/)
+  })
 })
