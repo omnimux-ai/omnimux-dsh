@@ -4,6 +4,7 @@ import {
   getModelChannelGroups,
   parseModelAndGroup,
   resolveChannelCandidates,
+  resolveChannelPlan,
   ROUTING_STRATEGIES,
 } from './channel-groups.js'
 
@@ -62,13 +63,14 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     it('resolves explicit group requests first', () => {
       const candidates = resolveChannelCandidates('seedance-2-0', { group: 'standard' })
       assert.equal(candidates[0], 'seedance-2-0@standard')
-      assert.ok(candidates.includes('seedance-2-0'))
+      // Routing intent stays inside the group plan: no bare-model escape hatch.
+      assert.ok(candidates.every((id) => id.includes('@')), candidates.join(','))
     })
 
     it('resolves explicit group from inline model@group', () => {
       const candidates = resolveChannelCandidates('claude-opus-4-6@claude-plus')
       assert.equal(candidates[0], 'claude-opus-4-6@claude-plus')
-      assert.ok(candidates.includes('claude-opus-4-6'))
+      assert.ok(candidates.every((id) => id.includes('@')), candidates.join(','))
     })
 
     it('sorts by cost_first (lowest points estimate first)', () => {
@@ -96,6 +98,44 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.ok(candidates.includes('seedance-2-0@standard'))
       assert.ok(candidates.includes('seedance-2-0@official'))
       assert.ok(!candidates.includes('seedance-2-0@seedance-cheap'))
+    })
+
+    it('fails closed when the requested pool matches no configured group', () => {
+      const plan = resolveChannelPlan('seedance-2-0', { allowedGroups: ['preferred-v2'] })
+      // The pre-fix behaviour widened this into every channel; a cost-capped
+      // request must never silently escalate to the priciest group.
+      assert.deepEqual(plan.candidates, [])
+      assert.deepEqual(plan.unresolvedGroups, ['preferred-v2'])
+    })
+
+    it('reports a group this model does not serve instead of dropping it silently', () => {
+      // `preferred` exists for seedance-2-0 but not for seedance-2-0-fast.
+      const plan = resolveChannelPlan('seedance-2-0-fast', { group: 'preferred' })
+      assert.equal(plan.candidates[0], 'seedance-2-0-fast@preferred')
+      assert.deepEqual(plan.unresolvedGroups, ['preferred'])
+    })
+
+    it('restricts the explicit-group failover tail to the allowed pool', () => {
+      const plan = resolveChannelPlan('seedance-2-0', { group: 'cheap', allowedGroups: ['cheap'] })
+      assert.deepEqual(plan.candidates, ['seedance-2-0@seedance-cheap'])
+    })
+
+    it('orders the explicit-group tail by the requested strategy', () => {
+      const plan = resolveChannelPlan('seedance-2-0', { group: 'cheap', strategy: 'cost_first' })
+      assert.deepEqual(plan.candidates, [
+        'seedance-2-0@seedance-cheap',
+        'seedance-2-0@standard',
+        'seedance-2-0@seedance-standard',
+        'seedance-2-0@seedance-pro',
+        'seedance-2-0@official',
+      ])
+    })
+
+    it('keeps a model without a channel pool on its base candidates and reports the intent', () => {
+      const plan = resolveChannelPlan('gpt-image-2.5', { allowedGroups: ['standard'] })
+      // The alias keeps the pre-routing candidate list intact.
+      assert.deepEqual(plan.candidates, ['gpt-image-2.5', 'gpt-image-2-5'])
+      assert.deepEqual(plan.unresolvedGroups, ['standard'])
     })
 
     it('falls back to gatewayCandidates for unregistered models', () => {

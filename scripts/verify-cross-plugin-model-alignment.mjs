@@ -32,6 +32,8 @@ import {
 import { DEFAULT_MEDIA } from '../plugins/omnimux/src/media/route.js';
 import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
 import { ASPECT_RATIO_GEOMETRIES } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/aspectRatioGeometry.ts';
+import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js';
+import { MODEL_CHANNEL_GROUPS as PICKER_CHANNEL_GROUPS } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const MANIFEST_URL = new URL('../plugins/omnimux/src/catalog/contract/auto-serving-manifest.json', import.meta.url);
@@ -250,11 +252,57 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     }
   }
 
-  // 4. Diff-Aware Notice
+  // 4. Channel Group Parity (picker mirror vs hub routing table)
+  // The canvas model picker cannot import hub internals, so it mirrors the hub's
+  // channel table. A drift here shows the user one channel and charges for
+  // another (or lets an excluded group back into the failover plan), so the two
+  // tables must agree on every routing-relevant field.
+  const hubGroups = options.hubChannelGroups ?? HUB_CHANNEL_GROUPS;
+  const pickerGroups = options.pickerChannelGroups ?? PICKER_CHANNEL_GROUPS;
+  let channelGroupsChecked = 0;
+  if (hubGroups && pickerGroups) {
+    const hubKeys = Object.keys(hubGroups).sort();
+    const pickerKeys = Object.keys(pickerGroups).sort();
+    for (const missing of hubKeys.filter((key) => !pickerKeys.includes(key))) {
+      issue('channel_pool_missing_in_picker', `Hub channel pool for "${missing}" is absent from the canvas picker mirror.`);
+    }
+    for (const extra of pickerKeys.filter((key) => !hubKeys.includes(key))) {
+      issue('channel_pool_unknown_in_hub', `Canvas picker offers channel choices for "${extra}", but the hub has no such pool; the request would silently ignore the choice.`);
+    }
+    for (const key of hubKeys.filter((k) => pickerKeys.includes(k))) {
+      const hubById = new Map(hubGroups[key].map((g) => [g.id, g]));
+      const pickerById = new Map(pickerGroups[key].map((g) => [g.id, g]));
+      for (const id of hubById.keys()) {
+        if (!pickerById.has(id)) issue('channel_missing_in_picker', `Channel "${key}@${id}" exists in the hub but not in the picker mirror.`, key);
+      }
+      for (const id of pickerById.keys()) {
+        if (!hubById.has(id)) issue('channel_unknown_in_hub', `Picker offers "${key}@${id}", but the hub pool has no such channel; selecting it cannot be honoured.`, key);
+      }
+      for (const [id, hubGroup] of hubById) {
+        const pickerGroup = pickerById.get(id);
+        if (!pickerGroup) continue;
+        channelGroupsChecked++;
+        const compare = (field, hubValue, pickerValue) => {
+          if (hubValue !== pickerValue) {
+            issue('channel_field_drift', `Channel "${key}@${id}" ${field}: picker=${JSON.stringify(pickerValue)} hub=${JSON.stringify(hubValue)}.`, key);
+          }
+        };
+        compare('wireGroup', hubGroup.wireGroup, pickerGroup.wireGroup);
+        compare('pointsEstimate', hubGroup.pricing?.pointsEstimate ?? null, pickerGroup.pricing?.pointsEstimate ?? null);
+        compare('discountRate', hubGroup.pricing?.discountRate ?? null, pickerGroup.pricing?.discountRate ?? null);
+        compare('billingMode', hubGroup.pricing?.billingMode ?? null, pickerGroup.pricing?.billingMode ?? null);
+        compare('stability24h', hubGroup.sla?.stability24h ?? null, pickerGroup.sla?.stability24h ?? null);
+        compare('avgWaitTimeSec', hubGroup.sla?.avgWaitTimeSec ?? null, pickerGroup.sla?.avgWaitTimeSec ?? null);
+        compare('enabled', hubGroup.enabled, pickerGroup.enabled);
+      }
+    }
+  }
+
+  // 5. Diff-Aware Notice
   const changedFiles = options.changedFiles ?? detectGitModelChanges();
   const notice = changedFiles.length > 0 ? formatCrossPluginImpactNotice(changedFiles) : null;
 
-  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, aspectRatiosChecked });
+  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, aspectRatiosChecked, channelGroupsChecked });
 }
 
 function finish(issues, notice, alignment) {
@@ -282,7 +330,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     }
     process.exit(1);
   } else {
-    console.log(`✅ Cross-Plugin Model Alignment OK: ${report.alignment.whitelistModelsChecked} whitelist models, ${report.alignment.defaultModelsChecked} defaults, ${report.alignment.aspectRatiosChecked} aspect ratios verified.`);
+    console.log(`✅ Cross-Plugin Model Alignment OK: ${report.alignment.whitelistModelsChecked} whitelist models, ${report.alignment.defaultModelsChecked} defaults, ${report.alignment.aspectRatiosChecked} aspect ratios, ${report.alignment.channelGroupsChecked ?? 0} channel groups verified.`);
     process.exit(0);
   }
 }

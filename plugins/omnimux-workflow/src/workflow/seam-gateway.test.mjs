@@ -410,6 +410,64 @@ test('image node: submit → poll → download → mediaUrl 回填 (fake seam fu
   }
 });
 
+test('node channel routing: params.routing reaches the seam as strategy + allowedGroups', async () => {
+  const hub = createFakeSeamHub();
+  const h = makeHarness({ seamHub: hub });
+  try {
+    const { wsId } = await h.createGraph({
+      nodes: [h.materialNode('n1', 'image', {
+        params: { routing: { strategy: 'cost_first', allowedGroups: ['standard', 'official'] } },
+      })],
+      bind: true,
+    });
+    const exec = await h.call({
+      method: 'POST',
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions`,
+      body: { mode: 'full' },
+    });
+    const sse = await h.openSse({
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions/${exec.body.execution.id}/events`,
+      until: (raw) => raw.includes('event: execution_complete'),
+    });
+    assert.ok(sse.satisfied, 'execution should complete');
+    assert.equal(hub.state.submitRequests[0].strategy, 'cost_first');
+    assert.deepEqual(hub.state.submitRequests[0].allowedGroups, ['standard', 'official']);
+  } finally {
+    h.dispose();
+    rmSync(h.root, { recursive: true, force: true });
+  }
+});
+
+test('node channel routing: a malformed routing blob never constrains the request', async () => {
+  const hub = createFakeSeamHub();
+  const h = makeHarness({ seamHub: hub });
+  try {
+    const { wsId } = await h.createGraph({
+      nodes: [h.materialNode('n1', 'image', {
+        // An unknown strategy or an empty pool would otherwise reach the hub as a
+        // failing routing request for a node the user never constrained.
+        params: { routing: { strategy: 'cheapestest', allowedGroups: [] } },
+      })],
+      bind: true,
+    });
+    const exec = await h.call({
+      method: 'POST',
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions`,
+      body: { mode: 'full' },
+    });
+    const sse = await h.openSse({
+      url: `/omnimux-workflow/api/workspaces/${wsId}/executions/${exec.body.execution.id}/events`,
+      until: (raw) => raw.includes('event: execution_complete'),
+    });
+    assert.ok(sse.satisfied, 'execution should complete');
+    assert.equal(hub.state.submitRequests[0].strategy, undefined);
+    assert.equal(hub.state.submitRequests[0].allowedGroups, undefined);
+  } finally {
+    h.dispose();
+    rmSync(h.root, { recursive: true, force: true });
+  }
+});
+
 test('text node: textComplete seam → generatedContent 回填 + 落盘', async () => {
   const hub = createFakeSeamHub();
   const h = makeHarness({ seamHub: hub });

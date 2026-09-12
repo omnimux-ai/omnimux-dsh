@@ -8,19 +8,60 @@ const CHANNEL_PATTERNS = [
   /\(distributor\)/,
   /分组\s+\S+\s+下模型/,
 ]
+
+/**
+ * A routing plan may still succeed on its *next* group when the current group is
+ * empty, forbidden for this key, or does not serve the requested model. These
+ * wordings never justify blind retries on an unplanned request, so they stay out
+ * of `CHANNEL_PATTERNS` and are only consulted by callers that hold a plan.
+ */
+const GROUP_SWITCH_PATTERNS = [
+  ...CHANNEL_PATTERNS,
+  /无权访问该分组/,
+  /model[_\s-]*not[_\s-]*found/i,
+]
+
 const ERROR_FIELDS = ['code', 'error', 'body', 'data', 'message', 'detail', 'details', 'cause', 'type']
 
-/** Inspect only error envelopes; never infer routing failure from HTTP status alone. */
-export function hasChannelEvidence(value, seen = new Set(), depth = 0) {
+/**
+ * Walk an error envelope for wording evidence. Never infers routing failure from
+ * HTTP status alone.
+ * @param {unknown} value
+ * @param {RegExp[]} patterns
+ * @param {Set<unknown>} [seen]
+ * @param {number} [depth]
+ * @returns {boolean}
+ */
+function matchesEvidence(value, patterns, seen = new Set(), depth = 0) {
   if (value == null || depth > 8) return false
   if (typeof value === 'string') {
-    if (value === CHANNEL_UNAVAILABLE_CODE || CHANNEL_PATTERNS.some((pattern) => pattern.test(value))) return true
-    try { return hasChannelEvidence(JSON.parse(value), seen, depth + 1) } catch { return false }
+    if (value === CHANNEL_UNAVAILABLE_CODE || patterns.some((pattern) => pattern.test(value))) return true
+    try { return matchesEvidence(JSON.parse(value), patterns, seen, depth + 1) } catch { return false }
   }
   if (typeof value !== 'object' || seen.has(value)) return false
   seen.add(value)
-  if (Array.isArray(value)) return value.some((entry) => hasChannelEvidence(entry, seen, depth + 1))
-  return ERROR_FIELDS.some((key) => hasChannelEvidence(value[key], seen, depth + 1))
+  if (Array.isArray(value)) return value.some((entry) => matchesEvidence(entry, patterns, seen, depth + 1))
+  return ERROR_FIELDS.some((key) => matchesEvidence(value[key], patterns, seen, depth + 1))
+}
+
+/**
+ * Inspect only error envelopes for an empty-channel-set failure.
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function hasChannelEvidence(value) {
+  return matchesEvidence(value, CHANNEL_PATTERNS)
+}
+
+/**
+ * Evidence that another channel group of a routing plan may still serve the
+ * request: empty channel set, a group this key cannot access, or a model this
+ * group does not serve. Still never inferred from HTTP status alone.
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function hasGroupFailoverEvidence(value) {
+  return matchesEvidence(value, GROUP_SWITCH_PATTERNS)
 }
 
 /**

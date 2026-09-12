@@ -7741,6 +7741,16 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   transition: background 120ms ease;
 }
 
+/* 模型级联浮层：入场淡入（画布内 portal 挂载） */
+@keyframes wfModelCascadeFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wf-model-cascade-fade {
+  animation: wfModelCascadeFade 150ms ease;
+}
+
 .wf-voice-trigger:hover {
   background: var(--wb-pill-hover);
 }
