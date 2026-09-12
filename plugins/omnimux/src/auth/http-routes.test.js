@@ -278,10 +278,10 @@ describe('auth http dispatcher', () => {
     const seen = { chunks: [] }
     const req = {
       method: 'POST',
-      url: '/omnimux/composer/attachments/materialize',
+      url: '/omnimux/composer/attachments/instantiate',
       headers: {},
       async *[Symbol.asyncIterator]() {
-        yield Buffer.from(JSON.stringify({ sessionId: 'sess-522', paths: [] }))
+        yield Buffer.from(JSON.stringify({ sessionId: 'sess-522', assetIds: [] }))
       },
     }
     const res = {
@@ -290,23 +290,8 @@ describe('auth http dispatcher', () => {
     }
     await composerRoute.handler(req, res)
     assert.equal(seen.status, 200)
+    assert.deepEqual(JSON.parse(seen.chunks.join('')), { results: [] })
     assert.deepEqual(observedSessionIds, ['sess-522'])
-
-    req.url = '/omnimux/composer/attachments/pick-files'
-    req.headers = { host: '127.0.0.1:45121', origin: 'http://127.0.0.1:45121' }
-    seen.chunks = []
-    await composerRoute.handler(req, res)
-    assert.equal(seen.status, 503)
-    optional.connection = { requestRejection: () => undefined }
-    seen.chunks = []
-    await composerRoute.handler(req, res)
-    assert.equal(seen.status, 501)
-    optional.desktopRuntime = { pickFiles: async () => ['/tmp/selected.txt'] }
-    seen.chunks = []
-    await composerRoute.handler(req, res)
-    assert.equal(seen.status, 200)
-    assert.deepEqual(JSON.parse(seen.chunks.join('')), { paths: ['/tmp/selected.txt'] })
-    assert.deepEqual(observedSessionIds, ['sess-522', 'sess-522', 'sess-522'])
   })
 
   it('apply still registers the video tool when webServer is absent', () => {

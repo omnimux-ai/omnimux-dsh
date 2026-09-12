@@ -14,14 +14,24 @@ import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewM
 import {
   NativeAttachmentCard,
   resolveNativeTitle,
+  resolveRetryHandler,
+  type NativeAttachmentUpload,
   type NativeComposerAttachment,
 } from './NativeAttachmentCard.tsx';
+
+/** 官方 DraftFileUpload：会话草稿里的上传回执。 */
+export type DraftFileUpload =
+  | { readonly status: 'uploading'; readonly loaded: number; readonly total?: number }
+  | { readonly status: 'ready'; readonly receiptId: string; readonly file: unknown }
+  | { readonly status: 'error'; readonly message: string };
 
 export interface AttachmentTrayProps {
   attachments?: readonly any[];
   canAcceptDrop?: boolean;
-  onAddImages?: (files: readonly File[]) => void;
-  onRemoveImage?: (id: string) => void;
+  onAddFiles?: (files: readonly File[]) => void;
+  onRemoveAttachment?: (id: string) => void;
+  uploads?: Readonly<Record<string, DraftFileUpload>>;
+  onRetryFile?: (id: string) => void;
   dropLimits?: { readonly count: number; readonly size: string };
   sessionId?: string;
   session?: { sessionId?: string; id?: string } | null;
@@ -86,6 +96,8 @@ interface AttachmentTrayRailProps {
   onOpenOmnimux: (attachment: ConversationAttachment) => void;
   onRemoveNative: (id: string) => void;
   onOpenNative: (attachment: NativeComposerAttachment) => void;
+  uploads?: Readonly<Record<string, DraftFileUpload>>;
+  onRetryFile?: (id: string) => void;
   t?: AttachmentTrayProps['t'];
 }
 
@@ -98,6 +110,8 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
     onOpenOmnimux,
     onRemoveNative,
     onOpenNative,
+    uploads,
+    onRetryFile,
     t,
   } = props;
 
@@ -111,17 +125,29 @@ const AttachmentTrayRail: React.FC<AttachmentTrayRailProps> = (props) => {
           onOpen={att.previewUrl ? onOpenOmnimux : undefined}
         />
       ))}
-      {nativeAttachments.map((att) => (
-        <NativeAttachmentCard
-          key={`native-${att.id}`}
-          attachment={att}
-          onOpen={onOpenNative}
-          onRemove={onRemoveNative}
-          removeAriaLabel={translate(t, 'attachments.removeNative', '移除 {name}', {
-            name: resolveNativeTitle(att),
-          })}
-        />
-      ))}
+      {nativeAttachments.map((att) => {
+        const draft = uploads?.[att.id];
+        const upload: NativeAttachmentUpload | undefined = draft
+          ? {
+            status: draft.status,
+            ...(draft.status === 'uploading' ? { loaded: draft.loaded, total: draft.total } : {}),
+            ...(draft.status === 'error' ? { message: draft.message } : {}),
+          }
+          : undefined;
+        return (
+          <NativeAttachmentCard
+            key={`native-${att.id}`}
+            attachment={att}
+            onOpen={onOpenNative}
+            onRemove={onRemoveNative}
+            upload={upload}
+            onRetry={resolveRetryHandler(upload, onRetryFile)}
+            removeAriaLabel={translate(t, 'attachments.removeNative', '移除 {name}', {
+              name: resolveNativeTitle(att),
+            })}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -138,7 +164,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     store.getActiveSessionId() ||
     'default';
 
-  const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof props.onAddImages === 'function';
+  const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof props.onAddFiles === 'function';
   const nativeAttachments: readonly NativeComposerAttachment[] = Array.isArray(props.attachments)
     ? (props.attachments as readonly NativeComposerAttachment[])
     : [];
@@ -151,7 +177,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const { slots, activeSlotIndex, selectSlot, replaceSlot } = usePromptSlotEnhancer();
   const dragActive = useDragDrop({
     canAcceptDrop,
-    onAddImages: props.onAddImages,
+    onAddFiles: props.onAddFiles,
   });
 
   useEffect(() => {
@@ -217,10 +243,10 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   }, []);
 
   const handleRemoveNative = useCallback((id: string) => {
-    if (typeof props.onRemoveImage === 'function') {
-      props.onRemoveImage(id);
+    if (typeof props.onRemoveAttachment === 'function') {
+      props.onRemoveAttachment(id);
     }
-  }, [props.onRemoveImage]);
+  }, [props.onRemoveAttachment]);
 
   const closePreview = useCallback(() => {
     setPreview(null);
@@ -240,7 +266,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
 
   return (
     <>
-      <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} />
+      <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} disabled={!canAcceptDrop} />
       {SHOW_MANUAL_LINK_BUTTON && (
         <VideoLinkPopover
           isOpen={isPopoverOpen}
@@ -253,7 +279,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         activeSlotIndex={activeSlotIndex}
         onSelectSlot={selectSlot}
         onReplaceSlot={replaceSlot}
-        onAddImages={props.onAddImages}
+        onAddFiles={props.onAddFiles}
         t={props.t}
       />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
@@ -280,6 +306,8 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
               onOpenOmnimux={handleOpenOmnimux}
               onRemoveNative={handleRemoveNative}
               onOpenNative={handleOpenNative}
+              uploads={props.uploads}
+              onRetryFile={props.onRetryFile}
               t={props.t}
             />
           )}

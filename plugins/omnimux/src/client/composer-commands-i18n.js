@@ -5,7 +5,6 @@ import { createElement } from 'react'
  *
  * Resolves:
  * 1. Visual Icon Matching (Referencing UI Figure 1):
- *    - Paperclip (📎) for `add-file`
  *    - Layered Media Stack (🗂️) for `add-from-library`
  *    - Dartboard Target (🎯) for `goal`
  *    - Glowing Lightbulb (💡) for `plan`
@@ -14,10 +13,10 @@ import { createElement } from 'react'
  *    - Feedback Bubble (💬) for `feedback`
  *    - Tray Download (📥) for `export`
  * 2. Command name (item.name) adaptive localization:
- *    - In Chinese locale (zh), renders Chinese command names (e.g. "add-file" -> "添加文件")
- *    - In English locale (en), retains canonical English command names (e.g. "add-file")
+ *    - In Chinese locale (zh), renders Chinese command names (e.g. "add-from-library" -> "从资产库添加")
+ *    - In English locale (en), retains canonical English command names (e.g. "add-from-library")
  * 3. Command description adaptive localization:
- *    - In Chinese locale (zh), renders concise Chinese descriptions (e.g. "从本地选择文件或图片")
+ *    - In Chinese locale (zh), renders concise Chinese descriptions (e.g. "从统一资产库选择素材")
  *    - In English locale (en), renders canonical English descriptions
  * 4. Bidirectional transparent mapping:
  *    - Intercepts `dispatch`, `matchSpace`, and `matchEnter` so that selecting or entering
@@ -32,25 +31,6 @@ import { createElement } from 'react'
 // ==========================================
 // 1. High-fidelity Vector Icon Renderers (Ref: Figure 1)
 // ==========================================
-
-export function renderPaperclipIcon(size = 16, className) {
-  return createElement(
-    'svg',
-    {
-      width: size,
-      height: size,
-      viewBox: '0 0 16 16',
-      fill: 'none',
-      xmlns: 'http://www.w3.org/2000/svg',
-      className,
-      'aria-hidden': true,
-    },
-    createElement('path', {
-      d: 'M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z',
-      fill: 'currentColor',
-    })
-  )
-}
 
 export function renderLibraryIcon(size = 16, className) {
   return createElement(
@@ -279,8 +259,6 @@ export function renderExportIcon(size = 16, className) {
 }
 
 export const COMMAND_ICONS = {
-  'add-file': renderPaperclipIcon,
-  'paperclip': renderPaperclipIcon,
   'add-from-library': renderLibraryIcon,
   'library': renderLibraryIcon,
   'compact': renderCompactIcon,
@@ -301,9 +279,6 @@ export const COMMAND_ICONS = {
 // ==========================================
 
 export const COMMAND_SVG_STRINGS = {
-  'add-file': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
-  '添加文件': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.55 9.75V5H6.95V9.75C6.95 10.33 7.42 10.8 8 10.8C8.58 10.8 9.05 10.33 9.05 9.75V4.5C9.05 2.95 7.8 1.7 6.25 1.7C4.7 1.7 3.45 2.95 3.45 4.5V9.75C3.45 12.26 5.49 14.3 8 14.3C10.51 14.3 12.55 12.26 12.55 9.75V4H13.95V9.75C13.95 13.04 11.29 15.7 8 15.7C4.71 15.7 2.05 13.04 2.05 9.75V4.5C2.05 2.18 3.93 0.3 6.25 0.3C8.57 0.3 10.45 2.18 10.45 4.5V9.75C10.45 11.1 9.35 12.2 8 12.2C6.65 12.2 5.55 11.1 5.55 9.75Z" fill="currentColor"/></svg>',
-
   'add-from-library': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   '从资产库添加': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.8H12.8C13.6 1.8 14.2 2.4 14.2 3.2V10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><path d="M2.5 10.8L5.2 8L7.8 10.5L9.8 8.5L11.5 10.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 
@@ -646,12 +621,6 @@ export const installMenuIconsAutoSync = installMenuAutoSync
 
 export const COMMAND_I18N = {
   zh: {
-    'add-file': {
-      name: '添加文件',
-      icon: 'add-file',
-      description: '从本地选择文件或图片',
-      keywords: ['文件', '添加', 'wenjian', 'tianjia', 'file', 'upload', 'add-file', 'addfile', 'add'],
-    },
     'add-from-library': {
       name: '从资产库添加',
       icon: 'add-from-library',
@@ -696,12 +665,6 @@ export const COMMAND_I18N = {
     },
   },
   en: {
-    'add-file': {
-      name: 'add-file',
-      icon: 'add-file',
-      description: 'Add files',
-      keywords: ['file', 'upload', 'add'],
-    },
     'add-from-library': {
       name: 'add-from-library',
       icon: 'add-from-library',

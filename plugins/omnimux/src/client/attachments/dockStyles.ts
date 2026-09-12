@@ -316,6 +316,37 @@ export const DOCK_STYLES = `
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
+.omx-att-card__spinner {
+  animation: omx-att-spin 0.9s linear infinite;
+  color: var(--dsw-alias-state-business-primary, currentColor);
+}
+@keyframes omx-att-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.omx-att-card--uploading .omx-att-card__file-ext {
+  text-transform: none;
+}
+.omx-att-card--failed .omx-att-card__file-ext {
+  text-transform: none;
+  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-tertiary));
+}
+.omx-att-card__retry-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--dsw-alias-border-l2, currentColor);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, inherit);
+  font: inherit;
+  font-size: 9px;
+  line-height: 11px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.omx-att-card__retry-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .omx-att-card__remove-btn {
   position: absolute;
   top: -4px;

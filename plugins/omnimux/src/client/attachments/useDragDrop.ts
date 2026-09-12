@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 
 export interface UseDragDropOptions {
   canAcceptDrop: boolean;
-  onAddImages?: (files: readonly File[]) => void;
+  onAddFiles?: (files: readonly File[]) => void;
 }
 
 interface DragHandlerContext {
   canAcceptDrop: boolean;
-  onAddImages?: (files: readonly File[]) => void;
+  onAddFiles?: (files: readonly File[]) => void;
   setDragActive: (active: boolean) => void;
   getDepth: () => number;
   setDepth: (val: number) => void;
@@ -71,8 +71,8 @@ function handleDrop(event: DragEvent, ctx: DragHandlerContext): void {
   event.preventDefault();
   ctx.setDepth(0);
   ctx.setDragActive(false);
-  if (ctx.canAcceptDrop && typeof ctx.onAddImages === 'function') {
-    ctx.onAddImages([...transfer.files]);
+  if (ctx.canAcceptDrop && typeof ctx.onAddFiles === 'function') {
+    ctx.onAddFiles([...transfer.files]);
   }
 }
 
@@ -102,7 +102,7 @@ function attachDragEventListeners(ctx: DragHandlerContext): () => void {
 }
 
 export function useDragDrop(options: UseDragDropOptions): boolean {
-  const { canAcceptDrop, onAddImages } = options;
+  const { canAcceptDrop, onAddFiles } = options;
   const [dragActive, setDragActive] = useState(false);
   const dragDepth = useRef(0);
 
@@ -114,13 +114,13 @@ export function useDragDrop(options: UseDragDropOptions): boolean {
     };
     const ctx: DragHandlerContext = {
       canAcceptDrop,
-      onAddImages,
+      onAddFiles,
       setDragActive,
       getDepth,
       setDepth,
     };
     return attachDragEventListeners(ctx);
-  }, [canAcceptDrop, onAddImages]);
+  }, [canAcceptDrop, onAddFiles]);
 
   return dragActive;
 }

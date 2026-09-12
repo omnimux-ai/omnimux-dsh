@@ -13,7 +13,6 @@ function fixture() {
       return () => listeners.delete(listener)
     } },
     actions: {
-      async addFiles(id) { calls.push(['file', id]) },
       openLibrary(id) { calls.push(['library', id]) },
     },
     async emit(id, name, result) {
@@ -26,11 +25,10 @@ describe('composer command acknowledgment', () => {
   it('handles only successful owned commands with the event session', async () => {
     const f = fixture()
     const stop = listenComposerAddCommands(f.ctx, f.actions)
-    await f.emit('a', 'add-file', { kind: 'success' })
     await f.emit('b', 'add-from-library', { kind: 'success' })
-    await f.emit('b', 'add-file', { kind: 'error', text: 'failed' })
+    await f.emit('c', 'add-from-library', { kind: 'error', text: 'failed' })
     await f.emit('c', 'clear', { kind: 'success' })
-    assert.deepEqual(f.calls, [['file', 'a'], ['library', 'b']])
+    assert.deepEqual(f.calls, [['library', 'b']])
     stop()
   })
 
@@ -39,8 +37,8 @@ describe('composer command acknowledgment', () => {
     const first = listenComposerAddCommands(f.ctx, f.actions)
     first()
     const next = listenComposerAddCommands(f.ctx, f.actions)
-    await f.emit('a', 'add-file', { kind: 'success' })
-    assert.deepEqual(f.calls, [['file', 'a']])
+    await f.emit('a', 'add-from-library', { kind: 'success' })
+    assert.deepEqual(f.calls, [['library', 'a']])
     next()
     next()
     await f.emit('a', 'add-from-library', { kind: 'success' })

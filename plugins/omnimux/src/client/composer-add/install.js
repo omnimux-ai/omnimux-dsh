@@ -64,9 +64,6 @@ export function installComposerAddCapture(doc, { t, store, sessions }) {
     },
   })
   return {
-    addFiles(sessionId) {
-      return controller.addFiles(sessionId)
-    },
     openLibrary(sessionId) {
       controller.openLibrary(sessionId)
     },

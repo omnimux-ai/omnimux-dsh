@@ -19,7 +19,6 @@ describe('hub apply composition', () => {
     const commands = { register(definition) { definitions.push(definition) } }
     registration[0].callback({ commands })
     assert.deepEqual(definitions.map(({ name, description }) => ({ name, description })), [
-      { name: 'add-file', description: '添加文件 / Add files' },
       { name: 'add-from-library', description: '从资产库添加 / Add from library' },
     ])
     for (const definition of definitions) {
