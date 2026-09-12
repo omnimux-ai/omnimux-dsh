@@ -5071,80 +5071,149 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 
 
-/* ==================== 模型级联菜单交互与样式（复用现有暗色菜单规范，零裸色） ==================== */
+/* ==================== Loomi 1:1 像素级复刻：模型级联与渠道策略面板 ==================== */
 
+.wf-loomi-popover {
+  position: fixed;
+  display: flex;
+  gap: 8px;
+  z-index: 10000;
+  align-items: flex-start;
+  user-select: none;
+  animation: wfModelCascadeFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wf-loomi-col {
+  background: rgb(34, 34, 37);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  box-sizing: border-box;
+}
+
+.wf-loomi-col::-webkit-scrollbar {
+  width: 4px;
+}
+.wf-loomi-col::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+.wf-loomi-col--brand {
+  width: 168px;
+  height: 360px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wf-loomi-col--model {
+  width: 230px;
+  height: 360px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wf-loomi-col--channel {
+  width: 400px;
+  max-height: 520px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 18px;
+}
+
+.wf-loomi-section-title {
+  padding: 4px 8px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary, #a1a1aa);
+  letter-spacing: 0.2px;
+}
+
+/* --- 第一列：品牌列表项 --- */
 .wf-cascade-brand-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 13px;
   text-align: left;
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-label-secondary, #cfd3d6);
   transition: all 120ms ease;
   box-sizing: border-box;
 }
 
 .wf-cascade-brand-item:hover,
 .wf-cascade-brand-item.is-hovered {
-  background: var(--dsw-alias-interactive-bg-hover) !important;
-  color: var(--dsw-alias-label-primary) !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
 .wf-cascade-brand-item.is-selected {
-  background: var(--dsw-alias-interactive-bg-active);
-  color: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.12));
+  color: var(--dsw-alias-label-primary, #ffffff);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
 }
 
 .wf-cascade-brand-item.is-selected:hover,
 .wf-cascade-brand-item.is-selected.is-hovered {
-  background: var(--dsw-alias-interactive-bg-active) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
 }
 
+/* --- 第二列：型号卡片项 --- */
 .wf-cascade-model-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
   width: 100%;
   background: transparent;
-  border: 1px solid var(--dsw-alias-border-l1);
-  color: var(--dsw-alias-label-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--dsw-alias-label-secondary, #a1a1aa);
   transition: all 120ms ease;
   box-sizing: border-box;
 }
 
 .wf-cascade-model-item:hover,
 .wf-cascade-model-item.is-hovered {
-  background: var(--dsw-alias-interactive-bg-hover) !important;
-  border-color: var(--dsw-alias-brand-primary) !important;
-  color: var(--dsw-alias-label-primary) !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08)) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
 .wf-cascade-model-item:hover .wf-cascade-model-item__title,
 .wf-cascade-model-item.is-hovered .wf-cascade-model-item__title {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 
 .wf-cascade-model-item.is-selected {
-  background: var(--dsw-alias-interactive-bg-active);
-  border: 1px solid var(--dsw-alias-brand-primary) !important;
-  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 
 .wf-cascade-model-item.is-selected:hover,
 .wf-cascade-model-item.is-selected.is-hovered {
-  background: var(--dsw-alias-interactive-bg-active) !important;
-  border-color: var(--dsw-alias-brand-primary) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
 }
 
 .wf-cascade-model-item__title {
@@ -5155,12 +5224,12 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 .wf-cascade-model-item.is-selected .wf-cascade-model-item__title {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary, #ffffff);
 }
 
 .wf-cascade-model-item__desc {
   font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-label-secondary, #a1a1aa);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -5168,16 +5237,24 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   overflow: hidden;
 }
 
+/* --- 第三列：多渠道策略横幅单选卡 --- */
+.wf-cascade-strategy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .wf-cascade-strategy-btn {
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  height: 52px;
+  border-radius: 12px;
   cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--dsw-alias-border-l1);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary, #ffffff);
   font-size: 12px;
   font-weight: 600;
   transition: all 120ms ease;
@@ -5185,21 +5262,32 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 .wf-cascade-strategy-btn:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover) !important;
-  border-color: var(--dsw-alias-brand-primary) !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08)) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .wf-cascade-strategy-btn.is-active {
-  background: var(--dsw-alias-interactive-bg-active);
-  border: 1px solid var(--dsw-alias-brand-primary) !important;
+  background: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* --- 第三列：渠道列表卡片 --- */
+.wf-cascade-channel-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
 }
 
 .wf-cascade-channel-row {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--dsw-alias-border-l1);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5208,18 +5296,92 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 .wf-cascade-channel-row:hover:not(.is-disabled) {
-  background: var(--dsw-alias-interactive-bg-hover) !important;
-  border-color: var(--dsw-alias-brand-primary) !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08)) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
 }
 
 .wf-cascade-channel-row.is-checked:not(.is-disabled) {
-  background: var(--dsw-alias-interactive-bg-active);
-  border: 1px solid var(--dsw-alias-brand-primary) !important;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .wf-cascade-channel-row.is-disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* --- 多彩语义标签胶囊（Loomi 1:1 风格） --- */
+.wf-loomi-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+/* 折扣胶囊（玫红） */
+.wf-loomi-badge--rose {
+  background: rgba(225, 29, 72, 0.18);
+  color: rgb(251, 113, 133);
+}
+
+/* 特色/真人胶囊（翠绿） */
+.wf-loomi-badge--emerald {
+  background: rgba(16, 185, 129, 0.18);
+  color: rgb(52, 211, 153);
+}
+
+/* 官方/原生胶囊（宝蓝） */
+.wf-loomi-badge--blue {
+  background: rgba(59, 130, 246, 0.20);
+  color: rgb(96, 165, 250);
+}
+
+/* 优惠/限时/按条胶囊（琥珀金） */
+.wf-loomi-badge--amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: rgb(251, 191, 36);
+}
+
+/* 按秒计费/按量胶囊（青蓝） */
+.wf-loomi-badge--cyan {
+  background: rgba(6, 182, 212, 0.18);
+  color: rgb(34, 211, 238);
+}
+
+/* 普通说明胶囊（中性冷灰） */
+.wf-loomi-badge--muted {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgb(212, 212, 216);
+}
+
+/* --- 24 小时健康度胶囊点阵条（1:1 Loomi 风格） --- */
+.wf-loomi-health-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wf-loomi-health-dot {
+  width: 3.5px;
+  height: 5px;
+  border-radius: 999px;
+  display: inline-block;
+  transition: transform 120ms ease;
+}
+
+.wf-loomi-health-dot--active {
+  background: rgb(0, 230, 118);
+}
+
+.wf-loomi-health-dot--inactive {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 
