@@ -951,7 +951,57 @@ export function patchPrimitivesReferenceIcon(primitives) {
 }
 
 /**
- * Method-wrap `commandUi` methods (candidates, dispatch, matchSpace, matchEnter) in-place safely.
+ * Coerce one command contribution into the current `description: () => string`
+ * contract. The 0.1.5 host CALLS `contribution.description()` while it
+ * synthesizes menu candidates, so a contribution still written against the
+ * older string-valued shape throws inside the host, which drops the entire
+ * `command` source and leaves the composer `+` menu empty. A compliant
+ * contribution is returned untouched.
+ * @param {any} contribution
+ * @returns {any} the same contribution, or a copy whose description is callable
+ */
+export function normalizeCommandContribution(contribution) {
+  if (!contribution || typeof contribution !== 'object') return contribution
+  const { description } = contribution
+  if (typeof description === 'function') return contribution
+  const text = description === undefined || description === null ? '' : String(description)
+  return { ...contribution, description: () => text }
+}
+
+/**
+ * Best-effort repair of contributions registered before this wrapper was
+ * installed: plugin load order decides who registers first, and a late
+ * wrapper cannot retroactively normalize an early registration. Reads the
+ * runtime registry defensively — when the host keeps it somewhere else this
+ * reports `false` and caller behaviour is unchanged.
+ * @param {any} commandUi
+ * @returns {boolean} whether at least one entry needed and received repair
+ */
+export function repairRegisteredCommandContributions(commandUi) {
+  const registry = commandUi?.live?.contributions
+  if (!registry || typeof registry.entries !== 'function' || typeof registry.set !== 'function') return false
+  let repaired = false
+  for (const [name, contribution] of [...registry.entries()]) {
+    if (!contribution || typeof contribution.description === 'function') continue
+    registry.set(name, normalizeCommandContribution(contribution))
+    repaired = true
+  }
+  return repaired
+}
+
+/**
+ * Detect the host-side throw caused by a string-valued contribution
+ * description, without matching unrelated candidate failures.
+ * @param {any} error
+ * @returns {boolean}
+ */
+function isDescriptionContractError(error) {
+  const message = error && typeof error.message === 'string' ? error.message : ''
+  return /description is not a function/u.test(message)
+}
+
+/**
+ * Method-wrap `commandUi` methods (register, candidates, dispatch, matchSpace, matchEnter) in-place safely.
  * @param {any} commandUi
  * @param {any} locale
  * @returns {() => void} Disposer to restore original methods
@@ -965,19 +1015,38 @@ export function wrapCommandUi(commandUi, locale) {
   const originalDispatch = typeof commandUi.dispatch === 'function' ? commandUi.dispatch : null
   const originalMatchSpace = typeof commandUi.matchSpace === 'function' ? commandUi.matchSpace : null
   const originalMatchEnter = typeof commandUi.matchEnter === 'function' ? commandUi.matchEnter : null
+  const originalRegister = typeof commandUi.register === 'function' ? commandUi.register : null
 
   const boundCandidates = originalCandidates.bind(commandUi)
   const boundDispatch = originalDispatch ? originalDispatch.bind(commandUi) : null
   const boundMatchSpace = originalMatchSpace ? originalMatchSpace.bind(commandUi) : null
   const boundMatchEnter = originalMatchEnter ? originalMatchEnter.bind(commandUi) : null
+  const boundRegister = originalRegister ? originalRegister.bind(commandUi) : null
+
+  // 0. Wrap register so a contribution on the older string-valued contract
+  //    still satisfies `description: () => string` (idempotent, disposer kept)
+  const wrappedRegister = boundRegister ? function (contribution) {
+    return boundRegister(normalizeCommandContribution(contribution))
+  } : null
+
+  const localizeCandidates = async function (session, req) {
+    const baseReq = req ? { ...req, query: '' } : { query: '' }
+    const allRows = await boundCandidates(session, baseReq)
+    return enhanceCommandCandidates(allRows, req, locale)
+  }
 
   // 1. Wrap candidates to yield adaptive names, descriptions, and icons
   const wrappedCandidates = async function (session, req) {
     try {
-      const baseReq = req ? { ...req, query: '' } : { query: '' }
-      const allRows = await boundCandidates(session, baseReq)
-      return enhanceCommandCandidates(allRows, req, locale)
-    } catch {
+      return await localizeCandidates(session, req)
+    } catch (error) {
+      // A contribution registered before this wrapper would still kill the
+      // whole source: repair the registry once, then retry with localization.
+      if (isDescriptionContractError(error) && repairRegisteredCommandContributions(commandUi)) {
+        try {
+          return await localizeCandidates(session, req)
+        } catch {}
+      }
       return boundCandidates(session, req)
     }
   }
@@ -1027,12 +1096,14 @@ export function wrapCommandUi(commandUi, locale) {
   } : null
 
   commandUi.candidates = wrappedCandidates
+  if (wrappedRegister) commandUi.register = wrappedRegister
   if (wrappedDispatch) commandUi.dispatch = wrappedDispatch
   if (wrappedMatchSpace) commandUi.matchSpace = wrappedMatchSpace
   if (wrappedMatchEnter) commandUi.matchEnter = wrappedMatchEnter
 
   return () => {
     if (commandUi.candidates === wrappedCandidates) commandUi.candidates = originalCandidates
+    if (originalRegister && commandUi.register === wrappedRegister) commandUi.register = originalRegister
     if (originalDispatch && commandUi.dispatch === wrappedDispatch) commandUi.dispatch = originalDispatch
     if (originalMatchSpace && commandUi.matchSpace === wrappedMatchSpace) commandUi.matchSpace = originalMatchSpace
     if (originalMatchEnter && commandUi.matchEnter === wrappedMatchEnter) commandUi.matchEnter = originalMatchEnter
