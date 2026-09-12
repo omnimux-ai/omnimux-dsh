@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { RivalAccountsPanel } from './RivalAccountsPanel.jsx'
@@ -7,6 +7,7 @@ import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.j
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
 import { PlusIcon } from './icons.jsx'
+import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 
@@ -77,6 +78,8 @@ export function InspirationSection({ t, active }) {
     clearSelection,
     handleConfirmBatchRemove,
     handleImportSuccess,
+    handleAccountImported,
+    landedItem,
     handleItemUpdated,
     importFailed,
     clearImportFailed,
@@ -84,6 +87,22 @@ export function InspirationSection({ t, active }) {
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
+
+  // The row the last import produced is pinned above the list while it is
+  // missing from it: the tab switch that follows an import refetches page 1, and
+  // a row created a second ago can be sorted off that page even with no filter.
+  const visibleItems = useMemo(
+    () => withLandedItem(items, landedItem, tab),
+    [items, landedItem, tab],
+  )
+  const landedId = landedItem?.id
+
+  // Bring the landed card into view and flash it. The effect owns the highlight;
+  // the pin above is what guarantees there is a card to find.
+  useEffect(() => {
+    if (landedId == null) return undefined
+    return revealLandedCard(landedId)
+  }, [landedId])
 
   useEffect(() => {
     injectInspirationStyles()
@@ -309,7 +328,7 @@ export function InspirationSection({ t, active }) {
 
       {phase === 'need-login' && tab === 'public' ? <LoginGate t={t} /> : null}
 
-      {phase === 'ready' && error && items.length === 0 ? (
+      {phase === 'ready' && error && visibleItems.length === 0 ? (
         <div className="omnimux-inspiration-error">
           <p className="omnimux-inspiration-empty-text">
             {error === 'disabled' ? t('error.disabled') : error || t('error.generic')}
@@ -317,13 +336,13 @@ export function InspirationSection({ t, active }) {
         </div>
       ) : null}
 
-      {!loading && items.length === 0 && (!error || tab === 'local') ? (
+      {!loading && visibleItems.length === 0 && (!error || tab === 'local') ? (
         <EmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
       ) : null}
 
-      {items.length > 0 ? (
+      {visibleItems.length > 0 ? (
         <div className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}>
-          {items.map((row) => (
+          {visibleItems.map((row) => (
             <InspirationCoverCard
               key={String(row.id)}
               card={{
@@ -398,6 +417,7 @@ export function InspirationSection({ t, active }) {
         t={t}
         onClose={() => setImportOpen(false)}
         onImported={handleImportSuccess}
+        onAccountImported={handleAccountImported}
       />
     </div>
   )

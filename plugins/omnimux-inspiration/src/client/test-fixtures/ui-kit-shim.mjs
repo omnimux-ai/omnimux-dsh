@@ -81,6 +81,9 @@ export const InputField = (props) => h('input', {
   readOnly: typeof props.onChange !== 'function',
   disabled: Boolean(props.disabled),
   onChange: props.onChange,
+  // The kit forwards blur like any other input event, and the import dialogs
+  // classify a pasted link on it; without this the shim would hide that path.
+  onBlur: props.onBlur,
 })
 
 /**

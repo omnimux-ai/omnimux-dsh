@@ -242,6 +242,9 @@ export function InspirationCoverCard({ card }) {
       onClick={handleClick}
       coverNode={coverNode}
       title={title}
+      // Identity of the row on the card element: the import reveal has to find
+      // the card it just landed, and the grid order may not survive a reload.
+      data-inspiration-id={String(row.id)}
     />
   )
 }

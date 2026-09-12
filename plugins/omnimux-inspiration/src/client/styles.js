@@ -394,6 +394,11 @@ export const INSPIRATION_CSS = `
   border-color: var(--dsw-alias-border-l4, #4a4a4a);
   box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.45));
 }
+/* 刚导入落地的卡片：高亮一段时间，让用户立刻看到导入结果 */
+.omnimux-inspiration-card-pure.is-landed {
+  border-color: var(--dsw-alias-brand-primary, #4c8dff);
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary, #4c8dff), 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.45));
+}
 
 /* 卡片左上角复选框 Checkbox */
 .omnimux-inspiration-stage .omnimux-inspiration-card-pure .omnimux-inspiration-card-check,
@@ -1340,6 +1345,21 @@ export const INSPIRATION_CSS = `
 }
 .omnimux-inspiration-import-notice p {
   margin: 0;
+}
+/* 导入弹窗的判定回显：说明这次链接会被当作账号还是内容导入 */
+.omnimux-inspiration-import-echo {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2, #242424);
+  background: var(--dsw-alias-bg-secondary, rgba(255, 255, 255, 0.06));
+  color: var(--dsw-alias-label-secondary, #b4b4b4);
+  font-size: 13px;
+  line-height: 18px;
+}
+.omnimux-inspiration-import-echo[data-kind="account"] {
+  border-color: var(--dsw-alias-brand-primary, #4c8dff);
+  color: var(--dsw-alias-label-primary, inherit);
 }
 /* 播放器不可内嵌播放时的提示：覆盖在封面之上，不遮挡操作按钮 */
 .omnimux-inspiration-player-notice {

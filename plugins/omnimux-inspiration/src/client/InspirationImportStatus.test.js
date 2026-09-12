@@ -642,13 +642,26 @@ describe('InspirationCoverCard render gate — running status', () => {
 })
 
 describe('InspirationInlineImportDialog render gate — background import hand-off', () => {
+  /**
+   * The verdict the dialog asks for before importing anything (E3). These cases
+   * are about what happens *after* the verdict, so the stub answers "content".
+   */
+  function contentVerdict() {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: { kind: 'content', platform: 'x' } }),
+    }
+  }
+
   /** The exact request the dialog makes once the user submits a URL. */
   function stubFetch(handler) {
     const previous = globalThis.fetch
     const calls = []
     globalThis.fetch = async (path, init) => {
-      calls.push({ path: String(path), body: JSON.parse(init?.body ?? '{}') })
-      return handler(calls.length)
+      const call = { path: String(path), body: JSON.parse(init?.body ?? '{}') }
+      calls.push(call)
+      return handler(call, calls.length)
     }
     return {
       calls,
@@ -698,11 +711,13 @@ describe('InspirationInlineImportDialog render gate — background import hand-o
       import_status: 'importing',
       import_stage: 'resolving',
     }
-    const fetchStub = stubFetch(() => ({
-      ok: true,
-      status: 202,
-      json: async () => ({ data: placeholder }),
-    }))
+    const fetchStub = stubFetch((call) => (call.path.includes('/classify')
+      ? contentVerdict()
+      : {
+        ok: true,
+        status: 202,
+        json: async () => ({ data: placeholder }),
+      }))
     /** @type {any[]} */
     const imported = []
     let closed = 0
@@ -722,8 +737,12 @@ describe('InspirationInlineImportDialog render gate — background import hand-o
       // back the wait the background job removes.
       assert.equal(closed, 1, 'a 202 must close the dialog in the same turn')
       assert.deepEqual(imported.map((item) => item.id), ['insp_bg_1'])
-      assert.equal(fetchStub.calls.length, 1)
-      assert.equal(fetchStub.calls[0].body.background, true)
+      const importCalls = fetchStub.calls.filter((call) => call.path.includes('/import-url'))
+      assert.equal(importCalls.length, 1, 'exactly one content import')
+      assert.equal(importCalls[0].body.background, true)
+      // The verdict is asked once, before the import: a URL the Host reads as an
+      // account must never reach this importer at all.
+      assert.equal(fetchStub.calls.filter((call) => call.path.includes('/classify')).length, 1)
       // The dialog is gone, so the acknowledgement copy has nothing left to say.
       assert.equal(mounted.container.textContent.includes(zh['add.importing']), false)
     } finally {
@@ -734,11 +753,13 @@ describe('InspirationInlineImportDialog render gate — background import hand-o
   })
 
   it('keeps the dialog open and shows the reason when the import is rejected', async () => {
-    const fetchStub = stubFetch(() => ({
-      ok: false,
-      status: 422,
-      json: async () => ({ error: '未从该链接解析到可入库的内容' }),
-    }))
+    const fetchStub = stubFetch((call) => (call.path.includes('/classify')
+      ? contentVerdict()
+      : {
+        ok: false,
+        status: 422,
+        json: async () => ({ error: '未从该链接解析到可入库的内容' }),
+      }))
     /** @type {any[]} */
     const imported = []
     let closed = 0
