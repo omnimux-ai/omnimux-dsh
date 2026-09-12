@@ -493,6 +493,32 @@ describe('installSidebarToggleTopbar', () => {
     assert.equal(doc.querySelector(`[${TOPBAR_NEW_SESSION_ATTR}="1"]`), null)
     assert.equal(tabBar.style.getPropertyValue('--omnimux-tabbar-pad-right'), '')
   })
+
+  it('strictly scopes observers to targeted containers without full-tree doc.body childList observation', () => {
+    const doc = setup()
+    const observed = []
+    const OriginalObserver = globalThis.MutationObserver
+    class SpyObserver extends OriginalObserver {
+      constructor(cb) {
+        super(cb)
+      }
+      observe(target, options) {
+        observed.push({ target, options })
+        super.observe(target, options)
+      }
+    }
+    globalThis.MutationObserver = SpyObserver
+
+    const cleanup = installSidebarToggleTopbar(doc)
+    // Verify that NO observer observed doc.body with childList: true or subtree: true
+    const bodyChildListObs = observed.filter(o => o.target === doc.body && o.options.childList === true)
+    assert.equal(bodyChildListObs.length, 0, 'Must not observe doc.body childList')
+    const bodySubtreeObs = observed.filter(o => o.target === doc.body && o.options.subtree === true)
+    assert.equal(bodySubtreeObs.length, 0, 'Must not observe doc.body subtree')
+
+    cleanup()
+    globalThis.MutationObserver = OriginalObserver
+  })
 })
 
 describe('topbar new-session control (collapsed only)', () => {

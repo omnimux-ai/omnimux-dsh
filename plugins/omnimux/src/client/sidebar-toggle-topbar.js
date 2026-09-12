@@ -132,6 +132,35 @@ export function findSidebarCollapsedHost(doc) {
 }
 
 /**
+ * 官方 AppFrame 把 `data-sidebar-collapsed` 写在 frame 根节点，不是 `<html>`。
+ * 监听必须覆盖真正带该属性的节点。优先绑 sidebar 列祖先里「已经带属性」
+ * 的节点，展开时属性不在则绑列的 parent（即 AppFrame）。不要对 html/body
+ * 做全树 attributes 或 childList subtree。
+ * @param {Document | null | undefined} doc
+ * @returns {Element | null}
+ */
+export function collapsedHostNode(doc = typeof document !== 'undefined' ? document : undefined) {
+  if (!doc || typeof doc.querySelector !== 'function') return null
+  const column = doc.querySelector(
+    '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, [class*="dshDesktopSidebarSurface"]',
+  )
+  if (column instanceof HTMLElement) {
+    const marked = column.closest('[data-sidebar-collapsed]')
+    if (marked instanceof HTMLElement) return marked
+    if (column.parentElement instanceof HTMLElement) return column.parentElement
+    const slot = column.closest('[data-slot="root"]')
+    if (slot instanceof HTMLElement) return slot
+  }
+  const marked = doc.querySelector(
+    '[class*="frame"][data-sidebar-collapsed], .dshDesktopFrame[data-sidebar-collapsed], [data-sidebar-collapsed]',
+  )
+  if (marked instanceof HTMLElement) return marked
+  const slot = doc.querySelector('[data-slot="root"]')
+  if (slot instanceof HTMLElement) return slot
+  return null
+}
+
+/**
  * @param {Document | null | undefined} doc
  * @returns {boolean}
  */
@@ -546,7 +575,8 @@ export function ensureSidebarToggleTopbar(doc) {
 
 /**
  * Install MutationObserver to keep the injected toggle present and collapsed
- * attr mirrored. Re-applies whenever the official toggle or tab bar re-renders.
+ * attr mirrored. Uses targeted host observers and rAF/debouncing to prevent
+ * microtask starvation and observer oscillations.
  * @param {Document | null | undefined} [doc]
  * @returns {() => void}
  */
@@ -555,11 +585,19 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
   ensureSidebarToggleTopbar(doc)
 
   /** @type {MutationObserver | null} */
-  let stateObserver = null
+  let collapsedObserver = null
+  /** @type {MutationObserver | null} */
+  let anchorObserver = null
+  /** @type {MutationObserver | null} */
+  let desktopObserver = null
   /** @type {ResizeObserver | null} */
   let widthObserver = null
   /** @type {((this: Window, ev: UIEvent) => void) | null} */
   let resizeListener = null
+
+  /** @type {number | any} */
+  let pendingSchedule = null
+  let isEnsuring = false
 
   // Track mounted controls and leaf panes so split dragging updates overlap.
   const syncGeometry = () => {
@@ -568,8 +606,10 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
   /** @type {Set<Element>} */
   let observedTargets = new Set()
   const ensureObserveTargets = () => {
-    if (typeof ResizeObserver === 'undefined') return
-    if (!widthObserver) widthObserver = new ResizeObserver(syncGeometry)
+    const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+    const ResizeObserverClass = win?.ResizeObserver || (typeof ResizeObserver !== 'undefined' ? ResizeObserver : undefined)
+    if (!ResizeObserverClass) return
+    if (!widthObserver) widthObserver = new ResizeObserverClass(syncGeometry)
     const panel = findVisibleWorkbenchPanel(doc)
     const bars = panel?.querySelectorAll('[class*="tabBar"]:not([class*="Plus"])') || []
     /** @type {(Element | null)[]} */
@@ -585,21 +625,120 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     observedTargets = targets
   }
 
-  if (typeof MutationObserver !== 'undefined') {
-    stateObserver = new MutationObserver(() => {
-      ensureSidebarToggleTopbar(doc)
-      ensureObserveTargets()
+  const scheduleSync = () => {
+    if (pendingSchedule !== null) return
+    let isCancelled = false
+    const runner = () => {
+      if (isCancelled) return
+      pendingSchedule = null
+      if (isEnsuring) return
+      isEnsuring = true
+      try {
+        ensureSidebarToggleTopbar(doc)
+        ensureObserveTargets()
+        rebindHostObservers()
+      } finally {
+        isEnsuring = false
+      }
+    }
+
+    const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+    if (win && typeof win.requestAnimationFrame === 'function') {
+      const id = win.requestAnimationFrame(runner)
+      pendingSchedule = () => {
+        isCancelled = true
+        try { win.cancelAnimationFrame(id) } catch { /* ignore */ }
+      }
+    } else if (typeof requestAnimationFrame === 'function') {
+      const id = requestAnimationFrame(runner)
+      pendingSchedule = () => {
+        isCancelled = true
+        try { cancelAnimationFrame(id) } catch { /* ignore */ }
+      }
+    } else if (typeof queueMicrotask === 'function') {
+      pendingSchedule = () => { isCancelled = true }
+      queueMicrotask(runner)
+    } else {
+      const timer = setTimeout(runner, 0)
+      pendingSchedule = () => {
+        isCancelled = true
+        try { clearTimeout(timer) } catch { /* ignore */ }
+      }
+    }
+  }
+
+  const ObserverClass = doc.defaultView?.MutationObserver || (typeof MutationObserver !== 'undefined' ? MutationObserver : undefined)
+
+  let observedCollapsedHost = null
+  const bindCollapsedObserver = () => {
+    if (!ObserverClass) return
+    const host = collapsedHostNode(doc)
+    if (!host || host === observedCollapsedHost) return
+    if (collapsedObserver) {
+      try { collapsedObserver.disconnect() } catch { /* ignore */ }
+      collapsedObserver = null
+    }
+    observedCollapsedHost = host
+    collapsedObserver = new ObserverClass(() => {
+      scheduleSync()
     })
-    const host = doc.body || doc.documentElement
-    if (host) {
-      stateObserver.observe(host, {
-        childList: true,
-        subtree: true,
+    const isSlot = typeof host.matches === 'function' && host.matches('[data-slot="root"]')
+    const subtree = Boolean(isSlot && !host.hasAttribute('data-sidebar-collapsed'))
+    collapsedObserver.observe(host, {
+      attributes: true,
+      attributeFilter: ['data-sidebar-collapsed'],
+      subtree,
+    })
+  }
+
+  let observedAnchor = null
+  const bindAnchorObserver = () => {
+    if (!ObserverClass) return
+    const anchor = findTopbarAnchor(doc) || doc.querySelector?.('[data-dsh-better-sidebar]')
+    if (!anchor || anchor === observedAnchor) return
+    if (anchorObserver) {
+      try { anchorObserver.disconnect() } catch { /* ignore */ }
+      anchorObserver = null
+    }
+    observedAnchor = anchor
+    anchorObserver = new ObserverClass(() => {
+      scheduleSync()
+    })
+    anchorObserver.observe(anchor, {
+      childList: true,
+      subtree: true,
+    })
+  }
+
+  const bindDesktopObserver = () => {
+    if (desktopObserver || !ObserverClass) return
+    desktopObserver = new ObserverClass(() => {
+      scheduleSync()
+    })
+    const filter = ['data-dsh-desktop-mode', 'data-dsh-desktop-platform']
+    if (doc.documentElement) {
+      desktopObserver.observe(doc.documentElement, {
         attributes: true,
-        attributeFilter: ['data-sidebar-collapsed', 'aria-label', 'class', 'data-dsh-desktop-mode', 'data-dsh-desktop-platform'],
+        attributeFilter: filter,
+        subtree: false,
+      })
+    }
+    if (doc.body) {
+      desktopObserver.observe(doc.body, {
+        attributes: true,
+        attributeFilter: filter,
+        subtree: false,
       })
     }
   }
+
+  const rebindHostObservers = () => {
+    bindCollapsedObserver()
+    bindAnchorObserver()
+    bindDesktopObserver()
+  }
+
+  rebindHostObservers()
   ensureObserveTargets()
   try {
     const win = doc.defaultView
@@ -610,10 +749,24 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
   } catch { /* ignore */ }
 
   return () => {
-    if (stateObserver) {
-      try { stateObserver.disconnect() } catch { /* ignore */ }
-      stateObserver = null
+    if (typeof pendingSchedule === 'function') {
+      try { pendingSchedule() } catch { /* ignore */ }
+      pendingSchedule = null
     }
+    if (collapsedObserver) {
+      try { collapsedObserver.disconnect() } catch { /* ignore */ }
+      collapsedObserver = null
+    }
+    if (anchorObserver) {
+      try { anchorObserver.disconnect() } catch { /* ignore */ }
+      anchorObserver = null
+    }
+    if (desktopObserver) {
+      try { desktopObserver.disconnect() } catch { /* ignore */ }
+      desktopObserver = null
+    }
+    observedCollapsedHost = null
+    observedAnchor = null
     if (widthObserver) {
       try { widthObserver.disconnect() } catch { /* ignore */ }
       widthObserver = null

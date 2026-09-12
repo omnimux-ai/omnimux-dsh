@@ -6,6 +6,7 @@ import {
   scanAndEnhanceAllBubbles,
   createLinkPillElement,
   injectLinkPillStyles,
+  installUserMessageLinkEnhancer,
 } from './userMessageLinkEnhancer.ts';
 import { detectMessageLinks } from './linkPillMetadata.ts';
 
@@ -109,3 +110,59 @@ test('userMessageLinkEnhancer: scanAndEnhanceAllBubbles scans all matching user 
   assert.equal(pills[0].getAttribute('data-raw-url'), 'https://youtube.com/watch?v=123');
   assert.equal(pills[1].getAttribute('data-raw-url'), 'https://bilibili.com/video/BV123');
 });
+
+test('userMessageLinkEnhancer: skips bubbles already marked as enhanced', () => {
+  const dom = new JSDOM(`
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <div class="VnbZpq_userRow">
+          <div class="VnbZpq_userStack">
+            <div class="VnbZpq_bubble" data-omx-link-enhanced="true">https://youtube.com/watch?v=123</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  const doc = dom.window.document;
+  const count = scanAndEnhanceAllBubbles(doc);
+  assert.equal(count, 0);
+  assert.equal(doc.querySelectorAll('.omx-chat-link-pill').length, 0);
+});
+
+test('userMessageLinkEnhancer: installUserMessageLinkEnhancer targets conversation scroll container', async () => {
+  const dom = new JSDOM(`
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <div data-conversation-scroll="true">
+          <div class="VnbZpq_userRow">
+            <div class="VnbZpq_userStack">
+              <div class="VnbZpq_bubble">测试链接 https://youtube.com/watch?v=456</div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  const doc = dom.window.document;
+  const cleanup = installUserMessageLinkEnhancer(doc);
+
+  // Initial scan should enhance bubble inside data-conversation-scroll
+  assert.equal(doc.querySelectorAll('.omx-chat-link-pill').length, 1);
+  const bubble = doc.querySelector('.VnbZpq_bubble');
+  assert.equal(bubble?.getAttribute('data-omx-link-enhanced'), 'true');
+
+  // Dynamic bubble insertion in scroll container triggers debounced enhancer
+  const scrollContainer = doc.querySelector('[data-conversation-scroll]');
+  const newRow = doc.createElement('div');
+  newRow.className = 'VnbZpq_userRow';
+  newRow.innerHTML = '<div class="VnbZpq_userStack"><div class="VnbZpq_bubble">新链接 https://x.com/user/status/789</div></div>';
+  scrollContainer?.appendChild(newRow);
+
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  assert.equal(doc.querySelectorAll('.omx-chat-link-pill').length, 2);
+
+  cleanup();
+});
+

@@ -7,6 +7,7 @@ import {
   RESTORE_ICON_SVG,
   createChatToggleButton,
   ensureChatToggle,
+  installChatToggleObserver,
   syncChatToggleState,
 } from './chat-toggle.js'
 import { installWorkbenchGlobal, resetWorkbenchForTests, setConversationCollapsed } from './workbench.js'
@@ -51,10 +52,17 @@ function setupFakeDOM() {
         for (const fn of fns) fn(event)
       },
       insertBefore(newChild, refChild) {
+        newChild.parentElement = elem
         const idx = refChild ? children.indexOf(refChild) : -1
         if (idx >= 0) children.splice(idx, 0, newChild)
         else children.unshift(newChild)
         return newChild
+      },
+      remove() {
+        if (elem.parentElement) {
+          const idx = elem.parentElement.children.indexOf(elem)
+          if (idx >= 0) elem.parentElement.children.splice(idx, 1)
+        }
       },
       querySelector(selector) {
         if (selector === CHAT_TOGGLE_SELECTOR || selector === `[${CHAT_TOGGLE_ATTR}="1"]`) {
@@ -70,6 +78,8 @@ function setupFakeDOM() {
   cluster.setAttribute('data-dsh-toggle-cluster', '')
   const b1 = createElem('button')
   const b2 = createElem('button')
+  b1.parentElement = cluster
+  b2.parentElement = cluster
   cluster.children.push(b1, b2)
 
   const headChildren = []
@@ -84,6 +94,7 @@ function setupFakeDOM() {
     },
     querySelector(sel) {
       if (sel.includes('data-dsh-toggle-cluster') || sel.includes('toggleCluster')) return cluster
+      if (sel === CHAT_TOGGLE_SELECTOR || sel.includes(CHAT_TOGGLE_ATTR)) return cluster.querySelector(sel)
       return null
     },
     documentElement: createElem('html'),
@@ -336,3 +347,32 @@ test('syncChatToggleState hides button when panel is closed or tab is not workbe
   syncChatToggleState(btn)
   assert.equal(btn.style.display, '')
 })
+
+test('installChatToggleObserver observes cluster only and never doc.body', () => {
+  const { win, doc, cluster } = setupFakeDOM()
+  setupToggleApi(win, doc)
+
+  const observedTargets = []
+  class MockMutationObserver {
+    constructor(callback) {
+      this.callback = callback
+    }
+    observe(target, options) {
+      observedTargets.push({ target, options })
+    }
+    disconnect() {}
+  }
+  doc.defaultView = { MutationObserver: MockMutationObserver }
+  globalThis.MutationObserver = MockMutationObserver
+
+  const cleanup = installChatToggleObserver(doc)
+  assert.equal(observedTargets.length, 1)
+  assert.equal(observedTargets[0].target, cluster)
+  assert.equal(observedTargets[0].options.childList, true)
+  assert.equal(observedTargets[0].options.subtree, undefined)
+  assert.ok(cluster.querySelector(CHAT_TOGGLE_SELECTOR))
+
+  cleanup()
+  assert.equal(cluster.querySelector(CHAT_TOGGLE_SELECTOR), null)
+})
+
