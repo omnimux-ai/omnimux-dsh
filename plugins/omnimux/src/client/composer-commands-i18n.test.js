@@ -11,6 +11,8 @@ import {
   scoreCommandCandidate,
   enhanceCommandCandidates,
   wrapCommandUi,
+  normalizeCommandContribution,
+  repairRegisteredCommandContributions,
   installCommandsI18n,
   patchPrimitivesReferenceIcon,
   renderLibraryIcon,
@@ -458,4 +460,142 @@ test('installMenuAutoSync handles pointerdown on add button and cleans up', () =
   assert.equal(anchor.dataset.overlayPlacement, 'bottom')
 
   cleanup()
+})
+
+/**
+ * Minimal stand-in for the host CommandUiRuntime: it keeps registrations in a
+ * `live.contributions` map and, exactly like `ui-commands/src/client/service.ts`
+ * candidate synthesis, CALLS `contribution.description()`.
+ */
+function createHostLikeCommandUi() {
+  const contributions = new Map()
+  return {
+    live: { contributions },
+    register(contribution) {
+      contributions.set(contribution.name, contribution)
+      return () => {
+        contributions.delete(contribution.name)
+      }
+    },
+    async candidates(session, req) {
+      const rows = [{ name: 'add-from-library', description: 'Add from library' }]
+      for (const contribution of contributions.values()) {
+        if (!contribution.available(session)) continue
+        rows.push({ name: contribution.name, description: contribution.description() })
+      }
+      return req?.query ? rows.filter((row) => row.name.includes(req.query)) : rows
+    },
+    dispatch: () => 'handled',
+    matchSpace: () => undefined,
+    matchEnter: async () => undefined,
+  }
+}
+
+const legacyFastContribution = () => ({
+  name: 'fast',
+  // The pre-0.1.5 shape: a plain string, not a resolver function.
+  description: '快速模式',
+  available: () => true,
+  ui: { kind: 'popupSelect', options: async () => [], onSelect: () => {} },
+})
+
+const fakeZhLocale = { getSnapshot: () => ({ active: 'zh-CN' }) }
+
+test('normalizeCommandContribution keeps the contract and is idempotent', () => {
+  const legacy = legacyFastContribution()
+  const normalized = normalizeCommandContribution(legacy)
+  assert.equal(typeof normalized.description, 'function')
+  assert.equal(normalized.description(), '快速模式')
+  assert.equal(normalized.name, 'fast')
+  assert.equal(normalized.ui, legacy.ui)
+  // idempotent: a callable description is passed through by identity
+  assert.equal(normalizeCommandContribution(normalized), normalized)
+  // defensive: nothing here may throw on odd input
+  assert.equal(normalizeCommandContribution(null), null)
+  assert.equal(normalizeCommandContribution(undefined), undefined)
+  assert.equal(normalizeCommandContribution('nope'), 'nope')
+  const emptyDescription = normalizeCommandContribution({ name: 'x' })
+  assert.equal(emptyDescription.description(), '')
+})
+
+test('the host call site really breaks on an unnormalized legacy contribution', async () => {
+  // Pins the failure the fix exists for: a string description makes the host
+  // throw TypeError and drops the whole `command` source.
+  const commandUi = createHostLikeCommandUi()
+  commandUi.register(legacyFastContribution())
+  await assert.rejects(
+    () => commandUi.candidates({ sessionId: 's1' }, { query: '' }),
+    (error) => error instanceof TypeError && /description is not a function/u.test(error.message),
+  )
+})
+
+test('wrapCommandUi normalizes contributions registered after the wrapper (composer + menu path)', async () => {
+  const commandUi = createHostLikeCommandUi()
+  const dispose = wrapCommandUi(commandUi, fakeZhLocale)
+
+  const release = commandUi.register(legacyFastContribution())
+  const stored = commandUi.live.contributions.get('fast')
+  assert.equal(typeof stored.description, 'function')
+  assert.equal(stored.description(), '快速模式')
+
+  // The host's candidate synthesis must now complete instead of throwing, and
+  // the enhanced rows keep the localized string shape the menu renders.
+  const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'fast'])
+  assert.equal(rows[0].rawName, 'add-from-library')
+  assert.equal(rows[0].description, '从统一资产库选择素材')
+  assert.equal(typeof rows[1].description, 'string')
+
+  // The contribution disposer still reaches the host registry
+  release()
+  assert.equal(commandUi.live.contributions.has('fast'), false)
+
+  dispose()
+  assert.equal(typeof commandUi.register, 'function')
+  assert.equal(commandUi.live.contributions.size, 0)
+})
+
+test('wrapCommandUi repairs a contribution registered before the wrapper (load-order safety net)', async () => {
+  const commandUi = createHostLikeCommandUi()
+  // Registered first, so the wrapper cannot intercept it: only the repair
+  // fallback inside the candidate path can save this pass.
+  commandUi.register(legacyFastContribution())
+
+  const dispose = wrapCommandUi(commandUi, fakeZhLocale)
+  const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'fast'])
+  assert.equal(typeof commandUi.live.contributions.get('fast').description, 'function')
+  dispose()
+})
+
+test('wrapCommandUi leaves compliant contributions and non-contract failures alone', async () => {
+  const commandUi = createHostLikeCommandUi()
+  const dispose = wrapCommandUi(commandUi, fakeZhLocale)
+
+  const compliant = {
+    name: 'model',
+    description: () => '切换模型',
+    available: () => true,
+    ui: { kind: 'popupSelect', options: async () => [], onSelect: () => {} },
+  }
+  commandUi.register(compliant)
+  assert.equal(commandUi.live.contributions.get('model'), compliant)
+
+  const rows = await commandUi.candidates({ sessionId: 's1' }, { query: '' })
+  assert.deepEqual(rows.map((row) => row.name), ['从资产库添加', 'model'])
+  assert.equal(rows[1].description, '切换模型')
+
+  // An unrelated host failure must still surface through the same channel it
+  // always did (the localized pass is attempted once, then the raw pass runs).
+  const brokenCommandUi = createHostLikeCommandUi()
+  brokenCommandUi.candidates = async () => {
+    throw new Error('command.list failed: internal')
+  }
+  const disposeBroken = wrapCommandUi(brokenCommandUi, fakeZhLocale)
+  await assert.rejects(
+    () => brokenCommandUi.candidates({ sessionId: 's1' }, { query: '' }),
+    /command\.list failed: internal/u,
+  )
+  disposeBroken()
+  dispose()
 })
