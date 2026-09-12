@@ -211,7 +211,7 @@ export interface PanelCopy {
 }
 
 const EN: PanelCopy = {
-  documentTitle: 'dsh Browser Assistant',
+  documentTitle: 'OmniMux Elf Assistant',
   status: {
     connected: 'Connected',
     connecting: 'Connecting…',
@@ -441,7 +441,7 @@ const EN: PanelCopy = {
 }
 
 const ZH: PanelCopy = {
-  documentTitle: 'dsh 浏览器助手',
+  documentTitle: 'OmniMux-精灵助手',
   status: {
     connected: '已连接',
     connecting: '连接中…',

@@ -118,3 +118,8 @@ void chrome.runtime.sendMessage({ type: 'DSH_CONTENT_READY' }).then((response: u
   const revision = typeof ready.selectionWatchRevision === 'number' ? ready.selectionWatchRevision : undefined
   selectionWatcher.setEnabled(ready.selectionWatch === true, revision, epoch)
 }).catch(() => {})
+
+// Mount OmniMux FAB & Immersive Workstation companion
+import('./fab-companion.ts').then(({ initFabCompanion }) => {
+  initFabCompanion()
+}).catch(() => {})

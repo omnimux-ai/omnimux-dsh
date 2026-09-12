@@ -1,11 +1,11 @@
 {
   "extensionName": {
-    "message": "dsh Browser Assistant"
+    "message": "OmniMux Elf Assistant"
   },
   "extensionDescription": {
-    "message": "A Chrome side-panel extension that lets dsh read and operate your browser directly without vision."
+    "message": "OmniMux Elf Assistant - Immersive browser companion for context-aware social content creation and local DSH engine integration."
   },
   "actionTitle": {
-    "message": "Open dsh Browser Assistant"
+    "message": "Open OmniMux Elf Assistant"
   }
 }

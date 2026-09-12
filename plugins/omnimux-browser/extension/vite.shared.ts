@@ -27,6 +27,8 @@ export const copyManifest = {
     copyFileSync(resolve(import.meta.dirname, targetManifest), resolve(outDir, 'manifest.json'))
     cpSync(resolve(import.meta.dirname, '_locales'), resolve(outDir, '_locales'), { recursive: true })
     cpSync(resolve(import.meta.dirname, 'assets'), resolve(outDir, 'assets'), { recursive: true })
+    cpSync(resolve(import.meta.dirname, 'welcome'), resolve(outDir, 'welcome'), { recursive: true })
+    cpSync(resolve(import.meta.dirname, 'images'), resolve(outDir, 'images'), { recursive: true })
   },
 }
 

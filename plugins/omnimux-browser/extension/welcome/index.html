@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to OmniMux</title>
+  <link rel="stylesheet" href="welcome.css">
+</head>
+<body class="welcome-body">
+  <!-- 背景动态柔光光晕 -->
+  <div class="glow-circle circle-1"></div>
+  <div class="glow-circle circle-2"></div>
+
+  <!-- 右上角 Pin 扩展引导条 -->
+  <div class="pin-tip-banner">
+    <span>Click the</span>
+    <svg class="puzzle-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M13.55 13.25V10.9c.43-.06.84-.27 1.15-.58.38-.38.6-.91.6-1.45s-.22-1.06-.6-1.45a1.8 1.8 0 0 0-1.15-.57V4.5c0-.54-.22-1.07-.6-1.45A2.05 2.05 0 0 0 11.5 2.45H9.15c-.06-.43-.27-.84-.58-1.15A2.05 2.05 0 0 0 7.12.7c-.54 0-1.06.22-1.45.6-.31.32-.51.72-.58 1.15H2.75c-.54 0-1.07.22-1.45.6-.39.39-.6.91-.6 1.45v2.93h.3c.38 0 .75.15 1.02.42.28.28.43.65.43 1.03s-.15.75-.43 1.02a1.44 1.44 0 0 1-1.02.43H.7v2.92c0 .55.22 1.07.6 1.45.39.39.91.6 1.45.6H11.5c.55 0 1.07-.21 1.45-.6.39-.38.6-.9.6-1.45z"/>
+    </svg>
+    <span>icon at the top right and Pin</span>
+  </div>
+
+  <!-- 主体展示区 -->
+  <div class="main-wrapper">
+    <!-- 标语与标题 -->
+    <div class="header-section">
+      <!-- 漂浮星星装饰 (左) -->
+      <img src="../images/welcome/welcome-c1.png" class="deco-star-left" alt="">
+      <!-- 漂浮闪烁星装饰 (右) -->
+      <img src="../images/welcome/welcome-c2.png" class="deco-star-right" alt="">
+
+      <div class="slogan-row">
+        <img src="../icons/icon-48.png" class="omnimux-slogan-logo" alt="OmniMux">
+        <span class="slogan-text">Learn smarter. Create bolder.</span>
+      </div>
+      <h1 class="main-title">OmniMux is ready to create with you anytime!</h1>
+    </div>
+
+    <!-- 1:1 浏览器窗口与 Pin 引导交互卡片 -->
+    <div class="mock-browser-card">
+      <!-- 左下角漂浮小星 -->
+      <img src="../images/welcome/welcome-c3.png" class="deco-c3" alt="">
+      <!-- 右下角漂浮灵感灯泡 -->
+      <img src="../images/welcome/welcome-c4.png" class="deco-c4" alt="">
+
+      <!-- 模拟浏览器顶部栏 -->
+      <div class="mock-window-topbar">
+        <div class="mock-tabs">
+          <div class="mock-tab active">
+            <span class="tab-close">✕</span>
+            <img src="../icons/icon-16.png" class="tab-icon" alt="">
+            <span class="tab-close">✕</span>
+          </div>
+          <span class="mock-add-tab">+</span>
+        </div>
+      </div>
+
+      <!-- 模拟浏览器地址栏 -->
+      <div class="mock-address-bar-row">
+        <div class="mock-address-bar">
+          <div class="address-star">☆</div>
+        </div>
+        <div class="mock-puzzle-button active">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M13.55 13.25V10.9c.43-.06.84-.27 1.15-.58.38-.38.6-.91.6-1.45s-.22-1.06-.6-1.45a1.8 1.8 0 0 0-1.15-.57V4.5c0-.54-.22-1.07-.6-1.45A2.05 2.05 0 0 0 11.5 2.45H9.15c-.06-.43-.27-.84-.58-1.15A2.05 2.05 0 0 0 7.12.7c-.54 0-1.06.22-1.45.6-.31.32-.51.72-.58 1.15H2.75c-.54 0-1.07.22-1.45.6-.39.39-.6.91-.6 1.45v2.93h.3c.38 0 .75.15 1.02.42.28.28.43.65.43 1.03s-.15.75-.43 1.02a1.44 1.44 0 0 1-1.02.43H.7v2.92c0 .55.22 1.07.6 1.45.39.39.91.6 1.45.6H11.5c.55 0 1.07-.21 1.45-.6.39-.38.6-.9.6-1.45z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 模拟下拉 Extensions 面板 -->
+      <div class="mock-extensions-popup">
+        <div class="popup-header">
+          <span class="popup-title">Extensions</span>
+          <span class="popup-close">✕</span>
+        </div>
+        <div class="popup-sub">
+          <div class="popup-sub-title">Full access</div>
+          <div class="popup-sub-desc">These extensions can see and change information on this site.</div>
+        </div>
+
+        <div class="extension-item-row">
+          <div class="ext-item-left">
+            <img src="../icons/icon-48.png" class="ext-icon" alt="OmniMux">
+            <span class="ext-name">OmniMux</span>
+          </div>
+          <div class="ext-item-right">
+            <!-- 高亮圆圈图钉 -->
+            <div class="pin-highlight-wrapper">
+              <svg class="pin-icon active-pin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 17v5"></path>
+                <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76z"></path>
+              </svg>
+              <!-- 手绘黄色高亮圆圈 -->
+              <svg class="hand-drawn-circle" viewBox="0 0 60 60">
+                <ellipse cx="30" cy="30" rx="26" ry="24" fill="none" stroke="#facc15" stroke-width="3" stroke-linecap="round" stroke-dasharray="140" stroke-dashoffset="10"/>
+              </svg>
+              <!-- 手绘批注手写体 -->
+              <span class="pin-handwritten-note">PIN OMNIMUX</span>
+            </div>
+            <span class="ext-more-dots">⋮</span>
+          </div>
+        </div>
+
+        <div class="popup-footer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Manage Extensions</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部 Get Started 大按钮 -->
+    <div class="action-section">
+      <button id="btn-get-started" class="btn-get-started">Get Started</button>
+    </div>
+  </div>
+
+  <script src="welcome.js"></script>
+</body>
+</html>

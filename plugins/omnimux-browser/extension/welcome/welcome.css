@@ -1,0 +1,432 @@
+/* Welcome to OmniMux - 1:1 像素级引导向导页样式 */
+
+:root {
+  --primary-font: "Avenir", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --handwritten-font: "Comic Sans MS", "Chalkboard SE", "Caveat", cursive, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.welcome-body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8fafc;
+  font-family: var(--primary-font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+/* 1. 背景动态光晕 */
+.glow-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 1;
+}
+
+.circle-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(184, 183, 255, 0.35) 0%, rgba(200, 240, 255, 0) 70%);
+  top: -100px;
+  left: -100px;
+  animation: float-slow 16s ease-in-out infinite alternate;
+}
+
+.circle-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(254, 240, 138, 0.25) 0%, rgba(254, 215, 170, 0) 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: float-slow 20s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes float-slow {
+  from { transform: translate(0, 0) rotate(0deg); }
+  to { transform: translate(40px, 30px) rotate(15deg); }
+}
+
+/* 2. 右上角 Pin 提示框 */
+.pin-tip-banner {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid rgba(2, 4, 26, 0.12);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.82);
+  box-shadow: 0 2px 10px rgba(2, 4, 26, 0.06);
+}
+
+.puzzle-icon {
+  color: #475569;
+}
+
+/* 3. 主体居中容器 */
+.main-wrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 900px;
+  width: 90vw;
+}
+
+/* 标题区 */
+.header-section {
+  position: relative;
+  text-align: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.slogan-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.omnimux-slogan-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.slogan-text {
+  font-size: 17px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+  letter-spacing: -0.2px;
+}
+
+.main-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.88);
+  letter-spacing: -0.5px;
+  line-height: 1.25;
+}
+
+/* 左右漂浮装饰 */
+.deco-star-left {
+  position: absolute;
+  top: -10px;
+  left: -80px;
+  width: 68px;
+  animation: wiggle 4s ease-in-out infinite;
+}
+
+.deco-star-right {
+  position: absolute;
+  top: 15px;
+  right: -50px;
+  width: 34px;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.deco-c3 {
+  position: absolute;
+  bottom: 20px;
+  left: -80px;
+  width: 40px;
+  animation: wiggle 5s ease-in-out infinite reverse;
+}
+
+.deco-c4 {
+  position: absolute;
+  bottom: 60px;
+  right: -70px;
+  width: 48px;
+  animation: wiggle 4.5s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* 4. 模拟 Chrome 浏览器窗口卡片 */
+.mock-browser-card {
+  position: relative;
+  width: 580px;
+  background: #f1f3f9;
+  border-radius: 20px;
+  border: 1px solid rgba(2, 4, 26, 0.12);
+  box-shadow: 0 8px 32px rgba(2, 4, 26, 0.12);
+  overflow: visible;
+  padding-bottom: 28px;
+}
+
+.mock-window-topbar {
+  height: 40px;
+  padding: 0 14px;
+  display: flex;
+  align-items: flex-end;
+  background: #e2e8f0;
+  border-top-left-radius: 19px;
+  border-top-right-radius: 19px;
+}
+
+.mock-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mock-tab {
+  height: 32px;
+  background: #f1f3f9;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.tab-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.tab-close {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.mock-add-tab {
+  font-size: 16px;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.mock-address-bar-row {
+  height: 42px;
+  background: #f1f3f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mock-address-bar {
+  flex: 1;
+  height: 28px;
+  background: #ffffff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  margin-right: 12px;
+}
+
+.address-star {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.mock-puzzle-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* 5. 模拟 Extensions 弹窗 */
+.mock-extensions-popup {
+  width: 320px;
+  margin: 18px auto 0 auto;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid rgba(2, 4, 26, 0.08);
+  box-shadow: 0 12px 30px rgba(2, 4, 26, 0.1);
+  padding: 16px;
+  position: relative;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.popup-close {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.popup-sub {
+  margin-bottom: 14px;
+}
+
+.popup-sub-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.popup-sub-desc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.extension-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 6px;
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-bottom: 12px;
+}
+
+.ext-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ext-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.ext-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ext-item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pin-highlight-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.active-pin {
+  color: #0f172a;
+  transform: rotate(45deg);
+}
+
+.hand-drawn-circle {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  top: -13px;
+  left: -13px;
+  pointer-events: none;
+  animation: draw 1.2s ease-out forwards;
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.pin-handwritten-note {
+  position: absolute;
+  bottom: -22px;
+  right: -24px;
+  font-family: var(--handwritten-font);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ca8a04;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  transform: rotate(-5deg);
+}
+
+.ext-more-dots {
+  color: #64748b;
+  font-size: 16px;
+}
+
+.popup-footer {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+}
+
+/* 6. 底部 Get Started 按钮 */
+.action-section {
+  margin-top: 24px;
+}
+
+.btn-get-started {
+  width: 224px;
+  height: 48px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-get-started:hover {
+  transform: scale(1.04);
+  background: #000000;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.26);
+}
+
+.btn-get-started:active {
+  transform: scale(0.97);
+}
