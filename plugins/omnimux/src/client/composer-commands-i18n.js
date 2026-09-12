@@ -21,6 +21,9 @@ import { createElement } from 'react'
  * 4. Bidirectional transparent mapping:
  *    - Intercepts `dispatch`, `matchSpace`, and `matchEnter` so that selecting or entering
  *      Chinese command names transparently resolves and executes the underlying native Host command.
+ *    - Each wrapper delegates with the receiver the runtime handed it, so the Host method keeps
+ *      running against the service's own context instead of the narrow scope that read the service
+ *      (`this.ctx.remote.commands` in the Host dispatch path must not resolve against that scope).
  * 5. Smart multi-modal query matching:
  *    - Typing Chinese keywords, pinyin, or English tokens all match and prioritize seamlessly.
  * 6. Dual-layer icon rendering:
@@ -1001,7 +1004,52 @@ function isDescriptionContractError(error) {
 }
 
 /**
+ * Read one service method together with how the service owns it.
+ *
+ * A context hands every service access back as a fresh proxy over the service,
+ * and reading a method off that proxy yields a callable that substitutes its
+ * own receiver: a copy rebound to the proxy therefore runs the host method with
+ * `this.ctx` pointing at the *accessing* scope instead of the service's own
+ * context. The host dispatch path reads the dotted `remote.commands` through
+ * `this.ctx`, so that lookup resolves against the wrong scope and throws
+ * `cannot get property "remote.commands" without inject`. Reading the prototype
+ * method (or the own value, for a plain-object service) yields the same
+ * function the host reaches through its own receiver, so delegation can forward
+ * the caller's receiver unchanged.
+ *
+ * @param {any} commandUi
+ * @param {string} name
+ * @returns {{ value: Function, own: boolean, descriptor?: PropertyDescriptor } | null}
+ */
+export function readServiceMethod(commandUi, name) {
+  if (!commandUi) return null
+  const descriptor = Object.getOwnPropertyDescriptor(commandUi, name)
+  if (descriptor && typeof descriptor.value === 'function') {
+    return { value: descriptor.value, own: true, descriptor }
+  }
+  let proto = Object.getPrototypeOf(commandUi)
+  while (proto) {
+    const desc = Object.getOwnPropertyDescriptor(proto, name)
+    if (desc && typeof desc.value === 'function') {
+      return { value: desc.value, own: false, descriptor }
+    }
+    proto = Object.getPrototypeOf(proto)
+  }
+  // Nothing on the service itself (an own accessor, or a proxy hiding the
+  // descriptor): the access-proxy callable is the only handle left, and it is
+  // still called with the caller's receiver. `descriptor` carries whatever the
+  // service owned, so disposal restores it verbatim.
+  const viaProxy = commandUi[name]
+  return typeof viaProxy === 'function' ? { value: viaProxy, own: true, descriptor } : null
+}
+
+/**
  * Method-wrap `commandUi` methods (register, candidates, dispatch, matchSpace, matchEnter) in-place safely.
+ *
+ * Every wrapper forwards the receiver the runtime handed it, so the host method
+ * keeps running against the service's own context; nothing is re-bound to the
+ * scope that happened to read the service.
+ *
  * @param {any} commandUi
  * @param {any} locale
  * @returns {() => void} Disposer to restore original methods
@@ -1011,78 +1059,78 @@ export function wrapCommandUi(commandUi, locale) {
     return () => {}
   }
 
-  const originalCandidates = commandUi.candidates
-  const originalDispatch = typeof commandUi.dispatch === 'function' ? commandUi.dispatch : null
-  const originalMatchSpace = typeof commandUi.matchSpace === 'function' ? commandUi.matchSpace : null
-  const originalMatchEnter = typeof commandUi.matchEnter === 'function' ? commandUi.matchEnter : null
-  const originalRegister = typeof commandUi.register === 'function' ? commandUi.register : null
-
-  const boundCandidates = originalCandidates.bind(commandUi)
-  const boundDispatch = originalDispatch ? originalDispatch.bind(commandUi) : null
-  const boundMatchSpace = originalMatchSpace ? originalMatchSpace.bind(commandUi) : null
-  const boundMatchEnter = originalMatchEnter ? originalMatchEnter.bind(commandUi) : null
-  const boundRegister = originalRegister ? originalRegister.bind(commandUi) : null
+  const originalCandidates = readServiceMethod(commandUi, 'candidates')
+  const originalDispatch = readServiceMethod(commandUi, 'dispatch')
+  const originalMatchSpace = readServiceMethod(commandUi, 'matchSpace')
+  const originalMatchEnter = readServiceMethod(commandUi, 'matchEnter')
+  const originalRegister = readServiceMethod(commandUi, 'register')
+  if (!originalCandidates) return () => {}
 
   // 0. Wrap register so a contribution on the older string-valued contract
   //    still satisfies `description: () => string` (idempotent, disposer kept)
-  const wrappedRegister = boundRegister ? function (contribution) {
-    return boundRegister(normalizeCommandContribution(contribution))
+  const wrappedRegister = originalRegister ? function (contribution) {
+    const receiver = this ?? commandUi
+    return originalRegister.value.call(receiver, normalizeCommandContribution(contribution))
   } : null
 
-  const localizeCandidates = async function (session, req) {
+  const localizeCandidates = async function (receiver, session, req) {
     const baseReq = req ? { ...req, query: '' } : { query: '' }
-    const allRows = await boundCandidates(session, baseReq)
+    const allRows = await originalCandidates.value.call(receiver, session, baseReq)
     return enhanceCommandCandidates(allRows, req, locale)
   }
 
   // 1. Wrap candidates to yield adaptive names, descriptions, and icons
   const wrappedCandidates = async function (session, req) {
+    const receiver = this ?? commandUi
     try {
-      return await localizeCandidates(session, req)
+      return await localizeCandidates(receiver, session, req)
     } catch (error) {
       // A contribution registered before this wrapper would still kill the
       // whole source: repair the registry once, then retry with localization.
       if (isDescriptionContractError(error) && repairRegisteredCommandContributions(commandUi)) {
         try {
-          return await localizeCandidates(session, req)
+          return await localizeCandidates(receiver, session, req)
         } catch {}
       }
-      return boundCandidates(session, req)
+      return originalCandidates.value.call(receiver, session, req)
     }
   }
 
   // 2. Wrap dispatch to transparently unwrap localized candidate name to rawName
-  const wrappedDispatch = boundDispatch ? function (pick) {
-    if (!pick || !pick.candidate) return boundDispatch(pick)
+  const wrappedDispatch = originalDispatch ? function (pick) {
+    const receiver = this ?? commandUi
+    if (!pick || !pick.candidate) return originalDispatch.value.call(receiver, pick)
     const rawName = pick.candidate.rawName || resolveRawCommandName(pick.candidate.name)
     const normalizedCandidate = {
       ...pick.candidate,
       name: rawName,
     }
-    return boundDispatch({
+    return originalDispatch.value.call(receiver, {
       ...pick,
       candidate: normalizedCandidate,
     })
   } : null
 
   // 3. Wrap matchSpace to map localized token to rawName
-  const wrappedMatchSpace = boundMatchSpace ? function (session, token) {
+  const wrappedMatchSpace = originalMatchSpace ? function (session, token) {
+    const receiver = this ?? commandUi
     if (!token || typeof token !== 'string' || !token.startsWith('/')) {
-      return boundMatchSpace(session, token)
+      return originalMatchSpace.value.call(receiver, session, token)
     }
     const name = token.slice(1)
     const rawName = resolveRawCommandName(name)
     if (rawName !== name) {
-      return boundMatchSpace(session, `/${rawName}`)
+      return originalMatchSpace.value.call(receiver, session, `/${rawName}`)
     }
-    return boundMatchSpace(session, token)
+    return originalMatchSpace.value.call(receiver, session, token)
   } : null
 
   // 4. Wrap matchEnter to map localized line to rawName
-  const wrappedMatchEnter = boundMatchEnter ? async function (session, line, signal, envelope) {
+  const wrappedMatchEnter = originalMatchEnter ? async function (session, line, signal, envelope) {
+    const receiver = this ?? commandUi
     const trimmed = (line || '').trim()
     if (!trimmed.startsWith('/')) {
-      return boundMatchEnter(session, line, signal, envelope)
+      return originalMatchEnter.value.call(receiver, session, line, signal, envelope)
     }
     const ws = trimmed.search(/\s/)
     const token = ws === -1 ? trimmed : trimmed.slice(0, ws)
@@ -1090,9 +1138,9 @@ export function wrapCommandUi(commandUi, locale) {
     const rawName = resolveRawCommandName(name)
     if (rawName !== name) {
       const mappedLine = ws === -1 ? `/${rawName}` : `/${rawName} ${trimmed.slice(ws + 1)}`
-      return boundMatchEnter(session, mappedLine, signal, envelope)
+      return originalMatchEnter.value.call(receiver, session, mappedLine, signal, envelope)
     }
-    return boundMatchEnter(session, line, signal, envelope)
+    return originalMatchEnter.value.call(receiver, session, line, signal, envelope)
   } : null
 
   commandUi.candidates = wrappedCandidates
@@ -1101,12 +1149,22 @@ export function wrapCommandUi(commandUi, locale) {
   if (wrappedMatchSpace) commandUi.matchSpace = wrappedMatchSpace
   if (wrappedMatchEnter) commandUi.matchEnter = wrappedMatchEnter
 
+  // Restore through the own descriptor: reading a method back through the
+  // context proxy yields a fresh callable, so identity comparison on the proxy
+  // would never match and the disposer would silently do nothing.
+  const restore = (name, original, wrapped) => {
+    const current = Object.getOwnPropertyDescriptor(commandUi, name)
+    if (!current || current.value !== wrapped) return
+    if (original.descriptor) Object.defineProperty(commandUi, name, original.descriptor)
+    else delete commandUi[name]
+  }
+
   return () => {
-    if (commandUi.candidates === wrappedCandidates) commandUi.candidates = originalCandidates
-    if (originalRegister && commandUi.register === wrappedRegister) commandUi.register = originalRegister
-    if (originalDispatch && commandUi.dispatch === wrappedDispatch) commandUi.dispatch = originalDispatch
-    if (originalMatchSpace && commandUi.matchSpace === wrappedMatchSpace) commandUi.matchSpace = originalMatchSpace
-    if (originalMatchEnter && commandUi.matchEnter === wrappedMatchEnter) commandUi.matchEnter = originalMatchEnter
+    restore('candidates', originalCandidates, wrappedCandidates)
+    if (originalRegister && wrappedRegister) restore('register', originalRegister, wrappedRegister)
+    if (originalDispatch && wrappedDispatch) restore('dispatch', originalDispatch, wrappedDispatch)
+    if (originalMatchSpace && wrappedMatchSpace) restore('matchSpace', originalMatchSpace, wrappedMatchSpace)
+    if (originalMatchEnter && wrappedMatchEnter) restore('matchEnter', originalMatchEnter, wrappedMatchEnter)
   }
 }
 
