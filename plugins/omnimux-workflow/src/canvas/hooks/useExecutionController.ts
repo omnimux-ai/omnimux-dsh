@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { WORKFLOW_API_ROUTES } from '../../shared/api';
-import type { ExecutionSnapshotDto } from '../../shared/api';
+import type { ExecutionSnapshotDto, NodeExecutionApiStatus } from '../../shared/api';
 import {
   createExecution,
   executionAction,
@@ -150,6 +150,197 @@ function writeNodeData(
   }
 }
 
+/** Node statuses owned by a live executor (a terminal run keeps none). */
+const IN_FLIGHT_STATUSES = new Set<NodeExecutionApiStatus>(['pending', 'running']);
+
+/**
+ * Converge every node still in flight into a terminal status.
+ *
+ * `node_start` writes `executionStatus: 'running'` into node.data (single-node
+ * mode writes `'pending'` first) and the terminal execution events carry no
+ * per-node event, so without this the GSC stays on 「生成中…」 — and the stale
+ * marker is autosaved with the canvas document, so reloading brings it back.
+ * Writes follow the existing `node_error` / `node_skipped` branches.
+ *
+ * @param status Terminal node status: `skipped` for a cancelled run, `error`
+ *   for a failed one.
+ * @param error Error message recorded on the `error` convergence.
+ * @returns The converged node ids (assertions / logging).
+ */
+export function settleInFlightNodes(status: 'skipped' | 'error', error?: string): string[] {
+  const exec = useExecutionStore.getState();
+  const nodeIds = new Set<string>();
+  for (const [nodeId, nodeStatus] of Object.entries(exec.nodeStatuses)) {
+    if (IN_FLIGHT_STATUSES.has(nodeStatus)) nodeIds.add(nodeId);
+  }
+  for (const node of useCanvasStore.getState().nodes) {
+    const executionStatus = (node.data as { executionStatus?: NodeExecutionApiStatus }).executionStatus;
+    if (executionStatus !== undefined && IN_FLIGHT_STATUSES.has(executionStatus)) nodeIds.add(node.id);
+  }
+
+  const settled = [...nodeIds];
+  for (const nodeId of settled) {
+    exec.setNodeStatus(nodeId, status);
+    writeNodeData(nodeId, {
+      executionStatus: status,
+      executionError: status === 'error' ? (error ?? t('error.nodeExecutionFailed')) : undefined,
+    });
+  }
+  return settled;
+}
+
+/**
+ * Island-reload guard for the 「no live execution」 branch: may the autosaved
+ * in-flight markers be converged now?
+ *
+ * The store status alone is not enough. `startExecution` awaits
+ * `createExecution` while the store still reads `'idle'` (the `'pending'` write
+ * happens only after the POST returns), so a list call that resolves inside
+ * that window looks like 「no surviving run」 and would flash every pending node
+ * to `'skipped'` until the SSE `node_start` corrects it.
+ *
+ * @param startInFlight True while `startExecution` holds `startingRef.current`:
+ *   from the save preflight onwards, across the create POST, until the store
+ *   write and `subscribe` have both returned.
+ * @returns True when the caller may settle the in-flight nodes.
+ */
+export function shouldConvergeInFlightOnReload(startInFlight: boolean): boolean {
+  if (startInFlight) return false;
+  return useExecutionStore.getState().status === 'idle';
+}
+
+/** Terminal execution state: no node is in flight any more. */
+function applyTerminalStatus(status: ExecutionUiStatus, error: string | null): void {
+  const exec = useExecutionStore.getState();
+  exec.setExecution({
+    status,
+    error,
+    progress: {
+      ...exec.progress,
+      running: 0,
+      percentage: status === 'completed' ? 100 : exec.progress.percentage,
+    },
+  });
+}
+
+/**
+ * Parse and apply one SSE execution event.
+ *
+ * Module-level (the hook only supplies the stream handle) so the island's event
+ * handling is exercisable headlessly by tests.
+ */
+export function dispatchExecutionEvent(
+  eventType: string,
+  raw: string,
+  closeStream: () => void,
+): void {
+  let data: SseEventData;
+  try {
+    data = JSON.parse(raw) as SseEventData;
+  } catch {
+    return;
+  }
+  const exec = useExecutionStore.getState();
+
+  switch (eventType) {
+    case 'execution_start': {
+      exec.setExecution({
+        status: 'running',
+        error: null,
+        progress: {
+          total: data.totalNodes ?? 0,
+          completed: 0,
+          running: 0,
+          pending: data.totalNodes ?? 0,
+          percentage: 0,
+        },
+      });
+      break;
+    }
+    case 'node_start': {
+      if (!data.nodeId) break;
+      exec.setNodeStatus(data.nodeId, 'running');
+      exec.setExecution({
+        progress: {
+          ...exec.progress,
+          running: exec.progress.running + 1,
+          pending: Math.max(0, exec.progress.pending - 1),
+        },
+      });
+      writeNodeData(data.nodeId, { executionStatus: 'running', executionError: undefined });
+      break;
+    }
+    case 'node_complete': {
+      if (!data.nodeId) break;
+      exec.setNodeStatus(data.nodeId, 'completed');
+      exec.setExecution({
+        progress: {
+          ...exec.progress,
+          completed: exec.progress.completed + 1,
+          running: Math.max(0, exec.progress.running - 1),
+          percentage: data.progress ?? exec.progress.percentage,
+        },
+      });
+      // Result backfill also marks the workspace dirty and triggers autosave.
+      applyExecutionNodeOutput(data.nodeId, data.output ?? {}, {
+        executionStatus: 'completed',
+        executionError: undefined,
+        taskId: 'exec-' + (data.executionId ?? ''),
+      });
+      break;
+    }
+    case 'node_error': {
+      if (!data.nodeId) break;
+      exec.setNodeStatus(data.nodeId, 'error');
+      exec.setExecution({
+        progress: { ...exec.progress, running: Math.max(0, exec.progress.running - 1) },
+      });
+      writeNodeData(data.nodeId, {
+        executionStatus: 'error',
+        executionError: data.error ?? t('error.nodeExecutionFailed'),
+      });
+      break;
+    }
+    case 'node_skipped': {
+      if (!data.nodeId) break;
+      exec.setNodeStatus(data.nodeId, 'skipped');
+      writeNodeData(data.nodeId, {
+        executionStatus: 'skipped',
+        executionError: undefined,
+      });
+      break;
+    }
+    case 'execution_paused': {
+      exec.setExecution({ status: 'paused' });
+      break;
+    }
+    case 'execution_resumed': {
+      exec.setExecution({ status: 'running' });
+      break;
+    }
+    case 'execution_complete': {
+      applyTerminalStatus('completed', null);
+      closeStream();
+      break;
+    }
+    case 'execution_error': {
+      const message = data.error ?? t('error.executionFailed');
+      applyTerminalStatus('error', message);
+      settleInFlightNodes('error', message);
+      closeStream();
+      break;
+    }
+    case 'execution_cancelled': {
+      applyTerminalStatus('cancelled', null);
+      settleInFlightNodes('skipped');
+      closeStream();
+      break;
+    }
+    default:
+      break;
+  }
+}
+
 export interface ExecutionControllerOptions {
   /** Optional pre-flight hook (e.g. flush canvas persistence before creating run). */
   onBeforeStart?: () => Promise<number | void> | number | void;
@@ -186,118 +377,9 @@ export function useExecutionController(
     }
   }, []);
 
-  const applyTerminal = useCallback((status: ExecutionUiStatus, error: string | null) => {
-    useExecutionStore.getState().setExecution({
-      status,
-      error,
-      progress: { ...useExecutionStore.getState().progress, percentage: status === 'completed' ? 100 : useExecutionStore.getState().progress.percentage },
-    });
-  }, []);
-
   const handleEvent = useCallback((eventType: string, raw: string) => {
-    let data: SseEventData;
-    try {
-      data = JSON.parse(raw) as SseEventData;
-    } catch {
-      return;
-    }
-    const exec = useExecutionStore.getState();
-
-    switch (eventType) {
-      case 'execution_start': {
-        exec.setExecution({
-          status: 'running',
-          error: null,
-          progress: {
-            total: data.totalNodes ?? 0,
-            completed: 0,
-            running: 0,
-            pending: data.totalNodes ?? 0,
-            percentage: 0,
-          },
-        });
-        break;
-      }
-      case 'node_start': {
-        if (!data.nodeId) break;
-        exec.setNodeStatus(data.nodeId, 'running');
-        exec.setExecution({
-          progress: {
-            ...exec.progress,
-            running: exec.progress.running + 1,
-            pending: Math.max(0, exec.progress.pending - 1),
-          },
-        });
-        writeNodeData(data.nodeId, { executionStatus: 'running', executionError: undefined });
-        break;
-      }
-      case 'node_complete': {
-        if (!data.nodeId) break;
-        exec.setNodeStatus(data.nodeId, 'completed');
-        exec.setExecution({
-          progress: {
-            ...exec.progress,
-            completed: exec.progress.completed + 1,
-            running: Math.max(0, exec.progress.running - 1),
-            percentage: data.progress ?? exec.progress.percentage,
-          },
-        });
-        // Result backfill also marks the workspace dirty and triggers autosave.
-        applyExecutionNodeOutput(data.nodeId, data.output ?? {}, {
-          executionStatus: 'completed',
-          executionError: undefined,
-          taskId: 'exec-' + (data.executionId ?? ''),
-        });
-        break;
-      }
-      case 'node_error': {
-        if (!data.nodeId) break;
-        exec.setNodeStatus(data.nodeId, 'error');
-        exec.setExecution({
-          progress: { ...exec.progress, running: Math.max(0, exec.progress.running - 1) },
-        });
-        writeNodeData(data.nodeId, {
-          executionStatus: 'error',
-          executionError: data.error ?? t('error.nodeExecutionFailed'),
-        });
-        break;
-      }
-      case 'node_skipped': {
-        if (!data.nodeId) break;
-        exec.setNodeStatus(data.nodeId, 'skipped');
-        writeNodeData(data.nodeId, {
-          executionStatus: 'skipped',
-          executionError: undefined,
-        });
-        break;
-      }
-      case 'execution_paused': {
-        exec.setExecution({ status: 'paused' });
-        break;
-      }
-      case 'execution_resumed': {
-        exec.setExecution({ status: 'running' });
-        break;
-      }
-      case 'execution_complete': {
-        applyTerminal('completed', null);
-        closeStream();
-        break;
-      }
-      case 'execution_error': {
-        applyTerminal('error', data.error ?? t('error.executionFailed'));
-        closeStream();
-        break;
-      }
-      case 'execution_cancelled': {
-        applyTerminal('cancelled', null);
-        closeStream();
-        break;
-      }
-      default:
-        break;
-    }
-  }, [applyTerminal, closeStream]);
+    dispatchExecutionEvent(eventType, raw, closeStream);
+  }, [closeStream]);
 
   const subscribe = useCallback((executionId: string) => {
     closeStream();
@@ -453,7 +535,15 @@ export function useExecutionController(
         const list = await listExecutions(workspaceId);
         if (cancelled || !list.ok) return;
         const live = (list.body.executions ?? []).find((row) => LIVE_STATUSES.has(row.status));
-        if (!live) return;
+        if (!live) {
+          // No live run for this workspace: the in-flight markers autosaved with
+          // the canvas document belong to a run that ended while this island was
+          // away, and nothing will ever correct them over SSE — converge them
+          // here instead. A start that raced the list call stays untouched; see
+          // `shouldConvergeInFlightOnReload` for the exact condition.
+          if (shouldConvergeInFlightOnReload(startingRef.current)) settleInFlightNodes('skipped');
+          return;
+        }
         const snapshot = await getExecution(workspaceId, live.id);
         if (cancelled || !snapshot.ok || !snapshot.body.execution) return;
         applySnapshot(snapshot.body.execution);

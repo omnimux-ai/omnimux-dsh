@@ -1,4 +1,4 @@
-import { ExecutionContext, ExecutionStatus } from './ExecutionContext';
+import { ExecutionContext, ExecutionStatus, NodeStatus, settleNodeState } from './ExecutionContext';
 import {
   ExecutionScheduler,
   type DagState,
@@ -54,13 +54,20 @@ function handleTimedOutExecution(
   executionsDir: string,
   record: PersistedExecutionRecord,
 ): null {
+  const error = `Execution timed out after restart (>${Math.round(EXECUTION_TIMEOUT_MS / 60000)}min)`;
+  // The crashed run's in-flight nodes must not survive as running in the record
+  // a client reads back through the snapshot endpoint.
+  const settled = Object.values(record.nodeStates).filter((state) =>
+    settleNodeState(state, NodeStatus.ERROR, error),
+  ).length;
   logger.warn('recovered execution timed out, marking failed', {
     executionId: record.id,
+    settledNodes: settled,
   });
   saveExecutionRecord(executionsDir, {
     ...record,
     status: ExecutionStatus.ERROR,
-    error: `Execution timed out after restart (>${Math.round(EXECUTION_TIMEOUT_MS / 60000)}min)`,
+    error,
     completedAt: Date.now(),
   });
   return null;

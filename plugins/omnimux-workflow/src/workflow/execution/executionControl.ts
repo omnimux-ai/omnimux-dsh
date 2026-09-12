@@ -65,6 +65,11 @@ export async function cancelExecution(
   }
   entry.scheduler.cancel();
   entry.abortController.abort();
+  // Cancel the context here as well: the scheduler loop only reaches its own
+  // cancel() once the abort has unwound the in-flight executors, while the
+  // record persisted on the execution_cancelled event must already carry the
+  // converged node states (cancel() is idempotent, the loop's call is a no-op).
+  entry.context.cancel();
   return { ok: true };
 }
 

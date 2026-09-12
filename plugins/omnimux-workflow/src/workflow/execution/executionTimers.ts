@@ -131,6 +131,11 @@ export function cleanupExecution(
   if (wasRunning) {
     entry.scheduler.cancel();
     entry.abortController.abort();
+    // Timeout termination: converge the in-flight node states and persist the
+    // terminal record before the entry leaves the in-memory table — after the
+    // deletion only the persisted record can still be read by a client.
+    // The scheduler loop's own cancel() is a no-op afterwards.
+    entry.context.cancel();
   }
   stopSyncTimer(entry);
   stopTimeoutTimer(entry);
