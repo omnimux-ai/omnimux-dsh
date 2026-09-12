@@ -6,7 +6,8 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import snapshot from './featured-skills.json' with { type: 'json' }
-import { filterSkillsByCategory, buildSkillPrompt } from './featured-skills-data.js'
+import { filterSkillsByCategory, buildSkillPrompt, resolveSkillTitle, resolveSkillSummary, isLocaleEn } from './featured-skills-data.js'
+import { guideZh, guideEn } from '../catalog.js'
 import { readCatalog, buildSnapshot } from '../../../../../../scripts/generate-featured-skills.mjs'
 
 const require = createRequire(import.meta.url)
@@ -41,8 +42,65 @@ test('featured-skills-data: buildSkillPrompt 生成清晰的技能预填指令',
   assert.ok(prompt.includes('用途：生成 3D 动画分镜脚本与画面设定。'))
   assert.ok(prompt.includes('请按照该技能的规范和步骤，帮我完成以下任务：'))
 
+  // 英文环境测试
+  const tEn = (key) => guideEn[key] || key
+  const promptEn = buildSkillPrompt({
+    title: 'Shopee Keyword Analysis',
+    titleEn: 'Shopee Keyword Analysis',
+    summary: 'Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.',
+    summaryEn: 'Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.',
+  }, tEn)
+  assert.ok(promptEn.includes('Use skill "Shopee Keyword Analysis"'))
+  assert.ok(promptEn.includes('Purpose: Shopee hot-search word ranking'))
+  assert.ok(promptEn.includes('Please follow the guidelines and steps of this skill'))
+
   assert.equal(buildSkillPrompt(null), '')
   assert.equal(buildSkillPrompt({}), '请按照该技能的规范和步骤，帮我完成以下任务：')
+})
+
+test('featured-skills-data: resolveSkillTitle & resolveSkillSummary 双语自适应与回退', () => {
+  const tZh = (key) => guideZh[key] || key
+  const tEn = (key) => guideEn[key] || key
+
+  const shopeeSkill = {
+    id: 'sk-shopee-keyword-analysis',
+    skill: 'shopee-keyword-analysis',
+    title: 'Shopee Keyword Analysis',
+    titleZh: 'Shopee 关键词分析',
+    titleEn: 'Shopee Keyword Analysis',
+    summary: 'Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.',
+    summaryZh: '使用 shopee-mcp 进行 Shopee 热搜词排名、详情、趋势及关联商品分析。',
+    summaryEn: 'Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.',
+  }
+
+  // 1. 中文环境下优先展示中文名称与描述
+  assert.equal(resolveSkillTitle(shopeeSkill, tZh), 'Shopee 关键词分析', '中文环境下必须解析为中文技能名称')
+  assert.equal(resolveSkillSummary(shopeeSkill, tZh), '使用 shopee-mcp 进行 Shopee 热搜词排名、详情、趋势及关联商品分析。')
+
+  // 2. 英文环境下优先展示英文名称与描述
+  assert.equal(resolveSkillTitle(shopeeSkill, tEn), 'Shopee Keyword Analysis', '英文环境下必须解析为英文技能名称')
+  assert.equal(resolveSkillSummary(shopeeSkill, tEn), 'Shopee hot-search word ranking, detail, trend and related items using shopee-mcp.')
+
+  // 3. 缺省或未传 t 时，默认遵循中文优先
+  assert.equal(resolveSkillTitle(shopeeSkill), 'Shopee 关键词分析', '无 t 时默认遵循中文系统语言')
+
+  // 4. 国风与官方视频类技能在英文环境下的 titleEn 表现
+  const animationSkill = {
+    id: 'sk-omx-3d-animation-short-generator',
+    skill: '3d-animation-short-generator',
+    title: '3D动画短片',
+    titleZh: '3D动画短片',
+    titleEn: '3D Animation Short Film',
+    summary: '根据故事创意完成角色场景设定...',
+    summaryZh: '根据故事创意完成角色场景设定...',
+    summaryEn: 'Generate unified 3D animation shorts...',
+  }
+  assert.equal(resolveSkillTitle(animationSkill, tZh), '3D动画短片')
+  assert.equal(resolveSkillTitle(animationSkill, tEn), '3D Animation Short Film', '官方视频技能在英文环境下返回 titleEn')
+
+  // 5. 字典覆盖测试
+  const customT = (key) => key === 'skill.name.custom-slug' ? '自定义覆盖标题' : key
+  assert.equal(resolveSkillTitle({ skill: 'custom-slug', title: 'Default' }, customT), '自定义覆盖标题')
 })
 
 test('featured-skills-data: 快照文件格式与约束', () => {
@@ -53,6 +111,10 @@ test('featured-skills-data: 快照文件格式与约束', () => {
   assert.equal(snapshot.categories.length, 5, '在册分类必须为 5 个')
   for (const s of snapshot.skills) {
     assert.ok(s.id && s.title, '技能条目必须包含 id 与 title')
+    assert.ok(s.titleZh, `条目 ${s.id} 必须包含 titleZh`)
+    assert.ok(s.titleEn, `条目 ${s.id} 必须包含 titleEn`)
+    assert.ok(s.summaryZh, `条目 ${s.id} 必须包含 summaryZh`)
+    assert.ok(s.summaryEn, `条目 ${s.id} 必须包含 summaryEn`)
   }
 })
 
@@ -229,6 +291,79 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     await flush()
     assert.equal(useBtn.getAttribute('aria-pressed'), 'false', '再次点击后取消 pressed')
     assert.equal(filteredCards[0].classList.contains('is-active'), false, '再次点击后移除 is-active')
+
+    await act(async () => root.unmount())
+  } finally {
+    env.restore()
+  }
+})
+
+test('TrendingReplicateSection: 技能卡片名称跟随 DSH 语言环境精准适配中英文双语', async () => {
+  const { TrendingReplicateSection } = await loadComponent('../trending/TrendingReplicateSection.jsx')
+  const env = withDom(FIXTURE_HTML)
+  const host = document.querySelector('#root')
+  const root = createRoot(host.querySelector('#seat'))
+  let appliedPrompt = ''
+
+  try {
+    // 1. 中文语言环境（t 使用 guideZh）
+    const tZh = (key) => guideZh[key] || key
+    await act(async () => {
+      root.render(React.createElement(TrendingReplicateSection, {
+        t: tZh,
+        onApplyPrompt: (p) => { appliedPrompt = p },
+      }))
+    })
+    await flush()
+
+    // 切换到 Skill Tab
+    await click(host.querySelector('#tab-skills'))
+    await flush()
+
+    // 切换到电商变现分类（包含 Shopee / TikTok 等原英文技能）
+    const chips = host.querySelectorAll('.omnimux-skills-chip')
+    await click(chips[1]) // 电商变现分类
+    await flush()
+
+    const cardsZh = host.querySelectorAll('.omnimux-skill-card')
+    const titlesZh = Array.from(cardsZh).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
+
+    // 验证中文环境下原英文标题成功适配为中文标题
+    assert.ok(titlesZh.includes('Shopee 关键词分析'), '中文环境下必须显示 "Shopee 关键词分析"')
+    assert.ok(titlesZh.includes('Shopee 市场分析'), '中文环境下必须显示 "Shopee 市场分析"')
+    assert.ok(titlesZh.includes('Shopee 商品分析'), '中文环境下必须显示 "Shopee 商品分析"')
+    assert.ok(titlesZh.includes('TikTok 市场趋势分析'), '中文环境下必须显示 "TikTok 市场趋势分析"')
+
+    // 点击卡片并验证指令预填为中文
+    const shopeeCard = Array.from(cardsZh).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'Shopee 关键词分析')
+    await click(shopeeCard.querySelector('.omnimux-skill-card-btn'))
+    await flush()
+    assert.ok(appliedPrompt.includes('使用技能「Shopee 关键词分析」'), '中文环境下预填指令必须包含中文技能名')
+
+    // 2. 英文语言环境（t 使用 guideEn）
+    const tEn = (key) => guideEn[key] || key
+    await act(async () => {
+      root.render(React.createElement(TrendingReplicateSection, {
+        t: tEn,
+        onApplyPrompt: (p) => { appliedPrompt = p },
+      }))
+    })
+    await flush()
+
+    // 仍处于电商分类
+    const cardsEn = host.querySelectorAll('.omnimux-skill-card')
+    const titlesEn = Array.from(cardsEn).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
+
+    // 验证英文环境下显示英文标题
+    assert.ok(titlesEn.includes('Shopee Keyword Analysis'), '英文环境下必须显示 "Shopee Keyword Analysis"')
+    assert.ok(titlesEn.includes('Shopee Market Analysis'), '英文环境下必须显示 "Shopee Market Analysis"')
+    assert.ok(titlesEn.includes('TikTok Market Trend Analysis'), '英文环境下必须显示 "TikTok Market Trend Analysis"')
+
+    // 点击卡片并验证指令预填为英文
+    const marketCardEn = Array.from(cardsEn).find((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim() === 'Shopee Market Analysis')
+    await click(marketCardEn.querySelector('.omnimux-skill-card-btn'))
+    await flush()
+    assert.ok(appliedPrompt.includes('Use skill "Shopee Market Analysis"'), '英文环境下预填指令必须包含英文技能名')
 
     await act(async () => root.unmount())
   } finally {

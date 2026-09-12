@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { resolveSkillTitle, resolveSkillSummary } from './featured-skills-data.js'
 
 const ICON_SPARKLES = (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="13" height="13">
@@ -38,9 +39,9 @@ export function SkillCard({ skill, t, onSelect, active = false, categoryTitle = 
   const [imgBroken, setImgBroken] = useState(false)
   if (!skill) return null
 
-  const title = String(skill.title || '').trim()
-  const summary = String(skill.summary || '').trim()
-  const displaySummary = summary.replace(/^用途[：:]\s*/, '')
+  const title = resolveSkillTitle(skill, t)
+  const summary = resolveSkillSummary(skill, t)
+  const displaySummary = summary.replace(/^用途[：:]\s*|^Purpose[：:]\s*/i, '')
   const coverUrl = resolveSkillCover(skill.cover)
   const badge = skill.badge || 'H3'
   const attribution = skill.attribution || '@MiniMax Design官方'

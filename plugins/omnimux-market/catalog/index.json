@@ -3915,7 +3915,11 @@
       "cover": {
         "asset": "catalog/covers/3d-animation-short-generator.png",
         "alt": "3D动画短片"
-      }
+      },
+      "titleZh": "3D动画短片",
+      "titleEn": "3D Animation Short Film",
+      "summaryZh": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
+      "summaryEn": "Generate unified 3D animation shorts with character & scene setup, shot planning, and storyboard video synthesis."
     },
     {
       "id": "sk-omx-ad-creative",
@@ -4037,7 +4041,11 @@
       "cover": {
         "asset": "catalog/covers/asmr-ambient.png",
         "alt": "助眠音频"
-      }
+      },
+      "titleZh": "助眠音频",
+      "titleEn": "ASMR Ambient Audio",
+      "summaryZh": "生成助眠冥想与ASMR音频。",
+      "summaryEn": "Generate sleep aid, meditation, and immersive ASMR ambient audio tracks."
     },
     {
       "id": "sk-omx-audiobook",
@@ -4063,7 +4071,11 @@
       "cover": {
         "asset": "catalog/covers/audiobook.png",
         "alt": "有声书"
-      }
+      },
+      "titleZh": "有声书",
+      "titleEn": "Multi-Voice Audiobook",
+      "summaryZh": "把书籍转化为多角色有声书。",
+      "summaryEn": "Convert books and manuscripts into multi-character audiobooks with expressive narration."
     },
     {
       "id": "sk-omx-backrooms-dreamcore",
@@ -4167,7 +4179,11 @@
       "cover": {
         "asset": "catalog/covers/brand-promo-video-generator.png",
         "alt": "品牌宣传短片生成器"
-      }
+      },
+      "titleZh": "品牌宣传短片生成器",
+      "titleEn": "Brand Promo Video Generator",
+      "summaryZh": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
+      "summaryEn": "Create presentation-ready brand promo videos with creative direction, storyboarding, and audiovisual synthesis."
     },
     {
       "id": "sk-omx-brand-stream-mg",
@@ -4193,7 +4209,11 @@
       "cover": {
         "asset": "catalog/covers/brand-stream-mg.png",
         "alt": "品牌流线 MG 动效"
-      }
+      },
+      "titleZh": "品牌流线 MG 动效",
+      "titleEn": "Brand Stream Motion Graphics",
+      "summaryZh": "基于Logo与主题生成IP领航的品牌流线MG动效视频，适合新品发布预热与社媒传播。",
+      "summaryEn": "Generate IP-led brand stream motion graphic videos for new product launches and social media buzz."
     },
     {
       "id": "sk-omx-brand-brief",
@@ -4259,7 +4279,11 @@
       "cover": {
         "asset": "catalog/covers/chinese-style-short-drama-generator.png",
         "alt": "国风短剧成片生成器"
-      }
+      },
+      "titleZh": "国风短剧成片生成器",
+      "titleEn": "Chinese Style Drama Generator",
+      "summaryZh": "国风短剧全流程成片创作。",
+      "summaryEn": "Full-pipeline production for traditional Chinese style cinematic short dramas."
     },
     {
       "id": "sk-omx-cinematic-motion-language",
@@ -4340,7 +4364,11 @@
       "cover": {
         "asset": "catalog/covers/clip-export.png",
         "alt": "剪映导出"
-      }
+      },
+      "titleZh": "剪映导出",
+      "titleEn": "CapCut / JianYing Export",
+      "summaryZh": "把视频推送到剪映或CapCut草稿。",
+      "summaryEn": "Export and push ready-to-edit video projects directly into JianYing or CapCut drafts."
     },
     {
       "id": "sk-omx-co-op-game-intro-generator",
@@ -4366,7 +4394,11 @@
       "cover": {
         "asset": "catalog/covers/co-op-game-intro-generator.png",
         "alt": "双人游戏开场视频生成器"
-      }
+      },
+      "titleZh": "双人游戏开场视频生成器",
+      "titleEn": "Co-Op Game Intro Generator",
+      "summaryZh": "根据玩家名称、视觉风格和角色参考图，生成双人游戏菜单开场视频。",
+      "summaryEn": "Generate stylized 2-player co-op game title and menu intro videos from character references."
     },
     {
       "id": "sk-omx-content-strategy",
@@ -4470,7 +4502,11 @@
       "cover": {
         "asset": "catalog/covers/digital-product-promo-generator.png",
         "alt": "数字产品宣传片生成"
-      }
+      },
+      "titleZh": "数字产品宣传片生成",
+      "titleEn": "Digital Product Promo Video",
+      "summaryZh": "把真实产品页面、前端项目与用户动效参考转成可审片的电影感宣传片，准确呈现界面、运镜、节奏和声音。",
+      "summaryEn": "Transform web apps, software interfaces, and UI motion into review-ready cinematic product promo videos."
     },
     {
       "id": "sk-omx-documentary",
@@ -4534,7 +4570,11 @@
       "cover": {
         "asset": "catalog/covers/dot-matrix-brand-wordmark-motion.png",
         "alt": "点阵品牌字形动效"
-      }
+      },
+      "titleZh": "点阵品牌字形动效",
+      "titleEn": "Dot Matrix Wordmark Motion",
+      "summaryZh": "根据品牌 Logo、品牌名与标语生成点阵品牌字形动效视频与横版品牌图。",
+      "summaryEn": "Generate futuristic dot-matrix wordmark motion videos and branding graphics from logos and slogans."
     },
     {
       "id": "sk-omx-drama-soundtrack",
@@ -4560,7 +4600,11 @@
       "cover": {
         "asset": "catalog/covers/drama-soundtrack.png",
         "alt": "影视配乐"
-      }
+      },
+      "titleZh": "影视配乐",
+      "titleEn": "Drama Soundtrack Composer",
+      "summaryZh": "创作角色主题曲与场景配乐。",
+      "summaryEn": "Compose emotive character theme songs and immersive background soundtracks for films and dramas."
     },
     {
       "id": "sk-omx-dynamic-poster",
@@ -4603,7 +4647,11 @@
       "cover": {
         "asset": "catalog/covers/ecommerce-design.png",
         "alt": "电商图设计"
-      }
+      },
+      "titleZh": "电商图设计",
+      "titleEn": "E-Commerce Graphic Design",
+      "summaryZh": "覆盖多品类的专业电商详情页与主图设计。",
+      "summaryEn": "Design conversion-focused e-commerce product detail pages, hero banners, and promotional cards."
     },
     {
       "id": "sk-omx-ecommerce-image",
@@ -4627,7 +4675,11 @@
       "cover": {
         "asset": "catalog/covers/ecommerce-image.png",
         "alt": "电商商品图"
-      }
+      },
+      "titleZh": "电商商品图",
+      "titleEn": "E-Commerce Product Image",
+      "summaryZh": "从实拍图生成平台合规的高品质电商组图。",
+      "summaryEn": "Generate platform-compliant, commercial-grade product photography sets from real product shots."
     },
     {
       "id": "sk-omx-education-studio",
@@ -4653,7 +4705,11 @@
       "cover": {
         "asset": "catalog/covers/education-studio.png",
         "alt": "教育内容工作室"
-      }
+      },
+      "titleZh": "教育内容工作室",
+      "titleEn": "Education Content Studio",
+      "summaryZh": "教育内容与教育视频的一体化创作入口，覆盖讲解、课件与教学视频。",
+      "summaryEn": "All-in-one studio for instructional content, explainer videos, courseware, and learning materials."
     },
     {
       "id": "sk-omx-face-warp",
@@ -4718,7 +4774,11 @@
       "cover": {
         "asset": "catalog/covers/film-reference-prompt-writer.png",
         "alt": "电影质感提示词大师"
-      }
+      },
+      "titleZh": "电影质感提示词大师",
+      "titleEn": "Cinematic Prompt Master",
+      "summaryZh": "从电影名称、剧照或截图提炼可复用的视觉与镜头规则，生成专业图像与视频提示词。",
+      "summaryEn": "Extract lighting, lenses, and composition rules from movie references into high-precision production prompts."
     },
     {
       "id": "sk-omx-film-shot",
@@ -4783,7 +4843,11 @@
       "cover": {
         "asset": "catalog/covers/fpv-tour-video-generator.png",
         "alt": "第一视角 FPV 穿越生成"
-      }
+      },
+      "titleZh": "第一视角 FPV 穿越生成",
+      "titleEn": "FPV Tour Video Generator",
+      "summaryZh": "按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
+      "summaryEn": "Generate thrilling, continuous first-person FPV drone one-take walkthroughs through 3D spaces."
     },
     {
       "id": "sk-omx-frontend-slides",
@@ -4828,7 +4892,11 @@
       "cover": {
         "asset": "catalog/covers/h3-prompt-expert.png",
         "alt": "H3 提示词专家"
-      }
+      },
+      "titleZh": "H3 提示词专家",
+      "titleEn": "H3 Video Prompt Expert",
+      "summaryZh": "将零散需求与参考素材整理成可控的多模态视频生成精准指令。",
+      "summaryEn": "Turn loose creative ideas and media references into structured, high-control multimodal video prompts."
     },
     {
       "id": "sk-omx-h3-visual-design",
@@ -4857,7 +4925,11 @@
       "cover": {
         "asset": "catalog/covers/h3-visual-design.png",
         "alt": "H3 Visual Design"
-      }
+      },
+      "titleZh": "H3 视觉动态设计",
+      "titleEn": "H3 Visual Motion Design",
+      "summaryZh": "字体、Logo、版式与空间动态包装设计。",
+      "summaryEn": "Professional motion typography, dynamic packaging, and spatial graphic visual effects."
     },
     {
       "id": "sk-omx-handdrawn-live-video-generator",
@@ -4884,7 +4956,11 @@
       "cover": {
         "asset": "catalog/covers/handdrawn-live-video-generator.png",
         "alt": "手绘实拍融合视频生成器"
-      }
+      },
+      "titleZh": "手绘实拍融合视频生成器",
+      "titleEn": "Hand-Drawn & Live Fusion Video",
+      "summaryZh": "生成手绘动画与实拍接触变形的创意短片视频。",
+      "summaryEn": "Blend 2D hand-drawn doodle animation seamlessly with live-action footage for creative viral clips."
     },
     {
       "id": "sk-omx-image-paint-edit",
@@ -4950,7 +5026,11 @@
       "cover": {
         "asset": "catalog/covers/ip-toy-grid-motion.png",
         "alt": "IP潮玩六宫格动态海报"
-      }
+      },
+      "titleZh": "IP潮玩六宫格动态海报",
+      "titleEn": "IP Toy 6-Grid Motion Poster",
+      "summaryZh": "基于角色形象生成3D潮玩六宫格竖版动态视频，适合IP提案与社媒展示。",
+      "summaryEn": "Turn character designs into dynamic 3D collectible toy 6-grid motion posters for social media."
     },
     {
       "id": "sk-omx-kling3-prompt-expert",
@@ -5018,7 +5098,11 @@
       "cover": {
         "asset": "catalog/covers/line-doodle-explainer-generator.png",
         "alt": "线条图解科普视频生成"
-      }
+      },
+      "titleZh": "线条图解科普视频生成",
+      "titleEn": "Line Doodle Explainer Video",
+      "summaryZh": "根据知识主题或教材内容，生成线条小人图解科普视频方案与成片素材。",
+      "summaryEn": "Generate fun line-doodle explainer videos and storyboard assets from educational concepts."
     },
     {
       "id": "sk-omx-lip-product-ad-generator",
@@ -5044,7 +5128,11 @@
       "cover": {
         "asset": "catalog/covers/lip-product-ad-generator.png",
         "alt": "唇部彩妆广告生成"
-      }
+      },
+      "titleZh": "唇部彩妆广告生成",
+      "titleEn": "Lipstick & Lip Product Ad",
+      "summaryZh": "生成唇部彩妆高质感商业广告TVC，强化人物与产品的自然互动。",
+      "summaryEn": "Produce luxury commercial TVC videos for lipstick and cosmetic beauty products."
     },
     {
       "id": "sk-omx-live-sketch-motion",
@@ -5108,7 +5196,11 @@
       "cover": {
         "asset": "catalog/covers/micro-expression-video-generator.png",
         "alt": "人物微表情视频生成"
-      }
+      },
+      "titleZh": "人物微表情视频生成",
+      "titleEn": "Micro-Expression Video Generator",
+      "summaryZh": "根据角色图与剧本设计分时微表情提示词，塑造自然可信的人物表演。",
+      "summaryEn": "Design nuanced facial micro-expressions and emotional shifts for photorealistic character acting."
     },
     {
       "id": "sk-omx-minecraft-pixel-art",
@@ -5154,7 +5246,11 @@
       "cover": {
         "asset": "catalog/covers/minimalist-product-ad-generator.png",
         "alt": "极简产品广告生成器"
-      }
+      },
+      "titleZh": "极简产品广告生成器",
+      "titleEn": "Minimalist Product Ad Generator",
+      "summaryZh": "完成卖点提炼与节拍分镜设计，输出极简美学产品广告短片。",
+      "summaryEn": "Create clean, minimalist product commercial videos highlighting core selling points and aesthetics."
     },
     {
       "id": "sk-omx-multi-shot",
@@ -5200,7 +5296,11 @@
       "cover": {
         "asset": "catalog/covers/music-video-subtitle-generator.png",
         "alt": "音乐MV动态字幕生成器"
-      }
+      },
+      "titleZh": "音乐MV动态字幕生成器",
+      "titleEn": "Music Video Dynamic Subtitle Generator",
+      "summaryZh": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案。",
+      "summaryEn": "Synchronize dynamic rhythm-matched motion typography and stylized subtitles for AI music videos."
     },
     {
       "id": "sk-omx-mv-creator",
@@ -5306,7 +5406,11 @@
       "cover": {
         "asset": "catalog/covers/paper-collage-explainer-generator.png",
         "alt": "纸拼贴讲解动画"
-      }
+      },
+      "titleZh": "纸拼贴讲解动画",
+      "titleEn": "Paper Collage Explainer Animation",
+      "summaryZh": "将文案与抽象概念转成触感质感的纸拼贴定格讲解动画。",
+      "summaryEn": "Transform scripts and ideas into tactile, artistic paper collage stop-motion explainer animations."
     },
     {
       "id": "sk-omx-papercraft-stop-motion-explainer",
@@ -5334,7 +5438,11 @@
       "cover": {
         "asset": "catalog/covers/papercraft-stop-motion-explainer.png",
         "alt": "纸艺定格科普视频生成器"
-      }
+      },
+      "titleZh": "纸艺定格科普视频生成器",
+      "titleEn": "Papercraft Stop-Motion Explainer",
+      "summaryZh": "设计纸偶、分层布景与分镜，输出纸艺定格科普短片。",
+      "summaryEn": "Craft whimsical paper cutout puppets, layered stages, and stop-motion educational explainer videos."
     },
     {
       "id": "sk-omx-podcast-marketing",
@@ -5500,7 +5608,11 @@
       "cover": {
         "asset": "catalog/covers/pov-short-film-generator.png",
         "alt": "第一视角短片生成"
-      }
+      },
+      "titleZh": "第一视角短片生成",
+      "titleEn": "POV Short Film Generator",
+      "summaryZh": "规划主角第一人称视角的沉浸式短片制作方案。",
+      "summaryEn": "Direct immersive point-of-view (POV) cinematic short stories from the protagonist’s eyes."
     },
     {
       "id": "sk-omx-product-photography-brief",
@@ -5605,7 +5717,11 @@
       "cover": {
         "asset": "catalog/covers/short-drama-multilingual-dubbing.png",
         "alt": "短剧多语言出海配音"
-      }
+      },
+      "titleZh": "短剧多语言出海配音",
+      "titleEn": "Short Drama Multilingual Dubbing",
+      "summaryZh": "分离人声与背景音并复刻音色节奏，输出多语言出海配音视频与字幕。",
+      "summaryEn": "Localize drama clips into multiple languages with voice clone preservation and synchronized captions."
     },
     {
       "id": "sk-omx-short-drama-screenwriter",
@@ -5631,7 +5747,11 @@
       "cover": {
         "asset": "catalog/covers/short-drama-screenwriter.png",
         "alt": "短剧编剧助手"
-      }
+      },
+      "titleZh": "短剧编剧助手",
+      "titleEn": "Short Drama Screenwriter Assistant",
+      "summaryZh": "按选题与爆款节奏撰写完整短剧剧本。",
+      "summaryEn": "Write high-tension, fast-paced episodic drama scripts optimized for short video platforms."
     },
     {
       "id": "sk-omx-short-drama-series-writer",
@@ -5657,7 +5777,11 @@
       "cover": {
         "asset": "catalog/covers/short-drama-series-writer.png",
         "alt": "微短剧剧集编剧"
-      }
+      },
+      "titleZh": "微短剧剧集编剧",
+      "titleEn": "Micro-Drama Series Writer",
+      "summaryZh": "一键生成微短剧全流程系列剧本与角色设定。",
+      "summaryEn": "Develop full episodic series bibles, cliffhangers, and character arcs for serialized micro-dramas."
     },
     {
       "id": "sk-omx-silkscreen-decorative-illustration-short",
@@ -5684,7 +5808,11 @@
       "cover": {
         "asset": "catalog/covers/silkscreen-decorative-illustration-short.png",
         "alt": "丝印装饰插画风格短片"
-      }
+      },
+      "titleZh": "丝印装饰插画风格短片",
+      "titleEn": "Silkscreen Illustration Short Video",
+      "summaryZh": "将丝印装饰插画转成艺术音效短片，适合高端奢华叙事。",
+      "summaryEn": "Animate silkscreen decorative prints and vintage graphics into elegant luxury aesthetic video ads."
     },
     {
       "id": "sk-omx-skill-creator",
@@ -5825,7 +5953,11 @@
       "cover": {
         "asset": "catalog/covers/subtitle-correction.png",
         "alt": "字幕修正"
-      }
+      },
+      "titleZh": "字幕修正",
+      "titleEn": "SRT Subtitle Correction",
+      "summaryZh": "修正 SRT 字幕语音识别错误，严格保留时间轴和编号。",
+      "summaryEn": "Fix ASR transcript typos, homophones, and terminology while preserving exact SRT timing."
     },
     {
       "id": "sk-omx-surreal-spot",
@@ -5870,7 +6002,11 @@
       "cover": {
         "asset": "catalog/covers/suspense-title-sequence-generator.png",
         "alt": "悬疑电影片头生成"
-      }
+      },
+      "titleZh": "悬疑电影片头生成",
+      "titleEn": "Suspense Film Title Sequence",
+      "summaryZh": "锚定关键帧和艺术署名，生成复古悬疑美学电影片头成片。",
+      "summaryEn": "Generate retro thriller and noir title sequences with atmospheric typography and moody lighting."
     },
     {
       "id": "sk-omx-sword-dance",
@@ -5915,7 +6051,11 @@
       "cover": {
         "asset": "catalog/covers/transcript-broll-planner.png",
         "alt": "口播视频B-roll规划器"
-      }
+      },
+      "titleZh": "口播视频B-roll规划器",
+      "titleEn": "Talking Head B-Roll Planner",
+      "summaryZh": "把口播逐字稿按语义拆成精准的 B-roll 画面方案并生成素材。",
+      "summaryEn": "Break speaking scripts into scene-by-scene B-roll visual lists and generate complementary video footage."
     },
     {
       "id": "sk-omx-ugc-ad-production",
@@ -5984,7 +6124,11 @@
       "cover": {
         "asset": "catalog/covers/video-deconstruct.png",
         "alt": "视频拆解与复刻"
-      }
+      },
+      "titleZh": "视频拆解与复刻",
+      "titleEn": "Video Deconstruction & Replication",
+      "summaryZh": "拆解爆款视频镜头、运镜、声音并编译为可复刻的最终 Prompt 与制作计划。",
+      "summaryEn": "Reverse-engineer reference videos into shot-by-shot prompt recipes and reproducible editing blueprints."
     },
     {
       "id": "sk-omx-video-deconstruct-analyzer",
@@ -6012,7 +6156,11 @@
       "cover": {
         "asset": "catalog/covers/video-deconstruct-analyzer.png",
         "alt": "视频拆解分析师"
-      }
+      },
+      "titleZh": "视频拆解分析师",
+      "titleEn": "Video Deconstruction Analyst",
+      "summaryZh": "高密度深度拆解 AI 视频的镜头语言与生成参数。",
+      "summaryEn": "Deeply analyze AI-generated video rhythm, camera movements, prompt dynamics, and audio cues."
     },
     {
       "id": "sk-omx-video-prompting",
@@ -6153,7 +6301,11 @@
       "cover": {
         "asset": "catalog/covers/vox-style-video-generator.png",
         "alt": "Vox风格科普动画"
-      }
+      },
+      "titleZh": "Vox风格科普动画",
+      "titleEn": "Vox-Style Explainer Animation",
+      "summaryZh": "生成带字幕、旁白与背景音乐的剪贴拼贴风格科普动画成片。",
+      "summaryEn": "Create iconic Vox-style collage documentary explainer animations with maps, photos, and animated charts."
     },
     {
       "id": "sk-omx-writing-fragments",
@@ -6239,7 +6391,11 @@
       "cover": {
         "asset": "catalog/covers/2d-animation-commentary-drama.png",
         "alt": "2D动画半解说短剧"
-      }
+      },
+      "titleZh": "2D动画半解说短剧",
+      "titleEn": "2D Animation Commentary Drama",
+      "summaryZh": "结合2D二次元画风与解说旁白的短剧生成器，支持分镜与节奏剪辑一键输出。",
+      "summaryEn": "Generate 2D anime commentary short dramas combining stylized visuals with dramatic voiceover."
     },
     {
       "id": "sk-omx-3d-comic-commentary-drama",
@@ -6265,7 +6421,11 @@
       "cover": {
         "asset": "catalog/covers/3d-comic-commentary-drama.png",
         "alt": "3D漫剧半解说"
-      }
+      },
+      "titleZh": "3D漫剧半解说",
+      "titleEn": "3D Comic Commentary Drama",
+      "summaryZh": "3D漫剧半解说视频生成工作流，自动完成分镜调度、动作与音轨合成。",
+      "summaryEn": "Produce 3D dynamic webtoon commentary videos with choreographed action and character dialogue."
     },
     {
       "id": "sk-omx-live-action-commentary-drama",
@@ -6291,7 +6451,11 @@
       "cover": {
         "asset": "catalog/covers/live-action-commentary-drama.png",
         "alt": "半解说真人短剧"
-      }
+      },
+      "titleZh": "半解说真人短剧",
+      "titleEn": "Live-Action Commentary Drama",
+      "summaryZh": "真人短剧半解说成片助手，拆解剧情爽点、黄金3秒开场与强反转旁白设计。",
+      "summaryEn": "Craft high-retention live-action drama recaps with instant hook voiceovers and rapid pacing."
     },
     {
       "id": "sk-omx-wes-anderson-aesthetic-generator",
@@ -6317,7 +6481,11 @@
       "cover": {
         "asset": "catalog/covers/wes-anderson-aesthetic-generator.png",
         "alt": "韦斯·安德森美学短片生成器"
-      }
+      },
+      "titleZh": "韦斯·安德森美学短片生成器",
+      "titleEn": "Wes Anderson Aesthetic Generator",
+      "summaryZh": "严格对齐韦斯·安德森对称构图、复古调色与平移运镜美学的电影感短片生成器。",
+      "summaryEn": "Produce distinctive Wes Anderson style videos with symmetrical framing, pastel palettes, and whip pans."
     },
     {
       "id": "sk-omx-sitcom-story-video-generator",
@@ -6343,7 +6511,11 @@
       "cover": {
         "asset": "catalog/covers/sitcom-story-video-generator.png",
         "alt": "情景喜剧故事视频"
-      }
+      },
+      "titleZh": "情景喜剧故事视频",
+      "titleEn": "Sitcom Story Video Generator",
+      "summaryZh": "情景喜剧风格故事视频生成助手，涵盖多机位切换与喜剧冲突。",
+      "summaryEn": "Generate multi-cam episodic sitcom story clips complete with humorous timing and banter."
     },
     {
       "id": "sk-omx-scifi-cinematic-video-generator",
@@ -6369,7 +6541,11 @@
       "cover": {
         "asset": "catalog/covers/scifi-cinematic-video-generator.png",
         "alt": "未来科幻质感影视生成器"
-      }
+      },
+      "titleZh": "未来科幻质感影视生成器",
+      "titleEn": "Sci-Fi Cinematic Video Generator",
+      "summaryZh": "赛博朋克与硬科幻质感影视生成器，强化光影粒子、体积雾与未来机械细节。",
+      "summaryEn": "Render epic cyberpunk and hard sci-fi cinematic footage with volumetric fog and intricate mechanical detail."
     },
     {
       "id": "sk-omx-retro-city-cel-animation-short",
@@ -6395,7 +6571,11 @@
       "cover": {
         "asset": "catalog/covers/retro-city-cel-animation-short.png",
         "alt": "复古都市赛璐璐短片"
-      }
+      },
+      "titleZh": "复古都市赛璐璐短片",
+      "titleEn": "Retro City Cel Animation Short",
+      "summaryZh": "90年代复古都市赛璐璐动画生成器，包含颗粒噪点、霓虹色调与CityPop氛围感。",
+      "summaryEn": "Create 90s vintage anime cel animation clips bathed in neon nostalgia and City Pop aesthetic."
     },
     {
       "id": "sk-omx-felt-stop-motion-story-short",
@@ -6422,7 +6602,11 @@
       "cover": {
         "asset": "catalog/covers/felt-stop-motion-story-short.png",
         "alt": "羊毛毡故事短片"
-      }
+      },
+      "titleZh": "羊毛毡故事短片",
+      "titleEn": "Felt Stop-Motion Story Short",
+      "summaryZh": "温暖治愈的定格毛毡动画短片生成器，支持柔软织物纹理与治愈童话配乐。",
+      "summaryEn": "Produce cozy felt needlecraft stop-motion stories featuring soft fabric textures and fairytale charm."
     },
     {
       "id": "sk-omx-fashion-scene-showcase-video",
@@ -6449,7 +6633,11 @@
       "cover": {
         "asset": "catalog/covers/fashion-scene-showcase-video.png",
         "alt": "时装场景展示视频"
-      }
+      },
+      "titleZh": "时装场景展示视频",
+      "titleEn": "Fashion Scene Showcase Video",
+      "summaryZh": "高定服装与潮牌模特动态展示短视频生成器，支持秀场T台走秀与面料光影细节。",
+      "summaryEn": "Generate high-fashion runway walks and editorial streetwear showcase videos with realistic drape."
     },
     {
       "id": "sk-omx-product-kinetic-typography-tvc",
@@ -6475,7 +6663,11 @@
       "cover": {
         "asset": "catalog/covers/product-kinetic-typography-tvc.png",
         "alt": "产品贴字动画TVC"
-      }
+      },
+      "titleZh": "产品贴字动画TVC",
+      "titleEn": "Kinetic Typography Product TVC",
+      "summaryZh": "商业广告级产品贴字与动效排版TVC生成器，融合动态文字跟拍与快节奏卖点展示。",
+      "summaryEn": "Generate high-energy commercial TVCs merging 3D kinetic typography tracked to moving products."
     },
     {
       "id": "sk-bggg-data-amazon",
