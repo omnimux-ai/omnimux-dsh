@@ -33,7 +33,14 @@ export interface PersistedEventLogEntry {
 }
 
 export interface PersistedExecutionRecord {
-  /** Record schema discriminator (migration hook). */
+  /**
+   * Record schema discriminator (migration hook).
+   *
+   * Still `1` after #1382: `nodeStates[].upstreamTask` is an additive optional
+   * field, so a record without it is simply a record with no in-flight upstream
+   * task (resubmit, the behavior before that change) and nothing branches on the
+   * version. Bumping it would imply a migration step that nobody performs.
+   */
   schemaVersion: 1;
   id: string;
   workspaceId: string;

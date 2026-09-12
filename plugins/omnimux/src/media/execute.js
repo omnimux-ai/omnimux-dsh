@@ -9,6 +9,7 @@ import {
   assertGuardSubmit,
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
+import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 export { probeMediaAssets } from './asset-probe.js'
@@ -55,6 +56,11 @@ const CAPABILITY_SEAM = Object.freeze({
  *   image_tail?: string,
  *   imageTail?: string,
  *   taskId?: string,
+ *   submittedAt?: number,
+ *   deadlineMs?: number,
+ *   pollIntervalMs?: number,
+ *   requestTimeoutMs?: number,
+ *   sleep?: (ms: number) => Promise<void>,
  *   wait?: boolean,
  *   signal?: AbortSignal,
  *   env?: Record<string, string | undefined>,
@@ -179,7 +185,10 @@ export async function executeOmnimuxMedia(capability, input) {
         providerId: route.providerId,
         modelId: `${route.providerId}-${capability}`,
         input: { ...finalInput, model: candidate },
-        timeoutMs: 10 * 60_000,
+        // Covers submit *and* the poll this same call performs when it waits
+        // (`metadata.wait`): the outer budget must sit above the poll deadline,
+        // otherwise runtime-kit's own abort replaces `omnimux-task-timeout`.
+        timeoutMs: MEDIA_EXECUTION_BUDGET_MS,
         metadata: { wait },
         ...(input.signal ? { signal: input.signal } : {}),
       })
@@ -230,6 +239,15 @@ export async function executeOmnimuxMedia(capability, input) {
 }
 
 /**
+ * Poll a task by id and download its artifact — the hub's reconcile entry.
+ *
+ * Issue #1382: this path reads no process-local state (the hub keeps no task
+ * ledger), which is exactly why it can finish a task submitted by a *previous*
+ * process. What it gained here is a bound and an anchor: `submittedAt` (the
+ * persisted first-submit time) fixes the deadline so a restart cannot restart
+ * the clock, and past that deadline the call fails immediately without issuing
+ * a single request.
+ *
  * @param {string} capability
  * @param {ReturnType<typeof resolveMediaRoute>} route
  * @param {{
@@ -241,6 +259,11 @@ export async function executeOmnimuxMedia(capability, input) {
  *   env?: Record<string, string | undefined>,
  *   store?: { resolve: () => Promise<string | undefined> },
  *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
+ *   submittedAt?: number,
+ *   deadlineMs?: number,
+ *   pollIntervalMs?: number,
+ *   requestTimeoutMs?: number,
+ *   sleep?: (ms: number) => Promise<void>,
  * }} input
  */
 export async function finishMediaTask(capability, route, input) {
@@ -260,6 +283,11 @@ export async function finishMediaTask(capability, route, input) {
     taskId: input.taskId,
     capability,
     signal: input.signal,
+    ...(input.submittedAt !== undefined ? { submittedAt: input.submittedAt } : {}),
+    ...(input.deadlineMs !== undefined ? { deadlineMs: input.deadlineMs } : {}),
+    ...(input.pollIntervalMs !== undefined ? { pollIntervalMs: input.pollIntervalMs } : {}),
+    ...(input.requestTimeoutMs !== undefined ? { requestTimeoutMs: input.requestTimeoutMs } : {}),
+    ...(input.sleep !== undefined ? { sleep: input.sleep } : {}),
   })
   const url = pickMediaUrl(done)
   if (!url) {

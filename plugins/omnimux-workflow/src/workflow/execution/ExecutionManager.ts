@@ -152,6 +152,10 @@ function setupAndRunExecution(
   entry: ExecutionEntry,
 ): void {
   entries.set(entry.context.id, entry);
+  // #1382: an upstream task reference is written the moment it exists instead of
+  // waiting for the periodic sync — that gap is where a crash forces a resubmit
+  // of a task the hub is already running.
+  entry.context.onPersistRequested = () => persistRecord(executionsDir, entry);
   persistRecord(executionsDir, entry);
   setupExecutionListeners(executionsDir, entry);
   startTimeout(entry, () => cleanupExecution(entries, entry.context.id));

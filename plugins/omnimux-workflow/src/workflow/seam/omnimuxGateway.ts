@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { AwaitTaskResult, GenerationCapability, GenerationGateway, SubmitRequest, SubmitResult } from './gateway';
+import type { AwaitTaskResult, GenerationCapability, GenerationGateway, SubmitRequest, SubmitResult, UpstreamTaskRef } from './gateway';
 import { createWorkflowLogger } from '../execution/logger.ts';
 import { readCanvasCatalog } from './canvasCatalog.ts';
 import { resolveCanvasSubmission } from './submitGuard.ts';
@@ -156,6 +156,29 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
       return { url: dest, type: record.capability, ...metadata };
     },
     async capabilities() { return readCanvasCatalog(opts.getSeam); },
+    /**
+     * #1382: finish a task from a persisted reference.
+     *
+     * No catalog and no task-table lookup: the hub owns the task and is asked by
+     * id through the pre-existing `{ taskId, dest }` form, which is why a task
+     * submitted by a *previous* process can be reconciled at all. `submittedAt`
+     * travels with the request so the hub anchors the poll deadline at the
+     * original submit time instead of restarting the clock.
+     */
+    async reconcileTask(ref: UpstreamTaskRef, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult> {
+      const seam = requireSeam(opts.getSeam, ref.capability);
+      const request = {
+        dest,
+        taskId: ref.taskId,
+        submittedAt: ref.submittedAt,
+        ...(signal ? { signal } : {}),
+      };
+      const result = await guarded(() => seam.execute(request));
+      if (result?.mode !== 'live') throw new SeamGatewayError('omnimux-invalid-response', '轮询未返回已完成的产物');
+      const metadata = validateGeneratedResult({ ...result, url: result.url ?? dest }, ref.capability, dest);
+      tasks.delete(ref.taskId);
+      return { url: dest, type: ref.capability, ...metadata };
+    },
     currentMode() { return 'omnimux' as const; },
   };
 }

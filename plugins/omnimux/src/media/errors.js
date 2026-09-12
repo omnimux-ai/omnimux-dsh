@@ -4,7 +4,7 @@ export class OmnimuxError extends Error {
   /**
    * @param {string} code
    * @param {string} message
-   * @param {ErrorOptions} [options]
+   * @param {ErrorOptions & { status?: number, details?: unknown, retryable?: boolean }} [options]
    */
   constructor(code, message, options = {}) {
     super(message, options)
@@ -12,6 +12,10 @@ export class OmnimuxError extends Error {
     this.code = code
     if (typeof options.status === 'number') this.status = options.status
     if (options.details !== undefined) this.details = options.details
+    // Pure data (#1382): states whether repeating the request could plausibly
+    // change the answer. It never retries anything by itself — the poll loop is
+    // the only retry authority.
+    if (options.retryable !== undefined) this.retryable = options.retryable
   }
 }
 

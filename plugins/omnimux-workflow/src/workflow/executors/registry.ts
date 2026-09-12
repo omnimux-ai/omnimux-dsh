@@ -9,6 +9,7 @@
  */
 
 import type { CapabilityCatalog } from '../../shared/api.ts';
+import type { UpstreamTaskRef } from '../seam/gateway.ts';
 
 /** Upstream-resolved inputs handed to each executor. */
 export interface ExecutionContext {
@@ -55,6 +56,20 @@ export interface ExecutionContext {
     }>;
   /** Progress reporter wired to node_progress SSE events (0-100). */
   reportProgress?: (progress: number, message?: string) => void;
+  /**
+   * #1382: record the upstream task this node is now waiting on. Mirrors
+   * `persistGenerated` — an execution-time fact written back into the workflow
+   * state — and lands in `nodeStates[<nodeId>].upstreamTask`, which the record
+   * already persists.
+   */
+  recordUpstreamTask?: (ref: UpstreamTaskRef) => void;
+  /**
+   * #1382: the reference a recovered node was re-pended with, if any. Present
+   * means "the hub already has this task" — reconcile instead of submitting.
+   */
+  readUpstreamTask?: () => UpstreamTaskRef | undefined;
+  /** #1382: drop the reference (node terminal, or reconciling is impossible). */
+  clearUpstreamTask?: () => void;
 }
 
 export interface NodeOutput {

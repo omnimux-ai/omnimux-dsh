@@ -5,6 +5,15 @@
 ## Unreleased
 
 ### 变更
+- **重启恢复从「盲目重投」升级为「上游任务复核」（Issue #1382 P2）**：提交成功后 `taskId` / 能力 / 提交时刻随节点状态落盘，进程重启后在途节点仍回置 pending，但执行器先按该引用向 hub 复核而不是重新提交。
+  - `src/workflow/seam/gateway.ts`：新增 `UpstreamTaskRef`（`taskId` / `capability` / `submittedAt`）与 `GenerationGateway.reconcileTask(ref, dest, signal)`。复核不复用 `awaitTask`——后者以进程内任务表为前提，「未知任务」是它的契约性错误，正是复核要区分的两种含义。
+  - `src/workflow/seam/omnimuxGateway.ts`：`reconcileTask` 走既有 `{ taskId, dest }` 路径并带上 `submittedAt`，因此**不读进程内存**、天然支持跨进程复核；`src/workflow/seam/mockGateway.ts` 显式抛「任务不跨进程存活」，`gatewaySelection.ts` 补路由（`taskOwners` 优先，默认 hub）。
+  - `src/workflow/execution/ExecutionContext.ts`：`NodeStateSnapshot` 增可选 `upstreamTask`；新增 `setNodeUpstreamTask` / `clearNodeUpstreamTask` / `readNodeUpstreamTask` 与 `onPersistRequested` 钩子（落盘不等 5s 同步周期）；`fromJSON` 对持久化值做校验归一，坏值等价于无引用；**`startNode` 保留引用**（否则恢复后的节点在调度器置 running 时就把复核依据抹掉）。
+  - `src/workflow/execution/upstreamReconcile.ts`（新增）：三态状态机 `downloaded` / `failed` / `not-reconcilable`，`UPSTREAM_TASK_DEADLINE_MS = 20min` 且严格小于 `EXECUTION_TIMEOUT_MS`。
+  - `src/workflow/execution/materialGatewayExecutor.ts`：有引用即复核（`submit` 调用数为 0），submit 成功后**立即**登记引用，节点终态清除；上游已完成 → 下载回填，未完成 → 保持 running 续等，失败 → 节点标错，无引用或 hub 不认该任务 → 回退重投。
+  - `src/workflow/execution/executionRecovery.ts`：`resetInFlightNodeStates` 重置 status/时间戳但**保留** `upstreamTask`（#1379 的「重启后回 pending」语义不变），恢复日志补 `reconcilable` 计数。
+  - `src/workflow/execution/executionStore.ts`：`schemaVersion` 保持 `1`，`nodeStates[].upstreamTask` 为可选增量字段（老记录缺失即「无引用」，仍走重投路径，行为不劣化）。
+  - 回归测试：`upstreamTask.test.mjs`（7）、`upstreamReconcile.test.mjs`（10）、`materialReconcile.test.mjs`（6）、`upstreamRecovery.test.mjs`（3）、`reconcileContract.test.mjs`（9）。修复前：恢复路径必然重投（`reconcile` 计数恒为 0、持久化记录无该字段）；修复后全量 1628 pass / 0 fail。
 - **源码唯一真相**：停止跟踪 `dist/index.js`、`lib/client.js`、`lib/canvas.js`。入口仍由 build 生成（`prepare` + `sync-to-app` 现场 build）；CI 拒绝把这些文件重新提交进 Git。画布 island 在 `canvasHash` 变化时替换 `<script>`，避免 Dev App 吃到过期 IIFE。
 
 ### 修复

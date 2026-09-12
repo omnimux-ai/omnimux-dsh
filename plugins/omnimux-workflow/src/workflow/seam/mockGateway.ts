@@ -3,9 +3,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { CapabilityCatalog } from '../../shared/api.ts';
-import type { GenerationGateway, SubmitRequest, SubmitResult } from './gateway';
+import type { GenerationGateway, SubmitRequest, SubmitResult, UpstreamTaskRef } from './gateway';
 import { resolveCanvasSubmission } from './submitGuard.ts';
 import { mockCatalog } from './mockCatalog.ts';
+import { SeamGatewayError } from './SeamGatewayError.ts';
 
 export interface MockGatewayOptions {
   minLatencyMs?: number;
@@ -63,5 +64,21 @@ export function createMockGateway(opts: MockGatewayOptions = {}): GenerationGate
         ...(task.req.capability === 'text' ? { text: MOCK_TEXT_PLACEHOLDER } : {}), simulated: true };
     },
     capabilities,
+    /**
+     * #1382: mock tasks live in this process's `tasks` map and nowhere else, so
+     * a task submitted before a restart cannot be reconciled — and after a
+     * restart there is no map at all.
+     *
+     * Declaring that out loud (with the code the hub uses for an unknown task)
+     * is what sends recovery down the resubmit path, which is both correct and
+     * free for the mock. Fabricating a "settled" artifact here would hide the
+     * fact that the node's real work was never done.
+     */
+    async reconcileTask(ref: UpstreamTaskRef): Promise<never> {
+      throw new SeamGatewayError(
+        'omnimux-invalid-request',
+        `mock gateway: task ${ref.taskId} does not survive a restart (nothing to reconcile)`,
+      );
+    },
   };
 }

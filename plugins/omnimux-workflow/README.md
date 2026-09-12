@@ -196,7 +196,7 @@ hub 错误（`OmnimuxError`，带 `code`）映射为节点执行错误，格式 
 - **视频输入和参数按型号、模式限定**：阶段一七款 APIMart 型号的素材角色、画幅、时长和上限见[视频阶段一合同](../../docs/specs/2026-09-05-video-phase-one-scope.md)。不兼容的输入保留并提示，修正前阻止提交。
 - **音频生成不可用**：hub 无 `audioGenerate` seam；音频生成节点在真实网关下报 `[omnimux:needs-provider]`，能力目录 audio 列表为空
 - **能力目录不代表真实执行历史**：目录来自 Hub 的本地合同投影；文档确认、适配就绪和真实执行证据分别记录。
-- **跨进程任务恢复为重新提交**：seam 任务表只在插件进程内存（hub 无任务台账）；进程重启后在途节点回置 pending 重新提交
+- **跨进程任务恢复优先复核，无法复核才重新提交**：提交成功后 `taskId` / 能力 / 提交时刻随节点状态落盘（`nodeStates[<nodeId>].upstreamTask`），进程重启后在途节点仍回置 pending，但执行器先按该引用向 hub 复核——上游已完成则直接下载回填（不重复提交、不重复计费），未完成则在**剩余窗口**内继续等待（deadline 锚定持久化的提交时刻，不因重启重置），上游失败则节点标错；只有「无引用」（#1382 之前的老记录）或 hub 明确不认这个任务（`omnimux-invalid-request`）时才回退重新提交。mock 网关的任务不跨进程存活，因此其 `reconcileTask` 显式报「不可复核」，恢复路径回投——与今天行为一致。
 - **Agent 工具为只读 + 触发执行**：不提供画布结构修改工具（防误改用户画布）；Agent 需要改图时给出建议、由用户操作
 - hub 不可达时的 auto 回退是 mock 网关（模拟生成）——`source: "static-stub"` 目录会明示；要硬保证不跑 mock，用 `OMNIMUX_WORKFLOW_GATEWAY=omnimux`
 - canvas.json 损坏（zod 校验不过）按「工作区不存在」（404）处理——文件仍在磁盘上，可手工修复后恢复

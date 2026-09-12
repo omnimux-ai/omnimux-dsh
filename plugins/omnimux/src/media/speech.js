@@ -4,6 +4,7 @@ import { assertGuardOutput } from '../catalog/contract/submit-guard/index.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { OmnimuxError } from './errors.js'
 import { assertDownloadedMediaType } from './job.js'
+import { SPEECH_TASK_DEADLINE_MS } from './task-deadline.js'
 import { SPEECH_PATH } from './vendors/omnimux.js'
 
 /**
@@ -20,7 +21,9 @@ import { SPEECH_PATH } from './vendors/omnimux.js'
  * @returns {Promise<{ mode: 'live', model: string, duration?: number, url?: string, dest: string }>}
  */
 export async function generateSpeech(input) {
-  const timeout = AbortSignal.timeout(10 * 60_000)
+  // Speech keeps its historical 10-minute budget; the polled media path uses a
+  // longer one (see task-deadline.js). Named here so neither path hardcodes it.
+  const timeout = AbortSignal.timeout(SPEECH_TASK_DEADLINE_MS)
   const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout
   const fetcher = input.fetcher ?? fetch
   try {

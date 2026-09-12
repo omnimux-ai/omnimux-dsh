@@ -151,6 +151,25 @@ export function createAutoSwitchGateway(opts: AutoSwitchGatewayOptions): AutoSwi
       }
     },
 
+    /**
+     * #1382: route a reconcile by whichever backend owned the task, defaulting to
+     * the hub.
+     *
+     * Reconciliation happens after a restart, when `taskOwners` is empty by
+     * construction and the task was therefore submitted to the real hub. Falling
+     * back to `backendOf()` would hand an auto-mode run without hub seams to the
+     * mock, whose honest answer ("nothing to reconcile") is a downgrade: the
+     * finished upstream work would be regenerated instead of reused.
+     */
+    async reconcileTask(ref, dest, signal) {
+      const backend = taskOwners.get(ref.taskId) === 'mock' ? mock : omnimux;
+      try {
+        return await backend.reconcileTask(ref, dest, signal);
+      } finally {
+        taskOwners.delete(ref.taskId);
+      }
+    },
+
     async capabilities() {
       return backendOf().capabilities();
     },

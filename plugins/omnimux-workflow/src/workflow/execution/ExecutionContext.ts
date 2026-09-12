@@ -17,6 +17,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { createWorkflowLogger } from './logger';
+import type { UpstreamTaskRef } from '../seam/gateway';
+import { readUpstreamTaskRef } from './upstreamTask';
 
 const LOG_TAG = 'ExecutionContext';
 
@@ -178,6 +180,16 @@ export interface NodeStateSnapshot {
   completedAt: number | null;
   error: string | null;
   skipReason?: string;
+  /**
+   * #1382: the upstream task this node is currently waiting on, cleared once the
+   * node reaches a terminal state or the reference proves unusable.
+   *
+   * Optional and additive: it rides the existing `nodeStates` plumbing through
+   * `toJSON` / `fromJSON` / `buildExecutionRecord` / `loadExecutionRecord`, so
+   * the record `schemaVersion` stays `1` — a record without the field is simply
+   * a record with no reference (resubmit, the pre-#1382 behavior).
+   */
+  upstreamTask?: UpstreamTaskRef;
 }
 
 export interface SerializedContext {
@@ -259,6 +271,17 @@ export class ExecutionContext {
   error: string | null = null;
   totalNodes = 0;
   completedNodes = 0;
+
+  /**
+   * #1382: persistence hook, set by whoever owns the record file
+   * (`ExecutionManager` / `executionRecovery`).
+   *
+   * An upstream task reference is written the moment it exists rather than at
+   * the next periodic sync: the gap between "the hub accepted the submit" and
+   * "the record mentions it" is exactly the window in which a crash would force
+   * a resubmit of a task that is already running (and billable) upstream.
+   */
+  onPersistRequested: (() => void) | null = null;
 
   constructor(opts: ExecutionContextOptions) {
     this.id = opts.id ?? randomUUID();
@@ -405,11 +428,17 @@ export class ExecutionContext {
 
   startNode(nodeId: string, nodeInfo: { label?: string; type?: string } = {}): void {
     const startedAt = Date.now();
+    // #1382: a node re-entering `running` after a restart must keep the upstream
+    // task reference it was recovered with. The scheduler marks a recovered node
+    // running before the executor can read that reference, so replacing the
+    // whole state here would silently discard the only evidence the task exists.
+    const previous = this.nodeStates.get(nodeId);
     this.nodeStates.set(nodeId, {
       status: NodeStatus.RUNNING,
       startedAt,
       completedAt: null,
       error: null,
+      ...(previous?.upstreamTask ? { upstreamTask: previous.upstreamTask } : {}),
     });
 
     this.events.emit('node_start', {
@@ -527,6 +556,43 @@ export class ExecutionContext {
   }
 
   // ========================================================================
+  // Upstream task references (#1382)
+  // ========================================================================
+
+  /**
+   * Record the upstream task this node is now waiting on.
+   *
+   * Called by the material executor immediately after a successful submit, then
+   * persisted before the call returns. `clearNodeUpstreamTask` is the mirror
+   * image: a terminal node (or one that turned out to be unreconcilable) must
+   * not leave a stale reference behind for the next recovery to chase.
+   */
+  setNodeUpstreamTask(nodeId: string, ref: UpstreamTaskRef): void {
+    const state = this.nodeStates.get(nodeId);
+    if (!state) {
+      // Bookkeeping only: with no node state there is nothing to attach the
+      // reference to, and the node will simply be resubmitted as before.
+      logger.warn('cannot record upstream task without a node state', { executionId: this.id, nodeId });
+      return;
+    }
+    state.upstreamTask = ref;
+    this.onPersistRequested?.();
+  }
+
+  /** Drop the reference (node terminal, or reconciling proved impossible). */
+  clearNodeUpstreamTask(nodeId: string): void {
+    const state = this.nodeStates.get(nodeId);
+    if (!state?.upstreamTask) return;
+    delete state.upstreamTask;
+    this.onPersistRequested?.();
+  }
+
+  /** The reference this node is waiting on, if any (recovery reads this). */
+  readNodeUpstreamTask(nodeId: string): UpstreamTaskRef | undefined {
+    return this.nodeStates.get(nodeId)?.upstreamTask;
+  }
+
+  // ========================================================================
   // Variables / outputs
   // ========================================================================
 
@@ -606,7 +672,14 @@ export class ExecutionContext {
       ctx.nodeOutputs.set(nodeId, output);
     }
     for (const [nodeId, state] of Object.entries(data.nodeStates)) {
-      ctx.nodeStates.set(nodeId, state);
+      // #1382: a persisted reference is unchecked JSON — normalize it on the way
+      // in so a malformed value reads as "no reference" instead of steering a
+      // reconcile at something unusable.
+      const upstreamTask = readUpstreamTaskRef(state.upstreamTask);
+      const normalized: NodeStateSnapshot = { ...state };
+      if (upstreamTask) normalized.upstreamTask = upstreamTask;
+      else delete normalized.upstreamTask;
+      ctx.nodeStates.set(nodeId, normalized);
     }
     for (const [nodeId, assets] of Object.entries(data.mediaAssets)) {
       ctx.mediaAssets.set(nodeId, assets);
