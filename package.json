@@ -74,6 +74,7 @@
     "presets:build": "node scripts/build-agent-presets.mjs",
     "presets:verify": "node --test scripts/verify-agent-presets.test.mjs",
     "verify:cdp": "node scripts/verify-dev-cdp.mjs",
+    "verify:picker": "node scripts/verify-picker-dialog.mjs",
     "check:package-files": "node scripts/verify-package-files.mjs",
     "form:": "node packages/form-contract/scripts/cli.mjs",
     "verify:forms": "node packages/form-contract/scripts/verify.mjs",

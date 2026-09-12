@@ -85,14 +85,15 @@ describe('picker-model generalized max', () => {
     assert.equal(isAlreadyAdded([], ''), false)
   })
 
-  it('AssetPicker enforces fixed 800 width and responsive grid columns', async () => {
+  it('AssetPicker uses the kit lg tier + shared dialog contract instead of a dead width prop', async () => {
     const { readFileSync } = await import('node:fs')
     const source = readFileSync(new URL('./AssetPicker.jsx', import.meta.url), 'utf8')
-    assert.ok(source.includes('width: 800px !important'), 'penetrates modal width to 800px')
-    assert.ok(source.includes('height: 480px'), 'prefers a 480px content height')
+    assert.ok(source.includes('size="lg"'), 'sits on the kit lg tier')
+    assert.ok(source.includes('className={PICKER_DIALOG_CLASS}'), 'owns the dialog width via the official className seam')
+    assert.ok(source.includes('ensurePickerDialogStyles'), 'injects the shared dialog geometry contract')
+    assert.ok(!/width=\{\d+\}/.test(source), 'no dead width prop (ModalDialog has none)')
     assert.ok(source.includes('repeat(auto-fill, minmax(240px, 1fr))'), 'uses responsive grid columns')
     assert.ok(source.includes('max-height: calc(80vh - 190px)'), 'caps height by viewport to avoid dialog overflow')
-    assert.ok(source.includes('.dshUk-Dialog-body:has(.omx-asset-pick)'), 'lifts the kit body max-height cap')
     assert.ok(!source.includes('min-height: 480px'), 'drops the rigid min-height that overflowed the dialog body')
   })
 })

@@ -9,6 +9,7 @@ dist
 # 本机 PR board / 会话状态（不进 git）
 .workbuddy/
 /docs/evidence/live-qa-report.json
+/docs/evidence/picker-dialog-qa-report.json
 .worktrees/
 .agent-backups/
 
