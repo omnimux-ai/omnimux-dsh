@@ -307,7 +307,7 @@ importers:
         specifier: 11.14.0
         version: 11.14.0(react@18.3.1)
       '@omnimux/form-contract':
-        specifier: workspace:*
+        specifier: file:../../packages/form-contract
         version: link:../../packages/form-contract
       dsh-ui-kit:
         specifier: file:../../../../personal/dsh-ui-kit
