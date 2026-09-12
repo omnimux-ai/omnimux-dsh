@@ -12,8 +12,13 @@ div:has(> * > .omx-product-pick),
   width: 800px !important;
   max-width: 92vw !important;
 }
+/* 底座把正文容器限制为 min(56vh,480px)，会与「头部 + 480px 选择器」冲突并产生外层滚动条；放开上限，改由弹窗 80vh 统一约束 */
+.dshUk-Dialog-body:has(.omx-product-pick) {
+  max-height: none !important;
+}
 .omx-product-pick {
-  display: flex; width: 100%; height: 480px; min-height: 480px; max-height: 480px;
+  display: flex; width: 100%; height: 480px; min-height: 0;
+  max-height: calc(80vh - 190px);
   box-sizing: border-box;
 }
 .omx-product-pick__nav {
