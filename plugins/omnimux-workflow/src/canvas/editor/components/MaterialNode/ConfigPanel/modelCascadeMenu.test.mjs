@@ -35,12 +35,65 @@ describe('ModelCascadeMenu source contracts', () => {
   });
 
   it('offers channel selection for every modality, with an empty state for pools that do not exist', () => {
-    // Text nodes now route like media nodes: the hub sends a routed text request
-    // through the direct chat path, so the picker must not hide the column.
-    assert.match(cascadeSrc, /const canRouteChannels = channelGroups\.length > 0/);
+    // Text nodes route like media nodes: a routed text request goes through the
+    // hub's direct chat path, so the picker must not hide the column.
     assert.doesNotMatch(cascadeSrc, /不提供渠道选择/);
     assert.match(cascadeSrc, /channelGroups\.length === 0/);
     assert.match(cascadeSrc, /尚未配置渠道分组/);
+  });
+
+  it('lists real product brands only, never aggregate placeholder names', () => {
+    // Issue #1402: the brand column is what the user reads first, so it carries
+    // the vendor/product name and nothing invented.
+    // 品牌注册表内不得出现聚合名；断言收窄到 ALL_BRANDS 段，避免误伤普通描述文案。
+    const brandBlock = cascadeSrc.slice(
+      cascadeSrc.indexOf('const ALL_BRANDS'),
+      cascadeSrc.indexOf('const BRAND_MATCHERS'),
+    );
+    assert.ok(brandBlock.length > 0, 'ALL_BRANDS block must exist');
+    assert.doesNotMatch(brandBlock, /全能/, 'aggregate brand names must be gone');
+    assert.doesNotMatch(cascadeSrc, /all_omni|all_x/, 'aggregate brand ids must be gone');
+    assert.match(cascadeSrc, /\{ id: 'openai', name: 'OpenAI'/);
+    assert.match(cascadeSrc, /id: 'google', name: 'Google',/);
+    assert.doesNotMatch(cascadeSrc, /Google Gemini/);
+    // Brands are derived from the catalog, so a brand without models cannot become a dead end.
+    assert.match(cascadeSrc, /const withModels = ordered\.filter\(\(brand\) => modelsForBrand\(brand\.id\)\.length > 0\)/);
+  });
+
+  it('switches submenus on hover and only commits on click', () => {
+    assert.match(cascadeSrc, /onMouseEnter=\{\(\) => handleBrandHover\(brand\.id\)\}/);
+    assert.match(cascadeSrc, /onMouseEnter=\{\(\) => handleModelHover\(item\.id\)\}/);
+    // Hover is preview-only: the commit path stays on the click handlers.
+    assert.match(cascadeSrc, /const handleBrandHover = useCallback/);
+    assert.doesNotMatch(cascadeSrc, /onMouseEnter=\{\(\) => handleSelectModel/);
+    assert.match(cascadeSrc, /onClick=\{\(\) => handleSelectModel\(item\.id\)\}/);
+  });
+
+  it('reveals one level per hover: selected chain shows three, hovered branch shows the next one', () => {
+    // 选中激活 → 三级；悬停非选中品牌 → 只显示二级；悬停到型号 → 才显示三级。
+    assert.match(cascadeSrc, /const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId/);
+    assert.match(cascadeSrc, /const showChannelColumn = hoveringOtherBrand \? hoverModelId !== null : true/);
+    assert.match(cascadeSrc, /\{showChannelColumn \? \(/);
+    assert.match(cascadeSrc, /onMouseLeave=\{handlePopoverLeave\}/);
+    assert.match(cascadeSrc, /const handlePopoverLeave = useCallback\(\(\) => \{/);
+  });
+
+  it('renders the catalog display fields, not raw ids', () => {
+    // CapabilityModelItem 的显示契约是 label / subtitle；读不存在的 name 会退回裸 id。
+    assert.match(cascadeSrc, /typeof row\.label === 'string' && row\.label \? row\.label : item\.id/);
+    assert.match(cascadeSrc, /typeof row\.subtitle === 'string' && row\.subtitle/);
+    assert.doesNotMatch(cascadeSrc, /row\.name/);
+  });
+
+  it('keeps the popover anchor fixed so a revealed column cannot move the menu under the cursor', () => {
+    assert.match(cascadeSrc, /POPOVER_MAX_WIDTH = 786/);
+    assert.doesNotMatch(cascadeSrc, /panelWidth/, 'positioning must not depend on the visible column count');
+  });
+
+  it('keeps a hovered-but-uncommitted model read-only in the channel column', () => {
+    assert.match(cascadeSrc, /const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId/);
+    assert.match(cascadeSrc, /disabled=\{isChannelPreview\}/);
+    assert.match(cascadeSrc, /预览中 · 点击该型号后即可调整渠道/);
   });
 
   it('always sends allowedGroups when a pool resolved, and drops routing when it did not', () => {
