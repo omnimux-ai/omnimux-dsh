@@ -116,10 +116,11 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.doesNotMatch(cascadeSrc, /panelWidth/, 'positioning must not depend on the visible column count');
   });
 
-  it('keeps a hovered-but-uncommitted model read-only in the channel column', () => {
+  it('keeps a hovered-but-uncommitted model read-only in the channel column without redundant preview prompt', () => {
     assert.match(cascadeSrc, /const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId/);
     assert.match(cascadeSrc, /disabled=\{isChannelPreview\}/);
-    assert.match(cascadeSrc, /预览中 · 点击该型号后即可调整渠道/);
+    // 冗余设计已移除：不得渲染「预览中 · 点击该型号后即可调整渠道」及预览分割线
+    assert.doesNotMatch(cascadeSrc, /预览中/);
   });
 
   it('always sends allowedGroups when a pool resolved, and drops routing when it did not', () => {
