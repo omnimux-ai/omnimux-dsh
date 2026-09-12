@@ -28,7 +28,7 @@
     "@chakra-ui/react": "3.37.0",
     "@emotion/react": "11.14.0",
     "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
-    "@omnimux/form-contract": "workspace:*"
+    "@omnimux/form-contract": "file:../../packages/form-contract"
   },
   "dsh": {
     "bundle": {
