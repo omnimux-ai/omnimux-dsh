@@ -36,12 +36,13 @@ const SELECTORS = PICKER === 'assets'
   ? { root: '.omx-asset-pick', chip: /资产|素材|模型|角色|场景|道具|风格/, slot: '[assets://参考]' }
   : { root: '.omx-product-pick', chip: /商品|产品|品类/, slot: '[product://对标商品]' }
 
-async function cdpSession() {
-  const targets = await (await fetch(`${CDP_BASE}/json/list`)).json()
-  const page = targets.find((t) => t.type === 'page')
-  if (!page) throw new Error('No CDP page target found (is the Dev App window open?)')
-
-  const ws = new WebSocket(page.webSocketDebuggerUrl)
+/**
+ * 连接一个 CDP page target 并暴露 send/evaluate。
+ * @param {string} wsUrl
+ * @param {number} timeoutMs 连接与首帧探测的总超时（空页面可能永不响应）
+ */
+async function connect(wsUrl, timeoutMs = 5000) {
+  const ws = new WebSocket(wsUrl)
   const pending = new Map()
   let id = 0
   ws.addEventListener('message', (ev) => {
@@ -52,12 +53,26 @@ async function cdpSession() {
     }
   })
   await new Promise((resolve, reject) => {
-    ws.addEventListener('open', resolve)
-    ws.addEventListener('error', () => reject(new Error('CDP websocket error')))
+    const timer = setTimeout(() => reject(new Error('CDP connect timeout')), timeoutMs)
+    ws.addEventListener('open', () => {
+      clearTimeout(timer)
+      resolve()
+    })
+    ws.addEventListener('error', () => {
+      clearTimeout(timer)
+      reject(new Error('CDP websocket error'))
+    })
   })
   const send = (method, params = {}) =>
-    new Promise((resolve) => {
-      pending.set(++id, resolve)
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pending.delete(id)
+        reject(new Error(`CDP ${method} timeout`))
+      }, timeoutMs)
+      pending.set(++id, (result) => {
+        clearTimeout(timer)
+        resolve(result)
+      })
       ws.send(JSON.stringify({ id, method, params }))
     })
   const evaluate = async (expression) => {
@@ -65,6 +80,40 @@ async function cdpSession() {
     return result?.result?.value ?? null
   }
   return { send, evaluate, close: () => ws.close() }
+}
+
+/**
+ * Dev App 同时暴露多个 page target（主窗口、原生兼容壳页、可能残留的空白页），
+ * 首个 target 往往是 compatibility-chrome.html 壳页——它没有输入框，会让「打不开弹窗」被误报为产品缺陷。
+ * 故按「存在 [contenteditable=true]」挑选真正的应用窗口。
+ */
+async function cdpSession() {
+  const targets = await (await fetch(`${CDP_BASE}/json/list`)).json()
+  const pages = (targets || []).filter((t) => t.type === 'page' && t.webSocketDebuggerUrl)
+  if (pages.length === 0) {
+    throw new Error(`No CDP page target found on ${CDP_BASE} (is the Dev App window open?)`)
+  }
+
+  const seen = []
+  for (const page of pages) {
+    const label = `${page.title || '(untitled)'} ${page.url || ''}`.trim()
+    let session = null
+    try {
+      session = await connect(page.webSocketDebuggerUrl)
+      const hasComposer = await session.evaluate(
+        'Boolean(document.querySelector(\'[contenteditable="true"]\'))',
+      )
+      if (hasComposer) return session
+      seen.push(`${label} (无输入框)`)
+    } catch (error) {
+      seen.push(`${label} (${error?.message || 'probe failed'})`)
+    }
+    session?.close()
+  }
+
+  throw new Error(
+    `未找到含输入框的 Dev App 页面，无法验证弹窗。已探测 ${pages.length} 个 target：\n  - ${seen.join('\n  - ')}`,
+  )
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
