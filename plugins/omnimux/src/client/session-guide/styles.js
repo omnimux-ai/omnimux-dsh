@@ -2215,70 +2215,121 @@ export const GUIDE_CSS = `
   font-weight:600;
 }
 
-/* 技能卡片网格 */
+/* 技能卡片网格：基准 4 列，响应式折叠，对齐图 4 视觉规范 */
 .omnimux-skills-grid {
-  display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px;
+  display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px;
 }
-@media (min-width: 1100px) {
-  .omnimux-skills-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .omnimux-skills-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
 }
-@media (min-width: 1400px) {
-  .omnimux-skills-grid { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+@media (max-width: 820px) {
+  .omnimux-skills-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .omnimux-skills-grid { grid-template-columns:repeat(1, minmax(0, 1fr)); }
 }
 .omnimux-skill-card {
   position:relative;
   background:var(--omnimux-trending-cover-base);
   border:1px solid var(--dsw-alias-border-l1);
-  border-radius:14px; padding:16px;
+  border-radius:12px;
   display:flex; flex-direction:column;
+  overflow:hidden;
+  cursor:pointer;
   transition:border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 .omnimux-skill-card:hover {
   border-color:var(--dsw-alias-border-l2);
   transform:translateY(-2px);
-  box-shadow:0 8px 24px color-mix(in srgb, var(--dsw-static-neutral-1000) 40%, transparent);
+  box-shadow:0 8px 24px color-mix(in srgb, var(--dsw-static-neutral-1000) 60%, transparent);
 }
 .omnimux-skill-card.is-active { border-color:var(--dsw-alias-brand-primary); }
-.omnimux-skill-card-body { display:flex; flex-direction:column; height:100%; }
-.omnimux-skill-card-header { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
-.omnimux-skill-card-category {
-  display:inline-flex; align-self:flex-start; font-size:11px; line-height:14px;
-  color:var(--dsw-alias-brand-primary);
-  background:color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);
-  border-radius:4px; padding:2px 6px; font-weight:500;
+.omnimux-skill-card-cover-wrapper {
+  position:relative;
+  width:100%;
+  aspect-ratio:16 / 9;
+  background:var(--dsw-alias-bg-layer-2);
+  overflow:hidden;
 }
+.omnimux-skill-card-cover-img {
+  width:100%; height:100%; object-fit:cover; display:block;
+  transition:transform 240ms ease;
+}
+.omnimux-skill-card:hover .omnimux-skill-card-cover-img {
+  transform:scale(1.03);
+}
+.omnimux-skill-card-cover-fallback {
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; font-weight:700;
+  color:var(--dsw-alias-label-tertiary);
+  background:linear-gradient(135deg, var(--dsw-alias-bg-layer-3) 0%, var(--dsw-alias-bg-layer-1) 100%);
+}
+.omnimux-skill-card-badge {
+  position:absolute; top:6px; left:6px; z-index:2;
+  padding:1px 6px; font-size:10px; font-weight:700; line-height:14px;
+  color:var(--dsw-static-neutral-00);
+  background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* exempt-ui03: H3 官方精选视觉专属品牌紫色角标 */
+  border-radius:4px; text-transform:uppercase;
+  box-shadow:0 2px 6px color-mix(in srgb, var(--dsw-static-neutral-1000) 35%, transparent);
+}
+.omnimux-skill-card-cover-hover {
+  position:absolute; inset:0; z-index:3;
+  display:flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 40%, transparent);
+  opacity:0; transition:opacity 180ms ease;
+  backdrop-filter:blur(2px);
+}
+.omnimux-skill-card:hover .omnimux-skill-card-cover-hover,
+.omnimux-skill-card:focus-within .omnimux-skill-card-cover-hover,
+.omnimux-skill-card.is-active .omnimux-skill-card-cover-hover {
+  opacity:1;
+}
+.omnimux-skill-card-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; font-size:12px; font-weight:600; line-height:16px;
+  color:var(--dsw-static-neutral-1000); background:var(--dsw-static-neutral-00); border:none; border-radius:999px;
+  cursor:pointer; box-shadow:0 4px 16px color-mix(in srgb, var(--dsw-static-neutral-1000) 35%, transparent);
+  transition:transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  font-family:inherit;
+}
+.omnimux-skill-card-btn:hover {
+  transform:scale(1.05);
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 90%, var(--dsw-static-neutral-1000));
+  box-shadow:0 6px 20px color-mix(in srgb, var(--dsw-static-neutral-1000) 45%, transparent);
+}
+.omnimux-skill-card.is-active .omnimux-skill-card-btn {
+  background:var(--dsw-alias-brand-primary);
+  color:var(--dsw-static-neutral-00);
+}
+.omnimux-skill-card-btn-icon { display:inline-flex; width:13px; height:13px; }
+.omnimux-skill-card-btn-icon > svg { width:13px; height:13px; }
+.omnimux-skill-card-content {
+  display:flex; flex-direction:column; padding:12px 14px 14px 14px; flex:1;
+}
+.omnimux-skill-card-header { display:flex; align-items:center; margin-bottom:6px; }
 .omnimux-skill-card-title {
-  font-size:14px; font-weight:600; line-height:19px;
+  font-size:15px; font-weight:600; line-height:20px;
   color:var(--dsw-alias-label-primary); margin:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .omnimux-skill-card-summary {
-  font-size:12px; line-height:17px;
-  color:var(--dsw-alias-label-secondary); margin:0 0 14px 0;
+  font-size:12px; line-height:18px;
+  color:var(--dsw-alias-label-secondary); margin:0 0 10px 0;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-  overflow:hidden; flex:1;
+  overflow:hidden; min-height:36px; flex:1;
 }
-.omnimux-skill-card-footer { margin-top:auto; }
-.omnimux-skill-card-btn {
-  display:inline-flex; align-items:center; gap:6px; width:100%;
-  justify-content:center; padding:7px 12px; font-size:12px; font-weight:500;
-  color:var(--dsw-alias-label-primary);
-  background:var(--omnimux-trending-cover-soft);
-  border:1px solid var(--omnimux-trending-cover-line);
-  border-radius:8px; cursor:pointer;
-  transition:all 160ms ease; font-family:inherit;
+.omnimux-skill-card-attribution {
+  display:flex; align-items:center; gap:4px; margin-top:auto;
 }
-.omnimux-skill-card-btn:hover {
-  background:var(--omnimux-trending-cover-hover);
-  color:var(--omnimux-trending-cover-text-strong);
+.omnimux-skill-card-author {
+  font-size:11px; line-height:15px;
+  color:var(--dsw-alias-label-tertiary); font-weight:400;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.omnimux-skill-card.is-active .omnimux-skill-card-btn {
-  background:var(--dsw-alias-brand-primary);
-  border-color:var(--dsw-alias-brand-primary);
-  color:var(--dsw-static-neutral-00, #fff);
+.omnimux-skill-verified-icon {
+  display:inline-flex; width:12px; height:12px; color:var(--dsw-alias-brand-primary); flex-shrink:0;
 }
-.omnimux-skill-card-btn-icon { display:inline-flex; width:13px; height:13px; }
-.omnimux-skill-card-btn-icon > svg { width:13px; height:13px; }
 
 /* 复合筛选工具栏 */
 .omnimux-trending-toolbar {

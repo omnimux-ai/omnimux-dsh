@@ -354,7 +354,7 @@ export const guideZh = {
   "skills.category.sk-visual": "视觉与视频",
   "skills.category.sk-writing": "内容创作",
   "skills.chips.label": "技能分类筛选",
-  "skills.card.use": "使用技能",
+  "skills.card.use": "使用 Skill",
   "skills.source.badge": "精选工坊",
   "skills.empty": "当前分类下暂无技能。",
   "trending.title": "爆款对标视频，随时复刻",

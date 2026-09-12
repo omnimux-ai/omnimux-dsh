@@ -356,11 +356,6 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
             onClick={() => handleSwitchTab('trending')}
           >
             {t('guide.tab.trending')}
-            {status === TRENDING_SOURCE_STATUS.ready && activeTab === 'trending' ? (
-              <span className="omnimux-trending-source-badge" title={t('trending.source.hint')}>
-                {t('trending.source.badge')}
-              </span>
-            ) : null}
           </button>
           <button /* exempt-ui01: session-guide 导航双 Tab */
             type="button"
@@ -372,16 +367,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
             onClick={() => handleSwitchTab('skills')}
           >
             {t('guide.tab.skills')}
-            {activeTab === 'skills' ? (
-              <span className="omnimux-trending-source-badge">
-                {t('skills.source.badge')}
-              </span>
-            ) : null}
           </button>
         </div>
-        <p className="omnimux-trending-subtitle">
-          {activeTab === 'skills' ? t('skills.subtitle') : t('trending.subtitle')}
-        </p>
       </header>
 
       {activeTab === 'skills' ? (

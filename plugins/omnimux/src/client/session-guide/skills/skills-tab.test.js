@@ -169,15 +169,43 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     assert.equal(tabSkills.getAttribute('aria-selected'), 'true', '点击后 Skill Tab 选中')
     assert.ok(host.querySelector('#tabpanel-skills'), '切换后挂载 Skill 面板')
     assert.equal(host.querySelector('#tabpanel-trending'), null)
+    assert.equal(host.querySelector('.omnimux-trending-source-badge'), null, 'Tab 头部不得包含「来自灵感库」或工坊徽章')
+    assert.equal(host.querySelector('.omnimux-trending-subtitle'), null, '头部不得包含副标题（图 2 元素彻底移除）')
 
     // 3. 验证分类胶囊
     const chips = host.querySelectorAll('.omnimux-skills-chip')
     assert.equal(chips.length, 6, '应有 1 个全选「精选」+ 5 个业务分类胶囊')
     assert.equal(chips[0].getAttribute('aria-pressed'), 'true', '默认全部分类按下')
 
-    // 4. 验证技能卡片渲染
+    // 4. 验证技能卡片渲染与图 4 规范对齐
     const cards = host.querySelectorAll('.omnimux-skill-card')
     assert.equal(cards.length, 69, '全部分类下展示 69 张精选卡片')
+
+    // 验证前 8 张重磅置顶官方视频 Skill 顺序与图 4 像素级一致
+    const expectedTop8Titles = [
+      '3D动画短片',
+      '品牌宣传短片生成器',
+      '极简产品广告生成器',
+      '音乐MV动态字幕生成器',
+      '纸拼贴讲解动画',
+      '第一视角 FPV 穿越生成',
+      '第一视角短片生成',
+      '悬疑电影片头生成',
+    ]
+    const actualTop8Titles = Array.from(cards).slice(0, 8).map((c) => c.querySelector('.omnimux-skill-card-title')?.textContent?.trim())
+    assert.deepEqual(actualTop8Titles, expectedTop8Titles, '前 8 张卡片必须与图 4 官方精选爆款严格一致')
+
+    // 验证卡片内容规范（封面、H3 角标、hover 按钮、两行描述、认证底行）
+    const firstCard = cards[0]
+    const coverImg = firstCard.querySelector('.omnimux-skill-card-cover-img')
+    assert.ok(coverImg, '技能卡片必须渲染真实封面图片')
+    assert.ok(coverImg.getAttribute('src').includes('3d-animation-short-generator.png'), '封面 src 必须正确指向对应资源')
+    const badge = firstCard.querySelector('.omnimux-skill-card-badge')
+    assert.ok(badge, '技能卡片必须渲染左上角紫色角标')
+    assert.equal(badge.textContent.trim(), 'H3', '角标文本必须为 H3')
+    const author = firstCard.querySelector('.omnimux-skill-card-author')
+    assert.equal(author?.textContent?.trim(), '@MiniMax Design官方', '底部署名必须为 @MiniMax Design官方')
+    assert.ok(firstCard.querySelector('.omnimux-skill-verified-icon'), '底行必须渲染官方认证打勾图标')
 
     // 5. 点击分类胶囊筛选
     await click(chips[1]) // 第一个业务分类（电商变现）
@@ -188,6 +216,7 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     // 6. 点击卡片触发指令预填与激活态
     const useBtn = filteredCards[0].querySelector('.omnimux-skill-card-btn')
     assert.ok(useBtn, '技能卡片上必须有调用按钮')
+    assert.ok(useBtn.textContent.includes('skills.card.use') || useBtn.textContent.includes('使用 Skill'), '按钮文案必须对应使用技能/Skill')
     await click(useBtn)
     await flush()
 
