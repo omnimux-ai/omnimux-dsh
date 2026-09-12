@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react'
+import { FolderIcon, RefreshIcon } from './icons.tsx'
 
 export interface WorkspaceItem {
   id: string
@@ -74,7 +75,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
         title={isEn ? "Switch local DSH / OmniMux workspace" : "切换本地 DSH / OmniMux 工作区"}
       >
         <span className={`engine-dot ${bridgeConnected ? 'online' : loading ? 'connecting' : 'offline'}`} />
-        <span className="ws-icon">📂</span>
+        <span className="ws-icon"><FolderIcon size={13} /></span>
         <span className="ws-name">{activeWorkspace?.name || (isEn ? 'Select Workspace' : '选择工作区')}</span>
         <span className="ws-arrow">▾</span>
       </button>
@@ -99,7 +100,8 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
           ))}
           <div className="dropdown-footer">
             <button type="button" className="refresh-btn" onClick={fetchWorkspaces}>
-              {isEn ? '🔄 Refresh' : '🔄 刷新工作区'}
+              <RefreshIcon size={12} />
+              <span>{isEn ? 'Refresh' : '刷新工作区'}</span>
             </button>
           </div>
         </div>

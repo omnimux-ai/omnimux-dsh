@@ -1,9 +1,21 @@
-import { memo } from 'react'
+import React, { memo } from 'react'
 import type { PageSceneInfo } from './SceneBadge.tsx'
+import {
+  RocketIcon,
+  ThreadIcon,
+  QuoteIcon,
+  GlobeIcon,
+  SparklesIcon,
+  FileTextIcon,
+  FlameIcon,
+  ChartIcon,
+  ZapIcon,
+  VideoIcon
+} from './icons.tsx'
 
 export interface PresetChipItem {
   id: string
-  icon: string
+  icon: React.ComponentType<{ size?: number; className?: string }>
   labelZh: string
   labelEn: string
   promptTemplateZh: (scene: PageSceneInfo) => string
@@ -14,7 +26,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'twitter:status': [
     {
       id: 'tw_high_reply',
-      icon: '🚀',
+      icon: RocketIcon,
       labelZh: '高赞神评截流',
       labelEn: 'Viral Reply Hack',
       promptTemplateZh: (s) =>
@@ -24,7 +36,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_threads',
-      icon: '🧵',
+      icon: ThreadIcon,
       labelZh: '推文转长贴串',
       labelEn: 'Tweet to Threads',
       promptTemplateZh: (s) =>
@@ -34,7 +46,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_quote_retweet',
-      icon: '🔄',
+      icon: QuoteIcon,
       labelZh: '中文引用转推',
       labelEn: 'Quote Retweet',
       promptTemplateZh: (s) =>
@@ -44,7 +56,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_en_reply',
-      icon: '🌍',
+      icon: GlobeIcon,
       labelZh: '出海地道英文回复',
       labelEn: 'Native English Reply',
       promptTemplateZh: (s) =>
@@ -54,7 +66,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_witty_rebuttal',
-      icon: '🎭',
+      icon: SparklesIcon,
       labelZh: '幽默趣味反驳',
       labelEn: 'Witty Counter',
       promptTemplateZh: (s) =>
@@ -66,7 +78,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'twitter:profile': [
     {
       id: 'tw_dm_collab',
-      icon: '📩',
+      icon: FileTextIcon,
       labelZh: '达人商务合作私信',
       labelEn: 'Creator Outreach DM',
       promptTemplateZh: (s) =>
@@ -76,7 +88,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_author_audit',
-      icon: '🕵️',
+      icon: ZapIcon,
       labelZh: '达人画像与爆款拆解',
       labelEn: 'Profile Deep Dive',
       promptTemplateZh: (s) =>
@@ -88,7 +100,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'twitter:home': [
     {
       id: 'tw_home_imitation',
-      icon: '🔥',
+      icon: FlameIcon,
       labelZh: '热点主页发帖',
       labelEn: 'Trending Feed Post',
       promptTemplateZh: () =>
@@ -98,7 +110,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_viral_rewrite',
-      icon: '💡',
+      icon: SparklesIcon,
       labelZh: '爆款二创复刻',
       labelEn: 'Viral Post Remix',
       promptTemplateZh: () =>
@@ -108,7 +120,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_feed_filter',
-      icon: '📊',
+      icon: ChartIcon,
       labelZh: '信息流热度快筛',
       labelEn: 'Feed Intelligence',
       promptTemplateZh: () =>
@@ -120,7 +132,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'tiktok:detail': [
     {
       id: 'tt_hook_deconstruct',
-      icon: '🎣',
+      icon: ZapIcon,
       labelZh: '黄金3秒钩子拆解',
       labelEn: '3s Hook Teardown',
       promptTemplateZh: (s) =>
@@ -130,7 +142,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tt_script_breakdown',
-      icon: '🎬',
+      icon: VideoIcon,
       labelZh: '分镜脚本与逐字稿',
       labelEn: 'Storyboard Script',
       promptTemplateZh: (s) =>
@@ -140,7 +152,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tt_comment_reply',
-      icon: '💬',
+      icon: QuoteIcon,
       labelZh: '评论区高赞神评',
       labelEn: 'Top Comment Hijack',
       promptTemplateZh: () =>
@@ -152,7 +164,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'generic': [
     {
       id: 'gen_summary',
-      icon: '📝',
+      icon: FileTextIcon,
       labelZh: '核心要点提炼',
       labelEn: 'Key Takeaways',
       promptTemplateZh: (s) =>
@@ -162,7 +174,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'gen_critique',
-      icon: '⚡',
+      icon: ZapIcon,
       labelZh: '观点驳论与盲点',
       labelEn: 'Counter Arguments',
       promptTemplateZh: (s) =>
@@ -172,7 +184,7 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'gen_translate',
-      icon: '🌐',
+      icon: GlobeIcon,
       labelZh: '精炼中英双语对照',
       labelEn: 'Bilingual Polish',
       promptTemplateZh: () =>
@@ -209,6 +221,7 @@ export const PresetChips = memo(function PresetChips({
         {chips.map((chip) => {
           const label = isEn ? chip.labelEn : chip.labelZh
           const template = isEn ? chip.promptTemplateEn : chip.promptTemplateZh
+          const Icon = chip.icon
           return (
             <button
               key={chip.id}
@@ -217,7 +230,7 @@ export const PresetChips = memo(function PresetChips({
               onClick={() => onSelectPrompt(template(currentScene))}
               title={isEn ? `Apply preset: ${label}` : `点击载入预设：${label}`}
             >
-              <span className="chip-icon">{chip.icon}</span>
+              <span className="chip-icon"><Icon size={12} /></span>
               <span className="chip-label">{label}</span>
             </button>
           )

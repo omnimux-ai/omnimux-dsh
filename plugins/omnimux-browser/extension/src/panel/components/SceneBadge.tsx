@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { TargetIcon, CloseIcon } from './icons.tsx'
 
 export interface PageSceneInfo {
   url: string
@@ -61,14 +62,14 @@ export const SceneBadge = memo(function SceneBadge({
 
       {(scene.postText || scene.author) && (
         <div className="scene-context-snippet" title={scene.postText || ''}>
-          <span className="context-icon">🎯</span>
+          <span className="context-icon"><TargetIcon size={12} /></span>
           <span className="context-text">
             {scene.author ? `@${scene.author}: ` : ''}
             {scene.postText ? scene.postText.slice(0, 36) + (scene.postText.length > 36 ? '...' : '') : (isEn ? 'Page context linked' : '已关联帖子上下文')}
           </span>
           {onClearContext && (
             <button className="context-clear-btn" onClick={onClearContext} title={isEn ? 'Clear context' : '解除上下文锁定'}>
-              ✕
+              <CloseIcon size={10} />
             </button>
           )}
         </div>
