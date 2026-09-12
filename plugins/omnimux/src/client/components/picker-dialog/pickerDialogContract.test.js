@@ -30,11 +30,11 @@ test('dialog className carries a variant class so the width variable lands on th
 });
 
 test('each picker derives its width from its own layout geometry', () => {
-  // 产品库：顶部 Tab，无左侧栏，4 列
-  assert.equal(PICKER_LAYOUTS.product.columns, 4, '产品库需至少展示 3 列（取 4 列）');
+  // 产品库：顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡
+  assert.equal(PICKER_LAYOUTS.product.columns, 6, '产品库采用 6 列高密度微卡网格');
   assert.equal(PICKER_LAYOUTS.product.leading, 0, '顶部 Tab 布局没有左侧栏');
-  assert.equal(pickerExpectedWidth('product'), 4 * PICKER_CARD_WIDTH + 3 * PICKER_GRID_GAP);
-  assert.equal(pickerExpectedWidth('product'), 1104);
+  assert.equal(pickerExpectedWidth('product'), 6 * 156 + 5 * PICKER_GRID_GAP);
+  assert.equal(pickerExpectedWidth('product'), 1016);
 
   // 资产库：左侧分类栏 148 + 正文左内边距 16 + 2 列
   assert.equal(PICKER_LAYOUTS.assets.columns, 2);
@@ -46,7 +46,7 @@ test('each picker derives its width from its own layout geometry', () => {
 });
 
 test('pickerDialogWidth emits a leading-less calc for the top-tab layout', () => {
-  assert.equal(pickerDialogWidth({ columns: 4 }), 'calc(4 * 264px + 3 * 16px)');
+  assert.equal(pickerDialogWidth({ columns: 6, cardWidth: 156 }), 'calc(6 * 156px + 5 * 16px)');
   assert.equal(pickerDialogWidth({ columns: 2, leading: 164 }), 'calc(164px + 2 * 264px + 1 * 16px)');
   assert.equal(pickerDialogWidth({ columns: 1 }), 'calc(1 * 264px)', '单列不产生列间距项');
 });

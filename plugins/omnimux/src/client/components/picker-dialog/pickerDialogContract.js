@@ -53,10 +53,10 @@ export function pickerDialogWidth({ columns, cardWidth = PICKER_CARD_WIDTH, gap 
 
 /** 两个选择器各自的布局几何（单一真源；验收脚本与单测都从这里取值） */
 export const PICKER_LAYOUTS = Object.freeze({
-  /** 产品库：顶部 Tab，无左侧栏，4 列卡片 */
-  product: Object.freeze({ columns: 4, leading: 0 }),
+  /** 产品库：顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
+  product: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
   /** 资产库：左侧分类栏 148 + 正文左内边距 16，2 列卡片 */
-  assets: Object.freeze({ columns: 2, leading: 148 + 16 }),
+  assets: Object.freeze({ columns: 2, cardWidth: 264, gap: 16, leading: 148 + 16 }),
 });
 
 /**
@@ -66,8 +66,8 @@ export const PICKER_LAYOUTS = Object.freeze({
 export function pickerExpectedWidth(kind) {
   const layout = PICKER_LAYOUTS[kind];
   if (!layout) throw new Error(`unknown picker layout: ${kind}`);
-  const { columns, leading = 0 } = layout;
-  return leading + columns * PICKER_CARD_WIDTH + Math.max(0, columns - 1) * PICKER_GRID_GAP;
+  const { columns, cardWidth = PICKER_CARD_WIDTH, gap = PICKER_GRID_GAP, leading = 0 } = layout;
+  return leading + columns * cardWidth + Math.max(0, columns - 1) * gap;
 }
 
 /** 只依赖外壳、与布局无关的共享样式 */
@@ -92,13 +92,17 @@ export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器通过**弹窗�
   margin-top: 0 !important;
   padding: 0 !important;
 }
+/* 隐藏产品库自带的 ModalDialog 默认 Header（采用单层 Tab-as-Header 架构，避免双重 Header） */
+.omx-pick-dialog--product .dshUk-Dialog-body > *:first-child {
+  display: none !important;
+}
 /* 共享的 external 关闭按钮定位在弹窗右外侧（right:-50px），而底座弹窗自带 overflow: hidden 会把它裁出可视区
    （真机实测：几何在弹窗外，但元素命中测试落到遮罩层，按钮既看不见也点不到）。这里放开裁剪让共享按钮真正可见可点。
    该变体原本服务于无裁剪的 SplitModalDialog，本弹窗需显式放开。 */
 .${PICKER_DIALOG_CLASS} {
   overflow: visible !important;
 }
-/* 关闭按钮统一使用共享组件 ModalCloseButton(placement="external")，隐藏底座标题栏内置的 X。
+/* 关闭按钮统一使用共享组件 ModalCloseButton，隐藏底座标题栏内置的 X。
    底座关闭按钮只有 CSS-module 哈希类名，故按结构定位：正文滚动容器第一个子元素（标题栏）内的按钮。 */
 .${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button {
   display: none !important;
