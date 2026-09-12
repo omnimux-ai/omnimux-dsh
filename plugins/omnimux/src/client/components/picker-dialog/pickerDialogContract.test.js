@@ -93,6 +93,14 @@ test('shell lifts the primitive body cap and documented why', () => {
   }
 });
 
+test('shell lets the shared external close button escape the dialog clipping', () => {
+  assert.match(
+    PICKER_DIALOG_SHELL_CSS,
+    new RegExp(`\\.${PICKER_DIALOG_CLASS}\\s*\\{\\s*overflow: visible !important;`),
+    '底座弹窗 overflow:hidden 会把右外侧的共享关闭按钮裁掉（真机实测点不到）',
+  );
+});
+
 test('shell hides the kit built-in close in favour of the shared external button', () => {
   assert.ok(
     PICKER_DIALOG_SHELL_CSS.includes(`.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button`),
