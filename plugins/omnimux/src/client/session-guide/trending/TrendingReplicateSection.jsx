@@ -27,6 +27,14 @@ const ICON_CHEVRON_DOWN = (
   </svg>
 )
 
+/** rAF 在无布局环境（JSDOM / SSR）可能不存在，退化成宏任务即可。 */
+const scheduleFrame = typeof requestAnimationFrame === 'function'
+  ? requestAnimationFrame
+  : (fn) => setTimeout(fn, 0)
+const cancelFrame = typeof cancelAnimationFrame === 'function'
+  ? cancelAnimationFrame
+  : (id) => clearTimeout(id)
+
 /**
  * 「Trending Videos, Ready to Replicate」爆款对标与一键复刻板块。
  *
@@ -52,6 +60,10 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   const [refreshing, setRefreshing] = useState(true)
   // 工具栏能力集是**单调**的：只并入不重算，否则筛选后档位会塌成只剩当前命中项
   const [capabilities, setCapabilities] = useState(EMPTY_CAPABILITIES)
+  // 接管意图（dockedItem）与实际摆位（placement）分开：
+  // 意图由「复刻」决定，摆位由滚动位置决定——滚回原位就让原生输入框回到流内。
+  const [placement, setPlacement] = useState('docked')
+  const prevDockedItemRef = useRef(null)
   const sectionRef = useRef(null)
   // 生效过的宿主根节点。卸载清理必须用它，而不是已被 React 解绑的 DOM ref。
   const dockHostRef = useRef(null)
@@ -105,10 +117,11 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     if (!root) return undefined
     dockHostRef.current = root
 
+    const card = root.querySelector?.('[data-composer-card]')
+
     // 停靠几何取自输入框所在的 Hero 栏：它始终留在文档流里，
     // 即使输入框已经脱离流也保持原始的 left/width，缩放窗口时仍然算得准。
     const writeGeometry = () => {
-      const card = root.querySelector?.('[data-composer-card]')
       const band = card?.parentElement || root
       const rect = band?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
@@ -121,12 +134,16 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       if (height) root.style.setProperty('--omnimux-dock-card-height', `${Math.round(height)}px`)
     }
 
-    // 输入框脱离文档流会让下方内容整体上移，整页跟着跳一下。
-    // 在同一帧内量出板块位移并补偿滚动，用户看不到版面跳动。
+    // FLIP 测量变更前：在变更任何属性与类名前，同步测量当前视觉绝对位置
+    const from = card?.getBoundingClientRect?.()
+
     const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
     const before = sectionRef.current?.getBoundingClientRect?.().top
 
-    if (dockedItem) {
+    const shouldDock = Boolean(dockedItem && placement === 'docked')
+    const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
+
+    if (shouldDock) {
       writeGeometry()
       root.setAttribute(DOCK_OPEN_ATTR, '')
     } else {
@@ -134,23 +151,103 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
 
     const after = sectionRef.current?.getBoundingClientRect?.().top
-    if (scroller && Number.isFinite(before) && Number.isFinite(after) && after !== before) {
+    const intentChanged = prevDockedItemRef.current !== dockedItem
+    prevDockedItemRef.current = dockedItem
+
+    // 注意：滚动补偿仅在用户主动点击复刻/收起意图变更时发生，滚动中触发的 placement 切换绝不能做补偿，否则会死循环抖动。
+    if (intentChanged && scroller && Number.isFinite(before) && Number.isFinite(after) && after !== before) {
       scroller.scrollTop += after - before
     }
 
-    if (!dockedItem) return undefined
+    // FLIP 过渡：若吸底属性发生切换且前后具备有效布局，执行丝滑位移与透明度过渡
+    let cancelAnim = null
+    if (currentlyDocked !== shouldDock && card && from && from.width > 0 && from.height > 0) {
+      const to = card.getBoundingClientRect?.()
+      if (to && to.width > 0 && to.height > 0) {
+        const dx = Math.round(from.left - to.left)
+        const dy = Math.round(from.top - to.top)
+        if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
+          card.style.transition = 'none'
+          card.style.transform = `translate(${dx}px, ${dy}px)`
+          card.style.opacity = '0.85'
+          const raf = scheduleFrame(() => {
+            card.style.transition = 'transform 200ms cubic-bezier(0.2,0.9,0.3,1), opacity 160ms ease-out'
+            card.style.transform = ''
+            card.style.opacity = ''
+          })
+          const timer = setTimeout(() => {
+            if (card) card.style.transition = ''
+          }, 240)
+          cancelAnim = () => {
+            cancelFrame(raf)
+            clearTimeout(timer)
+            if (card) {
+              card.style.transition = ''
+              card.style.transform = ''
+              card.style.opacity = ''
+            }
+          }
+        }
+      }
+    }
+
+    if (!dockedItem) {
+      return () => {
+        cancelAnim?.()
+      }
+    }
 
     // 窗口缩放与会话列变化都要重新算停靠几何
     const observer = typeof window.ResizeObserver === 'function'
       ? new window.ResizeObserver(writeGeometry)
       : null
     observer?.observe(root)
-    const card = root.querySelector?.('[data-composer-card]')
     if (card) observer?.observe(card)
     window.addEventListener('resize', writeGeometry)
     return () => {
+      cancelAnim?.()
       observer?.disconnect()
       window.removeEventListener('resize', writeGeometry)
+    }
+  }, [dockedItem, placement])
+
+  // 滚回原位就把输入框放回流内、滑开再吸回来；两个阈值分开做迟滞，避免边界反复横跳。
+  useEffect(() => {
+    if (!dockedItem) return undefined
+    const root = dockHostRef.current
+    const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
+    let frame = 0
+
+    const evaluate = () => {
+      frame = 0
+      const card = root?.querySelector?.('[data-composer-card]')
+      const band = card?.parentElement
+      if (!band) return
+      const rect = band.getBoundingClientRect?.()
+      // 没有布局信息（JSDOM / 尚未挂载）时不猜，保持吸底
+      if (!rect || (rect.width <= 0 && rect.height <= 0)) return
+      const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
+      const visible = rect.bottom > 0 && rect.top < viewportH
+      setPlacement((prev) => {
+        if (prev === 'docked') return visible ? 'inline' : prev
+        // 离开视口 24px 以上才切回吸底
+        return (rect.top > viewportH + 24 || rect.bottom < -24) ? 'docked' : prev
+      })
+    }
+
+    const onScroll = () => {
+      if (frame) return
+      frame = scheduleFrame(evaluate)
+    }
+
+    evaluate()
+    const target = scroller || window
+    target.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      if (frame) cancelFrame(frame)
+      target.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
     }
   }, [dockedItem])
 
@@ -163,6 +260,13 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     root.style.removeProperty('--omnimux-dock-width')
     root.style.removeProperty('--omnimux-dock-bottom')
     root.style.removeProperty('--omnimux-dock-card-height')
+    // FLIP 过渡写下的内联样式也要清掉，别把控件永久留在过渡态
+    const card = root.querySelector?.('[data-composer-card]')
+    if (card) {
+      card.style.transform = ''
+      card.style.transition = ''
+      card.style.opacity = ''
+    }
   }, [])
 
   /**
@@ -173,6 +277,16 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     if (dockedItem?.id === item.id) {
       setDockedItem(null)
       return
+    }
+    const root = dockHostRef.current || sectionRef.current?.closest?.('[data-phase]')
+    const card = root?.querySelector?.('[data-composer-card]')
+    const band = card?.parentElement
+    const rect = band?.getBoundingClientRect?.()
+    const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
+    if (rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < viewportH) {
+      setPlacement('inline')
+    } else {
+      setPlacement('docked')
     }
     setDockedItem(item)
     onApplyPrompt?.(buildClonePrompt(item), item)
@@ -258,7 +372,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
         </div>
       ) : null}
 
-      {dockedItem ? (
+      {dockedItem && placement === 'docked' ? (
         <button /* exempt-ui01: 归还原生输入框属于轻量文本动作，非标准控件位 */
           type="button"
           className="omnimux-trending-undock"
