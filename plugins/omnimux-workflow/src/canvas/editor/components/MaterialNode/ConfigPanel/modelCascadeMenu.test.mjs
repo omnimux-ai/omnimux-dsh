@@ -9,6 +9,16 @@ const cascadeSrc = readFileSync(join(here, 'ModelCascadeMenu.tsx'), 'utf8');
 const configSrc = readFileSync(join(here, 'index.tsx'), 'utf8');
 
 describe('ModelCascadeMenu source contracts', () => {
+  it('binds hover and selected CSS classes without inline transparent backgrounds', () => {
+    // 必须有专有的规范 class 类名
+    assert.match(cascadeSrc, /wf-cascade-brand-item/);
+    assert.match(cascadeSrc, /wf-cascade-model-item/);
+    assert.match(cascadeSrc, /wf-cascade-strategy-btn/);
+    assert.match(cascadeSrc, /wf-cascade-channel-row/);
+    // 选项按钮不得内联设置 background: 'transparent'，否则会压死 CSS 中的 :hover
+    assert.doesNotMatch(cascadeSrc, /background:\s*isSelected\s*\?\s*['"][^'"]+['"]\s*:\s*['"]transparent['"]/);
+  });
+
   it('stores no raw hex or banned token', () => {
     const stripComments = (src) => src
       .replace(/\/\*[\s\S]*?\*\//g, '')
