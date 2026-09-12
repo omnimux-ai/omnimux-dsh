@@ -163,6 +163,22 @@ export function extractDomainSlug(hostname) {
 }
 
 /**
+ * Whether a hostname belongs to a pattern domain: the exact domain or one of its
+ * subdomains. Substring matching would read `netflix.com` as `x.com`,
+ * `box.com` as `x.com`, `myfb.com` as `facebook` and `tiktok.com.evil.com` as
+ * `tiktok`, which both mislabels items and pollutes the platform filter.
+ * @param {string} hostname lowercased hostname
+ * @param {string} domain pattern domain, e.g. `tiktok.com`
+ * @returns {boolean}
+ */
+export function hostMatchesDomain(hostname, domain) {
+  const host = typeof hostname === 'string' ? hostname.trim().toLowerCase() : ''
+  const target = typeof domain === 'string' ? domain.trim().toLowerCase() : ''
+  if (!host || !target) return false
+  return host === target || host.endsWith(`.${target}`)
+}
+
+/**
  * Detect social platform from URL. Known platforms take precedence,
  * and unknown valid URLs are dynamically self-registered by domain slug.
  * Fallback to 'unknown' for invalid or unparseable URLs.
@@ -173,28 +189,29 @@ export function detectPlatformFromUrl(url) {
   if (!url || typeof url !== 'string') return 'unknown'
   const trimmed = url.trim()
   if (!trimmed) return 'unknown'
-  const lower = trimmed.toLowerCase()
 
-  const hit = PLATFORM_PATTERNS.find((entry) => lower.includes(entry.test))
-  if (hit) return hit.platform
-
+  let parsed
   try {
-    const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return 'unknown'
-    }
-    const hostname = parsed.hostname.toLowerCase()
-    if (!hostname || !hostname.includes('.')) {
-      return 'unknown'
-    }
-    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-      return 'unknown'
-    }
-    const slug = extractDomainSlug(hostname)
-    return slug || 'unknown'
+    parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
   } catch {
     return 'unknown'
   }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return 'unknown'
+  }
+  const hostname = parsed.hostname.toLowerCase()
+
+  const hit = PLATFORM_PATTERNS.find((entry) => hostMatchesDomain(hostname, entry.test))
+  if (hit) return hit.platform
+
+  if (!hostname || !hostname.includes('.')) {
+    return 'unknown'
+  }
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return 'unknown'
+  }
+  const slug = extractDomainSlug(hostname)
+  return slug || 'unknown'
 }
 
 /**

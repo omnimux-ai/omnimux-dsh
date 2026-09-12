@@ -7,6 +7,7 @@ import {
   triggerAnalyzeInspiration,
 } from './api.js'
 import {
+  canAnalyzeInspiration,
   deconstructionCopyText,
   getInspirationPreviewData,
   hasDeconstruction,
@@ -79,6 +80,23 @@ function translatedSegmentText(data, segment) {
   return hit?.text || data.translationText || segment.text
 }
 
+/**
+ * Breakdown call to action.
+ *
+ * An item without any video stream cannot be decomposed (the backend answers
+ * 422), so it gets an explanation instead of a button that is guaranteed to fail.
+ */
+function AnalyzeAction({ t, canAnalyze, analyzing, onAnalyze }) {
+  if (!canAnalyze) {
+    return <p className="omnimux-inspiration-modal-hint">{t('modal.deconstruction.noVideo')}</p>
+  }
+  return (
+    <Button variant="primary" onClick={onAnalyze} loading={analyzing} disabled={analyzing}>
+      {t('modal.deconstruction.analyze')}
+    </Button>
+  )
+}
+
 export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onReplicate, replicateBusy }) {
   const [item, setItem] = useState(row)
   const [activeTab, setActiveTab] = useState('video')
@@ -101,6 +119,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   const sourceUrl = data.safeItem.source_url
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
+  const canAnalyze = canAnalyzeInspiration(data.safeItem)
   const localVideoUrl = data.safeItem.local_paths?.video
     ? `/omnimux/inspiration/local/media/${encodeURIComponent(data.safeItem.id)}/video.mp4`
     : null
@@ -135,6 +154,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
       setAnalyzing(false)
     }
   }
+
+  const analyzeAction = (
+    <AnalyzeAction t={t} canAnalyze={canAnalyze} analyzing={analyzing} onAnalyze={handleAnalyze} />
+  )
 
   const handleTranslate = async () => {
     if (translating || !data.safeItem.id || !data.script) return
@@ -317,7 +340,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                 <div className="omnimux-inspiration-modal-empty">
                   <p>{t('modal.script.empty')}</p>
                   <p>{t('modal.script.emptyHint')}</p>
-                  {!hasDeconstruction(data) ? <Button variant="primary" onClick={handleAnalyze} loading={analyzing} disabled={analyzing}>{t('modal.deconstruction.analyze')}</Button> : null}
+                  {!hasDeconstruction(data) ? analyzeAction : null}
                 </div>
               )}
             </section>
@@ -371,7 +394,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   <div className="omnimux-inspiration-modal-empty">
                     <p>{analyzing ? t('modal.deconstruction.analyzing') : t('modal.deconstruction.empty')}</p>
                     {analyzeError ? <div className="omnimux-inspiration-error-text">{analyzeError}</div> : null}
-                    <Button variant="primary" onClick={handleAnalyze} loading={analyzing} disabled={analyzing}>{t('modal.deconstruction.analyze')}</Button>
+                    {analyzeAction}
                   </div>
                 )}
               </div>

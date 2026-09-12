@@ -1281,6 +1281,25 @@ export const INSPIRATION_CSS = `
   color: var(--dsw-alias-state-success-primary);
   font-size: 13px;
 }
+.omnimux-inspiration-import-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-secondary, rgba(255, 255, 255, 0.06));
+  color: var(--dsw-alias-label-secondary, #b4b4b4);
+  font-size: 13px;
+  line-height: 18px;
+}
+.omnimux-inspiration-import-notice p {
+  margin: 0;
+}
+.omnimux-inspiration-modal-hint {
+  margin: 0;
+  font: 400 13px/18px inherit;
+  color: var(--dsw-alias-label-tertiary, #7c7c7c);
+}
 .omnimux-inspiration-check {
   display: flex;
   align-items: center;

@@ -1,20 +1,59 @@
 import { getCanonicalItemKey } from './url-normalizer.js'
 
+/**
+ * Public no-key fallback resolver for social links.
+ *
+ * NETWORK EGRESS: this module sends the URL the user is importing to
+ * third-party public endpoints — `www.tikwm.com` (TikTok stream resolver),
+ * `www.tiktok.com`, `www.youtube.com` and `publish.twitter.com` (oEmbed). The
+ * request carries the post URL and a browser user agent, and nothing else: no
+ * credentials, no API keys and no library content. Set
+ * `OMNIMUX_INSPIRATION_SOCIAL_FALLBACK=off` to keep every imported URL on this
+ * machine; the import then relies on the OmniMux cloud resolver alone. The same
+ * behaviour is documented in the plugin README.
+ */
+
 const OEMBED_TIMEOUT_MS = 8000
+
+/**
+ * Total wall-clock budget for one fallback resolution. TikTok needs two serial
+ * requests, so per-request timeouts alone could block the import for twice the
+ * per-request budget; the shared deadline keeps the worst case bounded.
+ */
+const FALLBACK_BUDGET_MS = 10_000
+
+/** Local switch for the outbound requests above. */
+export const FALLBACK_SWITCH_ENV = 'OMNIMUX_INSPIRATION_SOCIAL_FALLBACK'
+
+const DISABLING_VALUES = new Set(['off', '0', 'false', 'no'])
+
+/**
+ * Whether the outbound fallback resolvers may run.
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {boolean}
+ */
+export function isSocialFallbackEnabled(env = /** @type {any} */ (process).env) {
+  const raw = String(env?.[FALLBACK_SWITCH_ENV] ?? '').trim().toLowerCase()
+  return !DISABLING_VALUES.has(raw)
+}
+
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 /**
- * `GET` a public JSON endpoint with a hard timeout.
+ * `GET` a public JSON endpoint with a hard timeout drawn from the shared budget.
  * Any failure (network, timeout, non-JSON, non-2xx) resolves to null;
  * the fallback chain must never throw into the import flow.
  * @param {string} endpoint absolute http(s) URL
+ * @param {number} deadline epoch ms after which no request may start
  * @returns {Promise<Record<string, any> | null>}
  */
-async function fetchJson(endpoint) {
+async function fetchJson(endpoint, deadline) {
+  const budget = Math.min(OEMBED_TIMEOUT_MS, deadline - Date.now())
+  if (budget <= 0) return null
   try {
     const resp = await fetch(endpoint, {
       headers: { 'User-Agent': BROWSER_UA },
-      signal: AbortSignal.timeout(OEMBED_TIMEOUT_MS),
+      signal: AbortSignal.timeout(budget),
     })
     if (!resp.ok) return null
     const json = await resp.json()
@@ -64,11 +103,13 @@ function resolvePlatform(platform, url) {
 
 /**
  * TikTok: tikwm direct stream resolver, then the official oEmbed for title/cover.
+ * Both requests share one deadline, so a slow resolver cannot double the wait.
  * @param {string} url
+ * @param {number} deadline
  * @returns {Promise<Record<string, any> | null>}
  */
-async function resolveTikTok(url) {
-  const tikwm = await fetchJson(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`)
+async function resolveTikTok(url, deadline) {
+  const tikwm = await fetchJson(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`, deadline)
   const payload = tikwm && tikwm.data ? tikwm.data : null
   if (payload) {
     const videoUrl = payload.play || payload.wmplay || payload.hdplay || (Array.isArray(payload.videos) ? payload.videos[0] : '')
@@ -98,7 +139,7 @@ async function resolveTikTok(url) {
     }
   }
 
-  const oembed = await fetchJson(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`)
+  const oembed = await fetchJson(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, deadline)
   if (oembed && oembed.title) {
     return {
       platform: 'tiktok',
@@ -122,10 +163,11 @@ async function resolveTikTok(url) {
  * YouTube: public oEmbed returns title / author / cover but never a video stream,
  * which is a normal outcome that degrades the import to a link item.
  * @param {string} url
+ * @param {number} deadline
  * @returns {Promise<Record<string, any> | null>}
  */
-async function resolveYouTube(url) {
-  const oembed = await fetchJson(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`)
+async function resolveYouTube(url, deadline) {
+  const oembed = await fetchJson(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, deadline)
   if (!oembed) return null
   const title = asText(oembed.title)
   const coverUrl = asText(oembed.thumbnail_url)
@@ -150,10 +192,11 @@ async function resolveYouTube(url) {
 /**
  * X / Twitter: publish oEmbed returns author and post text (no media stream).
  * @param {string} url
+ * @param {number} deadline
  * @returns {Promise<Record<string, any> | null>}
  */
-async function resolveTweet(url) {
-  const oembed = await fetchJson(`https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&format=json`)
+async function resolveTweet(url, deadline) {
+  const oembed = await fetchJson(`https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&format=json`, deadline)
   if (!oembed) return null
   const authorName = asText(oembed.author_name)
   const tweetText = asText(oembed.text) || textFromHtml(oembed.html)
@@ -184,17 +227,22 @@ async function resolveTweet(url) {
  * Instagram, Facebook and Threads expose no public unauthenticated metadata
  * endpoint, so they deliberately return null here and let the caller report
  * an actionable message.
- * @param {{ platform: string, capability?: string, url: string }} params
+ * @param {{ platform: string, capability?: string, url: string, allowNetwork?: boolean }} params
  * @returns {Promise<Record<string, any> | null>}
  */
-export async function fallbackResolveSocial({ platform, capability = 'video', url }) {
+export async function fallbackResolveSocial({ platform, capability = 'video', url, allowNetwork }) {
   if (!url || typeof url !== 'string') return null
+  const networkAllowed = allowNetwork ?? isSocialFallbackEnabled()
+  if (!networkAllowed) return null
 
   const resolved = resolvePlatform(platform, url)
-  if (resolved === 'tiktok') return resolveTikTok(url)
-  if (resolved === 'youtube') return resolveYouTube(url)
-  if (resolved === 'x') return resolveTweet(url)
+  if (resolved !== 'tiktok' && resolved !== 'youtube' && resolved !== 'x') {
+    // instagram / facebook / threads / unknown: no public unauthenticated endpoint.
+    return null
+  }
 
-  // instagram / facebook / threads / unknown: no public unauthenticated endpoint.
-  return null
+  const deadline = Date.now() + FALLBACK_BUDGET_MS
+  if (resolved === 'tiktok') return resolveTikTok(url, deadline)
+  if (resolved === 'youtube') return resolveYouTube(url, deadline)
+  return resolveTweet(url, deadline)
 }

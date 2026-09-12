@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
-import { formatPlatformName } from './feed-helpers.js'
+import { buildPlatformFilterOptions, formatPlatformName, shouldShowPlatformFilter } from './feed-helpers.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { zh, en } from './locales.js'
 import { invalidateInspirationCache } from './api.js'
@@ -42,22 +42,50 @@ describe('Inspiration Platform Formatting & Dynamic Registration', () => {
     assert.equal(formatPlatformName(null, tZh), '')
   })
 
-  it('enforces UI gating rule in InspirationSection.jsx: availablePlatforms.length > 1', () => {
-    // The dropdown MUST be guarded strictly by availablePlatforms.length > 1
+  it('gates the platform filter through the predicate the section renders from', () => {
+    const tZh = (k) => zh[k] || k
+    const tEn = (k) => en[k] || k
+
+    // 0 or 1 platform: no dropdown at all. 2+: dropdown.
+    assert.equal(shouldShowPlatformFilter([]), false)
+    assert.equal(shouldShowPlatformFilter(['tiktok']), false)
+    assert.equal(shouldShowPlatformFilter(['tiktok', 'x']), true)
+    assert.equal(shouldShowPlatformFilter(undefined), false)
+    assert.equal(shouldShowPlatformFilter('tiktok'), false)
+    assert.equal(buildPlatformFilterOptions(['tiktok'], tZh), null)
+    assert.equal(buildPlatformFilterOptions([], tZh), null)
+    assert.equal(buildPlatformFilterOptions(undefined, tZh), null)
+
+    // The exact option list the dropdown renders, in both locales.
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'x'], tZh), [
+      { value: '', label: '全部平台' },
+      { value: 'tiktok', label: 'TikTok' },
+      { value: 'x', label: '推特 (X)' },
+    ])
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'x'], tEn), [
+      { value: '', label: 'All Platforms' },
+      { value: 'tiktok', label: 'TikTok' },
+      { value: 'x', label: 'Twitter (X)' },
+    ])
+    // Self-registered platforms stay selectable under the first-letter rule.
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'douyin'], tZh)[2], { value: 'douyin', label: 'Douyin' })
+  })
+
+  it('renders the dropdown from that gate and does not hand-roll the condition', () => {
     assert.match(
       sectionSrc,
-      /availablePlatforms\.length\s*>\s*1\s*&&\s*\(/,
-      'InspirationSection must conditionally render platform DropdownSelect only when availablePlatforms.length > 1',
+      /buildPlatformFilterOptions\(availablePlatforms,\s*t\)/,
+      'InspirationSection must derive the platform dropdown from buildPlatformFilterOptions',
     )
     assert.match(
       sectionSrc,
       /aria-label=\{t\('filter\.platform'\)\}/,
       'Platform DropdownSelect must carry t("filter.platform") aria-label',
     )
-    assert.match(
+    assert.doesNotMatch(
       sectionSrc,
-      /value:\s*'',\s*label:\s*t\('platform\.all'\)/,
-      'Platform DropdownSelect first option must be all platforms t("platform.all")',
+      /availablePlatforms\.length\s*>\s*1/,
+      'the gating condition must live in buildPlatformFilterOptions, not inline in the JSX',
     )
   })
 

@@ -219,6 +219,23 @@ export function hasDeconstruction(data) {
   ))
 }
 
+/**
+ * Whether the "analyze now" action can produce a breakdown.
+ *
+ * A breakdown needs a video stream, so a degraded import (`link` / `image`, the
+ * shape produced when no direct video link was resolved) must not offer the
+ * action at all — it would only ever answer 422. Video items keep it: they may
+ * already hold a local file, or `handleAnalyze` re-resolves the stream from
+ * `source_url`, which is how cloud-catalog items are analyzed.
+ * @param {unknown} item raw inspiration row
+ * @returns {boolean}
+ */
+export function canAnalyzeInspiration(item) {
+  const row = item && typeof item === 'object' ? item : {}
+  if (text(row.type) !== 'video') return false
+  return Boolean(text(row.local_paths?.video) || text(row.source_url))
+}
+
 export function scriptCopyText(data, translated) {
   if (translated && data.translationText) return data.translationText
   if (data.segments?.length) {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  canAnalyzeInspiration,
   deconstructionCopyText,
   getInspirationPreviewData,
   hasDeconstruction,
@@ -101,5 +102,36 @@ describe('inspiration preview data', () => {
     assert.equal(parsed[1].entries[2].type, 'labeled')
     assert.equal(parsed[1].entries[2].label, '转化目标')
     assert.equal(parsed[1].entries[2].desc, '强化品牌功效心智')
+  })
+})
+
+describe('canAnalyzeInspiration — degraded items must not offer a failing action (P1-2)', () => {
+  it('hides the action for a link or image item, which has no video stream', () => {
+    assert.equal(canAnalyzeInspiration({ type: 'link', source_url: 'https://youtu.be/abc' }), false)
+    assert.equal(canAnalyzeInspiration({ type: 'image', source_url: 'https://www.instagram.com/p/C1/' }), false)
+    assert.equal(canAnalyzeInspiration({ type: 'link', local_paths: { cover: '/tmp/c.jpg' } }), false)
+  })
+
+  it('keeps the action for a video item with a local file', () => {
+    assert.equal(canAnalyzeInspiration({
+      type: 'video',
+      source_url: 'https://x.com/a/status/1',
+      local_paths: { video: '/tmp/v.mp4' },
+    }), true)
+  })
+
+  it('keeps the action for a video item the backend can still re-resolve from its url', () => {
+    // Cloud-catalog video items carry no `local_paths`; `handleAnalyze` downloads
+    // the stream from `source_url` before decomposing it.
+    assert.equal(canAnalyzeInspiration({ type: 'video', source_url: 'https://www.tiktok.com/@a/video/1' }), true)
+    assert.equal(canAnalyzeInspiration({ type: 'video', source_url: 'https://x.com/a/status/1', local_paths: {} }), true)
+  })
+
+  it('hides the action when nothing can produce a video at all', () => {
+    assert.equal(canAnalyzeInspiration({ type: 'video' }), false)
+    assert.equal(canAnalyzeInspiration({ type: 'video', source_url: '' }), false)
+    assert.equal(canAnalyzeInspiration({}), false)
+    assert.equal(canAnalyzeInspiration(null), false)
+    assert.equal(canAnalyzeInspiration(undefined), false)
   })
 })

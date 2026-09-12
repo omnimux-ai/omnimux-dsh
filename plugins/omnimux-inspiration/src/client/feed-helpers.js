@@ -5,6 +5,7 @@ import {
   pickCoverSrc,
   setInspirationCache,
 } from './api.js'
+import { zh } from './locales.js'
 
 /**
  * Construct SWR-style cache key for inspiration query parameters.
@@ -110,16 +111,6 @@ export function extractLocalItemIds(items) {
   return (items || []).filter((it) => it.is_local).map((it) => it.id)
 }
 
-const PLATFORM_DISPLAY_NAMES = {
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-  youtube: 'YouTube',
-  x: 'X',
-  twitter: 'X',
-  facebook: 'Facebook',
-  threads: 'Threads',
-}
-
 /** Canonical locale key for a platform slug; `twitter` is an alias of `x`. */
 const PLATFORM_LOCALE_KEYS = {
   x: 'x',
@@ -129,10 +120,9 @@ const PLATFORM_LOCALE_KEYS = {
 /**
  * Human-readable platform label.
  *
- * Known platforms use their canonical casing; anything self-registered keeps the
- * first-letter-capitalized rule. A `translate` function (the section's `t`) may
- * override the label through the `platform.<name>` locale key; the `twitter`
- * alias resolves to the same entry as `x`.
+ * The `platform.<slug>` locale table is the only source of these names (the
+ * backend reads the same table), so no second table can drift from it. Anything
+ * self-registered keeps the first-letter-capitalized rule.
  * @param {unknown} platform
  * @param {(key: string) => string} [translate]
  * @returns {string}
@@ -140,15 +130,44 @@ const PLATFORM_LOCALE_KEYS = {
 export function formatPlatformName(platform, translate) {
   const raw = typeof platform === 'string' ? platform.trim() : ''
   if (!raw) return ''
-  const key = raw.toLowerCase()
-  const localeKey = PLATFORM_LOCALE_KEYS[key] || key
+  const localeKey = PLATFORM_LOCALE_KEYS[raw.toLowerCase()] || raw.toLowerCase()
   if (typeof translate === 'function') {
     const messageKey = `platform.${localeKey}`
     const localized = translate(messageKey)
     if (typeof localized === 'string' && localized && localized !== messageKey) return localized
   }
-  if (PLATFORM_DISPLAY_NAMES[key]) return PLATFORM_DISPLAY_NAMES[key]
+  const fromLocale = zh[`platform.${localeKey}`]
+  if (typeof fromLocale === 'string' && fromLocale) return fromLocale
   return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
+/**
+ * UI gating rule for the platform filter: a dropdown that can only select one
+ * value carries no information, so it is rendered from two platforms upwards.
+ * @param {unknown} availablePlatforms
+ * @returns {boolean}
+ */
+export function shouldShowPlatformFilter(availablePlatforms) {
+  return Array.isArray(availablePlatforms) && availablePlatforms.length > 1
+}
+
+/**
+ * Options for the platform filter dropdown, or null when the gate hides it.
+ * This is the exact list `InspirationSection` renders, so gating can be verified
+ * without reading the component source.
+ * @param {unknown} availablePlatforms
+ * @param {(key: string) => string} translate
+ * @returns {Array<{ value: string, label: string }> | null}
+ */
+export function buildPlatformFilterOptions(availablePlatforms, translate) {
+  if (!shouldShowPlatformFilter(availablePlatforms)) return null
+  return [
+    { value: '', label: translate('platform.all') },
+    ...availablePlatforms.map((plat) => ({
+      value: plat,
+      label: formatPlatformName(plat, translate),
+    })),
+  ]
 }
 
 export function updateItemInList(items, updatedItem) {

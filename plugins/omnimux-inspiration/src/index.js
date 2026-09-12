@@ -1,8 +1,9 @@
 import { resolveInspirationPaths } from './paths.js'
 import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher, formatErrorMessage, readJsonBody, sendJson } from './http-routes.js'
-import { capabilityOf } from './http-handlers.js'
+import { capabilityOf, parseSocialMeta } from './http-handlers.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
+import { zh } from './client/locales.js'
 
 export const name = 'omnimux-inspiration'
 export const inject = ['tools']
@@ -42,45 +43,43 @@ const jsonOut = {
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
 }
 
-/** Platforms the OmniMux cloud catalog has no (platform, capability) pair for. */
-const CLOUD_UNSUPPORTED_PLATFORMS = new Set(['facebook', 'threads'])
-
 /**
- * Display names for Chinese-language failure messages. Must stay aligned with
- * the client's `platform.<key>` locale entries so one product does not name a
- * platform two ways.
+ * Platforms the OmniMux cloud catalog serves. Everything else (Facebook,
+ * Threads, a self-registered domain slug) has no `(platform, capability)` pair,
+ * so the cloud call is skipped and the user gets an actionable message instead
+ * of an internal `unsupported social data pair …` error.
  */
-const PLATFORM_DISPLAY_NAMES = {
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-  youtube: 'YouTube',
-  x: '推特 (X)',
-  facebook: 'Facebook',
-  threads: 'Threads',
-}
+const SUPPORTED_CLOUD_PLATFORMS = new Set(['tiktok', 'instagram', 'youtube', 'x'])
 
 const SUPPORTED_PLATFORM_HINT = 'TikTok / Instagram / YouTube / X'
 
 /**
  * Human-readable label for a platform slug, falling back to the slug itself.
+ *
+ * The client locale table is the single source of truth for these names, so the
+ * failure message and the platform filter can never disagree about a platform.
  * @param {string} platform
  * @returns {string}
  */
 export function platformDisplayName(platform) {
   const key = typeof platform === 'string' ? platform.trim().toLowerCase() : ''
   if (!key) return ''
-  return PLATFORM_DISPLAY_NAMES[key] || key
+  const localized = zh[`platform.${key}`]
+  return typeof localized === 'string' && localized ? localized : key
 }
 
 /**
- * A cloud/fallback social response carries usable metadata when `data` is a
- * non-empty object. Field-level validity is judged in `parseSocialMeta`, so no
- * field sniffing happens here (platform envelopes are not flat).
+ * Whether a cloud/fallback social response carries usable content.
+ *
+ * `parseSocialMeta` is the single judge of that: the hub answers with an empty
+ * sentinel (`{ text: null }`) when it has no content, and a key-count check would
+ * count that sentinel as success and permanently skip the local fallback.
  * @param {unknown} data
  * @returns {boolean}
  */
-function hasSocialPayload(data) {
-  return Boolean(data) && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0
+export function hasSocialPayload(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
+  return parseSocialMeta(data).has_metadata
 }
 
 async function runFallback(fallback, params) {
@@ -110,17 +109,16 @@ function socialFailureMessage({ platform, cloudUnsupported, cloudError, toolRead
 /**
  * Build the social fetcher consumed by the import pipeline.
  *
- * Order: cloud `omnimux_social_data` (skipped for platforms the catalog does
- * not serve) → public no-key fallback resolver → actionable error that names
- * the real reason instead of a generic "check the link or network".
+ * Order: cloud `omnimux_social_data` (only for platforms the catalog serves) →
+ * public no-key fallback resolver → actionable error that names the real reason
+ * instead of a generic "check the link or network".
  * @param {{ getTool?: (name: string) => any, fallback?: Function }} [deps]
  */
 export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial } = {}) {
   return async function socialFetcher({ platform, capability, url }) {
-    const cloudUnsupported = CLOUD_UNSUPPORTED_PLATFORMS.has(platform)
-    const cloudSkipped = cloudUnsupported || !platform || platform === 'unknown'
+    const cloudUnsupported = !SUPPORTED_CLOUD_PLATFORMS.has(platform)
     const resolvedCapability = capability || capabilityOf(platform)
-    const socialDataTool = cloudSkipped || typeof getTool !== 'function' ? undefined : getTool('omnimux_social_data')
+    const socialDataTool = cloudUnsupported || typeof getTool !== 'function' ? undefined : getTool('omnimux_social_data')
     const toolReady = Boolean(socialDataTool && typeof socialDataTool.execute === 'function')
     let cloudError = null
 

@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher, detectPlatformFromUrl } from './http-routes.js'
-import { createSocialFetcher, platformDisplayName } from './index.js'
-import { fallbackResolveSocial } from './scraper-fallback.js'
-import { zh } from './client/locales.js'
+import { createSocialFetcher, hasSocialPayload, platformDisplayName } from './index.js'
+import { FALLBACK_SWITCH_ENV, fallbackResolveSocial, isSocialFallbackEnabled } from './scraper-fallback.js'
+import { formatPlatformName } from './client/feed-helpers.js'
+import { en, zh } from './client/locales.js'
 
 const X_VIDEO_ENVELOPE = {
   platform: 'x',
@@ -213,6 +214,7 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
           return X_VIDEO_ENVELOPE
         },
       }),
+      fallback: async () => null,
     })
 
     const res = await socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/1' })
@@ -225,6 +227,7 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
     let calls = 0
     const socialFetcher = createSocialFetcher({
       getTool: () => ({ async execute() { calls += 1; return { data: {} } } }),
+      fallback: async () => null,
     })
 
     await assert.rejects(
@@ -244,6 +247,7 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
     let calls = 0
     const socialFetcher = createSocialFetcher({
       getTool: () => ({ async execute() { calls += 1; return { data: {} } } }),
+      fallback: async () => null,
     })
 
     await assert.rejects(
@@ -259,13 +263,48 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
   })
 
   it('keeps the backend Chinese platform label aligned with the client locale', () => {
-    for (const platform of ['x', 'tiktok', 'instagram', 'youtube', 'facebook', 'threads']) {
+    const known = ['x', 'tiktok', 'instagram', 'youtube', 'facebook', 'threads']
+    for (const platform of known) {
       assert.equal(platformDisplayName(platform), zh[`platform.${platform}`])
+      // The client formatter must resolve the same locale entry — one table, two consumers.
+      assert.equal(formatPlatformName(platform, (key) => zh[key] || key), zh[`platform.${platform}`])
+      assert.equal(formatPlatformName(platform), zh[`platform.${platform}`])
+      assert.equal(typeof en[`platform.${platform}`], 'string')
     }
     assert.equal(platformDisplayName('X'), '推特 (X)')
     assert.equal(platformDisplayName('  threads  '), 'Threads')
     assert.equal(platformDisplayName('somecdn.example'), 'somecdn.example')
     assert.equal(platformDisplayName(''), '')
+    // Every `platform.*` key of either table resolves, so a new platform cannot be
+    // added on one side only.
+    const zhPlatformKeys = Object.keys(zh).filter((key) => key.startsWith('platform.')).sort()
+    const enPlatformKeys = Object.keys(en).filter((key) => key.startsWith('platform.')).sort()
+    assert.deepEqual(zhPlatformKeys, enPlatformKeys)
+    for (const key of zhPlatformKeys) {
+      const slug = key.slice('platform.'.length)
+      if (slug === 'all' || slug === 'local') continue
+      assert.equal(platformDisplayName(slug), zh[key])
+      assert.equal(formatPlatformName(slug, (k) => en[k] || k), en[key])
+    }
+  })
+
+  it('reports a self-registered platform through the whitelist, not an internal cloud error', async () => {
+    let calls = 0
+    const socialFetcher = createSocialFetcher({
+      getTool: () => ({ async execute() { calls += 1; return { data: { title: 'should not run' } } } }),
+      fallback: async () => null,
+    })
+
+    await assert.rejects(
+      () => socialFetcher({ platform: 'bilibili', capability: 'video', url: 'https://www.bilibili.com/video/BV1' }),
+      (err) => {
+        assert.match(err.message, /bilibili 暂不支持云端解析/)
+        assert.match(err.message, /TikTok \/ Instagram \/ YouTube \/ X/)
+        assert.doesNotMatch(err.message, /unsupported social data pair/)
+        return true
+      },
+    )
+    assert.equal(calls, 0)
   })
 
   it('surfaces the cloud error detail unchanged', async () => {
@@ -277,6 +316,7 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
           throw failure
         },
       }),
+      fallback: async () => null,
     })
 
     await assert.rejects(
@@ -348,6 +388,7 @@ describe('social import — Facebook / Threads without a cloud capability', () =
     let calls = 0
     const socialFetcher = createSocialFetcher({
       getTool: () => ({ async execute() { calls += 1; return { data: {} } } }),
+      fallback: async () => null,
     })
 
     const { res } = await importUrl({
@@ -363,7 +404,7 @@ describe('social import — Facebook / Threads without a cloud capability', () =
   })
 
   it('returns an actionable 502 for a Threads link without crashing', async () => {
-    const socialFetcher = createSocialFetcher({ getTool: () => undefined })
+    const socialFetcher = createSocialFetcher({ getTool: () => undefined, fallback: async () => null })
 
     const { res } = await importUrl({
       socialFetcher,
@@ -394,5 +435,174 @@ describe('fallbackResolveSocial — platforms without a public endpoint', () => 
   it('returns null for unusable input instead of throwing', async () => {
     assert.equal(await fallbackResolveSocial({ platform: 'tiktok', url: '' }), null)
     assert.equal(await fallbackResolveSocial({ platform: 'tiktok', url: undefined }), null)
+  })
+
+  it('keeps every request on this machine when the local switch is off', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => {
+      throw new Error('network access is not allowed in this test')
+    }
+    try {
+      assert.equal(await fallbackResolveSocial({ platform: 'tiktok', url: 'https://www.tiktok.com/@a/video/1', allowNetwork: false }), null)
+      assert.equal(await fallbackResolveSocial({ platform: 'youtube', url: 'https://youtu.be/abc', allowNetwork: false }), null)
+      assert.equal(await fallbackResolveSocial({ platform: 'x', url: 'https://x.com/a/status/1', allowNetwork: false }), null)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('reads the local egress switch from the environment', () => {
+    assert.equal(isSocialFallbackEnabled({}), true)
+    assert.equal(isSocialFallbackEnabled({ [FALLBACK_SWITCH_ENV]: '' }), true)
+    assert.equal(isSocialFallbackEnabled({ [FALLBACK_SWITCH_ENV]: 'on' }), true)
+    for (const off of ['off', 'OFF', '0', 'false', 'no', ' off ']) {
+      assert.equal(isSocialFallbackEnabled({ [FALLBACK_SWITCH_ENV]: off }), false, `${off} must disable egress`)
+    }
+  })
+})
+
+describe('createSocialFetcher — hub empty sentinel (P0-1 regression)', () => {
+  it('treats `{ text: null }` as no content and still runs the local fallback', async () => {
+    let fallbackCalls = 0
+    const socialFetcher = createSocialFetcher({
+      getTool: () => ({ async execute() { return { platform: 'x', capability: 'tweet', data: { text: null } } } }),
+      fallback: async () => {
+        fallbackCalls += 1
+        return { platform: 'x', capability: 'tweet', data: { text: 'oEmbed 文案', author: { name: 'X 作者' } } }
+      },
+    })
+
+    const res = await socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/9' })
+
+    assert.equal(fallbackCalls > 0, true)
+    assert.equal(res.data.text, 'oEmbed 文案')
+  })
+
+  it('classifies every empty sentinel shape as content-free', () => {
+    assert.equal(hasSocialPayload({ text: null }), false)
+    assert.equal(hasSocialPayload({ text: null, video_url: null, title: '' }), false)
+    assert.equal(hasSocialPayload({}), false)
+    assert.equal(hasSocialPayload(null), false)
+    assert.equal(hasSocialPayload(undefined), false)
+    assert.equal(hasSocialPayload([]), false)
+    assert.equal(hasSocialPayload('text'), false)
+    assert.equal(hasSocialPayload({ text: 'real content' }), true)
+    assert.equal(hasSocialPayload(X_VIDEO_ENVELOPE.data), true)
+  })
+
+  it('imports the fallback result instead of failing the whole import', async () => {
+    const sentinelTmp = mkdtempSync(join(tmpdir(), 'omnimux-sentinel-'))
+    try {
+      const socialFetcher = createSocialFetcher({
+        getTool: () => ({ async execute() { return { platform: 'x', capability: 'tweet', data: { text: null } } } }),
+        fallback: async () => ({ platform: 'x', capability: 'tweet', data: { title: 'oEmbed 标题', text: 'oEmbed 文案' } }),
+      })
+      const { res } = await importUrl({
+        socialFetcher,
+        paths: makePaths(sentinelTmp),
+        url: 'https://x.com/creator/status/777',
+      })
+
+      assert.equal(res.status, 200)
+      assert.equal(res.body.media_degraded, true)
+      assert.equal(res.body.data.content, 'oEmbed 文案')
+    } finally {
+      rmSync(sentinelTmp, { recursive: true, force: true })
+    }
+  })
+
+  it('reports no content when neither the cloud nor the fallback has any', async () => {
+    const socialFetcher = createSocialFetcher({
+      getTool: () => ({ async execute() { return { data: { text: null } } } }),
+      fallback: async () => null,
+    })
+
+    await assert.rejects(
+      () => socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/10' }),
+      /未从该链接解析到内容，请确认链接是公开可访问的帖子\/视频/,
+    )
+  })
+})
+
+describe('social import — upgrading a degraded record (P1-3)', () => {
+  const X_URL = 'https://x.com/creator/status/4242'
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-upgrade-'))
+    paths = makePaths(tmp)
+  })
+
+  after(() => {
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  const degradedFetcher = async () => ({
+    platform: 'x',
+    capability: 'tweet',
+    data: { text: '纯文字推文，没有视频', cover_url: 'https://pbs.twimg.com/media/old-cover.jpg' },
+  })
+
+  it('re-resolves a degraded link instead of locking it behind 409', async () => {
+    const first = await importUrl({ socialFetcher: degradedFetcher, paths, url: X_URL })
+    assert.equal(first.res.status, 200)
+    assert.equal(first.res.body.data.type, 'link')
+    const oldCover = first.res.body.data.local_paths.cover
+    assert.ok(oldCover && existsSync(oldCover))
+
+    const second = await importUrl({ socialFetcher: async () => X_VIDEO_ENVELOPE, paths, url: X_URL })
+
+    assert.equal(second.res.status, 200)
+    assert.equal(second.res.body.media_degraded, undefined)
+    assert.equal(second.res.body.data.type, 'video')
+    assert.equal(second.res.body.data.id, first.res.body.data.id)
+    assert.ok(existsSync(second.res.body.data.local_paths.video))
+    // The superseded cover is recycled, so the upgrade leaves no orphan file.
+    assert.equal(existsSync(oldCover), false)
+    assert.equal(second.store.list().total, 1)
+  })
+
+  it('keeps the id, creation time and favorite flag through the upgrade', async () => {
+    const first = await importUrl({ socialFetcher: degradedFetcher, paths, url: X_URL })
+    const { id, created_at: createdAt } = first.res.body.data
+    createLocalStore({ paths }).update(id, { is_favorite: true })
+
+    const second = await importUrl({ socialFetcher: async () => X_VIDEO_ENVELOPE, paths, url: X_URL })
+
+    assert.equal(second.res.body.data.id, id)
+    assert.equal(second.res.body.data.created_at, createdAt)
+    assert.equal(second.res.body.data.is_favorite, true)
+  })
+
+  it('still answers 409 for a duplicate that already holds a video', async () => {
+    const first = await importUrl({ socialFetcher: async () => X_VIDEO_ENVELOPE, paths, url: X_URL })
+    assert.equal(first.res.body.data.type, 'video')
+
+    const second = await importUrl({ socialFetcher: async () => X_VIDEO_ENVELOPE, paths, url: X_URL })
+
+    assert.equal(second.res.status, 409)
+    assert.equal(second.res.body.is_duplicate, true)
+    assert.equal(second.res.body.upgradable, false)
+    assert.equal(second.res.body.data.id, first.res.body.data.id)
+  })
+
+  it('replaces the row on a forced re-import and recycles the previous media (P3-5 fix)', async () => {
+    const first = await importUrl({ socialFetcher: async () => X_VIDEO_ENVELOPE, paths, url: X_URL })
+    const previousVideo = first.res.body.data.local_paths.video
+    assert.ok(existsSync(previousVideo))
+
+    const second = await importUrl({
+      socialFetcher: async () => X_VIDEO_ENVELOPE,
+      paths,
+      url: X_URL,
+      body: { force: true },
+    })
+
+    assert.equal(second.res.status, 200)
+    assert.equal(second.res.body.data.id, first.res.body.data.id)
+    assert.notEqual(second.res.body.data.local_paths.video, previousVideo)
+    assert.equal(existsSync(previousVideo), false)
+    assert.equal(second.store.list().total, 1)
   })
 })
