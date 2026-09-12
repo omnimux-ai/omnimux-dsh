@@ -31,8 +31,6 @@
       EXPERT_STATUS_CONFIG,
       resolveIntroTexts,
       extractItemSourceKey,
-      handleMoveToTop,
-      handleResetOrder,
       executeToggleExpert,
       updatePlazaItemInstalled,
       handleSwitchToggle,
@@ -160,19 +158,14 @@
     }
 
     function renderFeaturedSection(opts) {
-      const { featuredItems, customOrder, onResetOrder, tr, setOpen, onMoveToTop } = opts;
+      const { featuredItems, tr, setOpen } = opts;
       if (!featuredItems || !(featuredItems.length > 0)) return null;
-      const hasCustom = customOrder && customOrder.length;
-      const resetBtnStyle = { background: "transparent", border: "1px solid var(--dsw-alias-border-subtle, rgba(255,255,255,.12))", borderRadius: "6px", fontSize: "12px", color: "var(--dsw-alias-label-secondary, #cbd5e1)", padding: "3px 8px", cursor: "pointer" };
       return h("section", { className: "featured-section" },
         h("div", { className: "featured-title-bar", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" } },
           h("h2", { className: "featured-title", style: { margin: 0 } }, tr("workshop.featuredTitle") || "官方精选"),
-          hasCustom ?
-            // exempt-ui01 reset order button
-            h("button", { type: "button", className: "btn-reset-order", style: resetBtnStyle, onClick: onResetOrder }, tr("workshop.resetOrder") || "恢复默认排序") : null,
         ),
         h("div", { className: "featured-grid" },
-          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession, iconSrc, h })),
+          featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession, iconSrc, h })),
         ),
       );
     }
@@ -267,8 +260,6 @@
       const filteredMine = filterMineItems(state.installedItems, { category: state.category, presetBinding, mineCategory: state.mineCategory, mineSource: state.mineSource, searchQuery: state.searchQuery });
       const availableSources = Array.from(new Set(state.installedItems.map(extractItemSourceKey).filter(Boolean)));
       const workshopCategories = buildWorkshopCategories(presetBinding, tr);
-      const onMoveToTop = (targetId) => handleMoveToTop(targetId, featuredItems, state, opts.apiFn);
-      const onResetOrder = () => handleResetOrder(state, opts.apiFn);
       const onOpenInstall = () => state.setOpenInstallModal(true);
       const onSearchSubmit = () => { state.setSubmitted(state.searchQuery); state.setPage(1); };
       const tabContentOpts = {
@@ -277,7 +268,7 @@
         onMore: () => state.setPage(state.page + 1),
         featuredItems,
         mineToolbarOpts: { mineCategory: state.mineCategory, setMineCategory: state.setMineCategory, mineSource: state.mineSource, setMineSource: state.setMineSource, availableSources, autoUpdate: state.autoUpdate, setAutoUpdate: state.setAutoUpdate, tr },
-        featuredSectionOpts: { featuredItems, customOrder: state.customOrder, onResetOrder, tr, setOpen: state.setOpen, onMoveToTop },
+        featuredSectionOpts: { featuredItems, tr, setOpen: state.setOpen },
         regularSectionOpts: { hasQuery, regularItems, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
       };
       return {

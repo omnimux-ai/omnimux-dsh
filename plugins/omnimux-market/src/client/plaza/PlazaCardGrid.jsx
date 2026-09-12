@@ -83,19 +83,14 @@ export function renderMineCard(item, ...args) {
 
 export function renderFeaturedSection(opts) {
   const h = getH(opts);
-  const { featuredItems, customOrder, onResetOrder, tr, setOpen, onMoveToTop } = opts;
+  const { featuredItems, tr, setOpen } = opts;
   if (!featuredItems || !(featuredItems.length > 0)) return null;
-  const hasCustom = customOrder && customOrder.length;
-  const resetBtnStyle = { background: 'transparent', border: '1px solid var(--dsw-alias-border-subtle, rgba(255,255,255,.12))', borderRadius: '6px', fontSize: '12px', color: 'var(--dsw-alias-label-secondary, #cbd5e1)', padding: '3px 8px', cursor: 'pointer' };
   return h('section', { className: 'featured-section' },
     h('div', { className: 'featured-title-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' } },
       h('h2', { className: 'featured-title', style: { margin: 0 } }, tr('workshop.featuredTitle') || '官方精选'),
-      hasCustom ?
-        // exempt-ui01 reset order button
-        h('button', { type: 'button', className: 'btn-reset-order', style: resetBtnStyle, onClick: onResetOrder }, tr('workshop.resetOrder') || '恢复默认排序') : null,
     ),
     h('div', { className: 'featured-grid' },
-      featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onPin: onMoveToTop, onTry: safeTrySkillInSession })),
+      featuredItems.map((item) => renderFeaturedCard(item, { tr, onOpen: setOpen, onTry: safeTrySkillInSession })),
     ),
   );
 }
