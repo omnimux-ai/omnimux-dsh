@@ -20,7 +20,36 @@ import { RivalStoreError } from './rival-accounts-store.js'
 import { RIVAL_ERROR_CODES, DEFAULT_COVER_EXT } from './constants.js'
 import { downloadMedia } from '../downloader.js'
 
-export const RIVAL_PREFIX = '/omnimux/inspiration/local/rival-accounts'
+/**
+ * Last path segment of this module's prefix, and the only place it is written.
+ *
+ * The boundary is single-sourced because the inspiration router *also* matches
+ * everything under `/omnimux/inspiration/local`: `/rival-accounts/...` and
+ * `/rival-accounts` are otherwise claimable by that router, which reads the
+ * first segment as an item id (`parseItemId`). A deployment that assigns the
+ * two prefixes from two different literals is what silently swallows the whole
+ * module into the inspiration router's `not found` branch.
+ */
+export const RIVAL_BOUNDARY = 'rival-accounts'
+
+export const RIVAL_PREFIX = `/omnimux/inspiration/local/${RIVAL_BOUNDARY}`
+
+/**
+ * Whether a pathname belongs to this module's prefix.
+ *
+ * The check is segment-exact: `/rival-accounts` and every path below it match,
+ * while a look-alike such as `/rival-accounts-extra` does not. Both routers
+ * need this same answer, so it lives beside the prefix rather than being
+ * re-derived per call site.
+ * @param {unknown} pathname
+ * @returns {boolean}
+ */
+export function isRivalPath(pathname) {
+  if (typeof pathname !== 'string') return false
+  if (!pathname.startsWith(RIVAL_PREFIX)) return false
+  const rest = pathname.slice(RIVAL_PREFIX.length)
+  return rest === '' || rest.startsWith('/')
+}
 
 /** Codes the client maps to an actionable message. */
 const CODE_MESSAGES = {
@@ -326,6 +355,16 @@ export function createRivalDispatcher(deps) {
 
   return {
     dispatch,
+    /**
+     * Whether a pathname belongs to this dispatcher.
+     *
+     * Exposed so the inspiration dispatcher — which owns the parent prefix —
+     * can hand the rival segment over *before* its own route table sees it,
+     * without importing this module or re-deriving the boundary.
+     * @param {unknown} pathname
+     * @returns {boolean}
+     */
+    owns: isRivalPath,
     adoptDownloadedFile,
     /** @param {string} file @returns {string} */
     readMediaFile(file) {
