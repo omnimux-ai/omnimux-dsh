@@ -206,7 +206,7 @@ function resolvePopoverSurface(anchor: HTMLElement | null): string {
 }
 
 /** 三列全开时的最大宽度；定位锚点固定按它钳制，避免列数变化导致浮层横移。 */
-const POPOVER_MAX_WIDTH = 786;
+const POPOVER_MAX_WIDTH = 814;
 
 const PANEL_STYLE: React.CSSProperties = {
   // 底色由调用处按画布真实表面色覆盖（见 resolvePopoverSurface）；
@@ -556,25 +556,18 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         ? createPortal(
           <div
             ref={popoverRef}
-            className="wf-model-cascade-popover wf-model-cascade-fade nodrag nopan"
+            className="wf-model-cascade-popover wf-loomi-popover nodrag nopan"
             role="menu"
             aria-label="选择模型与渠道策略"
             onMouseLeave={handlePopoverLeave}
             style={{
-              position: 'fixed',
-              background: 'var(--wb-surface-elevated, var(--dsw-alias-bg-elevated))',
               bottom: popoverPos.bottom,
               left: popoverPos.left,
-              display: 'flex',
-              gap: 8,
-              zIndex: 10000,
-              alignItems: 'flex-start',
-              userSelect: 'none',
             }}
           >
-            {/* 栏 1：品牌（悬停即切换二级，点击固定当前列） */}
-            <div role="group" aria-label="选择品牌" style={{ ...PANEL_STYLE, width: 160, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 4, background: popoverSurface }}>
-              <div style={{ padding: '4px 8px', fontSize: 11, color: 'var(--dsw-alias-label-secondary)', fontWeight: 500 }}>
+            {/* 栏 1：品牌（168px x 360px，悬停即切换二级，点击固定当前列） */}
+            <div role="group" aria-label="选择品牌" className="wf-loomi-col wf-loomi-col--brand">
+              <div className="wf-loomi-section-title">
                 选择模型
               </div>
               {brandList.map((brand) => {
@@ -589,21 +582,18 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     data-testid={`wf-cascade-brand-${brand.id}`}
                     onMouseEnter={() => handleBrandHover(brand.id)}
                     onClick={() => handleBrandClick(brand.id)}
-                    className={`wf-cascade-row wf-cascade-brand-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
-                    style={{
-                      fontWeight: isSelected ? 600 : 400,
-                    }}
+                    className={`wf-cascade-brand-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
                   >
-                    <ModelBrandIcon modelId={brand.iconModelId} size={16} />
+                    <ModelBrandIcon modelId={brand.iconModelId} size={18} />
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</span>
-                    {isSelected ? <Check size={14} color="var(--dsw-alias-brand-primary)" /> : null}
+                    {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
                   </button>
                 );
               })}
             </div>
 
-            {/* 栏 2：型号（悬停即预览三级） */}
-            <div role="group" aria-label="选择模型版本" style={{ ...PANEL_STYLE, width: 230, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 8, background: popoverSurface }}>
+            {/* 栏 2：型号（230px x 360px，悬停即预览三级） */}
+            <div role="group" aria-label="选择模型版本" className="wf-loomi-col wf-loomi-col--model">
               {shownModels.map((item) => {
                 const isSelected = activeModelId === item.id;
                 const isHovered = hoverModelId === item.id;
@@ -616,13 +606,13 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                     data-testid={`wf-cascade-model-${item.id}`}
                     onMouseEnter={() => handleModelHover(item.id)}
                     onClick={() => handleSelectModel(item.id)}
-                    className={`wf-cascade-row wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
+                    className={`wf-cascade-model-item ${isSelected ? 'is-selected' : ''} ${isHovered ? 'is-hovered' : ''}`}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                       <span className="wf-cascade-model-item__title">
                         {item.name || item.id}
                       </span>
-                      {isSelected ? <Check size={14} color="var(--dsw-alias-brand-primary)" /> : null}
+                      {isSelected ? <Check size={15} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
                     </div>
                     {item.description ? (
                       <div className="wf-cascade-model-item__desc">
@@ -634,25 +624,25 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
               })}
             </div>
 
-            {/* 栏 3：渠道策略（选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
+            {/* 栏 3：渠道策略（400px，选中链可见可交互；悬停其他品牌时隐藏，悬停其型号时只读预览） */}
             {showChannelColumn ? (
               <div
                 role="group"
                 aria-label="选择渠道策略"
-                style={{ ...PANEL_STYLE, width: 380, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, background: popoverSurface }}
+                className="wf-loomi-col wf-loomi-col--channel"
               >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dsw-alias-text-primary)' }}>选择渠道策略</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary)', padding: '2px 4px' }}>选择渠道策略</div>
 
                 {channelGroups.length === 0 ? (
-                  <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', padding: '4px' }}>
                     该模型尚未配置渠道分组，请求将按模型默认通道执行。
                   </div>
                 ) : (
                   <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div className="wf-cascade-strategy-grid">
                       {([
-                        { id: 'stability_first' as const, label: '稳定性优先', icon: <ShieldCheck size={15} /> },
-                        { id: 'cost_first' as const, label: '低价优先', icon: <Percent size={14} /> },
+                        { id: 'stability_first' as const, label: '稳定性优先', icon: <ShieldCheck size={16} /> },
+                        { id: 'cost_first' as const, label: '低价优先', icon: <Percent size={15} /> },
                       ]).map((option) => {
                         const isActive = activeStrategy === option.id;
                         return (
@@ -667,18 +657,18 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                             className={`wf-cascade-strategy-btn ${isActive ? 'is-active' : ''}`}
                           >
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ color: isActive ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)', display: 'inline-flex' }}>
+                              <span style={{ color: isActive ? 'rgb(0, 230, 118)' : 'var(--dsw-alias-label-secondary)', display: 'inline-flex' }}>
                                 {option.icon}
                               </span>
                               {option.label}
                             </span>
-                            {isActive ? <Check size={13} color="var(--dsw-alias-brand-primary)" /> : null}
+                            {isActive ? <Check size={14} color="rgb(0, 230, 118)" strokeWidth={2.5} /> : null}
                           </button>
                         );
                       })}
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
+                    <div className="wf-cascade-channel-list">
                       {channelGroups.map((group) => (
                         <ChannelRow
                           key={group.id}
@@ -695,8 +685,8 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        paddingTop: 8,
-                        borderTop: '1px solid var(--dsw-alias-border-subtle)',
+                        paddingTop: 10,
+                        borderTop: '1px solid rgba(255, 255, 255, 0.10)',
                       }}
                     >
                       {isChannelPreview ? (
@@ -708,7 +698,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                           <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
                             已选 {selectedCount}/{channelGroups.length} 个
                           </div>
-                          <div style={{ display: 'flex', gap: 12 }}>
+                          <div style={{ display: 'flex', gap: 14 }}>
                             <button
                               type="button"
                               onClick={() => {
@@ -722,7 +712,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                             <button
                               type="button"
                               onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
-                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-text-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                             >
                               全选
                             </button>

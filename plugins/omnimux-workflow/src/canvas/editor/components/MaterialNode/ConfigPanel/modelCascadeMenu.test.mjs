@@ -99,7 +99,7 @@ describe('ModelCascadeMenu source contracts', () => {
     // 底色来自打开时解析的画布真实表面色，不依赖主题作用域、也不再需要模糊。
     assert.match(cascadeSrc, /resolvePopoverSurface\(triggerRef\.current\)/);
     assert.match(cascadeSrc, /--wb-surface-elevated/);
-    assert.match(cascadeSrc, /background: popoverSurface/);
+    assert.match(cascadeSrc, /wf-loomi-col/);
     assert.doesNotMatch(cascadeSrc, /backdropFilter/);
   });
 
@@ -111,7 +111,7 @@ describe('ModelCascadeMenu source contracts', () => {
   });
 
   it('keeps the popover anchor fixed so a revealed column cannot move the menu under the cursor', () => {
-    assert.match(cascadeSrc, /POPOVER_MAX_WIDTH = 786/);
+    assert.match(cascadeSrc, /POPOVER_MAX_WIDTH = 814/);
     assert.doesNotMatch(cascadeSrc, /panelWidth/, 'positioning must not depend on the visible column count');
   });
 
