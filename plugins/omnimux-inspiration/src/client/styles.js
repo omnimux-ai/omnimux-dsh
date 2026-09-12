@@ -463,6 +463,52 @@ export const INSPIRATION_CSS = `
   opacity: 0;
   pointer-events: none;
 }
+/* 导入进行中的卡片保持扫光脉动，让“还没结束”在缩略图上也能看出来 */
+.omnimux-inspiration-card-shimmer.is-importing::after {
+  animation-duration: 1s;
+}
+.omnimux-inspiration-badge-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  max-width: calc(100% - 20px);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.omnimux-inspiration-badge-status.is-failed {
+  background: var(--dsw-alias-state-error-secondary, rgba(220, 68, 68, 0.18));
+  color: var(--dsw-alias-state-error-primary, #f26d6d);
+  border-color: var(--dsw-alias-state-error-primary, #f26d6d);
+}
+/* 卡片上的失败/降级原因：贴在封面顶部，与居中的状态胶囊分层，不遮挡 CTA */
+.omnimux-inspiration-card-error {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 3;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-secondary, rgba(0, 0, 0, 0.62));
+  color: var(--dsw-alias-label-secondary, #d4d4d4);
+  font-size: 11px;
+  line-height: 15px;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  pointer-events: none;
+}
+.omnimux-inspiration-card-error.is-failed {
+  background: var(--dsw-alias-state-error-secondary, rgba(220, 68, 68, 0.28));
+  color: var(--dsw-alias-state-error-primary, #f26d6d);
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;
@@ -1294,6 +1340,27 @@ export const INSPIRATION_CSS = `
 }
 .omnimux-inspiration-import-notice p {
   margin: 0;
+}
+/* 播放器不可内嵌播放时的提示：覆盖在封面之上，不遮挡操作按钮 */
+.omnimux-inspiration-player-notice {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-secondary, rgba(0, 0, 0, 0.6));
+  color: var(--dsw-alias-label-secondary, #d4d4d4);
+  font-size: 12px;
+  line-height: 17px;
+}
+/* 导入中看板下方的阶段文案 */
+.omnimux-inspiration-player-status {
+  margin: 10px 0 0;
+  font: 400 13px/18px inherit;
+  color: var(--dsw-alias-label-tertiary, #7c7c7c);
 }
 .omnimux-inspiration-modal-hint {
   margin: 0;

@@ -1,6 +1,19 @@
 import { existsSync } from 'node:fs'
 import { downloadMedia } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
+import {
+  IMPORT_STAGES,
+  IMPORT_STATUS_DEGRADED,
+  IMPORT_STATUS_FAILED,
+  IMPORT_STATUS_IMPORTING,
+  IMPORT_STATUS_READY,
+  IMPORT_STALE_ERROR,
+  findStaleImports,
+  importStatusOf,
+  isImportBlocked,
+  isImporting,
+  staleImportPatch,
+} from './import-status.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
@@ -13,6 +26,19 @@ import {
 
 /** Module-level singleton — never construct per request. */
 export const importLocks = new Set()
+
+/**
+ * Ids of rows a background import owns right now, in this process.
+ *
+ * The stale sweep consults this set before failing a row whose deadline passed:
+ * a slow but healthy job must not be failed underneath itself. After a Host
+ * restart the set is empty, which is exactly right — the jobs it used to hold
+ * are gone, so the rows they left behind are abandoned and should be failed.
+ *
+ * Exported for the sweep's tests and for shutdown diagnostics.
+ * @type {Set<string>}
+ */
+export const activeJobs = new Set()
 
 const DUPLICATE_ERROR = '该灵感素材已在库中，请勿重复导入'
 const HTTP_URL_RE = /^https?:\/\//i
@@ -581,7 +607,40 @@ export function parseSocialMeta(data) {
   }
 }
 
+/**
+ * Fail abandoned import rows before a read answers.
+ *
+ * The sweep runs on a list of rows the caller already read, so the common case
+ * costs one array scan over rows that are already in memory and no extra read at
+ * all. Only a library that actually holds an expired `importing` row pays for a
+ * read-modify-write.
+ * @param {{ readAll: () => Array<Record<string, any>>, update: (id: string, patch: Record<string, any>) => unknown }} store
+ * @param {Set<string>} [liveIds] ids a live job still owns
+ * @returns {Map<string, Record<string, any>> | null} the failed rows by id
+ */
+export function sweepStaleImports(store, liveIds = activeJobs) {
+  const all = store.readAll()
+  if (all.length === 0) return null
+  const stale = findStaleImports(all, { activeIds: liveIds })
+  if (stale.length === 0) return null
+  const patch = staleImportPatch()
+  /** @type {Map<string, Record<string, any>>} */
+  const failed = new Map()
+  for (const row of stale) {
+    const id = String(row.id)
+    try {
+      store.update(id, { ...patch })
+    } catch {
+      // The row vanished between the read and the write; nothing to report.
+      continue
+    }
+    failed.set(id, { ...row, ...patch })
+  }
+  return failed.size > 0 ? failed : null
+}
+
 export function handleList({ url, store }) {
+  const failed = sweepStaleImports(store)
   const q = url.searchParams.get('q') || undefined
   const platform = url.searchParams.get('platform') || undefined
   const type = url.searchParams.get('type') || undefined
@@ -619,7 +678,10 @@ export function handleList({ url, store }) {
     posted_before,
   })
   const platforms = typeof store.platforms === 'function' ? store.platforms() : []
-  return { status: 200, body: { data: { ...result, platforms } } }
+  const items = failed
+    ? result.items.map((row) => failed.get(String(row.id)) || row)
+    : result.items
+  return { status: 200, body: { data: { ...result, items, platforms } } }
 }
 
 export function handleCreate({ req, store }) {
@@ -639,13 +701,179 @@ function parseImportBody(ctx) {
     customTags: Array.isArray(body.tags) ? body.tags : [],
     force: Boolean(body.force),
     returnExisting: Boolean(body.return_existing),
+    // Opt-in only. Every existing caller (the Agent `inspiration_create` tool and
+    // the inline import dialog) leaves it unset and therefore keeps the original
+    // synchronous contract, including its 409 / 429 / 422 / 502 statuses.
+    background: body.background === true,
   }
+}
+
+/**
+ * Row a background import is published as before any work has happened.
+ *
+ * The title is the raw URL rather than a localized "resolving…" string: the row
+ * is persisted, so a translated placeholder would freeze the page's language
+ * into stored data. The stage the UI renders comes from `import_stage`.
+ *
+ * `auto_analyze` is stored rather than carried in the job closure so a retry
+ * replayed from the row alone (or a restart) still knows the user's choice.
+ * @param {{ rawUrl: string, platform?: string, autoAnalyze: boolean, customTags: string[] }} args
+ * @returns {Record<string, any>}
+ */
+function buildImportPlaceholder(args) {
+  return {
+    title: args.rawUrl,
+    type: 'video',
+    source_platform: args.platform,
+    source_url: args.rawUrl,
+    cover_url: '',
+    media_urls: [],
+    local_paths: {},
+    tags: args.customTags,
+    auto_analyze: args.autoAnalyze,
+    import_status: IMPORT_STATUS_IMPORTING,
+    import_stage: IMPORT_STAGES.RESOLVING,
+    import_started_at: new Date().toISOString(),
+  }
+}
+
+/**
+ * Import the URL in the background and answer immediately.
+ *
+ * The placeholder is written before the job starts, so the row the client polls
+ * exists as soon as the 202 does. `runImport` is called in-process — never
+ * through an HTTP self-request — and the job owns the URL's import lock for its
+ * whole duration, which is what makes a second request for the same URL
+ * idempotent instead of a duplicate job.
+ * @param {Record<string, any>} ctx dispatcher context plus parsed import args
+ * @param {Record<string, any>} placeholder
+ * @returns {Promise<{ status: number, body: Record<string, any> }>}
+ */
+async function startBackgroundImport(ctx, placeholder) {
+  const id = String(placeholder.id)
+  const rawUrl = String(placeholder.source_url || '')
+  const canonicalKey = getCanonicalItemKey(rawUrl).key || normalizeUrl(rawUrl) || rawUrl
+
+  activeJobs.add(id)
+  importLocks.add(canonicalKey)
+  void runBackgroundImport(ctx, placeholder).finally(() => {
+    importLocks.delete(canonicalKey)
+    activeJobs.delete(id)
+  })
+  return { status: 202, body: { data: placeholder } }
+}
+
+/**
+ * Background job body.
+ *
+ * Every outcome is written to the row: a degraded completion, a failure with its
+ * reason, and an unexpected throw alike. Nothing is left to a floating rejection,
+ * because a rejected job would leave the row reading "importing" forever.
+ *
+ * A job that completed even though the AI breakdown did not is *not* a failure:
+ * the row keeps its video, its cover and its metadata, and the reason travels on
+ * `import_error` while `import_status` says what was actually stored. Only a job
+ * that produced no item at all fails. The re-stamp below writes the same verdict
+ * back — it exists for the case where the completion could not replace the row
+ * (the user deleted it mid-flight), and it preserves the breakdown reason instead
+ * of clearing it.
+ * @param {Record<string, any>} ctx
+ * @param {Record<string, any>} placeholder
+ */
+async function runBackgroundImport(ctx, placeholder) {
+  const id = String(placeholder.id)
+  const progress = createProgressReporter(ctx.store, id)
+  try {
+    const result = await runImport({ ...ctx, progress })
+    if (result.status >= 400) {
+      await markImportFailed(ctx.store, id, result.body?.error || `HTTP ${result.status}`)
+      return
+    }
+    const row = result.body?.data
+    if (!row || typeof row !== 'object') {
+      await markImportFailed(ctx.store, id, IMPORT_STALE_ERROR)
+      return
+    }
+    const settled = row.import_status
+      || (result.body?.media_degraded ? IMPORT_STATUS_DEGRADED : IMPORT_STATUS_READY)
+    // The `persisting` stage was already published while the completion was being
+    // written (`persistImportedItem` reports it before `persistImportedRecord`),
+    // and the row this lands on already carries the settled status, stage and
+    // reason from `buildImportRecord`. Re-publishing the stage here would land
+    // *after* the record is on disk, which is the one thing a stage must not do:
+    // the card would still read "写入中…" for a write that already finished.
+    await safeUpdate(ctx.store, id, {
+      import_status: settled,
+      import_stage: null,
+      import_error: row.import_error ?? null,
+    })
+  } catch (error) {
+    await markImportFailed(ctx.store, id, describeImportError(ctx, error))
+  }
+}
+
+/**
+ * @param {Record<string, any>} ctx
+ * @param {unknown} error
+ * @returns {string}
+ */
+function describeImportError(ctx, error) {
+  try {
+    return ctx.formatErrorMessage ? ctx.formatErrorMessage(error) : String(error)
+  } catch {
+    return String(error)
+  }
+}
+
+/**
+ * Report the stage a running import has reached.
+ *
+ * A stage write is best effort: the row is being updated up to three times while
+ * the job runs, and a failed progress write must degrade the label the user sees,
+ * never the import itself.
+ * @param {{ update: (id: string, patch: Record<string, any>) => unknown }} store
+ * @param {string} id
+ * @returns {(stage: string) => Promise<void>}
+ */
+function createProgressReporter(store, id) {
+  return async (stage) => {
+    await safeUpdate(store, id, { import_stage: stage })
+  }
+}
+
+/**
+ * @param {{ update: (id: string, patch: Record<string, any>) => unknown }} store
+ * @param {string} id
+ * @param {Record<string, any>} patch
+ * @returns {Promise<Record<string, any> | null>}
+ */
+async function safeUpdate(store, id, patch) {
+  try {
+    await Promise.resolve(store.update(id, patch))
+    return store.get(id)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * @param {{ update: (id: string, patch: Record<string, any>) => unknown }} store
+ * @param {string} id
+ * @param {unknown} reason
+ */
+async function markImportFailed(store, id, reason) {
+  await safeUpdate(store, id, {
+    import_status: IMPORT_STATUS_FAILED,
+    import_stage: null,
+    import_error: String(reason || IMPORT_STALE_ERROR) || IMPORT_STALE_ERROR,
+  })
 }
 
 export async function handleImportUrl(ctx) {
   const parsed = parseImportBody(ctx)
   if (!parsed.rawUrl) return fail(400, 'url is required')
   const existing = ctx.store.findByUrl(parsed.rawUrl)
+  if (parsed.background) return beginBackgroundImport({ ...ctx, ...parsed, upgradeId: '' }, existing, parsed)
   // Only a record that already holds a video is a true duplicate. A degraded
   // record is re-resolved so a later-available direct link can upgrade it.
   if (existing && !parsed.force && !needsVideoUpgrade(existing)) {
@@ -653,6 +881,52 @@ export async function handleImportUrl(ctx) {
   }
   const upgradeId = existing ? existing.id : ''
   return withImportLock(parsed.rawUrl, () => runImport({ ...ctx, ...parsed, upgradeId }))
+}
+
+/**
+ * Opt-in background branch of the import route.
+ *
+ * Each outcome of the duplicate question answers 202 with the row the client
+ * should watch, except a row that already holds a video — that one is a real
+ * duplicate and keeps its 409.
+ * @param {Record<string, any>} ctx parsed import args plus the dispatcher context
+ * @param {Record<string, any> | null} existing
+ * @param {Record<string, any>} parsed
+ * @returns {Promise<{ status: number, body: Record<string, any> }>}
+ */
+async function beginBackgroundImport(ctx, existing, parsed) {
+  // A job already owns this row: answer with the same row instead of a 429. The
+  // client's poll is the only thing that needs to make progress, and a second
+  // request that changed nothing would not help it.
+  if (existing && isImporting(existing)) {
+    return { status: 202, body: { data: existing, existing: true, is_duplicate: true } }
+  }
+  // A failed row keeps its id, so retrying the same URL restarts the job in
+  // place and the user does not end up with a second card for one link.
+  if (existing && importStatusOf(existing) === IMPORT_STATUS_FAILED) {
+    const restarted = ctx.store.update(existing.id, {
+      ...buildImportPlaceholder(parsed),
+      import_error: null,
+    })
+    return startBackgroundImport({ ...ctx, upgradeId: existing.id }, restarted)
+  }
+  if (existing && !parsed.force && !needsVideoUpgrade(existing)) {
+    return duplicateBody(existing, parsed.returnExisting)
+  }
+  // A degraded row is upgraded in place: no second card, and the completion
+  // replaces this very row.
+  if (existing) {
+    const upgraded = ctx.store.update(existing.id, {
+      ...buildImportPlaceholder(parsed),
+      import_error: null,
+    })
+    return startBackgroundImport({ ...ctx, upgradeId: existing.id }, upgraded)
+  }
+  // The new placeholder is itself the row this job owns: passing its id as the
+  // upgrade target is what stops the job from resolving its own row as a
+  // duplicate of the link it was asked to import.
+  const placeholder = ctx.store.add(buildImportPlaceholder(parsed))
+  return startBackgroundImport({ ...ctx, upgradeId: String(placeholder.id) }, placeholder)
 }
 
 async function withImportLock(rawUrl, work) {
@@ -680,6 +954,18 @@ async function runImport(args) {
 }
 
 /**
+ * Publish the stage a background import has reached, if anyone is listening.
+ *
+ * The synchronous import path passes no reporter, so this is a no-op there.
+ * @param {Record<string, any>} args
+ * @param {string} stage
+ */
+async function reportStage(args, stage) {
+  if (typeof args.progress !== 'function') return
+  await args.progress(stage)
+}
+
+/**
  * Persist a resolved social item.
  *
  * A downloadable direct video link keeps the full pipeline (download video +
@@ -687,18 +973,23 @@ async function runImport(args) {
  * YouTube page, a platform without a public stream — the item is still imported
  * as `link`/`image` with the metadata that was resolved, flagged as degraded so
  * callers can tell the difference. Only a completely empty envelope fails.
+ *
+ * An AI breakdown that fails does not fail the import either: the item is stored
+ * whole with the reason on `import_error`, and the caller sees it on the row.
  */
 async function persistImportedItem(args, meta) {
   const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
   if (!videoUrl && !meta.has_metadata) {
     return fail(422, '未从该链接解析到可入库的内容（标题、文案、封面与视频直链均为空）')
   }
+  if (videoUrl) await reportStage(args, IMPORT_STAGES.DOWNLOADING)
   const media = videoUrl
     ? await downloadImportMedia(args, meta, videoUrl)
     : await downloadImportCover(args, meta)
   if (media.error) return media.error
-  const deconstruction = await maybeAnalyze(args, media, meta)
-  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, deconstruction))
+  const analysis = await maybeAnalyze(args, media, meta)
+  await reportStage(args, IMPORT_STAGES.PERSISTING)
+  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
   if (videoUrl) return { status: 200, body: { data: record } }
   return {
     status: 200,
@@ -726,9 +1017,34 @@ async function persistImportedRecord(args, record) {
   return replaced || args.store.add(record)
 }
 
+/**
+ * AI deconstruction, plus the stage report that describes it.
+ *
+ * The `analyzing` stage is published only once the analysis is genuinely about
+ * to run — the same guard the analysis itself uses. A degraded import that never
+ * reaches the model must not claim the AI is working on it.
+ *
+ * A failure is returned, never thrown: the video, the cover and the metadata are
+ * already on disk by this point, so failing the whole import over the breakdown
+ * would throw away a complete item the user has already waited for and make them
+ * import it again to get it back. The caller decides how to record it — the
+ * background job keeps the row and stores the reason, and the synchronous path
+ * has always imported without a breakdown.
+ * @param {Record<string, any>} args
+ * @param {{ localVideoPath?: string }} media
+ * @param {Record<string, any>} meta
+ * @returns {Promise<{ deconstruction: Record<string, any> | null, error: string }>}
+ */
 async function maybeAnalyze(args, media, meta) {
-  if (!args.autoAnalyze || !media.localVideoPath) return null
-  const analysisResult = await analyzeInspirationVideo({
+  if (!args.autoAnalyze || !media.localVideoPath) return { deconstruction: null, error: '' }
+  await reportStage(args, IMPORT_STAGES.ANALYZING)
+  // `args.analyzeInspiration` is undefined in production, so the real analyzer
+  // runs. The dispatcher forwards an injected one for tests, which is the only
+  // seam that reaches the failure branch below: the analyzer degrades to a local
+  // breakdown rather than reporting failure, so no other input can produce a
+  // failed analysis.
+  const analyze = args.analyzeInspiration || analyzeInspirationVideo
+  const analysisResult = await analyze({
     videoPath: media.localVideoPath,
     title: meta.title || args.rawUrl,
     content: meta.text,
@@ -736,7 +1052,11 @@ async function maybeAnalyze(args, media, meta) {
     platform: args.platform,
     videoAnalyzeTool: args.videoAnalyzeTool,
   })
-  return analysisResult.deconstruction
+  if (analysisResult.deconstruction) return { deconstruction: analysisResult.deconstruction, error: '' }
+  return {
+    deconstruction: null,
+    error: analysisResult.error || 'AI 视频拆解失败，请确保大模型视觉分析服务可用',
+  }
 }
 
 /**
@@ -753,7 +1073,24 @@ function resolveImportType(meta, media) {
   return 'link'
 }
 
-function buildImportRecord(args, meta, media, deconstruction) {
+/**
+ * The row an import settles as.
+ *
+ * `import_error` carries a failure the import survived — a breakdown that could
+ * not be produced — and is `null` otherwise. It is deliberately not a synonym
+ * for `import_status: failed`: this row holds a complete item, and the field is
+ * what tells the user which part is missing.
+ *
+ * `auto_analyze` is re-stamped from the request so the stored choice survives the
+ * completion. The placeholder carried it, but this record *replaces* that row
+ * through `buildRow`, so leaving it out would reset the flag to its `true`
+ * default and a retry would run the AI again for a user who asked it not to.
+ * @param {Record<string, any>} args
+ * @param {Record<string, any>} meta
+ * @param {Record<string, any>} media
+ * @param {{ deconstruction?: Record<string, any> | null, error?: string }} [analysis]
+ */
+function buildImportRecord(args, meta, media, analysis = {}) {
   const coverName = media.localCoverPath ? media.localCoverPath.split('/').pop() : ''
   const videoName = media.localVideoPath ? media.localVideoPath.split('/').pop() : ''
   const cover_url = coverName
@@ -769,11 +1106,19 @@ function buildImportRecord(args, meta, media, deconstruction) {
     media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : [],
     local_paths: media.localPaths,
     tags: args.customTags,
+    auto_analyze: args.autoAnalyze !== false,
     author: meta.author,
     stats: meta.stats,
     duration: meta.duration,
     published_at: meta.published_at,
-    deconstruction,
+    deconstruction: analysis.deconstruction ?? null,
+    // This record is the completion of an import, so it settles the placeholder
+    // the background path published: `degraded` when no video stream was
+    // obtained, `ready` otherwise. Leaving `import_stage` at null is what stops a
+    // finished row from rendering a running stage.
+    import_status: media.localVideoPath ? IMPORT_STATUS_READY : IMPORT_STATUS_DEGRADED,
+    import_stage: null,
+    import_error: analysis.error || null,
   }
 }
 
@@ -804,7 +1149,11 @@ function checkResolvedDuplicate(args, meta) {
   if (!resolvedUrl || resolvedUrl === args.rawUrl || args.force) return null
   const secondExisting = args.store.findByUrl(resolvedUrl)
   if (!secondExisting) return null
-  // The degraded row being upgraded is not a duplicate of itself.
+  // The row being written is not a duplicate of itself, whether that is the
+  // degraded row an upgrade replaces or the placeholder a background job owns.
+  // Without this, an import whose resolved URL differs from the one the user
+  // pasted (a short link, a `?utm=` variant) resolves to its own placeholder row
+  // and answers 409 to its own job — leaving a row that never gets its media.
   if (args.upgradeId && secondExisting.id === args.upgradeId) return null
   return duplicateBody(secondExisting, args.returnExisting)
 }
@@ -853,6 +1202,12 @@ async function downloadImportCover(args, meta) {
 export async function handleAnalyze(ctx) {
   const item = ctx.store.get(ctx.id)
   if (!item) return fail(404, 'not found')
+  // The UI hides the action while a row is still importing; this refuses the
+  // same call coming from an Agent or a direct HTTP client, where an analysis
+  // started early would race the import that is already writing the row.
+  if (isImportBlocked(item)) {
+    return fail(422, '该灵感正在后台导入中，请等待导入完成后再拆解')
+  }
   const videoPath = await resolveAnalyzeVideo({ ...ctx, item })
   if (videoPath.error) return videoPath.error
   if (!videoPath.path || !existsSync(videoPath.path)) {
@@ -977,7 +1332,19 @@ export async function handleBatchDelete({ req, store }) {
 }
 
 export function handleGetItem({ id, store }) {
-  const item = store.get(id)
+  // Single-row reads are what the client polls, so they carry the sweep too:
+  // otherwise a row whose job died would answer `importing` forever to a client
+  // that never lists.
+  //
+  // Both halves of this poll — the sweep and the row lookup — read the same
+  // library file, and a poll fires every 2.5s per running row. The snapshot makes
+  // them share one read: taken before the sweep, kept only when the sweep changed
+  // nothing (a sweep that failed a row already answered the lookup with the row it
+  // patched).
+  const snapshot = store.snapshotForRead ? store.snapshotForRead() : null
+  const failed = sweepStaleImports(store)
+  if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
+  const item = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
   if (!item) return fail(404, 'not found')
   return { status: 200, body: { data: item } }
 }

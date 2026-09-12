@@ -67,19 +67,28 @@ export const DropdownSelect = ({ value, options, className, 'aria-label': ariaLa
 
 export const ConfirmModal = ({ children, ...rest }) => h('div', rest, children)
 
-export const Badge = ({ children }) => h('span', null, children)
+export const Badge = ({ children, variant, ...rest }) => h('span', { 'data-variant': variant, ...rest }, children)
 
 export const IconButton = ({ children, ...rest }) => h('button', { type: 'button', ...rest }, children)
 
-export const MediaCard = ({ children, ...rest }) => h('div', rest, children)
+export const MediaCard = ({ children, coverNode, ...rest }) => h('div', rest, coverNode, children)
 
 export const InputField = (props) => h('input', {
-  'aria-label': props['aria-label'],
+  type: props.type ?? 'text',
+  'aria-label': props.label ?? props['aria-label'],
+  placeholder: props.placeholder,
   value: props.value ?? '',
-  readOnly: true,
+  readOnly: typeof props.onChange !== 'function',
+  disabled: Boolean(props.disabled),
+  onChange: props.onChange,
 })
 
-export const ModalDialog = ({ open, children }) => (open ? h('div', null, children) : null)
+/**
+ * The kit's dialog renders the caller's `footer` slot, so the shim has to as
+ * well: whether the import dialog can close itself on a 202 is asserted through
+ * the buttons that live only in that slot.
+ */
+export const ModalDialog = ({ open, children, footer }) => (open ? h('div', null, children, footer) : null)
 
 export const CopyButton = () => h('button', { type: 'button' }, null)
 

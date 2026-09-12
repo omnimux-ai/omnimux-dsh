@@ -227,12 +227,18 @@ export function hasDeconstruction(data) {
  * action at all — it would only ever answer 422. Video items keep it: they may
  * already hold a local file, or `handleAnalyze` re-resolves the stream from
  * `source_url`, which is how cloud-catalog items are analyzed.
+ *
+ * A row whose import is still running is refused as well. It has no video file
+ * yet, and the server answers 422 while the import holds the row, so offering the
+ * button would promise an action that cannot start. The import completing swaps
+ * the row in place and the action appears with it.
  * @param {unknown} item raw inspiration row
  * @returns {boolean}
  */
 export function canAnalyzeInspiration(item) {
   const row = item && typeof item === 'object' ? item : {}
   if (text(row.type) !== 'video') return false
+  if (row.import_status === 'importing') return false
   return Boolean(text(row.local_paths?.video) || text(row.source_url))
 }
 

@@ -359,6 +359,48 @@ export function pickCoverSrc(row) {
 }
 
 /**
+ * Playable video source of a row, or `''` when it has none.
+ *
+ * `media_urls` is the single source of truth for a local record's video: the
+ * import pipeline writes the host-relative play path there, and only when a real
+ * video file was saved.
+ *
+ * Three prefixes are legitimate, and each one is passed through verbatim because
+ * it is already a URL the Host serves:
+ * 1. Absolute `http(s)://…` — a public CDN link stored as-is.
+ * 2. `/omnimux/inspiration/local/media/…` — a file this machine downloaded.
+ * 3. `/omnimux/inspiration/media/…` — the Host-media form a cloud catalogue row
+ *    carries: the hub's social adapter rewrites cloud media onto this prefix, and
+ *    `hostMediaSrc` above accepts it. Without this branch a cloud item's video
+ *    could never play, and every one of them would fall back to its cover.
+ *
+ * Form 3 is not a prefix of form 2 (nor the reverse), so neither branch can
+ * serve the other's rows; each matches its own exact prefix.
+ *
+ * `local_paths.video` is deliberately NOT read here. It holds an absolute
+ * filesystem path (`/Users/…/videos/video_ab12.mp4`), so running it through
+ * `hostMediaSrc` produces a malformed request such as
+ * `/omnimux/inspiration/media//Users/…` — the same class of bug as the
+ * hand-built `/local/media/<id>/video.mp4` route, which never existed. A value
+ * matching none of the three prefixes yields `''`, which the caller renders as a
+ * cover instead of a permanently blank player.
+ * @param {unknown} row
+ * @returns {string}
+ */
+export function pickVideoSrc(row) {
+  if (!row || typeof row !== 'object') return ''
+  const rec = /** @type {Record<string, unknown>} */ (row)
+  const first = Array.isArray(rec.media_urls)
+    ? rec.media_urls.find((url) => typeof url === 'string' && url)
+    : ''
+  if (!first) return ''
+  if (/^https?:\/\//i.test(first)) return first
+  if (first.startsWith('/omnimux/inspiration/local/media/')) return first
+  if (first.startsWith('/omnimux/inspiration/media/')) return first
+  return ''
+}
+
+/**
  * Gateway seed covers are 1×1 JPEG stubs. Treat those as empty.
  * @param {number} width
  * @param {number} height

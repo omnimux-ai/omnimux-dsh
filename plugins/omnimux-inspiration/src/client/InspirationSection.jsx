@@ -77,6 +77,8 @@ export function InspirationSection({ t, active }) {
     handleConfirmBatchRemove,
     handleImportSuccess,
     handleItemUpdated,
+    importFailed,
+    clearImportFailed,
   } = feed
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
@@ -338,6 +340,23 @@ export function InspirationSection({ t, active }) {
       >
         {ctaStatus ? t(ctaStatus) : ''}
       </div>
+
+      {/* 后台导入结算通知：降级、失败或 AI 拆解失败时告知结果，点击即清除。
+          每段文案各自包一层 <p>：样式表只给 `.omnimux-inspiration-import-notice p`
+          设了外边距，裸文本会继承浏览器的默认 margin 而与相邻提示错位。 */}
+      {importFailed ? (
+        <div
+          className="omnimux-inspiration-import-notice"
+          role="status"
+          onClick={() => clearImportFailed?.(null)}
+        >
+          <p>
+            {t(importFailed.key)}
+            {importFailed.detail ? `：${importFailed.detail}` : ''}
+          </p>
+          {importFailed.retryable ? <p>{t('add.retryHint')}</p> : null}
+        </div>
+      ) : null}
 
       <div ref={sentinelRef} />
 

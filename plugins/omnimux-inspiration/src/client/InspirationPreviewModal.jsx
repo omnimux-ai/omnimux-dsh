@@ -2,10 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, CopyButton, IconButton, Tabs } from 'dsh-ui-kit'
 import {
   pickCoverSrc,
+  pickVideoSrc,
   resolveTikTokEmbedUrl,
-  translateInspiration,
   triggerAnalyzeInspiration,
+  translateInspiration,
 } from './api.js'
+import {
+  importErrorText,
+  importSettledNotice,
+  importStageLabel,
+  isFailedRow,
+  isImportingRow,
+} from './import-status.js'
 import {
   canAnalyzeInspiration,
   deconstructionCopyText,
@@ -106,8 +114,16 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [translateError, setTranslateError] = useState(null)
   const [showTranslation, setShowTranslation] = useState(false)
   const [activeSegmentId, setActiveSegmentId] = useState('')
+  const [videoFailed, setVideoFailed] = useState(false)
 
   useEffect(() => setItem(row), [row])
+  // The media source of the row currently on screen. Declared before the reset
+  // effect below because that effect keys off it.
+  const videoSrc = pickVideoSrc(item)
+  // A message that belongs to one media source must never outlive it: without
+  // this reset the next row opened in the same modal would render its cover
+  // under the previous row's "cannot be played" notice.
+  useEffect(() => setVideoFailed(false), [videoSrc, item?.id])
   useEffect(() => {
     const handleKeyDown = (event) => { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKeyDown)
@@ -120,10 +136,13 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const sourceUrl = data.safeItem.source_url
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
   const canAnalyze = canAnalyzeInspiration(data.safeItem)
-  const localVideoUrl = data.safeItem.local_paths?.video
-    ? `/omnimux/inspiration/local/media/${encodeURIComponent(data.safeItem.id)}/video.mp4`
-    : null
   const cover = pickCoverSrc(data.safeItem)
+  const importing = isImportingRow(data.safeItem)
+  const failed = isFailedRow(data.safeItem)
+  // A settled row that carries an `import_error` imported fine but could not be
+  // broken down; `importSettledNotice` is empty for a clean completion and for a
+  // row already covered by the failure alert above.
+  const settledNotice = importSettledNotice(data.safeItem, t)
   const dimensions = [
     ['hook', t('modal.deconstruction.hook'), data.hook],
     ['goal', t('modal.deconstruction.goal'), data.targetGoal],
@@ -245,15 +264,28 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
           <main className="omnimux-inspiration-modal-body">
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel ${activeTab === 'video' ? 'is-active' : ''}`}>
               <div className="omnimux-inspiration-modal-player-box">
-                {embedUrl ? (
+                {/* Source priority, in one place: a real media URL, then the
+                    platform embed, then the poster, then the title glyph. The
+                    first entry is the only one that can render a <video>; a row
+                    without a usable URL falls through instead of mounting an
+                    element that would stay blank. */}
+                {videoSrc && !videoFailed ? (
+                  <video
+                    src={videoSrc}
+                    controls
+                    className="omnimux-inspiration-player-frame"
+                    onError={() => setVideoFailed(true)}
+                  />
+                ) : embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
-                ) : localVideoUrl ? (
-                  <video src={localVideoUrl} controls className="omnimux-inspiration-player-frame" />
                 ) : cover ? (
                   <img src={cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
                 ) : (
                   <div className="omnimux-inspiration-cover-fallback">{data.title.slice(0, 1)}</div>
                 )}
+                {videoFailed ? (
+                  <p className="omnimux-inspiration-player-notice">{t('modal.video.unplayable')}</p>
+                ) : null}
                 {sourceUrl ? (
                   <div className="omnimux-inspiration-player-actions">
                     <CopyButton
@@ -279,6 +311,23 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   </div>
                 ) : null}
               </div>
+              {/* A row that is still importing has no media yet, so the panel
+                  shows what the job is doing instead of an empty box; a failed
+                  one shows why it failed. */}
+              {importing ? (
+                <p className="omnimux-inspiration-player-status">{importStageLabel(data.safeItem, t)}</p>
+              ) : null}
+              {failed ? (
+                <p className="omnimux-inspiration-error-text" role="alert">
+                  {importErrorText(data.safeItem, t) || t('add.status.failed')}
+                </p>
+              ) : null}
+              {/* A completed import that is only missing its AI breakdown. Not an
+                  error state: the item is here, and this says which part is not
+                  and that re-running the breakdown is enough. */}
+              {!failed && settledNotice ? (
+                <p className="omnimux-inspiration-player-status" role="status">{settledNotice}</p>
+              ) : null}
             </section>
 
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-script-panel ${activeTab === 'script' ? 'is-active' : ''}`}>

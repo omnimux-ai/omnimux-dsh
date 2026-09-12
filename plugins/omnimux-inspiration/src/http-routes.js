@@ -276,6 +276,12 @@ export function createLocalInspirationDispatcher(deps) {
     // Forwarded to the download target check. Left undefined in production so the
     // real `dns.lookup` is used; tests inject a stub to stay offline.
     resolver: deps.resolver,
+    // Also undefined in production, where `maybeAnalyze` calls the real analyzer.
+    // The analyzer degrades to a local breakdown instead of reporting failure, so
+    // its failure branch is unreachable from a test through any other seam — an
+    // injected one is the only way to hold the "stored item keeps its video and
+    // records the reason" contract.
+    analyzeInspiration: deps.analyzeInspiration,
     detectPlatformFromUrl,
     formatErrorMessage,
   }
