@@ -146,4 +146,61 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
       'panel-host must never be hidden when omnimux-apps is active (apps live in workbench tabs)',
     )
   })
+
+  it('closes workbench panel when any new session intent is clicked', () => {
+    setup()
+    delete document.documentElement.dataset.dshSessionCloser
+    ensureProductStageChrome()
+
+    let closed = 0
+    globalThis.window.__omnimuxWorkbench = {
+      closePanel() { closed++ },
+      getConversationCollapsed() { return false },
+      setFocus() {},
+    }
+
+    // 1. 官方侧栏「+ 新对话」
+    const shellBtn = document.createElement('button')
+    shellBtn.className = 'x-Wl6W_newSession'
+    shellBtn.textContent = '新对话'
+    document.body.append(shellBtn)
+    shellBtn.click()
+    assert.equal(closed, 1, 'shell newSession button must close workbench panel')
+
+    // 2. 工作区行「在“测试环境”中新建对话」
+    const treeitem = document.createElement('div')
+    treeitem.setAttribute('role', 'treeitem')
+    const wsBtn = document.createElement('button')
+    wsBtn.setAttribute('aria-label', '在“测试环境”中新建对话')
+    treeitem.append(wsBtn)
+    document.body.append(treeitem)
+    wsBtn.click()
+    assert.equal(closed, 2, 'workspace newSession button must close workbench panel')
+
+    // 3. 顶栏「新建对话」按钮
+    const topbarBtn = document.createElement('button')
+    topbarBtn.setAttribute('data-omnimux-topbar-new-session', '1')
+    document.body.append(topbarBtn)
+    topbarBtn.click()
+    assert.equal(closed, 3, 'topbar newSession button must close workbench panel')
+
+    // 4. 收起轨新建会话菜单项
+    const menu = document.createElement('div')
+    menu.id = 'omnimux-sidebar-new-menu'
+    const menuItem = document.createElement('div')
+    menuItem.setAttribute('role', 'menuitem')
+    menuItem.textContent = '新建对话'
+    menu.append(menuItem)
+    document.body.append(menu)
+    menuItem.click()
+    assert.equal(closed, 4, 'menu newSession pick must close workbench panel')
+
+    // 5. 普通会话树行点击：不应触发 closePanel
+    const plainRow = document.createElement('div')
+    plainRow.setAttribute('role', 'treeitem')
+    plainRow.textContent = '已有会话'
+    document.body.append(plainRow)
+    plainRow.click()
+    assert.equal(closed, 4, 'plain session row must not close workbench panel')
+  })
 })

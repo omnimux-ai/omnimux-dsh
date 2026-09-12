@@ -295,12 +295,12 @@ function sessionRowPlainClick(target) {
   return true
 }
 
-/** 工作区行加号：`在“x”中新建会话` / New session in x。行内 pin/删是别的按钮。 */
+/** 工作区行加号：`在“x”中新建对话` / `在“x”中新建会话` / New session in x。行内 pin/删是别的按钮。 */
 function workspaceNewSessionButton(target) {
   const button = target.closest('button')
   if (!(button instanceof HTMLElement)) return false
   if (!button.closest('[role="treeitem"]')) return false
-  return /新建会话|New session/i.test(button.getAttribute('aria-label') || '')
+  return /新建会话|新会话|新建对话|新对话|New session/i.test(button.getAttribute('aria-label') || '')
 }
 
 function newSessionMenuPick(target) {
@@ -319,8 +319,14 @@ function shellNewSessionControl(target) {
   if (button.closest('#omnimux-sidebar-new-menu')) return false
   if (button.closest('[role="treeitem"]')) return false
   if (String(button.className).includes('newSession')) return true
+  if (button.hasAttribute('data-omnimux-topbar-new-session')) return true
   const aria = (button.getAttribute('aria-label') || '').trim()
   return /^(新建会话|新会话|新建对话|新对话|New session)$/i.test(aria)
+}
+
+function isNewSessionIntent(target) {
+  if (!(target instanceof Element)) return false
+  return workspaceNewSessionButton(target) || newSessionMenuPick(target) || shellNewSessionControl(target)
 }
 
 /**
@@ -337,6 +343,14 @@ function revealConversationIfCollapsed() {
   api.setFocus?.('split')
 }
 
+function closeWorkbenchIfOpen() {
+  const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
+  if (!api) return
+  if (typeof api.closePanel === 'function') {
+    api.closePanel()
+  }
+}
+
 function handleSessionEnterIntent(target) {
   if (!(target instanceof Element)) return false
   return sessionRowPlainClick(target) || workspaceNewSessionButton(target) || newSessionMenuPick(target)
@@ -346,6 +360,7 @@ function handleSessionEnterIntent(target) {
  * 任意工作区会话行离开产品页；已选中行官方 no-op 也要关。
  * 「新会话」官方会复用空白会话（看起来像没点），一级页必须自己关 overlay。
  * 藏中后点会话行 / 新会话：同时重新展开中间对话栏（进入对话意图）。
+ * 点新建会话：关闭右侧辅助工作台分栏，回到完整会话全宽视野。
  */
 function watchSelectedSessionClick() {
   if (document.documentElement.dataset.dshSessionCloser === '1') return
@@ -355,6 +370,7 @@ function watchSelectedSessionClick() {
     if (!handleSessionEnterIntent(target)) return
     if (document.documentElement.dataset.dshProductStage) leaveProductStage()
     revealConversationIfCollapsed()
+    if (isNewSessionIntent(target)) closeWorkbenchIfOpen()
   }, true)
   document.addEventListener('click', (event) => {
     const target = event.target
@@ -362,6 +378,7 @@ function watchSelectedSessionClick() {
     if (!shellNewSessionControl(target)) return
     if (document.documentElement.dataset.dshProductStage) leaveProductStage()
     revealConversationIfCollapsed()
+    closeWorkbenchIfOpen()
   })
 }
 
