@@ -3,13 +3,68 @@ import {
   createOpenAICompatibleClient,
   createProviderRegistry,
   createProviderRuntime,
+  withRetry,
 } from 'aigc-provider-runtime-kit/runtime'
 import { OmnimuxError } from '../errors.js'
 import { classifyQuotaFailure } from '../../errors/quota-classifier.js'
 import { getJson } from '../job.js'
 import { pickMediaUrl, pickTaskId, pickTaskStatus, TASK_PATH } from '../vendors/omnimux.js'
+import {
+  DEFAULT_POLL_INTERVAL_MS,
+  DEFAULT_RETRY_BUDGET_MS,
+  POLL_RETRY_POLICY,
+  isRetryablePollError,
+  isUnknownTaskError,
+  remainingMs,
+  resolveDeadlineAt,
+  taskTimeout,
+  unknownTask,
+} from '../task-deadline.js'
 
 /**
+ * Run one poll GET with its retry sequence.
+ *
+ * The retry window is bounded twice over: `attemptBudgetMs` caps the composed
+ * signal so a backoff wait cannot run past it, and `POLL_RETRY_POLICY`
+ * (`maxAttempts` 4) caps the attempt count. Both are far shorter than the task
+ * deadline, so one GET can never consume the whole window.
+ *
+ * @param {object} options Poll options (see `pollOpenAiMediaTask`).
+ * @param {string} url
+ * @param {number} attemptBudgetMs
+ */
+async function pollOnceWithRetry(options, url, attemptBudgetMs) {
+  const budgetTimer = AbortSignal.timeout(Math.max(1, attemptBudgetMs))
+  const signal = options.signal ? AbortSignal.any([options.signal, budgetTimer]) : budgetTimer
+  return withRetry(
+    () => getJson(options.fetcher, url, options.apiKey, options.signal, {
+      requestTimeoutMs: options.requestTimeoutMs,
+    }),
+    {
+      ...POLL_RETRY_POLICY,
+      signal,
+      shouldRetry: (error) => isRetryablePollError(error),
+    },
+  )
+}
+
+/**
+ * Poll one openai-media task until it reaches a terminal state, or until the
+ * poll deadline expires.
+ *
+ * Issue #1382: this loop used to be an unbounded `for (;;)` whose only exits
+ * were a terminal status or a caller abort — a task stuck at `processing`, or a
+ * provider that never answered, kept the workflow node "generating" forever.
+ * The deadline is now the single authority: there is deliberately no separate
+ * attempt counter (a second limit would only mask the first).
+ *
+ * A poll that fails with a retryable error (connection jitter, a per-request
+ * timeout, 429/408/409, a retryable 5xx) after its retries are used up does
+ * **not** end the poll: it is one failed attempt, and the loop keeps polling
+ * until the deadline. Ending it there would turn a transient blip into a failed
+ * node — the "used to finish, now times out" regression this change exists to
+ * avoid.
+ *
  * @param {object} options
  * @param {typeof fetch} options.fetcher
  * @param {string} options.baseUrl
@@ -17,29 +72,66 @@ import { pickMediaUrl, pickTaskId, pickTaskStatus, TASK_PATH } from '../vendors/
  * @param {string} options.taskId
  * @param {string} options.capability
  * @param {AbortSignal} [options.signal]
- * @param {() => Promise<void>} [options.sleep]
+ * @param {(ms: number) => Promise<void>} [options.sleep]
+ * @param {number} [options.deadlineMs] Poll window; defaults to DEFAULT_TASK_DEADLINE_MS.
+ * @param {number} [options.submittedAt] Anchor for the deadline (reconcile path).
+ * @param {number} [options.pollIntervalMs]
+ * @param {number} [options.requestTimeoutMs]
+ * @param {number} [options.retryBudgetMs]
  */
 export async function pollOpenAiMediaTask(options) {
-  const sleep = options.sleep ?? (() => new Promise((resolve) => setTimeout(resolve, 1500)))
+  const interval = Number.isFinite(options.pollIntervalMs) && /** @type {number} */ (options.pollIntervalMs) > 0
+    ? /** @type {number} */ (options.pollIntervalMs)
+    : DEFAULT_POLL_INTERVAL_MS
+  const sleep = options.sleep
+    ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
   const path = TASK_PATH[options.capability]
   if (!path) {
     throw new OmnimuxError('unknown-protocol', `openai-media has no task path for ${options.capability}`)
   }
   const url = `${options.baseUrl}/${path}/${options.taskId}`
+  // Anchored at the persisted submit time when the caller supplied one, so a
+  // restart cannot hand the task a second, fresh window.
+  const deadlineAt = resolveDeadlineAt({ deadlineMs: options.deadlineMs, submittedAt: options.submittedAt })
+  let lastTransientError = null
   for (;;) {
     if (options.signal?.aborted) {
       throw new OmnimuxError('omnimux-aborted', `${options.capability} poll aborted`)
     }
-    const json = await getJson(options.fetcher, url, options.apiKey, options.signal)
-    const status = pickTaskStatus(json)
-    if (status === 'completed' || status === 'success' || status === 'succeeded') return json
-    if (status === 'failed' || status === 'error' || status === 'failure') {
-      const classified = classifyQuotaFailure({ body: json })
-      if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
-      if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
-      throw new OmnimuxError('omnimux-failed', `${options.capability} task ${options.taskId} failed`)
+    const left = remainingMs(deadlineAt)
+    if (left <= 0) {
+      throw taskTimeout(options.capability, options.taskId, options.deadlineMs, lastTransientError ?? undefined)
     }
-    await sleep()
+    let json = null
+    try {
+      const budget = Math.min(left, options.retryBudgetMs ?? DEFAULT_RETRY_BUDGET_MS)
+      json = await pollOnceWithRetry(options, url, budget)
+      lastTransientError = null
+    } catch (error) {
+      // A cancel that landed during a backoff wait must keep its own identity.
+      if (options.signal?.aborted) {
+        throw new OmnimuxError('omnimux-aborted', `${options.capability} poll aborted`, { cause: error })
+      }
+      // "No such task" is an answer, not a transport failure: restate it as the
+      // domain error a reconcile reads ("nothing to reconcile, resubmit").
+      if (isUnknownTaskError(error)) {
+        throw unknownTask(options.capability, options.taskId, error)
+      }
+      if (!isRetryablePollError(error)) throw error
+      lastTransientError = error
+    }
+    if (json !== null) {
+      const status = pickTaskStatus(json)
+      if (status === 'completed' || status === 'success' || status === 'succeeded') return json
+      if (status === 'failed' || status === 'error' || status === 'failure') {
+        const classified = classifyQuotaFailure({ body: json })
+        if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
+        if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
+        throw new OmnimuxError('omnimux-failed', `${options.capability} task ${options.taskId} failed`)
+      }
+    }
+    // Never sleep past the deadline: the last wait must not overshoot it.
+    await sleep(Math.max(0, Math.min(interval, remainingMs(deadlineAt))))
   }
 }
 

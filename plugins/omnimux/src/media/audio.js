@@ -8,6 +8,13 @@ export { pollOpenAiMediaTask } from './protocols/openai-media.js'
 export { pickTaskId, pickMediaUrl as pickAudioUrl } from './vendors/omnimux.js'
 
 /**
+ * Poll an audio task by id.
+ *
+ * `options.deadlineMs` / `options.pollIntervalMs` / `options.requestTimeoutMs`
+ * override the poll lifecycle defaults (see `task-deadline.js`), and
+ * `options.submittedAt` anchors the deadline at the original submit time so a
+ * reconcile after a restart cannot restart the clock.
+ *
  * @param {Parameters<typeof pollOpenAiMediaTask>[0]} options
  */
 export function pollAudioTask(options) {

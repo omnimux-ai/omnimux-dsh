@@ -2,24 +2,54 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { OmnimuxError } from './errors.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
+import { DEFAULT_REQUEST_TIMEOUT_MS, RETRYABLE_STATUS } from './task-deadline.js'
 
 /**
+ * One poll request, bounded.
+ *
+ * Issue #1382: the composed signal **must** reach `fetcher`. A post-hoc
+ * `throwIfAborted()` cannot constrain a request that never settles — that check
+ * only runs once `fetch` returns, which is exactly what does not happen when a
+ * provider hangs. Measured before the fix: a request against a server that
+ * never answered hung indefinitely; with the signal passed in, the same request
+ * rejected with `TimeoutError` after ~302ms for a 300ms timeout.
+ *
+ * Cancellation attribution reads the two signals' own `aborted` flags instead
+ * of the composed `reason`, so a caller that happens to abort with a
+ * `TimeoutError` of its own is still reported as a caller cancellation.
+ *
+ * This function never retries: retrying here *and* in the poll loop would
+ * multiply the two layers' backoff and hide the real wall clock. It only marks
+ * whether repeating could help.
+ *
  * @param {typeof fetch} fetcher
  * @param {string} url
  * @param {string} apiKey
- * @param {AbortSignal | undefined} signal
+ * @param {AbortSignal | undefined} callerSignal
+ * @param {{ requestTimeoutMs?: number }} [options]
  */
-export async function getJson(fetcher, url, apiKey, signal) {
+export async function getJson(fetcher, url, apiKey, callerSignal, options = {}) {
   /** @type {Record<string, string>} */
   const headers = {
     accept: 'application/json',
     ...(apiKey && apiKey.trim() ? { authorization: `Bearer ${apiKey.trim()}` } : {}),
   }
-  const response = await fetcher(url, {
-    method: 'GET',
-    headers,
-    ...(signal ? { signal } : {}),
-  })
+  const requestTimeoutMs = Number.isFinite(options.requestTimeoutMs) && /** @type {number} */ (options.requestTimeoutMs) > 0
+    ? /** @type {number} */ (options.requestTimeoutMs)
+    : DEFAULT_REQUEST_TIMEOUT_MS
+  const timer = AbortSignal.timeout(requestTimeoutMs)
+  const signal = callerSignal ? AbortSignal.any([callerSignal, timer]) : timer
+  let response
+  try {
+    response = await fetcher(url, { method: 'GET', headers, signal })
+  } catch (cause) {
+    // A caller cancellation is not a timeout, whichever signal fired first.
+    if (callerSignal?.aborted) {
+      throw new OmnimuxError('omnimux-aborted', 'poll request aborted', { cause })
+    }
+    if (timer.aborted) throw timer.reason ?? new Error('poll request timed out')
+    throw new OmnimuxError('omnimux-request-failed', 'GET request failed', { retryable: true, cause })
+  }
   let body = null
   try {
     body = await response.json()
@@ -37,7 +67,11 @@ export async function getJson(fetcher, url, apiKey, signal) {
     if (classified.kind === 'needs-omnimux') {
       throw new OmnimuxError('needs-omnimux', classified.message, { status: response.status })
     }
-    throw new OmnimuxError('omnimux-request-failed', `GET request failed (HTTP ${response.status})`, { status: response.status })
+    throw new OmnimuxError('omnimux-request-failed', `GET request failed (HTTP ${response.status})`, {
+      status: response.status,
+      // Data only: whether a repeat is worth attempting is the poll loop's call.
+      retryable: RETRYABLE_STATUS.has(response.status),
+    })
   }
   return body
 }
