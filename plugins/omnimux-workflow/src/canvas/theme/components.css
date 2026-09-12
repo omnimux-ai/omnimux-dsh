@@ -7760,6 +7760,15 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 品牌/型号行的悬停反馈：内联样式无法表达 :hover，且悬停即切换需要即时视觉反馈 */
+.wf-cascade-row {
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.wf-cascade-row:hover {
+  background: var(--dsw-alias-control-bg-hover);
+}
+
 .wf-model-cascade-fade {
   animation: wfModelCascadeFade 150ms ease;
 }
