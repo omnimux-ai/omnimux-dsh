@@ -6,16 +6,6 @@ import {
   setInspirationCache,
 } from './api.js'
 
-export function formatPlatformName(slug, t) {
-  if (!slug) return ''
-  const lower = String(slug).toLowerCase().trim()
-  if (lower === 'tiktok') return t ? (t('platform.tiktok') || 'TikTok') : 'TikTok'
-  if (lower === 'x' || lower === 'twitter') return t ? (t('platform.twitter') || '推特 (X)') : '推特 (X)'
-  if (lower === 'instagram') return t ? (t('platform.instagram') || 'Instagram') : 'Instagram'
-  if (lower === 'youtube') return t ? (t('platform.youtube') || 'YouTube') : 'YouTube'
-  return lower.charAt(0).toUpperCase() + lower.slice(1)
-}
-
 /**
  * Construct SWR-style cache key for inspiration query parameters.
  * Shape: `insp:${tab}:${q}:${type}:${sort}:${favorite}(:${extra})*`
@@ -118,6 +108,47 @@ export function filterOutItemsByIds(items, idsToRemove) {
 
 export function extractLocalItemIds(items) {
   return (items || []).filter((it) => it.is_local).map((it) => it.id)
+}
+
+const PLATFORM_DISPLAY_NAMES = {
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  x: 'X',
+  twitter: 'X',
+  facebook: 'Facebook',
+  threads: 'Threads',
+}
+
+/** Canonical locale key for a platform slug; `twitter` is an alias of `x`. */
+const PLATFORM_LOCALE_KEYS = {
+  x: 'x',
+  twitter: 'x',
+}
+
+/**
+ * Human-readable platform label.
+ *
+ * Known platforms use their canonical casing; anything self-registered keeps the
+ * first-letter-capitalized rule. A `translate` function (the section's `t`) may
+ * override the label through the `platform.<name>` locale key; the `twitter`
+ * alias resolves to the same entry as `x`.
+ * @param {unknown} platform
+ * @param {(key: string) => string} [translate]
+ * @returns {string}
+ */
+export function formatPlatformName(platform, translate) {
+  const raw = typeof platform === 'string' ? platform.trim() : ''
+  if (!raw) return ''
+  const key = raw.toLowerCase()
+  const localeKey = PLATFORM_LOCALE_KEYS[key] || key
+  if (typeof translate === 'function') {
+    const messageKey = `platform.${localeKey}`
+    const localized = translate(messageKey)
+    if (typeof localized === 'string' && localized && localized !== messageKey) return localized
+  }
+  if (PLATFORM_DISPLAY_NAMES[key]) return PLATFORM_DISPLAY_NAMES[key]
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
 }
 
 export function updateItemInList(items, updatedItem) {

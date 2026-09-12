@@ -160,6 +160,11 @@ describe('Local Inspiration Store', () => {
     assert.equal(detectPlatformFromUrl('https://youtu.be/xyz'), 'youtube')
     assert.equal(detectPlatformFromUrl('https://x.com/user/status/789'), 'x')
     assert.equal(detectPlatformFromUrl('https://twitter.com/user/status/789'), 'x')
+    // Known-platform patterns from the Facebook/Threads extension
+    assert.equal(detectPlatformFromUrl('https://www.facebook.com/watch/?v=123456789'), 'facebook')
+    assert.equal(detectPlatformFromUrl('https://fb.watch/abc123/'), 'facebook')
+    assert.equal(detectPlatformFromUrl('https://www.threads.net/@creator/post/xyz'), 'threads')
+    // Dynamic self-registration for unknown-but-valid hosts
     assert.equal(detectPlatformFromUrl('https://www.bilibili.com/video/BV123'), 'bilibili')
     assert.equal(detectPlatformFromUrl('https://threads.net/@user/post/456'), 'threads')
     assert.equal(detectPlatformFromUrl('https://v.douyin.com/abc/'), 'douyin')
@@ -286,7 +291,7 @@ describe('Local Inspiration Store', () => {
     assert.ok(item.deconstruction.markdown)
   })
 
-  it('rejects import when no video URL is provided by social scraper', async () => {
+  it('degrades to a link item when the social scraper provides no video stream', async () => {
     const store = createLocalStore({ paths })
     const mockSocialFetcher = async () => ({
       platform: 'tiktok',
@@ -297,10 +302,12 @@ describe('Local Inspiration Store', () => {
         video_url: '', // Missing video stream
       },
     })
+    const mockFetcher = async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from('fake-cover') })
 
     const dispatcher = createLocalInspirationDispatcher({
       localStore: store,
       socialFetcher: mockSocialFetcher,
+      fetcher: mockFetcher,
     })
 
     const res = await dispatcher.dispatch({
@@ -311,8 +318,13 @@ describe('Local Inspiration Store', () => {
       },
     })
 
-    assert.equal(res.status, 422)
-    assert.ok(res.body?.error.includes('未提取到有效无水印视频直链'))
+    assert.equal(res.status, 200)
+    assert.equal(res.body.media_degraded, true)
+    assert.equal(res.body.data.type, 'link')
+    assert.equal(res.body.data.title, 'Only Text Post')
+    assert.equal(res.body.data.local_paths.video, undefined)
+    assert.ok(res.body.data.local_paths.cover)
+    assert.equal(res.body.data.deconstruction, null)
   })
 
   it('triggers on-demand /analyze endpoint for existing local item with video', async () => {

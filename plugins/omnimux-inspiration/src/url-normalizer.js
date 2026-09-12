@@ -26,14 +26,28 @@ const TRACKING_PARAMS = new Set([
   'share_link_id',
 ])
 
-export const KNOWN_PLATFORM_PATTERNS = [
+/**
+ * Host substring -> platform mapping. Host-based (not full-URL) matching keeps
+ * `fb.watch` and `threads.com` distinct from unrelated query strings.
+ * Single source of truth: both `detectPlatformFromUrl` and the HTTP route layer
+ * import from here.
+ */
+export const PLATFORM_PATTERNS = [
   { test: 'tiktok.com', platform: 'tiktok' },
   { test: 'instagram.com', platform: 'instagram' },
   { test: 'youtube.com', platform: 'youtube' },
   { test: 'youtu.be', platform: 'youtube' },
   { test: 'x.com', platform: 'x' },
   { test: 'twitter.com', platform: 'x' },
+  { test: 'facebook.com', platform: 'facebook' },
+  { test: 'fb.watch', platform: 'facebook' },
+  { test: 'fb.com', platform: 'facebook' },
+  { test: 'threads.net', platform: 'threads' },
+  { test: 'threads.com', platform: 'threads' },
 ]
+
+/** Backwards-compatible alias for the shared pattern table. */
+export const KNOWN_PLATFORM_PATTERNS = PLATFORM_PATTERNS
 
 /**
  * Clean tracking query parameters and lowercase domain.
@@ -59,6 +73,12 @@ export function normalizeUrl(rawUrl) {
     if (parsed.hostname === 'm.tiktok.com' || parsed.hostname === 'vt.tiktok.com' || parsed.hostname === 'vm.tiktok.com') {
       // keep subdomain if shortlink, but clean query
     }
+    if (parsed.hostname === 'm.facebook.com' || parsed.hostname === 'web.facebook.com') {
+      parsed.hostname = 'www.facebook.com'
+    }
+    if (parsed.hostname === 'm.threads.net') {
+      parsed.hostname = 'www.threads.net'
+    }
 
     const paramsToRemove = []
     for (const key of parsed.searchParams.keys()) {
@@ -79,6 +99,32 @@ export function normalizeUrl(rawUrl) {
   } catch {
     return trimmed.replace(/[?#].*$/, '').replace(/\/+$/, '')
   }
+}
+
+const FACEBOOK_VIDEO_PATTERNS = [
+  /facebook\.com\/(?:[^/?#]+\/videos|videos)\/(\d{6,})/i,
+  /facebook\.com\/reel\/(\d{6,})/i,
+  /facebook\.com\/(?:watch|video\.php)\?(?:[^#]*&)?v=(\d{6,})/i,
+]
+
+/**
+ * Extract the canonical Facebook video identity.
+ * Falls back to the `fb.watch` short code when no numeric video id is present.
+ * @param {string} clean normalized URL
+ * @returns {{ id: string, canonicalUrl: string } | null}
+ */
+function facebookVideoKey(clean) {
+  for (const pattern of FACEBOOK_VIDEO_PATTERNS) {
+    const match = clean.match(pattern)
+    if (match && match[1]) {
+      return { id: match[1], canonicalUrl: `https://www.facebook.com/watch/?v=${match[1]}` }
+    }
+  }
+  const shortMatch = clean.match(/fb\.watch\/([A-Za-z0-9_-]{4,})/i)
+  if (shortMatch && shortMatch[1]) {
+    return { id: shortMatch[1], canonicalUrl: `https://fb.watch/${shortMatch[1]}` }
+  }
+  return null
 }
 
 /**
@@ -129,7 +175,7 @@ export function detectPlatformFromUrl(url) {
   if (!trimmed) return 'unknown'
   const lower = trimmed.toLowerCase()
 
-  const hit = KNOWN_PLATFORM_PATTERNS.find((entry) => lower.includes(entry.test))
+  const hit = PLATFORM_PATTERNS.find((entry) => lower.includes(entry.test))
   if (hit) return hit.platform
 
   try {
@@ -201,7 +247,29 @@ export function getCanonicalItemKey(rawUrl) {
     }
   }
 
-  // 5. Dynamic self-registered platform from URL
+  // 5. Facebook: /videos/<id>, /watch/?v=<id>, /reel/<id>, fb.watch/<code>
+  if (/facebook\.com|fb\.watch|fb\.com/i.test(clean)) {
+    const facebook = facebookVideoKey(clean)
+    if (facebook) {
+      return {
+        platform: 'facebook',
+        key: `facebook:video:${facebook.id}`,
+        canonicalUrl: facebook.canonicalUrl,
+      }
+    }
+  }
+
+  // 6. Threads: /@user/post/<code> or /t/<code>
+  const threadsMatch = clean.match(/threads\.(?:net|com)\/(?:@[^/?#]+\/post|t)\/([A-Za-z0-9_-]+)/i)
+  if (threadsMatch && threadsMatch[1]) {
+    return {
+      platform: 'threads',
+      key: `threads:post:${threadsMatch[1]}`,
+      canonicalUrl: `https://www.threads.net/t/${threadsMatch[1]}`,
+    }
+  }
+
+  // 7. Dynamic self-registered platform from URL (known platforms above take precedence)
   const detected = detectPlatformFromUrl(clean || rawUrl)
   if (detected && detected !== 'unknown') {
     return {

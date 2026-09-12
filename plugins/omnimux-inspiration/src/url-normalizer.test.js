@@ -61,10 +61,12 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     assert.equal(keyBili.platform, 'bilibili')
     assert.equal(keyBili.key, 'bilibili:url:https://www.bilibili.com/video/BV1xx411c7mD')
 
+    // Threads is a known platform, so the structured post key wins over the
+    // self-registered `threads:url:` fallback.
     const threadsUrl = 'https://threads.net/@zuck/post/Cx12345'
     const keyThreads = getCanonicalItemKey(threadsUrl)
     assert.equal(keyThreads.platform, 'threads')
-    assert.equal(keyThreads.key, 'threads:url:https://threads.net/@zuck/post/Cx12345')
+    assert.equal(keyThreads.key, 'threads:post:Cx12345')
 
     const douyinUrl = 'https://v.douyin.com/iJabc12/'
     const keyDouyin = getCanonicalItemKey(douyinUrl)
@@ -105,5 +107,50 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     assert.equal(detectPlatformFromUrl('https://v.weibo.com.cn/video/123'), 'weibo')
     assert.equal(detectPlatformFromUrl('https://video.sohu.com.cn/123'), 'sohu')
     assert.equal(detectPlatformFromUrl('https://news.bbc.co.uk/story'), 'bbc')
+  })
+
+  it('extracts canonical keys from Facebook video URLs', () => {
+    const watchUrl = 'https://www.facebook.com/watch/?v=1234567890&ref=share'
+    const mobileUrl = 'https://m.facebook.com/reel/1234567890/'
+    const legacyUrl = 'https://www.facebook.com/creator/videos/1234567890'
+
+    for (const candidate of [watchUrl, mobileUrl, legacyUrl]) {
+      const key = getCanonicalItemKey(candidate)
+      assert.equal(key.platform, 'facebook')
+      assert.equal(key.key, 'facebook:video:1234567890')
+    }
+    assert.equal(isSameSocialContent(watchUrl, mobileUrl), true)
+    assert.equal(isSameSocialContent(watchUrl, legacyUrl), true)
+  })
+
+  it('keeps the fb.watch short code as the canonical key', () => {
+    const key = getCanonicalItemKey('https://fb.watch/AbCdEf123/')
+
+    assert.equal(key.platform, 'facebook')
+    assert.equal(key.key, 'facebook:video:AbCdEf123')
+    assert.equal(key.canonicalUrl, 'https://fb.watch/AbCdEf123')
+  })
+
+  it('extracts canonical keys from Threads post URLs', () => {
+    const netUrl = 'https://www.threads.net/@creator/post/CxYz12345?hl=zh'
+    const comUrl = 'https://threads.com/t/CxYz12345'
+    const keyNet = getCanonicalItemKey(netUrl)
+    const keyCom = getCanonicalItemKey(comUrl)
+
+    assert.equal(keyNet.platform, 'threads')
+    assert.equal(keyNet.key, 'threads:post:CxYz12345')
+    assert.equal(keyCom.key, 'threads:post:CxYz12345')
+    assert.equal(isSameSocialContent(netUrl, comUrl), true)
+  })
+
+  it('self-registers unrecognized Facebook pages without a video identity', () => {
+    const pageUrl = 'https://www.facebook.com/creatorpage/about'
+    const key = getCanonicalItemKey(pageUrl)
+
+    // No numeric video id -> no structured `facebook:video:` key. The page is
+    // still a valid URL on a known host, so it self-registers as `facebook:url:`.
+    assert.equal(key.platform, 'facebook')
+    assert.ok(key.key.startsWith('facebook:url:'))
+    assert.equal(isSameSocialContent(pageUrl, 'https://www.facebook.com/watch/?v=9876543210'), false)
   })
 })

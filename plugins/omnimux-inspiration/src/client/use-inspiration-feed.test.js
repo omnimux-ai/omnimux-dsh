@@ -11,6 +11,7 @@ import {
   createReplicateStatusHandler,
   extractLocalItemIds,
   filterOutItemsByIds,
+  formatPlatformName,
   mergeFetchResult,
   removeIdsFromSet,
   resetReplicateBusy,
@@ -462,5 +463,32 @@ describe('useInspirationFeed lifecycle', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
       globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
     }
+  })
+})
+
+describe('formatPlatformName', () => {
+  it('labels every supported platform with canonical casing', () => {
+    assert.equal(formatPlatformName('tiktok'), 'TikTok')
+    assert.equal(formatPlatformName('instagram'), 'Instagram')
+    assert.equal(formatPlatformName('youtube'), 'YouTube')
+    assert.equal(formatPlatformName('x'), 'X')
+    assert.equal(formatPlatformName('twitter'), 'X')
+    assert.equal(formatPlatformName('facebook'), 'Facebook')
+    assert.equal(formatPlatformName('threads'), 'Threads')
+  })
+
+  it('keeps the first-letter rule for self-registered platforms', () => {
+    assert.equal(formatPlatformName('bilibili'), 'Bilibili')
+    assert.equal(formatPlatformName(''), '')
+    assert.equal(formatPlatformName(undefined), '')
+  })
+
+  it('prefers a locale override when one is registered', () => {
+    // The `twitter` slug shares the `platform.x` locale entry with `x`.
+    const translate = (key) => (key === 'platform.x' ? 'Twitter (X)' : key)
+
+    assert.equal(formatPlatformName('x', translate), 'Twitter (X)')
+    assert.equal(formatPlatformName('twitter', translate), 'Twitter (X)')
+    assert.equal(formatPlatformName('facebook', translate), 'Facebook')
   })
 })
