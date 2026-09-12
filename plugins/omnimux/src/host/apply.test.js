@@ -45,6 +45,7 @@ describe('hub apply composition', () => {
       'omnimux_text_complete',
       'workbench_get_active_view',
       'workbench_open_tab',
+      'omnimux_marketing_presets_search',
     ])
   })
 
@@ -72,7 +73,7 @@ describe('hub apply composition', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
   })
 
-  it('registers all 31 tools and 8 seams by default', () => {
+  it('registers all 32 tools and 8 seams by default', () => {
     const names = []
     const provided = []
     apply({
@@ -81,7 +82,7 @@ describe('hub apply composition', () => {
       get() { return undefined },
     })
 
-    assert.equal(names.length, 31)
+    assert.equal(names.length, 32)
     assert.ok(names.includes('omnimux_video_submit'))
     assert.ok(names.includes('omnimux_image_submit'))
     assert.ok(names.includes('omnimux_audio_submit'))
@@ -92,6 +93,7 @@ describe('hub apply composition', () => {
     assert.ok(names.includes('omnimux_accounts_list'))
     assert.ok(names.includes('workbench_get_active_view'))
     assert.ok(names.includes('workbench_open_tab'))
+    assert.ok(names.includes('omnimux_marketing_presets_search'))
 
     assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'videoGenerate', 'imageGenerate', 'audioGenerate', 'speechToText', 'textComplete', 'modelCatalog'])
   })
@@ -105,8 +107,8 @@ describe('hub apply composition', () => {
       get() { return undefined },
     }, { gate: { enabled: false } })
 
-    // workbench tools are ungated core facilities
-    assert.equal(names.length, 2)
+    // workbench tools are ungated core facilities, marketing presets search is ungated
+    assert.equal(names.length, 3)
     assert.deepEqual(provided, ['identity', 'hubEvents', 'workbenchMailbox', 'modelCatalog'])
   })
 

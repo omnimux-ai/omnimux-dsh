@@ -28,7 +28,7 @@ import type {
   ShowcaseItem,
 } from '../shared/manifest.ts';
 import type { AppIndexEntry, TaskRecord } from '../host/storage/appStorage.ts';
-import { claimProductStage, APP_OPEN_EVENT, TABS_CHANGED_EVENT } from './stage.ts';
+import { APP_OPEN_EVENT, TABS_CHANGED_EVENT } from './stage.ts';
 import { AppFormPanel } from './AppFormPanel.tsx';
 import './apps.css';
 
@@ -85,15 +85,12 @@ export const AppWorkspaceView: React.FC<AppWorkspaceViewProps> = memo(({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Claim product stage on mount and listen to omnimux-app-open
+  // Listen to omnimux-app-open
   useEffect(() => {
-    claimProductStage('omnimux-apps');
-
     const handleAppOpen = (e: Event) => {
       const customEvt = e as CustomEvent<{ id?: string; manifest?: ApplicationManifest }>;
       const targetId = customEvt.detail?.id;
       if (targetId) {
-        claimProductStage('omnimux-apps');
         setCurrentAppId(targetId);
         if (customEvt.detail?.manifest) {
           setCurrentManifest(customEvt.detail.manifest);
