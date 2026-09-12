@@ -265,6 +265,12 @@ describe('listInspirations query params', () => {
         calls[1],
         '/omnimux/inspiration/local?sort=views&country=GB&category=home&traffic_type=organic',
       )
+
+      await listInspirations({ platform: 'x' })
+      assert.equal(calls.at(-1), '/omnimux/inspiration?platform=x')
+
+      await listLocalInspirations({ platform: 'tiktok' })
+      assert.equal(calls.at(-1), '/omnimux/inspiration/local?platform=tiktok')
     } finally {
       globalThis.fetch = originalFetch
     }

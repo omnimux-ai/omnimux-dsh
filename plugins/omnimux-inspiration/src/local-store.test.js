@@ -154,12 +154,55 @@ describe('Local Inspiration Store', () => {
     assert.ok(extracted.replication_action.includes('复制前3秒反转'))
   })
 
-  it('detects platforms accurately', () => {
+  it('detects platforms accurately and self-registers unknown platforms', () => {
     assert.equal(detectPlatformFromUrl('https://www.tiktok.com/@creator/video/123'), 'tiktok')
     assert.equal(detectPlatformFromUrl('https://www.instagram.com/reel/abc/'), 'instagram')
     assert.equal(detectPlatformFromUrl('https://youtu.be/xyz'), 'youtube')
     assert.equal(detectPlatformFromUrl('https://x.com/user/status/789'), 'x')
-    assert.equal(detectPlatformFromUrl('https://example.com/item'), 'unknown')
+    assert.equal(detectPlatformFromUrl('https://twitter.com/user/status/789'), 'x')
+    assert.equal(detectPlatformFromUrl('https://www.bilibili.com/video/BV123'), 'bilibili')
+    assert.equal(detectPlatformFromUrl('https://threads.net/@user/post/456'), 'threads')
+    assert.equal(detectPlatformFromUrl('https://v.douyin.com/abc/'), 'douyin')
+    assert.equal(detectPlatformFromUrl('https://example.com/item'), 'example')
+    assert.equal(detectPlatformFromUrl('not-a-valid-url'), 'unknown')
+    assert.equal(detectPlatformFromUrl(''), 'unknown')
+  })
+
+  it('supports store.platforms() statistics and alias normalization in store.list()', () => {
+    const store = createLocalStore({ paths })
+    store.add({ title: 'TikTok 1', source_url: 'https://www.tiktok.com/@u/video/111', source_platform: 'tiktok' })
+    store.add({ title: 'TikTok 2', source_url: 'https://www.tiktok.com/@u/video/222', source_platform: 'tiktok' })
+    store.add({ title: 'X 1', source_url: 'https://x.com/u/status/333', source_platform: 'x' })
+    store.add({ title: 'Twitter 2', source_url: 'https://twitter.com/u/status/444', source_platform: 'twitter' })
+    store.add({ title: 'Douyin 1', source_url: 'https://www.douyin.com/video/555', source_platform: 'douyin' })
+
+    const platforms = store.platforms()
+    assert.ok(Array.isArray(platforms))
+    const tiktokEntry = platforms.find((p) => p.name === 'tiktok')
+    const xEntry = platforms.find((p) => p.name === 'x')
+    const douyinEntry = platforms.find((p) => p.name === 'douyin')
+    assert.equal(tiktokEntry?.count, 2)
+    assert.equal(xEntry?.count, 2)
+    assert.equal(douyinEntry?.count, 1)
+
+    // Filtering by 'x' should return both 'x' and 'twitter'
+    const xList = store.list({ platform: 'x' })
+    assert.equal(xList.items.length, 2)
+    assert.ok(xList.items.some((it) => it.source_platform === 'x'))
+    assert.ok(xList.items.some((it) => it.source_platform === 'twitter'))
+
+    // Filtering by 'twitter' should also return both 'x' and 'twitter'
+    const twitterList = store.list({ platform: 'twitter' })
+    assert.equal(twitterList.items.length, 2)
+
+    // Filtering by 'tiktok'
+    const tiktokList = store.list({ platform: 'tiktok' })
+    assert.equal(tiktokList.items.length, 2)
+
+    // Filtering by 'douyin'
+    const douyinList = store.list({ platform: 'douyin' })
+    assert.equal(douyinList.items.length, 1)
+    assert.equal(douyinList.items[0].title, 'Douyin 1')
   })
 
   it('runs automated import with OmniMux social data and video analysis', async () => {

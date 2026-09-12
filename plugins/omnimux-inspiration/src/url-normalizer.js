@@ -26,6 +26,15 @@ const TRACKING_PARAMS = new Set([
   'share_link_id',
 ])
 
+export const KNOWN_PLATFORM_PATTERNS = [
+  { test: 'tiktok.com', platform: 'tiktok' },
+  { test: 'instagram.com', platform: 'instagram' },
+  { test: 'youtube.com', platform: 'youtube' },
+  { test: 'youtu.be', platform: 'youtube' },
+  { test: 'x.com', platform: 'x' },
+  { test: 'twitter.com', platform: 'x' },
+]
+
 /**
  * Clean tracking query parameters and lowercase domain.
  * @param {string} rawUrl
@@ -73,6 +82,63 @@ export function normalizeUrl(rawUrl) {
 }
 
 /**
+ * Extract platform slug from hostname (e.g. www.bilibili.com -> bilibili).
+ * Strips www. / m. / mobile. prefixes, multi-part and single TLDs.
+ * @param {string} hostname
+ * @returns {string}
+ */
+export function extractDomainSlug(hostname) {
+  if (!hostname || typeof hostname !== 'string') return ''
+  let host = hostname.toLowerCase().trim()
+  host = host.split(':')[0]
+  host = host.replace(/^(www\d*|mobile|m)\./i, '')
+  // Strip known multi-part TLDs (e.g. .com.cn, .co.uk, .com.tw)
+  host = host.replace(/\.(com|co|net|org|edu|gov)\.[a-z]{2}$/i, '')
+  // Strip single TLD
+  host = host.replace(/\.[a-z0-9-]+$/i, '')
+  if (!host) return ''
+  const parts = host.split('.')
+  const rawSlug = parts[parts.length - 1]
+  const slug = rawSlug ? rawSlug.replace(/[^a-z0-9_-]/g, '') : ''
+  return slug || ''
+}
+
+/**
+ * Detect social platform from URL. Known platforms take precedence,
+ * and unknown valid URLs are dynamically self-registered by domain slug.
+ * Fallback to 'unknown' for invalid or unparseable URLs.
+ * @param {string} url
+ * @returns {string}
+ */
+export function detectPlatformFromUrl(url) {
+  if (!url || typeof url !== 'string') return 'unknown'
+  const trimmed = url.trim()
+  if (!trimmed) return 'unknown'
+  const lower = trimmed.toLowerCase()
+
+  const hit = KNOWN_PLATFORM_PATTERNS.find((entry) => lower.includes(entry.test))
+  if (hit) return hit.platform
+
+  try {
+    const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'unknown'
+    }
+    const hostname = parsed.hostname.toLowerCase()
+    if (!hostname || !hostname.includes('.')) {
+      return 'unknown'
+    }
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+      return 'unknown'
+    }
+    const slug = extractDomainSlug(hostname)
+    return slug || 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
  * Extract platform and unique canonical key from social URL.
  * @param {string} rawUrl
  * @returns {{ platform: string, key: string, canonicalUrl: string }}
@@ -80,6 +146,7 @@ export function normalizeUrl(rawUrl) {
 export function getCanonicalItemKey(rawUrl) {
   if (!rawUrl || typeof rawUrl !== 'string') return { platform: 'unknown', key: '', canonicalUrl: '' }
   const clean = normalizeUrl(rawUrl)
+  if (!clean) return { platform: 'unknown', key: '', canonicalUrl: '' }
 
   // 1. TikTok video: /@user/video/(\d+) or /v/(\d+)
   const tiktokMatch = clean.match(/tiktok\.com\/(?:@[^/]+\/video|v)\/(\d{15,25})/i)
@@ -118,6 +185,16 @@ export function getCanonicalItemKey(rawUrl) {
       platform: 'x',
       key: `x:tweet:${xMatch[1]}`,
       canonicalUrl: `https://x.com/i/status/${xMatch[1]}`,
+    }
+  }
+
+  // 5. Dynamic self-registered platform from URL
+  const detected = detectPlatformFromUrl(clean || rawUrl)
+  if (detected && detected !== 'unknown') {
+    return {
+      platform: detected,
+      key: `${detected}:url:${clean}`,
+      canonicalUrl: clean,
     }
   }
 

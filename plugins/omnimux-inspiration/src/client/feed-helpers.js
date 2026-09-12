@@ -6,6 +6,16 @@ import {
   setInspirationCache,
 } from './api.js'
 
+export function formatPlatformName(slug, t) {
+  if (!slug) return ''
+  const lower = String(slug).toLowerCase().trim()
+  if (lower === 'tiktok') return t ? (t('platform.tiktok') || 'TikTok') : 'TikTok'
+  if (lower === 'x' || lower === 'twitter') return t ? (t('platform.twitter') || '推特 (X)') : '推特 (X)'
+  if (lower === 'instagram') return t ? (t('platform.instagram') || 'Instagram') : 'Instagram'
+  if (lower === 'youtube') return t ? (t('platform.youtube') || 'YouTube') : 'YouTube'
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
+}
+
 /**
  * Construct SWR-style cache key for inspiration query parameters.
  * Shape: `insp:${tab}:${q}:${type}:${sort}:${favorite}(:${extra})*`
@@ -20,6 +30,7 @@ export function cacheKeyOf(...args) {
   const base = `insp:${tab || 'all'}:${q || ''}:${type || ''}:${sort || 'hot'}:${favorite ?? '0'}`
 
   const extraParts = []
+  if (p.platform) extraParts.push(`plat=${p.platform}`)
   if (p.country) extraParts.push(`c=${p.country}`)
   if (p.category) extraParts.push(`cat=${p.category}`)
   if (p.duration_min != null && p.duration_min !== '') extraParts.push(`dmin=${p.duration_min}`)
@@ -58,11 +69,12 @@ function applyNextPageResult(result, targetPage, setters) {
 }
 
 function applyFirstPageResult(result, cacheKey, setters) {
-  const { setItems, setPage, setHasMore, setPhase } = setters
+  const { setItems, setPage, setHasMore, setPhase, setPlatforms } = setters
   if (setItems) setItems(result.items || [])
   if (setPage) setPage(1)
   if (setHasMore) setHasMore(Boolean(result.hasMore))
   if (setPhase && result.phase) setPhase(result.phase)
+  if (setPlatforms && Array.isArray(result.platforms)) setPlatforms(result.platforms)
   if (cacheKey) setInspirationCache(cacheKey, result)
 }
 
@@ -194,7 +206,7 @@ export async function preloadBatchCovers(items, timeoutMs = 600) {
 
 export async function fetchAndMergeInspirations(params, options) {
   const {
-    tab, q, type, sort, favorite, targetPage,
+    tab, q, platform, type, sort, favorite, targetPage,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   } = params
@@ -202,6 +214,7 @@ export async function fetchAndMergeInspirations(params, options) {
   const result = await loadInspirationsAtomic({
     tab,
     q,
+    platform,
     type,
     sort,
     favorite,
@@ -239,14 +252,14 @@ export function checkCacheEarlyReturn(cacheKey, setters) {
 
 export async function executeFeedLoad(params, setters) {
   const {
-    isNextPage, tab, q, type, sort, favorite, page, hasExistingItems,
+    isNextPage, tab, q, platform, type, sort, favorite, page, hasExistingItems,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   } = params
-  const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore } = setters
+  const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms } = setters
   const targetPage = isNextPage ? page + 1 : 1
   const cacheKey = cacheKeyOf({
-    tab, q, type, sort, favorite,
+    tab, q, platform, type, sort, favorite,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   })
@@ -261,11 +274,11 @@ export async function executeFeedLoad(params, setters) {
   try {
     await fetchAndMergeInspirations(
       {
-        tab, q, type, sort, favorite, targetPage,
+        tab, q, platform, type, sort, favorite, targetPage,
         country, category, duration_min, duration_max,
         views_min, views_max, traffic_type, posted_after, posted_before,
       },
-      { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError } },
+      { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError, setPlatforms } },
     )
   } catch (err) {
     setError(String(err?.message || err))

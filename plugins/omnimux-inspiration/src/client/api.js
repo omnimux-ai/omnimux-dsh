@@ -114,7 +114,7 @@ export function invalidateInspirationCache() {
 }
 
 const CLOUD_FILTER_KEYS = [
-  'type', 'tag', 'tags', 'q', 'is_favorite', 'sort', 'page', 'page_size',
+  'type', 'tag', 'tags', 'q', 'platform', 'is_favorite', 'sort', 'page', 'page_size',
   'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
   'traffic_type', 'posted_after', 'posted_before',
 ]
@@ -158,12 +158,13 @@ export function listLocalInspirations(filters = {}) {
 
 /**
  * Atomic multi-source loader with SWR cache support
- * @param {{ tab: string, q?: string, type?: string, sort?: string, favorite?: string, page?: number, pageSize?: number, country?: string, category?: string, duration_min?: number | string, duration_max?: number | string, views_min?: number | string, views_max?: number | string, traffic_type?: string, posted_after?: string, posted_before?: string }} params
+ * @param {{ tab: string, q?: string, platform?: string, type?: string, sort?: string, favorite?: string, page?: number, pageSize?: number, country?: string, category?: string, duration_min?: number | string, duration_max?: number | string, views_min?: number | string, views_max?: number | string, traffic_type?: string, posted_after?: string, posted_before?: string }} params
  */
 export async function loadInspirationsAtomic(params) {
   const {
     tab = 'all',
     q = '',
+    platform = '',
     type = '',
     sort = 'hot',
     favorite = '0',
@@ -181,6 +182,7 @@ export async function loadInspirationsAtomic(params) {
   } = params
   const filterArgs = {
     q: q.trim() || undefined,
+    platform: platform ? platform.trim() : undefined,
     type: type || undefined,
     sort: sort || undefined,
     is_favorite: favorite === '1' ? '1' : undefined,
@@ -202,7 +204,8 @@ export async function loadInspirationsAtomic(params) {
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
     const items = (res.body?.data?.items || []).map((it) => ({ ...it, is_local: true }))
     const total = Number(res.body?.data?.total) || items.length
-    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready' }
+    const platforms = res.body?.data?.platforms || []
+    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready', platforms }
   }
 
   if (tab === 'public') {
@@ -223,11 +226,15 @@ export async function loadInspirationsAtomic(params) {
   let items = []
   let total = 0
   let needLogin = false
+  let platforms = []
 
   if (localOutcome.status === 'fulfilled' && localOutcome.value.ok) {
     const lItems = (localOutcome.value.body?.data?.items || []).map((it) => ({ ...it, is_local: true }))
     items.push(...lItems)
     total += Number(localOutcome.value.body?.data?.total) || lItems.length
+    if (Array.isArray(localOutcome.value.body?.data?.platforms)) {
+      platforms = localOutcome.value.body?.data?.platforms
+    }
   }
 
   if (pubOutcome.status === 'fulfilled') {
@@ -246,6 +253,7 @@ export async function loadInspirationsAtomic(params) {
     total,
     hasMore: items.length >= pageSize,
     phase: needLogin && items.length === 0 ? 'need-login' : 'ready',
+    platforms,
   }
 }
 

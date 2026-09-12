@@ -109,6 +109,25 @@ export function createLocalStore(opts = {}) {
     paths,
 
     /**
+     * Read all items and extract unique valid platforms with their item counts.
+     * Normalizes twitter alias to x.
+     * @returns {Array<{ name: string, count: number }>}
+     */
+    platforms() {
+      const items = readAll()
+      const counts = {}
+      for (const item of items) {
+        let plat = (item.source_platform || item.platform || '').trim().toLowerCase()
+        if (plat === 'twitter') plat = 'x'
+        if (!plat || plat === 'unknown') continue
+        counts[plat] = (counts[plat] || 0) + 1
+      }
+      return Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    },
+
+    /**
      * @param {{
      *   q?: string,
      *   type?: string,
@@ -143,7 +162,14 @@ export function createLocalStore(opts = {}) {
       }
 
       if (query.platform) {
-        items = items.filter((row) => row.source_platform === query.platform)
+        const targetPlat = String(query.platform).toLowerCase().trim()
+        items = items.filter((row) => {
+          const rowPlat = (row.source_platform || row.platform || '').toLowerCase().trim()
+          if (targetPlat === 'x' || targetPlat === 'twitter') {
+            return rowPlat === 'x' || rowPlat === 'twitter'
+          }
+          return rowPlat === targetPlat
+        })
       }
 
       const matchTag = query.tag || query.tags
