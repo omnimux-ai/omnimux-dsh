@@ -1740,6 +1740,13 @@ if (import.meta.env.EXT_TARGET === 'firefox') {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
 }
 
+// Open welcome onboarding page on install
+chrome.runtime.onInstalled?.addListener((details) => {
+  if (details.reason === 'install') {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('welcome/index.html') }).catch(() => {})
+  }
+})
+
 // Alarms survive some extension/service-worker restarts. Remove any stale
 // schedule left by an older eager-connection build; onConnect re-arms it.
 disarmBridgeKeepalive()

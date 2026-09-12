@@ -16,6 +16,11 @@ import type { AffinityTab, TabAffinityDecision, TabAffinityState } from '../back
 import { connectPanel, PanelRpcError, type PanelApi, type PanelSettings } from './api.ts'
 import { renderMarkdown } from './markdown.ts'
 import whaleUrl from '../../assets/icons/deepseek-256.png'
+import { SceneBadge, type PageSceneInfo } from './components/SceneBadge.tsx'
+import { PresetChips } from './components/PresetChips.tsx'
+import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
+import { DomFillButton } from './components/DomFillButton.tsx'
+import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
@@ -573,6 +578,11 @@ const MessageBody = memo(function MessageBody({
           />
         )}
         {text.trim() !== '' && <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />}
+        {row.kind === 'assistant' && text.trim() !== '' && row.status !== 'running' && (
+          <div className="dom-fill-actions">
+            <DomFillButton textToFill={text} />
+          </div>
+        )}
       </div>
     )
   }
@@ -672,6 +682,64 @@ export function App(): React.JSX.Element {
   const seqRef = useRef(0)
   const sessionRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const [pageScene, setPageScene] = useState<PageSceneInfo | null>(null)
+  const [detectedMedia, setDetectedMedia] = useState<SniffedMediaItem[]>([])
+  const isFloatMode = useMemo(() => typeof window !== 'undefined' && window.location.search.includes('mode=float'), [])
+
+  useEffect(() => {
+    if (isFloatMode) {
+      const handleMessage = (e: MessageEvent) => {
+        if (!e.data || typeof e.data !== 'object') return
+        if (e.data.type === 'PAGE_CONTEXT_UPDATE') {
+          setPageScene(e.data.payload)
+          if (e.data.payload?.media) {
+            setDetectedMedia(e.data.payload.media)
+          }
+        } else if (e.data.type === 'MEDIA_SNIFFED_RESULT') {
+          setDetectedMedia(e.data.payload || [])
+        }
+      }
+      window.addEventListener('message', handleMessage)
+      try {
+        window.parent?.postMessage({ type: 'GET_PAGE_CONTEXT' }, '*')
+      } catch {
+        // Ignore
+      }
+      return () => window.removeEventListener('message', handleMessage)
+    } else {
+      const updateContextFromTab = () => {
+        chrome.tabs?.query({ active: true, currentWindow: true }).then(([tab]) => {
+          if (tab?.id) {
+            chrome.tabs.sendMessage(tab.id, { action: 'GET_PAGE_CONTEXT' }).then((ctx) => {
+              if (ctx) {
+                setPageScene(ctx)
+                if (ctx.media) setDetectedMedia(ctx.media)
+              }
+            }).catch(() => {})
+          }
+        }).catch(() => {})
+      }
+      updateContextFromTab()
+      const tabListener = () => updateContextFromTab()
+      chrome.tabs?.onActivated?.addListener(tabListener)
+      return () => {
+        chrome.tabs?.onActivated?.removeListener(tabListener)
+      }
+    }
+  }, [isFloatMode])
+
+  async function attachMediaAsImage(item: SniffedMediaItem): Promise<void> {
+    try {
+      const res = await fetch(item.src)
+      const blob = await res.blob()
+      const ext = item.type === 'video' ? 'jpg' : (blob.type.split('/')[1] || 'jpg')
+      const file = new File([blob], `page-media-${item.id}.${ext}`, { type: blob.type || 'image/jpeg' })
+      await addImageFiles([file])
+    } catch {
+      // Ignore
+    }
+  }
 
   const nextSeq = (): number => { seqRef.current += 1; return seqRef.current }
   const question = questions[0] ?? null
@@ -1928,10 +1996,7 @@ export function App(): React.JSX.Element {
   return (
     <><div className="app">
       <header className="topbar">
-        <span className="connection" role="status">
-          <span className={`dot ${state}`} />
-          <span className="connection-label">{statusText}</span>
-        </span>
+        <WorkspaceSelector bridgeConnected={state === 'connected'} />
         <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
           aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
           onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
@@ -1950,8 +2015,37 @@ export function App(): React.JSX.Element {
           </button>
           <button className="icon-button settings-trigger" onClick={() => setShowSettings(true)}
             aria-label={copy.app.openSettings} title={copy.app.settings}><SettingsIcon /></button>
+          {isFloatMode && (
+            <div className="float-top-actions">
+              <button
+                type="button"
+                className="float-btn"
+                onClick={() => {
+                  try {
+                    void chrome.sidePanel?.open?.({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch(() => {})
+                  } catch {
+                    // Fallback
+                  }
+                }}
+                title="切换到 Chrome 原生右侧边栏"
+              >
+                ↗ 侧栏
+              </button>
+              <button
+                type="button"
+                className="float-btn close"
+                onClick={() => {
+                  window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION' }, '*')
+                }}
+                title="收起大工作台 (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       </header>
+      <SceneBadge scene={pageScene} onClearContext={() => setPageScene(null)} />
       {showTextSize && (
         <TextSizePanel scale={uiScale} copy={copy}
           onStep={(direction) => changeUiScale(stepUiScale(uiScaleRef.current, direction))}
@@ -2048,6 +2142,8 @@ export function App(): React.JSX.Element {
       )}
       {error !== null && <div className="error">{error}</div>}
       <footer className="composer">
+        <MediaSnifferBar items={detectedMedia} onAttachMedia={(m) => { void attachMediaAsImage(m) }} />
+        <PresetChips scene={pageScene} onSelectPrompt={(p) => setDraft((c) => ({ ...c, text: p }))} />
         <div className="composer-box">
           {selection !== null && (
             <SelectionQuote
