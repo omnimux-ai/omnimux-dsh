@@ -8,7 +8,8 @@
       { "id": "创作视频", "name": "创作视频" },
       { "id": "生成电商图", "name": "生成电商图" },
       { "id": "创作图片", "name": "创作图片" },
-      { "id": "数据分析", "name": "数据分析" }
+      { "id": "数据分析", "name": "数据分析" },
+      { "id": "社媒营销", "name": "社媒营销" }
     ],
     "skills": [
       {
@@ -513,6 +514,17 @@
         "category": "数据分析",
         "description": "拆解 TikTok 账号的内容、受众与增长。",
         "summary": "拆解 TikTok 账号的内容、受众与增长。",
+        "installed": true
+      },
+      {
+        "id": "sk-tk-sopilot-social-agents",
+        "slug": "sopilot-social-agents",
+        "skill": "sopilot-social-agents",
+        "name": "SoPilot 社媒营销路由中心",
+        "title": "SoPilot 社媒营销路由中心",
+        "category": "社媒营销",
+        "description": "汇集 14 套社媒营销专项智能体提示词与表单配置，覆盖 Twitter/X 深度运营（高赞互动、Threads改写、引用转推、私信触达、爆款复刻等）。",
+        "summary": "汇集 14 套社媒营销专项智能体提示词与表单配置，覆盖 Twitter/X 深度运营（高赞互动、Threads改写、引用转推、私信触达、爆款复刻等）。",
         "installed": true
       }
     ]
