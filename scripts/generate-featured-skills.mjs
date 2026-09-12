@@ -24,26 +24,58 @@ export const CATALOG_PATH = join(ROOT, 'plugins/omnimux-market/catalog/index.jso
 export const SNAPSHOT_PATH = join(ROOT, 'plugins/omnimux/src/client/session-guide/skills/featured-skills.json')
 export const SNAPSHOT_SCHEMA = 'omnimux.session-guide.featured-skills/v1'
 
+/**
+ * 官方重磅精选置顶序列（严格对标首屏 4 列视觉网格与高品质出片流）
+ */
+export const PINNED_TOP_SKILL_IDS = [
+  'sk-omx-3d-animation-short-generator',
+  'sk-omx-brand-promo-video-generator',
+  'sk-omx-minimalist-product-ad-generator',
+  'sk-omx-music-video-subtitle-generator',
+  'sk-omx-paper-collage-explainer-generator',
+  'sk-omx-fpv-tour-video-generator',
+  'sk-omx-pov-short-film-generator',
+  'sk-omx-suspense-title-sequence-generator',
+]
+
 /** 快照只留界面真正用到的字段，避免把整个目录搬进客户端 bundle。 */
 export function buildSnapshot(catalog) {
   const items = Array.isArray(catalog?.items) ? catalog.items : []
+  const pinnedOrder = new Map(PINNED_TOP_SKILL_IDS.map((id, index) => [id, index]))
+
   const skills = items
     .filter((item) => item && item.kind === 'skill' && item.recommended === true)
-    .map((item) => ({
-      id: String(item.id || ''),
-      title: String(item.title || ''),
-      summary: String(item.summary || ''),
-      category: String(item.category || ''),
-      tags: Array.isArray(item.tags) ? item.tags.filter((tag) => typeof tag === 'string' && tag !== '') : [],
-      cover: typeof item.cover === 'string' ? item.cover : '',
-      avatar: typeof item.avatar === 'string' ? item.avatar : '',
-      skill: String(item.skill || ''),
-      sourceRef: item.source && typeof item.source === 'object'
-        ? { repo: String(item.source.repo || ''), path: String(item.source.path || '') }
-        : null,
-    }))
+    .map((item) => {
+      const coverAsset = typeof item.cover === 'string'
+        ? item.cover
+        : (item.cover && typeof item.cover.asset === 'string' ? item.cover.asset : '')
+      const avatarAsset = typeof item.avatar === 'string'
+        ? item.avatar
+        : (item.avatar && typeof item.avatar.asset === 'string' ? item.avatar.asset : '')
+
+      return {
+        id: String(item.id || ''),
+        title: String(item.title || ''),
+        summary: String(item.summary || ''),
+        category: String(item.category || ''),
+        tags: Array.isArray(item.tags) ? item.tags.filter((tag) => typeof tag === 'string' && tag !== '') : [],
+        cover: coverAsset,
+        avatar: avatarAsset,
+        badge: typeof item.badge === 'string' && item.badge ? item.badge : 'H3',
+        attribution: typeof item.attribution === 'string' && item.attribution ? item.attribution : '@MiniMax Design官方',
+        skill: String(item.skill || ''),
+        sourceRef: item.source && typeof item.source === 'object'
+          ? { repo: String(item.source.repo || ''), path: String(item.source.path || '') }
+          : null,
+      }
+    })
     .filter((skill) => skill.id && skill.title)
-    .sort((a, b) => a.id.localeCompare(b.id))
+    .sort((a, b) => {
+      const aRank = pinnedOrder.has(a.id) ? pinnedOrder.get(a.id) : 9999
+      const bRank = pinnedOrder.has(b.id) ? pinnedOrder.get(b.id) : 9999
+      if (aRank !== bRank) return aRank - bRank
+      return a.id.localeCompare(b.id)
+    })
 
   const categories = (Array.isArray(catalog?.categories) ? catalog.categories : [])
     .filter((category) => category && category.tab === 'skills' && category.id && category.title)

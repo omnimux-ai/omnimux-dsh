@@ -4,6 +4,162 @@
   "source": "plugins/omnimux-market/catalog/index.json",
   "skills": [
     {
+      "id": "sk-omx-3d-animation-short-generator",
+      "title": "3D动画短片",
+      "summary": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "精选"
+      ],
+      "cover": "catalog/covers/3d-animation-short-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "3d-animation-short-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/3d-animation-short-generator"
+      }
+    },
+    {
+      "id": "sk-omx-brand-promo-video-generator",
+      "title": "品牌宣传短片生成器",
+      "summary": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
+      "category": "sk-marketing",
+      "tags": [
+        "商业广告",
+        "精选"
+      ],
+      "cover": "catalog/covers/brand-promo-video-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "brand-promo-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/brand-promo-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-minimalist-product-ad-generator",
+      "title": "极简产品广告生成器",
+      "summary": "基于产品图片和广告需求，完成卖点提炼、英文文案与节拍分镜设计，输出极简产品广告短片，适用于电商推广与新品发布。",
+      "category": "sk-commerce",
+      "tags": [
+        "商业广告",
+        "电商",
+        "精选"
+      ],
+      "cover": "catalog/covers/minimalist-product-ad-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "minimalist-product-ad-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/minimalist-product-ad-generator"
+      }
+    },
+    {
+      "id": "sk-omx-music-video-subtitle-generator",
+      "title": "音乐MV动态字幕生成器",
+      "summary": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案，适用于人工智能音乐视频创作。",
+      "category": "sk-writing",
+      "tags": [
+        "创意实验",
+        "音频音乐",
+        "精选"
+      ],
+      "cover": "catalog/covers/music-video-subtitle-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "music-video-subtitle-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/music-video-subtitle-generator"
+      }
+    },
+    {
+      "id": "sk-omx-paper-collage-explainer-generator",
+      "title": "纸拼贴讲解动画",
+      "summary": "将文案、故事节点或抽象概念转成可确认的纸拼贴讲解动画，并保留触感音效。",
+      "category": "sk-visual",
+      "tags": [
+        "动画",
+        "教育",
+        "创意实验",
+        "精选"
+      ],
+      "cover": "catalog/covers/paper-collage-explainer-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "paper-collage-explainer-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/paper-collage-explainer-generator"
+      }
+    },
+    {
+      "id": "sk-omx-fpv-tour-video-generator",
+      "title": "第一视角 FPV 穿越生成",
+      "summary": "先确认时长和画幅，再按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
+      "category": "sk-visual",
+      "tags": [
+        "专业影视",
+        "精选"
+      ],
+      "cover": "catalog/covers/fpv-tour-video-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "fpv-tour-video-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/fpv-tour-video-generator"
+      }
+    },
+    {
+      "id": "sk-omx-pov-short-film-generator",
+      "title": "第一视角短片生成",
+      "summary": "将创意、剧本或参考素材规划为严格主角眼睛视角的沉浸式短片制作方案。",
+      "category": "sk-writing",
+      "tags": [
+        "短剧漫剧",
+        "精选"
+      ],
+      "cover": "catalog/covers/pov-short-film-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "pov-short-film-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/pov-short-film-generator"
+      }
+    },
+    {
+      "id": "sk-omx-suspense-title-sequence-generator",
+      "title": "悬疑电影片头生成",
+      "summary": "根据电影设定与参考素材锚定关键帧和英文署名，生成十五秒复古悬疑美学片头成片。",
+      "category": "sk-visual",
+      "tags": [
+        "创意实验",
+        "精选"
+      ],
+      "cover": "catalog/covers/suspense-title-sequence-generator.png",
+      "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
+      "skill": "suspense-title-sequence-generator",
+      "sourceRef": {
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/suspense-title-sequence-generator"
+      }
+    },
+    {
       "id": "sk-amazon-keyword-traffic-analysis",
       "title": "Amazon Keyword Traffic Analysis",
       "summary": "Amazon keyword, traffic source, ABA trend and PPC opportunity analysis.",
@@ -14,8 +170,10 @@
         "关键词流量",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-keyword-traffic-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -33,8 +191,10 @@
         "Listing优化",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-image.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-listing-optimization",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -52,8 +212,10 @@
         "市场分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-market-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -71,8 +233,10 @@
         "竞品研究",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-image.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-product-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -91,8 +255,10 @@
         "VOC",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/home/bggg-data-amazon.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-review-optimization",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -111,8 +277,10 @@
         "BSR",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/digital-product-promo-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "amazon-trend-risk-monitor",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -131,6 +299,8 @@
       ],
       "cover": "",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "bggg-data-amazon",
       "sourceRef": {
         "repo": "",
@@ -149,8 +319,10 @@
         "TikTok",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/home/bggg-data-amazon.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ecommerce-daily-review",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -168,8 +340,10 @@
         "报表",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/product-kinetic-typography-tvc.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ecommerce-output-spec",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -187,8 +361,10 @@
         "运营",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/product-kinetic-typography-tvc.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ecommerce-routing-policy",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -207,8 +383,10 @@
         "HTML",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/transcript-broll-planner.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "html-report-templates",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -225,29 +403,14 @@
         "动画",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/2d-animation-commentary-drama.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "2d-animation-commentary-drama",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/2d-animation-commentary-drama"
-      }
-    },
-    {
-      "id": "sk-omx-3d-animation-short-generator",
-      "title": "3D动画短片",
-      "summary": "根据故事创意完成角色场景设定、镜头规划、分镜生成与视频合成，输出风格统一的3D动画短片。",
-      "category": "sk-visual",
-      "tags": [
-        "动画",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "3d-animation-short-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/3d-animation-short-generator"
       }
     },
     {
@@ -259,8 +422,10 @@
         "短剧漫剧",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/3d-comic-commentary-drama.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "3d-comic-commentary-drama",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -276,8 +441,10 @@
         "音频音乐",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/asmr-ambient.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "asmr-ambient",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -293,29 +460,14 @@
         "音频音乐",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/audiobook.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "audiobook",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/audiobook"
-      }
-    },
-    {
-      "id": "sk-omx-brand-promo-video-generator",
-      "title": "品牌宣传短片生成器",
-      "summary": "基于品牌素材与推广目标，完成事实核验、创意方向、分镜和音画合成，输出可展示的品牌宣传短片。",
-      "category": "sk-marketing",
-      "tags": [
-        "商业广告",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "brand-promo-video-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/brand-promo-video-generator"
       }
     },
     {
@@ -327,8 +479,10 @@
         "商业广告",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/brand-stream-mg.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "brand-stream-mg",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -344,8 +498,10 @@
         "短剧漫剧",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/chinese-style-short-drama-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "chinese-style-short-drama-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -361,8 +517,10 @@
         "平台工具",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/clip-export.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "clip-export",
       "sourceRef": {
         "repo": "",
@@ -378,8 +536,10 @@
         "动画",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/co-op-game-intro-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "co-op-game-intro-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -395,8 +555,10 @@
         "商业广告",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/digital-product-promo-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "digital-product-promo-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -412,8 +574,10 @@
         "商业广告",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/dot-matrix-brand-wordmark-motion.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "dot-matrix-brand-wordmark-motion",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -429,8 +593,10 @@
         "音频音乐",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/drama-soundtrack.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "drama-soundtrack",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -446,8 +612,10 @@
         "电商",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ecommerce-design",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -463,8 +631,10 @@
         "电商",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-image.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ecommerce-image",
       "sourceRef": {
         "repo": "",
@@ -480,8 +650,10 @@
         "教育",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/education-studio.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "education-studio",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -498,8 +670,10 @@
         "电商",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/fashion-scene-showcase-video.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "fashion-scene-showcase-video",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -516,8 +690,10 @@
         "音频音乐",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/felt-stop-motion-story-short.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "felt-stop-motion-story-short",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -533,29 +709,14 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/film-reference-prompt-writer.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "film-reference-prompt-writer",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/film-reference-prompt-writer"
-      }
-    },
-    {
-      "id": "sk-omx-fpv-tour-video-generator",
-      "title": "第一视角 FPV 穿越生成",
-      "summary": "先确认时长和画幅，再按场景空间决定路线几何，生成连续沉浸的第一人称 FPV 一镜到底穿越视频。",
-      "category": "sk-visual",
-      "tags": [
-        "专业影视",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "fpv-tour-video-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/fpv-tour-video-generator"
       }
     },
     {
@@ -567,8 +728,10 @@
         "平台工具",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/h3-prompt-expert.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "h3-prompt-expert",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -587,8 +750,10 @@
         "精选",
         "创意实验"
       ],
-      "cover": "",
+      "cover": "catalog/covers/h3-visual-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "h3-visual-design",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -605,8 +770,10 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/handdrawn-live-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "handdrawn-live-video-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -623,8 +790,10 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ip-toy-grid-motion.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "ip-toy-grid-motion",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -640,8 +809,10 @@
         "教育",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/line-doodle-explainer-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "line-doodle-explainer-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -657,8 +828,10 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/lip-product-ad-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "lip-product-ad-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -674,8 +847,10 @@
         "短剧漫剧",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/live-action-commentary-drama.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "live-action-commentary-drama",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -691,67 +866,14 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/micro-expression-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "micro-expression-video-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/micro-expression-video-generator"
-      }
-    },
-    {
-      "id": "sk-omx-minimalist-product-ad-generator",
-      "title": "极简产品广告生成器",
-      "summary": "基于产品图片和广告需求，完成卖点提炼、英文文案与节拍分镜设计，输出极简产品广告短片，适用于电商推广与新品发布。",
-      "category": "sk-commerce",
-      "tags": [
-        "商业广告",
-        "电商",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "minimalist-product-ad-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/minimalist-product-ad-generator"
-      }
-    },
-    {
-      "id": "sk-omx-music-video-subtitle-generator",
-      "title": "音乐MV动态字幕生成器",
-      "summary": "基于音乐和歌词完成节奏拆解、镜头设计与动态字幕方案，适用于人工智能音乐视频创作。",
-      "category": "sk-writing",
-      "tags": [
-        "创意实验",
-        "音频音乐",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "music-video-subtitle-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/music-video-subtitle-generator"
-      }
-    },
-    {
-      "id": "sk-omx-paper-collage-explainer-generator",
-      "title": "纸拼贴讲解动画",
-      "summary": "将文案、故事节点或抽象概念转成可确认的纸拼贴讲解动画，并保留触感音效。",
-      "category": "sk-visual",
-      "tags": [
-        "动画",
-        "教育",
-        "创意实验",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "paper-collage-explainer-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/paper-collage-explainer-generator"
       }
     },
     {
@@ -765,29 +887,14 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/papercraft-stop-motion-explainer.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "papercraft-stop-motion-explainer",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/papercraft-stop-motion-explainer"
-      }
-    },
-    {
-      "id": "sk-omx-pov-short-film-generator",
-      "title": "第一视角短片生成",
-      "summary": "将创意、剧本或参考素材规划为严格主角眼睛视角的沉浸式短片制作方案。",
-      "category": "sk-writing",
-      "tags": [
-        "短剧漫剧",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "pov-short-film-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/pov-short-film-generator"
       }
     },
     {
@@ -799,8 +906,10 @@
         "商业广告",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/product-kinetic-typography-tvc.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "product-kinetic-typography-tvc",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -816,8 +925,10 @@
         "动画",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/retro-city-cel-animation-short.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "retro-city-cel-animation-short",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -833,8 +944,10 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/scifi-cinematic-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "scifi-cinematic-video-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -851,8 +964,10 @@
         "音频音乐",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/short-drama-multilingual-dubbing.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "short-drama-multilingual-dubbing",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -868,8 +983,10 @@
         "短剧漫剧",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/short-drama-screenwriter.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "short-drama-screenwriter",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -885,8 +1002,10 @@
         "短剧漫剧",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/short-drama-series-writer.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "short-drama-series-writer",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -903,8 +1022,10 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/silkscreen-decorative-illustration-short.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "silkscreen-decorative-illustration-short",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -920,8 +1041,10 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/sitcom-story-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "sitcom-story-video-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -937,29 +1060,14 @@
         "平台工具",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/subtitle-correction.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "subtitle-correction",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/subtitle-correction"
-      }
-    },
-    {
-      "id": "sk-omx-suspense-title-sequence-generator",
-      "title": "悬疑电影片头生成",
-      "summary": "根据电影设定与参考素材锚定关键帧和英文署名，生成十五秒复古悬疑美学片头成片。",
-      "category": "sk-visual",
-      "tags": [
-        "创意实验",
-        "精选"
-      ],
-      "cover": "",
-      "avatar": "",
-      "skill": "suspense-title-sequence-generator",
-      "sourceRef": {
-        "repo": "omnimux-ai/OmniMux-skills",
-        "path": "skills/suspense-title-sequence-generator"
       }
     },
     {
@@ -971,8 +1079,10 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/transcript-broll-planner.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "transcript-broll-planner",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -991,8 +1101,10 @@
         "精选",
         "OmniMux"
       ],
-      "cover": "",
+      "cover": "catalog/covers/video-deconstruct.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "video-deconstruct",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1010,8 +1122,10 @@
         "动画",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/video-deconstruct-analyzer.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "video-deconstruct-analyzer",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1028,8 +1142,10 @@
         "创意实验",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/vox-style-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "vox-style-video-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1045,8 +1161,10 @@
         "专业影视",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/wes-anderson-aesthetic-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "wes-anderson-aesthetic-generator",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1064,8 +1182,10 @@
         "品牌分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-image.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "shopee-brand-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1083,8 +1203,10 @@
         "关键词分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "shopee-keyword-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1102,8 +1224,10 @@
         "市场分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "shopee-market-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1121,8 +1245,10 @@
         "商品分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-image.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "shopee-product-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1140,8 +1266,10 @@
         "店铺分析",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/ecommerce-design.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "shopee-shop-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1160,8 +1288,10 @@
         "Topview",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/digital-product-promo-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "tiktok-market-trend-analysis",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1180,8 +1310,10 @@
         "Hook",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/video-deconstruct.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "tiktok-material-breakdown",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1199,8 +1331,10 @@
         "爆款选品",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/digital-product-promo-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "tiktok-product-selection",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1219,8 +1353,10 @@
         "短视频",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/film-reference-prompt-writer.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "tiktok-script-creation",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
@@ -1238,8 +1374,10 @@
         "视频生成",
         "精选"
       ],
-      "cover": "",
+      "cover": "catalog/covers/brand-promo-video-generator.png",
       "avatar": "",
+      "badge": "H3",
+      "attribution": "@MiniMax Design官方",
       "skill": "video-generate-canvas",
       "sourceRef": {
         "repo": "omnimux-ai/OmniMux-skills",
