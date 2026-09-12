@@ -225,8 +225,16 @@ function ensureFitStyle(document) {
  */
 function writeVars(document, sizePx, maxPx) {
   const leading = headlineLeadingPx(sizePx, maxPx)
-  document.documentElement.style.setProperty(HERO_HEADLINE_SIZE_VAR, `${sizePx}px`)
-  document.documentElement.style.setProperty(HERO_HEADLINE_LEADING_VAR, `${leading}px`)
+  const style = document.documentElement.style
+  const size = `${sizePx}px`
+  const leadingValue = `${leading}px`
+  // The fitter is driven by a ResizeObserver on the headline's own container, so
+  // rewriting an unchanged size keeps invalidating the box that triggered the
+  // callback. Skipping identical values lets the layout settle.
+  if (style.getPropertyValue(HERO_HEADLINE_SIZE_VAR) === size
+    && style.getPropertyValue(HERO_HEADLINE_LEADING_VAR) === leadingValue) return
+  style.setProperty(HERO_HEADLINE_SIZE_VAR, size)
+  style.setProperty(HERO_HEADLINE_LEADING_VAR, leadingValue)
 }
 
 /**
