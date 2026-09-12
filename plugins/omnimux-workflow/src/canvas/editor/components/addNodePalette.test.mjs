@@ -99,6 +99,6 @@ test('零彩虹、零副标题：源码与 CSS 不得再写彩色 icon 与 desc 
   assert.equal(cssSrc.includes('.wf-dock-add-popover__desc'), false);
   assert.equal(cssSrc.includes('.wf-dock-add-popover__item'), false);
   assert.equal(cssSrc.includes('#5B68F6'), false);
-  assert.match(cssSrc, /--wf-add-badge-primary-bg/);
-  assert.match(cssSrc, /--wf-add-icon-bg/);
+  assert.match(cssSrc, /--wf-node-badge-primary-bg/);
+  assert.match(cssSrc, /--wf-node-icon-bg/);
 });
