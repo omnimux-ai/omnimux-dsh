@@ -82,10 +82,11 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(cascadeSrc, /onClick=\{\(\) => handleSelectModel\(item\.id\)\}/);
   });
 
-  it('reveals one level per hover: selected chain shows three, hovered branch shows the next one', () => {
-    // 选中激活 → 三级；悬停非选中品牌 → 只显示二级；悬停到型号 → 才显示三级。
-    assert.match(cascadeSrc, /const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId/);
-    assert.match(cascadeSrc, /const showChannelColumn = hoveringOtherBrand \? hoverModelId !== null : true/);
+  it('reveals channel column only when model has multiple channels (>1); hides 3rd column if empty or single', () => {
+    // 渠道策略列（三级菜单）仅在模型具有多个可选渠道时（>1）才展示；
+    // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
+    assert.match(cascadeSrc, /const hasMultipleChannels = channelGroups\.length > 1/);
+    assert.match(cascadeSrc, /const showChannelColumn = hasMultipleChannels && \(hoveringOtherBrand \? hoverModelId !== null : true\)/);
     assert.match(cascadeSrc, /\{showChannelColumn \? \(/);
     assert.match(cascadeSrc, /onMouseLeave=\{handlePopoverLeave\}/);
     assert.match(cascadeSrc, /const handlePopoverLeave = useCallback\(\(\) => \{/);

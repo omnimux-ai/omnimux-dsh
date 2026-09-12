@@ -347,11 +347,14 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
   }, [modelsForBrand, shownBrandId, activeBrandId, activeModelId]);
 
   // 悬停到非选中品牌时只显示二级；悬停到型号（或没有任何悬停）时才显示三级。
+  // 渠道策略列（三级菜单）仅在模型有多个可选渠道时（>1）才展示；
+  // 若分组为空（0个）或只有唯一默认渠道（<=1），则直接不显示三级菜单。
   const hoveringOtherBrand = hoverBrandId !== null && hoverBrandId !== activeBrandId;
-  const showChannelColumn = hoveringOtherBrand ? hoverModelId !== null : true;
-
   const channelModelId = hoverModelId ?? activeModelId;
   const channelGroups = useMemo(() => getModelChannelGroups(channelModelId), [channelModelId]);
+  const activeChannelGroups = useMemo(() => getModelChannelGroups(activeModelId), [activeModelId]);
+  const hasMultipleChannels = channelGroups.length > 1;
+  const showChannelColumn = hasMultipleChannels && (hoveringOtherBrand ? hoverModelId !== null : true);
   const isChannelPreview = hoverModelId !== null && hoverModelId !== activeModelId;
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
@@ -524,7 +527,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
         <ModelBrandIcon modelId={activeModelId} size={15} />
         <span style={{ fontWeight: 600 }}>{shortName}</span>
 
-        {channelGroups.length > 0 ? (
+        {activeChannelGroups.length > 1 ? (
           <span
             style={{
               display: 'inline-flex',
