@@ -685,46 +685,40 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
                       ))}
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingTop: 10,
-                        borderTop: '1px solid rgba(255, 255, 255, 0.10)',
-                      }}
-                    >
-                      {isChannelPreview ? (
+                    {!isChannelPreview ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingTop: 10,
+                          borderTop: '1px solid rgba(255, 255, 255, 0.10)',
+                        }}
+                      >
                         <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                          预览中 · 点击该型号后即可调整渠道
+                          已选 {selectedCount}/{channelGroups.length} 个
                         </div>
-                      ) : (
-                        <>
-                          <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                            已选 {selectedCount}/{channelGroups.length} 个
-                          </div>
-                          <div style={{ display: 'flex', gap: 14 }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const firstGroup = channelGroups[0];
-                                if (firstGroup) applyGroupSelection([firstGroup.id]);
-                              }}
-                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                            >
-                              清空
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
-                              style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
-                            >
-                              全选
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                        <div style={{ display: 'flex', gap: 14 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const firstGroup = channelGroups[0];
+                              if (firstGroup) applyGroupSelection([firstGroup.id]);
+                            }}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                          >
+                            清空
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyGroupSelection(channelGroups.map((group) => group.id))}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--dsw-alias-label-primary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                          >
+                            全选
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
