@@ -467,6 +467,133 @@ describe('useInspirationFeed lifecycle', () => {
       globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
     }
   })
+
+  /**
+   * The landing contract, at the level that owns it.
+   *
+   * The render gate (`import-landing-render.test.js`) asserts the same thing on
+   * the DOM; this one asserts the state the view is built from, which is where
+   * the reported defect lived: an import used to set `selectedItem`, and that
+   * single line is what opened the preview modal.
+   */
+  it('lands a content import on its card instead of opening a preview', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const originalWindow = globalThis.window
+    const originalDocument = globalThis.document
+    const originalFetch = globalThis.fetch
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    const originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+    const row = { id: 'local-new-1', title: 'imported', source_platform: 'tiktok', is_local: true }
+    let feed
+
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.IntersectionObserver = TestIntersectionObserver
+    TestIntersectionObserver.instances = []
+    invalidateInspirationCache()
+
+    globalThis.fetch = async (input) => {
+      const url = new URL(String(input), dom.window.location.href)
+      if (url.pathname === '/omnimux/inspiration/local') {
+        return jsonResponse(200, { data: { items: [{ id: 'local-old-1', title: 'old', is_local: true }], total: 1 } })
+      }
+      return jsonResponse(200, { data: { items: [], total: 0 } })
+    }
+
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return React.createElement('div', { ref: feed.sentinelRef })
+    }
+
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness))
+      })
+      await waitFor(() => feed?.items.length === 1, 'first page did not load')
+      assert.equal(feed.tab, 'all')
+
+      await act(async () => {
+        feed.handleImportSuccess(row)
+      })
+
+      assert.equal(feed.selectedItem, null, 'an import must not open the preview modal')
+      assert.equal(feed.items[0].id, 'local-new-1', 'the imported row must be the first card')
+      assert.equal(feed.landedItem?.id, 'local-new-1', 'the imported row must stay pinned for the reveal')
+      assert.equal(feed.tab, 'all', 'the all tab can show the imported row and must be kept')
+
+      // A tab that cannot show a local row has to give way to one that can.
+      await act(async () => {
+        feed.setTab('public')
+      })
+      await waitFor(() => feed?.tab === 'public', 'the tab did not change')
+      await act(async () => {
+        feed.handleImportSuccess({ ...row, id: 'local-new-2' })
+      })
+      assert.equal(feed.tab, 'local', 'an import must land the grid on a tab that can show it')
+      assert.equal(feed.selectedItem, null, 'landing on a tab is still not a preview')
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      globalThis.window = originalWindow
+      globalThis.document = originalDocument
+      globalThis.fetch = originalFetch
+      globalThis.IntersectionObserver = originalIntersectionObserver
+      globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
+    }
+  })
+
+  it('lands an account import on the rival tab without touching the grid', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const originalWindow = globalThis.window
+    const originalDocument = globalThis.document
+    const originalFetch = globalThis.fetch
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    const originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+    let feed
+
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.IntersectionObserver = TestIntersectionObserver
+    TestIntersectionObserver.instances = []
+    invalidateInspirationCache()
+
+    globalThis.fetch = async () => jsonResponse(200, { data: { items: [], total: 0 } })
+
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return React.createElement('div', { ref: feed.sentinelRef })
+    }
+
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness))
+      })
+      await waitFor(() => feed !== undefined, 'the hook did not mount')
+
+      await act(async () => {
+        feed.handleAccountImported({ id: 'acc-1', handle: '@li9292', platform: 'x' })
+      })
+
+      assert.equal(feed.tab, 'rivals', 'an account belongs to the 对标账号 tab')
+      assert.equal(feed.selectedItem, null, 'an account import must not open the preview modal')
+      assert.deepEqual(feed.items, [], 'an account is not an inspiration row')
+      assert.equal(feed.landedItem, null, 'an account must not be pinned into the grid')
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      globalThis.window = originalWindow
+      globalThis.document = originalDocument
+      globalThis.fetch = originalFetch
+      globalThis.IntersectionObserver = originalIntersectionObserver
+      globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
+    }
+  })
 })
 
 describe('formatPlatformName', () => {

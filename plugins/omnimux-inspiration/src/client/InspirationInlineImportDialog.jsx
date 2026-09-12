@@ -6,14 +6,35 @@ import {
   CollapsibleTagsField,
 } from './import-dialog-controls.jsx'
 import { readAutoAnalyzePreference } from './import-dialog-prefs.js'
+import { classifyRivalInput, importRivalAccount } from './rival-api.js'
 
-export function InspirationInlineImportDialog({ open, t, onClose, onImported }) {
+/**
+ * Top-level「导入灵感」dialog.
+ *
+ * One input, two outcomes, decided by the Host before anything is imported: an
+ * account profile URL is echoed back as「将导入账号 @xxx（平台）」and imported as a
+ * monitored 对标账号, a post URL keeps the original content import, and a link
+ * the Host cannot place is refused with an explanation instead of being stored
+ * as a broken row.
+ *
+ * The classification is the same call (E3) the rival workbench makes, so both
+ * entry points agree about a URL. Without it an account URL fell through to the
+ * content importer, where the download failed and the row degraded to a bare
+ * link — the stored artifact of a link nobody could parse.
+ *
+ * `onImported` still receives a content row; `onAccountImported` receives the
+ * monitored account. Two callbacks rather than one tagged payload: the two
+ * landings share nothing (a row enters the grid, an account enters the
+ * workbench), and the caller's contract stays explicit about which is which.
+ */
+export function InspirationInlineImportDialog({ open, t, onClose, onImported, onAccountImported }) {
   const [url, setUrl] = useState('')
   const [tags, setTags] = useState('')
   const [autoAnalyze, setAutoAnalyze] = useState(() => readAutoAnalyzePreference())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [classified, setClassified] = useState(null)
 
   if (!open) return null
 
@@ -33,17 +54,96 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
     onClose()
   }
 
+  const tagList = () => tags.split(/[,，\s]+/).filter(Boolean)
+
+  /**
+   * Ask the Host what the pasted link is.
+   *
+   * @param {string} value
+   * @returns {Promise<{ ok: boolean, kind?: string, data?: object, message?: string }>}
+   *   `message` is already localized when the Host refuses the URL
+   */
+  const classify = async (value) => {
+    try {
+      const res = await classifyRivalInput(value)
+      if (!res?.ok) {
+        return {
+          ok: false,
+          // An unplaceable host is refused by the Host as `unrecognized-url`
+          // with a message the dialog must not print verbatim: it is not
+          // localized, so the locale key is used instead.
+          message: res?.body?.code === 'unrecognized-url'
+            ? t('rivalAccounts.import.unrecognized')
+            : (res?.body?.error || t('add.error')),
+        }
+      }
+      return { ok: true, kind: res.body?.data?.kind || 'unknown', data: res.body?.data || null }
+    } catch (err) {
+      return { ok: false, message: String(err?.message || err) }
+    }
+  }
+
+  /**
+   * Echo the verdict while the user is still deciding, so what the import is
+   * about to become is on screen before the button is pressed.
+   */
+  const handleClassify = async () => {
+    const value = url.trim()
+    if (!value || loading) return
+    setError(null)
+    const result = await classify(value)
+    if (!result.ok) {
+      setClassified(null)
+      setError(result.message)
+      return
+    }
+    if (result.kind === 'unknown') {
+      setClassified(null)
+      setError(t('rivalAccounts.import.unrecognized'))
+      return
+    }
+    setClassified(result.data)
+  }
+
   /**
    * @param {boolean} force re-resolve an already stored link that has no video
    */
   const submitImport = async (force) => {
+    const value = url.trim()
+    if (!value) return
     setLoading(true)
     setError(null)
     try {
-      const tagList = tags.split(/[,，\s]+/).filter(Boolean)
+      // Classify before importing: an account URL must never reach the content
+      // importer, and a link the Host cannot place must not become a row.
+      const resolved = classified
+        ? { ok: true, kind: classified.kind, data: classified }
+        : await classify(value)
+      if (!resolved.ok) {
+        setError(resolved.message)
+        return
+      }
+      if (resolved.kind === 'account') {
+        const res = await importRivalAccount({ url: value, tags: tagList() })
+        if (res?.ok && res.body?.data) {
+          await onAccountImported?.(res.body.data)
+          onClose()
+          return
+        }
+        setError(res?.body?.error || t('add.error'))
+        return
+      }
+      if (resolved.kind !== 'content') {
+        // facebook / threads / an unknown host: there is nothing to monitor and
+        // nothing to download, so the only honest answer is no import at all.
+        setClassified(null)
+        setError(t('rivalAccounts.import.unrecognized'))
+        return
+      }
+
       const res = await importLocalInspiration({
-        url: url.trim(),
-        tags: tagList,
+        url: value,
+        tags: tagList(),
         auto_analyze: autoAnalyze,
         // Opt in to the background job: the request answers 202 with a
         // placeholder row instead of holding the dialog open for the download and
@@ -104,6 +204,18 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
   const acknowledged = notice?.tone === 'degraded'
   const inputsDisabled = loading || Boolean(notice)
 
+  // The echo reuses the rivalry workbench's account wording verbatim — one
+  // sentence, one translation — and only the content verdict gets its own key,
+  // because it names what this dialog is about to do.
+  const kind = classified?.kind
+  const echo = kind === 'account'
+    ? t('rivalAccounts.import.echoAccount')
+      .replace('{handle}', classified.handle || classified.external_id || '')
+      .replace('{platform}', t(`platform.${classified.platform}`))
+    : kind === 'content'
+      ? t('add.echoContent')
+      : null
+
   return (
     <ModalDialog
       open={open}
@@ -152,20 +264,32 @@ export function InspirationInlineImportDialog({ open, t, onClose, onImported }) 
           placeholder={t('add.urlPlaceholder')}
           value={url}
           disabled={inputsDisabled}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={(e) => {
+            setUrl(e.target.value)
+            // The verdict belongs to the URL it was made for.
+            setClassified(null)
+          }}
+          onBlur={handleClassify}
         />
+        {echo ? (
+          <div className="omnimux-inspiration-import-echo" role="status" data-kind={kind}>{echo}</div>
+        ) : null}
         <CollapsibleTagsField
           t={t}
           value={tags}
           disabled={inputsDisabled}
           onChange={setTags}
         />
-        <AutoAnalyzeSwitch
-          t={t}
-          checked={autoAnalyze}
-          disabled={inputsDisabled}
-          onChange={setAutoAnalyze}
-        />
+        {/* The AI breakdown only exists for content: an account is monitored, not
+            deconstructed, so the switch would be a promise the import cannot keep. */}
+        {kind === 'account' ? null : (
+          <AutoAnalyzeSwitch
+            t={t}
+            checked={autoAnalyze}
+            disabled={inputsDisabled}
+            onChange={setAutoAnalyze}
+          />
+        )}
       </form>
     </ModalDialog>
   )

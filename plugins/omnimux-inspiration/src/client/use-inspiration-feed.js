@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getLocalInspiration, whenAuthReady } from './api.js'
+import { CONTENT_LANDING_TABS, LANDED_PIN_MS, tabAfterContentImport } from './import-landing.js'
 import { createImportPoller } from './import-poller.js'
 import { importErrorDetail, isImportingRow } from './import-status.js'
 import {
@@ -70,7 +71,7 @@ function useReplicateToChat() {
 }
 
 function useFeedSelection(options) {
-  const { items, selectedItem, setSelectedItem, setItems } = options || {}
+  const { items, selectedItem, setSelectedItem, setItems, onRemoved } = options || {}
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [pendingRemove, setPendingRemove] = useState(null)
   const [removing, setRemoving] = useState(false)
@@ -94,12 +95,16 @@ function useFeedSelection(options) {
     setRemoving(true)
     try {
       await executeBatchDelete(ids, { selectedItem, setSelectedItem, setItems, setSelectedIds, setPendingRemove })
+      // A deleted row must not survive on screen through the landing pin: the
+      // pin holds a row the feed no longer lists, which is exactly the state a
+      // removal leaves behind.
+      onRemoved?.(ids)
     } catch (err) {
       console.error('Failed to delete local inspirations:', err)
     } finally {
       setRemoving(false)
     }
-  }, [pendingRemove, selectedItem, setItems, setSelectedItem])
+  }, [pendingRemove, selectedItem, setItems, setSelectedItem, onRemoved])
 
   return {
     selectedIds,
@@ -370,16 +375,26 @@ function useImportWatch(options) {
  */
 export function useInspirationFeed({ active }) {
   const filters = useInspirationFilters()
+  const { tab, setTab } = filters
   const data = useFeedData({ active, filters })
   const { items, setItems, backendPlatforms, hasMore, loading, loadingMore, loadData } = data
 
   const [selectedItem, setSelectedItem] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
   const [importedPlatforms, setImportedPlatforms] = useState([])
+  // Row the last content import produced. It stays pinned above the list for
+  // `LANDED_PIN_MS` so neither the post-import reload nor an active filter can
+  // hide the card the user is looking for; the section renders it.
+  const [landedItem, setLandedItem] = useState(null)
   const sentinelRef = useRef(null)
 
+  const dropLanded = useCallback((ids) => {
+    const removed = new Set((ids || []).map((id) => String(id)))
+    setLandedItem((prev) => (prev && removed.has(String(prev.id)) ? null : prev))
+  }, [])
+
   const replicate = useReplicateToChat()
-  const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems })
+  const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems, onRemoved: dropLanded })
   const watch = useImportWatch({ setItems })
 
   useSentinelObserver({ sentinelRef, hasMore, loading, loadingMore, loadData })
@@ -390,16 +405,51 @@ export function useInspirationFeed({ active }) {
     watch.pollerRef.current?.sync(items)
   }, [items, watch.pollerRef])
 
+  // The pin is a reveal window, not a second list: it expires on its own, and it
+  // is dropped as soon as the grid moves to a tab that cannot hold a local row.
+  useEffect(() => {
+    if (!landedItem) return undefined
+    if (!CONTENT_LANDING_TABS.includes(tab)) {
+      setLandedItem(null)
+      return undefined
+    }
+    const timer = setTimeout(() => setLandedItem(null), LANDED_PIN_MS)
+    return () => clearTimeout(timer)
+  }, [landedItem, tab])
+
+  /**
+   * A content import landed in the local library: prepend the row, keep the grid
+   * on a tab that can show it, and pin it so the user sees what they imported.
+   *
+   * The preview modal used to be opened here, which answered an import with a
+   * modal for a row the user had not asked to look at — the row's own card is
+   * the thing the import produced, and clicking it still opens that preview.
+   * @param {object} newItem the stored row, or the 202 placeholder of a
+   *   background job the grid will keep polling
+   */
   const handleImportSuccess = useCallback((newItem) => {
+    if (!newItem) return
     setItems((prev) => [newItem, ...prev])
-    setSelectedItem(newItem)
+    setLandedItem(newItem)
+    // `all` already lists local rows and is kept; `public` cannot show a local
+    // row at all, so the grid follows the import to `local`.
+    setTab((prev) => tabAfterContentImport(prev))
     if (isImportingRow(newItem)) watch.pollerRef.current?.track([newItem.id])
     const plat = (newItem?.source_platform || newItem?.platform || '').trim().toLowerCase()
     if (plat && plat !== 'unknown') {
       const canonical = plat === 'twitter' ? 'x' : plat
       setImportedPlatforms((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]))
     }
-  }, [setItems, watch.pollerRef])
+  }, [setItems, setTab, watch.pollerRef])
+
+  /**
+   * An account import landed in the 对标账号 workbench. The panel mounts fresh on
+   * that tab and loads the account list itself, so the new account card is what
+   * the user sees; an account is not a library row, so nothing enters the grid.
+   */
+  const handleAccountImported = useCallback(() => {
+    setTab('rivals')
+  }, [setTab])
 
   const handleItemUpdated = useCallback((updatedItem) => {
     setItems((prev) => updateItemInList(prev, updatedItem))
@@ -463,7 +513,9 @@ export function useInspirationFeed({ active }) {
     setImportOpen,
     sentinelRef,
     ...replicate,
+    landedItem,
     handleImportSuccess,
+    handleAccountImported,
     handleItemUpdated,
     importFailed: watch.importFailed,
     clearImportFailed: watch.setImportFailed,

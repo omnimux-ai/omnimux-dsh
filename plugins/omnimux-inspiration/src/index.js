@@ -193,17 +193,12 @@ export function apply(ctx) {
     },
   }
 
-  const dispatcher = createLocalInspirationDispatcher({
-    localStore: store,
-    socialFetcher,
-    videoAnalyzeTool,
-    textComplete,
-  })
-
   // ── 对标账号 (rival accounts) ─────────────────────────────────────────────
   // Wired here, at the single assembly point, so the module's dependencies are
-  // visible in one place: the cloud seam is the hub's social-data tool, and the
-  // import link is the plugin's own import endpoint.
+  // visible in one place: the cloud seam is the hub's social-data tool, the
+  // import link is the plugin's own import endpoint, and the HTTP ownership of
+  // the rival prefix is handed to `dispatcher` (see below) rather than being
+  // re-implemented in the server handler.
   const rivalPaths = resolveRivalPaths({ paths })
   const rivalStore = createRivalAccountsStore({ paths: rivalPaths })
   const rivalRemote = createRivalRemote({ getTool })
@@ -213,6 +208,12 @@ export function apply(ctx) {
     remote: rivalRemote,
     runCycle: (input) => rivalService.runCycle(input),
   })
+  // The impossible-to-order pair: the service needs the inspiration dispatcher
+  // (`importUrl` is "转成灵感") and the dispatcher needs the rival dispatcher,
+  // which needs the service. The service is created first with a late-bound
+  // `dispatcher` reference — `importUrl` only runs on a request, long after
+  // `apply` has finished, so the binding is always resolved by then.
+  let dispatcher = null
   rivalService = createRivalAccountsService({
     store: rivalStore,
     remote: rivalRemote,
@@ -224,10 +225,22 @@ export function apply(ctx) {
       body: { ...payload, background: true },
     }),
   })
+  // The rival prefix is a sub-path of this plugin's HTTP prefix, so the two
+  // routers must agree on who answers it. `rivalDispatcher.owns()` is that
+  // single decision: a request the rival module owns is handed to it *before*
+  // the inspiration route table runs, and the inspiration table therefore never
+  // sees (and never mis-reads) a rival path as an item id.
   const rivalDispatcher = createRivalDispatcher({
     service: rivalService,
     paths: rivalPaths,
     formatErrorMessage,
+  })
+  dispatcher = createLocalInspirationDispatcher({
+    localStore: store,
+    socialFetcher,
+    videoAnalyzeTool,
+    textComplete,
+    rivalDispatcher,
   })
 
   /** Start the refresh tick, and stop it when the host tears the plugin down. */
@@ -242,6 +255,47 @@ export function apply(ctx) {
   }
   void startRivalScheduler
 
+  /**
+   * Serve one request under this plugin's HTTP prefix.
+   *
+   * The handler is deliberately routing-free: media streams, then everything
+   * else goes to `dispatcher.dispatch`, whose first step is the rival check.
+   * A second route table here is what leaves the rival prefix unreachable when
+   * only one of the two is updated, so there is exactly one.
+   * @param {any} req
+   * @param {any} res
+   */
+  const callLocalEndpoint = async (req, res) => {
+    try {
+      const rawUrl = req.url || '/omnimux/inspiration/local'
+      const url = new URL(rawUrl, 'http://127.0.0.1')
+      if (url.pathname.startsWith('/omnimux/inspiration/local/media/')) {
+        // The rival media tree is a real subdirectory of `mediaDir`, so the
+        // *existing* stream endpoint serves it (E14) and no second route for
+        // files exists to drift out of date.
+        await dispatcher.streamLocalMedia(req, res)
+        return
+      }
+      // Read the JSON body only when the request carries one. Redundant for a
+      // rival request (that dispatcher reads `req.body` and ignores it), harmless
+      // for a DELETE, and it keeps the invalid-JSON answer on every write method.
+      const wantsBody = req.method === 'POST' || req.method === 'PATCH'
+      const body = wantsBody ? await readJsonBody(req) : undefined
+      if (wantsBody && body === null) {
+        sendJson(res, 400, { error: 'invalid json' })
+        return
+      }
+      const result = await dispatcher.dispatch({
+        method: req.method || 'GET',
+        url: rawUrl,
+        body,
+      })
+      sendJson(res, result.status, result.body)
+    } catch {
+      sendJson(res, 500, { error: 'internal error' })
+    }
+  }
+
   // Mount HTTP server routes for /omnimux/inspiration/local
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
@@ -250,45 +304,10 @@ export function apply(ctx) {
       kind: 'prefix',
       path: '/omnimux/inspiration/local',
       async handler(req, res) {
-        try {
-          const url = new URL(req.url || '/omnimux/inspiration/local', 'http://127.0.0.1')
-          if (url.pathname.startsWith('/omnimux/inspiration/local/media/')) {
-            // The rival media tree is a real subdirectory of `mediaDir`, so the
-            // *existing* stream endpoint serves it (E14) and no second route for
-            // files exists to drift out of date.
-            await dispatcher.streamLocalMedia(req, res)
-            return
-          }
-          if (url.pathname.startsWith(`${LOCAL_PREFIX}/rival-accounts`)) {
-            const wantsJsonBody = req.method === 'POST' || req.method === 'PATCH'
-            const rivalBody = wantsJsonBody ? await readJsonBody(req) : undefined
-            if (wantsJsonBody && rivalBody === null) {
-              sendJson(res, 400, { error: 'invalid json' })
-              return
-            }
-            const result = await rivalDispatcher.dispatch({
-              method: req.method || 'GET',
-              url: req.url || LOCAL_PREFIX,
-              body: rivalBody,
-            })
-            sendJson(res, result.status, result.body)
-            return
-          }
-          const wantsBody = req.method === 'POST' || req.method === 'PATCH'
-          const body = wantsBody ? await readJsonBody(req) : undefined
-          if (wantsBody && body === null) {
-            sendJson(res, 400, { error: 'invalid json' })
-            return
-          }
-          const result = await dispatcher.dispatch({
-            method: req.method || 'GET',
-            url: req.url || '/omnimux/inspiration/local',
-            body,
-          })
-          sendJson(res, result.status, result.body)
-        } catch {
-          sendJson(res, 500, { error: 'internal error' })
-        }
+        // The promise must be returned: this handler is what the host awaits
+        // before it treats the request as served, so a fire-and-forget call
+        // would let the response finish before the body is written.
+        return callLocalEndpoint(req, res)
       },
     })
     if (typeof httpCtx.effect === 'function') {

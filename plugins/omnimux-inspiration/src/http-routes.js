@@ -183,6 +183,13 @@ async function dispatchRequest(ctx, req) {
   const method = (req.method || 'GET').toUpperCase()
   const rawPath = req.url || LOCAL_PREFIX
   const url = new URL(rawPath, 'http://127.0.0.1')
+  // The rival prefix lives *under* `LOCAL_PREFIX`, so it has to be claimed
+  // before the inspiration route table runs: `matchItem` reads the segment
+  // after `/local/` as an item id, so every `/rival-accounts...` path would
+  // resolve to the item route's `not found`.
+  if (typeof ctx.rivalDispatcher?.dispatch === 'function' && ctx.rivalDispatcher.owns?.(url.pathname) === true) {
+    return ctx.rivalDispatcher.dispatch({ method, url, body: req.body })
+  }
   const route = matchRoute(method, url.pathname)
   const args = { ...ctx, req, url, id: route.id }
   try {
@@ -261,6 +268,22 @@ function pipeRange(opts) {
 
 /**
  * Create dispatcher for inspiration local endpoints.
+ *
+ * `deps.rivalDispatcher` is the module that owns the rival prefix. It is
+ * consulted *first* (see `dispatchRequest`) and needs a `owns(pathname)`
+ * predicate plus a `dispatch({ method, url, body })` method; passing it in
+ * keeps this file free of any import from the rival module while still making
+ * this dispatcher the single router for everything under `LOCAL_PREFIX`.
+ * @param {{
+ *   localStore: any,
+ *   socialFetcher?: Function,
+ *   videoAnalyzeTool?: any,
+ *   textComplete?: any,
+ *   fetcher?: typeof fetch,
+ *   resolver?: Function,
+ *   analyzeInspiration?: Function,
+ *   rivalDispatcher?: { owns: (pathname: string) => boolean, dispatch: Function },
+ * }} deps
  */
 export function createLocalInspirationDispatcher(deps) {
   const store = deps.localStore
@@ -282,6 +305,7 @@ export function createLocalInspirationDispatcher(deps) {
     // injected one is the only way to hold the "stored item keeps its video and
     // records the reason" contract.
     analyzeInspiration: deps.analyzeInspiration,
+    rivalDispatcher: deps.rivalDispatcher,
     detectPlatformFromUrl,
     formatErrorMessage,
   }
