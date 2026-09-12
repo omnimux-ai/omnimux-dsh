@@ -228,11 +228,11 @@ function resolveTabPayload(service, tabId, titleOpt, pathOpt) {
     titleResolver = (id) => service.getTab(id)
   }
   const title = resolveWorkbenchTabTitle(tabId, titleOpt, titleResolver)
-  let path = tabId
-  if (typeof pathOpt === 'string' && pathOpt) {
-    path = pathOpt
+  const payload = { type: tabId, id: tabId, title }
+  if (typeof pathOpt === 'string' && pathOpt && pathOpt !== tabId) {
+    payload.path = pathOpt
   }
-  return { type: tabId, id: tabId, title, path }
+  return payload
 }
 
 /**
@@ -384,13 +384,13 @@ function openSidebarStore(options, tabId, path) {
   const api = getWorkbenchApi()
   if (api && typeof api.open === 'function') {
     const title = resolveStoreTitle(options, tabId)
-    void api.open({ tabId, title, path })
+    void api.open({ tabId, title, ...(path ? { path } : {}) })
   }
 }
 
 export function createWorkbenchSidebarStore(options) {
   const tabId = options.tabId
-  const path = options.path || tabId
+  const path = options.path && options.path !== tabId ? options.path : undefined
 
   return {
     getSnapshot: () => readSidebarSnapshot(tabId),
