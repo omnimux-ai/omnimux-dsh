@@ -234,7 +234,9 @@ function videoUrlFromLayer(layer) {
     videoFromMediaList(asObject(layer.media).video),
     videoFromMediaList(asObject(layer.entities).media),
     videoFromMediaList(asObject(layer.extended_entities).media),
-    videoFromMediaList(layer.video_versions),
+    // `video_versions[]` is one clip's quality ladder (ascending), not a list of
+    // clips: rank it so the highest quality wins instead of the first entry.
+    bestVariantUrl(layer.video_versions) || videoFromMediaList(layer.video_versions),
     videoFromFormatList(layer),
     layer.video_url,
     layer.video,

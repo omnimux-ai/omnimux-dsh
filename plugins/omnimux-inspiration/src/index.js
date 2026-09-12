@@ -45,16 +45,32 @@ const jsonOut = {
 /** Platforms the OmniMux cloud catalog has no (platform, capability) pair for. */
 const CLOUD_UNSUPPORTED_PLATFORMS = new Set(['facebook', 'threads'])
 
+/**
+ * Display names for Chinese-language failure messages. Must stay aligned with
+ * the client's `platform.<key>` locale entries so one product does not name a
+ * platform two ways.
+ */
 const PLATFORM_DISPLAY_NAMES = {
   tiktok: 'TikTok',
   instagram: 'Instagram',
   youtube: 'YouTube',
-  x: 'X (Twitter)',
+  x: '推特 (X)',
   facebook: 'Facebook',
   threads: 'Threads',
 }
 
 const SUPPORTED_PLATFORM_HINT = 'TikTok / Instagram / YouTube / X'
+
+/**
+ * Human-readable label for a platform slug, falling back to the slug itself.
+ * @param {string} platform
+ * @returns {string}
+ */
+export function platformDisplayName(platform) {
+  const key = typeof platform === 'string' ? platform.trim().toLowerCase() : ''
+  if (!key) return ''
+  return PLATFORM_DISPLAY_NAMES[key] || key
+}
 
 /**
  * A cloud/fallback social response carries usable metadata when `data` is a
@@ -81,8 +97,10 @@ function socialFailureMessage({ platform, cloudUnsupported, cloudError, toolRead
     return `未能识别该链接所属平台，请确认链接来自 ${SUPPORTED_PLATFORM_HINT}、Facebook 或 Threads`
   }
   if (cloudUnsupported) {
-    const name = PLATFORM_DISPLAY_NAMES[platform] || platform
-    return `${name} 暂不支持云端解析，请粘贴该平台视频的公开直链，或改用受支持平台（${SUPPORTED_PLATFORM_HINT}）`
+    const name = platformDisplayName(platform) || platform
+    // No import path accepts a bare media URL as `video_url`, so suggesting one
+    // would send the user into a guaranteed-failing cloud call.
+    return `${name} 暂不支持云端解析，请改用受支持平台（${SUPPORTED_PLATFORM_HINT}）的链接导入`
   }
   if (cloudError) return `OmniMux 云端社媒解析失败: ${formatErrorMessage(cloudError)}`
   if (!toolReady) return 'OmniMux 社媒解析工具 (omnimux_social_data) 未就绪，请检查 omnimux 插件是否加载'

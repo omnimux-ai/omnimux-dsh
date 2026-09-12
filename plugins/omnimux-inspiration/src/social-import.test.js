@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher, detectPlatformFromUrl } from './http-routes.js'
-import { createSocialFetcher } from './index.js'
+import { createSocialFetcher, platformDisplayName } from './index.js'
 import { fallbackResolveSocial } from './scraper-fallback.js'
+import { zh } from './client/locales.js'
 
 const X_VIDEO_ENVELOPE = {
   platform: 'x',
@@ -230,7 +231,9 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
       () => socialFetcher({ platform: 'facebook', capability: 'video', url: 'https://www.facebook.com/watch/?v=123456789' }),
       (err) => {
         assert.match(err.message, /Facebook 暂不支持云端解析/)
-        assert.match(err.message, /TikTok \/ Instagram \/ YouTube \/ X/)
+        assert.match(err.message, /请改用受支持平台（TikTok \/ Instagram \/ YouTube \/ X）的链接导入/)
+        // No import path accepts a bare media URL, so the message must not offer one.
+        assert.doesNotMatch(err.message, /公开直链/)
         return true
       },
     )
@@ -245,9 +248,24 @@ describe('createSocialFetcher — cloud contract and differentiated failures', (
 
     await assert.rejects(
       () => socialFetcher({ platform: 'threads', capability: 'video', url: 'https://www.threads.net/@a/post/xyz' }),
-      /Threads 暂不支持云端解析/,
+      (err) => {
+        assert.match(err.message, /Threads 暂不支持云端解析/)
+        assert.match(err.message, /请改用受支持平台（TikTok \/ Instagram \/ YouTube \/ X）的链接导入/)
+        assert.doesNotMatch(err.message, /公开直链/)
+        return true
+      },
     )
     assert.equal(calls, 0)
+  })
+
+  it('keeps the backend Chinese platform label aligned with the client locale', () => {
+    for (const platform of ['x', 'tiktok', 'instagram', 'youtube', 'facebook', 'threads']) {
+      assert.equal(platformDisplayName(platform), zh[`platform.${platform}`])
+    }
+    assert.equal(platformDisplayName('X'), '推特 (X)')
+    assert.equal(platformDisplayName('  threads  '), 'Threads')
+    assert.equal(platformDisplayName('somecdn.example'), 'somecdn.example')
+    assert.equal(platformDisplayName(''), '')
   })
 
   it('surfaces the cloud error detail unchanged', async () => {

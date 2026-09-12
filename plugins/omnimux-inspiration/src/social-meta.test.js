@@ -126,6 +126,29 @@ describe('parseSocialMeta — Instagram', () => {
     assert.equal(meta.author.handle, 'creator')
   })
 
+  it('picks the highest quality entry of a multi-entry video_versions[] ladder (regression)', () => {
+    const meta = parseSocialMeta({
+      video_versions: [
+        { type: 101, width: 480, height: 852, url: 'https://scontent.cdninstagram.com/v/t50/low-480.mp4' },
+        { type: 102, width: 720, height: 1280, url: 'https://scontent.cdninstagram.com/v/t50/mid-720.mp4' },
+        { type: 103, width: 1080, height: 1920, url: 'https://scontent.cdninstagram.com/v/t50/high-1080.mp4' },
+      ],
+    })
+
+    assert.equal(meta.video_url, 'https://scontent.cdninstagram.com/v/t50/high-1080.mp4')
+  })
+
+  it('falls back to the first usable video_versions[] entry when no ranking info exists', () => {
+    const meta = parseSocialMeta({
+      video_versions: [
+        { url: 'https://scontent.cdninstagram.com/v/t50/first.mp4' },
+        { url: 'https://scontent.cdninstagram.com/v/t50/second.mp4' },
+      ],
+    })
+
+    assert.equal(meta.video_url, 'https://scontent.cdninstagram.com/v/t50/first.mp4')
+  })
+
   it('degrades a photo post to metadata only', () => {
     const meta = parseSocialMeta({
       display_url: 'https://scontent.cdninstagram.com/v/t51/photo.jpg',
