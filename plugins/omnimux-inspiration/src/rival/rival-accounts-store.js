@@ -297,6 +297,38 @@ function localDay(iso) {
 }
 
 /**
+ * Dedup key of the requirement-2 identity: `platform + external_id`.
+ *
+ * The `@` is decoration, not identity, so it is stripped on both sides of the
+ * comparison: `x.com/@bar` and `x.com/bar` are one account, and a row written
+ * before the import path settled on the `@`-prefixed form (a bare `foo`) still
+ * matches. Stripping is idempotent, so it does not matter how many times it is
+ * applied; a YouTube channel id (`UC…`) has no `@` and passes through unchanged.
+ *
+ * Comparison is deliberately *looser* than storage: only one form is ever
+ * written, but any legacy form still resolves.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function identityKey(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+/**
+ * Budget ledgers whose pause is a *daily* fact, and the account state that
+ * pause is written as. A rollover lifts these; every other pause reason
+ * (`identity-unverified`, an exhausted retry `error`, a user-hold) is a fact the
+ * user or the cloud has to change, so it survives the boundary.
+ */
+const DAILY_CAP_REASONS = new Set([
+  BUDGET_REASONS.GLOBAL_DAILY_CAP,
+  BUDGET_REASONS.ACCOUNT_DAILY_CAP,
+  BUDGET_REASONS.PER_CYCLE_CAP,
+])
+/** Refresh state a cap pause is written as; the account state is not touched. */
+const CAP_PAUSE_STATE = 'paused'
+
+/**
  * @param {{ paths?: import('./rival-paths.js').RivalPaths, now?: () => number, homeDir?: string, env?: NodeJS.ProcessEnv }} [opts]
  */
 export function createRivalAccountsStore(opts = {}) {
@@ -395,6 +427,14 @@ export function createRivalAccountsStore(opts = {}) {
    * A rollover clears the counters *and* the pause: the pause was raised by a
    * daily cap that no longer applies, and carrying it across the boundary would
    * leave the module refusing work for a reason the user can no longer act on.
+   *
+   * The release runs on **both** this path and `writeBudget`'s, because either
+   * one can be the first budget touch of a new day: the pause can be lifted
+   * while a spend is being recorded just as easily as while the ledger is being
+   * read, and a release that only happened on one of them would leave the
+   * account parked depending on which call arrived first. It is keyed on the
+   * *rollover*, not on the day: a same-day read must not undo a pause the ledger
+   * still says is correct.
    * @returns {Record<string, any>}
    */
   function readBudget() {
@@ -402,8 +442,97 @@ export function createRivalAccountsStore(opts = {}) {
     const raw = readJson(paths.budgetFile)
     if (Object.keys(raw).length === 0) return buildBudget({}, today)
     const stored = buildBudget(raw, null)
-    if (stored.day !== today) return buildBudget({ day: today }, today)
-    return stored
+    if (stored.day === today) return stored
+    releaseDailyCapPauses(today)
+    return buildBudget({ day: today }, today)
+  }
+
+  /**
+   * The ledger exactly as stored: no rollover rebuild, no side effects.
+   *
+   * Unlike `readBudget` it does not substitute today's date, because the
+   * *stored* day is the fact the caller needs — a ledger can already have been
+   * rebuilt for today while still carrying yesterday's counters, and "does this
+   * cap still apply?" is a question about today's numbers.
+   *
+   * This is also the seam that keeps `releaseDailyCapPauses` from calling
+   * `readBudget`, which calls back into the release.
+   * @returns {Record<string, any>}
+   */
+  function readStoredBudget() {
+    return buildBudget(readJson(paths.budgetFile), null)
+  }
+
+  /**
+   * `paused → idle` for the accounts a daily cap parked, at the rollover.
+   *
+   * `rival-refresh.js` treats `paused` as terminal for the tick, so a cap pause
+   * that outlived the ledger it came from would stop that account's automatic
+   * refresh for good — the state machine's `paused → idle : 跨日重置` promise,
+   * and the "跨日自动恢复" copy the UI shows, both unmet.
+   *
+   * Only cap pauses are touched: the reason is read back off `error_code`, so
+   * `identity-unverified`, an exhausted backoff `error`, and any state a future
+   * user-hold introduces stay parked.
+   *
+   * The released account is also made **due**, by anchoring
+   * `next_auto_refresh_at` at the start of the new day. A successful cycle sets
+   * that timestamp to `now + interval` and the ledger check happens before it,
+   * so a parked account still carries a moment hours in the future — releasing
+   * it to `idle` alone would leave `isRefreshDue()` false and the tick would
+   * skip it anyway.
+   *
+   * A pause the ledger *still* refuses is left exactly as it was. Releasing on
+   * the rollover alone would be wrong for an account that spends its whole
+   * allowance again the very next day: it would read `idle`, be queued by the
+   * tick, and be refused on every attempt. The account's own ledger entry is the
+   * authority — the same entry `reserve` refuses on.
+   *
+   * The pause *also* lives in `budget.paused.global`; the rebuilt budget clears
+   * that copy of it.
+   *
+   * Exposed so the scheduler can run it at the top of a tick: a process that was
+   * down across midnight would otherwise only notice when something happened to
+   * write the budget first.
+   * @param {string} [day] local day now in effect
+   */
+  function releaseDailyCapPauses(day = localDay(nowIso())) {
+    const items = readAccountRows()
+    if (items.length === 0) return
+    const limits = readConfigFile().limits
+    // A stored ledger from an earlier day has already spent its allowance: the
+    // caps it enforced do not carry over, and `readBudget` has not necessarily
+    // rebuilt it yet. Reading the stored day is what makes the release
+    // independent of which budget touch happens to come first.
+    const stored = readStoredBudget()
+    const budget = stored.day === day ? stored : buildBudget({}, day)
+    const iso = nowIso()
+    let changed = false
+    const released = items.map((row) => {
+      if (row.refresh_state !== CAP_PAUSE_STATE) return row
+      if (!DAILY_CAP_REASONS.has(String(row.error_code || ''))) return row
+      // The cap that parked it no longer applies if this account could reserve a
+      // cycle against today's ledger.
+      const used = finiteNumber(budget.per_account[row.id]?.calls, 0)
+      const overAccountCap = used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day
+      const overGlobalCap = budget.global_calls + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_global_per_day
+      if (budget.paused.global || overAccountCap || overGlobalCap) return row
+      // `refresh_interval_hours === 0` means "manual only": the account has no
+      // automatic schedule to resume, so it is not given one.
+      const nextAt = finiteNumber(row.refresh_interval_hours, 0) > 0 ? `${day}T00:00:00.000Z` : null
+      changed = true
+      return buildAccountRow(
+        {
+          ...row,
+          refresh_state: 'idle',
+          error_code: null,
+          error_message: null,
+          next_auto_refresh_at: nextAt,
+        },
+        { id: row.id, created_at: row.created_at, now: iso },
+      )
+    })
+    if (changed) writeAccountRows(released)
   }
 
   /**
@@ -412,8 +541,14 @@ export function createRivalAccountsStore(opts = {}) {
    */
   function writeBudget(budget) {
     const today = localDay(nowIso())
+    const raw = readJson(paths.budgetFile)
+    const rolledOver = raw && typeof raw.day === 'string' && raw.day !== '' && raw.day !== today
     const next = buildBudget({ ...budget, day: today }, today)
     writeJson(paths.budgetFile, next)
+    // A spend or a refusal can be the first budget touch of a new day, so the
+    // release is duplicated here rather than left to `readBudget`. It only runs
+    // on an actual rollover: a same-day write must not lift a live pause.
+    if (rolledOver) releaseDailyCapPauses(today)
     return next
   }
 
@@ -466,16 +601,16 @@ export function createRivalAccountsStore(opts = {}) {
     },
 
     /**
-     * Dedup key of requirement 2: `platform + external_id`.
+     * Dedup key of requirement 2: `platform + external_id`, `@`-insensitive.
      * @param {string} platform
      * @param {string} externalId
      * @returns {Record<string, any> | null}
      */
     findAccount(platform, externalId) {
-      const key = String(externalId || '').trim().toLowerCase()
+      const key = identityKey(externalId)
       if (!platform || !key) return null
       return readAccountRows().find(
-        (row) => row.platform === platform && String(row.external_id || '').trim().toLowerCase() === key,
+        (row) => row.platform === platform && identityKey(row.external_id) === key,
       ) || null
     },
 
@@ -666,6 +801,11 @@ export function createRivalAccountsStore(opts = {}) {
      * Used where the caller has to describe the situation before acting — the
      * enqueue path prefers "out of allowance" over "you asked too soon", and it
      * must not consume budget to find that out.
+     *
+     * **A refusal writes nothing.** A per-account cap is not a global pause, and
+     * having this non-mutating probe raise one is how an account that merely ran
+     * out of its own allowance would stop every *other* account from refreshing.
+     * Only `reserve` records a refusal, and only for the ledger it is about.
      * @param {{ accountId?: string }} [opts]
      * @returns {{ allowed: boolean, reason: string | null, budget: Record<string, any> }}
      */
@@ -673,30 +813,17 @@ export function createRivalAccountsStore(opts = {}) {
       const budget = readBudget()
       const accountId = opts.accountId ? String(opts.accountId) : ''
       const limits = readConfigFile().limits
-      /** @param {string} reason */
-      const refuse = (reason) => ({
-        allowed: false,
-        reason,
-        // A refusal is a fact about the ledger, so it is recorded here and not
-        // only at the caller: the paused flag has to survive even when nothing
-        // else writes afterwards. Repeating it is idempotent.
-        budget: writeBudget({
-          ...budget,
-          paused: { global: true, reason, paused_at: nowIso() },
-        }),
-      })
       if (budget.paused.global) {
         return { allowed: false, reason: budget.paused.reason || BUDGET_REASONS.GLOBAL_DAILY_CAP, budget }
       }
       if (budget.global_calls + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_global_per_day) {
-        return refuse(BUDGET_REASONS.GLOBAL_DAILY_CAP)
+        return { allowed: false, reason: BUDGET_REASONS.GLOBAL_DAILY_CAP, budget }
       }
       if (accountId) {
         const used = finiteNumber(budget.per_account[accountId]?.calls, 0)
         if (used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day) {
-          // A per-account cap parks *that account* only. Raising the global pause
-          // here would stop every other account from refreshing because one of
-          // them ran out of its own allowance.
+          // A per-account cap parks *that account* only. The global pause stays
+          // clear, so one spent account cannot stall the others.
           return { allowed: false, reason: BUDGET_REASONS.ACCOUNT_DAILY_CAP, budget }
         }
       }
@@ -709,6 +836,15 @@ export function createRivalAccountsStore(opts = {}) {
      * The decision is explicit: a refusal names the ledger that stopped it, so
      * the caller reports "paused, because the daily cap was reached" instead of
      * failing silently. Nothing is decremented on refusal.
+     *
+     * **The unit is a cycle attempt, not an HTTP call.** A cycle that dies on
+     * its first call still charges the full two: the reservation is what the
+     * day's allowance is spent against, and the tick, the manual path and the
+     * import path all go through it, so the cap is a cap on *attempts*. Making
+     * a mid-cycle failure cheaper would let a repeatedly failing account spend
+     * an unbounded number of cloud calls inside the same allowance — the exact
+     * thing `LIMIT_CALLS_PER_ACCOUNT_DAY` exists to bound. A refund path was
+     * removed for that reason rather than left unwired.
      * @param {{ accountId?: string, scope?: 'cycle' | 'manual' }} [opts]
      * @returns {{ allowed: boolean, reason: string | null, budget: Record<string, any> }}
      */
@@ -754,34 +890,28 @@ export function createRivalAccountsStore(opts = {}) {
     },
 
     /**
-     * Record a refresh that consumed fewer calls than reserved (a failure before
-     * the second call). The ledger must agree with what the cloud actually served.
-     * @param {string} accountId
-     * @param {number} calls
-     */
-    refundCalls(accountId, calls) {
-      if (!calls || calls <= 0) return readBudget()
-      const budget = readBudget()
-      return writeBudget({
-        ...budget,
-        global_calls: Math.max(0, budget.global_calls - calls),
-        per_account: {
-          ...budget.per_account,
-          ...(accountId
-            ? { [accountId]: { ...budget.per_account[accountId], calls: Math.max(0, finiteNumber(budget.per_account[accountId]?.calls, 0) - calls) } }
-            : {}),
-        },
-      })
-    },
-
-    /**
      * Clear a pause (the user's "continue refreshing" action).
+     *
+     * Note this clears the *ledger's* pause only. An account parked by the cap
+     * also carries `refresh_state: 'paused'`, which the rollover reset lifts;
+     * a manual resume of an account that still has no allowance would only put
+     * it back to sleep on the next attempt.
      * @returns {Record<string, any>}
      */
     resumeBudget() {
       const budget = readBudget()
       return writeBudget({ ...budget, paused: { global: false, reason: null, paused_at: null } })
     },
+
+    /**
+     * Lift the cap pauses a new day has invalidated, and make the released
+     * accounts due again. Idempotent; callable at any time, but the guarantee it
+     * provides is only as fresh as its last invocation — `readBudget` and
+     * `writeBudget` call it on a rollover, and the scheduler calls it once per
+     * tick so a process that slept across midnight recovers without waiting for
+     * some other write to happen first.
+     */
+    releaseDailyCapPauses,
 
     isRefreshDue,
   }

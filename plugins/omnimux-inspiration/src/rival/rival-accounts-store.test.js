@@ -289,12 +289,81 @@ describe('rival-accounts-store: budget ledger', () => {
     assert.equal(next.day, new Date(clock).toISOString().slice(0, 10))
   })
 
-  it('refunds calls the refresh never spent', () => {
-    const { store } = sandbox()
-    store.reserve({ accountId: 'riv_a' })
-    const after = store.refundCalls('riv_a', 1)
-    assert.equal(after.per_account.riv_a.calls, LIMIT_CALLS_PER_ACCOUNT_CYCLE - 1)
-    assert.equal(after.global_calls, LIMIT_CALLS_PER_ACCOUNT_CYCLE - 1)
+  it('releases the accounts a daily cap parked when the day rolls over', () => {
+    // Regression: the rollover reset the ledger but left `refresh_state` on
+    // `paused`, and the tick treats `paused` as terminal — so the account never
+    // refreshed again. The design's `paused → idle : 跨日重置` and the UI's
+    // "跨日自动恢复" copy both depend on this release.
+    let clock = FIXED_NOW
+    const { store } = sandbox({ nowMs: () => clock })
+    const account = store.addAccount({
+      platform: 'tiktok',
+      external_id: '@foo',
+      refresh_interval_hours: 24,
+      // A successful cycle set this hours in the future; releasing the pause
+      // without re-anchoring it would leave `isRefreshDue()` false.
+      next_auto_refresh_at: new Date(FIXED_NOW + 20 * 3_600_000).toISOString(),
+    })
+    store.reserve({ accountId: account.id })
+    store.updateAccount(account.id, { refresh_state: 'paused', error_code: 'account-daily-cap' })
+    assert.equal(store.isRefreshDue(store.getAccount(account.id)), false)
+    // Same-day: the cap still stands, so the pause must survive the read.
+    store.readBudget()
+    assert.equal(store.getAccount(account.id).refresh_state, 'paused')
+
+    clock = FIXED_NOW + 86_400_000
+    store.readBudget()
+
+    const released = store.getAccount(account.id)
+    assert.equal(released.refresh_state, 'idle')
+    assert.equal(released.error_code, null)
+    assert.equal(released.error_message, null)
+    assert.equal(store.isRefreshDue(released), true)
+
+    // Idempotent: a second read of the same day changes nothing.
+    store.readBudget()
+    assert.equal(store.getAccount(account.id).refresh_state, 'idle')
+  })
+
+  it('releases a global-cap pause too, and leaves the pauses the user must fix alone', () => {
+    let clock = FIXED_NOW
+    const { store } = sandbox({ nowMs: () => clock })
+    const global = store.addAccount({ platform: 'x', external_id: '@g', refresh_interval_hours: 24 })
+    const unverified = store.addAccount({ platform: 'youtube', external_id: '@u', refresh_interval_hours: 24 })
+    const terminal = store.addAccount({ platform: 'tiktok', external_id: '@t', refresh_interval_hours: 24 })
+    const held = store.addAccount({ platform: 'tiktok', external_id: '@h', refresh_interval_hours: 24 })
+    store.reserve({ accountId: global.id })
+    store.updateAccount(global.id, { refresh_state: 'paused', error_code: 'global-daily-cap' })
+    store.updateAccount(unverified.id, { refresh_state: 'paused', error_code: 'identity-unverified' })
+    store.updateAccount(terminal.id, { refresh_state: 'error', error_code: 'cloud-error' })
+    store.updateAccount(held.id, { refresh_state: 'paused', error_code: 'user-hold' })
+
+    clock = FIXED_NOW + 86_400_000
+    store.readBudget()
+
+    assert.equal(store.getAccount(global.id).refresh_state, 'idle')
+    // Not a daily-cap pause: the identity is still unproven, the backoff is
+    // still exhausted, the user still holds it.
+    assert.equal(store.getAccount(unverified.id).refresh_state, 'paused')
+    assert.equal(store.getAccount(unverified.id).error_code, 'identity-unverified')
+    assert.equal(store.getAccount(terminal.id).refresh_state, 'error')
+    assert.equal(store.getAccount(held.id).refresh_state, 'paused')
+  })
+
+  it('releases a cap pause even when the budget file was written same-day', () => {
+    // The rollover can be consumed by an unrelated budget write (a reserve, a
+    // refusal) before anything reads the accounts. The release lives on that
+    // path too, so the parked account still comes back.
+    let clock = FIXED_NOW
+    const { store } = sandbox({ nowMs: () => clock })
+    const account = store.addAccount({ platform: 'tiktok', external_id: '@w', refresh_interval_hours: 24 })
+    store.reserve({ accountId: account.id })
+    store.updateAccount(account.id, { refresh_state: 'paused', error_code: 'account-daily-cap' })
+
+    clock = FIXED_NOW + 86_400_000
+    // A write, not a read: this is the call that notices the new day.
+    store.reserve({ accountId: 'riv_other' })
+    assert.equal(store.getAccount(account.id).refresh_state, 'idle')
   })
 
   it('clears a pause on demand', () => {

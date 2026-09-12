@@ -33,9 +33,9 @@ describe('rival-identity: homepage URLs of all four platforms', () => {
     ['https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv', 'youtube', 'UCabcdefghijklmnopqrstuv', 'channel_id'],
     ['https://www.youtube.com/c/foo', 'youtube', '@foo', 'handle-unverified'],
     ['https://www.youtube.com/user/foo', 'youtube', '@foo', 'handle-unverified'],
-    ['https://www.instagram.com/foo/', 'instagram', 'foo', 'username'],
-    ['https://x.com/foo', 'x', 'foo', 'username'],
-    ['https://twitter.com/foo', 'x', 'foo', 'username'],
+    ['https://www.instagram.com/foo/', 'instagram', '@foo', 'username'],
+    ['https://x.com/foo', 'x', '@foo', 'username'],
+    ['https://twitter.com/foo', 'x', '@foo', 'username'],
   ]
 
   for (const [url, platform, externalId, kind] of cases) {
@@ -48,6 +48,25 @@ describe('rival-identity: homepage URLs of all four platforms', () => {
       assert.ok(result.identity.profile_url.startsWith('http'))
     })
   }
+
+  it('stores one identity whether or not the pasted handle carries an @', () => {
+    // Regression (requirement 3): instagram/x stored the bare name while
+    // tiktok/youtube stored `@name`, so `x.com/@bar` and `x.com/bar` produced
+    // two rows for one account. One stored form is written for all four now.
+    const withAt = detectInputKind('https://x.com/@bar')
+    const withoutAt = detectInputKind('https://x.com/bar')
+    assert.equal(withAt.kind, 'account')
+    assert.equal(withoutAt.kind, 'account')
+    assert.equal(withAt.identity.external_id, '@bar')
+    assert.equal(withAt.identity.external_id, withoutAt.identity.external_id)
+    assert.equal(
+      detectInputKind('https://www.instagram.com/@bar').identity.external_id,
+      detectInputKind('https://www.instagram.com/bar').identity.external_id,
+    )
+    // Idempotent: the prefixed form is already canonical, so re-normalizing a
+    // stored value cannot produce `@@bar`.
+    assert.equal(detectInputKind('https://x.com/@@bar').identity.external_id, '@bar')
+  })
 
   it('marks a YouTube @handle unverified and a /channel/UC form verified', () => {
     assert.equal(parseRivalIdentity('https://www.youtube.com/@foo').external_id_kind, 'handle-unverified')
@@ -98,6 +117,38 @@ describe('rival-identity: content URLs stay with the existing pipeline', () => {
     const result = detectInputKind('https://www.youtube.com/somecreator')
     assert.equal(result.kind, 'account')
     assert.equal(result.identity.external_id_kind, 'handle-unverified')
+  })
+
+  it('refuses a host outside the four platforms instead of calling it content', () => {
+    // Regression (requirement 2): facebook/threads/any other domain used to fall
+    // through to `kind: 'content'`, so the dialog never reached the
+    // `rivalAccounts.import.unrecognized` branch and the content import was
+    // attempted for a link this pipeline has no parser for.
+    for (const url of [
+      'https://www.facebook.com/somepage',
+      'https://fb.watch/abc123/',
+      'https://www.threads.net/@someone',
+      'https://www.threads.com/@someone',
+      'https://example.com/@someone',
+    ]) {
+      const result = detectInputKind(url)
+      assert.equal(result.kind, 'unknown', url)
+      assert.equal(result.hint_key, 'rivalAccounts.import.unrecognized', url)
+      assert.equal(parseRivalIdentity(url), null, url)
+    }
+  })
+
+  it('still sends the four platforms\u2019 content links to the existing pipeline', () => {
+    for (const url of [
+      'https://www.tiktok.com/@foo/video/7321234567890123456',
+      'https://www.instagram.com/reel/CxYz123ab/',
+      'https://x.com/foo/status/1700000000000000000',
+      'https://twitter.com/foo/status/1700000000000000000',
+    ]) {
+      const result = detectInputKind(url)
+      assert.equal(result.kind, 'content', url)
+      assert.notEqual(result.platform, 'unknown', url)
+    }
   })
 })
 

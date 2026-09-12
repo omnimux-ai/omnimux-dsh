@@ -111,6 +111,14 @@ function makeRunCycle(store, remote) {
   } catch (err) {
     throw toOutcomeError(err, cycle.calls())
   }
+  // Mirrors `rival-accounts-service.js`: the cloud's no-content sentinel is a
+  // failure, an empty list is not.
+  if (postsResult.status === 'no-content') {
+    const error = new Error('云端未返回该账号的动态内容')
+    error.code = RIVAL_ERROR_CODES.NO_CONTENT
+    error.calls_used = cycle.calls()
+    throw error
+  }
   const rows = (postsResult.rows || []).slice(0, POSTS_PER_REFRESH)
   const patch = {
     nickname: userResult.profile?.nickname || account.nickname,
@@ -489,7 +497,139 @@ describe('T03: budget exhaustion pauses and reports (G9)', () => {
     assert.equal(parked.refresh_state, 'paused')
     assert.equal(parked.error_code, 'account-daily-cap')
     assert.deepEqual(world.scheduler.snapshot().per_account_paused, [{ id: account.id, reason: 'account-daily-cap' }])
+    // While the cap stands, the tick leaves the account alone: re-queuing it
+    // every minute would only produce refreshes that cannot succeed.
     assert.deepEqual(world.scheduler.tick().due, [])
+    assert.equal(world.store.getAccount(account.id).refresh_state, 'paused')
+  })
+
+  it('returns a cap-parked account to the queue after the day rolls over', async () => {
+    // Regression (design §5.3 `paused → idle : 跨日重置`, and the UI's
+    // "跨日自动恢复" copy): the rollover reset the ledger but left the account on
+    // `refresh_state: 'paused'`, which the tick treats as terminal — so its
+    // automatic refresh stopped for good and only a manual action brought it
+    // back.
+    const world = makeWorld()
+    const account = world.store.addAccount({ platform: 'tiktok', external_id: '@cap', refresh_interval_hours: 1 })
+
+    // Spend the whole daily allowance: two cycles at two calls each. The mode is
+    // `auto`, not `manual`: the manual path carries a rate limit of its own, and
+    // the case is about the ledger.
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      world.store.updateAccount(account.id, { next_auto_refresh_at: new Date(world.now() - 1000).toISOString() })
+      world.cloud.resetCycle()
+      world.scheduler.enqueue({ account_id: account.id, mode: 'auto' })
+      await waitForIdle(world, account.id)
+    }
+    assert.equal(world.cloud.calls.length, 4)
+    // A third attempt is what parks it: the ledger refuses and the account goes
+    // to `paused` instead of spending the rest of the day being refused.
+    const refused = world.scheduler.enqueue({ account_id: account.id, mode: 'auto' })
+    assert.equal(refused.status, 'budget')
+    const parked = world.store.getAccount(account.id)
+    assert.equal(parked.refresh_state, 'paused')
+    assert.equal(parked.error_code, 'account-daily-cap')
+    // `next_auto_refresh_at` is still hours away — the successful cycle set it,
+    // and the refusal happened before it could be rewritten. That is exactly the
+    // shape QA reproduced: paused, and not due.
+    assert.equal(world.store.isRefreshDue(parked, world.now()), false)
+    // While the cap stands, the tick leaves the account alone: re-queuing it
+    // every minute would only produce refreshes that cannot succeed.
+    assert.deepEqual(world.scheduler.tick().due, [])
+    assert.equal(world.store.getAccount(account.id).refresh_state, 'paused')
+
+    // The clock crosses midnight and the next automatic tick runs.
+    world.setClock(FIXED_NOW + 86_400_000)
+    // A new refresh is a new cycle for the stand-in's own third-call guardrail.
+    world.cloud.resetCycle()
+    const tick = world.scheduler.tick()
+    assert.ok(tick.due.includes(account.id), `expected a due tick, got ${JSON.stringify(tick)}`)
+    assert.ok(tick.queued.includes(account.id))
+    await waitForIdle(world, account.id)
+
+    // The refresh really ran: two more cloud calls and a clean idle row.
+    assert.equal(world.cloud.calls.length, 6)
+    const recovered = world.store.getAccount(account.id)
+    assert.equal(recovered.refresh_state, 'idle')
+    assert.equal(recovered.error_code, null)
+  })
+
+  it('does not release a pause the rollover cannot fix', async () => {
+    const world = makeWorld()
+    const refusal = new Error('channel_id is invalid')
+    refusal.code = 'identity-unverified'
+    world.cloud.behaviour.failUser = refusal
+    const refused = world.store.addAccount({
+      platform: 'youtube',
+      external_id: '@blocked',
+      refresh_interval_hours: 1,
+      next_auto_refresh_at: new Date(FIXED_NOW - 1000).toISOString(),
+    })
+    world.scheduler.enqueue({ account_id: refused.id, mode: 'first' })
+    await waitForIdle(world, refused.id)
+    assert.equal(world.store.getAccount(refused.id).refresh_state, 'error')
+
+    world.cloud.behaviour.failUser = null
+    world.setClock(FIXED_NOW + 86_400_000)
+    assert.deepEqual(world.scheduler.tick().due, [])
+    assert.equal(world.store.getAccount(refused.id).refresh_state, 'error')
+  })
+
+  it('stops reporting a per-account pause once the rollover released it', async () => {
+    const world = makeWorld()
+    // A 48h interval keeps the account out of the *tick*'s way after recovery,
+    // so the assertion below is about the stale pause record, not about a
+    // refresh that would clear it anyway.
+    const account = world.store.addAccount({ platform: 'tiktok', external_id: '@stale', refresh_interval_hours: 48 })
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      world.cloud.resetCycle()
+      world.scheduler.enqueue({ account_id: account.id, mode: 'auto' })
+      await waitForIdle(world, account.id)
+    }
+    world.store.updateAccount(account.id, { next_auto_refresh_at: new Date(world.now() - 1000).toISOString() })
+    const parkedByLedger = world.scheduler.enqueue({ account_id: account.id, mode: 'auto' })
+    assert.equal(parkedByLedger.status, 'budget')
+    assert.deepEqual(world.scheduler.snapshot().per_account_paused, [{ id: account.id, reason: 'account-daily-cap' }])
+
+    world.setClock(FIXED_NOW + 86_400_000)
+    world.cloud.resetCycle()
+    world.scheduler.tick()
+    await world.scheduler.settled()
+    assert.deepEqual(world.scheduler.snapshot().per_account_paused, [])
+    assert.equal(world.store.getAccount(account.id).refresh_state, 'idle')
+  })
+})
+
+describe('T03: the cloud sentinel and an empty post list are different facts (G9)', () => {
+  it('fails the cycle with no-content when the posts answer is the sentinel', async () => {
+    const world = makeWorld()
+    world.cloud.behaviour.posts = { text: null }
+    const account = world.store.addAccount({ platform: 'tiktok', external_id: '@foo' })
+    world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
+    await world.scheduler.settled()
+
+    const row = world.store.getAccount(account.id)
+    assert.equal(row.refresh_state, 'backoff')
+    assert.equal(row.error_code, RIVAL_ERROR_CODES.NO_CONTENT)
+    // The cost contract still holds: one `user` call, one `posts` call, no more.
+    assert.equal(world.cloud.calls.length, 2)
+  })
+
+  it('treats an empty post list as a successful refresh with no new rows', async () => {
+    // A brand-new account that has published nothing must not be backed off into
+    // the terminal `error` state for having no posts.
+    const world = makeWorld()
+    world.cloud.behaviour.posts = { items: [] }
+    const account = world.store.addAccount({ platform: 'tiktok', external_id: '@empty' })
+    world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
+    await world.scheduler.settled()
+
+    const row = world.store.getAccount(account.id)
+    assert.equal(row.refresh_state, 'idle')
+    assert.equal(row.error_code, null)
+    assert.equal(row.consecutive_failures, 0)
+    assert.deepEqual(world.store.readPosts(account.id), [])
+    assert.equal(world.cloud.calls.length, 2)
   })
 })
 

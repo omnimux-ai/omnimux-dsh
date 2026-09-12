@@ -33,6 +33,48 @@ const PLATFORM_META = {
 }
 
 /**
+ * Platforms whose *content* URLs the inspiration import pipeline has a parser
+ * for. A host outside this set is not a content link this module can hand on,
+ * so it must be refused rather than stored as an "unknown platform" row.
+ */
+const CONTENT_PLATFORMS = new Set(Object.keys(PLATFORM_META))
+
+/**
+ * Platforms that store their `external_id` in the `@handle` form. TikTok and
+ * YouTube already did; Instagram and X stored the bare name, which is the
+ * divergence requirement 2's dedup key tripped over.
+ *
+ * The `@`-prefixed form wins because it is the one the module *shows*
+ * (`handle`) and the one two of the four platforms already persist — so the fix
+ * adds a form rather than migrating away from one, and no existing row has to
+ * change. Comparison never depends on it: `identityKey` in the store strips the
+ * prefix, so a `@bar` row and a `bar` row are the same account either way.
+ */
+const AT_PREFIXED_PLATFORMS = new Set(['tiktok', 'instagram', 'x'])
+
+/**
+ * The handle with its `@` decoration removed. Idempotent, and a YouTube
+ * channel id (`UC…`, never stored with a `@`) passes through unchanged — which
+ * is what keeps `external_id_canonical` meaningful, since this only ever runs
+ * on `external_id` and never on the canonical value.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function bareHandle(value) {
+  return typeof value === 'string' ? value.trim().replace(/^@+/, '').trim() : ''
+}
+
+/**
+ * Stored identity form of `platform` + bare handle.
+ * @param {string} platform
+ * @param {string} handle bare, already validated by `isHandleLike`
+ * @returns {string}
+ */
+function externalIdFor(platform, handle) {
+  return AT_PREFIXED_PLATFORMS.has(platform) ? `@${handle}` : handle
+}
+
+/**
  * @typedef {Object} RivalIdentity
  * @property {string} platform
  * @property {string} external_id
@@ -73,13 +115,13 @@ export function detectInputKind(url) {
 
   const meta = PLATFORM_META[platform]
   if (meta && segments.length === 1 && isHandleLike(segments[0])) {
-    const handle = segments[0].replace(/^@+/, '')
+    const handle = bareHandle(segments[0])
     return {
       kind: 'account',
       platform,
       identity: {
         platform,
-        external_id: platform === 'tiktok' ? `@${handle}` : handle,
+        external_id: externalIdFor(platform, handle),
         external_id_kind: meta.idKind,
         handle: `@${handle}`,
         profile_url: `${meta.profileBase}@${handle}`,
@@ -87,20 +129,24 @@ export function detectInputKind(url) {
     }
   }
   if (platform === 'tiktok' && segments.length === 2 && segments[0] === 'user' && isHandleLike(segments[1])) {
-    const handle = segments[1]
+    const handle = bareHandle(segments[1])
     return {
       kind: 'account',
       platform,
       identity: {
         platform,
-        external_id: `@${handle}`,
+        external_id: externalIdFor(platform, handle),
         external_id_kind: meta.idKind,
         handle: `@${handle}`,
         profile_url: `${meta.profileBase}@${handle}`,
       },
     }
   }
-  if (platform === 'unknown') {
+  // facebook / threads / any other host has no content parser here and no
+  // monitorable identity, so it is refused — the dialog then shows
+  // `rivalAccounts.import.unrecognized` instead of falling through to a content
+  // import that cannot succeed.
+  if (!CONTENT_PLATFORMS.has(platform)) {
     return { kind: 'unknown', platform, hint_key: 'rivalAccounts.import.unrecognized' }
   }
   return { kind: 'content', platform }
@@ -141,12 +187,12 @@ function parseYouTube(parsed, segments) {
     return { platform: 'youtube', external_id: id, external_id_kind: 'channel_id', handle: id, profile_url: `${base}/channel/${id}` }
   }
   if (segments.length >= 1 && segments[0].startsWith('@')) {
-    const handle = segments[0].slice(1)
+    const handle = bareHandle(segments[0])
     if (!isHandleLike(handle)) return null
     return { platform: 'youtube', external_id: `@${handle}`, external_id_kind: 'handle-unverified', handle: `@${handle}`, profile_url: `${base}/@${handle}` }
   }
   if (segments.length >= 2 && (segments[0] === 'c' || segments[0] === 'user') && isHandleLike(segments[1])) {
-    const handle = segments[1]
+    const handle = bareHandle(segments[1])
     return {
       platform: 'youtube',
       external_id: `@${handle}`,
@@ -161,7 +207,7 @@ function parseYouTube(parsed, segments) {
   // checked before its only path segment is read as a handle.
   if (segments.length === 1 && parsed.hostname.toLowerCase().endsWith('youtube.com')
     && isHandleLike(segments[0]) && parsed.searchParams.get('v') === null) {
-    const handle = segments[0]
+    const handle = bareHandle(segments[0])
     return { platform: 'youtube', external_id: `@${handle}`, external_id_kind: 'handle-unverified', handle: `@${handle}`, profile_url: `${base}/@${handle}` }
   }
   return null
@@ -173,6 +219,11 @@ function parseYouTube(parsed, segments) {
  * `external_id_canonical` wins once a first refresh has proven it: a `@handle`
  * that the cloud accepted is then refreshed through its resolved channel id, so
  * later refreshes stop depending on the unverified form.
+ *
+ * The value is handed over exactly as stored. Making this function rewrite it
+ * would silently change which business field the hub seam receives, and that
+ * mapping (`uniqueId` / `username` / `screen_name` / `channel_id`) is owned by
+ * the hub — this module only decides what identity it recorded.
  * @param {{ external_id?: string, external_id_canonical?: string | null }} account
  * @returns {string}
  */

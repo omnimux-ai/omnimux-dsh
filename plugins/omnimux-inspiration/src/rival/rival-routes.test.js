@@ -166,6 +166,59 @@ describe('E1/E2/E3 + G4: import, dedup and classification', () => {
     assert.equal(world.store.listAccounts().length, 1)
   })
 
+  it('answers unrecognized-url for facebook, threads and any other domain (E3)', async () => {
+    // Regression (requirement 2): these used to answer 200 with
+    // `{ kind: 'content' }`, so the dialog's `rivalAccounts.import.unrecognized`
+    // branch was unreachable and the content import was attempted instead.
+    const world = makeWorld()
+    const callsBefore = world.cloud.calls.length
+    for (const url of [
+      'https://www.facebook.com/somepage',
+      'https://fb.watch/abc123/',
+      'https://www.threads.net/@someone',
+      'https://www.threads.com/@someone',
+      'https://example.com/@someone',
+    ]) {
+      const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/classify`, { url })
+      assert.equal(result.status, 400, url)
+      assert.equal(result.body.code, RIVAL_ERROR_CODES.UNRECOGNIZED_URL, url)
+      assert.equal(typeof result.body.error, 'string', url)
+      assert.ok(result.body.error.length > 0, url)
+    }
+    assert.equal(world.cloud.calls.length, callsBefore)
+    assert.deepEqual(world.store.listAccounts(), [])
+  })
+
+  it('still hands the four platforms\u2019 content links to the existing pipeline', async () => {
+    const world = makeWorld()
+    for (const url of [
+      'https://www.tiktok.com/@foo/video/7321234567890123456',
+      'https://www.instagram.com/reel/CxYz123ab/',
+      'https://x.com/foo/status/1700000000000000000',
+    ]) {
+      const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/classify`, { url })
+      assert.equal(result.status, 200, url)
+      assert.equal(result.body.data.kind, 'content', url)
+    }
+  })
+
+  it('dedups a mixed-prefix import of one account (E2, requirement 3)', async () => {
+    // Regression: `x.com/@bar` stored `@bar` while `x.com/bar` stored `bar`, so
+    // the same account produced two rows.
+    const world = makeWorld()
+    const first = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://x.com/@bar' })
+    assert.equal(first.status, 201)
+    await world.scheduler.settled()
+    const callsAfterFirst = world.cloud.calls.length
+
+    const second = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://x.com/bar' })
+    assert.equal(second.status, 200)
+    assert.equal(second.body.existing, true)
+    assert.equal(second.body.is_duplicate, true)
+    assert.equal(world.store.listAccounts().length, 1)
+    assert.equal(world.cloud.calls.length, callsAfterFirst)
+  })
+
   it('rejects an unresolvable identity with 422', async () => {
     const world = makeWorld()
     const result = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })

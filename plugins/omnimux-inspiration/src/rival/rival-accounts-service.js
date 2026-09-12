@@ -81,6 +81,11 @@ export function createRivalAccountsService(deps) {
    * The per-cycle cost guard throws on a third call, so a future edit that
    * "just needs one more lookup" fails loudly here instead of quietly spending
    * quota.
+   *
+   * Two "nothing came back" answers are distinguished on purpose: the `user`
+   * sentinel and the `posts` sentinel are `no-content` failures, while an empty
+   * `posts` list is a successful refresh with no new rows — a brand-new account
+   * must not be backed off into the terminal `error` state for having no posts.
    * @param {{ account: Record<string, any> }} input
    */
   async function runCycle({ account }) {
@@ -100,6 +105,12 @@ export function createRivalAccountsService(deps) {
       posts = await cycle.fetchPosts({ platform: account.platform, value })
     } catch (err) {
       throw withCalls(err, cycle.calls())
+    }
+    // The cloud answered with its no-content sentinel: there is nothing to
+    // store, so the cycle is a `no-content` failure (design §7.2). An empty
+    // *list* is not this case — it is a successful refresh with no new rows.
+    if (posts.status === 'no-content') {
+      throw new RivalRemoteError(RIVAL_ERROR_CODES.NO_CONTENT, '云端未返回该账号的动态内容', { callsUsed: cycle.calls() })
     }
     const rows = (posts.rows || []).slice(0, POSTS_PER_REFRESH)
     const marked = markPotential(rows, { now: new Date(now()).toISOString() })

@@ -12,6 +12,7 @@
 import {
   CLOUD_CAPABILITY_POSTS,
   CLOUD_CAPABILITY_USER,
+  EMPTY_PAYLOAD_KEYS,
   FIELD_PROBE_MISS,
   POST_FIELD_CANDIDATES,
   USER_FIELD_CANDIDATES,
@@ -126,10 +127,9 @@ export function probeLayer(layer, candidates) {
 /**
  * Whether an envelope carries nothing at all.
  *
- * The hub answers `{ text: null }` when it has no content, and an empty list
- * answer from a `posts` call (`{ items: [] }`) looks the same way: a payload
- * whose fields are all empty containers has to be reported as `no-content`
- * rather than stored as "0 posts, refresh succeeded".
+ * An empty *list* answer from a `posts` call (`{ items: [] }`) reads the same
+ * way as the hub's no-content sentinel, so this answers "no content" for both
+ * and `isNoContentSentinel` is what tells them apart.
  * @param {unknown} data
  * @returns {boolean}
  */
@@ -138,6 +138,34 @@ export function isEmptyPayload(data) {
   const keys = Object.keys(data)
   if (keys.length === 0) return true
   return keys.every((key) => isEmptyValue(data[key]))
+}
+
+/**
+ * Whether an empty payload is the hub's no-content *sentinel* (`{ text: null }`)
+ * rather than a well-formed answer that happens to be empty.
+ *
+ * The two are not the same fact and must not be treated the same way:
+ *
+ * - **Sentinel** — the cloud reported that it has no content. There is nothing
+ *   to parse and nothing to store, so a refresh must say so (`no-content`).
+ * - **Empty list** (`{ items: [] }`, `{ aweme_list: [] }`) — the cloud answered
+ *   normally and the account genuinely has no posts yet. That is a *successful*
+ *   refresh with zero new rows. Reporting it as a failure would start the
+ *   `[5, 15, 60]` backoff and end in the terminal `error` state, silently
+ *   switching automatic refresh off for a brand-new account — a far worse
+ *   outcome than an empty list.
+ *
+ * A payload carrying any key outside the sentinel vocabulary is *not* a
+ * sentinel, even when its values are all empty: `{ items: [] }` declares a list
+ * container, and `{ data: { items: [] } }` nests one.
+ * @param {unknown} data
+ * @returns {boolean}
+ */
+export function isNoContentSentinel(data) {
+  if (!isPlainObject(data)) return false
+  const keys = Object.keys(data)
+  if (keys.length === 0) return false
+  return keys.every((key) => EMPTY_PAYLOAD_KEYS.includes(key))
 }
 
 /**

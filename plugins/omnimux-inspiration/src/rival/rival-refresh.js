@@ -405,13 +405,20 @@ export function createRivalRefreshScheduler(deps) {
    */
   function tick(atMs) {
     const at = typeof atMs === 'number' ? atMs : now()
+    // A daily cap that expired at midnight lifts before the "is it due?" question
+    // is asked: otherwise a process that was idle across the boundary would keep
+    // reading the parked state and never queue the account again. Idempotent, and
+    // no-op once the day's releases have happened.
+    if (typeof store.releaseDailyCapPauses === 'function') store.releaseDailyCapPauses()
     const accounts = store.listAccounts()
     /** @type {string[]} */
     const due = []
     for (const account of accounts) {
       // `error` and `paused` are terminal for the automatic tick: the first waits
-      // for the user to fix the identity, the second for the daily ledger to roll
-      // over. Queuing them again would produce a refresh that cannot succeed.
+      // for the user to fix the identity, the second for its allowance to come
+      // back. Whether that allowance is back was already decided by the release
+      // pass above, so a row still reading `paused` is a row that is still
+      // parked.
       if (account.refresh_state === 'error' || account.refresh_state === 'paused') continue
       if (queued.has(account.id) || inFlight.has(account.id)) continue
       if (!store.isRefreshDue(account, at)) continue
@@ -461,6 +468,14 @@ export function createRivalRefreshScheduler(deps) {
     const perAccount = {}
     for (const [id, entry] of Object.entries(budget.per_account || {})) {
       perAccount[id] = typeof entry === 'object' && entry ? Number(entry.calls) || 0 : 0
+    }
+    // The in-memory map is the per-account *reason* record; the account row is
+    // the durable state. They are reconciled on read so a released pause (the
+    // rollover reset, a manual budget resume) stops being reported as active
+    // instead of leaving a stale banner for the user to act on.
+    const pausedStates = new Set(accounts.filter((account) => account.refresh_state === 'paused').map((account) => account.id))
+    for (const id of [...pausedAccounts.keys()]) {
+      if (!pausedStates.has(id)) pausedAccounts.delete(id)
     }
     return {
       running: [...running.entries()].map(([id, since]) => ({ id, since })),

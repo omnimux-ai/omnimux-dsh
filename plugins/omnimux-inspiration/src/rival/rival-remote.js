@@ -20,7 +20,7 @@
  * `OmnimuxError` and sometimes only inside the message, so both are inspected.
  */
 
-import { mapRivalPosts, mapRivalUser, isEmptyPayload } from './rival-parsers.js'
+import { mapRivalPosts, mapRivalUser, isEmptyPayload, isNoContentSentinel } from './rival-parsers.js'
 import {
   CLOUD_CAPABILITY_POSTS,
   CLOUD_CAPABILITY_USER,
@@ -180,11 +180,27 @@ export function createRivalRemote(opts = {}) {
         },
         /**
          * `posts` call — 2 of the 2.
+         *
+         * The posts answer is the one place where "the cloud has nothing" and
+         * "the account has nothing" arrive in the same shape, and they must not
+         * be collapsed: an empty *list* is a successful refresh with no new rows
+         * (the account may simply be new), while the sentinel is the cloud
+         * reporting no content at all. Only the second is a `no-content`
+         * failure — treating the first as one would back off, then terminal-error
+         * a perfectly healthy new account. See `isNoContentSentinel`.
          * @param {{ platform: string, value: string }} args
          */
         async fetchPosts({ platform, value }) {
           const raw = await execute({ platform, capability: CLOUD_CAPABILITY_POSTS, id: value })
           const data = raw && typeof raw === 'object' ? raw.data : undefined
+          if (isNoContentSentinel(data)) {
+            return {
+              status: 'no-content',
+              rows: [],
+              field_probe: {},
+              raw: { platform, capability: CLOUD_CAPABILITY_POSTS, model: raw?.model, field: raw?.field, value: raw?.value },
+            }
+          }
           if (isEmptyPayload(data)) {
             return { status: 'empty', rows: [], field_probe: {} }
           }
