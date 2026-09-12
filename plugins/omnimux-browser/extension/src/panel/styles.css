@@ -108,13 +108,13 @@ textarea:focus-visible {
 }
 
 .topbar {
-  display: grid;
-  min-height: 58px;
+  display: flex;
+  min-height: 52px;
   flex: 0 0 auto;
-  grid-template-columns: minmax(70px, 1fr) minmax(0, 1.75fr) minmax(106px, 1fr);
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(203, 211, 225, 0.72);
   background: rgba(255, 255, 255, 0.92);
 }
@@ -388,20 +388,20 @@ textarea:focus-visible {
 .session-menu-trigger {
   display: inline-flex;
   min-width: 0;
-  max-width: 100%;
-  min-height: 34px;
+  max-width: 140px;
+  flex: 1 1 auto;
+  min-height: 32px;
   align-items: center;
   justify-content: center;
-  justify-self: center;
-  gap: 5px;
-  padding: 5px 9px 5px 11px;
+  gap: 4px;
+  padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: 10px;
   outline: none;
   background: transparent;
   color: var(--ink-strong);
   cursor: pointer;
-  font-size: calc(13.5px * var(--ui-scale));
+  font-size: calc(13px * var(--ui-scale));
   font-weight: 680;
   letter-spacing: -0.015em;
   line-height: 1.2;
@@ -2874,22 +2874,27 @@ textarea:focus-visible {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 130px;
 }
 
 .workspace-selector-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 8px;
   background: rgba(124, 58, 237, 0.08);
   border: 1px solid rgba(124, 58, 237, 0.22);
   border-radius: 14px;
   color: var(--ink-strong);
-  font-size: calc(11.5px * var(--ui-scale));
+  font-size: calc(11px * var(--ui-scale));
   font-weight: 580;
   cursor: pointer;
   transition: all 0.2s ease;
+  max-width: 130px;
+  overflow: hidden;
 }
 
 .workspace-selector-pill:hover {
@@ -2907,9 +2912,9 @@ textarea:focus-visible {
 .engine-dot.connecting { background: #f59e0b; }
 .engine-dot.offline { background: #ef4444; }
 
-.ws-icon { font-size: calc(13px * var(--ui-scale)); }
-.ws-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-arrow { font-size: calc(10px * var(--ui-scale)); opacity: 0.6; }
+.ws-icon { font-size: calc(12px * var(--ui-scale)); flex-shrink: 0; }
+.ws-name { max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-arrow { font-size: calc(9px * var(--ui-scale)); opacity: 0.6; flex-shrink: 0; }
 
 .workspace-dropdown-menu {
   position: absolute;
@@ -3184,10 +3189,7 @@ textarea:focus-visible {
 .dom-fill-btn.success::before { content: "✓ "; }
 .dom-fill-btn.fallback::before { content: "📋 "; }
 
-.dom-fill-btn::after { content: "填入输入框"; }
-.dom-fill-btn.filling::after { content: "填入中…"; }
-.dom-fill-btn.success::after { content: "已填入"; }
-.dom-fill-btn.fallback::after { content: "已复制"; }
+.dom-fill-btn::after { content: attr(data-label); }
 
 .dom-fill-btn:hover {
   background: #ede9fe;

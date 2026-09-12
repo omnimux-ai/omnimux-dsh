@@ -74,6 +74,11 @@ export interface PanelCopy {
     sharingOff: string
     unrestrictedBrowserAccess: string
     unrestrictedBrowserAccessHelp: string
+    language: string
+    languageHelp: string
+    languageFollowDsh: string
+    languageZh: string
+    languageEn: string
     approvalNotifications: string
     approvalNotificationsHelp: string
     autoResumeSession: string
@@ -304,6 +309,11 @@ const EN: PanelCopy = {
     sharingOff: 'Off',
     unrestrictedBrowserAccess: 'Allow unrestricted browser control',
     unrestrictedBrowserAccessHelp: 'Let the model read every HTTP(S) page, inspect all open tab titles and URLs, and perform actions—including following and closing tabs—without confirmation. Browser-protected page content remains inaccessible.',
+    language: 'Language',
+    languageHelp: 'Interface display language',
+    languageFollowDsh: 'Follow DSH Configuration (Auto)',
+    languageZh: '简体中文 (Simplified Chinese)',
+    languageEn: 'English',
     approvalNotifications: 'Browser approval notifications',
     approvalNotificationsHelp: 'Notify you when an approval arrives while the side panel is closed',
     autoResumeSession: "Resume this page's conversation",
@@ -534,6 +544,11 @@ const ZH: PanelCopy = {
     sharingOff: '关闭',
     unrestrictedBrowserAccess: '允许模型完全控制浏览器',
     unrestrictedBrowserAccessHelp: '模型无需确认即可读取所有 HTTP(S) 页面、查看全部已打开标签页的标题和链接，并执行包括跟随、关闭标签页在内的所有操作。浏览器受保护页面的内容仍不可访问。',
+    language: '界面语言',
+    languageHelp: '侧边栏与工作台显示语言',
+    languageFollowDsh: '跟随 DSH 运行时配置（自动）',
+    languageZh: '简体中文',
+    languageEn: 'English',
     approvalNotifications: '浏览器审批通知',
     approvalNotificationsHelp: '侧栏关闭时收到审批请求，通过系统通知提醒你',
     autoResumeSession: '续接当前页面会话',

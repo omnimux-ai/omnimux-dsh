@@ -2,11 +2,14 @@ import { memo, useState } from 'react'
 
 export const DomFillButton = memo(function DomFillButton({
   textToFill,
+  locale = 'zh',
   activeTabId
 }: {
   textToFill: string
+  locale?: 'zh' | 'en'
   activeTabId?: number | null
 }) {
+  const isEn = locale === 'en'
   const [status, setStatus] = useState<'idle' | 'filling' | 'success' | 'fallback'>('idle')
   const [feedbackMsg, setFeedbackMsg] = useState('')
 
@@ -32,10 +35,10 @@ export const DomFillButton = memo(function DomFillButton({
           const res = e.data.payload
           if (res?.success) {
             setStatus('success')
-            setFeedbackMsg(res.message || '已填入')
+            setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填入'))
           } else {
             setStatus('fallback')
-            setFeedbackMsg(res?.message || '已复制到剪贴板')
+            setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制剪贴板'))
           }
           setTimeout(() => setStatus('idle'), 2500)
         }
@@ -45,7 +48,7 @@ export const DomFillButton = memo(function DomFillButton({
         window.removeEventListener('message', onMessage)
         if (status === 'filling') {
           setStatus('fallback')
-          setFeedbackMsg('已复制剪贴板')
+          setFeedbackMsg(isEn ? 'Copied!' : '已复制剪贴板')
           navigator.clipboard.writeText(cleanText).catch(() => {})
           setTimeout(() => setStatus('idle'), 2500)
         }
@@ -62,14 +65,14 @@ export const DomFillButton = memo(function DomFillButton({
         })
         if (res?.success) {
           setStatus('success')
-          setFeedbackMsg(res.message || '已填入输入框')
+          setFeedbackMsg(res.message || (isEn ? 'Filled!' : '已填入输入框'))
         } else {
           setStatus('fallback')
-          setFeedbackMsg(res?.message || '已复制剪贴板')
+          setFeedbackMsg(res?.message || (isEn ? 'Copied!' : '已复制剪贴板'))
         }
       } catch {
         setStatus('fallback')
-        setFeedbackMsg('已复制剪贴板')
+        setFeedbackMsg(isEn ? 'Copied!' : '已复制剪贴板')
         await navigator.clipboard.writeText(cleanText).catch(() => {})
       }
       setTimeout(() => setStatus('idle'), 2500)
@@ -80,21 +83,29 @@ export const DomFillButton = memo(function DomFillButton({
     try {
       await navigator.clipboard.writeText(cleanText)
       setStatus('fallback')
-      setFeedbackMsg('已复制到剪贴板')
+      setFeedbackMsg(isEn ? 'Copied!' : '已复制到剪贴板')
     } catch {
       setStatus('fallback')
-      setFeedbackMsg('复制失败')
+      setFeedbackMsg(isEn ? 'Failed' : '复制失败')
     }
     setTimeout(() => setStatus('idle'), 2500)
+  }
+
+  const getLabel = () => {
+    if (status === 'filling') return isEn ? 'Filling…' : '填入中…'
+    if (status === 'success') return feedbackMsg || (isEn ? 'Filled!' : '已填入')
+    if (status === 'fallback') return feedbackMsg || (isEn ? 'Copied!' : '已复制')
+    return isEn ? 'Fill Input' : '填入输入框'
   }
 
   return (
     <button
       type="button"
       className={`dom-fill-btn ${status}`}
+      data-label={getLabel()}
       onClick={handleFill}
-      title="一键将该内容自动填入宿主网页的发帖/评论输入框（支持 Twitter / TikTok / 通用网页）"
-      aria-label={status === 'filling' ? '填入中…' : status === 'success' ? (feedbackMsg || '已填入') : status === 'fallback' ? (feedbackMsg || '已复制') : '填入输入框'}
+      title={isEn ? "Insert into host page input (Twitter, TikTok, generic)" : "一键将该内容自动填入宿主网页的发帖/评论输入框（支持 Twitter / TikTok / 通用网页）"}
+      aria-label={getLabel()}
     />
   )
 })

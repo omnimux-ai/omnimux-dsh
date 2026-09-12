@@ -9,11 +9,14 @@ export interface WorkspaceItem {
 
 export const WorkspaceSelector = memo(function WorkspaceSelector({
   bridgeConnected,
+  locale = 'zh',
   onSelectWorkspace
 }: {
   bridgeConnected: boolean
+  locale?: 'zh' | 'en'
   onSelectWorkspace?: (ws: WorkspaceItem) => void
 }) {
+  const isEn = locale === 'en'
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([])
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceItem | null>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -46,7 +49,6 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
     }
 
     if (!loaded) {
-      // Default fallback
       const fallback: WorkspaceItem = {
         id: 'default-browser',
         name: 'omnimux-browser',
@@ -69,17 +71,17 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
         type="button"
         className="workspace-selector-pill"
         onClick={() => setIsOpen(!isOpen)}
-        title="切换本地 DSH / OmniMux 工作区"
+        title={isEn ? "Switch local DSH / OmniMux workspace" : "切换本地 DSH / OmniMux 工作区"}
       >
         <span className={`engine-dot ${bridgeConnected ? 'online' : loading ? 'connecting' : 'offline'}`} />
         <span className="ws-icon">📂</span>
-        <span className="ws-name">{activeWorkspace?.name || '选择工作区'}</span>
+        <span className="ws-name">{activeWorkspace?.name || (isEn ? 'Select Workspace' : '选择工作区')}</span>
         <span className="ws-arrow">▾</span>
       </button>
 
       {isOpen && (
         <div className="workspace-dropdown-menu">
-          <div className="dropdown-header">本地工作区列表</div>
+          <div className="dropdown-header">{isEn ? 'Local Workspaces' : '本地工作区列表'}</div>
           {workspaces.map((ws) => (
             <button
               key={ws.id}
@@ -97,7 +99,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
           ))}
           <div className="dropdown-footer">
             <button type="button" className="refresh-btn" onClick={fetchWorkspaces}>
-              🔄 刷新工作区
+              {isEn ? '🔄 Refresh' : '🔄 刷新工作区'}
             </button>
           </div>
         </div>
