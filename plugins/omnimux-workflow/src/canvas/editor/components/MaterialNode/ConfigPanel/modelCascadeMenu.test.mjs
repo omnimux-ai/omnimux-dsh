@@ -34,18 +34,17 @@ describe('ModelCascadeMenu source contracts', () => {
     assert.match(configSrc, /ModelCascadeMenu/);
   });
 
-  it('offers no channel affordance the node cannot honour', () => {
-    // Text nodes run through llm.stream: the request cannot carry a group, so the
-    // third panel explains that instead of rendering selectable channels.
-    assert.match(cascadeSrc, /materialType === 'text'/);
-    assert.match(cascadeSrc, /llm\.stream/);
+  it('offers channel selection for every modality, with an empty state for pools that do not exist', () => {
+    // Text nodes now route like media nodes: the hub sends a routed text request
+    // through the direct chat path, so the picker must not hide the column.
+    assert.match(cascadeSrc, /const canRouteChannels = channelGroups\.length > 0/);
+    assert.doesNotMatch(cascadeSrc, /不提供渠道选择/);
     assert.match(cascadeSrc, /channelGroups\.length === 0/);
     assert.match(cascadeSrc, /尚未配置渠道分组/);
   });
 
-  it('omits routing for text nodes and for pools that resolved to nothing', () => {
-    assert.match(cascadeSrc, /materialType === 'text' \|\| groupIds\.length === 0 \? \{\} : \{ allowedGroups: groupIds \}/);
-    // A stale routing object must not survive a modality that cannot carry it.
+  it('always sends allowedGroups when a pool resolved, and drops routing when it did not', () => {
+    assert.match(cascadeSrc, /groupIds\.length === 0 \? \{\} : \{ allowedGroups: groupIds \}/);
     assert.match(configSrc, /delete nextParams\.routing/);
   });
 

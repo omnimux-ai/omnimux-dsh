@@ -445,7 +445,7 @@ describe('omnimux_text_complete tool', () => {
     const res = await completeTextViaChat({
       prompt: 'test prompt',
       model: 'gemini-3.8-flash',
-      videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } },
+      mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } }],
       settings: {
         get: (section) => {
           if (section === 'llm-pi-ai') {
@@ -474,5 +474,88 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(res.text, 'local cpa completion result')
     assert.ok(capturedRequest.url.startsWith('http://127.0.0.1:8317/v1'))
     assert.equal(capturedRequest.opts.headers.authorization, 'Bearer sk-cpa-test')
+  })
+
+  it('sends a routed text request through the direct chat path with the group attached', async () => {
+    let streamCalls = 0
+    const requests = []
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      model: 'claude-opus-4-6',
+      allowedGroups: ['standard'],
+      strategy: 'cost_first',
+      env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
+      fetcher: async (url, options) => {
+        requests.push({ url, body: JSON.parse(options.body) })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'routed reply' } }] }) }
+      },
+      // ctx.llm.stream resolves a declared model id, so it must not be used.
+      llm: {
+        async * stream() {
+          streamCalls += 1
+          yield { type: 'text-delta', text: 'must not run' }
+        },
+      },
+    })
+
+    assert.equal(streamCalls, 0)
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].body.model, 'claude-opus-4-6@standard')
+    assert.equal(result.text, 'routed reply')
+    assert.equal(result.model, 'claude-opus-4-6')
+  })
+
+  it('keeps an unrouted text request on llm.stream with the bare model id', async () => {
+    let fetcherCalls = 0
+    const seen = []
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      model: 'claude-opus-4-6',
+      env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
+      fetcher: async () => {
+        fetcherCalls += 1
+        return { ok: true, status: 200, json: async () => ({ choices: [] }) }
+      },
+      llm: collectStream(seen),
+    })
+
+    assert.equal(fetcherCalls, 0)
+    assert.equal(seen.length, 1)
+    assert.equal(seen[0].model, 'claude-opus-4-6')
+    assert.equal(seen[0].provider, 'omnimux')
+    assert.equal(result.text, 'a cat')
+  })
+
+  it('carries routed image input as a data URL part instead of falling back to the stream', async () => {
+    let streamCalls = 0
+    const requests = []
+    const result = await executeOmnimuxText({
+      prompt: 'describe',
+      model: 'deepseek-v4-flash-vision-exp',
+      allowedGroups: ['deepseek-official'],
+      image: `data:image/png;base64,${Buffer.from(PNG).toString('base64')}`,
+      attachments: { saveImage: async () => ({ id: 'unused' }) },
+      env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
+      fetcher: async (url, options) => {
+        requests.push({ url, body: JSON.parse(options.body) })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'a small png' } }] }) }
+      },
+      llm: {
+        async * stream() {
+          streamCalls += 1
+          yield { type: 'text-delta', text: 'must not run' }
+        },
+      },
+    })
+
+    assert.equal(streamCalls, 0)
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].body.model, 'deepseek-v4-flash-vision-exp@deepseek-official')
+    const parts = requests[0].body.messages.at(-1).content
+    assert.equal(parts[0].type, 'text')
+    const imagePart = parts.find((part) => part.type === 'image_url')
+    assert.ok(imagePart, 'routed image input must travel as an image_url part')
+    assert.ok(imagePart.image_url.url.startsWith('data:image/png;base64,'))
+    assert.equal(result.text, 'a small png')
   })
 })

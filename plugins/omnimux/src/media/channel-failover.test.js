@@ -73,7 +73,7 @@ describe('Channel Group Routing & Failover', () => {
       candidates: ['claude-opus-4-6@pro', 'claude-opus-4-6@standard'],
       prompt: 'say hi',
       maxTokens: 10,
-      videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } },
+      mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } }],
       apiKey: 'sk-test',
       fetcher,
     })
@@ -108,7 +108,7 @@ describe('Channel Group Routing & Failover', () => {
       candidates: ['claude-opus-4-6@claude-max-open', 'claude-opus-4-6@standard'],
       prompt: 'say hi',
       maxTokens: 10,
-      videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } },
+      mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } }],
       apiKey: 'sk-test',
       fetcher,
     });
@@ -133,7 +133,7 @@ describe('Channel Group Routing & Failover', () => {
         model: 'claude-opus-4-6',
         prompt: 'say hi',
         maxTokens: 10,
-        videoPart: { type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } },
+        mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAA' } }],
         apiKey: 'sk-test',
         fetcher,
       }),
