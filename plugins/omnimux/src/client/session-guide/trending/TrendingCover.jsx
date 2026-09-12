@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { accentIndex } from './trending-data.js'
 
 /**
@@ -116,8 +116,9 @@ const SCENE_MAP = {
  * @param {{ item: { id: string, title?: string, archetype?: string, cover?: string } }} props
  */
 export function TrendingCover({ item }) {
+  const [coverFailed, setCoverFailed] = useState(false)
   const cover = typeof item?.cover === 'string' ? item.cover.trim() : ''
-  if (cover) {
+  if (cover && !coverFailed) {
     return (
       <img
         className="omnimux-trending-cover-img"
@@ -125,7 +126,9 @@ export function TrendingCover({ item }) {
         alt=""
         loading="lazy"
         decoding="async"
+        referrerPolicy="no-referrer"
         aria-hidden="true"
+        onError={() => setCoverFailed(true)}
       />
     )
   }

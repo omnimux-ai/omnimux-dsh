@@ -5,16 +5,6 @@ import { createRequire } from 'node:module'
 import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import {
-  TRENDING_VIEW_BUCKETS,
-  TRENDING_ENGAGEMENT_BUCKETS,
-  TRENDING_INDUSTRIES,
-  TRENDING_RANGES,
-  TRENDING_REGIONS,
-  defaultTrendingFilters,
-  filterTrendingVideos,
-  TRENDING_VIDEOS,
-} from './trending-data.js'
 
 const require = createRequire(import.meta.url)
 
@@ -42,6 +32,7 @@ function withDom(html) {
     window: globalThis.window,
     document: globalThis.document,
     act: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    fetch: globalThis.fetch,
   }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
@@ -52,6 +43,7 @@ function withDom(html) {
       globalThis.window = previous.window
       globalThis.document = previous.document
       globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+      globalThis.fetch = previous.fetch
       dom.window.close()
     },
   }
@@ -71,110 +63,296 @@ async function keydown(node, key) {
   })
 }
 
-// ─────────────────────────────────────────────────────────────
-// 1. 通用守卫：每个筛选维度都必须真实改变结果集
-//    （这条断言本应拦下「range 是假控件」的缺陷）
-// ─────────────────────────────────────────────────────────────
+/** 刷新一次微任务队列，让真源拉取的 promise 落地。 */
+async function flush() {
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
 
-test('trending 守卫：每个筛选维度必须真实接入过滤（假控件护栏）', () => {
-  // 全开基线（range 置空）才能让每个维度的「是否生效」被单独验证
-  const base = { ...defaultTrendingFilters(), range: '' }
-  const total = TRENDING_VIDEOS.length
-  assert.equal(filterTrendingVideos(TRENDING_VIDEOS, base).length, total, '基线应为全量')
+/** 按 aria-label 找某个筛选下拉的触发器（比按显示文案找稳，文案会随选中值变化）。 */
+function triggerByAria(host, ariaLabel) {
+  return host.querySelector(`.omnimux-trending-select-trigger[aria-label="${ariaLabel}"]`)
+}
 
-  // stricter: 档位值越大越严格（下限阈值） / 越小越严格（range 是上限窗口） / 无序（分区枚举）
-  const dimensions = [
-    { key: 'region', buckets: TRENDING_REGIONS, stricter: 'partition' },
-    { key: 'industry', buckets: TRENDING_INDUSTRIES, stricter: 'partition' },
-    { key: 'views', buckets: TRENDING_VIEW_BUCKETS, stricter: 'larger' },
-    { key: 'engagement', buckets: TRENDING_ENGAGEMENT_BUCKETS, stricter: 'larger' },
-    { key: 'range', buckets: TRENDING_RANGES, stricter: 'smaller' },
-  ]
+/** 打开某个筛选下拉并选中一项。 */
+async function chooseOption(host, ariaLabel, optionText) {
+  const trigger = triggerByAria(host, ariaLabel)
+  assert.ok(trigger, `找不到筛选下拉：${ariaLabel}`)
+  await click(trigger)
+  const option = Array.from(document.querySelectorAll('.omnimux-trending-select-option'))
+    .find((el) => el.textContent.trim() === optionText)
+  assert.ok(option, `下拉「${ariaLabel}」里没有选项「${optionText}」`)
+  await click(option)
+  await flush()
+}
 
-  for (const { key, buckets, stricter } of dimensions) {
-    const values = buckets.map((bucket) => bucket.value).filter((value) => value !== '')
-    assert.ok(values.length > 0, `维度 ${key} 缺少可用档位`)
+/**
+ * 灵感库行样本：覆盖两个地区、两个类目、三档播放量与三档互动率，
+ * 但**没有发布时间**，因此「发布时间窗」维度必须不出现。
+ */
+const SOURCE_ROWS = [
+  {
+    id: 'insp_us_beauty',
+    title: 'US beauty hook',
+    country_code: 'US',
+    category: 'beauty',
+    cover_url: '/omnimux/inspiration/local/media/covers/us-beauty.jpg',
+    stats: { likes: 300000, comments: 20000, shares: 5000, views: 12000000 },
+    deconstruction: { hook_highlight: '开场 3 秒反差' },
+  },
+  {
+    id: 'insp_us_home',
+    title: 'US home demo',
+    country_code: 'US',
+    category: 'home',
+    cover_url: '/omnimux/inspiration/local/media/covers/us-home.jpg',
+    stats: { likes: 7000, views: 900000 },
+    deconstruction: { summary: '桌面整理前后对比' },
+  },
+  {
+    id: 'insp_th_beauty',
+    title: 'TH beauty routine',
+    country_code: 'TH',
+    category: 'beauty',
+    cover_url: '/omnimux/inspiration/local/media/covers/th-beauty.jpg',
+    stats: { likes: 400000, comments: 1000, shares: 1000, views: 40000000 },
+    deconstruction: { summary: '素颜到上妆的完整节奏' },
+  },
+]
 
-    const counts = values.map((value) => ({
-      value,
-      count: filterTrendingVideos(TRENDING_VIDEOS, { ...base, [key]: value }).length,
+/** 装一个只会返回给定行的 fetch 替身；服务端参数（country / views_min）按真源行为先过滤。 */
+function stubFetch(rows, { ok = true, status = 200, fail = false } = {}) {
+  const previous = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url) => {
+    calls.push(String(url))
+    if (fail) throw new Error('network down')
+    const params = new URL(String(url), 'http://localhost').searchParams
+    let items = rows
+    const country = params.get('country')
+    if (country) {
+      items = items.filter((row) => String(row.country_code || '').toUpperCase() === country.toUpperCase())
+    }
+    const viewsMin = Number(params.get('views_min'))
+    if (Number.isFinite(viewsMin) && viewsMin > 0) {
+      items = items.filter((row) => Number(row.stats?.views) >= viewsMin)
+    }
+    return { ok, status, json: async () => ({ data: { items, total: items.length } }) }
+  }
+  return { calls, restore: () => { globalThis.fetch = previous } }
+}
+
+const SECTION_FIXTURE = [
+  '<div id="root" data-omnimux-starter-host data-phase="hero">',
+  '<div data-composer-seat><div class="band"><div data-composer-card>',
+  '<button data-send-button>Send</button>',
+  '</div></div></div>',
+  '<div id="seat"></div>',
+  '</div>',
+].join('')
+
+async function renderSection({ rows = SOURCE_ROWS, ...stubOptions } = {}) {
+  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
+  const env = withDom(SECTION_FIXTURE)
+  const host = document.querySelector('#root')
+  const stub = stubFetch(rows, stubOptions)
+  const root = createRoot(host.querySelector('#seat'))
+
+  await act(async () => {
+    root.render(React.createElement(TrendingReplicateSection, {
+      t: (key) => key,
+      onApplyPrompt: () => {},
     }))
+  })
+  await flush()
+  await flush()
 
-    // 1) 该维度至少要有一个档位真正缩小结果集 —— 否则这个控件是装饰品
+  return {
+    env,
+    host,
+    root,
+    stub,
+    DOCK_OPEN_ATTR,
+    cards: () => Array.from(host.querySelectorAll('[data-trending-id]')),
+    triggers: () => Array.from(host.querySelectorAll('.omnimux-trending-select-trigger')),
+    async settle() {
+      await flush()
+      await flush()
+    },
+    async teardown() {
+      await act(async () => root.unmount())
+      stub.restore()
+      env.restore()
+    },
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 1. 真源接入：卡片来自灵感库，工具栏只渲染数据支持的维度
+// ─────────────────────────────────────────────────────────────
+
+test('trending 真源：卡片渲染真实封面与真实读数，工具栏不出现无数据维度', async () => {
+  const view = await renderSection()
+  const { host, stub } = view
+
+  try {
     assert.ok(
-      counts.some((entry) => entry.count < total),
-      `维度 ${key} 的所有档位都没有改变结果集，说明该控件未接入过滤（假控件）`,
+      stub.calls.some((url) => url.startsWith('/omnimux/inspiration/local?')),
+      '必须向灵感库要数据',
     )
+    assert.equal(view.cards().length, SOURCE_ROWS.length, '有几条就渲染几张')
+    assert.equal(host.querySelector('[data-omnimux-trending]')?.getAttribute('data-omnimux-trending-source'), 'ready')
 
-    // 2) 任何档位都不允许放大结果集
-    for (const entry of counts) {
-      assert.ok(
-        entry.count <= total,
-        `维度 ${key}=${entry.value} 放大了结果集（${entry.count} > ${total}）`,
-      )
+    // 真实封面：img 直通，且 src 就是灵感库给的媒体路径
+    const covers = Array.from(host.querySelectorAll('.omnimux-trending-cover-img')).map((img) => img.getAttribute('src'))
+    assert.equal(covers.length, SOURCE_ROWS.length, '每张卡片都必须用真实封面')
+    assert.ok(covers.includes('/omnimux/inspiration/local/media/covers/us-beauty.jpg'))
+
+    // 读数来自真实 stats：12M 播放、2.71% 互动率（按 id 定位，不依赖排序）
+    const first = view.cards().find((el) => el.getAttribute('data-trending-id') === 'insp_us_beauty')
+    const values = Array.from(first.querySelectorAll('.omnimux-trending-card-metric-value')).map((el) => el.textContent.trim())
+    assert.deepEqual(values, ['2.7%', '12M'])
+    assert.equal(first.querySelector('.omnimux-trending-card-region').textContent.trim(), 'US')
+
+    // 地区 / 类目 / 播放量 / 互动率在册 → 四个下拉都在；无发布时间 → 时间窗不得出现
+    for (const ariaLabel of [
+      'trending.filter.region',
+      'trending.filter.industry',
+      'trending.filter.views',
+      'trending.filter.engagement',
+      'trending.filter.sort',
+    ]) {
+      assert.ok(triggerByAria(host, ariaLabel), `缺了筛选下拉 ${ariaLabel}`)
     }
-
-    // 3) 分区枚举维度：每个档位都必须是真子集，否则该档位是摆设
-    if (stricter === 'partition') {
-      for (const entry of counts) {
-        assert.ok(
-          entry.count > 0 && entry.count < total,
-          `维度 ${key}=${entry.value} 未切分出真子集（${entry.count}/${total}）`,
-        )
-      }
-      continue
-    }
-
-    // 4) 数值阈值维度：沿档位数组，越严格计数只能越小
-    const isStricter = stricter === 'larger'
-      ? (prev, next) => Number(next.value) > Number(prev.value)
-      : (prev, next) => Number(next.value) < Number(prev.value)
-    for (let index = 1; index < counts.length; index += 1) {
-      const prev = counts[index - 1]
-      const next = counts[index]
-      if (!isStricter(prev, next)) continue
-      assert.ok(
-        next.count <= prev.count,
-        `维度 ${key} 从 ${prev.value} 收紧到 ${next.value} 时结果集反而变大（${prev.count} → ${next.count}）`,
-      )
-    }
-
-    // 5) 该维度最严格的那一档必须真正筛掉样本，避免阈值方向写反蒙混过关
-    const strictest = counts.reduce((acc, entry) => (
-      isStricter(acc, entry) ? entry : acc
-    ), counts[0])
-    assert.ok(
-      strictest.count < total,
-      `维度 ${key} 最严格档位 ${strictest.value} 未筛掉任何样本，阈值方向可能有误`,
-    )
+    assert.equal(host.querySelectorAll('.omnimux-trending-select-trigger').length, 5, '只应有 4 个维度 + 1 个排序')
+    assert.ok(!host.querySelector('.omnimux-trending-range'), '没有发布时间的库不得出现时间窗控件')
+  } finally {
+    await view.teardown()
   }
 })
 
-test('trending range：时间窗是上限语义，且档位间单调包含', () => {
-  const base = defaultTrendingFilters()
-  const byRange = (range) => filterTrendingVideos(TRENDING_VIDEOS, { ...base, range })
+test('trending 真源：地区与类目档位来自数据，不出现库里没有的档位', async () => {
+  const view = await renderSection()
+  try {
+    await click(triggerByAria(view.host, 'trending.filter.region'))
+    const regions = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
+    assert.deepEqual(regions, ['trending.region.all', 'TH', 'US'], '档位必须只包含数据里真实存在的地区')
+    await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
 
-  const d7 = byRange('7')
-  const d30 = byRange('30')
-  const d90 = byRange('90')
+    await click(triggerByAria(view.host, 'trending.filter.industry'))
+    const categories = Array.from(document.querySelectorAll('.omnimux-trending-select-option')).map((el) => el.textContent.trim())
+    assert.deepEqual(categories, ['trending.industry.all', 'beauty', 'home'], '类目档位必须是库里真实出现的类目')
+    await keydown(document.querySelector('.omnimux-trending-select-menu'), 'Escape')
+  } finally {
+    await view.teardown()
+  }
+})
 
-  assert.ok(d7.every((item) => item.days <= 7), '未过滤掉超出 7 天的样本')
-  assert.ok(d30.every((item) => item.days <= 30), '未过滤掉超出 30 天的样本')
-  assert.ok(d90.every((item) => item.days <= 90), '未过滤掉超出 90 天的样本')
+test('trending 真源：切换筛选真的改变屏幕上的卡片数（假控件护栏）', async () => {
+  const view = await renderSection()
+  try {
+    assert.equal(view.cards().length, 3)
 
-  assert.ok(d7.length <= d30.length && d30.length <= d90.length, '窗口越大结果集不应变小')
-  assert.ok(d90.length === TRENDING_VIDEOS.length, '样本最长 days 在 90 天内，90 天窗口应为全量')
+    await chooseOption(view.host, 'trending.filter.region', 'TH')
+    assert.equal(view.cards().length, 1, '选 TH 后屏幕上必须只剩 TH 的卡片')
+    assert.equal(view.cards()[0].getAttribute('data-trending-id'), 'insp_th_beauty')
+    assert.ok(
+      view.stub.calls.at(-1).includes('country=TH'),
+      `地区是服务端维度，必须把 country 发给真源：${view.stub.calls.at(-1)}`,
+    )
 
-  const ids = (list) => new Set(list.map((item) => item.id))
-  const set7 = ids(d7)
-  for (const id of set7) assert.ok(ids(d30).has(id), `7 天命中 ${id} 应同时出现在 30 天窗口`)
-  for (const id of ids(d30)) assert.ok(ids(d90).has(id), `30 天命中 ${id} 应同时出现在 90 天窗口`)
+    // 回到全部地区 → 结果集复原
+    await chooseOption(view.host, 'trending.filter.region', 'trending.region.all')
+    assert.equal(view.cards().length, 3)
+  } finally {
+    await view.teardown()
+  }
+})
 
-  assert.ok(TRENDING_RANGES.length >= 3, '时间窗至少要有 7/30/90 三档')
+test('trending 真源：服务端过滤条件变化会重取，客户端维度不重取', async () => {
+  const view = await renderSection()
+  try {
+    const before = view.stub.calls.length
+    // 客户端维度（互动率）：不触发重取，但必须真的改变结果
+    await chooseOption(view.host, 'trending.filter.engagement', 'trending.engagement.2')
+    assert.equal(view.stub.calls.length, before, '互动率是客户端过滤，不应重取')
+    assert.equal(view.cards().length, 1, '互动率门槛必须真的筛掉屏幕上的卡片（≥2% 只剩 1 条）')
+
+    // 服务端维度（播放量）：必须带上 views_min 重取
+    await chooseOption(view.host, 'trending.filter.views', 'trending.views.10m')
+    assert.ok(view.stub.calls.length > before, '服务端维度变化必须重取')
+    assert.ok(
+      view.stub.calls.at(-1).includes('views_min=10000000'),
+      `重取必须带上下界：${view.stub.calls.at(-1)}`,
+    )
+  } finally {
+    await view.teardown()
+  }
 })
 
 // ─────────────────────────────────────────────────────────────
-// 2. TrendingSelect：listbox 键盘契约
+// 2. 降级：库为空 / 真源不可用，都不得回落编造数据
+// ─────────────────────────────────────────────────────────────
+
+test('trending 降级：灵感库为空 → 空态话术，卡片数为 0', async () => {
+  const view = await renderSection({ rows: [] })
+  try {
+    assert.equal(view.cards().length, 0, '空库不得渲染任何卡片')
+    assert.equal(view.host.querySelector('[data-omnimux-trending]').getAttribute('data-omnimux-trending-source'), 'empty')
+    assert.equal(view.host.querySelector('[data-omnimux-trending-empty]').getAttribute('data-omnimux-trending-empty'), 'library')
+    assert.match(view.host.textContent, /trending\.library\.empty/)
+    assert.equal(view.triggers().length, 0, '没有数据就不该有筛选工具栏')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('trending 降级：真源不可用（未安装 / 未登录 / 网络异常）→ 说清楚，且不展示任何假数据', async () => {
+  for (const options of [{ fail: true }, { ok: false, status: 404 }]) {
+    const view = await renderSection({ ...options, rows: SOURCE_ROWS })
+    try {
+      assert.equal(view.cards().length, 0, '真源不可用时不得展示任何卡片')
+      assert.equal(
+        view.host.querySelector('[data-omnimux-trending]').getAttribute('data-omnimux-trending-source'),
+        'unavailable',
+      )
+      assert.equal(view.host.querySelector('[data-omnimux-trending-empty]').getAttribute('data-omnimux-trending-empty'), 'unavailable')
+      assert.match(view.host.textContent, /trending\.library\.unavailable/)
+      assert.equal(view.triggers().length, 0)
+    } finally {
+      await view.teardown()
+    }
+  }
+})
+
+test('trending 降级：筛选把结果筛空 → 说清是「筛选无匹配」，工具栏与重置都还在', async () => {
+  const view = await renderSection()
+  try {
+    await chooseOption(view.host, 'trending.filter.region', 'TH')
+    assert.equal(view.cards().length, 1)
+    // TH 那条只有 1.0% 互动率，再加 2% 门槛必然筛空
+    await chooseOption(view.host, 'trending.filter.engagement', 'trending.engagement.2')
+    assert.equal(view.cards().length, 0)
+
+    const empty = view.host.querySelector('[data-omnimux-trending-empty]')
+    assert.equal(empty?.getAttribute('data-omnimux-trending-empty'), 'filtered')
+    assert.match(view.host.textContent, /trending\.empty/)
+    assert.doesNotMatch(view.host.textContent, /trending\.library\.empty/, '筛空不得被说成库为空')
+
+    // 工具栏必须留着，否则用户只能靠刷新页面逃出来
+    assert.ok(triggerByAria(view.host, 'trending.filter.region'), '筛空后工具栏必须保留')
+
+    await click(view.host.querySelector('.omnimux-trending-reset'))
+    await view.settle()
+    assert.equal(view.cards().length, 3, '重置必须把结果拉回来')
+  } finally {
+    await view.teardown()
+  }
+})
+
+// ─────────────────────────────────────────────────────────────
+// 3. TrendingSelect：listbox 键盘契约
 // ─────────────────────────────────────────────────────────────
 
 test('TrendingSelect：方向键打开与移动、Enter 选中、Escape 关闭并回焦', async () => {
@@ -212,6 +390,7 @@ test('TrendingSelect：方向键打开与移动、Enter 选中、Escape 关闭�
   assert.equal(trigger().getAttribute('aria-expanded'), 'true')
   assert.ok(menu(), 'ArrowDown 应展开 listbox')
   assert.equal(document.activeElement.textContent, 'All regions', '应聚焦当前选中项')
+  assert.equal(opts().length, 3)
 
   // ArrowDown 下移一项
   await keydown(menu(), 'ArrowDown')
@@ -243,78 +422,71 @@ test('TrendingSelect：方向键打开与移动、Enter 选中、Escape 关闭�
 })
 
 // ─────────────────────────────────────────────────────────────
-// 3. 复刻接管集成：把**原生**输入框搬到视口底部，不复制任何控件
+// 4. 复刻接管集成：把**原生**输入框搬到视口底部，不复制任何控件
 // ─────────────────────────────────────────────────────────────
 
-const SECTION_FIXTURE = [
-  '<div id="root" data-omnimux-starter-host data-phase="hero">',
-  '<div data-composer-seat><div class="band"><div data-composer-card>',
-  '<button data-send-button>Send</button>',
-  '</div></div></div>',
-  '<div id="seat"></div>',
-  '</div>',
-].join('')
-
 test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠，再点同一张卡片即归还', async () => {
-  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
-  const env = withDom(SECTION_FIXTURE)
-  const host = document.querySelector('#root')
-  const root = createRoot(host.querySelector('#seat'))
-
+  const view = await renderSection()
+  const { host, DOCK_OPEN_ATTR } = view
   const applied = []
-  await act(async () => {
-    root.render(React.createElement(TrendingReplicateSection, {
-      t: (key) => key,
-      onApplyPrompt: (prompt, item) => applied.push({ prompt, id: item.id }),
-    }))
-  })
+  const root = view.root
 
-  const cards = () => Array.from(host.querySelectorAll('[data-trending-id]'))
-  assert.ok(cards().length > 0, '应渲染出可复刻样本')
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '初始不应接管输入框')
+  try {
+    // 重新渲染以捕获 onApplyPrompt
+    await act(async () => {
+      root.render(React.createElement(
+        (await loadComponent('./TrendingReplicateSection.jsx')).TrendingReplicateSection,
+        { t: (key) => key, onApplyPrompt: (prompt, item) => applied.push({ prompt, id: item.id }) },
+      ))
+    })
+    await flush()
 
-  // 点击第二张卡片 → 接管：原生输入框被标记停靠，指令交回输入框所有权方
-  const target = cards()[1]
-  const targetId = target.getAttribute('data-trending-id')
-  await click(target.querySelector('.omnimux-trending-recreate-btn'))
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '应给宿主打上停靠标记')
-  assert.equal(applied.length, 1, '复刻应把指令交回输入框所有权方')
-  assert.equal(applied[0].id, targetId)
-  assert.ok(applied[0].prompt.startsWith('Clone the attached viral ad'), '应写入克隆指令模板')
-  assert.equal(target.getAttribute('data-trending-active'), 'true', '被接管的卡片应标记 active')
-  assert.equal(cards()[0].getAttribute('data-trending-active'), 'false')
+    assert.ok(view.cards().length > 0, '应渲染出可复刻样本')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '初始不应接管输入框')
 
-  // 板块不再自造输入框：底部那一个就是原生输入框本身
-  assert.equal(host.querySelector('[data-omnimux-trending-dock]'), null, '不应再挂载自绘吸底输入框')
-  assert.equal(host.querySelectorAll('textarea').length, 0, '板块不得自造 textarea')
+    // 点击第二张卡片 → 接管：原生输入框被标记停靠，指令交回输入框所有权方
+    const target = view.cards()[1]
+    const targetId = target.getAttribute('data-trending-id')
+    await click(target.querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '应给宿主打上停靠标记')
+    assert.equal(applied.length, 1, '复刻应把指令交回输入框所有权方')
+    assert.equal(applied[0].id, targetId)
+    assert.ok(applied[0].prompt.startsWith('Clone the attached viral ad'), '应写入克隆指令模板')
+    assert.ok(applied[0].prompt.includes('可复用结构：'), '真实拆解出的结构必须进指令')
+    assert.equal(target.getAttribute('data-trending-active'), 'true', '被接管的卡片应标记 active')
+    assert.equal(view.cards()[0].getAttribute('data-trending-active'), 'false')
 
-  // 换片：改选第三张，指令随之替换，写入的仍是同一个原生输入框
-  const thirdId = cards()[2].getAttribute('data-trending-id')
-  await click(cards()[2].querySelector('.omnimux-trending-recreate-btn'))
-  assert.equal(cards()[2].getAttribute('data-trending-active'), 'true')
-  assert.equal(cards()[1].getAttribute('data-trending-active'), 'false', '旧卡片应让出 active')
-  assert.equal(applied.length, 2)
-  assert.equal(applied[1].id, thirdId)
-  assert.notEqual(applied[1].prompt, applied[0].prompt, '换片应重灌指令')
+    // 板块不再自造输入框：底部那一个就是原生输入框本身
+    assert.equal(host.querySelector('[data-omnimux-trending-dock]'), null, '不应再挂载自绘吸底输入框')
+    assert.equal(host.querySelectorAll('textarea').length, 0, '板块不得自造 textarea')
 
-  // 接管期间其余卡片保持可点，可直接换片
-  assert.equal(cards()[0].querySelector('.omnimux-trending-recreate-btn').disabled, false)
+    // 换片：改选第三张，指令随之替换，写入的仍是同一个原生输入框
+    const thirdId = view.cards()[2].getAttribute('data-trending-id')
+    await click(view.cards()[2].querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(view.cards()[2].getAttribute('data-trending-active'), 'true')
+    assert.equal(view.cards()[1].getAttribute('data-trending-active'), 'false', '旧卡片应让出 active')
+    assert.equal(applied.length, 2)
+    assert.equal(applied[1].id, thirdId)
+    assert.notEqual(applied[1].prompt, applied[0].prompt, '换片应重灌指令')
 
-  // 再点同一张卡片 → 归还输入框，且不再产生写入
-  await click(cards()[2].querySelector('.omnimux-trending-recreate-btn'))
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '再点同一张卡片应归还输入框')
-  assert.equal(cards()[2].getAttribute('data-trending-active'), 'false')
-  assert.equal(applied.length, 2, '归还输入框不应再写入指令')
+    // 接管期间其余卡片保持可点，可直接换片
+    assert.equal(view.cards()[0].querySelector('.omnimux-trending-recreate-btn').disabled, false)
 
-  // 「收起输入框」同样只归还位置，不改草稿
-  await click(cards()[0].querySelector('.omnimux-trending-recreate-btn'))
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
-  await click(host.querySelector('.omnimux-trending-undock'))
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '收起按钮应归还输入框')
-  assert.equal(applied.length, 3, '收起不应额外写入')
+    // 再点同一张卡片 → 归还输入框，且不再产生写入
+    await click(view.cards()[2].querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '再点同一张卡片应归还输入框')
+    assert.equal(view.cards()[2].getAttribute('data-trending-active'), 'false')
+    assert.equal(applied.length, 2, '归还输入框不应再写入指令')
 
-  await act(async () => root.unmount())
-  env.restore()
+    // 「收起输入框」同样只归还位置，不改草稿
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+    await click(host.querySelector('.omnimux-trending-undock'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '收起按钮应归还输入框')
+    assert.equal(applied.length, 3, '收起不应额外写入')
+  } finally {
+    await view.teardown()
+  }
 })
 
 test('TrendingReplicateSection：停靠几何按 Hero 栏居中换算，卸载后连同标记一并回收', async () => {
@@ -328,24 +500,29 @@ test('TrendingReplicateSection：停靠几何按 Hero 栏居中换算，卸载�
       right: 1594, bottom: 266, toJSON() { return this },
     }
   }
+  const stub = stubFetch(SOURCE_ROWS)
   const root = createRoot(host.querySelector('#seat'))
 
-  await act(async () => {
-    root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
-  })
+  try {
+    await act(async () => {
+      root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
+    })
+    await flush()
 
-  await click(host.querySelector('.omnimux-trending-recreate-btn'))
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
-  // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
+    await click(host.querySelector('.omnimux-trending-recreate-btn'))
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
+    // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
 
-  await act(async () => root.unmount())
-  assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
-  assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
-
-  env.restore()
+    await act(async () => root.unmount())
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
+  } finally {
+    stub.restore()
+    env.restore()
+  }
 })

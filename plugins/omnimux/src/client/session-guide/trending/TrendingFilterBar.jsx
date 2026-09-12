@@ -2,9 +2,7 @@ import React from 'react'
 import { TrendingSelect } from './TrendingSelect.jsx'
 import {
   TRENDING_ENGAGEMENT_BUCKETS,
-  TRENDING_INDUSTRIES,
   TRENDING_RANGES,
-  TRENDING_REGIONS,
   TRENDING_SORTS,
   TRENDING_VIEW_BUCKETS,
 } from './trending-data.js'
@@ -43,81 +41,104 @@ function InfoMark({ label }) {
   )
 }
 
+/** 参与「是否已筛选」判定的维度键；这些维度在册才可能出现非空值。 */
+const FILTER_KEYS = ['region', 'industry', 'views', 'engagement', 'range']
+
 /**
  * 爆款对标筛选工具栏。
  *
- * 对齐 TopView 实测的工具栏结构与右对齐排序，但只保留有数据源的维度：
- * 地区 / 行业 / 播放量 / 互动率 / 时间窗 + Sort（预估营收与 ROAS 已随 v2 下线）。
+ * **只渲染数据支持的维度**：`dimensions` 来自真实数据推导（灵感库行里没有
+ * 类目就绝不出现类目下拉）。地区与类目的档位同样由数据推导——库里只有 US
+ * 就不该能选到 GB。这样工具栏永远不会出现「控件能点、数据不变」的假控件。
  *
  * @param {{
  *   filters: object,
  *   t: (key: string, fallback?: string) => string,
  *   onChange: (patch: object) => void,
  *   onReset: () => void,
+ *   dimensions: { region?: boolean, industry?: boolean, views?: boolean, engagement?: boolean, range?: boolean },
+ *   regionOptions: Array<object>,
+ *   industryOptions: Array<object>,
+ *   viewOptions: Array<object>,
  * }} props
  */
-export function TrendingFilterBar({ filters, t, onChange, onReset }) {
+export function TrendingFilterBar({
+  filters,
+  t,
+  onChange,
+  onReset,
+  dimensions = {},
+  regionOptions = [],
+  industryOptions = [],
+  viewOptions = [],
+}) {
   const set = (key) => (value) => onChange?.({ [key]: value })
 
-  const isFiltered = Boolean(
-    filters.region
-    || filters.industry
-    || filters.views
-    || filters.engagement
-  )
+  const isFiltered = FILTER_KEYS.some((key) => Boolean(filters?.[key]))
 
   return (
     <div className="omnimux-trending-toolbar" role="group" aria-label={t('trending.filters.label')}>
       <div className="omnimux-trending-toolbar-left">
-        <TrendingSelect
-          value={filters.region}
-          ariaLabel={t('trending.filter.region')}
-          onChange={set('region')}
-          className="omnimux-trending-select-field"
-          placeholder={t('trending.region.all')}
-          options={toOptions(TRENDING_REGIONS, t)}
-        />
-
-        <TrendingSelect
-          value={filters.industry}
-          ariaLabel={t('trending.filter.industry')}
-          onChange={set('industry')}
-          className="omnimux-trending-select-field"
-          placeholder={t('trending.industry.all')}
-          options={toOptions(TRENDING_INDUSTRIES, t)}
-        />
-
-        <TrendingSelect
-          value={filters.views}
-          ariaLabel={t('trending.filter.views')}
-          onChange={set('views')}
-          className="omnimux-trending-select-field"
-          placeholder={t('trending.views.all')}
-          options={toOptions(TRENDING_VIEW_BUCKETS, t)}
-        />
-
-        <span className="omnimux-trending-select-with-info">
+        {dimensions.region ? (
           <TrendingSelect
-            value={filters.engagement}
-            ariaLabel={t('trending.filter.engagement')}
-            onChange={set('engagement')}
+            value={filters.region}
+            ariaLabel={t('trending.filter.region')}
+            onChange={set('region')}
             className="omnimux-trending-select-field"
-            placeholder={t('trending.engagement.all')}
-            options={toOptions(TRENDING_ENGAGEMENT_BUCKETS, t)}
+            placeholder={t('trending.region.all')}
+            options={toOptions(regionOptions, t)}
           />
-          <InfoMark label={t('trending.info.engagement')} />
-        </span>
+        ) : null}
 
-        <span className="omnimux-trending-range">
-          <span className="omnimux-trending-range-icon" aria-hidden="true">{ICON_CALENDAR}</span>
+        {dimensions.industry ? (
           <TrendingSelect
-            value={filters.range}
-            ariaLabel={t('trending.filter.range')}
-            onChange={set('range')}
+            value={filters.industry}
+            ariaLabel={t('trending.filter.industry')}
+            onChange={set('industry')}
             className="omnimux-trending-select-field"
-            options={toOptions(TRENDING_RANGES, t)}
+            placeholder={t('trending.industry.all')}
+            options={toOptions(industryOptions, t)}
           />
-        </span>
+        ) : null}
+
+        {dimensions.views ? (
+          <TrendingSelect
+            value={filters.views}
+            ariaLabel={t('trending.filter.views')}
+            onChange={set('views')}
+            className="omnimux-trending-select-field"
+            placeholder={t('trending.views.all')}
+            options={toOptions(viewOptions, t)}
+          />
+        ) : null}
+
+        {dimensions.engagement ? (
+          <span className="omnimux-trending-select-with-info">
+            <TrendingSelect
+              value={filters.engagement}
+              ariaLabel={t('trending.filter.engagement')}
+              onChange={set('engagement')}
+              className="omnimux-trending-select-field"
+              placeholder={t('trending.engagement.all')}
+              options={toOptions(TRENDING_ENGAGEMENT_BUCKETS, t)}
+            />
+            <InfoMark label={t('trending.info.engagement')} />
+          </span>
+        ) : null}
+
+        {dimensions.range ? (
+          <span className="omnimux-trending-range">
+            <span className="omnimux-trending-range-icon" aria-hidden="true">{ICON_CALENDAR}</span>
+            <TrendingSelect
+              value={filters.range}
+              ariaLabel={t('trending.filter.range')}
+              onChange={set('range')}
+              className="omnimux-trending-select-field"
+              options={toOptions(TRENDING_RANGES, t)}
+            />
+            <InfoMark label={t('trending.info.range')} />
+          </span>
+        ) : null}
 
         {isFiltered ? (
           <button /* exempt-ui01: 筛选复位属于轻量文本动作，非标准控件位 */
