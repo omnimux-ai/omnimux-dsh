@@ -28,7 +28,7 @@ test('slot renders accessible filled media and add control without native file t
  assert.match(html,/src="https:\/\/example.test\/portrait.png"/);
  assert.match(html,/aria-label="portrait.png"/);
  assert.match(html,/data-slot-state="filled"/);
- assert.match(html,/wf-slot-well--add/);
+ assert.match(html,/wf-slot-well--append/);
  assert.doesNotMatch(html,/title="portrait.png"|aspect-ratio|wf-slot-well__label/);
 });
 test('missing and waiting outputs render honest states rather than valid image previews',()=>{
@@ -39,9 +39,9 @@ test('missing and waiting outputs render honest states rather than valid image p
 });
 test('empty and full strips preserve model capacity affordances',()=>{
  const empty=render({...props,bindings:{}});
- assert.doesNotMatch(empty,/data-slot-state="filled"/); assert.match(empty,/wf-slot-well--add/);
+ assert.doesNotMatch(empty,/data-slot-state="filled"/); assert.match(empty,/wf-slot-well--append/);
  const full=render({...props,layout:{...props.layout,slots:[{...spec,max:1}]}});
- assert.doesNotMatch(full,/wf-slot-well--add/);
+ assert.doesNotMatch(full,/wf-slot-well--append/);
 });
 test('replacement and reference grouping labels cover both locales',()=>{
  assert.equal(zh['node.replaceMaterial'],'替换素材'); assert.equal(en['node.replaceMaterial'],'Replace asset');

@@ -239,7 +239,7 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
         {showAdd ? (
           <button
             type="button"
-            className="wf-slot-well wf-slot-well--add nodrag"
+            className="wf-slot-well wf-slot-well--append nodrag"
             data-slot={addSpec.slot}
             title={t('panel.slotPick').replace('{slot}', slotLabel(addSpec))}
             aria-label={t('panel.slotPick').replace('{slot}', slotLabel(addSpec))}

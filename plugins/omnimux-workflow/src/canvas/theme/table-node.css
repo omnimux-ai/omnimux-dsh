@@ -833,7 +833,7 @@
   border-color: #ef4444;
 }
 
-.wf-grid-attachment-add-btn {
+.wf-grid-attachment-append-btn {
   width: 26px;
   height: 26px;
   min-width: 26px;
@@ -849,7 +849,7 @@
   padding: 0;
 }
 
-.wf-grid-attachment-add-btn:hover {
+.wf-grid-attachment-append-btn:hover {
   border-color: var(--wb-node-ring);
   color: var(--wb-text-primary);
   background: color-mix(in srgb, var(--wb-node-ring) 14%, transparent);
@@ -951,7 +951,8 @@
   background: var(--wb-surface, #18181b);
 }
 
-.wf-grid-add-row-btn {
+/* 类名避免 'add' 子串：宿主 button[class*="add"] 注入 !important 规则会改写尺寸/边框。 */
+.wf-grid-row-append-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -968,13 +969,13 @@
   font-family: inherit;
 }
 
-.wf-grid-add-row-btn:hover {
+.wf-grid-row-append-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--wb-text-primary, #f4f4f5);
 }
 
-.wf-grid-add-row-btn:active {
+.wf-grid-row-append-btn:active {
   transform: scale(0.98);
 }
 

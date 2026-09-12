@@ -479,7 +479,7 @@ export const VirtualDataGrid: React.FC = () => {
                             {/* 手动扩充加号按钮 (对齐图一与图二的右侧 + 按钮) */}
                             <button
                               type="button"
-                              className="wf-grid-attachment-add-btn"
+                              className="wf-grid-attachment-append-btn"
                               title="添加资源"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -524,7 +524,7 @@ export const VirtualDataGrid: React.FC = () => {
         <div className="wf-grid-add-row-bar">
           <button
             type="button"
-            className="wf-grid-add-row-btn"
+            className="wf-grid-row-append-btn"
             onClick={() => addRow()}
           >
             <Plus size={14} />

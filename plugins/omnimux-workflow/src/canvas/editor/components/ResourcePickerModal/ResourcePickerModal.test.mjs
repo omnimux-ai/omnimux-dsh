@@ -128,7 +128,7 @@ test('选择资源样式覆盖 Tab / 网格 / 拖拽区 / 已添加 / [+] 按钮
   assert.match(cssSrc, /\.wf-picker-dropzone/);
   assert.match(cssSrc, /\.wf-picker-added-badge/);
   // T03：strip 末尾虚线 [+] 槽位（SlotWells）
-  assert.match(cssSrc, /\.wf-slot-well--add/);
+  assert.match(cssSrc, /\.wf-slot-well--append/);
 });
 
 test('选择资源弹窗标题栏与 Tab 行不得再画分割线', () => {

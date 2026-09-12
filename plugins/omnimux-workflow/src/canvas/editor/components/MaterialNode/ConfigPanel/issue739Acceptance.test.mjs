@@ -138,13 +138,13 @@ describe('Issue #739 Acceptance: 图像节点卡槽常驻验证', () => {
     assert.match(themeCss, /\.wf-slot-well\s*\{[\s\S]*?height:\s*44px;/);
     assert.match(themeCss, /\.wf-slot-well\s*\{[\s\S]*?border-radius:\s*10px;/);
     assert.match(themeCss, /\.wf-slot-well--empty\s*\{[\s\S]*?border-style:\s*dashed;/);
-    assert.match(themeCss, /\.wf-slot-well--add\s*\{[\s\S]*?width:\s*44px;/);
-    assert.match(themeCss, /\.wf-slot-well--add\s*\{[\s\S]*?height:\s*44px;/);
-    assert.match(themeCss, /\.wf-slot-well--add\s*\{[\s\S]*?border:\s*1\.5px dashed/);
+    assert.match(themeCss, /\.wf-slot-well--append\s*\{[\s\S]*?width:\s*44px;/);
+    assert.match(themeCss, /\.wf-slot-well--append\s*\{[\s\S]*?height:\s*44px;/);
+    assert.match(themeCss, /\.wf-slot-well--append\s*\{[\s\S]*?border:\s*1\.5px dashed/);
 
     // 检查 SlotWells.tsx 渲染逻辑
     assert.match(slotWellsSrc, /<Plus\s+size=\{20\}/, '加号图标尺寸应为 20');
-    assert.match(slotWellsSrc, /wf-slot-well--add/, '存在尾部添加按钮');
+    assert.match(slotWellsSrc, /wf-slot-well--append/, '存在尾部添加按钮');
     assert.match(slotWellsSrc, /wf-slot-well--filled/, '存在填入卡片状态');
     assert.match(slotWellsSrc, /wf-slot-well--empty/, '存在空态卡槽状态');
   });
