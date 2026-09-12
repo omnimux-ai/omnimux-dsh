@@ -36,8 +36,8 @@ const EXPECTED_COLUMNS = PICKER === 'assets' ? 2 : 4
 const FULL_HEIGHT = 480
 
 const SELECTORS = PICKER === 'assets'
-  ? { root: '.omx-asset-pick', chip: /资产|素材|模型|角色|场景|道具|风格/, slot: '[assets://参考]' }
-  : { root: '.omx-product-pick', chip: /商品|产品|品类/, slot: '[product://对标商品]' }
+  ? { root: '.omx-asset-pick', chip: /角色/, slot: '[assets://角色]', slotName: '角色' }
+  : { root: '.omx-product-pick', chip: /对标商品/, slot: '[product://对标商品]', slotName: '对标商品' }
 
 /**
  * 连接一个 CDP page target 并暴露 send/evaluate。
@@ -127,6 +127,15 @@ async function openPicker({ send, evaluate }) {
   await send('Page.reload')
   await sleep(2500)
 
+  // 清掉可能残留的弹窗，避免把「上一个弹窗」当成目标组件测量
+  await evaluate(`(() => {
+    const mask = document.querySelector('[class*="_mask_"]');
+    if (mask) mask.click();
+    const btn = document.querySelector('.omnimux-modal-close-btn');
+    if (btn && document.querySelector('.dshUk-Dialog-dialog')) btn.click();
+  })()`)
+  await sleep(400)
+
   await evaluate(`(() => {
     const editor = document.querySelector('[data-composer-input="true"]') || document.querySelector('[contenteditable="true"]');
     if (!editor) return false;
@@ -139,7 +148,8 @@ async function openPicker({ send, evaluate }) {
 
   const clicked = await evaluate(`(() => {
     const chips = [...document.querySelectorAll('.omx-prompt-slot-chip')];
-    const chip = chips.find((c) => ${SELECTORS.chip}.test(c.textContent || '')) || chips[0];
+    // 必须按槽位名精确选中本模式对应的胶囊：写错模式会把另一种弹窗点开，测出的就不是目标组件
+    const chip = chips.find((c) => ${SELECTORS.chip}.test(c.textContent || ''));
     if (!chip) return false;
     chip.click();
     return true;
@@ -164,6 +174,9 @@ function measureExpression() {
     const footerRect = footerButton ? footerButton.getBoundingClientRect() : null;
     const nav = document.querySelector('${SELECTORS.root}__nav');
     const navRect = nav ? nav.getBoundingClientRect() : null;
+    // 正文滚动容器同时装着标题栏与内容区，比较分类栏高度时要用「内容区」而不是整个正文
+    const inner = body.lastElementChild;
+    const innerHeight = inner ? inner.getBoundingClientRect().height : null;
     // 产品库：顶部 Tab（无左侧栏）；资产库：左侧分类栏
     const tabs = document.querySelector('${SELECTORS.root}__tabs');
     const tabsRect = tabs ? tabs.getBoundingClientRect() : null;
@@ -189,7 +202,8 @@ function measureExpression() {
       viewportHeight: innerHeight,
       // 通高分割线：分类栏应填满正文可用高度
       navHeight: navRect ? Math.round(navRect.height) : null,
-      navDividerFullHeight: navRect ? Math.abs(navRect.height - body.clientHeight) <= 4 : null,
+      innerHeight,
+      navDividerFullHeight: navRect && innerHeight ? Math.abs(navRect.height - innerHeight) <= 4 : null,
       // 产品库布局：Tab 在顶部、无左侧栏；缩略图 1:1
       hasLeftNav: Boolean(nav),
       tabsOnTop: tabsRect ? Math.abs(tabsRect.top - rootRect.top) <= 8 : null,
@@ -281,7 +295,7 @@ async function main() {
         deviceScaleFactor: 1,
         mobile: false,
       })
-      await sleep(400)
+      await sleep(900)
       const m = await session.evaluate(measureExpression())
       if (!m?.present) {
         record(`viewport ${viewportHeight}: picker present`, false, JSON.stringify(m))
@@ -317,7 +331,7 @@ async function main() {
         record(
           `viewport ${viewportHeight}: nav divider spans the full content height`,
           Boolean(m.navDividerFullHeight),
-          `nav=${m.navHeight}px body=${m.bodyClientHeight}px`,
+          `nav=${m.navHeight}px content=${Math.round(m.innerHeight ?? 0)}px`,
         )
       } else {
         record(
