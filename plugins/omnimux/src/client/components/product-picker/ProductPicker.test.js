@@ -50,6 +50,11 @@ test('ProductPicker: follows design system, contains search, nav, empty states a
   assert.ok(pickerSource.includes('collectCategories'), 'uses collectCategories');
   assert.ok(pickerSource.includes('filterProducts'), 'uses filterProducts');
   assert.ok(pickerSource.includes('flex-shrink: 0'), 'actions protected against overflow squeeze');
+  assert.ok(!pickerSource.includes('__nav-header'), '分类栏目标题已移除（信息降噪）');
+  assert.ok(!pickerSource.includes('__tab-badge'), '分类数量徽标已移除');
+  assert.ok(!pickerSource.includes('unselectedHint'), '未选中时的页脚提示已移除');
+  assert.ok(pickerSource.includes('ModalCloseButton'), '关闭按钮改用全局共享组件');
+  assert.ok(pickerSource.includes('placement="external"'), '共享关闭按钮固定在弹窗外侧');
   assert.doesNotMatch(pickerSource, /📦/, 'contains no box emoji');
   assert.doesNotMatch(pickerSource, /🔍/, 'contains no search emoji');
 });
