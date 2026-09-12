@@ -14,6 +14,16 @@ export const DOWNLOAD_TIMEOUT_MS = 60_000
 /** Redirect hops followed before a download is abandoned. */
 const MAX_REDIRECTS = 5
 
+/** Bytes read from the head of a response to recognise a non-media payload. */
+const MEDIA_SNIFF_BYTES = 512
+
+/**
+ * Body prefixes that mean "this is a document, not a media stream": an HTML
+ * challenge page or an XML error document served with a 200. CDNs answer a
+ * blocked download this way, so a status check alone is not enough.
+ */
+const NON_MEDIA_BODY_RE = /^\s*(?:<!doctype\s|<html[\s>]|<\?xml[\s?]|<head[\s>]|<body[\s>]|<Error[\s>]|<\?php)/i
+
 /**
  * Detect extension from URL or mime type.
  * @param {string} url
@@ -46,18 +56,55 @@ function removeQuietly(filePath) {
 }
 
 /**
+ * Whether a declared content type can only belong to a document. Only `text/html`
+ * is refused: media CDNs publish `application/octet-stream`, `binary/octet-stream`
+ * and occasionally a wrong or missing type, so anything that is not unambiguously
+ * a web page is left to the byte sniff below.
+ * @param {unknown} contentType
+ * @returns {boolean}
+ */
+function isHtmlContentType(contentType) {
+  const type = typeof contentType === 'string' ? contentType.trim().toLowerCase() : ''
+  return type.startsWith('text/html') || type.startsWith('application/xhtml')
+}
+
+/**
+ * Sniff the head of a body for a document prefix.
+ * @param {Buffer} buffer
+ * @returns {boolean} true when the payload is a document rather than media
+ */
+function looksLikeDocument(buffer) {
+  if (buffer.length === 0) return false
+  return NON_MEDIA_BODY_RE.test(buffer.toString('latin1', 0, Math.min(buffer.length, MEDIA_SNIFF_BYTES)))
+}
+
+/**
+ * @param {string} url
+ * @returns {Error}
+ */
+function documentResponseError(url) {
+  return new Error(`下载目标返回的不是媒体内容（HTML/XML 挑战页或错误页），已中止 (${url})`)
+}
+
+/**
  * Fetch a URL, validating the target and every redirect hop before it is
  * contacted. `redirect: 'manual'` keeps the runtime from following a hop into a
  * private address that the first check would have refused.
+ *
+ * The host check is repeated per hop rather than once up front: a redirect can
+ * point at a name that was never validated, and the resolution of an already
+ * checked name is not stable, so a single up-front lookup would not cover the
+ * address actually contacted.
  * @param {typeof fetch} fetcher
  * @param {string} url
  * @param {AbortSignal} signal
+ * @param {{ resolver?: Function }} deps resolver forwarded to the policy check
  * @returns {Promise<{ response: Response, url: string }>}
  */
-async function fetchValidated(fetcher, url, signal) {
+async function fetchValidated(fetcher, url, signal, deps = {}) {
   let current = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    assertDownloadableUrl(current)
+    await assertDownloadableUrl(current, deps)
     const response = await fetcher(current, { redirect: 'manual', signal })
     if (!isRedirectStatus(response.status)) return { response, url: current }
     const location = resolveRedirectUrl(response.headers?.get?.('location'), current)
@@ -85,14 +132,75 @@ function createByteLimiter(maxBytes, url) {
   })
 }
 
+/**
+ * Reject a stream whose *first* chunk is a document prefix, before any of it
+ * reaches the temp file. The sniff window is bounded by `MEDIA_SNIFF_BYTES`, so at
+ * most one small chunk is held back and the byte ceiling and the timeout keep
+ * working exactly as before.
+ * @param {string} url
+ * @returns {Transform}
+ */
+function createMediaSniff(url) {
+  let sniffed = false
+  let head = Buffer.alloc(0)
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      if (sniffed) {
+        callback(null, chunk)
+        return
+      }
+      head = Buffer.concat([head, Buffer.from(chunk)])
+      if (head.length < MEDIA_SNIFF_BYTES) {
+        callback()
+        return
+      }
+      sniffed = true
+      if (looksLikeDocument(head)) {
+        callback(documentResponseError(url))
+        return
+      }
+      callback(null, head)
+    },
+    flush(callback) {
+      if (sniffed) {
+        callback()
+        return
+      }
+      sniffed = true
+      callback(looksLikeDocument(head) ? documentResponseError(url) : null, head)
+    },
+  })
+}
+
+/**
+ * Reject an obviously non-media response before anything is written: the header
+ * must not declare an HTML document, and the body must not open with a document
+ * marker. A 200 that carries a challenge page would otherwise be stored as a
+ * playable-looking `insp_*.mp4`.
+ * @param {Response} response
+ * @param {string} url
+ * @returns {void}
+ */
+function assertMediaResponse(response, url) {
+  if (isHtmlContentType(response.headers?.get?.('content-type'))) {
+    throw new Error(`下载目标返回的不是媒体内容 (content-type: text/html)，已中止 (${url})`)
+  }
+}
+
 async function writeBody(response, tempPath, maxBytes, url) {
   const declared = Number(response.headers?.get?.('content-length') || 0)
   if (Number.isFinite(declared) && declared > maxBytes) {
     throw new Error(`媒体文件超过大小上限 ${formatMegabytes(maxBytes)}，已中止下载 (${url})`)
   }
+  assertMediaResponse(response, url)
   if (response.body && typeof response.body.getReader === 'function') {
     const nodeStream = Readable.fromWeb(/** @type {any} */ (response.body))
-    await pipeline(nodeStream, createByteLimiter(maxBytes, url), createWriteStream(tempPath))
+    await pipeline(
+      nodeStream,
+      createMediaSniff(url),
+      createByteLimiter(maxBytes, url),
+      createWriteStream(tempPath),
+    )
     return
   }
   if (typeof response.arrayBuffer === 'function') {
@@ -100,6 +208,7 @@ async function writeBody(response, tempPath, maxBytes, url) {
     if (buffer.length > maxBytes) {
       throw new Error(`媒体文件超过大小上限 ${formatMegabytes(maxBytes)}，已中止下载 (${url})`)
     }
+    if (looksLikeDocument(buffer)) throw documentResponseError(url)
     writeFileSync(tempPath, buffer)
     return
   }
@@ -109,12 +218,20 @@ async function writeBody(response, tempPath, maxBytes, url) {
 /**
  * Download a remote URL into a target local destination safely.
  *
- * The target must be a public http(s) URL, every redirect hop is re-validated,
- * the transfer is bounded by a wall-clock timeout and a byte ceiling, and no
- * partial file is left behind on any failure.
+ * The target must be a public http(s) URL whose host resolves only to public
+ * addresses, every redirect hop is re-validated, the response must look like
+ * media, the transfer is bounded by a wall-clock timeout and a byte ceiling, and
+ * no partial file is left behind on any failure.
  * @param {string} url
  * @param {string} destDir
- * @param {{ prefix?: string, ext?: string, fetcher?: typeof fetch, maxBytes?: number, timeoutMs?: number }} [opts]
+ * @param {{
+ *   prefix?: string,
+ *   ext?: string,
+ *   fetcher?: typeof fetch,
+ *   maxBytes?: number,
+ *   timeoutMs?: number,
+ *   resolver?: Function,
+ * }} [opts] `resolver` overrides the DNS lookup used by the target check
  * @returns {Promise<string>} absolute path of saved file
  */
 export async function downloadMedia(url, destDir, opts = {}) {
@@ -129,7 +246,13 @@ export async function downloadMedia(url, destDir, opts = {}) {
   const tempPath = `${targetPath}.${randomUUID().slice(0, 4)}.tmp`
 
   try {
-    const { response, url: finalUrl } = await fetchValidated(fetcher, url, AbortSignal.timeout(timeoutMs))
+    const deps = opts.resolver ? { resolver: opts.resolver } : {}
+    const { response, url: finalUrl } = await fetchValidated(
+      fetcher,
+      url,
+      AbortSignal.timeout(timeoutMs),
+      deps,
+    )
     if (!response.ok) {
       throw new Error(`Failed to download media: HTTP ${response.status} from ${finalUrl}`)
     }

@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -12,7 +10,6 @@ import { zh, en } from './locales.js'
 import { invalidateInspirationCache } from './api.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
-const sectionSrc = readFileSync(join(__dirname, 'InspirationSection.jsx'), 'utf8')
 
 describe('Inspiration Platform Formatting & Dynamic Registration', () => {
   it('formats known and self-registered platforms accurately with i18n support', () => {
@@ -71,23 +68,10 @@ describe('Inspiration Platform Formatting & Dynamic Registration', () => {
     assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'douyin'], tZh)[2], { value: 'douyin', label: 'Douyin' })
   })
 
-  it('renders the dropdown from that gate and does not hand-roll the condition', () => {
-    assert.match(
-      sectionSrc,
-      /buildPlatformFilterOptions\(availablePlatforms,\s*t\)/,
-      'InspirationSection must derive the platform dropdown from buildPlatformFilterOptions',
-    )
-    assert.match(
-      sectionSrc,
-      /aria-label=\{t\('filter\.platform'\)\}/,
-      'Platform DropdownSelect must carry t("filter.platform") aria-label',
-    )
-    assert.doesNotMatch(
-      sectionSrc,
-      /availablePlatforms\.length\s*>\s*1/,
-      'the gating condition must live in buildPlatformFilterOptions, not inline in the JSX',
-    )
-  })
+  // The "does the section actually render the dropdown" half of this gate lives in
+  // inspiration-section-render.test.js. It mounts the component in jsdom and
+  // asserts on the DOM, because a source-text assertion cannot tell a rendered
+  // dropdown from a commented-out or dead-conditioned call site.
 
   it('dynamically discovers platforms from items and handleImportSuccess', async () => {
     const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>', {

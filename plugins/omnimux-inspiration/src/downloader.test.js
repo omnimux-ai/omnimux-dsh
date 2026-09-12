@@ -22,6 +22,48 @@ function streamResponse(chunks, headers = {}) {
   }
 }
 
+/**
+ * Offline `dns.lookup` stand-in for every download in this file.
+ *
+ * `assertDownloadableUrl` resolves the target host, so without an injected
+ * resolver these tests would issue real DNS queries. Names that model a rebinding
+ * host resolve to loopback/metadata here; everything else answers with a public
+ * address. `asked` proves the resolver was consulted.
+ * @type {string[]}
+ */
+const resolvedHosts = []
+
+/** @type {Record<string, string>} */
+const REBINDING_HOSTS = {
+  'localtest.me': '127.0.0.1',
+  '127.0.0.1.nip.io': '127.0.0.1',
+  'instance-data': '169.254.169.254',
+  'spoofed.attacker.example': '169.254.169.254',
+  'rebind.example': '10.1.2.3',
+}
+
+/**
+ * @param {string} hostname
+ * @param {{ all?: boolean }} [_options]
+ * @returns {Promise<Array<{ address: string, family: number }>>}
+ */
+async function offlineResolver(hostname, _options) {
+  resolvedHosts.push(hostname)
+  const address = REBINDING_HOSTS[hostname] || '93.184.216.34'
+  return [{ address, family: address.includes(':') ? 6 : 4 }]
+}
+
+/**
+ * Download with the offline resolver forced in, so no test resolves a real name.
+ * @param {string} url
+ * @param {string} destDir
+ * @param {Record<string, any>} [opts]
+ * @returns {Promise<string>}
+ */
+function downloadForTest(url, destDir, opts = {}) {
+  return downloadMedia(url, destDir, { resolver: offlineResolver, ...opts })
+}
+
 function bufferResponse(buffer, headers = {}) {
   return {
     ok: true,
@@ -44,6 +86,7 @@ describe('downloadMedia — download target policy', () => {
 
   it('refuses the cloud metadata endpoint and loopback before any request', async () => {
     const requested = []
+    resolvedHosts.length = 0
     const fetcher = async (url) => {
       requested.push(url)
       return bufferResponse(Buffer.from('nope'))
@@ -56,15 +99,16 @@ describe('downloadMedia — download target policy', () => {
       'http://192.168.0.10/stream.mp4',
       'file:///etc/passwd',
     ]) {
-      await assert.rejects(() => downloadMedia(target, dir, { fetcher }), /拒绝下载/)
+      await assert.rejects(() => downloadForTest(target, dir, { fetcher }), /拒绝下载/)
     }
     assert.deepEqual(requested, [])
     assert.deepEqual(readdirSync(dir), [])
+    assert.deepEqual(resolvedHosts, [], 'a literal private target must be refused before any DNS lookup')
   })
 
   it('downloads a public direct link and reports its extension', async () => {
     const fetcher = async () => bufferResponse(Buffer.from('fake-media'))
-    const saved = await downloadMedia(PUBLIC_MP4, dir, { fetcher, prefix: 'video_' })
+    const saved = await downloadForTest(PUBLIC_MP4, dir, { fetcher, prefix: 'video_' })
 
     assert.match(saved, /video_[0-9a-f]{8}\.mp4$/)
     assert.deepEqual(readdirSync(dir), [saved.split('/').pop()])
@@ -74,7 +118,7 @@ describe('downloadMedia — download target policy', () => {
     const fetcher = async () => streamResponse([new Uint8Array(20), new Uint8Array(20), new Uint8Array(20)])
 
     await assert.rejects(
-      () => downloadMedia(PUBLIC_MP4, dir, { fetcher, maxBytes: 32 }),
+      () => downloadForTest(PUBLIC_MP4, dir, { fetcher, maxBytes: 32 }),
       /媒体文件超过大小上限/,
     )
     assert.deepEqual(readdirSync(dir), [])
@@ -84,7 +128,7 @@ describe('downloadMedia — download target policy', () => {
     const fetcher = async () => streamResponse([new Uint8Array(4)], { 'content-length': '1048576' })
 
     await assert.rejects(
-      () => downloadMedia(PUBLIC_MP4, dir, { fetcher, maxBytes: 1024 }),
+      () => downloadForTest(PUBLIC_MP4, dir, { fetcher, maxBytes: 1024 }),
       /媒体文件超过大小上限/,
     )
     assert.deepEqual(readdirSync(dir), [])
@@ -94,7 +138,7 @@ describe('downloadMedia — download target policy', () => {
     const fetcher = async () => bufferResponse(Buffer.alloc(4096))
 
     await assert.rejects(
-      () => downloadMedia(PUBLIC_MP4, dir, { fetcher, maxBytes: 1024 }),
+      () => downloadForTest(PUBLIC_MP4, dir, { fetcher, maxBytes: 1024 }),
       /媒体文件超过大小上限/,
     )
     assert.deepEqual(readdirSync(dir), [])
@@ -105,7 +149,7 @@ describe('downloadMedia — download target policy', () => {
       init.signal.addEventListener('abort', () => reject(init.signal.reason))
     })
 
-    await assert.rejects(() => downloadMedia(PUBLIC_MP4, dir, { fetcher, timeoutMs: 20 }), /abort/i)
+    await assert.rejects(() => downloadForTest(PUBLIC_MP4, dir, { fetcher, timeoutMs: 20 }), /abort/i)
     assert.deepEqual(readdirSync(dir), [])
   })
 
@@ -124,7 +168,7 @@ describe('downloadMedia — download target policy', () => {
     }
 
     await assert.rejects(
-      () => downloadMedia('https://cdn.example.com/start.mp4', dir, { fetcher }),
+      () => downloadForTest('https://cdn.example.com/start.mp4', dir, { fetcher }),
       /拒绝下载本机\/内网地址/,
     )
     assert.deepEqual(requested, ['https://cdn.example.com/start.mp4'])
@@ -136,7 +180,7 @@ describe('downloadMedia — download target policy', () => {
       ? { ok: false, status: 301, headers: new Headers({ location: 'https://mirror.example.com/final.mp4' }) }
       : bufferResponse(Buffer.from('media')))
 
-    const saved = await downloadMedia('https://cdn.example.com/start.mp4', dir, { fetcher })
+    const saved = await downloadForTest('https://cdn.example.com/start.mp4', dir, { fetcher })
 
     assert.match(saved, /\.mp4$/)
     assert.deepEqual(readdirSync(dir), [saved.split('/').pop()])
@@ -149,14 +193,14 @@ describe('downloadMedia — download target policy', () => {
       return { ok: false, status: 302, headers: new Headers({ location: `https://cdn.example.com/hop-${hop}.mp4` }) }
     }
 
-    await assert.rejects(() => downloadMedia('https://cdn.example.com/start.mp4', dir, { fetcher }), /重定向次数超过/)
+    await assert.rejects(() => downloadForTest('https://cdn.example.com/start.mp4', dir, { fetcher }), /重定向次数超过/)
     assert.deepEqual(readdirSync(dir), [])
   })
 
   it('surfaces a non-2xx response without leaving a temp file', async () => {
     const fetcher = async () => ({ ok: false, status: 404, headers: new Headers() })
 
-    await assert.rejects(() => downloadMedia(PUBLIC_MP4, dir, { fetcher }), /HTTP 404/)
+    await assert.rejects(() => downloadForTest(PUBLIC_MP4, dir, { fetcher }), /HTTP 404/)
     assert.deepEqual(readdirSync(dir), [])
   })
 
@@ -167,5 +211,148 @@ describe('downloadMedia — download target policy', () => {
     assert.equal(detectExt('not a url'), '.mp4')
     assert.equal(MAX_DOWNLOAD_BYTES, 512 * 1024 * 1024)
     assert.equal(DOWNLOAD_TIMEOUT_MS, 60_000)
+  })
+})
+
+describe('downloadMedia — resolved host must be public (P2-B regression)', () => {
+  let dir
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'omnimux-downloader-rebind-'))
+  })
+
+  after(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('refuses a name that only resolves into loopback or the metadata service', async () => {
+    const requested = []
+
+    for (const host of Object.keys(REBINDING_HOSTS)) {
+      const fetcher = async (url) => {
+        requested.push(url)
+        return bufferResponse(Buffer.from('should never happen'))
+      }
+
+      await assert.rejects(
+        () => downloadForTest(`http://${host}/x.mp4`, dir, { fetcher }),
+        /拒绝下载本机\/内网地址/,
+        `${host} must be refused before it is contacted`,
+      )
+    }
+    assert.deepEqual(requested, [], 'no request may be made to a rebinding host')
+    assert.deepEqual(readdirSync(dir), [])
+  })
+
+  it('re-checks the resolved host of every redirect hop', async () => {
+    const requested = []
+    const fetcher = async (url) => {
+      requested.push(url)
+      if (url.startsWith('https://cdn.example.com/start')) {
+        return { ok: false, status: 302, headers: new Headers({ location: 'http://instance-data/steal.mp4' }) }
+      }
+      return bufferResponse(Buffer.from('should never happen'))
+    }
+
+    await assert.rejects(
+      () => downloadForTest('https://cdn.example.com/start.mp4', dir, { fetcher }),
+      /拒绝下载本机\/内网地址/,
+    )
+    assert.deepEqual(requested, ['https://cdn.example.com/start.mp4'])
+    assert.deepEqual(readdirSync(dir), [])
+  })
+
+  it('still downloads from a host that resolves to a public address', async () => {
+    const fetcher = async () => bufferResponse(Buffer.from('fake-media'))
+
+    resolvedHosts.length = 0
+    const saved = await downloadForTest('https://v16-webapp.tiktokcdn.com/video.mp4', dir, { fetcher })
+
+    assert.match(saved, /\.mp4$/)
+    assert.deepEqual(resolvedHosts, ['v16-webapp.tiktokcdn.com'])
+    assert.deepEqual(readdirSync(dir), [saved.split('/').pop()])
+  })
+})
+
+describe('downloadMedia — non-media responses are rejected (P2-D regression)', () => {
+  let dir
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'omnimux-downloader-sniff-'))
+  })
+
+  after(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('rejects a 200 that declares text/html and leaves no file behind', async () => {
+    const fetcher = async () => streamResponse(
+      [new TextEncoder().encode('<!DOCTYPE html><html><body>challenge</body></html>')],
+      { 'content-type': 'text/html; charset=utf-8' },
+    )
+
+    await assert.rejects(
+      () => downloadForTest(PUBLIC_MP4, dir, { fetcher }),
+      /content-type: text\/html/,
+    )
+    assert.deepEqual(readdirSync(dir), [])
+  })
+
+  it('rejects a 200 whose body opens with a document marker and leaves no file behind', async () => {
+    const documents = [
+      '<!DOCTYPE html>\n<html><body>captcha</body></html>',
+      '<html><head><title>Access denied</title></head></html>',
+      '<?xml version="1.0"?><Error><Code>AccessDenied</Code></Error>',
+    ]
+
+    for (const body of documents) {
+      const fetcher = async () => streamResponse([new TextEncoder().encode(body)])
+
+      await assert.rejects(
+        () => downloadForTest(PUBLIC_MP4, dir, { fetcher }),
+        /返回的不是媒体内容/,
+        `${body.slice(0, 20)}… must be rejected`,
+      )
+      assert.deepEqual(readdirSync(dir), [], 'a rejected response must not leave a file behind')
+    }
+  })
+
+  it('rejects a document body that is only distinguishable past the header check', async () => {
+    // No content-type at all — the byte sniff is the only thing standing between
+    // this challenge page and an `insp_*.mp4` on disk.
+    const fetcher = async () => streamResponse([
+      new TextEncoder().encode('  \n  <!DOCTYPE html><html><body>challenge</body></html>'),
+    ])
+
+    await assert.rejects(() => downloadForTest(PUBLIC_MP4, dir, { fetcher }), /返回的不是媒体内容/)
+    assert.deepEqual(readdirSync(dir), [])
+  })
+
+  it('rejects a document body delivered through the buffered path', async () => {
+    const fetcher = async () => bufferResponse(
+      Buffer.from('<!DOCTYPE html><html><body>challenge</body></html>'),
+    )
+
+    await assert.rejects(() => downloadForTest(PUBLIC_MP4, dir, { fetcher }), /返回的不是媒体内容/)
+    assert.deepEqual(readdirSync(dir), [])
+  })
+
+  it('keeps a genuine video/mp4 response working, including its first bytes', async () => {
+    const media = new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32])
+    const fetcher = async () => streamResponse([media], { 'content-type': 'video/mp4' })
+
+    const saved = await downloadForTest(PUBLIC_MP4, dir, { fetcher })
+
+    assert.match(saved, /\.mp4$/)
+    assert.deepEqual(readdirSync(dir), [saved.split('/').pop()])
+  })
+
+  it('keeps an octet-stream response working when the bytes are media', async () => {
+    const media = new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70])
+    const fetcher = async () => streamResponse([media], { 'content-type': 'application/octet-stream' })
+
+    const saved = await downloadForTest(PUBLIC_MP4, dir, { fetcher })
+
+    assert.match(saved, /\.mp4$/)
   })
 })

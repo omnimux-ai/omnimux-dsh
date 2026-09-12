@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { downloadMedia } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
-import { isDownloadableHttpUrl } from './url-policy.js'
+import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import {
   buildTranslatePrompt,
   extractScriptStructure,
@@ -77,6 +77,27 @@ function needsVideoUpgrade(item) {
 function firstHttpUrl(values) {
   for (const value of values) {
     if (typeof value === 'string' && HTTP_URL_RE.test(value)) return value
+  }
+  return ''
+}
+
+/**
+ * First candidate that is a public http(s) URL.
+ *
+ * The structural extractor reads fields that deliberately carry no file
+ * extension — TikTok `play_addr.url_list`, Instagram `video_versions[]`, X
+ * `variants[]`, YouTube `formats[]` — so the downloadability rule (which needs a
+ * recognizable media path or a known CDN host) must NOT be applied here: it would
+ * drop those real streams. Only the private/protocol refusal applies, which is
+ * what keeps `http://169.254.169.254/x.mp4` out of `video_url` without breaking
+ * the extension-less CDN paths.
+ * @param {unknown[]} values
+ * @returns {string}
+ */
+function firstPublicHttpUrl(values) {
+  for (const value of values) {
+    const url = httpText(value)
+    if (url && isPublicHttpUrl(url)) return url
   }
   return ''
 }
@@ -179,19 +200,34 @@ function bestVariantUrl(variants) {
   return bestUrl
 }
 
-/** mp4 stream inside `media.video[]`, `entities.media[].video_info` or Instagram `video_versions[]`. */
+/**
+ * mp4 stream inside `media.video[]`, `entities.media[].video_info` or Instagram
+ * `video_versions[]`.
+ *
+ * The chosen url still has to pass the policy: the variant ranking only looks at
+ * the container type, so it would happily return a link-local or loopback URL
+ * that the envelope put in `variants[]`.
+ * @param {unknown} list
+ * @returns {string}
+ */
 function videoFromMediaList(list) {
   for (const item of asArray(list)) {
     const media = asObject(item)
     const url = bestVariantUrl(media.variants)
       || bestVariantUrl(asObject(media.video_info).variants)
       || bestVariantUrl([item])
-    if (url) return url
+    if (url) return firstPublicHttpUrl([url])
   }
   return ''
 }
 
-/** Poster image inside `media[].media_url_https` / `display_url`. */
+/**
+ * Poster image inside `media[].media_url_https` / `display_url`. A cover is
+ * fetched by the cover downloader too, so it gets the same private-target
+ * refusal as a stream.
+ * @param {unknown} list
+ * @returns {string}
+ */
 function coverFromMediaList(list) {
   for (const item of asArray(list)) {
     const media = asObject(item)
@@ -199,7 +235,7 @@ function coverFromMediaList(list) {
       || httpText(media.media_url)
       || httpText(media.display_url)
       || httpText(media.url)
-    if (url) return url
+    if (url) return firstPublicHttpUrl([url])
   }
   return ''
 }
@@ -215,7 +251,7 @@ function videoFromFormatList(layer) {
   for (const raw of [...asArray(layer.formats), ...asArray(layer.adaptive_formats)]) {
     if (!isPlainObject(raw)) continue
     if (asText(raw.signatureCipher) || asText(raw.cipher)) continue
-    const url = httpText(raw.url)
+    const url = firstPublicHttpUrl([raw.url])
     if (!url) continue
     const mime = firstText([raw.mimeType, raw.mime_type]).toLowerCase()
     if (mime ? !mime.includes('video/mp4') : !/\.mp4$/i.test(urlPathname(url))) continue
@@ -230,14 +266,14 @@ function videoFromFormatList(layer) {
 
 /** Instagram `image_versions2.candidates[].url`. */
 function instagramCandidateUrl(versions) {
-  return firstHttpUrl(asArray(asObject(versions).candidates).map((item) => asObject(item).url))
+  return firstPublicHttpUrl(asArray(asObject(versions).candidates).map((item) => asObject(item).url))
 }
 
 /** YouTube `thumbnails[]` — the last entry is the largest. */
 function lastThumbnailUrl(thumbnails) {
   const items = asArray(thumbnails)
   for (let index = items.length - 1; index >= 0; index -= 1) {
-    const url = httpText(asObject(items[index]).url)
+    const url = firstPublicHttpUrl([asObject(items[index]).url])
     if (url) return url
   }
   return ''
@@ -276,7 +312,8 @@ function videoUrlFromLayer(layer) {
     videoFromMediaList(asObject(layer.extended_entities).media),
     // `video_versions[]` is one clip's quality ladder (ascending), not a list of
     // clips: rank it so the highest quality wins instead of the first entry.
-    bestVariantUrl(layer.video_versions) || videoFromMediaList(layer.video_versions),
+    firstPublicHttpUrl([bestVariantUrl(layer.video_versions)]),
+    firstPublicHttpUrl(asArray(layer.video_versions).map((item) => asObject(item).url || item)),
     videoFromFormatList(layer),
     // Bare direct-link fields are attacker-influenced envelope data, so each one
     // must pass the media-url policy before it can become the download target.
@@ -285,8 +322,11 @@ function videoUrlFromLayer(layer) {
     mediaLikeUrl(layer.play_url),
     mediaLikeUrl(layer.play),
     mediaLikeUrl(layer.download_url),
-    firstHttpUrl(asArray(asObject(layer.play_addr).url_list)),
-    firstHttpUrl(asArray(asObject(asObject(layer.video).play_addr).url_list)),
+    // Nested `url_list` streams carry no file extension on TikTok/Instagram, so
+    // only the private/protocol layer applies here — the download entry point
+    // still enforces the full policy.
+    firstPublicHttpUrl(asArray(asObject(layer.play_addr).url_list)),
+    firstPublicHttpUrl(asArray(asObject(asObject(layer.video).play_addr).url_list)),
     mediaLikeUrl(layer.url),
   ])
 }
@@ -513,16 +553,18 @@ export function parseSocialMeta(data) {
   const duration = pickLayerValue(layers, durationFromLayer, isBlankNumber)
   const published_at = pickLayerValue(layers, publishedAtFromLayer, isBlankText)
   const resolvedUrl = pickLayerValue(layers, resolvedUrlFromLayer, isBlankText)
+  // Only *substantive* content counts as metadata: a title, body text, cover,
+  // image list or video stream. Author, stats, duration and publication time are
+  // attached metadata — an envelope that carries nothing but
+  // `{ author: { id } }`, `{ stats: { likes: 0 } }`, `{ duration: 0 }` or
+  // `{ create_time: 0 }` has no content, and counting it here would skip the
+  // local fallback resolver and end up persisting an empty `link` row.
   const has_metadata = Boolean(
     video_url
     || cover_url
     || text
     || title
-    || images.length > 0
-    || Object.keys(author).length > 0
-    || Object.keys(stats).length > 0
-    || duration != null
-    || published_at,
+    || images.length > 0,
   )
   return {
     title,
@@ -775,6 +817,7 @@ async function downloadImportMedia(args, meta, rawVideoUrl) {
     localVideoPath = await downloadMedia(rawVideoUrl, args.paths.videosDir, {
       prefix: 'video_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     localPaths.video = localVideoPath
   } catch (downErr) {
@@ -791,6 +834,7 @@ async function downloadCoverBestEffort(args, meta, localPaths) {
     const saved = await downloadMedia(meta.cover_url, args.paths.coversDir, {
       prefix: 'cover_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     localPaths.cover = saved
     return saved
@@ -914,6 +958,7 @@ async function downloadAnalyzeVideo(args) {
     const videoPath = await downloadMedia(vUrl, args.paths.videosDir, {
       prefix: 'video_',
       fetcher: args.fetcher,
+      resolver: args.resolver,
     })
     args.item.local_paths = { ...(args.item.local_paths || {}), video: videoPath }
     return { path: videoPath }

@@ -7,6 +7,23 @@ import { createLocalStore } from './local-store.js'
 import { extractStructuredBreakdown } from './analyzer.js'
 import { createLocalInspirationDispatcher, detectPlatformFromUrl } from './http-routes.js'
 
+/**
+ * Offline `dns.lookup` stand-in for the download target check.
+ *
+ * `downloadMedia` resolves the target host, so every dispatcher built in a test
+ * injects this instead of letting the real resolver run — the suite must issue no
+ * DNS queries at all. Any host answers with a public address.
+ * @type {Array<string>}
+ */
+export const testResolvedHosts = []
+
+/** @param {string} hostname @returns {Promise<Array<{ address: string, family: number }>>} */
+export async function offlineResolver(hostname) {
+  testResolvedHosts.push(hostname)
+  return [{ address: '93.184.216.34', family: 4 }]
+}
+
+
 describe('Local Inspiration Store', () => {
   let tmp
   let paths
@@ -260,6 +277,7 @@ describe('Local Inspiration Store', () => {
     }
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       socialFetcher: mockSocialFetcher,
       videoAnalyzeTool: mockVideoAnalyzeTool,
@@ -305,6 +323,7 @@ describe('Local Inspiration Store', () => {
     const mockFetcher = async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from('fake-cover') })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       socialFetcher: mockSocialFetcher,
       fetcher: mockFetcher,
@@ -364,6 +383,7 @@ Ecolchi 发膜核心拆解。
     }
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
       videoAnalyzeTool: mockVideoAnalyzeTool,
     })
@@ -389,6 +409,7 @@ Ecolchi 发膜核心拆解。
     })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
     })
 
@@ -426,6 +447,7 @@ Ecolchi 发膜核心拆解。
     })
 
     const dispatcher = createLocalInspirationDispatcher({
+      resolver: offlineResolver,
       localStore: store,
     })
 

@@ -43,6 +43,22 @@ const X_PHOTO_ENVELOPE = {
 
 const mockFetcher = async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from('fake-media-content') })
 
+/**
+ * Offline `dns.lookup` stand-in for the download target check.
+ *
+ * `downloadMedia` resolves the target host, so every dispatcher built in a test
+ * injects this instead of letting the real resolver run — the suite must issue no
+ * DNS queries at all. Any host answers with a public address.
+ * @type {Array<string>}
+ */
+export const testResolvedHosts = []
+
+/** @param {string} hostname @returns {Promise<Array<{ address: string, family: number }>>} */
+export async function offlineResolver(hostname) {
+  testResolvedHosts.push(hostname)
+  return [{ address: '93.184.216.34', family: 4 }]
+}
+
 function makePaths(tmp) {
   return {
     dir: tmp,
@@ -57,6 +73,7 @@ function makePaths(tmp) {
 async function importUrl({ socialFetcher, paths, url, body = {} }) {
   const store = createLocalStore({ paths })
   const dispatcher = createLocalInspirationDispatcher({
+    resolver: offlineResolver,
     localStore: store,
     socialFetcher,
     fetcher: mockFetcher,
@@ -521,6 +538,62 @@ describe('createSocialFetcher — hub empty sentinel (P0-1 regression)', () => {
       () => socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/10' }),
       /未从该链接解析到内容，请确认链接是公开可访问的帖子\/视频/,
     )
+  })
+})
+
+describe('createSocialFetcher — attached metadata alone must not skip the fallback (P2-A regression)', () => {
+  // `author` / `stats` / `duration` / `published_at` are attached metadata, not
+  // content. Counting them as content made the cloud envelope look usable, so the
+  // local oEmbed fallback was skipped and the import persisted an empty link row.
+  const attachedOnly = [
+    { author: { id: '123' } },
+    { stats: { likes: 0, comments: 0, shares: 0, views: 0 } },
+    { duration: 0 },
+    { create_time: 0 },
+  ]
+
+  it('classifies attached metadata alone as content-free', () => {
+    for (const payload of attachedOnly) {
+      assert.equal(
+        hasSocialPayload(payload),
+        false,
+        `${JSON.stringify(payload)} must not count as content`,
+      )
+    }
+  })
+
+  it('still calls the fallback resolver for each attached-metadata-only envelope', async () => {
+    for (const payload of attachedOnly) {
+      let fallbackCalls = 0
+      const socialFetcher = createSocialFetcher({
+        getTool: () => ({ async execute() { return { platform: 'x', capability: 'tweet', data: payload } } }),
+        fallback: async () => {
+          fallbackCalls += 1
+          return { platform: 'x', capability: 'tweet', data: { text: 'oEmbed 兜底文案' } }
+        },
+      })
+
+      const res = await socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/11' })
+
+      assert.equal(fallbackCalls, 1, `${JSON.stringify(payload)} must reach the fallback exactly once`)
+      assert.equal(res.data.text, 'oEmbed 兜底文案')
+    }
+  })
+
+  it('does not call the fallback when the cloud envelope carries real content', async () => {
+    let fallbackCalls = 0
+    const socialFetcher = createSocialFetcher({
+      getTool: () => ({ async execute() { return { platform: 'x', capability: 'tweet', data: { text: '云端正文' } } } }),
+      fallback: async () => {
+        fallbackCalls += 1
+        return { platform: 'x', capability: 'tweet', data: { text: '不该被用到' } }
+      },
+    })
+
+    const res = await socialFetcher({ platform: 'x', capability: 'tweet', url: 'https://x.com/a/status/12' })
+
+    assert.equal(fallbackCalls, 0)
+    assert.equal(res.data.text, '云端正文')
   })
 })
 
