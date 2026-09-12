@@ -82,7 +82,7 @@ export function normalizeUrl(rawUrl) {
 }
 
 /**
- * Extract platform slug from hostname (e.g. www.bilibili.com -> bilibili).
+ * Extract platform slug from hostname or URL (e.g. www.bilibili.com -> bilibili).
  * Strips www. / m. / mobile. prefixes, multi-part and single TLDs.
  * @param {string} hostname
  * @returns {string}
@@ -90,12 +90,25 @@ export function normalizeUrl(rawUrl) {
 export function extractDomainSlug(hostname) {
   if (!hostname || typeof hostname !== 'string') return ''
   let host = hostname.toLowerCase().trim()
+  if (host.includes('://') || host.includes('/')) {
+    try {
+      const parsed = new URL(host.includes('://') ? host : `https://${host}`)
+      host = parsed.hostname.toLowerCase()
+    } catch {
+      host = host.replace(/^https?:\/\//, '').split('/')[0].split('?')[0].split('#')[0]
+    }
+  }
   host = host.split(':')[0]
   host = host.replace(/^(www\d*|mobile|m)\./i, '')
-  // Strip known multi-part TLDs (e.g. .com.cn, .co.uk, .com.tw)
-  host = host.replace(/\.(com|co|net|org|edu|gov)\.[a-z]{2}$/i, '')
-  // Strip single TLD
-  host = host.replace(/\.[a-z0-9-]+$/i, '')
+
+  // 互斥分支：剥离多级 TLD 与单级 TLD
+  const multiTldRegex = /\.(com|co|net|org|edu|gov)\.[a-z]{2}$/i
+  if (multiTldRegex.test(host)) {
+    host = host.replace(multiTldRegex, '')
+  } else {
+    host = host.replace(/\.[a-z0-9-]+$/i, '')
+  }
+
   if (!host) return ''
   const parts = host.split('.')
   const rawSlug = parts[parts.length - 1]

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
+import { detectPlatformFromUrl, extractDomainSlug, getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
 
 describe('URL Normalizer & Canonical Key Extraction', () => {
   it('strips tracking query parameters', () => {
@@ -78,5 +78,32 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     const emptyKey = getCanonicalItemKey('')
     assert.equal(emptyKey.platform, 'unknown')
     assert.equal(emptyKey.key, '')
+  })
+
+  it('handles subdomains with multi-part TLDs and edge cases correctly', () => {
+    // Direct extractDomainSlug checks
+    assert.equal(extractDomainSlug('v.weibo.com.cn'), 'weibo')
+    assert.equal(extractDomainSlug('sub.domain.co.uk'), 'domain')
+    assert.equal(extractDomainSlug('https://v.weibo.com.cn/video/123'), 'weibo')
+    assert.equal(extractDomainSlug('https://m.weibo.cn'), 'weibo')
+    assert.equal(extractDomainSlug('https://example.org'), 'example')
+    assert.equal(extractDomainSlug('https://test.me'), 'test')
+    assert.equal(extractDomainSlug('localhost'), 'localhost')
+    assert.equal(extractDomainSlug(''), '')
+    assert.equal(extractDomainSlug(null), '')
+
+    // Single TLD with subdomains
+    assert.equal(detectPlatformFromUrl('https://v.douyin.com/abc/'), 'douyin')
+    assert.equal(detectPlatformFromUrl('https://www.bilibili.com/video/BV123'), 'bilibili')
+
+    // Multi-part TLDs without subdomains
+    assert.equal(detectPlatformFromUrl('https://weibo.com.cn/video/123'), 'weibo')
+    assert.equal(detectPlatformFromUrl('https://bbc.co.uk/news'), 'bbc')
+
+    // Multi-part TLDs WITH subdomains (e.g. v.weibo.com.cn, video.sohu.com.cn, news.bbc.co.uk)
+    // Expected: extract the real brand domain slug (weibo, sohu, bbc) rather than subdomain prefix (v, video, news)
+    assert.equal(detectPlatformFromUrl('https://v.weibo.com.cn/video/123'), 'weibo')
+    assert.equal(detectPlatformFromUrl('https://video.sohu.com.cn/123'), 'sohu')
+    assert.equal(detectPlatformFromUrl('https://news.bbc.co.uk/story'), 'bbc')
   })
 })
