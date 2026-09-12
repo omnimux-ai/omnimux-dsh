@@ -25,7 +25,7 @@ function ProductPlaceholderIcon({ size = 28 }) {
 }
 
 /**
- * 产品选择卡片组件
+ * 产品选择卡片（对齐参考稿：方形缩略图 + 左上勾选框 + 左下价格胶囊 + 卡下名称，保持简洁）
  * @param {{
  *   product: any,
  *   selected?: boolean,
@@ -49,11 +49,6 @@ export function ProductPickerCard({
 
   const priceText = formatPrice(product.price);
   const glyph = (product.name || '?').trim().slice(0, 1).toUpperCase();
-
-  // 提取有效标签（最多展示 3 个）
-  const tags = Array.isArray(product.categories)
-    ? product.categories.filter((c) => typeof c === 'string' && c.trim()).slice(0, 3)
-    : [];
 
   return (
     <article
@@ -110,7 +105,7 @@ export function ProductPickerCard({
           </div>
         )}
 
-        <span className="omx-product-pick-card__badge">{typeLabel}</span>
+        {priceText ? <span className="omx-product-pick-card__badge">{priceText}</span> : null}
       </div>
 
       <div className="omx-product-pick-card__body">
@@ -118,25 +113,8 @@ export function ProductPickerCard({
           {product.name || '未命名产品'}
         </div>
         <div className="omx-product-pick-card__meta">
-          {priceText ? (
-            <span className="omx-product-pick-card__price">{priceText}</span>
-          ) : null}
-          {product.sku ? (
-            <span className="omx-product-pick-card__sku">SKU: {product.sku}</span>
-          ) : null}
+          <span className="omx-product-pick-card__sku" title={typeLabel}>{typeLabel}</span>
         </div>
-        <div className="omx-product-pick-card__desc" title={product.description}>
-          {product.description || '暂无产品描述'}
-        </div>
-        {tags.length > 0 ? (
-          <div className="omx-product-pick-card__tags">
-            {tags.map((tag) => (
-              <span key={tag} className="omx-product-pick-card__tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </div>
     </article>
   );

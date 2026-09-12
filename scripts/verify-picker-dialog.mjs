@@ -18,7 +18,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PICKER_COLUMNS, PICKER_DIALOG_CLASS, PICKER_DIALOG_CSS } from '../plugins/omnimux/src/client/components/picker-dialog/pickerDialogContract.js'
+import { PICKER_DIALOG_CLASS, pickerExpectedWidth } from '../plugins/omnimux/src/client/components/picker-dialog/pickerDialogContract.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const evidenceDir = join(here, '..', 'docs', 'evidence')
@@ -28,19 +28,9 @@ const CDP_PORT = Number(process.env.OMNIMUX_CDP_PORT || 9229)
 const CDP_BASE = `http://127.0.0.1:${CDP_PORT}`
 const PICKER = process.env.OMNIMUX_PICKER === 'assets' ? 'assets' : 'product'
 
-/** 从契约 CSS 读取几何变量，与实现保持单一真源，避免本脚本另存一份常量 */
-function contractVarPx(name) {
-  const match = PICKER_DIALOG_CSS.match(new RegExp(`${name}:\\s*(\\d+)px`))
-  if (!match) throw new Error(`contract is missing ${name}`)
-  return Number(match[1])
-}
-
-/** 契约推导宽度：分类栏 + 正文左内边距 + 列数×卡片 + (列数-1)×列间距（选择器贴边，无正文内边距项） */
-const EXPECTED_WIDTH =
-  contractVarPx('--omnimux-pick-nav-w')
-  + contractVarPx('--omnimux-pick-main-pad')
-  + PICKER_COLUMNS * contractVarPx('--omnimux-pick-card-w')
-  + (PICKER_COLUMNS - 1) * contractVarPx('--omnimux-pick-gap')
+/** 期望宽度与列数直接取自契约，避免本脚本另存一份常量后与实现漂移 */
+const EXPECTED_WIDTH = pickerExpectedWidth(PICKER)
+const EXPECTED_COLUMNS = PICKER === 'assets' ? 2 : 4
 
 /** 视口足够高时选择器的完整高度 */
 const FULL_HEIGHT = 480
@@ -174,6 +164,12 @@ function measureExpression() {
     const footerRect = footerButton ? footerButton.getBoundingClientRect() : null;
     const nav = document.querySelector('${SELECTORS.root}__nav');
     const navRect = nav ? nav.getBoundingClientRect() : null;
+    // 产品库：顶部 Tab（无左侧栏）；资产库：左侧分类栏
+    const tabs = document.querySelector('${SELECTORS.root}__tabs');
+    const tabsRect = tabs ? tabs.getBoundingClientRect() : null;
+    const rootRect = root.getBoundingClientRect();
+    const thumb = document.querySelector('${SELECTORS.root}-card__thumb');
+    const thumbRect = thumb ? thumb.getBoundingClientRect() : null;
     // 共享的外部关闭按钮（ModalCloseButton placement="external"）
     const externalClose = document.querySelector('.omnimux-modal-close-btn.is-external');
     const externalCloseRect = externalClose ? externalClose.getBoundingClientRect() : null;
@@ -194,6 +190,10 @@ function measureExpression() {
       // 通高分割线：分类栏应填满正文可用高度
       navHeight: navRect ? Math.round(navRect.height) : null,
       navDividerFullHeight: navRect ? Math.abs(navRect.height - body.clientHeight) <= 4 : null,
+      // 产品库布局：Tab 在顶部、无左侧栏；缩略图 1:1
+      hasLeftNav: Boolean(nav),
+      tabsOnTop: tabsRect ? Math.abs(tabsRect.top - rootRect.top) <= 8 : null,
+      thumbAspect: thumbRect && thumbRect.height ? Number((thumbRect.width / thumbRect.height).toFixed(2)) : null,
       // 关闭按钮统一：外部共享按钮存在且落在弹窗右外侧；底座内置 X 已隐藏
       externalClosePresent: Boolean(externalClose),
       externalCloseOutside: externalCloseRect ? externalCloseRect.left >= dialogRect.right - 4 : null,
@@ -254,8 +254,8 @@ async function main() {
         `overflow=${m.outerOverflow}px (client ${m.bodyClientHeight} / scroll ${m.bodyScrollHeight})`,
       )
       record(
-        `viewport ${viewportHeight}: ${PICKER_COLUMNS}-column grid`,
-        m.gridColumns === PICKER_COLUMNS,
+        `viewport ${viewportHeight}: ${EXPECTED_COLUMNS}-column grid`,
+        m.gridColumns === EXPECTED_COLUMNS,
         `columns=${m.gridColumns}`,
       )
       record(
@@ -263,11 +263,24 @@ async function main() {
         Boolean(m.dialogInViewport) && Boolean(m.footerVisible),
         `inViewport=${m.dialogInViewport} footerVisible=${m.footerVisible}`,
       )
-      record(
-        `viewport ${viewportHeight}: nav divider spans the full content height`,
-        Boolean(m.navDividerFullHeight),
-        `nav=${m.navHeight}px body=${m.bodyClientHeight}px`,
-      )
+      if (PICKER === 'assets') {
+        record(
+          `viewport ${viewportHeight}: nav divider spans the full content height`,
+          Boolean(m.navDividerFullHeight),
+          `nav=${m.navHeight}px body=${m.bodyClientHeight}px`,
+        )
+      } else {
+        record(
+          `viewport ${viewportHeight}: tabs sit on top with no left rail`,
+          Boolean(m.tabsOnTop) && m.hasLeftNav === false,
+          `tabsOnTop=${m.tabsOnTop} hasLeftNav=${m.hasLeftNav}`,
+        )
+        record(
+          `viewport ${viewportHeight}: card thumb is square (1:1)`,
+          m.thumbAspect !== null && Math.abs(m.thumbAspect - 1) <= 0.03,
+          `aspect=${m.thumbAspect}`,
+        )
+      }
       record(
         `viewport ${viewportHeight}: shared external close button`,
         Boolean(m.externalClosePresent) && Boolean(m.externalCloseOutside) && Boolean(m.kitCloseHidden),

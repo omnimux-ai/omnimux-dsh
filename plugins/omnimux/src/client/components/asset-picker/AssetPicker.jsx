@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { AssetPickerCard } from './AssetPickerCard.jsx'
 import { ASSET_CATEGORIES, isAlreadyAdded, remainingQuota, toggleSelect } from './picker-model.js'
-import { PICKER_DIALOG_CLASS, ensurePickerDialogStyles } from '../picker-dialog/pickerDialogContract.js'
+import { PICKER_DIALOG_CLASS, PICKER_LAYOUTS, ensurePickerDialogStyles, pickerDialogWidth } from '../picker-dialog/pickerDialogContract.js'
 import { ModalCloseButton } from '../ModalCloseButton.jsx'
 
 const STYLE_ID = 'omx-composer-add-asset-picker'
 
 const CSS = `
 .omx-asset-pick {
+  /* 左侧分类栏 + 正文左内边距 + 2 列卡片，由契约推导 */
+  --omnimux-pick-dialog-width: ${pickerDialogWidth(PICKER_LAYOUTS.assets)};
   display: flex; width: 100%; height: 480px; min-height: 0;
   max-height: calc(80vh - 190px);
   box-sizing: border-box;

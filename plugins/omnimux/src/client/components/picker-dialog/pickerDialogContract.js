@@ -1,9 +1,11 @@
 /**
- * 资产库 / 产品库选择器的弹窗几何契约（单一真源）。
+ * 资产库 / 产品库选择器的弹窗外壳契约（单一真源）。
  *
- * 底座（dsh-ui-kit ModalDialog）只暴露 `size: 'sm' | 'md' | 'lg'` 三档，最大档 lg 仅 640px，
- * 而本选择器需要「分类栏 + 多列卡片」的桌面级宽度，因此按自有几何契约推导宽度，
- * 不再写死魔法数字：任一项几何调整（含列数）只需改下面的 CSS 变量。
+ * 两个选择器共享弹窗外壳（尺寸上限、贴边、统一关闭按钮），但**布局各不相同**
+ * （产品库为「顶部 Tab + 卡片网格」，资产库为「左侧分类栏 + 卡片网格」），
+ * 因此宽度由各选择器按自己的几何自行推导，通过 `--omnimux-pick-dialog-width` 传入：
+ *
+ *   宽度 = 列数 × 卡片宽 + (列数-1) × 列间距 [+ 左侧分类栏与正文内边距（若有）]
  */
 
 /** 挂到 ModalDialog 的 className（宽度覆盖只用自有类名，不依赖底座类名） */
@@ -12,26 +14,46 @@ export const PICKER_DIALOG_CLASS = 'omx-pick-dialog';
 /** 两个选择器各自的根类名，用于 :has() 定位正文滚动容器 */
 export const PICKER_ROOT_CLASSES = Object.freeze(['.omx-product-pick', '.omx-asset-pick']);
 
-/** 目标列数：至少同时陈列 3 张卡片 */
-export const PICKER_COLUMNS = 3;
+/** 布局无关的默认几何（各选择器可覆盖） */
+export const PICKER_CARD_WIDTH = 264;
+export const PICKER_GRID_GAP = 16;
 
 /**
- * 宽度契约：分类栏 + 正文左内边距 + 列数×卡片宽 + (列数-1)×列间距
- * 148 + 16 + 3×264 + 2×16 = 988px
- * （选择器已贴边，正文容器不再贡献左右内边距，故不计入）
+ * 按几何推导弹窗宽度，返回可直接写进 CSS 的 `calc()` 表达式。
+ * @param {{ columns: number, cardWidth?: number, gap?: number, leading?: number }} options
+ *   leading：网格之前占用的固定宽度（如资产库左侧分类栏 148 + 正文左内边距 16）
  */
-export const PICKER_DIALOG_CSS = `
+export function pickerDialogWidth({ columns, cardWidth = PICKER_CARD_WIDTH, gap = PICKER_GRID_GAP, leading = 0 }) {
+  const parts = [];
+  if (leading > 0) parts.push(`${leading}px`);
+  parts.push(`${columns} * ${cardWidth}px`);
+  if (columns > 1) parts.push(`${columns - 1} * ${gap}px`);
+  return `calc(${parts.join(' + ')})`;
+}
+
+/** 两个选择器各自的布局几何（单一真源；验收脚本与单测都从这里取值） */
+export const PICKER_LAYOUTS = Object.freeze({
+  /** 产品库：顶部 Tab，无左侧栏，4 列卡片 */
+  product: Object.freeze({ columns: 4, leading: 0 }),
+  /** 资产库：左侧分类栏 148 + 正文左内边距 16，2 列卡片 */
+  assets: Object.freeze({ columns: 2, leading: 148 + 16 }),
+});
+
+/**
+ * 某个选择器的期望弹窗宽度（px）
+ * @param {'product' | 'assets'} kind
+ */
+export function pickerExpectedWidth(kind) {
+  const layout = PICKER_LAYOUTS[kind];
+  if (!layout) throw new Error(`unknown picker layout: ${kind}`);
+  const { columns, leading = 0 } = layout;
+  return leading + columns * PICKER_CARD_WIDTH + Math.max(0, columns - 1) * PICKER_GRID_GAP;
+}
+
+/** 只依赖外壳、与布局无关的共享样式 */
+export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器按自有几何提供；此处只负责视口上限与装配 */
 .${PICKER_DIALOG_CLASS} {
-  --omnimux-pick-nav-w: 148px;        /* 左侧分类栏宽度，与 .omx-*-pick__nav 保持一致 */
-  --omnimux-pick-main-pad: 16px;      /* 正文区左内边距 .omx-*-pick__main padding-left */
-  --omnimux-pick-card-w: 264px;       /* 单张卡片目标宽度 */
-  --omnimux-pick-gap: 16px;           /* 网格列间距 .omx-*-pick__grid gap */
-  --omnimux-pick-columns: ${PICKER_COLUMNS};
-  width: min(92vw, calc(
-    var(--omnimux-pick-nav-w) + var(--omnimux-pick-main-pad)
-    + (var(--omnimux-pick-columns) * var(--omnimux-pick-card-w))
-    + ((var(--omnimux-pick-columns) - 1) * var(--omnimux-pick-gap))
-  )) !important;
+  width: min(92vw, var(--omnimux-pick-dialog-width, ${pickerDialogWidth({ columns: 3 })})) !important;
   max-width: 92vw !important;
 }
 /* 正文滚动容器由 primitive（@deepseek-ai/dsh-client-ui-primitives）提供，自带 max-height: min(56vh, 480px)；
@@ -43,7 +65,7 @@ export const PICKER_DIALOG_CSS = `
   max-height: none !important;
 }
 /* 选择器在正文内贴边：清掉 kit 内层 _body_ 的左右内边距与上间距（结构定位：正文滚动容器最后一个子元素），
-   使左侧分类栏的 border-right 从标题下方一路延伸到页脚上方，成为通高分割线。 */
+   让内容区完整占满弹窗正文。 */
 .dshUk-Dialog-body:has(.omx-product-pick) > *:last-child,
 .dshUk-Dialog-body:has(.omx-asset-pick) > *:last-child {
   margin-top: 0 !important;
@@ -51,7 +73,7 @@ export const PICKER_DIALOG_CSS = `
 }
 /* 关闭按钮统一使用共享组件 ModalCloseButton(placement="external")，隐藏底座标题栏内置的 X。
    底座关闭按钮只有 CSS-module 哈希类名，故按结构定位：正文滚动容器第一个子元素（标题栏）内的按钮。 */
-.omx-pick-dialog .dshUk-Dialog-body > *:first-child > button {
+.${PICKER_DIALOG_CLASS} .dshUk-Dialog-body > *:first-child > button {
   display: none !important;
 }
 `;
@@ -59,13 +81,13 @@ export const PICKER_DIALOG_CSS = `
 const STYLE_ID = 'omx-picker-dialog-contract';
 
 /**
- * 注入契约样式（幂等）。两个选择器共用同一份，避免重复声明导致漂移。
+ * 注入外壳样式（幂等）。两个选择器共用同一份，避免重复声明导致漂移。
  * @param {Document | null} [doc]
  */
 export function ensurePickerDialogStyles(doc = (typeof document !== 'undefined' ? document : null)) {
   if (!doc || doc.getElementById(STYLE_ID)) return;
   const style = doc.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = PICKER_DIALOG_CSS;
+  style.textContent = PICKER_DIALOG_SHELL_CSS;
   doc.head?.appendChild(style);
 }
