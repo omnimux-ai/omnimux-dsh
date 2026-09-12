@@ -39,7 +39,7 @@ function toOptions(buckets, t) {
 
 function InfoMark({ label }) {
   return (
-    <span className="omx-trending-info-mark" title={label} aria-label={label} role="img">
+    <span className="omnimux-trending-info-mark" title={label} aria-label={label} role="img">
       {ICON_INFO}
     </span>
   )
@@ -72,13 +72,13 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
   )
 
   return (
-    <div className="omx-trending-toolbar" role="group" aria-label={t('trending.filters.label')}>
-      <div className="omx-trending-toolbar-left">
+    <div className="omnimux-trending-toolbar" role="group" aria-label={t('trending.filters.label')}>
+      <div className="omnimux-trending-toolbar-left">
         <TrendingSelect
           value={filters.region}
           ariaLabel={t('trending.filter.region')}
           onChange={set('region')}
-          className="omx-trending-select-field"
+          className="omnimux-trending-select-field"
           placeholder={t('trending.region.all')}
           options={toOptions(TRENDING_REGIONS, t)}
         />
@@ -87,7 +87,7 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
           value={filters.industry}
           ariaLabel={t('trending.filter.industry')}
           onChange={set('industry')}
-          className="omx-trending-select-field"
+          className="omnimux-trending-select-field"
           placeholder={t('trending.industry.all')}
           options={toOptions(TRENDING_INDUSTRIES, t)}
         />
@@ -96,54 +96,54 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
           value={filters.views}
           ariaLabel={t('trending.filter.views')}
           onChange={set('views')}
-          className="omx-trending-select-field"
+          className="omnimux-trending-select-field"
           placeholder={t('trending.views.all')}
           options={toOptions(TRENDING_VIEW_BUCKETS, t)}
         />
 
-        <span className="omx-trending-select-with-info">
+        <span className="omnimux-trending-select-with-info">
           <TrendingSelect
             value={filters.revenue}
             ariaLabel={t('trending.filter.revenue')}
             onChange={set('revenue')}
-            className="omx-trending-select-field"
+            className="omnimux-trending-select-field"
             placeholder={t('trending.revenue.all')}
             options={toOptions(TRENDING_REVENUE_BUCKETS, t)}
           />
           <InfoMark label={t('trending.info.revenue')} />
         </span>
 
-        <span className="omx-trending-select-with-info">
+        <span className="omnimux-trending-select-with-info">
           <TrendingSelect
             value={filters.engagement}
             ariaLabel={t('trending.filter.engagement')}
             onChange={set('engagement')}
-            className="omx-trending-select-field"
+            className="omnimux-trending-select-field"
             placeholder={t('trending.engagement.all')}
             options={toOptions(TRENDING_ENGAGEMENT_BUCKETS, t)}
           />
           <InfoMark label={t('trending.info.engagement')} />
         </span>
 
-        <span className="omx-trending-select-with-info">
+        <span className="omnimux-trending-select-with-info">
           <TrendingSelect
             value={filters.roas}
             ariaLabel={t('trending.filter.roas')}
             onChange={set('roas')}
-            className="omx-trending-select-field"
+            className="omnimux-trending-select-field"
             placeholder={t('trending.roas.all')}
             options={toOptions(TRENDING_ROAS_BUCKETS, t)}
           />
           <InfoMark label={t('trending.info.roas')} />
         </span>
 
-        <span className="omx-trending-range">
-          <span className="omx-trending-range-icon" aria-hidden="true">{ICON_CALENDAR}</span>
+        <span className="omnimux-trending-range">
+          <span className="omnimux-trending-range-icon" aria-hidden="true">{ICON_CALENDAR}</span>
           <TrendingSelect
             value={filters.range}
             ariaLabel={t('trending.filter.range')}
             onChange={set('range')}
-            className="omx-trending-select-field"
+            className="omnimux-trending-select-field"
             options={toOptions(TRENDING_RANGES, t)}
           />
         </span>
@@ -151,7 +151,7 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
         {isFiltered ? (
           <button /* exempt-ui01: 筛选复位属于轻量文本动作，非标准控件位 */
             type="button"
-            className="omx-trending-reset"
+            className="omnimux-trending-reset"
             onClick={onReset}
           >
             {t('trending.filter.reset')}
@@ -159,8 +159,8 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
         ) : null}
       </div>
 
-      <div className="omx-trending-toolbar-right">
-        <span className="omx-trending-count">
+      <div className="omnimux-trending-toolbar-right">
+        <span className="omnimux-trending-count">
           {t('trending.filter.count').replace('{count}', String(total))}
         </span>
         <TrendingSelect
@@ -168,7 +168,7 @@ export function TrendingFilterBar({ filters, t, onChange, onReset, total }) {
           ariaLabel={t('trending.filter.sort')}
           onChange={set('sort')}
           align="end"
-          className="omx-trending-select-field"
+          className="omnimux-trending-select-field"
           options={toOptions(TRENDING_SORTS, t)}
         />
       </div>

@@ -81,8 +81,13 @@ export const TRENDING_SORTS = [
   { value: 'roas', labelKey: 'trending.sort.roas' },
 ]
 
-/** 筛选初始态。 */
-export function emptyTrendingFilters() {
+/**
+ * 筛选默认态。
+ *
+ * 注意 `range` 默认为近 7 天（与参考站 "Last 7 days" 一致），因此默认视图
+ * 本来就只呈现 7 天内的样本，不是「全量」。需要全量请显式传 `range: ''`。
+ */
+export function defaultTrendingFilters() {
   return {
     region: '',
     industry: '',
@@ -273,16 +278,19 @@ export const TRENDING_VIDEOS = [
 
 /**
  * 紧凑金额格式化：129000 → $129K，58200000 → $58.2M。
+ *
+ * 先按档缩放到 [1, 1000) 区间再取有效位；缩放值四舍五入后一旦回到 1000
+ * （例如 999_999 → 999.999K），必须向上一档进位，否则会输出 `$1000K` 这种
+ * 未归一的读数。
+ *
  * @param {number} value
  * @returns {string}
  */
 export function formatCompactCurrency(value) {
   const n = Number(value)
   if (!Number.isFinite(n) || n <= 0) return '$0'
-  if (n >= 1_000_000_000) return `$${trimZero(n / 1_000_000_000)}B`
-  if (n >= 1_000_000) return `$${trimZero(n / 1_000_000)}M`
-  if (n >= 1_000) return `$${trimZero(n / 1_000)}K`
-  return `$${Math.round(n)}`
+  const scaled = scaleToUnit(n)
+  return `$${trimZero(scaled.value)}${scaled.unit}`
 }
 
 /**
@@ -293,13 +301,40 @@ export function formatCompactCurrency(value) {
 export function formatCompactNumber(value) {
   const n = Number(value)
   if (!Number.isFinite(n) || n <= 0) return '0'
-  if (n >= 1_000_000_000) return `${trimZero(n / 1_000_000_000)}B`
-  if (n >= 1_000_000) return `${trimZero(n / 1_000_000)}M`
-  if (n >= 1_000) return `${trimZero(n / 1_000)}K`
-  return String(Math.round(n))
+  const scaled = scaleToUnit(n)
+  return `${trimZero(scaled.value)}${scaled.unit}`
 }
 
-/** 保留有效小数位并去掉多余的尾随零（14.52 → "14.52"，1.30 → "1.3"，129.0 → "129"）。 */
+const COMPACT_UNITS = [
+  { threshold: 1_000_000_000_000, divisor: 1_000_000_000_000, unit: 'T' },
+  { threshold: 1_000_000_000, divisor: 1_000_000_000, unit: 'B' },
+  { threshold: 1_000_000, divisor: 1_000_000, unit: 'M' },
+  { threshold: 1_000, divisor: 1_000, unit: 'K' },
+]
+
+/**
+ * 把原始数值换算成「有效读数 + 单位后缀」，并保证进位后的读数仍落在 [1, 1000)。
+ *
+ * @param {number} n 正有限数
+ * @returns {{ value: number, unit: string }}
+ */
+function scaleToUnit(n) {
+  let index = COMPACT_UNITS.findIndex((entry) => n >= entry.threshold)
+  if (index < 0) return { value: n, unit: '' }
+
+  let scaled = n / COMPACT_UNITS[index].divisor
+  // 四舍五入可能把读数推回 1000（999_999 → 999.999K → 1000K），此时升一档重算。
+  if (Math.round(scaled) >= 1000 && index > 0) {
+    index -= 1
+    scaled = n / COMPACT_UNITS[index].divisor
+  }
+  return { value: scaled, unit: COMPACT_UNITS[index].unit }
+}
+
+/**
+ * 保留有效小数位并去掉多余的尾随零（14.52 → "14.52"，1.30 → "1.3"，129.0 → "129"）。
+ * 入参已由 scaleToUnit 归一到 [1, 1000)，因此 1000 只会作为进位判定值出现。
+ */
 function trimZero(n) {
   const fixed = n >= 1000 ? String(Math.round(n)) : n.toFixed(n >= 100 ? 1 : 2)
   return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')
@@ -313,6 +348,10 @@ function toLowerBound(raw) {
 
 /**
  * 按筛选条件过滤。
+ *
+ * 七个维度必须全部真实参与过滤：地区、行业、播放量、预估营收、互动率、ROAS、
+ * 统计时间窗（range ↔ 样本 days）。少一个就会出现「控件能点、数据不变」的假控件。
+ *
  * @param {Array<object>} videos
  * @param {object} filters
  * @returns {Array<object>}
@@ -324,6 +363,7 @@ export function filterTrendingVideos(videos, filters) {
   const minRevenue = toLowerBound(f.revenue)
   const minEngagement = toLowerBound(f.engagement)
   const minRoas = toLowerBound(f.roas)
+  const maxDays = toLowerBound(f.range)
 
   return list.filter((item) => {
     if (!item) return false
@@ -333,6 +373,8 @@ export function filterTrendingVideos(videos, filters) {
     if (minRevenue && !(Number(item.revenue) >= minRevenue)) return false
     if (minEngagement && !(Number(item.engagement) >= minEngagement)) return false
     if (minRoas && !(Number(item.roas) >= minRoas)) return false
+    // 时间窗是「上限」语义：样本距今天数超过窗口即排除
+    if (maxDays && !(Number(item.days) <= maxDays)) return false
     return true
   })
 }

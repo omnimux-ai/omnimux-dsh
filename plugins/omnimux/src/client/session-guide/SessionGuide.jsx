@@ -211,12 +211,16 @@ function BlankSessionGuide({
     showToast(t('guide.popular.placeholder-notice'))
   }
 
-  function handleSubmitDraft(prompt) {
-    setIsInsightModalOpen(false)
-    setIsUrlToVideoOpen(false)
-    setIsRecreateModalOpen(false)
-    setIsBulkCreateAdsOpen(false)
-    setIsCreativePresetsOpen(false)
+  /**
+   * 把一段意图写入官方会话输入框（唯一副作用 = setDraft + 聚焦，从不代发）。
+   *
+   * 模态框与爆款对标吸底输入框共用本函数，差异只在 toast 文案与
+   * `restoreNotice`（用户手动操作时清掉上一轮的「输入框未就绪」提示）。
+   *
+   * @param {string} prompt
+   * @param {{ toastKey: string, restoreNotice?: boolean, copy?: boolean }} options
+   */
+  function applyDraftToComposer(prompt, { toastKey, restoreNotice = false, copy = false }) {
     if (!isSessionActive() || !inputActions?.setDraft) {
       setNotice('unavailable')
       return
@@ -225,33 +229,30 @@ function BlankSessionGuide({
       inputActions.setDraft(prompt)
       attachmentDrafts?.delete(sessionId)
       live.current = { ...live.current, input: { ...input, draft: prompt } }
-      copyText(prompt)
-      showToast(t('guide.insight.copied'))
+      if (copy) copyText(prompt)
+      if (restoreNotice) setNotice(null)
+      showToast(t(toastKey))
       focusEditor()
     } catch {
       setNotice('unavailable')
     }
   }
 
+  function handleSubmitDraft(prompt) {
+    setIsInsightModalOpen(false)
+    setIsUrlToVideoOpen(false)
+    setIsRecreateModalOpen(false)
+    setIsBulkCreateAdsOpen(false)
+    setIsCreativePresetsOpen(false)
+    applyDraftToComposer(prompt, { toastKey: 'guide.insight.copied', copy: true })
+  }
+
   /**
    * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
-   * 与上方模态框同源语义——只预填、不代发，用户保有最终发送权。
+   * 与模态框同源语义——只预填、不代发，用户保有最终发送权。
    */
   function handleTrendingApply(prompt) {
-    if (!isSessionActive() || !inputActions?.setDraft) {
-      setNotice('unavailable')
-      return
-    }
-    try {
-      inputActions.setDraft(prompt)
-      attachmentDrafts?.delete(sessionId)
-      live.current = { ...live.current, input: { ...input, draft: prompt } }
-      setNotice(null)
-      showToast(t('trending.applied'))
-      focusEditor()
-    } catch {
-      setNotice('unavailable')
-    }
+    applyDraftToComposer(prompt, { toastKey: 'trending.applied', restoreNotice: true })
   }
 
   return (

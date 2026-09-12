@@ -69,32 +69,46 @@ export function DockedComposer({
     setDraft(buildClonePrompt(item))
   }, [item?.id])
 
-  // 横向对齐会话宿主
+  // 横向对齐会话宿主。
+  //
+  // 宿主矩形的变化只来自窗口缩放与侧栏折叠（宽度变化但无 window resize），
+  // 纵向滚动不会改变 left/width。因此用 ResizeObserver 观察宿主本身，
+  // 而不是挂 window scroll —— 后者会在每一次滚动事件上 setState 一个新字面量，
+  // 导致吸底框逐帧重渲染。
   useLayoutEffect(() => {
     const node = dockRef.current
     if (!node || typeof window === 'undefined') return undefined
     const doc = node.ownerDocument
+    const host = doc.querySelector(hostSelector)
+
+    let last = null
+    const apply = (left, width) => {
+      if (last && last.left === left && last.width === width) return
+      last = { left, width }
+      setGeometry({ left, width })
+    }
 
     const measure = () => {
-      const host = doc.querySelector(hostSelector)
-      if (!host) {
-        setGeometry(null)
-        return
-      }
-      const rect = host.getBoundingClientRect()
+      const rect = host?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) {
+        if (!last) return
+        last = null
         setGeometry(null)
         return
       }
-      setGeometry({ left: `${Math.round(rect.left)}px`, width: `${Math.round(rect.width)}px` })
+      apply(`${Math.round(rect.left)}px`, `${Math.round(rect.width)}px`)
     }
 
     measure()
+
+    const observer = typeof window.ResizeObserver === 'function' && host
+      ? new window.ResizeObserver(measure)
+      : null
+    observer?.observe(host)
     window.addEventListener('resize', measure)
-    window.addEventListener('scroll', measure, true)
     return () => {
+      observer?.disconnect()
       window.removeEventListener('resize', measure)
-      window.removeEventListener('scroll', measure, true)
     }
   }, [hostSelector, item?.id])
 
@@ -135,27 +149,27 @@ export function DockedComposer({
   return (
     <div
       ref={dockRef}
-      className="omx-trending-dock"
+      className="omnimux-trending-dock"
       style={dockStyle}
       data-omnimux-trending-dock=""
       role="dialog"
       aria-label={t('trending.dock.title')}
       onKeyDown={handleKeyDown}
     >
-      <div className="omx-trending-dock-card">
-        <div className="omx-trending-dock-chips">
-          <span className="omx-trending-dock-thumb">
+      <div className="omnimux-trending-dock-card">
+        <div className="omnimux-trending-dock-chips">
+          <span className="omnimux-trending-dock-thumb">
             <TrendingCover item={item} />
           </span>
-          <span className="omx-trending-dock-chip">
-            <span className="omx-trending-dock-chip-region">{String(item.region || '').toUpperCase()}</span>
-            <span className="omx-trending-dock-chip-label">{item.product || item.title}</span>
+          <span className="omnimux-trending-dock-chip">
+            <span className="omnimux-trending-dock-chip-region">{String(item.region || '').toUpperCase()}</span>
+            <span className="omnimux-trending-dock-chip-label">{item.product || item.title}</span>
           </span>
         </div>
 
         <textarea
           ref={textareaRef}
-          className="omx-trending-dock-input"
+          className="omnimux-trending-dock-input"
           value={draft}
           rows={3}
           spellCheck={false}
@@ -164,32 +178,32 @@ export function DockedComposer({
           onChange={(event) => setDraft(event.target.value)}
         />
 
-        <div className="omx-trending-dock-footer">
-          <div className="omx-trending-dock-footer-left">
+        <div className="omnimux-trending-dock-footer">
+          <div className="omnimux-trending-dock-footer-left">
             <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生图标动作按钮 */
               type="button"
-              className="omx-trending-dock-icon"
+              className="omnimux-trending-dock-icon"
               aria-label={t('trending.dock.attach')}
               title={t('trending.dock.attach')}
             >
               {ICON_ATTACH}
             </button>
-            <span className="omx-trending-dock-expert">
-              <span className="omx-trending-dock-expert-icon" aria-hidden="true">{ICON_EXPERT}</span>
+            <span className="omnimux-trending-dock-expert">
+              <span className="omnimux-trending-dock-expert-icon" aria-hidden="true">{ICON_EXPERT}</span>
               <span>{t('trending.dock.expert')}</span>
             </span>
           </div>
 
-          <div className="omx-trending-dock-footer-right">
+          <div className="omnimux-trending-dock-footer-right">
             {modelLabel ? (
-              <span className="omx-trending-dock-model">
+              <span className="omnimux-trending-dock-model">
                 <span>{modelLabel}</span>
-                <span className="omx-trending-dock-model-caret" aria-hidden="true">{ICON_CHEVRON}</span>
+                <span className="omnimux-trending-dock-model-caret" aria-hidden="true">{ICON_CHEVRON}</span>
               </span>
             ) : null}
             <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生图标动作按钮 */
               type="button"
-              className="omx-trending-dock-icon"
+              className="omnimux-trending-dock-icon"
               aria-label={t('trending.dock.cancel')}
               title={t('trending.dock.cancel')}
               onClick={() => onCancel?.()}
@@ -198,7 +212,7 @@ export function DockedComposer({
             </button>
             <button /* exempt-ui01: session-guide 子树不引入 UI Kit，使用等效原生主行动按钮 */
               type="button"
-              className="omx-trending-dock-send"
+              className="omnimux-trending-dock-send"
               aria-label={t('trending.dock.submit')}
               title={t('trending.dock.submit')}
               disabled={!canSubmit}
