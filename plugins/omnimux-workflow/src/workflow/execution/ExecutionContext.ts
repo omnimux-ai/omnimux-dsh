@@ -20,6 +20,9 @@ import { createWorkflowLogger } from './logger';
 
 const LOG_TAG = 'ExecutionContext';
 
+/** Skip reason recorded on nodes converged by a cancelled execution. */
+const CANCELLED_SKIP_REASON = '执行已取消';
+
 // ============================================================================
 // Status enums (Gxgen ExecutionStatus / NodeStatus, string-valued)
 // ============================================================================
@@ -203,6 +206,37 @@ export interface ExecutionContextOptions {
   breakpoints?: Set<string>;
 }
 
+/**
+ * Converge one non-terminal node state snapshot into a terminal one, in place.
+ *
+ * Termination paths (cancel / timeout / abort / failure) emit no per-node event
+ * for the nodes they interrupt, so a state left at `running` (or at `pending`,
+ * written when recovery re-pends an in-flight node) would live on as a
+ * permanently in-flight node in `toJSON()` snapshots, in the persisted record
+ * and in recovery input. Shared with `executionRecovery`, which converges the
+ * persisted record of a run that timed out across a restart.
+ *
+ * @param status Terminal node status (`error` on failure, `skipped` on cancel).
+ * @param error Error message recorded on the converged state (null on cancel).
+ * @param skipReason Skip reason recorded with a skip convergence.
+ * @param completedAt Settle timestamp (one shared stamp per convergence pass).
+ * @returns true when the state was non-terminal and got converged.
+ */
+export function settleNodeState(
+  state: NodeStateSnapshot,
+  status: typeof NodeStatus.ERROR | typeof NodeStatus.SKIPPED,
+  error: string | null,
+  skipReason?: string,
+  completedAt: number = Date.now(),
+): boolean {
+  if (state.status !== NodeStatus.RUNNING && state.status !== NodeStatus.PENDING) return false;
+  state.status = status;
+  state.completedAt = completedAt;
+  state.error = error;
+  if (skipReason !== undefined) state.skipReason = skipReason;
+  return true;
+}
+
 export class ExecutionContext {
   readonly id: string;
   readonly workflowId: string;
@@ -321,12 +355,15 @@ export class ExecutionContext {
     this.completedAt = Date.now();
     this.error = error instanceof Error ? error.message : String(error);
     const durationMs = this.completedAt - (this.startedAt ?? this.completedAt);
+    // In-flight siblings (maxParallel > 1) get no node_error of their own.
+    const settled = this.settleInFlightNodes(NodeStatus.ERROR, this.error);
 
     logger.error('execution failed', {
       executionId: this.id,
       error: this.error,
       failedNodeId: nodeId,
       durationMs,
+      settledNodes: settled,
     });
 
     this.events.emit('execution_error', {
@@ -339,15 +376,21 @@ export class ExecutionContext {
   }
 
   cancel(): void {
+    // Idempotent: a timeout cleanup cancels the run before the scheduler loop
+    // observes the abort, and only the first caller may stamp the terminal state.
+    if (this.status === ExecutionStatus.CANCELLED) return;
+
     this.status = ExecutionStatus.CANCELLED;
     this.completedAt = Date.now();
     const durationMs = this.startedAt !== null ? this.completedAt - this.startedAt : 0;
+    const settled = this.settleInFlightNodes(NodeStatus.SKIPPED, null, CANCELLED_SKIP_REASON);
 
     logger.info('execution cancelled', {
       executionId: this.id,
       durationMs,
       completedNodes: this.completedNodes,
       totalNodes: this.totalNodes,
+      settledNodes: settled,
     });
 
     this.events.emit('execution_cancelled', {
@@ -458,6 +501,29 @@ export class ExecutionContext {
       nodeId,
       reason,
     });
+  }
+
+  /**
+   * Converge every non-terminal node state of this context (see
+   * `settleNodeState` for the rationale).
+   *
+   * @param status Terminal node status (`error` for a failed run, `skipped`
+   *   for a cancelled one).
+   * @param error Error message recorded on the converged states (null on cancel).
+   * @param skipReason Optional skip reason recorded with a skip convergence.
+   * @returns The converged node ids (logging / assertions).
+   */
+  private settleInFlightNodes(
+    status: typeof NodeStatus.ERROR | typeof NodeStatus.SKIPPED,
+    error: string | null,
+    skipReason?: string,
+  ): string[] {
+    const settled: string[] = [];
+    const completedAt = Date.now();
+    for (const [nodeId, state] of this.nodeStates) {
+      if (settleNodeState(state, status, error, skipReason, completedAt)) settled.push(nodeId);
+    }
+    return settled;
   }
 
   // ========================================================================
