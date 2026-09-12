@@ -2,15 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, ModalDialog } from 'dsh-ui-kit';
 import { ProductPickerCard } from './ProductPickerCard.jsx';
 import { collectCategories, filterProducts, createSafeT } from './picker-model.js';
-import { PICKER_DIALOG_CLASS, PICKER_LAYOUTS, ensurePickerDialogStyles, pickerDialogWidth } from '../picker-dialog/pickerDialogContract.js';
+import { PICKER_DIALOG_VARIANT_CLASS, PICKER_LAYOUTS, ensurePickerDialogStyles, pickerDialogClassName, pickerDialogWidth } from '../picker-dialog/pickerDialogContract.js';
 import { ModalCloseButton } from '../ModalCloseButton.jsx';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
 
 const CSS = `
-.omx-product-pick {
-  /* 顶部 Tab 布局：宽度 = 4 列卡片 + 3 个列间距（无左侧分类栏），由契约推导 */
+/* 顶部 Tab 布局：宽度 = 4 列卡片 + 3 个列间距（无左侧分类栏）。
+   变量必须挂在弹窗自身的变体类上——挂到 .omx-product-pick（子元素）上，父元素读不到，会退化为 3 列。 */
+.${PICKER_DIALOG_VARIANT_CLASS.product} {
   --omnimux-pick-dialog-width: ${pickerDialogWidth(PICKER_LAYOUTS.product)};
+}
+.omx-product-pick {
   display: flex; flex-direction: column; width: 100%; height: 480px; min-height: 0;
   max-height: calc(80vh - 190px);
   box-sizing: border-box;
@@ -264,7 +267,7 @@ export function ProductPicker({
       onClose={onClose}
       title={safeT('productPicker.title')}
       size="lg"
-      className={PICKER_DIALOG_CLASS}
+      className={pickerDialogClassName('product')}
       footer={
         <div className="omx-product-pick__footer">
           {selectedProduct ? (

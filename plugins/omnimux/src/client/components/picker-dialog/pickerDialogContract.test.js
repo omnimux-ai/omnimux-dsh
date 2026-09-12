@@ -4,13 +4,30 @@ import {
   PICKER_CARD_WIDTH,
   PICKER_DIALOG_CLASS,
   PICKER_DIALOG_SHELL_CSS,
+  PICKER_DIALOG_VARIANT_CLASS,
   PICKER_GRID_GAP,
   PICKER_LAYOUTS,
   PICKER_ROOT_CLASSES,
   ensurePickerDialogStyles,
+  pickerDialogClassName,
   pickerDialogWidth,
   pickerExpectedWidth,
 } from './pickerDialogContract.js';
+
+test('dialog className carries a variant class so the width variable lands on the dialog itself', () => {
+  assert.equal(pickerDialogClassName('product'), `${PICKER_DIALOG_CLASS} omx-pick-dialog--product`);
+  assert.equal(pickerDialogClassName('assets'), `${PICKER_DIALOG_CLASS} omx-pick-dialog--assets`);
+  assert.throws(() => pickerDialogClassName('nope'), /unknown picker variant/);
+  assert.equal(
+    PICKER_DIALOG_SHELL_CSS.includes('var(--omnimux-pick-dialog-width'),
+    true,
+    'shell must consume the per-picker width variable',
+  );
+  assert.ok(
+    !PICKER_DIALOG_SHELL_CSS.includes(`.${PICKER_DIALOG_VARIANT_CLASS.product} {`),
+    'variant geometry belongs to the picker files, not the shell',
+  );
+});
 
 test('each picker derives its width from its own layout geometry', () => {
   // 产品库：顶部 Tab，无左侧栏，4 列
