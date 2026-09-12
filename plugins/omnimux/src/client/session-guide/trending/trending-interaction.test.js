@@ -11,8 +11,6 @@ import {
   TRENDING_INDUSTRIES,
   TRENDING_RANGES,
   TRENDING_REGIONS,
-  TRENDING_REVENUE_BUCKETS,
-  TRENDING_ROAS_BUCKETS,
   defaultTrendingFilters,
   filterTrendingVideos,
   TRENDING_VIDEOS,
@@ -89,9 +87,7 @@ test('trending 守卫：每个筛选维度必须真实接入过滤（假控件�
     { key: 'region', buckets: TRENDING_REGIONS, stricter: 'partition' },
     { key: 'industry', buckets: TRENDING_INDUSTRIES, stricter: 'partition' },
     { key: 'views', buckets: TRENDING_VIEW_BUCKETS, stricter: 'larger' },
-    { key: 'revenue', buckets: TRENDING_REVENUE_BUCKETS, stricter: 'larger' },
     { key: 'engagement', buckets: TRENDING_ENGAGEMENT_BUCKETS, stricter: 'larger' },
-    { key: 'roas', buckets: TRENDING_ROAS_BUCKETS, stricter: 'larger' },
     { key: 'range', buckets: TRENDING_RANGES, stricter: 'smaller' },
   ]
 

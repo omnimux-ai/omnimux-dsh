@@ -4,12 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   TRENDING_ACCENT_COUNT,
+  TRENDING_DATA_VERSION,
   TRENDING_ENGAGEMENT_BUCKETS,
   TRENDING_INDUSTRIES,
   TRENDING_RANGES,
   TRENDING_REGIONS,
-  TRENDING_REVENUE_BUCKETS,
-  TRENDING_ROAS_BUCKETS,
   TRENDING_SORTS,
   TRENDING_VIDEOS,
   TRENDING_VIEW_BUCKETS,
@@ -18,49 +17,43 @@ import {
   defaultTrendingFilters,
   filterTrendingVideos,
   findTrendingVideo,
-  formatCompactCurrency,
   formatCompactNumber,
+  formatEngagementPercent,
   selectTrendingVideos,
   sortTrendingVideos,
 } from './trending-data.js'
+import { guideEn, guideZh } from '../catalog.js'
 
-test('trending: 紧凑数字与货币格式化对齐参考站读数', () => {
-  assert.equal(formatCompactCurrency(129000), '$129K')
-  assert.equal(formatCompactCurrency(58200000), '$58.2M')
-  assert.equal(formatCompactCurrency(1300000), '$1.3M')
-  assert.equal(formatCompactCurrency(0), '$0')
-  assert.equal(formatCompactCurrency(-5), '$0')
-
+test('trending: 紧凑数字与互动率读数对齐卡片', () => {
   assert.equal(formatCompactNumber(14520000), '14.52M')
   assert.equal(formatCompactNumber(9530000), '9.53M')
   assert.equal(formatCompactNumber(2400), '2.4K')
   assert.equal(formatCompactNumber(0), '0')
+
+  assert.equal(formatEngagementPercent(7.4), '7.4%')
+  assert.equal(formatEngagementPercent(8), '8%')
+  assert.equal(formatEngagementPercent(6.84), '6.8%')
+  assert.equal(formatEngagementPercent(9.06), '9.1%')
+  // 缺字段的样本不得渲染出 NaN%
+  assert.equal(formatEngagementPercent(0), '0%')
+  assert.equal(formatEngagementPercent(-5), '0%')
+  assert.equal(formatEngagementPercent(undefined), '0%')
+  assert.equal(formatEngagementPercent(Number.NaN), '0%')
 })
 
 test('trending: 格式化跨档必须进位，不得出现 1000K/1000M/1000B', () => {
   // 回归护栏：先除档再四舍五入会把 999_999 推成 999.999K → 1000K
-  assert.equal(formatCompactCurrency(999999), '$1M')
-  assert.equal(formatCompactCurrency(999999999), '$1B')
-  assert.equal(formatCompactCurrency(999999999999), '$1T')
   assert.equal(formatCompactNumber(999999), '1M')
   assert.equal(formatCompactNumber(999999999), '1B')
-
-  // 档位边界两侧各自取正确的单位
-  assert.equal(formatCompactCurrency(999), '$999')
-  assert.equal(formatCompactCurrency(1000), '$1K')
-  assert.equal(formatCompactCurrency(999499), '$999.5K')
-  assert.equal(formatCompactCurrency(1000000), '$1M')
 
   // 任何输入都不得产出四位数读数
   for (const value of [
     999, 1000, 999499, 999999, 1000000, 999999999, 1000000000, 999999999999,
   ]) {
-    for (const text of [formatCompactCurrency(value), formatCompactNumber(value)]) {
-      assert.ok(
-        !/^\$?1000(\.[0-9]+)?[KMBT]$/.test(text),
-        `${value} 产出了未归一的读数 ${text}`,
-      )
-    }
+    assert.ok(
+      !/^1000(\.[0-9]+)?[KMBT]$/.test(formatCompactNumber(value)),
+      `${value} 产出了未归一的读数 ${formatCompactNumber(value)}`,
+    )
   }
 })
 
@@ -81,10 +74,23 @@ test('trending: 样本库结构自洽（唯一 id、必填字段、合法枚举�
     assert.ok(industries.has(item.industry), `非法 industry: ${item.industry}`)
     assert.ok(archetypes.has(item.archetype), `非法 archetype: ${item.archetype}`)
     assert.ok(Number(item.views) > 0, `views 必须为正: ${item.id}`)
-    assert.ok(Number(item.revenue) > 0, `revenue 必须为正: ${item.id}`)
+    assert.ok(Number(item.engagement) > 0, `engagement 必须为正: ${item.id}`)
     assert.ok(String(item.title || '').length > 0, `title 不可为空: ${item.id}`)
     assert.ok(String(item.product || '').length > 0, `product 不可为空: ${item.id}`)
   }
+})
+
+test('trending: 契约 v2 不得再携带无数据源的营收 / ROAS', () => {
+  assert.equal(TRENDING_DATA_VERSION, 2, '下线营收 / ROAS 属于破坏性字段变更，必须升契约版本')
+
+  for (const item of TRENDING_VIDEOS) {
+    assert.equal('revenue' in item, false, `样本仍带 revenue 字段: ${item.id}`)
+    assert.equal('roas' in item, false, `样本仍带 roas 字段: ${item.id}`)
+  }
+
+  const filters = defaultTrendingFilters()
+  assert.equal('revenue' in filters, false, '默认筛选态不得再带 revenue')
+  assert.equal('roas' in filters, false, '默认筛选态不得再带 roas')
 })
 
 test('trending: 各维度筛选与组合筛选', () => {
@@ -109,15 +115,9 @@ test('trending: 各维度筛选与组合筛选', () => {
   assert.ok(highViews.length > 0)
   assert.ok(highViews.every((it) => it.views >= 10000000))
 
-  const highRevenue = filterTrendingVideos(TRENDING_VIDEOS, { ...base, revenue: '1000000' })
-  assert.ok(highRevenue.length > 0)
-  assert.ok(highRevenue.every((it) => it.revenue >= 1000000))
-
   const highEngagement = filterTrendingVideos(TRENDING_VIDEOS, { ...base, engagement: '8' })
+  assert.ok(highEngagement.length > 0, '互动率档位必须仍有命中：空集会让 every() 恒真而假通过')
   assert.ok(highEngagement.every((it) => it.engagement >= 8))
-
-  const highRoas = filterTrendingVideos(TRENDING_VIDEOS, { ...base, roas: '6' })
-  assert.ok(highRoas.every((it) => it.roas >= 6))
 
   const combined = filterTrendingVideos(TRENDING_VIDEOS, {
     ...base,
@@ -139,9 +139,9 @@ test('trending: 排序为降序、稳定且不改动入参', () => {
     assert.ok(byViews[i - 1].views >= byViews[i].views, '播放量必须降序')
   }
 
-  const byRevenue = sortTrendingVideos(source, 'revenue')
-  for (let i = 1; i < byRevenue.length; i += 1) {
-    assert.ok(byRevenue[i - 1].revenue >= byRevenue[i].revenue, '营收必须降序')
+  const byEngagement = sortTrendingVideos(source, 'engagement')
+  for (let i = 1; i < byEngagement.length; i += 1) {
+    assert.ok(byEngagement[i - 1].engagement >= byEngagement[i].engagement, '互动率必须降序')
   }
 
   assert.deepEqual(source.map((it) => it.id), before, '排序不得改动入参顺序')
@@ -155,11 +155,11 @@ test('trending: 排序为降序、稳定且不改动入参', () => {
 })
 
 test('trending: selectTrendingVideos 先筛后排并可组合扫描器', () => {
-  const list = selectTrendingVideos({ ...defaultTrendingFilters(), region: 'ID', sort: 'revenue' })
+  const list = selectTrendingVideos({ ...defaultTrendingFilters(), region: 'ID', sort: 'engagement' })
   assert.ok(list.length > 0)
   assert.ok(list.every((it) => it.region === 'ID'))
   for (let i = 1; i < list.length; i += 1) {
-    assert.ok(list[i - 1].revenue >= list[i].revenue)
+    assert.ok(list[i - 1].engagement >= list[i].engagement)
   }
 })
 
@@ -194,11 +194,9 @@ test('trending: 档位定义完整且与筛选语义一致', () => {
     TRENDING_REGIONS,
     TRENDING_INDUSTRIES,
     TRENDING_VIEW_BUCKETS,
-    TRENDING_REVENUE_BUCKETS,
     TRENDING_ENGAGEMENT_BUCKETS,
-    TRENDING_ROAS_BUCKETS,
   ]) {
-    assert.equal(buckets[0].value, '', '每个筛选维度都必须提供「不限」档')
+    assert.equal(buckets[0].value, '', '每个筛选维度都必须提供默认档')
     for (const bucket of buckets.slice(1)) {
       assert.ok(bucket.value !== '', '非默认档位必须携带下界值')
       assert.ok(
@@ -209,7 +207,7 @@ test('trending: 档位定义完整且与筛选语义一致', () => {
   }
   assert.ok(TRENDING_RANGES.every((r) => r.value && r.labelKey))
   assert.ok(TRENDING_SORTS.every((s) => s.value && s.labelKey))
-  assert.deepEqual(TRENDING_SORTS.map((s) => s.value), ['views', 'revenue', 'engagement', 'roas'])
+  assert.deepEqual(TRENDING_SORTS.map((s) => s.value), ['views', 'engagement'])
 })
 
 function read(rel) {
@@ -295,9 +293,7 @@ test('trending: 默认档位文案不带「不限」，工具栏不显示命中�
 
   for (const key of [
     'trending.views.all',
-    'trending.revenue.all',
     'trending.engagement.all',
-    'trending.roas.all',
   ]) {
     const line = catalog.split('\n').find((entry) => entry.includes(`"${key}":`))
     assert.ok(line, `缺少默认档位键位 ${key}`)
@@ -310,13 +306,72 @@ test('trending: 默认档位文案不带「不限」，工具栏不显示命中�
   assert.ok(!styles.includes('omnimux-trending-count'), '命中计数样式必须随组件一并删除')
 })
 
-test('trending: i18n 双语键位齐全', () => {
+test('trending: 无数据源维度不得回到 UI（营收 / ROAS 下线护栏）', () => {
   const catalog = read('../catalog.js')
+  const bar = read('./TrendingFilterBar.jsx')
+  const card = read('./TrendingVideoCard.jsx')
+  const data = read('./trending-data.js')
+
+  // 不再有「预估营收 / ROAS」任何入口或展示
+  for (const key of [
+    'trending.revenue.',
+    'trending.roas.',
+    'trending.metric.revenue',
+    'trending.sort.revenue',
+    'trending.sort.roas',
+    'trending.filter.revenue',
+    'trending.filter.roas',
+    'trending.info.revenue',
+    'trending.info.roas',
+  ]) {
+    assert.ok(!catalog.includes(`"${key}`), `字典里不得再出现 ${key} 键位`)
+  }
+  for (const symbol of [
+    'TRENDING_REVENUE_BUCKETS',
+    'TRENDING_ROAS_BUCKETS',
+    'filters.revenue',
+    'filters.roas',
+    'trending.revenue',
+    'trending.roas',
+  ]) {
+    assert.ok(!bar.includes(symbol), `筛选工具栏不得再引用 ${symbol}`)
+  }
+  assert.ok(!card.includes('revenue') && !card.includes('formatCompactCurrency'), '卡片不得再渲染营收指标')
+  assert.ok(
+    card.includes('formatEngagementPercent') && card.includes("t('trending.metric.engagement')"),
+    '卡片第二指标必须换成互动率',
+  )
+  assert.ok(!data.includes('formatCompactCurrency'), '无数据源的金额格式化函数必须一并删除')
+})
+
+test('trending: 副标题不得再承诺实时数据，且必须标注示例数据', () => {
+  const catalog = read('../catalog.js')
+  const section = read('./TrendingReplicateSection.jsx')
+
+  const subtitleLines = catalog.split('\n').filter((line) => line.includes('"trending.subtitle"'))
+  assert.equal(subtitleLines.length, 2, '副标题必须中英各一条')
+  for (const line of subtitleLines) {
+    for (const forbidden of ['实时', '跑量', 'real-time', 'realtime', 'live ad performance', 'live data', 'live metrics', 'live ranking']) {
+      assert.ok(!line.includes(forbidden), `副标题仍在承诺实时数据（${forbidden}）：${line.trim()}`)
+    }
+  }
+
+  for (const key of ['trending.sample.badge', 'trending.sample.hint']) {
+    assert.equal(typeof guideZh[key], 'string', `中文缺少键位 ${key}`)
+    assert.equal(typeof guideEn[key], 'string', `英文缺少键位 ${key}`)
+  }
+  assert.ok(section.includes("t('trending.sample.badge')"), '板块必须渲染示例数据标注')
+  assert.ok(section.includes("t('trending.sample.hint')"), '示例数据标注必须带来源说明')
+})
+
+test('trending: i18n 双语键位齐全', () => {
   const keys = [
     'trending.title',
     'trending.subtitle',
+    'trending.sample.badge',
+    'trending.sample.hint',
     'trending.card.recreate',
-    'trending.metric.revenue',
+    'trending.metric.engagement',
     'trending.metric.views',
     'trending.empty',
     'trending.applied',
@@ -324,24 +379,33 @@ test('trending: i18n 双语键位齐全', () => {
     'trending.filter.reset',
   ]
   for (const key of keys) {
-    const occurrences = catalog.split(`"${key}":`).length - 1
-    assert.equal(occurrences, 2, `键位 ${key} 必须在中英双语中各出现一次（实际 ${occurrences} 次）`)
+    assert.equal(typeof guideZh[key], 'string', `中文缺少键位 ${key}`)
+    assert.equal(typeof guideEn[key], 'string', `英文缺少键位 ${key}`)
+    assert.ok(
+      String(guideZh[key]).trim() && String(guideEn[key]).trim(),
+      `键位 ${key} 不得为空`,
+    )
   }
+
+  // trending 命名空间必须整体中英一一对应。
+  // 只在源文件里按字符串计数是不够的：两边同时缺失时计数仍等于 2，单边缺失也发现不了。
+  const zhKeys = Object.keys(guideZh).filter((key) => key.startsWith('trending.')).sort()
+  const enKeys = Object.keys(guideEn).filter((key) => key.startsWith('trending.')).sort()
+  assert.ok(zhKeys.length > 0, 'trending 命名空间不得为空')
+  assert.deepEqual(zhKeys, enKeys, 'trending 命名空间必须中英一一对应，不得有单边键位')
 
   // 档位 labelKey 必须都能在字典中解析
   const catalogue = new Set([
     ...TRENDING_REGIONS,
     ...TRENDING_INDUSTRIES,
     ...TRENDING_VIEW_BUCKETS,
-    ...TRENDING_REVENUE_BUCKETS,
     ...TRENDING_ENGAGEMENT_BUCKETS,
-    ...TRENDING_ROAS_BUCKETS,
     ...TRENDING_RANGES,
     ...TRENDING_SORTS,
   ].map((b) => b.labelKey).filter(Boolean))
 
   for (const key of catalogue) {
-    const occurrences = catalog.split(`"${key}":`).length - 1
-    assert.equal(occurrences, 2, `档位键位 ${key} 必须在中英双语中各出现一次（实际 ${occurrences} 次）`)
+    assert.equal(typeof guideZh[key], 'string', `档位键位中文缺失 ${key}`)
+    assert.equal(typeof guideEn[key], 'string', `档位键位英文缺失 ${key}`)
   }
 })
