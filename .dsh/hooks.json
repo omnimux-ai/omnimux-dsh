@@ -21,6 +21,17 @@
           "timeout": 5
         }
       ]
+    },
+    {
+      "matcher": "edit|write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node scripts/guard-quality-loop.mjs",
+          "statusMessage": "🚦 检查质量五步闭环硬门禁（Spec先行与实机演练校验）",
+          "timeout": 5
+        }
+      ]
     }
   ]
 }
