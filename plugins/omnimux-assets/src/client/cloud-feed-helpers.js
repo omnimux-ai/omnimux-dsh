@@ -1,22 +1,12 @@
 /**
  * Pure helpers for the cloud assets feed: page-list arithmetic, scope naming,
- * card-kind classification and row-shape normalization. Kept free of React and
- * `fetch` so the paging contract can be tested directly.
+ * card-kind classification, the audio card's colour rotation, and row-shape
+ * normalization. Kept free of React and `fetch` so the paging contract can be
+ * tested directly.
  */
 
 /** Rows per page. Mirrors `PAGE_SIZE` in the catalog build script. */
 export const CLOUD_PAGE_SIZE = 24
-
-/**
- * The one category that owns a second navigation level.
- *
- * The knowledge, character, scene, prop and style entries carry
- * `sub_categories` in the manifest too, but those are counting buckets, not
- * switchable filters: opening them under a selected 知识包 put 全部声音 next to
- * 脚本提示词 / 知识笔记 / 短剧拆镜. The second level is therefore a fixed rule
- * about the audio tab, not a property any category can opt into.
- */
-export const CLOUD_SUBNAV_CATEGORY = 'audio'
 
 /**
  * Scope id for a category (+ optional sub-category).
@@ -69,21 +59,26 @@ export function findCategory(manifest, category) {
   return manifest.categories.find((row) => row?.id === category) ?? null
 }
 
-/** No second level, shared so a rejected category never allocates one. */
+/** No second level, shared so a category without one never allocates it. */
 const NO_SECOND_LEVEL = { items: [], hasSecondLevel: false }
 
 /**
  * Sub-category tabs for a category, always led by the "all" pseudo-entry.
  *
- * Only audio has a second level (see `CLOUD_SUBNAV_CATEGORY`); every other
- * category reports `hasSecondLevel: false` whatever its manifest entry carries.
- * Within audio an empty sub-category is still dropped, so a tab never opens onto
- * nothing.
+ * A category owns a second level exactly when the manifest gives it at least one
+ * populated sub-category — 声音 (配音 / 音效 / 背景音), 素材 (绿幕 / 钩子 /
+ * 表情包) and 角色 (女性 / 男性 / 生活居家 / 职场商务) all qualify; 场景 and the
+ * deliberately empty 道具 do not. The rule is read from the data rather than
+ * hard-coded per category, so a category that gains or loses a shelf follows the
+ * layout without a code change.
+ *
+ * The first entry is always `''` — 全部 — carrying the category's own total, so
+ * the second level never opens onto an empty selection and no category inherits
+ * another one's wording.
  * @param {any} manifest
  * @param {string} category
  */
 export function subCategoryTabs(manifest, category) {
-  if (category !== CLOUD_SUBNAV_CATEGORY) return NO_SECOND_LEVEL
   const entry = findCategory(manifest, category)
   const subs = Array.isArray(entry?.sub_categories)
     ? entry.sub_categories.filter((row) => row && Number(row.total) > 0)
@@ -103,9 +98,9 @@ export function subCategoryTabs(manifest, category) {
  *
  * `hasCover` / `hasMedia` are what tell a card whether it has a picture before
  * anything is requested. The builder leaves both locators empty for a text row —
- * the 知识包 case (脚本提示词, 知识笔记, 短剧拆镜) — and a card that has to learn
- * that from a failed image request paints a grey plate with a meaningless icon in
- * the meantime.
+ * the 知识包 case (脚本提示词 / 短剧拆镜) — and a card that has to learn that
+ * from a failed image request paints a grey plate with a meaningless icon in the
+ * meantime.
  * @param {any} row
  */
 export function normalizeCloudAsset(row) {
@@ -148,6 +143,32 @@ export function cloudCardKind(asset) {
   if (asset?.mediaType === 'audio') return hasMedia && asset?.playable !== false ? 'audio' : 'text'
   if (asset?.hasCover === true || hasMedia) return 'media'
   return 'text'
+}
+
+/**
+ * The restrained dark washes an audio card rotates through.
+ *
+ * 深靛青 / 墨绿 / 曜蓝 / 暗紫夜 / 深炭黑 — five surfaces dark enough to carry
+ * white text in either theme and never brighter than the chrome around them.
+ * Declared here as names so the colour itself stays in the stylesheet.
+ */
+export const CLOUD_AUDIO_THEMES = ['indigo', 'jade', 'azure', 'violet', 'charcoal']
+
+/**
+ * Pick one audio theme for a row.
+ *
+ * Deterministic on the row id, so a card keeps its wash across renders, pages and
+ * category switches instead of flickering as the grid reflows.
+ * @param {string} id
+ * @returns {string} one of `CLOUD_AUDIO_THEMES`
+ */
+export function cloudAudioTheme(id) {
+  const seed = String(id ?? '')
+  let hash = 2166136261
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619) >>> 0
+  }
+  return CLOUD_AUDIO_THEMES[hash % CLOUD_AUDIO_THEMES.length]
 }
 
 /**

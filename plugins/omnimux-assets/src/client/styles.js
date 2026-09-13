@@ -873,9 +873,30 @@ export const ASSETS_CSS = `
   height: 164px;
   aspect-ratio: auto;
 }
-/* 声音：一块波形预览区，点一下即播即停。 */
+/* 声音：一块暗调微彩色波形预览区，点一下即播即停。
+   底色仍由官方 Token 打底，上面叠一层极低饱和的深色微彩：深靛青 / 墨绿 / 曜蓝 /
+   暗紫夜 / 深炭黑五种，按行 id 确定性轮换。色相压到最低、明度压到最深，浅色和深色
+   主题下都保持同一块暗色板，只用来让连续的音效卡片彼此可分辨，不出现任何亮色。
+   这里是媒体展示面（等同缩略图底），不是界面控件色，故按 design.md 的特化场景豁免。 */
 .omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb {
   height: 112px;
+  background-color: var(--dsw-alias-bg-elevated);
+  background-image: linear-gradient(135deg, rgba(18, 22, 30, 0.94), rgba(10, 12, 17, 0.98)); /* exempt-ui03 音效卡片暗调底：媒体展示面，非控件色 */
+}
+.omnimux-assets-cloud-card--audio[data-theme="indigo"] .omnimux-assets-cloud-thumb {
+  background-image: linear-gradient(135deg, rgba(24, 32, 60, 0.94), rgba(12, 16, 30, 0.98)); /* exempt-ui03 深靛青微彩 */
+}
+.omnimux-assets-cloud-card--audio[data-theme="jade"] .omnimux-assets-cloud-thumb {
+  background-image: linear-gradient(135deg, rgba(20, 42, 38, 0.94), rgba(10, 20, 19, 0.98)); /* exempt-ui03 墨绿微彩 */
+}
+.omnimux-assets-cloud-card--audio[data-theme="azure"] .omnimux-assets-cloud-thumb {
+  background-image: linear-gradient(135deg, rgba(20, 36, 58, 0.94), rgba(10, 17, 28, 0.98)); /* exempt-ui03 曜蓝微彩 */
+}
+.omnimux-assets-cloud-card--audio[data-theme="violet"] .omnimux-assets-cloud-thumb {
+  background-image: linear-gradient(135deg, rgba(38, 26, 56, 0.94), rgba(17, 12, 26, 0.98)); /* exempt-ui03 暗紫夜微彩 */
+}
+.omnimux-assets-cloud-card--audio[data-theme="charcoal"] .omnimux-assets-cloud-thumb {
+  background-image: linear-gradient(135deg, rgba(32, 34, 38, 0.94), rgba(15, 17, 19, 0.98)); /* exempt-ui03 深炭黑微彩 */
 }
 .omnimux-assets-cloud-preview {
   position: absolute;
@@ -908,10 +929,10 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-primary-foreground);
   pointer-events: none;
 }
-/* Top-right hover controls: one mounts the asset into the conversation, the
-   other copies it into the local library. Both are neutral plates that invert to
-   ink under the pointer; neither carries a hue of its own.
-   The cluster is pinned to the corner — absolute, above the card body — so it
+/* Top-right hover control: the one route out of a card, which mounts the asset
+   into the conversation. A neutral plate that inverts to ink under the pointer;
+   it carries no hue of its own.
+   The control is pinned to the corner — absolute, above the card body — so it
    never joins the flow and never lands in the middle of the text. */
 .omnimux-assets-cloud-actions {
   position: absolute;
@@ -922,8 +943,7 @@ export const ASSETS_CSS = `
   align-items: center;
   gap: 6px;
 }
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat,
-.omnimux-assets-cloud-card .omnimux-assets-cloud-save {
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat {
   border-radius: 8px;
   background: var(--dsw-alias-bg-elevated);
   border-color: var(--dsw-alias-border-l2);
@@ -932,32 +952,23 @@ export const ASSETS_CSS = `
   transition: opacity 0.16s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-chat,
-.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat,
-.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-save,
-.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-save {
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat {
   opacity: 1;
 }
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]),
-.omnimux-assets-cloud-card .omnimux-assets-cloud-save:hover:not(:disabled):not([aria-disabled="true"]) {
-  background: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-label-primary);
-  color: var(--dsw-alias-label-primary-foreground);
-}
-/* Saved is a state, not a hover: the inked plate and its check stay on screen
-   after the pointer leaves, so the card still reports 已收藏 at rest. */
-.omnimux-assets-cloud-card .omnimux-assets-cloud-save[aria-pressed="true"] {
-  opacity: 1;
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-label-primary-foreground);
 }
 /* ---- card bodies ---------------------------------------------------------
    Three kinds, one card (see cloudCardKind): 图片/视频 = 缩略图 + 一行标题；
-   声音 = 波形预览区 + 一句音色描述；文本类（知识包：脚本提示词 / 知识笔记 /
-   短剧拆镜）= 标题 + 描述。文本类没有封面也没有可播媒体，画一块占位图只会把
-   标题和描述挤成一行省略，所以它直接按阅读版式排版。 */
+   声音 = 暗调波形预览区 + 一句音色描述；文本类（知识包：脚本提示词 / 短剧拆镜）
+   = 标题 + 描述。文本类没有封面也没有可播媒体，画一块占位图只会把标题和描述
+   挤成一行省略，所以它直接按阅读版式排版。 */
 
-/* 声音：波形由卡片自己按行 id 画，整块缩略图就是播放键。 */
+/* 声音：波形由卡片自己按行 id 画，整块缩略图就是播放键。
+   波形颜色跟着暗色底板走，直接取一层浅白：底板在两种主题下都是同一块深色（见上），
+   而 label token 会随主题在两极之间反色，浅色主题下正好和底板撞成一片。 */
 .omnimux-assets-cloud-wave {
   display: flex;
   align-items: center;
@@ -967,7 +978,7 @@ export const ASSETS_CSS = `
   height: 100%;
   padding: 0 18px;
   box-sizing: border-box;
-  color: var(--dsw-alias-label-tertiary);
+  color: rgba(255, 255, 255, 0.5); /* exempt-ui03 暗色底板上的波形色，需跨主题恒定 */
   /* The plate is decoration: the thumbnail around it owns the click. */
   pointer-events: none;
   transition: color 0.15s ease;
@@ -982,20 +993,20 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-cloud-card--audio:hover .omnimux-assets-cloud-wave,
 .omnimux-assets-cloud-card--audio:focus-within .omnimux-assets-cloud-wave {
-  color: var(--dsw-alias-label-primary);
+  color: rgba(255, 255, 255, 0.92); /* exempt-ui03 暗色底板上的波形悬停色 */
 }
-/* 声音卡片的描述就是那句音色说明，最多两行。 */
+/* 声音卡片的描述就是那句音色说明，一行。 */
 .omnimux-assets-cloud-desc {
   margin: 0;
   font-size: 12px;
   line-height: 17px;
   color: var(--dsw-alias-label-tertiary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* 文本类：标题最多 2 行、描述最多 4 行。标题给右上角那两块悬浮牌子让出位置，
+/* 文本类：标题最多 2 行、描述最多 4 行。标题给右上角那块悬浮牌子让出位置，
    所以按钮展开时不会盖住任何一行字。 */
 .omnimux-assets-cloud-card--text .omnimux-assets-card-body {
   flex: 1;
@@ -1011,9 +1022,9 @@ export const ASSETS_CSS = `
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  /* 14px 卡片内边距 + 64px：两块 28px 的牌子加 6px 间距、离右边缘 8px，标题文字
-     正好停在它们左边，按钮展开时一行都不压。 */
-  padding-right: 64px;
+  /* 14px 卡片内边距 + 32px：一块 28px 的牌子离右边缘 8px，标题文字正好停在它
+     左边，按钮展开时一行都不压。 */
+  padding-right: 32px;
 }
 .omnimux-assets-cloud-card--text .omnimux-assets-cloud-desc {
   -webkit-line-clamp: 4;

@@ -63,8 +63,13 @@ describe('AssetPreviewModal component contract and tokens compliance', () => {
     // Image contain style
     assert.match(stylesJs, /\.omnimux-assets-modal-image\s*\{[\s\S]*?object-fit:\s*contain;/)
 
-    // No bare rgba or hex in modal styles
-    const modalCssPart = stylesJs.slice(stylesJs.indexOf('.omnimux-assets-modal-backdrop'))
+    // No bare rgba or hex anywhere in the modal section. The slice stops at the
+    // next section banner: the cloud card rules below it deliberately paint the
+    // audio plate in fixed dark media colours, which is a different surface from
+    // the modal chrome this assertion is about.
+    const modalStart = stylesJs.indexOf('.omnimux-assets-modal-backdrop')
+    const cloudSection = stylesJs.indexOf('/* ---- cloud assets', modalStart)
+    const modalCssPart = stylesJs.slice(modalStart, cloudSection === -1 ? undefined : cloudSection)
     assert.doesNotMatch(modalCssPart, /#[0-9a-fA-F]{3,8}\b/)
     assert.doesNotMatch(modalCssPart, /rgba\(/)
   })

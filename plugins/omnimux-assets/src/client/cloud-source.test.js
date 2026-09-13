@@ -66,7 +66,7 @@ describe('cloudManifestUrl / cloudPageUrl', () => {
 
   it('builds gateway paths otherwise', () => {
     assert.equal(cloudManifestUrl(GATEWAY), `${GATEWAY}/manifest.json`)
-    assert.equal(cloudPageUrl(GATEWAY, 'character/digital-human', 12), `${GATEWAY}/character/digital-human/page-0012.json`)
+    assert.equal(cloudPageUrl(GATEWAY, 'character/female', 12), `${GATEWAY}/character/female/page-0012.json`)
   })
 
   it('encodes each scope segment separately so the slashes survive', () => {
@@ -142,10 +142,10 @@ describe('cloud API source wiring', () => {
     try {
       setCloudSource(createCloudSource({ baseUrl: GATEWAY, probe: async () => true }))
       await cloudManifest()
-      await cloudPage('character/digital-human', 1)
+      await cloudPage('character/female', 1)
       assert.deepEqual(fetch.calls, [
         `${GATEWAY}/manifest.json`,
-        `${GATEWAY}/character/digital-human/page-0001.json`,
+        `${GATEWAY}/character/female/page-0001.json`,
       ])
     } finally {
       fetch.restore()

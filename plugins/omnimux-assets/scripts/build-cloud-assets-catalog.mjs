@@ -17,22 +17,44 @@
  * only part of the library.
  *
  *   knowledge  `prompts/`                prompt packs (recursive)
- *              `知识库/`                  long-form knowledge notes (recursive)
  *              `skills/&lt;drama pack&gt;/references/`  short-drama shot rules
  *   character  `gxgen-data/character-library/pippit-local-avatars-source/`
  *              `素材库/AI 网红/`
  *   scene      `gxgen-data/element-library/场景氛围/`
- *   prop       `gxgen-data/element-library/video/green-screen-meme/`
- *              `gxgen-data/element-library/hook/`
- *   style      `gxgen-data/style-library/` (six preset JSON files)
+ *   prop       (no source — the category is deliberately empty, see below)
+ *   material   `gxgen-data/element-library/video/green-screen-meme/`   绿幕
+ *              `gxgen-data/element-library/hook-videos/`              钩子
+ *              `gxgen-data/element-library/hook/`                     钩子
+ *              `gxgen-data/inspiration-library/image/`                表情包
+ *   style      `gxgen-data/style-library/` (three curated preset files)
  *              `gxgen-data/element-library/视频风格/`
  *   audio      `素材库/音频/volcengine-voices.json`          配音 (509 voices)
- *              `素材库/音频/` recursive audio/image files     配音 · 音效 · 背景音
+ *              `素材库/音频/` recorded voice samples          配音 · 背景音
+ *              `素材库/音频/音效/` real transition SFX         音效
  *              `gxgen-data/music-library/` Fastlane manifest  背景音 (103 tracks)
  *
  * where `<gxgen>` = `<root>/素材库/gxgen-data`. `灵感社区` is a separate system
  * and is deliberately excluded: its directory symlinks under `<root>/prompts/`
- * are skipped by name.
+ * are skipped by name. The one exception is the image gallery the 表情包 shelf
+ * names, which is read by its exact path.
+ *
+ * ## What is deliberately absent
+ *
+ * 道具 ships empty. Green screens and opening hooks are overlays and beats, not
+ * physical props, and no real prop library exists yet. The category still emits
+ * its page file so the tab renders an empty state instead of a 404.
+ *
+ * 知识库 is not catalogued at all: it is a working vault of reports, dumps, and
+ * service configs whose long-form notes carry no short-video value. 知识包 keeps
+ * only the two shelves that do — 脚本提示词 and 短剧拆镜.
+ *
+ * ## Sub-category membership
+ *
+ * A row's `sub_category` is its primary shelf; `sub_categories` is the full
+ * membership list. The two differ where a category genuinely has more than one
+ * axis — 角色 splits by gender *and* by scene, so one row can sit under both
+ * 女性角色 and 职场商务. Sub-category pages and counts follow the membership
+ * list, so a filter never hides a row that belongs to it.
  *
  * ## Output contract
  *
@@ -84,10 +106,10 @@ const AUDIO_EXTS = new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.opus', '.f
 const DOC_EXTS = new Set(['.md', '.txt'])
 
 /**
- * The knowledge tree is a working vault, not a curated library: it also holds
- * service configs, database dumps, and captured exports that describe no
- * creative asset. Those are skipped by directory name and by extension so the
- * catalog stays about prompts, scripts, and production know-how.
+ * Prompt packs are a working vault, not a curated library: they also hold
+ * service configs and captured exports that describe no creative asset. Those
+ * are skipped by directory name so the catalog stays about prompts and
+ * production know-how.
  */
 const KNOWLEDGE_SKIP_DIRS = new Set([
   'node_modules', 'infra', 'dist', 'build', 'vendor', 'coverage', '.git',
@@ -96,12 +118,102 @@ const KNOWLEDGE_SKIP_DIRS = new Set([
 /** Reference material that is genuinely a creative asset in this vault. */
 const KNOWLEDGE_ALSO_EXTS = new Set(['.json'])
 
+/** Folders that are 素材库/AI 网红 shelves, mapped to their display label. */
+const INFLUENCER_GROUPS = [
+  ['御用模特', '御用模特'],
+  ['高清', '高清'],
+  ['图生图', '图生图'],
+  ['未命名文件夹', '未分类'],
+]
+
+/**
+ * Given names in the Pippit avatar catalogue, split by how the avatar is
+ * presented. The catalogue ships no gender field (`metadata.json` carries only
+ * `tags: [name, scene]`), so gender is read from the given name, which is the
+ * only stable signal the source has. A name absent from both sets simply gets
+ * no gender shelf — the row still appears under 全部 rather than being guessed
+ * into the wrong one.
+ */
+const FEMALE_NAMES = new Set([
+  'Abigail', 'Agnes', 'Aiko', 'Aisha', 'Akiko', 'Aline', 'Amara', 'Amelia', 'Angelica',
+  'Anh', 'Anna', 'Anya', 'Ariana', 'Aurora', 'Ava', 'Brielle', 'Carlie', 'Carolina',
+  'Charlotte', 'Chloe', 'Dalia', 'Daniela', 'Dara', 'Dorothy', 'Eliza', 'Elizabeth',
+  'Ella', 'Emiko', 'Emily', 'Emma', 'Eri', 'Estelle', 'Evelyn', 'Fatima', 'Freya',
+  'Gabriela', 'Grace', 'Greta', 'Harper', 'Helena', 'Isabela', 'Jasmine', 'Julia',
+  'Juliana', 'Kara', 'Keisha', 'Kelly', 'Lan', 'Lara', 'Laura', 'Lauren', 'Liana',
+  'Lily', 'Liora', 'Lola', 'Lucy', 'Luna', 'Maria', 'Mariam', 'Mars', 'Martha', 'Mia',
+  'Nadia', 'Noor', 'Nora', 'Pooja', 'Rin', 'Santa', 'Siri', 'Sophie', 'Stella', 'Suman',
+  'Tati', 'Thandi', 'Trinh', 'Vanessa', 'Victoria', 'Xiao', 'Zara',
+])
+const MALE_NAMES = new Set([
+  'Akira', 'Arthur', 'Brooks', 'Charles', 'Christopher', 'Darnell', 'Derrick',
+  'Diego', 'Elias', 'Ethan', 'Fabian', 'Felipe', 'Fred', 'Gary', 'George', 'Gregory',
+  'Gustavo', 'Harold', 'Hassan', 'Henry', 'Jack', 'Jamal', 'James', 'Jasper', 'John',
+  'Joseph', 'Julian', 'Julio', 'Karim', 'Kavi', 'Ken', 'Kenji', 'Kenneth', 'Kevin',
+  'Kofi', 'Krit', 'Leon', 'Leonard', 'Lewis', 'Luca', 'Malik', 'Marcus', 'Mark',
+  'Martin', 'Mason', 'Mat', 'Miguel', 'Milo', 'Neo', 'Oliver', 'Omar', 'Rahul', 'Rami',
+  'Raymond', 'Richard', 'Rizky', 'Robert', 'Simon', 'Stephen', 'Steven', 'Thomas',
+  'Tolga', 'Victor', 'Vincent', 'Walter',
+])
+
+/**
+ * Scene words that put an avatar on the 生活居家 or 职场商务 shelf. Matched
+ * case-insensitively against the avatar's own folder name and tags, which is
+ * where Pippit records the scene (`Aiko_Marketing_Office_Standing`).
+ *
+ * 职场商务 is tested first. Its words name a room or an activity, while the
+ * 生活居家 list has to carry generic ones (a shot taken over a sofa can also be
+ * a 自拍), so an office selfie is an office scene rather than a home one.
+ */
+const BUSINESS_WORDS = [
+  'office', 'marketing', 'business', 'laptop', 'podcast', 'presentation', 'meeting',
+  'conference', 'stage', 'lobby', 'corridor', 'classroom', 'storyteller', 'studio',
+  'professional', 'interview', 'esports', 'corporate', 'work',
+]
+const LIFESTYLE_WORDS = [
+  'home', 'lifestyle', 'lifesytle', 'living', 'livingroom', 'bedroom', 'bed', 'kitchen',
+  'bathroom', 'washroom', 'shower', 'dressing', 'cloakroom', 'vanity', 'makeup', 'mirror',
+  'sofa', 'cafe', 'park', 'balcony', 'beauty', 'resting', 'relaxed', 'casual',
+  'healing', 'seaside', 'study', 'bookshelf', 'curtain', 'sunshine', 'gym', 'outdoor',
+  'outside', 'market', 'street', 'indoor', 'window', 'room', 'costume', 'christmas',
+  'sports', 'festival', 'food', 'court', 'ball', 'phone', 'pad',
+]
+
+/** A `file:` locator outside the assets root cannot be served, so an empty
+ *  locale is used when the sample is absent. */
+const SFX_DIR = ['素材库', '音频', '音效']
+
+/**
+ * The real transition SFX shelf, keyed by file stem. Each entry carries the
+ * sound design role it plays so a card describes the effect, not the file name.
+ */
+const SFX_CATALOGUE = {
+  whoosh: { name: '经典转场嗖声', description: '经典短视频转场嗖声，画面切换的默认听觉标点' },
+  'whoosh-fast': { name: '快速转场', description: '快速转场嗖声，适合卡点快切与高节奏混剪' },
+  'whoosh-cinematic': { name: '电影重音转场', description: '电影重音转场，低频冲击带出强节拍的场景切换' },
+  click: { name: 'UI 轻脆点击', description: 'UI 轻脆点击音，用于按钮、选项与弹层交互反馈' },
+  'notification-pop': { name: '气泡弹出提示', description: '气泡弹出提示音，用于消息、点赞与弹窗出现' },
+}
+
+/**
+ * Style rows whose content is not a visual style at all: a live-stream screenshot
+ * and a prescription form are subjects, not looks. The old source files mixed
+ * them in with the presets; they must not reach the 风格 shelf.
+ */
+const STYLE_EXCLUDE = /直播|处方|截图一张|朋友圈|小红书|淘宝|评价|文案生成|帮我生成/
+
+/** The gallery the 表情包 shelf is built from, addressed relative to the
+ *  gxgen-data root so the 灵感社区 exclusion above stays intact. */
+const MEME_SOURCE = 'inspiration-library/image'
+const MEME_MEDIA_DIR = 'inspiration-library/image/media'
+
 const MAX_TAGS = 12
 const MAX_DESCRIPTION = 240
 
 /** Guard rails. The asset root is a working directory: it contains generated
  *  dumps, archives, and self-referential symlinks (`知识库/资产库 -> ..`), so a
- *  naive recursive read can recurse forever or buffer gigabytes. */
+ *  naive recursive read can recurse forever or buffer gigabytes. So the walk is
+ *  depth-, cycle-, and row-bounded. */
 const MAX_KNOWLEDGE_ROWS = 4000
 const MAX_KNOWLEDGE_FILE_BYTES = 512 * 1024
 const MAX_KNOWLEDGE_WALK_DEPTH = 6
@@ -259,6 +371,7 @@ function relTo(root, abs) {
  *   id: string,
  *   category: string,
  *   sub_category: string,
+ *   sub_categories: string[],
  *   name: string,
  *   description: string,
  *   cover_url: string,
@@ -270,12 +383,28 @@ function relTo(root, abs) {
  */
 
 /**
+ * Every shelf a row belongs to.
+ *
+ * `sub_category` alone is the primary shelf, which is all most rows need. A row
+ * whose category has two axes (角色: gender and scene) lists all of them, and
+ * every sub-category count and page file is built from this list.
+ * @param {CatalogAsset} row
+ * @returns {string[]}
+ */
+export function shelfListOf(row) {
+  const shelves = Array.isArray(row.sub_categories) ? row.sub_categories : []
+  if (shelves.length > 0) return shelves
+  return row.sub_category ? [row.sub_category] : []
+}
+
+/**
  * Build one normalized catalog row.
  *
  * @param {{ assetsRoot: string }} ctx
  * @param {{
  *   key: string, category: string, subCategory?: string, name: string,
  *   description?: string, tags?: unknown[],
+ *   dimensions?: string[],
  *   localMedia?: string, remoteMedia?: string,
  *   localCover?: string, remoteCover?: string,
  *   meta?: Record<string, unknown>,
@@ -298,10 +427,20 @@ function makeAsset(ctx, spec) {
   if (localMedia !== '' && remoteMedia !== '') meta.source_media_url = remoteMedia
   if (localCover !== '' && remoteCover !== '') meta.source_cover_url = remoteCover
 
+  // The membership list always starts with the primary shelf and never repeats
+  // one, so the first entry stays the row's own shelf.
+  const shelves = []
+  for (const shelf of [sub, ...(spec.dimensions ?? [])]) {
+    const value = text(shelf)
+    if (value === '' || shelves.includes(value)) continue
+    shelves.push(value)
+  }
+
   return {
     id,
     category: spec.category,
     sub_category: sub,
+    sub_categories: shelves,
     name: clamp(spec.name, 80) || '未命名',
     description: clamp(spec.description, MAX_DESCRIPTION),
     cover_url: localCover ? `file:${relTo(ctx.assetsRoot, localCover)}` : remoteCover,
@@ -447,7 +586,7 @@ function collectKnowledge(ctx, add) {
       subCategory: group,
       name: displayName,
       description: descriptionFromMarkdown(body) || `${pack} · ${displayName}`,
-      tags: [pack, group === 'storyboard' ? '短剧拆镜' : group === 'note' ? '知识笔记' : '脚本提示词'],
+      tags: [pack, group === 'storyboard' ? '短剧拆镜' : '脚本提示词'],
       meta: {
         source: 'local-file',
         source_path: relTo(assetsRoot, abs),
@@ -456,7 +595,7 @@ function collectKnowledge(ctx, add) {
       },
     }))
     // The full body is released as soon as the row is built: the catalog keeps
-    // only the derived description, so 2 600 reference documents stay a few
+    // only the derived description, so the reference documents stay a few
     // hundred kilobytes instead of repeating their own text into every page.
     body = ''
   }
@@ -474,15 +613,9 @@ function collectKnowledge(ctx, add) {
     }
   }
 
-  const knowledgeRoot = join(assetsRoot, '知识库')
-  walkFiles(knowledgeRoot, {
-    visit: (file, fileName) => {
-      const rel = relTo(assetsRoot, file)
-      if (rel.includes('/memory/') || rel.includes('个人资料/')) return
-      if (fileName === 'CLAUDE.md' || fileName === 'claude.md') return
-      emit(file, fileName, '知识库', 'note')
-    },
-  })
+  // 知识库 is deliberately not walked: see "What is deliberately absent" in the
+  // module docstring — its long-form notes are reference reading, not short-video
+  // material, and they used to be 1302 of the catalog's 1502 知识包 rows.
 
   // Short-drama deconstruction rules ship as skill references rather than as a
   // standalone prompt folder, so they are read from the skills shelf.
@@ -507,7 +640,30 @@ function collectKnowledge(ctx, add) {
 // character — 329 real digital humans + virtual influencer archive
 // ---------------------------------------------------------------------------
 
-function collectCharacter(ctx, add) {
+/**
+ * Gender shelf for one avatar, or `''` when the catalogue gives no signal.
+ * @param {string} folderName
+ */
+function genderShelfOf(folderName) {
+  const given = text(folderName.split('_')[0])
+  if (FEMALE_NAMES.has(given)) return 'female'
+  if (MALE_NAMES.has(given)) return 'male'
+  return ''
+}
+
+/**
+ * Scene shelf for one avatar, or `''` when its folder names no recognisable
+ * scene. 职场商务 is tested first: see `BUSINESS_WORDS`.
+ * @param {string} haystack
+ */
+function sceneShelfOf(haystack) {
+  const hay = haystack.toLowerCase()
+  if (BUSINESS_WORDS.some((word) => hay.includes(word))) return 'business'
+  if (LIFESTYLE_WORDS.some((word) => hay.includes(word))) return 'lifestyle'
+  return ''
+}
+
+export function collectCharacter(ctx, add) {
   const { assetsRoot } = ctx
   const source = join(assetsRoot, '素材库', 'gxgen-data', 'character-library', 'pippit-local-avatars-source')
 
@@ -517,10 +673,19 @@ function collectCharacter(ctx, add) {
     const meta = readJsonSafe(join(dir, 'metadata.json')) ?? {}
     const rawName = text(meta.name) || entry.name.replace(/_/g, '-')
     const metaTags = Array.isArray(meta.tags) ? meta.tags : []
+    // The folder name and the tag list both describe the scene; neither alone is
+    // complete (`Agnes_Home_Selfie` vs a `Marketing` tag).
+    const haystack = [entry.name, rawName, ...metaTags].join(' ')
+    const gender = genderShelfOf(entry.name)
+    const scene = sceneShelfOf(haystack)
+    // Gender leads the membership list, so the primary shelf of a digital human
+    // is who they are; the scene rides along as a second filter.
+    const dimensions = [scene].filter((value) => value !== '')
     add(makeAsset(ctx, {
       key: `pippit/${entry.name}`,
       category: 'character',
-      subCategory: 'digital-human',
+      subCategory: gender,
+      dimensions,
       name: rawName.replace(/-/g, ' '),
       description: `Pippit 实景数字人 · ${metaTags.join(' / ') || rawName.replace(/-/g, ' ')}`,
       tags: ['实景数字人', 'Pippit', ...metaTags],
@@ -532,19 +697,14 @@ function collectCharacter(ctx, add) {
         source_url: text(meta.source_url),
         index: Number(meta.index) || null,
         total: Number(meta.total) || null,
+        gender: gender || null,
+        scene: scene || null,
       },
     }))
   }
 
   const influencer = join(assetsRoot, '素材库', 'AI 网红')
-  /** @type {[string, string][]} */
-  const groups = [
-    ['御用模特', '御用模特'],
-    ['高清', '高清'],
-    ['图生图', '图生图'],
-    ['未命名文件夹', '未分类'],
-  ]
-  for (const [dirName, label] of groups) {
+  for (const [dirName, label] of INFLUENCER_GROUPS) {
     const dir = join(influencer, dirName)
     if (!isDir(dir)) continue
     for (const file of listDirSafe(dir)) {
@@ -553,16 +713,21 @@ function collectCharacter(ctx, add) {
       const ext = extname(file.name).toLowerCase()
       if (!IMAGE_EXTS.has(ext) && !VIDEO_EXTS.has(ext)) continue
       const isImage = IMAGE_EXTS.has(ext)
+      const stem = file.name.slice(0, file.name.length - extname(file.name).length)
+      // This archive is a shelf of unnamed portraits (`1.jpg`, `lao_<hash>.png`)
+      // with no name, gender, or scene recorded anywhere, so the rows carry no
+      // gender or scene shelf: guessing one would put faces behind a filter the
+      // source cannot support. They stay reachable under 全部.
       add(makeAsset(ctx, {
         key: `influencer/${dirName}/${file.name}`,
         category: 'character',
-        subCategory: 'virtual-influencer',
-        name: file.name.slice(0, file.name.length - extname(file.name).length),
+        subCategory: '',
+        name: stem,
         description: `AI 网红档案 · ${label}`,
         tags: ['虚拟红人', label],
         localMedia: abs,
         localCover: isImage ? abs : '',
-        meta: { source: 'AI 网红', source_path: relTo(assetsRoot, abs) },
+        meta: { source: 'AI 网红', source_path: relTo(assetsRoot, abs), shelf: label },
       }))
     }
   }
@@ -586,7 +751,8 @@ function findPoster(dir, base) {
  * @param {{ assetsRoot: string }} ctx
  * @param {string} dirName folder name under `element-library/`
  * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
- * @param {{ category: string, subCategory: string, tag: string, fallbackDesc: string }} opts
+ * @param {{ category: string, subCategory: string, tag: string, fallbackDesc: string,
+ *   promptFrom?: (title: string, description: string) => string }} opts
  */
 function collectElementIndex(ctx, dirName, add, opts) {
   const dir = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'element-library', dirName)
@@ -606,23 +772,28 @@ function collectElementIndex(ctx, dirName, add, opts) {
       localCover = findPoster(mediaDir, base)
     }
     const title = text(row.title) || text(row.id)
+    const description = text(row.metadata?.description) || opts.fallbackDesc
+    /** @type {Record<string, unknown>} */
+    const meta = {
+      source: text(row.source_platform) || 'gxgen',
+      source_url: text(row.metadata?.source_url),
+      value: text(row.metadata?.value),
+      category_label: text(row.metadata?.category),
+    }
+    // Only the shelves that promise a prompt ask for one (see 风格).
+    if (opts.promptFrom) meta.prompt_text = clamp(opts.promptFrom(title, description), 600)
     add(makeAsset(ctx, {
       key: `${dirName}/${text(row.id)}`,
       category: opts.category,
       subCategory: opts.subCategory,
       name: title,
-      description: text(row.metadata?.description) || opts.fallbackDesc,
+      description,
       tags: [opts.tag, ...(Array.isArray(row.tags) ? row.tags : [])],
       localMedia,
       remoteMedia: text(row.media_url),
       localCover,
       remoteCover: text(row.metadata?.poster_url),
-      meta: {
-        source: text(row.source_platform) || 'gxgen',
-        source_url: text(row.metadata?.source_url),
-        value: text(row.metadata?.value),
-        category_label: text(row.metadata?.category),
-      },
+      meta,
     }))
   }
 }
@@ -636,60 +807,168 @@ function collectScene(ctx, add) {
   })
 }
 
-function collectProp(ctx, add) {
+/**
+ * 绿幕 — the Fastlane green-screen overlay library.
+ *
+ * These are transparent-background clips to key over a shot, which is why they
+ * live under 素材 rather than under 道具: nothing here is an object the cast
+ * handles.
+ */
+function collectGreenScreen(ctx, add) {
   const gxgen = join(ctx.assetsRoot, '素材库', 'gxgen-data')
   const memeRoot = join(gxgen, 'element-library', 'video', 'green-screen-meme')
   const rows = readJsonSafe(join(memeRoot, 'fastlane-green-screen-meme-library.json'))
-  if (Array.isArray(rows)) {
-    const mediaDir = join(memeRoot, 'media')
-    const videoDir = join(memeRoot, 'videos')
-    for (const row of rows) {
-      const id = text(row.id)
-      if (!id) continue
-      const thumbRel = text(row.localThumbPath)
-      const thumb = thumbRel ? join(gxgen, thumbRel) : join(mediaDir, `${id}.webp`)
-      const remote = text(row.videoUrl)
-      const remoteName = remote.slice(remote.lastIndexOf('/') + 1)
-      const localVideo = [join(videoDir, `${remoteName}.mp4`), join(videoDir, `${id}.mp4`)]
-        .find((candidate) => isFile(candidate)) ?? ''
-      add(makeAsset(ctx, {
-        key: `green-screen-meme/${id}`,
-        category: 'prop',
-        subCategory: 'green-screen',
-        name: `绿幕贴片 ${id.slice(0, 6)}`,
-        description: '绿幕动态道具贴片，可直接抠像叠加到成片中',
-        tags: ['绿幕道具', '动态贴片'],
-        localMedia: localVideo,
-        remoteMedia: remote,
-        localCover: thumb,
-        remoteCover: text(row.thumbUrl),
-        meta: { source: text(row.sourcePlatform) || 'fastlane', source_id: id },
-      }))
-    }
+  if (!Array.isArray(rows)) return
+  const mediaDir = join(memeRoot, 'media')
+  const videoDir = join(memeRoot, 'videos')
+  for (const row of rows) {
+    const id = text(row.id)
+    if (!id) continue
+    const thumbRel = text(row.localThumbPath)
+    const thumb = thumbRel ? join(gxgen, thumbRel) : join(mediaDir, `${id}.webp`)
+    const remote = text(row.videoUrl)
+    const remoteName = remote.slice(remote.lastIndexOf('/') + 1)
+    const localVideo = [join(videoDir, `${remoteName}.mp4`), join(videoDir, `${id}.mp4`)]
+      .find((candidate) => isFile(candidate)) ?? ''
+    add(makeAsset(ctx, {
+      key: `green-screen-meme/${id}`,
+      category: 'material',
+      subCategory: 'green-screen',
+      name: `绿幕动态素材 ${id.slice(0, 6)}`,
+      description: '绿幕动态贴片，可直接抠像叠加到成片中',
+      tags: ['绿幕', '动态贴片', '抠像'],
+      localMedia: localVideo,
+      remoteMedia: remote,
+      localCover: thumb,
+      remoteCover: text(row.thumbUrl),
+      meta: { source: text(row.sourcePlatform) || 'fastlane', source_id: id },
+    }))
   }
+}
 
+/**
+ * 钩子 — the opening beats: short-video first-three-second hooks and the
+ * product close-up cutaways they cut to.
+ *
+ * Both shelves are `gxgen-index.json` element libraries. The hook-videos shelf
+ * is far larger and many of its rows only carry a remote URL, which the row
+ * shape already supports.
+ */
+function collectHook(ctx, add) {
+  collectElementIndex(ctx, 'hook-videos', add, {
+    category: 'material',
+    subCategory: 'hook',
+    tag: '前三秒钩子',
+    fallbackDesc: '短视频前 3 秒开场钩子素材',
+  })
   collectElementIndex(ctx, 'hook', add, {
-    category: 'prop',
-    subCategory: 'hook-video',
+    category: 'material',
+    subCategory: 'hook',
     tag: '商品特写',
-    fallbackDesc: '商品特写互动视频钩子',
+    fallbackDesc: '商品特写互动镜头钩子',
   })
 }
 
-/** Flatten the differently-shaped style-preset JSONs into rows. */
+/**
+ * 表情包 — the image gallery the meme shelf is built from.
+ *
+ * The gallery lives under `inspiration-library`, which the community exclusion
+ * normally keeps out of this catalog; it is read here by its exact path because
+ * it is the only sticker/gag image set the library actually holds. Each row is
+ * an image plus the prompt that produced it, so a card can hand the prompt to
+ * the conversation along with the picture.
+ */
+function collectMeme(ctx, add) {
+  const gxgen = join(ctx.assetsRoot, '素材库', 'gxgen-data')
+  const parsed = readJsonSafe(join(gxgen, MEME_SOURCE, 'gpt-image-2-skill.json'))
+  const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : [])
+  const pack = 'gpt-image-2'
+  for (const row of rows) {
+    const title = text(row.title)
+    if (!title) continue
+    // The gallery names its frames `NNNN-<prompt slug>.webp`; the index carries
+    // the same order, so the file is addressed by the row's own ordinal.
+    const index = rows.indexOf(row)
+    const cover = findGalleryImage(join(gxgen, MEME_MEDIA_DIR, 'gpt-image-2-skill'), String(index).padStart(4, '0'))
+    add(makeAsset(ctx, {
+      key: `meme/${pack}/${index}/${title}`,
+      category: 'material',
+      subCategory: 'meme',
+      name: title,
+      description: clamp(text(row.prompt_text), MAX_DESCRIPTION) || '趣味梗图贴片素材',
+      tags: [pack, text(row.category), '表情包', '梗图贴片'],
+      // A gallery frame is its own cover, so the media slot is left to the
+      // remote original and the local webp is what the grid paints.
+      localCover: cover,
+      remoteCover: text(row.cover_url),
+      meta: {
+        source: 'gpt-image-2-skill',
+        category: text(row.category),
+        prompt_text: clamp(text(row.prompt_text), 400),
+        source_file: `${MEME_SOURCE}/gpt-image-2-skill.json`,
+      },
+    }))
+  }
+}
+
+/**
+ * Resolve one gallery frame by its `NNNN-` ordinal prefix.
+ * @param {string} dir
+ * @param {string} ordinal
+ */
+function findGalleryImage(dir, ordinal) {
+  for (const file of listDirSafe(dir)) {
+    if (!file.isFile()) continue
+    if (!file.name.startsWith(`${ordinal}-`)) continue
+    if (!IMAGE_EXTS.has(extname(file.name).toLowerCase())) continue
+    return join(dir, file.name)
+  }
+  return ''
+}
+
+function collectMaterial(ctx, add) {
+  collectGreenScreen(ctx, add)
+  collectHook(ctx, add)
+  collectMeme(ctx, add)
+}
+
+/**
+ * 道具 is intentionally empty — green screens and hooks are overlays and beats,
+ * not physical props, and no real prop library exists yet. The category keeps
+ * its place in the table (and therefore its empty page file) so the tab renders
+ * 空状态 rather than a broken scope.
+ */
+function collectProp() {}
+
+/**
+ * The style presets worth shipping: three curated files plus the video-tone
+ * element library.
+ *
+ * The two raw Twitter prompt dumps the shelf used to include (`awesome-gpt-image-2`,
+ * `gpt-image-2-style-presets`) are gone. They are user requests — "生成一张刘亦菲
+ * 直播的截图", "三甲医院真实门诊处方笺" — not looks, and they outnumbered the
+ * real presets 6:1 in the old 风格 tab.
+ */
+const STYLE_SOURCES = [
+  ['new-style-presets.json', '生图预设'],
+  ['xiaoyunque-novel-style-library.json', '小说推文'],
+  ['pippit-visual-styles.json', 'Pippit 视觉'],
+]
+
+/**
+ * Flatten the differently-shaped style-preset JSONs into rows.
+ *
+ * Every row must end up with a usable prompt: a style card that is only a cover
+ * image hands the conversation nothing to work with. `新海诚动漫` carries its
+ * prompt verbatim; a Pippit visual style records only an English description, so
+ * the description is composed into the prompt it stands for rather than
+ * inventing an unrelated one.
+ */
 function collectStyle(ctx, add) {
   const styleDir = join(ctx.assetsRoot, '素材库', 'gxgen-data', 'style-library')
-  /** @type {[string, string][]} */
-  const sources = [
-    ['awesome-gpt-image-2.json', '生图预设'],
-    ['gpt-image-2-style-presets.json', '生图预设'],
-    ['gpt-image-2-style-presets-quality.json', '精品预设'],
-    ['new-style-presets.json', '新款预设'],
-    ['xiaoyunque-novel-style-library.json', '小说推文'],
-    ['pippit-visual-styles.json', 'Pippit 视觉'],
-  ]
+  let dropped = 0
 
-  for (const [fileName, pack] of sources) {
+  for (const [fileName, pack] of STYLE_SOURCES) {
     const parsed = readJsonSafe(join(styleDir, fileName))
     if (parsed === null) continue
     const rows = Array.isArray(parsed)
@@ -700,19 +979,28 @@ function collectStyle(ctx, add) {
     for (const row of rows) {
       const title = text(row.title) || text(row.title_zh)
       if (!title) continue
-      const rawLocal = text(row.local_media_path)
-      const localMedia = rawLocal ? join(ctx.assetsRoot, '素材库', 'gxgen-data', rawLocal) : ''
-      const cover = isFile(localMedia) && bucketOf(extOf(localMedia)) === 'image'
-        ? localMedia
+      const authored = text(row.prompt_text)
+      const description = text(row.description)
+      const category = [text(row.category_zh), text(row.category)].filter(Boolean).join(' / ')
+      const prompt = authored || (description ? `${title}（${category || pack}）：${description}` : '')
+      if (prompt === '' || STYLE_EXCLUDE.test(title) || STYLE_EXCLUDE.test(prompt)) {
+        dropped += 1
+        continue
+      }
+
+      const rawLocal = text(row.local_media_path) || text(row.localPosterPath)
+      const localAsset = rawLocal ? join(ctx.assetsRoot, '素材库', 'gxgen-data', rawLocal) : ''
+      const kind = bucketOf(extOf(localAsset))
+      const cover = localAsset !== '' && (kind === 'image' || kind === 'video')
+        ? localAsset
         : join(localMediaDir, `${slugify(title)}.webp`)
+
       add(makeAsset(ctx, {
         key: `style/${fileName}/${text(row.source_id) || text(row.id) || title}`,
         category: 'style',
-        subCategory: 'image-preset',
+        subCategory: fileName === 'pippit-visual-styles.json' ? 'video-tone' : 'image-preset',
         name: title,
-        description: text(row.description)
-          || clamp(text(row.prompt_text), MAX_DESCRIPTION)
-          || title,
+        description: clamp(description || prompt, MAX_DESCRIPTION) || title,
         tags: [pack, text(row.category), text(row.category_zh)],
         localCover: cover,
         remoteCover: text(row.cover_url) || text(row.remotePosterUrl),
@@ -720,7 +1008,9 @@ function collectStyle(ctx, add) {
           source: 'style-library',
           source_file: fileName,
           pack,
-          prompt_text: clamp(text(row.prompt_text), 400),
+          // The contract of this shelf: every style row ships a prompt.
+          prompt_text: clamp(prompt, 600),
+          prompt_source: authored ? 'authored' : 'description',
           author: text(row.author),
           source_url: text(row.source_url),
         },
@@ -728,11 +1018,16 @@ function collectStyle(ctx, add) {
     }
   }
 
+  if (dropped > 0) log(`  · style: dropped ${dropped} row(s) that carry no visual style`)
+
   collectElementIndex(ctx, '视频风格', add, {
     category: 'style',
     subCategory: 'video-tone',
     tag: '视频调性',
     fallbackDesc: '视频调性预设',
+    // This shelf records a look in one English line rather than as a prompt, so
+    // the line is composed into the prompt it stands for.
+    promptFrom: (title, description) => `视频调性「${title}」：${description}`,
   })
 }
 
@@ -805,9 +1100,11 @@ function collectVoiceSamples(ctx, add) {
     }
   }
 
-  // Loose files at the audio root, plus named single-file samples. Every claimed
-  // file name is recorded so the fallback pass below cannot re-file the same
-  // audio as a sound effect.
+  // Named single-file samples at the audio root. Nothing else at that level is
+  // catalogued: the root also holds dated scratch recordings and the authored
+  // `5秒无声` / `6 秒无声` silence beds, which used to be filed as 音效 purely
+  // because they sat there — that is how two silent files became the whole 音效
+  // shelf. The shelf now comes from `collectSfx` below.
   /** @type {[string, string, string, string][]} file -> [sub_category, tag, description] */
   const loose = [
     ['播客女.MP3', 'voiceover', '播客', '实录音频样本 · 播客女声'],
@@ -815,11 +1112,9 @@ function collectVoiceSamples(ctx, add) {
     ['TK 口播女.mp3', 'voiceover', '口播', '实录音频样本 · 口播女声'],
     ['口播博主声音克隆.WAV', 'voiceover', '音频克隆', '声音克隆样本'],
   ]
-  const claimed = new Set()
   for (const [fileName, subCategory, tag, description] of loose) {
     const abs = join(audioRoot, fileName)
     if (!isFile(abs)) continue
-    claimed.add(fileName)
     add(makeAsset(ctx, {
       key: `sample/${fileName}`,
       category: 'audio',
@@ -831,28 +1126,41 @@ function collectVoiceSamples(ctx, add) {
       meta: { source: '音频', source_path: relTo(ctx.assetsRoot, abs) },
     }))
   }
+}
 
-  /** Silence beds are authored fillers for transitions, not recorded effects. */
-  const SILENT_BED = /无声|silent|no[-_ ]?audio/i
-
-  for (const file of listDirSafe(audioRoot)) {
+/**
+ * 音效 — real transition and interface sounds.
+ *
+ * Sourced from the shared motion-skill SFX packs (Pixabay Content License) and
+ * copied into `素材库/音频/音效/`, which is the only location a `file:` locator
+ * can address. The shelf is scanned rather than hard-coded, so a sound added to
+ * that folder appears without touching this script; the catalogue table above
+ * only supplies the human name and the role each known effect plays.
+ */
+function collectSfx(ctx, add) {
+  const dir = join(ctx.assetsRoot, ...SFX_DIR)
+  if (!isDir(dir)) return
+  for (const file of listDirSafe(dir)) {
     if (!file.isFile() || file.name.startsWith('.')) continue
-    if (claimed.has(file.name)) continue
     const ext = extname(file.name).toLowerCase()
-    if (bucketOf(ext) !== 'audio') continue
-    const abs = join(audioRoot, file.name)
-    const isSilentBed = SILENT_BED.test(file.name)
+    if (!AUDIO_EXTS.has(ext)) continue
+    const stem = file.name.slice(0, file.name.length - ext.length)
+    const known = SFX_CATALOGUE[stem]
+    const abs = join(dir, file.name)
     add(makeAsset(ctx, {
       key: `sfx/${file.name}`,
       category: 'audio',
       subCategory: 'sfx',
-      name: file.name.slice(0, file.name.length - extname(file.name).length),
-      description: isSilentBed
-        ? '静音垫底素材，用于转场与停顿留白'
-        : '音效素材（冲击 / 转场 / 环境音）',
-      tags: isSilentBed ? ['静音垫底', '转场'] : ['音效'],
+      name: known?.name ?? stem,
+      description: known?.description ?? '短视频转场 / 界面音效素材',
+      tags: ['音效', '转场', ...(known ? [] : ['未收录说明'])],
       localMedia: abs,
-      meta: { source: '音频', source_path: relTo(ctx.assetsRoot, abs) },
+      meta: {
+        source: 'skill-sfx-pack',
+        source_path: relTo(ctx.assetsRoot, abs),
+        license: 'Pixabay Content License',
+        playable: true,
+      },
     }))
   }
 }
@@ -893,7 +1201,6 @@ const CATEGORIES = [
     en: 'Knowledge',
     subCategories: [
       { id: 'prompt', zh: '脚本提示词', en: 'Prompt Packs' },
-      { id: 'note', zh: '知识笔记', en: 'Notes' },
       { id: 'storyboard', zh: '短剧拆镜', en: 'Storyboard' },
     ],
     collect: collectKnowledge,
@@ -903,8 +1210,10 @@ const CATEGORIES = [
     zh: '角色',
     en: 'Characters',
     subCategories: [
-      { id: 'digital-human', zh: '实景数字人', en: 'Real Digital Humans' },
-      { id: 'virtual-influencer', zh: '虚拟红人', en: 'Virtual Influencers' },
+      { id: 'female', zh: '女性角色', en: 'Female' },
+      { id: 'male', zh: '男性角色', en: 'Male' },
+      { id: 'lifestyle', zh: '生活居家', en: 'Lifestyle' },
+      { id: 'business', zh: '职场商务', en: 'Business' },
     ],
     collect: collectCharacter,
   },
@@ -916,14 +1225,27 @@ const CATEGORIES = [
     collect: collectScene,
   },
   {
+    /**
+     * 道具 is deliberately empty: the two shelves it used to hold were green
+     * screens and product hooks, which are 素材, and no physical prop library
+     * exists yet. The empty entry is kept so the tab renders 空状态.
+     */
     id: 'prop',
     zh: '道具',
     en: 'Props',
-    subCategories: [
-      { id: 'green-screen', zh: '绿幕贴片', en: 'Green Screen' },
-      { id: 'hook-video', zh: '商品特写', en: 'Product Hook' },
-    ],
+    subCategories: [],
     collect: collectProp,
+  },
+  {
+    id: 'material',
+    zh: '素材',
+    en: 'Material',
+    subCategories: [
+      { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
+      { id: 'hook', zh: '钩子', en: 'Hooks' },
+      { id: 'meme', zh: '表情包', en: 'Memes' },
+    ],
+    collect: collectMaterial,
   },
   {
     id: 'style',
@@ -947,6 +1269,7 @@ const CATEGORIES = [
     collect: (ctx, add) => {
       collectVoices(ctx, add)
       collectVoiceSamples(ctx, add)
+      collectSfx(ctx, add)
       collectBgm(ctx, add)
     },
   },
@@ -1038,7 +1361,7 @@ async function main() {
     all.push(...items)
 
     const subCategories = spec.subCategories.map((sub) => {
-      const total = items.filter((row) => row.sub_category === sub.id).length
+      const total = items.filter((row) => shelfListOf(row).includes(sub.id)).length
       return {
         id: sub.id,
         zh: sub.zh,
@@ -1085,6 +1408,7 @@ async function main() {
       id: row.id,
       category: row.category,
       sub_category: row.sub_category,
+      sub_categories: shelfListOf(row),
       name: row.name,
       description: row.description,
       media_type: row.media_type,
@@ -1114,7 +1438,7 @@ async function main() {
       pageFiles += 1
     }
     for (const sub of spec.subCategories) {
-      const subItems = items.filter((row) => row.sub_category === sub.id)
+      const subItems = items.filter((row) => shelfListOf(row).includes(sub.id))
       if (subItems.length === 0) continue
       for (const page of pageSpecs(subItems, `${spec.id}/${sub.id}`)) {
         writeJson(outDir, page.relPath, page.body)

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  CLOUD_AUDIO_THEMES,
   CLOUD_PAGE_SIZE,
-  CLOUD_SUBNAV_CATEGORY,
   appendUniqueAssets,
+  cloudAudioTheme,
   cloudCardKind,
   cloudScope,
   findCategory,
@@ -24,21 +25,23 @@ const MANIFEST = {
       id: 'character',
       zh: '角色',
       en: 'Characters',
-      total: 40,
-      pages: 2,
+      total: 428,
+      pages: 18,
       sub_categories: [
-        { id: 'digital-human', zh: '实景数字人', en: 'Digital Humans', total: 40, pages: 2 },
+        { id: 'female', zh: '女性角色', en: 'Female', total: 185, pages: 8 },
+        { id: 'male', zh: '男性角色', en: 'Male', total: 144, pages: 6 },
+        { id: 'lifestyle', zh: '生活居家', en: 'Lifestyle', total: 254, pages: 11 },
+        { id: 'business', zh: '职场商务', en: 'Business', total: 43, pages: 2 },
       ],
     },
     {
       id: 'knowledge',
       zh: '知识包',
       en: 'Knowledge',
-      total: 1502,
-      pages: 63,
+      total: 200,
+      pages: 9,
       sub_categories: [
         { id: 'prompt', zh: '脚本提示词', en: 'Prompt Packs', total: 57, pages: 3 },
-        { id: 'note', zh: '知识笔记', en: 'Notes', total: 1302, pages: 55 },
         { id: 'storyboard', zh: '短剧拆镜', en: 'Storyboard', total: 143, pages: 6 },
       ],
     },
@@ -46,18 +49,26 @@ const MANIFEST = {
       id: 'audio',
       zh: '声音',
       en: 'Audio',
-      total: 20,
-      pages: 1,
+      total: 640,
+      pages: 27,
       sub_categories: [
-        { id: 'voiceover', zh: '配音', en: 'Voiceover', total: 12, pages: 1 },
-        { id: 'sfx', zh: '音效', en: 'SFX', total: 8, pages: 1 },
-        { id: 'bgm', zh: '背景音', en: 'BGM', total: 0, pages: 1 },
+        { id: 'voiceover', zh: '配音', en: 'Voiceover', total: 527, pages: 22 },
+        { id: 'sfx', zh: '音效', en: 'SFX', total: 5, pages: 1 },
+        { id: 'bgm', zh: '背景音', en: 'BGM', total: 108, pages: 5 },
       ],
     },
     {
       id: 'scene',
       zh: '场景',
       en: 'Scenes',
+      total: 14,
+      pages: 1,
+      sub_categories: [{ id: 'ambience', zh: '场景氛围', en: 'Ambience', total: 14, pages: 1 }],
+    },
+    {
+      id: 'prop',
+      zh: '道具',
+      en: 'Props',
       total: 0,
       pages: 1,
       sub_categories: [],
@@ -83,18 +94,18 @@ describe('cloudScope', () => {
 
 describe('pageCountOf / totalOf', () => {
   it('reads the category level of the manifest', () => {
-    assert.equal(pageCountOf(MANIFEST, 'character'), 2)
-    assert.equal(totalOf(MANIFEST, 'character'), 40)
+    assert.equal(pageCountOf(MANIFEST, 'character'), 18)
+    assert.equal(totalOf(MANIFEST, 'character'), 428)
   })
 
   it('reads the sub-category level when one is given', () => {
     assert.equal(pageCountOf(MANIFEST, 'audio', 'sfx'), 1)
-    assert.equal(totalOf(MANIFEST, 'audio', 'sfx'), 8)
+    assert.equal(totalOf(MANIFEST, 'audio', 'sfx'), 5)
   })
 
   it('reports one page for an empty category so the pager still renders', () => {
-    assert.equal(pageCountOf(MANIFEST, 'scene'), 1)
-    assert.equal(totalOf(MANIFEST, 'scene'), 0)
+    assert.equal(pageCountOf(MANIFEST, 'prop'), 1)
+    assert.equal(totalOf(MANIFEST, 'prop'), 0)
   })
 
   it('falls back to one page for an unknown category', () => {
@@ -110,35 +121,48 @@ describe('pageCountOf / totalOf', () => {
 })
 
 describe('subCategoryTabs', () => {
-  it('leads with an all-entry when the audio category has populated sub-categories', () => {
+  it('leads every second level with an all-entry carrying the category total', () => {
     const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'audio')
     assert.equal(hasSecondLevel, true)
-    assert.deepEqual(items.map((row) => row.id), ['', 'voiceover', 'sfx'])
-    assert.equal(items[0].total, 20)
+    assert.deepEqual(items.map((row) => row.id), ['', 'voiceover', 'sfx', 'bgm'])
+    assert.equal(items[0].total, 640)
   })
 
-  it('names audio as the only category that owns a second level', () => {
-    assert.equal(CLOUD_SUBNAV_CATEGORY, 'audio')
-  })
-
-  it('keeps the second level shut on every other category, sub-categories or not', () => {
-    // Regression: 知识包 carries 脚本提示词 / 知识笔记 / 短剧拆镜 and 角色 carries
-    // 实景数字人, so a category-agnostic rule opened a second level under a
-    // selected 知识包 and put the audio-only 全部 chip above those buckets.
-    for (const category of ['knowledge', 'character', 'scene', 'prop', 'style']) {
+  it('opens a second level for every category the data gives one to', () => {
+    // The level is a property of the manifest, not of one tab: 声音, 素材 and 角色
+    // all carry shelves, so all three get the bar.
+    for (const category of ['character', 'knowledge', 'audio', 'scene']) {
       const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, category)
-      assert.equal(hasSecondLevel, false, `${category} must not open a second level`)
-      assert.deepEqual(items, [])
+      assert.equal(hasSecondLevel, true, `${category} should open a second level`)
+      assert.equal(items[0].id, '')
+      assert.equal(items[0].total, MANIFEST.categories.find((row) => row.id === category).total)
     }
   })
 
-  it('hides empty sub-categories so a tab never opens onto nothing', () => {
-    const { items } = subCategoryTabs(MANIFEST, 'audio')
-    assert.equal(items.some((row) => row.id === 'bgm'), false)
+  it('keeps the second level shut on a category whose shelves are all empty', () => {
+    const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'prop')
+    assert.equal(hasSecondLevel, false)
+    assert.deepEqual(items, [])
   })
 
-  it('reports no second level for a category without sub-categories', () => {
-    const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'scene')
+  it('hides empty sub-categories so a tab never opens onto nothing', () => {
+    const manifest = {
+      categories: [{
+        id: 'audio',
+        total: 10,
+        pages: 1,
+        sub_categories: [
+          { id: 'voiceover', total: 10, pages: 1 },
+          { id: 'bgm', total: 0, pages: 1 },
+        ],
+      }],
+    }
+    const { items } = subCategoryTabs(manifest, 'audio')
+    assert.deepEqual(items.map((row) => row.id), ['', 'voiceover'])
+  })
+
+  it('reports no second level for an empty category', () => {
+    const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'prop')
     assert.equal(hasSecondLevel, false)
     assert.deepEqual(items, [])
   })
@@ -169,7 +193,7 @@ describe('normalizeCloudAsset', () => {
   })
 
   it('reports whether the row has a cover and a playable original', () => {
-    const text = normalizeCloudAsset({ id: 'knowledge-note-1', media_type: 'other' })
+    const text = normalizeCloudAsset({ id: 'knowledge-prompt-1', media_type: 'other' })
     assert.equal(text.hasCover, false)
     assert.equal(text.hasMedia, false)
 
@@ -215,12 +239,12 @@ describe('cloudCardKind', () => {
   const kindOf = (row) => cloudCardKind(normalizeCloudAsset(row))
 
   it('gives a 知识包 row the text card: no cover and no media', () => {
-    assert.equal(kindOf({ id: 'knowledge-note-1', media_type: 'other' }), 'text')
+    assert.equal(kindOf({ id: 'knowledge-prompt-1', media_type: 'other' }), 'text')
   })
 
   it('gives a text row with a description the text card too', () => {
     assert.equal(
-      kindOf({ id: 'knowledge-prompt-1', media_type: 'other', description: '分镜提示词' }),
+      kindOf({ id: 'knowledge-prompt-2', media_type: 'other', description: '分镜提示词' }),
       'text',
     )
   })
@@ -234,7 +258,7 @@ describe('cloudCardKind', () => {
 
   it('gives a playable voice the waveform card', () => {
     assert.equal(
-      kindOf({ id: 'audio-bgm-1', media_type: 'audio', media_url: 'file:素材库/x.mp3' }),
+      kindOf({ id: 'audio-sfx-1', media_type: 'audio', media_url: 'file:素材库/x.mp3' }),
       'audio',
     )
   })
@@ -261,6 +285,34 @@ describe('cloudCardKind', () => {
   it('survives a missing row', () => {
     assert.equal(cloudCardKind(undefined), 'text')
     assert.equal(cloudCardKind(null), 'text')
+  })
+})
+
+/**
+ * The voice plate's restrained dark wash. Five fixed names, chosen by row id so
+ * a card never changes colour as the grid reflows.
+ */
+describe('cloudAudioTheme', () => {
+  it('offers exactly the five restrained dark washes', () => {
+    assert.deepEqual(CLOUD_AUDIO_THEMES, ['indigo', 'jade', 'azure', 'violet', 'charcoal'])
+  })
+
+  it('picks the same wash for the same row every time', () => {
+    const id = 'audio-sfx-8f21ac'
+    const first = cloudAudioTheme(id)
+    assert.equal(cloudAudioTheme(id), first)
+    assert.ok(CLOUD_AUDIO_THEMES.includes(first))
+  })
+
+  it('spreads a realistic set of row ids across more than one wash', () => {
+    const ids = Array.from({ length: 200 }, (_, index) => `audio-sfx-${String(index)}`)
+    const used = new Set(ids.map((id) => cloudAudioTheme(id)))
+    assert.ok(used.size >= 4, `expected a spread across the palette, got ${[...used].join(',')}`)
+  })
+
+  it('falls back to a valid wash for an absent id', () => {
+    assert.ok(CLOUD_AUDIO_THEMES.includes(cloudAudioTheme(undefined)))
+    assert.ok(CLOUD_AUDIO_THEMES.includes(cloudAudioTheme('')))
   })
 })
 

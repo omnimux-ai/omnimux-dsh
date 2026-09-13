@@ -3,18 +3,14 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { CLOUD_AUDIO_THEMES } from './cloud-feed-helpers.js'
 import { en, zh } from './locales.js'
 import { ASSETS_CSS } from './styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const viewJsx = readFileSync(join(here, 'CloudAssetsView.jsx'), 'utf8')
 const feedJs = readFileSync(join(here, 'use-cloud-assets-feed.js'), 'utf8')
-
-/** The save control's own handler, isolated from the rest of the card. */
-const saveHandler = viewJsx.slice(
-  viewJsx.indexOf('const handleSave'),
-  viewJsx.indexOf('const handlePlayClick'),
-)
+const saveJs = readFileSync(join(here, 'use-cloud-save.js'), 'utf8')
 
 /**
  * The declaration block of the first rule whose selector matches `selector`,
@@ -32,28 +28,29 @@ function ruleBody(css, selector) {
 }
 
 /**
- * 二级分类栏只属于声音。
+ * 二级分类栏属于数据，不属于某一个 Tab。
  *
- * 知识包、角色等分类在清单里同样带 sub_categories（脚本提示词 / 知识笔记 /
- * 短剧拆镜 / 实景数字人），旧版据此展开二级栏，于是在选中的「知识包」下面
- * 出现了「全部声音」。这些断言把「只有声音展开」钉死在数据流两端：导航不再
- * 带分类专属文案，feed 的 hasSecondLevel 只在 audio 上成立。
+ * 旧版把二级栏钉死在声音上：知识包、角色、素材的 sub_categories 只当计数桶用，
+ * 于是选中「知识包」时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类
+ * 都展开二级栏，首个 Tab 统一是「全部」并带该大类总数；场景与空的道具不展开。
  */
-describe('Cloud second level is audio-only', () => {
-  it('gates hasSecondLevel on the audio category in the feed', () => {
-    assert.match(feedJs, /import \{[\s\S]*?CLOUD_SUBNAV_CATEGORY[\s\S]*?\} from '\.\/cloud-feed-helpers\.js'/)
-    assert.match(feedJs, /const hasSecondLevel = category === CLOUD_SUBNAV_CATEGORY && tabs\.hasSecondLevel/)
+describe('Cloud second level follows the catalog data', () => {
+  it('reads hasSecondLevel from the tabs instead of naming one category', () => {
+    assert.doesNotMatch(feedJs, /CLOUD_SUBNAV_CATEGORY/)
+    assert.match(feedJs, /const hasSecondLevel = tabs\.hasSecondLevel/)
   })
 
-  it('labels the first chip generically instead of naming audio', () => {
+  it('labels the first chip generically in every category', () => {
     assert.match(viewJsx, /\{row\.id === '' \? t\('cloud\.subnav\.all'\) : t\(`cloud\.subcategory\.\$\{row\.id\}`\)\}/)
     assert.doesNotMatch(viewJsx, /cloud\.audio\.all/)
     assert.doesNotMatch(viewJsx, /全部声音/)
   })
 
-  it('keeps the generic key in both dictionaries and drops the audio-only one', () => {
+  it('keeps the generic keys in both dictionaries and drops the audio-only wording', () => {
     assert.equal(zh['cloud.subnav.all'], '全部')
     assert.equal(en['cloud.subnav.all'], 'All')
+    assert.equal(zh['cloud.subnav.label'], '二级分类')
+    assert.equal(en['cloud.subnav.label'], 'Sub-categories')
     assert.equal(zh['cloud.audio.all'], undefined)
     assert.equal(en['cloud.audio.all'], undefined)
   })
@@ -63,16 +60,40 @@ describe('Cloud second level is audio-only', () => {
     assert.match(viewJsx, /tabs=\{feed\.tabs\.items\}/)
     assert.match(viewJsx, /hasSecondLevel=\{feed\.hasSecondLevel\}/)
   })
+
+  it('opens every category on 全部', () => {
+    assert.match(feedJs, /const \[subCategory, setSubCategory\] = useState\(''\)/)
+    assert.match(feedJs, /setCategory\(next\)\n    \/\/ Every category opens on 全部[\s\S]*?setSubCategory\(''\)/)
+  })
+
+  it('names the new 素材 category in both dictionaries', () => {
+    assert.equal(zh['cloud.category.material'], '素材')
+    assert.equal(en['cloud.category.material'], 'Material')
+    assert.equal(zh['cloud.subcategory.green-screen'], '绿幕')
+    assert.equal(zh['cloud.subcategory.hook'], '钩子')
+    assert.equal(zh['cloud.subcategory.meme'], '表情包')
+    assert.equal(zh['cloud.subcategory.female'], '女性角色')
+    assert.equal(zh['cloud.subcategory.male'], '男性角色')
+    assert.equal(zh['cloud.subcategory.lifestyle'], '生活居家')
+    assert.equal(zh['cloud.subcategory.business'], '职场商务')
+  })
+
+  it('drops the shelves the catalog no longer has', () => {
+    for (const gone of ['note', 'digital-human', 'virtual-influencer', 'hook-video']) {
+      assert.equal(zh[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from zh`)
+      assert.equal(en[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from en`)
+    }
+  })
 })
 
 /**
- * 文本类卡片：知识包全是文字资产（脚本、分镜提示词、笔记），旧版给它们画一块
- * 4:3 的灰色占位图加一个文档图标，标题和描述被挤成一行省略。这类卡片现在直接
- * 是「标题 + 描述」的阅读版式，没有占位图。
+ * 文本类卡片：知识包全是文字资产（脚本、分镜提示词），旧版给它们画一块 4:3 的灰色
+ * 占位图加一个文档图标，标题和描述被挤成一行省略。这类卡片现在直接是「标题 2 行、
+ * 描述 4 行」的阅读版式，没有占位图。
  */
 describe('Cloud text card renders the text, not a placeholder plate', () => {
   it('branches the card body on the row kind', () => {
-    assert.match(viewJsx, /import \{ cloudCardKind \} from '\.\/cloud-feed-helpers\.js'/)
+    assert.match(viewJsx, /import \{ cloudAudioTheme, cloudCardKind \} from '\.\/cloud-feed-helpers\.js'/)
     assert.match(viewJsx, /const kind = cloudCardKind\(asset\)/)
     assert.match(viewJsx, /className=\{`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--\$\{kind\}`\}/)
     assert.match(viewJsx, /data-kind=\{kind\}/)
@@ -95,9 +116,9 @@ describe('Cloud text card renders the text, not a placeholder plate', () => {
     assert.match(title, /font-weight: 600/)
     assert.match(title, /-webkit-line-clamp: 2/)
     assert.match(title, /white-space: normal/)
-    // The hover plates are 28px each, 6px apart, 8px from the edge: the title
-    // keeps clear of them instead of running underneath.
-    assert.match(title, /padding-right: 64px/)
+    // The one hover plate is 28px, 8px from the edge: the title keeps clear of it
+    // instead of running underneath.
+    assert.match(title, /padding-right: 32px/)
 
     const desc = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card--text .omnimux-assets-cloud-desc')
     assert.match(desc, /-webkit-line-clamp: 4/)
@@ -112,7 +133,7 @@ describe('Cloud text card renders the text, not a placeholder plate', () => {
 })
 
 /**
- * 图片类卡片（角色 / 场景 / 道具 / 风格）：缩略图加一行标题，没有别的。
+ * 图片类卡片（角色 / 场景 / 道具 / 素材 / 风格）：缩略图加一行标题，没有别的。
  */
 describe('Cloud picture card is a thumbnail and one line of title', () => {
   it('fixes the media thumbnail at a 160-170px height', () => {
@@ -120,6 +141,7 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
     const height = Number(/height:\s*(\d+)px/.exec(body)?.[1])
     assert.ok(Number.isFinite(height), 'the media thumbnail needs a pixel height')
     assert.ok(height >= 160 && height <= 170, `expected a 160-170px thumbnail, got ${height}px`)
+    assert.equal(height, 164)
   })
 
   it('keeps the picture title to one line', () => {
@@ -134,8 +156,8 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
 })
 
 /**
- * 声音类卡片（配音 / 音效 / BGM）：波形预览区点击即播即停，下面标题加一句音色
- * 描述，没有底部大按钮条。
+ * 声音类卡片（配音 / 音效 / 背景音）：暗调微彩波形区点击即播即停，下面标题加一句
+ * 音色描述，没有底部大按钮条。
  */
 describe('Cloud voice card plays from its waveform plate', () => {
   it('makes the waveform plate the play control', () => {
@@ -163,7 +185,26 @@ describe('Cloud voice card plays from its waveform plate', () => {
     assert.match(viewJsx, /const handlePlayClick = \(event\) => \{\n    event\.stopPropagation\(\)\n    togglePlay\(\)\n  \}/)
   })
 
-  it('keeps no labelled bottom action bar on any card', () => {
+  it('carries one of the five restrained dark washes, chosen from the row id', () => {
+    assert.match(viewJsx, /const theme = canPlay \? cloudAudioTheme\(asset\.id\) : undefined/)
+    assert.match(viewJsx, /data-theme=\{theme\}/)
+
+    const plate = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb')
+    assert.match(plate, /height: 112px/)
+    // The wash is an overlay on the official token, not a replacement for it.
+    assert.match(plate, /background-color: var\(--dsw-alias-bg-elevated\)/)
+    assert.match(plate, /background-image: linear-gradient/)
+
+    assert.equal(CLOUD_AUDIO_THEMES.length, 5)
+    for (const theme of CLOUD_AUDIO_THEMES) {
+      const rule = ruleBody(ASSETS_CSS, `.omnimux-assets-cloud-card--audio[data-theme="${theme}"]`)
+      assert.match(rule, /background-image: linear-gradient/, `${theme} needs its own wash`)
+    }
+  })
+
+  it('keeps the voice description to one line and no labelled bottom bar', () => {
+    const desc = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-desc {')
+    assert.match(desc, /-webkit-line-clamp: 1/)
     assert.doesNotMatch(viewJsx, /<Badge\b/)
     assert.doesNotMatch(viewJsx, /mediaLabelOf/)
     assert.doesNotMatch(viewJsx, /omnimux-assets-cloud-tags?["'\s]/)
@@ -173,12 +214,12 @@ describe('Cloud voice card plays from its waveform plate', () => {
 })
 
 /**
- * 双操作按钮：右上角绝对定位，悬停白底黑字高对比反色，零紫色。
+ * 卡片右上角只留一个操作：加入对话。收藏（+ 号）连同它的悬浮条与状态一并删除。
  */
-describe('Cloud card hover controls are pinned to the top-right corner', () => {
+describe('Cloud card keeps exactly one hover control', () => {
   const actions = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-actions {')
 
-  it('positions the cluster absolutely in the corner, above the card body', () => {
+  it('positions the control absolutely in the corner, above the card body', () => {
     assert.match(actions, /position: absolute/)
     assert.match(actions, /top: 8px/)
     assert.match(actions, /right: 8px/)
@@ -194,10 +235,51 @@ describe('Cloud card hover controls are pinned to the top-right corner', () => {
     assert.match(viewJsx, /title=\{addLabel\}/)
   })
 
-  it('inverts both plates on hover, with no brand hue anywhere in the cluster', () => {
+  it('renders the bubble icon and nothing else in that corner', () => {
+    const start = viewJsx.indexOf('className="omnimux-assets-cloud-actions"')
+    const end = viewJsx.indexOf('className="omnimux-assets-card-body"', start)
+    const cluster = viewJsx.slice(start, end)
+    assert.equal((cluster.match(/<IconButton/g) ?? []).length, 1)
+    assert.match(cluster, /<ChatIcon size=\{16\} \/>/)
+  })
+
+  it('removes the save control and its state from the card, the feed and the stylesheet', () => {
+    assert.doesNotMatch(viewJsx, /PlusIcon/)
+    assert.doesNotMatch(viewJsx, /cloud-save/)
+    assert.doesNotMatch(viewJsx, /handleSave/)
+    assert.doesNotMatch(viewJsx, /saveToLocal/)
+    assert.doesNotMatch(viewJsx, /data-saved/)
+    assert.doesNotMatch(viewJsx, /savedIds|savingId/)
+    assert.doesNotMatch(feedJs, /useCloudSave/)
+    assert.doesNotMatch(feedJs, /saveToLocal/)
+    assert.doesNotMatch(ASSETS_CSS, /omnimux-assets-cloud-save/)
+  })
+
+  it('drops the cloud-only save wording from both dictionaries', () => {
+    assert.equal(zh['cloud.action.save'], undefined)
+    assert.equal(zh['cloud.action.saved'], undefined)
+    assert.equal(zh['cloud.save.saved'], undefined)
+    assert.equal(en['cloud.action.save'], undefined)
+    assert.equal(en['cloud.action.saved'], undefined)
+    assert.equal(en['cloud.save.saved'], undefined)
+  })
+
+  it('re-points the surviving save notice at a modal-scoped key', () => {
+    // The preview modal is the only remaining saver, so the notice it shows must
+    // not be worded as a card action.
+    assert.match(saveJs, /setNotice\(t\('modal\.save\.notice'\)\.replace\('\{name\}'/)
+    assert.match(saveJs, /import \{ saveCloudAssetToLocal \} from '\.\/cloud-save\.js'/)
+    assert.ok(zh['modal.save.notice'].includes('{name}'))
+    assert.ok(en['modal.save.notice'].includes('{name}'))
+    assert.equal(zh['modal.saveToLocal'], '收藏到本地')
+  })
+
+  it('inverts the plate on hover, with no brand hue anywhere in the control', () => {
+    // Bounded at the waveform rules: those sit on the fixed dark media plate and
+    // are exempted from the token rule, while this control is chrome and is not.
     const plates = ASSETS_CSS.slice(
       ASSETS_CSS.indexOf('.omnimux-assets-cloud-card .omnimux-assets-cloud-chat'),
-      ASSETS_CSS.indexOf('.omnimux-assets-cloud-desc'),
+      ASSETS_CSS.indexOf('.omnimux-assets-cloud-wave {'),
     )
     assert.match(plates, /background: var\(--dsw-alias-bg-elevated\)/)
     assert.match(plates, /transition: opacity/)
@@ -206,32 +288,6 @@ describe('Cloud card hover controls are pinned to the top-right corner', () => {
     assert.doesNotMatch(plates, /brand-primary|interactive-bg-hover-accent/)
     assert.doesNotMatch(plates, /#[0-9a-fA-F]{3,8}\b/)
     assert.doesNotMatch(plates, /rgba\(/)
-  })
-
-  it('runs the card control through the feed save, not a private request', () => {
-    assert.match(viewJsx, /onSave=\{feed\.saveToLocal\}/)
-    assert.match(saveHandler, /if \(saved \|\| saving\) return/)
-    assert.match(saveHandler, /event\.stopPropagation\(\)/)
-    assert.match(saveHandler, /onSave\?\.\(asset\)/)
-    assert.match(viewJsx, /className="omnimux-assets-cloud-save"/)
-  })
-
-  it('swaps 收藏到本地 for 已收藏 once the row is saved, and keeps it on screen at rest', () => {
-    assert.match(viewJsx, /const saveLabel = saved \? t\('cloud\.action\.saved'\) : t\('cloud\.action\.save'\)/)
-    assert.match(viewJsx, /title=\{saveLabel\}/)
-    assert.match(viewJsx, /aria-pressed=\{saved \? 'true' : 'false'\}/)
-    assert.match(viewJsx, /\{saved \? <CheckIcon size=\{16\} \/> : <PlusIcon size=\{16\} \/>\}/)
-    assert.match(viewJsx, /saved=\{feed\.savedIds\.has\(asset\.id\)\}/)
-    assert.match(viewJsx, /saving=\{feed\.savingId === asset\.id\}/)
-    assert.match(viewJsx, /disabled=\{saved \|\| saving\}/)
-
-    const saved = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card .omnimux-assets-cloud-save[aria-pressed="true"]')
-    assert.match(saved, /opacity: 1/)
-    assert.match(saved, /background: var\(--dsw-alias-label-primary\)/)
-  })
-
-  it('marks the card itself, so the saved state is readable without a hover', () => {
-    assert.match(viewJsx, /data-saved=\{saved \? 'true' : 'false'\}/)
   })
 })
 
@@ -245,8 +301,8 @@ describe('Cloud card opens the preview', () => {
   })
 
   it('hands the preview handler down from the view to every card', () => {
-    assert.match(viewJsx, /const \{ t, open = true, onPreview, save \} = props/)
-    assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open, save \}\)/)
+    assert.match(viewJsx, /const \{ t, open = true, onPreview \} = props/)
+    assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open \}\)/)
     assert.match(viewJsx, /onPreview=\{onPreview\}/)
   })
 })
