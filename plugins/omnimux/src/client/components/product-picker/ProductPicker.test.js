@@ -86,3 +86,11 @@ test('ProductPickerModal: exposes thin adapter contract with onConfirm, onClose,
   assert.ok(modalSource.includes('export function ProductPickerModal'), 'exports ProductPickerModal');
   assert.ok(modalSource.includes('ProductPicker'), 'delegates to ProductPicker');
 });
+
+test('ProductPicker: supports custom product name fallback when search query is entered', () => {
+  const currentPickerSource = readFileSync(join(here, 'ProductPicker.jsx'), 'utf8');
+  assert.ok(currentPickerSource.includes('productPicker.useCustom'), 'supports custom product placeholder');
+  assert.ok(currentPickerSource.includes('custom-'), 'generates custom product fallback id');
+  const safeT = createSafeT(undefined);
+  assert.equal(safeT('productPicker.useCustom', { name: '便携小风扇' }), '使用自定义产品："便携小风扇"');
+});

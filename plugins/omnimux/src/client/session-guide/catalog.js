@@ -38,7 +38,7 @@ export const MARKETING_INSIGHT_ITEMS = [
   {
     id: 'tiktok-creators',
     icon: 'clapperboard',
-    prompt: 'Find and shortlist TikTok creators for [product://product/brand] in [target market]. Evaluate audience fit, content style, engagement quality, brand safety, and collaboration potential, then recommend campaign roles and outreach angles.',
+    prompt: 'Find and shortlist TikTok creators for [product/brand] in [target market]. Evaluate audience fit, content style, engagement quality, brand safety, and collaboration potential, then recommend campaign roles and outreach angles.',
   },
   {
     id: 'ads-roas',
@@ -58,7 +58,7 @@ export const MARKETING_INSIGHT_ITEMS = [
   {
     id: 'category-market',
     icon: 'chart-column',
-    prompt: 'Analyze the potential of [product://product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.',
+    prompt: 'Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.',
   },
   {
     id: 'title-optimization',
@@ -214,11 +214,11 @@ export const guideZh = {
   "guide.content-creators": "内容与创作者",
   "guide.ad-analytics": "广告分析",
   "guide.category-opportunity.title": "品类机会",
-  "guide.category-opportunity.prompt": "分析[product://产品品类]在[目标市场]的[电商平台]上的潜力。评估需求、竞争、定价、客户需求、进入壁垒和增长信号；明确区分事实、推断和假设；并建议是否进入以及如何进入。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
+  "guide.category-opportunity.prompt": "分析[产品品类]在[目标市场]的[电商平台]上的潜力。评估需求、竞争、定价、客户需求、进入壁垒和增长信号；明确区分事实、推断和假设；并建议是否进入以及如何进入。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
   "guide.trending-products.title": "热门产品",
-  "guide.trending-products.prompt": "结合[业务背景或限制条件]，找出[目标市场]的[电商平台]上[product://品类/产品]中具有较强销售潜力的热门产品。解释每项推荐背后的需求信号、受众匹配度、竞争强度、定价机会、季节性和运营风险。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
+  "guide.trending-products.prompt": "结合[业务背景或限制条件]，找出[目标市场]的[电商平台]上[品类/产品]中具有较强销售潜力的热门产品。解释每项推荐背后的需求信号、受众匹配度、竞争强度、定价机会、季节性和运营风险。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
   "guide.competitor-scan.title": "竞争对手扫描",
-  "guide.competitor-scan.prompt": "分析[目标市场]的[电商平台]上[product://对标商品/品类]中排名靠前的竞品商品页面。比较定位、定价、优惠、评论、内容、卖点和转化策略，并找出具体的差异化机会。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
+  "guide.competitor-scan.prompt": "分析[目标市场]的[电商平台]上[对标商品/品类]中排名靠前的竞品商品页面。比较定位、定价、优惠、评论、内容、卖点和转化策略，并找出具体的差异化机会。如果缺少背景信息，请用开放式问题追问有用的参考资料。",
   "guide.title-optimization.title": "标题优化",
   "guide.title-optimization.prompt": "根据[product://关联产品详情]，为[电商平台]优化[当前商品标题]。在遵守平台要求的前提下，提升搜索可见度、关键词相关性、可读性、差异化和转化效果。给出推荐标题及简要理由。如果缺少背景信息，请用开放式问题追问有用的产品信息。",
   "guide.review-insights.title": "评论洞察",
@@ -263,11 +263,11 @@ export const guideZh = {
   "guide.insight.title-optimization.title": "产品列表标题优化",
 
   // 6个洞察子项预填 Prompt (DSH 中文语言适配)
-  "guide.insight.tiktok-creators.prompt": "请为[目标市场]中的[product://产品/品牌]寻找并筛选候选 TikTok 创作者。\n从以下维度进行专业评估：\n1. 受众画像与受众契合度\n2. 内容风格与视觉调性\n3. 真实互动质量与完播表现\n4. 品牌安全性与舆情合规\n5. 商业转化潜力与合作意向\n最后给出具体的合作营销角色建议与建联触达切入点。如果缺少关键背景信息，请向我追问。",
+  "guide.insight.tiktok-creators.prompt": "请为[目标市场]中的[产品/品牌]寻找并筛选候选 TikTok 创作者。\n从以下维度进行专业评估：\n1. 受众画像与受众契合度\n2. 内容风格与视觉调性\n3. 真实互动质量与完播表现\n4. 品牌安全性与舆情合规\n5. 商业转化潜力与合作意向\n最后给出具体的合作营销角色建议与建联触达切入点。如果缺少关键背景信息，请向我追问。",
   "guide.insight.ads-roas.prompt": "[file://广告投放报告]\n\n结合[归因窗口]和[product://关联产品]，按照[目标 ROAS/CPA]对[平台]在[日期范围]内的广告投放表现进行多维度诊断：\n1. 分层评估广告系列、广告组与单条素材层级的消耗、收入、ROAS、CPA、CTR、CPC 与转化率；\n2. 深入定位预算分配、受众圈选、出价策略、素材创意及落地页转化瓶颈；\n3. 给出清晰的操盘优先级建议：哪些应立即暂停止损、哪些应加大预算放量、哪些需要建立新创意测试组。\n请明确区分有数据支撑的客观事实与假设推断。若报告信息不全，请向我追问。",
   "guide.insight.amazon-a-plus.prompt": "请为[product://主推产品]设计一份专业且高转化率的亚马逊 A+ 页面（EBC）内容创作简报，包含：\n1. 整体叙事结构与版块编排逻辑\n2. 核心卖点与差异化价值提炼（Key Messages）\n3. 推荐使用的 A+ 官方模块组合与图文排版\n4. 视觉设计风格、配色体系与拍摄布光建议\n如果缺少产品详情或竞品背景，请向我提出针对性的补充问题。",
   "guide.insight.amazon-search-terms.prompt": "根据[归因设置]和[目标核心指标]，深入分析[平台]在[日期范围]内的[file://搜索词报告]：\n1. 筛选出高点击率、高转化率的高效搜索词（Golden Keywords）；\n2. 识别出高消耗低转化的浪费型搜索词，并提供否定关键词（Negative Keywords）清单；\n3. 给出精准竞价调整策略与广告活动预算优化建议。\n请严格基于真实数据分析，明确区分事实与推断。若关键报表数据缺失，请向我追问。",
-  "guide.insight.category-market.prompt": "请全面分析[product://产品品类]在[目标市场]的[电商/社媒平台]上的商业机会与增长潜力：\n1. 评估市场需求规模、季节性特征与增长信号；\n2. 剖析现有主要竞争对手格局与定价带区间；\n3. 挖掘目标消费者的核心痛点、未满足需求与进入壁垒；\n4. 明确给出是否建议入场以及具体的差异化切入策略。\n请明确区分客观事实、行业推断与假设。如果缺少背景信息，请向我提出开放式问题以获取补充材料。",
+  "guide.insight.category-market.prompt": "请全面分析[产品品类]在[目标市场]的[电商/社媒平台]上的商业机会与增长潜力：\n1. 评估市场需求规模、季节性特征与增长信号；\n2. 剖析现有主要竞争对手格局与定价带区间；\n3. 挖掘目标消费者的核心痛点、未满足需求与进入壁垒；\n4. 明确给出是否建议入场以及具体的差异化切入策略。\n请明确区分客观事实、行业推断与假设。如果缺少背景信息，请向我提出开放式问题以获取补充材料。",
   "guide.insight.title-optimization.prompt": "请根据[product://关联产品详情]，为[电商平台]深度优化[当前商品标题]：\n1. 严格遵守平台的字符限制与排版规则（避免违规堆砌）；\n2. 最大化提升核心大词与长尾词的搜索权重与搜索可见度；\n3. 兼顾高可读性、产品差异化与点击转化吸引力；\n4. 提供 3 个不同侧重点（如搜索权重优先型、卖点吸引型、品牌调性型）的推荐标题，并附带简要修改理由。\n如果缺少必要的产品参数，请向我追问。",
 
   // 视频网址（URL to Video）模态框文案
@@ -688,11 +688,11 @@ export const guideEn = {
   "guide.content-creators": "Content & Creators",
   "guide.ad-analytics": "Ad Analytics",
   "guide.category-opportunity.title": "Category Opportunity",
-  "guide.category-opportunity.prompt": "Analyze the potential of [product://product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
+  "guide.category-opportunity.prompt": "Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
   "guide.trending-products.title": "Trending Products",
-  "guide.trending-products.prompt": "Identify trending products with strong sales potential in [product://category/product] on [ecommerce platform] in [target market], taking [business context or constraints] into account. Explain the demand signals, audience fit, competitive intensity, pricing opportunity, seasonality, and operational risks behind each recommendation. If context is missing, ask an open follow-up question about useful reference information.",
+  "guide.trending-products.prompt": "Identify trending products with strong sales potential in [category/product] on [ecommerce platform] in [target market], taking [business context or constraints] into account. Explain the demand signals, audience fit, competitive intensity, pricing opportunity, seasonality, and operational risks behind each recommendation. If context is missing, ask an open follow-up question about useful reference information.",
   "guide.competitor-scan.title": "Competitor Scan",
-  "guide.competitor-scan.prompt": "Analyze the top-ranking competitor product listings for [product://benchmark product/category] on [ecommerce platform] in [target market]. Compare positioning, pricing, offers, reviews, content, selling points, and conversion tactics, then identify specific opportunities for differentiation. If context is missing, ask an open follow-up question about useful reference information.",
+  "guide.competitor-scan.prompt": "Analyze the top-ranking competitor product listings for [benchmark product/category] on [ecommerce platform] in [target market]. Compare positioning, pricing, offers, reviews, content, selling points, and conversion tactics, then identify specific opportunities for differentiation. If context is missing, ask an open follow-up question about useful reference information.",
   "guide.title-optimization.title": "Title Optimization",
   "guide.title-optimization.prompt": "Optimize [current product title] for [ecommerce platform] using [product://product details]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide the recommended title with a concise rationale. If context is missing, ask an open follow-up question about useful product information.",
   "guide.review-insights.title": "Review Insights",
@@ -737,11 +737,11 @@ export const guideEn = {
   "guide.insight.title-optimization.title": "Product Listing Title Optimization",
 
   // 6 Insight Items Prompt (English)
-  "guide.insight.tiktok-creators.prompt": "Find and shortlist TikTok creators for [product://product/brand] in [target market]. Evaluate audience fit, content style, engagement quality, brand safety, and collaboration potential, then recommend campaign roles and outreach angles. If context is missing, ask an open follow-up question about useful reference information.",
+  "guide.insight.tiktok-creators.prompt": "Find and shortlist TikTok creators for [product/brand] in [target market]. Evaluate audience fit, content style, engagement quality, brand safety, and collaboration potential, then recommend campaign roles and outreach angles. If context is missing, ask an open follow-up question about useful reference information.",
   "guide.insight.ads-roas.prompt": "[file://ads report]\n\nAnalyze performance on [platform] for [date range] against [target ROAS/CPA], considering [attribution window] and [product://product margin]. Evaluate campaign, ad group or ad set, and ad-level spend, revenue, ROAS, CPA, CTR, CPC, and conversion rate; identify budget, audience, bidding, creative, and landing-page issues; and prioritize what to pause, scale, or test next. Distinguish data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
   "guide.insight.amazon-a-plus.prompt": "Create an Amazon A+ Content brief for [product://target product], including the content structure, key messages, module recommendations, and visual direction. If context is missing, ask an open follow-up question about useful product information.",
   "guide.insight.amazon-search-terms.prompt": "Analyze [file://search term report] from [platform] for [date range], using [attribution settings] and [target metrics]. Identify high-performing queries, wasted ad spend, negative-keyword opportunities, and bid or budget actions. Separate data-backed findings from assumptions. If context is missing, ask an open follow-up question about useful report information.",
-  "guide.insight.category-market.prompt": "Analyze the potential of [product://product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
+  "guide.insight.category-market.prompt": "Analyze the potential of [product category] on [ecommerce platform] in [target market]. Evaluate demand, competition, pricing, customer needs, barriers to entry, and growth signals; clearly distinguish facts, inferences, and assumptions; and recommend whether and how to enter. If context is missing, ask an open follow-up question about any useful reference information.",
   "guide.insight.title-optimization.prompt": "Optimize [current product title] for [ecommerce platform] using [product://product details]. Improve search visibility, keyword relevance, readability, differentiation, and conversion while following the platform’s requirements. Provide 3 recommended titles with concise rationales. If context is missing, ask an open follow-up question about useful product information.",
 
   // URL to Video modal
