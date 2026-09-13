@@ -664,6 +664,105 @@ describe('Cloud catalog metadata routes', () => {
   })
 })
 
+/**
+ * 角色的八维筛选走查询参数而不是分片目录：组合数远多于目录该承受的文件数，而
+ * 服务端手里已有整份 `index.json`。路由必须与分片同形返回，客户端的分页才不必
+ * 区分两种来源。
+ */
+describe('Cloud dimension filter route', () => {
+  /** A catalog of four characters on two of the eight dimensions. */
+  function makeFilterDispatcher() {
+    const catalogDir = join(root, 'filter-catalog')
+    mkdirSync(catalogDir, { recursive: true })
+    const dims = (gender, scene, pose) => ({
+      gender, age: 'Youth', figure: 'Average', name: gender === 'Female' ? 'Ava' : 'Ethan',
+      industry: 'General Lifestyle', scene, pose, outfit: 'Casual/Lifestyle',
+    })
+    const rows = [
+      { id: 'character-1', category: 'character', sub_category: 'female', name: 'Ava in car', description: '', media_type: 'video', tags: [], meta: { dims: dims('Female', 'Car', 'Selfie') } },
+      { id: 'character-2', category: 'character', sub_category: 'female', name: 'Ava at home', description: '', media_type: 'video', tags: [], meta: { dims: dims('Female', 'Living Room', 'Frontal') } },
+      { id: 'character-3', category: 'character', sub_category: 'male', name: 'Ethan in car', description: '', media_type: 'video', tags: [], meta: { dims: dims('Male', 'Car', 'Sitting') } },
+      { id: 'audio-1', category: 'audio', sub_category: '', name: 'Voice', description: '', media_type: 'audio', tags: [], meta: {} },
+    ]
+    writeFileSync(join(catalogDir, 'manifest.json'), JSON.stringify({
+      version: 1,
+      pageSize: 24,
+      totalAssets: rows.length,
+      sourceRoot: '',
+      categories: [
+        { id: 'character', zh: '角色', en: 'Characters', total: 3, pages: 1 },
+        { id: 'audio', zh: '声音', en: 'Audio', total: 1, pages: 1 },
+      ],
+    }))
+    writeFileSync(join(catalogDir, 'index.json'), JSON.stringify(rows))
+
+    const { mappings, artifacts, library } = makeDispatcher()
+    return createAssetsDispatcher({
+      mappings,
+      artifacts,
+      library,
+      cloud: createCloudCatalog({ catalogDir }),
+    })
+  }
+
+  it('returns the page envelope a shard would, filtered by one dimension', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/filter?dims=1female' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.total, 2)
+    assert.equal(response.body.totalPages, 1)
+    assert.deepEqual(response.body.items.map((row) => row.id), ['character-1', 'character-2'])
+  })
+
+  it('narrows on every selected dimension at once', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/filter?dims=1female&dims=1car' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.total, 1)
+    assert.equal(response.body.items[0].id, 'character-1')
+  })
+
+  it('keeps the filtered rows out of every other category', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/filter?dims=1youth' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.items.every((row) => row.category === 'character'), true)
+  })
+
+  it('matches an unknown token against nothing', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/filter?dims=1nobody' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.total, 0)
+    assert.deepEqual(response.body.items, [])
+  })
+
+  it('refuses a filter with no dimension at all', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/filter' })
+    assert.equal(response.status, 400)
+    assert.equal(response.body.error, 'catalog-filter-invalid')
+  })
+
+  it('pages by offset', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux/assets/cloud/filter?dims=1female&limit=1&offset=1',
+    })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.total, 2)
+    assert.equal(response.body.totalPages, 2)
+    assert.deepEqual(response.body.items.map((row) => row.id), ['character-2'])
+  })
+})
+
 /** @param {{ status: number, contentType: string, text: string, body: unknown }} response @param {string} original */
 function assertRefused(response, original) {
   assert.equal(response.status, 500)

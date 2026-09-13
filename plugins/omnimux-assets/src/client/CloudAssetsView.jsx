@@ -4,6 +4,7 @@ import {
   AudioIcon,
   ChatIcon,
   CheckIcon,
+  ChevronRightIcon,
   DocIcon,
   ImageIcon,
   PauseIcon,
@@ -13,6 +14,7 @@ import {
 import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
+import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 
@@ -220,15 +222,150 @@ export function CloudAssetCard(props) {
 }
 
 /**
+ * One dimension of the 角色 filter bar: a pill that opens its own option list.
+ *
+ * The pill reads as its own title until a value is picked, then as
+ * `标题：值`, so a filtered tab says what it is filtered by without the list
+ * being open. Every option carries the number of rows on it, counted by the
+ * catalog rather than by the client, and 全部 leads the list as the way back out
+ * of that one dimension.
+ * @param {{
+ *   t: (key: string) => string,
+ *   dimension: any,
+ *   value: string,
+ *   onSelect: (value: string) => void,
+ * }} props
+ */
+function CloudDimensionFilter(props) {
+  const { t, dimension, value, onSelect } = props
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null))
+  const label = dimensionLabelOf({ t, dimension, value })
+
+  // One listener for the whole bar: a pointer landing anywhere outside this pill
+  // closes it, which is what keeps two pills from being open at once without
+  // lifting the open state into every parent.
+  useEffect(() => {
+    if (!open) return undefined
+    const onPointerDown = (event) => {
+      const node = rootRef.current
+      if (node && !node.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => { document.removeEventListener('mousedown', onPointerDown) }
+  }, [open])
+
+  /** @param {string} next */
+  const pick = (next) => {
+    onSelect(next)
+    setOpen(false)
+  }
+
+  /** @param {{ value: string, total: number }} option */
+  const renderOption = (option) => (
+    <Button
+      key={option.value || 'all'}
+      variant="ghost"
+      size="xs"
+      className="omnimux-assets-cloud-dimension-option"
+      aria-pressed={option.value === value ? 'true' : 'false'}
+      onClick={() => { pick(option.value) }}
+    >
+      <span className="omnimux-assets-cloud-dimension-option-label">
+        {optionLabelOf({ t, dimension, value: option.value })}
+      </span>
+      <span className="omnimux-assets-cloud-count">{option.total}</span>
+    </Button>
+  )
+
+  return (
+    <div className="omnimux-assets-cloud-dimension" ref={rootRef}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="omnimux-assets-cloud-dimension-btn"
+        aria-haspopup="listbox"
+        aria-expanded={open ? 'true' : 'false'}
+        aria-pressed={value === '' ? 'false' : 'true'}
+        aria-label={label}
+        onClick={() => { setOpen((prev) => !prev) }}
+      >
+        <span className="omnimux-assets-cloud-dimension-label">{label}</span>
+        <ChevronRightIcon size={12} className="omnimux-assets-cloud-dimension-caret" />
+      </Button>
+      {open ? (
+        <div className="omnimux-assets-cloud-dimension-menu" role="listbox" aria-label={t(`dim.${dimension.id}`)}>
+          {renderOption({ value: '', total: dimension.total })}
+          {dimension.options.map((option) => renderOption(option))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * The 角色 filter bar: eight dimension pills, plus the one control that clears
+ * them all.
+ *
+ * It replaces the sub-category chip row for 角色 only, because that category's
+ * shelves (女性 / 男性 / 生活居家 / 职场商务) were the first two axes of a job that
+ * genuinely has eight. The bar is data-driven: it renders whatever the catalog's
+ * `dimensions` table holds, in the order the scope key is built from, so a
+ * catalog that publishes fewer dimensions simply shows fewer pills.
+ * @param {{
+ *   t: (key: string) => string,
+ *   dimensions: any[],
+ *   filters: Record<string, string>,
+ *   active: number,
+ *   onSelect: (dimensionId: string, value: string) => void,
+ *   onReset: () => void,
+ * }} props
+ */
+function CloudDimensionBar(props) {
+  const { t, dimensions, filters, active, onSelect, onReset } = props
+  if (dimensions.length === 0) return null
+
+  return (
+    <div className="omnimux-assets-cloud-dimensions" role="group" aria-label={t('dim.label')}>
+      {dimensions.map((dimension) => (
+        <CloudDimensionFilter
+          key={dimension.id}
+          t={t}
+          dimension={dimension}
+          value={filters[dimension.id] ?? ''}
+          onSelect={(value) => { onSelect(dimension.id, value) }}
+        />
+      ))}
+      {/* One reset control, and only while there is something to reset: an
+          always-visible button that usually does nothing is noise. */}
+      {active > 0 ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="omnimux-assets-cloud-dimension-reset"
+          onClick={onReset}
+        >
+          {t('dim.reset')}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+/**
  * Category navigation with its optional second level.
  *
  * The second level belongs to the data: a category shows its sub-categories
- * whenever the feed reports them (声音, 素材, 角色), and 场景 and the empty 道具
- * report none. The first chip is always a plain 全部 carrying the category's own
- * count rather than a category-specific label, so no category can inherit
- * another one's wording. Both levels share one chip treatment: neutral until
- * selected, then inked with the label colour instead of a brand accent, so the
- * tab row carries no colour of its own in either theme.
+ * whenever the feed reports them (声音, 素材), and 场景 and the empty 道具 report
+ * none. The first chip is always a plain 全部 carrying the category's own count
+ * rather than a category-specific label, so no category can inherit another one's
+ * wording. Both levels share one chip treatment: neutral until selected, then
+ * inked with the label colour instead of a brand accent, so the tab row carries
+ * no colour of its own in either theme.
+ *
+ * 角色 is the one category whose second level is the filter bar instead: its
+ * eight professional dimensions replace the four shelves, which were only ever
+ * two of those axes.
  * @param {{
  *   t: (key: string) => string,
  *   categories: any[],
@@ -236,12 +373,19 @@ export function CloudAssetCard(props) {
  *   subCategory: string,
  *   tabs: any[],
  *   hasSecondLevel: boolean,
+ *   characterFilters: { dimensions: any[], filters: Record<string, string>, active: number },
  *   onCategory: (id: string) => void,
  *   onSubCategory: (id: string) => void,
+ *   onDimension: (dimensionId: string, value: string) => void,
+ *   onResetDimensions: () => void,
  * }} props
  */
 function CloudCategoryNav(props) {
-  const { t, categories, category, subCategory, tabs, hasSecondLevel, onCategory, onSubCategory } = props
+  const {
+    t, categories, category, subCategory, tabs, hasSecondLevel, characterFilters,
+    onCategory, onSubCategory, onDimension, onResetDimensions,
+  } = props
+  const filterBarOwnsSecondLevel = characterFilters.dimensions.length > 0
 
   return (
     <div className="omnimux-assets-cloud-nav">
@@ -260,7 +404,15 @@ function CloudCategoryNav(props) {
           </Button>
         ))}
       </div>
-      {hasSecondLevel ? (
+      <CloudDimensionBar
+        t={t}
+        dimensions={characterFilters.dimensions}
+        filters={characterFilters.filters}
+        active={characterFilters.active}
+        onSelect={onDimension}
+        onReset={onResetDimensions}
+      />
+      {hasSecondLevel && !filterBarOwnsSecondLevel ? (
         <div className="omnimux-assets-cloud-subnav" role="group" aria-label={t('cloud.subnav.label')}>
           {tabs.map((row) => (
             <Button
@@ -311,13 +463,20 @@ export function CloudAssetsView(props) {
 
   const onTogglePlay = useCallback((asset) => { audition.toggle(asset) }, [audition])
   const searchActive = feed.query.trim() !== ''
+  const filtered = feed.characterFilters.active > 0
 
   const emptyState = useMemo(() => {
+    // A dimension combination that the catalog holds no rows for is the one
+    // empty case the user caused themselves, so it is the one that names the
+    // filter rather than the search.
+    if (filtered) {
+      return { title: t('dim.empty.title'), description: t('dim.empty.desc') }
+    }
     if (searchActive) {
       return { title: t('cloud.empty.search'), description: t('cloud.empty.searchDesc') }
     }
     return { title: t('cloud.empty.title'), description: t('cloud.empty.desc') }
-  }, [searchActive, t])
+  }, [filtered, searchActive, t])
 
   let body = null
   if (feed.loading) {
@@ -362,8 +521,11 @@ export function CloudAssetsView(props) {
         subCategory={feed.subCategory}
         tabs={feed.tabs.items}
         hasSecondLevel={feed.hasSecondLevel}
+        characterFilters={feed.characterFilters}
         onCategory={feed.selectCategory}
         onSubCategory={feed.selectSubCategory}
+        onDimension={feed.selectDimension}
+        onResetDimensions={feed.resetDimensions}
       />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {body}

@@ -29,6 +29,7 @@ const STATUS_BY_CODE = {
   'asset-not-found': 404,
   'catalog-not-found': 404,
   'catalog-unavailable': 503,
+  'catalog-filter-invalid': 400,
   'cloud-media-unavailable': 404,
   'name-conflict': 409,
   'type-invalid': 400,
@@ -65,7 +66,11 @@ const CLOUD_INDEX_PATHS = new Set([
 
 /** A catalog page name is `page-NNNN` or `page-NNNN.json`; nothing else is read. */
 const CATALOG_PAGE_RE = /^page-(\d{1,6})(?:\.json)?$/
-/** A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. */
+/**
+ * A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. The digits and
+ * underscores the 角色 filter scope uses are part of it, because a filtered scope
+ * names its dimension values (`1female1youth0car…`).
+ */
 const CATALOG_SCOPE_SEGMENT_RE = /^[a-z][a-z0-9_]*$/
 
 /**
@@ -453,6 +458,23 @@ export function createAssetsDispatcher(deps) {
             q: url.searchParams.get('q') || '',
             category: url.searchParams.get('category') || '',
             subCategory: url.searchParams.get('sub_category') || '',
+            limit: url.searchParams.get('limit'),
+            offset: url.searchParams.get('offset'),
+          }),
+        }
+      }
+
+      // `/omnimux/assets/cloud/filter?dims=<token,token>&limit=&offset=`
+      //
+      // 角色's eight dimensions describe far more combinations than the catalog
+      // should carry as files, so a filtered page is answered from the index the
+      // Host already holds. The response is the same page envelope a shard file
+      // is, so the client's pager does not know the difference.
+      if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/filter') {
+        return {
+          status: 200,
+          body: cloud.filter({
+            dims: url.searchParams.getAll('dims'),
             limit: url.searchParams.get('limit'),
             offset: url.searchParams.get('offset'),
           }),
