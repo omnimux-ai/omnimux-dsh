@@ -6,6 +6,7 @@ import { AssetBrowse } from './AssetBrowse.jsx'
 import { AssetGrid } from './AssetGrid.jsx'
 import { AssetDetail } from './AssetDetail.jsx'
 import { AssetPreviewModal } from './AssetPreviewModal.jsx'
+import { CloudAssetsView } from './CloudAssetsView.jsx'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
@@ -227,20 +228,19 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, sourceTab } = props
+  const { t, feed, emptyProps, onPreview, sourceTab, visible } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
   }
 
   if (sourceTab === 'cloud') {
+    // Mounted only while the cloud tab is selected: leaving it unmounts the
+    // feed, which is what stops an in-flight audition and releases its audio.
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <EmptyState
-            title={t('cloud.title')}
-            description={t('cloud.desc')}
-          />
+          <CloudAssetsView t={t} open={visible} />
         </div>
       </div>
     )
@@ -371,7 +371,7 @@ export function AssetsStage(props) {
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
-      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} sourceTab={sourceTab} />
+      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} sourceTab={sourceTab} visible={visible} />
       <AssetsDialogs t={t} feed={feed} />
       {previewTarget && (
         <AssetPreviewModal

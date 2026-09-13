@@ -749,6 +749,126 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-state-warn-primary);
 }
 
+/* ---- cloud assets -------------------------------------------------------
+   The cloud tab reuses the local card, so only what genuinely differs is
+   defined here: two-level navigation, a fixed tile ratio that stops the grid
+   from reflowing as covers load, and the scroll container. */
+
+.omnimux-assets-cloud {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  gap: 10px;
+}
+.omnimux-assets-cloud-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.omnimux-assets-cloud-nav-row,
+.omnimux-assets-cloud-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.omnimux-assets-cloud-subnav {
+  padding-inline-start: 10px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+}
+.omnimux-assets-cloud-count {
+  margin-left: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-assets-cloud-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+.omnimux-assets-cloud-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+/* Fixed ratio per media type: the tile reserves its box before the image
+   arrives, so paging never shifts the grid under the pointer. */
+.omnimux-assets-cloud-thumb {
+  height: auto;
+}
+.omnimux-assets-cloud-card[data-media-type="video"] .omnimux-assets-cloud-thumb,
+.omnimux-assets-cloud-card[data-media-type="audio"] .omnimux-assets-cloud-thumb {
+  aspect-ratio: 16 / 9;
+}
+.omnimux-assets-cloud-card[data-media-type="image"] .omnimux-assets-cloud-thumb,
+.omnimux-assets-cloud-card[data-media-type="document"] .omnimux-assets-cloud-thumb,
+.omnimux-assets-cloud-card[data-media-type="other"] .omnimux-assets-cloud-thumb {
+  aspect-ratio: 4 / 3;
+}
+.omnimux-assets-cloud-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-preview,
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-preview {
+  opacity: 1;
+}
+.omnimux-assets-cloud-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.omnimux-assets-cloud-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.omnimux-assets-cloud-tag {
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-cloud-sentinel {
+  height: 1px;
+}
+.omnimux-assets-cloud-more {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 4px;
+}
+.omnimux-assets-cloud-end {
+  margin: 0;
+  padding: 14px 0 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-assets-cloud-notice {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-secondary);
+}
+
 `
 
 export function injectAssetsStyles() {

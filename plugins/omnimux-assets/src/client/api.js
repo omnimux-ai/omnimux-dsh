@@ -153,3 +153,57 @@ export function listArtifacts(type, arev) {
 export function artifactDetail(id) {
   return assetsRequest(`/omnimux/assets/artifacts/detail?id=${encodeURIComponent(id)}`)
 }
+
+// ---------------------------------------------------------------------------
+// cloud assets — a prebuilt static catalog served by the Host
+// ---------------------------------------------------------------------------
+
+/** Total control file: categories, sub-categories, and per-scope page counts. */
+export function cloudManifest() {
+  return assetsRequest('/omnimux/assets/cloud/manifest')
+}
+
+/**
+ * One page of cloud assets. `scope` is `category` or `category/sub_category`;
+ * pages are zero-based and 24 rows each.
+ * @param {string} scope
+ * @param {number} page
+ */
+export function cloudPage(scope, page) {
+  const safeScope = String(scope).split('/').map(encodeURIComponent).join('/')
+  return assetsRequest(`/omnimux/assets/cloud/${safeScope}/page-${String(page).padStart(4, '0')}.json`)
+}
+
+/**
+ * Catalog-wide search. Only called from the search box, never while paging.
+ * @param {{ q: string, category?: string, subCategory?: string, limit?: number, offset?: number }} query
+ */
+export function cloudSearch(query) {
+  const params = new URLSearchParams()
+  params.set('q', query.q)
+  if (query.category) params.set('category', query.category)
+  if (query.subCategory) params.set('sub_category', query.subCategory)
+  if (Number.isFinite(query.limit)) params.set('limit', String(query.limit))
+  if (Number.isFinite(query.offset)) params.set('offset', String(query.offset))
+  return assetsRequest(`/omnimux/assets/cloud/search?${params}`)
+}
+
+/**
+ * Read-only preview URL for a cloud asset. `which=cover` asks for the thumbnail,
+ * `which=media` for the playable original.
+ * @param {string} id
+ * @param {'media' | 'cover'} [which]
+ */
+export function cloudMediaUrl(id, which = 'media') {
+  const params = new URLSearchParams({ id, which })
+  return `/omnimux/assets/cloud/media?${params}`
+}
+
+/**
+ * Copy one cloud asset into the local library so it appears under the local tab.
+ * @param {string} id
+ * @param {{ name?: string, type?: string }} [options]
+ */
+export function cloudSaveToLocal(id, options = {}) {
+  return assetsRequest('/omnimux/assets/cloud/save', { method: 'POST', body: { id, ...options } })
+}

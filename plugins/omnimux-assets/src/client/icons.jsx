@@ -210,6 +210,25 @@ export function AudioIcon(props) {
   )
 }
 
+/** Filled triangle: the audition control's idle state. @param {{ size?: number }} props */
+export function PlayIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M7 5.5v13l11-6.5z" fill="currentColor" stroke="none" />
+    </Icon>
+  )
+}
+
+/** Two bars: the audition control's playing state. @param {{ size?: number }} props */
+export function PauseIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
+      <rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
+    </Icon>
+  )
+}
+
 /** @param {{ size?: number }} props */
 export function DocIcon(props) {
   return (
