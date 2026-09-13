@@ -12,7 +12,7 @@
  * shimmer, so a tab switch does not change how loading looks.
  */
 
-import { Button } from 'dsh-ui-kit'
+import { Button, EmptyState } from 'dsh-ui-kit'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 
 /** Blocks a first paint or a page append shows while it has nothing to show. */
@@ -51,24 +51,28 @@ export function RivalFeedGrid(props) {
   if (cards.length === 0) {
     if (emptyKind === 'no-accounts') {
       return (
-        <div className="omnimux-rival-empty">
-          <p className="omnimux-rival-empty-title">{t('rivalFeed.empty.noAccounts')}</p>
-          <p className="omnimux-rival-empty-text">{t('rivalFeed.empty.noAccountsHint')}</p>
-          <Button variant="primary" size="sm" className="omnimux-rival-empty-cta" onClick={onImport}>
-            {t('rivalAccounts.import.btn')}
-          </Button>
-        </div>
+        <EmptyState
+          title={t('rivalFeed.empty.noAccounts')}
+          description={t('rivalFeed.empty.noAccountsHint')}
+          action={
+            <Button variant="primary" size="sm" onClick={onImport}>
+              {t('rivalAccounts.import.btn')}
+            </Button>
+          }
+        />
       )
     }
     if (emptyKind === 'filtered') {
       return (
-        <div className="omnimux-rival-empty">
-          <p className="omnimux-rival-empty-title">{t('rivalFeed.empty.filtered')}</p>
-          <p className="omnimux-rival-empty-text">{t('rivalFeed.empty.filteredHint')}</p>
-          <Button variant="outline" size="sm" className="omnimux-rival-empty-cta" onClick={onResetFilters}>
-            {t('rivalFilter.reset')}
-          </Button>
-        </div>
+        <EmptyState
+          title={t('rivalFeed.empty.filtered')}
+          description={t('rivalFeed.empty.filteredHint')}
+          action={
+            <Button variant="outline" size="sm" onClick={onResetFilters}>
+              {t('rivalFilter.reset')}
+            </Button>
+          }
+        />
       )
     }
     // Still loading with nothing to show yet is not an empty state — saying
@@ -76,9 +80,9 @@ export function RivalFeedGrid(props) {
     // read.
     if (emptyKind === 'loading') return null
     return (
-      <div className="omnimux-rival-empty">
-        <p className="omnimux-rival-empty-title">{t('rivalFeed.empty.noPosts')}</p>
-      </div>
+      <EmptyState
+        title={t('rivalFeed.empty.noPosts')}
+      />
     )
   }
 
