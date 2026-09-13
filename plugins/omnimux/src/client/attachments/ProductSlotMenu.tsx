@@ -5,9 +5,15 @@ import {
   getRecentProductIds,
   saveRecentProductId,
   sortProductsForQuickMenu,
+  resolveProductThumbUrl,
 } from './productSlotHelper.ts';
 
-export { getRecentProductIds, saveRecentProductId, sortProductsForQuickMenu };
+export {
+  getRecentProductIds,
+  saveRecentProductId,
+  sortProductsForQuickMenu,
+  resolveProductThumbUrl,
+};
 
 export interface ProductSlotMenuProps {
   isOpen: boolean;
@@ -202,19 +208,7 @@ export const ProductSlotMenu: React.FC<ProductSlotMenuProps> = ({
           <div className="omx-product-slot-menu__loading">正在加载产品...</div>
         ) : quickProducts.length > 0 ? (
           quickProducts.map((p) => {
-            const firstMedia =
-              Array.isArray(p.media) && p.cover_media_id
-                ? p.media.find((m: any) => m.id === p.cover_media_id)
-                : Array.isArray(p.media)
-                  ? p.media[0]
-                  : null;
-
-            const thumbUrl = firstMedia?.id
-              ? `/omnimux/products/${p.id}?preview=${firstMedia.id}`
-              : firstMedia?.real_path
-                ? `file://${firstMedia.real_path}`
-                : '';
-
+            const thumbUrl = resolveProductThumbUrl(p);
             const isRecent = recentIds.includes(p.id);
 
             return (

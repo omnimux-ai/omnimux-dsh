@@ -255,20 +255,15 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const handleAddProductAttachment = useCallback(
     (product: any) => {
       if (!product) return;
-      const firstMedia =
-        Array.isArray(product.media) && product.cover_media_id
-          ? product.media.find((m: any) => m.id === product.cover_media_id)
-          : Array.isArray(product.media)
-            ? product.media[0]
-            : null;
-
-      const previewUrl = firstMedia?.id
-        ? `/omnimux/products/${product.id}?preview=${firstMedia.id}`
-        : firstMedia?.real_path
-          ? `file://${firstMedia.real_path}`
+      const cover = product.cover;
+      const coverId = cover?.id || product.cover_media_id;
+      const previewUrl = coverId
+        ? `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(coverId)}`
+        : cover?.real_path
+          ? `file://${cover.real_path}`
           : '';
 
-      const relativePath = firstMedia?.real_path || `products/${product.id}.json`;
+      const relativePath = cover?.real_path || `products/${product.id}.json`;
 
       store.addAttachment(currentSessionId, {
         sourcePlugin: 'omnimux-products',

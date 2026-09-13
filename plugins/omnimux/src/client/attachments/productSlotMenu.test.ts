@@ -7,6 +7,7 @@ import {
   sortProductsForQuickMenu,
   getRecentProductIds,
   saveRecentProductId,
+  resolveProductThumbUrl,
 } from './productSlotHelper.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -70,4 +71,30 @@ test('PromptSlotChips: integrates ProductSlotMenu and ProductUrlPopover for prod
   assert.ok(chipsSource.includes('handleSelectProductFromMenu'), 'handles quick product selection from menu');
   assert.ok(chipsSource.includes('handleOpenUrlInput'), 'handles open URL input');
   assert.ok(chipsSource.includes('handleActivateCustomInput'), 'handles custom text input activation');
+});
+
+test('resolveProductThumbUrl: extracts preview url from cover or cover_media_id', () => {
+  const pWithCover = {
+    id: 'prd_1',
+    cover_media_id: 'med_1',
+    cover: { id: 'med_1', kind: 'image' },
+  };
+  assert.equal(
+    resolveProductThumbUrl(pWithCover),
+    '/omnimux/products/prd_1?preview=med_1',
+  );
+
+  const pWithCoverMediaIdOnly = {
+    id: 'prd_2',
+    cover_media_id: 'med_2',
+  };
+  assert.equal(
+    resolveProductThumbUrl(pWithCoverMediaIdOnly),
+    '/omnimux/products/prd_2?preview=med_2',
+  );
+
+  const pWithoutCover = {
+    id: 'prd_3',
+  };
+  assert.equal(resolveProductThumbUrl(pWithoutCover), '');
 });
