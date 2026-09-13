@@ -519,6 +519,18 @@ for (const name of plugins) {
     manifest.dependencies[name] = targetSpec
     depChanged = true
   }
+  const pluginPkgPath = path.join(managedRoot, name, 'package.json')
+  if (fs.existsSync(pluginPkgPath)) {
+    try {
+      const pluginPkg = JSON.parse(fs.readFileSync(pluginPkgPath, 'utf8'))
+      for (const [dep, ver] of Object.entries(pluginPkg.dependencies || {})) {
+        if (!dep.startsWith('file:') && typeof ver === 'string' && !ver.startsWith('file:') && !manifest.dependencies[dep]) {
+          manifest.dependencies[dep] = ver
+          depChanged = true
+        }
+      }
+    } catch {}
+  }
   if (declaresBundle(name)) {
     if (!bundles.includes(name)) {
       bundles.push(name)

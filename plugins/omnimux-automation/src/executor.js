@@ -1,9 +1,41 @@
-import { installModelSelection } from "@deepseek-ai/dsh-agent";
-import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { setApprovalPolicy } from "@deepseek-ai/dsh-user-approval";
+import { createRequire } from "node:module";
 import { automationSessionTitle } from "./run-title.js";
+
+const require = createRequire(import.meta.url);
+
 const SessionId = (id) => String(id);
 const WorkspaceId = (id) => String(id);
+
+function createUserMessage(payload) {
+  try {
+    const mod = require("@deepseek-ai/dsh-llm");
+    if (typeof mod?.createUserMessage === "function") {
+      return mod.createUserMessage(payload);
+    }
+  } catch {}
+  return { role: "user", ...payload };
+}
+
+function installModelSelection(agentCtx, payload) {
+  try {
+    const mod = require("@deepseek-ai/dsh-agent");
+    if (typeof mod?.installModelSelection === "function") {
+      mod.installModelSelection(agentCtx, payload);
+    }
+  } catch {}
+}
+
+function setApprovalPolicy(session, policy) {
+  try {
+    const mod = require("@deepseek-ai/dsh-user-approval");
+    if (typeof mod?.setApprovalPolicy === "function") {
+      mod.setApprovalPolicy(session, policy);
+      return;
+    }
+  } catch {}
+  session?.append?.("approval/policy", { policy });
+}
+
 const CANCEL_CONVERGENCE_TIMEOUT_MS = 1e4;
 async function settlesWithin(promise, timeoutMs) {
   let timer;
@@ -92,10 +124,11 @@ async function executeAutomationRun(ctx, definition, run, config) {
       agentOptions: { provider: selection.provider, model: selection.model },
       setup: async (agentCtx, createdAgent) => {
         await ctx.agentPresets.mount(agentCtx, target.agentPreset);
+        const installModelSelection = await resolveInstallModelSelection();
         installModelSelection(agentCtx, { current: selection, assembled: void 0 });
         const agent = createdAgent ?? agentCtx.agent;
         if (agent === void 0) throw new Error("automation setup has no scoped Agent");
-        applyUnattendedPermission(ctx.permissionPresets, agent.session, target.permissionPreset);
+        await applyUnattendedPermission(ctx.permissionPresets, agent.session, target.permissionPreset);
       }
     }));
     await handle.agent.whenIdle();
