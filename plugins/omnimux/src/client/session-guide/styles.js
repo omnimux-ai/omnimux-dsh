@@ -2200,7 +2200,7 @@ export const GUIDE_CSS = `
   display:flex; flex-direction:column; align-items:center; gap:10px;
   padding:20px 0 8px; margin-top:4px;
 }
-.omnimux-trending-feed-hint, .omnimux-trending-feed-end {
+.omnimux-trending-feed-hint, .omnimux-trending-feed-end, .omnimux-trending-feed-failed {
   margin:0; font-size:12px; line-height:18px;
   color:var(--dsw-alias-label-tertiary);
 }

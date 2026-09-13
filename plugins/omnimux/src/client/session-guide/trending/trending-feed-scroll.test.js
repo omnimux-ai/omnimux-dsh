@@ -133,8 +133,8 @@ function makeRow(index) {
   }
 }
 
-/** 一个按 page / page_size 真分页的 fetch 替身，并记录每次请求。 */
-function stubPagedFetch(rows, { pageSize = 48, maxRequests = 6 } = {}) {
+/** 一个按 page / page_size 真分页的 fetch 替身，并记录每次请求；`failAppend` 可让追加页报网络错。 */
+function stubPagedFetch(rows, { pageSize = 48, maxRequests = 6, failAppend = () => false } = {}) {
   const previous = globalThis.fetch
   const calls = []
   globalThis.fetch = async (url) => {
@@ -146,6 +146,7 @@ function stubPagedFetch(rows, { pageSize = 48, maxRequests = 6 } = {}) {
     const params = new URL(href, 'http://localhost').searchParams
     const page = Math.max(1, Number(params.get('page') || 1))
     const size = Number(params.get('page_size') || pageSize)
+    if (page > 1 && failAppend()) throw new Error('测试注入：追加页网络中断')
     const start = (page - 1) * size
     const items = rows.slice(start, start + size)
     return {
@@ -195,6 +196,7 @@ async function renderSection({ rows, stubOptions } = {}) {
     stub,
     observer,
     cards: () => Array.from(host.querySelectorAll('[data-trending-id]')).map((el) => el.getAttribute('data-trending-id')),
+    source: () => host.querySelector('[data-omnimux-trending]')?.getAttribute('data-omnimux-trending-source'),
     sentinel: () => host.querySelector('[data-omnimux-trending-sentinel]'),
     feedState: () => host.querySelector('[data-omnimux-trending-sentinel]')?.getAttribute('data-omnimux-trending-feed'),
     /** 一次「加载一批」= 每个真源各一次请求（本地库 + 云端库），按页号统计才稳。 */
@@ -310,7 +312,71 @@ test('无限滚动：上游忽略翻页、每页都回同一批时在第二批�
 })
 
 // ─────────────────────────────────────────────────────────────
-// 3. 筛选变更：回到第 1 页重新累积
+// 3. 追加失败：已加载的卡片不得清空，重试必须真的能再取一次
+// ─────────────────────────────────────────────────────────────
+
+test('无限滚动：追加页网络失败不得清空已加载卡片，板块状态仍是 ready', async () => {
+  const rows = Array.from({ length: 60 }, (_, index) => makeRow(index))
+  const view = await renderSection({ rows, stubOptions: { failAppend: () => true } })
+
+  try {
+    assert.equal(view.cards().length, 48, '首屏必须正常拿到第 1 页')
+
+    await act(async () => {
+      view.observer.enter()
+    })
+    await view.settle()
+
+    // 用户什么都没做错：网络抖一下不该让正在看的 48 张卡片凭空消失
+    assert.equal(view.cards().length, 48, '追加失败不得卸载已加载的卡片')
+    assert.equal(view.source(), 'ready', '一次追加失败不得把整个板块打成 unavailable')
+    assert.equal(view.feedState(), 'error', '哨兵要如实报出失败，而不是假装还在加载或已经到底')
+    assert.ok(view.host.querySelector('[data-omnimux-trending-retry]'), '追加失败后必须给得出重试入口')
+    assert.doesNotMatch(
+      view.host.textContent,
+      /trending\.library\.unavailable/,
+      '不得拿「灵感库不可用」整屏提示替换掉已经上屏的列表',
+    )
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('无限滚动：追加失败后点重试真的再取一次，把第 2 页补齐', async () => {
+  const rows = Array.from({ length: 60 }, (_, index) => makeRow(index))
+  let failing = true
+  const view = await renderSection({ rows, stubOptions: { failAppend: () => failing } })
+
+  try {
+    await act(async () => {
+      view.observer.enter()
+    })
+    await view.settle()
+    assert.equal(view.cards().length, 48)
+
+    const retry = view.host.querySelector('[data-omnimux-trending-retry]')
+    assert.ok(retry, '追加失败后必须给得出重试入口')
+
+    const before = view.stub.calls.length
+    failing = false
+    await act(async () => {
+      retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    })
+    await view.settle()
+
+    assert.ok(
+      view.stub.calls.length > before,
+      `点重试必须真的再取一次数（点击前 ${before} 次请求，点击后 ${view.stub.calls.length} 次）`,
+    )
+    assert.equal(view.callsForPage(2).length, 4, '重试取的是失败的那一页：失败两次 + 重试两次')
+    assert.equal(view.cards().length, 60, '重试成功后第 2 页补上，前面 48 张一张不少')
+  } finally {
+    await view.teardown()
+  }
+})
+
+// ─────────────────────────────────────────────────────────────
+// 4. 筛选变更：回到第 1 页重新累积
 // ─────────────────────────────────────────────────────────────
 
 test('无限滚动：换筛选条件整体回到第 1 页，旧页不残留', async () => {
@@ -341,7 +407,7 @@ test('无限滚动：换筛选条件整体回到第 1 页，旧页不残留', as
 })
 
 // ─────────────────────────────────────────────────────────────
-// 4. 吸顶栏与既有功能
+// 5. 吸顶栏与既有功能
 // ─────────────────────────────────────────────────────────────
 
 test('吸顶：双 Tab 与筛选工具栏同处一条 sticky 容器，工具栏不因切 Tab 丢失', async () => {

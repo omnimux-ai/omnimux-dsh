@@ -65,7 +65,6 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
  * 结构化数据一律随附件交出去，不灌进用户看得见的草稿。
  * 板块只负责给出停靠几何（宿主 CSS 变量）与三处挂载状态，复刻意图的落地仍由
  * `onApplyPrompt` 交回会话输入框所有权方处理——只预填，从不代发。
- * `onApplyPrompt` 交回会话输入框所有权方处理——只预填，从不代发。
  *
  * @param {{
  *   t: (key: string, fallback?: string) => string,
@@ -430,11 +429,6 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
   }, [dockedItem, onApplyPrompt, t])
 
-  // 失败重试复用同一条取数路径：哨兵被卸载后 loadMore 是唯一能把加载推下去的入口
-  const handleLoadMore = useCallback(() => {
-    feed.loadMore()
-  }, [feed.loadMore])
-
   return (
     <section
       ref={sectionRef}
@@ -539,6 +533,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
               sentinelRef={sentinelRef}
               loading={feed.loadingMore}
               exhausted={!feed.hasMore}
+              failed={Boolean(feed.error)}
+              onRetry={feed.retry}
               t={t}
             />
           ) : null}
@@ -567,11 +563,13 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
               <p>{t('trending.library.unavailable')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>
-              {/* 网络抖动导致的失败：给一次原地重试机会，而不是逼用户刷新整页 */}
+              {/* 网络抖动导致的失败：给一次原地重试机会，而不是逼用户刷新整页。
+                  首屏失败重取第 1 页，追加失败续取那一页——起点由状态机按手里有没有卡片决定 */}
               <button /* exempt-ui01: 重试属于轻量文本动作，非标准控件位 */
                 type="button"
                 className="omnimux-trending-reset"
-                onClick={handleLoadMore}
+                data-omnimux-trending-retry=""
+                onClick={feed.retry}
               >
                 {t('trending.retry')}
               </button>
