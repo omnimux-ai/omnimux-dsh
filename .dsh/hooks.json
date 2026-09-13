@@ -23,13 +23,13 @@
       ]
     },
     {
-      "matcher": "edit|write",
+      "matcher": "edit|write|bash",
       "hooks": [
         {
           "type": "command",
           "command": "node scripts/guard-quality-loop.mjs",
-          "statusMessage": "🚦 检查质量五步闭环硬门禁（Spec先行与实机演练校验）",
-          "timeout": 5
+          "statusMessage": "🚦 检查质量五步闭环硬门禁（任务级规格/验证证据/端到端完整性）",
+          "timeout": 8
         }
       ]
     }

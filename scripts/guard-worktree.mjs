@@ -527,8 +527,21 @@ export function decideMaterializationCommand({ cwd }) {
   return { decision: 'allow' }
 }
 
+/** 从命令段解析 `git -C <path>` 的真实目标仓库；无 -C 时返回 null。 */
+export function resolveGitTargetPath(seg, cwd) {
+  const m = /(?:^|\s)-C\s+(?:"([^"]+)"|'([^']+)'|(\S+))/.exec(seg)
+  if (!m) return null
+  const raw = (m[1] || m[2] || m[3] || '').trim()
+  if (!raw) return null
+  return isAbsolute(raw) ? raw : resolve(cwd, raw)
+}
+
 export function decideMainBranchGitOp(command, cwd) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
+  const sessionCwd = resolve(cwd || process.cwd())
+  // 在「未剥离引号」的原始命令上解析 -C；commandSegments() 会剥掉引号内容，
+  // 只在剥离后的片段上查找会漏掉 `git -C "<path>"` 这种最常用的写法。
+  const rawTarget = resolveGitTargetPath(command, sessionCwd)
   const segments = commandSegments(command)
   for (const seg of segments) {
     if (!looksLikeGitInvocation(seg)) continue
@@ -541,10 +554,12 @@ export function decideMainBranchGitOp(command, cwd) {
       continue
     }
 
-    const resolvedCwd = resolve(cwd || process.cwd())
-    if (isWorktreePath(resolvedCwd)) continue
+    // hook 收到的 cwd 是会话工作目录，不代表命令真正的执行目录；
+    // 必须优先采用命令里显式声明的 -C 目标，否则会误伤在独立工作树内的合法提交。
+    const target = rawTarget || resolveGitTargetPath(seg, sessionCwd) || sessionCwd
+    if (isWorktreePath(target)) continue
 
-    const branchResult = spawnSync('git', ['-C', resolvedCwd, 'symbolic-ref', '--quiet', '--short', 'HEAD'], {
+    const branchResult = spawnSync('git', ['-C', target, 'symbolic-ref', '--quiet', '--short', 'HEAD'], {
       encoding: 'utf8',
       timeout: 3000,
     })
@@ -554,14 +569,14 @@ export function decideMainBranchGitOp(command, cwd) {
         return {
           decision: 'deny',
           reason: 'forbidden-main-branch-merge',
-          cwd: resolvedCwd,
+          cwd: target,
         }
       }
       if (isCommit) {
         return {
           decision: 'deny',
           reason: 'forbidden-main-branch-commit',
-          cwd: resolvedCwd,
+          cwd: target,
         }
       }
     }
