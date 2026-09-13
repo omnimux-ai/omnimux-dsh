@@ -684,6 +684,24 @@ describe('link importer · hub model analysis', () => {
     assert.match(calls.textComplete[0].prompt, /产品信息调研专家/)
   })
 
+  it('hands the physical playbook the page body, not just the URL', async () => {
+    const body = 'Aurora Mug 350ml：双层陶瓷内胆，6 小时长效保温，防滑硅胶底座'
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const { hub, calls } = stubHub({ text: V9_REPORT, pageContent: body })
+    const draft = await importProductFromUrl({ url: PAGE_URL, kind: 'physical', fetcher, hub })
+
+    assert.equal(draft.kind, 'physical')
+    assert.equal(calls.textComplete.length, 1)
+    // The vendored v9 template carries a {{url}} slot and no body slot, so the
+    // page text only reaches the model if it is appended. Without it the model is
+    // asked to price a listing it was never shown — and invents one from the URL.
+    assert.ok(
+      calls.textComplete[0].prompt.includes(body),
+      'the page body must reach the physical playbook',
+    )
+    assert.ok(calls.textComplete[0].prompt.includes(PAGE_URL))
+  })
+
   it('falls back to its own page read when the hub reader fails', async () => {
     const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
     const { hub, calls } = stubHub({ pageFetchThrows: true })

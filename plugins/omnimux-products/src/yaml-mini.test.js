@@ -108,6 +108,59 @@ describe('yaml-mini · report parsing', () => {
     assert.deepEqual(parseYamlMini('issue: C#7'), { issue: 'C#7' })
   })
 
+  it('reads a block scalar as one value and keeps reading the report after it', () => {
+    const value = parseYamlMini([
+      'identity_and_product:',
+      '  core_identity: |',
+      '    一站式多模态模型服务',
+      '    支持免费试用',
+      '  unique_advantage:',
+      '    - 超长上下文',
+      'content_angles:',
+      '  - id: cost_01',
+      '    description: |-',
+      '      按量付费',
+      '      无需自建 GPU',
+      '    priority: 1',
+    ].join('\n'))
+    assert.equal(value.identity_and_product.core_identity, '一站式多模态模型服务\n支持免费试用\n')
+    assert.deepEqual(value.identity_and_product.unique_advantage, ['超长上下文'])
+    assert.deepEqual(value.content_angles, [
+      { id: 'cost_01', description: '按量付费\n无需自建 GPU', priority: 1 },
+    ])
+  })
+
+  it('folds `>` and honours the chomping and indent flags', () => {
+    assert.deepEqual(parseYamlMini('a: >\n  one\n  two\n'), { a: 'one two\n' })
+    assert.deepEqual(parseYamlMini('a: >-\n  one\n  two\n'), { a: 'one two' })
+    assert.deepEqual(parseYamlMini('a: |+\n  one\n\n'), { a: 'one\n\n' })
+    assert.deepEqual(parseYamlMini('a: |2\n    indented\n'), { a: '  indented\n' })
+    assert.deepEqual(parseYamlMini('a: |\nb: 1\n'), { a: '', b: 1 })
+  })
+
+  it('keeps a blank line inside a block scalar out of the keys around it', () => {
+    const value = parseYamlMini('a: |\n  第一段\n\n  第二段\nb: 2\n')
+    assert.equal(value.a, '第一段\n\n第二段\n')
+    assert.equal(value.b, 2)
+  })
+
+  it('reads an inline collection whole when its values carry quotes and colons', () => {
+    const value = parseYamlMini([
+      'content_angles:',
+      '  - {id: cost_01, title: "成本: 焦虑", target_audience: "AI 应用开发者", priority: 1}',
+      '  - {id: "cost: 02", title: 效率焦虑}',
+      'meta:',
+      '  {locale: cn, note: "按量付费: 无需自建 GPU"}',
+      'tags: ["a: b", "c"]',
+    ].join('\n'))
+    assert.deepEqual(value.content_angles, [
+      { id: 'cost_01', title: '成本: 焦虑', target_audience: 'AI 应用开发者', priority: 1 },
+      { id: 'cost: 02', title: '效率焦虑' },
+    ])
+    assert.deepEqual(value.meta, { locale: 'cn', note: '按量付费: 无需自建 GPU' })
+    assert.deepEqual(value.tags, ['a: b', 'c'])
+  })
+
   it('answers null for nothing to read', () => {
     assert.equal(parseYamlMini(''), null)
     assert.equal(parseYamlMini('\n\n# only a comment\n'), null)
@@ -116,5 +169,7 @@ describe('yaml-mini · report parsing', () => {
   it('refuses an input outside the supported subset instead of guessing', () => {
     assert.throws(() => parseYamlMini('a: 1\n   b: 2\n'), YamlMiniError)
     assert.throws(() => parseYamlMini('a: 1\nnot a key line\n'), YamlMiniError)
+    // A flow collection that spans lines is still outside the subset.
+    assert.throws(() => parseYamlMini('tags: [\n  a,\n  b\n]\n'), YamlMiniError)
   })
 })

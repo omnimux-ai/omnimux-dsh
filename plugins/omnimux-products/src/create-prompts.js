@@ -67,14 +67,23 @@ export function renderBrandStrategyV2Prompt(input = {}) {
 /**
  * Gxgen import-from-link v9 playbook, rendered for one physical listing.
  *
- * @param {{ url?: string, pageContent?: string }} input
+ * The vendored v9 template declares a `{{url}}` slot and nothing else, so the
+ * page body rides along the way brand-strategy v2 carries it — appended, not
+ * slotted. The playbook asks the model to extract from the page content it was
+ * given; a listing whose body never reached the prompt is unfillable.
+ *
+ * @param {{ url?: string, pageContent?: string, language?: string }} input
  * @returns {string}
  */
 export function renderPhysicalImportV9Prompt(input = {}) {
-  return renderPromptTemplate(IMPORT_FROM_LINK_V9, {
+  const rendered = renderPromptTemplate(IMPORT_FROM_LINK_V9, {
     url: input.url ?? '',
-    pageContent: input.pageContent ?? '',
+    language: input.language ?? '中文',
   })
+  const body = String(input.pageContent ?? '').trim()
+  return body
+    ? `${rendered}\n\n---\n以下是已提供的商品页面正文/图文简介：\n${body}`
+    : rendered
 }
 
 /** Digital create playbook：门控 + v2 主规程 + CoT 全文附录 */

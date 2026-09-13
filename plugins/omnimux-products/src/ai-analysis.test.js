@@ -181,6 +181,39 @@ describe('ai-analysis · model input and answer shapes', () => {
     assert.deepEqual(extractStructuredPayload('好的，以下是报告：\n没有结构'), null)
     assert.equal(extractStructuredPayload(''), null)
   })
+
+  it('reads the prose-shaped report a chatty model answers with', () => {
+    const answer = [
+      '```yaml',
+      'brand_basic_info:',
+      '  company:',
+      '    name: MiniMax',
+      '  product:',
+      '    name: "MiniMax 开放平台"',
+      '',
+      'content_angles:',
+      '  - {id: cost_01, title: "成本: 焦虑", description: "按量付费，无需自建 GPU", priority: 1}',
+      '',
+      'identity_and_product:',
+      '  core_identity: >',
+      '    一站式多模态模型服务，',
+      '    支持免费试用',
+      '  unique_advantage:',
+      '    - 超长上下文',
+      '```',
+    ].join('\n')
+    // A block scalar and an inline collection must not cost the whole report.
+    const payload = extractStructuredPayload(answer)
+    assert.ok(payload, 'the report must survive its own formatting')
+    const strategy = normalizeBrandStrategy(payload)
+    assert.equal(strategy.identity_and_product.core_identity, '一站式多模态模型服务， 支持免费试用\n')
+    assert.deepEqual(strategy.identity_and_product.unique_advantage, ['超长上下文'])
+    assert.equal(strategy.content_angles[0].title, '成本: 焦虑')
+
+    const draft = mapBrandStrategyToDraft(strategy)
+    assert.equal(draft.name, 'MiniMax 开放平台')
+    assert.equal(draft.selling_points, '一站式多模态模型服务， 支持免费试用，超长上下文')
+  })
 })
 
 describe('ai-analysis · field mapping', () => {
