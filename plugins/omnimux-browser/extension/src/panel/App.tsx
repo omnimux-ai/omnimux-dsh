@@ -16,7 +16,7 @@ import type { AffinityTab, TabAffinityDecision, TabAffinityState } from '../back
 import { connectPanel, PanelRpcError, type PanelApi, type PanelSettings } from './api.ts'
 import { renderMarkdown } from './markdown.ts'
 import whaleUrl from '../../assets/icons/deepseek-256.png'
-import { SceneBadge, type PageSceneInfo } from './components/SceneBadge.tsx'
+import type { PageSceneInfo } from './components/SceneBadge.tsx'
 import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
@@ -2194,7 +2194,6 @@ export function App(): React.JSX.Element {
           )}
         </div>
       </header>
-      <SceneBadge scene={pageScene} locale={locale} onClearContext={() => setPageScene(null)} />
       <TabAffinityBanner state={tabAffinity} copy={copy} onDecision={decideTabAffinity} />
       {showSessionPicker && (
         <section className="session-picker youmind-style" aria-label={copy.app.sessions}>
@@ -2299,7 +2298,6 @@ export function App(): React.JSX.Element {
               <button
                 type="button"
                 className="hero-action-pill-btn"
-                disabled={!sessionReady}
                 onClick={() => { void send(copy.app.overviewPrompt) }}
               >
                 {locale === 'en' ? 'Send to OmniMux' : '保存到 OmniMux'}

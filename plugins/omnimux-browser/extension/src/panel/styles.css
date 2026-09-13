@@ -25,7 +25,7 @@
   --security-soft: rgba(245, 158, 11, 0.12);
   --security-border: rgba(245, 158, 11, 0.25);
   --shadow: 0 10px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  --focus-ring: 0 0 0 3px rgba(121, 97, 242, 0.22);
+  --focus-ring: 0 0 0 2px rgba(0, 0, 0, 0.18);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: calc(13.5px * var(--ui-scale));
   font-synthesis: none;
@@ -52,7 +52,7 @@
     --blue-wash: rgba(121, 97, 242, 0.08);
     --navy: #0c0f17;
     --shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
-    --focus-ring: 0 0 0 3px rgba(121, 97, 242, 0.35);
+    --focus-ring: 0 0 0 2px rgba(255, 255, 255, 0.25);
   }
 }
 
@@ -82,7 +82,7 @@
   --security-soft: rgba(245, 158, 11, 0.12);
   --security-border: rgba(245, 158, 11, 0.25);
   --shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
-  --focus-ring: 0 0 0 3px rgba(121, 97, 242, 0.35);
+  --focus-ring: 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
 :root[data-theme="dark"] .topbar {
@@ -152,7 +152,11 @@ textarea:focus-visible {
 }
 
 ::selection {
-  background: rgba(77, 107, 254, 0.2);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+:root[data-theme="light"] ::selection {
+  background: rgba(0, 0, 0, 0.12);
 }
 
 ::-webkit-scrollbar {
@@ -215,17 +219,17 @@ textarea:focus-visible {
 }
 
 .tab-affinity.background {
-  border-color: #dce3ff;
-  background: #f9faff;
+  border-color: var(--line-strong);
+  background: var(--canvas-deep);
 }
 
 .tab-affinity.background::before {
-  background: var(--blue);
+  background: var(--ink-strong);
 }
 
 .tab-affinity.lost {
-  border-color: #f3d0cc;
-  background: #fffafa;
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
 }
 
 .tab-affinity.lost::before {
@@ -687,8 +691,8 @@ textarea:focus-visible {
 }
 
 .empty button:hover:not(:disabled) {
-  border-color: #aebeff;
-  background: var(--blue-wash);
+  border-color: var(--line-strong);
+  background: var(--canvas-deep);
   transform: translateY(-1px);
 }
 
@@ -1245,13 +1249,13 @@ textarea:focus-visible {
 }
 
 .question-option:hover {
-  border-color: #b5c1ed;
+  border-color: var(--line-strong);
   transform: translateY(-1px);
 }
 
 .question-option.checked {
-  border-color: #aebeff;
-  background: var(--blue-wash);
+  border-color: var(--ink-strong);
+  background: var(--canvas-deep);
 }
 
 .question-option input {
@@ -1602,24 +1606,25 @@ textarea:focus-visible {
 }
 
 .composer-actions button {
-  display: grid;
-  width: 30px;
-  height: 30px;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   padding: 0;
-  place-items: center;
-  border: 1px solid var(--blue);
-  border-radius: 10px;
-  background: var(--blue);
-  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(77, 107, 254, 0.22);
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  box-shadow: none;
+  transition: all 150ms ease;
 }
 
 .composer-actions button svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -1628,8 +1633,8 @@ textarea:focus-visible {
 }
 
 .composer-actions button:hover:not(:disabled) {
-  border-color: var(--blue-hover);
-  background: var(--blue-hover);
+  border-color: var(--line-strong);
+  background: var(--surface);
   transform: translateY(-1px);
 }
 
@@ -3109,12 +3114,12 @@ textarea:focus-visible {
   border-radius: 12px;
   font-size: calc(11px * var(--ui-scale));
   font-weight: 600;
-  background: #ede9fe;
-  color: #5b21b6;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+  border: 1px solid var(--line);
 }
-.scene-badge-pill.twitter { background: #e0f2fe; color: #0369a1; border-color: rgba(3, 105, 161, 0.25); }
-.scene-badge-pill.tiktok { background: #fdf2f8; color: #be185d; border-color: rgba(190, 24, 93, 0.25); }
+.scene-badge-pill.twitter { background: var(--canvas-deep); color: var(--ink-strong); border-color: var(--line-strong); }
+.scene-badge-pill.tiktok { background: var(--canvas-deep); color: var(--ink-strong); border-color: var(--line-strong); }
 .scene-badge-pill .scene-dot {
   width: 6px;
   height: 6px;
@@ -3650,11 +3655,16 @@ textarea:focus-visible {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: rgba(121, 97, 242, 0.12);
-  border: 1px solid rgba(121, 97, 242, 0.25);
+  background: var(--canvas-deep);
+  border: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+:root[data-theme="dark"] .hero-app-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .hero-app-badge img {
@@ -3695,19 +3705,19 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-/* design.md 主执行行动按钮 (Dark 纯白底黑字 / Light 纯黑底白字 Ink CTA) */
+/* design.md 主执行行动按钮 (Dark 纯白底纯黑字 / Light 纯黑底纯白字 Ink CTA 严禁紫色) */
 .hero-action-pill-btn {
-  margin-top: 4px;
-  height: 32px;
-  padding: 0 20px;
+  margin-top: 6px;
+  height: 34px;
+  padding: 0 24px;
   border-radius: 9999px;
-  background: #0f172a;
-  color: #ffffff;
+  background: #0f172a !important;
+  color: #ffffff !important;
   font-size: calc(12.5px * var(--ui-scale));
   font-weight: 600;
-  border: none;
+  border: none !important;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
@@ -3715,9 +3725,10 @@ textarea:focus-visible {
 }
 
 :root[data-theme="dark"] .hero-action-pill-btn {
-  background: #ffffff;
-  color: #09090b;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  background: #ffffff !important;
+  color: #09090b !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
 }
 
 .hero-action-pill-btn:hover {
@@ -3746,7 +3757,7 @@ textarea:focus-visible {
   margin: 0;
 }
 
-/* Clean Composer Box (图 1 YouMind 紧凑风格) */
+/* Clean Composer Box (图 1 极简黑白墨水风格 零多余彩色) */
 .composer-box.clean-chat-box {
   border-radius: 16px;
   background: var(--surface);
@@ -3763,8 +3774,13 @@ textarea:focus-visible {
 }
 
 .composer-box.clean-chat-box:focus-within {
-  border-color: #7961f2;
-  box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25);
+  border-color: rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+:root[data-theme="dark"] .composer-box.clean-chat-box:focus-within {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) !important;
 }
 
 .clean-actions-row {
@@ -3775,22 +3791,31 @@ textarea:focus-visible {
 }
 
 .clean-add-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--canvas-deep);
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--canvas-deep) !important;
+  color: var(--muted) !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease !important;
 }
 
-.clean-add-btn:hover {
-  color: var(--ink-strong);
-  border-color: var(--line-strong);
+:root[data-theme="dark"] .clean-add-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #d1d5db !important;
+}
+
+.clean-add-btn:hover:not(:disabled) {
+  color: var(--ink-strong) !important;
+  border-color: var(--line-strong) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
 }
 
 .mode-capsule-btn {
@@ -3808,13 +3833,18 @@ textarea:focus-visible {
   margin-left: 5px;
 }
 
+:root[data-theme="dark"] .mode-capsule-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .mode-capsule-btn svg {
   width: 11px;
   height: 11px;
   opacity: 0.6;
 }
 
-/* design.md 圆形发送钮规范 (Dark 纯白圆底黑箭头 / Light 纯黑圆底白箭头) */
+/* design.md 圆形发送钮规范 (Dark 纯白圆底黑箭头 / Light 纯黑圆底白箭头 零紫色光晕) */
 .clean-send-btn {
   display: inline-flex;
   align-items: center;
@@ -3843,7 +3873,7 @@ textarea:focus-visible {
 :root[data-theme="dark"] .clean-send-btn.active:not(:disabled) {
   background: #ffffff;
   color: #09090b;
-  box-shadow: 0 0 14px rgba(121, 97, 242, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .clean-send-btn.active:not(:disabled):hover {
