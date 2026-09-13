@@ -196,7 +196,7 @@ const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 20)
 const click = (el) => act(async () => { el.dispatchEvent(new window.MouseEvent('click', { bubbles: true })) })
 
 test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab 并支持平滑切换', async () => {
-  const { TrendingReplicateSection } = await loadComponent('../trending/TrendingReplicateSection.jsx')
+  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('../trending/TrendingReplicateSection.jsx')
   const env = withDom(FIXTURE_HTML)
   const host = document.querySelector('#root')
   const root = createRoot(host.querySelector('#seat'))
@@ -285,12 +285,14 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     assert.ok(appliedPrompt.includes('使用技能'), '必须通过 onApplyPrompt 预填技能指令')
     assert.equal(useBtn.getAttribute('aria-pressed'), 'true', '点击后卡片按钮状态为 pressed')
     assert.ok(filteredCards[0].classList.contains('is-active'), '点击后技能卡片具备 is-active 样式')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '选用 Skill 与复刻同源：同样必须先把输入框吸底')
 
     // 7. 再次点击同一技能卡片归还/取消接管
     await click(useBtn)
     await flush()
     assert.equal(useBtn.getAttribute('aria-pressed'), 'false', '再次点击后取消 pressed')
     assert.equal(filteredCards[0].classList.contains('is-active'), false, '再次点击后移除 is-active')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '再次点击同一 Skill 必须归还输入框')
 
     await act(async () => root.unmount())
   } finally {

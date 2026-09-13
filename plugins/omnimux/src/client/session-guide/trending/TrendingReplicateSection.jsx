@@ -286,7 +286,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       frame = scheduleFrame(evaluate)
     }
 
-    evaluate()
+    // 接管当帧不做几何判定：这一刻的吸底就是点击意图本身，若立刻按「原位是否可见」
+    // 反悔，首帧就会闪回 inline。只有真实滚动 / 缩放才重新判定。
     const target = scroller || window
     target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
@@ -324,16 +325,10 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       setDockedItem(null)
       return
     }
-    const root = dockHostRef.current || sectionRef.current?.closest?.('[data-phase]')
-    const card = root?.querySelector?.('[data-composer-card]')
-    const band = card?.parentElement
-    const rect = band?.getBoundingClientRect?.()
-    const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-    if (rect && rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.top < viewportH - 80) {
-      setPlacement('inline')
-    } else {
-      setPlacement('docked')
-    }
+    // 复刻是明确的吸底意图：首帧一律停靠到视口底部，绝不因为原位此刻恰好还在视口里
+    // 就把输入框留在页首——那等于把用户的浏览节奏打断在顶部。
+    // 滚动感知交给迟滞监听：只有用户真的滚回原位，输入框才会被放回流内。
+    setPlacement('docked')
     setDockedItem(item)
     onApplyPrompt?.(buildClonePrompt(item), item)
   }, [dockedItem, onApplyPrompt])
@@ -343,16 +338,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       setDockedItem(null)
       return
     }
-    const root = dockHostRef.current || sectionRef.current?.closest?.('[data-phase]')
-    const card = root?.querySelector?.('[data-composer-card]')
-    const band = card?.parentElement
-    const rect = band?.getBoundingClientRect?.()
-    const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-    if (rect && rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.top < viewportH - 80) {
-      setPlacement('inline')
-    } else {
-      setPlacement('docked')
-    }
+    // 与复刻同源：选用技能同样先吸底呈现，再由滚动迟滞监听决定何时收回原位。
+    setPlacement('docked')
     setDockedItem(skill)
     onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
   }, [dockedItem, onApplyPrompt, t])
