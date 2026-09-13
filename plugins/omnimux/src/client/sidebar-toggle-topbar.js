@@ -37,7 +37,7 @@ export const TOPBAR_TOGGLE_SIZE_PX = 32
 export const TOPBAR_TOGGLE_GAP_PX = 8
 export const TOPBAR_TOGGLE_RIGHT_MARGIN_PX = 8
 export const TOPBAR_TOGGLE_TOP_PX = 4
-export const TOPBAR_TOGGLE_Z_INDEX = 9999
+export const TOPBAR_TOGGLE_Z_INDEX = 2147483647
 
 /**
  * Trigger click robustly penetrating React 17/18 synthetic event props.
