@@ -201,39 +201,6 @@ export function selectTrendingVideos(filters, items) {
 }
 
 /**
- * 克隆指令模板。与 TopView 实测文案保持同构：
- *   Clone the attached viral ad and create a new video with the following content:
- *
- *   <原始文案>
- *
- * 真源行里「产品」通常为空（那是用户自己的东西），此时不写这一行，
- * 而不是塞占位符——指令里出现空字段只会让模型乱猜。
- *
- * @param {object} item
- * @returns {string}
- */
-export function buildClonePrompt(item) {
-  if (!item || typeof item !== 'object') return ''
-  const lines = [
-    'Clone the attached viral ad and create a new video with the following content:',
-    '',
-  ]
-  const title = String(item.title || '').trim()
-  if (title) lines.push(title)
-
-  const meta = []
-  if (item.product) meta.push(`产品：${item.product}`)
-  if (item.region) meta.push(`目标市场：${item.region}`)
-  const structure = String(item.structure || item.angle || '').trim()
-  if (structure) meta.push(`可复用结构：${structure}`)
-  if (meta.length) {
-    lines.push('', ...meta)
-  }
-  lines.push('', '保留原片的钩子节奏、信息递进与转化落点，替换为我的产品后重新生成。')
-  return lines.join('\n')
-}
-
-/**
  * 强调色档位数（对应 CSS 中的 --omnimux-trending-accent-0..3）。
  */
 export const TRENDING_ACCENT_COUNT = 4

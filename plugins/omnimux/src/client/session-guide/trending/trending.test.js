@@ -10,7 +10,6 @@ import {
   TRENDING_SORTS,
   TRENDING_VIEW_BUCKETS,
   accentIndex,
-  buildClonePrompt,
   defaultTrendingFilters,
   filterTrendingVideos,
   formatCompactNumber,
@@ -165,26 +164,6 @@ test('trending: selectTrendingVideos 默认使用智能推荐算法排序', () =
   assert.equal(list[1].id, 'old_flat')
 })
 
-test('trending: 克隆指令只写真实存在的字段', () => {
-  const real = ITEMS[0]
-  const prompt = buildClonePrompt(real)
-  assert.ok(prompt.startsWith('Clone the attached viral ad and create a new video with the following content:'))
-  assert.ok(prompt.includes(real.title), '必须带入原始文案')
-  assert.ok(prompt.includes('目标市场：US'), '必须带入目标市场')
-  assert.ok(prompt.includes('可复用结构：s-a'), '必须带入真实拆解出来的结构')
-  assert.ok(!prompt.includes('产品：'), '真源行没有产品字段时不得写占位产品行')
-  assert.ok(prompt.includes('保留原片的钩子节奏'), '必须显式约束结构复用')
-
-  const withProduct = buildClonePrompt({ ...real, product: '我的产品' })
-  assert.ok(withProduct.includes('产品：我的产品'))
-
-  assert.equal(buildClonePrompt(null), '')
-  assert.equal(
-    buildClonePrompt({}),
-    'Clone the attached viral ad and create a new video with the following content:\n\n\n保留原片的钩子节奏、信息递进与转化落点，替换为我的产品后重新生成。',
-  )
-})
-
 test('trending: 强调色由 id 稳定派生且落在四档内', () => {
   for (const item of ITEMS) {
     const idx = accentIndex(item.id)
@@ -313,7 +292,11 @@ test('trending: 复刻接管契约（搬迁原生输入框 / 只预填不代发�
   assert.ok(!section.includes('DockedComposer'), '板块不得再引用自绘吸底输入框')
   assert.ok(!section.includes('<textarea'), '板块不得自造输入区')
   assert.ok(!section.includes('onSubmit'), '板块不得自建提交通道')
-  assert.ok(section.includes('buildClonePrompt(item)'), '复刻必须把克隆指令灌进原生输入框')
+  // 草稿只写极简意图：结构化数据（克隆指令全文 / 卡片 JSON）不得灌进用户草稿
+  assert.ok(section.includes('RECREATE_PROMPT'), '复刻必须写入极简意图提示词')
+  assert.ok(!section.includes('buildClonePrompt'), '复刻不得再把克隆指令全文灌进用户草稿')
+  assert.ok(section.includes('addReplicateAttachment(item)'), '复刻必须把对标对象挂进会话附件栏')
+  assert.ok(section.includes('publishActiveSkill(RECREATE_SKILL)'), '复刻必须激活「复刻爆款视频」技能')
   assert.ok(section.includes("querySelector?.('[data-composer-card]')"), '停靠几何必须取自原生输入框卡片')
 
   // 3. 停靠样式必须直接作用于官方输入框卡片（搬位置，不复制控件）

@@ -6,11 +6,13 @@
 
 import { useEffect } from 'react';
 import { detectMessageLinks, type DetectedLinkItem } from './linkPillMetadata.ts';
+import { hideAttachedContextBlock } from './attachedContextCleaner.ts';
 
 const USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"], div[class*="userStack"] div[class*="bubble"]';
 const UNENHANCED_USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"]:not([data-omx-link-enhanced="true"]), div[class*="userStack"] div[class*="bubble"]:not([data-omx-link-enhanced="true"])';
 const PILL_CLASS = 'omx-chat-link-pill';
 const PILL_STYLE_ID = 'omx-chat-link-pill-styles';
+const CONTEXT_HIDDEN_ATTR = 'data-omx-context-hidden';
 
 const PILL_CSS = `
 .${PILL_CLASS} {
@@ -132,6 +134,11 @@ export function enhanceUserBubble(bubbleEl: HTMLElement, doc: Document = documen
 
   isEnhancing = true;
   try {
+    // 先把「会话关联上下文」数据块从可见节点里摘掉：它只喂给模型，
+    // 不属于用户自己写的内容；其中的附件路径也不该被收敛成链接胶囊。
+    hideAttachedContextBlock(bubbleEl, doc);
+    bubbleEl.setAttribute(CONTEXT_HIDDEN_ATTR, 'true');
+
     const nodeFilter = typeof NodeFilter !== 'undefined' ? NodeFilter : doc.defaultView?.NodeFilter;
     const showText = nodeFilter?.SHOW_TEXT ?? 4;
     const filterAccept = nodeFilter?.FILTER_ACCEPT ?? 1;
@@ -197,11 +204,32 @@ export function enhanceUserBubble(bubbleEl: HTMLElement, doc: Document = documen
 }
 
 /**
+ * 摘掉气泡里所有「会话关联上下文」数据块。
+ * 与链接胶囊不同，这一步必须覆盖**全部**气泡（含已增强过的）：
+ * 宿主重渲染会把提交时的完整文本写回 DOM，而已增强标记会拦住二次增强，
+ * 因此每次扫描都要重新对账。
+ */
+export function cleanUserBubbles(root: ParentNode = document): number {
+  if (!root || typeof root.querySelectorAll !== 'function') return 0;
+  const doc = root.ownerDocument || (root as Document);
+  const bubbles = root.querySelectorAll(USER_BUBBLE_SELECTOR);
+  let cleaned = 0;
+  bubbles.forEach((bubble) => {
+    if (hideAttachedContextBlock(bubble as HTMLElement, doc)) {
+      (bubble as HTMLElement).setAttribute(CONTEXT_HIDDEN_ATTR, 'true');
+      cleaned += 1;
+    }
+  });
+  return cleaned;
+}
+
+/**
  * Scan all matching unenhanced user bubbles currently in document or container
  */
 export function scanAndEnhanceAllBubbles(root: ParentNode = document): number {
   if (isEnhancing) return 0;
   if (!root || typeof root.querySelectorAll !== 'function') return 0;
+  cleanUserBubbles(root);
   const bubbles = root.querySelectorAll(UNENHANCED_USER_BUBBLE_SELECTOR);
   let enhancedCount = 0;
   bubbles.forEach((bubble) => {
