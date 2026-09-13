@@ -1,11 +1,10 @@
 /**
  * 资产库 / 产品库选择器的弹窗外壳契约（单一真源）。
  *
- * 两个选择器共享弹窗外壳（尺寸上限、贴边、统一关闭按钮），但**布局各不相同**
- * （产品库为「顶部 Tab + 卡片网格」，资产库为「左侧分类栏 + 卡片网格」），
- * 因此宽度由各选择器按自己的几何自行推导，通过 `--omnimux-pick-dialog-width` 传入：
+ * 两个选择器共享弹窗外壳与布局规范（单层「顶部 Tab + 筛选胶囊 + 搜索框」+ 6 列高密度微卡网格 + 统一外部关闭按钮），
+ * 宽度由各选择器按自己的几何推导（统一为 6 列 × 156px + 5 间距 = 1016px），通过 `--omnimux-pick-dialog-width` 传入：
  *
- *   宽度 = 列数 × 卡片宽 + (列数-1) × 列间距 [+ 左侧分类栏与正文内边距（若有）]
+ *   宽度 = 列数 × 卡片宽 + (列数-1) × 列间距 [+ 预留前置宽度（若有）]
  */
 
 /** 挂到 ModalDialog 的 className（宽度覆盖只用自有类名，不依赖底座类名） */
@@ -55,8 +54,8 @@ export function pickerDialogWidth({ columns, cardWidth = PICKER_CARD_WIDTH, gap 
 export const PICKER_LAYOUTS = Object.freeze({
   /** 产品库：顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
   product: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
-  /** 资产库：左侧分类栏 148 + 正文左内边距 16，2 列卡片 */
-  assets: Object.freeze({ columns: 2, cardWidth: 264, gap: 16, leading: 148 + 16 }),
+  /** 资产库：参考选择产品弹窗，顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡网格 */
+  assets: Object.freeze({ columns: 6, cardWidth: 156, gap: 16, leading: 0 }),
 });
 
 /**
@@ -92,8 +91,9 @@ export const PICKER_DIALOG_SHELL_CSS = `/* 宽度由各选择器通过**弹窗�
   margin-top: 0 !important;
   padding: 0 !important;
 }
-/* 隐藏产品库自带的 ModalDialog 默认 Header（采用单层 Tab-as-Header 架构，避免双重 Header） */
-.omx-pick-dialog--product .dshUk-Dialog-body > *:first-child {
+/* 隐藏产品库与资产库自带的 ModalDialog 默认 Header（采用单层 Tab-as-Header 架构，避免双重 Header） */
+.omx-pick-dialog--product .dshUk-Dialog-body > *:first-child,
+.omx-pick-dialog--assets .dshUk-Dialog-body > *:first-child {
   display: none !important;
 }
 /* 共享的 external 关闭按钮定位在弹窗右外侧（right:-50px），而底座弹窗自带 overflow: hidden 会把它裁出可视区

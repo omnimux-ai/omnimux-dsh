@@ -332,24 +332,16 @@ async function main() {
         Boolean(m.dialogInViewport) && Boolean(m.footerVisible),
         `inViewport=${m.dialogInViewport} footerVisible=${m.footerVisible}`,
       )
-      if (PICKER === 'assets') {
-        record(
-          `viewport ${viewportHeight}: nav divider spans the full content height`,
-          Boolean(m.navDividerFullHeight),
-          `nav=${m.navHeight}px content=${Math.round(m.innerHeight ?? 0)}px`,
-        )
-      } else {
-        record(
-          `viewport ${viewportHeight}: tabs sit on top with no left rail`,
-          Boolean(m.tabsOnTop) && m.hasLeftNav === false,
-          `tabsOnTop=${m.tabsOnTop} hasLeftNav=${m.hasLeftNav}`,
-        )
-        record(
-          `viewport ${viewportHeight}: card thumb is square (1:1)`,
-          m.thumbAspect !== null && Math.abs(m.thumbAspect - 1) <= 0.03,
-          `aspect=${m.thumbAspect}`,
-        )
-      }
+      record(
+        `viewport ${viewportHeight}: tabs sit on top with no left rail`,
+        Boolean(m.tabsOnTop) && m.hasLeftNav === false,
+        `tabsOnTop=${m.tabsOnTop} hasLeftNav=${m.hasLeftNav}`,
+      )
+      record(
+        `viewport ${viewportHeight}: card thumb is square (1:1)`,
+        m.thumbAspect !== null && Math.abs(m.thumbAspect - 1) <= 0.03,
+        `aspect=${m.thumbAspect}`,
+      )
       const closePositionOk = m.closeOutside
       record(
         `viewport ${viewportHeight}: shared close button`,
