@@ -2366,7 +2366,7 @@ export function App(): React.JSX.Element {
       )}
       <div className="messages" ref={scrollRef}>
         {pageScene && (
-          <div className="empty empty-hero-layout" style={{ margin: '8px 0 16px' }}>
+          <div className="empty empty-hero-layout" style={{ width: '100%', margin: '8px auto 16px' }}>
             <div className="hero-card-stack-wrapper">
               <div className="hero-card-stack-underlay underlay-2" />
               <div className="hero-card-stack-underlay underlay-1" />

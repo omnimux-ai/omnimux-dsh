@@ -3835,25 +3835,27 @@ textarea:focus-visible {
   color: #ef4444;
 }
 
-/* Empty Hero Layout (1:1 对标 YouMind 图 2 极简层叠卡片) */
+/* Empty Hero Layout (1:1 对标 YouMind 图 2 极简层叠卡片 绝对水平居中) */
 .empty-hero-layout {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: auto 0;
-  padding: 14px 10px;
-  gap: 16px;
+  margin: 8px auto 16px !important;
+  padding: 8px 0 12px;
+  gap: 14px;
   width: 100%;
-  max-width: calc(340px * var(--ui-scale));
-  margin-inline: auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* 1:1 复刻 YouMind 叠层卡片质感 (Stacked Cards) */
 .hero-card-stack-wrapper {
   position: relative;
   width: 100%;
+  max-width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .hero-card-stack-underlay {

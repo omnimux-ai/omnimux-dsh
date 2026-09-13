@@ -62,4 +62,35 @@ describe('page-sensor suite', () => {
     const heroImg = extractHeroImage('twitter')
     expect(heroImg).toBe('https://pbs.twimg.com/media/XYZ123.jpg')
   })
+
+  it('strictly ignores account switcher avatar in header and picks profile owner avatar', () => {
+    window.history.pushState({}, '', '/yihui_indie')
+
+    // 模拟左侧侧边栏登录用户（钟老）头像
+    const header = document.createElement('header')
+    header.setAttribute('role', 'banner')
+    const switcher = document.createElement('div')
+    switcher.setAttribute('data-testid', 'SideNav_AccountSwitcher_Button')
+    const loggedInAvatar = document.createElement('img')
+    loggedInAvatar.src = 'https://pbs.twimg.com/profile_images/9999/evander_normal.jpg'
+    switcher.appendChild(loggedInAvatar)
+    header.appendChild(switcher)
+    document.body.appendChild(header)
+
+    // 模拟博主 Yihui 的主页主头像
+    const mainCol = document.createElement('main')
+    mainCol.setAttribute('role', 'main')
+    const profileLink = document.createElement('a')
+    profileLink.setAttribute('href', '/yihui_indie/photo')
+    const yihuiAvatar = document.createElement('img')
+    yihuiAvatar.src = 'https://pbs.twimg.com/profile_images/8888/yihui_normal.jpg'
+    profileLink.appendChild(yihuiAvatar)
+    mainCol.appendChild(profileLink)
+    document.body.appendChild(mainCol)
+
+    const heroImg = extractHeroImage('twitter')
+    // 必须拿到 Yihui 的头像，绝不能拿到登录用户钟老的头像！
+    expect(heroImg).toBe('https://pbs.twimg.com/profile_images/8888/yihui_400x400.jpg')
+    expect(heroImg?.includes('evander')).toBe(false)
+  })
 })
