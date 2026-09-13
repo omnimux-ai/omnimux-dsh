@@ -1,0 +1,163 @@
+%% OmniMux 自动化插件（omnimux-automation）— 关键调用序列
+%% 目标插件：plugins/omnimux-automation
+%% 本文件含 4 段独立序列图，各自以 sequenceDiagram 开头，可分段渲染。
+
+%% ============================================================
+%% 4.1 打开右侧工作台并轮询快照（初始化 + 只读）
+%% ============================================================
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant BS as ctx.betterSidebar
+    participant CE as client/index.js
+    participant WB as AutomationWorkbench
+    participant RT as AutomationRuntime
+    participant RPC as RPC /dsh-automation
+    participant SVC as AutomationService
+
+    Note over CE: apply(ctx) 阶段
+    CE->>CE: injectAutomationStyles() / locale.register(NS)
+    CE->>BS: registerTab({ id:'omnimux-automation:workbench', order:21, single:true })
+    BS-->>CE: disposer
+
+    U->>BS: 点击 Tab「自动化」
+    BS->>WB: mount({ ctx, store, scope, tab, visible:true })
+    WB->>RT: setActive(true)
+    WB->>RT: refresh()
+    RT->>RPC: call('snapshot', { sessionId })
+    RPC->>SVC: snapshot(scope, signal)
+    SVC-->>RPC: { definitions, runs, workspaces, models, permissions, serverNow }
+    RPC-->>RT: { ok:true, value: AutomationSnapshot }
+    RT-->>WB: source.getSnapshot() 变化（useSyncExternalStore）
+    WB->>WB: view = 'runs' → ScheduleRunsView
+    Note over RT: 空闲 15s / 存在 queued|running 时 2s 轮询
+
+    U->>BS: 收起右侧面板
+    BS->>WB: visible = false
+    WB->>RT: setActive(false)
+    Note over RT: 停止轮询，保留最后一次快照；不卸载组件、不清空数据
+
+    U->>BS: 展开面板 / 切回该 Tab
+    BS->>WB: visible = true
+    WB->>RT: setActive(true)
+    RT->>RPC: call('snapshot', …) 立即补拉一次
+
+%% ============================================================
+%% 4.2 在面板内新建任务（弹窗 → RPC → 落库）
+%% ============================================================
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant OV as ScheduleOverviewView
+    participant WB as AutomationWorkbench
+    participant CM as CreateModal
+    participant RT as AutomationRuntime
+    participant RPC as RPC /dsh-automation
+    participant SVC as AutomationService
+    participant DOM as domain.js
+    participant ST as storageDomain
+
+    U->>OV: 点击「新建任务」
+    OV->>WB: onOpenCreate()
+    WB->>CM: mount({ draft: defaultFormState(), editing:false })
+    CM-->>U: 名称 / 任务说明 / 计划七型 / 时区 / 权限 / 模型 / 工作区
+    U->>CM: 填写并提交
+    CM->>CM: buildCreateInput(form) 本地校验
+    alt 校验失败
+        CM-->>U: 字段级错误，不发出请求
+    else 校验通过
+        CM->>RT: createAutomation(input)
+        RT->>RPC: call('create', { sessionId, input })
+        RPC->>RPC: toDomainSchedule(input.schedule)  %% 周几 1..7 → MO..SU
+        RPC->>SVC: create(scope, input, signal)
+        SVC->>DOM: createDefinition(input)
+        DOM-->>SVC: AutomationDefinition{ revision:1, rrule, timeZone }
+        SVC->>ST: definitions.put(id, definition)
+        SVC->>SVC: 重排下一个到期时刻
+        SVC-->>RPC: AutomationDefinitionView
+        RPC-->>RT: { ok:true, value:{ id } }
+        RT->>RT: refresh() 拉取新快照
+        RT-->>WB: snapshot 更新
+        WB->>CM: onClose()
+        WB-->>U: 总览列表出现新任务卡片
+    end
+
+%% ============================================================
+%% 4.3 计划触发执行（Host 无人值守，含超时与取消）
+%% ============================================================
+sequenceDiagram
+    autonumber
+    participant CLK as 时钟 pump
+    participant SVC as AutomationService
+    participant DOM as domain.js
+    participant REC as recurrence.js
+    participant EXE as executor.js
+    participant AG as ctx.agents
+    participant ST as storageDomain
+
+    CLK->>SVC: 到期唤醒（MAX_TIMER_DELAY_MS 分段定时）
+    SVC->>REC: latestDueOccurrence(definition.schedule, now)
+    REC-->>SVC: scheduledFor（落在 misfireGraceMs 宽限内才补跑）
+    SVC->>DOM: createScheduledRun(definition, scheduledFor)
+    DOM-->>SVC: AutomationRun{ occurrenceKey, id, status:'queued' }
+    SVC->>ST: runs.put(id, run)
+    Note over SVC,ST: occurrenceKey 幂等认领：同一 (id, revision, 时刻) 只跑一次
+    SVC->>SVC: 并发上限 maxConcurrentRuns 判定
+
+    SVC->>EXE: executeAutomationRun(ctx, definition, run, config)
+    EXE->>EXE: workspaceRegistry.get(workspaceId) 校验 path 与 status
+    EXE->>AG: agents.withoutInitiator(create({ sessionId, meta:{cwd,agentPreset}, setup }))
+    AG-->>EXE: handle
+    EXE->>EXE: applyUnattendedPermission(permissionPreset, approvalPolicy='never')
+    EXE->>AG: followup(createUserMessage({ content: promptSnapshot, source:{ kind:'automation', … } }))
+    EXE->>AG: whenIdle()
+
+    par 正常结束
+        AG-->>EXE: idle
+    and 超时
+        EXE->>AG: agent.cancel({ kind:'hook', reason:'automation run timeout' })
+    and 服务停止
+        EXE->>AG: agent.cancel({ kind:'hook', reason:'automation service disposed' })
+    end
+
+    EXE->>EXE: settlesWithin(idle, 10000) 二次退出上限
+    EXE->>AG: sessions.flush(session)
+    EXE->>EXE: summarizeRun(readSessionEvents(session), firstSeq)
+    EXE->>AG: handle.dispose()
+    EXE-->>SVC: RunCompletion{ status, summary, sessionId, error? }
+    SVC->>ST: runs.put(id, run{ status, sessionId, startedAt, finishedAt, summary, error })
+
+%% ============================================================
+%% 4.4 从执行记录安全打开会话
+%% ============================================================
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant RV as ScheduleRunsView
+    participant OS as open-session
+    participant RT as AutomationRuntime
+    participant SESS as ctx.sessions
+
+    U->>RV: 点击某次执行记录
+    RV->>OS: openSession(run.sessionId)
+    OS->>RT: adoptSession(sessionId)
+    RT->>RT: RPC call('adopt-session', { sessionId })
+    OS->>SESS: list.getSnapshot()
+
+    alt 会话已在宿主会话簿
+        OS->>SESS: open(sessionId)
+        SESS-->>U: 切到该执行会话
+    else 会话缺席（宿主会话簿常常晚于自动化快照）
+        OS->>SESS: refresh()
+        loop 重试间隔 1s / 2s / 4s（最多 4 次）
+            OS->>SESS: list.getSnapshot() 再判在册
+        end
+        alt 重试后在册
+            OS->>SESS: open(sessionId)
+            SESS-->>U: 切到该执行会话
+        else 仍缺席
+            OS-->>U: 保持当前面板，不打开空会话
+        end
+    end
+
+    Note over OS: sessionId 只能来自 run 记录，禁止拼接或猜测；不直接改 store

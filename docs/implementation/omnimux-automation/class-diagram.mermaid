@@ -1,0 +1,408 @@
+%% OmniMux 自动化插件（omnimux-automation）— 数据结构与服务接口类图
+%% 目标插件：plugins/omnimux-automation
+%% 生成日期：2026-09-13
+
+classDiagram
+    direction TB
+
+    %% ============ 存储域 dsh_automation v1（逐字兼容，禁止改动） ============
+
+    class AutomationSchedule {
+        <<union>>
+        +string kind
+        +string timeZone
+        +string at
+        +number everyMinutes
+        +string anchor
+        +number minute
+        +string time
+        +List~string~ weekdays
+        +number day
+        +number everyDays
+    }
+
+    class AutomationDefinition {
+        +number version
+        +string id
+        +number revision
+        +number maxConcurrentRuns
+        +string name
+        +string prompt
+        +string status
+        +AutomationSchedule schedule
+        +string rrule
+        +string timeZone
+        +string workspaceId
+        +string cwd
+        +string agentPreset
+        +string provider
+        +string model
+        +string reasoningEffort
+        +string permissionPreset
+        +AutomationCreator createdBy
+        +string createdAt
+        +string updatedAt
+    }
+
+    class AutomationCreator {
+        +string kind
+        +string sessionId
+    }
+
+    class AutomationTargetSnapshot {
+        +string workspaceId
+        +string cwd
+        +string agentPreset
+        +string provider
+        +string model
+        +string reasoningEffort
+        +string permissionPreset
+    }
+
+    class AutomationRun {
+        +number version
+        +string id
+        +string automationId
+        +string automationName
+        +number definitionRevision
+        +string occurrenceKey
+        +string trigger
+        +string scheduledFor
+        +string status
+        +string promptSnapshot
+        +AutomationTargetSnapshot targetSnapshot
+        +string sessionId
+        +string startedAt
+        +string finishedAt
+        +string summary
+        +AutomationRunError error
+        +boolean unread
+    }
+
+    class AutomationRunError {
+        +string code
+        +string message
+    }
+
+    class DomainSpec["automationDomainSpec"] {
+        <<const>>
+        +string name
+        +number version
+    }
+
+    DomainSpec "1" --> "1" AutomationDefinition : tables.definitions
+    DomainSpec "1" --> "1" AutomationRun : tables.runs
+    AutomationDefinition "1" *-- "1" AutomationSchedule
+    AutomationDefinition "1" *-- "1" AutomationCreator
+    AutomationRun "1" *-- "1" AutomationTargetSnapshot
+    AutomationRun "1" *-- "1" AutomationRunError
+
+    %% ============ Host 引擎 ============
+
+    class AutomationService["AutomationService (src/service.js)"] {
+        -Domain domain
+        -KvTable definitions
+        -KvTable runs
+        -Timeout timer
+        -Map active
+        +open(ctx, config) AutomationService
+        +start() void
+        +dispose() Promise
+        +ownsSession(sessionId, events) boolean
+        +permissionNames() List~string~
+        +permissionOptions() List~PermissionOption~
+        +defaultPermission() string
+        +snapshot(scope, signal) AutomationSnapshot
+        +create(scope, input, signal) AutomationDefinitionView
+        +update(scope, id, input, signal) AutomationDefinitionView
+        +delete(scope, id, signal) DeleteAutomationPlan
+        +runNow(scope, id, signal) AutomationRun
+        +markRead(scope, runId, signal) AutomationRun
+        +adoptSession(sessionId) Promise
+        +forgetSession(sessionId) Promise
+        +forgetAutomationSessions(automationId) Promise
+        +reconcileMissingSessions() Promise
+    }
+
+    class Executor["Executor (src/executor.js)"] {
+        <<module>>
+        +executeAutomationRun(ctx, definition, run, config) RunCompletion
+        +summarizeRun(events, firstSeq) Summary
+        +readSessionEvents(session) List~Event~
+        +applyUnattendedPermission(presets, session, permission) void
+        +pinAutomationSessionTitle(ctx, session, title) void
+        +settlesWithin(promise, timeoutMs) boolean
+    }
+
+    class Recurrence["Recurrence (src/recurrence.js)"] {
+        <<module>>
+        +assertValidSchedule(schedule) void
+        +normalizeSchedule(schedule) AutomationSchedule
+        +isEqualSchedule(left, right) boolean
+        +scheduleToRRule(schedule) string
+        +nextOccurrence(schedule, after) string
+        +latestDueOccurrence(schedule, now) string
+        +occurrencesBetween(schedule, from, to) List~string~
+    }
+
+    class DomainFactory["DomainFactory (src/domain.js)"] {
+        <<module>>
+        +createDefinition(input) AutomationDefinition
+        +updateDefinition(current, input) AutomationDefinition
+        +pauseDefinition(current, now) AutomationDefinition
+        +resumeDefinition(current, now) AutomationDefinition
+        +deleteDefinition(current) DeleteAutomationPlan
+        +occurrenceKey(id, revision, scheduledFor) string
+        +runIdForOccurrence(key) string
+        +createScheduledRun(definition, scheduledFor) AutomationRun
+        +createManualRun(definition, scheduledFor, nonce) AutomationRun
+    }
+
+    class Rpc["Rpc (src/rpc.js)"] {
+        <<module>>
+        +registerAutomationRpc(ctx, service) Disposer
+    }
+
+    class Tools["Tools (src/tools.js)"] {
+        <<module>>
+        +registerAutomationTools(service, agent) Disposer
+    }
+
+    class Prompt["Prompt (src/prompt.js)"] {
+        <<module>>
+        +AUTOMATION_PROMPT_NAME string
+        +AUTOMATION_PROMPT_ORDER number
+        +AUTOMATION_PROMPT_TEXT string
+        +AUTOMATION_CREATE_DESCRIPTION string
+        +shouldUseAutomationCreate(text) boolean
+    }
+
+    class RunTitle["RunTitle (src/run-title.js)"] {
+        <<module>>
+        +formatRunStamp(iso, timeZone) string
+        +automationSessionTitle(name, iso, timeZone) string
+    }
+
+    class PermissionPresets["PermissionPresets (src/permission-presets.js)"] {
+        <<module>>
+        +normalizePermissionPreset(input, names) string
+    }
+
+    AutomationService ..> DomainFactory : 构造与变更定义
+    AutomationService ..> Recurrence : 计算下次执行与漏跑窗口
+    AutomationService ..> Executor : 认领后执行 run
+    AutomationService ..> PermissionPresets : 归一权限预设
+    Executor ..> RunTitle : 固化会话标题
+    Rpc --> AutomationService : 九个 endpoint
+    Tools --> AutomationService : 六个 Agent 工具
+
+    %% ============ 客户端 ============
+
+    class AutomationRuntime["AutomationRuntime (src/client/runtime.js)"] {
+        +source source
+        +refresh() Promise
+        +createAutomation(input) Promise
+        +mutateAutomation(id, mutation) Promise
+        +updateAutomation(id, input) Promise
+        +runNow(id) Promise
+        +markRunRead(runId) Promise
+        +adoptSession(sessionId) Promise
+        +forgetSession(sessionId) Promise
+        +forgetAutomationSessions(id) Promise
+        +setActive(active) void
+    }
+
+    class AutomationClientState {
+        +AutomationSnapshot snapshot
+        +string error
+        +boolean loading
+    }
+
+    class AutomationSnapshot {
+        +Scope scope
+        +List~WorkspaceOption~ workspaces
+        +List~ModelOption~ models
+        +List~PermissionOption~ permissions
+        +string defaultPermission
+        +List~AutomationViewModel~ automations
+        +List~AutomationRunViewModel~ runs
+        +string serverNow
+    }
+
+    class AutomationViewModel {
+        +string id
+        +number revision
+        +string name
+        +string prompt
+        +string status
+        +AutomationSchedule schedule
+        +string scheduleSummary
+        +string timeZone
+        +string permission
+        +number maxConcurrentRuns
+        +string nextRunAt
+        +string lastRunAt
+        +string lastRunStatus
+        +string createdAt
+        +string updatedAt
+    }
+
+    class AutomationRunViewModel {
+        +string id
+        +string automationId
+        +string automationName
+        +string status
+        +string trigger
+        +string scheduledFor
+        +string startedAt
+        +string finishedAt
+        +string sessionId
+        +string summary
+        +string error
+        +boolean unread
+    }
+
+    class ScheduleModel["ScheduleModel (src/client/schedule-model.js)"] {
+        <<module>>
+        +groupScheduledSessions(automations, runs) List~Group~
+        +deriveTaskOverviewRows(automations) List~Row~
+        +automationToggleMutation(status) string
+        +scheduledSessionTitle(live, fallback) string
+        +keepScheduledSessionLink(id, archived) boolean
+        +collectScheduledSessionIds(runs) Set
+        +isAutomationSidebarSession(id, item, ids) boolean
+    }
+
+    class OpenSession["OpenSession (src/client/open-session.js)"] {
+        <<module>>
+        +createScheduledSessionOpener(ctx, runtime) Opener
+        +ensureOpenScheduledSession(input) boolean
+    }
+
+    class Helpers["Helpers (src/client/helpers.js)"] {
+        <<module>>
+        +formatSchedule(schedule, t) string
+        +formatRelativeTime(iso, now, t) string
+        +formatWithin(iso, now, t) string
+        +formatDuration(startedAt, finishedAt) string
+        +formatRunTrigger(trigger, t) string
+        +sortAutomations(items, key, direction) List~Item~
+        +groupHistory(runs, range, t) List~Group~
+        +defaultFormState(now, workspaces, model, permission) Form
+        +buildCreateInput(form) CreateInput
+        +formFromAutomation(item) Form
+    }
+
+    class AutomationWorkbench["AutomationWorkbench (src/client/AutomationWorkbench.jsx)"] {
+        +Translate t
+        +Translate permissionT
+        +Translate modelT
+        +AutomationRuntime runtime
+        +Opener openSession
+        +boolean visible
+        +render() Workbench
+    }
+
+    class ScheduleViewSwitch["ScheduleViewSwitch (Workbench 内导出)"] {
+        +Translate t
+        +string view
+        +onChange(view) void
+    }
+
+    class ScheduleRunsView["ScheduleRunsView (src/client/ScheduleRunsView.jsx)"] {
+        +Translate t
+        +AutomationRuntime runtime
+        +List~Group~ groups
+        +Opener openSession
+        +object folded
+        +onToggleFold(id) void
+        +onMarkRead(runId) void
+    }
+
+    class ScheduleOverviewView["ScheduleOverviewView (src/client/ScheduleOverviewView.jsx)"] {
+        +Translate t
+        +List~AutomationViewModel~ automations
+        +string serverNow
+        +onToggle(id, mutation) void
+        +onRunNow(id) void
+        +onEdit(item) void
+        +onDelete(item) void
+    }
+
+    class CreateModal["CreateModal (src/client/create-modal.jsx)"] {
+        +Translate t
+        +boolean busy
+        +List~WorkspaceOption~ workspaces
+        +List~ModelOption~ models
+        +List~PermissionOption~ permissions
+        +Form draft
+        +boolean editing
+        +onClose() void
+        +onSubmit(form) Promise
+    }
+
+    class DeleteConfirmation["DeleteConfirmation (src/client/delete-confirmation.jsx)"] {
+        +Target target
+        +Translate t
+        +boolean busy
+        +onCancel() void
+        +onConfirm() void
+    }
+
+    class ClientEntry["ClientEntry (src/client/index.js)"] {
+        <<module>>
+        +string name
+        +List~string~ inject
+        +apply(ctx) void
+        +AUTOMATION_TAB_ID string
+    }
+
+    class BetterSidebarService["BetterSidebarService (ctx.betterSidebar)"] {
+        <<service>>
+        +registerTab(descriptor) Disposer
+        +getTab(id) TabDescriptor
+        +getTabs() List~TabDescriptor~
+        +openTab(open) void
+        +closeTab(id) void
+    }
+
+    class TabDescriptor {
+        +string id
+        +string title
+        +Icon icon
+        +number order
+        +boolean hidden
+        +boolean single
+        +Component component
+    }
+
+    class TabComponentProps {
+        +Context ctx
+        +SidebarStore store
+        +SessionScope scope
+        +SidebarTab tab
+        +boolean visible
+    }
+
+    ClientEntry --> AutomationRuntime : createAutomationRuntime(rpc)
+    ClientEntry --> BetterSidebarService : ctx.inject ['betterSidebar']
+    ClientEntry --> AutomationWorkbench : 包装为 Tab component
+    BetterSidebarService ..> TabDescriptor : 注册
+    TabDescriptor ..> TabComponentProps : 组件入参
+    AutomationWorkbench --> ScheduleViewSwitch
+    AutomationWorkbench --> ScheduleRunsView
+    AutomationWorkbench --> ScheduleOverviewView
+    AutomationWorkbench --> CreateModal
+    AutomationWorkbench --> DeleteConfirmation
+    AutomationWorkbench --> AutomationRuntime
+    ScheduleRunsView --> ScheduleModel
+    ScheduleOverviewView --> ScheduleModel
+    ScheduleRunsView --> OpenSession
+    ScheduleRunsView --> Helpers
+    ScheduleOverviewView --> Helpers
+    CreateModal --> Helpers
+    AutomationRuntime --> AutomationClientState
+    AutomationRuntime ..> OpenSession : ctx.sessions 同步
+    AutomationClientState "1" *-- "1" AutomationSnapshot
+    AutomationSnapshot "1" *-- "*" AutomationViewModel
+    AutomationSnapshot "1" *-- "*" AutomationRunViewModel
