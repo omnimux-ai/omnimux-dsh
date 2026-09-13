@@ -357,7 +357,6 @@ test('trending: i18n 双语键位齐全', () => {
     'trending.library.emptyHint',
     'trending.library.unavailable',
     'trending.library.unavailableHint',
-    'trending.applied',
     'trending.undock',
     'trending.filter.reset',
   ]
