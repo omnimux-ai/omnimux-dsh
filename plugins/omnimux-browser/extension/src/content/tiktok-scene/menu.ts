@@ -167,14 +167,15 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     else iconSlot.innerHTML = actionIcon(action, 19)
   }
 
-  const showDetail = (text: string): void => {
+  const showDetail = (text: string, tone: 'ok' | 'error'): void => {
     detail.textContent = text
+    detail.classList.toggle('is-ok', tone === 'ok')
     detail.classList.add('is-visible')
   }
 
   const hideDetail = (): void => {
     detail.textContent = ''
-    detail.classList.remove('is-visible')
+    detail.classList.remove('is-visible', 'is-ok')
   }
 
   const pending = new Set<TiktokAction>()
@@ -193,10 +194,14 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       outcome = { ok: false, code: 'unreachable' }
     }
     pending.delete(action)
-    if (outcome.ok) setRowState(action, 'done', copy.done(action, outcome))
-    else {
+    if (outcome.ok) {
+      setRowState(action, 'done', copy.done(action, outcome))
+      // Naming the file is what turns "something was saved" into "this is what
+      // you got", which is the only way the user can notice a wrong post.
+      showDetail(copy.detail(action, outcome), 'ok')
+    } else {
       setRowState(action, 'error', '')
-      showDetail(copy.failed(outcome))
+      showDetail(copy.failed(outcome), 'error')
     }
   }
 

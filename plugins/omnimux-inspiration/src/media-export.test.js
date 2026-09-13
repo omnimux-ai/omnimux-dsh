@@ -201,6 +201,31 @@ describe('exportMediaFile — audio', () => {
     assert.equal(existsSync(work) ? readdirSync(work).length : 0, 0, 'the intermediate file must be removed')
   })
 
+  it('discards a half-written audio file instead of leaving it in Downloads', async () => {
+    const { downloads, work } = dirs()
+    await assert.rejects(
+      exportMediaFile({
+        videoUrl: PUBLIC_MP4,
+        meta: TIKTOK_META,
+        kind: EXPORT_KIND.audio,
+        downloadsDir: downloads,
+        workDir: work,
+        fetcher: async () => streamResponse([[1, 2, 3, 4]]),
+        resolver: offlineResolver,
+        // A real ffmpeg creates its output before it discovers the stream is bad,
+        // so this shape leaves a file behind for the cleanup to remove — the other
+        // failure case throws before writing anything and proves nothing.
+        runFfmpeg: async (_input, output) => {
+          writeFileSync(output, Buffer.from([1, 2, 3]))
+          throw new Error('ffmpeg: invalid data found when processing input')
+        },
+      }),
+      /invalid data/,
+    )
+    assert.equal(existsSync(downloads) ? readdirSync(downloads).length : 0, 0, 'no half-written file may stay')
+    assert.equal(existsSync(work) ? readdirSync(work).length : 0, 0)
+  })
+
   it('fails the export and clears the intermediate file when the audio track cannot be read', async () => {
     const { downloads, work } = dirs()
     await assert.rejects(

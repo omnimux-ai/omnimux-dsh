@@ -9,8 +9,10 @@
  * while the page could only ever fetch a watermarked, page-scoped blob.
  *
  * Results are answered as a code plus a detail string, never as rendered copy:
- * the host's messages are already localised, and the wording a user sees belongs
- * to the content script.
+ * the wording a user sees belongs to the content script. `detail` carries the
+ * host’s own reason verbatim, and that reason is written in Chinese whatever
+ * the extension’s locale is — translating it here would drop the specifics it
+ * names (which link failed, which region refused), which are the actionable part.
  *
  * @module
  */
@@ -75,19 +77,27 @@ const HOST_PROBE_TIMEOUT_MS = 1_500
  * Serial probing would make a user wait out each dead port's timeout before the
  * live one is reached — the worst case is nine ports, and the user is watching a
  * menu row that says it is working. Asking in parallel keeps the wait at one
- * timeout, and `Promise.any` means a port that never answers cannot hold the
- * answer back once a real host has replied.
- * @param ports candidate loopback ports
+ * timeout, while reading the answers in port order keeps the choice deterministic
+ * instead of letting a race decide which host answers.
+ * @param ports candidate loopback ports, in priority order
  * @param fetchImpl injectable transport, for tests
- * @returns the HTTP base of the first host that answers, or `null` for none
+ * @param timeoutMs per-port budget in milliseconds
+ * @returns the first reachable host's HTTP base, or `null` for none
  */
 export async function discoverHostBase(
   ports: readonly number[],
   fetchImpl: typeof fetch = fetch,
+  timeoutMs: number = HOST_PROBE_TIMEOUT_MS,
 ): Promise<string | null> {
+  // Every probe starts at once, then the answers are read in port order. The list
+  // is a priority order (Dev, then Desktop, then the legacy ports), so letting
+  // "whoever answers first" win could hand the shortcuts to a second local DSH that
+  // the user’s panel is not talking to — and that host may not serve the
+  // inspiration prefix at all. Reading in order costs nothing here: the slower
+  // probes are already in flight, so the worst case is still one timeout.
   const probes = ports.map(async (port): Promise<string> => {
     const response = await fetchImpl(`http://127.0.0.1:${port}${BRIDGE_CONFIG_PATH}`, {
-      signal: AbortSignal.timeout(HOST_PROBE_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     if (!response.ok) throw new Error(`port ${port} answered ${response.status}`)
     const body = await response.json() as { wsUrl?: unknown }
@@ -95,12 +105,17 @@ export async function discoverHostBase(
     if (base === null) throw new Error(`port ${port} is not a dsh host`)
     return base
   })
-  try {
-    return await Promise.any(probes)
-  } catch {
-    // Every candidate refused or timed out: there is no local host to talk to.
-    return null
+  // The loop may return before the later probes settle, and an unhandled rejection
+  // inside a service worker is noise the user can never act on.
+  for (const probe of probes) probe.catch(() => {})
+  for (const probe of probes) {
+    try {
+      return await probe
+    } catch {
+      // This candidate is not the host; the next one already has its answer.
+    }
   }
+  return null
 }
 
 /** Read a JSON body, answering `null` for anything that is not JSON. */

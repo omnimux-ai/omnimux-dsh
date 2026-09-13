@@ -22,11 +22,13 @@ export const TIKTOK_RUNTIME_MESSAGE = {
 /** Timing budgets. */
 export const TIKTOK_TIMING = {
   /**
-   * Quiet period after a DOM mutation before the page is re-scanned.
+   * Shortest gap between two anchor re-measurements.
    *
    * TikTok mutates the feed continuously while a video plays, so reacting to
    * every mutation would re-measure the anchor dozens of times a second for a
-   * position that only changes when the user scrolls or navigates.
+   * position that only changes when the rail is rebuilt. A throttle, not a
+   * debounce: a debounce restarted by each mutation can be starved forever by a
+   * page that never goes quiet, leaving the trigger at a stale anchor.
    */
-  rescanDebounceMs: 180,
+  rescanThrottleMs: 180,
 } as const

@@ -143,17 +143,30 @@ describe('保存到灵感库', () => {
 })
 
 describe('宿主地址探测', () => {
-  it('端口并行探测：先应答的那个立即决定结果，不回答的端口拖不住它', async () => {
+  it('按候选顺序裁决：靠前的端口可用就用它', async () => {
     const base = await discoverHostBase([45120, 43120], async (input) => {
-      if (String(input).includes(':43120')) {
-        return jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
+      const port = String(input).includes(':45120') ? 45120 : 43120
+      return jsonResponse(200, { wsUrl: `ws://127.0.0.1:${port}/ext/bridge` })
+    }, 100)
+
+    expect(base).toBe('http://127.0.0.1:45120')
+  })
+
+  it('靠前的端口不应答时改用靠后的，且只等一个探测超时', async () => {
+    const started = Date.now()
+    const base = await discoverHostBase([45120, 43120], async (input, init) => {
+      if (String(input).includes(':45120')) {
+        // A port with no DSH behind it: the real fetch rejects when its own
+        // AbortSignal fires, and the sweep must not wait that out per port.
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('timeout')))
+        })
       }
-      // A port with no DSH behind it can hang until its own timeout; a serial
-      // sweep would spend that timeout before ever reaching the live port.
-      return new Promise<Response>(() => {})
-    })
+      return jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
+    }, 40)
 
     expect(base).toBe(BASE)
+    expect(Date.now() - started).toBeLessThan(1000)
   })
 
   it('应答的不是 dsh 时继续看别的端口', async () => {
@@ -161,7 +174,7 @@ describe('宿主地址探测', () => {
       String(input).includes(':45120')
         ? jsonResponse(200, { something: 'else' })
         : jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
-    ))
+    ), 100)
 
     expect(base).toBe(BASE)
   })
@@ -169,7 +182,7 @@ describe('宿主地址探测', () => {
   it('所有候选端口都不通时回答空，交给调用方说“主程序没在跑”', async () => {
     const base = await discoverHostBase([45120, 43120], async () => {
       throw new TypeError('Failed to fetch')
-    })
+    }, 100)
 
     expect(base).toBeNull()
   })
@@ -179,7 +192,7 @@ describe('宿主地址探测', () => {
     const base = await discoverHostBase([43120], async (input) => {
       seen.push(String(input))
       return jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
-    })
+    }, 100)
 
     expect(seen).toEqual(['http://127.0.0.1:43120/ext/bridge-config'])
     expect(base).toBe(BASE)

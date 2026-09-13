@@ -896,10 +896,15 @@ export async function handleFetchMedia(ctx) {
     return fail(400, `kind must be "${EXPORT_KIND.video}" or "${EXPORT_KIND.audio}", got "${kind}"`)
   }
   // The page-supplied address reaches a downloader that follows redirects, so it
-  // is held to the same public-address rule as every other import.
+  // is held to a public-address rule before anything touches the network. This is
+  // stricter than the import path, which vets the resolved stream instead of the
+  // address the user pasted.
   if (!isPublicHttpUrl(rawUrl)) return fail(400, 'url must be a public http(s) address')
 
-  const platform = body.platform || ctx.detectPlatformFromUrl(rawUrl)
+  // The platform is derived here, never read from the body: it selects which
+  // cloud capability resolves the post, and a requesting page must not be able to
+  // steer that choice.
+  const platform = ctx.detectPlatformFromUrl(rawUrl)
   const social = await fetchSocialMeta({ ...ctx, rawUrl, platform })
   if (social.error) return social.error
   const videoUrl = social.meta.video_url

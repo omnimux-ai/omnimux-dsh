@@ -27,8 +27,6 @@ export interface TargetInput {
   pageUrl: string
   /** Post the pointer was last over, when the page is a profile grid. */
   hoveredHref?: string | null
-  /** First post link found on the page, as the last DOM resort. */
-  gridHref?: string | null
 }
 
 /** `tiktok.com` and its subdomains; lookalike hosts must not match. */
@@ -91,25 +89,24 @@ function isTikTokPage(href: string): boolean {
  *
  * A post page always wins — that is the watched video and the user's evident
  * intent. On a profile grid there is no watched post, so the pointer's last
- * target wins over the first tile, which is the one the user was about to act
- * on when they reached for the trigger.
+ * target decides.
+ *
+ * There is deliberately no "first post link on the page" resort. The trigger is
+ * mounted on every TikTok page, including search and explore, and on those a
+ * first-link guess would silently download whichever post happened to render
+ * first. Answering `null` costs the user one clear "nothing to act on here"
+ * line; guessing costs them a wrong download they never learn about.
  *
  * The page's own host is checked first: the trigger is only mounted on TikTok,
  * but a decision function that could return a target while sitting on another
  * site is one refactor away from acting on the wrong page.
  * @param input
- * @returns the target, or `null` when this page offers no post to act on
+ * @returns the target, or `null` when this page names no post to act on
  */
 export function resolveTargetPost(input: TargetInput): PostTarget | null {
   if (!isTikTokPage(input.pageUrl)) return null
   const fromPage = matchPostTarget(input.pageUrl)
   if (fromPage !== null) return fromPage
-  const fromHover = input.hoveredHref === undefined || input.hoveredHref === null
-    ? null
-    : matchPostTarget(input.hoveredHref)
-  if (fromHover !== null) return fromHover
-  const fromGrid = input.gridHref === undefined || input.gridHref === null
-    ? null
-    : matchPostTarget(input.gridHref)
-  return fromGrid
+  if (input.hoveredHref === undefined || input.hoveredHref === null) return null
+  return matchPostTarget(input.hoveredHref)
 }

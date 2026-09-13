@@ -36,6 +36,14 @@ export interface TiktokCopy {
   busy: Record<TiktokAction, string>
   /** Row label once the host answered. */
   done: (action: TiktokAction, outcome: ExportOutcome) => string
+  /**
+   * Fuller result line, shown under the rows.
+   *
+   * The menu row is one line in a 224px panel, so the name of the file that
+   * was just written — the only thing that tells the user *which* post they
+   * got — belongs on its own line rather than squeezed into the label.
+   */
+  detail: (action: TiktokAction, outcome: ExportOutcome) => string
   /** Explanation shown under a failed row. */
   failed: (outcome: ExportOutcome) => string
   /** Shown when the page offers no post to act on. */
@@ -59,6 +67,13 @@ const ZH: TiktokCopy = {
     if (outcome.code === 'duplicate') return '已在灵感库'
     if (outcome.code === 'saved') return '已进灵感库'
     return action === 'audio' ? '原声已存「下载」' : '已存到「下载」'
+  },
+  detail: (action, outcome) => {
+    if (outcome.code === 'duplicate') return '这条作品已经在灵感库里，没有重复写入'
+    if (outcome.code === 'saved') return '已写入 OmniMux 灵感库，可在灵感页查看'
+    const name = outcome.filename ?? ''
+    if (name === '') return '文件已保存到你的「下载」文件夹'
+    return `${action === 'audio' ? '原声' : '视频'}已保存到「下载」：${name}`
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return '未连接 OmniMux 主程序，请先启动后再试'
@@ -84,6 +99,13 @@ const EN: TiktokCopy = {
     if (outcome.code === 'duplicate') return 'Already in library'
     if (outcome.code === 'saved') return 'Saved to library'
     return action === 'audio' ? 'Audio in Downloads' : 'Saved to Downloads'
+  },
+  detail: (action, outcome) => {
+    if (outcome.code === 'duplicate') return 'Already in the inspiration library'
+    if (outcome.code === 'saved') return 'Saved to the OmniMux inspiration library'
+    const name = outcome.filename ?? ''
+    if (name === '') return 'File written to your Downloads folder'
+    return `${action === 'audio' ? 'Audio' : 'Video'} saved to Downloads: ${name}`
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return 'OmniMux is not running — start it and retry'

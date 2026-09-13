@@ -24,17 +24,8 @@
   text-rendering: optimizeLegibility;
 }
 
-/* The host is a zero-size anchor: it must never swallow a page click. */
-.omx-scene-layer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 0;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 2147483640;
-}
+/* The host element itself carries the fixed positioning as an inline style, so
+   this file owns only the layer's children. */
 
 .omx-anchor {
   position: fixed;
@@ -219,6 +210,11 @@
 
 .omx-item-detail.is-visible {
   display: block;
+}
+
+/* A settled shortcut reports what it wrote, not what went wrong. */
+.omx-item-detail.is-ok {
+  color: rgba(126, 224, 168, 0.92);
 }
 
 .omx-spinner {

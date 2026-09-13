@@ -152,6 +152,9 @@ describe('TikTok 场景菜单 — 执行与反馈', () => {
 
     expect(row('video').classList.contains('is-done')).toBe(true)
     expect(row('video').textContent).toContain(COPY.done('video', exported('a.mp4')))
+    // Naming the written file is the only thing that tells the user which post
+    // they actually got; without it a wrong download is invisible.
+    expect(shadow().querySelector('.omx-item-detail')?.textContent).toContain('a.mp4')
   })
 
   it('已在库里也按完成处理，不当成失败', async () => {

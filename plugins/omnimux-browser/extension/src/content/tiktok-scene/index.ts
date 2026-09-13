@@ -34,12 +34,6 @@ export function isTikTokHost(hostname: string): boolean {
   return host === 'tiktok.com' || host.endsWith('.tiktok.com')
 }
 
-/** The first post link on the page, as the profile grid's last resort. */
-function firstPostHref(doc: Document): string | null {
-  const anchor = doc.querySelector('a[href*="/video/"]')
-  return anchor instanceof HTMLAnchorElement ? anchor.href : null
-}
-
 /**
  * Mount the TikTok scene, if this page is one.
  *
@@ -67,11 +61,7 @@ export function initTiktokScene(): void {
   }
 
   const run = async (action: TiktokAction): Promise<ExportOutcome> => {
-    const target = resolveTargetPost({
-      pageUrl: window.location.href,
-      hoveredHref,
-      gridHref: firstPostHref(doc),
-    })
+    const target = resolveTargetPost({ pageUrl: window.location.href, hoveredHref })
     if (target === null) return { ok: false, code: 'rejected', detail: copy.noTarget }
     return sendTiktokShortcut(action, target.url)
   }
@@ -80,17 +70,27 @@ export function initTiktokScene(): void {
 
   doc.addEventListener('pointerover', onPointerOver, { passive: true })
 
-  // A debounced re-measure rather than a re-mount: the trigger stays put and only
-  // its anchor is refreshed, so an open menu is never torn down under the user's
-  // pointer by a feed update.
+  // A throttled re-measure rather than a re-mount: the trigger stays put and only
+  // its anchor is refreshed, so an open menu is never torn down under the user’s
+  // pointer by a feed update. The first mutation re-measures at once; a burst
+  // after that collapses into one trailing re-measure.
+  let lastMeasure = 0
   let timer: ReturnType<typeof setTimeout> | null = null
-  const observer = new MutationObserver(() => {
-    if (timer !== null) clearTimeout(timer)
+  const remeasure = (): void => {
+    const wait = TIKTOK_TIMING.rescanThrottleMs - (Date.now() - lastMeasure)
+    if (wait <= 0) {
+      lastMeasure = Date.now()
+      scene.reposition()
+      return
+    }
+    if (timer !== null) return
     timer = setTimeout(() => {
       timer = null
+      lastMeasure = Date.now()
       scene.reposition()
-    }, TIKTOK_TIMING.rescanDebounceMs)
-  })
+    }, wait)
+  }
+  const observer = new MutationObserver(remeasure)
   observer.observe(doc.documentElement, { childList: true, subtree: true })
 
   shell[SCENE_SLOT] = {

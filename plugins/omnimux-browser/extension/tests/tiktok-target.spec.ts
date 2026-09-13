@@ -37,7 +37,6 @@ describe('TikTok 目标作品判定 — 优先级', () => {
     const target = resolveTargetPost({
       pageUrl: `${WATCH}?is_from_webapp=1`,
       hoveredHref: GRID_POST,
-      gridHref: GRID_POST,
     })
     expect(target).toEqual({ url: WATCH, postId: '7412345678901234567' })
   })
@@ -47,23 +46,19 @@ describe('TikTok 目标作品判定 — 优先级', () => {
     expect(target?.postId).toBe('7412345678901234567')
   })
 
-  it('博主主页优先取鼠标指向的那条', () => {
-    const target = resolveTargetPost({
-      pageUrl: PROFILE,
-      hoveredHref: `${GRID_POST}?lang=zh`,
-      gridHref: WATCH,
-    })
+  it('博主主页取鼠标指向的那条', () => {
+    const target = resolveTargetPost({ pageUrl: PROFILE, hoveredHref: `${GRID_POST}?lang=zh` })
     expect(target).toEqual({ url: GRID_POST, postId: '7419999999999999999' })
   })
 
-  it('博主主页没有指向时退回页面里第一条作品', () => {
-    const target = resolveTargetPost({ pageUrl: PROFILE, gridHref: WATCH })
-    expect(target).toEqual({ url: WATCH, postId: '7412345678901234567' })
+  it('博主主页没有指向时不给目标，绝不拿页面里第一条作品顶替', () => {
+    expect(resolveTargetPost({ pageUrl: PROFILE })).toBeNull()
+    expect(resolveTargetPost({ pageUrl: PROFILE, hoveredHref: PROFILE })).toBeNull()
   })
 
-  it('博主主页既没有指向也没有作品链接时不给目标', () => {
-    expect(resolveTargetPost({ pageUrl: PROFILE })).toBeNull()
-    expect(resolveTargetPost({ pageUrl: PROFILE, hoveredHref: 'https://www.tiktok.com/@cleanlife' })).toBeNull()
+  it('搜索页、探索页这类没有当前作品的页面不给目标，避免下错作品', () => {
+    expect(resolveTargetPost({ pageUrl: 'https://www.tiktok.com/search?q=clean' })).toBeNull()
+    expect(resolveTargetPost({ pageUrl: 'https://www.tiktok.com/' })).toBeNull()
   })
 
   it('非 TikTok 页面一律不产生目标', () => {
