@@ -84,8 +84,16 @@ test('session guide switches drafts without a reference panel or send intercepti
     const savedState = store.get(owner)
     const savedWrites = writes
     await setPanel(owner, true)
-    assert.equal(document.querySelector('[data-omnimux-starter-guide]'), null)
-    assert.equal(document.querySelector('[data-omnimux-starter-host]'), null)
+    // 面板打开 ⇒ 分栏紧凑态：卡片流撤场，但简洁模式宿主仍在（#1591 契约）。
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0, '面板打开时收回完整卡片流')
+    assert.ok(
+      Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact')),
+      '面板打开时必须保留会话栏简洁模式宿主',
+    )
+    assert.ok(
+      Boolean(document.querySelector('[data-omnimux-starter-host]')),
+      '简洁模式仍要挂 starter-host，输入框才能贴底',
+    )
     await setPanel(owner, false)
     assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
     assert.ok(document.querySelector('[data-omnimux-starter-host]'))
@@ -743,6 +751,84 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
   } finally {
     await act(async () => root.unmount())
     document.documentElement.removeAttribute('data-omnimux-composer-density')
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+test('陈旧的 panelOpen 拦不住引导：官方右栏收起后必须按 DOM 实测放行', async () => {
+  // 复刻 #1588 的卡死路径：右栏打开过「技能/专家」→ 工作台把 panelOpen 写成 true；
+  // 官方右栏随后被原生折叠，没有任何观察者把这次折叠写回 store —— panelOpen 仍是 true。
+  // 门控必须以 DOM 实测为准，否则引导与卡片会被永久挡在门外。
+  const dom = new JSDOM(`<!doctype html><html><head></head><body>
+    <div class="dshDesktopFrame">
+      <div class="frame_centerCol">
+        <div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>
+      </div>
+      <div class="frame_rightbarCol" data-rightbar-col></div>
+    </div>
+  </body></html>`, { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const frame = document.querySelector('.dshDesktopFrame')
+  const widths = { rightbar: 778, column: 1448 }
+  stubWidth(document.querySelector('[data-rightbar-col]'), () => widths.rightbar)
+  stubWidth(document.querySelector('.frame_centerCol'), () => widths.column)
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  let panelOpen = true
+  const listeners = new Set()
+  const workbench = {
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
+    getSnapshot: () => ({ sessionId: 'A', state: { panelOpen } }),
+  }
+  const props = {
+    sessionId: 'A', useSession: (selector) => selector({ blank: true }), useConversation: (selector) => selector({ activeTargets: new Set() }),
+    useInput: (selector) => selector({ draft: '', phase: 'plain' }), inputActions: { setDraft() {} },
+    getCurrentSessionId: () => 'A', store, workbench, t: (key) => key,
+  }
+  const render = () => act(async () => root.render(React.createElement(SessionGuide, props)))
+  /** 让 MutationObserver 的微任务与 React 提交都落地。 */
+  const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+  const guideMounted = () => document.querySelectorAll('[data-starter-id]').length === 10
+    && Boolean(document.querySelector('[data-omnimux-starter-host]'))
+  const guideCompact = () => document.querySelectorAll('[data-starter-id]').length === 0
+    && Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact'))
+
+  try {
+    // 1) 右栏真展开 + panelOpen=true（技能/专家已打开）：完整卡片必须让位
+    await render()
+    await settle()
+    assert.ok(guideCompact(), '右栏展开且工作台面板打开时只保留会话栏简洁模式')
+    assert.equal(document.documentElement.getAttribute('data-omnimux-split-compact'), 'true')
+
+    // 2) 官方右栏收起，panelOpen 保持陈旧的 true：实测已折叠 → 完整卡片必须回归
+    await act(async () => { frame.setAttribute('data-rightbar-collapsed', 'true') })
+    await settle()
+    assert.equal(panelOpen, true, '本用例固定走陈旧内存态路径：panelOpen 全程不被写回')
+    assert.ok(guideMounted(), '内存残留的 panelOpen 不得覆盖 DOM 实测，引导与卡片必须回归')
+    assert.equal(document.documentElement.hasAttribute('data-omnimux-split-compact'), false)
+
+    // 3) 右栏再次展开：panelOpen 依旧 true，完整卡片必须重新让位（不许过度放行）
+    await act(async () => { frame.removeAttribute('data-rightbar-collapsed') })
+    await settle()
+    assert.ok(guideCompact(), '右栏重新展开后必须再次收回完整卡片')
+
+    // 4) 内存把面板关掉（新会话走 reconcile/closePanel）：收起态完整卡片回归
+    await act(async () => {
+      panelOpen = false
+      for (const listener of listeners) listener()
+      frame.setAttribute('data-rightbar-collapsed', 'true')
+    })
+    await settle()
+    assert.ok(guideMounted(), 'panelOpen 与实测都不再打开时完整卡片必须回归')
+  } finally {
+    await act(async () => root.unmount())
     store.dispose()
     dom.window.close()
     globalThis.window = previous.window

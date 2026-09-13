@@ -13,7 +13,17 @@
  * 判定值同时镜像到 html[data-omnimux-split-compact]，供 CSS 兜底；
  * 监听覆盖右侧侧栏折叠/展开、分栏拖拽、窗口缩放与输入框密度切换。
  *
- * @see ./session-guide/SessionGuide.jsx 消费方：分栏时必须返回 null
+ * 第二路实测值 `sidebarCollapsed` 单独经 getRightSidebarCollapsedSnapshot() 暴露：
+ * 内存里的 workbench state 只被「打开面板」单向写入，官方右栏被点掉后没人写回，
+ * 残留的 panelOpen:true 会让消费方误判面板仍开着。它只在 DOM **确证**右栏已折叠时为
+ * true —— 宿主里压根没有右栏证据时不具备推翻内存态的资格（见 SessionGuide 的
+ * effectivePanelOpen）：内存态不得覆盖 DOM 实测，但也不能凭空反推。
+ *
+ * ResizeObserver 回调一律推迟到下一帧执行：在 RO 交付周期内同步改写 html 属性会
+ * 让被观测元素在同一周期里再次改变尺寸，触发宿主浏览器
+ * `ResizeObserver loop completed with undelivered notifications.` 告警。
+ *
+ * @see ./session-guide/SessionGuide.jsx 消费方：分栏时必须返回 null，残留 panelOpen 不得拦截
  * @see ./conversation-box.js 消费方：进入新会话不得破坏真实侧栏展开状态
  */
 import { COMPOSER_COMPACT_ATTR } from './composer-compact.js'
@@ -24,6 +34,8 @@ export const SPLIT_COMPACT_ATTR = 'data-omnimux-split-compact'
 export const SPLIT_COMPACT_MAX_COLUMN_PX = 860
 /** 右侧侧栏可见宽度下限：低于它按收起处理（收起时格轨为 0px）。 */
 export const RIGHT_SIDEBAR_MIN_VISIBLE_PX = 50
+/** 官方外框上标记右侧侧栏已收起的属性：命中即确证折叠。 */
+export const RIGHTBAR_COLLAPSED_ATTR = 'data-rightbar-collapsed'
 
 /**
  * 右侧侧栏候选根节点。官方外框用 `[data-rightbar-col]` / `.dshDesktopRightbarSurface`，
@@ -137,15 +149,28 @@ export function findRightSidebarRoot(doc = hostDocument()) {
 }
 
 /**
+ * DOM 对右侧侧栏状态的实测结论。
+ *
+ * `unknown` = 宿主里没有任何右栏证据（非宿主页面 / 尚未挂载），此时既不算展开也不算
+ * 折叠：消费方只能退回内存态，不能拿它去推翻内存态。
+ * @param {Document | undefined} [doc]
+ * @returns {'expanded' | 'collapsed' | 'unknown'}
+ */
+export function readRightSidebarState(doc = hostDocument()) {
+  if (!doc?.querySelector) return 'unknown'
+  if (doc.querySelector(`[${RIGHTBAR_COLLAPSED_ATTR}="true"]`)) return 'collapsed'
+  const root = findRightSidebarRoot(doc)
+  if (!root) return 'unknown'
+  return elementWidth(root) > RIGHT_SIDEBAR_MIN_VISIBLE_PX ? 'expanded' : 'collapsed'
+}
+
+/**
  * 宿主右侧侧栏是否在真实界面上展开：外框没有收起标记，且根节点实测宽于 50px。
  * @param {Document | undefined} [doc]
  * @returns {boolean}
  */
 export function isRightSidebarExpanded(doc = hostDocument()) {
-  if (!doc?.querySelector) return false
-  if (doc.querySelector('[data-rightbar-collapsed="true"]')) return false
-  const root = findRightSidebarRoot(doc)
-  return elementWidth(root) > RIGHT_SIDEBAR_MIN_VISIBLE_PX
+  return readRightSidebarState(doc) === 'expanded'
 }
 
 /**
@@ -179,16 +204,19 @@ export function readConversationColumnWidth(doc = hostDocument()) {
 /**
  * 分栏/中间栏信号明细，便于调用方与测试定位是哪一条命中。
  * @param {Document | undefined} [doc]
- * @returns {{ sidebarExpanded: boolean, compactDensity: boolean, columnWidth: number, narrowColumn: boolean, splitCompact: boolean }}
+ * @returns {{ sidebarState: 'expanded' | 'collapsed' | 'unknown', sidebarExpanded: boolean, sidebarCollapsed: boolean, compactDensity: boolean, columnWidth: number, narrowColumn: boolean, splitCompact: boolean }}
  */
 export function readSplitCompactSignals(doc = hostDocument()) {
   const density = doc?.documentElement?.getAttribute?.(COMPOSER_COMPACT_ATTR)
   const compactDensity = density === 'short' || density === 'icon'
-  const sidebarExpanded = isRightSidebarExpanded(doc)
+  const sidebarState = readRightSidebarState(doc)
+  const sidebarExpanded = sidebarState === 'expanded'
   const columnWidth = readConversationColumnWidth(doc)
   const narrowColumn = columnWidth > 0 && columnWidth < SPLIT_COMPACT_MAX_COLUMN_PX
   return {
+    sidebarState,
     sidebarExpanded,
+    sidebarCollapsed: sidebarState === 'collapsed',
     compactDensity,
     columnWidth,
     narrowColumn,
@@ -210,10 +238,15 @@ export function isSplitOrCompactLayout(doc = hostDocument()) {
 let activeDoc = null
 let teardown = null
 let listeners = new Set()
-let snapshot = false
+/** 同时缓存两路实测值：分栏紧凑态与「DOM 确证右栏已折叠」（后者用于修正内存残留的 panelOpen）。 */
+let snapshot = { splitCompact: false, rightbarCollapsed: false }
 let measured = false
 let trackedTargets = new Set()
 let layoutResizeObserver = null
+/** 待执行的帧回调句柄（rAF id；退化为微任务时用 0 作哨兵，null 表示没有排队）。 */
+let pendingFrame = null
+/** 安装代次：卸载/重建后让已排队的回调失效。 */
+let frameToken = 0
 
 /**
  * 把判定结果镜像到 html，供 CSS 兜底；只在值真变化时写，避免自触发循环。
@@ -232,20 +265,69 @@ function syncRootAttribute(doc, value) {
 
 /**
  * 重新测量并（可选）通知订阅者。
+ *
+ * 分栏态与「右栏确证折叠」任一变化都要通知：只关心后者的消费方（拿它给内存
+ * panelOpen 做背书）在分栏态不变时同样会经历翻转。
  * @param {Document | undefined} doc
  * @param {boolean} notify
- * @returns {boolean}
+ * @returns {{ splitCompact: boolean, rightbarCollapsed: boolean }}
  */
 function measure(doc, notify) {
-  const next = isSplitOrCompactLayout(doc)
-  const changed = !measured || next !== snapshot
+  const signals = readSplitCompactSignals(doc)
+  const next = { splitCompact: signals.splitCompact, rightbarCollapsed: signals.sidebarCollapsed }
+  const changed = !measured
+    || next.splitCompact !== snapshot.splitCompact
+    || next.rightbarCollapsed !== snapshot.rightbarCollapsed
   snapshot = next
   measured = true
-  syncRootAttribute(doc, next)
+  syncRootAttribute(doc, next.splitCompact)
   if (changed && notify) {
     for (const listener of [...listeners]) listener()
   }
   return next
+}
+
+/**
+ * 把 ResizeObserver 回调里的测量推迟到下一帧再执行。
+ *
+ * RO 交付周期内同步改写 html 属性会让被观测元素在同一周期里再次改变尺寸，
+ * 触发宿主浏览器的 `ResizeObserver loop completed with undelivered notifications.`
+ * 告警。推迟一帧后，属性写入引起的尺寸变化落到下一个正常交付周期，不再成环。
+ * 同帧内的多次触发合并为一次；取不到 requestAnimationFrame 时退到微任务。
+ * @param {Document | undefined} doc
+ * @param {boolean} resyncTargets
+ */
+function scheduleWatcherRefresh(doc, resyncTargets) {
+  if (pendingFrame !== null) return
+  const token = frameToken
+  const run = () => {
+    pendingFrame = null
+    if (token !== frameToken || activeDoc !== doc) return
+    if (resyncTargets) syncResizeTargets(doc)
+    measure(doc, true)
+  }
+  const win = doc?.defaultView || (typeof window !== 'undefined' ? window : undefined)
+  if (typeof win?.requestAnimationFrame === 'function') {
+    pendingFrame = win.requestAnimationFrame(run)
+    return
+  }
+  pendingFrame = 0
+  if (typeof queueMicrotask === 'function') queueMicrotask(run)
+  else run()
+}
+
+/** 撤销尚未执行的帧回调，并让已排队的微任务失效（代次自增）。 */
+function cancelScheduledRefresh() {
+  if (pendingFrame === null) return
+  const handle = pendingFrame
+  pendingFrame = null
+  frameToken += 1
+  if (typeof handle === 'number' && handle > 0) {
+    const win = activeDoc?.defaultView || (typeof window !== 'undefined' ? window : undefined)
+    if (typeof win?.cancelAnimationFrame === 'function') {
+      try { win.cancelAnimationFrame(handle) } catch { /* ignore */ }
+    }
+  }
 }
 
 /** 观测目标掉线（会话切换重建列）或首次出现时重新绑定。 */
@@ -283,8 +365,7 @@ function installWatchers(doc) {
 
   if (ResizeObserverClass) {
     layoutResizeObserver = new ResizeObserverClass(() => {
-      syncResizeTargets(doc)
-      refresh()
+      scheduleWatcherRefresh(doc, true)
     })
     disposers.push(() => {
       try { layoutResizeObserver?.disconnect() } catch { /* ignore */ }
@@ -348,6 +429,7 @@ function ensureInstalled(doc) {
 }
 
 function disposeInstall() {
+  cancelScheduledRefresh()
   if (teardown) {
     try { teardown() } catch { /* ignore */ }
   }
@@ -358,21 +440,46 @@ function disposeInstall() {
   syncRootAttribute(hostDocument(), false)
 }
 
+/** 无宿主文档时的常量实测结果。 */
+const NO_HOST_LAYOUT = Object.freeze({ splitCompact: false, rightbarCollapsed: false })
+
 /**
- * React `useSyncExternalStore` 取数：首次渲染直接实测，避免首帧闪出完整卡片；
- * 之后每次渲染复用实时结果，观测目标被替换也能自愈。
- * @returns {boolean}
+ * 取当前实测结果：首次渲染直接实测（避免首帧闪出完整卡片），之后复用实时缓存；
+ * 观测目标被替换也能自愈。
+ * @returns {{ splitCompact: boolean, rightbarCollapsed: boolean }}
  */
-export function getSplitCompactSnapshot() {
+function readLayoutSnapshot() {
   const doc = hostDocument()
-  if (!doc) return false
+  if (!doc) return NO_HOST_LAYOUT
   if (activeDoc !== doc) {
-    snapshot = isSplitOrCompactLayout(doc)
+    const signals = readSplitCompactSignals(doc)
+    snapshot = { splitCompact: signals.splitCompact, rightbarCollapsed: signals.sidebarCollapsed }
     measured = true
-    syncRootAttribute(doc, snapshot)
+    syncRootAttribute(doc, snapshot.splitCompact)
     return snapshot
   }
   return measure(doc, false)
+}
+
+/**
+ * React `useSyncExternalStore` 取数：是否处于分栏/中间栏（应展示简洁对话模式）。
+ * @returns {boolean}
+ */
+export function getSplitCompactSnapshot() {
+  return readLayoutSnapshot().splitCompact
+}
+
+/**
+ * React `useSyncExternalStore` 取数：DOM 是否**确证**宿主右侧侧栏已折叠。
+ *
+ * 消费方拿它作废内存里的陈旧 panelOpen —— 官方右栏被点掉后没有观察者把这次原生
+ * 折叠写回 workbench state，panelOpen:true 会一直留着。
+ * 只在 DOM 给出折叠证据（外框收起标记，或右栏根节点实测宽度低于可见下限）时为 true；
+ * 宿主里没有右栏证据时保持 false，让内存态继续生效。
+ * @returns {boolean}
+ */
+export function getRightSidebarCollapsedSnapshot() {
+  return readLayoutSnapshot().rightbarCollapsed
 }
 
 /**
@@ -396,8 +503,9 @@ export function subscribeSplitCompactLayout(listener) {
 /** 测试专用：拆除监听、清空订阅者与镜像属性。 */
 export function resetSplitCompactLayoutForTests() {
   disposeInstall()
+  cancelScheduledRefresh()
   listeners = new Set()
-  snapshot = false
+  snapshot = { splitCompact: false, rightbarCollapsed: false }
   measured = false
   trackedTargets = new Set()
   if (layoutResizeObserver) {
