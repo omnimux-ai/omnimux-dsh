@@ -21,7 +21,9 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, PlatformMarkIcon, SaveIcon } from './components/icons.tsx'
+import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
+import { ModelSelector } from './components/ModelSelector.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -255,10 +257,10 @@ function TrashIcon(): React.JSX.Element {
   )
 }
 
-function ChevronDownIcon(): React.JSX.Element {
+function ChevronDownIcon({ size = 13 }: { size?: number } = {}): React.JSX.Element {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="m5.5 7.5 4.5 4.5 4.5-4.5" />
+    <svg viewBox="0 0 20 20" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 8 10 12 14 8" />
     </svg>
   )
 }
@@ -560,6 +562,104 @@ export function App(): React.JSX.Element {
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
+  const [targetPort, setTargetPort] = useState<number>(() => {
+    const saved = safeGetStorage('omnimux_target_port')
+    const num = saved ? parseInt(saved, 10) : 45120
+    return !isNaN(num) && num > 0 ? num : 45120
+  })
+
+  const [hostDefaultModel, setHostDefaultModel] = useState<string>('')
+  const [hostDefaultEffort, setHostDefaultEffort] = useState<string>('')
+  const [dynamicModels, setDynamicModels] = useState<Array<{ id: string; name?: string }>>([])
+  const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>(() => {
+    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gpt-6-astra'
+  })
+  const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>(() => {
+    return safeGetStorage(`omnimux_default_effort_${targetPort}`) || safeGetStorage('omnimux_default_effort') || 'medium'
+  })
+
+  const handleSelectModel = (modelId: string, effort?: string) => {
+    setSelectedDefaultModel(modelId)
+    safeSetStorage(`omnimux_default_model_${targetPort}`, modelId)
+    safeSetStorage('omnimux_default_model', modelId)
+
+    const eff = effort || selectedReasoningEffort
+    if (eff) {
+      setSelectedReasoningEffort(eff)
+      safeSetStorage(`omnimux_default_effort_${targetPort}`, eff)
+      safeSetStorage('omnimux_default_effort', eff)
+    }
+
+    // 同步到当前 Host 实例的 agent-default-model
+    const ops: Array<{ op: string; path: string[]; value?: unknown }> = [
+      { op: 'set', path: ['model'], value: modelId },
+    ]
+    if (eff && eff !== 'none') {
+      ops.push({ op: 'set', path: ['reasoningEffort'], value: eff })
+    }
+
+    void api.rpc('settings.mutate', {
+      ns: 'agent-default-model',
+      ops,
+    }).catch(() => {})
+
+    // 如果当前会话处于活跃状态，即时应用
+    if (sessionRef.current) {
+      void api.rpc('session.selectModel', {
+        sessionId: sessionRef.current,
+        model: modelId,
+        ...(eff && eff !== 'none' ? { reasoningEffort: eff } : {}),
+      }).catch(() => {})
+    }
+  }
+
+  const handleSelectEffort = (effort: string) => {
+    setSelectedReasoningEffort(effort)
+    safeSetStorage(`omnimux_default_effort_${targetPort}`, effort)
+    safeSetStorage('omnimux_default_effort', effort)
+
+    void api.rpc('settings.mutate', {
+      ns: 'agent-default-model',
+      ops: [
+        { op: 'set', path: ['reasoningEffort'], value: effort },
+      ],
+    }).catch(() => {})
+
+    if (sessionRef.current && selectedDefaultModel) {
+      void api.rpc('session.selectModel', {
+        sessionId: sessionRef.current,
+        model: selectedDefaultModel,
+        reasoningEffort: effort,
+      }).catch(() => {})
+    }
+  }
+
+  const [selectedWorkspace, setSelectedWorkspace] = useState<SessionWorkspaceItem | null>(() => {
+    const id = safeGetStorage('omnimux_default_workspace_id') || 'default'
+    const name = safeGetStorage('omnimux_default_workspace_name') || ''
+    const path = safeGetStorage('omnimux_default_workspace_path') || ''
+    return { id, name: name || '默认工作区', path }
+  })
+
+  const handleSwitchDshInstance = (inst: { id: string; port: number; name: string }) => {
+    setTargetPort(inst.port)
+    safeSetStorage('omnimux_target_port', String(inst.port))
+    const nextUrl = `ws://127.0.0.1:${inst.port}/ext/bridge`
+    const nextToken = settings?.token ?? ''
+    setSettings((current) => current === null ? current : { ...current, bridgeUrl: nextUrl, token: nextToken })
+    try {
+      chrome.runtime?.sendMessage?.({
+        type: 'SWITCH_DSH_PORT',
+        payload: { port: inst.port, bridgeUrl: nextUrl, token: nextToken }
+      })
+    } catch {
+      // Ignore
+    }
+    void api.updateSettings({
+      bridgeUrl: nextUrl,
+      token: nextToken,
+    }).catch(() => {})
+  }
   const [api] = useState<PanelApi>(() => connectPanel())
   const [state, setState] = useState<BridgeState>('stopped')
   const [caps, setCaps] = useState<BridgeCaps | null>(null)
@@ -587,6 +687,30 @@ export function App(): React.JSX.Element {
   const [sessionSearchQuery, setSessionSearchQuery] = useState('')
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [sessionChanging, setSessionChanging] = useState(false)
+
+  // 防止会话切换状态异常滞留导致界面永久冻结
+  useEffect(() => {
+    if (sessionChanging) {
+      const timer = setTimeout(() => {
+        sessionChangingRef.current = false
+        setSessionChanging(false)
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [sessionChanging])
+
+  // 点击空白处自动收起历史会话菜单
+  useEffect(() => {
+    if (!showSessionPicker) return
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.session-picker') && !target.closest('.session-menu-trigger')) {
+        setShowSessionPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showSessionPicker])
   const [sessionList, setSessionList] = useState<SessionPickerEntry[]>([])
   const [relayProfiles, setRelayProfiles] = useState<RelayProfileDraft[]>([])
   const [relayLoaded, setRelayLoaded] = useState(false)
@@ -1054,8 +1178,10 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void chrome.storage.local.get('dshSettings').then((stored) => {
       const raw = stored.dshSettings as Partial<PanelSettings> | undefined
+      const savedPort = safeGetStorage('omnimux_target_port')
+      const p = savedPort ? parseInt(savedPort, 10) : targetPort
       setSettings({
-        bridgeUrl: raw?.bridgeUrl ?? '',
+        bridgeUrl: raw?.bridgeUrl || `ws://127.0.0.1:${p}/ext/bridge`,
         token: raw?.token ?? '',
         sharePageContent: raw?.sharePageContent ?? 'auto',
         unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? true,
@@ -1407,10 +1533,22 @@ export function App(): React.JSX.Element {
   }
 
   async function createSession(transition: number): Promise<void> {
-    const created = await api.rpc<{ sessionId: string }>('session.create', {})
+    const payload: Record<string, unknown> = {}
+    if (selectedWorkspace?.path) {
+      payload.cwd = selectedWorkspace.path
+    } else if (selectedWorkspace?.id && selectedWorkspace.id !== 'default') {
+      payload.workspaceId = selectedWorkspace.id
+    }
+    const created = await api.rpc<{ sessionId: string }>('session.create', payload)
     if (sessionTransitionRef.current !== transition) return
     sessionRef.current = created.sessionId
     await api.setActiveSession(created.sessionId, true)
+    if (selectedDefaultModel) {
+      void api.rpc('session.selectModel', {
+        sessionId: created.sessionId,
+        model: selectedDefaultModel,
+      }).catch(() => {})
+    }
     setSessionTitle(null)
     sessionRuntimeRef.current.seedRunning(created.sessionId, false)
     applyHistory(created.sessionId, await readHistory(created.sessionId))
@@ -1487,7 +1625,7 @@ export function App(): React.JSX.Element {
       setShowSessionPicker(false)
       return
     }
-    if (state !== 'connected' || sessionSwitchBlocked || sessionChangingRef.current) return
+    if (sessionSwitchBlocked || sessionChangingRef.current) return
     setShowSessionPicker(true)
     setLoadingSessions(true)
     try {
@@ -1497,7 +1635,9 @@ export function App(): React.JSX.Element {
       if (currentTitle !== undefined) setSessionTitle(currentTitle)
       setSessionList(items)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
+      if (state === 'connected') {
+        setError(cause instanceof Error ? cause.message : String(cause))
+      }
     } finally {
       setLoadingSessions(false)
     }
@@ -1672,10 +1812,10 @@ export function App(): React.JSX.Element {
     const submittedImages = textOverride === undefined ? draftImages : []
     // A quick-start prompt asks about the whole page, not about a quote.
     const submittedSelection = textOverride === undefined ? selection : null
-    const id = sessionRef.current
+    let id = sessionRef.current
     // busy state 是异步的：连续回车可能都通过 state 检查——用 ref 同步锁。
     if ((text === '' && submittedImages.length === 0 && submittedSelection === null)
-      || busy || addingImagesRef.current || sendingRef.current || sessionChangingRef.current || id === null) return
+      || busy || addingImagesRef.current || sendingRef.current) return
     sendingRef.current = true
     const submittedDraft: ComposerDraft<DraftImage> = { text, images: submittedImages }
     if (textOverride === undefined) {
@@ -1686,6 +1826,24 @@ export function App(): React.JSX.Element {
     setError(null)
     // 不渲染乐观行：live user/message 事件即时回显，避免同一消息出现两行。
     try {
+      if (id === null) {
+        const createPayload: Record<string, unknown> = {}
+        if (selectedWorkspace?.path) {
+          createPayload.cwd = selectedWorkspace.path
+        } else if (selectedWorkspace?.id && selectedWorkspace.id !== 'default') {
+          createPayload.workspaceId = selectedWorkspace.id
+        }
+        const created = await api.rpc<{ sessionId: string }>('session.create', createPayload)
+        sessionRef.current = created.sessionId
+        id = created.sessionId
+        await api.setActiveSession(created.sessionId, true).catch(() => {})
+        if (selectedDefaultModel) {
+          void api.rpc('session.selectModel', {
+            sessionId: created.sessionId,
+            model: selectedDefaultModel,
+          }).catch(() => {})
+        }
+      }
       const clientTimeZone = browserTimeZone()
       const mediaContext = activeMediaItems.length > 0
         ? `\n\n已点亮挂载的页面媒体素材：\n` + activeMediaItems.map((it, idx) => `[媒体 ${idx + 1}] (${it.type.toUpperCase()}): ${it.src}`).join('\n')
@@ -1750,6 +1908,12 @@ export function App(): React.JSX.Element {
       const relaySaved = await saveRelayProfiles()
       if (!relaySaved) return
       await api.updateSettings(settings)
+      try {
+        chrome.runtime?.sendMessage?.({
+          type: 'SETTINGS_UPDATED',
+          payload: { bridgeUrl: settings.bridgeUrl, token: settings.token }
+        })
+      } catch {}
       setShowSettings(false)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause))
@@ -1774,7 +1938,24 @@ export function App(): React.JSX.Element {
           models?: Array<{ id: string; contextWindow?: number }>
         }>
         const defaults = (described.namespaces?.find((candidate) => candidate.ns === 'agent-default-model')
-          ?.value ?? {}) as { provider?: unknown }
+          ?.value ?? {}) as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
+        if (typeof defaults.model === 'string' && defaults.model.trim() !== '') {
+          setHostDefaultModel(defaults.model.trim())
+        }
+        if (typeof defaults.reasoningEffort === 'string' && defaults.reasoningEffort.trim() !== '') {
+          setHostDefaultEffort(defaults.reasoningEffort.trim())
+        }
+        const discoveredModels: Array<{ id: string; name?: string }> = []
+        Object.values(providers).forEach((route) => {
+          (route.models ?? []).forEach((m) => {
+            if (m.id && !discoveredModels.some((x) => x.id === m.id)) {
+              discoveredModels.push({ id: m.id, name: m.id })
+            }
+          })
+        })
+        if (discoveredModels.length > 0) {
+          setDynamicModels(discoveredModels)
+        }
         const refs = Object.entries(providers)
           .filter(([key]) => key.startsWith(RELAY_ROUTE_PREFIX))
           .map(([, route]) => typeof route.apiKeyEnv === 'string' ? route.apiKeyEnv : '')
@@ -2024,7 +2205,7 @@ export function App(): React.JSX.Element {
       : { ...current, trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin) })
   }
 
-  const sessionMenuTitle = sessionTitle ?? copy.app.newSession
+  const sessionMenuTitle = sessionTitle ?? (locale === 'en' ? 'New Project' : '新建项目')
   const filteredSessions = useMemo(() => {
     if (!sessionSearchQuery.trim()) return sessionList
     const q = sessionSearchQuery.toLowerCase().trim()
@@ -2042,18 +2223,74 @@ export function App(): React.JSX.Element {
       <><div className="settings">
         <div className="settings-heading">
           <button className="icon-button" onClick={() => setShowSettings(false)} aria-label={copy.settings.back}><BackIcon /></button>
-          <div>
-            <span className="eyebrow">{copy.settings.eyebrow}</span>
-            <h1>{copy.settings.title}</h1>
-          </div>
+          <h1 className="settings-header-title">{copy.settings.title}</h1>
         </div>
         <div className="settings-panel">
           <label>
-            <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
-            <small>{locale === 'en' ? 'Bind your browser chat and generation tasks to a local DSH / OmniMux workspace' : '设置会话与生成任务绑定的本地 DSH / OmniMux 工作区目录'}</small>
-            <div style={{ marginTop: '8px' }}>
-              <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
+            <span>{locale === 'en' ? 'Connect Instance' : '连接实例'}</span>
+            <small>{locale === 'en' ? 'Select connected local service instance and port' : '选择连接的本地 OmniMux 或 DSH 服务实例'}</small>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
+              <WorkspaceSelector
+                bridgeConnected={state === 'connected'}
+                locale={locale}
+                targetPort={targetPort}
+                onSelectWorkspace={(ws) => {
+                  if (ws.port) {
+                    handleSwitchDshInstance({ id: ws.id, port: ws.port, name: ws.name })
+                  }
+                }}
+              />
             </div>
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Associated Workspace' : '默认工作区'}</span>
+            <small>{locale === 'en' ? 'Workspace for new sessions and tasks' : '选择会话工作区，新会话默认在此工作区创建'}</small>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
+              <SessionWorkspaceSelector
+                locale={locale}
+                api={api}
+                activePort={targetPort}
+                bridgeConnected={state === 'connected'}
+                selectedWorkspaceId={selectedWorkspace?.id}
+                onSelectWorkspace={(ws) => {
+                  setSelectedWorkspace(ws)
+                }}
+              />
+            </div>
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Default Model & Reasoning' : '默认模型与推理等级'}</span>
+            <small>{locale === 'en' ? 'Match models and reasoning effort supported by the active instance' : '跟随当前实例匹配可用模型与思考推理等级'}</small>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
+              <ModelSelector
+                locale={locale}
+                activePort={targetPort}
+                hostDefaultModel={hostDefaultModel}
+                hostDefaultEffort={hostDefaultEffort}
+                dynamicModels={dynamicModels}
+                onSelectModel={handleSelectModel}
+                onSelectEffort={handleSelectEffort}
+              />
+            </div>
+          </label>
+          <label>
+            <span>{copy.settings.bridgeAddress}</span>
+            <small>{copy.settings.bridgeHelp}</small>
+            <input
+              value={settings?.bridgeUrl ?? `ws://127.0.0.1:${targetPort}/ext/bridge`}
+              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, bridgeUrl: e.target.value })}
+              placeholder={copy.settings.bridgePlaceholder}
+            />
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Auth Token' : '鉴权 Token'}</span>
+            <small>{locale === 'en' ? 'Leave empty for local loopback; enter token only for protected remotes' : '本机回环免密连接请留空；仅受保护远程实例需要填写'}</small>
+            <input
+              type="password"
+              value={settings?.token ?? ''}
+              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
+              placeholder={locale === 'en' ? 'Optional token (leave empty for loopback)' : '可选 Token（本机回环留空即可免密连接）'}
+            />
           </label>
           <label>
             <span>{copy.settings.pageSharing}</span>
@@ -2070,7 +2307,7 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Appearance Theme' : '界面主题'}</span>
-            <small>{locale === 'en' ? 'Automatically follow browser/system theme or choose dark/light' : '自适应跟随浏览器系统深浅色，或选择固定深色/浅色'}</small>
+            <small>{locale === 'en' ? 'Light, dark, or system theme' : '深浅色外观模式'}</small>
             <select
               value={themeSetting}
               onChange={(e) => updateThemeSetting(e.target.value as 'auto' | 'light' | 'dark')}
@@ -2105,7 +2342,7 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Interface Text Scale' : '界面字号大小'}</span>
-            <small>{locale === 'en' ? 'Scale panel text size for comfortable reading' : '按需微调工作台字号大小与阅读比例'}</small>
+            <small>{locale === 'en' ? 'Font scale ratio' : '微调字号大小与阅读比例'}</small>
             <div className="settings-scale-bar">
               <button
                 type="button"
@@ -2339,34 +2576,36 @@ export function App(): React.JSX.Element {
           <button className="primary" onClick={saveSettings}>{copy.settings.save}</button>
           <button className="secondary" onClick={() => setShowSettings(false)}>{copy.settings.cancel}</button>
         </div>
-        <p className="hint">{copy.settings.snapshotHint(caps?.snapshotMaxChars ?? DEFAULT_SNAPSHOT_MAX_CHARS)}</p>
       </div>{approvalDialog}</>
     )
   }
+
+  // 即使后台正在初始化或尚未分派 sessionId，输入框也必须立即可用，绝不锁定禁用
+  const composerDisabled = busy || sessionChanging
+  const sendDisabled = busy || addingImages || (!input.trim() && draftImages.length === 0 && selection === null)
 
   return (
     <><div className="app">
       <header className="topbar">
         <div className="topbar-left">
-          <span className="brand-mini-badge" title="OmniMux-精灵助手">
-            <img src={whaleUrl} alt="OmniMux" />
-          </span>
-          <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
+          <button className="session-menu-trigger"
             aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
             onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
-            <MenuIcon size={14} />
+            <BinocularsIcon size={17} className="session-trigger-binoculars" />
             <span className="session-trigger-title">{sessionMenuTitle}</span>
-            <ChevronDownIcon />
+            <ChevronDownIcon size={12} />
           </button>
         </div>
         <div className="topbar-actions">
-          <button className="icon-button new-session-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
+          <button className="icon-button new-session-trigger" disabled={sessionSwitchBlocked}
             onClick={() => { void startNewSession() }}
             aria-label={copy.app.newSession} title={copy.app.newSession}>
             <PlusSvgIcon size={14} />
           </button>
           <button className="icon-button settings-trigger" onClick={() => setShowSettings(true)}
-            aria-label={copy.app.openSettings} title={copy.app.settings}><SettingsIcon /></button>
+            aria-label={copy.app.openSettings} title={copy.app.settings}>
+            <MoreHorizontalIcon size={16} />
+          </button>
           {isFloatMode && (
             <div className="float-top-actions">
               <button
@@ -2446,7 +2685,8 @@ export function App(): React.JSX.Element {
                     const isCurrent = entry.sessionId === sessionRef.current
                     return (
                       <li key={entry.sessionId}>
-                        <button disabled={sessionSwitchBlocked}
+                        <button
+                          type="button"
                           className={`session-item-row ${isCurrent ? 'active' : ''}`}
                           aria-current={isCurrent ? 'true' : undefined}
                           onClick={() => {
@@ -2455,11 +2695,18 @@ export function App(): React.JSX.Element {
                           }}>
                           <span className="session-icon"><MessageSquareIcon size={13} /></span>
                           <span className="session-title" title={title}>{title}</span>
+                          {isCurrent && <span className="session-active-check">✓</span>}
                         </button>
                         {!entry.running && (
-                          <button className="icon-button session-delete" disabled={sessionSwitchBlocked}
-                            aria-label={copy.app.deleteSession} title={copy.app.deleteSession}
-                            onClick={() => { void deleteSession(entry) }}>
+                          <button
+                            type="button"
+                            className="icon-button session-delete"
+                            aria-label={copy.app.deleteSession}
+                            title={copy.app.deleteSession}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void deleteSession(entry)
+                            }}>
                             <TrashIcon />
                           </button>
                         )}
@@ -2470,8 +2717,8 @@ export function App(): React.JSX.Element {
               )}
           <div className="session-picker-footer">
             <button
+              type="button"
               className="session-footer-new-btn"
-              disabled={state !== 'connected' || sessionSwitchBlocked}
               onClick={() => {
                 void startNewSession()
                 setShowSessionPicker(false)
@@ -2642,7 +2889,7 @@ export function App(): React.JSX.Element {
               }
             }}
             placeholder={locale === 'en' ? 'Ask me anything...' : '问我任何问题~'}
-            disabled={!sessionReady || busy}
+            disabled={composerDisabled}
             rows={1}
           />
           <div className="composer-actions clean-actions-row">
@@ -2663,7 +2910,7 @@ export function App(): React.JSX.Element {
               <button
                 type="button"
                 className="clean-add-btn"
-                disabled={!sessionReady || busy || addingImages || imageLimits === null
+                disabled={composerDisabled || addingImages || imageLimits === null
                   || draftImages.length >= imageLimits.maxImagesPerMessage}
                 aria-label={copy.app.addImages}
                 title={imageLimits === null ? copy.app.imageUnavailable : copy.app.addImages}
@@ -2676,7 +2923,7 @@ export function App(): React.JSX.Element {
               <button
                 className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
-                disabled={!sessionReady || stopping}
+                disabled={stopping}
                 aria-label={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
                 title={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
               >
@@ -2684,10 +2931,9 @@ export function App(): React.JSX.Element {
               </button>
             ) : (
               <button
-                className="clean-send-btn active"
+                className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
                 onClick={() => void send()}
-                disabled={!sessionReady || busy || addingImages
-                  || (input.trim() === '' && draftImages.length === 0 && selection === null)}
+                disabled={sendDisabled}
                 aria-label={copy.app.sendMessage}
                 title={copy.app.sendMessage}
               >

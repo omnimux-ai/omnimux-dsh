@@ -64,6 +64,7 @@ describe('the page-surface switches in the settings view', () => {
   let chromeHarness: ChromeHarness
 
   beforeEach(() => {
+    localStorage.clear()
     document.body.innerHTML = '<div id="root"></div>'
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
     HTMLElement.prototype.scrollTo = vi.fn()

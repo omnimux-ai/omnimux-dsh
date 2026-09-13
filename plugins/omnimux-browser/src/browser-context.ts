@@ -12,7 +12,8 @@
  */
 
 import type { Agent, AgentRegistry } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm'
+import type { UserMessage } from '@deepseek-ai/dsh-llm'
+import * as dshLlm from '@deepseek-ai/dsh-llm'
 
 /** Provenance key used for snapshot supersession and transcript presentation. */
 export const BROWSER_CONTEXT_PLUGIN = '@yuxianglin/dsh-bridge-browser'
@@ -27,15 +28,20 @@ export function createBrowserSnapshotMessage(snapshot: string): UserMessage {
     'The following is an already completed browser_snapshot of the current page. Use its stable indices directly for the next request; do not take an immediate duplicate snapshot unless required context is missing.',
     snapshot,
   ].join('\n\n')
-  return createUserMessage({
-    content: [{ type: 'text', text }],
+  const payload = {
+    content: [{ type: 'text' as const, text }],
     source: {
-      kind: 'plugin',
+      kind: 'plugin' as const,
       plugin: BROWSER_CONTEXT_PLUGIN,
-      form: 'snapshot',
+      form: 'snapshot' as const,
       sections: [{ name: 'browser-page', text }],
     },
-  })
+  }
+  const createFn = (dshLlm as Record<string, unknown>).createUserMessage
+  if (typeof createFn === 'function') {
+    return (createFn as (p: unknown) => UserMessage)(payload)
+  }
+  return { role: 'user', ...payload } as unknown as UserMessage
 }
 
 /** Supersede pending tab context through the durable Inbox command surface. */
