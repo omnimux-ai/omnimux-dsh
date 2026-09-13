@@ -38,14 +38,34 @@ export const PINNED_TOP_SKILL_IDS = [
   'sk-omx-suspense-title-sequence-generator',
 ]
 
+/** 快照双语字段域：与 `plugins/omnimux-market/src/skill-bilingual.ts` 的判据同域。 */
+export const BILINGUAL_FIELDS = ['titleZh', 'titleEn', 'summaryZh', 'summaryEn']
+
+/**
+ * 缺任一双语字段即抛错（B14：抛错且不写文件）。
+ * 旧实现用 `titleEn || title` 静默回退，会把「未入库双语」伪装成「已双语」。
+ * @param {Record<string, unknown>} item
+ */
+export function assertBilingualOrThrow(item) {
+  const missing = BILINGUAL_FIELDS.filter((field) => !String(item?.[field] ?? '').trim())
+  if (missing.length) {
+    throw new Error(
+      `featured-skills: 技能 ${String(item?.id || '(no-id)')}（${String(item?.title || '')}）缺少双语字段 [${missing.join(', ')}]；`
+      + '补齐 plugins/omnimux-market/catalog/index.json 后重试，契约见 docs/contracts/skill-bilingual.md。',
+    )
+  }
+}
+
 /** 快照只留界面真正用到的字段，避免把整个目录搬进客户端 bundle。 */
 export function buildSnapshot(catalog) {
   const items = Array.isArray(catalog?.items) ? catalog.items : []
   const pinnedOrder = new Map(PINNED_TOP_SKILL_IDS.map((id, index) => [id, index]))
 
   const skills = items
-    .filter((item) => item && item.kind === 'skill' && item.recommended === true)
+    // 与工坊同口径：收紧后仍是 69 条，属零漂移加固。
+    .filter((item) => item && item.tab === 'skills' && item.kind === 'skill' && item.recommended === true)
     .map((item) => {
+      assertBilingualOrThrow(item)
       const coverAsset = typeof item.cover === 'string'
         ? item.cover
         : (item.cover && typeof item.cover.asset === 'string' ? item.cover.asset : '')
@@ -56,11 +76,11 @@ export function buildSnapshot(catalog) {
       return {
         id: String(item.id || ''),
         title: String(item.title || ''),
-        titleZh: String(item.titleZh || item.nameZh || item.title || ''),
-        titleEn: String(item.titleEn || item.nameEn || item.title || ''),
+        titleZh: String(item.titleZh || ''),
+        titleEn: String(item.titleEn || ''),
         summary: String(item.summary || ''),
-        summaryZh: String(item.summaryZh || item.descriptionZh || item.summary || ''),
-        summaryEn: String(item.summaryEn || item.descriptionEn || item.summary || ''),
+        summaryZh: String(item.summaryZh || ''),
+        summaryEn: String(item.summaryEn || ''),
         category: String(item.category || ''),
         tags: Array.isArray(item.tags) ? item.tags.filter((tag) => typeof tag === 'string' && tag !== '') : [],
         cover: coverAsset,

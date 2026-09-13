@@ -2,6 +2,7 @@ import { clamp, collectQueries, searchSkills as searchSkillsRemote } from './api
 import { categoryLabel, parseCategory } from './categories.js'
 import { parseAggregateChannels, sanitizeSortBy } from './config-store.js'
 import { loadCatalog as loadCatalogDefault } from './expert/catalog.js'
+import { checkSkillBilingual } from './skill-bilingual.js'
 import type { CatalogDoc, CatalogSkillItem, PluginConfig, SearchResult, SkillCard, SkillChannel, SortBy } from './types.js'
 export type { CatalogDoc, CatalogSkillItem } from './types.js'
 
@@ -303,6 +304,14 @@ export function catalogItemToCard(
     cover: item.cover,
   }
   if (avatar) card.iconUrl = avatar
+  // 双语只在门禁通过时携带：半截数据不得流向卡片与下游渲染层（缺失即保持无字段）。
+  const bilingual = checkSkillBilingual(item)
+  if (bilingual.ok) {
+    card.titleZh = bilingual.titleZh
+    card.titleEn = bilingual.titleEn
+    card.summaryZh = bilingual.summaryZh
+    card.summaryEn = bilingual.summaryEn
+  }
   return card
 }
 

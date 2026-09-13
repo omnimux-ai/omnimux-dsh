@@ -1,5 +1,6 @@
 import { itemShelfTags, matchesDomainTag, skillToken } from './client/skill-picker-logic.js';
 import { catalogSkillChannel, catalogSkillSlug } from './skill-aggregate.js';
+import { checkSkillBilingual, isOfficialShelfItem } from './skill-bilingual.js';
 /** View order only. Membership and fallback matching remain owned by SkillShelf. */
 export const WORKSHOP_DOMAINS = Object.freeze([
     '短剧漫剧', '专业影视', '动画', '商业广告', '电商', '教育', '创意实验', '音频音乐', '平台工具',
@@ -69,19 +70,58 @@ export function workshopSourceOptions(inventory) {
     return ['all', ...WORKSHOP_ORIGINS.filter((origin) => inventory.entries.some((entry) => entry.origin === origin))];
 }
 function normalizeSkill(skill) {
+    const bilingual = checkSkillBilingual(skill);
     return {
         ...skill, domains: WORKSHOP_DOMAINS.filter((domain) => skill.domains.includes(domain)),
         sourceRef: skill.sourceRef ? { ...skill.sourceRef } : null,
         version: typeof skill.version === 'string' && skill.version.trim() ? skill.version.trim() : null,
         recommended: false, cover: undefined,
+        titleZh: bilingual.titleZh, titleEn: bilingual.titleEn, summaryZh: bilingual.summaryZh, summaryEn: bilingual.summaryEn,
         downloads: knownCount(skill.downloads), updatedAt: workshopDate(skill.updatedAt), publishedAt: workshopDate(skill.publishedAt),
         enabled: typeof skill.enabled === 'boolean' ? skill.enabled : null,
     };
 }
-/** Whole-card winners are selected BEFORE domain/search filtering; no lower-source field merging. */
-export function normalizeWorkshopDiscovery(input, includeRemote) {
+/**
+ * 官方货架条目的运行时准入判定。
+ * 范围外条目（155 项遗留技能、已装技能、SkillHub/WorkBuddy 远程行）一律放行——门禁不越界。
+ */
+export function admitWorkshopCatalogSkill(item) {
+    if (!isOfficialShelfItem(item))
+        return true;
+    return checkSkillBilingual(item).ok;
+}
+/** 被拒 id 的审计上限：超出部分只累加 `skippedCount`，避免脏数据撑爆快照。 */
+export const ADMISSION_SKIPPED_ID_LIMIT = 50;
+/** 汇总审计摘要：id 去重升序，最多保留 `ADMISSION_SKIPPED_ID_LIMIT` 条。 */
+export function summarizeAdmission(outcome) {
+    const ids = [...new Set(outcome.rejectedIds.map((id) => String(id)))].sort();
+    return {
+        enforced: outcome.enforced,
+        skippedCount: ids.length,
+        skippedIds: ids.slice(0, ADMISSION_SKIPPED_ID_LIMIT),
+    };
+}
+/** 只告警不外抛：运行时门禁是纵深防御，不得因脏数据让整个市场不可用。 */
+function warnAdmissionRejected(admission, catalogRevision) {
+    const omitted = admission.skippedCount - admission.skippedIds.length;
+    console.warn(`[omnimux-market] 技能双语准入门禁拒绝了 ${admission.skippedCount} 条官方货架技能`
+        + `（catalog=${catalogRevision}）：${admission.skippedIds.join(', ')}${omitted > 0 ? ` … 另 ${omitted} 条` : ''}`
+        + '。补齐目录 index.json 的 titleZh/titleEn/summaryZh/summaryEn 后重试；'
+        + '用 corepack pnpm verify:skill-bilingual 定位缺失字段，契约见 docs/contracts/skill-bilingual.md。');
+}
+/**
+ * 工坊发现投影：目录条目优先，远程候选补位。
+ *
+ * 准入门禁发生在 `winners.set` **之前**（ADR-BL-01）：拒绝即出局——既不写入 winners，
+ * 也不允许远程同名行顶替。若先写入再过滤，未过门禁的官方技能会被非官方远程行替代，
+ * 等于门禁被绕过。
+ */
+function collectWorkshopDiscovery(input, includeRemote) {
     const inventory = new Map(input.inventory.entries.map((entry) => [entry.skill.skillKey, entry.skill]));
     const winners = new Map();
+    const outcome = { enforced: false, rejectedIds: [] };
+    /** 被拒 token 的出局名录：远程候选同样不得补位（ADR-BL-01「拒绝即出局，不降级、不顶替」）。 */
+    const rejectedTokens = new Set();
     for (const channel of ['custom', 'workbuddy']) {
         for (const item of input.catalog.items) {
             if (catalogSkillChannel(item) !== channel)
@@ -89,10 +129,22 @@ export function normalizeWorkshopDiscovery(input, includeRemote) {
             const token = skillToken({ slug: catalogSkillSlug(item) }).toLowerCase();
             if (!token || winners.has(token))
                 continue;
+            if (isOfficialShelfItem(item)) {
+                outcome.enforced = true;
+                if (!admitWorkshopCatalogSkill(item)) {
+                    outcome.rejectedIds.push(String(item.id));
+                    rejectedTokens.add(token);
+                    continue;
+                }
+            }
             const installed = inventory.get(token);
             const domains = workshopDomains(item);
+            // 范围外条目「尽力携带」双语：不判不拦，但字段缺失时保持空串。
+            const bilingual = checkSkillBilingual(item);
             winners.set(token, {
                 skillKey: token, token, title: item.title || token, description: item.summary || '', domains,
+                titleZh: bilingual.titleZh, titleEn: bilingual.titleEn,
+                summaryZh: bilingual.summaryZh, summaryEn: bilingual.summaryEn,
                 sourceRef: { kind: 'catalog', catalogId: item.id, revision: input.catalogRevision },
                 version: typeof item.version === 'string' && item.version.trim() ? item.version.trim() : null,
                 recommended: Object.hasOwn(item, 'recommended') && item.recommended === true && domains.length > 0,
@@ -105,7 +157,7 @@ export function normalizeWorkshopDiscovery(input, includeRemote) {
     if (includeRemote) {
         for (const row of input.remote) {
             const token = skillToken({ slug: row.card.slug }).toLowerCase();
-            if (!token || winners.has(token))
+            if (!token || winners.has(token) || rejectedTokens.has(token))
                 continue;
             const installed = inventory.get(token);
             winners.set(token, {
@@ -119,11 +171,16 @@ export function normalizeWorkshopDiscovery(input, includeRemote) {
     }
     // Directory order, not channel order, determines controlled featured order.
     const order = new Map(input.catalog.items.map((item, index) => [item.id, index]));
-    return [...winners.values()].sort((a, b) => {
+    const skills = [...winners.values()].sort((a, b) => {
         const ai = a.sourceRef?.kind === 'catalog' ? order.get(a.sourceRef.catalogId) ?? Infinity : Infinity;
         const bi = b.sourceRef?.kind === 'catalog' ? order.get(b.sourceRef.catalogId) ?? Infinity : Infinity;
         return ai - bi || 0;
     });
+    return { skills, admission: summarizeAdmission(outcome) };
+}
+/** 兼容既有调用点：只返回投影结果；准入审计由 `createWorkshopSnapshot` 读取。 */
+export function normalizeWorkshopDiscovery(input, includeRemote) {
+    return collectWorkshopDiscovery(input, includeRemote).skills;
 }
 /** Compute an offline snapshot. Callers must supply source exhaustion and inventory evidence. */
 export function createWorkshopSnapshot(input, request, id, now, pageSize = 48) {
@@ -150,20 +207,25 @@ export function createWorkshopSnapshot(input, request, id, now, pageSize = 48) {
     const complete = input.inventory.status === 'complete' && sourceStatus.every((s) => s.status === 'complete' && s.exhausted === true && knownCount(s.fetched) !== null);
     let featured = [];
     let items = [];
+    let admission = summarizeAdmission({ enforced: false, rejectedIds: [] });
     if (request.view === 'mine') {
         items = input.inventory.entries.filter((entry) => request.source === 'all' || entry.origin === request.source)
             .map((entry) => ({ ...normalizeSkill(entry.skill), installed: true }))
             .filter((skill) => matches(skill, request));
     }
     else {
-        const filtered = normalizeWorkshopDiscovery(input, includeRemote).filter((skill) => skill.domains.length > 0 && matches(skill, request));
+        const discovery = collectWorkshopDiscovery(input, includeRemote);
+        admission = discovery.admission;
+        const filtered = discovery.skills.filter((skill) => skill.domains.length > 0 && matches(skill, request));
         featured = filtered.filter((skill) => skill.recommended);
         items = request.domain === 'featured' ? [] : filtered.filter((skill) => !skill.recommended && (!request.uninstalledOnly || !skill.installed));
     }
     items.sort(recent);
+    if (admission.skippedCount > 0)
+        warnAdmissionRejected(admission, input.catalogRevision);
     return { id, createdAt: now, scopeKey: input.inventory.scopeKey, catalogRevision: input.catalogRevision,
         inventoryRevision: input.inventory.revision, queryRevision: request.queryRevision, queryKey: key,
-        pageSize, featured, items, complete, sourceStatus };
+        pageSize, featured, items, complete, sourceStatus, admission };
 }
 /** Cursors select frozen data only; they do not authorize access to a scope. */
 export function pageWorkshopSnapshot(snapshot, request, versions, now) {
@@ -194,7 +256,7 @@ export function pageWorkshopSnapshot(snapshot, request, versions, now) {
         count: { value: snapshot.items.length, mode: snapshot.complete ? 'exact' : 'loaded' },
         completeness: snapshot.complete ? 'complete' : 'partial', sortScope: snapshot.complete ? 'complete-result' : 'loaded-result',
         nextCursor: next < snapshot.items.length ? JSON.stringify([1, snapshot.id, next]) : null,
-        sourceStatus: structuredClone(snapshot.sourceStatus) };
+        sourceStatus: structuredClone(snapshot.sourceStatus), ...(snapshot.admission ? { admission: structuredClone(snapshot.admission) } : {}) };
 }
 /** Pure bounded cache replacement; caller owns memory and scope authorization. */
 export function retainWorkshopSnapshot(snapshots, next, now) {

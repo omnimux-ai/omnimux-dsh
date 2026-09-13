@@ -1,12 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseCatalog } from '../expert/catalog.js';
+import { loadCatalog, parseCatalog } from '../expert/catalog.js';
 import { mapSkill } from '../api.js';
-import { WORKSHOP_CATEGORIES, WORKSHOP_DOMAINS, createWorkshopSnapshot, pageWorkshopSnapshot, normalizeWorkshopDiscovery, workshopDate, workshopDomains, workshopSourceOptions, retainWorkshopSnapshot, isWorkshopResponseApplicable, } from '../workshop-query.js';
+import { ADMISSION_SKIPPED_ID_LIMIT, WORKSHOP_CATEGORIES, WORKSHOP_DOMAINS, admitWorkshopCatalogSkill, createWorkshopSnapshot, pageWorkshopSnapshot, normalizeWorkshopDiscovery, summarizeAdmission, workshopDate, workshopDomains, workshopSourceOptions, retainWorkshopSnapshot, isWorkshopResponseApplicable, } from '../workshop-query.js';
 import { acceptWorkshopPage, canLoadWorkshopPage, createWorkshopLoadBudget } from '../workshop-query-budget.js';
 const request = { view: 'discover', query: '', domain: 'all', source: 'all', uninstalledOnly: false, queryRevision: 1 };
+/** 官方货架条目默认双语齐备；需要验证门禁时用 `withoutBilingual()` 显式剥离字段。 */
 function item(id, extra = {}) {
-    return { id: `sk-omx-${id}`, kind: 'skill', tab: 'skills', skill: id, title: id, summary: '动画', category: 'sk-visual', tags: ['动画'], source: { type: 'bundled', path: 'catalog/skills/demo' }, ...extra };
+    return { id: `sk-omx-${id}`, kind: 'skill', tab: 'skills', skill: id, title: id, summary: '动画', category: 'sk-visual', tags: ['动画'],
+        titleZh: `中文标题 ${id}`, titleEn: `English title ${id}`, summaryZh: `中文摘要 ${id}`, summaryEn: `English summary ${id}`,
+        source: { type: 'bundled', path: 'catalog/skills/demo' }, ...extra };
+}
+/** 剥离指定双语字段，用于验证门禁确实拦得住「缺字段」而不是靠回退蒙混过关。 */
+function withoutBilingual(row, fields = ['titleZh', 'titleEn', 'summaryZh', 'summaryEn']) {
+    const copy = { ...row };
+    for (const field of fields)
+        delete copy[field];
+    return copy;
+}
+function shelf(id, extra = {}) {
+    return item(id, { recommended: true, tags: ['动画'], ...extra });
 }
 function input(items = []) {
     return { catalog: { items }, catalogRevision: 'catalog-1', remote: [], sourceStatus: [
@@ -288,4 +301,142 @@ test('DATA-01: wall time, oversize pages, duplicate page/cursor and source error
     assert.equal(acceptWorkshopPage(first, { ...page, pageKey: 'p2' }, 2).budget.stop, 'no-progress');
     assert.equal(acceptWorkshopPage(initial, { ...page, failed: true }, 1).budget.stop, 'source-error');
     assert.equal(acceptWorkshopPage(initial, { ...page, candidates: 0 }, 1).budget.stop, 'no-progress');
+});
+// ---------------------------------------------------------------------------
+// T02 · 双语运行时准入门禁（B7–B10、ADR-BL-01 防绕过、admission 审计）
+// ---------------------------------------------------------------------------
+test('T02-01（B7）：官方条目缺双语被拒绝，不出现在任何出口且写入 admission', () => {
+    const broken = withoutBilingual(shelf('broken'), ['titleEn', 'summaryEn']);
+    const data = input([broken, shelf('good')]);
+    const { snapshot, result } = query(data);
+    assert.deepEqual(snapshot.featured.map((s) => s.skillKey), ['good']);
+    assert.deepEqual(result.featured.map((s) => s.skillKey), ['good']);
+    assert.deepEqual(snapshot.admission, { enforced: true, skippedCount: 1, skippedIds: ['sk-omx-broken'] });
+    assert.deepEqual(result.admission, snapshot.admission);
+    // 空白串与缺失等价：不得靠中文回退蒙混过关。
+    const blank = shelf('blank', { titleEn: '   ', summaryEn: '\n' });
+    assert.deepEqual(query(input([blank])).snapshot.admission.skippedIds, ['sk-omx-blank']);
+});
+test('T02-02（B8 · ADR-BL-01）：被拒 token 不得被远程同名行顶替', () => {
+    const broken = withoutBilingual(shelf('broken'));
+    const data = input([broken]);
+    data.remote = [{
+            card: { id: 'broken', slug: 'broken', name: '远端 broken', description: '远端同名行', category: '', categoryLabel: '',
+                version: '', downloads: 0, stars: 0, installs: 0, pageUrl: '', channel: 'skillhub' },
+            sourceRef: { kind: 'skillhub', identity: 'owner/broken', version: null },
+            downloads: null, updatedAt: null, publishedAt: null,
+        }];
+    const { snapshot, result } = query(data, { query: 'broken' });
+    assert.equal(snapshot.items.length, 0);
+    assert.equal(result.items.length, 0);
+    assert.equal(result.featured.length, 0);
+    assert.deepEqual(snapshot.admission.skippedIds, ['sk-omx-broken']);
+    // 对照：门禁放行时远程同名行同样不会出现（目录条目占位），行为未因门禁而改变。
+    const ok = input([shelf('broken')]);
+    ok.remote = data.remote;
+    assert.equal(query(ok, { query: 'broken' }).result.items.length, 0);
+});
+test('T02-03：范围外条目缺双语不判不拦（不误伤 155 项遗留技能与远程行）', () => {
+    const legacy = withoutBilingual(item('legacy'));
+    const notRecommended = withoutBilingual(item('beta', { recommended: false }));
+    const otherTab = withoutBilingual({ ...item('expertish'), kind: 'expert', tab: 'experts' });
+    const { snapshot, result } = query(input([legacy, notRecommended, otherTab]));
+    assert.deepEqual(snapshot.items.map((s) => s.skillKey).sort(), ['beta', 'legacy']);
+    assert.deepEqual(result.admission, { enforced: false, skippedCount: 0, skippedIds: [] });
+    // 尽力携带：字段缺失时归一化为空串，绝不回退到 title/summary。
+    const carried = snapshot.items.find((s) => s.skillKey === 'legacy');
+    assert.equal(carried.titleZh, '');
+    assert.equal(carried.summaryEn, '');
+    assert.equal(carried.title, 'legacy');
+});
+test('T02-04（B9）：mine 视图历史技能缺双语照常显示，门禁不介入', () => {
+    const data = input([]);
+    data.inventory.entries = [{ origin: 'omnimux', skill: {
+                skillKey: 'legacy', token: 'legacy', title: '历史技能', description: '历史', domains: [], sourceRef: null,
+                version: null, recommended: true, downloads: null, updatedAt: null, publishedAt: null, installed: true, enabled: null,
+            } }];
+    const { snapshot } = query(data, { view: 'mine' });
+    assert.deepEqual(snapshot.items.map((s) => s.skillKey), ['legacy']);
+    assert.equal(snapshot.items[0].title, '历史技能');
+    assert.equal(snapshot.items[0].titleZh, '');
+    assert.deepEqual(snapshot.admission, { enforced: false, skippedCount: 0, skippedIds: [] });
+});
+test('T02-05（B10/B13）：无官方条目或目录不可用时 enforced 为 false，且老响应判定不受影响', () => {
+    const empty = query(input([item('a')]));
+    assert.deepEqual(empty.snapshot.admission, { enforced: false, skippedCount: 0, skippedIds: [] });
+    const unavailable = input([]);
+    unavailable.catalogRevision = 'catalog-unavailable';
+    assert.equal(query(unavailable).result.featured.length, 0);
+    assert.equal(query(unavailable).result.admission.enforced, false);
+    // 老快照/老客户端没有 admission 字段：适用性判定与 pageWorkshopSnapshot 均不受影响。
+    assert.equal(isWorkshopResponseApplicable(empty.result, empty.req, versions(unavailable)), false);
+    const { admission: _dropped, ...legacyEnvelope } = empty.result;
+    const legacyVersions = versions(input([item('a')]));
+    assert.equal(isWorkshopResponseApplicable(legacyEnvelope, empty.req, legacyVersions), true);
+    const legacySnapshot = { ...empty.snapshot };
+    delete legacySnapshot.admission;
+    const paged = pageWorkshopSnapshot(legacySnapshot, empty.req, legacyVersions, 0);
+    assert.equal('admission' in paged, false);
+});
+test('T02-06：双语随投影进入 WorkshopSkill，且审计字段按值复制隔离', () => {
+    const { snapshot, result } = query(input([shelf('good')]));
+    assert.equal(result.featured[0].titleZh, '中文标题 good');
+    assert.equal(result.featured[0].titleEn, 'English title good');
+    assert.equal(result.featured[0].summaryZh, '中文摘要 good');
+    assert.equal(result.featured[0].summaryEn, 'English summary good');
+    result.admission.skippedIds.push('tampered');
+    assert.deepEqual(snapshot.admission.skippedIds, []);
+});
+test('T02-07：admitWorkshopCatalogSkill 的适用边界', () => {
+    assert.equal(admitWorkshopCatalogSkill(shelf('ok')), true);
+    assert.equal(admitWorkshopCatalogSkill(withoutBilingual(shelf('bad'))), false);
+    assert.equal(admitWorkshopCatalogSkill(withoutBilingual(item('legacy'))), true);
+    assert.equal(admitWorkshopCatalogSkill(withoutBilingual(item('beta', { recommended: false }))), true);
+    assert.equal(admitWorkshopCatalogSkill(withoutBilingual({ ...item('c'), tab: 'connectors' })), true);
+});
+test('T02-08：summarizeAdmission 去重升序并按上限截断', () => {
+    assert.deepEqual(summarizeAdmission({ enforced: true, rejectedIds: [] }), { enforced: true, skippedCount: 0, skippedIds: [] });
+    assert.deepEqual(summarizeAdmission({ enforced: false, rejectedIds: ['b', 'a', 'b'] }), { enforced: false, skippedCount: 2, skippedIds: ['a', 'b'] });
+    const many = Array.from({ length: ADMISSION_SKIPPED_ID_LIMIT + 5 }, (_, i) => `id-${String(i).padStart(3, '0')}`);
+    const summary = summarizeAdmission({ enforced: true, rejectedIds: many });
+    assert.equal(summary.skippedCount, many.length);
+    assert.equal(summary.skippedIds.length, ADMISSION_SKIPPED_ID_LIMIT);
+    assert.deepEqual(summary.skippedIds.slice(0, 2), ['id-000', 'id-001']);
+});
+test('T02-09：运行时门禁只告警不外抛，脏数据不得让市场不可用', () => {
+    const original = console.warn;
+    const warnings = [];
+    console.warn = (...args) => { warnings.push(args.map(String).join(' ')); };
+    try {
+        const broken = withoutBilingual(shelf('broken'));
+        const data = input([broken, shelf('good')]);
+        const { result } = query(data);
+        assert.equal(result.featured.length, 1);
+        assert.equal(warnings.length, 1);
+        assert.match(warnings[0], /sk-omx-broken/);
+        assert.match(warnings[0], /skill-bilingual/);
+        assert.equal(query(input([shelf('good')])).snapshot.admission.skippedCount, 0);
+        assert.equal(warnings.length, 1);
+        // 极端脏数据（字段为对象/数组）同样不得抛异常。
+        const hostile = shelf('hostile', { titleZh: {}, titleEn: [], summaryZh: 1, summaryEn: null });
+        assert.doesNotThrow(() => query(input([hostile])));
+    }
+    finally {
+        console.warn = original;
+    }
+});
+test('T02-10：真实目录下工坊 featured 达 69 条且门禁零拒绝（T02 验收证据）', () => {
+    const catalog = loadCatalog();
+    const data = input(catalog.items);
+    data.catalogRevision = 'real-catalog';
+    const { snapshot, result } = query(data);
+    assert.equal(snapshot.featured.length, 69);
+    assert.deepEqual(snapshot.admission, { enforced: true, skippedCount: 0, skippedIds: [] });
+    assert.equal(result.featured.length, 69);
+    assert.ok(result.featured.some((s) => s.skillKey === 'video-generate-canvas'));
+    assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-material-breakdown'));
+    assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-script-creation'));
+    for (const skill of result.featured) {
+        assert.ok(skill.titleZh && skill.titleEn && skill.summaryZh && skill.summaryEn, `缺双语：${skill.skillKey}`);
+    }
 });
