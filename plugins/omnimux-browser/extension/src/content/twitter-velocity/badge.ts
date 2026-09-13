@@ -38,6 +38,17 @@ export function mountTweetBadge(tweetEl: HTMLElement): void {
 
   host.appendChild(badge)
 
+  // Avoid overlapping Grok button if present
+  const grokBtn = tweetEl.querySelector('button[aria-label*="Grok"], button[aria-label*="grok"], button[aria-label*="GROK"]')
+  if (grokBtn instanceof HTMLElement) {
+    const tweetRect = tweetEl.getBoundingClientRect()
+    const grokRect = grokBtn.getBoundingClientRect()
+    if (tweetRect.width > 0 && grokRect.width > 0) {
+      const grokLeftFromRight = tweetRect.right - grokRect.left
+      host.style.right = `${Math.round(grokLeftFromRight + 8)}px`
+    }
+  }
+
   // Position relative to tweet
   const originalPos = window.getComputedStyle(tweetEl).position
   if (originalPos === 'static') {
