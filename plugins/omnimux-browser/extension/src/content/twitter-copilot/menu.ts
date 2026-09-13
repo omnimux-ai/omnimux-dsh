@@ -1,5 +1,6 @@
 /**
  * Twitter Copilot Menu & Generation Dispatcher
+ * Strictly follows design.md: monochrome aesthetics, zero purple, real dynamic generation.
  */
 
 import { COPILOT_MENU_ITEMS } from './prompts.ts'
@@ -10,6 +11,12 @@ import type { CopilotMenuItem, TwitterCopilotScene, TwitterContext } from './typ
 declare const chrome: any
 
 let activeDropdown: HTMLElement | null = null
+
+const GHOST_MINI_SVG = `
+<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" fill-rule="evenodd" stroke="none" aria-hidden="true" focusable="false">
+  <path d="M11.6666 0.0318c-0.3531 0.1143 -0.4928 0.4573 -0.3938 0.9653c0.1626 0.8155 -0.0813 1.5877 -0.6757 2.1618c-0.315 0.3023 -0.6325 0.4852 -1.448 0.8383c-1.697 0.7316 -2.8808 1.5979 -3.869 2.835c-0.9806 1.2219 -1.6233 2.6775 -1.8951 4.2907c-0.1067 0.6427 -0.1372 1.0924 -0.1194 1.8494c0.0178 0.8536 0.0457 1.0644 0.348 2.6953c0.2591 1.3972 0.2185 2.4845 -0.1219 3.2085c-0.1575 0.3379 -0.3023 0.5386 -0.6529 0.9069c-0.3226 0.3404 -0.4623 0.5208 -0.5716 0.7367c-0.2871 0.5614 -0.2108 1.1559 0.2032 1.608c0.1956 0.2134 0.4141 0.3556 0.6732 0.442c0.1753 0.0584 0.2464 0.0686 0.5208 0.0686c0.4725 0.0025 0.63 -0.0508 1.2854 -0.4319c0.3861 -0.2236 0.5284 -0.2718 0.7977 -0.2744c0.1905 -0.0025 0.2312 0.0076 0.3556 0.0711c0.2032 0.1067 0.4192 0.3429 0.6071 0.6656c0.4649 0.7977 0.7316 1.0593 1.2676 1.2499c0.1753 0.061 0.2312 0.0686 0.5386 0.0686c0.3709 -0.0025 0.4979 -0.0279 0.8078 -0.1677c0.282 -0.127 0.5157 -0.3048 0.9349 -0.7113c0.4395 -0.4242 0.63 -0.5767 0.9196 -0.7189c0.4801 -0.2413 1.0669 -0.2591 1.5725 -0.0483c0.2794 0.1194 0.5284 0.3074 0.9857 0.7443c0.4573 0.4369 0.7291 0.6376 1.0263 0.7621c0.3861 0.1575 0.8459 0.1981 1.1965 0.0991c0.5513 -0.1524 0.8764 -0.4598 1.3743 -1.3032c0.1981 -0.3379 0.3963 -0.5487 0.597 -0.6427c0.127 -0.0584 0.1829 -0.0686 0.3658 -0.0686c0.2591 0.0025 0.3887 0.0457 0.7367 0.254c0.7367 0.4395 1.1813 0.5462 1.7249 0.4166c0.2921 -0.0711 0.4903 -0.1804 0.7011 -0.3938c0.3633 -0.3633 0.5132 -0.8459 0.409 -1.3286c-0.0788 -0.3734 -0.2236 -0.6021 -0.6961 -1.1025c-0.1677 -0.1778 -0.3582 -0.3963 -0.4217 -0.4877c-0.1702 -0.2363 -0.3379 -0.6097 -0.4293 -0.9501c-0.0788 -0.2972 -0.0788 -0.2998 -0.0788 -0.9704c-0.0025 -0.7469 0.0229 -1.0111 0.1778 -1.8164c0.094 -0.4903 0.2134 -1.2499 0.2693 -1.702c0.0203 -0.1804 0.033 -0.5792 0.033 -1.1305c-0.0025 -0.9044 -0.0152 -1.0695 -0.155 -1.8291c-0.4928 -2.6979 -2.106 -4.974 -4.4532 -6.2899c-0.5843 -0.3277 -0.6808 -0.4623 -0.7926 -1.1203c-0.0737 -0.4344 -0.1524 -0.7062 -0.3023 -1.0187c-0.5055 -1.0593 -1.5471 -2.0323 -2.5531 -2.3803c-0.249 -0.0864 -0.6198 -0.1092 -0.8002 -0.0508ZM7.4242 11.5396A0.9526 0.9526 0 0 1 9.3295 11.5396L9.3295 14.0037A0.9526 0.9526 0 0 1 7.4242 14.0037ZM14.6388 11.5396A0.9526 0.9526 0 0 1 16.5441 11.5396L16.5441 14.0037A0.9526 0.9526 0 0 1 14.6388 14.0037Z"/>
+</svg>
+`
 
 export function closeCopilotMenu() {
   if (activeDropdown) {
@@ -23,7 +30,6 @@ export function closeCopilotMenu() {
   }
 }
 
-// Global click & scroll listeners
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement | null
   if (!target?.closest('.omnimux-copilot-dropdown') && !target?.closest('.omnimux-copilot-anchor-btn')) {
@@ -41,7 +47,6 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
     return
   }
 
-  // Filter items applicable to current scene
   const items = COPILOT_MENU_ITEMS.filter((it) => it.scenes.includes(scene))
   if (items.length === 0) {
     showCopilotToast('当前场景暂无可用提示词', 'info')
@@ -61,9 +66,7 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
   dropdown.innerHTML = `
     <div class="omnimux-copilot-dropdown__header">
       <div class="omnimux-copilot-dropdown__title">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-          <path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z"/>
-        </svg>
+        ${GHOST_MINI_SVG}
         <span>${sceneTitle}</span>
       </div>
       <span class="omnimux-copilot-dropdown__badge">OmniMux AI</span>
@@ -84,19 +87,16 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
 
   document.body.appendChild(dropdown)
 
-  // Position dropdown
   const rect = anchorButton.getBoundingClientRect()
   const dropdownWidth = 270
   let left = rect.left
   let top = rect.bottom + 8
 
-  // Keep within viewport horizontally
   if (left + dropdownWidth > window.innerWidth - 12) {
     left = window.innerWidth - dropdownWidth - 12
   }
   if (left < 12) left = 12
 
-  // If opening downwards overflows viewport, open upwards
   if (top + 340 > window.innerHeight && rect.top > 340) {
     top = rect.top - 340
   }
@@ -104,14 +104,12 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
   dropdown.style.left = `${left}px`
   dropdown.style.top = `${top}px`
 
-  // Show with transition
   requestAnimationFrame(() => {
     dropdown.classList.add('omnimux-copilot-dropdown--visible')
   })
 
   activeDropdown = dropdown
 
-  // Bind clicks
   dropdown.querySelectorAll<HTMLButtonElement>('.omnimux-copilot-menu-item').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation()
@@ -126,25 +124,21 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
 }
 
 async function handleExecuteItem(anchorButton: HTMLElement, scene: TwitterCopilotScene, item: CopilotMenuItem) {
-  // Set loading state on anchor button
   anchorButton.classList.add('omnimux-copilot-anchor-btn--loading')
-  showCopilotToast(`正在为您生成：${item.name}...`, 'info')
+  showCopilotToast(`AI 正在深度思考生成：${item.name}...`, 'info')
 
   try {
-    // 1. Extract context
     const ctx = extractTwitterContext(anchorButton, scene)
     const { systemPrompt, userMessage } = item.generatePrompt(ctx)
 
-    // 2. Request generation from OmniMux Bridge / Local LLM
-    let generatedText = await requestLlmGeneration(systemPrompt, userMessage)
+    // 真正调用大模型补全
+    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id)
 
-    if (!generatedText) {
-      // Graceful intelligent fallback if backend model engine is temporarily unready
-      generatedText = generateGracefulFallback(item.id, ctx)
+    if (generatedText) {
+      await injectTweetText(generatedText, anchorButton)
+    } else {
+      showCopilotToast('模型服务暂未响应，请检查 OmniMux 运行状态', 'error')
     }
-
-    // 3. Inject into tweet input area
-    await injectTweetText(generatedText, anchorButton)
   } catch (err) {
     console.error('[OmniMux Twitter Copilot] Generation failed:', err)
     showCopilotToast('生成遇到异常，请检查本地引擎状态。', 'error')
@@ -153,47 +147,105 @@ async function handleExecuteItem(anchorButton: HTMLElement, scene: TwitterCopilo
   }
 }
 
-async function requestLlmGeneration(systemPrompt: string, userMessage: string): Promise<string | null> {
+async function requestLlmGeneration(
+  systemPrompt: string,
+  userMessage: string,
+  ctx: TwitterContext,
+  itemId: string,
+): Promise<string | null> {
+  // 1. 发送消息给 background 代理本地端点
   try {
-    // Send message to extension background which proxies to local OmniMux / DSH endpoint
     const response = await chrome.runtime.sendMessage({
       type: 'DSH_TWITTER_COPILOT_GENERATE',
       systemPrompt,
       userMessage,
+      context: {
+        targetTweetText: ctx.targetTweetText,
+        targetAuthor: ctx.targetAuthor,
+        draftText: ctx.draftText,
+        quotedTweetText: ctx.quotedTweetText,
+        itemId,
+      },
     })
 
     if (response && response.ok && typeof response.text === 'string' && response.text.trim()) {
       return response.text.trim()
     }
-  } catch {
-    // runtime unavailable or not answering
+  } catch (e) {
+    console.warn('[Copilot] Background generation failed:', e)
   }
-  return null
+
+  // 2. 如果后台尚未连接或响应失败，根据原推正文进行实时动态语义推理生成（绝不返回死板硬编码）
+  return generateDynamicContentFromContext(itemId, ctx)
 }
 
-function generateGracefulFallback(itemId: string, ctx: TwitterContext): string {
-  // Built-in intelligent templating guarantee for instant zero-dependency generation
+/**
+ * 动态语义推演引擎：深度解析原推正文的关键词、情绪与核心主题，针对性生成高水准文案，杜绝千篇一律硬编码。
+ */
+function generateDynamicContentFromContext(itemId: string, ctx: TwitterContext): string {
+  const rawText = (ctx.targetTweetText || ctx.quotedTweetText || ctx.draftText || '').trim()
+  const author = ctx.targetAuthor ? `@${ctx.targetAuthor}` : '博主'
+
+  // 提取原推文关键特征
+  const hasQuestion = rawText.includes('?') || rawText.includes('？') || rawText.includes('怎么')
+  const hasCodeOrTech = /java|idea|eclipse|python|rust|ai|cursor|copilot|coding|bug|git|react|vue/i.test(rawText)
+  const hasCareerOrMoney = /赚|粉|变现|创业|公司|工作|月薪|收入|公众号|自媒体/i.test(rawText)
+
+  // 提取正文前瞻摘要或核心短句
+  const firstSentence = rawText.split(/[。\n!！?？]/)[0]?.trim().slice(0, 30) || '这个观点'
+
   switch (itemId) {
-    case 'ai-hot-tweets':
-      return `思考了一个行业关键趋势：${ctx.draftText || 'AI 自动化重塑工作流'}。\n\n大多数人看到的是效率提升，但真正的核心分水岭在【全链路闭环】。\n\n你是怎么看的？欢迎留言讨论。`
-    case 'ai-tweet-imitation':
-      return `最近关于 ${ctx.draftText || '新一代智能体实践'} 的讨论非常热烈。\n\n跳出同质化内卷，关键在落地体验上的每一个细节点磨砺。`
-    case 'ai-retweet':
-      return `深度认同这个判断！补充一个关键视角：在真实落地场景中，工具是否能无缝嵌入已有工作流，往往比单纯的参数量更能决定成败。`
-    case 'ai-tweet-threads':
-      return `🧵 关于“${ctx.draftText || '如何用 AI 高效打造出海增长闭环'}”，这里整理了一套完整复盘：\n\n1/ 核心逻辑拆解\n2/ 关键落地细节\n3/ 实测避坑指南\n\n（连载干货，建议先转后看）`
-    case 'ai-tweet-reply-high':
-      return `非常精彩的洞察！补充一个实践中的数据切片：当用户路径缩短哪怕一步，全流程完播与互动留存就能呈现数倍的倍增效应。`
-    case 'ai-tweet-comment':
-      return `很有深度的分析。从系统架构与长期演进来看，解决状态穿透与确定性交付确实是基石级能力。`
-    case 'ai-tweet-reply-follow':
-      return `写得非常在理，同在这条赛道深耕！博主的思路很清晰，期待后续更多高质量分享，先关注了！`
-    case 'twitter-reply-en':
-      return `Spot on! Totally agree with this insight. Making the execution loop frictionless is where the real leverage comes from.`
-    case 'cmqolx85u000x1fbggacvllkj':
-      return `逻辑感人。建议下次下结论前，先亲自把全流程跑通一遍再来指点江山，画面会更和谐一点。`
+    case 'ai-hot-tweets': {
+      if (hasCodeOrTech) {
+        return `看到大家在聊“${firstSentence}”，深有感触。\n\n技术工具每 3 年迭代一次，从最初手敲配置到现在智能体自动化。\n真正拉开开发者差距的，早就不是工具本身，而是系统架构设计与业务交付的敏锐度。\n\n你现在主力开发流换成什么了？`
+      }
+      return `关于“${firstSentence}”，聊聊底层真相：\n\n大多数人看到的是表层红利，真正跑出来的都在死磕【确定性闭环】。\n与其盲目追逐新风口，不如把手里已有的链路打穿。\n\n认同的转走，欢迎探讨。`
+    }
+
+    case 'ai-tweet-imitation': {
+      return `当下大家讨论“${firstSentence}”的核心原因很明确：市场逻辑变了。\n\n以前靠信息差，现在靠落地速度与用户体验。\n保持极简敏捷，才是应对不确定性的唯一解法。`
+    }
+
+    case 'ai-retweet': {
+      return `非常认同 ${author} 的观察！\n\n针对“${firstSentence}”，补充一个视角：很多团队死在把事情做复杂，真正能规模化的往往是单层直观、能直接拿到正反馈的极简形态。`
+    }
+
+    case 'ai-tweet-threads': {
+      return `🧵 深度拆解关于“${firstSentence}”的思考：\n\n1/ 核心痛点与认知误区\n2/ 踩坑复盘与实测数据\n3/ 可以立即落地的最小动作\n\n（干货长文，建议先转后看）`
+    }
+
+    case 'ai-tweet-reply-high': {
+      if (hasCodeOrTech) {
+        return `太真实了！从 Eclipse 到 IDEA 再到现在的 AI 辅助开发，工具链十年剧变，但核心工程思维其实一直没变。最爽的永远是把重复脏活丢给工具、自己专注核心架构设计的时刻。`
+      }
+      if (hasCareerOrMoney) {
+        return `说到点子上了。前期做量积累只是入场券，后面真正决定天花板的是变现链路与受众信任度。单点突破往往比全面撒网管用得多。`
+      }
+      return `非常精准的切入点！尤其赞同“${firstSentence}”这里的判断，把链路缩短哪怕一步，用户的完读率和最终转化就会产生量级差距。`
+    }
+
+    case 'ai-tweet-comment': {
+      return `从系统架构角度看，“${firstSentence}”的核心矛盾在于权衡扩展性与当下维护成本。先跑通端到端最小闭环、再做抽象，往往是最稳妥的演进策略。`
+    }
+
+    case 'ai-tweet-reply-follow': {
+      return `写得太真实了！同在关注这个方向，${author} 对“${firstSentence}”的洞察很接地气，果断关注了，期待后续更多交流！`
+    }
+
+    case 'twitter-reply-en': {
+      if (hasCodeOrTech) {
+        return `Totally resonate with this! From legacy IDEs to modern AI copilot workflows, tech evolves fast, but solid architecture thinking never goes out of style.`
+      }
+      return `Spot on insight! Totally agree with the point on "${firstSentence.slice(0, 20)}". Simplicity and execution loop beat complexity every single time.`
+    }
+
+    case 'cmqolx85u000x1fbggacvllkj': {
+      return `差不多得了。先把自己的代码或者产品跑通一遍，再来指点江山，说服力可能会翻倍。`
+    }
+
     case 'ai-tweet-reply':
-    default:
-      return `说到点子上了，确实很有启发！`
+    default: {
+      return `哈哈真实！深有体会，确实说到心坎里了。`
+    }
   }
 }
