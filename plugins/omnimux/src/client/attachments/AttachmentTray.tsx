@@ -252,6 +252,50 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     setPreview(null);
   }, []);
 
+  const handleAddProductAttachment = useCallback(
+    (product: any) => {
+      if (!product) return;
+      const firstMedia =
+        Array.isArray(product.media) && product.cover_media_id
+          ? product.media.find((m: any) => m.id === product.cover_media_id)
+          : Array.isArray(product.media)
+            ? product.media[0]
+            : null;
+
+      const previewUrl = firstMedia?.id
+        ? `/omnimux/products/${product.id}?preview=${firstMedia.id}`
+        : firstMedia?.real_path
+          ? `file://${firstMedia.real_path}`
+          : '';
+
+      const relativePath = firstMedia?.real_path || `products/${product.id}.json`;
+
+      store.addAttachment(currentSessionId, {
+        sourcePlugin: 'omnimux-products',
+        kind: 'product',
+        entityId: product.id || String(Date.now()),
+        title: product.name || product.title || '产品',
+        extension: 'JSON',
+        relativePath,
+        previewUrl,
+        metadata: {
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            sku: product.sku,
+            brand: product.brand,
+            description: product.description,
+            selling_points: product.selling_points,
+            features: product.features,
+            target_audience: product.target_audience,
+          },
+        },
+      });
+    },
+    [store, currentSessionId],
+  );
+
   const hasOmnimux = Boolean(omnimuxAttachments && omnimuxAttachments.length > 0);
   const hasNative = nativeAttachments.length > 0;
   const hasRailContent = hasOmnimux || hasNative;
@@ -280,6 +324,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
         onSelectSlot={selectSlot}
         onReplaceSlot={replaceSlot}
         onAddFiles={props.onAddFiles}
+        onAddProductAttachment={handleAddProductAttachment}
         t={props.t}
       />
       {(SHOW_MANUAL_LINK_BUTTON || hasRailContent) && (
