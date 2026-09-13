@@ -706,6 +706,11 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
     assert.ok(style, 'style element must exist')
     const css = style.textContent
 
+    // 0. Tab strip standard height and breathing padding
+    assert.match(css, /\[data-dockkit-strip\]/)
+    assert.match(css, /height:\s*40px\s*!important/)
+    assert.match(css, /padding:\s*6px\s+6px\s+6px\s+10px\s*!important/)
+
     // 1. Tab title & close button ergonomics
     assert.match(css, /\[data-dockkit-tab-close\]/)
     assert.match(css, /right:\s*6px\s*!important/)

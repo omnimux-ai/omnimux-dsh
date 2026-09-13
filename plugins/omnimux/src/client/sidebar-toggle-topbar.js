@@ -699,7 +699,17 @@ button[data-sidebar-right-expand] {
   -webkit-app-region: no-drag !important;
 }
 
-/* 5. 右侧侧边栏全屏业务逻辑重构：工作区级铺满，与左侧侧边栏解耦联动 */
+/* 5. 修复右侧栏顶栏 strip 在 border-box 盒模型下高度塌陷（28px）导致 Tab 选项卡被下方内容页面遮挡：
+   明确高度为 40px 并居中对齐，为选项卡胶囊提供上下各 6px 的正常呼吸间距，确保底部圆角完整展现且与内容保持优雅间距 */
+[data-dockkit-strip],
+[class*="_tabStrip_"] {
+  height: 40px !important;
+  box-sizing: border-box !important;
+  padding: 6px 6px 6px 10px !important;
+  align-items: center !important;
+}
+
+/* 6. 右侧侧边栏全屏业务逻辑重构：工作区级铺满，与左侧侧边栏解耦联动 */
 /* 5.1 默认全屏态（左侧侧边栏展开时）：只铺满右侧主区域，完整保留左侧侧边栏 */
 [data-sidebar-right-panel="fullscreen"],
 [class*="_panel"][data-sidebar-right-panel="fullscreen"] {
