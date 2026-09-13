@@ -38,14 +38,28 @@ export function mountTweetBadge(tweetEl: HTMLElement): void {
 
   host.appendChild(badge)
 
-  // Avoid overlapping Grok button if present
-  const grokBtn = tweetEl.querySelector('button[aria-label*="Grok"], button[aria-label*="grok"], button[aria-label*="GROK"]')
+  // Avoid overlapping Grok button if present, strictly maintain 8px gap
+  const grokBtn = tweetEl.querySelector('button[aria-label*="Grok"], button[aria-label*="grok"], [aria-label*="Grok"]')
   if (grokBtn instanceof HTMLElement) {
     const tweetRect = tweetEl.getBoundingClientRect()
     const grokRect = grokBtn.getBoundingClientRect()
     if (tweetRect.width > 0 && grokRect.width > 0) {
       const grokLeftFromRight = tweetRect.right - grokRect.left
       host.style.right = `${Math.round(grokLeftFromRight + 8)}px`
+      const grokTopFromTweet = grokRect.top - tweetRect.top
+      host.style.top = `${Math.round(grokTopFromTweet)}px`
+    }
+  } else {
+    const moreBtn = tweetEl.querySelector('button[data-testid="caret"]')
+    if (moreBtn instanceof HTMLElement) {
+      const tweetRect = tweetEl.getBoundingClientRect()
+      const moreRect = moreBtn.getBoundingClientRect()
+      if (tweetRect.width > 0 && moreRect.width > 0) {
+        const moreLeftFromRight = tweetRect.right - moreRect.left
+        host.style.right = `${Math.round(moreLeftFromRight + 8)}px`
+        const moreTopFromTweet = moreRect.top - tweetRect.top
+        host.style.top = `${Math.round(moreTopFromTweet)}px`
+      }
     }
   }
 
