@@ -46,7 +46,7 @@
 ┌───────────────────────────▼──────────────────────────────────────┐
 │ L2 悬浮覆盖层（Shadow DOM · 唯一 UI 出口）                        │
 │   media/overlay.ts        host + shadow 生命周期、定位、显隐       │
-│   media/capsule.ts        深黑磨砂药丸（4 图标 + 分割 + 品牌微标） │
+│   media/capsule.ts        深黑磨砂药丸（3 个动作图标，无分割与品牌微标） │
 │   media/tooltip.ts        ★ 纯白气泡（胶囊的兄弟节点，非子节点）   │
 │   media/overlay-icons.ts  SVG 字符串常量（禁 Emoji）              │
 │   media/actions.ts        加入灵感库 / 复制 / 加入对话             │
@@ -74,7 +74,7 @@
 | `src/content/media/payload.ts` | 悬停素材载荷类型、归一化、尺寸阈值判定 |
 | `src/content/media/messages.ts` | 消息 `type` 常量、`source` 标识、层级与视觉规格常量（唯一真源） |
 | `src/content/media/detector.ts` | 指针→素材元素解析、候选缓存、视口/可见性过滤 |
-| `src/content/media/overlay-icons.ts` | 纯矢量 SVG 字符串常量表（星标、复制、气泡、加号、品牌微标） |
+| `src/content/media/overlay-icons.ts` | 纯矢量 SVG 字符串常量表（星标、复制、气泡、加号、对勾、外链） |
 | `src/content/media/capsule.ts` | 药丸胶囊的 DOM 构建与图标交互态 |
 | `src/content/media/tooltip.ts` | **纯白气泡**的 DOM 构建、贴边算法、显隐 |
 | `src/content/media/overlay.ts` | Shadow DOM 根生命周期、定位、防抖、防误触、销毁清理 |
@@ -564,7 +564,7 @@ stateDiagram-v2
 
 - 单一 host：`position:fixed; top:0; left:0; width:0; height:0; overflow:visible; z-index:2147483647`，`attachShadow({mode:'open'})`，`styles.ts` 内容全量内联注入。
 - 胶囊：`rgba(30,32,38,0.95)`、圆角 `22px`、高 `44px`、`backdrop-filter` 磨砂 + `inset` 上边光泽，定位**素材左下角内侧 10px**。
-- 胶囊内容顺序固定：`[星标] [复制] [气泡] [竖线分割] [+] [品牌微标]`。
+- 胶囊内容顺序固定：`[星标] [复制] [气泡]`，仅 3 个核心动作图标，无竖线分割、无「+」、无品牌微标。
 - 图标全部来自 `overlay-icons.ts` 的 `innerHTML` SVG 字符串，**零 Emoji、零 Unicode 字符**（UI04 精神，即使 guard 不扫描 content 目录也必须遵守）。
 - **气泡（关键验收点）**：
   - 气泡节点是**胶囊的兄弟节点**，同为 `position:fixed`，**绝不作为胶囊或素材容器的子元素**。

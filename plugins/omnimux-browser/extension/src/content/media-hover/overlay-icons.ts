@@ -12,7 +12,7 @@
  */
 
 /** Marks drawn as outlines; the checked/active look is a CSS fill. */
-export type CapsuleIcon = 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star' | 'brand'
+export type CapsuleIcon = 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star'
 
 /** Shared root attributes. `aria-hidden` keeps the mark out of the a11y tree. */
 export const SVG_ROOT_ATTRS =
@@ -38,7 +38,7 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
     '<path d="M20.5 12.25a8.5 8.5 0 0 0-4.06-7.29"/>',
     '<path d="M12 3.75a8.5 8.5 0 1 0 4.44 15.75"/>',
   ].join(''),
-  // Plus: the split affordance.
+  // Plus: the in-flight mark an action wears while it runs.
   plus: '<path d="M12 4.5v15"/><path d="M4.5 12h15"/>',
   // Check: saved / copied confirmation.
   check: '<path d="M20.5 6.5 9.8 17.5 3.8 11.6"/>',
@@ -50,11 +50,6 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
   ].join(''),
   // Star: the filled "kept" state of the lightbulb button.
   star: '<path d="M12 3.6l2.6 5.3 5.9.86-4.25 4.14 1 5.9L12 17.02l-5.25 2.78 1-5.9L3.5 9.76l5.9-.86Z"/>',
-  // Brand micro-mark: a squircle with the OmniMux seam.
-  brand: [
-    '<rect x="4" y="4" width="16" height="16" rx="5.2"/>',
-    '<path d="M8.6 15.4V10l3.4 5.4L15.4 10v5.4"/>',
-  ].join(''),
 }
 
 /**

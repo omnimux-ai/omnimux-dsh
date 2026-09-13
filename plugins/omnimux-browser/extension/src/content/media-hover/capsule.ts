@@ -4,7 +4,7 @@
  * Layout is fixed by the design contract:
  *
  * ```
- * [ inspiration ] [ copy ] [ attach ] | [ + ] [ brand ]
+ * [ inspiration ] [ copy ] [ attach ]
  * ```
  *
  * The capsule owns no positioning logic and no messaging: the overlay places it
@@ -18,43 +18,11 @@ import { ICON_BY_ACTION, STATE_ICON, svgIcon, type CapsuleIcon } from './overlay
 import type { CapsuleActionEvent, HoveredMedia, MediaActionKind, OverlayState } from './types.ts'
 import type { HoverCopy } from './copy.ts'
 
-/** The four icon slots, in capsule order. */
+/** The three action slots, in capsule order. */
 const ACTION_ORDER: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
 
 /** Extra icon swap applied while an action is in flight or settled. */
 type IconState = 'idle' | 'busy' | 'done' | 'saved' | 'error'
-
-/**
- * Builds the button that sits in the split position after the three shortcuts.
- *
- * It is deliberately not a `<button>`: the design ships a visual divider only,
- * so it must not enter the tab order or advertise an action it does not have.
- */
-function buildSplitMark(): HTMLSpanElement {
-  const split = document.createElement('span')
-  split.className = 'omnimux-capsule-split'
-  split.setAttribute('aria-hidden', 'true')
-  return split
-}
-
-function buildPlusMark(label: string): HTMLSpanElement {
-  const plus = document.createElement('span')
-  plus.className = 'omnimux-capsule-icon omnimux-capsule-plus'
-  plus.setAttribute('role', 'presentation')
-  plus.setAttribute('aria-hidden', 'true')
-  plus.setAttribute('title', label)
-  plus.innerHTML = svgIcon('plus', 15)
-  return plus
-}
-
-function buildBrandMark(label: string): HTMLSpanElement {
-  const brand = document.createElement('span')
-  brand.className = 'omnimux-capsule-brand'
-  brand.setAttribute('role', 'img')
-  brand.setAttribute('aria-label', label)
-  brand.innerHTML = svgIcon('brand', 14)
-  return brand
-}
 
 /** Resolves the icon a slot shows for the current overlay state. */
 function iconFor(action: MediaActionKind, state: IconState): CapsuleIcon {
@@ -173,9 +141,6 @@ export class MediaCapsule {
     for (const action of ACTION_ORDER) {
       this.element.appendChild(this.buildButton(action))
     }
-    this.element.appendChild(buildSplitMark())
-    this.element.appendChild(buildPlusMark(this.hints.more))
-    this.element.appendChild(buildBrandMark(this.hints.brand))
     this.paint()
   }
 

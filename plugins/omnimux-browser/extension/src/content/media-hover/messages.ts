@@ -70,6 +70,11 @@ export const CAPSULE_SPEC = {
   backgroundAlpha: 0.95,
   borderRadius: 22,
   height: 44,
+  /**
+   * Compact row width assumed before the first layout measurement.
+   * Three 30px icons + two 4px gaps + 2 × 6px padding + 2 × 1px border.
+   */
+  width: 112,
   paddingX: 6,
   blur: 'blur(24px) saturate(140%)',
   border: '1px solid rgba(255,255,255,0.14)',

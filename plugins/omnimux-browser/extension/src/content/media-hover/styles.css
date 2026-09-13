@@ -144,33 +144,6 @@
   background: rgba(255, 157, 157, 0.16);
 }
 
-/* --- Split affordance and brand micro-mark -------------------------------- */
-.omnimux-capsule-split {
-  flex: 0 0 auto;
-  width: 1px;
-  height: 18px;
-  margin: 0 2px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.omnimux-capsule-brand {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin: 0 2px 0 0;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.omnimux-capsule-brand svg {
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
 /* --- Pure-white tooltip (a SIBLING of the capsule, never a child) --------- */
 .white-tooltip {
   position: fixed;

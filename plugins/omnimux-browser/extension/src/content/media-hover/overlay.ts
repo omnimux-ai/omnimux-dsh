@@ -33,9 +33,6 @@ export const MEDIA_OVERLAY_HOST_ID = 'omnimux-media-hover-root'
 /** Icon slots that own a tooltip. */
 const TOOLTIP_ACTIONS: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
 
-/** Capsule width assumed before the first layout measurement. */
-const CAPSULE_WIDTH_FALLBACK = 168
-
 /**
  * Mounts and drives the hover overlay.
  *
@@ -390,7 +387,9 @@ export class MediaOverlay {
   private capsuleAlignment(element: Element): 'left' | 'right' {
     const rect = element.getBoundingClientRect()
     const measured = this.capsule?.element.getBoundingClientRect().width ?? 0
-    const capsuleWidth = measured > 0 ? measured : CAPSULE_WIDTH_FALLBACK
+    // Before the first layout the capsule reports a zero width; the spec's
+    // compact row width stands in so the flip decision is still correct.
+    const capsuleWidth = measured > 0 ? measured : CAPSULE_SPEC.width
     const available = currentViewportWidth()
     const fitsLeft = rect.left + CAPSULE_SPEC.inset + capsuleWidth <= available - CAPSULE_SPEC.edgeMargin
     return fitsLeft ? 'left' : 'right'
@@ -441,7 +440,7 @@ export class MediaOverlay {
     const geometry = computeCapsuleGeometry(
       rect,
       {
-        width: box.width > 0 ? box.width : CAPSULE_WIDTH_FALLBACK,
+        width: box.width > 0 ? box.width : CAPSULE_SPEC.width,
         height: box.height > 0 ? box.height : CAPSULE_SPEC.height,
       },
       viewport.width,

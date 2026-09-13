@@ -24,9 +24,7 @@ export interface HoverCopy {
   failed: string
   /** Rendered for media whose address cannot be used downstream. */
   unusable: string
-  /** Title of the divider "+" affordance. */
-  more: string
-  /** Accessible name of the brand micro-mark. */
+  /** Accessible name of the capsule toolbar. */
   brand: string
   action: Record<MediaActionKind, string>
 }
@@ -44,7 +42,6 @@ const ZH: HoverCopy = {
   },
   failed: '操作失败，请重试',
   unusable: '该素材地址不可用',
-  more: '更多操作',
   brand: 'OmniMux',
   action: {
     inspiration: '加入灵感库',
@@ -66,7 +63,6 @@ const EN: HoverCopy = {
   },
   failed: 'Something went wrong. Try again.',
   unusable: 'This media address cannot be used',
-  more: 'More actions',
   brand: 'OmniMux',
   action: {
     inspiration: 'Add to library',

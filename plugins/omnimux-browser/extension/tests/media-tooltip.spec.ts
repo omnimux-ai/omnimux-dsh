@@ -94,13 +94,15 @@ describe('overlay structure', () => {
       'omnimux-capsule-icon',
       'omnimux-capsule-icon',
       'omnimux-capsule-icon',
-      'omnimux-capsule-split',
-      'omnimux-capsule-icon omnimux-capsule-plus',
-      'omnimux-capsule-brand',
     ])
     const actions = [...capsule.element.querySelectorAll('[data-action]')]
       .map((node) => node.getAttribute('data-action'))
     expect(actions).toEqual(['inspiration', 'copy', 'attach'])
+    // Decorative extras (divider, "+" affordance, brand mark) were removed.
+    expect(capsule.element.children).toHaveLength(3)
+    expect(capsule.element.querySelector('.omnimux-capsule-split')).toBeNull()
+    expect(capsule.element.querySelector('.omnimux-capsule-plus')).toBeNull()
+    expect(capsule.element.querySelector('.omnimux-capsule-brand')).toBeNull()
   })
 
   it('uses inline vector icons only: no emoji or glyph characters', () => {
@@ -169,6 +171,8 @@ describe('overlay structure', () => {
     expect(CAPSULE_SPEC.borderRadius).toBe(22)
     expect(CAPSULE_SPEC.height).toBe(44)
     expect(CAPSULE_SPEC.inset).toBe(10)
+    // Compact row: 3 × 30px icons + 2 × 4px gaps + 2 × 6px padding + 2 × 1px border.
+    expect(CAPSULE_SPEC.width).toBe(112)
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
   })
