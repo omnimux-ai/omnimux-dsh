@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { resolveInspirationPaths } from './paths.js'
 import { getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
 import { moveToTrash } from './trash.js'
+import { calculateRecommendationScore } from './recommendation-engine.js'
 
 export class InspirationError extends Error {
   /**
@@ -469,15 +470,25 @@ export function createLocalStore(opts = {}) {
       }
 
       const sortMode = query.sort || 'new'
+      let scoreMap = null
+      if (sortMode === 'hot' || sortMode === 'recommend') {
+        scoreMap = new Map()
+        for (const it of items) {
+          const algoScore = calculateRecommendationScore(it)
+          const manualScore = typeof it.hot_score === 'number' ? it.hot_score : 0
+          scoreMap.set(it, Math.max(algoScore, manualScore))
+        }
+      }
+
       items.sort((a, b) => {
         if (sortMode === 'fav') {
           if (Boolean(b.is_favorite) !== Boolean(a.is_favorite)) {
             return b.is_favorite ? 1 : -1
           }
         }
-        if (sortMode === 'hot') {
-          const scoreA = typeof a.hot_score === 'number' ? a.hot_score : 0
-          const scoreB = typeof b.hot_score === 'number' ? b.hot_score : 0
+        if (sortMode === 'hot' || sortMode === 'recommend') {
+          const scoreA = scoreMap?.get(a) ?? 0
+          const scoreB = scoreMap?.get(b) ?? 0
           if (scoreB !== scoreA) return scoreB - scoreA
         }
         if (sortMode === 'views') {

@@ -144,6 +144,12 @@ describe('Local Inspiration Store', () => {
     const viewsSorted = store.list({ sort: 'views' })
     assert.equal(viewsSorted.items[0].title, 'UK Organic Video')
     assert.equal(viewsSorted.items[1].title, 'US Ad Video')
+
+    // 推荐算法排序：高互动近期视频在推荐流中脱颖而出
+    const hotSorted = store.list({ sort: 'hot' })
+    assert.equal(hotSorted.items.length, 2)
+    const recommendSorted = store.list({ sort: 'recommend' })
+    assert.equal(recommendSorted.items.length, 2)
   })
 
   it('extracts structured markdown sections', () => {

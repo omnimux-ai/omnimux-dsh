@@ -6,6 +6,8 @@
  * 所有函数保持纯粹，可被 node:test 直接消费。
  */
 
+import { sortTrendingByRecommendation } from './recommendation-engine.js'
+
 /**
  * 数据契约版本，随字段结构调整，便于缓存与灰度判别。
  *
@@ -46,6 +48,7 @@ export const TRENDING_RANGES = [
 
 /** 排序档位。 */
 export const TRENDING_SORTS = [
+  { value: 'recommend', labelKey: 'trending.sort.recommend' },
   { value: 'views', labelKey: 'trending.sort.views' },
   { value: 'engagement', labelKey: 'trending.sort.engagement' },
 ]
@@ -60,7 +63,7 @@ export function defaultTrendingFilters() {
     views: '',
     engagement: '',
     range: '',
-    sort: 'views',
+    sort: 'recommend',
   }
 }
 
@@ -173,7 +176,10 @@ export function filterTrendingVideos(items, filters) {
  */
 export function sortTrendingVideos(items, sortKey) {
   const list = Array.isArray(items) ? items.slice() : []
-  const key = sortKey || 'views'
+  const key = sortKey || 'recommend'
+  if (key === 'recommend') {
+    return sortTrendingByRecommendation(list)
+  }
   return list.sort((a, b) => {
     const av = Number(a?.[key])
     const bv = Number(b?.[key])
