@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  CLOUD_ALL_CATEGORY,
   CLOUD_AUDIO_THEMES,
   CLOUD_PAGE_SIZE,
+  allCategoryEntry,
   appendUniqueAssets,
   cloudAudioTheme,
   cloudCardKind,
@@ -32,17 +34,6 @@ const MANIFEST = {
         { id: 'male', zh: '男性角色', en: 'Male', total: 144, pages: 6 },
         { id: 'lifestyle', zh: '生活居家', en: 'Lifestyle', total: 254, pages: 11 },
         { id: 'business', zh: '职场商务', en: 'Business', total: 43, pages: 2 },
-      ],
-    },
-    {
-      id: 'knowledge',
-      zh: '知识包',
-      en: 'Knowledge',
-      total: 200,
-      pages: 9,
-      sub_categories: [
-        { id: 'prompt', zh: '脚本提示词', en: 'Prompt Packs', total: 57, pages: 3 },
-        { id: 'storyboard', zh: '短剧拆镜', en: 'Storyboard', total: 143, pages: 6 },
       ],
     },
     {
@@ -92,6 +83,35 @@ describe('cloudScope', () => {
   })
 })
 
+/**
+ * 一级栏最左侧的「全部」不是清单里的一个大类，而是一个跨全量的作用域：它的行数来自
+ * manifest 的总数，分片由构建脚本写成 all/page-NNNN.json。
+ */
+describe('allCategoryEntry', () => {
+  const t = (key) => ({ 'cloud.category.all': '全部' }[key] ?? key)
+
+  it('leads the nav with 全部 carrying the whole-catalog totals', () => {
+    const entry = allCategoryEntry(MANIFEST, t)
+    assert.equal(entry.id, 'all')
+    assert.equal(entry.zh, '全部')
+    assert.equal(entry.en, 'All')
+    assert.equal(entry.total, MANIFEST.totalAssets)
+    assert.equal(entry.pages, Math.ceil(MANIFEST.totalAssets / MANIFEST.pageSize))
+    assert.deepEqual(entry.sub_categories, [])
+  })
+
+  it('keeps the scope id in one place, so the fetch URL and the chip agree', () => {
+    assert.equal(CLOUD_ALL_CATEGORY, 'all')
+    assert.equal(cloudScope(CLOUD_ALL_CATEGORY), 'all')
+  })
+
+  it('survives a manifest that has not landed yet', () => {
+    const entry = allCategoryEntry(null, t)
+    assert.equal(entry.total, 0)
+    assert.equal(entry.pages, 1)
+  })
+})
+
 describe('pageCountOf / totalOf', () => {
   it('reads the category level of the manifest', () => {
     assert.equal(pageCountOf(MANIFEST, 'character'), 18)
@@ -106,6 +126,13 @@ describe('pageCountOf / totalOf', () => {
   it('reports one page for an empty category so the pager still renders', () => {
     assert.equal(pageCountOf(MANIFEST, 'prop'), 1)
     assert.equal(totalOf(MANIFEST, 'prop'), 0)
+  })
+
+  it('sizes 全部 from the whole-catalog totals instead of a category entry', () => {
+    assert.equal(totalOf(MANIFEST, 'all'), MANIFEST.totalAssets)
+    assert.equal(pageCountOf(MANIFEST, 'all'), Math.ceil(MANIFEST.totalAssets / MANIFEST.pageSize))
+    // The page size is read from the manifest, so the count follows the builder.
+    assert.equal(pageCountOf({ totalAssets: 25, pageSize: 10 }, 'all'), 3)
   })
 
   it('falls back to one page for an unknown category', () => {
@@ -128,10 +155,16 @@ describe('subCategoryTabs', () => {
     assert.equal(items[0].total, 640)
   })
 
+  it('keeps the second level shut on 全部, which spans every category', () => {
+    const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'all')
+    assert.equal(hasSecondLevel, false)
+    assert.deepEqual(items, [])
+  })
+
   it('opens a second level for every category the data gives one to', () => {
-    // The level is a property of the manifest, not of one tab: 声音, 素材 and 角色
+    // The level is a property of the manifest, not of one tab: 角色, 声音 and 场景
     // all carry shelves, so all three get the bar.
-    for (const category of ['character', 'knowledge', 'audio', 'scene']) {
+    for (const category of ['character', 'audio', 'scene']) {
       const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, category)
       assert.equal(hasSecondLevel, true, `${category} should open a second level`)
       assert.equal(items[0].id, '')
@@ -193,7 +226,7 @@ describe('normalizeCloudAsset', () => {
   })
 
   it('reports whether the row has a cover and a playable original', () => {
-    const text = normalizeCloudAsset({ id: 'knowledge-prompt-1', media_type: 'other' })
+    const text = normalizeCloudAsset({ id: 'doc-note-1', media_type: 'other' })
     assert.equal(text.hasCover, false)
     assert.equal(text.hasMedia, false)
 
@@ -238,13 +271,13 @@ describe('normalizeCloudAsset', () => {
 describe('cloudCardKind', () => {
   const kindOf = (row) => cloudCardKind(normalizeCloudAsset(row))
 
-  it('gives a 知识包 row the text card: no cover and no media', () => {
-    assert.equal(kindOf({ id: 'knowledge-prompt-1', media_type: 'other' }), 'text')
+  it('gives a coverless document row the text card: no cover and no media', () => {
+    assert.equal(kindOf({ id: 'doc-note-1', media_type: 'other' }), 'text')
   })
 
   it('gives a text row with a description the text card too', () => {
     assert.equal(
-      kindOf({ id: 'knowledge-prompt-2', media_type: 'other', description: '分镜提示词' }),
+      kindOf({ id: 'doc-note-2', media_type: 'other', description: '分镜提示词' }),
       'text',
     )
   })

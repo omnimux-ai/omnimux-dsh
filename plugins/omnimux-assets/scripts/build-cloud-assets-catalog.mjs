@@ -3,7 +3,8 @@
  * Build the static paginated JSON catalog for the Asset Center "Cloud" tab.
  *
  * The catalog is the lightweight data plane behind the cloud source tab: a
- * `manifest.json` plus `{category}[/{sub_category}]/page-NNNN.json`, so the
+ * `manifest.json` plus `{category}[/{sub_category}]/page-NNNN.json` shards —
+ * including the cross-category `all/` shards the default 全部 view pages — so the
  * client fetches 24 rows at a time instead of loading the whole library. The
  * shape follows the Inspiration Community catalog builder
  * (`OmniMux/web/scripts/build-inspiration-catalog.mjs`).
@@ -16,10 +17,7 @@
  * fails the build, so the catalog can be regenerated on a machine that holds
  * only part of the library.
  *
- *   knowledge  `prompts/`                prompt packs (recursive)
- *              `skills/&lt;drama pack&gt;/references/`  short-drama shot rules
  *   character  `gxgen-data/character-library/pippit-local-avatars-source/`
- *              `素材库/AI 网红/`
  *   scene      `gxgen-data/element-library/场景氛围/`
  *   prop       (no source — the category is deliberately empty, see below)
  *   material   `gxgen-data/element-library/video/green-screen-meme/`   绿幕
@@ -34,19 +32,14 @@
  *              `gxgen-data/music-library/` Fastlane manifest  背景音 (103 tracks)
  *
  * where `<gxgen>` = `<root>/素材库/gxgen-data`. `灵感社区` is a separate system
- * and is deliberately excluded: its directory symlinks under `<root>/prompts/`
- * are skipped by name. The one exception is the image gallery the 表情包 shelf
- * names, which is read by its exact path.
+ * and is deliberately excluded; the one part of it this catalog reads is the
+ * image gallery the 表情包 shelf names, addressed by its exact path.
  *
  * ## What is deliberately absent
  *
  * 道具 ships empty. Green screens and opening hooks are overlays and beats, not
  * physical props, and no real prop library exists yet. The category still emits
  * its page file so the tab renders an empty state instead of a 404.
- *
- * 知识库 is not catalogued at all: it is a working vault of reports, dumps, and
- * service configs whose long-form notes carry no short-video value. 知识包 keeps
- * only the two shelves that do — 脚本提示词 and 短剧拆镜.
  *
  * ## Sub-category membership
  *
@@ -58,10 +51,11 @@
  *
  * ## Output contract
  *
- *   <out>/manifest.json                              categories + per-scope counts
- *   <out>/index.json                                 flat id -> row lookup (server)
- *   <out>/<category>/page-NNNN.json                  24 rows, 4-digit padding
+ *   <out>/manifest.json                            categories + per-scope counts
+ *   <out>/index.json                               flat id -> row lookup (server)
+ *   <out>/<category>/page-NNNN.json                24 rows, 4-digit padding
  *   <out>/<category>/<sub_category>/page-NNNN.json
+ *   <out>/all/page-NNNN.json                       every category, in nav order
  *
  * A page file is `{ scope, page, pageSize, total, totalPages, items }`, so a
  * page is self-describing and fetchable by URL alone. `manifest.json` carries
@@ -79,15 +73,16 @@
  * ## Determinism
  *
  * Identical inputs produce byte-identical output apart from `generatedAt`,
- * overridable via `--generated-at=<iso>`. Rows are sorted by id, and ids are
- * content hashes of the source identity rather than counters.
+ * overridable via `--generated-at=<iso>`. Rows are sorted by id inside a
+ * category, the `all` scope concatenates the categories in nav order, and ids
+ * are content hashes of the source identity rather than counters.
  *
  * Usage (from the plugin directory):
  *   node scripts/build-cloud-assets-catalog.mjs
  *   node scripts/build-cloud-assets-catalog.mjs --out=/tmp/catalog --dry-run
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -95,36 +90,14 @@ const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_ASSETS_ROOT = '/Users/x/Desktop/Project/OPC/资产库'
 const DEFAULT_OUT = join(PLUGIN_ROOT, 'cloud-catalog')
 const PAGE_SIZE = 24
+/** Scope id of the cross-category shards the client's 全部 tab pages through. */
+const ALL_SCOPE = 'all'
 const CATALOG_VERSION = 1
-
-/** Belongs to the separate Inspiration Community system — never catalogued here. */
-const EXCLUDED_DIR_NAMES = new Set(['inspiration-library', 'inspiration-community', '灵感社区'])
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv'])
 const AUDIO_EXTS = new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.opus', '.flac'])
 const DOC_EXTS = new Set(['.md', '.txt'])
-
-/**
- * Prompt packs are a working vault, not a curated library: they also hold
- * service configs and captured exports that describe no creative asset. Those
- * are skipped by directory name so the catalog stays about prompts and
- * production know-how.
- */
-const KNOWLEDGE_SKIP_DIRS = new Set([
-  'node_modules', 'infra', 'dist', 'build', 'vendor', 'coverage', '.git',
-  '个人资料', '安全备份', '身份资料', '公司资料',
-])
-/** Reference material that is genuinely a creative asset in this vault. */
-const KNOWLEDGE_ALSO_EXTS = new Set(['.json'])
-
-/** Folders that are 素材库/AI 网红 shelves, mapped to their display label. */
-const INFLUENCER_GROUPS = [
-  ['御用模特', '御用模特'],
-  ['高清', '高清'],
-  ['图生图', '图生图'],
-  ['未命名文件夹', '未分类'],
-]
 
 /**
  * Given names in the Pippit avatar catalogue, split by how the avatar is
@@ -209,14 +182,6 @@ const MEME_MEDIA_DIR = 'inspiration-library/image/media'
 
 const MAX_TAGS = 12
 const MAX_DESCRIPTION = 240
-
-/** Guard rails. The asset root is a working directory: it contains generated
- *  dumps, archives, and self-referential symlinks (`知识库/资产库 -> ..`), so a
- *  naive recursive read can recurse forever or buffer gigabytes. So the walk is
- *  depth-, cycle-, and row-bounded. */
-const MAX_KNOWLEDGE_ROWS = 4000
-const MAX_KNOWLEDGE_FILE_BYTES = 512 * 1024
-const MAX_KNOWLEDGE_WALK_DEPTH = 6
 
 /** @param {string} message */
 function log(message) {
@@ -334,28 +299,6 @@ function uniqTags(values) {
   return out
 }
 
-/** @param {string} md */
-function titleFromMarkdown(md) {
-  const match = /^#\s+(.+)$/m.exec(md)
-  return match ? clamp(match[1], 80) : ''
-}
-
-/** First prose paragraph of a markdown body, used as the row description. @param {string} md */
-function descriptionFromMarkdown(md) {
-  const paragraph = []
-  for (const line of md.split('\n')) {
-    const trimmed = line.trim()
-    if (trimmed === '' || trimmed.startsWith('#')) {
-      if (paragraph.length > 0) break
-      continue
-    }
-    if (trimmed.startsWith('|') || trimmed.startsWith('-') || trimmed.startsWith('---')) continue
-    paragraph.push(trimmed)
-    if (paragraph.join(' ').length > MAX_DESCRIPTION) break
-  }
-  return clamp(paragraph.join(' '), MAX_DESCRIPTION)
-}
-
 /** @param {string} root @param {string} abs */
 function relTo(root, abs) {
   const rel = abs.startsWith(root) ? abs.slice(root.length).replace(/^[/\\]/, '') : abs
@@ -455,189 +398,7 @@ function makeAsset(ctx, spec) {
 }
 
 // ---------------------------------------------------------------------------
-// knowledge — prompt packs, knowledge notes, short-drama shot rules
-// ---------------------------------------------------------------------------
-
-/**
- * Recursive directory walk with hard bounds.
- *
- * A directory whose real path is an ancestor of the walk root is skipped: the
- * asset root contains self-referential links (`知识库/资产库 -> ..`) which would
- * otherwise re-enter the tree — and re-read every file — once per level. Depth,
- * visited directories, and a row budget are capped so a pathological tree
- * degrades into a reported truncation instead of an OOM.
- *
- * @param {string} dir
- * @param {{ visit: (file: string, name: string, depth: number) => void, maxDepth?: number, maxRows?: number }} opts
- * @returns {{ rows: number, truncated: boolean }}
- */
-function walkFiles(dir, opts) {
-  const maxDepth = opts.maxDepth ?? MAX_KNOWLEDGE_WALK_DEPTH
-  const maxRows = opts.maxRows ?? MAX_KNOWLEDGE_ROWS
-  const visited = new Set()
-  let rows = 0
-
-  let rootReal = dir
-  try {
-    rootReal = realpathSync(dir)
-  } catch {
-    return { rows: 0, truncated: false }
-  }
-  const rootAncestors = ancestorsAbove(rootReal)
-
-  /** @returns {boolean} whether walking may continue */
-  const step = (current, depth) => {
-    if (depth > maxDepth) return true
-    let real
-    try {
-      real = realpathSync(current)
-    } catch {
-      return true
-    }
-    // Re-entering an ancestor of the root (or the root itself) is a cycle.
-    if (rootAncestors.has(real) || visited.has(real)) return true
-    visited.add(real)
-
-    for (const entry of listDirSafe(current)) {
-      const name = entry.name
-      if (name.startsWith('.') || EXCLUDED_DIR_NAMES.has(name) || KNOWLEDGE_SKIP_DIRS.has(name)) continue
-      const abs = join(current, name)
-      const directory = entry.isSymbolicLink() ? isDir(abs) : entry.isDirectory()
-      if (directory) {
-        if (!step(abs, depth + 1)) return false
-        continue
-      }
-      if (!entry.isFile() && !entry.isSymbolicLink()) continue
-      opts.visit(abs, name, depth)
-      rows += 1
-      if (rows >= maxRows) return false
-    }
-    return true
-  }
-
-  const completed = step(dir, 0)
-  return { rows, truncated: !completed }
-}
-
-/**
- * Every ancestor directory strictly above `abs`.
- *
- * Walking into one of these means the walk has climbed back above its own root,
- * which is exactly what the self-referential `知识库/资产库 -> ..` link does.
- * `abs` itself is deliberately excluded: it is the walk root, not a cycle.
- * @param {string} abs
- */
-function ancestorsAbove(abs) {
-  const out = new Set()
-  let current = dirname(abs)
-  for (;;) {
-    out.add(current)
-    const parent = dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-  return out
-}
-
-function collectKnowledge(ctx, add) {
-  const { assetsRoot } = ctx
-  const seen = new Set()
-  let skippedForSize = 0
-  let emitting = true
-
-  /** @param {string} abs @param {string} fileName @param {string} pack @param {string} group */
-  const emit = (abs, fileName, pack, group) => {
-    if (!emitting) return
-    if (seen.size >= MAX_KNOWLEDGE_ROWS) {
-      emitting = false
-      return
-    }
-    if (!isFile(abs)) return
-    const ext = extname(fileName).toLowerCase()
-    // Markdown and plain text are the creative assets here; JSON only counts
-    // when it is a prompt/agent definition rather than a config or a dump.
-    if (!DOC_EXTS.has(ext) && !(KNOWLEDGE_ALSO_EXTS.has(ext) && /prompt|agent|skill/i.test(fileName))) return
-
-    const size = fileBytes(abs)
-    if (size > MAX_KNOWLEDGE_FILE_BYTES) {
-      skippedForSize += 1
-      return
-    }
-
-    let body = ''
-    try {
-      body = readFileSync(abs, 'utf8')
-    } catch {
-      return
-    }
-    if (text(body).length < 40) return
-
-    const stem = fileName.slice(0, fileName.length - extname(fileName).length)
-    const title = ext === '.md' ? titleFromMarkdown(body) : ''
-    const key = `${group}/${relTo(assetsRoot, abs)}`
-    const id = `knowledge-${group}-${shortId(key)}`
-    if (seen.has(id)) return
-    seen.add(id)
-
-    const displayName = clamp(title || stem, 80)
-    add(makeAsset(ctx, {
-      key,
-      category: 'knowledge',
-      subCategory: group,
-      name: displayName,
-      description: descriptionFromMarkdown(body) || `${pack} · ${displayName}`,
-      tags: [pack, group === 'storyboard' ? '短剧拆镜' : '脚本提示词'],
-      meta: {
-        source: 'local-file',
-        source_path: relTo(assetsRoot, abs),
-        ext,
-        pack,
-      },
-    }))
-    // The full body is released as soon as the row is built: the catalog keeps
-    // only the derived description, so the reference documents stay a few
-    // hundred kilobytes instead of repeating their own text into every page.
-    body = ''
-  }
-
-  const promptsRoot = join(assetsRoot, 'prompts')
-  for (const entry of listDirSafe(promptsRoot)) {
-    if (!emitting) break
-    const name = entry.name
-    if (name.startsWith('.') || EXCLUDED_DIR_NAMES.has(name)) continue
-    const abs = join(promptsRoot, name)
-    if (entry.isDirectory() || (entry.isSymbolicLink() && isDir(abs))) {
-      walkFiles(abs, { visit: (file, fileName) => emit(file, fileName, name, 'prompt') })
-    } else if (isFile(abs)) {
-      emit(abs, name, 'prompts', 'prompt')
-    }
-  }
-
-  // 知识库 is deliberately not walked: see "What is deliberately absent" in the
-  // module docstring — its long-form notes are reference reading, not short-video
-  // material, and they used to be 1302 of the catalog's 1502 知识包 rows.
-
-  // Short-drama deconstruction rules ship as skill references rather than as a
-  // standalone prompt folder, so they are read from the skills shelf.
-  const skillsRoot = join(assetsRoot, 'skills')
-  for (const entry of listDirSafe(skillsRoot)) {
-    if (!emitting) break
-    const name = entry.name
-    if (!/drama/i.test(name) || EXCLUDED_DIR_NAMES.has(name)) continue
-    const references = join(skillsRoot, name, 'references')
-    if (!isDir(references)) continue
-    for (const ref of listDirSafe(references)) {
-      if (!ref.isFile() || extname(ref.name).toLowerCase() !== '.md') continue
-      emit(join(references, ref.name), ref.name, name, 'storyboard')
-    }
-  }
-
-  if (skippedForSize > 0) log(`  · knowledge: skipped ${skippedForSize} file(s) over ${MAX_KNOWLEDGE_FILE_BYTES} bytes`)
-  if (seen.size >= MAX_KNOWLEDGE_ROWS) log(`  · knowledge: truncated at ${MAX_KNOWLEDGE_ROWS} rows (raise MAX_KNOWLEDGE_ROWS to include more)`)
-}
-
-// ---------------------------------------------------------------------------
-// character — 329 real digital humans + virtual influencer archive
+// character — the 329 real digital humans
 // ---------------------------------------------------------------------------
 
 /**
@@ -701,35 +462,6 @@ export function collectCharacter(ctx, add) {
         scene: scene || null,
       },
     }))
-  }
-
-  const influencer = join(assetsRoot, '素材库', 'AI 网红')
-  for (const [dirName, label] of INFLUENCER_GROUPS) {
-    const dir = join(influencer, dirName)
-    if (!isDir(dir)) continue
-    for (const file of listDirSafe(dir)) {
-      if (!file.isFile() || file.name.startsWith('.')) continue
-      const abs = join(dir, file.name)
-      const ext = extname(file.name).toLowerCase()
-      if (!IMAGE_EXTS.has(ext) && !VIDEO_EXTS.has(ext)) continue
-      const isImage = IMAGE_EXTS.has(ext)
-      const stem = file.name.slice(0, file.name.length - extname(file.name).length)
-      // This archive is a shelf of unnamed portraits (`1.jpg`, `lao_<hash>.png`)
-      // with no name, gender, or scene recorded anywhere, so the rows carry no
-      // gender or scene shelf: guessing one would put faces behind a filter the
-      // source cannot support. They stay reachable under 全部.
-      add(makeAsset(ctx, {
-        key: `influencer/${dirName}/${file.name}`,
-        category: 'character',
-        subCategory: '',
-        name: stem,
-        description: `AI 网红档案 · ${label}`,
-        tags: ['虚拟红人', label],
-        localMedia: abs,
-        localCover: isImage ? abs : '',
-        meta: { source: 'AI 网红', source_path: relTo(assetsRoot, abs), shelf: label },
-      }))
-    }
   }
 }
 
@@ -1196,16 +928,6 @@ function collectBgm(ctx, add) {
 
 const CATEGORIES = [
   {
-    id: 'knowledge',
-    zh: '知识包',
-    en: 'Knowledge',
-    subCategories: [
-      { id: 'prompt', zh: '脚本提示词', en: 'Prompt Packs' },
-      { id: 'storyboard', zh: '短剧拆镜', en: 'Storyboard' },
-    ],
-    collect: collectKnowledge,
-  },
-  {
     id: 'character',
     zh: '角色',
     en: 'Characters',
@@ -1431,6 +1153,12 @@ async function main() {
   writeJson(outDir, 'index.json', index)
 
   let pageFiles = 0
+  // 全部 is a real scope with its own shards: the client's default view pages the
+  // whole catalog by URL instead of loading a category at a time and merging.
+  for (const page of pageSpecs(all, ALL_SCOPE)) {
+    writeJson(outDir, page.relPath, page.body)
+    pageFiles += 1
+  }
   for (const spec of CATEGORIES) {
     const items = byCategory.get(spec.id) ?? []
     for (const page of pageSpecs(items, spec.id)) {

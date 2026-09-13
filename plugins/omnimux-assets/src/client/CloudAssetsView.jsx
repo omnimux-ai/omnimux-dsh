@@ -29,51 +29,6 @@ const TYPE_ICON = {
 const THUMB_CLASS = 'omnimux-assets-card-thumb omnimux-assets-cloud-thumb'
 const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action omnimux-assets-focusable`
 
-/** Bars drawn into a voice card's waveform plate. */
-const WAVE_BAR_COUNT = 26
-
-/**
- * Decorative waveform silhouette.
- *
- * A catalog row carries no peak data, so the bars are derived from the row id:
- * every render — and every return to the page — paints the same shape, and the
- * plate never claims to be a measurement of the audio behind it.
- * @param {string} seed
- */
-function waveBars(seed) {
-  let hash = 2166136261
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619) >>> 0
-  }
-  const bars = []
-  for (let index = 0; index < WAVE_BAR_COUNT; index += 1) {
-    hash = (Math.imul(hash, 1664525) + 1013904223) >>> 0
-    bars.push(30 + ((hash >>> 9) % 70))
-  }
-  return bars
-}
-
-/**
- * The voice card's face: a waveform strip that is also the play control, since
- * its parent thumbnail carries the click, the tab stop and the pressed state.
- * @param {{ seed: string }} props
- */
-function CloudWaveform(props) {
-  const { seed } = props
-  const bars = useMemo(() => waveBars(seed), [seed])
-  return (
-    <span className="omnimux-assets-cloud-wave" aria-hidden="true">
-      {bars.map((height, index) => (
-        <span
-          key={`wave-${String(index)}`}
-          className="omnimux-assets-cloud-wave-bar"
-          style={{ height: `${String(height)}%` }}
-        />
-      ))}
-    </span>
-  )
-}
-
 /**
  * Tile media.
  *
@@ -152,10 +107,10 @@ function CloudTileMedia(props) {
  *
  * The body follows the row (`cloudCardKind`):
  * - a picture or video gets a fixed 164px thumbnail with one line of title;
- * - a voice gets a waveform plate that plays and stops it, with the title and one
- *   line of voice description underneath;
- * - a text row (脚本提示词 / 短剧拆镜) gets no plate at all — a title over its
- *   description, which is the only thing that distinguishes those rows.
+ * - a voice gets a tinted colour plate that plays and stops it, with the title and
+ *   one line of voice description underneath;
+ * - a text row (a description-only document) gets no plate at all — a title over
+ *   its description, which is the only thing that distinguishes those rows.
  *
  * Where a click lands decides what happens. On a voice card the plate is the play
  * control, so it claims the click for itself and the rest of the card opens the
@@ -227,7 +182,7 @@ export function CloudAssetCard(props) {
           onClick={canPlay ? handlePlayClick : undefined}
           onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
         >
-          {canPlay ? <CloudWaveform seed={asset.id} /> : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />}
+          {canPlay ? null : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />}
           {canPlay ? (
             <span className="omnimux-assets-cloud-play" aria-hidden="true">
               {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}

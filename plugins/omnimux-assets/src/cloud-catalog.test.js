@@ -283,6 +283,14 @@ describe('createCloudCatalog: search', () => {
     assert.equal(cloud.search({ q: '', category: 'audio', subCategory: 'bgm' }).total, 0)
   })
 
+  it('reads the 全部 scope as the whole catalog rather than an empty category', () => {
+    writeCatalog()
+    const cloud = makeCatalog()
+    assert.equal(cloud.search({ q: '', category: 'all' }).total, 3)
+    assert.equal(cloud.search({ q: '卧室', category: 'all' }).total, 1)
+    assert.equal(cloud.search({ q: '', category: 'all', subCategory: 'ambience' }).total, 2)
+  })
+
   it('pages the result set', () => {
     writeCatalog()
     const cloud = makeCatalog()

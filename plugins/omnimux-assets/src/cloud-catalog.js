@@ -23,6 +23,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_CATALOG_DIR = resolve(HERE, '..', 'cloud-catalog')
 
 const FILE_LOCATOR = 'file:'
+/** Cross-category scope: the client's 全部 tab searches the whole catalog. */
+const ALL_CATEGORY = 'all'
 /** Saving a remote asset to the local library is bounded so one click cannot
  *  pull a multi-gigabyte clip; local copies are trusted and not size-checked. */
 const MAX_REMOTE_SAVE_BYTES = 512 * 1024 * 1024
@@ -260,7 +262,9 @@ export function createCloudCatalog(deps = {}) {
     const offset = Math.max(0, Number(query.offset) || 0)
 
     const rows = [.../** @type {Map<string, CatalogIndexRow>} */ (index).values()].filter((row) => {
-      if (category !== '' && row.category !== category) return false
+      // 全部 is a scope, not a category: it matches every row, so the search box
+      // keeps working while the tab sits on the whole-catalog view.
+      if (category !== '' && category !== ALL_CATEGORY && row.category !== category) return false
       if (subCategory !== '' && !catalogShelves(row).includes(subCategory)) return false
       if (needle === '') return true
       return (

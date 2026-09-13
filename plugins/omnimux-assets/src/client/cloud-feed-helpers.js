@@ -9,6 +9,15 @@
 export const CLOUD_PAGE_SIZE = 24
 
 /**
+ * Scope of the cross-category "全部" view.
+ *
+ * It is not a manifest category — the builder writes its shards from the whole
+ * row set (`all/page-NNNN.json`) — but it is a real fetchable scope, so the id
+ * lives here rather than being spelled out at each call site.
+ */
+export const CLOUD_ALL_CATEGORY = 'all'
+
+/**
  * Scope id for a category (+ optional sub-category).
  * @param {string} category
  * @param {string} [subCategory]
@@ -18,13 +27,28 @@ export function cloudScope(category, subCategory = '') {
 }
 
 /**
+ * Rows the catalog holds in total, across every category.
+ * @param {any} manifest
+ */
+export function wholeCatalogTotal(manifest) {
+  return Math.max(0, Number(manifest?.totalAssets) || 0)
+}
+
+/**
  * How many pages a scope has. A scope with no rows still has page 0, so an empty
  * category renders an empty state instead of a broken pager.
+ *
+ * 全部 has no manifest entry to read, so its size is derived from the catalog
+ * totals the manifest does carry.
  * @param {any} manifest
  * @param {string} category
  * @param {string} [subCategory]
  */
 export function pageCountOf(manifest, category, subCategory = '') {
+  if (category === CLOUD_ALL_CATEGORY && subCategory === '') {
+    const size = Math.max(1, Number(manifest?.pageSize) || CLOUD_PAGE_SIZE)
+    return Math.max(1, Math.ceil(wholeCatalogTotal(manifest) / size))
+  }
   const entry = findCategory(manifest, category)
   if (!entry) return 1
   if (subCategory !== '') {
@@ -41,6 +65,7 @@ export function pageCountOf(manifest, category, subCategory = '') {
  * @param {string} [subCategory]
  */
 export function totalOf(manifest, category, subCategory = '') {
+  if (category === CLOUD_ALL_CATEGORY && subCategory === '') return wholeCatalogTotal(manifest)
   const entry = findCategory(manifest, category)
   if (!entry) return 0
   if (subCategory !== '') {
@@ -63,6 +88,27 @@ export function findCategory(manifest, category) {
 const NO_SECOND_LEVEL = { items: [], hasSecondLevel: false }
 
 /**
+ * The leading 全部 entry of the category nav.
+ *
+ * It spans every category rather than one manifest entry, so the manifest stays
+ * a plain list of what the library actually holds while the nav still opens on a
+ * tab that shows everything. Counts come from the same helpers the pages are
+ * paged with, so the chip and the pager cannot disagree.
+ * @param {any} manifest
+ * @param {(key: string) => string} t
+ */
+export function allCategoryEntry(manifest, t) {
+  return {
+    id: CLOUD_ALL_CATEGORY,
+    zh: t('cloud.category.all'),
+    en: 'All',
+    total: totalOf(manifest, CLOUD_ALL_CATEGORY),
+    pages: pageCountOf(manifest, CLOUD_ALL_CATEGORY),
+    sub_categories: [],
+  }
+}
+
+/**
  * Sub-category tabs for a category, always led by the "all" pseudo-entry.
  *
  * A category owns a second level exactly when the manifest gives it at least one
@@ -79,6 +125,9 @@ const NO_SECOND_LEVEL = { items: [], hasSecondLevel: false }
  * @param {string} category
  */
 export function subCategoryTabs(manifest, category) {
+  // 全部 has no shelves of its own: it spans every category, so a second level
+  // would have to borrow some other category's wording. It stays single-level.
+  if (category === CLOUD_ALL_CATEGORY) return NO_SECOND_LEVEL
   const entry = findCategory(manifest, category)
   const subs = Array.isArray(entry?.sub_categories)
     ? entry.sub_categories.filter((row) => row && Number(row.total) > 0)
@@ -98,9 +147,8 @@ export function subCategoryTabs(manifest, category) {
  *
  * `hasCover` / `hasMedia` are what tell a card whether it has a picture before
  * anything is requested. The builder leaves both locators empty for a text row —
- * the 知识包 case (脚本提示词 / 短剧拆镜) — and a card that has to learn that
- * from a failed image request paints a grey plate with a meaningless icon in the
- * meantime.
+ * a description-only document — and a card that has to learn that from a failed
+ * image request paints a grey plate with a meaningless icon in the meantime.
  * @param {any} row
  */
 export function normalizeCloudAsset(row) {
@@ -126,15 +174,15 @@ export function normalizeCloudAsset(row) {
 /**
  * Which body a cloud card renders.
  *
- * - `audio` — a playable voice, sound or score: the thumbnail is the waveform
+ * - `audio` — a playable voice, sound or score: the thumbnail is the colour
  *   plate that starts and stops the row.
  * - `media` — a picture, or a video whose own first frame stands in for a missing
  *   poster: the thumbnail is the card's face and one line of title sits under it.
- * - `text` — a row with neither. A 知识包 row is a title plus a description and
+ * - `text` — a row with neither. Such a row is a title plus a description and
  *   nothing else, so the card has to be that text rather than a 4:3 placeholder.
  *
  * A voice row with no audio file (the descriptor-only 音色 catalogue) is text as
- * well: there is nothing to play, so a waveform plate would be a dead control.
+ * well: there is nothing to play, so a play control would be a dead one.
  * @param {any} asset normalized cloud row (see `normalizeCloudAsset`)
  * @returns {'audio' | 'media' | 'text'}
  */

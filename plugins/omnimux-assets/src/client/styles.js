@@ -873,7 +873,9 @@ export const ASSETS_CSS = `
   height: 164px;
   aspect-ratio: auto;
 }
-/* 声音：一块暗调微彩色波形预览区，点一下即播即停。
+/* 声音：一块暗调微彩底板，正中间一个居中的播放/暂停键，点一下即播即停。
+   底板不画任何波形、刻度或跳动条——一排音色卡片同时出现细密竖线会变成视觉噪点，
+   行与行的区别只交给颜色本身，整块面板因此保持干净。
    底色仍由官方 Token 打底，上面叠一层极低饱和的深色微彩：深靛青 / 墨绿 / 曜蓝 /
    暗紫夜 / 深炭黑五种，按行 id 确定性轮换。色相压到最低、明度压到最深，浅色和深色
    主题下都保持同一块暗色板，只用来让连续的音效卡片彼此可分辨，不出现任何亮色。
@@ -962,39 +964,10 @@ export const ASSETS_CSS = `
 }
 /* ---- card bodies ---------------------------------------------------------
    Three kinds, one card (see cloudCardKind): 图片/视频 = 缩略图 + 一行标题；
-   声音 = 暗调波形预览区 + 一句音色描述；文本类（知识包：脚本提示词 / 短剧拆镜）
-   = 标题 + 描述。文本类没有封面也没有可播媒体，画一块占位图只会把标题和描述
-   挤成一行省略，所以它直接按阅读版式排版。 */
+   声音 = 暗调微彩底板 + 居中播放键 + 一句音色描述；文本类（没有封面也没有可播
+   媒体的文档行）= 标题 + 描述。文本类画一块占位图只会把标题和描述挤成一行省略，
+   所以它直接按阅读版式排版。 */
 
-/* 声音：波形由卡片自己按行 id 画，整块缩略图就是播放键。
-   波形颜色跟着暗色底板走，直接取一层浅白：底板在两种主题下都是同一块深色（见上），
-   而 label token 会随主题在两极之间反色，浅色主题下正好和底板撞成一片。 */
-.omnimux-assets-cloud-wave {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 100%;
-  height: 100%;
-  padding: 0 18px;
-  box-sizing: border-box;
-  color: rgba(255, 255, 255, 0.5); /* exempt-ui03 暗色底板上的波形色，需跨主题恒定 */
-  /* The plate is decoration: the thumbnail around it owns the click. */
-  pointer-events: none;
-  transition: color 0.15s ease;
-}
-.omnimux-assets-cloud-wave-bar {
-  flex: 1 1 0;
-  min-width: 2px;
-  max-width: 4px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.6;
-}
-.omnimux-assets-cloud-card--audio:hover .omnimux-assets-cloud-wave,
-.omnimux-assets-cloud-card--audio:focus-within .omnimux-assets-cloud-wave {
-  color: rgba(255, 255, 255, 0.92); /* exempt-ui03 暗色底板上的波形悬停色 */
-}
 /* 声音卡片的描述就是那句音色说明，一行。 */
 .omnimux-assets-cloud-desc {
   margin: 0;
