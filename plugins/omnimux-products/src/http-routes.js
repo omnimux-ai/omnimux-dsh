@@ -181,6 +181,18 @@ const HUB_CHAT_MODULE = '../../omnimux/src/text/chat.js'
 const DEFAULT_CHAT_MODEL = 'gemini-3.8-flash'
 const BRIDGE_MAX_TOKENS = 6000
 
+/**
+ * How long a single fallback channel may run before the seam gives up on it. A
+ * seat or tool that waits on a provider this host never configured (no `omnimux`
+ * provider seat, no session connection) answers neither success nor failure, so
+ * the import would otherwise hang for a minute or more before the heuristics get
+ * their turn.
+ */
+const CHANNEL_TIMEOUT_MS = 8000
+
+/** The timeout guard's own rejection, told apart from a channel's failure. */
+const CHANNEL_TIMEOUT = Symbol('omnimux-products.channel-timeout')
+
 /** @type {Function | null} */
 let hubChatComplete = null
 
@@ -202,26 +214,54 @@ async function loadHubChatComplete() {
  * Wrap the hub capabilities this vertical consumes, resolved lazily at call time
  * (load order between plugins is not this plugin's contract):
  *
- * - `textComplete` — the hub's one-shot model seam, as the provided service, else
- *   the official `omnimux_text_complete` tool, else the hub chat bridge;
+ * - `textComplete` — the hub chat bridge first, then the hub's one-shot model
+ *   seam (the provided service, else the official `omnimux_text_complete` tool),
+ *   with every channel under a hard time cap;
  * - `pageFetch` — the official `omnimux_page_fetch` tool (OmniMux Jina Reader).
  *
  * @param {unknown} ctx
- * @param {{ chatComplete?: Function }} [deps] test seam for the chat bridge
+ * @param {{ chatComplete?: Function, channelTimeoutMs?: number }} [deps] test seams: the chat bridge, and the per-channel time cap
  * @returns {{ textComplete: Function, pageFetch: Function } | null}
  */
 export function createHubSeams(ctx, deps) {
   if (!ctx || typeof ctx !== 'object') return null
   const overrides = deps && typeof deps === 'object' ? deps : {}
   const injectedChat = typeof overrides.chatComplete === 'function' ? overrides.chatComplete : null
+  const channelTimeoutMs = Number.isFinite(overrides.channelTimeoutMs) && overrides.channelTimeoutMs > 0
+    ? Number(overrides.channelTimeoutMs)
+    : CHANNEL_TIMEOUT_MS
 
   /**
-   * Last-resort channel, used only when neither the provided seat nor the
-   * official tool answered. The hub chat module resolves the provider this host
-   * already configured (`llm-pi-ai` in settings / credentials, e.g. CPA or
-   * `gemini-3.8-flash-high`), so an import still gets a model answer on hosts
-   * where the LLM seat behind `omnimux_text_complete` cannot run. Keys stay in
-   * the host: this plugin reads a credential seat, never a key file.
+   * Cap one channel's wait. The channel's own answer passes through untouched; a
+   * channel that never answers rejects with the sentinel, so a dead seam cannot
+   * hold the import open. An abandoned channel's late rejection is swallowed
+   * here rather than surfacing as an unhandled rejection.
+   *
+   * @template T
+   * @param {Promise<T>} promise
+   * @returns {Promise<T>}
+   */
+  function withChannelTimeout(promise) {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer
+    const capped = /** @type {Promise<T>} */ (promise)
+    capped.catch(() => {})
+    const timeout = new Promise((_resolve, reject) => {
+      timer = setTimeout(() => reject(CHANNEL_TIMEOUT), channelTimeoutMs)
+      if (typeof timer?.unref === 'function') timer.unref()
+    })
+    return Promise.race([capped, timeout]).finally(() => {
+      if (timer) clearTimeout(timer)
+    })
+  }
+
+  /**
+   * Primary channel. The hub chat module resolves the provider this host already
+   * configured (`llm-pi-ai` in settings / credentials, e.g. CPA or
+   * `gemini-3.8-flash-high`), and unlike the seats behind `textComplete` it needs
+   * no `omnimux` provider seat and no session connection — so this is the channel
+   * that answers in a plain Electron App runtime. Keys stay in the host: this
+   * plugin reads a credential seat, never a key file.
    *
    * @param {{ prompt: string, model?: string, system?: string, maxTokens?: number }} request
    * @returns {Promise<unknown>}
@@ -245,18 +285,34 @@ export function createHubSeams(ctx, deps) {
 
   const seams = {
     /**
+     * The chat bridge answers first: on a desktop App runtime it is the one
+     * channel that needs no host session, so it returns in seconds where the
+     * seats can hang. The seats stay as fallbacks, each under a hard time cap.
+     *
      * @param {{ prompt: string, model?: string, system?: string, maxTokens?: number, reason?: string }} request
      * @returns {Promise<unknown>}
      */
     async textComplete(request) {
       const reasons = []
 
+      try {
+        return await textCompleteViaChat(request)
+      } catch (error) {
+        // A bridge that never answers the race rejects with the sentinel, not
+        // with an error: report the wait as what it is.
+        reasons.push(error === CHANNEL_TIMEOUT
+          ? `chat bridge timed out after ${channelTimeoutMs}ms`
+          : `chat bridge failed: ${messageOf(error)}`)
+      }
+
       const service = /** @type {{ execute?: Function } | undefined} */ (readSeat(ctx, 'textComplete'))
       if (service && typeof service.execute === 'function') {
         try {
-          return await service.execute(request)
+          return await withChannelTimeout(/** @type {Promise<unknown>} */ (service.execute(request)))
         } catch (error) {
-          reasons.push(`textComplete seat failed: ${messageOf(error)}`)
+          reasons.push(error === CHANNEL_TIMEOUT
+            ? `textComplete seat timed out after ${channelTimeoutMs}ms`
+            : `textComplete seat failed: ${messageOf(error)}`)
         }
       } else {
         reasons.push('textComplete seat: not provided')
@@ -268,22 +324,18 @@ export function createHubSeams(ctx, deps) {
         reasons.push('omnimux_text_complete unavailable: hub is not loaded or text completion is disabled')
       } else {
         try {
-          return await tool.execute({
+          return await withChannelTimeout(/** @type {Promise<unknown>} */ (tool.execute({
             prompt: request.prompt,
             model: request.model,
             system: request.system,
             max_tokens: request.maxTokens,
             reason: request.reason || 'omnimux-products import-from-link',
-          })
+          })))
         } catch (error) {
-          reasons.push(`omnimux_text_complete failed: ${messageOf(error)}`)
+          reasons.push(error === CHANNEL_TIMEOUT
+            ? `omnimux_text_complete timed out after ${channelTimeoutMs}ms`
+            : `omnimux_text_complete failed: ${messageOf(error)}`)
         }
-      }
-
-      try {
-        return await textCompleteViaChat(request)
-      } catch (error) {
-        reasons.push(`chat bridge failed: ${messageOf(error)}`)
       }
 
       throw new Error(`no text channel answered the request (${reasons.join(' | ')})`)
@@ -329,6 +381,7 @@ function parseProductPath(pathname) {
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
  *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', hub?: object | null }) => Promise<object>,
  *   chatComplete?: Function,
+ *   channelTimeoutMs?: number,
  * }} deps
  */
 export function createProductsDispatcher(deps) {
@@ -337,7 +390,10 @@ export function createProductsDispatcher(deps) {
   const importFromUrl = deps.importFromUrl ?? importProductFromUrl
   // Hub seams are optional: without a hub the importer still answers from its own
   // page read and the heuristics, and reports the degradation in-band.
-  const hub = deps.hub ?? createHubSeams(deps.ctx, { chatComplete: deps.chatComplete })
+  const hub = deps.hub ?? createHubSeams(deps.ctx, {
+    chatComplete: deps.chatComplete,
+    channelTimeoutMs: deps.channelTimeoutMs,
+  })
 
   /**
    * @param {{ body?: unknown }} req
