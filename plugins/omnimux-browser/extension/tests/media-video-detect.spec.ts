@@ -47,7 +47,13 @@ function appendOverlaidVideo(options: {
   const overlay = document.createElement('div')
   overlay.className = 'overlay'
   wrapper.append(video, overlay)
-  document.body.appendChild(wrapper)
+  // The capsule is offered for posts and works only, so the fixture is mounted
+  // in a post container: a bare player under <body> is rejected by the
+  // creative-asset classifier however large it renders.
+  document.body.insertAdjacentHTML('beforeend', '<article></article>')
+  const article = document.querySelector('article')
+  if (article === null) throw new Error('article fixture missing')
+  article.appendChild(wrapper)
 
   const width = options.width ?? 600
   const height = options.height ?? 340
@@ -204,6 +210,7 @@ describe('detector wiring', () => {
         elementFromPoint: () => overlay,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_700_000_000_000,
+        host: () => 'page.example.com',
       },
     )
     detector.start()
@@ -221,6 +228,7 @@ describe('detector wiring', () => {
         elementFromPoint: () => overlay,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_700_000_000_000,
+        host: () => 'page.example.com',
       },
     )
     detector.start()
@@ -245,6 +253,7 @@ describe('detector wiring', () => {
         elementFromPoint: () => play,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_700_000_000_000,
+        host: () => 'page.example.com',
       },
     )
     detector.start()

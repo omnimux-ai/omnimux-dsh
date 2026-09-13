@@ -2,15 +2,18 @@
  * Media Sniffer: detects visible images and video posters in the current viewport
  * so users can toggle them into attachments with one click.
  *
- * The `>= 40px` eligibility rule and the URL normalisation both come from the
- * hover detector's payload module: the viewport scan and the pointer detector
- * must never disagree about what counts as a usable media element.
+ * The `>= 40px` eligibility rule, the post/work classifier and the URL
+ * normalisation all come from the hover detector's payload module: the viewport
+ * scan and the pointer detector must never disagree about what counts as a
+ * usable media element — an avatar the capsule refuses must not turn up in the
+ * picker either.
  */
 
 import {
   isAttachablePayload,
   isElementInViewport,
   isEligibleMediaSize,
+  isPostOrWorkMedia,
   mediaSourceOf,
   normalizeMedia,
 } from './media-hover/payload.ts'
@@ -29,12 +32,13 @@ export interface DetectedMediaItem {
 /** Maximum number of items one page scan reports. */
 export const SNIFF_MEDIA_LIMIT = 8
 
-/** True when an element is large enough and inside the viewport. */
+/** True when an element is large enough, inside the viewport and a post or work. */
 function isSniffable(el: Element): boolean {
   const rect = el.getBoundingClientRect()
   const vw = window.innerWidth || document.documentElement.clientWidth
   const vh = window.innerHeight || document.documentElement.clientHeight
   if (!isEligibleMediaSize(rect.width, rect.height)) return false
+  if (!isPostOrWorkMedia(el)) return false
   return isElementInViewport(rect, vw, vh)
 }
 

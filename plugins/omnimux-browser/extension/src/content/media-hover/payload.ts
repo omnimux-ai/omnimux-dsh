@@ -25,6 +25,14 @@ import type {
   MediaSourceResolution,
 } from './types.ts'
 
+/**
+ * The creative-asset rule lives in its own module and is re-exported here so a
+ * caller imports every media predicate from one place: the pointer detector, the
+ * viewport sniffer and the classifier must never disagree about which elements
+ * are offered a hover capsule.
+ */
+export { MIN_POST_MEDIA_SIZE_PX, isPostOrWorkMedia } from './classifier.ts'
+
 /** Minimum rendered edge length, in CSS pixels, for a media element to count. */
 export const MIN_MEDIA_SIZE_PX = 40
 

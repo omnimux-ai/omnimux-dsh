@@ -148,8 +148,15 @@ function media(src: string, id = src): HoveredMedia {
   }
 }
 
-/** Drives the detector once over `element` and returns what it reported. */
-function detectOnce(element: Element): HoverCandidate[] {
+/**
+ * Drives the detector once over `element` and returns what it reported.
+ *
+ * `host` defaults to an ordinary page, so the classifier's platform rules stay
+ * out of the way and the container rule decides. The media still has to sit in a
+ * post or work container: that is the product contract as of the creative-asset
+ * classifier, and the fixtures below mount accordingly.
+ */
+function detectOnce(element: Element, host = 'page.example.com'): HoverCandidate[] {
   const hits: HoverCandidate[] = []
   const detector = new MediaDetector(
     { onCandidate: (candidate) => { hits.push(candidate) } },
@@ -157,6 +164,7 @@ function detectOnce(element: Element): HoverCandidate[] {
       elementFromPoint: () => element,
       viewport: () => ({ width: 1280, height: 800 }),
       now: () => 1_000,
+      host: () => host,
     },
   )
   detector.start()
@@ -359,7 +367,8 @@ describe('C. the >= 40px media threshold', () => {
   it('triggers the hover bar for an eligible image', () => {
     const image = document.createElement('img')
     image.src = 'https://cdn.example.com/hero.png'
-    document.body.appendChild(image)
+    document.body.insertAdjacentHTML('beforeend', '<article></article>')
+    document.querySelector('article')!.appendChild(image)
     stubBox(image, 640, 420)
 
     const hits = detectOnce(image)
@@ -369,11 +378,35 @@ describe('C. the >= 40px media threshold', () => {
     expect(hits[0]?.payload.type).toBe('image')
   })
 
+  it('does not trigger the hover bar for the same image outside a post', () => {
+    // Identical pixels, no post or work container: the capsule stays away.
+    const image = document.createElement('img')
+    image.src = 'https://cdn.example.com/hero.png'
+    document.body.appendChild(image)
+    stubBox(image, 640, 420)
+
+    expect(detectOnce(image)).toHaveLength(0)
+  })
+
   it('ignores an avatar rendered below the threshold', () => {
     const avatar = document.createElement('img')
     avatar.src = 'https://cdn.example.com/avatar.png'
-    document.body.appendChild(avatar)
+    document.body.insertAdjacentHTML('beforeend', '<article></article>')
+    document.querySelector('article')!.appendChild(avatar)
     stubBox(avatar, 32, 32)
+
+    expect(detectOnce(avatar)).toHaveLength(0)
+  })
+
+  it('ignores an avatar that renders above every size threshold', () => {
+    // Size alone never separated a large avatar from a post image; the naming
+    // rule is what does.
+    const avatar = document.createElement('img')
+    avatar.src = 'https://cdn.example.com/avatar.png'
+    avatar.className = 'user-avatar'
+    document.body.insertAdjacentHTML('beforeend', '<article class="post"></article>')
+    document.querySelector('article')!.appendChild(avatar)
+    stubBox(avatar, 400, 400)
 
     expect(detectOnce(avatar)).toHaveLength(0)
   })
@@ -394,11 +427,21 @@ describe('C. the >= 40px media threshold', () => {
   it('applies the same threshold to video elements', () => {
     const video = document.createElement('video')
     video.setAttribute('poster', 'https://cdn.example.com/poster.png')
-    document.body.appendChild(video)
-    stubBox(video, 40, 40)
+    document.body.insertAdjacentHTML('beforeend', '<article class="post"></article>')
+    document.querySelector('article')!.appendChild(video)
+
+    // A player laid out like a post is admitted…
+    stubBox(video, 640, 360)
     expect(detectOnce(video)[0]?.payload.type).toBe('video')
 
-    stubBox(video, 40, 39)
+    // …while a 40px one is still below the post floor the classifier enforces,
+    // so the two thresholds stay distinct: 40px is what the detector can see,
+    // 120px is what the capsule will offer.
+    stubBox(video, 40, 40)
+    expect(isEligibleMediaSize(40, 40)).toBe(true)
+    expect(detectOnce(video)).toHaveLength(0)
+
+    stubBox(video, 119, 119)
     expect(detectOnce(video)).toHaveLength(0)
   })
 

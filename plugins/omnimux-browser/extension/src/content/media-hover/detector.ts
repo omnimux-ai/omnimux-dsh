@@ -9,9 +9,12 @@
  * - Candidates are cached in a `WeakMap` and re-described only when their media
  *   address changes, so a memoised payload is reused across pointer moves.
  *
- * Rejections are silent: nothing is created, nothing is reported, no DOM is
- * touched. In particular this layer never starts a runtime message, so hovering
- * cannot cold-start the MV3 service worker.
+ * A resolved media element is still not automatically offered the capsule: the
+ * final gate is {@link isPostOrWorkMedia}, which admits posts and works while
+ * rejecting avatars, icons, badges and page chrome. Rejections are silent:
+ * nothing is created, nothing is reported, no DOM is touched. In particular this
+ * layer never starts a runtime message, so hovering cannot cold-start the MV3
+ * service worker.
  *
  * @module
  */
@@ -20,6 +23,7 @@ import {
   findMediaElement,
   isElementInViewport,
   isEligibleMediaSize,
+  isPostOrWorkMedia,
   measureElement,
   mediaIdOf,
   mediaKindOf,
@@ -27,6 +31,7 @@ import {
   resolveMediaSource,
 } from './payload.ts'
 import { isControlSizedElement } from './video-anchor.ts'
+import { normalizeHost } from './classifier.ts'
 import type { AnchorRect, HoverCandidate, HoveredMedia } from './types.ts'
 
 /** Listener invoked when a pointer settles on an eligible media element. */
@@ -80,6 +85,13 @@ export interface DetectorEnvironment {
   elementFromPoint(x: number, y: number): Element | null
   viewport(): { width: number; height: number }
   now(): number
+  /**
+   * Page host, used by the post/work classifier's platform rules.
+   *
+   * Optional so an existing environment stub keeps working; the detector falls
+   * back to reading the live document when it is absent.
+   */
+  host?(): string
 }
 
 function browserEnvironment(): DetectorEnvironment {
@@ -98,6 +110,9 @@ function browserEnvironment(): DetectorEnvironment {
       }
     },
     now: () => Date.now(),
+    host() {
+      return normalizeHost(globalThis.location?.hostname ?? '')
+    },
   }
 }
 
@@ -127,6 +142,11 @@ export class MediaDetector {
   /** The candidate currently under the pointer, if any. */
   get active(): HoverCandidate | null {
     return this.current
+  }
+
+  /** The page host the post/work classifier judges platform rules against. */
+  private pageHost(): string {
+    return this.env.host?.() ?? ''
   }
 
   /** The last media element the pointer resolved to, for quick re-entry. */
@@ -165,8 +185,11 @@ export class MediaDetector {
     const rect = this.rectOf(candidate.element)
     const viewport = this.env.viewport()
     const metric = measureElement(candidate.element)
+    const kind = mediaKindOf(candidate.element)
     if (!isElementInViewport(rect, viewport.width, viewport.height)
-      || !isEligibleMediaSize(metric.width, metric.height)) {
+      || !isEligibleMediaSize(metric.width, metric.height)
+      || kind === null
+      || !isPostOrWorkMedia(candidate.element, this.pageHost())) {
       this.options.onInvalidate?.('scroll')
       return
     }
@@ -247,8 +270,9 @@ export class MediaDetector {
   /**
    * Resolves or refreshes the cached candidate for an element.
    *
-   * @returns `null` when the element is detached, too small, or has no usable
-   *   media address — the caller then reports "no candidate" and stays silent.
+   * @returns `null` when the element is detached, too small, not a post or work
+   *   asset, or has no usable media address — the caller then reports "no
+   *   candidate" and stays silent.
    */
   private describe(element: Element): HoverCandidate | null {
     if (!element.isConnected) {
@@ -260,6 +284,15 @@ export class MediaDetector {
 
     const metric = measureElement(element)
     if (!isEligibleMediaSize(metric.width, metric.height)) return null
+
+    // The creative-asset gate. It runs before the address ladder because it is
+    // the cheapest rejection and the one that decides the product behaviour: a
+    // 600px profile avatar is a perfectly resolvable media address that must
+    // still never raise the capsule.
+    if (!isPostOrWorkMedia(element, this.pageHost())) {
+      this.cache.delete(element)
+      return null
+    }
 
     const viewport = this.env.viewport()
     if (!isElementInViewport(this.rectOf(element), viewport.width, viewport.height)) return null
