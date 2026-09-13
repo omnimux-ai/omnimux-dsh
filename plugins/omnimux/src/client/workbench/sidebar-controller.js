@@ -264,7 +264,7 @@ export async function openWorkbench(opts = {}) {
   const payload = resolveTabPayload(service, tabId, opts.title, opts.path)
   service.openTab(payload, openScope)
 
-  const targetMode = resolveTargetFocusMode(sessionId, tabId)
+  const targetMode = opts.focus || resolveTargetFocusMode(sessionId, tabId)
   setWorkbenchFocus(targetMode, getAttachedStore(), {}, tabId)
   notifyWorkbenchChange()
   return true
@@ -384,7 +384,8 @@ function openSidebarStore(options, tabId, path) {
   const api = getWorkbenchApi()
   if (api && typeof api.open === 'function') {
     const title = resolveStoreTitle(options, tabId)
-    void api.open({ tabId, title, ...(path ? { path } : {}) })
+    // 左侧侧边栏按钮直接点击：契约约束默认进入右侧全屏状态（不显示会话栏）
+    void api.open({ tabId, title, focus: WORKBENCH_FOCUS.gui, ...(path ? { path } : {}) })
   }
 }
 
