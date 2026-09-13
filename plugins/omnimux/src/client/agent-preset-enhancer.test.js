@@ -36,6 +36,7 @@ import {
   seatLabelText,
   uninstallAgentPresetAvatarEnhancer,
 } from './agent-preset-enhancer.js'
+import { generatePixelAvatarDataUrl } from './pixel-avatar.js'
 import { HUB_CSS } from './styles.js'
 
 const previousDocument = globalThis.document
@@ -175,7 +176,8 @@ describe('agent preset avatars', () => {
     assert.equal(byName.id, 'tiktok-agent')
     assert.equal(byName.src, byId.src, 'the localized name and the id must resolve to one face')
     assert.equal(resolveAgentPresetAvatar('tiktok-agent').src, byId.src, 'resolution must be deterministic')
-    assert.match(byId.src, /^data:image\/svg\+xml,/, 'blobatar renders a percent-encoded SVG data URI')
+    assert.match(byId.src, /^data:image\/svg\+xml/, 'pixel avatar renders a percent-encoded SVG data URI')
+    assert.equal(byName.src, generatePixelAvatarDataUrl('tiktok-agent', { size: MENU_AVATAR_SIZE_PX }), 'matches market pixel avatar generator')
     assert.equal(resolveAgentPresetAvatar(''), null)
     assert.equal(resolveAgentPresetAvatar('   '), null)
   })
@@ -195,7 +197,17 @@ describe('agent preset avatars', () => {
 
     globalThis[PRESET_AVATAR_HOST_KEY] = { '软件开发团队': 'data:image/png;base64,HOST' }
     assert.equal(resolveAgentPresetAvatar('software-company').src, 'data:image/png;base64,HOST')
-    assert.equal(resolveAgentPresetAvatar('standard').src.startsWith('data:image/svg+xml,'), true)
+    assert.equal(resolveAgentPresetAvatar('standard').src.startsWith('data:image/svg+xml'), true)
+  })
+
+  it('resolves market expert covers for hired domain experts', () => {
+    const shopee = resolveAgentPresetAvatar('Shopee运营专家')
+    assert.equal(shopee.id, 'shopee-ops-expert')
+    assert.match(shopee.src, /expert-shopee-ops\.png/)
+
+    const youtube = resolveAgentPresetAvatar('YouTube创作者专家')
+    assert.equal(youtube.id, 'youtube-creator-expert')
+    assert.match(youtube.src, /expert-youtube-creator\.png/)
   })
 
   it('finds the preset chip, not the workspace picker beside it', () => {
