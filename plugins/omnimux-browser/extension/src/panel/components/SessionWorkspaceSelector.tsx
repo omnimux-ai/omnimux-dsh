@@ -178,30 +178,32 @@ export const SessionWorkspaceSelector = memo(function SessionWorkspaceSelector({
             </div>
           )}
 
-          <div className="instance-list session-ws-list">
+          <div className="session-ws-list">
             {workspaces.map((ws) => {
               const isChosen = ws.id === currentWsId
               return (
                 <div
                   key={ws.id}
-                  className={`instance-row ${isChosen ? 'selected' : ''}`}
+                  className={`session-ws-item-row ${isChosen ? 'active' : ''}`}
                   onClick={() => handleSelect(ws)}
                   role="button"
                   tabIndex={0}
                 >
-                  <div className="instance-info">
-                    <div className="instance-name-line">
-                      <FolderIcon size={13} className="ws-item-icon" />
-                      <span className="instance-title">{ws.name}</span>
-                      {ws.isDefault && (
-                        <span className="recommended-tag">{isEn ? 'Default' : '默认'}</span>
-                      )}
+                  <div className="session-ws-item-left">
+                    <FolderIcon size={14} className="ws-item-icon" />
+                    <div className="session-ws-name-wrap">
+                      <div className="session-ws-name-title">
+                        <span className="session-ws-title-text">{ws.name}</span>
+                        {ws.isDefault && (
+                          <span className="session-ws-rec-tag">{isEn ? 'Default' : '默认'}</span>
+                        )}
+                      </div>
+                      {ws.path && <div className="session-ws-path-text">{ws.path}</div>}
                     </div>
-                    {ws.path && <div className="instance-desc">{ws.path}</div>}
                   </div>
                   {isChosen && (
-                    <div className="instance-checked">
-                      <CheckIcon size={14} />
+                    <div className="session-ws-item-right">
+                      <span className="session-ws-check-mark"><CheckIcon size={14} /></span>
                     </div>
                   )}
                 </div>
