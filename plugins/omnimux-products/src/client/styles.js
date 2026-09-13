@@ -32,16 +32,37 @@ export const PRODUCTS_CSS = `
   align-items: center;
   color: var(--dsw-alias-label-tertiary);
 }
-.omnimux-products-url-import-input {
+/* 复合容器内部不再叠加原生框线（防「框中框」）。
+   外层 .omnimux-products-url-import 已绘制唯一圆角边框，而 hub 的全局
+   :focus-visible { outline: … !important }（plugins/omnimux/src/client/styles.js）
+   权重 0,1,0 且带 !important，会反超无 !important 的自身 outline: none，在输入框
+   周围画出一个直角矩形。下面的状态位选择器把权重提到 0,2,0 并同用 !important，
+   因此稳定胜出、不依赖样式表顺序——:focus-visible 在点击与 Tab 聚焦下均命中。
+   聚焦可见性由外层 :focus-within 的边框高亮保留，键盘可达性不受影响。 */
+.omnimux-products-url-import-input,
+.omnimux-products-url-import-input:focus,
+.omnimux-products-url-import-input:focus-visible,
+.omnimux-products-url-import-input:active {
   flex: 1;
   min-width: 0;
   height: 26px;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  outline: 0 !important;
+  outline-style: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
   color: inherit;
   font: inherit;
   font-size: 13px;
+  padding: 0 4px;
 }
 .omnimux-products-url-import-input::placeholder {
   color: var(--dsw-alias-label-tertiary);

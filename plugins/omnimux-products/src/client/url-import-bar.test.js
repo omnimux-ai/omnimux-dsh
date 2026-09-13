@@ -198,6 +198,47 @@ describe('products client · link bar wiring', () => {
     assert.match(styles, /@keyframes omnimux-products-fade-in/)
     assert.match(read('icons.jsx'), /export function LinkIcon/)
   })
+
+  // The bar itself draws the only frame. The hub's global
+  // `:focus-visible { outline: … !important }` outranks a plain `outline: none`
+  // on the field (0,1,0 with !important vs 0,1,0 without), so the field must win
+  // on specificity, not on stylesheet order.
+  it('flattens the inner field frame in every state, plus an inline backstop', () => {
+    const styles = read('styles.js')
+    const start = styles.indexOf('.omnimux-products-url-import-input,')
+    const end = styles.indexOf('.omnimux-products-url-import-input::placeholder')
+    assert.ok(start >= 0 && end > start, 'state-combined input rule precedes the placeholder rule')
+    const fieldRule = styles.slice(start, end)
+    const selectors = fieldRule.slice(0, fieldRule.indexOf('{')).split(',').map((s) => s.trim())
+    for (const state of [':focus', ':focus-visible', ':active']) {
+      assert.ok(selectors.includes(`.omnimux-products-url-import-input${state}`), `rule flattens ${state}`)
+    }
+
+    // Compare declarations, not formatting: `outline: 0` and `outline: none` are
+    // equivalent, so a cosmetic rewrite must not redden this contract.
+    const declarations = fieldRule
+      .slice(fieldRule.indexOf('{') + 1, fieldRule.lastIndexOf('}'))
+      .split(';')
+      .map((d) => d.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+    const flattening = [
+      ['border', /^(border|border-width|border-style): (0|none) !important$/],
+      ['border-color', /^border-color: transparent !important$/],
+      ['outline', /^outline(-style)?: (0|none) !important$/],
+      ['box-shadow', /^(box-shadow|-webkit-box-shadow): none !important$/],
+      ['appearance', /^(-webkit-)?appearance: none !important$/],
+      ['background', /^(background|background-color): transparent !important$/],
+    ]
+    for (const [frame, pattern] of flattening) {
+      assert.ok(declarations.some((d) => pattern.test(d)), `field rule neutralises ${frame}`)
+    }
+
+    const view = read('ProductFormFields.jsx')
+    assert.match(
+      view,
+      /style=\{\{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent' \}\}[^\n]*exempt-ui02/,
+    )
+  })
 })
 
 describe('products client · server draft contract', () => {
