@@ -360,3 +360,22 @@ export function ChatBubbleIcon({ size = 13, className }: { size?: number; classN
     </SvgIcon>
   )
 }
+
+export function ServerIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+      <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+      <line x1="6" x2="6.01" y1="6" y2="6" />
+      <line x1="6" x2="6.01" y1="18" y2="18" />
+    </SvgIcon>
+  )
+}
+
+export function CheckIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <polyline points="20 6 9 17 4 12" />
+    </SvgIcon>
+  )
+}
