@@ -73,6 +73,13 @@ market_and_competition:
       website: "https://openai.com"
 \`\`\``
 
+/** `BRAND_YAML` under the namespace a model sometimes wraps the whole report in. */
+const WRAPPED_BRAND_YAML = (() => {
+  const [fence, ...rest] = BRAND_YAML.split('\n')
+  const body = rest.slice(0, -1).map((line) => (line.trim() ? `  ${line}` : line))
+  return [fence, 'brand_strategy:', ...body, '```'].join('\n')
+})()
+
 const PHYSICAL_JSON = JSON.stringify({
   name: 'Aurora Mug 350ml',
   description: '双层陶瓷保温杯，保温 6 小时。',
@@ -839,5 +846,18 @@ describe('ai-analysis · one import through the model', () => {
     })
     assert.equal(result.mode, ANALYSIS_MODES.HEURISTIC)
     assert.match(result.reason, /战略模块/)
+  })
+
+  it('reads a report the model wrapped in a namespace, not an empty one', async () => {
+    const result = await analyzeLandingPage({
+      hub: { textComplete: async () => ({ text: WRAPPED_BRAND_YAML }) },
+      kind: 'digital',
+      page: page({ text: '有正文' }),
+    })
+    assert.equal(result.mode, ANALYSIS_MODES.MODEL)
+    assert.equal(result.reason, null)
+    assert.equal(result.brand_strategy.brand_basic_info.product.name, 'MiniMax 开放平台')
+    assert.equal(result.fields.name, 'MiniMax 开放平台')
+    assert.equal(result.fields.brand, 'MiniMax')
   })
 })

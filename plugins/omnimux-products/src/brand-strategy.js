@@ -205,6 +205,70 @@ function isEmptyStrategy(strategy) {
 }
 
 /**
+ * Namespaces models have been seen to wrap the report in, though the playbook
+ * asks for the bare modules at the top level.
+ */
+const STRATEGY_WRAPPERS = ['brand_strategy', 'brand_report', 'strategy', 'data']
+
+/** Modules that prove a node holds the report itself. */
+const STRATEGY_ROOT_MARKERS = ['brand_basic_info', 'identity_and_product']
+
+/** Unwrap is bounded: a report nested deeper than this is not this report. */
+const UNWRAP_MAX_DEPTH = 3
+
+/**
+ * @param {unknown} node
+ */
+function isStrategyRoot(node) {
+  const record = asPlain(node)
+  if (!record) return false
+  return STRATEGY_ROOT_MARKERS.some((key) => isPlainStrategy(record[key]))
+}
+
+/**
+ * Child keys in the order worth descending: the known namespaces first, then
+ * everything else (a model may key the report by the product name).
+ * @param {Record<string, unknown>} record
+ */
+function unwrapOrder(record) {
+  const keys = Object.keys(record)
+  const known = STRATEGY_WRAPPERS.filter((key) => keys.includes(key))
+  return [...known, ...keys.filter((key) => !STRATEGY_WRAPPERS.includes(key))]
+}
+
+/**
+ * The report inside `node`, however many namespaces it was wrapped in, or null
+ * when none surfaces within `depth`. Only plain maps are searched, so a report
+ * is never read out of a list item.
+ * @param {unknown} node
+ * @param {number} depth
+ * @returns {Record<string, unknown> | null}
+ */
+function findStrategyRoot(node, depth) {
+  if (depth <= 0) return null
+  const record = asPlain(node)
+  if (!record) return null
+  if (isStrategyRoot(record)) return record
+  for (const key of unwrapOrder(record)) {
+    const found = findStrategyRoot(record[key], depth - 1)
+    if (found) return found
+  }
+  return null
+}
+
+/**
+ * Peel the namespaces a report may arrive in. A wrapped report reads as an empty
+ * strategy, which callers then report as a missing one. A payload that holds no
+ * report anywhere within reach is returned as given, so callers keep seeing the
+ * empty result they saw before.
+ * @param {Record<string, unknown>} value
+ * @returns {Record<string, unknown>}
+ */
+function unwrapStrategyNamespaces(value) {
+  return findStrategyRoot(value, UNWRAP_MAX_DEPTH) ?? value
+}
+
+/**
  * Write-path normalizer. Hydrate must catch `brand-strategy-invalid` and fall to null.
  * @param {unknown} value
  * @returns {ReturnType<typeof emptyBrandStrategy> | null}
@@ -215,14 +279,15 @@ export function normalizeBrandStrategy(value) {
     throw new ProductsError('brand-strategy-invalid', 'brand_strategy must be an object or null')
   }
 
-  const basic = asPlain(value.brand_basic_info) ?? {}
+  const root = unwrapStrategyNamespaces(/** @type {Record<string, unknown>} */ (value))
+  const basic = asPlain(root.brand_basic_info) ?? {}
   const companyIn = asPlain(basic.company) ?? {}
   const productIn = asPlain(basic.product) ?? {}
-  const tone = asPlain(value.tone_and_voice) ?? {}
-  const identityIn = asPlain(value.identity_and_product) ?? {}
-  const missionIn = asPlain(value.mission_and_positioning) ?? {}
+  const tone = asPlain(root.tone_and_voice) ?? {}
+  const identityIn = asPlain(root.identity_and_product) ?? {}
+  const missionIn = asPlain(root.mission_and_positioning) ?? {}
   const spaceIn = asPlain(missionIn.ownable_space) ?? {}
-  const marketIn = asPlain(value.market_and_competition) ?? {}
+  const marketIn = asPlain(root.market_and_competition) ?? {}
 
   const localeRaw = clipStr(companyIn.locale).trim()
   const out = {
@@ -237,7 +302,7 @@ export function normalizeBrandStrategy(value) {
         category: clipStr(productIn.category),
       },
     },
-    content_angles: normalizeAngles(value.content_angles),
+    content_angles: normalizeAngles(root.content_angles),
     tone_and_voice: {
       dos: clipStringList(tone.dos, LIST_MAX),
       donts: clipStringList(tone.donts, LIST_MAX),
