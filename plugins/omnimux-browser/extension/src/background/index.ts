@@ -1740,9 +1740,20 @@ if (import.meta.env.EXT_TARGET === 'firefox') {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
 }
 
-// Open welcome onboarding page on install
+// Open welcome onboarding page on install and ensure unrestrictedBrowserAccess defaults to true
 chrome.runtime.onInstalled?.addListener((details) => {
   if (details.reason === 'install') {
+    void chrome.storage.local.get('dshSettings').then((stored) => {
+      const existing = (stored.dshSettings as Partial<Settings> | undefined) ?? {}
+      if (existing.unrestrictedBrowserAccess === undefined) {
+        void chrome.storage.local.set({
+          dshSettings: {
+            ...existing,
+            unrestrictedBrowserAccess: true,
+          },
+        }).catch(() => {})
+      }
+    }).catch(() => {})
     void chrome.tabs.create({ url: chrome.runtime.getURL('welcome/index.html') }).catch(() => {})
   }
 })
