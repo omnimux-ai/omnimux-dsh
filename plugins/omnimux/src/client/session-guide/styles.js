@@ -5,6 +5,19 @@ export const GUIDE_CSS = `
 [data-omnimux-starter-host] {
   --omnimux-surface-dialog:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, var(--dsw-static-neutral-800)));
 }
+/* 分栏弹窗右侧的雾面毛玻璃面板：24px 高斯雾化 + 82% 微透。
+   默认值由宿主浮层底色派生，浅色主题得到浅色玻璃、暗色主题得到深色玻璃，
+   保证 --dsw-alias-label-primary 始终压在对比度足够的底色上；
+   暗色主题（宿主在 body 上打 data-ds-dark-theme）换成用户确认的 82% 微透暗色。
+   两个选择器都必要：分栏弹窗经 portal 挂到 body，宿主子树上的自定义属性覆盖不到它，
+   无回退的 var() 会把背景算成 transparent，右侧会整片透底。 */
+:root {
+  --omnimux-surface-glass:color-mix(in srgb, var(--dsw-alias-bg-layer-2, #2c2c2e) 82%, transparent);
+  --omnimux-surface-glass-filter:blur(24px) saturate(160%);
+}
+body[data-ds-dark-theme] {
+  --omnimux-surface-glass:rgba(20, 22, 30, 0.82);
+}
 [data-omnimux-starter-host] [data-conversation-scroll] { justify-content:flex-start!important; }
 [data-omnimux-starter-host] [data-composer-seat] {
   flex:1 0 auto!important; min-height:100%; display:flex; flex-direction:column;
@@ -281,7 +294,9 @@ export const GUIDE_CSS = `
   max-width: 96vw;
   height: 700px;
   max-height: 92vh;
-  background: var(--omnimux-surface-dialog);
+  /* 容器自身不铺色：左栏实底 + 右栏毛玻璃各自负责可读性底座。
+     容器若继续实色，右栏透出来的只会是容器自己的灰底，看不见底层网页。 */
+  background: transparent;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 16px;
   display: flex;
@@ -356,7 +371,10 @@ export const GUIDE_CSS = `
   min-width: 0;
   height: 100%;
   box-sizing: border-box;
-  background: var(--omnimux-surface-dialog);
+  /* 雾面毛玻璃：82% 微透暗色叠 24px 雾化，既透出底层页面，又不夺走表单文字的对比度。 */
+  background: var(--omnimux-surface-glass, var(--omnimux-surface-dialog));
+  backdrop-filter: var(--omnimux-surface-glass-filter, blur(24px) saturate(160%));
+  -webkit-backdrop-filter: var(--omnimux-surface-glass-filter, blur(24px) saturate(160%));
 }
 .omnimux-split-modal-right-header {
   margin-bottom: 14px;
