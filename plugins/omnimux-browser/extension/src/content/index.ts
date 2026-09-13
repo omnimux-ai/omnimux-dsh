@@ -143,3 +143,10 @@ import('./media-hover/overlay.ts').then(({ initMediaHoverOverlay, MEDIA_OVERLAY_
   const overlay = initMediaHoverOverlay(document)
   contentShell[MEDIA_OVERLAY_HANDLE] = overlay
 }).catch(() => {})
+
+// Mount the TikTok scene trigger: the avatar-anchored shortcut menu for
+// watermark-free download, original audio, and saving into the inspiration
+// library. It self-disposes when the page is not TikTok.
+import('./tiktok-scene/index.ts').then(({ initTiktokScene }) => {
+  initTiktokScene()
+}).catch(() => {})

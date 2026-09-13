@@ -81,6 +81,14 @@ import {
 } from './session-continuity.ts'
 import { appendMediaInspiration } from './media-library.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
+import { TIKTOK_RUNTIME_MESSAGE } from '../content/tiktok-scene/messages.ts'
+import {
+  httpBaseFromBridgeUrl,
+  requestInspirationSave,
+  requestMediaExport,
+  type ExportKind,
+  type ExportOutcome,
+} from './media-export.ts'
 
 /** User settings persisted in chrome.storage.local. */
 export interface Settings {
@@ -154,6 +162,16 @@ async function probeBridge(url: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * The bridge address automatic discovery last found.
+ *
+ * Kept so the TikTok shortcuts can reach the same origin without re-probing:
+ * the bridge and the HTTP surface are one process on one port, and running a
+ * nine-port sweep in front of every menu press would cost the user a second of
+ * waiting for an address that has not moved.
+ */
+let discoveredBridgeUrl = ''
 
 const STORAGE_KEY = 'dshSettings'
 const TAB_AFFINITY_STORAGE_KEY = 'dshTabAffinity'
@@ -1226,6 +1244,7 @@ async function startBridge(): Promise<void> {
   let url = settings.bridgeUrl
   if (url === '') {
     url = await discoverBridge(() => revision === bridgeStartRevision && panelPorts.size > 0) ?? ''
+    if (url !== '') discoveredBridgeUrl = url
   }
   // Discovery is asynchronous. A panel may have closed or a newer settings
   // update may have started while its fetches were in flight.
@@ -1292,6 +1311,59 @@ async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
 
 // ---- Content script messages ----
 
+/**
+ * The post and export kind a TikTok shortcut asked for.
+ *
+ * A malformed payload answers `null` rather than a defaulted request: acting on a
+ * guessed post would download the wrong video, which is worse than refusing.
+ */
+function readTiktokShortcut(message: unknown): { url: string; kind: ExportKind } | null {
+  const payload = (message as { payload?: unknown }).payload
+  if (typeof payload !== 'object' || payload === null) return null
+  const url = (payload as { url?: unknown }).url
+  if (typeof url !== 'string' || url.trim() === '') return null
+  const kind = (payload as { kind?: unknown }).kind
+  if (kind !== undefined && kind !== 'video' && kind !== 'audio') return null
+  return { url, kind: kind === 'audio' ? 'audio' : 'video' }
+}
+
+/**
+ * The OmniMux HTTP base to call, discovering the local host when it is not known.
+ *
+ * `null` means no DSH process answered on any candidate port, which the menu
+ * renders as "OmniMux is not running" instead of a content error.
+ */
+async function hostHttpBase(): Promise<string | null> {
+  const known = settings.bridgeUrl !== '' ? settings.bridgeUrl : discoveredBridgeUrl
+  if (known !== '') return httpBaseFromBridgeUrl(known)
+  const found = await discoverBridge()
+  if (found === undefined) return null
+  discoveredBridgeUrl = found
+  return httpBaseFromBridgeUrl(found)
+}
+
+/**
+ * Run one TikTok shortcut against the host.
+ *
+ * Network failures are folded into the `unreachable` outcome here so the message
+ * handler never rejects: the menu has to render something for every press.
+ */
+async function runTiktokShortcut(
+  type: string,
+  request: { url: string; kind: ExportKind },
+): Promise<ExportOutcome> {
+  const base = await hostHttpBase()
+  if (base === null) return { ok: false, code: 'unreachable' }
+  try {
+    if (type === TIKTOK_RUNTIME_MESSAGE.saveToInspiration) {
+      return await requestInspirationSave({ base, url: request.url })
+    }
+    return await requestMediaExport({ base, url: request.url, kind: request.kind })
+  } catch {
+    return { ok: false, code: 'unreachable' }
+  }
+}
+
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (typeof message !== 'object' || message === null) return
   if (sender.id !== chrome.runtime.id) return
@@ -1307,6 +1379,25 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
       selectionWatchRevision: selectionWatchRevision,
     })
     return
+  }
+
+  // ---- TikTok scene shortcuts ----
+  //
+  // The page cannot reach the DSH process; this worker can, on the loopback
+  // origin the bridge already discovered. These are the only two messages the
+  // TikTok trigger produces, and only after the user pressed a menu row.
+
+  if (type === TIKTOK_RUNTIME_MESSAGE.fetchMedia || type === TIKTOK_RUNTIME_MESSAGE.saveToInspiration) {
+    const request = readTiktokShortcut(message)
+    if (request === null) {
+      sendResponse({ ok: false, error: { code: 'invalid-request', message: 'shortcut payload is malformed' } })
+      return
+    }
+    void runTiktokShortcut(type, request).then(
+      (result) => { sendResponse({ ok: true, result }) },
+      () => { sendResponse({ ok: false, error: { code: 'shortcut-failed', message: 'shortcut failed' } }) },
+    )
+    return true // async response
   }
 
   // ---- Page-media hover capsule ----

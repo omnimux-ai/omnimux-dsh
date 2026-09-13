@@ -376,3 +376,20 @@ describe('HTTP entry: assembly completeness and teardown', () => {
     )
   })
 })
+
+describe('HTTP entry: the media-export route is reachable through the registered handler', () => {
+  it('answers a validation error on POST /fetch-media rather than the item route`s `not found`', async () => {
+    const world = bootPlugin()
+    const response = await httpCall(world.route, {
+      method: 'POST',
+      url: `${LOCAL_PREFIX}/fetch-media`,
+      body: {},
+    })
+
+    // The same blind spot the rival prefix hit: an unclaimed sub-path is read as
+    // an item id, so a route the extension depends on would answer 404 `not
+    // found` and look like a missing feature instead of a bad request.
+    assert.equal(response.status, 400, `POST /fetch-media → ${response.raw}`)
+    assert.match(response.body.error, /url/)
+  })
+})

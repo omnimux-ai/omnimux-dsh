@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { downloadMedia } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
+import { EXPORT_KIND, exportMediaFile, resolveDownloadsDir } from './media-export.js'
 import {
   IMPORT_STAGES,
   IMPORT_STATUS_DEGRADED,
@@ -867,6 +870,58 @@ async function markImportFailed(store, id, reason) {
     import_stage: null,
     import_error: String(reason || IMPORT_STALE_ERROR) || IMPORT_STALE_ERROR,
   })
+}
+
+/**
+ * Export one post out of the page into a file the user can pick up.
+ *
+ * The browser extension's TikTok shortcuts resolve the post through the same
+ * cloud seam the import path uses, then hand the watermark-free direct link to
+ * `exportMediaFile`. Nothing is written to the library: asking to download
+ * something is not asking to shelve it, and the two shortcuts stay separable —
+ * the extension's third shortcut is the one that imports.
+ *
+ * The scratch directory is the system temp folder rather than the library's
+ * media tree: the downloaded container is an intermediate for the audio export
+ * and must never look like library content.
+ * @param {Record<string, any>} ctx dispatcher context plus the parsed request
+ * @returns {Promise<{ status: number, body: Record<string, any> }>}
+ */
+export async function handleFetchMedia(ctx) {
+  const body = ctx.req?.body || {}
+  const rawUrl = String(body.url || '').trim()
+  const kind = String(body.kind || '').trim()
+  if (!rawUrl) return fail(400, 'url is required')
+  if (kind !== EXPORT_KIND.video && kind !== EXPORT_KIND.audio) {
+    return fail(400, `kind must be "${EXPORT_KIND.video}" or "${EXPORT_KIND.audio}", got "${kind}"`)
+  }
+  // The page-supplied address reaches a downloader that follows redirects, so it
+  // is held to the same public-address rule as every other import.
+  if (!isPublicHttpUrl(rawUrl)) return fail(400, 'url must be a public http(s) address')
+
+  const platform = body.platform || ctx.detectPlatformFromUrl(rawUrl)
+  const social = await fetchSocialMeta({ ...ctx, rawUrl, platform })
+  if (social.error) return social.error
+  const videoUrl = social.meta.video_url
+  if (!HTTP_URL_RE.test(videoUrl || '')) {
+    return fail(422, '未从该作品解析到可下载的视频直链（可能是图文作品、地区受限或需要登录 TikTok）')
+  }
+
+  try {
+    const exported = await exportMediaFile({
+      videoUrl,
+      meta: social.meta,
+      kind,
+      downloadsDir: ctx.downloadsDir || resolveDownloadsDir(),
+      workDir: join(tmpdir(), 'omnimux-export'),
+      fetcher: ctx.fetcher,
+      resolver: ctx.resolver,
+      runFfmpeg: ctx.runFfmpeg,
+    })
+    return { status: 200, body: { data: exported } }
+  } catch (error) {
+    return fail(502, `导出失败: ${ctx.formatErrorMessage(error)}`)
+  }
 }
 
 export async function handleImportUrl(ctx) {
