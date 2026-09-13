@@ -612,7 +612,11 @@ export function injectTopbarRightExpandButton(doc) {
   const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
   const api = win?.__omnimuxWorkbench
   const snapshot = api?.getSnapshot?.()
-  const isPanelOpen = snapshot?.state?.panelOpen === true || api?.isOpen?.() === true
+  const isRightCollapsed = Boolean(
+    doc.querySelector('[data-rightbar-collapsed="true"]') ||
+    doc.querySelector('button[data-sidebar-right-expand="true"]')
+  )
+  const isPanelOpen = (!isRightCollapsed) || snapshot?.state?.panelOpen === true || api?.isOpen?.() === true
 
   if (!btn) {
     btn = doc.createElement('button')
@@ -624,6 +628,11 @@ export function injectTopbarRightExpandButton(doc) {
     btn.addEventListener('click', (event) => {
       try { event.preventDefault() } catch { /* ignore */ }
       try { event.stopPropagation() } catch { /* ignore */ }
+      const officialRight = doc.querySelector('button[data-sidebar-right-expand="true"], button[aria-label*="打开右侧边栏"]')
+      if (officialRight) {
+        triggerClick(officialRight)
+        return
+      }
       const currentWin = doc.defaultView || (typeof window !== 'undefined' ? window : null)
       const currentApi = currentWin?.__omnimuxWorkbench
       if (currentApi && typeof currentApi.open === 'function') {
