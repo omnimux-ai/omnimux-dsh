@@ -1,8 +1,8 @@
 /**
  * 「自动化」客户端入口。
  *
- * 唯一座位是社区 betterSidebar 的右侧工作台 Tab：不注册任何 slot、不写
- * `data-dsh-product-stage`、不触碰左侧任务树，也不做任何更新检查。
+ * 两个座位：左栏（新会话下方）的入口行，与社区 betterSidebar 的右侧工作台 Tab。
+ * 不注册任何 slot、不写 `data-dsh-product-stage`、不触碰左侧任务树，也不做任何更新检查。
  */
 
 import { createElement } from 'react'
@@ -11,13 +11,14 @@ import { en, NS, zh } from './locales.js'
 import { createScheduledSessionOpener } from './open-session.js'
 import { createAutomationRuntime, installAutomationSessionSync } from './runtime.js'
 import { IconWorkbench } from './icons.jsx'
+import { AUTOMATION_TAB_ID, mountSidebarEntry } from './sidebar-entry.js'
 import { injectAutomationStyles } from './styles.js'
 
 export const name = 'omnimux-automation-client'
 export const inject = ['locale', 'connection', 'sessions']
 
-/** 工作台 Tab 的唯一标识。 */
-export const AUTOMATION_TAB_ID = 'omnimux-automation:workbench'
+/** 工作台 Tab 的唯一标识：左栏入口行与 Tab 共用同一定义。 */
+export { AUTOMATION_TAB_ID }
 
 /** Tab 在右侧工作台的位序：assets/studio 15、products 16、accounts 17、forms 19、analytics 20。 */
 export const AUTOMATION_TAB_ORDER = 21
@@ -30,6 +31,9 @@ export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-automation: locale')
 
   const t = ctx.locale.bind(NS)
+
+  ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-automation: sidebar entry')
+
   const permissionT = ctx.locale.bind('permission.access')
   const modelT = ctx.locale.bind('model')
   const runtime = createAutomationRuntime(ctx.connection.rpc)
