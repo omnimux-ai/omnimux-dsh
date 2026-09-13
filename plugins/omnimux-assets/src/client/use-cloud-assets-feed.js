@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
 import {
   CLOUD_PAGE_SIZE,
+  CLOUD_SUBNAV_CATEGORY,
   appendUniqueAssets,
   normalizeCloudAsset,
   pageCountOf,
@@ -153,8 +154,13 @@ export function useCloudAssetsFeed(options) {
     setSubCategory('')
   }, [manifest, categories, category])
 
+  // The second level belongs to the audio tab only. 知识包, 角色, 场景, 道具 and
+  // 风格 carry sub-categories in the manifest as counting buckets, and opening
+  // them put 全部声音 above 脚本提示词 / 知识笔记 / 短剧拆镜 — an audio label in
+  // another category's row. `subCategoryTabs` owns that rule; the check is
+  // repeated here so no future consumer can inherit the second level by accident.
   const tabs = useMemo(() => subCategoryTabs(manifest, category), [manifest, category])
-  const hasSecondLevel = tabs.hasSecondLevel
+  const hasSecondLevel = category === CLOUD_SUBNAV_CATEGORY && tabs.hasSecondLevel
 
   // A category switch invalidates the sub-category selection unless that
   // sub-category exists in the new category.

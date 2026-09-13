@@ -14,9 +14,10 @@ import {
 import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
+import { cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 
-/** Media type -> tile icon, for rows with no cover image. */
+/** Media type -> tile icon, for media rows whose cover and original both fail. */
 const TYPE_ICON = {
   audio: AudioIcon,
   video: VideoIcon,
@@ -29,16 +30,49 @@ const TYPE_ICON = {
 const THUMB_CLASS = 'omnimux-assets-card-thumb omnimux-assets-cloud-thumb'
 const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action omnimux-assets-focusable`
 
+/** Bars drawn into a voice card's waveform plate. */
+const WAVE_BAR_COUNT = 26
+
 /**
- * Does this card body carry the description?
+ * Decorative waveform silhouette.
  *
- * A picture card is scanned by its thumbnail and title alone. A voice is picked
- * by the character it reads in and a text asset by what it holds, so those two
- * keep the description under the title as the thing that tells them apart.
- * @param {string} mediaType
+ * A catalog row carries no peak data, so the bars are derived from the row id:
+ * every render — and every return to the page — paints the same shape, and the
+ * plate never claims to be a measurement of the audio behind it.
+ * @param {string} seed
  */
-function showsDescription(mediaType) {
-  return mediaType === 'audio' || mediaType === 'document'
+function waveBars(seed) {
+  let hash = 2166136261
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619) >>> 0
+  }
+  const bars = []
+  for (let index = 0; index < WAVE_BAR_COUNT; index += 1) {
+    hash = (Math.imul(hash, 1664525) + 1013904223) >>> 0
+    bars.push(30 + ((hash >>> 9) % 70))
+  }
+  return bars
+}
+
+/**
+ * The voice card's face: a waveform strip that is also the play control, since
+ * its parent thumbnail carries the click, the tab stop and the pressed state.
+ * @param {{ seed: string }} props
+ */
+function CloudWaveform(props) {
+  const { seed } = props
+  const bars = useMemo(() => waveBars(seed), [seed])
+  return (
+    <span className="omnimux-assets-cloud-wave" aria-hidden="true">
+      {bars.map((height, index) => (
+        <span
+          key={`wave-${String(index)}`}
+          className="omnimux-assets-cloud-wave-bar"
+          style={{ height: `${String(height)}%` }}
+        />
+      ))}
+    </span>
+  )
 }
 
 /**
@@ -111,17 +145,24 @@ function CloudTileMedia(props) {
 /**
  * One cloud asset card.
  *
- * Four things live on a card: the thumbnail, the title, and the two hover
- * controls in the top-right that are the two ways out of the cloud — into the
- * conversation, or into the local library. A media-type badge, tags and a
- * bottom action bar used to compete with the thumbnail for attention; they are
- * gone.
+ * Four things live on a card: the body, the title under it, and the two hover
+ * controls pinned into the top-right corner that are the two ways out of the
+ * cloud — into the conversation, or into the local library. A media-type badge,
+ * tags and a bottom action bar used to compete with the thumbnail for attention;
+ * they are gone.
  *
- * Where a click lands decides what happens. On a voice card the thumbnail is
- * the play control, so it claims the click for itself and the rest of the card
- * opens the preview; on every other card the whole card opens the preview. The
- * title is the keyboard route to that preview, which keeps one tab stop per card
- * rather than one per region.
+ * The body follows the row (`cloudCardKind`):
+ * - a picture or video gets a fixed 164px thumbnail with one line of title;
+ * - a voice gets a waveform plate that plays and stops it, with the title and its
+ *   one-line voice description underneath;
+ * - a text row (脚本提示词 / 知识笔记 / 短剧拆镜) gets no plate at all — a title
+ *   over its description, which is the only thing that distinguishes those rows.
+ *
+ * Where a click lands decides what happens. On a voice card the plate is the play
+ * control, so it claims the click for itself and the rest of the card opens the
+ * preview; on every other card the whole card opens the preview. The title is the
+ * keyboard route to that preview, which keeps one tab stop per card rather than
+ * one per region.
  * @param {{
  *   asset: any,
  *   t: (key: string) => string,
@@ -144,7 +185,8 @@ export function CloudAssetCard(props) {
     if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
   }, [])
 
-  const canPlay = asset.mediaType === 'audio' && asset.playable
+  const kind = cloudCardKind(asset)
+  const canPlay = kind === 'audio'
   const handleBroken = useCallback(() => { setBroken(true) }, [])
   const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
   const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
@@ -158,8 +200,8 @@ export function CloudAssetCard(props) {
     addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
   }
 
-  // Both controls sit over the thumbnail, so each claims its own pointer event:
-  // without that, using one would also open the preview behind it.
+  // Both controls sit over the card's top-right corner, so each claims its own
+  // pointer event: without that, using one would also open the preview behind it.
   const handleSave = (event) => {
     event.stopPropagation()
     if (saved || saving) return
@@ -176,27 +218,30 @@ export function CloudAssetCard(props) {
 
   return (
     <div
-      className="omnimux-assets-card omnimux-assets-cloud-card"
+      className={`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--${kind}`}
+      data-kind={kind}
       data-media-type={asset.mediaType}
       data-saved={saved ? 'true' : 'false'}
       onClick={openPreview}
     >
-      <div
-        className={canPlay ? PLAYABLE_THUMB_CLASS : THUMB_CLASS}
-        role={canPlay ? 'button' : undefined}
-        tabIndex={canPlay ? 0 : undefined}
-        aria-label={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
-        aria-pressed={canPlay ? (playing ? 'true' : 'false') : undefined}
-        onClick={canPlay ? handlePlayClick : undefined}
-        onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
-      >
-        <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />
-        {canPlay ? (
-          <span className="omnimux-assets-cloud-play" aria-hidden="true">
-            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-          </span>
-        ) : null}
-      </div>
+      {kind === 'text' ? null : (
+        <div
+          className={canPlay ? PLAYABLE_THUMB_CLASS : THUMB_CLASS}
+          role={canPlay ? 'button' : undefined}
+          tabIndex={canPlay ? 0 : undefined}
+          aria-label={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
+          aria-pressed={canPlay ? (playing ? 'true' : 'false') : undefined}
+          onClick={canPlay ? handlePlayClick : undefined}
+          onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
+        >
+          {canPlay ? <CloudWaveform seed={asset.id} /> : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />}
+          {canPlay ? (
+            <span className="omnimux-assets-cloud-play" aria-hidden="true">
+              {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+            </span>
+          ) : null}
+        </div>
+      )}
       <div className="omnimux-assets-cloud-actions">
         <IconButton
           variant="ghost"
@@ -230,9 +275,9 @@ export function CloudAssetCard(props) {
         onKeyDown={activateRowKeydown(openPreview)}
       >
         <p className="omnimux-assets-card-title" title={asset.name}>{asset.name}</p>
-        {showsDescription(asset.mediaType) && asset.description !== '' ? (
+        {kind === 'media' || asset.description === '' ? null : (
           <p className="omnimux-assets-cloud-desc" title={asset.description}>{asset.description}</p>
-        ) : null}
+        )}
       </div>
     </div>
   )
@@ -241,9 +286,10 @@ export function CloudAssetCard(props) {
 /**
  * Category navigation with its optional second level.
  *
- * The second level is data-driven rather than hard-coded to audio: any category
- * whose manifest entry carries sub-categories reveals it, which is why the
- * audio tab shows 全部声音 / 配音 / 音效 / 背景音 without a special case here.
+ * The second level belongs to the audio tab alone: a category shows its
+ * sub-categories only when the feed says so, and the feed only ever says so for
+ * audio (see `CLOUD_SUBNAV_CATEGORY`). The first chip is a plain 全部 rather than
+ * a category-specific label, so no category can inherit another one's wording.
  * Both levels share one chip treatment: neutral until selected, then inked with
  * the label colour instead of a brand accent, so the tab row carries no colour
  * of its own in either theme.
@@ -289,7 +335,7 @@ function CloudCategoryNav(props) {
               aria-pressed={row.id === subCategory ? 'true' : 'false'}
               onClick={() => onSubCategory(row.id)}
             >
-              {row.id === '' ? t('cloud.audio.all') : t(`cloud.subcategory.${row.id}`)}
+              {row.id === '' ? t('cloud.subnav.all') : t(`cloud.subcategory.${row.id}`)}
               <span className="omnimux-assets-cloud-count">{row.total}</span>
             </Button>
           ))}
