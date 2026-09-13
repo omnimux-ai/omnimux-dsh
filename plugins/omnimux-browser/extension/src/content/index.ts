@@ -129,6 +129,11 @@ import('./twitter-velocity/index.ts').then(({ initTwitterVelocity }) => {
   initTwitterVelocity()
 }).catch(() => {})
 
+// Mount Twitter Native In-page Copilot (Post & Reply Assistants)
+import('./twitter-copilot/index.ts').then(({ initTwitterCopilot }) => {
+  initTwitterCopilot()
+}).catch(() => {})
+
 // Mount the page-media hover assistant (capsule + white tooltip).
 // A re-injected content script replaces its own listeners, so the previous
 // overlay is disposed first; the page must never accumulate shadow hosts.

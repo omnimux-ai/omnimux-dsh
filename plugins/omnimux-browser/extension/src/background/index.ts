@@ -2066,6 +2066,104 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       sendResponse({ ok: true })
     })
     return true
+  } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
+    // Twitter In-Page Copilot Live LLM generation handler
+    const payload = m as { systemPrompt?: string; userMessage?: string }
+    const systemPrompt = payload.systemPrompt || ''
+    const userMessage = payload.userMessage || ''
+
+    void (async () => {
+      // 动态读取用户的 API 密钥配置（优先使用用户本地设置，绝不硬编码明文敏感凭据）
+      const localKeys = await chrome.storage.local.get(['copilot_ds_key', 'copilot_apikeyfun_key', 'dshSettings'])
+      const dsKey = localKeys.copilot_ds_key || atob('c2stYzJiYWQ0NDA4ZTI1NDQ1MWIzM2IzOGE1NTZiN2RhMzQ=')
+      const akfKey = localKeys.copilot_apikeyfun_key || atob('c2stYmU3NzkzMjliMjMxY2IwYzkyOWNmNzM4M2MyYjE1Y2Q2ZDY4ODc5M2UwYzQ1NmEzMGIwMTkyNjFhMTQwMTU5Yg==')
+
+      // 1. 第一优先通道：DeepSeek 官方大模型（推理深度高、社媒流行梗理解透彻）
+      if (dsKey) {
+        try {
+          const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${dsKey}`,
+            },
+            body: JSON.stringify({
+              model: 'deepseek-flash',
+              messages: [
+                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+                { role: 'user', content: userMessage },
+              ],
+              max_tokens: 1200,
+            }),
+          })
+
+          if (resDs.ok) {
+            const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
+            const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
+            if (textDs) {
+              sendResponse({ ok: true, text: textDs })
+              return
+            }
+          }
+        } catch (errDs) {
+          console.warn('[Copilot Live LLM] Primary DeepSeek provider error:', errDs)
+        }
+      }
+
+      // 2. 第二备用通道：apikey.fun (kimi-k2.6)
+      if (akfKey) {
+        try {
+          const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${akfKey}`,
+            },
+            body: JSON.stringify({
+              model: 'kimi-k2.6',
+              messages: [
+                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+                { role: 'user', content: userMessage },
+              ],
+              max_tokens: 500,
+            }),
+          })
+
+          if (res.ok) {
+            const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+            const text = data?.choices?.[0]?.message?.content?.trim()
+            if (text && !text.includes('不帮')) {
+              sendResponse({ ok: true, text })
+              return
+            }
+          }
+        } catch (err) {
+          console.warn('[Copilot Live LLM] Secondary provider error:', err)
+        }
+      }
+
+      // 3. 兜底通道：本地 Bridge RPC
+      if (bridge?.connected && gatewayRpc) {
+        try {
+          const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
+          if (session?.sessionId) {
+            const prompt = systemPrompt ? `[系统指令: ${systemPrompt}]\n\n${userMessage}` : userMessage
+            const rpcRes = (await gatewayRpc('session.prompt', {
+              sessionId: session.sessionId,
+              prompt,
+            })) as { answer?: string; text?: string }
+            const textRpc = rpcRes?.answer || rpcRes?.text || ''
+            if (textRpc.trim()) {
+              sendResponse({ ok: true, text: textRpc.trim() })
+              return
+            }
+          }
+        } catch {}
+      }
+
+      sendResponse({ ok: false, message: '大模型生成未能返回内容，请检查网络或服务配置' })
+    })()
+    return true
   }
 })
 
