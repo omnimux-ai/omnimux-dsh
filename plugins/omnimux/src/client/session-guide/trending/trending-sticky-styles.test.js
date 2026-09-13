@@ -102,3 +102,29 @@ test('styles: 追加批次骨架复用首屏骨架的几何、微光与响应式
     )
   }
 })
+
+test('styles: 吸顶栏与双 Tab 导航头显式声明 no-drag 并严禁使用 header 标签（防御桌面端滚轮死锁）', async () => {
+  const stickyBody = ruleBody(GUIDE_CSS, '.omnimux-trending-sticky-header')
+  assert.match(
+    stickyBody,
+    /-webkit-app-region:no-drag/,
+    '吸顶栏必须显式声明 -webkit-app-region:no-drag，防止桌面端滚轮失效',
+  )
+
+  const headBody = ruleBody(GUIDE_CSS, '.omnimux-trending-head')
+  assert.match(
+    headBody,
+    /-webkit-app-region:no-drag/,
+    '双 Tab 导航容器必须显式声明 -webkit-app-region:no-drag，防止桌面端滚轮失效',
+  )
+
+  const { readFileSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const jsxPath = resolve(new URL('.', import.meta.url).pathname, 'TrendingReplicateSection.jsx')
+  const jsxContent = readFileSync(jsxPath, 'utf8')
+  assert.doesNotMatch(
+    jsxContent,
+    /<header[\s>]/,
+    'TrendingReplicateSection 严禁使用 <header> 标签（否则命中桌面端全局 header drag 导致滚轮死锁）',
+  )
+})

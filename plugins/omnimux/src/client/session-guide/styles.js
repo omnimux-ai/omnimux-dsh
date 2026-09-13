@@ -2203,16 +2203,21 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   font-size:13px;
   line-height:1.5;
 }
-.omnimux-trending-head { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.omnimux-trending-head {
+  display:flex; flex-direction:column; gap:6px; margin-bottom:12px;
+  -webkit-app-region:no-drag!important;
+}
 
 /* 吸顶栏：双 Tab 与当前 Tab 的工具栏共用一条 sticky 容器。
    1. position:sticky 相对最近的滚动祖先（宿主会话滚动列）吸附，不劫持滚动；
    2. z-index 卡在「卡片(0~10)」之上、「下拉浮层(60)」之下，弹层永远压得住吸顶栏；
-   3. 底色近乎不透明 + backdrop-filter，暗色模式下卡片文字不会透上来。 */
+   3. 底色近乎不透明 + backdrop-filter，暗色模式下卡片文字不会透上来；
+   4. 显式声明 no-drag，防御桌面端全局 header 拖拽样式误伤。 */
 .omnimux-trending-sticky-header {
   position:sticky; top:var(--omnimux-trending-sticky-top); z-index:30;
   overflow:visible;
   padding:12px 0 0;
+  -webkit-app-region:no-drag!important;
   background:var(--omnimux-trending-sticky-solid);
   -webkit-backdrop-filter:blur(12px) saturate(140%);
   backdrop-filter:blur(12px) saturate(140%);
