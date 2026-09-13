@@ -45,7 +45,7 @@ export const zh = {
   'action.cancel': '取消',
   'connect.title': '连接新账号',
   'connect.choosePlatform': '选择平台',
-  'connect.subtitle': '选择要绑定的社媒平台，授权后可一键发布与同步数据',
+  'connect.subtitle': '选择要绑定的社媒平台，授权后可发布与同步数据',
   'connect.securityTip': '通过官方通道安全授权 · 密码不保存在本地',
   'connect.comingSoon': '即将支持',
   'connect.opened': '授权页面已在新窗口打开，请在浏览器中完成授权。',
