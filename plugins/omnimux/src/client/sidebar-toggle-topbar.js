@@ -730,6 +730,31 @@ export function syncNativeRightbarControls(doc) {
     }
   }
 
+  // 3.1 监听全屏与分栏按钮点击，打通会话栏显隐与分栏/全屏联动，彻底杜绝空白死区占位
+  if (fsBtn instanceof HTMLElement && !fsBtn.__omnimuxModeBound) {
+    fsBtn.__omnimuxModeBound = true
+    fsBtn.addEventListener('click', () => {
+      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+      const api = win?.__omnimuxWorkbench
+      if (!api) return
+      const isPush = fsBtn.getAttribute('data-sidebar-right-mode') === 'push'
+        || /退出全屏/.test(fsBtn.getAttribute('aria-label') || '')
+      if (isPush) {
+        api.setFocus?.('split')
+      } else {
+        api.setFocus?.('gui')
+      }
+    }, true)
+  }
+  if (splitBtn instanceof HTMLElement && !splitBtn.__omnimuxSplitBound) {
+    splitBtn.__omnimuxSplitBound = true
+    splitBtn.addEventListener('click', () => {
+      const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+      const api = win?.__omnimuxWorkbench
+      api?.setFocus?.('split')
+    }, true)
+  }
+
   // 4. 原生侧边栏按钮在关闭时也显示，以便点击激活展开
   const isRightCollapsed = Boolean(
     doc.querySelector('[data-rightbar-collapsed="true"]') ||
