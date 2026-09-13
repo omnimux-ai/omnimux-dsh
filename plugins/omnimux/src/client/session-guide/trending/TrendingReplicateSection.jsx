@@ -1,12 +1,15 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
+import { TrendingSkeletonGrid } from './TrendingSkeleton.jsx'
 import { buildClonePrompt, defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { buildSkillPrompt } from '../skills/featured-skills-data.js'
 import {
   EMPTY_CAPABILITIES,
   TRENDING_SOURCE_STATUS,
+  getTrendingCache,
+  getTrendingCacheKey,
   loadTrendingItems,
   mergeCapabilities,
 } from './trending-source.js'
@@ -90,9 +93,26 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   useEffect(() => {
     const controller = new AbortController()
     let alive = true
-    setRefreshing(true)
+
+    const currentFilters = { region: filters.region, industry: filters.industry, views: filters.views }
+    const cached = getTrendingCache(getTrendingCacheKey({ filters: currentFilters }))
+
+    // 若命中本地内存缓存：同步恢复，避免切 Tab 或重复筛选时的无谓白屏
+    if (cached?.data) {
+      setSourceItems(cached.data.items)
+      setStatus(cached.data.status)
+      setRefreshing(false)
+      if (cached.data.items.length > 0) {
+        setCapabilities((previous) => mergeCapabilities(previous, cached.data.items))
+      }
+      // 新鲜缓存直接呈现，无需重复请求网络
+      if (!cached.isStale) return undefined
+    } else {
+      setRefreshing(true)
+    }
+
     loadTrendingItems({
-      filters: { region: filters.region, industry: filters.industry, views: filters.views },
+      filters: currentFilters,
       signal: controller.signal,
     }).then((result) => {
       if (!alive || result.reason === 'aborted') return
@@ -123,11 +143,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   }, [items, dockedItem, refreshing])
 
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
-  const showGrid = !refreshing && status !== TRENDING_SOURCE_STATUS.unavailable && items.length > 0
+  const showSkeleton = refreshing && items.length === 0
+  const showGrid = !showSkeleton && status !== TRENDING_SOURCE_STATUS.unavailable && items.length > 0
   const showFilteredEmpty = !refreshing && showToolbar && items.length === 0
 
-  const patchFilters = (patch) => setFilters((prev) => ({ ...prev, ...patch }))
-  const resetFilters = () => setFilters((prev) => ({ ...defaultTrendingFilters(), sort: prev.sort }))
+  const patchFilters = useCallback((patch) => setFilters((prev) => ({ ...prev, ...patch })), [])
+  const resetFilters = useCallback(() => setFilters((prev) => ({ ...defaultTrendingFilters(), sort: prev.sort })), [])
 
   useLayoutEffect(() => {
     const root = sectionRef.current?.closest?.('[data-phase]')
@@ -298,7 +319,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
    * 点击复刻：把这一条对标片的克隆指令灌进原生输入框，并把原生输入框停靠到视口底部。
    * 再点同一张卡片即归还输入框——开合不依赖任何自绘控件。
    */
-  const handleRecreate = (item) => {
+  const handleRecreate = useCallback((item) => {
     if (dockedItem?.id === item.id) {
       setDockedItem(null)
       return
@@ -315,9 +336,9 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
     setDockedItem(item)
     onApplyPrompt?.(buildClonePrompt(item), item)
-  }
+  }, [dockedItem, onApplyPrompt])
 
-  const handleSelectSkill = (skill) => {
+  const handleSelectSkill = useCallback((skill) => {
     if (dockedItem?.id === skill.id) {
       setDockedItem(null)
       return
@@ -334,7 +355,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
     setDockedItem(skill)
     onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
-  }
+  }, [dockedItem, onApplyPrompt, t])
 
   return (
     <section
@@ -394,8 +415,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
             />
           ) : null}
 
+          {showSkeleton ? (
+            <TrendingSkeletonGrid count={8} t={t} />
+          ) : null}
+
           {showGrid ? (
-            <div className="omnimux-trending-grid">
+            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${refreshing ? ' is-refreshing' : ''}`}>
               {items.map((item) => (
                 <TrendingVideoCard
                   key={item.id}
@@ -421,20 +446,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
             </div>
           ) : null}
 
-          {refreshing ? (
-            <div className="omnimux-trending-empty" data-omnimux-trending-empty="loading">
-              <p>{t('trending.loading')}</p>
-            </div>
-          ) : null}
-
-          {status === TRENDING_SOURCE_STATUS.empty ? (
+          {status === TRENDING_SOURCE_STATUS.empty && !refreshing ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="library">
               <p>{t('trending.library.empty')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.emptyHint')}</p>
             </div>
           ) : null}
 
-          {status === TRENDING_SOURCE_STATUS.unavailable ? (
+          {status === TRENDING_SOURCE_STATUS.unavailable && !refreshing ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
               <p>{t('trending.library.unavailable')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>

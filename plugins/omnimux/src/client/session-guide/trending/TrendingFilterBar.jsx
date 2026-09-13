@@ -62,7 +62,7 @@ const FILTER_KEYS = ['region', 'industry', 'views', 'engagement', 'range']
  *   viewOptions: Array<object>,
  * }} props
  */
-export function TrendingFilterBar({
+export const TrendingFilterBar = React.memo(function TrendingFilterBar({
   filters,
   t,
   onChange,
@@ -163,4 +163,4 @@ export function TrendingFilterBar({
       </div>
     </div>
   )
-}
+})

@@ -26,6 +26,60 @@ export const DEFAULT_TRENDING_SOURCES = Object.freeze([TRENDING_LOCAL_PATH, TREN
  */
 export const TRENDING_SOURCE_PAGE_SIZE = 48
 
+/** 内存缓存：按 query 与 source 存储响应结果，支持 TTL 与 Stale-While-Revalidate。 */
+const TRENDING_CACHE = new Map()
+export const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000 // 默认 5 分钟有效
+
+/** 正在进行的网络请求映射表（并发请求自动复用去重，防重复并发击穿）。 */
+const IN_FLIGHT_REQUESTS = new Map()
+
+/**
+ * 构造稳定的缓存 key。
+ * @param {object} [opts]
+ * @returns {string}
+ */
+export function getTrendingCacheKey(opts = {}) {
+  const sourcePaths = opts.sourcePaths || (opts.sourcePath ? [opts.sourcePath] : DEFAULT_TRENDING_SOURCES)
+  const sortedSources = [...sourcePaths].sort().join(';')
+  const filters = opts.filters || {}
+  const filterKey = `${filters.region || ''}|${filters.industry || ''}|${filters.views || ''}|${filters.type || ''}`
+  return `${sortedSources}::${filterKey}`
+}
+
+/**
+ * 读取缓存，返回数据与是否已过期（stale）。
+ * @param {string} key
+ * @param {number} [nowMs]
+ * @returns {{ data: object, isStale: boolean } | null}
+ */
+export function getTrendingCache(key, nowMs = Date.now()) {
+  const entry = TRENDING_CACHE.get(key)
+  if (!entry) return null
+  const isStale = nowMs > entry.expiresAt
+  return { data: entry.data, isStale }
+}
+
+/**
+ * 写入缓存。
+ * @param {string} key
+ * @param {object} data
+ * @param {number} [ttlMs]
+ * @param {number} [nowMs]
+ */
+export function setTrendingCache(key, data, ttlMs = DEFAULT_CACHE_TTL_MS, nowMs = Date.now()) {
+  TRENDING_CACHE.set(key, {
+    data,
+    expiresAt: nowMs + ttlMs,
+    savedAt: nowMs,
+  })
+}
+
+/** 清理全部缓存与并发请求（用于测试或主动刷新）。 */
+export function clearTrendingCache() {
+  TRENDING_CACHE.clear()
+  IN_FLIGHT_REQUESTS.clear()
+}
+
 /** 拉取结果状态。 */
 export const TRENDING_SOURCE_STATUS = {
   ready: 'ready',
@@ -348,56 +402,95 @@ export async function loadTrendingItems(opts = {}) {
   const fetchImpl = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null)
   if (!fetchImpl) return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'no-fetch' }
 
-  const sourcePaths = opts.sourcePaths || (opts.sourcePath ? [opts.sourcePath] : DEFAULT_TRENDING_SOURCES)
+  const cacheKey = getTrendingCacheKey(opts)
+  const useCache = !opts.forceRefresh && (!opts.fetchImpl || opts.cache === true)
+  const cached = useCache ? getTrendingCache(cacheKey) : null
 
-  const outcomes = await Promise.all(
-    sourcePaths.map((basePath) => {
-      const isCloud = basePath === TRENDING_CLOUD_PATH
-      const query = buildSourceQuery(isCloud ? { ...opts.filters, type: 'video' } : (opts.filters || {}))
-      const url = `${basePath}?${query}`
-      return fetchSourcePayload(fetchImpl, url, opts.signal)
-    }),
-  )
-
-  const aborted = outcomes.some((o) => !o.ok && o.reason === 'aborted')
-  if (aborted) {
-    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'aborted' }
+  // 1. 命中新鲜缓存：立即返回（0ms 极速呈现，彻底免除重复网络请求与白屏）
+  if (cached && !cached.isStale) {
+    return cached.data
   }
 
-  const okOutcomes = outcomes.filter((o) => o.ok)
-  if (okOutcomes.length === 0) {
-    const firstReason = outcomes[0]?.reason || 'network'
-    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: firstReason }
+  // 2. 并发请求去重：防止组件多次重复触发同一 query 的网络拉取
+  if (!opts.signal && useCache && IN_FLIGHT_REQUESTS.has(cacheKey)) {
+    return IN_FLIGHT_REQUESTS.get(cacheKey)
   }
 
-  const combinedRows = []
-  const seenIds = new Set()
-  const seenUrls = new Set()
+  const executeFetch = async () => {
+    try {
+      const sourcePaths = opts.sourcePaths || (opts.sourcePath ? [opts.sourcePath] : DEFAULT_TRENDING_SOURCES)
 
-  for (const outcome of okOutcomes) {
-    for (const row of outcome.rows) {
-      if (!row || typeof row !== 'object') continue
-      const id = row.id != null ? String(row.id).trim() : ''
-      const url = typeof row.source_url === 'string' ? row.source_url.trim() : ''
-      if (id && seenIds.has(id)) continue
-      if (url && seenUrls.has(url)) continue
-      if (id) seenIds.add(id)
-      if (url) seenUrls.add(url)
-      combinedRows.push(row)
+      const outcomes = await Promise.all(
+        sourcePaths.map((basePath) => {
+          const isCloud = basePath === TRENDING_CLOUD_PATH
+          const query = buildSourceQuery(isCloud ? { ...opts.filters, type: 'video' } : (opts.filters || {}))
+          const url = `${basePath}?${query}`
+          return fetchSourcePayload(fetchImpl, url, opts.signal)
+        }),
+      )
+
+      const aborted = outcomes.some((o) => !o.ok && o.reason === 'aborted')
+      if (aborted) {
+        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'aborted' }
+      }
+
+      const okOutcomes = outcomes.filter((o) => o.ok)
+      if (okOutcomes.length === 0) {
+        // 网络失败时如果有陈旧缓存，降级返回陈旧缓存，提供极佳的离线/弱网韧性
+        if (cached?.data) {
+          return cached.data
+        }
+        const firstReason = outcomes[0]?.reason || 'network'
+        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: firstReason }
+      }
+
+      const combinedRows = []
+      const seenIds = new Set()
+      const seenUrls = new Set()
+
+      for (const outcome of okOutcomes) {
+        for (const row of outcome.rows) {
+          if (!row || typeof row !== 'object') continue
+          const id = row.id != null ? String(row.id).trim() : ''
+          const url = typeof row.source_url === 'string' ? row.source_url.trim() : ''
+          if (id && seenIds.has(id)) continue
+          if (url && seenUrls.has(url)) continue
+          if (id) seenIds.add(id)
+          if (url) seenUrls.add(url)
+          combinedRows.push(row)
+        }
+      }
+
+      const items = combinedRows.map((row) => mapSourceItem(row)).filter(Boolean)
+      const total = items.length
+
+      const applied = String(opts.filters?.region || '').trim() !== ''
+        || String(opts.filters?.industry || '').trim() !== ''
+        || Number(opts.filters?.views) > 0
+      const emptyStatus = applied ? TRENDING_SOURCE_STATUS.filtered : TRENDING_SOURCE_STATUS.empty
+
+      const result = {
+        status: items.length > 0 ? TRENDING_SOURCE_STATUS.ready : emptyStatus,
+        items,
+        total,
+      }
+
+      // 写入内存缓存
+      if (useCache && (result.status === TRENDING_SOURCE_STATUS.ready || result.status === TRENDING_SOURCE_STATUS.filtered || result.status === TRENDING_SOURCE_STATUS.empty)) {
+        setTrendingCache(cacheKey, result, opts.ttlMs)
+      }
+
+      return result
+    } finally {
+      if (useCache) {
+        IN_FLIGHT_REQUESTS.delete(cacheKey)
+      }
     }
   }
 
-  const items = combinedRows.map((row) => mapSourceItem(row)).filter(Boolean)
-  const total = items.length
-
-  const applied = String(opts.filters?.region || '').trim() !== ''
-    || String(opts.filters?.industry || '').trim() !== ''
-    || Number(opts.filters?.views) > 0
-  const emptyStatus = applied ? TRENDING_SOURCE_STATUS.filtered : TRENDING_SOURCE_STATUS.empty
-
-  return {
-    status: items.length > 0 ? TRENDING_SOURCE_STATUS.ready : emptyStatus,
-    items,
-    total,
+  const promise = executeFetch()
+  if (!opts.signal && useCache) {
+    IN_FLIGHT_REQUESTS.set(cacheKey, promise)
   }
+  return promise
 }
