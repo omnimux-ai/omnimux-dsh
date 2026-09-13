@@ -111,5 +111,9 @@ describe('账号主页快捷预设 — 条目质量', () => {
     expect(bench, 'benchmark preset missing').toBeDefined()
     expect(bench!.promptTemplateZh(scene())).toMatch(/无公开数据/)
     expect(bench!.promptTemplateEn(scene())).toMatch(/not public|unavailable/)
+    // The host exposes web_search but not web_fetch, so the instruction must not
+    // lead with a tool that is not there.
+    expect(bench!.promptTemplateZh(scene())).toMatch(/搜索/)
+    expect(bench!.promptTemplateEn(scene())).toMatch(/search/)
   })
 })
