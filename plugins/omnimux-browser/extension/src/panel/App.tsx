@@ -21,7 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, SaveIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -698,9 +698,38 @@ export function App(): React.JSX.Element {
     // The draft image keeps the payload id inside its file name, which is how the
     // "lit" highlight finds the thumbnail it belongs to.
     setLitMediaIds((current) => new Set(current).add(item.id))
+    // Media that just landed is lit, not merely stored: the chip has to show the
+    // active highlight on its own, and the send path reads the lit set, so the
+    // model carries the media without a second click. Both bars are fed from
+    // these lists, and each one de-duplicates, because the page may already have
+    // reported the same element.
+    setActiveMediaItems((current) => {
+      const exists = current.some((it) => it.src === item.src || it.id === item.id)
+      return exists ? current : [item, ...current]
+    })
+    setDetectedMedia((current) => {
+      const exists = current.some((it) => it.src === item.src || it.id === item.id)
+      return exists ? current : [item, ...current]
+    })
     reportMediaAttachResult(payload, true)
     focusComposer()
   }
+
+  /**
+   * Latest draft-intake helper, so the port listener below never calls a stale
+   * closure. That effect subscribes once, while this function is re-created per
+   * render with the current draft limits and composer state.
+   */
+  const attachHoveredMediaRef = useRef(attachHoveredMedia)
+  attachHoveredMediaRef.current = attachHoveredMedia
+
+  // Media the capsule sent into THIS panel. An open side panel takes page media
+  // over its port, so the floating workstation is never expanded on top of it.
+  // The payload is re-validated here like every other arriving page message.
+  useEffect(() => api.onMediaAttach((media) => {
+    const payload = readHoveredMedia(media)
+    if (payload !== null) void attachHoveredMediaRef.current(payload)
+  }), [api])
 
   useEffect(() => {
     if (isFloatMode) {
@@ -2454,6 +2483,7 @@ export function App(): React.JSX.Element {
         locale={locale}
         onActiveChange={setActiveMediaItems}
         onSaveToInspiration={handleSaveToInspiration}
+        attachedIds={attachedMediaIds}
       />
       <footer className="composer">
         {detectedMedia.length > 0 && !isFloatMode && (

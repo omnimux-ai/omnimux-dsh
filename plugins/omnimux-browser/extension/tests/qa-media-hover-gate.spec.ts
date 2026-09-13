@@ -12,7 +12,9 @@
  *     flips below when the icon is near the viewport top;
  *  C. the >= 40px media threshold admits images and videos and ignores avatars;
  *  D. the three shortcuts close their loops (library / clipboard / conversation);
- *  E. the cross-module constants agree.
+ *  E. the cross-module constants agree;
+ *  F. the capsule is two-staged: a 36px brand circle that widens to the 112px
+ *     row of three actions, and folds back on the required buffer.
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -146,8 +148,15 @@ function media(src: string, id = src): HoveredMedia {
   }
 }
 
-/** Drives the detector once over `element` and returns what it reported. */
-function detectOnce(element: Element): HoverCandidate[] {
+/**
+ * Drives the detector once over `element` and returns what it reported.
+ *
+ * `host` defaults to an ordinary page, so the classifier's platform rules stay
+ * out of the way and the container rule decides. The media still has to sit in a
+ * post or work container: that is the product contract as of the creative-asset
+ * classifier, and the fixtures below mount accordingly.
+ */
+function detectOnce(element: Element, host = 'page.example.com'): HoverCandidate[] {
   const hits: HoverCandidate[] = []
   const detector = new MediaDetector(
     { onCandidate: (candidate) => { hits.push(candidate) } },
@@ -155,6 +164,7 @@ function detectOnce(element: Element): HoverCandidate[] {
       elementFromPoint: () => element,
       viewport: () => ({ width: 1280, height: 800 }),
       now: () => 1_000,
+      host: () => host,
     },
   )
   detector.start()
@@ -357,7 +367,8 @@ describe('C. the >= 40px media threshold', () => {
   it('triggers the hover bar for an eligible image', () => {
     const image = document.createElement('img')
     image.src = 'https://cdn.example.com/hero.png'
-    document.body.appendChild(image)
+    document.body.insertAdjacentHTML('beforeend', '<article></article>')
+    document.querySelector('article')!.appendChild(image)
     stubBox(image, 640, 420)
 
     const hits = detectOnce(image)
@@ -367,11 +378,35 @@ describe('C. the >= 40px media threshold', () => {
     expect(hits[0]?.payload.type).toBe('image')
   })
 
+  it('does not trigger the hover bar for the same image outside a post', () => {
+    // Identical pixels, no post or work container: the capsule stays away.
+    const image = document.createElement('img')
+    image.src = 'https://cdn.example.com/hero.png'
+    document.body.appendChild(image)
+    stubBox(image, 640, 420)
+
+    expect(detectOnce(image)).toHaveLength(0)
+  })
+
   it('ignores an avatar rendered below the threshold', () => {
     const avatar = document.createElement('img')
     avatar.src = 'https://cdn.example.com/avatar.png'
-    document.body.appendChild(avatar)
+    document.body.insertAdjacentHTML('beforeend', '<article></article>')
+    document.querySelector('article')!.appendChild(avatar)
     stubBox(avatar, 32, 32)
+
+    expect(detectOnce(avatar)).toHaveLength(0)
+  })
+
+  it('ignores an avatar that renders above every size threshold', () => {
+    // Size alone never separated a large avatar from a post image; the naming
+    // rule is what does.
+    const avatar = document.createElement('img')
+    avatar.src = 'https://cdn.example.com/avatar.png'
+    avatar.className = 'user-avatar'
+    document.body.insertAdjacentHTML('beforeend', '<article class="post"></article>')
+    document.querySelector('article')!.appendChild(avatar)
+    stubBox(avatar, 400, 400)
 
     expect(detectOnce(avatar)).toHaveLength(0)
   })
@@ -392,11 +427,21 @@ describe('C. the >= 40px media threshold', () => {
   it('applies the same threshold to video elements', () => {
     const video = document.createElement('video')
     video.setAttribute('poster', 'https://cdn.example.com/poster.png')
-    document.body.appendChild(video)
-    stubBox(video, 40, 40)
+    document.body.insertAdjacentHTML('beforeend', '<article class="post"></article>')
+    document.querySelector('article')!.appendChild(video)
+
+    // A player laid out like a post is admitted…
+    stubBox(video, 640, 360)
     expect(detectOnce(video)[0]?.payload.type).toBe('video')
 
-    stubBox(video, 40, 39)
+    // …while a 40px one is still below the post floor the classifier enforces,
+    // so the two thresholds stay distinct: 40px is what the detector can see,
+    // 120px is what the capsule will offer.
+    stubBox(video, 40, 40)
+    expect(isEligibleMediaSize(40, 40)).toBe(true)
+    expect(detectOnce(video)).toHaveLength(0)
+
+    stubBox(video, 119, 119)
     expect(detectOnce(video)).toHaveLength(0)
   })
 
@@ -501,6 +546,7 @@ describe('D1. add to inspiration library', () => {
     })
     const failures: unknown[] = []
     const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
       postToBackground: vi.fn(async () => {
         // Mirrors background/index.ts: the store's own `ok` decides the receipt, so
@@ -528,6 +574,7 @@ describe('D2. copy the media link', () => {
   it('writes the absolute address to the system clipboard', async () => {
     const writeClipboard = vi.fn(async () => true)
     const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
       postToBackground: vi.fn(async () => ({ ok: true })),
       writeClipboard,
@@ -567,6 +614,7 @@ describe('D2. copy the media link', () => {
 
 describe('D3. add to the conversation', () => {
   it('wakes the floating workstation and trusts its receipt', async () => {
+    vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn(async () => ({ ok: true, active: false })) } })
     const openWithMedia = vi.fn(async () => true)
     ;(globalThis as Record<string, unknown>).__dshBrowserWorkstation = { openWithMedia, isOpen: () => false }
 
@@ -575,6 +623,25 @@ describe('D3. add to the conversation', () => {
 
     expect(openWithMedia).toHaveBeenCalledTimes(1)
     expect(outcome).toMatchObject({ ok: true, status: 'attached', channel: 'workbench' })
+  })
+
+  it('never expands the floating workstation while the side panel is open', async () => {
+    // One window, one conversation: the panel already on screen takes the media
+    // and nothing floats beside it.
+    const sendMessage = vi.fn(async (message: { type?: string }) => (
+      message.type === RUNTIME_MESSAGE.checkSidePanelOpen
+        ? { ok: true, active: true }
+        : { ok: true, result: { channel: 'side-panel', active: true } }
+    ))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
+    const openWithMedia = vi.fn(async () => true)
+    ;(globalThis as Record<string, unknown>).__dshBrowserWorkstation = { openWithMedia, isOpen: () => false }
+
+    const outcome = await new MediaActionBridge(browserTransport(() => hoverCopy('zh')))
+      .attachToConversation(media('https://cdn.example.com/a.png'))
+
+    expect(openWithMedia).not.toHaveBeenCalled()
+    expect(outcome).toMatchObject({ ok: true, status: 'attached', channel: 'side-panel' })
   })
 
   it('falls back to the native side panel when no workstation is mounted', async () => {
@@ -673,5 +740,114 @@ describe('E. cross-module contract agreement', () => {
   it('keeps the attach receipt budget short enough to feel instant', () => {
     expect(TIMING.attachReceiptTimeout).toBeGreaterThan(0)
     expect(TIMING.attachReceiptTimeout).toBeLessThanOrEqual(1_000)
+  })
+})
+
+// ------------------------------------------------- F. 两段式悬停展开 ---
+
+describe('F. two-stage hover expansion', () => {
+  it('paints stage one as a 36px circle and stage two as the 112px row', () => {
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(36)
+    expect(CAPSULE_SPEC.width).toBe(112)
+    // The circle must be exactly that: a 36px box with an 18px radius.
+    expect(CAPSULE_SPEC.height).toBe(CAPSULE_SPEC.collapsedWidth)
+    expect(CAPSULE_SPEC.borderRadius).toBe(CAPSULE_SPEC.height / 2)
+
+    const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
+    expect(base).toContain('height:36px')
+    expect(base).toContain('border-radius:18px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed')).toContain('width:36px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:112px')
+  })
+
+  it('animates the width between the stages instead of snapping', () => {
+    const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
+    // 0.22s on the shared ease-out curve, in the pill's own transition list.
+    expect(base).toContain('width220mscubic-bezier(0.16,1,0.3,1)')
+  })
+
+  it('keeps both stage layers mounted and swaps them by opacity', () => {
+    const brand = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed .omnimux-capsule-brand')
+    const actions = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded .omnimux-capsule-actions')
+    const hiddenBrand = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded .omnimux-capsule-brand')
+    const hiddenActions = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed .omnimux-capsule-actions')
+
+    expect(brand).toContain('opacity:1')
+    expect(actions).toContain('opacity:1')
+    expect(hiddenBrand).toContain('opacity:0')
+    expect(hiddenActions).toContain('opacity:0')
+    // A retiring layer must not keep taking the pointer, or stage one would sit
+    // invisibly on top of the three shortcuts.
+    expect(hiddenBrand).toContain('pointer-events:none')
+    expect(hiddenActions).toContain('pointer-events:none')
+  })
+
+  it('keeps the three shortcuts off the pointer until stage two is on screen', () => {
+    // `pointer-events` is inherited, but the icons' own `auto` beats the `none`
+    // on the retired row: both stage layers are absolutely centred, so while the
+    // pill is 36px wide the middle icon covers the brand circle. Without this
+    // override a hover on folded stage one lands on the copy button and its hint
+    // leaks before the capsule ever opens.
+    const collapsedIcon = declarationsOf(
+      OVERLAY_STYLES,
+      '.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon',
+    )
+    const collapsedActions = declarationsOf(
+      OVERLAY_STYLES,
+      '.omnimux-capsule-bar.is-collapsed .omnimux-capsule-actions',
+    )
+    const expandedActions = declarationsOf(
+      OVERLAY_STYLES,
+      '.omnimux-capsule-bar.is-expanded .omnimux-capsule-actions',
+    )
+
+    expect(collapsedIcon).toContain('pointer-events:none!important')
+    expect(collapsedActions).toContain('pointer-events:none!important')
+    expect(collapsedActions).toContain('visibility:hidden')
+    expect(expandedActions).toContain('pointer-events:auto')
+    expect(expandedActions).toContain('visibility:visible')
+    // Stage two is reachable through the base rule, which the busy guard
+    // (`.omnimux-capsule-icon.is-busy`) still has to be able to override — so no
+    // state rule may re-pin the icons once the row has opened.
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon')).toContain('pointer-events:auto')
+  })
+
+  it('carries the brand trigger in stage one and the three actions behind it', () => {
+    const capsule = MediaCapsule.create(hoverCopy('zh'))
+
+    expect(capsule.stage).toBe('collapsed')
+    expect(capsule.element.classList.contains('is-collapsed')).toBe(true)
+    expect(capsule.brandElement().getAttribute('aria-label')).toBe('OmniMux')
+    expect(capsule.brandElement().querySelectorAll('path').length).toBeGreaterThan(0)
+
+    const actions = [...capsule.element.querySelectorAll('.omnimux-capsule-actions [data-action]')]
+    expect(actions.map((node) => node.getAttribute('data-action'))).toEqual(['inspiration', 'copy', 'attach'])
+
+    capsule.expand()
+    expect(capsule.element.classList.contains('is-expanded')).toBe(true)
+    // Expanding must not disturb the per-media marks the state machine paints.
+    capsule.setState({ saved: true })
+    expect(capsule.buttonElement('inspiration')!.classList.contains('is-saved')).toBe(true)
+    capsule.destroy()
+  })
+
+  it('folds back inside the 180-250ms buffer the requirement asks for', () => {
+    expect(TIMING.collapseGrace).toBeGreaterThanOrEqual(180)
+    expect(TIMING.collapseGrace).toBeLessThanOrEqual(250)
+    // Leaving the media still fades the whole capsule out on the shorter grace.
+    expect(TIMING.leaveGrace).toBeLessThanOrEqual(TIMING.collapseGrace)
+  })
+
+  it('reserves the expanded footprint so stage two never leaves the viewport', () => {
+    const media = rect(1240, 100, 36, 300)
+    const metrics = { width: CAPSULE_SPEC.width, height: CAPSULE_SPEC.height }
+
+    const geometry = computeCapsuleGeometry(media, metrics, VIEWPORT.width, VIEWPORT.height)
+
+    expect(geometry.alignment).toBe('right')
+    expect(geometry.left + CAPSULE_SPEC.width).toBeLessThanOrEqual(VIEWPORT.width - CAPSULE_SPEC.edgeMargin)
+    expect(geometry.left + CAPSULE_SPEC.collapsedWidth).toBeLessThanOrEqual(
+      geometry.left + CAPSULE_SPEC.width,
+    )
   })
 })

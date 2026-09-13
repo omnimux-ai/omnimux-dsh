@@ -9,9 +9,12 @@
  * - Candidates are cached in a `WeakMap` and re-described only when their media
  *   address changes, so a memoised payload is reused across pointer moves.
  *
- * Rejections are silent: nothing is created, nothing is reported, no DOM is
- * touched. In particular this layer never starts a runtime message, so hovering
- * cannot cold-start the MV3 service worker.
+ * A resolved media element is still not automatically offered the capsule: the
+ * final gate is {@link isPostOrWorkMedia}, which admits posts and works while
+ * rejecting avatars, icons, badges and page chrome. Rejections are silent:
+ * nothing is created, nothing is reported, no DOM is touched. In particular this
+ * layer never starts a runtime message, so hovering cannot cold-start the MV3
+ * service worker.
  *
  * @module
  */
@@ -20,12 +23,15 @@ import {
   findMediaElement,
   isElementInViewport,
   isEligibleMediaSize,
+  isPostOrWorkMedia,
   measureElement,
   mediaIdOf,
   mediaKindOf,
-  mediaSourceOf,
   normalizeMedia,
+  resolveMediaSource,
 } from './payload.ts'
+import { isControlSizedElement } from './video-anchor.ts'
+import { normalizeHost } from './classifier.ts'
 import type { AnchorRect, HoverCandidate, HoveredMedia } from './types.ts'
 
 /** Listener invoked when a pointer settles on an eligible media element. */
@@ -58,7 +64,10 @@ interface MediaFacts {
  *
  * Uses hit testing rather than `event.target` so an element covered by an
  * overlay inside the media (a play button, a caption) still resolves to the
- * media itself.
+ * media itself. The pointer position is handed to {@link findMediaElement} so a
+ * transparent click catcher layered over a video resolves to the video beside
+ * it, and a control the size of one button ends the search: aiming at play,
+ * mute or fullscreen is not a request for the capsule.
  */
 export function resolvePointerTarget(
   x: number,
@@ -66,7 +75,9 @@ export function resolvePointerTarget(
   hitTest: (x: number, y: number) => Element | null,
 ): Element | null {
   const top = hitTest(x, y)
-  return top === null ? null : findMediaElement(top)
+  if (top === null) return null
+  if (isControlSizedElement(top)) return null
+  return findMediaElement(top, { x, y })
 }
 
 /** Everything the detector needs from the browser, injectable for tests. */
@@ -74,6 +85,13 @@ export interface DetectorEnvironment {
   elementFromPoint(x: number, y: number): Element | null
   viewport(): { width: number; height: number }
   now(): number
+  /**
+   * Page host, used by the post/work classifier's platform rules.
+   *
+   * Optional so an existing environment stub keeps working; the detector falls
+   * back to reading the live document when it is absent.
+   */
+  host?(): string
 }
 
 function browserEnvironment(): DetectorEnvironment {
@@ -92,6 +110,9 @@ function browserEnvironment(): DetectorEnvironment {
       }
     },
     now: () => Date.now(),
+    host() {
+      return normalizeHost(globalThis.location?.hostname ?? '')
+    },
   }
 }
 
@@ -121,6 +142,11 @@ export class MediaDetector {
   /** The candidate currently under the pointer, if any. */
   get active(): HoverCandidate | null {
     return this.current
+  }
+
+  /** The page host the post/work classifier judges platform rules against. */
+  private pageHost(): string {
+    return this.env.host?.() ?? ''
   }
 
   /** The last media element the pointer resolved to, for quick re-entry. */
@@ -159,8 +185,11 @@ export class MediaDetector {
     const rect = this.rectOf(candidate.element)
     const viewport = this.env.viewport()
     const metric = measureElement(candidate.element)
+    const kind = mediaKindOf(candidate.element)
     if (!isElementInViewport(rect, viewport.width, viewport.height)
-      || !isEligibleMediaSize(metric.width, metric.height)) {
+      || !isEligibleMediaSize(metric.width, metric.height)
+      || kind === null
+      || !isPostOrWorkMedia(candidate.element, this.pageHost())) {
       this.options.onInvalidate?.('scroll')
       return
     }
@@ -241,8 +270,9 @@ export class MediaDetector {
   /**
    * Resolves or refreshes the cached candidate for an element.
    *
-   * @returns `null` when the element is detached, too small, or has no usable
-   *   media address — the caller then reports "no candidate" and stays silent.
+   * @returns `null` when the element is detached, too small, not a post or work
+   *   asset, or has no usable media address — the caller then reports "no
+   *   candidate" and stays silent.
    */
   private describe(element: Element): HoverCandidate | null {
     if (!element.isConnected) {
@@ -255,10 +285,21 @@ export class MediaDetector {
     const metric = measureElement(element)
     if (!isEligibleMediaSize(metric.width, metric.height)) return null
 
+    // The creative-asset gate. It runs before the address ladder because it is
+    // the cheapest rejection and the one that decides the product behaviour: a
+    // 600px profile avatar is a perfectly resolvable media address that must
+    // still never raise the capsule.
+    if (!isPostOrWorkMedia(element, this.pageHost())) {
+      this.cache.delete(element)
+      return null
+    }
+
     const viewport = this.env.viewport()
     if (!isElementInViewport(this.rectOf(element), viewport.width, viewport.height)) return null
 
-    const src = mediaSourceOf(element, kind, this.baseUrl())
+    // The cheap identity probe: same ladder as the payload, minus the canvas
+    // capture, because this runs on every pointer move and a frame grab does not.
+    const src = resolveMediaSource(element, kind, this.baseUrl(), false).src
     if (src === '') return null
 
     const facts: MediaFacts = {
@@ -294,9 +335,12 @@ export class MediaDetector {
 
 /** Whether a cached payload still matches the element's current facts. */
 function matchesFacts(payload: HoveredMedia, facts: MediaFacts): boolean {
-  return payload.id === mediaIdOf(payload.type, facts.src)
-    && payload.width === facts.width
-    && payload.height === facts.height
+  if (payload.width !== facts.width || payload.height !== facts.height) return false
+  if (payload.id === mediaIdOf(payload.type, facts.src)) return true
+  // A video whose only identity is a captured frame has no cheap address to
+  // compare against, so the element-keyed cache wins instead of the ladder
+  // re-encoding the same frame on every pointer move.
+  return payload.sourceKind === 'frame'
 }
 
 /** Walks up from a node looking for a media ancestor (light DOM only). */

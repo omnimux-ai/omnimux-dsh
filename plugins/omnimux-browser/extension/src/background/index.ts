@@ -16,6 +16,7 @@
  *   panel → bg: { type: 'tab-affinity.rebind', id }
  *   panel → bg: { type: 'panel.window', windowId }
  *   panel → bg: { type: 'selection.clear', selection? }
+ *   content → bg: { type: 'DSH_CHECK_SIDE_PANEL_OPEN' }
  *   panel → bg: { type: 'request-status' }
  *   bg → panel: { type: 'rpc.result', id, ok, result? | error? }
  *   bg → panel: { type: 'respond.result', id, ok, result? | error? }
@@ -26,6 +27,7 @@
  *   bg → panel: { type: 'approval.resolved', id }
  *   bg → panel: { type: 'session.resume-hint', sessionId }
  *   bg → panel: { type: 'selection', selection }
+ *   bg → panel: { type: 'media.attach', media }
  *   bg → panel: { type: 'tab-affinity', state }
  *   bg → panel: { type: 'tab-affinity.rebind.result', id, ok, error? }
  *
@@ -80,6 +82,7 @@ import {
   PageSessionContextTracker,
 } from './session-continuity.ts'
 import { appendMediaInspiration } from './media-library.ts'
+import { PanelPresence } from './panel-presence.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
 import { TIKTOK_RUNTIME_MESSAGE } from '../content/tiktok-scene/messages.ts'
 import {
@@ -375,7 +378,7 @@ function broadcastTabAffinity(): void {
 }
 
 /** Which window each panel port belongs to, so a quote stays in its window. */
-const panelWindows = new WeakMap<chrome.runtime.Port, number>()
+const panelPresence = new PanelPresence()
 /** The conversation each live panel is displaying, used for close checkpoints. */
 const panelActiveSessions = new WeakMap<chrome.runtime.Port, string>()
 
@@ -389,7 +392,7 @@ const panelActiveSessions = new WeakMap<chrome.runtime.Port, string>()
 function broadcastSelection(windowId: number): void {
   const payload = { type: 'selection', selection: selections.current(windowId) }
   for (const port of panelPorts) {
-    if (panelWindows.get(port) !== windowId) continue
+    if (panelPresence.windowOf(port) !== windowId) continue
     try { port.postMessage(payload) } catch { /* port already closed */ }
   }
 }
@@ -400,10 +403,27 @@ function broadcastSelections(windowIds: readonly number[]): void {
 
 /** Whether a window currently has a panel that can display its selection. */
 function hasPanelInWindow(windowId: number): boolean {
-  for (const port of panelPorts) {
-    if (panelWindows.get(port) === windowId) return true
+  return panelPresence.hasPanelInWindow(panelPorts, windowId)
+}
+
+/**
+ * Hand one page media element to the panels of a single window.
+ *
+ * A capture in one window is never offered to another window's panel, for the
+ * same reason its quote is not: the conversation on screen belongs to the page
+ * that window is looking at.
+ *
+ * @returns Whether at least one live panel accepted the message.
+ */
+function deliverMediaToPanels(windowId: number, media: HoveredMedia): boolean {
+  let delivered = false
+  for (const port of panelPresence.portsFor(panelPorts, windowId)) {
+    try {
+      port.postMessage({ type: 'media.attach', media })
+      delivered = true
+    } catch { /* port already closed */ }
   }
-  return false
+  return delivered
 }
 
 /**
@@ -454,7 +474,7 @@ let selectionWatchRevision = 0
  */
 function syncSelectionWatch(): void {
   const anyEnabled = selectionSharingEnabled()
-    && [...panelPorts].some((port) => panelWindows.get(port) !== undefined)
+    && panelPresence.anyPanel(panelPorts)
   const wasArmed = selectionWatchArmed
   selectionWatchArmed = anyEnabled
   const revision = ++selectionWatchRevision
@@ -770,14 +790,14 @@ async function postResumeHint(port: chrome.runtime.Port, windowId: number): Prom
   } catch {
     // Without an exact live page the panel must start a new conversation.
   }
-  if (!panelPorts.has(port) || panelWindows.get(port) !== windowId) return
+  if (!panelPorts.has(port) || panelPresence.windowOf(port) !== windowId) return
   try { port.postMessage({ type: 'session.resume-hint', sessionId }) } catch { /* port closed */ }
 }
 
 /** Re-checkpoint each open panel before issuing a bridge-epoch resume hint. */
 function refreshPanelResumeHints(): void {
   for (const port of panelPorts) {
-    const windowId = panelWindows.get(port)
+    const windowId = panelPresence.windowOf(port)
     if (windowId === undefined) continue
     const sessionId = panelActiveSessions.get(port)
     const checkpoint = sessionId === undefined
@@ -1417,9 +1437,19 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 
   // ---- Page-media hover capsule ----
   //
-  // These three messages are the only traffic the hover assistant produces, and
-  // only after the user presses a capsule icon: hovering itself never wakes this
+  // These messages are the only traffic the hover assistant produces, and only
+  // after the user presses a capsule icon: hovering itself never wakes this
   // worker.
+
+  if (type === 'DSH_CHECK_SIDE_PANEL_OPEN') {
+    // Asked before anything opens: one window must never end up with both the
+    // native side panel and the floating workstation showing one conversation.
+    // A window nobody has proved a panel in answers `active: false`, so the
+    // capsule keeps the floating workstation as its channel.
+    const windowId = sender.tab.windowId
+    sendResponse({ ok: true, active: panelPresence.hasPanelInWindow(panelPorts, windowId) })
+    return
+  }
 
   if (type === 'DSH_MEDIA_TO_INSPIRATION') {
     const payload = readHoveredMedia(message)
@@ -1453,9 +1483,16 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     // opened from inside this handler and the payload is stashed for the panel to
     // collect once its port connects.
     const windowId = sender.tab.windowId
+    // A panel that is already open owns the conversation on screen: it takes the
+    // media over its port, and nothing has to open or be stashed for a later
+    // collector that will never run.
+    if (deliverMediaToPanels(windowId, payload)) {
+      sendResponse({ ok: true, result: { channel: 'side-panel', tabId: sender.tab.id, active: true } })
+      return
+    }
     stashPendingMedia(windowId, payload)
     openAssistantPanel(windowId)
-    sendResponse({ ok: true, result: { channel: 'side-panel', tabId: sender.tab.id } })
+    sendResponse({ ok: true, result: { channel: 'side-panel', tabId: sender.tab.id, active: false } })
     return
   }
 
@@ -1622,7 +1659,7 @@ chrome.runtime.onConnect.addListener((port) => {
         if (typeof registration.windowId !== 'number'
           || !Number.isInteger(registration.windowId)
           || registration.windowId < 0) break
-        panelWindows.set(port, registration.windowId)
+        panelPresence.register(port, registration.windowId)
         syncSelectionWatch()
         try {
           port.postMessage({ type: 'selection', selection: selections.current(registration.windowId) })
@@ -1634,7 +1671,7 @@ chrome.runtime.onConnect.addListener((port) => {
         // The user sent, dismissed, or explicitly abandoned this window's
         // quote. A send/dismiss names the value it acted on so a newer capture
         // that arrived while work was in flight cannot be cleared by mistake.
-        const windowId = panelWindows.get(port)
+        const windowId = panelPresence.windowOf(port)
         if (windowId === undefined) break
         const request = message as { selection?: unknown }
         const expected = request.selection === undefined ? undefined : parsePageSelection(request.selection)
@@ -1746,7 +1783,7 @@ chrome.runtime.onConnect.addListener((port) => {
         try {
           port.postMessage({ type: 'status', state: bridge?.state ?? ('stopped' as BridgeState), caps })
           port.postMessage({ type: 'tab-affinity', state: tabAffinity.snapshot() })
-          const statusWindowId = panelWindows.get(port)
+          const statusWindowId = panelPresence.windowOf(port)
           if (statusWindowId !== undefined) {
             port.postMessage({ type: 'selection', selection: selections.current(statusWindowId) })
           }
@@ -1755,7 +1792,7 @@ chrome.runtime.onConnect.addListener((port) => {
             port.postMessage({ type: 'approval.request', request })
             return true
           })
-          const resumeWindowId = panelWindows.get(port)
+          const resumeWindowId = panelPresence.windowOf(port)
           if (resumeWindowId !== undefined) void postResumeHint(port, resumeWindowId)
         } catch { /* port closed */ }
         break
@@ -1769,7 +1806,7 @@ chrome.runtime.onConnect.addListener((port) => {
         : 'The background connection was lost, so tab binding was cancelled'))
     }
     tabAffinityRebinds.clear()
-    const panelWindowId = panelWindows.get(port)
+    const panelWindowId = panelPresence.windowOf(port)
     const panelSessionId = panelActiveSessions.get(port)
     panelActiveSessions.delete(port)
     panelPorts.delete(port)
