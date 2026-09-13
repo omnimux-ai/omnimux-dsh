@@ -39,25 +39,34 @@ npm run build:cloud-catalog   # 重扫本地素材库 → cloud-catalog/ 静态�
 cloud-catalog/
 ├── manifest.json                              # categories / sub_categories / total / pages / sourceRoot
 ├── index.json                                 # id → 行（Host 用它解析媒体与收藏到本地）
-├── knowledge/{prompt,note,storyboard}/page-NNNN.json
-├── character/{digital-human,virtual-influencer}/page-NNNN.json
+├── knowledge/{prompt,storyboard}/page-NNNN.json
+├── character/{female,male,lifestyle,business}/page-NNNN.json
 ├── scene/ambience/page-NNNN.json
-├── prop/{green-screen,hook-video}/page-NNNN.json
+├── prop/page-NNNN.json                        # 空分类，只发一页空 items
+├── material/{green-screen,hook,meme}/page-NNNN.json
 ├── style/{image-preset,video-tone}/page-NNNN.json
 └── audio/{voiceover,sfx,bgm}/page-NNNN.json
 ```
 
-六大分类共 3333 条：知识包 1502（含短剧拆镜 143）、角色 428（329 实景数字人 + 99 虚拟红人）、
-场景 14、道具 160（150 绿幕贴片 + 10 商品特写）、风格 592（583 生图预设 + 9 视频调性）、
-声音 637（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 2；背景音 108）。
+七大分类共 2449 条：知识包 200（脚本提示词 57 + 短剧拆镜 143）、角色 428（329 实景数字人 + 99 虚拟红人）、
+场景 14、道具 0（**刻意留空**：绿幕与钩子都是素材，不是实物道具）、素材 1016（绿幕 150 + 钩子 705 + 表情包 161）、
+风格 151（生图预设 122 + 视频调性 29）、声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；背景音 108）。
+
+角色的二级分类是**多维**的：`sub_category` 是主架（性别），`sub_categories` 是完整归属表，所以同一位数字人
+可以同时落在「女性角色」和「职场商务」下；分片子目录与计数都按归属表算。没有性别或场景线索的行
+（例如整批无名的 AI 网红档案）只出现在「全部」，不会被猜进任何一个架子。
+
+每一级都按数据开二级栏：清单里有非空子分类就展开，首个 Tab 固定是「全部」并带该大类总数；场景与空的道具不展开。
 
 生成脚本 `scripts/build-cloud-assets-catalog.mjs`：
 
 - 默认读 `/Users/x/Desktop/Project/OPC/资产库`，可用 `--assets-root=` 换根、`--out=` 换输出、`--dry-run` 只统计
 - 每个数据源都可缺失：缺源只让该分类变空，不会让整次构建失败
-- 灵感社区是独立系统，按目录名跳过
+- 灵感社区是独立系统，按目录名跳过；只有表情包那一处按精确路径读它的图片画廊
 - 素材路径写 `file:<相对 assets-root 的路径>`；同时有本地副本与可公开访问的远端地址时，远端地址存进
-  `meta.source_media_url`，换机器仍可播放（453 行只有本地副本，其余 708 行带远端回退）
+  `meta.source_media_url`，换机器仍可播放
+- 知识包只收 `prompts/` 与短剧 skill 参考，不再扫 `知识库/`；风格只收三个策展预设文件，每条都带
+  `meta.prompt_text`；音效只收 `素材库/音频/音效/` 下的真实转场音效
 
 Host 侧（`src/cloud-catalog.js` + `src/http-routes.js`）：
 

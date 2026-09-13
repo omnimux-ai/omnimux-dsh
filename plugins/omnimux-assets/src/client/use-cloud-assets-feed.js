@@ -1,16 +1,19 @@
 /**
  * The cloud assets feed: category + sub-category selection, page loading,
- * catalog search, audio audition, and save-to-local.
+ * catalog search, and audio audition.
  *
  * Pages are fetched lazily and appended, so switching category costs one request
  * (24 rows) rather than the whole scope. A viewport sentinel asks for the next
  * page; a failed page reports an error and leaves the loaded rows intact.
+ *
+ * Copying a cloud row into the local library is not part of this feed: the only
+ * route out of a card is into the conversation, and the preview modal owns the
+ * one remaining save control through its own controller (see `AssetsStage`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
 import {
   CLOUD_PAGE_SIZE,
-  CLOUD_SUBNAV_CATEGORY,
   appendUniqueAssets,
   normalizeCloudAsset,
   pageCountOf,
@@ -18,7 +21,6 @@ import {
 } from './cloud-feed-helpers.js'
 import { errText, messageOf } from './feed-helpers.js'
 import { useCloudManifest } from './use-cloud-manifest.js'
-import { useCloudSave } from './use-cloud-save.js'
 
 /** Debounce before a keystroke turns into a catalog-wide search request. */
 export const CLOUD_SEARCH_DEBOUNCE_MS = 280
@@ -109,21 +111,10 @@ export function useCloudAudition() {
  *   t: (key: string) => string,
  *   open: boolean,
  *   defaultCategory?: string,
- *   save?: {
- *     savedIds: Set<string>,
- *     savingId: string,
- *     notice: string,
- *     save: (asset: any) => Promise<boolean>,
- *   },
  * }} options
  */
 export function useCloudAssetsFeed(options) {
-  const { t, open, defaultCategory = 'knowledge', save: stageSave } = options
-  // The stage owns one save controller so the preview modal and the cards agree
-  // on what has already been copied into the library; a view mounted without one
-  // still saves on its own.
-  const ownSave = useCloudSave({ t })
-  const saver = stageSave ?? ownSave
+  const { t, open, defaultCategory = 'knowledge' } = options
   const { manifest, loading: manifestLoading, error: manifestError, reload: reloadManifest } = useCloudManifest({ enabled: open })
 
   const categories = useMemo(() => {
@@ -154,13 +145,11 @@ export function useCloudAssetsFeed(options) {
     setSubCategory('')
   }, [manifest, categories, category])
 
-  // The second level belongs to the audio tab only. 知识包, 角色, 场景, 道具 and
-  // 风格 carry sub-categories in the manifest as counting buckets, and opening
-  // them put 全部声音 above 脚本提示词 / 知识笔记 / 短剧拆镜 — an audio label in
-  // another category's row. `subCategoryTabs` owns that rule; the check is
-  // repeated here so no future consumer can inherit the second level by accident.
+  // The second level is a property of the data, not of one tab: every category
+  // whose manifest entry carries populated sub-categories gets one, always led
+  // by 全部. 场景 and the deliberately empty 道具 therefore stay single-level.
   const tabs = useMemo(() => subCategoryTabs(manifest, category), [manifest, category])
-  const hasSecondLevel = category === CLOUD_SUBNAV_CATEGORY && tabs.hasSecondLevel
+  const hasSecondLevel = tabs.hasSecondLevel
 
   // A category switch invalidates the sub-category selection unless that
   // sub-category exists in the new category.
@@ -307,6 +296,7 @@ export function useCloudAssetsFeed(options) {
 
   const selectCategory = useCallback((next) => {
     setCategory(next)
+    // Every category opens on 全部, never on another category's last filter.
     setSubCategory('')
     setQuery('')
     setQueryApplied('')
@@ -337,16 +327,12 @@ export function useCloudAssetsFeed(options) {
     /** True while a page or a search slice is in flight, for the button state. */
     loadingMore: loadingPage || searching,
     error: manifestError || pageError,
-    notice: saver.notice,
-    savedIds: saver.savedIds,
-    savingId: saver.savingId,
     query,
     setQuery,
     selectCategory,
     selectSubCategory,
     loadMore,
     refresh,
-    saveToLocal: saver.save,
     audition,
   }
 }

@@ -1,9 +1,10 @@
 /**
- * The save-to-local controller for the cloud tab.
+ * The save-to-local controller for the cloud source tab.
  *
- * One controller per stage rather than one per view: the preview modal and the
- * card then share a single `savedIds` set, so saving from the modal marks the
- * card behind it as 已收藏 instead of inviting a second save of the same row.
+ * One controller per stage rather than one per view. It serves the cloud preview
+ * modal, which is now the only place a catalog row can be copied into the local
+ * library — the grid cards themselves offer just 加入对话 — so `savedIds` marks
+ * the modal's button as 已收藏 and keeps a second copy of the same row out.
  *
  * The save itself is single-flight — a second click while a copy is in progress
  * is dropped rather than racing the same catalog row into the library, and a row
@@ -53,7 +54,7 @@ export function useCloudSave(options) {
         next.add(id)
         return next
       })
-      setNotice(t('cloud.save.saved').replace('{name}', String(asset?.name ?? '')))
+      setNotice(t('modal.save.notice').replace('{name}', String(asset?.name ?? '')))
       return true
     } catch (caught) {
       setNotice(errText(caught))

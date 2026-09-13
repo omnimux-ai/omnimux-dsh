@@ -41,16 +41,18 @@ describe('cloud -> local bridge', () => {
     assert.doesNotMatch(hubBranch.slice(0, hubBranch.indexOf('} else {')), /void refreshState\(true\)/)
   })
 
-  it('exposes the shared controller through the cloud feed as saveToLocal', () => {
-    assert.match(cloudFeedJs, /const saver = stageSave \?\? ownSave/)
-    assert.match(cloudFeedJs, /saveToLocal: saver\.save/)
-    assert.match(cloudFeedJs, /savedIds: saver\.savedIds/)
-    assert.match(cloudFeedJs, /savingId: saver\.savingId/)
+  it('keeps the cloud grid off the save path entirely', () => {
+    // Cards carry no save control any more — the single route out of a card is
+    // into the conversation — so the cloud feed must not hold a controller.
+    assert.doesNotMatch(cloudFeedJs, /useCloudSave/)
+    assert.doesNotMatch(cloudFeedJs, /saveToLocal|savedIds|savingId/)
+    assert.doesNotMatch(cloudFeedJs, /stageSave|ownSave/)
   })
 
-  it('shares one save controller between the cloud grid and the preview modal', () => {
+  it('keeps one save controller on the stage, serving the cloud preview modal', () => {
     assert.match(stageJsx, /const cloudSave = useCloudSave\(\{ t \}\)/)
-    assert.match(stageJsx, /<CloudAssetsView t=\{t\} open=\{visible\} onPreview=\{onCloudPreview\} save=\{cloudSave\} \/>/)
+    assert.match(stageJsx, /<CloudAssetsView t=\{t\} open=\{visible\} onPreview=\{onCloudPreview\} \/>/)
+    assert.doesNotMatch(stageJsx, /<CloudAssetsView[^>]*save=\{cloudSave\}/)
     assert.match(stageJsx, /saved=\{previewCloudId !== '' && cloudSave\.savedIds\.has\(previewCloudId\)\}/)
     assert.match(stageJsx, /saving=\{previewCloudId !== '' && cloudSave\.savingId === previewCloudId\}/)
     assert.match(stageJsx, /onSaveToLocal=\{previewCloudId !== '' \? savePreviewItem : undefined\}/)

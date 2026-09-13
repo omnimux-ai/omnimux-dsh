@@ -8,13 +8,12 @@ import {
   ImageIcon,
   PauseIcon,
   PlayIcon,
-  PlusIcon,
   VideoIcon,
 } from './icons.jsx'
 import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
-import { cloudCardKind } from './cloud-feed-helpers.js'
+import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 
 /** Media type -> tile icon, for media rows whose cover and original both fail. */
@@ -145,18 +144,18 @@ function CloudTileMedia(props) {
 /**
  * One cloud asset card.
  *
- * Four things live on a card: the body, the title under it, and the two hover
- * controls pinned into the top-right corner that are the two ways out of the
- * cloud — into the conversation, or into the local library. A media-type badge,
- * tags and a bottom action bar used to compete with the thumbnail for attention;
- * they are gone.
+ * Three things live on a card: the body, the title under it, and the one hover
+ * control pinned into the top-right corner that is the single way out of the
+ * cloud — into the conversation. Copying a row into the local library used to
+ * share that corner behind a `+`; it is gone, and the bubble is now the only
+ * control on the card.
  *
  * The body follows the row (`cloudCardKind`):
  * - a picture or video gets a fixed 164px thumbnail with one line of title;
- * - a voice gets a waveform plate that plays and stops it, with the title and its
- *   one-line voice description underneath;
- * - a text row (脚本提示词 / 知识笔记 / 短剧拆镜) gets no plate at all — a title
- *   over its description, which is the only thing that distinguishes those rows.
+ * - a voice gets a waveform plate that plays and stops it, with the title and one
+ *   line of voice description underneath;
+ * - a text row (脚本提示词 / 短剧拆镜) gets no plate at all — a title over its
+ *   description, which is the only thing that distinguishes those rows.
  *
  * Where a click lands decides what happens. On a voice card the plate is the play
  * control, so it claims the click for itself and the rest of the card opens the
@@ -169,13 +168,10 @@ function CloudTileMedia(props) {
  *   playing: boolean,
  *   onTogglePlay: (asset: any) => void,
  *   onPreview?: (asset: any) => void,
- *   saved?: boolean,
- *   saving?: boolean,
- *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay, onPreview, saved = false, saving = false, onSave } = props
+  const { asset, t, playing, onTogglePlay, onPreview } = props
   const [broken, setBroken] = useState(false)
   const [added, setAdded] = useState(false)
   const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
@@ -200,28 +196,25 @@ export function CloudAssetCard(props) {
     addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
   }
 
-  // Both controls sit over the card's top-right corner, so each claims its own
-  // pointer event: without that, using one would also open the preview behind it.
-  const handleSave = (event) => {
-    event.stopPropagation()
-    if (saved || saving) return
-    onSave?.(asset)
-  }
+  // The control sits over the card's top-right corner, so it claims its own
+  // pointer event: without that, using it would also open the preview behind it.
   const handlePlayClick = (event) => {
     event.stopPropagation()
     togglePlay()
   }
 
   const addLabel = added ? t('card.addedToConversation') : t('card.addToConversation')
-  const saveLabel = saved ? t('cloud.action.saved') : t('cloud.action.save')
   const previewLabel = `${asset.name} · ${t('card.view')}`
+  // A voice card carries one of five restrained dark washes, picked by row id so
+  // it never changes between renders. Other kinds declare no theme.
+  const theme = canPlay ? cloudAudioTheme(asset.id) : undefined
 
   return (
     <div
       className={`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--${kind}`}
       data-kind={kind}
       data-media-type={asset.mediaType}
-      data-saved={saved ? 'true' : 'false'}
+      data-theme={theme}
       onClick={openPreview}
     >
       {kind === 'text' ? null : (
@@ -254,18 +247,6 @@ export function CloudAssetCard(props) {
         >
           {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
         </IconButton>
-        <IconButton
-          variant="ghost"
-          size="sm"
-          className="omnimux-assets-cloud-save"
-          aria-label={saveLabel}
-          title={saveLabel}
-          aria-pressed={saved ? 'true' : 'false'}
-          disabled={saved || saving}
-          onClick={handleSave}
-        >
-          {saved ? <CheckIcon size={16} /> : <PlusIcon size={16} />}
-        </IconButton>
       </div>
       <div
         className="omnimux-assets-card-body"
@@ -286,13 +267,13 @@ export function CloudAssetCard(props) {
 /**
  * Category navigation with its optional second level.
  *
- * The second level belongs to the audio tab alone: a category shows its
- * sub-categories only when the feed says so, and the feed only ever says so for
- * audio (see `CLOUD_SUBNAV_CATEGORY`). The first chip is a plain 全部 rather than
- * a category-specific label, so no category can inherit another one's wording.
- * Both levels share one chip treatment: neutral until selected, then inked with
- * the label colour instead of a brand accent, so the tab row carries no colour
- * of its own in either theme.
+ * The second level belongs to the data: a category shows its sub-categories
+ * whenever the feed reports them (声音, 素材, 角色), and 场景 and the empty 道具
+ * report none. The first chip is always a plain 全部 carrying the category's own
+ * count rather than a category-specific label, so no category can inherit
+ * another one's wording. Both levels share one chip treatment: neutral until
+ * selected, then inked with the label colour instead of a brand accent, so the
+ * tab row carries no colour of its own in either theme.
  * @param {{
  *   t: (key: string) => string,
  *   categories: any[],
@@ -352,16 +333,11 @@ function CloudCategoryNav(props) {
  *   t: (key: string) => string,
  *   open?: boolean,
  *   onPreview?: (asset: any) => void,
- *   save?: {
- *     savedIds: Set<string>,
- *     savingId: string,
- *     save: (asset: any) => Promise<boolean>,
- *   },
  * }} props
  */
 export function CloudAssetsView(props) {
-  const { t, open = true, onPreview, save } = props
-  const feed = useCloudAssetsFeed({ t, open, save })
+  const { t, open = true, onPreview } = props
+  const feed = useCloudAssetsFeed({ t, open })
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   const { loadMore, hasMore, loadingMore, items, audition } = feed
 
@@ -405,9 +381,6 @@ export function CloudAssetsView(props) {
               playing={audition.playingId === asset.id}
               onTogglePlay={onTogglePlay}
               onPreview={onPreview}
-              saved={feed.savedIds.has(asset.id)}
-              saving={feed.savingId === asset.id}
-              onSave={feed.saveToLocal}
             />
           ))}
         </div>
@@ -438,7 +411,6 @@ export function CloudAssetsView(props) {
         onSubCategory={feed.selectSubCategory}
       />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
-      {feed.notice !== '' ? <p className="omnimux-assets-cloud-notice">{feed.notice}</p> : null}
       {body}
     </div>
   )

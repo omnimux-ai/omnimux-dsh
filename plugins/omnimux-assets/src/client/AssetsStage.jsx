@@ -239,12 +239,12 @@ function AssetsBody(props) {
   if (sourceTab === 'cloud') {
     // Mounted only while the cloud tab is selected: leaving it unmounts the
     // feed, which is what stops an in-flight audition and releases its audio.
-    // The save controller outlives the tab, so a row saved here stays marked
-    // 已收藏 when the user comes back to the cloud list.
+    // Cards carry no save control — the only route out of a card is into the
+    // conversation — so the stage's controller serves the preview modal alone.
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} save={cloudSave} />
+          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} />
         </div>
       </div>
     )
@@ -394,6 +394,7 @@ export function AssetsStage(props) {
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
+      {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}
       <AssetsBody
         t={t}
         feed={feed}

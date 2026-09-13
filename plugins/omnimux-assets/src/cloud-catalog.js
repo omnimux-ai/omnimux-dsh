@@ -87,9 +87,26 @@ function locatorPath(value) {
 }
 
 /**
- * @typedef {{ id: string, category: string, sub_category: string, name: string,
+ * @typedef {{ id: string, category: string, sub_category: string,
+ *   sub_categories?: string[], name: string,
  *   media_type: string, media_url: string, cover_url: string, tags: string[] }} CatalogIndexRow
  */
+
+/**
+ * Every shelf a catalog row belongs to.
+ *
+ * A row's `sub_category` is its primary shelf; `sub_categories` carries the full
+ * membership list and is only longer where a category has more than one axis
+ * (角色: gender and scene). A catalog built before that field existed still
+ * scopes correctly, because the primary shelf is the fallback.
+ * @param {CatalogIndexRow} row
+ * @returns {string[]}
+ */
+export function catalogShelves(row) {
+  const shelves = Array.isArray(row?.sub_categories) ? row.sub_categories : []
+  if (shelves.length > 0) return shelves
+  return row?.sub_category ? [row.sub_category] : []
+}
 
 /**
  * @param {{
@@ -244,7 +261,7 @@ export function createCloudCatalog(deps = {}) {
 
     const rows = [.../** @type {Map<string, CatalogIndexRow>} */ (index).values()].filter((row) => {
       if (category !== '' && row.category !== category) return false
-      if (subCategory !== '' && row.sub_category !== subCategory) return false
+      if (subCategory !== '' && !catalogShelves(row).includes(subCategory)) return false
       if (needle === '') return true
       return (
         row.name.toLowerCase().includes(needle)
@@ -365,8 +382,9 @@ function typeForCategory(category) {
 
 /** @param {CatalogIndexRow} row */
 function descriptionFor(row) {
+  const shelves = catalogShelves(row)
   const parts = [row.description]
-  if (row.sub_category) parts.push(`云端分类：${row.sub_category}`)
+  if (shelves.length > 0) parts.push(`云端分类：${shelves.join(' / ')}`)
   parts.push(`云端来源：${row.id}`)
   return parts.filter(Boolean).join('\n')
 }
