@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { RivalAccountsPanel } from './RivalAccountsPanel.jsx'
+import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -85,8 +85,21 @@ export function InspirationSection({ t, active }) {
     clearImportFailed,
   } = feed
 
+  /**
+   * Account-dimension filters of the 对标账号 tab, owned by the shell.
+   *
+   * The workbench filters accounts rather than library rows, so its two controls
+   * cannot be the feed's. They are still rendered in the one filter row every
+   * tab shares: switching tabs swaps what the row is wired to, never the row
+   * itself, which is what keeps the four tabs on the same visual level.
+   */
+  const [rivalQuery, setRivalQuery] = useState('')
+  const [rivalPlatform, setRivalPlatform] = useState('')
+  const rivalTab = tab === 'rivals'
+
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
+  const rivalPlatformOptions = buildRivalPlatformOptions(t)
 
   // The row the last import produced is pinned above the list while it is
   // missing from it: the tab switch that follows an import refetches page 1, and
@@ -107,16 +120,6 @@ export function InspirationSection({ t, active }) {
   useEffect(() => {
     injectInspirationStyles()
   }, [])
-
-  // The rival workbench renders instead of the inspiration grid: the two have
-  // unrelated toolbars, and sharing one would mean hiding half of it by tab.
-  if (tab === 'rivals') {
-    return (
-      <div className="omnimux-inspiration-root">
-        <RivalAccountsPanel t={t} active={active !== false} />
-      </div>
-    )
-  }
 
   return (
     <div className="omnimux-inspiration-root">
@@ -147,7 +150,16 @@ export function InspirationSection({ t, active }) {
             onChange={setTab}
           />
         }
-        search={(
+        search={rivalTab ? (
+          <SearchField
+            value={rivalQuery}
+            placeholder={t('rivalAccounts.import.searchPlaceholder')}
+            aria-label={t('rivalAccounts.import.searchPlaceholder')}
+            debounceMs={200}
+            stretch
+            onValueChange={setRivalQuery}
+          />
+        ) : (
           <SearchField
             value={q}
             placeholder={t('filter.search')}
@@ -157,7 +169,15 @@ export function InspirationSection({ t, active }) {
             onValueChange={setQ}
           />
         )}
-        tools={(
+        tools={rivalTab ? (
+          <DropdownSelect
+            value={rivalPlatform}
+            aria-label={t('filter.platform')}
+            onChange={setRivalPlatform}
+            className="omnimux-inspiration-filter-select"
+            options={rivalPlatformOptions}
+          />
+        ) : (
           <>
             {platformOptions ? (
               <DropdownSelect
@@ -206,211 +226,223 @@ export function InspirationSection({ t, active }) {
         )}
       />
 
-      <div className="omnimux-inspiration-subfilter-row">
-        <DropdownSelect
-          value={country}
-          aria-label={t('filter.country')}
-          onChange={setCountry}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('country.all') },
-            { value: 'US', label: t('country.us') },
-            { value: 'GB', label: t('country.gb') },
-            { value: 'ID', label: t('country.id') },
-            { value: 'TH', label: t('country.th') },
-            { value: 'MY', label: t('country.my') },
-            { value: 'VN', label: t('country.vn') },
-            { value: 'PH', label: t('country.ph') },
-          ]}
+      {/* Content area — the one region a tab switch replaces. */}
+      {rivalTab ? (
+        <RivalAccountsPanel
+          t={t}
+          active={active !== false}
+          query={rivalQuery}
+          platform={rivalPlatform}
         />
-        <DropdownSelect
-          value={category}
-          aria-label={t('filter.category')}
-          onChange={setCategory}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('category.all') },
-            { value: '美妆护肤', label: '美妆护肤' },
-            { value: '厨房用品', label: '厨房用品' },
-            { value: '家居生活', label: '家居生活' },
-            { value: '健康保健', label: '健康保健' },
-            { value: '服装服饰', label: '服装服饰' },
-            { value: '母婴玩具', label: '母婴玩具' },
-            { value: '数码科技', label: '数码科技' },
-            { value: '食品饮料', label: '食品饮料' },
-            { value: '汽车与户外', label: '汽车与户外' },
-          ]}
-        />
-        <DropdownSelect
-          value={duration}
-          aria-label={t('filter.duration')}
-          onChange={setDuration}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('duration.all') },
-            { value: '0-15', label: t('duration.under15') },
-            { value: '15-30', label: t('duration.15to30') },
-            { value: '30-60', label: t('duration.30to60') },
-            { value: '60+', label: t('duration.over60') },
-          ]}
-        />
-        <DropdownSelect
-          value={views}
-          aria-label={t('filter.views')}
-          onChange={setViews}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('views.all') },
-            { value: '10k+', label: t('views.10k') },
-            { value: '100k+', label: t('views.100k') },
-            { value: '500k+', label: t('views.500k') },
-            { value: '1m+', label: t('views.1m') },
-            { value: '5m+', label: t('views.5m') },
-            { value: '10m+', label: t('views.10m') },
-          ]}
-        />
-        <DropdownSelect
-          value={trafficType}
-          aria-label={t('filter.trafficType')}
-          onChange={setTrafficType}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('traffic.all') },
-            { value: 'ad', label: t('traffic.ad') },
-            { value: 'organic', label: t('traffic.organic') },
-          ]}
-        />
-        <DropdownSelect
-          value={dateRange}
-          aria-label={t('filter.dateRange')}
-          onChange={setDateRange}
-          className="omnimux-inspiration-subfilter-select"
-          options={[
-            { value: '', label: t('date.all') },
-            { value: 'last7', label: t('date.last7') },
-            { value: 'last30', label: t('date.last30') },
-            { value: 'last90', label: t('date.last90') },
-          ]}
-        />
-      </div>
-
-      {selecting ? (
-        <div className="omnimux-inspiration-selection-bar">
-          <div className="omnimux-inspiration-selection-count">
-            <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
-          </div>
-          <div className="omnimux-inspiration-selection-actions">
-            <Button variant="ghost" size="sm" onClick={selectAllLocal}>
-              {t('select.selectAll')}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={clearSelection}>
-              {t('select.clear')}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={removing}
-              onClick={() => setPendingRemove({ ids: [...selectedIds], count: selectedCount })}
-            >
-              {t('select.delete').replace('{n}', String(selectedCount))}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {loading && items.length === 0 ? (
-        <div className="omnimux-inspiration-skeleton">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="omnimux-inspiration-skel" />
-          ))}
-        </div>
-      ) : null}
-
-      {phase === 'need-login' && tab === 'public' ? <LoginGate t={t} /> : null}
-
-      {phase === 'ready' && error && visibleItems.length === 0 ? (
-        <div className="omnimux-inspiration-error">
-          <p className="omnimux-inspiration-empty-text">
-            {error === 'disabled' ? t('error.disabled') : error || t('error.generic')}
-          </p>
-        </div>
-      ) : null}
-
-      {!loading && visibleItems.length === 0 && (!error || tab === 'local') ? (
-        <EmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
-      ) : null}
-
-      {visibleItems.length > 0 ? (
-        <div className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}>
-          {visibleItems.map((row) => (
-            <InspirationCoverCard
-              key={String(row.id)}
-              card={{
-                row,
-                t,
-                selected: selectedIds.has(row.id),
-                selecting,
-                replicateBusy,
-                onToggleSelect: toggleSelect,
-                onSelect: (item) => setSelectedItem(item),
-                onReplicate: handleReplicate,
-              }}
+      ) : (
+        <>
+          <div className="omnimux-inspiration-subfilter-row">
+            <DropdownSelect
+              value={country}
+              aria-label={t('filter.country')}
+              onChange={setCountry}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('country.all') },
+                { value: 'US', label: t('country.us') },
+                { value: 'GB', label: t('country.gb') },
+                { value: 'ID', label: t('country.id') },
+                { value: 'TH', label: t('country.th') },
+                { value: 'MY', label: t('country.my') },
+                { value: 'VN', label: t('country.vn') },
+                { value: 'PH', label: t('country.ph') },
+              ]}
             />
-          ))}
-          {loadingMore ? Array.from({ length: 10 }).map((_, i) => (
-            <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
-          )) : null}
-        </div>
-      ) : null}
+            <DropdownSelect
+              value={category}
+              aria-label={t('filter.category')}
+              onChange={setCategory}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('category.all') },
+                { value: '美妆护肤', label: '美妆护肤' },
+                { value: '厨房用品', label: '厨房用品' },
+                { value: '家居生活', label: '家居生活' },
+                { value: '健康保健', label: '健康保健' },
+                { value: '服装服饰', label: '服装服饰' },
+                { value: '母婴玩具', label: '母婴玩具' },
+                { value: '数码科技', label: '数码科技' },
+                { value: '食品饮料', label: '食品饮料' },
+                { value: '汽车与户外', label: '汽车与户外' },
+              ]}
+            />
+            <DropdownSelect
+              value={duration}
+              aria-label={t('filter.duration')}
+              onChange={setDuration}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('duration.all') },
+                { value: '0-15', label: t('duration.under15') },
+                { value: '15-30', label: t('duration.15to30') },
+                { value: '30-60', label: t('duration.30to60') },
+                { value: '60+', label: t('duration.over60') },
+              ]}
+            />
+            <DropdownSelect
+              value={views}
+              aria-label={t('filter.views')}
+              onChange={setViews}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('views.all') },
+                { value: '10k+', label: t('views.10k') },
+                { value: '100k+', label: t('views.100k') },
+                { value: '500k+', label: t('views.500k') },
+                { value: '1m+', label: t('views.1m') },
+                { value: '5m+', label: t('views.5m') },
+                { value: '10m+', label: t('views.10m') },
+              ]}
+            />
+            <DropdownSelect
+              value={trafficType}
+              aria-label={t('filter.trafficType')}
+              onChange={setTrafficType}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('traffic.all') },
+                { value: 'ad', label: t('traffic.ad') },
+                { value: 'organic', label: t('traffic.organic') },
+              ]}
+            />
+            <DropdownSelect
+              value={dateRange}
+              aria-label={t('filter.dateRange')}
+              onChange={setDateRange}
+              className="omnimux-inspiration-subfilter-select"
+              options={[
+                { value: '', label: t('date.all') },
+                { value: 'last7', label: t('date.last7') },
+                { value: 'last30', label: t('date.last30') },
+                { value: 'last90', label: t('date.last90') },
+              ]}
+            />
+          </div>
 
-      <div
-        className="omnimux-inspiration-cta-status"
-        id="omnimux-inspiration-cta-status"
-        aria-live="polite"
-        role="status"
-      >
-        {ctaStatus ? t(ctaStatus) : ''}
-      </div>
+          {selecting ? (
+            <div className="omnimux-inspiration-selection-bar">
+              <div className="omnimux-inspiration-selection-count">
+                <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
+              </div>
+              <div className="omnimux-inspiration-selection-actions">
+                <Button variant="ghost" size="sm" onClick={selectAllLocal}>
+                  {t('select.selectAll')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  {t('select.clear')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={removing}
+                  onClick={() => setPendingRemove({ ids: [...selectedIds], count: selectedCount })}
+                >
+                  {t('select.delete').replace('{n}', String(selectedCount))}
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
-      {/* 后台导入结算通知：降级、失败或 AI 拆解失败时告知结果，点击即清除。
-          每段文案各自包一层 <p>：样式表只给 `.omnimux-inspiration-import-notice p`
-          设了外边距，裸文本会继承浏览器的默认 margin 而与相邻提示错位。 */}
-      {importFailed ? (
-        <div
-          className="omnimux-inspiration-import-notice"
-          role="status"
-          onClick={() => clearImportFailed?.(null)}
-        >
-          <p>
-            {t(importFailed.key)}
-            {importFailed.detail ? `：${importFailed.detail}` : ''}
-          </p>
-          {importFailed.retryable ? <p>{t('add.retryHint')}</p> : null}
-        </div>
-      ) : null}
+          {loading && items.length === 0 ? (
+            <div className="omnimux-inspiration-skeleton">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="omnimux-inspiration-skel" />
+              ))}
+            </div>
+          ) : null}
 
-      <div ref={sentinelRef} />
+          {phase === 'need-login' && tab === 'public' ? <LoginGate t={t} /> : null}
 
-      {selectedItem ? (
-        <InspirationPreviewModal
-          row={selectedItem}
-          t={t}
-          onClose={() => setSelectedItem(null)}
-          onItemUpdated={handleItemUpdated}
-          onReplicate={handleReplicate}
-          replicateBusy={replicateBusy}
-        />
-      ) : null}
+          {phase === 'ready' && error && visibleItems.length === 0 ? (
+            <div className="omnimux-inspiration-error">
+              <p className="omnimux-inspiration-empty-text">
+                {error === 'disabled' ? t('error.disabled') : error || t('error.generic')}
+              </p>
+            </div>
+          ) : null}
 
-      {pendingRemove ? (
-        <ConfirmRemoveDialog
-          t={t}
-          count={pendingRemove.count}
-          busy={removing}
-          onCancel={() => setPendingRemove(null)}
-          onConfirm={handleConfirmBatchRemove}
-        />
-      ) : null}
+          {!loading && visibleItems.length === 0 && (!error || tab === 'local') ? (
+            <EmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
+          ) : null}
+
+          {visibleItems.length > 0 ? (
+            <div className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}>
+              {visibleItems.map((row) => (
+                <InspirationCoverCard
+                  key={String(row.id)}
+                  card={{
+                    row,
+                    t,
+                    selected: selectedIds.has(row.id),
+                    selecting,
+                    replicateBusy,
+                    onToggleSelect: toggleSelect,
+                    onSelect: (item) => setSelectedItem(item),
+                    onReplicate: handleReplicate,
+                  }}
+                />
+              ))}
+              {loadingMore ? Array.from({ length: 10 }).map((_, i) => (
+                <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
+              )) : null}
+            </div>
+          ) : null}
+
+          <div
+            className="omnimux-inspiration-cta-status"
+            id="omnimux-inspiration-cta-status"
+            aria-live="polite"
+            role="status"
+          >
+            {ctaStatus ? t(ctaStatus) : ''}
+          </div>
+
+          {/* 后台导入结算通知：降级、失败或 AI 拆解失败时告知结果，点击即清除。
+              每段文案各自包一层 <p>：样式表只给 `.omnimux-inspiration-import-notice p`
+              设了外边距，裸文本会继承浏览器的默认 margin 而与相邻提示错位。 */}
+          {importFailed ? (
+            <div
+              className="omnimux-inspiration-import-notice"
+              role="status"
+              onClick={() => clearImportFailed?.(null)}
+            >
+              <p>
+                {t(importFailed.key)}
+                {importFailed.detail ? `：${importFailed.detail}` : ''}
+              </p>
+              {importFailed.retryable ? <p>{t('add.retryHint')}</p> : null}
+            </div>
+          ) : null}
+
+          <div ref={sentinelRef} />
+
+          {selectedItem ? (
+            <InspirationPreviewModal
+              row={selectedItem}
+              t={t}
+              onClose={() => setSelectedItem(null)}
+              onItemUpdated={handleItemUpdated}
+              onReplicate={handleReplicate}
+              replicateBusy={replicateBusy}
+            />
+          ) : null}
+
+          {pendingRemove ? (
+            <ConfirmRemoveDialog
+              t={t}
+              count={pendingRemove.count}
+              busy={removing}
+              onCancel={() => setPendingRemove(null)}
+              onConfirm={handleConfirmBatchRemove}
+            />
+          ) : null}
+        </>
+      )}
 
       <InspirationInlineImportDialog
         open={importOpen}

@@ -34,8 +34,7 @@ export const RIVAL_CSS = `
   gap: 10px;
   min-width: 0;
 }
-.omnimux-rival-toolbar,
-.omnimux-rival-filters,
+.omnimux-rival-column-actions,
 .omnimux-rival-post-toolbar {
   display: flex;
   align-items: center;
@@ -252,6 +251,9 @@ export const RIVAL_CSS = `
   margin: 0;
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
+}
+.omnimux-rival-empty-cta {
+  margin-top: 4px;
 }
 .omnimux-rival-notice,
 .omnimux-rival-banner {
