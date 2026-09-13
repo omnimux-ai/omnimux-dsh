@@ -602,27 +602,44 @@ function hideOriginalToggle(doc) {
 
 const RIGHTBAR_CHROME_STYLES_ID = 'omnimux-rightbar-chrome-styles'
 const RIGHTBAR_CHROME_STYLES = `
-/* 1. 修复创作画布等 Tab 标题文字被官方右侧 mask-image 渐变遮罩虚化截断（“创作画布”变“创作画x”） */
+/* 1. 修复创作画布等 Tab 标题文字被关闭按钮“x”遮挡及官方 mask-image 遮罩虚化截断 */
 [data-dockkit-strip] [data-dockkit-tab-title],
 [class*="_tabTitle_"] {
   width: auto !important;
   min-width: max-content !important;
-  max-width: 220px !important;
+  max-width: 200px !important;
+  margin-right: 6px !important;
+  padding-right: 0 !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
   overflow: visible !important;
   white-space: nowrap !important;
 }
 
-/* 2. 确保 Tab 按钮内留出合理宽度展示图标、文字与关闭 x */
+/* 2. 确保 Tab 容器留足右侧关闭按钮空间与最小呼吸留白 */
 [data-dockkit-tab],
 [class*="_tab_17p4l"] {
-  min-width: 120px !important;
-  max-width: 220px !important;
-  padding-right: 8px !important;
+  min-width: max-content !important;
+  padding-right: 28px !important;
+  position: relative !important;
 }
 
-/* 3. 增强原生右上角按钮无拖拽穿透与交互 */
+/* 3. 关闭按钮绝对定位居右并垂直居中，绝不压在标题字上 */
+[data-dockkit-tab-close],
+[class*="_tabClose_"] {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2 !important;
+}
+
+/* 4. 增强原生右上角按钮无拖拽穿透与交互 */
 button[data-dockkit-split-button],
 button[data-sidebar-right-mode],
 button[data-sidebar-right-toggle],
