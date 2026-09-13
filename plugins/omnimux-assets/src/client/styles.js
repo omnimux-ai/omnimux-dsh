@@ -750,9 +750,12 @@ export const ASSETS_CSS = `
 }
 
 /* ---- cloud assets -------------------------------------------------------
-   The cloud tab reuses the local card, so only what genuinely differs is
-   defined here: two-level navigation, a fixed tile ratio that stops the grid
-   from reflowing as covers load, and the scroll container. */
+   The cloud tab reuses the local card. What it adds is the two-level
+   navigation, a fixed tile ratio that stops the grid from reflowing as covers
+   load, the scroll container, and the top-right control that mounts a card into
+   the conversation. Colour stays neutral end to end: the selected chip is inked
+   with the label colour — a white pill with black text on the dark theme, the
+   reverse on the light one — never with a brand accent. */
 
 .omnimux-assets-cloud {
   display: flex;
@@ -778,6 +781,33 @@ export const ASSETS_CSS = `
   padding-inline-start: 10px;
   border-left: 2px solid var(--dsw-alias-border-l2);
 }
+/* Category chips, both levels. The nav wrappers are part of the selectors
+   because the kit's own rules for this control reach (0,2,0) unselected and
+   (0,4,0) on hover, so a bare class would lose to them. */
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip,
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip {
+  border-radius: 999px;
+  padding: 0 12px;
+}
+/* Selected: a filled pill in the label colour, with the label inverted on top
+   of it. No accent hue is involved, in either theme. */
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"],
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"],
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-primary);
+  box-shadow: none;
+  color: var(--dsw-alias-label-primary-foreground);
+}
+/* On a filled chip the count has to invert with the label, or it lands as
+   tertiary grey on white. */
+.omnimux-assets-cloud-chip[aria-pressed="true"] .omnimux-assets-cloud-count {
+  color: inherit;
+  opacity: 0.55;
+}
 .omnimux-assets-cloud-count {
   margin-left: 6px;
   font-size: 11px;
@@ -796,6 +826,13 @@ export const ASSETS_CSS = `
 }
 /* Fixed ratio per media type: the tile reserves its box before the image
    arrives, so paging never shifts the grid under the pointer. */
+.omnimux-assets-cloud-card {
+  position: relative;
+  cursor: default;
+}
+.omnimux-assets-cloud-card .omnimux-assets-cloud-thumb--action {
+  cursor: pointer;
+}
 .omnimux-assets-cloud-thumb {
   height: auto;
 }
@@ -822,6 +859,45 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-preview {
   opacity: 1;
 }
+/* The play control is decoration: the whole thumbnail is the button, so the
+   glyph inside it never takes a click of its own. */
+.omnimux-assets-cloud-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  pointer-events: none;
+}
+/* Top-right "add to the conversation". Hidden until the card is hovered or
+   holds focus, then a neutral plate that inverts to ink under the pointer. */
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-elevated);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+  opacity: 0;
+}
+.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-chat,
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat {
+  opacity: 1;
+}
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
 .omnimux-assets-cloud-desc {
   margin: 0;
   font-size: 12px;
@@ -831,19 +907,6 @@ export const ASSETS_CSS = `
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-.omnimux-assets-cloud-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.omnimux-assets-cloud-tag {
-  font-size: 11px;
-  line-height: 16px;
-  padding: 0 6px;
-  border-radius: 6px;
-  background: var(--dsw-alias-bg-module-platform);
-  color: var(--dsw-alias-label-secondary);
 }
 .omnimux-assets-cloud-sentinel {
   height: 1px;

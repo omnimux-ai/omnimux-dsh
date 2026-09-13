@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Badge, Button, EmptyState } from 'dsh-ui-kit'
-import { AudioIcon, CheckIcon, DocIcon, ImageIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from './icons.jsx'
+import { Button, EmptyState, IconButton } from 'dsh-ui-kit'
+import { AudioIcon, ChatIcon, CheckIcon, DocIcon, ImageIcon, PauseIcon, PlayIcon, VideoIcon } from './icons.jsx'
+import { activateRowKeydown } from './a11y.js'
+import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
-import { mediaLabelOf } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 
 /** Media type -> tile icon, for rows with no cover image. */
@@ -12,6 +13,22 @@ const TYPE_ICON = {
   image: ImageIcon,
   document: DocIcon,
   other: DocIcon,
+}
+
+/** Thumb classes; the playable variant also becomes the card's play control. */
+const THUMB_CLASS = 'omnimux-assets-card-thumb omnimux-assets-cloud-thumb'
+const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action omnimux-assets-focusable`
+
+/**
+ * Does this card body carry the description?
+ *
+ * A picture card is scanned by its thumbnail and title alone. A voice is picked
+ * by the character it reads in and a text asset by what it holds, so those two
+ * keep the description under the title as the thing that tells them apart.
+ * @param {string} mediaType
+ */
+function showsDescription(mediaType) {
+  return mediaType === 'audio' || mediaType === 'document'
 }
 
 /**
@@ -84,83 +101,76 @@ function CloudTileMedia(props) {
 /**
  * One cloud asset card.
  *
- * Layout deliberately reuses the local library's card classes so both source
- * tabs share one visual language; only the actions differ.
+ * Three things live on a card: the thumbnail, the title, and one hover control
+ * that mounts the asset into the conversation. A media-type badge, tags and a
+ * bottom action bar used to compete with the thumbnail for attention; they are
+ * gone, and a row that has audio plays from the thumbnail itself.
  * @param {{
  *   asset: any,
  *   t: (key: string) => string,
  *   playing: boolean,
  *   onTogglePlay: (asset: any) => void,
- *   onSave: (asset: any) => void,
- *   saved: boolean,
- *   saving: boolean,
- *   mediaLabel: string,
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay, onSave, saved, saving, mediaLabel } = props
+  const { asset, t, playing, onTogglePlay } = props
   const [broken, setBroken] = useState(false)
+  const [added, setAdded] = useState(false)
+  const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
   useEffect(() => { setBroken(false) }, [asset.id])
+  useEffect(() => () => {
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+  }, [])
 
   const canPlay = asset.mediaType === 'audio' && asset.playable
   const handleBroken = useCallback(() => { setBroken(true) }, [])
+  const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
+
+  const handleAdd = (event) => {
+    event.stopPropagation()
+    if (added) return
+    addAssetToConversation(asset)
+    setAdded(true)
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+    addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
+  }
+
+  const addLabel = added ? t('card.addedToConversation') : t('card.addToConversation')
 
   return (
     <div className="omnimux-assets-card omnimux-assets-cloud-card" data-media-type={asset.mediaType}>
-      <div className="omnimux-assets-card-thumb omnimux-assets-cloud-thumb">
+      <div
+        className={canPlay ? PLAYABLE_THUMB_CLASS : THUMB_CLASS}
+        role={canPlay ? 'button' : undefined}
+        tabIndex={canPlay ? 0 : undefined}
+        aria-label={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
+        aria-pressed={canPlay ? (playing ? 'true' : 'false') : undefined}
+        onClick={canPlay ? togglePlay : undefined}
+        onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
+      >
         <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />
-        <Badge size="sm" shape="capsule" className="omnimux-assets-badge">
-          {mediaLabel}
-        </Badge>
-        <div className="omnimux-assets-card-overlay">
-          <div className="omnimux-assets-card-overlay-actions">
-            {canPlay ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--primary"
-                aria-label={playing ? t('cloud.action.pause') : t('cloud.action.play')}
-                aria-pressed={playing ? 'true' : 'false'}
-                leadingIcon={playing ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onTogglePlay(asset)
-                }}
-              >
-                {playing ? t('cloud.action.pause') : t('cloud.action.play')}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="omnimux-assets-overlay-btn omnimux-assets-overlay-btn--secondary"
-              aria-label={t('cloud.action.save')}
-              disabled={saving}
-              leadingIcon={saved ? <CheckIcon size={14} /> : <PlusIcon size={14} />}
-              onClick={(event) => {
-                event.stopPropagation()
-                onSave(asset)
-              }}
-            >
-              {saved ? t('cloud.action.saved') : t('cloud.action.save')}
-            </Button>
-          </div>
-        </div>
+        {canPlay ? (
+          <span className="omnimux-assets-cloud-play" aria-hidden="true">
+            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+          </span>
+        ) : null}
       </div>
+      <IconButton
+        variant="ghost"
+        size="sm"
+        className="omnimux-assets-cloud-chat"
+        aria-label={addLabel}
+        title={addLabel}
+        disabled={added}
+        onClick={handleAdd}
+      >
+        {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
+      </IconButton>
       <div className="omnimux-assets-card-body">
         <p className="omnimux-assets-card-title" title={asset.name}>{asset.name}</p>
-        {asset.description !== '' ? (
+        {showsDescription(asset.mediaType) && asset.description !== '' ? (
           <p className="omnimux-assets-cloud-desc" title={asset.description}>{asset.description}</p>
-        ) : null}
-        {asset.tags.length > 0 ? (
-          <div className="omnimux-assets-cloud-tags">
-            {asset.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="omnimux-assets-cloud-tag">{tag}</span>
-            ))}
-          </div>
         ) : null}
       </div>
     </div>
@@ -173,6 +183,9 @@ export function CloudAssetCard(props) {
  * The second level is data-driven rather than hard-coded to audio: any category
  * whose manifest entry carries sub-categories reveals it, which is why the
  * audio tab shows 全部声音 / 配音 / 音效 / 背景音 without a special case here.
+ * Both levels share one chip treatment: neutral until selected, then inked with
+ * the label colour instead of a brand accent, so the tab row carries no colour
+ * of its own in either theme.
  * @param {{
  *   t: (key: string) => string,
  *   categories: any[],
@@ -189,12 +202,13 @@ function CloudCategoryNav(props) {
 
   return (
     <div className="omnimux-assets-cloud-nav">
-      <div className="omnimux-assets-cloud-nav-row">
+      <div className="omnimux-assets-cloud-nav-row" role="group" aria-label={t('cloud.nav.label')}>
         {categories.map((row) => (
           <Button
             key={row.id}
-            variant={row.id === category ? 'secondary' : 'ghost'}
+            variant="ghost"
             size="sm"
+            className="omnimux-assets-cloud-chip"
             aria-pressed={row.id === category ? 'true' : 'false'}
             onClick={() => onCategory(row.id)}
           >
@@ -204,12 +218,13 @@ function CloudCategoryNav(props) {
         ))}
       </div>
       {hasSecondLevel ? (
-        <div className="omnimux-assets-cloud-subnav">
+        <div className="omnimux-assets-cloud-subnav" role="group" aria-label={t('cloud.subnav.label')}>
           {tabs.map((row) => (
             <Button
               key={row.id || 'all'}
-              variant={row.id === subCategory ? 'secondary' : 'ghost'}
+              variant="ghost"
               size="xs"
+              className="omnimux-assets-cloud-chip"
               aria-pressed={row.id === subCategory ? 'true' : 'false'}
               onClick={() => onSubCategory(row.id)}
             >
@@ -273,10 +288,6 @@ export function CloudAssetsView(props) {
               t={t}
               playing={audition.playingId === asset.id}
               onTogglePlay={onTogglePlay}
-              onSave={feed.saveToLocal}
-              saved={feed.savedIds.has(asset.id)}
-              saving={feed.savingId === asset.id}
-              mediaLabel={mediaLabelOf({ t, mediaType: asset.mediaType })}
             />
           ))}
         </div>
