@@ -19,14 +19,13 @@ import {
 
 const VIEWPORT = { width: 1200, height: 800 }
 
-function makeEnvironment() {
+function makeEnvironment(host = 'x.com') {
   return {
     elementFromPoint: () => null as Element | null,
     viewport: () => ({ ...VIEWPORT }),
     now: () => 1_700_000_000_000,
-    // An ordinary page, not a creator platform: the classifier's platform rules
-    // stay out of the way and the container rule is what admits the fixture.
-    host: () => 'page.example.com',
+    // Whitelisted social platform host so detector pipeline can be verified
+    host: () => host,
   }
 }
 
@@ -220,6 +219,19 @@ describe('pointer target resolution', () => {
     )
     detector.start()
     document.dispatchEvent(new MouseEvent('pointermove', { clientX: 5, clientY: 5 }))
+    expect(onCandidate).not.toHaveBeenCalled()
+    detector.dispose()
+  })
+
+  it('strictly stays silent on non-whitelisted hosts to protect normal browsing', () => {
+    const onCandidate = vi.fn()
+    const img = appendImage({ width: 300, height: 300 })
+    const detector = new MediaDetector(
+      { onCandidate },
+      { ...makeEnvironment('github.com'), elementFromPoint: () => img },
+    )
+    detector.start()
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, clientY: 100 }))
     expect(onCandidate).not.toHaveBeenCalled()
     detector.dispose()
   })

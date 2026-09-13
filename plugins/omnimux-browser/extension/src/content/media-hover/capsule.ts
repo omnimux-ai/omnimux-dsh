@@ -4,12 +4,13 @@
  * The capsule is a two-stage control, and the DOM mirrors the two stages:
  *
  * ```
- * stage one (collapsed, 36 x 36)     stage two (expanded, 112 x 36)
+ * stage one (collapsed, 32 x 32)     stage two (expanded, 92 x 32)
  *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
  * ```
  *
- * Both stages are mounted at once and absolutely centred inside the pill, so the
- * width animation never reflows a row: `is-collapsed` / `is-expanded` swap which
+ * Both stages are mounted at once and absolutely centred inside the pill, and
+ * both occupy the same 32px band, so the width animation never reflows a row and
+ * the pill never jumps vertically: `is-collapsed` / `is-expanded` swap which
  * of the two layers is visible, and the stylesheet owns the cross-fade. The
  * overlay decides *when* to move between the stages and `actions.ts` performs the
  * work; the capsule only paints state and reports presses.
@@ -199,7 +200,6 @@ export class MediaCapsule {
     button.type = 'button'
     button.className = 'omnimux-capsule-brand'
     button.setAttribute('aria-label', this.hints.brand)
-    button.setAttribute('title', this.hints.brand)
     button.innerHTML = svgIcon('brand', CAPSULE_SPEC.brandIconSize)
     button.addEventListener('pointerdown', swallowEvent)
     button.addEventListener('mousedown', swallowEvent)
@@ -214,8 +214,7 @@ export class MediaCapsule {
     button.className = 'omnimux-capsule-icon'
     button.setAttribute('data-action', action)
     button.setAttribute('aria-label', this.hints.action[action])
-    button.setAttribute('title', this.hints.hint[action])
-    button.innerHTML = svgIcon(ICON_BY_ACTION[action], 18)
+    button.innerHTML = svgIcon(ICON_BY_ACTION[action], CAPSULE_SPEC.iconGlyphSize)
 
     // The page must never see these presses: no navigation, no card selection,
     // no page-level click handler.
@@ -267,7 +266,7 @@ export class MediaCapsule {
       const button = this.buttons.get(action)
       if (button === null || button === undefined) continue
       const iconState = this.iconState(action)
-      const markup = svgIcon(iconFor(action, iconState), 18)
+      const markup = svgIcon(iconFor(action, iconState), CAPSULE_SPEC.iconGlyphSize)
       if (button.innerHTML !== markup) button.innerHTML = markup
       button.classList.toggle('is-saved', iconState === 'saved')
       button.classList.toggle('is-done', iconState === 'done')

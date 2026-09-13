@@ -33,12 +33,12 @@ export interface DetectedMediaItem {
 export const SNIFF_MEDIA_LIMIT = 8
 
 /** True when an element is large enough, inside the viewport and a post or work. */
-function isSniffable(el: Element): boolean {
+function isSniffable(el: Element, host?: string): boolean {
   const rect = el.getBoundingClientRect()
   const vw = window.innerWidth || document.documentElement.clientWidth
   const vh = window.innerHeight || document.documentElement.clientHeight
   if (!isEligibleMediaSize(rect.width, rect.height)) return false
-  if (!isPostOrWorkMedia(el)) return false
+  if (!isPostOrWorkMedia(el, host)) return false
   return isElementInViewport(rect, vw, vh)
 }
 
@@ -58,13 +58,13 @@ function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMedi
   }
 }
 
-export function sniffViewportMedia(): DetectedMediaItem[] {
+export function sniffViewportMedia(host?: string): DetectedMediaItem[] {
   const items: DetectedMediaItem[] = []
   const seenUrls = new Set<string>()
 
   const push = (el: Element, kind: MediaKind): void => {
     if (items.length >= SNIFF_MEDIA_LIMIT) return
-    if (!isSniffable(el)) return
+    if (!isSniffable(el, host)) return
     const item = sniffElement(el, kind, items.length)
     if (item === null || seenUrls.has(item.src)) return
     seenUrls.add(item.src)

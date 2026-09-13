@@ -328,14 +328,16 @@ describe('场景 5 · a footer buried 26 levels deep', () => {
     const image = mount(nest('<img src="https://cdn.example.com/work.png" alt="作品">', 26), 'img')
     stubBox(image, 900, 600)
 
-    expectAdmitted(image, 'page.example.com')
+    expectAdmitted(image, X_HOST)
+    expectRejected(image, 'page.example.com')
   })
 
   it('still admits a work image 40 levels deep on an ordinary page', () => {
     const image = mount(nest('<img src="https://cdn.example.com/work.png" alt="作品">', 40), 'img')
     stubBox(image, 900, 600)
 
-    expectAdmitted(image, 'page.example.com')
+    expectAdmitted(image, X_HOST)
+    expectRejected(image, 'page.example.com')
   })
 })
 
@@ -353,7 +355,8 @@ describe('场景 6 · a descriptive alt or title naming logo / reaction', () => 
     const image = mount(`<article class="post"><img src="https://cdn.example.com/w.png" alt="${alt}"></article>`, 'img')
     stubBox(image, 800, 600)
 
-    expectAdmitted(image, 'page.example.com')
+    expectAdmitted(image, X_HOST)
+    expectRejected(image, 'page.example.com')
   })
 
   it.each([
@@ -363,7 +366,8 @@ describe('场景 6 · a descriptive alt or title naming logo / reaction', () => 
     const image = mount(`<article class="post"><img src="https://cdn.example.com/w.png" title="${title}" alt=""></article>`, 'img')
     stubBox(image, 800, 600)
 
-    expectAdmitted(image, 'page.example.com')
+    expectAdmitted(image, X_HOST)
+    expectRejected(image, 'page.example.com')
   })
 
   it('admits a logo-worded alt on a platform card the same way', () => {
@@ -416,7 +420,7 @@ describe('cross-check · one size gate covers every admitting branch', () => {
     ['xiaohongshu note', '<section class="note-item"><img src="https://sns-img.xhscdn.com/a.jpg" alt=""></section>', 'img', 'www.xiaohongshu.com'],
     ['weibo card', '<div class="card-wrap"><img src="https://wx.example.com/a.jpg" alt=""></div>', 'img', 'www.weibo.com'],
     ['tiktok item', '<div data-e2e="recommend-list-item-container"><img src="https://p.example.com/a.jpg" alt=""></div>', 'img', 'www.tiktok.com'],
-    ['work container', '<article class="post"><img src="https://cdn.example.com/w.png" alt="作品"></article>', 'img', 'page.example.com'],
+    ['work container', '<article class="post"><img src="https://cdn.example.com/w.png" alt="作品"></article>', 'img', X_HOST],
   ]
 
   it.each(BRANCHES)('rejects %s media one pixel short on either edge', (_label, html, selector, host) => {
@@ -459,14 +463,16 @@ describe('cross-check · the viewport sniffer and the pointer detector agree', (
     stubBox(avatar!, 400, 400)
     stubBox(tiny!, 100, 100)
 
-    const items = sniffViewportMedia()
+    const items = sniffViewportMedia(X_HOST)
 
     // One entry, and it is the work image: the picker must not offer what the
     // capsule refuses, or an avatar would reach a message through the shelf.
     expect(items.map((item) => item.previewSrc)).toEqual(['https://cdn.example.com/work.png'])
-    expect(isPostOrWorkMedia(work!)).toBe(true)
-    expect(isPostOrWorkMedia(avatar!)).toBe(false)
-    expect(isPostOrWorkMedia(tiny!)).toBe(false)
+    expect(isPostOrWorkMedia(work!, X_HOST)).toBe(true)
+    expect(isPostOrWorkMedia(avatar!, X_HOST)).toBe(false)
+    expect(isPostOrWorkMedia(tiny!, X_HOST)).toBe(false)
+    // Non-whitelisted hosts must yield zero items from the sniffer
+    expect(sniffViewportMedia('page.example.com')).toHaveLength(0)
   })
 
   it('reports nothing for a viewport that holds only chrome', () => {
@@ -476,7 +482,7 @@ describe('cross-check · the viewport sniffer and the pointer detector agree', (
     stubBox(hero!, 1200, 400)
     stubBox(reaction!, 300, 300)
 
-    expect(sniffViewportMedia()).toHaveLength(0)
+    expect(sniffViewportMedia(X_HOST)).toHaveLength(0)
   })
 })
 
@@ -499,19 +505,19 @@ describe('contract · one floor, one gate, one verdict per box', () => {
     const image = mount('<article class="post"><img src="https://cdn.example.com/w.png" alt="作品"></article>', 'img')
 
     stubBox(image, 120, 120)
-    expect(isPostOrWorkMedia(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, X_HOST)).toBe(true)
 
     stubBox(image, 119, 120)
-    expect(isPostOrWorkMedia(image)).toBe(false)
+    expect(isPostOrWorkMedia(image, X_HOST)).toBe(false)
 
     stubBox(image, 120, 119)
-    expect(isPostOrWorkMedia(image)).toBe(false)
+    expect(isPostOrWorkMedia(image, X_HOST)).toBe(false)
 
     stubBox(image, 119, 4000)
-    expect(isPostOrWorkMedia(image)).toBe(false)
+    expect(isPostOrWorkMedia(image, X_HOST)).toBe(false)
 
     stubBox(image, 4000, 119)
-    expect(isPostOrWorkMedia(image)).toBe(false)
+    expect(isPostOrWorkMedia(image, X_HOST)).toBe(false)
   })
 
   it('refuses a non-media element whatever its box', () => {
@@ -519,7 +525,7 @@ describe('contract · one floor, one gate, one verdict per box', () => {
     const div = document.querySelector('div')!
     stubBox(div, 800, 600)
 
-    expect(isPostOrWorkMedia(div)).toBe(false)
+    expect(isPostOrWorkMedia(div, X_HOST)).toBe(false)
     expect(detectOnce(div, 'page.example.com')).toHaveLength(0)
   })
 
@@ -539,7 +545,7 @@ describe('contract · one floor, one gate, one verdict per box', () => {
         elementFromPoint: () => image,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_000,
-        host: () => 'page.example.com',
+        host: () => X_HOST,
       },
     )
     detector.start()
