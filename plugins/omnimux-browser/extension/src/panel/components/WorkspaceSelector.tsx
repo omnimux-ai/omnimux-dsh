@@ -225,6 +225,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
         type="button"
         className="workspace-selector-trigger"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         title={isEn ? 'Switch instance and default workspace' : '选择连接的实例与默认工作区'}
       >
         <div className="ws-trigger-left">
