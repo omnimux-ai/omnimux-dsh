@@ -10,6 +10,7 @@ import {
   deriveIndustryOptions,
   deriveRegionOptions,
   deriveViewBuckets,
+  getInspirationFingerprints,
   getTrendingCache,
   getTrendingCacheKey,
   loadTrendingItems,
@@ -396,4 +397,83 @@ test('source: 网络拉取失败时如存在陈旧缓存则平滑降级使用陈
   // 平滑降级至陈旧缓存，页面不崩溃
   assert.equal(res.status, TRENDING_SOURCE_STATUS.ready)
   assert.equal(res.items[0].id, 'stale_1')
+})
+
+test('source: getInspirationFingerprints 稳健提取真实 TikTok ID、作者播放量指纹并清洗临时后缀', () => {
+  const rowA = {
+    id: '339',
+    source_url: 'https://www.tiktok.com/@kob.studys/video/7558617674939452703',
+    stats: { views: 16200000 },
+    cover_url: '/omnimux/inspiration/media/covers/kob.jpg',
+  }
+  const fpsA = getInspirationFingerprints(rowA)
+  assert.ok(fpsA.includes('tt:7558617674939452703'))
+  assert.ok(fpsA.includes('av:kobstudys:16200000'))
+  assert.ok(fpsA.includes('cov:omnimux/inspiration/media/covers/kob.jpg'))
+
+  // 镜像换皮行：带 gxgen 虚拟 URL 和被污染的 base64 handle，同播放量同封面
+  const rowB = {
+    id: '641',
+    source_url: 'https://www.tiktok.com/@kob.studys-ahr0chm6ly92dc50awt0/video/gxgen-33032957-5ffd-4c15',
+    stats: { views: 16200000 },
+    cover_key: '/omnimux/inspiration/media/covers/kob.jpg',
+  }
+  const fpsB = getInspirationFingerprints(rowB)
+  // 清洗后两者具备完全相同的作者播放量指纹与封面指纹
+  assert.ok(fpsB.includes('av:kobstudys:16200000'))
+  assert.ok(fpsB.includes('cov:omnimux/inspiration/media/covers/kob.jpg'))
+})
+
+test('source: loadTrendingItems 双源聚合时彻底识别并剔除换皮/重复爆款', async () => {
+  clearTrendingCache()
+  const fetchImpl = async (url) => {
+    if (url.includes('/omnimux/inspiration/local')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            items: [
+              {
+                id: 'local_1',
+                title: 'AI 播客咳嗽引发的“恐怖谷”反应',
+                source_url: 'https://www.tiktok.com/@kob.studys/video/7558617674939452703',
+                stats: { views: 16200000 },
+              },
+            ],
+          },
+        }),
+      }
+    }
+    // 云端库返回了同一视频的另一个换皮版本（不同 id、不同 url，但相同博主与播放量）
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          items: [
+            {
+              id: 'cloud_dup_1',
+              title: 'AI 播客“太像人”的惊愕瞬间',
+              source_url: 'https://www.tiktok.com/@kob.studys/video/gxgen-33032957-5ffd-4c15',
+              stats: { views: 16200000 },
+            },
+            {
+              id: 'cloud_distinct_2',
+              title: '全新独立视频',
+              source_url: 'https://www.tiktok.com/@other/video/9999999999999999',
+              stats: { views: 500000 },
+            },
+          ],
+        },
+      }),
+    }
+  }
+
+  const res = await loadTrendingItems({ fetchImpl, cache: false })
+  assert.equal(res.status, TRENDING_SOURCE_STATUS.ready)
+  // 必须成功去重：原本 3 条数据，去重后只保留 2 条（重复的 cloud_dup_1 被剔除）
+  assert.equal(res.items.length, 2)
+  assert.equal(res.items[0].id, 'local_1')
+  assert.equal(res.items[1].id, 'cloud_distinct_2')
 })
