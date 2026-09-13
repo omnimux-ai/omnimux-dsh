@@ -9,6 +9,10 @@ import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
+import { getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
+
+/** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
+const NOOP_SUBSCRIBE = () => () => {}
 
 function copyText(text) {
   const clip = typeof navigator !== 'undefined' ? navigator?.clipboard : null
@@ -92,15 +96,22 @@ function PopularStarterGrid({ popularStarters, t, onCardClick }) {
 export function SessionGuide(props) {
   const session = props.useSession((value) => value)
   const hasTargets = props.useConversation((value) => value.activeTargets.size > 0)
+  // 内存里的 panelOpen 只看全局开关，不再要求 sessionId 相等：右侧打开技能/专家等
+  // 全局 Tab 时 sessionId 未必等于本会话，相等判断会把分栏误判成全屏。
+  const workbench = props.workbench
   const panelOpen = useSyncExternalStore(
-    props.workbench.subscribe,
-    () => {
-      const snapshot = props.workbench.getSnapshot()
-      return snapshot?.sessionId === props.sessionId && snapshot.state.panelOpen === true
-    },
+    workbench?.subscribe ?? NOOP_SUBSCRIBE,
+    () => workbench?.getSnapshot?.()?.state?.panelOpen === true,
     () => false
   )
-  if (panelOpen || !isBlankConversation(session, hasTargets)) return null
+  // 内存状态会被 closePanel() 写成 false 而真实侧栏仍展开，所以再实测一次宿主布局：
+  // 右侧侧栏展开 / 会话列被挤窄 / 输入框降到紧凑档，任一命中都只保留简洁对话模式。
+  const splitCompact = useSyncExternalStore(
+    subscribeSplitCompactLayout,
+    getSplitCompactSnapshot,
+    () => false
+  )
+  if (panelOpen || splitCompact || !isBlankConversation(session, hasTargets)) return null
   return <BlankSessionGuide {...props} key={props.sessionId} />
 }
 
