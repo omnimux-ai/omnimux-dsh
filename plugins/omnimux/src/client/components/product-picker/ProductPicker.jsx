@@ -9,6 +9,13 @@ import {
   pickerDialogClassName,
   pickerDialogWidth,
 } from '../picker-dialog/pickerDialogContract.js';
+import {
+  PickerHeaderTabs,
+  PickerToolbar,
+  PickerFilterPills,
+  PickerSearchInput,
+  PickerFooter,
+} from '../picker-dialog/index.js';
 import { ModalCloseButton } from '../ModalCloseButton.jsx';
 
 const STYLE_ID = 'omx-composer-add-product-picker';
@@ -315,42 +322,38 @@ export function ProductPicker({
       size="lg"
       className={pickerDialogClassName('product')}
       footer={
-        <div className="omx-product-pick__footer">
-          {selectedProduct ? (
-            <div className="omx-product-pick__meta">
-              {safeT('productPicker.selectedMeta')}
-              <span className="omx-product-pick__meta-highlight">
-                {selectedProduct.name || selectedProduct.id}
-              </span>
-            </div>
-          ) : searchQuery.trim() ? (
-            <div className="omx-product-pick__meta">
+        <PickerFooter
+          className="omx-product-pick__footer"
+          metaClassName="omx-product-pick__meta"
+          actionsClassName="omx-product-pick__actions"
+          meta={
+            selectedProduct ? (
+              <>
+                {safeT('productPicker.selectedMeta')}
+                <span className="omx-product-pick__meta-highlight">
+                  {selectedProduct.name || selectedProduct.id}
+                </span>
+              </>
+            ) : searchQuery.trim() ? (
               <span>{safeT('productPicker.useCustom', { name: searchQuery.trim() })}</span>
-            </div>
-          ) : null}
-          <div className="omx-product-pick__actions">
-            <Button variant="secondary" onClick={onClose}>
-              {safeT('productPicker.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={!selectedProduct && !searchQuery.trim()}
-              onClick={() => {
-                if (selectedProduct) {
-                  handleConfirm(selectedProduct);
-                } else if (searchQuery.trim()) {
-                  handleConfirm({
-                    id: `custom-${Date.now()}`,
-                    name: searchQuery.trim(),
-                    title: searchQuery.trim(),
-                  });
-                }
-              }}
-            >
-              {safeT('productPicker.confirm')}
-            </Button>
-          </div>
-        </div>
+            ) : null
+          }
+          cancelLabel={safeT('productPicker.cancel')}
+          confirmLabel={safeT('productPicker.confirm')}
+          onCancel={onClose}
+          onConfirm={() => {
+            if (selectedProduct) {
+              handleConfirm(selectedProduct);
+            } else if (searchQuery.trim()) {
+              handleConfirm({
+                id: `custom-${Date.now()}`,
+                name: searchQuery.trim(),
+                title: searchQuery.trim(),
+              });
+            }
+          }}
+          confirmDisabled={!selectedProduct && !searchQuery.trim()}
+        />
       }
     >
       <div className="omx-product-pick">
@@ -358,108 +361,52 @@ export function ProductPicker({
         <ModalCloseButton onClose={onClose} placement="external" ariaLabel={safeT('productPicker.cancel')} />
 
         {/* 单层顶栏：Tab 顶替传统标题栏 */}
-        <div className="omx-product-pick__header">
-          <div className="omx-product-pick__tabs" role="tablist" aria-label={safeT('productPicker.categories')}>
-            {categories.map((cat) => {
-              const label = cat.key ? safeT(cat.key) : cat.label;
-              return (
-                <button /* exempt-ui01: 产品分类切换 tab */
-                  key={cat.id}
-                  type="button"
-                  role="tab"
-                  className="omx-product-pick__tab"
-                  data-active={activeCategory === cat.id ? 'true' : 'false'}
-                  aria-selected={activeCategory === cat.id ? 'true' : 'false'}
-                  onClick={() => setActiveCategory(cat.id)}
-                  title={label}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <PickerHeaderTabs
+          tabs={categories.map((cat) => ({
+            id: cat.id,
+            label: cat.key ? safeT(cat.key) : cat.label,
+          }))}
+          activeTab={activeCategory}
+          onTabChange={setActiveCategory}
+          ariaLabel={safeT('productPicker.categories')}
+          className="omx-product-pick__tabs"
+          tabClassName="omx-product-pick__tab"
+          headerClassName="omx-product-pick__header"
+        />
 
         {/* 次级工具栏：左侧分类/标签胶囊，右侧紧凑搜索框 */}
-        <div className="omx-product-pick__toolbar">
-          <div className="omx-product-pick__filter-pills" role="radiogroup" aria-label="子分类筛选">
-            <button /* exempt-ui01: 全部胶囊筛选 */
-              type="button"
-              className="omx-product-pick__pill"
-              data-active={activeTag === 'all' ? 'true' : 'false'}
-              onClick={() => setActiveTag('all')}
-            >
-              {safeT('productPicker.cat.all') || '全部'}
-            </button>
-            {availableTags.map((tag) => (
-              <button /* exempt-ui01: 标签胶囊筛选 */
-                key={tag}
-                type="button"
-                className="omx-product-pick__pill"
-                data-active={activeTag === tag ? 'true' : 'false'}
-                onClick={() => setActiveTag(activeTag === tag ? 'all' : tag)}
-                title={tag}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+        <PickerToolbar className="omx-product-pick__toolbar">
+          <PickerFilterPills
+            pills={[
+              { id: 'all', label: safeT('productPicker.cat.all') || '全部' },
+              ...availableTags.map((tag) => ({ id: tag, label: tag })),
+            ]}
+            activePill={activeTag}
+            onPillChange={setActiveTag}
+            className="omx-product-pick__filter-pills"
+            pillClassName="omx-product-pick__pill"
+          />
 
-          <div className="omx-product-pick__search-wrap">
-            <span className="omx-product-pick__search-icon" aria-hidden="true">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              className="omx-product-pick__search-input"
-              placeholder={safeT('productPicker.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && searchQuery.trim() && !selectedProduct) {
-                  e.preventDefault();
-                  handleConfirm({
-                    id: `custom-${Date.now()}`,
-                    name: searchQuery.trim(),
-                    title: searchQuery.trim(),
-                  });
-                }
-              }}
-            />
-            {searchQuery ? (
-              <button /* exempt-ui01: 搜索清空按钮 */
-                type="button"
-                className="omx-product-pick__search-clear"
-                onClick={() => setSearchQuery('')}
-                aria-label="清空搜索"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            ) : null}
-          </div>
-        </div>
+          <PickerSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim() && !selectedProduct) {
+                e.preventDefault();
+                handleConfirm({
+                  id: `custom-${Date.now()}`,
+                  name: searchQuery.trim(),
+                  title: searchQuery.trim(),
+                });
+              }
+            }}
+            placeholder={safeT('productPicker.searchPlaceholder')}
+            className="omx-product-pick__search-wrap"
+            inputClassName="omx-product-pick__search-input"
+            iconClassName="omx-product-pick__search-icon"
+            clearClassName="omx-product-pick__search-clear"
+          />
+        </PickerToolbar>
 
         {error ? <div className="omx-product-pick__error">{error}</div> : null}
 

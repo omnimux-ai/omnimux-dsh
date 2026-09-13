@@ -36,11 +36,11 @@ test('each picker derives its width from its own layout geometry', () => {
   assert.equal(pickerExpectedWidth('product'), 6 * 156 + 5 * PICKER_GRID_GAP);
   assert.equal(pickerExpectedWidth('product'), 1016);
 
-  // 资产库：左侧分类栏 148 + 正文左内边距 16 + 2 列
-  assert.equal(PICKER_LAYOUTS.assets.columns, 2);
-  assert.equal(PICKER_LAYOUTS.assets.leading, 148 + 16);
-  assert.equal(pickerExpectedWidth('assets'), 164 + 2 * PICKER_CARD_WIDTH + PICKER_GRID_GAP);
-  assert.equal(pickerExpectedWidth('assets'), 708);
+  // 资产库：对齐选择产品弹窗，顶部 Tab 单层顶栏，无左侧栏，6 列高密度微卡
+  assert.equal(PICKER_LAYOUTS.assets.columns, 6, '资产库采用 6 列高密度微卡网格');
+  assert.equal(PICKER_LAYOUTS.assets.leading, 0, '顶部 Tab 布局没有左侧栏');
+  assert.equal(pickerExpectedWidth('assets'), 6 * 156 + 5 * PICKER_GRID_GAP);
+  assert.equal(pickerExpectedWidth('assets'), 1016);
 
   assert.throws(() => pickerExpectedWidth('nope'), /unknown picker layout/);
 });
