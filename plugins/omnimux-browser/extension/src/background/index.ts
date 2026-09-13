@@ -2066,6 +2066,39 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       sendResponse({ ok: true })
     })
     return true
+  } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
+    // Twitter In-Page Copilot text generation handler
+    const payload = m as { systemPrompt?: string; userMessage?: string }
+    const systemPrompt = payload.systemPrompt || ''
+    const userMessage = payload.userMessage || ''
+
+    // 优先尝试通过已连接的 DSH Bridge 发起真实 LLM 文本补全
+    if (bridge?.connected && gatewayRpc) {
+      void (async () => {
+        try {
+          const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
+          if (session?.sessionId) {
+            const prompt = systemPrompt ? `[系统指令: ${systemPrompt}]\n\n${userMessage}` : userMessage
+            const res = (await gatewayRpc('session.prompt', {
+              sessionId: session.sessionId,
+              prompt,
+            })) as { answer?: string; text?: string }
+            const text = res?.answer || res?.text || ''
+            if (text.trim()) {
+              sendResponse({ ok: true, text: text.trim() })
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('[Copilot] Live Bridge RPC prompt attempt ended, fallback to dynamic inference:', e)
+        }
+        sendResponse({ ok: false, message: 'bridge prompt completed without text' })
+      })()
+      return true
+    }
+
+    sendResponse({ ok: false, message: 'bridge offline, using dynamic context engine' })
+    return false
   }
 })
 

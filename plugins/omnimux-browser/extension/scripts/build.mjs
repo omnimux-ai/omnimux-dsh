@@ -22,12 +22,19 @@ const configs = [
   'vite.panel.config.ts',
 ]
 
+const binDir = new URL('../node_modules/.bin', import.meta.url).pathname
+const env = {
+  ...process.env,
+  PATH: `${binDir}:${process.env.PATH || ''}`,
+}
+
 if (watch) {
   // 三个 watcher 并行启动（串行时第一个永不停机，后面的永远不会启动）。
   const children = configs.map((config) => spawn('vite', ['build', '--config', config, '--watch'], {
     cwd: root,
     stdio: 'inherit',
     shell: process.platform === 'win32',
+    env,
   }))
   for (const child of children) {
     child.on('exit', (code) => { if (code !== 0) process.exit(code ?? 1) })
@@ -38,6 +45,7 @@ if (watch) {
       cwd: root,
       stdio: 'inherit',
       shell: process.platform === 'win32',
+      env,
     })
     if (result.status !== 0) process.exit(result.status ?? 1)
   }
