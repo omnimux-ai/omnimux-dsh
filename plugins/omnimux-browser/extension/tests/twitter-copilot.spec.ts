@@ -84,7 +84,7 @@ describe('Twitter Copilot Native Unit Tests', () => {
     expect(ctx.draftText).toBe('我的观点是：')
   })
 
-  it('T4: 场景提示词矩阵 - 完整覆盖 10 套推特场景', () => {
+  it('T4: 场景提示词矩阵 - 完整覆盖 10 套推特场景与中英双语自适应', () => {
     expect(COPILOT_MENU_ITEMS.length).toBe(10)
 
     const createItems = COPILOT_MENU_ITEMS.filter((i) => i.category === 'create')
@@ -93,18 +93,45 @@ describe('Twitter Copilot Native Unit Tests', () => {
     expect(createItems.length).toBeGreaterThanOrEqual(4)
     expect(replyItems.length).toBeGreaterThanOrEqual(5)
 
-    // 验证高赞神评 Prompt 组装
+    // 验证每项均有英文名称与描述
+    COPILOT_MENU_ITEMS.forEach((it) => {
+      expect(it.nameEn).toBeDefined()
+      expect(it.nameEn.length).toBeGreaterThan(0)
+      expect(it.descEn).toBeDefined()
+      expect(it.descEn.length).toBeGreaterThan(0)
+    })
+
+    // 验证高赞神评 Prompt 中英双语组装
     const highReply = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-tweet-reply-high')
     expect(highReply).toBeDefined()
-    const assembled = highReply!.generatePrompt({
-      scene: 'REPLY_DETAIL',
-      draftText: '赞同',
-      targetAuthor: 'elonmusk',
-      targetTweetText: 'Starship flight test',
-    })
-    expect(assembled.systemPrompt).toContain('神评制造机')
-    expect(assembled.userMessage).toContain('@elonmusk')
-    expect(assembled.userMessage).toContain('Starship flight test')
+
+    // 中文 Prompt
+    const zhAssembled = highReply!.generatePrompt(
+      {
+        scene: 'REPLY_DETAIL',
+        draftText: '赞同',
+        targetAuthor: 'elonmusk',
+        targetTweetText: 'Starship flight test',
+      },
+      'zh',
+    )
+    expect(zhAssembled.systemPrompt).toContain('神评制造机')
+    expect(zhAssembled.userMessage).toContain('@elonmusk')
+    expect(zhAssembled.userMessage).toContain('Starship flight test')
+
+    // 英文 Prompt
+    const enAssembled = highReply!.generatePrompt(
+      {
+        scene: 'REPLY_DETAIL',
+        draftText: 'Agree',
+        targetAuthor: 'elonmusk',
+        targetTweetText: 'Starship flight test',
+      },
+      'en',
+    )
+    expect(enAssembled.systemPrompt).toContain('Twitter power-user')
+    expect(enAssembled.systemPrompt).toContain('Information Delta')
+    expect(enAssembled.userMessage).toContain('Original tweet by @elonmusk')
   })
 
   it('T5: 按钮挂载 - 横向Flex提升、官方幽灵角标注入与竞品覆盖', () => {

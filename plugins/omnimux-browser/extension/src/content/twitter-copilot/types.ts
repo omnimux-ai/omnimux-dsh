@@ -23,11 +23,13 @@ export interface TwitterContext {
 export interface CopilotMenuItem {
   id: string
   name: string
+  nameEn: string
   desc: string
+  descEn: string
   /** Categories: create (发帖/转发) vs reply (回帖互动) */
   category: 'create' | 'reply'
   /** Matching scenes */
   scenes: TwitterCopilotScene[]
-  /** System prompt / instruction generator */
-  generatePrompt: (context: TwitterContext) => { systemPrompt: string; userMessage: string }
+  /** System prompt / instruction generator supporting bilingual output */
+  generatePrompt: (context: TwitterContext, locale?: 'zh' | 'en') => { systemPrompt: string; userMessage: string }
 }

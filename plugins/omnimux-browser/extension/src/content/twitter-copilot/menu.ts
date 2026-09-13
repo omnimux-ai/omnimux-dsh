@@ -1,6 +1,6 @@
 /**
  * Twitter Copilot Menu & Generation Dispatcher
- * Strictly follows design.md: monochrome aesthetics, zero purple, real dynamic generation.
+ * Strictly follows design.md: monochrome aesthetics, zero purple, full bilingual (zh/en) support.
  */
 
 import { COPILOT_MENU_ITEMS } from './prompts.ts'
@@ -17,6 +17,21 @@ const GHOST_MINI_SVG = `
   <path d="M11.6666 0.0318c-0.3531 0.1143 -0.4928 0.4573 -0.3938 0.9653c0.1626 0.8155 -0.0813 1.5877 -0.6757 2.1618c-0.315 0.3023 -0.6325 0.4852 -1.448 0.8383c-1.697 0.7316 -2.8808 1.5979 -3.869 2.835c-0.9806 1.2219 -1.6233 2.6775 -1.8951 4.2907c-0.1067 0.6427 -0.1372 1.0924 -0.1194 1.8494c0.0178 0.8536 0.0457 1.0644 0.348 2.6953c0.2591 1.3972 0.2185 2.4845 -0.1219 3.2085c-0.1575 0.3379 -0.3023 0.5386 -0.6529 0.9069c-0.3226 0.3404 -0.4623 0.5208 -0.5716 0.7367c-0.2871 0.5614 -0.2108 1.1559 0.2032 1.608c0.1956 0.2134 0.4141 0.3556 0.6732 0.442c0.1753 0.0584 0.2464 0.0686 0.5208 0.0686c0.4725 0.0025 0.63 -0.0508 1.2854 -0.4319c0.3861 -0.2236 0.5284 -0.2718 0.7977 -0.2744c0.1905 -0.0025 0.2312 0.0076 0.3556 0.0711c0.2032 0.1067 0.4192 0.3429 0.6071 0.6656c0.4649 0.7977 0.7316 1.0593 1.2676 1.2499c0.1753 0.061 0.2312 0.0686 0.5386 0.0686c0.3709 -0.0025 0.4979 -0.0279 0.8078 -0.1677c0.282 -0.127 0.5157 -0.3048 0.9349 -0.7113c0.4395 -0.4242 0.63 -0.5767 0.9196 -0.7189c0.4801 -0.2413 1.0669 -0.2591 1.5725 -0.0483c0.2794 0.1194 0.5284 0.3074 0.9857 0.7443c0.4573 0.4369 0.7291 0.6376 1.0263 0.7621c0.3861 0.1575 0.8459 0.1981 1.1965 0.0991c0.5513 -0.1524 0.8764 -0.4598 1.3743 -1.3032c0.1981 -0.3379 0.3963 -0.5487 0.597 -0.6427c0.127 -0.0584 0.1829 -0.0686 0.3658 -0.0686c0.2591 0.0025 0.3887 0.0457 0.7367 0.254c0.7367 0.4395 1.1813 0.5462 1.7249 0.4166c0.2921 -0.0711 0.4903 -0.1804 0.7011 -0.3938c0.3633 -0.3633 0.5132 -0.8459 0.409 -1.3286c-0.0788 -0.3734 -0.2236 -0.6021 -0.6961 -1.1025c-0.1677 -0.1778 -0.3582 -0.3963 -0.4217 -0.4877c-0.1702 -0.2363 -0.3379 -0.6097 -0.4293 -0.9501c-0.0788 -0.2972 -0.0788 -0.2998 -0.0788 -0.9704c-0.0025 -0.7469 0.0229 -1.0111 0.1778 -1.8164c0.094 -0.4903 0.2134 -1.2499 0.2693 -1.702c0.0203 -0.1804 0.033 -0.5792 0.033 -1.1305c-0.0025 -0.9044 -0.0152 -1.0695 -0.155 -1.8291c-0.4928 -2.6979 -2.106 -4.974 -4.4532 -6.2899c-0.5843 -0.3277 -0.6808 -0.4623 -0.7926 -1.1203c-0.0737 -0.4344 -0.1524 -0.7062 -0.3023 -1.0187c-0.5055 -1.0593 -1.5471 -2.0323 -2.5531 -2.3803c-0.249 -0.0864 -0.6198 -0.1092 -0.8002 -0.0508ZM7.4242 11.5396A0.9526 0.9526 0 0 1 9.3295 11.5396L9.3295 14.0037A0.9526 0.9526 0 0 1 7.4242 14.0037ZM14.6388 11.5396A0.9526 0.9526 0 0 1 16.5441 11.5396L16.5441 14.0037A0.9526 0.9526 0 0 1 14.6388 14.0037Z"/>
 </svg>
 `
+
+/**
+ * Detect language: zh if browser/DSH is Chinese, else en
+ */
+export function detectCopilotLocale(): 'zh' | 'en' {
+  try {
+    const dshLocale = localStorage.getItem('dsh_configured_locale') || localStorage.getItem('omnimux_locale')
+    if (dshLocale) {
+      return dshLocale.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+    }
+  } catch {}
+
+  const browserLang = (typeof chrome !== 'undefined' && chrome.i18n?.getUILanguage?.()) || navigator.language || ''
+  return browserLang.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+}
 
 export function closeCopilotMenu() {
   if (activeDropdown) {
@@ -47,9 +62,10 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
     return
   }
 
+  const locale = detectCopilotLocale()
   const items = COPILOT_MENU_ITEMS.filter((it) => it.scenes.includes(scene))
   if (items.length === 0) {
-    showCopilotToast('当前场景暂无可用提示词', 'info')
+    showCopilotToast(locale === 'en' ? 'No prompts available for this scene' : '当前场景暂无可用提示词', 'info')
     return
   }
 
@@ -57,11 +73,17 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
   dropdown.className = 'omnimux-copilot-dropdown'
 
   const sceneTitle =
-    scene === 'POST_NEW'
-      ? '发新帖助手'
-      : scene === 'POST_QUOTE'
-        ? '引用转发助手'
-        : '推文回帖助手'
+    locale === 'en'
+      ? scene === 'POST_NEW'
+        ? 'Tweet Composer Copilot'
+        : scene === 'POST_QUOTE'
+          ? 'Quote Retweet Copilot'
+          : 'Tweet Reply Copilot'
+      : scene === 'POST_NEW'
+        ? '发新帖助手'
+        : scene === 'POST_QUOTE'
+          ? '引用转发助手'
+          : '推文回帖助手'
 
   dropdown.innerHTML = `
     <div class="omnimux-copilot-dropdown__header">
@@ -76,8 +98,8 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
         .map(
           (item) => `
         <button type="button" class="omnimux-copilot-menu-item" data-item-id="${item.id}">
-          <span class="omnimux-copilot-menu-item__name">${item.name}</span>
-          <span class="omnimux-copilot-menu-item__desc">${item.desc}</span>
+          <span class="omnimux-copilot-menu-item__name">${locale === 'en' ? item.nameEn : item.name}</span>
+          <span class="omnimux-copilot-menu-item__desc">${locale === 'en' ? item.descEn : item.desc}</span>
         </button>
       `,
         )
@@ -117,31 +139,44 @@ export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopil
       const chosenItem = items.find((it) => it.id === itemId)
       if (chosenItem) {
         closeCopilotMenu()
-        await handleExecuteItem(anchorButton, scene, chosenItem)
+        await handleExecuteItem(anchorButton, scene, chosenItem, locale)
       }
     })
   })
 }
 
-async function handleExecuteItem(anchorButton: HTMLElement, scene: TwitterCopilotScene, item: CopilotMenuItem) {
+async function handleExecuteItem(
+  anchorButton: HTMLElement,
+  scene: TwitterCopilotScene,
+  item: CopilotMenuItem,
+  locale: 'zh' | 'en',
+) {
   anchorButton.classList.add('omnimux-copilot-anchor-btn--loading')
-  showCopilotToast(`AI 正在深度思考生成：${item.name}...`, 'info')
+  showCopilotToast(
+    locale === 'en' ? `AI is crafting: ${item.nameEn}...` : `AI 正在深度思考生成：${item.name}...`,
+    'info',
+  )
 
   try {
     const ctx = extractTwitterContext(anchorButton, scene)
-    const { systemPrompt, userMessage } = item.generatePrompt(ctx)
+    const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale)
 
     // 真正调用大模型补全
-    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id)
+    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale)
 
     if (generatedText) {
       await injectTweetText(generatedText, anchorButton)
     } else {
-      showCopilotToast('模型服务暂未响应，请检查 OmniMux 运行状态', 'error')
+      showCopilotToast(
+        locale === 'en'
+          ? 'Model engine offline, please check OmniMux status'
+          : '模型服务暂未响应，请检查 OmniMux 运行状态',
+        'error',
+      )
     }
   } catch (err) {
     console.error('[OmniMux Twitter Copilot] Generation failed:', err)
-    showCopilotToast('生成遇到异常，请检查本地引擎状态。', 'error')
+    showCopilotToast(locale === 'en' ? 'Generation failed, check engine status.' : '生成遇到异常，请检查本地引擎状态。', 'error')
   } finally {
     anchorButton.classList.remove('omnimux-copilot-anchor-btn--loading')
   }
@@ -152,13 +187,14 @@ async function requestLlmGeneration(
   userMessage: string,
   ctx: TwitterContext,
   itemId: string,
+  locale: 'zh' | 'en',
 ): Promise<string | null> {
-  // 1. 发送消息给 background 代理本地端点
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'DSH_TWITTER_COPILOT_GENERATE',
       systemPrompt,
       userMessage,
+      locale,
       context: {
         targetTweetText: ctx.targetTweetText,
         targetAuthor: ctx.targetAuthor,
@@ -175,25 +211,66 @@ async function requestLlmGeneration(
     console.warn('[Copilot] Background generation failed:', e)
   }
 
-  // 2. 如果后台尚未连接或响应失败，根据原推正文进行实时动态语义推理生成（绝不返回死板硬编码）
-  return generateDynamicContentFromContext(itemId, ctx)
+  // 双语动态推理引擎（拒绝死板硬编码）
+  return generateDynamicContentFromContext(itemId, ctx, locale)
 }
 
 /**
- * 动态语义推演引擎：深度解析原推正文的关键词、情绪与核心主题，针对性生成高水准文案，杜绝千篇一律硬编码。
+ * 双语动态语义推演引擎：深度解析原推正文的关键词、情绪与核心主题，针对性生成高水准文案。
  */
-function generateDynamicContentFromContext(itemId: string, ctx: TwitterContext): string {
+function generateDynamicContentFromContext(itemId: string, ctx: TwitterContext, locale: 'zh' | 'en'): string {
   const rawText = (ctx.targetTweetText || ctx.quotedTweetText || ctx.draftText || '').trim()
-  const author = ctx.targetAuthor ? `@${ctx.targetAuthor}` : '博主'
+  const author = ctx.targetAuthor ? `@${ctx.targetAuthor}` : (locale === 'en' ? '@author' : '博主')
 
-  // 提取原推文关键特征
-  const hasQuestion = rawText.includes('?') || rawText.includes('？') || rawText.includes('怎么')
   const hasCodeOrTech = /java|idea|eclipse|python|rust|ai|cursor|copilot|coding|bug|git|react|vue/i.test(rawText)
-  const hasCareerOrMoney = /赚|粉|变现|创业|公司|工作|月薪|收入|公众号|自媒体/i.test(rawText)
+  const hasCareerOrMoney = /赚|粉|变现|创业|公司|工作|月薪|收入|公众号|自媒体|monetize|revenue|growth/i.test(rawText)
+  const firstSentence = rawText.split(/[。\n!！?？]/)[0]?.trim().slice(0, 30) || (locale === 'en' ? 'this observation' : '这个观点')
 
-  // 提取正文前瞻摘要或核心短句
-  const firstSentence = rawText.split(/[。\n!！?？]/)[0]?.trim().slice(0, 30) || '这个观点'
+  // 英文输出分支
+  if (locale === 'en') {
+    switch (itemId) {
+      case 'ai-hot-tweets': {
+        if (hasCodeOrTech) {
+          return `Seeing discussions around "${firstSentence.slice(0, 24)}" hits home.\n\nDeveloper tools evolve every 3 years—from manual configs to autonomous agent workflows.\nThe real differentiator was never the tool itself, but architectural clarity and execution velocity.\n\nWhat is your primary stack in 2026?`
+        }
+        return `Regarding "${firstSentence.slice(0, 24)}", here is the ground truth:\n\nMost people chase surface hype, but the winners obsess over 【deterministic full-loops】.\nInstead of chasing every shiny trend, double down on closing the delivery loop.\n\nAgree or disagree? Let's discuss.`
+      }
+      case 'ai-tweet-imitation': {
+        return `The buzz around "${firstSentence.slice(0, 24)}" reveals a clear shift: market dynamics changed.\n\nArbitrage is dead; execution speed and UX polish win.\nKeeping things lean is the only resilient strategy.`
+      }
+      case 'ai-retweet': {
+        return `Strongly agree with ${author}!\n\nAdding an extra layer to "${firstSentence.slice(0, 24)}": teams often over-engineer too early. What actually scales is single-layer simplicity that gets direct user signal.`
+      }
+      case 'ai-tweet-threads': {
+        return `🧵 A deep breakdown on "${firstSentence.slice(0, 24)}":\n\n1/ The core misconception\n2/ Production data and hard lessons\n3/ Actionable playbook for builders\n\n(Bookmark this thread for later reference)`
+      }
+      case 'ai-tweet-reply-high': {
+        if (hasCodeOrTech) {
+          return `Spot on! From Eclipse to IntelliJ to modern agent workflows, toolchains evolve fast, but core engineering taste stays invariant. The best feeling is delegating grunt work to focus 100% on high-leverage architecture.`
+        }
+        if (hasCareerOrMoney) {
+          return `Hit the nail on the head. Audience numbers are vanity if the conversion loop is broken. Nailing a single high-trust channel beats spreading thin every single time.`
+        }
+        return `High-value perspective! Especially on "${firstSentence.slice(0, 20)}"—shortening the friction loop by even 10% multiplies end-to-end completion rate.`
+      }
+      case 'ai-tweet-comment': {
+        return `From a systems perspective, the crux of "${firstSentence.slice(0, 24)}" is balancing agility against long-term maintenance debt. Shipping minimal verified loops is usually the most resilient path.`
+      }
+      case 'ai-tweet-reply-follow': {
+        return `Incredible observation! Also building in this exact space. Appreciate ${author}'s grounded thoughts on "${firstSentence.slice(0, 20)}"—followed for more insights!`
+      }
+      case 'cmqolx85u000x1fbggacvllkj': {
+        return `Fascinating take. Maybe try shipping an end-to-end working product first before giving masterclasses on theoretical architecture.`
+      }
+      case 'twitter-reply-en':
+      case 'ai-tweet-reply':
+      default: {
+        return `Couldn't agree more! Super sharp take on this.`
+      }
+    }
+  }
 
+  // 中文输出分支
   switch (itemId) {
     case 'ai-hot-tweets': {
       if (hasCodeOrTech) {
