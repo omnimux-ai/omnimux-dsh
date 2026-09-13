@@ -1,0 +1,322 @@
+%% 推特推文爆速检测与智能截流系统 — 完整类图
+%% 规格：plugins/omnimux-intercept/docs/system_design.md（§3.4 的展开版）
+%% 约定：<<pure>> 标记纯函数模块（零 I/O、零 Date.now）；<<injected>> 标记外部边界（单测必须可注入假实现）
+classDiagram
+    direction TB
+
+    %% ─────────────── 采集层 ───────────────
+    class TweetMetrics {
+        +number|null views
+        +number|null likes
+        +number|null retweets
+        +number|null replies
+        +number|null bookmarks
+    }
+
+    class DataAnomaly {
+        <<enumeration>>
+        VIEWS_MISSING
+        VIEWS_UNPARSEABLE
+        CLOCK_SKEW_FUTURE
+        CREATED_AT_INVALID
+        AUTHOR_MISSING
+    }
+
+    class TweetRecord {
+        +string id
+        +string author
+        +string authorHandle
+        +string text
+        +number createdAtMs
+        +string url
+        +TweetMetrics metrics
+        +boolean hasMedia
+        +string[] mediaUrls
+        +string|null quotedTweetId
+        +string source
+        +DataAnomaly[] anomalies
+    }
+
+    class SourceRunner {
+        <<injected>>
+        +call(argv: string[], options) SourceResult
+    }
+
+    class HubRequester {
+        <<injected>>
+        +call(tool: string, args: object) unknown
+    }
+
+    class OpencliSource {
+        <<injected run>>
+        +fetchTimelineFromOpencli(options, deps) TimelineFetchResult
+        -buildArgv(limit) string[]
+        -mapProcessError(stderr, code) InterceptError
+        -parseArrayPayload(stdout) unknown[]
+    }
+
+    class HubSource {
+        <<injected request>>
+        +fetchTimelineFromHub(options, deps) TimelineFetchResult
+        -unwrapEnvelope(payload) unknown[]
+    }
+
+    class TimelineFetcher {
+        +fetch(options, deps) TimelineFetchResult
+        -pickSource(mode) string
+    }
+
+    class MetricParser {
+        <<pure>>
+        +parseMetric(raw: unknown) number|null
+        +parseRelativeTime(raw: string, nowMs: number) number
+    }
+
+    class Normalizer {
+        <<pure>>
+        +normalizeRecords(raw: unknown[], nowMs: number, source: string) TweetRecord[]
+        -collectAnomalies(rawRow: object) DataAnomaly[]
+    }
+
+    class TimelineFetchResult {
+        +TweetRecord[] records
+        +string source
+        +number fetchedAtMs
+        +number rawCount
+        +string[] warnings
+    }
+
+    %% ─────────────── 核心层（纯函数） ───────────────
+    class ViralTier {
+        <<enumeration>>
+        viral
+        surging
+        normal
+    }
+
+    class ExposureBreakdown {
+        +number timeDecay
+        +number freshnessBonus
+        +number competition
+        +number baseRate
+        +number predicted
+        +boolean floored
+    }
+
+    class TweetStats {
+        +number hoursAlive
+        +number hoursAliveRaw
+        +number pace
+        +ViralTier tier
+        +ExposureBreakdown exposure
+    }
+
+    class ScoredTweet {
+        +TweetRecord record
+        +TweetStats stats
+        +boolean degraded
+        +number score
+    }
+
+    class AlgorithmCore {
+        <<pure>>
+        +clamp(value, min, max) number
+        +toHoursAlive(nowMs, createdAtMs) HoursAliveResult
+        +classifyTier(pace: number) ViralTier
+        +computeExposure(j, hoursAlive, replies) ExposureBreakdown
+        +computeTweetStats(record, nowMs) TweetStats
+        +scoreTweets(records, nowMs) ScoredTweet[]
+    }
+
+    class SortCore {
+        <<pure>>
+        +rankTweets(rows, by) ScoredTweet[]
+        +splitByTier(rows) TierBuckets
+        -compareByExposure(a, b) number
+        -compareByPace(a, b) number
+    }
+
+    %% ─────────────── 文案层 ───────────────
+    class PromptTemplate {
+        +string kind
+        +string system
+        +string body
+        +string sourcePath
+        +boolean fallback
+    }
+
+    class PromptTemplates {
+        <<injected readFile>>
+        +loadPromptTemplate(kind, deps) PromptTemplate
+        -readFromPresets(kind) string|null
+        -builtinFallback(kind) PromptTemplate
+    }
+
+    class PromptBuilder {
+        <<pure>>
+        +buildCommentPrompt(req, template) PromptPayload
+        -renderMetrics(record, stats) string
+    }
+
+    class CompleteFn {
+        <<injected>>
+        +call(input: PromptPayload) string
+    }
+
+    class CompleteGateway {
+        <<injected fetcher>>
+        +resolveCompleteChannel(deps) CompleteFn|null
+        -fromHost(host) CompleteFn
+        -fromHttp(env, fetcher) CompleteFn
+    }
+
+    class CommentDraft {
+        +string tweetId
+        +ReplyDraft|null reply
+        +QuoteDraft|null quote
+        +string usedChannel
+        +string[] warnings
+    }
+
+    class CommentService {
+        +generateComments(reqs, deps) CommentDraft[]
+        -validate(draft, maxChars) ValidationResult
+        -templateFallback(req) CommentDraft
+    }
+
+    %% ─────────────── 呈现层 ───────────────
+    class TableRenderer {
+        <<pure>>
+        +renderTable(rows, options) string
+        -displayWidth(text: string) number
+        -padTo(text, width) string
+        -tierLabel(tier) string
+    }
+
+    class GenuiDashboard {
+        <<pure>>
+        +buildDashboard(rows, drafts, meta) GenuiSpec
+        -statCard(rows) object
+        -candidateTable(rows) object
+        -healthCallout(meta) object
+    }
+
+    class ReportWriter {
+        +renderMarkdownReport(payload) string
+        +writeReport(payload, deps) ReportPaths
+    }
+
+    %% ─────────────── 编排 / 护栏 ───────────────
+    class PersistedState {
+        +number lastRunAtMs
+        +string[] draftedTweetIds
+        +string|null lastDigest
+    }
+
+    class RunStore {
+        <<injected readFile/writeFile>>
+        +loadState(paths, deps) PersistedState
+        +saveState(paths, state, deps) void
+    }
+
+    class GuardDecision {
+        +boolean allowed
+        +string|null reason
+        +number waitMs
+        +number lastRunAtMs
+    }
+
+    class InterceptGuard {
+        +checkCooldown(state, nowMs, config) GuardDecision
+        +withRetry(fn, options) T
+        +sleep(ms) Promise
+    }
+
+    class InterceptError {
+        +string code
+        +string|null hint
+        +boolean retryable
+        +unknown cause
+    }
+
+    class InterceptPipeline {
+        +runOnce(options, deps) RunPayload
+        -resolveNow(options) number
+        -selectTargets(rows, minTier) ScoredTweet[]
+        -emit(rows, drafts, meta, options) string
+    }
+
+    class RunOptions {
+        +number limit
+        +string type
+        +string rankBy
+        +ViralTier minTier
+        +boolean genui
+        +string llm
+        +string|null outDir
+        +boolean dryRun
+        +boolean force
+        +string source
+        +string|null fixturePath
+        +number|null nowMs
+    }
+
+    class CliEntry {
+        +parseArgs(argv) RunOptions
+        +main(argv) number
+        -printHelp() void
+        -exitCodeFor(error) number
+    }
+
+    %% ─────────────── 关系 ───────────────
+    TweetRecord *-- TweetMetrics
+    TweetRecord o-- DataAnomaly
+    ScoredTweet *-- TweetRecord
+    ScoredTweet *-- TweetStats
+    TweetStats *-- ExposureBreakdown
+    TweetStats --> ViralTier
+
+    TimelineFetcher --> OpencliSource
+    TimelineFetcher --> HubSource
+    TimelineFetcher --> Normalizer
+    OpencliSource <.. SourceRunner : injects
+    HubSource <.. HubRequester : injects
+    OpencliSource ..> InterceptError : throws
+    Normalizer --> MetricParser
+    TimelineFetcher ..> TimelineFetchResult : produces
+
+    AlgorithmCore ..> ScoredTweet : produces
+    AlgorithmCore --> ExposureBreakdown
+    SortCore --> ScoredTweet
+
+    CommentService --> PromptBuilder
+    CommentService --> PromptTemplates
+    CommentService <.. CompleteFn : injects
+    CommentService ..> CommentDraft : produces
+    CompleteGateway ..> CompleteFn : produces
+    PromptTemplates ..> PromptTemplate : produces
+
+    GenuiDashboard ..> ReportWriter : data handoff
+    ReportWriter --> RunStore : writes via
+
+    InterceptGuard --> GuardDecision
+    InterceptGuard --> InterceptError
+    RunStore --> PersistedState
+
+    InterceptPipeline --> TimelineFetcher
+    InterceptPipeline --> AlgorithmCore
+    InterceptPipeline --> SortCore
+    InterceptPipeline --> CommentService
+    InterceptPipeline --> TableRenderer
+    InterceptPipeline --> GenuiDashboard
+    InterceptPipeline --> ReportWriter
+    InterceptPipeline --> InterceptGuard
+    InterceptPipeline --> RunStore
+    InterceptPipeline ..> RunPayload : produces
+    CliEntry --> InterceptPipeline
+    CliEntry --> RunOptions
+    CliEntry --> InterceptError
+
+    note for AlgorithmCore "附录 A 唯一实现：R 夹取 [1/60,48] · j = views/R · 三档分级 · 曝光 = max(20, round(j·衰减·时效·竞争·0.04))"
+    note for InterceptPipeline "全仓唯一取当前时间处：nowMs = options.nowMs ?? Date.now()"
+    note for GenuiDashboard "只产出 spec，不渲染、不依赖 React"

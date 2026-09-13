@@ -1,0 +1,21 @@
+{
+  "id": "omnimux-intercept",
+  "name": "omnimux-intercept",
+  "version": "0.1.0",
+  "tier": "tier-3-personal",
+  "entrypoint": "src/index.js",
+  "status": "active",
+  "description": "推特推文爆速检测与智能截流：按存活小时数计算时速与三档爆速分级，预估抢评曝光，并生成高赞评论/引用转发草稿（只出草稿，不自动发帖）",
+  "tags": ["twitter", "x", "intercept", "viral", "pace", "comment", "drafts"],
+  "capabilities": {
+    "tools": [],
+    "seamsProvided": [],
+    "seamsConsumed": [],
+    "slots": [],
+    "storageDomains": ["$DSH_HOME/omnimux-intercept/"]
+  },
+  "dependencies": {
+    "requiredPlugins": [],
+    "systemBinaries": ["opencli"]
+  }
+}

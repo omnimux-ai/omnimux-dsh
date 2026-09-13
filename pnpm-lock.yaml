@@ -466,6 +466,15 @@ importers:
         specifier: ^30.0.1
         version: 30.0.1
 
+  plugins/omnimux-intercept:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.4
+        version: 25.9.5
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+
   plugins/omnimux-market:
     dependencies:
       '@unicode/unicode-15.1.0':

@@ -1,0 +1,35 @@
+{
+  "name": "omnimux-intercept",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "intercept": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "test",
+    "docs",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "typecheck:contracts": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.4",
+    "typescript": "~5.9.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "description": "omnimux-intercept: 推特推文爆速检测与智能截流。纯函数算法核心 + OpenCLI 采集适配 + 三级降级文案生成，零 npm 运行时依赖。"
+}
