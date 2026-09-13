@@ -39,6 +39,39 @@ export const TOPBAR_TOGGLE_RIGHT_MARGIN_PX = 8
 export const TOPBAR_TOGGLE_TOP_PX = 4
 export const TOPBAR_TOGGLE_Z_INDEX = 9999
 
+/**
+ * Trigger click robustly penetrating React 17/18 synthetic event props.
+ * @param {HTMLElement | null | undefined} el
+ */
+export function triggerClick(el) {
+  if (!el) return
+  try {
+    const propKey = Object.keys(el).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
+    if (propKey && typeof el[propKey]?.onClick === 'function') {
+      el[propKey].onClick({
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        nativeEvent: new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
+        target: el,
+        currentTarget: el,
+      })
+      return
+    }
+  } catch {
+    // fall through
+  }
+  try {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
+  } catch {
+    // fall through
+  }
+  try {
+    el.click()
+  } catch {
+    // fall through
+  }
+}
+
 const TOGGLE_ARIA_LABELS = Object.freeze([
   '打开侧边栏',
   '收起侧边栏',
@@ -49,15 +82,19 @@ const TOGGLE_ARIA_LABELS = Object.freeze([
 const NEW_SESSION_ARIA_LABELS = Object.freeze([
   '新建会话',
   '新会话',
+  '新对话',
+  '新建对话',
   'New session',
   'New Session',
+  'New chat',
+  'New Chat',
 ])
 
 /** Shown while the sidebar is expanded (action = collapse). */
 const COLLAPSE_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="collapse" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="6.8" y1="2.5" x2="6.8" y2="13.5"/><path d="M11.5 8h-1.3"/><path d="M11.4 6.9l-1.2 1.1 1.2 1.1"/></svg>`
 
 /** Shown while the sidebar is collapsed (action = expand). */
-const EXPAND_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="expand" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="6.8" y1="2.5" x2="6.8" y2="13.5"/><path d="M9.8 8h1.3"/><path d="M9.9 6.9l1.2 1.1-1.2 1.1"/></svg>`
+const EXPAND_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="expand" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="9.8" y1="2.5" x2="9.8" y2="13.5"/><path d="M9.8 8h1.3"/><path d="M9.9 6.9l1.2 1.1-1.2 1.1"/></svg>`
 
 /** Official ic_ds_new_chat_outline_16 path (ui-primitives IconNewChatOutline16). */
 const NEW_SESSION_ICON_SVG = `<svg data-omnimux-topbar-new-session-icon width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8.00003 0.3237C3.76075 0.3237 0.32373 3.76072 0.32373 8C0.32373 9.17603 0.589121 10.2922 1.0632 11.2901L1.35291 11.8989L2.5705 11.3205L2.28079 10.7117C1.89079 9.89074 1.67301 8.97167 1.67301 8C1.67301 4.50546 4.50549 1.67298 8.00003 1.67298C11.4946 1.67298 14.3271 4.50546 14.3271 8C14.3271 11.4945 11.4946 14.327 8.00003 14.327C7.28473 14.327 6.76077 14.277 6.29621 14.1487C5.83857 14.0224 5.40441 13.8109 4.88514 13.4488C4.12569 12.919 3.03778 12.7316 2.141 13.2978L2.12682 13.307L2.11264 13.3171L1.34886 13.854L1.79659 15.188L2.86122 14.4384C3.19068 14.2305 3.68325 14.2542 4.11326 14.5539C4.72789 14.9826 5.30042 15.2724 5.93762 15.4484C6.56803 15.6224 7.22776 15.6763 8.00003 15.6763C12.2393 15.6763 15.6763 12.2393 15.6763 8C15.6763 3.76072 12.2393 0.3237 8.00003 0.3237ZM7.32033 4.82535V7.32536H4.82538V8.67464H7.32033V11.1747H8.6696V8.67464H11.1747V7.32536H8.6696V4.82535H7.32033Z" fill="currentColor"/></svg>`
@@ -77,6 +114,8 @@ export function findOfficialSidebarToggle(doc) {
     const byAria = doc.querySelector(`button[aria-label="${label}"]${notInjected}`)
     if (byAria instanceof HTMLElement) return byAria
   }
+  const byClass = doc.querySelector(`button.x-Wl6W_toggle${notInjected}, .x-Wl6W_toggle${notInjected}`)
+  if (byClass instanceof HTMLElement) return byClass
   const fallback = doc.querySelector(
     `[class*="sidebarCol"] [class*="logoRow"] [class*="toggle"]${notInjected}, [class*="sidebarCol"] [class*="logoRow"] button[class*="toggle"]${notInjected}`,
   )
@@ -97,6 +136,8 @@ export function findOfficialNewSessionButton(doc) {
     const byAria = doc.querySelector(`button[aria-label="${label}"]${notInjected}`)
     if (byAria instanceof HTMLElement) return byAria
   }
+  const byBrand = doc.querySelector(`button.x-Wl6W_brand${notInjected}, button.x-Wl6W_newSession${notInjected}`)
+  if (byBrand instanceof HTMLElement) return byBrand
   const byClass = doc.querySelector(
     `[class*="sidebarCol"] button[class*="newSession"]${notInjected}, [class*="sidebarCol"] [class*="newSession"]${notInjected}`,
   )
@@ -354,7 +395,9 @@ export function computeTabBarPadLeft(doc) {
  */
 export function findSidebarColumn(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
-  return doc.querySelector('[class*="sidebarCol"], [data-pane="sidebar"]')
+  return doc.querySelector(
+    '[class*="sidebarCol"], [data-pane="sidebar"], .dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar, [class*="UpstreamSidebar"]'
+  )
 }
 
 /**
@@ -432,9 +475,9 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
  */
 export function findTopbarAnchor(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
-  return (
-    doc.querySelector('[data-dsh-better-sidebar] [class*="tabBar"], [class*="tabBar"], [data-dsh-better-sidebar]')
-  )
+  const anchor = doc.querySelector('[data-dsh-better-sidebar] [class*="tabBar"], [class*="tabBar"], [data-dsh-better-sidebar]')
+  if (anchor) return anchor
+  return doc.body || doc.documentElement || null
 }
 
 /**
@@ -453,11 +496,13 @@ export function injectTopbarToggleButton(doc) {
     btn.setAttribute(SIDEBAR_TOGGLE_TOPBAR_ATTR, '1')
     btn.setAttribute('aria-label', '收起侧边栏')
     btn.innerHTML = COLLAPSE_ICON_SVG + EXPAND_ICON_SVG
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (event) => {
+      try { event.preventDefault() } catch { /* ignore */ }
+      try { event.stopPropagation() } catch { /* ignore */ }
       const willCollapse = !isLeftSidebarCollapsed(doc)
       setExplicitLeftCollapseIntent(willCollapse)
       const official = findOfficialSidebarToggle(doc)
-      if (official) official.click()
+      if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
   }
@@ -501,7 +546,7 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
         // Fall through to official click if coordinator is not ready.
       }
       const official = findOfficialNewSessionButton(doc)
-      if (official) official.click()
+      if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
   }
@@ -582,12 +627,11 @@ export function injectTopbarRightExpandButton(doc) {
       const currentWin = doc.defaultView || (typeof window !== 'undefined' ? window : null)
       const currentApi = currentWin?.__omnimuxWorkbench
       if (currentApi && typeof currentApi.open === 'function') {
-        currentApi.open()
+        currentApi.open({ tabId: 'omnimux-workflow:canvas' })
       } else {
         const trigger = doc.querySelector('[data-dsh-panel-toggle], [data-dsh-toggle-cluster] button, button[aria-label*="展开"]')
-        if (trigger && typeof trigger.click === 'function') trigger.click()
+        if (trigger) triggerClick(trigger)
       }
-      btn.style.setProperty('display', 'none', 'important')
     })
     const host = doc.body || doc.documentElement
     if (host) host.appendChild(btn)

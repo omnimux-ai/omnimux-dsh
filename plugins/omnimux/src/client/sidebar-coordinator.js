@@ -21,6 +21,7 @@
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
+import { triggerClick } from './sidebar-toggle-topbar.js'
 
 const ALPHA_DESCRIPTION = 'Alpha · 内测：开发阶段优先完善非 Alpha 功能；正式版不包含此功能。'
 const ALPHA_STYLES = `
@@ -115,7 +116,9 @@ const INLINE_STYLES = `
 `
 
 function sidebarRoot() {
-  const column = document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]')
+  const column = document.querySelector(
+    '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar, [class*="UpstreamSidebar"]'
+  )
   if (!(column instanceof HTMLElement)) return undefined
   const logoOwner = column.querySelector('[class*="logoRow"]')?.parentElement
   return logoOwner ?? (column.firstElementChild instanceof HTMLElement ? column.firstElementChild : undefined)
@@ -258,7 +261,7 @@ export function openCollapsedNewMenuAt(anchor) {
       event.stopPropagation()
       closeNewMenu()
       skipNextCollapsedClick = true
-      sessionBtn.click()
+      triggerClick(sessionBtn)
     })
     menu.append(sessionItem)
     document.body.append(menu)
@@ -312,7 +315,7 @@ function isButtonEl(el) {
 }
 
 function newSessionButton(root) {
-  const nested = root.querySelector('button[class*="newSession"]')
+  const nested = root.querySelector('button[class*="newSession"], button.x-Wl6W_brand, button.x-Wl6W_newSession')
   if (isButtonEl(nested)) return nested
   for (const child of root.children) {
     if (isButtonEl(child)) return child
