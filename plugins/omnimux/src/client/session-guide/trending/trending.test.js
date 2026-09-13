@@ -77,7 +77,7 @@ test('trending: 档位定义完整，互动率按真实分布定标', () => {
   assert.equal(TRENDING_RANGES[0].value, '', '时间窗必须留一个空档')
   assert.ok(TRENDING_RANGES.slice(1).every((r) => r.value))
   assert.ok(TRENDING_SORTS.every((s) => s.value && s.labelKey))
-  assert.deepEqual(TRENDING_SORTS.map((s) => s.value), ['views', 'engagement'])
+  assert.deepEqual(TRENDING_SORTS.map((s) => s.value), ['recommend', 'views', 'engagement'])
 
   // 早期样本时代的 4/6/8% 档位在真实库（0.27%~4.21%）上会几乎筛空
   assert.deepEqual(TRENDING_ENGAGEMENT_BUCKETS.map((b) => b.value), ['', '0.5', '1', '2'])
@@ -94,7 +94,7 @@ test('trending: 默认筛选态只含在册维度', () => {
     views: '',
     engagement: '',
     range: '',
-    sort: 'views',
+    sort: 'recommend',
   })
 })
 
@@ -153,6 +153,16 @@ test('trending: selectTrendingVideos 先筛后排', () => {
   const list = selectTrendingVideos({ ...defaultTrendingFilters(), region: 'US', sort: 'engagement' }, ITEMS)
   assert.deepEqual(list.map((it) => it.id), ['a', 'b'])
   assert.deepEqual(selectTrendingVideos(defaultTrendingFilters(), null), [])
+})
+
+test('trending: selectTrendingVideos 默认使用智能推荐算法排序', () => {
+  const sampleItems = [
+    { id: 'old_flat', views: 5000000, days: 120, stats: { likes: 5000 } },
+    { id: 'new_viral', views: 200000, days: 2, stats: { likes: 12000, comments: 1000, saves: 2000, shares: 1000 } },
+  ]
+  const list = selectTrendingVideos(defaultTrendingFilters(), sampleItems)
+  assert.equal(list[0].id, 'new_viral', '近期优质爆款在智能推荐算法下置顶')
+  assert.equal(list[1].id, 'old_flat')
 })
 
 test('trending: 克隆指令只写真实存在的字段', () => {
