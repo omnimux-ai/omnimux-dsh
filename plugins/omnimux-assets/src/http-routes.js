@@ -27,18 +27,55 @@ const STATUS_BY_CODE = {
   'mapping-not-found': 404,
   'artifact-not-found': 404,
   'asset-not-found': 404,
+  'catalog-not-found': 404,
+  'catalog-unavailable': 503,
+  'cloud-media-unavailable': 404,
   'name-conflict': 409,
   'type-invalid': 400,
   'name-invalid': 400,
   'description-too-long': 400,
   'tags-invalid': 400,
   'files-invalid': 400,
+  'file-too-large': 413,
   'not-local': 403,
   'disk-space-insufficient': 413,
   'invalid-path': 400,
   'not-a-file': 400,
   'blob-url-forbidden': 400,
   'internal': 500,
+}
+
+/** A catalog page name is `page-NNNN` or `page-NNNN.json`; nothing else is read. */
+const CATALOG_PAGE_RE = /^page-(\d{1,6})(?:\.json)?$/
+/** A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. */
+const CATALOG_SCOPE_SEGMENT_RE = /^[a-z][a-z0-9_]*$/
+
+/**
+ * Resolve a catalog page request to a file path inside the catalog directory.
+ *
+ * The page path arrives as URL segments, so every segment is validated against a
+ * strict pattern before a path is joined. `../`, absolute paths, and unknown
+ * scopes are refused here rather than sanitized later.
+ *
+ * @param {string} catalogDir
+ * @param {string[]} segments e.g. ['audio', 'bgm', 'page-0002.json']
+ * @returns {string} absolute page file path
+ */
+export function resolveCatalogPagePath(catalogDir, segments) {
+  const parts = segments.filter((segment) => segment !== '')
+  if (parts.length < 2 || parts.length > 3) {
+    throw new AssetsError('catalog-not-found', 'catalog page path must be <category>/[<sub_category>/]page-NNNN')
+  }
+  const match = CATALOG_PAGE_RE.exec(parts[parts.length - 1])
+  if (!match) throw new AssetsError('catalog-not-found', 'invalid catalog page name')
+  const scope = parts.slice(0, -1)
+  for (const segment of scope) {
+    if (!CATALOG_SCOPE_SEGMENT_RE.test(segment)) {
+      throw new AssetsError('catalog-not-found', 'invalid catalog scope')
+    }
+  }
+  const fileName = `page-${match[1].padStart(4, '0')}.json`
+  return resolve(catalogDir, ...scope, fileName)
 }
 
 /**
@@ -175,8 +212,62 @@ function messageOf(error) {
  * }} deps
  */
 export function createAssetsDispatcher(deps) {
-  const { mappings, artifacts, library } = deps
+  const { mappings, artifacts, library, cloud } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
+
+  /**
+   * `/omnimux/assets/cloud/<category>/[<sub_category>/]page-NNNN.json`
+   *
+   * Served as a stream rather than parsed JSON so the page file is forwarded
+   * byte-for-byte: the client is the only thing that needs its shape, and a
+   * large page never has to be materialized in the Host.
+   * @param {string} pathname
+   */
+  function cloudPageRoute(pathname) {
+    if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+    const rest = pathname.slice('/omnimux/assets/cloud/'.length)
+    const segments = rest.split('/').map((segment) => decodeURIComponent(segment))
+    const file = resolveCatalogPagePath(cloud.catalogDir, segments)
+    const status = statStatus(file, 'file')
+    if (status !== 'ok') throw new AssetsError('catalog-not-found', 'catalog page not found')
+    return {
+      status: 200,
+      stream: { absolutePath: file, mime: 'application/json; charset=utf-8' },
+    }
+  }
+
+  /** `GET /omnimux/assets/cloud/media?id=<row id>&which=media|cover` */
+  function cloudMediaRoute(url) {
+    if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+    const id = url.searchParams.get('id') || ''
+    const which = url.searchParams.get('which') === 'cover' ? 'cover' : 'media'
+    const resolved = cloud.resolveRowMedia(id, which)
+    if (!resolved) throw new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
+    if (resolved.kind === 'remote') {
+      // Remote assets are already public CDN URLs; the browser loads them
+      // directly instead of the Host proxying the bytes.
+      return { status: 302, redirect: resolved.url }
+    }
+    return {
+      status: 200,
+      stream: { absolutePath: resolved.absolutePath, mime: resolved.mime, size: resolved.size },
+    }
+  }
+
+  /** `POST /omnimux/assets/cloud/save` — copy one cloud asset into the local library. */
+  async function cloudSaveRoute(req) {
+    if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+    if (!library) throw new AssetsError('catalog-unavailable', 'local library is not available')
+    const problem = jsonBodyProblem(req)
+    if (problem) return problem
+    const body = /** @type {{ id?: string, name?: string, type?: string }} */ (req.body)
+    try {
+      const asset = await cloud.saveToLocal(String(body.id ?? ''), { name: body.name, type: body.type })
+      return { status: 200, body: { asset, lrev: library.revision() } }
+    } finally {
+      cloud.clearStaging()
+    }
+  }
 
   /**
    * Reject null (bad JSON) / non-object POST bodies.
@@ -310,6 +401,37 @@ export function createAssetsDispatcher(deps) {
         return stateRoute(url)
       }
 
+      // ---- cloud assets -------------------------------------------------
+      if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/manifest') {
+        return { status: 200, body: cloud.getManifest() }
+      }
+
+      if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/search') {
+        return {
+          status: 200,
+          body: cloud.search({
+            q: url.searchParams.get('q') || '',
+            category: url.searchParams.get('category') || '',
+            subCategory: url.searchParams.get('sub_category') || '',
+            limit: url.searchParams.get('limit'),
+            offset: url.searchParams.get('offset'),
+          }),
+        }
+      }
+
+      if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/media') {
+        return cloudMediaRoute(url)
+      }
+
+      if (cloud && method === 'GET' && path.startsWith('/omnimux/assets/cloud/')) {
+        return cloudPageRoute(path)
+      }
+
+      if (method === 'POST' && path === '/omnimux/assets/cloud/save') {
+        return await cloudSaveRoute(req)
+      }
+
+      // ---- local library ------------------------------------------------
       if (library && method === 'GET' && path === '/omnimux/assets/library') {
         const type = url.searchParams.get('type') || ''
         const query = url.searchParams.get('q') || ''
@@ -496,6 +618,13 @@ export function registerAssetsRoutes(webServer, dispatcher) {
           secFetchSite: header(req, 'sec-fetch-site'),
           body,
         })
+        if (result.redirect) {
+          // Remote cloud media lives on a public CDN; send the browser there
+          // rather than proxying the bytes through the Host.
+          res.writeHead(result.status ?? 302, { Location: result.redirect, 'Cache-Control': 'no-store' })
+          res.end()
+          return
+        }
         if (result.stream) {
           sendPreview(res, result.status, result.stream)
           return

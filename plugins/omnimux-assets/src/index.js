@@ -1,5 +1,6 @@
 import { createAssetsDispatcher, registerAssetsRoutes } from './http-routes.js'
 import { createArtifactStore } from './artifacts.js'
+import { createCloudCatalog } from './cloud-catalog.js'
 import { createLibraryStore } from './library.js'
 import { createMappingStore, AssetsError } from './mappings.js'
 import { resolveAssetsPaths } from './paths.js'
@@ -57,7 +58,8 @@ export function apply(ctx) {
   const artifacts = createArtifactStore({ paths })
   const library = createLibraryStore({ paths })
   library.migrateMappings(mappings)
-  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library })
+  const cloud = createCloudCatalog({ library })
+  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud })
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
