@@ -93,6 +93,13 @@ test('session guide switches drafts without a reference panel or send intercepti
     assert.equal(store.get(owner), savedState)
     assert.equal(writes, savedWrites)
     await setPanel('another-session', true)
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0)
+    assert.equal(
+      document.querySelector('[data-omnimux-starter-guide]'),
+      null,
+      'workbench 全局分栏打开时不再要求 sessionId 相等，任何会话都不该渲染完整卡片',
+    )
+    await setPanel('another-session', false)
     assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
     await click('[data-send-button]')
     assert.equal(sends, 1, 'normal send needs no extra synchronization gesture')
@@ -638,5 +645,108 @@ test('复刻吸底：写入输入框不再弹「已填入」提示，回执由�
     globalThis.document = previous.document
     globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
     globalThis.fetch = previous.fetch
+  }
+})
+
+// ─────────────────────────────────────────────────────────────
+// 分栏（中间栏）：只保留简洁对话模式，不渲染完整引导卡片
+// ─────────────────────────────────────────────────────────────
+
+/** jsdom 没有布局，宽度只能按元素打桩。 */
+function stubWidth(node, read) {
+  Object.defineProperty(node, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => {
+      const width = read()
+      return { width, height: 600, top: 0, left: 0, right: width, bottom: 600, x: 0, y: 0 }
+    },
+  })
+}
+
+test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输入框紧凑档任一命中', async () => {
+  const dom = new JSDOM(`<!doctype html><html><head></head><body>
+    <div class="dshDesktopFrame" data-rightbar-collapsed="true">
+      <div class="frame_centerCol">
+        <div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div>
+      </div>
+      <div class="frame_rightbarCol" data-rightbar-col></div>
+    </div>
+  </body></html>`, { url: 'http://localhost/' })
+  const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const frame = document.querySelector('.dshDesktopFrame')
+  const widths = { rightbar: 1028, column: 1200 }
+  stubWidth(document.querySelector('[data-rightbar-col]'), () => widths.rightbar)
+  stubWidth(document.querySelector('.frame_centerCol'), () => widths.column)
+  const store = createGuideStore()
+  const root = createRoot(document.querySelector('#guide'))
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => ({ sessionId: 'A', state: { panelOpen: false } }) }
+  const props = {
+    sessionId: 'A', useSession: (selector) => selector({ blank: true }), useConversation: (selector) => selector({ activeTargets: new Set() }),
+    useInput: (selector) => selector({ draft: '', phase: 'plain' }), inputActions: { setDraft() {} },
+    getCurrentSessionId: () => 'A', store, workbench, t: (key) => key,
+  }
+  const render = () => act(async () => root.render(React.createElement(SessionGuide, props)))
+  /** 让 MutationObserver 的微任务与 React 提交都落地。 */
+  const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+  const guideMounted = () => document.querySelectorAll('[data-starter-id]').length === 10
+    && Boolean(document.querySelector('[data-omnimux-starter-host]'))
+  const guideHidden = () => document.querySelector('[data-omnimux-starter-guide]') === null
+    && document.querySelector('[data-omnimux-starter-host]') === null
+
+  try {
+    await render()
+    assert.ok(guideMounted(), '全宽空白会话仍要渲染完整引导卡片（零回退基线）')
+    assert.equal(document.documentElement.hasAttribute('data-omnimux-split-compact'), false)
+
+    // 1) 右侧侧栏真实展开（内存 panelOpen 仍是 false）
+    await act(async () => { frame.removeAttribute('data-rightbar-collapsed') })
+    await settle()
+    assert.ok(guideHidden(), '右侧侧栏展开时必须只保留简洁对话模式')
+    assert.equal(
+      document.documentElement.getAttribute('data-omnimux-split-compact'),
+      'true',
+      '分栏判定必须镜像到 html，供 CSS 兜底',
+    )
+
+    // 2) 收起右侧侧栏：完整卡片平滑回归
+    await act(async () => { frame.setAttribute('data-rightbar-collapsed', 'true') })
+    await settle()
+    assert.ok(guideMounted(), '侧栏收起后必须恢复完整引导卡片')
+    assert.equal(document.documentElement.hasAttribute('data-omnimux-split-compact'), false)
+
+    // 3) 侧栏收起但会话被挤成中间栏窄列
+    await act(async () => {
+      widths.column = 680
+      dom.window.dispatchEvent(new dom.window.Event('resize'))
+    })
+    await settle()
+    assert.ok(guideHidden(), '中间栏窄列同样只保留简洁对话模式')
+
+    // 4) 会话列回到全宽
+    await act(async () => {
+      widths.column = 1200
+      dom.window.dispatchEvent(new dom.window.Event('resize'))
+    })
+    await settle()
+    assert.ok(guideMounted(), '会话列回到全宽后必须恢复完整引导卡片')
+
+    // 5) 输入框降到紧凑档：分栏紧凑态同样收回卡片
+    await act(async () => { document.documentElement.setAttribute('data-omnimux-composer-density', 'icon') })
+    await settle()
+    assert.ok(guideHidden(), '输入框紧凑档下不得再渲染完整卡片')
+    await act(async () => { document.documentElement.setAttribute('data-omnimux-composer-density', 'full') })
+    await settle()
+    assert.ok(guideMounted(), '输入框回到全档后必须恢复完整引导卡片')
+  } finally {
+    await act(async () => root.unmount())
+    document.documentElement.removeAttribute('data-omnimux-composer-density')
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
   }
 })

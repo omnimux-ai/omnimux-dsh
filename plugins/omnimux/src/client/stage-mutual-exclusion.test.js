@@ -147,7 +147,7 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     )
   })
 
-  it('closes workbench panel when any new session intent is clicked', () => {
+  it('reconciles workbench panel on new session intent without touching a real expanded sidebar', () => {
     setup()
     delete document.documentElement.dataset.dshSessionCloser
     ensureProductStageChrome()
@@ -165,7 +165,7 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     shellBtn.textContent = '新对话'
     document.body.append(shellBtn)
     shellBtn.click()
-    assert.equal(closed, 1, 'shell newSession button must close workbench panel')
+    assert.equal(closed, 1, 'shell newSession button must reconcile workbench panel while the sidebar is collapsed')
 
     // 2. 工作区行「在“测试环境”中新建对话」
     const treeitem = document.createElement('div')
@@ -175,14 +175,14 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     treeitem.append(wsBtn)
     document.body.append(treeitem)
     wsBtn.click()
-    assert.equal(closed, 2, 'workspace newSession button must close workbench panel')
+    assert.equal(closed, 2, 'workspace newSession button must reconcile workbench panel while the sidebar is collapsed')
 
     // 3. 顶栏「新建对话」按钮
     const topbarBtn = document.createElement('button')
     topbarBtn.setAttribute('data-omnimux-topbar-new-session', '1')
     document.body.append(topbarBtn)
     topbarBtn.click()
-    assert.equal(closed, 3, 'topbar newSession button must close workbench panel')
+    assert.equal(closed, 3, 'topbar newSession button must reconcile workbench panel while the sidebar is collapsed')
 
     // 4. 收起轨新建会话菜单项
     const menu = document.createElement('div')
@@ -193,7 +193,7 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     menu.append(menuItem)
     document.body.append(menu)
     menuItem.click()
-    assert.equal(closed, 4, 'menu newSession pick must close workbench panel')
+    assert.equal(closed, 4, 'menu newSession pick must reconcile workbench panel while the sidebar is collapsed')
 
     // 5. 普通会话树行点击：不应触发 closePanel
     const plainRow = document.createElement('div')
@@ -202,5 +202,30 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     document.body.append(plainRow)
     plainRow.click()
     assert.equal(closed, 4, 'plain session row must not close workbench panel')
+
+    // 6. 真实右侧侧栏展开着：新会话只把会话挤到中间栏，不得破坏用户已打开的分栏
+    const frame = document.createElement('div')
+    frame.className = 'dshDesktopFrame'
+    const rightbar = document.createElement('div')
+    rightbar.setAttribute('data-rightbar-col', '')
+    Object.defineProperty(rightbar, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ width: 1028, height: 600, top: 0, left: 680, right: 1708, bottom: 600, x: 680, y: 0 }),
+    })
+    frame.append(rightbar)
+    document.body.append(frame)
+    topbarBtn.click()
+    assert.equal(closed, 4, 'an expanded right sidebar must survive a new session intent (split stays open)')
+    shellBtn.click()
+    assert.equal(closed, 4, 'shell newSession must not collapse an expanded right sidebar either')
+    menuItem.click()
+    assert.equal(closed, 4, 'menu newSession pick must not collapse an expanded right sidebar either')
+    wsBtn.click()
+    assert.equal(closed, 4, 'workspace newSession must not collapse an expanded right sidebar either')
+
+    // 7. 宿主已收起侧栏、内存状态仍停在 open：补写关闭，两端状态收敛
+    frame.setAttribute('data-rightbar-collapsed', 'true')
+    wsBtn.click()
+    assert.equal(closed, 5, 'a stale open state must be reconciled once the host sidebar is collapsed')
   })
 })
