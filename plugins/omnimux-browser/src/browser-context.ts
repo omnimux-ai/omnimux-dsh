@@ -26,6 +26,7 @@ export function createBrowserSnapshotMessage(snapshot: string): UserMessage {
   const text = [
     'The user chose to follow the newly active browser tab. The browser page context was refreshed immediately after that choice.',
     'The following is an already completed browser_snapshot of the current page. Use its stable indices directly for the next request; do not take an immediate duplicate snapshot unless required context is missing.',
+    'Conversational guidance: Do not mechanically repeat, paste, or echo the raw page URL in conversational greetings or responses unless specifically requested by the user. Integrate the page context naturally, smoothly, and concisely.',
     snapshot,
   ].join('\n\n')
   const payload = {
