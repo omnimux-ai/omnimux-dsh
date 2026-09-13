@@ -1640,7 +1640,7 @@ export async function importProductFromUrl(args) {
   const source = await readPageSource({ url, fetcher, timeoutMs, hub })
   // A page that advertises no goods at all is a brand / software site, even when
   // the form was left on the physical default.
-  const kind = isDigitalLandingPage({ kind: requestedKind, page: source.page }) ? 'digital' : 'physical'
+  const kind = isDigitalLandingPage({ kind: requestedKind, page: source.page, url }) ? 'digital' : 'physical'
 
   const fields = buildProductFields({ url, kind, page: source.page })
   const analysis = await analyzeLandingPage({

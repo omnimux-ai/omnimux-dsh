@@ -409,9 +409,76 @@ describe('products hub seams', () => {
     const seams = createHubSeams(ctx)
     assert.deepEqual(await seams.pageFetch('https://a.example'), { pageContent: '# https://a.example' })
 
-    const bare = createHubSeams({})
+    // The chat bridge is stubbed shut: the default one resolves a provider on
+    // this machine, and a unit test must not reach the network.
+    const bare = createHubSeams({}, { chatComplete: async () => { throw new Error('chat bridge offline') } })
     await assert.rejects(() => bare.pageFetch('https://a.example'), /omnimux_page_fetch unavailable/)
     await assert.rejects(() => bare.textComplete({ prompt: 'p' }), /omnimux_text_complete unavailable/)
+  })
+
+  it('bridges to the hub chat path when neither the seat nor the tool answers', async () => {
+    const credentials = { resolve: async () => undefined }
+    const settings = { get: () => undefined }
+    const ctx = {
+      get: (name) => {
+        if (name === 'credentials') return credentials
+        if (name === 'settings') return settings
+        return undefined
+      },
+      tools: { get: () => undefined },
+    }
+    const calls = []
+    const seams = createHubSeams(ctx, {
+      chatComplete: async (input) => { calls.push(input); return { mode: 'live', text: 'report' } },
+    })
+    const answer = await seams.textComplete({
+      prompt: 'p', model: 'gemini-3.8-flash', system: 'be brief', maxTokens: 6000,
+    })
+    assert.deepEqual(answer, { mode: 'live', text: 'report' })
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].model, 'gemini-3.8-flash')
+    assert.equal(calls[0].prompt, 'p')
+    assert.equal(calls[0].system, 'be brief')
+    assert.equal(calls[0].maxTokens, 6000)
+    assert.equal(calls[0].env, process.env)
+    // The host resolves its own provider: the seats are forwarded, no key is read here.
+    assert.equal(calls[0].credentials, credentials)
+    assert.equal(calls[0].settings, settings)
+  })
+
+  it('bridges after a seat that throws, with the default model and cap', async () => {
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: async () => { throw new Error('needs-provider: textComplete requires ctx.llm') } } : undefined),
+    }
+    const calls = []
+    const seams = createHubSeams(ctx, {
+      chatComplete: async (input) => { calls.push(input); return { text: 'bridged' } },
+    })
+    assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { text: 'bridged' })
+    assert.equal(calls[0].model, 'gemini-3.8-flash')
+    assert.ok(calls[0].maxTokens > 0)
+    assert.equal(calls[0].system, undefined)
+  })
+
+  it('reports every channel it tried when none of them answer', async () => {
+    const ctx = { get: (name) => (name === 'textComplete' ? { execute: async () => { throw new Error('seat exploded') } } : undefined) }
+    const seams = createHubSeams(ctx, { chatComplete: async () => { throw new Error('no local provider') } })
+    await assert.rejects(
+      () => seams.textComplete({ prompt: 'p' }),
+      (error) => {
+        assert.match(error.message, /seat exploded/)
+        assert.match(error.message, /omnimux_text_complete unavailable/)
+        assert.match(error.message, /no local provider/)
+        return true
+      },
+    )
+  })
+
+  it('points the default bridge at the hub chat module this repository ships', async () => {
+    // Same relative target as HUB_CHAT_MODULE in http-routes.js: the bridge is
+    // only a safety net while that path resolves to the real hub module.
+    const mod = await import(new URL('../../omnimux/src/text/chat.js', new URL('./http-routes.js', import.meta.url)).href)
+    assert.equal(typeof mod.completeTextViaChat, 'function')
   })
 
   it('survives a ctx whose get() throws', async () => {

@@ -73,6 +73,64 @@ const SOFTWARE_COPY = [
 ]
 
 /**
+ * Platform vocabulary. Every one of these words is ordinary in a shop
+ * description (`ai`, `bot`, `cloud`), so a single hit never decides — two of
+ * them together, counted with the software markers above, do.
+ */
+const PLATFORM_COPY = [
+  /\bdocs?\b/i,
+  /\bconsole\b/i,
+  /\bplatform\b/i,
+  /\bdashboard\b/i,
+  /\bchatbot\b/i,
+  /\bbot\b/i,
+  /\bcloud\b/i,
+  /\bai\b/i,
+  /\btiktok\b/i,
+  /\bsdk\b/i,
+  /\bworkflow(s)?\b/i,
+  /\bworkspace\b/i,
+  /控制台/,
+  /云服务/,
+  /大模型/,
+  /智能体/,
+  /工作流/,
+]
+
+/**
+ * One hit is already proof. Nothing but a software / service site writes these
+ * on its landing page, so these do not wait for a second marker.
+ */
+const PLATFORM_STRONG = [
+  /\bdocumentation\b/i,
+  /\bdevelopers?\b/i,
+  /\bapi\s*(?:key|keys|reference|docs?|documentation|endpoint)/i,
+  /开发者文档/,
+  /开发者中心/,
+  /开发者平台/,
+  /开放平台/,
+]
+
+/**
+ * Hosts only a software / service product uses: a `.ai` domain, or the
+ * docs / api / app subdomain a SaaS site puts in front of its product.
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+function digitalHost(value) {
+  if (!value) return false
+  let hostname = ''
+  try {
+    hostname = new URL(value).hostname
+  } catch {
+    return false
+  }
+  if (/\.ai$/i.test(hostname)) return true
+  return /(?:^|\.)(?:docs|api|app|console|developer|developers|dashboard|platform|portal)\./i.test(hostname)
+}
+
+/**
  * @param {unknown} value
  * @returns {Record<string, unknown> | null}
  */
@@ -180,12 +238,18 @@ function pageCopy(page) {
 /**
  * Which playbook does this page belong to?
  *
- * An explicit `kind` wins. Otherwise structured data decides first (a page that
- * declares a schema.org Product is a listing), and only a page with no commerce
- * vocabulary is read as a software / brand site — and then only on real evidence
- * (a software schema type, or at least two software-copy markers).
+ * An explicit `kind: 'digital'` wins outright. Structured data decides next: a
+ * page that declares a schema.org Product is a listing whatever its copy says.
+ * A page with no commerce vocabulary is read as a software / brand site on real
+ * evidence — a software schema type, a software host (`*.ai`, `docs.`, `api.`,
+ * `app.`), one unambiguous platform marker, or two soft platform markers.
  *
- * @param {{ kind?: 'physical' | 'digital', page?: object | null }} input
+ * A defaulted `kind: 'physical'` never vetoes that evidence. The form ships the
+ * switch on physical, so for a page that advertises no goods the page decides,
+ * not the default: that is what routes a SaaS / brand site to the brand
+ * playbook without the user touching the switch first.
+ *
+ * @param {{ kind?: 'physical' | 'digital', page?: object | null, url?: string }} input
  * @returns {boolean}
  */
 export function isDigitalLandingPage(input) {
@@ -195,9 +259,11 @@ export function isDigitalLandingPage(input) {
   const types = jsonLdTypes(page)
   if (types.some((type) => COMMERCE_TYPES.has(type))) return false
   if (types.some((type) => DIGITAL_TYPES.has(type))) return true
+  if (digitalHost(text(input?.url) || text(page?.canonical))) return true
   const copy = pageCopy(page)
   if (!copy) return false
-  const hits = SOFTWARE_COPY.filter((pattern) => pattern.test(copy)).length
+  if (PLATFORM_STRONG.some((pattern) => pattern.test(copy))) return true
+  const hits = [...SOFTWARE_COPY, ...PLATFORM_COPY].filter((pattern) => pattern.test(copy)).length
   return hits >= 2
 }
 
@@ -411,7 +477,7 @@ function degraded(message, kind) {
  */
 export async function analyzeLandingPage(input) {
   const hub = normalizeHub(input?.hub)
-  const digital = isDigitalLandingPage({ kind: input?.kind, page: input?.page })
+  const digital = isDigitalLandingPage({ kind: input?.kind, page: input?.page, url: input?.url })
   const kind = digital ? 'digital' : 'physical'
   if (!hub || typeof hub.textComplete !== 'function') {
     return degraded('宿主未提供大模型通道（omnimux 未装载或未配置密钥）', kind)

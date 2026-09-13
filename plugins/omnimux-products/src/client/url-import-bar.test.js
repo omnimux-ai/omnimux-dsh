@@ -280,12 +280,14 @@ describe('products client · applyImportedData', () => {
     assert.equal(applied.strategy.content_angles[0].target_audience, 'AI 应用开发者')
   })
 
-  it('still switches to digital when the answer carries the kind but no strategy', () => {
+  it('unfolds the six modules even when the answer carries the kind but no strategy', () => {
     const { bundle, writes } = harness()
     bundle.actions.applyImportedData({ name: '某平台', kind: 'digital' })
     const applied = Object.fromEntries(writes)
     assert.equal(applied.kind, 'digital')
-    assert.equal(applied.strategyOpen, undefined)
+    assert.equal(applied.strategyOpen, true, 'a digital answer must arrive expanded')
+    assert.equal(applied.strategyTouched, true)
+    assert.equal(applied.strategy, undefined, 'no report to write, so the empty draft stays')
   })
 
   it('keeps the dialog usable when a strategy arrives unusable', () => {

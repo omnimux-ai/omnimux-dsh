@@ -132,6 +132,34 @@ describe('ai-analysis · which playbook reads the page', () => {
     assert.equal(isDigitalLandingPage({ page: page({ text: '开发者文档齐备，支持免费试用' }) }), true)
   })
 
+  it('reads a platform word in the title as a software site, without the page text', () => {
+    assert.equal(isDigitalLandingPage({ page: page({ title: 'MiniMax 开放平台' }) }), true)
+    assert.equal(isDigitalLandingPage({ page: page({ title: 'Acme API documentation' }) }), true)
+    // One soft platform word is still not enough on its own.
+    assert.equal(isDigitalLandingPage({ page: page({ title: 'Acme AI' }) }), false)
+    assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 ai 助手很好用' }) }), false)
+    assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 ai 助手，支持云端工作流' }) }), true)
+  })
+
+  it('reads a software host as a software site even when the form said physical', () => {
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.minimax.ai/' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://docs.tiktok.com/x' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://api.example.com/v1' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://app.example.com/' }), true)
+    // The page's own canonical URL counts when the caller passes none.
+    assert.equal(isDigitalLandingPage({ page: page({ canonical: 'https://console.example.ai/' }) }), true)
+    // An ordinary shop host is untouched.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://shop.example.com/p/1' }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'not a url' }), false)
+  })
+
+  it('lets the page overrule a defaulted physical kind, but never a shop listing', () => {
+    const software = page({ text: '一站式多模态模型服务，控制台与开发者文档齐备' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: software }), true)
+    const shop = page({ nodes: [{ '@type': 'Product' }], text: '一站式多模态模型服务，控制台与开发者文档齐备' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: shop }), false)
+  })
+
   it('never guesses without a page', () => {
     assert.equal(isDigitalLandingPage({}), false)
     assert.equal(isDigitalLandingPage({ page: null }), false)
