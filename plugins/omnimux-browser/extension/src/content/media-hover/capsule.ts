@@ -200,7 +200,6 @@ export class MediaCapsule {
     button.type = 'button'
     button.className = 'omnimux-capsule-brand'
     button.setAttribute('aria-label', this.hints.brand)
-    button.setAttribute('title', this.hints.brand)
     button.innerHTML = svgIcon('brand', CAPSULE_SPEC.brandIconSize)
     button.addEventListener('pointerdown', swallowEvent)
     button.addEventListener('mousedown', swallowEvent)
@@ -215,7 +214,6 @@ export class MediaCapsule {
     button.className = 'omnimux-capsule-icon'
     button.setAttribute('data-action', action)
     button.setAttribute('aria-label', this.hints.action[action])
-    button.setAttribute('title', this.hints.hint[action])
     button.innerHTML = svgIcon(ICON_BY_ACTION[action], CAPSULE_SPEC.iconGlyphSize)
 
     // The page must never see these presses: no navigation, no card selection,
