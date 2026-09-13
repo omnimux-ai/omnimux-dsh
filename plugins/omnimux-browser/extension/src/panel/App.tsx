@@ -21,7 +21,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, SaveIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
@@ -377,69 +377,20 @@ function tabLabel(tab: AffinityTab | null, unknownTab: string): string {
 
 function TabAffinityBanner({
   state,
-  copy,
   onDecision,
 }: {
   state: TabAffinityState | null
   copy: PanelCopy
   onDecision: (decision: TabAffinityDecision) => void
 }): React.JSX.Element | null {
-  if (state === null || state.status === 'unbound' || state.status === 'following') return null
-  const controlled = tabLabel(state.controlled, copy.tabHandoff.closedTab)
-  const active = tabLabel(state.active, copy.tabHandoff.unknownTab)
-  const lost = state.status === 'lost'
-  const handoff = state.status === 'handoff'
-  const title = lost
-    ? copy.tabHandoff.lostTitle
-    : handoff
-      ? copy.tabHandoff.questionTitle
-      : copy.tabHandoff.backgroundTitle(controlled)
-  const body = lost
-    ? copy.tabHandoff.lostBody
-    : handoff
-      ? copy.tabHandoff.questionBody(controlled, active)
-      : state.pinned
-        ? copy.tabHandoff.pinnedBody(active)
-        : copy.tabHandoff.backgroundBody(active)
-
-  return (
-    <section className={`tab-affinity ${state.status}`} role={handoff || lost ? 'alert' : 'status'}>
-      <div className="tab-affinity-heading">
-        <span className="eyebrow">{copy.tabHandoff.eyebrow}</span>
-        <strong>{title}</strong>
-      </div>
-      <div className="tab-affinity-route" aria-hidden="true">
-        <span className={`tab-affinity-node ${lost ? 'closed' : 'controlled'}`}>
-          <small>{copy.tabHandoff.assistant}</small>
-          <span title={controlled}>{controlled}</span>
-        </span>
-        <span className="tab-affinity-arrow">→</span>
-        <span className="tab-affinity-node active">
-          <small>{copy.tabHandoff.you}</small>
-          <span title={active}>{active}</span>
-        </span>
-      </div>
-      <p>{body}</p>
-      <div className="tab-affinity-actions">
-        {handoff && <button className="keep" onClick={() => onDecision('keep')}>{copy.tabHandoff.keep}</button>}
-        {state.active !== null && (
-          <button className="follow" onClick={() => onDecision('follow')}>
-            {lost ? copy.tabHandoff.useCurrent : handoff ? copy.tabHandoff.follow : copy.tabHandoff.followCurrent}
-          </button>
-        )}
-        {handoff && (
-          <button className="keep-always" onClick={() => onDecision('keep-always')}>
-            {copy.tabHandoff.keepAlways}
-          </button>
-        )}
-        {!handoff && !lost && state.pinned && (
-          <button className="keep-always" onClick={() => onDecision('ask-again')}>
-            {copy.tabHandoff.askAgain}
-          </button>
-        )}
-      </div>
-    </section>
-  )
+  useEffect(() => {
+    if (state && (state.status === 'lost' || state.status === 'handoff' || state.status === 'background')) {
+      if (state.active !== null) {
+        onDecision('follow')
+      }
+    }
+  }, [state, onDecision])
+  return null
 }
 
 function ApprovalDialog({
@@ -753,6 +704,39 @@ export function App(): React.JSX.Element {
       }
     }
   }, [isFloatMode])
+
+  const [stickyTopBarVisible, setStickyTopBarVisible] = useState(false)
+  const [activeMediaItems, setActiveMediaItems] = useState<SniffedMediaItem[]>([])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      setStickyTopBarVisible(el.scrollTop > 180)
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const handleSaveToInspiration = async (mediaItem?: SniffedMediaItem) => {
+    const targetUrl = mediaItem?.src || pageScene?.url || ''
+    if (!targetUrl) return
+    try {
+      const res = await fetch('/omnimux/inspiration/local/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: targetUrl }),
+      })
+      const data = await res.json()
+      if (data?.ok || data?.success) {
+        alert(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
+      } else {
+        void send(`请将当前页面（${targetUrl}）的内容与核心灵感点提取并归档到我的灵感中心。`)
+      }
+    } catch {
+      void send(`请将当前页面（${targetUrl}）的内容与核心灵感点提取并归档到我的灵感中心。`)
+    }
+  }
 
   const updateThemeSetting = (mode: 'auto' | 'light' | 'dark') => {
     setThemeSetting(mode)
@@ -1497,11 +1481,15 @@ export function App(): React.JSX.Element {
     // 不渲染乐观行：live user/message 事件即时回显，避免同一消息出现两行。
     try {
       const clientTimeZone = browserTimeZone()
+      const mediaContext = activeMediaItems.length > 0
+        ? `\n\n已点亮挂载的页面媒体素材：\n` + activeMediaItems.map((it, idx) => `[媒体 ${idx + 1}] (${it.type.toUpperCase()}): ${it.src}`).join('\n')
+        : ''
+      const promptWithMedia = text + mediaContext
       await api.rpc('session.prompt', {
         sessionId: id,
         mode: 'queue',
         content: promptContent(
-          submittedSelection === null ? text : selectionPromptText(submittedSelection, text),
+          submittedSelection === null ? promptWithMedia : selectionPromptText(submittedSelection, promptWithMedia),
           submittedImages,
         ),
         ...(clientTimeZone === undefined ? {} : { clientTimeZone }),
@@ -2175,6 +2163,28 @@ export function App(): React.JSX.Element {
         </div>
       </header>
       <TabAffinityBanner state={tabAffinity} copy={copy} onDecision={decideTabAffinity} />
+      {stickyTopBarVisible && pageScene && (
+        <div className="sticky-top-page-bar visible">
+          <div
+            className="sticky-bar-left"
+            onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+            title={locale === 'en' ? 'Scroll to top' : '点击滚动回到顶部大卡片'}
+          >
+            <div className="sticky-bar-badge">
+              <TwitterXIcon size={11} />
+            </div>
+            <span className="sticky-bar-title">{pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}</span>
+          </div>
+          <button
+            type="button"
+            className="sticky-bar-action-btn"
+            onClick={() => { void handleSaveToInspiration() }}
+          >
+            {locale === 'en' ? 'Save' : '保存到灵感库'}
+          </button>
+        </div>
+      )}
       {showSessionPicker && (
         <section className="session-picker youmind-style" aria-label={copy.app.sessions}>
           <div className="session-search-box">
@@ -2237,8 +2247,8 @@ export function App(): React.JSX.Element {
         </section>
       )}
       <div className="messages" ref={scrollRef}>
-        {rows.length === 0 && streamRow === null && !working && (
-          <div className="empty empty-hero-layout">
+        {pageScene && (
+          <div className="empty empty-hero-layout" style={{ margin: '8px 0 16px' }}>
             <div className="page-hero-card">
               <div className="hero-preview-stack">
                 <div className="hero-sheet-back" />
@@ -2261,10 +2271,10 @@ export function App(): React.JSX.Element {
               </div>
               <div className="hero-top-row">
                 <span className="hero-app-badge">
-                  <img src={whaleUrl} alt="OmniMux" />
+                  <TwitterXIcon size={12} />
                 </span>
                 <span className="hero-platform-text">
-                  {pageScene?.platform === 'twitter' ? 'X (formerly Twitter)' : (pageScene?.title ? 'Web' : 'OmniMux')}
+                  {pageScene?.platform === 'twitter' ? (locale === 'en' ? 'X · Post Detail' : 'X · 帖子详情') : (pageScene?.title ? 'Web' : 'OmniMux')}
                 </span>
               </div>
               <div className="hero-page-meta">
@@ -2278,16 +2288,12 @@ export function App(): React.JSX.Element {
               <button
                 type="button"
                 className="hero-action-pill-btn"
-                onClick={() => { void send(copy.app.overviewPrompt) }}
+                onClick={() => { void handleSaveToInspiration() }}
               >
-                {locale === 'en' ? 'Send to OmniMux' : '保存到 OmniMux'}
+                {locale === 'en' ? 'Save' : '保存到灵感库'}
               </button>
             </div>
-
-            <div className="hero-welcome-texts">
-              <h2>{locale === 'en' ? 'Hello 👋' : '你好 👋'}</h2>
-              <p>{locale === 'en' ? 'What would you like to know?' : '你想了解些什么呢？'}</p>
-            </div>
+            <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => void send(p)} />
           </div>
         )}
         {rows.map((row) => (
@@ -2323,6 +2329,12 @@ export function App(): React.JSX.Element {
         />
       )}
       {error !== null && <div className="error">{error}</div>}
+      <MediaSnifferBar
+        items={detectedMedia}
+        locale={locale}
+        onActiveChange={setActiveMediaItems}
+        onSaveToInspiration={handleSaveToInspiration}
+      />
       <footer className="composer">
         <div className="composer-box clean-chat-box">
           {selection !== null && (
@@ -2397,10 +2409,6 @@ export function App(): React.JSX.Element {
               >
                 <PlusSvgIcon size={14} />
               </button>
-              <div className="mode-capsule-btn" title="当前为自动选模与全能对话模式">
-                <span>{locale === 'en' ? 'Auto' : '自动'}</span>
-                <ChevronDownIcon />
-              </div>
             </span>
             {working ? (
               <button

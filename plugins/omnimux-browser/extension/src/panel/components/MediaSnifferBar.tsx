@@ -1,5 +1,5 @@
-import { memo, useState } from 'react'
-import { ImageIcon } from './icons.tsx'
+import { memo, useRef, useState, useEffect } from 'react'
+import { CloseIcon, SaveIcon } from './icons.tsx'
 
 export interface SniffedMediaItem {
   id: string
@@ -7,58 +7,122 @@ export interface SniffedMediaItem {
   src: string
   previewSrc: string
   alt?: string
+  width?: number
+  height?: number
 }
 
 export const MediaSnifferBar = memo(function MediaSnifferBar({
   items,
   locale = 'zh',
-  onAttachMedia
+  onActiveChange,
+  onSaveToInspiration,
 }: {
   items: SniffedMediaItem[]
   locale?: 'zh' | 'en'
-  onAttachMedia: (item: SniffedMediaItem) => void
+  onActiveChange?: (activeItems: SniffedMediaItem[]) => void
+  onSaveToInspiration?: (item: SniffedMediaItem) => void
 }) {
-  const isEn = locale === 'en'
-  const [attachedIds, setAttachedIds] = useState<Set<string>>(new Set())
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
+  const [previewItem, setPreviewItem] = useState<SniffedMediaItem | null>(null)
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearHoverTimer = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    return () => clearHoverTimer()
+  }, [])
 
   if (!items || items.length === 0) return null
 
-  const handleToggle = (item: SniffedMediaItem) => {
-    const next = new Set(attachedIds)
+  const handleChipClick = (item: SniffedMediaItem) => {
+    clearHoverTimer()
+    const next = new Set(activeIds)
     if (next.has(item.id)) {
       next.delete(item.id)
+      if (previewItem?.id === item.id) {
+        setPreviewItem(null)
+      }
     } else {
       next.add(item.id)
-      onAttachMedia(item)
+      setPreviewItem(item)
     }
-    setAttachedIds(next)
+    setActiveIds(next)
+    const activeList = items.filter((it) => next.has(it.id))
+    onActiveChange?.(activeList)
+  }
+
+  const handleChipHover = (item: SniffedMediaItem) => {
+    clearHoverTimer()
+    if (activeIds.has(item.id)) {
+      setPreviewItem(item)
+    }
+  }
+
+  const handleShelfLeave = () => {
+    clearHoverTimer()
+    hoverTimerRef.current = setTimeout(() => {
+      setPreviewItem(null)
+    }, 250)
   }
 
   return (
-    <div className="media-sniffer-bar">
-      <div className="media-sniffer-title">
-        <span className="sniffer-icon"><ImageIcon size={13} /></span>
-        <span>{isEn ? `Page Media (${items.length})` : `页面媒体感知 (${items.length})`}</span>
-      </div>
-      <div className="media-sniffer-pills">
-        {items.map((item) => {
-          const isAttached = attachedIds.has(item.id)
-          const tag = item.type === 'video' ? (isEn ? 'Video' : '视频') : (isEn ? 'Image' : '图片')
-          const title = isAttached
-            ? (isEn ? 'Attached to conversation' : '已作为附件附加到对话')
-            : (isEn ? 'Click to attach image' : '点击将此图片作为多模态附件附加')
-          return (
+    <div className="media-sniffer-shelf" onMouseLeave={handleShelfLeave} onMouseOut={handleShelfLeave}>
+      {previewItem && (
+        <div
+          className="media-float-preview-card visible"
+          onMouseEnter={clearHoverTimer}
+          onMouseLeave={handleShelfLeave}
+        >
+          <div className="float-preview-header">
+            <span className="float-preview-title" title={previewItem.alt || ''}>
+              {previewItem.alt || (previewItem.type === 'video' ? '视频原片' : '图片素材')}
+            </span>
             <button
-              key={item.id}
               type="button"
-              className={`media-pill-btn ${isAttached ? 'active' : ''}`}
-              onClick={() => handleToggle(item)}
-              title={title}
+              className="float-preview-close"
+              onClick={() => setPreviewItem(null)}
+              title={locale === 'en' ? 'Close' : '关闭预览'}
             >
-              <img src={item.previewSrc} alt="" className="media-pill-thumb" />
-              <span className="media-pill-tag">{tag}</span>
-              <span className="media-pill-check">{isAttached ? '✓' : '+'}</span>
+              <CloseIcon size={10} />
             </button>
+          </div>
+          <div className="float-preview-thumb-box">
+            <img src={previewItem.previewSrc} alt={previewItem.alt || ''} className="float-preview-thumb" />
+          </div>
+          <div className="float-preview-action-row">
+            <button
+              type="button"
+              className="float-preview-save-btn"
+              onClick={() => onSaveToInspiration?.(previewItem)}
+            >
+              <SaveIcon size={13} />
+              <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="media-items-row">
+        {items.map((item) => {
+          const isActive = activeIds.has(item.id)
+          const typeTag = item.type === 'video' ? 'MP4' : (item.src.toLowerCase().includes('.png') ? 'PNG' : 'JPG')
+          return (
+            <div
+              key={item.id}
+              className={`media-item-chip ${isActive ? 'active' : ''}`}
+              data-tooltip={isActive ? (locale === 'en' ? 'Active' : '已点亮激活') : (locale === 'en' ? 'Activate' : '点亮激活')}
+              onClick={() => handleChipClick(item)}
+              onMouseEnter={() => handleChipHover(item)}
+              onMouseOver={() => handleChipHover(item)}
+            >
+              <img src={item.previewSrc} alt={item.alt || ''} className="media-thumb" />
+              <span className="media-type-badge">{typeTag}</span>
+            </div>
           )
         })}
       </div>
