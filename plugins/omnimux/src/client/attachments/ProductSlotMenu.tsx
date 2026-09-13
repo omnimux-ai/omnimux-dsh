@@ -279,10 +279,7 @@ export const ProductSlotMenu: React.FC<ProductSlotMenuProps> = ({
           <span className="omx-product-slot-menu__action-icon">
             <LibraryIcon size={14} />
           </span>
-          <div className="omx-product-slot-menu__action-label">
-            <span>从产品库导入...</span>
-            <span className="omx-product-slot-menu__action-sub">全量产品库检索与筛选</span>
-          </div>
+          <span className="omx-product-slot-menu__action-text">从产品库导入...</span>
         </button>
 
         <button /* exempt-ui01: 自定义输入操作项 */
@@ -296,10 +293,7 @@ export const ProductSlotMenu: React.FC<ProductSlotMenuProps> = ({
           <span className="omx-product-slot-menu__action-icon">
             <TextEditIcon size={14} />
           </span>
-          <div className="omx-product-slot-menu__action-label">
-            <span>自定义输入</span>
-            <span className="omx-product-slot-menu__action-sub">直接就地打字填入产品名称</span>
-          </div>
+          <span className="omx-product-slot-menu__action-text">自定义输入</span>
         </button>
 
         <button /* exempt-ui01: 从URL添加操作项 */
@@ -313,10 +307,7 @@ export const ProductSlotMenu: React.FC<ProductSlotMenuProps> = ({
           <span className="omx-product-slot-menu__action-icon">
             <LinkIcon size={14} />
           </span>
-          <div className="omx-product-slot-menu__action-label">
-            <span>从 URL 添加...</span>
-            <span className="omx-product-slot-menu__action-sub">输入商品页面网址作为参考源</span>
-          </div>
+          <span className="omx-product-slot-menu__action-text">从 URL 添加...</span>
         </button>
       </div>
     </div>,

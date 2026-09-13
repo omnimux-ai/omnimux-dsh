@@ -53,6 +53,7 @@ test('ProductSlotMenu: complies with UI and modular design system', () => {
   assert.ok(menuSource.includes('自定义输入'), 'contains custom input action');
   assert.ok(menuSource.includes('从 URL 添加...'), 'contains add from url action');
   assert.ok(menuSource.includes('sortProductsForQuickMenu'), 'calls sortProductsForQuickMenu for ranking');
+  assert.ok(!menuSource.includes('action-sub'), 'drops secondary description text to avoid redundant design');
   assert.doesNotMatch(menuSource, /[\u{1F300}-\u{1FAFF}]/u, 'contains no emoji');
 });
 
