@@ -1,5 +1,5 @@
 /**
- * T04 gates — G4 (duplicate import), the E1–E14 contract, the error codes, and
+ * T04 gates — G4 (duplicate import), the E1–E15 contract, the error codes, and
  * G10 (the structural gate that keeps cloud access in one file).
  *
  * The dispatcher under test is the production one: it takes a
@@ -453,6 +453,91 @@ describe('E10/E11/E12: monitor, analyze and the post list', () => {
   })
 })
 
+describe('E15: the aggregated works feed', () => {
+  /** Import one account and wait for its first collection to land. */
+  async function seed(world, url) {
+    const created = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url })
+    await world.scheduler.settled()
+    return created.body.data.id
+  }
+
+  it('answers one page of works across every monitored account', async () => {
+    const world = makeWorld()
+    const first = await seed(world, 'https://www.tiktok.com/@foo')
+    const second = await seed(world, 'https://x.com/bar')
+    const result = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts`)
+    assert.equal(result.status, 200)
+    const data = result.body.data
+    assert.deepEqual(
+      data.requested_accounts.sort(),
+      [first, second].sort(),
+      'the answer must name the accounts it aggregated',
+    )
+    assert.equal(data.total, data.items.length)
+    assert.equal(data.page, 1)
+    assert.equal(data.has_more, false)
+    for (const row of data.items) {
+      assert.match(row.row_id, new RegExp(`^${row.account_id}:`), 'every row carries a composite id')
+      assert.ok(row.account.nickname || row.account.handle, 'every row names its author')
+      assert.equal(row.cover_key, row.cover_src, 'the cover address has exactly one field')
+    }
+    const authors = new Set(data.items.map((row) => row.account_id))
+    assert.equal(authors.size, 2, 'works from both accounts must be in the same list')
+  })
+
+  it('narrows to the requested accounts, and refuses an unknown one', async () => {
+    const world = makeWorld()
+    const first = await seed(world, 'https://www.tiktok.com/@foo')
+    await seed(world, 'https://x.com/bar')
+
+    const onlyFirst = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?accounts=${first}`)
+    assert.equal(onlyFirst.status, 200)
+    assert.deepEqual([...new Set(onlyFirst.body.data.items.map((row) => row.account_id))], [first])
+    assert.deepEqual(onlyFirst.body.data.requested_accounts, [first])
+
+    const missing = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?accounts=riv_ghost`)
+    assert.equal(missing.status, 404)
+    assert.equal(missing.body.code, RIVAL_ERROR_CODES.ACCOUNT_NOT_FOUND)
+  })
+
+  it('treats an explicit `all` as「every monitored account」', async () => {
+    const world = makeWorld()
+    await seed(world, 'https://www.tiktok.com/@foo')
+    const all = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?accounts=all`)
+    const omitted = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts`)
+    assert.equal(all.status, 200)
+    assert.deepEqual(all.body.data.requested_accounts, omitted.body.data.requested_accounts)
+  })
+
+  it('filters by keyword, platform and pages the result', async () => {
+    const world = makeWorld()
+    await seed(world, 'https://www.tiktok.com/@foo')
+    const all = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts`)
+
+    const keyword = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?q=kitchen`)
+    assert.ok(keyword.body.data.total <= all.body.data.total)
+    assert.ok(keyword.body.data.items.every((row) => JSON.stringify(row).toLowerCase().includes('kitchen')))
+
+    const tiktok = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?platform=tiktok`)
+    assert.deepEqual(tiktok.body.data.items, all.body.data.items)
+    const instagram = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?platform=instagram`)
+    assert.equal(instagram.body.data.total, 0)
+
+    const firstPage = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?page=1&page_size=1`)
+    assert.equal(firstPage.body.data.items.length, 1)
+    assert.equal(firstPage.body.data.has_more, true)
+    const secondPage = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts?page=2&page_size=1`)
+    assert.equal(secondPage.body.data.items.length, 1)
+    assert.notEqual(secondPage.body.data.items[0].row_id, firstPage.body.data.items[0].row_id)
+  })
+
+  it('refuses the wrong method instead of silently answering', async () => {
+    const world = makeWorld()
+    const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/posts`, {})
+    assert.equal(result.status, 405)
+  })
+})
+
 describe('E13: convert a post into the inspiration library', () => {
   it('imports through the existing pipeline and records the id', async () => {
     const world = makeWorld()
@@ -533,6 +618,9 @@ describe('route matching', () => {
     assert.deepEqual(matchRivalRoute(RIVAL_PREFIX), { kind: 'collection' })
     assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/classify`), { kind: 'classify' })
     assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/status`), { kind: 'status' })
+    // The aggregate feed is a sibling of the per-account routes, and it must win
+    // over the single-segment「otherwise it is an account id」fallback.
+    assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/posts`), { kind: 'feed' })
     assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/refresh-all`), { kind: 'refresh-all' })
     assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/riv_1`), { kind: 'account', id: 'riv_1' })
     assert.deepEqual(matchRivalRoute(`${RIVAL_PREFIX}/riv_1/refresh`), { kind: 'account-refresh', id: 'riv_1' })

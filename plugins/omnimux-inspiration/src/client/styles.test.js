@@ -235,11 +235,15 @@ describe('locale dictionaries', () => {
     assert.ok(zh['view.switch'] && en['view.switch'])
     assert.equal(zh['view.player'], '作品')
     assert.equal(zh['view.deconstruct'], '作品解析')
-    assert.equal(zh['card.cta.try'], '一键复刻')
-    assert.equal(zh['card.cta.tryFull'], '一键复刻')
-    assert.equal(zh['card.cta.detail'], '查看')
-    assert.equal(en['card.cta.try'], 'Replicate')
-    assert.equal(en['card.cta.tryFull'], 'One-click replicate')
+    // The account-monitor grid put both CTAs on the same card as the library's,
+    // so the wording is now the one the prototype fixed for that card: 详情 for
+    // the secondary action and 立即复刻 for the primary, in both languages.
+    assert.equal(zh['card.cta.try'], '立即复刻')
+    assert.equal(zh['card.cta.tryFull'], '立即复刻')
+    assert.equal(zh['card.cta.detail'], '详情')
+    assert.equal(en['card.cta.try'], 'Replicate now')
+    assert.equal(en['card.cta.tryFull'], 'Replicate now')
+    assert.equal(en['card.cta.detail'], 'Details')
     assert.equal(zh['card.cta.noSession'], '请先新建或打开一个会话')
     assert.doesNotMatch(zh['card.cta.try'], /加会话/)
     assert.doesNotMatch(en['card.cta.try'], /Add to chat/)

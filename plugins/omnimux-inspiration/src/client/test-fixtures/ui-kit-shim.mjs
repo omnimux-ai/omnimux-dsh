@@ -38,7 +38,10 @@ export const SearchField = (props) => h('input', {
   type: 'search',
   'aria-label': props['aria-label'],
   value: props.value ?? '',
-  readOnly: true,
+  // The real field reports every keystroke through `onValueChange` and applies
+  // its own debounce; the shim calls back synchronously, which is what lets a
+  // gate drive a search without waiting on a timer.
+  onChange: (event) => props.onValueChange?.(event.target.value),
 })
 
 export const DropdownSelect = ({ value, options, className, onChange, 'aria-label': ariaLabel }) => {
@@ -104,8 +107,24 @@ export const InputField = (props) => h('input', {
  * The kit's dialog renders the caller's `footer` slot, so the shim has to as
  * well: whether the import dialog can close itself on a 202 is asserted through
  * the buttons that live only in that slot.
+ *
+ * `title` and `closeLabel` are rendered too, because the kit's `Modal` primitive
+ * puts both in the header: without them a gate could not tell a titled dialog
+ * from an untitled one, which is exactly the difference between「作品详情」and a
+ * library-item preview.
  */
-export const ModalDialog = ({ open, children, footer }) => (open ? h('div', null, children, footer) : null)
+export const ModalDialog = ({ open, children, footer, title, closeLabel, onClose }) => (open
+  ? h(
+    'div',
+    { role: 'dialog', 'aria-label': typeof title === 'string' ? title : undefined },
+    typeof title === 'string' ? h('h2', null, title) : title,
+    closeLabel
+      ? h('button', { type: 'button', 'aria-label': closeLabel, onClick: onClose })
+      : null,
+    children,
+    footer,
+  )
+  : null)
 
 export const CopyButton = () => h('button', { type: 'button' }, null)
 

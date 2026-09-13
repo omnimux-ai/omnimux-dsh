@@ -14,6 +14,7 @@
 import { detectInputKind, parseRivalIdentity, rivalIdentityValue } from './rival-identity.js'
 import { advanceMetrics, averageRecentViews, buildAccountProfile, computeAnalysis, computeMonitor } from './rival-analyze.js'
 import { markPotential } from './rival-potential.js'
+import { mergeAccountPosts, paginateFeed, sortFeedRows } from './rival-feed.js'
 import { rivalMediaFilename, rivalMediaUrl } from './rival-paths.js'
 import { RivalRemoteError } from './rival-remote.js'
 import {
@@ -57,6 +58,29 @@ function isPlainObject(value) {
 function nextRefreshAt(nowMs, hours) {
   if (!(hours > 0)) return null
   return new Date(nowMs + hours * 3_600_000).toISOString()
+}
+
+/**
+ * Account ids the feed request asked for, in the order given.
+ *
+ * `undefined`, `''` and `'all'` all mean "every monitored account" — the client
+ * omits the parameter in that case, and a hand-written request is allowed to
+ * spell the default out. Duplicates collapse to the first occurrence, so a
+ * repeated id cannot produce the same account twice in one feed.
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+function normalizeRequestedIds(value) {
+  const raw = Array.isArray(value) ? value : String(value ?? '').split(',')
+  const ids = []
+  const seen = new Set()
+  for (const entry of raw) {
+    const id = typeof entry === 'string' ? entry.trim() : ''
+    if (!id || id === 'all' || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  return ids
 }
 
 /**
@@ -411,6 +435,45 @@ export function createRivalAccountsService(deps) {
   }
 
   /**
+   * The aggregated cross-account feed (E15).
+   *
+   * The 账号监控 tab shows *works*, not accounts, so the client asks this one
+   * question instead of fanning out one request per account. Sorting, paging and
+   * the cover address therefore have a single implementation (§J2 of the design).
+   * @param {{ accounts?: string | string[], q?: string, platform?: string, sort?: string, page?: number | string, page_size?: number | string }} [filter]
+   */
+  function listFeed(filter = {}) {
+    const requested = normalizeRequestedIds(filter.accounts)
+    const accounts = store.listAccounts()
+    const byId = new Map(accounts.map((account) => [account.id, account]))
+    if (requested.length > 0) {
+      const unknown = requested.filter((id) => !byId.has(id))
+      if (unknown.length > 0) {
+        throw new RivalServiceError(
+          RIVAL_ERROR_CODES.ACCOUNT_NOT_FOUND,
+          `对标账号不存在 (account not found): ${unknown.join(', ')}`,
+          404,
+        )
+      }
+    }
+    const selected = requested.length > 0
+      ? requested.map((id) => byId.get(id))
+      : accounts
+    /** @type {Record<string, Array<Record<string, any>>>} */
+    const postsByAccount = {}
+    for (const account of selected) postsByAccount[account.id] = store.readPosts(account.id)
+    const rows = mergeAccountPosts({
+      accounts: selected,
+      postsByAccount,
+      q: filter.q,
+      platform: filter.platform,
+    })
+    const sorted = sortFeedRows(rows, filter.sort === 'views' ? 'views' : 'posted_at')
+    const page = paginateFeed(sorted, filter.page, filter.page_size)
+    return { ...page, requested_accounts: selected.map((account) => account.id) }
+  }
+
+  /**
    * The payload the client mounts into the conversation (E13 sibling).
    *
    * `relativePath` is an `@` file reference, so it must point at a real file: the
@@ -547,6 +610,7 @@ export function createRivalAccountsService(deps) {
     refreshAccount,
     refreshAll,
     listPosts,
+    listFeed,
     buildAttachmentPayload,
     mediaTarget,
     toInspiration,

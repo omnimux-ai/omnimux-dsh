@@ -95,40 +95,6 @@ export function removeRivalAccount(id) {
   )()
 }
 
-/** Refresh one account (E7). */
-export function refreshRivalAccount(id) {
-  return guarded(
-    () => request(`/${encodeURIComponent(id)}/refresh`, { method: 'POST', body: { manual: true } }),
-    'inspiration-rival',
-  )()
-}
-
-/** Refresh every account (E8). */
-export function refreshAllRivalAccounts() {
-  return guarded(
-    () => request('/refresh-all', { method: 'POST', body: { manual: true } }),
-    'inspiration-rival',
-  )()
-}
-
-/** Scheduler status (E9). */
-export function fetchRivalStatus() {
-  return guarded(() => request('/status'), 'inspiration-rival')()
-}
-
-/** Monitor view (E10). */
-export function fetchRivalMonitor(id) {
-  return guarded(() => request(`/${encodeURIComponent(id)}/monitor`), 'inspiration-rival')()
-}
-
-/** Local analysis (E11) — zero cloud calls. */
-export function analyzeRivalAccount(id) {
-  return guarded(
-    () => request(`/${encodeURIComponent(id)}/analyze`, { method: 'POST' }),
-    'inspiration-rival',
-  )()
-}
-
 /**
  * Post list (E12).
  * @param {string} id
@@ -142,6 +108,36 @@ export function fetchRivalPosts(id, filter = {}) {
     if (filter.sort) query.set('sort', String(filter.sort))
     const suffix = query.toString() ? `?${query}` : ''
     return request(`/${encodeURIComponent(id)}/posts${suffix}`)
+  }, 'inspiration-rival')()
+}
+
+/**
+ * Aggregated feed of every monitored account's works (E15).
+ *
+ * One request for the whole grid: the tab lists works rather than accounts, and
+ * a per-account fan-out would multiply the request count by the number of
+ * accounts on every filter change. `accounts: ''` means「every account」and is
+ * left out of the URL, so the aggregate and an explicit selection stay
+ * distinguishable on the wire.
+ * @param {{
+ *   accounts?: string,
+ *   q?: string,
+ *   platform?: string,
+ *   sort?: string,
+ *   page?: number,
+ *   page_size?: number,
+ * }} [filter]
+ */
+export function fetchRivalFeed(filter = {}) {
+  return guarded(async () => {
+    const query = new URLSearchParams()
+    for (const key of ['accounts', 'q', 'platform', 'sort', 'page', 'page_size']) {
+      const value = filter[key]
+      if (value == null || value === '') continue
+      query.set(key, String(value))
+    }
+    const suffix = query.toString() ? `?${query}` : ''
+    return request(`/posts${suffix}`)
   }, 'inspiration-rival')()
 }
 

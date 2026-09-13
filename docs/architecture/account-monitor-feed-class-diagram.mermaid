@@ -1,0 +1,162 @@
+classDiagram
+    %% 路径映射：RivalFeedRules=src/rival/rival-feed.js；RivalAccountsService=src/rival/rival-accounts-service.js；
+    %% RivalDispatcher=src/rival/rival-routes.js；RivalAccountsStore=src/rival/rival-accounts-store.js；
+    %% RivalApiClient=src/client/rival-api.js；UseRivalFeed=src/client/use-rival-feed.js；
+    %% InspirationSection=src/client/InspirationSection.jsx；RivalAccountFilter=src/client/RivalAccountFilter.jsx；
+    %% RivalFeedGrid=src/client/RivalFeedGrid.jsx；RivalAccountsPanel=src/client/RivalAccountsPanel.jsx；
+    %% RivalPostPreviewModal=src/client/RivalPostPreviewModal.jsx；RivalPlatformMark=src/client/RivalPlatformMark.jsx；
+    %% InspirationCoverCard=src/client/InspirationCoverCard.jsx（原样复用）
+    direction LR
+
+    class RivalFeedRules {
+        <<pure rules>>
+        +matchesFeedQuery(post, account, q) bool
+        +feedCoverSrc(post, mediaUrlOf) string
+        +toFeedRow(post, account) RivalFeedRow
+        +mergeAccountPosts(input) List_of_RivalFeedRow
+        +paginate(items, page, pageSize) Page
+    }
+
+    class RivalAccountsService {
+        +listAccounts(filter) AccountListResult
+        +listPosts(accountId, filter) PostListResult
+        +listFeed(filter) FeedResult
+    }
+
+    class RivalAccountsStore {
+        +listAccounts() List_of_Account
+        +readPostsFile(accountId) PostsFile
+        +readPosts(accountId) List_of_Post
+        +getAccount(id) Account
+    }
+
+    class RivalDispatcher {
+        +matchRivalRoute(pathname) Route
+        +dispatch(req) Response
+    }
+
+    class RivalFeedRow {
+        +id string
+        +row_id string
+        +account_id string
+        +title string
+        +cover_src string
+        +cover_key string
+        +source_platform string
+        +posted_at string
+        +duration number
+        +stats Record
+        +in_library bool
+        +inspiration_id string
+        +author RivalAccountRef
+    }
+
+    class RivalAccountRef {
+        +id string
+        +nickname string
+        +handle string
+        +platform string
+        +avatar_url string
+        +profile_url string
+        +post_count number
+    }
+
+    class RivalApiClient {
+        <<client api>>
+        +fetchRivalAccounts(filter) Response
+        +fetchRivalFeed(filter) Response
+        +convertRivalPost(id, postId, opts) Response
+        +ensureRivalPostMedia(id, postId, kind) Response
+    }
+
+    class RivalSelectionState {
+        +mode All_or_Subset
+        +selectedIds Set_string
+        +toggle(id, allIds) RivalSelectionState
+        +invert(allIds) RivalSelectionState
+        +reset() RivalSelectionState
+        +summary(total, t) string
+        +toQueryParam() string
+    }
+
+    class UseRivalFeed {
+        <<state hook>>
+        +accounts List_of_Account
+        +selection RivalSelectionState
+        +items List_of_RivalFeedRow
+        +page number
+        +hasMore bool
+        +phase Phase
+        +reload() void
+        +loadMore() void
+        +toggleAccount(id) void
+        +invertAccounts() void
+        +resetAccounts() void
+    }
+
+    class InspirationSection {
+        <<shell>>
+        +tab string
+        +rivalQuery string
+        +rivalPlatform string
+        +renderToolbar() void
+        +renderContent() void
+    }
+
+    class RivalAccountFilter {
+        <<filter popover>>
+        +open bool
+        +onToggle(id) void
+        +onInvert() void
+        +onReset() void
+        +onOpenProfile(url) void
+    }
+
+    class RivalFeedGrid {
+        <<feed grid>>
+        +items List
+        +loading bool
+        +loadingMore bool
+        +onDetail(row) void
+        +onReplicate(row) void
+    }
+
+    class RivalAccountsPanel {
+        <<tab content>>
+        +feed UseRivalFeed
+        +onImported() void
+        +render() void
+    }
+
+    class RivalPostPreviewModal {
+        <<detail modal>>
+        +row RivalFeedRow
+        +onClose() void
+        +onReplicate(row) void
+    }
+
+    class InspirationCoverCard {
+        <<reused as is>>
+        +card CardDescriptor
+    }
+
+    class RivalPlatformMark {
+        <<platform glyph>>
+        +platform string
+    }
+
+    RivalDispatcher --> RivalAccountsService : dispatch feed
+    RivalAccountsService --> RivalFeedRules : merge / sort / paginate
+    RivalAccountsService --> RivalAccountsStore : readPostsFile
+    RivalFeedRules --> RivalFeedRow : builds
+    RivalFeedRow --> RivalAccountRef : embeds
+    UseRivalFeed --> RivalApiClient : fetchRivalFeed
+    UseRivalFeed --> RivalSelectionState : owns
+    InspirationSection --> UseRivalFeed : mounts when tab = rivals
+    InspirationSection --> RivalAccountFilter : toolbar slot
+    InspirationSection --> RivalAccountsPanel : content area
+    RivalAccountFilter --> RivalSelectionState : reads / writes
+    RivalAccountFilter --> RivalPlatformMark : row glyph
+    RivalAccountsPanel --> RivalFeedGrid : renders
+    RivalAccountsPanel --> RivalPostPreviewModal : opens
+    RivalFeedGrid --> InspirationCoverCard : one card per row
