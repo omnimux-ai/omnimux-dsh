@@ -153,12 +153,10 @@ describe('video anchor policy', () => {
     // ...and a row that sits inside the band is centred exactly: its own centre
     // line becomes the circle's centre line.
     //
-    // `20px` from the bottom edge is where that stops being possible: centring a
-    // 32px circle on a row 20px up needs a 20 - 16 = 4px inset, and the band floor
-    // is 6px — so the clamp wins and the circle settles 22px up instead, 2px past
-    // the row's own line. The floor is what keeps a 32px box plus its 4px halo
-    // clear of the media's bottom edge.
-    const rowOffsetY = 20
+    // `16px` from the bottom edge is where that stops being possible: centring a
+    // 24px circle on a row 16px up needs a 16 - 12 = 4px inset, and the band floor
+    // is 6px — so the clamp wins and the circle settles 6px up instead.
+    const rowOffsetY = 16
     const lowRow = resolveCapsuleAnchor(video, 'video', {
       playButtonRight: 52,
       controlCenterY: video.bottom - rowOffsetY,
