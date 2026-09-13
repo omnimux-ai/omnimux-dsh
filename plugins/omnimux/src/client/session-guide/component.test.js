@@ -93,11 +93,10 @@ test('session guide switches drafts without a reference panel or send intercepti
     assert.equal(store.get(owner), savedState)
     assert.equal(writes, savedWrites)
     await setPanel('another-session', true)
-    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0)
-    assert.equal(
-      document.querySelector('[data-omnimux-starter-guide]'),
-      null,
-      'workbench 全局分栏打开时不再要求 sessionId 相等，任何会话都不该渲染完整卡片',
+    assert.equal(document.querySelectorAll('[data-starter-id]').length, 0, 'workbench 全局分栏打开时不渲染完整卡片')
+    assert.ok(
+      document.querySelector('[data-omnimux-starter-guide].is-compact'),
+      '分栏紧凑态下必须保留会话栏简洁模式宿主与输入框',
     )
     await setPanel('another-session', false)
     assert.equal(document.querySelectorAll('[data-starter-id]').length, 10)
@@ -693,8 +692,9 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
   const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
   const guideMounted = () => document.querySelectorAll('[data-starter-id]').length === 10
     && Boolean(document.querySelector('[data-omnimux-starter-host]'))
-  const guideHidden = () => document.querySelector('[data-omnimux-starter-guide]') === null
-    && document.querySelector('[data-omnimux-starter-host]') === null
+  const guideCompact = () => document.querySelectorAll('[data-starter-id]').length === 0
+    && Boolean(document.querySelector('[data-omnimux-starter-guide].is-compact'))
+    && Boolean(document.querySelector('[data-omnimux-starter-host]'))
 
   try {
     await render()
@@ -704,7 +704,7 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
     // 1) 右侧侧栏真实展开（内存 panelOpen 仍是 false）
     await act(async () => { frame.removeAttribute('data-rightbar-collapsed') })
     await settle()
-    assert.ok(guideHidden(), '右侧侧栏展开时必须只保留简洁对话模式')
+    assert.ok(guideCompact(), '右侧侧栏展开时必须正常展示会话栏简洁模式')
     assert.equal(
       document.documentElement.getAttribute('data-omnimux-split-compact'),
       'true',
@@ -723,7 +723,7 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
       dom.window.dispatchEvent(new dom.window.Event('resize'))
     })
     await settle()
-    assert.ok(guideHidden(), '中间栏窄列同样只保留简洁对话模式')
+    assert.ok(guideCompact(), '中间栏窄列同样正常展示会话栏简洁模式')
 
     // 4) 会话列回到全宽
     await act(async () => {
@@ -733,10 +733,10 @@ test('分栏中间栏收回完整卡片：右栏展开 / 会话列挤窄 / 输�
     await settle()
     assert.ok(guideMounted(), '会话列回到全宽后必须恢复完整引导卡片')
 
-    // 5) 输入框降到紧凑档：分栏紧凑态同样收回卡片
+    // 5) 输入框降到紧凑档：分栏紧凑态同样收回卡片保留简洁模式
     await act(async () => { document.documentElement.setAttribute('data-omnimux-composer-density', 'icon') })
     await settle()
-    assert.ok(guideHidden(), '输入框紧凑档下不得再渲染完整卡片')
+    assert.ok(guideCompact(), '输入框紧凑档下正常展示会话栏简洁模式')
     await act(async () => { document.documentElement.setAttribute('data-omnimux-composer-density', 'full') })
     await settle()
     assert.ok(guideMounted(), '输入框回到全档后必须恢复完整引导卡片')

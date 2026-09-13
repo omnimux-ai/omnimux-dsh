@@ -111,8 +111,9 @@ export function SessionGuide(props) {
     getSplitCompactSnapshot,
     () => false
   )
-  if (panelOpen || splitCompact || !isBlankConversation(session, hasTargets)) return null
-  return <BlankSessionGuide {...props} key={props.sessionId} />
+  if (!isBlankConversation(session, hasTargets)) return null
+  const isCompact = panelOpen || splitCompact
+  return <BlankSessionGuide {...props} isCompact={isCompact} key={props.sessionId} />
 }
 
 function BlankSessionGuide({
@@ -123,6 +124,7 @@ function BlankSessionGuide({
   t,
   getCurrentSessionId,
   attachmentDrafts,
+  isCompact = false,
 }) {
   const input = useInput((value) => value)
   const state = useSyncExternalStore(
@@ -275,8 +277,9 @@ function BlankSessionGuide({
   return (
     <section
       ref={guideRef}
-      className="omnimux-starter-guide"
+      className={`omnimux-starter-guide${isCompact ? ' is-compact' : ''}`}
       data-omnimux-starter-guide=""
+      data-compact={isCompact ? 'true' : undefined}
       data-session-id={sessionId}
       aria-label={t('guide.title')}
     >
@@ -291,24 +294,29 @@ function BlankSessionGuide({
         </div>
       )}
 
-      {/* Top 10 quick starters */}
-      <StarterGroupList
-        groups={STARTER_GROUPS}
-        starters={STARTERS}
-        selectedId={state.selectedId}
-        t={t}
-        onChoose={choose}
-      />
+      {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
+      {!isCompact && (
+        <>
+          {/* Top 10 quick starters */}
+          <StarterGroupList
+            groups={STARTER_GROUPS}
+            starters={STARTERS}
+            selectedId={state.selectedId}
+            t={t}
+            onChoose={choose}
+          />
 
-      {/* Popular Ways to Get Started (4 Featured Cards) */}
-      <PopularStarterGrid
-        popularStarters={POPULAR_STARTERS}
-        t={t}
-        onCardClick={handlePopularClick}
-      />
+          {/* Popular Ways to Get Started (4 Featured Cards) */}
+          <PopularStarterGrid
+            popularStarters={POPULAR_STARTERS}
+            t={t}
+            onCardClick={handlePopularClick}
+          />
 
-      {/* Trending Videos, Ready to Replicate */}
-      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+          {/* Trending Videos, Ready to Replicate */}
+          <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+        </>
+      )}
 
       {/* Marketing Insight Modal */}
       <MarketingInsightModal
