@@ -1,0 +1,143 @@
+[
+  {
+    "id": "dirty-future",
+    "author": "未来时间",
+    "handle": "future_user",
+    "text": "这条推文的时间戳在未来（时钟偏移场景）。",
+    "likes": "10",
+    "retweets": "1",
+    "replies": "0",
+    "views": "500",
+    "created_at": "2026-09-14T00:00:00.000Z",
+    "url": "https://x.com/future_user/status/dirty-future"
+  },
+  {
+    "id": "dirty-missing-views",
+    "author": "字段缺失",
+    "handle": "missing_views",
+    "text": "这条记录根本没有 views 字段。",
+    "likes": "20",
+    "retweets": "2",
+    "replies": "1",
+    "created_at": "2026-09-13T05:00:00.000Z",
+    "url": "https://x.com/missing_views/status/dirty-missing-views"
+  },
+  {
+    "id": "dirty-empty-views",
+    "author": "空浏览量",
+    "handle": "empty_views",
+    "text": "views 是空字符串。",
+    "likes": "5",
+    "retweets": "0",
+    "replies": "0",
+    "views": "",
+    "created_at": "2026-09-13T05:30:00.000Z",
+    "url": "https://x.com/empty_views/status/dirty-empty-views"
+  },
+  {
+    "id": "dirty-unparseable-views",
+    "author": "脏字符串",
+    "handle": "bad_views",
+    "text": "views 是无法解析的字符串。",
+    "likes": "7",
+    "retweets": "1",
+    "replies": "2",
+    "views": "abc",
+    "created_at": "2026-09-13T05:10:00.000Z",
+    "url": "https://x.com/bad_views/status/dirty-unparseable-views"
+  },
+  {
+    "id": "dirty-placeholder-views",
+    "author": "占位符",
+    "handle": "placeholder_views",
+    "text": "views 是破折号占位符，语义上等于源未提供。",
+    "likes": "9",
+    "retweets": "0",
+    "replies": "0",
+    "views": "—",
+    "created_at": "2026-09-13T05:20:00.000Z",
+    "url": "https://x.com/placeholder_views/status/dirty-placeholder-views"
+  },
+  {
+    "id": "dirty-billion",
+    "author": "十亿级",
+    "handle": "big_b",
+    "text": "views 使用 b 单位。",
+    "likes": "50000",
+    "retweets": "9000",
+    "replies": "1200",
+    "views": "1.1b",
+    "created_at": "2026-09-13T01:00:00.000Z",
+    "url": "https://x.com/big_b/status/dirty-billion"
+  },
+  {
+    "id": "dirty-wan",
+    "author": "万级",
+    "handle": "wan_user",
+    "text": "views 使用中文「万」单位。",
+    "likes": "3200",
+    "retweets": "410",
+    "replies": "88",
+    "views": "12.7万",
+    "created_at": "2026-09-13T03:00:00.000Z",
+    "url": "https://x.com/wan_user/status/dirty-wan"
+  },
+  {
+    "id": "dirty-thousands",
+    "author": "千分位",
+    "handle": "comma_user",
+    "text": "views 带千分位逗号。",
+    "likes": "1,234",
+    "retweets": "56",
+    "replies": "12",
+    "views": "1,234",
+    "created_at": "2026-09-13T04:00:00.000Z",
+    "url": "https://x.com/comma_user/status/dirty-thousands"
+  },
+  {
+    "id": "dirty-relative",
+    "author": "相对时间",
+    "handle": "relative_user",
+    "text": "created_at 是中文相对时间格式（相对基准必须是注入的 nowMs）。",
+    "likes": "600",
+    "retweets": "80",
+    "replies": "10",
+    "views": "9000",
+    "created_at": "30 分钟前",
+    "url": "https://x.com/relative_user/status/dirty-relative"
+  },
+  {
+    "id": "dirty-invalid-time",
+    "author": "时间不可解析",
+    "handle": "bad_time",
+    "text": "created_at 完全无法解析。",
+    "likes": "100",
+    "retweets": "10",
+    "replies": "3",
+    "views": "2500",
+    "created_at": "not-a-date",
+    "url": "https://x.com/bad_time/status/dirty-invalid-time"
+  },
+  {
+    "id": "dirty-no-author",
+    "author": "",
+    "text": "既没有作者也没有 handle，连 url 都没有。",
+    "likes": "3",
+    "retweets": "0",
+    "replies": "0",
+    "views": "80",
+    "created_at": "2026-09-13T06:00:00.000Z"
+  },
+  {
+    "id": "dirty-zero-replies",
+    "author": "零回复",
+    "handle": "zero_replies",
+    "text": "零回复也必须安全（log10(0+1) = 0）。",
+    "likes": "15600",
+    "retweets": "2400",
+    "replies": "0",
+    "views": "480000",
+    "created_at": "2026-09-13T06:40:00.000Z",
+    "url": "https://x.com/zero_replies/status/dirty-zero-replies"
+  }
+]

@@ -1,0 +1,9 @@
+- insert:
+    - id: omnimux-intercept
+      name: omnimux-intercept
+      # omnimux-intercept 是「CLI 优先」的独立插件：核心能力通过 `intercept` 命令暴露，
+      # 不注册 Client Slot、不产出客户端 bundle、不消费任何 hub seam。
+      # 启用方式：在 profile 层（user cordis.patch.yml）给本行加 config，例如：
+      # config:
+      #   enabled: true
+      # 未配置 config 时插件保持静默（不崩 profile），命令仍可通过 `intercept` 直接调用。
