@@ -253,17 +253,26 @@ describe('overlay structure', () => {
   })
 
   it('exposes the two-stage capsule geometry from the single spec source', () => {
-    expect(CAPSULE_SPEC.borderRadius).toBe(18)
-    expect(CAPSULE_SPEC.height).toBe(36)
+    expect(CAPSULE_SPEC.borderRadius).toBe(16)
+    expect(CAPSULE_SPEC.height).toBe(32)
     expect(CAPSULE_SPEC.inset).toBe(10)
-    // Stage one: a 36px circle. Stage two: 3 × 30px icons + 2 × 4px gaps +
-    // 2 × 6px padding + 2 × 1px border.
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(36)
-    expect(CAPSULE_SPEC.width).toBe(112)
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.height)
+    // Stage one: a 32px circle whose 4px halo carries it to a 40px span. Stage
+    // two: 3 × 20px circular buttons + 2 × 6px gaps + 2 × 6px row padding = 84px,
+    // with buttons forming concentric circles inside the pill's rounded ends.
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(32)
+    expect(CAPSULE_SPEC.width).toBe(84)
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.collapsedHeight)
+    expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
+    expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
+    expect(CAPSULE_SPEC.collapsedWidth + 2 * CAPSULE_SPEC.haloWidth).toBe(40)
     expect(CAPSULE_SPEC.width).toBe(
-      2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
+      2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap,
     )
+    expect(CAPSULE_SPEC.iconSize).toBe(20)
+    // The constant 6px margin left on every side (top, bottom, caps) eliminates
+    // all corner clipping and visual overflow.
+    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(6)
+    expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
   })

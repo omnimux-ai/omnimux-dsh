@@ -272,7 +272,7 @@ describe('page chrome and undersized images are never offered the capsule', () =
     )
     stubBox(card, 120, 120)
 
-    expect(isPostOrWorkMedia(card)).toBe(true)
+    expect(isPostOrWorkMedia(card, PLATFORM_HOST)).toBe(true)
     expect(detectOnce(card)).toHaveLength(1)
   })
 })
@@ -294,11 +294,11 @@ describe('post and work media are admitted', () => {
   it('admits an image inside a post / entry-content container', () => {
     const inPost = mount('<div class="post-content"><img src="https://cdn.example.com/a.png" alt=""></div>', 'img')
     stubBox(inPost, 640, 480)
-    expect(isPostOrWorkMedia(inPost)).toBe(true)
+    expect(isPostOrWorkMedia(inPost, PLATFORM_HOST)).toBe(true)
 
     const inEntry = mount('<div class="entry-content"><img src="https://cdn.example.com/b.png" alt=""></div>', 'img')
     stubBox(inEntry, 640, 480)
-    expect(isPostOrWorkMedia(inEntry)).toBe(true)
+    expect(isPostOrWorkMedia(inEntry, PLATFORM_HOST)).toBe(true)
   })
 
   it('admits a bare decorative image on a page with no content container', () => {
@@ -611,7 +611,7 @@ describe('header, nav and footer are found however deeply they are nested', () =
     const image = document.querySelector('img')!
     stubBox(image, 900, 600)
 
-    expect(isPostOrWorkMedia(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(true)
     expect(detectOnce(image)).toHaveLength(1)
   })
 })
@@ -624,7 +624,7 @@ describe('a descriptive alt or title is not a role', () => {
     )
     stubBox(image, 800, 600)
 
-    expect(isPostOrWorkMedia(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(true)
     expect(detectOnce(image)).toHaveLength(1)
   })
 
@@ -635,7 +635,7 @@ describe('a descriptive alt or title is not a role', () => {
     )
     stubBox(image, 800, 600)
 
-    expect(isPostOrWorkMedia(image)).toBe(true)
+    expect(isPostOrWorkMedia(image, PLATFORM_HOST)).toBe(true)
     expect(detectOnce(image)).toHaveLength(1)
   })
 
@@ -696,5 +696,67 @@ describe('classifier contract', () => {
     const avatar = mount('<div class="avatar"><img src="https://cdn.example.com/c.png" alt=""></div>', 'img')
     stubBox(avatar, 400, 300)
     expect(describePostMediaContext(avatar)).toBe('excluded')
+  })
+})
+
+// -------------------------------------------------- 社交平台白名单硬门禁 ---
+
+describe('social platform whitelist gate', () => {
+  it('strictly rejects non-whitelisted domains even with article or post markup', () => {
+    const nonSocialHosts = [
+      'github.com',
+      'google.com',
+      'wikipedia.org',
+      'news.ycombinator.com',
+      'cnn.com',
+      'nytimes.com',
+      'amazon.com',
+      'stackoverflow.com',
+      'medium.com',
+      'example.com',
+      'mycompany.internal',
+      'localhost',
+    ]
+
+    const postMedia = mount(
+      '<article class="post"><img src="https://cdn.example.com/photo.png" alt="content"></article>',
+      'img',
+    )
+    stubBox(postMedia, 600, 400)
+
+    for (const host of nonSocialHosts) {
+      expect(isPostOrWorkMedia(postMedia, host), `host ${host} must be rejected`).toBe(false)
+      expect(detectOnce(postMedia, host), `detector on ${host} must yield no candidate`).toHaveLength(0)
+    }
+  })
+
+  it('admits whitelisted major social platforms on post/work cards', () => {
+    const socialHosts = [
+      'x.com',
+      'twitter.com',
+      'xiaohongshu.com',
+      'weibo.com',
+      'bilibili.com',
+      'youtube.com',
+      'tiktok.com',
+      'douyin.com',
+      'kuaishou.com',
+      'instagram.com',
+      'threads.net',
+      'reddit.com',
+      'zhihu.com',
+      'weixin.qq.com',
+    ]
+
+    const postMedia = mount(
+      '<article class="post"><img src="https://cdn.example.com/photo.png" alt="content"></article>',
+      'img',
+    )
+    stubBox(postMedia, 600, 400)
+
+    for (const host of socialHosts) {
+      expect(isPostOrWorkMedia(postMedia, host), `host ${host} must be admitted`).toBe(true)
+      expect(detectOnce(postMedia, host), `detector on ${host} must yield candidate`).toHaveLength(1)
+    }
   })
 })

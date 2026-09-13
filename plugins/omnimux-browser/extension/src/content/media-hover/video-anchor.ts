@@ -6,9 +6,15 @@
  * pill the way an image is anchored paints it straight over the button the user
  * is aiming at. Two things fix that, and this module owns both:
  *
- * 1. a fixed, control-clearing left inset ({@link VIDEO_ANCHOR_SPEC}), and
+ * 1. a fixed, control-clearing inset pair ({@link VIDEO_ANCHOR_SPEC}) that also
+ *    keeps the pill close to the button instead of marooned beside it, and
  * 2. one bounded hit test that reads the *measured* control, so a player with a
- *    wider cluster pushes the pill further right instead of being ignored.
+ *    wider cluster pushes the pill further right instead of being ignored, and a
+ *    measured row pulls the pill onto its own centre line.
+ *
+ * Both insets are read as the gap between the media's bottom-left corner and the
+ * pill's own bottom-left corner, so the pill's left edge and its bottom edge move
+ * by the same numbers no matter which branch produced them.
  *
  * The probe is deliberately cheap and cached: it runs once per media element per
  * {@link VIDEO_ANCHOR_SPEC.cacheMs}, never once per scroll frame.
@@ -128,6 +134,12 @@ export function probePlayControl(
  * control when there is not: both `offsetX` and `offsetY` are clamped into the
  * required bands, so no probe result can park the pill back on the play button.
  *
+ * Vertically the pill is centred on the control row it shares, which is what puts
+ * the stage-one circle on the same line as the play button rather than floating
+ * above it. The centring is computed against the *collapsed* circle, the box that
+ * is actually painted in stage one: the reserved band and the opened row are both
+ * taller, so measuring against those would leave the circle sitting high.
+ *
  * @param rect - The media element's current bounding rect.
  * @param kind - Media kind resolved by the detector.
  * @param probe - Control probe for this element; defaults to "unmeasured".
@@ -145,10 +157,12 @@ export function resolveCapsuleAnchor(
     : VIDEO_ANCHOR_SPEC.offsetX
 
   const [minY, maxY] = VIDEO_ANCHOR_SPEC.offsetYRange
-  // Centring the pill on the measured control row is what the band bounds; a
-  // 48px row already sits below the band, so the clamp is the active rule there.
+  // `offsetY` is the gap between the media's bottom edge and the pill's bottom
+  // edge in both branches, so the measured and unmeasured placements agree on
+  // what the number means: centring the drawn box on the measured row means
+  // leaving that row's own bottom inset minus half the box.
   const centredY = probe.measured
-    ? (rect.bottom - probe.controlCenterY) - CAPSULE_SPEC.height / 2
+    ? (rect.bottom - probe.controlCenterY) - CAPSULE_SPEC.collapsedHeight / 2
     : VIDEO_ANCHOR_SPEC.offsetY
 
   return {

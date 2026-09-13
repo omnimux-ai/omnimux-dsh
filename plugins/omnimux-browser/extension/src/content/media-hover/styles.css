@@ -36,30 +36,39 @@
 }
 
 /* --- Capsule: deep-black frosted pill -------------------------------------
-   Two stages share one pill. Stage one is a 36px circle carrying the brand
-   mark; stage two is the 112px row of three shortcuts. The width is the only
-   thing that animates between them, and both layers are absolutely centred so
-   the row never reflows while the pill grows. */
+   Two stages share one pill. Stage one is a 32px circle carrying the brand
+   mark; stage two is the 92px row of three shortcuts. The width is the only
+   thing that animates between them — both stages sit in the same 32px band, so
+   the row never reflows and the pill never jumps while it opens.
+
+   The pill sits on top of arbitrary artwork, so its edge cannot rely on the
+   frosted fill: a translucent rim plus a 4px outer halo and a deep drop shadow
+   keep it legible over a white studio shot and a black night frame alike.
+   A video is the harder case — the artwork moves and swings from blown-out
+   highlight to near-black within a second — which is what the extra halo width
+   is for: the ring is the one edge that never depends on what is underneath.
+
+   The halo is also the geometry: it adds 4px on every side, so the collapsed
+   circle's total span across the page is 32 + 4 + 4 = exactly 40px. */
 .omnimux-capsule-bar {
   position: fixed;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: 36px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 16px;
   background: rgba(30, 32, 38, 0.95);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42), inset 0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22), 0 2px 10px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   color: rgba(255, 255, 255, 0.94);
   font-size: 12px;
   line-height: 1;
-  pointer-events: none;
-  visibility: hidden;
+  pointer-events: auto;
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
@@ -67,31 +76,41 @@
   transform: translateY(6px) scale(0.96);
   transition: opacity 140ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    width 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 220ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 2147483646;
 }
 
-/* Stage one: the brand trigger alone, a perfect 36px circle. */
+/* Stage one: the brand trigger alone, a perfect 32px circle spanning 40px with
+   its halo. */
 .omnimux-capsule-bar.is-collapsed {
-  width: 36px;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
 }
 
-/* Stage two: the three shortcuts, 112px wide. */
+/* Stage two: the three shortcuts, 84px wide.
+   3 x 20px buttons + 2 x 6px gaps + 2 x 6px padding = 84px.
+   The outer halo softens to 2.5px in stage two so the toolbar feels lightweight
+   and elegant instead of thick and bulging. */
 .omnimux-capsule-bar.is-expanded {
-  width: 112px;
+  width: 84px;
+  height: 32px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.22), 0 2px 10px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .omnimux-capsule-bar.is-visible {
   opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
   transform: translateY(0) scale(1);
 }
 
+/* Pointer inside: the halo and the sheen brighten, the cast shadow deepens. The
+   edge is already there in the resting state, so the pill never flickers in. */
 .omnimux-capsule-bar.is-interactive {
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42), inset 0 0 0 0.5px rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.32), 0 4px 14px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 /* --- Stage layers: brand trigger and the action row ----------------------- */
@@ -103,12 +122,15 @@
   transform: translate(-50%, -50%);
 }
 
+/* The stage layers are centred inside the pill's box, so the 24px brand hit box
+   is centred on the drawn 32px circle: the mark ends up 4px clear of every edge,
+   which is what makes the circle read as balanced rather than tight. */
 .omnimux-capsule-brand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   margin: 0;
   border: 0;
@@ -138,15 +160,18 @@
 
 .omnimux-capsule-brand svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   pointer-events: none;
 }
 
+/* The buttons are 20px perfect circles centered inside the 32px band (R=16, r=10),
+   creating a constant 6px margin in every direction (top, bottom, left cap, right cap).
+   Their hover fills never clip or overflow the capsule rounded ends. */
 .omnimux-capsule-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.88);
   /* Stage two is not hoverable until it is on screen. */
@@ -191,16 +216,19 @@
    See `.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon` below. */
 
 /* --- Icon buttons --------------------------------------------------------- */
+/* A 20px circular hit box (border-radius: 50%) inside the 32px band.
+   The 6px margin on every side eliminates all corner clipping against the
+   capsule rounded cap. */
 .omnimux-capsule-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   margin: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 50%;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -213,7 +241,7 @@
 /* Stage one carries no action slot, so nothing in the retired row may take the
    pointer. `.omnimux-capsule-actions` being `none` is not enough on its own: the
    explicit `auto` above beats the inherited `none`, and the two stage layers are
-   absolutely centred — while the pill is 36px wide the middle icon sits exactly
+   absolutely centred — while the pill is 32px wide the middle icon sits exactly
    over the brand circle, so hovering stage one would fire that icon's hint.
    Scoped to `is-collapsed` on purpose: inside stage two the busy guard
    (`.omnimux-capsule-icon.is-busy`) must still be able to disable a slot. */
@@ -222,14 +250,14 @@
 }
 
 .omnimux-capsule-icon:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
-  transform: translateY(-1px);
+  transform: scale(1.08);
 }
 
 .omnimux-capsule-icon:active {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(0) scale(0.94);
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.94);
 }
 
 .omnimux-capsule-icon:focus-visible {
@@ -239,8 +267,8 @@
 
 .omnimux-capsule-icon svg {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 13px;
+  height: 13px;
   pointer-events: none;
 }
 
