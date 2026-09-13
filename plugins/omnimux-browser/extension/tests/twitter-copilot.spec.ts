@@ -4,6 +4,7 @@ import { detectTwitterScene, extractTwitterContext } from '../src/content/twitte
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import { mountCopilotToTwitterButtons } from '../src/content/twitter-copilot/anchor.ts'
 import { injectTweetText } from '../src/content/twitter-copilot/injector.ts'
+import { detectCopilotLocale } from '../src/content/twitter-copilot/menu.ts'
 
 describe('Twitter Copilot Native Unit Tests', () => {
   beforeEach(() => {
@@ -195,5 +196,26 @@ describe('Twitter Copilot Native Unit Tests', () => {
     const result = await injectTweetText('生成的推特高赞评论内容')
     expect(result).toBe(true)
     expect(textarea.textContent).toBe('生成的推特高赞评论内容')
+  })
+
+  it('T7: 语言自适应 - 页面或推特为中文时优先判定为中文', () => {
+    // 场景 A：html lang="zh"
+    document.documentElement.lang = 'zh-CN'
+    expect(detectCopilotLocale()).toBe('zh')
+
+    // 场景 B：html lang 缺失，但页面上有“回复”中文按钮
+    document.documentElement.lang = ''
+    const btn = document.createElement('span')
+    btn.textContent = '回复'
+    document.body.appendChild(btn)
+    expect(detectCopilotLocale()).toBe('zh')
+
+    // 场景 C：完全无中文特征且非中文 lang
+    document.body.innerHTML = ''
+    document.documentElement.lang = 'en'
+    Object.defineProperty(navigator, 'language', { value: 'en-US', configurable: true })
+    Object.defineProperty(navigator, 'languages', { value: ['en-US', 'en'], configurable: true })
+    try { localStorage?.removeItem?.('dsh_configured_locale') } catch {}
+    expect(detectCopilotLocale()).toBe('en')
   })
 })

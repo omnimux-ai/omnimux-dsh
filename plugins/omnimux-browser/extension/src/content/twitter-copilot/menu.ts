@@ -19,13 +19,44 @@ const GHOST_MINI_SVG = `
 `
 
 /**
- * Detect language: zh if browser/DSH is Chinese, else en
+ * Detect language:
+ * 1. Primary: Twitter/X webpage language declared on <html lang="...">
+ * 2. Secondary: Native Twitter button keywords ("发帖", "回复")
+ * 3. Tertiary: DSH configured locale & browser language preferences (navigator.languages)
  */
 export function detectCopilotLocale(): 'zh' | 'en' {
+  // 1. 最高优先级：当前推特网页自身声明的语言（<html lang="zh">）
+  try {
+    const htmlLang = document.documentElement.lang || document.querySelector('html')?.getAttribute('lang') || ''
+    if (htmlLang.toLowerCase().startsWith('zh')) {
+      return 'zh'
+    }
+  } catch {}
+
+  // 2. 检查推特界面是否有原生中文关键按钮特征
+  try {
+    const isChineseTwitter = Array.from(document.querySelectorAll('span, button')).some((el) => {
+      const txt = el.textContent?.trim()
+      return txt === '发帖' || txt === '回复' || txt === '转帖'
+    })
+    if (isChineseTwitter) {
+      return 'zh'
+    }
+  } catch {}
+
+  // 3. 检查 DSH 显式配置的环境语言（如果设置存在）
   try {
     const dshLocale = localStorage.getItem('dsh_configured_locale') || localStorage.getItem('omnimux_locale')
-    if (dshLocale) {
-      return dshLocale.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+    if (dshLocale && dshLocale.toLowerCase().startsWith('zh')) {
+      return 'zh'
+    }
+  } catch {}
+
+  // 4. 检查浏览器用户偏好语言列表
+  try {
+    const langs = navigator.languages || [navigator.language]
+    if (langs.some((l) => l.toLowerCase().startsWith('zh'))) {
+      return 'zh'
     }
   } catch {}
 
