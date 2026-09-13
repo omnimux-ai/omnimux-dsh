@@ -595,6 +595,19 @@ describe('topbar new-session control (collapsed only)', () => {
       expanded.toggleLeft + TOPBAR_TOGGLE_SIZE_PX + TOPBAR_TOGGLE_GAP_PX,
     )
   })
+
+  it('falls back to doc.body when no tabBar anchor exists in page', () => {
+    const doc = setup(`<!doctype html><html><body>
+      <div class="frame_abc" data-sidebar-collapsed>
+        <button type="button" aria-label="打开侧边栏">T</button>
+      </div>
+    </body></html>`)
+    ensureSidebarToggleTopbar(doc)
+    const btn = doc.querySelector(`[${SIDEBAR_TOGGLE_TOPBAR_ATTR}="1"]`)
+    assert.ok(btn, 'toggle button should be created and mounted')
+    assert.equal(btn.parentElement, doc.body, 'should mount to doc.body as safe fallback')
+    assert.equal(btn.style.position, 'fixed')
+  })
 })
 
 describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
