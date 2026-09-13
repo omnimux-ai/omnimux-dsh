@@ -24,6 +24,9 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
 }) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
   const [previewItem, setPreviewItem] = useState<SniffedMediaItem | null>(null)
+  const [previewLeft, setPreviewLeft] = useState<number>(0)
+  const shelfRef = useRef<HTMLDivElement | null>(null)
+  const chipRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const clearHoverTimer = () => {
@@ -39,6 +42,25 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
 
   if (!items || items.length === 0) return null
 
+  const updatePreviewPosition = (itemId: string) => {
+    const el = chipRefs.current.get(itemId)
+    if (!el || !shelfRef.current) return
+    const shelfRect = shelfRef.current.getBoundingClientRect()
+    const chipRect = el.getBoundingClientRect()
+    // 计算 chip 水平中心点在 shelfRef 内的相对距离
+    const chipCenterX = chipRect.left + chipRect.width / 2 - shelfRect.left
+    const cardWidth = 206
+    let targetLeft = chipCenterX - cardWidth / 2
+    if (targetLeft < 0) {
+      targetLeft = 0
+    }
+    const maxLeft = Math.max(0, shelfRect.width - cardWidth)
+    if (shelfRect.width > cardWidth && targetLeft > maxLeft) {
+      targetLeft = maxLeft
+    }
+    setPreviewLeft(Math.round(targetLeft))
+  }
+
   const handleChipClick = (item: SniffedMediaItem) => {
     clearHoverTimer()
     const next = new Set(activeIds)
@@ -50,6 +72,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
     } else {
       next.add(item.id)
       setPreviewItem(item)
+      updatePreviewPosition(item.id)
     }
     setActiveIds(next)
     const activeList = items.filter((it) => next.has(it.id))
@@ -60,6 +83,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
     clearHoverTimer()
     if (activeIds.has(item.id)) {
       setPreviewItem(item)
+      updatePreviewPosition(item.id)
     }
   }
 
@@ -71,10 +95,16 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   }
 
   return (
-    <div className="media-sniffer-shelf" onMouseLeave={handleShelfLeave} onMouseOut={handleShelfLeave}>
+    <div
+      ref={shelfRef}
+      className="media-sniffer-shelf"
+      onMouseLeave={handleShelfLeave}
+      onMouseOut={handleShelfLeave}
+    >
       {previewItem && (
         <div
           className="media-float-preview-card visible"
+          style={{ left: `${previewLeft}px` }}
           onMouseEnter={clearHoverTimer}
           onMouseLeave={handleShelfLeave}
         >
@@ -114,6 +144,10 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
           return (
             <div
               key={item.id}
+              ref={(el) => {
+                if (el) chipRefs.current.set(item.id, el)
+                else chipRefs.current.delete(item.id)
+              }}
               className={`media-item-chip ${isActive ? 'active' : ''}`}
               data-tooltip={isActive ? (locale === 'en' ? 'Active' : '已点亮激活') : (locale === 'en' ? 'Activate' : '点亮激活')}
               onClick={() => handleChipClick(item)}

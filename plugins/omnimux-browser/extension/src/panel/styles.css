@@ -2093,8 +2093,8 @@ textarea:focus-visible {
 }
 
 .setting-toggle-input:checked + .setting-toggle-control {
-  border-color: #0f172a;
-  background: #0f172a;
+  border-color: var(--ink-strong);
+  background: var(--ink-strong);
   box-shadow: none;
 }
 
@@ -3309,13 +3309,12 @@ textarea:focus-visible {
   line-height: 1;
 }
 
-/* 激活素材正上方就地弹出的悬浮预览卡片（严格在卡槽正上方居中对齐） */
+/* 激活素材正上方就地弹出的悬浮预览卡片（严格在鼠标悬浮预览素材的正上方对齐，消除靠右偏差） */
 .media-float-preview-card {
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+  left: 0;
   width: 206px;
   background: var(--surface);
   border: 1px solid var(--line-strong);
@@ -3326,6 +3325,7 @@ textarea:focus-visible {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1);
   z-index: 50;
   animation: floatPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: left 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .media-float-preview-card::before {
@@ -3344,8 +3344,8 @@ textarea:focus-visible {
 }
 
 @keyframes floatPop {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.97); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .float-preview-header {
@@ -3416,7 +3416,7 @@ textarea:focus-visible {
   color: var(--canvas);
   font-size: calc(11.5px * var(--ui-scale));
   font-weight: 600;
-  border: none;
+  border: 1px solid var(--line-strong);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -3424,6 +3424,23 @@ textarea:focus-visible {
   gap: 5px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .float-preview-save-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+:root[data-theme="dark"] .float-preview-save-btn {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .float-preview-save-btn {
+  background: #09090b !important;
+  color: #ffffff !important;
 }
 
 .float-preview-save-btn:hover {
@@ -3494,14 +3511,32 @@ textarea:focus-visible {
   color: var(--canvas);
   font-size: calc(11px * var(--ui-scale));
   font-weight: 600;
-  border: none;
+  border: 1px solid var(--line-strong);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sticky-bar-action-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+:root[data-theme="dark"] .sticky-bar-action-btn {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .sticky-bar-action-btn {
+  background: #09090b !important;
+  color: #ffffff !important;
 }
 
 .sticky-bar-action-btn:hover {
@@ -3958,35 +3993,51 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-/* design.md 主执行行动按钮 (Dark 纯白底纯黑字 / Light 纯黑底纯白字 Ink CTA 严禁紫色) */
+/* design.md 主执行行动按钮 (Dark 纯白底纯黑字 / Light 纯黑底纯白字 Ink CTA 严禁深蓝与紫色) */
 .hero-action-pill-btn {
   margin-top: 6px;
   height: 34px;
-  padding: 0 24px;
+  padding: 0 20px;
   border-radius: 9999px;
-  background: #0f172a !important;
-  color: #ffffff !important;
+  background: var(--ink-strong) !important;
+  color: var(--canvas) !important;
   font-size: calc(12.5px * var(--ui-scale));
   font-weight: 600;
-  border: none !important;
+  border: 1px solid var(--line-strong) !important;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-action-pill-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  }
 }
 
 :root[data-theme="dark"] .hero-action-pill-btn {
   background: #ffffff !important;
-  color: #09090b !important;
-  border: none !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+}
+
+:root[data-theme="light"] .hero-action-pill-btn {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 .hero-action-pill-btn:hover {
+  opacity: 0.9;
   transform: scale(1.02);
-  opacity: 0.95;
 }
 
 .hero-action-pill-btn:active {
@@ -4118,8 +4169,8 @@ textarea:focus-visible {
 }
 
 .clean-send-btn.active:not(:disabled) {
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--ink-strong);
+  color: var(--canvas);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
