@@ -45,6 +45,8 @@ export const zh = {
   'action.cancel': '取消',
   'connect.title': '连接新账号',
   'connect.choosePlatform': '选择平台',
+  'connect.subtitle': '选择要绑定的社媒平台，授权后可一键发布与同步数据',
+  'connect.securityTip': '通过官方通道安全授权 · 密码不保存在本地',
   'connect.comingSoon': '即将支持',
   'connect.opened': '授权页面已在新窗口打开，请在浏览器中完成授权。',
   'connect.reopen': '重新打开授权页',
@@ -76,6 +78,11 @@ export const zh = {
   'platform.douyin': '抖音',
   'platform.facebook': 'Facebook',
   'platform.wechat-channels': '视频号',
+  'platform.desc.tiktok': '短视频与电商矩阵',
+  'platform.desc.instagram': 'Reels 短视频与图文帖子',
+  'platform.desc.youtube': 'Shorts 与长视频频道',
+  'platform.desc.x': '推文与视频流分发',
+  'platform.desc.facebook': '公共主页与帖子分发',
 }
 
 export const en = {
@@ -125,6 +132,8 @@ export const en = {
   'action.cancel': 'Cancel',
   'connect.title': 'Connect a New Account',
   'connect.choosePlatform': 'Choose a Platform',
+  'connect.subtitle': 'Select a social platform to connect for one-click publishing and analytics sync.',
+  'connect.securityTip': 'Authorized securely via official channels · Credentials are never stored locally',
   'connect.comingSoon': 'Coming Soon',
   'connect.opened': 'Authorization page opened. Complete the authorization in your browser.',
   'connect.reopen': 'Reopen Authorization Page',
@@ -156,6 +165,11 @@ export const en = {
   'platform.douyin': 'Douyin',
   'platform.facebook': 'Facebook',
   'platform.wechat-channels': 'WeChat Channels',
+  'platform.desc.tiktok': 'Short video & ecommerce',
+  'platform.desc.instagram': 'Reels & post feed',
+  'platform.desc.youtube': 'Shorts & video channels',
+  'platform.desc.x': 'Posts & video distribution',
+  'platform.desc.facebook': 'Pages & post distribution',
 }
 
 export const NS = 'omnimux-accounts'
