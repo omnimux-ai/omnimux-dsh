@@ -16,7 +16,7 @@ export const GUIDE_CSS = `
   --omnimux-surface-glass-filter:blur(24px) saturate(160%);
 }
 body[data-ds-dark-theme] {
-  --omnimux-surface-glass:rgba(20, 22, 30, 0.82);
+  --omnimux-surface-glass:rgba(20, 22, 30, 0.82); /* --dsw-alias-bg-elevated-dark-override */
 }
 [data-omnimux-starter-host] [data-conversation-scroll] { justify-content:flex-start!important; }
 [data-omnimux-starter-host] [data-composer-seat] {
