@@ -26,6 +26,7 @@ import {
   PRESET_SEAT_ATTR,
   PRESET_SEAT_AVATAR_CLASS,
   SEAT_AVATAR_SIZE_PX,
+  agentPresetEnhancerState,
   applyAgentPresetAvatars,
   findAgentPresetSeat,
   installAgentPresetAvatarEnhancer,
@@ -40,8 +41,27 @@ import { HUB_CSS } from './styles.js'
 const previousDocument = globalThis.document
 const previousMutationObserver = globalThis.MutationObserver
 
+/** Every `observe()` call the module made, so the watched region is assertable. */
+let observeCalls = []
+
+/**
+ * Wrap the window's MutationObserver before setup(), so the enhancer is forced
+ * to build its watchers through `globalThis.MutationObserver`.
+ * @param {JSDOM} dom
+ */
+function spyOnObservers(dom) {
+  const Real = dom.window.MutationObserver
+  globalThis.MutationObserver = class extends Real {
+    observe(target, options) {
+      observeCalls.push({ target, options })
+      return super.observe(target, options)
+    }
+  }
+}
+
 afterEach(() => {
   resetAgentPresetEnhancerForTests()
+  observeCalls = []
   if (previousDocument === undefined) delete globalThis.document
   else globalThis.document = previousDocument
   if (previousMutationObserver === undefined) delete globalThis.MutationObserver
@@ -315,6 +335,145 @@ describe('agent preset avatars', () => {
   })
 })
 
+describe('agent preset avatar lifecycle', () => {
+  it('drops a pass that was queued before uninstall instead of re-injecting (D1)', async () => {
+    const { doc, dom } = setup()
+    const uninstall = installAgentPresetAvatarEnhancer(doc)
+    await flush()
+
+    // A capture-phase click queues the pass synchronously; the teardown then
+    // races that queued microtask, which is the window the defect lived in.
+    doc.body.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+    uninstall()
+    await flush()
+
+    assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 0, 'the queued pass must not re-inject the avatar')
+    assert.equal(doc.querySelectorAll(`img.${PRESET_MENU_AVATAR_CLASS}`).length, 0)
+    assert.equal(doc.querySelectorAll(`[${PRESET_SEAT_ATTR}]`).length, 0, 'the queued pass must not re-stamp the chip')
+    assert.equal(doc.querySelectorAll(`[${PRESET_ICON_HIDDEN_ATTR}]`).length, 0, 'the queued pass must not re-hide the glyph')
+  })
+
+  it('binds each disposer to its own install, so a stale one cannot tear down the live one (D2)', async () => {
+    const { doc } = setup()
+    const disposeA = installAgentPresetAvatarEnhancer(doc)
+    installAgentPresetAvatarEnhancer(doc)
+
+    disposeA()
+
+    const seat = findAgentPresetSeat(doc)
+    assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 1, 'the live install keeps its avatar')
+    assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent', 'the live install keeps its marker')
+
+    seat.querySelector('[class*="seatLabel"]').textContent = '软件开发团队'
+    await flush()
+    assert.equal(agentPresetEnhancerState().installed, true, 'the live install is still mounted')
+    assert.equal(
+      seat.querySelector(`img.${PRESET_SEAT_AVATAR_CLASS}`).getAttribute(PRESET_ID_ATTR),
+      'software-company',
+      'the live observer still reacts after a stale disposer ran',
+    )
+  })
+
+  it('counts generations so installs never inherit each other state', async () => {
+    const { doc } = setup()
+    const before = agentPresetEnhancerState()
+    assert.equal(before.installed, false, 'nothing is installed before the first install')
+    assert.equal(before.seatsObserved, 0)
+    assert.equal(before.menuRowsObserved, 0)
+
+    const disposeA = installAgentPresetAvatarEnhancer(doc)
+    const first = agentPresetEnhancerState()
+    assert.equal(first.generation, before.generation + 1, 'an install opens a generation')
+    assert.equal(first.installed, true)
+
+    installAgentPresetAvatarEnhancer(doc)
+    assert.equal(
+      agentPresetEnhancerState().generation,
+      first.generation + 1,
+      'a superseding install opens a new generation',
+    )
+
+    disposeA()
+    assert.equal(agentPresetEnhancerState().installed, true, 'the stale disposer left the live install alone')
+
+    uninstallAgentPresetAvatarEnhancer()
+    assert.equal(agentPresetEnhancerState().installed, false)
+    const state = agentPresetEnhancerState()
+    assert.equal(state.observerDisconnected, state.observerCreated, 'every watcher is disconnected on teardown')
+    assert.equal(state.seatsObserved, 0, 'the chip watcher pool is empty')
+    assert.equal(state.menuRowsObserved, 0, 'the row watcher pool is empty')
+  })
+
+  it('watches the chip and the open menu, never the whole document (D3)', async () => {
+    const { doc, dom } = setup()
+    spyOnObservers(dom)
+    observeCalls = []
+
+    installAgentPresetAvatarEnhancer(doc)
+    const menu = openPresetMenu(doc)
+    await flush()
+
+    assert.ok(observeCalls.length > 0, 'the enhancer must observe something')
+    const wide = observeCalls.filter(({ target }) => target === doc.documentElement || target === doc)
+    assert.equal(wide.length, 0, 'the document root must never be observed')
+    assert.equal(
+      observeCalls.some(({ options }) => options.characterData === true && options.subtree === true && options.childList !== true),
+      false,
+      'no watcher may exist for text changes alone',
+    )
+    const menuCalls = observeCalls.filter(({ target }) => target === menu || menu.contains(target))
+    assert.ok(menuCalls.length > 0, 'the open picker rows are watched for a late-arriving name')
+    assert.ok(
+      menuCalls.every(({ target }) => target !== doc.body),
+      'a row watcher must be scoped to the row, not the whole body',
+    )
+  })
+
+  it('ignores transcript churn and never decorates a foreign menu', async () => {
+    const { doc } = setup()
+    installAgentPresetAvatarEnhancer(doc)
+    const transcript = doc.createElement('div')
+    transcript.innerHTML = `${'<p>会话正文段落</p>'.repeat(300)}
+      <div role="menu">${Array.from({ length: 20 }, (_, i) => `
+        <div><button type="button" role="menuitem" class="x_item">
+          <span class="x_name">普通选项 ${i}</span><span class="x_desc">普通描述 ${i}</span>
+        </button></div>`).join('')}</div>`
+    doc.body.appendChild(transcript)
+    await flush()
+
+    for (let i = 0; i < 50; i += 1) transcript.firstChild.textContent = `会话正文段落 ${i}`
+    await flush()
+
+    assert.equal(doc.querySelectorAll(`img.${PRESET_MENU_AVATAR_CLASS}`).length, 0, 'a foreign menu is never decorated')
+    assert.equal(doc.querySelectorAll(`[${PRESET_MENU_ATTR}]`).length, 0, 'a foreign menu is never marked')
+    assert.equal(doc.querySelectorAll(`img.${PRESET_SEAT_AVATAR_CLASS}`).length, 1, 'the chip keeps its avatar')
+    assert.equal(findAgentPresetSeat(doc).getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent', 'the chip keeps its marker')
+    assert.equal(findAgentPresetSeat(doc).querySelector('[class*="seatIcon"]').hasAttribute(PRESET_ICON_HIDDEN_ATTR), true)
+  })
+
+  it('re-arms a watcher on the chip React re-created while installed', async () => {
+    const { doc } = setup()
+    installAgentPresetAvatarEnhancer(doc)
+    const first = findAgentPresetSeat(doc)
+    first.remove()
+
+    const host = doc.createElement('div')
+    host.innerHTML = SEAT_HTML
+    doc.body.appendChild(host)
+    await flush()
+
+    const next = findAgentPresetSeat(doc)
+    assert.notEqual(next, first)
+    next.querySelector('[class*="seatLabel"]').textContent = '创造模式'
+    await flush()
+    assert.equal(
+      next.querySelector(`img.${PRESET_SEAT_AVATAR_CLASS}`).getAttribute(PRESET_ID_ATTR),
+      'cordis',
+      'the re-created chip switches its face without being installed again',
+    )
+  })
+})
+
 describe('agent preset avatar styles', () => {
   it('ships the enhancer block inside HUB_CSS from one source', () => {
     assert.ok(AGENT_PRESET_AVATAR_CSS.length > 0)
@@ -339,9 +498,31 @@ describe('agent preset avatar styles', () => {
     assert.match(rule[1], /display:\s*flex\s*!important/)
     assert.match(rule[1], /flex-direction:\s*row\s*!important/)
     assert.match(rule[1], /align-items:\s*center\s*!important/)
-    assert.match(rule[1], new RegExp(`min-height:\\s*${MENU_ITEM_MIN_HEIGHT_PX}px`))
+    assert.match(rule[1], new RegExp(`min-height:\\s*${MENU_ITEM_MIN_HEIGHT_PX}px\\s*!important`))
     assert.ok(MENU_ITEM_MIN_HEIGHT_PX >= 36 && MENU_ITEM_MIN_HEIGHT_PX <= 38, 'row height stays in the 36-38px band')
     assert.match(AGENT_PRESET_AVATAR_CSS, /\[data-omnimux-preset-item\] > \[class\*="check"\][\s\S]*?margin-left:\s*auto\s*!important/)
+  })
+
+  it('wins the row height and width against the host styles (D4)', () => {
+    const rule = AGENT_PRESET_AVATAR_CSS.match(/\[class\*="AgentPresetSeat_item"\][^{]*\[data-omnimux-preset-item\]\s*\{([^}]*)\}/)
+    assert.ok(rule, 'the single-line row rule must exist')
+    const body = rule[1]
+
+    // The host styles this row too. Without !important an equal-or-higher
+    // specificity host rule wins on source order and the row grows back into a
+    // tall, wide panel.
+    assert.match(body, /min-height:\s*\d+px\s*!important/, 'the row height must win against the host')
+    assert.match(body, /max-width:\s*\d+px\s*!important/, 'the row width must win against the host')
+
+    // Every sizing declaration this rule writes, including the two above.
+    for (const property of ['gap', 'padding', 'box-sizing']) {
+      assert.match(body, new RegExp(`${property}:[^;]*!important`), `${property} must stay !important`)
+    }
+    for (const declaration of body.split(';')) {
+      const one = declaration.trim()
+      if (!/(min-height|max-width|padding|gap|box-sizing|display|align-items|flex-direction)\s*:/.test(one)) continue
+      assert.match(one, /!important$/, `"${one}" must be !important`)
+    }
   })
 
   it('draws both avatars as ringed circles from official tokens', () => {

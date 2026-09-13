@@ -438,16 +438,201 @@ export function syncMenuAvatars(doc = globalThis.document) {
 
 /* ── Install / teardown ──────────────────────────────────────────────────── */
 
-/** @type {Document | null} */
-let activeDoc = null
-/** @type {MutationObserver | null} */
-let observer = null
-/** @type {(() => void) | null} */
-let clickListener = null
+/**
+ * The live install. It is an object with its own identity rather than a set of
+ * module-level fields, because several installs can take turns on one document
+ * while callbacks queued by the earlier ones are still in flight.
+ * @type {{ doc: Document, token: symbol, disposer: () => void } | null}
+ */
+let activeInstall = null
+/** Bumped on every install. A pass queued under an older install never runs. */
+let generation = 0
+/** The generation token of the live install; null while nothing is installed. */
+let activeToken = null
 /** Coalesces a mutation burst into one apply per microtask. */
 let scheduled = false
 /** Set while this module writes, so its own records are not re-processed. */
 let applying = false
+/** Seat <-> its dedicated observer, watching only that chip's own label. */
+let seatObservers = new Map()
+/** Menu row <-> its dedicated observer, for a late-updated row name. */
+let menuObservers = new Map()
+/** @type {(() => void) | null} */
+let clickListener = null
+
+/**
+ * Counters for `agentPresetEnhancerState()`. They observe the observer pool
+ * rather than any single role in it, so a fix that drops the whole-document
+ * feed still registers as "one observer watching something narrower".
+ */
+const observerStats = { created: 0, disconnected: 0 }
+
+/**
+ * @param {MutationObserver} watcher
+ */
+function disconnectObserver(watcher) {
+  try { watcher.disconnect() } catch { /* the observer is already dead */ }
+  observerStats.disconnected += 1
+}
+
+/**
+ * Observe exactly one node's own subtree, and only while the install that asked
+ * for it is still live. The liveness re-read after `observe` closes the window
+ * where a teardown lands inside this call.
+ * @param {Element} target
+ * @param {boolean} withCharacterData true for a chip or row whose *text* changes
+ * @returns {MutationObserver | null} null when the watcher could not be attached
+ */
+function watchNode(target, withCharacterData) {
+  const MutationObserverCtor = globalThis.MutationObserver
+  if (typeof MutationObserverCtor !== 'function' || !target) return null
+  const isMounted = () => activeToken !== null
+  const watcher = new MutationObserverCtor(() => { if (isMounted()) scheduleSync() })
+  watcher.observe(target, {
+    childList: true,
+    subtree: true,
+    ...(withCharacterData ? { characterData: true } : {}),
+  })
+  if (!isMounted()) {
+    watcher.disconnect()
+    return null
+  }
+  observerStats.created += 1
+  return watcher
+}
+
+/**
+ * Observe the chip. A React re-render swaps the label's text node rather than
+ * mutating it, so a row- or text-level watcher on this one node covers every way
+ * the selected expert can change — without watching the whole document.
+ * @param {Element} seat
+ */
+function watchSeat(seat) {
+  if (seatObservers.has(seat)) return
+  const watcher = watchNode(seat, true)
+  if (watcher) seatObservers.set(seat, watcher)
+}
+
+/**
+ * Observe one preset row, so a row whose name arrives after the row itself still
+ * gets its face. Unlike the chip, a menu row is portaled and re-rendered often,
+ * so its observer is pooled per row and released by the pool sweep.
+ * @param {Element} item
+ */
+function watchMenuItem(item) {
+  if (menuObservers.has(item)) return
+  const watcher = watchNode(item, true)
+  if (watcher) menuObservers.set(item, watcher)
+}
+
+/**
+ * Ensure the seat and menu-row observers cover exactly the nodes on screen. Rows
+ * React removed while the enhancer was live are released here, so the pool
+ * cannot grow with a session.
+ * @param {Document} doc
+ */
+function syncWatcherPool(doc) {
+  const seat = findAgentPresetSeat(doc)
+  for (const [watched] of seatObservers) {
+    if (!watched.isConnected) {
+      disconnectObserver(seatObservers.get(watched))
+      seatObservers.delete(watched)
+    }
+  }
+  if (seat) watchSeat(seat)
+
+  /** @type {Set<Element>} */
+  const live = new Set()
+  for (const { items } of findAgentPresetMenus(doc)) {
+    for (const item of items) live.add(item)
+  }
+  for (const [watched] of menuObservers) {
+    if (!live.has(watched) || !watched.isConnected) {
+      disconnectObserver(menuObservers.get(watched))
+      menuObservers.delete(watched)
+    }
+  }
+  for (const item of live) watchMenuItem(item)
+}
+
+/** Scheduled pass. The token is captured at schedule time; see `runApply`. */
+let runScheduled = () => {}
+
+/** Coalesce a mutation burst into one pass per microtask. */
+function scheduleSync() {
+  if (scheduled || applying || activeToken === null) return
+  scheduled = true
+  const token = activeToken
+  queueMicrotask(() => {
+    scheduled = false
+    runScheduled(token)
+  })
+}
+
+/**
+ * True when one mutation record touches something this module decorates.
+ * Everything else — the transcript streaming token by token, unrelated chrome,
+ * a foreign menu — is dropped here, so the pass below never sees it.
+ *
+ * Two shapes matter: an element arriving in the composer or in a portal (the
+ * chip and its menu are both React-owned, so a switch re-creates them), and the
+ * popup opening or closing. `characterData` is deliberately absent: text inside
+ * the chip or a row is covered by that node's own watcher (D3).
+ * @param {MutationRecord} record
+ * @returns {boolean}
+ */
+function isRelevantRecord(record) {
+  const node = record.target
+  if (!node || node.nodeType !== 1 || typeof node.closest !== 'function') return false
+
+  if (record.type === 'attributes') {
+    return isAgentPresetSeatButton(node) || !!node.closest(`[${PRESET_SEAT_ATTR}]`)
+  }
+  if (record.type !== 'childList') return false
+
+  const added = record.addedNodes ?? []
+  if (added.length === 0) return false
+  if (node.matches('[role="menu"]')) return true
+  if (node.closest(`[${PRESET_SEAT_ATTR}]`) || node.closest(`[${PRESET_MENU_ATTR}="true"]`)) return true
+  for (const child of added) {
+    if (child.nodeType !== 1) continue
+    if (child.matches?.('[role="menu"]')) return true
+    if (child.matches?.(`[${PRESET_ITEM_ATTR}]`)) return true
+    // A row React swapped in arrives under a wrapper, so the row itself is only
+    // reachable by query. The class probe is what keeps this off the hot path.
+    if (child.querySelector?.('[class*="itemName"]') && isAgentPresetMenuItem(child)) return true
+    if (isAgentPresetSeatButton(child)) return true
+    if (child.querySelector?.('[class*="seatLabel"]')) return true
+  }
+  return false
+}
+
+/**
+ * @param {MutationRecord[]} records
+ * @returns {boolean}
+ */
+function hasRelevantRecord(records) {
+  for (const record of records) {
+    if (isRelevantRecord(record)) return true
+  }
+  return false
+}
+
+/**
+ * Count the watchers currently attached, for tests and for a host that wants to
+ * assert the enhancer is idle.
+ * @returns {{ generation: number, installed: boolean, observerCreated: number, observerDisconnected: number, seatsObserved: number, menuRowsObserved: number }}
+ */
+export function agentPresetEnhancerState() {
+  return {
+    generation,
+    installed: activeToken !== null,
+    observerCreated: observerStats.created,
+    observerDisconnected: observerStats.disconnected,
+    seatsObserved: seatObservers.size,
+    menuRowsObserved: menuObservers.size,
+  }
+}
 
 /**
  * One pass: sync the chip, then every open preset menu.
@@ -460,77 +645,130 @@ export function applyAgentPresetAvatars(doc = globalThis.document) {
 }
 
 /**
- * Install the enhancer: one debounced `MutationObserver` plus a capture-phase
+ * Release every per-node watcher. Called on install (a superseding install may
+ * not inherit the previous one's pool) and on teardown.
+ */
+function dropWatchers() {
+  for (const watcher of seatObservers.values()) disconnectObserver(watcher)
+  seatObservers.clear()
+  for (const watcher of menuObservers.values()) disconnectObserver(watcher)
+  menuObservers.clear()
+}
+
+/**
+ * Install the enhancer: one structural `MutationObserver` on the composer card,
+ * per-node watchers on the chip and the open preset rows, and a capture-phase
  * click listener (the picker menu is portaled to `<body>`, so it arrives as a
  * mutation rather than as a child of the chip).
+ *
+ * Installing supersedes the previous install: its generation is retired and its
+ * disposer becomes inert (D2), and any pass it had already queued returns
+ * without writing (D1). Observing the composer and the open menu nodes instead
+ * of the whole document keeps typed text and unrelated chrome out of the pass
+ * (D3).
  * @param {Document | undefined} doc
- * @returns {() => void} disposer
+ * @returns {() => void} disposer, bound to this install's generation
  */
 export function installAgentPresetAvatarEnhancer(doc = globalThis.document) {
   if (!doc || typeof doc.querySelectorAll !== 'function') return () => {}
-  uninstallAgentPresetAvatarEnhancer()
-  activeDoc = doc
+  dropWatchers()
 
-  const apply = () => {
+  const token = Symbol('omnimux-preset-avatar-install')
+  activeInstall = { doc, token, disposer: () => {} }
+  activeToken = token
+  generation += 1
+
+  /** @param {symbol} passToken the generation this pass was scheduled under */
+  const runApply = (passToken) => {
+    // D1: a pass queued by an install that has since been torn down — or
+    // superseded — must not touch the document. The doc used is the live
+    // install's, never a closure over the document of a dead one.
+    if (passToken !== activeToken || !activeInstall) return
     if (applying) return
+    scheduled = false
     applying = true
     try {
-      applyAgentPresetAvatars(activeDoc ?? doc)
+      applyAgentPresetAvatars(activeInstall.doc)
+      syncWatcherPool(activeInstall.doc)
     } finally {
       applying = false
     }
   }
+  runScheduled = runApply
 
-  const schedule = () => {
-    if (scheduled || applying) return
-    scheduled = true
-    queueMicrotask(() => {
-      scheduled = false
-      apply()
+  // One structural observer on the document body: the chip is re-created by
+  // React inside the composer, and the popup is portaled straight to `<body>`,
+  // so both arrive here. Its record filter is what keeps the transcript off the
+  // hot path — see `isRelevantRecord`.
+  const portalHost = doc.body ?? doc.documentElement
+  const structural = createObserver((records) => {
+    if (activeToken !== token) return
+    if (hasRelevantRecord(records)) scheduleSync()
+  })
+  if (structural && portalHost) {
+    structural.observe(portalHost, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-expanded'],
     })
   }
 
-  const MutationObserverCtor = globalThis.MutationObserver
-  if (typeof MutationObserverCtor === 'function') {
-    observer = new MutationObserverCtor(schedule)
-    const root = doc.documentElement ?? doc.body
-    if (root) {
-      observer.observe(root, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-        attributes: true,
-        attributeFilter: ['aria-expanded', 'class'],
-      })
-    }
-  }
-
+  clickListener = () => { scheduleSync() }
   if (typeof doc.addEventListener === 'function') {
-    clickListener = () => { schedule() }
     doc.addEventListener('click', clickListener, true)
   }
 
-  apply()
-  return uninstallAgentPresetAvatarEnhancer
+  // D2: the teardown runs only while this install is still the live one, so
+  // calling the previous install's disposer cannot strip the current install's
+  // observers or injected avatars.
+  const disposer = () => {
+    if (activeToken !== token) return
+    teardown()
+  }
+  if (activeInstall) activeInstall.disposer = disposer
+
+  runApply(token)
+  return disposer
+}
+
+/**
+ * Builds a mutation observer, or null when the host has none.
+ * @param {(records: MutationRecord[]) => void} onRecords
+ * @returns {MutationObserver | null}
+ */
+function createObserver(onRecords) {
+  const Ctor = globalThis.MutationObserver
+  if (typeof Ctor !== 'function') return null
+  return new Ctor(onRecords)
+}
+
+/** Retire the live install and remove everything it wrote. */
+function teardown() {
+  const install = activeInstall
+  activeToken = null
+  activeInstall = null
+  runScheduled = () => {}
+  scheduled = false
+  dropWatchers()
+
+  const doc = install?.doc
+  if (clickListener && doc && typeof doc.removeEventListener === 'function') {
+    doc.removeEventListener('click', clickListener, true)
+  }
+  clickListener = null
+  if (doc) clearInjectedAvatars(doc)
 }
 
 /**
  * Remove every injected node and marker, and stop observing. Safe to call when
  * nothing was installed.
+ *
+ * The live install is torn down; a disposer returned by an earlier install is
+ * inert and leaves the live one alone.
  */
 export function uninstallAgentPresetAvatarEnhancer() {
-  if (observer) {
-    try { observer.disconnect() } catch { /* the observer is already dead */ }
-    observer = null
-  }
-  const doc = activeDoc
-  if (doc && clickListener && typeof doc.removeEventListener === 'function') {
-    doc.removeEventListener('click', clickListener, true)
-  }
-  clickListener = null
-  scheduled = false
-  if (doc) clearInjectedAvatars(doc)
-  activeDoc = null
+  teardown()
 }
 
 /**
@@ -592,15 +830,18 @@ export const AGENT_PRESET_AVATAR_CSS = `
 /* The row itself. Production ships hashed class names, so the row is matched by
    the marker this module writes; the unhashed name is kept for a build that
    renders it, with :not() guards so the prefixed name/label/description
-   children never inherit the row's padding. */
+   children never inherit the row's padding.
+   Height and width carry !important because the host styles this row too: an
+   equal-or-higher-specificity host rule would otherwise win on source order and
+   the picker would drift back to a tall, wide panel. */
 [class*="AgentPresetSeat_item"]:not([class*="AgentPresetSeat_itemName"]):not([class*="AgentPresetSeat_itemDesc"]):not([class*="AgentPresetSeat_itemLabel"]),
 [data-omnimux-preset-item] {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   gap: 8px !important;
-  min-height: ${MENU_ITEM_MIN_HEIGHT_PX}px;
-  max-width: 280px;
+  min-height: ${MENU_ITEM_MIN_HEIGHT_PX}px !important;
+  max-width: 280px !important;
   padding: 8px 10px !important;
   box-sizing: border-box !important;
 }
