@@ -9,7 +9,7 @@ import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
-import { getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
+import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
 const NOOP_SUBSCRIBE = () => () => {}
@@ -104,6 +104,15 @@ export function SessionGuide(props) {
     () => workbench?.getSnapshot?.()?.state?.panelOpen === true,
     () => false
   )
+  // 但内存 panelOpen 只会被「打开面板」单向写入：官方右栏被点掉后没有观察者把这次
+  // 原生折叠写回 workbench state，残留的 panelOpen:true 会把完整引导永久挡在门外
+  // （收起右栏后会话列已 1448px、镜像属性也已撤除，界面却只剩一个空输入框）。
+  // DOM 一旦确证右栏已折叠就作废这条内存态 —— 内存态不得覆盖 DOM 实测。
+  const rightbarCollapsed = useSyncExternalStore(
+    subscribeSplitCompactLayout,
+    getRightSidebarCollapsedSnapshot,
+    () => false
+  )
   // 内存状态会被 closePanel() 写成 false 而真实侧栏仍展开，所以再实测一次宿主布局：
   // 右侧侧栏展开 / 会话列被挤窄 / 输入框降到紧凑档，任一命中都只保留简洁对话模式。
   const splitCompact = useSyncExternalStore(
@@ -112,7 +121,8 @@ export function SessionGuide(props) {
     () => false
   )
   if (!isBlankConversation(session, hasTargets)) return null
-  const isCompact = panelOpen || splitCompact
+  const effectivePanelOpen = panelOpen && !rightbarCollapsed
+  const isCompact = effectivePanelOpen || splitCompact
   return <BlankSessionGuide {...props} isCompact={isCompact} key={props.sessionId} />
 }
 

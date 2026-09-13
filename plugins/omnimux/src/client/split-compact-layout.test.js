@@ -9,10 +9,12 @@ import {
   SPLIT_COMPACT_MAX_COLUMN_PX,
   elementWidth,
   findRightSidebarRoot,
+  getRightSidebarCollapsedSnapshot,
   getSplitCompactSnapshot,
   isRightSidebarExpanded,
   isSplitOrCompactLayout,
   readConversationColumnWidth,
+  readRightSidebarState,
   readSplitCompactSignals,
   resetSplitCompactLayoutForTests,
   subscribeSplitCompactLayout,
@@ -239,10 +241,83 @@ describe('订阅与 html 镜像属性', () => {
     assert.ok(observer, '右栏必须被 ResizeObserver 观测')
     widths.column = 520
     observer.trigger()
+    // RO 回调节流到下一帧：在交付周期内同步改宿主属性会被浏览器判成 RO 循环。
+    await nextTick()
     assert.equal(getSplitCompactSnapshot(), true)
     assert.ok(notified > before)
 
     unsubscribe()
+  })
+
+  test('ResizeObserver 回调按帧合并：同帧内多次触发只测量并通知一次', async () => {
+    const { widths, rightbar } = setupLayout({ rightbarWidth: 1028, columnWidth: 1448, collapsed: true })
+    globalThis.ResizeObserver = FakeResizeObserver
+    let notified = 0
+    const unsubscribe = subscribeSplitCompactLayout(() => { notified++ })
+    const observer = FakeResizeObserver.instances.find((instance) => instance.observed.has(rightbar))
+    assert.ok(observer, '右栏必须被 ResizeObserver 观测')
+    assert.equal(getSplitCompactSnapshot(), false)
+
+    const before = notified
+    widths.column = 520
+    observer.trigger()
+    widths.column = 400
+    observer.trigger()
+    await nextTick()
+    assert.equal(notified - before, 1, '同帧内的多次 RO 触发必须合并成一次测量与通知')
+    assert.equal(getSplitCompactSnapshot(), true)
+    unsubscribe()
+  })
+
+  test('右栏折叠证据单独暴露，且与分栏态一起通知订阅者', async () => {
+    const { frame } = setupLayout({ rightbarWidth: 1028, columnWidth: 1448, collapsed: true })
+    globalThis.ResizeObserver = FakeResizeObserver
+    let notified = 0
+    const unsubscribe = subscribeSplitCompactLayout(() => { notified++ })
+    assert.equal(getRightSidebarCollapsedSnapshot(), true)
+    assert.equal(getSplitCompactSnapshot(), false)
+
+    // 展开官方右栏：折叠证据消失，两个实测值一起翻到「分栏」
+    const beforeExpand = notified
+    frame.removeAttribute('data-rightbar-collapsed')
+    await nextTick()
+    assert.equal(getRightSidebarCollapsedSnapshot(), false)
+    assert.equal(getSplitCompactSnapshot(), true)
+    assert.ok(notified > beforeExpand)
+
+    // 收起官方右栏：内存里的 panelOpen 不会被写回，折叠证据必须自己回到 true
+    frame.setAttribute('data-rightbar-collapsed', 'true')
+    await nextTick()
+    assert.equal(getRightSidebarCollapsedSnapshot(), true)
+    assert.equal(getSplitCompactSnapshot(), false)
+    unsubscribe()
+  })
+
+  test('分栏态不变时折叠证据翻转也要单独通知', async () => {
+    // 会话列本就窄（< 860px），分栏态恒为 true；折叠证据必须能单独触发通知。
+    const { frame } = setupLayout({ rightbarWidth: 1028, columnWidth: 400 })
+    let notified = 0
+    const unsubscribe = subscribeSplitCompactLayout(() => { notified++ })
+    assert.equal(getSplitCompactSnapshot(), true)
+    assert.equal(getRightSidebarCollapsedSnapshot(), false)
+
+    const before = notified
+    frame.setAttribute('data-rightbar-collapsed', 'true')
+    await nextTick()
+    assert.equal(getRightSidebarCollapsedSnapshot(), true)
+    assert.equal(getSplitCompactSnapshot(), true)
+    assert.ok(notified > before, '折叠证据翻转必须单独触发通知')
+    unsubscribe()
+  })
+
+  test('宿主里没有右栏证据时不算折叠，内存态继续生效', () => {
+    dom = new JSDOM('<!doctype html><html><head></head><body><div id="root"></div></body></html>', { url: 'http://localhost' })
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    assert.equal(readRightSidebarState(document), 'unknown')
+    assert.equal(isRightSidebarExpanded(document), false)
+    assert.equal(getRightSidebarCollapsedSnapshot(), false, '没有右栏证据时不能凭空判折叠')
+    assert.equal(getSplitCompactSnapshot(), false)
   })
 
   test('输入框密度切换后订阅者收到通知', async () => {
