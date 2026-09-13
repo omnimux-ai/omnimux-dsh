@@ -305,21 +305,160 @@ export function isDestructiveResetCommand(command) {
   })
 }
 
-export function decideBashCommand({ command, cwd }) {
-  if (!command || typeof command !== 'string') return { decision: 'allow' }
-  if (!isDestructiveResetCommand(command)) return { decision: 'allow' }
+function tokenizeCommandLine(cmd) {
+  const tokens = []
+  let current = ''
+  let inSingle = false
+  let inDouble = false
+  let escaped = false
 
-  // Check if unpushed commits exist on current HEAD
-  const unpushed = getUnpushedCommits(cwd)
-  if (unpushed.length > 0) {
-    return {
-      decision: 'deny',
-      reason: 'unpushed-commits-at-risk',
-      unpushedCount: unpushed.length,
-      unpushedCommits: unpushed,
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i]
+    if (escaped) {
+      current += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\' && !inSingle) {
+      escaped = true
+      continue
+    }
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle
+      continue
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble
+      continue
+    }
+    if (/\s/.test(ch) && !inSingle && !inDouble) {
+      if (current) {
+        tokens.push(current)
+        current = ''
+      }
+      continue
+    }
+    current += ch
+  }
+  if (current) {
+    tokens.push(current)
+  }
+  return tokens
+}
+
+export function extractCommandWriteTargets(command) {
+  if (!command || typeof command !== 'string') return []
+  const targets = []
+  const segments = commandSegments(command)
+
+  for (const seg of segments) {
+    // 拆分管道符 | (避免管道下游命令如 tee 漏检)，避开 || 逻辑或
+    const subSegments = seg.split(/(?<!\|)\|(?!\|)/).map((s) => s.trim()).filter(Boolean)
+
+    for (const sub of subSegments) {
+      const cleaned = sub.replace(/^(\s*[a-zA-Z_][a-zA-Z0-9_]*=(?:'[^']*'|"[^"]*"|\S+)\s+)+/, '').trim()
+      if (!cleaned) continue
+
+      // 正常 Git 命令完全放行（绝不误杀主目录的合并与同步操作）
+      if (looksLikeGitInvocation(cleaned)) {
+        continue
+      }
+
+      // 提取重定向目标 > 或 >> (避开 2>&1 等描述符重定向)
+      const redirectMatches = cleaned.matchAll(/(?:^|[^&>0-9])(?:>>?)\s*(?:"([^"]+)"|'([^']+)'|([^\s;&|<>]+))/g)
+      for (const m of redirectMatches) {
+        const target = m[1] || m[2] || m[3]
+        if (target && target !== '/dev/null') {
+          targets.push(target)
+        }
+      }
+
+      const words = tokenizeCommandLine(cleaned)
+      if (words.length === 0) continue
+
+      const verb = words[0].toLowerCase()
+
+      if (['cp', 'mv', 'rsync', 'install'].includes(verb)) {
+        let target = null
+        for (let i = 1; i < words.length; i++) {
+          const arg = words[i]
+          if (arg === '-t' || arg === '--target-directory') {
+            target = words[i + 1]
+            break
+          }
+          if (arg.startsWith('--target-directory=')) {
+            target = arg.slice('--target-directory='.length)
+            break
+          }
+        }
+        if (!target) {
+          const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
+          if (nonOptions.length >= 2) {
+            target = nonOptions[nonOptions.length - 1]
+          }
+        }
+        if (target) {
+          targets.push(target)
+        }
+      } else if (verb === 'tee') {
+        const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
+        for (const f of nonOptions) {
+          targets.push(f)
+        }
+      } else if (verb === 'sed' && words.some((w) => w === '-i' || w.startsWith('-i'))) {
+        const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
+        if (nonOptions.length >= 1) {
+          targets.push(nonOptions[nonOptions.length - 1])
+        }
+      }
     }
   }
-  return { decision: 'allow', reason: 'clean-upstream' }
+
+  return targets
+}
+
+export function isForbiddenMainCheckoutWriteTarget(targetPath, cwd) {
+  if (!targetPath || typeof targetPath !== 'string') return false
+  const cleanTarget = targetPath.trim().replace(/^['"]|['"]$/g, '').replace(/\/\*+$/, '')
+  if (!cleanTarget) return false
+  const fullPath = toFullPath(cleanTarget, cwd)
+  if (!fullPath) return false
+  if (isWorktreePath(fullPath)) return false
+  if (isEphemeralPath(fullPath)) return false
+  if (isGitIgnored(fullPath, cwd)) return false
+  return isProtectedScope(fullPath, cwd)
+}
+
+export function decideBashCommand({ command, cwd }) {
+  if (!command || typeof command !== 'string') return { decision: 'allow' }
+
+  // 1. 检查破坏性重置未推送提交
+  if (isDestructiveResetCommand(command)) {
+    const unpushed = getUnpushedCommits(cwd)
+    if (unpushed.length > 0) {
+      return {
+        decision: 'deny',
+        reason: 'unpushed-commits-at-risk',
+        unpushedCount: unpushed.length,
+        unpushedCommits: unpushed,
+      }
+    }
+    return { decision: 'allow', reason: 'clean-upstream' }
+  }
+
+  // 2. 检查试图通过命令行拷贝/写入/移动到主 checkout 受保护目录
+  const targets = extractCommandWriteTargets(command)
+  for (const target of targets) {
+    if (isForbiddenMainCheckoutWriteTarget(target, cwd)) {
+      return {
+        decision: 'deny',
+        reason: 'forbidden-main-checkout-copy',
+        target,
+      }
+    }
+  }
+
+  return { decision: 'allow' }
 }
 
 export function decideWrite({ filePath, cwd, toolName }) {
@@ -388,6 +527,13 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】Git 状态读取失败，无法确认目标的版本管理状态；保守拒绝写入。请检查 Git 可用性、仓库元数据与读取权限，不要绕过门禁。'
     } else if (reason === 'unresolved-target') {
       output.permissionDecisionReason = '🚫【OmniMux 仓库 Hook】目标路径无法安全解析；保守拒绝写入。请检查路径读取权限、符号链接及父目录。'
+    } else if (reason === 'forbidden-main-checkout-copy') {
+      output.permissionDecisionReason = [
+        `🚫【OmniMux 仓库 Hook】严禁通过命令行向主目录核心受保护路径（${extra.target || '目标路径'}）复制、移动或写入文件！`,
+        '📌 核心防线原则：主目录仅允许通过 Git 进行常规合并与同步最新代码（如 git pull / git merge），严禁通过 cp/mv/重定向 越过版本管理篡改主干代码。',
+        '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 在独立 Worktree 中修改并提交，经 PR 合入后再同步到主目录！',
+        'ℹ️  豁免范围：独立 Worktree 目录内的操作、临时衍生目录（dist/、node_modules/、tmp/、*.log）与被 gitignore 忽略的文件。',
+      ].join('\n')
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
         '🚫【OmniMux 仓库 Hook】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
