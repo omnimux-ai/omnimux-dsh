@@ -4,7 +4,7 @@
  * The capsule is a two-stage control, and the DOM mirrors the two stages:
  *
  * ```
- * stage one (collapsed, 28 x 28)     stage two (expanded, 108 x 32)
+ * stage one (collapsed, 22 x 22)     stage two (expanded, 102 x 28)
  *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
  * ```
  *

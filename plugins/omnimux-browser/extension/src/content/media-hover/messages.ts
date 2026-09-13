@@ -77,27 +77,29 @@ export const CAPSULE_SPEC = {
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
   /** Expanded-row radius; `height / 2` keeps both of its ends perfectly round. */
-  borderRadius: 16,
+  borderRadius: 14,
   /**
    * Stage-two height, and the band the placement reserves for *both* stages: the
    * collapsed circle is drawn inside it, so opening the pill grows downward into
    * space the geometry has already accounted for and never crosses a viewport edge.
    */
-  height: 32,
+  height: 28,
   /**
    * Stage one, the collapsed circle: the brand trigger alone, kept deliberately
    * small so it covers as little of the media as possible.
-   * `28 × 28` with a `14px` radius is a perfect circle.
+   * `22 × 22` with an `11px` radius is a perfect circle.
    */
-  collapsedWidth: 28,
-  collapsedHeight: 28,
-  collapsedRadius: 14,
+  collapsedWidth: 22,
+  collapsedHeight: 22,
+  collapsedRadius: 11,
   /**
-   * Stage two, the expanded row: 3 x 30px icons + 2 x 4px gaps +
-   * 2 x 4px padding + 2 x 1px border.
+   * Stage two, the expanded row: 3 x 28px icon buttons + 2 x 3px gaps +
+   * 2 x 5px row padding + 2 x 1px border. The buttons fill the whole band, so the
+   * row reads as one compact line of three glyphs; the 5px is what keeps their
+   * hover fills off the pill's own rounded ends.
    */
-  width: 108,
-  paddingX: 4,
+  width: 102,
+  paddingX: 5,
   /**
    * The `collapsedWidth → width` opening animation. The stylesheet owns the
    * transition; this is the same duration on the JavaScript side, where it ends
@@ -105,7 +107,7 @@ export const CAPSULE_SPEC = {
    */
   openMs: 220,
   /** Gap between two action icons in the expanded row. */
-  iconGap: 4,
+  iconGap: 3,
   blur: 'blur(24px) saturate(140%)',
   /**
    * Translucent rim. Media behind the pill can be a white studio shot or a black
@@ -116,19 +118,25 @@ export const CAPSULE_SPEC = {
   /** Lit top edge, inset so the rim reads as a highlight rather than a stroke. */
   sheen: 'inset 0 1px 0 rgba(255,255,255,0.35)',
   /**
-   * Three translucent rings: a 2px outer halo and the inset top sheen separate
-   * the pill from bright media, while the deep drop shadow separates it from dark
-   * media. Whatever the artwork underneath, one of the three always lands.
+   * Three translucent rings: a wide 3.5px outer halo and the inset top sheen
+   * separate the pill from bright media, while the deep drop shadow separates it
+   * from dark media. Video artwork moves under the pill and swings from blown-out
+   * highlights to near-black shadows within a single second, so the halo is the
+   * only edge the pill can rely on: it stays wide enough to survive both.
    */
   shadow:
-    '0 0 0 2px rgba(255,255,255,0.16), 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.35)',
+    '0 0 0 3.5px rgba(255,255,255,0.22), 0 2px 10px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
   /** Inset from the media's bottom-left corner. */
   inset: 10,
-  iconSize: 30,
+  iconSize: 28,
   /** Hit box of the stage-one brand trigger inside the circle. */
-  brandSize: 22,
-  /** Rendered size of the brand silhouette, centred in the 22px hit box. */
-  brandIconSize: 15,
+  brandSize: 18,
+  /**
+   * Rendered size of the brand silhouette, centred in the 18px hit box. Kept
+   * small on purpose: the glyph is a solid filled shape, so its weight grows
+   * faster than its box and 12px is what keeps it a mark rather than a blob.
+   */
+  brandIconSize: 12,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const
@@ -142,16 +150,28 @@ export const CAPSULE_SPEC = {
  * constant below exists to push the pill clear of that cluster.
  */
 export const VIDEO_ANCHOR_SPEC = {
-  /** Default left inset: clears the ~48px play control and leaves a comfortable gap. */
-  offsetX: 78,
-  /** Gap kept past a measured play control's right edge. */
-  minClearance: 16,
+  /**
+   * Default left inset: clears a typical ~48px play control and lands 52px from
+   * the media's left edge, which is the close, comfortable gap the shot demands.
+   */
+  offsetX: 52,
+  /**
+   * Gap kept past a measured play control's right edge.
+   *
+   * Zero is deliberate. A player's control box is mostly padding around its
+   * glyph, so a pill starting at the box's right edge already reads as clear of
+   * the button, and the wider gap an oversized clearance used to force was what
+   * pushed the pill away from the button it belongs next to. It also keeps the
+   * band floor real: the inset can still reach `offsetXRange[0]` when a probe
+   * reports a control that ends at the media's 48px mark.
+   */
+  minClearance: 0,
   /** Band the left inset is allowed to move within, whatever a probe reports. */
-  offsetXRange: [78, 140] as const,
+  offsetXRange: [48, 96] as const,
   /** Default gap between the media's bottom edge and the capsule's bottom edge. */
-  offsetY: 16,
+  offsetY: 8,
   /** Band the bottom inset is allowed to move within, whatever a probe reports. */
-  offsetYRange: [14, 18] as const,
+  offsetYRange: [6, 12] as const,
   /** Play-control probe point: media `(left + probeInsetX, bottom - probeInsetY)`. */
   probeInsetX: 24,
   probeInsetY: 24,

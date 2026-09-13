@@ -253,18 +253,20 @@ describe('overlay structure', () => {
   })
 
   it('exposes the two-stage capsule geometry from the single spec source', () => {
-    expect(CAPSULE_SPEC.borderRadius).toBe(16)
-    expect(CAPSULE_SPEC.height).toBe(32)
+    expect(CAPSULE_SPEC.borderRadius).toBe(14)
+    expect(CAPSULE_SPEC.height).toBe(28)
     expect(CAPSULE_SPEC.inset).toBe(10)
-    // Stage one: a 28px circle. Stage two: 3 × 30px icons + 2 × 4px gaps +
-    // 2 × 4px padding + 2 × 1px border.
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(28)
-    expect(CAPSULE_SPEC.width).toBe(108)
+    // Stage one: a 22px circle. Stage two: 3 × 28px icon buttons + 2 × 3px gaps
+    // + 2 × 5px row padding + 2 × 1px border, with the buttons filling the
+    // compact 28px band.
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(22)
+    expect(CAPSULE_SPEC.width).toBe(102)
     expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.collapsedHeight)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
     expect(CAPSULE_SPEC.width).toBe(
       2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
     )
+    expect(CAPSULE_SPEC.iconSize).toBe(CAPSULE_SPEC.height)
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
   })
