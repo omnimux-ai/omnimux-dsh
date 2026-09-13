@@ -27,6 +27,8 @@ function makeDispatcher(opts = {}) {
   if (opts.picker) deps.picker = opts.picker
   if (opts.importFromUrl) deps.importFromUrl = opts.importFromUrl
   if (opts.ctx) deps.ctx = opts.ctx
+  if (opts.chatComplete) deps.chatComplete = opts.chatComplete
+  if (opts.channelTimeoutMs) deps.channelTimeoutMs = opts.channelTimeoutMs
   if (Object.prototype.hasOwnProperty.call(opts, 'hub')) deps.hub = opts.hub
   return { dispatcher: createProductsDispatcher(deps), library }
 }
@@ -257,6 +259,9 @@ describe('ProductsDispatcher import-from-link', () => {
     const ctx = { tools: { get: (name) => (name === 'omnimux_page_fetch' ? pageFetch : undefined) }, get: () => textComplete }
     const { dispatcher } = makeDispatcher({
       ctx,
+      // The chat bridge is stubbed shut: it answers first now, and the default
+      // one resolves a provider on this machine, so a unit test must not reach it.
+      chatComplete: async () => { throw new Error('chat bridge offline') },
       importFromUrl: async (args) => {
         seen.push(args)
         return { name: '货' }
@@ -367,6 +372,45 @@ describe('ProductsDispatcher import-from-link', () => {
     }, { origin: 'http://127.0.0.1:3210' }))
     assert.equal(local.status, 200)
   })
+
+  it('returns the model report in seconds while the host seat hangs', async () => {
+    // The Electron App runtime shape: the host exposes a textComplete seat whose
+    // provider lookup never settles, `omnimux_text_complete` is not loaded, and
+    // the chat bridge is the one channel that answers.
+    const page = '<html><head><title>落地页</title></head><body><h1>智能记账 App</h1>'
+      + '<ul><li>自动记账</li><li>多端同步</li><li>数据看板</li><li>团队协作</li></ul></body></html>'
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+      tools: { get: (name) => (name === 'omnimux_page_fetch' ? { execute: async () => ({ pageContent: '# 智能记账 App\n\n自动记账，多端同步' }) } : undefined) },
+    }
+    const modelReport = [
+      '```yaml',
+      'name: 智能记账 App',
+      'selling_points: 自动记账，多端同步',
+      'features: 自动记账，多端同步，数据看板',
+      'brand: Aurora',
+      '```',
+    ].join('\n')
+    const { dispatcher } = makeDispatcher({
+      ctx,
+      channelTimeoutMs: 30,
+      chatComplete: async () => ({ mode: 'live', model: 'gemini-3.8-flash', text: modelReport }),
+    })
+    // The vertical's own page read is stubbed; the point here is the model chain.
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => new Response(page, { status: 200, headers: { 'content-type': 'text/html' } })
+    const startedAt = Date.now()
+    try {
+      const ok = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+      assert.equal(ok.status, 200)
+      assert.equal(ok.body.success, true)
+      assert.equal(ok.body.data.analysis.mode, 'model')
+      assert.equal(ok.body.data.name, '智能记账 App')
+      assert.ok(Date.now() - startedAt < 3000, 'a dead seat must not push the import past seconds')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
 
 describe('products hub seams', () => {
@@ -378,15 +422,28 @@ describe('products hub seams', () => {
     assert.equal(typeof seams.pageFetch, 'function')
   })
 
-  it('prefers the provided textComplete service', async () => {
+  it('prefers the provided textComplete service after the chat bridge declines', async () => {
     const calls = []
     const ctx = {
       get: (name) => (name === 'textComplete' ? { execute: async (req) => { calls.push(req); return { text: 'x' } } } : undefined),
     }
-    const seams = createHubSeams(ctx)
+    const seams = createHubSeams(ctx, { chatComplete: async () => { throw new Error('no local provider') } })
     const answer = await seams.textComplete({ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 })
     assert.deepEqual(answer, { text: 'x' })
     assert.deepEqual(calls, [{ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 }])
+  })
+
+  it('lets the chat bridge win over the seats, and never touches them', async () => {
+    let seatCalls = 0
+    let toolCalls = 0
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: async () => { seatCalls += 1; return { text: 'seat' } } } : undefined),
+      tools: { get: () => ({ execute: async () => { toolCalls += 1; return { text: 'tool' } } }) },
+    }
+    const seams = createHubSeams(ctx, { chatComplete: async () => ({ mode: 'live', text: 'bridged' }) })
+    assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { mode: 'live', text: 'bridged' })
+    assert.equal(seatCalls, 0, 'a chat answer is the whole answer')
+    assert.equal(toolCalls, 0)
   })
 
   it('falls back to the omnimux_text_complete tool with the wire field names it needs', async () => {
@@ -395,7 +452,7 @@ describe('products hub seams', () => {
       get: () => undefined,
       tools: { get: (name) => (name === 'omnimux_text_complete' ? { execute: async (args) => { calls.push(args); return { text: 'y' } } } : undefined) },
     }
-    const seams = createHubSeams(ctx)
+    const seams = createHubSeams(ctx, { chatComplete: async () => { throw new Error('no local provider') } })
     const answer = await seams.textComplete({ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 })
     assert.deepEqual(answer, { text: 'y' })
     // The official tool requires a reason and spells the cap max_tokens.
@@ -486,8 +543,56 @@ describe('products hub seams', () => {
       get: () => { throw new Error('no such seat') },
       tools: { get: (name) => (name === 'omnimux_text_complete' ? { execute: async () => ({ text: 'z' }) } : undefined) },
     }
-    const seams = createHubSeams(ctx)
+    const seams = createHubSeams(ctx, { chatComplete: async () => { throw new Error('bridge offline') } })
     assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { text: 'z' })
+  })
+
+  it('cuts a seat that never answers at the channel cap instead of hanging', async () => {
+    // A seat waiting on an `omnimux` provider seat this host does not have
+    // answers neither success nor failure. Without the cap it would hold the
+    // import for a minute or more.
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+    }
+    const seams = createHubSeams(ctx, {
+      chatComplete: async () => { throw new Error('bridge offline') },
+      channelTimeoutMs: 30,
+    })
+    const startedAt = Date.now()
+    await assert.rejects(
+      () => seams.textComplete({ prompt: 'p' }),
+      (error) => {
+        assert.match(error.message, /textComplete seat timed out after 30ms/)
+        assert.match(error.message, /bridge offline/)
+        return true
+      },
+    )
+    assert.ok(Date.now() - startedAt < 2000, 'the cap, not the host, decides')
+  })
+
+  it('cuts the omnimux_text_complete tool that never answers at the channel cap', async () => {
+    const ctx = { tools: { get: (name) => (name === 'omnimux_text_complete' ? { execute: () => new Promise(() => {}) } : undefined) } }
+    const seams = createHubSeams(ctx, {
+      chatComplete: async () => { throw new Error('bridge offline') },
+      channelTimeoutMs: 30,
+    })
+    await assert.rejects(
+      () => seams.textComplete({ prompt: 'p' }),
+      /omnimux_text_complete timed out after 30ms/,
+    )
+  })
+
+  it('answers from the chat bridge before any seat can hang', async () => {
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: () => new Promise(() => {}) } : undefined),
+    }
+    const seams = createHubSeams(ctx, {
+      chatComplete: async () => ({ mode: 'live', text: 'fast' }),
+      channelTimeoutMs: 30,
+    })
+    const startedAt = Date.now()
+    assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { mode: 'live', text: 'fast' })
+    assert.ok(Date.now() - startedAt < 30, 'the dead seat is never waited on')
   })
 })
 
