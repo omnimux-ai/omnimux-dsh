@@ -178,6 +178,17 @@ describe('TikTok 场景菜单 — 执行与反馈', () => {
     expect(detail?.textContent).toContain('视频直链')
   })
 
+  it('响应超时与“主程序没在跑”给出的是两条不同的提示', async () => {
+    mount(async () => ({ ok: false, code: 'timeout' }))
+    trigger().click()
+    row('video').click()
+    await settle()
+
+    const shown = shadow().querySelector('.omx-item-detail')?.textContent ?? ''
+    expect(shown).toContain(COPY.failed({ ok: false, code: 'timeout' }))
+    expect(shown).not.toContain(COPY.failed({ ok: false, code: 'unreachable' }))
+  })
+
   it('主程序没在跑时给出的也是可执行的原因', async () => {
     mount(async () => ({ ok: false, code: 'unreachable' }))
     trigger().click()

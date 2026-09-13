@@ -37,7 +37,7 @@ export type ExportKind = 'video' | 'audio'
  */
 export interface ExportOutcome {
   ok: boolean
-  code: 'exported' | 'saved' | 'duplicate' | 'unreachable' | 'rejected'
+  code: 'exported' | 'saved' | 'duplicate' | 'unreachable' | 'timeout' | 'rejected'
   /** Name of the written file, for `exported`. */
   filename?: string
   /** Host-authored reason, for `rejected`. */
@@ -146,21 +146,35 @@ function errorText(body: Record<string, any> | null, response: Response): string
   return `OmniMux 主程序返回 ${response.status}`
 }
 
-/** One POST, with a network failure folded into `null` rather than thrown. */
+/**
+ * Whether a thrown fetch error is the request's own budget expiring.
+ *
+ * `AbortSignal.timeout` rejects with either name depending on the runtime, and
+ * the distinction matters: a host that is running but wedged is a different
+ * problem from a host that is not there, and telling the user to go start a
+ * process that is already running sends them after a fault that does not exist.
+ */
+function isTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return error.name === 'TimeoutError' || error.name === 'AbortError'
+}
+
+/** One POST; a network failure resolves to `null`, a spent budget to `'timeout'`. */
 async function postJson(
   fetchImpl: typeof fetch,
   endpoint: string,
   payload: Record<string, unknown>,
-): Promise<Response | null> {
+  timeoutMs: number,
+): Promise<Response | 'timeout' | null> {
   try {
     return await fetchImpl(endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(SHORTCUT_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     })
-  } catch {
-    return null
+  } catch (error) {
+    return isTimeoutError(error) ? 'timeout' : null
   }
 }
 
@@ -173,12 +187,14 @@ export async function requestMediaExport(args: {
   url: string
   kind: ExportKind
   fetchImpl?: typeof fetch
+  timeoutMs?: number
 }): Promise<ExportOutcome> {
   const fetchImpl = args.fetchImpl ?? fetch
   const response = await postJson(fetchImpl, `${args.base}${FETCH_MEDIA_PATH}`, {
     url: args.url,
     kind: args.kind,
-  })
+  }, args.timeoutMs ?? SHORTCUT_TIMEOUT_MS)
+  if (response === 'timeout') return { ok: false, code: 'timeout' }
   if (response === null) return { ok: false, code: 'unreachable' }
   const body = await readJson(response)
   if (!response.ok) return { ok: false, code: 'rejected', detail: errorText(body, response) }
@@ -198,9 +214,16 @@ export async function requestInspirationSave(args: {
   base: string
   url: string
   fetchImpl?: typeof fetch
+  timeoutMs?: number
 }): Promise<ExportOutcome> {
   const fetchImpl = args.fetchImpl ?? fetch
-  const response = await postJson(fetchImpl, `${args.base}${IMPORT_URL_PATH}`, { url: args.url })
+  const response = await postJson(
+    fetchImpl,
+    `${args.base}${IMPORT_URL_PATH}`,
+    { url: args.url },
+    args.timeoutMs ?? SHORTCUT_TIMEOUT_MS,
+  )
+  if (response === 'timeout') return { ok: false, code: 'timeout' }
   if (response === null) return { ok: false, code: 'unreachable' }
   const body = await readJson(response)
   if (body?.is_duplicate === true) return { ok: true, code: 'duplicate' }

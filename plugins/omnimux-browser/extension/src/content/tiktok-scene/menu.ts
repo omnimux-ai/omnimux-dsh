@@ -144,11 +144,19 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     if (next) reposition()
   }
 
+  let placedLeft = -1
+  let placedBottom = -1
+
   const reposition = (): void => {
     const placement = resolveAnchorPlacement(doc, {
       width: doc.defaultView?.innerWidth ?? 0,
       height: doc.defaultView?.innerHeight ?? 0,
     })
+    // Attribute observation makes this run on a busy page, and writing the same
+    // two values would force a style recalculation for no movement at all.
+    if (placement.left === placedLeft && placement.bottom === placedBottom) return
+    placedLeft = placement.left
+    placedBottom = placement.bottom
     anchor.style.left = `${placement.left}px`
     anchor.style.bottom = `${placement.bottom}px`
   }

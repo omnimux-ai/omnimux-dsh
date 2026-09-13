@@ -76,19 +76,27 @@ describe('下载无水印视频', () => {
     expect(outcome).toEqual({ ok: false, code: 'unreachable' })
   })
 
-  it('每次请求都带超时预算，宿主卡住时不会永远等着', async () => {
-    let signal: AbortSignal | undefined
-    await requestMediaExport({
+  it('宿主接了连接却不响应时，报超时而不是“主程序没在跑”', async () => {
+    const outcome = await requestMediaExport({
       base: BASE,
       url: POST,
       kind: 'video',
-      fetchImpl: async (_input, init) => {
-        signal = init?.signal ?? undefined
-        return jsonResponse(200, { data: { filename: 'a.mp4' } })
-      },
+      timeoutMs: 30,
+      // A host that accepted the connection and then wedged: the fetch settles
+      // only because the request's own budget aborts it. Skipping that budget
+      // must leave this call hanging, which is the failure the budget exists for.
+      fetchImpl: async (_input, init) => new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          const error = new Error('The operation was aborted')
+          error.name = 'TimeoutError'
+          reject(error)
+        })
+      }),
     })
 
-    expect(signal).toBeInstanceOf(AbortSignal)
+    // Reporting this as `unreachable` would send the user to start a host that is
+    // already running.
+    expect(outcome).toEqual({ ok: false, code: 'timeout' })
   })
 
   it('主程序回了非 JSON 内容也不会把异常抛到界面上', async () => {

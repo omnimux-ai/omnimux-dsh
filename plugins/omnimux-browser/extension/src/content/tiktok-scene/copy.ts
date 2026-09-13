@@ -77,6 +77,7 @@ const ZH: TiktokCopy = {
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return '未连接 OmniMux 主程序，请先启动后再试'
+    if (outcome.code === 'timeout') return '主程序响应超时，请稍后重试'
     return outcome.detail !== undefined && outcome.detail !== '' ? outcome.detail : '操作失败，请重试'
   },
   noTarget: '这一页没有可操作的作品',
@@ -109,6 +110,7 @@ const EN: TiktokCopy = {
   },
   failed: (outcome) => {
     if (outcome.code === 'unreachable') return 'OmniMux is not running — start it and retry'
+    if (outcome.code === 'timeout') return 'OmniMux did not answer in time — try again'
     return outcome.detail !== undefined && outcome.detail !== '' ? outcome.detail : 'That did not work — try again'
   },
   noTarget: 'No post to act on here',
