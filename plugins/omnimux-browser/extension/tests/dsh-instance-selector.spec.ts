@@ -10,8 +10,8 @@ import {
 } from '../src/panel/components/WorkspaceSelector.tsx'
 import {
   ModelSelector,
-  INSTANCE_MODELS,
-  getDefaultModelForPort,
+  REAL_LOCAL_SUBSCRIPTION_GROUPS,
+  getDefaultModelForInstance,
 } from '../src/panel/components/ModelSelector.tsx'
 
 describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite', () => {
@@ -127,7 +127,7 @@ describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite'
   })
 })
 
-describe('ModelSelector Component & Instance Match Suite', () => {
+describe('ModelSelector Component & Real Subscription Models Suite', () => {
   let container: HTMLDivElement
   let root: ReturnType<typeof createRoot>
 
@@ -139,20 +139,24 @@ describe('ModelSelector Component & Instance Match Suite', () => {
     vi.restoreAllMocks()
   })
 
-  it('matches models correctly per instance port', () => {
-    expect(getDefaultModelForPort(45120)).toBe('gemini-3.8-flash-high')
-    expect(getDefaultModelForPort(43120)).toBe('deepseek-v4.1-flash')
-    expect(getDefaultModelForPort(43128)).toBe('gemini-3.1-pro-preview')
+  it('matches real local subscription models from ChatGPT (Codex) and Grok', () => {
+    expect(REAL_LOCAL_SUBSCRIPTION_GROUPS.length).toBe(2)
+    const codex = REAL_LOCAL_SUBSCRIPTION_GROUPS.find((g) => g.group === 'ChatGPT (Codex)')
+    expect(codex).not.toBeUndefined()
+    expect(codex?.models.some((m) => m.id === 'gpt-6-astra')).toBe(true)
+    expect(codex?.models.some((m) => m.id === 'gpt-5.6-sol')).toBe(true)
+    expect(codex?.models.some((m) => m.id === 'gpt-5.6-terra')).toBe(true)
+    expect(codex?.models.some((m) => m.id === 'gpt-5.6-luna')).toBe(true)
+    expect(codex?.models.some((m) => m.id === 'gpt-5.5')).toBe(true)
+    expect(codex?.models.some((m) => m.id === 'gpt-5.3-codex-spark')).toBe(true)
 
-    const devModels = INSTANCE_MODELS[45120]
-    expect(devModels.some((m) => m.id === 'gemini-3.8-flash-high')).toBe(true)
-    expect(devModels.some((m) => m.id === 'deepseek-reasoner')).toBe(true)
-
-    const dshModels = INSTANCE_MODELS[43120]
-    expect(dshModels.some((m) => m.id === 'deepseek-v4.1-flash')).toBe(true)
+    const grok = REAL_LOCAL_SUBSCRIPTION_GROUPS.find((g) => g.group === 'Grok (Subscription)')
+    expect(grok).not.toBeUndefined()
+    expect(grok?.models.some((m) => m.id === 'grok-4.20-0309-non-reasoning')).toBe(true)
+    expect(grok?.models.some((m) => m.id === 'grok-4.20-0309-reasoning')).toBe(true)
   })
 
-  it('renders select matching active instance port and switches model', async () => {
+  it('renders select with real local models grouped by provider and switches model', async () => {
     const onSelect = vi.fn()
 
     await act(async () => {
@@ -167,16 +171,20 @@ describe('ModelSelector Component & Instance Match Suite', () => {
 
     const select = container.querySelector<HTMLSelectElement>('.model-select-control')!
     expect(select).not.toBeNull()
-    expect(select.value).toBe('gemini-3.8-flash-high')
 
-    // Change model to deepseek-reasoner
+    const optgroups = container.querySelectorAll('optgroup')
+    expect(optgroups.length).toBeGreaterThanOrEqual(2)
+    expect(optgroups[0].label).toBe('ChatGPT (Codex)')
+    expect(optgroups[1].label).toBe('Grok (Subscription)')
+
+    // Change model to gpt-6-astra
     await act(async () => {
-      select.value = 'deepseek-reasoner'
+      select.value = 'gpt-6-astra'
       select.dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    expect(onSelect).toHaveBeenCalledWith('deepseek-reasoner')
-    expect(localStorage.getItem('omnimux_default_model_45120')).toBe('deepseek-reasoner')
+    expect(onSelect).toHaveBeenCalledWith('gpt-6-astra')
+    expect(localStorage.getItem('omnimux_default_model_45120')).toBe('gpt-6-astra')
   })
 
   it('supports custom model entry and persistence', async () => {

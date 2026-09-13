@@ -1,95 +1,43 @@
 import { memo, useEffect, useState } from 'react'
 
-export interface ModelOption {
-  id: string
-  nameZh: string
-  nameEn: string
-  isRecommended?: boolean
-  isCustom?: boolean
+export interface ModelGroup {
+  group: string
+  models: Array<{
+    id: string
+    name: string
+  }>
 }
 
-export const INSTANCE_MODELS: Record<number, ModelOption[]> = {
-  // 45120: OmniMux Dev
-  45120: [
-    {
-      id: 'gemini-3.8-flash-high',
-      nameZh: 'Gemini 3.8 Flash (Dev 默认)',
-      nameEn: 'Gemini 3.8 Flash (Dev Default)',
-      isRecommended: true,
-    },
-    {
-      id: 'deepseek-chat',
-      nameZh: 'DeepSeek-V3 (通用推理)',
-      nameEn: 'DeepSeek-V3 (General)',
-    },
-    {
-      id: 'deepseek-reasoner',
-      nameZh: 'DeepSeek-R1 (深度思考)',
-      nameEn: 'DeepSeek-R1 (Reasoner)',
-    },
-    {
-      id: 'claude-3-7-sonnet',
-      nameZh: 'Claude 3.7 Sonnet (高质量编码)',
-      nameEn: 'Claude 3.7 Sonnet (Coding)',
-    },
-    {
-      id: 'gpt-4o',
-      nameZh: 'GPT-4o (多模态通用)',
-      nameEn: 'GPT-4o (Multimodal)',
-    },
-  ],
-  // 43120: DSH Desktop
-  43120: [
-    {
-      id: 'deepseek-v4.1-flash',
-      nameZh: 'DeepSeek V4.1 Flash (原生默认)',
-      nameEn: 'DeepSeek V4.1 Flash (Desktop Default)',
-      isRecommended: true,
-    },
-    {
-      id: 'deepseek-chat',
-      nameZh: 'DeepSeek-V3 (官方底座)',
-      nameEn: 'DeepSeek-V3 (Official)',
-    },
-    {
-      id: 'deepseek-v4-flash-vision-exp',
-      nameZh: 'DeepSeek V4 Vision (多模态视觉)',
-      nameEn: 'DeepSeek V4 Vision (Multimodal)',
-    },
-    {
-      id: 'gemini-3.8-flash-high',
-      nameZh: 'Gemini 3.8 Flash (高性能通道)',
-      nameEn: 'Gemini 3.8 Flash (Fast)',
-    },
-  ],
-  // 43128: OmniMux PRD
-  43128: [
-    {
-      id: 'gemini-3.1-pro-preview',
-      nameZh: 'Gemini 3.1 Pro (PRD 生产默认)',
-      nameEn: 'Gemini 3.1 Pro (PRD Default)',
-      isRecommended: true,
-    },
-    {
-      id: 'gemini-3.8-flash-high',
-      nameZh: 'Gemini 3.8 Flash (高可用极速)',
-      nameEn: 'Gemini 3.8 Flash (High Availability)',
-    },
-    {
-      id: 'deepseek-chat',
-      nameZh: 'DeepSeek-V3 (稳定版)',
-      nameEn: 'DeepSeek-V3 (Stable)',
-    },
-  ],
-}
+/** 本地真实订阅模型（与 ~/.dsh/plugins/subscriptions/models.json 1:1 对齐） */
+export const REAL_LOCAL_SUBSCRIPTION_GROUPS: ModelGroup[] = [
+  {
+    group: 'ChatGPT (Codex)',
+    models: [
+      { id: 'gpt-6-astra', name: 'GPT-6-Astra' },
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6-Sol' },
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6-Terra' },
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6-Luna' },
+      { id: 'gpt-5.5', name: 'GPT-5.5' },
+      { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3-Codex-Spark' },
+    ],
+  },
+  {
+    group: 'Grok (Subscription)',
+    models: [
+      { id: 'grok-4.20-0309-non-reasoning', name: 'grok-4.20-0309-non-reasoning' },
+      { id: 'grok-4.20-0309-reasoning', name: 'grok-4.20-0309-reasoning' },
+      { id: 'grok-4.20-multi-agent-0309', name: 'grok-4.20-multi-agent-0309' },
+      { id: 'grok-4.3', name: 'grok-4.3' },
+      { id: 'grok-4.5', name: 'Grok 4.5' },
+      { id: 'grok-4.6', name: 'Grok 4.6' },
+      { id: 'grok-build-0.1', name: 'grok-build-0.1' },
+    ],
+  },
+]
 
-export function getDefaultModelForPort(port: number): string {
-  const list = INSTANCE_MODELS[port]
-  if (list && list.length > 0) {
-    const rec = list.find((m) => m.isRecommended) || list[0]
-    return rec.id
-  }
-  return 'gemini-3.8-flash-high'
+export function getDefaultModelForInstance(port: number): string {
+  // 默认推荐 GPT-5.3-Codex-Spark 或 GPT-6-Astra
+  return 'gpt-5.3-codex-spark'
 }
 
 export const ModelSelector = memo(function ModelSelector({
@@ -106,8 +54,9 @@ export const ModelSelector = memo(function ModelSelector({
   onSelectModel?: (modelId: string) => void
 }) {
   const isEn = locale === 'en'
+  const [modelGroups, setModelGroups] = useState<ModelGroup[]>(REAL_LOCAL_SUBSCRIPTION_GROUPS)
 
-  // 从本地缓存加载该端口专属的默认模型设置
+  // 默认模型初始化
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
@@ -117,13 +66,33 @@ export const ModelSelector = memo(function ModelSelector({
     } catch {
       // Ignore
     }
-    return hostDefaultModel || getDefaultModelForPort(activePort)
+    return hostDefaultModel || getDefaultModelForInstance(activePort)
   })
 
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customModelInput, setCustomModelInput] = useState('')
 
-  // 当外部实例端口切换时，自动匹配并刷新该实例的推荐模型
+  // 动态向本地真实服务探查最新模型列表
+  useEffect(() => {
+    let active = true
+    void fetch(`http://127.0.0.1:${activePort}/ext/bridge-config`, {
+      signal: AbortSignal.timeout(1200),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active || !data) return
+        if (Array.isArray(data.modelGroups) && data.modelGroups.length > 0) {
+          setModelGroups(data.modelGroups)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      active = false
+    }
+  }, [activePort])
+
+  // 当外部实例端口切换时，同步更新默认模型
   useEffect(() => {
     try {
       const savedForPort = localStorage.getItem(`omnimux_default_model_${activePort}`)
@@ -135,35 +104,16 @@ export const ModelSelector = memo(function ModelSelector({
     } catch {
       // Ignore
     }
-    const defaultModel = hostDefaultModel || getDefaultModelForPort(activePort)
+    const defaultModel = hostDefaultModel || getDefaultModelForInstance(activePort)
     setSelectedModel(defaultModel)
     onSelectModel?.(defaultModel)
   }, [activePort, hostDefaultModel])
 
-  // 计算当前实例的全部候选模型
-  const currentInstanceModels: ModelOption[] = [...(INSTANCE_MODELS[activePort] || INSTANCE_MODELS[45120])]
+  // 合并可能存在的动态模型
+  const allKnownIds = new Set<string>()
+  modelGroups.forEach((g) => g.models.forEach((m) => allKnownIds.add(m.id)))
 
-  // 融入从当前 Host 实例动态获取的补充模型
-  for (const dm of dynamicModels) {
-    if (!currentInstanceModels.some((m) => m.id === dm.id)) {
-      currentInstanceModels.push({
-        id: dm.id,
-        nameZh: dm.name || dm.id,
-        nameEn: dm.name || dm.id,
-      })
-    }
-  }
-
-  // 如果当前选中的是自定义模型且不在预设列表中，动态加入
-  const isPreset = currentInstanceModels.some((m) => m.id === selectedModel)
-  if (!isPreset && selectedModel && selectedModel !== '__custom__') {
-    currentInstanceModels.push({
-      id: selectedModel,
-      nameZh: `${selectedModel} (自定义)`,
-      nameEn: `${selectedModel} (Custom)`,
-      isCustom: true,
-    })
-  }
+  const unassignedDynamic = dynamicModels.filter((dm) => !allKnownIds.has(dm.id))
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
@@ -205,11 +155,32 @@ export const ModelSelector = memo(function ModelSelector({
           value={selectedModel}
           onChange={handleSelectChange}
         >
-          {currentInstanceModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {isEn ? m.nameEn : m.nameZh}
-            </option>
+          {modelGroups.map((group) => (
+            <optgroup key={group.group} label={group.group}>
+              {group.models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
+
+          {unassignedDynamic.length > 0 && (
+            <optgroup label={isEn ? 'Other Local Models' : '其他本地配置模型'}>
+              {unassignedDynamic.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.id}
+                </option>
+              ))}
+            </optgroup>
+          )}
+
+          {!allKnownIds.has(selectedModel) && selectedModel && selectedModel !== '__custom__' && (
+            <optgroup label={isEn ? 'Custom Selected' : '自定义当前模型'}>
+              <option value={selectedModel}>{selectedModel}</option>
+            </optgroup>
+          )}
+
           <option value="__custom__">
             ＋ {isEn ? 'Custom Model...' : '自定义模型...'}
           </option>
@@ -219,7 +190,7 @@ export const ModelSelector = memo(function ModelSelector({
           <input
             type="text"
             className="custom-port-input"
-            placeholder={isEn ? 'Model ID (e.g. claude-3-7-sonnet)' : '输入模型 ID (如 claude-3-7-sonnet)'}
+            placeholder={isEn ? 'Model ID (e.g. gpt-6-astra)' : '输入模型 ID (如 gpt-6-astra)'}
             value={customModelInput}
             onChange={(e) => setCustomModelInput(e.target.value)}
             onKeyDown={(e) => {

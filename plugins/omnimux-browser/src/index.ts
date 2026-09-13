@@ -257,6 +257,51 @@ function mountBridge(
   // 异步 disposer：HMR/卸载时先等桥完全关闭（socket/泵/acceptor 静默）再继续。
   ctx.effect(() => () => server.close(), 'bridge-browser: bridge server')
 
+  function loadSubscriptionModelGroups(): Array<{ group: string; models: Array<{ id: string; name: string }> }> {
+    const candidateHomes = [
+      dshHomePath(),
+      process.env.DSH_HOME,
+      join(homedir(), '.dsh'),
+      join(homedir(), '.omnimux-dev'),
+      join(homedir(), '.omnimux'),
+    ].filter(Boolean) as string[]
+
+    for (const home of candidateHomes) {
+      const modelsPath = join(home, 'plugins', 'subscriptions', 'models.json')
+      try {
+        if (existsSync(modelsPath)) {
+          const raw = JSON.parse(readFileSync(modelsPath, 'utf8'))
+          const groups: Array<{ group: string; models: Array<{ id: string; name: string }> }> = []
+
+          if (Array.isArray(raw.codex?.models) && raw.codex.models.length > 0) {
+            groups.push({
+              group: 'ChatGPT (Codex)',
+              models: raw.codex.models.map((m: any) => ({
+                id: m.id,
+                name: m.name || m.id,
+              })),
+            })
+          }
+
+          if (Array.isArray(raw.grok?.models) && raw.grok.models.length > 0) {
+            groups.push({
+              group: 'Grok (Subscription)',
+              models: raw.grok.models.map((m: any) => ({
+                id: m.id,
+                name: m.name || m.id,
+              })),
+            })
+          }
+
+          if (groups.length > 0) return groups
+        }
+      } catch {
+        // Ignore
+      }
+    }
+    return []
+  }
+
   // Zero-config discovery endpoint: the extension fetches this to learn the
   // bridge WebSocket URL without any manual configuration. The URL carries no
   // secret (loopback connections skip the token); non-loopback deployments
@@ -265,10 +310,14 @@ function mountBridge(
     kind: 'exact',
     path: BRIDGE_CONFIG_PATH,
     handler: (_req, res) => {
-      res.writeHead(200, { 'content-type': 'application/json' })
+      res.writeHead(200, {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*',
+      })
       res.end(JSON.stringify({
         wsUrl: `ws://127.0.0.1:${ctx.webServer.port}${BRIDGE_PATH}`,
         locale: hostLocale,
+        modelGroups: loadSubscriptionModelGroups(),
       }))
     },
   }
