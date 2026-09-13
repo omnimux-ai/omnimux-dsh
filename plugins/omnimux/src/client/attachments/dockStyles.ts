@@ -522,7 +522,8 @@ export const DOCK_STYLES = `
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -536,8 +537,8 @@ export const DOCK_STYLES = `
   background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08));
 }
 .omx-product-slot-menu__action-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
   background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.06));
   display: flex;
@@ -546,20 +547,9 @@ export const DOCK_STYLES = `
   flex-shrink: 0;
   color: var(--dsw-alias-label-secondary, #d1d5db);
 }
-.omx-product-slot-menu__action-label {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.omx-product-slot-menu__action-label > span:first-child {
+.omx-product-slot-menu__action-text {
   font-size: 13px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary, #ffffff);
-}
-.omx-product-slot-menu__action-sub {
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary, #9ca3af);
 }
 `;
