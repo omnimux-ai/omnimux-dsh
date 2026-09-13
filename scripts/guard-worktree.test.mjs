@@ -829,4 +829,33 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
     })
     assert.equal(goodWtResult.decision, 'allow')
   })
+
+  it('honours explicit `git -C <worktree>` so legitimate commits inside a worktree are not blocked', () => {
+    // hook 收到的 cwd 是会话工作目录（此处为主干），但命令显式指向独立工作树
+    const wrt = join(fixture, 'explicit-c-worktree')
+    gitCommand(mainRepoRoot, 'worktree', 'add', '-b', 'explicit-c-branch', wrt, 'HEAD')
+
+    // 1. 显式 -C 指向工作树 → 允许提交
+    const allowed = decideBashCommand({
+      command: `git -C "${wrt}" commit -m "work inside worktree"`,
+      cwd: mainRepoRoot,
+    })
+    assert.equal(allowed.decision, 'allow')
+
+    // 2. 无 -C，cwd 为主干 → 拦截
+    const denied = decideBashCommand({
+      command: 'git commit -m "direct on main"',
+      cwd: mainRepoRoot,
+    })
+    assert.equal(denied.decision, 'deny')
+    assert.equal(denied.reason, 'forbidden-main-branch-commit')
+
+    // 3. 显式 -C 指向主干 → 拦截
+    const deniedExplicit = decideBashCommand({
+      command: `git -C "${mainRepoRoot}" commit -m "direct on main via -C"`,
+      cwd: '/some/other/dir',
+    })
+    assert.equal(deniedExplicit.decision, 'deny')
+    assert.equal(deniedExplicit.reason, 'forbidden-main-branch-commit')
+  })
 })
