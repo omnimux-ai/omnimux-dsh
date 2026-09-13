@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { SessionId } from "@deepseek-ai/dsh-session";
-import { WorkspaceId } from "@deepseek-ai/dsh-workspace";
+const SessionId = (id) => String(id);
+const WorkspaceId = (id) => String(id);
 import {
   automationDomainSpec,
   createDefinition,
