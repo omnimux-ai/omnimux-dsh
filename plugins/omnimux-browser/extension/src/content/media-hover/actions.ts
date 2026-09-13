@@ -14,8 +14,28 @@
  */
 
 import { RUNTIME_MESSAGE, TIMING } from './messages.ts'
+import { isAttachablePayload } from './payload.ts'
 import type { ActionOutcome, HoveredMedia } from './types.ts'
 import type { HoverCopy } from './copy.ts'
+
+/**
+ * The payload as the outside world should see it.
+ *
+ * A `blob:` handle resolves nowhere outside the page that minted it, so a
+ * non-attachable payload travels as a page reference — with the captured frame
+ * kept as the thumbnail — instead of being shipped as a dead link or dropped.
+ */
+export function outboundMedia(payload: HoveredMedia): HoveredMedia {
+  if (isAttachablePayload(payload)) return payload
+  return {
+    ...payload,
+    id: `video:${payload.pageUrl}`,
+    src: payload.pageUrl,
+    previewSrc: payload.previewSrc !== '' ? payload.previewSrc : payload.pageUrl,
+    sourceKind: 'page',
+    attachable: true,
+  }
+}
 
 /** How the workbench delivery ended, so the caller can report the channel. */
 export type WorkstationResult = 'attached' | 'unavailable' | 'rejected'
@@ -151,22 +171,35 @@ export class MediaActionBridge {
     const hints = this.transport.copy()
     const record = asRecord(await this.transport.postToBackground({
       type: RUNTIME_MESSAGE.mediaToInspiration,
-      payload,
+      payload: outboundMedia(payload),
     }))
     if (record?.ok !== true) return { ok: false, status: 'failed', message: hints.failed }
     const outcome = asRecord(record.result)
     if (outcome !== null && outcome.ok === false) {
       return { ok: false, status: 'failed', message: hints.failed }
     }
-    return { ok: true, status: 'saved', message: hints.done.inspiration }
+    return {
+      ok: true,
+      status: 'saved',
+      message: isAttachablePayload(payload) ? hints.done.inspiration : hints.pageReference,
+    }
   }
 
-  /** Copies the absolute media address to the system clipboard. */
+  /**
+   * Copies the media address to the system clipboard.
+   *
+   * A page-scoped video is copied as its page address: the `blob:` handle it
+   * carries would paste a link that resolves nowhere.
+   */
   async copyToClipboard(payload: HoveredMedia): Promise<ActionOutcome> {
     const hints = this.transport.copy()
-    const copied = await this.transport.writeClipboard(payload.src)
+    const copied = await this.transport.writeClipboard(outboundMedia(payload).src)
     if (!copied) return { ok: false, status: 'failed', message: hints.failed }
-    return { ok: true, status: 'copied', message: hints.done.copy }
+    return {
+      ok: true,
+      status: 'copied',
+      message: isAttachablePayload(payload) ? hints.done.copy : hints.pageReference,
+    }
   }
 
   /**
@@ -180,7 +213,8 @@ export class MediaActionBridge {
    */
   async attachToConversation(payload: HoveredMedia): Promise<ActionOutcome> {
     const hints = this.transport.copy()
-    const delivered = await this.transport.deliverToWorkstation(payload, TIMING.attachReceiptTimeout)
+    const media = outboundMedia(payload)
+    const delivered = await this.transport.deliverToWorkstation(media, TIMING.attachReceiptTimeout)
     if (delivered === 'attached') {
       return { ok: true, status: 'attached', message: hints.done.attach, channel: 'workbench' }
     }
@@ -189,7 +223,7 @@ export class MediaActionBridge {
     // the media must still reach the conversation rather than being dropped.
     const record = asRecord(await this.transport.postToBackground({
       type: RUNTIME_MESSAGE.openAssistantWithMedia,
-      payload,
+      payload: media,
     }))
     if (record?.ok !== true) return { ok: false, status: 'failed', message: hints.failed }
     return { ok: true, status: 'attached', message: hints.done.attach, channel: 'side-panel' }

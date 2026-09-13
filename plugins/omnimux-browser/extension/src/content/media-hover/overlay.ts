@@ -22,9 +22,10 @@ import { MediaActionBridge, browserTransport } from './actions.ts'
 import { MediaCapsule } from './capsule.ts'
 import { hoverCopy, type HoverCopy } from './copy.ts'
 import { MediaDetector } from './detector.ts'
-import { CAPSULE_SPEC, OVERLAY_Z, TIMING, computeCapsuleGeometry } from './messages.ts'
+import { CAPSULE_SPEC, OVERLAY_Z, TIMING, computeCapsuleGeometry, type CapsuleGeometry } from './messages.ts'
 import { OVERLAY_STYLES } from './styles.ts'
 import { MediaTooltip, readViewportBox } from './tooltip.ts'
+import { UNMEASURED_CONTROL, VideoAnchorProbe, resolveCapsuleAnchor } from './video-anchor.ts'
 import type { ActionOutcome, AnchorRect, HoverCandidate, HoveredMedia, MediaActionKind, OverlayState } from './types.ts'
 
 /** Id of the host element; also how a duplicate injection is detected. */
@@ -61,6 +62,8 @@ export class MediaOverlay {
   }
   private payload: HoveredMedia | null = null
   private anchorElement: Element | null = null
+  /** Shared probe cache: one player is measured once, not once per frame. */
+  private readonly videoProbe = new VideoAnchorProbe()
 
   private enterTimer: number | null = null
   private leaveTimer: number | null = null
@@ -198,8 +201,10 @@ export class MediaOverlay {
     this.anchorElement = candidate.element
     capsule.render(candidate.payload)
     this.state = { ...this.state, ...capsule.snapshot(), phase: 'shown' }
-    this.repositionNow()
-    capsule.show(this.capsuleAlignment(candidate.element))
+    // Placement and the flip both come out of the one geometry call, so the
+    // transform origin can never disagree with where the pill actually landed.
+    const geometry = this.repositionNow()
+    capsule.show(geometry?.alignment ?? 'left')
   }
 
   private hideNow(clear: boolean): void {
@@ -431,17 +436,6 @@ export class MediaOverlay {
 
   // ---- Geometry ----------------------------------------------------------
 
-  private capsuleAlignment(element: Element): 'left' | 'right' {
-    const rect = element.getBoundingClientRect()
-    // The flip is decided on the EXPANDED width: stage two is the widest the
-    // capsule ever gets, and a decision made on the 36px circle would push the
-    // row off the right edge as soon as the pointer opened it.
-    const capsuleWidth = CAPSULE_SPEC.width
-    const available = currentViewportWidth()
-    const fitsLeft = rect.left + CAPSULE_SPEC.inset + capsuleWidth <= available - CAPSULE_SPEC.edgeMargin
-    return fitsLeft ? 'left' : 'right'
-  }
-
   private scheduleReposition(force = false): void {
     if (this.state.phase === 'idle' || this.host === null || this.payload === null) return
     if (force) {
@@ -457,19 +451,21 @@ export class MediaOverlay {
   }
 
   /**
-   * Re-measures the media and moves the capsule to its bottom-left corner.
+   * Re-measures the media and places the capsule for its kind.
    *
    * Runs on every scroll frame: the anchor is read from the element itself, so
    * the capsule tracks the media instead of drifting with a stale rect.
+   *
+   * @returns The geometry that was painted, or `null` when the capsule hid.
    */
-  private repositionNow(): void {
+  private repositionNow(): CapsuleGeometry | null {
     const capsule = this.capsule
     const element = this.anchorElement
-    if (capsule === null) return
-    if (this.payload === null || element === null) return
+    const payload = this.payload
+    if (capsule === null || element === null || payload === null) return null
     if (!element.isConnected) {
       this.hideNow(true)
-      return
+      return null
     }
 
     const rect = element.getBoundingClientRect()
@@ -480,10 +476,17 @@ export class MediaOverlay {
 
     if (rect.bottom <= 0 || rect.right <= 0 || rect.top >= viewport.height || rect.left >= viewport.width) {
       this.hideNow(true)
-      return
+      return null
     }
 
     const box = capsule.element.getBoundingClientRect()
+    // A video's bottom-left corner belongs to the player, so the pill is pushed
+    // clear of the control cluster instead of being drawn over the play button.
+    const policy = resolveCapsuleAnchor(
+      rect,
+      payload.type,
+      payload.type === 'video' ? this.videoProbe.probe(element, rect) : UNMEASURED_CONTROL,
+    )
     // Both stages are measured as the expanded row. The circle is drawn inside
     // that footprint, so opening stage two grows into space the geometry already
     // reserved and can never cross the viewport edge.
@@ -495,12 +498,14 @@ export class MediaOverlay {
       },
       viewport.width,
       viewport.height,
+      policy,
     )
     capsule.element.style.left = `${Math.round(geometry.left)}px`
     capsule.element.style.top = `${Math.round(geometry.top)}px`
 
     const icon = this.activeIcon
     if (icon !== null) this.showMessage(this.copy.hint[icon], icon)
+    return geometry
   }
 
   private cancelFrame(): void {

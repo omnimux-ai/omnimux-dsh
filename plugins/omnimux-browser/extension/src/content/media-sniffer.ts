@@ -8,6 +8,7 @@
  */
 
 import {
+  isAttachablePayload,
   isElementInViewport,
   isEligibleMediaSize,
   mediaSourceOf,
@@ -43,7 +44,9 @@ function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMedi
   return {
     id: `${kind === 'video' ? 'video' : 'img'}_${index + 1}`,
     type: payload.type,
-    src: payload.src,
+    // A page-scoped address is dead outside its own tab, so the panel gets the
+    // captured frame or the page address instead of a link that resolves nowhere.
+    src: isAttachablePayload(payload) ? payload.src : (payload.previewSrc || payload.pageUrl),
     previewSrc: payload.previewSrc || mediaSourceOf(el, kind, location.href),
     alt: payload.alt,
     width: payload.naturalWidth || payload.width,

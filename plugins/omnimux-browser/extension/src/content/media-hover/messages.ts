@@ -8,6 +8,8 @@
  * @module
  */
 
+import type { CapsuleAnchorPolicy } from './types.ts'
+
 /** Identity attached to every content-script message; receivers validate it. */
 export const CONTENT_MESSAGE_SOURCE = 'omnimux-content-script'
 
@@ -104,6 +106,34 @@ export const CAPSULE_SPEC = {
   edgeMargin: 8,
 } as const
 
+/**
+ * Video-only capsule anchoring.
+ *
+ * A video's bottom-left corner belongs to the player, not to the page: the
+ * native or custom control cluster (play/pause, mute, elapsed time) sits there,
+ * so the image anchor would paint the pill straight over the play button. Every
+ * constant below exists to push the pill clear of that cluster.
+ */
+export const VIDEO_ANCHOR_SPEC = {
+  /** Default left inset: clears the ~48px play control and leaves a comfortable gap. */
+  offsetX: 78,
+  /** Gap kept past a measured play control's right edge. */
+  minClearance: 16,
+  /** Band the left inset is allowed to move within, whatever a probe reports. */
+  offsetXRange: [78, 140] as const,
+  /** Default gap between the media's bottom edge and the capsule's bottom edge. */
+  offsetY: 16,
+  /** Band the bottom inset is allowed to move within, whatever a probe reports. */
+  offsetYRange: [14, 18] as const,
+  /** Play-control probe point: media `(left + probeInsetX, bottom - probeInsetY)`. */
+  probeInsetX: 24,
+  probeInsetY: 24,
+  /** Largest edge length that still counts as player chrome rather than content. */
+  controlMaxSize: 80,
+  /** How long one element's probe result stays valid. */
+  cacheMs: 1000,
+} as const
+
 /** Timing budget. Values are rendered in the tooltip labels and copy. */
 export const TIMING = {
   /** Pointer must rest this long on a media element before the capsule shows. */
@@ -138,6 +168,19 @@ export const INSPIRATION_STORE = {
 /** Ghost-capsule placement relative to the media's bottom-left corner. */
 export type CapsuleAlignment = 'left' | 'right'
 
+/**
+ * The anchor every non-video media kind uses.
+ *
+ * `offsetX` / `offsetY` read `CAPSULE_SPEC.inset`, so an image keeps the exact
+ * placement the two-stage contract has always produced, and `mirror` keeps the
+ * established "flip to the right edge when the left corner does not fit" rule.
+ */
+export const IMAGE_ANCHOR_POLICY: CapsuleAnchorPolicy = {
+  offsetX: CAPSULE_SPEC.inset,
+  offsetY: CAPSULE_SPEC.inset,
+  overflow: 'mirror',
+}
+
 /** Computed capsule geometry in viewport coordinates. */
 export interface CapsuleGeometry {
   left: number
@@ -148,30 +191,49 @@ export interface CapsuleGeometry {
 /**
  * Computes the fixed-position geometry of the data-driven capsule (`.omnimux-add-bar`).
  *
+ * This is the single source of the placement rule *and* the flip decision. An
+ * earlier revision also decided the flip inside the overlay, with a second copy
+ * of the same comparison; the two disagreed as soon as a media kind wanted its
+ * own inset, so the overlay now reads `alignment` from here instead.
+ *
  * @param anchor - The media element's bounding rect.
  * @param metrics - Capsule pixel size, measured after mount (0 before layout).
  * @param width - Viewport width in CSS pixels.
  * @param height - Viewport height in CSS pixels.
+ * @param policy - Where the pill sits relative to the anchor; defaults to the
+ *   image policy, which is byte-for-byte the historical placement.
  */
 export function computeCapsuleGeometry(
   anchor: { left: number; top: number; right: number; bottom: number },
   metrics: { width: number; height: number },
   width: number,
   height: number,
+  policy: CapsuleAnchorPolicy = IMAGE_ANCHOR_POLICY,
 ): CapsuleGeometry {
   const width_ = Math.max(0, metrics.width)
   const height_ = Math.max(0, metrics.height)
   const margin = CAPSULE_SPEC.edgeMargin
 
-  const fitsLeft = anchor.left + CAPSULE_SPEC.inset + width_ <= width - margin
-  const preferredLeft = fitsLeft
-    ? anchor.left + CAPSULE_SPEC.inset
-    : anchor.right - CAPSULE_SPEC.inset - width_
-  const top = anchor.bottom - CAPSULE_SPEC.inset - height_
-  const alignment: CapsuleAlignment = fitsLeft ? 'left' : 'right'
+  const preferredLeft = anchor.left + policy.offsetX
+  const fitsAtAnchor = preferredLeft + width_ <= width - margin
+
+  // `mirror` flips the pill to the media's opposite edge. `clamp` keeps the
+  // left-hand bias the video anchor asks for and slides the pill back inside
+  // instead, because a video's right edge is the other half of its control bar.
+  const targetLeft = fitsAtAnchor || policy.overflow === 'clamp'
+    ? preferredLeft
+    : anchor.right - policy.offsetX - width_
+
+  const left = clamp(targetLeft, margin, Math.max(margin, width - width_ - margin))
+  const top = anchor.bottom - policy.offsetY - height_
+
+  // The transform origin follows the pill: it only reads as "right" once the
+  // pill has actually been pushed left of the corner it was anchored to, which
+  // is what keeps the opening animation growing into free space.
+  const alignment: CapsuleAlignment = left < preferredLeft - 0.5 ? 'right' : 'left'
 
   return {
-    left: clamp(preferredLeft, margin, Math.max(margin, width - width_ - margin)),
+    left,
     top: clamp(top, margin, Math.max(margin, height - height_ - margin)),
     alignment,
   }

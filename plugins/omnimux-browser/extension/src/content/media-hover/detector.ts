@@ -23,9 +23,10 @@ import {
   measureElement,
   mediaIdOf,
   mediaKindOf,
-  mediaSourceOf,
   normalizeMedia,
+  resolveMediaSource,
 } from './payload.ts'
+import { isControlSizedElement } from './video-anchor.ts'
 import type { AnchorRect, HoverCandidate, HoveredMedia } from './types.ts'
 
 /** Listener invoked when a pointer settles on an eligible media element. */
@@ -58,7 +59,10 @@ interface MediaFacts {
  *
  * Uses hit testing rather than `event.target` so an element covered by an
  * overlay inside the media (a play button, a caption) still resolves to the
- * media itself.
+ * media itself. The pointer position is handed to {@link findMediaElement} so a
+ * transparent click catcher layered over a video resolves to the video beside
+ * it, and a control the size of one button ends the search: aiming at play,
+ * mute or fullscreen is not a request for the capsule.
  */
 export function resolvePointerTarget(
   x: number,
@@ -66,7 +70,9 @@ export function resolvePointerTarget(
   hitTest: (x: number, y: number) => Element | null,
 ): Element | null {
   const top = hitTest(x, y)
-  return top === null ? null : findMediaElement(top)
+  if (top === null) return null
+  if (isControlSizedElement(top)) return null
+  return findMediaElement(top, { x, y })
 }
 
 /** Everything the detector needs from the browser, injectable for tests. */
@@ -258,7 +264,9 @@ export class MediaDetector {
     const viewport = this.env.viewport()
     if (!isElementInViewport(this.rectOf(element), viewport.width, viewport.height)) return null
 
-    const src = mediaSourceOf(element, kind, this.baseUrl())
+    // The cheap identity probe: same ladder as the payload, minus the canvas
+    // capture, because this runs on every pointer move and a frame grab does not.
+    const src = resolveMediaSource(element, kind, this.baseUrl(), false).src
     if (src === '') return null
 
     const facts: MediaFacts = {
@@ -294,9 +302,12 @@ export class MediaDetector {
 
 /** Whether a cached payload still matches the element's current facts. */
 function matchesFacts(payload: HoveredMedia, facts: MediaFacts): boolean {
-  return payload.id === mediaIdOf(payload.type, facts.src)
-    && payload.width === facts.width
-    && payload.height === facts.height
+  if (payload.width !== facts.width || payload.height !== facts.height) return false
+  if (payload.id === mediaIdOf(payload.type, facts.src)) return true
+  // A video whose only identity is a captured frame has no cheap address to
+  // compare against, so the element-keyed cache wins instead of the ladder
+  // re-encoding the same frame on every pointer move.
+  return payload.sourceKind === 'frame'
 }
 
 /** Walks up from a node looking for a media ancestor (light DOM only). */
