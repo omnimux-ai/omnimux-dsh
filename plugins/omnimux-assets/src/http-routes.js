@@ -451,6 +451,11 @@ export function createAssetsDispatcher(deps) {
         return cloudIndexRoute()
       }
 
+      // `/omnimux/assets/cloud/search?q=&category=character&dims=1female`
+      //
+      // A search is narrowed by the dimension chips as well as by the query
+      // text: typing a name after picking 女性 must not surface a male row, so
+      // the selection rides along with the needle.
       if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/search') {
         return {
           status: 200,
@@ -458,6 +463,7 @@ export function createAssetsDispatcher(deps) {
             q: url.searchParams.get('q') || '',
             category: url.searchParams.get('category') || '',
             subCategory: url.searchParams.get('sub_category') || '',
+            dims: url.searchParams.getAll('dims'),
             limit: url.searchParams.get('limit'),
             offset: url.searchParams.get('offset'),
           }),

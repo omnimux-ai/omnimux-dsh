@@ -305,6 +305,37 @@ describe('createCloudCatalog: search', () => {
   it('refuses to search before the catalog exists', () => {
     assert.throws(() => makeCatalog().search({ q: 'x' }), /catalog is not built/)
   })
+
+  it('narrows by the selected dimensions as well as by the needle', () => {
+    // The search box narrows what the chips narrowed: 女性 plus a male name must
+    // answer with nothing rather than with the male row that name belongs to.
+    writeCatalog({
+      rows: [
+        { id: 'character-female', category: 'character', sub_category: 'female', name: 'Ava in car', description: '', media_type: 'video', tags: [], meta: { dims: { gender: 'Female', scene: 'Car' } } },
+        { id: 'character-male', category: 'character', sub_category: 'male', name: 'Ethan in car', description: '', media_type: 'video', tags: [], meta: { dims: { gender: 'Male', scene: 'Car' } } },
+      ],
+    })
+    const cloud = makeCatalog()
+    assert.equal(cloud.search({ q: 'Ethan' }).total, 1)
+    assert.equal(cloud.search({ q: 'Ethan', dims: ['1female'] }).total, 0)
+    assert.deepEqual(cloud.search({ q: 'Ethan', dims: ['1female'] }).items, [])
+    assert.equal(cloud.search({ q: 'Ava', dims: ['1female'] }).total, 1)
+    assert.equal(cloud.search({ q: 'car', dims: ['1female'] }).total, 1)
+    assert.equal(cloud.search({ q: 'car', dims: ['1female', '1male'] }).total, 0)
+  })
+
+  it('reads a comma-joined selection the way it reads repeated ones', () => {
+    writeCatalog({
+      rows: [
+        { id: 'character-female', category: 'character', sub_category: 'female', name: 'Ava in car', description: '', media_type: 'video', tags: [], meta: { dims: { gender: 'Female', scene: 'Car' } } },
+        { id: 'character-male', category: 'character', sub_category: 'male', name: 'Ethan at home', description: '', media_type: 'video', tags: [], meta: { dims: { gender: 'Male', scene: 'Living Room' } } },
+      ],
+    })
+    const cloud = makeCatalog()
+    assert.equal(cloud.search({ q: 'a', dims: '1female,1car' }).total, 1)
+    assert.equal(cloud.search({ q: 'a', dims: [] }).total, 2)
+    assert.equal(cloud.search({ q: 'a' }).total, 2)
+  })
 })
 
 describe('createCloudCatalog: save to local', () => {

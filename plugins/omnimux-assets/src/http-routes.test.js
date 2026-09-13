@@ -749,6 +749,38 @@ describe('Cloud dimension filter route', () => {
     assert.equal(response.body.error, 'catalog-filter-invalid')
   })
 
+  it('narrows a search by the selection, not only by the needle', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const loose = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/search?q=Ethan' })
+    assert.equal(loose.status, 200)
+    assert.equal(loose.body.total, 1)
+
+    const narrowed = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/search?q=Ethan&dims=1female' })
+    assert.equal(narrowed.status, 200)
+    assert.equal(narrowed.body.total, 0)
+    assert.deepEqual(narrowed.body.items, [])
+  })
+
+  it('keeps a searched page inside every selected dimension', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({
+      method: 'GET',
+      url: '/omnimux/assets/cloud/search?q=Ava&category=character&dims=1female&dims=1car',
+    })
+    assert.equal(response.status, 200)
+    assert.deepEqual(response.body.items.map((row) => row.id), ['character-1'])
+  })
+
+  it('leaves an unfiltered search exactly as wide as before', async () => {
+    const dispatcher = makeFilterDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/search?q=Ava' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.total, 2)
+  })
+
   it('pages by offset', async () => {
     const dispatcher = makeFilterDispatcher()
 

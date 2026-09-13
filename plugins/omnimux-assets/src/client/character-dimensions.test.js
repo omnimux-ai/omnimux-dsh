@@ -17,6 +17,7 @@ import {
   characterDimensionsOf,
   characterFilterKey,
   characterFilterTokens,
+  dimensionLabelOf,
   dimensionSlug,
   emptyCharacterFilters,
   optionKeyOf,
@@ -28,6 +29,7 @@ import { en, zh } from './locales.js'
 const here = dirname(fileURLToPath(import.meta.url))
 const builder = readFileSync(join(here, '..', '..', 'scripts', 'build-cloud-assets-catalog.mjs'), 'utf8')
 const feed = readFileSync(join(here, 'use-cloud-assets-feed.js'), 'utf8')
+const api = readFileSync(join(here, 'api.js'), 'utf8')
 const view = readFileSync(join(here, 'CloudAssetsView.jsx'), 'utf8')
 
 /** @param {string} source @returns {string[]} */
@@ -133,6 +135,47 @@ describe('Chip labels come from the dictionary, the catalog label is the fallbac
     assert.equal(optionLabelOf({ t, dimension: nameDimension, value: 'Ava' }), 'Ava')
   })
 
+  it('labels the synthesized 全部 row from the dictionary instead of leaving it blank', () => {
+    // Every dropdown leads with 全部, which the bar renders as the empty value —
+    // an option the catalog never publishes. It has no handle to slug and no
+    // catalog label to fall back to, so without a dictionary answer it resolved
+    // to `''` and the row showed nothing but its count.
+    const nameDimension = { id: 'name', zh: '姓名', en: 'Name', total: 9, options: [{ value: 'Ava', total: 1 }] }
+    for (const dimension of [dimensions[0], nameDimension]) {
+      assert.equal(optionLabelOf({ t: (key) => zh[key] ?? key, dimension, value: '' }), '全部')
+      assert.equal(optionLabelOf({ t: (key) => en[key] ?? key, dimension, value: '' }), 'All')
+    }
+  })
+
+  it('renders that 全部 row through the same option renderer as every other row', () => {
+    assert.match(view, /\{renderOption\(\{ value: '', total: dimension\.total \}\)\}/)
+    assert.match(view, /optionLabelOf\(\{ t, dimension, value: option\.value \}\)/)
+  })
+
+  it('keeps 场景的 Podcast Studio apart from 行业的 Podcast & Media', () => {
+    // Both shelves name a podcast, and they once shared one handle: the scene
+    // chip then read as the industry wording, `Podcast & Media` / 播客电台.
+    const industryKey = optionKeyOf('industry', 'Podcast & Media')
+    const sceneKey = optionKeyOf('scene', 'Podcast Studio')
+    assert.equal(industryKey, 'podcast')
+    assert.equal(sceneKey, 'podcast_studio')
+    assert.notEqual(sceneKey, industryKey)
+
+    const industry = { id: 'industry', zh: '行业', en: 'Industry' }
+    const scene = { id: 'scene', zh: '场景', en: 'Scene' }
+    assert.equal(optionLabelOf({ t: (key) => zh[key] ?? key, dimension: scene, value: 'Podcast Studio' }), '播客影棚')
+    assert.equal(optionLabelOf({ t: (key) => en[key] ?? key, dimension: scene, value: 'Podcast Studio' }), 'Podcast Studio')
+    assert.equal(optionLabelOf({ t: (key) => zh[key] ?? key, dimension: industry, value: 'Podcast & Media' }), '播客电台')
+    assert.equal(optionLabelOf({ t: (key) => en[key] ?? key, dimension: industry, value: 'Podcast & Media' }), 'Podcast & Media')
+  })
+
+  it('labels the selected 场景 chip with the studio wording, not the industry one', () => {
+    const scene = { id: 'scene', zh: '场景', en: 'Scene' }
+    const t = (key) => zh[key] ?? key
+    assert.equal(dimensionLabelOf({ t, dimension: scene, value: 'Podcast Studio' }), '场景: 播客影棚')
+    assert.equal(dimensionLabelOf({ t, dimension: scene, value: '' }), '场景')
+  })
+
   it('reports no dimensions for a catalog that has no dimension table', () => {
     assert.deepEqual(characterDimensionsOf({ categories: [{ id: 'character' }] }, 'character'), [])
     assert.deepEqual(characterDimensionsOf(null, 'character'), [])
@@ -155,6 +198,7 @@ describe('Both dictionaries carry every dimension and every option', () => {
     'female', 'male', 'youth', 'middle', 'slim', 'average', 'curvy',
     'marketing', 'beauty', 'podcast', 'gaming', 'education', 'lifestyle',
     'car', 'living', 'bedroom', 'outdoor', 'bathroom', 'office', 'kitchen', 'cafe', 'indoor',
+    'podcast_studio',
     'frontal', 'sitting', 'selfie', 'standing',
     'casual', 'fashion', 'business', 'holiday',
   ]
@@ -230,5 +274,14 @@ describe('The filter bar is wired to the feed, not to a local counter', () => {
     assert.match(feed, /setFilters\(emptyCharacterFilters\(\)\)/)
     assert.match(feed, /const selectDimension = useCallback/)
     assert.match(feed, /const resetDimensions = useCallback/)
+  })
+
+  it('carries the selection into the search request, on the first search and on later pages', () => {
+    // A search used to send only the needle and the category, so picking 女性 and
+    // then searching a male name still answered with male rows.
+    assert.equal((feed.match(/dims: filterTokens,/g) ?? []).length, 2)
+    assert.match(feed, /\[queryApplied, open, category, subCategory, filterTokens, manifest, t\]/)
+    assert.match(api, /for \(const token of query\.dims \?\? \[\]\) params\.append\('dims', token\)/)
+    assert.match(api, /@param \{\{ q: string, category\?: string, subCategory\?: string, dims\?: string\[\]/)
   })
 })
