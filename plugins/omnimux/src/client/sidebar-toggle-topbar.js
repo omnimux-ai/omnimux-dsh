@@ -456,6 +456,8 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
   root.style.setProperty('--omnimux-topbar-toggle-top', `${top}px`)
   root.style.setProperty('--omnimux-topbar-toggle-end', `${end}px`)
   root.style.setProperty('--omnimux-tabbar-pad-left', `${Math.max(0, Math.round(tabPad))}px`)
+  const sidebarWidth = layout.collapsed ? 0 : Math.max(0, layout.leftRailW || 280)
+  root.style.setProperty('--omnimux-sidebar-width', `${sidebarWidth}px`)
   syncTopbarTabClearance(doc)
   if (typeof newSessionLeft === 'number') {
     root.style.setProperty('--omnimux-topbar-new-session-left', `${newSessionLeft}px`)
@@ -599,32 +601,89 @@ function hideOriginalToggle(doc) {
 
 const RIGHTBAR_CHROME_STYLES_ID = 'omnimux-rightbar-chrome-styles'
 const RIGHTBAR_CHROME_STYLES = `
-/* 1. 修复创作画布等 Tab 标题文字被官方右侧 mask-image 渐变遮罩虚化截断（“创作画布”变“创作画x”） */
+/* 1. 修复创作画布等 Tab 标题文字被关闭按钮“x”遮挡及官方 mask-image 遮罩虚化截断 */
 [data-dockkit-strip] [data-dockkit-tab-title],
 [class*="_tabTitle_"] {
   width: auto !important;
   min-width: max-content !important;
-  max-width: 220px !important;
+  max-width: 200px !important;
+  margin-right: 6px !important;
+  padding-right: 0 !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
   overflow: visible !important;
   white-space: nowrap !important;
 }
 
-/* 2. 确保 Tab 按钮内留出合理宽度展示图标、文字与关闭 x */
+/* 2. 确保 Tab 容器留足右侧关闭按钮空间与最小呼吸留白 */
 [data-dockkit-tab],
 [class*="_tab_17p4l"] {
-  min-width: 120px !important;
-  max-width: 220px !important;
-  padding-right: 8px !important;
+  min-width: max-content !important;
+  padding-right: 28px !important;
+  position: relative !important;
 }
 
-/* 3. 增强原生右上角按钮无拖拽穿透与交互 */
+/* 3. 关闭按钮绝对定位居右并垂直居中，绝不压在标题字上 */
+[data-dockkit-tab-close],
+[class*="_tabClose_"] {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2 !important;
+}
+
+/* 4. 增强原生右上角按钮无拖拽穿透与交互 */
 button[data-dockkit-split-button],
 button[data-sidebar-right-mode],
 button[data-sidebar-right-toggle],
 button[data-sidebar-right-expand] {
   -webkit-app-region: no-drag !important;
+}
+
+/* 5. 右侧侧边栏全屏业务逻辑重构：工作区级铺满，与左侧侧边栏解耦联动 */
+/* 5.1 默认全屏态（左侧侧边栏展开时）：只铺满右侧主区域，完整保留左侧侧边栏 */
+[data-sidebar-right-panel="fullscreen"],
+[class*="_panel"][data-sidebar-right-panel="fullscreen"] {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  left: var(--omnimux-sidebar-width, 280px) !important;
+  width: calc(100vw - var(--omnimux-sidebar-width, 280px)) !important;
+  z-index: 30 !important;
+  border-left: 0.5px solid var(--dsw-alias-border-l4) !important;
+  transition: left var(--ds-transition-duration-normal, 0.2s) ease,
+              width var(--ds-transition-duration-normal, 0.2s) ease !important;
+}
+
+/* 5.2 真正的全屏态（左侧侧边栏折叠/隐藏时）：铺满整个 100vw 视口 */
+html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"],
+html[data-omnimux-left-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"],
+.dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"],
+.dshDesktopFrame[data-sidebar-collapsed] [class*="_panel"][data-sidebar-right-panel="fullscreen"] {
+  left: 0 !important;
+  width: 100vw !important;
+  border-left: none !important;
+}
+
+/* 5.3 确保左侧侧边栏在层级上始终置顶并可完全交互 */
+.dshDesktopSidebarSurface,
+[class*="sidebarCol"],
+[data-pane="sidebar"] {
+  z-index: 35 !important;
+  position: relative !important;
+}
+
+/* 5.4 macOS 桌面端在全屏且左侧收起时，给顶栏 strip 预留 84px 避让窗口交通灯 */
+body[data-dsh-desktop-platform="darwin"] html[data-omnimux-left-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip],
+body[data-dsh-desktop-platform="darwin"] .dshDesktopFrame[data-sidebar-collapsed] [data-sidebar-right-panel="fullscreen"] [data-dockkit-strip] {
+  padding-left: 84px !important;
 }
 `
 
@@ -656,11 +715,13 @@ export function syncNativeRightbarControls(doc) {
   // 2. 注入全局样式补丁（修复 Tab 标题文字遮挡）
   ensureRightbarChromeStyles(doc)
 
-  // 3. 全屏按钮迁移到左侧，顺序变为：全屏 ｜ 分栏 ｜ 侧边栏
+  // 3. 全屏按钮迁移到左侧，顺序变为：全屏 ｜ 分栏 ｜ 侧边栏（兼容全屏与退出全屏两种状态）
   const splitBtn = doc.querySelector('button[data-dockkit-split-button], button[aria-label="分栏"]')
-  const fsBtn = doc.querySelector('button[data-sidebar-right-mode="fullscreen"], button[aria-label="全屏"]')
+  const fsBtn = doc.querySelector('button[data-sidebar-right-mode], button[aria-label="全屏"], button[aria-label="退出全屏"]')
   if (splitBtn && fsBtn && splitBtn.parentElement) {
-    if (splitBtn.compareDocumentPosition(fsBtn) & Node.DOCUMENT_POSITION_FOLLOWING) {
+    const NodeClass = doc.defaultView?.Node || (typeof Node !== 'undefined' ? Node : null)
+    const following = NodeClass?.DOCUMENT_POSITION_FOLLOWING ?? 4
+    if (splitBtn.compareDocumentPosition(fsBtn) & following) {
       try {
         splitBtn.before(fsBtn)
       } catch {

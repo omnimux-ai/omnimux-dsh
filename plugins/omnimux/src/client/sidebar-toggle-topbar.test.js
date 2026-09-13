@@ -28,6 +28,7 @@ import {
   isLeftSidebarCollapsed,
   setExplicitLeftCollapseIntent,
   syncLeftCollapsedHtmlAttr,
+  syncNativeRightbarControls,
   syncTopbarTabClearance,
 } from './sidebar-toggle-topbar.js'
 import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
@@ -684,6 +685,62 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
     assert.match(PRODUCT_STAGE_CHROME, /::after/)
     assert.match(PRODUCT_STAGE_CHROME, /--dsw-alias-/)
     assert.doesNotMatch(PRODUCT_STAGE_CHROME, /#[0-9a-fA-F]{3,8}\b/)
+  })
+
+  it('sets --omnimux-sidebar-width reflecting collapsed vs expanded rail', () => {
+    const doc = setup()
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '0px')
+
+    doc.querySelector('[data-sidebar-collapsed]')?.removeAttribute('data-sidebar-collapsed')
+    const col = doc.querySelector('[class*="sidebarCol"]')
+    Object.defineProperty(col, 'offsetWidth', { value: 310, configurable: true })
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '310px')
+  })
+
+  it('ensures rightbar chrome styles refactor fullscreen to occupy right workspace without obscuring sidebar', () => {
+    const doc = setup()
+    syncNativeRightbarControls(doc)
+    const style = doc.getElementById('omnimux-rightbar-chrome-styles')
+    assert.ok(style, 'style element must exist')
+    const css = style.textContent
+
+    // 1. Tab title & close button ergonomics
+    assert.match(css, /\[data-dockkit-tab-close\]/)
+    assert.match(css, /right:\s*6px\s*!important/)
+    assert.match(css, /padding-right:\s*28px\s*!important/)
+
+    // 2. Fullscreen mode anchors to sidebar width when expanded
+    assert.match(css, /\[data-sidebar-right-panel="fullscreen"\]/)
+    assert.match(css, /left:\s*var\(--omnimux-sidebar-width,\s*280px\)\s*!important/)
+    assert.match(css, /width:\s*calc\(100vw\s*-\s*var\(--omnimux-sidebar-width,\s*280px\)\)\s*!important/)
+
+    // 3. Fullscreen mode expands to true full viewport when left sidebar is collapsed
+    assert.match(css, /html\[data-omnimux-left-collapsed\]\s+\[data-sidebar-right-panel="fullscreen"\]/)
+    assert.match(css, /left:\s*0\s*!important/)
+    assert.match(css, /width:\s*100vw\s*!important/)
+
+    // 4. Sidebar surface remains raised above fullscreen panel
+    assert.match(css, /\.dshDesktopSidebarSurface/)
+    assert.match(css, /z-index:\s*35\s*!important/)
+
+    // 5. macOS traffic lights safe inset when collapsed + fullscreen
+    assert.match(css, /padding-left:\s*84px\s*!important/)
+  })
+
+  it('syncNativeRightbarControls orders fullscreen before split in both fullscreen and push mode', () => {
+    const doc = setup(`<!doctype html><html><body>
+      <div data-dockkit-strip-chrome="true">
+        <button data-dockkit-split-button="true" aria-label="分栏">Split</button>
+        <button data-sidebar-right-mode="push" aria-label="退出全屏">ExitFS</button>
+      </div>
+    </body></html>`)
+    syncNativeRightbarControls(doc)
+    const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"]')
+    const buttons = Array.from(chrome.querySelectorAll('button'))
+    assert.equal(buttons[0].getAttribute('data-sidebar-right-mode'), 'push')
+    assert.equal(buttons[1].getAttribute('data-dockkit-split-button'), 'true')
   })
 })
 
