@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, Divider, DropdownSelect, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
@@ -7,6 +7,8 @@ import { AssetGrid } from './AssetGrid.jsx'
 import { AssetDetail } from './AssetDetail.jsx'
 import { AssetPreviewModal } from './AssetPreviewModal.jsx'
 import { CloudAssetsView } from './CloudAssetsView.jsx'
+import { cloudAssetToPreviewItem } from './cloud-preview.js'
+import { useCloudSave } from './use-cloud-save.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
@@ -228,7 +230,7 @@ function AssetsMainView(props) {
 }
 
 function AssetsBody(props) {
-  const { t, feed, emptyProps, onPreview, sourceTab, visible } = props
+  const { t, feed, emptyProps, onPreview, onCloudPreview, cloudSave, sourceTab, visible } = props
   const onOpenAdd = () => {
     feed.setCreating(feed.filterType || 'character')
     feed.setFormError('')
@@ -237,10 +239,12 @@ function AssetsBody(props) {
   if (sourceTab === 'cloud') {
     // Mounted only while the cloud tab is selected: leaving it unmounts the
     // feed, which is what stops an in-flight audition and releases its audio.
+    // The save controller outlives the tab, so a row saved here stays marked
+    // 已收藏 when the user comes back to the cloud list.
     return (
       <div className="omnimux-assets-body">
         <div className="omnimux-assets-main">
-          <CloudAssetsView t={t} open={visible} />
+          <CloudAssetsView t={t} open={visible} onPreview={onCloudPreview} save={cloudSave} />
         </div>
       </div>
     )
@@ -323,6 +327,9 @@ function AssetsDialogs(props) {
 export function AssetsStage(props) {
   const { t, stage, store, visible = true } = props
   const [previewTarget, setPreviewTarget] = useState(null)
+  // One save controller for the whole stage: the cloud cards and the preview
+  // modal share it, so a row saved from either one is marked in both.
+  const cloudSave = useCloudSave({ t })
   useEffect(() => { injectAssetsStyles() }, [])
   const everOpened = true
 
@@ -336,6 +343,22 @@ export function AssetsStage(props) {
   const feed = useAssetsFeed({ t, open: visible })
   const emptyProps = computeEmptyState(feed.filterType, feed.query, t)
   const [sourceTab, setSourceTab] = useState('local')
+
+  // A cloud row has no library record behind it, so opening its preview means
+  // translating the catalog row first — and the translation remembers the row
+  // id, which is what the modal's save needs.
+  const openCloudPreview = useCallback((asset) => {
+    const next = cloudAssetToPreviewItem(asset)
+    if (next) setPreviewTarget(next)
+  }, [])
+
+  const savePreviewItem = useCallback((item) => {
+    const id = String(item?.sourceAssetId ?? '')
+    if (id === '') return
+    void cloudSave.save({ id, name: String(item?.title ?? '') })
+  }, [cloudSave])
+
+  const previewCloudId = previewTarget?.cloud === true ? String(previewTarget.sourceAssetId ?? '') : ''
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
@@ -371,13 +394,25 @@ export function AssetsStage(props) {
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
-      <AssetsBody t={t} feed={feed} emptyProps={emptyProps} onPreview={setPreviewTarget} sourceTab={sourceTab} visible={visible} />
+      <AssetsBody
+        t={t}
+        feed={feed}
+        emptyProps={emptyProps}
+        onPreview={setPreviewTarget}
+        onCloudPreview={openCloudPreview}
+        cloudSave={cloudSave}
+        sourceTab={sourceTab}
+        visible={visible}
+      />
       <AssetsDialogs t={t} feed={feed} />
       {previewTarget && (
         <AssetPreviewModal
           item={previewTarget}
           t={t}
           onClose={() => setPreviewTarget(null)}
+          saved={previewCloudId !== '' && cloudSave.savedIds.has(previewCloudId)}
+          saving={previewCloudId !== '' && cloudSave.savingId === previewCloudId}
+          onSaveToLocal={previewCloudId !== '' ? savePreviewItem : undefined}
         />
       )}
     </div>

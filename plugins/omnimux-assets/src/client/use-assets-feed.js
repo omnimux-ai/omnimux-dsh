@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createAsset, deleteAsset, getState, pickPath, updateAsset } from './api.js'
+import { subscribeAssetsChanged } from './assets-events.js'
 import {
   citeOf,
   cleanRemovedSelection,
@@ -11,6 +12,13 @@ import {
 } from './feed-helpers.js'
 
 export const POLL_MS = 5000
+
+/**
+ * Coalescing window for the change signal. The cloud tab's save announces itself
+ * on the window and the Hub's bus relays the same event over its socket, so both
+ * usually arrive within a few milliseconds of each other; one read is enough.
+ */
+export const REFRESH_GUARD_MS = 250
 
 function resolveRevsArgs(current, force) {
   if (force) return { lrev: undefined, arev: undefined }
@@ -149,6 +157,13 @@ function useFeedPolling(open, refreshState) {
 
     const hubEvents = typeof window !== 'undefined' ? window.__omnimuxHubEvents : undefined
     let timer = null
+    let lastRefresh = 0
+    const refreshNow = () => {
+      const now = Date.now()
+      if (now - lastRefresh < REFRESH_GUARD_MS) return
+      lastRefresh = now
+      void refreshState(true)
+    }
     const startPoll = () => {
       if (!timer) timer = setInterval(() => { void refreshState() }, POLL_MS)
     }
@@ -165,7 +180,7 @@ function useFeedPolling(open, refreshState) {
 
     const unsub = hubEvents?.subscribe?.('*', (ev) => {
       if (ev.type === 'omnimux:assets:changed') {
-        void refreshState(true)
+        refreshNow()
       } else if (ev.type === 'omnimux:connected' || ev.type === 'omnimux:heartbeat') {
         stopPoll()
       } else if (ev.type === 'omnimux:disconnected' || ev.type === 'omnimux:silence') {
@@ -173,8 +188,14 @@ function useFeedPolling(open, refreshState) {
       }
     })
 
+    // The other half of the cloud -> local bridge: the cloud tab copies a row
+    // into this library and says so on the window, so the grid under 本地 is
+    // already fresh when the user switches to it.
+    const unsubscribe = subscribeAssetsChanged({ handler: refreshNow })
+
     return () => {
       stopPoll()
+      unsubscribe()
       if (typeof unsub === 'function') unsub()
     }
   }, [open, refreshState])

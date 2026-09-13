@@ -654,6 +654,30 @@ export const ASSETS_CSS = `
   background: var(--dsw-alias-bg-module-platform);
   display: block;
 }
+/* A voice has no picture to zoom, so the preview gives it the widest player the
+   dialog can hold without stretching the transport controls. */
+.omnimux-assets-modal-audio {
+  width: min(420px, 100%);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-module-platform);
+}
+/* A text asset is read, not zoomed: the body scrolls instead of the dialog. */
+.omnimux-assets-modal-text-wrap {
+  width: 100%;
+  height: 100%;
+  max-height: calc(85vh - 120px);
+  overflow-y: auto;
+  padding: 4px 20px 20px;
+  box-sizing: border-box;
+}
+.omnimux-assets-modal-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 21px;
+  color: var(--dsw-alias-label-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .omnimux-assets-modal-unsupported {
   display: flex;
   flex-direction: column;
@@ -711,6 +735,14 @@ export const ASSETS_CSS = `
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* The modal's half of the cloud -> local bridge. The scoped selector is what
+   outranks the kit's own outline-button rule; 已收藏 then reads as a filled
+   plate, so a reopened preview still shows the row as done. */
+.omnimux-assets-modal-actions .omnimux-assets-modal-save[aria-pressed="true"] {
+  background: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
 }
 .omnimux-assets-file-table, .omnimux-assets-artifact-table {
   width: 100%;
@@ -826,9 +858,11 @@ export const ASSETS_CSS = `
 }
 /* Fixed ratio per media type: the tile reserves its box before the image
    arrives, so paging never shifts the grid under the pointer. */
+/* Every part of the card opens the preview, so the pointer says so. A voice
+   card overrides this on its own thumbnail, which plays instead. */
 .omnimux-assets-cloud-card {
   position: relative;
-  cursor: default;
+  cursor: pointer;
 }
 .omnimux-assets-cloud-card .omnimux-assets-cloud-thumb--action {
   cursor: pointer;
@@ -876,13 +910,20 @@ export const ASSETS_CSS = `
   color: var(--dsw-alias-label-primary-foreground);
   pointer-events: none;
 }
-/* Top-right "add to the conversation". Hidden until the card is hovered or
-   holds focus, then a neutral plate that inverts to ink under the pointer. */
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat {
+/* Top-right hover controls: one mounts the asset into the conversation, the
+   other copies it into the local library. Both are neutral plates that invert
+   to ink under the pointer; neither carries a hue of its own. */
+.omnimux-assets-cloud-card .omnimux-assets-cloud-actions {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat,
+.omnimux-assets-cloud-card .omnimux-assets-cloud-save {
   border-radius: 8px;
   background: var(--dsw-alias-bg-elevated);
   border-color: var(--dsw-alias-border-l2);
@@ -890,10 +931,21 @@ export const ASSETS_CSS = `
   opacity: 0;
 }
 .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-chat,
-.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat {
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat,
+.omnimux-assets-cloud-card:hover .omnimux-assets-cloud-save,
+.omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-save {
   opacity: 1;
 }
-.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]) {
+.omnimux-assets-cloud-card .omnimux-assets-cloud-chat:hover:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-cloud-card .omnimux-assets-cloud-save:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+/* Saved is a state, not a hover: the inked plate and its check stay on screen
+   after the pointer leaves, so the card still reports 已收藏 at rest. */
+.omnimux-assets-cloud-card .omnimux-assets-cloud-save[aria-pressed="true"] {
+  opacity: 1;
   background: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-label-primary-foreground);
