@@ -113,6 +113,29 @@ function parseCategory(raw) {
 }
 
 /**
+ * 双语字段长度上限。**必须与 `src/skill-bilingual.ts` 的同名常量一致**，
+ * 由 `src/tests/skill-bilingual.test.ts` 的漂移断言守卫。
+ * 本层不得反向 import TS 模块：`src/expert/*.test.js` 会源码直跑，
+ * 而 `src/skill-bilingual.js` 在源码目录并不存在（须经 tsc 产出）。
+ */
+export const SKILL_BILINGUAL_LIMITS = Object.freeze({ titleZh: 80, titleEn: 80, summaryZh: 200, summaryEn: 200 })
+
+/**
+ * 双语字段投影：trim + 长度裁剪，**不设语言回退**（缺失即空串）。
+ * 空串是有意义信号：表示该条目未入库双语，工坊准入门禁据此拒绝该条目。
+ * 本层只做投影，不做判定——判据真源是 `src/skill-bilingual.ts` 的 `checkSkillBilingual`。
+ * @param {Record<string, unknown>} row
+ */
+function parseBilingual(row) {
+  const out = {}
+  for (const field of Object.keys(SKILL_BILINGUAL_LIMITS)) {
+    const value = row[field]
+    out[field] = typeof value === 'string' ? value.trim().slice(0, SKILL_BILINGUAL_LIMITS[field]) : ''
+  }
+  return out
+}
+
+/**
  * @param {unknown} raw
  */
 function parseItem(raw) {
@@ -132,7 +155,8 @@ function parseItem(raw) {
   if (!ID.test(category)) throw new Error(`catalog: item ${id} bad category`)
   const subtitle = typeof row.subtitle === 'string' ? row.subtitle.trim().slice(0, 24) : ''
   const avatar = parseAvatar(row.avatar)
-  const tags = Array.isArray(row.tags) ? row.tags.map(String).slice(0, 6) : []
+  // 上限只防脏数据撑爆卡片；目录最长条目 7 个标签，取 8 以免**静默截断**掉领域标签。
+  const tags = Array.isArray(row.tags) ? row.tags.map(String).slice(0, 8) : []
   const skill = typeof row.skill === 'string' && ID.test(row.skill) ? row.skill : undefined
   const serverName = typeof row.serverName === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(row.serverName)
     ? row.serverName
@@ -150,6 +174,7 @@ function parseItem(raw) {
   if (kind === 'skill' && tab === 'skills') {
     return {
       ...item,
+      ...parseBilingual(row),
       recommended: Object.hasOwn(row, 'recommended') && row.recommended === true,
       cover: parseSkillCover(row.cover),
       downloads: typeof row.downloads === 'number' && Number.isSafeInteger(row.downloads) && row.downloads >= 0

@@ -23,6 +23,31 @@ export interface CatalogSkillItem {
   updatedAt?: string | null
   publishedAt?: string | null
   version?: string | null
+  /** 双语真源投影（可选：155 项遗留技能没有）。判据见 skill-bilingual.ts。 */
+  titleZh?: string
+  titleEn?: string
+  summaryZh?: string
+  summaryEn?: string
+}
+
+/**
+ * 技能双语字段域。官方货架条目投影后 4 字段恒为 `string`（缺失即 `''`）；
+ * 声明为可选以兼容历史快照、远程候选行与库存适配器。
+ */
+export interface BilingualSkillFields {
+  titleZh?: string
+  titleEn?: string
+  summaryZh?: string
+  summaryEn?: string
+}
+
+/** 运行时准入门禁的审计摘要：写进快照，便于区分「没跑门禁」与「全部通过」。 */
+export interface AdmissionSummary {
+  /** 本次快照是否真的执行过门禁（无官方货架条目时为 false）。 */
+  enforced: boolean
+  skippedCount: number
+  /** 被拒条目 id，升序，最多保留 50 条；超出部分只计 skippedCount。 */
+  skippedIds: string[]
 }
 
 export interface CatalogDoc {
@@ -38,7 +63,7 @@ export type SourceRef =
   | { kind: 'skillhub'; identity: string; version: string | null }
   | { kind: 'local'; contentHash: string }
 
-export interface WorkshopSkill {
+export interface WorkshopSkill extends BilingualSkillFields {
   skillKey: string
   token: string
   title: string
@@ -120,6 +145,8 @@ export interface WorkshopQueryResult {
   sortScope: 'complete-result' | 'loaded-result'
   nextCursor: string | null
   sourceStatus: SourceStatus[]
+  /** 可选：老快照/老客户端不认该字段，`isWorkshopResponseApplicable` 不校验它。 */
+  admission?: AdmissionSummary
 }
 
 export interface FetchOptions {
@@ -187,7 +214,7 @@ export interface SkillIntegrity {
   signature?: string
 }
 
-export interface SkillCard {
+export interface SkillCard extends BilingualSkillFields {
   id: string
   slug: string
   name: string

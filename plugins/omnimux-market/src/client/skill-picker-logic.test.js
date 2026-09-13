@@ -32,6 +32,8 @@ import {
   resolveActivePreset,
   filterPresetSkills,
   plazaDiscoverySections,
+  skillDesc,
+  skillTitle,
 } from './skill-picker-logic.js'
 
 describe('skill shelf taxonomy', () => {
@@ -549,5 +551,58 @@ describe('agent preset skill bindings', () => {
     assert.ok(regularNames.has('2D动画半解说短剧'))
     assert.ok(regularNames.has('分镜板'))
     assert.ok(regular.length >= 80, `MiniMax Design video skills should be populated, got ${regular.length}`)
+  })
+})
+
+describe('skill bilingual selection (skillTitle/skillDesc)', () => {
+  const bilingual = {
+    slug: 'demo-skill',
+    id: 'sk-omx-demo-skill',
+    name: '中文标题',
+    title: '中文标题',
+    description: '中文摘要',
+    summary: '中文摘要',
+    titleZh: '中文标题',
+    titleEn: 'English title',
+    summaryZh: '中文摘要',
+    summaryEn: 'English summary',
+  }
+  const dict = {
+    locale: 'zh',
+    'skill.name.some-key': '字典标题',
+    'skill.desc.some-key': '字典摘要',
+  }
+  const tr = (locale, extra = {}) => {
+    const table = { ...dict, ...extra, locale }
+    return (key) => (Object.prototype.hasOwnProperty.call(table, key) ? table[key] : key)
+  }
+
+  it('picks the EN fields under locale en and the ZH fields under locale zh', () => {
+    assert.equal(skillTitle(bilingual, tr('en')), 'English title')
+    assert.equal(skillDesc(bilingual, tr('en')), 'English summary')
+    assert.equal(skillTitle(bilingual, tr('zh')), '中文标题')
+    assert.equal(skillDesc(bilingual, tr('zh')), '中文摘要')
+  })
+
+  it('keeps the i18n dictionary ahead of the catalog fields', () => {
+    const item = { ...bilingual, slug: 'some-key', skill: 'some-key' }
+    assert.equal(skillTitle(item, tr('en')), '字典标题')
+    assert.equal(skillDesc(item, tr('en')), '字典摘要')
+    assert.equal(skillTitle(item, tr('zh')), '字典标题')
+  })
+
+  it('falls back to the single-language fields, then the slug, when bilingual is absent', () => {
+    const legacy = { slug: 'legacy-skill', name: '中文标题', description: '中文摘要' }
+    assert.equal(skillTitle(legacy, tr('en')), '中文标题')
+    assert.equal(skillDesc(legacy, tr('en')), '中文摘要')
+    assert.equal(skillTitle({ slug: 'bare-skill' }, tr('en')), 'bare-skill')
+    assert.equal(skillDesc({ slug: 'bare-skill' }, tr('en')), '')
+  })
+
+  it('without a translator, zh is the default selection (no document in node)', () => {
+    assert.equal(skillTitle(bilingual), '中文标题')
+    assert.equal(skillDesc(bilingual), '中文摘要')
+    assert.equal(skillTitle(null), '')
+    assert.equal(skillDesc(null), '')
   })
 })

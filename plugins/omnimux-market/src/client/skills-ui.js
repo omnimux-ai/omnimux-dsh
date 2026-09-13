@@ -24,6 +24,12 @@
             item.downloads ? tr("meta.downloads", { n: fmt(item.downloads, tr) }) : null,
             item.version ? "v" + item.version : null,
           ].filter(Boolean).join(" · ");
+          const rawTitle = typeof skillTitle === "function" ? skillTitle(item, tr) : (item.name || item.slug);
+          const title = rawTitle && typeof rawTitle === "object"
+            ? (rawTitle.name || rawTitle.title || item.slug || "")
+            : String(rawTitle || item.slug || "");
+          const rawDesc = typeof skillDesc === "function" ? skillDesc(item, tr) : (item.description || item.summary);
+          const desc = rawDesc && typeof rawDesc === "object" ? "" : String(rawDesc || "");
           return h(
             Button,
             {
@@ -36,10 +42,10 @@
             h(Icon, { item, className: "sh-icon" }),
             h("div", { className: "sh-meta" },
               h("div", { className: "sh-top" },
-                h("div", { className: "sh-title", title: item.name }, item.name),
+                h("div", { className: "sh-title", title }, title),
                 item.installed ? h("span", { className: "sh-badge" }, tr("badge.installed")) : null,
               ),
-              item.description ? h("div", { className: "sh-desc" }, item.description) : null,
+              desc ? h("div", { className: "sh-desc" }, desc) : null,
               h("div", { className: "sh-footline" }, meta || item.slug),
             ),
           );

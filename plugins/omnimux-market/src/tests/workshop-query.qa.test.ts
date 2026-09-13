@@ -17,6 +17,8 @@ function catalogItem(token: string, extra: Partial<CatalogSkillItem> = {}): Cata
   return {
     id: `sk-omx-${token}`, tab: 'skills', kind: 'skill', skill: token, title: token,
     summary: '动画 fixture', category: 'sk-visual', tags: ['动画'],
+    titleZh: `中文标题 ${token}`, titleEn: `English title ${token}`,
+    summaryZh: `中文摘要 ${token}`, summaryEn: `English summary ${token}`,
     source: { type: 'bundled', path: `catalog/skills/${token}` }, ...extra,
   }
 }

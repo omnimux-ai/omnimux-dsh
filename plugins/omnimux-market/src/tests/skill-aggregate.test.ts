@@ -4,13 +4,14 @@ import { loadCatalog } from '../expert/catalog.js'
 import { withDefaults } from '../config-store.js'
 import {
   aggregateSkillSearch,
+  catalogItemToCard,
   catalogSkillChannel,
   catalogSkillSlug,
   findCatalogSkill,
   scoreCatalogSkill,
   tokenizeSkillQuery,
 } from '../skill-aggregate.js'
-import type { PluginConfig, SearchResult, SkillCard } from '../types.js'
+import type { CatalogSkillItem, PluginConfig, SearchResult, SkillCard } from '../types.js'
 
 function cfg(): PluginConfig {
   return withDefaults({ skillsDir: '/tmp/omnimux-market-no-skills', timeoutMs: 5000, userAgent: 't' })
@@ -274,4 +275,58 @@ test('live catalog still exposes face-warp as custom', async () => {
     channels: ['custom', 'workbuddy'],
   })
   assert.equal(result.items.some((it) => it.slug === 'face-warp' && it.channel === 'custom'), true)
+})
+
+// ---------------------------------------------------------------------------
+// T03 · 卡片投影双语携带（仅门禁通过时外流，name/description 语义不变）
+// ---------------------------------------------------------------------------
+
+function cardFor(partial: Record<string, unknown>): SkillCard {
+  const row = catalogItem({ id: 'sk-omx-demo-skill', skill: 'demo-skill', title: '中文标题', summary: '中文摘要', ...partial })
+  return catalogItemToCard(row as unknown as CatalogSkillItem, 'custom', cfg())
+}
+
+test('T03-01：双语齐备时卡片携带 4 字段，name/description 与 slug 语义不变', () => {
+  const card = cardFor({ titleZh: '中文标题', titleEn: 'English title', summaryZh: '中文摘要', summaryEn: 'English summary' })
+  assert.equal(card.titleZh, '中文标题')
+  assert.equal(card.titleEn, 'English title')
+  assert.equal(card.summaryZh, '中文摘要')
+  assert.equal(card.summaryEn, 'English summary')
+  assert.equal(card.name, '中文标题')
+  assert.equal(card.description, '中文摘要')
+  assert.equal(card.slug, 'demo-skill')
+  assert.equal(card.catalogId, 'sk-omx-demo-skill')
+  assert.equal(card.channel, 'custom')
+})
+
+test('T03-02：缺任一字段时卡片完全不携带双语（半截数据不得外流）', () => {
+  const card = cardFor({ titleZh: '中文标题', titleEn: 'English title', summaryZh: '中文摘要' })
+  assert.equal('titleZh' in card, false)
+  assert.equal('titleEn' in card, false)
+  assert.equal('summaryZh' in card, false)
+  assert.equal('summaryEn' in card, false)
+  assert.equal(card.name, '中文标题')
+  assert.equal(card.description, '中文摘要')
+})
+
+test('T03-03：空白串同样视为缺失，绝不把 title 回填进英文字段', () => {
+  const card = cardFor({ titleEn: '   ', summaryEn: '\n', titleZh: '中文标题', summaryZh: '中文摘要' })
+  assert.equal('titleEn' in card, false)
+  assert.equal('titleEn' in card ? card.titleEn : 'absent', 'absent')
+})
+
+test('T03-04：真实目录 69 项官方货架技能投影出的卡片全部携带双语', () => {
+  const doc = loadCatalog()
+  const cards = (doc.items as unknown as CatalogSkillItem[])
+    .filter((item) => item.kind === 'skill' && item.tab === 'skills' && item.recommended === true)
+    .map((item) => catalogItemToCard(item, 'custom', cfg()))
+  assert.equal(cards.length, 69)
+  const missing = cards
+    .filter((card) => !card.titleZh || !card.titleEn || !card.summaryZh || !card.summaryEn)
+    .map((card) => card.slug)
+  assert.deepEqual(missing, [])
+  const sample = cards.find((card) => card.slug === '3d-animation-short-generator')
+  assert.ok(sample)
+  assert.equal(sample!.titleZh, '3D动画短片')
+  assert.ok(sample!.titleEn && sample!.titleEn !== sample!.titleZh)
 })

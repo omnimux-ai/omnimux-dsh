@@ -1568,6 +1568,8 @@
       "summaryEn": "TikTok viral video, material, hook and CTA breakdown.",
       "category": "sk-video",
       "tags": [
+        "电商",
+        "商业广告",
         "TikTok",
         "视频",
         "素材拆解",
@@ -1619,6 +1621,8 @@
       "summaryEn": "TikTok UGC, creator, ad and live script generation.",
       "category": "sk-video",
       "tags": [
+        "电商",
+        "商业广告",
         "TikTok",
         "脚本创作",
         "UGC",
@@ -1645,6 +1649,7 @@
       "summaryEn": "Trigger this skill whenever the user expresses any intent to create video content, such as generating videos or editing on canvas.",
       "category": "sk-video",
       "tags": [
+        "平台工具",
         "视频",
         "画布",
         "视频生成",

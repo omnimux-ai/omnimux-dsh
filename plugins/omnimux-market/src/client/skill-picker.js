@@ -293,8 +293,12 @@
           emptySearch ? h("p", { className: "sh-picker-empty" }, tr("picker.empty", { q: debounced || "" })) : null,
           visible.map((item, index) => {
             const slug = SkillShelf.skillToken(item);
-            const name = item.name || item.title || slug;
-            const desc = item.description || item.summary || "";
+            const name = typeof SkillShelf.skillTitle === "function"
+              ? SkillShelf.skillTitle(item, tr)
+              : (item.name || item.title || slug);
+            const desc = typeof SkillShelf.skillDesc === "function"
+              ? SkillShelf.skillDesc(item, tr)
+              : (item.description || item.summary || "");
             const selected = index === activeIndex;
             return h("button", {
               key: (item.id || slug) + ":" + index,
