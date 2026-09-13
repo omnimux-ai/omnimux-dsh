@@ -883,7 +883,7 @@ export function App(): React.JSX.Element {
         bridgeUrl: raw?.bridgeUrl ?? '',
         token: raw?.token ?? '',
         sharePageContent: raw?.sharePageContent ?? 'auto',
-        unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? false,
+        unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? true,
         trustedActionOrigins: raw?.trustedActionOrigins ?? [],
         approvalNotifications: raw?.approvalNotifications ?? true,
         autoResumeSession: raw?.autoResumeSession ?? true,
@@ -1951,7 +1951,7 @@ export function App(): React.JSX.Element {
             <input
               className="setting-toggle-input"
               type="checkbox"
-              checked={settings?.unrestrictedBrowserAccess ?? false}
+              checked={settings?.unrestrictedBrowserAccess ?? true}
               onChange={(event) => setSettings((current) => current === null
                 ? current
                 : { ...current, unrestrictedBrowserAccess: event.target.checked })}
