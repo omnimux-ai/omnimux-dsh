@@ -10,7 +10,10 @@ import {
   FlameIcon,
   ChartIcon,
   ZapIcon,
-  VideoIcon
+  VideoIcon,
+  LightbulbIcon,
+  ScissorsIcon,
+  RetweetIcon
 } from './icons.tsx'
 
 export interface PresetChipItem {
@@ -27,52 +30,42 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     {
       id: 'tw_high_reply',
       icon: RocketIcon,
-      labelZh: '高赞神评截流',
-      labelEn: 'Viral Reply Hack',
+      labelZh: '高赞神评',
+      labelEn: 'Viral Reply',
       promptTemplateZh: (s) =>
-        `请针对当前推文${s.author ? `（作者：@${s.author}）` : ''}${s.postText ? `（内容：“${s.postText}”）` : ''}，运用高赞截流公式（信息增量 × 情绪共鸣 × 表达清晰度），撰写 3 条不同风格的优质评论（数据补充型、反向思考型、幽默共鸣型），语言接地气、不讲套话、坚决杜绝机械AI味。`,
+        `请针对当前推文${s.author ? `（作者：@${s.author}）` : ''}${s.postText ? `（内容：“${s.postText}”）` : ''}，运用高赞截流公式（信息增量 × 情绪共鸣 × 表达清晰度），撰写 3 条不同风格的优质回复（数据补充型、反向思考型、幽默共鸣型），语言接地气、不讲套话、坚决杜绝机械AI味。`,
       promptTemplateEn: (s) =>
         `Please craft 3 high-impact, engaging replies to this tweet${s.author ? ` by @${s.author}` : ''}${s.postText ? `: "${s.postText}"` : ''}. Balance unique information value with emotional resonance. Concise, witty, and native-sounding without robotic AI tone.`
     },
     {
-      id: 'tw_threads',
-      icon: ThreadIcon,
-      labelZh: '推文转长贴串',
-      labelEn: 'Tweet to Threads',
+      id: 'tw_insight',
+      icon: LightbulbIcon,
+      labelZh: '干货洞察',
+      labelEn: 'Key Insights',
       promptTemplateZh: (s) =>
-        `请把当前推文${s.postText ? `（“${s.postText}”）` : ''}的核心观点拆解并扩写为 5~7 条深度 Twitter Threads 推文串。第一条给强钩子（Hook），中间层层展开干货与案例，最后一条做总结并引导转评互动。`,
+        `请深度提炼并补充当前推文${s.postText ? `（“${s.postText}”）` : ''}背后的行业干货与关键数据，给出独到的专业增量见解。`,
       promptTemplateEn: (s) =>
-        `Deconstruct and expand this tweet's core thesis${s.postText ? ` ("${s.postText}")` : ''} into a high-retention 5-7 post Twitter Threads. Start with a viral Hook, structure actionable steps and insights in the body, and close with a compelling CTA.`
+        `Extract deep industry insights and supplemental data for this tweet${s.postText ? ` ("${s.postText}")` : ''} with authoritative perspective.`
+    },
+    {
+      id: 'tw_rewrite',
+      icon: ScissorsIcon,
+      labelZh: '洗帖二创',
+      labelEn: 'Viral Rewrite',
+      promptTemplateZh: (s) =>
+        `请根据当前推文${s.postText ? `（“${s.postText}”）` : ''}的主题与逻辑骨架，结合最新全网视角，重构并改写为一篇文风鲜明、短句留白的原创爆款推文，严禁同质化抄袭感。`,
+      promptTemplateEn: (s) =>
+        `Rewrite and reframe this tweet's core angle${s.postText ? ` ("${s.postText}")` : ''} into a punchy, original viral post with high retention.`
     },
     {
       id: 'tw_quote_retweet',
-      icon: QuoteIcon,
-      labelZh: '中文引用转推',
+      icon: RetweetIcon,
+      labelZh: '引用转推',
       labelEn: 'Quote Retweet',
       promptTemplateZh: (s) =>
-        `请提炼当前推文${s.postText ? `（“${s.postText}”）` : ''}的核心爆点，撰写 3 条有深度、有独特见解的中文引用转推文案，每条提供独立信息增量。`,
+        `请提炼当前推文${s.postText ? `（“${s.postText}”）` : ''}的核心爆点，撰写 2 条有深度、有独特见解的引用转推文案。`,
       promptTemplateEn: (s) =>
-        `Synthesize the breakthrough insight of this tweet${s.postText ? ` ("${s.postText}")` : ''} and generate 3 thought-provoking quote retweets that add unique perspective and spark discussion.`
-    },
-    {
-      id: 'tw_en_reply',
-      icon: GlobeIcon,
-      labelZh: '出海地道英文回复',
-      labelEn: 'Native English Reply',
-      promptTemplateZh: (s) =>
-        `Please write 3 sharp, native-sounding English replies to this tweet${s.postText ? `: "${s.postText}"` : ''} from the perspective of a seasoned tech/AI practitioner. Crisp, insightful, and natural.`,
-      promptTemplateEn: (s) =>
-        `Write 3 sharp, insider-level replies to this tweet${s.postText ? `: "${s.postText}"` : ''} from the perspective of a Silicon Valley builder. Punchy, authentic, and discussion-driving.`
-    },
-    {
-      id: 'tw_witty_rebuttal',
-      icon: SparklesIcon,
-      labelZh: '幽默趣味反驳',
-      labelEn: 'Witty Counter',
-      promptTemplateZh: (s) =>
-        `针对当前推文${s.postText ? `（“${s.postText}”）` : ''}的观点，生成 2 条幽默风趣、逻辑严密的神评，化解争议并引爆前排互动。`,
-      promptTemplateEn: (s) =>
-        `Generate 2 witty, razor-sharp yet respectful counter-points to this tweet${s.postText ? ` ("${s.postText}")` : ''} that reframe the topic with clever humor.`
+        `Synthesize the breakthrough insight of this tweet${s.postText ? ` ("${s.postText}")` : ''} and generate 2 thought-provoking quote retweets.`
     }
   ],
   'twitter:profile': [

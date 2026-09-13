@@ -265,3 +265,87 @@ export function SidebarPanelIcon({ size = 13, className }: { size?: number; clas
     </SvgIcon>
   )
 }
+
+export function SaveIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <polyline points="17 21 17 13 7 13 7 21" />
+      <polyline points="7 3 7 8 15 8" />
+    </SvgIcon>
+  )
+}
+
+export function CopyIcon({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </SvgIcon>
+  )
+}
+
+export function EditIcon({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </SvgIcon>
+  )
+}
+
+export function LightbulbIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <line x1="9" y1="18" x2="15" y2="18" />
+      <line x1="10" y1="22" x2="14" y2="22" />
+      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+    </SvgIcon>
+  )
+}
+
+export function ScissorsIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="m18 2 4 4-12 12H6v-4L18 2z" />
+    </SvgIcon>
+  )
+}
+
+export function RetweetIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M17 1l4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="M7 23l-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </SvgIcon>
+  )
+}
+
+export function BotIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <rect x="3" y="11" width="18" height="10" rx="2" />
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v4" />
+      <line x1="8" y1="16" x2="8" y2="16" />
+      <line x1="16" y1="16" x2="16" y2="16" />
+    </SvgIcon>
+  )
+}
+
+export function TwitterXIcon({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}

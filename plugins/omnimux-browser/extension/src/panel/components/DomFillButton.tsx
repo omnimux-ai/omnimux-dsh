@@ -1,4 +1,5 @@
 import { memo, useState } from 'react'
+import { EditIcon } from './icons.tsx'
 
 export const DomFillButton = memo(function DomFillButton({
   textToFill,
@@ -106,6 +107,8 @@ export const DomFillButton = memo(function DomFillButton({
       onClick={handleFill}
       title={isEn ? "Insert into host page input (Twitter, TikTok, generic)" : "一键将该内容自动填入宿主网页的发帖/评论输入框（支持 Twitter / TikTok / 通用网页）"}
       aria-label={getLabel()}
-    />
+    >
+      <EditIcon size={12} />
+    </button>
   )
 })
