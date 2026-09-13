@@ -773,4 +773,60 @@ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖
 
     assert.equal(result.decision, 'allow')
   })
+
+  it('denies materialization when local main is ahead of origin/main (unpushed commits)', () => {
+    const localAheadRepo = createRepo('local-ahead-repo')
+    // 模拟远程已经对齐
+    gitCommand(localAheadRepo, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    // 本地产生新提交，形成领先状态
+    writeFileSync(join(localAheadRepo, 'unpushed.txt'), 'local unpushed feature\n')
+    gitCommand(localAheadRepo, 'add', '.')
+    gitCommand(localAheadRepo, '-c', 'user.name=Guard Test', '-c', 'user.email=guard@example.invalid', 'commit', '-m', 'unpushed commit')
+
+    const result = decideBashCommand({
+      command: './scripts/sync-to-app.sh',
+      cwd: localAheadRepo,
+    })
+
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-diverged-main-materialization')
+    assert.equal(result.aheadCount >= 1, true)
+  })
+
+  it('denies git merge and git commit on main branch in primary checkout', () => {
+    const mainRepo = createRepo('main-branch-ops-repo')
+
+    // 1. git merge on main -> deny
+    const mergeResult = decideBashCommand({
+      command: 'git merge feature-branch',
+      cwd: mainRepo,
+    })
+    assert.equal(mergeResult.decision, 'deny')
+    assert.equal(mergeResult.reason, 'forbidden-main-branch-merge')
+
+    // 2. git commit on main -> deny
+    const commitResult = decideBashCommand({
+      command: 'git commit -m "direct commit"',
+      cwd: mainRepo,
+    })
+    assert.equal(commitResult.decision, 'deny')
+    assert.equal(commitResult.reason, 'forbidden-main-branch-commit')
+  })
+
+  it('denies git worktree add without origin/main', () => {
+    // 1. without origin/main -> deny
+    const badWtResult = decideBashCommand({
+      command: 'git worktree add ../wt-test',
+      cwd: '/some/dir',
+    })
+    assert.equal(badWtResult.decision, 'deny')
+    assert.equal(badWtResult.reason, 'forbidden-non-origin-worktree-add')
+
+    // 2. with origin/main -> allow
+    const goodWtResult = decideBashCommand({
+      command: 'git worktree add -b my-feat ../wt-test origin/main',
+      cwd: '/some/dir',
+    })
+    assert.equal(goodWtResult.decision, 'allow')
+  })
 })

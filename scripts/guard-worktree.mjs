@@ -509,6 +509,80 @@ export function decideMaterializationCommand({ cwd }) {
     }
   }
 
+  // 4. 检查当前本地主分支是否领先于远程 origin/main (未推送的本地合并或私有提交)
+  const aheadList = spawnSync('git', ['-C', resolvedCwd, 'rev-list', '--count', 'origin/main..HEAD'], {
+    encoding: 'utf8',
+    timeout: 3000,
+  })
+  const aheadCount = parseInt((aheadList.stdout || '').trim(), 10)
+  if (!isNaN(aheadCount) && aheadCount > 0) {
+    return {
+      decision: 'deny',
+      reason: 'forbidden-diverged-main-materialization',
+      aheadCount,
+      cwd: resolvedCwd,
+    }
+  }
+
+  return { decision: 'allow' }
+}
+
+export function decideMainBranchGitOp(command, cwd) {
+  if (!command || typeof command !== 'string') return { decision: 'allow' }
+  const segments = commandSegments(command)
+  for (const seg of segments) {
+    if (!looksLikeGitInvocation(seg)) continue
+    const isMerge = /(?:^|\s)merge\b/.test(seg)
+    const isCommit = /(?:^|\s)commit\b/.test(seg)
+    if (!isMerge && !isCommit) continue
+
+    // 允许合法的远端快进同步：git merge origin/main 或 git merge --ff-only origin/main
+    if (isMerge && (seg.includes('origin/main') || seg.includes('origin/master'))) {
+      continue
+    }
+
+    const resolvedCwd = resolve(cwd || process.cwd())
+    if (isWorktreePath(resolvedCwd)) continue
+
+    const branchResult = spawnSync('git', ['-C', resolvedCwd, 'symbolic-ref', '--quiet', '--short', 'HEAD'], {
+      encoding: 'utf8',
+      timeout: 3000,
+    })
+    const branch = (branchResult.stdout || '').trim()
+    if (branch === 'main') {
+      if (isMerge) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-main-branch-merge',
+          cwd: resolvedCwd,
+        }
+      }
+      if (isCommit) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-main-branch-commit',
+          cwd: resolvedCwd,
+        }
+      }
+    }
+  }
+  return { decision: 'allow' }
+}
+
+export function decideWorktreeAddCommand(command, cwd) {
+  if (!command || typeof command !== 'string') return { decision: 'allow' }
+  const segments = commandSegments(command)
+  for (const seg of segments) {
+    if (!looksLikeGitInvocation(seg)) continue
+    if (/(?:^|\s)worktree\s+add\b/.test(seg)) {
+      if (!seg.includes('origin/main')) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-non-origin-worktree-add',
+        }
+      }
+    }
+  }
   return { decision: 'allow' }
 }
 
@@ -541,7 +615,19 @@ export function decideBashCommand({ command, cwd }) {
     }
   }
 
-  // 3. 检查多 Agent 物化覆盖风险（防冲刷物理硬门禁）
+  // 3. 检查在主仓本地 main 分支上执行 git merge 或 git commit
+  const mainBranchOps = decideMainBranchGitOp(command, cwd)
+  if (mainBranchOps.decision === 'deny') {
+    return mainBranchOps
+  }
+
+  // 4. 检查 git worktree add 是否显式绑定了 origin/main
+  const wtAddDecision = decideWorktreeAddCommand(command, cwd)
+  if (wtAddDecision.decision === 'deny') {
+    return wtAddDecision
+  }
+
+  // 5. 检查多 Agent 物化覆盖风险（防冲刷物理硬门禁）
   if (isMaterializationCommand(command)) {
     const matDecision = decideMaterializationCommand({ cwd })
     if (matDecision.decision === 'deny') {
@@ -641,6 +727,31 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '👉 强制标准流程：',
         '  请先在主目录执行: git pull --ff-only origin main',
         '  将他人已合入的最新成果拉齐融合后，再执行物化，确保更新为增量叠加！',
+      ].join('\n')
+    } else if (reason === 'forbidden-diverged-main-materialization') {
+      output.permissionDecisionReason = [
+        `🚫【OmniMux 多 Agent 防覆盖硬拦截】本地主分支领先于远程 origin/main（存在 ${extra.aheadCount || 0} 个未推送的私有提交），严禁物化刷新！`,
+        '📌 事故防范守则：本地主分支堆积了未在云端合入的私有提交，若直接物化将导致未经评审的半成品脏代码流入共享开发环境。',
+        '👉 强制标准流程：',
+        '  请保持本地 main 与 origin/main 严格 1:1 对齐 (0 ahead, 0 behind)，所有改动走 PR 合并后再执行物化！',
+      ].join('\n')
+    } else if (reason === 'forbidden-main-branch-merge') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 多 Agent 隔离守卫】严禁在本地主干执行 git merge！',
+        '📌 核心守则：本地 main 分支为纯只读镜像，严禁私自合并代码。所有特性分支必须推送到远端，通过 GitHub PR 经 CI 门禁全绿后统一合并入 origin/main。',
+        '👉 正确流程：请在独立 Worktree 中开发，使用 gh pr create 提交合并请求。',
+      ].join('\n')
+    } else if (reason === 'forbidden-main-branch-commit') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 多 Agent 隔离守卫】严禁在本地主干直接执行 git commit！',
+        '📌 核心守则：本地 main 分支为纯只读镜像，严禁直接提交代码。',
+        '👉 正确流程：请先调用: ./scripts/git-wt.sh start <plugin> <topic> 在独立工作树中开发并提交。',
+      ].join('\n')
+    } else if (reason === 'forbidden-non-origin-worktree-add') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 多 Agent 隔离守卫】新建工作树必须显式以 origin/main 为唯一起点！',
+        '📌 核心守则：严禁基于本地旧状态或未推送分支签出工作树，防止将他人半成品脏代码引入新环境。',
+        '👉 正确流程：请直接运行: ./scripts/git-wt.sh start <plugin> <topic>，或在命令末尾显式指定 origin/main。',
       ].join('\n')
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
