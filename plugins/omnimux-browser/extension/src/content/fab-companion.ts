@@ -214,18 +214,36 @@ export function initFabCompanion(): void {
   }
 
   function syncContextToIframe() {
-    if (!iframe || !iframe.contentWindow) return
+    broadcastContextUpdate()
+  }
+
+  function broadcastContextUpdate() {
     try {
       const context = getFullContext()
       const media = sniffViewportMedia()
-      iframe.contentWindow.postMessage({
-        source: 'omnimux-content-script',
-        type: 'PAGE_CONTEXT_UPDATE',
-        payload: { ...context, media },
-        timestamp: Date.now(),
-      }, '*')
+      const payload = { ...context, media }
+
+      // 1. 同步到浮动工作台 iframe
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({
+          source: 'omnimux-content-script',
+          type: 'PAGE_CONTEXT_UPDATE',
+          payload,
+          timestamp: Date.now(),
+        }, '*')
+      }
+
+      // 2. 主动广播给 Chrome 原生侧边栏 / 扩展后台
+      try {
+        chrome.runtime?.sendMessage({
+          action: 'PAGE_CONTEXT_UPDATE',
+          payload,
+        }).catch(() => {})
+      } catch {
+        // Ignore extension invalidated
+      }
     } catch {
-      // Ignore cross-origin issues
+      // Ignore
     }
   }
 
@@ -418,10 +436,59 @@ export function initFabCompanion(): void {
   }
   window.addEventListener('message', handleMessage)
 
+  // 实时感知算法：深度监听 SPA (Twitter/X, TikTok, etc.) 单页路由、标题及内容变动
+  let lastTrackedUrl = window.location.href
+  let lastTrackedTitle = document.title
+
+  const checkAndNotifyPageChange = () => {
+    const currentUrl = window.location.href
+    const currentTitle = document.title
+    if (currentUrl !== lastTrackedUrl || currentTitle !== lastTrackedTitle) {
+      lastTrackedUrl = currentUrl
+      lastTrackedTitle = currentTitle
+      broadcastContextUpdate()
+    }
+  }
+
+  // 1. 劫持 History API (pushState & replaceState)
+  const originalPushState = history.pushState
+  history.pushState = function (...args) {
+    originalPushState.apply(this, args)
+    setTimeout(checkAndNotifyPageChange, 80)
+    setTimeout(checkAndNotifyPageChange, 300)
+  }
+
+  const originalReplaceState = history.replaceState
+  history.replaceState = function (...args) {
+    originalReplaceState.apply(this, args)
+    setTimeout(checkAndNotifyPageChange, 80)
+    setTimeout(checkAndNotifyPageChange, 300)
+  }
+
+  // 2. 监听 popstate 与 hashchange
+  window.addEventListener('popstate', () => {
+    setTimeout(checkAndNotifyPageChange, 80)
+    setTimeout(checkAndNotifyPageChange, 300)
+  })
+  window.addEventListener('hashchange', () => {
+    setTimeout(checkAndNotifyPageChange, 80)
+  })
+
+  // 3. 监听 document.title 变化 (SPA 页面通常跳转后异步更新 title)
+  const titleTag = document.querySelector('title')
+  if (titleTag) {
+    const titleObs = new MutationObserver(() => checkAndNotifyPageChange())
+    titleObs.observe(titleTag, { subtree: true, characterData: true, childList: true })
+  }
+
+  // 4. 定时轻量巡检兜底 (每 800ms 巡检一次 URL 与 Title 状态)
+  const routePollTimer = setInterval(checkAndNotifyPageChange, 800)
+
   // Unsubscribe and remove global event listeners
   const unsubscribe = () => {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('message', handleMessage)
+    clearInterval(routePollTimer)
   }
   (window as unknown as { __omnimux_fab_unsubscribe?: () => void }).__omnimux_fab_unsubscribe = unsubscribe
 

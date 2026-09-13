@@ -754,10 +754,42 @@ export function App(): React.JSX.Element {
       }
       updateContextFromTab()
       void collectPendingMedia().catch(() => {})
+
+      // 1. 监听标签页切换
       const tabListener = () => updateContextFromTab()
       chrome.tabs?.onActivated?.addListener(tabListener)
+
+      // 2. 监听活跃标签页 URL 变动与页面导航 (SPA/MPA)
+      const tabUpdateListener = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+        if (changeInfo.status === 'complete' || changeInfo.url || changeInfo.title) {
+          chrome.tabs?.query({ active: true, currentWindow: true }).then(([activeTab]) => {
+            if (activeTab?.id === tabId) {
+              updateContextFromTab()
+            }
+          }).catch(() => {})
+        }
+      }
+      chrome.tabs?.onUpdated?.addListener(tabUpdateListener)
+
+      // 3. 监听来自 content script 的主动广播
+      const runtimeMessageListener = (msg: any) => {
+        if (msg?.action === 'PAGE_CONTEXT_UPDATE' && msg.payload) {
+          setPageScene(msg.payload)
+          if (msg.payload.media) {
+            setDetectedMedia(msg.payload.media)
+          }
+        }
+      }
+      chrome.runtime?.onMessage?.addListener(runtimeMessageListener)
+
+      // 4. 定时轻量同步探针 (1.2s 自动比对当前活动标签页，保障零滞后)
+      const pollTimer = setInterval(updateContextFromTab, 1200)
+
       return () => {
         chrome.tabs?.onActivated?.removeListener(tabListener)
+        chrome.tabs?.onUpdated?.removeListener(tabUpdateListener)
+        chrome.runtime?.onMessage?.removeListener(runtimeMessageListener)
+        clearInterval(pollTimer)
       }
     }
     // Attach helpers are re-created per render on purpose: this effect must run
@@ -2335,56 +2367,51 @@ export function App(): React.JSX.Element {
       <div className="messages" ref={scrollRef}>
         {pageScene && (
           <div className="empty empty-hero-layout" style={{ margin: '8px 0 16px' }}>
-            <div className="page-hero-card">
-              <div className="hero-preview-stack">
-                <div className="hero-sheet-back" />
-                <div className="hero-sheet-front">
-                  <div className="hero-sheet-header">
-                    <span className="hero-sheet-dot" />
-                    <span className="hero-sheet-dot" />
-                    <span className="hero-sheet-dot" />
-                    <span className="hero-sheet-bar" />
-                  </div>
-                  <div className="hero-sheet-body">
-                    <div className="hero-sheet-mock-block" />
-                    <div className="hero-sheet-mock-lines">
-                      <span className="line w-80" />
-                      <span className="line w-60" />
-                      <span className="line w-40" />
+            <div className="hero-card-stack-wrapper">
+              <div className="hero-card-stack-underlay underlay-2" />
+              <div className="hero-card-stack-underlay underlay-1" />
+              <div className="page-hero-card youmind-exact-card">
+                {/* 1. 顶部真实封面大图 */}
+                <div className="hero-card-cover-box">
+                  {pageScene.heroImage ? (
+                    <img
+                      src={pageScene.heroImage}
+                      alt={pageScene.title || 'Page cover'}
+                      className="hero-card-cover-img"
+                    />
+                  ) : (
+                    <div className="hero-card-cover-placeholder">
+                      <TwitterXIcon size={28} />
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* 2. 平台标识行 (1:1 对标 YouMind 图 2) */}
+                <div className="hero-platform-row">
+                  <span className="hero-square-badge">
+                    <TwitterXIcon size={11} />
+                  </span>
+                  <span className="hero-platform-text">
+                    {pageScene.platformLabel || (pageScene.platform === 'twitter' ? 'X (formerly Twitter)' : (pageScene.title ? 'Web' : 'OmniMux'))}
+                  </span>
+                </div>
+
+                {/* 3. 页面大标题 */}
+                <div className="hero-card-title" title={pageScene.title || ''}>
+                  {pageScene.title || (pageScene.author ? `@${pageScene.author} / X` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
+                </div>
+
+                {/* 4. 底部半悬浮保存药丸按钮 */}
+                <div className="hero-card-action-shelf">
+                  <button
+                    type="button"
+                    className="hero-action-pill-btn"
+                    onClick={() => { void handleSaveToInspiration() }}
+                  >
+                    <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
+                  </button>
                 </div>
               </div>
-              <div className="hero-top-row">
-                <span className="hero-app-badge">
-                  <TwitterXIcon size={12} />
-                </span>
-                <span className="hero-platform-text">
-                  {pageScene?.platform === 'twitter'
-                    ? (pageScene.pageType === 'profile'
-                        ? (locale === 'en' ? 'X · Profile' : 'X · 创作者主页')
-                        : pageScene.pageType === 'home'
-                          ? (locale === 'en' ? 'X · Feed' : 'X · 首页信息流')
-                          : (locale === 'en' ? 'X · Post' : 'X · 帖子详情'))
-                    : (pageScene?.title ? 'Web' : 'OmniMux')}
-                </span>
-              </div>
-              <div className="hero-page-meta">
-                <div className="hero-meta-title" title={pageScene?.title || ''}>
-                  {pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}
-                </div>
-                <div className="hero-meta-url">
-                  {pageScene?.url ? pageScene.url.replace(/^https?:\/\//, '').slice(0, 42) : (pageScene?.author ? `@${pageScene.author}` : '')}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="hero-action-pill-btn"
-                onClick={() => { void handleSaveToInspiration() }}
-              >
-                <SaveIcon size={13} />
-                <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
-              </button>
             </div>
             <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => void send(p)} />
           </div>
