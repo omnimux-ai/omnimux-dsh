@@ -136,7 +136,11 @@ export function SplitCreateButton({ label, menuLabel, disabled = false, onPrimar
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(value => !value)}
-      ><span className="dsh-st-split-caret" /></Button>
+      >
+        <svg className="dsh-st-split-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M4 6.5L8 10.5L12 6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </Button>
       {menu}
     </div>
   )
