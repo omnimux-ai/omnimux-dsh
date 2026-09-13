@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   CLOUD_PAGE_SIZE,
+  CLOUD_SUBNAV_CATEGORY,
   appendUniqueAssets,
+  cloudCardKind,
   cloudScope,
   findCategory,
   mediaLabelOf,
@@ -26,6 +28,18 @@ const MANIFEST = {
       pages: 2,
       sub_categories: [
         { id: 'digital-human', zh: '实景数字人', en: 'Digital Humans', total: 40, pages: 2 },
+      ],
+    },
+    {
+      id: 'knowledge',
+      zh: '知识包',
+      en: 'Knowledge',
+      total: 1502,
+      pages: 63,
+      sub_categories: [
+        { id: 'prompt', zh: '脚本提示词', en: 'Prompt Packs', total: 57, pages: 3 },
+        { id: 'note', zh: '知识笔记', en: 'Notes', total: 1302, pages: 55 },
+        { id: 'storyboard', zh: '短剧拆镜', en: 'Storyboard', total: 143, pages: 6 },
       ],
     },
     {
@@ -96,11 +110,26 @@ describe('pageCountOf / totalOf', () => {
 })
 
 describe('subCategoryTabs', () => {
-  it('leads with an all-entry when the category has populated sub-categories', () => {
+  it('leads with an all-entry when the audio category has populated sub-categories', () => {
     const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, 'audio')
     assert.equal(hasSecondLevel, true)
     assert.deepEqual(items.map((row) => row.id), ['', 'voiceover', 'sfx'])
     assert.equal(items[0].total, 20)
+  })
+
+  it('names audio as the only category that owns a second level', () => {
+    assert.equal(CLOUD_SUBNAV_CATEGORY, 'audio')
+  })
+
+  it('keeps the second level shut on every other category, sub-categories or not', () => {
+    // Regression: 知识包 carries 脚本提示词 / 知识笔记 / 短剧拆镜 and 角色 carries
+    // 实景数字人, so a category-agnostic rule opened a second level under a
+    // selected 知识包 and put the audio-only 全部 chip above those buckets.
+    for (const category of ['knowledge', 'character', 'scene', 'prop', 'style']) {
+      const { items, hasSecondLevel } = subCategoryTabs(MANIFEST, category)
+      assert.equal(hasSecondLevel, false, `${category} must not open a second level`)
+      assert.deepEqual(items, [])
+    }
   })
 
   it('hides empty sub-categories so a tab never opens onto nothing', () => {
@@ -139,18 +168,99 @@ describe('normalizeCloudAsset', () => {
     assert.equal(row.playable, false)
   })
 
+  it('reports whether the row has a cover and a playable original', () => {
+    const text = normalizeCloudAsset({ id: 'knowledge-note-1', media_type: 'other' })
+    assert.equal(text.hasCover, false)
+    assert.equal(text.hasMedia, false)
+
+    const preset = normalizeCloudAsset({
+      id: 'style-image-preset-1',
+      media_type: 'other',
+      cover_url: 'file:素材库/gxgen-data/style-library/media/x.webp',
+    })
+    assert.equal(preset.hasCover, true)
+    assert.equal(preset.hasMedia, false)
+
+    const voice = normalizeCloudAsset({
+      id: 'audio-bgm-1',
+      media_type: 'audio',
+      media_url: 'file:素材库/x.mp3',
+    })
+    assert.equal(voice.hasCover, false)
+    assert.equal(voice.hasMedia, true)
+  })
+
   it('defaults every field of a malformed row instead of throwing', () => {
     const row = normalizeCloudAsset({ id: 'a', media_type: 'nonsense', tags: 'not-an-array' })
     assert.equal(row.category, '')
     assert.equal(row.mediaType, 'other')
     assert.deepEqual(row.tags, [])
     assert.equal(row.playable, true)
+    assert.equal(row.hasCover, false)
+    assert.equal(row.hasMedia, false)
   })
 
   it('survives an entirely absent row', () => {
     const row = normalizeCloudAsset(undefined)
     assert.equal(row.id, '')
     assert.equal(row.mediaType, 'other')
+  })
+})
+
+/**
+ * Which body a card renders is decided from the row, never from a failed image
+ * request: a text row must never be painted as a grey 4:3 plate first.
+ */
+describe('cloudCardKind', () => {
+  const kindOf = (row) => cloudCardKind(normalizeCloudAsset(row))
+
+  it('gives a 知识包 row the text card: no cover and no media', () => {
+    assert.equal(kindOf({ id: 'knowledge-note-1', media_type: 'other' }), 'text')
+  })
+
+  it('gives a text row with a description the text card too', () => {
+    assert.equal(
+      kindOf({ id: 'knowledge-prompt-1', media_type: 'other', description: '分镜提示词' }),
+      'text',
+    )
+  })
+
+  it('gives a 风格 preset its picture card from the cover alone', () => {
+    assert.equal(
+      kindOf({ id: 'style-image-preset-1', media_type: 'other', cover_url: 'file:素材库/x.webp' }),
+      'media',
+    )
+  })
+
+  it('gives a playable voice the waveform card', () => {
+    assert.equal(
+      kindOf({ id: 'audio-bgm-1', media_type: 'audio', media_url: 'file:素材库/x.mp3' }),
+      'audio',
+    )
+  })
+
+  it('falls back to text for the descriptor-only 音色 rows that have nothing to play', () => {
+    assert.equal(kindOf({ id: 'audio-voiceover-1', media_type: 'other', meta: { playable: false } }), 'text')
+    assert.equal(
+      kindOf({ id: 'audio-voiceover-2', media_type: 'audio', media_url: 'file:素材库/x.mp3', meta: { playable: false } }),
+      'text',
+    )
+  })
+
+  it('keeps a video without a poster a picture card, so its own frame stands in', () => {
+    assert.equal(
+      kindOf({ id: 'scene-ambience-1', media_type: 'video', media_url: 'file:素材库/x.mp4' }),
+      'media',
+    )
+  })
+
+  it('treats a document row as text', () => {
+    assert.equal(kindOf({ id: 'doc-1', media_type: 'document' }), 'text')
+  })
+
+  it('survives a missing row', () => {
+    assert.equal(cloudCardKind(undefined), 'text')
+    assert.equal(cloudCardKind(null), 'text')
   })
 })
 

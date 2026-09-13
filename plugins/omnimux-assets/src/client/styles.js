@@ -856,10 +856,11 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-grid {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
-/* Fixed ratio per media type: the tile reserves its box before the image
-   arrives, so paging never shifts the grid under the pointer. */
-/* Every part of the card opens the preview, so the pointer says so. A voice
-   card overrides this on its own thumbnail, which plays instead. */
+/* One body per card kind (see cloudCardKind). A tile keeps a fixed height, so
+   its box is reserved before the image arrives and paging never shifts the grid
+   under the pointer. */
+/* Every part of the card opens the preview, so the pointer says so. A voice card
+   overrides this on its own plate, which plays instead. */
 .omnimux-assets-cloud-card {
   position: relative;
   cursor: pointer;
@@ -867,17 +868,14 @@ export const ASSETS_CSS = `
 .omnimux-assets-cloud-card .omnimux-assets-cloud-thumb--action {
   cursor: pointer;
 }
-.omnimux-assets-cloud-thumb {
-  height: auto;
+/* 图片/视频：164px 缩略图，下面一行标题。 */
+.omnimux-assets-cloud-card--media .omnimux-assets-cloud-thumb {
+  height: 164px;
+  aspect-ratio: auto;
 }
-.omnimux-assets-cloud-card[data-media-type="video"] .omnimux-assets-cloud-thumb,
-.omnimux-assets-cloud-card[data-media-type="audio"] .omnimux-assets-cloud-thumb {
-  aspect-ratio: 16 / 9;
-}
-.omnimux-assets-cloud-card[data-media-type="image"] .omnimux-assets-cloud-thumb,
-.omnimux-assets-cloud-card[data-media-type="document"] .omnimux-assets-cloud-thumb,
-.omnimux-assets-cloud-card[data-media-type="other"] .omnimux-assets-cloud-thumb {
-  aspect-ratio: 4 / 3;
+/* 声音：一块波形预览区，点一下即播即停。 */
+.omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb {
+  height: 112px;
 }
 .omnimux-assets-cloud-preview {
   position: absolute;
@@ -911,13 +909,15 @@ export const ASSETS_CSS = `
   pointer-events: none;
 }
 /* Top-right hover controls: one mounts the asset into the conversation, the
-   other copies it into the local library. Both are neutral plates that invert
-   to ink under the pointer; neither carries a hue of its own. */
-.omnimux-assets-cloud-card .omnimux-assets-cloud-actions {
+   other copies it into the local library. Both are neutral plates that invert to
+   ink under the pointer; neither carries a hue of its own.
+   The cluster is pinned to the corner — absolute, above the card body — so it
+   never joins the flow and never lands in the middle of the text. */
+.omnimux-assets-cloud-actions {
   position: absolute;
   top: 8px;
   right: 8px;
-  z-index: 2;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -929,6 +929,7 @@ export const ASSETS_CSS = `
   border-color: var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
   opacity: 0;
+  transition: opacity 0.16s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-chat,
 .omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-chat,
@@ -950,6 +951,40 @@ export const ASSETS_CSS = `
   border-color: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-label-primary-foreground);
 }
+/* ---- card bodies ---------------------------------------------------------
+   Three kinds, one card (see cloudCardKind): 图片/视频 = 缩略图 + 一行标题；
+   声音 = 波形预览区 + 一句音色描述；文本类（知识包：脚本提示词 / 知识笔记 /
+   短剧拆镜）= 标题 + 描述。文本类没有封面也没有可播媒体，画一块占位图只会把
+   标题和描述挤成一行省略，所以它直接按阅读版式排版。 */
+
+/* 声音：波形由卡片自己按行 id 画，整块缩略图就是播放键。 */
+.omnimux-assets-cloud-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  padding: 0 18px;
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-tertiary);
+  /* The plate is decoration: the thumbnail around it owns the click. */
+  pointer-events: none;
+  transition: color 0.15s ease;
+}
+.omnimux-assets-cloud-wave-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.omnimux-assets-cloud-card--audio:hover .omnimux-assets-cloud-wave,
+.omnimux-assets-cloud-card--audio:focus-within .omnimux-assets-cloud-wave {
+  color: var(--dsw-alias-label-primary);
+}
+/* 声音卡片的描述就是那句音色说明，最多两行。 */
 .omnimux-assets-cloud-desc {
   margin: 0;
   font-size: 12px;
@@ -959,6 +994,37 @@ export const ASSETS_CSS = `
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+/* 文本类：标题最多 2 行、描述最多 4 行。标题给右上角那两块悬浮牌子让出位置，
+   所以按钮展开时不会盖住任何一行字。 */
+.omnimux-assets-cloud-card--text .omnimux-assets-card-body {
+  flex: 1;
+  gap: 6px;
+  padding: 14px;
+}
+.omnimux-assets-cloud-card--text .omnimux-assets-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  /* 14px 卡片内边距 + 64px：两块 28px 的牌子加 6px 间距、离右边缘 8px，标题文字
+     正好停在它们左边，按钮展开时一行都不压。 */
+  padding-right: 64px;
+}
+.omnimux-assets-cloud-card--text .omnimux-assets-cloud-desc {
+  -webkit-line-clamp: 4;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+/* 图片/视频：只有缩略图和一行标题。 */
+.omnimux-assets-cloud-card--media .omnimux-assets-card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .omnimux-assets-cloud-sentinel {
   height: 1px;
