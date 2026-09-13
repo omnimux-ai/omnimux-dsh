@@ -20,6 +20,7 @@ fork 进来的预览插件在宿主半边使用了替身未声明的具名导出
 | 宿主包 | 缺失导出 | 用途 |
 | --- | --- | --- |
 | `@deepseek-ai/dsh-attachment` | `AttachmentError` | 附件错误判别（`instanceof`） |
+| `@deepseek-ai/dsh-attachment` | `AttachmentId` | 附件标识构造（真实值调用） |
 | `@deepseek-ai/dsh-fs` | `FsError` | 文件系统错误判别 |
 | `@deepseek-ai/dsh-sandbox` | `canonicalPath` | 路径规范化 |
 | `@deepseek-ai/dsh-settings` | `installSettingsSection` | 设置座席注册 |

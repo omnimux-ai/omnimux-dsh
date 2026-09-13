@@ -133,7 +133,7 @@ export function apply(ctx) {
 
 /** 导入替身必须声明的宿主机面导出：静态 ESM 缺任何一条都会在解析期直接失败。 */
 const HOST_NAMED_EXPORTS_PLUGIN = `
-import { AttachmentError } from '@deepseek-ai/dsh-attachment'
+import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
 import { FsError } from '@deepseek-ai/dsh-fs'
 import { canonicalPath } from '@deepseek-ai/dsh-sandbox'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
@@ -141,8 +141,9 @@ export function apply() {
   const attachmentError = new AttachmentError('demo')
   const fsError = new FsError('demo')
   const path = canonicalPath('/tmp/demo')
+  const id = AttachmentId('demo-attachment')
   installSettingsSection(settingsNamespace('demo'), {}, () => {})
-  if (!attachmentError || !fsError || !path) throw new Error('stub face unusable')
+  if (!attachmentError || !fsError || !path || !id) throw new Error('stub face unusable')
 }
 `
 

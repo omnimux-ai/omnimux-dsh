@@ -63,6 +63,7 @@ const HOST_PACKAGE_STUB_SOURCE = [
   // 宿主包具名导出必须逐条声明：替身是静态 ESM，缺一条就会让 import 在解析期失败。
   // 以下五项是套件内插件实际使用的宿主人脸（错误类/路径工具/设置座席），只保签名。
   'export class AttachmentError extends Error {};',
+  'export function AttachmentId(id) { return id; };',
   'export class FsError extends Error {};',
   'export function canonicalPath(path) { return path; };',
   'export function installSettingsSection(...args) { return () => {}; };',
