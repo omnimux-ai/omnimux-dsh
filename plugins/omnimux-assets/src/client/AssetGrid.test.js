@@ -51,8 +51,8 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
 
   it('contains complete i18n locales for card actions with Add to Conversation updated', () => {
     assert.equal(zh['card.view'], '查看详情')
-    assert.equal(zh['card.addToConversation'], '加入对话')
-    assert.equal(zh['card.addedToConversation'], '已加入')
+    assert.equal(zh['card.addToConversation'], '添加到会话')
+    assert.equal(zh['card.addedToConversation'], '已添加')
     assert.equal(zh['card.actions'], '操作')
 
     assert.equal(en['card.view'], 'View Details')

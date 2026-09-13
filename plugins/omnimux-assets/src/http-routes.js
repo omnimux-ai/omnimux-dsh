@@ -45,6 +45,24 @@ const STATUS_BY_CODE = {
   'internal': 500,
 }
 
+/**
+ * Catalog metadata routes, with and without the `.json` suffix.
+ *
+ * The gateway serves the catalog straight off disk, so the client asks for the
+ * on-disk names (`manifest.json`, `index.json`). Both spellings are accepted
+ * here: the extension-less form is the one this route table advertised first,
+ * and a request that misses every named route falls through to the page route
+ * below, which would answer a valid metadata request as a malformed page path.
+ */
+const CLOUD_MANIFEST_PATHS = new Set([
+  '/omnimux/assets/cloud/manifest',
+  '/omnimux/assets/cloud/manifest.json',
+])
+const CLOUD_INDEX_PATHS = new Set([
+  '/omnimux/assets/cloud/index',
+  '/omnimux/assets/cloud/index.json',
+])
+
 /** A catalog page name is `page-NNNN` or `page-NNNN.json`; nothing else is read. */
 const CATALOG_PAGE_RE = /^page-(\d{1,6})(?:\.json)?$/
 /** A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. */
@@ -236,6 +254,24 @@ export function createAssetsDispatcher(deps) {
     }
   }
 
+  /**
+   * `GET /omnimux/assets/cloud/index.json` — the flat index, one row per asset.
+   *
+   * Streamed like a page rather than rebuilt from the in-memory map: it is the
+   * same file the catalog was built from, and a few thousand rows do not need
+   * re-serializing per request.
+   */
+  function cloudIndexRoute() {
+    if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+    const file = resolve(cloud.catalogDir, 'index.json')
+    const status = statStatus(file, 'file')
+    if (status !== 'ok') throw new AssetsError('catalog-not-found', 'cloud catalog index not found')
+    return {
+      status: 200,
+      stream: { absolutePath: file, mime: 'application/json; charset=utf-8' },
+    }
+  }
+
   /** `GET /omnimux/assets/cloud/media?id=<row id>&which=media|cover` */
   function cloudMediaRoute(url) {
     if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
@@ -402,8 +438,12 @@ export function createAssetsDispatcher(deps) {
       }
 
       // ---- cloud assets -------------------------------------------------
-      if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/manifest') {
+      if (cloud && method === 'GET' && CLOUD_MANIFEST_PATHS.has(path)) {
         return { status: 200, body: cloud.getManifest() }
+      }
+
+      if (cloud && method === 'GET' && CLOUD_INDEX_PATHS.has(path)) {
+        return cloudIndexRoute()
       }
 
       if (cloud && method === 'GET' && path === '/omnimux/assets/cloud/search') {

@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { createAssetsDispatcher, registerAssetsRoutes } from './http-routes.js'
 import { createArtifactStore } from './artifacts.js'
+import { createCloudCatalog } from './cloud-catalog.js'
 import { createLibraryStore } from './library.js'
 import { createMappingStore } from './mappings.js'
 
@@ -555,6 +556,111 @@ describe('Assets routes serialized response guard', () => {
     } finally {
       await routes.close()
     }
+  })
+})
+
+describe('Cloud catalog metadata routes', () => {
+  /**
+   * A dispatcher over a minimal on-disk catalog: `manifest.json`, a flat
+   * `index.json`, and one category page — the same three files the real
+   * catalog builder writes.
+   */
+  function makeCloudDispatcher() {
+    const catalogDir = join(root, 'catalog')
+    mkdirSync(join(catalogDir, 'scene'), { recursive: true })
+    const rows = [
+      {
+        id: 'scene-aaa',
+        category: 'scene',
+        sub_category: '',
+        name: 'Bedroom',
+        description: '',
+        media_type: 'image',
+        tags: [],
+        meta: {},
+      },
+    ]
+    writeFileSync(join(catalogDir, 'manifest.json'), JSON.stringify({
+      version: 1,
+      pageSize: 24,
+      totalAssets: rows.length,
+      sourceRoot: '',
+      categories: [{ id: 'scene', zh: '场景', en: 'Scenes', total: 1, pages: 1 }],
+    }))
+    writeFileSync(join(catalogDir, 'index.json'), JSON.stringify(rows))
+    writeFileSync(join(catalogDir, 'scene', 'page-0000.json'), JSON.stringify({
+      scope: 'scene',
+      page: 0,
+      pageSize: 24,
+      total: 1,
+      totalPages: 1,
+      items: rows,
+    }))
+
+    const { mappings, artifacts, library } = makeDispatcher()
+    return createAssetsDispatcher({
+      mappings,
+      artifacts,
+      library,
+      cloud: createCloudCatalog({ catalogDir }),
+    })
+  }
+
+  it('answers the manifest under both the bare name and manifest.json', async () => {
+    const dispatcher = makeCloudDispatcher()
+
+    const bare = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/manifest' })
+    assert.equal(bare.status, 200)
+    assert.equal(bare.body.totalAssets, 1)
+
+    const dotted = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/manifest.json' })
+    assert.equal(dotted.status, 200)
+    assert.equal(dotted.body.totalAssets, 1)
+    assert.deepEqual(dotted.body.categories, bare.body.categories)
+  })
+
+  it('serves the flat index as a file instead of reading it as a page path', async () => {
+    const dispatcher = makeCloudDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/index.json' })
+    assert.equal(response.status, 200)
+    assert.equal(response.stream.mime, 'application/json; charset=utf-8')
+    assert.equal(response.stream.absolutePath.endsWith('index.json'), true)
+
+    const bare = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/index' })
+    assert.equal(bare.status, 200)
+    assert.equal(bare.stream.absolutePath.endsWith('index.json'), true)
+  })
+
+  it('serves the paths the client asks for through the registered prefix route', async () => {
+    const routes = await openRegisteredRoutes(makeCloudDispatcher())
+    try {
+      const manifest = await requestJson(routes.port, { path: '/omnimux/assets/cloud/manifest.json' })
+      assert.equal(manifest.status, 200)
+      assert.equal(manifest.body.totalAssets, 1)
+
+      const index = await requestJson(routes.port, { path: '/omnimux/assets/cloud/index.json' })
+      assert.equal(index.status, 200)
+      assert.equal(Array.isArray(index.body), true)
+      assert.equal(index.body[0].id, 'scene-aaa')
+    } finally {
+      await routes.close()
+    }
+  })
+
+  it('still resolves a category page through the page route', async () => {    const dispatcher = makeCloudDispatcher()
+
+    const page = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/scene/page-0000.json' })
+    assert.equal(page.status, 200)
+    assert.equal(page.stream.absolutePath.endsWith(join('scene', 'page-0000.json')), true)
+  })
+
+  it('reports a malformed page path as a page error, not as a missing catalog', async () => {
+    const dispatcher = makeCloudDispatcher()
+
+    const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/manifest.xml' })
+    assert.equal(response.status, 404)
+    assert.match(response.body.message, /catalog page path/)
   })
 })
 
