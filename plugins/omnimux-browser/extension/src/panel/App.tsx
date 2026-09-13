@@ -2427,7 +2427,7 @@ export function App(): React.JSX.Element {
 
                 {/* 3. 页面大标题 */}
                 <div className="hero-card-title" title={pageScene.title || ''}>
-                  {pageScene.title || (pageScene.author ? `@${pageScene.author} / X` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
+                  {pageScene.title || (pageScene.author ? `@${pageScene.author}` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
                 </div>
 
                 {/* 4. 底部半悬浮保存药丸按钮 */}

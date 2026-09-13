@@ -65,5 +65,8 @@ export const PLATFORM_GLYPHS: Record<string, PlatformGlyph> = {
  */
 export function platformGlyph(platform: string | undefined): PlatformGlyph {
   const key = String(platform ?? '').trim().toLowerCase()
-  return PLATFORM_GLYPHS[key] ?? PLATFORM_GLYPHS.generic
+  // `hasOwn`, not `??`: the table is an ordinary object literal, so a key like
+  // `constructor` or `__proto__` finds an inherited member, `??` sees a truthy
+  // value, and the caller renders a mark with no path at all.
+  return Object.hasOwn(PLATFORM_GLYPHS, key) ? PLATFORM_GLYPHS[key] : PLATFORM_GLYPHS.generic
 }
