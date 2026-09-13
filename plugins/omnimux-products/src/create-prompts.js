@@ -35,6 +35,48 @@ export const CREATE_PROMPT_SECTIONS = Object.freeze([
   { name: 'products:create:physical', order: 72 },
 ])
 
+/**
+ * Fill the `{{name}}` slots of one playbook with real values. Unlike the system
+ * prompt above (which must survive DSH's strict interpolation), a request-time
+ * render substitutes the value outright; an unknown slot is left untouched so a
+ * half-filled prompt is visible rather than silently blank.
+ *
+ * @param {string} text
+ * @param {Record<string, string>} vars
+ * @returns {string}
+ */
+export function renderPromptTemplate(text, vars) {
+  return String(text).replace(/\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (whole, key) => (
+    Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : whole
+  ))
+}
+
+/**
+ * Brand-strategy v2 playbook, rendered for one digital landing page.
+ *
+ * @param {{ language?: string, pageContent?: string }} input
+ * @returns {string}
+ */
+export function renderBrandStrategyV2Prompt(input = {}) {
+  return renderPromptTemplate(BRAND_STRATEGY_V2, {
+    language: input.language ?? '中文',
+    pageContent: input.pageContent ?? '',
+  })
+}
+
+/**
+ * Gxgen import-from-link v9 playbook, rendered for one physical listing.
+ *
+ * @param {{ url?: string, pageContent?: string }} input
+ * @returns {string}
+ */
+export function renderPhysicalImportV9Prompt(input = {}) {
+  return renderPromptTemplate(IMPORT_FROM_LINK_V9, {
+    url: input.url ?? '',
+    pageContent: input.pageContent ?? '',
+  })
+}
+
 /** Digital create playbook：门控 + v2 主规程 + CoT 全文附录 */
 export function buildDigitalCreatePromptText() {
   return sanitizeDshPromptVars([

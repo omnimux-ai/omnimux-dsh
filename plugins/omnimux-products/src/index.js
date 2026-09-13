@@ -86,6 +86,7 @@ const COPY_FIELDS = {
  * @param {{
  *   tools: { register: (tool: object) => unknown },
  *   systemPrompt?: { section: (spec: object) => unknown },
+ *   get?: (name: string) => unknown,
  *   effect?: (fn: () => unknown, label?: string) => unknown,
  *   inject?: (deps: string[], callback: (inner: object) => void) => void,
  * }} ctx
@@ -93,7 +94,9 @@ const COPY_FIELDS = {
 export function apply(ctx) {
   const paths = resolveProductsPaths()
   const library = createLibraryStore({ paths })
-  const dispatcher = createProductsDispatcher({ library })
+  // The host context rides along so the link importer can reach the hub seams
+  // (`textComplete`, `omnimux_page_fetch`) lazily, at request time.
+  const dispatcher = createProductsDispatcher({ library, ctx })
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')

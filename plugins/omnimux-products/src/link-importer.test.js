@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { describe, it } from 'node:test'
 import {
+  IMPORT_DRAFT_EXTRA_KEYS,
   IMPORT_FIELD_KEYS,
   LinkImportError,
   buildProductFields,
@@ -536,5 +537,203 @@ describe('link importer · importProductFromUrl', () => {
     } finally {
       await new Promise((resolve) => server.close(resolve))
     }
+  })
+})
+
+const BRAND_REPORT = `\`\`\`yaml
+brand_basic_info:
+  company:
+    name: "MiniMax"
+    website: "https://platform.example.com/product/open-platform"
+    locale: "cn"
+  product:
+    name: "MiniMax 开放平台"
+    category: "AI 平台"
+
+content_angles:
+  - id: "cost_01"
+    title: "成本焦虑"
+    description: "按量付费，无需自建 GPU"
+    target_audience: "AI 应用开发者"
+    priority: 1
+
+tone_and_voice:
+  dos:
+    - "用数据说话"
+  donts:
+    - "夸大效果"
+
+identity_and_product:
+  core_identity: "一站式多模态模型服务"
+  product_offering:
+    - "文本模型 API"
+  unique_advantage:
+    - "超长上下文"
+  problems_solved:
+    - "多模型拼接成本高"
+  solutions:
+    - "一个接口接入多模态"
+
+mission_and_positioning:
+  mission: "让智能触手可及"
+  differentiation:
+    - "性价比"
+  ownable_space:
+    statement: "多模态入口"
+    category: "AI 平台"
+    is_not:
+      - "通用云"
+
+market_and_competition:
+  customer_segments:
+    - name: "AI 应用开发者"
+      percentage: 60
+  competitors:
+    - name: "OpenAI"
+      website: "https://openai.com"
+\`\`\``
+
+const V9_REPORT = JSON.stringify({
+  name: 'Aurora Mug 350ml',
+  description: '双层陶瓷保温杯，保温 6 小时。',
+  features: '容量: 350ml,材质: 双层陶瓷',
+  sellingPoints: '6 小时长效保温,防滑硅胶底座',
+  brand: 'Aurora',
+  targetAudience: '咖啡爱好者',
+  price: 24.9,
+  promotion: '限时包邮',
+  category: 'physicalproduct,home,drinkware',
+})
+
+const DIGITAL_PAGE_URL = 'https://platform.example.com/product/open-platform'
+const DIGITAL_HTML = `<!doctype html><html lang="zh-CN"><head>
+<title>MiniMax 开放平台 | MiniMax</title>
+<meta property="og:description" content="一站式多模态模型服务，支持免费试用与预约演示。">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MiniMax 开放平台","applicationCategory":"AI 平台"}
+</script>
+</head><body><p>找到我们：support@example.com 会员专线 400-000-0000</p></body></html>`
+
+/** A hub double: the two seams, each recording what it was asked for. */
+function stubHub(over = {}) {
+  const calls = { textComplete: [], pageFetch: [] }
+  return {
+    calls,
+    hub: {
+      async pageFetch(url) {
+        calls.pageFetch.push(url)
+        if (over.pageFetchThrows) throw new Error('reader unavailable')
+        return { mode: 'live', url, title: 'MiniMax 开放平台', pageContent: over.pageContent ?? '# MiniMax 开放平台\n\n一站式多模态模型服务' }
+      },
+      async textComplete(request) {
+        calls.textComplete.push(request)
+        if (over.textCompleteThrows) throw new Error('no key configured')
+        return { text: over.text ?? BRAND_REPORT, model: request.model }
+      },
+    },
+  }
+}
+
+describe('link importer · hub model analysis', () => {
+  it('reads a brand site into a full six-module strategy, end to end', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub, calls } = stubHub()
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, kind: 'physical', fetcher, hub })
+
+    // A page that advertises no goods is read as a brand site, whatever the form said.
+    assert.equal(draft.kind, 'digital')
+    assert.equal(draft.analysis.mode, 'model')
+    assert.equal(draft.analysis.model, 'gemini-3.8-flash')
+    assert.equal(draft.analysis.reason, null)
+    assert.deepEqual(Object.keys(draft.brand_strategy), [
+      'brand_basic_info',
+      'content_angles',
+      'tone_and_voice',
+      'identity_and_product',
+      'mission_and_positioning',
+      'market_and_competition',
+    ])
+    assert.equal(draft.name, 'MiniMax 开放平台')
+    assert.equal(draft.brand, 'MiniMax')
+    assert.equal(draft.link, DIGITAL_PAGE_URL)
+    // Digital offerings never carry price / sku / promotion.
+    assert.equal(draft.price, '')
+    assert.equal(draft.sku, '')
+    assert.equal(draft.promotion, '')
+
+    // The hub read the page and the model got that Markdown.
+    assert.deepEqual(calls.pageFetch, [DIGITAL_PAGE_URL])
+    assert.equal(calls.textComplete.length, 1)
+    assert.equal(calls.textComplete[0].model, 'gemini-3.8-flash')
+    assert.match(calls.textComplete[0].prompt, /MiniMax 开放平台/)
+    assert.deepEqual(Object.keys(draft), [...IMPORT_FIELD_KEYS, ...IMPORT_DRAFT_EXTRA_KEYS])
+  })
+
+  it('extracts a physical listing with the v9 playbook', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const { hub, calls } = stubHub({ text: V9_REPORT })
+    const draft = await importProductFromUrl({ url: PAGE_URL, kind: 'physical', fetcher, hub })
+
+    assert.equal(draft.kind, 'physical')
+    assert.equal(draft.analysis.mode, 'model')
+    assert.equal(draft.brand_strategy, null)
+    assert.equal(draft.name, 'Aurora Mug 350ml')
+    assert.equal(draft.price, '24.9')
+    assert.equal(draft.sku, 'AM-350')
+    assert.deepEqual(draft.categories, ['physicalproduct', 'home', 'drinkware'])
+    assert.match(calls.textComplete[0].prompt, /产品信息调研专家/)
+  })
+
+  it('falls back to its own page read when the hub reader fails', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: DIGITAL_HTML } })
+    const { hub, calls } = stubHub({ pageFetchThrows: true })
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub })
+    assert.equal(draft.analysis.mode, 'model')
+    // The model still got input: the text extracted from the document itself.
+    assert.equal(calls.textComplete.length, 1)
+    assert.match(calls.textComplete[0].prompt, /一站式多模态模型服务，支持免费试用与预约演示/)
+  })
+
+  it('still answers a draft when the model is not configured', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const { hub } = stubHub({ textCompleteThrows: true })
+    const draft = await importProductFromUrl({ url: PAGE_URL, kind: 'physical', fetcher, hub })
+
+    assert.equal(draft.analysis.mode, 'heuristic')
+    assert.match(draft.analysis.reason, /大模型调用失败/)
+    assert.equal(draft.analysis.model, null)
+    assert.equal(draft.brand_strategy, null)
+    // The local extraction is untouched by the failed model call.
+    assert.equal(draft.name, 'Aurora Mug 350ml')
+    assert.equal(draft.selling_points, '6 小时长效保温，Dishwasher safe')
+    assert.equal(draft.price, '24.9')
+  })
+
+  it('says so when no hub is loaded at all, and never throws for it', async () => {
+    const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
+    const draft = await importProductFromUrl({ url: PAGE_URL, fetcher })
+    assert.equal(draft.analysis.mode, 'heuristic')
+    assert.match(draft.analysis.reason, /大模型通道/)
+    assert.equal(draft.kind, 'physical')
+    assert.equal(draft.name, 'Aurora Mug 350ml')
+  })
+
+  it('keeps a page that only the hub could read usable', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: new Error('socket hang up') })
+    const { hub } = stubHub({ pageContent: 'MiniMax 开放平台提供一站式多模态模型服务，支持免费试用与预约演示。' })
+    const draft = await importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub })
+    assert.equal(draft.kind, 'digital')
+    assert.equal(draft.analysis.mode, 'model')
+    assert.equal(draft.name, 'MiniMax 开放平台')
+    assert.equal(draft.brand_strategy.identity_and_product.core_identity, '一站式多模态模型服务')
+  })
+
+  it('fails as an empty import only when neither the page nor the model gave anything', async () => {
+    const { fetcher } = stubFetcher({ [DIGITAL_PAGE_URL]: { html: '<head><title>MiniMax</title></head><body></body>' } })
+    const { hub } = stubHub({ textCompleteThrows: true, pageFetchThrows: true })
+    await assert.rejects(
+      () => importProductFromUrl({ url: DIGITAL_PAGE_URL, fetcher, hub }),
+      (error) => error.code === 'link-import-empty',
+    )
   })
 })

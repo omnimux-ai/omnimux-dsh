@@ -326,7 +326,9 @@ export function UrlImportBar(props) {
       }
       onImported(data)
       setPhase('success')
-      setMessage(t('add.urlImport.success'))
+      // The import itself succeeded; only the model step was unavailable, so the
+      // strategy modules may be thin. Say which of the two happened.
+      setMessage(t(data.analysis?.mode === 'heuristic' ? 'add.urlImport.degraded' : 'add.urlImport.success'))
     } catch {
       setPhase('error')
       setMessage(t('add.urlImport.failed'))

@@ -27,6 +27,50 @@ const IMPORTED = {
 
 const STRING_FIELDS = ['name', 'selling', 'audience', 'brand', 'features', 'price', 'sku', 'promotion', 'link']
 
+/** A digital landing-page import: the six-module report plus the mapped fields. */
+const DIGITAL_IMPORT = {
+  name: 'MiniMax 开放平台',
+  selling_points: '一站式多模态模型服务，超长上下文',
+  features: '文本模型 API，让开发者一个接口接入多模态',
+  target_audience: 'AI 应用开发者',
+  brand: 'MiniMax',
+  price: '',
+  sku: '',
+  promotion: '',
+  link: 'https://platform.example.com',
+  categories: ['AI 平台'],
+  images: [],
+  kind: 'digital',
+  analysis: { mode: 'model', model: 'gemini-3.8-flash', reason: null },
+  brand_strategy: {
+    brand_basic_info: {
+      company: { name: 'MiniMax', website: 'https://platform.example.com', locale: 'cn' },
+      product: { name: 'MiniMax 开放平台', category: 'AI 平台' },
+    },
+    content_angles: [
+      { id: 'cost_01', title: '成本焦虑', description: '按量付费', target_audience: 'AI 应用开发者', priority: 1 },
+    ],
+    tone_and_voice: { dos: ['用数据说话'], donts: ['夸大效果'] },
+    identity_and_product: {
+      core_identity: '一站式多模态模型服务',
+      product_offering: ['文本模型 API'],
+      unique_advantage: ['超长上下文'],
+      problems_solved: ['多模型拼接成本高'],
+      solutions: ['让开发者一个接口接入多模态'],
+      extra_unknown_key: 'dropped',
+    },
+    mission_and_positioning: {
+      mission: '让智能触手可及',
+      differentiation: ['性价比'],
+      ownable_space: { statement: '多模态入口', category: 'AI 平台', is_not: ['通用云'] },
+    },
+    market_and_competition: {
+      customer_segments: [{ name: 'AI 应用开发者', percentage: 60 }],
+      competitors: [{ name: 'OpenAI', website: 'https://openai.com' }],
+    },
+  },
+}
+
 const originalFetch = globalThis.fetch
 
 afterEach(() => {
@@ -43,6 +87,7 @@ describe('products client · link import copy', () => {
       'add.urlImport.invalidUrl': ['请输入合法的网页链接', 'Please enter a valid URL'],
       'add.urlImport.failed': ['解析失败，请检查链接或手动输入', 'Failed to parse link, please fill manually'],
       'add.urlImport.empty': ['未能提取到有效商品信息，请手动输入', 'No usable product info found, please fill manually'],
+      'add.urlImport.degraded': ['解析成功，但智能分析未接入，已按页面信息尽力填充', 'Extracted from the page only — the analysis model was unavailable'],
     }
     for (const [key, [zhText, enText]] of Object.entries(expected)) {
       assert.equal(zh[key], zhText, `zh ${key}`)
@@ -114,10 +159,13 @@ describe('products client · applyImportedData', () => {
     const writes = []
     const base = {
       fields: Object.fromEntries([...STRING_FIELDS, 'kind'].map((key) => [key, ''])),
-      setters: Object.fromEntries(STRING_FIELDS.map((key) => [
-        `set${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-        (value) => { writes.push([key, value]) },
-      ])),
+      setters: {
+        ...Object.fromEntries(STRING_FIELDS.map((key) => [
+          `set${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+          (value) => { writes.push([key, value]) },
+        ])),
+        setKind: (value) => { writes.push(['kind', value]) },
+      },
     }
     const mediaState = {
       categories: ['已有标签'],
@@ -129,7 +177,9 @@ describe('products client · applyImportedData', () => {
       strategyOpen: false,
       strategyTouched: false,
       strategy: {},
-      setStrategyOpen: () => {},
+      setStrategyOpen: (value) => { writes.push(['strategyOpen', value]) },
+      setStrategyTouched: (value) => { writes.push(['strategyTouched', value]) },
+      setStrategy: (value) => { writes.push(['strategy', value]) },
       openStrategy: () => {},
       patchStrategy: () => {},
       handleSelectPhysical: () => {},
@@ -137,6 +187,38 @@ describe('products client · applyImportedData', () => {
     }
     const bundle = bundleFormReturn(base, mediaState, strategyState, false)
     return { bundle, writes }
+  }
+
+  /** Same form, but the setters really write: the submit payload can be read back. */
+  function liveHarness() {
+    const base = {
+      fields: { ...Object.fromEntries([...STRING_FIELDS, 'kind'].map((key) => [key, ''])), kind: 'physical' },
+      setters: {},
+    }
+    for (const key of [...STRING_FIELDS, 'kind']) {
+      base.setters[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`] = (value) => { base.fields[key] = value }
+    }
+    const mediaState = {
+      categories: [],
+      media: [],
+      coverId: null,
+      setCategories: (next) => {
+        mediaState.categories = typeof next === 'function' ? next(mediaState.categories) : next
+      },
+    }
+    const strategyState = {
+      strategyOpen: false,
+      strategyTouched: false,
+      strategy: {},
+      setStrategyOpen: (value) => { strategyState.strategyOpen = value },
+      setStrategyTouched: (value) => { strategyState.strategyTouched = value },
+      setStrategy: (value) => { strategyState.strategy = value },
+      openStrategy: () => {},
+      patchStrategy: () => {},
+      handleSelectPhysical: () => {},
+      handleSelectDigital: () => {},
+    }
+    return { bundle: bundleFormReturn(base, mediaState, strategyState, false), base, strategyState }
   }
 
   it('fills name, selling, audience, brand, features, price, sku, promotion, link and tags', () => {
@@ -160,6 +242,92 @@ describe('products client · applyImportedData', () => {
     bundle.actions.applyImportedData({ name: 'Only a name' })
     assert.deepEqual(writes, [['name', 'Only a name']])
   })
+
+  it('never moves the kind switch or the strategy panel for a physical import', () => {
+    const { bundle, writes } = harness()
+    bundle.actions.applyImportedData({ ...IMPORTED, kind: 'physical', analysis: { mode: 'model', model: 'gemini-3.8-flash' } })
+    const touched = writes.map(([key]) => key)
+    assert.equal(touched.includes('kind'), false)
+    assert.equal(touched.includes('strategyOpen'), false)
+    assert.equal(touched.includes('strategy'), false)
+  })
+
+  it('switches to digital, unfolds the six modules and fills them from the analysis', () => {
+    const { bundle, writes } = harness()
+    bundle.actions.applyImportedData(DIGITAL_IMPORT)
+    const applied = Object.fromEntries(writes)
+    assert.equal(applied.kind, 'digital')
+    assert.equal(applied.strategyOpen, true, 'the six strategy cards must arrive expanded')
+    assert.equal(applied.strategyTouched, true)
+    assert.equal(applied.selling, '一站式多模态模型服务，超长上下文')
+    assert.equal(applied.audience, 'AI 应用开发者')
+    assert.equal(applied.brand, 'MiniMax')
+    assert.deepEqual(applied.categories, ['已有标签', 'AI 平台'])
+    // The whole six-module report lands in the panel, not just a summary.
+    assert.deepEqual(Object.keys(applied.strategy), [
+      'brand_basic_info',
+      'content_angles',
+      'tone_and_voice',
+      'identity_and_product',
+      'mission_and_positioning',
+      'market_and_competition',
+    ])
+    assert.equal(applied.strategy.brand_basic_info.company.name, 'MiniMax')
+    assert.equal(applied.strategy.identity_and_product.core_identity, '一站式多模态模型服务')
+    assert.deepEqual(applied.strategy.identity_and_product.unique_advantage, ['超长上下文'])
+    assert.equal(applied.strategy.mission_and_positioning.ownable_space.category, 'AI 平台')
+    assert.deepEqual(applied.strategy.market_and_competition.customer_segments, [{ name: 'AI 应用开发者', percentage: 60 }])
+    assert.equal(applied.strategy.content_angles[0].target_audience, 'AI 应用开发者')
+  })
+
+  it('still switches to digital when the answer carries the kind but no strategy', () => {
+    const { bundle, writes } = harness()
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital' })
+    const applied = Object.fromEntries(writes)
+    assert.equal(applied.kind, 'digital')
+    assert.equal(applied.strategyOpen, undefined)
+  })
+
+  it('keeps the dialog usable when a strategy arrives unusable', () => {
+    for (const broken of ['not an object', [], 42, { brand_basic_info: 'nope' }]) {
+      const { bundle, writes } = harness()
+      bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', brand_strategy: broken })
+      const applied = Object.fromEntries(writes)
+      assert.equal(applied.kind, 'digital')
+      assert.equal(applied.strategy, undefined, `strategy must not be written for ${JSON.stringify(broken)}`)
+    }
+  })
+
+  it('submits the copy fields under the wire names the library actually reads', () => {
+    const { bundle } = liveHarness()
+    bundle.actions.applyImportedData(IMPORTED)
+    const payload = bundle.payload()
+    assert.equal(payload.kind, 'physical')
+    assert.equal(payload.selling_points, '6 小时长效保温，防滑硅胶底座')
+    assert.equal(payload.target_audience, 'Coffee lovers')
+    assert.equal(payload.brand, 'Aurora')
+    assert.equal(payload.features, '容量: 350ml')
+    assert.equal(payload.price, '24.9')
+    assert.equal(payload.sku, 'AM-350')
+    assert.equal(payload.link, 'https://shop.example.com/p/aurora-mug')
+    assert.equal(payload.brand_strategy, undefined)
+  })
+
+  it('submits the filled strategy with a digital import', () => {
+    const { bundle, strategyState } = liveHarness()
+    bundle.actions.applyImportedData(DIGITAL_IMPORT)
+    assert.equal(strategyState.strategyOpen, true)
+    const payload = bundle.payload()
+    assert.equal(payload.kind, 'digital')
+    assert.equal(payload.selling_points, '一站式多模态模型服务，超长上下文')
+    assert.equal(payload.target_audience, 'AI 应用开发者')
+    assert.equal(payload.brand_strategy.brand_basic_info.company.name, 'MiniMax')
+    assert.equal(payload.brand_strategy.identity_and_product.core_identity, '一站式多模态模型服务')
+    // Price / SKU / promotion stay physical-only fields.
+    assert.equal(payload.price, undefined)
+    assert.equal(payload.sku, undefined)
+    assert.equal(payload.promotion, undefined)
+  })
 })
 
 describe('products client · link bar wiring', () => {
@@ -179,7 +347,8 @@ describe('products client · link bar wiring', () => {
     assert.match(source, /event\.preventDefault\(\)/)
     assert.match(source, /loading=\{phase === 'loading'\}/)
     assert.match(source, /setMessage\(t\('add\.urlImport\.loading'\)\)/)
-    assert.match(source, /setMessage\(t\('add\.urlImport\.success'\)\)/)
+    // Success has two flavours: the model read the page, or only the page rules did.
+    assert.match(source, /setMessage\(t\(data\.analysis\?\.mode === 'heuristic' \? 'add\.urlImport\.degraded' : 'add\.urlImport\.success'\)\)/)
     assert.match(source, /setMessage\(t\('add\.urlImport\.failed'\)\)/)
     assert.match(source, /setMessage\(t\('add\.urlImport\.invalidUrl'\)\)/)
     assert.match(source, /role="status"/)
