@@ -22,7 +22,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -2115,7 +2115,7 @@ export function App(): React.JSX.Element {
       : { ...current, trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin) })
   }
 
-  const sessionMenuTitle = sessionTitle ?? copy.app.newSession
+  const sessionMenuTitle = sessionTitle ?? (locale === 'en' ? 'New Project' : '新建项目')
   const filteredSessions = useMemo(() => {
     if (!sessionSearchQuery.trim()) return sessionList
     const q = sessionSearchQuery.toLowerCase().trim()
@@ -2431,13 +2431,10 @@ export function App(): React.JSX.Element {
     <><div className="app">
       <header className="topbar">
         <div className="topbar-left">
-          <span className="brand-mini-badge" title="OmniMux-精灵助手">
-            <img src={whaleUrl} alt="OmniMux" />
-          </span>
           <button className="session-menu-trigger"
             aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
             onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
-            <MenuIcon size={14} />
+            <BinocularsIcon size={17} className="session-trigger-binoculars" />
             <span className="session-trigger-title">{sessionMenuTitle}</span>
             <ChevronDownIcon size={12} />
           </button>
@@ -2449,7 +2446,9 @@ export function App(): React.JSX.Element {
             <PlusSvgIcon size={14} />
           </button>
           <button className="icon-button settings-trigger" onClick={() => setShowSettings(true)}
-            aria-label={copy.app.openSettings} title={copy.app.settings}><SettingsIcon /></button>
+            aria-label={copy.app.openSettings} title={copy.app.settings}>
+            <MoreHorizontalIcon size={16} />
+          </button>
           {isFloatMode && (
             <div className="float-top-actions">
               <button

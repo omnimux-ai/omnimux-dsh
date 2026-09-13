@@ -31,6 +31,45 @@ export function SvgIcon({
   )
 }
 
+export function BinocularsIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="5.5" y="2.5" width="3" height="3" rx="0.8" />
+      <rect x="15.5" y="2.5" width="3" height="3" rx="0.8" />
+      <path d="M8.5 7h7v2.5h-7z" />
+      <circle cx="12" cy="8.25" r="1.2" fill="var(--canvas, #09090b)" />
+      <path d="M5 5h4l1.5 6.5A5 5 0 1 1 3.5 16L5 5Z" />
+      <path d="M19 5h-4l-1.5 6.5A5 5 0 1 1 20.5 16L19 5Z" />
+      <circle cx="7" cy="15.5" r="1.4" fill="#ffffff" />
+      <circle cx="17" cy="15.5" r="1.4" fill="#ffffff" />
+    </svg>
+  )
+}
+
+export function MoreHorizontalIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </svg>
+  )
+}
+
 export function FolderIcon({ size = 14, className }: { size?: number; className?: string }) {
   return (
     <SvgIcon size={size} className={className}>

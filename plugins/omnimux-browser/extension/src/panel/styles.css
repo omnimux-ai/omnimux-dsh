@@ -4316,41 +4316,47 @@ textarea:focus-visible {
   align-items: center !important;
   gap: 6px !important;
   height: 32px !important;
-  padding: 0 10px !important;
-  background: var(--surface) !important;
-  border: 1px solid var(--line-strong) !important;
-  border-radius: 8px !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 6px !important;
   color: var(--ink-strong) !important;
-  font-size: calc(12.5px * var(--ui-scale)) !important;
-  font-weight: 600 !important;
+  font-size: calc(13.5px * var(--ui-scale)) !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.01em !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease !important;
   flex: 0 0 auto !important;
   min-width: fit-content !important;
-  max-width: 220px !important;
+  max-width: 240px !important;
   box-sizing: border-box !important;
 }
 
 :root[data-theme="dark"] .session-menu-trigger {
-  background: #18181b !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #f4f4f5 !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
 }
 
 .session-menu-trigger:hover:not(:disabled),
 .session-menu-trigger[aria-expanded="true"] {
-  border-color: var(--ink-strong) !important;
-  background: var(--canvas-deep) !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-:root[data-theme="dark"] .session-menu-trigger:hover:not(:disabled),
-:root[data-theme="dark"] .session-menu-trigger[aria-expanded="true"] {
-  background: #27272a !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
+:root[data-theme="light"] .session-menu-trigger:hover:not(:disabled),
+:root[data-theme="light"] .session-menu-trigger[aria-expanded="true"] {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.session-trigger-binoculars {
+  color: var(--ink-strong) !important;
+  flex-shrink: 0 !important;
 }
 
 .session-trigger-title {
-  max-width: 140px !important;
+  max-width: 160px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -4358,13 +4364,39 @@ textarea:focus-visible {
 }
 
 .session-menu-trigger svg {
-  color: var(--muted) !important;
+  color: var(--ink-strong) !important;
   flex-shrink: 0 !important;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.session-menu-trigger[aria-expanded="true"] svg {
+.session-menu-trigger[aria-expanded="true"] svg:last-child {
   transform: rotate(180deg) !important;
+}
+
+/* 顶栏图标按钮无边框极简风格 */
+.topbar-actions .icon-button,
+.topbar .icon-button {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: var(--ink-strong) !important;
+  border-radius: 6px !important;
+  width: 30px !important;
+  height: 30px !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.topbar-actions .icon-button:hover:not(:disabled),
+.topbar .icon-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme="light"] .topbar-actions .icon-button:hover:not(:disabled),
+:root[data-theme="light"] .topbar .icon-button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #000000 !important;
 }
 
 /* Session Picker (现代黑白极简 Popover 风格) */
