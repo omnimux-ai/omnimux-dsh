@@ -132,8 +132,9 @@ describe('video anchor policy', () => {
   it('centres the collapsed circle on the measured control row', () => {
     // The circle is the box stage one paints, so it is the box the centring is
     // measured against. A row whose centre sits 30px above the media's bottom
-    // edge needs a 30 - 22/2 = 19px inset, which the band caps at 12px: the
-    // circle then centres 23px up against the row's 30px, never above it.
+    // edge needs a 30 - 32/2 = 14px inset, which the band caps at 12px: the
+    // circle ends up centred 28px up against the row's 30px, 2px below the row's
+    // line and never above it.
     const rowCentreY = 330
     const policy = resolveCapsuleAnchor(video, 'video', {
       playButtonRight: 52,
@@ -151,14 +152,24 @@ describe('video anchor policy', () => {
 
     // ...and a row that sits inside the band is centred exactly: its own centre
     // line becomes the circle's centre line.
+    //
+    // `20px` from the bottom edge is where that stops being possible: centring a
+    // 32px circle on a row 20px up needs a 20 - 16 = 4px inset, and the band floor
+    // is 6px — so the clamp wins and the circle settles 22px up instead, 2px past
+    // the row's own line. The floor is what keeps a 32px box plus its 4px halo
+    // clear of the media's bottom edge.
     const rowOffsetY = 20
     const lowRow = resolveCapsuleAnchor(video, 'video', {
       playButtonRight: 52,
       controlCenterY: video.bottom - rowOffsetY,
       measured: true,
     })
-    expect(lowRow.offsetY).toBe(rowOffsetY - CAPSULE_SPEC.collapsedHeight / 2)
-    expect(lowRow.offsetY + CAPSULE_SPEC.collapsedHeight / 2).toBe(rowOffsetY)
+    expect(lowRow.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetYRange[0])
+    expect(lowRow.offsetY).toBe(
+      rowOffsetY - CAPSULE_SPEC.collapsedHeight / 2 < VIDEO_ANCHOR_SPEC.offsetYRange[0]
+        ? VIDEO_ANCHOR_SPEC.offsetYRange[0]
+        : rowOffsetY - CAPSULE_SPEC.collapsedHeight / 2,
+    )
   })
 
   it('leaves the image placement untouched', () => {

@@ -253,16 +253,18 @@ describe('overlay structure', () => {
   })
 
   it('exposes the two-stage capsule geometry from the single spec source', () => {
-    expect(CAPSULE_SPEC.borderRadius).toBe(14)
-    expect(CAPSULE_SPEC.height).toBe(28)
+    expect(CAPSULE_SPEC.borderRadius).toBe(16)
+    expect(CAPSULE_SPEC.height).toBe(32)
     expect(CAPSULE_SPEC.inset).toBe(10)
-    // Stage one: a 22px circle. Stage two: 3 × 28px icon buttons + 2 × 3px gaps
-    // + 2 × 5px row padding + 2 × 1px border, with the buttons filling the
-    // compact 28px band.
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(22)
-    expect(CAPSULE_SPEC.width).toBe(102)
+    // Stage one: a 32px circle whose 4px halo carries it to a 40px span. Stage
+    // two: 3 × 32px icon buttons + 2 × 0px gaps + 2 × 2px row padding + 2 × 1px
+    // border, with the buttons filling the same 32px band the circle occupies.
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(32)
+    expect(CAPSULE_SPEC.width).toBe(108)
     expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.collapsedHeight)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
+    expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
+    expect(CAPSULE_SPEC.collapsedWidth + 2 * CAPSULE_SPEC.haloWidth).toBe(40)
     expect(CAPSULE_SPEC.width).toBe(
       2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
     )
