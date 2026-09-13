@@ -9,8 +9,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   MediaActionBridge,
+  browserTransport,
   legacyCopy,
   type ActionTransport,
+  type SidePanelState,
   type WorkstationResult,
 } from '../src/content/media-hover/actions.ts'
 import { hoverCopy } from '../src/content/media-hover/copy.ts'
@@ -34,6 +36,7 @@ const PAYLOAD: HoveredMedia = {
 
 function transport(overrides: Partial<ActionTransport> = {}): ActionTransport {
   return {
+    sidePanelState: async () => 'inactive',
     deliverToWorkstation: vi.fn(async (): Promise<WorkstationResult> => 'unavailable'),
     postToBackground: vi.fn(async () => ({ ok: true, result: {} })),
     writeClipboard: vi.fn(async () => true),
@@ -117,6 +120,7 @@ describe('copy the media link', () => {
 describe('add to conversation', () => {
   it('reports the workbench channel when the panel confirms the receipt', async () => {
     const bridge = new MediaActionBridge(transport({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'attached' as WorkstationResult),
     }))
     const outcome = await bridge.attachToConversation(PAYLOAD)
@@ -128,6 +132,7 @@ describe('add to conversation', () => {
   it('falls back to the side panel when no workstation exists', async () => {
     const postToBackground = vi.fn(async () => ({ ok: true, result: { channel: 'side-panel' } }))
     const bridge = new MediaActionBridge(transport({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as WorkstationResult),
       postToBackground,
     }))
@@ -143,6 +148,7 @@ describe('add to conversation', () => {
 
   it('does not claim success when the fallback also fails', async () => {
     const bridge = new MediaActionBridge(transport({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as WorkstationResult),
       postToBackground: vi.fn(async () => ({ ok: false })),
     }))
@@ -154,6 +160,7 @@ describe('add to conversation', () => {
   it('waits at most the receipt budget for an unresponsive workstation', async () => {
     const started = Date.now()
     const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: (_media, timeoutMs) => new Promise((resolve) => {
         // Mirror the production timeout, whose budget the bridge owns.
         setTimeout(() => resolve('unavailable'), timeoutMs)
@@ -170,6 +177,7 @@ describe('add to conversation', () => {
 
   it('surfaces a panel that explicitly refuses the media', async () => {
     const bridge = new MediaActionBridge(transport({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'rejected' as WorkstationResult),
       postToBackground: vi.fn(async () => ({ ok: true })),
     }))
@@ -177,5 +185,121 @@ describe('add to conversation', () => {
     // A refusal still hands the media to the side panel rather than dropping it.
     expect(outcome.ok).toBe(true)
     expect(outcome.channel).toBe('side-panel')
+  })
+})
+
+describe('one window, one conversation', () => {
+  /**
+   * A transport whose only difference from the default is a live worker.
+   *
+   * Overriding `postToBackground` alone is not enough: the panel check rides
+   * that same channel, so a case that drives the worker by its wire has to say
+   * how the check is answered as well.
+   */
+  function wire(
+    postToBackground: (message: Record<string, unknown>) => Promise<unknown>,
+    panel: SidePanelState,
+  ): ActionTransport {
+    return transport({
+      sidePanelState: vi.fn(async () => panel),
+      postToBackground,
+    })
+  }
+
+  it('asks the worker about the side panel before it tries anything else', async () => {
+    // The question itself is asserted through the real transport below; here the
+    // bridge must put it, and only then reach for the workstation.
+    const sidePanelState = vi.fn(async () => 'inactive' as const)
+    const deliverToWorkstation = vi.fn(async () => 'attached' as WorkstationResult)
+    const bridge = new MediaActionBridge(transport({ sidePanelState, deliverToWorkstation }))
+
+    await bridge.attachToConversation(PAYLOAD)
+
+    expect(sidePanelState).toHaveBeenCalledTimes(1)
+    expect(deliverToWorkstation).toHaveBeenCalledTimes(1)
+  })
+
+  it('delivers to the open side panel and never expands the floating workstation', async () => {
+    // The reported defect: with the native side panel already showing the
+    // conversation, pressing the capsule expanded the floating workstation
+    // beside it, so the same session appeared twice.
+    const deliverToWorkstation = vi.fn(async () => 'attached' as WorkstationResult)
+    const postToBackground = vi.fn(async () => ({ ok: true, result: { channel: 'side-panel', active: true } }))
+    const bridge = new MediaActionBridge({ ...wire(postToBackground, 'active'), deliverToWorkstation })
+
+    const outcome = await bridge.attachToConversation(PAYLOAD)
+
+    expect(deliverToWorkstation).not.toHaveBeenCalled()
+    expect(postToBackground).toHaveBeenCalledWith(expect.objectContaining({
+      type: RUNTIME_MESSAGE.openAssistantWithMedia,
+    }))
+    expect(outcome).toMatchObject({ ok: true, status: 'attached', channel: 'side-panel' })
+  })
+
+  it('keeps the workstation closed when the worker cannot be reached', async () => {
+    // An unreachable worker cannot rule a panel out, and the panel channel holds
+    // the media either way — so the workstation stays shut and the request is
+    // reported as a failure instead of a success nobody received.
+    const deliverToWorkstation = vi.fn(async () => 'attached' as WorkstationResult)
+    const postToBackground = vi.fn(async () => null)
+    const bridge = new MediaActionBridge({ ...wire(postToBackground, 'unreachable'), deliverToWorkstation })
+
+    const outcome = await bridge.attachToConversation(PAYLOAD)
+
+    expect(deliverToWorkstation).not.toHaveBeenCalled()
+    expect(outcome.ok).toBe(false)
+    expect(outcome.status).toBe('failed')
+  })
+
+  it('uses the floating workstation only when no side panel is connected', async () => {
+    const deliverToWorkstation = vi.fn(async () => 'attached' as WorkstationResult)
+    const postToBackground = vi.fn(async () => ({ ok: true, active: false }))
+    const bridge = new MediaActionBridge({ ...wire(postToBackground, 'inactive'), deliverToWorkstation })
+
+    const outcome = await bridge.attachToConversation(PAYLOAD)
+
+    expect(deliverToWorkstation).toHaveBeenCalledTimes(1)
+    expect(outcome).toMatchObject({ ok: true, channel: 'workbench' })
+  })
+
+  it('reads the panel state from the worker through the real transport', async () => {
+    const sendMessage = vi.fn(async () => ({ ok: true, active: true }))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
+    try {
+      expect(await browserTransport(() => hoverCopy('zh')).sidePanelState()).toBe('active')
+      expect(sendMessage).toHaveBeenCalledWith({ type: RUNTIME_MESSAGE.checkSidePanelOpen })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('reports a closed panel only on a positive answer', async () => {
+    const sendMessage = vi.fn(async () => ({ ok: true, active: false }))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
+    try {
+      expect(await browserTransport(() => hoverCopy('zh')).sidePanelState()).toBe('inactive')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('reports an unreachable worker rather than a closed panel', async () => {
+    // The distinction matters: "no panel" opens the workstation, "unknown" must
+    // not.
+    const cases: Array<() => unknown> = [
+      () => undefined,
+      () => null,
+      () => ({ ok: false }),
+      () => ({ ok: true }),
+      () => ({ ok: true, active: 'yes' }),
+    ]
+    for (const answer of cases) {
+      vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn(async () => answer()) } })
+      try {
+        expect(await browserTransport(() => hoverCopy('zh')).sidePanelState()).toBe('unreachable')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    }
   })
 })

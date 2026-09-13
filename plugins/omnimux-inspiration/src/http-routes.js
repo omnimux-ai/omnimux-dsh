@@ -5,6 +5,7 @@ import {
   handleBatchDelete,
   handleCreate,
   handleDeleteItem,
+  handleFetchMedia,
   handleGetItem,
   handleImportUrl,
   handleList,
@@ -37,6 +38,7 @@ const ROUTE_HANDLERS = {
   list: handleList,
   create: handleCreate,
   'import-url': handleImportUrl,
+  'fetch-media': handleFetchMedia,
   analyze: handleAnalyze,
   translate: handleTranslate,
   'batch-delete': handleBatchDelete,
@@ -147,6 +149,7 @@ function matchCollection(method, path) {
 
 const SPECIAL_PATHS = {
   [`${LOCAL_PREFIX}/import-url`]: { POST: 'import-url' },
+  [`${LOCAL_PREFIX}/fetch-media`]: { POST: 'fetch-media' },
   [`${LOCAL_PREFIX}/batch-delete`]: { POST: 'batch-delete', DELETE: 'batch-delete' },
 }
 
@@ -299,6 +302,12 @@ export function createLocalInspirationDispatcher(deps) {
     // Forwarded to the download target check. Left undefined in production so the
     // real `dns.lookup` is used; tests inject a stub to stay offline.
     resolver: deps.resolver,
+    // Export destination and the audio extractor, both left undefined in
+    // production: the platform Downloads folder and the real ffmpeg are the
+    // correct defaults, and a test that reached either one would be writing to
+    // the developer's own machine.
+    downloadsDir: deps.downloadsDir,
+    runFfmpeg: deps.runFfmpeg,
     // Also undefined in production, where `maybeAnalyze` calls the real analyzer.
     // The analyzer degrades to a local breakdown instead of reporting failure, so
     // its failure branch is unreachable from a test through any other seam — an

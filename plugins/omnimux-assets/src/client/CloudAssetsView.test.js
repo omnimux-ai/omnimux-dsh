@@ -32,7 +32,7 @@ function ruleBody(css, selector) {
  *
  * 旧版把二级栏钉死在声音上，其余大类的 sub_categories 只当计数桶用，于是选中别的
  * 大类时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类都展开二级栏，首个
- * Tab 统一是「全部」并带该大类总数；只有刻意留空的道具和最左侧的「全部」不展开。
+ * Tab 统一是「全部」并带该大类总数；只有最左侧的「全部」不展开。
  */
 describe('Cloud second level follows the catalog data', () => {
   it('reads hasSecondLevel from the tabs instead of naming one category', () => {
@@ -56,7 +56,10 @@ describe('Cloud second level follows the catalog data', () => {
   })
 
   it('renders the sub-navigation only when the feed reports a second level', () => {
-    assert.match(viewJsx, /hasSecondLevel \? \(\n        <div className="omnimux-assets-cloud-subnav"/)
+    // 角色 hands its second level to the eight-dimension filter bar, so the chip
+    // row is rendered when the feed reports one *and* no filter bar took over.
+    assert.match(viewJsx, /const filterBarOwnsSecondLevel = characterFilters\.dimensions\.length > 0/)
+    assert.match(viewJsx, /hasSecondLevel && !filterBarOwnsSecondLevel \? \(\n        <div className="omnimux-assets-cloud-subnav"/)
     assert.match(viewJsx, /tabs=\{feed\.tabs\.items\}/)
     assert.match(viewJsx, /hasSecondLevel=\{feed\.hasSecondLevel\}/)
   })
@@ -95,6 +98,19 @@ describe('Cloud second level follows the catalog data', () => {
     assert.equal(zh['cloud.subcategory.male'], '男性角色')
     assert.equal(zh['cloud.subcategory.lifestyle'], '生活居家')
     assert.equal(zh['cloud.subcategory.business'], '职场商务')
+  })
+
+  it('names the Loomi shelves in both dictionaries', () => {
+    assert.equal(zh['cloud.subcategory.object'], '实物道具')
+    assert.equal(en['cloud.subcategory.object'], 'Props & Objects')
+    assert.equal(zh['cloud.subcategory.environment'], '实景环境')
+    assert.equal(en['cloud.subcategory.environment'], 'Environments')
+    assert.equal(zh['cloud.subcategory.pet'], '萌宠动物')
+    assert.equal(en['cloud.subcategory.pet'], 'Pets & Animals')
+    assert.equal(zh['cloud.subcategory.clothing'], '服饰穿搭')
+    assert.equal(en['cloud.subcategory.clothing'], 'Fashion & Outfits')
+    assert.equal(zh['cloud.subcategory.portrait'], '人像写真')
+    assert.equal(en['cloud.subcategory.portrait'], 'Portraits')
   })
 
   it('drops the shelves the catalog no longer has', () => {
@@ -352,5 +368,96 @@ describe('Cloud chrome stays neutral', () => {
 
   it('leaves no orphaned tag styling behind', () => {
     assert.doesNotMatch(ASSETS_CSS, /\.omnimux-assets-cloud-tag\b/)
+  })
+})
+
+/**
+ * 角色的八维筛选栏：一排药丸，点开是自己的选项清单，每项带条数，选中有高亮，
+ * 有筛选时才出现「重置筛选」。它只属于角色，其他大类的二级分类行原样保留。
+ */
+describe('Cloud character filter bar', () => {
+  /** @param {string} selector */
+  const ruleOf = (selector) => {
+    const start = ASSETS_CSS.indexOf(selector)
+    assert.notEqual(start, -1, `${selector} must exist`)
+    return ASSETS_CSS.slice(start, ASSETS_CSS.indexOf('}', start))
+  }
+
+  it('renders one pill per catalog dimension, in the catalog order', () => {
+    assert.match(viewJsx, /const CloudDimensionBar = \(props\)|function CloudDimensionBar\(props\)/)
+    assert.match(viewJsx, /\{dimensions\.map\(\(dimension\) => \(\n        <CloudDimensionFilter/)
+    assert.match(viewJsx, /const \{ t, dimensions, filters, active, onSelect, onReset \} = props/)
+  })
+
+  it('shows the value in the pill label once a dimension is narrowed', () => {
+    assert.match(viewJsx, /const label = dimensionLabelOf\(\{ t, dimension, value \}\)/)
+    assert.match(viewJsx, /<span className="omnimux-assets-cloud-dimension-label">\{label\}<\/span>/)
+  })
+
+  it('mounts the option list only while the pill is open, and closes it on outside input', () => {
+    assert.match(viewJsx, /const \[open, setOpen\] = useState\(false\)/)
+    assert.match(viewJsx, /\{open \? \(\n        <div className="omnimux-assets-cloud-dimension-menu"/)
+    assert.match(viewJsx, /if \(node && !node\.contains\(event\.target\)\) setOpen\(false\)/)
+    assert.match(viewJsx, /document\.removeEventListener\('mousedown', onPointerDown\)/)
+  })
+
+  it('carries the row count on 全部 and on every option', () => {
+    assert.match(viewJsx, /\{renderOption\(\{ value: '', total: dimension\.total \}\)\}/)
+    assert.match(viewJsx, /\{dimension\.options\.map\(\(option\) => renderOption\(option\)\)\}/)
+    assert.match(viewJsx, /<span className="omnimux-assets-cloud-count">\{option\.total\}<\/span>/)
+  })
+
+  it('marks the chosen option as pressed, and nothing else', () => {
+    assert.match(viewJsx, /aria-pressed=\{option\.value === value \? 'true' : 'false'\}/)
+  })
+
+  it('offers one reset control, and only while a dimension is narrowed', () => {
+    assert.match(viewJsx, /\{active > 0 \? \(/)
+    assert.match(viewJsx, /className="omnimux-assets-cloud-dimension-reset"/)
+    assert.match(viewJsx, /\{t\('dim\.reset'\)\}/)
+    assert.match(viewJsx, /onResetDimensions=\{feed\.resetDimensions\}/)
+  })
+
+  it('replaces the sub-category row for 角色 and leaves it for every other category', () => {
+    assert.match(viewJsx, /const filterBarOwnsSecondLevel = characterFilters\.dimensions\.length > 0/)
+    assert.match(viewJsx, /<CloudDimensionBar\n        t=\{t\}/)
+    assert.match(viewJsx, /characterFilters=\{feed\.characterFilters\}/)
+  })
+
+  it('paints the bar with label tokens only: no brand hue, no literal colour', () => {
+    const bar = ASSETS_CSS.slice(
+      ASSETS_CSS.indexOf('.omnimux-assets-cloud-dimensions {'),
+      ASSETS_CSS.indexOf('.omnimux-assets-cloud-scroll {'),
+    )
+    assert.match(bar, /border-radius: 999px/)
+    assert.match(bar, /background: var\(--dsw-alias-label-primary\)/)
+    assert.match(bar, /color: var\(--dsw-alias-label-primary-foreground\)/)
+    assert.match(bar, /background: var\(--dsw-alias-bg-elevated\)/)
+    assert.doesNotMatch(bar, /brand-primary/)
+    assert.doesNotMatch(bar, /#[0-9a-fA-F]{3,8}\b/)
+    assert.doesNotMatch(bar, /rgba?\(/)
+  })
+
+  it('stacks the option list above the grid instead of inside its flow', () => {
+    const menu = ruleOf('.omnimux-assets-cloud-dimension-menu {')
+    assert.match(menu, /position: absolute/)
+    assert.match(menu, /top: calc\(100% \+ 6px\)/)
+    assert.match(menu, /z-index: 20/)
+    assert.match(menu, /max-height: 264px/)
+    assert.match(menu, /overflow-y: auto/)
+  })
+
+  it('turns the caret to point at the open list, and inverts it on a selected pill', () => {
+    const caret = ruleOf('.omnimux-assets-cloud-dimension-caret {')
+    assert.match(caret, /transform: rotate\(90deg\)/)
+    assert.match(caret, /var\(--dsw-alias-label-tertiary\)/)
+    assert.match(ruleOf('.omnimux-assets-cloud-dimension-btn[aria-expanded="true"]'), /rotate\(-90deg\)/)
+    assert.match(ruleOf('.omnimux-assets-cloud-dimension-btn[aria-pressed="true"] .omnimux-assets-cloud-dimension-caret'), /color: inherit/)
+  })
+
+  it('names the empty result after the filter that caused it', () => {
+    assert.match(viewJsx, /const filtered = feed\.characterFilters\.active > 0/)
+    assert.match(viewJsx, /t\('dim\.empty\.title'\)/)
+    assert.equal(zh['dim.empty.title'], '没有符合这组条件的角色')
   })
 })

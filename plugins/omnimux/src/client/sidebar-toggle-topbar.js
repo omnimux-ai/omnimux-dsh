@@ -37,7 +37,40 @@ export const TOPBAR_TOGGLE_SIZE_PX = 32
 export const TOPBAR_TOGGLE_GAP_PX = 8
 export const TOPBAR_TOGGLE_RIGHT_MARGIN_PX = 8
 export const TOPBAR_TOGGLE_TOP_PX = 4
-export const TOPBAR_TOGGLE_Z_INDEX = 9999
+export const TOPBAR_TOGGLE_Z_INDEX = 2147483647
+
+/**
+ * Trigger click robustly penetrating React 17/18 synthetic event props.
+ * @param {HTMLElement | null | undefined} el
+ */
+export function triggerClick(el) {
+  if (!el) return
+  try {
+    const propKey = Object.keys(el).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
+    if (propKey && typeof el[propKey]?.onClick === 'function') {
+      el[propKey].onClick({
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        nativeEvent: new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
+        target: el,
+        currentTarget: el,
+      })
+      return
+    }
+  } catch {
+    // fall through
+  }
+  try {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
+  } catch {
+    // fall through
+  }
+  try {
+    el.click()
+  } catch {
+    // fall through
+  }
+}
 
 const TOGGLE_ARIA_LABELS = Object.freeze([
   '打开侧边栏',
@@ -49,15 +82,19 @@ const TOGGLE_ARIA_LABELS = Object.freeze([
 const NEW_SESSION_ARIA_LABELS = Object.freeze([
   '新建会话',
   '新会话',
+  '新对话',
+  '新建对话',
   'New session',
   'New Session',
+  'New chat',
+  'New Chat',
 ])
 
 /** Shown while the sidebar is expanded (action = collapse). */
 const COLLAPSE_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="collapse" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="6.8" y1="2.5" x2="6.8" y2="13.5"/><path d="M11.5 8h-1.3"/><path d="M11.4 6.9l-1.2 1.1 1.2 1.1"/></svg>`
 
 /** Shown while the sidebar is collapsed (action = expand). */
-const EXPAND_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="expand" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="6.8" y1="2.5" x2="6.8" y2="13.5"/><path d="M9.8 8h1.3"/><path d="M9.9 6.9l1.2 1.1-1.2 1.1"/></svg>`
+const EXPAND_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="expand" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"/><line x1="9.8" y1="2.5" x2="9.8" y2="13.5"/><path d="M9.8 8h1.3"/><path d="M9.9 6.9l1.2 1.1-1.2 1.1"/></svg>`
 
 /** Official ic_ds_new_chat_outline_16 path (ui-primitives IconNewChatOutline16). */
 const NEW_SESSION_ICON_SVG = `<svg data-omnimux-topbar-new-session-icon width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8.00003 0.3237C3.76075 0.3237 0.32373 3.76072 0.32373 8C0.32373 9.17603 0.589121 10.2922 1.0632 11.2901L1.35291 11.8989L2.5705 11.3205L2.28079 10.7117C1.89079 9.89074 1.67301 8.97167 1.67301 8C1.67301 4.50546 4.50549 1.67298 8.00003 1.67298C11.4946 1.67298 14.3271 4.50546 14.3271 8C14.3271 11.4945 11.4946 14.327 8.00003 14.327C7.28473 14.327 6.76077 14.277 6.29621 14.1487C5.83857 14.0224 5.40441 13.8109 4.88514 13.4488C4.12569 12.919 3.03778 12.7316 2.141 13.2978L2.12682 13.307L2.11264 13.3171L1.34886 13.854L1.79659 15.188L2.86122 14.4384C3.19068 14.2305 3.68325 14.2542 4.11326 14.5539C4.72789 14.9826 5.30042 15.2724 5.93762 15.4484C6.56803 15.6224 7.22776 15.6763 8.00003 15.6763C12.2393 15.6763 15.6763 12.2393 15.6763 8C15.6763 3.76072 12.2393 0.3237 8.00003 0.3237ZM7.32033 4.82535V7.32536H4.82538V8.67464H7.32033V11.1747H8.6696V8.67464H11.1747V7.32536H8.6696V4.82535H7.32033Z" fill="currentColor"/></svg>`
@@ -77,6 +114,8 @@ export function findOfficialSidebarToggle(doc) {
     const byAria = doc.querySelector(`button[aria-label="${label}"]${notInjected}`)
     if (byAria instanceof HTMLElement) return byAria
   }
+  const byClass = doc.querySelector(`button.x-Wl6W_toggle${notInjected}, .x-Wl6W_toggle${notInjected}`)
+  if (byClass instanceof HTMLElement) return byClass
   const fallback = doc.querySelector(
     `[class*="sidebarCol"] [class*="logoRow"] [class*="toggle"]${notInjected}, [class*="sidebarCol"] [class*="logoRow"] button[class*="toggle"]${notInjected}`,
   )
@@ -98,7 +137,7 @@ export function findOfficialNewSessionButton(doc) {
     if (byAria instanceof HTMLElement) return byAria
   }
   const byClass = doc.querySelector(
-    `[class*="sidebarCol"] button[class*="newSession"]${notInjected}, [class*="sidebarCol"] [class*="newSession"]${notInjected}`,
+    `[class*="sidebarCol"] button[class*="newSession"]${notInjected}, [data-pane="sidebar"] button[class*="newSession"]${notInjected}, .dshDesktopSidebarSurface button[class*="newSession"]${notInjected}`,
   )
   if (byClass instanceof HTMLElement) return byClass
   // Text fallback for localized labels without exact aria match.
@@ -355,6 +394,7 @@ export function computeTabBarPadLeft(doc) {
 export function findSidebarColumn(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
   return doc.querySelector('[class*="sidebarCol"], [data-pane="sidebar"]')
+    || doc.querySelector('.dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar')
 }
 
 /**
@@ -432,9 +472,9 @@ export function applyTopbarToggleCssVars(doc, geom = {}) {
  */
 export function findTopbarAnchor(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
-  return (
-    doc.querySelector('[data-dsh-better-sidebar] [class*="tabBar"], [class*="tabBar"], [data-dsh-better-sidebar]')
-  )
+  const anchor = doc.querySelector('[data-dsh-better-sidebar] [class*="tabBar"], [class*="tabBar"], [data-dsh-better-sidebar]')
+  if (anchor) return anchor
+  return doc.body || doc.documentElement || null
 }
 
 /**
@@ -453,11 +493,13 @@ export function injectTopbarToggleButton(doc) {
     btn.setAttribute(SIDEBAR_TOGGLE_TOPBAR_ATTR, '1')
     btn.setAttribute('aria-label', '收起侧边栏')
     btn.innerHTML = COLLAPSE_ICON_SVG + EXPAND_ICON_SVG
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (event) => {
+      try { event.preventDefault() } catch { /* ignore */ }
+      try { event.stopPropagation() } catch { /* ignore */ }
       const willCollapse = !isLeftSidebarCollapsed(doc)
       setExplicitLeftCollapseIntent(willCollapse)
       const official = findOfficialSidebarToggle(doc)
-      if (official) official.click()
+      if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
   }
@@ -501,7 +543,7 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
         // Fall through to official click if coordinator is not ready.
       }
       const official = findOfficialNewSessionButton(doc)
-      if (official) official.click()
+      if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
   }
@@ -555,65 +597,142 @@ function hideOriginalToggle(doc) {
   return btn
 }
 
+const RIGHTBAR_CHROME_STYLES_ID = 'omnimux-rightbar-chrome-styles'
+const RIGHTBAR_CHROME_STYLES = `
+/* 1. 修复创作画布等 Tab 标题文字被官方右侧 mask-image 渐变遮罩虚化截断（“创作画布”变“创作画x”） */
+[data-dockkit-strip] [data-dockkit-tab-title],
+[class*="_tabTitle_"] {
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: 220px !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+/* 2. 确保 Tab 按钮内留出合理宽度展示图标、文字与关闭 x */
+[data-dockkit-tab],
+[class*="_tab_17p4l"] {
+  min-width: 120px !important;
+  max-width: 220px !important;
+  padding-right: 8px !important;
+}
+
+/* 3. 增强原生右上角按钮无拖拽穿透与交互 */
+button[data-dockkit-split-button],
+button[data-sidebar-right-mode],
+button[data-sidebar-right-toggle],
+button[data-sidebar-right-expand] {
+  -webkit-app-region: no-drag !important;
+}
+`
+
+function ensureRightbarChromeStyles(doc) {
+  if (!doc || doc.getElementById(RIGHTBAR_CHROME_STYLES_ID)) return
+  const style = doc.createElement('style')
+  style.id = RIGHTBAR_CHROME_STYLES_ID
+  style.textContent = RIGHTBAR_CHROME_STYLES
+  const target = doc.head || doc.documentElement
+  if (target) target.appendChild(style)
+}
+
 /**
- * Inject the right sidebar expand button into the top-right corner.
- * Only shown when the right workbench panel is closed.
+ * Native right sidebar controls orchestrator:
+ * 1. Remove duplicate/injected custom right buttons to prevent icon collision.
+ * 2. Reorder controls so Fullscreen precedes Split: [Fullscreen | Split | Sidebar].
+ * 3. Keep the native rightbar toggle button accessible when rightbar is collapsed.
  * @param {Document | null | undefined} doc
- * @returns {HTMLElement | null}
+ */
+export function syncNativeRightbarControls(doc) {
+  if (!doc) return
+
+  // 1. 移除我们自定义注入的重复按钮，彻底保留原生
+  const injected = doc.querySelectorAll(`[${TOPBAR_RIGHT_EXPAND_ATTR}]`)
+  injected.forEach((el) => {
+    try { el.remove() } catch { /* ignore */ }
+  })
+
+  // 2. 注入全局样式补丁（修复 Tab 标题文字遮挡）
+  ensureRightbarChromeStyles(doc)
+
+  // 3. 全屏按钮迁移到左侧，顺序变为：全屏 ｜ 分栏 ｜ 侧边栏
+  const splitBtn = doc.querySelector('button[data-dockkit-split-button], button[aria-label="分栏"]')
+  const fsBtn = doc.querySelector('button[data-sidebar-right-mode="fullscreen"], button[aria-label="全屏"]')
+  if (splitBtn && fsBtn && splitBtn.parentElement) {
+    if (splitBtn.compareDocumentPosition(fsBtn) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      try {
+        splitBtn.before(fsBtn)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  // 4. 原生侧边栏按钮在关闭时也显示，以便点击激活展开
+  const isRightCollapsed = Boolean(
+    doc.querySelector('[data-rightbar-collapsed="true"]') ||
+    doc.querySelector('.dshDesktopFrame[data-rightbar-collapsed="true"]')
+  )
+  const toggleBtn = doc.querySelector('button[data-sidebar-right-toggle="true"], button[data-sidebar-right-expand="true"]')
+  const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"], [class*="stripChrome"]')
+
+  if (toggleBtn instanceof HTMLElement) {
+    if (isRightCollapsed) {
+      // 在关闭时，将其挂到 body 上并设置 fixed 显式展示在右上角
+      if (toggleBtn.parentElement !== doc.body) {
+        toggleBtn.dataset.originalParent = '_stripChrome'
+        doc.body.appendChild(toggleBtn)
+      }
+      toggleBtn.style.setProperty('position', 'fixed', 'important')
+      toggleBtn.style.setProperty('right', '8px', 'important')
+      toggleBtn.style.setProperty('top', '5px', 'important')
+      toggleBtn.style.setProperty('z-index', '9999', 'important')
+      toggleBtn.style.setProperty('display', 'flex', 'important')
+      toggleBtn.style.setProperty('visibility', 'visible', 'important')
+      toggleBtn.style.setProperty('cursor', 'pointer', 'important')
+      toggleBtn.style.setProperty('pointer-events', 'auto', 'important')
+
+      if (!toggleBtn.__omnimuxClickBound) {
+        toggleBtn.__omnimuxClickBound = true
+        toggleBtn.addEventListener('click', () => {
+          const frame = doc.querySelector('.dshDesktopFrame')
+          if (frame?.hasAttribute('data-rightbar-collapsed')) {
+            try {
+              const propKey = Object.keys(toggleBtn).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
+              if (propKey && typeof toggleBtn[propKey]?.onClick === 'function') {
+                toggleBtn[propKey].onClick({ preventDefault: () => {}, stopPropagation: () => {} })
+                return
+              }
+            } catch { /* ignore */ }
+            const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+            win?.__omnimuxWorkbench?.open?.()
+          }
+        })
+      }
+    } else {
+      // 展开状态下，归位到原生的 stripChrome 容器中
+      if (chrome && toggleBtn.parentElement !== chrome) {
+        chrome.appendChild(toggleBtn)
+      }
+      toggleBtn.style.removeProperty('position')
+      toggleBtn.style.removeProperty('right')
+      toggleBtn.style.removeProperty('top')
+      toggleBtn.style.removeProperty('z-index')
+      toggleBtn.style.removeProperty('display')
+      toggleBtn.style.removeProperty('visibility')
+    }
+  }
+}
+
+/**
+ * Kept for backwards compatibility; now delegated to syncNativeRightbarControls.
+ * @param {Document | null | undefined} doc
+ * @returns {null}
  */
 export function injectTopbarRightExpandButton(doc) {
-  if (!doc) return null
-  let btn = doc.querySelector(`[${TOPBAR_RIGHT_EXPAND_ATTR}="1"]`)
-  const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-  const api = win?.__omnimuxWorkbench
-  const snapshot = api?.getSnapshot?.()
-  const isPanelOpen = snapshot?.state?.panelOpen === true || api?.isOpen?.() === true
-
-  if (!btn) {
-    btn = doc.createElement('button')
-    btn.setAttribute('type', 'button')
-    btn.setAttribute(TOPBAR_RIGHT_EXPAND_ATTR, '1')
-    btn.setAttribute('aria-label', '展开侧边栏')
-    btn.setAttribute('title', '展开侧边栏')
-    btn.innerHTML = RIGHT_EXPAND_ICON_SVG
-    btn.addEventListener('click', (event) => {
-      try { event.preventDefault() } catch { /* ignore */ }
-      try { event.stopPropagation() } catch { /* ignore */ }
-      const currentWin = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-      const currentApi = currentWin?.__omnimuxWorkbench
-      if (currentApi && typeof currentApi.open === 'function') {
-        currentApi.open()
-      } else {
-        const trigger = doc.querySelector('[data-dsh-panel-toggle], [data-dsh-toggle-cluster] button, button[aria-label*="展开"]')
-        if (trigger && typeof trigger.click === 'function') trigger.click()
-      }
-      btn.style.setProperty('display', 'none', 'important')
-    })
-    const host = doc.body || doc.documentElement
-    if (host) host.appendChild(btn)
-  }
-
-  applyButtonChrome(btn)
-  btn.style.setProperty('position', 'fixed', 'important')
-  btn.style.setProperty('right', '8px', 'important')
-  btn.style.setProperty('top', 'var(--omnimux-topbar-toggle-top, 4px)', 'important')
-  btn.style.setProperty('width', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
-  btn.style.setProperty('height', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
-  btn.style.setProperty('align-items', 'center', 'important')
-  btn.style.setProperty('justify-content', 'center', 'important')
-  btn.style.setProperty('background', 'transparent', 'important')
-  btn.style.setProperty('border', 'none', 'important')
-  btn.style.setProperty('border-radius', '8px', 'important')
-  btn.style.setProperty('color', 'var(--dsw-alias-label-secondary)', 'important')
-  btn.style.setProperty('cursor', 'pointer', 'important')
-
-  if (isPanelOpen) {
-    btn.style.setProperty('display', 'none', 'important')
-  } else {
-    btn.style.setProperty('display', 'flex', 'important')
-  }
-
-  return btn
+  syncNativeRightbarControls(doc)
+  return null
 }
 
 /**
@@ -630,7 +749,7 @@ export function ensureSidebarToggleTopbar(doc) {
   hideOriginalToggle(doc)
   const btn = injectTopbarToggleButton(doc)
   injectTopbarNewSessionButton(doc, collapsed)
-  injectTopbarRightExpandButton(doc)
+  syncNativeRightbarControls(doc)
   // Guard against the observer's aria-label attribute filter: setting the same
   // value would still fire a MutationRecord and loop forever.
   if (btn) {
@@ -753,7 +872,7 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const subtree = Boolean(isSlot && !host.hasAttribute('data-sidebar-collapsed'))
     collapsedObserver.observe(host, {
       attributes: true,
-      attributeFilter: ['data-sidebar-collapsed'],
+      attributeFilter: ['data-sidebar-collapsed', 'data-rightbar-collapsed'],
       subtree,
     })
   }

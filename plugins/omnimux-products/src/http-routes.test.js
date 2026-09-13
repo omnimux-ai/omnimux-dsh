@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { createProductsDispatcher } from './http-routes.js'
+import { createHubSeams, createProductsDispatcher, sendJson } from './http-routes.js'
 import { createLibraryStore } from './library.js'
 
 let root
@@ -26,6 +26,8 @@ function makeDispatcher(opts = {}) {
   const deps = { library }
   if (opts.picker) deps.picker = opts.picker
   if (opts.importFromUrl) deps.importFromUrl = opts.importFromUrl
+  if (opts.ctx) deps.ctx = opts.ctx
+  if (Object.prototype.hasOwnProperty.call(opts, 'hub')) deps.hub = opts.hub
   return { dispatcher: createProductsDispatcher(deps), library }
 }
 
@@ -238,12 +240,35 @@ describe('ProductsDispatcher import-from-link', () => {
     assert.equal(ok.body.success, true)
     assert.deepEqual(ok.body.data, imported)
     assert.equal(seen.length, 1)
-    // Only the url and the kind cross the seam: this vertical holds no
+    // The url, the kind and the hub seams cross; this vertical holds no
     // credential and calls no OmniMux HTTP surface of its own.
-    assert.deepEqual(seen[0], { url: 'https://shop.example.com/p/1', kind: 'digital' })
+    assert.equal(seen[0].url, 'https://shop.example.com/p/1')
+    assert.equal(seen[0].kind, 'digital')
+    assert.equal(seen[0].hub, null, 'no host ctx means no hub seams, not a failure')
     // Importing never writes to the library.
     assert.deepEqual(library.list(), [])
     assert.equal(library.revision(), 0)
+  })
+
+  it('hands the host seats to the importer as hub seams', async () => {
+    const seen = []
+    const textComplete = { execute: async () => ({ text: 'ok' }) }
+    const pageFetch = { execute: async () => ({ pageContent: '# page' }) }
+    const ctx = { tools: { get: (name) => (name === 'omnimux_page_fetch' ? pageFetch : undefined) }, get: () => textComplete }
+    const { dispatcher } = makeDispatcher({
+      ctx,
+      importFromUrl: async (args) => {
+        seen.push(args)
+        return { name: '货' }
+      },
+    })
+    const ok = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+    assert.equal(ok.status, 200)
+    assert.equal(typeof seen[0].hub.pageFetch, 'function')
+    assert.equal(typeof seen[0].hub.textComplete, 'function')
+    const answer = await seen[0].hub.textComplete({ prompt: 'hi', model: 'gemini-3.8-flash', maxTokens: 12 })
+    assert.deepEqual(answer, { text: 'ok' })
+    assert.deepEqual(await seen[0].hub.pageFetch('https://shop.example.com/p/1'), { pageContent: '# page' })
   })
 
   it('defaults kind to physical when the body omits it', async () => {
@@ -341,5 +366,90 @@ describe('ProductsDispatcher import-from-link', () => {
       url: 'https://shop.example.com/p/1',
     }, { origin: 'http://127.0.0.1:3210' }))
     assert.equal(local.status, 200)
+  })
+})
+
+describe('products hub seams', () => {
+  it('answers null without a host context, and resolves nothing eagerly', () => {
+    assert.equal(createHubSeams(undefined), null)
+    assert.equal(createHubSeams(null), null)
+    const seams = createHubSeams({})
+    assert.equal(typeof seams.textComplete, 'function')
+    assert.equal(typeof seams.pageFetch, 'function')
+  })
+
+  it('prefers the provided textComplete service', async () => {
+    const calls = []
+    const ctx = {
+      get: (name) => (name === 'textComplete' ? { execute: async (req) => { calls.push(req); return { text: 'x' } } } : undefined),
+    }
+    const seams = createHubSeams(ctx)
+    const answer = await seams.textComplete({ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 })
+    assert.deepEqual(answer, { text: 'x' })
+    assert.deepEqual(calls, [{ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 }])
+  })
+
+  it('falls back to the omnimux_text_complete tool with the wire field names it needs', async () => {
+    const calls = []
+    const ctx = {
+      get: () => undefined,
+      tools: { get: (name) => (name === 'omnimux_text_complete' ? { execute: async (args) => { calls.push(args); return { text: 'y' } } } : undefined) },
+    }
+    const seams = createHubSeams(ctx)
+    const answer = await seams.textComplete({ prompt: 'p', model: 'gemini-3.8-flash', maxTokens: 32 })
+    assert.deepEqual(answer, { text: 'y' })
+    // The official tool requires a reason and spells the cap max_tokens.
+    assert.equal(calls[0].max_tokens, 32)
+    assert.equal(calls[0].model, 'gemini-3.8-flash')
+    assert.match(calls[0].reason, /omnimux-products/)
+  })
+
+  it('reads the page through omnimux_page_fetch, and fails loudly when the hub is missing', async () => {
+    const ctx = { tools: { get: (name) => (name === 'omnimux_page_fetch' ? { execute: async (args) => ({ pageContent: `# ${args.url}` }) } : undefined) } }
+    const seams = createHubSeams(ctx)
+    assert.deepEqual(await seams.pageFetch('https://a.example'), { pageContent: '# https://a.example' })
+
+    const bare = createHubSeams({})
+    await assert.rejects(() => bare.pageFetch('https://a.example'), /omnimux_page_fetch unavailable/)
+    await assert.rejects(() => bare.textComplete({ prompt: 'p' }), /omnimux_text_complete unavailable/)
+  })
+
+  it('survives a ctx whose get() throws', async () => {
+    const ctx = {
+      get: () => { throw new Error('no such seat') },
+      tools: { get: (name) => (name === 'omnimux_text_complete' ? { execute: async () => ({ text: 'z' }) } : undefined) },
+    }
+    const seams = createHubSeams(ctx)
+    assert.deepEqual(await seams.textComplete({ prompt: 'p' }), { text: 'z' })
+  })
+})
+
+describe('products responses · secret guard', () => {
+  function fakeRes() {
+    const out = { status: 0, body: '' }
+    return {
+      out,
+      writeHead: (status) => { out.status = status },
+      end: (text) => { out.body = text },
+    }
+  }
+
+  it('emits ordinary page copy that merely contains "sk-"', () => {
+    const res = fakeRes()
+    sendJson(res, 200, { data: { selling_points: 'risk-free, task-focused, desk-lamp' } })
+    assert.equal(res.out.status, 200)
+    assert.match(res.out.body, /risk-free/)
+  })
+
+  it('still refuses a real-looking key and an access token', () => {
+    for (const body of [
+      { data: { note: 'sk-proj-abcdefghijklmnopqrstuvwxyz012345' } },
+      { data: { note: 'access_token=abc' } },
+    ]) {
+      const res = fakeRes()
+      sendJson(res, 200, body)
+      assert.equal(res.out.status, 500)
+      assert.match(res.out.body, /refused to emit a secret/)
+    }
   })
 })

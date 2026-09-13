@@ -18,12 +18,14 @@
  * only part of the library.
  *
  *   character  `gxgen-data/character-library/pippit-local-avatars-source/`
- *   scene      `gxgen-data/element-library/场景氛围/`
- *   prop       (no source — the category is deliberately empty, see below)
+ *   scene      `gxgen-data/element-library/场景氛围/`              场景氛围
+ *              `gxgen-data/inspiration-library/loomi/`            实景环境
+ *   prop       `gxgen-data/inspiration-library/loomi/`            实物道具
  *   material   `gxgen-data/element-library/video/green-screen-meme/`   绿幕
  *              `gxgen-data/element-library/hook-videos/`              钩子
  *              `gxgen-data/element-library/hook/`                     钩子
  *              `gxgen-data/inspiration-library/image/`                表情包
+ *              `gxgen-data/inspiration-library/loomi/`                萌宠 · 服饰 · 人像
  *   style      `gxgen-data/style-library/` (three curated preset files)
  *              `gxgen-data/element-library/视频风格/`
  *   audio      `素材库/音频/volcengine-voices.json`          配音 (509 voices)
@@ -32,14 +34,17 @@
  *              `gxgen-data/music-library/` Fastlane manifest  背景音 (103 tracks)
  *
  * where `<gxgen>` = `<root>/素材库/gxgen-data`. `灵感社区` is a separate system
- * and is deliberately excluded; the one part of it this catalog reads is the
- * image gallery the 表情包 shelf names, addressed by its exact path.
+ * and is deliberately excluded; the parts of it this catalog reads are the two
+ * galleries named by exact path — the 表情包 image set and the offline Loomi
+ * library, which is what fills 道具 and widens 场景 and 素材.
  *
- * ## What is deliberately absent
+ * ## The Loomi library
  *
- * 道具 ships empty. Green screens and opening hooks are overlays and beats, not
- * physical props, and no real prop library exists yet. The category still emits
- * its page file so the tab renders an empty state instead of a 404.
+ * `inspiration-library/loomi/` is one offline snapshot of 632 curated items
+ * (333 stills, 299 clips) whose media files are already downloaded beside it.
+ * A single source class every row under a source tab of its own, so the five
+ * classes are mapped onto the shelves they actually describe rather than reusing
+ * the source tab's five names — see `LOOMI_SHELVES`.
  *
  * ## Sub-category membership
  *
@@ -402,6 +407,284 @@ function makeAsset(ctx, spec) {
 // ---------------------------------------------------------------------------
 
 /**
+ * The eight professional dimensions a digital human is catalogued on.
+ *
+ * They are orthogonal: every row carries exactly one value per dimension, the
+ * dimensions partition the same 329 rows eight different ways, and every option
+ * list therefore sums back to the category total. This table furnishes the
+ * dimension titles and the option labels; the builder turns the resolvers below
+ * into the manifest's per-option counts, so no chip count is ever hand-kept.
+ *
+ * 姓名 is the only dimension whose option list is not enumerated here: it has
+ * one option per given name in the source (144 of them), ranked by how many
+ * avatars that person has and cut off with `NAME_OPTION_LIMIT`.
+ */
+export const CHARACTER_DIMENSIONS = [
+  { id: 'gender', zh: '性别', en: 'Gender', defaults: [] },
+  { id: 'age', zh: '年龄', en: 'Age', defaults: [] },
+  { id: 'figure', zh: '体型', en: 'Figure', defaults: [] },
+  { id: 'name', zh: '姓名', en: 'Name', defaults: [] },
+  { id: 'industry', zh: '行业', en: 'Industry', defaults: ['General Lifestyle'] },
+  { id: 'scene', zh: '场景', en: 'Scene', defaults: ['Indoor/Studio'] },
+  { id: 'pose', zh: '姿势', en: 'Pose', defaults: ['Frontal'] },
+  { id: 'outfit', zh: '服装风格', en: 'Outfit style', defaults: ['Casual/Lifestyle'] },
+]
+
+/** How many 姓名 options the manifest carries, ranked by avatar count. */
+const NAME_OPTION_LIMIT = 40
+
+/**
+ * Body-type words the source actually writes. A row whose text names no body
+ * type is 匀称 (average) — the catalogue's own middle — so the three options
+ * still describe every row rather than leaving a silent fourth bucket.
+ */
+const FIGURE_WORDS = [
+  ['Curvy', ['curvy', 'plump', 'plus size']],
+  ['Slim', ['slim', 'thin', 'lean', 'petite']],
+]
+
+/**
+ * The young-adult wording, tested before the 中年 signals below. The catalogue
+ * writes age only through these words, so everything else is read from the
+ * persona a row presents (see `MIDDLE_AGED_SIGNALS`).
+ */
+const YOUTH_WORDS = ['teen', 'student', ' kid ', 'young', 'youth', 'child']
+
+/**
+ * Personas that read as 中年 in the source: the talk-host, teaching and
+ * business-presenting roles, plus the maturity cues the catalogue does write (a
+ * market walkabout, a balcony, a dressing room). Each signal is a persona the
+ * catalogue names, not a guess about how someone looks, and a row that carries
+ * none of them is 青年 — which is what makes the dimension total 329.
+ */
+const MIDDLE_AGED_SIGNALS = [
+  'podcast', 'storyteller', 'classroom', 'education', 'office', 'marketing',
+  'market', 'balcony', 'mirror', 'vanity',
+]
+
+/**
+ * Scene words, most specific first. The first list that matches wins, so a
+ * podcast studio is a 播客录音棚 even though it is also an indoor room, and the
+ * tail of the list is only reached by a row whose text names no place at all.
+ */
+const SCENE_SIGNALS = [
+  ['Podcast Studio', ['podcast']],
+  ['Car', [' car ', ' cars ', 'car selfie']],
+  ['Living Room', ['living room', 'livingroom', ' living ', ' sofa ']],
+  ['Bedroom', ['bedroom', ' bed ']],
+  ['Outdoor', ['outdoor', 'outside', ' park ', 'street', 'balcony', 'seaside', ' court ', 'sunshine', 'beach', 'shore']],
+  ['Bathroom', ['bathroom', 'washroom', 'shower', ' bath ']],
+  ['Office', ['office', 'classroom', 'lobby', 'corridor']],
+  ['Kitchen', ['kitchen', 'cloakroom', 'study', 'bookshelf']],
+  ['Cafe', ['cafe', 'coffee']],
+]
+
+/**
+ * Pose words, most specific first: a selfie frame is a selfie even when the
+ * person sits down for it, and a standing interview is 站立 rather than 正面.
+ */
+const POSE_SIGNALS = [
+  ['Selfie', ['selfie', 'mirror', 'holding phone', 'plain background', 'white background', 'by the window']],
+  ['Sitting', ['sitting', ' sofa ', 'resting', 'laptop', 'christmas', ' seated ']],
+  ['Standing', ['standing', 'arms crossed', 'armscross']],
+]
+
+/**
+ * Outfit words, most specific first. 节日造型 wins over the workplace reading of
+ * a costume, and 商务正式 is read from the setting the source names rather than
+ * from a garment word it never writes.
+ */
+const OUTFIT_SIGNALS = [
+  ['Holiday/Costume', ['christmas', 'costume', 'holiday', 'festival', 'santa']],
+  ['Business/Formal', ['office', 'marketing']],
+  ['Fashion/Chic', ['fashion', 'dressing', 'mirror', 'makeup', 'beauty', 'vanity']],
+]
+
+/**
+ * Industry words. 游戏电竞 is tested first so an esports room is not read as
+ * entertainment hosting, and the tail is the catalogue's own catch-all.
+ */
+const INDUSTRY_SIGNALS = [
+  ['Gaming & Tech', ['esports', 'gaming', ' game ']],
+  ['Podcast & Media', ['podcast', 'storyteller']],
+  ['Education', ['classroom', 'education']],
+  ['Marketing & Ads', ['marketing', 'office', 'lobby', 'corridor']],
+  ['Beauty & Fashion', ['beauty', 'fashion', 'makeup', 'mirror', 'dressing', 'vanity', 'cloakroom']],
+]
+
+/** The order a dimension's options are listed in, its default last. */
+const DIMENSION_OPTIONS = {
+  gender: ['Female', 'Male'],
+  age: ['Youth', 'Middle-aged'],
+  figure: ['Slim', 'Average', 'Curvy'],
+  industry: [...INDUSTRY_SIGNALS.map(([label]) => label), 'General Lifestyle'],
+  scene: [...SCENE_SIGNALS.map(([label]) => label), 'Indoor/Studio'],
+  pose: [...POSE_SIGNALS.map(([label]) => label), 'Frontal'],
+  outfit: [...OUTFIT_SIGNALS.map(([label]) => label), 'Casual/Lifestyle'],
+}
+
+/**
+ * The text a dimension is resolved from: the folder name, the display name and
+ * the source's own tag list, all folded to a space-delimited lowercase slug so a
+ * word match cannot land inside a longer word (`in_car` is a car, `Carlie` is
+ * not).
+ * @param {{ folder: string, name: string, tags: string[] }} input
+ */
+function dimensionHaystack(input) {
+  const joined = [input.folder, input.name, ...input.tags].join(' ')
+  return ` ${joined.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()} `
+}
+
+/** @param {string} haystack @param {string[]} words */
+function mentions(haystack, words) {
+  return words.some((word) => haystack.includes(word))
+}
+
+/**
+ * @param {string} haystack
+ * @param {[string, string[]][]} table
+ * @param {string} fallback
+ */
+function firstSignal(haystack, table, fallback) {
+  for (const [label, words] of table) {
+    if (mentions(haystack, words)) return label
+  }
+  return fallback
+}
+
+/**
+ * Resolve all eight dimensions for one avatar.
+ *
+ * The source ships no such fields — `metadata.json` carries only a name, a tag
+ * list and the media URLs — so every value is read from the row's own text with
+ * the tables above. Gender is the one value taken from the given name, which is
+ * where Pippit records whether the presenter is a woman or a man.
+ * @param {{ folder: string, name: string, tags: string[] }} input
+ * @returns {{ given: string, values: Record<string, string> }}
+ */
+export function characterDimensionsOf(input) {
+  const haystack = dimensionHaystack(input)
+  const given = text(input.folder.split('_')[0])
+  const gender = FEMALE_NAMES.has(given) ? 'Female' : MALE_NAMES.has(given) ? 'Male' : 'Female'
+
+  let figure = 'Average'
+  for (const [label, words] of FIGURE_WORDS) {
+    if (mentions(haystack, words)) {
+      figure = label
+      break
+    }
+  }
+
+  return {
+    given,
+    values: {
+      gender,
+      age: mentions(haystack, YOUTH_WORDS) ? 'Youth'
+        : mentions(haystack, MIDDLE_AGED_SIGNALS) ? 'Middle-aged' : 'Youth',
+      figure,
+      name: given,
+      industry: firstSignal(haystack, INDUSTRY_SIGNALS, 'General Lifestyle'),
+      scene: firstSignal(haystack, SCENE_SIGNALS, 'Indoor/Studio'),
+      pose: firstSignal(haystack, POSE_SIGNALS, 'Frontal'),
+      outfit: firstSignal(haystack, OUTFIT_SIGNALS, 'Casual/Lifestyle'),
+    },
+  }
+}
+
+/**
+ * The facet table for one category: for every dimension, every option the rows
+ * actually use, with the number of rows on it.
+ *
+ * An option with no rows is left out rather than listed with a zero, and the
+ * 姓名 list is cut to `NAME_OPTION_LIMIT` by row count so the dimension stays
+ * usable at 144 named people. Counts are computed from the rows, never written
+ * by hand, so they cannot drift from the pages the chips sit above.
+ * @param {CatalogAsset[]} items
+ */
+export function dimensionFacetsOf(items) {
+  /** @type {Map<string, string[]>} */
+  const perId = new Map()
+  for (const row of items) {
+    const dims = row.meta?.dims
+    if (!dims || typeof dims !== 'object') continue
+    for (const dimension of CHARACTER_DIMENSIONS) {
+      const value = text(/** @type {Record<string, unknown>} */ (dims)[dimension.id])
+      if (value === '') continue
+      const bucket = perId.get(dimension.id)
+      if (bucket) bucket.push(value)
+      else perId.set(dimension.id, [value])
+    }
+  }
+
+  return CHARACTER_DIMENSIONS.map((dimension) => {
+    const values = perId.get(dimension.id) ?? []
+    /** @type {Map<string, number>} */
+    const counts = new Map()
+    for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
+    let options = [...counts.entries()].map(([value, total]) => ({ value, total }))
+    if (dimension.id === 'name') {
+      options = options
+        .sort((a, b) => (b.total - a.total) || (a.value < b.value ? -1 : 1))
+        .slice(0, NAME_OPTION_LIMIT)
+        .sort((a, b) => (a.value < b.value ? -1 : 1))
+    } else {
+      // Options keep the declared order so the dropdown reads the same way on
+      // every rebuild, with the dimension's default option last.
+      const order = DIMENSION_OPTIONS[dimension.id] ?? []
+      options.sort((a, b) => order.indexOf(a.value) - order.indexOf(b.value))
+    }
+    return { id: dimension.id, zh: dimension.zh, en: dimension.en, total: values.length, options }
+  })
+}
+
+/**
+ * Scope id of the pre-filtered 角色 shards. A filtered view pages this scope
+ * instead of paging the whole category and filtering client-side, so a chip
+ * selection still costs one request per page.
+ */
+export const CHARACTER_FILTER_SCOPE = 'character_filtered'
+
+/**
+ * The wire token for one combination of dimension values, in dimension order.
+ *
+ * It travels as the `dims` query parameter of the filtered page route rather
+ * than as a catalog directory: the eight dimensions describe 3000+ combinations,
+ * and materializing a shard set per combination would put several megabytes of
+ * nearly-identical rows in the repository to answer a query the Host can serve
+ * from the index it already holds. Each token is `1` followed by its value
+ * slugified, `-` downcased to `_`, and a dimension left on 全部 contributes
+ * nothing.
+ * @param {string[]} values one per dimension, in `CHARACTER_DIMENSIONS` order
+ */
+export function characterFilterKey(values) {
+  return values
+    .filter((value) => text(value) !== '')
+    .map((value) => `1${slugify(value).replace(/-/g, '_')}`)
+    .join('')
+}
+
+/**
+ * Every combination of dimension values present in the rows, keyed by
+ * `characterFilterKey`. Used to prove the filter's own vocabulary is the rows'
+ * vocabulary; the filter itself is served by query, not by these keys.
+ * @param {CatalogAsset[]} items
+ * @returns {Map<string, number>}
+ */
+export function characterFilterScopes(items) {
+  /** @type {Map<string, number>} */
+  const scopes = new Map()
+  for (const row of items) {
+    const dims = row.meta?.dims
+    if (!dims || typeof dims !== 'object') continue
+    const values = CHARACTER_DIMENSIONS.map((dimension) => text(/** @type {Record<string, unknown>} */ (dims)[dimension.id]))
+    if (values.some((value) => value === '')) continue
+    const key = characterFilterKey(values)
+    scopes.set(key, (scopes.get(key) ?? 0) + 1)
+  }
+  return scopes
+}
+
+/**
  * Gender shelf for one avatar, or `''` when the catalogue gives no signal.
  * @param {string} folderName
  */
@@ -439,6 +722,7 @@ export function collectCharacter(ctx, add) {
     const haystack = [entry.name, rawName, ...metaTags].join(' ')
     const gender = genderShelfOf(entry.name)
     const scene = sceneShelfOf(haystack)
+    const profile = characterDimensionsOf({ folder: entry.name, name: rawName, tags: metaTags })
     // Gender leads the membership list, so the primary shelf of a digital human
     // is who they are; the scene rides along as a second filter.
     const dimensions = [scene].filter((value) => value !== '')
@@ -460,6 +744,9 @@ export function collectCharacter(ctx, add) {
         total: Number(meta.total) || null,
         gender: gender || null,
         scene: scene || null,
+        // The eight professional dimensions, one value each. Kept on the row so
+        // the client can filter a page it already holds without another request.
+        dims: profile.values,
       },
     }))
   }
@@ -530,6 +817,13 @@ function collectElementIndex(ctx, dirName, add, opts) {
   }
 }
 
+/**
+ * 场景 — the ambient element library plus the Loomi real-world environments.
+ *
+ * The two shelves are genuinely different things: 场景氛围 is a small set of
+ * graded atmospheric clips, while the Loomi half is 125 stills and clips of
+ * actual places (`LOOMI_SHELVES` routes them to 实景环境).
+ */
 function collectScene(ctx, add) {
   collectElementIndex(ctx, '场景氛围', add, {
     category: 'scene',
@@ -537,6 +831,7 @@ function collectScene(ctx, add) {
     tag: '场景氛围',
     fallbackDesc: '高清动态场景氛围',
   })
+  collectLoomi(ctx, add, 'scene')
 }
 
 /**
@@ -658,19 +953,186 @@ function findGalleryImage(dir, ordinal) {
   return ''
 }
 
+/**
+ * The offline Loomi library, addressed relative to the gxgen-data root.
+ *
+ * `materials.json` is the only index; every `local_source_media` /
+ * `local_thumbnail` in it is relative to this directory and was verified present
+ * when it was downloaded, so a row that lost its file still falls back to the
+ * remote original rather than to a broken tile.
+ */
+const LOOMI_SOURCE = 'inspiration-library/loomi'
+
+/**
+ * Which catalog shelf each Loomi source class belongs on.
+ *
+ * The mapping is deliberately many-to-one: the source tab splits 场景 and 道具
+ * into classes of their own, while this catalog already owns 场景氛围 and treats
+ * an object, a place, an animal and a person as four different kinds of 素材.
+ * Reusing the source's own five names would have put 道具-classified pictures
+ * under a shelf called 场景. `tag` carries the source class itself, so the
+ * origin stays visible on the card even where the shelf had to be renamed.
+ *
+ * `sourceClass` is the `category` value `materials.json` writes, and
+ * `subCategory` is the shelf the catalog files it under; the two are separate
+ * fields precisely because they are not the same word.
+ *
+ * `describe` composes the row description from the item's own title, so a card
+ * reads as a description of the thing rather than one sentence repeated 125
+ * times: a prop card names the prop, a person card names the subject.
+ * `label` names a row the source left without a usable title (see `loomiTitle`).
+ */
+const LOOMI_SHELVES = [
+  {
+    category: 'prop',
+    sourceClass: 'prop',
+    subCategory: 'object',
+    tag: '道具',
+    label: '实物道具',
+    describe: (title) => `${title}，可作画面中实物道具的参考或贴片`,
+  },
+  {
+    category: 'scene',
+    sourceClass: 'scene',
+    subCategory: 'environment',
+    tag: '实景',
+    label: '实景环境',
+    describe: (title) => `${title}，可直接作为画面背景的实景环境素材`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'pet',
+    subCategory: 'pet',
+    tag: '宠物',
+    label: '萌宠动物',
+    describe: (title) => `${title}，萌宠动物素材，适合出镜或做画面点缀`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'clothing',
+    subCategory: 'clothing',
+    tag: '服装',
+    label: '服饰穿搭',
+    describe: (title) => `${title}，服饰穿搭素材，可作为造型与人设参考`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'portrait',
+    subCategory: 'portrait',
+    tag: '人像',
+    label: '人像写真',
+    describe: (title) => `${title}，写实人像配图素材，可作为人物出镜参考`,
+  },
+]
+
+/** The media-kind word a Loomi row carries as its third tag. */
+const LOOMI_MEDIA_LABELS = { image: '图片', video: '视频', audio: '音频' }
+
+/**
+ * The display name for one Loomi row.
+ *
+ * A title is usable when the source actually wrote one. All 299 clips fail that
+ * test: their `title` repeats `creator`, the Pexels uploader's handle, so a card
+ * named from it would read `Hữu Thịnh 79` and say nothing about the picture.
+ * Those rows are named `<shelf label> <source id>` instead, and the handle stays
+ * in `meta.creator` where attribution belongs.
+ * @param {{ title?: unknown, filename?: unknown, creator?: unknown, id?: unknown }} row
+ * @param {typeof LOOMI_SHELVES[number]} shelf
+ * @returns {string}
+ */
+function loomiTitle(row, shelf) {
+  const title = text(row.title)
+  const creator = text(row.creator)
+  if (title !== '' && title !== creator) return title
+  const stem = text(row.filename).replace(/\.[^.]+$/, '')
+  return `${shelf.label} ${text(row.id) || stem}`.trim()
+}
+
+/**
+ * Resolve one path recorded in `materials.json` against the Loomi directory.
+ *
+ * The index stores portable relative paths (`media/<hash>.jpg`); a path that
+ * escapes the source directory or no longer exists yields an empty string, which
+ * leaves the row on its remote original instead of writing a locator the Host
+ * would refuse to serve.
+ * @param {string} loomiDir @param {unknown} value @returns {string}
+ */
+function loomiLocal(loomiDir, value) {
+  const rel = text(value).replace(/\\/g, '/')
+  if (rel === '' || rel.startsWith('/') || rel.split('/').includes('..')) return ''
+  const abs = join(loomiDir, rel)
+  return isFile(abs) ? abs : ''
+}
+
+/**
+ * 道具 · 场景 · 素材 — the offline Loomi library.
+ *
+ * 632 curated items from one snapshot, each with its media already downloaded.
+ * One source feeds three catalog categories, so the collector is handed the
+ * category it is being run for and keeps only that category's classes; the page
+ * count of each caller then matches the rows it actually owns.
+ *
+ * The title is the item's own Chinese name, so a card reads `复古相机道具`
+ * rather than a filename.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
+ * @param {string} category the catalog category this run collects for
+ */
+function collectLoomi(ctx, add, category) {
+  const loomiDir = join(ctx.assetsRoot, '素材库', 'gxgen-data', LOOMI_SOURCE)
+  const parsed = readJsonSafe(join(loomiDir, 'materials.json'))
+  const rows = Array.isArray(parsed?.items) ? parsed.items : []
+  const shelves = LOOMI_SHELVES.filter((entry) => entry.category === category)
+  for (const row of rows) {
+    const shelf = shelves.find((entry) => entry.sourceClass === text(row.category))
+    if (!shelf) continue
+    const sourceId = text(row.id)
+    if (!sourceId) continue
+    const title = loomiTitle(row, shelf)
+    const kind = text(row.mediaKind) || bucketOf(extOf(text(row.local_source_media)))
+    add(makeAsset(ctx, {
+      key: `loomi/${sourceId}`,
+      category: shelf.category,
+      subCategory: shelf.subCategory,
+      name: title,
+      description: shelf.describe(title),
+      tags: [shelf.tag, LOOMI_MEDIA_LABELS[kind] ?? '素材', text(row.sourceProvider)].filter(Boolean),
+      localMedia: loomiLocal(loomiDir, row.local_source_media),
+      remoteMedia: text(row.assetUrl),
+      localCover: loomiLocal(loomiDir, row.local_thumbnail),
+      remoteCover: text(row.thumbnailUrl),
+      meta: {
+        source: 'loomi',
+        source_id: sourceId,
+        source_category: text(row.category),
+        source_file: text(row.filename),
+        provider: text(row.sourceProvider),
+        creator: text(row.creator),
+        license: text(row.license),
+        attribution_required: row.attributionRequired === true,
+        source_url: text(row.sourceUrl),
+      },
+    }))
+  }
+}
+
 function collectMaterial(ctx, add) {
   collectGreenScreen(ctx, add)
   collectHook(ctx, add)
   collectMeme(ctx, add)
+  collectLoomi(ctx, add, 'material')
 }
 
 /**
- * 道具 is intentionally empty — green screens and hooks are overlays and beats,
- * not physical props, and no real prop library exists yet. The category keeps
- * its place in the table (and therefore its empty page file) so the tab renders
- * 空状态 rather than a broken scope.
+ * 道具 — the Loomi props: cameras, guitars, computers and the rest of the real
+ * objects the shelf was waiting for. Nothing is invented here; the category
+ * names only the class `LOOMI_SHELVES` routes to it.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
  */
-function collectProp() {}
+function collectProp(ctx, add) {
+  collectLoomi(ctx, add, 'prop')
+}
 
 /**
  * The style presets worth shipping: three curated files plus the video-tone
@@ -943,19 +1405,23 @@ const CATEGORIES = [
     id: 'scene',
     zh: '场景',
     en: 'Scenes',
-    subCategories: [{ id: 'ambience', zh: '场景氛围', en: 'Ambience' }],
+    subCategories: [
+      { id: 'ambience', zh: '场景氛围', en: 'Ambience' },
+      { id: 'environment', zh: '实景环境', en: 'Environments' },
+    ],
     collect: collectScene,
   },
   {
     /**
-     * 道具 is deliberately empty: the two shelves it used to hold were green
-     * screens and product hooks, which are 素材, and no physical prop library
-     * exists yet. The empty entry is kept so the tab renders 空状态.
+     * 道具 holds the Loomi props: cameras, guitars, computers and the rest of
+     * the real objects the tab used to have no source for. Green screens and
+     * product hooks stay under 素材 — they are overlays and beats, not things
+     * the cast handles.
      */
     id: 'prop',
     zh: '道具',
     en: 'Props',
-    subCategories: [],
+    subCategories: [{ id: 'object', zh: '实物道具', en: 'Props & Objects' }],
     collect: collectProp,
   },
   {
@@ -966,6 +1432,9 @@ const CATEGORIES = [
       { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
       { id: 'hook', zh: '钩子', en: 'Hooks' },
       { id: 'meme', zh: '表情包', en: 'Memes' },
+      { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
+      { id: 'clothing', zh: '服饰穿搭', en: 'Fashion & Outfits' },
+      { id: 'portrait', zh: '人像写真', en: 'Portraits' },
     ],
     collect: collectMaterial,
   },
@@ -1093,15 +1562,39 @@ async function main() {
       }
     })
 
-    categoryMeta.push({
+    // A category whose rows carry the eight professional dimensions also
+    // publishes their option counts, so the filter chips are served their
+    // numbers instead of computing them from pages they have not fetched. The
+    // filtered rows themselves come from the Host's `dims` query over
+    // `index.json` — see `characterFilterKey`.
+    const facets = dimensionFacetsOf(items)
+    if (spec.id === 'character') {
+      subCategories.push({
+        id: CHARACTER_FILTER_SCOPE,
+        zh: '筛选结果',
+        en: 'Filtered',
+        total: items.length,
+        pages: Math.max(1, Math.ceil(items.length / PAGE_SIZE)),
+      })
+    }
+
+    const entry = {
       id: spec.id,
       zh: spec.zh,
       en: spec.en,
       total: items.length,
       pages: Math.max(1, Math.ceil(items.length / PAGE_SIZE)),
       sub_categories: subCategories,
-    })
-    log(`[cloud-catalog] ${spec.id.padEnd(10)} ${String(items.length).padStart(5)} rows · ${categoryMeta[categoryMeta.length - 1].pages} page(s)`)
+    }
+    if (facets.some((dimension) => dimension.options.length > 0)) entry.dimensions = facets
+    categoryMeta.push(entry)
+    log(`[cloud-catalog] ${spec.id.padEnd(10)} ${String(items.length).padStart(5)} rows · ${entry.pages} page(s)`)
+    if (entry.dimensions) {
+      const shape = entry.dimensions
+        .map((dimension) => `${dimension.id}:${dimension.options.length}`)
+        .join(' ')
+      log(`[cloud-catalog] ${spec.id.padEnd(10)} dimensions ${shape}`)
+    }
   }
 
   const manifest = {
@@ -1126,6 +1619,9 @@ async function main() {
     const meta = {}
     if (row.meta.source_media_url) meta.source_media_url = row.meta.source_media_url
     if (row.meta.source_cover_url) meta.source_cover_url = row.meta.source_cover_url
+    // The professional dimensions ride along on the server index too, so the
+    // 收藏到本地 path can describe a row with the same vocabulary the chips use.
+    if (row.meta.dims) meta.dims = row.meta.dims
     const entry = {
       id: row.id,
       category: row.category,
@@ -1159,6 +1655,10 @@ async function main() {
     writeJson(outDir, page.relPath, page.body)
     pageFiles += 1
   }
+  // One shard set per dimension combination is deliberately not written: the
+  // eight dimensions describe thousands of combinations, and the filtered rows
+  // are served by the Host's `dims` query over `index.json` instead. Keeping the
+  // catalog to `category/[sub_category]/` shards is what holds it at ~6 MB.
   for (const spec of CATEGORIES) {
     const items = byCategory.get(spec.id) ?? []
     for (const page of pageSpecs(items, spec.id)) {

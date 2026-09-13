@@ -24,6 +24,11 @@ export interface HoverCopy {
   failed: string
   /** Rendered for media whose address cannot be used downstream. */
   unusable: string
+  /**
+   * Rendered when the media only resolves inside its own page — a `blob:` video
+   * with no poster — so the shortcut fell back to citing the page itself.
+   */
+  pageReference: string
   /** Accessible name of the capsule toolbar. */
   brand: string
   action: Record<MediaActionKind, string>
@@ -42,6 +47,7 @@ const ZH: HoverCopy = {
   },
   failed: '操作失败，请重试',
   unusable: '该素材地址不可用',
+  pageReference: '该视频仅在页面内可播，已引用页面链接',
   brand: 'OmniMux',
   action: {
     inspiration: '加入灵感库',
@@ -63,6 +69,7 @@ const EN: HoverCopy = {
   },
   failed: 'Something went wrong. Try again.',
   unusable: 'This media address cannot be used',
+  pageReference: 'This video only plays in its page, so the page link was used',
   brand: 'OmniMux',
   action: {
     inspiration: 'Add to library',

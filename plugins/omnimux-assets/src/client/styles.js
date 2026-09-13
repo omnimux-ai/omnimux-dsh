@@ -36,8 +36,20 @@ export const ASSETS_CSS = `
 .omnimux-assets-search-wrap {
   width: 220px;
 }
-.omnimux-assets-sort-wrap {
-  width: 120px;
+/* ---- local category nav --------------------------------------------------
+   The local tab's filter row, sitting under the toolbar. Layout only: the pill
+   shape, the pressed ink and the count all come from the shared chip blocks in
+   the cloud section below, which list this nav's selectors next to the cloud
+   one's so the two rows cannot drift apart. */
+.omnimux-assets-local-nav {
+  flex: none;
+  padding: 0 24px 10px;
+}
+.omnimux-assets-local-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .omnimux-assets-view-toggle {
   display: inline-flex;
@@ -813,11 +825,14 @@ export const ASSETS_CSS = `
   padding-inline-start: 10px;
   border-left: 2px solid var(--dsw-alias-border-l2);
 }
-/* Category chips, both levels. The nav wrappers are part of the selectors
-   because the kit's own rules for this control reach (0,2,0) unselected and
-   (0,4,0) on hover, so a bare class would lose to them. */
+/* Category chips, both levels, in both navs. The nav wrappers are part of the
+   selectors because the kit's own rules for this control reach (0,2,0)
+   unselected and (0,4,0) on hover, so a bare class would lose to them. The
+   local library's row lists its selectors here too: it is the same chip, and
+   one shared block is what keeps the two rows from drifting apart. */
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip,
-.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip {
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip,
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip {
   border-radius: 999px;
   padding: 0 12px;
 }
@@ -825,10 +840,13 @@ export const ASSETS_CSS = `
    of it. No accent hue is involved, in either theme. */
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"],
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"],
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"],
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
-.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
   background: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-label-primary);
   box-shadow: none;
@@ -845,6 +863,105 @@ export const ASSETS_CSS = `
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-tertiary);
+}
+/* 角色的八维筛选栏。它取代二级分类那一行，形态与它一致：一排胶囊，未选中是
+   中性描边，选中反白。没有任何品牌色参与。 */
+.omnimux-assets-cloud-dimensions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-inline-start: 10px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+}
+.omnimux-assets-cloud-dimension {
+  position: relative;
+}
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-btn {
+  gap: 4px;
+  border-radius: 999px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
+}
+/* 选中态与分类胶囊同一套：底色是标签色，标签反白。 */
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-btn[aria-pressed="true"],
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-btn[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omnimux-assets-cloud-dimension-caret {
+  color: var(--dsw-alias-label-tertiary);
+  transform: rotate(90deg);
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-assets-cloud-dimension-btn[aria-expanded="true"] .omnimux-assets-cloud-dimension-caret {
+  transform: rotate(-90deg);
+}
+.omnimux-assets-cloud-dimension-btn[aria-pressed="true"] .omnimux-assets-cloud-dimension-caret {
+  color: inherit;
+  opacity: 0.7;
+}
+.omnimux-assets-cloud-dimension-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 168px;
+  max-height: 264px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-elevated);
+  box-shadow: 0 12px 28px var(--dsw-alias-shadow-strong);
+}
+/* 面板里的选项是同一套胶囊文字的列表行：左标签右计数，选中反白。 */
+.omnimux-assets-cloud-dimension-menu .omnimux-assets-cloud-dimension-option {
+  width: 100%;
+  justify-content: space-between;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-assets-cloud-dimension-menu .omnimux-assets-cloud-dimension-option:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-assets-cloud-dimension-menu .omnimux-assets-cloud-dimension-option[aria-pressed="true"],
+.omnimux-assets-cloud-dimension-menu .omnimux-assets-cloud-dimension-option[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+.omnimux-assets-cloud-dimension-option-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.omnimux-assets-cloud-dimension-menu .omnimux-assets-cloud-count {
+  margin-left: 12px;
+}
+.omnimux-assets-cloud-dimension-option[aria-pressed="true"] .omnimux-assets-cloud-count {
+  color: inherit;
+  opacity: 0.55;
+}
+/* 重置只在有筛选时出现，且是这一行里最轻的一个控件。 */
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-reset {
+  margin-inline-start: 4px;
+  border-radius: 999px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-assets-cloud-dimensions .omnimux-assets-cloud-dimension-reset:hover:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--dsw-alias-label-primary);
 }
 .omnimux-assets-cloud-scroll {
   flex: 1;

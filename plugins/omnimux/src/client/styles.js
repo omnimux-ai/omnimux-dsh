@@ -1,3 +1,5 @@
+import { AGENT_PRESET_AVATAR_CSS } from './agent-preset-enhancer.js'
+
 export const STYLES_ID = 'omnimux-hub-styles'
 
 /** Deep-sea school + caustic shafts (offline SVG, 1:1 with the locked poster). */
@@ -1265,7 +1267,8 @@ body[data-ds-dark-theme] [data-composer-card] [class*="trailing"] button[class*=
 [data-composer-card] [class*="modes"] > button[class*="trigger"]:first-child {
   display: none !important;
 }
-`
+
+${AGENT_PRESET_AVATAR_CSS}`
 
 export function injectHubStyles() {
   if (typeof document === 'undefined') return

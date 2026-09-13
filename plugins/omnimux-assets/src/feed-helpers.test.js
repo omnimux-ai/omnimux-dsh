@@ -4,6 +4,7 @@ import {
   citeOf,
   cleanRemovedSelection,
   computeEmptyState,
+  countAssetsByType,
   errText,
   filterAndSortAssets,
   messageOf,
@@ -197,6 +198,42 @@ describe('Assets feed pure helpers', () => {
       assert.equal(res.searching, true)
       assert.equal(res.emptyLabel, 't:empty.noMatch')
       assert.equal(res.emptyActionLabel, undefined)
+    })
+  })
+
+  describe('countAssetsByType', () => {
+    it('tallies each type it sees', () => {
+      const rows = [
+        { type: 'character' },
+        { type: 'character' },
+        { type: 'scene' },
+        { type: 'custom' },
+      ]
+      assert.deepEqual(countAssetsByType(rows), { character: 2, scene: 1, custom: 1 })
+    })
+
+    it('reports only the types that are present, never a zero bucket', () => {
+      const counts = countAssetsByType([{ type: 'scene' }])
+      assert.deepEqual(Object.keys(counts), ['scene'])
+    })
+
+    it('skips rows a chip could never select', () => {
+      const rows = [
+        { type: 'scene' },
+        { type: '' },
+        { type: '   ' },
+        { type: 42 },
+        { name: 'typeless' },
+        null,
+        undefined,
+      ]
+      assert.deepEqual(countAssetsByType(rows), { scene: 1 })
+    })
+
+    it('survives a feed that has not loaded yet', () => {
+      assert.deepEqual(countAssetsByType([]), {})
+      assert.deepEqual(countAssetsByType(undefined), {})
+      assert.deepEqual(countAssetsByType(null), {})
     })
   })
 })

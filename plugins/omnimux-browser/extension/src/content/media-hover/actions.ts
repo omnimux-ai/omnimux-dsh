@@ -14,14 +14,51 @@
  */
 
 import { RUNTIME_MESSAGE, TIMING } from './messages.ts'
+import { isAttachablePayload } from './payload.ts'
 import type { ActionOutcome, HoveredMedia } from './types.ts'
 import type { HoverCopy } from './copy.ts'
+
+/**
+ * The payload as the outside world should see it.
+ *
+ * A `blob:` handle resolves nowhere outside the page that minted it, so a
+ * non-attachable payload travels as a page reference — with the captured frame
+ * kept as the thumbnail — instead of being shipped as a dead link or dropped.
+ */
+export function outboundMedia(payload: HoveredMedia): HoveredMedia {
+  if (isAttachablePayload(payload)) return payload
+  return {
+    ...payload,
+    id: `video:${payload.pageUrl}`,
+    src: payload.pageUrl,
+    previewSrc: payload.previewSrc !== '' ? payload.previewSrc : payload.pageUrl,
+    sourceKind: 'page',
+    attachable: true,
+  }
+}
 
 /** How the workbench delivery ended, so the caller can report the channel. */
 export type WorkstationResult = 'attached' | 'unavailable' | 'rejected'
 
+/**
+ * What the worker knows about the native side panel in this page's window.
+ *
+ * `unreachable` is not a synonym for `inactive`: a page whose worker did not
+ * answer has not proved that no panel is open, and the two states lead to
+ * different decisions below.
+ */
+export type SidePanelState = 'active' | 'inactive' | 'unreachable'
+
 /** Everything the bridge needs from the page and the extension runtime. */
 export interface ActionTransport {
+  /**
+   * Ask the worker whether the native side panel is connected in this window.
+   *
+   * @returns `'active'` when a panel holds the conversation, `'inactive'` when
+   *   the worker answered that none is open, and `'unreachable'` when the
+   *   question could not be put to a worker at all.
+   */
+  sidePanelState(): Promise<SidePanelState>
   /**
    * Ask the floating workstation to take the media and report the receipt.
    *
@@ -52,7 +89,15 @@ export function workstationHandle(): WorkstationHandle | null {
 
 /** Creates the browser transport bound to the current page. */
 export function browserTransport(copy: () => HoverCopy): ActionTransport {
-  return {
+  const transport: ActionTransport = {
+    async sidePanelState() {
+      // The question rides the same background channel as every other capsule
+      // request. A page without a worker, or a worker that answers something
+      // else entirely, reports `unreachable` rather than a panel it cannot see.
+      const record = asRecord(await transport.postToBackground({ type: RUNTIME_MESSAGE.checkSidePanelOpen }))
+      if (record?.ok !== true || typeof record.active !== 'boolean') return 'unreachable'
+      return record.active ? 'active' : 'inactive'
+    },
     async deliverToWorkstation(payload, timeoutMs) {
       const handle = workstationHandle()
       if (handle === null) return 'unavailable'
@@ -82,6 +127,7 @@ export function browserTransport(copy: () => HoverCopy): ActionTransport {
     },
     copy,
   }
+  return transport
 }
 
 /** Await a promise against a budget; `null` means the budget ran out. */
@@ -151,51 +197,73 @@ export class MediaActionBridge {
     const hints = this.transport.copy()
     const record = asRecord(await this.transport.postToBackground({
       type: RUNTIME_MESSAGE.mediaToInspiration,
-      payload,
+      payload: outboundMedia(payload),
     }))
     if (record?.ok !== true) return { ok: false, status: 'failed', message: hints.failed }
     const outcome = asRecord(record.result)
     if (outcome !== null && outcome.ok === false) {
       return { ok: false, status: 'failed', message: hints.failed }
     }
-    return { ok: true, status: 'saved', message: hints.done.inspiration }
+    return {
+      ok: true,
+      status: 'saved',
+      message: isAttachablePayload(payload) ? hints.done.inspiration : hints.pageReference,
+    }
   }
 
-  /** Copies the absolute media address to the system clipboard. */
+  /**
+   * Copies the media address to the system clipboard.
+   *
+   * A page-scoped video is copied as its page address: the `blob:` handle it
+   * carries would paste a link that resolves nowhere.
+   */
   async copyToClipboard(payload: HoveredMedia): Promise<ActionOutcome> {
     const hints = this.transport.copy()
-    const copied = await this.transport.writeClipboard(payload.src)
+    const copied = await this.transport.writeClipboard(outboundMedia(payload).src)
     if (!copied) return { ok: false, status: 'failed', message: hints.failed }
-    return { ok: true, status: 'copied', message: hints.done.copy }
+    return {
+      ok: true,
+      status: 'copied',
+      message: isAttachablePayload(payload) ? hints.done.copy : hints.pageReference,
+    }
   }
 
   /**
    * Delivers the media into the conversation.
    *
-   * Prefers the floating workstation: its receipt proves the panel accepted the
-   * attachment, so the capsule only paints the "added" state on real evidence.
-   * When the workstation is missing or silent past the receipt budget, the
-   * request falls back to the native side panel, which holds the media until its
-   * panel connects.
+   * The native side panel wins whenever it is open: the user is already looking
+   * at that conversation, and expanding the floating workstation beside it would
+   * show the same session twice. A panel state the worker could not answer is
+   * treated the same way — it cannot rule a panel out, and the panel channel
+   * holds the media either way.
+   *
+   * Only a positive "no panel is open" lets the floating workstation take the
+   * request, and only the workstation's own receipt counts as "added". When no
+   * channel can take the media, the request falls back to the side panel, which
+   * keeps it until its port connects.
    */
   async attachToConversation(payload: HoveredMedia): Promise<ActionOutcome> {
     const hints = this.transport.copy()
-    const delivered = await this.transport.deliverToWorkstation(payload, TIMING.attachReceiptTimeout)
-    if (delivered === 'attached') {
-      return { ok: true, status: 'attached', message: hints.done.attach, channel: 'workbench' }
+    const media = outboundMedia(payload)
+
+    if (await this.transport.sidePanelState() === 'inactive') {
+      const delivered = await this.transport.deliverToWorkstation(media, TIMING.attachReceiptTimeout)
+      if (delivered === 'attached') {
+        return { ok: true, status: 'attached', message: hints.done.attach, channel: 'workbench' }
+      }
     }
 
     // A workbench that exists but never answered is treated like a missing one:
     // the media must still reach the conversation rather than being dropped.
     const record = asRecord(await this.transport.postToBackground({
       type: RUNTIME_MESSAGE.openAssistantWithMedia,
-      payload,
+      payload: media,
     }))
     if (record?.ok !== true) return { ok: false, status: 'failed', message: hints.failed }
     return { ok: true, status: 'attached', message: hints.done.attach, channel: 'side-panel' }
   }
 }
 
-function asRecord(value: unknown): { ok?: unknown; result?: unknown } | null {
-  return typeof value === 'object' && value !== null ? value as { ok?: unknown; result?: unknown } : null
+function asRecord(value: unknown): { ok?: unknown; result?: unknown; active?: unknown } | null {
+  return typeof value === 'object' && value !== null ? value as { ok?: unknown; result?: unknown; active?: unknown } : null
 }

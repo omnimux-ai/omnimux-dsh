@@ -127,16 +127,6 @@ function buildCreateInput(form, workspaces, models, now = /* @__PURE__ */ new Da
     reasoningEffort: form.reasoningEffort === "none" ? null : form.reasoningEffort
   };
 }
-const ATTENTION_STATUSES = /* @__PURE__ */ new Set(["failed", "interrupted"]);
-function deriveOverview(snapshot) {
-  const next = snapshot.automations.filter((item) => item.status === "active" && item.nextRunAt !== void 0).map((item) => item.nextRunAt).sort((a, b) => Date.parse(a) - Date.parse(b))[0];
-  return {
-    total: snapshot.automations.length,
-    active: snapshot.automations.filter((item) => item.status === "active").length,
-    attention: snapshot.runs.filter((run) => ATTENTION_STATUSES.has(run.status) && run.unread !== false).length,
-    ...next === void 0 ? {} : { nextRunAt: next }
-  };
-}
 function formatRelativeTime(iso, now, t) {
   const value = Date.parse(iso);
   if (!Number.isFinite(value)) return iso;
@@ -192,49 +182,6 @@ function formatDuration(startedAt, finishedAt) {
   if (!Number.isFinite(seconds) || seconds < 0) return void 0;
   return `${seconds.toFixed(1)}s`;
 }
-function sortStamp(value) {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-function sortAutomations(items, key, direction) {
-  const factor = direction === "asc" ? 1 : -1;
-  return items.slice().sort((left, right) => {
-    if (key === "planned") {
-      const leftNext = left.nextRunAt;
-      const rightNext = right.nextRunAt;
-      if (leftNext === void 0 || rightNext === void 0) {
-        if (leftNext === void 0 && rightNext === void 0) {
-          return left.name.localeCompare(right.name) || left.id.localeCompare(right.id);
-        }
-        return leftNext === void 0 ? 1 : -1;
-      }
-      const primary2 = sortStamp(leftNext) - sortStamp(rightNext);
-      if (primary2 !== 0) return primary2 * factor;
-      return left.name.localeCompare(right.name) || left.id.localeCompare(right.id);
-    }
-    const primary = sortStamp(left.createdAt) - sortStamp(right.createdAt);
-    if (primary !== 0) return primary * factor;
-    return left.id.localeCompare(right.id);
-  });
-}
-const SETTINGS_SORT_DEFAULT_KEY = "dsh-automation.sort-default.settings";
-const OVERVIEW_SORT_DEFAULT_KEY = "dsh-automation.sort-default.overview";
-function readSortDefault(storage, storageKey) {
-  if (storage === void 0) return void 0;
-  try {
-    const raw = storage.getItem(storageKey);
-    if (raw === null) return void 0;
-    const parsed = JSON.parse(raw);
-    if (parsed.key !== "created" && parsed.key !== "planned") return void 0;
-    if (parsed.direction !== "asc" && parsed.direction !== "desc") return void 0;
-    return { key: parsed.key, direction: parsed.direction };
-  } catch {
-    return void 0;
-  }
-}
-function writeSortDefault(storage, storageKey, key, direction) {
-  storage.setItem(storageKey, JSON.stringify({ key, direction }));
-}
 function formFromAutomation(item, workspaces = [], defaultModel, defaultPermission = item.permission) {
   const base = defaultFormState(/* @__PURE__ */ new Date(), workspaces, defaultModel, defaultPermission);
   const schedule = item.schedule;
@@ -288,11 +235,8 @@ function prettyModelName(model) {
 }
 export {
   AutomationFormError,
-  OVERVIEW_SORT_DEFAULT_KEY,
-  SETTINGS_SORT_DEFAULT_KEY,
   buildCreateInput,
   defaultFormState,
-  deriveOverview,
   formFromAutomation,
   formatDuration,
   formatRelativeTime,
@@ -302,10 +246,7 @@ export {
   insertSkillGesture,
   localDateTimeValue,
   prettyModelName,
-  readSortDefault,
   shortSessionId,
   skillGestureToken,
-  sortAutomations,
   workspaceLabel,
-  writeSortDefault
 };

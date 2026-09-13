@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import { Button, Divider, DropdownSelect, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { Button, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
@@ -10,7 +10,7 @@ import { CloudAssetsView } from './CloudAssetsView.jsx'
 import { cloudAssetToPreviewItem } from './cloud-preview.js'
 import { useCloudSave } from './use-cloud-save.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { computeEmptyState } from './feed-helpers.js'
+import { computeEmptyState, countAssetsByType } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
 
@@ -67,23 +67,54 @@ function AssetsActionRow(props) {
   )
 }
 
-function AssetsFilterChips(props) {
-  const { t, filterType, onTypeChange } = props
-  const filterChips = [
-    { key: '', label: t('chip.all') },
-    ...ASSET_TYPE_KEYS.map((k) => ({ key: k, label: t(`type.${k}`) })),
-  ]
-  return filterChips.map((chip) => (
-    <Button
-      key={chip.key || 'all'}
-      variant={filterType === chip.key ? 'secondary' : 'ghost'}
-      size="sm"
-      aria-pressed={filterType === chip.key}
-      onClick={() => onTypeChange(chip.key)}
-    >
-      {chip.label}
-    </Button>
-  ))
+/**
+ * Category row for the local library: the same chip treatment and the same
+ * shape as the cloud tab's first level, driven by the local type vocabulary
+ * instead of catalog categories.
+ *
+ * The row always leads with 全部 and then lists every asset type. Each chip
+ * carries its own count; counts describe the whole library and never the
+ * current query, so a chip's number holds still while the search box narrows
+ * the grid — the cloud nav reads its totals from the manifest the same way.
+ * An empty library still renders the row: 全部 0 is information, and a filter
+ * row that appears only after the first asset would move the grid under the
+ * user.
+ * @param {{
+ *   t: (key: string) => string,
+ *   assets: any[],
+ *   filterType: string,
+ *   onTypeChange: (type: string) => void,
+ * }} props
+ */
+function LocalCategoryNav(props) {
+  const { t, assets, filterType, onTypeChange } = props
+  const rows = useMemo(() => {
+    const counts = countAssetsByType(assets)
+    return [
+      { key: '', label: t('chip.all'), total: Array.isArray(assets) ? assets.length : 0 },
+      ...ASSET_TYPE_KEYS.map((key) => ({ key, label: t(`type.${key}`), total: counts[key] ?? 0 })),
+    ]
+  }, [assets, t])
+
+  return (
+    <div className="omnimux-assets-local-nav">
+      <div className="omnimux-assets-local-nav-row" role="group" aria-label={t('local.nav.label')}>
+        {rows.map((row) => (
+          <Button
+            key={row.key || 'all'}
+            variant="ghost"
+            size="sm"
+            className="omnimux-assets-cloud-chip"
+            aria-pressed={row.key === filterType ? 'true' : 'false'}
+            onClick={() => onTypeChange(row.key)}
+          >
+            {row.label}
+            <span className="omnimux-assets-cloud-count">{row.total}</span>
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function AssetsViewToggle(props) {
@@ -114,16 +145,6 @@ function AssetsViewToggle(props) {
 
 function AssetsFilterBar(props) {
   const { t, feed, sourceTab, onSourceTabChange } = props
-  const sortOptions = [
-    { value: 'updatedAt_desc', label: t('sort.updatedAt_desc') },
-    { value: 'updatedAt_asc', label: t('sort.updatedAt_asc') },
-    { value: 'name_asc', label: t('sort.name_asc') },
-    { value: 'name_desc', label: t('sort.name_desc') },
-  ]
-  const typeOptions = [
-    { value: '', label: t('chip.all') },
-    ...ASSET_TYPE_KEYS.map((k) => ({ value: k, label: t(`type.${k}`) })),
-  ]
 
   return (
     <FilterBar
@@ -147,22 +168,6 @@ function AssetsFilterBar(props) {
               value={feed.query}
               onChange={feed.setQuery}
               onClear={() => feed.setQuery('')}
-            />
-          </div>
-          <div className="omnimux-assets-sort-wrap">
-            <DropdownSelect
-              options={typeOptions}
-              value={feed.filterType}
-              onChange={feed.setFilterType}
-              triggerTitle={t('chip.all')}
-            />
-          </div>
-          <div className="omnimux-assets-sort-wrap">
-            <DropdownSelect
-              options={sortOptions}
-              value={feed.sortBy}
-              onChange={feed.setSortBy}
-              triggerTitle={t('sort.label')}
             />
           </div>
           <AssetsViewToggle t={t} viewMode={feed.viewMode} onViewModeChange={feed.setViewMode} />
@@ -392,6 +397,17 @@ export function AssetsStage(props) {
       <AssetsActionRow t={t} feed={feed} />
       <Divider />
       <AssetsFilterBar t={t} feed={feed} sourceTab={sourceTab} onSourceTabChange={setSourceTab} />
+      {sourceTab === 'local' ? (
+        // The local tab draws its own category row here, under the toolbar. The
+        // cloud tab draws one from the catalog manifest inside its own view, so
+        // mounting this one there as well would stack two rows of chips.
+        <LocalCategoryNav
+          t={t}
+          assets={feed.assets}
+          filterType={feed.filterType}
+          onTypeChange={feed.setFilterType}
+        />
+      ) : null}
       <AssetsSelectionBar t={t} feed={feed} />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
       {cloudSave.notice !== '' ? <p className="omnimux-assets-cloud-notice">{cloudSave.notice}</p> : null}

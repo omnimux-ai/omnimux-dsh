@@ -6,6 +6,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MediaDetector } from '../src/content/media-hover/detector.ts'
 import {
+  isPostOrWorkMedia,
+} from '../src/content/media-hover/classifier.ts'
+import {
   MIN_MEDIA_SIZE_PX,
   findMediaElement,
   isEligibleMediaSize,
@@ -21,10 +24,20 @@ function makeEnvironment() {
     elementFromPoint: () => null as Element | null,
     viewport: () => ({ ...VIEWPORT }),
     now: () => 1_700_000_000_000,
+    // An ordinary page, not a creator platform: the classifier's platform rules
+    // stay out of the way and the container rule is what admits the fixture.
+    host: () => 'page.example.com',
   }
 }
 
-/** An <img> with an explicit layout box; jsdom has no layout engine. */
+/**
+ * An <img> with an explicit layout box; jsdom has no layout engine.
+ *
+ * The image is mounted inside an `<article>`: the detector offers the capsule
+ * for posts and works only, so a bare image under `<body>` is rejected by the
+ * creative-asset classifier no matter how large it renders. Use `parent` to
+ * mount it somewhere else and assert the rejection instead.
+ */
 function appendImage(options: {
   width: number
   height: number
@@ -34,6 +47,7 @@ function appendImage(options: {
   top?: number
   left?: number
   alt?: string
+  parent?: Element
 }): HTMLImageElement {
   const img = document.createElement('img')
   img.setAttribute('src', options.src ?? 'https://cdn.example.com/a.png')
@@ -56,7 +70,14 @@ function appendImage(options: {
     toJSON: () => ({}),
   }
   img.getBoundingClientRect = () => box as DOMRect
-  document.body.appendChild(img)
+  if (options.parent !== undefined) {
+    options.parent.appendChild(img)
+    return img
+  }
+  document.body.insertAdjacentHTML('beforeend', '<article></article>')
+  const article = document.querySelector('article')
+  if (article === null) throw new Error('article fixture missing')
+  article.appendChild(img)
   return img
 }
 
@@ -75,6 +96,7 @@ describe('eligibility threshold', () => {
   it('rejects a media element one pixel below the threshold', () => {
     const detector = new MediaDetector({ onCandidate: vi.fn() }, makeEnvironment())
     const tooSmall = appendImage({ width: 39, height: 120 })
+    expect(isEligibleMediaSize(39, 120)).toBe(false)
     expect(detector.peek(tooSmall)).toBeNull()
     expect(detector.rectOf(tooSmall).width).toBe(39)
   })
@@ -83,6 +105,14 @@ describe('eligibility threshold', () => {
     const img = appendImage({ width: 40, height: 40 })
     expect(isEligibleMediaSize(40, 40)).toBe(true)
     expect(normalizeMedia(img, 'image', 'https://page.example.com/')).not.toBeNull()
+  })
+
+  it('rejects an image that clears the detector floor but not the post floor', () => {
+    // The two thresholds answer different questions: 40px is what the detector
+    // can see, 120px is what the capsule will offer.
+    const thumbnail = appendImage({ width: 100, height: 100 })
+    expect(isEligibleMediaSize(100, 100)).toBe(true)
+    expect(isPostOrWorkMedia(thumbnail)).toBe(false)
   })
 })
 
@@ -169,9 +199,11 @@ describe('pointer target resolution', () => {
 
   it('stays silent when the hit test lands outside any media', () => {
     const onCandidate = vi.fn()
+    document.body.insertAdjacentHTML('beforeend', '<article></article>')
+    const article = document.querySelector('article') as Element
     const detector = new MediaDetector(
       { onCandidate },
-      { ...makeEnvironment(), elementFromPoint: () => document.body },
+      { ...makeEnvironment(), elementFromPoint: () => article },
     )
     detector.start()
     document.dispatchEvent(new MouseEvent('pointermove', { clientX: 10, clientY: 10 }))

@@ -89,7 +89,44 @@ interface SessionResumeHintMessage {
   sessionId: string | null
 }
 
-type BackgroundMessage = RpcResultMessage | RespondResultMessage | SettingsResultMessage | StatusMessage | EventMessage | ApprovalRequestMessage | ApprovalResolvedMessage | TabAffinityMessage | TabAffinityRebindResultMessage | SelectionMessage | SessionResumeHintMessage
+interface MediaAttachMessage {
+  type: 'media.attach'
+  media: unknown
+}
+
+type BackgroundMessage = RpcResultMessage | RespondResultMessage | SettingsResultMessage | StatusMessage | EventMessage | ApprovalRequestMessage | ApprovalResolvedMessage | TabAffinityMessage | TabAffinityRebindResultMessage | SelectionMessage | SessionResumeHintMessage | MediaAttachMessage
+
+/**
+ * One page media element a capsule sent into this conversation.
+ *
+ * The payload arrives from a page, so every field the panel acts on is validated
+ * here rather than trusted: an address it cannot download must never reach the
+ * draft intake.
+ */
+export interface HoveredMediaMessage {
+  id: string
+  type: 'image' | 'video'
+  src: string
+  previewSrc: string
+  alt?: string
+}
+
+/** Validates one page-media payload, or `null` when it is unusable. */
+export function parseHoveredMediaMessage(value: unknown): HoveredMediaMessage | null {
+  if (typeof value !== 'object' || value === null) return null
+  const media = value as { id?: unknown; type?: unknown; src?: unknown; previewSrc?: unknown; alt?: unknown }
+  if (typeof media.id !== 'string' || media.id === '') return null
+  if (typeof media.src !== 'string' || media.src === '') return null
+  if (media.type !== 'image' && media.type !== 'video') return null
+  const previewSrc = typeof media.previewSrc === 'string' && media.previewSrc !== '' ? media.previewSrc : media.src
+  return {
+    id: media.id,
+    type: media.type,
+    src: media.src,
+    previewSrc,
+    alt: typeof media.alt === 'string' ? media.alt : undefined,
+  }
+}
 
 /** Structured gateway failure retained for product-level error handling. */
 export class PanelRpcError extends Error {
@@ -122,6 +159,14 @@ export interface PanelApi {
   onTabAffinity(callback: (state: TabAffinityState) => void): () => void
   onSelection(callback: (selection: PageSelection | null) => void): () => void
   onSessionResumeHint(callback: (sessionId: string | null) => void): () => void
+  /**
+   * Page media the capsule sent into the conversation this panel is showing.
+   *
+   * This is the channel an already-open side panel takes media over: the capsule
+   * asks the worker first, and only reaches the floating workstation when no
+   * panel is connected.
+   */
+  onMediaAttach(callback: (media: HoveredMediaMessage) => void): () => void
   respondToApproval(id: string, decision: ApprovalDecision): Promise<void>
   resolveTabAffinity(revision: number, decision: TabAffinityDecision, sessionId: string | null): Promise<void>
   rebindTabAffinity(): Promise<void>
@@ -157,6 +202,7 @@ export function connectPanel(): PanelApi {
   const tabAffinityListeners = new Set<(state: TabAffinityState) => void>()
   const selectionListeners = new Set<(selection: PageSelection | null) => void>()
   const sessionResumeHintListeners = new Set<(sessionId: string | null) => void>()
+  const mediaAttachListeners = new Set<(media: HoveredMediaMessage) => void>()
 
   let port: chrome.runtime.Port | null = null
   let reconnectPromise: Promise<chrome.runtime.Port> | null = null
@@ -234,6 +280,13 @@ export function connectPanel(): PanelApi {
       case 'session.resume-hint':
         for (const listener of sessionResumeHintListeners) listener(msg.sessionId)
         break
+      case 'media.attach': {
+        // The page owns this payload; validate it again on the way into the UI.
+        const media = parseHoveredMediaMessage(msg.media)
+        if (media === null) break
+        for (const listener of mediaAttachListeners) listener(media)
+        break
+      }
     }
   }
 
@@ -405,6 +458,10 @@ export function connectPanel(): PanelApi {
     onSessionResumeHint(callback) {
       sessionResumeHintListeners.add(callback)
       return () => { sessionResumeHintListeners.delete(callback) }
+    },
+    onMediaAttach(callback) {
+      mediaAttachListeners.add(callback)
+      return () => { mediaAttachListeners.delete(callback) }
     },
     respondToApproval(id, decision) {
       return send({ type: 'approval.response', id, decision })

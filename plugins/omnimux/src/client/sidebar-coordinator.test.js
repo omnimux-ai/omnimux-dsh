@@ -27,13 +27,16 @@ afterEach(async () => {
   dom = undefined
 })
 
-function setup() {
+function setup(html) {
   // 对齐官方 AppFrame：data-sidebar-collapsed 写在 frame 根，不是 <html>。
-  dom = new JSDOM(`<!doctype html><html><body>
+  // logoRow 品牌钮必须在夹具里：#1572 曾把它误当成新对话锚点。
+  dom = new JSDOM(html || `<!doctype html><html><body>
     <div data-slot="root">
       <div class="frame" data-omnimux-frame>
         <div data-pane="sidebar">
-          <div class="logoRow"><span>logo</span></div>
+          <div class="logoRow">
+            <button type="button" class="x-Wl6W_brand" aria-label="OmniMux">OmniMux</button>
+          </div>
           <button class="newSession">新建会话</button>
         </div>
       </div>
@@ -360,4 +363,71 @@ test('Alpha entries retain activation and labels across placement and remount', 
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 4)
   for (const dispose of again) dispose()
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
+})
+
+test('品牌按钮不得抢占新对话锚点，below 行紧挨新对话且不抛', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  const belowBtn = document.createElement('button')
+  belowBtn.id = 'apps-entry'
+  belowBtn.setAttribute('data-omnimux-apps-entry', '')
+  let dispose
+  assert.doesNotThrow(() => {
+    dispose = api.register({ id: 'omnimux-apps-entry', rank: 1, create: () => belowBtn })
+  })
+  try {
+    for (let i = 0; i < 4; i++) assert.doesNotThrow(() => { api.place() })
+    const root = document.querySelector('[data-pane="sidebar"]')
+    const sessionBtn = root.querySelector('.newSession')
+    const brand = root.querySelector('.x-Wl6W_brand')
+    assert.ok(brand, '夹具含品牌钮')
+    assert.equal(belowBtn.parentElement, root)
+    assert.equal(belowBtn.previousElementSibling, sessionBtn, '入口必须紧挨新对话，不得插在品牌钮后')
+    assert.notEqual(belowBtn.previousElementSibling, brand)
+  } finally {
+    dispose?.()
+  }
+})
+
+test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方', async () => {
+  setup(`<!doctype html><html><body>
+    <div class="dshDesktopSidebarSurface">
+      <div class="dshDesktopUpstreamSidebar">
+        <div data-pane="sidebar">
+          <div class="logoRow">
+            <button type="button" class="x-Wl6W_brand">OmniMux</button>
+          </div>
+          <button class="newSession" aria-label="新对话">新对话</button>
+          <div class="workspace">工作区</div>
+        </div>
+      </div>
+    </div>
+  </body></html>`)
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  const belowBtn = document.createElement('button')
+  belowBtn.id = 'assets-entry'
+  const dispose = api.register({ id: 'omnimux-assets-entry', rank: 6, create: () => belowBtn })
+  try {
+    const pane = document.querySelector('[data-pane="sidebar"]')
+    const sessionBtn = pane.querySelector('.newSession')
+    assert.equal(belowBtn.parentElement, pane, '不得插到 desktop surface 外壳')
+    assert.equal(belowBtn.previousElementSibling, sessionBtn)
+    assert.equal(belowBtn.nextElementSibling?.className, 'workspace')
+  } finally {
+    dispose()
+  }
+})
+
+test('coordinator 源码不得把 brand 类写进新对话选择器', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { dirname, join } = await import('node:path')
+  const { fileURLToPath } = await import('node:url')
+  const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'sidebar-coordinator.js'), 'utf8')
+  assert.doesNotMatch(source, /x-Wl6W_brand/)
+  assert.doesNotMatch(source, /button\.x-Wl6W_brand/)
+  assert.match(source, /button\[class\*="newSession"\]/)
 })

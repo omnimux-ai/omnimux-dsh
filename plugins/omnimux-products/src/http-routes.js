@@ -59,9 +59,16 @@ export function sendPreview(res, status, stream) {
   }).pipe(res)
 }
 
+/**
+ * A key shape, not the two letters `sk`. An import now answers page-derived and
+ * model-authored copy, where `risk-free` / `task-focused` are ordinary English;
+ * matching those would fail a good import with a 500.
+ */
+const SECRET_PATTERN = /access_token|sk-[A-Za-z0-9_-]{16,}/
+
 export function sendJson(res, status, body) {
   const text = JSON.stringify(body)
-  if (/access_token|sk-[A-Za-z0-9]/.test(text)) {
+  if (SECRET_PATTERN.test(text)) {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: 'refused to emit a secret' }))
     return
@@ -132,6 +139,91 @@ function messageOf(error) {
 }
 
 /**
+ * Read one seat off the host context. A seat that is absent, or that throws on
+ * lookup, reads as "missing" — never as a request failure.
+ *
+ * @param {unknown} ctx
+ * @param {string} name
+ * @returns {unknown}
+ */
+function readSeat(ctx, name) {
+  if (!ctx || typeof ctx !== 'object') return undefined
+  const getter = /** @type {{ get?: Function }} */ (ctx).get
+  if (typeof getter !== 'function') return undefined
+  try {
+    return getter.call(ctx, name)
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The host tool registry: `ctx.tools` directly, else the `tools` seat.
+ * @param {unknown} ctx
+ * @returns {{ get?: Function, execute?: Function } | null}
+ */
+function toolRegistry(ctx) {
+  if (!ctx || typeof ctx !== 'object') return null
+  const direct = /** @type {{ tools?: unknown }} */ (ctx).tools
+  if (direct && typeof direct === 'object') return /** @type {{ get?: Function }} */ (direct)
+  const seat = readSeat(ctx, 'tools')
+  return seat && typeof seat === 'object' ? /** @type {{ get?: Function }} */ (seat) : null
+}
+
+/**
+ * Wrap the hub capabilities this vertical consumes, resolved lazily at call time
+ * (load order between plugins is not this plugin's contract):
+ *
+ * - `textComplete` — the hub's one-shot model seam, as the provided service, else
+ *   the official `omnimux_text_complete` tool;
+ * - `pageFetch` — the official `omnimux_page_fetch` tool (OmniMux Jina Reader).
+ *
+ * @param {unknown} ctx
+ * @returns {{ textComplete: Function, pageFetch: Function } | null}
+ */
+export function createHubSeams(ctx) {
+  if (!ctx || typeof ctx !== 'object') return null
+
+  const seams = {
+    /**
+     * @param {{ prompt: string, model?: string, system?: string, maxTokens?: number, reason?: string }} request
+     * @returns {Promise<unknown>}
+     */
+    async textComplete(request) {
+      const service = /** @type {{ execute?: Function } | undefined} */ (readSeat(ctx, 'textComplete'))
+      if (service && typeof service.execute === 'function') return service.execute(request)
+
+      const tools = toolRegistry(ctx)
+      const tool = tools && typeof tools.get === 'function' ? tools.get('omnimux_text_complete') : null
+      if (!tool || typeof tool.execute !== 'function') {
+        throw new Error('omnimux_text_complete unavailable: hub is not loaded or text completion is disabled')
+      }
+      return tool.execute({
+        prompt: request.prompt,
+        model: request.model,
+        system: request.system,
+        max_tokens: request.maxTokens,
+        reason: request.reason || 'omnimux-products import-from-link',
+      })
+    },
+
+    /**
+     * @param {string} url
+     * @returns {Promise<unknown>}
+     */
+    async pageFetch(url) {
+      const tools = toolRegistry(ctx)
+      const tool = tools && typeof tools.get === 'function' ? tools.get('omnimux_page_fetch') : null
+      if (!tool || typeof tool.execute !== 'function') {
+        throw new Error('omnimux_page_fetch unavailable: hub is not loaded or the reader is disabled')
+      }
+      return tool.execute({ url })
+    },
+  }
+  return seams
+}
+
+/**
  * @param {string} pathname
  */
 function parseProductPath(pathname) {
@@ -150,14 +242,19 @@ function parseProductPath(pathname) {
 /**
  * @param {{
  *   library: ReturnType<typeof import('./library.js').createLibraryStore>,
+ *   ctx?: unknown,
+ *   hub?: { textComplete?: Function, pageFetch?: Function } | null,
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
- *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital' }) => Promise<object>,
+ *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', hub?: object | null }) => Promise<object>,
  * }} deps
  */
 export function createProductsDispatcher(deps) {
   const { library } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
   const importFromUrl = deps.importFromUrl ?? importProductFromUrl
+  // Hub seams are optional: without a hub the importer still answers from its own
+  // page read and the heuristics, and reports the degradation in-band.
+  const hub = deps.hub ?? createHubSeams(deps.ctx)
 
   /**
    * @param {{ body?: unknown }} req
@@ -231,18 +328,22 @@ export function createProductsDispatcher(deps) {
        * POST /omnimux/products/import-from-link
        * Read a landing page and answer a product draft. Local-only (the write
        * guard above), and the importer re-validates every url it fetches. The
-       * vertical scrapes the page itself: no OmniMux client, no credential.
+       * vertical scrapes the page itself and borrows the hub only for the model
+       * call and the reader: no OmniMux client, no credential.
        */
       if (method === 'POST' && parsed.kind === 'import-from-link') {
         const problem = jsonBodyProblem(req)
         if (problem) return problem
-        const body = /** @type {{ url?: unknown, kind?: unknown }} */ (req.body)
+        const body = /** @type {{ url?: unknown, kind?: unknown, model?: unknown, language?: unknown }} */ (req.body)
         if (body.kind !== undefined && !PRODUCT_KINDS.includes(/** @type {'physical' | 'digital'} */ (body.kind))) {
           throw new ProductsError('kind-invalid', `kind must be one of ${PRODUCT_KINDS.join(', ')}`)
         }
         const data = await importFromUrl({
           url: body.url,
           kind: body.kind === 'digital' ? 'digital' : 'physical',
+          model: typeof body.model === 'string' ? body.model : undefined,
+          language: typeof body.language === 'string' ? body.language : undefined,
+          hub,
         })
         return { status: 200, body: { success: true, data } }
       }

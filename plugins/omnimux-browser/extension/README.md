@@ -24,6 +24,15 @@ The **browser-operation end** of dsh: the model reads and operates the browser p
 | Chat with images | `session.prompt` / `session.attachment` | Host-gated image selection, image-only sends, and durable history previews |
 | Quote what you highlight | side panel composer | The text you select in the page becomes a quote in the composer and rides along with your next message |
 
+## On-page shortcuts
+
+On a TikTok page the extension adds its own trigger above the signed-in avatar at the foot of the left rail, with three shortcuts: **download without watermark**, **download the original audio**, and **save to the inspiration library**.
+
+The work happens in the local OmniMux host, not in the page: the host resolves the stream, writes the file, and owns the library row. A download is therefore the real source file rather than a page-scoped blob, and a saved post is in the inspiration library the moment the row settles.
+
+The shortcuts act on the post the page is showing, or on the one the pointer is over. A page that names no post — search, explore — answers that there is nothing to act on instead of picking one for you.
+
+Two conditions apply. The OmniMux host must be running — the trigger says so plainly when it is not — and TikTok must be signed in, because a watermark-free stream is only resolvable for a session that can already watch the post. A shortcut that cannot proceed states its own reason in the menu row; nothing fails silently.
 ## Architecture
 
 ```

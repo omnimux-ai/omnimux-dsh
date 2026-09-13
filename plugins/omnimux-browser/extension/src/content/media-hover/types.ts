@@ -38,10 +38,60 @@ export interface HoveredMedia {
   naturalHeight: number
   alt: string
   capturedAt: number
+  /**
+   * Which rung of the source ladder produced {@link src}.
+   *
+   * Optional because the payload crosses `chrome.runtime`: a record written by
+   * an older build, or one replayed from the store, carries no rung, and a
+   * reader must fall back to the `direct` rung rather than reject the record.
+   */
+  sourceKind?: MediaSourceKind
+  /** Whether {@link src} can be re-fetched outside the page. Defaults to `true`. */
+  attachable?: boolean
 }
 
 /** How a media element can be materialised downstream. */
 export type MediaKind = 'image' | 'video'
+
+/**
+ * Which rung of the source ladder produced a media address.
+ *
+ * Ordered by reusability rather than by discovery order: `direct` and `poster`
+ * are ordinary URLs the workbench can fetch on its own, `frame` is an inline
+ * capture that carries its own pixels, and `blob` / `page` are page-scoped
+ * references that only mean something inside the tab they came from.
+ */
+export type MediaSourceKind = 'direct' | 'poster' | 'frame' | 'blob' | 'page'
+
+/** One resolved media address, with the rung and the reach that produced it. */
+export interface MediaSourceResolution {
+  /** The address recorded as the media's identity; `''` when nothing resolved. */
+  src: string
+  /** What to paint as the thumbnail; falls back to {@link src}. */
+  previewSrc: string
+  kind: MediaSourceKind
+  /** Whether the workbench may re-fetch {@link src} from its own origin. */
+  attachable: boolean
+}
+
+/** What to do when the capsule does not fit at its preferred corner. */
+export type CapsuleOverflowPolicy = 'mirror' | 'clamp'
+
+/**
+ * Where the pill sits relative to a media element, per media kind.
+ *
+ * Modelled as data rather than as an `if` at each call site: the placement rule
+ * and the flip decision are read from the same object, so a new media kind is
+ * one more policy instead of one more branch inside the geometry.
+ */
+export interface CapsuleAnchorPolicy {
+  /** Horizontal inset from the anchor corner. */
+  offsetX: number
+  /** Vertical inset from the media's bottom edge. */
+  offsetY: number
+  /** `mirror` flips to the opposite corner; `clamp` slides back inside instead. */
+  overflow: CapsuleOverflowPolicy
+}
 
 /** The three shortcuts the capsule offers, in capsule order. */
 export type MediaActionKind = 'inspiration' | 'copy' | 'attach'

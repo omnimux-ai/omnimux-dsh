@@ -22,7 +22,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -786,9 +786,38 @@ export function App(): React.JSX.Element {
     // The draft image keeps the payload id inside its file name, which is how the
     // "lit" highlight finds the thumbnail it belongs to.
     setLitMediaIds((current) => new Set(current).add(item.id))
+    // Media that just landed is lit, not merely stored: the chip has to show the
+    // active highlight on its own, and the send path reads the lit set, so the
+    // model carries the media without a second click. Both bars are fed from
+    // these lists, and each one de-duplicates, because the page may already have
+    // reported the same element.
+    setActiveMediaItems((current) => {
+      const exists = current.some((it) => it.src === item.src || it.id === item.id)
+      return exists ? current : [item, ...current]
+    })
+    setDetectedMedia((current) => {
+      const exists = current.some((it) => it.src === item.src || it.id === item.id)
+      return exists ? current : [item, ...current]
+    })
     reportMediaAttachResult(payload, true)
     focusComposer()
   }
+
+  /**
+   * Latest draft-intake helper, so the port listener below never calls a stale
+   * closure. That effect subscribes once, while this function is re-created per
+   * render with the current draft limits and composer state.
+   */
+  const attachHoveredMediaRef = useRef(attachHoveredMedia)
+  attachHoveredMediaRef.current = attachHoveredMedia
+
+  // Media the capsule sent into THIS panel. An open side panel takes page media
+  // over its port, so the floating workstation is never expanded on top of it.
+  // The payload is re-validated here like every other arriving page message.
+  useEffect(() => api.onMediaAttach((media) => {
+    const payload = readHoveredMedia(media)
+    if (payload !== null) void attachHoveredMediaRef.current(payload)
+  }), [api])
 
   useEffect(() => {
     if (isFloatMode) {
@@ -2072,7 +2101,7 @@ export function App(): React.JSX.Element {
           <label>
             <span>{locale === 'en' ? 'Default Workspace' : '默认工作区'}</span>
             <small>{locale === 'en' ? 'Bind your chats and tasks to a local workspace.' : '会话与任务绑定的本地工作区'}</small>
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <WorkspaceSelector
                 bridgeConnected={state === 'connected'}
                 locale={locale}
@@ -2088,7 +2117,7 @@ export function App(): React.JSX.Element {
           <label>
             <span>{locale === 'en' ? 'Default Model & Reasoning' : '默认模型与推理等级'}</span>
             <small>{locale === 'en' ? 'Match models and reasoning effort supported by the active instance' : '跟随当前实例匹配可用模型与思考推理等级'}</small>
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <ModelSelector
                 locale={locale}
                 activePort={targetPort}
@@ -2420,7 +2449,7 @@ export function App(): React.JSX.Element {
             title={locale === 'en' ? 'Scroll to top' : '点击滚动回到顶部大卡片'}
           >
             <div className="sticky-bar-badge">
-              <TwitterXIcon size={11} />
+              <PlatformMarkIcon platform={pageScene.platform} size={11} />
             </div>
             <span className="sticky-bar-title">{pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}</span>
           </div>
@@ -2512,7 +2541,7 @@ export function App(): React.JSX.Element {
                     />
                   ) : (
                     <div className="hero-card-cover-placeholder">
-                      <TwitterXIcon size={28} />
+                      <PlatformMarkIcon platform={pageScene.platform} size={28} />
                     </div>
                   )}
                 </div>
@@ -2520,7 +2549,7 @@ export function App(): React.JSX.Element {
                 {/* 2. 平台标识行 (1:1 对标 YouMind 图 2) */}
                 <div className="hero-platform-row">
                   <span className="hero-square-badge">
-                    <TwitterXIcon size={11} />
+                    <PlatformMarkIcon platform={pageScene.platform} size={11} />
                   </span>
                   <span className="hero-platform-text">
                     {pageScene.platformLabel || (pageScene.platform === 'twitter' ? 'X (formerly Twitter)' : (pageScene.title ? 'Web' : 'OmniMux'))}
@@ -2529,7 +2558,7 @@ export function App(): React.JSX.Element {
 
                 {/* 3. 页面大标题 */}
                 <div className="hero-card-title" title={pageScene.title || ''}>
-                  {pageScene.title || (pageScene.author ? `@${pageScene.author} / X` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
+                  {pageScene.title || (pageScene.author ? `@${pageScene.author}` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
                 </div>
 
                 {/* 4. 底部半悬浮保存药丸按钮 */}
@@ -2585,6 +2614,7 @@ export function App(): React.JSX.Element {
         locale={locale}
         onActiveChange={setActiveMediaItems}
         onSaveToInspiration={handleSaveToInspiration}
+        attachedIds={attachedMediaIds}
       />
       <footer className="composer">
         {detectedMedia.length > 0 && !isFloatMode && (

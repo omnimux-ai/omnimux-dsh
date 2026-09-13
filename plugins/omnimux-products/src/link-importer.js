@@ -1,10 +1,19 @@
 /**
  * Link importer: one landing-page URL in, one canonical product draft out.
  *
- * One track, owned by this vertical: a plain GET of the landing page plus
- * structured extraction from the document itself — `<title>`, meta, OpenGraph,
- * Twitter card, JSON-LD (`Product` / `Offer` / `BreadcrumbList`) and the list
- * items / body copy the page renders.
+ * Two tracks, one answer. The page is read twice over: the hub's Jina Reader
+ * (`omnimux_page_fetch`) returns clean Markdown for the model, and the vertical's
+ * own guarded GET keeps the structured extraction exact — `<title>`, meta,
+ * OpenGraph, Twitter card, JSON-LD (`Product` / `Offer` / `BreadcrumbList`) and
+ * the list items / body copy the page renders. Either read may fail on its own;
+ * the draft is assembled from whatever came back.
+ *
+ * The model then reads that text through the hub's one-shot `textComplete` seam,
+ * with `gemini-3.8-flash` by default: a digital / brand site is decomposed by the
+ * brand-strategy v2 playbook into six strategy modules, a physical listing is
+ * extracted by the Gxgen import-from-link v9 playbook. Without a hub, or when the
+ * model fails, the draft falls back to the local extraction above and says so —
+ * the request is never turned into an error by a missing model.
  *
  * The output field contract mirrors the Gxgen import playbook already vendored
  * at `prompts/physical/import-from-link.v9.txt` — name, selling_points,
@@ -14,9 +23,10 @@
  * matching the library rule that those are physical-only fields.
  *
  * Server-side only, and self-contained by contract: this vertical opens no
- * OmniMux HTTP client and reads no `OMNIMUX_*` credential
- * ([hub contract](../../../../docs/contracts/hub.md)).
+ * OmniMux HTTP client and reads no `OMNIMUX_*` credential — the hub holds the key
+ * and does the call ([hub contract](../../../../docs/contracts/hub.md)).
  */
+import { ANALYSIS_MODES, analyzeLandingPage, isDigitalLandingPage, normalizeHub } from './ai-analysis.js'
 
 /** Canonical import field order — the draft shape this module always returns. */
 export const IMPORT_FIELD_KEYS = Object.freeze([
@@ -32,6 +42,13 @@ export const IMPORT_FIELD_KEYS = Object.freeze([
   'categories',
   'images',
 ])
+
+/**
+ * Keys `importProductFromUrl` adds on top of the canonical field set: the kind
+ * the page turned out to be, the six-module strategy an all-model digital import
+ * produced, and how the draft was read.
+ */
+export const IMPORT_DRAFT_EXTRA_KEYS = Object.freeze(['kind', 'brand_strategy', 'analysis'])
 
 export const DEFAULT_TIMEOUT_MS = 12000
 
@@ -1458,29 +1475,187 @@ function messageOf(error) {
 }
 
 /**
+ * Ask the hub to read the page (OmniMux Jina Reader, markdown out). A missing
+ * seam or a failed read is not an error here: the caller still has its own GET.
+ *
+ * @param {{ hub: Record<string, unknown> | null, url: string }} input
+ * @returns {Promise<{ pageContent: string, title: string } | null>}
+ */
+async function readViaHub(input) {
+  if (!input.hub || typeof input.hub.pageFetch !== 'function') return null
+  try {
+    const answer = await input.hub.pageFetch(input.url)
+    const row = answer && typeof answer === 'object' ? /** @type {Record<string, unknown>} */ (answer) : {}
+    const pageContent = typeof row.pageContent === 'string' ? row.pageContent.trim() : ''
+    if (!pageContent) return null
+    return { pageContent, title: typeof row.title === 'string' ? row.title.trim() : '' }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The vertical's own guarded GET. Kept as a promise-returning step so both page
+ * reads can run together and fail independently.
+ *
+ * @param {{ url: string, fetcher: typeof fetch | null, timeoutMs: number }} input
+ * @returns {Promise<{ html: string, finalUrl: string }>}
+ */
+async function readPageDocument(input) {
+  if (!input.fetcher) throw new LinkImportError('link-import-failed', 'no fetch implementation is available')
+  return fetchPageDocument({ url: input.url, fetcher: input.fetcher, timeoutMs: input.timeoutMs })
+}
+
+/**
+ * A page known only as Markdown: no document head, no structured data, just the
+ * body text. Name, audience phrasing and promo lines still read out of it.
+ *
+ * @param {{ pageContent: string, title: string }} hubPage
+ * @returns {ParsedPage}
+ */
+function pageFromMarkdown(hubPage) {
+  return {
+    title: cleanText(hubPage.title),
+    canonical: '',
+    meta: {},
+    nodes: [],
+    images: [],
+    bullets: [],
+    text: cleanText(hubPage.pageContent),
+  }
+}
+
+/**
+ * Read one page both ways at once: the hub returns clean Markdown for the model,
+ * the guarded GET keeps structured extraction exact. Either read may fail alone;
+ * the draft is assembled from whatever came back.
+ *
+ * @param {{ url: string, fetcher: typeof fetch | null, timeoutMs: number, hub: Record<string, unknown> | null }} input
+ * @returns {Promise<{ page: ParsedPage, markdown: string, title: string, finalUrl: string }>}
+ * @throws {LinkImportError} neither read produced a page
+ */
+async function readPageSource(input) {
+  const [hubSettled, fetchSettled] = await Promise.allSettled([
+    readViaHub({ hub: input.hub, url: input.url }),
+    readPageDocument(input),
+  ])
+  const hubPage = hubSettled.status === 'fulfilled' ? hubSettled.value : null
+  const fetched = fetchSettled.status === 'fulfilled' ? fetchSettled.value : null
+
+  if (fetched) {
+    const page = parseHtmlDocument(fetched.html, input.url)
+    return {
+      page,
+      markdown: hubPage?.pageContent ?? '',
+      title: hubPage?.title || page.title,
+      finalUrl: fetched.finalUrl,
+    }
+  }
+  if (hubPage) {
+    const page = pageFromMarkdown(hubPage)
+    return { page, markdown: hubPage.pageContent, title: hubPage.title || page.title, finalUrl: input.url }
+  }
+  if (fetchSettled.status === 'rejected') throw fetchSettled.reason
+  throw new LinkImportError('link-import-failed', 'the page could not be read')
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function asText(value) {
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return ''
+}
+
+/**
+ * Model fields land on top of the local extraction: what the model named wins,
+ * what it left empty keeps the value the document itself gave. A strategy turns
+ * the draft into a digital one.
+ *
+ * @param {ImportedProduct} fields
+ * @param {{ mode?: string, model?: string | null, reason?: string | null, kind?: string, brand_strategy?: object | null, fields?: object | null }} analysis
+ * @param {{ url: string, kind: 'physical' | 'digital' }} input
+ * @returns {ImportedProduct & { kind: string, brand_strategy: object | null, analysis: { mode: string, model: string | null, reason: string | null } }}
+ */
+export function mergeAnalysisDraft(fields, analysis, input) {
+  const out = { ...fields }
+  const draft = analysis?.fields && typeof analysis.fields === 'object'
+    ? /** @type {Record<string, unknown>} */ (analysis.fields)
+    : null
+
+  if (draft) {
+    for (const key of ['name', 'selling_points', 'features', 'target_audience', 'brand', 'price', 'sku', 'promotion']) {
+      const value = asText(draft[key])
+      if (value) out[key] = value
+    }
+    const categories = Array.isArray(draft.categories) ? draft.categories.map(asText).filter(Boolean) : []
+    if (categories.length > 0) out.categories = dedupe(categories).slice(0, CATEGORIES_MAX)
+  }
+
+  out.name = capText(out.name, NAME_MAX)
+  out.selling_points = capText(out.selling_points, 400)
+  out.features = capText(out.features, 1000)
+  out.target_audience = capText(out.target_audience, 200)
+  out.brand = capText(out.brand, NAME_MAX)
+  out.sku = capText(out.sku, 64)
+  out.promotion = capText(out.promotion, 200)
+  out.link = input.url
+
+  return {
+    ...out,
+    kind: analysis?.kind === 'digital' ? 'digital' : input.kind,
+    brand_strategy: analysis?.brand_strategy ?? null,
+    analysis: {
+      mode: analysis?.mode ?? ANALYSIS_MODES.HEURISTIC,
+      model: analysis?.model ?? null,
+      reason: analysis?.reason ?? null,
+    },
+  }
+}
+
+/**
  * Import a product draft from one landing-page link.
  *
  * @param {{
  *   url: unknown,
  *   kind?: 'physical' | 'digital',
+ *   model?: string,
+ *   language?: string,
+ *   hub?: { textComplete?: Function, pageFetch?: Function } | null,
  *   fetcher?: typeof fetch,
  *   timeoutMs?: number,
  * }} args
- * @returns {Promise<ImportedProduct>}
+ * @returns {Promise<ImportedProduct & { kind: string, brand_strategy: object | null, analysis: object }>}
  * @throws {LinkImportError}
  */
 export async function importProductFromUrl(args) {
   const url = normalizeImportUrl(args?.url)
-  const kind = args?.kind === 'digital' ? 'digital' : 'physical'
+  const requestedKind = args?.kind === 'digital' ? 'digital' : 'physical'
   const fetcher = args?.fetcher ?? (typeof fetch === 'function' ? fetch : null)
-  if (!fetcher) throw new LinkImportError('link-import-failed', 'no fetch implementation is available')
   const timeoutMs = Number.isFinite(args?.timeoutMs) ? Number(args.timeoutMs) : DEFAULT_TIMEOUT_MS
+  const hub = normalizeHub(args?.hub)
 
-  const { html } = await fetchPageDocument({ url, fetcher, timeoutMs })
-  const page = parseHtmlDocument(html, url)
-  const fields = buildProductFields({ url, kind, page })
-  if (!isUsableImport(fields)) {
+  const source = await readPageSource({ url, fetcher, timeoutMs, hub })
+  // A page that advertises no goods at all is a brand / software site, even when
+  // the form was left on the physical default.
+  const kind = isDigitalLandingPage({ kind: requestedKind, page: source.page }) ? 'digital' : 'physical'
+
+  const fields = buildProductFields({ url, kind, page: source.page })
+  const analysis = await analyzeLandingPage({
+    hub,
+    kind,
+    url,
+    page: source.page,
+    markdown: source.markdown,
+    title: source.title,
+    model: args?.model,
+    language: args?.language,
+  })
+  const draft = mergeAnalysisDraft(fields, analysis, { url, kind })
+  if (!isUsableImport(draft)) {
     throw new LinkImportError('link-import-empty', 'no product information was found on the page')
   }
-  return fields
+  return draft
 }

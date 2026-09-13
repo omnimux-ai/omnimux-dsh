@@ -5,10 +5,14 @@ export interface PageSceneInfo {
   url: string
   title: string
   platform: 'twitter' | 'tiktok' | 'zhihu' | 'wechat' | 'generic'
+  /** Human-readable platform name; mirrors `PageSceneContext` in page-sensor. */
+  platformLabel?: string
   pageType: 'home' | 'profile' | 'status' | 'detail' | 'article' | 'unknown'
   selectedText?: string
   author?: string
   postText?: string
+  /** Preview image the sensor lifted off the page; may be absent. */
+  heroImage?: string
 }
 
 const PLATFORM_NAMES: Record<string, { zh: string; en: string }> = {

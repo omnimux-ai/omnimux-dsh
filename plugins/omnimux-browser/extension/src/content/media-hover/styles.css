@@ -35,17 +35,21 @@
   z-index: 2147483647;
 }
 
-/* --- Capsule: deep-black frosted pill ------------------------------------- */
+/* --- Capsule: deep-black frosted pill -------------------------------------
+   Two stages share one pill. Stage one is a 36px circle carrying the brand
+   mark; stage two is the 112px row of three shortcuts. The width is the only
+   thing that animates between them, and both layers are absolutely centred so
+   the row never reflows while the pill grows. */
 .omnimux-capsule-bar {
   position: fixed;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   box-sizing: border-box;
-  height: 44px;
-  padding: 0 6px;
+  height: 36px;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(30, 32, 38, 0.95);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42), inset 0 0 0 0.5px rgba(255, 255, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -54,18 +58,33 @@
   color: rgba(255, 255, 255, 0.94);
   font-size: 12px;
   line-height: 1;
-  pointer-events: auto;
+  pointer-events: none;
+  visibility: hidden;
   user-select: none;
   -webkit-user-select: none;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(6px) scale(0.96);
   transition: opacity 140ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 220ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 2147483646;
+}
+
+/* Stage one: the brand trigger alone, a perfect 36px circle. */
+.omnimux-capsule-bar.is-collapsed {
+  width: 36px;
+}
+
+/* Stage two: the three shortcuts, 112px wide. */
+.omnimux-capsule-bar.is-expanded {
+  width: 112px;
 }
 
 .omnimux-capsule-bar.is-visible {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0) scale(1);
 }
 
@@ -74,6 +93,102 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.06),
     0 10px 30px rgba(0, 0, 0, 0.5);
 }
+
+/* --- Stage layers: brand trigger and the action row ----------------------- */
+.omnimux-capsule-brand,
+.omnimux-capsule-actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.omnimux-capsule-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: opacity 130ms ease, background-color 140ms ease, transform 190ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omnimux-capsule-brand:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.omnimux-capsule-brand:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%) scale(0.92);
+}
+
+.omnimux-capsule-brand:focus-visible {
+  outline: 2px solid rgba(184, 183, 255, 0.9);
+  outline-offset: 1px;
+}
+
+.omnimux-capsule-brand svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.omnimux-capsule-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.88);
+  /* Stage two is not hoverable until it is on screen. */
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The brand mark retires as the row arrives, and each layer takes its own
+   pointer-events, so stage two can never be reached from stage one's layout. */
+.omnimux-capsule-bar.is-expanded .omnimux-capsule-brand {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.72);
+}
+
+.omnimux-capsule-bar.is-expanded .omnimux-capsule-actions {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 40ms;
+}
+
+.omnimux-capsule-bar.is-collapsed .omnimux-capsule-brand {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.omnimux-capsule-bar.is-collapsed .omnimux-capsule-actions {
+  opacity: 0;
+  /* Not transitioned, so the fold-back gives the pointer up on the first frame. */
+  pointer-events: none !important;
+  visibility: hidden;
+  /* The row leaves the hit-test and the tab order behind the fade, which is what
+     keeps the stage swap a cross-fade instead of a snap. */
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 160ms;
+}
+
+/* The three icons still have to be pinned off themselves: `pointer-events` is
+   inherited, but their own `auto` beats the `none` on the retired row above.
+   See `.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon` below. */
 
 /* --- Icon buttons --------------------------------------------------------- */
 .omnimux-capsule-icon {
@@ -93,6 +208,17 @@
   -webkit-appearance: none;
   appearance: none;
   transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+/* Stage one carries no action slot, so nothing in the retired row may take the
+   pointer. `.omnimux-capsule-actions` being `none` is not enough on its own: the
+   explicit `auto` above beats the inherited `none`, and the two stage layers are
+   absolutely centred — while the pill is 36px wide the middle icon sits exactly
+   over the brand circle, so hovering stage one would fire that icon's hint.
+   Scoped to `is-collapsed` on purpose: inside stage two the busy guard
+   (`.omnimux-capsule-icon.is-busy`) must still be able to disable a slot. */
+.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon {
+  pointer-events: none !important;
 }
 
 .omnimux-capsule-icon:hover {

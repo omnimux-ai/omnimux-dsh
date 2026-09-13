@@ -1,17 +1,33 @@
 /**
- * The cloud assets feed: category + sub-category selection, page loading,
- * catalog search, and audio audition.
+ * The cloud assets feed: category + sub-category selection, the 角色 dimension
+ * filters, page loading, catalog search, and audio audition.
  *
- * Pages are fetched lazily and appended, so switching category costs one request
- * (24 rows) rather than the whole scope. A viewport sentinel asks for the next
- * page; a failed page reports an error and leaves the loaded rows intact.
+ * Pages are fetched lazily and appended, so switching category — or narrowing a
+ * 角色 filter — costs one request (24 rows) rather than the whole scope. A
+ * viewport sentinel asks for the next page; a failed page reports an error and
+ * leaves the loaded rows intact.
+ *
+ * A 角色 filter selection is not applied to the rows client-side either. It is
+ * answered by the Host's filter route over the catalog index, which returns the
+ * same page envelope a shard does, so filtering and paging stay one request per
+ * page and the chip counts stay the catalog's own numbers. A search carries the
+ * same selection, so the search box narrows what the chips already narrowed
+ * rather than widening it back to the whole category.
  *
  * Copying a cloud row into the local library is not part of this feed: the only
  * route out of a card is into the conversation, and the preview modal owns the
  * one remaining save control through its own controller (see `AssetsStage`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
+import { cloudFilter, cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
+import {
+  CHARACTER_CATEGORY,
+  activeDimensionCount,
+  characterDimensionsOf,
+  characterFilterTokens,
+  emptyCharacterFilters,
+  pageTotalPages,
+} from './character-dimensions.js'
 import {
   CLOUD_ALL_CATEGORY,
   CLOUD_PAGE_SIZE,
@@ -131,8 +147,10 @@ export function useCloudAssetsFeed(options) {
 
   const [category, setCategory] = useState(defaultCategory)
   const [subCategory, setSubCategory] = useState('')
+  const [filters, setFilters] = useState(emptyCharacterFilters)
   const [items, setItems] = useState(/** @type {any[]} */ ([]))
   const [loadedPages, setLoadedPages] = useState(0)
+  const [scopedPages, setScopedPages] = useState(/** @type {number | null} */ (null))
   const [pageError, setPageError] = useState('')
   const [loadingPage, setLoadingPage] = useState(false)
   const [query, setQuery] = useState('')
@@ -155,9 +173,32 @@ export function useCloudAssetsFeed(options) {
 
   // The second level is a property of the data, not of one tab: every category
   // whose manifest entry carries populated sub-categories gets one, always led
-  // by 全部. 场景, the deliberately empty 道具 and 全部 itself stay single-level.
+  // by 全部. 全部 itself, which spans every category and owns no shelf, stays
+  // single-level.
   const tabs = useMemo(() => subCategoryTabs(manifest, category), [manifest, category])
   const hasSecondLevel = tabs.hasSecondLevel
+
+  // 角色 swaps that second level for the eight-dimension filter bar. The
+  // dimensions are read from the manifest, so a catalog built before the bar
+  // existed simply has none and the tab keeps its sub-category row.
+  const dimensions = useMemo(() => characterDimensionsOf(manifest, category), [manifest, category])
+  const activeDimensions = activeDimensionCount(filters)
+  // The one derivation the rest reads: an array of wire tokens, whose identity
+  // changes exactly when the selection does. `loadPage` depends on it, and the
+  // scope effect below fires on `loadPage`, so a value that changed identity on
+  // every render would refetch the tab on any unrelated re-render.
+  const filterTokens = useMemo(() => characterFilterTokens(filters), [filters])
+  const filtering = dimensions.length > 0 && filterTokens.length > 0
+  const characterFilters = useMemo(
+    () => ({
+      dimensions,
+      filters,
+      active: activeDimensions,
+      key: filterTokens.join(','),
+      enabled: dimensions.length > 0,
+    }),
+    [dimensions, filters, activeDimensions, filterTokens],
+  )
 
   // A category switch invalidates the sub-category selection unless that
   // sub-category exists in the new category.
@@ -171,6 +212,11 @@ export function useCloudAssetsFeed(options) {
 
   /**
    * Load one page and append it. `reset` restarts the list for a new scope.
+   *
+   * A dimension selection has no catalog directory of its own, so it is fetched
+   * from the Host's filter route; everything else pages a shard. Both answer with
+   * the same envelope, which is what lets the caller below not care which one it
+   * got.
    * @param {number} page
    * @param {{ reset?: boolean }} [opts]
    */
@@ -181,13 +227,16 @@ export function useCloudAssetsFeed(options) {
     requestRef.current = token
     setLoadingPage(true)
     try {
-      const result = await cloudPage(scope, page)
+      const result = filtering
+        ? await cloudFilter({ tokens: filterTokens, limit: CLOUD_PAGE_SIZE, offset: page * CLOUD_PAGE_SIZE })
+        : await cloudPage(scope, page)
       if (requestRef.current !== token) return
       if (!result.ok) {
         // A missing page file is a valid end-of-list signal for a scope whose
         // real row count is lower than the manifest advertises.
         if (result.status === 404) {
           setPageError('')
+          setScopedPages(0)
           setLoadedPages(page)
           return
         }
@@ -196,6 +245,9 @@ export function useCloudAssetsFeed(options) {
       }
       setPageError('')
       const rows = rowsOf(result.body)
+      // A filtered view has no manifest entry, so its page count is only
+      // knowable from the envelope the Host just served.
+      setScopedPages(filtering ? pageTotalPages(result.body) : null)
       setItems((prev) => (reset ? rows : appendUniqueAssets(prev, rows)))
       setLoadedPages(page + 1)
     } catch (caught) {
@@ -204,18 +256,20 @@ export function useCloudAssetsFeed(options) {
     } finally {
       if (requestRef.current === token) setLoadingPage(false)
     }
-  }, [category, subCategory, t])
+  }, [category, subCategory, filtering, filterTokens, t])
 
-  // Scope change: stop any audition, drop the old rows, and fetch page 0.
+  // Scope change — a category, a sub-category or a dimension combination: stop
+  // any audition, drop the old rows, and fetch page 0 of the new scope.
   useEffect(() => {
     if (!open || manifest === null) return
     stopAudition()
     setItems([])
     setLoadedPages(0)
+    setScopedPages(null)
     setPageError('')
     void loadPage(0, { reset: true })
-    // `loadPage` already depends on category/subCategory, so those are the
-    // real triggers; listing them separately would double-fetch.
+    // `loadPage` already depends on category/subCategory/filterTokens, so those
+    // are the real triggers; listing them separately would double-fetch.
   }, [open, manifest, loadPage, stopAudition])
 
   // Debounced search. A blank query returns to paged browsing instead of
@@ -243,6 +297,10 @@ export function useCloudAssetsFeed(options) {
           q: queryApplied,
           category,
           subCategory,
+          // The chips narrow the search too: without this, searching a male name
+          // after picking 女性 answered with male rows, because the request
+          // carried the needle and the category but not the selection.
+          dims: filterTokens,
           limit: CLOUD_PAGE_SIZE,
           offset: 0,
         })
@@ -264,12 +322,17 @@ export function useCloudAssetsFeed(options) {
       }
     })()
     return () => { cancelled = true }
-  }, [queryApplied, open, category, subCategory, manifest, t])
+  }, [queryApplied, open, category, subCategory, filterTokens, manifest, t])
 
   const visible = searchResult ? searchResult.items : items
+  // A filtered scope reports its page count in the page envelope, and a page is
+  // only known to exist once one has been fetched. `null` is therefore "not yet
+  // known" rather than "empty", which is what makes the sentinel ask for page 0
+  // of a combination no manifest entry describes.
+  const scopePages = filtering ? (scopedPages ?? 1) : pages
   const hasMore = searchResult
     ? searchResult.items.length < searchResult.total
-    : loadedPages < pages
+    : loadedPages < scopePages
 
   const loadMore = useCallback(() => {
     if (loadingPage || !hasMore) return
@@ -281,6 +344,9 @@ export function useCloudAssetsFeed(options) {
             q: queryApplied,
             category,
             subCategory,
+            // A second search page carries the same selection as the first, or
+            // the appended rows would come from a wider scope than page one.
+            dims: filterTokens,
             limit: CLOUD_PAGE_SIZE,
             offset: searchResult.items.length,
           })
@@ -300,12 +366,14 @@ export function useCloudAssetsFeed(options) {
       return
     }
     void loadPage(loadedPages)
-  }, [loadingPage, hasMore, searchResult, queryApplied, category, subCategory, loadedPages, loadPage])
+  }, [loadingPage, hasMore, searchResult, queryApplied, category, subCategory, filterTokens, loadedPages, loadPage])
 
   const selectCategory = useCallback((next) => {
     setCategory(next)
-    // Every category opens on 全部, never on another category's last filter.
+    // Every category opens on 全部, never on another category's last filter, and
+    // the dimension chips carry no selection across a tab switch either.
     setSubCategory('')
+    setFilters(emptyCharacterFilters())
     setQuery('')
     setQueryApplied('')
     setSearchResult(null)
@@ -315,10 +383,27 @@ export function useCloudAssetsFeed(options) {
     setSubCategory(next)
   }, [])
 
+  /**
+   * Narrow one dimension, or clear it by passing its own current value or `''`.
+   * The value is the catalog's label (`Car`, `Middle-aged`), which is what the
+   * scope key is built from.
+   * @param {string} dimensionId
+   * @param {string} value
+   */
+  const selectDimension = useCallback((dimensionId, value) => {
+    setFilters((prev) => (prev[dimensionId] === value ? prev : { ...prev, [dimensionId]: value }))
+  }, [])
+
+  /** Clear all eight dimensions at once — 重置筛选. */
+  const resetDimensions = useCallback(() => {
+    setFilters((prev) => (activeDimensionCount(prev) === 0 ? prev : emptyCharacterFilters()))
+  }, [])
+
   const refresh = useCallback(async () => {
     await reloadManifest(true)
     setItems([])
     setLoadedPages(0)
+    setScopedPages(null)
     await loadPage(0, { reset: true })
   }, [reloadManifest, loadPage])
 
@@ -329,6 +414,8 @@ export function useCloudAssetsFeed(options) {
     subCategory,
     tabs,
     hasSecondLevel,
+    /** The eight-dimension filter bar: its data, its state and its controls. */
+    characterFilters,
     items: visible,
     hasMore,
     loading: manifestLoading || (loadingPage && items.length === 0),
@@ -339,6 +426,8 @@ export function useCloudAssetsFeed(options) {
     setQuery,
     selectCategory,
     selectSubCategory,
+    selectDimension,
+    resetDimensions,
     loadMore,
     refresh,
     audition,
