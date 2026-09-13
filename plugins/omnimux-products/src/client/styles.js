@@ -32,16 +32,32 @@ export const PRODUCTS_CSS = `
   align-items: center;
   color: var(--dsw-alias-label-tertiary);
 }
-.omnimux-products-url-import-input {
+/* The bar above already draws the only visible frame: every state of the inner
+   field flattens its own border/outline/shadow so no second box can appear
+   inside the rounded bar, whatever global input styling the host injects. */
+.omnimux-products-url-import-input,
+.omnimux-products-url-import-input:focus,
+.omnimux-products-url-import-input:focus-visible,
+.omnimux-products-url-import-input:active {
   flex: 1;
   min-width: 0;
   height: 26px;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  outline: 0 !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
   color: inherit;
   font: inherit;
   font-size: 13px;
+  padding: 0 4px;
 }
 .omnimux-products-url-import-input::placeholder {
   color: var(--dsw-alias-label-tertiary);

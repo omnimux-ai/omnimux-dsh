@@ -354,6 +354,7 @@ export function UrlImportBar(props) {
         </span>
         <input
           className="omnimux-products-url-import-input"
+          style={{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent' }} /* exempt-ui02: 输入框需在任何宿主全局注入下抹平自身框线，框体由外层 .omnimux-products-url-import 唯一绘制 */
           type="url"
           value={url}
           placeholder={t('add.urlImport.placeholder')}

@@ -198,6 +198,43 @@ describe('products client · link bar wiring', () => {
     assert.match(styles, /@keyframes omnimux-products-fade-in/)
     assert.match(read('icons.jsx'), /export function LinkIcon/)
   })
+
+  // The bar itself draws the only frame; a host stylesheet that styles bare
+  // inputs would otherwise draw a second rectangle inside it.
+  it('flattens the inner field frame in every state, plus an inline backstop', () => {
+    const styles = read('styles.js')
+    const start = styles.indexOf('.omnimux-products-url-import-input,')
+    const end = styles.indexOf('.omnimux-products-url-import-input::placeholder')
+    assert.ok(start >= 0 && end > start, 'state-combined input rule precedes the placeholder rule')
+    const fieldRule = styles.slice(start, end)
+    const selectors = fieldRule.slice(0, fieldRule.indexOf('{')).split(',').map((s) => s.trim())
+    for (const state of [':focus', ':focus-visible', ':active']) {
+      assert.ok(selectors.includes(`.omnimux-products-url-import-input${state}`), `rule flattens ${state}`)
+    }
+    const required = [
+      'border: 0 !important',
+      'border-width: 0 !important',
+      'border-style: none !important',
+      'border-color: transparent !important',
+      'outline: 0 !important',
+      'outline-style: none !important',
+      'box-shadow: none !important',
+      '-webkit-box-shadow: none !important',
+      '-webkit-appearance: none !important',
+      'appearance: none !important',
+      'background: transparent !important',
+      'background-color: transparent !important',
+    ]
+    for (const declaration of required) {
+      assert.ok(fieldRule.includes(declaration), `field rule declares ${declaration}`)
+    }
+
+    const view = read('ProductFormFields.jsx')
+    assert.match(
+      view,
+      /style=\{\{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent' \}\}[^\n]*exempt-ui02/,
+    )
+  })
 })
 
 describe('products client · server draft contract', () => {
