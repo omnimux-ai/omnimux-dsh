@@ -18,6 +18,35 @@ import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 /** Blocks a first paint or a page append shows while it has nothing to show. */
 const SKELETON_COUNT = 10
 
+const EMPTY_ICON_WORKS = (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+    <line x1="7" y1="2" x2="7" y2="22" />
+    <line x1="17" y1="2" x2="17" y2="22" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <line x1="2" y1="7" x2="7" y2="7" />
+    <line x1="2" y1="17" x2="7" y2="17" />
+    <line x1="17" y1="17" x2="22" y2="17" />
+    <line x1="17" y1="7" x2="22" y2="7" />
+  </svg>
+)
+
+const EMPTY_ICON_USER = (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <line x1="19" y1="8" x2="19" y2="14" />
+    <line x1="22" y1="11" x2="16" y2="11" />
+  </svg>
+)
+
+const EMPTY_ICON_SEARCH = (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+)
+
 /**
  * @param {{
  *   t: (key: string) => string,
@@ -52,6 +81,7 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'no-accounts') {
       return (
         <EmptyState
+          icon={EMPTY_ICON_USER}
           title={t('rivalFeed.empty.noAccounts')}
           description={t('rivalFeed.empty.noAccountsHint')}
           action={
@@ -65,6 +95,7 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'filtered') {
       return (
         <EmptyState
+          icon={EMPTY_ICON_SEARCH}
           title={t('rivalFeed.empty.filtered')}
           description={t('rivalFeed.empty.filteredHint')}
           action={
@@ -81,7 +112,9 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'loading') return null
     return (
       <EmptyState
-        title={t('rivalFeed.empty.noPosts')}
+        icon={EMPTY_ICON_WORKS}
+        title={t('rivalFeed.empty.noPostsTitle') || t('rivalFeed.empty.noPosts')}
+        description={t('rivalFeed.empty.noPostsDesc')}
       />
     )
   }
