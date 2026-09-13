@@ -163,5 +163,11 @@ describe('Twitter Copilot Interactive Suite', () => {
       expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*left:\s*50%\s*!important;/)
       expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*transform:\s*translateX\(-50%\)\s*!important;/)
     })
+
+    it('removes focus borders, outlines, and box-shadows from composer textarea', () => {
+      expect(styles).toMatch(/\.composer textarea:focus-visible[^}]*border:\s*0\s*!important;/)
+      expect(styles).toMatch(/\.composer textarea:focus-visible[^}]*outline:\s*none\s*!important;/)
+      expect(styles).toMatch(/\.composer textarea:focus-visible[^}]*box-shadow:\s*none\s*!important;/)
+    })
   })
 })
