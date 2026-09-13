@@ -49,17 +49,24 @@ const SHEET = `
   display: block; max-width: 100%; max-height: 420px; width: auto; height: auto;
   border-radius: 6px; object-fit: contain;
   /* A transparent PNG on a themed panel is unreadable without a backdrop; the
-     checkerboard is the conventional one and reads in both palettes. */
+     checkerboard is the conventional one and reads in both palettes. It is a
+     device-independent pattern, not a brand colour. */
+  --dshview-checker: rgb(128 128 128 / .16); /* exempt-ui03 neutral transparency checkerboard, palette-independent */
   background-color: var(--dsw-alias-bg-layer-2);
   background-image:
-    linear-gradient(45deg, rgb(128 128 128 / .16) 25%, transparent 25%),
-    linear-gradient(-45deg, rgb(128 128 128 / .16) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgb(128 128 128 / .16) 75%),
-    linear-gradient(-45deg, transparent 75%, rgb(128 128 128 / .16) 75%);
+    linear-gradient(45deg, var(--dshview-checker) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--dshview-checker) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--dshview-checker) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--dshview-checker) 75%);
   background-size: 16px 16px;
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
-.dshview-video { display: block; max-width: 100%; max-height: 420px; border-radius: 6px; background: #000; }
+.dshview-video {
+  display: block; max-width: 100%; max-height: 420px; border-radius: 6px;
+  /* Letterbox behind video is black by intent, in both palettes. */
+  --dshview-video-backdrop: #000; /* exempt-ui03 video letterbox */
+  background: var(--dshview-video-backdrop);
+}
 .dshview-audio { display: block; width: 100%; }
 .dshview-frame {
   display: block; width: 100%; height: 460px; border: 0; border-radius: 6px;
@@ -82,7 +89,7 @@ const SHEET = `
 .dshview-lightbox {
   position: fixed; inset: 0; z-index: 2000; display: flex;
   align-items: center; justify-content: center;
-  padding: 32px; background: rgb(0 0 0 / .72); cursor: zoom-out;
+  padding: 32px; background: var(--dsw-alias-bg-mask-1); cursor: zoom-out;
 }
 .dshview-lightboxImage {
   max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;

@@ -65,7 +65,8 @@ const KIND_TITLE: Readonly<Record<ViewerKind, ViewerKey>> = {
  * characters in logical order.
  */
 function PathLabel({ path }: { path: string }) {
-  return <span className={`${CSS}-path`} title={path}>&#8296;{path}&#8297;</span>
+  // &#8296;/&#8297; are the LRI/PDI isolate characters, not colours.
+  return <span className={`${CSS}-path` /* exempt-ui03 html numeric character references, not colours */} title={path}>&#8296;{path}&#8297;</span>
 }
 
 /** The card's leading glyph — inline so the bundle needs no icon dependency. */
@@ -151,7 +152,10 @@ function Viewer({ value, injected, t }: { value: DisplayValue; injected: ViewerC
   const label = value.image?.name ?? value.path
 
   if (failed) {
-    return <button type="button" className={`${CSS}-retry`} onClick={retry}>{t('state.loadFailed')}</button>
+    // Native controls are required here: this client bundle admits only react,
+    // relative files and type-only imports, so dsh-ui-kit cannot be imported.
+    return <button // exempt-ui01 bundle-purity contract forbids the value import that dsh-ui-kit needs
+      type="button" className={`${CSS}-retry`} onClick={retry}>{t('state.loadFailed')}</button>
   }
   if (pending) return <div className={`${CSS}-note`}>{t('state.loading')}</div>
   if (src === undefined) {
@@ -165,7 +169,8 @@ function Viewer({ value, injected, t }: { value: DisplayValue; injected: ViewerC
     case 'image':
       return (
         <>
-          <button type="button" className={`${CSS}-imageButton`} title={t('action.open')} onClick={() => { setZoomed(true) }}>
+          <button // exempt-ui01 bundle-purity contract forbids the value import that dsh-ui-kit needs
+            type="button" className={`${CSS}-imageButton`} title={t('action.open')} onClick={() => { setZoomed(true) }}>
             <img className={`${CSS}-image`} src={src} alt={label} loading="lazy" />
           </button>
           {zoomed && <Lightbox src={src} alt={label} onClose={closeZoom} />}
@@ -220,7 +225,7 @@ function Head({ kind, label, path, detail, badge, onToggle, expanded, t }: {
   t: TranslateNS<'tool.viewer'>
 }): ReactNode {
   return (
-    <button
+    <button // exempt-ui01 bundle-purity contract forbids the value import that dsh-ui-kit needs
       type="button"
       className={`${CSS}-head`}
       onClick={onToggle}
