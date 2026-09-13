@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { Button, InputField } from 'dsh-ui-kit'
+import { importFromLink, isHttpUrl } from './api.js'
+import { LinkIcon } from './icons.jsx'
 import { StrategyFields } from './ProductStrategyFields.jsx'
 import { CategoriesEditor, CoverDropzone, MediaList } from './ProductMediaSection.jsx'
 
@@ -292,6 +295,90 @@ function MediaAndCategoriesSection(props) {
   )
 }
 
+/**
+ * Minimal link bar: paste a landing page, press Enter, fields fill in.
+ * Failures stay inline and never block manual entry.
+ * @param {{ t: (key: string) => string, kind: string, onImported: (data: object) => void }} props
+ */
+export function UrlImportBar(props) {
+  const { t, kind, onImported } = props
+  const [url, setUrl] = useState('')
+  const [phase, setPhase] = useState('idle')
+  const [message, setMessage] = useState('')
+
+  const submit = async () => {
+    if (phase === 'loading') return
+    const value = url.trim()
+    if (!isHttpUrl(value)) {
+      setPhase('error')
+      setMessage(t('add.urlImport.invalidUrl'))
+      return
+    }
+    setPhase('loading')
+    setMessage(t('add.urlImport.loading'))
+    try {
+      const result = await importFromLink(value, kind)
+      const data = result.ok ? result.body?.data : null
+      if (!data || typeof data !== 'object') {
+        setPhase('error')
+        setMessage(t('add.urlImport.failed'))
+        return
+      }
+      onImported(data)
+      setPhase('success')
+      setMessage(t('add.urlImport.success'))
+    } catch {
+      setPhase('error')
+      setMessage(t('add.urlImport.failed'))
+    }
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    void submit()
+  }
+
+  const handleChange = (event) => {
+    setUrl(event.target.value)
+    if (phase === 'idle') return
+    setPhase('idle')
+    setMessage('')
+  }
+
+  return (
+    <div className="omnimux-products-url-import" data-phase={phase}>
+      <div className="omnimux-products-url-import-row">
+        <span className="omnimux-products-url-import-icon" aria-hidden="true">
+          <LinkIcon size={14} />
+        </span>
+        <input
+          className="omnimux-products-url-import-input"
+          type="url"
+          value={url}
+          placeholder={t('add.urlImport.placeholder')}
+          aria-label={t('add.urlImport.placeholder')}
+          disabled={phase === 'loading'}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={phase === 'loading'}
+          disabled={url.trim() === ''}
+          onClick={() => { void submit() }}
+        >
+          {t('add.urlImport.button')}
+        </Button>
+      </div>
+      {message === '' ? null : (
+        <p className="omnimux-products-url-import-status" role="status">{message}</p>
+      )}
+    </div>
+  )
+}
+
 export function ProductFormBody(props) {
   const { t, state, setters, actions, dirty, busy, error, onReload, onPick, nameRef } = props
   const { strategyHandlers, mediaActions, categoryActions } = assembleFormHandlers(setters, actions)
@@ -301,6 +388,12 @@ export function ProductFormBody(props) {
 
   return (
     <div className="omnimux-products-form">
+      <UrlImportBar
+        t={t}
+        kind={state.kind}
+        onImported={actions.applyImportedData}
+      />
+
       <FormHeaderSection {...headerProps} />
 
       <ProductFieldsSection {...fieldProps} />

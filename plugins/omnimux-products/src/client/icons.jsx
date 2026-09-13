@@ -71,3 +71,11 @@ export function ChatIcon(props) {
   )
 }
 
+export function LinkIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M10.6 13.4a4 4 0 0 0 5.66 0l2.12-2.12a4 4 0 0 0-5.66-5.66l-1.1 1.1" />
+      <path d="M13.4 10.6a4 4 0 0 0-5.66 0L5.62 12.72a4 4 0 0 0 5.66 5.66l1.1-1.1" />
+    </Icon>
+  )
+}

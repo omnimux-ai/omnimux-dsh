@@ -5,7 +5,8 @@
  * gated POST — do not copy that shortcut.
  */
 import { createReadStream } from 'node:fs'
-import { listViewOf, ProductsError } from './library.js'
+import { LinkImportError, importProductFromUrl } from './link-importer.js'
+import { PRODUCT_KINDS, listViewOf, ProductsError } from './library.js'
 import { PickerError, pickNativePath } from './picker.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
@@ -25,6 +26,9 @@ const STATUS_BY_CODE = {
   'media-path-unavailable': 400,
   'content-required': 400,
   'brand-strategy-invalid': 400,
+  'invalid-url': 400,
+  'link-import-empty': 422,
+  'link-import-failed': 502,
   'library-corrupt': 500,
   'picker-invalid-kind': 400,
   'picker-unsupported': 501,
@@ -134,6 +138,7 @@ function parseProductPath(pathname) {
   if (pathname === PREFIX || pathname === `${PREFIX}/`) return { kind: 'collection' }
   if (pathname === `${PREFIX}/state`) return { kind: 'state' }
   if (pathname === `${PREFIX}/pick`) return { kind: 'pick' }
+  if (pathname === `${PREFIX}/import-from-link`) return { kind: 'import-from-link' }
   if (!pathname.startsWith(`${PREFIX}/`)) return { kind: 'unknown' }
   const rest = pathname.slice(`${PREFIX}/`.length)
   const media = rest.match(/^([^/]+)\/media$/)
@@ -146,11 +151,14 @@ function parseProductPath(pathname) {
  * @param {{
  *   library: ReturnType<typeof import('./library.js').createLibraryStore>,
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
+ *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', env?: Record<string, string | undefined> }) => Promise<object>,
+ *   env?: Record<string, string | undefined>,
  * }} deps
  */
 export function createProductsDispatcher(deps) {
   const { library } = deps
   const picker = deps.picker ?? ((kind) => pickNativePath(kind))
+  const importFromUrl = deps.importFromUrl ?? importProductFromUrl
 
   /**
    * @param {{ body?: unknown }} req
@@ -220,6 +228,26 @@ export function createProductsDispatcher(deps) {
         return { status: 200, body: { path: paths[0] ?? result?.path ?? null, paths } }
       }
 
+      /**
+       * POST /omnimux/products/import-from-link
+       * Read a landing page and answer a product draft. Local-only (the write
+       * guard above), and the importer re-validates the url it is handed.
+       */
+      if (method === 'POST' && parsed.kind === 'import-from-link') {
+        const problem = jsonBodyProblem(req)
+        if (problem) return problem
+        const body = /** @type {{ url?: unknown, kind?: unknown }} */ (req.body)
+        if (body.kind !== undefined && !PRODUCT_KINDS.includes(/** @type {'physical' | 'digital'} */ (body.kind))) {
+          throw new ProductsError('kind-invalid', `kind must be one of ${PRODUCT_KINDS.join(', ')}`)
+        }
+        const data = await importFromUrl({
+          url: body.url,
+          kind: body.kind === 'digital' ? 'digital' : 'physical',
+          env: deps.env,
+        })
+        return { status: 200, body: { success: true, data } }
+      }
+
       if (method === 'GET' && parsed.kind === 'collection') {
         const query = url.searchParams.get('q') || url.searchParams.get('query') || ''
         return {
@@ -274,7 +302,7 @@ export function createProductsDispatcher(deps) {
 
       return { status: 404, body: { error: 'not-found', message: 'unknown route' } }
     } catch (error) {
-      if (error instanceof ProductsError || error instanceof PickerError) {
+      if (error instanceof ProductsError || error instanceof PickerError || error instanceof LinkImportError) {
         return {
           status: STATUS_BY_CODE[error.code] ?? 400,
           body: { error: error.code, message: error.message },

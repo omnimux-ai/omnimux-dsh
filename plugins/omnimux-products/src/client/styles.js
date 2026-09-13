@@ -1,6 +1,68 @@
 export const STYLES_ID = 'omnimux-products-styles'
 
 export const PRODUCTS_CSS = `
+
+/* Link import bar: one quiet row above the product name. */
+.omnimux-products-url-import {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-module-platform);
+  transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-products-url-import:focus-within {
+  border-color: var(--dsw-alias-border-l4);
+}
+.omnimux-products-url-import[data-phase="success"] {
+  border-color: var(--dsw-alias-state-success-primary);
+}
+.omnimux-products-url-import[data-phase="error"] {
+  border-color: var(--dsw-alias-state-error-secondary, var(--dsw-alias-state-error-primary));
+}
+.omnimux-products-url-import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omnimux-products-url-import-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-url-import-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.omnimux-products-url-import-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-url-import-input:disabled {
+  opacity: 0.6;
+}
+.omnimux-products-url-import-status {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  animation: omnimux-products-fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-products-url-import[data-phase="success"] .omnimux-products-url-import-status {
+  color: var(--dsw-alias-state-success-primary);
+}
+.omnimux-products-url-import[data-phase="error"] .omnimux-products-url-import-status {
+  color: var(--dsw-alias-state-error-primary);
+}
+
 .omnimux-products-stage {
   position: relative;
   width: 100%;

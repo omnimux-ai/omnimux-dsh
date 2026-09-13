@@ -25,6 +25,8 @@ function makeDispatcher(opts = {}) {
   })
   const deps = { library }
   if (opts.picker) deps.picker = opts.picker
+  if (opts.importFromUrl) deps.importFromUrl = opts.importFromUrl
+  if (opts.env) deps.env = opts.env
   return { dispatcher: createProductsDispatcher(deps), library }
 }
 
@@ -215,5 +217,101 @@ describe('ProductsDispatcher loopback guard', () => {
 
     const evilDel = await dispatcher.dispatch(del(`/omnimux/products/${id}`, { secFetchSite: 'cross-site' }))
     assert.equal(evilDel.status, 403)
+  })
+})
+
+describe('ProductsDispatcher import-from-link', () => {
+  it('POST returns { success, data } and forwards url + kind to the importer', async () => {
+    const seen = []
+    const imported = { name: '某防晒 50ml', brand: 'Aurora', categories: ['Beauty'], images: [] }
+    const { dispatcher, library } = makeDispatcher({
+      importFromUrl: async (args) => {
+        seen.push(args)
+        return imported
+      },
+      env: { OMNIMUX_API_KEY: 'k' },
+    })
+
+    const ok = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'https://shop.example.com/p/1',
+      kind: 'digital',
+    }))
+    assert.equal(ok.status, 200)
+    assert.equal(ok.body.success, true)
+    assert.deepEqual(ok.body.data, imported)
+    assert.equal(seen.length, 1)
+    assert.equal(seen[0].url, 'https://shop.example.com/p/1')
+    assert.equal(seen[0].kind, 'digital')
+    assert.deepEqual(seen[0].env, { OMNIMUX_API_KEY: 'k' })
+    // Importing never writes to the library.
+    assert.deepEqual(library.list(), [])
+    assert.equal(library.revision(), 0)
+  })
+
+  it('defaults kind to physical when the body omits it', async () => {
+    const seen = []
+    const { dispatcher } = makeDispatcher({
+      importFromUrl: async (args) => {
+        seen.push(args)
+        return { name: '货' }
+      },
+    })
+    const ok = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+    assert.equal(ok.status, 200)
+    assert.equal(seen[0].kind, 'physical')
+  })
+
+  it('validates the url with the real importer and answers 400 invalid-url', async () => {
+    const { dispatcher } = makeDispatcher()
+    for (const bad of ['javascript:alert(1)', 'http://127.0.0.1:8080/p', 'not a url', '']) {
+      const rejected = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: bad }))
+      assert.equal(rejected.status, 400, `expected 400 for ${bad}`)
+      assert.equal(rejected.body.error, 'invalid-url')
+    }
+  })
+
+  it('rejects an unknown kind and a non-object body', async () => {
+    const { dispatcher } = makeDispatcher()
+    const badKind = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'https://shop.example.com/p/1',
+      kind: 'service',
+    }))
+    assert.equal(badKind.status, 400)
+    assert.equal(badKind.body.error, 'kind-invalid')
+
+    const badBody = await dispatcher.dispatch(post('/omnimux/products/import-from-link', null))
+    assert.equal(badBody.status, 400)
+    assert.equal(badBody.body.error, 'invalid-json')
+  })
+
+  it('maps an importer failure onto its own status code', async () => {
+    const { dispatcher } = makeDispatcher({
+      importFromUrl: async () => {
+        const { LinkImportError } = await import('./link-importer.js')
+        throw new LinkImportError('link-import-failed', 'the page responded HTTP 500')
+      },
+    })
+    const failed = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+    assert.equal(failed.status, 502)
+    assert.equal(failed.body.error, 'link-import-failed')
+  })
+
+  it('keeps the local-write guard on the import route', async () => {
+    const { dispatcher } = makeDispatcher({ importFromUrl: async () => ({ name: '货' }) })
+    const evil = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'https://shop.example.com/p/1',
+    }, { origin: 'http://evil.example' }))
+    assert.equal(evil.status, 403)
+    assert.equal(evil.body.error, 'not-local')
+
+    const crossSite = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'https://shop.example.com/p/1',
+    }, { secFetchSite: 'cross-site' }))
+    assert.equal(crossSite.status, 403)
+
+    const local = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
+      url: 'https://shop.example.com/p/1',
+    }, { origin: 'http://127.0.0.1:3210' }))
+    assert.equal(local.status, 200)
   })
 })
