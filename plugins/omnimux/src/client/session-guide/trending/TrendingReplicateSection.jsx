@@ -2,17 +2,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
 import { TrendingSkeletonGrid } from './TrendingSkeleton.jsx'
+import { TrendingSentinel } from './TrendingSentinel.jsx'
 import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
+import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { buildSkillPrompt } from '../skills/featured-skills-data.js'
-import {
-  EMPTY_CAPABILITIES,
-  TRENDING_SOURCE_STATUS,
-  getTrendingCache,
-  getTrendingCacheKey,
-  loadTrendingItems,
-  mergeCapabilities,
-} from './trending-source.js'
+import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
   RECREATE_PROMPT,
@@ -34,8 +29,14 @@ const DOCK_BOTTOM = 20
 /** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
 const DOCK_MAX_WIDTH = 780
 
-/** 承载 Hero 的滚动容器；输入框离开 Hero 会抽掉一块高度，用它做滚动补偿。 */
+/** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 const SCROLLER_SELECTOR = '[class*="scrollBody"]'
+
+/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。 */
+const READ_TOP_MAX = 10
+
+/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。 */
+const DOCK_LEAVE_MAX = 20
 
 const ICON_CHEVRON_DOWN = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -52,11 +53,34 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
   : (id) => clearTimeout(id)
 
 /**
+ * 读取页面真实的滚动位置：宿主用 `scrollBody` 容器滚动，整页滚动则是 window / documentElement。
+ * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部，
+ * 输入框就该留在底部，而不是被一次空读数顶回页首。
+ *
+ * @param {Element | null} scroller 滚动容器（可能不存在）
+ * @returns {number} 已滚动的像素数；无布局信息时为 0
+ */
+function readPageScrollTop(scroller) {
+  const scrollerTop = Number(scroller?.scrollTop)
+  const windowTop = Number(window?.scrollY ?? window?.pageYOffset)
+  const documentTop = Number(document?.documentElement?.scrollTop)
+  return [scrollerTop, windowTop, documentTop]
+    .filter((value) => Number.isFinite(value))
+    .reduce((max, value) => Math.max(max, value), 0)
+}
+
+/**
  * 「Trending Videos, Ready to Replicate」爆款对标与一键复刻板块。
  *
  * 卡片数据来自灵感库真源（`/omnimux/inspiration/local`）：有数据就展示真实对标片，
  * 库为空或灵感社区未就绪就说清楚，**不回落任何编造的样本**。
  * 工具栏只渲染当前数据真的支持的维度（缺类目就没有类目下拉）。
+ *
+ * 两条滚动契约（吸顶 + 无限追加）：
+ * 1. 双 Tab 导航与当前 Tab 的工具栏**共用一条吸顶栏**，滚到视口顶边就钉住，
+ *    底色与深色模式 Token 取自 design.md，下方卡片穿行不会透字；
+ * 2. 网格底部挂观察哨兵，进入视口就异步追加下一批对标视频（跨页按内容指纹去重），
+ *    加载中给骨架提示，全部取完给温和的末尾提示，**不反复空转请求**。
  *
  * 复刻接管**不复制输入框**：点击复刻后把那个原生输入框停靠到会话视口底部
  * （附件、专家、模型、发送全是原生那一套），同时把复刻对象挂进会话附件栏、
@@ -74,14 +98,13 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
 export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   const [filters, setFilters] = useState(defaultTrendingFilters)
   const [dockedItem, setDockedItem] = useState(null)
-  const [sourceItems, setSourceItems] = useState([])
-  const [status, setStatus] = useState('loading')
-  const [refreshing, setRefreshing] = useState(true)
   // 工具栏能力集是**单调**的：只并入不重算，否则筛选后档位会塌成只剩当前命中项
   const [capabilities, setCapabilities] = useState(EMPTY_CAPABILITIES)
   // 接管意图（dockedItem）与实际摆位（placement）分开：
   // 意图由「复刻」决定，摆位由滚动位置决定——滚回原位就让原生输入框回到流内。
   const [placement, setPlacement] = useState('docked')
+  // 分类胶囊栏在吸顶栏、卡片网格在流内，是同一条筛选链的两端，因此选中态收在这里
+  const [skillCategory, setSkillCategory] = useState('')
   const [activeTab, setActiveTab] = useState(() => {
     try {
       return sessionStorage.getItem('omnimux-guide-tab') || 'trending'
@@ -96,61 +119,32 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       sessionStorage.setItem('omnimux-guide-tab', tab)
     } catch {}
   }
-  const prevDockedItemRef = useRef(null)
   const sectionRef = useRef(null)
   // 生效过的宿主根节点。卸载清理必须用它，而不是已被 React 解绑的 DOM ref。
   const dockHostRef = useRef(null)
+  // 待落地的复刻意图。必须等输入框真的吸底就位后再交出去，见下方 flush 布局效果。
+  const pendingPromptRef = useRef(null)
   // 当前接管的目标。附件栏与技能通道的监听都靠 ref 读实时值，
   // 避免每次换片都重建订阅（重建窗口里的事件会漏听）。
   const dockedItemRef = useRef(null)
   dockedItemRef.current = dockedItem
   // 技能药丸移除动作的解绑函数：复刻意图生效期间才有值。
   const skillReleaseRef = useRef(null)
+  // 无限滚动的观察哨兵：由取数状态机观察，由视图渲染在网格最末一行之下。
+  const sentinelRef = useRef(null)
 
   // 地区 / 类目 / 播放量下界交给服务端先过滤再取窗口；互动率门槛与排序在客户端做。
   const serverFilterKey = `${filters.region}|${filters.industry}|${filters.views}`
 
-  useEffect(() => {
-    const controller = new AbortController()
-    let alive = true
+  // 每换一组服务端筛选条件即整体回到第 1 页重新累积：
+  // 追加窗口属于某一组筛选条件，换条件后旧页不是「更多」，而是错的数据。
+  const feed = useTrendingFeed({
+    revision: serverFilterKey,
+    filters: { region: filters.region, industry: filters.industry, views: filters.views },
+    observeRef: sentinelRef,
+  })
 
-    const currentFilters = { region: filters.region, industry: filters.industry, views: filters.views }
-    const cached = getTrendingCache(getTrendingCacheKey({ filters: currentFilters }))
-
-    // 若命中本地内存缓存：同步恢复，避免切 Tab 或重复筛选时的无谓白屏
-    if (cached?.data) {
-      setSourceItems(cached.data.items)
-      setStatus(cached.data.status)
-      setRefreshing(false)
-      if (cached.data.items.length > 0) {
-        setCapabilities((previous) => mergeCapabilities(previous, cached.data.items))
-      }
-      // 新鲜缓存直接呈现，无需重复请求网络
-      if (!cached.isStale) return undefined
-    } else {
-      setRefreshing(true)
-    }
-
-    loadTrendingItems({
-      filters: currentFilters,
-      signal: controller.signal,
-    }).then((result) => {
-      if (!alive || result.reason === 'aborted') return
-      setSourceItems(result.items)
-      setStatus(result.status)
-      setRefreshing(false)
-      if (result.items.length > 0) {
-        setCapabilities((previous) => mergeCapabilities(previous, result.items))
-      }
-    })
-    return () => {
-      alive = false
-      controller.abort()
-    }
-    // 只在「服务端过滤条件」变化时重取；filters 其余键由客户端处理
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverFilterKey])
-
+  const sourceItems = feed.items
   const { dimensions, regionOptions, industryOptions, viewOptions } = capabilities
   const items = useMemo(() => selectTrendingVideos(filters, sourceItems), [filters, sourceItems])
 
@@ -194,13 +188,20 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     })
   }, [disarmSkillReleaseWatch, sessionId])
 
+  // 能力集随真源累积单调并入：第二页带来的新地区/新类目也要能出现在工具栏里
+  useEffect(() => {
+    if (sourceItems.length > 0) {
+      setCapabilities((previous) => mergeCapabilities(previous, sourceItems))
+    }
+  }, [sourceItems])
+
   // 被接管的卡片一旦不在当前结果里（换地区/换阈值），输入框要归还，
   // 不能让它停在一个屏幕上已经不存在的片子上。
   // 注意：技能卡片不受对标视频筛选影响（带 skill 标记），不得误归还。
   useEffect(() => {
-    if (refreshing || !dockedItem) return
+    if (feed.loading || !dockedItem) return
     if (!dockedItem.skill && !items.some((item) => item.id === dockedItem.id)) setDockedItem(null)
-  }, [items, dockedItem, refreshing])
+  }, [items, dockedItem, feed.loading])
 
   // 附件栏是复刻对象的真源：卡上 ✕ 移除附件后，卡片态与技能药丸同步撤回。
   // 会话是订阅与对账的坐标：宿主换会话时同一个组件实例会被复用，
@@ -223,10 +224,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     return store.subscribe(targetSession, syncFromAttachments)
   }, [disarmSkillReleaseWatch, sessionId])
 
+  const status = feed.status
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
-  const showSkeleton = refreshing && items.length === 0
+  // 骨架屏只在「首页还没回来」时出现；追加批次有自己的骨架哨兵，不遮蔽已有卡片
+  const showSkeleton = feed.loading && items.length === 0
   const showGrid = !showSkeleton && status !== TRENDING_SOURCE_STATUS.unavailable && items.length > 0
-  const showFilteredEmpty = !refreshing && showToolbar && items.length === 0
+  const showFilteredEmpty = !feed.loading && showToolbar && items.length === 0
+  // 末尾提示只在真的有卡片垫底时才出现：空库/不可用态已有各自的说明，不叠第二条
+  const showSentinel = showGrid
 
   const patchFilters = useCallback((patch) => setFilters((prev) => ({ ...prev, ...patch })), [])
   const resetFilters = useCallback(() => setFilters((prev) => ({ ...defaultTrendingFilters(), sort: prev.sort })), [])
@@ -237,11 +242,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     dockHostRef.current = root
 
     const card = root.querySelector?.('[data-composer-card]')
+    // 承载原生输入框的那一层：吸底期间由它替输入框留着原位的占位高度
+    const band = card?.parentElement || root
 
     // 停靠几何取自输入框所在的 Hero 栏：它始终留在文档流里，
     // 即使输入框已经脱离流也保持原始的 left/width，缩放窗口时仍然算得准。
     const writeGeometry = () => {
-      const band = card?.parentElement || root
       const rect = band?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
       const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, rect.width - 24))
@@ -253,30 +259,28 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       if (height) root.style.setProperty('--omnimux-dock-card-height', `${Math.round(height)}px`)
     }
 
-    // FLIP 测量变更前：在变更任何属性与类名前，同步测量当前视觉绝对位置
+    // FLIP 测量变更前：在变更任何属性与类名前，同步测量当前视觉绝对位置。
+    // 同时量下 Hero 栏此刻真实占用的高度——输入框改成 fixed 后会脱离文档流，
+    // 这一层会当场塌成 0 高、下方内容整体上移；把量到的高度写回 min-height 就能原地钉住。
     const from = card?.getBoundingClientRect?.()
-
-    const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
-    const before = sectionRef.current?.getBoundingClientRect?.().top
+    const fromBand = band?.getBoundingClientRect?.()
 
     const shouldDock = Boolean(dockedItem && placement === 'docked')
     const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
 
     if (shouldDock) {
       writeGeometry()
+      const reserved = Math.round(fromBand?.height || from?.height || 0)
+      if (band && reserved > 0) band.style.minHeight = `${reserved}px`
       root.setAttribute(DOCK_OPEN_ATTR, '')
     } else {
+      if (band) band.style.minHeight = ''
       root.removeAttribute(DOCK_OPEN_ATTR)
     }
 
-    const after = sectionRef.current?.getBoundingClientRect?.().top
-    const intentChanged = prevDockedItemRef.current !== dockedItem
-    prevDockedItemRef.current = dockedItem
-
-    // 注意：滚动补偿仅在用户主动点击复刻/收起意图变更时发生，滚动中触发的 placement 切换绝不能做补偿，否则会死循环抖动。
-    if (intentChanged && scroller && Number.isFinite(before) && Number.isFinite(after) && after !== before) {
-      scroller.scrollTop += after - before
-    }
+    // 这里**不做任何 scrollTop 补偿**：输入框吸底后原槽位由上面的占位高度撑住，
+    // 页面本来就零位移，再补偿一次等于凭空把滚动条往上抽——用户正在看的列表会被
+    // 一把拽回顶部。滚动只由用户手势驱动。
 
     // FLIP 过渡：若吸底属性发生切换且前后具备有效布局，执行丝滑位移与透明度过渡
     let cancelAnim = null
@@ -334,31 +338,42 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     }
   }, [dockedItem, placement])
 
-  // 滚回原位就把输入框放回流内、滑开再吸回来；两个阈值分开做迟滞，避免边界反复横跳。
+  // 复刻意图**只在输入框真的吸底就位之后**才交回会话输入框所有权方。
+  // 这一步必须是布局效果：上面那个效果已经把停靠属性与占位高度写进 DOM，
+  // 此刻输入框已是 fixed 的底部形态，宿主再怎么聚焦都只会落在底部——
+  // 若提前到点击那一刻交出去，输入框还在 Hero 流内，原生聚焦会触发浏览器
+  // scrollIntoView，页面被瞬间抽回顶部，用户正看的灵感列表当场消失。
+  useLayoutEffect(() => {
+    const pending = pendingPromptRef.current
+    if (!pending) return
+    pendingPromptRef.current = null
+    onApplyPrompt?.(pending.prompt, pending.item)
+  }, [dockedItem, placement, onApplyPrompt])
+
+  // 点击复刻后**默认一直在底部**：只有用户主动向上滑、把页面真正滑回最顶部，
+  // 才把输入框放回原位；一旦滑离顶部立刻吸回底。判定只认页面滚动位置，
+  // 不看「原位槽位此刻是否在视口里」——页面本身不长，槽位常常还在视口内，
+  // 用可视性判定会把每一次滚动（含聚焦、挂附件触发的滚动）都误判成「该归还了」。
   useEffect(() => {
     if (!dockedItem) return undefined
     const root = dockHostRef.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
+    // 「滑回顶部」是一次手势，不是一次位置读数：复刻那一刻页面若本来就停在最顶部，
+    // 必须先真的滑下去再滑回来才算数，否则首帧就会被一次空滚动事件顶回原位。
+    let leftTop = readPageScrollTop(scroller) > DOCK_LEAVE_MAX
 
     const evaluate = () => {
       frame = 0
-      const card = root?.querySelector?.('[data-composer-card]')
-      const band = card?.parentElement
-      if (!band) return
-      const rect = band.getBoundingClientRect?.()
-      // 没有布局信息（JSDOM / 尚未挂载）时不猜，保持吸底
-      if (!rect || (rect.width <= 0 && rect.height <= 0)) return
-      const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-      // 归还判定：原位槽位顶边已真实进入视口可见区时才切回 inline，
-      // 绝不在仅露出一丝下边缘甚至还在视口上方时提前起飞
-      const slotVisibleAtTop = rect.top >= 0 && rect.top < viewportH - 80
-      // 吸底判定：离开视口 24px 以上（含上方滑出与下方滑出）迟滞切回吸底
-      const slotScrolledOut = rect.bottom < -24 || rect.top > viewportH + 24
-
+      const scrollTop = readPageScrollTop(scroller)
+      if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
       setPlacement((prev) => {
-        if (prev === 'docked') return slotVisibleAtTop ? 'inline' : prev
-        return slotScrolledOut ? 'docked' : prev
+        // 真的滑回了页面最顶部，且此前确实滑下去过 → 还原位
+        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
+        // 已经滑离顶部 → 一律吸底，绝不停在页首
+        if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
+        // 迟滞区（顶部阈值与吸底阈值之间）：维持现状，边界上不横跳
+        return prev
       })
     }
 
@@ -367,14 +382,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       frame = scheduleFrame(evaluate)
     }
 
-    // 接管当帧不做几何判定：这一刻的吸底就是点击意图本身，若立刻按「原位是否可见」
-    // 反悔，首帧就会闪回 inline。只有真实滚动 / 缩放才重新判定。
-    const target = scroller || window
-    target.addEventListener('scroll', onScroll, { passive: true })
+    // 接管当帧不做判定：这一刻的吸底就是点击意图本身。只有真实滚动 / 缩放才重新判定。
+    // 两个滚动源都听：宿主用 scrollBody 容器滚动，外层窗口滚动也要算数。
+    const targets = [scroller, window].filter(Boolean)
+    for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
     return () => {
       if (frame) cancelFrame(frame)
-      target.removeEventListener('scroll', onScroll)
+      for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
   }, [dockedItem])
@@ -389,6 +404,9 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     root.style.removeProperty('--omnimux-dock-width')
     root.style.removeProperty('--omnimux-dock-bottom')
     root.style.removeProperty('--omnimux-dock-card-height')
+    // 占位高度是写在宿主节点上的内联样式，卸载必须还回去，否则 Hero 栏会永久多出一块空白
+    const band = root.querySelector?.('[data-composer-card]')?.parentElement
+    if (band) band.style.minHeight = ''
     // FLIP 过渡写下的内联样式也要清掉，别把控件永久留在过渡态
     const card = root.querySelector?.('[data-composer-card]')
     if (card) {
@@ -429,13 +447,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
 
     // 复刻是明确的吸底意图：首帧一律停靠到视口底部，绝不因为原位此刻恰好还在视口里
     // 就把输入框留在页首——那等于把用户的浏览节奏打断在顶部。
-    // 滚动感知交给迟滞监听：只有用户真的滚回原位，输入框才会被放回流内。
+    // 归还只由滚动位置决定：只有用户真的把页面滑回最顶部，输入框才会被放回流内。
     setPlacement('docked')
     setDockedItem(item)
     publishActiveSkill(RECREATE_SKILL)
     armSkillReleaseWatch()
-    onApplyPrompt?.(RECREATE_PROMPT, item)
-  }, [dockedItem, disarmSkillReleaseWatch, dropRecreateSkill, armSkillReleaseWatch, onApplyPrompt])
+    // 意图先攒着，等输入框吸底就位后由布局效果交出去（见 pendingPromptRef 的说明）
+    pendingPromptRef.current = { prompt: RECREATE_PROMPT, item }
+  }, [dockedItem, disarmSkillReleaseWatch, dropRecreateSkill, armSkillReleaseWatch])
 
   const handleSelectSkill = useCallback((skill) => {
     if (dockedItem?.id === skill.id) {
@@ -445,8 +464,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     // 与复刻同源：选用技能同样先吸底呈现，再由滚动迟滞监听决定何时收回原位。
     setPlacement('docked')
     setDockedItem(skill)
-    onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
-  }, [dockedItem, onApplyPrompt, t])
+    pendingPromptRef.current = { prompt: buildSkillPrompt(skill, t), item: skill }
+  }, [dockedItem, t])
 
   return (
     <section
@@ -456,44 +475,52 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       data-omnimux-trending-source={status}
       aria-label={t('trending.title')}
     >
-      <header className="omnimux-trending-head">
-        <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
-          <button /* exempt-ui01: session-guide 导航双 Tab */
-            type="button"
-            role="tab"
-            id="tab-trending"
-            aria-selected={activeTab === 'trending'}
-            aria-controls="tabpanel-trending"
-            className={`omnimux-guide-tab${activeTab === 'trending' ? ' is-active' : ''}`}
-            onClick={() => handleSwitchTab('trending')}
-          >
-            {t('guide.tab.trending')}
-          </button>
-          <button /* exempt-ui01: session-guide 导航双 Tab */
-            type="button"
-            role="tab"
-            id="tab-skills"
-            aria-selected={activeTab === 'skills'}
-            aria-controls="tabpanel-skills"
-            className={`omnimux-guide-tab${activeTab === 'skills' ? ' is-active' : ''}`}
-            onClick={() => handleSwitchTab('skills')}
-          >
-            {t('guide.tab.skills')}
-          </button>
-        </div>
-      </header>
+      {/* 吸顶栏：双 Tab 与「当前 Tab 的工具栏」共用一条 sticky 容器，滚到视口顶边即钉住 */}
+      <div
+        className={`omnimux-trending-sticky-header${activeTab === 'skills' || showToolbar ? ' is-with-toolbar' : ''}`}
+        data-omnimux-trending-sticky=""
+      >
+        <header className="omnimux-trending-head">
+          <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
+            <button /* exempt-ui01: session-guide 导航双 Tab */
+              type="button"
+              role="tab"
+              id="tab-trending"
+              aria-selected={activeTab === 'trending'}
+              aria-controls="tabpanel-trending"
+              className={`omnimux-guide-tab${activeTab === 'trending' ? ' is-active' : ''}`}
+              onClick={() => handleSwitchTab('trending')}
+            >
+              {t('guide.tab.trending')}
+            </button>
+            <button /* exempt-ui01: session-guide 导航双 Tab */
+              type="button"
+              role="tab"
+              id="tab-skills"
+              aria-selected={activeTab === 'skills'}
+              aria-controls="tabpanel-skills"
+              className={`omnimux-guide-tab${activeTab === 'skills' ? ' is-active' : ''}`}
+              onClick={() => handleSwitchTab('skills')}
+            >
+              {t('guide.tab.skills')}
+            </button>
+          </div>
+        </header>
 
-      {activeTab === 'skills' ? (
-        <div id="tabpanel-skills" role="tabpanel" aria-labelledby="tab-skills">
-          <SkillsPanel
-            t={t}
-            onSelectSkill={handleSelectSkill}
-            activeSkillId={dockedItem?.id}
-          />
-        </div>
-      ) : (
-        <div id="tabpanel-trending" role="tabpanel" aria-labelledby="tab-trending">
-          {showToolbar ? (
+        {/* 工具栏随 Tab 走：创作灵感是筛选工具栏，Skill 是分类胶囊栏，两者都是各自列表的滚动伴随控件 */}
+        {activeTab === 'skills' ? (
+          <div className="omnimux-trending-sticky-toolbar" data-omnimux-trending-sticky-toolbar="skills">
+            <SkillsPanel
+              t={t}
+              onSelectSkill={handleSelectSkill}
+              activeSkillId={dockedItem?.id}
+              selectedCategory={skillCategory}
+              onSelectCategory={setSkillCategory}
+              chipsOnly
+            />
+          </div>
+        ) : (showToolbar ? (
+          <div className="omnimux-trending-sticky-toolbar" data-omnimux-trending-sticky-toolbar="trending">
             <TrendingFilterBar
               filters={filters}
               t={t}
@@ -504,14 +531,29 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
               industryOptions={industryOptions}
               viewOptions={viewOptions}
             />
-          ) : null}
+          </div>
+        ) : null)}
+      </div>
 
+      {activeTab === 'skills' ? (
+        <div id="tabpanel-skills" role="tabpanel" aria-labelledby="tab-skills">
+          <SkillsPanel
+            t={t}
+            onSelectSkill={handleSelectSkill}
+            activeSkillId={dockedItem?.id}
+            selectedCategory={skillCategory}
+            onSelectCategory={setSkillCategory}
+            hideChips
+          />
+        </div>
+      ) : (
+        <div id="tabpanel-trending" role="tabpanel" aria-labelledby="tab-trending">
           {showSkeleton ? (
             <TrendingSkeletonGrid count={8} t={t} />
           ) : null}
 
           {showGrid ? (
-            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${refreshing ? ' is-refreshing' : ''}`}>
+            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${feed.loading ? ' is-refreshing' : ''}`}>
               {items.map((item) => (
                 <TrendingVideoCard
                   key={item.id}
@@ -522,6 +564,17 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
                 />
               ))}
             </div>
+          ) : null}
+
+          {showSentinel ? (
+            <TrendingSentinel
+              sentinelRef={sentinelRef}
+              loading={feed.loadingMore}
+              exhausted={!feed.hasMore}
+              failed={Boolean(feed.error)}
+              onRetry={feed.retry}
+              t={t}
+            />
           ) : null}
 
           {showFilteredEmpty ? (
@@ -537,17 +590,27 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
             </div>
           ) : null}
 
-          {status === TRENDING_SOURCE_STATUS.empty && !refreshing ? (
+          {status === TRENDING_SOURCE_STATUS.empty && !feed.loading ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="library">
               <p>{t('trending.library.empty')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.emptyHint')}</p>
             </div>
           ) : null}
 
-          {status === TRENDING_SOURCE_STATUS.unavailable && !refreshing ? (
+          {status === TRENDING_SOURCE_STATUS.unavailable && !feed.loading ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
               <p>{t('trending.library.unavailable')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>
+              {/* 网络抖动导致的失败：给一次原地重试机会，而不是逼用户刷新整页。
+                  首屏失败重取第 1 页，追加失败续取那一页——起点由状态机按手里有没有卡片决定 */}
+              <button /* exempt-ui01: 重试属于轻量文本动作，非标准控件位 */
+                type="button"
+                className="omnimux-trending-reset"
+                data-omnimux-trending-retry=""
+                onClick={feed.retry}
+              >
+                {t('trending.retry')}
+              </button>
             </div>
           ) : null}
         </div>

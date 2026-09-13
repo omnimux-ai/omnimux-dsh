@@ -2146,6 +2146,13 @@ export const GUIDE_CSS = `
      封面用的 cover-line 是「白 16%」，只适用于深色封面之上，不能拿来当页面底上的描边。 */
   --omnimux-trending-chip-bg:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-3, var(--dsw-static-neutral-800)));
   --omnimux-trending-chip-line:color-mix(in srgb, var(--dsw-alias-label-tertiary) 42%, transparent);
+  /* 吸顶栏遮罩：底色取自 design.md 的页面主背景 Token（深色 #111113 / 浅色 #fff），
+     并以近乎不透明的权重混合——卡片从下方穿行时必须被彻底挡住，
+     毛玻璃只负责边缘过渡，不承担遮字职责。 */
+  --omnimux-trending-sticky-fade:color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent);
+  --omnimux-trending-sticky-solid:color-mix(in srgb, var(--dsw-alias-bg-base) 94%, transparent);
+  /* 吸附偏移：宿主顶部若有自己的吸顶条，由宿主覆盖本变量让开高度，避免两条吸顶互相压盖 */
+  --omnimux-trending-sticky-top:0px;
   width:100%!important;
   max-width:1200px!important;
   box-sizing:border-box;
@@ -2157,7 +2164,79 @@ export const GUIDE_CSS = `
   font-size:13px;
   line-height:1.5;
 }
-.omnimux-trending-head { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.omnimux-trending-head { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+
+/* 吸顶栏：双 Tab 与当前 Tab 的工具栏共用一条 sticky 容器。
+   1. position:sticky 相对最近的滚动祖先（宿主会话滚动列）吸附，不劫持滚动；
+   2. z-index 卡在「卡片(0~10)」之上、「下拉浮层(60)」之下，弹层永远压得住吸顶栏；
+   3. 底色近乎不透明 + backdrop-filter，暗色模式下卡片文字不会透上来。 */
+.omnimux-trending-sticky-header {
+  position:sticky; top:var(--omnimux-trending-sticky-top); z-index:30;
+  overflow:visible;
+  padding:12px 0 0;
+  background:var(--omnimux-trending-sticky-solid);
+  -webkit-backdrop-filter:blur(12px) saturate(140%);
+  backdrop-filter:blur(12px) saturate(140%);
+  border-bottom:1px solid transparent;
+  transition:border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+/* 边缘柔化：吸顶栏与卡片之间不留硬切线，只做 12px 的渐隐过渡 */
+.omnimux-trending-sticky-header::after {
+  content:''; position:absolute; left:0; right:0; top:100%; height:12px;
+  pointer-events:none;
+  background:linear-gradient(to bottom, var(--omnimux-trending-sticky-fade), transparent);
+}
+/* 有工具栏时才画分隔线：只有双 Tab 时一条线会显得多余 */
+.omnimux-trending-sticky-header.is-with-toolbar {
+  border-bottom-color:var(--dsw-alias-border-l1);
+}
+.omnimux-trending-sticky-toolbar { position:relative; z-index:1; }
+/* 工具栏进入吸顶栏后不再自带外边距，间距交给容器统一控制 */
+.omnimux-trending-sticky-toolbar > .omnimux-trending-toolbar { margin-bottom:12px; }
+.omnimux-trending-sticky-toolbar > .omnimux-skills-chips-bar { margin-bottom:12px; }
+
+/* 无限滚动哨兵：加载中给一行骨架，取完给温和的末尾提示 */
+.omnimux-trending-sentinel {
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  padding:20px 0 8px; margin-top:4px;
+}
+.omnimux-trending-feed-hint, .omnimux-trending-feed-end, .omnimux-trending-feed-failed {
+  margin:0; font-size:12px; line-height:18px;
+  color:var(--dsw-alias-label-tertiary);
+}
+.omnimux-trending-feed-end {
+  display:flex; align-items:center; gap:10px; width:100%;
+  justify-content:center;
+}
+.omnimux-trending-feed-end::before, .omnimux-trending-feed-end::after {
+  content:''; flex:1 1 auto; max-width:72px; height:1px;
+  background:var(--dsw-alias-border-l1);
+}
+.omnimux-trending-feed-skeleton {
+  display:grid; gap:16px; width:100%;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+.omnimux-trending-feed-skeleton-card {
+  position:relative; aspect-ratio:9/16; overflow:hidden;
+  border-radius:16px; background:var(--omnimux-trending-cover-base);
+  border:1px solid var(--dsw-alias-border-l1);
+  opacity:0.55;
+}
+.omnimux-trending-feed-shimmer {
+  position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-static-neutral-00) 6%, transparent) 50%, transparent 100%);
+  animation:omnimux-skeleton-shimmer 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events:none;
+}
+@container trending (min-width:640px) {
+  .omnimux-trending-feed-skeleton { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+}
+@container trending (min-width:880px) {
+  .omnimux-trending-feed-skeleton { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+}
+@container trending (min-width:1080px) {
+  .omnimux-trending-feed-skeleton { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+}
 .omnimux-trending-title {
   display:flex; align-items:center; gap:8px;
   margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em;

@@ -188,7 +188,10 @@ test('trending: 数据只来自真源，代码里不得再有编造样本', () =
   assert.ok(!data.includes('TRENDING_VIDEOS'), '样本库不得复活')
   assert.ok(!data.includes('tr-us-'), '样本数据不得残留')
   assert.ok(!section.includes('TRENDING_VIDEOS'), '板块不得引用任何样本库')
-  assert.ok(section.includes('loadTrendingItems'), '板块必须从真源拉取数据')
+  // 板块不再直接调真源，而是经 use-trending-feed 单页取数（无限滚动要按页累积）
+  const feed = read('./use-trending-feed.js')
+  assert.ok(feed.includes('loadTrendingPage'), '取数状态机必须从真源按页拉取数据')
+  assert.ok(section.includes('useTrendingFeed'), '板块必须经取数状态机接真源')
   // 真源必须区分「库为空」与「被筛空」两种情况，话术完全不同
   for (const state of ['ready', 'empty', 'filtered', 'unavailable']) {
     assert.ok(source.includes(`${state}: '${state}'`), `真源必须暴露 ${state} 状态`)
@@ -213,7 +216,10 @@ test('trending: 工具栏只渲染数据支持的维度（假控件护栏）', (
   }
   assert.ok(section.includes('mergeCapabilities'), '板块必须把真源推导出的能力集并入工具栏')
   assert.ok(source.includes('export function deriveDimensions'), '维度必须由数据推导')
-  assert.ok(section.includes('loadTrendingItems'), '板块必须从真源拉取数据')
+  // 板块经取数状态机接真源（无限滚动按页累积），能力集随每一页单调并入
+  const feed = read('./use-trending-feed.js')
+  assert.ok(feed.includes('loadTrendingPage'), '取数状态机必须从真源按页拉取数据')
+  assert.ok(section.includes('useTrendingFeed'), '板块必须经取数状态机接真源')
   assert.ok(
     source.includes('deriveRegionOptions') && source.includes('deriveIndustryOptions'),
     '档位必须由数据推导',
