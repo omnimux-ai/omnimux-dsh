@@ -87,4 +87,29 @@ describe('账号主页快捷预设 — 条目质量', () => {
       }
     }
   })
+
+  it('账号主页给的是账号向指令，措辞与通用网页预设明确不同', () => {
+    const texts = presetChipsFor(scene()).map((chip) => chip.promptTemplateZh(scene())).join('\n')
+    // Content-level on purpose: if the profile group is ever deleted, the panel
+    // falls back to the generic presets and this fails, whereas assertions that
+    // compare against the table itself would keep passing.
+    expect(texts).toMatch(/内容支柱|KOL 层级|对标/)
+    expect(texts).not.toContain('提炼其核心论点')
+  })
+
+  it('报价指令要求标注口径并给区间，不允许甩一个确定数字', () => {
+    const collab = presetChipsFor(scene()).find((chip) => chip.id === 'tt_profile_collab')
+    expect(collab, 'collab preset missing').toBeDefined()
+    for (const text of [collab!.promptTemplateZh(scene()), collab!.promptTemplateEn(scene())]) {
+      expect(text).toMatch(/口径|basis/)
+      expect(text).toMatch(/区间|range/)
+    }
+  })
+
+  it('对标指令说明数据拿不到时如实标注，而不是估算成精确值', () => {
+    const bench = presetChipsFor(scene()).find((chip) => chip.id === 'tt_profile_benchmark')
+    expect(bench, 'benchmark preset missing').toBeDefined()
+    expect(bench!.promptTemplateZh(scene())).toMatch(/无公开数据/)
+    expect(bench!.promptTemplateEn(scene())).toMatch(/not public|unavailable/)
+  })
 })

@@ -169,9 +169,9 @@ export const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
       labelZh: '合作价值与报价',
       labelEn: 'Collab Valuation',
       promptTemplateZh: (s) =>
-        `请评估 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 的合作价值：依据主页可见的粉丝量、互动表现与内容垂类判断其 KOL 层级（素人 / KOC / 腰部 / 头部 / 顶流），给出合理的商单报价区间及其调整因子（垂直度、独家、多平台、时效），并列出最适合合作的 3 类品牌与预期效果指标。`,
+        `请评估 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 的合作价值：依据主页可见的粉丝量、互动表现与内容垂类判断其 KOL 层级（素人 / KOC / 腰部 / 头部 / 顶流），给出合理的商单报价区间及其调整因子（垂直度、独家、多平台、时效），报价必须标注口径：能参考的定价资料多为中文平台人民币口径，若没有 TikTok 直接对口的报价表，请说明折算依据并给出保守—乐观区间，不要给出单一确定数字。最后列出最适合合作的 3 类品牌与预期效果指标（每个数值标注估算口径）。`,
       promptTemplateEn: (s) =>
-        `Assess the brand-collaboration value of the TikTok account ${s.author ? `@${s.author}` : 'on this page'}: infer its KOL tier (nano / micro / mid / macro / top) from the followers, engagement and niche visible here, propose a fair rate range with its adjustment factors (verticality, exclusivity, cross-platform, seasonality), and list the 3 best-fit brand categories with expected KPIs.`
+        `Assess the brand-collaboration value of the TikTok account ${s.author ? `@${s.author}` : 'on this page'}: infer its KOL tier (nano / micro / mid / macro / top) from the followers, engagement and niche visible here, propose a fair rate range with its adjustment factors (verticality, exclusivity, cross-platform, seasonality), State the basis for the numbers: where the only rate references are RMB-denominated tables for other platforms, say so, explain the conversion, and give a conservative-to-optimistic range rather than a single figure. Finish with the 3 best-fit brand categories and expected KPIs, each noting how it was estimated.`
     },
     {
       id: 'tt_profile_benchmark',
@@ -179,9 +179,9 @@ export const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
       labelZh: '对标竞品与选题',
       labelEn: 'Competitor Gaps',
       promptTemplateZh: (s) =>
-        `请以 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 为基准做赛道对标：找出同垂类对标账号在选题、形式与节奏上的差异，列出 3 个可以抢先做的选题方向，并说明各自的爆款潜力与切入方式。`,
+        `请以 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 为基准做赛道对标：先取 3-5 个同垂类对标账号的主页（优先直接读取页面，被拦截时改用搜索），对比它们在选题、形式与节奏上的差异；拿不到的播放量、完播率等后台数据如实标注为「无公开数据」，不要估成精确值。最后列出 3 个更值得抢先做的选题方向，并说明各自的爆款潜力与切入方式。`,
       promptTemplateEn: (s) =>
-        `Benchmark the TikTok account ${s.author ? `@${s.author}` : 'on this page'} against its niche: compare topic choice, format and pacing with peer accounts, then list 3 topic directions worth moving on first, each with its viral potential and how to enter it.`
+        `Benchmark the TikTok account ${s.author ? `@${s.author}` : 'on this page'} against peer accounts in its niche: first gather 3-5 comparable accounts (read their pages directly, fall back to search if blocked), then compare their topic choice, format and pacing. Where backend metrics such as views or completion rate are not public, label them as unavailable rather than inventing precise figures. Finish with 3 topic directions worth moving on first, each with its viral potential and how to enter it.`
     }
   ],
   'tiktok:detail': [
