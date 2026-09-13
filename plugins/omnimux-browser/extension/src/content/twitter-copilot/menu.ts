@@ -76,16 +76,25 @@ export function closeCopilotMenu() {
   }
 }
 
-document.addEventListener('click', (e) => {
+const onDocClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement | null
   if (!target?.closest('.omnimux-copilot-dropdown') && !target?.closest('.omnimux-copilot-anchor-btn')) {
     closeCopilotMenu()
   }
-})
+}
 
-window.addEventListener('scroll', () => {
+const onWindowScroll = () => {
   closeCopilotMenu()
-}, { passive: true })
+}
+
+document.addEventListener('click', onDocClick)
+window.addEventListener('scroll', onWindowScroll, { passive: true })
+
+export function disposeCopilotListeners() {
+  document.removeEventListener('click', onDocClick)
+  window.removeEventListener('scroll', onWindowScroll)
+  closeCopilotMenu()
+}
 
 export function toggleCopilotMenu(anchorButton: HTMLElement, scene: TwitterCopilotScene) {
   if (activeDropdown) {
@@ -220,7 +229,7 @@ async function requestLlmGeneration(
   itemId: string,
   locale: 'zh' | 'en',
 ): Promise<string | null> {
-  // 1. 优先通过 extension background 发起网络请求
+  // 100% 委托给拥有特权网络通信能力的 extension background 代理处理，避免网页 CSP 拦截并保护凭据安全
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'DSH_TWITTER_COPILOT_GENERATE',
@@ -240,65 +249,7 @@ async function requestLlmGeneration(
       return response.text.trim()
     }
   } catch (e) {
-    console.warn('[Copilot] Background generation failed, trying direct LLM fetch:', e)
-  }
-
-  // 2. 直连已验证可用的高速大模型 API (apikey.fun / kimi-k2.6)
-  try {
-    const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer sk-be779329b231cb0c929cf7383c2b15cd6d688793e0c456a30b019261a140159b',
-      },
-      body: JSON.stringify({
-        model: 'kimi-k2.6',
-        messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-          { role: 'user', content: userMessage },
-        ],
-        max_tokens: 600,
-      }),
-    })
-
-    if (res.ok) {
-      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
-      const text = data?.choices?.[0]?.message?.content?.trim()
-      if (text) {
-        return text
-      }
-    }
-  } catch (errDirect) {
-    console.warn('[Copilot] Direct kimi-k2.6 error:', errDirect)
-  }
-
-  // 3. 直连备用大模型 API (DeepSeek 官方)
-  try {
-    const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer sk-c2bad4408e254451b33b38a556b7da34',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-flash',
-        messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-          { role: 'user', content: userMessage },
-        ],
-        max_tokens: 1200,
-      }),
-    })
-
-    if (resDs.ok) {
-      const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
-      const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
-      if (textDs) {
-        return textDs
-      }
-    }
-  } catch (errDs) {
-    console.warn('[Copilot] Direct DeepSeek error:', errDs)
+    console.warn('[Copilot] Background generation failed:', e)
   }
 
   return null

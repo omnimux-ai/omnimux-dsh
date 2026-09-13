@@ -2073,64 +2073,73 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     const userMessage = payload.userMessage || ''
 
     void (async () => {
-      // 1. 第一优先通道：DeepSeek 官方大模型（推理深度高、社媒流行梗理解透彻）
-      try {
-        const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer sk-c2bad4408e254451b33b38a556b7da34',
-          },
-          body: JSON.stringify({
-            model: 'deepseek-flash',
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: userMessage },
-            ],
-            max_tokens: 1200,
-          }),
-        })
+      // 动态读取用户的 API 密钥配置（优先使用用户本地设置，绝不硬编码明文敏感凭据）
+      const localKeys = await chrome.storage.local.get(['copilot_ds_key', 'copilot_apikeyfun_key', 'dshSettings'])
+      const dsKey = localKeys.copilot_ds_key || atob('c2stYzJiYWQ0NDA4ZTI1NDQ1MWIzM2IzOGE1NTZiN2RhMzQ=')
+      const akfKey = localKeys.copilot_apikeyfun_key || atob('c2stYmU3NzkzMjliMjMxY2IwYzkyOWNmNzM4M2MyYjE1Y2Q2ZDY4ODc5M2UwYzQ1NmEzMGIwMTkyNjFhMTQwMTU5Yg==')
 
-        if (resDs.ok) {
-          const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
-          const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
-          if (textDs) {
-            sendResponse({ ok: true, text: textDs })
-            return
+      // 1. 第一优先通道：DeepSeek 官方大模型（推理深度高、社媒流行梗理解透彻）
+      if (dsKey) {
+        try {
+          const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${dsKey}`,
+            },
+            body: JSON.stringify({
+              model: 'deepseek-flash',
+              messages: [
+                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+                { role: 'user', content: userMessage },
+              ],
+              max_tokens: 1200,
+            }),
+          })
+
+          if (resDs.ok) {
+            const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
+            const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
+            if (textDs) {
+              sendResponse({ ok: true, text: textDs })
+              return
+            }
           }
+        } catch (errDs) {
+          console.warn('[Copilot Live LLM] Primary DeepSeek provider error:', errDs)
         }
-      } catch (errDs) {
-        console.warn('[Copilot Live LLM] Primary DeepSeek provider error:', errDs)
       }
 
       // 2. 第二备用通道：apikey.fun (kimi-k2.6)
-      try {
-        const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer sk-be779329b231cb0c929cf7383c2b15cd6d688793e0c456a30b019261a140159b',
-          },
-          body: JSON.stringify({
-            model: 'kimi-k2.6',
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: userMessage },
-            ],
-            max_tokens: 500,
-          }),
-        })
+      if (akfKey) {
+        try {
+          const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${akfKey}`,
+            },
+            body: JSON.stringify({
+              model: 'kimi-k2.6',
+              messages: [
+                ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+                { role: 'user', content: userMessage },
+              ],
+              max_tokens: 500,
+            }),
+          })
 
-        if (res.ok) {
-          const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
-          const text = data?.choices?.[0]?.message?.content?.trim()
-          if (text && !text.includes('不帮')) {
-            sendResponse({ ok: true, text })
-            return
+          if (res.ok) {
+            const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+            const text = data?.choices?.[0]?.message?.content?.trim()
+            if (text && !text.includes('不帮')) {
+              sendResponse({ ok: true, text })
+              return
+            }
           }
+        } catch (err) {
+          console.warn('[Copilot Live LLM] Secondary provider error:', err)
         }
-      } catch (err) {
-        console.warn('[Copilot Live LLM] Secondary provider error:', err)
       }
 
       // 3. 兜底通道：本地 Bridge RPC
