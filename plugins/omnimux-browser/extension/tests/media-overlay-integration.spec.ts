@@ -208,3 +208,124 @@ describe('two-stage hover expansion', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+describe('pointer loss and idle dismiss optimizations', () => {
+  it('hides capsule immediately when window loses focus (blur)', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    window.dispatchEvent(new Event('blur'))
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('hides capsule immediately when document becomes hidden', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('hides capsule immediately on pointercancel', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    document.dispatchEvent(new Event('pointercancel'))
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('hides capsule immediately when pointerleave leaves the document', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    const event = new MouseEvent('pointerleave')
+    Object.defineProperty(event, 'relatedTarget', { value: null })
+    document.documentElement.dispatchEvent(event)
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('hides capsule immediately on pointerout when relatedTarget is null', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    const event = new MouseEvent('pointerout')
+    Object.defineProperty(event, 'relatedTarget', { value: null })
+    document.dispatchEvent(event)
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('auto-dismisses capsule when user stays idle without interacting', () => {
+    vi.useFakeTimers()
+    const { overlay, capsule } = mountedCapsule()
+    const img = document.createElement('img')
+    document.body.appendChild(img)
+    const candidate = {
+      element: img,
+      payload: {
+        id: 'test-media-1',
+        src: 'https://cdn.example.com/test.jpg',
+        type: 'image' as const,
+        title: 'test',
+        pageUrl: 'https://example.com',
+      },
+    }
+    // Trigger real showNow lifecycle
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showNow(candidate)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    // Simulate idle timeout
+    vi.advanceTimersByTime(TIMING.idleDismiss)
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+
+  it('hides capsule immediately when pointer moves far away from media element', () => {
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+
+    const img = document.createElement('img')
+    img.getBoundingClientRect = () => ({
+      left: 100,
+      top: 100,
+      right: 400,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 100,
+      y: 100,
+      toJSON: () => ({}),
+    }) as DOMRect
+    document.body.appendChild(img)
+
+    const candidate = {
+      element: img,
+      payload: {
+        id: 'test-media-2',
+        src: 'https://cdn.example.com/test2.jpg',
+        type: 'image' as const,
+        title: 'test2',
+        pageUrl: 'https://example.com',
+      },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showNow(candidate)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
+
+    // Pointer moves far away from the image (e.g. clientX: 600, clientY: 600, distance > 24)
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 600, clientY: 600 }))
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
+})

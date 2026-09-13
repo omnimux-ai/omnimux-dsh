@@ -222,12 +222,18 @@ export class MediaDetector {
     const element = resolvePointerTarget(point.x, point.y, (x, y) => this.env.elementFromPoint(x, y))
       ?? this.fallbackTarget()
     if (element === null) {
-      this.current = null
+      if (this.current !== null) {
+        this.current = null
+        this.options.onInvalidate?.('detach')
+      }
       return
     }
     const candidate = this.describe(element)
     if (candidate === null) {
-      this.current = null
+      if (this.current !== null) {
+        this.current = null
+        this.options.onInvalidate?.('detach')
+      }
       return
     }
     this.current = candidate
