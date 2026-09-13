@@ -104,7 +104,7 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
     expect(dropdown).not.toBeNull()
 
     // 3 preset items
-    const items = container.querySelectorAll('.instance-item-card')
+    const items = container.querySelectorAll('.instance-item-row')
     expect(items.length).toBe(3)
 
     // Select DSH Desktop (43120)
@@ -115,7 +115,7 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
     expect(onSelect).toHaveBeenCalledWith({
       id: 'dsh-desktop',
       port: 43120,
-      name: 'DSH Desktop（基础版）',
+      name: 'DSH Desktop',
     })
     expect(localStorage.getItem('omnimux_target_port')).toBe('43120')
   })

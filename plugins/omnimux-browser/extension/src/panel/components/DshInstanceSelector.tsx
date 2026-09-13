@@ -6,8 +6,6 @@ export interface DshInstance {
   nameZh: string
   nameEn: string
   port: number
-  descriptionZh: string
-  descriptionEn: string
   isRecommended?: boolean
 }
 
@@ -23,28 +21,22 @@ export interface InstanceHealth {
 export const PRESET_INSTANCES: DshInstance[] = [
   {
     id: 'omnimux-dev',
-    nameZh: 'OmniMux Dev（开发版）',
+    nameZh: 'OmniMux Dev',
     nameEn: 'OmniMux Dev',
     port: 45120,
-    descriptionZh: '本地开发调试版应用，默认端口 45120',
-    descriptionEn: 'Local developer build, default port 45120',
     isRecommended: true,
   },
   {
     id: 'dsh-desktop',
-    nameZh: 'DSH Desktop（基础版）',
+    nameZh: 'DSH Desktop',
     nameEn: 'DSH Desktop',
     port: 43120,
-    descriptionZh: '官方原生桌面端应用，默认端口 43120',
-    descriptionEn: 'Official desktop application, default port 43120',
   },
   {
     id: 'omnimux-prd',
-    nameZh: 'OmniMux PRD（正式版）',
-    nameEn: 'OmniMux Production',
+    nameZh: 'OmniMux PRD',
+    nameEn: 'OmniMux PRD',
     port: 43128,
-    descriptionZh: '正式生产发布版应用，默认端口 43128',
-    descriptionEn: 'Production release app, default port 43128',
   },
 ]
 
@@ -54,7 +46,6 @@ export async function probeInstanceHealth(port: number): Promise<InstanceHealth>
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 1200)
 
-    // 优先探测 bridge-config 或根路径
     const resp = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
       signal: controller.signal,
     }).catch(async () => {
@@ -75,7 +66,6 @@ export async function probeInstanceHealth(port: number): Promise<InstanceHealth>
       }
     }
 
-    // 401 / 403 说明端口正在监听运行且进程存活
     if (resp.status === 401 || resp.status === 403) {
       return {
         status: 'standby',
@@ -88,15 +78,15 @@ export async function probeInstanceHealth(port: number): Promise<InstanceHealth>
     return {
       status: 'online',
       latencyMs: latency,
-      messageZh: `服务在线 (HTTP ${resp.status})`,
-      messageEn: `Active (HTTP ${resp.status})`,
+      messageZh: `在线 (${latency}ms)`,
+      messageEn: `Online (${latency}ms)`,
     }
   } catch {
     const latency = Date.now() - start
     return {
       status: 'offline',
       latencyMs: latency,
-      messageZh: '未启动 / 离线',
+      messageZh: '离线',
       messageEn: 'Offline',
     }
   }
@@ -119,7 +109,6 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
   const [healthMap, setHealthMap] = useState<Record<number, InstanceHealth>>({})
   const [probing, setProbing] = useState(false)
 
-  // 并发检查所有候选端口的在线状态
   const refreshAllHealth = async () => {
     setProbing(true)
     const targets = [...PRESET_INSTANCES.map((p) => p.port)]
@@ -176,7 +165,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
       onSelectInstance?.({
         id: 'custom',
         port: p,
-        name: isEn ? `Custom Port (${p})` : `自定义端口 (${p})`,
+        name: isEn ? `Custom (${p})` : `自定义 (${p})`,
       })
       void probeInstanceHealth(p).then((res) => {
         setHealthMap((prev) => ({ ...prev, [p]: res }))
@@ -214,7 +203,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
       {isOpen && (
         <div className="dsh-instance-dropdown-menu">
           <div className="instance-dropdown-header">
-            <span>{isEn ? 'Local DSH Instances & Ports' : '本地 DSH / OmniMux 实例版本'}</span>
+            <span>{isEn ? 'DSH / OmniMux Instances' : '本地 DSH / OmniMux 实例'}</span>
             <button
               type="button"
               className="probe-refresh-icon-btn"
@@ -232,32 +221,38 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
             {PRESET_INSTANCES.map((inst) => {
               const isChosen = inst.port === selectedPort
               const health = healthMap[inst.port]
+              const latencyText = health?.latencyMs !== undefined ? `${health.latencyMs}ms` : ''
+              const statusLabel = health?.status === 'online'
+                ? (latencyText || (isEn ? 'Online' : '在线'))
+                : health?.status === 'standby'
+                  ? (isEn ? `Ready ${latencyText}` : `就绪 ${latencyText}`)
+                  : health?.status === 'offline'
+                    ? (isEn ? 'Offline' : '离线')
+                    : '...'
+
               return (
                 <div
                   key={inst.id}
-                  className={`instance-item-card ${isChosen ? 'active' : ''}`}
+                  className={`instance-item-row ${isChosen ? 'active' : ''}`}
                   onClick={() => handleSelect(inst)}
                 >
-                  <div className="instance-card-left">
-                    <div className="instance-card-title-row">
-                      <span
-                        className={`instance-health-dot ${
-                          health?.status === 'online'
-                            ? 'online'
-                            : health?.status === 'standby'
-                              ? 'standby'
-                              : health ? 'offline' : 'checking'
-                        }`}
-                      />
-                      <span className="instance-name">{isEn ? inst.nameEn : inst.nameZh}</span>
-                      {inst.isRecommended && (
-                        <span className="instance-recommend-badge">{isEn ? 'Default' : '推荐默认'}</span>
-                      )}
-                    </div>
-                    <div className="instance-desc">{isEn ? inst.descriptionEn : inst.descriptionZh}</div>
-                  </div>
-                  <div className="instance-card-right">
+                  <div className="instance-row-left">
+                    <span
+                      className={`instance-health-dot ${
+                        health?.status === 'online'
+                          ? 'online'
+                          : health?.status === 'standby'
+                            ? 'standby'
+                            : health ? 'offline' : 'checking'
+                      }`}
+                    />
+                    <span className="instance-name">{isEn ? inst.nameEn : inst.nameZh}</span>
                     <span className="instance-port-tag">:{inst.port}</span>
+                    {inst.isRecommended && (
+                      <span className="instance-rec-pill">{isEn ? 'REC' : '推荐'}</span>
+                    )}
+                  </div>
+                  <div className="instance-row-right">
                     <span
                       className={`health-pill ${
                         health?.status === 'online'
@@ -267,10 +262,10 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                             : 'offline'
                       }`}
                     >
-                      {health ? (isEn ? health.messageEn : health.messageZh) : (isEn ? 'Checking...' : '检测中...')}
+                      {statusLabel}
                     </span>
                     {isChosen && (
-                      <span className="instance-check-icon"><CheckIcon size={13} /></span>
+                      <span className="instance-check-mark"><CheckIcon size={12} /></span>
                     )}
                   </div>
                 </div>
@@ -285,13 +280,13 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                 className="custom-port-trigger-btn"
                 onClick={() => setShowCustomInput(true)}
               >
-                ＋ {isEn ? 'Specify Custom Port...' : '指定自定义本地端口...'}
+                ＋ {isEn ? 'Custom Port...' : '自定义端口...'}
               </button>
             ) : (
               <div className="custom-port-input-row">
                 <input
                   type="number"
-                  placeholder={isEn ? 'Port (e.g. 3080)' : '端口号 (例如 3080)'}
+                  placeholder={isEn ? 'Port (e.g. 3080)' : '端口号 (如 3080)'}
                   value={customPortInput}
                   onChange={(e) => setCustomPortInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -305,7 +300,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                   className="custom-port-apply-btn"
                   onClick={handleApplyCustomPort}
                 >
-                  {isEn ? 'Connect' : '连接'}
+                  {isEn ? 'OK' : '确认'}
                 </button>
                 <button
                   type="button"

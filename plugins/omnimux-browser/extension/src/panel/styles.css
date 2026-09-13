@@ -3169,81 +3169,80 @@ textarea:focus-visible {
 .instance-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 240px;
+  gap: 3px;
+  max-height: 220px;
   overflow-y: auto;
 }
 
-.instance-item-card {
+.instance-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  height: calc(34px * var(--ui-scale));
+  padding: 0 8px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: var(--canvas-deep);
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
-.instance-item-card:hover {
+.instance-item-row:hover {
   border-color: var(--line-strong);
   background: var(--surface);
 }
 
-.instance-item-card.active {
+.instance-item-row.active {
   border-color: var(--ink-strong);
   background: var(--surface);
 }
 
-.instance-card-left {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  text-align: left;
-}
-
-.instance-card-title-row {
+.instance-row-left {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .instance-name {
   font-size: calc(12px * var(--ui-scale));
   font-weight: 600;
   color: var(--ink-strong);
-}
-
-.instance-recommend-badge {
-  font-size: calc(9.5px * var(--ui-scale));
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--ink-strong);
-  color: var(--canvas);
-  font-weight: 600;
-}
-
-.instance-desc {
-  font-size: calc(10.5px * var(--ui-scale));
-  color: var(--muted);
-}
-
-.instance-card-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  white-space: nowrap;
 }
 
 .instance-port-tag {
   font-size: calc(11px * var(--ui-scale));
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.instance-rec-pill {
+  font-size: calc(9px * var(--ui-scale));
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--ink-strong);
+  color: var(--canvas);
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.instance-row-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .health-pill {
   font-size: calc(10px * var(--ui-scale));
-  padding: 2px 6px;
+  padding: 1.5px 6px;
   border-radius: 999px;
   font-weight: 550;
   white-space: nowrap;
@@ -3264,7 +3263,7 @@ textarea:focus-visible {
   border: 1px solid rgba(113, 113, 122, 0.2);
 }
 
-.instance-check-icon {
+.instance-check-mark {
   color: var(--ink-strong);
   display: flex;
   align-items: center;
