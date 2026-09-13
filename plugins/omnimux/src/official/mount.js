@@ -181,9 +181,21 @@ export function mountOfficial(ctx, deps) {
     { id: { type: 'string', required: true } },
     (args) => getInspiration(client, args),
   )
+  const assertInspirationAdmin = async () => {
+    if (!deps.identity || typeof deps.identity.require !== 'function') return
+    const profile = await deps.identity.require()
+    const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
+    if (!isAdmin) {
+      throw new OmnimuxError(
+        'admin-required',
+        '云端公共灵感库仅限官方管理员录入与管理。收录素材请使用本地灵感库工具 (inspiration_create)。'
+      )
+    }
+  }
+
   tool(
     'omnimux_inspiration_create',
-    'Create an inspiration item from a source URL. Duplicate URLs return 409 unless return_existing. Requires OmniMux sign-in.',
+    'Create an inspiration item from a source URL. Duplicate URLs return 409 unless return_existing. Requires OmniMux admin sign-in.',
     {
       source_url: { type: 'string', required: true },
       type: { type: 'string', enum: ['video', 'image', 'link'] },
@@ -194,11 +206,14 @@ export function mountOfficial(ctx, deps) {
       hot_score: { type: 'number' },
       return_existing: { type: 'boolean' },
     },
-    (args) => createInspiration(client, args),
+    async (args) => {
+      await assertInspirationAdmin()
+      return createInspiration(client, args)
+    },
   )
   tool(
     'omnimux_inspiration_update',
-    'Patch an inspiration item (title/content/tags/is_favorite/hot_score). Requires OmniMux sign-in.',
+    'Patch an inspiration item (title/content/tags/is_favorite/hot_score). Requires OmniMux admin sign-in.',
     {
       id: { type: 'string', required: true },
       title: { type: 'string' },
@@ -207,22 +222,31 @@ export function mountOfficial(ctx, deps) {
       is_favorite: { type: 'boolean' },
       hot_score: { type: 'number' },
     },
-    (args) => updateInspiration(client, args),
+    async (args) => {
+      await assertInspirationAdmin()
+      return updateInspiration(client, args)
+    },
   )
   tool(
     'omnimux_inspiration_delete',
-    'Soft-delete an inspiration item by id. Requires OmniMux sign-in.',
+    'Soft-delete an inspiration item by id. Requires OmniMux admin sign-in.',
     { id: { type: 'string', required: true } },
-    (args) => deleteInspiration(client, args),
+    async (args) => {
+      await assertInspirationAdmin()
+      return deleteInspiration(client, args)
+    },
   )
   tool(
     'omnimux_inspiration_upload_media',
-    'Upload a cover or media file to cloud storage (URL ingest or payload). Returns media key and rewritten path. Requires OmniMux sign-in.',
+    'Upload a cover or media file to cloud storage (URL ingest or payload). Returns media key and rewritten path. Requires OmniMux admin sign-in.',
     {
       url: { type: 'string', required: true },
       kind: { type: 'string', enum: ['cover', 'media'] },
     },
-    (args) => uploadMedia(client, args),
+    async (args) => {
+      await assertInspirationAdmin()
+      return uploadMedia(client, args)
+    },
   )
   tool(
     'omnimux_inspiration_tags',

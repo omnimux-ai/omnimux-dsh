@@ -109,4 +109,28 @@ describe('official mount', () => {
     mountOfficial(disabledCapture.ctx, disabledCapture.deps)
     assert.equal(disabledCapture.registeredTools.omnimux_social_data, undefined)
   })
+
+  it('omnimux_inspiration_create blocks non-admin and permits admin', async () => {
+    const capture = registerCapture()
+    capture.deps.identity = { require: async () => ({ id: 'u', role: 1, is_admin: false }) }
+    mountOfficial(capture.ctx, capture.deps)
+    const createTool = capture.registeredTools.omnimux_inspiration_create
+    assert.ok(createTool)
+    await assert.rejects(
+      async () => createTool.execute({ source_url: 'https://tiktok.com/@a/video/1' }),
+      (err) => err instanceof OmnimuxError && err.code === 'admin-required' && /仅限官方管理员/.test(err.message)
+    )
+
+    const adminCapture = registerCapture()
+    adminCapture.deps.identity = { require: async () => ({ id: 'admin', role: 10, is_admin: true }) }
+    adminCapture.deps.fetcher = async () => new Response(JSON.stringify({ success: true, data: { id: 'insp_1' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+    mountOfficial(adminCapture.ctx, adminCapture.deps)
+    const adminCreateTool = adminCapture.registeredTools.omnimux_inspiration_create
+    assert.ok(adminCreateTool)
+    const result = await adminCreateTool.execute({ source_url: 'https://tiktok.com/@a/video/1' })
+    assert.equal(result.data.id, 'insp_1')
+  })
 })

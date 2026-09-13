@@ -110,6 +110,37 @@ describe('inspiration dispatcher', () => {
     assert.equal(refused.status, 403)
   })
 
+  it('blocks common user writes with 403 and permits admin writes', async () => {
+    const commonDispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      identity: {
+        require: async () => ({ id: 1, role: 1, is_admin: false }),
+      },
+      client: clientWith(async () => ({ success: true, data: {} })),
+    })
+    const blockedRes = await commonDispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration',
+      body: { source_url: 'https://x.com/a' },
+    })
+    assert.equal(blockedRes.status, 403)
+    assert.match(blockedRes.body.error, /仅限官方管理员管理/)
+
+    const adminDispatcher = createInspirationDispatcher({
+      official: { mount: true },
+      identity: {
+        require: async () => ({ id: 2, role: 10, is_admin: true }),
+      },
+      client: clientWith(async () => ({ success: true, data: { id: 'insp_123' } })),
+    })
+    const allowedRes = await adminDispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/inspiration',
+      body: { source_url: 'https://x.com/a' },
+    })
+    assert.equal(allowedRes.status, 200)
+  })
+
   it('is absent when official tools are unmounted', async () => {
     const dispatcher = createInspirationDispatcher({ official: { mount: false } })
     const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/inspiration' })
