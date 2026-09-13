@@ -1,9 +1,9 @@
 import { installModelSelection } from "@deepseek-ai/dsh-agent";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { SessionId } from "@deepseek-ai/dsh-session";
 import { setApprovalPolicy } from "@deepseek-ai/dsh-user-approval";
-import { WorkspaceId } from "@deepseek-ai/dsh-workspace";
 import { automationSessionTitle } from "./run-title.js";
+const SessionId = (id) => String(id);
+const WorkspaceId = (id) => String(id);
 const CANCEL_CONVERGENCE_TIMEOUT_MS = 1e4;
 async function settlesWithin(promise, timeoutMs) {
   let timer;
