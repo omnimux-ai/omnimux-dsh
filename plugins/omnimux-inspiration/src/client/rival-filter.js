@@ -109,18 +109,21 @@ export function selectionQuery(state, allIds) {
 }
 
 /**
- * Trigger label of the account filter, word for word from the prototype.
+ * Trigger label of the account filter.
+ *
+ * 全部 reads as the bare dimension name (「账号」/「Accounts」), with no tally:
+ * design.md §5.1 fixes a full-selection trigger to the dimension name or a
+ * name:value pair, and a count of monitored accounts is not what the person
+ * reading the trigger is choosing between — it is a property of the list, not
+ * of the selection. The tally that still matters is the one a narrowed
+ * selection has, and 已选 N 个账号/未选择账号 (0) carry it below.
  * @param {{ mode?: string, ids?: string[] | Set<string> }} state
- * @param {number} total
  * @param {(key: string) => string} t
  * @returns {string}
  */
-export function rivalSelectionSummary(state, total, t) {
+export function rivalSelectionSummary(state, t) {
   const translate = typeof t === 'function' ? t : (key) => key
-  const count = Number.isFinite(total) && total > 0 ? Math.floor(total) : 0
-  if (state?.mode !== 'subset') {
-    return translate('rivalFilter.all').replace('{n}', String(count))
-  }
+  if (state?.mode !== 'subset') return translate('rivalFilter.all')
   const size = state.ids instanceof Set ? state.ids.size : (state.ids || []).length
   if (size === 0) return translate('rivalFilter.none')
   return translate('rivalFilter.some').replace('{k}', String(size))

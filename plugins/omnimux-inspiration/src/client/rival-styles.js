@@ -74,7 +74,9 @@ export const RIVAL_CSS = `
   top: 38px;
   right: 0;
   width: 290px;
-  z-index: 100;
+  /* 面板必须压在一切同屏元素之上：任何后置的卡片、摘要行都不允许盖住这份账号
+     列表，否则被盖住的行既看不见也点不到。 */
+  z-index: 1000;
   padding: 8px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;

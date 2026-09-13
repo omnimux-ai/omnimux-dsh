@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
@@ -7,13 +7,19 @@ import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
-import { PlusIcon } from './icons.jsx'
+import { CheckIcon, PlusIcon } from './icons.jsx'
 import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
 
 export { formatPlatformName }
+
+/** 气泡停留时长：够看清一句话，又不至于让人等它消失。 */
+const TOAST_VISIBLE_MS = 2500
+
+/** 退场动画时长，必须与样式表里 `.omnimux-inspiration-toast` 的 transition 一致。 */
+const TOAST_FADE_MS = 180
 
 /**
  * 账号导入成功的提示文案：账号带 handle 就点名，没带就退回一句通用话术 ——
@@ -131,19 +137,59 @@ export function InspirationSection({ t, active }) {
   const { reload: reloadRivalFeed } = rivalFeed
 
   /**
+   * 导入结果的统一出口：顶部气泡。
+   *
+   * 成功回执以前是内容区里的一条通知条，它把账号列表和作品网格整体下推一行 ——
+   * 一句「刚刚成功了」的回执不该改变内容区的高度。气泡浮在内容之上，位置固定，
+   * 停留 2.5 秒后淡出；同一时刻只留最新的一条，连续导入不会被旧回执盖住。
+   */
+  const [toast, setToast] = useState(null)
+  const [toastLeaving, setToastLeaving] = useState(false)
+  const toastSeq = useRef(0)
+
+  const showToast = useCallback((text) => {
+    const message = String(text ?? '').trim()
+    if (!message) return
+    toastSeq.current += 1
+    setToastLeaving(false)
+    setToast({ id: toastSeq.current, text: message })
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const timer = setTimeout(() => setToastLeaving(true), TOAST_VISIBLE_MS)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  useEffect(() => {
+    if (!toastLeaving) return undefined
+    const timer = setTimeout(() => setToast(null), TOAST_FADE_MS)
+    return () => clearTimeout(timer)
+  }, [toastLeaving])
+
+  /**
    * 账号导入成功后的统一收口（顶部「导入灵感」弹窗与账号监控页内的弹窗共用）。
    *
    * 只切 tab 是不够的：用户本来就在账号监控页时 tab 不变、`useRivalFeed` 的
    * enabled 也跟着不变，重新请求不会被触发 —— 新账号既不进账号筛选器，也不进
    * 作品流，界面上看起来就是「点了导入没反应」。所以这里显式重读一次第 1 页，
-   * 并把成功提示交给账号监控页顶部的通知条，让这次导入在界面上留下痕迹。
+   * 并把成功文案交给顶部气泡，让这次导入在界面上留下痕迹。
    */
-  const [accountNotice, setAccountNotice] = useState(null)
   const handleAccountImported = useCallback((account) => {
     landOnAccountTab(account)
     void reloadRivalFeed()
-    setAccountNotice(accountImportNotice(t, account))
-  }, [landOnAccountTab, reloadRivalFeed, t])
+    showToast(accountImportNotice(t, account))
+  }, [landOnAccountTab, reloadRivalFeed, showToast, t])
+
+  /**
+   * 内容导入成功：先走原有的入库收口（前插新行、切到能显示它的 tab、钉住卡片），
+   * 再补一句气泡回执。入库本身的痕迹在网格里，气泡只回答「刚才那一下成了没有」。
+   */
+  const handleContentImported = useCallback((item) => {
+    if (!item) return
+    handleImportSuccess(item)
+    showToast(t('add.importedToast'))
+  }, [handleImportSuccess, showToast, t])
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
@@ -292,10 +338,11 @@ export function InspirationSection({ t, active }) {
           query={rivalQuery}
           platform={rivalPlatform}
           feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
-          onImported={() => reloadRivalFeed()}
+          onImported={(item) => {
+            void reloadRivalFeed()
+            handleContentImported(item)
+          }}
           onAccountImported={handleAccountImported}
-          importNotice={accountNotice}
-          onDismissNotice={() => setAccountNotice(null)}
         />
       ) : (
         <>
@@ -511,9 +558,23 @@ export function InspirationSection({ t, active }) {
         open={importOpen}
         t={t}
         onClose={() => setImportOpen(false)}
-        onImported={handleImportSuccess}
+        onImported={handleContentImported}
         onAccountImported={handleAccountImported}
       />
+
+      {/* 导入成功的气泡：浮在内容之上，不占内容区高度。 */}
+      {toast ? (
+        <div
+          className={`omnimux-inspiration-toast${toastLeaving ? ' is-leaving' : ''}`}
+          role="status"
+          data-toast-id={toast.id}
+        >
+          <span className="omnimux-inspiration-toast-icon" aria-hidden="true">
+            <CheckIcon size={16} />
+          </span>
+          <span className="omnimux-inspiration-toast-text">{toast.text}</span>
+        </div>
+      ) : null}
     </div>
   )
 }

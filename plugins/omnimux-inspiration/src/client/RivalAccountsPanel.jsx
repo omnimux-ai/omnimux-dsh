@@ -62,14 +62,11 @@ export function feedEmptyKind(feed) {
  *   feed: Record<string, any>,
  *   onImported?: (item?: Record<string, any>) => void,
  *   onAccountImported?: (account?: Record<string, any>) => void,
- *   importNotice?: string | null,
- *   onDismissNotice?: () => void,
  * }} props
  */
 export function RivalAccountsPanel(props) {
   const {
     t, active = true, feed, onImported, onAccountImported,
-    importNotice = null, onDismissNotice,
   } = props
   const [importOpen, setImportOpen] = useState(false)
   const [detailRow, setDetailRow] = useState(null)
@@ -108,17 +105,15 @@ export function RivalAccountsPanel(props) {
   const emptyKind = feedEmptyKind(feed)
 
   /**
-   * The page has one top notice bar, not two.
+   * The only notice this panel still owns is a failed 复刻 — the answer to the
+   * action the user just clicked here.
    *
-   * A local outcome (a failed 复刻) outranks the shell's import confirmation,
-   * because it is the answer to what the user just clicked here; each source
-   * clears only its own.
+   * Import confirmations moved to the shell's top toast: a confirmation is not
+   * this panel's business, and rendering it here pushed the grid down by a row
+   * every time something was imported.
    */
-  const noticeText = notice ? t(notice.key) : importNotice
-  const dismissNotice = () => {
-    setNotice(null)
-    onDismissNotice?.()
-  }
+  const noticeText = notice ? t(notice.key) : null
+  const dismissNotice = () => setNotice(null)
 
   return (
     <div className="omnimux-rival-root" data-active={active ? 'true' : 'false'}>

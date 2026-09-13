@@ -124,6 +124,24 @@ export const INSPIRATION_CSS = `
   flex-wrap: nowrap;
 }
 
+/* 工具栏与它的三个内容层放开裁切。
+   宿主工具栏默认声明了 overflow: hidden（用于裁掉超出行高的内容），代价是把账号筛选
+   的下拉面板整块截断 —— 面板不是工具栏的一部分，它是浮层。这里逐层放开，浮层
+   才能溢出工具栏边界完整显示。 */
+.omnimux-inspiration-toolbar,
+.omnimux-inspiration-toolbar [class*="bar"],
+.omnimux-inspiration-toolbar [class*="tools"],
+.omnimux-inspiration-toolbar [class*="right"] {
+  overflow: visible !important;
+}
+
+/* 筛选器自成一个层叠上下文：面板的层级在这个上下文里高于同排控件，而它自己与
+   同排控件同层，避免把工具栏整体抬到宿主其它浮层之上。 */
+.omnimux-rival-filter {
+  position: relative;
+  z-index: 100;
+}
+
 .omnimux-inspiration-search-box {
   position: relative;
   display: flex;
@@ -720,6 +738,58 @@ export const INSPIRATION_CSS = `
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-secondary);
+}
+
+/* ── 顶部气泡提示（Toast）────────────────────────────────────────────────
+   导入成功的回执浮在内容之上，不进入内容流：它是「刚刚发生了什么」的一句话，
+   不该把作品网格往下推。定位与宿主其它模块的气泡同位（中上），底色取浮层色，
+   毛玻璃 + 规范边框 + 微阴影，与工具栏下拉面板同一套材质。 */
+.omnimux-inspiration-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 10px 16px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  /* 只报信，不拦截点击：气泡盖住的控件仍然可点。 */
+  pointer-events: none;
+  animation: omnimux-inspiration-toast-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.omnimux-inspiration-toast.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+.omnimux-inspiration-toast-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-state-success-primary);
+}
+@keyframes omnimux-inspiration-toast-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-inspiration-toast {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* 详情弹窗 Modal */

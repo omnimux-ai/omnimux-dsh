@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { INSPIRATION_CSS } from './styles.js'
+import { RIVAL_CSS } from './rival-styles.js'
 import { en, zh } from './locales.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -248,6 +249,10 @@ describe('locale dictionaries', () => {
     assert.doesNotMatch(zh['card.cta.try'], /加会话/)
     assert.doesNotMatch(en['card.cta.try'], /Add to chat/)
     assert.doesNotMatch(zh['card.cta.addToConversation'], /添加到会话/)
+    // 账号筛选的全量态读作维度名，不带计数（design.md §5.1 的触发器文案契约）。
+    assert.equal(zh['rivalFilter.all'], '账号')
+    assert.equal(en['rivalFilter.all'], 'Accounts')
+    assert.doesNotMatch(zh['rivalFilter.all'], /[:(（]/, 'the full-selection label must not be a name:value pair')
   })
 })
 
@@ -445,5 +450,45 @@ describe('card reveal shimmer and batch loading UX', () => {
     // Empty or non-browser fallback should resolve cleanly
     await assert.doesNotReject(() => preloadBatchCovers([], 100))
     await assert.doesNotReject(() => preloadCover(''))
+  })
+})
+
+describe('账号筛选下拉面板的层级与裁切', () => {
+  it('keeps the filter at the toolbar level and lets its panel out of every clipping box', () => {
+    // 工具栏默认 overflow: hidden，会把展开的账号列表整块切掉 —— 用户看到的
+    // 是「菜单被遮挡」。工具栏与它的三个内容层都必须放开裁切。
+    const toolbarSrc = readFileSync(join(here, 'styles.js'), 'utf8')
+    assert.match(
+      toolbarSrc,
+      /\.omnimux-inspiration-toolbar,[\s\S]*?\[class\*="bar"\][\s\S]*?\[class\*="tools"\][\s\S]*?\[class\*="right"\][\s\S]*?overflow:\s*visible\s*!important;/,
+      'the toolbar and its three content layers must stop clipping the popover panel',
+    )
+
+    const filterCss = ruleBody(INSPIRATION_CSS, '.omnimux-rival-filter')
+    assert.equal(decl(filterCss, 'position'), 'relative', 'the panel is positioned against the trigger')
+    assert.equal(decl(filterCss, 'z-index'), '100')
+  })
+
+  it('puts the account list above everything else on the page', () => {
+    const panelCss = ruleBody(RIVAL_CSS, '.omnimux-rival-filter-panel')
+    assert.equal(decl(panelCss, 'position'), 'absolute')
+    assert.equal(decl(panelCss, 'z-index'), '1000')
+  })
+})
+
+describe('导入成功的气泡提示', () => {
+  it('floats at the top of the window instead of taking a row in the content area', () => {
+    const css = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-toast')
+    assert.equal(decl(css, 'position'), 'fixed')
+    assert.equal(decl(css, 'top'), '24px')
+    assert.equal(decl(css, 'left'), '50%')
+    assert.equal(decl(css, 'transform'), 'translateX(-50%)')
+    assert.equal(decl(css, 'z-index'), '99999')
+    assert.equal(decl(css, 'pointer-events'), 'none', 'a receipt must not swallow clicks on what it covers')
+    assert.match(css, /var\(--dsw-alias-bg-elevated\)/, 'the pill reuses the frosted overlay surface')
+    assert.match(css, /backdrop-filter:\s*blur\(16px\)/)
+
+    const iconCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-toast-icon')
+    assert.match(iconCss, /var\(--dsw-alias-state-success-primary\)/)
   })
 })

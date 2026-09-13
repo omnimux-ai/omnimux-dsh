@@ -164,7 +164,7 @@ export function RivalAccountFilter(props) {
   }, [close, open])
 
   const rows = (Array.isArray(accounts) ? accounts : []).map((account) => toAccountFilterRow(account, selection))
-  const summary = rivalSelectionSummary(selection, rows.length, t)
+  const summary = rivalSelectionSummary(selection, t)
 
   return (
     <div className="omnimux-rival-filter" ref={rootRef}>
