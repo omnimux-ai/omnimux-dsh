@@ -174,5 +174,14 @@ describe('Twitter Copilot Interactive Suite', () => {
       expect(styles).toMatch(/\.composer textarea:focus-visible[^}]*outline:\s*none\s*!important;/)
       expect(styles).toMatch(/\.composer textarea:focus-visible[^}]*box-shadow:\s*none\s*!important;/)
     })
+
+    it('implements stacked cards layout, hero cover box, and platform row matching YouMind style', () => {
+      expect(styles.includes('.hero-card-stack-wrapper')).toBe(true)
+      expect(styles.includes('.hero-card-stack-underlay')).toBe(true)
+      expect(styles.includes('.hero-card-cover-box')).toBe(true)
+      expect(styles.includes('.hero-platform-row')).toBe(true)
+      expect(styles.includes('.hero-card-title')).toBe(true)
+      expect(styles.includes('.hero-square-badge')).toBe(true)
+    })
   })
 })

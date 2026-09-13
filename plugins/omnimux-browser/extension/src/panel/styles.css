@@ -3835,205 +3835,186 @@ textarea:focus-visible {
   color: #ef4444;
 }
 
-/* Empty Hero Layout (图 1 风格) */
+/* Empty Hero Layout (1:1 对标 YouMind 图 2 极简层叠卡片) */
 .empty-hero-layout {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   margin: auto 0;
-  padding: 20px 14px;
-  gap: 22px;
+  padding: 14px 10px;
+  gap: 16px;
   width: 100%;
-  max-width: 360px;
+  max-width: calc(340px * var(--ui-scale));
   margin-inline: auto;
 }
 
-.page-hero-card {
+/* 1:1 复刻 YouMind 叠层卡片质感 (Stacked Cards) */
+.hero-card-stack-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.hero-card-stack-underlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.hero-card-stack-underlay.underlay-2 {
+  transform: translate(-3px, -5px) rotate(-1.4deg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  opacity: 0.35;
+  z-index: 1;
+}
+
+.hero-card-stack-underlay.underlay-1 {
+  transform: translate(2px, -3px) rotate(0.9deg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  opacity: 0.55;
+  z-index: 2;
+}
+
+:root[data-theme="dark"] .hero-card-stack-underlay {
+  background: #111113;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-card-stack-underlay {
+    background: #111113;
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.page-hero-card.youmind-exact-card {
+  position: relative;
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--line-strong);
-  border-radius: 18px;
-  padding: 16px 14px;
+  border-radius: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  box-shadow: var(--shadow);
-  gap: 10px;
+  text-align: left;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+  z-index: 3;
+  transition: box-shadow 0.2s ease;
 }
 
-/* 立体叠层卡片效果 (图 1 YouMind 对标) */
-.hero-preview-stack {
-  position: relative;
-  width: 160px;
-  height: 82px;
-  margin: 0 auto 2px;
-}
-
-.hero-sheet-back {
-  position: absolute;
-  top: 0;
-  left: 14px;
-  right: 2px;
-  bottom: 8px;
-  border-radius: 10px;
-  background: var(--canvas-deep);
-  border: 1px solid var(--line);
-  transform: rotate(3deg);
-  opacity: 0.65;
-}
-
-.hero-sheet-front {
-  position: absolute;
-  top: 6px;
-  left: 4px;
-  right: 12px;
-  bottom: 0;
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  padding: 7px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-:root[data-theme="dark"] .hero-sheet-front {
+:root[data-theme="dark"] .page-hero-card.youmind-exact-card {
   background: #141416;
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.65);
 }
 
-.hero-sheet-header {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page-hero-card.youmind-exact-card {
+    background: #141416;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.65);
+  }
 }
 
-.hero-sheet-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-
-.hero-sheet-bar {
-  margin-left: 4px;
-  height: 3px;
-  width: 42px;
-  border-radius: 2px;
-  background: var(--line);
-}
-
-.hero-sheet-body {
-  display: flex;
-  gap: 6px;
-  flex: 1;
-  align-items: center;
-}
-
-.hero-sheet-mock-block {
-  width: 32px;
-  height: 32px;
-  border-radius: 5px;
-  background: var(--canvas-deep);
-  border: 1px dashed var(--line);
-  flex-shrink: 0;
-}
-
-.hero-sheet-mock-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.hero-sheet-mock-lines .line {
-  height: 3px;
-  border-radius: 2px;
-  background: var(--line);
-  display: block;
-}
-
-.hero-sheet-mock-lines .line.w-80 { width: 80%; }
-.hero-sheet-mock-lines .line.w-60 { width: 60%; }
-.hero-sheet-mock-lines .line.w-40 { width: 40%; }
-
-.hero-top-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.hero-app-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--canvas-deep);
+/* 顶部真实大图封面 (Hero Cover Image) */
+.hero-card-cover-box {
+  width: 100%;
+  height: calc(152px * var(--ui-scale));
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000000;
   border: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
-:root[data-theme="dark"] .hero-app-badge {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
+.hero-card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.hero-app-badge img {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
+.hero-card-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.75) 100%);
+  color: var(--faint);
+}
+
+/* 平台标识行 (Platform Row) */
+.hero-platform-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-square-badge {
+  width: calc(18px * var(--ui-scale));
+  height: calc(18px * var(--ui-scale));
+  border-radius: 4px;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
 }
 
 .hero-platform-text {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(11.5px * var(--ui-scale));
   color: var(--muted);
   font-weight: 500;
 }
 
-.hero-page-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 95%;
-}
-
-.hero-meta-title {
-  font-size: calc(13px * var(--ui-scale));
-  font-weight: 650;
+/* 主标题行 (Main Title) */
+.hero-card-title {
+  margin-top: 5px;
+  font-size: calc(14.5px * var(--ui-scale));
+  font-weight: 700;
   color: var(--ink-strong);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-align: left;
+  word-break: break-word;
 }
 
-.hero-meta-url {
-  font-size: calc(11px * var(--ui-scale));
-  color: var(--muted);
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
+/* 底部半悬浮保存药丸按钮 (1:1 YouMind 药丸居中) */
+.hero-card-action-shelf {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 /* design.md 主执行行动按钮 (Dark 纯白底纯黑字 / Light 纯黑底纯白字 Ink CTA 严禁深蓝与紫色) */
 .hero-action-pill-btn {
-  margin-top: 6px;
-  height: 34px;
-  padding: 0 20px;
+  height: calc(36px * var(--ui-scale));
+  padding: 0 calc(30px * var(--ui-scale));
   border-radius: 9999px;
   background: var(--ink-strong) !important;
   color: var(--canvas) !important;
-  font-size: calc(12.5px * var(--ui-scale));
+  font-size: calc(13px * var(--ui-scale));
   font-weight: 600;
-  border: 1px solid var(--line-strong) !important;
+  border: none !important;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
@@ -4064,7 +4045,7 @@ textarea:focus-visible {
 }
 
 .hero-action-pill-btn:hover {
-  opacity: 0.9;
+  opacity: 0.95;
   transform: scale(1.02);
 }
 
