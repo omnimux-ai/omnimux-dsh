@@ -29,8 +29,14 @@ const DOCK_BOTTOM = 20
 /** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
 const DOCK_MAX_WIDTH = 780
 
-/** 承载 Hero 的滚动容器；输入框离开 Hero 会抽掉一块高度，用它做滚动补偿。 */
+/** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 const SCROLLER_SELECTOR = '[class*="scrollBody"]'
+
+/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。 */
+const READ_TOP_MAX = 10
+
+/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。 */
+const DOCK_LEAVE_MAX = 20
 
 const ICON_CHEVRON_DOWN = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -45,6 +51,23 @@ const scheduleFrame = typeof requestAnimationFrame === 'function'
 const cancelFrame = typeof cancelAnimationFrame === 'function'
   ? cancelAnimationFrame
   : (id) => clearTimeout(id)
+
+/**
+ * 读取页面真实的滚动位置：宿主用 `scrollBody` 容器滚动，整页滚动则是 window / documentElement。
+ * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部，
+ * 输入框就该留在底部，而不是被一次空读数顶回页首。
+ *
+ * @param {Element | null} scroller 滚动容器（可能不存在）
+ * @returns {number} 已滚动的像素数；无布局信息时为 0
+ */
+function readPageScrollTop(scroller) {
+  const scrollerTop = Number(scroller?.scrollTop)
+  const windowTop = Number(window?.scrollY ?? window?.pageYOffset)
+  const documentTop = Number(document?.documentElement?.scrollTop)
+  return [scrollerTop, windowTop, documentTop]
+    .filter((value) => Number.isFinite(value))
+    .reduce((max, value) => Math.max(max, value), 0)
+}
 
 /**
  * 「Trending Videos, Ready to Replicate」爆款对标与一键复刻板块。
@@ -96,10 +119,11 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       sessionStorage.setItem('omnimux-guide-tab', tab)
     } catch {}
   }
-  const prevDockedItemRef = useRef(null)
   const sectionRef = useRef(null)
   // 生效过的宿主根节点。卸载清理必须用它，而不是已被 React 解绑的 DOM ref。
   const dockHostRef = useRef(null)
+  // 待落地的复刻意图。必须等输入框真的吸底就位后再交出去，见下方 flush 布局效果。
+  const pendingPromptRef = useRef(null)
   // 当前接管的目标。附件栏与技能通道的监听都靠 ref 读实时值，
   // 避免每次换片都重建订阅（重建窗口里的事件会漏听）。
   const dockedItemRef = useRef(null)
@@ -218,11 +242,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     dockHostRef.current = root
 
     const card = root.querySelector?.('[data-composer-card]')
+    // 承载原生输入框的那一层：吸底期间由它替输入框留着原位的占位高度
+    const band = card?.parentElement || root
 
     // 停靠几何取自输入框所在的 Hero 栏：它始终留在文档流里，
     // 即使输入框已经脱离流也保持原始的 left/width，缩放窗口时仍然算得准。
     const writeGeometry = () => {
-      const band = card?.parentElement || root
       const rect = band?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
       const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, rect.width - 24))
@@ -234,30 +259,28 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       if (height) root.style.setProperty('--omnimux-dock-card-height', `${Math.round(height)}px`)
     }
 
-    // FLIP 测量变更前：在变更任何属性与类名前，同步测量当前视觉绝对位置
+    // FLIP 测量变更前：在变更任何属性与类名前，同步测量当前视觉绝对位置。
+    // 同时量下 Hero 栏此刻真实占用的高度——输入框改成 fixed 后会脱离文档流，
+    // 这一层会当场塌成 0 高、下方内容整体上移；把量到的高度写回 min-height 就能原地钉住。
     const from = card?.getBoundingClientRect?.()
-
-    const scroller = root.querySelector?.(SCROLLER_SELECTOR) || null
-    const before = sectionRef.current?.getBoundingClientRect?.().top
+    const fromBand = band?.getBoundingClientRect?.()
 
     const shouldDock = Boolean(dockedItem && placement === 'docked')
     const currentlyDocked = root.hasAttribute(DOCK_OPEN_ATTR)
 
     if (shouldDock) {
       writeGeometry()
+      const reserved = Math.round(fromBand?.height || from?.height || 0)
+      if (band && reserved > 0) band.style.minHeight = `${reserved}px`
       root.setAttribute(DOCK_OPEN_ATTR, '')
     } else {
+      if (band) band.style.minHeight = ''
       root.removeAttribute(DOCK_OPEN_ATTR)
     }
 
-    const after = sectionRef.current?.getBoundingClientRect?.().top
-    const intentChanged = prevDockedItemRef.current !== dockedItem
-    prevDockedItemRef.current = dockedItem
-
-    // 注意：滚动补偿仅在用户主动点击复刻/收起意图变更时发生，滚动中触发的 placement 切换绝不能做补偿，否则会死循环抖动。
-    if (intentChanged && scroller && Number.isFinite(before) && Number.isFinite(after) && after !== before) {
-      scroller.scrollTop += after - before
-    }
+    // 这里**不做任何 scrollTop 补偿**：输入框吸底后原槽位由上面的占位高度撑住，
+    // 页面本来就零位移，再补偿一次等于凭空把滚动条往上抽——用户正在看的列表会被
+    // 一把拽回顶部。滚动只由用户手势驱动。
 
     // FLIP 过渡：若吸底属性发生切换且前后具备有效布局，执行丝滑位移与透明度过渡
     let cancelAnim = null
@@ -315,31 +338,42 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     }
   }, [dockedItem, placement])
 
-  // 滚回原位就把输入框放回流内、滑开再吸回来；两个阈值分开做迟滞，避免边界反复横跳。
+  // 复刻意图**只在输入框真的吸底就位之后**才交回会话输入框所有权方。
+  // 这一步必须是布局效果：上面那个效果已经把停靠属性与占位高度写进 DOM，
+  // 此刻输入框已是 fixed 的底部形态，宿主再怎么聚焦都只会落在底部——
+  // 若提前到点击那一刻交出去，输入框还在 Hero 流内，原生聚焦会触发浏览器
+  // scrollIntoView，页面被瞬间抽回顶部，用户正看的灵感列表当场消失。
+  useLayoutEffect(() => {
+    const pending = pendingPromptRef.current
+    if (!pending) return
+    pendingPromptRef.current = null
+    onApplyPrompt?.(pending.prompt, pending.item)
+  }, [dockedItem, placement, onApplyPrompt])
+
+  // 点击复刻后**默认一直在底部**：只有用户主动向上滑、把页面真正滑回最顶部，
+  // 才把输入框放回原位；一旦滑离顶部立刻吸回底。判定只认页面滚动位置，
+  // 不看「原位槽位此刻是否在视口里」——页面本身不长，槽位常常还在视口内，
+  // 用可视性判定会把每一次滚动（含聚焦、挂附件触发的滚动）都误判成「该归还了」。
   useEffect(() => {
     if (!dockedItem) return undefined
     const root = dockHostRef.current
     const scroller = root?.querySelector?.(SCROLLER_SELECTOR) || null
     let frame = 0
+    // 「滑回顶部」是一次手势，不是一次位置读数：复刻那一刻页面若本来就停在最顶部，
+    // 必须先真的滑下去再滑回来才算数，否则首帧就会被一次空滚动事件顶回原位。
+    let leftTop = readPageScrollTop(scroller) > DOCK_LEAVE_MAX
 
     const evaluate = () => {
       frame = 0
-      const card = root?.querySelector?.('[data-composer-card]')
-      const band = card?.parentElement
-      if (!band) return
-      const rect = band.getBoundingClientRect?.()
-      // 没有布局信息（JSDOM / 尚未挂载）时不猜，保持吸底
-      if (!rect || (rect.width <= 0 && rect.height <= 0)) return
-      const viewportH = window.innerHeight || document.documentElement?.clientHeight || 0
-      // 归还判定：原位槽位顶边已真实进入视口可见区时才切回 inline，
-      // 绝不在仅露出一丝下边缘甚至还在视口上方时提前起飞
-      const slotVisibleAtTop = rect.top >= 0 && rect.top < viewportH - 80
-      // 吸底判定：离开视口 24px 以上（含上方滑出与下方滑出）迟滞切回吸底
-      const slotScrolledOut = rect.bottom < -24 || rect.top > viewportH + 24
-
+      const scrollTop = readPageScrollTop(scroller)
+      if (scrollTop > DOCK_LEAVE_MAX) leftTop = true
       setPlacement((prev) => {
-        if (prev === 'docked') return slotVisibleAtTop ? 'inline' : prev
-        return slotScrolledOut ? 'docked' : prev
+        // 真的滑回了页面最顶部，且此前确实滑下去过 → 还原位
+        if (scrollTop <= READ_TOP_MAX && leftTop) return 'inline'
+        // 已经滑离顶部 → 一律吸底，绝不停在页首
+        if (scrollTop > DOCK_LEAVE_MAX) return 'docked'
+        // 迟滞区（顶部阈值与吸底阈值之间）：维持现状，边界上不横跳
+        return prev
       })
     }
 
@@ -348,14 +382,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       frame = scheduleFrame(evaluate)
     }
 
-    // 接管当帧不做几何判定：这一刻的吸底就是点击意图本身，若立刻按「原位是否可见」
-    // 反悔，首帧就会闪回 inline。只有真实滚动 / 缩放才重新判定。
-    const target = scroller || window
-    target.addEventListener('scroll', onScroll, { passive: true })
+    // 接管当帧不做判定：这一刻的吸底就是点击意图本身。只有真实滚动 / 缩放才重新判定。
+    // 两个滚动源都听：宿主用 scrollBody 容器滚动，外层窗口滚动也要算数。
+    const targets = [scroller, window].filter(Boolean)
+    for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
     return () => {
       if (frame) cancelFrame(frame)
-      target.removeEventListener('scroll', onScroll)
+      for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
   }, [dockedItem])
@@ -370,6 +404,9 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     root.style.removeProperty('--omnimux-dock-width')
     root.style.removeProperty('--omnimux-dock-bottom')
     root.style.removeProperty('--omnimux-dock-card-height')
+    // 占位高度是写在宿主节点上的内联样式，卸载必须还回去，否则 Hero 栏会永久多出一块空白
+    const band = root.querySelector?.('[data-composer-card]')?.parentElement
+    if (band) band.style.minHeight = ''
     // FLIP 过渡写下的内联样式也要清掉，别把控件永久留在过渡态
     const card = root.querySelector?.('[data-composer-card]')
     if (card) {
@@ -410,13 +447,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
 
     // 复刻是明确的吸底意图：首帧一律停靠到视口底部，绝不因为原位此刻恰好还在视口里
     // 就把输入框留在页首——那等于把用户的浏览节奏打断在顶部。
-    // 滚动感知交给迟滞监听：只有用户真的滚回原位，输入框才会被放回流内。
+    // 归还只由滚动位置决定：只有用户真的把页面滑回最顶部，输入框才会被放回流内。
     setPlacement('docked')
     setDockedItem(item)
     publishActiveSkill(RECREATE_SKILL)
     armSkillReleaseWatch()
-    onApplyPrompt?.(RECREATE_PROMPT, item)
-  }, [dockedItem, disarmSkillReleaseWatch, dropRecreateSkill, armSkillReleaseWatch, onApplyPrompt])
+    // 意图先攒着，等输入框吸底就位后由布局效果交出去（见 pendingPromptRef 的说明）
+    pendingPromptRef.current = { prompt: RECREATE_PROMPT, item }
+  }, [dockedItem, disarmSkillReleaseWatch, dropRecreateSkill, armSkillReleaseWatch])
 
   const handleSelectSkill = useCallback((skill) => {
     if (dockedItem?.id === skill.id) {
@@ -426,8 +464,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     // 与复刻同源：选用技能同样先吸底呈现，再由滚动迟滞监听决定何时收回原位。
     setPlacement('docked')
     setDockedItem(skill)
-    onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
-  }, [dockedItem, onApplyPrompt, t])
+    pendingPromptRef.current = { prompt: buildSkillPrompt(skill, t), item: skill }
+  }, [dockedItem, t])
 
   return (
     <section

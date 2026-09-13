@@ -152,6 +152,87 @@ const SECTION_FIXTURE = [
   '</div>',
 ].join('')
 
+/**
+ * 带滚动容器的宿主骨架。宿主真正的滚动发生在 `scrollBody` 上，
+ * 「页面顶部」就是它的 `scrollTop === 0`——归还判定只认这个读数。
+ */
+const DOCK_FIXTURE = [
+  '<div id="root" data-omnimux-starter-host data-phase="hero">',
+  '<div class="scrollBody">',
+  '<div data-composer-seat><div class="band"><div data-composer-card>',
+  '<button data-send-button>Send</button>',
+  '</div></div></div>',
+  '<div id="seat"></div>',
+  '</div>',
+  '</div>',
+].join('')
+
+/**
+ * JSDOM 不做布局，这里给宿主一个可控矩形。
+ *
+ * @param {{dom: object}} env withDom 返回的环境
+ * @param {Element} host 宿主根节点
+ * @param {number} slotTop 原位槽位顶边在视口中的位置；默认落在可见区内，
+ *   即用户反馈的场景——按「原位可不可见」判归还必然误判。
+ * @param {number} [collapse] 吸附后下方内容整体上移的位移，用来复现
+ *   「输入框脱离文档流 → 原位塌陷 → 旧实现拿它做滚动补偿把滚动条抽回顶部」。
+ */
+function stubLayout(env, host, slotTop, collapse = 0) {
+  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
+    const shifted = host.hasAttribute('data-omnimux-dock-open') ? -collapse : 0
+    const top = slotTop + shifted
+    return {
+      x: 394, y: top, left: 394, top, width: 1200, height: 166,
+      right: 1594, bottom: top + 166, toJSON() { return this },
+    }
+  }
+}
+
+/** 把宿主滚动条移到指定位置并派发一次真实滚动事件（判定走 rAF，需要放行一帧）。 */
+async function scrollTo(scroller, top) {
+  await act(async () => {
+    scroller.scrollTop = top
+    scroller.dispatchEvent(new window.Event('scroll'))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
+
+/** 渲染一个带滚动容器的宿主，返回停靠断言常用的句柄。 */
+async function renderDockSection({ slotTop = 100, collapse = 0, onApplyPrompt = () => {} } = {}) {
+  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
+  const env = withDom(DOCK_FIXTURE)
+  const host = document.querySelector('#root')
+  const scroller = host.querySelector('.scrollBody')
+  const band = host.querySelector('[data-composer-card]').parentElement
+  stubLayout(env, host, slotTop, collapse)
+  const stub = stubFetch(SOURCE_ROWS)
+  const root = createRoot(host.querySelector('#seat'))
+
+  await act(async () => {
+    root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt }))
+  })
+  await flush()
+
+  return {
+    env,
+    host,
+    band,
+    scroller,
+    root,
+    stub,
+    DOCK_OPEN_ATTR,
+    docked: () => host.hasAttribute(DOCK_OPEN_ATTR),
+    async recreate(index = 0) {
+      await click(host.querySelectorAll('.omnimux-trending-recreate-btn')[index])
+    },
+    async teardown() {
+      await act(async () => root.unmount())
+      stub.restore()
+      env.restore()
+    },
+  }
+}
+
 async function renderSection({ rows = SOURCE_ROWS, ...stubOptions } = {}) {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
   const env = withDom(SECTION_FIXTURE)
@@ -490,98 +571,134 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
   }
 })
 
-test('TrendingReplicateSection：复刻吸底并给出停靠几何，滚回原位归还、再滑开重新吸底（含回收）', async () => {
-  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
-  const env = withDom(SECTION_FIXTURE)
-  const host = document.querySelector('#root')
-  // JSDOM 不做布局，这里给 Hero 栏一个可控矩形：bandTop 决定它在视口内还是视口外
-  let bandTop = 1000
-  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
-    return {
-      x: 394, y: bandTop, left: 394, top: bandTop, width: 1200, height: 166,
-      right: 1594, bottom: bandTop + 166, toJSON() { return this },
-    }
-  }
-  const stub = stubFetch(SOURCE_ROWS)
-  const root = createRoot(host.querySelector('#seat'))
-  const scroll = async () => {
-    await act(async () => {
-      window.dispatchEvent(new window.Event('scroll'))
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
-  }
+test('TrendingReplicateSection：复刻吸底给出停靠几何，只有滑回页面最顶部才归还，滑开立刻吸回（含回收）', async () => {
+  const view = await renderDockSection({ slotTop: 100 })
 
   try {
-    await act(async () => {
-      root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
-    })
-    await flush()
-
-    await click(host.querySelector('.omnimux-trending-recreate-btn'))
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '复刻必须吸底')
+    // 用户正在灵感列表里往下浏览
+    await scrollTo(view.scroller, 900)
+    await view.recreate()
+    assert.equal(view.docked(), true, '复刻必须吸底')
     // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '604px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
 
-    // 滚回原位：输入框回流动内，底部那个让位
-    bandTop = 100
-    await scroll()
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '原位进入视口后必须把输入框放回流内')
+    // 仍然在浏览灵感（没有滑到最顶部）→ 必须一直吸底
+    await scrollTo(view.scroller, 500)
+    assert.equal(view.docked(), true, '没滑到最顶部就必须留在底部')
+    await scrollTo(view.scroller, 120)
+    assert.equal(view.docked(), true, '原位可见也不算数：只要不在最顶部就绝不弹回页首')
 
-    // 再滑开：重新吸底（迟滞要求离开视口 24px 以上）
-    bandTop = 1000
-    await scroll()
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '再次滑出视口应当重新吸底')
+    // 迟滞区（10 < scrollTop <= 20）：维持吸底，边界上不来回横跳
+    await scrollTo(view.scroller, 18)
+    assert.equal(view.docked(), true, '迟滞区内不得来回横跳')
 
-    await act(async () => root.unmount())
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '板块卸载必须回收停靠标记')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '')
+    // 真正向上滑回页面最顶部 → 归还
+    await scrollTo(view.scroller, 0)
+    assert.equal(view.docked(), false, '滑回页面最顶部才还原位')
+
+    // 再滑开 → 立刻吸回底
+    await scrollTo(view.scroller, 400)
+    assert.equal(view.docked(), true, '滑离顶部应当重新吸底')
+
+    await act(async () => view.root.unmount())
+    assert.equal(view.docked(), false, '板块卸载必须回收停靠标记')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '', '板块卸载必须清掉停靠几何变量')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '')
+    assert.equal(view.band.style.minHeight, '', '板块卸载必须还回原位占位高度')
   } finally {
-    stub.restore()
-    env.restore()
+    await view.teardown()
   }
 })
 
-test('TrendingReplicateSection：复刻首帧一律吸底（原位在视口内也一样），滚回顶部原位才解除吸底', async () => {
-  const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
-  const env = withDom(SECTION_FIXTURE)
-  const host = document.querySelector('#root')
-  // 原位始终落在视口可见区：复刻仍然必须先吸底，不允许几何判定抢走首帧
-  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
-    return {
-      x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
-      right: 1594, bottom: 266, toJSON() { return this },
-    }
-  }
-  const stub = stubFetch(SOURCE_ROWS)
-  const root = createRoot(host.querySelector('#seat'))
-  const scroll = async () => {
-    await act(async () => {
-      window.dispatchEvent(new window.Event('scroll'))
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
-  }
+test('TrendingReplicateSection：吸底绝不动用户的滚动条（原位塌陷不得被当成滚动补偿）', async () => {
+  // 吸底后下方内容整体上移 180px：旧实现拿这个位移做 scrollTop 补偿，
+  // 一把把滚动条往顶部抽——用户scrollTop 本来就不大，直接回到页面最顶部。
+  const view = await renderDockSection({ slotTop: 1000, collapse: 180 })
 
   try {
-    await act(async () => {
-      root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
-    })
-    await flush()
+    await scrollTo(view.scroller, 150)
+    await view.recreate()
 
-    await click(host.querySelector('.omnimux-trending-recreate-btn'))
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '点击复刻首帧必须吸底，无论原位是否还在视口内')
-    assert.ok(host.querySelector('.omnimux-trending-undock'), '吸底时必须给出底部收起入口')
-
-    // 向上滚回顶部原位：原位真实可见 → 解除吸底，输入框回到流内
-    await scroll()
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '滚回顶部原位必须自动解除吸底切回 inline')
-    assert.equal(host.querySelector('.omnimux-trending-undock'), null, '回流内后不再显示底部收起入口')
+    assert.equal(view.docked(), true, '复刻必须吸底')
+    assert.equal(view.scroller.scrollTop, 150, '吸底不得改写用户的滚动位置：抽回顶部是致命缺陷')
+    assert.equal(view.scroller.scrollTop >= 0, true, '滚动位置不得被补偿成负值')
+    assert.equal(view.band.style.minHeight, '166px', '原位槽位必须留出占位高度，布局零位移')
   } finally {
-    stub.restore()
-    env.restore()
+    await view.teardown()
+  }
+})
+
+test('TrendingReplicateSection：复刻首帧必吸底，原位仍在视口内且没滑到最顶部时绝不弹回 inline', async () => {
+  // 原位始终落在视口可见区：这正是用户反馈的场景，按「原位可不可见」判归还必然误判
+  const view = await renderDockSection({ slotTop: 100 })
+
+  try {
+    await scrollTo(view.scroller, 600)
+    await view.recreate()
+    assert.equal(view.docked(), true, '点击复刻首帧必须吸底，无论原位是否还在视口内')
+    assert.ok(view.host.querySelector('.omnimux-trending-undock'), '吸底时必须给出底部收起入口')
+
+    // 聚焦、挂附件、追加批次都会甩出滚动事件：只要没滑到最顶部就必须纹丝不动
+    await scrollTo(view.scroller, 600)
+    assert.equal(view.docked(), true, '一次空滚动事件不得把输入框顶回原位')
+    await scrollTo(view.scroller, 21)
+    assert.equal(view.docked(), true, 'scrollTop > 20 必须保持吸底')
+
+    // 滑回最顶部（<= 10）才切回 inline
+    await scrollTo(view.scroller, 8)
+    assert.equal(view.docked(), false, '只有滑回最顶部才切回 inline')
+    assert.equal(view.host.querySelector('.omnimux-trending-undock'), null, '回流内后不再显示底部收起入口')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('TrendingReplicateSection：停在页面最顶部点击复刻仍先吸底，必须真的滑开再滑回才还原位', async () => {
+  // 页面本来就在最顶部：没有「滑下去」这个动作，就不该被一次空滚动事件判成「滑回顶部」
+  const view = await renderDockSection({ slotTop: 100 })
+
+  try {
+    await view.recreate()
+    assert.equal(view.docked(), true, '首帧必吸底')
+
+    await scrollTo(view.scroller, 0)
+    assert.equal(view.docked(), true, '没滑下去过就不算滑回顶部，不得提前起飞')
+
+    await scrollTo(view.scroller, 300)
+    assert.equal(view.docked(), true, '滑下去之后仍然吸底')
+
+    await scrollTo(view.scroller, 0)
+    assert.equal(view.docked(), false, '真的滑回页面最顶部才还原位')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('TrendingReplicateSection：复刻意图只在输入框吸底就位之后才交出去（避免聚焦把页面抽回顶部）', async () => {
+  // 采样点就是断言点：宿主收到意图的那一刻，会去聚焦原生输入框。
+  // 若此刻还没吸底，输入框仍在 Hero 流内，原生聚焦会触发 scrollIntoView 把页面抽回顶部。
+  const dockedWhenApplied = []
+  const applied = []
+  const view = await renderDockSection({
+    slotTop: 100,
+    onApplyPrompt: (prompt) => {
+      applied.push(prompt)
+      dockedWhenApplied.push(document.querySelector('#root').hasAttribute('data-omnimux-dock-open'))
+    },
+  })
+
+  try {
+    await scrollTo(view.scroller, 700)
+    await view.recreate()
+
+    assert.deepEqual(applied, ['复刻这条爆款视频'], '复刻意图必须交出去（且只交一次）')
+    assert.deepEqual(dockedWhenApplied, [true], '意图落地时输入框必须已经吸底就位，否则聚焦会把页面抽回顶部')
+    assert.equal(view.docked(), true)
+  } finally {
+    await view.teardown()
   }
 })
 

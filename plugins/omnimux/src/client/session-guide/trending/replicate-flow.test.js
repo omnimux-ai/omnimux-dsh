@@ -25,12 +25,37 @@ async function loadComponent(entry) {
 
 const SECTION_FIXTURE = [
   '<div id="root" data-omnimux-starter-host data-phase="hero">',
+  '<div class="scrollBody">',
   '<div data-composer-seat><div class="band"><div data-composer-card>',
   '<button data-send-button>Send</button>',
   '</div></div></div>',
   '<div id="seat"></div>',
   '</div>',
+  '</div>',
 ].join('')
+
+/**
+ * JSDOM 不做布局，这里给宿主一个可控矩形。
+ * 原位槽位**始终落在视口可见区**（top=100）：这正是用户反馈的场景，
+ * 归还判定若看「原位可不可见」，每一次滚动都会被误判成「该归还了」。
+ */
+function stubLayout(env, host) {
+  env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
+    return {
+      x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
+      right: 1594, bottom: 266, toJSON() { return this },
+    }
+  }
+}
+
+/** 把宿主滚动条移到指定位置并派发一次真实滚动事件（判定走 rAF，需要放行一帧）。 */
+async function scrollTo(scroller, top) {
+  await act(async () => {
+    scroller.scrollTop = top
+    scroller.dispatchEvent(new window.Event('scroll'))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
 
 /** 灵感库真实行：带封面与来源视频，确保 previewUrl / relativePath 都来自真实字段。 */
 const SOURCE_ROWS = [
@@ -129,6 +154,9 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
   window.addEventListener('omnimux:skill:changed', (event) => skillEvents.push(event.detail?.skill || null))
 
   const root = createRoot(host.querySelector('#seat'))
+  // 宿主的滚动发生在 scrollBody 上；停靠判定只认它的 scrollTop
+  const scroller = host.querySelector('.scrollBody')
+  stubLayout(env, host)
   const paint = () => act(async () => {
     root.render(React.createElement(sectionModule.TrendingReplicateSection, {
       t: (key) => key,
@@ -144,11 +172,15 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
     env,
     host,
     root,
+    scroller,
     stub,
     applied,
     skillEvents,
     store: globalStore,
     Section: sectionModule.TrendingReplicateSection,
+    DOCK_OPEN_ATTR: sectionModule.DOCK_OPEN_ATTR,
+    /** 原生输入框此刻是否被停在会话视口底部。 */
+    docked: () => host.hasAttribute(sectionModule.DOCK_OPEN_ATTR),
     get sessionId() { return boundSessionId },
     attachments: () => globalStore.getSnapshot(boundSessionId),
     /** 模拟宿主换会话：同一个组件实例，只换 sessionId。 */
@@ -432,6 +464,98 @@ test('复刻联动：技能通道改挂别的技能不算撤回复刻，复刻�
       targetId,
       '留在附件栏的仍是用户点过的那条对标片',
     )
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('复刻联动：点击复刻后守在底部，浏览灵感期间不篡改页面位置、不弹回页首', async () => {
+  const view = await renderSection()
+  try {
+    const firstId = view.cards()[0].getAttribute('data-trending-id')
+    // 用户正在灵感列表里往下浏览：默认就该在底部出现
+    await scrollTo(view.scroller, 900)
+
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), true, '复刻必须停在会话视口底部')
+    assert.equal(view.scroller.scrollTop, 900, '吸底不得改写用户的滚动位置')
+
+    // 继续浏览：原位槽位仍在视口内也不许弹回页首
+    await scrollTo(view.scroller, 420)
+    assert.equal(view.docked(), true, '只要没滑回最顶部，原位可见也绝不弹回页首')
+    assert.equal(view.attachments()[0].entityId, firstId, '吸底期间复刻对象始终挂得住')
+
+    // 换片：接管的仍是底部那一个输入框，页面位置同样不受影响
+    await click(view.cards()[1].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), true, '换片后仍须守在底部')
+    assert.equal(view.scroller.scrollTop, 420, '换片不得改写用户的滚动位置')
+    assert.equal(view.attachments().length, 1, '换片仍是替换而不是新增')
+
+    // 再点同一张卡片 → 撤回复刻、输入框归位
+    await click(view.cards()[1].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), false, '再点同一张卡片应归还输入框')
+    assert.equal(view.activeCardId(), null)
+
+    // 重新接管，滑回页面最顶部 → 平滑切回默认位置
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), true)
+    await scrollTo(view.scroller, 0)
+    assert.equal(view.docked(), false, '只有滑回页面最顶部才切回默认位置')
+    assert.equal(view.attachments().length, 1, '还原位不改变复刻挂载')
+
+    // 再滑开 → 立刻吸回底
+    await scrollTo(view.scroller, 300)
+    assert.equal(view.docked(), true, '滑离顶部应当重新吸底')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('复刻联动：吸底状态下附件卡 ✕ 与技能药丸 ✕ 仍能正常收回输入框', async () => {
+  const view = await renderSection()
+  const band = view.host.querySelector('[data-composer-card]').parentElement
+  try {
+    await scrollTo(view.scroller, 800)
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), true, '前置条件：复刻已吸底')
+    assert.equal(band.style.minHeight, '166px', '吸底期间原位必须留着占位高度')
+
+    // 附件卡 ✕：订阅在板块首次提交后建立，这里补一次提交让订阅就位
+    await act(async () => view.root.render(React.createElement(view.Section, {
+      t: (key) => key,
+      sessionId: view.sessionId,
+      onApplyPrompt: () => {},
+    })))
+    await flush()
+    await act(async () => {
+      view.store.removeAttachment(view.sessionId, view.attachments()[0].id)
+    })
+    await flush()
+    assert.equal(view.docked(), false, '附件被移除后输入框必须回到原位')
+    assert.equal(band.style.minHeight, '', '归位时必须把占位高度还回去，不留空白')
+    assert.equal(window.__omnimuxActiveSkill, null)
+
+    // 重新接管后再走技能药丸 ✕
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.docked(), true)
+    await act(async () => {
+      window.__omnimuxActiveSkill = null
+      window.dispatchEvent(new window.CustomEvent('omnimux:skill:changed', { detail: { skill: null } }))
+    })
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    await flush()
+    assert.equal(view.docked(), false, '药丸移除技能后输入框必须回到原位')
+    assert.equal(view.attachments().length, 0, '药丸移除技能必须同步撤下复刻附件')
+    assert.equal(band.style.minHeight, '')
   } finally {
     await view.teardown()
   }
