@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-09-13T06:51:23.720Z",
+  "updatedAt": "2026-09-13T15:28:44.752Z",
   "topology": {
     "tiers": [
       {
@@ -23,8 +23,8 @@
       }
     ],
     "summary": {
-      "totalPlugins": 14,
-      "totalTools": 73,
+      "totalPlugins": 16,
+      "totalTools": 74,
       "totalSeams": 6
     }
   },
@@ -718,9 +718,7 @@
           }
         ],
         "seamsProvided": [],
-        "seamsConsumed": [
-          "reader"
-        ],
+        "seamsConsumed": [],
         "slots": [
           {
             "target": "sidebar.extra",
@@ -921,6 +919,40 @@
       "path": "plugins/omnimux-video"
     },
     {
+      "id": "omnimux-intercept",
+      "name": "omnimux-intercept",
+      "version": "0.1.0",
+      "tier": "tier-3-personal",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "推特推文爆速检测与智能截流：按存活小时数计算时速与三档爆速分级，预估抢评曝光，并生成高赞评论/引用转发草稿（只出草稿，不自动发帖）",
+      "tags": [
+        "twitter",
+        "x",
+        "intercept",
+        "viral",
+        "pace",
+        "comment",
+        "drafts"
+      ],
+      "capabilities": {
+        "tools": [],
+        "seamsProvided": [],
+        "seamsConsumed": [],
+        "slots": [],
+        "storageDomains": [
+          "$DSH_HOME/omnimux-intercept/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [],
+        "systemBinaries": [
+          "opencli"
+        ]
+      },
+      "path": "plugins/omnimux-intercept"
+    },
+    {
       "id": "omnimux-publish",
       "name": "omnimux-publish",
       "version": "0.1.0",
@@ -1090,6 +1122,44 @@
         "systemBinaries": []
       },
       "path": "plugins/omnimux-video-preview"
+    },
+    {
+      "id": "omnimux-viewer",
+      "name": "omnimux-viewer",
+      "version": "0.1.0",
+      "tier": "tier-3-extension",
+      "entrypoint": "lib/index.js",
+      "status": "active",
+      "description": "OmniMux 内联文件预览：把图片、视频、音频、PDF、Office 与 HTML 渲染进对话流（上游 @crosery/dsh-viewer 的 OmniMux fork，见 VENDOR.md）。",
+      "tags": [
+        "viewer",
+        "preview",
+        "display-file",
+        "media",
+        "fork"
+      ],
+      "capabilities": {
+        "tools": [
+          {
+            "name": "display_file",
+            "summary": "在 Web 界面里就地渲染一个文件（图片/视频/音频/PDF/Office/HTML），供用户直接看到或听到",
+            "category": "media",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          }
+        ],
+        "seamsProvided": [],
+        "seamsConsumed": [],
+        "slots": [
+          "tool.call.toolview"
+        ],
+        "storageDomains": []
+      },
+      "dependencies": {
+        "harness": [],
+        "plugins": []
+      },
+      "path": "plugins/omnimux-viewer"
     }
   ]
 }

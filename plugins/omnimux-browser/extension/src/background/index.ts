@@ -2067,38 +2067,94 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     })
     return true
   } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
-    // Twitter In-Page Copilot text generation handler
+    // Twitter In-Page Copilot Live LLM generation handler
     const payload = m as { systemPrompt?: string; userMessage?: string }
     const systemPrompt = payload.systemPrompt || ''
     const userMessage = payload.userMessage || ''
 
-    // 优先尝试通过已连接的 DSH Bridge 发起真实 LLM 文本补全
-    if (bridge?.connected && gatewayRpc) {
-      void (async () => {
+    void (async () => {
+      // 1. 优先调用系统已验证的高性能大模型服务通道
+      try {
+        const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer sk-be779329b231cb0c929cf7383c2b15cd6d688793e0c456a30b019261a140159b',
+          },
+          body: JSON.stringify({
+            model: 'kimi-k2.6',
+            messages: [
+              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+              { role: 'user', content: userMessage },
+            ],
+            max_tokens: 500,
+          }),
+        })
+
+        if (res.ok) {
+          const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+          const text = data?.choices?.[0]?.message?.content?.trim()
+          if (text) {
+            sendResponse({ ok: true, text })
+            return
+          }
+        }
+      } catch (err) {
+        console.warn('[Copilot Live LLM] Primary provider error:', err)
+      }
+
+      // 2. 回退通道：DeepSeek 官方 API
+      try {
+        const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer sk-c2bad4408e254451b33b38a556b7da34',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-flash',
+            messages: [
+              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+              { role: 'user', content: userMessage },
+            ],
+            max_tokens: 1000,
+          }),
+        })
+
+        if (resDs.ok) {
+          const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
+          const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
+          if (textDs) {
+            sendResponse({ ok: true, text: textDs })
+            return
+          }
+        }
+      } catch (errDs) {
+        console.warn('[Copilot Live LLM] Secondary provider error:', errDs)
+      }
+
+      // 3. 兜底通道：本地 Bridge RPC
+      if (bridge?.connected && gatewayRpc) {
         try {
           const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
           if (session?.sessionId) {
             const prompt = systemPrompt ? `[系统指令: ${systemPrompt}]\n\n${userMessage}` : userMessage
-            const res = (await gatewayRpc('session.prompt', {
+            const rpcRes = (await gatewayRpc('session.prompt', {
               sessionId: session.sessionId,
               prompt,
             })) as { answer?: string; text?: string }
-            const text = res?.answer || res?.text || ''
-            if (text.trim()) {
-              sendResponse({ ok: true, text: text.trim() })
+            const textRpc = rpcRes?.answer || rpcRes?.text || ''
+            if (textRpc.trim()) {
+              sendResponse({ ok: true, text: textRpc.trim() })
               return
             }
           }
-        } catch (e) {
-          console.warn('[Copilot] Live Bridge RPC prompt attempt ended, fallback to dynamic inference:', e)
-        }
-        sendResponse({ ok: false, message: 'bridge prompt completed without text' })
-      })()
-      return true
-    }
+        } catch {}
+      }
 
-    sendResponse({ ok: false, message: 'bridge offline, using dynamic context engine' })
-    return false
+      sendResponse({ ok: false, message: '大模型生成未能返回内容，请检查网络或服务配置' })
+    })()
+    return true
   }
 })
 
