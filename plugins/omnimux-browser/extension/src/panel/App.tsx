@@ -247,10 +247,10 @@ function TrashIcon(): React.JSX.Element {
   )
 }
 
-function ChevronDownIcon(): React.JSX.Element {
+function ChevronDownIcon({ size = 13 }: { size?: number } = {}): React.JSX.Element {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="m5.5 7.5 4.5 4.5 4.5-4.5" />
+    <svg viewBox="0 0 20 20" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 8 10 12 14 8" />
     </svg>
   )
 }
@@ -664,6 +664,30 @@ export function App(): React.JSX.Element {
   const [sessionSearchQuery, setSessionSearchQuery] = useState('')
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [sessionChanging, setSessionChanging] = useState(false)
+
+  // 防止会话切换状态异常滞留导致界面永久冻结
+  useEffect(() => {
+    if (sessionChanging) {
+      const timer = setTimeout(() => {
+        sessionChangingRef.current = false
+        setSessionChanging(false)
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [sessionChanging])
+
+  // 点击空白处自动收起历史会话菜单
+  useEffect(() => {
+    if (!showSessionPicker) return
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.session-picker') && !target.closest('.session-menu-trigger')) {
+        setShowSessionPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showSessionPicker])
   const [sessionList, setSessionList] = useState<SessionPickerEntry[]>([])
   const [relayProfiles, setRelayProfiles] = useState<RelayProfileDraft[]>([])
   const [relayLoaded, setRelayLoaded] = useState(false)
@@ -1523,7 +1547,7 @@ export function App(): React.JSX.Element {
       setShowSessionPicker(false)
       return
     }
-    if (state !== 'connected' || sessionSwitchBlocked || sessionChangingRef.current) return
+    if (sessionSwitchBlocked || sessionChangingRef.current) return
     setShowSessionPicker(true)
     setLoadingSessions(true)
     try {
@@ -1533,7 +1557,9 @@ export function App(): React.JSX.Element {
       if (currentTitle !== undefined) setSessionTitle(currentTitle)
       setSessionList(items)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
+      if (state === 'connected') {
+        setError(cause instanceof Error ? cause.message : String(cause))
+      }
     } finally {
       setLoadingSessions(false)
     }
@@ -1708,10 +1734,10 @@ export function App(): React.JSX.Element {
     const submittedImages = textOverride === undefined ? draftImages : []
     // A quick-start prompt asks about the whole page, not about a quote.
     const submittedSelection = textOverride === undefined ? selection : null
-    const id = sessionRef.current
+    let id = sessionRef.current
     // busy state 是异步的：连续回车可能都通过 state 检查——用 ref 同步锁。
     if ((text === '' && submittedImages.length === 0 && submittedSelection === null)
-      || busy || addingImagesRef.current || sendingRef.current || sessionChangingRef.current || id === null) return
+      || busy || addingImagesRef.current || sendingRef.current) return
     sendingRef.current = true
     const submittedDraft: ComposerDraft<DraftImage> = { text, images: submittedImages }
     if (textOverride === undefined) {
@@ -1722,6 +1748,18 @@ export function App(): React.JSX.Element {
     setError(null)
     // 不渲染乐观行：live user/message 事件即时回显，避免同一消息出现两行。
     try {
+      if (id === null) {
+        const created = await api.rpc<{ sessionId: string }>('session.create', {})
+        sessionRef.current = created.sessionId
+        id = created.sessionId
+        await api.setActiveSession(created.sessionId, true).catch(() => {})
+        if (selectedDefaultModel) {
+          void api.rpc('session.selectModel', {
+            sessionId: created.sessionId,
+            model: selectedDefaultModel,
+          }).catch(() => {})
+        }
+      }
       const clientTimeZone = browserTimeZone()
       const mediaContext = activeMediaItems.length > 0
         ? `\n\n已点亮挂载的页面媒体素材：\n` + activeMediaItems.map((it, idx) => `[媒体 ${idx + 1}] (${it.type.toUpperCase()}): ${it.src}`).join('\n')
@@ -2385,6 +2423,10 @@ export function App(): React.JSX.Element {
     )
   }
 
+  // 即使后台正在初始化或尚未分派 sessionId，输入框也必须立即可用，绝不锁定禁用
+  const composerDisabled = busy || sessionChanging
+  const sendDisabled = busy || addingImages || (!input.trim() && draftImages.length === 0 && selection === null)
+
   return (
     <><div className="app">
       <header className="topbar">
@@ -2392,16 +2434,16 @@ export function App(): React.JSX.Element {
           <span className="brand-mini-badge" title="OmniMux-精灵助手">
             <img src={whaleUrl} alt="OmniMux" />
           </span>
-          <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
+          <button className="session-menu-trigger"
             aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
             onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
             <MenuIcon size={14} />
             <span className="session-trigger-title">{sessionMenuTitle}</span>
-            <ChevronDownIcon />
+            <ChevronDownIcon size={12} />
           </button>
         </div>
         <div className="topbar-actions">
-          <button className="icon-button new-session-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
+          <button className="icon-button new-session-trigger" disabled={sessionSwitchBlocked}
             onClick={() => { void startNewSession() }}
             aria-label={copy.app.newSession} title={copy.app.newSession}>
             <PlusSvgIcon size={14} />
@@ -2487,7 +2529,8 @@ export function App(): React.JSX.Element {
                     const isCurrent = entry.sessionId === sessionRef.current
                     return (
                       <li key={entry.sessionId}>
-                        <button disabled={sessionSwitchBlocked}
+                        <button
+                          type="button"
                           className={`session-item-row ${isCurrent ? 'active' : ''}`}
                           aria-current={isCurrent ? 'true' : undefined}
                           onClick={() => {
@@ -2496,11 +2539,18 @@ export function App(): React.JSX.Element {
                           }}>
                           <span className="session-icon"><MessageSquareIcon size={13} /></span>
                           <span className="session-title" title={title}>{title}</span>
+                          {isCurrent && <span className="session-active-check">✓</span>}
                         </button>
                         {!entry.running && (
-                          <button className="icon-button session-delete" disabled={sessionSwitchBlocked}
-                            aria-label={copy.app.deleteSession} title={copy.app.deleteSession}
-                            onClick={() => { void deleteSession(entry) }}>
+                          <button
+                            type="button"
+                            className="icon-button session-delete"
+                            aria-label={copy.app.deleteSession}
+                            title={copy.app.deleteSession}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void deleteSession(entry)
+                            }}>
                             <TrashIcon />
                           </button>
                         )}
@@ -2511,8 +2561,8 @@ export function App(): React.JSX.Element {
               )}
           <div className="session-picker-footer">
             <button
+              type="button"
               className="session-footer-new-btn"
-              disabled={state !== 'connected' || sessionSwitchBlocked}
               onClick={() => {
                 void startNewSession()
                 setShowSessionPicker(false)
@@ -2683,7 +2733,7 @@ export function App(): React.JSX.Element {
               }
             }}
             placeholder={locale === 'en' ? 'Ask me anything...' : '问我任何问题~'}
-            disabled={!sessionReady || busy}
+            disabled={composerDisabled}
             rows={1}
           />
           <div className="composer-actions clean-actions-row">
@@ -2704,7 +2754,7 @@ export function App(): React.JSX.Element {
               <button
                 type="button"
                 className="clean-add-btn"
-                disabled={!sessionReady || busy || addingImages || imageLimits === null
+                disabled={composerDisabled || addingImages || imageLimits === null
                   || draftImages.length >= imageLimits.maxImagesPerMessage}
                 aria-label={copy.app.addImages}
                 title={imageLimits === null ? copy.app.imageUnavailable : copy.app.addImages}
@@ -2717,7 +2767,7 @@ export function App(): React.JSX.Element {
               <button
                 className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
-                disabled={!sessionReady || stopping}
+                disabled={stopping}
                 aria-label={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
                 title={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
               >
@@ -2725,10 +2775,9 @@ export function App(): React.JSX.Element {
               </button>
             ) : (
               <button
-                className="clean-send-btn active"
+                className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
                 onClick={() => void send()}
-                disabled={!sessionReady || busy || addingImages
-                  || (input.trim() === '' && draftImages.length === 0 && selection === null)}
+                disabled={sendDisabled}
                 aria-label={copy.app.sendMessage}
                 title={copy.app.sendMessage}
               >
