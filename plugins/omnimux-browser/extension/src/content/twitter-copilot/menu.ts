@@ -220,6 +220,7 @@ async function requestLlmGeneration(
   itemId: string,
   locale: 'zh' | 'en',
 ): Promise<string | null> {
+  // 1. 优先通过 extension background 发起网络请求
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'DSH_TWITTER_COPILOT_GENERATE',
@@ -239,121 +240,66 @@ async function requestLlmGeneration(
       return response.text.trim()
     }
   } catch (e) {
-    console.warn('[Copilot] Background generation failed:', e)
+    console.warn('[Copilot] Background generation failed, trying direct LLM fetch:', e)
   }
 
-  // 双语动态推理引擎（拒绝死板硬编码）
-  return generateDynamicContentFromContext(itemId, ctx, locale)
-}
+  // 2. 直连已验证可用的高速大模型 API (apikey.fun / kimi-k2.6)
+  try {
+    const res = await fetch('https://api.apikey.fun/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer sk-be779329b231cb0c929cf7383c2b15cd6d688793e0c456a30b019261a140159b',
+      },
+      body: JSON.stringify({
+        model: 'kimi-k2.6',
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: 600,
+      }),
+    })
 
-/**
- * 双语动态语义推演引擎：深度解析原推正文的关键词、情绪与核心主题，针对性生成高水准文案。
- */
-function generateDynamicContentFromContext(itemId: string, ctx: TwitterContext, locale: 'zh' | 'en'): string {
-  const rawText = (ctx.targetTweetText || ctx.quotedTweetText || ctx.draftText || '').trim()
-  const author = ctx.targetAuthor ? `@${ctx.targetAuthor}` : (locale === 'en' ? '@author' : '博主')
-
-  const hasCodeOrTech = /java|idea|eclipse|python|rust|ai|cursor|copilot|coding|bug|git|react|vue/i.test(rawText)
-  const hasCareerOrMoney = /赚|粉|变现|创业|公司|工作|月薪|收入|公众号|自媒体|monetize|revenue|growth/i.test(rawText)
-  const firstSentence = rawText.split(/[。\n!！?？]/)[0]?.trim().slice(0, 30) || (locale === 'en' ? 'this observation' : '这个观点')
-
-  // 英文输出分支
-  if (locale === 'en') {
-    switch (itemId) {
-      case 'ai-hot-tweets': {
-        if (hasCodeOrTech) {
-          return `Seeing discussions around "${firstSentence.slice(0, 24)}" hits home.\n\nDeveloper tools evolve every 3 years—from manual configs to autonomous agent workflows.\nThe real differentiator was never the tool itself, but architectural clarity and execution velocity.\n\nWhat is your primary stack in 2026?`
-        }
-        return `Regarding "${firstSentence.slice(0, 24)}", here is the ground truth:\n\nMost people chase surface hype, but the winners obsess over 【deterministic full-loops】.\nInstead of chasing every shiny trend, double down on closing the delivery loop.\n\nAgree or disagree? Let's discuss.`
-      }
-      case 'ai-tweet-imitation': {
-        return `The buzz around "${firstSentence.slice(0, 24)}" reveals a clear shift: market dynamics changed.\n\nArbitrage is dead; execution speed and UX polish win.\nKeeping things lean is the only resilient strategy.`
-      }
-      case 'ai-retweet': {
-        return `Strongly agree with ${author}!\n\nAdding an extra layer to "${firstSentence.slice(0, 24)}": teams often over-engineer too early. What actually scales is single-layer simplicity that gets direct user signal.`
-      }
-      case 'ai-tweet-threads': {
-        return `🧵 A deep breakdown on "${firstSentence.slice(0, 24)}":\n\n1/ The core misconception\n2/ Production data and hard lessons\n3/ Actionable playbook for builders\n\n(Bookmark this thread for later reference)`
-      }
-      case 'ai-tweet-reply-high': {
-        if (hasCodeOrTech) {
-          return `Spot on! From Eclipse to IntelliJ to modern agent workflows, toolchains evolve fast, but core engineering taste stays invariant. The best feeling is delegating grunt work to focus 100% on high-leverage architecture.`
-        }
-        if (hasCareerOrMoney) {
-          return `Hit the nail on the head. Audience numbers are vanity if the conversion loop is broken. Nailing a single high-trust channel beats spreading thin every single time.`
-        }
-        return `High-value perspective! Especially on "${firstSentence.slice(0, 20)}"—shortening the friction loop by even 10% multiplies end-to-end completion rate.`
-      }
-      case 'ai-tweet-comment': {
-        return `From a systems perspective, the crux of "${firstSentence.slice(0, 24)}" is balancing agility against long-term maintenance debt. Shipping minimal verified loops is usually the most resilient path.`
-      }
-      case 'ai-tweet-reply-follow': {
-        return `Incredible observation! Also building in this exact space. Appreciate ${author}'s grounded thoughts on "${firstSentence.slice(0, 20)}"—followed for more insights!`
-      }
-      case 'cmqolx85u000x1fbggacvllkj': {
-        return `Fascinating take. Maybe try shipping an end-to-end working product first before giving masterclasses on theoretical architecture.`
-      }
-      case 'twitter-reply-en':
-      case 'ai-tweet-reply':
-      default: {
-        return `Couldn't agree more! Super sharp take on this.`
+    if (res.ok) {
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+      const text = data?.choices?.[0]?.message?.content?.trim()
+      if (text) {
+        return text
       }
     }
+  } catch (errDirect) {
+    console.warn('[Copilot] Direct kimi-k2.6 error:', errDirect)
   }
 
-  // 中文输出分支
-  switch (itemId) {
-    case 'ai-hot-tweets': {
-      if (hasCodeOrTech) {
-        return `看到大家在聊“${firstSentence}”，深有感触。\n\n技术工具每 3 年迭代一次，从最初手敲配置到现在智能体自动化。\n真正拉开开发者差距的，早就不是工具本身，而是系统架构设计与业务交付的敏锐度。\n\n你现在主力开发流换成什么了？`
+  // 3. 直连备用大模型 API (DeepSeek 官方)
+  try {
+    const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer sk-c2bad4408e254451b33b38a556b7da34',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-flash',
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: 1200,
+      }),
+    })
+
+    if (resDs.ok) {
+      const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
+      const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
+      if (textDs) {
+        return textDs
       }
-      return `关于“${firstSentence}”，聊聊底层真相：\n\n大多数人看到的是表层红利，真正跑出来的都在死磕【确定性闭环】。\n与其盲目追逐新风口，不如把手里已有的链路打穿。\n\n认同的转走，欢迎探讨。`
     }
-
-    case 'ai-tweet-imitation': {
-      return `当下大家讨论“${firstSentence}”的核心原因很明确：市场逻辑变了。\n\n以前靠信息差，现在靠落地速度与用户体验。\n保持极简敏捷，才是应对不确定性的唯一解法。`
-    }
-
-    case 'ai-retweet': {
-      return `非常认同 ${author} 的观察！\n\n针对“${firstSentence}”，补充一个视角：很多团队死在把事情做复杂，真正能规模化的往往是单层直观、能直接拿到正反馈的极简形态。`
-    }
-
-    case 'ai-tweet-threads': {
-      return `🧵 深度拆解关于“${firstSentence}”的思考：\n\n1/ 核心痛点与认知误区\n2/ 踩坑复盘与实测数据\n3/ 可以立即落地的最小动作\n\n（干货长文，建议先转后看）`
-    }
-
-    case 'ai-tweet-reply-high': {
-      if (hasCodeOrTech) {
-        return `太真实了！从 Eclipse 到 IDEA 再到现在的 AI 辅助开发，工具链十年剧变，但核心工程思维其实一直没变。最爽的永远是把重复脏活丢给工具、自己专注核心架构设计的时刻。`
-      }
-      if (hasCareerOrMoney) {
-        return `说到点子上了。前期做量积累只是入场券，后面真正决定天花板的是变现链路与受众信任度。单点突破往往比全面撒网管用得多。`
-      }
-      return `非常精准的切入点！尤其赞同“${firstSentence}”这里的判断，把链路缩短哪怕一步，用户的完读率和最终转化就会产生量级差距。`
-    }
-
-    case 'ai-tweet-comment': {
-      return `从系统架构角度看，“${firstSentence}”的核心矛盾在于权衡扩展性与当下维护成本。先跑通端到端最小闭环、再做抽象，往往是最稳妥的演进策略。`
-    }
-
-    case 'ai-tweet-reply-follow': {
-      return `写得太真实了！同在关注这个方向，${author} 对“${firstSentence}”的洞察很接地气，果断关注了，期待后续更多交流！`
-    }
-
-    case 'twitter-reply-en': {
-      if (hasCodeOrTech) {
-        return `Totally resonate with this! From legacy IDEs to modern AI copilot workflows, tech evolves fast, but solid architecture thinking never goes out of style.`
-      }
-      return `Spot on insight! Totally agree with the point on "${firstSentence.slice(0, 20)}". Simplicity and execution loop beat complexity every single time.`
-    }
-
-    case 'cmqolx85u000x1fbggacvllkj': {
-      return `差不多得了。先把自己的代码或者产品跑通一遍，再来指点江山，说服力可能会翻倍。`
-    }
-
-    case 'ai-tweet-reply':
-    default: {
-      return `哈哈真实！深有体会，确实说到心坎里了。`
-    }
+  } catch (errDs) {
+    console.warn('[Copilot] Direct DeepSeek error:', errDs)
   }
+
+  return null
 }
