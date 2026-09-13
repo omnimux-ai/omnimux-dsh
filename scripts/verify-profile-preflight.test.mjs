@@ -130,3 +130,26 @@ export function apply(ctx) {
 
   assert.equal(run.status, 0, `render 必须被保留，实际 stderr: ${run.stderr}`)
 })
+
+/** 导入替身必须声明的宿主机面导出：静态 ESM 缺任何一条都会在解析期直接失败。 */
+const HOST_NAMED_EXPORTS_PLUGIN = `
+import { AttachmentError } from '@deepseek-ai/dsh-attachment'
+import { FsError } from '@deepseek-ai/dsh-fs'
+import { canonicalPath } from '@deepseek-ai/dsh-sandbox'
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+export function apply() {
+  const attachmentError = new AttachmentError('demo')
+  const fsError = new FsError('demo')
+  const path = canonicalPath('/tmp/demo')
+  installSettingsSection(settingsNamespace('demo'), {}, () => {})
+  if (!attachmentError || !fsError || !path) throw new Error('stub face unusable')
+}
+`
+
+test('preflight: 替身声明插件实际使用的宿主机面导出，解析期不再缺名', () => {
+  const profile = makeProfile([{ name: 'omnimux-host-face-user', source: HOST_NAMED_EXPORTS_PLUGIN }])
+  const run = runPreflight(profile)
+
+  assert.equal(run.status, 0, `应当通过，实际 stderr: ${run.stderr}`)
+  assert.match(run.stdout, /✔ \[omnimux-host-face-user\] apply\(ctx\) 演练成功/)
+})
