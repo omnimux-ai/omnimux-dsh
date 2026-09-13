@@ -2245,7 +2245,7 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Default Workspace' : '默认工作区'}</span>
+            <span>{locale === 'en' ? 'Associated Workspace' : '默认工作区'}</span>
             <small>{locale === 'en' ? 'Workspace for new sessions and tasks' : '选择会话工作区，新会话默认在此工作区创建'}</small>
             <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <SessionWorkspaceSelector
