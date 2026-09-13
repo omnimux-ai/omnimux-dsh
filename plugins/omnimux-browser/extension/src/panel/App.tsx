@@ -2152,9 +2152,10 @@ export function App(): React.JSX.Element {
                   try {
                     void chrome.sidePanel?.open?.({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch(() => {})
                   } catch {}
+                  window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION' }, '*')
                 }}
-                title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
-                aria-label={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
+                title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏并收起当前面板"}
+                aria-label={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏并收起当前面板"}
               >
                 <SidebarPanelIcon size={13} />
               </button>
