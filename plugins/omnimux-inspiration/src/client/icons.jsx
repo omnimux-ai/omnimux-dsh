@@ -36,6 +36,18 @@ export function PlusIcon(props) {
 }
 
 /**
+ * 顶部气泡提示（Toast）里的对勾：细线、圆角端点，与动作图标同栅格。
+ * @param {{ size?: number, className?: string }} props
+ */
+export function CheckIcon(props) {
+  return (
+    <Icon {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </Icon>
+  )
+}
+
+/**
  * 「暂无作品」的空态图标：视频画幅（胶片格）。
  *
  * 空态图标与动作图标同源同栅格（24 栅格、1.8 描边、`currentColor`），只把尺寸

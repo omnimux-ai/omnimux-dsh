@@ -77,6 +77,7 @@ const L = {
     .replace('{platform}', platform),
   importSuccess: (handle) => zh['rivalAccounts.import.success'].replace('{handle}', handle),
   echoContent: zh['add.echoContent'],
+  importedToast: zh['add.importedToast'],
   unrecognized: zh['rivalAccounts.import.unrecognized'],
   autoAnalyze: zh['add.autoAnalyze'],
 }
@@ -476,6 +477,19 @@ describe('import landing — content URL', () => {
         mounted.container.querySelector(PREVIEW_MODAL_SELECTOR),
         null,
         'a content import must land on the card, not on a preview modal',
+      )
+
+      // 内容导入同样以顶部气泡回执：卡片是「导到了哪」，气泡是「成功了」。
+      const pill = mounted.container.querySelector('.omnimux-inspiration-toast')
+      assert.ok(pill, 'a content import must confirm itself in the top toast')
+      assert.ok(
+        (pill.textContent || '').includes(L.importedToast),
+        `the toast must say「${L.importedToast}」(got ${JSON.stringify(pill.textContent)})`,
+      )
+      assert.equal(
+        pill.closest('.omnimux-inspiration-grid'),
+        null,
+        'the confirmation must float above the grid, not sit inside it',
       )
 
       // Clicking the card still opens the preview: the landing changed, the

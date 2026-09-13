@@ -339,10 +339,34 @@ async function settle(container, predicate) {
   return false
 }
 
+/**
+ * Let wall-clock time pass, so a timed dismissal can actually happen on screen.
+ *
+ * Time is advanced in short slices, each inside its own `act`: the timer fires
+ * inside a window instead of between them, so the updates it produces are
+ * observed rather than warned about. A single long `act` window spanning the
+ * whole wait is what does not work here.
+ */
+async function waitFor(ms) {
+  const slice = 50
+  for (let waited = 0; waited < ms; waited += slice) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, slice))
+    })
+  }
+}
+
+/**
+ * 气泡的停留与退场时长，与 `InspirationSection.jsx` 的两个常量同值。
+ * 断言「2.5 秒后自动关闭」必须等满两者之和，少一毫秒都会读到还在退场的那个节点。
+ */
+const TOAST_EXIT_MS = 2500 + 180 + 120
+
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 const filterPanel = (container) => container.querySelector('.omnimux-rival-filter-panel')
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
 const cards = (container) => [...container.querySelectorAll('[data-inspiration-id]')]
+const toast = (container) => container.querySelector('.omnimux-inspiration-toast')
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
   .filter((node) => node.textContent.trim() === text)
@@ -383,15 +407,15 @@ after(() => {
 })
 
 describe('账号监控 — 账号筛选（多选）', () => {
-  it('renders a 32px-class trigger reading 账号: 全部 (N)', async () => {
+  it('renders a 32px-class trigger reading 账号', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
       const trigger = filterTrigger(mounted.container)
       assert.ok(trigger, 'the toolbar must render the account filter')
       assert.ok(
-        triggerText(mounted.container).includes(label(zh['rivalFilter.all'], { n: ACCOUNTS.length })),
-        `the trigger must read「账号: 全部 (2)」(got ${JSON.stringify(triggerText(mounted.container))})`,
+        triggerText(mounted.container).includes(zh['rivalFilter.all']),
+        `the trigger must read「账号」(got ${JSON.stringify(triggerText(mounted.container))})`,
       )
       assert.equal(trigger.getAttribute('aria-expanded'), 'false', 'the panel starts closed')
       assert.equal(filterPanel(mounted.container), null, 'the panel must not be rendered while closed')
@@ -477,8 +501,8 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
       await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
       assert.ok(
-        triggerText(mounted.container).includes(label(zh['rivalFilter.all'], { n: ACCOUNTS.length })),
-        '重置 must restore「账号: 全部 (N)」',
+        triggerText(mounted.container).includes(zh['rivalFilter.all']),
+        '重置 must restore「账号」',
       )
       assert.equal(cards(mounted.container).length, WORKS.length, '重置 must restore the whole grid')
 
@@ -526,7 +550,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
 
       assert.deepEqual(mounted.opened, [ACCOUNTS[0].profile_url], 'the profile must open in a new tab')
       assert.ok(
-        triggerText(mounted.container).includes(label(zh['rivalFilter.all'], { n: ACCOUNTS.length })),
+        triggerText(mounted.container).includes(zh['rivalFilter.all']),
         'opening a profile must not change the selection',
       )
       assert.equal(
@@ -776,6 +800,30 @@ describe('账号监控 — 空态与导入反馈', () => {
         'the dialog must close once the account is imported',
       )
 
+      // 确认必须浮在内容之上，而不是插进内容流：以前那条通知条每次导入都把
+      // 账号列表和作品网格整体下推一行。
+      const pill = toast(mounted.container)
+      assert.ok(pill, 'an account import must confirm itself in the top toast')
+      assert.equal(
+        pill.closest('.omnimux-rival-root'),
+        null,
+        'the confirmation must float above the content area, not sit inside it',
+      )
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-notice'),
+        null,
+        'a successful import must not render a notice bar in the content area',
+      )
+      assert.equal(pill.getAttribute('role'), 'status', 'the toast must announce itself to assistive tech')
+      assert.ok(
+        pill.querySelector('.omnimux-inspiration-toast-icon svg'),
+        'the toast must draw its own vector tick — never a character or an emoji',
+      )
+      assert.ok(
+        (pill.textContent || '').includes(L.importSuccess('@gethullo')),
+        'the toast must name the account that was just added',
+      )
+
       const createIndex = mounted.calls.findIndex(
         (call) => call.method === 'POST' && call.path.includes(RIVAL_PREFIX),
       )
@@ -802,6 +850,15 @@ describe('账号监控 — 空态与导入反馈', () => {
       assert.ok(
         rowById(mounted.container, NEW_ACCOUNT_ID),
         'the imported account must be listed in the filter without a manual refresh',
+      )
+
+      // 气泡自己走：2.5 秒后淡出，不留下一条需要人来关掉的通知。
+      assert.ok(toast(mounted.container), 'the toast must still be up while it is being read')
+      await waitFor(TOAST_EXIT_MS)
+      assert.equal(
+        toast(mounted.container),
+        null,
+        'the toast must close itself after its 2.5s instead of waiting to be dismissed',
       )
     } finally {
       await mounted.unmount()

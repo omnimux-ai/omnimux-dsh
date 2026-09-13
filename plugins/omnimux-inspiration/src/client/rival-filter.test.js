@@ -37,7 +37,7 @@ describe('rival-filter — 勾选', () => {
     const without = toggleAccountSelection(ALL_ACCOUNTS, 'ra_a', ALL_IDS)
     const back = toggleAccountSelection(without, 'ra_a', ALL_IDS)
     assert.deepEqual(back, { mode: 'all', ids: [] })
-    assert.equal(rivalSelectionSummary(back, ALL_IDS.length, t), '账号: 全部 (3)')
+    assert.equal(rivalSelectionSummary(back, t), '账号')
   })
 
   it('grows a subset without losing what was already excluded', () => {
@@ -55,7 +55,7 @@ describe('rival-filter — 反选与重置', () => {
   it('inverting 全部 leaves nothing selected', () => {
     const inverted = invertAccountSelection(ALL_ACCOUNTS, ALL_IDS)
     assert.deepEqual(inverted, { mode: 'subset', ids: [] })
-    assert.equal(rivalSelectionSummary(inverted, ALL_IDS.length, t), '未选择账号 (0)')
+    assert.equal(rivalSelectionSummary(inverted, t), '未选择账号 (0)')
   })
 
   it('inverting a subset selects its complement, in list order', () => {
@@ -78,9 +78,12 @@ describe('rival-filter — 反选与重置', () => {
 
 describe('rival-filter — 触发按钮文案与请求参数', () => {
   it('reads the three wordings the prototype defines', () => {
-    assert.equal(rivalSelectionSummary(ALL_ACCOUNTS, 12, t), '账号: 全部 (12)')
-    assert.equal(rivalSelectionSummary({ mode: 'subset', ids: ['ra_a', 'ra_b', 'ra_c'] }, 12, t), '已选 3 个账号')
-    assert.equal(rivalSelectionSummary({ mode: 'subset', ids: [] }, 12, t), '未选择账号 (0)')
+    // 全量态是维度名，不是一句统计：design.md §5.1 要求全选态读作维度名或
+    // 「名: 值」，监控账号的数量不属于用户此刻在选择的东西。
+    assert.equal(rivalSelectionSummary(ALL_ACCOUNTS, t), '账号')
+    assert.doesNotMatch(rivalSelectionSummary(ALL_ACCOUNTS, t), /\d/, '全量态不得带计数')
+    assert.equal(rivalSelectionSummary({ mode: 'subset', ids: ['ra_a', 'ra_b', 'ra_c'] }, t), '已选 3 个账号')
+    assert.equal(rivalSelectionSummary({ mode: 'subset', ids: [] }, t), '未选择账号 (0)')
   })
 
   it('serializes 全部 as an omitted parameter and a subset in list order', () => {
@@ -98,7 +101,6 @@ describe('rival-filter — 触发按钮文案与请求参数', () => {
   it('survives a value that is not a list', () => {
     assert.deepEqual(accountIds(null), [])
     assert.deepEqual(accountIds([{ id: 'ra_a' }, {}, null]), ['ra_a'])
-    assert.equal(rivalSelectionSummary(ALL_ACCOUNTS, Number.NaN, t), '账号: 全部 (0)')
   })
 })
 
