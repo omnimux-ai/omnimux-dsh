@@ -18,7 +18,9 @@
     ],
     "seamsProvided": [],
     "seamsConsumed": [],
-    "slots": [],
+    "slots": [
+      { "target": "sidebar.extra", "componentPath": "src/client/sidebar-entry.js" }
+    ],
     "storageDomains": ["$DSH_HOME/omnimux-automation/"]
   },
   "dependencies": {

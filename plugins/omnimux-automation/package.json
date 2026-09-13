@@ -35,6 +35,7 @@
     }
   },
   "dependencies": {
+    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
     "luxon": "^3.7.2",
     "zod": "^4.1.5"
   },

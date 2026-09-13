@@ -25,6 +25,11 @@ let container
 /** 每个用例的客户端 ctx 效果都要在收尾时注销，否则常驻订阅会挂住进程。 */
 const harnesses = []
 
+/** 左栏行：真实宿主里由 hub 的侧边栏协调器登记，这里替身记录登记与注销。 */
+const sidebarRows = []
+/** 工作台全局桥：只保留本门禁需要断言的开 Tab 与订阅语义。 */
+const workbench = { activeTabs: new Set(), opened: [], listeners: new Set() }
+
 const uiPrimitivesStub = {
   IconCheckOutline16: () => null,
   IconChevronDownOutline14: () => null,
@@ -60,6 +65,39 @@ before(async () => {
     pretendToBeVisual: true,
   })
   installDomGlobals(dom.window)
+
+  // 宿主侧边栏协调器与工作台桥：入口行只有拿到它们才能排位与打开 Tab。
+  dom.window.__omnimuxSidebar = {
+    register(row) {
+      const record = { ...row, element: row.create() }
+      sidebarRows.push(record)
+      return () => {
+        const index = sidebarRows.indexOf(record)
+        if (index >= 0) sidebarRows.splice(index, 1)
+      }
+    },
+  }
+  dom.window.__omnimuxWorkbench = {
+    createSidebarStore({ tabId, title }) {
+      return {
+        getSnapshot: () => workbench.activeTabs.has(tabId),
+        subscribe(listener) {
+          workbench.listeners.add(listener)
+          return () => workbench.listeners.delete(listener)
+        },
+        open() {
+          workbench.activeTabs.add(tabId)
+          workbench.opened.push({ tabId, title: title() })
+          for (const listener of workbench.listeners) listener()
+        },
+        close() {
+          workbench.activeTabs.delete(tabId)
+          for (const listener of workbench.listeners) listener()
+        },
+        readBox: () => ({ top: 0, left: 0, width: 0, height: 0 }),
+      }
+    },
+  }
 
   const moduleShim = { exports: {} }
   const requireShim = (id) => {
@@ -203,7 +241,10 @@ function makeClientHarness() {
       register({ betterSidebar: { registerTab } })
     },
   }
-  return { ctx, tabs, effects, calls }
+  // 登记进 harnesses，下一个用例的 resetHarness 才能注销本用例留下的常驻订阅与左栏行。
+  const harness = { ctx, tabs, effects, calls }
+  harnesses.push(harness)
+  return harness
 }
 
 /**
@@ -216,6 +257,8 @@ async function resetHarness() {
     for (const effect of harness.effects) effect.dispose?.()
   }
   harnesses.length = 0
+  workbench.activeTabs.clear()
+  workbench.opened.length = 0
   return makeClientHarness()
 }
 
@@ -373,4 +416,34 @@ test('删除必须先经二次确认，确认后才发出 mutate；取消则不�
   assert.ok(mutate !== undefined, '确认后必须发出 mutate')
   assert.equal(mutate.payload.mutation, 'delete')
   assert.equal(mutate.payload.automationId, 'a1')
+})
+
+test('左栏入口以 rank 9 登记，点击打开工作台 Tab 而不是抢占 overlay', async () => {
+  const harness = await resetHarness()
+  clientModule.apply(harness.ctx)
+
+  assert.equal(sidebarRows.length, 1, 'apply 后左栏应恰好登记一行')
+  const row = sidebarRows[0]
+  assert.equal(row.id, 'omnimux-automation-entry')
+  assert.equal(row.rank, 9)
+  const entry = row.element
+  assert.equal(entry.tagName, 'BUTTON')
+  assert.ok(entry.hasAttribute('data-omnimux-automation-entry'), '入口行必须带产品 marker')
+  assert.equal(entry.getAttribute('aria-label'), '自动化')
+  assert.match(entry.innerHTML, /width="14" height="14"/, '入口图标必须守 14×14 契约')
+
+  entry.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await flush()
+  assert.deepEqual(
+    workbench.opened.at(-1),
+    { tabId: 'omnimux-automation:workbench', title: '自动化' },
+    '点击左栏必须打开工作台 Tab',
+  )
+  assert.equal(entry.dataset.active, 'true', 'Tab 激活时入口行必须高亮')
+  assert.equal(dom.window.document.documentElement.dataset.dshProductStage, undefined, '入口行不得抢占产品级 stage')
+
+  const effect = harness.effects.find(item => item.label === 'omnimux-automation: sidebar entry')
+  assert.ok(effect !== undefined)
+  effect.dispose()
+  assert.equal(sidebarRows.length, 0, 'disposer 必须注销协调器登记')
 })
