@@ -67,11 +67,15 @@ const CLOUD_INDEX_PATHS = new Set([
 /** A catalog page name is `page-NNNN` or `page-NNNN.json`; nothing else is read. */
 const CATALOG_PAGE_RE = /^page-(\d{1,6})(?:\.json)?$/
 /**
- * A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. The digits and
- * underscores the 角色 filter scope uses are part of it, because a filtered scope
- * names its dimension values (`1female1youth0car…`).
+ * A catalog scope segment is a lowercase id: no `.`, `/`, or `%`. The digits,
+ * underscores, and hyphens the taxonomy uses are part of it: a filtered scope
+ * names its dimension values (`1female1youth0car…`), and the builder's slug
+ * form turns multi-word ids into hyphenated ones (`style/live-action`).
+ *
+ * The leading `[a-z]` is what keeps a segment from being all punctuation, so a
+ * traversal segment (`..`) never reaches the path join below.
  */
-const CATALOG_SCOPE_SEGMENT_RE = /^[a-z][a-z0-9_]*$/
+const CATALOG_SCOPE_SEGMENT_RE = /^[a-z][a-z0-9_-]*$/
 
 /**
  * Resolve a catalog page request to a file path inside the catalog directory.

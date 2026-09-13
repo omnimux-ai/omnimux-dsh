@@ -93,18 +93,50 @@ describe('Cloud second level follows the catalog data', () => {
     assert.equal(en['cloud.category.material'], 'Material')
     assert.equal(zh['cloud.subcategory.green-screen'], '绿幕')
     assert.equal(zh['cloud.subcategory.hook'], '钩子')
-    assert.equal(zh['cloud.subcategory.meme'], '表情包')
+    assert.equal(zh['cloud.subcategory.graphic-design'], '平面设计')
+    assert.equal(en['cloud.subcategory.graphic-design'], 'Graphic Design')
+    assert.equal(zh['cloud.subcategory.illustration'], '商业插画')
+    assert.equal(zh['cloud.subcategory.anime'], '动漫分镜')
+    assert.equal(zh['cloud.subcategory.concept-art'], '概念艺术')
     assert.equal(zh['cloud.subcategory.female'], '女性角色')
     assert.equal(zh['cloud.subcategory.male'], '男性角色')
     assert.equal(zh['cloud.subcategory.lifestyle'], '生活居家')
     assert.equal(zh['cloud.subcategory.business'], '职场商务')
   })
 
+  it('names the six 场景 shelves in both dictionaries', () => {
+    const shelves = [
+      ['nature', '自然山水', 'Nature'],
+      ['indoor', '生活室内', 'Indoor Living'],
+      ['city', '城市街景', 'City Streets'],
+      ['travel', '出行车载', 'On the Move'],
+      ['creative', '极境奇观', 'Surreal Extremes'],
+      ['workplace', '商务办公', 'Workplace'],
+    ]
+    for (const [id, zhLabel, enLabel] of shelves) {
+      assert.equal(zh[`cloud.subcategory.${id}`], zhLabel, id)
+      assert.equal(en[`cloud.subcategory.${id}`], enLabel, id)
+    }
+  })
+
+  it('names the six 风格 shelves in both dictionaries', () => {
+    const shelves = [
+      ['live-action', '真人影视', 'Live Action'],
+      ['anime-2d', '2D 动漫', '2D Anime'],
+      ['render-3d', '3D 动画', '3D Render'],
+      ['photography', '胶片摄影', 'Photography'],
+      ['traditional-art', '国风传统', 'Traditional Art'],
+      ['video-tone', '调性氛围', 'Mood & Tone'],
+    ]
+    for (const [id, zhLabel, enLabel] of shelves) {
+      assert.equal(zh[`cloud.subcategory.${id}`], zhLabel, id)
+      assert.equal(en[`cloud.subcategory.${id}`], enLabel, id)
+    }
+  })
+
   it('names the Loomi shelves in both dictionaries', () => {
     assert.equal(zh['cloud.subcategory.object'], '实物道具')
     assert.equal(en['cloud.subcategory.object'], 'Props & Objects')
-    assert.equal(zh['cloud.subcategory.environment'], '实景环境')
-    assert.equal(en['cloud.subcategory.environment'], 'Environments')
     assert.equal(zh['cloud.subcategory.pet'], '萌宠动物')
     assert.equal(en['cloud.subcategory.pet'], 'Pets & Animals')
     assert.equal(zh['cloud.subcategory.clothing'], '服饰穿搭')
@@ -114,9 +146,47 @@ describe('Cloud second level follows the catalog data', () => {
   })
 
   it('drops the shelves the catalog no longer has', () => {
-    for (const gone of ['note', 'digital-human', 'virtual-influencer', 'hook-video', 'prompt', 'storyboard']) {
-      assert.equal(zh[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from zh`)
-      assert.equal(en[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from en`)
+    const gone = [
+      'note', 'digital-human', 'virtual-influencer', 'hook-video', 'prompt', 'storyboard',
+      // The collection batches and the format split the new taxonomy replaced.
+      'ambience', 'environment', 'meme', 'image-preset',
+    ]
+    for (const id of gone) {
+      assert.equal(zh[`cloud.subcategory.${id}`], undefined, `${id} should be gone from zh`)
+      assert.equal(en[`cloud.subcategory.${id}`], undefined, `${id} should be gone from en`)
+    }
+  })
+})
+
+/**
+ * 清单与词典必须成套：分片清单里出现的每个分类 / 二级分类，界面上都得有一个中文和
+ * 英文标签。少了哪一条，那个 Tab 就会渲染出 `cloud.subcategory.xxx` 这样的原始键。
+ */
+describe('every shelf in the shipped catalog has a label', () => {
+  const manifest = JSON.parse(
+    readFileSync(join(here, '..', '..', 'cloud-catalog', 'manifest.json'), 'utf8'),
+  )
+
+  it('ships the six categories the nav renders', () => {
+    assert.deepEqual(
+      manifest.categories.map((row) => row.id),
+      ['character', 'scene', 'prop', 'material', 'style', 'audio'],
+    )
+    for (const category of manifest.categories) {
+      assert.equal(typeof zh[`cloud.category.${category.id}`], 'string', `zh ${category.id}`)
+      assert.equal(typeof en[`cloud.category.${category.id}`], 'string', `en ${category.id}`)
+    }
+  })
+
+  it('labels every sub-category the manifest publishes', () => {
+    for (const category of manifest.categories) {
+      for (const sub of category.sub_categories) {
+        // 角色's second level is the eight-dimension filter bar, and this scope is
+        // the filter's own handle rather than a chip the nav draws.
+        if (sub.id === 'character_filtered') continue
+        assert.equal(typeof zh[`cloud.subcategory.${sub.id}`], 'string', `zh ${sub.id}`)
+        assert.equal(typeof en[`cloud.subcategory.${sub.id}`], 'string', `en ${sub.id}`)
+      }
     }
   })
 })

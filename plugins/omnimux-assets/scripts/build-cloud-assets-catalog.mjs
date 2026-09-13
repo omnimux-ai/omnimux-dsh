@@ -18,13 +18,13 @@
  * only part of the library.
  *
  *   character  `gxgen-data/character-library/pippit-local-avatars-source/`
- *   scene      `gxgen-data/element-library/场景氛围/`              场景氛围
- *              `gxgen-data/inspiration-library/loomi/`            实景环境
+ *   scene      `gxgen-data/element-library/场景氛围/`              the 14 atmospheric clips
+ *              `gxgen-data/inspiration-library/loomi/`            the 125 Loomi places
  *   prop       `gxgen-data/inspiration-library/loomi/`            实物道具
  *   material   `gxgen-data/element-library/video/green-screen-meme/`   绿幕
  *              `gxgen-data/element-library/hook-videos/`              钩子
  *              `gxgen-data/element-library/hook/`                     钩子
- *              `gxgen-data/inspiration-library/image/`                表情包
+ *              `gxgen-data/inspiration-library/image/`                专业生图画廊
  *              `gxgen-data/inspiration-library/loomi/`                萌宠 · 服饰 · 人像
  *   style      `gxgen-data/style-library/` (three curated preset files)
  *              `gxgen-data/element-library/视频风格/`
@@ -35,8 +35,8 @@
  *
  * where `<gxgen>` = `<root>/素材库/gxgen-data`. `灵感社区` is a separate system
  * and is deliberately excluded; the parts of it this catalog reads are the two
- * galleries named by exact path — the 表情包 image set and the offline Loomi
- * library, which is what fills 道具 and widens 场景 and 素材.
+ * galleries named by exact path — the gpt-image-2 professional image gallery and
+ * the offline Loomi library, which is what fills 道具 and widens 场景 and 素材.
  *
  * ## The Loomi library
  *
@@ -180,10 +180,40 @@ const SFX_CATALOGUE = {
  */
 const STYLE_EXCLUDE = /直播|处方|截图一张|朋友圈|小红书|淘宝|评价|文案生成|帮我生成/
 
-/** The gallery the 表情包 shelf is built from, addressed relative to the
- *  gxgen-data root so the 灵感社区 exclusion above stays intact. */
-const MEME_SOURCE = 'inspiration-library/image'
-const MEME_MEDIA_DIR = 'inspiration-library/image/media'
+/** The gallery the 平面设计 · 商业插画 · 动漫分镜 · 概念艺术 shelves are built
+ *  from, addressed relative to the gxgen-data root so the 灵感社区 exclusion
+ *  above stays intact. */
+const GALLERY_SOURCE = 'inspiration-library/image'
+const GALLERY_MEDIA_DIR = 'inspiration-library/image/media'
+
+/**
+ * Which shelf each gallery class belongs on.
+ *
+ * The gallery is a professional image-generation set, not a sticker pack: its
+ * own `category` field names the discipline each frame was made for, so the
+ * shelf is a direct read of that field. The five classes that name a subject
+ * rather than a discipline (photography, creative, architecture, ecommerce,
+ * cultural) are the concept-art half of the set — stylised single-frame art.
+ */
+const GALLERY_SHELF_BY_CATEGORY = new Map([
+  ['graphic-design', 'graphic-design'],
+  ['illustration', 'illustration'],
+  ['anime', 'anime'],
+  ['photography', 'concept-art'],
+  ['creative', 'concept-art'],
+  ['architecture', 'concept-art'],
+  ['ecommerce', 'concept-art'],
+  ['cultural', 'concept-art'],
+])
+/** Where a gallery frame lands when its class is not in the table above. */
+const GALLERY_FALLBACK_SHELF = 'concept-art'
+/** 素材 · the four gallery shelves' Chinese names, used as the card tag. */
+const GALLERY_SHELF_LABEL = new Map([
+  ['graphic-design', '平面设计'],
+  ['illustration', '商业插画'],
+  ['anime', '动漫分镜'],
+  ['concept-art', '概念艺术'],
+])
 
 const MAX_TAGS = 12
 const MAX_DESCRIPTION = 240
@@ -770,7 +800,8 @@ function findPoster(dir, base) {
  * @param {{ assetsRoot: string }} ctx
  * @param {string} dirName folder name under `element-library/`
  * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
- * @param {{ category: string, subCategory: string, tag: string, fallbackDesc: string,
+ * @param {{ category: string, subCategory: string | ((row: any) => string),
+ *   tag: string | ((row: any, subCategory: string) => string), fallbackDesc: string,
  *   promptFrom?: (title: string, description: string) => string }} opts
  */
 function collectElementIndex(ctx, dirName, add, opts) {
@@ -780,6 +811,10 @@ function collectElementIndex(ctx, dirName, add, opts) {
   const mediaDir = join(dir, 'media')
 
   for (const row of rows) {
+    // 场景 resolves its shelf per row — the place the picture shows — while every
+    // other caller names one shelf for the whole folder.
+    const subCategory = typeof opts.subCategory === 'function' ? opts.subCategory(row) : opts.subCategory
+    const tag = typeof opts.tag === 'function' ? opts.tag(row, subCategory) : opts.tag
     const localRel = text(row.local_media_path)
     const localMedia = localRel ? join(ctx.assetsRoot, '素材库', 'gxgen-data', localRel) : ''
     const posterRel = text(row.metadata?.local_poster_path)
@@ -804,10 +839,10 @@ function collectElementIndex(ctx, dirName, add, opts) {
     add(makeAsset(ctx, {
       key: `${dirName}/${text(row.id)}`,
       category: opts.category,
-      subCategory: opts.subCategory,
+      subCategory,
       name: title,
       description,
-      tags: [opts.tag, ...(Array.isArray(row.tags) ? row.tags : [])],
+      tags: [tag, ...(Array.isArray(row.tags) ? row.tags : [])],
       localMedia,
       remoteMedia: text(row.media_url),
       localCover,
@@ -817,18 +852,155 @@ function collectElementIndex(ctx, dirName, add, opts) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// scene — six shelves read off what the picture shows
+// ---------------------------------------------------------------------------
+
 /**
- * 场景 — the ambient element library plus the Loomi real-world environments.
+ * 场景 · 六个二级分类。
  *
- * The two shelves are genuinely different things: 场景氛围 is a small set of
- * graded atmospheric clips, while the Loomi half is 125 stills and clips of
- * actual places (`LOOMI_SHELVES` routes them to 实景环境).
+ * The batch labels this tab used to carry (场景氛围, 实景环境) said where a row
+ * was collected, not what it shows: the 14 graded clips and the 125 Loomi rows
+ * are the same kind of object — a place to shoot against — so the tab is sorted
+ * by the place itself, and the collection provenance stays on the card as a tag.
+ */
+const SCENE_SHELVES = [
+  { id: 'nature', zh: '自然山水', en: 'Nature' },
+  { id: 'indoor', zh: '生活室内', en: 'Indoor Living' },
+  { id: 'city', zh: '城市街景', en: 'City Streets' },
+  { id: 'travel', zh: '出行车载', en: 'On the Move' },
+  { id: 'creative', zh: '极境奇观', en: 'Surreal Extremes' },
+  { id: 'workplace', zh: '商务办公', en: 'Workplace' },
+]
+
+/** 场景 · 二级分类的中文名,同时是卡片的场景标签。 */
+const SCENE_SHELF_LABEL = new Map(SCENE_SHELVES.map((shelf) => [shelf.id, shelf.zh]))
+
+/** 场景 · 每个二级分类在卡片描述里的用途说明。 */
+const SCENE_SHELF_DESCRIPTION = {
+  nature: '自然山水实景,可直接作为画面背景',
+  indoor: '生活室内实景,适合家居与日常题材',
+  city: '城市街景实景,适合都市题材',
+  travel: '出行车载视角,适合旅拍与自驾题材',
+  creative: '极境奇观实景,适合强视觉冲击的画面',
+  workplace: '商务办公实景,适合职场与商业题材',
+}
+
+/**
+ * 场景 · 逐条判定的二级分类。
+ *
+ * Every row was placed by looking at the frame, not by reading the source: the
+ * 60 Loomi clips carry only the uploader handle as their title, and a few stills
+ * were filed under a name their picture contradicts (`mat-living-room` is a
+ * desert highway, not a living room). Keeping the call in one table makes it
+ * reviewable and keeps the build reproducible — the alternative, a keyword
+ * predicate, would have mis-shelved every untitled clip.
+ *
+ * Ids are the Loomi `id` and the 场景氛围 element id respectively.
+ */
+const SCENE_SHELF_BY_ID = {
+  'mat-forest-path': 'nature', 'mat-mountain-lake': 'nature', 'pexels-photo-11539579': 'nature',
+  'pexels-photo-20733834': 'nature', 'pexels-photo-37947534': 'nature', 'pexels-photo-10897112': 'nature',
+  'pexels-photo-39190103': 'nature', 'pexels-photo-20391867': 'nature', 'pexels-photo-33454833': 'nature',
+  'pexels-photo-14383733': 'nature', 'pexels-photo-4610449': 'nature', 'pexels-photo-33278656': 'nature',
+  'pexels-photo-30404451': 'nature', 'pexels-photo-29054973': 'nature', 'pexels-photo-38280841': 'nature',
+  'pexels-photo-35859966': 'nature', 'pexels-photo-38918786': 'nature', 'pexels-photo-9963170': 'nature',
+  'pexels-photo-13047436': 'nature', 'pexels-photo-38237585': 'nature', 'pexels-photo-36789099': 'nature',
+  'pexels-photo-9939280': 'nature', 'pexels-photo-1152765': 'nature', 'pexels-photo-34875485': 'nature',
+  'pexels-photo-38200865': 'nature', 'pexels-photo-15310250': 'nature', 'pexels-photo-19907603': 'nature',
+  'pexels-photo-38792903': 'nature', 'pexels-photo-14583400': 'nature', 'pexels-photo-266691': 'nature',
+  'pexels-photo-12842589': 'nature', 'pexels-photo-33315609': 'nature', 'pexels-photo-1000184': 'nature',
+  'pexels-photo-9989560': 'nature', 'pexels-photo-38837069': 'nature', 'pexels-photo-36982537': 'nature',
+  'pexels-photo-30715281': 'nature', 'pexels-photo-28237540': 'nature', 'pexels-photo-37061441': 'nature',
+  'pexels-photo-39482363': 'nature', 'pexels-photo-38007761': 'nature', 'pexels-photo-10984308': 'nature',
+  'pexels-photo-16731727': 'nature', 'pexels-video-36931949': 'nature', 'pexels-video-28838718': 'nature',
+  'pexels-video-30668113': 'nature', 'pexels-video-29013205': 'nature', 'pexels-video-16613695': 'nature',
+  'pexels-video-5221915': 'nature', 'pexels-video-27847139': 'nature', 'pexels-video-5991360': 'nature',
+  'pexels-video-32145366': 'nature', 'pexels-video-5109896': 'nature', 'pexels-video-37059607': 'nature',
+  'pexels-video-3960630': 'nature', 'pexels-video-30892710': 'nature', 'pexels-video-3967567': 'nature',
+  'pexels-video-29496981': 'nature', 'pexels-video-28838714': 'nature', 'pexels-video-5973125': 'nature',
+  'pexels-video-5962683': 'nature', 'pexels-video-6670417': 'nature', 'pexels-video-29138952': 'nature',
+  'pexels-video-5880244': 'nature', 'pexels-video-5803308': 'nature', 'pexels-video-34725581': 'nature',
+  'pexels-video-29055828': 'nature', 'pexels-video-30263137': 'nature', 'pexels-video-34535505': 'nature',
+  'fcefe7b2-9bb2-caf3-c283-18f8330028cd': 'nature',
+  'mat-studio-room': 'indoor', 'mat-bedroom': 'indoor', 'mat-cafe-corner': 'indoor',
+  'pexels-photo-23471090': 'indoor', 'pexels-photo-11142103': 'indoor', 'pexels-photo-14747854': 'indoor',
+  'pexels-photo-31032083': 'indoor', 'pexels-photo-26528685': 'indoor', 'pexels-video-7035078': 'indoor',
+  'pexels-video-6068302': 'indoor', 'pexels-video-10273772': 'indoor', 'pexels-video-6909983': 'indoor',
+  'pexels-video-38043817': 'indoor', 'pexels-video-6229485': 'indoor', 'pexels-video-6909985': 'indoor',
+  '3827d45a-62c1-ebcc-0ac9-4e1c2fce844d': 'indoor', '1f884d7b-56df-7d94-1457-24bc3c807b15': 'indoor', '39a12a8f-12a7-55c9-7fa4-1c593c397788': 'indoor',
+  'f6953ac2-0908-6927-8a47-1833dad13473': 'indoor',
+  'mat-city-night': 'city', 'pexels-photo-34401390': 'city', 'pexels-photo-16029549': 'city',
+  'pexels-photo-15915700': 'city', 'pexels-photo-18885382': 'city', 'pexels-photo-14720371': 'city',
+  'pexels-video-36846736': 'city', 'pexels-video-35527543': 'city', 'pexels-video-5878094': 'city',
+  'pexels-video-36138233': 'city', 'pexels-video-6694070': 'city', 'pexels-video-5109889': 'city',
+  'pexels-video-6287715': 'city', 'pexels-video-38687116': 'city', 'pexels-video-29207802': 'city',
+  'pexels-video-6171204': 'city', 'pexels-video-4252067': 'city', 'pexels-video-3893441': 'city',
+  'pexels-video-30241055': 'city', 'pexels-video-28638116': 'city', 'pexels-video-36964695': 'city',
+  'pexels-video-31687872': 'city', 'pexels-video-29502261': 'city', 'cf4cbadd-bc32-4f21-d00c-519c30ebbd37': 'city',
+  'mat-living-room': 'travel', 'pexels-photo-34401487': 'travel', 'pexels-photo-30243468': 'travel',
+  'pexels-video-31412571': 'travel', 'pexels-video-31406059': 'travel', 'pexels-video-33734444': 'travel',
+  'pexels-video-31406057': 'travel', 'pexels-video-31748900': 'travel', 'pexels-video-31069867': 'travel',
+  'pexels-video-35186939': 'travel', 'pexels-video-31748899': 'travel', '69c1d8f9-5d8f-7274-feda-5dfcb9f0b6ce': 'travel',
+  'f6a88aeb-1315-2cf1-c0cd-8847c40d403a': 'travel', '14e61d7c-a992-2dad-4e8b-e11234d8d137': 'travel', 'b155701f-a0a1-2c57-d763-0adb63c0b115': 'travel',
+  'pexels-photo-12369099': 'creative', 'pexels-photo-12195867': 'creative', 'pexels-photo-11807074': 'creative',
+  '83421523-53d5-ce8a-0539-24d62d3c57aa': 'creative', 'eb927b0c-ff24-e852-b1e2-3c69f7b0ab1f': 'creative', '1bd3d2a5-5965-80f4-39a9-81a12f0bdbd9': 'creative',
+  'mat-studio-backdrop': 'workplace', 'pexels-photo-6899763': 'workplace', 'pexels-video-6273834': 'workplace',
+  'pexels-video-6899901': 'workplace', '41599061-20bc-c058-1c69-d0021dad5792': 'workplace',
+}
+
+/**
+ * 场景 · 未收录行的关键词兜底。
+ *
+ * The table above covers the library as it stands; a row added to either source
+ * still gets a shelf from its own title rather than landing in 自然山水 by
+ * default. Rules are ordered — a row matching more than one keyword takes the
+ * first match, so the narrower places are tested before the general ones.
+ * @type {[string, RegExp][]}
+ */
+const SCENE_SHELF_RULES = [
+  ['indoor', /室内|客厅|卧室|厨房|卫浴|浴室|阳台|走廊|咖啡馆|屋内|家居|房间/],
+  ['workplace', /办公|工位|工作室|会议室|剧院|舞台|舞台剧/],
+  ['travel', /车内|车载|车顶|公路|高速|铁轨|火车|机舱|机翼|帆船|游船|自驾|出行|旅途/],
+  ['creative', /超现实|奇观|火山|悬空|天台|悬崖|末日|异星|幻境/],
+  ['city', /城市|都市|街道|街头|街景|商圈|广场|建筑|夜景|港口/],
+  ['nature', /山|湖|海|森林|树林|沙漠|沙丘|草原|田野|乡野|河|溪|瀑布|冰川|雪|自然|花园|公园/],
+]
+
+/**
+ * The 场景 shelf one row belongs on — the place the picture shows.
+ *
+ * The id table wins; a row that is not in it falls back to its own title, and a
+ * row with no usable title (an untitled clip the table has never seen) lands on
+ * 自然山水, which is where the overwhelming majority of the library's untagged
+ * outdoor footage belongs.
+ * @param {string} id
+ * @param {string} [title] the row's own title or description
+ * @returns {string}
+ */
+function placeShelfOf(id, title = '') {
+  const known = SCENE_SHELF_BY_ID[id]
+  if (known) return known
+  for (const [shelf, pattern] of SCENE_SHELF_RULES) {
+    if (pattern.test(title)) return shelf
+  }
+  return 'nature'
+}
+
+/**
+ * 场景 — the 14 atmospheric clips plus the 125 Loomi places.
+ *
+ * Both halves are handed the same classifier, so a clip and a still of the same
+ * kind of place land on the same shelf instead of on two shelves named after the
+ * batch they arrived in.
  */
 function collectScene(ctx, add) {
   collectElementIndex(ctx, '场景氛围', add, {
     category: 'scene',
-    subCategory: 'ambience',
-    tag: '场景氛围',
+    subCategory: (row) => placeShelfOf(text(row.id), `${text(row.title)} ${text(row.metadata?.description)}`),
+    // The card carries the place it shows; 场景氛围 rides along from the row's own
+    // source tag, so the collection provenance is not lost.
+    tag: (_row, subCategory) => SCENE_SHELF_LABEL.get(subCategory) ?? '场景氛围',
     fallbackDesc: '高清动态场景氛围',
   })
   collectLoomi(ctx, add, 'scene')
@@ -897,33 +1069,37 @@ function collectHook(ctx, add) {
 }
 
 /**
- * 表情包 — the image gallery the meme shelf is built from.
+ * 平面设计 · 商业插画 · 动漫分镜 · 概念艺术 — the professional image gallery.
  *
  * The gallery lives under `inspiration-library`, which the community exclusion
  * normally keeps out of this catalog; it is read here by its exact path because
- * it is the only sticker/gag image set the library actually holds. Each row is
- * an image plus the prompt that produced it, so a card can hand the prompt to
- * the conversation along with the picture.
+ * it is the only professionally generated image set the library holds. Each row
+ * is an image plus the prompt that produced it, so a card can hand the prompt to
+ * the conversation along with the picture, and the shelf is a direct read of the
+ * row's own `category` through `GALLERY_SHELF_BY_CATEGORY`.
  */
-function collectMeme(ctx, add) {
+function collectGallery(ctx, add) {
   const gxgen = join(ctx.assetsRoot, '素材库', 'gxgen-data')
-  const parsed = readJsonSafe(join(gxgen, MEME_SOURCE, 'gpt-image-2-skill.json'))
+  const parsed = readJsonSafe(join(gxgen, GALLERY_SOURCE, 'gpt-image-2-skill.json'))
   const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : [])
   const pack = 'gpt-image-2'
   for (const row of rows) {
     const title = text(row.title)
     if (!title) continue
+    const shelf = GALLERY_SHELF_BY_CATEGORY.get(text(row.category)) ?? GALLERY_FALLBACK_SHELF
     // The gallery names its frames `NNNN-<prompt slug>.webp`; the index carries
     // the same order, so the file is addressed by the row's own ordinal.
     const index = rows.indexOf(row)
-    const cover = findGalleryImage(join(gxgen, MEME_MEDIA_DIR, 'gpt-image-2-skill'), String(index).padStart(4, '0'))
+    const cover = findGalleryImage(join(gxgen, GALLERY_MEDIA_DIR, 'gpt-image-2-skill'), String(index).padStart(4, '0'))
     add(makeAsset(ctx, {
-      key: `meme/${pack}/${index}/${title}`,
+      key: `gallery/${pack}/${index}/${title}`,
       category: 'material',
-      subCategory: 'meme',
+      subCategory: shelf,
       name: title,
-      description: clamp(text(row.prompt_text), MAX_DESCRIPTION) || '趣味梗图贴片素材',
-      tags: [pack, text(row.category), '表情包', '梗图贴片'],
+      // The row's own prompt is the description: it is what the picture is, and
+      // it is the line a card hands to the conversation.
+      description: clamp(text(row.prompt_text), MAX_DESCRIPTION) || '专业生图画廊素材',
+      tags: [pack, text(row.category), GALLERY_SHELF_LABEL.get(shelf) ?? '专业生图', '专业生图'],
       // A gallery frame is its own cover, so the media slot is left to the
       // remote original and the local webp is what the grid paints.
       localCover: cover,
@@ -932,7 +1108,7 @@ function collectMeme(ctx, add) {
         source: 'gpt-image-2-skill',
         category: text(row.category),
         prompt_text: clamp(text(row.prompt_text), 400),
-        source_file: `${MEME_SOURCE}/gpt-image-2-skill.json`,
+        source_file: `${GALLERY_SOURCE}/gpt-image-2-skill.json`,
       },
     }))
   }
@@ -975,7 +1151,8 @@ const LOOMI_SOURCE = 'inspiration-library/loomi'
  *
  * `sourceClass` is the `category` value `materials.json` writes, and
  * `subCategory` is the shelf the catalog files it under; the two are separate
- * fields precisely because they are not the same word.
+ * fields precisely because they are not the same word. 场景 fills neither: it
+ * carries `resolveShelf`, which answers the shelf for a single row.
  *
  * `describe` composes the row description from the item's own title, so a card
  * reads as a description of the thing rather than one sentence repeated 125
@@ -994,10 +1171,10 @@ const LOOMI_SHELVES = [
   {
     category: 'scene',
     sourceClass: 'scene',
-    subCategory: 'environment',
-    tag: '实景',
-    label: '实景环境',
-    describe: (title) => `${title}，可直接作为画面背景的实景环境素材`,
+    // The one class whose shelf is read off the picture itself (see
+    // `placeShelfOf`) instead of being named for the whole source folder.
+    resolveShelf: (row) => placeShelfOf(text(row.id), `${text(row.title)} ${text(row.filename)}`),
+    describe: (title, subCategory) => `${title}，${SCENE_SHELF_DESCRIPTION[subCategory] ?? '可直接作为画面背景的实景素材'}`,
   },
   {
     category: 'material',
@@ -1037,15 +1214,15 @@ const LOOMI_MEDIA_LABELS = { image: '图片', video: '视频', audio: '音频' }
  * Those rows are named `<shelf label> <source id>` instead, and the handle stays
  * in `meta.creator` where attribution belongs.
  * @param {{ title?: unknown, filename?: unknown, creator?: unknown, id?: unknown }} row
- * @param {typeof LOOMI_SHELVES[number]} shelf
+ * @param {string} label the row's own shelf name
  * @returns {string}
  */
-function loomiTitle(row, shelf) {
+function loomiTitle(row, label) {
   const title = text(row.title)
   const creator = text(row.creator)
   if (title !== '' && title !== creator) return title
   const stem = text(row.filename).replace(/\.[^.]+$/, '')
-  return `${shelf.label} ${text(row.id) || stem}`.trim()
+  return `${label} ${text(row.id) || stem}`.trim()
 }
 
 /**
@@ -1084,19 +1261,24 @@ function collectLoomi(ctx, add, category) {
   const rows = Array.isArray(parsed?.items) ? parsed.items : []
   const shelves = LOOMI_SHELVES.filter((entry) => entry.category === category)
   for (const row of rows) {
-    const shelf = shelves.find((entry) => entry.sourceClass === text(row.category))
-    if (!shelf) continue
+    const entry = shelves.find((candidate) => candidate.sourceClass === text(row.category))
+    if (!entry) continue
     const sourceId = text(row.id)
     if (!sourceId) continue
-    const title = loomiTitle(row, shelf)
+    // 场景 reads its shelf off the picture (one shelf per row); every other class
+    // names one shelf for the whole source folder.
+    const subCategory = entry.resolveShelf ? entry.resolveShelf(row) : entry.subCategory
+    const label = entry.resolveShelf ? (SCENE_SHELF_LABEL.get(subCategory) ?? entry.label) : entry.label
+    const tag = entry.resolveShelf ? (SCENE_SHELF_LABEL.get(subCategory) ?? entry.tag) : entry.tag
+    const title = loomiTitle(row, label)
     const kind = text(row.mediaKind) || bucketOf(extOf(text(row.local_source_media)))
     add(makeAsset(ctx, {
       key: `loomi/${sourceId}`,
-      category: shelf.category,
-      subCategory: shelf.subCategory,
+      category: entry.category,
+      subCategory,
       name: title,
-      description: shelf.describe(title),
-      tags: [shelf.tag, LOOMI_MEDIA_LABELS[kind] ?? '素材', text(row.sourceProvider)].filter(Boolean),
+      description: entry.describe(title, subCategory),
+      tags: [tag, LOOMI_MEDIA_LABELS[kind] ?? '素材', text(row.sourceProvider)].filter(Boolean),
       localMedia: loomiLocal(loomiDir, row.local_source_media),
       remoteMedia: text(row.assetUrl),
       localCover: loomiLocal(loomiDir, row.local_thumbnail),
@@ -1119,7 +1301,7 @@ function collectLoomi(ctx, add, category) {
 function collectMaterial(ctx, add) {
   collectGreenScreen(ctx, add)
   collectHook(ctx, add)
-  collectMeme(ctx, add)
+  collectGallery(ctx, add)
   collectLoomi(ctx, add, 'material')
 }
 
@@ -1135,6 +1317,22 @@ function collectProp(ctx, add) {
 }
 
 /**
+ * 风格 · 六个二级分类。
+ *
+ * The tab used to split by delivery format (生图预设 / 视频调性), which told a
+ * creator nothing about the look. It is now split by the visual school the look
+ * belongs to, so a preset is picked by the picture it produces.
+ */
+const STYLE_SHELVES = [
+  { id: 'live-action', zh: '真人影视', en: 'Live Action' },
+  { id: 'anime-2d', zh: '2D 动漫', en: '2D Anime' },
+  { id: 'render-3d', zh: '3D 动画', en: '3D Render' },
+  { id: 'photography', zh: '胶片摄影', en: 'Photography' },
+  { id: 'traditional-art', zh: '国风传统', en: 'Traditional Art' },
+  { id: 'video-tone', zh: '调性氛围', en: 'Mood & Tone' },
+]
+
+/**
  * The style presets worth shipping: three curated files plus the video-tone
  * element library.
  *
@@ -1148,6 +1346,67 @@ const STYLE_SOURCES = [
   ['xiaoyunque-novel-style-library.json', '小说推文'],
   ['pippit-visual-styles.json', 'Pippit 视觉'],
 ]
+
+/**
+ * Which shelf each curated file's own classes belong on.
+ *
+ * Each file already groups its presets — 小说推文 by 真人 / 3D / 2D, the preset
+ * file by subject — and those groups are one step coarser than the shelves, so
+ * the group is the shelf unless `STYLE_SHELF_OVERRIDES` corrects a single row.
+ * `pippit-visual-styles.json` carries no such group: its classes name a mood
+ * (Natural Living, Premium Aesthetics), which is 调性氛围 itself.
+ */
+const STYLE_SHELF_BY_CLASS = new Map([
+  ['new-style-presets.json', new Map([
+    ['photography', 'photography'],
+    ['anime', 'anime-2d'],
+    ['illustration', 'anime-2d'],
+    ['creative', 'render-3d'],
+    ['graphic-design', 'video-tone'],
+    ['cultural', 'traditional-art'],
+  ])],
+  ['xiaoyunque-novel-style-library.json', new Map([
+    ['真人', 'live-action'],
+    ['3D', 'render-3d'],
+    ['2D', 'anime-2d'],
+  ])],
+])
+
+/** The shelf a style row lands on when its own class says nothing. */
+const STYLE_FALLBACK_SHELF = 'video-tone'
+
+/**
+ * 风格 · 逐条补正表。
+ *
+ * A row whose own class name is broader than the picture it describes: 水墨 and
+ * 版画 are classed as illustration upstream but are 国风传统 here, and the
+ * analog-photography treatments ride with the photographic shelf rather than
+ * with the 3D group they are filed under.
+ */
+const STYLE_SHELF_OVERRIDES = new Map([
+  ['新中式水墨', 'traditional-art'],
+  ['复古水彩', 'traditional-art'],
+  ['木刻版画', 'traditional-art'],
+  ['浮世绘', 'traditional-art'],
+  ['蒸汽波', 'anime-2d'],
+  ['赛博霓虹涂鸦', 'anime-2d'],
+  ['双重曝光', 'photography'],
+  ['故障艺术', 'photography'],
+  ['波普艺术', 'video-tone'],
+])
+
+/**
+ * The look shelf one style row belongs on.
+ * @param {string} fileName the curated file the row came from
+ * @param {string} title the preset's own name
+ * @param {string} className the row's own `category` value
+ * @returns {string}
+ */
+function styleShelfOf(fileName, title, className) {
+  const override = STYLE_SHELF_OVERRIDES.get(title)
+  if (override) return override
+  return STYLE_SHELF_BY_CLASS.get(fileName)?.get(className) ?? STYLE_FALLBACK_SHELF
+}
 
 /**
  * Flatten the differently-shaped style-preset JSONs into rows.
@@ -1175,7 +1434,8 @@ function collectStyle(ctx, add) {
       if (!title) continue
       const authored = text(row.prompt_text)
       const description = text(row.description)
-      const category = [text(row.category_zh), text(row.category)].filter(Boolean).join(' / ')
+      const className = text(row.category)
+      const category = [text(row.category_zh), className].filter(Boolean).join(' / ')
       const prompt = authored || (description ? `${title}（${category || pack}）：${description}` : '')
       if (prompt === '' || STYLE_EXCLUDE.test(title) || STYLE_EXCLUDE.test(prompt)) {
         dropped += 1
@@ -1192,10 +1452,10 @@ function collectStyle(ctx, add) {
       add(makeAsset(ctx, {
         key: `style/${fileName}/${text(row.source_id) || text(row.id) || title}`,
         category: 'style',
-        subCategory: fileName === 'pippit-visual-styles.json' ? 'video-tone' : 'image-preset',
+        subCategory: styleShelfOf(fileName, title, className),
         name: title,
         description: clamp(description || prompt, MAX_DESCRIPTION) || title,
-        tags: [pack, text(row.category), text(row.category_zh)],
+        tags: [pack, className, text(row.category_zh)],
         localCover: cover,
         remoteCover: text(row.cover_url) || text(row.remotePosterUrl),
         meta: {
@@ -1405,10 +1665,7 @@ const CATEGORIES = [
     id: 'scene',
     zh: '场景',
     en: 'Scenes',
-    subCategories: [
-      { id: 'ambience', zh: '场景氛围', en: 'Ambience' },
-      { id: 'environment', zh: '实景环境', en: 'Environments' },
-    ],
+    subCategories: SCENE_SHELVES,
     collect: collectScene,
   },
   {
@@ -1429,12 +1686,15 @@ const CATEGORIES = [
     zh: '素材',
     en: 'Material',
     subCategories: [
-      { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
       { id: 'hook', zh: '钩子', en: 'Hooks' },
-      { id: 'meme', zh: '表情包', en: 'Memes' },
-      { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
+      { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
       { id: 'clothing', zh: '服饰穿搭', en: 'Fashion & Outfits' },
+      { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
       { id: 'portrait', zh: '人像写真', en: 'Portraits' },
+      { id: 'graphic-design', zh: '平面设计', en: 'Graphic Design' },
+      { id: 'illustration', zh: '商业插画', en: 'Commercial Illustration' },
+      { id: 'anime', zh: '动漫分镜', en: 'Anime Storyboard' },
+      { id: 'concept-art', zh: '概念艺术', en: 'Concept Art' },
     ],
     collect: collectMaterial,
   },
@@ -1442,10 +1702,7 @@ const CATEGORIES = [
     id: 'style',
     zh: '风格',
     en: 'Styles',
-    subCategories: [
-      { id: 'image-preset', zh: '生图预设', en: 'Image Presets' },
-      { id: 'video-tone', zh: '视频调性', en: 'Video Tones' },
-    ],
+    subCategories: STYLE_SHELVES,
     collect: collectStyle,
   },
   {

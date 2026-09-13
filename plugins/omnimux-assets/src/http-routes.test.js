@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { createAssetsDispatcher, registerAssetsRoutes } from './http-routes.js'
+import { fileURLToPath } from 'node:url'
+import { createAssetsDispatcher, registerAssetsRoutes, resolveCatalogPagePath } from './http-routes.js'
 import { createArtifactStore } from './artifacts.js'
 import { createCloudCatalog } from './cloud-catalog.js'
 import { createLibraryStore } from './library.js'
@@ -661,6 +662,107 @@ describe('Cloud catalog metadata routes', () => {
     const response = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/manifest.xml' })
     assert.equal(response.status, 404)
     assert.match(response.body.message, /catalog page path/)
+  })
+})
+
+/**
+ * 真实资产库分类体系的路由覆盖。
+ *
+ * 二级分类 id 由构建脚本 slug 化，`style/live-action` 这类连字符 id 是常规产物而
+ * 不是例外。测试输入是仓库里真实 manifest 的每一个二级分类，而不是一个手写的
+ * 样例作用域：路由正则少放行一个字符类，整架二级分类就会一起 404，样例作用域
+ * 恰恰会漏掉这种整架失败。
+ *
+ * `character/character_filtered` 是 manifest 声明但目录里没有分片的筛选作用域，
+ * 它由 `/filter` 查询路由回答，因此分片断言只覆盖磁盘上真有分片的二级分类；
+ * 路径解析断言对它同样生效。
+ */
+describe('Real catalog sub-category routing', () => {
+  const REAL_CATALOG_DIR = fileURLToPath(new URL('../cloud-catalog/', import.meta.url))
+  const realManifest = JSON.parse(readFileSync(join(REAL_CATALOG_DIR, 'manifest.json'), 'utf8'))
+  const subCategories = realManifest.categories.flatMap((category) =>
+    (category.sub_categories ?? []).map((sub) => ({ scope: `${category.id}/${sub.id}`, segments: [category.id, sub.id] })),
+  )
+
+  function makeRealCatalogDispatcher() {
+    const { mappings, artifacts, library } = makeDispatcher()
+    return createAssetsDispatcher({
+      mappings,
+      artifacts,
+      library,
+      cloud: createCloudCatalog({ catalogDir: REAL_CATALOG_DIR }),
+    })
+  }
+
+  it('reads a manifest that declares sub-categories', () => {
+    assert.ok(subCategories.length > 0, 'the shipped manifest must declare sub-categories')
+  })
+
+  it('resolves every declared sub-category page inside the catalog directory', () => {
+    for (const { scope, segments } of subCategories) {
+      const file = resolveCatalogPagePath(REAL_CATALOG_DIR, [...segments, 'page-0000.json'])
+      assert.equal(file, join(REAL_CATALOG_DIR, ...segments, 'page-0000.json'), scope)
+    }
+  })
+
+  it('serves page-0000.json for every sub-category that has a shard on disk', async () => {
+    const dispatcher = makeRealCatalogDispatcher()
+    const served = []
+    for (const { scope, segments } of subCategories) {
+      const expected = join(REAL_CATALOG_DIR, ...segments, 'page-0000.json')
+      if (!existsSync(expected)) continue
+      const response = await dispatcher.dispatch({
+        method: 'GET',
+        url: `/omnimux/assets/cloud/${scope}/page-0000.json`,
+      })
+      assert.equal(response.status, 200, scope)
+      assert.equal(response.stream.mime, 'application/json; charset=utf-8', scope)
+      assert.equal(response.stream.absolutePath, expected, scope)
+      served.push(scope)
+    }
+    assert.ok(served.length > 0, 'no sub-category shard was exercised')
+    assert.ok(
+      served.some((scope) => scope.includes('-')),
+      'the served set must include the hyphenated ids the taxonomy produces',
+    )
+  })
+
+  it('answers hyphenated sub-category shards over the registered HTTP route', async () => {
+    const shardScopes = subCategories.filter(({ segments }) =>
+      existsSync(join(REAL_CATALOG_DIR, ...segments, 'page-0000.json')),
+    )
+    const hyphenated = shardScopes.filter(({ scope }) => scope.includes('-'))
+    assert.ok(hyphenated.length > 0, 'the taxonomy is expected to produce hyphenated ids')
+
+    const routes = await openRegisteredRoutes(makeRealCatalogDispatcher())
+    try {
+      for (const { scope } of hyphenated) {
+        const response = await requestJson(routes.port, { path: `/omnimux/assets/cloud/${scope}/page-0000.json` })
+        assert.equal(response.status, 200, scope)
+        assert.equal(response.body.scope, scope, scope)
+        assert.equal(Array.isArray(response.body.items), true, scope)
+      }
+    } finally {
+      await routes.close()
+    }
+  })
+
+  it('keeps refusing traversal and non-id scope segments', async () => {
+    const dispatcher = makeRealCatalogDispatcher()
+    const refused = [
+      'style/%2e%2e/page-0000.json',
+      'style/%2E%2E/page-0000.json',
+      'style%2flive-action/page-0000.json',
+      'style/live-action%2f%2e%2e/page-0000.json',
+      '%2e%2e%2fmanifest.json',
+      'Style/page-0000.json',
+      '-live-action/page-0000.json',
+    ]
+    for (const suffix of refused) {
+      const response = await dispatcher.dispatch({ method: 'GET', url: `/omnimux/assets/cloud/${suffix}` })
+      assert.equal(response.status, 404, suffix)
+      assert.equal(response.stream, undefined, suffix)
+    }
   })
 })
 
