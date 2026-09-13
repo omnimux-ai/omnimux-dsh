@@ -3805,12 +3805,48 @@ textarea:focus-visible {
   transition: all 0.15s ease;
   text-align: left;
 }
+
 .preset-chip-btn:hover {
-  background: var(--ink-strong);
-  color: var(--canvas);
-  border-color: var(--ink-strong);
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+  border-color: var(--line-strong);
 }
-.preset-chip-btn .chip-icon { font-size: calc(12px * var(--ui-scale)); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .preset-chip-btn {
+    background: #18181b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f4f4f5;
+  }
+  :root:not([data-theme="light"]) .preset-chip-btn:hover {
+    background: #27272a !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+  }
+}
+
+:root[data-theme="dark"] .preset-chip-btn {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
+}
+
+:root[data-theme="dark"] .preset-chip-btn:hover {
+  background: #27272a !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+}
+
+.preset-chip-btn .chip-icon {
+  font-size: calc(12px * var(--ui-scale));
+  display: flex;
+  align-items: center;
+  color: inherit;
+}
+
+.preset-chip-btn .chip-label {
+  color: inherit;
+}
 
 /* Page media sensed by the content script, shown above the composer. */
 .page-media-bar {
