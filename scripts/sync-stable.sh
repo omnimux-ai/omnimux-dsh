@@ -461,7 +461,12 @@ function declaresBundle(name) {
 }
 
 // 清理已知历史废弃/更名前的包名，避免 Cordis 重复注册 Service 冲突导致 Host 启动失败崩溃
-const LEGACY_PRUNE_NAMES = pruneLegacy === '1' ? ['dsh-video', 'dsh-omnimux', 'dsh-drama', 'dsh-publish'] : []
+// `@crosery/dsh-viewer` 是被 fork 进套件（plugins/omnimux-viewer）的外部预览插件：它与官方
+// read_image 卡片在同一个 keyed slot 上同优先级注册并抛错，必须随全量同步清退，否则老实现
+// 仍会被加载并继续与官方行抢位，修复在界面上不生效。
+const LEGACY_PRUNE_NAMES = pruneLegacy === '1'
+  ? ['dsh-video', 'dsh-omnimux', 'dsh-drama', 'dsh-publish', '@crosery/dsh-viewer']
+  : []
 for (const legacy of LEGACY_PRUNE_NAMES) {
   if (manifest.dependencies[legacy]) {
     delete manifest.dependencies[legacy]
