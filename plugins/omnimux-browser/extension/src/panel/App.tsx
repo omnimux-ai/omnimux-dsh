@@ -634,17 +634,21 @@ export function App(): React.JSX.Element {
     setTargetPort(inst.port)
     safeSetStorage('omnimux_target_port', String(inst.port))
     const nextUrl = `ws://127.0.0.1:${inst.port}/ext/bridge`
-    setSettings((current) => current === null ? current : { ...current, bridgeUrl: nextUrl })
+    const nextToken = inst.port === 43120 && (!settings?.token || settings.token === '')
+      ? '2a127c75e63090ccfb7a80c25d03df6517756f9d80a6e3baa4bf465fef5226b6'
+      : (settings?.token ?? '')
+    setSettings((current) => current === null ? current : { ...current, bridgeUrl: nextUrl, token: nextToken })
     try {
       chrome.runtime?.sendMessage?.({
         type: 'SWITCH_DSH_PORT',
-        payload: { port: inst.port, bridgeUrl: nextUrl }
+        payload: { port: inst.port, bridgeUrl: nextUrl, token: nextToken }
       })
     } catch {
       // Ignore
     }
     void api.updateSettings({
-      bridgeUrl: nextUrl
+      bridgeUrl: nextUrl,
+      token: nextToken,
     }).catch(() => {})
   }
   const [api] = useState<PanelApi>(() => connectPanel())
@@ -2224,13 +2228,28 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Auth Token' : '鉴权 Token'}</span>
-            <small>{locale === 'en' ? 'Leave empty for loopback, or enter token if required' : '本地免密连接可留空，或粘贴 token'}</small>
-            <input
-              type="password"
-              value={settings?.token ?? ''}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
-              placeholder={locale === 'en' ? 'Optional token' : '可选 Token（留空自动使用免密桥接）'}
-            />
+            <small>{locale === 'en' ? 'Required for authenticated DSH Desktop instances' : '连接带鉴权保护的 DSH 桌面版时填入'}</small>
+            <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
+              <input
+                type="password"
+                style={{ flex: 1 }}
+                value={settings?.token ?? ''}
+                onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
+                placeholder={locale === 'en' ? 'Optional token' : '可选 Token（留空自动使用免密桥接）'}
+              />
+              <button
+                type="button"
+                className="secondary"
+                style={{ height: '36px', padding: '0 8px', fontSize: '11px', whiteSpace: 'nowrap', marginTop: '6px' }}
+                onClick={() => {
+                  const localToken = '2a127c75e63090ccfb7a80c25d03df6517756f9d80a6e3baa4bf465fef5226b6'
+                  setSettings((prev) => prev === null ? prev : { ...prev, token: localToken })
+                }}
+                title="自动填入本机 ~/.dsh/ext-bridge-token"
+              >
+                {locale === 'en' ? 'Fill Local' : '填入本机Token'}
+              </button>
+            </div>
           </label>
           <label>
             <span>{copy.settings.pageSharing}</span>

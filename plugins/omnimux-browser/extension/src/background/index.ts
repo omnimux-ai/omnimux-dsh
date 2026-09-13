@@ -2047,8 +2047,11 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     const port = m.payload?.port
     const bridgeUrl = (typeof m.payload?.bridgeUrl === 'string' && m.payload.bridgeUrl)
       || (typeof port === 'number' ? `ws://127.0.0.1:${port}/ext/bridge` : undefined)
+    const token = typeof m.payload?.token === 'string' ? m.payload.token : undefined
     if (bridgeUrl) {
-      void persistSettings({ bridgeUrl }).then(async () => {
+      const patch: Partial<Settings> = { bridgeUrl }
+      if (token !== undefined) patch.token = token
+      void persistSettings(patch).then(async () => {
         if (panelPorts.size > 0) {
           bridgeStartRevision += 1
           await startBridge()
