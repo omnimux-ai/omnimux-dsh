@@ -129,29 +129,191 @@ export function renderRegularSection(opts) {
   );
 }
 
-export function renderMineToolbar(opts) {
-  const h = getH(opts);
-  const { mineCategory, setMineCategory, mineSource, setMineSource, availableSources, autoUpdate, setAutoUpdate, tr } = opts;
-  const catAll = tr('workshop.catAll') || '全部';
-  const nextMineCat = () => { const o = ['', ...WORKSHOP_DOMAIN_ORDER]; setMineCategory(o[(o.indexOf(mineCategory) + 1) % o.length]); };
-  const nextMineSrc = () => { const o = ['', ...availableSources]; setMineSource(o[(o.indexOf(mineSource) + 1) % o.length]); };
+function resolveStateHook(hooks) {
+  if (hooks && typeof hooks.useState === 'function') return hooks.useState;
+  if (typeof useState === 'function') return useState;
+  return React.useState;
+}
+
+function resolveRefHook(hooks) {
+  if (hooks && typeof hooks.useRef === 'function') return hooks.useRef;
+  if (typeof useRef === 'function') return useRef;
+  return React.useRef;
+}
+
+function resolveEffectHook(hooks) {
+  if (hooks && typeof hooks.useEffect === 'function') return hooks.useEffect;
+  if (typeof useEffect === 'function') return useEffect;
+  return React.useEffect;
+}
+
+function renderCheckIcon(h) {
+  return h('svg', {
+    width: 12,
+    height: 12,
+    viewBox: '0 0 16 16',
+    fill: 'none',
+    className: 'mine-dropdown-check',
+    'aria-hidden': 'true',
+  },
+    h('path', {
+      d: 'M3.5 8.5L6.5 11.5L12.5 4.5',
+      stroke: 'currentColor',
+      strokeWidth: '1.8',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    }),
+  );
+}
+
+export function MineToolbar(props) {
+  const h = getH(props);
+  const stateFn = resolveStateHook(props?.hooks);
+  const refFn = resolveRefHook(props?.hooks);
+  const effectFn = resolveEffectHook(props?.hooks);
+
+  const {
+    mineCategory = '',
+    setMineCategory = () => {},
+    mineSource = '',
+    setMineSource = () => {},
+    availableSources = [],
+    autoUpdate = false,
+    setAutoUpdate = () => {},
+    tr,
+  } = props || {};
+
+  const [openMenu, setOpenMenu] = stateFn(null);
+  const catRef = refFn(null);
+  const srcRef = refFn(null);
+
+  effectFn(() => {
+    if (!openMenu) return undefined;
+    if (typeof document === 'undefined') return undefined;
+    const onDocClick = (e) => {
+      const target = e.target;
+      if (openMenu === 'category' && catRef.current && !catRef.current.contains(target)) {
+        setOpenMenu(null);
+      } else if (openMenu === 'source' && srcRef.current && !srcRef.current.contains(target)) {
+        setOpenMenu(null);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpenMenu(null);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenu]);
+
+  const isZh = tr ? tr('locale') === 'zh' : true;
+  const isCatOpen = openMenu === 'category';
+  const isSrcOpen = openMenu === 'source';
+
+  const defaultCatText = tr ? (tr('workshop.category') || '分类') : '分类';
+  const catPrefix = tr ? (tr('workshop.catPrefix') || '分类 ') : '分类 ';
+  const catDisplay = mineCategory === '短剧漫剧' && isZh ? '短剧/漫剧' : mineCategory;
+  const catBtnText = mineCategory ? (catPrefix + catDisplay) : defaultCatText;
+
+  const defaultSrcText = tr ? (tr('workshop.source') || '来源') : '来源';
+  const srcPrefix = tr ? (tr('workshop.sourcePrefix') || '来源 ') : '来源 ';
+  const srcBtnText = mineSource ? (srcPrefix + mineSource) : defaultSrcText;
+
+  const allCatLabel = isZh ? '全部分类' : (tr ? (tr('workshop.catAll') || 'All') : 'All');
+  const allSrcLabel = isZh ? '全部来源' : (tr ? (tr('workshop.catAll') || 'All') : 'All');
+
+  const isAllCatActive = !mineCategory;
+  const isAllSrcActive = !mineSource;
+
+  const toggleCatMenu = () => setOpenMenu(isCatOpen ? null : 'category');
+  const toggleSrcMenu = () => setOpenMenu(isSrcOpen ? null : 'source');
+
   return h('div', { className: 'mine-toolbar' },
-    // exempt-ui01 mine category dropdown button
-    h('button', { type: 'button', className: 'pill-dropdown', onClick: nextMineCat },
-      h('span', null, (tr('workshop.catPrefix') || '分类 ') + (mineCategory || catAll)),
-      h('span', { style: { fontSize: '10px' } }, '▾'),
+    h('div', { className: 'mine-dropdown-wrap', ref: catRef },
+      // exempt-ui01 mine category dropdown button
+      h('button', {
+        type: 'button',
+        className: 'pill-dropdown' + (isCatOpen ? ' open' : ''),
+        'aria-expanded': isCatOpen,
+        onClick: toggleCatMenu,
+      },
+        h('span', null, catBtnText),
+        h('span', { className: 'pill-arrow', style: { fontSize: '10px' } }, '▾'),
+      ),
+      isCatOpen ? h('div', { className: 'mine-dropdown-menu', role: 'menu' },
+        h('button', {
+          key: '__all_cat__',
+          type: 'button',
+          className: 'mine-dropdown-item' + (isAllCatActive ? ' active' : ''),
+          onClick: () => { setMineCategory(''); setOpenMenu(null); },
+        },
+          h('span', null, allCatLabel),
+          isAllCatActive ? renderCheckIcon(h) : null,
+        ),
+        WORKSHOP_DOMAIN_ORDER.map((c) => {
+          const isSelected = mineCategory === c;
+          const label = (c === '短剧漫剧' && isZh) ? '短剧/漫剧' : c;
+          return h('button', {
+            key: c,
+            type: 'button',
+            className: 'mine-dropdown-item' + (isSelected ? ' active' : ''),
+            onClick: () => { setMineCategory(c); setOpenMenu(null); },
+          },
+            h('span', null, label),
+            isSelected ? renderCheckIcon(h) : null,
+          );
+        }),
+      ) : null,
     ),
-    availableSources.length ?
-      // exempt-ui01 mine source dropdown button
-      h('button', { type: 'button', className: 'pill-dropdown', onClick: nextMineSrc },
-        h('span', null, (tr('workshop.sourcePrefix') || '来源 ') + (mineSource || catAll)),
-        h('span', { style: { fontSize: '10px' } }, '▾'),
+    availableSources && availableSources.length ?
+      h('div', { className: 'mine-dropdown-wrap', ref: srcRef },
+        // exempt-ui01 mine source dropdown button
+        h('button', {
+          type: 'button',
+          className: 'pill-dropdown' + (isSrcOpen ? ' open' : ''),
+          'aria-expanded': isSrcOpen,
+          onClick: toggleSrcMenu,
+        },
+          h('span', null, srcBtnText),
+          h('span', { className: 'pill-arrow', style: { fontSize: '10px' } }, '▾'),
+        ),
+        isSrcOpen ? h('div', { className: 'mine-dropdown-menu', role: 'menu' },
+          h('button', {
+            key: '__all_src__',
+            type: 'button',
+            className: 'mine-dropdown-item' + (isAllSrcActive ? ' active' : ''),
+            onClick: () => { setMineSource(''); setOpenMenu(null); },
+          },
+            h('span', null, allSrcLabel),
+            isAllSrcActive ? renderCheckIcon(h) : null,
+          ),
+          availableSources.map((src) => {
+            const isSelected = mineSource === src;
+            return h('button', {
+              key: src,
+              type: 'button',
+              className: 'mine-dropdown-item' + (isSelected ? ' active' : ''),
+              onClick: () => { setMineSource(src); setOpenMenu(null); },
+            },
+              h('span', null, src),
+              isSelected ? renderCheckIcon(h) : null,
+            );
+          }),
+        ) : null,
       ) : null,
     h('div', { className: 'auto-update-wrap' },
-      h('span', null, tr('workshop.autoUpdate') || '自动更新'),
+      h('span', null, tr ? (tr('workshop.autoUpdate') || '自动更新') : '自动更新'),
       h(WorkshopSwitch, { checked: autoUpdate, onChange: setAutoUpdate }),
     ),
   );
+}
+
+export function renderMineToolbar(opts) {
+  const h = getH(opts);
+  return h(MineToolbar, { ...opts, h });
 }
 
 export function renderMineCardsList(filteredMine, opts) {

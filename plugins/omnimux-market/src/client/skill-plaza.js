@@ -9,7 +9,7 @@
     const { ConfirmInstallModal: PlazaConfirmInstallModal } = require("./plaza/ConfirmInstallModal.jsx");
     const { renderExpertCard, ExpertCard } = require("./plaza/ExpertCard.jsx");
     const { renderFeaturedCard, FeaturedCard } = require("./plaza/FeaturedCard.jsx");
-    const { renderRegularCard, renderMineCard, PlazaCardGrid } = require("./plaza/PlazaCardGrid.jsx");
+    const { renderRegularCard, renderMineCard, MineToolbar, renderMineToolbar: plazaRenderMineToolbar, PlazaCardGrid } = require("./plaza/PlazaCardGrid.jsx");
     const {
       updateInstalledItemsList,
       filterMineItems,
@@ -134,27 +134,10 @@
     }
 
     function renderMineToolbar(opts) {
-      const { mineCategory, setMineCategory, mineSource, setMineSource, availableSources, autoUpdate, setAutoUpdate, tr } = opts;
-      const catAll = tr("workshop.catAll") || "全部";
-      const nextMineCat = () => { const o = ["", ...WORKSHOP_DOMAIN_ORDER]; setMineCategory(o[(o.indexOf(mineCategory) + 1) % o.length]); };
-      const nextMineSrc = () => { const o = ["", ...availableSources]; setMineSource(o[(o.indexOf(mineSource) + 1) % o.length]); };
-      return h("div", { className: "mine-toolbar" },
-        // exempt-ui01 mine category dropdown button
-        h("button", { type: "button", className: "pill-dropdown", onClick: nextMineCat },
-          h("span", null, (tr("workshop.catPrefix") || "分类 ") + (mineCategory || catAll)),
-          h("span", { style: { fontSize: "10px" } }, "▾"),
-        ),
-        availableSources.length ?
-          // exempt-ui01 mine source dropdown button
-          h("button", { type: "button", className: "pill-dropdown", onClick: nextMineSrc },
-            h("span", null, (tr("workshop.sourcePrefix") || "来源 ") + (mineSource || catAll)),
-            h("span", { style: { fontSize: "10px" } }, "▾"),
-          ) : null,
-        h("div", { className: "auto-update-wrap" },
-          h("span", null, tr("workshop.autoUpdate") || "自动更新"),
-          h(WorkshopSwitch, { checked: autoUpdate, onChange: setAutoUpdate }),
-        ),
-      );
+      const stateHook = typeof useState === "function" ? useState : null;
+      const refHook = typeof useRef === "function" ? useRef : null;
+      const effectHook = typeof useEffect === "function" ? useEffect : null;
+      return plazaRenderMineToolbar({ ...opts, h, hooks: { useState: stateHook, useRef: refHook, useEffect: effectHook } });
     }
 
     function renderFeaturedSection(opts) {
