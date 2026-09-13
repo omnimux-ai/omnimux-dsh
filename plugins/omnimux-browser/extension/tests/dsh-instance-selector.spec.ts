@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Verification suite for DSH & OmniMux instance port selector and health checker
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
