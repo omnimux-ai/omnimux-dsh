@@ -160,6 +160,7 @@ export const zh = {
   'composerAdd.toast.failed': '{n} 项添加失败',
   'workbench.chatShow': '显示会话栏',
   'workbench.chatHide': '全屏铺满右侧栏',
+  'mediaViewer.tabTitle': '图片浏览',
 }
 
 export const en = {
@@ -324,6 +325,7 @@ export const en = {
   'composerAdd.toast.failed': '{n} failed to add',
   'workbench.chatShow': 'Show conversation',
   'workbench.chatHide': 'Expand to full width',
+  'mediaViewer.tabTitle': 'Media Viewer',
 }
 
 
