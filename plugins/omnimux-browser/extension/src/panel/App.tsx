@@ -21,7 +21,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { SunIcon, MoonIcon, CloseIcon } from './components/icons.tsx'
+import { SunIcon, MoonIcon, CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
@@ -653,6 +653,7 @@ export function App(): React.JSX.Element {
   const [trustedOriginInput, setTrustedOriginInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showSessionPicker, setShowSessionPicker] = useState(false)
+  const [sessionSearchQuery, setSessionSearchQuery] = useState('')
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [sessionChanging, setSessionChanging] = useState(false)
   const [sessionList, setSessionList] = useState<SessionPickerEntry[]>([])
@@ -1826,6 +1827,14 @@ export function App(): React.JSX.Element {
   // 状态栏只显示连接状态；快照上限是技术细节，在设置页说明（见 hint）。
   const statusText = copy.status[state]
   const sessionMenuTitle = sessionTitle ?? copy.app.newSession
+  const filteredSessions = useMemo(() => {
+    if (!sessionSearchQuery.trim()) return sessionList
+    const q = sessionSearchQuery.toLowerCase().trim()
+    return sessionList.filter((entry) => {
+      const title = sessionDisplayTitle(entry).toLowerCase()
+      return title.includes(q) || (entry.cwd && entry.cwd.toLowerCase().includes(q))
+    })
+  }, [sessionList, sessionSearchQuery])
   const approvalDialog = !approvalReadyForSession(queuedApproval, sessionRef.current, sessionChanging)
     ? null
     : <ApprovalDialog request={queuedApproval!} onDecision={decideApproval} copy={copy} />
@@ -1842,6 +1851,13 @@ export function App(): React.JSX.Element {
         </div>
         <UpdateCard copy={copy.update} />
         <div className="settings-panel">
+          <label>
+            <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
+            <small>{locale === 'en' ? 'Bind your browser chat and generation tasks to a local DSH / OmniMux workspace' : '设置会话与生成任务绑定的本地 DSH / OmniMux 工作区目录'}</small>
+            <div style={{ marginTop: '8px' }}>
+              <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
+            </div>
+          </label>
           <label>
             <span>{copy.settings.bridgeAddress}</span>
             <small>{copy.settings.bridgeHelp}</small>
@@ -2079,13 +2095,18 @@ export function App(): React.JSX.Element {
   return (
     <><div className="app">
       <header className="topbar">
-        <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
-          aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
-          onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
-          <span>{sessionMenuTitle}</span>
-          <ChevronDownIcon />
-        </button>
-        <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
+        <div className="topbar-left">
+          <span className="brand-mini-badge" title="OmniMux-精灵助手">
+            <img src={whaleUrl} alt="OmniMux" />
+          </span>
+          <button className="session-menu-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
+            aria-expanded={showSessionPicker} aria-label={copy.app.openSessions}
+            onClick={() => { void openSessionPicker() }} title={sessionMenuTitle}>
+            <MenuIcon size={14} />
+            <span className="session-trigger-title">{sessionMenuTitle}</span>
+            <ChevronDownIcon />
+          </button>
+        </div>
         <div className="topbar-actions">
           <button
             type="button"
@@ -2099,7 +2120,7 @@ export function App(): React.JSX.Element {
           <button className="icon-button new-session-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
             onClick={() => { void startNewSession() }}
             aria-label={copy.app.newSession} title={copy.app.newSession}>
-            <PlusIcon />
+            <PlusSvgIcon size={14} />
           </button>
           <button className="icon-button text-size-trigger" onClick={() => setShowTextSize((open) => !open)}
             aria-expanded={showTextSize} aria-label={copy.textSize.open} title={copy.textSize.open}>
@@ -2115,9 +2136,7 @@ export function App(): React.JSX.Element {
                 onClick={() => {
                   try {
                     void chrome.sidePanel?.open?.({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch(() => {})
-                  } catch {
-                    // Fallback
-                  }
+                  } catch {}
                 }}
                 title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
               >
@@ -2145,32 +2164,38 @@ export function App(): React.JSX.Element {
       )}
       <TabAffinityBanner state={tabAffinity} copy={copy} onDecision={decideTabAffinity} />
       {showSessionPicker && (
-        <section className="session-picker" aria-label={copy.app.sessions}>
-          <div className="session-picker-head">
-            <strong>{copy.app.sessions}</strong>
-            <button className="session-new" disabled={state !== 'connected' || sessionSwitchBlocked}
-              onClick={() => { void startNewSession() }}>
-              {copy.app.newSession}
-            </button>
+        <section className="session-picker youmind-style" aria-label={copy.app.sessions}>
+          <div className="session-search-box">
+            <SearchIcon size={13} className="search-icon" />
+            <input
+              type="text"
+              className="session-search-input"
+              value={sessionSearchQuery}
+              onChange={(e) => setSessionSearchQuery(e.target.value)}
+              placeholder={locale === 'en' ? 'Search...' : '搜索...'}
+              autoFocus
+            />
           </div>
           {loadingSessions
             ? <p className="session-empty">{copy.app.sessionPickerLoading}</p>
-            : sessionList.length === 0
+            : filteredSessions.length === 0
               ? <p className="session-empty">{copy.app.sessionPickerEmpty}</p>
               : (
                 <ul className="session-list">
-                  {sessionList.map((entry) => {
+                  {filteredSessions.map((entry) => {
                     const title = sessionDisplayTitle(entry)
+                    const isCurrent = entry.sessionId === sessionRef.current
                     return (
                       <li key={entry.sessionId}>
                         <button disabled={sessionSwitchBlocked}
-                          aria-current={entry.sessionId === sessionRef.current ? 'true' : undefined}
-                          onClick={() => { void resumeSession(entry) }}>
+                          className={`session-item-row ${isCurrent ? 'active' : ''}`}
+                          aria-current={isCurrent ? 'true' : undefined}
+                          onClick={() => {
+                            void resumeSession(entry)
+                            setShowSessionPicker(false)
+                          }}>
+                          <span className="session-icon"><MessageSquareIcon size={13} /></span>
                           <span className="session-title" title={title}>{title}</span>
-                          <span className="session-meta">
-                            <span className="session-time">{new Date(entry.updatedAt).toLocaleString()}</span>
-                            {entry.cwd !== undefined && <span className="session-cwd" title={entry.cwd}>{entry.cwd}</span>}
-                          </span>
                         </button>
                         {!entry.running && (
                           <button className="icon-button session-delete" disabled={sessionSwitchBlocked}
@@ -2184,20 +2209,55 @@ export function App(): React.JSX.Element {
                   })}
                 </ul>
               )}
+          <div className="session-picker-footer">
+            <button
+              className="session-footer-new-btn"
+              disabled={state !== 'connected' || sessionSwitchBlocked}
+              onClick={() => {
+                void startNewSession()
+                setShowSessionPicker(false)
+              }}
+            >
+              <PlusSvgIcon size={13} />
+              <span>{locale === 'en' ? 'Start New Chat' : '开启新对话'}</span>
+            </button>
+          </div>
         </section>
       )}
       <div className="messages" ref={scrollRef}>
         {rows.length === 0 && streamRow === null && !working && (
-          <div className="empty">
-            <span className="empty-logo"><img src={whaleUrl} alt="" /></span>
-            <div>
-              <h1>{copy.app.emptyTitle}</h1>
-              <p>{copy.app.emptyDescription}</p>
+          <div className="empty empty-hero-layout">
+            <div className="page-hero-card">
+              <div className="hero-top-row">
+                <span className="hero-app-badge">
+                  <img src={whaleUrl} alt="OmniMux" />
+                </span>
+                <span className="hero-platform-text">
+                  {pageScene?.platform === 'twitter' ? 'X (formerly Twitter)' : (pageScene?.title ? 'Web' : 'OmniMux')}
+                </span>
+              </div>
+              <div className="hero-page-meta">
+                <div className="hero-meta-title" title={pageScene?.title || ''}>
+                  {pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}
+                </div>
+                {pageScene?.author && (
+                  <div className="hero-meta-author">@{pageScene.author}</div>
+                )}
+              </div>
+              <button
+                type="button"
+                className="hero-action-pill-btn"
+                disabled={!sessionReady}
+                onClick={() => { void send(copy.app.overviewPrompt) }}
+              >
+                {locale === 'en' ? 'Summarize Current Page' : '把当前页面交给我'}
+              </button>
             </div>
-            <button disabled={!sessionReady}
-              onClick={() => { void send(copy.app.overviewPrompt) }}>
-              {copy.app.overviewPage}
-            </button>
+
+            <div className="hero-welcome-texts">
+              <h2>{locale === 'en' ? 'Hello 👋' : '你好 👋'}</h2>
+              <p>{locale === 'en' ? 'What would you like to know?' : '你想了解些什么呢？'}</p>
+            </div>
           </div>
         )}
         {rows.map((row) => (
@@ -2234,9 +2294,7 @@ export function App(): React.JSX.Element {
       )}
       {error !== null && <div className="error">{error}</div>}
       <footer className="composer">
-        <MediaSnifferBar items={detectedMedia} locale={locale} onAttachMedia={(m) => { void attachMediaAsImage(m) }} />
-        <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => setDraft((c) => ({ ...c, text: p }))} />
-        <div className="composer-box">
+        <div className="composer-box clean-chat-box">
           {selection !== null && (
             <SelectionQuote
               selection={{ ...selection, quote: selection.text }}
@@ -2279,11 +2337,11 @@ export function App(): React.JSX.Element {
                 void send()
               }
             }}
-            placeholder={state === 'connected' ? copy.app.connectedPlaceholder : copy.app.disconnectedPlaceholder}
+            placeholder={locale === 'en' ? 'Ask me anything...' : '问我任何问题~'}
             disabled={!sessionReady || busy}
-            rows={2}
+            rows={1}
           />
-          <div className="composer-actions">
+          <div className="composer-actions clean-actions-row">
             <span className="composer-actions-start">
               <input
                 ref={fileInputRef}
@@ -2300,18 +2358,23 @@ export function App(): React.JSX.Element {
               />
               <button
                 type="button"
-                className="attachment-button"
+                className="clean-add-btn"
                 disabled={!sessionReady || busy || addingImages || imageLimits === null
                   || draftImages.length >= imageLimits.maxImagesPerMessage}
                 aria-label={copy.app.addImages}
                 title={imageLimits === null ? copy.app.imageUnavailable : copy.app.addImages}
                 onClick={() => fileInputRef.current?.click()}
-              ><AttachmentIcon /></button>
-              <span>{copy.app.composerHelp}</span>
+              >
+                <PlusSvgIcon size={14} />
+              </button>
+              <div className="mode-capsule-btn" title="当前为自动选模与全能对话模式">
+                <span>{locale === 'en' ? 'Auto' : '自动'}</span>
+                <ChevronDownIcon />
+              </div>
             </span>
             {working ? (
               <button
-                className="stop-button"
+                className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
                 disabled={!sessionReady || stopping}
                 aria-label={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
@@ -2320,10 +2383,16 @@ export function App(): React.JSX.Element {
                 <span className="stop-glyph" aria-hidden="true" />
               </button>
             ) : (
-              <button onClick={() => void send()}
+              <button
+                className="clean-send-btn active"
+                onClick={() => void send()}
                 disabled={!sessionReady || busy || addingImages
                   || (input.trim() === '' && draftImages.length === 0 && selection === null)}
-                aria-label={copy.app.sendMessage}><SendIcon /></button>
+                aria-label={copy.app.sendMessage}
+                title={copy.app.sendMessage}
+              >
+                <ArrowUpIcon size={15} />
+              </button>
             )}
           </div>
         </div>

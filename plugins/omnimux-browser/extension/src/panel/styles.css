@@ -3270,3 +3270,399 @@ textarea:focus-visible {
   color: #1d4ed8;
 }
 
+/* ============================================================
+   Minimalist YouMind-Inspired UI (Black & White + Violet Accent)
+   ============================================================ */
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.brand-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: rgba(139, 92, 246, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.brand-mini-badge img {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+}
+
+.session-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-strong);
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 0;
+  max-width: 160px;
+}
+
+.session-trigger-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-menu-trigger:hover:not(:disabled),
+.session-menu-trigger[aria-expanded="true"] {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--blue-wash);
+}
+
+/* Session Picker (图 3 风格) */
+.session-picker.youmind-style {
+  position: absolute;
+  top: 48px;
+  left: 10px;
+  width: 270px;
+  max-height: 420px;
+  z-index: 1200;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 6px;
+}
+
+.session-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--canvas-deep);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.session-search-box .search-icon {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.session-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink-strong);
+  font-size: calc(12px * var(--ui-scale));
+  outline: none;
+}
+
+.session-picker.youmind-style .session-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.session-item-row:hover {
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+}
+
+.session-item-row.active {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-weight: 600;
+}
+
+.session-icon {
+  color: var(--muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.session-item-row.active .session-icon {
+  color: var(--blue);
+}
+
+.session-picker-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.session-footer-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 32px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-strong);
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.session-footer-new-btn:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--blue-wash);
+}
+
+/* Empty Hero Layout (图 2 风格) */
+.empty-hero-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto 0;
+  padding: 24px 16px;
+  gap: 28px;
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+}
+
+.page-hero-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: var(--shadow);
+  gap: 12px;
+}
+
+.hero-top-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-app-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-app-badge img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.hero-platform-text {
+  font-size: calc(11px * var(--ui-scale));
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hero-page-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 90%;
+}
+
+.hero-meta-title {
+  font-size: calc(14.5px * var(--ui-scale));
+  font-weight: 700;
+  color: var(--ink-strong);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero-meta-author {
+  font-size: calc(12px * var(--ui-scale));
+  color: var(--muted);
+}
+
+.hero-action-pill-btn {
+  margin-top: 6px;
+  padding: 8px 24px;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #0b0b0e;
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+:root[data-theme="dark"] .hero-action-pill-btn {
+  background: #ffffff;
+  color: #09090b;
+}
+
+.hero-action-pill-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+}
+
+.hero-welcome-texts {
+  text-align: center;
+}
+
+.hero-welcome-texts h2 {
+  font-size: calc(18px * var(--ui-scale));
+  font-weight: 700;
+  color: var(--ink-strong);
+  margin: 0 0 6px;
+}
+
+.hero-welcome-texts p {
+  font-size: calc(14px * var(--ui-scale));
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Clean Composer Box (图 2 风格) */
+.composer-box.clean-chat-box {
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:root[data-theme="dark"] .composer-box.clean-chat-box {
+  background: #141419;
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.composer-box.clean-chat-box:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+.clean-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.clean-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--canvas-deep);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clean-add-btn:hover {
+  color: var(--ink-strong);
+  border-color: var(--line-strong);
+}
+
+.mode-capsule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+  font-size: calc(11.5px * var(--ui-scale));
+  font-weight: 550;
+  cursor: default;
+  margin-left: 6px;
+}
+
+.mode-capsule-btn svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+
+.clean-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #2a2a34;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clean-send-btn.active:not(:disabled) {
+  background: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+}
+
+.clean-send-btn.active:not(:disabled):hover {
+  background: #7c3aed;
+  transform: scale(1.05);
+}
+
+.clean-send-btn.active:not(:disabled):active {
+  transform: scale(0.95);
+}
+
