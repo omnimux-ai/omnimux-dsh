@@ -323,6 +323,10 @@ export function ProductPicker({
                 {selectedProduct.name || selectedProduct.id}
               </span>
             </div>
+          ) : searchQuery.trim() ? (
+            <div className="omx-product-pick__meta">
+              <span>{safeT('productPicker.useCustom', { name: searchQuery.trim() })}</span>
+            </div>
           ) : null}
           <div className="omx-product-pick__actions">
             <Button variant="secondary" onClick={onClose}>
@@ -330,8 +334,18 @@ export function ProductPicker({
             </Button>
             <Button
               variant="primary"
-              disabled={!selectedProduct}
-              onClick={() => handleConfirm()}
+              disabled={!selectedProduct && !searchQuery.trim()}
+              onClick={() => {
+                if (selectedProduct) {
+                  handleConfirm(selectedProduct);
+                } else if (searchQuery.trim()) {
+                  handleConfirm({
+                    id: `custom-${Date.now()}`,
+                    name: searchQuery.trim(),
+                    title: searchQuery.trim(),
+                  });
+                }
+              }}
             >
               {safeT('productPicker.confirm')}
             </Button>
@@ -413,6 +427,16 @@ export function ProductPicker({
               placeholder={safeT('productPicker.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim() && !selectedProduct) {
+                  e.preventDefault();
+                  handleConfirm({
+                    id: `custom-${Date.now()}`,
+                    name: searchQuery.trim(),
+                    title: searchQuery.trim(),
+                  });
+                }
+              }}
             />
             {searchQuery ? (
               <button /* exempt-ui01: 搜索清空按钮 */
@@ -449,6 +473,21 @@ export function ProductPicker({
                   ? safeT('productPicker.emptySearch')
                   : safeT('productPicker.empty')}
               </p>
+              {searchQuery.trim() ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    handleConfirm({
+                      id: `custom-${Date.now()}`,
+                      name: searchQuery.trim(),
+                      title: searchQuery.trim(),
+                    });
+                  }}
+                >
+                  {safeT('productPicker.useCustom', { name: searchQuery.trim() })}
+                </Button>
+              ) : null}
               {!searchQuery && activeTag === 'all' ? (
                 <Button
                   variant="secondary"

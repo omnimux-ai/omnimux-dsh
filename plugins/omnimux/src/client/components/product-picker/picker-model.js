@@ -121,6 +121,7 @@ export const DEFAULT_STRINGS = Object.freeze({
   'productPicker.goLibrary': '前往产品库管理',
   'productPicker.selectedMeta': '已选择：',
   'productPicker.unselectedHint': '请选择一件商品',
+  'productPicker.useCustom': '使用自定义产品："{name}"',
 });
 
 /**
