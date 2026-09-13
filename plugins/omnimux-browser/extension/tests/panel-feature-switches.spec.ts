@@ -94,14 +94,14 @@ describe('the two page-surface switches', () => {
     expect(card).toContain('setting-toggle-control')
   })
 
-  it('shows both cards inside the settings view, ahead of the host settings', () => {
+  it('shows both cards inside the settings view, below the workspace settings card', () => {
     const settingsView = APP.slice(APP.indexOf('if (showSettings) {'))
     const fab = settingsView.indexOf('omnimux-fab-setting')
     const mediaHover = settingsView.indexOf('omnimux-media-hover-setting')
     const workspace = settingsView.indexOf('Associated Workspace')
-    expect(fab).toBeGreaterThan(-1)
+    expect(workspace).toBeGreaterThan(-1)
+    expect(fab).toBeGreaterThan(workspace)
     expect(mediaHover).toBeGreaterThan(fab)
-    expect(workspace).toBeGreaterThan(mediaHover)
   })
 
   it('starts both switches from the stored value, which defaults to on', () => {

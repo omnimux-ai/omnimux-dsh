@@ -2047,38 +2047,6 @@ export function App(): React.JSX.Element {
             <h1>{copy.settings.title}</h1>
           </div>
         </div>
-        <section className="settings-panel feature-switch" aria-labelledby="omnimux-fab-setting">
-          <div id="omnimux-fab-setting" className="settings-card-heading">{copy.settings.fabSection}</div>
-          <label className="setting-toggle">
-            <span className="setting-toggle-copy">
-              <strong>{copy.settings.fabToggle}</strong>
-              <small>{copy.settings.fabToggleHelp}</small>
-            </span>
-            <input
-              className="setting-toggle-input"
-              type="checkbox"
-              checked={fabEnabled}
-              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.fab, event.target.checked)}
-            />
-            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
-          </label>
-        </section>
-        <section className="settings-panel feature-switch" aria-labelledby="omnimux-media-hover-setting">
-          <div id="omnimux-media-hover-setting" className="settings-card-heading">{copy.settings.mediaHoverSection}</div>
-          <label className="setting-toggle">
-            <span className="setting-toggle-copy">
-              <strong>{copy.settings.mediaHoverToggle}</strong>
-              <small>{copy.settings.mediaHoverToggleHelp}</small>
-            </span>
-            <input
-              className="setting-toggle-input"
-              type="checkbox"
-              checked={mediaHoverEnabled}
-              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.mediaHover, event.target.checked)}
-            />
-            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
-          </label>
-        </section>
         <div className="settings-panel">
           <label>
             <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
@@ -2166,6 +2134,38 @@ export function App(): React.JSX.Element {
             </div>
           </label>
         </div>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-fab-setting">
+          <div id="omnimux-fab-setting" className="settings-card-heading">{copy.settings.fabSection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.fabToggle}</strong>
+              <small>{copy.settings.fabToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={fabEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.fab, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+        </section>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-media-hover-setting">
+          <div id="omnimux-media-hover-setting" className="settings-card-heading">{copy.settings.mediaHoverSection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.mediaHoverToggle}</strong>
+              <small>{copy.settings.mediaHoverToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={mediaHoverEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.mediaHover, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+        </section>
         <div className="settings-panel preference-toggles">
           <label className="setting-toggle">
             <span className="setting-toggle-copy">
