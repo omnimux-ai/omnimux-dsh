@@ -18,12 +18,14 @@
  * only part of the library.
  *
  *   character  `gxgen-data/character-library/pippit-local-avatars-source/`
- *   scene      `gxgen-data/element-library/场景氛围/`
- *   prop       (no source — the category is deliberately empty, see below)
+ *   scene      `gxgen-data/element-library/场景氛围/`              场景氛围
+ *              `gxgen-data/inspiration-library/loomi/`            实景环境
+ *   prop       `gxgen-data/inspiration-library/loomi/`            实物道具
  *   material   `gxgen-data/element-library/video/green-screen-meme/`   绿幕
  *              `gxgen-data/element-library/hook-videos/`              钩子
  *              `gxgen-data/element-library/hook/`                     钩子
  *              `gxgen-data/inspiration-library/image/`                表情包
+ *              `gxgen-data/inspiration-library/loomi/`                萌宠 · 服饰 · 人像
  *   style      `gxgen-data/style-library/` (three curated preset files)
  *              `gxgen-data/element-library/视频风格/`
  *   audio      `素材库/音频/volcengine-voices.json`          配音 (509 voices)
@@ -32,14 +34,17 @@
  *              `gxgen-data/music-library/` Fastlane manifest  背景音 (103 tracks)
  *
  * where `<gxgen>` = `<root>/素材库/gxgen-data`. `灵感社区` is a separate system
- * and is deliberately excluded; the one part of it this catalog reads is the
- * image gallery the 表情包 shelf names, addressed by its exact path.
+ * and is deliberately excluded; the parts of it this catalog reads are the two
+ * galleries named by exact path — the 表情包 image set and the offline Loomi
+ * library, which is what fills 道具 and widens 场景 and 素材.
  *
- * ## What is deliberately absent
+ * ## The Loomi library
  *
- * 道具 ships empty. Green screens and opening hooks are overlays and beats, not
- * physical props, and no real prop library exists yet. The category still emits
- * its page file so the tab renders an empty state instead of a 404.
+ * `inspiration-library/loomi/` is one offline snapshot of 632 curated items
+ * (333 stills, 299 clips) whose media files are already downloaded beside it.
+ * A single source class every row under a source tab of its own, so the five
+ * classes are mapped onto the shelves they actually describe rather than reusing
+ * the source tab's five names — see `LOOMI_SHELVES`.
  *
  * ## Sub-category membership
  *
@@ -812,6 +817,13 @@ function collectElementIndex(ctx, dirName, add, opts) {
   }
 }
 
+/**
+ * 场景 — the ambient element library plus the Loomi real-world environments.
+ *
+ * The two shelves are genuinely different things: 场景氛围 is a small set of
+ * graded atmospheric clips, while the Loomi half is 125 stills and clips of
+ * actual places (`LOOMI_SHELVES` routes them to 实景环境).
+ */
 function collectScene(ctx, add) {
   collectElementIndex(ctx, '场景氛围', add, {
     category: 'scene',
@@ -819,6 +831,7 @@ function collectScene(ctx, add) {
     tag: '场景氛围',
     fallbackDesc: '高清动态场景氛围',
   })
+  collectLoomi(ctx, add, 'scene')
 }
 
 /**
@@ -940,19 +953,186 @@ function findGalleryImage(dir, ordinal) {
   return ''
 }
 
+/**
+ * The offline Loomi library, addressed relative to the gxgen-data root.
+ *
+ * `materials.json` is the only index; every `local_source_media` /
+ * `local_thumbnail` in it is relative to this directory and was verified present
+ * when it was downloaded, so a row that lost its file still falls back to the
+ * remote original rather than to a broken tile.
+ */
+const LOOMI_SOURCE = 'inspiration-library/loomi'
+
+/**
+ * Which catalog shelf each Loomi source class belongs on.
+ *
+ * The mapping is deliberately many-to-one: the source tab splits 场景 and 道具
+ * into classes of their own, while this catalog already owns 场景氛围 and treats
+ * an object, a place, an animal and a person as four different kinds of 素材.
+ * Reusing the source's own five names would have put 道具-classified pictures
+ * under a shelf called 场景. `tag` carries the source class itself, so the
+ * origin stays visible on the card even where the shelf had to be renamed.
+ *
+ * `sourceClass` is the `category` value `materials.json` writes, and
+ * `subCategory` is the shelf the catalog files it under; the two are separate
+ * fields precisely because they are not the same word.
+ *
+ * `describe` composes the row description from the item's own title, so a card
+ * reads as a description of the thing rather than one sentence repeated 125
+ * times: a prop card names the prop, a person card names the subject.
+ * `label` names a row the source left without a usable title (see `loomiTitle`).
+ */
+const LOOMI_SHELVES = [
+  {
+    category: 'prop',
+    sourceClass: 'prop',
+    subCategory: 'object',
+    tag: '道具',
+    label: '实物道具',
+    describe: (title) => `${title}，可作画面中实物道具的参考或贴片`,
+  },
+  {
+    category: 'scene',
+    sourceClass: 'scene',
+    subCategory: 'environment',
+    tag: '实景',
+    label: '实景环境',
+    describe: (title) => `${title}，可直接作为画面背景的实景环境素材`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'pet',
+    subCategory: 'pet',
+    tag: '宠物',
+    label: '萌宠动物',
+    describe: (title) => `${title}，萌宠动物素材，适合出镜或做画面点缀`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'clothing',
+    subCategory: 'clothing',
+    tag: '服装',
+    label: '服饰穿搭',
+    describe: (title) => `${title}，服饰穿搭素材，可作为造型与人设参考`,
+  },
+  {
+    category: 'material',
+    sourceClass: 'portrait',
+    subCategory: 'portrait',
+    tag: '人像',
+    label: '人像写真',
+    describe: (title) => `${title}，写实人像配图素材，可作为人物出镜参考`,
+  },
+]
+
+/** The media-kind word a Loomi row carries as its third tag. */
+const LOOMI_MEDIA_LABELS = { image: '图片', video: '视频', audio: '音频' }
+
+/**
+ * The display name for one Loomi row.
+ *
+ * A title is usable when the source actually wrote one. All 299 clips fail that
+ * test: their `title` repeats `creator`, the Pexels uploader's handle, so a card
+ * named from it would read `Hữu Thịnh 79` and say nothing about the picture.
+ * Those rows are named `<shelf label> <source id>` instead, and the handle stays
+ * in `meta.creator` where attribution belongs.
+ * @param {{ title?: unknown, filename?: unknown, creator?: unknown, id?: unknown }} row
+ * @param {typeof LOOMI_SHELVES[number]} shelf
+ * @returns {string}
+ */
+function loomiTitle(row, shelf) {
+  const title = text(row.title)
+  const creator = text(row.creator)
+  if (title !== '' && title !== creator) return title
+  const stem = text(row.filename).replace(/\.[^.]+$/, '')
+  return `${shelf.label} ${text(row.id) || stem}`.trim()
+}
+
+/**
+ * Resolve one path recorded in `materials.json` against the Loomi directory.
+ *
+ * The index stores portable relative paths (`media/<hash>.jpg`); a path that
+ * escapes the source directory or no longer exists yields an empty string, which
+ * leaves the row on its remote original instead of writing a locator the Host
+ * would refuse to serve.
+ * @param {string} loomiDir @param {unknown} value @returns {string}
+ */
+function loomiLocal(loomiDir, value) {
+  const rel = text(value).replace(/\\/g, '/')
+  if (rel === '' || rel.startsWith('/') || rel.split('/').includes('..')) return ''
+  const abs = join(loomiDir, rel)
+  return isFile(abs) ? abs : ''
+}
+
+/**
+ * 道具 · 场景 · 素材 — the offline Loomi library.
+ *
+ * 632 curated items from one snapshot, each with its media already downloaded.
+ * One source feeds three catalog categories, so the collector is handed the
+ * category it is being run for and keeps only that category's classes; the page
+ * count of each caller then matches the rows it actually owns.
+ *
+ * The title is the item's own Chinese name, so a card reads `复古相机道具`
+ * rather than a filename.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
+ * @param {string} category the catalog category this run collects for
+ */
+function collectLoomi(ctx, add, category) {
+  const loomiDir = join(ctx.assetsRoot, '素材库', 'gxgen-data', LOOMI_SOURCE)
+  const parsed = readJsonSafe(join(loomiDir, 'materials.json'))
+  const rows = Array.isArray(parsed?.items) ? parsed.items : []
+  const shelves = LOOMI_SHELVES.filter((entry) => entry.category === category)
+  for (const row of rows) {
+    const shelf = shelves.find((entry) => entry.sourceClass === text(row.category))
+    if (!shelf) continue
+    const sourceId = text(row.id)
+    if (!sourceId) continue
+    const title = loomiTitle(row, shelf)
+    const kind = text(row.mediaKind) || bucketOf(extOf(text(row.local_source_media)))
+    add(makeAsset(ctx, {
+      key: `loomi/${sourceId}`,
+      category: shelf.category,
+      subCategory: shelf.subCategory,
+      name: title,
+      description: shelf.describe(title),
+      tags: [shelf.tag, LOOMI_MEDIA_LABELS[kind] ?? '素材', text(row.sourceProvider)].filter(Boolean),
+      localMedia: loomiLocal(loomiDir, row.local_source_media),
+      remoteMedia: text(row.assetUrl),
+      localCover: loomiLocal(loomiDir, row.local_thumbnail),
+      remoteCover: text(row.thumbnailUrl),
+      meta: {
+        source: 'loomi',
+        source_id: sourceId,
+        source_category: text(row.category),
+        source_file: text(row.filename),
+        provider: text(row.sourceProvider),
+        creator: text(row.creator),
+        license: text(row.license),
+        attribution_required: row.attributionRequired === true,
+        source_url: text(row.sourceUrl),
+      },
+    }))
+  }
+}
+
 function collectMaterial(ctx, add) {
   collectGreenScreen(ctx, add)
   collectHook(ctx, add)
   collectMeme(ctx, add)
+  collectLoomi(ctx, add, 'material')
 }
 
 /**
- * 道具 is intentionally empty — green screens and hooks are overlays and beats,
- * not physical props, and no real prop library exists yet. The category keeps
- * its place in the table (and therefore its empty page file) so the tab renders
- * 空状态 rather than a broken scope.
+ * 道具 — the Loomi props: cameras, guitars, computers and the rest of the real
+ * objects the shelf was waiting for. Nothing is invented here; the category
+ * names only the class `LOOMI_SHELVES` routes to it.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {(spec: Parameters<typeof makeAsset>[1]) => void} add
  */
-function collectProp() {}
+function collectProp(ctx, add) {
+  collectLoomi(ctx, add, 'prop')
+}
 
 /**
  * The style presets worth shipping: three curated files plus the video-tone
@@ -1225,19 +1405,23 @@ const CATEGORIES = [
     id: 'scene',
     zh: '场景',
     en: 'Scenes',
-    subCategories: [{ id: 'ambience', zh: '场景氛围', en: 'Ambience' }],
+    subCategories: [
+      { id: 'ambience', zh: '场景氛围', en: 'Ambience' },
+      { id: 'environment', zh: '实景环境', en: 'Environments' },
+    ],
     collect: collectScene,
   },
   {
     /**
-     * 道具 is deliberately empty: the two shelves it used to hold were green
-     * screens and product hooks, which are 素材, and no physical prop library
-     * exists yet. The empty entry is kept so the tab renders 空状态.
+     * 道具 holds the Loomi props: cameras, guitars, computers and the rest of
+     * the real objects the tab used to have no source for. Green screens and
+     * product hooks stay under 素材 — they are overlays and beats, not things
+     * the cast handles.
      */
     id: 'prop',
     zh: '道具',
     en: 'Props',
-    subCategories: [],
+    subCategories: [{ id: 'object', zh: '实物道具', en: 'Props & Objects' }],
     collect: collectProp,
   },
   {
@@ -1248,6 +1432,9 @@ const CATEGORIES = [
       { id: 'green-screen', zh: '绿幕', en: 'Green Screen' },
       { id: 'hook', zh: '钩子', en: 'Hooks' },
       { id: 'meme', zh: '表情包', en: 'Memes' },
+      { id: 'pet', zh: '萌宠动物', en: 'Pets & Animals' },
+      { id: 'clothing', zh: '服饰穿搭', en: 'Fashion & Outfits' },
+      { id: 'portrait', zh: '人像写真', en: 'Portraits' },
     ],
     collect: collectMaterial,
   },

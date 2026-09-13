@@ -113,10 +113,10 @@ export function allCategoryEntry(manifest, t) {
  *
  * A category owns a second level exactly when the manifest gives it at least one
  * populated sub-category — 声音 (配音 / 音效 / 背景音), 素材 (绿幕 / 钩子 /
- * 表情包) and 角色 (女性 / 男性 / 生活居家 / 职场商务) all qualify; 场景 and the
- * deliberately empty 道具 do not. The rule is read from the data rather than
- * hard-coded per category, so a category that gains or loses a shelf follows the
- * layout without a code change.
+ * 表情包 / 萌宠 / 服饰 / 人像), 场景 (场景氛围 / 实景环境), 道具 (实物道具) and
+ * 角色 (女性 / 男性 / 生活居家 / 职场商务) all qualify, and 全部 alone does not.
+ * The rule is read from the data rather than hard-coded per category, so a
+ * category that gains or loses a shelf follows the layout without a code change.
  *
  * The first entry is always `''` — 全部 — carrying the category's own total, so
  * the second level never opens onto an empty selection and no category inherits

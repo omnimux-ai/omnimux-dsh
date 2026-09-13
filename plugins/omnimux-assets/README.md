@@ -40,36 +40,58 @@ npm run build:cloud-catalog   # 重扫本地素材库 → cloud-catalog/ 静态�
 cloud-catalog/
 ├── manifest.json                              # categories / totalAssets / pageSize / sourceRoot
 ├── index.json                                 # id → 行（Host 用它解析媒体与收藏到本地）
-├── all/page-NNNN.json                         # 跨分类全量：90 片，2150 条，按导航顺序拼
+├── all/page-NNNN.json                         # 跨分类全量：116 片，2782 条，按导航顺序拼
 ├── character/{female,male,lifestyle,business}/page-NNNN.json
-├── scene/ambience/page-NNNN.json
-├── prop/page-NNNN.json                        # 空分类，只发一页空 items
-├── material/{green-screen,hook,meme}/page-NNNN.json
+├── scene/{ambience,environment}/page-NNNN.json
+├── prop/object/page-NNNN.json
+├── material/{green-screen,hook,meme,pet,clothing,portrait}/page-NNNN.json
 ├── style/{image-preset,video-tone}/page-NNNN.json
 └── audio/{voiceover,sfx,bgm}/page-NNNN.json
 ```
 
-六大分类共 2150 条：角色 329（Pippit 实景数字人）、场景 14、道具 0（**刻意留空**：绿幕与钩子都是素材，
-不是实物道具）、素材 1016（绿幕 150 + 钩子 705 + 表情包 161）、风格 151（生图预设 122 + 视频调性 29）、
-声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；背景音 108）。`all/` 分片把六个分类按导航
-顺序拼成一条流，共 90 页，与各大类分片出自同一次构建。
+六大分类共 2782 条：角色 329（Pippit 实景数字人）、场景 139（场景氛围 14 + 实景环境 125）、道具 125
+（全部来自 Loomi）、素材 1398（绿幕 150 + 钩子 705 + 表情包 161 + 萌宠 127 + 服饰 128 + 人像 127）、
+风格 151（生图预设 122 + 视频调性 29）、声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；
+背景音 108）。`all/` 分片把六个分类按导航顺序拼成一条流，共 116 页，与各大类分片出自同一次构建。
+
+## Loomi 素材库的归类映射
+
+`gxgen-data/inspiration-library/loomi/` 是一份离线快照：632 条素材（图片 333 + 视频 299），媒体文件已
+全部下载到同级 `media/`。它是唯一一个「一个源喂三个大类」的数据源，所以下面的映射表在代码里叫
+`LOOMI_SHELVES`，**源分类名与落地二级分类名是两个字段**（`sourceClass` / `subCategory`）：
+
+| 源分类 | 条数 | 落地大类 | 落地二级分类 | 中文 / 英文 |
+| --- | --- | --- | --- | --- |
+| `prop` | 125 | 道具 | `object` | 实物道具 / Props & Objects |
+| `scene` | 125 | 场景 | `environment` | 实景环境 / Environments |
+| `pet` | 127 | 素材 | `pet` | 萌宠动物 / Pets & Animals |
+| `clothing` | 128 | 素材 | `clothing` | 服饰穿搭 / Fashion & Outfits |
+| `portrait` | 127 | 素材 | `portrait` | 人像写真 / Portraits |
+
+**不要直接把源分类名当二级分类名用**：源站把 `prop` 和 `scene` 各当一个独立大类，而本清单里 `prop` 是
+一级大类的 id，`scene` 是大类 id 而二级架子叫 `environment`。早期实现按二级分类名去匹配源分类，结果
+道具与场景两个大类一条都收不到（构建日志会显示 `prop 0 rows`）；匹配必须走 `sourceClass`。
+
+每行还带 `meta.source_id` / `source_category` / `provider` / `creator` / `license` /
+`attribution_required` / `source_url`，源站署名信息完整保留；标签固定三枚（源分类 + 媒体类型 + 图库），
+媒体类型随行而非随架子，所以同一架子下视频行标「视频」、图片行标「图片」。
 
 角色的二级分类是**多维**的：`sub_category` 是主架（性别），`sub_categories` 是完整归属表，所以同一位数字人
 可以同时落在「女性角色」和「职场商务」下；分片子目录与计数都按归属表算，这也是架子总数之和大于 329 的原因
 （女性 185 + 男性 144 + 生活居家 254 + 职场商务 43）。名字里读不出性别或场景线索的行不会被猜进任何一个
-架子，只出现在「全部」。
+架子，只出现在「全部」。Loomi 的 632 条一条都不进角色：角色只收 Pippit 那 329 套实景数字人。
 
 一级栏最左是跨六个分类的「全部」，默认选中，它自己不展开二级栏；其余大类按数据开二级栏：清单里有非空
-子分类就展开（角色 / 场景 / 素材 / 风格 / 声音），首个 Tab 固定是「全部」并带该大类总数；只有刻意留空的
-道具不展开。
+子分类就展开（角色 / 场景 / 道具 / 素材 / 风格 / 声音），首个 Tab 固定是「全部」并带该大类总数。
 
 生成脚本 `scripts/build-cloud-assets-catalog.mjs`：
 
 - 默认读 `/Users/x/Desktop/Project/OPC/资产库`，可用 `--assets-root=` 换根、`--out=` 换输出、`--dry-run` 只统计
 - 每个数据源都可缺失：缺源只让该分类变空，不会让整次构建失败
-- 灵感社区是独立系统，按目录名跳过；只有表情包那一处按精确路径读它的图片画廊
+- 灵感社区是独立系统，按目录名跳过；只有表情包与 Loomi 两处按精确路径读它的素材
 - 素材路径写 `file:<相对 assets-root 的路径>`；同时有本地副本与可公开访问的远端地址时，远端地址存进
-  `meta.source_media_url`，换机器仍可播放
+  `meta.source_media_url`，换机器仍可播放。Loomi 的媒体已全部落盘，所以本地 `file:` 优先，远端只作兜底；
+  某条源文件缺失时该行自动退回远端地址，不会写出打不开的定位符
 - 角色只收 `gxgen-data/character-library/pippit-local-avatars-source/` 的实景数字人；`素材库/AI 网红/` 一类的
   零散图片不进清单，知识包（本地资产类型）也没有云端分类；风格只收三个策展预设文件，每条都带
   `meta.prompt_text`；音效只收 `素材库/音频/音效/` 下的真实转场音效
