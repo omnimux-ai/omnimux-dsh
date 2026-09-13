@@ -198,6 +198,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   -webkit-mask-position:center;
   mask-position:center;
 }
+/* 当模型选择按钮自身已有原生 triggerIcon 或模型图标时，禁止 ::before 伪元素生成图标，杜绝双图标并存 */
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerIcon"])::before,
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has(> svg:not([class*="chevron"]))::before {
+  display:none!important;
+  content:none!important;
+}
+/* 原生 triggerIcon 在 28px 紧凑圆形/圆角按钮中居中居正 */
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerIcon"]{
+  margin:0!important;
+  flex-shrink:0!important;
+}
 /* Text-only toolbar buttons become icon-sized. Never touch the .add (plus)
    button — it is already an icon. */
 html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="tools"] > button:not([class*="add"]){

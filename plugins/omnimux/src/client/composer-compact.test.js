@@ -182,6 +182,15 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(modelIconBefore, /mask-image/)
   assert.match(modelIconBefore, /background-color:currentColor/)
   assert.match(modelIconBefore, /width:14px/)
+  // Prevents duplicate icons when the button already carries a native triggerIcon
+  assert.match(
+    style.textContent,
+    /button\[aria-haspopup='menu'\]:has\(\[class\*="triggerIcon"\]\)::before/,
+  )
+  assert.match(
+    style.textContent,
+    /display:none!important;\s*content:none!important;/,
+  )
   // Permission chip still drops its text when it already has a triggerIcon.
   assert.match(
     style.textContent,
