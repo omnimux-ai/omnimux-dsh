@@ -114,12 +114,14 @@ export function RivalAccountsPanel(props) {
         </div>
       ) : null}
 
-      <div className="omnimux-rival-summary" data-rival-summary="true">
-        <span className="omnimux-rival-summary-text">{t('rivalFeed.summary')}</span>
-        <span className="omnimux-rival-summary-count">
-          {t('rivalFeed.count').replace('{n}', String(feed.total || 0))}
-        </span>
-      </div>
+      {feed.cards.length > 0 ? (
+        <div className="omnimux-rival-summary" data-rival-summary="true">
+          <span className="omnimux-rival-summary-text">{t('rivalFeed.summary')}</span>
+          <span className="omnimux-rival-summary-count">
+            {t('rivalFeed.count').replace('{n}', String(feed.total || 0))}
+          </span>
+        </div>
+      ) : null}
 
       <RivalFeedGrid
         t={t}

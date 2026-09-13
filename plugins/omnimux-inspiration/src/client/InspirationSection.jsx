@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
@@ -29,17 +29,19 @@ function LoginGate({ t }) {
   )
 }
 
-function EmptyState({ t, onOpenAdd }) {
+function InspirationEmptyState({ t, onOpenAdd }) {
   return (
-    <div className="omnimux-inspiration-empty">
-      <h2 className="omnimux-inspiration-empty-title">{t('empty.title')}</h2>
-      <p className="omnimux-inspiration-empty-text">{t('empty.description')}</p>
-      {onOpenAdd ? (
-        <Button variant="primary" className="omnimux-inspiration-empty-cta" onClick={onOpenAdd}>
-          {t('add.btn')}
-        </Button>
-      ) : null}
-    </div>
+    <EmptyState
+      title={t('empty.title')}
+      description={t('empty.description')}
+      action={
+        onOpenAdd ? (
+          <Button variant="primary" onClick={onOpenAdd}>
+            {t('add.btn')}
+          </Button>
+        ) : null
+      }
+    />
   )
 }
 
@@ -394,7 +396,7 @@ export function InspirationSection({ t, active }) {
           ) : null}
 
           {!loading && visibleItems.length === 0 && (!error || tab === 'local') ? (
-            <EmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
+            <InspirationEmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
           ) : null}
 
           {visibleItems.length > 0 ? (

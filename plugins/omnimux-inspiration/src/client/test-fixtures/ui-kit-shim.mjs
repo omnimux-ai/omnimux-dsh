@@ -146,6 +146,16 @@ export const PageHeader = ({ title, subtitle, onClose, closeTitle, children, ...
     : null,
 )
 
+export const EmptyState = ({ icon, title, description, action, children }) => h(
+  'div',
+  { className: 'dshUk-EmptyState-emptyState' },
+  icon ? h('div', { className: 'dshUk-EmptyState-iconWrap' }, icon) : null,
+  title ? h('h2', { className: 'dshUk-EmptyState-title' }, title) : null,
+  description ? h('p', { className: 'dshUk-EmptyState-description' }, description) : null,
+  action ? h('div', { className: 'dshUk-EmptyState-actions' }, action) : null,
+  children,
+)
+
 export const createSidebarEntry = () => ({})
 
 export const createStageStore = () => ({})
