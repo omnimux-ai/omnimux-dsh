@@ -56,7 +56,12 @@ export function initTiktokScene(): void {
   const onPointerOver = (event: Event): void => {
     const target = event.target
     if (!(target instanceof Element)) return
-    const anchor = target.closest('a[href*="/video/"]')
+    // Photo posts are collected as well: `target.ts` accepts them by contract
+    // because the host can still import one into the library, and the export
+    // path reports its own reason when a post has no stream to take. Filtering
+    // them out here would answer "nothing to act on" for a post the user can
+    // plainly see.
+    const anchor = target.closest('a[href*="/video/"], a[href*="/photo/"]')
     if (anchor instanceof HTMLAnchorElement) hoveredHref = anchor.href
   }
 
@@ -91,7 +96,16 @@ export function initTiktokScene(): void {
     }, wait)
   }
   const observer = new MutationObserver(remeasure)
-  observer.observe(doc.documentElement, { childList: true, subtree: true })
+  // Attribute changes count too: the rail hides or collapses itself by switching a
+  // class or an inline style, which inserts no node at all and would otherwise
+  // leave the trigger at the old anchor until something else mutated the tree.
+  // Throttling above is what keeps that affordable.
+  observer.observe(doc.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style'],
+  })
 
   shell[SCENE_SLOT] = {
     dispose(): void {

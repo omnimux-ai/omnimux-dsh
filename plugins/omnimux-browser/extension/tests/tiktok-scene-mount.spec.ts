@@ -49,6 +49,9 @@ function hover(anchor: HTMLAnchorElement): void {
 
 beforeEach(() => {
   document.body.innerHTML = ''
+  // `initTiktokScene` disposes its own previous mount before installing a new
+  // one, so each case releases the observers and pointer listeners of the last;
+  // this only clears the leftover host element.
   for (const stale of Array.from(document.querySelectorAll(`#${TIKTOK_SCENE_HOST_ID}`))) stale.remove()
   sent = []
   vi.stubGlobal('chrome', {
@@ -137,5 +140,20 @@ describe('TikTok 场景挂载 — 动作发往哪一条作品', () => {
 
     expect(sent).toHaveLength(1)
     expect(sent[0].type).toBe('DSH_TIKTOK_SAVE_TO_INSPIRATION')
+  })
+
+  it('博主主页指向图文作品时也照常发出去，让宿主如实回答能不能下', async () => {
+    setLocation(PROFILE)
+    // A photo post has no stream, but it is still importable: the decision layer
+    // accepts these addresses, so the hover scan must collect them instead of
+    // answering "nothing to act on" for a post the user can see.
+    document.body.innerHTML = `<a href="https://www.tiktok.com/@cleanlife/photo/7418888888888888888">tile</a>`
+    initTiktokScene()
+    hover(document.querySelector('a') as HTMLAnchorElement)
+    await clickRow('save')
+
+    expect(sent).toHaveLength(1)
+    expect((sent[0].payload as { url: string }).url)
+      .toBe('https://www.tiktok.com/@cleanlife/photo/7418888888888888888')
   })
 })

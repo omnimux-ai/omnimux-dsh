@@ -76,6 +76,21 @@ describe('下载无水印视频', () => {
     expect(outcome).toEqual({ ok: false, code: 'unreachable' })
   })
 
+  it('每次请求都带超时预算，宿主卡住时不会永远等着', async () => {
+    let signal: AbortSignal | undefined
+    await requestMediaExport({
+      base: BASE,
+      url: POST,
+      kind: 'video',
+      fetchImpl: async (_input, init) => {
+        signal = init?.signal ?? undefined
+        return jsonResponse(200, { data: { filename: 'a.mp4' } })
+      },
+    })
+
+    expect(signal).toBeInstanceOf(AbortSignal)
+  })
+
   it('主程序回了非 JSON 内容也不会把异常抛到界面上', async () => {
     const outcome = await requestMediaExport({
       base: BASE,

@@ -68,6 +68,16 @@ export function httpBaseFromBridgeUrl(bridgeUrl: string): string | null {
 /** Path the bridge publishes its own address on. */
 const BRIDGE_CONFIG_PATH = '/ext/bridge-config'
 
+/**
+ * Budget for one shortcut request.
+ *
+ * The host's own worst case is a 60s download plus a 120s extraction, so the
+ * client waits longer than the work can take. Without a budget, a host that
+ * accepts the connection and then wedges would leave the menu row spinning and
+ * its action permanently un-retryable.
+ */
+const SHORTCUT_TIMEOUT_MS = 240_000
+
 /** Per-port budget while probing for a local DSH process. */
 const HOST_PROBE_TIMEOUT_MS = 1_500
 
@@ -147,6 +157,7 @@ async function postJson(
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(SHORTCUT_TIMEOUT_MS),
     })
   } catch {
     return null
