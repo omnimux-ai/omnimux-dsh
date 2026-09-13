@@ -40,6 +40,35 @@ function toolNames(text) {
   return [...text.matchAll(/toolName: (expert_\w+)/g)].map((m) => m[1])
 }
 
+function personaConfig(rel) {
+  const script = `
+import sys, json, yaml
+from pathlib import Path
+text = Path(sys.argv[1]).read_text()
+def js_ctor(loader, node):
+    return False
+yaml.SafeLoader.add_constructor('tag:yaml.org,2002:js', js_ctor)
+data = yaml.load(text, Loader=yaml.SafeLoader)
+assert isinstance(data, list), type(data)
+rows = [r for r in data if isinstance(r, dict) and r.get('id') == 'persona']
+assert len(rows) == 1, f'expected exactly one persona row, got {len(rows)}'
+cfg = rows[0].get('config')
+assert isinstance(cfg, dict), f'persona config must be a mapping, got {type(cfg).__name__}'
+prefix_present = 'prefix' in cfg
+print(json.dumps({
+    'keys': sorted(cfg.keys()),
+    'prefixIsString': isinstance(cfg.get('prefix'), str),
+    'prefixLength': len(cfg['prefix']) if isinstance(cfg.get('prefix'), str) else 0,
+    'prefixPresent': prefix_present,
+}))
+`
+  const res = spawnSync('python3', ['-c', script, join(root, rel)], { encoding: 'utf8' })
+  if (res.status !== 0) {
+    throw new Error(`${rel} persona config parse failed:\n${res.stderr || res.stdout}`)
+  }
+  return JSON.parse(res.stdout.trim())
+}
+
 function parseWithPython(rel) {
   const script = `
 import sys, yaml
@@ -166,4 +195,37 @@ test('build-agent-presets is idempotent', () => {
   equal(res.status, 0, res.stderr || res.stdout)
   const afterTikTok = read('presets/tiktok-agent/agent.cordis.yml')
   equal(afterTikTok, beforeTikTok)
+})
+
+// `@deepseek-ai/dsh-persona` reads its prose from the required `prefix` key.
+// `text` is not in its schema at all, so a preset carrying it fails to mount
+// with `$.prefix missing required value` — surfaced to the user as a failed
+// session create (a dead "New conversation" button), not as a preset error.
+test('every shipped preset persona row uses the persona plugin key `prefix`, never `text`', () => {
+  const shipped = [
+    'presets/tiktok-agent/agent.cordis.yml',
+    'presets/standard/agent.cordis.yml',
+    'presets/daily-work/agent.cordis.yml',
+    'presets/cordis/agent.cordis.yml',
+  ]
+  for (const rel of shipped) {
+    const cfg = personaConfig(rel)
+    ok(cfg.prefixPresent, `${rel} persona config must set prefix, got ${cfg.keys.join(', ')}`)
+    ok(!cfg.keys.includes('text'), `${rel} persona config must not set the retired text key`)
+    ok(cfg.prefixIsString, `${rel} persona prefix must be a string`)
+    ok(cfg.prefixLength > 0, `${rel} persona prefix must not be empty`)
+  }
+})
+
+test('preset generators emit the persona `prefix` key, never `text`', () => {
+  const generators = [
+    'scripts/build-agent-presets.mjs',
+    'plugins/omnimux-market/src/expert-market.ts',
+    'plugins/omnimux-market/lib/expert-market.js',
+  ]
+  for (const rel of generators) {
+    const text = read(rel)
+    ok(text.includes('prefix: |'), `${rel} must emit the persona prefix key`)
+    ok(!/^\s*text: \|/m.test(text), `${rel} must not emit the retired persona text key`)
+  }
 })

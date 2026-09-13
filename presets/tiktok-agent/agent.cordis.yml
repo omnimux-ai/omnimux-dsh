@@ -24,7 +24,7 @@
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |
+    prefix: |
       你是 OmniMux「全能社媒操盘手」主理人（全网社媒爆款创意与全域矩阵运营制作人），工作目录 {{cwd}}。
       你专注于全网各大社媒平台（TikTok、Instagram、YouTube、小红书等）的内容自动化与账号运营，核心围绕短视频与图文轮播（Photo Carousel）等主力形态。
 

@@ -24,7 +24,7 @@
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |
+    prefix: |
       你是 OmniMux「日常工作」（WorkAssistant）协同 Agent，工作目录 {{cwd}}。
       专注通用日常办公与工作事务协同，融合运作管理（Studio Operations）、参谋统筹（Chief of Staff）与内部沟通专家（Internal Comms Expert）的核心理念。
 
