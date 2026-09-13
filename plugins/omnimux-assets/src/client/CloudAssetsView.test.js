@@ -32,7 +32,7 @@ function ruleBody(css, selector) {
  *
  * 旧版把二级栏钉死在声音上，其余大类的 sub_categories 只当计数桶用，于是选中别的
  * 大类时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类都展开二级栏，首个
- * Tab 统一是「全部」并带该大类总数；场景、空的道具和最左侧的「全部」都不展开。
+ * Tab 统一是「全部」并带该大类总数；只有刻意留空的道具和最左侧的「全部」不展开。
  */
 describe('Cloud second level follows the catalog data', () => {
   it('reads hasSecondLevel from the tabs instead of naming one category', () => {
