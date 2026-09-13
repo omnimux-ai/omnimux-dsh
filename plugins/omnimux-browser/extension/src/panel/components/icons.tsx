@@ -349,3 +349,14 @@ export function TwitterXIcon({ size = 12, className }: { size?: number; classNam
     </svg>
   )
 }
+
+export function ChatBubbleIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M20.5 12.25v8.25h-5.6" />
+      <path d="M14.9 20.5v-5.2h5.6" />
+      <path d="M20.5 12.25a8.5 8.5 0 0 0-4.06-7.29" />
+      <path d="M12 3.75a8.5 8.5 0 1 0 4.44 15.75" />
+    </SvgIcon>
+  )
+}

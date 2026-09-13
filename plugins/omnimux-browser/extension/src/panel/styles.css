@@ -1531,6 +1531,24 @@ textarea:focus-visible {
   object-fit: cover;
 }
 
+/* A page element the user sent from the hover capsule "lights up" as it lands. */
+.draft-image.lit > img {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18), 0 4px 14px rgba(124, 58, 237, 0.22);
+  animation: draft-image-lit 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes draft-image-lit {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .draft-image > button {
   position: absolute;
   top: -5px;
@@ -3208,6 +3226,16 @@ textarea:focus-visible {
   border-color: var(--ink-strong);
 }
 .preset-chip-btn .chip-icon { font-size: calc(12px * var(--ui-scale)); }
+
+/* Page media sensed by the content script, shown above the composer. */
+.page-media-bar {
+  flex: 0 0 auto;
+  margin: 0 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
 
 /* Media Sniffer Shelf & Sticky Top Bar (Pure Black & White Minimalist) */
 .media-sniffer-shelf {

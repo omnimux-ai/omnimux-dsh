@@ -1,7 +1,6 @@
 import { formatMetricNumber } from './algorithm.ts'
 import { extractTweetVelocityData } from './extractor.ts'
 import { showVelocityPanel } from './panel.ts'
-import type { TweetVelocityData } from './types.ts'
 
 const ATTACHED_ATTR = 'data-omnimux-velocity-attached'
 

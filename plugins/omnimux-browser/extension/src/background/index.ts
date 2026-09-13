@@ -79,6 +79,8 @@ import {
   PAGE_SESSION_CONTEXT_STORAGE_KEY,
   PageSessionContextTracker,
 } from './session-continuity.ts'
+import { appendMediaInspiration } from './media-library.ts'
+import type { HoveredMedia } from '../content/media-hover/types.ts'
 
 /** User settings persisted in chrome.storage.local. */
 export interface Settings {
@@ -1306,9 +1308,90 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     })
     return
   }
+
+  // ---- Page-media hover capsule ----
+  //
+  // These three messages are the only traffic the hover assistant produces, and
+  // only after the user presses a capsule icon: hovering itself never wakes this
+  // worker.
+
+  if (type === 'DSH_MEDIA_TO_INSPIRATION') {
+    const payload = readHoveredMedia(message)
+    if (payload === null) {
+      sendResponse({ ok: false, error: { code: 'invalid-media', message: 'media payload is malformed' } })
+      return
+    }
+    void appendMediaInspiration(payload).then(
+      (result) => {
+        // A rejected store resolves with `ok: false` rather than throwing, so the
+        // receipt has to be read from the result: wrapping every resolution in
+        // `{ ok: true }` is what told the capsule a lost write had succeeded.
+        if (result.ok) {
+          sendResponse({ ok: true, result })
+          return
+        }
+        sendResponse({ ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } })
+      },
+      () => { sendResponse({ ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } }) },
+    )
+    return true
+  }
+
+  if (type === 'DSH_OPEN_ASSISTANT_WITH_MEDIA') {
+    const payload = readHoveredMedia(message)
+    if (payload === null) {
+      sendResponse({ ok: false, error: { code: 'invalid-media', message: 'media payload is malformed' } })
+      return
+    }
+    // `chrome.sidePanel.open()` needs the click's user gesture, so the panel is
+    // opened from inside this handler and the payload is stashed for the panel to
+    // collect once its port connects.
+    const windowId = sender.tab.windowId
+    stashPendingMedia(windowId, payload)
+    openAssistantPanel(windowId)
+    sendResponse({ ok: true, result: { channel: 'side-panel', tabId: sender.tab.id } })
+    return
+  }
+
+  if (type === 'DSH_MEDIA_ATTACH_REQUEST') {
+    // A freshly opened side panel asks for the media that sent it here.
+    const wanted = (message as { payload?: unknown }).payload
+    const requestedId = typeof wanted === 'object' && wanted !== null
+      ? (wanted as { id?: unknown }).id
+      : undefined
+    const payload = takePendingMedia(sender.tab.windowId, typeof requestedId === 'string' ? requestedId : undefined)
+    sendResponse({ ok: true, result: payload === null ? { pending: false } : { pending: true, media: payload } })
+    return
+  }
+
   if (type !== 'DSH_SELECTION' || sender.tab === undefined) return
   recordSelection(sender.tab, sender.frameId ?? 0, (message as { selection?: unknown }).selection)
 })
+
+/** Pending page media per window, waiting for a side panel to collect it. */
+const pendingMediaByWindow = new Map<number, HoveredMedia>()
+
+function readHoveredMedia(message: unknown): HoveredMedia | null {
+  const payload = (message as { payload?: unknown }).payload
+  if (typeof payload !== 'object' || payload === null) return null
+  const media = payload as Partial<HoveredMedia>
+  if (typeof media.id !== 'string' || typeof media.src !== 'string') return null
+  if (media.type !== 'image' && media.type !== 'video') return null
+  return media as HoveredMedia
+}
+
+function stashPendingMedia(windowId: number, payload: HoveredMedia): void {
+  pendingMediaByWindow.set(windowId, payload)
+}
+
+/** Takes the stashed payload, optionally filtered by media id. */
+function takePendingMedia(windowId: number, mediaId?: string): HoveredMedia | null {
+  const pending = pendingMediaByWindow.get(windowId)
+  if (pending === undefined) return null
+  if (mediaId !== undefined && pending.id !== mediaId) return null
+  pendingMediaByWindow.delete(windowId)
+  return pending
+}
 
 // ---- Panel ports ----
 

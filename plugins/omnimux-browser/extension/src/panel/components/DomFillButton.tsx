@@ -47,12 +47,16 @@ export const DomFillButton = memo(function DomFillButton({
       window.addEventListener('message', onMessage)
       setTimeout(() => {
         window.removeEventListener('message', onMessage)
-        if (status === 'filling') {
-          setStatus('fallback')
+        // The closure captured `status` before React re-rendered, so it can only
+        // ever read the pre-click value. The deadline fires exactly when no host
+        // reply arrived, which is the condition this fallback is for.
+        setStatus((current) => {
+          if (current !== 'filling') return current
           setFeedbackMsg(isEn ? 'Copied!' : '已复制剪贴板')
           navigator.clipboard.writeText(cleanText).catch(() => {})
           setTimeout(() => setStatus('idle'), 2500)
-        }
+          return 'fallback'
+        })
       }, 1500)
       return
     }

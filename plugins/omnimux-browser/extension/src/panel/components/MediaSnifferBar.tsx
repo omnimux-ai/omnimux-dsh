@@ -16,11 +16,15 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   locale = 'zh',
   onActiveChange,
   onSaveToInspiration,
+  attachedIds,
+  onAttachMedia,
 }: {
   items: SniffedMediaItem[]
   locale?: 'zh' | 'en'
   onActiveChange?: (activeItems: SniffedMediaItem[]) => void
   onSaveToInspiration?: (item: SniffedMediaItem) => void
+  attachedIds?: ReadonlySet<string>
+  onAttachMedia?: (item: SniffedMediaItem) => void
 }) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
   const [previewItem, setPreviewItem] = useState<SniffedMediaItem | null>(null)
@@ -64,7 +68,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   const handleChipClick = (item: SniffedMediaItem) => {
     clearHoverTimer()
     const next = new Set(activeIds)
-    if (next.has(item.id)) {
+    if (next.has(item.id) || attachedIds?.has(item.id)) {
       next.delete(item.id)
       if (previewItem?.id === item.id) {
         setPreviewItem(null)
@@ -73,6 +77,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
       next.add(item.id)
       setPreviewItem(item)
       updatePreviewPosition(item.id)
+      onAttachMedia?.(item)
     }
     setActiveIds(next)
     const activeList = items.filter((it) => next.has(it.id))
@@ -81,7 +86,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
 
   const handleChipHover = (item: SniffedMediaItem) => {
     clearHoverTimer()
-    if (activeIds.has(item.id)) {
+    if (activeIds.has(item.id) || attachedIds?.has(item.id)) {
       setPreviewItem(item)
       updatePreviewPosition(item.id)
     }
@@ -139,7 +144,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
 
       <div className="media-items-row">
         {items.map((item) => {
-          const isActive = activeIds.has(item.id)
+          const isActive = activeIds.has(item.id) || attachedIds?.has(item.id)
           const typeTag = item.type === 'video' ? 'MP4' : (item.src.toLowerCase().includes('.png') ? 'PNG' : 'JPG')
           return (
             <div

@@ -1,0 +1,126 @@
+%% 浏览器插件页面素材悬停感知 — 数据结构与接口
+%% 来源：docs/architecture/media-hover-assistant-design.md §3
+%% 扩展根：plugins/omnimux-browser/extension
+
+classDiagram
+    class HoveredMedia {
+        +string id
+        +'image' | 'video' type
+        +string src
+        +string previewSrc
+        +string pageUrl
+        +string pageTitle
+        +number width
+        +number height
+        +number naturalWidth
+        +number naturalHeight
+        +string alt
+        +number capturedAt
+    }
+
+    class HoverCandidate {
+        +Element element
+        +HoveredMedia payload
+        +number lastSeenAt
+        +boolean disabled
+    }
+
+    class MediaDetector {
+        -WeakMap~Element, HoverCandidate~ cache
+        -Element current
+        +resolve(target: EventTarget) HoverCandidate | null
+        +isEligible(element: Element) boolean
+        +describe(element: Element) HoveredMedia
+        +dispose() void
+    }
+
+    class OverlayState {
+        +'idle' | 'shown' | 'interactive' | 'hidden' phase
+        +string activeId
+        +'inspiration' | 'copy' | 'attach' | null busyAction
+        +boolean saved
+        +boolean copied
+    }
+
+    class MediaOverlay {
+        -ShadowRoot shadow
+        -HTMLElement host
+        -MediaCapsule capsule
+        -MediaTooltip tooltip
+        +mount() void
+        +show(candidate: HoverCandidate, anchor: DOMRect) void
+        +reposition(anchor: DOMRect) void
+        +hide() void
+        +setBusy(action, flag) void
+        +dispose() void
+    }
+
+    class MediaCapsule {
+        +element HTMLDivElement
+        +render(payload: HoveredMedia) void
+        +setState(patch: Partial~OverlayState~) void
+        +onAction(handler) void
+    }
+
+    class MediaTooltip {
+        +element HTMLDivElement
+        +show(text: string, anchorRect: DOMRect, viewport: ViewportBox) void
+        +hide() void
+        +place(anchorRect: DOMRect, viewport: ViewportBox) TooltipPlacement
+    }
+
+    class TooltipPlacement {
+        +number left
+        +number top
+        +'above' | 'below' side
+        +boolean flipped
+    }
+
+    class ViewportBox {
+        +number width
+        +number height
+        +number margin
+    }
+
+    class MediaActionBridge {
+        +saveToInspiration(payload: HoveredMedia) Promise~ActionOutcome~
+        +copyToClipboard(payload: HoveredMedia) Promise~ActionOutcome~
+        +attachToConversation(payload: HoveredMedia) Promise~ActionOutcome~
+        -postToWorkbench(message) boolean
+        -postToBackground(message) Promise~unknown~
+    }
+
+    class ActionOutcome {
+        +boolean ok
+        +'saved' | 'copied' | 'attached' | 'failed' status
+        +string message
+    }
+
+    class FabCompanion {
+        +initFabCompanion() void
+        +openWorkstationWithMedia(payload: HoveredMedia) void
+        +isWorkstationOpen() boolean
+        -syncContextToIframe() void
+    }
+
+    class PanelApp {
+        +SniffedMediaItem[] detectedMedia
+        +attachMediaAsImage(item: SniffedMediaItem) Promise~void~
+        +handleMediaAttachRequest(payload: HoveredMedia) void
+        +focusComposer() void
+    }
+
+    MediaDetector --> HoverCandidate : 产出
+    HoverCandidate --> HoveredMedia : 持有载荷
+    MediaOverlay --> MediaDetector : 消费候选
+    MediaOverlay *-- MediaCapsule : 组合(兄弟节点)
+    MediaOverlay *-- MediaTooltip : 组合(兄弟节点)
+    MediaCapsule ..> MediaTooltip : 仅触发显隐
+    MediaCapsule --> MediaActionBridge : 动作回调
+    MediaActionBridge ..> HoveredMedia : 入参
+    MediaActionBridge --> ActionOutcome : 返回
+    MediaActionBridge --> FabCompanion : postMessage
+    FabCompanion --> PanelApp : iframe postMessage
+    PanelApp ..> HoveredMedia : 挂载为草稿附件
+    MediaTooltip --> TooltipPlacement : 计算产出
+    MediaTooltip ..> ViewportBox : 读取视口
