@@ -60,11 +60,17 @@ export function feedEmptyKind(feed) {
  *   query?: string,
  *   platform?: string,
  *   feed: Record<string, any>,
- *   onImported: () => void,
+ *   onImported?: (item?: Record<string, any>) => void,
+ *   onAccountImported?: (account?: Record<string, any>) => void,
+ *   importNotice?: string | null,
+ *   onDismissNotice?: () => void,
  * }} props
  */
 export function RivalAccountsPanel(props) {
-  const { t, active = true, feed, onImported } = props
+  const {
+    t, active = true, feed, onImported, onAccountImported,
+    importNotice = null, onDismissNotice,
+  } = props
   const [importOpen, setImportOpen] = useState(false)
   const [detailRow, setDetailRow] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -101,11 +107,24 @@ export function RivalAccountsPanel(props) {
 
   const emptyKind = feedEmptyKind(feed)
 
+  /**
+   * The page has one top notice bar, not two.
+   *
+   * A local outcome (a failed 复刻) outranks the shell's import confirmation,
+   * because it is the answer to what the user just clicked here; each source
+   * clears only its own.
+   */
+  const noticeText = notice ? t(notice.key) : importNotice
+  const dismissNotice = () => {
+    setNotice(null)
+    onDismissNotice?.()
+  }
+
   return (
     <div className="omnimux-rival-root" data-active={active ? 'true' : 'false'}>
-      {notice ? (
-        <div className="omnimux-rival-notice" role="status" onClick={() => setNotice(null)}>
-          <p>{t(notice.key)}</p>
+      {noticeText ? (
+        <div className="omnimux-rival-notice" role="status" onClick={dismissNotice}>
+          <p>{noticeText}</p>
         </div>
       ) : null}
       {feed.error ? (
@@ -114,6 +133,7 @@ export function RivalAccountsPanel(props) {
         </div>
       ) : null}
 
+      {/* 空态不占摘要行：「显示 0 个作品」对一片空白没有任何解释力，只会把留白切碎。 */}
       {feed.cards.length > 0 ? (
         <div className="omnimux-rival-summary" data-rival-summary="true">
           <span className="omnimux-rival-summary-text">{t('rivalFeed.summary')}</span>
@@ -140,9 +160,14 @@ export function RivalAccountsPanel(props) {
         open={importOpen}
         t={t}
         onClose={() => setImportOpen(false)}
-        onImported={async () => {
+        onImported={async (item) => {
           setImportOpen(false)
-          onImported?.()
+          onImported?.(item)
+        }}
+        onAccountImported={async (account) => {
+          setImportOpen(false)
+          // 账号不是这里的私事：切页、重读筛选器与作品流、提示成功都由外壳收口。
+          onAccountImported?.(account)
         }}
       />
 

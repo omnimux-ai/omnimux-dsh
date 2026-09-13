@@ -6,6 +6,11 @@
  * content URL and is handed to the plugin's original import flow unchanged. The
  * classification happens on the Host (E3), so the dialog and the Agent use the
  * same judgement about what a URL is.
+ *
+ * The two outcomes report through two different callbacks because they land in
+ * two different places: a content row belongs to the inspiration library
+ * (`onImported`), an account belongs to the monitored-account list
+ * (`onAccountImported`) and is the shell's to follow up on.
  */
 
 import { useState } from 'react'
@@ -18,7 +23,7 @@ import {
 import { readAutoAnalyzePreference } from './import-dialog-prefs.js'
 import { importLocalInspiration } from './api.js'
 
-export function RivalImportDialog({ open, t, onClose, onImported }) {
+export function RivalImportDialog({ open, t, onClose, onImported, onAccountImported }) {
   const [url, setUrl] = useState('')
   const [tags, setTags] = useState('')
   const [autoAnalyze, setAutoAnalyze] = useState(() => readAutoAnalyzePreference())
@@ -72,7 +77,7 @@ export function RivalImportDialog({ open, t, onClose, onImported }) {
           setError(res?.body?.error || t('rivalAccounts.import.error'))
           return
         }
-        await onImported(res.body?.data)
+        await onAccountImported?.(res.body?.data)
         return
       }
       if (resolved.kind === 'content') {

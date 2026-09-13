@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
@@ -14,6 +14,20 @@ import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
 
 export { formatPlatformName }
+
+/**
+ * 账号导入成功的提示文案：账号带 handle 就点名，没带就退回一句通用话术 ——
+ * 成功提示无论如何都要出现，不能因为缺一个字段而变成一句半截话。
+ * @param {(key: string) => string} t
+ * @param {Record<string, any> | undefined} account
+ * @returns {string}
+ */
+function accountImportNotice(t, account) {
+  const handle = String(account?.handle || account?.nickname || '').trim()
+  return handle
+    ? t('rivalAccounts.import.success').replace('{handle}', handle)
+    : t('rivalAccounts.import.successPlain')
+}
 
 function LoginGate({ t }) {
   const login = () => {
@@ -82,7 +96,8 @@ export function InspirationSection({ t, active }) {
     clearSelection,
     handleConfirmBatchRemove,
     handleImportSuccess,
-    handleAccountImported,
+    // 导入账号的默认落点：切到账号监控 tab。外壳在它之上再叠加重读与提示。
+    handleAccountImported: landOnAccountTab,
     landedItem,
     handleItemUpdated,
     importFailed,
@@ -113,6 +128,22 @@ export function InspirationSection({ t, active }) {
     query: rivalQuery,
     platform: rivalPlatform,
   })
+  const { reload: reloadRivalFeed } = rivalFeed
+
+  /**
+   * 账号导入成功后的统一收口（顶部「导入灵感」弹窗与账号监控页内的弹窗共用）。
+   *
+   * 只切 tab 是不够的：用户本来就在账号监控页时 tab 不变、`useRivalFeed` 的
+   * enabled 也跟着不变，重新请求不会被触发 —— 新账号既不进账号筛选器，也不进
+   * 作品流，界面上看起来就是「点了导入没反应」。所以这里显式重读一次第 1 页，
+   * 并把成功提示交给账号监控页顶部的通知条，让这次导入在界面上留下痕迹。
+   */
+  const [accountNotice, setAccountNotice] = useState(null)
+  const handleAccountImported = useCallback((account) => {
+    landOnAccountTab(account)
+    void reloadRivalFeed()
+    setAccountNotice(accountImportNotice(t, account))
+  }, [landOnAccountTab, reloadRivalFeed, t])
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
@@ -261,7 +292,10 @@ export function InspirationSection({ t, active }) {
           query={rivalQuery}
           platform={rivalPlatform}
           feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
-          onImported={() => rivalFeed.reload()}
+          onImported={() => reloadRivalFeed()}
+          onAccountImported={handleAccountImported}
+          importNotice={accountNotice}
+          onDismissNotice={() => setAccountNotice(null)}
         />
       ) : (
         <>
