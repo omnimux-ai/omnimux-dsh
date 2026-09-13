@@ -334,8 +334,9 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
     actions: {
       /**
        * Fill every parsed field at once; tags merge into the existing list. A
-       * digital answer also switches the kind and unfolds the six brand-strategy
-       * modules the analysis filled, so the whole report is visible on arrival.
+       * digital answer always switches the kind and unfolds the six
+       * brand-strategy modules, so the panel — filled when the analysis
+       * answered, empty when it did not — is visible on arrival.
        */
       applyImportedData: (data) => {
         const patch = importedPatchOf(data)
@@ -355,12 +356,12 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
           ))
         }
         const strategy = importedStrategyOf(data)
-        if (strategy || importedKindOf(data) === 'digital') base.setters.setKind('digital')
-        if (strategy) {
-          strategyState.setStrategy(strategy)
+        if (importedKindOf(data) === 'digital' || strategy) {
+          base.setters.setKind('digital')
           strategyState.setStrategyOpen(true)
           strategyState.setStrategyTouched(true)
         }
+        if (strategy) strategyState.setStrategy(strategy)
       },
       openStrategy: strategyState.openStrategy,
       patchStrategy: strategyState.patchStrategy,

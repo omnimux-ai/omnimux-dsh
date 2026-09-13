@@ -171,18 +171,77 @@ function toolRegistry(ctx) {
 }
 
 /**
+ * The hub's own chat-completions path, a sibling of this plugin wherever the
+ * two are installed together. Loaded lazily so a host without `omnimux` still
+ * boots this plugin.
+ */
+const HUB_CHAT_MODULE = '../../omnimux/src/text/chat.js'
+
+/** Model and cap the chat bridge asks for when the caller names neither. */
+const DEFAULT_CHAT_MODEL = 'gemini-3.8-flash'
+const BRIDGE_MAX_TOKENS = 6000
+
+/** @type {Function | null} */
+let hubChatComplete = null
+
+/**
+ * @returns {Promise<Function | null>} null when the hub is not installed here
+ */
+async function loadHubChatComplete() {
+  if (hubChatComplete) return hubChatComplete
+  try {
+    const mod = await import(new URL(HUB_CHAT_MODULE, import.meta.url).href)
+    if (typeof mod?.completeTextViaChat === 'function') hubChatComplete = mod.completeTextViaChat
+  } catch {
+    return null
+  }
+  return hubChatComplete
+}
+
+/**
  * Wrap the hub capabilities this vertical consumes, resolved lazily at call time
  * (load order between plugins is not this plugin's contract):
  *
  * - `textComplete` — the hub's one-shot model seam, as the provided service, else
- *   the official `omnimux_text_complete` tool;
+ *   the official `omnimux_text_complete` tool, else the hub chat bridge;
  * - `pageFetch` — the official `omnimux_page_fetch` tool (OmniMux Jina Reader).
  *
  * @param {unknown} ctx
+ * @param {{ chatComplete?: Function }} [deps] test seam for the chat bridge
  * @returns {{ textComplete: Function, pageFetch: Function } | null}
  */
-export function createHubSeams(ctx) {
+export function createHubSeams(ctx, deps) {
   if (!ctx || typeof ctx !== 'object') return null
+  const overrides = deps && typeof deps === 'object' ? deps : {}
+  const injectedChat = typeof overrides.chatComplete === 'function' ? overrides.chatComplete : null
+
+  /**
+   * Last-resort channel, used only when neither the provided seat nor the
+   * official tool answered. The hub chat module resolves the provider this host
+   * already configured (`llm-pi-ai` in settings / credentials, e.g. CPA or
+   * `gemini-3.8-flash-high`), so an import still gets a model answer on hosts
+   * where the LLM seat behind `omnimux_text_complete` cannot run. Keys stay in
+   * the host: this plugin reads a credential seat, never a key file.
+   *
+   * @param {{ prompt: string, model?: string, system?: string, maxTokens?: number }} request
+   * @returns {Promise<unknown>}
+   */
+  async function textCompleteViaChat(request) {
+    const chat = injectedChat ?? await loadHubChatComplete()
+    if (typeof chat !== 'function') throw new Error('hub chat module is not reachable')
+    const maxTokens = Number.isFinite(request.maxTokens) && request.maxTokens > 0
+      ? request.maxTokens
+      : BRIDGE_MAX_TOKENS
+    return chat({
+      model: request.model || DEFAULT_CHAT_MODEL,
+      prompt: request.prompt,
+      ...(request.system ? { system: request.system } : {}),
+      maxTokens,
+      env: process.env,
+      credentials: readSeat(ctx, 'credentials'),
+      settings: readSeat(ctx, 'settings'),
+    })
+  }
 
   const seams = {
     /**
@@ -190,21 +249,44 @@ export function createHubSeams(ctx) {
      * @returns {Promise<unknown>}
      */
     async textComplete(request) {
+      const reasons = []
+
       const service = /** @type {{ execute?: Function } | undefined} */ (readSeat(ctx, 'textComplete'))
-      if (service && typeof service.execute === 'function') return service.execute(request)
+      if (service && typeof service.execute === 'function') {
+        try {
+          return await service.execute(request)
+        } catch (error) {
+          reasons.push(`textComplete seat failed: ${messageOf(error)}`)
+        }
+      } else {
+        reasons.push('textComplete seat: not provided')
+      }
 
       const tools = toolRegistry(ctx)
       const tool = tools && typeof tools.get === 'function' ? tools.get('omnimux_text_complete') : null
       if (!tool || typeof tool.execute !== 'function') {
-        throw new Error('omnimux_text_complete unavailable: hub is not loaded or text completion is disabled')
+        reasons.push('omnimux_text_complete unavailable: hub is not loaded or text completion is disabled')
+      } else {
+        try {
+          return await tool.execute({
+            prompt: request.prompt,
+            model: request.model,
+            system: request.system,
+            max_tokens: request.maxTokens,
+            reason: request.reason || 'omnimux-products import-from-link',
+          })
+        } catch (error) {
+          reasons.push(`omnimux_text_complete failed: ${messageOf(error)}`)
+        }
       }
-      return tool.execute({
-        prompt: request.prompt,
-        model: request.model,
-        system: request.system,
-        max_tokens: request.maxTokens,
-        reason: request.reason || 'omnimux-products import-from-link',
-      })
+
+      try {
+        return await textCompleteViaChat(request)
+      } catch (error) {
+        reasons.push(`chat bridge failed: ${messageOf(error)}`)
+      }
+
+      throw new Error(`no text channel answered the request (${reasons.join(' | ')})`)
     },
 
     /**
@@ -246,6 +328,7 @@ function parseProductPath(pathname) {
  *   hub?: { textComplete?: Function, pageFetch?: Function } | null,
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
  *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', hub?: object | null }) => Promise<object>,
+ *   chatComplete?: Function,
  * }} deps
  */
 export function createProductsDispatcher(deps) {
@@ -254,7 +337,7 @@ export function createProductsDispatcher(deps) {
   const importFromUrl = deps.importFromUrl ?? importProductFromUrl
   // Hub seams are optional: without a hub the importer still answers from its own
   // page read and the heuristics, and reports the degradation in-band.
-  const hub = deps.hub ?? createHubSeams(deps.ctx)
+  const hub = deps.hub ?? createHubSeams(deps.ctx, { chatComplete: deps.chatComplete })
 
   /**
    * @param {{ body?: unknown }} req

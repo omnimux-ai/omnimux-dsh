@@ -669,6 +669,31 @@ describe('link importer · hub model analysis', () => {
     assert.deepEqual(Object.keys(draft), [...IMPORT_FIELD_KEYS, ...IMPORT_DRAFT_EXTRA_KEYS])
   })
 
+  it('routes a bare software host to the brand playbook on the URL alone', async () => {
+    // The regression: a SaaS landing page whose copy reads like nothing in
+    // particular, with the form left on the physical default. Only the host
+    // says what the page is, so the host has to be enough.
+    const host = 'https://docs.acme.ai/'
+    const html = '<!doctype html><html lang="en"><head><title>Acme</title></head><body><main><p>Ship faster.</p></main></body></html>'
+    const { fetcher } = stubFetcher({ [host]: { html } })
+    const { hub, calls } = stubHub({ pageFetchThrows: true })
+    const draft = await importProductFromUrl({ url: host, kind: 'physical', fetcher, hub })
+
+    assert.equal(draft.kind, 'digital')
+    assert.equal(draft.analysis.mode, 'model')
+    assert.deepEqual(Object.keys(draft.brand_strategy), [
+      'brand_basic_info',
+      'content_angles',
+      'tone_and_voice',
+      'identity_and_product',
+      'mission_and_positioning',
+      'market_and_competition',
+    ])
+    assert.equal(calls.textComplete.length, 1)
+    // The brand playbook ran, not the physical listing one.
+    assert.doesNotMatch(calls.textComplete[0].prompt, /产品信息调研专家/)
+  })
+
   it('extracts a physical listing with the v9 playbook', async () => {
     const { fetcher } = stubFetcher({ [PAGE_URL]: { html: PRODUCT_HTML } })
     const { hub, calls } = stubHub({ text: V9_REPORT })
