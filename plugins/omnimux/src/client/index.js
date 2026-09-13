@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import { mountFormsBridge } from './forms/mount.js'
 /** Registers OmniMux profile in Settings and Apps under 新会话. */
 import { NS } from './locales.js'
@@ -35,6 +36,9 @@ import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
+import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
+import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
+import { injectMediaViewerStyles } from './media-viewer/styles.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
 import { findReplicateAttachment, shouldReleaseReplicateAttachments } from './session-guide/trending/replicate-linkage.js'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
@@ -216,6 +220,28 @@ export function apply(ctx) {
     ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
     ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.effect(() => installUserMessageLinkEnhancer(document), 'omnimux: user message link pill enhancer')
+    ctx.effect(() => { injectMediaViewerStyles(document) }, 'omnimux: media viewer styles')
+    ctx.effect(() => installAssistantMessageMediaEnhancer(document), 'omnimux: assistant message media enhancer')
+    if (typeof ctx.inject === 'function') {
+      ctx.inject(['betterSidebar'], (inner) => {
+        const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
+        if (sidebar && typeof sidebar.registerTab === 'function') {
+          const registerMediaViewer = () => sidebar.registerTab({
+            id: MEDIA_VIEWER_TAB_ID,
+            title: () => t('mediaViewer.tabTitle') || '图片浏览',
+            order: 7,
+            hidden: false,
+            single: true,
+            component: (props) => createElement(MediaViewerTab, props),
+          })
+          if (typeof ctx.effect === 'function') {
+            ctx.effect(registerMediaViewer, 'omnimux: media viewer tab')
+          } else {
+            registerMediaViewer()
+          }
+        }
+      })
+    }
     ctx.inject(['commandUi', 'sessions'], (inner) => {
       guideSessions = inner.sessions
       inner.effect(() => {
