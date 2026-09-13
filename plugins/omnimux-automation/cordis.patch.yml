@@ -1,0 +1,8 @@
+# 一次安装同时挂载 Host 定时引擎并发布 Web 客户端。
+- insert:
+    - id: omnimux-automation
+      name: omnimux-automation
+      config:
+        runTimeoutMinutes: 60
+        misfireGraceMinutes: 15
+        historyLimit: 200

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-09-09T04:26:49.091Z",
+  "updatedAt": "2026-09-13T06:51:23.720Z",
   "topology": {
     "tiers": [
       {
@@ -23,8 +23,8 @@
       }
     ],
     "summary": {
-      "totalPlugins": 13,
-      "totalTools": 59,
+      "totalPlugins": 14,
+      "totalTools": 73,
       "totalSeams": 6
     }
   },
@@ -251,20 +251,55 @@
           }
         ],
         "storageDomains": [
-          "$DSH_HOME/omnimux/assets-storage/ (root pointer and task receipts)",
-          "$DSH_HOME/omnimux/assets/ (default root)",
-          "Active root selected through a confirmed storage migration plan; cleanup limited to confirmed managed-file manifests"
+          "$DSH_HOME/omnimux/assets/"
         ]
       },
       "dependencies": {
         "requiredPlugins": [
           "omnimux"
         ],
-        "systemBinaries": [
-          "osascript"
-        ]
+        "systemBinaries": []
       },
       "path": "plugins/omnimux-assets"
+    },
+    {
+      "id": "omnimux-automation",
+      "name": "omnimux-automation",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "OmniMux 官方应用「自动化」：定时任务的定义、计划计算、无人值守执行与执行记录工作台",
+      "tags": [
+        "automation",
+        "schedule",
+        "cron",
+        "agent",
+        "workbench"
+      ],
+      "capabilities": {
+        "tools": [
+          "automation_create",
+          "automation_list",
+          "automation_update",
+          "automation_runs",
+          "automation_run_now",
+          "automation_delete"
+        ],
+        "seamsProvided": [],
+        "seamsConsumed": [],
+        "slots": [],
+        "storageDomains": [
+          "$DSH_HOME/omnimux-automation/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": []
+      },
+      "path": "plugins/omnimux-automation"
     },
     {
       "id": "omnimux-clip",
@@ -413,6 +448,30 @@
           {
             "name": "inspiration_create",
             "summary": "Create and crawl inspiration from social media URLs (TikTok, Instagram, YouTube, X), download media and trigger AI analysis."
+          },
+          {
+            "name": "inspiration_rival_accounts",
+            "summary": "List monitored rival accounts with platform, handle, followers, refresh state and potential post count."
+          },
+          {
+            "name": "inspiration_rival_posts",
+            "summary": "List the cached posts of one rival account, optionally filtered to the potential-flagged ones only."
+          },
+          {
+            "name": "inspiration_rival_post",
+            "summary": "Get one rival post with its account, including media urls, stats and library status."
+          },
+          {
+            "name": "inspiration_rival_posts_add_to_session",
+            "summary": "Build the session attachment payload of one rival post so the workbench can mount it into the active conversation."
+          },
+          {
+            "name": "inspiration_rival_to_inspiration",
+            "summary": "Import one rival post into the local inspiration library through the existing import-url pipeline."
+          },
+          {
+            "name": "inspiration_rival_refresh",
+            "summary": "Queue a refresh of one or all rival accounts, bounded by the per-account cloud call budget."
           }
         ],
         "seamsProvided": [],
@@ -986,6 +1045,20 @@
             "summary": "探查指定视频文件的元数据信息并获取本地 Range 206 流式播放地址",
             "category": "media",
             "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "video_breakdown_analyze",
+            "summary": "分析视频链接并提取结构化分镜列表与阶段拆解，自动在右侧侧边栏打开预览",
+            "category": "media",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "video_breakdown_translate",
+            "summary": "调用大模型统一通道将视频分镜台词/口播翻译为多语言并持久化缓存",
+            "category": "media",
+            "isWriteOperation": true,
             "requiresAuth": false
           }
         ],

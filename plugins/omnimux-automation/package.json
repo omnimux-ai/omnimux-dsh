@@ -1,0 +1,63 @@
+{
+  "name": "omnimux-automation",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib/client.js",
+    "scripts/build-client.mjs",
+    "cordis.patch.yml",
+    "dsh.manifest.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "prepare": "npm run build",
+    "test": "node --import ./scripts/register-dsh-stubs.mjs --test --test-force-exit src/*.test.js src/client/*.test.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "luxon": "^3.7.2",
+    "zod": "^4.1.5"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.1",
+    "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.0-rc.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^30.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "license": "MIT",
+  "description": "OmniMux 官方应用「自动化」：在独立 Session 中按计划执行任务，右侧工作台双视图管理。"
+}

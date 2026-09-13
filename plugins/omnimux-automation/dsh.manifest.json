@@ -1,0 +1,28 @@
+{
+  "id": "omnimux-automation",
+  "name": "omnimux-automation",
+  "version": "0.1.0",
+  "tier": "tier-1-app",
+  "entrypoint": "src/index.js",
+  "status": "active",
+  "description": "OmniMux 官方应用「自动化」：定时任务的定义、计划计算、无人值守执行与执行记录工作台",
+  "tags": ["automation", "schedule", "cron", "agent", "workbench"],
+  "capabilities": {
+    "tools": [
+      "automation_create",
+      "automation_list",
+      "automation_update",
+      "automation_runs",
+      "automation_run_now",
+      "automation_delete"
+    ],
+    "seamsProvided": [],
+    "seamsConsumed": [],
+    "slots": [],
+    "storageDomains": ["$DSH_HOME/omnimux-automation/"]
+  },
+  "dependencies": {
+    "requiredPlugins": ["omnimux"],
+    "systemBinaries": []
+  }
+}
