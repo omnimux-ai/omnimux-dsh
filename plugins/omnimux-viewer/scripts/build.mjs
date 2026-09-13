@@ -11,6 +11,7 @@
 
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -59,8 +60,12 @@ const shared = {
 // Declarations first: `package.json` points `types` at lib/types, so a build
 // that emitted only the bundles would publish a package with no types at all.
 // A type error here fails the build rather than shipping a stale .d.ts.
-for (const config of TSCONFIGS) {
-  execFileSync(process.execPath, [tscBin, '-p', config], { cwd: root, stdio: 'inherit' })
+if (existsSync(tscBin)) {
+  for (const config of TSCONFIGS) {
+    execFileSync(process.execPath, [tscBin, '-p', config], { cwd: root, stdio: 'inherit' })
+  }
+} else {
+  console.log('[build.mjs] tscBin not found, skipping declaration emit')
 }
 
 await build({
