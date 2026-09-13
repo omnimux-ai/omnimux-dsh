@@ -42,17 +42,39 @@ cloud-catalog/
 ├── index.json                                 # id → 行（Host 用它解析媒体与收藏到本地）
 ├── all/page-NNNN.json                         # 跨分类全量：116 片，2782 条，按导航顺序拼
 ├── character/{female,male,lifestyle,business}/page-NNNN.json
-├── scene/{ambience,environment}/page-NNNN.json
+├── scene/{nature,indoor,city,travel,creative,workplace}/page-NNNN.json
 ├── prop/object/page-NNNN.json
-├── material/{green-screen,hook,meme,pet,clothing,portrait}/page-NNNN.json
-├── style/{image-preset,video-tone}/page-NNNN.json
+├── material/{hook,green-screen,clothing,pet,portrait,graphic-design,illustration,anime,concept-art}/page-NNNN.json
+├── style/{live-action,anime-2d,render-3d,photography,traditional-art,video-tone}/page-NNNN.json
 └── audio/{voiceover,sfx,bgm}/page-NNNN.json
 ```
 
-六大分类共 2782 条：角色 329（Pippit 实景数字人）、场景 139（场景氛围 14 + 实景环境 125）、道具 125
-（全部来自 Loomi）、素材 1398（绿幕 150 + 钩子 705 + 表情包 161 + 萌宠 127 + 服饰 128 + 人像 127）、
-风格 151（生图预设 122 + 视频调性 29）、声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；
-背景音 108）。`all/` 分片把六个分类按导航顺序拼成一条流，共 116 页，与各大类分片出自同一次构建。
+## 分类体系（六大一级 + 29 个二级）
+
+| 一级 | 二级（条数） |
+| --- | --- |
+| 角色 `character` | 女性角色 185 · 男性角色 144 · 生活居家 254 · 职场商务 43（多维归属，见下） |
+| 场景 `scene` | 自然山水 70 · 城市街景 24 · 生活室内 19 · 出行车载 15 · 极境奇观 6 · 商务办公 5 |
+| 道具 `prop` | 实物道具 125 |
+| 素材 `material` | 钩子 705 · 绿幕 150 · 服饰穿搭 128 · 萌宠动物 127 · 人像写真 127 · 平面设计 62 · 概念艺术 44 · 商业插画 33 · 动漫分镜 22 |
+| 风格 `style` | 真人影视 35 · 2D 动漫 35 · 3D 动画 35 · 调性氛围 35 · 胶片摄影 7 · 国风传统 4 |
+| 声音 `audio` | 配音 527 · 背景音 108 · 音效 5 |
+
+全库 2782 条，与各大类分片出自同一次构建。三条重构原则：
+
+- **场景按画面里的地方分，不按采集批次分**。旧的两个架子（`ambience` 场景氛围 14 / `environment` 实景环境
+  125）说的是「怎么收来的」，14 条氛围视频和 125 条 Loomi 实景本来是同一类东西——可拍摄的环境。两个批次标签
+  已废除，`ambience` / `environment` 不再出现在清单里。
+- **素材彻底废除表情包**（`meme` 161 条已删除）。gpt-image-2 的 161 张专业生图按其原生 `category` 落到四个架子：
+  `graphic-design` / `illustration` / `anime` / `concept-art`（后者的 5 个题材类合并：photography / creative /
+  architecture / ecommerce / cultural）。其余五个素材架子不变。
+- **风格按视觉流派分，不按交付格式分**。旧的「生图预设 / 视频调性」只说这是图还是视频。`image-preset` 已废除，
+  六派为：真人影视 / 2D 动漫 / 3D 动画 / 胶片摄影 / 国风传统 / 调性氛围。落架规则 = 数据源自带的分类 → 逐条补正表
+  （`STYLE_SHELF_OVERRIDES`，例如「新中式水墨」按作品补到国风传统）→ 兜底调性氛围。
+
+场景的逐条落架写在 `SCENE_SHELF_BY_ID`：60 条 Loomi 视频的标题只有摄影师昵称、没有画面信息，少量图片的标题也与
+画面不符（`mat-living-room` 的画面是一条荒漠公路），所以 139 条逐条按画面复核，判定结果以一张表固化，未收录的新
+素材再走标题关键词兜底（`SCENE_SHELF_RULES`）。
 
 ## Loomi 素材库的归类映射
 
@@ -63,14 +85,15 @@ cloud-catalog/
 | 源分类 | 条数 | 落地大类 | 落地二级分类 | 中文 / 英文 |
 | --- | --- | --- | --- | --- |
 | `prop` | 125 | 道具 | `object` | 实物道具 / Props & Objects |
-| `scene` | 125 | 场景 | `environment` | 实景环境 / Environments |
+| `scene` | 125 | 场景 | 逐条判定（`SCENE_SHELF_BY_ID`） | 自然山水 / 生活室内 / 城市街景 / 出行车载 / 极境奇观 / 商务办公 |
 | `pet` | 127 | 素材 | `pet` | 萌宠动物 / Pets & Animals |
 | `clothing` | 128 | 素材 | `clothing` | 服饰穿搭 / Fashion & Outfits |
 | `portrait` | 127 | 素材 | `portrait` | 人像写真 / Portraits |
 
 **不要直接把源分类名当二级分类名用**：源站把 `prop` 和 `scene` 各当一个独立大类，而本清单里 `prop` 是
-一级大类的 id，`scene` 是大类 id 而二级架子叫 `environment`。早期实现按二级分类名去匹配源分类，结果
-道具与场景两个大类一条都收不到（构建日志会显示 `prop 0 rows`）；匹配必须走 `sourceClass`。
+一级大类的 id，`scene` 是大类 id 而二级架子按画面判定。早期实现按二级分类名去匹配源分类，结果
+道具与场景两个大类一条都收不到（构建日志会显示 `prop 0 rows`）；匹配必须走 `sourceClass`。`scene` 是唯一
+按「行」而不是按「源文件夹」落架的源分类，它在 `LOOMI_SHELVES` 里带的是 `resolveShelf` 而不是 `subCategory`。
 
 每行还带 `meta.source_id` / `source_category` / `provider` / `creator` / `license` /
 `attribution_required` / `source_url`，源站署名信息完整保留；标签固定三枚（源分类 + 媒体类型 + 图库），
@@ -88,13 +111,13 @@ cloud-catalog/
 
 - 默认读 `/Users/x/Desktop/Project/OPC/资产库`，可用 `--assets-root=` 换根、`--out=` 换输出、`--dry-run` 只统计
 - 每个数据源都可缺失：缺源只让该分类变空，不会让整次构建失败
-- 灵感社区是独立系统，按目录名跳过；只有表情包与 Loomi 两处按精确路径读它的素材
+- 灵感社区是独立系统，按目录名跳过；只有专业生图画廊与 Loomi 两处按精确路径读它的素材
 - 素材路径写 `file:<相对 assets-root 的路径>`；同时有本地副本与可公开访问的远端地址时，远端地址存进
   `meta.source_media_url`，换机器仍可播放。Loomi 的媒体已全部落盘，所以本地 `file:` 优先，远端只作兜底；
   某条源文件缺失时该行自动退回远端地址，不会写出打不开的定位符
 - 角色只收 `gxgen-data/character-library/pippit-local-avatars-source/` 的实景数字人；`素材库/AI 网红/` 一类的
-  零散图片不进清单，知识包（本地资产类型）也没有云端分类；风格只收三个策展预设文件，每条都带
-  `meta.prompt_text`；音效只收 `素材库/音频/音效/` 下的真实转场音效
+  零散图片不进清单，知识包（本地资产类型）也没有云端分类；风格只收三个策展预设文件 + `element-library/视频风格/`
+  的模式预设，每条都带 `meta.prompt_text`；音效只收 `素材库/音频/音效/` 下的真实转场音效
 - `all/` 分片与分类分片同一次构建产出，行按导航顺序拼接，所以「全部」的分页与各大类不会互相漂移
 
 Host 侧（`src/cloud-catalog.js` + `src/http-routes.js`）：

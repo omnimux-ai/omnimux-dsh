@@ -11,14 +11,16 @@
  *
  * The fixture is the smallest root that exercises the removals: one digital human
  * from the Pippit catalogue, one loose portrait from the 素材库/AI 网红 archive,
- * one prompt pack, one short-drama reference pack, and enough 场景氛围 rows to
- * push the whole-catalog scope past a single page.
+ * one prompt pack, one short-drama reference pack, one row per image-gallery
+ * class, one row per style shelf rule, and enough 场景氛围 rows to push the
+ * whole-catalog scope past a single page.
  *
  * It also carries one Loomi row per source class, because that library is the one
  * source whose classes do not map onto a catalog category one-to-one — 道具-classed
- * items become 实物道具 while the source tab calls them 道具, 场景-classed items
- * become 实景环境, and the remaining three become three shelves of 素材. A fixture
- * with a single class could not tell the two tables apart.
+ * items become 实物道具 while the source tab calls them 道具, 场景-classed items are
+ * sorted by the place their picture shows, and the remaining three become three
+ * shelves of 素材. A fixture with a single class could not tell the two tables
+ * apart.
  */
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -37,15 +39,45 @@ const AMBIENCE_ROWS = 30
 /**
  * One row per Loomi source class, each mapped to the shelf it must land on.
  * `mediaKind: 'video'` on one of them is what proves the tag follows the row
- * rather than the shelf.
+ * rather than the shelf. 场景 is the class whose shelf is read off the picture
+ * rather than named for the source folder, so its expected shelf (`indoor`) is
+ * the one the classifier answers for `mat-studio-room`.
  * @type {[string, string, string, string][]} source class, shelf, id, media kind
  */
 const LOOMI_ROWS = [
   ['prop', 'object', 'mat-camera-prop', 'image'],
-  ['scene', 'environment', 'mat-studio-room', 'video'],
+  ['scene', 'indoor', 'mat-studio-room', 'video'],
   ['pet', 'pet', 'mat-orange-cat', 'image'],
   ['clothing', 'clothing', 'mat-purple-dress', 'image'],
   ['portrait', 'portrait', 'mat-cowboy', 'image'],
+]
+
+/**
+ * The gpt-image-2 gallery, one row per class group, each mapped to the shelf its
+ * own `category` names. The five subject classes are the concept-art half.
+ * @type {[string, string, number][]} source category, shelf, ordinal
+ */
+const GALLERY_ROWS = [
+  ['graphic-design', 'graphic-design', 0],
+  ['illustration', 'illustration', 1],
+  ['anime', 'anime', 2],
+  ['photography', 'concept-art', 3],
+  ['cultural', 'concept-art', 4],
+]
+
+/**
+ * The style shelf tables, one row each: a row whose own class already names the
+ * shelf, a row the override table corrects, and a file that carries no class at
+ * all (Pippit moods are 调性氛围 itself).
+ * @type {[string, string, string][]} file, preset title, expected shelf
+ */
+const STYLE_ROWS = [
+  ['new-style-presets.json', '35mm 胶片摄影', 'photography'],
+  ['new-style-presets.json', '新中式水墨', 'traditional-art'],
+  ['new-style-presets.json', '包豪斯', 'video-tone'],
+  ['xiaoyunque-novel-style-library.json', '宫斗权谋冷峻风格', 'live-action'],
+  ['xiaoyunque-novel-style-library.json', 'UE5写实渲染', 'render-3d'],
+  ['pippit-visual-styles.json', 'Quiet Luxury Minimalism', 'video-tone'],
 ]
 
 const LOOMI_DIR = '素材库/gxgen-data/inspiration-library/loomi'
@@ -179,6 +211,44 @@ before(() => {
     writeFile(join(assetsRoot, LOOMI_DIR, `media/${id}-thumb.bin`), 'thumb')
   }
 
+  // The professional image gallery: one frame per class group, each with its
+  // `NNNN-` ordinal file present.
+  writeJson('素材库/gxgen-data/inspiration-library/image/gpt-image-2-skill.json', GALLERY_ROWS.map(([category, _shelf, ordinal]) => ({
+    title: `${category} 样张 ${ordinal}`,
+    category,
+    prompt_text: `a ${category} frame`,
+    cover_url: `https://cdn.test/gallery/${ordinal}.jpg`,
+  })))
+  for (const [_category, _shelf, ordinal] of GALLERY_ROWS) {
+    writeFile(join(assetsRoot, '素材库/gxgen-data/inspiration-library/image/media/gpt-image-2-skill', `${String(ordinal).padStart(4, '0')}-frame.webp`), 'webp')
+  }
+
+  // The style shelf: two curated preset files whose own classes are one step
+  // coarser than the shelves, and one mood file that carries no class at all.
+  writeJson('素材库/gxgen-data/style-library/new-style-presets.json', STYLE_ROWS
+    .filter(([file]) => file === 'new-style-presets.json')
+    .map(([_file, title]) => ({
+      title,
+      category: title === '35mm 胶片摄影' ? 'photography' : (title === '新中式水墨' ? 'illustration' : 'graphic-design'),
+      prompt_text: `${title} look`,
+    })))
+  writeJson('素材库/gxgen-data/style-library/xiaoyunque-novel-style-library.json', STYLE_ROWS
+    .filter(([file]) => file === 'xiaoyunque-novel-style-library.json')
+    .map(([_file, title]) => ({
+      title,
+      category: title === '宫斗权谋冷峻风格' ? '真人' : '3D',
+      prompt_text: `${title} look`,
+    })))
+  writeJson('素材库/gxgen-data/style-library/pippit-visual-styles.json', {
+    styles: STYLE_ROWS
+      .filter(([file]) => file === 'pippit-visual-styles.json')
+      .map(([_file, title]) => ({
+        id: 'quiet-luxury',
+        title,
+        description: 'Understated luxury with clean minimal elegance',
+      })),
+  })
+
   execFileSync(process.execPath, [
     builder,
     `--assets-root=${assetsRoot}`,
@@ -223,21 +293,25 @@ describe('cloud catalog builder · 知识包 and 素材库/AI 网红 are off the
 })
 
 describe('cloud catalog builder · Loomi classes land on the shelves they describe', () => {
-  it('opens 实物道具, widens 实景环境 and files the rest under 素材', () => {
+  it('opens 实物道具, sorts 场景 by place and files the rest under 素材', () => {
     const prop = manifest.categories.find((row) => row.id === 'prop')
     assert.deepEqual(prop.sub_categories.map((sub) => sub.id), ['object'])
     assert.equal(prop.sub_categories[0].total, 2, 'both fixture props — the offline one included')
 
     const scene = manifest.categories.find((row) => row.id === 'scene')
     assert.deepEqual(
-      scene.sub_categories.filter((sub) => sub.id === 'environment').map((sub) => sub.total),
+      scene.sub_categories.map((sub) => sub.id),
+      ['nature', 'indoor', 'city', 'travel', 'creative', 'workplace'],
+    )
+    assert.deepEqual(
+      scene.sub_categories.filter((sub) => sub.id === 'indoor').map((sub) => sub.total),
       [1],
     )
 
     const material = manifest.categories.find((row) => row.id === 'material')
     assert.deepEqual(
       material.sub_categories.map((sub) => sub.id).filter((id) => ['pet', 'clothing', 'portrait'].includes(id)),
-      ['pet', 'clothing', 'portrait'],
+      ['clothing', 'pet', 'portrait'],
     )
   })
 
@@ -252,7 +326,10 @@ describe('cloud catalog builder · Loomi classes land on the shelves they descri
     assert.equal(prop.sub_category, 'object')
     assert.equal(prop.category, 'prop')
     assert.notEqual(prop.sub_category, 'prop')
-    assert.equal(loomiRowOf('scene').sub_category, 'environment')
+    // 场景 carries no shelf of its own: the picture decides, and this fixture's
+    // scene row is a living room.
+    assert.equal(loomiRowOf('scene').sub_category, 'indoor')
+    assert.notEqual(loomiRowOf('scene').sub_category, 'scene')
   })
 
   it('keeps every Loomi row out of 角色', () => {
@@ -286,12 +363,58 @@ describe('cloud catalog builder · Loomi classes land on the shelves they descri
 
   it('never puts an uploader handle where the card shows a name', () => {
     const scene = loomiRowOf('scene')
-    assert.equal(scene.name, '实景环境 mat-studio-room')
+    assert.equal(scene.name, '生活室内 mat-studio-room')
     assert.notEqual(scene.name, 'Hữu Thịnh 79')
     assert.equal(scene.meta.creator, 'Hữu Thịnh 79')
 
     // A row the source did title keeps its own name.
     assert.equal(loomiRowOf('prop', 'mat-camera-prop').name, 'prop 标题')
+  })
+})
+
+describe('cloud catalog builder · the image gallery names the discipline it was made for', () => {
+  it('files each gallery class on the shelf its own category names', () => {
+    for (const [category, shelf] of GALLERY_ROWS) {
+      const row = allRows().find((entry) => entry?.meta?.source === 'gpt-image-2-skill'
+        && entry.meta.category === category)
+      assert.ok(row, `${category} should be catalogued`)
+      assert.equal(row.sub_category, shelf, `${category} → ${shelf}`)
+      assert.equal(row.category, 'material')
+    }
+  })
+
+  it('keeps the five subject classes together as concept art', () => {
+    const material = manifest.categories.find((row) => row.id === 'material')
+    const concept = material.sub_categories.find((sub) => sub.id === 'concept-art')
+    assert.equal(concept.total, 2, 'photography and cultural fixture rows')
+    assert.equal(material.sub_categories.some((sub) => sub.id === 'meme'), false)
+  })
+
+  it('hands the gallery prompt to the card instead of a sticker caption', () => {
+    const row = allRows().find((entry) => entry?.meta?.source === 'gpt-image-2-skill'
+      && entry.meta.category === 'anime')
+    assert.match(String(row.meta.prompt_text), /anime frame/)
+    assert.match(String(row.cover_url), /^file:素材库\/gxgen-data\/inspiration-library\/image\/media\//)
+  })
+})
+
+describe('cloud catalog builder · style rows land on the school they belong to', () => {
+  it('publishes the six shelves and puts every row on one of them', () => {
+    const style = manifest.categories.find((row) => row.id === 'style')
+    assert.deepEqual(
+      style.sub_categories.map((sub) => sub.id),
+      ['live-action', 'anime-2d', 'render-3d', 'photography', 'traditional-art', 'video-tone'],
+    )
+    assert.equal(style.sub_categories.reduce((sum, sub) => sum + sub.total, 0), STYLE_ROWS.length)
+    assert.equal(style.sub_categories.some((sub) => sub.id === 'image-preset'), false)
+  })
+
+  it('reads the shelf off the row class, the override table, or the file itself', () => {
+    for (const [_file, title, shelf] of STYLE_ROWS) {
+      const row = allRows().find((entry) => entry?.meta?.source === 'style-library' && entry.name === title)
+      assert.ok(row, `${title} should be catalogued`)
+      assert.equal(row.sub_category, shelf, `${title} → ${shelf}`)
+    }
   })
 })
 
@@ -303,7 +426,7 @@ describe('cloud catalog builder · 全部 pages the whole catalog', () => {
     assert.equal(first.pageSize, manifest.pageSize)
     assert.equal(first.total, manifest.totalAssets)
     assert.equal(first.totalPages, Math.ceil(manifest.totalAssets / manifest.pageSize))
-    assert.equal(manifest.totalAssets, AMBIENCE_ROWS + 1 + LOOMI_ROWS.length + 1)
+    assert.equal(manifest.totalAssets, AMBIENCE_ROWS + 1 + LOOMI_ROWS.length + 1 + GALLERY_ROWS.length + STYLE_ROWS.length)
   })
 
   it('numbers the shards so a pager can walk them to the end', () => {
@@ -321,7 +444,7 @@ describe('cloud catalog builder · 全部 pages the whole catalog', () => {
     assert.equal(new Set(rows.map((row) => row.id)).size, rows.length)
     assert.deepEqual(
       [...new Set(rows.map((row) => row.category))].sort(),
-      ['character', 'material', 'prop', 'scene'],
+      ['character', 'material', 'prop', 'scene', 'style'],
     )
   })
 })

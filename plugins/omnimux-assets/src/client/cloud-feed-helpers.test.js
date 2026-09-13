@@ -54,7 +54,7 @@ const MANIFEST = {
       en: 'Scenes',
       total: 14,
       pages: 1,
-      sub_categories: [{ id: 'ambience', zh: '场景氛围', en: 'Ambience', total: 14, pages: 1 }],
+      sub_categories: [{ id: 'nature', zh: '自然山水', en: 'Nature', total: 14, pages: 1 }],
     },
     {
       id: 'prop',
@@ -306,7 +306,7 @@ describe('cloudCardKind', () => {
 
   it('keeps a video without a poster a picture card, so its own frame stands in', () => {
     assert.equal(
-      kindOf({ id: 'scene-ambience-1', media_type: 'video', media_url: 'file:素材库/x.mp4' }),
+      kindOf({ id: 'scene-nature-1', media_type: 'video', media_url: 'file:素材库/x.mp4' }),
       'media',
     )
   })
