@@ -7,6 +7,7 @@ import { installWorkbenchGlobal, installWorkbenchLeftRailObserver, installSplitC
 import { installChatToggle } from './chat-toggle.js'
 import { ensureConversationCollapseChrome } from './conversation-collapse.js'
 import { ensureComposerCompactChrome, installComposerCompactObserver } from './composer-compact.js'
+import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
 import { NS, en, zh } from './locales.js'
 // x.ai 全壳 overrideTokens 已临时关闭：发送钮在暗色下变成白底白箭头。
@@ -52,12 +53,14 @@ export function installHubChrome(ctx) {
     const unsubSplitMin = installSplitConversationMin()
     const unsubCompact = installComposerCompactObserver()
     const unsubSidebarTopbar = installSidebarToggleTopbar()
+    const unsubPresetAvatars = installAgentPresetAvatarEnhancer()
     return () => {
       unsubToggle?.()
       unsubLeftRail?.()
       unsubSplitMin?.()
       unsubCompact?.()
       unsubSidebarTopbar?.()
+      unsubPresetAvatars?.()
     }
   }, 'omnimux: product-stage chrome, chat toggle, topbar sidebar toggle & workbench left-rail sync')
   // 临时关闭：ctx.effect(() => applyXaiShellTheme(ctx), 'omnimux: xai shell theme')
