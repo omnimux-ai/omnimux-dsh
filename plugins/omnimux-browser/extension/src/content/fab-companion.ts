@@ -130,7 +130,7 @@ export function initFabCompanion(): void {
     </div>
 
     <div id="omnimux-workstation" class="omnimux-workstation-container" role="dialog" aria-label="OmniMux工作台">
-      <iframe id="omnimux-panel-iframe" class="omnimux-iframe" src="${panelUrl}" allow="clipboard-read; clipboard-write"></iframe>
+      <iframe id="omnimux-panel-iframe" class="omnimux-iframe" src="${panelUrl}" allow="clipboard-read; clipboard-write" allowtransparency="true"></iframe>
     </div>
   `
 

@@ -932,9 +932,13 @@ export function App(): React.JSX.Element {
     const offSelection = api.onSelection(setSelection)
     // A side panel has no sender.tab, so it reports its own window; the
     // background answers with whatever that window already had selected.
-    void Promise.resolve(chrome.windows.getCurrent())
-      .then((window) => { if (window.id !== undefined) return api.registerWindow(window.id) })
-      .catch(() => {})
+    try {
+      if (typeof chrome !== 'undefined' && chrome.windows?.getCurrent) {
+        void Promise.resolve(chrome.windows.getCurrent())
+          .then((win) => { if (win?.id !== undefined) return api.registerWindow(win.id) })
+          .catch(() => {})
+      }
+    } catch {}
     const offResumeHint = api.onSessionResumeHint((sessionId) => {
       setResumeHint({ ready: true, sessionId })
     })

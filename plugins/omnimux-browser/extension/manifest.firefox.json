@@ -81,8 +81,12 @@
       "resources": [
         "welcome/*",
         "images/*",
+        "images/welcome/*",
+        "icons/*",
         "assets/*",
-        "panel/*"
+        "assets/icons/*",
+        "panel/*",
+        "panel/assets/*"
       ],
       "matches": [
         "<all_urls>"

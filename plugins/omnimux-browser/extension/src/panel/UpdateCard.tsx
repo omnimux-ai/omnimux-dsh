@@ -19,16 +19,20 @@ type CopyState = 'idle' | 'copied' | 'error'
 
 /** Read-only update check plus the existing managed installer handoff. */
 export function UpdateCard({ copy }: { copy: PanelCopy['update'] }): React.JSX.Element {
-  const currentVersion = chrome.runtime.getManifest().version
+  const currentVersion = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest)
+    ? chrome.runtime.getManifest()?.version ?? '1.0.0'
+    : '1.0.0'
   const [checkState, setCheckState] = useState<CheckState>({ status: 'idle' })
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const [installInfo, setInstallInfo] = useState<ExtensionInstallInfo | null>(null)
 
   useEffect(() => {
     let current = true
-    void readExtensionInstallInfo(chrome.runtime.getURL('install-info.json')).then((info) => {
-      if (current) setInstallInfo(info)
-    })
+    if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+      void readExtensionInstallInfo(chrome.runtime.getURL('install-info.json')).then((info) => {
+        if (current) setInstallInfo(info)
+      })
+    }
     return () => { current = false }
   }, [])
 

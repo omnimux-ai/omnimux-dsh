@@ -5,6 +5,7 @@ import { outDir, sharedPlugins } from './vite.shared.ts'
 
 /** Side panel: React application (html entry). */
 export default defineConfig({
+  base: './',
   plugins: [react(), ...sharedPlugins],
   build: {
     outDir,
