@@ -230,6 +230,8 @@ export const TIMING = {
   errorDismiss: 3000,
   /** Cache expiry for a candidate that the pointer has left. */
   candidateIdle: 2000,
+  /** Idle timeout when shown but user never interacts with the capsule. */
+  idleDismiss: 3500,
 } as const
 
 /** Longest tooltip label rendered, in characters. */

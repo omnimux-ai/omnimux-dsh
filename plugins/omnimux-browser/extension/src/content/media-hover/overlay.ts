@@ -76,6 +76,7 @@ export class MediaOverlay {
   private collapseTimer: number | null = null
   private flashTimer: number | null = null
   private dismissTimer: number | null = null
+  private idleTimer: number | null = null
   private frame: number | null = null
   private activeIcon: MediaActionKind | null = null
 
@@ -184,6 +185,7 @@ export class MediaOverlay {
     this.clearCollapseTimer()
     this.clearFlashTimer()
     this.clearDismissTimer()
+    this.clearIdleTimer()
     this.cancelFrame()
 
     this.unsubscribeFlag?.()
@@ -239,6 +241,7 @@ export class MediaOverlay {
 
   private handleInvalidate(reason: 'scroll' | 'resize' | 'detach'): void {
     if (reason === 'detach') {
+      if (this.isInsideOverlay(this.hoveredElement())) return
       this.hideNow(true)
       return
     }
@@ -257,12 +260,14 @@ export class MediaOverlay {
     // transform origin can never disagree with where the pill actually landed.
     const geometry = this.repositionNow()
     capsule.show(geometry?.alignment ?? 'left')
+    this.startIdleTimer()
   }
 
   private hideNow(clear: boolean): void {
     this.clearEnterTimer()
     this.clearCollapseTimer()
     this.clearDismissTimer()
+    this.clearIdleTimer()
     this.capsule?.hide()
     this.tooltip?.hide()
     this.activeIcon = null
@@ -283,6 +288,10 @@ export class MediaOverlay {
     this.doc.addEventListener('pointerover', this.onPointerOver, true)
     this.doc.addEventListener('pointermove', this.onPointerMoveTarget, true)
     this.doc.addEventListener('pointerout', this.onPointerOut, true)
+    this.doc.addEventListener('pointercancel', this.onPointerLost, true)
+    this.doc.documentElement?.addEventListener('pointerleave', this.onDocumentLeave, true)
+    this.doc.addEventListener('visibilitychange', this.onVisibilityChange)
+    window.addEventListener('blur', this.onPointerLost)
     window.addEventListener('scroll', this.onScroll, { passive: true, capture: true })
     window.addEventListener('resize', this.onWindowResize, { passive: true })
   }
@@ -292,8 +301,29 @@ export class MediaOverlay {
     this.doc.removeEventListener('pointerover', this.onPointerOver, true)
     this.doc.removeEventListener('pointermove', this.onPointerMoveTarget, true)
     this.doc.removeEventListener('pointerout', this.onPointerOut, true)
+    this.doc.removeEventListener('pointercancel', this.onPointerLost, true)
+    this.doc.documentElement?.removeEventListener('pointerleave', this.onDocumentLeave, true)
+    this.doc.removeEventListener('visibilitychange', this.onVisibilityChange)
+    window.removeEventListener('blur', this.onPointerLost)
     window.removeEventListener('scroll', this.onScroll, true)
     window.removeEventListener('resize', this.onWindowResize)
+  }
+
+  private readonly onPointerLost = (): void => {
+    this.hideNow(true)
+  }
+
+  private readonly onVisibilityChange = (): void => {
+    if (this.doc.visibilityState === 'hidden') {
+      this.onPointerLost()
+    }
+  }
+
+  private readonly onDocumentLeave = (event: Event): void => {
+    const pEvent = event as PointerEvent
+    if (pEvent.relatedTarget === null || !this.isInsideOverlay(pEvent.relatedTarget)) {
+      this.onPointerLost()
+    }
   }
 
   private readonly onPointerOver = (event: Event): void => {
@@ -303,6 +333,7 @@ export class MediaOverlay {
   private readonly onPointerMoveTarget = (event: Event): void => {
     if (this.isInsideOverlay(event.target)) {
       this.cancelLeave()
+      this.clearIdleTimer()
       this.state.phase = 'interactive'
       this.capsule?.setInteractive(true)
       return
@@ -311,11 +342,76 @@ export class MediaOverlay {
       this.state.phase = 'shown'
       this.capsule?.setInteractive(false)
     }
+
+    if (this.state.phase === 'shown' && this.anchorElement !== null) {
+      if (!this.anchorElement.isConnected) {
+        this.hideNow(true)
+        return
+      }
+      const pEvent = event as PointerEvent
+      if (typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number') {
+        const x = pEvent.clientX
+        const y = pEvent.clientY
+        const vw = currentViewportWidth()
+        const vh = currentViewportHeight()
+        if (x <= 0 || y <= 0 || x >= vw || y >= vh) {
+          this.hideNow(true)
+          return
+        }
+
+        if (!this.isPointNearAnchorOrCapsule(x, y)) {
+          const dist = this.distanceToAnchor(x, y)
+          if (dist > 24) {
+            this.hideNow(true)
+          } else if (this.leaveTimer === null) {
+            this.leaveTimer = this.setTimer(() => {
+              this.leaveTimer = null
+              if (this.isInsideOverlay(this.hoveredElement())) return
+              this.hideNow(true)
+            }, TIMING.leaveGrace)
+          }
+          return
+        }
+
+        this.cancelLeave()
+        this.resetIdleTimer()
+      }
+    }
+  }
+
+  private isPointNearAnchorOrCapsule(x: number, y: number): boolean {
+    if (this.anchorElement === null) return false
+    const rect = this.anchorElement.getBoundingClientRect()
+    const pad = 12
+    if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad) {
+      return true
+    }
+    if (this.capsule !== null) {
+      const cBox = this.capsule.element.getBoundingClientRect()
+      if (x >= cBox.left - 8 && x <= cBox.right + 8 && y >= cBox.top - 8 && y <= cBox.bottom + 8) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private distanceToAnchor(x: number, y: number): number {
+    if (this.anchorElement === null) return 9999
+    const rect = this.anchorElement.getBoundingClientRect()
+    const dx = Math.max(rect.left - x, 0, x - rect.right)
+    const dy = Math.max(rect.top - y, 0, y - rect.bottom)
+    return Math.hypot(dx, dy)
   }
 
   private readonly onPointerOut = (event: Event): void => {
     const related = (event as PointerEvent).relatedTarget
     if (this.isInsideOverlay(related)) return
+
+    if (related === null) {
+      this.hideNow(true)
+      return
+    }
+
     if (this.state.phase !== 'shown' && this.state.phase !== 'interactive') return
 
     this.cancelLeave()
@@ -609,6 +705,28 @@ export class MediaOverlay {
     if (this.dismissTimer === null) return
     window.clearTimeout(this.dismissTimer)
     this.dismissTimer = null
+  }
+
+  private startIdleTimer(): void {
+    this.clearIdleTimer()
+    this.idleTimer = this.setTimer(() => {
+      this.idleTimer = null
+      if (this.state.phase === 'shown') {
+        this.hideNow(true)
+      }
+    }, TIMING.idleDismiss)
+  }
+
+  private resetIdleTimer(): void {
+    if (this.state.phase === 'shown') {
+      this.startIdleTimer()
+    }
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer === null) return
+    window.clearTimeout(this.idleTimer)
+    this.idleTimer = null
   }
 
   private cancelLeave(): void {
