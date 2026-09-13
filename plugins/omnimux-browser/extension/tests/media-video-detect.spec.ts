@@ -210,7 +210,7 @@ describe('detector wiring', () => {
         elementFromPoint: () => overlay,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_700_000_000_000,
-        host: () => 'page.example.com',
+        host: () => 'x.com',
       },
     )
     detector.start()
@@ -228,7 +228,7 @@ describe('detector wiring', () => {
         elementFromPoint: () => overlay,
         viewport: () => ({ ...VIEWPORT }),
         now: () => 1_700_000_000_000,
-        host: () => 'page.example.com',
+        host: () => 'x.com',
       },
     )
     detector.start()
@@ -237,6 +237,24 @@ describe('detector wiring', () => {
     }
     expect(payloads).toHaveLength(4)
     expect(new Set(payloads).size).toBe(1)
+    detector.dispose()
+  })
+
+  it('strictly stays silent on non-whitelisted hosts for video overlay', () => {
+    const { overlay } = appendOverlaidVideo({ src: 'https://cdn.example.com/v/clip.mp4' })
+    const seen: string[] = []
+    const detector = new MediaDetector(
+      { onCandidate: (candidate) => { seen.push(candidate.payload.type) } },
+      {
+        elementFromPoint: () => overlay,
+        viewport: () => ({ ...VIEWPORT }),
+        now: () => 1_700_000_000_000,
+        host: () => 'page.example.com',
+      },
+    )
+    detector.start()
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 400, clientY: 250 }))
+    expect(seen).toHaveLength(0)
     detector.dispose()
   })
 

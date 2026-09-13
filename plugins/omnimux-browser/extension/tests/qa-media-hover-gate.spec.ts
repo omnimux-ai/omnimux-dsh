@@ -151,12 +151,11 @@ function media(src: string, id = src): HoveredMedia {
 /**
  * Drives the detector once over `element` and returns what it reported.
  *
- * `host` defaults to an ordinary page, so the classifier's platform rules stay
- * out of the way and the container rule decides. The media still has to sit in a
- * post or work container: that is the product contract as of the creative-asset
- * classifier, and the fixtures below mount accordingly.
+ * `host` defaults to a whitelisted platform (x.com), so post media is admitted
+ * and hover capsule behaviors can be tested. Non-whitelisted hosts must explicitly
+ * be tested for complete silence.
  */
-function detectOnce(element: Element, host = 'page.example.com'): HoverCandidate[] {
+function detectOnce(element: Element, host = 'x.com'): HoverCandidate[] {
   const hits: HoverCandidate[] = []
   const detector = new MediaDetector(
     { onCandidate: (candidate) => { hits.push(candidate) } },
@@ -376,6 +375,10 @@ describe('C. the >= 40px media threshold', () => {
     expect(hits).toHaveLength(1)
     expect(hits[0]?.payload.src).toBe('https://cdn.example.com/hero.png')
     expect(hits[0]?.payload.type).toBe('image')
+
+    // Strictly stays silent on non-whitelisted hosts even inside article
+    expect(detectOnce(image, 'page.example.com')).toHaveLength(0)
+    expect(detectOnce(image, 'github.com')).toHaveLength(0)
   })
 
   it('does not trigger the hover bar for the same image outside a post', () => {

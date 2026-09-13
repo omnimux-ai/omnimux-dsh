@@ -296,6 +296,45 @@ const TWEET_AVATAR_SELECTOR = [
 ].join(', ')
 
 /**
+ * Known social platforms allowed to display media hover toolbar.
+ * Strictly whitelisted to avoid interfering with normal web browsing.
+ */
+export const SOCIAL_PLATFORM_HOSTS: readonly string[] = [
+  // Global major social networks & video platforms
+  'x.com',
+  'twitter.com',
+  'youtube.com',
+  'youtu.be',
+  'tiktok.com',
+  'instagram.com',
+  'facebook.com',
+  'threads.net',
+  'pinterest.com',
+  'reddit.com',
+  // Domestic major social networks & UGC video/content platforms
+  'xiaohongshu.com',
+  'weibo.com',
+  'weibo.cn',
+  'bilibili.com',
+  'douyin.com',
+  'kuaishou.com',
+  'zhihu.com',
+  'weixin.qq.com',
+]
+
+/**
+ * Whether the host is a recognized major social platform.
+ * Subdomains (e.g. www.xiaohongshu.com, m.weibo.cn) are matched.
+ */
+export function isSocialPlatformHost(host: string): boolean {
+  if (!host) return false
+  const normalized = normalizeHost(host)
+  return SOCIAL_PLATFORM_HOSTS.some(
+    (domain) => normalized === domain || normalized.endsWith(`.${domain}`),
+  )
+}
+
+/**
  * Hosts whose cards are creative work by construction.
  *
  * Consulted only when the page actually belongs to that host, so an unrelated
@@ -305,12 +344,21 @@ const TWEET_AVATAR_SELECTOR = [
  * own media containers are, and {@link isTweetContext} reads those exclusively.
  */
 const WORK_CARD_SELECTOR: Readonly<Record<string, string>> = {
-  'xiaohongshu.com': '.note-item, [class*="note-item" i]',
-  'weibo.com': '.card-wrap, [class*="Feed_wrap"]',
-  'tiktok.com': '[data-e2e="recommend-list-item-container"], [data-e2e="user-post-item"]',
-  'youtube.com': 'ytd-rich-item-renderer, ytd-video-renderer, ytd-watch-flexy, ytd-shorts',
-  'bilibili.com': '.bili-video-card, .video-card, .small-item, .bili-dyn-item, #bilibili-player',
-  'instagram.com': 'article, [role="presentation"]',
+  'xiaohongshu.com': '.note-item, [class*="note-item" i], .feed-card, [class*="feed-card" i]',
+  'weibo.com': '.card-wrap, [class*="Feed_wrap"], [class*="detail_wrap"]',
+  'weibo.cn': '.card-wrap, [class*="Feed_wrap"]',
+  'tiktok.com': '[data-e2e="recommend-list-item-container"], [data-e2e="user-post-item"], [data-e2e="search-card-container"]',
+  'douyin.com': '[data-e2e*="feed-active-video"], .video-container, [class*="videoBox"], [data-e2e="feed-video"], .playerContainer',
+  'kuaishou.com': '.feed-item, .video-card, [class*="video-card"], .work-card',
+  'youtube.com': 'ytd-rich-item-renderer, ytd-video-renderer, ytd-watch-flexy, ytd-shorts, #player',
+  'bilibili.com': '.bili-video-card, .video-card, .small-item, .bili-dyn-item, #bilibili-player, .bpx-player-container',
+  'instagram.com': 'article, [role="presentation"], [role="main"]',
+  'threads.net': 'article, [role="article"]',
+  'reddit.com': 'shreddit-post, [data-testid="post-container"], .Post, [slot="post-media-container"]',
+  'pinterest.com': '[data-test-id="pin"], [data-test-id="pinWrapper"]',
+  'zhihu.com': '.ContentItem, .ZhihuItem, .QuestionAnswer-content, .PinItem, .ZVideoItem',
+  'facebook.com': '[role="feed"] [role="article"], [data-pagelet*="FeedUnit"]',
+  'weixin.qq.com': '#js_content, .rich_media_content, .video_player_box',
 }
 
 /** Hosts that ship the status markup {@link TWEET_ROOT_SELECTOR} describes. */
@@ -322,9 +370,12 @@ const TWEET_HOSTS: readonly string[] = ['x.com', 'twitter.com']
  * @param element - The `<img>` or `<video>` the pointer resolved to.
  * @param host - Page host used for the platform-card rules. Defaults to the live
  *   document's host; injectable so the rule stays testable and pure.
- * @returns `true` only when the element is a post or work asset on a page.
+ * @returns `true` only when the element is a post or work asset on a whitelisted social platform.
  */
 export function isPostOrWorkMedia(element: Element, host: string = currentHost()): boolean {
+  // Hard gate 0: Non-whitelisted domains NEVER show the media hover toolbar.
+  // This protects normal web browsing (news, documentation, search, e-commerce, work tools).
+  if (!isSocialPlatformHost(host)) return false
   if (mediaKindOf(element) === null) return false
   // The hard gate, ahead of every context rule below. No branch — status,
   // platform card, article — may admit media that is not laid out at post size,
