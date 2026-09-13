@@ -22,7 +22,7 @@ export function useCloudManifest(options = {}) {
     if (!force && loadedRef.current) return
     setLoading(true)
     try {
-      const result = await cloudManifest()
+      const result = await cloudManifest({ force })
       if (!result.ok) {
         setError(String(result.body?.message ?? result.body?.error ?? 'manifest unavailable'))
         return

@@ -63,11 +63,33 @@ Host 侧（`src/cloud-catalog.js` + `src/http-routes.js`）：
 
 | 路由 | 作用 |
 | --- | --- |
-| `GET /omnimux/assets/cloud/manifest` | 总控清单 |
-| `GET /omnimux/assets/cloud/{category}[/{sub}]/page-NNNN.json` | 直通磁盘的分片文件 |
+| `GET /omnimux/assets/cloud/manifest` | 总控清单（本地兜底；网关可达时不走这条） |
+| `GET /omnimux/assets/cloud/{category}[/{sub}]/page-NNNN.json` | 直通磁盘的分片文件（同上） |
 | `GET /omnimux/assets/cloud/search?q=&category=&sub_category=` | 清单内检索 |
 | `GET /omnimux/assets/cloud/media?id=&which=media\|cover` | 本地素材直接流式返回，远端素材 302 到 CDN |
 | `POST /omnimux/assets/cloud/save` | 「收藏到本地」：复制/下载进本地资产库 |
+
+### 清单元数据来源：网关优先，本地兜底
+
+同一份清单存在两处：生产网关（Caddy 静态路由 `/cloud-assets-catalog/*`，见 OmniMux 仓库
+`deploy/geminix/caddy/Caddyfile.tpl` 与 `scripts/ops/cloud-assets-catalog-publish.sh`）和随插件提交的
+`cloud-catalog/`。`src/client/cloud-source.js` 按下面的顺序决定读哪一份：
+
+| 优先级 | 来源 | 配置方式 |
+| --- | --- | --- |
+| 1 | 运行时覆盖 | `window.__OMNIMUX_CLOUD_ASSETS_BASE_URL__` |
+| 2 | 构建期注入 | `CLOUD_ASSETS_BASE_URL=<url> npm run build` |
+| 3 | 生产网关 | `https://omnimux.ai/cloud-assets-catalog` |
+
+探活 `manifest.json` 成功就走网关，失败自动回退本地 Host；响应必须是 JSON——SPA 兜底会拿 200 +
+HTML 应答任意未知路径，只看状态码会把 HTML 当清单。`local` / `off` / `host` / 空串可跳过探活强制只用本地，
+每会话只探一次，手动刷新时强制重探。
+
+只有**清单元数据**走网关：媒体字节仍由 Host 代理（`file:` 定位符只有本机能解析），检索与「收藏到本地」也留在
+Host 一侧，避免同一份逻辑在网关与本地各写一遍而漂移。
+
+代价是网关与本地副本可能不同期：网关清单比本地新时，页面上能看到、但本地 `index.json` 还没有的行，试听与收藏
+会失败。换目录重新构建本地副本（`npm run build:cloud-catalog`）即恢复一致。
 
 安全边界：
 
