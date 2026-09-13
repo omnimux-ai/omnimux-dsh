@@ -257,10 +257,11 @@ describe('overlay structure', () => {
     expect(CAPSULE_SPEC.height).toBe(32)
     expect(CAPSULE_SPEC.inset).toBe(10)
     // Stage one: a 32px circle whose 4px halo carries it to a 40px span. Stage
-    // two: 3 × 32px icon buttons + 2 × 0px gaps + 2 × 2px row padding + 2 × 1px
-    // border, with the buttons filling the same 32px band the circle occupies.
+    // two: 3 × 24px icon buttons + 2 × 4px gaps + 2 × 5px row padding + 2 × 1px
+    // border, with the buttons floating clear of the same 32px band the circle
+    // occupies rather than filling it.
     expect(CAPSULE_SPEC.collapsedWidth).toBe(32)
-    expect(CAPSULE_SPEC.width).toBe(108)
+    expect(CAPSULE_SPEC.width).toBe(92)
     expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.collapsedHeight)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
@@ -268,7 +269,11 @@ describe('overlay structure', () => {
     expect(CAPSULE_SPEC.width).toBe(
       2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
     )
-    expect(CAPSULE_SPEC.iconSize).toBe(CAPSULE_SPEC.height)
+    expect(CAPSULE_SPEC.iconSize).toBe(24)
+    // The 4px left above and below the hit box is what keeps the translucent
+    // hover fill off the pill's own edges.
+    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(4)
+    expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
   })

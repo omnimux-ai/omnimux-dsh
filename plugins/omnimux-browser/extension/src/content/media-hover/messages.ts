@@ -98,13 +98,13 @@ export const CAPSULE_SPEC = {
   collapsedHeight: 32,
   collapsedRadius: 16,
   /**
-   * Stage two, the expanded row: 3 x 32px icon buttons + 2 x 2px gaps +
-   * 2 x 2px row padding + 2 x 1px border. The buttons fill the whole band, so the
-   * row reads as one compact line of three glyphs while their hover fills stay
-   * clear of the pill's own rounded ends.
+   * Stage two, the expanded row: 3 x 24px icon buttons + 2 x 4px gaps +
+   * 2 x 5px row padding + 2 x 1px border. The buttons are smaller than the band
+   * on purpose, so their hover fills float inside the pill instead of filling it
+   * from edge to edge.
    */
-  width: 108,
-  paddingX: 2,
+  width: 92,
+  paddingX: 5,
   /**
    * Width of the translucent halo the pill casts on every side.
    *
@@ -120,7 +120,7 @@ export const CAPSULE_SPEC = {
    */
   openMs: 220,
   /** Gap between two action icons in the expanded row. */
-  iconGap: 3,
+  iconGap: 4,
   blur: 'blur(24px) saturate(140%)',
   /**
    * Translucent rim. Media behind the pill can be a white studio shot or a black
@@ -142,7 +142,15 @@ export const CAPSULE_SPEC = {
     '0 0 0 4px rgba(255,255,255,0.22), 0 2px 10px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
   /** Inset from the media's bottom-left corner. */
   inset: 10,
-  iconSize: 32,
+  /**
+   * Action-button hit box, and therefore the size of the translucent fill its
+   * hover paints. It is deliberately smaller than {@link height}: the `4px` left
+   * above and below the box is what keeps that fill reading as a light, precise
+   * control instead of a slab pressed against the pill's edges.
+   */
+  iconSize: 24,
+  /** Rendered size of the glyph inside an action button. */
+  iconGlyphSize: 14,
   /**
    * Hit box of the stage-one brand trigger inside the circle. Unlike the icon
    * buttons this box is not the band itself: a full-band trigger would put its

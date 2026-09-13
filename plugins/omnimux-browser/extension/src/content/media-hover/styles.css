@@ -37,7 +37,7 @@
 
 /* --- Capsule: deep-black frosted pill -------------------------------------
    Two stages share one pill. Stage one is a 32px circle carrying the brand
-   mark; stage two is the 108px row of three shortcuts. The width is the only
+   mark; stage two is the 92px row of three shortcuts. The width is the only
    thing that animates between them — both stages sit in the same 32px band, so
    the row never reflows and the pill never jumps while it opens.
 
@@ -57,7 +57,7 @@
   justify-content: center;
   box-sizing: border-box;
   height: 32px;
-  padding: 0 2px;
+  padding: 0 5px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 16px;
   background: rgba(30, 32, 38, 0.95);
@@ -89,9 +89,9 @@
   border-radius: 16px;
 }
 
-/* Stage two: the three shortcuts, 108px wide. */
+/* Stage two: the three shortcuts, 92px wide. */
 .omnimux-capsule-bar.is-expanded {
-  width: 108px;
+  width: 92px;
   height: 32px;
   border-radius: 16px;
 }
@@ -160,13 +160,12 @@
   pointer-events: none;
 }
 
-/* The gap keeps the buttons' hover fills apart without opening the row up: at
-   32px the buttons fill the band on their own, so a 3px gutter is all the row
-   needs to still read as one compact line of three glyphs. */
+/* The buttons are 24px inside the 32px band, so their hover fills never reach the
+   pill's own edges and the row keeps a compact line of three glyphs. */
 .omnimux-capsule-actions {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.88);
   /* Stage two is not hoverable until it is on screen. */
@@ -211,16 +210,19 @@
    See `.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon` below. */
 
 /* --- Icon buttons --------------------------------------------------------- */
+/* A 24px hit box inside the 32px band: the hover fill is the box itself, so the
+   4px above and below it are what keep the press target light instead of a slab
+   pinned to the pill's edges. The 6px radius matches the smaller box. */
 .omnimux-capsule-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   margin: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -259,8 +261,8 @@
 
 .omnimux-capsule-icon svg {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
 }
 

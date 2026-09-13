@@ -4,7 +4,7 @@
  * The capsule is a two-stage control, and the DOM mirrors the two stages:
  *
  * ```
- * stage one (collapsed, 32 x 32)     stage two (expanded, 108 x 32)
+ * stage one (collapsed, 32 x 32)     stage two (expanded, 92 x 32)
  *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
  * ```
  *
@@ -216,7 +216,7 @@ export class MediaCapsule {
     button.setAttribute('data-action', action)
     button.setAttribute('aria-label', this.hints.action[action])
     button.setAttribute('title', this.hints.hint[action])
-    button.innerHTML = svgIcon(ICON_BY_ACTION[action], 18)
+    button.innerHTML = svgIcon(ICON_BY_ACTION[action], CAPSULE_SPEC.iconGlyphSize)
 
     // The page must never see these presses: no navigation, no card selection,
     // no page-level click handler.
@@ -268,7 +268,7 @@ export class MediaCapsule {
       const button = this.buttons.get(action)
       if (button === null || button === undefined) continue
       const iconState = this.iconState(action)
-      const markup = svgIcon(iconFor(action, iconState), 18)
+      const markup = svgIcon(iconFor(action, iconState), CAPSULE_SPEC.iconGlyphSize)
       if (button.innerHTML !== markup) button.innerHTML = markup
       button.classList.toggle('is-saved', iconState === 'saved')
       button.classList.toggle('is-done', iconState === 'done')

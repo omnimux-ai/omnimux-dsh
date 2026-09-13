@@ -13,7 +13,7 @@
  *  C. the >= 40px media threshold admits images and videos and ignores avatars;
  *  D. the three shortcuts close their loops (library / clipboard / conversation);
  *  E. the cross-module constants agree;
- *  F. the capsule is two-staged: a 32px brand circle that widens to the 108px
+ *  F. the capsule is two-staged: a 32px brand circle that widens to the 92px
  *     row of three actions, and folds back on the required buffer.
  */
 import { readFileSync } from 'node:fs'
@@ -746,10 +746,10 @@ describe('E. cross-module contract agreement', () => {
 // ------------------------------------------------- F. 两段式悬停展开 ---
 
 describe('F. two-stage hover expansion', () => {
-  it('paints stage one as a 32px circle spanning 40px, and stage two as the 108px row', () => {
+  it('paints stage one as a 32px circle spanning 40px, and stage two as the 92px row', () => {
     expect(CAPSULE_SPEC.collapsedWidth).toBe(32)
     expect(CAPSULE_SPEC.collapsedHeight).toBe(32)
-    expect(CAPSULE_SPEC.width).toBe(108)
+    expect(CAPSULE_SPEC.width).toBe(92)
     expect(CAPSULE_SPEC.height).toBe(32)
     // The circle must be exactly that: a 32px box with a 16px radius.
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.collapsedWidth)
@@ -767,7 +767,7 @@ describe('F. two-stage hover expansion', () => {
     expect(collapsed).toContain('width:32px')
     expect(collapsed).toContain('height:32px')
     expect(collapsed).toContain('border-radius:16px')
-    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:108px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:92px')
   })
 
   it('spans exactly 40px once the translucent halo is included', () => {
@@ -848,16 +848,26 @@ describe('F. two-stage hover expansion', () => {
     expect(CAPSULE_SPEC.collapsedHeight).toBeLessThanOrEqual(CAPSULE_SPEC.height)
   })
 
-  it('sizes the action buttons to the spec band they fill', () => {
-    // The expanded row has no vertical padding, so its buttons fill the band's
-    // height: the icon buttons and the pill must agree, or the 108px width stops
-    // adding up against the spec's own arithmetic.
+  it('floats every hover fill clear of the pill it sits in', () => {
+    // The buttons are smaller than the band on purpose: the translucent fill a
+    // hover paints is the hit box itself, so the 4px left above and below it is
+    // what keeps the control light instead of a slab pinned to the pill's edges.
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
     expect(base).toContain(`padding:0${CAPSULE_SPEC.paddingX}px`)
     const icons = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon')
     expect(icons).toContain(`width:${CAPSULE_SPEC.iconSize}px`)
     expect(icons).toContain(`height:${CAPSULE_SPEC.iconSize}px`)
-    expect(CAPSULE_SPEC.iconSize).toBe(CAPSULE_SPEC.height)
+    expect(icons).toContain('border-radius:6px')
+    expect(CAPSULE_SPEC.iconSize).toBe(24)
+    expect(CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize).toBe(8)
+    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(4)
+    // The glyph keeps an inset of its own inside the hit box, and both halves of
+    // that contract have to be written the same way or the painted mark drifts
+    // from the spec the row is measured against.
+    expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
+    const glyph = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon svg')
+    expect(glyph).toContain(`width:${CAPSULE_SPEC.iconGlyphSize}px`)
+    expect(glyph).toContain(`height:${CAPSULE_SPEC.iconGlyphSize}px`)
     expect(CAPSULE_SPEC.width).toBe(
       2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
     )
