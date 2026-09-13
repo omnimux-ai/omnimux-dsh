@@ -120,12 +120,22 @@ export class BridgeClient {
         continue
       }
 
+      try {
+        console.log(`[OmniMux Bridge] 尝试连接: ${this.url}`)
+      } catch {}
       const socket = new WebSocket(this.url)
       this.ws = socket
+      socket.addEventListener('open', () => {
+        try { console.log(`[OmniMux Bridge] WebSocket 已连接成功: ${this.url}`) } catch {}
+      })
+      socket.addEventListener('error', (err) => {
+        try { console.warn(`[OmniMux Bridge] WebSocket 连接异常: ${this.url}`, err) } catch {}
+      })
       // A replacement is an ownership handoff, not a transient transport
       // failure. Yield permanently so two open profiles cannot reconnect in a
       // tight loop and repeatedly evict one another.
       socket.addEventListener('close', (event) => {
+        try { console.warn(`[OmniMux Bridge] WebSocket 已关闭: code=${event.code}, reason=${event.reason || '无'}`) } catch {}
         if (event.code !== 4000 || this.ws !== socket || !this.running) return
         this.running = false
         this.clearAckTimer()
@@ -164,9 +174,11 @@ export class BridgeClient {
             if (frame.t === 'hello.ok') {
               authed = true
               this.clearAckTimer()
+              try { console.log(`[OmniMux Bridge] 握手成功，服务通道已就绪！`, frame.caps) } catch {}
               resolve(true)
               this.sinks.onHelloOk(frame.caps)
             } else if (frame.t === 'error' || frame.t === 'rpc.result' || frame.t === 'event') {
+              try { console.error(`[OmniMux Bridge] 握手失败被拒:`, frame) } catch {}
               this.sinks.onFrame(frame)
             }
             return
