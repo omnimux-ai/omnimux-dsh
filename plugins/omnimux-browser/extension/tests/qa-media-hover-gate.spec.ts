@@ -546,6 +546,7 @@ describe('D1. add to inspiration library', () => {
     })
     const failures: unknown[] = []
     const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
       postToBackground: vi.fn(async () => {
         // Mirrors background/index.ts: the store's own `ok` decides the receipt, so
@@ -573,6 +574,7 @@ describe('D2. copy the media link', () => {
   it('writes the absolute address to the system clipboard', async () => {
     const writeClipboard = vi.fn(async () => true)
     const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
       postToBackground: vi.fn(async () => ({ ok: true })),
       writeClipboard,
@@ -612,6 +614,7 @@ describe('D2. copy the media link', () => {
 
 describe('D3. add to the conversation', () => {
   it('wakes the floating workstation and trusts its receipt', async () => {
+    vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn(async () => ({ ok: true, active: false })) } })
     const openWithMedia = vi.fn(async () => true)
     ;(globalThis as Record<string, unknown>).__dshBrowserWorkstation = { openWithMedia, isOpen: () => false }
 
@@ -620,6 +623,25 @@ describe('D3. add to the conversation', () => {
 
     expect(openWithMedia).toHaveBeenCalledTimes(1)
     expect(outcome).toMatchObject({ ok: true, status: 'attached', channel: 'workbench' })
+  })
+
+  it('never expands the floating workstation while the side panel is open', async () => {
+    // One window, one conversation: the panel already on screen takes the media
+    // and nothing floats beside it.
+    const sendMessage = vi.fn(async (message: { type?: string }) => (
+      message.type === RUNTIME_MESSAGE.checkSidePanelOpen
+        ? { ok: true, active: true }
+        : { ok: true, result: { channel: 'side-panel', active: true } }
+    ))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
+    const openWithMedia = vi.fn(async () => true)
+    ;(globalThis as Record<string, unknown>).__dshBrowserWorkstation = { openWithMedia, isOpen: () => false }
+
+    const outcome = await new MediaActionBridge(browserTransport(() => hoverCopy('zh')))
+      .attachToConversation(media('https://cdn.example.com/a.png'))
+
+    expect(openWithMedia).not.toHaveBeenCalled()
+    expect(outcome).toMatchObject({ ok: true, status: 'attached', channel: 'side-panel' })
   })
 
   it('falls back to the native side panel when no workstation is mounted', async () => {

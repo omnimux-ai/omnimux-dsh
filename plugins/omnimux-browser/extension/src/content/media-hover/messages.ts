@@ -33,6 +33,12 @@ export const BRIDGE_MESSAGE = {
 export const RUNTIME_MESSAGE = {
   /** Content → background: persist one media record into the inspiration library. */
   mediaToInspiration: 'DSH_MEDIA_TO_INSPIRATION',
+  /**
+   * Content → background: is the native side panel already connected in this
+   * window? Answered before anything opens, so the floating workstation is only
+   * ever used when the side panel is not.
+   */
+  checkSidePanelOpen: 'DSH_CHECK_SIDE_PANEL_OPEN',
   /** Content → background: side-panel fallback plus a pending-media stash. */
   openAssistantWithMedia: 'DSH_OPEN_ASSISTANT_WITH_MEDIA',
   /** Content → background: hand the stashed media to a freshly opened panel. */
