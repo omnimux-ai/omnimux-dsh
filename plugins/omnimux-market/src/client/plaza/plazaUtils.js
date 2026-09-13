@@ -1,5 +1,10 @@
 import React from 'react';
 
+import { generatePixelAvatarDataUrl } from './pixel-avatar.js';
+
+// 像素头像生成器随专家卡片工具集一并对外透出（客户端其他模块可直接复用）。
+export { generatePixelAvatarDataUrl, generatePixelAvatarSvg, isPixelAvatarDataUrl } from './pixel-avatar.js';
+
 export function isValidPositiveNumber(val) {
   if (typeof val !== 'number') return false;
   return Number.isFinite(val) && val > 0;
@@ -42,6 +47,7 @@ export function resolvePlazaPluginUrl(path) {
 
 export function resolveIconSrc(url) {
   if (!url) return '';
+  // 内联 data:（含像素头像的 data:image/svg+xml）与远程地址原样透出，不做代理重写。
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
   if (typeof globalThis !== 'undefined' && typeof globalThis.iconSrc === 'function') {
     try {
@@ -50,6 +56,30 @@ export function resolveIconSrc(url) {
     } catch {}
   }
   return resolvePlazaPluginUrl('icon?url=' + encodeURIComponent(url));
+}
+
+/**
+ * 专家卡片的默认像素头像：以 id（缺失时退回名称）为种子确定性生成。
+ *
+ * @param {object} item 专家条目
+ * @returns {string} data:image/svg+xml 形式的像素头像
+ */
+export function resolveExpertPixelAvatar(item) {
+  const seed = item ? (item.id || item.name || item.nameEn) : '';
+  return generatePixelAvatarDataUrl(seed || '');
+}
+
+/**
+ * 专家卡片头像地址：没配 avatar 的条目（内置预设、自建预设）自动使用像素头像。
+ *
+ * @param {object} item 专家条目
+ * @returns {string} 可直接用于 img src 的地址
+ */
+export function resolveExpertAvatarSrc(item) {
+  const avatar = item && typeof item.avatar === 'string' ? item.avatar.trim() : '';
+  if (!avatar) return resolveExpertPixelAvatar(item);
+  const resolved = resolveIconSrc(avatar);
+  return resolved || resolveExpertPixelAvatar(item);
 }
 
 export function resolveInitials(name) {
@@ -137,7 +167,19 @@ export const WORKSHOP_DOMAIN_ORDER = [
   '平台工具',
 ];
 
-export const DEFAULT_MARKET_EXPERTS = [
+// 专家市场离线兜底清单：出厂内置 Agent 预设 + 预设市场专家。
+// avatar 为空的内置预设由 resolveExpertAvatarSrc 自动补像素头像；接口返回后会整体替换为
+// listMarketExperts 的聚合结果（含磁盘实际预设与离职状态）。
+export const BUILTIN_AGENT_PRESETS = [
+  { id: 'tiktok-agent', name: '全能社媒操盘手', nameEn: 'Social Media Lead', description: '全域社媒爆款创作与矩阵运营增长。', descriptionEn: 'Full-funnel social hit creation and matrix growth operations.', avatar: '', status: 'enabled' },
+  { id: 'standard', name: '代码开发', nameEn: 'CodeDev', description: '全栈架构设计、代码编写与工程交付。', descriptionEn: 'Full-stack architecture design, coding and engineering delivery.', avatar: '', status: 'enabled' },
+  { id: 'daily-work', name: '日常工作', nameEn: 'WorkAssistant', description: '日常办公协同、文档拟定与事务闭环。', descriptionEn: 'Daily office collaboration, document drafting and closure of errands.', avatar: '', status: 'enabled' },
+  { id: 'cordis', name: '创造模式', nameEn: 'Creator Mode', description: '插件实验开发、运行时检查与团队搭建。', descriptionEn: 'Plugin experimentation, runtime inspection and team composition.', avatar: '', status: 'enabled' },
+  { id: 'ptc', name: 'PTC 模式', nameEn: 'PTC Mode', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。', descriptionEn: 'A full-featured coding agent without the workflow tool by default; other tools surface through the PTC SDK so the model composes multi-step work in one TypeScript program.', avatar: '', status: 'enabled' },
+  { id: 'minimal', name: '极简模式', nameEn: 'Minimal Mode', description: '仅提供持久 shell 的单工具编码 Agent。', descriptionEn: 'A single-tool coding agent that only offers a persistent shell.', avatar: '', status: 'enabled' },
+];
+
+export const MARKET_PRESET_EXPERTS = [
   { id: 'shopee-ops-expert', name: 'Shopee运营专家', nameEn: 'Shopee Ops Expert', description: '负责市场、产品、店铺、品牌和关键词分析的Shopee运营专员。', descriptionEn: 'Shopee operation specialist for market, product, shop, brand and keyword analysis.', avatar: 'catalog/covers/expert-shopee-ops.png', status: 'enabled' },
   { id: 'youtube-creator-expert', name: 'YouTube创作者专家', nameEn: 'YouTube Creator Expert', description: '帮助商家利用Topview自有创作者池数据寻找和评估YouTube创作者。', descriptionEn: 'Help merchants find and evaluate YouTube creators using Topview self-owned creator pool data.', avatar: 'catalog/covers/expert-youtube-creator.png', status: 'enabled' },
   { id: 'amazon-ops-expert', name: '亚马逊运营专家', nameEn: 'Amazon Ops Expert', description: '亚马逊市场、产品、列表、关键词、评论和风险分析运营专家。', descriptionEn: 'Amazon operation specialist for market, product, listing, keyword, review and risk analysis.', avatar: 'catalog/covers/expert-amazon-ops.png', status: 'enabled' },
@@ -147,6 +189,8 @@ export const DEFAULT_MARKET_EXPERTS = [
   { id: 'amazon-operations-expert', name: '亚马逊运营专家', nameEn: 'Amazon Operations Expert', description: '专注于亚马逊店铺运营、商品详情优化、广告投放和竞争对手分析，以提高转化率和销售额。', descriptionEn: 'Focused on Amazon store operations, listing optimization, advertising, and competitor analysis to improve conversion', avatar: 'catalog/covers/expert-amazon-operations.png', status: 'available' },
   { id: 'tiktok-ecommerce-expert', name: 'TikTok电商专家', nameEn: 'TikTok Ecommerce Expert', description: '擅长TikTok短视频销售、创作者合作和增长策略，帮助品牌在TikTok Shop上推出产品。', descriptionEn: 'Expert in TikTok short-video selling, creator partnerships, and growth strategies to help brands launch on TikTok Shop.', avatar: 'catalog/covers/expert-tiktok-ecommerce.png', status: 'available' },
 ];
+
+export const DEFAULT_MARKET_EXPERTS = [...BUILTIN_AGENT_PRESETS, ...MARKET_PRESET_EXPERTS];
 
 export function safeTrySkillInSession(item) {
   if (typeof trySkillInSession === 'function') {
@@ -163,9 +207,9 @@ export function safeTrySkillInSession(item) {
 }
 
 export const EXPERT_STATUS_CONFIG = {
-  enabled: { statusKey: 'expertMarket.enabled', defaultZh: '已入职', defaultEn: 'Employed', btnKey: 'expertMarket.disable', defaultBtn: '禁用', defaultBtnEn: 'Disable' },
-  available: { statusKey: 'expertMarket.available', defaultZh: '可聘用', defaultEn: 'Hireable', btnKey: 'expertMarket.install', defaultBtn: '安装', defaultBtnEn: 'Install' },
-  disabled: { statusKey: 'expertMarket.disabled', defaultZh: '已离职', defaultEn: 'Resigned', btnKey: 'expertMarket.install', defaultBtn: '安装', defaultBtnEn: 'Install' },
+  enabled: { statusKey: 'expertMarket.enabled', defaultZh: '已入职', defaultEn: 'Employed', btnKey: 'expertMarket.disable', defaultBtn: '解聘', defaultBtnEn: 'Dismiss' },
+  available: { statusKey: 'expertMarket.available', defaultZh: '可聘用', defaultEn: 'Hireable', btnKey: 'expertMarket.install', defaultBtn: '招聘', defaultBtnEn: 'Hire' },
+  disabled: { statusKey: 'expertMarket.disabled', defaultZh: '已离职', defaultEn: 'Resigned', btnKey: 'expertMarket.install', defaultBtn: '招聘', defaultBtnEn: 'Hire' },
   coming_soon: { statusKey: 'expertMarket.comingSoon', defaultZh: '即将推出', defaultEn: 'Coming soon', btnKey: '', defaultBtn: '', defaultBtnEn: '' },
 };
 

@@ -1,10 +1,17 @@
 /**
  * @file plugins/omnimux-market/src/expert-market.ts
- * Dedicated data structures and preset installers for Market Experts.
+ * 专家市场数据层：出厂内置 Agent 预设 + 预设市场专家 + 磁盘实际预设的聚合。
+ *
+ * 三个来源：
+ * 1. 出厂内置 Agent 预设（tiktok-agent / standard / daily-work / cordis / ptc / minimal）——随应用分发，恒为已入职；
+ * 2. 预设市场专家（DEFAULT_MARKET_EXPERTS）——按需安装到 ~/.dsh/.agent-presets/<id>/；
+ * 3. ~/.dsh/.agent-presets/ 下真实存在的预设目录（如用户自建的 software-company）——动态扫描，
+ *    含被禁用后移入 .retired 的预设（标记为已离职，可重新聘用）。
  */
 
-import { existsSync, mkdirSync, readdirSync, rmSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parse as parseYaml } from 'yaml'
 
 export interface MarketExpertItem {
   id: string
@@ -17,6 +24,93 @@ export interface MarketExpertItem {
   order: number
 }
 
+export type MarketExpertStatus = MarketExpertItem['initialStatus']
+
+/** 条目来源：出厂内置预设 / 市场专家定义 / 磁盘已装预设 / 已离职预设。 */
+export type MarketExpertSource = 'builtin' | 'preset' | 'installed' | 'retired'
+
+export interface MarketExpertEntry extends MarketExpertItem {
+  status: MarketExpertStatus
+  source: MarketExpertSource
+}
+
+/** preset.yml 中可被专家市场消费的字段。 */
+export interface AgentPresetMeta {
+  name?: string
+  description?: string
+  nameEn?: string
+  descriptionEn?: string
+  avatar?: string
+  order?: number
+}
+
+/** 出厂内置 Agent 预设：随应用分发，不伪造用户级副本。 */
+export const BUILTIN_AGENT_PRESETS: MarketExpertItem[] = [
+  {
+    id: 'tiktok-agent',
+    name: '全能社媒操盘手',
+    nameEn: 'Social Media Lead',
+    description: '全域社媒爆款创作与矩阵运营增长。',
+    descriptionEn: 'Full-funnel social hit creation and matrix growth operations.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 1,
+  },
+  {
+    id: 'standard',
+    name: '代码开发',
+    nameEn: 'CodeDev',
+    description: '全栈架构设计、代码编写与工程交付。',
+    descriptionEn: 'Full-stack architecture design, coding and engineering delivery.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 2,
+  },
+  {
+    id: 'daily-work',
+    name: '日常工作',
+    nameEn: 'WorkAssistant',
+    description: '日常办公协同、文档拟定与事务闭环。',
+    descriptionEn: 'Daily office collaboration, document drafting and closure of errands.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 3,
+  },
+  {
+    id: 'cordis',
+    name: '创造模式',
+    nameEn: 'Creator Mode',
+    description: '插件实验开发、运行时检查与团队搭建。',
+    descriptionEn: 'Plugin experimentation, runtime inspection and team composition.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 4,
+  },
+  {
+    id: 'ptc',
+    name: 'PTC 模式',
+    nameEn: 'PTC Mode',
+    description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。',
+    descriptionEn: 'A full-featured coding agent without the workflow tool by default; other tools surface through the PTC SDK so the model composes multi-step work in one TypeScript program.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 5,
+  },
+  {
+    id: 'minimal',
+    name: '极简模式',
+    nameEn: 'Minimal Mode',
+    description: '仅提供持久 shell 的单工具编码 Agent。',
+    descriptionEn: 'A single-tool coding agent that only offers a persistent shell.',
+    avatar: '',
+    initialStatus: 'enabled',
+    order: 6,
+  },
+]
+
+const BUILTIN_AGENT_PRESET_IDS = new Set(BUILTIN_AGENT_PRESETS.map((preset) => preset.id))
+
+/** 预设市场专家（无需本地预设文件即可展示与安装）。 */
 export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
   {
     id: 'shopee-ops-expert',
@@ -100,21 +194,295 @@ export const DEFAULT_MARKET_EXPERTS: MarketExpertItem[] = [
   },
 ]
 
-export function getMarketExpertStatus(home: string, exp: MarketExpertItem): 'enabled' | 'available' | 'disabled' | 'coming_soon' {
-  if (exp.initialStatus === 'coming_soon') return 'coming_soon'
-  const presetDir = join(home, '.agent-presets', exp.id)
-  if (existsSync(join(presetDir, 'preset.yml'))) return 'enabled'
-  const retiredDir = join(home, '.agent-presets', '.retired')
-  if (existsSync(retiredDir)) {
-    try {
-      const files = readdirSync(retiredDir)
-      if (files.some((f) => f === exp.id || f.startsWith(`${exp.id}-`))) {
-        return 'disabled'
-      }
-    } catch {}
+/** 静态清单 = 出厂内置预设 + 预设市场专家，数组顺序即默认展示顺序。 */
+export const STATIC_MARKET_EXPERTS: MarketExpertItem[] = [...BUILTIN_AGENT_PRESETS, ...DEFAULT_MARKET_EXPERTS]
+
+// ─────────────────────────────────────────────────────────────
+// 磁盘扫描
+// ─────────────────────────────────────────────────────────────
+
+/** 预设根目录（用户预设与 .retired 归档均在此）。 */
+export function agentPresetRoot(home: string): string {
+  return join(home, '.agent-presets')
+}
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory()
+  } catch {
+    return false
   }
+}
+
+/**
+ * 是否为出厂内置 Agent 预设（随应用分发，不由本插件伪造用户级副本）。
+ *
+ * @param id 预设 id
+ * @returns 是否内置
+ */
+export function isBuiltinAgentPreset(id: string): boolean {
+  return BUILTIN_AGENT_PRESET_IDS.has(id)
+}
+
+/**
+ * ~/.dsh/.agent-presets/<id>/preset.yml 是否存在。
+ *
+ * @param home DSH home 目录
+ * @param id 预设 id
+ * @returns 是否已安装
+ */
+export function isAgentPresetInstalled(home: string, id: string): boolean {
+  return existsSync(join(agentPresetRoot(home), id, 'preset.yml'))
+}
+
+/**
+ * 解析 .retired 里的条目名 → 原始预设 id。
+ * 禁用时写入 `<id>-<毫秒时间戳>`，这里剥离时间戳后缀，避免误伤自带数字的 id。
+ *
+ * @param name .retired 下的目录/文件名
+ * @returns 原始预设 id
+ */
+export function retireEntryId(name: string): string {
+  return name.replace(/-\d{9,}$/, '')
+}
+
+function retiredEntries(home: string): string[] {
+  const dir = join(agentPresetRoot(home), '.retired')
+  if (!existsSync(dir)) return []
+  try {
+    return readdirSync(dir)
+  } catch {
+    return []
+  }
+}
+
+function hasRetiredEntry(home: string, id: string): boolean {
+  return retiredEntries(home).some((name) => retireEntryId(name) === id)
+}
+
+/** 内置预设的离职标记只认标记文件：出厂预设目录不会被搬走。 */
+function hasRetiredMarker(home: string, id: string): boolean {
+  const dir = join(agentPresetRoot(home), '.retired')
+  return retiredEntries(home).some((name) => {
+    if (retireEntryId(name) !== id) return false
+    try {
+      return !statSync(join(dir, name)).isDirectory()
+    } catch {
+      return false
+    }
+  })
+}
+
+/**
+ * 读取一个 preset.yml 的展示字段；文件缺失或不可解析时返回 null。
+ *
+ * @param presetFile preset.yml 绝对路径
+ * @returns 元信息或 null
+ */
+export function readAgentPresetMeta(presetFile: string): AgentPresetMeta | null {
+  if (!existsSync(presetFile)) return null
+  let raw = ''
+  try {
+    raw = readFileSync(presetFile, 'utf8')
+  } catch {
+    return null
+  }
+  const parsed = parsePresetYaml(raw)
+  if (!parsed) return null
+  const order = Number(parsed.order)
+  return {
+    name: typeof parsed.name === 'string' ? parsed.name : undefined,
+    description: typeof parsed.description === 'string' ? parsed.description : undefined,
+    nameEn: typeof parsed.nameEn === 'string' ? parsed.nameEn : undefined,
+    descriptionEn: typeof parsed.descriptionEn === 'string' ? parsed.descriptionEn : undefined,
+    avatar: typeof parsed.avatar === 'string' ? parsed.avatar : undefined,
+    order: Number.isFinite(order) ? order : undefined,
+  }
+}
+
+function parsePresetYaml(raw: string): Record<string, unknown> | null {
+  try {
+    const doc = parseYaml(raw)
+    if (doc && typeof doc === 'object') return doc as Record<string, unknown>
+  } catch {
+    // 落到下面的逐行兜底解析
+  }
+  const fallback: Record<string, unknown> = {}
+  for (const line of raw.split(/\r?\n/)) {
+    const match = /^([A-Za-z][A-Za-z0-9_]*):\s*(.*)$/.exec(line.trim())
+    if (!match) continue
+    const value = match[2].trim().replace(/^['"]|['"]$/g, '')
+    if (value) fallback[match[1]] = value
+  }
+  return Object.keys(fallback).length > 0 ? fallback : null
+}
+
+/** 由 id + preset.yml 元信息构造展示条目；缺名字时退回 id，保证卡片不空。 */
+function buildScannedExpert(id: string, meta: AgentPresetMeta, initialStatus: MarketExpertStatus): MarketExpertItem {
+  const name = meta.name || id
+  const description = meta.description || ''
+  return {
+    id,
+    name,
+    nameEn: meta.nameEn || name,
+    description,
+    descriptionEn: meta.descriptionEn || description,
+    avatar: meta.avatar || '',
+    initialStatus,
+    order: typeof meta.order === 'number' ? meta.order : 100,
+  }
+}
+
+function compareExpertOrder(a: MarketExpertItem, b: MarketExpertItem): number {
+  if (a.order !== b.order) return a.order - b.order
+  return a.id.localeCompare(b.id)
+}
+
+/**
+ * 扫描 ~/.dsh/.agent-presets/ 下真实存在的预设目录（跳过隐藏目录与 .retired）。
+ *
+ * @param home DSH home 目录
+ * @returns 已装预设条目（按 order 排序）
+ */
+export function scanInstalledAgentPresets(home: string): MarketExpertItem[] {
+  const root = agentPresetRoot(home)
+  if (!isDirectory(root)) return []
+  let entries: string[] = []
+  try {
+    entries = readdirSync(root)
+  } catch {
+    return []
+  }
+  const items: MarketExpertItem[] = []
+  for (const name of entries) {
+    if (name.startsWith('.')) continue
+    if (!isDirectory(join(root, name))) continue
+    const meta = readAgentPresetMeta(join(root, name, 'preset.yml'))
+    if (!meta) continue
+    items.push(buildScannedExpert(name, meta, 'enabled'))
+  }
+  return items.sort(compareExpertOrder)
+}
+
+/**
+ * 扫描 .retired 归档，让已离职的自定义预设仍可见、可重新聘用。
+ *
+ * @param home DSH home 目录
+ * @returns 已离职条目（按 order 排序）
+ */
+export function scanRetiredAgentPresets(home: string): MarketExpertItem[] {
+  const dir = join(agentPresetRoot(home), '.retired')
+  if (!isDirectory(dir)) return []
+  const items: MarketExpertItem[] = []
+  const seen = new Set<string>()
+  for (const name of retiredEntries(home)) {
+    if (name.startsWith('.')) continue
+    const id = retireEntryId(name)
+    if (seen.has(id)) continue
+    const meta = readAgentPresetMeta(join(dir, name, 'preset.yml'))
+    if (!meta) continue
+    seen.add(id)
+    items.push(buildScannedExpert(id, meta, 'disabled'))
+  }
+  return items.sort(compareExpertOrder)
+}
+
+// ─────────────────────────────────────────────────────────────
+// 状态与聚合
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 计算单个专家的市场状态。
+ *
+ * 判定顺序：即将推出 → 出厂内置 → 磁盘已装 → 已离职归档 → 定义里的初始状态。
+ * 内置预设恒为已入职，只有用户在市场里显式离职（.retired 标记）后才变为已离职。
+ *
+ * @param home DSH home 目录
+ * @param exp 专家定义
+ * @returns 市场状态
+ */
+export function getMarketExpertStatus(home: string, exp: MarketExpertItem): MarketExpertStatus {
+  if (exp.initialStatus === 'coming_soon') return 'coming_soon'
+  if (isBuiltinAgentPreset(exp.id)) return hasRetiredMarker(home, exp.id) ? 'disabled' : 'enabled'
+  if (isAgentPresetInstalled(home, exp.id)) return 'enabled'
+  if (hasRetiredEntry(home, exp.id)) return 'disabled'
   return exp.initialStatus
 }
+
+/**
+ * 静态定义与磁盘 preset.yml 合并：静态定义的展示字段优先，磁盘仅补齐缺失项。
+ *
+ * @param exp 静态定义
+ * @param meta 磁盘 preset.yml 元信息（可为 null）
+ * @returns 合并后的条目
+ */
+export function mergeMarketExpertMeta(exp: MarketExpertItem, meta: AgentPresetMeta | null): MarketExpertItem {
+  if (!meta) return { ...exp }
+  return {
+    ...exp,
+    name: exp.name || meta.name || exp.id,
+    nameEn: exp.nameEn || meta.nameEn || meta.name || exp.id,
+    description: exp.description || meta.description || '',
+    descriptionEn: exp.descriptionEn || meta.descriptionEn || meta.description || '',
+    avatar: exp.avatar || meta.avatar || '',
+    order: exp.order,
+  }
+}
+
+/**
+ * 专家市场完整清单：静态定义（内置预设 + 市场专家）在前，磁盘实际预设随后，已离职的排最后。
+ *
+ * @param home DSH home 目录
+ * @returns 带状态与来源的条目列表
+ */
+export function listMarketExperts(home: string): MarketExpertEntry[] {
+  const entries: MarketExpertEntry[] = []
+  const seen = new Set<string>()
+
+  for (const exp of STATIC_MARKET_EXPERTS) {
+    const meta = readAgentPresetMeta(join(agentPresetRoot(home), exp.id, 'preset.yml'))
+    const merged = mergeMarketExpertMeta(exp, meta)
+    const builtin = isBuiltinAgentPreset(exp.id)
+    entries.push({
+      ...merged,
+      status: getMarketExpertStatus(home, merged),
+      source: builtin ? 'builtin' : (meta ? 'installed' : 'preset'),
+    })
+    seen.add(exp.id)
+  }
+
+  for (const item of scanInstalledAgentPresets(home)) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    entries.push({ ...item, status: 'enabled', source: 'installed' })
+  }
+
+  for (const item of scanRetiredAgentPresets(home)) {
+    if (seen.has(item.id)) continue
+    seen.add(item.id)
+    entries.push({ ...item, status: 'disabled', source: 'retired' })
+  }
+
+  return entries
+}
+
+/**
+ * 按 id 解析专家定义（静态定义 ∪ 磁盘预设 ∪ 已离职预设）。
+ *
+ * @param home DSH home 目录
+ * @param id 预设 id
+ * @returns 专家定义或 null
+ */
+export function findMarketExpert(home: string, id: string): MarketExpertItem | null {
+  const hit = listMarketExperts(home).find((item) => item.id === id)
+  if (!hit) return null
+  const { status: _status, source: _source, ...item } = hit
+  return item
+}
+
+// ─────────────────────────────────────────────────────────────
+// 安装 / 禁用
+// ─────────────────────────────────────────────────────────────
 
 function resolveExpertPersonaText(exp: MarketExpertItem): string {
   if (exp.id === 'amazon-operations-expert') {
@@ -126,13 +494,13 @@ function resolveExpertPersonaText(exp: MarketExpertItem): string {
   return `你是「${exp.name}」AI Agent专家。${exp.description}，工作目录 {{cwd}}。`
 }
 
-export function installMarketExpertPreset(home: string, exp: MarketExpertItem): void {
-  const dir = join(home, '.agent-presets', exp.id)
-  mkdirSync(dir, { recursive: true })
-  const presetYml = `name: ${exp.name}\ndescription: ${exp.description}\norder: ${exp.order}\n`
-  writeFileSync(join(dir, 'preset.yml'), presetYml, 'utf8')
+function buildPresetYml(exp: MarketExpertItem): string {
+  return `name: ${exp.name}\ndescription: ${exp.description}\norder: ${exp.order}\n`
+}
+
+function buildCordisYml(exp: MarketExpertItem): string {
   const personaText = resolveExpertPersonaText(exp)
-  const cordisYml = `# ${exp.id} Agent Preset
+  return `# ${exp.id} Agent Preset
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
@@ -161,24 +529,103 @@ export function installMarketExpertPreset(home: string, exp: MarketExpertItem): 
     toolName: subagent_fork
     backgroundMode: continuable
 `
-  writeFileSync(join(dir, 'agent.cordis.yml'), cordisYml, 'utf8')
-  const retiredDir = join(home, '.agent-presets', '.retired')
-  if (existsSync(retiredDir)) {
+}
+
+/**
+ * 清除 .retired 中该 id 的离职标记文件（重新聘用时调用）。
+ * 只删除标记文件，归档的预设目录一律保留，避免误删用户此前的预设内容。
+ *
+ * @param home DSH home 目录
+ * @param id 预设 id
+ */
+function clearRetiredMarkers(home: string, id: string): void {
+  const dir = join(agentPresetRoot(home), '.retired')
+  if (!isDirectory(dir)) return
+  for (const name of retiredEntries(home)) {
+    if (retireEntryId(name) !== id) continue
     try {
-      const files = readdirSync(retiredDir)
-      for (const f of files) {
-        if (f === exp.id || f.startsWith(`${exp.id}-`)) {
-          rmSync(join(retiredDir, f), { recursive: true, force: true })
-        }
-      }
+      if (statSync(join(dir, name)).isDirectory()) continue
+      rmSync(join(dir, name), { force: true })
     } catch {}
   }
 }
 
+/**
+ * 把 .retired 里的预设目录搬回原位（保留用户自定义内容，绝不重建副本）。
+ *
+ * 只服务于自定义/市场预设：出厂内置预设随应用分发，其 `.retired` 目录可能来自
+ * 内置预设出现在市场之前的旧副本，一律不得当成用户级副本还原（调用方须先判定）。
+ *
+ * @param home DSH home 目录
+ * @param id 预设 id
+ * @returns 是否发生了还原
+ */
+function restoreRetiredPreset(home: string, id: string): boolean {
+  const active = join(agentPresetRoot(home), id)
+  if (existsSync(active)) return false
+  const dir = join(agentPresetRoot(home), '.retired')
+  if (!isDirectory(dir)) return false
+  const candidates = retiredEntries(home)
+    .filter((name) => retireEntryId(name) === id)
+    .filter((name) => existsSync(join(dir, name, 'preset.yml')))
+    .sort()
+  const latest = candidates[candidates.length - 1]
+  if (!latest) return false
+  try {
+    renameSync(join(dir, latest), active)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 安装（或重新聘用）一个专家预设。
+ *
+ * - 已离职的预设优先原样还原，保留用户此前的自定义内容；
+ * - 出厂内置预设随应用分发，只清除离职标记，不伪造用户级副本；
+ * - 其余按需创建 preset.yml 与 agent.cordis.yml，已存在的定义一律不覆盖。
+ *
+ * @param home DSH home 目录
+ * @param exp 专家定义
+ */
+export function installMarketExpertPreset(home: string, exp: MarketExpertItem): void {
+  // 内置判定必须先于离职还原：.retired 里的旧副本是过期归档，不得冒充用户预设覆盖出厂定义。
+  if (isBuiltinAgentPreset(exp.id)) {
+    clearRetiredMarkers(home, exp.id)
+    return
+  }
+  if (restoreRetiredPreset(home, exp.id)) {
+    clearRetiredMarkers(home, exp.id)
+    return
+  }
+  clearRetiredMarkers(home, exp.id)
+  const dir = join(agentPresetRoot(home), exp.id)
+  mkdirSync(dir, { recursive: true })
+  if (!existsSync(join(dir, 'preset.yml'))) writeFileSync(join(dir, 'preset.yml'), buildPresetYml(exp), 'utf8')
+  if (!existsSync(join(dir, 'agent.cordis.yml'))) writeFileSync(join(dir, 'agent.cordis.yml'), buildCordisYml(exp), 'utf8')
+}
+
+/**
+ * 禁用（离职）一个专家预设。
+ *
+ * - 出厂内置预设只写离职标记，不移动应用自带定义；
+ * - 其余预设目录整体移入 .retired，便于原样还原。
+ *
+ * @param home DSH home 目录
+ * @param id 预设 id
+ */
 export function disableMarketExpertPreset(home: string, id: string): void {
-  const dir = join(home, '.agent-presets', id)
-  const retiredDir = join(home, '.agent-presets', '.retired')
+  const dir = join(agentPresetRoot(home), id)
+  const retiredDir = join(agentPresetRoot(home), '.retired')
   mkdirSync(retiredDir, { recursive: true })
+  if (isBuiltinAgentPreset(id)) {
+    clearRetiredMarkers(home, id)
+    try {
+      writeFileSync(join(retiredDir, `${id}-${Date.now()}`), '', 'utf8')
+    } catch {}
+    return
+  }
   if (existsSync(dir)) {
     const dest = join(retiredDir, `${id}-${Date.now()}`)
     try {

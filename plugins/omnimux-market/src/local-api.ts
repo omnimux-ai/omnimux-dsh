@@ -108,18 +108,23 @@ export const MUTATING_METHODS = new Set([
 
 export {
   type MarketExpertItem,
+  type MarketExpertEntry,
+  BUILTIN_AGENT_PRESETS,
   DEFAULT_MARKET_EXPERTS,
+  STATIC_MARKET_EXPERTS,
   getMarketExpertStatus,
+  listMarketExperts,
+  findMarketExpert,
   installMarketExpertPreset,
   disableMarketExpertPreset,
 } from './expert-market.js'
 
 import {
   type MarketExpertItem,
-  DEFAULT_MARKET_EXPERTS,
-  getMarketExpertStatus,
+  findMarketExpert,
   installMarketExpertPreset,
   disableMarketExpertPreset,
+  listMarketExperts,
 } from './expert-market.js'
 
 interface ApiContext {
@@ -382,12 +387,12 @@ function handleHomeCustomOrder(ctx: ApiContext): void {
   return sendJson(res, 200, { ok: true, order: currentOrder })
 }
 
+/**
+ * 专家市场清单：内置 Agent 预设 + 预设市场专家 + ~/.dsh/.agent-presets 实际预设（含已离职归档）。
+ */
 function handleExpertMarketList(ctx: ApiContext): void {
   const home = expertRoots().home
-  const items = DEFAULT_MARKET_EXPERTS.map((exp) => ({
-    ...exp,
-    status: getMarketExpertStatus(home, exp),
-  }))
+  const items = listMarketExperts(home)
   return sendJson(ctx.res, 200, { ok: true, items })
 }
 
@@ -395,9 +400,9 @@ function handleExpertMarketInstall(ctx: ApiContext): void {
   const { body, url, res } = ctx
   const id = String(body.id || url.searchParams.get('id') || '').trim()
   if (!id) return sendJson(res, 400, { ok: false, error: '缺少 id' })
-  const exp = DEFAULT_MARKET_EXPERTS.find((it) => it.id === id)
-  if (!exp) return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` })
   const home = expertRoots().home
+  const exp: MarketExpertItem | null = findMarketExpert(home, id)
+  if (!exp) return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` })
   installMarketExpertPreset(home, exp)
   return sendJson(res, 200, { ok: true, id, status: 'enabled' })
 }

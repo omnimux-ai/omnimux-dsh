@@ -12,14 +12,44 @@
  */
 
 /** Marks drawn as outlines; the checked/active look is a CSS fill. */
-export type CapsuleIcon = 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star'
+export type CapsuleIcon = 'brand' | 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star'
 
 /** Shared root attributes. `aria-hidden` keeps the mark out of the a11y tree. */
 export const SVG_ROOT_ATTRS =
   'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
   'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"'
 
+/**
+ * Root attributes for a solid brand silhouette.
+ *
+ * The brand mark is a filled shape — a stroked outline of the same drawing
+ * reads as a hole at 20px — so it overrides the outline attributes above.
+ * `evenodd` is what cuts the two capsule eyes out of the ghost body.
+ */
+export const SVG_FILLED_ROOT_ATTRS =
+  'viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" stroke="none" ' +
+  'aria-hidden="true" focusable="false"'
+
+/**
+ * The brand micro-mark: the OmniMux ghost with its two capsule eyes.
+ *
+ * A single-path reduction of the product logo (`assets/icons/icon.svg`): the
+ * 1254-unit tile artwork is redrawn on the shared 24-unit grid, the tile fill
+ * and the 0.1-scaled ghost outline are dropped, and the eyes become even-odd
+ * holes so the whole mark paints in one colour. At 20px the silhouette stays
+ * legible where the detailed logo would not.
+ */
+const BRAND_GHOST_PATH =
+  'M12 2.6C8.7 2.6 6.6 5.3 6.6 9.2V19' +
+  'Q8.4 21 10.2 19Q12 21 13.8 19Q15.6 21 17.4 19V9.2C17.4 5.3 15.3 2.6 12 2.6Z' +
+  // Left eye.
+  'M10.2 8.4a1.15 1.15 0 0 1 1.15 1.15v1.9a1.15 1.15 0 0 1-2.3 0v-1.9A1.15 1.15 0 0 1 10.2 8.4Z' +
+  // Right eye.
+  'M13.8 8.4a1.15 1.15 0 0 1 1.15 1.15v1.9a1.15 1.15 0 0 1-2.3 0v-1.9A1.15 1.15 0 0 1 13.8 8.4Z'
+
 const ICON_PATHS: Record<CapsuleIcon, string> = {
+  // The stage-one trigger: the OmniMux ghost, drawn as a solid silhouette.
+  brand: `<path d="${BRAND_GHOST_PATH}"/>`,
   // Lightbulb: "keep this idea".
   bulb: [
     '<path d="M9 18h6"/>',
@@ -59,7 +89,8 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
  * @param size - Rendered square size in CSS pixels; defaults to the icon box.
  */
 export function svgIcon(name: CapsuleIcon, size = 18): string {
-  return `<svg ${SVG_ROOT_ATTRS} width="${size}" height="${size}">${ICON_PATHS[name]}</svg>`
+  const root = name === 'brand' ? SVG_FILLED_ROOT_ATTRS : SVG_ROOT_ATTRS
+  return `<svg ${root} width="${size}" height="${size}">${ICON_PATHS[name]}</svg>`
 }
 
 /** Replaceable icons the capsule swaps in place for a confirmed action. */

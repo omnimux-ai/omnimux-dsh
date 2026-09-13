@@ -68,14 +68,27 @@ export const CAPSULE_SPEC = {
   background: 'rgba(30,32,38,0.95)',
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
-  borderRadius: 22,
-  height: 44,
+  borderRadius: 18,
+  height: 36,
   /**
-   * Compact row width assumed before the first layout measurement.
-   * Three 30px icons + two 4px gaps + 2 × 6px padding + 2 × 1px border.
+   * Stage one, the collapsed circle: the brand trigger alone.
+   * `36 × 36` with an `18px` radius is a perfect circle.
+   */
+  collapsedWidth: 36,
+  /**
+   * Stage two, the expanded row: 3 x 30px icons + 2 x 4px gaps +
+   * 2 x 6px padding + 2 x 1px border.
    */
   width: 112,
   paddingX: 6,
+  /**
+   * The `collapsedWidth → width` opening animation. The stylesheet owns the
+   * transition; this is the same duration on the JavaScript side, where it ends
+   * the window in which the action row may not take the pointer.
+   */
+  openMs: 220,
+  /** Gap between two action icons in the expanded row. */
+  iconGap: 4,
   blur: 'blur(24px) saturate(140%)',
   border: '1px solid rgba(255,255,255,0.14)',
   sheen: 'inset 0 1px 0 rgba(255,255,255,0.20)',
@@ -83,6 +96,10 @@ export const CAPSULE_SPEC = {
   /** Inset from the media's bottom-left corner. */
   inset: 10,
   iconSize: 30,
+  /** Hit box of the stage-one brand trigger inside the circle. */
+  brandSize: 28,
+  /** Rendered size of the brand silhouette. */
+  brandIconSize: 20,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const
@@ -93,6 +110,11 @@ export const TIMING = {
   enterDebounce: 150,
   /** Grace period after `mouseleave` during which entering the capsule cancels the hide. */
   leaveGrace: 150,
+  /**
+   * Buffer between the pointer leaving the capsule and the fold-back, so the
+   * diagonal trip from an action icon back to the brand circle never flickers.
+   */
+  collapseGrace: 220,
   /** Receipt window for the workbench attach request. */
   attachReceiptTimeout: 800,
   /** Instant check feedback on the copy icon. */

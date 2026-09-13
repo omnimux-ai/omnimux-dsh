@@ -90,8 +90,8 @@ export const MUTATING_METHODS = new Set([
     'expertMarketDisable',
     'setModelSelection',
 ]);
-export { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
-import { DEFAULT_MARKET_EXPERTS, getMarketExpertStatus, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
+export { BUILTIN_AGENT_PRESETS, DEFAULT_MARKET_EXPERTS, STATIC_MARKET_EXPERTS, getMarketExpertStatus, listMarketExperts, findMarketExpert, installMarketExpertPreset, disableMarketExpertPreset, } from './expert-market.js';
+import { findMarketExpert, installMarketExpertPreset, disableMarketExpertPreset, listMarketExperts, } from './expert-market.js';
 // --- 独立领域 Handler 路由实现 ---
 async function handleSearch(ctx) {
     const { body, url, cfg, res } = ctx;
@@ -340,12 +340,12 @@ function handleHomeCustomOrder(ctx) {
     catch { }
     return sendJson(res, 200, { ok: true, order: currentOrder });
 }
+/**
+ * 专家市场清单：内置 Agent 预设 + 预设市场专家 + ~/.dsh/.agent-presets 实际预设（含已离职归档）。
+ */
 function handleExpertMarketList(ctx) {
     const home = expertRoots().home;
-    const items = DEFAULT_MARKET_EXPERTS.map((exp) => ({
-        ...exp,
-        status: getMarketExpertStatus(home, exp),
-    }));
+    const items = listMarketExperts(home);
     return sendJson(ctx.res, 200, { ok: true, items });
 }
 function handleExpertMarketInstall(ctx) {
@@ -353,10 +353,10 @@ function handleExpertMarketInstall(ctx) {
     const id = String(body.id || url.searchParams.get('id') || '').trim();
     if (!id)
         return sendJson(res, 400, { ok: false, error: '缺少 id' });
-    const exp = DEFAULT_MARKET_EXPERTS.find((it) => it.id === id);
+    const home = expertRoots().home;
+    const exp = findMarketExpert(home, id);
     if (!exp)
         return sendJson(res, 400, { ok: false, error: `unknown expert ${id}` });
-    const home = expertRoots().home;
     installMarketExpertPreset(home, exp);
     return sendJson(res, 200, { ok: true, id, status: 'enabled' });
 }
