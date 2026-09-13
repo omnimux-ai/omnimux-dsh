@@ -52,3 +52,17 @@ export function sortProductsForQuickMenu(products: any[], recentIds: string[], l
 
   return [...recentProducts, ...otherProducts].slice(0, limit);
 }
+
+export function resolveProductThumbUrl(product: any): string {
+  if (!product) return '';
+  const cover = product.cover;
+  const coverId = cover?.id || product.cover_media_id;
+  if (coverId) {
+    return `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(coverId)}`;
+  }
+  if (cover?.real_path) {
+    return `file://${cover.real_path}`;
+  }
+  return '';
+}
+
