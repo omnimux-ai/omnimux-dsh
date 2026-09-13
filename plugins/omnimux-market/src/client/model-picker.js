@@ -37,7 +37,7 @@
         icon: "bytedance",
       },
       "seedance-2-0-fast": {
-        name: "Dreamina Seedance 2.0 快速版",
+        name: "Dreamina Seedance 2.0 Fast",
         capsuleName: "Dreamina Seedance 2.0 Fast",
         subtitle: "细节和质量提升，成本更低",
         pro: true,
@@ -52,7 +52,7 @@
         icon: "bytedance",
       },
       "seedance-2-0-mini-trial": {
-        name: "Dreamina Seedance 2.0 Mini (试用版)",
+        name: "Dreamina Seedance 2.0 Mini (Trial)",
         capsuleName: "Dreamina Seedance 2.0 Mini",
         subtitle: "最适合快速生成，仅需7积分/秒",
         pro: true,
@@ -96,8 +96,8 @@
         icon: "nanobanana",
       },
       "gpt-image-2": {
-        name: "GPT图像2",
-        capsuleName: "GPT图像2",
+        name: "GPT Image 2",
+        capsuleName: "GPT Image 2",
         subtitle: "精准文本渲染，更强的推理能力",
         pro: false,
         icon: "openai",
@@ -153,7 +153,7 @@
         },
         {
           id: "seedance-2-0-fast",
-          name: "Dreamina Seedance 2.0 快速版",
+          name: "Dreamina Seedance 2.0 Fast",
           capsuleName: "Dreamina Seedance 2.0 Fast",
           type: "video",
           subtitle: "细节和质量提升，成本更低",
@@ -173,7 +173,7 @@
         },
         {
           id: "seedance-2-0-mini-trial",
-          name: "Dreamina Seedance 2.0 Mini (试用版)",
+          name: "Dreamina Seedance 2.0 Mini (Trial)",
           capsuleName: "Dreamina Seedance 2.0 Mini",
           type: "video",
           subtitle: "最适合快速生成，仅需7积分/秒",
@@ -205,8 +205,8 @@
         },
         {
           id: "gpt-image-2",
-          name: "GPT图像2",
-          capsuleName: "GPT图像2",
+          name: "GPT Image 2",
+          capsuleName: "GPT Image 2",
           type: "image",
           subtitle: "精准文本渲染，更强的推理能力",
           pro: false,
