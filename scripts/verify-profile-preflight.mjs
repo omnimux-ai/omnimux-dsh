@@ -60,6 +60,13 @@ const HOST_PACKAGE_STUB_SOURCE = [
   'export function createUserMessage(options) { return options; };',
   'export function dshHomePath(...args) { return ""; };',
   'export function dshProfilePath(...args) { return ""; };',
+  // 宿主包具名导出必须逐条声明：替身是静态 ESM，缺一条就会让 import 在解析期失败。
+  // 以下五项是套件内插件实际使用的宿主人脸（错误类/路径工具/设置座席），只保签名。
+  'export class AttachmentError extends Error {};',
+  'export class FsError extends Error {};',
+  'export function canonicalPath(path) { return path; };',
+  'export function installSettingsSection(...args) { return () => {}; };',
+  'export function settingsNamespace(name) { return name; };',
   'export default new Proxy(def, {',
   '  get(target, prop) {',
   '    if (prop in target) return target[prop];',
