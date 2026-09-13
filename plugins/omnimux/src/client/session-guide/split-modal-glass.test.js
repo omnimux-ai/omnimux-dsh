@@ -38,17 +38,29 @@ function ruleFor(selector) {
 /** CSSOM 会丢弃 backdrop-filter 一类属性，语义断言之外还需要按源码文本核对（先剥注释再取声明块）。 */
 const sourceWithoutComments = GUIDE_CSS.replace(/\/\*[\s\S]*?\*\//g, '')
 
-function declarationsOf(selector) {
+/** 同一选择器可以出现在多条规则里，单条规则里也能重复声明同一属性；CSS 后者胜，
+    所以必须收齐全部声明块并按级联取最后一条。只认首个匹配会把「规则内后置覆盖」和
+    「文末再补一条同权重规则」这两类回退直接放行，用例照样全绿、毛玻璃却已经没了。 */
+function declarationBlocksOf(selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const block = sourceWithoutComments.match(new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([^}]*)\\}`))
-  assert.ok(block, `缺少 ${selector} 的样式声明块`)
-  return block[1]
+  const pattern = new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([^}]*)\\}`, 'g')
+  const blocks = [...sourceWithoutComments.matchAll(pattern)].map((match) => match[1])
+  assert.ok(blocks.length > 0, `缺少 ${selector} 的样式声明块`)
+  return blocks
+}
+
+function declarationsOf(selector) {
+  return declarationBlocksOf(selector).join(';')
 }
 
 function declared(selector, property) {
-  const match = declarationsOf(selector).match(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`, 'i'))
-  assert.ok(match, `${selector} 缺少 ${property} 声明`)
-  return match[1].trim()
+  const matches = [...declarationsOf(selector).matchAll(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`, 'gi'))]
+    .map((match) => match[1].trim())
+  assert.ok(matches.length > 0, `${selector} 缺少 ${property} 声明`)
+  // !important 无视源码顺序压过普通声明，所以先挑出带 !important 的一组，再在组内取最后一条。
+  const important = matches.filter((value) => /!\s*important\s*$/i.test(value))
+  const winner = important.length > 0 ? important.at(-1) : matches.at(-1)
+  return winner.replace(/\s*!\s*important\s*$/i, '')
 }
 
 test('split modal: 右侧面板消费 24px 高斯雾化 + 82% 微透', () => {
@@ -68,6 +80,17 @@ test('split modal: 暗色主题用确认过的 82% 微透暗色', () => {
 })
 
 test('split modal: 容器不铺实色，左栏保持实底可读性', () => {
-  assert.equal(ruleFor('.omnimux-split-modal-container').style.getPropertyValue('background'), 'transparent')
-  assert.equal(ruleFor('.omnimux-split-modal-left').style.getPropertyValue('background'), 'var(--dsw-alias-bg-layer-1)')
+  ruleFor('.omnimux-split-modal-container')
+  ruleFor('.omnimux-split-modal-left')
+  assert.equal(declared('.omnimux-split-modal-container', 'background'), 'transparent')
+  assert.equal(declared('.omnimux-split-modal-left', 'background'), 'var(--dsw-alias-bg-layer-1)')
+})
+
+test('split modal: 其它规则不得改写右栏背景或滤镜', () => {
+  const overrides = [...sourceWithoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, selector]) => /\.omnimux-split-modal-right(?![\w-])/.test(selector))
+    .filter(([, selector]) => selector.trim() !== '.omnimux-split-modal-right')
+    .filter(([, , body]) => /(?:^|;)\s*(?:background|backdrop-filter|-webkit-backdrop-filter)\s*:/.test(body))
+    .map(([, selector]) => selector.trim())
+  assert.deepEqual(overrides, [], '右栏的背景与滤镜只能由 .omnimux-split-modal-right 自己声明，后面的同权重规则同样会胜出')
 })
