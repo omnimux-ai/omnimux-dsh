@@ -27,8 +27,8 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /30秒视频生成，精准片段编辑/)
 
     assert.match(modelPickerSrc, /"seedance-2-0-fast"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 快速版/)
     assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 Fast/)
+    assert.doesNotMatch(modelPickerSrc, /快速版/)
     assert.match(modelPickerSrc, /高达43%折扣/)
     assert.match(modelPickerSrc, /细节和质量提升，成本更低/)
 
@@ -37,7 +37,8 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /更精准的参考，更真实，高达4K/)
 
     assert.match(modelPickerSrc, /"seedance-2-0-mini-trial"/)
-    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 Mini \(试用版\)/)
+    assert.match(modelPickerSrc, /Dreamina Seedance 2\.0 Mini \(Trial\)/)
+    assert.doesNotMatch(modelPickerSrc, /试用版/)
     assert.match(modelPickerSrc, /新增/)
     assert.match(modelPickerSrc, /最适合快速生成，仅需7积分\/秒/)
 
@@ -45,13 +46,14 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /最高可享58折优惠/)
     assert.match(modelPickerSrc, /轻量级推理，最具成本效益/)
 
-    // 图像分类模型
+    // 图像分类模型：模型名称始终保持英文，不需要支持多语言
     assert.match(modelPickerSrc, /"nanobanana-pro"/)
     assert.match(modelPickerSrc, /Nano Banana Pro/)
     assert.match(modelPickerSrc, /专业图像质量和文本布局/)
 
     assert.match(modelPickerSrc, /"gpt-image-2"/)
-    assert.match(modelPickerSrc, /GPT图像2/)
+    assert.match(modelPickerSrc, /GPT Image 2/)
+    assert.doesNotMatch(modelPickerSrc, /GPT图像/)
     assert.match(modelPickerSrc, /精准文本渲染，更强的推理能力/)
 
     assert.match(modelPickerSrc, /"nanobanana"/)
@@ -93,7 +95,7 @@ describe('model picker client & session contracts (Issue #1167)', () => {
       auto: false,
       selectedModel: {
         id: 'seedance-2-0-fast',
-        name: 'Dreamina Seedance 2.0 快速版',
+        name: 'Dreamina Seedance 2.0 Fast',
         capsuleName: 'Dreamina Seedance 2.0 Fast',
         type: 'video',
       },
