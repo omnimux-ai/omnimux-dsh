@@ -71,6 +71,7 @@ const L = {
   tabLocal: zh['tab.local'],
   tabPublic: zh['tab.public'],
   tabRivals: zh['tab.rivals'],
+  filterTrigger: zh['rivalFilter.trigger'],
   echoAccount: (handle, platform) => zh['rivalAccounts.import.echoAccount']
     .replace('{handle}', handle)
     .replace('{platform}', platform),
@@ -310,7 +311,7 @@ after(() => {
 })
 
 describe('import landing — account profile URL', () => {
-  it('echoes the account, imports it as an account, and lands on the rival tab without a preview', async () => {
+  it('echoes the account, imports it as an account, and lands on the 账号监控 tab without a preview', async () => {
     const host = createHost({
       classify: jsonResponse(200, {
         success: true,
@@ -321,8 +322,8 @@ describe('import landing — account profile URL', () => {
         data: { id: 'acc-1', handle: '@li9292', platform: 'x', display_name: 'li9292' },
       }),
     })
-    // The panel reloads its own list as soon as it mounts, which is how the new
-    // account card shows up on the tab we land on.
+    // The account filter reloads its own list as soon as the tab mounts, which
+    // is how the imported account shows up in the panel we land on.
     host.state.accounts = [{ id: 'acc-1', handle: '@li9292', platform: 'x', display_name: 'li9292', refresh_state: 'idle' }]
 
     const mounted = await mountSection(host)
@@ -351,22 +352,34 @@ describe('import landing — account profile URL', () => {
       assert.equal(imports.length, 1, 'exactly one account import')
       assert.equal(imports[0].path, RIVAL_PREFIX)
 
-      // The 对标账号 tab renders its workbench instead of the grid, so the panel
-      // on screen *is* the evidence that the import moved the view there.
-      assert.ok(mounted.container.querySelector('.omnimux-rival-root'), 'the 对标账号 workbench must be on screen')
-      assert.equal(
-        mounted.container.querySelector('.omnimux-inspiration-grid'),
-        null,
-        'the inspiration grid must not be the view an account import lands on',
+      // The 账号监控 tab renders the works feed, so the feed's own container on
+      // screen *is* the evidence that the import moved the view there. Its grid
+      // is the library's 9:16 grid on purpose — that is the point of the
+      // redesign — so the distinguishing marker is the feed wrapper, not the
+      // grid class.
+      const feed = mounted.container.querySelector('.omnimux-rival-root')
+      assert.ok(feed, 'the 账号监控 feed must be on screen')
+      assert.ok(
+        feed.querySelector('[data-rival-grid="true"], [data-rival-skeleton="true"]'),
+        'the works grid must be what the account import lands on',
       )
       assert.equal(
         mounted.container.querySelector(`input[aria-label="${L.urlLabel}"]`),
         null,
         'the dialog must close once the account is imported',
       )
+      // The account dimension lives in the filter panel now, so the imported
+      // account is found by opening it — not in a column beside the grid. The
+      // trigger's label carries the current summary after its own name, which is
+      // why it is matched by prefix.
+      const filterTrigger = [...mounted.container.querySelectorAll('button')]
+        .find((node) => (node.getAttribute('aria-label') || '').startsWith(L.filterTrigger))
+      assert.ok(filterTrigger, 'the account filter must be in the toolbar of the tab it landed on')
+      await click(filterTrigger)
+      await settle(mounted.container, () => mounted.container.querySelector('[data-account-id="acc-1"]'))
       assert.ok(
         mounted.container.querySelector('[data-account-id="acc-1"]'),
-        'the imported account must be in the left column',
+        'the imported account must be listed in the account filter',
       )
       assert.equal(
         mounted.container.querySelector(PREVIEW_MODAL_SELECTOR),

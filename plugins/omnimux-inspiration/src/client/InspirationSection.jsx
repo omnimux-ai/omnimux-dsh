@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Divider, DropdownSelect, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
+import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
@@ -10,6 +11,7 @@ import { PlusIcon } from './icons.jsx'
 import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
+import { useRivalFeed } from './use-rival-feed.js'
 
 export { formatPlatformName }
 
@@ -86,16 +88,29 @@ export function InspirationSection({ t, active }) {
   } = feed
 
   /**
-   * Account-dimension filters of the 对标账号 tab, owned by the shell.
+   * Account-dimension filters of the 账号监控 tab, owned by the shell.
    *
-   * The workbench filters accounts rather than library rows, so its two controls
-   * cannot be the feed's. They are still rendered in the one filter row every
-   * tab shares: switching tabs swaps what the row is wired to, never the row
-   * itself, which is what keeps the four tabs on the same visual level.
+   * The feed filters works rather than library rows, so its controls cannot be
+   * the library feed's. They are still rendered in the one filter row every tab
+   * shares: switching tabs swaps what the row is wired to, never the row itself,
+   * which is what keeps the four tabs on the same visual level.
    */
   const [rivalQuery, setRivalQuery] = useState('')
   const [rivalPlatform, setRivalPlatform] = useState('')
   const rivalTab = tab === 'rivals'
+
+  /**
+   * The 账号监控 feed, mounted here rather than inside the panel.
+   *
+   * The account filter lives in the toolbar and the grid lives in the content
+   * area, and both have to read the same selection and the same totals — one
+   * state source, two consumers. It loads only while its tab is on screen.
+   */
+  const rivalFeed = useRivalFeed({
+    enabled: rivalTab && active !== false,
+    query: rivalQuery,
+    platform: rivalPlatform,
+  })
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
@@ -170,13 +185,23 @@ export function InspirationSection({ t, active }) {
           />
         )}
         tools={rivalTab ? (
-          <DropdownSelect
-            value={rivalPlatform}
-            aria-label={t('filter.platform')}
-            onChange={setRivalPlatform}
-            className="omnimux-inspiration-filter-select"
-            options={rivalPlatformOptions}
-          />
+          <>
+            <RivalAccountFilter
+              t={t}
+              accounts={rivalFeed.accounts}
+              selection={rivalFeed.selection}
+              onToggle={rivalFeed.toggleAccount}
+              onInvert={rivalFeed.invertAccounts}
+              onReset={rivalFeed.resetAccounts}
+            />
+            <DropdownSelect
+              value={rivalPlatform}
+              aria-label={t('filter.platform')}
+              onChange={setRivalPlatform}
+              className="omnimux-inspiration-filter-select"
+              options={rivalPlatformOptions}
+            />
+          </>
         ) : (
           <>
             {platformOptions ? (
@@ -233,6 +258,8 @@ export function InspirationSection({ t, active }) {
           active={active !== false}
           query={rivalQuery}
           platform={rivalPlatform}
+          feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
+          onImported={() => rivalFeed.reload()}
         />
       ) : (
         <>

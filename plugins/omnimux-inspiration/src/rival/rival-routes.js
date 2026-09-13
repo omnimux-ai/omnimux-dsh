@@ -1,10 +1,14 @@
 /**
- * HTTP endpoints of the rival-accounts module (E1–E14).
+ * HTTP endpoints of the rival-accounts module (E1–E15).
  *
  * Protocol adaptation only: the dispatcher reads a `{ method, url, body }`
  * request, calls the service, and answers `{ status, body }`. Keeping it this
  * thin is what lets `rival-routes.test.js` drive the whole contract without a
  * socket — the same dispatcher serves the real server and the tests.
+ *
+ * E15 (`GET /rival-accounts/posts`) is the one cross-account endpoint: the
+ * 账号监控 tab lists works, and it asks this instead of fanning out one request
+ * per monitored account.
  *
  * Prefix: `/omnimux/inspiration/local/rival-accounts`. Media files live under
  * the *existing* `/omnimux/inspiration/local/media/` route (E14), so no new
@@ -122,6 +126,10 @@ export function matchRivalRoute(pathname) {
     if (parts[0] === 'classify') return { kind: 'classify' }
     if (parts[0] === 'refresh-all') return { kind: 'refresh-all' }
     if (parts[0] === 'status') return { kind: 'status' }
+    // The aggregate feed. This branch must stay ahead of the account fallback
+    // below, or `/rival-accounts/posts` reads as「the account whose id is posts」
+    // and answers 404 instead of the merged feed.
+    if (parts[0] === 'posts') return { kind: 'feed' }
     return { kind: 'account', id: parts[0] }
   }
   if (parts.length === 2) {
@@ -243,6 +251,17 @@ export function createRivalDispatcher(deps) {
           only_potential: url.searchParams.get('only_potential'),
           limit: url.searchParams.get('limit'),
           sort: url.searchParams.get('sort'),
+        }))
+
+      case 'feed':
+        if (method !== 'GET') return fail(405, 'method-not-allowed', 'method not allowed')
+        return ok(service.listFeed({
+          accounts: url.searchParams.get('accounts') || undefined,
+          q: url.searchParams.get('q') || undefined,
+          platform: url.searchParams.get('platform') || undefined,
+          sort: url.searchParams.get('sort') || undefined,
+          page: url.searchParams.get('page') || undefined,
+          page_size: url.searchParams.get('page_size') || undefined,
         }))
 
       case 'post-to-inspiration':

@@ -117,6 +117,13 @@ export const INSPIRATION_CSS = `
   padding: 0;
 }
 
+/* 账号监控的三件控件（账号筛选 / 平台筛选 / 搜索框）必须同处一行：
+   账号筛选的下拉面板以触发器为定位基准，右侧控件一旦折行就会把面板挤到错位。
+   仅作用于该 Tab —— 该 Tab 不渲染次行细筛，行内空间充足。 */
+.omnimux-inspiration-stage .omnimux-inspiration-toolbar [class*="tools"] {
+  flex-wrap: nowrap;
+}
+
 .omnimux-inspiration-search-box {
   position: relative;
   display: flex;
@@ -682,13 +689,16 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-overlay-cta-btn.secondary:hover {
   background: var(--dsw-alias-bg-mask-2, var(--dsw-alias-bg-mask-1));
 }
+/* 主行动按钮：实心底 + 反色文字（design.md §2.4「Action Ink & Paper」）。
+   两套主题都由 token 自动反色——深色为白底黑字，浅色为黑底白字，
+   不再走品牌蓝填充，避免宿主亮蓝出现在卡片 CTA 上。 */
 .omnimux-inspiration-overlay-cta-btn.primary {
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
   border-color: transparent;
 }
 .omnimux-inspiration-overlay-cta-btn.primary:hover {
-  background: var(--dsw-alias-button-primary-hover);
+  background: var(--dsw-alias-label-secondary);
 }
 .omnimux-inspiration-overlay-cta-btn:disabled,
 .omnimux-inspiration-overlay-cta-btn[aria-disabled="true"] {

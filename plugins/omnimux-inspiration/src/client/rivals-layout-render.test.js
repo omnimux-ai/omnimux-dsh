@@ -31,10 +31,12 @@ import { zh } from './locales.js'
  *   - the shell is not remounted by a tab switch (the same DOM nodes survive a
  *     trip to 对标账号 and back);
  *   - the content tabs keep the library's own filters, the platform gate
- *     included, while 对标账号 swaps the row to the account filters and drops the
- *     library-only second row;
- *   - the workbench's three former header buttons are inside the content area,
- *     never siblings of the shell.
+ *     included, while 账号监控 swaps the row to accounts' works filters — the
+ *     account multi-select among them — and drops the library-only second row;
+ *   - the workbench's former header buttons (「导入对标账号」「全部刷新」「只看潜力帖」)
+ *     are gone from the page: the account dimension is a toolbar filter now, so
+ *     none of them has a home left, and a surviving copy would be a second
+ *     control for one decision.
  *
  * Reverting the fix is measurable: restoring the `if (tab === 'rivals') return …`
  * early return in `InspirationSection.jsx` fails every shell assertion below
@@ -58,15 +60,21 @@ const L = {
   title: zh['title'],
   subtitle: zh['subtitle'],
   importBtn: zh['add.btn'],
-  rivalImportBtn: zh['rivalAccounts.import.btn'],
   rivalSearch: zh['rivalAccounts.import.searchPlaceholder'],
   librarySearch: zh['filter.search'],
   platform: zh['filter.platform'],
   type: zh['filter.type'],
   sort: zh['filter.sort'],
   country: zh['filter.country'],
-  refreshAll: zh['rivalAccounts.refresh.all'],
-  potentialFilter: zh['rivalAccounts.potential.filter'],
+  // Literals, not locale keys: these two controls no longer exist, and the
+  // point of the assertion is that their wording is absent from the page. A
+  // lookup would silently become '' the moment the key is deleted, and every
+  // "must not exist" check would pass for the wrong reason.
+  refreshAll: '全部刷新',
+  potentialFilter: '只看潜力帖',
+  filterTrigger: zh['rivalFilter.trigger'],
+  accountTab: '账号监控',
+  rivalImportBtn: zh['rivalAccounts.import.btn'],
 }
 
 let bundleCounter = 0
@@ -153,8 +161,29 @@ async function mountStage(options = {}) {
     if (path.includes(`${RIVAL_PREFIX}/status`)) {
       return jsonResponse(200, { success: true, data: { paused: { global: false, reason: null } } })
     }
-    if (path.includes(RIVAL_PREFIX) && /\/posts(\?|$)/.test(path)) {
-      return jsonResponse(200, { success: true, data: { items: [], total: 0, carry_over: 0 } })
+    if (path.includes(`${RIVAL_PREFIX}/posts`)) {
+      return jsonResponse(200, {
+        success: true,
+        data: {
+          items: [
+            {
+              id: 'post_1',
+              row_id: 'acc-1:post_1',
+              account_id: 'acc-1',
+              title: 'probe work',
+              url: 'https://x.com/li9292/status/1',
+              posted_at: '2026-09-12T08:00:00.000Z',
+              stats: { views: 10, likes: 1, comments: 0, shares: 0 },
+              cover_src: '/omnimux/inspiration/local/media/rival-accounts/covers/rival-1.jpg',
+              account: { id: 'acc-1', nickname: 'Li', handle: '@li9292', platform: 'tiktok', post_count: 1 },
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 20,
+          has_more: false,
+        },
+      })
     }
     if (path.includes(RIVAL_PREFIX)) {
       return jsonResponse(200, { success: true, data: { items: accounts, total: accounts.length } })
@@ -233,6 +262,7 @@ const hasText = (container, selector, text) => [...container.querySelectorAll(se
   .some((node) => node.textContent.trim() === text)
 const buttonsLabelled = (container, label) => [...container.querySelectorAll('button')]
   .filter((node) => node.textContent.trim() === label)
+const textPresent = (container, text) => (container.textContent || '').includes(text)
 const tabButtons = (container) => [...container.querySelectorAll('[data-tab]')]
 const searchInput = (container) => container.querySelector('input[type="search"]')
 const platformTriggers = (container) => [...container.querySelectorAll(`[aria-haspopup="listbox"][aria-label="${L.platform}"]`)]
@@ -240,6 +270,7 @@ const subfilterRow = (container) => container.querySelector('.omnimux-inspiratio
 const rivalRoot = (container) => container.querySelector('.omnimux-rival-root')
 const grid = (container) => container.querySelector('.omnimux-inspiration-grid')
 const importButton = (container) => buttonsLabelled(container, L.importBtn)[0] || null
+const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 
 /**
  * Everything the shell owns, whatever tab is selected.
@@ -303,21 +334,38 @@ describe('inspiration tabs — shared shell', () => {
         assertShellOnScreen(mounted.container, tabId)
       }
 
-      // The workbench is swapped into the content area, not over the shell.
-      assert.ok(rivalRoot(mounted.container), '[rivals] the workbench must render in the content area')
-      assert.equal(grid(mounted.container), null, '[rivals] the library grid must not render behind the workbench')
-      assert.ok(
-        rivalRoot(mounted.container).contains(buttonsLabelled(mounted.container, L.refreshAll)[0]),
-        '[rivals] 全部刷新 must sit inside the workbench content area',
-      )
-      assert.ok(
-        rivalRoot(mounted.container).contains(buttonsLabelled(mounted.container, L.potentialFilter)[0]),
-        '[rivals] 只看潜力帖 must sit inside the workbench content area',
-      )
+      // The feed is swapped into the content area, not over the shell.
+      assert.ok(rivalRoot(mounted.container), '[rivals] the feed must render in the content area')
+
+      // The redesign removed both controls outright: they are not inside the
+      // content area either, they are gone.
+      for (const label of [L.refreshAll, L.potentialFilter]) {
+        assert.equal(
+          buttonsLabelled(mounted.container, label).length,
+          0,
+          `[rivals] the removed「${label}」button must not exist anywhere on the page`,
+        )
+        assert.equal(
+          textPresent(mounted.container, label),
+          false,
+          `[rivals]「${label}」must not survive as loose text either`,
+        )
+      }
+
+      // The account dimension moved up into the shared row, which is the one
+      // region a tab switch does not replace.
+      const trigger = filterTrigger(mounted.container)
+      assert.ok(trigger, '[rivals] the toolbar must render the account filter')
       assert.equal(
-        buttonsLabelled(mounted.container, L.rivalImportBtn).length,
-        0,
-        '[rivals] a populated account list must not keep a second import button at the top of the page',
+        trigger.closest('.omnimux-rival-root'),
+        null,
+        '[rivals] the account filter belongs to the shell toolbar, not to the content area',
+      )
+
+      // The works come from the aggregate endpoint, and the row is what drives it.
+      assert.ok(
+        mounted.requestsTo(`${RIVAL_PREFIX}/posts`).length > 0,
+        '[rivals] the content area must load the aggregated works',
       )
     } finally {
       await mounted.unmount()
@@ -336,7 +384,12 @@ describe('inspiration tabs — shared shell', () => {
       }
 
       await mounted.openTab('rivals')
-      assert.ok(rivalRoot(mounted.container), '[rivals] the workbench must be on screen')
+      assert.ok(rivalRoot(mounted.container), '[rivals] the feed must be on screen')
+      assert.equal(
+        tabButtons(mounted.container).find((node) => node.getAttribute('data-tab') === 'rivals')?.textContent.trim(),
+        zh['tab.rivals'],
+        '[rivals] the tab must carry the module label',
+      )
       // Every tab switch in between still shows the shell's own nodes.
       assertShellOnScreen(mounted.container, 'rivals')
 
@@ -423,11 +476,12 @@ describe('inspiration tabs — filter row follows the tab', () => {
       assert.equal(
         mounted.container.querySelector(`[aria-label="${L.type}"]`),
         null,
-        '[rivals] the library content filters must not be shown over accounts',
+        '[rivals] the library content filters must not be shown over works',
       )
+      assert.ok(filterTrigger(mounted.container), '[rivals] the account filter must be on the row')
       assert.ok(
         mounted.requestsTo(RIVAL_PREFIX).length > 0,
-        '[rivals] the row must be driving the account list',
+        '[rivals] the row must be driving the works feed',
       )
     } finally {
       await mounted.unmount()

@@ -1,29 +1,30 @@
 /**
- * Rival-accounts workbench: the content area of the 对标账号 tab.
+ * Content area of the 账号监控 tab: one grid of the monitored accounts' works.
  *
- * Owns the client store, the import dialog and the post actions. The two filter
- * controls it used to render itself are plain props now — they belong to the one
- * filter row the shell shares across all four tabs, and the panel only has to
- * read them to decide what to load. Everything it renders is presentational; the
- * state lives in `rival-client-store.js` so the rules stay testable without a
- * renderer.
+ * It used to be a two-column workbench — an account column on the left and a
+ * post list on the right — and the account dimension now lives in the toolbar's
+ * multi-select filter instead. What is left is what the tab is for: the works.
+ *
+ * The feed state is mounted by the shell (`use-rival-feed`) because the filter
+ * in the toolbar and this grid read the same numbers; the panel renders it and
+ * owns only what is scoped to the content area — the import dialog, the detail
+ * dialog and the「立即复刻」action.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
-import { RivalAccountList } from './RivalAccountList.jsx'
-import { RivalPostPanel } from './RivalPostPanel.jsx'
+import { useCallback, useEffect, useState } from 'react'
+import { RivalFeedGrid } from './RivalFeedGrid.jsx'
 import { RivalImportDialog } from './RivalImportDialog.jsx'
+import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
-import { createRivalClientStore } from './rival-client-store.js'
-import { convertRivalPost, refreshAllRivalAccounts, removeRivalAccount, refreshRivalAccount } from './rival-api.js'
+import { toRivalPost } from './rival-filter.js'
 import { injectRivalStyles } from './rival-styles.js'
 
 /**
  * Platform filter options, built from the module's own platform names.
  *
- * Exported because the shell renders this dropdown: the account list and the
- * filter that narrows it have to offer the same platforms in the same order.
+ * Exported because the shell renders this dropdown: the account filter and the
+ * platform filter that narrows the same grid have to offer the platforms in the
+ * same order.
  */
 export function buildRivalPlatformOptions(t) {
   return [
@@ -35,189 +36,126 @@ export function buildRivalPlatformOptions(t) {
   ]
 }
 
-export function RivalAccountsPanel({ t, active = true, query = '', platform = '' }) {
-  const storeRef = useRef(null)
-  if (!storeRef.current) storeRef.current = createRivalClientStore()
-  const store = storeRef.current
+/**
+ * Why the grid has nothing in it.
+ *
+ * Four distinct answers, because「no works」is not one situation: there may be no
+ * monitored account at all, the accounts may have nothing collected yet, the
+ * filters may have excluded everything, or the first request may still be in
+ * flight. Only the last one may show a skeleton.
+ * @param {Record<string, any>} feed
+ * @returns {'loading' | 'no-accounts' | 'filtered' | 'no-posts'}
+ */
+export function feedEmptyKind(feed) {
+  if (feed.loading) return 'loading'
+  if (feed.accounts.length === 0) return 'no-accounts'
+  if (feed.emptySelection || feed.error || feed.query || feed.platform) return 'filtered'
+  return 'no-posts'
+}
 
-  const [snapshot, setSnapshot] = useState(() => store.getState())
+/**
+ * @param {{
+ *   t: (key: string) => string,
+ *   active?: boolean,
+ *   query?: string,
+ *   platform?: string,
+ *   feed: Record<string, any>,
+ *   onImported: () => void,
+ * }} props
+ */
+export function RivalAccountsPanel(props) {
+  const { t, active = true, feed, onImported } = props
   const [importOpen, setImportOpen] = useState(false)
-  const [busyPostId, setBusyPostId] = useState(null)
+  const [detailRow, setDetailRow] = useState(null)
   const [notice, setNotice] = useState(null)
-  const [busyAccount, setBusyAccount] = useState(false)
-
-  useEffect(() => store.subscribe(setSnapshot), [store])
+  const [busyId, setBusyId] = useState(null)
 
   useEffect(() => {
     injectRivalStyles()
   }, [])
 
+  const handleDetail = useCallback((row) => setDetailRow(row), [])
+
   /**
-   * Reload the account list under whatever the shell's filter row holds.
+   * 「立即复刻」reuses the module's existing "add to session" orchestrator.
    *
-   * Every reload path goes through here: a refresh or a removal that reloaded
-   * unfiltered would leave the row showing one thing and the list another.
+   * That chain already holds this feature's red lines — the library tab stays
+   * open, the canvas is untouched, nothing is sent — and it is the only
+   * compliant path from a monitored work to a replication, so this component
+   * reports the outcome instead of reimplementing the mount.
    */
-  const reloadAccounts = useCallback(() => store.loadAccounts({
-    q: query || undefined,
-    platform: platform || undefined,
-  }), [store, query, platform])
-
-  /**
-   * Load when the tab becomes active and whenever the filter row changes. The
-   * `active` guard keeps a hidden tab from polling: a workbench panel that
-   * fetches while the user is elsewhere is a background cost with no visible
-   * benefit.
-   */
-  useEffect(() => {
-    if (!active) return
-    void reloadAccounts()
-  }, [active, reloadAccounts])
-
-  useEffect(() => {
-    void store.loadStatus()
-  }, [store, snapshot.phase])
-
-  useEffect(() => () => store.stopPolling(), [store])
-
-  const handleSelect = useCallback((id) => {
-    void store.selectAccount(id)
-  }, [store])
-
-  const handleRefreshAll = useCallback(async () => {
-    setBusyAccount(true)
-    setNotice(null)
+  const handleReplicate = useCallback(async (card) => {
+    const ticket = String(card.id)
+    setBusyId(ticket)
     try {
-      const res = await refreshAllRivalAccounts()
-      if (!res?.ok) {
-        setNotice({ key: res?.body?.code === 'refresh-budget-exhausted'
-          ? 'rivalAccounts.refresh.budgetPaused'
-          : 'rivalAccounts.error.cloud', detail: res?.body?.error })
+      const result = await addRivalPostToSession(toRivalPost(card), { id: card.account_id })
+      if (!result?.ok && result?.error !== 'busy') {
+        setNotice({ key: result?.key || 'rivalAccounts.post.attachFailed' })
         return
       }
-      const queued = res.body?.data?.queued || []
-      for (const id of queued) store.startPolling(id)
-      await reloadAccounts()
-    } finally {
-      setBusyAccount(false)
-    }
-  }, [store, reloadAccounts])
-
-  const handleRefreshOne = useCallback(async (id) => {
-    const res = await refreshRivalAccount(id)
-    if (!res?.ok) {
-      setNotice({
-        key: res?.body?.code === 'manual-cooldown'
-          ? 'rivalAccounts.refresh.cooldown'
-          : res?.body?.code === 'refresh-budget-exhausted'
-            ? 'rivalAccounts.refresh.budgetPaused'
-            : 'rivalAccounts.error.cloud',
-        detail: res?.body?.error,
-      })
-      return
-    }
-    setNotice(null)
-    store.startPolling(id)
-  }, [store])
-
-  const handleRemove = useCallback(async (id) => {
-    await removeRivalAccount(id)
-    await reloadAccounts()
-  }, [reloadAccounts])
-
-  const handleTogglePotential = useCallback((next) => {
-    void store.togglePotential(next)
-  }, [store])
-
-  /**
-   * "Add to session": the whole red-line contract lives in the orchestrator; the
-   * panel only reports the outcome.
-   */
-  const handleAddToChat = useCallback(async (post, opts = {}) => {
-    setBusyPostId(post.id)
-    try {
-      const account = store.getState().accounts.find((row) => row.id === post.account_id)
-        || store.getState().accounts.find((row) => row.id === store.getState().selectedId)
-      const result = await addRivalPostToSession(post, account || {}, { preferVideo: opts.preferVideo === true })
-      if (!result.ok && result.error !== 'busy') setNotice({ key: result.key || 'rivalAccounts.post.attachFailed' })
-      else setNotice(null)
-    } finally {
-      setBusyPostId(null)
-    }
-  }, [store])
-
-  const handleToInspiration = useCallback(async (post) => {
-    const accountId = store.getState().selectedId
-    setBusyPostId(post.id)
-    try {
-      const res = await convertRivalPost(accountId, post.id, { auto_analyze: true })
-      if (!res?.ok) {
-        setNotice({ key: 'rivalAccounts.error.cloud', detail: res?.body?.error })
-        return
-      }
-      store.markPostInLibrary(post.id, { inspiration_id: res.body?.data?.inspiration_id })
       setNotice(null)
     } finally {
-      setBusyPostId(null)
+      setBusyId(null)
     }
-  }, [store])
+  }, [])
 
-  const accounts = Array.isArray(snapshot.accounts) ? snapshot.accounts : []
-  const paused = snapshot.status?.paused || { global: false, reason: null }
+  const emptyKind = feedEmptyKind(feed)
 
   return (
     <div className="omnimux-rival-root" data-active={active ? 'true' : 'false'}>
       {notice ? (
         <div className="omnimux-rival-notice" role="status" onClick={() => setNotice(null)}>
-          <p>{t(notice.key)}{notice.detail ? `：${notice.detail}` : ''}</p>
+          <p>{t(notice.key)}</p>
         </div>
       ) : null}
-      {snapshot.error ? (
+      {feed.error ? (
         <div className="omnimux-rival-notice is-error" role="alert">
-          <p>{snapshot.error}</p>
+          <p>{feed.error}</p>
         </div>
       ) : null}
-      <div className="omnimux-rival-columns">
-        <RivalAccountList
-          accounts={accounts}
-          selectedId={snapshot.selectedId}
-          t={t}
-          onSelect={handleSelect}
-          onImport={() => setImportOpen(true)}
-          onRefreshAll={handleRefreshAll}
-          onRefreshOne={handleRefreshOne}
-          onRemove={handleRemove}
-          refreshing={busyAccount}
-          paused={paused}
-        />
-        <RivalPostPanel
-          t={t}
-          posts={snapshot.posts}
-          loading={snapshot.postsLoading}
-          carryOver={snapshot.carryOver}
-          onlyPotential={snapshot.onlyPotential}
-          onTogglePotential={handleTogglePotential}
-          onAddToChat={handleAddToChat}
-          onToInspiration={handleToInspiration}
-          busyPostId={busyPostId}
-        />
+
+      <div className="omnimux-rival-summary" data-rival-summary="true">
+        <span className="omnimux-rival-summary-text">{t('rivalFeed.summary')}</span>
+        <span className="omnimux-rival-summary-count">
+          {t('rivalFeed.count').replace('{n}', String(feed.total || 0))}
+        </span>
       </div>
-      {accounts.length > 0 && !snapshot.selectedId ? (
-        <div className="omnimux-rival-empty">
-          <Button variant="outline" size="sm" onClick={() => handleSelect(accounts[0].id)}>
-            {t('rivalAccounts.posts.selectHint')}
-          </Button>
-        </div>
-      ) : null}
+
+      <RivalFeedGrid
+        t={t}
+        cards={feed.cards}
+        loading={feed.loading}
+        loadingMore={feed.loadingMore}
+        emptyKind={emptyKind}
+        onResetFilters={feed.resetAccounts}
+        onImport={() => setImportOpen(true)}
+        onDetail={handleDetail}
+        onReplicate={handleReplicate}
+        replicateBusy={busyId}
+      />
+
       <RivalImportDialog
         open={importOpen}
         t={t}
         onClose={() => setImportOpen(false)}
         onImported={async () => {
           setImportOpen(false)
-          await reloadAccounts()
+          onImported?.()
         }}
       />
+
+      {detailRow ? (
+        <RivalPostPreviewModal
+          row={detailRow}
+          t={t}
+          busy={busyId === String(detailRow.id)}
+          onClose={() => setDetailRow(null)}
+          onReplicate={(row) => {
+            setDetailRow(null)
+            void handleReplicate(row)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

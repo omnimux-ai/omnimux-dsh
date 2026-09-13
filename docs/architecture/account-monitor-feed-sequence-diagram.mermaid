@@ -1,0 +1,70 @@
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant Sec as InspirationSection
+    participant Hook as useRivalFeed
+    participant Filter as RivalAccountFilter
+    participant Grid as RivalFeedGrid
+    participant Card as InspirationCoverCard
+    participant API as rival-api.js
+    participant Srv as RivalDispatcher / Service
+    participant Store as RivalAccountsStore
+
+    Note over Sec,Srv: A. 首次进入「账号监控」Tab（骨架屏）
+    U->>Sec: 点击 Tab（id=rivals）
+    Sec->>Hook: useRivalFeed({ enabled: true, q, platform })
+    Hook-->>Grid: phase=loading, items=[]
+    Grid-->>U: 10 个 9:16 灰阶扫光骨架块
+    Hook->>API: fetchRivalAccounts({})
+    API->>Srv: GET /rival-accounts
+    Srv->>Store: listAccounts() + readPosts()
+    Store-->>Srv: Account[]
+    Srv-->>API: { items, total }
+    API-->>Hook: accounts（含 post_count / avatar_url / profile_url）
+    Hook->>API: fetchRivalFeed({ accounts:'', q, platform, sort, page:1 })
+    API->>Srv: GET /rival-accounts/posts
+    Srv->>Store: readPostsFile(每个监控账号)
+    Store-->>Srv: 各账号缓存作品
+    Srv-->>API: { items: FeedRow[], total, page, has_more }
+    API-->>Hook: FeedRow[]
+    Hook-->>Grid: phase=ready, items=FeedRow[]
+    Grid->>Card: 每行一张 9:16 卡片（复用）
+    Card-->>U: 封面网格 + 悬停播放键 / 详情 / 立即复刻
+
+    Note over U,Filter: B. 账号多选筛选（勾选 / 反选 / 重置）联动过滤
+    U->>Filter: 点击触发按钮（账号: 全部 (12)）
+    Filter-->>U: 展开毛玻璃多选面板
+    U->>Filter: 勾选「@alice」
+    Filter->>Hook: toggleAccount('ra_alice')
+    Note right of Hook: mode=all → 物化子集 = 全部 \ {alice}
+    Hook-->>Filter: 触发按钮文案 → 已选 11 个账号
+    Hook->>API: fetchRivalFeed({ accounts:'ra_b,ra_c,…', page:1 })
+    API->>Srv: GET /rival-accounts/posts?accounts=…
+    Srv-->>Hook: 过滤后的 FeedRow[]
+    Hook-->>Grid: items 更新
+    Grid-->>U: 网格立即联动（不整屏 loading，仅首屏骨架）
+    U->>Filter: 点击「反选」
+    Filter->>Hook: invertAccounts()
+    Note right of Hook: base = 全部 → next = allIds \ base
+    Hook->>API: fetchRivalFeed（新的 accounts 集合）
+    U->>Filter: 点击「重置」
+    Filter->>Hook: resetAccounts()
+    Note right of Hook: mode=all，selectedIds=∅ → 显示全部
+    Hook->>API: fetchRivalFeed({ accounts:'' })
+    API-->>Hook: 全部监控账号的作品
+
+    Note over U,Filter: C. 悬停外跳主页（事件防冒泡隔离）
+    U->>Filter: 悬停在账号行上
+    Filter-->>U: 昵称右侧平滑显现细线外跳图标
+    U->>Filter: 点击外跳图标
+    Filter->>Filter: preventDefault + stopPropagation（onClick / onMouseDown / onPointerDown / onKeyDown）
+    Filter->>U: window.open(profile_url, '_blank', 'noopener,noreferrer')
+    Note right of Filter: 复选勾选状态不变（断言 selected 计数不变）
+
+    Note over U,Card: D. 详情与立即复刻
+    U->>Card: 悬停卡片 → 点击「详情」
+    Card->>Grid: onDetail(row)
+    Grid->>U: RivalPostPreviewModal（封面 / 指标 / 作者 / 原帖）
+    U->>Grid: 点击「立即复刻」
+    Grid->>API: 复用 addRivalPostToSession（既有入会话链路）
+    API-->>U: 附件挂载到当前会话
