@@ -7,7 +7,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@yuxianglin/dsh-bridge-browser'
+const PACKAGE_NAME = 'omnimux-browser'
 
 /** Cordis companion plugin name. */
 export const name = 'bridge-browser-invariant'
