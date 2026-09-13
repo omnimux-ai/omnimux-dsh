@@ -67,6 +67,36 @@ export function pickPath(kind) {
 }
 
 /**
+ * Cheap client-side check so a bad paste gets an instant message. The server
+ * re-validates every link it is asked to fetch.
+ * @param {unknown} value
+ */
+export function isHttpUrl(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return false
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`
+  try {
+    const parsed = new URL(candidate)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Read a landing page into a product draft. Writes nothing to the library —
+ * the dialog stays the only writer.
+ * @param {string} url
+ * @param {'physical' | 'digital'} [kind]
+ */
+export function importFromLink(url, kind) {
+  return productsRequest('/omnimux/products/import-from-link', {
+    method: 'POST',
+    body: kind === 'digital' || kind === 'physical' ? { url, kind } : { url },
+  })
+}
+
+/**
  * Optional image preview (read-only stream). Card fallback is the first glyph.
  * @param {string} productId
  * @param {string} mediaId

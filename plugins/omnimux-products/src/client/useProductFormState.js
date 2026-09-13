@@ -74,6 +74,35 @@ export function appendCategoryTag(current, rawTag) {
   return exists ? current : [...current, tag]
 }
 
+/**
+ * Import draft → form patch. Parsed fields are cleaned to strings; empty values
+ * stay empty so an import never wipes what the user already typed.
+ * @param {Record<string, unknown> | null | undefined} data
+ */
+export function importedPatchOf(data) {
+  const source = data && typeof data === 'object' ? data : {}
+  /** @param {string} key */
+  const text = (key) => (typeof source[key] === 'string' ? source[key].trim() : '')
+  const categories = Array.isArray(source.categories)
+    ? source.categories
+      .filter((row) => typeof row === 'string')
+      .map((row) => row.trim())
+      .filter((row) => row !== '')
+    : []
+  return {
+    name: text('name'),
+    selling: text('selling_points'),
+    audience: text('target_audience'),
+    brand: text('brand'),
+    features: text('features'),
+    price: text('price'),
+    sku: text('sku'),
+    promotion: text('promotion'),
+    link: text('link'),
+    categories,
+  }
+}
+
 export function buildPayload(params) {
   const { name, kind, link, categories, media, coverId, physical, digital } = params
   const body = {
@@ -267,6 +296,25 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
       setStrategyOpen: strategyState.setStrategyOpen,
     },
     actions: {
+      /** Fill every parsed field at once; tags merge into the existing list. */
+      applyImportedData: (data) => {
+        const patch = importedPatchOf(data)
+        if (patch.name) base.setters.setName(patch.name)
+        if (patch.selling) base.setters.setSelling(patch.selling)
+        if (patch.audience) base.setters.setAudience(patch.audience)
+        if (patch.brand) base.setters.setBrand(patch.brand)
+        if (patch.features) base.setters.setFeatures(patch.features)
+        if (patch.price) base.setters.setPrice(patch.price)
+        if (patch.sku) base.setters.setSku(patch.sku)
+        if (patch.promotion) base.setters.setPromotion(patch.promotion)
+        if (patch.link) base.setters.setLink(patch.link)
+        if (patch.categories.length > 0) {
+          mediaState.setCategories((current) => patch.categories.reduce(
+            (list, tag) => appendCategoryTag(list, tag),
+            current,
+          ))
+        }
+      },
       openStrategy: strategyState.openStrategy,
       patchStrategy: strategyState.patchStrategy,
       handleSelectPhysical: () => strategyState.handleSelectPhysical(base.setters.setKind),
