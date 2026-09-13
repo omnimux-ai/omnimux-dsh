@@ -6,7 +6,7 @@ const JS_SYNTAX_EXTENSIONS = new Set(['.js', '.mjs', '.cjs'])
 const TEST_RE = /(?:^|[./\\])[^/\\]*\.(?:test|spec)\.[^/\\]+$/
 const RAW_COLOR_RE = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g
 const VENDOR_ENGINE_RE = /(?:^|[\\/])engine[\\/]openreel(?:[\\/]|$)/
-const CONTENT_PRESET_RE = /^(?:plugins[\\/]omnimux-clip[\\/])?src[\\/]client[\\/]store[\\/]timelineTypes\.js$/
+const CONTENT_PRESET_RE = /(?:timelineTypes\.js|pixel-avatar-constants\.js)$/
 const JSX_TAG_RE = /<[A-Za-z][A-Za-z0-9._-]*(?:\s+[^>]*)?(?:\/>|>[^<]*<\/[A-Za-z][A-Za-z0-9._-]*>)/
 const JSX_RETURN_RE = /return\s+<[A-Za-z][A-Za-z0-9._-]*/
 const ONE_SHOT_FEEDBACK_RE = /\bsetTimeout\s*\(\s*(?:\(\s*\)\s*=>|\bfunction\b)[^{}]*(?:setCopied|setStatus|setNotice|setMessage|setFeedback|setShowToast|toast|copied|notice)\b[^{}]*,\s*(?:[1-9][0-9]{2,3})\s*\)/

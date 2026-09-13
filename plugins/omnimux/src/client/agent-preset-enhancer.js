@@ -21,7 +21,7 @@
  * `[class*=…]` suffix, on an ARIA role, or on the markers this module writes.
  */
 
-import { blobatarUri } from 'blobatar/uri'
+import { generatePixelAvatarDataUrl } from './pixel-avatar.js'
 
 /* ── Markers written onto the official DOM ───────────────────────────────── */
 
@@ -108,7 +108,61 @@ export const AGENT_PRESET_NAMES = Object.freeze({
   '日常工作': 'daily-work',
   WorkAssistant: 'daily-work',
   'daily-work': 'daily-work',
+  'Shopee运营专家': 'shopee-ops-expert',
+  'Shopee 运营专家': 'shopee-ops-expert',
+  'Shopee Ops Expert': 'shopee-ops-expert',
+  'shopee-ops-expert': 'shopee-ops-expert',
+  'YouTube创作者专家': 'youtube-creator-expert',
+  'YouTube 创作者专家': 'youtube-creator-expert',
+  'YouTube Creator Expert': 'youtube-creator-expert',
+  'youtube-creator-expert': 'youtube-creator-expert',
+  '亚马逊运营专家': 'amazon-ops-expert',
+  '亚马逊运营专员': 'amazon-ops-expert',
+  'Amazon Ops Expert': 'amazon-ops-expert',
+  'amazon-ops-expert': 'amazon-ops-expert',
+  'TikTok Shop运营专家': 'tiktok-shop-ops-expert',
+  'TikTok Shop 运营专家': 'tiktok-shop-ops-expert',
+  'TikTok Shop': 'tiktok-shop-ops-expert',
+  'TikTok Shop Ops Expert': 'tiktok-shop-ops-expert',
+  'tiktok-shop-ops-expert': 'tiktok-shop-ops-expert',
+  '媒体创作者': 'media-creator',
+  'Media Creator': 'media-creator',
+  'media-creator': 'media-creator',
+  'TikTok电商专家': 'tiktok-ecommerce-expert',
+  'TikTok Ecommerce Expert': 'tiktok-ecommerce-expert',
+  'tiktok-ecommerce-expert': 'tiktok-ecommerce-expert',
 })
+
+/**
+ * Known market expert covers from omnimux-market.
+ */
+export const BUILTIN_EXPERT_COVERS = Object.freeze({
+  'shopee-ops-expert': 'catalog/covers/expert-shopee-ops.png',
+  'youtube-creator-expert': 'catalog/covers/expert-youtube-creator.png',
+  'amazon-ops-expert': 'catalog/covers/expert-amazon-ops.png',
+  'tiktok-shop-ops-expert': 'catalog/covers/expert-tiktok-shop-ops.png',
+  'media-creator': 'catalog/covers/expert-media-creator.png',
+  'html-generator': 'catalog/covers/expert-html-generator.png',
+  'amazon-operations-expert': 'catalog/covers/expert-amazon-operations.png',
+  'tiktok-ecommerce-expert': 'catalog/covers/expert-tiktok-ecommerce.png',
+})
+
+/**
+ * Resolve a preset avatar URL or cover path to a browser-loadable image URI.
+ * @param {string} url
+ * @returns {string}
+ */
+export function resolvePresetCoverUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  if (typeof globalThis !== 'undefined' && typeof globalThis.iconSrc === 'function') {
+    try {
+      const res = globalThis.iconSrc(url)
+      if (res) return res
+    } catch {}
+  }
+  return '/api/plugin/omnimux-market/icon?url=' + encodeURIComponent(url)
+}
 
 /**
  * Configured avatars, keyed by preset id or display name. A host (or a
@@ -208,18 +262,19 @@ export function resolveAgentPresetAvatar(label, opts = {}) {
   const overrides = { ...readAgentPresetAvatarOverrides(), ...(opts.overrides ?? {}) }
   const configured = configuredAvatarFor(overrides, id, text)
   if (configured) return { id, label: text, src: configured }
-  const spec = AGENT_PRESET_AVATARS[id] ?? {}
+
+  const builtinCover = BUILTIN_EXPERT_COVERS[id]
+  if (builtinCover) {
+    return { id, label: text, src: resolvePresetCoverUrl(builtinCover) }
+  }
+
   const size = Number.isFinite(Number(opts.size)) && Number(opts.size) > 0
     ? Math.round(Number(opts.size))
     : MENU_AVATAR_SIZE_PX
   return {
     id,
     label: text,
-    src: blobatarUri(id, {
-      ...(spec.hue === undefined ? {} : { hue: spec.hue }),
-      background: 'circle',
-      size,
-    }),
+    src: generatePixelAvatarDataUrl(id, { size }),
   }
 }
 
@@ -319,6 +374,10 @@ export function syncSeatAvatar(doc = globalThis.document, seat = findAgentPreset
     avatar.setAttribute('aria-hidden', 'true')
     avatar.setAttribute('width', String(SEAT_AVATAR_SIZE_PX))
     avatar.setAttribute('height', String(SEAT_AVATAR_SIZE_PX))
+    avatar.onerror = () => {
+      const fallback = generatePixelAvatarDataUrl(resolved.id, { size: SEAT_AVATAR_SIZE_PX })
+      if (avatar.getAttribute('src') !== fallback) avatar.setAttribute('src', fallback)
+    }
     seat.insertBefore(avatar, seat.firstChild)
   }
   if (avatar.getAttribute('src') !== resolved.src) avatar.setAttribute('src', resolved.src)
@@ -410,6 +469,10 @@ function decorateMenuItem(doc, item) {
     avatar.setAttribute('aria-hidden', 'true')
     avatar.setAttribute('width', String(MENU_AVATAR_SIZE_PX))
     avatar.setAttribute('height', String(MENU_AVATAR_SIZE_PX))
+    avatar.onerror = () => {
+      const fallback = generatePixelAvatarDataUrl(resolved.id, { size: MENU_AVATAR_SIZE_PX })
+      if (avatar.getAttribute('src') !== fallback) avatar.setAttribute('src', fallback)
+    }
     item.insertBefore(avatar, item.firstChild)
   }
   if (avatar.getAttribute('src') !== resolved.src) avatar.setAttribute('src', resolved.src)
