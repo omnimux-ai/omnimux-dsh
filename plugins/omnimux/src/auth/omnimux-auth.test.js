@@ -47,6 +47,20 @@ describe('omnimux auth parsing', () => {
     assert.equal(/access_token|pat-secret|sk-|ada@example|AFF|cus_x/.test(dumped), false)
   })
 
+  it('parses role and sets is_admin for admin and common users', () => {
+    const admin = stripProfile({ id: 1, username: 'root', role: 10 })
+    assert.equal(admin.role, 10)
+    assert.equal(admin.is_admin, true)
+
+    const superAdmin = stripProfile({ id: 2, username: 'owner', role: 100 })
+    assert.equal(superAdmin.role, 100)
+    assert.equal(superAdmin.is_admin, true)
+
+    const common = stripProfile({ id: 3, username: 'guest', role: 1 })
+    assert.equal(common.role, 1)
+    assert.equal(common.is_admin, false)
+  })
+
   it('parses device code and token outcomes', () => {
     const started = parseDeviceCodeResponse({
       success: true,

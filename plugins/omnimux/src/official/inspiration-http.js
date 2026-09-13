@@ -83,6 +83,16 @@ export function createInspirationDispatcher(deps = {}) {
     if (method !== 'GET') {
       try {
         assertLocalWrite(req)
+        if (deps.identity && typeof deps.identity.require === 'function') {
+          const profile = await deps.identity.require()
+          const isAdmin = Boolean(profile?.is_admin || (typeof profile?.role === 'number' && profile.role >= 10))
+          if (!isAdmin) {
+            return {
+              status: 403,
+              body: { error: '云端公共灵感库仅限官方管理员管理，普通用户无权修改' },
+            }
+          }
+        }
       } catch (error) {
         return { status: 403, body: { error: error instanceof Error ? error.message : String(error) } }
       }

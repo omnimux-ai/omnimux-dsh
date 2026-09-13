@@ -6,7 +6,7 @@ export const CLIENT_NAME = 'omnimux'
 export const QUOTA_PER_USD = 500000
 export const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
 
-const PROFILE_KEYS = ['id', 'username', 'display_name', 'group', 'quota_usd', 'used_quota_usd']
+const PROFILE_KEYS = ['id', 'username', 'display_name', 'group', 'quota_usd', 'used_quota_usd', 'role', 'is_admin']
 
 /**
  * @param {string} base
@@ -46,6 +46,10 @@ export function stripProfile(self) {
   if (typeof row.username === 'string') out.username = row.username
   if (typeof row.display_name === 'string') out.display_name = row.display_name
   if (typeof row.group === 'string') out.group = row.group
+  if (typeof row.role === 'number') {
+    out.role = row.role
+    out.is_admin = row.role >= 10
+  }
   for (const key of Object.keys(out)) {
     if (!PROFILE_KEYS.includes(key)) delete out[key]
   }
