@@ -211,3 +211,48 @@ export function FileTextIcon({ size = 13, className }: { size?: number; classNam
     </SvgIcon>
   )
 }
+
+export function SearchIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </SvgIcon>
+  )
+}
+
+export function MenuIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </SvgIcon>
+  )
+}
+
+export function ArrowUpIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="m5 12 7-7 7 7" />
+      <path d="M12 19V5" />
+    </SvgIcon>
+  )
+}
+
+export function MessageSquareIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </SvgIcon>
+  )
+}
+
+export function PlusIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </SvgIcon>
+  )
+}
