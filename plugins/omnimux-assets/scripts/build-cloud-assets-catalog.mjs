@@ -402,6 +402,284 @@ function makeAsset(ctx, spec) {
 // ---------------------------------------------------------------------------
 
 /**
+ * The eight professional dimensions a digital human is catalogued on.
+ *
+ * They are orthogonal: every row carries exactly one value per dimension, the
+ * dimensions partition the same 329 rows eight different ways, and every option
+ * list therefore sums back to the category total. This table furnishes the
+ * dimension titles and the option labels; the builder turns the resolvers below
+ * into the manifest's per-option counts, so no chip count is ever hand-kept.
+ *
+ * 姓名 is the only dimension whose option list is not enumerated here: it has
+ * one option per given name in the source (144 of them), ranked by how many
+ * avatars that person has and cut off with `NAME_OPTION_LIMIT`.
+ */
+export const CHARACTER_DIMENSIONS = [
+  { id: 'gender', zh: '性别', en: 'Gender', defaults: [] },
+  { id: 'age', zh: '年龄', en: 'Age', defaults: [] },
+  { id: 'figure', zh: '体型', en: 'Figure', defaults: [] },
+  { id: 'name', zh: '姓名', en: 'Name', defaults: [] },
+  { id: 'industry', zh: '行业', en: 'Industry', defaults: ['General Lifestyle'] },
+  { id: 'scene', zh: '场景', en: 'Scene', defaults: ['Indoor/Studio'] },
+  { id: 'pose', zh: '姿势', en: 'Pose', defaults: ['Frontal'] },
+  { id: 'outfit', zh: '服装风格', en: 'Outfit style', defaults: ['Casual/Lifestyle'] },
+]
+
+/** How many 姓名 options the manifest carries, ranked by avatar count. */
+const NAME_OPTION_LIMIT = 40
+
+/**
+ * Body-type words the source actually writes. A row whose text names no body
+ * type is 匀称 (average) — the catalogue's own middle — so the three options
+ * still describe every row rather than leaving a silent fourth bucket.
+ */
+const FIGURE_WORDS = [
+  ['Curvy', ['curvy', 'plump', 'plus size']],
+  ['Slim', ['slim', 'thin', 'lean', 'petite']],
+]
+
+/**
+ * The young-adult wording, tested before the 中年 signals below. The catalogue
+ * writes age only through these words, so everything else is read from the
+ * persona a row presents (see `MIDDLE_AGED_SIGNALS`).
+ */
+const YOUTH_WORDS = ['teen', 'student', ' kid ', 'young', 'youth', 'child']
+
+/**
+ * Personas that read as 中年 in the source: the talk-host, teaching and
+ * business-presenting roles, plus the maturity cues the catalogue does write (a
+ * market walkabout, a balcony, a dressing room). Each signal is a persona the
+ * catalogue names, not a guess about how someone looks, and a row that carries
+ * none of them is 青年 — which is what makes the dimension total 329.
+ */
+const MIDDLE_AGED_SIGNALS = [
+  'podcast', 'storyteller', 'classroom', 'education', 'office', 'marketing',
+  'market', 'balcony', 'mirror', 'vanity',
+]
+
+/**
+ * Scene words, most specific first. The first list that matches wins, so a
+ * podcast studio is a 播客录音棚 even though it is also an indoor room, and the
+ * tail of the list is only reached by a row whose text names no place at all.
+ */
+const SCENE_SIGNALS = [
+  ['Podcast Studio', ['podcast']],
+  ['Car', [' car ', ' cars ', 'car selfie']],
+  ['Living Room', ['living room', 'livingroom', ' living ', ' sofa ']],
+  ['Bedroom', ['bedroom', ' bed ']],
+  ['Outdoor', ['outdoor', 'outside', ' park ', 'street', 'balcony', 'seaside', ' court ', 'sunshine', 'beach', 'shore']],
+  ['Bathroom', ['bathroom', 'washroom', 'shower', ' bath ']],
+  ['Office', ['office', 'classroom', 'lobby', 'corridor']],
+  ['Kitchen', ['kitchen', 'cloakroom', 'study', 'bookshelf']],
+  ['Cafe', ['cafe', 'coffee']],
+]
+
+/**
+ * Pose words, most specific first: a selfie frame is a selfie even when the
+ * person sits down for it, and a standing interview is 站立 rather than 正面.
+ */
+const POSE_SIGNALS = [
+  ['Selfie', ['selfie', 'mirror', 'holding phone', 'plain background', 'white background', 'by the window']],
+  ['Sitting', ['sitting', ' sofa ', 'resting', 'laptop', 'christmas', ' seated ']],
+  ['Standing', ['standing', 'arms crossed', 'armscross']],
+]
+
+/**
+ * Outfit words, most specific first. 节日造型 wins over the workplace reading of
+ * a costume, and 商务正式 is read from the setting the source names rather than
+ * from a garment word it never writes.
+ */
+const OUTFIT_SIGNALS = [
+  ['Holiday/Costume', ['christmas', 'costume', 'holiday', 'festival', 'santa']],
+  ['Business/Formal', ['office', 'marketing']],
+  ['Fashion/Chic', ['fashion', 'dressing', 'mirror', 'makeup', 'beauty', 'vanity']],
+]
+
+/**
+ * Industry words. 游戏电竞 is tested first so an esports room is not read as
+ * entertainment hosting, and the tail is the catalogue's own catch-all.
+ */
+const INDUSTRY_SIGNALS = [
+  ['Gaming & Tech', ['esports', 'gaming', ' game ']],
+  ['Podcast & Media', ['podcast', 'storyteller']],
+  ['Education', ['classroom', 'education']],
+  ['Marketing & Ads', ['marketing', 'office', 'lobby', 'corridor']],
+  ['Beauty & Fashion', ['beauty', 'fashion', 'makeup', 'mirror', 'dressing', 'vanity', 'cloakroom']],
+]
+
+/** The order a dimension's options are listed in, its default last. */
+const DIMENSION_OPTIONS = {
+  gender: ['Female', 'Male'],
+  age: ['Youth', 'Middle-aged'],
+  figure: ['Slim', 'Average', 'Curvy'],
+  industry: [...INDUSTRY_SIGNALS.map(([label]) => label), 'General Lifestyle'],
+  scene: [...SCENE_SIGNALS.map(([label]) => label), 'Indoor/Studio'],
+  pose: [...POSE_SIGNALS.map(([label]) => label), 'Frontal'],
+  outfit: [...OUTFIT_SIGNALS.map(([label]) => label), 'Casual/Lifestyle'],
+}
+
+/**
+ * The text a dimension is resolved from: the folder name, the display name and
+ * the source's own tag list, all folded to a space-delimited lowercase slug so a
+ * word match cannot land inside a longer word (`in_car` is a car, `Carlie` is
+ * not).
+ * @param {{ folder: string, name: string, tags: string[] }} input
+ */
+function dimensionHaystack(input) {
+  const joined = [input.folder, input.name, ...input.tags].join(' ')
+  return ` ${joined.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()} `
+}
+
+/** @param {string} haystack @param {string[]} words */
+function mentions(haystack, words) {
+  return words.some((word) => haystack.includes(word))
+}
+
+/**
+ * @param {string} haystack
+ * @param {[string, string[]][]} table
+ * @param {string} fallback
+ */
+function firstSignal(haystack, table, fallback) {
+  for (const [label, words] of table) {
+    if (mentions(haystack, words)) return label
+  }
+  return fallback
+}
+
+/**
+ * Resolve all eight dimensions for one avatar.
+ *
+ * The source ships no such fields — `metadata.json` carries only a name, a tag
+ * list and the media URLs — so every value is read from the row's own text with
+ * the tables above. Gender is the one value taken from the given name, which is
+ * where Pippit records whether the presenter is a woman or a man.
+ * @param {{ folder: string, name: string, tags: string[] }} input
+ * @returns {{ given: string, values: Record<string, string> }}
+ */
+export function characterDimensionsOf(input) {
+  const haystack = dimensionHaystack(input)
+  const given = text(input.folder.split('_')[0])
+  const gender = FEMALE_NAMES.has(given) ? 'Female' : MALE_NAMES.has(given) ? 'Male' : 'Female'
+
+  let figure = 'Average'
+  for (const [label, words] of FIGURE_WORDS) {
+    if (mentions(haystack, words)) {
+      figure = label
+      break
+    }
+  }
+
+  return {
+    given,
+    values: {
+      gender,
+      age: mentions(haystack, YOUTH_WORDS) ? 'Youth'
+        : mentions(haystack, MIDDLE_AGED_SIGNALS) ? 'Middle-aged' : 'Youth',
+      figure,
+      name: given,
+      industry: firstSignal(haystack, INDUSTRY_SIGNALS, 'General Lifestyle'),
+      scene: firstSignal(haystack, SCENE_SIGNALS, 'Indoor/Studio'),
+      pose: firstSignal(haystack, POSE_SIGNALS, 'Frontal'),
+      outfit: firstSignal(haystack, OUTFIT_SIGNALS, 'Casual/Lifestyle'),
+    },
+  }
+}
+
+/**
+ * The facet table for one category: for every dimension, every option the rows
+ * actually use, with the number of rows on it.
+ *
+ * An option with no rows is left out rather than listed with a zero, and the
+ * 姓名 list is cut to `NAME_OPTION_LIMIT` by row count so the dimension stays
+ * usable at 144 named people. Counts are computed from the rows, never written
+ * by hand, so they cannot drift from the pages the chips sit above.
+ * @param {CatalogAsset[]} items
+ */
+export function dimensionFacetsOf(items) {
+  /** @type {Map<string, string[]>} */
+  const perId = new Map()
+  for (const row of items) {
+    const dims = row.meta?.dims
+    if (!dims || typeof dims !== 'object') continue
+    for (const dimension of CHARACTER_DIMENSIONS) {
+      const value = text(/** @type {Record<string, unknown>} */ (dims)[dimension.id])
+      if (value === '') continue
+      const bucket = perId.get(dimension.id)
+      if (bucket) bucket.push(value)
+      else perId.set(dimension.id, [value])
+    }
+  }
+
+  return CHARACTER_DIMENSIONS.map((dimension) => {
+    const values = perId.get(dimension.id) ?? []
+    /** @type {Map<string, number>} */
+    const counts = new Map()
+    for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
+    let options = [...counts.entries()].map(([value, total]) => ({ value, total }))
+    if (dimension.id === 'name') {
+      options = options
+        .sort((a, b) => (b.total - a.total) || (a.value < b.value ? -1 : 1))
+        .slice(0, NAME_OPTION_LIMIT)
+        .sort((a, b) => (a.value < b.value ? -1 : 1))
+    } else {
+      // Options keep the declared order so the dropdown reads the same way on
+      // every rebuild, with the dimension's default option last.
+      const order = DIMENSION_OPTIONS[dimension.id] ?? []
+      options.sort((a, b) => order.indexOf(a.value) - order.indexOf(b.value))
+    }
+    return { id: dimension.id, zh: dimension.zh, en: dimension.en, total: values.length, options }
+  })
+}
+
+/**
+ * Scope id of the pre-filtered 角色 shards. A filtered view pages this scope
+ * instead of paging the whole category and filtering client-side, so a chip
+ * selection still costs one request per page.
+ */
+export const CHARACTER_FILTER_SCOPE = 'character_filtered'
+
+/**
+ * The wire token for one combination of dimension values, in dimension order.
+ *
+ * It travels as the `dims` query parameter of the filtered page route rather
+ * than as a catalog directory: the eight dimensions describe 3000+ combinations,
+ * and materializing a shard set per combination would put several megabytes of
+ * nearly-identical rows in the repository to answer a query the Host can serve
+ * from the index it already holds. Each token is `1` followed by its value
+ * slugified, `-` downcased to `_`, and a dimension left on 全部 contributes
+ * nothing.
+ * @param {string[]} values one per dimension, in `CHARACTER_DIMENSIONS` order
+ */
+export function characterFilterKey(values) {
+  return values
+    .filter((value) => text(value) !== '')
+    .map((value) => `1${slugify(value).replace(/-/g, '_')}`)
+    .join('')
+}
+
+/**
+ * Every combination of dimension values present in the rows, keyed by
+ * `characterFilterKey`. Used to prove the filter's own vocabulary is the rows'
+ * vocabulary; the filter itself is served by query, not by these keys.
+ * @param {CatalogAsset[]} items
+ * @returns {Map<string, number>}
+ */
+export function characterFilterScopes(items) {
+  /** @type {Map<string, number>} */
+  const scopes = new Map()
+  for (const row of items) {
+    const dims = row.meta?.dims
+    if (!dims || typeof dims !== 'object') continue
+    const values = CHARACTER_DIMENSIONS.map((dimension) => text(/** @type {Record<string, unknown>} */ (dims)[dimension.id]))
+    if (values.some((value) => value === '')) continue
+    const key = characterFilterKey(values)
+    scopes.set(key, (scopes.get(key) ?? 0) + 1)
+  }
+  return scopes
+}
+
+/**
  * Gender shelf for one avatar, or `''` when the catalogue gives no signal.
  * @param {string} folderName
  */
@@ -439,6 +717,7 @@ export function collectCharacter(ctx, add) {
     const haystack = [entry.name, rawName, ...metaTags].join(' ')
     const gender = genderShelfOf(entry.name)
     const scene = sceneShelfOf(haystack)
+    const profile = characterDimensionsOf({ folder: entry.name, name: rawName, tags: metaTags })
     // Gender leads the membership list, so the primary shelf of a digital human
     // is who they are; the scene rides along as a second filter.
     const dimensions = [scene].filter((value) => value !== '')
@@ -460,6 +739,9 @@ export function collectCharacter(ctx, add) {
         total: Number(meta.total) || null,
         gender: gender || null,
         scene: scene || null,
+        // The eight professional dimensions, one value each. Kept on the row so
+        // the client can filter a page it already holds without another request.
+        dims: profile.values,
       },
     }))
   }
@@ -1093,15 +1375,39 @@ async function main() {
       }
     })
 
-    categoryMeta.push({
+    // A category whose rows carry the eight professional dimensions also
+    // publishes their option counts, so the filter chips are served their
+    // numbers instead of computing them from pages they have not fetched. The
+    // filtered rows themselves come from the Host's `dims` query over
+    // `index.json` — see `characterFilterKey`.
+    const facets = dimensionFacetsOf(items)
+    if (spec.id === 'character') {
+      subCategories.push({
+        id: CHARACTER_FILTER_SCOPE,
+        zh: '筛选结果',
+        en: 'Filtered',
+        total: items.length,
+        pages: Math.max(1, Math.ceil(items.length / PAGE_SIZE)),
+      })
+    }
+
+    const entry = {
       id: spec.id,
       zh: spec.zh,
       en: spec.en,
       total: items.length,
       pages: Math.max(1, Math.ceil(items.length / PAGE_SIZE)),
       sub_categories: subCategories,
-    })
-    log(`[cloud-catalog] ${spec.id.padEnd(10)} ${String(items.length).padStart(5)} rows · ${categoryMeta[categoryMeta.length - 1].pages} page(s)`)
+    }
+    if (facets.some((dimension) => dimension.options.length > 0)) entry.dimensions = facets
+    categoryMeta.push(entry)
+    log(`[cloud-catalog] ${spec.id.padEnd(10)} ${String(items.length).padStart(5)} rows · ${entry.pages} page(s)`)
+    if (entry.dimensions) {
+      const shape = entry.dimensions
+        .map((dimension) => `${dimension.id}:${dimension.options.length}`)
+        .join(' ')
+      log(`[cloud-catalog] ${spec.id.padEnd(10)} dimensions ${shape}`)
+    }
   }
 
   const manifest = {
@@ -1126,6 +1432,9 @@ async function main() {
     const meta = {}
     if (row.meta.source_media_url) meta.source_media_url = row.meta.source_media_url
     if (row.meta.source_cover_url) meta.source_cover_url = row.meta.source_cover_url
+    // The professional dimensions ride along on the server index too, so the
+    // 收藏到本地 path can describe a row with the same vocabulary the chips use.
+    if (row.meta.dims) meta.dims = row.meta.dims
     const entry = {
       id: row.id,
       category: row.category,
@@ -1159,6 +1468,10 @@ async function main() {
     writeJson(outDir, page.relPath, page.body)
     pageFiles += 1
   }
+  // One shard set per dimension combination is deliberately not written: the
+  // eight dimensions describe thousands of combinations, and the filtered rows
+  // are served by the Host's `dims` query over `index.json` instead. Keeping the
+  // catalog to `category/[sub_category]/` shards is what holds it at ~6 MB.
   for (const spec of CATEGORIES) {
     const items = byCategory.get(spec.id) ?? []
     for (const page of pageSpecs(items, spec.id)) {

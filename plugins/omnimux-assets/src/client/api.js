@@ -206,6 +206,23 @@ export function cloudSearch(query) {
 }
 
 /**
+ * One page of 角色 rows filtered by the eight professional dimensions.
+ *
+ * Like search, this is always the Host: the dimensions describe thousands of
+ * combinations, so there is no shard set to point a gateway at and the index the
+ * Host holds is the only place the query can be answered. The envelope is the
+ * same one a page shard carries, so the pager treats both the same way.
+ * @param {{ tokens: string[], limit?: number, offset?: number }} query
+ */
+export function cloudFilter(query) {
+  const params = new URLSearchParams()
+  for (const token of query.tokens ?? []) params.append('dims', token)
+  if (Number.isFinite(query.limit)) params.set('limit', String(query.limit))
+  if (Number.isFinite(query.offset)) params.set('offset', String(query.offset))
+  return assetsRequest(`/omnimux/assets/cloud/filter?${params}`)
+}
+
+/**
  * Read-only preview URL for a cloud asset. `which=cover` asks for the thumbnail,
  * `which=media` for the playable original.
  * @param {string} id

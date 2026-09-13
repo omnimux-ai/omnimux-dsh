@@ -25,6 +25,8 @@ const DEFAULT_CATALOG_DIR = resolve(HERE, '..', 'cloud-catalog')
 const FILE_LOCATOR = 'file:'
 /** Cross-category scope: the client's 全部 tab searches the whole catalog. */
 const ALL_CATEGORY = 'all'
+/** The one category whose rows carry the eight professional dimensions. */
+const CHARACTER_CATEGORY = 'character'
 /** Saving a remote asset to the local library is bounded so one click cannot
  *  pull a multi-gigabyte clip; local copies are trusted and not size-checked. */
 const MAX_REMOTE_SAVE_BYTES = 512 * 1024 * 1024
@@ -283,6 +285,45 @@ export function createCloudCatalog(deps = {}) {
   }
 
   /**
+   * The catalog rows that satisfy a dimension query, paged.
+   *
+   * 角色 is catalogued on eight professional dimensions, and their combination
+   * space is far larger than the catalog should carry as files, so the filtered
+   * view is answered here from `index.json` instead of from a page shard. Both
+   * sides of the comparison are tokenized the same way, so a token the caller
+   * makes up simply matches nothing rather than being trusted.
+   *
+   * @param {{ dims?: string | string[], limit?: number, offset?: number }} query
+   */
+  function filter(query) {
+    if (!ready()) {
+      throw new AssetsError('catalog-unavailable', 'cloud assets catalog is not built; run the build:cloud-catalog script')
+    }
+    const wants = asTokenList(query.dims)
+    if (wants.length === 0) {
+      throw new AssetsError('catalog-filter-invalid', 'a dimension filter needs at least one token')
+    }
+    const limit = Math.min(200, Math.max(1, Number(query.limit) || 24))
+    const offset = Math.max(0, Number(query.offset) || 0)
+    const rows = [.../** @type {Map<string, CatalogIndexRow>} */ (index).values()]
+      .filter((row) => row.category === CHARACTER_CATEGORY)
+      // Every selected dimension must match: the eight chips narrow one query,
+      // so a row has to satisfy all of them, not any one of them.
+      .filter((row) => {
+        const tokens = dimensionTokensOf(row)
+        return wants.every((token) => tokens.includes(token))
+      })
+    const total = rows.length
+    return {
+      total,
+      offset,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      items: rows.slice(offset, offset + limit),
+    }
+  }
+
+  /**
    * Copy (or download) one catalog row's media into the local asset library.
    *
    * Returns the created library asset. A descriptor-only row — an official
@@ -365,6 +406,7 @@ export function createCloudCatalog(deps = {}) {
     getManifest,
     getRow,
     search,
+    filter,
     resolveMedia,
     resolveRowMedia,
     saveToLocal,
@@ -373,6 +415,39 @@ export function createCloudCatalog(deps = {}) {
     /** Diagnostic only: never used to build a path the caller chooses. */
     getSourceRoot: () => sourceRoot,
   }
+}
+
+/** @param {unknown} value */
+function asTokenList(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => asTokenList(entry))
+  }
+  return String(value ?? '')
+    .split(',')
+    .map((token) => token.trim())
+    .filter((token) => token !== '')
+}
+
+/**
+ * The filter tokens one catalog row answers to: every dimension value it carries,
+ * slugged and prefixed. Mirrors `characterFilterKey` in the build script and in
+ * the client, so all three agree on what `1general_lifestyle` means.
+ * @param {CatalogIndexRow} row
+ * @returns {string[]}
+ */
+function dimensionTokensOf(row) {
+  const dims = row?.meta?.dims
+  if (!dims || typeof dims !== 'object') return []
+  return Object.values(dims).map(dimensionToken)
+}
+
+/** @param {unknown} value */
+function dimensionToken(value) {
+  const slug = String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug === '' ? '' : `1${slug.replace(/-/g, '_')}`
 }
 
 /** @param {string} category */

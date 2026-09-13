@@ -125,6 +125,27 @@ export function cleanRemovedSelection(selectedIds, liveAssets) {
 }
 
 /**
+ * How many assets each type holds.
+ *
+ * The count describes the whole library, never the rows a query leaves on
+ * screen: a category chip's number has to hold still while the search box
+ * narrows the grid. Rows without a readable type are skipped rather than
+ * pooled into a bucket nothing can select — the Host normalizes every stored
+ * row onto the known type set, so a typeless row is not reachable by a chip.
+ * @param {Array<{ type?: string }>} assets
+ * @returns {Record<string, number>}
+ */
+export function countAssetsByType(assets) {
+  const counts = {}
+  for (const asset of Array.isArray(assets) ? assets : []) {
+    const type = typeof asset?.type === 'string' ? asset.type.trim() : ''
+    if (type === '') continue
+    counts[type] = (counts[type] ?? 0) + 1
+  }
+  return counts
+}
+
+/**
  * Compute empty state labels for AssetGrid.
  * @param {string} filterType
  * @param {string} query
