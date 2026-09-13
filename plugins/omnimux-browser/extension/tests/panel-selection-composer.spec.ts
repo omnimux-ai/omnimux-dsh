@@ -91,7 +91,7 @@ describe('attaching a page selection in the composer', () => {
     await act(async () => { onSelection?.(selection) })
 
     expect(document.querySelector('.composer-box .page-selection-quote')?.textContent).toContain(selection.text)
-    expect(document.querySelector('.composer-box .page-selection-source')?.textContent).toBe(selection.title)
+    expect(document.querySelector('.composer-box .page-selection-source')).toBeNull()
 
     const composer = document.querySelector<HTMLTextAreaElement>('.composer textarea')!
     await act(async () => {
