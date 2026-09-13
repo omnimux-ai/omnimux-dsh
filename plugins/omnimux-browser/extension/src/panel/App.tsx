@@ -21,7 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, SaveIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, PlatformMarkIcon, SaveIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -2318,7 +2318,7 @@ export function App(): React.JSX.Element {
             title={locale === 'en' ? 'Scroll to top' : '点击滚动回到顶部大卡片'}
           >
             <div className="sticky-bar-badge">
-              <TwitterXIcon size={11} />
+              <PlatformMarkIcon platform={pageScene.platform} size={11} />
             </div>
             <span className="sticky-bar-title">{pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}</span>
           </div>
@@ -2410,7 +2410,7 @@ export function App(): React.JSX.Element {
                     />
                   ) : (
                     <div className="hero-card-cover-placeholder">
-                      <TwitterXIcon size={28} />
+                      <PlatformMarkIcon platform={pageScene.platform} size={28} />
                     </div>
                   )}
                 </div>
@@ -2418,7 +2418,7 @@ export function App(): React.JSX.Element {
                 {/* 2. 平台标识行 (1:1 对标 YouMind 图 2) */}
                 <div className="hero-platform-row">
                   <span className="hero-square-badge">
-                    <TwitterXIcon size={11} />
+                    <PlatformMarkIcon platform={pageScene.platform} size={11} />
                   </span>
                   <span className="hero-platform-text">
                     {pageScene.platformLabel || (pageScene.platform === 'twitter' ? 'X (formerly Twitter)' : (pageScene.title ? 'Web' : 'OmniMux'))}
@@ -2427,7 +2427,7 @@ export function App(): React.JSX.Element {
 
                 {/* 3. 页面大标题 */}
                 <div className="hero-card-title" title={pageScene.title || ''}>
-                  {pageScene.title || (pageScene.author ? `@${pageScene.author} / X` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
+                  {pageScene.title || (pageScene.author ? `@${pageScene.author}` : (locale === 'en' ? 'Active Page' : '当前浏览页面'))}
                 </div>
 
                 {/* 4. 底部半悬浮保存药丸按钮 */}
