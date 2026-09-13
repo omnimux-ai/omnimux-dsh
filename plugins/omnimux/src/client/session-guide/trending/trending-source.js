@@ -26,6 +26,22 @@ export const DEFAULT_TRENDING_SOURCES = Object.freeze([TRENDING_LOCAL_PATH, TREN
  */
 export const TRENDING_SOURCE_PAGE_SIZE = 48
 
+/** 翻页参数名：本地库与云端目录都按 `page` 取窗口（页码从 1 开始）。 */
+export const TRENDING_PAGE_QUERY_KEY = 'page'
+
+/**
+ * 页码归一：只有正整数页号才有意义，其余（缺省 / 0 / 负数 / 非数）一律当第 1 页。
+ *
+ * 无限滚动是**追加**语义：调用方拿到 `hasMore` 为假就必须停下，
+ * 否则同一页会被反复请求，越往下滚越慢。
+ * @param {unknown} raw
+ * @returns {number}
+ */
+export function normalizeTrendingPage(raw) {
+  const page = Number(raw)
+  return Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1
+}
+
 /** 内存缓存：按 query 与 source 存储响应结果，支持 TTL 与 Stale-While-Revalidate。 */
 const TRENDING_CACHE = new Map()
 export const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000 // 默认 5 分钟有效
@@ -35,6 +51,9 @@ const IN_FLIGHT_REQUESTS = new Map()
 
 /**
  * 构造稳定的缓存 key。
+ *
+ * 翻页必须进 key：第 2 页与第 1 页是两份不同的窗口，共用一把 key 会让
+ * 后续页覆盖首页缓存，「滚回顶部再滚下来」就成了重新拉取。
  * @param {object} [opts]
  * @returns {string}
  */
@@ -43,7 +62,7 @@ export function getTrendingCacheKey(opts = {}) {
   const sortedSources = [...sourcePaths].sort().join(';')
   const filters = opts.filters || {}
   const filterKey = `${filters.region || ''}|${filters.industry || ''}|${filters.views || ''}|${filters.type || ''}`
-  return `${sortedSources}::${filterKey}`
+  return `${sortedSources}::${filterKey}::p${normalizeTrendingPage(opts.page)}`
 }
 
 /**
@@ -78,6 +97,22 @@ export function setTrendingCache(key, data, ttlMs = DEFAULT_CACHE_TTL_MS, nowMs 
 export function clearTrendingCache() {
   TRENDING_CACHE.clear()
   IN_FLIGHT_REQUESTS.clear()
+}
+
+/**
+ * 只看缓存、不发网络：给首屏一个同步的初值，避免重新挂载时先闪一屏骨架。
+ *
+ * 与 `getTrendingCache` 的差别是它按「这次加载的入参」自己算 key，
+ * 调用方不必先知道 key 怎么拼；`use-trending-feed` 的初值就是它。
+ *
+ * @param {Parameters<typeof loadTrendingPage>[0]} [opts]
+ * @param {number} [nowMs]
+ * @returns {{ page: object, isStale: boolean } | null}
+ */
+export function peekTrendingCache(opts = {}, nowMs = Date.now()) {
+  const entry = TRENDING_CACHE.get(getTrendingCacheKey(opts))
+  if (!entry) return null
+  return { page: entry.data, isStale: nowMs > entry.expiresAt }
 }
 
 /** 拉取结果状态。 */
@@ -404,6 +439,7 @@ export function buildSourceQuery(filters = {}) {
   const query = new URLSearchParams()
   query.set('sort', 'views')
   query.set('page_size', String(TRENDING_SOURCE_PAGE_SIZE))
+  query.set(TRENDING_PAGE_QUERY_KEY, String(normalizeTrendingPage(filters.page)))
   if (filters.type) query.set('type', String(filters.type))
   const country = String(filters.region || '').trim()
   if (country) query.set('country', country)
@@ -414,25 +450,26 @@ export function buildSourceQuery(filters = {}) {
   return query.toString()
 }
 
-async function fetchSourcePayload(fetchImpl, url, signal) {
+async function fetchSourcePayload(fetchImpl, url, signal, basePath = '') {
   try {
     const res = await fetchImpl(url, { signal })
     if (!res || !res.ok) {
-      return { ok: false, status: res?.status ?? 0, reason: `http-${res?.status ?? 0}` }
+      return { ok: false, basePath, status: res?.status ?? 0, reason: `http-${res?.status ?? 0}` }
     }
     let payload
     try {
       payload = await res.json()
     } catch {
-      return { ok: false, status: res.status, reason: 'bad-json' }
+      return { ok: false, basePath, status: res.status, reason: 'bad-json' }
     }
     const data = payload && typeof payload === 'object' && payload.data ? payload.data : payload
     const rows = Array.isArray(data?.items) ? data.items : null
-    if (!rows) return { ok: false, status: res.status, reason: 'bad-shape' }
-    return { ok: true, rows, total: readFiniteNumber(data?.total) ?? rows.length }
+    if (!rows) return { ok: false, basePath, status: res.status, reason: 'bad-shape' }
+    return { ok: true, basePath, rows, total: readFiniteNumber(data?.total) ?? rows.length }
   } catch (error) {
     return {
       ok: false,
+      basePath,
       status: 0,
       reason: error?.name === 'AbortError' ? 'aborted' : 'network',
     }
@@ -446,18 +483,28 @@ async function fetchSourcePayload(fetchImpl, url, signal) {
  * `unavailable`（接口不通、灵感库没装或未登录）。任何异常都收敛成 `unavailable`，
  * 绝不让板块崩，也绝不回落到编造的样本。
  *
+ * 单页语义：`page` 决定取第几窗口，`hasMore` 由「本页拿到的条数是否填满窗口」判定——
+ * 任一源回满自己的窗口就认为后面还可能有数据（见 `sourcePageSizes`）。
+ * 这条判据同时兜住了「上游忽略 page 参数、每次都回同一批」的情况：
+ * 第二页整页都是旧的，追加去重后不带任何新卡片，调用方的哨兵自然停在末尾，不会空转。
+ *
  * @param {{
  *   fetchImpl?: typeof fetch,
  *   filters?: object,
  *   signal?: AbortSignal,
+ *   page?: number,
  *   sourcePath?: string,
  *   sourcePaths?: string[],
+ *   sourcePageSizes?: Record<string, number>,
  * }} [opts]
- * @returns {Promise<{ status: string, items: Array<object>, total: number, reason?: string }>}
+ * @returns {Promise<{ status: string, items: Array<object>, total: number, page: number, hasMore: boolean, reason?: string }>}
  */
-export async function loadTrendingItems(opts = {}) {
+export async function loadTrendingPage(opts = {}) {
   const fetchImpl = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null)
-  if (!fetchImpl) return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'no-fetch' }
+  const page = normalizeTrendingPage(opts.page)
+  if (!fetchImpl) {
+    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, page, hasMore: false, reason: 'no-fetch' }
+  }
 
   const cacheKey = getTrendingCacheKey(opts)
   const useCache = !opts.forceRefresh && (!opts.fetchImpl || opts.cache === true)
@@ -468,8 +515,9 @@ export async function loadTrendingItems(opts = {}) {
     return cached.data
   }
 
-  // 2. 并发请求去重：防止组件多次重复触发同一 query 的网络拉取
-  if (!opts.signal && useCache && IN_FLIGHT_REQUESTS.has(cacheKey)) {
+  // 2. 并发请求去重：防止组件多次重复触发同一 query 的网络拉取。
+  //    只对首页去重：追加页带 AbortSignal（切筛选要能取消），且与首页不是同一份窗口。
+  if (page === 1 && !opts.signal && useCache && IN_FLIGHT_REQUESTS.has(cacheKey)) {
     return IN_FLIGHT_REQUESTS.get(cacheKey)
   }
 
@@ -480,15 +528,15 @@ export async function loadTrendingItems(opts = {}) {
       const outcomes = await Promise.all(
         sourcePaths.map((basePath) => {
           const isCloud = basePath === TRENDING_CLOUD_PATH
-          const query = buildSourceQuery(isCloud ? { ...opts.filters, type: 'video' } : (opts.filters || {}))
+          const query = buildSourceQuery({ ...(opts.filters || {}), page, ...(isCloud ? { type: 'video' } : {}) })
           const url = `${basePath}?${query}`
-          return fetchSourcePayload(fetchImpl, url, opts.signal)
+          return fetchSourcePayload(fetchImpl, url, opts.signal, basePath)
         }),
       )
 
       const aborted = outcomes.some((o) => !o.ok && o.reason === 'aborted')
       if (aborted) {
-        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'aborted' }
+        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, page, hasMore: false, reason: 'aborted' }
       }
 
       const okOutcomes = outcomes.filter((o) => o.ok)
@@ -498,15 +546,20 @@ export async function loadTrendingItems(opts = {}) {
           return cached.data
         }
         const firstReason = outcomes[0]?.reason || 'network'
-        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: firstReason }
+        return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, page, hasMore: false, reason: firstReason }
       }
 
       const combinedRows = []
       const seenIds = new Set()
       const seenUrls = new Set()
       const seenFingerprints = new Set()
+      // 窗口是否被填满：任一源回满它自己的窗口，就说明它后面可能还有下一页
+      let windowFilled = false
 
       for (const outcome of okOutcomes) {
+        const expectedSize = Number(opts.sourcePageSizes?.[outcome.basePath]) || TRENDING_SOURCE_PAGE_SIZE
+        if (outcome.rows.length >= expectedSize) windowFilled = true
+
         for (const row of outcome.rows) {
           if (!row || typeof row !== 'object') continue
           const id = row.id != null ? String(row.id).trim() : ''
@@ -539,23 +592,27 @@ export async function loadTrendingItems(opts = {}) {
         status: items.length > 0 ? TRENDING_SOURCE_STATUS.ready : emptyStatus,
         items,
         total,
+        page,
+        hasMore: windowFilled,
       }
 
-      // 写入内存缓存
-      if (useCache && (result.status === TRENDING_SOURCE_STATUS.ready || result.status === TRENDING_SOURCE_STATUS.filtered || result.status === TRENDING_SOURCE_STATUS.empty)) {
+      // 写入内存缓存：只缓存首页。追加页缓存住会让「切走再切回」跳过陈旧窗口，
+      // 而首页缓存已经足以消除首屏白屏。
+      // `hasMore` 随首页一并入缓存：重新挂载时的初值直接用它，不必先按「还有下一页」猜一次。
+      if (page === 1 && useCache && (result.status === TRENDING_SOURCE_STATUS.ready || result.status === TRENDING_SOURCE_STATUS.filtered || result.status === TRENDING_SOURCE_STATUS.empty)) {
         setTrendingCache(cacheKey, result, opts.ttlMs)
       }
 
       return result
     } finally {
-      if (useCache) {
+      if (page === 1 && useCache) {
         IN_FLIGHT_REQUESTS.delete(cacheKey)
       }
     }
   }
 
   const promise = executeFetch()
-  if (!opts.signal && useCache) {
+  if (page === 1 && !opts.signal && useCache) {
     IN_FLIGHT_REQUESTS.set(cacheKey, promise)
   }
   return promise

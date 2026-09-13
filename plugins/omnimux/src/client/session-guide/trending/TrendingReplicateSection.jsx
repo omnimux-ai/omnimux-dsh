@@ -2,17 +2,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
 import { TrendingSkeletonGrid } from './TrendingSkeleton.jsx'
+import { TrendingSentinel } from './TrendingSentinel.jsx'
 import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
+import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { buildSkillPrompt } from '../skills/featured-skills-data.js'
-import {
-  EMPTY_CAPABILITIES,
-  TRENDING_SOURCE_STATUS,
-  getTrendingCache,
-  getTrendingCacheKey,
-  loadTrendingItems,
-  mergeCapabilities,
-} from './trending-source.js'
+import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
   RECREATE_PROMPT,
@@ -58,11 +53,18 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
  * 库为空或灵感社区未就绪就说清楚，**不回落任何编造的样本**。
  * 工具栏只渲染当前数据真的支持的维度（缺类目就没有类目下拉）。
  *
+ * 两条滚动契约（吸顶 + 无限追加）：
+ * 1. 双 Tab 导航与当前 Tab 的工具栏**共用一条吸顶栏**，滚到视口顶边就钉住，
+ *    底色与深色模式 Token 取自 design.md，下方卡片穿行不会透字；
+ * 2. 网格底部挂观察哨兵，进入视口就异步追加下一批对标视频（跨页按内容指纹去重），
+ *    加载中给骨架提示，全部取完给温和的末尾提示，**不反复空转请求**。
+ *
  * 复刻接管**不复制输入框**：点击复刻后把那个原生输入框停靠到会话视口底部
  * （附件、专家、模型、发送全是原生那一套），同时把复刻对象挂进会话附件栏、
  * 点亮底部工具栏的「复刻爆款视频」技能药丸；输入框草稿只写极简意图，
  * 结构化数据一律随附件交出去，不灌进用户看得见的草稿。
  * 板块只负责给出停靠几何（宿主 CSS 变量）与三处挂载状态，复刻意图的落地仍由
+ * `onApplyPrompt` 交回会话输入框所有权方处理——只预填，从不代发。
  * `onApplyPrompt` 交回会话输入框所有权方处理——只预填，从不代发。
  *
  * @param {{
@@ -74,14 +76,13 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
 export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   const [filters, setFilters] = useState(defaultTrendingFilters)
   const [dockedItem, setDockedItem] = useState(null)
-  const [sourceItems, setSourceItems] = useState([])
-  const [status, setStatus] = useState('loading')
-  const [refreshing, setRefreshing] = useState(true)
   // 工具栏能力集是**单调**的：只并入不重算，否则筛选后档位会塌成只剩当前命中项
   const [capabilities, setCapabilities] = useState(EMPTY_CAPABILITIES)
   // 接管意图（dockedItem）与实际摆位（placement）分开：
   // 意图由「复刻」决定，摆位由滚动位置决定——滚回原位就让原生输入框回到流内。
   const [placement, setPlacement] = useState('docked')
+  // 分类胶囊栏在吸顶栏、卡片网格在流内，是同一条筛选链的两端，因此选中态收在这里
+  const [skillCategory, setSkillCategory] = useState('')
   const [activeTab, setActiveTab] = useState(() => {
     try {
       return sessionStorage.getItem('omnimux-guide-tab') || 'trending'
@@ -106,51 +107,21 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   dockedItemRef.current = dockedItem
   // 技能药丸移除动作的解绑函数：复刻意图生效期间才有值。
   const skillReleaseRef = useRef(null)
+  // 无限滚动的观察哨兵：由取数状态机观察，由视图渲染在网格最末一行之下。
+  const sentinelRef = useRef(null)
 
   // 地区 / 类目 / 播放量下界交给服务端先过滤再取窗口；互动率门槛与排序在客户端做。
   const serverFilterKey = `${filters.region}|${filters.industry}|${filters.views}`
 
-  useEffect(() => {
-    const controller = new AbortController()
-    let alive = true
+  // 每换一组服务端筛选条件即整体回到第 1 页重新累积：
+  // 追加窗口属于某一组筛选条件，换条件后旧页不是「更多」，而是错的数据。
+  const feed = useTrendingFeed({
+    revision: serverFilterKey,
+    filters: { region: filters.region, industry: filters.industry, views: filters.views },
+    observeRef: sentinelRef,
+  })
 
-    const currentFilters = { region: filters.region, industry: filters.industry, views: filters.views }
-    const cached = getTrendingCache(getTrendingCacheKey({ filters: currentFilters }))
-
-    // 若命中本地内存缓存：同步恢复，避免切 Tab 或重复筛选时的无谓白屏
-    if (cached?.data) {
-      setSourceItems(cached.data.items)
-      setStatus(cached.data.status)
-      setRefreshing(false)
-      if (cached.data.items.length > 0) {
-        setCapabilities((previous) => mergeCapabilities(previous, cached.data.items))
-      }
-      // 新鲜缓存直接呈现，无需重复请求网络
-      if (!cached.isStale) return undefined
-    } else {
-      setRefreshing(true)
-    }
-
-    loadTrendingItems({
-      filters: currentFilters,
-      signal: controller.signal,
-    }).then((result) => {
-      if (!alive || result.reason === 'aborted') return
-      setSourceItems(result.items)
-      setStatus(result.status)
-      setRefreshing(false)
-      if (result.items.length > 0) {
-        setCapabilities((previous) => mergeCapabilities(previous, result.items))
-      }
-    })
-    return () => {
-      alive = false
-      controller.abort()
-    }
-    // 只在「服务端过滤条件」变化时重取；filters 其余键由客户端处理
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverFilterKey])
-
+  const sourceItems = feed.items
   const { dimensions, regionOptions, industryOptions, viewOptions } = capabilities
   const items = useMemo(() => selectTrendingVideos(filters, sourceItems), [filters, sourceItems])
 
@@ -194,13 +165,20 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     })
   }, [disarmSkillReleaseWatch, sessionId])
 
+  // 能力集随真源累积单调并入：第二页带来的新地区/新类目也要能出现在工具栏里
+  useEffect(() => {
+    if (sourceItems.length > 0) {
+      setCapabilities((previous) => mergeCapabilities(previous, sourceItems))
+    }
+  }, [sourceItems])
+
   // 被接管的卡片一旦不在当前结果里（换地区/换阈值），输入框要归还，
   // 不能让它停在一个屏幕上已经不存在的片子上。
   // 注意：技能卡片不受对标视频筛选影响（带 skill 标记），不得误归还。
   useEffect(() => {
-    if (refreshing || !dockedItem) return
+    if (feed.loading || !dockedItem) return
     if (!dockedItem.skill && !items.some((item) => item.id === dockedItem.id)) setDockedItem(null)
-  }, [items, dockedItem, refreshing])
+  }, [items, dockedItem, feed.loading])
 
   // 附件栏是复刻对象的真源：卡上 ✕ 移除附件后，卡片态与技能药丸同步撤回。
   // 会话是订阅与对账的坐标：宿主换会话时同一个组件实例会被复用，
@@ -223,10 +201,14 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     return store.subscribe(targetSession, syncFromAttachments)
   }, [disarmSkillReleaseWatch, sessionId])
 
+  const status = feed.status
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
-  const showSkeleton = refreshing && items.length === 0
+  // 骨架屏只在「首页还没回来」时出现；追加批次有自己的骨架哨兵，不遮蔽已有卡片
+  const showSkeleton = feed.loading && items.length === 0
   const showGrid = !showSkeleton && status !== TRENDING_SOURCE_STATUS.unavailable && items.length > 0
-  const showFilteredEmpty = !refreshing && showToolbar && items.length === 0
+  const showFilteredEmpty = !feed.loading && showToolbar && items.length === 0
+  // 末尾提示只在真的有卡片垫底时才出现：空库/不可用态已有各自的说明，不叠第二条
+  const showSentinel = showGrid
 
   const patchFilters = useCallback((patch) => setFilters((prev) => ({ ...prev, ...patch })), [])
   const resetFilters = useCallback(() => setFilters((prev) => ({ ...defaultTrendingFilters(), sort: prev.sort })), [])
@@ -448,6 +430,11 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     onApplyPrompt?.(buildSkillPrompt(skill, t), skill)
   }, [dockedItem, onApplyPrompt, t])
 
+  // 失败重试复用同一条取数路径：哨兵被卸载后 loadMore 是唯一能把加载推下去的入口
+  const handleLoadMore = useCallback(() => {
+    feed.loadMore()
+  }, [feed.loadMore])
+
   return (
     <section
       ref={sectionRef}
@@ -456,44 +443,52 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       data-omnimux-trending-source={status}
       aria-label={t('trending.title')}
     >
-      <header className="omnimux-trending-head">
-        <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
-          <button /* exempt-ui01: session-guide 导航双 Tab */
-            type="button"
-            role="tab"
-            id="tab-trending"
-            aria-selected={activeTab === 'trending'}
-            aria-controls="tabpanel-trending"
-            className={`omnimux-guide-tab${activeTab === 'trending' ? ' is-active' : ''}`}
-            onClick={() => handleSwitchTab('trending')}
-          >
-            {t('guide.tab.trending')}
-          </button>
-          <button /* exempt-ui01: session-guide 导航双 Tab */
-            type="button"
-            role="tab"
-            id="tab-skills"
-            aria-selected={activeTab === 'skills'}
-            aria-controls="tabpanel-skills"
-            className={`omnimux-guide-tab${activeTab === 'skills' ? ' is-active' : ''}`}
-            onClick={() => handleSwitchTab('skills')}
-          >
-            {t('guide.tab.skills')}
-          </button>
-        </div>
-      </header>
+      {/* 吸顶栏：双 Tab 与「当前 Tab 的工具栏」共用一条 sticky 容器，滚到视口顶边即钉住 */}
+      <div
+        className={`omnimux-trending-sticky-header${activeTab === 'skills' || showToolbar ? ' is-with-toolbar' : ''}`}
+        data-omnimux-trending-sticky=""
+      >
+        <header className="omnimux-trending-head">
+          <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
+            <button /* exempt-ui01: session-guide 导航双 Tab */
+              type="button"
+              role="tab"
+              id="tab-trending"
+              aria-selected={activeTab === 'trending'}
+              aria-controls="tabpanel-trending"
+              className={`omnimux-guide-tab${activeTab === 'trending' ? ' is-active' : ''}`}
+              onClick={() => handleSwitchTab('trending')}
+            >
+              {t('guide.tab.trending')}
+            </button>
+            <button /* exempt-ui01: session-guide 导航双 Tab */
+              type="button"
+              role="tab"
+              id="tab-skills"
+              aria-selected={activeTab === 'skills'}
+              aria-controls="tabpanel-skills"
+              className={`omnimux-guide-tab${activeTab === 'skills' ? ' is-active' : ''}`}
+              onClick={() => handleSwitchTab('skills')}
+            >
+              {t('guide.tab.skills')}
+            </button>
+          </div>
+        </header>
 
-      {activeTab === 'skills' ? (
-        <div id="tabpanel-skills" role="tabpanel" aria-labelledby="tab-skills">
-          <SkillsPanel
-            t={t}
-            onSelectSkill={handleSelectSkill}
-            activeSkillId={dockedItem?.id}
-          />
-        </div>
-      ) : (
-        <div id="tabpanel-trending" role="tabpanel" aria-labelledby="tab-trending">
-          {showToolbar ? (
+        {/* 工具栏随 Tab 走：创作灵感是筛选工具栏，Skill 是分类胶囊栏，两者都是各自列表的滚动伴随控件 */}
+        {activeTab === 'skills' ? (
+          <div className="omnimux-trending-sticky-toolbar" data-omnimux-trending-sticky-toolbar="skills">
+            <SkillsPanel
+              t={t}
+              onSelectSkill={handleSelectSkill}
+              activeSkillId={dockedItem?.id}
+              selectedCategory={skillCategory}
+              onSelectCategory={setSkillCategory}
+              chipsOnly
+            />
+          </div>
+        ) : (showToolbar ? (
+          <div className="omnimux-trending-sticky-toolbar" data-omnimux-trending-sticky-toolbar="trending">
             <TrendingFilterBar
               filters={filters}
               t={t}
@@ -504,14 +499,29 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
               industryOptions={industryOptions}
               viewOptions={viewOptions}
             />
-          ) : null}
+          </div>
+        ) : null)}
+      </div>
 
+      {activeTab === 'skills' ? (
+        <div id="tabpanel-skills" role="tabpanel" aria-labelledby="tab-skills">
+          <SkillsPanel
+            t={t}
+            onSelectSkill={handleSelectSkill}
+            activeSkillId={dockedItem?.id}
+            selectedCategory={skillCategory}
+            onSelectCategory={setSkillCategory}
+            hideChips
+          />
+        </div>
+      ) : (
+        <div id="tabpanel-trending" role="tabpanel" aria-labelledby="tab-trending">
           {showSkeleton ? (
             <TrendingSkeletonGrid count={8} t={t} />
           ) : null}
 
           {showGrid ? (
-            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${refreshing ? ' is-refreshing' : ''}`}>
+            <div className={`omnimux-trending-grid omnimux-trending-grid-enter${feed.loading ? ' is-refreshing' : ''}`}>
               {items.map((item) => (
                 <TrendingVideoCard
                   key={item.id}
@@ -522,6 +532,15 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
                 />
               ))}
             </div>
+          ) : null}
+
+          {showSentinel ? (
+            <TrendingSentinel
+              sentinelRef={sentinelRef}
+              loading={feed.loadingMore}
+              exhausted={!feed.hasMore}
+              t={t}
+            />
           ) : null}
 
           {showFilteredEmpty ? (
@@ -537,17 +556,25 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
             </div>
           ) : null}
 
-          {status === TRENDING_SOURCE_STATUS.empty && !refreshing ? (
+          {status === TRENDING_SOURCE_STATUS.empty && !feed.loading ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="library">
               <p>{t('trending.library.empty')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.emptyHint')}</p>
             </div>
           ) : null}
 
-          {status === TRENDING_SOURCE_STATUS.unavailable && !refreshing ? (
+          {status === TRENDING_SOURCE_STATUS.unavailable && !feed.loading ? (
             <div className="omnimux-trending-empty" data-omnimux-trending-empty="unavailable">
               <p>{t('trending.library.unavailable')}</p>
               <p className="omnimux-trending-empty-hint">{t('trending.library.unavailableHint')}</p>
+              {/* 网络抖动导致的失败：给一次原地重试机会，而不是逼用户刷新整页 */}
+              <button /* exempt-ui01: 重试属于轻量文本动作，非标准控件位 */
+                type="button"
+                className="omnimux-trending-reset"
+                onClick={handleLoadMore}
+              >
+                {t('trending.retry')}
+              </button>
             </div>
           ) : null}
         </div>
