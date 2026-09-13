@@ -529,6 +529,28 @@ describe('topbar new-session control (collapsed only)', () => {
     assert.equal(btn.getAttribute('aria-label'), '新建会话')
   })
 
+  it('does not treat logoRow brand button as new session', () => {
+    const doc = setup(`<!doctype html><html><body>
+      <div class="sidebarCol_x">
+        <div class="logoRow_y">
+          <button type="button" class="x-Wl6W_brand" aria-label="OmniMux">OmniMux</button>
+          <button type="button" class="x-Wl6W_toggle" aria-label="收起侧边栏">T</button>
+        </div>
+        <button type="button" class="newSession_n" aria-label="新对话">新对话</button>
+      </div>
+    </body></html>`)
+    const btn = findOfficialNewSessionButton(doc)
+    assert.ok(btn)
+    assert.equal(btn.getAttribute('aria-label'), '新对话')
+    assert.match(String(btn.className), /newSession/)
+    assert.doesNotMatch(String(btn.className), /brand/)
+  })
+
+  it('source never treats hashed brand class as new session', () => {
+    assert.doesNotMatch(moduleSource, /x-Wl6W_brand/)
+    assert.doesNotMatch(moduleSource, /button\.x-Wl6W_brand/)
+  })
+
   it('injects new-session when collapsed and removes when expanded', () => {
     const doc = setup()
     ensureSidebarToggleTopbar(doc)
