@@ -893,42 +893,115 @@ export const STYLES = `
 .omnimux-accounts-modal-link {
   align-self: flex-start;
 }
+.omnimux-accounts-modal-subtitle {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary, rgba(255,255,255,0.72));
+}
 .omnimux-accounts-platform-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .omnimux-accounts-platform-btn {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  height: auto;
-  padding: 14px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 68px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
   border-radius: 12px;
-  background: var(--dsw-alias-bg-secondary);
+  background: var(--dsw-alias-bg-secondary, rgba(255,255,255,0.04));
   color: inherit;
   cursor: pointer;
   text-align: left;
   white-space: normal;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  justify-content: flex-start;
 }
 .omnimux-accounts-platform-btn:not(:disabled):hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12));
+  border-color: var(--dsw-alias-border-hover, rgba(255,255,255,0.22));
+  transform: translateY(-1px);
 }
 .omnimux-accounts-platform-btn:active {
+  transform: translateY(0);
   background: var(--dsw-alias-interactive-bg-active, rgba(128,128,128,0.18));
 }
 .omnimux-accounts-platform-btn:disabled { cursor: default; opacity: 0.5; }
 .omnimux-accounts-platform-btn--coming {
-  cursor: default;
-  opacity: 0.55;
+  cursor: not-allowed;
+  opacity: 0.48;
+  border-style: dashed;
+}
+.omnimux-accounts-platform-btn--coming:hover {
+  transform: none;
+  background: var(--dsw-alias-bg-secondary, rgba(255,255,255,0.04));
+  border-color: var(--dsw-alias-border-l2, rgba(255,255,255,0.12));
+}
+.omnimux-accounts-brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.omnimux-accounts-brand-icon--tiktok {
+  background: var(--dsw-platform-tiktok, #000000);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.14));
+  color: var(--dsw-alias-label-primary-foreground, #ffffff);
+}
+.omnimux-accounts-brand-icon--instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%); /* exempt-ui03 官方品牌渐变色 */
+  color: var(--dsw-alias-label-primary-foreground, #ffffff);
+}
+.omnimux-accounts-brand-icon--youtube {
+  background: var(--dsw-platform-youtube, #ff0000);
+  color: var(--dsw-alias-label-primary-foreground, #ffffff);
+}
+.omnimux-accounts-brand-icon--x {
+  background: var(--dsw-platform-x, #111111);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.14));
+  color: var(--dsw-alias-label-primary-foreground, #ffffff);
+}
+.omnimux-accounts-brand-icon--facebook {
+  background: var(--dsw-platform-facebook, #1877f2);
+  color: var(--dsw-alias-label-primary-foreground, #ffffff);
+}
+.omnimux-accounts-platform-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.omnimux-accounts-platform-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .omnimux-accounts-platform-name {
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
+  color: var(--dsw-alias-label-primary, #ffffff);
+}
+.omnimux-accounts-platform-desc {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary, rgba(255,255,255,0.48));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .omnimux-accounts-platform-soon {
   font-size: 11px;
@@ -938,6 +1011,36 @@ export const STYLES = `
   background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.18));
   color: var(--dsw-alias-label-secondary, rgba(255,255,255,0.72));
   white-space: nowrap;
+}
+.omnimux-accounts-platform-action {
+  color: var(--dsw-alias-label-tertiary, rgba(255,255,255,0.48));
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.omnimux-accounts-platform-btn:not(:disabled):hover .omnimux-accounts-platform-action {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--dsw-alias-label-primary, #ffffff);
+}
+.omnimux-accounts-modal-security {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.06));
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary, rgba(255,255,255,0.48));
+}
+.omnimux-accounts-security-icon {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary, rgba(255,255,255,0.48));
 }
 
 /* ---------- empty state ---------- */

@@ -14,6 +14,7 @@
 
 import { Button, EmptyState } from 'dsh-ui-kit'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
+import { EMPTY_ICON_SEARCH, EMPTY_ICON_USER, EMPTY_ICON_WORKS } from './icons.jsx'
 
 /** Blocks a first paint or a page append shows while it has nothing to show. */
 const SKELETON_COUNT = 10
@@ -52,6 +53,7 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'no-accounts') {
       return (
         <EmptyState
+          icon={EMPTY_ICON_USER}
           title={t('rivalFeed.empty.noAccounts')}
           description={t('rivalFeed.empty.noAccountsHint')}
           action={
@@ -65,6 +67,7 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'filtered') {
       return (
         <EmptyState
+          icon={EMPTY_ICON_SEARCH}
           title={t('rivalFeed.empty.filtered')}
           description={t('rivalFeed.empty.filteredHint')}
           action={
@@ -81,7 +84,14 @@ export function RivalFeedGrid(props) {
     if (emptyKind === 'loading') return null
     return (
       <EmptyState
-        title={t('rivalFeed.empty.noPosts')}
+        icon={EMPTY_ICON_WORKS}
+        title={t('rivalFeed.empty.noPostsTitle')}
+        description={t('rivalFeed.empty.noPostsDesc')}
+        action={
+          <Button variant="primary" size="sm" onClick={onImport}>
+            {t('rivalAccounts.import.btn')}
+          </Button>
+        }
       />
     )
   }

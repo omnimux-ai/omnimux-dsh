@@ -14,6 +14,7 @@ import { fillHostInput } from './dom-fill.ts'
 import { sniffViewportMedia } from './media-sniffer.ts'
 import { BRIDGE_MESSAGE, CONTENT_MESSAGE_SOURCE, TIMING } from './media-hover/messages.ts'
 import type { HoveredMedia } from './media-hover/types.ts'
+import { FEATURE_FLAG, readFlag, readFlagSync, subscribeFlag } from '../feature-flags.ts'
 
 /** A media-attach request awaiting the panel's receipt. */
 interface PendingAttach {
@@ -170,6 +171,32 @@ export function initFabCompanion(): void {
   const iframe = shadow.getElementById('omnimux-panel-iframe') as HTMLIFrameElement
 
   let isExpanded = false
+
+  /**
+   * Whether the panel's "floating ball" switch leaves the ball on screen.
+   *
+   * Off hides the ball itself, not the workstation: the hover capsule's "add to
+   * conversation" shortcut expands the workstation, and that belongs to the
+   * image-toolbar switch rather than this one.
+   */
+  let fabEnabled = readFlagSync(FEATURE_FLAG.fab)
+
+  function applyFabVisibility(): void {
+    fab.style.display = fabEnabled ? '' : 'none'
+  }
+
+  applyFabVisibility()
+
+  // The panel writes the switch; the change arrives through storage and through
+  // the message it sends to this tab, whichever lands first.
+  const unsubscribeFlag = subscribeFlag(FEATURE_FLAG.fab, (enabled) => {
+    fabEnabled = enabled
+    applyFabVisibility()
+  })
+  void readFlag(FEATURE_FLAG.fab).then((enabled) => {
+    fabEnabled = enabled
+    applyFabVisibility()
+  })
 
   // Load saved position
   const savedPos = (() => {
@@ -489,6 +516,7 @@ export function initFabCompanion(): void {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('message', handleMessage)
     clearInterval(routePollTimer)
+    unsubscribeFlag()
   }
   (window as unknown as { __omnimux_fab_unsubscribe?: () => void }).__omnimux_fab_unsubscribe = unsubscribe
 

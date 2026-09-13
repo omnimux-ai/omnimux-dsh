@@ -83,6 +83,12 @@ export interface PanelCopy {
     approvalNotificationsHelp: string
     autoResumeSession: string
     autoResumeSessionHelp: string
+    fabSection: string
+    fabToggle: string
+    fabToggleHelp: string
+    mediaHoverSection: string
+    mediaHoverToggle: string
+    mediaHoverToggleHelp: string
     trustedOrigins: string
     trustedOriginsHelp: string
     trustedOriginInput: string
@@ -318,6 +324,12 @@ const EN: PanelCopy = {
     approvalNotificationsHelp: 'Send desktop notification when sidepanel is closed',
     autoResumeSession: "Resume this page's conversation",
     autoResumeSessionHelp: 'Auto-resume session for matching page URL',
+    fabSection: 'Floating ball',
+    fabToggle: 'Enable the floating ball',
+    fabToggleHelp: 'Show the OmniMux companion ball in the bottom-right corner of every page',
+    mediaHoverSection: 'Image toolbar',
+    mediaHoverToggle: 'Show it while hovering over an image',
+    mediaHoverToggleHelp: 'Enable the OmniMux capsule toolbar that appears when the pointer hovers over a page image or video',
     trustedOrigins: 'Always-allowed domains',
     trustedOriginsHelp: 'Trusted domains exempt from confirmation',
     trustedOriginInput: 'Domain to always trust (e.g. https://example.com or https://*.example.com)',
@@ -553,6 +565,12 @@ const ZH: PanelCopy = {
     approvalNotificationsHelp: '侧栏关闭时通过系统通知提醒审批',
     autoResumeSession: '续接当前页面会话',
     autoResumeSessionHelp: '重开同网址标签页时自动恢复对应会话',
+    fabSection: '悬浮球',
+    fabToggle: '启用悬浮球',
+    fabToggleHelp: '控制网页右下角全局悬浮球是否显示',
+    mediaHoverSection: '图片工具栏',
+    mediaHoverToggle: '悬停在图片上时显示',
+    mediaHoverToggleHelp: '控制页面图片、视频悬停感知的 OmniMux 胶囊工具栏是否启用',
     trustedOrigins: '永久免确认域名',
     trustedOriginsHelp: '免除操作审批的受信域名（支持通配符）',
     trustedOriginInput: '要永久信任的域名（如 https://example.com 或 https://*.example.com）',

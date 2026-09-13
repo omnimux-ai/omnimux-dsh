@@ -76,38 +76,97 @@ export const CAPSULE_SPEC = {
   background: 'rgba(30,32,38,0.95)',
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
-  borderRadius: 18,
-  height: 36,
+  /** Expanded-row radius; `height / 2` keeps both of its ends perfectly round. */
+  borderRadius: 16,
+  /**
+   * Stage-two height, and the band the placement reserves for *both* stages: the
+   * collapsed circle is drawn inside it, so opening the pill grows sideways into
+   * space the geometry has already accounted for and never crosses a viewport edge.
+   *
+   * `32` is the project's control-height baseline, which is also why the two
+   * stages now share one band: the circle folds into the row it becomes.
+   */
+  height: 32,
   /**
    * Stage one, the collapsed circle: the brand trigger alone.
-   * `36 × 36` with an `18px` radius is a perfect circle.
+   * `32 × 32` with a `16px` radius is a perfect circle.
+   *
+   * The drawn box is 32px while {@link haloWidth} adds 4px on every side, so the
+   * circle's *total* span — ring included — is exactly 40px.
    */
-  collapsedWidth: 36,
+  collapsedWidth: 32,
+  collapsedHeight: 32,
+  collapsedRadius: 16,
   /**
-   * Stage two, the expanded row: 3 x 30px icons + 2 x 4px gaps +
-   * 2 x 6px padding + 2 x 1px border.
+   * Stage two, the expanded row: 3 x 20px circular icon buttons + 2 x 6px gaps +
+   * 2 x 6px row padding = 84px.
+   * Every gap, padding, and vertical margin is strictly 6px:
+   * (32 - 20) / 2 = 6px above and below, 6px at left/right edges, and 6px between
+   * buttons. The two end buttons form exact concentric circles with the pill's
+   * 16px rounded ends, completely eliminating corner clipping and visual overflow.
    */
-  width: 112,
+  width: 84,
   paddingX: 6,
+  /**
+   * Width of the translucent halo the pill casts on every side.
+   *
+   * This is the pill's one edge that never depends on what is underneath it, so
+   * it is part of the geometry contract rather than a decoration: a 32px circle
+   * plus `2 x 4px` spans exactly 40px of the page.
+   */
+  haloWidth: 4,
   /**
    * The `collapsedWidth → width` opening animation. The stylesheet owns the
    * transition; this is the same duration on the JavaScript side, where it ends
    * the window in which the action row may not take the pointer.
    */
   openMs: 220,
-  /** Gap between two action icons in the expanded row. */
-  iconGap: 4,
+  /** Gap between two action icons in the expanded row: strictly 6px. */
+  iconGap: 6,
   blur: 'blur(24px) saturate(140%)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  sheen: 'inset 0 1px 0 rgba(255,255,255,0.20)',
-  shadow: '0 8px 26px rgba(0,0,0,0.42), inset 0 0 0 0.5px rgba(255,255,255,0.06)',
+  /**
+   * Translucent rim. Media behind the pill can be a white studio shot or a black
+   * night frame, so the edge itself has to carry contrast instead of relying on
+   * the frosted fill alone.
+   */
+  border: '1px solid rgba(255,255,255,0.28)',
+  /** Lit top edge, inset so the rim reads as a highlight rather than a stroke. */
+  sheen: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+  /**
+   * Three translucent rings: the wide {@link haloWidth} outer halo and the inset
+   * top sheen separate the pill from bright media, while the deep drop shadow
+   * separates it from dark media. Video artwork moves under the pill and swings
+   * from blown-out highlights to near-black shadows within a single second, so the
+   * halo is the only edge the pill can rely on: it stays wide enough to survive
+   * both, and `32 + 2 x 4` is what makes the circle span exactly 40px.
+   */
+  shadow:
+    '0 0 0 4px rgba(255,255,255,0.22), 0 2px 10px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
   /** Inset from the media's bottom-left corner. */
   inset: 10,
-  iconSize: 30,
-  /** Hit box of the stage-one brand trigger inside the circle. */
-  brandSize: 28,
-  /** Rendered size of the brand silhouette. */
-  brandIconSize: 20,
+  /**
+   * Action-button hit box: strictly a 20px perfect circle (`border-radius: 50%`).
+   * Inside the 32px band (R=16), a 20px circle (r=10) centered at (16, 16)
+   * creates a constant 6px breathing margin in EVERY direction (top, bottom,
+   * and along the rounded cap), ensuring zero corner protrusion or overflow.
+   */
+  iconSize: 20,
+  /** Rendered size of the glyph inside an action button: 13px. */
+  iconGlyphSize: 13,
+  /**
+   * Hit box of the stage-one brand trigger inside the circle. Unlike the icon
+   * buttons this box is not the band itself: a full-band trigger would put its
+   * hover fill, and the ripple that follows a press, right up against the circle's
+   * rounded edge.
+   */
+  brandSize: 24,
+  /**
+   * Rendered size of the brand silhouette, centred in the 24px hit box. The glyph
+   * has to stay smaller than its box to read as a mark rather than a disc, but it
+   * is the one thing the 40px circle carries — so it is scaled with the circle
+   * instead of being pinned small.
+   */
+  brandIconSize: 18,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const
@@ -121,16 +180,28 @@ export const CAPSULE_SPEC = {
  * constant below exists to push the pill clear of that cluster.
  */
 export const VIDEO_ANCHOR_SPEC = {
-  /** Default left inset: clears the ~48px play control and leaves a comfortable gap. */
-  offsetX: 78,
-  /** Gap kept past a measured play control's right edge. */
-  minClearance: 16,
+  /**
+   * Default left inset: clears a typical ~48px play control and lands 52px from
+   * the media's left edge, which is the close, comfortable gap the shot demands.
+   */
+  offsetX: 52,
+  /**
+   * Gap kept past a measured play control's right edge.
+   *
+   * Zero is deliberate. A player's control box is mostly padding around its
+   * glyph, so a pill starting at the box's right edge already reads as clear of
+   * the button, and the wider gap an oversized clearance used to force was what
+   * pushed the pill away from the button it belongs next to. It also keeps the
+   * band floor real: the inset can still reach `offsetXRange[0]` when a probe
+   * reports a control that ends at the media's 48px mark.
+   */
+  minClearance: 0,
   /** Band the left inset is allowed to move within, whatever a probe reports. */
-  offsetXRange: [78, 140] as const,
+  offsetXRange: [48, 96] as const,
   /** Default gap between the media's bottom edge and the capsule's bottom edge. */
-  offsetY: 16,
+  offsetY: 8,
   /** Band the bottom inset is allowed to move within, whatever a probe reports. */
-  offsetYRange: [14, 18] as const,
+  offsetYRange: [6, 12] as const,
   /** Play-control probe point: media `(left + probeInsetX, bottom - probeInsetY)`. */
   probeInsetX: 24,
   probeInsetY: 24,

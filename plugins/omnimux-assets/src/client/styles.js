@@ -1027,6 +1027,12 @@ export const ASSETS_CSS = `
   transition: opacity 0.18s ease;
   pointer-events: none;
 }
+/* 没有封面的片段：首帧就是卡片正面，不等悬停才显形。否则一张没有海报的视频卡要么
+   一片空白，要么退化成类型图标，也就是用户看到的「灰底占位符」。有封面的卡片不适用
+   这条规则，预览仍旧只在悬停时浮出。 */
+.omnimux-assets-cloud-preview--bare {
+  opacity: 1;
+}
 .omnimux-assets-cloud-card:hover .omnimux-assets-cloud-preview,
 .omnimux-assets-cloud-card:focus-within .omnimux-assets-cloud-preview {
   opacity: 1;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { connectAccount } from './api.js'
-import { PlatformChip } from './chips.jsx'
+import { ArrowRightIcon, PlatformBrandIcon, ShieldCheckIcon } from './icons.jsx'
 import { COMING_PLATFORMS, SUPPORTED_PLATFORMS } from './platforms.js'
 import { localeText } from './view.js'
 
@@ -114,7 +114,9 @@ export function ConnectModal({ t, watchConnect, onClose, onConnected }) {
     >
       {phase === 'select' || phase === 'opening' ? (
         <div className="omnimux-accounts-modal-body">
-          <p className="omnimux-accounts-muted">{t('connect.choosePlatform')}</p>
+          <p className="omnimux-accounts-modal-subtitle">
+            {localeText(t, 'connect.subtitle', t('connect.choosePlatform'))}
+          </p>
           <div className="omnimux-accounts-platform-grid">
             {SUPPORTED_PLATFORMS.map((id, index) => (
               <Button
@@ -124,21 +126,46 @@ export function ConnectModal({ t, watchConnect, onClose, onConnected }) {
                 disabled={phase === 'opening'}
                 onClick={() => { void startConnect(id) }}
               >
-                <PlatformChip platform={id} t={t} />
-                <span className="omnimux-accounts-platform-name">
-                  {localeText(t, `platform.${id}`, id)}
-                </span>
+                <div className={`omnimux-accounts-brand-icon omnimux-accounts-brand-icon--${id}`}>
+                  <PlatformBrandIcon platform={id} size={22} />
+                </div>
+                <div className="omnimux-accounts-platform-info">
+                  <div className="omnimux-accounts-platform-name-row">
+                    <span className="omnimux-accounts-platform-name">
+                      {localeText(t, `platform.${id}`, id)}
+                    </span>
+                  </div>
+                  <span className="omnimux-accounts-platform-desc">
+                    {localeText(t, `platform.desc.${id}`, '')}
+                  </span>
+                </div>
+                <div className="omnimux-accounts-platform-action" aria-hidden="true">
+                  <ArrowRightIcon size={14} />
+                </div>
               </Button>
             ))}
             {COMING_PLATFORMS.map((id) => (
               <div key={id} className="omnimux-accounts-platform-btn omnimux-accounts-platform-btn--coming">
-                <PlatformChip platform={id} t={t} />
-                <span className="omnimux-accounts-platform-name">
-                  {localeText(t, `platform.${id}`, id)}
-                </span>
-                <span className="omnimux-accounts-platform-soon">{t('connect.comingSoon')}</span>
+                <div className={`omnimux-accounts-brand-icon omnimux-accounts-brand-icon--${id}`}>
+                  <PlatformBrandIcon platform={id} size={22} />
+                </div>
+                <div className="omnimux-accounts-platform-info">
+                  <div className="omnimux-accounts-platform-name-row">
+                    <span className="omnimux-accounts-platform-name">
+                      {localeText(t, `platform.${id}`, id)}
+                    </span>
+                    <span className="omnimux-accounts-platform-soon">{t('connect.comingSoon')}</span>
+                  </div>
+                  <span className="omnimux-accounts-platform-desc">
+                    {localeText(t, `platform.desc.${id}`, '')}
+                  </span>
+                </div>
               </div>
             ))}
+          </div>
+          <div className="omnimux-accounts-modal-security">
+            <ShieldCheckIcon size={14} className="omnimux-accounts-security-icon" />
+            <span>{t('connect.securityTip')}</span>
           </div>
         </div>
       ) : null}

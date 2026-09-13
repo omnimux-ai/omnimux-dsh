@@ -75,6 +75,7 @@ const L = {
   echoAccount: (handle, platform) => zh['rivalAccounts.import.echoAccount']
     .replace('{handle}', handle)
     .replace('{platform}', platform),
+  importSuccess: (handle) => zh['rivalAccounts.import.success'].replace('{handle}', handle),
   echoContent: zh['add.echoContent'],
   unrecognized: zh['rivalAccounts.import.unrecognized'],
   autoAnalyze: zh['add.autoAnalyze'],
@@ -367,6 +368,25 @@ describe('import landing — account profile URL', () => {
         mounted.container.querySelector(`input[aria-label="${L.urlLabel}"]`),
         null,
         'the dialog must close once the account is imported',
+      )
+      // 导出成功必须留下痕迹：弹窗关掉之后界面上要给一句确认，否则用户看到的
+      // 就是「点了导入没反应」。
+      assert.ok(
+        (mounted.container.textContent || '').includes(L.importSuccess('@li9292')),
+        'an account import must confirm itself on the page it lands on',
+      )
+      const createIndex = mounted.calls.findIndex(
+        (call) => call.method === 'POST' && call.path.includes(RIVAL_PREFIX),
+      )
+      const reloaded = await settle(
+        mounted.container,
+        () => mounted.calls.some(
+          (call, index) => index > createIndex && call.path.includes(`${RIVAL_PREFIX}/posts`),
+        ),
+      )
+      assert.ok(
+        reloaded,
+        'the works feed must be re-read for the account that was just added',
       )
       // The account dimension lives in the filter panel now, so the imported
       // account is found by opening it — not in a column beside the grid. The

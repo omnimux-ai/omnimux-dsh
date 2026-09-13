@@ -1,3 +1,5 @@
+import { isRightSidebarExpanded } from './split-compact-layout.js'
+
 /**
  * @param {unknown} node
  * @returns {{ top: number, left: number, width: number, height: number } | null}
@@ -211,6 +213,18 @@ html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed
 html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-details-collapsed="true"]){
   grid-template-columns: 0px minmax(0px, 1fr) auto !important;
 }
+/* 当中间会话栏收起时（右侧全屏铺满状态）：
+   必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！ */
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame,
+html[data-omnimux-conversation-collapsed] [class*="frame"] {
+  grid-template-columns: var(--omnimux-sidebar-width, 280px) 0px minmax(0px, 1fr) !important;
+}
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] .dshDesktopFrame,
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] [class*="frame"],
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame[data-sidebar-collapsed],
+html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapsed] {
+  grid-template-columns: 0px 0px 100vw !important;
+}
 /* Tab labels dock by overlap: pad = max(0, toggleEnd − panel.left), written
    to --omnimux-tabbar-pad-left. Do NOT key this off left-collapsed: collapsed
    + split already starts the panel right of the toggle, so pad must stay 0.
@@ -354,9 +368,18 @@ function revealConversationIfCollapsed() {
   api.setFocus?.('split')
 }
 
-function closeWorkbenchIfOpen() {
+/**
+ * 新会话意图只做状态对齐，不主动收起右侧侧栏。
+ *
+ * 真实侧栏还展开着的时候，新会话本来就该落在中间栏、由 SessionGuide 切到简洁模式；
+ * 早先无条件 closePanel() 会把内存状态改成 panelOpen:false，而真实侧栏纹丝不动，
+ * 于是空白会话在分栏里错误地渲染出完整引导卡片。只有宿主确实已把侧栏收起、
+ * 内存状态还停在 open 时才补写关闭，两侧状态由此收敛。
+ */
+function reconcileWorkbenchPanel() {
   const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
   if (!api) return
+  if (isRightSidebarExpanded(typeof document !== 'undefined' ? document : undefined)) return
   if (typeof api.closePanel === 'function') {
     api.closePanel()
   }
@@ -371,7 +394,7 @@ function handleSessionEnterIntent(target) {
  * 任意工作区会话行离开产品页；已选中行官方 no-op 也要关。
  * 「新会话」官方会复用空白会话（看起来像没点），一级页必须自己关 overlay。
  * 藏中后点会话行 / 新会话：同时重新展开中间对话栏（进入对话意图）。
- * 点新建会话：关闭右侧辅助工作台分栏，回到完整会话全宽视野。
+ * 点新建会话：只对齐右侧辅助工作台的内存状态，真实侧栏展开/收起由用户与宿主决定。
  */
 function watchSelectedSessionClick() {
   if (document.documentElement.dataset.dshSessionCloser === '1') return
@@ -381,7 +404,7 @@ function watchSelectedSessionClick() {
     if (!handleSessionEnterIntent(target)) return
     if (document.documentElement.dataset.dshProductStage) leaveProductStage()
     revealConversationIfCollapsed()
-    if (isNewSessionIntent(target)) closeWorkbenchIfOpen()
+    if (isNewSessionIntent(target)) reconcileWorkbenchPanel()
   }, true)
   document.addEventListener('click', (event) => {
     const target = event.target
@@ -389,7 +412,7 @@ function watchSelectedSessionClick() {
     if (!shellNewSessionControl(target)) return
     if (document.documentElement.dataset.dshProductStage) leaveProductStage()
     revealConversationIfCollapsed()
-    closeWorkbenchIfOpen()
+    reconcileWorkbenchPanel()
   })
 }
 

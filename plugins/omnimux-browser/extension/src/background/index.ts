@@ -1309,7 +1309,6 @@ async function startBridge(): Promise<void> {
   let url = settings.bridgeUrl
   if (url === '') {
     url = await discoverBridge(() => revision === bridgeStartRevision && panelPorts.size > 0) ?? ''
-    if (url !== '') discoveredBridgeUrl = url
   }
   // Discovery is asynchronous. A panel may have closed or a newer settings
   // update may have started while its fetches were in flight.
@@ -1469,11 +1468,6 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   }
 
   // ---- TikTok scene shortcuts ----
-  //
-  // The page cannot reach the DSH process; this worker can, on the loopback
-  // origin the bridge already discovered. These are the only two messages the
-  // TikTok trigger produces, and only after the user pressed a menu row.
-
   if (type === TIKTOK_RUNTIME_MESSAGE.fetchMedia || type === TIKTOK_RUNTIME_MESSAGE.saveToInspiration) {
     const request = readTiktokShortcut(message)
     if (request === null) {

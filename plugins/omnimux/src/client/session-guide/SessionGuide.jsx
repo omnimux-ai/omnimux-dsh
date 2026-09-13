@@ -9,6 +9,10 @@ import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
 import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
 import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
+import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
+
+/** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
+const NOOP_SUBSCRIBE = () => () => {}
 
 function copyText(text) {
   const clip = typeof navigator !== 'undefined' ? navigator?.clipboard : null
@@ -92,16 +96,34 @@ function PopularStarterGrid({ popularStarters, t, onCardClick }) {
 export function SessionGuide(props) {
   const session = props.useSession((value) => value)
   const hasTargets = props.useConversation((value) => value.activeTargets.size > 0)
+  // 内存里的 panelOpen 只看全局开关，不再要求 sessionId 相等：右侧打开技能/专家等
+  // 全局 Tab 时 sessionId 未必等于本会话，相等判断会把分栏误判成全屏。
+  const workbench = props.workbench
   const panelOpen = useSyncExternalStore(
-    props.workbench.subscribe,
-    () => {
-      const snapshot = props.workbench.getSnapshot()
-      return snapshot?.sessionId === props.sessionId && snapshot.state.panelOpen === true
-    },
+    workbench?.subscribe ?? NOOP_SUBSCRIBE,
+    () => workbench?.getSnapshot?.()?.state?.panelOpen === true,
     () => false
   )
-  if (panelOpen || !isBlankConversation(session, hasTargets)) return null
-  return <BlankSessionGuide {...props} key={props.sessionId} />
+  // 但内存 panelOpen 只会被「打开面板」单向写入：官方右栏被点掉后没有观察者把这次
+  // 原生折叠写回 workbench state，残留的 panelOpen:true 会把完整引导永久挡在门外
+  // （收起右栏后会话列已 1448px、镜像属性也已撤除，界面却只剩一个空输入框）。
+  // DOM 一旦确证右栏已折叠就作废这条内存态 —— 内存态不得覆盖 DOM 实测。
+  const rightbarCollapsed = useSyncExternalStore(
+    subscribeSplitCompactLayout,
+    getRightSidebarCollapsedSnapshot,
+    () => false
+  )
+  // 内存状态会被 closePanel() 写成 false 而真实侧栏仍展开，所以再实测一次宿主布局：
+  // 右侧侧栏展开 / 会话列被挤窄 / 输入框降到紧凑档，任一命中都只保留简洁对话模式。
+  const splitCompact = useSyncExternalStore(
+    subscribeSplitCompactLayout,
+    getSplitCompactSnapshot,
+    () => false
+  )
+  if (!isBlankConversation(session, hasTargets)) return null
+  const effectivePanelOpen = panelOpen && !rightbarCollapsed
+  const isCompact = effectivePanelOpen || splitCompact
+  return <BlankSessionGuide {...props} isCompact={isCompact} key={props.sessionId} />
 }
 
 function BlankSessionGuide({
@@ -112,6 +134,7 @@ function BlankSessionGuide({
   t,
   getCurrentSessionId,
   attachmentDrafts,
+  isCompact = false,
 }) {
   const input = useInput((value) => value)
   const state = useSyncExternalStore(
@@ -264,8 +287,9 @@ function BlankSessionGuide({
   return (
     <section
       ref={guideRef}
-      className="omnimux-starter-guide"
+      className={`omnimux-starter-guide${isCompact ? ' is-compact' : ''}`}
       data-omnimux-starter-guide=""
+      data-compact={isCompact ? 'true' : undefined}
       data-session-id={sessionId}
       aria-label={t('guide.title')}
     >
@@ -280,24 +304,29 @@ function BlankSessionGuide({
         </div>
       )}
 
-      {/* Top 10 quick starters */}
-      <StarterGroupList
-        groups={STARTER_GROUPS}
-        starters={STARTERS}
-        selectedId={state.selectedId}
-        t={t}
-        onChoose={choose}
-      />
+      {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
+      {!isCompact && (
+        <>
+          {/* Top 10 quick starters */}
+          <StarterGroupList
+            groups={STARTER_GROUPS}
+            starters={STARTERS}
+            selectedId={state.selectedId}
+            t={t}
+            onChoose={choose}
+          />
 
-      {/* Popular Ways to Get Started (4 Featured Cards) */}
-      <PopularStarterGrid
-        popularStarters={POPULAR_STARTERS}
-        t={t}
-        onCardClick={handlePopularClick}
-      />
+          {/* Popular Ways to Get Started (4 Featured Cards) */}
+          <PopularStarterGrid
+            popularStarters={POPULAR_STARTERS}
+            t={t}
+            onCardClick={handlePopularClick}
+          />
 
-      {/* Trending Videos, Ready to Replicate */}
-      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+          {/* Trending Videos, Ready to Replicate */}
+          <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
+        </>
+      )}
 
       {/* Marketing Insight Modal */}
       <MarketingInsightModal

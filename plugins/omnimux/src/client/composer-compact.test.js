@@ -182,6 +182,15 @@ test('ensureComposerCompactChrome injects the style id and the CSS fragments', (
   assert.match(modelIconBefore, /mask-image/)
   assert.match(modelIconBefore, /background-color:currentColor/)
   assert.match(modelIconBefore, /width:14px/)
+  // Prevents duplicate icons when the button already carries a native triggerIcon
+  assert.match(
+    style.textContent,
+    /button\[aria-haspopup='menu'\]:has\(\[class\*="triggerIcon"\]\)::before/,
+  )
+  assert.match(
+    style.textContent,
+    /display:none!important;\s*content:none!important;/,
+  )
   // Permission chip still drops its text when it already has a triggerIcon.
   assert.match(
     style.textContent,
@@ -290,7 +299,7 @@ test('ensureComposerCompactChrome is idempotent and copies CSS once', () => {
   assert.equal(first.textContent, COMPOSER_COMPACT_CSS)
 })
 
-test('installComposerCompactObserver writes density from the card width via ResizeObserver', () => {
+test('installComposerCompactObserver writes density from the card width via ResizeObserver', async () => {
   const { doc, setCardWidth } = setupDoc()
   setCardWidth(400)
   globalThis.ResizeObserver = FakeResizeObserver
@@ -300,16 +309,41 @@ test('installComposerCompactObserver writes density from the card width via Resi
   assert.equal(FakeResizeObserver.instances.length, 1)
   assert.equal(FakeResizeObserver.instances[0].observed.length, 1)
 
+  // RO 回调已节流到下一帧（在交付周期内同步改宿主属性会触发 RO 循环告警）。
   setCardWidth(700)
   FakeResizeObserver.instances[0].trigger()
+  await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.full)
 
   setCardWidth(500)
   FakeResizeObserver.instances[0].trigger()
+  await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.short)
 
   dispose()
   assert.equal(FakeResizeObserver.instances[0].disconnected, true)
+})
+
+test('ResizeObserver 密度写入按帧合并：同一帧内多次触发只应用一次', async () => {
+  const { doc, setCardWidth } = setupDoc()
+  setCardWidth(400)
+  globalThis.ResizeObserver = FakeResizeObserver
+  FakeResizeObserver.instances = []
+  const dispose = installComposerCompactObserver(doc)
+  const observer = FakeResizeObserver.instances[0]
+
+  setCardWidth(700)
+  observer.trigger()
+  setCardWidth(500)
+  observer.trigger()
+  assert.equal(
+    doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR),
+    COMPOSER_COMPACT_DENSITY.icon,
+    '尚未落到下一帧时不得同步写入，否则成环告警的根因仍在',
+  )
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(doc.documentElement.getAttribute(COMPOSER_COMPACT_ATTR), COMPOSER_COMPACT_DENSITY.short)
+  dispose()
 })
 
 test('installComposerCompactObserver falls back to resize listener when ResizeObserver is absent', () => {

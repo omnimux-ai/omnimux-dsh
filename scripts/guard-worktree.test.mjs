@@ -538,3 +538,157 @@ describe('guard-worktree git reset --hard safety guard', () => {
     assert.equal(isDestructiveResetCommand('git push -u origin agent/infra-guard-destructive-reset'), false)
   })
 })
+
+describe('guard-worktree bash command write safety guard (防命令行绕过篡改主目录)', () => {
+  it('denies cp / mv / rsync targeting protected paths on the main checkout', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'cp /tmp/foo.js plugins/omnimux/src/apply.js',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: `cp -r /tmp/dir ${mainRepoRoot}/plugins/omnimux/src/`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'mv /tmp/foo.js scripts/dev-doctor.sh',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'rsync -av /tmp/dir/ docs/contracts/hub.md',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+  })
+
+  it('denies shell redirections > and >> targeting protected paths on the main checkout', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'echo "hack" > plugins/omnimux/src/apply.js',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'cat /tmp/patch >> package.json',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'printf "data" > scripts/dev-doctor.sh',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+  })
+
+  it('denies tee and sed -i targeting protected files on the main checkout', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'echo "data" | tee plugins/omnimux/src/apply.js',
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: "sed -i '' 's/a/b/' docs/contracts/hub.md",
+        cwd: mainRepoRoot,
+      }).decision,
+      'deny',
+    )
+  })
+
+  it('strictly allows legitimate git synchronization commands on the main checkout', () => {
+    const gitSyncCommands = [
+      'git pull origin main',
+      'git pull --rebase origin main',
+      'git merge origin/main',
+      'git fetch origin',
+      'git checkout main',
+      'git checkout -b new-feature-branch',
+      'git stash',
+      'git stash pop',
+      'git status -s',
+      'git log -n 5 --oneline',
+      'git diff origin/main',
+      'git branch -a',
+    ]
+    for (const cmd of gitSyncCommands) {
+      assert.equal(
+        decideBashCommand({ command: cmd, cwd: mainRepoRoot }).decision,
+        'allow',
+        `Expected command to be allowed: ${cmd}`,
+      )
+    }
+  })
+
+  it('allows cp / redirections inside a registered worktree directory', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'cp /tmp/foo.js plugins/omnimux/src/apply.js',
+        cwd: worktreeRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'echo "hello" > plugins/omnimux/src/apply.js',
+        cwd: worktreeRoot,
+      }).decision,
+      'allow',
+    )
+  })
+
+  it('allows ephemeral and gitignored targets on the main checkout', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'cp /tmp/bundle.js dist/app.js',
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'echo "log info" > trace.log',
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'cp /tmp/data.txt ignored/item.txt',
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+  })
+
+  it('allows standard build and package manager commands', () => {
+    assert.equal(
+      decideBashCommand({ command: 'pnpm build', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'npm run build', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'node scripts/dev-doctor.sh', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+  })
+})

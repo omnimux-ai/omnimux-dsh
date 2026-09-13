@@ -480,7 +480,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
         className={`omnimux-trending-sticky-header${activeTab === 'skills' || showToolbar ? ' is-with-toolbar' : ''}`}
         data-omnimux-trending-sticky=""
       >
-        <header className="omnimux-trending-head">
+        <div className="omnimux-trending-head">
           <div className="omnimux-guide-tabs" role="tablist" aria-label={t('guide.tabs.label', '创作发现')}>
             <button /* exempt-ui01: session-guide 导航双 Tab */
               type="button"
@@ -505,7 +505,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
               {t('guide.tab.skills')}
             </button>
           </div>
-        </header>
+        </div>
 
         {/* 工具栏随 Tab 走：创作灵感是筛选工具栏，Skill 是分类胶囊栏，两者都是各自列表的滚动伴随控件 */}
         {activeTab === 'skills' ? (

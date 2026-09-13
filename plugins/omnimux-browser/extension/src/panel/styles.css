@@ -1782,6 +1782,18 @@ textarea:focus-visible {
   box-shadow: 0 6px 18px rgba(23, 32, 51, 0.05);
 }
 
+/* Heading of a card that holds a single switch row. Kept quiet and small so the
+   switch label underneath stays the line the eye lands on. */
+.settings-card-heading {
+  padding: 12px 13px 0;
+  color: var(--faint);
+  font-size: calc(10px * var(--ui-scale));
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .update-card {
   position: relative;
   display: flex;

@@ -60,6 +60,7 @@ const HOST_PACKAGE_STUB_SOURCE = [
   '  },',
   '});',
   'const def = Object.assign(defineTool, { defineTool, Schema, object: Schema.object, string: Schema.string, number: Schema.number, boolean: Schema.boolean, array: Schema.array, union: Schema.union });',
+  'export function createUserMessage(options) { return options; };',
   'export default new Proxy(def, {',
   '  get(target, prop) {',
   '    if (prop in target) return target[prop];',

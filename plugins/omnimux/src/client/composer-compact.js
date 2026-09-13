@@ -198,6 +198,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   -webkit-mask-position:center;
   mask-position:center;
 }
+/* 当模型选择按钮自身已有原生 triggerIcon 或模型图标时，禁止 ::before 伪元素生成图标，杜绝双图标并存 */
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has([class*="triggerIcon"])::before,
+[data-composer-card] [class*="trailing"] button[aria-haspopup='menu']:has(> svg:not([class*="chevron"]))::before {
+  display:none!important;
+  content:none!important;
+}
+/* 原生 triggerIcon 在 28px 紧凑圆形/圆角按钮中居中居正 */
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-composer-card] [class*="trailing"] button[aria-haspopup='menu'] [class*="triggerIcon"]{
+  margin:0!important;
+  flex-shrink:0!important;
+}
 /* Text-only toolbar buttons become icon-sized. Never touch the .add (plus)
    button — it is already an icon. */
 html[data-omnimux-composer-density='icon'] [data-composer-card] [class*="tools"] > button:not([class*="add"]){
@@ -243,6 +254,10 @@ let composerMountObserver = null
 let observedTarget = null
 /** @type {Document | null} */
 let observerDoc = null
+/** 待执行的帧回调句柄（rAF id；退化为微任务时用 0 作哨兵，null 表示没有排队）。 */
+let densityFrame = null
+/** 安装代次：卸载/重建后让已排队的回调失效。 */
+let densityFrameToken = 0
 
 /**
  * Density from a live width (px). Pure, unit-testable.
@@ -347,13 +362,55 @@ function observeComposerTarget(doc, target) {
   observedTarget = target
   const RO = globalThis.ResizeObserver
   if (typeof RO === 'function') {
-    composerResizeObserver = new RO(() => { applyComposerDensity(doc) })
+    composerResizeObserver = new RO(() => { scheduleComposerDensity(doc) })
     composerResizeObserver.observe(target)
   } else {
     // jsdom / browsers without ResizeObserver: measure once + re-measure on resize.
     composerResizeListener = () => { applyComposerDensity(doc) }
     const win = hostWindow()
     if (win?.addEventListener) win.addEventListener('resize', composerResizeListener)
+  }
+}
+
+/**
+ * 把 ResizeObserver 回调里的密度写入推迟到下一帧。
+ *
+ * 密度档位本身就改写输入框卡片的布局：在 RO 交付周期内同步写 html 属性，会让被观测的
+ * 卡片在同一周期里再次改变尺寸，触发宿主浏览器的
+ * `ResizeObserver loop completed with undelivered notifications.` 告警。
+ * 推迟一帧后尺寸变化落到下一个正常交付周期；同帧多次触发合并为一次，
+ * 取不到 requestAnimationFrame 时退到微任务。resize 兜底路径保持同步。
+ * @param {Document | undefined} doc
+ */
+function scheduleComposerDensity(doc) {
+  if (densityFrame !== null) return
+  const token = densityFrameToken
+  const run = () => {
+    densityFrame = null
+    if (token !== densityFrameToken || observerDoc !== doc) return
+    applyComposerDensity(doc)
+  }
+  const win = hostWindow()
+  if (typeof win?.requestAnimationFrame === 'function') {
+    densityFrame = win.requestAnimationFrame(run)
+    return
+  }
+  densityFrame = 0
+  if (typeof queueMicrotask === 'function') queueMicrotask(run)
+  else run()
+}
+
+/** 撤销尚未执行的帧回调，并让已排队的微任务失效（代次自增）。 */
+function cancelScheduledComposerDensity() {
+  if (densityFrame === null) return
+  const handle = densityFrame
+  densityFrame = null
+  densityFrameToken += 1
+  if (typeof handle === 'number' && handle > 0) {
+    const win = hostWindow()
+    if (typeof win?.cancelAnimationFrame === 'function') {
+      try { win.cancelAnimationFrame(handle) } catch { /* ignore */ }
+    }
   }
 }
 
@@ -396,6 +453,7 @@ export function installComposerCompactObserver(doc = hostDocument()) {
 
 /** Tear down the observer (RO, fallback resize listener, mount watcher). */
 export function uninstallComposerCompactObserver() {
+  cancelScheduledComposerDensity()
   if (composerResizeObserver) {
     try { composerResizeObserver.disconnect() } catch { /* ignore */ }
     composerResizeObserver = null
@@ -416,6 +474,7 @@ export function uninstallComposerCompactObserver() {
 /** Test-only: drop state, the style tag, and the `<html>` density attr. */
 export function resetComposerCompactForTests() {
   uninstallComposerCompactObserver()
+  cancelScheduledComposerDensity()
   const doc = hostDocument()
   const root = doc?.documentElement
   if (root && typeof root.removeAttribute === 'function') {

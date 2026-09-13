@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import { JSDOM } from 'jsdom'
+// 必须先于 react-dom 求值：本文件也驱动受控输入框（顶部「导入灵感」弹窗）。
+import './test-fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
@@ -36,6 +38,12 @@ const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
 const cacheDir = join(here, '.esbuild-cache', 'account-monitor-feed')
 
 const RIVAL_PREFIX = '/omnimux/inspiration/local/rival-accounts'
+
+/** 导入用例里 Host 新建出来的那个监控账号。 */
+const NEW_ACCOUNT_ID = 'ra_gethullo'
+
+/** 导入用例粘贴的账号主页链接。 */
+const NEW_ACCOUNT_URL = 'https://www.tiktok.com/@gethullo'
 
 /** Requests one mount may make before the gate calls it a loop. */
 const REQUEST_BUDGET = 120
@@ -122,6 +130,11 @@ const L = {
   replicate: zh['card.cta.try'],
   importBtn: zh['rivalAccounts.import.btn'],
   searchPlaceholder: zh['rivalAccounts.import.searchPlaceholder'],
+  // 顶部「导入灵感」弹窗的三个控件标签，账号主页链接就是从它进来的。
+  topImport: zh['add.btn'],
+  urlLabel: zh['add.urlLabel'],
+  submit: zh['add.submit'],
+  importSuccess: (handle) => zh['rivalAccounts.import.success'].replace('{handle}', handle),
 }
 
 const label = (key, values = {}) => Object.entries(values)
@@ -172,7 +185,8 @@ function jsonResponse(status, body) {
  * @param {{ accounts?: Array<object>, works?: Array<object> }} [options]
  */
 async function mountStage(options = {}) {
-  const accounts = options.accounts ?? ACCOUNTS
+  // 可变副本：导入用例会让 Host 多出一个监控账号，重读必须看得到它。
+  const accounts = [...(options.accounts ?? ACCOUNTS)]
   const works = options.works ?? WORKS
   const stageModule = await import(`${await bundleStage()}?mount=${bundleCounter}`)
 
@@ -238,10 +252,30 @@ async function mountStage(options = {}) {
         },
       })
     }
+    // 判定与账号导入：一次导入会先问 Host「这条链接是什么」，再创建监控账号。
+    // 新账号进的是同一个数组，所以导入之后的重读必须能把它带回来。
+    if (path.includes(`${RIVAL_PREFIX}/classify`)) {
+      return jsonResponse(200, {
+        success: true,
+        data: { kind: 'account', platform: 'tiktok', external_id: 'gethullo', handle: '@gethullo' },
+      })
+    }
+    if (path.includes(RIVAL_PREFIX) && method === 'POST') {
+      const created = {
+        id: NEW_ACCOUNT_ID,
+        nickname: 'Gethullo',
+        handle: '@gethullo',
+        platform: 'tiktok',
+        profile_url: 'https://www.tiktok.com/@gethullo',
+        refresh_state: 'idle',
+        post_count: 0,
+      }
+      accounts.push(created)
+      return jsonResponse(201, { success: true, data: created })
+    }
     if (path.includes(RIVAL_PREFIX)) {
       return jsonResponse(200, { success: true, data: { items: accounts, total: accounts.length } })
-    }
-    if (path.startsWith('/omnimux/inspiration/local')) {
+    }    if (path.startsWith('/omnimux/inspiration/local')) {
       return jsonResponse(200, { success: true, data: { items: [], total: 0, platforms: [] } })
     }
     return jsonResponse(200, { success: true, data: { items: [], total: 0 } })
@@ -314,6 +348,29 @@ const buttonsLabelled = (container, text) => [...container.querySelectorAll('but
   .filter((node) => node.textContent.trim() === text)
 const summaryCount = (container) => container.querySelector('.omnimux-rival-summary-count')?.textContent.trim()
 const triggerText = (container) => filterTrigger(container)?.textContent.trim() || ''
+
+/** Type into a React-controlled input the way a user would. */
+async function typeInto(input, value) {
+  const view = input.ownerDocument.defaultView
+  const setter = Object.getOwnPropertyDescriptor(view.HTMLInputElement.prototype, 'value').set
+  await act(async () => {
+    setter.call(input, value)
+    input.dispatchEvent(new view.Event('input', { bubbles: true }))
+  })
+}
+
+/** Move focus away, which is when the import dialog asks the Host what the link is. */
+async function blur(input) {
+  const view = input.ownerDocument.defaultView
+  await act(async () => {
+    input.dispatchEvent(new view.FocusEvent('blur'))
+    input.dispatchEvent(new view.FocusEvent('focusout', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
+
+/** 顶部「导入灵感」弹窗里那个链接输入框，弹窗没开时为 null。 */
+const urlInput = (container) => container.querySelector(`input[aria-label="${L.urlLabel}"]`)
 
 /** Rival feed paths requested so far, in order. */
 const feedRequests = (mounted) => mounted.calls
@@ -587,7 +644,7 @@ describe('账号监控 — 作品网格流', () => {
         button.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       const skeleton = mounted.container.querySelector('[data-rival-skeleton="true"]')
-      const claimed = (mounted.container.textContent || '').includes(zh['rivalFeed.empty.noPosts'])
+      const claimed = (mounted.container.textContent || '').includes(zh['rivalFeed.empty.noPostsTitle'])
       assert.ok(
         skeleton || claimed,
         'the tab must either shimmer or report the settled empty state, never nothing',
@@ -620,6 +677,131 @@ describe('账号监控 — 作品网格流', () => {
       assert.ok(
         buttonsLabelled(mounted.container, L.importBtn).length > 0,
         'the no-account empty state must offer the import dialog',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+})
+
+/**
+ * 空态与导入反馈。
+ *
+ * 两条被用户报上来的缺陷，各自钉在这里：
+ *
+ *   - 作品为空的账号监控曾经只剩一行灰字，没有图标的层级，也没有任何出路；
+ *     作品为空时它还要顺带把「显示 0 个作品」的摘要行一起收掉，留白就是留白；
+ *   - 在账号监控页导入账号时，弹窗关掉之后界面上什么都没发生 —— 重读作品流与
+ *     账号筛选器、以及一句成功提示，是这次修复必须留下的痕迹。
+ */
+describe('账号监控 — 空态与导入反馈', () => {
+  it('renders the shared empty state with its vector icon, copy and action, and no summary line', async () => {
+    const mounted = await mountStage({ works: [] })
+    try {
+      await mounted.openAccountTab()
+      const shown = await settle(
+        mounted.container,
+        () => (mounted.container.textContent || '').includes(zh['rivalFeed.empty.noPostsTitle']),
+      )
+      assert.ok(shown, 'monitored accounts without works must say so')
+
+      const empty = mounted.container.querySelector('.dshUk-EmptyState-emptyState')
+      assert.ok(empty, 'the empty state must be the shared kit component, not a hand-written paragraph')
+
+      // 层级：矢量图标 → 标题 → 描述 → 操作。缺一层就退回成「一屏灰字」。
+      const icon = empty.querySelector('.dshUk-EmptyState-iconWrap svg')
+      assert.ok(icon, 'the empty state must open with a vector SVG icon — never a character or an emoji')
+      assert.equal(icon.getAttribute('aria-hidden'), 'true', 'a decorative icon must stay out of the a11y tree')
+
+      assert.equal(
+        empty.querySelector('.dshUk-EmptyState-title')?.textContent,
+        zh['rivalFeed.empty.noPostsTitle'],
+        'the empty state must carry its own title',
+      )
+      assert.equal(
+        empty.querySelector('.dshUk-EmptyState-description')?.textContent,
+        zh['rivalFeed.empty.noPostsDesc'],
+        'the empty state must explain what happens next',
+      )
+      assert.ok(
+        buttonsLabelled(empty, L.importBtn).length > 0,
+        'an empty grid must offer a way out of itself',
+      )
+
+      // 摘要行只属于有作品的时候：「显示 0 个作品」和空态是两套说法。
+      assert.equal(
+        mounted.container.querySelector('[data-rival-summary]'),
+        null,
+        'an empty grid must not carry the summary line',
+      )
+      assert.equal(
+        (mounted.container.textContent || '').includes(L.summary),
+        false,
+        'the summary copy must go with its line',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('reloads the feed, refreshes the account filter and reports success on an account import', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+
+      const postsBefore = feedRequests(mounted).length
+
+      // 用户就在账号监控页上，从顶部「导入灵感」弹窗粘贴账号主页链接。
+      await mounted.click(buttonsLabelled(mounted.container, L.topImport)[0])
+      const input = urlInput(mounted.container)
+      assert.ok(input, 'the top import dialog must render its URL field')
+      await typeInto(input, NEW_ACCOUNT_URL)
+      await blur(input)
+      await mounted.click(buttonsLabelled(mounted.container, L.submit)[0])
+
+      const imported = await settle(
+        mounted.container,
+        () => (mounted.container.textContent || '').includes(L.importSuccess('@gethullo')),
+      )
+      assert.ok(
+        imported,
+        'closing the dialog on a successful account import must leave a confirmation behind',
+      )
+      assert.equal(
+        urlInput(mounted.container),
+        null,
+        'the dialog must close once the account is imported',
+      )
+
+      const createIndex = mounted.calls.findIndex(
+        (call) => call.method === 'POST' && call.path.includes(RIVAL_PREFIX),
+      )
+      assert.ok(createIndex >= 0, 'the account import must reach the Host')
+      const after = mounted.calls.slice(createIndex + 1)
+      assert.ok(
+        after.some((call) => call.path.includes(`${RIVAL_PREFIX}/posts`)),
+        'the works feed must be re-read immediately, not on the next tab switch',
+      )
+      assert.ok(
+        after.some((call) => call.method === 'GET'
+          && call.path.includes(RIVAL_PREFIX)
+          && !call.path.includes('/posts')),
+        'the account list behind the filter must be re-read as well',
+      )
+      assert.ok(
+        feedRequests(mounted).length > postsBefore,
+        'the reload must be a new request, not the one already in flight',
+      )
+
+      // 重读的成果要看见：新账号出现在账号筛选器里。
+      await mounted.click(filterTrigger(mounted.container))
+      await settle(mounted.container, () => rowById(mounted.container, NEW_ACCOUNT_ID))
+      assert.ok(
+        rowById(mounted.container, NEW_ACCOUNT_ID),
+        'the imported account must be listed in the filter without a manual refresh',
       )
     } finally {
       await mounted.unmount()
