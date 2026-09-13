@@ -379,3 +379,11 @@ export function CheckIcon({ size = 13, className }: { size?: number; className?:
     </SvgIcon>
   )
 }
+
+export function ChevronDownIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <polyline points="6 9 12 15 18 9" />
+    </SvgIcon>
+  )
+}

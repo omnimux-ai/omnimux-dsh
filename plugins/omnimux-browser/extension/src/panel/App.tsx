@@ -21,7 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { DshInstanceSelector } from './components/DshInstanceSelector.tsx'
+import { ModelSelector } from './components/ModelSelector.tsx'
 import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
@@ -555,6 +555,34 @@ export function App(): React.JSX.Element {
     const num = saved ? parseInt(saved, 10) : 45120
     return !isNaN(num) && num > 0 ? num : 45120
   })
+
+  const [hostDefaultModel, setHostDefaultModel] = useState<string>('')
+  const [dynamicModels, setDynamicModels] = useState<Array<{ id: string; name?: string }>>([])
+  const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>(() => {
+    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gemini-3.8-flash-high'
+  })
+
+  const handleSelectModel = (modelId: string) => {
+    setSelectedDefaultModel(modelId)
+    safeSetStorage(`omnimux_default_model_${targetPort}`, modelId)
+    safeSetStorage('omnimux_default_model', modelId)
+
+    // 同步到当前 Host 实例的 agent-default-model
+    void api.rpc('settings.mutate', {
+      ns: 'agent-default-model',
+      ops: [
+        { op: 'set', path: ['model'], value: modelId }
+      ]
+    }).catch(() => {})
+
+    // 如果当前会话处于活跃状态，即时应用
+    if (sessionRef.current) {
+      void api.rpc('session.selectModel', {
+        sessionId: sessionRef.current,
+        model: modelId,
+      }).catch(() => {})
+    }
+  }
 
   const handleSwitchDshInstance = (inst: { id: string; port: number; name: string }) => {
     setTargetPort(inst.port)
@@ -1346,6 +1374,12 @@ export function App(): React.JSX.Element {
     if (sessionTransitionRef.current !== transition) return
     sessionRef.current = created.sessionId
     await api.setActiveSession(created.sessionId, true)
+    if (selectedDefaultModel) {
+      void api.rpc('session.selectModel', {
+        sessionId: created.sessionId,
+        model: selectedDefaultModel,
+      }).catch(() => {})
+    }
     setSessionTitle(null)
     sessionRuntimeRef.current.seedRunning(created.sessionId, false)
     applyHistory(created.sessionId, await readHistory(created.sessionId))
@@ -1709,7 +1743,21 @@ export function App(): React.JSX.Element {
           models?: Array<{ id: string; contextWindow?: number }>
         }>
         const defaults = (described.namespaces?.find((candidate) => candidate.ns === 'agent-default-model')
-          ?.value ?? {}) as { provider?: unknown }
+          ?.value ?? {}) as { provider?: unknown; model?: unknown }
+        if (typeof defaults.model === 'string' && defaults.model.trim() !== '') {
+          setHostDefaultModel(defaults.model.trim())
+        }
+        const discoveredModels: Array<{ id: string; name?: string }> = []
+        Object.values(providers).forEach((route) => {
+          (route.models ?? []).forEach((m) => {
+            if (m.id && !discoveredModels.some((x) => x.id === m.id)) {
+              discoveredModels.push({ id: m.id, name: m.id })
+            }
+          })
+        })
+        if (discoveredModels.length > 0) {
+          setDynamicModels(discoveredModels)
+        }
         const refs = Object.entries(providers)
           .filter(([key]) => key.startsWith(RELAY_ROUTE_PREFIX))
           .map(([, route]) => typeof route.apiKeyEnv === 'string' ? route.apiKeyEnv : '')
@@ -1977,28 +2025,36 @@ export function App(): React.JSX.Element {
       <><div className="settings">
         <div className="settings-heading">
           <button className="icon-button" onClick={() => setShowSettings(false)} aria-label={copy.settings.back}><BackIcon /></button>
-          <div>
-            <span className="eyebrow">{copy.settings.eyebrow}</span>
-            <h1>{copy.settings.title}</h1>
-          </div>
+          <h1 className="settings-header-title">{copy.settings.title}</h1>
         </div>
         <div className="settings-panel">
           <label>
-            <span>{locale === 'en' ? 'Local Engine Instance & Port' : '本地引擎实例与端口'}</span>
-            <small>{locale === 'en' ? 'Select which local DSH / OmniMux instance to connect with live port health checks' : '自主选择要连接的本地引擎版本（OmniMux Dev 45120 默认推荐、DSH Desktop 43120、PRD 43128 等），自动进行本地网络健康检测'}</small>
+            <span>{locale === 'en' ? 'Default Workspace' : '默认工作区'}</span>
+            <small>{locale === 'en' ? 'Bind your chats and tasks to a local workspace.' : '会话与任务绑定的本地工作区'}</small>
             <div style={{ marginTop: '8px' }}>
-              <DshInstanceSelector
+              <WorkspaceSelector
+                bridgeConnected={state === 'connected'}
                 locale={locale}
-                activePort={targetPort}
-                onSelectInstance={handleSwitchDshInstance}
+                targetPort={targetPort}
+                onSelectWorkspace={(ws) => {
+                  if (ws.port) {
+                    handleSwitchDshInstance({ id: ws.id, port: ws.port, name: ws.name })
+                  }
+                }}
               />
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
-            <small>{locale === 'en' ? 'Bind your browser chat and generation tasks to a local DSH / OmniMux workspace' : '设置会话与生成任务绑定的本地 DSH / OmniMux 工作区目录'}</small>
+            <span>{locale === 'en' ? 'Default Model' : '默认模型'}</span>
+            <small>{locale === 'en' ? 'Match models supported by the active instance' : '跟随当前实例匹配可用默认模型'}</small>
             <div style={{ marginTop: '8px' }}>
-              <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} targetPort={targetPort} />
+              <ModelSelector
+                locale={locale}
+                activePort={targetPort}
+                hostDefaultModel={hostDefaultModel}
+                dynamicModels={dynamicModels}
+                onSelectModel={handleSelectModel}
+              />
             </div>
           </label>
           <label>
@@ -2016,7 +2072,7 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Appearance Theme' : '界面主题'}</span>
-            <small>{locale === 'en' ? 'Automatically follow browser/system theme or choose dark/light' : '自适应跟随浏览器系统深浅色，或选择固定深色/浅色'}</small>
+            <small>{locale === 'en' ? 'Light, dark, or system theme' : '深浅色外观模式'}</small>
             <select
               value={themeSetting}
               onChange={(e) => updateThemeSetting(e.target.value as 'auto' | 'light' | 'dark')}
@@ -2051,7 +2107,7 @@ export function App(): React.JSX.Element {
           </label>
           <label>
             <span>{locale === 'en' ? 'Interface Text Scale' : '界面字号大小'}</span>
-            <small>{locale === 'en' ? 'Scale panel text size for comfortable reading' : '按需微调工作台字号大小与阅读比例'}</small>
+            <small>{locale === 'en' ? 'Font scale ratio' : '微调字号大小与阅读比例'}</small>
             <div className="settings-scale-bar">
               <button
                 type="button"
@@ -2253,7 +2309,6 @@ export function App(): React.JSX.Element {
           <button className="primary" onClick={saveSettings}>{copy.settings.save}</button>
           <button className="secondary" onClick={() => setShowSettings(false)}>{copy.settings.cancel}</button>
         </div>
-        <p className="hint">{copy.settings.snapshotHint(caps?.snapshotMaxChars ?? DEFAULT_SNAPSHOT_MAX_CHARS)}</p>
       </div>{approvalDialog}</>
     )
   }

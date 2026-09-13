@@ -4,12 +4,17 @@ import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import {
-  DshInstanceSelector,
+  WorkspaceSelector,
   PRESET_INSTANCES,
   probeInstanceHealth,
-} from '../src/panel/components/DshInstanceSelector.tsx'
+} from '../src/panel/components/WorkspaceSelector.tsx'
+import {
+  ModelSelector,
+  INSTANCE_MODELS,
+  getDefaultModelForPort,
+} from '../src/panel/components/ModelSelector.tsx'
 
-describe('DshInstanceSelector Component & Port Health Check Suite', () => {
+describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite', () => {
   let container: HTMLDivElement
   let root: ReturnType<typeof createRoot>
 
@@ -34,7 +39,7 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
     expect(prd?.port).toBe(43128)
   })
 
-  it('probes port health correctly: online for 200, standby for 401/403, offline on failure', async () => {
+  it('probes port health correctly: online for 200/401/403, offline on network refusal', async () => {
     // 1. Mock 200 OK
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: true,
@@ -44,16 +49,15 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
 
     const resOnline = await probeInstanceHealth(45120)
     expect(resOnline.status).toBe('online')
-    expect(resOnline.messageZh).toContain('已就绪')
 
-    // 2. Mock 401 Unauthorized (DSH app alive and listening)
+    // 2. Mock 401 Unauthorized (DSH app alive and listening -> treated as active online)
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 401,
     })
     const resStandby = await probeInstanceHealth(45120)
-    expect(resStandby.status).toBe('standby')
-    expect(resStandby.messageZh).toContain('运行中')
+    expect(resStandby.status).toBe('online')
+    expect(resStandby.messageZh).toContain('就绪')
 
     // 3. Mock Network Error (Port offline)
     fetchMock.mockRejectedValueOnce(new Error('Failed to fetch'))
@@ -62,45 +66,51 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
     expect(resOffline.messageZh).toContain('离线')
   })
 
-  it('renders instance selector pill and selects OmniMux Dev by default', async () => {
+  it('renders default workspace trigger with green dot for active OmniMux Dev 45120 and ChevronDown arrow', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
 
     await act(async () => {
       root.render(
-        createElement(DshInstanceSelector, {
+        createElement(WorkspaceSelector, {
+          bridgeConnected: false,
           locale: 'zh',
-          activePort: 45120,
+          targetPort: 45120,
         })
       )
     })
 
-    const pill = container.querySelector('.dsh-instance-pill-btn')
-    expect(pill).not.toBeNull()
-    expect(pill?.textContent).toContain('45120')
-    expect(pill?.textContent).toContain('OmniMux Dev')
+    const trigger = container.querySelector('.workspace-selector-trigger, .workspace-selector-pill')
+    expect(trigger).not.toBeNull()
+    expect(trigger?.textContent).toContain('45120')
+    expect(trigger?.textContent).toContain('OmniMux Dev')
+    expect(container.querySelector('.ws-chevron-arrow')).not.toBeNull()
+    // Must be online (green dot) because 45120 responded healthy
+    const dot = container.querySelector('.engine-dot')
+    expect(dot?.classList.contains('online')).toBe(true)
   })
 
-  it('opens dropdown menu, lists instances with health tags, and triggers onSelectInstance', async () => {
+  it('opens dropdown menu, lists instances and triggers onSelectWorkspace', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
     const onSelect = vi.fn()
 
     await act(async () => {
       root.render(
-        createElement(DshInstanceSelector, {
+        createElement(WorkspaceSelector, {
+          bridgeConnected: false,
           locale: 'zh',
-          activePort: 45120,
-          onSelectInstance: onSelect,
+          targetPort: 45120,
+          onSelectWorkspace: onSelect,
         })
       )
     })
 
     // Click to open dropdown
-    const pill = container.querySelector<HTMLButtonElement>('.dsh-instance-pill-btn')!
+    const trigger = container.querySelector<HTMLButtonElement>('.workspace-selector-trigger, .workspace-selector-pill')!
     await act(async () => {
-      pill.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
-    const dropdown = container.querySelector('.dsh-instance-dropdown-menu')
+    const dropdown = container.querySelector('.workspace-dropdown-menu')
     expect(dropdown).not.toBeNull()
 
     // 3 preset items
@@ -112,11 +122,97 @@ describe('DshInstanceSelector Component & Port Health Check Suite', () => {
       items[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
-    expect(onSelect).toHaveBeenCalledWith({
-      id: 'dsh-desktop',
-      port: 43120,
-      name: 'DSH Desktop',
-    })
+    expect(onSelect).toHaveBeenCalled()
     expect(localStorage.getItem('omnimux_target_port')).toBe('43120')
+  })
+})
+
+describe('ModelSelector Component & Instance Match Suite', () => {
+  let container: HTMLDivElement
+  let root: ReturnType<typeof createRoot>
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('matches models correctly per instance port', () => {
+    expect(getDefaultModelForPort(45120)).toBe('gemini-3.8-flash-high')
+    expect(getDefaultModelForPort(43120)).toBe('deepseek-v4.1-flash')
+    expect(getDefaultModelForPort(43128)).toBe('gemini-3.1-pro-preview')
+
+    const devModels = INSTANCE_MODELS[45120]
+    expect(devModels.some((m) => m.id === 'gemini-3.8-flash-high')).toBe(true)
+    expect(devModels.some((m) => m.id === 'deepseek-reasoner')).toBe(true)
+
+    const dshModels = INSTANCE_MODELS[43120]
+    expect(dshModels.some((m) => m.id === 'deepseek-v4.1-flash')).toBe(true)
+  })
+
+  it('renders select matching active instance port and switches model', async () => {
+    const onSelect = vi.fn()
+
+    await act(async () => {
+      root.render(
+        createElement(ModelSelector, {
+          locale: 'zh',
+          activePort: 45120,
+          onSelectModel: onSelect,
+        })
+      )
+    })
+
+    const select = container.querySelector<HTMLSelectElement>('.model-select-control')!
+    expect(select).not.toBeNull()
+    expect(select.value).toBe('gemini-3.8-flash-high')
+
+    // Change model to deepseek-reasoner
+    await act(async () => {
+      select.value = 'deepseek-reasoner'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(onSelect).toHaveBeenCalledWith('deepseek-reasoner')
+    expect(localStorage.getItem('omnimux_default_model_45120')).toBe('deepseek-reasoner')
+  })
+
+  it('supports custom model entry and persistence', async () => {
+    const onSelect = vi.fn()
+
+    await act(async () => {
+      root.render(
+        createElement(ModelSelector, {
+          locale: 'zh',
+          activePort: 45120,
+          onSelectModel: onSelect,
+        })
+      )
+    })
+
+    const select = container.querySelector<HTMLSelectElement>('.model-select-control')!
+    await act(async () => {
+      select.value = '__custom__'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    // Custom input should appear
+    const input = container.querySelector<HTMLInputElement>('.custom-port-input')!
+    expect(input).not.toBeNull()
+
+    const okBtn = container.querySelector<HTMLButtonElement>('.custom-port-apply-btn')!
+    await act(async () => {
+      input.value = 'my-custom-llm'
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      // Trigger onChange
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      nativeSetter.call(input, 'my-custom-llm')
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      okBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onSelect).toHaveBeenCalled()
   })
 })

@@ -1721,7 +1721,7 @@ textarea:focus-visible {
   gap: 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 18px 16px 24px;
+  padding: 0 16px 24px;
   background: var(--canvas);
   scrollbar-gutter: stable;
 }
@@ -1730,39 +1730,48 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 
+/* 顶部固定标题栏：上下滚动保持吸顶常驻 */
 .settings-heading {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 0 -16px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
 }
 
 .settings-heading .icon-button {
-  border-color: var(--line);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
   background: var(--surface);
-}
-
-.settings-heading > div {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-strong);
+  transition: all 0.15s ease;
 }
 
-.eyebrow {
-  color: var(--blue);
-  font-size: calc(9.5px * var(--ui-scale));
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  line-height: 1.2;
-  text-transform: uppercase;
+.settings-heading .icon-button:hover {
+  background: var(--canvas-deep);
+  border-color: var(--ink-strong);
 }
 
+.settings-header-title,
 .settings h1 {
   margin: 0;
   color: var(--ink-strong);
-  font-size: calc(19px * var(--ui-scale));
-  font-weight: 720;
-  letter-spacing: -0.035em;
-  line-height: 1.25;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .settings-panel {
@@ -2091,11 +2100,17 @@ textarea:focus-visible {
   display: block;
   width: 36px;
   height: 21px;
-  border: 1px solid #b8c1cf;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
-  background: #cfd5df;
-  box-shadow: inset 0 1px 2px rgba(23, 32, 51, 0.08);
+  background: #27272a;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+:root[data-theme="light"] .setting-toggle-control {
+  border-color: #cbd5e1;
+  background: #e2e8f0;
+  box-shadow: inset 0 1px 2px rgba(23, 32, 51, 0.08);
 }
 
 .setting-toggle-control > span {
@@ -2105,29 +2120,36 @@ textarea:focus-visible {
   width: 15px;
   height: 15px;
   border-radius: 50%;
+  background: #a1a1aa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+
+:root[data-theme="light"] .setting-toggle-control > span {
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(23, 32, 51, 0.25);
-  transition: transform 150ms ease;
 }
 
+/* 开启激活态 (Checked)：深色下纯白高亮槽底+纯黑滑块；浅色下纯黑槽底+纯白滑块 */
 .setting-toggle-input:checked + .setting-toggle-control {
-  border-color: var(--ink-strong);
-  background: var(--ink-strong);
-  box-shadow: none;
-}
-
-:root[data-theme="dark"] .setting-toggle-input:checked + .setting-toggle-control {
   border-color: #ffffff;
   background: #ffffff;
-  box-shadow: none;
-}
-
-:root[data-theme="dark"] .setting-toggle-input:checked + .setting-toggle-control > span {
-  background: #09090b;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
 .setting-toggle-input:checked + .setting-toggle-control > span {
+  background: #09090b;
   transform: translateX(15px);
+}
+
+:root[data-theme="light"] .setting-toggle-input:checked + .setting-toggle-control {
+  border-color: #09090b;
+  background: #09090b;
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .setting-toggle-input:checked + .setting-toggle-control > span {
+  background: #ffffff;
 }
 
 .setting-toggle-input:focus-visible + .setting-toggle-control {
@@ -2166,46 +2188,95 @@ textarea:focus-visible {
 }
 
 .settings-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   display: grid;
   grid-template-columns: 1fr 0.65fr;
   gap: 9px;
+  padding: 12px 16px;
+  margin: auto -16px 0;
+  background: var(--canvas);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(8px);
 }
 
 .settings-actions button {
   min-height: 40px;
   padding: 9px 13px;
-  border-radius: 11px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: calc(12px * var(--ui-scale));
-  font-weight: 680;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  font-size: calc(12.5px * var(--ui-scale));
+  font-weight: 600;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* 主操作保存按钮 (纯黑白墨水规范：深色下纯白底纯黑字，浅色下纯黑底纯白字) */
 .settings-actions .primary {
-  border: 1px solid var(--blue);
-  background: var(--blue);
-  color: #ffffff;
-  box-shadow: 0 5px 14px rgba(77, 107, 254, 0.18);
-}
-
-.settings-actions .secondary {
   border: 1px solid var(--line-strong);
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--ink-strong);
+  color: var(--canvas);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
-.settings-actions button:hover {
-  transform: translateY(-1px);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .settings-actions .primary {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+}
+
+:root[data-theme="dark"] .settings-actions .primary {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-theme="light"] .settings-actions .primary {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 .settings-actions .primary:hover {
-  border-color: var(--blue-hover);
-  background: var(--blue-hover);
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* 辅助取消按钮 (深色下深灰底浅色字，浅色下浅灰底黑字) */
+.settings-actions .secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .settings-actions .secondary {
+    background: #18181b !important;
+    color: #f4f4f5 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+}
+
+:root[data-theme="dark"] .settings-actions .secondary {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root[data-theme="light"] .settings-actions .secondary {
+  background: #f4f4f5 !important;
+  color: #18181b !important;
+  border-color: #e4e4e7 !important;
 }
 
 .settings-actions .secondary:hover {
-  border-color: #adb7c7;
-  color: var(--ink);
+  border-color: var(--ink-strong);
+  transform: translateY(-1px);
 }
 
 .hint {
@@ -2296,21 +2367,40 @@ textarea:focus-visible {
 
 .trusted-origin-add button {
   min-height: 34px;
-  padding: 7px 10px;
-  border: 1px solid var(--blue);
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
   border-radius: 9px;
-  background: var(--blue);
-  color: #fff;
+  background: var(--ink-strong);
+  color: var(--canvas);
   cursor: pointer;
-  font-size: calc(10px * var(--ui-scale));
-  font-weight: 700;
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .trusted-origin-add button {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+:root[data-theme="dark"] .trusted-origin-add button {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .trusted-origin-add button {
+  background: #09090b !important;
+  color: #ffffff !important;
 }
 
 .trusted-origin-add button:disabled {
-  border-color: var(--line);
-  background: var(--canvas);
-  color: var(--faint);
+  border-color: var(--line) !important;
+  background: var(--canvas) !important;
+  color: var(--faint) !important;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .trusted-origins .origin-error {
@@ -2743,6 +2833,37 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.relay-heading button {
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--ink-strong);
+  color: var(--canvas);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  font-size: calc(11.5px * var(--ui-scale));
+  font-weight: 600;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .relay-heading button {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+:root[data-theme="dark"] .relay-heading button {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .relay-heading button {
+  background: #09090b !important;
+  color: #ffffff !important;
+}
+
 .relay-heading > span {
   display: flex;
   flex-direction: column;
@@ -2984,37 +3105,53 @@ textarea:focus-visible {
    OmniMux-精灵助手 v2.0 - Scene, Presets, Media Sniffer, DOM Fill & Workspace
    ========================================================================== */
 
-/* Workspace Selector (中性黑白墨水设计，消除紫色) */
+/* Workspace Selector (与下方设置项 select 1:1 视觉统一) */
 .workspace-selector-container {
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.workspace-selector-trigger,
+.workspace-selector-pill {
   display: flex;
   align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
+  justify-content: space-between;
   width: 100%;
-}
-
-.workspace-selector-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: calc(30px * var(--ui-scale));
-  padding: 0 10px;
-  background: var(--surface);
+  min-height: 38px;
+  margin-top: 7px;
+  padding: 8px 12px;
+  background: var(--canvas);
   border: 1px solid var(--line-strong);
-  border-radius: 15px;
+  border-radius: 10px;
   color: var(--ink-strong);
-  font-size: calc(11.5px * var(--ui-scale));
-  font-weight: 580;
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 400;
   cursor: pointer;
-  transition: all 0.15s ease;
-  max-width: 100%;
-  overflow: hidden;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  box-sizing: border-box;
 }
 
+.workspace-selector-trigger:hover,
 .workspace-selector-pill:hover {
-  background: var(--canvas-deep);
-  border-color: var(--ink-strong);
+  border-color: #adb7c7;
+}
+
+.workspace-selector-trigger:focus-visible,
+.workspace-selector-pill:focus-visible {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
+}
+
+.ws-trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .engine-dot {
@@ -3027,24 +3164,88 @@ textarea:focus-visible {
 .engine-dot.connecting { background: #f59e0b; }
 .engine-dot.offline { background: #ef4444; }
 
-.ws-icon { font-size: calc(12px * var(--ui-scale)); flex-shrink: 0; }
-.ws-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-arrow { font-size: calc(9px * var(--ui-scale)); opacity: 0.6; flex-shrink: 0; }
+.ws-icon {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.ws-name {
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 500;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-port-tag {
+  font-size: calc(11.5px * var(--ui-scale));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.ws-chevron-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
 
 .workspace-dropdown-menu {
   position: absolute;
-  top: 36px;
+  top: calc(100% + 4px);
   left: 0;
-  min-width: 240px;
+  right: 0;
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
   padding: 6px;
-  z-index: 1000;
+  z-index: 1050;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  box-sizing: border-box;
+}
+
+/* Model Selector (默认模型选择器，与设置项 1:1 统一) */
+.model-selector-container {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.model-select-control {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 7px;
+  padding: 8px 12px;
+  background: var(--canvas);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink-strong);
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  box-sizing: border-box;
+}
+
+.model-select-control:hover {
+  border-color: #adb7c7;
+}
+
+.model-select-control:focus {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
 }
 
 /* DSH Instance & Port Selector (中性黑白极简风格) */

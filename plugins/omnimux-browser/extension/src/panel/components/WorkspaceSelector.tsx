@@ -1,18 +1,108 @@
 import { memo, useEffect, useState } from 'react'
-import { FolderIcon, RefreshIcon } from './icons.tsx'
+import { FolderIcon, RefreshIcon, CheckIcon, ChevronDownIcon } from './icons.tsx'
 
 export interface WorkspaceItem {
   id: string
   name: string
   path: string
+  port: number
+  instanceNameZh: string
+  instanceNameEn: string
+  isRecommended?: boolean
   isActive?: boolean
+}
+
+export type HealthStatus = 'online' | 'standby' | 'offline'
+
+export interface InstanceHealth {
+  status: HealthStatus
+  latencyMs?: number
+  messageZh: string
+  messageEn: string
+}
+
+export const PRESET_INSTANCES = [
+  {
+    id: 'omnimux-dev',
+    port: 45120,
+    nameZh: 'OmniMux Dev',
+    nameEn: 'OmniMux Dev',
+    defaultPath: '~/Desktop/Project/dsh-plugin/product/omnimux-dsh',
+    isRecommended: true,
+  },
+  {
+    id: 'dsh-desktop',
+    port: 43120,
+    nameZh: 'DSH Desktop',
+    nameEn: 'DSH Desktop',
+    defaultPath: '~/.dsh',
+  },
+  {
+    id: 'omnimux-prd',
+    port: 43128,
+    nameZh: 'OmniMux PRD',
+    nameEn: 'OmniMux PRD',
+    defaultPath: '~/.omnimux',
+  },
+]
+
+export async function probeInstanceHealth(port: number): Promise<InstanceHealth> {
+  const start = Date.now()
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 1200)
+
+    const resp = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
+      signal: controller.signal,
+    }).catch(async () => {
+      return fetch(`http://127.0.0.1:${port}/`, {
+        signal: controller.signal,
+      })
+    })
+
+    clearTimeout(timer)
+    const latency = Date.now() - start
+
+    if (resp.ok) {
+      return {
+        status: 'online',
+        latencyMs: latency,
+        messageZh: `${latency}ms`,
+        messageEn: `${latency}ms`,
+      }
+    }
+
+    if (resp.status === 401 || resp.status === 403) {
+      return {
+        status: 'online', // 本地端口监听中且响应，属于真实可用在线状态
+        latencyMs: latency,
+        messageZh: `就绪 ${latency}ms`,
+        messageEn: `Ready ${latency}ms`,
+      }
+    }
+
+    return {
+      status: 'online',
+      latencyMs: latency,
+      messageZh: `${latency}ms`,
+      messageEn: `${latency}ms`,
+    }
+  } catch {
+    const latency = Date.now() - start
+    return {
+      status: 'offline',
+      latencyMs: latency,
+      messageZh: '离线',
+      messageEn: 'Offline',
+    }
+  }
 }
 
 export const WorkspaceSelector = memo(function WorkspaceSelector({
   bridgeConnected,
   locale = 'zh',
   targetPort = 45120,
-  onSelectWorkspace
+  onSelectWorkspace,
 }: {
   bridgeConnected: boolean
   locale?: 'zh' | 'en'
@@ -20,92 +110,237 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
   onSelectWorkspace?: (ws: WorkspaceItem) => void
 }) {
   const isEn = locale === 'en'
+  const [selectedPort, setSelectedPort] = useState<number>(() => {
+    const saved = localStorage.getItem('omnimux_target_port')
+    const p = saved ? parseInt(saved, 10) : targetPort
+    return !isNaN(p) && p > 0 ? p : 45120
+  })
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([])
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceItem | null>(null)
+  const [healthMap, setHealthMap] = useState<Record<number, InstanceHealth>>({})
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [probing, setProbing] = useState(false)
+  const [showCustomInput, setShowCustomInput] = useState(false)
+  const [customPortInput, setCustomPortInput] = useState('')
 
-  const fetchWorkspaces = async () => {
-    setLoading(true)
-    const ports = Array.from(new Set([targetPort, 45120, 43120, 43128]))
-    let loaded = false
+  const refreshInstances = async () => {
+    setProbing(true)
+    const targets = Array.from(new Set([...PRESET_INSTANCES.map((p) => p.port), selectedPort]))
+    const healthResults: Record<number, InstanceHealth> = {}
 
-    for (const port of ports) {
-      try {
-        const resp = await fetch(`http://127.0.0.1:${port}/api/workspaces`, {
-          signal: AbortSignal.timeout(1500)
-        })
-        if (resp.ok) {
-          const data = await resp.json()
-          const list: WorkspaceItem[] = Array.isArray(data) ? data : data?.workspaces || []
-          if (list.length > 0) {
-            setWorkspaces(list)
-            const active = list.find((w) => w.isActive) || list[0]
-            setActiveWorkspace(active)
-            loaded = true
-            break
-          }
-        }
-      } catch {
-        // Try next port
+    await Promise.all(
+      targets.map(async (port) => {
+        healthResults[port] = await probeInstanceHealth(port)
+      })
+    )
+    setHealthMap(healthResults)
+
+    // 构建各实例对应的工作区列表
+    const list: WorkspaceItem[] = PRESET_INSTANCES.map((inst) => {
+      const h = healthResults[inst.port]
+      return {
+        id: inst.id,
+        name: inst.nameZh,
+        path: inst.defaultPath,
+        port: inst.port,
+        instanceNameZh: inst.nameZh,
+        instanceNameEn: inst.nameEn,
+        isRecommended: inst.isRecommended,
+        healthStatus: h?.status || 'offline',
+        latencyMs: h?.latencyMs,
+        isActive: inst.port === selectedPort,
       }
+    })
+
+    if (!PRESET_INSTANCES.some((p) => p.port === selectedPort)) {
+      const h = healthResults[selectedPort]
+      list.push({
+        id: 'custom',
+        name: isEn ? `Custom Port (${selectedPort})` : `自定义实例 (${selectedPort})`,
+        path: `http://127.0.0.1:${selectedPort}`,
+        port: selectedPort,
+        instanceNameZh: `自定义 (${selectedPort})`,
+        instanceNameEn: `Custom (${selectedPort})`,
+        healthStatus: h?.status || 'offline',
+        latencyMs: h?.latencyMs,
+        isActive: true,
+      })
     }
 
-    if (!loaded) {
-      const portName = targetPort === 45120 ? 'OmniMux Dev' : targetPort === 43120 ? 'DSH Desktop' : targetPort === 43128 ? 'OmniMux PRD' : `Port ${targetPort}`
-      const fallback: WorkspaceItem = {
-        id: `default-${targetPort}`,
-        name: `${portName} (${targetPort})`,
-        path: `http://127.0.0.1:${targetPort}`,
-        isActive: true
-      }
-      setWorkspaces([fallback])
-      setActiveWorkspace(fallback)
-    }
-    setLoading(false)
+    setWorkspaces(list)
+    const cur = list.find((w) => w.port === selectedPort) || list[0]
+    setActiveWorkspace(cur)
+    setProbing(false)
   }
 
   useEffect(() => {
-    void fetchWorkspaces()
-  }, [targetPort])
+    void refreshInstances()
+  }, [selectedPort])
+
+  const handleSelect = (ws: WorkspaceItem) => {
+    setSelectedPort(ws.port)
+    setActiveWorkspace(ws)
+    setIsOpen(false)
+    setShowCustomInput(false)
+    try {
+      localStorage.setItem('omnimux_target_port', String(ws.port))
+      localStorage.setItem('omnimux_target_instance', ws.id)
+    } catch {
+      // Ignore
+    }
+    onSelectWorkspace?.(ws)
+  }
+
+  const handleApplyCustom = () => {
+    const p = parseInt(customPortInput.trim(), 10)
+    if (!isNaN(p) && p > 0 && p <= 65535) {
+      setSelectedPort(p)
+      setShowCustomInput(false)
+      setIsOpen(false)
+      try {
+        localStorage.setItem('omnimux_target_port', String(p))
+        localStorage.setItem('omnimux_target_instance', 'custom')
+      } catch {
+        // Ignore
+      }
+      onSelectWorkspace?.({
+        id: 'custom',
+        name: isEn ? `Custom (${p})` : `自定义实例 (${p})`,
+        path: `http://127.0.0.1:${p}`,
+        port: p,
+        instanceNameZh: `自定义 (${p})`,
+        instanceNameEn: `Custom (${p})`,
+        isActive: true,
+      })
+    }
+  }
+
+  // 状态指示点：只要本地探活为 online，或者 WebSocket 已连接，均点亮为绿色在线；避免红点误导
+  const currentHealth = healthMap[selectedPort]
+  const isOnline = bridgeConnected || currentHealth?.status === 'online'
 
   return (
     <div className="workspace-selector-container">
       <button
         type="button"
-        className="workspace-selector-pill"
+        className="workspace-selector-trigger"
         onClick={() => setIsOpen(!isOpen)}
-        title={isEn ? "Switch local DSH / OmniMux workspace" : "切换本地 DSH / OmniMux 工作区"}
+        title={isEn ? 'Switch instance and default workspace' : '选择连接的实例与默认工作区'}
       >
-        <span className={`engine-dot ${bridgeConnected ? 'online' : loading ? 'connecting' : 'offline'}`} />
-        <span className="ws-icon"><FolderIcon size={13} /></span>
-        <span className="ws-name">{activeWorkspace?.name || (isEn ? 'Select Workspace' : '选择工作区')}</span>
-        <span className="ws-arrow">▾</span>
+        <div className="ws-trigger-left">
+          <span className={`engine-dot ${isOnline ? 'online' : probing ? 'connecting' : 'offline'}`} />
+          <span className="ws-icon"><FolderIcon size={14} /></span>
+          <span className="ws-name">
+            {activeWorkspace?.instanceNameZh || activeWorkspace?.name || (isEn ? 'Select Workspace' : '选择工作区')}
+          </span>
+          <span className="ws-port-tag">:{selectedPort}</span>
+        </div>
+        <span className="ws-chevron-arrow">
+          <ChevronDownIcon size={14} />
+        </span>
       </button>
 
       {isOpen && (
         <div className="workspace-dropdown-menu">
-          <div className="dropdown-header">{isEn ? 'Local Workspaces' : '本地工作区列表'}</div>
-          {workspaces.map((ws) => (
+          <div className="dropdown-header">
+            <span>{isEn ? 'Available Instances & Workspaces' : '可用实例与工作区'}</span>
             <button
-              key={ws.id}
               type="button"
-              className={`dropdown-item ${activeWorkspace?.id === ws.id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveWorkspace(ws)
-                setIsOpen(false)
-                onSelectWorkspace?.(ws)
+              className="probe-refresh-icon-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                void refreshInstances()
               }}
+              title={isEn ? 'Refresh all ports' : '重新探测实例状态'}
             >
-              <span className="item-name">{ws.name}</span>
-              <span className="item-path">{ws.path}</span>
+              <RefreshIcon size={12} className={probing ? 'spinning' : ''} />
             </button>
-          ))}
-          <div className="dropdown-footer">
-            <button type="button" className="refresh-btn" onClick={fetchWorkspaces}>
-              <RefreshIcon size={12} />
-              <span>{isEn ? 'Refresh' : '刷新工作区'}</span>
-            </button>
+          </div>
+
+          <div className="instance-list">
+            {workspaces.map((ws) => {
+              const isChosen = ws.port === selectedPort
+              const health = healthMap[ws.port]
+              const latencyText = health?.latencyMs !== undefined ? `${health.latencyMs}ms` : ''
+              const statusLabel = health?.status === 'online'
+                ? (latencyText ? `${isEn ? 'Online' : '在线'} ${latencyText}` : (isEn ? 'Online' : '在线'))
+                : (isEn ? 'Offline' : '离线')
+
+              return (
+                <div
+                  key={ws.id}
+                  className={`instance-item-row ${isChosen ? 'active' : ''}`}
+                  onClick={() => handleSelect(ws)}
+                >
+                  <div className="instance-row-left">
+                    <span
+                      className={`instance-health-dot ${
+                        health?.status === 'online'
+                          ? 'online'
+                          : health ? 'offline' : 'checking'
+                      }`}
+                    />
+                    <span className="instance-name">{isEn ? ws.instanceNameEn : ws.instanceNameZh}</span>
+                    <span className="instance-port-tag">:{ws.port}</span>
+                    {ws.isRecommended && (
+                      <span className="instance-rec-pill">{isEn ? 'REC' : '推荐'}</span>
+                    )}
+                  </div>
+                  <div className="instance-row-right">
+                    <span
+                      className={`health-pill ${
+                        health?.status === 'online' ? 'online' : 'offline'
+                      }`}
+                    >
+                      {statusLabel}
+                    </span>
+                    {isChosen && (
+                      <span className="instance-check-mark"><CheckIcon size={12} /></span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="instance-custom-footer">
+            {!showCustomInput ? (
+              <button
+                type="button"
+                className="custom-port-trigger-btn"
+                onClick={() => setShowCustomInput(true)}
+              >
+                ＋ {isEn ? 'Custom Port...' : '自定义端口...'}
+              </button>
+            ) : (
+              <div className="custom-port-input-row">
+                <input
+                  type="number"
+                  placeholder={isEn ? 'Port (e.g. 3080)' : '端口号 (如 3080)'}
+                  value={customPortInput}
+                  onChange={(e) => setCustomPortInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleApplyCustom()
+                  }}
+                  className="custom-port-input"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="custom-port-apply-btn"
+                  onClick={handleApplyCustom}
+                >
+                  {isEn ? 'OK' : '确认'}
+                </button>
+                <button
+                  type="button"
+                  className="custom-port-cancel-btn"
+                  onClick={() => setShowCustomInput(false)}
+                >
+                  {isEn ? 'Cancel' : '取消'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
