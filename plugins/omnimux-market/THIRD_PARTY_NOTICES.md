@@ -90,6 +90,16 @@ package's `LICENSE`; the upstream scraper MIT notice is retained in
 `PROVENANCE.md` records the pinned source and the SKILL.md runtime/path adaptation.
 The MIT grants cover software, not rights to collected customer reviews.
 
+## DiceBear Pixel-Art（像素艺术头像规范）
+
+`src/client/plaza/pixel-avatar.js` 与 `src/client/plaza/pixel-avatar-constants.js` 为自研
+零依赖实现，未复制上游代码；算法规范适配
+[DiceBear](https://github.com/dicebear/dicebear) 的 Pixel-Art 像素艺术头像公开规范
+（MIT License）：对称像素网格、有限调色板、游程合并后的矢量输出与种子确定性随机。
+DiceBear 以 MIT License 开源，特此致谢。
+
+自研实现沿用本插件的 MIT License（见 `LICENSE`），源文件头保留 SPDX 标识与声明。
+
 ## 上游同步策略
 
 上游迭代活跃，本 fork 的改动保持「追加式」以降低同步成本。同步上游修复时：

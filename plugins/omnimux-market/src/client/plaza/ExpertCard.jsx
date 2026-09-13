@@ -4,18 +4,40 @@ import {
   getExpertButtonText,
   getExpertLocalizedNames,
   getExpertStatusText,
-  resolveIconSrc,
+  resolveExpertAvatarSrc,
+  resolveExpertPixelAvatar,
   resolveInitials,
 } from './plazaUtils.js';
 
 const h = React.createElement;
 
-function getIconSrc(avatar) {
-  return resolveIconSrc(avatar);
+function getIconSrc(item) {
+  return resolveExpertAvatarSrc(item);
 }
 
 function getInitials(name) {
   return resolveInitials(name);
+}
+
+/**
+ * 头像兜底：图片加载失败先换成同种子像素头像，像素头像也失败才退回文字首字。
+ * 用 dataset 标记保证每个 img 只降级一次，不会陷入无限 onError 循环。
+ *
+ * @param {string} pixelAvatar 该条目的确定性像素头像 data URL
+ * @returns {(e: Event) => void} img onError 处理器
+ */
+function createAvatarErrorHandler(pixelAvatar) {
+  return (e) => {
+    const img = e.currentTarget;
+    if (img.dataset.pixelFallback !== '1') {
+      img.dataset.pixelFallback = '1';
+      img.src = pixelAvatar;
+      return;
+    }
+    img.style.display = 'none';
+    const fallbackNode = img.nextElementSibling;
+    if (fallbackNode) fallbackNode.style.display = 'grid';
+  };
 }
 
 export function renderExpertCard(item, opts) {
@@ -26,11 +48,10 @@ export function renderExpertCard(item, opts) {
   const btnText = getExpertButtonText(conf, tr, isEn);
   const isToggling = expertMarketToggling === item.id;
 
-  const onAvatarErr = (e) => {
-    e.currentTarget.style.display = 'none';
-    const n = e.currentTarget.nextElementSibling;
-    if (n) n.style.display = 'grid';
-  };
+  // 未配置 avatar 的专家（内置预设、自建预设）自动使用像素头像。
+  const pixelAvatar = resolveExpertPixelAvatar(item);
+  const avatarSrc = getIconSrc(item);
+  const onAvatarErr = createAvatarErrorHandler(pixelAvatar);
   const onBtnClick = (e) => {
     e.stopPropagation();
     onToggle(item);
@@ -38,7 +59,7 @@ export function renderExpertCard(item, opts) {
 
   return h('div', { key: item.id, className: 'expert-card' },
     h('div', { className: 'expert-card-avatar-wrap' },
-      h('img', { className: 'expert-card-avatar', src: getIconSrc(item.avatar), alt: title, loading: 'lazy', onError: onAvatarErr }),
+      h('img', { className: 'expert-card-avatar', src: avatarSrc, alt: title, loading: 'lazy', onError: onAvatarErr }),
       h('div', { className: 'expert-card-avatar-fallback', style: { display: 'none' } }, getInitials(title)),
     ),
     conf.btnKey ? h('div', { className: 'expert-card-action' },
