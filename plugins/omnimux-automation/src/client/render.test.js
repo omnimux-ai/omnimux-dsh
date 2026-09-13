@@ -492,7 +492,7 @@ function mountComposerSeat() {
 test('创建按钮是分裂胶囊：左半创建、右半展开两项下拉，选中后收起', async () => {
   const { main, toggle, items } = await mountWorkbenchSplit()
 
-  assert.equal(main().textContent, '新建定时任务')
+  assert.equal(main().textContent, '创建')
   assert.equal(main().disabled, false)
   assert.equal(toggle().disabled, false)
   assert.equal(toggle().getAttribute('aria-haspopup'), 'menu')
@@ -556,7 +556,7 @@ test('「使用对话创建」把引导语写进主对话 contenteditable 并收
     )
     assert.equal(field.textContent, '我要创建一个定时任务，每【时间间隔】执行【具体任务】')
     assert.equal(items().length, 0, '选中后浮层必须收起')
-    assert.equal(dom.window.document.querySelector('.dsh-st-split-main').textContent, '新建定时任务')
+    assert.equal(dom.window.document.querySelector('.dsh-st-split-main').textContent, '创建')
     assert.doesNotMatch(dom.window.document.body.textContent, /请写完整、独立的任务说明/, '对话创建不得打开手动配置弹窗')
   } finally {
     delete dom.window.document.execCommand
