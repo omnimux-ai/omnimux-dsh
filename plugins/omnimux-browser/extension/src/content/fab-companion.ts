@@ -281,6 +281,11 @@ export function initFabCompanion(): void {
       return
     }
 
+    if (type === 'OMNIMUX_PANEL_ERROR') {
+      console.error('[OmniMux-Workstation-Fatal]', e.data.error)
+      return
+    }
+
     if (type === 'GET_PAGE_CONTEXT') {
       syncContextToIframe()
       return
