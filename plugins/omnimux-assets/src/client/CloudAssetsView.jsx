@@ -18,7 +18,7 @@ import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './charact
 import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 
-/** Media type -> tile icon, for media rows whose cover and original both fail. */
+/** Media type -> tile icon, for a media row whose picture and clip are both gone. */
 const TYPE_ICON = {
   audio: AudioIcon,
   video: VideoIcon,
@@ -30,23 +30,43 @@ const TYPE_ICON = {
 /** Thumb classes; the playable variant also becomes the card's play control. */
 const THUMB_CLASS = 'omnimux-assets-card-thumb omnimux-assets-cloud-thumb'
 const PLAYABLE_THUMB_CLASS = `${THUMB_CLASS} omnimux-assets-cloud-thumb--action omnimux-assets-focusable`
+/** Clip classes; the bare variant is the tile's face instead of a hover overlay. */
+const PREVIEW_CLASS = 'omnimux-assets-cloud-preview'
+const BARE_PREVIEW_CLASS = `${PREVIEW_CLASS} omnimux-assets-cloud-preview--bare`
 
 /**
  * Tile media.
  *
- * Small images are their own cover (`which=media`); everything else asks for the
- * thumbnail. A row with no poster reports no cover, and the tile then falls back
- * once to the playable media — for a video that is a frame the browser decodes
- * itself — before settling on the type icon. The `preload="none"` preview only
- * plays while the pointer is over the tile, so a 24-card page issues no video
- * requests up front.
- * @param {{ asset: any, broken: boolean, onBroken: () => void }} props
+ * The tile draws the picture it actually has, in one fixed order: the cover the
+ * catalog published; for a picture row its own file (`which=media`, since an
+ * image is its own cover); and otherwise the clip's first frame.
+ *
+ * An `<img>` is only ever pointed at a picture. The tile used to retry a failed
+ * cover against `which=media` for every type, which for a clip means asking the
+ * browser to draw an mp4: that request can only fail, the row was marked broken,
+ * and a card whose clip was perfectly fine collapsed into a grey type icon. A
+ * clip with no picture above it now *is* the face of the tile, decoding the frame
+ * it shows (`preload="metadata"`); a clip that does have a poster keeps
+ * `preload="none"`, so a 24-card page issues no clip requests up front.
+ *
+ * `hovering` belongs to the card and covers all of it, so what plays is what the
+ * stylesheet already fades in.
+ * @param {{ asset: any, broken: boolean, onBroken: () => void, hovering: boolean }} props
  */
 function CloudTileMedia(props) {
-  const { asset, broken, onBroken } = props
-  const [hovering, setHovering] = useState(false)
-  const [retriedWithMedia, setRetriedWithMedia] = useState(false)
+  const { asset, broken, onBroken, hovering } = props
+  const [coverFailed, setCoverFailed] = useState(false)
   const videoRef = useRef(/** @type {HTMLVideoElement | null} */ (null))
+
+  const isVideo = asset.mediaType === 'video'
+  const coverSrc = asset.hasCover === true && !coverFailed ? cloudMediaUrl(asset.id, 'cover') : ''
+  const imageSrc = asset.mediaType === 'image' ? cloudMediaUrl(asset.id, 'media') : coverSrc
+  const hasClip = asset.hasMedia === true
+  // The clip is mounted for every video row — that is what plays on hover — and
+  // for any other row whose file is the only thing left to draw. It is bare when
+  // no picture sits above it, which is when it has to be visible on its own.
+  const showClip = hasClip && (isVideo || imageSrc === '')
+  const bareClip = showClip && imageSrc === ''
 
   useEffect(() => {
     const element = videoRef.current
@@ -59,39 +79,55 @@ function CloudTileMedia(props) {
     }
   }, [hovering])
 
-  useEffect(() => { setRetriedWithMedia(false) }, [asset.id])
+  // A bare clip has to decode the frame it already shows: at mount, and again if
+  // the cover request failed after mount. A clip with a poster above it waits for
+  // hover, so nothing is fetched up front.
+  useEffect(() => {
+    const element = videoRef.current
+    if (!element || !bareClip || element.readyState > 0) return
+    element.load()
+  }, [bareClip])
+
+  useEffect(() => { setCoverFailed(false) }, [asset.id])
 
   const Icon = TYPE_ICON[asset.mediaType] ?? DocIcon
   if (broken) return <Icon size={22} />
 
-  const isImage = asset.mediaType === 'image'
-  const wantsCover = !isImage && !retriedWithMedia
-  const coverSrc = cloudMediaUrl(asset.id, wantsCover ? 'cover' : 'media')
-
   const handleImageError = () => {
-    // One retry against the playable media, then give up and show the icon.
-    if (wantsCover) setRetriedWithMedia(true)
+    // A lost picture is survivable only when a clip can take its place: there is
+    // no second image source to try, because the row's original is a clip. A
+    // picture row has no clip behind it, so there the icon is the last resort.
+    if (asset.mediaType !== 'image' && hasClip) setCoverFailed(true)
     else onBroken()
+  }
+
+  const handleVideoError = () => {
+    // The clip was the tile's only picture, so with it gone the tile falls back
+    // to its type icon instead of sitting there blank.
+    if (bareClip) onBroken()
   }
 
   return (
     <>
-      <img
-        src={coverSrc}
-        className="omnimux-assets-card-media"
-        alt=""
-        loading="lazy"
-        onError={handleImageError}
-      />
-      {asset.mediaType === 'video' ? (
+      {imageSrc === '' ? null : (
+        <img
+          src={imageSrc}
+          className="omnimux-assets-card-media"
+          alt=""
+          loading="lazy"
+          onError={handleImageError}
+        />
+      )}
+      {showClip ? (
         <video
           ref={videoRef}
-          className="omnimux-assets-cloud-preview"
+          className={bareClip ? BARE_PREVIEW_CLASS : PREVIEW_CLASS}
           src={cloudMediaUrl(asset.id, 'media')}
           muted
           loop
           playsInline
-          preload="none"
+          preload={bareClip ? 'metadata' : 'none'}
+          onError={handleVideoError}
         />
       ) : null}
     </>
@@ -119,6 +155,10 @@ function CloudTileMedia(props) {
  * preview; on every other card the whole card opens the preview. The title is the
  * keyboard route to that preview, which keeps one tab stop per card rather than
  * one per region.
+ *
+ * The card is also the pointer surface of its own preview: the pointer landing
+ * anywhere on it starts the clip, leaving resets it to its first frame, and that
+ * is the very area the stylesheet fades the preview in over.
  * @param {{
  *   asset: any,
  *   t: (key: string) => string,
@@ -130,6 +170,7 @@ function CloudTileMedia(props) {
 export function CloudAssetCard(props) {
   const { asset, t, playing, onTogglePlay, onPreview } = props
   const [broken, setBroken] = useState(false)
+  const [hovering, setHovering] = useState(false)
   const [added, setAdded] = useState(false)
   const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
 
@@ -172,6 +213,8 @@ export function CloudAssetCard(props) {
       data-kind={kind}
       data-media-type={asset.mediaType}
       data-theme={theme}
+      onMouseEnter={() => { setHovering(true) }}
+      onMouseLeave={() => { setHovering(false) }}
       onClick={openPreview}
     >
       {kind === 'text' ? null : (
@@ -184,7 +227,7 @@ export function CloudAssetCard(props) {
           onClick={canPlay ? handlePlayClick : undefined}
           onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
         >
-          {canPlay ? null : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />}
+          {canPlay ? null : <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} hovering={hovering} />}
           {canPlay ? (
             <span className="omnimux-assets-cloud-play" aria-hidden="true">
               {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
