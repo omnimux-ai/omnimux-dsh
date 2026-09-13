@@ -84,18 +84,32 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
   try {
     if (platform === 'twitter') {
       const pathname = window.location.pathname
-      const isProfile = !pathname.includes('/status/') && pathname !== '/home' && pathname !== '/'
+      const segments = pathname.split('/').filter(Boolean)
+      const reserved = ['home', 'explore', 'notifications', 'messages', 'settings', 'i', 'compose', 'search']
+      const handle = (segments.length >= 1 && !reserved.includes(segments[0].toLowerCase())) ? segments[0] : ''
+      const isProfile = !!handle && !pathname.includes('/status/')
 
-      // 1. Profile 优先提取高清大头像 (替换 _normal 或 _bigger 为 _400x400 高清大特写)
-      const avatarImg = document.querySelector<HTMLImageElement>(
-        'div[data-testid="UserAvatar-Container"] img, a[href$="/photo"] img, img[src*="profile_images"]'
-      )
-      if (isProfile && avatarImg?.src) {
-        return avatarImg.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
+      // 锁定页面主内容区，坚决排除左侧导航栏账号切换按钮 (防止误抓登录用户头像)
+      const mainCol = document.querySelector('div[data-testid="primaryColumn"], main[role="main"], main') || document.body
+
+      // 1. Profile 个人主页：精准锚定博主专属头像链接 /${handle}/photo 或 mainArea 内大头像
+      if (isProfile) {
+        if (handle) {
+          const handleAvatar = mainCol.querySelector<HTMLImageElement>(`a[href*="/${handle}/photo"] img, a[href$="/photo"] img`)
+          if (handleAvatar?.src) {
+            return handleAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
+          }
+        }
+        const profileAvatar = Array.from(mainCol.querySelectorAll<HTMLImageElement>('div[data-testid="UserAvatar-Container"] img')).find(
+          (img) => !img.closest('[data-testid="SideNav_AccountSwitcher_Button"], header[role="banner"]')
+        )
+        if (profileAvatar?.src) {
+          return profileAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
+        }
       }
 
-      // 2. Status 详情页首选推文大图或视频海报
-      const tweetArticle = document.querySelector('article[data-testid="tweet"]')
+      // 2. Status 详情页首选推文大图或视频首帧
+      const tweetArticle = mainCol.querySelector('article[data-testid="tweet"]')
       if (tweetArticle) {
         const photo = tweetArticle.querySelector<HTMLImageElement>('div[data-testid="tweetPhoto"] img, img[src*="media"]')
         if (photo?.src) return photo.src
@@ -108,12 +122,15 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
       }
 
       // 3. 用户 Banner 背景图
-      const bannerImg = document.querySelector<HTMLImageElement>('a[href$="/header_photo"] img, img[src*="profile_banners"]')
+      const bannerImg = mainCol.querySelector<HTMLImageElement>('a[href$="/header_photo"] img, img[src*="profile_banners"]')
       if (bannerImg?.src) return bannerImg.src
 
-      // 4. 头像兜底
-      if (avatarImg?.src) {
-        return avatarImg.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
+      // 4. 主内容区头像兜底 (严格排除左侧导航栏与账号切换器)
+      const anyMainAvatar = Array.from(mainCol.querySelectorAll<HTMLImageElement>('div[data-testid="UserAvatar-Container"] img')).find(
+        (img) => !img.closest('[data-testid="SideNav_AccountSwitcher_Button"], header[role="banner"]')
+      )
+      if (anyMainAvatar?.src) {
+        return anyMainAvatar.src.replace('_normal.', '_400x400.').replace('_bigger.', '_400x400.')
       }
     }
 
@@ -130,8 +147,8 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
     )?.content
     if (ogImg) return ogImg
 
-    // 6. 页面内首张有效大图
-    const firstImg = Array.from(document.querySelectorAll<HTMLImageElement>('main img, article img, img')).find(
+    // 6. 页面内首张有效大图 (限定在 main/article 内，排除小图标)
+    const firstImg = Array.from(document.querySelectorAll<HTMLImageElement>('main img, article img')).find(
       (img) => (img.naturalWidth > 180 || img.width > 180) && (img.naturalHeight > 120 || img.height > 120) && !img.src.includes('svg')
     )
     if (firstImg?.src) return firstImg.src
