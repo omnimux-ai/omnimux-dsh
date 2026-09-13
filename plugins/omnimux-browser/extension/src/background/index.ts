@@ -2066,6 +2066,10 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       sendResponse({ ok: true })
     })
     return true
+  } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
+    // Twitter In-Page Copilot text generation handler
+    sendResponse({ ok: false, message: 'delegating to copilot built-in templating', text: '' })
+    return false
   }
 })
 
