@@ -98,13 +98,15 @@ export const CAPSULE_SPEC = {
   collapsedHeight: 32,
   collapsedRadius: 16,
   /**
-   * Stage two, the expanded row: 3 x 24px icon buttons + 2 x 4px gaps +
-   * 2 x 5px row padding + 2 x 1px border. The buttons are smaller than the band
-   * on purpose, so their hover fills float inside the pill instead of filling it
-   * from edge to edge.
+   * Stage two, the expanded row: 3 x 20px circular icon buttons + 2 x 6px gaps +
+   * 2 x 6px row padding = 84px.
+   * Every gap, padding, and vertical margin is strictly 6px:
+   * (32 - 20) / 2 = 6px above and below, 6px at left/right edges, and 6px between
+   * buttons. The two end buttons form exact concentric circles with the pill's
+   * 16px rounded ends, completely eliminating corner clipping and visual overflow.
    */
-  width: 92,
-  paddingX: 5,
+  width: 84,
+  paddingX: 6,
   /**
    * Width of the translucent halo the pill casts on every side.
    *
@@ -119,8 +121,8 @@ export const CAPSULE_SPEC = {
    * the window in which the action row may not take the pointer.
    */
   openMs: 220,
-  /** Gap between two action icons in the expanded row. */
-  iconGap: 4,
+  /** Gap between two action icons in the expanded row: strictly 6px. */
+  iconGap: 6,
   blur: 'blur(24px) saturate(140%)',
   /**
    * Translucent rim. Media behind the pill can be a white studio shot or a black
@@ -143,14 +145,14 @@ export const CAPSULE_SPEC = {
   /** Inset from the media's bottom-left corner. */
   inset: 10,
   /**
-   * Action-button hit box, and therefore the size of the translucent fill its
-   * hover paints. It is deliberately smaller than {@link height}: the `4px` left
-   * above and below the box is what keeps that fill reading as a light, precise
-   * control instead of a slab pressed against the pill's edges.
+   * Action-button hit box: strictly a 20px perfect circle (`border-radius: 50%`).
+   * Inside the 32px band (R=16), a 20px circle (r=10) centered at (16, 16)
+   * creates a constant 6px breathing margin in EVERY direction (top, bottom,
+   * and along the rounded cap), ensuring zero corner protrusion or overflow.
    */
-  iconSize: 24,
-  /** Rendered size of the glyph inside an action button. */
-  iconGlyphSize: 14,
+  iconSize: 20,
+  /** Rendered size of the glyph inside an action button: 13px. */
+  iconGlyphSize: 13,
   /**
    * Hit box of the stage-one brand trigger inside the circle. Unlike the icon
    * buttons this box is not the band itself: a full-band trigger would put its
