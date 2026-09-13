@@ -26,6 +26,7 @@ import { CAPSULE_SPEC, OVERLAY_Z, TIMING, computeCapsuleGeometry, type CapsuleGe
 import { OVERLAY_STYLES } from './styles.ts'
 import { MediaTooltip, readViewportBox } from './tooltip.ts'
 import { UNMEASURED_CONTROL, VideoAnchorProbe, resolveCapsuleAnchor } from './video-anchor.ts'
+import { FEATURE_FLAG, readFlag, subscribeFlag } from '../../feature-flags.ts'
 import type { ActionOutcome, AnchorRect, HoverCandidate, HoveredMedia, MediaActionKind, OverlayState } from './types.ts'
 
 /** Id of the host element; also how a duplicate injection is detected. */
@@ -51,6 +52,11 @@ export class MediaOverlay {
   private capsule: MediaCapsule | null = null
   private tooltip: MediaTooltip | null = null
   private detector: MediaDetector | null = null
+
+  /** Whether the hover behaviour is attached; `false` while the panel switch is off. */
+  private active = false
+  /** Releases the listeners that follow the panel switch. */
+  private unsubscribeFlag: (() => void) | null = null
 
   private state: OverlayState = {
     phase: 'idle',
@@ -116,13 +122,59 @@ export class MediaOverlay {
 
     this.host = host
     this.bindCapsule()
-    this.bindDocument()
+    this.followSwitch()
+  }
 
+  /**
+   * Turns the hover assistant on or off.
+   *
+   * Off is a full stop rather than a hidden node: the detector and the pointer
+   * listeners are released, so a switched-off toolbar costs the page nothing and
+   * releases the media under the pointer at once. The shadow tree stays mounted,
+   * so switching back on re-attaches instead of rebuilding.
+   */
+  setEnabled(enabled: boolean): void {
+    if (enabled === this.active) return
+    this.active = enabled
+    if (enabled) this.activate()
+    else this.deactivate()
+  }
+
+  /** Whether the hover assistant is currently listening to the page. */
+  isEnabled(): boolean {
+    return this.active
+  }
+
+  private activate(): void {
+    this.bindDocument()
     this.detector = new MediaDetector({
       onCandidate: (candidate) => { this.handleCandidate(candidate) },
       onInvalidate: (reason) => { this.handleInvalidate(reason) },
     })
     this.detector.start()
+  }
+
+  private deactivate(): void {
+    this.hideNow(true)
+    this.unbindDocument()
+    this.detector?.dispose()
+    this.detector = null
+  }
+
+  /**
+   * Follows the panel's switch.
+   *
+   * The stored value is read before anything is attached: the detector's capture
+   * listeners are how the extension observes the page, so a tab whose switch is
+   * off must never attach one — not even for the tick before the read lands.
+   * With no storage to read, the read falls back to the mirror and the default.
+   */
+  private followSwitch(): void {
+    this.unsubscribeFlag = subscribeFlag(FEATURE_FLAG.mediaHover, (enabled) => { this.setEnabled(enabled) })
+    void readFlag(FEATURE_FLAG.mediaHover).then((enabled) => {
+      // The read may land after a teardown; a disposed overlay owns no behaviour.
+      if (this.host !== null) this.setEnabled(enabled)
+    })
   }
 
   /** Tears everything down: listeners, timers, nodes and pending waits. */
@@ -134,14 +186,14 @@ export class MediaOverlay {
     this.clearDismissTimer()
     this.cancelFrame()
 
+    this.unsubscribeFlag?.()
+    this.unsubscribeFlag = null
+    this.active = false
+
     this.detector?.dispose()
     this.detector = null
 
-    this.doc.removeEventListener('pointerover', this.onPointerOver, true)
-    this.doc.removeEventListener('pointermove', this.onPointerMoveTarget, true)
-    this.doc.removeEventListener('pointerout', this.onPointerOut, true)
-    window.removeEventListener('scroll', this.onScroll, true)
-    window.removeEventListener('resize', this.onWindowResize)
+    this.unbindDocument()
 
     this.capsule?.destroy()
     this.tooltip?.destroy()
@@ -233,6 +285,15 @@ export class MediaOverlay {
     this.doc.addEventListener('pointerout', this.onPointerOut, true)
     window.addEventListener('scroll', this.onScroll, { passive: true, capture: true })
     window.addEventListener('resize', this.onWindowResize, { passive: true })
+  }
+
+  /** Releases exactly the listeners {@link bindDocument} installed. */
+  private unbindDocument(): void {
+    this.doc.removeEventListener('pointerover', this.onPointerOver, true)
+    this.doc.removeEventListener('pointermove', this.onPointerMoveTarget, true)
+    this.doc.removeEventListener('pointerout', this.onPointerOut, true)
+    window.removeEventListener('scroll', this.onScroll, true)
+    window.removeEventListener('resize', this.onWindowResize)
   }
 
   private readonly onPointerOver = (event: Event): void => {
@@ -487,14 +548,14 @@ export class MediaOverlay {
       payload.type,
       payload.type === 'video' ? this.videoProbe.probe(element, rect) : UNMEASURED_CONTROL,
     )
-    // Both stages are measured as the expanded row. The circle is drawn inside
-    // that footprint, so opening stage two grows into space the geometry already
-    // reserved and can never cross the viewport edge.
+    // Both stages are measured as the expanded row. The smaller circle is drawn
+    // inside that footprint, so opening stage two grows right and downward into
+    // space the geometry already reserved and can never cross the viewport edge.
     const geometry = computeCapsuleGeometry(
       rect,
       {
         width: Math.max(box.width, CAPSULE_SPEC.width),
-        height: box.height > 0 ? box.height : CAPSULE_SPEC.height,
+        height: Math.max(box.height, CAPSULE_SPEC.height),
       },
       viewport.width,
       viewport.height,
