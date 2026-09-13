@@ -103,6 +103,32 @@ export function importedPatchOf(data) {
   }
 }
 
+/**
+ * The product kind an import reports. Only a digital answer carries one; a
+ * physical answer leaves the switch where the user put it.
+ * @param {Record<string, unknown> | null | undefined} data
+ * @returns {'digital' | null}
+ */
+export function importedKindOf(data) {
+  if (!data || typeof data !== 'object') return null
+  return data.kind === 'digital' ? 'digital' : null
+}
+
+/**
+ * The six-module strategy an import carried, normalized for the form. An absent
+ * or unusable payload answers null so the dialog keeps what the user typed.
+ * @param {Record<string, unknown> | null | undefined} data
+ * @returns {ReturnType<typeof normalizeBrandStrategy>}
+ */
+export function importedStrategyOf(data) {
+  if (!data || typeof data !== 'object') return null
+  try {
+    return normalizeBrandStrategy(data.brand_strategy)
+  } catch {
+    return null
+  }
+}
+
 export function buildPayload(params) {
   const { name, kind, link, categories, media, coverId, physical, digital } = params
   const body = {
@@ -117,8 +143,18 @@ export function buildPayload(params) {
     })),
     cover_media_id: coverId,
   }
-  if (kind === 'physical' && physical) {
-    Object.assign(body, physical)
+  if (physical) {
+    // `selling` / `audience` are the form's own names; the library reads
+    // `selling_points` / `target_audience`, so they are renamed on the wire.
+    const { selling, audience, brand, features, price, sku, promotion } = physical
+    Object.assign(body, {
+      selling_points: selling,
+      target_audience: audience,
+      brand,
+      features,
+    })
+    // Price / SKU / promotion are physical-only fields.
+    if (kind === 'physical') Object.assign(body, { price, sku, promotion })
   }
   if (kind === 'digital' && digital && digital.strategyTouched) {
     try {
@@ -296,7 +332,11 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
       setStrategyOpen: strategyState.setStrategyOpen,
     },
     actions: {
-      /** Fill every parsed field at once; tags merge into the existing list. */
+      /**
+       * Fill every parsed field at once; tags merge into the existing list. A
+       * digital answer also switches the kind and unfolds the six brand-strategy
+       * modules the analysis filled, so the whole report is visible on arrival.
+       */
       applyImportedData: (data) => {
         const patch = importedPatchOf(data)
         if (patch.name) base.setters.setName(patch.name)
@@ -313,6 +353,13 @@ export function bundleFormReturn(base, mediaState, strategyState, busy) {
             (list, tag) => appendCategoryTag(list, tag),
             current,
           ))
+        }
+        const strategy = importedStrategyOf(data)
+        if (strategy || importedKindOf(data) === 'digital') base.setters.setKind('digital')
+        if (strategy) {
+          strategyState.setStrategy(strategy)
+          strategyState.setStrategyOpen(true)
+          strategyState.setStrategyTouched(true)
         }
       },
       openStrategy: strategyState.openStrategy,

@@ -8,6 +8,7 @@ import {
   buildDigitalCreatePromptText,
   buildPhysicalCreatePromptText,
   registerCreatePromptSections,
+  renderPhysicalImportV9Prompt,
   sanitizeDshPromptVars,
 } from './create-prompts.js'
 
@@ -27,6 +28,34 @@ describe('sanitizeDshPromptVars', () => {
   it('leaves lone {{ without }} and already-sanitized text alone', () => {
     assert.equal(sanitizeDshPromptVars('示例 {{ 未闭合'), '示例 {{ 未闭合')
     assert.equal(sanitizeDshPromptVars('已是 «url»'), '已是 «url»')
+  })
+})
+
+describe('renderPhysicalImportV9Prompt', () => {
+  it('appends the page body to the playbook it was given', () => {
+    const prompt = renderPhysicalImportV9Prompt({
+      url: 'https://shop.example.com/p/aurora-mug',
+      language: '中文',
+      pageContent: 'Aurora Mug 350ml：双层陶瓷内胆，6 小时长效保温。',
+    })
+    // The vendored template keeps its own words …
+    assert.match(prompt, /产品信息调研专家/)
+    assert.match(prompt, /https:\/\/shop\.example\.com\/p\/aurora-mug/)
+    // … and the body rides after it, so nothing is filled into a slot that the
+    // template does not declare.
+    assert.match(prompt, /以下是已提供的商品页面正文\/图文简介：/)
+    assert.ok(prompt.endsWith('Aurora Mug 350ml：双层陶瓷内胆，6 小时长效保温。'))
+    assert.doesNotMatch(prompt, DSH_MUSTACHE)
+  })
+
+  it('renders the playbook alone when there is no body to carry', () => {
+    const prompt = renderPhysicalImportV9Prompt({ url: 'https://shop.example.com/p/aurora-mug' })
+    assert.match(prompt, /产品信息调研专家/)
+    assert.equal(prompt.includes('以下是已提供的商品页面正文'), false)
+    assert.equal(
+      renderPhysicalImportV9Prompt({ url: 'x', pageContent: '  \n\t ' }).includes('以下是已提供的商品页面正文'),
+      false,
+    )
   })
 })
 
