@@ -25,6 +25,8 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   border: 1px solid transparent;
+  background-color: #000000;
+  opacity: 1;
 }
 
 .omnimux-velocity-badge:hover {
@@ -33,23 +35,23 @@
 }
 
 .omnimux-velocity-badge--viral {
-  background: rgba(147, 51, 234, 0.18);
-  border-color: rgba(192, 132, 252, 0.5);
-  color: #d8b4fe;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+  background-color: #250b44;
+  border-color: #a855f7;
+  color: #f3e8ff;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.35);
 }
 
 .omnimux-velocity-badge--surging {
-  background: rgba(234, 88, 12, 0.18);
-  border-color: rgba(251, 146, 60, 0.5);
-  color: #fdba74;
-  box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+  background-color: #3b1404;
+  border-color: #f97316;
+  color: #ffedd5;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
 }
 
 .omnimux-velocity-badge--normal {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #94a3b8;
+  background-color: #000000;
+  border-color: #334155;
+  color: #cbd5e1;
 }
 
 /* Panel Popover */
