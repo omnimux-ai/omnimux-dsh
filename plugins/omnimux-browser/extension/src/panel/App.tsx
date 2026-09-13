@@ -2181,7 +2181,8 @@ export function App(): React.JSX.Element {
             className="sticky-bar-action-btn"
             onClick={() => { void handleSaveToInspiration() }}
           >
-            {locale === 'en' ? 'Save' : '保存到灵感库'}
+            <SaveIcon size={11} />
+            <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
           </button>
         </div>
       )}
@@ -2296,7 +2297,8 @@ export function App(): React.JSX.Element {
                 className="hero-action-pill-btn"
                 onClick={() => { void handleSaveToInspiration() }}
               >
-                {locale === 'en' ? 'Save' : '保存到灵感库'}
+                <SaveIcon size={13} />
+                <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
               </button>
             </div>
             <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => void send(p)} />

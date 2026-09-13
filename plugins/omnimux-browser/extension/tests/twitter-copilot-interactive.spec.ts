@@ -156,12 +156,17 @@ describe('Twitter Copilot Interactive Suite', () => {
       expect(styles).toMatch(/\.topbar\s*\{[^}]*border-bottom:\s*none;/)
     })
 
-    it('defines sticky-top-page-bar and media-float-preview-card centered with width 206px', () => {
+    it('defines sticky-top-page-bar and media-float-preview-card positioned above previewed chip with width 206px', () => {
       expect(styles.includes('.sticky-top-page-bar')).toBe(true)
       expect(styles.includes('.media-float-preview-card')).toBe(true)
       expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*width:\s*206px;/)
-      expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*left:\s*50%\s*!important;/)
-      expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*transform:\s*translateX\(-50%\)\s*!important;/)
+      expect(styles).toMatch(/\.media-float-preview-card\s*\{[^}]*position:\s*absolute;/)
+    })
+
+    it('ensures hero-action-pill-btn and float-preview-save-btn strictly follow pure black and white theme without #0f172a', () => {
+      expect(styles).toMatch(/\.hero-action-pill-btn\s*\{[^}]*background:\s*var\(--ink-strong\)\s*!important;/)
+      expect(styles.includes('background: #0f172a')).toBe(false)
+      expect(styles).toMatch(/\.float-preview-save-btn\s*\{[^}]*background:\s*var\(--ink-strong\);/)
     })
 
     it('removes focus borders, outlines, and box-shadows from composer textarea', () => {
