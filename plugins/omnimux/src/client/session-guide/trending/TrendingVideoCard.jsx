@@ -26,7 +26,7 @@ const ICON_REPLICATE = (
  *   active?: boolean,
  * }} props
  */
-export function TrendingVideoCard({ item, t, onRecreate, active = false }) {
+export const TrendingVideoCard = React.memo(function TrendingVideoCard({ item, t, onRecreate, active = false }) {
   if (!item) return null
 
   const region = String(item.region || '').toUpperCase()
@@ -87,4 +87,4 @@ export function TrendingVideoCard({ item, t, onRecreate, active = false }) {
       </div>
     </article>
   )
-}
+})

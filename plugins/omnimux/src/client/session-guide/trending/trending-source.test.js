@@ -1,13 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  DEFAULT_CACHE_TTL_MS,
   TRENDING_SOURCE_PAGE_SIZE,
   TRENDING_SOURCE_STATUS,
   buildSourceQuery,
+  clearTrendingCache,
   deriveDimensions,
   deriveIndustryOptions,
   deriveRegionOptions,
   deriveViewBuckets,
+  getTrendingCache,
+  getTrendingCacheKey,
   loadTrendingItems,
   mapSourceItem,
   mergeCapabilities,
@@ -16,6 +20,7 @@ import {
   readEngagement,
   readStructure,
   readViews,
+  setTrendingCache,
   unionOptions,
 } from './trending-source.js'
 
@@ -340,4 +345,55 @@ test('source: 双源聚合拉取（本地库 + 云端库合并去重）', async 
   assert.equal(result.items.length, 2, '必须合并且按 ID 去重')
   assert.equal(result.items[0].id, 'local_1', '本地源项目优先保留')
   assert.equal(result.items[1].id, '2690', '云端项目顺利合并排入')
+})
+
+test('source: 数据内存缓存命中（TTL 有效期内 0ms 返回、不重复发网络请求）', async () => {
+  clearTrendingCache()
+  let fetchCount = 0
+  const row = makeRow({ id: 'cache_test_1', title: 'Cached video' })
+
+  const fetchImpl = async () => {
+    fetchCount += 1
+    return fakeResponse({ data: { items: [row], total: 1 } })
+  }
+
+  // 首次请求：未命中缓存，发起网络请求
+  const res1 = await loadTrendingItems({ fetchImpl, filters: { region: 'US' }, cache: true })
+  assert.equal(res1.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(res1.items[0].id, 'cache_test_1')
+  assert.equal(fetchCount, 2, '双源聚合共请求 2 个端点')
+
+  // 第二次相同参数请求：命中新鲜缓存，网络请求次数不增加
+  const res2 = await loadTrendingItems({ fetchImpl, filters: { region: 'US' }, cache: true })
+  assert.equal(res2.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(res2.items[0].id, 'cache_test_1')
+  assert.equal(fetchCount, 2, '命中缓存，不得再次发起网络调用')
+
+  // 第三次使用 forceRefresh: true，强制绕过缓存重新拉取
+  const res3 = await loadTrendingItems({ fetchImpl, filters: { region: 'US' }, forceRefresh: true, cache: true })
+  assert.equal(res3.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(fetchCount, 4, '强制刷新必须重新触发网络请求')
+})
+
+test('source: 网络拉取失败时如存在陈旧缓存则平滑降级使用陈旧缓存', async () => {
+  clearTrendingCache()
+  const key = getTrendingCacheKey({ filters: { region: 'JP' } })
+  const staleData = {
+    status: TRENDING_SOURCE_STATUS.ready,
+    items: [mapSourceItem(makeRow({ id: 'stale_1', title: 'Stale cached item' }))],
+    total: 1,
+  }
+  // 注入已过期缓存
+  setTrendingCache(key, staleData, -1000)
+
+  // 此时网络报错失败
+  const res = await loadTrendingItems({
+    filters: { region: 'JP' },
+    cache: true,
+    fetchImpl: async () => ({ ok: false, status: 500 }),
+  })
+
+  // 平滑降级至陈旧缓存，页面不崩溃
+  assert.equal(res.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(res.items[0].id, 'stale_1')
 })

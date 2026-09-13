@@ -2388,10 +2388,27 @@ export const GUIDE_CSS = `
 }
 .omnimux-trending-reset:hover { background:var(--dsw-alias-interactive-bg-hover); }
 
+/* 骨架屏与卡片入场动画 */
+@keyframes omnimux-skeleton-shimmer {
+  0% { transform:translateX(-100%); }
+  100% { transform:translateX(100%); }
+}
+@keyframes omnimux-grid-fade-in {
+  from { opacity:0; transform:translateY(6px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
 /* 卡片矩阵 */
 .omnimux-trending-grid {
   display:grid; gap:16px;
   grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+.omnimux-trending-grid.omnimux-trending-grid-enter {
+  animation:omnimux-grid-fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.omnimux-trending-grid.is-refreshing {
+  opacity:0.65;
+  transition:opacity 180ms ease-out;
 }
 .omnimux-trending-card {
   position:relative; display:block; aspect-ratio:9/16; overflow:hidden;
@@ -2399,6 +2416,8 @@ export const GUIDE_CSS = `
   border:1px solid var(--dsw-alias-border-l1);
   isolation:isolate;
   transition:border-color 200ms ease-out;
+  content-visibility:auto;
+  contain-intrinsic-size:200px 355px;
 }
 /* 当前被吸底输入框接管的样本：用描边高亮代替「禁用」，用户仍可随时改选其它卡片 */
 .omnimux-trending-card.is-active { border-color:var(--dsw-alias-brand-primary); }
@@ -2407,9 +2426,70 @@ export const GUIDE_CSS = `
 }
 .omnimux-trending-card:hover .omnimux-trending-card-media,
 .omnimux-trending-card:focus-within .omnimux-trending-card-media { transform:scale(1.015); }
-.omnimux-trending-cover-svg, .omnimux-trending-cover-img {
+.omnimux-trending-cover-svg {
   position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:cover;
 }
+.omnimux-trending-cover-img {
+  position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:cover;
+  opacity:0; transition:opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-trending-cover-img.is-loaded {
+  opacity:1;
+}
+
+/* 爆款对标极简骨架屏与微光扫描 */
+.omnimux-trending-skeleton-grid { pointer-events:none; user-select:none; }
+.omnimux-trending-skeleton-card {
+  position:relative; display:block; aspect-ratio:9/16; overflow:hidden;
+  border-radius:16px; background:var(--omnimux-trending-cover-base);
+  border:1px solid var(--dsw-alias-border-l1);
+  isolation:isolate;
+}
+.omnimux-trending-skeleton-shimmer {
+  position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-static-neutral-00) 6%, transparent) 50%, transparent 100%);
+  animation:omnimux-skeleton-shimmer 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events:none;
+}
+.omnimux-trending-skeleton-top {
+  position:absolute; top:12px; left:12px;
+}
+.omnimux-trending-skeleton-badge {
+  display:block; width:38px; height:20px; border-radius:999px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 9%, transparent);
+}
+.omnimux-trending-skeleton-body {
+  position:absolute; inset-inline:0; bottom:0; padding:12px;
+  display:flex; flex-direction:column; gap:10px;
+  background:linear-gradient(to top, var(--omnimux-trending-card-scrim-strong), transparent);
+}
+.omnimux-trending-skeleton-metrics {
+  display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));
+  border-bottom:1px solid var(--omnimux-trending-cover-line); padding-bottom:10px;
+}
+.omnimux-trending-skeleton-metric-box {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.omnimux-trending-skeleton-metric-box.is-divider {
+  border-left:1px solid var(--omnimux-trending-cover-line);
+}
+.omnimux-trending-skeleton-metric-val {
+  display:block; width:44px; height:14px; border-radius:4px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 12%, transparent);
+}
+.omnimux-trending-skeleton-metric-lbl {
+  display:block; width:32px; height:9px; border-radius:3px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 7%, transparent);
+}
+.omnimux-trending-skeleton-title-lines {
+  display:flex; flex-direction:column; gap:6px;
+}
+.omnimux-trending-skeleton-title-line {
+  display:block; height:12px; border-radius:4px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-00) 10%, transparent);
+}
+.omnimux-trending-skeleton-title-line.is-long { width:84%; }
+.omnimux-trending-skeleton-title-line.is-short { width:58%; }
 .omnimux-trending-card-topshade {
   position:absolute; inset-inline:0; top:0; height:22%;
   background:linear-gradient(to bottom, var(--omnimux-trending-card-scrim), transparent);

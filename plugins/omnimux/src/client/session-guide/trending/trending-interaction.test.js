@@ -571,3 +571,56 @@ test('TrendingReplicateSection：复刻时若原位已在视口内，首帧即�
     env.restore()
   }
 })
+
+test('TrendingReplicateSection：加载态呈现现代极简骨架屏与微光扫描，数据就绪后平滑过渡至真实网格', async () => {
+  const { TrendingReplicateSection } = await loadComponent('./TrendingReplicateSection.jsx')
+  const { clearTrendingCache } = await import('./trending-source.js')
+  clearTrendingCache()
+
+  const env = withDom(SECTION_FIXTURE)
+  const host = document.querySelector('#root')
+  let finishFetch
+  const deferred = new Promise((resolve) => { finishFetch = resolve })
+
+  const stub = {
+    restore: () => { globalThis.fetch = undefined },
+  }
+  globalThis.fetch = async () => {
+    await deferred
+    return { ok: true, status: 200, json: async () => ({ data: { items: SOURCE_ROWS, total: SOURCE_ROWS.length } }) }
+  }
+
+  const root = createRoot(host.querySelector('#seat'))
+
+  try {
+    // 挂载初始状态（网络未返回）：必须渲染骨架屏，而非生硬文字或空白
+    await act(async () => {
+      root.render(React.createElement(TrendingReplicateSection, { t: (key) => key, onApplyPrompt: () => {} }))
+      await flush()
+    })
+
+    const skeleton = host.querySelector('[data-omnimux-skeleton]')
+    assert.ok(skeleton, '加载过程中必须渲染骨架屏容器')
+    const skeletonCards = host.querySelectorAll('.omnimux-trending-skeleton-card')
+    assert.equal(skeletonCards.length, 8, '骨架屏默认呈现 8 个 9:16 极简占位卡')
+    assert.ok(host.querySelector('.omnimux-trending-skeleton-shimmer'), '骨架屏必须包含微光扫描动画层')
+
+    // 网络数据返回并渲染
+    finishFetch()
+    await act(async () => {
+      await flush()
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    assert.equal(host.querySelector('[data-omnimux-skeleton]'), null, '数据到达后骨架屏必须平滑卸载')
+    const realGrid = host.querySelector('.omnimux-trending-grid')
+    assert.ok(realGrid, '真实卡片网格必须挂载')
+    assert.ok(realGrid.classList.contains('omnimux-trending-grid-enter'), '真实网格必须携带淡入平滑过渡动画类')
+    assert.equal(host.querySelectorAll('.omnimux-trending-card').length, 3, '真实卡片数正确渲染')
+  } finally {
+    root.unmount()
+    stub.restore()
+    env.restore()
+    clearTrendingCache()
+  }
+})

@@ -115,19 +115,21 @@ const SCENE_MAP = {
 /**
  * @param {{ item: { id: string, title?: string, archetype?: string, cover?: string } }} props
  */
-export function TrendingCover({ item }) {
+export const TrendingCover = React.memo(function TrendingCover({ item }) {
   const [coverFailed, setCoverFailed] = useState(false)
+  const [coverLoaded, setCoverLoaded] = useState(false)
   const cover = typeof item?.cover === 'string' ? item.cover.trim() : ''
   if (cover && !coverFailed) {
     return (
       <img
-        className="omnimux-trending-cover-img"
+        className={`omnimux-trending-cover-img${coverLoaded ? ' is-loaded' : ''}`}
         src={cover}
         alt=""
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
         aria-hidden="true"
+        onLoad={() => setCoverLoaded(true)}
         onError={() => setCoverFailed(true)}
       />
     )
@@ -148,4 +150,4 @@ export function TrendingCover({ item }) {
       <Scene />
     </svg>
   )
-}
+})
