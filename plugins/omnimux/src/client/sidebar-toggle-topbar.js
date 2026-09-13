@@ -27,6 +27,8 @@ export const LEFT_COLLAPSED_HTML_ATTR = 'data-omnimux-left-collapsed'
 export const SIDEBAR_ORIGINAL_TOGGLE_ATTR = 'data-omnimux-original-sidebar-toggle'
 /** Injected topbar "new session" control (collapsed rail only). */
 export const TOPBAR_NEW_SESSION_ATTR = 'data-omnimux-topbar-new-session'
+/** Injected topbar right sidebar expand button (shown when right panel is closed). */
+export const TOPBAR_RIGHT_EXPAND_ATTR = 'data-omnimux-topbar-right-expand'
 
 /** Web gutter; the macOS desktop marker reserves its native window controls. */
 export const TOPBAR_TOGGLE_LEFT_PX = 8
@@ -59,6 +61,9 @@ const EXPAND_ICON_SVG = `<svg data-omnimux-sidebar-toggle-icon="expand" width="1
 
 /** Official ic_ds_new_chat_outline_16 path (ui-primitives IconNewChatOutline16). */
 const NEW_SESSION_ICON_SVG = `<svg data-omnimux-topbar-new-session-icon width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8.00003 0.3237C3.76075 0.3237 0.32373 3.76072 0.32373 8C0.32373 9.17603 0.589121 10.2922 1.0632 11.2901L1.35291 11.8989L2.5705 11.3205L2.28079 10.7117C1.89079 9.89074 1.67301 8.97167 1.67301 8C1.67301 4.50546 4.50549 1.67298 8.00003 1.67298C11.4946 1.67298 14.3271 4.50546 14.3271 8C14.3271 11.4945 11.4946 14.327 8.00003 14.327C7.28473 14.327 6.76077 14.277 6.29621 14.1487C5.83857 14.0224 5.40441 13.8109 4.88514 13.4488C4.12569 12.919 3.03778 12.7316 2.141 13.2978L2.12682 13.307L2.11264 13.3171L1.34886 13.854L1.79659 15.188L2.86122 14.4384C3.19068 14.2305 3.68325 14.2542 4.11326 14.5539C4.72789 14.9826 5.30042 15.2724 5.93762 15.4484C6.56803 15.6224 7.22776 15.6763 8.00003 15.6763C12.2393 15.6763 15.6763 12.2393 15.6763 8C15.6763 3.76072 12.2393 0.3237 8.00003 0.3237ZM7.32033 4.82535V7.32536H4.82538V8.67464H7.32033V11.1747H8.6696V8.67464H11.1747V7.32536H8.6696V4.82535H7.32033Z" fill="currentColor"/></svg>`
+
+/** Right sidebar expand icon (the "展开右侧侧边栏" glyph). */
+export const RIGHT_EXPAND_ICON_SVG = `<svg data-omnimux-right-expand-icon width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1.5" y="2" width="13" height="12" rx="2.5" stroke="currentColor" stroke-width="1.5"/><rect x="10.5" y="3.25" width="2.75" height="9.5" rx="1" fill="currentColor" stroke="none"/></svg>`
 
 /**
  * @param {Document | null | undefined} doc
@@ -551,6 +556,67 @@ function hideOriginalToggle(doc) {
 }
 
 /**
+ * Inject the right sidebar expand button into the top-right corner.
+ * Only shown when the right workbench panel is closed.
+ * @param {Document | null | undefined} doc
+ * @returns {HTMLElement | null}
+ */
+export function injectTopbarRightExpandButton(doc) {
+  if (!doc) return null
+  let btn = doc.querySelector(`[${TOPBAR_RIGHT_EXPAND_ATTR}="1"]`)
+  const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+  const api = win?.__omnimuxWorkbench
+  const snapshot = api?.getSnapshot?.()
+  const isPanelOpen = snapshot?.state?.panelOpen === true || api?.isOpen?.() === true
+
+  if (!btn) {
+    btn = doc.createElement('button')
+    btn.setAttribute('type', 'button')
+    btn.setAttribute(TOPBAR_RIGHT_EXPAND_ATTR, '1')
+    btn.setAttribute('aria-label', '展开侧边栏')
+    btn.setAttribute('title', '展开侧边栏')
+    btn.innerHTML = RIGHT_EXPAND_ICON_SVG
+    btn.addEventListener('click', (event) => {
+      try { event.preventDefault() } catch { /* ignore */ }
+      try { event.stopPropagation() } catch { /* ignore */ }
+      const currentWin = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+      const currentApi = currentWin?.__omnimuxWorkbench
+      if (currentApi && typeof currentApi.open === 'function') {
+        currentApi.open()
+      } else {
+        const trigger = doc.querySelector('[data-dsh-panel-toggle], [data-dsh-toggle-cluster] button, button[aria-label*="展开"]')
+        if (trigger && typeof trigger.click === 'function') trigger.click()
+      }
+      btn.style.setProperty('display', 'none', 'important')
+    })
+    const host = doc.body || doc.documentElement
+    if (host) host.appendChild(btn)
+  }
+
+  applyButtonChrome(btn)
+  btn.style.setProperty('position', 'fixed', 'important')
+  btn.style.setProperty('right', '8px', 'important')
+  btn.style.setProperty('top', 'var(--omnimux-topbar-toggle-top, 4px)', 'important')
+  btn.style.setProperty('width', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('height', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('align-items', 'center', 'important')
+  btn.style.setProperty('justify-content', 'center', 'important')
+  btn.style.setProperty('background', 'transparent', 'important')
+  btn.style.setProperty('border', 'none', 'important')
+  btn.style.setProperty('border-radius', '8px', 'important')
+  btn.style.setProperty('color', 'var(--dsw-alias-label-secondary)', 'important')
+  btn.style.setProperty('cursor', 'pointer', 'important')
+
+  if (isPanelOpen) {
+    btn.style.setProperty('display', 'none', 'important')
+  } else {
+    btn.style.setProperty('display', 'flex', 'important')
+  }
+
+  return btn
+}
+
+/**
  * Wire the topbar toggle + collapsed mirror. Returns the injected toggle button.
  * @param {Document | null | undefined} doc
  * @returns {HTMLElement | null}
@@ -564,6 +630,7 @@ export function ensureSidebarToggleTopbar(doc) {
   hideOriginalToggle(doc)
   const btn = injectTopbarToggleButton(doc)
   injectTopbarNewSessionButton(doc, collapsed)
+  injectTopbarRightExpandButton(doc)
   // Guard against the observer's aria-label attribute filter: setting the same
   // value would still fire a MutationRecord and loop forever.
   if (btn) {
@@ -802,6 +869,10 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const newSession = doc.querySelector?.(`[${TOPBAR_NEW_SESSION_ATTR}="1"]`)
     if (newSession instanceof HTMLElement) {
       try { newSession.remove() } catch { /* ignore */ }
+    }
+    const rightExpand = doc.querySelector?.(`[${TOPBAR_RIGHT_EXPAND_ATTR}="1"]`)
+    if (rightExpand instanceof HTMLElement) {
+      try { rightExpand.remove() } catch { /* ignore */ }
     }
     const official = doc.querySelector?.(`[${SIDEBAR_ORIGINAL_TOGGLE_ATTR}="1"]`)
     if (official instanceof HTMLElement) {
