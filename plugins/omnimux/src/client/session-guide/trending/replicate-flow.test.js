@@ -109,6 +109,8 @@ async function flush() {
  * 因此断言看到的就是附件栏真实拿到的数据。
  */
 async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' } = {}) {
+  // 组件实例在宿主里会跨会话被复用：会话换的是 prop，不是 React 树。
+  let boundSessionId = sessionId
   const sectionModule = await loadComponent('./TrendingReplicateSection.jsx')
   const store = await loadComponent('../../attachments/store.ts')
 
@@ -127,12 +129,14 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
   window.addEventListener('omnimux:skill:changed', (event) => skillEvents.push(event.detail?.skill || null))
 
   const root = createRoot(host.querySelector('#seat'))
-  await act(async () => {
+  const paint = () => act(async () => {
     root.render(React.createElement(sectionModule.TrendingReplicateSection, {
       t: (key) => key,
+      sessionId: boundSessionId,
       onApplyPrompt: (prompt, item) => applied.push({ prompt, id: item.id }),
     }))
   })
+  await paint()
   await flush()
   await flush()
 
@@ -145,8 +149,16 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
     skillEvents,
     store: globalStore,
     Section: sectionModule.TrendingReplicateSection,
-    sessionId,
-    attachments: () => globalStore.getSnapshot(sessionId),
+    get sessionId() { return boundSessionId },
+    attachments: () => globalStore.getSnapshot(boundSessionId),
+    /** 模拟宿主换会话：同一个组件实例，只换 sessionId。 */
+    async switchSession(nextSessionId) {
+      boundSessionId = nextSessionId
+      globalStore.clear(nextSessionId)
+      globalStore.setActiveSessionId(nextSessionId)
+      await paint()
+      await flush()
+    },
     cards: () => Array.from(host.querySelectorAll('[data-trending-id]')),
     activeCardId: () => {
       const active = host.querySelector('[data-trending-active="true"]')
@@ -154,6 +166,7 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
     },
     async teardown() {
       await act(async () => root.unmount())
+      globalStore.clear(boundSessionId)
       globalStore.clear(sessionId)
       window.__omnimuxActiveSkill = null
       stub.restore()
@@ -371,6 +384,54 @@ test('复刻联动：附件栏已满时，换片靠替换名额完成（不因�
     assert.equal(replicate.length, 1, '换片后仍只挂一个复刻对象')
     assert.equal(replicate[0].entityId, view.cards()[1].getAttribute('data-trending-id'))
     assert.equal(view.attachments().length, 8, '其它附件不受影响')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('复刻联动：宿主换会话时对账跟着走，新会话没有复刻对象就不再假装接管', async () => {
+  const view = await renderSection()
+  try {
+    const targetId = view.cards()[0].getAttribute('data-trending-id')
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+    assert.equal(view.attachments().length, 1, '前置条件：A 会话已接管')
+    assert.equal(view.activeCardId(), targetId)
+    assert.equal(window.__omnimuxActiveSkill?.slug, 'video-deconstruct')
+
+    // 宿主切到 B 会话：同一个组件实例，只换 sessionId。B 会话里没有复刻对象。
+    await view.switchSession('sess-replicate-b')
+    await flush()
+
+    assert.equal(view.attachments().length, 0, 'B 会话附件栏是空的')
+    assert.equal(view.activeCardId(), null, '换会话后不得把 A 的接管态留在 B 上')
+  } finally {
+    await view.teardown()
+  }
+})
+
+test('复刻联动：技能通道改挂别的技能不算撤回复刻，复刻对象留在附件栏', async () => {
+  const view = await renderSection()
+  try {
+    const targetId = view.cards()[0].getAttribute('data-trending-id')
+    await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
+    await flush()
+
+    // 技能选择器点选别的技能：技能通道广播非空技能
+    await act(async () => {
+      const other = { id: 'sk-omx-other', slug: 'other-skill', name: '别的技能' }
+      window.__omnimuxActiveSkill = other
+      window.dispatchEvent(new window.CustomEvent('omnimux:skill:changed', { detail: { skill: other } }))
+    })
+    await flush()
+    await flush()
+
+    assert.equal(view.attachments().length, 1, '换技能不得把复刻对象静默删掉')
+    assert.equal(
+      view.attachments()[0].entityId,
+      targetId,
+      '留在附件栏的仍是用户点过的那条对标片',
+    )
   } finally {
     await view.teardown()
   }

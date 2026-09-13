@@ -284,3 +284,35 @@ test('userMessageLinkEnhancer: 清洁后仍正常收敛正文里的链接胶囊'
   assert.ok(!text.includes('会话关联上下文'), '数据块不得因为插了胶囊而漏删');
 });
 
+
+test('userMessageLinkEnhancer: 宿主只改写文本节点（不加新节点）也会触发重扫，数据块不得回屏', async () => {
+  const dom = new JSDOM(`
+    <!DOCTYPE html>
+    <html>
+      <body>
+        <div data-conversation-scroll="true">
+          <div class="VnbZpq_userRow">
+            <div class="VnbZpq_userStack">
+              <div class="VnbZpq_bubble"><span>复刻这条爆款视频</span></div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  const doc = dom.window.document;
+  const cleanup = installUserMessageLinkEnhancer(doc);
+  const bubble = doc.querySelector('.VnbZpq_bubble') as HTMLElement;
+  const span = bubble.querySelector('span') as HTMLElement;
+  const textNode = span.firstChild as Text;
+
+  // 宿主重渲染：就地改写已有文本节点（characterData 变更，不新增任何节点）
+  textNode.nodeValue = `${REPLICATE_USER_TEXT}${REPLICATE_CONTEXT_BLOCK}`;
+  await new Promise((resolve) => setTimeout(resolve, 80));
+
+  const text = (bubble.textContent || '').replace(/\s+/g, ' ').trim();
+  assert.equal(text, REPLICATE_USER_TEXT, '只改文本节点也必须重扫，把数据块摘掉');
+  assert.ok(!text.includes('会话关联上下文'), '数据块不得因为宿主只改文本就重新上屏');
+
+  cleanup();
+});

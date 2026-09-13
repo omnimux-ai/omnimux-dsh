@@ -297,7 +297,7 @@ function BlankSessionGuide({
       />
 
       {/* Trending Videos, Ready to Replicate */}
-      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} />
+      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
 
       {/* Marketing Insight Modal */}
       <MarketingInsightModal

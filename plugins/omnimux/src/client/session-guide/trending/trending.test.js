@@ -386,3 +386,30 @@ test('trending: i18n 双语键位齐全', () => {
     assert.equal(typeof guideEn[key], 'string', `档位键位英文缺失 ${key}`)
   }
 })
+
+test('trending: 复刻板块跟随会话重订阅，且只有复刻药丸被撤下才允许撤附件', () => {
+  const section = read('./TrendingReplicateSection.jsx')
+  const hub = read('../../index.js')
+
+  // 板块按 sessionId 订阅附件栏：宿主换会话会复用同一个组件实例，
+  // 少把 sessionId 当依赖就会继续盯上一个会话，吸底与药丸留在新会话里。
+  assert.ok(
+    /return store\.subscribe\(targetSession, syncFromAttachments\)/.test(section),
+    '附件对账必须订阅当前会话',
+  )
+  assert.ok(
+    /\}, \[disarmSkillReleaseWatch, sessionId\]\)/.test(section),
+    'sessionId 必须进附件对账的依赖，换会话时重新订阅',
+  )
+
+  // Hub 侧撤回判据：技能通道上跑的不止复刻，别的技能被点选/清空都不该撤复刻对象。
+  assert.ok(
+    hub.includes('shouldReleaseReplicateAttachments(skill, readActiveSkill())'),
+    'Hub 必须用复刻专属判据决定是否撤离附件',
+  )
+  const releaseBlock = hub.slice(hub.indexOf("'omnimux: replicate skill release'") - 700, hub.indexOf("'omnimux: replicate skill release'"))
+  assert.ok(
+    !releaseBlock.includes('if (isRecreateSkill(skill)) return'),
+    '把非空技能一律当成「复刻被撤下」会静默删掉复刻对象',
+  )
+})

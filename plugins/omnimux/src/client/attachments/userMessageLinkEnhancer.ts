@@ -6,13 +6,12 @@
 
 import { useEffect } from 'react';
 import { detectMessageLinks, type DetectedLinkItem } from './linkPillMetadata.ts';
-import { hideAttachedContextBlock } from './attachedContextCleaner.ts';
+import { CLEANED_ATTR, hideAttachedContextBlock } from './attachedContextCleaner.ts';
 
 const USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"], div[class*="userStack"] div[class*="bubble"]';
 const UNENHANCED_USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"]:not([data-omx-link-enhanced="true"]), div[class*="userStack"] div[class*="bubble"]:not([data-omx-link-enhanced="true"])';
 const PILL_CLASS = 'omx-chat-link-pill';
 const PILL_STYLE_ID = 'omx-chat-link-pill-styles';
-const CONTEXT_HIDDEN_ATTR = 'data-omx-context-hidden';
 
 const PILL_CSS = `
 .${PILL_CLASS} {
@@ -136,8 +135,10 @@ export function enhanceUserBubble(bubbleEl: HTMLElement, doc: Document = documen
   try {
     // 先把「会话关联上下文」数据块从可见节点里摘掉：它只喂给模型，
     // 不属于用户自己写的内容；其中的附件路径也不该被收敛成链接胶囊。
-    hideAttachedContextBlock(bubbleEl, doc);
-    bubbleEl.setAttribute(CONTEXT_HIDDEN_ATTR, 'true');
+    // 标记只在真摘到东西时才留：它是排查用的凭据，不能变成「走过这条路」的记号。
+    if (hideAttachedContextBlock(bubbleEl, doc)) {
+      bubbleEl.setAttribute(CLEANED_ATTR, 'true');
+    }
 
     const nodeFilter = typeof NodeFilter !== 'undefined' ? NodeFilter : doc.defaultView?.NodeFilter;
     const showText = nodeFilter?.SHOW_TEXT ?? 4;
@@ -216,7 +217,7 @@ export function cleanUserBubbles(root: ParentNode = document): number {
   let cleaned = 0;
   bubbles.forEach((bubble) => {
     if (hideAttachedContextBlock(bubble as HTMLElement, doc)) {
-      (bubble as HTMLElement).setAttribute(CONTEXT_HIDDEN_ATTR, 'true');
+      (bubble as HTMLElement).setAttribute(CLEANED_ATTR, 'true');
       cleaned += 1;
     }
   });
@@ -283,7 +284,9 @@ export function installUserMessageLinkEnhancer(targetDoc: Document = document): 
         if (isEnhancing) return;
         let shouldScan = false;
         for (const mutation of mutations) {
-          if (mutation.addedNodes.length > 0) {
+          // 宿主重渲染可能只改文本（把整段提交文本写回文本节点），
+          // 只盯新增节点会漏掉这种改写，数据块就有机会重新上屏。
+          if (mutation.addedNodes.length > 0 || mutation.type === 'characterData') {
             shouldScan = true;
             break;
           }
@@ -295,6 +298,7 @@ export function installUserMessageLinkEnhancer(targetDoc: Document = document): 
 
       scrollObserver.observe(scrollTarget, {
         childList: true,
+        characterData: true,
         subtree: true,
       });
     }

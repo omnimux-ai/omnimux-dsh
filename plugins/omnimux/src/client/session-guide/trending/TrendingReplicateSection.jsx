@@ -68,9 +68,10 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
  * @param {{
  *   t: (key: string, fallback?: string) => string,
  *   onApplyPrompt: (prompt: string, item: object) => void,
+ *   sessionId?: string,
  * }} props
  */
-export function TrendingReplicateSection({ t, onApplyPrompt }) {
+export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   const [filters, setFilters] = useState(defaultTrendingFilters)
   const [dockedItem, setDockedItem] = useState(null)
   const [sourceItems, setSourceItems] = useState([])
@@ -191,7 +192,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       removeReplicateAttachment(docked.id)
       disarmSkillReleaseWatch()
     })
-  }, [disarmSkillReleaseWatch])
+  }, [disarmSkillReleaseWatch, sessionId])
 
   // 被接管的卡片一旦不在当前结果里（换地区/换阈值），输入框要归还，
   // 不能让它停在一个屏幕上已经不存在的片子上。
@@ -202,13 +203,15 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   }, [items, dockedItem, refreshing])
 
   // 附件栏是复刻对象的真源：卡上 ✕ 移除附件后，卡片态与技能药丸同步撤回。
+  // 会话是订阅与对账的坐标：宿主换会话时同一个组件实例会被复用，
+  // 因此必须跟着 `sessionId` 重新订阅，否则会继续盯上一个会话的附件栏。
   useEffect(() => {
     const store = getGlobalAttachmentStore()
-    const sessionId = resolveSessionId()
+    const targetSession = sessionId || resolveSessionId()
     const syncFromAttachments = () => {
       const docked = dockedItemRef.current
       if (!docked || docked.skill) return
-      const stuck = findReplicateAttachment(store.getSnapshot(sessionId))
+      const stuck = findReplicateAttachment(store.getSnapshot(targetSession))
       if (readReplicateEntityId(stuck) === String(docked.id)) return
       dockedItemRef.current = null
       setDockedItem(null)
@@ -217,8 +220,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
     // 挂载瞬间先对一次账：复刻对象没能落进附件栏时不得假装接管成功
     syncFromAttachments()
-    return store.subscribe(sessionId, syncFromAttachments)
-  }, [disarmSkillReleaseWatch])
+    return store.subscribe(targetSession, syncFromAttachments)
+  }, [disarmSkillReleaseWatch, sessionId])
 
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
   const showSkeleton = refreshing && items.length === 0
@@ -402,7 +405,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       publishActiveSkill(null)
     }
     removeReplicateAttachment(null)
-  }, [disarmSkillReleaseWatch])
+  }, [disarmSkillReleaseWatch, sessionId])
 
   /**
    * 点击复刻：三处挂载一次到位，再点同一张卡片即整体撤回。

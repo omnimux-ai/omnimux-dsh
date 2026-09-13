@@ -9,6 +9,7 @@ import {
   findReplicateAttachment,
   isRecreateSkill,
   readReplicateEntityId,
+  shouldReleaseReplicateAttachments,
 } from './replicate-linkage.js'
 
 /** 灵感库真实卡片行（字段名与 `mapSourceItem` 输出一致）。 */
@@ -108,4 +109,19 @@ test('复刻意图常量：极简提示词与复刻技能身份稳定', () => {
   assert.equal(RECREATE_SKILL.slug, 'video-deconstruct')
   assert.equal(RECREATE_SKILL.name, '复刻爆款视频')
   assert.equal(REPLICATE_CLEARED_EVENT, 'omnimux:replicate:cleared')
+})
+
+test('shouldReleaseReplicateAttachments：只有「复刻药丸被撤下」才撤附件，切换到别的技能不算', () => {
+  // 药丸 ✕：通道清空，且清掉的就是复刻技能 → 撤附件
+  assert.equal(shouldReleaseReplicateAttachments(null, RECREATE_SKILL), true)
+  assert.equal(shouldReleaseReplicateAttachments(null, { slug: 'video-deconstruct' }), true)
+
+  // 技能选择器点选别的技能：广播非空技能 → 复刻对象不得被静默删掉
+  assert.equal(shouldReleaseReplicateAttachments({ id: 'sk-omx-other' }, { id: 'sk-omx-other' }), false)
+  assert.equal(shouldReleaseReplicateAttachments(RECREATE_SKILL, RECREATE_SKILL), false)
+
+  // 别的技能被清空：通道里钉着的不是复刻技能 → 与复刻无关
+  assert.equal(shouldReleaseReplicateAttachments(null, { id: 'sk-omx-other' }), false)
+  assert.equal(shouldReleaseReplicateAttachments(null, null), false)
+  assert.equal(shouldReleaseReplicateAttachments(null, undefined), false)
 })

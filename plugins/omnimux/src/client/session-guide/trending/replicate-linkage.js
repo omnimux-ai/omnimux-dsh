@@ -55,6 +55,22 @@ export function isRecreateSkill(skill) {
 }
 
 /**
+ * 技能通道的一次变更是否等于「复刻药丸被撤下」。
+ *
+ * 通道上跑的不止复刻：技能选择器点选别的技能、或点 ✕ 清掉别的技能，
+ * 都会广播出去。把它们当成复刻被撤下，会把复刻对象从附件栏静默删掉。
+ * 判据因此收紧成两条同时成立——本次是清空，且清掉的正是复刻技能本身。
+ *
+ * @param {{ id?: unknown, slug?: unknown, name?: unknown, title?: unknown } | null} skill 本次广播的技能
+ * @param {{ id?: unknown, slug?: unknown, name?: unknown, title?: unknown } | null} activeSkill 广播后通道里钉着的技能
+ * @returns {boolean}
+ */
+export function shouldReleaseReplicateAttachments(skill, activeSkill) {
+  if (skill !== null) return false
+  return activeSkill != null && isRecreateSkill(activeSkill)
+}
+
+/**
  * 把灵感库媒体地址收敛成工作区相对路径，避免把云端绝对地址写进附件引用。
  * @param {unknown} raw
  * @param {string} fallbackId
