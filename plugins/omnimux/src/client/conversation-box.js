@@ -213,6 +213,18 @@ html[data-omnimux-sidebar-toggle-topbar] [class*="frame"][data-sidebar-collapsed
 html[data-omnimux-sidebar-toggle-topbar] .dshDesktopFrame[data-sidebar-collapsed]:not([data-details-collapsed="true"]){
   grid-template-columns: 0px minmax(0px, 1fr) auto !important;
 }
+/* 当中间会话栏收起时（右侧全屏铺满状态）：
+   必须将网格中间列收缩为 0px，让右侧列占满整个右侧区域，绝不留出中间黑色空白占位！ */
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame,
+html[data-omnimux-conversation-collapsed] [class*="frame"] {
+  grid-template-columns: var(--omnimux-sidebar-width, 280px) 0px minmax(0px, 1fr) !important;
+}
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] .dshDesktopFrame,
+html[data-omnimux-conversation-collapsed][data-omnimux-left-collapsed] [class*="frame"],
+html[data-omnimux-conversation-collapsed] .dshDesktopFrame[data-sidebar-collapsed],
+html[data-omnimux-conversation-collapsed] [class*="frame"][data-sidebar-collapsed] {
+  grid-template-columns: 0px 0px 100vw !important;
+}
 /* Tab labels dock by overlap: pad = max(0, toggleEnd − panel.left), written
    to --omnimux-tabbar-pad-left. Do NOT key this off left-collapsed: collapsed
    + split already starts the panel right of the toggle, so pad must stay 0.

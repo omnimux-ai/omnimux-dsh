@@ -44,12 +44,17 @@ body[data-ds-dark-theme] {
   margin-inline:auto!important;
 }
 
-/* 分栏中间栏 / 窄列防御：分栏时 SessionGuide 已返回 null、宿主属性随之移除，
-   这里再兜一层 —— 任一紧凑信号出现时引导卡片整体撤场，输入框回到贴底，
-   不被下面的 justify-content:center 顶到容器中间。 */
+/* 分栏中间栏 / 紧凑模式（会话栏简洁模式）：
+   引导卡片撤场后，会话输入框优雅吸底至中间栏底部，绝不留出大片黑色死区！ */
 html[data-omnimux-split-compact] .omnimux-starter-guide,
-html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) .omnimux-starter-guide {
-  display:none!important;
+html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) .omnimux-starter-guide,
+.omnimux-starter-guide[data-compact="true"],
+.omnimux-starter-guide.is-compact {
+  padding-top:0!important;
+  margin:0!important;
+  width:100%!important;
+  height:0!important;
+  min-height:0!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [data-composer-seat],
 html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density='icon']) [data-omnimux-starter-host] [data-composer-seat] {
