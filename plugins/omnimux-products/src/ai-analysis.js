@@ -32,8 +32,13 @@ const CATEGORIES_MAX = 5
 /** Software markers a page must carry to go digital without unambiguous evidence. */
 const SOFTWARE_MARKER_MIN = 2
 
-/** Product markers (trial hooks excluded) that outrank one price or size. */
-const PRODUCT_MARKER_MIN = 2
+/**
+ * Product markers (trial hooks excluded) that outrank one price or size. It
+ * reads the same list as `SOFTWARE_MARKER_MIN` and has to hold the same value:
+ * at two different values, adding a price to a page would flip a verdict that
+ * the marker rule had already settled.
+ */
+const PRODUCT_MARKER_MIN = SOFTWARE_MARKER_MIN
 
 /** Price / size signals that have to appear together to read as a listing. */
 const COMMERCE_PRICE_MIN = 2
