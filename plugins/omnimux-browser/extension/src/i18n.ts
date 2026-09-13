@@ -45,7 +45,8 @@ export function safeRemoveStorage(key: string): void {
  * Read the active UI locale:
  * 1. Explicit user manual preference ('omnimux_manual_locale')
  * 2. Host DSH configuration preference ('dsh_configured_locale')
- * 3. Browser first preferred language
+ * 3. Chrome extension runtime UI language (chrome.i18n.getUILanguage)
+ * 4. Browser preferred languages (navigator.languages)
  */
 export function getUiLocale(): UiLocale {
   const manual = safeGetStorage('omnimux_manual_locale')
@@ -53,17 +54,24 @@ export function getUiLocale(): UiLocale {
   const dsh = safeGetStorage('dsh_configured_locale')
   if (dsh === 'zh' || dsh === 'en') return dsh
 
+  // 1. In browser extension runtime, check chrome.i18n.getUILanguage first
+  // which accurately reflects user system / browser UI locale
+  if (typeof chrome !== 'undefined' && chrome.i18n?.getUILanguage) {
+    try {
+      const uiLang = chrome.i18n.getUILanguage()
+      if (uiLang && typeof uiLang === 'string') {
+        const normalized = uiLang.trim().toLowerCase()
+        if (normalized === 'zh' || normalized.startsWith('zh-')) return 'zh'
+        if (normalized === 'en' || normalized.startsWith('en-')) return 'en'
+      }
+    } catch {}
+  }
+
+  // 2. Primary browser preferred language
   let language: string | undefined
   if (typeof navigator !== 'undefined') {
     const preferred = navigator.languages?.find((candidate) => candidate.trim() !== '') ?? navigator.language
     language = preferred.trim() === '' ? undefined : preferred
-  }
-  if (language === undefined && typeof chrome !== 'undefined' && chrome.i18n?.getUILanguage !== undefined) {
-    try {
-      language = chrome.i18n.getUILanguage()
-    } catch {
-      // A partially mocked or stale extension context may expose an unusable API.
-    }
   }
   return localeFromLanguage(language)
 }
