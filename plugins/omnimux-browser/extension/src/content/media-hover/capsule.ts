@@ -1,14 +1,18 @@
 /**
  * The dark frosted capsule that carries the page-media shortcuts.
  *
- * Layout is fixed by the design contract:
+ * The capsule is a two-stage control, and the DOM mirrors the two stages:
  *
  * ```
- * [ inspiration ] [ copy ] [ attach ]
+ * stage one (collapsed, 36 x 36)     stage two (expanded, 112 x 36)
+ *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
  * ```
  *
- * The capsule owns no positioning logic and no messaging: the overlay places it
- * and `actions.ts` performs the work. It only paints state and reports presses.
+ * Both stages are mounted at once and absolutely centred inside the pill, so the
+ * width animation never reflows a row: `is-collapsed` / `is-expanded` swap which
+ * of the two layers is visible, and the stylesheet owns the cross-fade. The
+ * overlay decides *when* to move between the stages and `actions.ts` performs the
+ * work; the capsule only paints state and reports presses.
  *
  * @module
  */
@@ -20,6 +24,9 @@ import type { HoverCopy } from './copy.ts'
 
 /** The three action slots, in capsule order. */
 const ACTION_ORDER: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
+
+/** Which of the two stages the capsule currently paints. */
+export type CapsuleStage = 'collapsed' | 'expanded'
 
 /** Extra icon swap applied while an action is in flight or settled. */
 type IconState = 'idle' | 'busy' | 'done' | 'saved' | 'error'
@@ -37,13 +44,18 @@ function iconFor(action: MediaActionKind, state: IconState): CapsuleIcon {
  * The capsule node and its icon state machine.
  *
  * State is kept locally so a repaint never needs the overlay's full state
- * object: `setState` merges a patch and re-derives each icon.
+ * object: `setState` merges a patch and re-derives each icon, `expand` /
+ * `collapse` move between the two stages.
  */
 export class MediaCapsule {
   /** The `.omnimux-capsule-bar` node; a direct child of the shadow root. */
   readonly element: HTMLDivElement
 
   private readonly buttons = new Map<MediaActionKind, HTMLButtonElement>()
+  /** The stage-one trigger; a direct child of the pill, centred by the stylesheet. */
+  private readonly brand: HTMLButtonElement
+  /** The stage-two wrapper holding the three action slots. */
+  private readonly actions: HTMLDivElement
   private readonly hints: HoverCopy
   private state: OverlayState = {
     phase: 'idle',
@@ -53,6 +65,7 @@ export class MediaCapsule {
     copied: false,
     attached: false,
   }
+  private current: CapsuleStage = 'collapsed'
   private actionHandler: ((event: CapsuleActionEvent) => void) | null = null
 
   private constructor(hints: HoverCopy) {
@@ -62,9 +75,12 @@ export class MediaCapsule {
     this.element.setAttribute('role', 'toolbar')
     this.element.setAttribute('aria-label', hints.brand)
     this.element.setAttribute('aria-orientation', 'horizontal')
+    this.brand = this.buildBrand()
+    this.actions = document.createElement('div')
+    this.actions.className = 'omnimux-capsule-actions'
   }
 
-  /** Creates the capsule with its full icon row. */
+  /** Creates the capsule with its brand trigger and its three action slots. */
   static create(hints: HoverCopy): MediaCapsule {
     const capsule = new MediaCapsule(hints)
     capsule.buildRow()
@@ -79,6 +95,16 @@ export class MediaCapsule {
   /** The node a press event bubbles from, used for tooltip anchoring. */
   buttonElement(action: MediaActionKind): HTMLButtonElement | null {
     return this.buttons.get(action) ?? null
+  }
+
+  /** The stage-one trigger node, used by the overlay and by the tests. */
+  brandElement(): HTMLButtonElement {
+    return this.brand
+  }
+
+  /** Which stage is painted right now. */
+  get stage(): CapsuleStage {
+    return this.current
   }
 
   /** Whether the capsule is fully painted. */
@@ -98,6 +124,9 @@ export class MediaCapsule {
       copied: false,
       attached: false,
     }
+    // Every new media starts at stage one: the brand circle is what the pointer
+    // lands on, and the three shortcuts stay out of the way until asked for.
+    this.collapse()
     this.paint()
   }
 
@@ -117,9 +146,20 @@ export class MediaCapsule {
     this.element.classList.toggle('is-interactive', interactive)
   }
 
+  /** Stage two: widens to the three action icons. Idempotent. */
+  expand(): void {
+    this.setStage('expanded')
+  }
+
+  /** Stage one: folds back to the brand mark alone. Idempotent. */
+  collapse(): void {
+    this.setStage('collapsed')
+  }
+
   /** Shows the capsule and points the transform origin at the media edge. */
   show(alignment: 'left' | 'right'): void {
     this.element.style.transformOrigin = alignment === 'left' ? 'bottom left' : 'bottom right'
+    this.collapse()
     this.element.classList.add('is-visible')
   }
 
@@ -127,6 +167,7 @@ export class MediaCapsule {
   hide(): void {
     this.element.classList.remove('is-visible')
     this.element.classList.remove('is-interactive')
+    this.collapse()
   }
 
   /** Removes the node from the DOM. */
@@ -136,12 +177,35 @@ export class MediaCapsule {
   }
 
   private buildRow(): void {
-    this.element.style.paddingLeft = `${CAPSULE_SPEC.paddingX}px`
-    this.element.style.paddingRight = `${CAPSULE_SPEC.paddingX}px`
+    this.element.appendChild(this.brand)
     for (const action of ACTION_ORDER) {
-      this.element.appendChild(this.buildButton(action))
+      this.actions.appendChild(this.buildButton(action))
     }
+    this.element.appendChild(this.actions)
+    // The stage contract is written once the row it governs exists.
+    this.applyStage()
     this.paint()
+  }
+
+  /**
+   * Stage one: the brand trigger.
+   *
+   * It carries no shortcut, so a press does nothing beyond focusing the pill —
+   * which is what expands it for a keyboard user and keeps touch from landing on
+   * an invisible action.
+   */
+  private buildBrand(): HTMLButtonElement {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'omnimux-capsule-brand'
+    button.setAttribute('aria-label', this.hints.brand)
+    button.setAttribute('title', this.hints.brand)
+    button.innerHTML = svgIcon('brand', CAPSULE_SPEC.brandIconSize)
+    button.addEventListener('pointerdown', swallowEvent)
+    button.addEventListener('mousedown', swallowEvent)
+    button.addEventListener('contextmenu', swallowEvent)
+    button.addEventListener('click', swallowEvent)
+    return button
   }
 
   private buildButton(action: MediaActionKind): HTMLButtonElement {
@@ -155,20 +219,47 @@ export class MediaCapsule {
 
     // The page must never see these presses: no navigation, no card selection,
     // no page-level click handler.
-    const swallow = (event: Event): void => {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    button.addEventListener('pointerdown', swallow)
-    button.addEventListener('mousedown', swallow)
-    button.addEventListener('contextmenu', swallow)
+    button.addEventListener('pointerdown', swallowEvent)
+    button.addEventListener('mousedown', swallowEvent)
+    button.addEventListener('contextmenu', swallowEvent)
     button.addEventListener('click', (event) => {
-      swallow(event)
+      swallowEvent(event)
       this.actionHandler?.({ action, element: button })
     })
 
     this.buttons.set(action, button)
     return button
+  }
+
+  private setStage(stage: CapsuleStage): void {
+    if (this.current === stage) return
+    this.current = stage
+    this.applyStage()
+  }
+
+  /** Writes the class/ARIA contract the stylesheet and assistive tech read. */
+  private applyStage(): void {
+    const expanded = this.current === 'expanded'
+    this.element.classList.toggle('is-expanded', expanded)
+    this.element.classList.toggle('is-collapsed', !expanded)
+    this.element.setAttribute('aria-expanded', String(expanded))
+
+    // Stage two is not merely invisible while it is off screen. The stylesheet
+    // owns `visibility` (it follows the fold-back fade), so the attributes below
+    // are what take the row off the pointer path, out of the tab order and off
+    // the accessibility tree from the first frame of the fold-back.
+    this.actions.setAttribute('aria-hidden', String(!expanded))
+    for (const button of this.buttons.values()) {
+      if (expanded) button.removeAttribute('tabindex')
+      else button.setAttribute('tabindex', '-1')
+    }
+
+    // A fold-back never strands focus on a row that stopped being a tab stop:
+    // while the pill is still on screen stage one takes the focus, which is the
+    // keyboard's way back into stage two.
+    if (!expanded && this.visible && this.actions.contains(document.activeElement)) {
+      this.brand.focus()
+    }
   }
 
   private paint(): void {
@@ -193,4 +284,10 @@ export class MediaCapsule {
     if (action === 'attach' && this.state.attached) return 'done'
     return 'idle'
   }
+}
+
+/** Keeps an overlay press from reaching the page underneath. */
+function swallowEvent(event: Event): void {
+  event.preventDefault()
+  event.stopPropagation()
 }

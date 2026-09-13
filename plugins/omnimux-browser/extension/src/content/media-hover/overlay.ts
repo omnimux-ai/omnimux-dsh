@@ -64,6 +64,7 @@ export class MediaOverlay {
 
   private enterTimer: number | null = null
   private leaveTimer: number | null = null
+  private collapseTimer: number | null = null
   private flashTimer: number | null = null
   private dismissTimer: number | null = null
   private frame: number | null = null
@@ -125,6 +126,7 @@ export class MediaOverlay {
   dispose(): void {
     this.clearEnterTimer()
     this.clearLeaveTimer()
+    this.clearCollapseTimer()
     this.clearFlashTimer()
     this.clearDismissTimer()
     this.cancelFrame()
@@ -202,6 +204,7 @@ export class MediaOverlay {
 
   private hideNow(clear: boolean): void {
     this.clearEnterTimer()
+    this.clearCollapseTimer()
     this.clearDismissTimer()
     this.capsule?.hide()
     this.tooltip?.hide()
@@ -286,6 +289,15 @@ export class MediaOverlay {
 
     capsule.onAction(({ action }) => { void this.runAction(action) })
 
+    // Two-stage hover. Stage one is whatever the pointer rested on; reaching the
+    // capsule (with the pointer or with Tab) is what opens stage two, and leaving
+    // it folds back after a buffer so the trip between an icon and the brand
+    // circle never flickers.
+    capsule.element.addEventListener('pointerenter', this.onCapsuleEnter)
+    capsule.element.addEventListener('pointerleave', this.onCapsuleLeave)
+    capsule.element.addEventListener('focusin', this.onCapsuleEnter)
+    capsule.element.addEventListener('focusout', this.onCapsuleLeave)
+
     for (const action of TOOLTIP_ACTIONS) {
       const button = capsule.buttonElement(action)
       if (button === null) continue
@@ -294,6 +306,41 @@ export class MediaOverlay {
       button.addEventListener('pointerleave', () => { this.clearHint(action) })
       button.addEventListener('blur', () => { this.clearHint(action) })
     }
+  }
+
+  /** Stage two: the pointer or the keyboard reached the capsule. */
+  private expandCapsule(): void {
+    this.clearCollapseTimer()
+    this.capsule?.expand()
+    if (this.state.phase === 'shown') this.state.phase = 'interactive'
+  }
+
+  /** Folds the capsule back once the pointer has genuinely left it. */
+  private scheduleCollapse(): void {
+    this.clearCollapseTimer()
+    this.collapseTimer = this.setTimer(() => {
+      this.collapseTimer = null
+      this.collapseCapsule()
+    }, TIMING.collapseGrace)
+  }
+
+  private collapseCapsule(): void {
+    const capsule = this.capsule
+    if (capsule === null) return
+    capsule.collapse()
+    // Stage one carries no tooltip: a hint left over from an icon would have
+    // nothing to point at.
+    this.activeIcon = null
+    this.tooltip?.hide()
+    if (this.state.phase === 'interactive') this.state.phase = 'shown'
+  }
+
+  private readonly onCapsuleEnter = (): void => {
+    this.expandCapsule()
+  }
+
+  private readonly onCapsuleLeave = (): void => {
+    this.scheduleCollapse()
   }
 
   private showHint(action: MediaActionKind): void {
@@ -386,10 +433,10 @@ export class MediaOverlay {
 
   private capsuleAlignment(element: Element): 'left' | 'right' {
     const rect = element.getBoundingClientRect()
-    const measured = this.capsule?.element.getBoundingClientRect().width ?? 0
-    // Before the first layout the capsule reports a zero width; the spec's
-    // compact row width stands in so the flip decision is still correct.
-    const capsuleWidth = measured > 0 ? measured : CAPSULE_SPEC.width
+    // The flip is decided on the EXPANDED width: stage two is the widest the
+    // capsule ever gets, and a decision made on the 36px circle would push the
+    // row off the right edge as soon as the pointer opened it.
+    const capsuleWidth = CAPSULE_SPEC.width
     const available = currentViewportWidth()
     const fitsLeft = rect.left + CAPSULE_SPEC.inset + capsuleWidth <= available - CAPSULE_SPEC.edgeMargin
     return fitsLeft ? 'left' : 'right'
@@ -437,10 +484,13 @@ export class MediaOverlay {
     }
 
     const box = capsule.element.getBoundingClientRect()
+    // Both stages are measured as the expanded row. The circle is drawn inside
+    // that footprint, so opening stage two grows into space the geometry already
+    // reserved and can never cross the viewport edge.
     const geometry = computeCapsuleGeometry(
       rect,
       {
-        width: box.width > 0 ? box.width : CAPSULE_SPEC.width,
+        width: Math.max(box.width, CAPSULE_SPEC.width),
         height: box.height > 0 ? box.height : CAPSULE_SPEC.height,
       },
       viewport.width,
@@ -475,6 +525,12 @@ export class MediaOverlay {
     if (this.leaveTimer === null) return
     window.clearTimeout(this.leaveTimer)
     this.leaveTimer = null
+  }
+
+  private clearCollapseTimer(): void {
+    if (this.collapseTimer === null) return
+    window.clearTimeout(this.collapseTimer)
+    this.collapseTimer = null
   }
 
   private clearFlashTimer(): void {

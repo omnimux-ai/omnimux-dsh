@@ -11,12 +11,30 @@ import { MediaCapsule } from '../src/content/media-hover/capsule.ts'
 import { hoverCopy } from '../src/content/media-hover/copy.ts'
 import { CAPSULE_SPEC, TOOLTIP_SPEC } from '../src/content/media-hover/messages.ts'
 import { MediaTooltip, placeTooltip } from '../src/content/media-hover/tooltip.ts'
-import type { AnchorRect, ViewportBox } from '../src/content/media-hover/types.ts'
+import type { AnchorRect, HoveredMedia, ViewportBox } from '../src/content/media-hover/types.ts'
 
 const VIEWPORT: ViewportBox = { width: 1000, height: 800, margin: TOOLTIP_SPEC.viewportMargin }
 
 function anchor(left: number, top: number, size = 30): AnchorRect {
   return { left, top, right: left + size, bottom: top + size, width: size, height: size }
+}
+
+/** Minimal payload for the capsule's per-media reset. */
+function payload(id: string): HoveredMedia {
+  return {
+    id,
+    type: 'image',
+    src: `https://cdn.example.com/${id}.png`,
+    previewSrc: `https://cdn.example.com/${id}.png`,
+    pageUrl: 'https://page.example.com/post/1',
+    pageTitle: '示例页面',
+    width: 480,
+    height: 320,
+    naturalWidth: 960,
+    naturalHeight: 640,
+    alt: '示例图片',
+    capturedAt: 1_700_000_000_000,
+  }
 }
 
 describe('tooltip placement', () => {
@@ -87,22 +105,89 @@ describe('overlay structure', () => {
     expect(tooltip.element.parentNode).toBe(shadow)
   })
 
-  it('renders the capsule icon row in the fixed design order', () => {
+  it('renders the two-stage capsule: brand trigger, then the three action icons', () => {
     const capsule = MediaCapsule.create(hoverCopy('zh'))
-    const classes = [...capsule.element.children].map((child) => child.className)
-    expect(classes).toEqual([
-      'omnimux-capsule-icon',
-      'omnimux-capsule-icon',
-      'omnimux-capsule-icon',
-    ])
+    const layers = [...capsule.element.children].map((child) => child.className)
+    expect(layers).toEqual(['omnimux-capsule-brand', 'omnimux-capsule-actions'])
+
     const actions = [...capsule.element.querySelectorAll('[data-action]')]
       .map((node) => node.getAttribute('data-action'))
     expect(actions).toEqual(['inspiration', 'copy', 'attach'])
-    // Decorative extras (divider, "+" affordance, brand mark) were removed.
-    expect(capsule.element.children).toHaveLength(3)
+    expect(capsule.element.querySelectorAll('.omnimux-capsule-icon')).toHaveLength(3)
+
+    // The decorative divider and "+" affordance stayed out; the brand mark is the
+    // stage-one trigger, not a fourth action slot.
     expect(capsule.element.querySelector('.omnimux-capsule-split')).toBeNull()
     expect(capsule.element.querySelector('.omnimux-capsule-plus')).toBeNull()
-    expect(capsule.element.querySelector('.omnimux-capsule-brand')).toBeNull()
+    expect(capsule.brandElement().querySelector('svg')).not.toBeNull()
+    expect(capsule.brandElement().getAttribute('aria-label')).toBe('OmniMux')
+  })
+
+  it('opens at stage one and swaps stages through the class contract', () => {
+    const capsule = MediaCapsule.create(hoverCopy('zh'))
+    const actions = capsule.element.querySelector('.omnimux-capsule-actions')
+    const buttons = [...capsule.element.querySelectorAll('.omnimux-capsule-actions [data-action]')]
+
+    expect(capsule.stage).toBe('collapsed')
+    expect(capsule.element.classList.contains('is-collapsed')).toBe(true)
+    expect(capsule.element.classList.contains('is-expanded')).toBe(false)
+    expect(capsule.element.getAttribute('aria-expanded')).toBe('false')
+
+    // Stage two is out of reach while it is off screen: not a tab stop and not
+    // an accessibility node, so a folded capsule cannot offer a shortcut.
+    expect(buttons).toHaveLength(3)
+    expect(actions?.getAttribute('aria-hidden')).toBe('true')
+    expect(buttons.map((button) => button.getAttribute('tabindex'))).toEqual(['-1', '-1', '-1'])
+
+    capsule.expand()
+    expect(capsule.stage).toBe('expanded')
+    expect(capsule.element.classList.contains('is-expanded')).toBe(true)
+    expect(capsule.element.classList.contains('is-collapsed')).toBe(false)
+    expect(capsule.element.getAttribute('aria-expanded')).toBe('true')
+
+    expect(actions?.getAttribute('aria-hidden')).toBe('false')
+    expect(buttons.some((button) => button.hasAttribute('tabindex'))).toBe(false)
+
+    capsule.collapse()
+    expect(capsule.stage).toBe('collapsed')
+    expect(capsule.element.classList.contains('is-collapsed')).toBe(true)
+    expect(capsule.element.classList.contains('is-expanded')).toBe(false)
+    expect(capsule.element.getAttribute('aria-expanded')).toBe('false')
+
+    // The fold-back restores the stage-one reachability contract exactly.
+    expect(actions?.getAttribute('aria-hidden')).toBe('true')
+    expect(buttons.map((button) => button.getAttribute('tabindex'))).toEqual(['-1', '-1', '-1'])
+  })
+
+  it('hands focus back to stage one instead of stranding it in the retired row', () => {
+    const capsule = MediaCapsule.create(hoverCopy('zh'))
+    document.body.appendChild(capsule.element)
+    capsule.show('left')
+    capsule.expand()
+
+    const copy = capsule.buttonElement('copy')
+    copy?.focus()
+    expect(document.activeElement).toBe(copy)
+
+    capsule.collapse()
+    expect(document.activeElement).toBe(capsule.brandElement())
+    capsule.destroy()
+  })
+
+  it('folds back to stage one whenever the capsule is hidden, shown or re-targeted', () => {
+    const capsule = MediaCapsule.create(hoverCopy('zh'))
+
+    capsule.expand()
+    capsule.hide()
+    expect(capsule.stage).toBe('collapsed')
+
+    capsule.expand()
+    capsule.show('left')
+    expect(capsule.stage).toBe('collapsed')
+
+    capsule.expand()
+    capsule.render(payload('next'))
+    expect(capsule.stage).toBe('collapsed')
   })
 
   it('uses inline vector icons only: no emoji or glyph characters', () => {
@@ -167,12 +252,18 @@ describe('overlay structure', () => {
     expect(left + 120).toBeLessThanOrEqual(VIEWPORT.width - VIEWPORT.margin)
   })
 
-  it('exposes the capsule inset and radius from the single spec source', () => {
-    expect(CAPSULE_SPEC.borderRadius).toBe(22)
-    expect(CAPSULE_SPEC.height).toBe(44)
+  it('exposes the two-stage capsule geometry from the single spec source', () => {
+    expect(CAPSULE_SPEC.borderRadius).toBe(18)
+    expect(CAPSULE_SPEC.height).toBe(36)
     expect(CAPSULE_SPEC.inset).toBe(10)
-    // Compact row: 3 × 30px icons + 2 × 4px gaps + 2 × 6px padding + 2 × 1px border.
+    // Stage one: a 36px circle. Stage two: 3 × 30px icons + 2 × 4px gaps +
+    // 2 × 6px padding + 2 × 1px border.
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(36)
     expect(CAPSULE_SPEC.width).toBe(112)
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.height)
+    expect(CAPSULE_SPEC.width).toBe(
+      2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap + 2,
+    )
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
   })
