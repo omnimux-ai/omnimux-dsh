@@ -10,7 +10,13 @@
 import { TRENDING_VIEW_BUCKETS } from './trending-data.js'
 
 /** 灵感库本地库列表接口。 */
-export const TRENDING_SOURCE_PATH = '/omnimux/inspiration/local'
+export const TRENDING_LOCAL_PATH = '/omnimux/inspiration/local'
+/** 灵感社区云端精选灵感库接口（包含全量海量对标视频）。 */
+export const TRENDING_CLOUD_PATH = '/omnimux/inspiration'
+/** 兼容既有单路径常量的别名。 */
+export const TRENDING_SOURCE_PATH = TRENDING_LOCAL_PATH
+/** 默认双源聚合：同时拉取本地录入库与云端精选库，对齐灵感社区「全部」大盘数据。 */
+export const DEFAULT_TRENDING_SOURCES = Object.freeze([TRENDING_LOCAL_PATH, TRENDING_CLOUD_PATH])
 /**
  * 一次拉取的窗口大小。
  *
@@ -98,12 +104,13 @@ export function readEngagement(row) {
  * @returns {string}
  */
 export function readStructure(row) {
-  const raw = row?.deconstruction
+  const raw = row?.deconstruction || row?.analysis
   const dec = raw && typeof raw === 'object' ? raw : null
-  const candidate = [dec?.hook_highlight, dec?.hook, dec?.summary]
+  const candidate = [dec?.hook_highlight, dec?.hook, dec?.summary, dec?.target_goal]
     .find((value) => typeof value === 'string' && value.trim() !== '')
   if (!candidate) return ''
   const text = String(candidate)
+    .replace(/^[#\s*I|:\-\.]+/g, '')
     .replace(/\*\*/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -133,7 +140,7 @@ export function readAgeDays(value, nowMs = Date.now()) {
  */
 export function mapSourceItem(row, nowMs = Date.now()) {
   if (!row || typeof row !== 'object') return null
-  const id = typeof row.id === 'string' && row.id !== '' ? row.id : ''
+  const id = row.id != null && String(row.id).trim() !== '' ? String(row.id).trim() : ''
   if (!id) return null
   const region = String(row.country_code || '').trim().toUpperCase()
   const industry = String(row.category || '').trim()
@@ -286,6 +293,7 @@ export function buildSourceQuery(filters = {}) {
   const query = new URLSearchParams()
   query.set('sort', 'views')
   query.set('page_size', String(TRENDING_SOURCE_PAGE_SIZE))
+  if (filters.type) query.set('type', String(filters.type))
   const country = String(filters.region || '').trim()
   if (country) query.set('country', country)
   const category = String(filters.industry || '').trim()
@@ -295,8 +303,33 @@ export function buildSourceQuery(filters = {}) {
   return query.toString()
 }
 
+async function fetchSourcePayload(fetchImpl, url, signal) {
+  try {
+    const res = await fetchImpl(url, { signal })
+    if (!res || !res.ok) {
+      return { ok: false, status: res?.status ?? 0, reason: `http-${res?.status ?? 0}` }
+    }
+    let payload
+    try {
+      payload = await res.json()
+    } catch {
+      return { ok: false, status: res.status, reason: 'bad-json' }
+    }
+    const data = payload && typeof payload === 'object' && payload.data ? payload.data : payload
+    const rows = Array.isArray(data?.items) ? data.items : null
+    if (!rows) return { ok: false, status: res.status, reason: 'bad-shape' }
+    return { ok: true, rows, total: readFiniteNumber(data?.total) ?? rows.length }
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      reason: error?.name === 'AbortError' ? 'aborted' : 'network',
+    }
+  }
+}
+
 /**
- * 从灵感库拉取可复刻对标视频。
+ * 从灵感库拉取可复刻对标视频（双源聚合：本地库 + 云端精选库）。
  *
  * 三种结果都要能被调用方区分：`ready`（有数据）/ `empty`（接口通但库里没有）/
  * `unavailable`（接口不通、灵感库没装或未登录）。任何异常都收敛成 `unavailable`，
@@ -306,44 +339,62 @@ export function buildSourceQuery(filters = {}) {
  *   fetchImpl?: typeof fetch,
  *   filters?: object,
  *   signal?: AbortSignal,
+ *   sourcePath?: string,
+ *   sourcePaths?: string[],
  * }} [opts]
  * @returns {Promise<{ status: string, items: Array<object>, total: number, reason?: string }>}
  */
 export async function loadTrendingItems(opts = {}) {
   const fetchImpl = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null)
   if (!fetchImpl) return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'no-fetch' }
-  const url = `${TRENDING_SOURCE_PATH}?${buildSourceQuery(opts.filters)}`
-  let response
-  try {
-    response = await fetchImpl(url, { signal: opts.signal })
-  } catch (error) {
-    return {
-      status: TRENDING_SOURCE_STATUS.unavailable,
-      items: [],
-      total: 0,
-      reason: error?.name === 'AbortError' ? 'aborted' : 'network',
+
+  const sourcePaths = opts.sourcePaths || (opts.sourcePath ? [opts.sourcePath] : DEFAULT_TRENDING_SOURCES)
+
+  const outcomes = await Promise.all(
+    sourcePaths.map((basePath) => {
+      const isCloud = basePath === TRENDING_CLOUD_PATH
+      const query = buildSourceQuery(isCloud ? { ...opts.filters, type: 'video' } : (opts.filters || {}))
+      const url = `${basePath}?${query}`
+      return fetchSourcePayload(fetchImpl, url, opts.signal)
+    }),
+  )
+
+  const aborted = outcomes.some((o) => !o.ok && o.reason === 'aborted')
+  if (aborted) {
+    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'aborted' }
+  }
+
+  const okOutcomes = outcomes.filter((o) => o.ok)
+  if (okOutcomes.length === 0) {
+    const firstReason = outcomes[0]?.reason || 'network'
+    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: firstReason }
+  }
+
+  const combinedRows = []
+  const seenIds = new Set()
+  const seenUrls = new Set()
+
+  for (const outcome of okOutcomes) {
+    for (const row of outcome.rows) {
+      if (!row || typeof row !== 'object') continue
+      const id = row.id != null ? String(row.id).trim() : ''
+      const url = typeof row.source_url === 'string' ? row.source_url.trim() : ''
+      if (id && seenIds.has(id)) continue
+      if (url && seenUrls.has(url)) continue
+      if (id) seenIds.add(id)
+      if (url) seenUrls.add(url)
+      combinedRows.push(row)
     }
   }
-  if (!response || !response.ok) {
-    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: `http-${response?.status ?? 0}` }
-  }
-  let payload
-  try {
-    payload = await response.json()
-  } catch {
-    return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'bad-json' }
-  }
-  const data = payload && typeof payload === 'object' && payload.data ? payload.data : payload
-  const rows = Array.isArray(data?.items) ? data.items : null
-  if (!rows) return { status: TRENDING_SOURCE_STATUS.unavailable, items: [], total: 0, reason: 'bad-shape' }
-  const items = rows.map(mapSourceItem).filter(Boolean)
-  const total = readFiniteNumber(data?.total) ?? items.length
-  // 带了服务端过滤却 0 命中，是「被筛空了」，不是「库里没有东西」。
-  // 两者话术完全不同：前者要留在筛选语境里并允许重置，后者才是引导去导入。
+
+  const items = combinedRows.map((row) => mapSourceItem(row)).filter(Boolean)
+  const total = items.length
+
   const applied = String(opts.filters?.region || '').trim() !== ''
     || String(opts.filters?.industry || '').trim() !== ''
     || Number(opts.filters?.views) > 0
   const emptyStatus = applied ? TRENDING_SOURCE_STATUS.filtered : TRENDING_SOURCE_STATUS.empty
+
   return {
     status: items.length > 0 ? TRENDING_SOURCE_STATUS.ready : emptyStatus,
     items,

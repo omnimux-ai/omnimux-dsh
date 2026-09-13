@@ -288,3 +288,56 @@ test('source: 没有可用 fetch 时不抛错，直接报 unavailable', async ()
   // Node 有全局 fetch，这条断言只保证「没有 fetch 实现」时不崩
   assert.ok(result.status === TRENDING_SOURCE_STATUS.unavailable || result.status === TRENDING_SOURCE_STATUS.ready)
 })
+
+test('source: 兼容解析云端精选灵感库结构（数字 id、analysis 结构、顶层 views、cover_key）', () => {
+  const cloudRow = {
+    id: 3007,
+    title: '误会男友玩Tinder的相册清理App反转',
+    country_code: 'US',
+    category: 'Personal Development',
+    cover_key: '/omnimux/inspiration/media/inspiration-covers/3007',
+    source_url: 'https://www.tiktok.com/@test/video/1',
+    views: 38600000,
+    posted_at: '2026-09-10T00:00:00.000Z',
+    analysis: {
+      hook_highlight: '### 事实观察\n开场反转展示相册清理 App',
+    },
+  }
+  const item = mapSourceItem(cloudRow, NOW)
+  assert.equal(item.id, '3007', '数字 ID 必须规范转为 string')
+  assert.equal(item.region, 'US')
+  assert.equal(item.industry, 'Personal Development')
+  assert.equal(item.views, 38600000)
+  assert.equal(item.cover, '/omnimux/inspiration/media/inspiration-covers/3007')
+  assert.ok(item.structure.includes('开场反转展示相册清理 App'))
+})
+
+test('source: 双源聚合拉取（本地库 + 云端库合并去重）', async () => {
+  const localRow = makeRow({ id: 'local_1', title: 'Local video 1' })
+  const cloudRow = {
+    id: 2690,
+    title: 'Cloud viral video 1',
+    views: 78200000,
+    cover_key: '/omnimux/inspiration/media/inspiration-covers/2690',
+  }
+  const duplicateCloudRow = {
+    id: 'local_1',
+    title: 'Duplicate in cloud',
+    views: 500000,
+  }
+
+  const result = await loadTrendingItems({
+    fetchImpl: async (url) => {
+      const u = String(url)
+      if (u.includes('/local')) {
+        return fakeResponse({ data: { items: [localRow], total: 1 } })
+      }
+      return fakeResponse({ data: { items: [cloudRow, duplicateCloudRow], total: 2 } })
+    },
+  })
+
+  assert.equal(result.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(result.items.length, 2, '必须合并且按 ID 去重')
+  assert.equal(result.items[0].id, 'local_1', '本地源项目优先保留')
+  assert.equal(result.items[1].id, '2690', '云端项目顺利合并排入')
+})
