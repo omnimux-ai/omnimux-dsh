@@ -1,0 +1,134 @@
+%% 浏览器插件页面素材悬停感知 — 程序调用时序与状态流转
+%% 来源：docs/architecture/media-hover-assistant-design.md §4
+%% 扩展根：plugins/omnimux-browser/extension
+
+%% ── 4.1 悬停感知与展示 ────────────────────────────────────────────
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant P as 页面
+    participant D as MediaDetector
+    participant O as MediaOverlay
+    participant C as MediaCapsule
+    participant T as MediaTooltip
+
+    U->>P: 指针移入 <img>/<video>
+    P->>D: pointermove (passive 单监听)
+    D->>D: elementFromPoint 解析顶层命中
+    D->>D: cache.get(el) / isEligible()
+    Note over D: 尺寸 ≥40px 且视口内且非装饰性<br/>否则静默返回，不建任何 DOM
+    D-->>O: onCandidate(candidate, rect)
+
+    O->>O: 120ms 去抖（快速划过不计）
+    O->>C: render(payload)
+    C->>C: 挂载胶囊于素材左下角（fixed 定位）
+    O->>O: show()
+
+    U->>C: 指针移入图标（星标/复制/气泡/加号）
+    C->>T: show(text, iconRect, viewport)
+    T->>T: place()：优先图标上方；顶部不足则翻转到下方
+    T->>T: clamp 到视口 margin=8px
+    Note over T: ★ 气泡为胶囊的兄弟节点<br/>绝不进入素材容器，故永不被 overflow:hidden 裁剪
+    T-->>U: 纯白气泡呈现（黑字加粗 + 下三角）
+
+    U->>C: 指针移出图标
+    C->>T: hide()
+    U->>C: 指针移出胶囊（超出 120ms 宽限期）
+    O->>O: hide()（立即回收，无残留）
+
+%% ── 4.2 加入灵感库 ────────────────────────────────────────────────
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant C as MediaCapsule
+    participant A as MediaActionBridge
+    participant BG as Background
+    participant S as chrome.storage.local
+
+    U->>C: 点击「加入灵感库」
+    C->>C: setBusy('inspiration', true)
+    C->>A: saveToInspiration(payload)
+    A->>BG: DSH_MEDIA_TO_INSPIRATION
+    BG->>S: get('dshMediaInspiration')
+    S-->>BG: records[]
+    BG->>BG: 按 src 去重 + 上限 500 条，超限淘汰最旧
+    BG->>S: set({ dshMediaInspiration: next })
+    S-->>BG: ok
+    BG-->>A: { ok, result: { total, duplicate } }
+    A-->>C: ActionOutcome
+    C->>C: 打勾态 + setBusy(false)
+    C-->>U: 星标变实心打勾，气泡改显「已存入灵感库」
+
+%% ── 4.3 复制 ──────────────────────────────────────────────────────
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant C as MediaCapsule
+    participant A as MediaActionBridge
+    participant CB as 系统剪贴板
+
+    U->>C: 点击「复制」
+    C->>A: copyToClipboard(payload)
+    A->>CB: navigator.clipboard.writeText(src)
+    alt 权限被策略拒绝
+        A->>A: 降级：临时 textarea + execCommand('copy')
+        CB-->>A: 兜底结果
+    end
+    A-->>C: ActionOutcome{ status:'copied' }
+    C->>C: 图标瞬时切换为打勾（600ms 后还原）
+    C-->>U: 气泡提示「已复制」
+
+%% ── 4.4 加入对话并点亮（核心闭环） ─────────────────────────────────
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant C as MediaCapsule
+    participant A as MediaActionBridge
+    participant F as FabCompanion
+    participant P as PanelApp(iframe)
+    participant BG as Background
+
+    U->>C: 点击「加入对话」
+    C->>C: setBusy('attach', true)
+    C->>A: attachToConversation(payload)
+    A->>F: postMessage(ACTIVATE_WORKBENCH_WITH_MEDIA)
+    F->>F: openWorkstation()（未展开则先展开）
+    F->>P: postMessage(MEDIA_ATTACH_REQUEST, payload)
+
+    alt 工作台可用
+        P->>P: attachMediaAsImage(payload) 下载 → 校验 → 入草稿
+        P->>P: setDraft(images + [prepared])
+        P->>P: focusComposer() 聚焦输入框
+        P-->>F: MEDIA_ATTACH_RESULT{ ok:true }
+        F-->>A: 转发回执
+        A-->>C: ActionOutcome{ status:'attached' }
+        C-->>U: 图标点亮 + 气泡「已加入对话」
+    else 工作台不可用（未注入 / iframe 未就绪 / 超时 800ms）
+        A->>BG: DSH_OPEN_ASSISTANT_WITH_MEDIA
+        BG->>BG: openAssistantPanel(windowId) + 暂存待处理素材
+        BG-->>A: { ok:true, result:{ channel:'side-panel' } }
+        A-->>C: ActionOutcome{ status:'attached' }
+        C-->>U: 气泡「已在侧边栏打开」
+    end
+    C->>C: setBusy('attach', false)
+
+%% ── 4.5 状态流转 ──────────────────────────────────────────────────
+stateDiagram-v2
+    [*] --> idle: 覆盖层挂载完成
+    idle --> pending: 指针命中合格素材
+    pending --> shown: 去抖 120ms 后仍停留
+    pending --> idle: 去抖期内移出（不建 DOM）
+    shown --> interactive: 指针进入胶囊
+    interactive --> shown: 指针离开胶囊但仍在素材内
+    shown --> hidden: 指针移出素材（宽限 120ms）
+    interactive --> hidden: 指针移出胶囊超宽限
+    hidden --> idle: 动画结束 + 监听回收
+    shown --> saving: 点击「加入灵感库」
+    saving --> shown: 打勾反馈（星标切实心）
+    shown --> copying: 点击「复制」
+    copying --> shown: 打勾瞬时反馈（600ms 还原）
+    shown --> attaching: 点击「加入对话」
+    attaching --> attached: 回执 ok
+    attaching --> failed: 回执 error / 超时
+    attached --> hidden: 工作台接管焦点
+    failed --> shown: 错误气泡（3s 自动消散）

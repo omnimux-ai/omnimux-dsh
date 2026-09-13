@@ -17,22 +17,21 @@ import { connectPanel, PanelRpcError, type PanelApi, type PanelSettings } from '
 import { renderMarkdown } from './markdown.ts'
 import whaleUrl from '../../assets/icons/deepseek-256.png'
 import type { PageSceneInfo } from './components/SceneBadge.tsx'
-import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
+import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, SaveIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
+import type { UiLocale } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
 import {
   applyUiScale,
   DEFAULT_UI_SCALE,
-  formatUiScale,
   loadUiScale,
   saveUiScale,
   stepUiScale,
-  uiScaleAtLimit,
 } from './ui-scale.ts'
 import { QuestionCard } from './QuestionCard.tsx'
 import { MessageImages } from './MessageImages.tsx'
@@ -239,14 +238,6 @@ function SettingsIcon(): React.JSX.Element {
   )
 }
 
-function PlusIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 4.5v11M4.5 10h11" />
-    </svg>
-  )
-}
-
 function TrashIcon(): React.JSX.Element {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -259,22 +250,6 @@ function ChevronDownIcon(): React.JSX.Element {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="m5.5 7.5 4.5 4.5 4.5-4.5" />
-    </svg>
-  )
-}
-
-function SendIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 15.5v-11M5.5 9 10 4.5 14.5 9" />
-    </svg>
-  )
-}
-
-function AttachmentIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="m7.25 10.75 4.9-4.9a2.3 2.3 0 0 1 3.25 3.25l-6.2 6.2a3.55 3.55 0 1 1-5.02-5.02l6.2-6.2" />
     </svg>
   )
 }
@@ -303,23 +278,6 @@ function BackIcon(): React.JSX.Element {
   )
 }
 
-function TextSizeIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M2.5 14.5 6.25 5h1.5l3.75 9.5M4.1 11.4h5.8" />
-      <path d="M12.4 14.5 15 7.6h1.1l2.6 6.9M13.5 12.4h4.1" />
-    </svg>
-  )
-}
-
-function MinusIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M5 10h10" />
-    </svg>
-  )
-}
-
 function ShieldIcon(): React.JSX.Element {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -329,42 +287,7 @@ function ShieldIcon(): React.JSX.Element {
   )
 }
 
-/** Stepper for the panel-wide text scale; see `ui-scale.ts` for the model. */
-function TextSizePanel({
-  scale,
-  copy,
-  onStep,
-  onReset,
-}: {
-  scale: number
-  copy: PanelCopy
-  onStep: (direction: 1 | -1) => void
-  onReset: () => void
-}): React.JSX.Element {
-  return (
-    <section className="text-size-panel" aria-label={copy.textSize.title}>
-      <strong>{copy.textSize.title}</strong>
-      <div className="text-size-stepper">
-        <button type="button" disabled={uiScaleAtLimit(scale, -1)}
-          onClick={() => onStep(-1)}
-          aria-label={copy.textSize.smaller} title={copy.textSize.smaller}>
-          <MinusIcon />
-        </button>
-        <span className="text-size-value" role="status"
-          aria-label={copy.textSize.value(formatUiScale(scale))}>{formatUiScale(scale)}</span>
-        <button type="button" disabled={uiScaleAtLimit(scale, 1)}
-          onClick={() => onStep(1)}
-          aria-label={copy.textSize.larger} title={copy.textSize.larger}>
-          <PlusIcon />
-        </button>
-      </div>
-      <button type="button" className="text-size-reset" disabled={scale === DEFAULT_UI_SCALE}
-        onClick={onReset}>{copy.textSize.reset}</button>
-    </section>
-  )
-}
-
-function tabLabel(tab: AffinityTab | null, unknownTab: string): string {
+export function tabLabel(tab: AffinityTab | null, unknownTab: string): string {
   const title = tab?.title.trim()
   if (title !== undefined && title !== '') return title
   try {
@@ -568,28 +491,60 @@ const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy:
   )
 })
 
+/**
+ * Normalised page-media payload, as produced by the content script's hover
+ * detector. Declared locally rather than imported: the panel and the content
+ * script are separate bundles, and the receiving side must validate anyway.
+ */
+interface HoveredMedia {
+  id: string
+  type: 'image' | 'video'
+  src: string
+  previewSrc: string
+  pageUrl: string
+  pageTitle: string
+  width: number
+  height: number
+  naturalWidth: number
+  naturalHeight: number
+  alt: string
+  capturedAt: number
+}
+
+/**
+ * Validates a page-media payload that arrived by message.
+ *
+ * The content script is the only producer, but a panel can be framed by any
+ * page, so an untrusted `postMessage` must not be able to mount an arbitrary
+ * draft attachment with a malformed shape.
+ */
+function readHoveredMedia(raw: unknown): HoveredMedia | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const media = raw as Partial<HoveredMedia>
+  if (typeof media.id !== 'string' || typeof media.src !== 'string') return null
+  if (media.type !== 'image' && media.type !== 'video') return null
+  return {
+    id: media.id,
+    type: media.type,
+    src: media.src,
+    previewSrc: typeof media.previewSrc === 'string' ? media.previewSrc : media.src,
+    pageUrl: typeof media.pageUrl === 'string' ? media.pageUrl : '',
+    pageTitle: typeof media.pageTitle === 'string' ? media.pageTitle : '',
+    width: typeof media.width === 'number' ? media.width : 0,
+    height: typeof media.height === 'number' ? media.height : 0,
+    naturalWidth: typeof media.naturalWidth === 'number' ? media.naturalWidth : 0,
+    naturalHeight: typeof media.naturalHeight === 'number' ? media.naturalHeight : 0,
+    alt: typeof media.alt === 'string' ? media.alt : '',
+    capturedAt: typeof media.capturedAt === 'number' ? media.capturedAt : Date.now(),
+  }
+}
+
 export function App(): React.JSX.Element {
   const [themeSetting, setThemeSetting] = useState<'auto' | 'light' | 'dark'>(() => {
     const saved = safeGetStorage('omnimux_theme_mode')
     if (saved === 'dark' || saved === 'light' || saved === 'auto') return saved
     return 'auto'
   })
-  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
-    return 'light'
-  })
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light')
-    }
-    media.addEventListener?.('change', handler)
-    return () => media.removeEventListener?.('change', handler)
-  }, [])
-
-  const effectiveTheme = themeSetting === 'auto' ? systemTheme : themeSetting
 
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
@@ -661,7 +616,91 @@ export function App(): React.JSX.Element {
 
   const [pageScene, setPageScene] = useState<PageSceneInfo | null>(null)
   const [detectedMedia, setDetectedMedia] = useState<SniffedMediaItem[]>([])
+  const [attachedMediaIds, setAttachedMediaIds] = useState<Set<string>>(() => new Set())
+  /** Draft images delivered by the page-media hover capsule, by media id. */
+  const [litMediaIds, setLitMediaIds] = useState<Set<string>>(() => new Set())
+  /**
+   * Live mirror of the host's image projection.
+   *
+   * The listener that mounts hovered page media is installed once per mode, so
+   * it would otherwise keep reading the limits from the render that subscribed —
+   * the state is `null` there, because the projection only arrives with the
+   * session history. Reading the ref keeps that long-lived closure honest: the
+   * draft intake either runs against the real limits or reports a failure.
+   */
+  const imageLimitsRef = useRef<ImageAttachmentLimits | null>(null)
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const isFloatMode = useMemo(() => typeof window !== 'undefined' && window.location.search.includes('mode=float'), [])
+
+  /** Focus the composer so the user can type the moment media lands in the draft. */
+  function focusComposer(): void {
+    const node = composerRef.current
+    if (node === null) return
+    try {
+      node.focus({ preventScroll: true })
+    } catch {
+      node.focus()
+    }
+  }
+
+  /** Converts a hovered page element into the panel's media item shape. */
+  function mediaItemFromHover(payload: HoveredMedia): SniffedMediaItem {
+    return {
+      id: payload.id,
+      type: payload.type,
+      src: payload.src,
+      previewSrc: payload.previewSrc || payload.src,
+      alt: payload.alt,
+    }
+  }
+
+  /** Reports the attach outcome back to the content script's capsule. */
+  function reportMediaAttachResult(payload: HoveredMedia, ok: boolean, reason?: string): void {
+    const message = {
+      type: 'MEDIA_ATTACH_RESULT',
+      payload: reason === undefined ? { id: payload.id, ok } : { id: payload.id, ok, reason },
+    }
+    if (isFloatMode) {
+      try {
+        window.parent?.postMessage({ source: 'omnimux-content-script', ...message }, '*')
+      } catch {
+        // The parent frame may already be gone.
+      }
+      return
+    }
+    if (chrome.tabs?.query === undefined || chrome.tabs.sendMessage === undefined) return
+    void chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const tabId = tabs?.[0]?.id
+      if (tabId === undefined) return
+      void chrome.tabs.sendMessage(tabId, message).catch(() => {})
+    }).catch(() => {})
+  }
+
+  /**
+   * Mounts a page element the user sent from the hover capsule.
+   *
+   * The media becomes a normal draft attachment: it appears above the input as a
+   * thumbnail and the composer takes focus, so the next keystroke joins the prompt.
+   */
+  async function attachHoveredMedia(payload: HoveredMedia): Promise<void> {
+    const item = mediaItemFromHover(payload)
+    try {
+      await attachMediaAsImage(item)
+    } catch (cause) {
+      // A cross-origin media URL is the expected failure: the page can display the
+      // image while the extension cannot download it. Report it instead of showing
+      // the capsule a success it did not get, and leave the draft — and its light
+      // and check marks — untouched.
+      reportMediaAttachResult(payload, false, cause instanceof Error ? cause.message : undefined)
+      return
+    }
+    setAttachedMediaIds((current) => new Set(current).add(item.id))
+    // The draft image keeps the payload id inside its file name, which is how the
+    // "lit" highlight finds the thumbnail it belongs to.
+    setLitMediaIds((current) => new Set(current).add(item.id))
+    reportMediaAttachResult(payload, true)
+    focusComposer()
+  }
 
   useEffect(() => {
     if (isFloatMode) {
@@ -674,6 +713,9 @@ export function App(): React.JSX.Element {
           }
         } else if (e.data.type === 'MEDIA_SNIFFED_RESULT') {
           setDetectedMedia(e.data.payload || [])
+        } else if (e.data.type === 'MEDIA_ATTACH_REQUEST') {
+          const payload = readHoveredMedia(e.data.payload)
+          if (payload !== null) void attachHoveredMedia(payload)
         }
       }
       window.addEventListener('message', handleMessage)
@@ -696,13 +738,30 @@ export function App(): React.JSX.Element {
           }
         }).catch(() => {})
       }
+      // A capsule press opens this side panel only after the floating workstation
+      // proved unavailable; its media waits in the worker until this request.
+      const collectPendingMedia = async () => {
+        if (chrome.tabs?.query === undefined || chrome.tabs.sendMessage === undefined) return
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [])
+        const tabId = tabs?.[0]?.id
+        if (tabId === undefined) return
+        const response = await chrome.tabs
+          .sendMessage(tabId, { type: 'DSH_MEDIA_ATTACH_REQUEST' })
+          .catch(() => null) as { ok?: boolean; result?: { pending?: boolean; media?: unknown } } | null
+        if (response?.result?.pending !== true) return
+        const payload = readHoveredMedia(response.result.media)
+        if (payload !== null) void attachHoveredMedia(payload)
+      }
       updateContextFromTab()
+      void collectPendingMedia().catch(() => {})
       const tabListener = () => updateContextFromTab()
       chrome.tabs?.onActivated?.addListener(tabListener)
       return () => {
         chrome.tabs?.onActivated?.removeListener(tabListener)
       }
     }
+    // Attach helpers are re-created per render on purpose: this effect must run
+    // once per mode and must not re-subscribe on every draft keystroke.
   }, [isFloatMode])
 
   const [stickyTopBarVisible, setStickyTopBarVisible] = useState(false)
@@ -776,16 +835,29 @@ export function App(): React.JSX.Element {
     void probe()
   }, [manualLocale])
 
+  /**
+   * Downloads one page media and mounts it in the draft.
+   *
+   * Rejects whenever the media did not land: a cross-origin address the page can
+   * display but the extension cannot download, a response whose body is not a
+   * usable image, and a draft intake that refused the file all mean the same
+   * thing to the caller — there is nothing in the conversation to confirm.
+   *
+   * @throws {Error} When the download or the draft intake did not complete.
+   */
   async function attachMediaAsImage(item: SniffedMediaItem): Promise<void> {
+    let file: File
     try {
       const res = await fetch(item.src)
       const blob = await res.blob()
+      if (blob.size === 0) throw new Error(`empty media response for ${item.src}`)
       const ext = item.type === 'video' ? 'jpg' : (blob.type.split('/')[1] || 'jpg')
-      const file = new File([blob], `page-media-${item.id}.${ext}`, { type: blob.type || 'image/jpeg' })
-      await addImageFiles([file])
-    } catch {
-      // Ignore
+      file = new File([blob], `page-media-${item.id}.${ext}`, { type: blob.type || 'image/jpeg' })
+    } catch (cause) {
+      throw cause instanceof Error ? cause : new Error(String(cause))
     }
+    const landed = await addImageFiles([file])
+    if (!landed) throw new Error(`media was not mounted in the draft: ${item.src}`)
   }
 
   const nextSeq = (): number => { seqRef.current += 1; return seqRef.current }
@@ -901,6 +973,7 @@ export function App(): React.JSX.Element {
         setRows([])
         setDraft((current) => ({ ...current, images: [] }))
         setImageLimits(null)
+        imageLimitsRef.current = null
         imageProjectionRef.current = { sessionId: null, seq: Number.NEGATIVE_INFINITY, limits: null }
         setSessionTitle(null)
         setWorking(false)
@@ -970,6 +1043,7 @@ export function App(): React.JSX.Element {
     if (previous.sessionId === sessionId && seq <= previous.seq) return
     const limits = parseImageAttachmentLimits(value)
     imageProjectionRef.current = { sessionId, seq, limits }
+    imageLimitsRef.current = limits
     setImageLimits(limits)
   }
 
@@ -1439,22 +1513,35 @@ export function App(): React.JSX.Element {
     setShowSessionPicker(false)
   }
 
-  async function addImageFiles(files: readonly File[]): Promise<void> {
-    const limits = imageLimits
+  /**
+   * Mounts files in the draft and reports whether they really landed.
+   *
+   * A `false` return is not a cosmetic distinction: the caller paints the
+   * "attached" state from it, so a draft that never received the image has to be
+   * distinguishable from one that did.
+   */
+  async function addImageFiles(files: readonly File[]): Promise<boolean> {
+    // Read through the ref: hovered page media reaches this function from a
+    // listener that subscribed before the projection existed.
+    const limits = imageLimitsRef.current
     const sessionId = sessionRef.current
     if (files.length === 0 || limits === null || sessionId === null
-      || !canAcceptImageSelection(addingImagesRef.current, sendingRef.current)) return
+      || !canAcceptImageSelection(addingImagesRef.current, sendingRef.current)) {
+      if (sessionId !== null && limits === null) setError(copy.app.imageUnavailable)
+      return false
+    }
     addingImagesRef.current = true
     setAddingImages(true)
     setError(null)
     const existing = draftImages
     try {
       const prepared = await prepareImageFiles(files, existing, limits)
-      if (sessionRef.current === sessionId) {
-        setDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
-      }
+      if (sessionRef.current !== sessionId) return false
+      setDraft((current) => ({ ...current, images: [...current.images, ...prepared] }))
+      return prepared.length > 0
     } catch (cause) {
       if (sessionRef.current === sessionId) setError(imageErrorMessage(cause, copy, limits))
+      return false
     } finally {
       addingImagesRef.current = false
       setAddingImages(false)
@@ -1818,8 +1905,6 @@ export function App(): React.JSX.Element {
       : { ...current, trustedActionOrigins: current.trustedActionOrigins.filter((candidate) => candidate !== origin) })
   }
 
-  // 状态栏只显示连接状态；快照上限是技术细节，在设置页说明（见 hint）。
-  const statusText = copy.status[state]
   const sessionMenuTitle = sessionTitle ?? copy.app.newSession
   const filteredSessions = useMemo(() => {
     if (!sessionSearchQuery.trim()) return sessionList
@@ -2344,6 +2429,26 @@ export function App(): React.JSX.Element {
         onSaveToInspiration={handleSaveToInspiration}
       />
       <footer className="composer">
+        {detectedMedia.length > 0 && !isFloatMode && (
+          <div className="page-media-bar">
+            <MediaSnifferBar
+              items={detectedMedia}
+              locale={locale}
+              attachedIds={attachedMediaIds}
+              onAttachMedia={(item) => {
+                // The check mark is earned by the draft intake, not by the click:
+                // media the panel could not download must stay unmarked.
+                void attachMediaAsImage(item).then(
+                  () => {
+                    setAttachedMediaIds((current) => new Set(current).add(item.id))
+                    focusComposer()
+                  },
+                  () => {},
+                )
+              }}
+            />
+          </div>
+        )}
         <div className="composer-box clean-chat-box">
           {selection !== null && (
             <SelectionQuote
@@ -2357,8 +2462,9 @@ export function App(): React.JSX.Element {
             <div className="draft-images" aria-label={copy.app.addImages}>
               {draftImages.map((image) => {
                 const name = image.name ?? copy.app.image
+                const isLit = litMediaIds.size > 0 && [...litMediaIds].some((mediaId) => name.includes(mediaId))
                 return (
-                  <span className="draft-image" key={image.id}>
+                  <span className={`draft-image${isLit ? ' lit' : ''}`} key={image.id}>
                     <img src={draftImageDataUrl(image)} alt={name} />
                     <button
                       type="button"
@@ -2376,6 +2482,7 @@ export function App(): React.JSX.Element {
             </div>
           )}
           <textarea
+            ref={composerRef}
             value={input}
             onChange={(e) => {
               if (!sendingRef.current) setDraft((current) => ({ ...current, text: e.target.value }))

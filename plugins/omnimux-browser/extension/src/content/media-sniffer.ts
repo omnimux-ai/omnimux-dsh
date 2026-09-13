@@ -1,7 +1,19 @@
 /**
  * Media Sniffer: detects visible images and video posters in the current viewport
  * so users can toggle them into attachments with one click.
+ *
+ * The `>= 40px` eligibility rule and the URL normalisation both come from the
+ * hover detector's payload module: the viewport scan and the pointer detector
+ * must never disagree about what counts as a usable media element.
  */
+
+import {
+  isElementInViewport,
+  isEligibleMediaSize,
+  mediaSourceOf,
+  normalizeMedia,
+} from './media-hover/payload.ts'
+import type { MediaKind } from './media-hover/types.ts'
 
 export interface DetectedMediaItem {
   id: string
@@ -13,63 +25,50 @@ export interface DetectedMediaItem {
   height?: number
 }
 
+/** Maximum number of items one page scan reports. */
+export const SNIFF_MEDIA_LIMIT = 8
+
+/** True when an element is large enough and inside the viewport. */
+function isSniffable(el: Element): boolean {
+  const rect = el.getBoundingClientRect()
+  const vw = window.innerWidth || document.documentElement.clientWidth
+  const vh = window.innerHeight || document.documentElement.clientHeight
+  if (!isEligibleMediaSize(rect.width, rect.height)) return false
+  return isElementInViewport(rect, vw, vh)
+}
+
+function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMediaItem | null {
+  const payload = normalizeMedia(el, kind, location.href)
+  if (payload === null) return null
+  return {
+    id: `${kind === 'video' ? 'video' : 'img'}_${index + 1}`,
+    type: payload.type,
+    src: payload.src,
+    previewSrc: payload.previewSrc || mediaSourceOf(el, kind, location.href),
+    alt: payload.alt,
+    width: payload.naturalWidth || payload.width,
+    height: payload.naturalHeight || payload.height,
+  }
+}
+
 export function sniffViewportMedia(): DetectedMediaItem[] {
   const items: DetectedMediaItem[] = []
   const seenUrls = new Set<string>()
 
-  const vw = window.innerWidth || document.documentElement.clientWidth
-  const vh = window.innerHeight || document.documentElement.clientHeight
-
-  function isElementInViewport(el: Element): boolean {
-    const rect = el.getBoundingClientRect()
-    return (
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < vh &&
-      rect.left < vw &&
-      rect.width >= 40 &&
-      rect.height >= 40
-    )
+  const push = (el: Element, kind: MediaKind): void => {
+    if (items.length >= SNIFF_MEDIA_LIMIT) return
+    if (!isSniffable(el)) return
+    const item = sniffElement(el, kind, items.length)
+    if (item === null || seenUrls.has(item.src)) return
+    seenUrls.add(item.src)
+    items.push(item)
   }
 
-  // 1. Scan <img> elements
-  const imgs = document.querySelectorAll('img')
-  for (const img of imgs) {
-    if (items.length >= 8) break
-    const src = img.currentSrc || img.src
-    if (!src || src.startsWith('data:') || seenUrls.has(src)) continue
-    // Filter tiny tracking pixels / avatars < 40px
-    if (isElementInViewport(img)) {
-      seenUrls.add(src)
-      items.push({
-        id: `img_${items.length + 1}`,
-        type: 'image',
-        src,
-        previewSrc: src,
-        alt: img.alt || img.title || '网页图片',
-        width: img.naturalWidth || img.clientWidth,
-        height: img.naturalHeight || img.clientHeight,
-      })
-    }
+  for (const img of document.querySelectorAll('img')) {
+    push(img, 'image')
   }
-
-  // 2. Scan <video> elements
-  const videos = document.querySelectorAll('video')
-  for (const video of videos) {
-    if (items.length >= 8) break
-    const poster = video.poster
-    if (poster && !seenUrls.has(poster) && isElementInViewport(video)) {
-      seenUrls.add(poster)
-      items.push({
-        id: `video_${items.length + 1}`,
-        type: 'video',
-        src: poster,
-        previewSrc: poster,
-        alt: '视频海报',
-        width: video.videoWidth || video.clientWidth,
-        height: video.videoHeight || video.clientHeight,
-      })
-    }
+  for (const video of document.querySelectorAll('video')) {
+    push(video, 'video')
   }
 
   return items

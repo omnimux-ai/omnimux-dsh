@@ -2,11 +2,34 @@
  * FAB & Immersive Workstation Companion:
  * Injects a squircle draggable FAB into the host page via Shadow DOM.
  * Expands into a 760px immersive workstation running panel/index.html?mode=float.
+ *
+ * It is also the transport the hover capsule uses to deliver a page media element
+ * into the conversation: `openWorkstationWithMedia` expands the workstation,
+ * posts `MEDIA_ATTACH_REQUEST`, and resolves only when the panel answers with a
+ * `MEDIA_ATTACH_RESULT` receipt.
  */
 
 import { getFullContext, detectPlatform } from './page-sensor.ts'
 import { fillHostInput } from './dom-fill.ts'
 import { sniffViewportMedia } from './media-sniffer.ts'
+import { BRIDGE_MESSAGE, CONTENT_MESSAGE_SOURCE, TIMING } from './media-hover/messages.ts'
+import type { HoveredMedia } from './media-hover/types.ts'
+
+/** A media-attach request awaiting the panel's receipt. */
+interface PendingAttach {
+  resolve: (ok: boolean) => void
+  timer: ReturnType<typeof setTimeout>
+}
+
+/** Per-page registry of attach requests; a fresh injection clears the old one. */
+const HOST_SHELL = globalThis as typeof globalThis & {
+  __dshBrowserMediaAttach?: Map<string, PendingAttach>
+}
+
+function pendingAttachMap(): Map<string, PendingAttach> {
+  if (HOST_SHELL.__dshBrowserMediaAttach === undefined) HOST_SHELL.__dshBrowserMediaAttach = new Map()
+  return HOST_SHELL.__dshBrowserMediaAttach
+}
 
 export function initFabCompanion(): void {
   // Only inject in top window
@@ -206,6 +229,74 @@ export function initFabCompanion(): void {
     }
   }
 
+  /**
+   * Expands the workstation and hands it one page media element.
+   *
+   * Resolves `true` only when the panel confirms the attachment, so the caller
+   * can fall back to the native side panel instead of claiming success.
+   */
+  function openWorkstationWithMedia(payload: HoveredMedia): Promise<boolean> {
+    openWorkstation()
+    if (!iframe?.contentWindow) return Promise.resolve(false)
+
+    const pending = pendingAttachMap()
+    const previous = pending.get(payload.id)
+    if (previous !== undefined) {
+      clearTimeout(previous.timer)
+      pending.delete(payload.id)
+    }
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pending.delete(payload.id)
+        resolve(false)
+      }, TIMING.attachReceiptTimeout)
+      pending.set(payload.id, { resolve, timer })
+      try {
+        iframe.contentWindow?.postMessage({
+          source: CONTENT_MESSAGE_SOURCE,
+          type: BRIDGE_MESSAGE.mediaAttachRequest,
+          payload,
+          timestamp: Date.now(),
+        }, '*')
+      } catch {
+        clearTimeout(timer)
+        pending.delete(payload.id)
+        resolve(false)
+      }
+    })
+  }
+
+  /** Whether the floating workstation is currently expanded. */
+  function isWorkstationOpen(): boolean {
+    return isExpanded
+  }
+
+  /** Resolves a waiting attach request when the panel reports the outcome. */
+  function handleAttachResult(payload: unknown): void {
+    if (typeof payload !== 'object' || payload === null) return
+    const receipt = payload as { id?: unknown; ok?: unknown }
+    if (typeof receipt.id !== 'string') return
+    const pending = pendingAttachMap().get(receipt.id)
+    if (pending === undefined) return
+    pendingAttachMap().delete(receipt.id)
+    clearTimeout(pending.timer)
+    pending.resolve(receipt.ok === true)
+  }
+
+  // The hover capsule consumes this handle instead of keeping a second iframe
+  // channel, so the workstation owns its own message contract in one place.
+  const shell = globalThis as typeof globalThis & {
+    __dshBrowserWorkstation?: {
+      openWithMedia: (payload: HoveredMedia) => Promise<boolean>
+      isOpen: () => boolean
+    }
+  }
+  shell.__dshBrowserWorkstation = {
+    openWithMedia: openWorkstationWithMedia,
+    isOpen: isWorkstationOpen,
+  }
+
   // Free Dragging
   let isDragging = false
   let hasMoved = false
@@ -306,6 +397,11 @@ export function initFabCompanion(): void {
         type: 'MEDIA_SNIFFED_RESULT',
         payload: media,
       }, '*')
+      return
+    }
+
+    if (type === BRIDGE_MESSAGE.mediaAttachResult) {
+      handleAttachResult(e.data.payload)
       return
     }
 

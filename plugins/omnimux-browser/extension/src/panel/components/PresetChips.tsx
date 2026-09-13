@@ -2,7 +2,6 @@ import React, { memo } from 'react'
 import type { PageSceneInfo } from './SceneBadge.tsx'
 import {
   RocketIcon,
-  ThreadIcon,
   QuoteIcon,
   GlobeIcon,
   SparklesIcon,

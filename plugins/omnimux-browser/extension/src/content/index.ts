@@ -129,3 +129,17 @@ import('./twitter-velocity/index.ts').then(({ initTwitterVelocity }) => {
   initTwitterVelocity()
 }).catch(() => {})
 
+// Mount the page-media hover assistant (capsule + white tooltip).
+// A re-injected content script replaces its own listeners, so the previous
+// overlay is disposed first; the page must never accumulate shadow hosts.
+const MEDIA_OVERLAY_HANDLE = '__dshBrowserMediaOverlay'
+const contentShell = globalThis as typeof globalThis & {
+  [MEDIA_OVERLAY_HANDLE]?: { dispose: () => void }
+}
+import('./media-hover/overlay.ts').then(({ initMediaHoverOverlay, MEDIA_OVERLAY_HOST_ID }) => {
+  // A replaceable content script keeps its DOM until something removes it.
+  contentShell[MEDIA_OVERLAY_HANDLE]?.dispose()
+  for (const stale of document.querySelectorAll(`#${MEDIA_OVERLAY_HOST_ID}`)) stale.remove()
+  const overlay = initMediaHoverOverlay(document)
+  contentShell[MEDIA_OVERLAY_HANDLE] = overlay
+}).catch(() => {})
