@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- 专家市场聚合出厂内置 Agent 预设（`tiktok-agent`、`standard`、`daily-work`、`cordis`、`ptc`、`minimal`）
+- 专家市场动态扫描 `~/.dsh/.agent-presets/` 下的真实预设（含 `.retired` 已离职归档），离职预设可原样重新聘用
+- 像素风格头像生成器：无 `avatar` 的专家按 id 确定性生成 16×16 像素头像，图片加载失败时自动降级为像素头像
+
+### Changed
+
+- 内置出厂预设的禁用/安装只切换离职标记，不再移动或覆盖应用自带的预设目录
+
 ## [0.2.13] - 2026-08-20
 
 ### Changed
