@@ -35,7 +35,6 @@ import {
   uiScaleAtLimit,
 } from './ui-scale.ts'
 import { QuestionCard } from './QuestionCard.tsx'
-import { UpdateCard } from './UpdateCard.tsx'
 import { MessageImages } from './MessageImages.tsx'
 import type { QuestionAnswer } from './questions.ts'
 import {
@@ -1856,7 +1855,6 @@ export function App(): React.JSX.Element {
             <h1>{copy.settings.title}</h1>
           </div>
         </div>
-        <UpdateCard copy={copy.update} />
         <div className="settings-panel">
           <label>
             <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
