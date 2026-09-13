@@ -1,12 +1,10 @@
 /**
  * Link importer: one landing-page URL in, one canonical product draft out.
  *
- * Two fetch tracks, each independently degradable:
- *   reader — OmniMux reader gateway `POST {base}/v1/reader` (model
- *            `jina-reader-v1`) answered as text/plain markdown.
- *   direct — plain GET of the landing page, reading <title>, meta,
- *            OpenGraph, Twitter card and JSON-LD (`Product` / `Offer` /
- *            `BreadcrumbList`) blocks.
+ * One track, owned by this vertical: a plain GET of the landing page plus
+ * structured extraction from the document itself — `<title>`, meta, OpenGraph,
+ * Twitter card, JSON-LD (`Product` / `Offer` / `BreadcrumbList`) and the list
+ * items / body copy the page renders.
  *
  * The output field contract mirrors the Gxgen import playbook already vendored
  * at `prompts/physical/import-from-link.v9.txt` — name, selling_points,
@@ -15,8 +13,9 @@
  * currency symbol. Digital offerings never carry price / sku / promotion,
  * matching the library rule that those are physical-only fields.
  *
- * Server-side only: no hub internals are imported, the reader request goes over
- * the documented public HTTP contract.
+ * Server-side only, and self-contained by contract: this vertical opens no
+ * OmniMux HTTP client and reads no `OMNIMUX_*` credential
+ * ([hub contract](../../../../docs/contracts/hub.md)).
  */
 
 /** Canonical import field order — the draft shape this module always returns. */
@@ -34,21 +33,21 @@ export const IMPORT_FIELD_KEYS = Object.freeze([
   'images',
 ])
 
-export const READER_MODEL = 'jina-reader-v1'
-export const DEFAULT_READER_BASE = 'https://api.omnimux.ai/v1'
 export const DEFAULT_TIMEOUT_MS = 12000
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 OmniMuxProducts/0.1'
-const READER_USER_AGENT = 'OmniMuxProducts/0.1 (omnimux_products_import; +https://omnimux.ai)'
 const ACCEPT_HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 
 const MAX_TEXT_CHARS = 512 * 1024
+const MAX_REDIRECTS = 5
 const NAME_MAX = 40
 const CATEGORIES_MAX = 5
 const IMAGES_MAX = 8
 const BULLET_MIN = 4
 const BULLET_MAX = 80
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
 /** Query params that never identify a product page. */
 const TRACKING_PARAMS = [
@@ -65,16 +64,9 @@ const TRACKING_PARAMS = [
   /^mc_(cid|eid)$/i,
 ]
 
-const PRIVATE_V4 = [
-  /^0\./,
-  /^10\./,
-  /^127\./,
-  /^169\.254\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-]
-
-/** Phrases that mark a running promotion rather than ordinary copy. */
+/**
+ * Phrases that mark a running promotion rather than ordinary copy.
+ */
 const PROMO_PATTERNS = [
   /\b\d{1,2}%\s*off\b/i,
   /\bsave\s+\d/i,
@@ -86,6 +78,55 @@ const PROMO_PATTERNS = [
   /\bflash sale\b/i,
   /限时|满减|满\d+减|折扣|优惠|促销|秒杀|立减|特价|赠品|包邮|优惠券|券后|到手价/,
 ]
+
+/**
+ * Marketing decorations that wrap a real product name. A bracketed prefix is
+ * dropped as one block (brackets included) so no orphan `】` survives;
+ * unbracketed store phrases are dropped only when they lead the string and
+ * something readable remains.
+ */
+const MARKETING_WORDS = [
+  '官方旗舰店', '官方旗舰', '官方自营', '官方直销', '官方商城', '品牌官方店', '官方店',
+  '天猫旗舰店', '天猫官方', '天猫推荐', '京东自营', '旗舰店', '专营店', '专卖店',
+  '正品保证', '官方正品', '新品首发', '新品上市', '爆款推荐', '限时特惠', '限时秒杀', '今日特价',
+  '官方', '自营', '新品', '新款', '正品', '爆款', '热卖', '热销', '旗舰',
+  'official store', 'official', 'new arrival', 'new', 'hot sale', 'hot', 'best seller', 'bestseller',
+  'sale', 'flash sale', 'limited time', 'limited', 'free shipping', 'featured', 'top rated',
+].join('|')
+
+/** The whole decoration on its own — `[Official]`, `【新品】`. */
+const MARKETING_WORD = new RegExp(`^(?:${MARKETING_WORDS})$`, 'i')
+
+/** A decoration leading a longer string — `官方旗舰店 轻氧羽绒服`. */
+const MARKETING_LEAD = new RegExp(`^(?:${MARKETING_WORDS})(?![\\u4e00-\\u9fff\\w])`, 'i')
+
+/**
+ * Navigation chrome. These rows are real links on a real page, so they must
+ * never be read back as selling points, features, brands or categories.
+ */
+const NAVIGATION_WORDS = [
+  'home', 'homepage', 'home page', 'main', 'main page', 'menu', 'main menu', 'navigation', 'nav',
+  'skip to content', 'skip to main content', 'skip to content',
+  'search', 'login', 'log in', 'sign in', 'signin', 'sign up', 'signup', 'register', 'registration',
+  'cart', 'shopping cart', 'my cart', 'view cart', 'basket', 'checkout',
+  'my account', 'account', 'profile', 'my orders', 'orders', 'wishlist', 'my wishlist',
+  'favorites', 'favourites', 'all products', 'all items', 'all', 'shop all', 'shop', 'store', 'products', 'product',
+  'category', 'categories', 'collections', 'collection', 'contact', 'contact us', 'help', 'help center',
+  'customer service', 'support', 'faq', 'about', 'about us', 'blog', 'news', 'sitemap',
+  'close', 'back', 'next', 'previous', 'prev', 'share', 'follow us', 'follow', 'subscribe',
+  'language', 'currency', 'more', 'loading', 'copyright',
+  '首页', '主页', '网站首页', '官网首页', '登录', '登陆', '登录/注册', '注册', '注册/登录',
+  '我的', '我的账户', '我的账号', '我的订单', '个人中心', '会员中心', '购物车', '购物袋', '加入购物车',
+  '全部商品', '所有商品', '商品分类', '分类', '菜单', '导航', '主导航', '搜索',
+  '客服', '在线客服', '联系客服', '联系我们', '帮助', '帮助中心',
+  '关于我们', '关于', '收藏', '我的收藏', '设置', '返回', '关闭', '更多', '语言', '货币',
+  '分享', '关注', '订阅', '版权所有',
+]
+
+const NAVIGATION_SET = new Set(NAVIGATION_WORDS)
+
+/** Category segments that only name the catalogue root. */
+const GENERIC_CATEGORY = /^(?:home|首页|shop|store|all products|全部商品|产品|商品)$/i
 
 /**
  * @typedef {object} ImportedProduct
@@ -126,28 +167,193 @@ export class LinkImportError extends Error {
 }
 
 /**
- * @param {string | undefined} raw
- * @param {string} [base]
+ * Canonical form of a url host, so two spellings of the same address cannot
+ * pass as two different hosts: surrounding brackets, trailing root dots, a
+ * zone id and letter case all drop out.
+ *
+ * @param {unknown} raw
  * @returns {string}
  */
-export function resolveReaderBaseUrl(raw, base = DEFAULT_READER_BASE) {
-  const value = String(raw || base).replace(/\/+$/, '')
-  if (!value) return base
-  if (/\/v1$/i.test(value)) return value
-  return `${value}/v1`
+export function normalizeHostname(raw) {
+  let host = String(raw ?? '').trim().toLowerCase()
+  host = host.replace(/^\[/, '').replace(/\]$/, '')
+  host = host.split('%')[0]
+  while (host.endsWith('.')) host = host.slice(0, -1)
+  return host
 }
 
 /**
- * @param {string} hostname
+ * Expand an IPv6 literal into eight 16-bit groups. A trailing dotted quad
+ * (`::ffff:127.0.0.1`) folds into the last two groups. Returns null when the
+ * literal cannot be understood — an unreadable address is never fetched.
+ *
+ * @param {string} host
+ * @returns {number[] | null}
+ */
+function expandIpv6(host) {
+  let text = normalizeHostname(host)
+  const dotted = /(\d{1,3}(?:\.\d{1,3}){3})$/.exec(text)
+  if (dotted) {
+    const bytes = dotted[1].split('.').map((part) => Number.parseInt(part, 10))
+    if (bytes.some((byte) => !Number.isFinite(byte) || byte > 255)) return null
+    const hi = ((bytes[0] << 8) | bytes[1]).toString(16)
+    const lo = ((bytes[2] << 8) | bytes[3]).toString(16)
+    text = `${text.slice(0, dotted.index)}${hi}:${lo}`
+  }
+  const halves = text.split('::')
+  if (halves.length > 2) return null
+  const head = halves[0] ? halves[0].split(':') : []
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : []
+  const fill = 8 - head.length - tail.length
+  if (fill < 0) return null
+  const groups = [...head, ...new Array(halves.length === 2 ? fill : 0).fill('0'), ...tail]
+  if (groups.length !== 8) return null
+  const out = []
+  for (const group of groups) {
+    if (!/^[0-9a-f]{1,4}$/.test(group)) return null
+    out.push(Number.parseInt(group, 16))
+  }
+  return out
+}
+
+/**
+ * The IPv4 an IPv6 literal carries, when it carries one: IPv4-mapped
+ * (`::ffff:0:0/96`), IPv4-compatible (`::/96`) and NAT64 (`64:ff9b::/96`).
+ *
+ * @param {number[]} groups
+ * @returns {number[] | null}
+ */
+function ipv4InsideIpv6(groups) {
+  const low = groups.slice(6)
+  const quad = [(low[0] >> 8) & 0xff, low[0] & 0xff, (low[1] >> 8) & 0xff, low[1] & 0xff]
+  if (groups.slice(0, 5).every((group) => group === 0) && (groups[5] === 0 || groups[5] === 0xffff)) return quad
+  const nat64 = [0x64, 0xff9b, 0, 0, 0, 0]
+  if (groups.slice(0, 6).every((group, index) => group === nat64[index])) return quad
+  return null
+}
+
+/**
+ * Read a host that is written as a number rather than a dotted quad
+ * (`2130706433`, `0x7f000001`, `0177.0.0.1`, `127.1`).
+ *
+ * @param {string} host
+ * @returns {{ bytes: number[], canonical: boolean } | null}
+ */
+function numericIpv4(host) {
+  const parts = host.split('.')
+  if (parts.length > 4) return null
+  const numbers = []
+  for (const part of parts) {
+    if (/^0[xX][0-9a-f]+$/.test(part)) {
+      numbers.push(Number.parseInt(part.slice(2), 16))
+      continue
+    }
+    if (/^0[0-7]+$/.test(part)) {
+      numbers.push(Number.parseInt(part.slice(1), 8))
+      continue
+    }
+    if (/^\d+$/.test(part)) {
+      numbers.push(Number.parseInt(part, 10))
+      continue
+    }
+    return null
+  }
+  if (numbers.some((value) => !Number.isFinite(value) || value < 0)) return null
+  const last = Number(numbers.pop())
+  const byteCount = 4 - numbers.length
+  if (numbers.some((value) => value > 255)) return null
+  if (last >= 2 ** (8 * byteCount)) return null
+  const bytes = [...numbers]
+  for (let shift = byteCount - 1; shift >= 0; shift -= 1) bytes.push((last >> (8 * shift)) & 0xff)
+  const canonical = parts.length === 4
+    && parts.every((part) => /^\d{1,3}$/.test(part) && !/^0\d/.test(part))
+  return { bytes, canonical }
+}
+
+/**
+ * @param {number[]} bytes
+ * @returns {boolean}
+ */
+function isBlockedIpv4(bytes) {
+  const [a, b] = bytes
+  if (bytes.every((byte) => byte === 0)) return true
+  if (a === 0 || a === 10 || a === 127) return true
+  if (a === 100 && b >= 64 && b <= 127) return true
+  if (a === 169 && b === 254) return true
+  if (a === 172 && b >= 16 && b <= 31) return true
+  if (a === 192 && b === 168) return true
+  if (a === 192 && b === 0) return true
+  if (a === 198 && (b === 18 || b === 19)) return true
+  if (a >= 224) return true
+  return false
+}
+
+/**
+ * @param {number[]} groups
+ * @returns {boolean}
+ */
+function isBlockedIpv6(groups) {
+  if (groups.every((group) => group === 0)) return true
+  if (groups.slice(0, 7).every((group) => group === 0) && groups[7] === 1) return true
+  const first = groups[0]
+  if ((first & 0xfe00) === 0xfc00) return true
+  if ((first & 0xffc0) === 0xfe80) return true
+  if ((first & 0xff00) === 0xff00) return true
+  if (first === 0x2001 && groups[1] === 0x0db8) return true
+  return false
+}
+
+/**
+ * Should this host be refused as a fetch target?
+ *
+ * Loopback, private, link-local, CGNAT, multicast and reserved ranges are all
+ * refused, in every spelling: trailing root dots (`localhost.`), IPv4-mapped
+ * IPv6 (`::ffff:7f00:1`), IPv4-compatible and NAT64 literals, and hosts written
+ * as a bare decimal / hex / octal number. A non-canonical numeric host is
+ * refused outright — no product page is published at `0177.0.0.1`.
+ *
+ * @param {unknown} hostname
  * @returns {boolean}
  */
 export function isPrivateHost(hostname) {
-  const host = String(hostname || '').toLowerCase().replace(/^\[/, '').replace(/\]$/, '')
+  const host = normalizeHostname(hostname)
   if (!host) return true
   if (host === 'localhost' || host.endsWith('.localhost')) return true
-  if (host.endsWith('.local') || host.endsWith('.internal')) return true
-  if (host.includes(':')) return host === '::1' || /^(fc|fd|fe80)/.test(host)
-  return PRIVATE_V4.some((pattern) => pattern.test(host))
+  if (host.endsWith('.local') || host.endsWith('.localdomain')) return true
+  if (host.endsWith('.internal') || host.endsWith('.home.arpa')) return true
+  if (host.includes(':')) {
+    const groups = expandIpv6(host)
+    if (!groups) return true
+    if (isBlockedIpv6(groups)) return true
+    const quad = ipv4InsideIpv6(groups)
+    return quad === null ? false : isBlockedIpv4(quad)
+  }
+  const numeric = numericIpv4(host)
+  if (!numeric) return false
+  if (!numeric.canonical) return true
+  return isBlockedIpv4(numeric.bytes)
+}
+
+/**
+ * The legality and private-host guard every fetch target passes: the pasted
+ * link, and then each redirect hop in turn.
+ *
+ * @param {URL} parsed
+ * @param {string} subject
+ * @throws {LinkImportError} code `invalid-url`
+ */
+function assertAllowedUrl(parsed, subject) {
+  const protocol = parsed.protocol.toLowerCase()
+  if (protocol !== 'http:' && protocol !== 'https:') {
+    throw new LinkImportError('invalid-url', `${subject} is not an http(s) address`)
+  }
+  if (!parsed.hostname) throw new LinkImportError('invalid-url', `${subject} has no host`)
+  if (parsed.username || parsed.password) {
+    throw new LinkImportError('invalid-url', `${subject} must not embed credentials`)
+  }
+  if (isPrivateHost(parsed.hostname)) {
+    throw new LinkImportError('invalid-url', `${subject} points at a private host`)
+  }
 }
 
 /**
@@ -175,17 +381,7 @@ export function normalizeImportUrl(raw) {
       throw new LinkImportError('invalid-url', 'the page url is not a valid url')
     }
   }
-  const protocol = parsed.protocol.toLowerCase()
-  if (protocol !== 'http:' && protocol !== 'https:') {
-    throw new LinkImportError('invalid-url', 'only http and https links are supported')
-  }
-  if (!parsed.hostname) throw new LinkImportError('invalid-url', 'the page url has no host')
-  if (parsed.username || parsed.password) {
-    throw new LinkImportError('invalid-url', 'the page url must not embed credentials')
-  }
-  if (isPrivateHost(parsed.hostname)) {
-    throw new LinkImportError('invalid-url', 'the page url points at a private host')
-  }
+  assertAllowedUrl(parsed, 'the page url')
   parsed.hash = ''
   for (const key of [...parsed.searchParams.keys()]) {
     if (TRACKING_PARAMS.some((pattern) => pattern.test(key))) parsed.searchParams.delete(key)
@@ -195,34 +391,284 @@ export function normalizeImportUrl(raw) {
 }
 
 /**
- * Reader gateway markdown header:
+ * Resolve one `Location` header and run it through the same guard as the
+ * pasted link. A hop into a private network is refused before any socket opens.
  *
- *   Title: Example Domain
- *   URL Source: https://example.com/
- *   Markdown Content:
- *   # Example Domain
- *
- * @param {unknown} text
- * @returns {{ title: string, markdown: string }}
+ * @param {string} location
+ * @param {string} baseUrl
+ * @returns {string}
+ * @throws {LinkImportError}
  */
-export function parseReaderMarkdown(text) {
-  const markdown = String(text ?? '').replace(/^\uFEFF/, '')
-  if (!markdown.trim()) return { title: '', markdown: '' }
-  const titleLine = /^Title:\s*(.+)\s*$/m.exec(markdown)
-  const heading = /^#\s+(.+)\s*$/m.exec(markdown)
-  const title = pickTitle(titleLine?.[1]) || pickTitle(heading?.[1])
-  return { title, markdown }
+function resolveRedirectTarget(location, baseUrl) {
+  let parsed = null
+  try {
+    parsed = new URL(String(location ?? '').trim(), baseUrl)
+  } catch {
+    throw new LinkImportError('invalid-url', 'the redirect target is not a valid url')
+  }
+  assertAllowedUrl(parsed, 'the redirect target')
+  return parsed.toString()
+}
+
+/**
+ * @param {string} tag
+ * @param {string} name
+ * @returns {string}
+ */
+function attrOf(tag, name) {
+  const pattern = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i')
+  const match = pattern.exec(String(tag ?? ''))
+  if (!match) return ''
+  return decodeEntities(match[1] ?? match[2] ?? match[3] ?? '').trim()
+}
+
+const ENTITIES = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  ldquo: '“',
+  rdquo: '”',
+  lsquo: '‘',
+  rsquo: '’',
+  hellip: '…',
+  mdash: '—',
+  ndash: '–',
+  middot: '·',
+  times: '×',
+  copy: '©',
+  reg: '®',
+  trade: '™',
+  deg: '°',
 }
 
 /**
  * @param {unknown} value
  * @returns {string}
  */
-function pickTitle(value) {
-  const title = String(value ?? '').trim()
-  if (!title) return ''
-  if (/^(untitled|no title|-)$/i.test(title)) return ''
-  return title
+export function decodeEntities(value) {
+  return String(value ?? '').replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, body) => {
+    if (body.startsWith('#')) {
+      const hex = body[1] === 'x' || body[1] === 'X'
+      const code = Number.parseInt(hex ? body.slice(2) : body.slice(1), hex ? 16 : 10)
+      if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return whole
+      try {
+        return String.fromCodePoint(code)
+      } catch {
+        return whole
+      }
+    }
+    const named = ENTITIES[body.toLowerCase()]
+    return named === undefined ? whole : named
+  })
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function cleanText(value) {
+  return decodeEntities(value)
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[\u200b\u200e\u200f\ufeff]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Is this string pure site chrome rather than page content? Bare nav labels and
+ * separator-joined rows of them ("首页 / 登录", "Home | Cart") both qualify.
+ *
+ * @param {unknown} raw
+ * @returns {boolean}
+ */
+export function isNavigationText(raw) {
+  const text = cleanText(raw)
+  if (!text) return true
+  const normalized = text
+    .toLowerCase()
+    .replace(/[|/·•>»:：\-—–]+/g, '/')
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\s+/g, ' ')
+    .replace(/^\/+|\/+$/g, '')
+    .trim()
+  if (!normalized) return true
+  if (NAVIGATION_SET.has(normalized)) return true
+  const segments = normalized.split('/').map((segment) => segment.trim()).filter(Boolean)
+  if (segments.length > 1 && segments.every((segment) => NAVIGATION_SET.has(segment))) return true
+  return false
+}
+
+/**
+ * Should a leading bracketed block be treated as decoration rather than part of
+ * the product name? Curated marketing words always go; a short Latin tag
+ * (`[Official]`, `(Hot)`) goes; a CJK name in brackets (`【轻氧羽绒服】`) and a
+ * size/count marker (`[3-pack]`) stay.
+ *
+ * @param {string} inner
+ * @returns {boolean}
+ */
+function isDecorationBlock(inner) {
+  const text = cleanText(inner)
+  if (!text) return true
+  if (MARKETING_WORD.test(text)) return true
+  if (/[0-9]/.test(text)) return false
+  if (!/^[\x20-\x7e]+$/.test(text)) return false
+  return text.length <= 12
+}
+
+/**
+ * Drop marketing decorations from the front of a title: whole bracketed blocks
+ * (`【官方旗舰】`, `[官方自营]`, `（天猫推荐）`) and leading unbracketed store
+ * phrases. Stripping a block removes its closing bracket with it, so no orphan
+ * `】` is left behind.
+ *
+ * @param {unknown} raw
+ * @returns {string}
+ */
+function stripMarketingPrefixes(raw) {
+  let text = cleanText(raw)
+  for (let guard = 0; guard < 6; guard += 1) {
+    const bracketed = /^([【\[(（])([^】\])）]{1,24})([】\])）])\s*/.exec(text)
+    if (bracketed && isDecorationBlock(bracketed[2])) {
+      text = text.slice(bracketed[0].length).trim()
+      continue
+    }
+    const bare = MARKETING_LEAD.exec(text)
+    if (bare && text.length - bare[0].length >= 2) {
+      text = text.slice(bare[0].length).replace(/^[\s\-—–·|丨:：,，、]+/, '').trim()
+      continue
+    }
+    break
+  }
+  return text
+}
+
+/**
+ * @param {string} text
+ * @returns {string}
+ */
+function stripDecorations(text) {
+  const stripped = stripMarketingPrefixes(text)
+  return stripped
+    // A surviving block keeps its own brackets (`[3-pack] Socks`), but a stray
+    // closing bracket left by a half-removed decoration does not survive.
+    .replace(/^[\s"'“”‘’«»】\]）)]+/, '')
+    .replace(/[\s"'“”‘’«»【\[（(]+$/, '')
+    .trim()
+}
+
+/**
+ * @param {string} text
+ * @param {number} max
+ * @returns {string}
+ */
+function capText(text, max) {
+  const value = String(text ?? '').trim()
+  if (value.length <= max) return value
+  const slice = value.slice(0, max)
+  const breakAt = Math.max(slice.lastIndexOf(' '), slice.lastIndexOf('，'), slice.lastIndexOf(','))
+  return (breakAt > max * 0.6 ? slice.slice(0, breakAt) : slice).trim()
+}
+
+/**
+ * Split a page title into a product name and the trailing site name.
+ * @param {unknown} raw
+ * @returns {{ name: string, siteName: string }}
+ */
+export function cleanTitle(raw) {
+  const text = cleanText(raw)
+  if (!text) return { name: '', siteName: '' }
+  let candidate = stripMarketingPrefixes(text)
+  let siteName = ''
+  for (const separator of [' | ', ' |', '｜', ' – ', ' — ', ' - ', ' :: ', ' · ']) {
+    if (!candidate.includes(separator)) continue
+    const parts = candidate.split(separator).map((part) => part.trim()).filter(Boolean)
+    if (parts.length < 2) continue
+    const head = parts[0]
+    const tail = parts[parts.length - 1]
+    if (isNavigationText(head) || head.length >= 3) {
+      // The head is the product slot: a nav label there means this title names
+      // no product, and the tail is the site name.
+      candidate = head
+      siteName = tail
+    } else {
+      candidate = parts.slice(1).join(' ')
+    }
+    break
+  }
+  const name = capText(stripDecorations(candidate), NAME_MAX)
+  const site = capText(stripDecorations(siteName), NAME_MAX)
+  return {
+    name: isNavigationText(name) ? '' : name,
+    siteName: isNavigationText(site) ? '' : site,
+  }
+}
+
+/**
+ * @param {string[]} values
+ * @returns {string[]}
+ */
+function dedupe(values) {
+  const seen = new Set()
+  const out = []
+  for (const value of values) {
+    const key = String(value).toLowerCase()
+    if (!value || seen.has(key)) continue
+    seen.add(key)
+    out.push(value)
+  }
+  return out
+}
+
+/**
+ * Join short phrases with the separator that matches the script.
+ * @param {string[]} phrases
+ * @returns {string}
+ */
+function joinPhrases(phrases) {
+  const list = dedupe(phrases.map((phrase) => cleanText(phrase)).filter(Boolean))
+  if (list.length === 0) return ''
+  const cjk = list.some((phrase) => /[\u4e00-\u9fff]/.test(phrase))
+  return list.join(cjk ? '，' : ', ')
+}
+
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
+function splitSentences(text) {
+  return String(text ?? '')
+    .split(/[\n\r]+|(?<=[。！？!?;；])|(?<=\.)\s+/)
+    .map((row) => cleanText(row))
+    .filter(Boolean)
+}
+
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
+function splitPhrases(text) {
+  return String(text ?? '')
+    .split(/[,，、;；|·•\n\r]+/)
+    .map((row) => cleanText(row))
+    .filter(Boolean)
+}
+
+/**
+ * A phrase worth putting in the draft: long enough to say something, and not
+ * site chrome.
+ *
+ * @param {unknown} raw
+ * @returns {boolean}
+ */
+function isProductPhrase(raw) {
+  const text = cleanText(raw)
+  if (text.length < 2) return false
+  return !isNavigationText(text)
 }
 
 /**
@@ -240,7 +686,7 @@ export function parseHtmlDocument(html, baseUrl) {
   const canonicalTag = /<link[^>]*rel\s*=\s*["']canonical["'][^>]*>/i.exec(head)?.[0] ?? ''
   const canonical = absoluteUrl(attrOf(canonicalTag, 'href'), baseUrl)
   const nodes = extractJsonLdNodes(source)
-  const images = [...extractMarkdownImages(source), ...extractImgTags(source)]
+  const images = extractImgTags(source)
   const bullets = extractListItems(source)
   return {
     title: cleanText(titleTag),
@@ -333,74 +779,6 @@ function walkJson(value, out) {
 }
 
 /**
- * @param {string} tag
- * @param {string} name
- * @returns {string}
- */
-function attrOf(tag, name) {
-  const pattern = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i')
-  const match = pattern.exec(String(tag ?? ''))
-  if (!match) return ''
-  return decodeEntities(match[1] ?? match[2] ?? match[3] ?? '').trim()
-}
-
-const ENTITIES = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-  nbsp: ' ',
-  ldquo: '“',
-  rdquo: '”',
-  lsquo: '‘',
-  rsquo: '’',
-  hellip: '…',
-  mdash: '—',
-  ndash: '–',
-  middot: '·',
-  times: '×',
-  copy: '©',
-  reg: '®',
-  trade: '™',
-  deg: '°',
-}
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-export function decodeEntities(value) {
-  return String(value ?? '').replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, body) => {
-    if (body.startsWith('#')) {
-      const hex = body[1] === 'x' || body[1] === 'X'
-      const code = Number.parseInt(hex ? body.slice(2) : body.slice(1), hex ? 16 : 10)
-      if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return whole
-      try {
-        return String.fromCodePoint(code)
-      } catch {
-        return whole
-      }
-    }
-    const named = ENTITIES[body.toLowerCase()]
-    return named === undefined ? whole : named
-  })
-}
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-export function cleanText(value) {
-  return decodeEntities(value)
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/[\u200b\u200e\u200f\ufeff]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/**
  * @param {string} html
  * @returns {string}
  */
@@ -414,12 +792,22 @@ function htmlToText(html) {
 }
 
 /**
+ * List rows that read as content. Navigation entries (`首页`, `登录`, `购物车`,
+ * `Home`, `Cart`, …) and pure links are dropped here so nothing downstream can
+ * mistake them for selling points.
+ *
  * @param {string} html
  * @returns {string[]}
  */
 function extractListItems(html) {
   const items = String(html ?? '').match(/<li\b[^>]*>([\s\S]*?)<\/li>/gi) ?? []
-  return items.map((item) => cleanText(item.replace(/<\/?li\b[^>]*>/gi, ''))).filter(Boolean)
+  const out = []
+  for (const item of items) {
+    const text = cleanText(item.replace(/<\/?li\b[^>]*>/gi, ''))
+    if (!isProductPhrase(text)) continue
+    out.push(text)
+  }
+  return out
 }
 
 /**
@@ -429,22 +817,6 @@ function extractListItems(html) {
 function extractImgTags(html) {
   const tags = String(html ?? '').match(/<img\b[^>]*>/gi) ?? []
   return tags.map((tag) => attrOf(tag, 'src') || attrOf(tag, 'data-src')).filter(Boolean)
-}
-
-/**
- * @param {string} text
- * @returns {string[]}
- */
-function extractMarkdownImages(text) {
-  const images = []
-  const source = String(text ?? '')
-  const pattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
-  let match = pattern.exec(source)
-  while (match) {
-    images.push(match[1])
-    match = pattern.exec(source)
-  }
-  return images
 }
 
 /**
@@ -489,166 +861,18 @@ function metaOne(meta, keys) {
 }
 
 /**
+ * First value that carries information. Site chrome never qualifies, so a
+ * `<title>… | Store</title>` tail cannot come back as a brand.
+ *
  * @param {...unknown} values
  * @returns {string}
  */
 function firstOf(...values) {
   for (const value of values) {
     const text = cleanText(value)
-    if (text) return text
+    if (text && !isNavigationText(text)) return text
   }
   return ''
-}
-
-/**
- * Split a page title into a product name and the trailing site name.
- * @param {unknown} raw
- * @returns {{ name: string, siteName: string }}
- */
-export function cleanTitle(raw) {
-  const text = cleanText(raw)
-  if (!text) return { name: '', siteName: '' }
-  let candidate = text
-  let siteName = ''
-  for (const separator of [' | ', ' |', '｜', ' – ', ' — ', ' - ', ' :: ', ' · ']) {
-    if (!candidate.includes(separator)) continue
-    const parts = candidate.split(separator).map((part) => part.trim()).filter(Boolean)
-    if (parts.length < 2) continue
-    const head = parts[0]
-    const tail = parts[parts.length - 1]
-    if (head.length >= 3) {
-      candidate = head
-      siteName = tail
-    } else {
-      candidate = parts.slice(1).join(' ')
-    }
-    break
-  }
-  return {
-    name: capText(stripDecorations(candidate), NAME_MAX),
-    siteName: capText(stripDecorations(siteName), NAME_MAX),
-  }
-}
-
-/**
- * @param {string} text
- * @returns {string}
- */
-function stripDecorations(text) {
-  return String(text ?? '')
-    .replace(/^[\s"'“”‘’«»【】[\]()]+/, '')
-    .replace(/[\s"'“”‘’«»【】\](]+$/, '')
-    .trim()
-}
-
-/**
- * @param {string} text
- * @param {number} max
- * @returns {string}
- */
-function capText(text, max) {
-  const value = String(text ?? '').trim()
-  if (value.length <= max) return value
-  const slice = value.slice(0, max)
-  const breakAt = Math.max(slice.lastIndexOf(' '), slice.lastIndexOf('，'), slice.lastIndexOf(','))
-  return (breakAt > max * 0.6 ? slice.slice(0, breakAt) : slice).trim()
-}
-
-/**
- * @param {string[]} values
- * @returns {string[]}
- */
-function dedupe(values) {
-  const seen = new Set()
-  const out = []
-  for (const value of values) {
-    const key = String(value).toLowerCase()
-    if (!value || seen.has(key)) continue
-    seen.add(key)
-    out.push(value)
-  }
-  return out
-}
-
-/**
- * Join short phrases with the separator that matches the script.
- * @param {string[]} phrases
- * @returns {string}
- */
-function joinPhrases(phrases) {
-  const list = dedupe(phrases.map((phrase) => cleanText(phrase)).filter(Boolean))
-  if (list.length === 0) return ''
-  const cjk = list.some((phrase) => /[\u4e00-\u9fff]/.test(phrase))
-  return list.join(cjk ? '，' : ', ')
-}
-
-/**
- * @param {string} text
- * @returns {string[]}
- */
-function splitSentences(text) {
-  return String(text ?? '')
-    .split(/[\n\r]+|(?<=[。！？!?;；])|(?<=\.)\s+/)
-    .map((row) => cleanText(row))
-    .filter(Boolean)
-}
-
-/**
- * @param {string} text
- * @returns {string[]}
- */
-function splitPhrases(text) {
-  return String(text ?? '')
-    .split(/[,，、;；|·•\n\r]+/)
-    .map((row) => cleanText(row))
-    .filter(Boolean)
-}
-
-/**
- * Markdown bullets that look like product content. Navigation rows and
- * pure links are dropped.
- *
- * @param {string} markdown
- * @returns {string[]}
- */
-export function markdownBullets(markdown) {
-  const lines = String(markdown ?? '').split(/\r?\n/)
-  const out = []
-  for (const line of lines) {
-    const match = /^\s{0,3}(?:[-*+•]|\d+[.)])\s+(.+)$/.exec(line)
-    if (!match) continue
-    const text = cleanText(match[1].replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1'))
-    if (text.length < BULLET_MIN || text.length > BULLET_MAX) continue
-    if (/^(home|menu|skip|share|login|sign in|cart|search|首页|登录|注册|购物车|菜单)$/i.test(text)) continue
-    out.push(text)
-  }
-  return out
-}
-
-/**
- * Bullets that follow a selling / feature heading.
- * @param {string} markdown
- * @returns {string[]}
- */
-function headingBullets(markdown) {
-  const lines = String(markdown ?? '').split(/\r?\n/)
-  const wanted = /(卖点|亮点|特点|优势|功能|特色|规格|参数|feature|highlight|benefit|why (?:choose|buy)|specification|what(?:'s| is) inside)/i
-  const anyHeading = /^\s{0,3}#{1,6}\s+\S/
-  let collecting = false
-  const out = []
-  for (const line of lines) {
-    if (anyHeading.test(line)) {
-      collecting = wanted.test(line)
-      continue
-    }
-    if (!collecting) continue
-    const match = /^\s{0,3}(?:[-*+•]|\d+[.)])\s+(.+)$/.exec(line)
-    if (!match) continue
-    const text = cleanText(match[1].replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1'))
-    if (text.length < BULLET_MIN || text.length > BULLET_MAX) continue
-    out.push(text)
-  }
-  return out
 }
 
 /**
@@ -694,6 +918,23 @@ function imageUrlsOf(nodes) {
     urls.push(...candidates.filter((row) => /^https?:\/\//i.test(row)))
   }
   return urls
+}
+
+/**
+ * The product copy stated by structured data, used when the page head has no
+ * description of its own.
+ *
+ * @param {Record<string, unknown>[]} nodes
+ * @returns {string}
+ */
+function descriptionFromJsonLd(nodes) {
+  const wanted = ['product', 'individualproduct', 'offer', 'aggregateoffer', 'website']
+  for (const node of nodes) {
+    if (!typesOf(node).some((type) => wanted.includes(type))) continue
+    const text = cleanText(typeof node.description === 'string' ? node.description : '')
+    if (text.length >= 12) return text
+  }
+  return ''
 }
 
 /**
@@ -818,46 +1059,41 @@ export function extractCategories(nodes, meta) {
     }
   }
   out.push(...splitPhrases(metaOne(meta, ['product:category', 'article:section'])))
-  const generic = /^(home|首页|shop|store|all products|全部商品|产品)$/i
   const cleaned = dedupe(
     out
       .map((row) => cleanText(row))
-      .filter((row) => row.length >= 2 && row.length <= 24 && !generic.test(row)),
+      .filter((row) => row.length >= 2 && row.length <= 24 && !GENERIC_CATEGORY.test(row) && !isNavigationText(row)),
   )
   return cleaned.slice(0, CATEGORIES_MAX)
 }
 
 /**
- * Assemble the canonical draft. Reader markdown supplies the narrative fields;
- * structured HTML metadata wins on identity fields (brand / sku / price /
- * categories / images) because a landing page states those explicitly.
+ * Assemble the canonical draft from the parsed document.
  *
  * @param {{
  *   url: string,
  *   kind?: 'physical' | 'digital',
- *   reader?: { title: string, markdown: string } | null,
  *   page?: ParsedPage | null,
  * }} input
  * @returns {ImportedProduct}
  */
 export function buildProductFields(input) {
-  const { url, kind = 'physical', reader = null, page = null } = input
+  const { url, kind = 'physical', page = null } = input
   const digital = kind === 'digital'
   const meta = page?.meta ?? {}
   const nodes = page?.nodes ?? []
-  const markdown = reader?.markdown ?? ''
-  const description = metaOne(meta, ['og:description', 'description', 'twitter:description', 'itemprop:description'])
-  const pageText = [description, page?.text ?? '', markdown].filter(Boolean).join('\n')
+
+  const description = firstOf(
+    metaOne(meta, ['og:description', 'description', 'twitter:description', 'itemprop:description']),
+    descriptionFromJsonLd(nodes),
+  )
+  const pageText = [description, page?.text ?? ''].filter(Boolean).join('\n')
 
   const title = cleanTitle(
-    firstOf(reader?.title, page?.title, metaOne(meta, ['og:title', 'twitter:title', 'itemprop:name'])),
+    firstOf(page?.title, metaOne(meta, ['og:title', 'twitter:title', 'itemprop:name'])),
   )
 
-  const bullets = [
-    ...headingBullets(markdown),
-    ...(page?.bullets ?? []),
-    ...markdownBullets(markdown),
-  ]
+  const bullets = (page?.bullets ?? []).filter(isProductPhrase)
   const structuredProps = collectAdditionalProperties(nodes)
   const sentences = splitSentences(description)
 
@@ -889,7 +1125,6 @@ export function buildProductFields(input) {
       ...imageUrlsOf(nodes),
       ...metaAll(meta, ['og:image:secure_url', 'og:image', 'twitter:image', 'twitter:image:src', 'image', 'image_src']),
       ...(page?.images ?? []),
-      ...extractMarkdownImages(markdown),
     ]
       .map((row) => absoluteUrl(row, url))
       .filter((row) => /^https?:\/\//i.test(row)),
@@ -915,20 +1150,24 @@ export function buildProductFields(input) {
  * @returns {string[]}
  */
 function pickSellingPoints(input) {
-  const fromBullets = input.bullets.map((row) => capText(row, 32)).filter((row) => row.length >= 2)
+  const fromBullets = input.bullets
+    .filter(isProductPhrase)
+    .map((row) => capText(row, 32))
+    .filter(isProductPhrase)
   if (fromBullets.length > 0) return fromBullets.slice(0, 5)
 
   const fromProps = input.structuredProps
     .map((row) => capText(row.name && row.value ? `${row.name}: ${row.value}` : row.name || row.value, 32))
-    .filter((row) => row.length >= 2)
+    .filter(isProductPhrase)
   if (fromProps.length > 0) return fromProps.slice(0, 5)
 
   // Description fallback: keep the clause readable instead of chopping it at
   // the bullet-sized cap.
   return input.sentences
     .flatMap((row) => splitPhrases(row))
+    .filter(isProductPhrase)
     .map((row) => capText(row, 60))
-    .filter((row) => row.length >= 2)
+    .filter(isProductPhrase)
     .slice(0, 5)
 }
 
@@ -939,15 +1178,19 @@ function pickSellingPoints(input) {
 function pickFeatures(input) {
   const fromProps = input.structuredProps
     .map((row) => (row.name && row.value ? `${row.name}: ${row.value}` : row.name || row.value))
+    .filter(isProductPhrase)
     .map((row) => capText(row, 60))
-    .filter((row) => row.length >= 2)
+    .filter(isProductPhrase)
   if (fromProps.length > 0) return fromProps.slice(0, 8)
 
-  const fromBullets = input.bullets.map((row) => capText(row, 60)).filter((row) => row.length >= 2)
+  const fromBullets = input.bullets
+    .filter(isProductPhrase)
+    .map((row) => capText(row, 60))
+    .filter(isProductPhrase)
   if (fromBullets.length > 0) return fromBullets.slice(0, 8)
 
   const description = cleanText(input.description)
-  return description ? [capText(description, 300)] : []
+  return isProductPhrase(description) && description.length >= 12 ? [capText(description, 300)] : []
 }
 
 /**
@@ -1105,22 +1348,21 @@ function audienceFromText(text) {
 }
 
 /**
- * A draft nobody can use is a failure, not an empty success: the form needs a
- * name plus at least some copy.
+ * A draft nobody can use is a failure, not an empty success. The name must be a
+ * real product name — never a nav label — and something else must have been
+ * read: copy, offer data or product detail. A page whose entire content was
+ * site chrome therefore fails instead of reporting a hollow success.
  *
  * @param {ImportedProduct} fields
  * @returns {boolean}
  */
 export function isUsableImport(fields) {
-  return Boolean(fields.name || fields.selling_points || fields.features)
-}
-
-/**
- * @param {Record<string, string | undefined>} env
- * @returns {string}
- */
-function readerKeyOf(env) {
-  return String(env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN || '').trim()
+  const name = cleanText(fields?.name)
+  if (!name || isNavigationText(name)) return false
+  const hasCopy = Boolean(cleanText(fields?.selling_points) || cleanText(fields?.features))
+  const hasOffer = Boolean(cleanText(fields?.price) || cleanText(fields?.sku))
+  const hasDetail = Boolean(cleanText(fields?.brand)) || (fields?.categories ?? []).length > 0
+  return hasCopy || hasOffer || hasDetail
 }
 
 /**
@@ -1148,54 +1390,71 @@ async function readCapped(response) {
 }
 
 /**
- * Reader track: clean markdown through the OmniMux reader gateway.
- * Unconfigured or unsuccessful reads return null — the direct track still runs.
- *
- * @param {{ url: string, env: Record<string, string | undefined>, fetcher: typeof fetch, timeoutMs: number }} input
- * @returns {Promise<{ reader: { title: string, markdown: string } | null, note: string }>}
+ * @param {Response} response
+ * @param {string} name
+ * @returns {string}
  */
-async function readViaReaderGateway(input) {
-  const key = readerKeyOf(input.env)
-  if (!key) return { reader: null, note: 'reader skipped: no OMNIMUX_API_KEY' }
-  const base = resolveReaderBaseUrl(input.env.OMNIMUX_BASE_URL)
-  try {
-    const response = await withTimeout(input.fetcher, `${base}/reader`, {
-      method: 'POST',
-      headers: {
-        accept: 'text/plain, application/json',
-        'content-type': 'application/json',
-        authorization: `Bearer ${key}`,
-        'user-agent': READER_USER_AGENT,
-      },
-      body: JSON.stringify({ model: READER_MODEL, url: input.url }),
-    }, input.timeoutMs)
-    if (!response.ok) return { reader: null, note: `reader responded HTTP ${String(response.status)}` }
-    const parsed = parseReaderMarkdown(await readCapped(response))
-    if (!parsed.markdown.trim()) return { reader: null, note: 'reader returned empty markdown' }
-    return { reader: parsed, note: '' }
-  } catch (error) {
-    return { reader: null, note: `reader failed: ${String(error instanceof Error ? error.message : error)}` }
-  }
+function headerOf(response, name) {
+  const headers = response?.headers
+  if (!headers) return ''
+  if (typeof headers.get === 'function') return String(headers.get(name) ?? '').trim()
+  const value = headers[name] ?? headers[name.toLowerCase()]
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 /**
- * Direct track: fetch the landing page and parse its own metadata.
+ * Follow the page's own redirect chain, one manually validated hop at a time.
+ * Every hop runs through the same legality and private-host guard as the pasted
+ * link, so a public URL cannot bounce this local-only route into the machine's
+ * network. A transport failure (DNS, reset, timeout) is a read failure and is
+ * reported as one, never as an internal error.
  *
  * @param {{ url: string, fetcher: typeof fetch, timeoutMs: number }} input
- * @returns {Promise<ParsedPage>}
+ * @returns {Promise<{ html: string, finalUrl: string }>}
  */
-async function readViaDirectFetch(input) {
-  const response = await withTimeout(input.fetcher, input.url, {
-    method: 'GET',
-    redirect: 'follow',
-    headers: { accept: ACCEPT_HTML, 'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8', 'user-agent': USER_AGENT },
-  }, input.timeoutMs)
-  if (!response.ok) {
-    throw new LinkImportError('link-import-failed', `the page responded HTTP ${String(response.status)}`)
+async function fetchPageDocument(input) {
+  let target = input.url
+  const visited = new Set([target])
+  try {
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+      const response = await withTimeout(input.fetcher, target, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: { accept: ACCEPT_HTML, 'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8', 'user-agent': USER_AGENT },
+      }, input.timeoutMs)
+      const status = Number(response?.status ?? 0)
+      if (REDIRECT_STATUSES.has(status)) {
+        const location = headerOf(response, 'location')
+        if (!location) {
+          throw new LinkImportError('link-import-failed', `the page redirected with HTTP ${String(status)} but sent no target`)
+        }
+        const next = resolveRedirectTarget(location, target)
+        if (visited.has(next)) throw new LinkImportError('link-import-failed', 'the page redirected in a loop')
+        visited.add(next)
+        target = next
+        continue
+      }
+      if (!response.ok) {
+        throw new LinkImportError('link-import-failed', `the page responded HTTP ${String(status)}`)
+      }
+      const html = await readCapped(response)
+      if (!html.trim()) throw new LinkImportError('link-import-empty', 'the page returned an empty body')
+      return { html, finalUrl: target }
+    }
+  } catch (error) {
+    if (error instanceof LinkImportError) throw error
+    throw new LinkImportError('link-import-failed', `the page could not be read: ${messageOf(error)}`)
   }
-  const html = await readCapped(response)
-  if (!html.trim()) throw new LinkImportError('link-import-empty', 'the page returned an empty body')
-  return parseHtmlDocument(html, input.url)
+  throw new LinkImportError('link-import-failed', 'the page redirected too many times')
+}
+
+/**
+ * @param {unknown} error
+ * @returns {string}
+ */
+function messageOf(error) {
+  if (error instanceof Error) return error.message
+  return String(error ?? 'unknown error')
 }
 
 /**
@@ -1204,7 +1463,6 @@ async function readViaDirectFetch(input) {
  * @param {{
  *   url: unknown,
  *   kind?: 'physical' | 'digital',
- *   env?: Record<string, string | undefined>,
  *   fetcher?: typeof fetch,
  *   timeoutMs?: number,
  * }} args
@@ -1214,27 +1472,13 @@ async function readViaDirectFetch(input) {
 export async function importProductFromUrl(args) {
   const url = normalizeImportUrl(args?.url)
   const kind = args?.kind === 'digital' ? 'digital' : 'physical'
-  const env = args?.env ?? (typeof process !== 'undefined' ? process.env : {})
   const fetcher = args?.fetcher ?? (typeof fetch === 'function' ? fetch : null)
   if (!fetcher) throw new LinkImportError('link-import-failed', 'no fetch implementation is available')
   const timeoutMs = Number.isFinite(args?.timeoutMs) ? Number(args.timeoutMs) : DEFAULT_TIMEOUT_MS
 
-  const readerAttempt = await readViaReaderGateway({ url, env, fetcher, timeoutMs })
-
-  let page = null
-  let directError = ''
-  try {
-    page = await readViaDirectFetch({ url, fetcher, timeoutMs })
-  } catch (error) {
-    directError = String(error instanceof Error ? error.message : error)
-  }
-
-  if (!readerAttempt.reader && !page) {
-    const notes = [readerAttempt.note, directError ? `page failed: ${directError}` : ''].filter(Boolean)
-    throw new LinkImportError('link-import-failed', notes.join('; ') || 'the page could not be read')
-  }
-
-  const fields = buildProductFields({ url, kind, reader: readerAttempt.reader, page })
+  const { html } = await fetchPageDocument({ url, fetcher, timeoutMs })
+  const page = parseHtmlDocument(html, url)
+  const fields = buildProductFields({ url, kind, page })
   if (!isUsableImport(fields)) {
     throw new LinkImportError('link-import-empty', 'no product information was found on the page')
   }

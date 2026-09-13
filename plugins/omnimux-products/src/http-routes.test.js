@@ -26,7 +26,6 @@ function makeDispatcher(opts = {}) {
   const deps = { library }
   if (opts.picker) deps.picker = opts.picker
   if (opts.importFromUrl) deps.importFromUrl = opts.importFromUrl
-  if (opts.env) deps.env = opts.env
   return { dispatcher: createProductsDispatcher(deps), library }
 }
 
@@ -229,7 +228,6 @@ describe('ProductsDispatcher import-from-link', () => {
         seen.push(args)
         return imported
       },
-      env: { OMNIMUX_API_KEY: 'k' },
     })
 
     const ok = await dispatcher.dispatch(post('/omnimux/products/import-from-link', {
@@ -240,9 +238,9 @@ describe('ProductsDispatcher import-from-link', () => {
     assert.equal(ok.body.success, true)
     assert.deepEqual(ok.body.data, imported)
     assert.equal(seen.length, 1)
-    assert.equal(seen[0].url, 'https://shop.example.com/p/1')
-    assert.equal(seen[0].kind, 'digital')
-    assert.deepEqual(seen[0].env, { OMNIMUX_API_KEY: 'k' })
+    // Only the url and the kind cross the seam: this vertical holds no
+    // credential and calls no OmniMux HTTP surface of its own.
+    assert.deepEqual(seen[0], { url: 'https://shop.example.com/p/1', kind: 'digital' })
     // Importing never writes to the library.
     assert.deepEqual(library.list(), [])
     assert.equal(library.revision(), 0)
@@ -294,6 +292,36 @@ describe('ProductsDispatcher import-from-link', () => {
     const failed = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
     assert.equal(failed.status, 502)
     assert.equal(failed.body.error, 'link-import-failed')
+  })
+
+  it('answers 422 link-import-empty for a page with no product information', async () => {
+    const { dispatcher } = makeDispatcher({
+      importFromUrl: async () => {
+        const { LinkImportError } = await import('./link-importer.js')
+        throw new LinkImportError('link-import-empty', 'no product information was found on the page')
+      },
+    })
+    const empty = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+    assert.equal(empty.status, 422)
+    assert.equal(empty.body.error, 'link-import-empty')
+  })
+
+  it('reaches that 422 through the real importer and a chrome-only page', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'text/html' },
+      text: async () => '<head><title>首页 | Example Store</title></head><body><ul><li>首页</li><li>登录</li><li>购物车</li></ul></body>',
+    })
+    try {
+      const { dispatcher } = makeDispatcher()
+      const empty = await dispatcher.dispatch(post('/omnimux/products/import-from-link', { url: 'https://shop.example.com/p/1' }))
+      assert.equal(empty.status, 422)
+      assert.equal(empty.body.error, 'link-import-empty')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 
   it('keeps the local-write guard on the import route', async () => {

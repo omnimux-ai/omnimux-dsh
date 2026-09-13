@@ -151,8 +151,7 @@ function parseProductPath(pathname) {
  * @param {{
  *   library: ReturnType<typeof import('./library.js').createLibraryStore>,
  *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
- *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', env?: Record<string, string | undefined> }) => Promise<object>,
- *   env?: Record<string, string | undefined>,
+ *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital' }) => Promise<object>,
  * }} deps
  */
 export function createProductsDispatcher(deps) {
@@ -231,7 +230,8 @@ export function createProductsDispatcher(deps) {
       /**
        * POST /omnimux/products/import-from-link
        * Read a landing page and answer a product draft. Local-only (the write
-       * guard above), and the importer re-validates the url it is handed.
+       * guard above), and the importer re-validates every url it fetches. The
+       * vertical scrapes the page itself: no OmniMux client, no credential.
        */
       if (method === 'POST' && parsed.kind === 'import-from-link') {
         const problem = jsonBodyProblem(req)
@@ -243,7 +243,6 @@ export function createProductsDispatcher(deps) {
         const data = await importFromUrl({
           url: body.url,
           kind: body.kind === 'digital' ? 'digital' : 'physical',
-          env: deps.env,
         })
         return { status: 200, body: { success: true, data } }
       }

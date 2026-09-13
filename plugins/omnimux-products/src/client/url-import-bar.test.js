@@ -34,7 +34,7 @@ afterEach(() => {
 })
 
 describe('products client · link import copy', () => {
-  it('ships the six url-import keys in both dictionaries', () => {
+  it('ships the seven url-import keys in both dictionaries', () => {
     const expected = {
       'add.urlImport.placeholder': ['粘贴商品或品牌落地页链接，智能解析填写项...', 'Paste product link to auto-fill fields...'],
       'add.urlImport.button': ['智能解析', 'Auto Fill'],
@@ -42,11 +42,18 @@ describe('products client · link import copy', () => {
       'add.urlImport.success': ['解析成功，已自动填入目标项', 'Product info extracted and auto-filled'],
       'add.urlImport.invalidUrl': ['请输入合法的网页链接', 'Please enter a valid URL'],
       'add.urlImport.failed': ['解析失败，请检查链接或手动输入', 'Failed to parse link, please fill manually'],
+      'add.urlImport.empty': ['未能提取到有效商品信息，请手动输入', 'No usable product info found, please fill manually'],
     }
     for (const [key, [zhText, enText]] of Object.entries(expected)) {
       assert.equal(zh[key], zhText, `zh ${key}`)
       assert.equal(en[key], enText, `en ${key}`)
     }
+  })
+
+  it('reads the empty-page answer as its own message, not a generic failure', () => {
+    assert.equal(zh['add.urlImport.empty'], '未能提取到有效商品信息，请手动输入')
+    assert.notEqual(zh['add.urlImport.empty'], zh['add.urlImport.failed'])
+    assert.match(read('ProductFormFields.jsx'), /result\.body\?\.error === 'link-import-empty' \? 'add\.urlImport\.empty' : 'add\.urlImport\.failed'/)
   })
 })
 

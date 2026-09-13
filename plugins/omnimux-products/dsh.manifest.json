@@ -17,7 +17,7 @@
       { "name": "products_read_media", "summary": "读取商品关联的多模态素材", "category": "ecommerce", "isWriteOperation": false, "requiresAuth": false }
     ],
     "seamsProvided": [],
-    "seamsConsumed": ["reader"],
+    "seamsConsumed": [],
     "slots": [
       { "target": "sidebar.extra", "componentPath": "src/client/sidebar-entry.js" },
       { "target": "shell.overlay", "componentPath": "src/client/ProductsStage.jsx" }

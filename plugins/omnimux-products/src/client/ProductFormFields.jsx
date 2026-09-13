@@ -321,7 +321,7 @@ export function UrlImportBar(props) {
       const data = result.ok ? result.body?.data : null
       if (!data || typeof data !== 'object') {
         setPhase('error')
-        setMessage(t('add.urlImport.failed'))
+        setMessage(t(result.body?.error === 'link-import-empty' ? 'add.urlImport.empty' : 'add.urlImport.failed'))
         return
       }
       onImported(data)

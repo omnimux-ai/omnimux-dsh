@@ -4,7 +4,7 @@ OmniMux **产品库**（P0）：一条产品是名称 + 怎么卖 + 可选主图
 
 - **媒体只记 `real_path`**：不拷贝、不移动、不改原文件。保存时拒绝无效、相对、不存在、非文件或不可读路径；校验失败不改变商品。已保存的文件后来消失时，该素材不显示
 - **删除只删 JSON 行**：永不 `rm` 用户原文件
-- **链接导入**：添加/编辑弹窗顶栏粘贴商品落地页 → `POST /omnimux/products/import-from-link`，双轨抓取（OmniMux reader 网关 markdown + 直连页面 title/meta/OpenGraph/JSON-LD）后回填名称、卖点、受众、品牌、特性、价格、SKU、促销、链接、分类。解析失败只给温和提示，不阻塞手填；仅本机 POST 可用，且不写库
+- **链接导入**：添加/编辑弹窗顶栏粘贴商品落地页 → `POST /omnimux/products/import-from-link`，由本插件直接抓取页面（title/meta/OpenGraph/JSON-LD + 列表与正文），过滤导航噪音后回填名称、卖点、受众、品牌、特性、价格、SKU、促销、链接、分类。解析失败只给温和提示，不阻塞手填；仅本机 POST 可用，且不写库；不调用 OmniMux 云、不读任何 `OMNIMUX_*` 凭据
 - **引用**：`@产品/{name}`
 - **Agent 六工具**：`products_list` / `search` / `get` / `read_media` / `create` / `update`（无 delete 工具）
 - **入口**：侧栏「产品库」（rank 6）→ 一级页「+ 添加产品」
