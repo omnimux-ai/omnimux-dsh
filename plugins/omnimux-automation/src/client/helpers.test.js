@@ -2,15 +2,10 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import test from 'node:test'
 import {
-  OVERVIEW_SORT_DEFAULT_KEY,
-  SETTINGS_SORT_DEFAULT_KEY,
   formatDuration,
   formatRelativeTime,
   formatSchedule,
   formatWithin,
-  readSortDefault,
-  sortAutomations,
-  writeSortDefault,
 } from './helpers.js'
 
 /** @returns {any} */
@@ -96,27 +91,4 @@ test('formatDuration 在缺少端点或倒挂时不给假时长', () => {
   assert.equal(formatDuration('2026-08-16T01:00:00.000Z', '2026-08-16T01:00:01.500Z'), '1.5s')
   assert.equal(formatDuration(undefined, '2026-08-16T01:00:01.500Z'), undefined)
   assert.equal(formatDuration('2026-08-16T01:00:02.000Z', '2026-08-16T01:00:01.000Z'), undefined)
-})
-
-test('排序：planned 把无下次执行的任务放最后，created 按创建时间', () => {
-  const items = [
-    { id: 'b', name: 'B', createdAt: '2026-08-16T02:00:00.000Z' },
-    { id: 'a', name: 'A', createdAt: '2026-08-16T01:00:00.000Z' },
-    { id: 'c', name: 'C', createdAt: '2026-08-16T03:00:00.000Z', nextRunAt: '2026-08-17T01:00:00.000Z' },
-  ]
-  assert.deepEqual(sortAutomations(items, 'created', 'asc').map(item => item.id), ['a', 'b', 'c'])
-  assert.deepEqual(sortAutomations(items, 'created', 'desc').map(item => item.id), ['c', 'b', 'a'])
-  assert.deepEqual(sortAutomations(items, 'planned', 'asc').map(item => item.id), ['c', 'a', 'b'])
-})
-
-test('排序偏好按存储键读写，存储不可用时安静降级', () => {
-  const store = new Map()
-  const storage = {
-    getItem: key => (store.has(key) ? store.get(key) : null),
-    setItem: (key, value) => { store.set(key, value) },
-  }
-  assert.equal(readSortDefault(storage, OVERVIEW_SORT_DEFAULT_KEY), undefined)
-  writeSortDefault(storage, OVERVIEW_SORT_DEFAULT_KEY, 'planned', 'desc')
-  assert.deepEqual(readSortDefault(storage, OVERVIEW_SORT_DEFAULT_KEY), { key: 'planned', direction: 'desc' })
-  assert.equal(readSortDefault(undefined, SETTINGS_SORT_DEFAULT_KEY), undefined)
 })

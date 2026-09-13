@@ -435,5 +435,6 @@ function clampOnceAt(value) {
   return new Date(next.getTime() - offset).toISOString().slice(0, 16);
 }
 export {
-  CreateModal
+  CreateModal,
+  TimeSelect
 };
