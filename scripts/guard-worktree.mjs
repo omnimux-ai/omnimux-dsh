@@ -429,6 +429,89 @@ export function isForbiddenMainCheckoutWriteTarget(targetPath, cwd) {
   return isProtectedScope(fullPath, cwd)
 }
 
+export function isMaterializationCommand(command) {
+  if (!command || typeof command !== 'string') return false
+  const trimmed = command.trim()
+  if (!trimmed) return false
+
+  // 豁免自动化测试脚本运行与帮助提示
+  if (/\.test\.(?:mjs|js|ts)\b/.test(trimmed)) return false
+  if (/\b(?:vitest|jest)\b/.test(trimmed)) return false
+  // 豁免纯打印或只读命令（例如 echo / cat / grep 等）
+  if (/^(?:echo|cat|grep|head|tail|less|more|which)\b/.test(trimmed)) return false
+
+  // 匹配常见的物化与同步指令
+  const scriptPatterns = [
+    /(?:^|[/\s;&|'"])(?:scripts\/)?sync-to-app\.sh(?:[\s;&|'"]|$)/,
+    /(?:^|[/\s;&|'"])(?:scripts\/)?sync-stable\.sh(?:[\s;&|'"]|$)/,
+    /(?:^|[/\s;&|'"])(?:scripts\/)?materialize-with-rollback\.sh(?:[\s;&|'"]|$)/,
+    /(?:^|[/\s;&|'"])(?:scripts\/)?sync-main\.sh(?:[\s;&|'"]|$)/,
+    /(?:^|[/\s;&|'"])(?:node\s+)?(?:scripts\/)?omnimux(?:\.mjs)?\s+sync(?:[\s;&|'"]|$)/,
+  ]
+
+  return scriptPatterns.some((pattern) => pattern.test(trimmed))
+}
+
+export function decideMaterializationCommand({ cwd }) {
+  const resolvedCwd = resolve(cwd || process.cwd())
+
+  // 1. 检查是否在 linked worktree 路径下
+  if (isWorktreePath(resolvedCwd)) {
+    return {
+      decision: 'deny',
+      reason: 'forbidden-worktree-materialization',
+      cwd: resolvedCwd,
+    }
+  }
+
+  // 检查 .git 是否是文件 (linked worktree 的典型底层标识)
+  try {
+    const gitPath = resolve(resolvedCwd, '.git')
+    const stat = lstatSync(gitPath)
+    if (stat.isFile()) {
+      return {
+        decision: 'deny',
+        reason: 'forbidden-worktree-materialization',
+        cwd: resolvedCwd,
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. 检查当前分支是否为 main
+  const branchResult = spawnSync('git', ['-C', resolvedCwd, 'symbolic-ref', '--quiet', '--short', 'HEAD'], {
+    encoding: 'utf8',
+    timeout: 3000,
+  })
+  const branch = (branchResult.stdout || '').trim()
+  if (branch && branch !== 'main') {
+    return {
+      decision: 'deny',
+      reason: 'forbidden-worktree-materialization',
+      branch,
+      cwd: resolvedCwd,
+    }
+  }
+
+  // 3. 检查当前本地主分支是否落后于远程 origin/main
+  const revList = spawnSync('git', ['-C', resolvedCwd, 'rev-list', '--count', 'HEAD..origin/main'], {
+    encoding: 'utf8',
+    timeout: 3000,
+  })
+  const behindCount = parseInt((revList.stdout || '').trim(), 10)
+  if (!isNaN(behindCount) && behindCount > 0) {
+    return {
+      decision: 'deny',
+      reason: 'forbidden-stale-main-materialization',
+      behindCount,
+      cwd: resolvedCwd,
+    }
+  }
+
+  return { decision: 'allow' }
+}
+
 export function decideBashCommand({ command, cwd }) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
 
@@ -455,6 +538,14 @@ export function decideBashCommand({ command, cwd }) {
         reason: 'forbidden-main-checkout-copy',
         target,
       }
+    }
+  }
+
+  // 3. 检查多 Agent 物化覆盖风险（防冲刷物理硬门禁）
+  if (isMaterializationCommand(command)) {
+    const matDecision = decideMaterializationCommand({ cwd })
+    if (matDecision.decision === 'deny') {
+      return matDecision
     }
   }
 
@@ -533,6 +624,23 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '📌 核心防线原则：主目录仅允许通过 Git 进行常规合并与同步最新代码（如 git pull / git merge），严禁通过 cp/mv/重定向 越过版本管理篡改主干代码。',
         '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 在独立 Worktree 中修改并提交，经 PR 合入后再同步到主目录！',
         'ℹ️  豁免范围：独立 Worktree 目录内的操作、临时衍生目录（dist/、node_modules/、tmp/、*.log）与被 gitignore 忽略的文件。',
+      ].join('\n')
+    } else if (reason === 'forbidden-worktree-materialization') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 多 Agent 防覆盖硬拦截】严禁在临时工作树 (Worktree) 或非主分支直接执行测试环境物化/刷新！',
+        '📌 事故防范守则：多个工作流并发时，直接在临时工作区刷新开发环境会暴力覆盖其他并发任务已物化的正式成果，导致他人代码被顶替失效。',
+        '👉 强制标准流程：',
+        '  1. 当前功能在工作区开发并自测通过后，提交 PR 经由 Merge Queue 合入主分支；',
+        '  2. 在主分支执行交付同步 (ship)，拉齐最新主干成果；',
+        '  3. 统一切回主检出目录 (main 分支) 执行统一物化，确保增量合并更新，杜绝覆盖。',
+      ].join('\n')
+    } else if (reason === 'forbidden-stale-main-materialization') {
+      output.permissionDecisionReason = [
+        `🚫【OmniMux 多 Agent 防覆盖硬拦截】本地主分支落后于远程 origin/main（落后 ${extra.behindCount || 0} 个提交），严禁拿过时代码物化刷新！`,
+        '📌 事故防范守则：远程主分支已被其他并发任务推进了新提交，若直接物化将导致测试环境版本倒退并冲掉他人刚合入的成果。',
+        '👉 强制标准流程：',
+        '  请先在主目录执行: git pull --ff-only origin main',
+        '  将他人已合入的最新成果拉齐融合后，再执行物化，确保更新为增量叠加！',
       ].join('\n')
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
