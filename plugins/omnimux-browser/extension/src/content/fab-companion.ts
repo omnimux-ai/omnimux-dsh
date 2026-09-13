@@ -84,21 +84,21 @@ export function initFabCompanion(): void {
         display: block;
       }
 
-      /* 760px Immersive workstation container */
+      /* YouMind-style compact workstation container (430px width) */
       .omnimux-workstation-container {
         position: fixed;
         top: 14px;
         right: 14px;
         bottom: 14px;
-        width: min(760px, calc(100vw - 28px));
+        width: min(430px, calc(100vw - 28px));
         height: calc(100vh - 28px);
         max-height: calc(100vh - 28px);
-        border-radius: 20px;
-        background: rgba(11, 11, 14, 0.94);
+        border-radius: 18px;
+        background: rgba(14, 15, 20, 0.96);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 32px rgba(139, 92, 246, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 32px rgba(121, 97, 242, 0.12);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -108,6 +108,14 @@ export function initFabCompanion(): void {
         pointer-events: none;
         transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
                     opacity 0.22s ease;
+      }
+
+      @media (prefers-color-scheme: light) {
+        .omnimux-workstation-container {
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 24px rgba(121, 97, 242, 0.06);
+        }
       }
 
       .omnimux-workstation-container.expanded {
