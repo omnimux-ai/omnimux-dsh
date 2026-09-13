@@ -744,6 +744,86 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
   })
 })
 
+describe('left rail width poisoning (issue #1618)', () => {
+  const COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
+
+  /**
+   * Frame shaped like the real desktop shell: it publishes the rail track as an
+   * inline `grid-template-columns`, which survives our `!important` override.
+   * @param {{ inlineTrack?: string, railWidth?: number, forced?: boolean }} [opts]
+   */
+  function setupRailFrame(opts = {}) {
+    const style = opts.inlineTrack
+      ? ` style="grid-template-columns: ${opts.inlineTrack} minmax(0px, 1fr) 0px;"`
+      : ''
+    const doc = setup(`<!doctype html><html><body>
+      <div class="dshDesktopFrame"${style}>
+        <div class="sidebarCol_x"></div>
+      </div>
+    </body></html>`)
+    if (opts.forced) doc.documentElement.setAttribute(COLLAPSED_MARKER, '')
+    const col = doc.querySelector('[class*="sidebarCol"]')
+    if (opts.railWidth !== undefined) {
+      Object.defineProperty(col, 'offsetWidth', { value: opts.railWidth, configurable: true })
+    }
+    return { doc, col }
+  }
+
+  it('ignores the reading our own grid override produced (the live failure)', () => {
+    // Reproduces 2026-09-13 Dev App: rail forced to 1px by the previous write,
+    // shell still asking for 280px. Sampling this reading must not write 1px.
+    const { doc } = setupRailFrame({ inlineTrack: '280px', railWidth: 1, forced: true })
+    const layout = computeChromeLayout(doc)
+    assert.equal(layout.collapsed, false)
+    assert.equal(layout.leftRailW, 280)
+    applyTopbarToggleCssVars(doc)
+    assert.equal(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'), '280px')
+  })
+
+  it('tracks a genuine measurement while the override is inactive', () => {
+    const { doc, col } = setupRailFrame({ inlineTrack: '280px', railWidth: 280 })
+    assert.equal(computeChromeLayout(doc).leftRailW, 280)
+    // User drags the rail narrower: the shell track and the reading move together.
+    Object.defineProperty(col, 'offsetWidth', { value: 220, configurable: true })
+    assert.equal(computeChromeLayout(doc).leftRailW, 220)
+  })
+
+  it('repairs a sub-threshold reading from the shell track when the override is off', () => {
+    const { doc } = setupRailFrame({ inlineTrack: '300px', railWidth: 1 })
+    assert.equal(computeChromeLayout(doc).leftRailW, 300)
+  })
+
+  it('falls back to the last good width when the shell publishes no track', () => {
+    const { doc, col } = setupRailFrame({ railWidth: 260 })
+    assert.equal(computeChromeLayout(doc).leftRailW, 260)
+    Object.defineProperty(col, 'offsetWidth', { value: 2, configurable: true })
+    assert.equal(computeChromeLayout(doc).leftRailW, 260)
+  })
+
+  it('still writes 0 for a collapsed rail', () => {
+    const { doc } = setupRailFrame({ inlineTrack: '280px', railWidth: 280 })
+    doc.querySelector('[class*="sidebarCol"]').closest('.dshDesktopFrame').setAttribute('data-sidebar-collapsed', '')
+    assert.equal(computeChromeLayout(doc).leftRailW, 0)
+  })
+
+  it('defers ResizeObserver writes out of the delivery cycle', () => {
+    assert.match(moduleSource, /new ResizeObserverClass\(scheduleSync\)/)
+  })
+
+  it('holds the rail steady across 20 feedback iterations (loop closed)', () => {
+    const { doc, col } = setupRailFrame({ inlineTrack: '280px', railWidth: 280, forced: true })
+    const widths = []
+    for (let i = 0; i < 20; i++) {
+      applyTopbarToggleCssVars(doc)
+      const written = Number.parseFloat(doc.documentElement.style.getPropertyValue('--omnimux-sidebar-width'))
+      widths.push(written)
+      // Emulate conversation-box.js: the measured column IS the written value.
+      Object.defineProperty(col, 'offsetWidth', { value: written, configurable: true })
+    }
+    assert.deepEqual(Array.from(new Set(widths)), [280])
+  })
+})
+
 describe('hard constraints', () => {
   it('never imports or calls setConversationCollapsed', () => {
     assert.doesNotMatch(moduleSource, /setConversationCollapsed/)
