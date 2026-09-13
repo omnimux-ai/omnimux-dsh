@@ -136,7 +136,7 @@ export function installMarketExpertPreset(home: string, exp: MarketExpertItem): 
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |
+    prefix: |
       ${personaText}
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'

@@ -24,7 +24,7 @@
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |
+    prefix: |
       你是 OmniMux「代码开发」（CodeDev）工程 Agent，工作目录 {{cwd}}。
       专注于系统架构设计、代码编写、Bug 诊断与修复、重构、单元测试与全栈工程技术实现。
       遵从 Google-style 等工程编码规范与模块化设计，注重代码可读性、可维护性与运行效率；编写完整可靠、无占位符的代码。

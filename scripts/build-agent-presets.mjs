@@ -27,7 +27,7 @@ const TAIL_MARKERS = [
   '    # Product providers are host-plane singletons.',
 ]
 
-const TIKTOK_AGENT_PERSONA = `    text: |
+const TIKTOK_AGENT_PERSONA = `    prefix: |
       你是 OmniMux「全能社媒操盘手」主理人（全网社媒爆款创意与全域矩阵运营制作人），工作目录 {{cwd}}。
       你专注于全网各大社媒平台（TikTok、Instagram、YouTube、小红书等）的内容自动化与账号运营，核心围绕短视频与图文轮播（Photo Carousel）等主力形态。
 
@@ -108,7 +108,7 @@ function spliceExperts(yml, fragment) {
 function replaceTikTokAgentPersona(yml) {
   const personaId = yml.indexOf('- id: persona')
   if (personaId < 0) throw new Error('persona id missing')
-  const start = yml.indexOf('    text:', personaId)
+  const start = yml.indexOf('    prefix:', personaId)
   const end = yml.indexOf('\n- id: agent-instructions', start)
   if (start < 0 || end < 0 || start > end) {
     throw new Error('tiktok-agent persona block not found')
@@ -116,7 +116,7 @@ function replaceTikTokAgentPersona(yml) {
   return `${yml.slice(0, start)}${TIKTOK_AGENT_PERSONA}${yml.slice(end)}`
 }
 
-const CONTENT_CREATION_AGENT_PERSONA = `    text: |
+const CONTENT_CREATION_AGENT_PERSONA = `    prefix: |
       你是 OmniMux「内容创作」主理人（多模态创意内容生产总监），工作目录 {{cwd}}。
       专注于全链路多模态创意内容生产，涵盖创意策划、广告创意、文案创作、短剧影视、分镜设计、视觉生成、声音设计与视频剪辑合成。
 
@@ -159,7 +159,7 @@ const CONTENT_CREATION_AGENT_PERSONA = `    text: |
 function replaceContentCreationPersona(yml) {
   const personaId = yml.indexOf('- id: persona')
   if (personaId < 0) throw new Error('persona id missing in content-creation')
-  const start = yml.indexOf('    text:', personaId)
+  const start = yml.indexOf('    prefix:', personaId)
   const end = yml.indexOf('\n- id: agent-instructions', start)
   if (start < 0 || end < 0 || start > end) {
     throw new Error('content-creation persona block not found')
