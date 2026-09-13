@@ -286,4 +286,22 @@ describe('candidate cache', () => {
     expect(onInvalidate).toHaveBeenCalledWith('scroll')
     detector.dispose()
   })
+
+  it('rejects media candidate when pointer is in blank area outside media bounds', () => {
+    const img = appendImage({ left: 100, top: 100, width: 300, height: 300 })
+    const onCandidate = vi.fn()
+    const detector = new MediaDetector(
+      { onCandidate },
+      { ...makeEnvironment(), elementFromPoint: () => img },
+    )
+    detector.start()
+    // Pointer is at (600, 200) - completely outside the image (e.g. tweet blank right side)
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 600, clientY: 200 }))
+    expect(onCandidate).not.toHaveBeenCalled()
+
+    // Pointer enters the actual media bounds (200, 200)
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, clientY: 200 }))
+    expect(onCandidate).toHaveBeenCalled()
+    detector.dispose()
+  })
 })
