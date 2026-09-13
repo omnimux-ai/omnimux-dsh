@@ -343,6 +343,24 @@ export class MediaOverlay {
       this.capsule?.setInteractive(false)
     }
 
+    // Pending 阶段：鼠标正在防抖倒计时中，若滑出画面立即取消，绝不闪烁
+    if (this.state.phase === 'pending' && this.anchorElement !== null) {
+      if (!this.anchorElement.isConnected) {
+        this.hideNow(true)
+        return
+      }
+      const pEvent = event as PointerEvent
+      if (typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number') {
+        const x = pEvent.clientX
+        const y = pEvent.clientY
+        const rect = this.anchorElement.getBoundingClientRect()
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+          this.hideNow(true)
+          return
+        }
+      }
+    }
+
     if (this.state.phase === 'shown' && this.anchorElement !== null) {
       if (!this.anchorElement.isConnected) {
         this.hideNow(true)
@@ -360,16 +378,7 @@ export class MediaOverlay {
         }
 
         if (!this.isPointNearAnchorOrCapsule(x, y)) {
-          const dist = this.distanceToAnchor(x, y)
-          if (dist > 24) {
-            this.hideNow(true)
-          } else if (this.leaveTimer === null) {
-            this.leaveTimer = this.setTimer(() => {
-              this.leaveTimer = null
-              if (this.isInsideOverlay(this.hoveredElement())) return
-              this.hideNow(true)
-            }, TIMING.leaveGrace)
-          }
+          this.hideNow(true)
           return
         }
 
@@ -382,13 +391,13 @@ export class MediaOverlay {
   private isPointNearAnchorOrCapsule(x: number, y: number): boolean {
     if (this.anchorElement === null) return false
     const rect = this.anchorElement.getBoundingClientRect()
-    const pad = 12
-    if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad) {
+    // 严格画面边界限制：只有光标在实际媒体画面内才视为有效
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
       return true
     }
     if (this.capsule !== null) {
       const cBox = this.capsule.element.getBoundingClientRect()
-      if (x >= cBox.left - 8 && x <= cBox.right + 8 && y >= cBox.top - 8 && y <= cBox.bottom + 8) {
+      if (x >= cBox.left - 4 && x <= cBox.right + 4 && y >= cBox.top - 4 && y <= cBox.bottom + 4) {
         return true
       }
     }

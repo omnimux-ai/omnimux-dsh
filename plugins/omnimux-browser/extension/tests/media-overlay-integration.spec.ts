@@ -328,4 +328,46 @@ describe('pointer loss and idle dismiss optimizations', () => {
     expect(capsule.classList.contains('is-visible')).toBe(false)
     overlay.dispose()
   })
+
+  it('cancels pending presentation immediately when pointer moves outside media bounds', () => {
+    vi.useFakeTimers()
+    const { overlay, capsule } = mountedCapsule()
+    overlay.setEnabled(true)
+
+    const img = document.createElement('img')
+    img.getBoundingClientRect = () => ({
+      left: 100,
+      top: 100,
+      right: 400,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 100,
+      y: 100,
+      toJSON: () => ({}),
+    }) as DOMRect
+    document.body.appendChild(img)
+
+    const candidate = {
+      element: img,
+      payload: {
+        id: 'test-media-pending',
+        src: 'https://cdn.example.com/pending.jpg',
+        type: 'image' as const,
+        title: 'pending',
+        pageUrl: 'https://example.com',
+      },
+    }
+    // Simulate candidate hover (enters pending)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).handleCandidate(candidate)
+
+    // Pointer slips to blank area (600, 200) during enter debounce
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 600, clientY: 200 }))
+
+    // Advance debounce time
+    vi.advanceTimersByTime(TIMING.enterDebounce)
+    expect(capsule.classList.contains('is-visible')).toBe(false)
+    overlay.dispose()
+  })
 })

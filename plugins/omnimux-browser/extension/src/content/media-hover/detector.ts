@@ -220,8 +220,16 @@ export class MediaDetector {
     if (point === null) return
     this.lastMouseTarget = event.target instanceof Element ? event.target : null
     const element = resolvePointerTarget(point.x, point.y, (x, y) => this.env.elementFromPoint(x, y))
-      ?? this.fallbackTarget()
+      ?? this.fallbackTarget(point)
     if (element === null) {
+      if (this.current !== null) {
+        this.current = null
+        this.options.onInvalidate?.('detach')
+      }
+      return
+    }
+    const rect = this.rectOf(element)
+    if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) {
       if (this.current !== null) {
         this.current = null
         this.options.onInvalidate?.('detach')
@@ -237,7 +245,7 @@ export class MediaDetector {
       return
     }
     this.current = candidate
-    this.options.onCandidate(candidate, this.rectOf(element))
+    this.options.onCandidate(candidate, rect)
   }
 
   private readonly handlePointerDown = (event: Event): void => {
@@ -258,11 +266,17 @@ export class MediaDetector {
    * Real browsers always have `document.elementFromPoint`; jsdom does not, so
    * tests either stub it or rely on this path.
    */
-  private fallbackTarget(): Element | null {
+  private fallbackTarget(point?: { x: number; y: number }): Element | null {
     const target = this.lastMouseTarget
     if (target === null) return null
-    const media = findMediaElement(target)
-    return media ?? nearestMediaAncestor(target)
+    const media = findMediaElement(target, point) ?? (point === undefined ? nearestMediaAncestor(target) : null)
+    if (media !== null && point !== undefined) {
+      const rect = this.rectOf(media)
+      if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) {
+        return null
+      }
+    }
+    return media
   }
 
   private pointOf(event: Event): { x: number; y: number } | null {
