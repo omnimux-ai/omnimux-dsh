@@ -7,10 +7,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   decideBashCommand,
+  decideMaterializationCommand,
   decideWrite,
   isDestructiveResetCommand,
   isEphemeralPath,
   isGitTracked,
+  isMaterializationCommand,
   isWorktreePath,
 } from './guard-worktree.mjs'
 
@@ -690,5 +692,85 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       decideBashCommand({ command: 'node scripts/dev-doctor.sh', cwd: mainRepoRoot }).decision,
       'allow',
     )
+  })
+})
+
+describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖硬拦截)', () => {
+  it('correctly classifies materialization scripts and commands', () => {
+    assert.equal(isMaterializationCommand('./scripts/sync-to-app.sh'), true)
+    assert.equal(isMaterializationCommand('bash scripts/sync-to-app.sh omnimux-assets'), true)
+    assert.equal(isMaterializationCommand('./scripts/sync-stable.sh'), true)
+    assert.equal(isMaterializationCommand('bash scripts/materialize-with-rollback.sh omnimux'), true)
+    assert.equal(isMaterializationCommand('node scripts/omnimux.mjs sync'), true)
+    assert.equal(isMaterializationCommand('omnimux.mjs sync --prod'), true)
+
+    // 豁免自动化测试与构建等非物化执行
+    assert.equal(isMaterializationCommand('node --test scripts/sync-targets.test.mjs'), false)
+    assert.equal(isMaterializationCommand('pnpm test'), false)
+    assert.equal(isMaterializationCommand('echo sync-to-app.sh'), false)
+  })
+
+  it('denies materialization commands executed from inside an isolated worktree', () => {
+    const result = decideBashCommand({
+      command: './scripts/sync-to-app.sh omnimux',
+      cwd: worktreeRoot,
+    })
+
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-worktree-materialization')
+  })
+
+  it('denies materialization on a non-main branch checkout', () => {
+    const branchRepoRoot = join(fixture, 'feature-branch-repo')
+    mkdirSync(branchRepoRoot, { recursive: true })
+    gitCommand(branchRepoRoot, 'init', '-b', 'agent/feature-branch')
+    writeFileSync(join(branchRepoRoot, 'package.json'), '{"name":"fixture"}')
+    gitCommand(branchRepoRoot, 'add', '.')
+    gitCommand(branchRepoRoot, '-c', 'user.name=Guard Test', '-c', 'user.email=guard@example.invalid', 'commit', '-m', 'feat base')
+
+    const result = decideBashCommand({
+      command: 'bash scripts/sync-to-app.sh',
+      cwd: branchRepoRoot,
+    })
+
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-worktree-materialization')
+  })
+
+  it('denies materialization when local main is behind origin/main', () => {
+    const localMainRepo = createRepo('local-behind-repo')
+    // 模拟远程已经合入了新成果并拉取了 ref，使得 origin/main 领先本地 HEAD
+    writeFileSync(join(localMainRepo, 'new-file.txt'), 'remote new feature\n')
+    gitCommand(localMainRepo, 'add', '.')
+    gitCommand(localMainRepo, '-c', 'user.name=Guard Test', '-c', 'user.email=guard@example.invalid', 'commit', '-m', 'remote merged feature')
+    gitCommand(localMainRepo, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+    // 本地回退一个提交，形成落后状态
+    gitCommand(localMainRepo, 'reset', '--hard', 'HEAD~1')
+
+    // 此时本地落后 1 个提交，物化必须被硬性阻断
+    const result = decideBashCommand({
+      command: './scripts/sync-to-app.sh',
+      cwd: localMainRepo,
+    })
+
+    assert.equal(result.decision, 'deny')
+    assert.equal(result.reason, 'forbidden-stale-main-materialization')
+    assert.equal(result.behindCount >= 1, true)
+  })
+
+  it('allows materialization on clean, synchronized main checkout', () => {
+    const syncRepo = join(fixture, 'synced-main-repo')
+    mkdirSync(syncRepo, { recursive: true })
+    gitCommand(syncRepo, 'init', '-b', 'main')
+    writeFileSync(join(syncRepo, 'package.json'), '{"name":"fixture"}')
+    gitCommand(syncRepo, 'add', '.')
+    gitCommand(syncRepo, '-c', 'user.name=Guard Test', '-c', 'user.email=guard@example.invalid', 'commit', '-m', 'base commit')
+
+    const result = decideBashCommand({
+      command: './scripts/sync-to-app.sh',
+      cwd: syncRepo,
+    })
+
+    assert.equal(result.decision, 'allow')
   })
 })
