@@ -30,7 +30,10 @@ const MAX_TOKENS_PHYSICAL = 2000
 const CATEGORIES_MAX = 5
 
 /** Software markers a page must carry to go digital without unambiguous evidence. */
-const SOFTWARE_MARKER_MIN = 3
+const SOFTWARE_MARKER_MIN = 2
+
+/** Product markers (trial hooks excluded) that outrank one price or size. */
+const PRODUCT_MARKER_MIN = 2
 
 /** Price / size signals that have to appear together to read as a listing. */
 const COMMERCE_PRICE_MIN = 2
@@ -68,12 +71,23 @@ const SOFTWARE_MARKERS = [
   /\bapi\b/i,
   /\bsdk\b/i,
   /\bworkflow(s)?\b/i,
-  /免费试用/,
-  /申请试用/,
-  /预约演示/,
   /控制台/,
   /按量计费/,
   /工作流/,
+]
+
+/**
+ * Marketing hooks a shop writes over a price just as readily (`免费试用 30 天`
+ * on a listing). They count as software evidence for a page that quotes no
+ * price, and never for one that does.
+ */
+const SOFTWARE_TRIAL_MARKERS = [
+  /免费试用/,
+  /申请试用/,
+  /预约演示/,
+  /\bfree trial\b/i,
+  /\bbook a demo\b/i,
+  /\brequest a demo\b/i,
 ]
 
 /**
@@ -85,7 +99,7 @@ const SOFTWARE_MARKERS = [
  *
  * `api`, `sdk` and `saas` deliberately stay out: they are product nouns a shop
  * advertises too (`OpenAPI` on a listing, `SDK` in a bundle), so they count
- * toward the two-marker rule instead of deciding on their own.
+ * toward the marker rule instead of deciding on their own.
  */
 const SOFTWARE_STRONG_MARKERS = [
   /\bdocumentation\b/i,
@@ -135,31 +149,60 @@ const COMMERCE_CONTROLS = [
  * lets them decide together — and never when the page carried an unambiguous
  * developer marker of its own.
  *
- * The currency is written in many ways — `$10`, `10,00 €`, `CHF 99.00`,
- * `1.980 TL` — so both placements are matched.
+ * The currency is written in many ways — `$10.99`, `10,00 €`, `CHF 99.00` —
+ * so both placements are matched, and each pattern captures the whole amount:
+ * `$10.99` and `$19.99` are two prices, not one that shares a leading digit.
  */
 const COMMERCE_PRICES = [
-  /[¥￥]\s?\d/g,
-  /[$€£₺]\s?\d/g,
-  /\d[\d,.]*\s(?:元|円|块|块钱|人民币|美元|欧元|日元|韩元|卢布|里拉)/g,
-  /\d[\d,.]*(?:美元|欧元|日元|韩元|卢布|里拉|人民币)/g,
-  /\d[\d,.]*\s?(?:usd|eur|gbp|chf|cny|rmb|jpy|krw|try|tl|rub|aud|cad)\b/gi,
-  /\b(?:usd|eur|gbp|chf|cny|rmb|jpy|krw|try|tl|rub|aud|cad)\s?\d[\d,.]*/gi,
-  /\d[\d,.]*\s?(?:€|£|₺|\$)/g,
+  /[¥￥]\s?\d[\d,.]*/g,
+  /[$€£₺]\s?\d[\d,.]*/g,
+  /\d[\d,.]*\s?(?:人民币|美元|欧元|日元|韩元|卢布|里拉|元|円|€|£|₺|\$)/g,
+  /\d[\d,.]*\s?(?:USD|EUR|GBP|CHF|CNY|RMB|JPY|KRW|TRY|TL|RUB|AUD|CAD|NZD|SEK|HKD|SGD)\b/g,
+  /\b(?:USD|EUR|GBP|CHF|CNY|RMB|JPY|KRW|TRY|TL|RUB|AUD|CAD|NZD|SEK|HKD|SGD)\s?\d[\d,.]*/g,
   /(?:^|[^\w.])\d+(?:[.,]\d+)?\s?(?:毫升|公升|升|公斤|千克|克|厘米|毫米|英寸|平方米|寸|斤)/g,
   /(?:^|[^\w.])\d+(?:[.,]\d+)?\s?(?:ml|cl|dl|mm|cm|km|kg|oz|lb|lbs|inch|inches|in)\.?(?![\w%])/gi,
   /(?:^|[^\w.])\d+(?:[.,]\d+)?\s(?:g|lb)\.?(?![\w%])/gi,
 ]
 
 /**
- * Two of the shapes above are also ordinary prose — `1 in 3 users` matches the
- * inch unit, and `元` is both a currency unit and the first character of 元旦,
- * 元宵 and 元数据 — so those shapes are removed before the signals are counted.
+ * The shapes above are also ordinary prose, and the copy is not edited to hide
+ * that — each candidate is judged in its own context instead, so real evidence
+ * such as `6 in the box` survives while `1 in 3 users` does not.
+ *
+ * A unit followed by a word is a sentence rather than a measurement; `元` is a
+ * currency unit and the first character of 元旦, 元宵 and 元数据; and a unit
+ * behind `#`, `No.` or `第` is a rank (`Ranked #1 in G2`). Bare currency codes
+ * (`CAD`, `TL`, `TRY`) are not read at all: in English prose they are words.
  */
-const SIZE_NOISE = [
-  /\b\d+(?:[.,]\d+)?\s?in\s(?:the|a|an|this|that|our|its|which|order|total|1|2|3|4|5|6|7|8|9)\b/gi,
-  /\d[\d,.]*\s?元(?=[旦宵月日数素组器件表类格式字码])/g,
+const COMMERCE_NOISE = [
+  // `1 in 3 users` is a ratio and `1 in the box` names no size; `5 in the box`
+  // and `12 in a case` are a pack size, so the noun decides, not the unit.
+  /^\d+(?:[.,]\d+)?\s?in\s(?:\d|the)\b/i,
+  /^\d+\s?(?:the|a|an|this|that|our|its|per)\b/i,
+  /^(?:of|no\.?|#)\s?\d/i,
 ]
+
+/** The characters that make `元` the first character of a word instead of a currency unit. */
+const YUAN_WORDS = /[旦宵月日数素组器件表类格式字码]/
+
+/**
+ * Is this candidate real evidence, or a piece of prose that happens to look
+ * like a price or a size?
+ *
+ * @param {string} candidate The matched text.
+ * @param {string} before The character that precedes it, when there is one.
+ * @param {string} after The character that follows it, when there is one.
+ * @returns {boolean}
+ */
+function isShoppingUnit(candidate, before, after) {
+  if (COMMERCE_NOISE.some((pattern) => pattern.test(candidate))) return false
+  // A rank reads `#1 in G2`, `No. 3 in the list`, `第 1 名`.
+  if (/[#第]$/.test(before)) return false
+  if (/\bNo\.$/i.test(before)) return false
+  // …and `元` opens 元旦, 元宵 and 元数据 as often as it names a yuan.
+  if (/元$/.test(candidate) && YUAN_WORDS.test(after)) return false
+  return true
+}
 
 /**
  * The hostname of a URL, with or without a scheme. A caller can hand the
@@ -327,19 +370,25 @@ function pageCopy(page) {
  *
  * Duplicates are dropped: the same `$10/month` in the title and in the meta
  * description is one price, not two, while a result grid naming `$10.99` and
- * `$27.99` names two. Prose that reads like a size (`1 in 3 users`) is removed
- * first, so the count is goods, not grammar.
+ * `$19.99` names two. Prose that happens to look like a unit (`1 in 3 users`,
+ * `Ranked #1 in G2`, `2025 元旦`) is rejected in its own context rather than
+ * deleted from the copy.
  *
  * @param {string} copy
  * @returns {string[]}
  */
 function shoppingUnits(copy) {
-  let source = copy
-  for (const pattern of SIZE_NOISE) source = source.replace(pattern, ' ')
   const units = new Set()
   for (const pattern of COMMERCE_PRICES) {
-    for (const match of source.matchAll(pattern)) {
-      units.add(match[0].replace(/\s+/g, '').toLowerCase())
+    for (const match of copy.matchAll(pattern)) {
+      // A size rail starts with the character before the number to keep `x1in`
+      // out, so the candidate is trimmed before it is judged.
+      const candidate = match[0].trim()
+      if (!candidate) continue
+      const before = copy[match.index - 1] ?? ''
+      const after = copy[match.index + match[0].length] ?? ''
+      if (!isShoppingUnit(candidate, before, after)) continue
+      units.add(candidate.replace(/\s+/g, '').toLowerCase())
     }
   }
   return [...units]
@@ -358,7 +407,7 @@ function shoppingUnits(copy) {
  * page does.
  *
  * @param {import('./link-importer.js').ParsedPage | null} page
- * @param {{ strong: boolean, hits: number }} software
+ * @param {{ strong: boolean, hits: number, productHits: number }} software
  * @returns {boolean}
  */
 function hasCommerceEvidence(page, software) {
@@ -368,11 +417,13 @@ function hasCommerceEvidence(page, software) {
   const units = shoppingUnits(copy)
   if (units.length >= COMMERCE_PRICE_MIN) return true
   if (units.length === 0) return false
-  // One price or size against a page that names its own software twice: the
-  // listing wins, because vague platform words are what a shop page footer is
-  // full of. Three markers, or one unambiguous developer marker, is a software
-  // page quoting a price.
-  return !software.strong && software.hits < SOFTWARE_MARKER_MIN
+  // One price or size against a page that names its own product: the listing
+  // wins, because vague platform words are what a shop footer is full of. Two
+  // product markers — the same number the marker rule uses — or one unambiguous
+  // developer marker make it a software page quoting a price. A trial hook never
+  // does, because a shop advertises one over a price too.
+  if (software.strong) return false
+  return software.productHits < PRODUCT_MARKER_MIN
 }
 
 /**
@@ -385,9 +436,12 @@ function hasCommerceEvidence(page, software) {
 function softwareEvidence(page) {
   const copy = pageCopy(page)
   if (!copy) return { strong: false, hits: 0 }
+  const markers = [...SOFTWARE_MARKERS, ...SOFTWARE_TRIAL_MARKERS]
   return {
     strong: SOFTWARE_STRONG_MARKERS.some((pattern) => pattern.test(copy)),
-    hits: SOFTWARE_MARKERS.filter((pattern) => pattern.test(copy)).length + SOFTWARE_STRONG_MARKERS.filter((pattern) => pattern.test(copy)).length,
+    hits: markers.filter((pattern) => pattern.test(copy)).length,
+    // The subset a price cannot outrank: product nouns, not trial hooks.
+    productHits: SOFTWARE_MARKERS.filter((pattern) => pattern.test(copy)).length,
   }
 }
 

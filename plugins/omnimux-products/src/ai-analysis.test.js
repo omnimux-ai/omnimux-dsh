@@ -259,7 +259,7 @@ describe('ai-analysis · e-commerce outranks every software signal', () => {
       )
     }
     // One price against a software page: the page decides, and it needs real
-    // software vocabulary — three markers, or one unambiguous developer marker.
+    // software vocabulary — two markers, or one unambiguous developer marker.
     assert.equal(
       isDigitalLandingPage({
         kind: 'physical',
@@ -272,10 +272,16 @@ describe('ai-analysis · e-commerce outranks every software signal', () => {
       isDigitalLandingPage({ kind: 'physical', url: 'https://acmecorp.com/docs', page: page({ text: 'API documentation，按量计费。' }) }),
       true,
     )
-    // Two vague markers are what a marketplace page footer is full of, so a
-    // price on such a page still reads as a listing.
+    // A page that names a console and a workflow for a price reads as software;
+    // `控制台` and `工作流` left the vague vocabulary when `ai` and `cloud` did.
     assert.equal(
-      isDigitalLandingPage({ kind: 'physical', page: page({ title: '智能商城 控制台', text: '工作流定制款，$10.99' }) }),
+      isDigitalLandingPage({ kind: 'physical', page: page({ title: 'Acme 控制台', text: '工作流按量计费，$10.99' }) }),
+      true,
+    )
+    // A shop page that only wears AI words still reads as a listing, with or
+    // without a price.
+    assert.equal(
+      isDigitalLandingPage({ kind: 'physical', page: page({ title: '智能商城 云端工作流', text: '智能体定制款，$10.99' }) }),
       false,
     )
   })
@@ -402,6 +408,80 @@ describe('ai-analysis · e-commerce outranks every software signal', () => {
       text: '按量计费，开发者文档齐备',
     })
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.acme.com/pricing', page: shared }), true)
+  })
+
+  it('never lets a trial hook outrank a price', () => {
+    // A listing wears the same trial copy a software page does.
+    const store = page({
+      title: 'Aurora 保温杯 - 官方商城',
+      text: '免费试用 30 天，支持工作流定制\n价格：$10.99',
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.omnimall.com/products/aurora-mug', page: store }), false)
+    const amazon = page({
+      title: 'Amazon.com: Nordic Ceramic Mug',
+      text: 'Nordic Ceramic Mug\n$10.99\n免费试用 我们的 ai 与 工作流 服务',
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.amazon.com/dp/B08N5WRWNW', page: amazon }), false)
+    // Three product markers do outrank it.
+    assert.equal(
+      isDigitalLandingPage({
+        kind: 'physical',
+        url: 'https://acme.com/pricing',
+        page: page({ title: 'Acme 控制台', text: '控制台与按量计费、API、SDK 齐备。Starting at $10 per month.' }),
+      }),
+      true,
+    )
+  })
+
+  it('keeps two different prices apart even when they share a leading digit', () => {
+    const pricing = page({ title: 'Acme 控制台 API SDK', text: 'Starter $10.99\nTeam $19.99. 免费试用，支持工作流与按量计费。' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.acme.com/pricing', page: pricing }), false)
+    assert.equal(
+      isDigitalLandingPage({ kind: 'physical', url: 'https://acme-shop.com/p/1', page: page({ title: 'Aurora Mug', text: '￥199.00 · ￥299.00' }) }),
+      false,
+    )
+  })
+
+  it('does not read a currency code in lower case as a price', () => {
+    const prose = page({ title: 'Acme 控制台 API SDK', text: 'Try 3 free calls\nTry 5 minutes of setup' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.acme.com/', page: prose }), true)
+  })
+
+  it('keeps a size that names goods, and drops a size that is prose', () => {
+    // A pack size is goods, even when it is the only signal on a `.ai` host…
+    for (const text of ['5 in the box', '6 in the box', '5 in a pack', '12 in a case']) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', url: 'https://mugshop.ai/p/1', page: page({ title: 'Mug set', text }) }),
+        false,
+        `expected a listing for ${JSON.stringify(text)}`,
+      )
+    }
+    // …and a ratio is a sentence, not a size.
+    assert.equal(
+      isDigitalLandingPage({ kind: 'physical', url: 'https://www.acme.com/', page: page({ title: 'Acme API SDK', text: '1 in 3 users rank us first' }) }),
+      true,
+    )
+  })
+
+  it('counts the same number of product markers against a price as the marker rule', () => {
+    // Two product markers plus one price is a software page quoting a price.
+    assert.equal(
+      isDigitalLandingPage({
+        kind: 'physical',
+        url: 'https://acme.com/pricing',
+        page: page({ title: 'Acme API SDK', text: 'Plans from $10/month. API and SDK.' }),
+      }),
+      true,
+    )
+    // One product marker plus one price is a listing with a marketing footer.
+    assert.equal(
+      isDigitalLandingPage({
+        kind: 'physical',
+        url: 'https://acme.com/pricing',
+        page: page({ title: 'Acme 工作流', text: 'Plans from $10/month.' }),
+      }),
+      false,
+    )
   })
 
   it('drops the root dot of a host, the way the importer does', () => {
