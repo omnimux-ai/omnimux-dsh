@@ -251,7 +251,14 @@ export function createCloudCatalog(deps = {}) {
   /**
    * Search the whole catalog. The index is a flat array, so this is a scan — it
    * is only reachable from an explicit search box, never from page loading.
-   * @param {{ q?: string, category?: string, subCategory?: string, limit?: number, offset?: number }} query
+   *
+   * `dims` carries the 角色 filter bar's selection, so a search narrows what the
+   * chips already narrowed instead of widening it: after picking 女性, typing a
+   * male name must not surface a male row. The tokens are matched exactly as
+   * `filter` matches them, so the two routes can never disagree about what a
+   * combination means.
+   * @param {{ q?: string, category?: string, subCategory?: string,
+   *   dims?: string | string[], limit?: number, offset?: number }} query
    */
   function search(query) {
     if (!ready()) {
@@ -260,6 +267,7 @@ export function createCloudCatalog(deps = {}) {
     const needle = String(query.q ?? '').trim().toLowerCase()
     const category = String(query.category ?? '')
     const subCategory = String(query.subCategory ?? '')
+    const wants = asTokenList(query.dims)
     const limit = Math.min(200, Math.max(1, Number(query.limit) || 24))
     const offset = Math.max(0, Number(query.offset) || 0)
 
@@ -268,6 +276,7 @@ export function createCloudCatalog(deps = {}) {
       // keeps working while the tab sits on the whole-catalog view.
       if (category !== '' && category !== ALL_CATEGORY && row.category !== category) return false
       if (subCategory !== '' && !catalogShelves(row).includes(subCategory)) return false
+      if (!matchesDimensionTokens(row, wants)) return false
       if (needle === '') return true
       return (
         row.name.toLowerCase().includes(needle)
@@ -309,10 +318,7 @@ export function createCloudCatalog(deps = {}) {
       .filter((row) => row.category === CHARACTER_CATEGORY)
       // Every selected dimension must match: the eight chips narrow one query,
       // so a row has to satisfy all of them, not any one of them.
-      .filter((row) => {
-        const tokens = dimensionTokensOf(row)
-        return wants.every((token) => tokens.includes(token))
-      })
+      .filter((row) => matchesDimensionTokens(row, wants))
     const total = rows.length
     return {
       total,
@@ -426,6 +432,22 @@ function asTokenList(value) {
     .split(',')
     .map((token) => token.trim())
     .filter((token) => token !== '')
+}
+
+/**
+ * Whether one row answers every wanted dimension token.
+ *
+ * An empty want list matches everything, which is what keeps an unfiltered
+ * search reading the whole catalog. A row carrying no dimensions of its own —
+ * every category but 角色 — answers no token at all, so a dimension query can
+ * never reach outside 角色 through the search box.
+ * @param {CatalogIndexRow} row
+ * @param {string[]} wants
+ */
+function matchesDimensionTokens(row, wants) {
+  if (wants.length === 0) return true
+  const tokens = dimensionTokensOf(row)
+  return wants.every((token) => tokens.includes(token))
 }
 
 /**

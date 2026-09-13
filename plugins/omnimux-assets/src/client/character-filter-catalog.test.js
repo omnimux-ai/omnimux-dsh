@@ -11,6 +11,8 @@ import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createCloudCatalog } from '../cloud-catalog.js'
+import { optionKeyOf, optionLabelOf } from './character-dimensions.js'
+import { en, zh } from './locales.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const catalogDir = join(here, '..', '..', 'cloud-catalog')
@@ -160,5 +162,72 @@ describe('Every declared option agrees with the rows and with the filter route',
     assert.equal(body.total, 0)
     assert.equal(body.items.length, 0)
     assert.equal(body.totalPages, 1)
+  })
+})
+
+/**
+ * 关键词只是收窄，不是放宽：搜索必须叠加当前选中的维度，否则选了女性再搜男性名字
+ * 仍会搜出男性。词条也必须一个货架一句话——场景的影棚与行业的播客栏目共用过一个
+ * 句柄，于是场景胶囊读成了行业文案。
+ */
+describe('A search and the two Podcast shelves stay inside their own scope', () => {
+  it('keeps 场景的 Podcast Studio apart from 行业的 Podcast & Media', () => {
+    const scene = character.dimensions.find((row) => row.id === 'scene')
+    const industry = character.dimensions.find((row) => row.id === 'industry')
+    const studio = scene.options.find((row) => row.value === 'Podcast Studio')
+    const shelf = industry.options.find((row) => row.value === 'Podcast & Media')
+    assert.ok(studio, '场景 must offer Podcast Studio')
+    assert.ok(shelf, '行业 must offer Podcast & Media')
+    assert.equal(optionKeyOf('scene', studio.value), 'podcast_studio')
+    assert.equal(optionKeyOf('industry', shelf.value), 'podcast')
+    assert.equal(optionLabelOf({ t: (key) => zh[key] ?? key, dimension: scene, value: studio.value }), '播客影棚')
+    assert.equal(optionLabelOf({ t: (key) => en[key] ?? key, dimension: scene, value: studio.value }), 'Podcast Studio')
+    assert.equal(optionLabelOf({ t: (key) => zh[key] ?? key, dimension: industry, value: shelf.value }), '播客电台')
+    assert.equal(optionLabelOf({ t: (key) => en[key] ?? key, dimension: industry, value: shelf.value }), 'Podcast & Media')
+  })
+
+  it('answers an opposite-gender name search with nothing', () => {
+    const cloud = createCloudCatalog({ catalogDir })
+    const female = characterRows.find((row) => row.meta.dims.gender === 'Female')
+    const male = characterRows.find((row) => row.meta.dims.gender === 'Male')
+    const name = male.meta.dims.name
+    const loose = cloud.search({ q: name, category: 'character' })
+    assert.ok(loose.total >= 1, `${name} must find its own row with no selection`)
+
+    const narrowed = cloud.search({
+      q: name,
+      category: 'character',
+      dims: [token(female.meta.dims.gender)],
+    })
+    assert.equal(narrowed.total, 0)
+    assert.deepEqual(narrowed.items, [])
+  })
+
+  it('serves every searched row from inside the selection', () => {
+    const cloud = createCloudCatalog({ catalogDir })
+    const body = cloud.search({
+      q: '',
+      category: 'character',
+      dims: [token('Car'), token('Selfie')],
+      limit: manifest.pageSize,
+      offset: 0,
+    })
+    const expected = characterRows.filter(
+      (row) => row.meta.dims.scene === 'Car' && row.meta.dims.pose === 'Selfie',
+    )
+    assert.ok(expected.length > 0, 'the catalog must carry rows for this combination')
+    assert.equal(body.total, expected.length)
+    for (const row of body.items) {
+      assert.equal(row.category, 'character')
+      assert.equal(row.meta.dims.scene, 'Car')
+      assert.equal(row.meta.dims.pose, 'Selfie')
+    }
+  })
+
+  it('keeps a dimension search off every other category', () => {
+    const cloud = createCloudCatalog({ catalogDir })
+    const body = cloud.search({ q: '', category: 'all', dims: [token('Car')], limit: 200, offset: 0 })
+    assert.ok(body.total > 0)
+    assert.equal(body.items.every((row) => row.category === 'character'), true)
   })
 })

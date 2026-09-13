@@ -10,7 +10,9 @@
  * A 角色 filter selection is not applied to the rows client-side either. It is
  * answered by the Host's filter route over the catalog index, which returns the
  * same page envelope a shard does, so filtering and paging stay one request per
- * page and the chip counts stay the catalog's own numbers.
+ * page and the chip counts stay the catalog's own numbers. A search carries the
+ * same selection, so the search box narrows what the chips already narrowed
+ * rather than widening it back to the whole category.
  *
  * Copying a cloud row into the local library is not part of this feed: the only
  * route out of a card is into the conversation, and the preview modal owns the
@@ -294,6 +296,10 @@ export function useCloudAssetsFeed(options) {
           q: queryApplied,
           category,
           subCategory,
+          // The chips narrow the search too: without this, searching a male name
+          // after picking 女性 answered with male rows, because the request
+          // carried the needle and the category but not the selection.
+          dims: filterTokens,
           limit: CLOUD_PAGE_SIZE,
           offset: 0,
         })
@@ -315,7 +321,7 @@ export function useCloudAssetsFeed(options) {
       }
     })()
     return () => { cancelled = true }
-  }, [queryApplied, open, category, subCategory, manifest, t])
+  }, [queryApplied, open, category, subCategory, filterTokens, manifest, t])
 
   const visible = searchResult ? searchResult.items : items
   // A filtered scope reports its page count in the page envelope, and a page is
@@ -337,6 +343,9 @@ export function useCloudAssetsFeed(options) {
             q: queryApplied,
             category,
             subCategory,
+            // A second search page carries the same selection as the first, or
+            // the appended rows would come from a wider scope than page one.
+            dims: filterTokens,
             limit: CLOUD_PAGE_SIZE,
             offset: searchResult.items.length,
           })
@@ -356,7 +365,7 @@ export function useCloudAssetsFeed(options) {
       return
     }
     void loadPage(loadedPages)
-  }, [loadingPage, hasMore, searchResult, queryApplied, category, subCategory, loadedPages, loadPage])
+  }, [loadingPage, hasMore, searchResult, queryApplied, category, subCategory, filterTokens, loadedPages, loadPage])
 
   const selectCategory = useCallback((next) => {
     setCategory(next)

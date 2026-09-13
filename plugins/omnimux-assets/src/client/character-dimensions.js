@@ -133,9 +133,15 @@ export function dimensionLabelOf({ t, dimension, value }) {
  * One option's label, resolved through the dictionary with the catalog's own
  * English label as the fallback so an option added by a newer catalog still
  * reads as words rather than as a key.
+ *
+ * 全部 is the one option the catalog does not publish: the bar synthesizes it
+ * with the empty value, which has no catalog label to fall back to and no
+ * handle to slug, so it is answered by the dictionary before either branch.
+ * Without this the first row of every dropdown rendered as a bare count.
  * @param {{ t: (key: string) => string, dimension: any, value: string }} input
  */
 export function optionLabelOf({ t, dimension, value }) {
+  if (value === '') return t('dim.opt.all')
   if (dimension.id === 'name') return value
   const key = `dim.opt.${optionKeyOf(dimension.id, value)}`
   const label = t(key)
@@ -179,7 +185,10 @@ const OPTION_KEYS = {
     Outdoor: 'outdoor',
     Bathroom: 'bathroom',
     Office: 'office',
-    'Podcast Studio': 'podcast',
+    // 场景's studio and 行业's podcast shelf are two different things that happen
+    // to share the word: one handle for both made the scene chip read as the
+    // industry wording (`Podcast & Media` / 播客电台).
+    'Podcast Studio': 'podcast_studio',
     Kitchen: 'kitchen',
     Cafe: 'cafe',
     'Indoor/Studio': 'indoor',

@@ -193,13 +193,18 @@ export async function cloudPage(scope, page) {
  * Always answered by the Host, even when the pages come from the gateway: search
  * scans the flat `index.json` that only the Host has loaded, so there is one
  * implementation instead of two that could disagree.
- * @param {{ q: string, category?: string, subCategory?: string, limit?: number, offset?: number }} query
+ *
+ * `dims` carries the 角色 filter bar's selection. The search box narrows what the
+ * chips already narrowed, so a row outside the selected dimensions is never a
+ * match however well its name fits the query.
+ * @param {{ q: string, category?: string, subCategory?: string, dims?: string[], limit?: number, offset?: number }} query
  */
 export function cloudSearch(query) {
   const params = new URLSearchParams()
   params.set('q', query.q)
   if (query.category) params.set('category', query.category)
   if (query.subCategory) params.set('sub_category', query.subCategory)
+  for (const token of query.dims ?? []) params.append('dims', token)
   if (Number.isFinite(query.limit)) params.set('limit', String(query.limit))
   if (Number.isFinite(query.offset)) params.set('offset', String(query.offset))
   return assetsRequest(`/omnimux/assets/cloud/search?${params}`)
