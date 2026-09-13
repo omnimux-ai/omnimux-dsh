@@ -2274,7 +2274,13 @@ export function App(): React.JSX.Element {
                   <TwitterXIcon size={12} />
                 </span>
                 <span className="hero-platform-text">
-                  {pageScene?.platform === 'twitter' ? (locale === 'en' ? 'X · Post Detail' : 'X · 帖子详情') : (pageScene?.title ? 'Web' : 'OmniMux')}
+                  {pageScene?.platform === 'twitter'
+                    ? (pageScene.pageType === 'profile'
+                        ? (locale === 'en' ? 'X · Profile' : 'X · 创作者主页')
+                        : pageScene.pageType === 'home'
+                          ? (locale === 'en' ? 'X · Feed' : 'X · 首页信息流')
+                          : (locale === 'en' ? 'X · Post' : 'X · 帖子详情'))
+                    : (pageScene?.title ? 'Web' : 'OmniMux')}
                 </span>
               </div>
               <div className="hero-page-meta">

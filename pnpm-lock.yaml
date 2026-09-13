@@ -162,6 +162,34 @@ importers:
         specifier: ^0.25.0
         version: 0.25.12
 
+  plugins/omnimux-automation:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: '>=4.0.1'
+        version: 4.0.2
+      '@deepseek-ai/dsh-client-ui-primitives':
+        specifier: '>=0.1.0-rc.6'
+        version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2))
+      luxon:
+        specifier: ^3.7.2
+        version: 3.7.2
+      zod:
+        specifier: ^4.1.5
+        version: 4.4.3
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      jsdom:
+        specifier: ^30.0.1
+        version: 30.0.1
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+
   plugins/omnimux-browser:
     dependencies:
       '@deepseek-ai/cordis':
@@ -4014,6 +4042,10 @@ packages:
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  luxon@3.7.2:
+    resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
+    engines: {node: '>=12'}
+
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -5685,6 +5717,33 @@ snapshots:
   '@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2))':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1
+      '@deepseek-ai/dsh-invariants': 0.1.5-rc.2(@deepseek-ai/cordis@4.0.2)
+      '@shikijs/langs': 4.4.3
+      '@types/mdast': 4.0.4
+      anser: 2.3.5
+      clsx: 2.1.1
+      katex: 0.16.47
+      mdast-util-from-markdown: 2.0.3
+      mdast-util-gfm: 3.1.0
+      mdast-util-math: 3.0.0
+      micromark-core-commonmark: 2.0.3
+      micromark-extension-gfm: 3.0.0
+      micromark-extension-math: 3.1.0
+      micromark-factory-space: 2.0.1
+      micromark-util-character: 2.1.1
+      micromark-util-classify-character: 2.0.1
+      micromark-util-sanitize-uri: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      shiki: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2))':
+    dependencies:
+      '@deepseek-ai/cordis': 4.0.2
       '@deepseek-ai/dsh-invariants': 0.1.5-rc.2(@deepseek-ai/cordis@4.0.2)
       '@shikijs/langs': 4.4.3
       '@types/mdast': 4.0.4
@@ -9017,6 +9076,8 @@ snapshots:
   lucide-react@1.33.0(react@19.2.8):
     dependencies:
       react: 19.2.8
+
+  luxon@3.7.2: {}
 
   magic-string@0.30.21:
     dependencies:

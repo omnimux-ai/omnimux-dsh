@@ -13,7 +13,8 @@ import {
   VideoIcon,
   LightbulbIcon,
   ScissorsIcon,
-  RetweetIcon
+  RetweetIcon,
+  TargetIcon
 } from './icons.tsx'
 
 export interface PresetChipItem {
@@ -72,8 +73,8 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     {
       id: 'tw_dm_collab',
       icon: FileTextIcon,
-      labelZh: '达人商务合作私信',
-      labelEn: 'Creator Outreach DM',
+      labelZh: '商务私信',
+      labelEn: 'Outreach DM',
       promptTemplateZh: (s) =>
         `结合博主${s.author ? `@${s.author}` : ''}的定位与主页风格，撰写 3 种语气的商务合作私信（真诚赞美型、利益共赢型、直接利落型），简短高效，拒绝营销垃圾感。`,
       promptTemplateEn: (s) =>
@@ -82,20 +83,40 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     {
       id: 'tw_author_audit',
       icon: ZapIcon,
-      labelZh: '达人画像与爆款拆解',
+      labelZh: '人设拆解',
       labelEn: 'Profile Deep Dive',
       promptTemplateZh: (s) =>
         `请分析该博主${s.author ? `@${s.author}` : ''}的内容矩阵、互动特征与人设定位，评估其内容策略与核心受众偏好。`,
       promptTemplateEn: (s) =>
         `Analyze the content strategy, engagement patterns, and niche positioning of ${s.author ? `@${s.author}` : 'this profile'}, summarizing core audience traits.`
+    },
+    {
+      id: 'tw_rival_track',
+      icon: TargetIcon,
+      labelZh: '加入对标',
+      labelEn: 'Track Creator',
+      promptTemplateZh: (s) =>
+        `请将当前博主${s.author ? `@${s.author}` : ''}加入我的对标账号库，并分析其近期表现最佳的爆款选题与互动模型。`,
+      promptTemplateEn: (s) =>
+        `Add creator ${s.author ? `@${s.author}` : 'this profile'} to my benchmark tracking list and analyze top-performing posts and angles.`
+    },
+    {
+      id: 'tw_style_imitation',
+      icon: SparklesIcon,
+      labelZh: '文风仿写',
+      labelEn: 'Style Remix',
+      promptTemplateZh: (s) =>
+        `请深度分析博主${s.author ? `@${s.author}` : ''}的发帖排版风格、语气语调与结构特点，按照其文风为我生成 3 条高原创度的全新推文。`,
+      promptTemplateEn: (s) =>
+        `Analyze the voice, tone, and pacing of ${s.author ? `@${s.author}` : 'this creator'}, crafting 3 original viral posts imitating this signature style.`
     }
   ],
   'twitter:home': [
     {
       id: 'tw_home_imitation',
       icon: FlameIcon,
-      labelZh: '热点主页发帖',
-      labelEn: 'Trending Feed Post',
+      labelZh: '热点发帖',
+      labelEn: 'Trending Post',
       promptTemplateZh: () =>
         `请结合当前社交网络讨论热点，为我的个人主页撰写 3 条高互动潜力的首发推文，排版采用一段一句、适度留白、富有网感。`,
       promptTemplateEn: () =>
@@ -103,9 +124,9 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     },
     {
       id: 'tw_viral_rewrite',
-      icon: SparklesIcon,
-      labelZh: '爆款二创复刻',
-      labelEn: 'Viral Post Remix',
+      icon: ScissorsIcon,
+      labelZh: '爆款二创',
+      labelEn: 'Viral Remix',
       promptTemplateZh: () =>
         `请提取当前视野中最具爆款潜质推文的核心开头钩子与情绪逻辑，在保持核心事实不变的前提下，复刻生成一篇更具传播力的原创推文。`,
       promptTemplateEn: () =>
@@ -114,12 +135,22 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
     {
       id: 'tw_feed_filter',
       icon: ChartIcon,
-      labelZh: '信息流热度快筛',
-      labelEn: 'Feed Intelligence',
+      labelZh: '信息流快筛',
+      labelEn: 'Feed Scanner',
       promptTemplateZh: () =>
-        `请快筛当前信息流中的核心议题，提炼出前 3 个最具传播价值的讨论角度与数据要点。`,
+        `请提取当前视口内前 10 条推文的作者、发布时间、互动量（转/评/赞）及核心要点，整理为互动率降序排列的结构化 Markdown 表格。`,
       promptTemplateEn: () =>
-        `Filter and rank key narratives across this feed, extracting the top 3 high-leverage discussion angles and takeaways.`
+        `Extract author, engagement, and core thesis of the top 10 tweets in viewport, formatting them into an engagement-ranked table.`
+    },
+    {
+      id: 'tw_reply_follow',
+      icon: RocketIcon,
+      labelZh: '破冰互关',
+      labelEn: 'Peer Networking',
+      promptTemplateZh: () =>
+        `请识别当前信息流中的同行与高价值博主，针对其推文生成 3 条真诚、专业、具有高信息增量的破冰互动回复，促进深度交流与互关。`,
+      promptTemplateEn: () =>
+        `Generate 3 thoughtful, value-add replies to peers in the current feed that naturally foster mutual connection and discussions.`
     }
   ],
   'tiktok:detail': [

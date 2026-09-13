@@ -3164,44 +3164,43 @@ textarea:focus-visible {
 }
 .context-clear-btn:hover { color: var(--danger); }
 
-/* Preset Chips */
+/* Preset Chips (Pure Black & White 2-Col Grid) */
 .preset-chips-scroll {
-  padding: 6px 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  border-top: 1px solid var(--line);
-  background: rgba(244, 246, 250, 0.6);
+  padding: 10px 0 0;
+  width: 100%;
+  background: transparent;
+  border: none;
 }
 .preset-chips-scroll::-webkit-scrollbar { display: none; }
 
 .preset-chips-track {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: max-content;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
 }
 
 .preset-chip-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 13px;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink-strong);
-  font-size: calc(11px * var(--ui-scale));
-  font-weight: 540;
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 550;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
+  white-space: normal;
+  transition: all 0.15s ease;
+  text-align: left;
 }
 .preset-chip-btn:hover {
-  background: #ede9fe;
-  border-color: #7c3aed;
-  color: #5b21b6;
-  transform: translateY(-1px);
+  background: var(--ink-strong);
+  color: var(--canvas);
+  border-color: var(--ink-strong);
 }
 .preset-chip-btn .chip-icon { font-size: calc(12px * var(--ui-scale)); }
 
