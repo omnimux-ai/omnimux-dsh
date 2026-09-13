@@ -147,14 +147,30 @@ async function discoverBridge(shouldContinue: () => boolean = () => true): Promi
     if (!shouldContinue()) return undefined
     try {
       const response = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
-        signal: AbortSignal.timeout(1_500),
+        signal: AbortSignal.timeout(1_000),
       })
       if (!shouldContinue()) return undefined
-      if (!response.ok) continue
-      const body = await response.json() as { wsUrl?: unknown }
-      if (typeof body.wsUrl === 'string' && body.wsUrl.startsWith('ws://')) return body.wsUrl
+      if (response.ok) {
+        const body = await response.json().catch(() => ({})) as { wsUrl?: unknown }
+        if (typeof body.wsUrl === 'string' && body.wsUrl.startsWith('ws://')) return body.wsUrl
+      }
     } catch {
       // 该端口没有 dsh 或未挂桥：试下一个。
+    }
+  }
+
+  // 兜底：如果所有端口都没返回 /ext/bridge-config，寻找第一个活跃的 DSH / OmniMux 实例端口
+  for (const port of prioritizedPorts) {
+    if (!shouldContinue()) return undefined
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/`, {
+        signal: AbortSignal.timeout(600),
+      })
+      if (response.status > 0) {
+        return `ws://127.0.0.1:${port}/ext/bridge`
+      }
+    } catch {
+      // 端口未运行
     }
   }
   return undefined
@@ -169,12 +185,21 @@ async function probeBridge(url: string): Promise<boolean> {
     target.pathname = BRIDGE_CONFIG_PATH
     target.search = ''
     target.hash = ''
-    const response = await fetch(target, { signal: AbortSignal.timeout(1_500) })
-    if (!response.ok) return false
-    const body = await response.json() as { wsUrl?: unknown }
-    return typeof body.wsUrl === 'string' && body.wsUrl.startsWith('ws://')
+    const response = await fetch(target, { signal: AbortSignal.timeout(1_200) }).catch(() => null)
+    if (response !== null) {
+      if (response.ok) {
+        const body = await response.json().catch(() => ({})) as { wsUrl?: unknown }
+        if (typeof body.wsUrl === 'string' && body.wsUrl.startsWith('ws://')) return true
+      }
+      // 只要端口上有 HTTP 服务应答（哪怕 404/403/401），说明实例存活，放行 WebSocket 握手
+      return true
+    }
+    // 兜底探测端口根路径
+    target.pathname = '/'
+    const rootRes = await fetch(target, { signal: AbortSignal.timeout(800) }).catch(() => null)
+    return rootRes !== null
   } catch {
-    return false
+    return true
   }
 }
 
@@ -2014,6 +2039,38 @@ chrome.runtime.onInstalled?.addListener((details) => {
 // Alarms survive some extension/service-worker restarts. Remove any stale
 // schedule left by an older eager-connection build; onConnect re-arms it.
 disarmBridgeKeepalive()
+
+// 监听来自前台面板的实例切换与设置更新消息，彻底打通连接业务逻辑
+chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+  const m = msg as { type?: string; payload?: Record<string, unknown> } | null
+  if (m?.type === 'SWITCH_DSH_PORT') {
+    const port = m.payload?.port
+    const bridgeUrl = (typeof m.payload?.bridgeUrl === 'string' && m.payload.bridgeUrl)
+      || (typeof port === 'number' ? `ws://127.0.0.1:${port}/ext/bridge` : undefined)
+    if (bridgeUrl) {
+      void persistSettings({ bridgeUrl }).then(async () => {
+        if (panelPorts.size > 0) {
+          bridgeStartRevision += 1
+          await startBridge()
+        }
+        broadcastStatus()
+        sendResponse({ ok: true })
+      })
+      return true
+    }
+  } else if (m?.type === 'SETTINGS_UPDATED') {
+    const nextSettings = (m.payload ?? {}) as Partial<Settings>
+    void persistSettings(nextSettings).then(async () => {
+      if (panelPorts.size > 0) {
+        bridgeStartRevision += 1
+        await startBridge()
+      }
+      broadcastStatus()
+      sendResponse({ ok: true })
+    })
+    return true
+  }
+})
 
 // `settingsReady` intentionally has no bridge-start continuation: opening a
 // side panel is the first action allowed to claim the bridge connection.

@@ -625,16 +625,18 @@ export function App(): React.JSX.Element {
   const handleSwitchDshInstance = (inst: { id: string; port: number; name: string }) => {
     setTargetPort(inst.port)
     safeSetStorage('omnimux_target_port', String(inst.port))
+    const nextUrl = `ws://127.0.0.1:${inst.port}/ext/bridge`
+    setSettings((current) => current === null ? current : { ...current, bridgeUrl: nextUrl })
     try {
       chrome.runtime?.sendMessage?.({
         type: 'SWITCH_DSH_PORT',
-        payload: { port: inst.port }
+        payload: { port: inst.port, bridgeUrl: nextUrl }
       })
     } catch {
       // Ignore
     }
     void api.updateSettings({
-      bridgeUrl: `ws://127.0.0.1:${inst.port}/ext/bridge`
+      bridgeUrl: nextUrl
     }).catch(() => {})
   }
   const [api] = useState<PanelApi>(() => connectPanel())
@@ -1108,8 +1110,10 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void chrome.storage.local.get('dshSettings').then((stored) => {
       const raw = stored.dshSettings as Partial<PanelSettings> | undefined
+      const savedPort = safeGetStorage('omnimux_target_port')
+      const p = savedPort ? parseInt(savedPort, 10) : targetPort
       setSettings({
-        bridgeUrl: raw?.bridgeUrl ?? '',
+        bridgeUrl: raw?.bridgeUrl || `ws://127.0.0.1:${p}/ext/bridge`,
         token: raw?.token ?? '',
         sharePageContent: raw?.sharePageContent ?? 'auto',
         unrestrictedBrowserAccess: raw?.unrestrictedBrowserAccess ?? true,
@@ -1824,6 +1828,12 @@ export function App(): React.JSX.Element {
       const relaySaved = await saveRelayProfiles()
       if (!relaySaved) return
       await api.updateSettings(settings)
+      try {
+        chrome.runtime?.sendMessage?.({
+          type: 'SETTINGS_UPDATED',
+          payload: { bridgeUrl: settings.bridgeUrl, token: settings.token }
+        })
+      } catch {}
       setShowSettings(false)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause))
@@ -2166,6 +2176,25 @@ export function App(): React.JSX.Element {
                 onSelectEffort={handleSelectEffort}
               />
             </div>
+          </label>
+          <label>
+            <span>{copy.settings.bridgeAddress}</span>
+            <small>{copy.settings.bridgeHelp}</small>
+            <input
+              value={settings?.bridgeUrl ?? `ws://127.0.0.1:${targetPort}/ext/bridge`}
+              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, bridgeUrl: e.target.value })}
+              placeholder={copy.settings.bridgePlaceholder}
+            />
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Auth Token' : '鉴权 Token'}</span>
+            <small>{locale === 'en' ? 'Leave empty for loopback, or enter token if required' : '本地免密连接可留空，或粘贴 token'}</small>
+            <input
+              type="password"
+              value={settings?.token ?? ''}
+              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
+              placeholder={locale === 'en' ? 'Optional token' : '可选 Token（留空自动使用免密桥接）'}
+            />
           </label>
           <label>
             <span>{copy.settings.pageSharing}</span>
