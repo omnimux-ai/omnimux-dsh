@@ -554,6 +554,19 @@ export function App(): React.JSX.Element {
     return 'auto'
   })
 
+  useEffect(() => {
+    if (themeSetting === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else if (themeSetting === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [themeSetting])
+
+  const [saveInspirationStatus, setSaveInspirationStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
@@ -972,21 +985,38 @@ export function App(): React.JSX.Element {
 
   const handleSaveToInspiration = async (mediaItem?: SniffedMediaItem) => {
     const targetUrl = mediaItem?.src || pageScene?.url || ''
-    if (!targetUrl) return
+    if (!targetUrl || saveInspirationStatus === 'saving') return
+    setSaveInspirationStatus('saving')
+    const targetBase = `http://127.0.0.1:${targetPort}`
     try {
-      const res = await fetch('/omnimux/inspiration/local/import-url', {
+      const res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl }),
-      })
-      const data = await res.json()
-      if (data?.ok || data?.success) {
-        alert(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
+        body: JSON.stringify({ url: targetUrl, background: true }),
+        signal: AbortSignal.timeout(6000),
+      }).catch(() => null)
+      if (res && (res.ok || res.status === 200 || res.status === 202)) {
+        setSaveInspirationStatus('saved')
+        setToastMessage(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
+        setTimeout(() => {
+          setSaveInspirationStatus('idle')
+          setToastMessage(null)
+        }, 3000)
       } else {
-        void send(`请将当前页面（${targetUrl}）的内容与核心灵感点提取并归档到我的灵感中心。`)
+        setSaveInspirationStatus('failed')
+        setToastMessage(locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态')
+        setTimeout(() => {
+          setSaveInspirationStatus('idle')
+          setToastMessage(null)
+        }, 3000)
       }
     } catch {
-      void send(`请将当前页面（${targetUrl}）的内容与核心灵感点提取并归档到我的灵感中心。`)
+      setSaveInspirationStatus('failed')
+      setToastMessage(locale === 'en' ? 'Failed to save' : '保存失败，请稍后重试')
+      setTimeout(() => {
+        setSaveInspirationStatus('idle')
+        setToastMessage(null)
+      }, 3000)
     }
   }
 
@@ -2634,6 +2664,11 @@ export function App(): React.JSX.Element {
           )}
         </div>
       </header>
+      {toastMessage && (
+        <div className="omnimux-toast-pill" role="status">
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <TabAffinityBanner state={tabAffinity} copy={copy} onDecision={decideTabAffinity} />
       {stickyTopBarVisible && pageScene && (
         <div className="sticky-top-page-bar visible">
@@ -2650,11 +2685,18 @@ export function App(): React.JSX.Element {
           </div>
           <button
             type="button"
-            className="sticky-bar-action-btn"
+            className={`sticky-bar-action-btn ${saveInspirationStatus === 'saved' ? 'success' : ''}`}
             onClick={() => { void handleSaveToInspiration() }}
+            disabled={saveInspirationStatus === 'saving'}
           >
             <SaveIcon size={11} />
-            <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
+            <span>
+              {saveInspirationStatus === 'saving'
+                ? (locale === 'en' ? 'Saving...' : '保存中...')
+                : saveInspirationStatus === 'saved'
+                  ? (locale === 'en' ? '✓ Saved' : '✓ 已保存')
+                  : (locale === 'en' ? 'Save' : '保存到灵感库')}
+            </span>
           </button>
         </div>
       )}
@@ -2768,10 +2810,17 @@ export function App(): React.JSX.Element {
                 <div className="hero-card-action-shelf">
                   <button
                     type="button"
-                    className="hero-action-pill-btn"
+                    className={`hero-action-pill-btn ${saveInspirationStatus === 'saved' ? 'success' : ''}`}
                     onClick={() => { void handleSaveToInspiration() }}
+                    disabled={saveInspirationStatus === 'saving'}
                   >
-                    <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
+                    <span>
+                      {saveInspirationStatus === 'saving'
+                        ? (locale === 'en' ? 'Saving...' : '保存中...')
+                        : saveInspirationStatus === 'saved'
+                          ? (locale === 'en' ? '✓ Saved' : '✓ 已保存到灵感库')
+                          : (locale === 'en' ? 'Save' : '保存到灵感库')}
+                    </span>
                   </button>
                 </div>
               </div>

@@ -740,6 +740,15 @@ textarea:focus-visible {
   box-shadow: 0 2px 8px rgba(77, 107, 254, 0.06);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .row.user .body {
+    background: #27272a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  }
+}
+
 :root[data-theme="dark"] .row.user .body {
   background: #27272a;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1048,6 +1057,14 @@ textarea:focus-visible {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: calc(11.5px * var(--ui-scale));
   word-break: break-all;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .row .body.md code {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #60a5fa;
+  }
 }
 
 :root[data-theme="dark"] .row .body.md code {
@@ -5367,5 +5384,36 @@ textarea:focus-visible {
 .scale-reset-btn:hover {
   color: var(--ink-strong);
   text-decoration: underline;
+}
+
+/* 灵感直接保存按钮状态与浮动 Toast */
+.hero-action-pill-btn.success,
+.sticky-bar-action-btn.success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+}
+
+.omnimux-toast-pill {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 6px 16px;
+  background: rgba(16, 185, 129, 0.94);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: calc(12.5px * var(--ui-scale));
+  font-weight: 500;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  animation: omnimuxToastFade 0.2s ease-out;
+}
+
+@keyframes omnimuxToastFade {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
