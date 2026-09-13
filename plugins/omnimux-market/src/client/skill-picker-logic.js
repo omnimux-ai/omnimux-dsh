@@ -9,6 +9,48 @@ import presetSkillsMap from '../../catalog/preset-skills.json' with { type: 'jso
  */
 export const AGENT_PRESET_SKILL_BINDINGS = Object.freeze(presetSkillsMap)
 
+/** 技能激活态全局事件名：任何来源（选择器自身、爆款复刻卡片）都只走这一条通道。 */
+export const SKILL_CHANGED_EVENT = 'omnimux:skill:changed'
+
+/**
+ * 从 `omnimux:skill:changed` 事件里取技能对象。
+ * 载荷形状不认识时一律回落 null，避免把脏数据写进激活态。
+ */
+export function resolveActiveSkillFromEvent(event) {
+  if (!event || typeof event !== 'object') return null
+  const detail = event.detail
+  if (!detail || typeof detail !== 'object') return null
+  const skill = detail.skill
+  if (!skill || typeof skill !== 'object') return null
+  return skill
+}
+
+/**
+ * 订阅技能激活态变更。
+ *
+ * 技能选择器只持有初始的 `window.__omnimuxActiveSkill`，别的来源（例如
+ * 爆款对标卡片的「复刻」）激活技能时它必须立刻跟上，否则底部工具栏的技能药丸不会亮。
+ * 返回取消订阅函数；无宿主环境时是空操作。
+ *
+ * @param {(skill: object | null) => void} listener
+ * @param {{ addEventListener?: Function, removeEventListener?: Function } | null} [target]
+ */
+export function subscribeActiveSkill(listener, target) {
+  const win = target || (typeof window !== 'undefined' ? window : null)
+  if (!win || typeof win.addEventListener !== 'function' || typeof listener !== 'function') {
+    return () => {}
+  }
+  const handler = (event) => listener(resolveActiveSkillFromEvent(event))
+  win.addEventListener(SKILL_CHANGED_EVENT, handler)
+  return () => {
+    try {
+      win.removeEventListener(SKILL_CHANGED_EVENT, handler)
+    } catch {
+      // 宿主已卸载时忽略
+    }
+  }
+}
+
 export function normalizePresetId(presetId) {
   return String(presetId || '').trim().toLowerCase().replace(/_/g, '-')
 }

@@ -35,6 +35,8 @@ import { ComposerPresetsTriggers } from './presets/index.js'
 import { ComposerModeTabs } from './composer-mode/ComposerModeTabs.jsx'
 import { registerLinkTriggerSource } from './attachments/linkTriggerSource.ts'
 import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnhancer.ts'
+import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
+import { findReplicateAttachment, shouldReleaseReplicateAttachments } from './session-guide/trending/replicate-linkage.js'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 
 export const name = 'omnimux'
@@ -182,6 +184,14 @@ export function apply(ctx) {
     inject: () => ({ attachmentStore, attachmentDrafts, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId }),
   }, AttachmentSubmitBridge))
   ctx.effect?.(() => attachmentStore.installGlobalEvents(), 'omnimux: attachment global events')
+  // 「复刻爆款视频」技能从底部药丸被移除时，复刻对象一并撤离附件栏。
+  // 这里只监听技能通道：附件栏自己不动技能，技能也不动附件，避免形成回环。
+  ctx.effect(() => subscribeSkillChanged((skill) => {
+    if (!shouldReleaseReplicateAttachments(skill, readActiveSkill())) return
+    const sessionId = attachmentStore.getActiveSessionId()
+    const stuck = findReplicateAttachment(attachmentStore.getSnapshot(sessionId))
+    if (stuck) attachmentStore.removeAttachment(sessionId, stuck.id)
+  }), 'omnimux: replicate skill release')
   ctx.slots.inject('conversation.input.attachments', () => ctx.slots.register({
     name: 'conversation.input.attachments',
     id: 'omnimux-attachment-tray',

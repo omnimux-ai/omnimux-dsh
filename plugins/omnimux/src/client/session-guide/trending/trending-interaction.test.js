@@ -444,15 +444,15 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
     assert.ok(view.cards().length > 0, '应渲染出可复刻样本')
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '初始不应接管输入框')
 
-    // 点击第二张卡片 → 接管：原生输入框被标记停靠，指令交回输入框所有权方
+    // 点击第二张卡片 → 接管：原生输入框被标记停靠，极简意图交回输入框所有权方
     const target = view.cards()[1]
     const targetId = target.getAttribute('data-trending-id')
     await click(target.querySelector('.omnimux-trending-recreate-btn'))
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '应给宿主打上停靠标记')
     assert.equal(applied.length, 1, '复刻应把指令交回输入框所有权方')
     assert.equal(applied[0].id, targetId)
-    assert.ok(applied[0].prompt.startsWith('Clone the attached viral ad'), '应写入克隆指令模板')
-    assert.ok(applied[0].prompt.includes('可复用结构：'), '真实拆解出的结构必须进指令')
+    // 草稿只承载极简意图：复刻对象的数据随附件走，不堆进用户草稿
+    assert.equal(applied[0].prompt, '复刻这条爆款视频', '复刻只写极简意图提示词')
     assert.equal(target.getAttribute('data-trending-active'), 'true', '被接管的卡片应标记 active')
     assert.equal(view.cards()[0].getAttribute('data-trending-active'), 'false')
 
@@ -467,7 +467,8 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
     assert.equal(view.cards()[1].getAttribute('data-trending-active'), 'false', '旧卡片应让出 active')
     assert.equal(applied.length, 2)
     assert.equal(applied[1].id, thirdId)
-    assert.notEqual(applied[1].prompt, applied[0].prompt, '换片应重灌指令')
+    // 换片后意图提示词不变（数据在附件里），但接管对象必须换成第三张
+    assert.equal(applied[1].prompt, '复刻这条爆款视频')
 
     // 接管期间其余卡片保持可点，可直接换片
     assert.equal(view.cards()[0].querySelector('.omnimux-trending-recreate-btn').disabled, false)

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { TrendingFilterBar } from './TrendingFilterBar.jsx'
 import { TrendingVideoCard } from './TrendingVideoCard.jsx'
 import { TrendingSkeletonGrid } from './TrendingSkeleton.jsx'
-import { buildClonePrompt, defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
+import { defaultTrendingFilters, selectTrendingVideos } from './trending-data.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { buildSkillPrompt } from '../skills/featured-skills-data.js'
 import {
@@ -13,6 +13,17 @@ import {
   loadTrendingItems,
   mergeCapabilities,
 } from './trending-source.js'
+import { getGlobalAttachmentStore } from '../../attachments/store.ts'
+import {
+  RECREATE_PROMPT,
+  RECREATE_SKILL,
+  REPLICATE_CLEARED_EVENT,
+  buildReplicateAttachmentPayload,
+  findReplicateAttachment,
+  isRecreateSkill,
+  readReplicateEntityId,
+} from './replicate-linkage.js'
+import { publishActiveSkill, readActiveSkill, subscribeSkillChanged } from '../../composer-add/skill-event.ts'
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
@@ -47,17 +58,20 @@ const cancelFrame = typeof cancelAnimationFrame === 'function'
  * 库为空或灵感社区未就绪就说清楚，**不回落任何编造的样本**。
  * 工具栏只渲染当前数据真的支持的维度（缺类目就没有类目下拉）。
  *
- * 复刻接管**不复制输入框**：点击复刻后把克隆指令写进官方原生输入框，
- * 并把那个原生输入框停靠到会话视口底部（附件、专家、模型、发送全是原生那一套）。
- * 板块只负责给出停靠几何（宿主 CSS 变量）与接管标记，复刻意图的落地仍由
+ * 复刻接管**不复制输入框**：点击复刻后把那个原生输入框停靠到会话视口底部
+ * （附件、专家、模型、发送全是原生那一套），同时把复刻对象挂进会话附件栏、
+ * 点亮底部工具栏的「复刻爆款视频」技能药丸；输入框草稿只写极简意图，
+ * 结构化数据一律随附件交出去，不灌进用户看得见的草稿。
+ * 板块只负责给出停靠几何（宿主 CSS 变量）与三处挂载状态，复刻意图的落地仍由
  * `onApplyPrompt` 交回会话输入框所有权方处理——只预填，从不代发。
  *
  * @param {{
  *   t: (key: string, fallback?: string) => string,
  *   onApplyPrompt: (prompt: string, item: object) => void,
+ *   sessionId?: string,
  * }} props
  */
-export function TrendingReplicateSection({ t, onApplyPrompt }) {
+export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
   const [filters, setFilters] = useState(defaultTrendingFilters)
   const [dockedItem, setDockedItem] = useState(null)
   const [sourceItems, setSourceItems] = useState([])
@@ -86,6 +100,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   const sectionRef = useRef(null)
   // 生效过的宿主根节点。卸载清理必须用它，而不是已被 React 解绑的 DOM ref。
   const dockHostRef = useRef(null)
+  // 当前接管的目标。附件栏与技能通道的监听都靠 ref 读实时值，
+  // 避免每次换片都重建订阅（重建窗口里的事件会漏听）。
+  const dockedItemRef = useRef(null)
+  dockedItemRef.current = dockedItem
+  // 技能药丸移除动作的解绑函数：复刻意图生效期间才有值。
+  const skillReleaseRef = useRef(null)
 
   // 地区 / 类目 / 播放量下界交给服务端先过滤再取窗口；互动率门槛与排序在客户端做。
   const serverFilterKey = `${filters.region}|${filters.industry}|${filters.views}`
@@ -134,6 +154,46 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
   const { dimensions, regionOptions, industryOptions, viewOptions } = capabilities
   const items = useMemo(() => selectTrendingVideos(filters, sourceItems), [filters, sourceItems])
 
+  /**
+   * 撤回复刻技能：清空激活技能并广播撤回事件。
+   * 只用于本板块自己的决策（再点卡片 / 移除技能药丸 / 收起输入框 / 卸载），
+   * 不参与外部同步，避免与附件栏、技能药丸形成回环。
+   */
+  const dropRecreateSkill = useCallback(() => {
+    publishActiveSkill(null)
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent(REPLICATE_CLEARED_EVENT, { detail: { sessionId: resolveSessionId() } }))
+      } catch {}
+    }
+  }, [])
+
+  /** 解绑技能药丸监听（复刻意图结束或板块卸载时）。 */
+  const disarmSkillReleaseWatch = useCallback(() => {
+    const unsubscribe = skillReleaseRef.current
+    skillReleaseRef.current = null
+    if (unsubscribe) unsubscribe()
+  }, [])
+
+  /**
+   * 挂上技能药丸移除动作的监听。
+   *
+   * 只在复刻意图生效期间挂：药丸是这一意图的产物，没有复刻就没有要跟着撤的东西。
+   * 订阅在点击那一刻同步建立（不等下一次 React 提交），用户吃掉药丸时一定收得到。
+   */
+  const armSkillReleaseWatch = useCallback(() => {
+    if (skillReleaseRef.current) return
+    skillReleaseRef.current = subscribeSkillChanged((skill) => {
+      if (skill) return
+      const docked = dockedItemRef.current
+      if (!docked || docked.skill) return
+      dockedItemRef.current = null
+      setDockedItem(null)
+      removeReplicateAttachment(docked.id)
+      disarmSkillReleaseWatch()
+    })
+  }, [disarmSkillReleaseWatch, sessionId])
+
   // 被接管的卡片一旦不在当前结果里（换地区/换阈值），输入框要归还，
   // 不能让它停在一个屏幕上已经不存在的片子上。
   // 注意：技能卡片不受对标视频筛选影响（带 skill 标记），不得误归还。
@@ -141,6 +201,27 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     if (refreshing || !dockedItem) return
     if (!dockedItem.skill && !items.some((item) => item.id === dockedItem.id)) setDockedItem(null)
   }, [items, dockedItem, refreshing])
+
+  // 附件栏是复刻对象的真源：卡上 ✕ 移除附件后，卡片态与技能药丸同步撤回。
+  // 会话是订阅与对账的坐标：宿主换会话时同一个组件实例会被复用，
+  // 因此必须跟着 `sessionId` 重新订阅，否则会继续盯上一个会话的附件栏。
+  useEffect(() => {
+    const store = getGlobalAttachmentStore()
+    const targetSession = sessionId || resolveSessionId()
+    const syncFromAttachments = () => {
+      const docked = dockedItemRef.current
+      if (!docked || docked.skill) return
+      const stuck = findReplicateAttachment(store.getSnapshot(targetSession))
+      if (readReplicateEntityId(stuck) === String(docked.id)) return
+      dockedItemRef.current = null
+      setDockedItem(null)
+      publishActiveSkill(null)
+      disarmSkillReleaseWatch()
+    }
+    // 挂载瞬间先对一次账：复刻对象没能落进附件栏时不得假装接管成功
+    syncFromAttachments()
+    return store.subscribe(targetSession, syncFromAttachments)
+  }, [disarmSkillReleaseWatch, sessionId])
 
   const showToolbar = status === TRENDING_SOURCE_STATUS.ready || status === TRENDING_SOURCE_STATUS.filtered
   const showSkeleton = refreshing && items.length === 0
@@ -298,7 +379,8 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
   }, [dockedItem])
 
-  // 宿主卸载即归还输入框，避免残留标记把它永久停在底部
+  // 宿主卸载即归还输入框，避免残留标记把它永久停在底部；
+  // 复刻状态（附件 + 技能药丸）同时撤回，不留悬空挂载。
   useEffect(() => () => {
     const root = dockHostRef.current
     if (!root) return
@@ -316,22 +398,44 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
     }
   }, [])
 
+  // 卸载时把技能药丸监听与复刻挂载一并收回
+  useEffect(() => () => {
+    disarmSkillReleaseWatch()
+    if (isRecreateSkill(readActiveSkill())) {
+      publishActiveSkill(null)
+    }
+    removeReplicateAttachment(null)
+  }, [disarmSkillReleaseWatch, sessionId])
+
   /**
-   * 点击复刻：把这一条对标片的克隆指令灌进原生输入框，并把原生输入框停靠到视口底部。
-   * 再点同一张卡片即归还输入框——开合不依赖任何自绘控件。
+   * 点击复刻：三处挂载一次到位，再点同一张卡片即整体撤回。
+   *   1. 复刻对象进会话附件栏（卡面吃封面缩略图与标题）；
+   *   2. 激活「复刻爆款视频」技能，底部工具栏药丸亮起；
+   *   3. 输入框草稿只写极简意图，结构化数据随附件交给模型。
+   * 开合不依赖任何自绘控件。
    */
   const handleRecreate = useCallback((item) => {
     if (dockedItem?.id === item.id) {
       setDockedItem(null)
+      disarmSkillReleaseWatch()
+      dropRecreateSkill()
+      removeReplicateAttachment(item.id)
       return
     }
+    // 换片：先把上一片撤下让出名额（换片是替换不是新增），再挂新片。
+    // 挂载是复刻的前提：附件栏仍挂不上（宿主未就绪等）就不能对外显示成已接管。
+    removeReplicateAttachment(null, item.id)
+    if (!addReplicateAttachment(item)) return
+
     // 复刻是明确的吸底意图：首帧一律停靠到视口底部，绝不因为原位此刻恰好还在视口里
     // 就把输入框留在页首——那等于把用户的浏览节奏打断在顶部。
     // 滚动感知交给迟滞监听：只有用户真的滚回原位，输入框才会被放回流内。
     setPlacement('docked')
     setDockedItem(item)
-    onApplyPrompt?.(buildClonePrompt(item), item)
-  }, [dockedItem, onApplyPrompt])
+    publishActiveSkill(RECREATE_SKILL)
+    armSkillReleaseWatch()
+    onApplyPrompt?.(RECREATE_PROMPT, item)
+  }, [dockedItem, disarmSkillReleaseWatch, dropRecreateSkill, armSkillReleaseWatch, onApplyPrompt])
 
   const handleSelectSkill = useCallback((skill) => {
     if (dockedItem?.id === skill.id) {
@@ -453,7 +557,12 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
         <button /* exempt-ui01: 归还原生输入框属于轻量文本动作，非标准控件位 */
           type="button"
           className="omnimux-trending-undock"
-          onClick={() => setDockedItem(null)}
+          onClick={() => {
+            setDockedItem(null)
+            disarmSkillReleaseWatch()
+            dropRecreateSkill()
+            removeReplicateAttachment(null)
+          }}
         >
           <span className="omnimux-trending-undock-icon" aria-hidden="true">{ICON_CHEVRON_DOWN}</span>
           {t('trending.undock')}
@@ -461,4 +570,52 @@ export function TrendingReplicateSection({ t, onApplyPrompt }) {
       ) : null}
     </section>
   )
+}
+
+/** 会话附件 Store 的活跃会话兜底：跨插件 Stage 未认领时取值。 */
+function resolveSessionId() {
+  try {
+    return getGlobalAttachmentStore().getActiveSessionId() || 'default'
+  } catch {
+    return 'default'
+  }
+}
+
+/**
+ * 把复刻对象挂进会话附件栏。
+ * 附件栏按「来源插件 + 类型 + 实体 + 路径」指纹去重，重复挂载不会堆积。
+ *
+ * @param {object} item 对标卡片行
+ * @returns {object | null} 落库后的附件；挂不上（满额 / 宿主未就绪）返回 null
+ */
+export function addReplicateAttachment(item) {
+  const payload = buildReplicateAttachmentPayload(item)
+  if (!payload) return null
+  try {
+    const result = getGlobalAttachmentStore().addAttachment(resolveSessionId(), payload)
+    return result.attachment || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 撤下复刻对象。
+ *
+ * @param {string | null} entityId 指定实体；传 null 表示撤下当前会话里的复刻对象
+ * @param {string | null} [keepEntityId] 保留实体：与它相同则跳过（换片时避免把自己撤掉）
+ */
+export function removeReplicateAttachment(entityId = null, keepEntityId = null) {
+  try {
+    const store = getGlobalAttachmentStore()
+    const sessionId = resolveSessionId()
+    const stuck = findReplicateAttachment(store.getSnapshot(sessionId))
+    const stuckId = readReplicateEntityId(stuck)
+    if (!stuckId) return
+    if (keepEntityId != null && String(keepEntityId) === stuckId) return
+    if (entityId != null && String(entityId) !== stuckId) return
+    store.removeAttachment(sessionId, stuck.id)
+  } catch {
+    // 附件栏未就绪时无需撤回
+  }
 }

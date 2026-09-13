@@ -13,6 +13,21 @@ const module = { exports: {} }
 new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
 const { SessionGuide } = module.exports
 
+/** 加载会话附件 Store：复刻板块写入的就是这个全局单例，断言看到的是真实挂载结果。 */
+async function loadAttachmentStore() {
+  const output = await build({ entryPoints: [new URL('../attachments/store.ts', import.meta.url).pathname], bundle: true, write: false, format: 'cjs', platform: 'node', external: ['react'] })
+  const attachments = { exports: {} }
+  new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), attachments, attachments.exports)
+  return attachments.exports
+}
+
+/** 刷新微任务队列，让真源拉取的 promise 与 React 提交都落地。 */
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
+
 test('session guide switches drafts without a reference panel or send interception', async () => {
   const dom = new JSDOM('<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div><button data-send-button>Send</button></div>', { url: 'http://localhost/' })
   const previous = { window: globalThis.window, document: globalThis.document, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
@@ -526,5 +541,102 @@ test('bulk create ads modal allows brief, references, ratio, duration, stepper a
     globalThis.window = previous.window
     globalThis.document = previous.document
     globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})
+
+// ─────────────────────────────────────────────────────────────
+// 复刻吸底：回执交给界面本体（附件缩略图 + 技能药丸），不再叠弹窗
+// ─────────────────────────────────────────────────────────────
+
+/** 灵感库真实行：复刻对象要能从真源映射出封面、标题与时长。 */
+const REPLICATE_TRENDING_ROWS = [
+  {
+    id: 'insp_us_beauty',
+    title: 'US beauty hook',
+    country_code: 'US',
+    category: 'beauty',
+    cover_url: '/omnimux/inspiration/local/media/covers/us-beauty.jpg',
+    source_url: '/omnimux/inspiration/local/media/videos/us-beauty.mp4',
+    stats: { likes: 300000, comments: 20000, shares: 5000, views: 12000000 },
+    deconstruction: { hook_highlight: '开场 3 秒反差' },
+  },
+]
+
+test('复刻吸底：写入输入框不再弹「已填入」提示，回执由附件与技能药丸承担', async () => {
+  const dom = new JSDOM(
+    '<div id="root" data-phase="hero"><div id="guide"></div><div data-composer-card><div data-composer-input="true" contenteditable="true"></div></div></div>',
+    { url: 'http://localhost/' },
+  )
+  const previous = {
+    window: globalThis.window,
+    document: globalThis.document,
+    act: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    fetch: globalThis.fetch,
+  }
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const attachmentStore = await loadAttachmentStore()
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ data: { items: REPLICATE_TRENDING_ROWS, total: REPLICATE_TRENDING_ROWS.length } }) })
+
+  const store = createGuideStore()
+  const sessionId = 'sess-replicate-toast'
+  const attachmentDrafts = new Map()
+  let draft = ''
+  let writes = 0
+  const workbenchSnapshot = { sessionId, state: { panelOpen: false } }
+  const workbench = { subscribe: () => () => {}, getSnapshot: () => workbenchSnapshot }
+  const props = {
+    sessionId,
+    useSession: (selector) => selector({ blank: true }),
+    useConversation: (selector) => selector({ activeTargets: new Set() }),
+    useInput: (selector) => selector({ draft, phase: 'plain' }),
+    inputActions: { setDraft(value) { draft = value; writes++ } },
+    getCurrentSessionId: () => sessionId,
+    attachmentDrafts,
+    store,
+    workbench,
+    t: (key) => guideZh[key] || key,
+  }
+  const globalStore = attachmentStore.getGlobalAttachmentStore()
+  globalStore.clear(sessionId)
+  globalStore.setActiveSessionId(sessionId)
+  const root = createRoot(document.querySelector('#guide'))
+  const render = () => act(async () => root.render(React.createElement(SessionGuide, props)))
+  try {
+    await render()
+    await flushMicrotasks()
+    const card = document.querySelector('[data-trending-id]')
+    assert.ok(card, '复刻板块必须渲染出对标卡片（前置条件成立）')
+    assert.equal(document.querySelector('.omnimux-toast-pill'), null, '点之前本来就没有弹窗')
+
+    await act(async () => {
+      card.querySelector('.omnimux-trending-recreate-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    })
+    await flushMicrotasks()
+
+    assert.equal(draft, '复刻这条爆款视频', '复刻指令仍要预填进输入框')
+    assert.equal(writes, 1, '只写一次，仍不代发')
+    assert.equal(globalStore.getSnapshot(sessionId).length, 1, '复刻对象仍要挂进附件栏（界面回执之一）')
+    assert.equal(window.__omnimuxActiveSkill?.slug, 'video-deconstruct', '技能药丸仍要点亮（界面回执之二）')
+    assert.equal(
+      document.querySelector('.omnimux-toast-pill'),
+      null,
+      '有了附件缩略图与技能药丸，不得再弹「已把复刻指令填入下方输入框，可直接发送」',
+    )
+    assert.ok(
+      !document.body.textContent.includes('已把复刻指令填入下方输入框'),
+      '弹窗文案不得出现在页面上',
+    )
+  } finally {
+    await act(async () => root.unmount())
+    globalStore.clear(sessionId)
+    window.__omnimuxActiveSkill = null
+    store.dispose()
+    dom.window.close()
+    globalThis.window = previous.window
+    globalThis.document = previous.document
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+    globalThis.fetch = previous.fetch
   }
 })

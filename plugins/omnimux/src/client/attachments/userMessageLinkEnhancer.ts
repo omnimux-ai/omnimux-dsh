@@ -6,6 +6,7 @@
 
 import { useEffect } from 'react';
 import { detectMessageLinks, type DetectedLinkItem } from './linkPillMetadata.ts';
+import { CLEANED_ATTR, hideAttachedContextBlock } from './attachedContextCleaner.ts';
 
 const USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"], div[class*="userStack"] div[class*="bubble"]';
 const UNENHANCED_USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"]:not([data-omx-link-enhanced="true"]), div[class*="userStack"] div[class*="bubble"]:not([data-omx-link-enhanced="true"])';
@@ -132,6 +133,13 @@ export function enhanceUserBubble(bubbleEl: HTMLElement, doc: Document = documen
 
   isEnhancing = true;
   try {
+    // 先把「会话关联上下文」数据块从可见节点里摘掉：它只喂给模型，
+    // 不属于用户自己写的内容；其中的附件路径也不该被收敛成链接胶囊。
+    // 标记只在真摘到东西时才留：它是排查用的凭据，不能变成「走过这条路」的记号。
+    if (hideAttachedContextBlock(bubbleEl, doc)) {
+      bubbleEl.setAttribute(CLEANED_ATTR, 'true');
+    }
+
     const nodeFilter = typeof NodeFilter !== 'undefined' ? NodeFilter : doc.defaultView?.NodeFilter;
     const showText = nodeFilter?.SHOW_TEXT ?? 4;
     const filterAccept = nodeFilter?.FILTER_ACCEPT ?? 1;
@@ -197,11 +205,32 @@ export function enhanceUserBubble(bubbleEl: HTMLElement, doc: Document = documen
 }
 
 /**
+ * 摘掉气泡里所有「会话关联上下文」数据块。
+ * 与链接胶囊不同，这一步必须覆盖**全部**气泡（含已增强过的）：
+ * 宿主重渲染会把提交时的完整文本写回 DOM，而已增强标记会拦住二次增强，
+ * 因此每次扫描都要重新对账。
+ */
+export function cleanUserBubbles(root: ParentNode = document): number {
+  if (!root || typeof root.querySelectorAll !== 'function') return 0;
+  const doc = root.ownerDocument || (root as Document);
+  const bubbles = root.querySelectorAll(USER_BUBBLE_SELECTOR);
+  let cleaned = 0;
+  bubbles.forEach((bubble) => {
+    if (hideAttachedContextBlock(bubble as HTMLElement, doc)) {
+      (bubble as HTMLElement).setAttribute(CLEANED_ATTR, 'true');
+      cleaned += 1;
+    }
+  });
+  return cleaned;
+}
+
+/**
  * Scan all matching unenhanced user bubbles currently in document or container
  */
 export function scanAndEnhanceAllBubbles(root: ParentNode = document): number {
   if (isEnhancing) return 0;
   if (!root || typeof root.querySelectorAll !== 'function') return 0;
+  cleanUserBubbles(root);
   const bubbles = root.querySelectorAll(UNENHANCED_USER_BUBBLE_SELECTOR);
   let enhancedCount = 0;
   bubbles.forEach((bubble) => {
@@ -255,7 +284,9 @@ export function installUserMessageLinkEnhancer(targetDoc: Document = document): 
         if (isEnhancing) return;
         let shouldScan = false;
         for (const mutation of mutations) {
-          if (mutation.addedNodes.length > 0) {
+          // 宿主重渲染可能只改文本（把整段提交文本写回文本节点），
+          // 只盯新增节点会漏掉这种改写，数据块就有机会重新上屏。
+          if (mutation.addedNodes.length > 0 || mutation.type === 'characterData') {
             shouldScan = true;
             break;
           }
@@ -267,6 +298,7 @@ export function installUserMessageLinkEnhancer(targetDoc: Document = document): 
 
       scrollObserver.observe(scrollTarget, {
         childList: true,
+        characterData: true,
         subtree: true,
       });
     }

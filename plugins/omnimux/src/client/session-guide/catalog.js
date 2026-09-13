@@ -398,7 +398,6 @@ export const guideZh = {
   "trending.library.emptyHint": "去灵感社区导入对标视频链接后，这里会自动出现。",
   "trending.library.unavailable": "暂时读不到灵感库。",
   "trending.library.unavailableHint": "灵感社区未就绪时这里不展示任何数据——不拿示例充数。",
-  "trending.applied": "已把复刻指令填入下方输入框，可直接发送",
   "trending.undock": "收起输入框",
 
   // 精选 Skill 双语名称与描述
@@ -873,7 +872,6 @@ export const guideEn = {
   "trending.library.emptyHint": "Import a reference video link in the inspiration library and it shows up here.",
   "trending.library.unavailable": "The inspiration library is not reachable right now.",
   "trending.library.unavailableHint": "Nothing is shown while the library is unavailable — no sample data stands in for it.",
-  "trending.applied": "Clone brief prefilled in the composer below — send when ready",
   "trending.undock": "Restore composer",
 
   // Featured Skills bilingual titles and summaries

@@ -374,6 +374,17 @@
 
       useEffect(() => { setOpen(false); }, [sessionId]);
 
+      // 技能激活态是全局通道：别的来源（爆款对标卡片的「复刻」）点亮技能时，
+      // 这里必须立刻跟上，否则底部工具栏的技能药丸不会出现。
+      useEffect(() => {
+        if (typeof window === "undefined" || typeof SkillShelf.subscribeActiveSkill !== "function") {
+          return undefined;
+        }
+        return SkillShelf.subscribeActiveSkill((skill) => {
+          setActiveSkill((prev) => (prev === skill ? prev : skill));
+        });
+      }, []);
+
       useEffect(() => {
         const payload = SkillShelf.buildSearchPayload("all", "");
         loadPickerSearch(payload).catch(() => {});

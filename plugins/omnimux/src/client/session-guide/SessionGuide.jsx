@@ -218,11 +218,13 @@ function BlankSessionGuide({
    *
    * 模态框与爆款对标吸底输入框共用本函数，差异只在 toast 文案与
    * `restoreNotice`（用户手动操作时清掉上一轮的「输入框未就绪」提示）。
+   * `toastKey` 可缺省：调用方已有更直接的界面证据（如附件缩略图、
+   * 技能药丸）时不再叠一层弹窗。
    *
    * @param {string} prompt
-   * @param {{ toastKey: string, restoreNotice?: boolean, copy?: boolean }} options
+   * @param {{ toastKey?: string | null, restoreNotice?: boolean, copy?: boolean }} options
    */
-  function applyDraftToComposer(prompt, { toastKey, restoreNotice = false, copy = false }) {
+  function applyDraftToComposer(prompt, { toastKey = null, restoreNotice = false, copy = false }) {
     if (!isSessionActive() || !inputActions?.setDraft) {
       setNotice('unavailable')
       return
@@ -233,7 +235,7 @@ function BlankSessionGuide({
       live.current = { ...live.current, input: { ...input, draft: prompt } }
       if (copy) copyText(prompt)
       if (restoreNotice) setNotice(null)
-      showToast(t(toastKey))
+      if (toastKey) showToast(t(toastKey))
       focusEditor()
     } catch {
       setNotice('unavailable')
@@ -252,9 +254,11 @@ function BlankSessionGuide({
   /**
    * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
    * 与模态框同源语义——只预填、不代发，用户保有最终发送权。
+   * 不弹 toast：复刻对象已挂成附件缩略图、技能药丸也已点亮，
+   * 界面本身即是回执，再弹一层提示只会变成视觉干扰。
    */
   function handleTrendingApply(prompt) {
-    applyDraftToComposer(prompt, { toastKey: 'trending.applied', restoreNotice: true })
+    applyDraftToComposer(prompt, { toastKey: null, restoreNotice: true })
   }
 
   return (
@@ -293,7 +297,7 @@ function BlankSessionGuide({
       />
 
       {/* Trending Videos, Ready to Replicate */}
-      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} />
+      <TrendingReplicateSection t={t} onApplyPrompt={handleTrendingApply} sessionId={sessionId} />
 
       {/* Marketing Insight Modal */}
       <MarketingInsightModal
