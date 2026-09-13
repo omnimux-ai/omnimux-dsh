@@ -115,10 +115,16 @@ const INLINE_STYLES = `
 }
 `
 
+/** Inner pane/col first; desktop shell wrappers are fallback only. */
+function querySidebarColumn() {
+  const inner = document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]')
+  if (inner instanceof HTMLElement) return inner
+  const shell = document.querySelector('.dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar')
+  return shell instanceof HTMLElement ? shell : undefined
+}
+
 function sidebarRoot() {
-  const column = document.querySelector(
-    '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar, [class*="UpstreamSidebar"]'
-  )
+  const column = querySidebarColumn()
   if (!(column instanceof HTMLElement)) return undefined
   const logoOwner = column.querySelector('[class*="logoRow"]')?.parentElement
   return logoOwner ?? (column.firstElementChild instanceof HTMLElement ? column.firstElementChild : undefined)
@@ -314,17 +320,44 @@ function isButtonEl(el) {
   return el instanceof HTMLElement && typeof el.click === 'function' && el.tagName === 'BUTTON'
 }
 
+const NEW_SESSION_LABEL_RE = /新会话|新建会话|新对话|新建对话|new session|new chat/i
+
+/**
+ * Official 新对话 / New Session control. Never the logoRow brand/logo button:
+ * a comma-list querySelector hits `*_brand` first in tree order.
+ * @param {Element | null | undefined} el
+ */
+function looksLikeNewSessionButton(el) {
+  if (!isButtonEl(el)) return false
+  const cls = typeof el.className === 'string' ? el.className : String(el.className ?? '')
+  if (/(?:^|\s)[\w-]*_brand(?:\s|$)/.test(cls)) return false
+  if (/newSession/i.test(cls)) return true
+  const aria = el.getAttribute?.('aria-label') || ''
+  const text = `${aria} ${el.textContent || ''}`
+  return NEW_SESSION_LABEL_RE.test(text)
+}
+
 function newSessionButton(root) {
-  const nested = root.querySelector('button[class*="newSession"], button.x-Wl6W_brand, button.x-Wl6W_newSession')
-  if (isButtonEl(nested)) return nested
+  const nested = root.querySelector('button[class*="newSession"]')
+  if (looksLikeNewSessionButton(nested)) return nested
   for (const child of root.children) {
-    if (isButtonEl(child)) return child
+    if (looksLikeNewSessionButton(child)) return child
   }
   const byAria = root.querySelector(
-    'button[aria-label="新建会话"], button[aria-label="New Session"], button[aria-label*="新会话"], button[aria-label*="new session" i], button[aria-label*="新对话"], button[aria-label*="新建对话"]',
+    'button[aria-label="新建会话"], button[aria-label="New Session"], button[aria-label*="新会话"], button[aria-label*="new session" i], button[aria-label*="新对话"], button[aria-label*="新建对话"], button[aria-label*="New chat" i]',
   )
-  if (isButtonEl(byAria)) return byAria
-  return [...root.querySelectorAll('button')].find((button) => /新会话|新建会话|新对话|新建对话|new session/i.test(button.textContent ?? ''))
+  if (looksLikeNewSessionButton(byAria)) return byAria
+  return [...root.querySelectorAll('button')].find((button) => looksLikeNewSessionButton(button))
+}
+
+/** Lift a nested control to the `root` child that owns it so insertBefore stays legal. */
+function directChildOf(root, node) {
+  if (!(node instanceof HTMLElement) || node === root) return undefined
+  let current = node
+  while (current.parentElement !== null && current.parentElement !== root) {
+    current = current.parentElement
+  }
+  return current.parentElement === root ? current : undefined
 }
 
 /** Optional external family rows (taskboard/atb/ssh) that precede our block. */
@@ -373,7 +406,7 @@ function enqueuePlaceAll() {
  * sidebar clicks now open stages directly) and wedges the renderer.
  */
 function bindWaitObserver() {
-  const column = document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]')
+  const column = querySidebarColumn()
   const target = column instanceof HTMLElement
     ? column
     : (document.body instanceof HTMLElement ? document.body : undefined)
@@ -397,7 +430,7 @@ function bindWaitObserver() {
  * 做全树 attributes。
  */
 function collapsedHostNode() {
-  const column = document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]')
+  const column = querySidebarColumn()
   if (column instanceof HTMLElement) {
     const marked = column.closest('[data-sidebar-collapsed]')
     if (marked instanceof HTMLElement) return marked
@@ -442,16 +475,8 @@ function runPlaceAll() {
 /** Below rows：按 rank 排序，落在「新建会话」下方（既有行为）。 */
 function placeBelow(root) {
   const sorted = [...ROWS].sort((a, b) => a.rank - b.rank)
-  let anchor = newSessionButton(root)
+  let anchor = directChildOf(root, newSessionButton(root))
   if (anchor === undefined) return
-  // P0 fix：placeInline 会把「新建会话」按钮移进 inline wrapper。此后该按钮
-  // 已非 root 直接子节点，其 nextElementSibling（inline 按钮）也不再是 root
-  // 直接子节点 —— 若仍以按钮为锚点，insertBefore(..., anchor.nextElementSibling)
-  // 会抛 NotFoundError。below 行应锚在 wrapper 之后（wrapper 才是 root 直接子）。
-  const inlineWrap = anchor.closest('[data-omnimux-inline-row]')
-  if (inlineWrap instanceof HTMLElement && inlineWrap.parentElement === root) {
-    anchor = inlineWrap
-  }
   let slotExternal = true
   for (const row of sorted) {
     // External family rows (taskboard/atb/ssh) slot between the hub block
@@ -479,18 +504,20 @@ function placeBelow(root) {
  */
 function placeInline(root) {
   if (INLINE_ROWS.length === 0) return
-  const anchor = newSessionButton(root)
-  if (anchor === undefined) return
+  const session = newSessionButton(root)
+  if (session === undefined || session.parentElement === null) return
   let wrapper = root.querySelector('[data-omnimux-inline-row]')
   if (!(wrapper instanceof HTMLElement)) {
     wrapper = document.createElement('div')
     wrapper.dataset.omnimuxInlineRow = ''
     wrapper.className = 'omnimux-sidebar-inline-row'
-    anchor.before(wrapper)
-    wrapper.append(anchor)
-    anchor.classList.add('omnimux-sidebar-inline-new-session')
+    session.before(wrapper)
+    wrapper.append(session)
+  } else if (session.parentElement !== wrapper) {
+    wrapper.append(session)
   }
-  let prev = anchor
+  session.classList.add('omnimux-sidebar-inline-new-session')
+  let prev = session
   for (const row of INLINE_ROWS) {
     const el = row.element
     if (el.parentElement === wrapper && el.previousElementSibling === prev) {
@@ -500,7 +527,7 @@ function placeInline(root) {
     wrapper.insertBefore(el, prev.nextElementSibling ?? null)
     prev = el
   }
-  bindCollapsedNewMenu(anchor)
+  bindCollapsedNewMenu(session)
 }
 
 function createApi() {

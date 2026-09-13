@@ -136,10 +136,8 @@ export function findOfficialNewSessionButton(doc) {
     const byAria = doc.querySelector(`button[aria-label="${label}"]${notInjected}`)
     if (byAria instanceof HTMLElement) return byAria
   }
-  const byBrand = doc.querySelector(`button.x-Wl6W_brand${notInjected}, button.x-Wl6W_newSession${notInjected}`)
-  if (byBrand instanceof HTMLElement) return byBrand
   const byClass = doc.querySelector(
-    `[class*="sidebarCol"] button[class*="newSession"]${notInjected}, [class*="sidebarCol"] [class*="newSession"]${notInjected}`,
+    `[class*="sidebarCol"] button[class*="newSession"]${notInjected}, [data-pane="sidebar"] button[class*="newSession"]${notInjected}, .dshDesktopSidebarSurface button[class*="newSession"]${notInjected}`,
   )
   if (byClass instanceof HTMLElement) return byClass
   // Text fallback for localized labels without exact aria match.
@@ -395,9 +393,8 @@ export function computeTabBarPadLeft(doc) {
  */
 export function findSidebarColumn(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return null
-  return doc.querySelector(
-    '[class*="sidebarCol"], [data-pane="sidebar"], .dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar, [class*="UpstreamSidebar"]'
-  )
+  return doc.querySelector('[class*="sidebarCol"], [data-pane="sidebar"]')
+    || doc.querySelector('.dshDesktopSidebarSurface, .dshDesktopUpstreamSidebar')
 }
 
 /**

@@ -67,6 +67,8 @@ New extra rows MUST reuse these metrics (copy the CSS block or import the same n
 
 There is no official slot under 新会话. Extra rows are DOM-injected after the new-session button. Order is **rank-sorted** by the hub coordinator (`window.__omnimuxSidebar`); do not invent a second observer.
 
+The placement anchor is the official **新对话 / New Session** control (`[class*="newSession"]` or matching aria/text). MUST NOT treat the logoRow brand/logo button as that anchor: a comma-list `querySelector` hits brand first in tree order, `insertBefore` then throws, and every extra row disappears (#1572 regression / #1582). Desktop shell wrappers (`.dshDesktopSidebarSurface`) MUST NOT win over the inner `[data-pane="sidebar"]` / `[class*="sidebarCol"]` column.
+
 **Plaza exception (#381):** `omnimux-market` is **not** an extra row. Its left entry is `sidebar.footer.action` (id `omnimux-market-plaza`, order 8, marker `[data-omnimux-market-entry]`), immediately above the official Settings foot. Click opens workbench Tab `omnimux-market:plaza`. MUST NOT claim overlay, MUST NOT use `document.body` 全屏 portal, MUST NOT also register an extra row under 新会话.
 
 Library pages (assets / products / accounts / inspiration / publish / analytics / workflow / clip) MUST NOT register `sidebar.footer.action`. That seat is the Settings foot, Hub updater (`omnimux-desktop-updater`, order 10), and the plaza trigger.
