@@ -1,12 +1,15 @@
 /**
- * Rival-accounts workbench: the two-column panel mounted as the fourth tab.
+ * Rival-accounts workbench: the content area of the 对标账号 tab.
  *
- * Owns the client store, the import dialog and the post actions. Everything it
- * renders is presentational; the state lives in `rival-client-store.js` so the
- * rules stay testable without a renderer.
+ * Owns the client store, the import dialog and the post actions. The two filter
+ * controls it used to render itself are plain props now — they belong to the one
+ * filter row the shell shares across all four tabs, and the panel only has to
+ * read them to decide what to load. Everything it renders is presentational; the
+ * state lives in `rival-client-store.js` so the rules stay testable without a
+ * renderer.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { RivalAccountList } from './RivalAccountList.jsx'
 import { RivalPostPanel } from './RivalPostPanel.jsx'
@@ -16,8 +19,13 @@ import { createRivalClientStore } from './rival-client-store.js'
 import { convertRivalPost, refreshAllRivalAccounts, removeRivalAccount, refreshRivalAccount } from './rival-api.js'
 import { injectRivalStyles } from './rival-styles.js'
 
-/** Platform filter options, built from the module's own platform names. */
-function buildPlatformOptions(t) {
+/**
+ * Platform filter options, built from the module's own platform names.
+ *
+ * Exported because the shell renders this dropdown: the account list and the
+ * filter that narrows it have to offer the same platforms in the same order.
+ */
+export function buildRivalPlatformOptions(t) {
   return [
     { value: '', label: t('platform.all') },
     { value: 'tiktok', label: t('platform.tiktok') },
@@ -27,7 +35,7 @@ function buildPlatformOptions(t) {
   ]
 }
 
-export function RivalAccountsPanel({ t, active = true }) {
+export function RivalAccountsPanel({ t, active = true, query = '', platform = '' }) {
   const storeRef = useRef(null)
   if (!storeRef.current) storeRef.current = createRivalClientStore()
   const store = storeRef.current
@@ -35,8 +43,6 @@ export function RivalAccountsPanel({ t, active = true }) {
   const [snapshot, setSnapshot] = useState(() => store.getState())
   const [importOpen, setImportOpen] = useState(false)
   const [busyPostId, setBusyPostId] = useState(null)
-  const [query, setQuery] = useState('')
-  const [platform, setPlatform] = useState('')
   const [notice, setNotice] = useState(null)
   const [busyAccount, setBusyAccount] = useState(false)
 
@@ -47,27 +53,32 @@ export function RivalAccountsPanel({ t, active = true }) {
   }, [])
 
   /**
-   * Load when the tab becomes active. The `active` guard keeps a hidden tab from
-   * polling: a workbench panel that fetches while the user is elsewhere is a
-   * background cost with no visible benefit.
+   * Reload the account list under whatever the shell's filter row holds.
+   *
+   * Every reload path goes through here: a refresh or a removal that reloaded
+   * unfiltered would leave the row showing one thing and the list another.
+   */
+  const reloadAccounts = useCallback(() => store.loadAccounts({
+    q: query || undefined,
+    platform: platform || undefined,
+  }), [store, query, platform])
+
+  /**
+   * Load when the tab becomes active and whenever the filter row changes. The
+   * `active` guard keeps a hidden tab from polling: a workbench panel that
+   * fetches while the user is elsewhere is a background cost with no visible
+   * benefit.
    */
   useEffect(() => {
     if (!active) return
-    void store.loadAccounts()
-  }, [active, store])
+    void reloadAccounts()
+  }, [active, reloadAccounts])
 
   useEffect(() => {
     void store.loadStatus()
   }, [store, snapshot.phase])
 
   useEffect(() => () => store.stopPolling(), [store])
-
-  const platforms = useMemo(() => buildPlatformOptions(t), [t])
-
-  /** Re-query whenever the search or the platform filter changes. */
-  const applyFilter = useCallback(async (nextQuery, nextPlatform) => {
-    await store.loadAccounts({ q: nextQuery || undefined, platform: nextPlatform || undefined })
-  }, [store])
 
   const handleSelect = useCallback((id) => {
     void store.selectAccount(id)
@@ -86,11 +97,11 @@ export function RivalAccountsPanel({ t, active = true }) {
       }
       const queued = res.body?.data?.queued || []
       for (const id of queued) store.startPolling(id)
-      await store.loadAccounts()
+      await reloadAccounts()
     } finally {
       setBusyAccount(false)
     }
-  }, [store])
+  }, [store, reloadAccounts])
 
   const handleRefreshOne = useCallback(async (id) => {
     const res = await refreshRivalAccount(id)
@@ -111,8 +122,8 @@ export function RivalAccountsPanel({ t, active = true }) {
 
   const handleRemove = useCallback(async (id) => {
     await removeRivalAccount(id)
-    await store.loadAccounts()
-  }, [store])
+    await reloadAccounts()
+  }, [reloadAccounts])
 
   const handleTogglePotential = useCallback((next) => {
     void store.togglePotential(next)
@@ -177,17 +188,6 @@ export function RivalAccountsPanel({ t, active = true }) {
           onRefreshOne={handleRefreshOne}
           onRemove={handleRemove}
           refreshing={busyAccount}
-          query={query}
-          onQueryChange={(value) => {
-            setQuery(value)
-            void applyFilter(value, platform)
-          }}
-          platform={platform}
-          onPlatformChange={(value) => {
-            setPlatform(value)
-            void applyFilter(query, value)
-          }}
-          platforms={platforms}
           paused={paused}
         />
         <RivalPostPanel
@@ -215,7 +215,7 @@ export function RivalAccountsPanel({ t, active = true }) {
         onClose={() => setImportOpen(false)}
         onImported={async () => {
           setImportOpen(false)
-          await store.loadAccounts()
+          await reloadAccounts()
         }}
       />
     </div>

@@ -1,5 +1,11 @@
 /**
- * Left column of the rival workbench: the account cards and the toolbar.
+ * Left column of the rival workbench: the account cards and the column's own
+ * action.
+ *
+ * The account search and the platform filter are not here — they are the shell's
+ * filter row, the one every tab shares, so this column holds only what is scoped
+ * to the accounts in it: refreshing all of them, and the empty state whose
+ * account-specific import is the useful next step while there is no list yet.
  *
  * Presentational only — every action is a callback, so the panel above owns the
  * state and the network. `dsh-ui-kit` supplies the controls (UI01 forbids native
@@ -7,7 +13,7 @@
  * emoji glyphs).
  */
 
-import { Button, DropdownSelect, SearchField } from 'dsh-ui-kit'
+import { Button } from 'dsh-ui-kit'
 import { toAccountView } from './rival-format.js'
 
 /** Small platform glyph, drawn rather than typed (no emoji, no icon font). */
@@ -102,43 +108,21 @@ function AccountCard({ account, t, active, onSelect }) {
  *   onRefreshAll: () => void,
  *   onRemove: (id: string) => void,
  *   refreshing: boolean,
- *   query: string,
- *   onQueryChange: (value: string) => void,
- *   platform: string,
- *   onPlatformChange: (value: string) => void,
- *   platforms: Array<{ value: string, label: string }>,
  *   paused: { global: boolean, reason: string | null },
  * }} props
  */
 export function RivalAccountList(props) {
   const {
     accounts, selectedId, t, onSelect, onImport, onRefreshAll, onRemove,
-    refreshing, query, onQueryChange, platform, onPlatformChange, platforms, paused,
+    refreshing, paused,
   } = props
 
   return (
     <div className="omnimux-rival-left">
-      <div className="omnimux-rival-toolbar">
-        <Button variant="primary" size="sm" onClick={onImport}>{t('rivalAccounts.import.btn')}</Button>
+      <div className="omnimux-rival-column-actions">
         <Button variant="outline" size="sm" disabled={refreshing} onClick={onRefreshAll}>
           {refreshing ? t('rivalAccounts.refresh.running') : t('rivalAccounts.refresh.all')}
         </Button>
-      </div>
-      <div className="omnimux-rival-filters">
-        <SearchField
-          value={query}
-          placeholder={t('rivalAccounts.import.searchPlaceholder')}
-          aria-label={t('rivalAccounts.import.searchPlaceholder')}
-          debounceMs={200}
-          stretch
-          onValueChange={onQueryChange}
-        />
-        <DropdownSelect
-          value={platform}
-          aria-label={t('filter.platform')}
-          onChange={onPlatformChange}
-          options={platforms}
-        />
       </div>
       {paused.global ? (
         <div className="omnimux-rival-banner" role="status">
@@ -149,6 +133,9 @@ export function RivalAccountList(props) {
         <div className="omnimux-rival-empty">
           <p className="omnimux-rival-empty-title">{t('rivalAccounts.empty.title')}</p>
           <p className="omnimux-rival-empty-text">{t('rivalAccounts.empty.description')}</p>
+          <Button variant="primary" size="sm" className="omnimux-rival-empty-cta" onClick={onImport}>
+            {t('rivalAccounts.import.btn')}
+          </Button>
         </div>
       ) : (
         <div className="omnimux-rival-account-list">

@@ -41,7 +41,7 @@ export const SearchField = (props) => h('input', {
   readOnly: true,
 })
 
-export const DropdownSelect = ({ value, options, className, 'aria-label': ariaLabel }) => {
+export const DropdownSelect = ({ value, options, className, onChange, 'aria-label': ariaLabel }) => {
   const [open, setOpen] = React.useState(false)
   const items = options || []
   const selected = items.find((option) => option.value === value)
@@ -60,7 +60,21 @@ export const DropdownSelect = ({ value, options, className, 'aria-label': ariaLa
       h('span', null, selected ? selected.label : 'Select'),
     ),
     open
-      ? h('ul', { role: 'listbox' }, items.map((option) => h('li', { key: String(option.value), role: 'option' }, option.label)))
+      ? h('ul', { role: 'listbox' }, items.map((option) => h(
+        'li',
+        {
+          key: String(option.value),
+          role: 'option',
+          'aria-selected': option.value === value,
+          // The kit's items call `onChange` with their value and close the menu;
+          // without this a gate could read the menu but never use it.
+          onClick: () => {
+            onChange?.(option.value)
+            setOpen(false)
+          },
+        },
+        option.label,
+      )))
       : null,
   )
 }
@@ -95,7 +109,23 @@ export const ModalDialog = ({ open, children, footer }) => (open ? h('div', null
 
 export const CopyButton = () => h('button', { type: 'button' }, null)
 
-export const PageHeader = ({ children, ...rest }) => h('div', rest, children)
+/**
+ * Mirrors the kit's DOM contract where a gate has to read it: the real
+ * `PageHeader` renders the title as an `<h1>`, the subtitle as a `<p>` and a
+ * close control. The shim used to drop `title`/`subtitle` into element
+ * attributes, which left "the page heading is on screen" unassertable on a
+ * rendered tree.
+ */
+export const PageHeader = ({ title, subtitle, onClose, closeTitle, children, ...rest }) => h(
+  'div',
+  rest,
+  typeof title === 'string' ? h('h1', null, title) : title,
+  subtitle ? h('p', null, subtitle) : null,
+  children,
+  onClose
+    ? h('button', { type: 'button', 'aria-label': closeTitle, onClick: onClose })
+    : null,
+)
 
 export const createSidebarEntry = () => ({})
 
