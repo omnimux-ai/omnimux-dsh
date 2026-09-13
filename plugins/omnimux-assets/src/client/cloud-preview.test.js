@@ -11,7 +11,7 @@ const IMAGE_ROW = {
 }
 const VIDEO_ROW = { id: 'scene-vid', name: '写字楼', description: '', mediaType: 'video' }
 const AUDIO_ROW = { id: 'audio-voice-bbb', name: '林潇 2.0', description: '配音 · 0:12', mediaType: 'audio' }
-const TEXT_ROW = { id: 'knowledge-note-1', name: 'Reddit 首页', description: '完整正文', mediaType: 'document' }
+const TEXT_ROW = { id: 'doc-note-1', name: 'Reddit 首页', description: '完整正文', mediaType: 'document' }
 const OTHER_ROW = { id: 'prop-plain', name: '道具', description: '无媒体', mediaType: 'other' }
 
 describe('previewKindOf', () => {

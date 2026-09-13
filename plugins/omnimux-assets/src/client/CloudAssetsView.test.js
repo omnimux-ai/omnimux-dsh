@@ -30,9 +30,9 @@ function ruleBody(css, selector) {
 /**
  * 二级分类栏属于数据，不属于某一个 Tab。
  *
- * 旧版把二级栏钉死在声音上：知识包、角色、素材的 sub_categories 只当计数桶用，
- * 于是选中「知识包」时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类
- * 都展开二级栏，首个 Tab 统一是「全部」并带该大类总数；场景与空的道具不展开。
+ * 旧版把二级栏钉死在声音上，其余大类的 sub_categories 只当计数桶用，于是选中别的
+ * 大类时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类都展开二级栏，首个
+ * Tab 统一是「全部」并带该大类总数；只有刻意留空的道具和最左侧的「全部」不展开。
  */
 describe('Cloud second level follows the catalog data', () => {
   it('reads hasSecondLevel from the tabs instead of naming one category', () => {
@@ -66,6 +66,25 @@ describe('Cloud second level follows the catalog data', () => {
     assert.match(feedJs, /setCategory\(next\)\n    \/\/ Every category opens on 全部[\s\S]*?setSubCategory\(''\)/)
   })
 
+  it('removes 知识包 and opens the nav on 全部 in both dictionaries', () => {
+    assert.equal(zh['cloud.category.all'], '全部')
+    assert.equal(en['cloud.category.all'], 'All')
+    assert.equal(zh['cloud.category.knowledge'], undefined)
+    assert.equal(en['cloud.category.knowledge'], undefined)
+    assert.equal(zh['cloud.subcategory.prompt'], undefined)
+    assert.equal(en['cloud.subcategory.prompt'], undefined)
+    assert.equal(zh['cloud.subcategory.storyboard'], undefined)
+    assert.equal(en['cloud.subcategory.storyboard'], undefined)
+  })
+
+  it('opens the tab on 全部 and leads the nav with it', () => {
+    assert.match(feedJs, /const \{ t, open, defaultCategory = CLOUD_ALL_CATEGORY \} = options/)
+    assert.match(feedJs, /return \[allCategoryEntry\(manifest, t\), \.\.\.listed\]/)
+    assert.match(feedJs, /if \(manifest === null\) return \[\]/)
+    // The chip label comes from the dictionary, never from a hard-coded string.
+    assert.match(viewJsx, /\{t\(`cloud\.category\.\$\{row\.id\}`\)\}/)
+  })
+
   it('names the new 素材 category in both dictionaries', () => {
     assert.equal(zh['cloud.category.material'], '素材')
     assert.equal(en['cloud.category.material'], 'Material')
@@ -79,7 +98,7 @@ describe('Cloud second level follows the catalog data', () => {
   })
 
   it('drops the shelves the catalog no longer has', () => {
-    for (const gone of ['note', 'digital-human', 'virtual-influencer', 'hook-video']) {
+    for (const gone of ['note', 'digital-human', 'virtual-influencer', 'hook-video', 'prompt', 'storyboard']) {
       assert.equal(zh[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from zh`)
       assert.equal(en[`cloud.subcategory.${gone}`], undefined, `${gone} should be gone from en`)
     }
@@ -87,7 +106,7 @@ describe('Cloud second level follows the catalog data', () => {
 })
 
 /**
- * 文本类卡片：知识包全是文字资产（脚本、分镜提示词），旧版给它们画一块 4:3 的灰色
+ * 文本类卡片：没有封面、也没有可播媒体，只有一段描述。旧版给它们画一块 4:3 的灰色
  * 占位图加一个文档图标，标题和描述被挤成一行省略。这类卡片现在直接是「标题 2 行、
  * 描述 4 行」的阅读版式，没有占位图。
  */
@@ -156,13 +175,16 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
 })
 
 /**
- * 声音类卡片（配音 / 音效 / 背景音）：暗调微彩波形区点击即播即停，下面标题加一句
- * 音色描述，没有底部大按钮条。
+ * 声音类卡片（配音 / 音效 / 背景音）：一块暗调微彩底板，正中间一个居中的播放/暂停键，
+ * 点一下即播即停；下面标题加一句音色描述，没有底部大按钮条。
+ *
+ * 底板上不画任何波形竖条：几十张音色卡片同时出现细密竖线会变成视觉噪点，行与行的
+ * 区别只交给颜色本身。
  */
-describe('Cloud voice card plays from its waveform plate', () => {
-  it('makes the waveform plate the play control', () => {
+describe('Cloud voice card plays from its colour plate', () => {
+  it('makes the colour plate the play control', () => {
     assert.match(viewJsx, /const canPlay = kind === 'audio'/)
-    assert.match(viewJsx, /\{canPlay \? <CloudWaveform seed=\{asset\.id\} \/> : <CloudTileMedia/)
+    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} \/>\}/)
     assert.match(viewJsx, /role=\{canPlay \? 'button' : undefined\}/)
     assert.match(viewJsx, /aria-pressed=\{canPlay \? \(playing \? 'true' : 'false'\) : undefined\}/)
     assert.match(viewJsx, /onKeyDown=\{canPlay \? activateRowKeydown\(togglePlay\) : undefined\}/)
@@ -171,14 +193,21 @@ describe('Cloud voice card plays from its waveform plate', () => {
     assert.match(viewJsx, /<PlayIcon size=\{16\} \/>/)
   })
 
-  it('draws a deterministic waveform, so a card never changes shape between renders', () => {
-    const waveform = viewJsx.slice(viewJsx.indexOf('function waveBars'), viewJsx.indexOf('function CloudTileMedia'))
-    assert.match(waveform, /const bars = \[\]/)
-    assert.match(viewJsx, /const bars = useMe[m]o\(\(\) => waveBars\(seed\), \[seed\]\)/)
-    const wave = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-wave {')
-    assert.match(wave, /display: flex/)
-    assert.match(wave, /pointer-events: none/)
-    assert.match(ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-wave-bar'), /background: currentColor/)
+  it('draws no waveform bars anywhere in the card or the stylesheet', () => {
+    assert.doesNotMatch(viewJsx, /waveBars|CloudWaveform|WAVE_BAR_COUNT/)
+    assert.doesNotMatch(viewJsx, /cloud-wave/)
+    assert.doesNotMatch(ASSETS_CSS, /omnimux-assets-cloud-wave/)
+    assert.doesNotMatch(ASSETS_CSS, /cloud-wave-bar/)
+  })
+
+  it('centres one play control instead of a strip of bars', () => {
+    const play = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-play {')
+    assert.match(play, /position: absolute/)
+    assert.match(play, /top: 50%/)
+    assert.match(play, /left: 50%/)
+    assert.match(play, /transform: translate\(-50%, -50%\)/)
+    assert.match(play, /border-radius: 999px/)
+    assert.match(play, /pointer-events: none/)
   })
 
   it('stops the plate from swallowing the row preview click', () => {
@@ -275,11 +304,11 @@ describe('Cloud card keeps exactly one hover control', () => {
   })
 
   it('inverts the plate on hover, with no brand hue anywhere in the control', () => {
-    // Bounded at the waveform rules: those sit on the fixed dark media plate and
-    // are exempted from the token rule, while this control is chrome and is not.
+    // Bounded at the description rule: everything above it is the fixed dark media
+    // plate, which is exempted, while this control is chrome and is not.
     const plates = ASSETS_CSS.slice(
       ASSETS_CSS.indexOf('.omnimux-assets-cloud-card .omnimux-assets-cloud-chat'),
-      ASSETS_CSS.indexOf('.omnimux-assets-cloud-wave {'),
+      ASSETS_CSS.indexOf('.omnimux-assets-cloud-desc {'),
     )
     assert.match(plates, /background: var\(--dsw-alias-bg-elevated\)/)
     assert.match(plates, /transition: opacity/)

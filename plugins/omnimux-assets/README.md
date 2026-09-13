@@ -2,7 +2,8 @@
 
 OmniMux **创作资产库**（v0.2）：一条资产是有名字、类型、描述、可选素材路径的创作对象，不是文件夹挂载。
 
-- **六类常驻**：角色 / 场景 / 风格包 / 道具 / 知识包 / 自定义（自定义 = 未选分类）
+- **六类常驻**：角色 / 场景 / 风格包 / 道具 / 知识包 / 自定义（自定义 = 未选分类）。这是**本地**资产类型；
+  云端清单的六个分类见下文，两者不是一套
 - **素材物化（2026-08-30）**：导入 copy 进 `$DSH_HOME/omnimux/assets/data/files/<id>/`。用户原文件不删、不改名。删资产记录可回收受管副本。合同：`docs/contracts/project-assets-contract.md`
 - **入口**：侧栏「资产库」→ 一级页「+ 添加资产」弹窗。本轮不做导入资产包
 - **产物**：`assets_upload` 仍写入自有 artifacts 区；一级页不再作为主视图
@@ -30,16 +31,16 @@ npm run build:cloud-catalog   # 重扫本地素材库 → cloud-catalog/ 静态�
 ## 云端素材中心（cloud tab）
 
 一级页「云端」标签是一个只读的**静态分片清单**，加载模型照搬 OmniMux 灵感社区：
-`manifest.json` + `{category}[/{sub_category}]/page-NNNN.json`，每页 24 条，前端按需拉取而不是
-一次载入整个库。
+`manifest.json` + `{category}[/{sub_category}]/page-NNNN.json`，另加一份跨分类的 `all/` 分片（一级栏
+「全部」读它），每页 24 条，前端按需拉取而不是一次载入整个库。
 
 产物目录 `cloud-catalog/`（随插件提交，`package.json` 的 `files` 已列入）：
 
 ```
 cloud-catalog/
-├── manifest.json                              # categories / sub_categories / total / pages / sourceRoot
+├── manifest.json                              # categories / totalAssets / pageSize / sourceRoot
 ├── index.json                                 # id → 行（Host 用它解析媒体与收藏到本地）
-├── knowledge/{prompt,storyboard}/page-NNNN.json
+├── all/page-NNNN.json                         # 跨分类全量：90 片，2150 条，按导航顺序拼
 ├── character/{female,male,lifestyle,business}/page-NNNN.json
 ├── scene/ambience/page-NNNN.json
 ├── prop/page-NNNN.json                        # 空分类，只发一页空 items
@@ -48,15 +49,19 @@ cloud-catalog/
 └── audio/{voiceover,sfx,bgm}/page-NNNN.json
 ```
 
-七大分类共 2449 条：知识包 200（脚本提示词 57 + 短剧拆镜 143）、角色 428（329 实景数字人 + 99 虚拟红人）、
-场景 14、道具 0（**刻意留空**：绿幕与钩子都是素材，不是实物道具）、素材 1016（绿幕 150 + 钩子 705 + 表情包 161）、
-风格 151（生图预设 122 + 视频调性 29）、声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；背景音 108）。
+六大分类共 2150 条：角色 329（Pippit 实景数字人）、场景 14、道具 0（**刻意留空**：绿幕与钩子都是素材，
+不是实物道具）、素材 1016（绿幕 150 + 钩子 705 + 表情包 161）、风格 151（生图预设 122 + 视频调性 29）、
+声音 640（配音 527 = 509 火山引擎官方音色 + 18 实录；音效 5；背景音 108）。`all/` 分片把六个分类按导航
+顺序拼成一条流，共 90 页，与各大类分片出自同一次构建。
 
 角色的二级分类是**多维**的：`sub_category` 是主架（性别），`sub_categories` 是完整归属表，所以同一位数字人
-可以同时落在「女性角色」和「职场商务」下；分片子目录与计数都按归属表算。没有性别或场景线索的行
-（例如整批无名的 AI 网红档案）只出现在「全部」，不会被猜进任何一个架子。
+可以同时落在「女性角色」和「职场商务」下；分片子目录与计数都按归属表算，这也是架子总数之和大于 329 的原因
+（女性 185 + 男性 144 + 生活居家 254 + 职场商务 43）。名字里读不出性别或场景线索的行不会被猜进任何一个
+架子，只出现在「全部」。
 
-每一级都按数据开二级栏：清单里有非空子分类就展开，首个 Tab 固定是「全部」并带该大类总数；场景与空的道具不展开。
+一级栏最左是跨六个分类的「全部」，默认选中，它自己不展开二级栏；其余大类按数据开二级栏：清单里有非空
+子分类就展开（角色 / 场景 / 素材 / 风格 / 声音），首个 Tab 固定是「全部」并带该大类总数；只有刻意留空的
+道具不展开。
 
 生成脚本 `scripts/build-cloud-assets-catalog.mjs`：
 
@@ -65,16 +70,18 @@ cloud-catalog/
 - 灵感社区是独立系统，按目录名跳过；只有表情包那一处按精确路径读它的图片画廊
 - 素材路径写 `file:<相对 assets-root 的路径>`；同时有本地副本与可公开访问的远端地址时，远端地址存进
   `meta.source_media_url`，换机器仍可播放
-- 知识包只收 `prompts/` 与短剧 skill 参考，不再扫 `知识库/`；风格只收三个策展预设文件，每条都带
+- 角色只收 `gxgen-data/character-library/pippit-local-avatars-source/` 的实景数字人；`素材库/AI 网红/` 一类的
+  零散图片不进清单，知识包（本地资产类型）也没有云端分类；风格只收三个策展预设文件，每条都带
   `meta.prompt_text`；音效只收 `素材库/音频/音效/` 下的真实转场音效
+- `all/` 分片与分类分片同一次构建产出，行按导航顺序拼接，所以「全部」的分页与各大类不会互相漂移
 
 Host 侧（`src/cloud-catalog.js` + `src/http-routes.js`）：
 
 | 路由 | 作用 |
 | --- | --- |
 | `GET /omnimux/assets/cloud/manifest` | 总控清单（本地兜底；网关可达时不走这条） |
-| `GET /omnimux/assets/cloud/{category}[/{sub}]/page-NNNN.json` | 直通磁盘的分片文件（同上） |
-| `GET /omnimux/assets/cloud/search?q=&category=&sub_category=` | 清单内检索 |
+| `GET /omnimux/assets/cloud/{category}[/{sub}]/page-NNNN.json` | 直通磁盘的分片文件（同上）；`{category}` 可取 `all` |
+| `GET /omnimux/assets/cloud/search?q=&category=&sub_category=` | 清单内检索；`category=all` 匹配全部行，不当空分类 |
 | `GET /omnimux/assets/cloud/media?id=&which=media\|cover` | 本地素材直接流式返回，远端素材 302 到 CDN |
 | `POST /omnimux/assets/cloud/save` | 「收藏到本地」：复制/下载进本地资产库 |
 

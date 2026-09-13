@@ -13,7 +13,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
 import {
+  CLOUD_ALL_CATEGORY,
   CLOUD_PAGE_SIZE,
+  allCategoryEntry,
   appendUniqueAssets,
   normalizeCloudAsset,
   pageCountOf,
@@ -114,12 +116,18 @@ export function useCloudAudition() {
  * }} options
  */
 export function useCloudAssetsFeed(options) {
-  const { t, open, defaultCategory = 'knowledge' } = options
+  const { t, open, defaultCategory = CLOUD_ALL_CATEGORY } = options
   const { manifest, loading: manifestLoading, error: manifestError, reload: reloadManifest } = useCloudManifest({ enabled: open })
 
+  // 全部 leads the nav and spans the whole catalog; it is synthesized here rather
+  // than catalogued, so the manifest keeps describing only real categories while
+  // the tab still opens on everything. Until the manifest lands there is no total
+  // to show, so the nav stays empty instead of flashing a chip with 0.
   const categories = useMemo(() => {
-    return Array.isArray(manifest?.categories) ? manifest.categories : []
-  }, [manifest])
+    if (manifest === null) return []
+    const listed = Array.isArray(manifest.categories) ? manifest.categories : []
+    return [allCategoryEntry(manifest, t), ...listed]
+  }, [manifest, t])
 
   const [category, setCategory] = useState(defaultCategory)
   const [subCategory, setSubCategory] = useState('')
@@ -147,7 +155,7 @@ export function useCloudAssetsFeed(options) {
 
   // The second level is a property of the data, not of one tab: every category
   // whose manifest entry carries populated sub-categories gets one, always led
-  // by 全部. 场景 and the deliberately empty 道具 therefore stay single-level.
+  // by 全部. 场景, the deliberately empty 道具 and 全部 itself stay single-level.
   const tabs = useMemo(() => subCategoryTabs(manifest, category), [manifest, category])
   const hasSecondLevel = tabs.hasSecondLevel
 
