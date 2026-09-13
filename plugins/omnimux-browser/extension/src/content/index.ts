@@ -123,3 +123,9 @@ void chrome.runtime.sendMessage({ type: 'DSH_CONTENT_READY' }).then((response: u
 import('./fab-companion.ts').then(({ initFabCompanion }) => {
   initFabCompanion()
 }).catch(() => {})
+
+// Mount Twitter Velocity Indicators & Snipe Action
+import('./twitter-velocity/index.ts').then(({ initTwitterVelocity }) => {
+  initTwitterVelocity()
+}).catch(() => {})
+
