@@ -25,7 +25,7 @@ export interface PresetChipItem {
   promptTemplateEn: (scene: PageSceneInfo) => string
 }
 
-const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
+export const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   'twitter:status': [
     {
       id: 'tw_high_reply',
@@ -152,6 +152,38 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
         `Generate 3 thoughtful, value-add replies to peers in the current feed that naturally foster mutual connection and discussions.`
     }
   ],
+  'tiktok:profile': [
+    {
+      id: 'tt_profile_diagnose',
+      icon: ChartIcon,
+      labelZh: '账号诊断与选题',
+      labelEn: 'Account Diagnosis',
+      promptTemplateZh: (s) =>
+        `请诊断 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 的定位与内容结构：依据主页可见的作品与简介，判断其内容支柱（教育 / 娱乐 / 激励 / 带货）是否失衡，指出 3 个增长瓶颈、最该补的选题空档，并给出可直接执行的内容调整建议。`,
+      promptTemplateEn: (s) =>
+        `Diagnose the TikTok account ${s.author ? `@${s.author}` : 'on this page'}: from the profile and videos visible here, judge whether its content pillars (educational / entertainment / inspirational / promotional) are out of balance, name 3 growth bottlenecks and the topic gaps worth filling, and give concrete, actionable adjustments.`
+    },
+    {
+      id: 'tt_profile_collab',
+      icon: TargetIcon,
+      labelZh: '合作价值与报价',
+      labelEn: 'Collab Valuation',
+      promptTemplateZh: (s) =>
+        `请评估 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 的合作价值：依据主页可见的粉丝量、互动表现与内容垂类判断其 KOL 层级（素人 / KOC / 腰部 / 头部 / 顶流），给出合理的商单报价区间及其调整因子（垂直度、独家、多平台、时效），报价必须标注口径：能参考的定价资料多为中文平台人民币口径，若没有 TikTok 直接对口的报价表，请说明折算依据并给出保守—乐观区间，不要给出单一确定数字。最后列出最适合合作的 3 类品牌与预期效果指标（每个数值标注估算口径）。`,
+      promptTemplateEn: (s) =>
+        `Assess the brand-collaboration value of the TikTok account ${s.author ? `@${s.author}` : 'on this page'}: infer its KOL tier (nano / micro / mid / macro / top) from the followers, engagement and niche visible here, propose a fair rate range with its adjustment factors (verticality, exclusivity, cross-platform, seasonality). State the basis for the numbers: where the only rate references are RMB-denominated tables for other platforms, say so, explain the conversion, and give a conservative-to-optimistic range rather than a single figure. Finish with the 3 best-fit brand categories and expected KPIs, each noting how it was estimated.`
+    },
+    {
+      id: 'tt_profile_benchmark',
+      icon: FlameIcon,
+      labelZh: '对标竞品与选题',
+      labelEn: 'Competitor Gaps',
+      promptTemplateZh: (s) =>
+        `请以 TikTok 账号 ${s.author ? `@${s.author}` : '当前账号'} 为基准做赛道对标：用搜索获取 3-5 个同垂类对标账号的公开资料（能直接读到页面内容时优先读取），对比它们在选题、形式与节奏上的差异；拿不到的播放量、完播率等后台数据如实标注为「无公开数据」，不要估成精确值。最后列出 3 个更值得抢先做的选题方向，并说明各自的爆款潜力与切入方式。`,
+      promptTemplateEn: (s) =>
+        `Benchmark the TikTok account ${s.author ? `@${s.author}` : 'on this page'} against peer accounts in its niche: first gather 3-5 comparable accounts by searching for their public profiles (read a page directly when that works), then compare their topic choice, format and pacing. Where backend metrics such as views or completion rate are not public, label them as unavailable rather than inventing precise figures. Finish with 3 topic directions worth moving on first, each with its viral potential and how to enter it.`
+    }
+  ],
   'tiktok:detail': [
     {
       id: 'tt_hook_deconstruct',
@@ -218,6 +250,20 @@ const PRESET_LIBRARY: Record<string, PresetChipItem[]> = {
   ]
 }
 
+/**
+ * The chips one page scene gets.
+ *
+ * Resolution order is scene, then the platform's home group, then the generic
+ * web presets. The fallback is a safety net, not a default: a creator profile
+ * used to land on the generic buttons because TikTok had no profile group at
+ * all, which read as "this page is about nothing in particular" on the one page
+ * where the account itself is the subject.
+ */
+export function presetChipsFor(scene: PageSceneInfo): PresetChipItem[] {
+  const key = `${scene.platform}:${scene.pageType}`
+  return PRESET_LIBRARY[key] ?? PRESET_LIBRARY[`${scene.platform}:home`] ?? PRESET_LIBRARY.generic
+}
+
 export const PresetChips = memo(function PresetChips({
   scene,
   locale = 'zh',
@@ -235,8 +281,7 @@ export const PresetChips = memo(function PresetChips({
     pageType: 'unknown'
   }
 
-  const key = `${currentScene.platform}:${currentScene.pageType}`
-  const chips = PRESET_LIBRARY[key] || PRESET_LIBRARY[`${currentScene.platform}:home`] || PRESET_LIBRARY.generic
+  const chips = presetChipsFor(currentScene)
 
   return (
     <div className="preset-chips-scroll">
