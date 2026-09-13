@@ -57,7 +57,6 @@ import { normalizeTrustedOrigin } from '../security/trusted-origins.ts'
 import type { PageSelection } from '../selection.ts'
 import {
   selectionPromptText,
-  selectionSourceLabel,
   splitSelectionMessage,
 } from './selection.ts'
 import { approvalReadyForSession, approvalSessionToFocus } from './approvals.ts'
@@ -400,13 +399,8 @@ function SelectionQuote({
   label: string
   onRemove?: () => void
 }): React.JSX.Element {
-  const source = selectionSourceLabel(selection)
   return (
     <div className="page-selection">
-      <blockquote className="page-selection-quote" title={selection.quote}>
-        {selection.quote}
-        {selection.truncated && <span className="page-selection-truncated"> {copy.app.selectionTruncated}</span>}
-      </blockquote>
       <div className="page-selection-meta">
         <span className="page-selection-chip">
           <QuoteIcon />
@@ -420,8 +414,11 @@ function SelectionQuote({
             >×</button>
           )}
         </span>
-        {source !== '' && <span className="page-selection-source" title={selection.url}>{source}</span>}
       </div>
+      <blockquote className="page-selection-quote" title={selection.quote}>
+        {selection.quote}
+        {selection.truncated && <span className="page-selection-truncated"> {copy.app.selectionTruncated}</span>}
+      </blockquote>
     </div>
   )
 }
