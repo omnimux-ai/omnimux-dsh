@@ -32,9 +32,13 @@ export const PRODUCTS_CSS = `
   align-items: center;
   color: var(--dsw-alias-label-tertiary);
 }
-/* The bar above already draws the only visible frame: every state of the inner
-   field flattens its own border/outline/shadow so no second box can appear
-   inside the rounded bar, whatever global input styling the host injects. */
+/* 复合容器内部不再叠加原生框线（防「框中框」）。
+   外层 .omnimux-products-url-import 已绘制唯一圆角边框，而 hub 的全局
+   :focus-visible { outline: … !important }（plugins/omnimux/src/client/styles.js）
+   权重 0,1,0 且带 !important，会反超无 !important 的自身 outline: none，在输入框
+   周围画出一个直角矩形。下面的状态位选择器把权重提到 0,2,0 并同用 !important，
+   因此稳定胜出、不依赖样式表顺序——:focus-visible 在点击与 Tab 聚焦下均命中。
+   聚焦可见性由外层 :focus-within 的边框高亮保留，键盘可达性不受影响。 */
 .omnimux-products-url-import-input,
 .omnimux-products-url-import-input:focus,
 .omnimux-products-url-import-input:focus-visible,
@@ -48,6 +52,7 @@ export const PRODUCTS_CSS = `
   border-color: transparent !important;
   outline: 0 !important;
   outline-style: none !important;
+  outline-offset: 0 !important;
   box-shadow: none !important;
   -webkit-box-shadow: none !important;
   -webkit-appearance: none !important;
