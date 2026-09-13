@@ -21,6 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
+import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
 import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
@@ -621,6 +622,13 @@ export function App(): React.JSX.Element {
       }).catch(() => {})
     }
   }
+
+  const [selectedWorkspace, setSelectedWorkspace] = useState<SessionWorkspaceItem | null>(() => {
+    const id = safeGetStorage('omnimux_default_workspace_id') || 'default'
+    const name = safeGetStorage('omnimux_default_workspace_name') || ''
+    const path = safeGetStorage('omnimux_default_workspace_path') || ''
+    return { id, name: name || '默认工作区', path }
+  })
 
   const handleSwitchDshInstance = (inst: { id: string; port: number; name: string }) => {
     setTargetPort(inst.port)
@@ -1465,7 +1473,13 @@ export function App(): React.JSX.Element {
   }
 
   async function createSession(transition: number): Promise<void> {
-    const created = await api.rpc<{ sessionId: string }>('session.create', {})
+    const payload: Record<string, unknown> = {}
+    if (selectedWorkspace?.path) {
+      payload.cwd = selectedWorkspace.path
+    } else if (selectedWorkspace?.id && selectedWorkspace.id !== 'default') {
+      payload.workspaceId = selectedWorkspace.id
+    }
+    const created = await api.rpc<{ sessionId: string }>('session.create', payload)
     if (sessionTransitionRef.current !== transition) return
     sessionRef.current = created.sessionId
     await api.setActiveSession(created.sessionId, true)
@@ -1753,7 +1767,13 @@ export function App(): React.JSX.Element {
     // 不渲染乐观行：live user/message 事件即时回显，避免同一消息出现两行。
     try {
       if (id === null) {
-        const created = await api.rpc<{ sessionId: string }>('session.create', {})
+        const createPayload: Record<string, unknown> = {}
+        if (selectedWorkspace?.path) {
+          createPayload.cwd = selectedWorkspace.path
+        } else if (selectedWorkspace?.id && selectedWorkspace.id !== 'default') {
+          createPayload.workspaceId = selectedWorkspace.id
+        }
+        const created = await api.rpc<{ sessionId: string }>('session.create', createPayload)
         sessionRef.current = created.sessionId
         id = created.sessionId
         await api.setActiveSession(created.sessionId, true).catch(() => {})
@@ -2147,8 +2167,8 @@ export function App(): React.JSX.Element {
         </div>
         <div className="settings-panel">
           <label>
-            <span>{locale === 'en' ? 'Default Workspace' : '默认工作区'}</span>
-            <small>{locale === 'en' ? 'Bind your chats and tasks to a local workspace.' : '会话与任务绑定的本地工作区'}</small>
+            <span>{locale === 'en' ? 'Connect Instance' : '连接实例'}</span>
+            <small>{locale === 'en' ? 'Select connected local service instance and port' : '选择连接的本地 OmniMux 或 DSH 服务实例'}</small>
             <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
               <WorkspaceSelector
                 bridgeConnected={state === 'connected'}
@@ -2158,6 +2178,22 @@ export function App(): React.JSX.Element {
                   if (ws.port) {
                     handleSwitchDshInstance({ id: ws.id, port: ws.port, name: ws.name })
                   }
+                }}
+              />
+            </div>
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Default Workspace' : '默认工作区'}</span>
+            <small>{locale === 'en' ? 'Workspace for new sessions and tasks' : '选择会话工作区，新会话默认在此工作区创建'}</small>
+            <div style={{ gridColumn: '1 / -1', width: '100%', marginTop: '7px' }}>
+              <SessionWorkspaceSelector
+                locale={locale}
+                api={api}
+                activePort={targetPort}
+                bridgeConnected={state === 'connected'}
+                selectedWorkspaceId={selectedWorkspace?.id}
+                onSelectWorkspace={(ws) => {
+                  setSelectedWorkspace(ws)
                 }}
               />
             </div>

@@ -226,13 +226,13 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
         className="workspace-selector-trigger"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        title={isEn ? 'Switch instance and default workspace' : '选择连接的实例与默认工作区'}
+        title={isEn ? 'Switch connected service instance' : '选择连接的本地服务实例与端口'}
       >
         <div className="ws-trigger-left">
           <span className={`engine-dot ${isOnline ? 'online' : probing ? 'connecting' : 'offline'}`} />
           <span className="ws-icon"><FolderIcon size={14} /></span>
           <span className="ws-name">
-            {activeWorkspace?.instanceNameZh || activeWorkspace?.name || (isEn ? 'Select Workspace' : '选择工作区')}
+            {activeWorkspace?.instanceNameZh || activeWorkspace?.name || (isEn ? 'Select Instance' : '选择实例')}
           </span>
           <span className="ws-port-tag">:{selectedPort}</span>
         </div>
@@ -244,7 +244,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
       {isOpen && (
         <div className="workspace-dropdown-menu">
           <div className="dropdown-header">
-            <span>{isEn ? 'Available Instances & Workspaces' : '可用实例与工作区'}</span>
+            <span>{isEn ? 'Available Service Instances' : '可用服务实例'}</span>
             <button
               type="button"
               className="probe-refresh-icon-btn"

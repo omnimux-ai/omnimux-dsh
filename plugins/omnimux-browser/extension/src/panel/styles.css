@@ -3269,6 +3269,49 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 
+.session-ws-path {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(10.5px * var(--ui-scale));
+  opacity: 0.8;
+}
+
+.custom-ws-input-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--canvas-deep);
+  border-bottom: 1px solid var(--line);
+}
+
+.custom-ws-input {
+  flex: 1;
+  min-width: 0;
+  height: calc(26px * var(--ui-scale));
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: calc(11px * var(--ui-scale));
+  outline: none;
+}
+
+.custom-ws-add-btn {
+  height: calc(26px * var(--ui-scale));
+  padding: 0 10px;
+  border-radius: 6px;
+  border: none;
+  background: var(--ink-strong);
+  color: var(--canvas);
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .ws-chevron-arrow {
   display: flex;
   align-items: center;
