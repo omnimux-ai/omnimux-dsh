@@ -152,6 +152,20 @@ body[data-ds-dark-theme] {
   outline-offset: 1px;
 }
 
+/* ── 复合输入控件内部不叠加原生 outline（防「双重边框」） ──
+   dsh-ui-kit 的 InputField / SearchField 由外层容器绘制圆角边框与 :focus-within
+   聚焦环，内部原生 input 若再吃到上面的 :focus-visible（带 !important，权重高于
+   Kit 自身的 .input{outline:none}），就会在圆角框里多出一个直角框。
+   聚焦可见性由外层容器保留（边框高亮 + box-shadow），键盘可达性不受影响。
+   选择器权重 0,2,1 > 0,1,0 且同为 !important，故可稳定胜出。 */
+[class*="InputField-control"] input:focus,
+[class*="InputField-control"] input:focus-visible,
+[class*="SearchField-root"] input:focus,
+[class*="SearchField-root"] input:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
 /* ── 发送/停止按钮 黑白主题高对比反色重构（根除官方写死白字导致的白底白字失真） ── */
 /* 浅色模式 */
 [class*="InputBar"] [class*="trailing"] button[class*="primary"],

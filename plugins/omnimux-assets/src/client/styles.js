@@ -496,6 +496,30 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-type-sep { color: var(--dsw-alias-border-l2); }
 .omnimux-assets-desc-field { flex: 1; min-width: 0; }
+/* ── 表单输入「双重边框」防御 ──
+   dsh-ui-kit 的 InputField 由外层 .dshUk-InputField-control 绘制圆角边框，并用
+   :focus-within 绘制聚焦环；内部原生 <input> 自身不应再出现任何边框或轮廓。
+   AddAssetDialog 打开时用 useEffect 立即 focus 名称输入框，命中全局
+   :focus-visible（带 !important），其权重高于 Kit 的 .input{outline:none}，
+   于是外层圆角框内又多出一个直角 outline，形成「两个框」。
+   此处用同等 !important + 更高选择器权重（.omnimux-assets-form input:focus-visible
+   = 0,2,1 > :focus-visible = 0,1,0）做防御性重置，确保全局样式与浏览器默认样式都无法再叠加。 */
+.omnimux-assets-form input:focus,
+.omnimux-assets-form input:focus-visible,
+.omnimux-assets-form textarea:focus,
+.omnimux-assets-form textarea:focus-visible,
+.omnimux-assets-form select:focus,
+.omnimux-assets-form select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+.omnimux-assets-form [class*="InputField-control"] input,
+.omnimux-assets-form [class*="SearchField-root"] input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
 .omnimux-assets-icon {
   flex: none;
   display: inline-block;
