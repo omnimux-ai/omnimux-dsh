@@ -18,27 +18,23 @@ export const CHAT_TOGGLE_ATTR = 'data-omnimux-chat-toggle'
 export const CHAT_TOGGLE_SELECTOR = `[${CHAT_TOGGLE_ATTR}="1"]`
 
 /**
- * Lucide maximize-2 style icon: two outward diagonal arrows. Shown while the
- * middle conversation column is visible — clicking expands (maximizes) the
- * right workbench panel to full width.
+ * Lucide/custom fullscreen icon: four outer corner marks (the viewfinder style in image 2).
+ * Shown while conversation column is visible (split mode) — clicking expands right workbench panel.
  */
-export const MAXIMIZE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" role="presentation" aria-hidden="true" preserveAspectRatio="xMidYMid meet" data-omnimux-icon="maximize">
-  <path d="M10 2h4v4"/>
-  <path d="M14 2L9 7"/>
-  <path d="M6 14H2v-4"/>
-  <path d="M2 14l5-5"/>
+export const MAXIMIZE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="presentation" aria-hidden="true" preserveAspectRatio="xMidYMid meet" data-omnimux-icon="maximize">
+  <path d="M2.5 5.5V3.5a1 1 0 0 1 1-1h2"/>
+  <path d="M10.5 2.5h2a1 1 0 0 1 1 1v2"/>
+  <path d="M13.5 10.5v2a1 1 0 0 1-1 1h-2"/>
+  <path d="M5.5 13.5h-2a1 1 0 0 1-1-1v-2"/>
 </svg>`
 
 /**
- * Lucide minimize-2 style icon: two inward diagonal arrows. Shown while the
- * middle conversation column is collapsed (right panel is full width) —
- * clicking restores (minimizes) the panel and brings the conversation back.
+ * Split columns icon: rounded frame with vertical divider (the split column style in image 2).
+ * Shown while right panel is maximized (full-width workbench) — clicking restores split conversation.
  */
-export const RESTORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" role="presentation" aria-hidden="true" preserveAspectRatio="xMidYMid meet" data-omnimux-icon="restore">
-  <path d="M13 6.5H9.5V3"/>
-  <path d="M14 2L9.5 6.5"/>
-  <path d="M3 9.5h3.5V13"/>
-  <path d="M2 14l4.5-4.5"/>
+export const RESTORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" role="presentation" aria-hidden="true" preserveAspectRatio="xMidYMid meet" data-omnimux-icon="restore">
+  <rect x="2" y="2.5" width="12" height="11" rx="2"/>
+  <line x1="8" y1="2.5" x2="8" y2="13.5"/>
 </svg>`
 
 function hostWindow() {

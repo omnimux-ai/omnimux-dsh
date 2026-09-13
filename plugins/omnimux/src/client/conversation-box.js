@@ -77,6 +77,8 @@ html:not([data-dsh-product-stage]) [data-slot="shell.overlay"] > [class$="-stage
 ${STAGE_MUTUAL_EXCLUSION_RULES}
 html:not([data-dsh-product-stage]) [class*="toggleCluster"],
 html:not([data-dsh-product-stage]) [class*="toggleCluster"] *{pointer-events:auto!important;z-index:300!important;}
+/* Hide bottom-dock toggles completely so only the right sidebar toggle is shown */
+[data-dsh-bottom-toggle], [class*="bottomDockToggle"], [class*="BottomDockToggle"] { display:none!important; pointer-events:none!important; }
 /* Desktop compatibility/extended used to mark better-sidebar tabBar as drag; that
    strip sits under toggleCluster and Electron app-region swallows the clicks. */
 body[data-dsh-desktop-mode] [class*="tabBar"],
@@ -233,6 +235,15 @@ html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [data-slot
   padding-left:var(--omnimux-topbar-toggle-end)!important;
   padding-top:var(--omnimux-topbar-toggle-top,4px)!important;
   box-sizing:border-box;
+}
+/* macOS desktop traffic lights safe inset for full-width stage/workbench page headers */
+body[data-dsh-desktop-platform="darwin"] .omnimux-workflow-library-page .dshUk-PageHeader-pageHeader,
+body[data-dsh-desktop-platform="darwin"] .omnimux-workflow-library-page .dshUk-PageHeader-heading,
+body[data-dsh-desktop-platform="darwin"] .omnimux-workflow-library-page [class*="PageHeader"],
+body[data-dsh-desktop-platform="darwin"] html[data-omnimux-left-collapsed] .dshUk-PageHeader-pageHeader,
+body[data-dsh-desktop-platform="darwin"] html[data-omnimux-conversation-collapsed] .dshUk-PageHeader-pageHeader {
+  padding-left: 84px !important;
+  box-sizing: border-box !important;
 }
 /* Blue dot on the injected toggle while left rail is collapsed. */
 html[data-omnimux-sidebar-toggle-topbar][data-omnimux-left-collapsed] [data-omnimux-sidebar-toggle-topbar="1"]::after{

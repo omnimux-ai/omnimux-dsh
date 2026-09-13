@@ -15,7 +15,8 @@ export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collap
 
 export const CONVERSATION_COLLAPSE_CSS = `
 /* Middle conversation column — keep mounted, force visual closed (#372) */
-html[${CONVERSATION_COLLAPSED_ATTR}] [class*="centerCol"]{
+html[${CONVERSATION_COLLAPSED_ATTR}] [class*="centerCol"],
+html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface{
   flex:0 0 0!important;
   width:0!important;
   min-width:0!important;
