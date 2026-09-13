@@ -163,9 +163,9 @@ export function safeTrySkillInSession(item) {
 }
 
 export const EXPERT_STATUS_CONFIG = {
-  enabled: { statusKey: 'expertMarket.enabled', defaultZh: '已入职', defaultEn: 'Employed', btnKey: 'expertMarket.disable', defaultBtn: '禁用', defaultBtnEn: 'Disable' },
-  available: { statusKey: 'expertMarket.available', defaultZh: '可聘用', defaultEn: 'Hireable', btnKey: 'expertMarket.install', defaultBtn: '安装', defaultBtnEn: 'Install' },
-  disabled: { statusKey: 'expertMarket.disabled', defaultZh: '已离职', defaultEn: 'Resigned', btnKey: 'expertMarket.install', defaultBtn: '安装', defaultBtnEn: 'Install' },
+  enabled: { statusKey: 'expertMarket.enabled', defaultZh: '已入职', defaultEn: 'Employed', btnKey: 'expertMarket.disable', defaultBtn: '解聘', defaultBtnEn: 'Dismiss' },
+  available: { statusKey: 'expertMarket.available', defaultZh: '可聘用', defaultEn: 'Hireable', btnKey: 'expertMarket.install', defaultBtn: '招聘', defaultBtnEn: 'Hire' },
+  disabled: { statusKey: 'expertMarket.disabled', defaultZh: '已离职', defaultEn: 'Resigned', btnKey: 'expertMarket.install', defaultBtn: '招聘', defaultBtnEn: 'Hire' },
   coming_soon: { statusKey: 'expertMarket.comingSoon', defaultZh: '即将推出', defaultEn: 'Coming soon', btnKey: '', defaultBtn: '', defaultBtnEn: '' },
 };
 
