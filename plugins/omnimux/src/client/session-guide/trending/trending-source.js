@@ -120,6 +120,63 @@ function readFiniteNumber(value) {
 }
 
 /**
+ * 提取灵感对标视频的内容指纹，用于识别并剔除同一视频的换皮镜像或多版本重复数据。
+ *
+ * 识别维度：
+ * 1. 真实 TikTok 数字视频 ID（从 source_url 或 analysis.tiktok_video_id 提取）；
+ * 2. 规范化封面路径；
+ * 3. 规范化博主 Handle（清洗 base64 临时后缀）+ 精确播放量（>10k）；
+ * 4. 标题文本（长度>4字）+ 精确播放量。
+ *
+ * @param {object | null | undefined} row
+ * @returns {string[]}
+ */
+export function getInspirationFingerprints(row) {
+  if (!row || typeof row !== 'object') return []
+  const fingerprints = []
+
+  // 1. 真实数字 TikTok ID
+  const sourceUrl = typeof row.source_url === 'string' ? row.source_url.trim() : ''
+  const urlMatch = sourceUrl.match(/\/video\/(\d{15,22})/)
+  if (urlMatch) {
+    fingerprints.push(`tt:${urlMatch[1]}`)
+  }
+  const analysisTiktokId = String(row.analysis?.tiktok_video_id || '').trim()
+  if (/^\d{15,22}$/.test(analysisTiktokId)) {
+    fingerprints.push(`tt:${analysisTiktokId}`)
+  }
+
+  // 2. 封面归一化路径指纹
+  const cover = typeof row.cover_url === 'string'
+    ? row.cover_url
+    : (typeof row.cover_key === 'string' ? row.cover_key : '')
+  if (cover && !cover.includes('placeholder') && !cover.includes('default')) {
+    const cleanCover = cover.replace(/^https?:\/\/[^/]+/, '').replace(/^\/+/, '')
+    if (cleanCover) fingerprints.push(`cov:${cleanCover}`)
+  }
+
+  // 3. 归一化作者 + 播放量（同一博主同播放量即视为同一视频的镜像条目）
+  let author = String(row.author?.handle || row.author?.name || '').trim().toLowerCase()
+  if (!author && sourceUrl) {
+    const authorMatch = sourceUrl.match(/@([^/]+)/)
+    if (authorMatch) author = authorMatch[1].toLowerCase()
+  }
+  author = author.replace(/-ahr0.*$/i, '').replace(/[^a-z0-9]/g, '')
+  const views = Number(row.views || row.stats?.views)
+  if (author && author !== 'creator' && Number.isFinite(views) && views > 10000) {
+    fingerprints.push(`av:${author}:${views}`)
+  }
+
+  // 4. 相同标题 + 播放量
+  const title = String(row.title || '').trim().toLowerCase()
+  if (title && title.length > 4 && Number.isFinite(views) && views > 10000) {
+    fingerprints.push(`tv:${title}:${views}`)
+  }
+
+  return fingerprints
+}
+
+/**
  * 播放量：灵感库把计数放在 `stats`，也有历史行放在顶层。
  *
  * 读不到**返回 null，不返回 0**——「不知道播放量」与「播放量是 0」是两件事：
@@ -447,6 +504,7 @@ export async function loadTrendingItems(opts = {}) {
       const combinedRows = []
       const seenIds = new Set()
       const seenUrls = new Set()
+      const seenFingerprints = new Set()
 
       for (const outcome of okOutcomes) {
         for (const row of outcome.rows) {
@@ -455,8 +513,16 @@ export async function loadTrendingItems(opts = {}) {
           const url = typeof row.source_url === 'string' ? row.source_url.trim() : ''
           if (id && seenIds.has(id)) continue
           if (url && seenUrls.has(url)) continue
+
+          const fps = getInspirationFingerprints(row)
+          const isDuplicate = fps.some((fp) => seenFingerprints.has(fp))
+          if (isDuplicate) continue
+
           if (id) seenIds.add(id)
           if (url) seenUrls.add(url)
+          for (const fp of fps) {
+            seenFingerprints.add(fp)
+          }
           combinedRows.push(row)
         }
       }
