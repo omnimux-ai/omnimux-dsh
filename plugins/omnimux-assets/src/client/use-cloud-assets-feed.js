@@ -173,7 +173,8 @@ export function useCloudAssetsFeed(options) {
 
   // The second level is a property of the data, not of one tab: every category
   // whose manifest entry carries populated sub-categories gets one, always led
-  // by 全部. 场景, the deliberately empty 道具 and 全部 itself stay single-level.
+  // by 全部. 全部 itself, which spans every category and owns no shelf, stays
+  // single-level.
   const tabs = useMemo(() => subCategoryTabs(manifest, category), [manifest, category])
   const hasSecondLevel = tabs.hasSecondLevel
 

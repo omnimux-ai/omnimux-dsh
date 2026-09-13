@@ -32,7 +32,7 @@ function ruleBody(css, selector) {
  *
  * 旧版把二级栏钉死在声音上，其余大类的 sub_categories 只当计数桶用，于是选中别的
  * 大类时那一行写着「全部声音」。现在凡是清单里带非空子分类的大类都展开二级栏，首个
- * Tab 统一是「全部」并带该大类总数；只有刻意留空的道具和最左侧的「全部」不展开。
+ * Tab 统一是「全部」并带该大类总数；只有最左侧的「全部」不展开。
  */
 describe('Cloud second level follows the catalog data', () => {
   it('reads hasSecondLevel from the tabs instead of naming one category', () => {
@@ -98,6 +98,19 @@ describe('Cloud second level follows the catalog data', () => {
     assert.equal(zh['cloud.subcategory.male'], '男性角色')
     assert.equal(zh['cloud.subcategory.lifestyle'], '生活居家')
     assert.equal(zh['cloud.subcategory.business'], '职场商务')
+  })
+
+  it('names the Loomi shelves in both dictionaries', () => {
+    assert.equal(zh['cloud.subcategory.object'], '实物道具')
+    assert.equal(en['cloud.subcategory.object'], 'Props & Objects')
+    assert.equal(zh['cloud.subcategory.environment'], '实景环境')
+    assert.equal(en['cloud.subcategory.environment'], 'Environments')
+    assert.equal(zh['cloud.subcategory.pet'], '萌宠动物')
+    assert.equal(en['cloud.subcategory.pet'], 'Pets & Animals')
+    assert.equal(zh['cloud.subcategory.clothing'], '服饰穿搭')
+    assert.equal(en['cloud.subcategory.clothing'], 'Fashion & Outfits')
+    assert.equal(zh['cloud.subcategory.portrait'], '人像写真')
+    assert.equal(en['cloud.subcategory.portrait'], 'Portraits')
   })
 
   it('drops the shelves the catalog no longer has', () => {
