@@ -1,4 +1,9 @@
 # 一次安装同时挂载 Host 定时引擎并发布 Web 客户端。
+- id: connection
+  name: '@deepseek-ai/dsh-client-connection'
+  inject:
+    - webServer
+    - webRuntime
 - insert:
     - id: omnimux-automation
       name: omnimux-automation
