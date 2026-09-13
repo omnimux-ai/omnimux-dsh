@@ -302,6 +302,45 @@ export function findVisibleWorkbenchPanel(doc) {
   return null
 }
 
+/** Rail narrower than this while expanded is a poisoned reading, never a layout. */
+export const LEFT_RAIL_MIN_PX = 64
+
+/**
+ * `<html>` marker owned by `conversation-collapse.js` (the middle-pane collapse).
+ * Read-only here: this file must not import that module, which owns the state —
+ * the coupling the module's hard-constraint test forbids.
+ */
+const CONVERSATION_COLLAPSED_MARKER = 'data-omnimux-conversation-collapsed'
+
+/** Last plausible expanded rail width; repairs a poisoned reading (see below). */
+let lastGoodLeftRailW = 0
+
+/**
+ * The rail width the shell itself asked for, read from a source our own
+ * stylesheet cannot rewrite.
+ *
+ * `conversation-box.js` pins the frame's first grid track to
+ * `var(--omnimux-sidebar-width)` while the middle column is collapsed, so the
+ * sidebar column's measured width is a function of the value we are about to
+ * write — a poisoned reading would confirm itself every frame. The frame's
+ * inline `grid-template-columns` is authored by the desktop shell and survives
+ * our `!important` override (inline style is the declaration, not the computed
+ * value), which makes it the authoritative rail width.
+ * @param {Document | null | undefined} doc
+ * @returns {number | null} rounded px, or null when the shell exposes none.
+ */
+export function readShellRailWidthPx(doc) {
+  const frame = doc?.querySelector?.('.dshDesktopFrame') || doc?.querySelector?.('[class*="frame"]')
+  if (!frame) return null
+  const inlineFirst = String(frame.style?.gridTemplateColumns || '').trim().split(/\s+/)[0] || ''
+  const fromInline = /^(\d+(?:\.\d+)?)px$/.exec(inlineFirst)
+  if (fromInline) {
+    const px = Math.round(Number(fromInline[1]))
+    return Number.isFinite(px) ? px : null
+  }
+  return null
+}
+
 /**
  * Single chrome layout snapshot. Tab padding is the horizontal overlap
  * between the fixed toggle and the visible workbench panel — NOT a function
@@ -331,13 +370,27 @@ export function computeChromeLayout(doc) {
   let leftRailW = 0
   if (!collapsed) {
     const col = findSidebarColumn(doc)
+    let measured = 0
     if (col) {
       try {
-        leftRailW = col.offsetWidth || Math.round(col.getBoundingClientRect().width) || 0
+        measured = col.offsetWidth || Math.round(col.getBoundingClientRect().width) || 0
       } catch {
-        leftRailW = 0
+        measured = 0
       }
     }
+    // While the middle column is collapsed, `conversation-box.js` pins the
+    // frame's first grid track to `var(--omnimux-sidebar-width)` — the value
+    // written here. Measuring that element then reads back our own write, so a
+    // single transient reading shrinks the rail every frame until the workbench
+    // covers it (measured live: 156→115px, then 1px, ~7px/s). In that state the
+    // shell's own inline track is the only trustworthy source; the live
+    // measurement is used whenever the override is inactive, so a dragged rail
+    // still tracks. `LEFT_RAIL_MIN_PX` keeps the same guard as a backstop.
+    const railWidthForced = doc?.documentElement?.hasAttribute?.(CONVERSATION_COLLAPSED_MARKER) === true
+    leftRailW = !railWidthForced && measured >= LEFT_RAIL_MIN_PX
+      ? measured
+      : (readShellRailWidthPx(doc) ?? (lastGoodLeftRailW || 0))
+    if (leftRailW >= LEFT_RAIL_MIN_PX) lastGoodLeftRailW = leftRailW
   }
   const leftInset = doc?.body?.matches?.('[data-dsh-desktop-mode][data-dsh-desktop-platform="darwin"]')
     ? TOPBAR_MACOS_INSET_PX
@@ -881,7 +934,12 @@ export function installSidebarToggleTopbar(doc = typeof document !== 'undefined'
     const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
     const ResizeObserverClass = win?.ResizeObserver || (typeof ResizeObserver !== 'undefined' ? ResizeObserver : undefined)
     if (!ResizeObserverClass) return
-    if (!widthObserver) widthObserver = new ResizeObserverClass(syncGeometry)
+    // Writes must not happen inside the ResizeObserver delivery cycle: mutating
+    // layout there re-arms the observer and yields the browser's
+    // `ResizeObserver loop completed with undelivered notifications.` warning
+    // (same rule split-compact-layout.js documents). `scheduleSync` coalesces
+    // into one rAF pass.
+    if (!widthObserver) widthObserver = new ResizeObserverClass(scheduleSync)
     const panel = findVisibleWorkbenchPanel(doc)
     const bars = panel?.querySelectorAll('[class*="tabBar"]:not([class*="Plus"])') || []
     /** @type {(Element | null)[]} */
