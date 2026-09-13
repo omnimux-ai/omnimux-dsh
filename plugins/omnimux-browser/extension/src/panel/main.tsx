@@ -19,13 +19,13 @@ function reportErrorToHost(error: unknown) {
   } catch {}
 }
 
-window.addEventListener('error', (e) => {
-  reportErrorToHost(e.error || e.message)
-})
+window.onerror = (_msg, _url, _line, _col, error) => {
+  reportErrorToHost(error || _msg)
+}
 
-window.addEventListener('unhandledrejection', (e) => {
+window.onunhandledrejection = (e) => {
   reportErrorToHost(e.reason)
-})
+}
 
 class WorkstationErrorBoundary extends Component<
   { children: ReactNode },
