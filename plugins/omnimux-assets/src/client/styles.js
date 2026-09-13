@@ -36,8 +36,20 @@ export const ASSETS_CSS = `
 .omnimux-assets-search-wrap {
   width: 220px;
 }
-.omnimux-assets-sort-wrap {
-  width: 120px;
+/* ---- local category nav --------------------------------------------------
+   The local tab's filter row, sitting under the toolbar. Layout only: the pill
+   shape, the pressed ink and the count all come from the shared chip blocks in
+   the cloud section below, which list this nav's selectors next to the cloud
+   one's so the two rows cannot drift apart. */
+.omnimux-assets-local-nav {
+  flex: none;
+  padding: 0 24px 10px;
+}
+.omnimux-assets-local-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .omnimux-assets-view-toggle {
   display: inline-flex;
@@ -813,11 +825,14 @@ export const ASSETS_CSS = `
   padding-inline-start: 10px;
   border-left: 2px solid var(--dsw-alias-border-l2);
 }
-/* Category chips, both levels. The nav wrappers are part of the selectors
-   because the kit's own rules for this control reach (0,2,0) unselected and
-   (0,4,0) on hover, so a bare class would lose to them. */
+/* Category chips, both levels, in both navs. The nav wrappers are part of the
+   selectors because the kit's own rules for this control reach (0,2,0)
+   unselected and (0,4,0) on hover, so a bare class would lose to them. The
+   local library's row lists its selectors here too: it is the same chip, and
+   one shared block is what keeps the two rows from drifting apart. */
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip,
-.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip {
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip,
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip {
   border-radius: 999px;
   padding: 0 12px;
 }
@@ -825,10 +840,13 @@ export const ASSETS_CSS = `
    of it. No accent hue is involved, in either theme. */
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"],
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"],
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"],
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
 .omnimux-assets-cloud-nav .omnimux-assets-cloud-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
-.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
+.omnimux-assets-cloud-nav .omnimux-assets-cloud-subnav .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]),
+.omnimux-assets-local-nav .omnimux-assets-local-nav-row .omnimux-assets-cloud-chip[aria-pressed="true"]:active:not(:disabled):not([aria-disabled="true"]) {
   background: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-label-primary);
   box-shadow: none;
