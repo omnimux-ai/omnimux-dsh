@@ -1864,25 +1864,6 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{copy.settings.bridgeAddress}</span>
-            <small>{copy.settings.bridgeHelp}</small>
-            <input
-              value={settings?.bridgeUrl ?? ''}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, bridgeUrl: e.target.value })}
-              placeholder={copy.settings.bridgePlaceholder}
-            />
-          </label>
-          <label>
-            <span>Token</span>
-            <small>{copy.settings.tokenHelp}</small>
-            <input
-              type="password"
-              value={settings?.token ?? ''}
-              onChange={(e) => setSettings((prev) => prev === null ? prev : { ...prev, token: e.target.value })}
-              placeholder={copy.settings.tokenPlaceholder}
-            />
-          </label>
-          <label>
             <span>{copy.settings.pageSharing}</span>
             <small>{copy.settings.pageSharingHelp}</small>
             <select
