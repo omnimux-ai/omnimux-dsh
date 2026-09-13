@@ -1,0 +1,137 @@
+%% 推特推文爆速检测与智能截流系统 — 完整调用时序
+%% 规格：plugins/omnimux-intercept/docs/system_design.md（§4.1 的展开版）
+%% 覆盖：初始化 → 冷却闸 → 采集（含源不可用分支）→ 计算 → 排序 → 文案生成（三级降级）→ 双视图呈现 → 落盘 → 退出码
+sequenceDiagram
+    autonumber
+    actor U as 用户 / Agent 调度
+    participant CLI as src/cli.js
+    participant CFG as src/config.js
+    participant P as src/pipeline.js
+    participant GS as src/guard.js + src/run-store.js
+    participant F as collect/timeline-fetcher.js
+    participant O as collect/opencli-source.js
+    participant X as opencli twitter timeline（子进程）
+    participant A as src/core/algorithm.js（纯函数）
+    participant C as src/comment/comment-service.js
+    participant PB as src/comment/prompt-builder.js
+    participant T as src/comment/prompt-templates.js
+    participant M as 模型通道（宿主 / HTTP / 离线模板）
+    participant R1 as src/present/table-renderer.js
+    participant R2 as src/present/genui-dashboard.js
+    participant R3 as src/present/report-writer.js
+    participant FS as $DSH_HOME/omnimux-intercept/
+
+    Note over U,CFG: 阶段 1 · 启动与参数解析
+    U->>CLI: intercept scan --limit 20 --rank-by exposure --min-tier surging
+    CLI->>CFG: resolveConfig(argv)
+    CFG->>CFG: 夹取 limit→[1,200] · 校验 rankBy / minTier 枚举
+    alt 参数非法
+        CFG-->>CLI: InterceptError(ARG_INVALID, hint)
+        CLI-->>U: 打印“参数 --limit 必须是 1..200 的整数” + 退出码 2
+    else 参数合法
+        CFG-->>CLI: ResolvedConfig + RunOptions
+    end
+    CLI->>CLI: 装配依赖 { fetchTimeline, complete, writeFile }
+    CLI->>P: runOnce(options, deps)
+
+    Note over P,GS: 阶段 2 · 冷却闸（唯一的时间与状态入口）
+    P->>GS: loadState()
+    GS->>FS: 读 state.json（不存在则返回初始态）
+    GS-->>P: PersistedState
+    P->>GS: checkCooldown(state, nowMs, config)
+    alt 冷却中且未加 --force
+        GS-->>P: { allowed:false, reason:'cooldown-active', waitMs }
+        P-->>CLI: InterceptError(COOLDOWN_ACTIVE)
+        CLI-->>U: “距上次运行 87 秒，冷却 90 秒；加 --force 强制” + 退出码 4
+    else 允许运行
+        GS-->>P: { allowed:true }
+    end
+
+    Note over P,X: 阶段 3 · 数据采集（源契约 = 数组 JSON）
+    P->>F: fetchTimeline({ limit:20, type:'for-you' })
+    F->>O: fetchTimelineFromOpencli(options, { run })
+    O->>X: run(['twitter','timeline','-f','json','--limit','20'], { timeoutMs:30000 })
+    alt 子进程非 0 退出 / 桥接失败（实测 attach failed: chrome-extension://）
+        X-->>O: { code:1, stderr:'attach failed …' }
+        O->>O: 映射为 SOURCE_UNAVAILABLE + 可执行 hint
+        O-->>F: throw InterceptError
+        F-->>P: 透传（绝不返回空数组）
+        P-->>CLI: 诊断行（stderr）+ 退出码 3
+    else stdout 非 JSON 或无数组
+        X-->>O: { code:0, stdout:'<非 JSON>' }
+        O-->>F: throw InterceptError(SOURCE_BAD_PAYLOAD)
+        F-->>P: 透传
+        P-->>CLI: 退出码 3
+    else 正常
+        X-->>O: { code:0, stdout:'[ …20 条… ]' }
+        O->>O: JSON.parse + 数组形状校验
+        O-->>F: raw[]
+        F->>F: normalizeRecords(raw, nowMs, 'opencli')
+        F->>F: parseMetric('1.2k'/'12.7万') · 解析 created_at · 标记 anomalies
+        F->>F: >limit 则截断 + warnings
+        F-->>P: TweetRecord[] + warnings
+        P->>P: 重试包装 withRetry(attempts:3, base:1000) — 仅 retryable 错误
+    end
+
+    Note over P,A: 阶段 4 · 计算与排序（纯函数，零 I/O，零 Date.now）
+    P->>A: scoreTweets(records, nowMs)
+    loop 每条推文
+        A->>A: R = clamp((nowMs-createdAtMs)/3.6e6, 1/60, 48)
+        A->>A: j = views / R
+        A->>A: tier = classifyTier(j)  // >8000 爆款 / 1000..8000 飙升 / <1000 正常
+        A->>A: exposure = max(20, round(j·衰减·时效·竞争·0.04))
+    end
+    A-->>P: ScoredTweet[]
+    P->>A: rankTweets(rows, 'exposure')  // 主键 + id 升序兜底，可复现
+    P->>P: 过滤 tier ≥ minTier → 待截流清单
+    alt 清单为空
+        P-->>CLI: “本轮无待截流目标”（与抓取失败严格区分）+ 退出码 0
+    end
+
+    Note over P,M: 阶段 5 · 高赞文案生成（三级降级阶梯）
+    P->>C: generateComments(requests, { complete, template })
+    C->>T: loadPromptTemplate('reply-high')
+    alt presets 提示词文件可读
+        T-->>C: PromptTemplate（SoPilot ai-tweet-reply-high）
+    else 读不到
+        T->>T: 使用内置精简模板 + warnings += TEMPLATE_FALLBACK
+        T-->>C: PromptTemplate（fallback）
+    end
+    loop 每条待截流推文
+        C->>PB: buildCommentPrompt(req, template)
+        PB-->>C: { system, prompt }（纯函数，含 R / j / 分级 / 预估曝光 / 互动量）
+        C->>M: complete({ system, prompt, maxTokens })
+        alt 第一通道：宿主 omnimux_text_complete
+            M-->>C: 文案文本（usedChannel = 'host'）
+        else 第二通道：HTTP /v1/chat/completions
+            M-->>C: 文案文本（usedChannel = 'http'）
+        else 第三通道：离线模板
+            M-->>C: 结构化草稿骨架（usedChannel = 'template'）
+        end
+        C->>C: 后置校验（空 / 超 220 字 / 含联系方式 → 判不合格则降级模板）
+    end
+    C-->>P: CommentDraft[]（usedChannel 标注真实通道 + warnings）
+
+    Note over P,R3: 阶段 6 · 双视图呈现与落盘
+    P->>R1: renderTable(rows, { maxRows, color:true })
+    R1-->>P: 终端富表格（CJK 等宽 · degraded 行带 ! 警示列）
+    P->>R2: buildDashboard(rows, drafts, meta)
+    R2-->>P: GenUI spec（根节点 ≤8 · stat + table + callout · 白名单组件）
+    alt --format genui
+        P-->>CLI: GenuiSpec（stdout JSON，供 Agent / 宿主渲染）
+    else 默认
+        P-->>CLI: 终端表格文本
+    end
+    alt 非 --dry-run
+        P->>R3: writeReport(payload, { writeFile })
+        R3->>FS: 写 report-<runId>.md
+        R3->>FS: 追加 runs.jsonl（含 warnings / usedChannel / anomalies）
+        R3-->>P: { markdownPath, jsonlPath }
+        P->>GS: saveState({ lastRunAtMs, draftedTweetIds, lastDigest })
+        GS->>FS: 写 state.json
+        P->>FS: 写 logs/run-<runId>.jsonl（JSON Lines，脱敏）
+    else --dry-run
+        P->>P: 跳过落盘与状态写入
+    end
+    P-->>CLI: RunPayload
+    CLI-->>U: 战报 + 退出码 0
