@@ -21,7 +21,7 @@ import { PresetChips } from './components/PresetChips.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
-import { SunIcon, MoonIcon, CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
@@ -619,12 +619,28 @@ const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy:
 })
 
 export function App(): React.JSX.Element {
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+  const [themeSetting, setThemeSetting] = useState<'auto' | 'light' | 'dark'>(() => {
     const saved = safeGetStorage('omnimux_theme_mode')
-    if (saved === 'dark' || saved === 'light') return saved
+    if (saved === 'dark' || saved === 'light' || saved === 'auto') return saved
+    return 'auto'
+  })
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
     return 'light'
   })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? 'dark' : 'light')
+    }
+    media.addEventListener?.('change', handler)
+    return () => media.removeEventListener?.('change', handler)
+  }, [])
+
+  const effectiveTheme = themeSetting === 'auto' ? systemTheme : themeSetting
+
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
@@ -647,7 +663,6 @@ export function App(): React.JSX.Element {
   const [uiScale, setUiScale] = useState(DEFAULT_UI_SCALE)
   const uiScaleRef = useRef(DEFAULT_UI_SCALE)
   const uiScaleChosenRef = useRef(false)
-  const [showTextSize, setShowTextSize] = useState(false)
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequest[]>([])
   const [tabAffinity, setTabAffinity] = useState<TabAffinityState | null>(null)
   const [trustedOriginInput, setTrustedOriginInput] = useState('')
@@ -740,17 +755,9 @@ export function App(): React.JSX.Element {
     }
   }, [isFloatMode])
 
-  useEffect(() => {
-    try {
-      document.documentElement.setAttribute('data-theme', themeMode)
-      document.documentElement.style.colorScheme = themeMode
-    } catch {}
-  }, [themeMode])
-
-  const toggleThemeMode = () => {
-    const next = themeMode === 'dark' ? 'light' : 'dark'
-    setThemeMode(next)
-    safeSetStorage('omnimux_theme_mode', next)
+  const updateThemeSetting = (mode: 'auto' | 'light' | 'dark') => {
+    setThemeSetting(mode)
+    safeSetStorage('omnimux_theme_mode', mode)
   }
 
   useEffect(() => {
@@ -1891,6 +1898,18 @@ export function App(): React.JSX.Element {
             </select>
           </label>
           <label>
+            <span>{locale === 'en' ? 'Appearance Theme' : '界面主题'}</span>
+            <small>{locale === 'en' ? 'Automatically follow browser/system theme or choose dark/light' : '自适应跟随浏览器系统深浅色，或选择固定深色/浅色'}</small>
+            <select
+              value={themeSetting}
+              onChange={(e) => updateThemeSetting(e.target.value as 'auto' | 'light' | 'dark')}
+            >
+              <option value="auto">{locale === 'en' ? 'Auto (Follow Browser / System)' : '跟随系统 (自适应)'}</option>
+              <option value="dark">{locale === 'en' ? 'Dark Theme' : '深色模式'}</option>
+              <option value="light">{locale === 'en' ? 'Light Theme' : '浅色模式'}</option>
+            </select>
+          </label>
+          <label>
             <span>{copy.settings.language}</span>
             <small>{copy.settings.languageHelp}</small>
             <select
@@ -1912,6 +1931,36 @@ export function App(): React.JSX.Element {
               <option value="zh">{copy.settings.languageZh}</option>
               <option value="en">{copy.settings.languageEn}</option>
             </select>
+          </label>
+          <label>
+            <span>{locale === 'en' ? 'Interface Text Scale' : '界面字号大小'}</span>
+            <small>{locale === 'en' ? 'Scale panel text size for comfortable reading' : '按需微调工作台字号大小与阅读比例'}</small>
+            <div className="settings-scale-bar">
+              <button
+                type="button"
+                className="scale-action-btn"
+                onClick={() => changeUiScale(stepUiScale(uiScaleRef.current, -1))}
+                aria-label={locale === 'en' ? 'Decrease text size' : '缩小字号'}
+              >
+                A-
+              </button>
+              <span className="scale-indicator">{Math.round(uiScale * 100)}%</span>
+              <button
+                type="button"
+                className="scale-action-btn"
+                onClick={() => changeUiScale(stepUiScale(uiScaleRef.current, 1))}
+                aria-label={locale === 'en' ? 'Increase text size' : '放大字号'}
+              >
+                A+
+              </button>
+              <button
+                type="button"
+                className="scale-reset-btn"
+                onClick={() => changeUiScale(DEFAULT_UI_SCALE)}
+              >
+                {locale === 'en' ? 'Reset' : '重置'}
+              </button>
+            </div>
           </label>
         </div>
         <div className="settings-panel preference-toggles">
@@ -2108,23 +2157,10 @@ export function App(): React.JSX.Element {
           </button>
         </div>
         <div className="topbar-actions">
-          <button
-            type="button"
-            className="icon-button theme-toggle-trigger"
-            onClick={toggleThemeMode}
-            aria-label={themeMode === 'dark' ? (locale === 'en' ? 'Switch to light mode' : '切换为浅色主题') : (locale === 'en' ? 'Switch to dark mode' : '切换为深色主题')}
-            title={themeMode === 'dark' ? (locale === 'en' ? 'Light mode' : '浅色主题') : (locale === 'en' ? 'Dark mode' : '深色主题')}
-          >
-            {themeMode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
-          </button>
           <button className="icon-button new-session-trigger" disabled={state !== 'connected' || sessionSwitchBlocked}
             onClick={() => { void startNewSession() }}
             aria-label={copy.app.newSession} title={copy.app.newSession}>
             <PlusSvgIcon size={14} />
-          </button>
-          <button className="icon-button text-size-trigger" onClick={() => setShowTextSize((open) => !open)}
-            aria-expanded={showTextSize} aria-label={copy.textSize.open} title={copy.textSize.open}>
-            <TextSizeIcon />
           </button>
           <button className="icon-button settings-trigger" onClick={() => setShowSettings(true)}
             aria-label={copy.app.openSettings} title={copy.app.settings}><SettingsIcon /></button>
@@ -2132,36 +2168,33 @@ export function App(): React.JSX.Element {
             <div className="float-top-actions">
               <button
                 type="button"
-                className="float-btn"
+                className="icon-button float-btn-icon"
                 onClick={() => {
                   try {
                     void chrome.sidePanel?.open?.({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch(() => {})
                   } catch {}
                 }}
                 title={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
+                aria-label={locale === 'en' ? "Open in native side panel" : "切换到 Chrome 原生右侧边栏"}
               >
-                {locale === 'en' ? '↗ Panel' : '↗ 侧栏'}
+                <SidebarPanelIcon size={13} />
               </button>
               <button
                 type="button"
-                className="float-btn close"
+                className="icon-button float-btn-icon close"
                 onClick={() => {
                   window.parent?.postMessage({ type: 'COLLAPSE_WORKSTATION' }, '*')
                 }}
-                title={locale === 'en' ? "Collapse workstation (Esc)" : "收起大工作台 (Esc)"}
+                title={locale === 'en' ? "Collapse workstation (Esc)" : "收起工作台 (Esc)"}
+                aria-label={locale === 'en' ? "Collapse workstation (Esc)" : "收起工作台 (Esc)"}
               >
-                <CloseIcon size={11} />
+                <CloseIcon size={12} />
               </button>
             </div>
           )}
         </div>
       </header>
       <SceneBadge scene={pageScene} locale={locale} onClearContext={() => setPageScene(null)} />
-      {showTextSize && (
-        <TextSizePanel scale={uiScale} copy={copy}
-          onStep={(direction) => changeUiScale(stepUiScale(uiScaleRef.current, direction))}
-          onReset={() => changeUiScale(DEFAULT_UI_SCALE)} />
-      )}
       <TabAffinityBanner state={tabAffinity} copy={copy} onDecision={decideTabAffinity} />
       {showSessionPicker && (
         <section className="session-picker youmind-style" aria-label={copy.app.sessions}>
@@ -2228,6 +2261,25 @@ export function App(): React.JSX.Element {
         {rows.length === 0 && streamRow === null && !working && (
           <div className="empty empty-hero-layout">
             <div className="page-hero-card">
+              <div className="hero-preview-stack">
+                <div className="hero-sheet-back" />
+                <div className="hero-sheet-front">
+                  <div className="hero-sheet-header">
+                    <span className="hero-sheet-dot" />
+                    <span className="hero-sheet-dot" />
+                    <span className="hero-sheet-dot" />
+                    <span className="hero-sheet-bar" />
+                  </div>
+                  <div className="hero-sheet-body">
+                    <div className="hero-sheet-mock-block" />
+                    <div className="hero-sheet-mock-lines">
+                      <span className="line w-80" />
+                      <span className="line w-60" />
+                      <span className="line w-40" />
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="hero-top-row">
                 <span className="hero-app-badge">
                   <img src={whaleUrl} alt="OmniMux" />
@@ -2240,9 +2292,9 @@ export function App(): React.JSX.Element {
                 <div className="hero-meta-title" title={pageScene?.title || ''}>
                   {pageScene?.title || (locale === 'en' ? 'Active Page' : '当前浏览页面')}
                 </div>
-                {pageScene?.author && (
-                  <div className="hero-meta-author">@{pageScene.author}</div>
-                )}
+                <div className="hero-meta-url">
+                  {pageScene?.url ? pageScene.url.replace(/^https?:\/\//, '').slice(0, 42) : (pageScene?.author ? `@${pageScene.author}` : '')}
+                </div>
               </div>
               <button
                 type="button"
@@ -2250,7 +2302,7 @@ export function App(): React.JSX.Element {
                 disabled={!sessionReady}
                 onClick={() => { void send(copy.app.overviewPrompt) }}
               >
-                {locale === 'en' ? 'Summarize Current Page' : '把当前页面交给我'}
+                {locale === 'en' ? 'Send to OmniMux' : '保存到 OmniMux'}
               </button>
             </div>
 

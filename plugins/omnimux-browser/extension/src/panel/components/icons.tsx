@@ -256,3 +256,12 @@ export function PlusIcon({ size = 14, className }: { size?: number; className?: 
     </SvgIcon>
   )
 }
+
+export function SidebarPanelIcon({ size = 13, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M15 3v18" />
+    </SvgIcon>
+  )
+}
