@@ -77,52 +77,46 @@ export const CAPSULE_SPEC = {
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
   /** Expanded-row radius; `height / 2` keeps both of its ends perfectly round. */
-  borderRadius: 16,
+  borderRadius: 12,
   /**
    * Stage-two height, and the band the placement reserves for *both* stages: the
    * collapsed circle is drawn inside it, so opening the pill grows sideways into
    * space the geometry has already accounted for and never crosses a viewport edge.
    *
-   * `32` is the project's control-height baseline, which is also why the two
-   * stages now share one band: the circle folds into the row it becomes.
+   * 24px micro-baseline: aligns comfortably with player time tags and small media.
    */
-  height: 32,
+  height: 24,
   /**
    * Stage one, the collapsed circle: the brand trigger alone.
-   * `32 × 32` with a `16px` radius is a perfect circle.
+   * `24 × 24` with a `12px` radius is a perfect circle.
    *
-   * The drawn box is 32px while {@link haloWidth} adds 4px on every side, so the
-   * circle's *total* span — ring included — is exactly 40px.
+   * The drawn box is 24px while {@link haloWidth} adds 2.5px on every side, so the
+   * circle's *total* span — ring included — is exactly 29px.
    */
-  collapsedWidth: 32,
-  collapsedHeight: 32,
-  collapsedRadius: 16,
+  collapsedWidth: 24,
+  collapsedHeight: 24,
+  collapsedRadius: 12,
   /**
-   * Stage two, the expanded row: 3 x 20px circular icon buttons + 2 x 6px gaps +
-   * 2 x 6px row padding = 84px.
-   * Every gap, padding, and vertical margin is strictly 6px:
-   * (32 - 20) / 2 = 6px above and below, 6px at left/right edges, and 6px between
-   * buttons. The two end buttons form exact concentric circles with the pill's
-   * 16px rounded ends, completely eliminating corner clipping and visual overflow.
+   * Stage two, the expanded row: 3 x 16px circular icon buttons + 2 x 4px gaps +
+   * 2 x 4px row padding = 64px.
+   * Every gap, padding, and vertical margin is strictly 4px:
+   * (24 - 16) / 2 = 4px above and below, 4px at left/right edges, and 4px between
+   * buttons.
    */
-  width: 84,
-  paddingX: 6,
+  width: 64,
+  paddingX: 4,
   /**
    * Width of the translucent halo the pill casts on every side.
-   *
-   * This is the pill's one edge that never depends on what is underneath it, so
-   * it is part of the geometry contract rather than a decoration: a 32px circle
-   * plus `2 x 4px` spans exactly 40px of the page.
    */
-  haloWidth: 4,
+  haloWidth: 2.5,
   /**
    * The `collapsedWidth → width` opening animation. The stylesheet owns the
    * transition; this is the same duration on the JavaScript side, where it ends
    * the window in which the action row may not take the pointer.
    */
   openMs: 220,
-  /** Gap between two action icons in the expanded row: strictly 6px. */
-  iconGap: 6,
+  /** Gap between two action icons in the expanded row: strictly 4px. */
+  iconGap: 4,
   blur: 'blur(24px) saturate(140%)',
   /**
    * Translucent rim. Media behind the pill can be a white studio shot or a black
@@ -132,41 +126,26 @@ export const CAPSULE_SPEC = {
   border: '1px solid rgba(255,255,255,0.28)',
   /** Lit top edge, inset so the rim reads as a highlight rather than a stroke. */
   sheen: 'inset 0 1px 0 rgba(255,255,255,0.35)',
-  /**
-   * Three translucent rings: the wide {@link haloWidth} outer halo and the inset
-   * top sheen separate the pill from bright media, while the deep drop shadow
-   * separates it from dark media. Video artwork moves under the pill and swings
-   * from blown-out highlights to near-black shadows within a single second, so the
-   * halo is the only edge the pill can rely on: it stays wide enough to survive
-   * both, and `32 + 2 x 4` is what makes the circle span exactly 40px.
-   */
   shadow:
-    '0 0 0 4px rgba(255,255,255,0.22), 0 2px 10px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
+    '0 0 0 2.5px rgba(255,255,255,0.22), 0 2px 8px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
   /** Inset from the media's bottom-left corner. */
-  inset: 10,
+  inset: 8,
   /**
-   * Action-button hit box: strictly a 20px perfect circle (`border-radius: 50%`).
-   * Inside the 32px band (R=16), a 20px circle (r=10) centered at (16, 16)
-   * creates a constant 6px breathing margin in EVERY direction (top, bottom,
-   * and along the rounded cap), ensuring zero corner protrusion or overflow.
+   * Action-button hit box: strictly a 16px perfect circle (`border-radius: 50%`).
+   * Inside the 24px band (R=12), a 16px circle (r=8) centered at (12, 12)
+   * creates a constant 4px breathing margin in EVERY direction.
    */
-  iconSize: 20,
-  /** Rendered size of the glyph inside an action button: 13px. */
-  iconGlyphSize: 13,
+  iconSize: 16,
+  /** Rendered size of the glyph inside an action button: 11px. */
+  iconGlyphSize: 11,
   /**
-   * Hit box of the stage-one brand trigger inside the circle. Unlike the icon
-   * buttons this box is not the band itself: a full-band trigger would put its
-   * hover fill, and the ripple that follows a press, right up against the circle's
-   * rounded edge.
+   * Hit box of the stage-one brand trigger inside the circle.
    */
-  brandSize: 24,
+  brandSize: 18,
   /**
-   * Rendered size of the brand silhouette, centred in the 24px hit box. The glyph
-   * has to stay smaller than its box to read as a mark rather than a disc, but it
-   * is the one thing the 40px circle carries — so it is scaled with the circle
-   * instead of being pinned small.
+   * Rendered size of the brand silhouette, centred in the 18px hit box.
    */
-  brandIconSize: 18,
+  brandIconSize: 13,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const

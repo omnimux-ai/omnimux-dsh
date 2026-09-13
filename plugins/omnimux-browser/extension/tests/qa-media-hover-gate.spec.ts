@@ -749,96 +749,71 @@ describe('E. cross-module contract agreement', () => {
 // ------------------------------------------------- F. 两段式悬停展开 ---
 
 describe('F. two-stage hover expansion', () => {
-  it('paints stage one as a 32px circle spanning 40px, and stage two as the 84px row', () => {
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(32)
-    expect(CAPSULE_SPEC.collapsedHeight).toBe(32)
-    expect(CAPSULE_SPEC.width).toBe(84)
-    expect(CAPSULE_SPEC.height).toBe(32)
-    // The circle must be exactly that: a 32px box with a 16px radius.
+  it('paints stage one as a 24px circle spanning 29px, and stage two as the 64px row', () => {
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(24)
+    expect(CAPSULE_SPEC.collapsedHeight).toBe(24)
+    expect(CAPSULE_SPEC.width).toBe(64)
+    expect(CAPSULE_SPEC.height).toBe(24)
+    // The circle must be exactly that: a 24px box with a 12px radius.
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.collapsedWidth)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
-    // The opened row is a 32px box with a 16px radius, so both ends stay round.
+    // The opened row is a 24px box with a 12px radius, so both ends stay round.
     expect(CAPSULE_SPEC.borderRadius).toBe(CAPSULE_SPEC.height / 2)
-    // 32px is the project's control-height baseline, and the two stages share
-    // that one band: the circle folds into the row it becomes.
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
 
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
-    expect(base).toContain('height:32px')
-    expect(base).toContain('border-radius:16px')
+    expect(base).toContain('height:24px')
+    expect(base).toContain('border-radius:12px')
     const collapsed = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed')
-    expect(collapsed).toContain('width:32px')
-    expect(collapsed).toContain('height:32px')
-    expect(collapsed).toContain('border-radius:16px')
-    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:84px')
+    expect(collapsed).toContain('width:24px')
+    expect(collapsed).toContain('height:24px')
+    expect(collapsed).toContain('border-radius:12px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:64px')
   })
 
-  it('spans exactly 40px once the translucent halo is included', () => {
-    // The halo is geometry, not decoration: it adds `haloWidth` on every side, so
-    // the box the user actually sees measured across the page is 32 + 4 + 4 = 40px
-    // in both stages, and the ring is part of the size rather than a second edge
-    // floating outside it.
-    expect(CAPSULE_SPEC.haloWidth).toBe(4)
-    expect(CAPSULE_SPEC.collapsedWidth + 2 * CAPSULE_SPEC.haloWidth).toBe(40)
+  it('spans exactly 29px once the translucent halo is included', () => {
+    expect(CAPSULE_SPEC.haloWidth).toBe(2.5)
+    expect(CAPSULE_SPEC.collapsedWidth + 2 * CAPSULE_SPEC.haloWidth).toBe(29)
 
-    // Both halves of the contract have to be written the same way, or the spec
-    // number and the painted ring drift apart.
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
     expect(base).toContain(`000${CAPSULE_SPEC.haloWidth}pxrgba(255,255,255,0.22)`)
     expect(CAPSULE_SPEC.shadow).toContain(`0 0 0 ${CAPSULE_SPEC.haloWidth}px rgba(255,255,255,0.22)`)
     const interactive = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-interactive')
-    expect(interactive).toContain(`000${CAPSULE_SPEC.haloWidth}pxrgba(255,255,255,0.32)`)
+    expect(interactive).toContain('0003pxrgba(255,255,255,0.32)')
   })
 
   it('keeps the pill visible on artwork of any tone', () => {
-    // The pill floats over arbitrary media, so the edge itself has to carry the
-    // contrast: a translucent rim, a wide 4px outer halo and the inset top
-    // sheen separate it from bright artwork, the deep cast shadow from dark
-    // artwork. Video artwork moves under the pill, so the halo is wider than a
-    // hairline on purpose — it is the one edge that survives a blown-out frame
-    // and a near-black one within the same second.
     expect(CAPSULE_SPEC.border).toBe('1px solid rgba(255,255,255,0.28)')
-    expect(CAPSULE_SPEC.shadow).toContain('0 0 0 4px rgba(255,255,255,0.22)')
-    expect(CAPSULE_SPEC.shadow).toContain('0 2px 10px rgba(0,0,0,0.65)')
+    expect(CAPSULE_SPEC.shadow).toContain('0 0 0 2.5px rgba(255,255,255,0.22)')
+    expect(CAPSULE_SPEC.shadow).toContain('0 2px 8px rgba(0,0,0,0.65)')
     expect(CAPSULE_SPEC.shadow).toContain('inset 0 1px 0 rgba(255,255,255,0.35)')
 
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
     expect(base).toContain('border:1pxsolidrgba(255,255,255,0.28)')
-    expect(base).toContain('0004pxrgba(255,255,255,0.22)')
-    expect(base).toContain('02px10pxrgba(0,0,0,0.65)')
+    expect(base).toContain('0002.5pxrgba(255,255,255,0.22)')
+    expect(base).toContain('02px8pxrgba(0,0,0,0.65)')
     expect(base).toContain('inset01px0rgba(255,255,255,0.35)')
-    // The hover state keeps the same edge and only brightens it, so the ring
-    // never appears out of nowhere when the pointer arrives.
     const interactive = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-interactive')
-    expect(interactive).toContain('0004pxrgba(255,255,255,0.32)')
+    expect(interactive).toContain('0003pxrgba(255,255,255,0.32)')
   })
 
   it('centres the stage-one brand mark inside its hit box', () => {
-    expect(CAPSULE_SPEC.brandSize).toBe(24)
-    expect(CAPSULE_SPEC.brandIconSize).toBe(18)
-    // An 18px mark inside a 24px box inside the 32px circle: the mark is the one
-    // thing the circle carries, so it scales with the circle while staying clear
-    // enough of its own hover fill to read as a mark rather than a disc.
+    expect(CAPSULE_SPEC.brandSize).toBe(18)
+    expect(CAPSULE_SPEC.brandIconSize).toBe(13)
     expect(CAPSULE_SPEC.brandIconSize).toBeLessThan(CAPSULE_SPEC.brandSize)
     expect(CAPSULE_SPEC.brandSize).toBeLessThanOrEqual(CAPSULE_SPEC.collapsedWidth)
 
-    // `declarationsOf` answers with the first match, which for this class is the
-    // centred-layer group rule it shares with `.omnimux-capsule-actions`, so the
-    // standalone sizing block is read straight from the stripped source.
     const brand = stripComments(OVERLAY_STYLES)
       .match(/\.omnimux-capsule-brand \{([^}]*)\}/)?.[1]
       ?.replace(/\s+/g, '') ?? ''
-    expect(brand).toContain('width:24px')
-    expect(brand).toContain('height:24px')
+    expect(brand).toContain('width:18px')
+    expect(brand).toContain('height:18px')
     const mark = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-brand svg')
-    expect(mark).toContain('width:18px')
-    expect(mark).toContain('height:18px')
+    expect(mark).toContain('width:13px')
+    expect(mark).toContain('height:13px')
   })
 
   it('lines the collapsed circle up with the row it folds into', () => {
-    // Both stages are absolutely centred in the pill, so the circle travels with
-    // whatever height the pill currently has: the two boxes share one centre line
-    // and the pill must not jump vertically while the width opens.
     const layer = stripComments(OVERLAY_STYLES)
       .match(/\.omnimux-capsule-brand,\s*\.omnimux-capsule-actions \{([^}]*)\}/)?.[1]
       ?.replace(/\s+/g, '') ?? ''
@@ -847,26 +822,19 @@ describe('F. two-stage hover expansion', () => {
     expect(layer).toContain('transform:translate(-50%,-50%)')
     expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed .omnimux-capsule-brand'))
       .toContain('transform:translate(-50%,-50%)')
-    // ...and the circle still has to fit inside the band the placement reserves.
     expect(CAPSULE_SPEC.collapsedHeight).toBeLessThanOrEqual(CAPSULE_SPEC.height)
   })
 
   it('floats every hover fill clear of the pill it sits in', () => {
-    // The buttons are 20px perfect circles inside the 32px band:
-    // the constant 6px left above, below, and along the caps is what keeps
-    // the control light instead of a slab pinned to or overflowing the pill's edges.
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
     expect(base).toContain(`padding:0${CAPSULE_SPEC.paddingX}px`)
     const icons = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon')
     expect(icons).toContain(`width:${CAPSULE_SPEC.iconSize}px`)
     expect(icons).toContain(`height:${CAPSULE_SPEC.iconSize}px`)
     expect(icons).toContain('border-radius:50%')
-    expect(CAPSULE_SPEC.iconSize).toBe(20)
-    expect(CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize).toBe(12)
-    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(6)
-    // The glyph keeps an inset of its own inside the hit box, and both halves of
-    // that contract have to be written the same way or the painted mark drifts
-    // from the spec the row is measured against.
+    expect(CAPSULE_SPEC.iconSize).toBe(16)
+    expect(CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize).toBe(8)
+    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(4)
     expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
     const glyph = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon svg')
     expect(glyph).toContain(`width:${CAPSULE_SPEC.iconGlyphSize}px`)
