@@ -2,85 +2,36 @@ export const STYLES_ID = 'omnimux-products-styles'
 
 export const PRODUCTS_CSS = `
 
-/* Link import bar: one quiet row above the product name. */
-.omnimux-products-url-import {
+/* Link import bar: one quiet row above the product name.
+   The row reuses the kit's InputField / Button as-is — the bar owns only the
+   row layout and the status line, so the field frame (32px / 8px radius /
+   bg-layer-1 / border-l2 / focus ring) is identical to every other field. */
+.omnimux-products-url-import-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-module-platform);
-  transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.omnimux-products-url-import:focus-within {
-  border-color: var(--dsw-alias-border-l4);
-}
-.omnimux-products-url-import[data-phase="success"] {
-  border-color: var(--dsw-alias-state-success-primary);
-}
-.omnimux-products-url-import[data-phase="error"] {
-  border-color: var(--dsw-alias-state-error-secondary, var(--dsw-alias-state-error-primary));
+  gap: 4px;
 }
 .omnimux-products-url-import-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.omnimux-products-url-import-icon {
-  display: inline-flex;
-  align-items: center;
-  color: var(--dsw-alias-label-tertiary);
-}
-/* 复合容器内部不再叠加原生框线（防「框中框」）。
-   外层 .omnimux-products-url-import 已绘制唯一圆角边框，而 hub 的全局
-   :focus-visible { outline: … !important }（plugins/omnimux/src/client/styles.js）
-   权重 0,1,0 且带 !important，会反超无 !important 的自身 outline: none，在输入框
-   周围画出一个直角矩形。下面的状态位选择器把权重提到 0,2,0 并同用 !important，
-   因此稳定胜出、不依赖样式表顺序——:focus-visible 在点击与 Tab 聚焦下均命中。
-   聚焦可见性由外层 :focus-within 的边框高亮保留，键盘可达性不受影响。 */
-.omnimux-products-url-import-input,
-.omnimux-products-url-import-input:focus,
-.omnimux-products-url-import-input:focus-visible,
-.omnimux-products-url-import-input:active {
+.omnimux-products-url-import-field {
   flex: 1;
   min-width: 0;
-  height: 26px;
-  border: 0 !important;
-  border-width: 0 !important;
-  border-style: none !important;
-  border-color: transparent !important;
-  outline: 0 !important;
-  outline-style: none !important;
-  outline-offset: 0 !important;
-  box-shadow: none !important;
-  -webkit-box-shadow: none !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  padding: 0 4px;
-}
-.omnimux-products-url-import-input::placeholder {
-  color: var(--dsw-alias-label-tertiary);
-}
-.omnimux-products-url-import-input:disabled {
-  opacity: 0.6;
 }
 .omnimux-products-url-import-status {
   margin: 0;
+  padding-left: 2px;
   font-size: 12px;
   line-height: 16px;
   color: var(--dsw-alias-label-secondary);
   animation: omnimux-products-fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.omnimux-products-url-import[data-phase="success"] .omnimux-products-url-import-status {
+.omnimux-products-url-import-status-success {
   color: var(--dsw-alias-state-success-primary);
 }
-.omnimux-products-url-import[data-phase="error"] .omnimux-products-url-import-status {
+.omnimux-products-url-import-status-error {
   color: var(--dsw-alias-state-error-primary);
 }
 

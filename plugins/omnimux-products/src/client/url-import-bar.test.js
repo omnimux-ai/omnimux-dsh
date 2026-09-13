@@ -175,7 +175,7 @@ describe('products client · link bar wiring', () => {
 
   it('submits on Enter, shows a loading button and answers inline', () => {
     const source = read('ProductFormFields.jsx')
-    assert.match(source, /if \(event\.key !== 'Enter'\) return/)
+    assert.match(source, /if \(event\.key === 'Enter'\) \{/)
     assert.match(source, /event\.preventDefault\(\)/)
     assert.match(source, /loading=\{phase === 'loading'\}/)
     assert.match(source, /setMessage\(t\('add\.urlImport\.loading'\)\)/)
@@ -188,9 +188,9 @@ describe('products client · link bar wiring', () => {
   it('declares the bar styles and the link icon', () => {
     const styles = read('styles.js')
     for (const className of [
-      'omnimux-products-url-import',
+      'omnimux-products-url-import-group',
       'omnimux-products-url-import-row',
-      'omnimux-products-url-import-input',
+      'omnimux-products-url-import-field',
       'omnimux-products-url-import-status',
     ]) {
       assert.match(styles, new RegExp(`\\.${className}\\b`))
@@ -199,45 +199,34 @@ describe('products client · link bar wiring', () => {
     assert.match(read('icons.jsx'), /export function LinkIcon/)
   })
 
-  // The bar itself draws the only frame. The hub's global
-  // `:focus-visible { outline: … !important }` outranks a plain `outline: none`
-  // on the field (0,1,0 with !important vs 0,1,0 without), so the field must win
-  // on specificity, not on stylesheet order.
-  it('flattens the inner field frame in every state, plus an inline backstop', () => {
-    const styles = read('styles.js')
-    const start = styles.indexOf('.omnimux-products-url-import-input,')
-    const end = styles.indexOf('.omnimux-products-url-import-input::placeholder')
-    assert.ok(start >= 0 && end > start, 'state-combined input rule precedes the placeholder rule')
-    const fieldRule = styles.slice(start, end)
-    const selectors = fieldRule.slice(0, fieldRule.indexOf('{')).split(',').map((s) => s.trim())
-    for (const state of [':focus', ':focus-visible', ':active']) {
-      assert.ok(selectors.includes(`.omnimux-products-url-import-input${state}`), `rule flattens ${state}`)
-    }
-
-    // Compare declarations, not formatting: `outline: 0` and `outline: none` are
-    // equivalent, so a cosmetic rewrite must not redden this contract.
-    const declarations = fieldRule
-      .slice(fieldRule.indexOf('{') + 1, fieldRule.lastIndexOf('}'))
-      .split(';')
-      .map((d) => d.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-    const flattening = [
-      ['border', /^(border|border-width|border-style): (0|none) !important$/],
-      ['border-color', /^border-color: transparent !important$/],
-      ['outline', /^outline(-style)?: (0|none) !important$/],
-      ['box-shadow', /^(box-shadow|-webkit-box-shadow): none !important$/],
-      ['appearance', /^(-webkit-)?appearance: none !important$/],
-      ['background', /^(background|background-color): transparent !important$/],
-    ]
-    for (const [frame, pattern] of flattening) {
-      assert.ok(declarations.some((d) => pattern.test(d)), `field rule neutralises ${frame}`)
-    }
-
+  // The bar is a plain layout row over the shared kit: the field frame, its
+  // 32px height, 8px radius and focus ring are the kit's, not a local copy.
+  // A hand-rolled frame here is what produced the "box inside a box" look.
+  it('delegates the field frame and the button to the shared kit', () => {
     const view = read('ProductFormFields.jsx')
-    assert.match(
-      view,
-      /style=\{\{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent' \}\}[^\n]*exempt-ui02/,
-    )
+    const start = view.indexOf('export function UrlImportBar')
+    const end = view.indexOf('export function ProductFormBody')
+    assert.ok(start >= 0 && end > start, 'UrlImportBar body is locatable')
+    const bar = view.slice(start, end)
+
+    assert.match(bar, /<InputField\b/)
+    assert.match(bar, /className="omnimux-products-url-import-field"/)
+    assert.match(bar, /prefix=\{<LinkIcon size=\{14\} \/>\}/)
+    assert.match(bar, /<Button\b/)
+    assert.ok(!bar.includes('<input'), 'no hand-written input element remains')
+    assert.ok(!bar.includes('style={{'), 'no inline frame backstop remains')
+
+    // Every deprecated hand-rolled frame class must be gone from view and styles.
+    const styles = read('styles.js')
+    for (const dead of [
+      '.omnimux-products-url-import-input',
+      '.omnimux-products-url-import-icon',
+      '.omnimux-products-url-import[data-phase',
+    ]) {
+      assert.ok(!styles.includes(dead), `styles drop ${dead}`)
+      assert.ok(!view.includes(dead.slice(1)), `view drops ${dead.slice(1)}`)
+    }
+    assert.ok(!/^\.omnimux-products-url-import \{/m.test(styles), 'the outer wrapper rule is gone')
   })
 })
 

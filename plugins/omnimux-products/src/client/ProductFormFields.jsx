@@ -334,9 +334,10 @@ export function UrlImportBar(props) {
   }
 
   const handleKeyDown = (event) => {
-    if (event.key !== 'Enter') return
-    event.preventDefault()
-    void submit()
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void submit()
+    }
   }
 
   const handleChange = (event) => {
@@ -347,14 +348,11 @@ export function UrlImportBar(props) {
   }
 
   return (
-    <div className="omnimux-products-url-import" data-phase={phase}>
+    <div className="omnimux-products-url-import-group">
       <div className="omnimux-products-url-import-row">
-        <span className="omnimux-products-url-import-icon" aria-hidden="true">
-          <LinkIcon size={14} />
-        </span>
-        <input
-          className="omnimux-products-url-import-input"
-          style={{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent' }} /* exempt-ui02: 兜底防线——压过非 !important 的全局输入框规则，并覆盖插件样式表尚未注入的窗口期；唯一可见框体由外层 .omnimux-products-url-import 绘制 */
+        <InputField
+          className="omnimux-products-url-import-field"
+          prefix={<LinkIcon size={14} />}
           type="url"
           value={url}
           placeholder={t('add.urlImport.placeholder')}
@@ -365,7 +363,6 @@ export function UrlImportBar(props) {
         />
         <Button
           variant="secondary"
-          size="sm"
           loading={phase === 'loading'}
           disabled={url.trim() === ''}
           onClick={() => { void submit() }}
@@ -374,7 +371,9 @@ export function UrlImportBar(props) {
         </Button>
       </div>
       {message === '' ? null : (
-        <p className="omnimux-products-url-import-status" role="status">{message}</p>
+        <p className={`omnimux-products-url-import-status omnimux-products-url-import-status-${phase}`} role="status">
+          {message}
+        </p>
       )}
     </div>
   )
