@@ -186,6 +186,23 @@ for (const name of plugins) {
             try { cb(); } catch {}
           },
           provide: () => {},
+          // 插件在 apply 阶段直接使用的上下文面：演练只调用 apply(ctx)，
+          // 因此只给签名与安全空值（订阅返回解绑函数、广播与日志无操作、服务为鸭子对象）。
+          logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+          fs: {
+            resolve: async (path) => path,
+            stat: async () => ({ size: 0, version: '0', isFile: true, isDirectory: false }),
+            readBytes: async () => new Uint8Array(0),
+            processPath: (path) => path,
+          },
+          on: () => () => {},
+          once: () => () => {},
+          off: () => {},
+          emit: () => {},
+          agents: { get: () => null, list: () => [] },
+          connection: { get: () => null, list: () => [] },
+          textComplete: { complete: async () => '' },
+          workspaceRegistry: { get: () => null, list: () => [] },
           plugin: () => {},
           loader: { import: async () => ({ apply: () => {} }) },
           clientModules: { graph: () => ({ entries: [] }) },

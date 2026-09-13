@@ -35,6 +35,22 @@ fork 进来的预览插件在宿主半边使用了替身未声明的具名导出
 - `node --test scripts/verify-profile-preflight.test.mjs` 全绿；`pnpm test:gates` 全绿。
 - 物化 `node scripts/omnimux.mjs sync` 的启动预检不再因缺导出失败。
 
+## 1bis 追加：模拟上下文（ctx）面补齐
+
+替身导入面闭合后，预检继续在同一插件上暴露**运行时**缺口：`ctx.on is not a function`。
+`makeCtx()` 只提供 tools/inject/effect/provide/plugin/loader/clientModules/webServer/
+betterSidebar/commands/systemPrompt/settings/omnimux/get，而套件内插件在 apply 阶段还会直接使用：
+
+| ctx 面 | 用途 |
+| --- | --- |
+| `on` / `once` / `off` | 事件订阅与解绑（返回解绑函数） |
+| `emit` | 事件广播 |
+| `fs` | 文件读取/探测（`resolve` / `stat` / `readBytes` / `processPath`） |
+| `logger` | 分级日志 |
+| `agents` / `connection` / `textComplete` / `workspaceRegistry` | 其它插件使用的领域服务 |
+
+演练只调用 `apply(ctx)`，因此这些面只需「签名 + 安全空值」。补齐后该类插件方可走完演练。
+
 ## 2. 命令 (Commands)
 
 ```
