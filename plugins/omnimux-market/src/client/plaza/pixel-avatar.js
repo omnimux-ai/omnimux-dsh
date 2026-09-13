@@ -2,6 +2,12 @@
  * @file plugins/omnimux-market/src/client/plaza/pixel-avatar.js
  * 开源风格像素头像生成器（Pixel Art Avatar Generator）。
  *
+ * 开源声明：本文件遵循开源 MIT License 发布，算法规范适配 DiceBear Pixel-Art
+ * （像素艺术）开源头像规范——对称像素网格、有限调色板、游程合并矢量输出与
+ * 种子确定性随机。DiceBear 项目同样以 MIT License 开源，特此致谢。
+ *
+ * SPDX-License-Identifier: MIT
+ *
  * 设计约束：
  * - 自包含、零依赖：只用标准 JavaScript，浏览器与 Node 均可直接运行（便于单测）。
  * - 确定性：同一 seed 永远得到同一头像。哈希用 FNV-1a 32bit，随机流用 mulberry32，

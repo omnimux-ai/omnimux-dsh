@@ -11,6 +11,7 @@ import { generatePixelAvatarSvg, generatePixelAvatarDataUrl } from './plaza/pixe
 
 const here = dirname(fileURLToPath(import.meta.url));
 const expertCardSrc = readFileSync(join(here, 'plaza/ExpertCard.jsx'), 'utf8');
+const pixelAvatarSrc = readFileSync(join(here, 'plaza/pixel-avatar.js'), 'utf8');
 
 // 把 ExpertCard.jsx 编译成 CJS，注入真实 plazaUtils 与 React 以便在 Node 里直跑。
 const compiledExpertCard = esbuild.transformSync(expertCardSrc, {
@@ -120,5 +121,13 @@ describe('专家卡片像素头像兜底 (Pixel Avatar Fallback)', () => {
       assert.equal(item.avatar, '');
       assert.equal(item.status, 'enabled');
     }
+  });
+
+  it('文件头保留开源声明与 DiceBear 像素艺术规范适配元数据', () => {
+    const header = pixelAvatarSrc.slice(0, pixelAvatarSrc.indexOf('*/'));
+    assert.match(header, /MIT License/, '必须声明遵循开源 MIT License');
+    assert.match(header, /DiceBear/, '必须声明适配 DiceBear 开源头像规范');
+    assert.match(header, /Pixel-Art|像素艺术/, '必须声明像素艺术规范口径');
+    assert.match(header, /SPDX-License-Identifier: MIT/, '必须带机器可读的 SPDX 许可标识');
   });
 });

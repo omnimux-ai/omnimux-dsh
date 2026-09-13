@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test, { afterEach, beforeEach } from 'node:test';
 import { Readable } from 'node:stream';
@@ -9,8 +9,15 @@ import { handleApi, BUILTIN_AGENT_PRESETS, DEFAULT_MARKET_EXPERTS, STATIC_MARKET
 const SCAN_FIXTURE_ID = 'omnimux-market-scan-fixture';
 const RETIRED_FIXTURE_ID = 'omnimux-market-retired-fixture';
 const FIXTURE_IDS = [SCAN_FIXTURE_ID, RETIRED_FIXTURE_ID];
-/** 可能产生 .retired 残留的 id：市场专家 8 项 + 夹具（内置预设与用户自建预设的归档一律不碰）。 */
-const RESIDUE_IDS = [...DEFAULT_MARKET_EXPERTS.map((exp) => exp.id), ...FIXTURE_IDS];
+/**
+ * .retired 残留 id：市场专家 8 项 + 夹具 + 内置预设。
+ * 内置预设只在 .retired 写标记文件，其目录由应用分发、测试绝不触碰。
+ */
+const RESIDUE_IDS = [
+    ...DEFAULT_MARKET_EXPERTS.map((exp) => exp.id),
+    ...FIXTURE_IDS,
+    ...BUILTIN_AGENT_PRESETS.map((preset) => preset.id),
+];
 function presetRoot() {
     return join(dshHome(), '.agent-presets');
 }
@@ -244,6 +251,37 @@ test('built-in preset disable and install only toggle the retire marker', async 
     assert.equal(enabled.status, 'enabled');
     assert.equal(enabled.source, 'builtin');
     assert.equal(existsSync(builtinDir), existedBefore, '重新安装内置预设不得伪造用户级副本');
+});
+test('built-in preset install never restores a stale .retired archive as a user preset', async () => {
+    const builtinId = 'standard';
+    const builtinDir = join(presetRoot(), builtinId);
+    const stashDir = join(presetRoot(), `${SCAN_FIXTURE_ID}-stash`);
+    const existedBefore = existsSync(builtinDir);
+    // 只有本地缺副本时才会触发归档还原：把既有副本挪开，强制走进「陈旧归档被当用户预设」的缺陷路径。
+    if (existedBefore)
+        renameSync(builtinDir, stashDir);
+    const staleName = `${builtinId}-1757000000000`;
+    const staleArchive = join(retiredRoot(), staleName);
+    mkdirSync(staleArchive, { recursive: true });
+    writeFileSync(join(staleArchive, 'preset.yml'), 'name: 陈旧归档山寨预设\ndescription: 不应被还原成用户级副本。\norder: 99\n', 'utf8');
+    try {
+        const install = await callApi({ method: 'expertMarketInstall', id: builtinId });
+        assert.equal(install.status, 200);
+        assert.equal(install.json?.status, 'enabled');
+        assert.equal(existsSync(join(staleArchive, 'preset.yml')), true, '内置预设安装不得搬动 .retired 归档');
+        assert.equal(existsSync(join(builtinDir, 'preset.yml')), false, '内置预设安装不得伪造用户级副本');
+        const hit = (await listItems()).find((it) => it.id === builtinId);
+        assert.ok(hit, '内置预设必须仍在专家市场');
+        assert.equal(hit.status, 'enabled');
+        assert.equal(hit.source, 'builtin', '内置预设来源不得被陈旧归档改写');
+        assert.equal(hit.name, '代码开发', '内置预设展示名不得被陈旧归档覆盖');
+    }
+    finally {
+        rmSync(staleArchive, { recursive: true, force: true });
+        rmSync(builtinDir, { recursive: true, force: true });
+        if (existedBefore)
+            renameSync(stashDir, builtinDir);
+    }
 });
 test('market expert install keeps the full preset lifecycle', async () => {
     const testId = 'html-generator';

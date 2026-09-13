@@ -521,6 +521,9 @@ function clearRetiredMarkers(home, id) {
 /**
  * 把 .retired 里的预设目录搬回原位（保留用户自定义内容，绝不重建副本）。
  *
+ * 只服务于自定义/市场预设：出厂内置预设随应用分发，其 `.retired` 目录可能来自
+ * 内置预设出现在市场之前的旧副本，一律不得当成用户级副本还原（调用方须先判定）。
+ *
  * @param home DSH home 目录
  * @param id 预设 id
  * @returns 是否发生了还原
@@ -558,13 +561,16 @@ function restoreRetiredPreset(home, id) {
  * @param exp 专家定义
  */
 export function installMarketExpertPreset(home, exp) {
+    // 内置判定必须先于离职还原：.retired 里的旧副本是过期归档，不得冒充用户预设覆盖出厂定义。
+    if (isBuiltinAgentPreset(exp.id)) {
+        clearRetiredMarkers(home, exp.id);
+        return;
+    }
     if (restoreRetiredPreset(home, exp.id)) {
         clearRetiredMarkers(home, exp.id);
         return;
     }
     clearRetiredMarkers(home, exp.id);
-    if (isBuiltinAgentPreset(exp.id))
-        return;
     const dir = join(agentPresetRoot(home), exp.id);
     mkdirSync(dir, { recursive: true });
     if (!existsSync(join(dir, 'preset.yml')))
