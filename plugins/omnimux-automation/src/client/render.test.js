@@ -1,11 +1,12 @@
 /**
  * 渲染级门禁：用 esbuild 打成客户端产物，在 jsdom 中以真实 React 挂着跑。
  *
- * 覆盖四条关键安全路径：
+ * 覆盖五条关键安全路径：
  * 1. Tab 以正确的 id/order/title 注册，且 disposer 真的注销；
  * 2. 双视图可切换，切换只替换内容区；
  * 3. `visible=false` 时 runtime 停表；
- * 4. 删除必须经过二次确认才会发出 mutate。
+ * 4. 删除必须经过二次确认才会发出 mutate；
+ * 5. 分裂创建按钮：主按钮走「手动设置」打开配置弹窗，下拉「使用对话创建」把引导语写进底座 contenteditable。
  */
 
 import assert from 'node:assert/strict'
@@ -446,4 +447,150 @@ test('左栏入口以 rank 9 登记，点击打开工作台 Tab 而不是抢占 
   assert.ok(effect !== undefined)
   effect.dispose()
   assert.equal(sidebarRows.length, 0, 'disposer 必须注销协调器登记')
+})
+
+/**
+ * 挂载工作台并返回分组「创建」按钮的查找器。
+ * 下拉浮层走 portal 挂在 body 上，所以按类名取而不是按容器取。
+ */
+async function mountWorkbenchSplit() {
+  const harness = await resetHarness()
+  clientModule.apply(harness.ctx)
+  const tab = harness.tabs[0]
+  await React.act(async () => {
+    root.render(React.createElement(tab.component, { visible: true }))
+  })
+  await flush()
+  const split = container.querySelector('.dsh-st-split')
+  assert.ok(split !== null, '工作台右上角必须有分裂创建按钮')
+  return {
+    harness,
+    split,
+    main: () => split.querySelector('.dsh-st-split-main'),
+    toggle: () => split.querySelector('.dsh-st-split-toggle'),
+    items: () => [...dom.window.document.querySelectorAll('.dsh-st-split-item')],
+  }
+}
+
+/**
+ * 造一个底座真身结构的 composer 座位：座位 div 包一个 contenteditable 输入框，
+ * 用于验证草稿写进的是真实 contenteditable，而不是 textarea。
+ *
+ * @returns {{ seat: HTMLElement, field: HTMLElement }}
+ */
+function mountComposerSeat() {
+  const seat = dom.window.document.createElement('div')
+  seat.setAttribute('data-composer-seat', '')
+  const field = dom.window.document.createElement('div')
+  field.setAttribute('contenteditable', 'true')
+  field.setAttribute('role', 'textbox')
+  seat.append(field)
+  dom.window.document.body.append(seat)
+  return { seat, field }
+}
+
+test('创建按钮是分裂胶囊：左半创建、右半展开两项下拉，选中后收起', async () => {
+  const { main, toggle, items } = await mountWorkbenchSplit()
+
+  assert.equal(main().textContent, '新建定时任务')
+  assert.equal(main().disabled, false)
+  assert.equal(toggle().disabled, false)
+  assert.equal(toggle().getAttribute('aria-haspopup'), 'menu')
+  assert.equal(toggle().getAttribute('aria-expanded'), 'false')
+  assert.equal(items().length, 0, '未展开时不得渲染浮层')
+
+  await React.act(async () => { toggle().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+  await flush()
+
+  assert.equal(toggle().getAttribute('aria-expanded'), 'true')
+  assert.deepEqual(
+    items().map(node => node.textContent),
+    ['使用对话创建', '手动设置'],
+    '下拉必须恰好是「使用对话创建」与「手动设置」两项',
+  )
+  assert.equal(items()[0].getAttribute('role'), 'menuitem')
+  assert.match(items()[0].innerHTML, /<svg/, '下拉项必须带图标')
+
+  // Escape 收起浮层并把焦点交还主按钮。
+  await React.act(async () => {
+    dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  })
+  await flush()
+  assert.equal(items().length, 0, 'Escape 必须收起浮层')
+  assert.equal(toggle().getAttribute('aria-expanded'), 'false')
+})
+
+test('主按钮点击默认走「手动设置」，直接打开任务配置弹窗且不展开浮层', async () => {
+  const { main, items } = await mountWorkbenchSplit()
+
+  await React.act(async () => {
+    main().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  })
+  await flush()
+
+  assert.equal(items().length, 0, '主按钮不得展开浮层')
+  assert.match(dom.window.document.body.textContent, /请写完整、独立的任务说明/, '主按钮必须打开手动配置弹窗')
+})
+
+test('「使用对话创建」把引导语写进主对话 contenteditable 并收起浮层，不打开配置弹窗', async () => {
+  const { toggle, items } = await mountWorkbenchSplit()
+  const { seat, field } = mountComposerSeat()
+  const commands = []
+  dom.window.document.execCommand = (command, _showUi, value) => {
+    commands.push({ command, value })
+    field.textContent = value
+    return true
+  }
+
+  try {
+    await React.act(async () => { toggle().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+    await flush()
+
+    await React.act(async () => { items()[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+    await flush()
+
+    assert.deepEqual(
+      commands,
+      [{ command: 'insertText', value: '我要创建一个定时任务，每【时间间隔】执行【具体任务】' }],
+      '底座编辑器的正常输入通道必须优先',
+    )
+    assert.equal(field.textContent, '我要创建一个定时任务，每【时间间隔】执行【具体任务】')
+    assert.equal(items().length, 0, '选中后浮层必须收起')
+    assert.equal(dom.window.document.querySelector('.dsh-st-split-main').textContent, '新建定时任务')
+    assert.doesNotMatch(dom.window.document.body.textContent, /请写完整、独立的任务说明/, '对话创建不得打开手动配置弹窗')
+  } finally {
+    delete dom.window.document.execCommand
+    seat.remove()
+  }
+})
+
+test('contenteditable 编辑器拒绝 insertText 时，草稿仍要真实落到输入框', async () => {
+  const { toggle, items } = await mountWorkbenchSplit()
+  const { seat, field } = mountComposerSeat()
+  let inputCount = 0
+  field.addEventListener('input', () => { inputCount += 1 })
+
+  try {
+    await React.act(async () => { toggle().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+    await flush()
+    await React.act(async () => { items()[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+    await flush()
+
+    assert.equal(field.textContent, '我要创建一个定时任务，每【时间间隔】执行【具体任务】')
+    assert.equal(inputCount, 1, '退回通道必须派发一次 input 事件，React 受控输入才同步')
+  } finally {
+    seat.remove()
+  }
+})
+
+test('「手动设置」打开任务配置弹窗', async () => {
+  const { toggle, items } = await mountWorkbenchSplit()
+
+  await React.act(async () => { toggle().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+  await flush()
+  await React.act(async () => { items()[1].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })) })
+  await flush()
+
+  assert.equal(items().length, 0, '选中后浮层必须收起')
+  assert.match(dom.window.document.body.textContent, /请写完整、独立的任务说明/, '手动设置必须打开配置弹窗')
 })

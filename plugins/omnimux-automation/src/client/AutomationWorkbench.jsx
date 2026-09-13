@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button } from './controls.jsx'
 import { CreateModal } from './create-modal.jsx'
 import { DeleteConfirmation } from './delete-confirmation.jsx'
-import { RefreshIcon } from './icons.jsx'
+import { ChatIcon, PencilIcon, RefreshIcon } from './icons.jsx'
 import {
   AutomationFormError,
   buildCreateInput,
   formFromAutomation,
 } from './helpers.js'
+import { applyComposerDraft } from './prefill-chat.js'
 import { isTransportError } from './runtime.js'
 import { groupAutomationRuns } from './schedule-model.js'
 import { ScheduleOverviewView } from './ScheduleOverviewView.jsx'
 import { ScheduleRunsView } from './ScheduleRunsView.jsx'
 import { ScheduleViewSwitch } from './ScheduleViewSwitch.jsx'
+import { SplitCreateButton } from './split-create-button.jsx'
 
 /**
  * 右侧工作台容器。
@@ -90,6 +92,12 @@ export function AutomationWorkbench({
     setCreating(true)
   }
 
+  /** 把定时任务引导语填进底座主对话输入框；输入框不在页面上时静默返回。 */
+  const applyPrefillToChat = (text) => applyComposerDraft(text).catch((caught) => {
+    console.warn('[omnimux-automation] 填充主对话草稿失败', caught)
+    return false
+  })
+
   const openEdit = (item) => {
     setEditingId(item.id)
     setDraft(formFromAutomation(item, workspaces, snapshot?.defaultModel ?? null, defaultPermission || item.permission))
@@ -117,11 +125,24 @@ export function AutomationWorkbench({
           <span className="dsh-st-wb-count" aria-label={`${automations.length}`}>{automations.length}</span>
         </div>
         <div className="dsh-st-wb-actions">
-          <Button
-            className="dsh-st-btn dsh-st-btn--primary"
+          <SplitCreateButton
+            label={t('action.create')}
+            menuLabel={t('action.createMenu')}
             disabled={!canCreate}
-            onClick={openCreate}
-          >{t('action.create')}</Button>
+            onPrimary={openCreate}
+            options={[
+              {
+                label: t('action.chatCreate'),
+                icon: <ChatIcon width={14} height={14} />,
+                onSelect: () => { void applyPrefillToChat(t('chat.prompt')) },
+              },
+              {
+                label: t('action.manualCreate'),
+                icon: <PencilIcon width={14} height={14} />,
+                onSelect: openCreate,
+              },
+            ]}
+          />
           <Button
             className="dsh-st-icon"
             aria-label={t('section.refresh')}
