@@ -83,6 +83,7 @@ import { appendMediaInspiration } from './media-library.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
 import { TIKTOK_RUNTIME_MESSAGE } from '../content/tiktok-scene/messages.ts'
 import {
+  discoverHostBase,
   httpBaseFromBridgeUrl,
   requestInspirationSave,
   requestMediaExport,
@@ -172,6 +173,14 @@ async function probeBridge(url: string): Promise<boolean> {
  * waiting for an address that has not moved.
  */
 let discoveredBridgeUrl = ''
+
+/**
+ * The HTTP base a parallel port probe found, once one has answered.
+ *
+ * Cached separately from the bridge address: the two are discovered from the
+ * same reply, but a failed probe must not be mistaken for a reachable bridge.
+ */
+let discoveredHostBase = ''
 
 const STORAGE_KEY = 'dshSettings'
 const TAB_AFFINITY_STORAGE_KEY = 'dshTabAffinity'
@@ -1335,11 +1344,17 @@ function readTiktokShortcut(message: unknown): { url: string; kind: ExportKind }
  */
 async function hostHttpBase(): Promise<string | null> {
   const known = settings.bridgeUrl !== '' ? settings.bridgeUrl : discoveredBridgeUrl
-  if (known !== '') return httpBaseFromBridgeUrl(known)
-  const found = await discoverBridge()
-  if (found === undefined) return null
-  discoveredBridgeUrl = found
-  return httpBaseFromBridgeUrl(found)
+  if (known !== '') {
+    const base = httpBaseFromBridgeUrl(known)
+    if (base !== null) return base
+  }
+  // Nothing known yet. Unlike the bridge sweep, this one asks every candidate
+  // port at once: the user is watching a menu row that says it is working, and
+  // nine serial timeouts is not an acceptable wait for one download.
+  if (discoveredHostBase !== '') return discoveredHostBase
+  const found = await discoverHostBase(DISCOVERY_PORTS)
+  if (found !== null) discoveredHostBase = found
+  return found
 }
 
 /**

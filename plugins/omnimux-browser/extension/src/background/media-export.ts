@@ -63,6 +63,46 @@ export function httpBaseFromBridgeUrl(bridgeUrl: string): string | null {
   return `${url.protocol === 'wss:' ? 'https:' : 'http:'}//${url.host}`
 }
 
+/** Path the bridge publishes its own address on. */
+const BRIDGE_CONFIG_PATH = '/ext/bridge-config'
+
+/** Per-port budget while probing for a local DSH process. */
+const HOST_PROBE_TIMEOUT_MS = 1_500
+
+/**
+ * Find the local DSH process, asking every candidate port at once.
+ *
+ * Serial probing would make a user wait out each dead port's timeout before the
+ * live one is reached — the worst case is nine ports, and the user is watching a
+ * menu row that says it is working. Asking in parallel keeps the wait at one
+ * timeout, and `Promise.any` means a port that never answers cannot hold the
+ * answer back once a real host has replied.
+ * @param ports candidate loopback ports
+ * @param fetchImpl injectable transport, for tests
+ * @returns the HTTP base of the first host that answers, or `null` for none
+ */
+export async function discoverHostBase(
+  ports: readonly number[],
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const probes = ports.map(async (port): Promise<string> => {
+    const response = await fetchImpl(`http://127.0.0.1:${port}${BRIDGE_CONFIG_PATH}`, {
+      signal: AbortSignal.timeout(HOST_PROBE_TIMEOUT_MS),
+    })
+    if (!response.ok) throw new Error(`port ${port} answered ${response.status}`)
+    const body = await response.json() as { wsUrl?: unknown }
+    const base = typeof body.wsUrl === 'string' ? httpBaseFromBridgeUrl(body.wsUrl) : null
+    if (base === null) throw new Error(`port ${port} is not a dsh host`)
+    return base
+  })
+  try {
+    return await Promise.any(probes)
+  } catch {
+    // Every candidate refused or timed out: there is no local host to talk to.
+    return null
+  }
+}
+
 /** Read a JSON body, answering `null` for anything that is not JSON. */
 async function readJson(response: Response): Promise<Record<string, any> | null> {
   try {

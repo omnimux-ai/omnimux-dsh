@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import {
+  discoverHostBase,
   httpBaseFromBridgeUrl,
   requestInspirationSave,
   requestMediaExport,
@@ -138,5 +139,49 @@ describe('保存到灵感库', () => {
 
     expect(outcome.ok).toBe(false)
     expect(outcome.detail).toContain('region blocked')
+  })
+})
+
+describe('宿主地址探测', () => {
+  it('端口并行探测：先应答的那个立即决定结果，不回答的端口拖不住它', async () => {
+    const base = await discoverHostBase([45120, 43120], async (input) => {
+      if (String(input).includes(':43120')) {
+        return jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
+      }
+      // A port with no DSH behind it can hang until its own timeout; a serial
+      // sweep would spend that timeout before ever reaching the live port.
+      return new Promise<Response>(() => {})
+    })
+
+    expect(base).toBe(BASE)
+  })
+
+  it('应答的不是 dsh 时继续看别的端口', async () => {
+    const base = await discoverHostBase([45120, 43120], async (input) => (
+      String(input).includes(':45120')
+        ? jsonResponse(200, { something: 'else' })
+        : jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
+    ))
+
+    expect(base).toBe(BASE)
+  })
+
+  it('所有候选端口都不通时回答空，交给调用方说“主程序没在跑”', async () => {
+    const base = await discoverHostBase([45120, 43120], async () => {
+      throw new TypeError('Failed to fetch')
+    })
+
+    expect(base).toBeNull()
+  })
+
+  it('探测结果用的是桥地址换算出的同一个来源', async () => {
+    const seen: string[] = []
+    const base = await discoverHostBase([43120], async (input) => {
+      seen.push(String(input))
+      return jsonResponse(200, { wsUrl: 'ws://127.0.0.1:43120/ext/bridge' })
+    })
+
+    expect(seen).toEqual(['http://127.0.0.1:43120/ext/bridge-config'])
+    expect(base).toBe(BASE)
   })
 })

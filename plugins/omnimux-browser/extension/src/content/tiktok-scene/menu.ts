@@ -223,16 +223,19 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     if (event.key === 'Escape' && open) setOpen(false)
   }
 
-  // The anchor is viewport-relative, so anything that changes the viewport has to
-  // re-measure it; scrolling is in the list because the rail can be shorter than
-  // the page even though it is pinned.
-  const onViewportChange = (): void => { if (open) reposition() }
+  // The anchor is viewport-relative, so a resize has to re-measure it: the rail
+  // moves and the trigger would otherwise be left pointing at where the avatar
+  // used to be. That applies whether or not the menu is showing, because the
+  // trigger itself is always visible. Scroll is different — the rail is pinned,
+  // so only an open menu (whose position the user is looking at) re-measures.
+  const onResize = (): void => reposition()
+  const onScroll = (): void => { if (open) reposition() }
 
   trigger.addEventListener('click', onTriggerClick)
   doc.addEventListener('click', onDocumentClick)
   doc.addEventListener('keydown', onKeydown)
-  doc.defaultView?.addEventListener('resize', onViewportChange)
-  doc.defaultView?.addEventListener('scroll', onViewportChange, { passive: true })
+  doc.defaultView?.addEventListener('resize', onResize)
+  doc.defaultView?.addEventListener('scroll', onScroll, { passive: true })
 
   reposition()
 
@@ -241,8 +244,8 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       trigger.removeEventListener('click', onTriggerClick)
       doc.removeEventListener('click', onDocumentClick)
       doc.removeEventListener('keydown', onKeydown)
-      doc.defaultView?.removeEventListener('resize', onViewportChange)
-      doc.defaultView?.removeEventListener('scroll', onViewportChange)
+      doc.defaultView?.removeEventListener('resize', onResize)
+      doc.defaultView?.removeEventListener('scroll', onScroll)
       host.remove()
     },
     reposition,
