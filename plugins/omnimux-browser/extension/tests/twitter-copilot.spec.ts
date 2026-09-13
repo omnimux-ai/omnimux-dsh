@@ -107,10 +107,25 @@ describe('Twitter Copilot Native Unit Tests', () => {
     expect(assembled.userMessage).toContain('Starship flight test')
   })
 
-  it('T5: 按钮挂载 - 自动注入小精灵图标且防重', () => {
-    const container = document.createElement('div')
+  it('T5: 按钮挂载 - 横向Flex提升、官方幽灵角标注入与竞品覆盖', () => {
+    // 模拟推特嵌套结构：grandparent(横向flex) -> parent(竖向/单按钮包装) -> tweetButton
+    const grandParent = document.createElement('div')
+    grandParent.style.display = 'flex'
+    grandParent.style.flexDirection = 'row'
+
+    const parent = document.createElement('div')
     const tweetButton = document.createElement('button')
     tweetButton.setAttribute('data-testid', 'tweetButton')
+    parent.appendChild(tweetButton)
+    grandParent.appendChild(parent)
+
+    // 竞品 SoPilot 按钮
+    const competitorBtn = document.createElement('div')
+    competitorBtn.className = 'ai-assistant-button'
+    grandParent.appendChild(competitorBtn)
+
+    document.body.appendChild(grandParent)
+
     // 模拟元素有可见几何尺寸
     vi.spyOn(tweetButton, 'getBoundingClientRect').mockReturnValue({
       width: 60,
@@ -124,18 +139,23 @@ describe('Twitter Copilot Native Unit Tests', () => {
       toJSON: () => {},
     })
 
-    container.appendChild(tweetButton)
-    document.body.appendChild(container)
-
     mountCopilotToTwitterButtons()
 
-    const attached = container.querySelectorAll('[data-omnimux-copilot="true"]')
+    const attached = grandParent.querySelectorAll('[data-omnimux-copilot="true"]')
     expect(attached.length).toBe(1)
-    expect(attached[0].className).toContain('omnimux-copilot-anchor-btn')
+    const copilotBtn = attached[0] as HTMLElement
+    expect(copilotBtn.className).toContain('omnimux-copilot-anchor-btn')
+
+    // 验证复用官方幽灵图标矢量图
+    expect(copilotBtn.innerHTML).toContain('fill-rule="evenodd"')
+    expect(copilotBtn.innerHTML).toContain('M11.6666')
+
+    // 验证竞品被干净替换覆盖
+    expect(competitorBtn.style.display).toBe('none')
 
     // 重复扫描不应重复挂载
     mountCopilotToTwitterButtons()
-    expect(container.querySelectorAll('[data-omnimux-copilot="true"]').length).toBe(1)
+    expect(grandParent.querySelectorAll('[data-omnimux-copilot="true"]').length).toBe(1)
   })
 
   it('T6: 输入框回填 - 模拟剪贴板粘贴与富文本穿透', async () => {

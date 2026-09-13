@@ -4,13 +4,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   margin-left: 8px;
+  margin-right: 4px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(99, 102, 241, 0.22));
-  border: 1px solid rgba(168, 85, 247, 0.35);
-  color: #c084fc;
+  background: radial-gradient(circle at 30% 30%, #a855f7 0%, #7c3aed 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
@@ -18,23 +19,26 @@
   position: relative;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
-  z-index: 10;
+  z-index: 99999;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
 }
 
 .omnimux-copilot-anchor-btn:hover {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32), rgba(99, 102, 241, 0.38));
-  border-color: rgba(192, 132, 252, 0.7);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
-  transform: scale(1.05);
+  background: radial-gradient(circle at 30% 30%, #c084fc 0%, #8b5cf6 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.6);
+  transform: scale(1.08);
 }
 
 .omnimux-copilot-anchor-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .omnimux-copilot-anchor-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
+  display: block;
+  fill: #ffffff;
   transition: transform 0.2s ease;
 }
 
