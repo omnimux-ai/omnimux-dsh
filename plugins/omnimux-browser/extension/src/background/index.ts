@@ -118,9 +118,20 @@ const SETTINGS_DEFAULTS: Settings = {
 const DISCOVERY_PORTS = [45120, 45128, 43120, 43128, 3080, 3081, 3090, 14389, 43189]
 const LEGACY_LOCAL_URL = 'ws://127.0.0.1:3080'
 
-/** 探测本机 dsh 的桥地址：fetch /ext/bridge-config 直到成功。 */
+/** 探测本机 dsh 的桥地址：fetch /ext/bridge-config 直到成功。优先匹配 OmniMux Dev (45120) 及用户指定端口。 */
 async function discoverBridge(shouldContinue: () => boolean = () => true): Promise<string | undefined> {
-  for (const port of DISCOVERY_PORTS) {
+  let prioritizedPorts = [...DISCOVERY_PORTS]
+  try {
+    const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
+    const p = saved ? parseInt(saved, 10) : undefined
+    if (p && !isNaN(p)) {
+      prioritizedPorts = [p, ...DISCOVERY_PORTS.filter((x) => x !== p)]
+    }
+  } catch {
+    // Ignore storage failure
+  }
+
+  for (const port of prioritizedPorts) {
     if (!shouldContinue()) return undefined
     try {
       const response = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
@@ -1289,6 +1300,22 @@ async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
   }
   return rpc.request(method, payload)
 }
+
+// ---- DSH instance / port switch listener ----
+
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  if (typeof message !== 'object' || message === null) return
+  const msg = message as { type?: unknown; payload?: { port?: number } }
+  if (msg.type === 'SWITCH_DSH_PORT' && msg.payload?.port) {
+    const port = msg.payload.port
+    void chrome.storage.local.set({ omnimux_target_port: String(port) }).catch(() => {})
+    settings.bridgeUrl = `ws://127.0.0.1:${port}/ext/bridge`
+    void saveSettings().catch(() => {})
+    startBridge()
+    sendResponse({ ok: true })
+    return true
+  }
+})
 
 // ---- Content script messages ----
 

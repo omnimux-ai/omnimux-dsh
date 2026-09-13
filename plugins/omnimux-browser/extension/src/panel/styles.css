@@ -2984,37 +2984,37 @@ textarea:focus-visible {
    OmniMux-精灵助手 v2.0 - Scene, Presets, Media Sniffer, DOM Fill & Workspace
    ========================================================================== */
 
-/* Workspace Selector */
+/* Workspace Selector (中性黑白墨水设计，消除紫色) */
 .workspace-selector-container {
   position: relative;
   display: flex;
   align-items: center;
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 130px;
+  width: 100%;
 }
 
 .workspace-selector-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 8px;
-  background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(124, 58, 237, 0.22);
-  border-radius: 14px;
+  gap: 6px;
+  height: calc(30px * var(--ui-scale));
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 15px;
   color: var(--ink-strong);
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(11.5px * var(--ui-scale));
   font-weight: 580;
   cursor: pointer;
-  transition: all 0.2s ease;
-  max-width: 130px;
+  transition: all 0.15s ease;
+  max-width: 100%;
   overflow: hidden;
 }
 
 .workspace-selector-pill:hover {
-  background: rgba(124, 58, 237, 0.14);
-  border-color: rgba(124, 58, 237, 0.4);
+  background: var(--canvas-deep);
+  border-color: var(--ink-strong);
 }
 
 .engine-dot {
@@ -3028,14 +3028,14 @@ textarea:focus-visible {
 .engine-dot.offline { background: #ef4444; }
 
 .ws-icon { font-size: calc(12px * var(--ui-scale)); flex-shrink: 0; }
-.ws-name { max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-arrow { font-size: calc(9px * var(--ui-scale)); opacity: 0.6; flex-shrink: 0; }
 
 .workspace-dropdown-menu {
   position: absolute;
-  top: 34px;
+  top: 36px;
   left: 0;
-  min-width: 220px;
+  min-width: 240px;
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: 12px;
@@ -3045,6 +3045,292 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* DSH Instance & Port Selector (中性黑白极简风格) */
+.dsh-instance-selector-container {
+  position: relative;
+  width: 100%;
+}
+
+.dsh-instance-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  height: calc(34px * var(--ui-scale));
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-strong);
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.dsh-instance-pill-btn:hover {
+  background: var(--canvas-deep);
+  border-color: var(--ink-strong);
+}
+
+.instance-health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.instance-health-dot.online { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+.instance-health-dot.standby { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.instance-health-dot.offline { background: #71717a; }
+.instance-health-dot.checking { background: #3b82f6; animation: dotPulse 1s infinite alternate; }
+
+@keyframes dotPulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.inst-icon {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+.inst-label {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inst-port-badge {
+  font-size: calc(11px * var(--ui-scale));
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--canvas-deep);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.inst-arrow {
+  font-size: calc(9px * var(--ui-scale));
+  opacity: 0.6;
+}
+
+.dsh-instance-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  padding: 8px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.instance-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.probe-refresh-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.probe-refresh-icon-btn:hover {
+  color: var(--ink-strong);
+}
+
+.probe-refresh-icon-btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+.instance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.instance-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--canvas-deep);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.instance-item-card:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.instance-item-card.active {
+  border-color: var(--ink-strong);
+  background: var(--surface);
+}
+
+.instance-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.instance-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.instance-name {
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+
+.instance-recommend-badge {
+  font-size: calc(9.5px * var(--ui-scale));
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--ink-strong);
+  color: var(--canvas);
+  font-weight: 600;
+}
+
+.instance-desc {
+  font-size: calc(10.5px * var(--ui-scale));
+  color: var(--muted);
+}
+
+.instance-card-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.instance-port-tag {
+  font-size: calc(11px * var(--ui-scale));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--muted);
+}
+
+.health-pill {
+  font-size: calc(10px * var(--ui-scale));
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.health-pill.online {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.health-pill.standby {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.health-pill.offline {
+  background: rgba(113, 113, 122, 0.12);
+  color: #71717a;
+  border: 1px solid rgba(113, 113, 122, 0.2);
+}
+
+.instance-check-icon {
+  color: var(--ink-strong);
+  display: flex;
+  align-items: center;
+}
+
+.instance-custom-footer {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.custom-port-trigger-btn {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+  font-size: calc(11.5px * var(--ui-scale));
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.custom-port-trigger-btn:hover {
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+}
+
+.custom-port-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.custom-port-input {
+  flex: 1;
+  height: calc(28px * var(--ui-scale));
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--canvas-deep);
+  color: var(--ink-strong);
+  font-size: calc(11.5px * var(--ui-scale));
+}
+
+.custom-port-apply-btn {
+  height: calc(28px * var(--ui-scale));
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--ink-strong);
+  color: var(--canvas);
+  border: none;
+  font-size: calc(11.5px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.custom-port-cancel-btn {
+  height: calc(28px * var(--ui-scale));
+  padding: 0 8px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-size: calc(11px * var(--ui-scale));
+  cursor: pointer;
 }
 
 .dropdown-header {

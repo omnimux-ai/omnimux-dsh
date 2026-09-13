@@ -21,6 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { DomFillButton } from './components/DomFillButton.tsx'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
+import { DshInstanceSelector } from './components/DshInstanceSelector.tsx'
 import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, SidebarPanelIcon, TwitterXIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
@@ -549,6 +550,27 @@ export function App(): React.JSX.Element {
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
+  const [targetPort, setTargetPort] = useState<number>(() => {
+    const saved = safeGetStorage('omnimux_target_port')
+    const num = saved ? parseInt(saved, 10) : 45120
+    return !isNaN(num) && num > 0 ? num : 45120
+  })
+
+  const handleSwitchDshInstance = (inst: { id: string; port: number; name: string }) => {
+    setTargetPort(inst.port)
+    safeSetStorage('omnimux_target_port', String(inst.port))
+    try {
+      chrome.runtime?.sendMessage?.({
+        type: 'SWITCH_DSH_PORT',
+        payload: { port: inst.port }
+      })
+    } catch {
+      // Ignore
+    }
+    void api.updateSettings({
+      bridgeUrl: `ws://127.0.0.1:${inst.port}/ext/bridge`
+    }).catch(() => {})
+  }
   const [api] = useState<PanelApi>(() => connectPanel())
   const [state, setState] = useState<BridgeState>('stopped')
   const [caps, setCaps] = useState<BridgeCaps | null>(null)
@@ -1962,10 +1984,21 @@ export function App(): React.JSX.Element {
         </div>
         <div className="settings-panel">
           <label>
+            <span>{locale === 'en' ? 'Local Engine Instance & Port' : '本地引擎实例与端口'}</span>
+            <small>{locale === 'en' ? 'Select which local DSH / OmniMux instance to connect with live port health checks' : '自主选择要连接的本地引擎版本（OmniMux Dev 45120 默认推荐、DSH Desktop 43120、PRD 43128 等），自动进行本地网络健康检测'}</small>
+            <div style={{ marginTop: '8px' }}>
+              <DshInstanceSelector
+                locale={locale}
+                activePort={targetPort}
+                onSelectInstance={handleSwitchDshInstance}
+              />
+            </div>
+          </label>
+          <label>
             <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
             <small>{locale === 'en' ? 'Bind your browser chat and generation tasks to a local DSH / OmniMux workspace' : '设置会话与生成任务绑定的本地 DSH / OmniMux 工作区目录'}</small>
             <div style={{ marginTop: '8px' }}>
-              <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} />
+              <WorkspaceSelector bridgeConnected={state === 'connected'} locale={locale} targetPort={targetPort} />
             </div>
           </label>
           <label>

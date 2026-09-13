@@ -11,10 +11,12 @@ export interface WorkspaceItem {
 export const WorkspaceSelector = memo(function WorkspaceSelector({
   bridgeConnected,
   locale = 'zh',
+  targetPort = 45120,
   onSelectWorkspace
 }: {
   bridgeConnected: boolean
   locale?: 'zh' | 'en'
+  targetPort?: number
   onSelectWorkspace?: (ws: WorkspaceItem) => void
 }) {
   const isEn = locale === 'en'
@@ -25,7 +27,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
 
   const fetchWorkspaces = async () => {
     setLoading(true)
-    const ports = [43120, 45120, 43128]
+    const ports = Array.from(new Set([targetPort, 45120, 43120, 43128]))
     let loaded = false
 
     for (const port of ports) {
@@ -50,10 +52,11 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
     }
 
     if (!loaded) {
+      const portName = targetPort === 45120 ? 'OmniMux Dev' : targetPort === 43120 ? 'DSH Desktop' : targetPort === 43128 ? 'OmniMux PRD' : `Port ${targetPort}`
       const fallback: WorkspaceItem = {
-        id: 'default-browser',
-        name: 'omnimux-browser',
-        path: '~/.dsh/browser-sessions',
+        id: `default-${targetPort}`,
+        name: `${portName} (${targetPort})`,
+        path: `http://127.0.0.1:${targetPort}`,
         isActive: true
       }
       setWorkspaces([fallback])
@@ -64,7 +67,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
 
   useEffect(() => {
     void fetchWorkspaces()
-  }, [])
+  }, [targetPort])
 
   return (
     <div className="workspace-selector-container">
