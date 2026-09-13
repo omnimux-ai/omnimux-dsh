@@ -76,19 +76,28 @@ export const CAPSULE_SPEC = {
   background: 'rgba(30,32,38,0.95)',
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
-  borderRadius: 18,
-  height: 36,
+  /** Expanded-row radius; `height / 2` keeps both of its ends perfectly round. */
+  borderRadius: 16,
   /**
-   * Stage one, the collapsed circle: the brand trigger alone.
-   * `36 × 36` with an `18px` radius is a perfect circle.
+   * Stage-two height, and the band the placement reserves for *both* stages: the
+   * collapsed circle is drawn inside it, so opening the pill grows downward into
+   * space the geometry has already accounted for and never crosses a viewport edge.
    */
-  collapsedWidth: 36,
+  height: 32,
+  /**
+   * Stage one, the collapsed circle: the brand trigger alone, kept deliberately
+   * small so it covers as little of the media as possible.
+   * `28 × 28` with a `14px` radius is a perfect circle.
+   */
+  collapsedWidth: 28,
+  collapsedHeight: 28,
+  collapsedRadius: 14,
   /**
    * Stage two, the expanded row: 3 x 30px icons + 2 x 4px gaps +
-   * 2 x 6px padding + 2 x 1px border.
+   * 2 x 4px padding + 2 x 1px border.
    */
-  width: 112,
-  paddingX: 6,
+  width: 108,
+  paddingX: 4,
   /**
    * The `collapsedWidth → width` opening animation. The stylesheet owns the
    * transition; this is the same duration on the JavaScript side, where it ends
@@ -98,16 +107,28 @@ export const CAPSULE_SPEC = {
   /** Gap between two action icons in the expanded row. */
   iconGap: 4,
   blur: 'blur(24px) saturate(140%)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  sheen: 'inset 0 1px 0 rgba(255,255,255,0.20)',
-  shadow: '0 8px 26px rgba(0,0,0,0.42), inset 0 0 0 0.5px rgba(255,255,255,0.06)',
+  /**
+   * Translucent rim. Media behind the pill can be a white studio shot or a black
+   * night frame, so the edge itself has to carry contrast instead of relying on
+   * the frosted fill alone.
+   */
+  border: '1px solid rgba(255,255,255,0.28)',
+  /** Lit top edge, inset so the rim reads as a highlight rather than a stroke. */
+  sheen: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+  /**
+   * Three translucent rings: a 2px outer halo and the inset top sheen separate
+   * the pill from bright media, while the deep drop shadow separates it from dark
+   * media. Whatever the artwork underneath, one of the three always lands.
+   */
+  shadow:
+    '0 0 0 2px rgba(255,255,255,0.16), 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.35)',
   /** Inset from the media's bottom-left corner. */
   inset: 10,
   iconSize: 30,
   /** Hit box of the stage-one brand trigger inside the circle. */
-  brandSize: 28,
-  /** Rendered size of the brand silhouette. */
-  brandIconSize: 20,
+  brandSize: 22,
+  /** Rendered size of the brand silhouette, centred in the 22px hit box. */
+  brandIconSize: 15,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const

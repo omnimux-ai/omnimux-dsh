@@ -13,7 +13,7 @@
  *  C. the >= 40px media threshold admits images and videos and ignores avatars;
  *  D. the three shortcuts close their loops (library / clipboard / conversation);
  *  E. the cross-module constants agree;
- *  F. the capsule is two-staged: a 36px brand circle that widens to the 112px
+ *  F. the capsule is two-staged: a 28px brand circle that widens to the 108px
  *     row of three actions, and folds back on the required buffer.
  */
 import { readFileSync } from 'node:fs'
@@ -746,18 +746,66 @@ describe('E. cross-module contract agreement', () => {
 // ------------------------------------------------- F. 两段式悬停展开 ---
 
 describe('F. two-stage hover expansion', () => {
-  it('paints stage one as a 36px circle and stage two as the 112px row', () => {
-    expect(CAPSULE_SPEC.collapsedWidth).toBe(36)
-    expect(CAPSULE_SPEC.width).toBe(112)
-    // The circle must be exactly that: a 36px box with an 18px radius.
-    expect(CAPSULE_SPEC.height).toBe(CAPSULE_SPEC.collapsedWidth)
+  it('paints stage one as a 28px circle and stage two as the 108px row', () => {
+    expect(CAPSULE_SPEC.collapsedWidth).toBe(28)
+    expect(CAPSULE_SPEC.collapsedHeight).toBe(28)
+    expect(CAPSULE_SPEC.width).toBe(108)
+    expect(CAPSULE_SPEC.height).toBe(32)
+    // The circle must be exactly that: a 28px box with a 14px radius.
+    expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.collapsedWidth)
+    expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
+    // The opened row is a 32px box with a 16px radius, so both ends stay round.
     expect(CAPSULE_SPEC.borderRadius).toBe(CAPSULE_SPEC.height / 2)
 
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
-    expect(base).toContain('height:36px')
-    expect(base).toContain('border-radius:18px')
-    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed')).toContain('width:36px')
-    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:112px')
+    expect(base).toContain('height:32px')
+    expect(base).toContain('border-radius:16px')
+    const collapsed = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed')
+    expect(collapsed).toContain('width:28px')
+    expect(collapsed).toContain('height:28px')
+    expect(collapsed).toContain('border-radius:14px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:108px')
+  })
+
+  it('keeps the pill visible on artwork of any tone', () => {
+    // The pill floats over arbitrary media, so the edge itself has to carry the
+    // contrast: a translucent rim, a 2px outer halo and the inset top sheen
+    // separate it from bright artwork, the deep cast shadow from dark artwork.
+    expect(CAPSULE_SPEC.border).toBe('1px solid rgba(255,255,255,0.28)')
+    expect(CAPSULE_SPEC.shadow).toContain('0 0 0 2px rgba(255,255,255,0.16)')
+    expect(CAPSULE_SPEC.shadow).toContain('0 4px 16px rgba(0,0,0,0.6)')
+    expect(CAPSULE_SPEC.shadow).toContain('inset 0 1px 0 rgba(255,255,255,0.35)')
+
+    const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
+    expect(base).toContain('border:1pxsolidrgba(255,255,255,0.28)')
+    expect(base).toContain('0002pxrgba(255,255,255,0.16)')
+    expect(base).toContain('04px16pxrgba(0,0,0,0.6)')
+    expect(base).toContain('inset01px0rgba(255,255,255,0.35)')
+    // The hover state keeps the same edge and only brightens it, so the ring
+    // never appears out of nowhere when the pointer arrives.
+    const interactive = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-interactive')
+    expect(interactive).toContain('0002pxrgba(255,255,255,0.26)')
+  })
+
+  it('keeps the stage-one brand mark small inside its hit box', () => {
+    expect(CAPSULE_SPEC.brandSize).toBe(22)
+    expect(CAPSULE_SPEC.brandIconSize).toBe(15)
+    // A 15px mark inside a 22px box inside the 28px circle: precise, and small
+    // enough that the trigger covers as little of the media as it can.
+    expect(CAPSULE_SPEC.brandIconSize).toBeLessThan(CAPSULE_SPEC.brandSize)
+    expect(CAPSULE_SPEC.brandSize).toBeLessThanOrEqual(CAPSULE_SPEC.collapsedWidth)
+
+    // `declarationsOf` answers with the first match, which for this class is the
+    // centred-layer group rule it shares with `.omnimux-capsule-actions`, so the
+    // standalone sizing block is read straight from the stripped source.
+    const brand = stripComments(OVERLAY_STYLES)
+      .match(/\.omnimux-capsule-brand \{([^}]*)\}/)?.[1]
+      ?.replace(/\s+/g, '') ?? ''
+    expect(brand).toContain('width:22px')
+    expect(brand).toContain('height:22px')
+    const mark = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-brand svg')
+    expect(mark).toContain('width:15px')
+    expect(mark).toContain('height:15px')
   })
 
   it('animates the width between the stages instead of snapping', () => {

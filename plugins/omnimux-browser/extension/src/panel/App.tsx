@@ -25,6 +25,15 @@ import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIc
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
+import {
+  FEATURE_FLAG,
+  featureFlagMessage,
+  readFlag,
+  readFlagSync,
+  subscribeFlag,
+  writeFlag,
+  type FeatureFlagKey,
+} from '../feature-flags.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
 import {
   applyUiScale,
@@ -547,6 +556,8 @@ export function App(): React.JSX.Element {
   })
 
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
+  const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
+  const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
   const [api] = useState<PanelApi>(() => connectPanel())
@@ -862,6 +873,53 @@ export function App(): React.JSX.Element {
     setThemeSetting(mode)
     safeSetStorage('omnimux_theme_mode', mode)
   }
+
+  /**
+   * Persists one page-surface switch and notifies the page in front of the user.
+   *
+   * The value is stored where the content scripts can read it — their own
+   * `localStorage` belongs to the page, not to the extension — so the write
+   * reaches every open tab, and the direct message reaches this one without
+   * waiting for the storage event.
+   */
+  function updateFeatureFlag(key: FeatureFlagKey, enabled: boolean): void {
+    if (key === FEATURE_FLAG.fab) setFabEnabled(enabled)
+    else setMediaHoverEnabled(enabled)
+    void writeFlag(key, enabled)
+    void notifyFeatureFlag(key, enabled)
+  }
+
+  /** Sends one switch change to the active tab; storage is the channel that always lands. */
+  async function notifyFeatureFlag(key: FeatureFlagKey, enabled: boolean): Promise<void> {
+    // The floating workstation already runs inside the page, which receives the
+    // storage write first-hand, so there is no tab to look up.
+    if (isFloatMode) return
+    if (chrome.tabs?.query === undefined || chrome.tabs.sendMessage === undefined) return
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+      const tabId = tabs?.[0]?.id
+      if (tabId === undefined) return
+      await chrome.tabs.sendMessage(tabId, featureFlagMessage(key, enabled))
+    } catch {
+      // No receiving content script is a normal outcome, not a failed save.
+    }
+  }
+
+  // Switches read back from the authoritative store on mount, then follow
+  // changes: the side panel and the floating workstation can be open at once.
+  useEffect(() => {
+    let live = true
+    const unsubscribes = [
+      subscribeFlag(FEATURE_FLAG.fab, setFabEnabled),
+      subscribeFlag(FEATURE_FLAG.mediaHover, setMediaHoverEnabled),
+    ]
+    void readFlag(FEATURE_FLAG.fab).then((enabled) => { if (live) setFabEnabled(enabled) })
+    void readFlag(FEATURE_FLAG.mediaHover).then((enabled) => { if (live) setMediaHoverEnabled(enabled) })
+    return () => {
+      live = false
+      for (const unsubscribe of unsubscribes) unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     if (caps?.locale && (caps.locale === 'zh' || caps.locale === 'en')) {
@@ -1989,6 +2047,38 @@ export function App(): React.JSX.Element {
             <h1>{copy.settings.title}</h1>
           </div>
         </div>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-fab-setting">
+          <div id="omnimux-fab-setting" className="settings-card-heading">{copy.settings.fabSection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.fabToggle}</strong>
+              <small>{copy.settings.fabToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={fabEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.fab, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+        </section>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-media-hover-setting">
+          <div id="omnimux-media-hover-setting" className="settings-card-heading">{copy.settings.mediaHoverSection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.mediaHoverToggle}</strong>
+              <small>{copy.settings.mediaHoverToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={mediaHoverEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.mediaHover, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+        </section>
         <div className="settings-panel">
           <label>
             <span>{locale === 'en' ? 'Associated Workspace' : '关联工作区'}</span>
