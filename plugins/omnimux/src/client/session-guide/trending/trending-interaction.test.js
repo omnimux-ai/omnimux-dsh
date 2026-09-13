@@ -489,7 +489,7 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
   }
 })
 
-test('TrendingReplicateSection：原位在视口外才吸底，滚回原位自动归还（含几何与回收）', async () => {
+test('TrendingReplicateSection：复刻吸底并给出停靠几何，滚回原位归还、再滑开重新吸底（含回收）', async () => {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
   const env = withDom(SECTION_FIXTURE)
   const host = document.querySelector('#root')
@@ -517,7 +517,7 @@ test('TrendingReplicateSection：原位在视口外才吸底，滚回原位自�
     await flush()
 
     await click(host.querySelector('.omnimux-trending-recreate-btn'))
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '原位在视口外时必须吸底')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '复刻必须吸底')
     // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
     assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
     assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '604px')
@@ -544,10 +544,11 @@ test('TrendingReplicateSection：原位在视口外才吸底，滚回原位自�
   }
 })
 
-test('TrendingReplicateSection：复刻时若原位已在视口内，首帧即为 inline，不发生吸底闪烁', async () => {
+test('TrendingReplicateSection：复刻首帧一律吸底（原位在视口内也一样），滚回顶部原位才解除吸底', async () => {
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
   const env = withDom(SECTION_FIXTURE)
   const host = document.querySelector('#root')
+  // 原位始终落在视口可见区：复刻仍然必须先吸底，不允许几何判定抢走首帧
   env.dom.window.Element.prototype.getBoundingClientRect = function stub() {
     return {
       x: 394, y: 100, left: 394, top: 100, width: 1200, height: 166,
@@ -556,6 +557,12 @@ test('TrendingReplicateSection：复刻时若原位已在视口内，首帧即�
   }
   const stub = stubFetch(SOURCE_ROWS)
   const root = createRoot(host.querySelector('#seat'))
+  const scroll = async () => {
+    await act(async () => {
+      window.dispatchEvent(new window.Event('scroll'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  }
 
   try {
     await act(async () => {
@@ -564,8 +571,13 @@ test('TrendingReplicateSection：复刻时若原位已在视口内，首帧即�
     await flush()
 
     await click(host.querySelector('.omnimux-trending-recreate-btn'))
-    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '原位在视口内时首帧直接保留在行内，不得吸底闪烁')
-    assert.equal(host.querySelector('.omnimux-trending-undock'), null, '行内时不显示底部的悬浮收起按钮')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '点击复刻首帧必须吸底，无论原位是否还在视口内')
+    assert.ok(host.querySelector('.omnimux-trending-undock'), '吸底时必须给出底部收起入口')
+
+    // 向上滚回顶部原位：原位真实可见 → 解除吸底，输入框回到流内
+    await scroll()
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '滚回顶部原位必须自动解除吸底切回 inline')
+    assert.equal(host.querySelector('.omnimux-trending-undock'), null, '回流内后不再显示底部收起入口')
   } finally {
     stub.restore()
     env.restore()

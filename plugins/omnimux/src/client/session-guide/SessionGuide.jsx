@@ -140,7 +140,9 @@ function BlankSessionGuide({
 
   function focusEditor() {
     const root = guideRef.current?.closest('[data-omnimux-starter-host]')
-    root?.querySelector('[data-composer-input="true"]')?.focus()
+    // 必须 `preventScroll`：否则浏览器原生 focus 会把视口拉回输入框所在的原位，
+    // 让刚吸底到视口底部的输入框连同页面一起跳回顶部。
+    root?.querySelector('[data-composer-input="true"]')?.focus({ preventScroll: true })
   }
 
   useLayoutEffect(() => {
