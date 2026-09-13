@@ -136,7 +136,7 @@ describe('Cloud text card renders the text, not a placeholder plate', () => {
 
   it('mounts no media plate and requests no image for a text row', () => {
     assert.match(viewJsx, /\{kind === 'text' \? null : \(/)
-    assert.match(viewJsx, /<CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} \/>/)
+    assert.match(viewJsx, /<CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/>/)
   })
 
   it('shows the description on text and voice rows only', () => {
@@ -191,6 +191,45 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
 })
 
 /**
+ * 视频卡片不再退化成灰底图标。
+ *
+ * 旧版把「封面失败」当成「再拿原始文件当图片试一次」，对视频来说那是一个 mp4，浏览器
+ * 永远画不出来：请求失败 → 整行标记为破损 → 连底层已经就绪的 <video> 预览一起被销毁，
+ * 于是用户看到的是一张灰底加小图标的卡片。现在 <img> 只指向图片，没有封面的片段让首帧
+ * 当卡片正面；悬停播放的开关也从卡片（不是组件内部）传下去，鼠标移入即播、移开即停。
+ */
+describe('Cloud video tile keeps its own frame and plays on hover', () => {
+  it('binds the pointer surface on the card and hands it down to the tile', () => {
+    assert.match(viewJsx, /const \[hovering, setHovering\] = useState\(false\)/)
+    assert.match(viewJsx, /onMouseEnter=\{\(\) => \{ setHovering\(true\) \}\}/)
+    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
+    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/>\}/)
+    // The one effect that turns the pointer state into playback.
+    assert.match(viewJsx, /if \(hovering\) \{\n      void element\.play\(\)\.catch/)
+    assert.match(viewJsx, /element\.pause\(\)\n      element\.currentTime = 0\n    \}\n  \}, \[hovering\]\)/)
+  })
+
+  it('never points the image at a clip', () => {
+    assert.doesNotMatch(viewJsx, /retriedWithMedia/)
+    assert.doesNotMatch(viewJsx, /cloudMediaUrl\(asset\.id, wantsCover \? 'cover' : 'media'\)/)
+    assert.match(viewJsx, /const imageSrc = asset\.mediaType === 'image' \? cloudMediaUrl\(asset\.id, 'media'\) : coverSrc/)
+  })
+
+  it('gives a poster-less clip the face of the tile and only then loads it', () => {
+    assert.match(viewJsx, /const showClip = hasClip && \(isVideo \|\| imageSrc === ''\)/)
+    assert.match(viewJsx, /const bareClip = showClip && imageSrc === ''/)
+    assert.match(viewJsx, /className=\{bareClip \? BARE_PREVIEW_CLASS : PREVIEW_CLASS\}/)
+    assert.match(viewJsx, /preload=\{bareClip \? 'metadata' : 'none'\}/)
+    assert.match(ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-preview--bare'), /opacity: 1/)
+  })
+
+  it('falls back to the type icon only when nothing is left to draw', () => {
+    assert.match(viewJsx, /if \(asset\.mediaType !== 'image' && hasClip\) setCoverFailed\(true\)\n    else onBroken\(\)/)
+    assert.match(viewJsx, /if \(bareClip\) onBroken\(\)/)
+  })
+})
+
+/**
  * 声音类卡片（配音 / 音效 / 背景音）：一块暗调微彩底板，正中间一个居中的播放/暂停键，
  * 点一下即播即停；下面标题加一句音色描述，没有底部大按钮条。
  *
@@ -200,7 +239,7 @@ describe('Cloud picture card is a thumbnail and one line of title', () => {
 describe('Cloud voice card plays from its colour plate', () => {
   it('makes the colour plate the play control', () => {
     assert.match(viewJsx, /const canPlay = kind === 'audio'/)
-    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} \/>\}/)
+    assert.match(viewJsx, /\{canPlay \? null : <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/>\}/)
     assert.match(viewJsx, /role=\{canPlay \? 'button' : undefined\}/)
     assert.match(viewJsx, /aria-pressed=\{canPlay \? \(playing \? 'true' : 'false'\) : undefined\}/)
     assert.match(viewJsx, /onKeyDown=\{canPlay \? activateRowKeydown\(togglePlay\) : undefined\}/)
