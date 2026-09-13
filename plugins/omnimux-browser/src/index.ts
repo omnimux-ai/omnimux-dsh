@@ -279,6 +279,7 @@ function mountBridge(
               models: raw.codex.models.map((m: any) => ({
                 id: m.id,
                 name: m.name || m.id,
+                reasoning: m.reasoning,
               })),
             })
           }
@@ -289,6 +290,7 @@ function mountBridge(
               models: raw.grok.models.map((m: any) => ({
                 id: m.id,
                 name: m.name || m.id,
+                reasoning: m.reasoning,
               })),
             })
           }

@@ -557,22 +557,38 @@ export function App(): React.JSX.Element {
   })
 
   const [hostDefaultModel, setHostDefaultModel] = useState<string>('')
+  const [hostDefaultEffort, setHostDefaultEffort] = useState<string>('')
   const [dynamicModels, setDynamicModels] = useState<Array<{ id: string; name?: string }>>([])
   const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>(() => {
-    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gemini-3.8-flash-high'
+    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gpt-6-astra'
+  })
+  const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>(() => {
+    return safeGetStorage(`omnimux_default_effort_${targetPort}`) || safeGetStorage('omnimux_default_effort') || 'medium'
   })
 
-  const handleSelectModel = (modelId: string) => {
+  const handleSelectModel = (modelId: string, effort?: string) => {
     setSelectedDefaultModel(modelId)
     safeSetStorage(`omnimux_default_model_${targetPort}`, modelId)
     safeSetStorage('omnimux_default_model', modelId)
 
+    const eff = effort || selectedReasoningEffort
+    if (eff) {
+      setSelectedReasoningEffort(eff)
+      safeSetStorage(`omnimux_default_effort_${targetPort}`, eff)
+      safeSetStorage('omnimux_default_effort', eff)
+    }
+
     // 同步到当前 Host 实例的 agent-default-model
+    const ops: Array<{ op: string; path: string[]; value?: unknown }> = [
+      { op: 'set', path: ['model'], value: modelId },
+    ]
+    if (eff && eff !== 'none') {
+      ops.push({ op: 'set', path: ['reasoningEffort'], value: eff })
+    }
+
     void api.rpc('settings.mutate', {
       ns: 'agent-default-model',
-      ops: [
-        { op: 'set', path: ['model'], value: modelId }
-      ]
+      ops,
     }).catch(() => {})
 
     // 如果当前会话处于活跃状态，即时应用
@@ -580,6 +596,28 @@ export function App(): React.JSX.Element {
       void api.rpc('session.selectModel', {
         sessionId: sessionRef.current,
         model: modelId,
+        ...(eff && eff !== 'none' ? { reasoningEffort: eff } : {}),
+      }).catch(() => {})
+    }
+  }
+
+  const handleSelectEffort = (effort: string) => {
+    setSelectedReasoningEffort(effort)
+    safeSetStorage(`omnimux_default_effort_${targetPort}`, effort)
+    safeSetStorage('omnimux_default_effort', effort)
+
+    void api.rpc('settings.mutate', {
+      ns: 'agent-default-model',
+      ops: [
+        { op: 'set', path: ['reasoningEffort'], value: effort },
+      ],
+    }).catch(() => {})
+
+    if (sessionRef.current && selectedDefaultModel) {
+      void api.rpc('session.selectModel', {
+        sessionId: sessionRef.current,
+        model: selectedDefaultModel,
+        reasoningEffort: effort,
       }).catch(() => {})
     }
   }
@@ -1743,9 +1781,12 @@ export function App(): React.JSX.Element {
           models?: Array<{ id: string; contextWindow?: number }>
         }>
         const defaults = (described.namespaces?.find((candidate) => candidate.ns === 'agent-default-model')
-          ?.value ?? {}) as { provider?: unknown; model?: unknown }
+          ?.value ?? {}) as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
         if (typeof defaults.model === 'string' && defaults.model.trim() !== '') {
           setHostDefaultModel(defaults.model.trim())
+        }
+        if (typeof defaults.reasoningEffort === 'string' && defaults.reasoningEffort.trim() !== '') {
+          setHostDefaultEffort(defaults.reasoningEffort.trim())
         }
         const discoveredModels: Array<{ id: string; name?: string }> = []
         Object.values(providers).forEach((route) => {
@@ -2045,15 +2086,17 @@ export function App(): React.JSX.Element {
             </div>
           </label>
           <label>
-            <span>{locale === 'en' ? 'Default Model' : '默认模型'}</span>
-            <small>{locale === 'en' ? 'Match models supported by the active instance' : '跟随当前实例匹配可用默认模型'}</small>
+            <span>{locale === 'en' ? 'Default Model & Reasoning' : '默认模型与推理等级'}</span>
+            <small>{locale === 'en' ? 'Match models and reasoning effort supported by the active instance' : '跟随当前实例匹配可用模型与思考推理等级'}</small>
             <div style={{ marginTop: '8px' }}>
               <ModelSelector
                 locale={locale}
                 activePort={targetPort}
                 hostDefaultModel={hostDefaultModel}
+                hostDefaultEffort={hostDefaultEffort}
                 dynamicModels={dynamicModels}
                 onSelectModel={handleSelectModel}
+                onSelectEffort={handleSelectEffort}
               />
             </div>
           </label>

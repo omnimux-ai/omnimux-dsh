@@ -183,7 +183,7 @@ describe('ModelSelector Component & Real Subscription Models Suite', () => {
       select.dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    expect(onSelect).toHaveBeenCalledWith('gpt-6-astra')
+    expect(onSelect).toHaveBeenCalledWith('gpt-6-astra', 'medium')
     expect(localStorage.getItem('omnimux_default_model_45120')).toBe('gpt-6-astra')
   })
 
@@ -222,5 +222,33 @@ describe('ModelSelector Component & Real Subscription Models Suite', () => {
     })
 
     expect(onSelect).toHaveBeenCalled()
+  })
+
+  it('renders reasoning effort selector on the right and allows changing effort', async () => {
+    const onSelect = vi.fn()
+    const onEffort = vi.fn()
+
+    await act(async () => {
+      root.render(
+        createElement(ModelSelector, {
+          locale: 'zh',
+          activePort: 45120,
+          onSelectModel: onSelect,
+          onSelectEffort: onEffort,
+        })
+      )
+    })
+
+    const effortSelect = container.querySelector<HTMLSelectElement>('.effort-select-control')!
+    expect(effortSelect).not.toBeNull()
+
+    // Select 'high' effort
+    await act(async () => {
+      effortSelect.value = 'high'
+      effortSelect.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(onEffort).toHaveBeenCalledWith('high')
+    expect(localStorage.getItem('omnimux_default_effort_45120')).toBe('high')
   })
 })
