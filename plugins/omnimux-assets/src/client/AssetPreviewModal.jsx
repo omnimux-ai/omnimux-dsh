@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
-import { ChatIcon, CloseIcon, FileIcon } from './icons.jsx'
+import { ChatIcon, CheckIcon, CloseIcon, FileIcon, PlusIcon } from './icons.jsx'
 import { addMediaToConversation } from './add-to-chat.js'
 
 /**
  * Tab-internal zoomed modal preview for creative media items and files.
  * Aligns with the InspirationPreviewModal paradigm.
  *
+ * The footer is where an item leaves the preview: into the conversation, or —
+ * for a cloud row that can still be saved — into the local library. The save
+ * half only renders when the caller can honour it, so a library item, which is
+ * already local, never offers to become local twice.
+ *
  * @param {{
  *   item: {
  *     id?: string,
  *     title?: string,
  *     extension?: string,
- *     kind?: 'folder' | 'image' | 'video' | 'file',
+ *     kind?: 'folder' | 'image' | 'video' | 'audio' | 'file',
  *     previewUrl?: string,
+ *     text?: string,
  *     pathInfo?: string,
  *     sourceAssetId?: string,
  *     sourceAsset?: any,
@@ -22,9 +28,12 @@ import { addMediaToConversation } from './add-to-chat.js'
  *   t: (key: string) => string,
  *   onClose: () => void,
  *   onAddToConversation?: (item: any) => void,
+ *   saved?: boolean,
+ *   saving?: boolean,
+ *   onSaveToLocal?: (item: any) => void,
  * }} props
  */
-export function AssetPreviewModal({ item, t, onClose, onAddToConversation }) {
+export function AssetPreviewModal({ item, t, onClose, onAddToConversation, saved = false, saving = false, onSaveToLocal }) {
   const [added, setAdded] = useState(false)
   const [broken, setBroken] = useState(false)
   const timerRef = useRef(null)
@@ -78,6 +87,14 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation }) {
 
   const isImage = item.kind === 'image' && Boolean(item.previewUrl) && !broken
   const isVideo = item.kind === 'video' && Boolean(item.previewUrl) && !broken
+  const isAudio = item.kind === 'audio' && Boolean(item.previewUrl) && !broken
+  const text = typeof item.text === 'string' ? item.text : ''
+
+  const handleSave = (event) => {
+    event?.stopPropagation()
+    if (saved || saving) return
+    onSaveToLocal?.(item)
+  }
 
   return (
     <div
@@ -136,6 +153,23 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation }) {
                 onError={() => setBroken(true)}
               />
             </div>
+          ) : isAudio ? (
+            <div className="omnimux-assets-modal-media-wrap">
+              <audio
+                ref={videoRef}
+                src={item.previewUrl}
+                controls
+                autoPlay={false}
+                preload="metadata"
+                className="omnimux-assets-modal-audio"
+                onError={() => setBroken(true)}
+              />
+            </div>
+          ) : text !== '' ? (
+            // A text row has nothing to stream, so its whole body is the preview.
+            <div className="omnimux-assets-modal-text-wrap">
+              <p className="omnimux-assets-modal-text">{text}</p>
+            </div>
           ) : (
             <div className="omnimux-assets-modal-unsupported">
               <div className="omnimux-assets-modal-unsupported-icon">
@@ -170,6 +204,19 @@ export function AssetPreviewModal({ item, t, onClose, onAddToConversation }) {
             >
               {added ? t('modal.addedToConversation') : t('modal.addToConversation')}
             </Button>
+            {typeof onSaveToLocal === 'function' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="omnimux-assets-modal-save"
+                leadingIcon={saved ? <CheckIcon size={14} /> : <PlusIcon size={14} />}
+                aria-pressed={saved ? 'true' : 'false'}
+                disabled={saved || saving}
+                onClick={handleSave}
+              >
+                {saved ? t('modal.savedToLocal') : t('modal.saveToLocal')}
+              </Button>
+            ) : null}
           </div>
         </footer>
       </div>

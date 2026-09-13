@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, EmptyState, IconButton } from 'dsh-ui-kit'
-import { AudioIcon, ChatIcon, CheckIcon, DocIcon, ImageIcon, PauseIcon, PlayIcon, VideoIcon } from './icons.jsx'
+import {
+  AudioIcon,
+  ChatIcon,
+  CheckIcon,
+  DocIcon,
+  ImageIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  VideoIcon,
+} from './icons.jsx'
 import { activateRowKeydown } from './a11y.js'
 import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
@@ -101,19 +111,30 @@ function CloudTileMedia(props) {
 /**
  * One cloud asset card.
  *
- * Three things live on a card: the thumbnail, the title, and one hover control
- * that mounts the asset into the conversation. A media-type badge, tags and a
+ * Four things live on a card: the thumbnail, the title, and the two hover
+ * controls in the top-right that are the two ways out of the cloud — into the
+ * conversation, or into the local library. A media-type badge, tags and a
  * bottom action bar used to compete with the thumbnail for attention; they are
- * gone, and a row that has audio plays from the thumbnail itself.
+ * gone.
+ *
+ * Where a click lands decides what happens. On a voice card the thumbnail is
+ * the play control, so it claims the click for itself and the rest of the card
+ * opens the preview; on every other card the whole card opens the preview. The
+ * title is the keyboard route to that preview, which keeps one tab stop per card
+ * rather than one per region.
  * @param {{
  *   asset: any,
  *   t: (key: string) => string,
  *   playing: boolean,
  *   onTogglePlay: (asset: any) => void,
+ *   onPreview?: (asset: any) => void,
+ *   saved?: boolean,
+ *   saving?: boolean,
+ *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay } = props
+  const { asset, t, playing, onTogglePlay, onPreview, saved = false, saving = false, onSave } = props
   const [broken, setBroken] = useState(false)
   const [added, setAdded] = useState(false)
   const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
@@ -126,6 +147,7 @@ export function CloudAssetCard(props) {
   const canPlay = asset.mediaType === 'audio' && asset.playable
   const handleBroken = useCallback(() => { setBroken(true) }, [])
   const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
+  const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
 
   const handleAdd = (event) => {
     event.stopPropagation()
@@ -136,17 +158,36 @@ export function CloudAssetCard(props) {
     addedTimerRef.current = setTimeout(() => { setAdded(false) }, 1800)
   }
 
+  // Both controls sit over the thumbnail, so each claims its own pointer event:
+  // without that, using one would also open the preview behind it.
+  const handleSave = (event) => {
+    event.stopPropagation()
+    if (saved || saving) return
+    onSave?.(asset)
+  }
+  const handlePlayClick = (event) => {
+    event.stopPropagation()
+    togglePlay()
+  }
+
   const addLabel = added ? t('card.addedToConversation') : t('card.addToConversation')
+  const saveLabel = saved ? t('cloud.action.saved') : t('cloud.action.save')
+  const previewLabel = `${asset.name} · ${t('card.view')}`
 
   return (
-    <div className="omnimux-assets-card omnimux-assets-cloud-card" data-media-type={asset.mediaType}>
+    <div
+      className="omnimux-assets-card omnimux-assets-cloud-card"
+      data-media-type={asset.mediaType}
+      data-saved={saved ? 'true' : 'false'}
+      onClick={openPreview}
+    >
       <div
         className={canPlay ? PLAYABLE_THUMB_CLASS : THUMB_CLASS}
         role={canPlay ? 'button' : undefined}
         tabIndex={canPlay ? 0 : undefined}
         aria-label={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
         aria-pressed={canPlay ? (playing ? 'true' : 'false') : undefined}
-        onClick={canPlay ? togglePlay : undefined}
+        onClick={canPlay ? handlePlayClick : undefined}
         onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
       >
         <CloudTileMedia asset={asset} broken={broken} onBroken={handleBroken} />
@@ -156,18 +197,38 @@ export function CloudAssetCard(props) {
           </span>
         ) : null}
       </div>
-      <IconButton
-        variant="ghost"
-        size="sm"
-        className="omnimux-assets-cloud-chat"
-        aria-label={addLabel}
-        title={addLabel}
-        disabled={added}
-        onClick={handleAdd}
+      <div className="omnimux-assets-cloud-actions">
+        <IconButton
+          variant="ghost"
+          size="sm"
+          className="omnimux-assets-cloud-chat"
+          aria-label={addLabel}
+          title={addLabel}
+          disabled={added}
+          onClick={handleAdd}
+        >
+          {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
+        </IconButton>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          className="omnimux-assets-cloud-save"
+          aria-label={saveLabel}
+          title={saveLabel}
+          aria-pressed={saved ? 'true' : 'false'}
+          disabled={saved || saving}
+          onClick={handleSave}
+        >
+          {saved ? <CheckIcon size={16} /> : <PlusIcon size={16} />}
+        </IconButton>
+      </div>
+      <div
+        className="omnimux-assets-card-body"
+        role="button"
+        tabIndex={0}
+        aria-label={previewLabel}
+        onKeyDown={activateRowKeydown(openPreview)}
       >
-        {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
-      </IconButton>
-      <div className="omnimux-assets-card-body">
         <p className="omnimux-assets-card-title" title={asset.name}>{asset.name}</p>
         {showsDescription(asset.mediaType) && asset.description !== '' ? (
           <p className="omnimux-assets-cloud-desc" title={asset.description}>{asset.description}</p>
@@ -241,11 +302,20 @@ function CloudCategoryNav(props) {
 /**
  * Cloud source tab body: category navigation, a card grid with a fixed tile
  * ratio, and paging driven by a bottom sentinel.
- * @param {{ t: (key: string) => string, open?: boolean }} props
+ * @param {{
+ *   t: (key: string) => string,
+ *   open?: boolean,
+ *   onPreview?: (asset: any) => void,
+ *   save?: {
+ *     savedIds: Set<string>,
+ *     savingId: string,
+ *     save: (asset: any) => Promise<boolean>,
+ *   },
+ * }} props
  */
 export function CloudAssetsView(props) {
-  const { t, open = true } = props
-  const feed = useCloudAssetsFeed({ t, open })
+  const { t, open = true, onPreview, save } = props
+  const feed = useCloudAssetsFeed({ t, open, save })
   const sentinelRef = useRef(/** @type {HTMLDivElement | null} */ (null))
   const { loadMore, hasMore, loadingMore, items, audition } = feed
 
@@ -288,6 +358,10 @@ export function CloudAssetsView(props) {
               t={t}
               playing={audition.playingId === asset.id}
               onTogglePlay={onTogglePlay}
+              onPreview={onPreview}
+              saved={feed.savedIds.has(asset.id)}
+              saving={feed.savingId === asset.id}
+              onSave={feed.saveToLocal}
             />
           ))}
         </div>

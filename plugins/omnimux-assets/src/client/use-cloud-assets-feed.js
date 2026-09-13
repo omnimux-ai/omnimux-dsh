@@ -7,7 +7,7 @@
  * page; a failed page reports an error and leaves the loaded rows intact.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { cloudMediaUrl, cloudPage, cloudSaveToLocal, cloudSearch } from './api.js'
+import { cloudMediaUrl, cloudPage, cloudSearch } from './api.js'
 import {
   CLOUD_PAGE_SIZE,
   appendUniqueAssets,
@@ -17,6 +17,7 @@ import {
 } from './cloud-feed-helpers.js'
 import { errText, messageOf } from './feed-helpers.js'
 import { useCloudManifest } from './use-cloud-manifest.js'
+import { useCloudSave } from './use-cloud-save.js'
 
 /** Debounce before a keystroke turns into a catalog-wide search request. */
 export const CLOUD_SEARCH_DEBOUNCE_MS = 280
@@ -107,10 +108,21 @@ export function useCloudAudition() {
  *   t: (key: string) => string,
  *   open: boolean,
  *   defaultCategory?: string,
+ *   save?: {
+ *     savedIds: Set<string>,
+ *     savingId: string,
+ *     notice: string,
+ *     save: (asset: any) => Promise<boolean>,
+ *   },
  * }} options
  */
 export function useCloudAssetsFeed(options) {
-  const { t, open, defaultCategory = 'knowledge' } = options
+  const { t, open, defaultCategory = 'knowledge', save: stageSave } = options
+  // The stage owns one save controller so the preview modal and the cards agree
+  // on what has already been copied into the library; a view mounted without one
+  // still saves on its own.
+  const ownSave = useCloudSave({ t })
+  const saver = stageSave ?? ownSave
   const { manifest, loading: manifestLoading, error: manifestError, reload: reloadManifest } = useCloudManifest({ enabled: open })
 
   const categories = useMemo(() => {
@@ -127,9 +139,6 @@ export function useCloudAssetsFeed(options) {
   const [queryApplied, setQueryApplied] = useState('')
   const [searchResult, setSearchResult] = useState(/** @type {any} */ (null))
   const [searching, setSearching] = useState(false)
-  const [savedIds, setSavedIds] = useState(() => new Set())
-  const [savingId, setSavingId] = useState('')
-  const [notice, setNotice] = useState('')
 
   const audition = useCloudAudition()
   const { stop: stopAudition } = audition
@@ -309,36 +318,6 @@ export function useCloudAssetsFeed(options) {
     await loadPage(0, { reset: true })
   }, [reloadManifest, loadPage])
 
-  const saveToLocal = useCallback(async (asset) => {
-    const id = asset?.id ?? ''
-    if (id === '' || savingId !== '') return
-    setSavingId(id)
-    setNotice('')
-    try {
-      const result = await cloudSaveToLocal(id, { name: asset.name })
-      if (!result.ok) {
-        setNotice(messageOf(result, t))
-        return
-      }
-      setSavedIds((prev) => {
-        const next = new Set(prev)
-        next.add(id)
-        return next
-      })
-      setNotice(t('cloud.save.saved').replace('{name}', asset.name))
-    } catch (caught) {
-      setNotice(errText(caught))
-    } finally {
-      setSavingId('')
-    }
-  }, [savingId, t])
-
-  useEffect(() => {
-    if (notice === '') return undefined
-    const timer = setTimeout(() => { setNotice('') }, 2400)
-    return () => { clearTimeout(timer) }
-  }, [notice])
-
   return {
     manifest,
     categories,
@@ -352,16 +331,16 @@ export function useCloudAssetsFeed(options) {
     /** True while a page or a search slice is in flight, for the button state. */
     loadingMore: loadingPage || searching,
     error: manifestError || pageError,
-    notice,
-    savedIds,
-    savingId,
+    notice: saver.notice,
+    savedIds: saver.savedIds,
+    savingId: saver.savingId,
     query,
     setQuery,
     selectCategory,
     selectSubCategory,
     loadMore,
     refresh,
-    saveToLocal,
+    saveToLocal: saver.save,
     audition,
   }
 }
