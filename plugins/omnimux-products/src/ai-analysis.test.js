@@ -13,6 +13,7 @@ import {
   normalizeHub,
 } from './ai-analysis.js'
 import { normalizeBrandStrategy } from './brand-strategy.js'
+import { parseHtmlDocument } from './link-importer.js'
 
 const DIGITAL_URL = 'https://platform.example.com'
 const PHYSICAL_URL = 'https://shop.example.com/p/aurora-mug'
@@ -129,40 +130,401 @@ describe('ai-analysis · which playbook reads the page', () => {
 
   it('needs more than one software marker in the copy', () => {
     assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 API 很好用' }) }), false)
+    assert.equal(isDigitalLandingPage({ page: page({ text: '我们的控制台很好用' }) }), false)
     assert.equal(isDigitalLandingPage({ page: page({ text: '开发者文档齐备，支持免费试用' }) }), true)
   })
 
   it('reads a platform word in the title as a software site, without the page text', () => {
     assert.equal(isDigitalLandingPage({ page: page({ title: 'MiniMax 开放平台' }) }), true)
     assert.equal(isDigitalLandingPage({ page: page({ title: 'Acme API documentation' }) }), true)
-    // One soft platform word is still not enough on its own.
+    // One marker is still not enough on its own.
     assert.equal(isDigitalLandingPage({ page: page({ title: 'Acme AI' }) }), false)
     assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 ai 助手很好用' }) }), false)
-    assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 ai 助手，支持云端工作流' }) }), true)
+    // `ai`, `cloud`, `bot`, `docs` and `platform` are shop vocabulary too, so
+    // they were dropped from the marker list and no longer decide anything.
+    assert.equal(isDigitalLandingPage({ page: page({ text: '我们的 ai 助手，支持云端工作流' }) }), false)
   })
 
-  it('reads a software host as a software site even when the form said physical', () => {
+  it('reads a developer host as a software site even when the form said physical', () => {
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.minimax.ai/' }), true)
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://docs.tiktok.com/x' }), true)
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://api.example.com/v1' }), true)
-    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://app.example.com/' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://console.example.com' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://developer.example.com' }), true)
+    // A scheme-less host the user typed by hand reaches the classifier raw.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'www.OmniMux.ai' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'omnimux.ai/docs/getting-started' }), true)
     // The page's own canonical URL counts when the caller passes none.
     assert.equal(isDigitalLandingPage({ page: page({ canonical: 'https://console.example.ai/' }) }), true)
-    // An ordinary shop host is untouched.
+    // A shop host is not a developer host.
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://shop.example.com/p/1' }), false)
     assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'not a url' }), false)
   })
 
+  it('does not let a bare app. or portal. subdomain decide the playbook', () => {
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://app.example.com/' }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://portal.example.com/' }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://dashboard.example.com/' }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://platform.example.com/' }), false)
+    // …and the same again through the page's canonical URL.
+    assert.equal(isDigitalLandingPage({ page: page({ canonical: 'https://app.example.com/' }) }), false)
+    // Such a page still routes digital on software copy of its own — the marker
+    // rule is what decides now, not the subdomain.
+    const console = page({ text: '控制台：按量计费，开发者文档与 API 文档齐备' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://app.example.com/', page: console }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://portal.example.com/', page: console }), true)
+  })
+
   it('lets the page overrule a defaulted physical kind, but never a shop listing', () => {
-    const software = page({ text: '一站式多模态模型服务，控制台与开发者文档齐备' })
+    const software = page({ text: '一站式多模态模型服务，开发者文档与 API 齐备' })
     assert.equal(isDigitalLandingPage({ kind: 'physical', page: software }), true)
-    const shop = page({ nodes: [{ '@type': 'Product' }], text: '一站式多模态模型服务，控制台与开发者文档齐备' })
+    const shop = page({ nodes: [{ '@type': 'Product' }], text: '一站式多模态模型服务，开发者文档与 API 齐备' })
     assert.equal(isDigitalLandingPage({ kind: 'physical', page: shop }), false)
   })
 
   it('never guesses without a page', () => {
     assert.equal(isDigitalLandingPage({}), false)
     assert.equal(isDigitalLandingPage({ page: null }), false)
+  })
+})
+
+describe('ai-analysis · e-commerce outranks every software signal', () => {
+  /**
+   * A page that is a shop *and* reads like a software site: the exact shape
+   * that regressed. Copy, title and host all point at software; only the
+   * shopping signals say listing.
+   *
+   * @param {{ title?: string, text?: string, nodes?: object[], meta?: object }} over
+   * @returns {object}
+   */
+  function shopPage(over = {}) {
+    return page({
+      title: 'AI 智能助手 云端工作流 控制台 开发者文档 开放平台 按量计费',
+      text: '免费试用，API 文档齐备，支持 SDK 与 MCP。',
+      ...over,
+    })
+  }
+
+  it('keeps a marketplace result page physical, whatever the copy says', () => {
+    // The Amazon result page QA captured: a footer navigation bar carrying `AI`
+    // and `cloud`, and thousands of product cards carrying cart controls and
+    // prices. No Product schema at all.
+    const amazonSearch = shopPage({
+      title: 'Amazon.com : ceramic mug',
+      text: [
+        'Amazon Basics Sell Home Improvement Pet Supplies Health AI Medical Care',
+        '1-48 of over 70,000 results for "ceramic mug"',
+        'Nordic Ceramic Mug, 350ml',
+        '$10.99',
+        'Add to Cart',
+      ].join('\n'),
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: amazonSearch }), false)
+    assert.equal(isDigitalLandingPage({ url: 'https://www.amazon.com/s?k=ceramic+mug', page: amazonSearch }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://amazon.com/s?k=mug', page: amazonSearch }), false)
+  })
+
+  it('keeps a listing physical on every shopping control the copy can carry', () => {
+    const controls = [
+      'Add to Cart',
+      'Add to Bag',
+      'Buy Now',
+      '立即购买',
+      '加入购物车',
+      'In Stock',
+      'Sold by Amazon.com',
+      '4.5 out of 5 stars · 1,204 Customer Reviews',
+      'Free shipping on orders over $25',
+      '全场包邮',
+    ]
+    for (const control of controls) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', page: shopPage({ text: control }) }),
+        false,
+        `expected a listing for ${JSON.stringify(control)}`,
+      )
+    }
+  })
+
+  it('weighs one price against the software evidence the page carries', () => {
+    // Two price / size signals is the shape a listing has.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: shopPage({ text: '￥199.00 350ml' }) }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: shopPage({ text: '$10.99 · $27.99' }) }), false)
+    // One price against a page with no software evidence at all: a listing.
+    for (const price of ['$10.99', '￥199.00', '199 元', '199元']) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', page: page({ title: 'Aurora 保温杯', text: price }) }),
+        false,
+        `a plain goods page stays a listing for ${JSON.stringify(price)}`,
+      )
+    }
+    // One price against a software page: the page decides, and it needs real
+    // software vocabulary — three markers, or one unambiguous developer marker.
+    assert.equal(
+      isDigitalLandingPage({
+        kind: 'physical',
+        url: 'https://acme.com/pricing',
+        page: page({ title: 'Acme 控制台 按量计费', text: '按量计费，免费试用 14 天，Starting at $10 per month. 支持 SDK 与工作流。' }),
+      }),
+      true,
+    )
+    assert.equal(
+      isDigitalLandingPage({ kind: 'physical', url: 'https://acmecorp.com/docs', page: page({ text: 'API documentation，按量计费。' }) }),
+      true,
+    )
+    // Two vague markers are what a marketplace page footer is full of, so a
+    // price on such a page still reads as a listing.
+    assert.equal(
+      isDigitalLandingPage({ kind: 'physical', page: page({ title: '智能商城 控制台', text: '工作流定制款，$10.99' }) }),
+      false,
+    )
+  })
+
+  it('keeps a listing physical on a developer host', () => {
+    const listing = shopPage({ text: '加入购物车 ￥199.00' })
+    for (const url of [
+      'https://www.amazon.com/dp/B08N5WRWNW',
+      'https://omnimux.myshopify.ai/products/mug',
+      'https://api.example.com/products/1',
+      'https://console.example.com/products/1',
+      'https://shop.ecommercemug.ai/products/mug',
+    ]) {
+      assert.equal(isDigitalLandingPage({ kind: 'physical', url, page: listing }), false, `expected a listing for ${url}`)
+    }
+  })
+
+  it('keeps a .ai shop physical when only the copy decides', () => {
+    const dtc = page({
+      title: 'Aurora 保温杯 350ml',
+      text: '双层陶瓷保温杯，保温 6 小时。加入购物车',
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://shop.ecommercemug.ai/products/mug', page: dtc }), false)
+  })
+
+  it('lets a shop subdomain take back the .ai TLD, but not a developer subdomain', () => {
+    // A storefront names its goods: a 350 ml mug at ￥24.90.
+    const listing = page({ title: 'Aurora Mug 350 ml', text: '￥24.90' })
+    for (const url of [
+      'https://shop.ecommercemug.ai/products/mug',
+      'https://store.ecommercemug.ai/products/mug',
+      'https://cart.ecommercemug.ai/',
+      'https://checkout.ecommercemug.ai/',
+      'https://ecommercemug.ai/products/mug',
+      'https://ecommerce-mugs.ai/products/mug',
+    ]) {
+      assert.equal(isDigitalLandingPage({ kind: 'physical', url, page: listing }), false, `expected a listing for ${url}`)
+    }
+    // The same TLD without a shop name still reads as a software host, for a
+    // page that is a software page rather than a storefront.
+    const software = page({ title: 'Acme 控制台', text: '支持工作流与按量计费' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://omnimux.ai/', page: software }), true)
+    // A developer subdomain is documentation whatever the TLD is.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://docs.ecommercemug.ai/getting-started', page: software }), true)
+    // A shop page inside that documentation site is still a shop page.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://docs.ecommercemug.ai/shop/mug', page: listing }), false)
+  })
+
+  it('still reads a software page with no shopping signal as digital', () => {
+    // The live www.OmniMux.ai landing page, verbatim: docs / API / console
+    // addresses in the footer, and no cart, price or stock badge anywhere.
+    const omnimux = page({
+      title: 'OmniMux | Create and Scale TikTok Commerce Videos',
+      text: [
+        'OmniMux | Create and Scale TikTok Commerce Videos OmniMux · omnimux.ai Home · Pricing · About · Docs · API · llms.txt',
+        'Discover, recreate, and scale viral TikTok commerce videos',
+        'Start with a popular video, a creative idea, a script, or your own assets.',
+        'Pay per call, no subscription.',
+        'For sellers, brands, and creators',
+        'Console: https://omnimux.ai/ OpenAI-compatible API base: https://api.omnimux.ai/v1 Documentation: https://docs.omnimux.ai/',
+      ].join('\n'),
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.OmniMux.ai/', page: omnimux }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'www.OmniMux.ai', page: omnimux }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', page: omnimux }), true)
+  })
+
+  it('never overrules an explicit digital choice', () => {
+    assert.equal(isDigitalLandingPage({ kind: 'digital', url: 'https://www.amazon.com/s?k=mug', page: shopPage({ text: 'Add to Cart $10.99' }) }), true)
+  })
+
+  it('reads a cart control in the language of the storefront', () => {
+    for (const control of [
+      'In den Warenkorb legen',
+      'Ajouter au panier',
+      'Añadir al carrito',
+      'Aggiungi al carrello',
+      'カートに入れる',
+      '장바구니에 담기',
+      'Добавить в корзину',
+      'Sepete ekle',
+    ]) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', url: 'https://mugshop.ai/p/1', page: page({ title: 'Kaffeetasse', text: control }) }),
+        false,
+        `expected a listing for ${JSON.stringify(control)}`,
+      )
+    }
+  })
+
+  it('reads a price written behind the amount', () => {
+    for (const price of ['CHF 99.00', '99,00 €', '1.980 TL', '24.90 USD', '¥1,980']) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', url: 'https://mugshop.ai/p/1', page: page({ title: 'Kaffeetasse', text: price }) }),
+        false,
+        `expected a listing for ${JSON.stringify(price)}`,
+      )
+    }
+  })
+
+  it('does not read ordinary prose as a price or a size', () => {
+    const prose = [
+      '5G 网络支持，Ranked #1 in G2',
+      '2025 元旦上线，每次调用占用 1 块 GPU',
+      '1 in 3 users rank us #1 in review',
+      '2024 in review',
+      'iPhone 15 in 2024',
+      'Wi-Fi 6 in 办公室',
+      '支持 3 元数据字段，分 3 块处理',
+    ]
+    for (const text of prose) {
+      assert.equal(
+        isDigitalLandingPage({ kind: 'physical', page: page({ title: 'Acme API 控制台 按量计费', text }) }),
+        true,
+        `expected a software page for ${JSON.stringify(text)}`,
+      )
+    }
+  })
+
+  it('counts a price once when the same one appears in the title and the description', () => {
+    const shared = page({
+      title: 'Acme Pricing — $10/month',
+      meta: { description: ['Acme Pricing — $10/month. 按量计费，支持工作流与 SDK，开发者文档齐备。'] },
+      text: '按量计费，开发者文档齐备',
+    })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://www.acme.com/pricing', page: shared }), true)
+  })
+
+  it('drops the root dot of a host, the way the importer does', () => {
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://omnimux.ai./' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'www.OmniMux.ai.' }), true)
+  })
+
+  it('falls back to the page canonical when the url names no host', () => {
+    const digital = page({ canonical: 'https://docs.example.ai/' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'not a url', page: digital }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'not a url', page: page({ canonical: 'https://shop.example.com/p/1' }) }), false)
+  })
+
+  it('reads meta copy whether it arrives as a string or a list', () => {
+    const asString = page({ title: 'Acme API SDK', meta: { description: 'Add to Cart' }, text: '免费试用' })
+    const asList = page({ title: 'Acme API SDK', meta: { description: ['Add to Cart'] }, text: '免费试用' })
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://shop.example.com/p/1', page: asString }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'https://shop.example.com/p/1', page: asList }), false)
+  })
+})
+
+/**
+ * Fixed samples. Each one is the real section that decided the routing on the
+ * page it came from — a marketplace result grid, a marketplace landing page, a
+ * storefront product page and a product/brand site — trimmed to those elements,
+ * so the classifier is measured against the page that regressed rather than
+ * against a summary of it.
+ */
+const AMAZON_SEARCH_HTML = `<!doctype html><html lang="en-us"><head>
+<meta charset="utf-8">
+<title>Amazon.com : ceramic mug</title>
+<meta name="description" content="Amazon.com : ceramic mug">
+<link rel="canonical" href="https://www.amazon.com/s?k=ceramic+mug">
+</head><body>
+<div id="nav-main"><ul><li>Amazon Basics</li><li>Sell</li><li>Home Improvement</li><li>Pet Supplies</li><li>Health</li><li>AI Medical Care</li></ul></div>
+<span>1-48 of over 70,000 results for "ceramic mug"</span>
+<div data-component-type="s-search-result"><a href="/dp/B08N5WRWNW"><span class="a-text-normal">Nordic Ceramic Mug, 350 ml, Matte Glaze</span></a>
+<span class="a-price"><span class="a-offscreen">$10.99</span></span>
+<span class="a-icon-alt">4.5 out of 5 stars</span><span>1,204</span><button name="submit.add-to-cart">Add to Cart</button></div>
+<div data-component-type="s-search-result"><a href="/dp/B07YTFX4NK"><span class="a-text-normal">Insulated Travel Mug 500 ml</span></a>
+<span class="a-price"><span class="a-offscreen">$27.99</span></span><button name="submit.add-to-cart">Add to Cart</button></div>
+<footer><ul><li>Careers</li><li>Amazon Science</li><li>Alexa</li></ul></footer>
+</body></html>`
+
+const AMAZON_LANDING_HTML = `<!doctype html><html lang="en-us"><head>
+<meta charset="utf-8">
+<title>Amazon.com. Spend less. Smile more.</title>
+<meta name="description" content="Free delivery on millions of items with Prime. Low prices across earth's biggest selection of books, music, DVDs, electronics, computers, software, apparel, furniture, food, toys and more.">
+</head><body><h1>Amazon.com</h1></body></html>`
+
+const SHOPIFY_PRODUCT_HTML = `<!doctype html><html lang="zh-CN"><head>
+<meta charset="utf-8">
+<title>Aurora 保温杯 350ml 双层陶瓷 | Example Store</title>
+<meta name="description" content="双层陶瓷保温杯，保温 6 小时，限时包邮。">
+</head><body>
+<h1>Aurora 保温杯 350ml</h1>
+<p>容量 350ml，材质双层陶瓷。</p>
+<div class="price">￥199.00</div>
+<button name="add">加入购物车</button>
+</body></html>`
+
+const OMNIMUX_HTML = `<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<title>OmniMux | Create and Scale TikTok Commerce Videos</title>
+<meta name="description" content="An AI content platform for TikTok commerce: create sales-driven images, videos, and audio, discover viral content, and publish directly through official APIs.">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://omnimux.ai/">
+</head><body>
+<p>OmniMux · omnimux.ai Home · Pricing · About · Docs · API · llms.txt</p>
+<h1>Discover, recreate, and scale viral TikTok commerce videos</h1>
+<p>An AI content platform for TikTok commerce: create sales-driven images, videos, and audio, discover viral content, and publish directly through official APIs.</p>
+<p>Start with a popular video, a creative idea, a script, or your own assets.</p>
+<p>OmniMux is an AI content platform for TikTok commerce, helping sellers, brands, affiliate creators, and content teams discover ideas, create original videos, recreate formats, and produce variations. Create images and voiceovers, publish through official APIs, and analyze content performance. Pay per call, no subscription.</p>
+<p>For sellers, brands, and creators</p>
+<p>Console: https://omnimux.ai/ OpenAI-compatible API base: https://api.omnimux.ai/v1 Documentation: https://docs.omnimux.ai/</p>
+</body></html>`
+
+describe('ai-analysis · captured pages, end to end', () => {
+  /**
+   * Classify a page exactly the way the importer does: parse the HTML, then let
+   * the page and its URL decide while the form sits on the physical default.
+   *
+   * @param {string} html
+   * @param {string} url
+   * @returns {boolean}
+   */
+  function routesDigital(html, url) {
+    const page = parseHtmlDocument(html, url)
+    return isDigitalLandingPage({ kind: 'physical', page, url })
+  }
+
+  it('compares the host case-insensitively and without a scheme', () => {
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'HTTPS://WWW.OmniMux.AI/' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'www.OmniMux.ai' }), true)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'www.amazon.com/s?k=mug' }), false)
+    // Junk is junk, not a host `new URL` can bend into one.
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: 'not a url' }), false)
+    assert.equal(isDigitalLandingPage({ kind: 'physical', url: '忽略我' }), false)
+  })
+
+  it('keeps the captured Amazon result page physical', () => {
+    const url = 'https://www.amazon.com/s?k=ceramic+mug'
+    // The footer navigation carries `AI`; the result grid carries `Add to Cart`
+    // and prices. The page ships no Product schema at all.
+    assert.equal(routesDigital(AMAZON_SEARCH_HTML, url), false)
+    assert.equal(routesDigital(AMAZON_SEARCH_HTML, 'https://www.amazon.com/s?k=books'), false)
+  })
+
+  it('keeps the captured Amazon landing page physical', () => {
+    assert.equal(routesDigital(AMAZON_LANDING_HTML, 'https://www.amazon.com/'), false)
+  })
+
+  it('keeps the captured storefront product page physical, schema or not', () => {
+    assert.equal(routesDigital(SHOPIFY_PRODUCT_HTML, 'https://shop.example.com/products/aurora-mug'), false)
+    assert.equal(routesDigital(SHOPIFY_PRODUCT_HTML, 'https://shop.ecommercemug.ai/products/mug'), false)
+  })
+
+  it('still routes the captured OmniMux landing page digital', () => {
+    assert.equal(routesDigital(OMNIMUX_HTML, 'https://omnimux.ai/'), true)
+    assert.equal(routesDigital(OMNIMUX_HTML, 'https://www.OmniMux.ai/'), true)
+    // The form's own value: a bare host the user typed reaches the classifier raw.
+    assert.equal(routesDigital(OMNIMUX_HTML, 'www.OmniMux.ai'), true)
+    assert.equal(routesDigital(OMNIMUX_HTML, 'https://omnimux.ai/docs/getting-started'), true)
   })
 })
 
