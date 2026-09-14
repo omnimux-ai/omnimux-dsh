@@ -272,7 +272,7 @@ async function requestLlmGeneration(
       userMessage,
       locale,
       context: {
-        scene,
+        scene: ctx.scene,
         targetTweetText: ctx.targetTweetText,
         targetAuthor: ctx.targetAuthor,
         draftText: ctx.draftText,

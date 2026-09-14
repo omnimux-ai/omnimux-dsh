@@ -18,7 +18,139 @@ const GHOST_ICON_SVG = `
 </svg>
 `
 
+/**
+ * Checks if a target button belongs to a collapsed (inactive) inline reply placeholder.
+ * Twitter's inline reply bar in comment threads has two distinct states:
+ * 1. Collapsed (compact placeholder bar): single-line compact bar with "Post your reply",
+ *    no active editable textbox (contenteditable="true"), no bottom media toolbar, disabled reply button.
+ * 2. Expanded (active composer): multi-line editable textbox (contenteditable="true"),
+ *    visible toolbar with media/emoji tools, active reply button at the bottom right.
+ * The Copilot icon must NEVER mount to the collapsed placeholder bar — only to the expanded toolbar!
+ */
+export function isCollapsedInlineReply(targetBtn: HTMLElement): boolean {
+  // 1. Tweet detail or inline feed buttons: tweetButtonInline
+  const testId = targetBtn.getAttribute('data-testid') || ''
+  if (!testId.includes('tweetButtonInline')) {
+    return false
+  }
+
+  // 2. If it is inside a modal dialog (role="dialog"), it is always an expanded composer modal
+  if (targetBtn.closest('[role="dialog"]')) {
+    return false
+  }
+
+  // 3. If button explicitly says "发帖" or "Post" (e.g. home feed top composer), it's not a reply placeholder
+  const btnText = (targetBtn.textContent || '').trim().toLowerCase()
+  if (btnText.includes('发帖') || btnText.includes('post')) {
+    return false
+  }
+
+  // 4. Find the owning composer container upwards
+  let composer: HTMLElement | null = targetBtn.parentElement
+  let foundEditableTextbox = false
+  let foundToolbar = false
+
+  for (let i = 0; i < 12 && composer && composer !== document.body; i++) {
+    // Check for active editable textbox in this composer
+    const textboxes = composer.querySelectorAll<HTMLElement>(
+      'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"], div[data-testid="tweetTextarea_0"]'
+    )
+    for (const tb of Array.from(textboxes)) {
+      const isContentEditable = tb.getAttribute('contenteditable') === 'true' || tb.isContentEditable
+      const rect = tb.getBoundingClientRect()
+      if (isContentEditable || (rect.height > 0 && tb.textContent?.trim() !== '')) {
+        foundEditableTextbox = true
+        break
+      }
+    }
+
+    // Check for media toolbar icons (images, gif, emoji, poll, schedule)
+    const toolbar = composer.querySelector(
+      '[data-testid="toolBar"], [aria-label*="Media"], [aria-label*="媒体"], [aria-label*="Emoji"], [aria-label*="GIF"], [data-testid="geoButton"]'
+    )
+    if (toolbar) {
+      foundToolbar = true
+    }
+
+    if (foundEditableTextbox && foundToolbar) {
+      return false
+    }
+
+    composer = composer.parentElement
+  }
+
+  // If there's an editable textbox and toolbar, it's expanded
+  if (foundEditableTextbox && foundToolbar) {
+    return false
+  }
+
+  // If it has an editable textbox and the button is active/actionable with non-trivial height
+  if (foundEditableTextbox) {
+    return false
+  }
+
+  // Otherwise, it's a collapsed placeholder bar (no active textbox)
+  return true
+}
+
+/**
+ * Cleans up stale, orphaned, or mislocated Copilot buttons from the DOM.
+ * When Twitter transitions between collapsed and expanded states or re-renders DOM trees,
+ * old buttons might be left behind as zombies while new buttons are mounted.
+ */
+export function cleanupStaleCopilotButtons(): void {
+  const existingBtns = document.querySelectorAll<HTMLElement>(
+    `.omnimux-copilot-anchor-btn, [${COPILOT_ATTACHED_ATTR}="true"]`
+  )
+
+  existingBtns.forEach((copilotBtn) => {
+    const boundTarget = (copilotBtn as any).__targetBtn as HTMLElement | undefined
+
+    // 1. If bound target is disconnected, invisible, or now in collapsed placeholder state
+    if (boundTarget) {
+      if (!boundTarget.isConnected || !isElementActionable(boundTarget) || isCollapsedInlineReply(boundTarget)) {
+        copilotBtn.remove()
+        return
+      }
+    }
+
+    // 2. If parent container is missing or disconnected
+    const parent = copilotBtn.parentElement
+    if (!parent || !parent.isConnected) {
+      copilotBtn.remove()
+      return
+    }
+
+    // 3. If there is no valid actionable tweetButton nearby in the same toolbar row
+    const nearbyButtons = parent.querySelectorAll<HTMLElement>(
+      'button[data-testid="tweetButton"], button[data-testid="tweetButtonInline"], div[data-testid="tweetButton"], div[data-testid="tweetButtonInline"]'
+    )
+    const hasValidActiveSibling = Array.from(nearbyButtons).some(
+      (tb) => isElementActionable(tb) && !isCollapsedInlineReply(tb)
+    )
+
+    if (!hasValidActiveSibling && !boundTarget?.isConnected) {
+      copilotBtn.remove()
+      return
+    }
+
+    // 4. Clean up duplicate buttons within the same container
+    const containerCopilots = parent.querySelectorAll<HTMLElement>(
+      `.omnimux-copilot-anchor-btn, [${COPILOT_ATTACHED_ATTR}="true"]`
+    )
+    if (containerCopilots.length > 1) {
+      // Keep only the last inserted one
+      for (let i = 0; i < containerCopilots.length - 1; i++) {
+        containerCopilots[i].remove()
+      }
+    }
+  })
+}
+
 export function mountCopilotToTwitterButtons(): void {
+  // 1. Clean up any orphaned or stale buttons from previous state transitions
+  cleanupStaleCopilotButtons()
+
   const targetSelectors = [
     'button[data-testid="tweetButton"]',
     'button[data-testid="tweetButtonInline"]',
@@ -29,7 +161,7 @@ export function mountCopilotToTwitterButtons(): void {
   for (const selector of targetSelectors) {
     const buttons = document.querySelectorAll(selector)
     buttons.forEach((btn) => {
-      if (btn instanceof HTMLElement && isElementActionable(btn)) {
+      if (btn instanceof HTMLElement && isElementActionable(btn) && !isCollapsedInlineReply(btn)) {
         attachCopilotButton(btn)
       }
     })
@@ -108,8 +240,15 @@ function attachCopilotButton(targetBtn: HTMLElement): void {
   const { container, insertBefore, sopilotTarget } = findHorizontalToolbarAnchor(targetBtn)
 
   // Prevent duplicate insertion in the same container
-  const existing = container.querySelector(`[${COPILOT_ATTACHED_ATTR}="true"]`)
-  if (existing) return
+  const existing = container.querySelector<HTMLElement>(`[${COPILOT_ATTACHED_ATTR}="true"]`)
+  if (existing) {
+    const bound = (existing as any).__targetBtn as HTMLElement | undefined
+    if (bound === targetBtn) {
+      return
+    }
+    // If previous bound target was stale/replaced, remove old button before remounting
+    existing.remove()
+  }
 
   // If competitor is present, suppress it cleanly so OmniMux occupies the primary spot
   if (sopilotTarget) {
@@ -120,10 +259,20 @@ function attachCopilotButton(targetBtn: HTMLElement): void {
   const copilotBtn = document.createElement('button')
   copilotBtn.type = 'button'
   copilotBtn.setAttribute(COPILOT_ATTACHED_ATTR, 'true')
+  ;(copilotBtn as any).__targetBtn = targetBtn
   copilotBtn.className = 'omnimux-copilot-anchor-btn'
   copilotBtn.title = 'OmniMux 推特就地助手'
   copilotBtn.setAttribute('aria-label', 'OmniMux 推特就地助手')
   copilotBtn.innerHTML = GHOST_ICON_SVG
+
+  // Stop mouse/pointer event propagation to prevent Twitter outer container from auto-expanding or toggling focus
+  const stopImmediate = (e: Event) => {
+    e.stopPropagation()
+  }
+  copilotBtn.addEventListener('mousedown', stopImmediate)
+  copilotBtn.addEventListener('pointerdown', stopImmediate)
+  copilotBtn.addEventListener('mouseup', stopImmediate)
+  copilotBtn.addEventListener('pointerup', stopImmediate)
 
   copilotBtn.addEventListener('click', (e) => {
     e.stopPropagation()
