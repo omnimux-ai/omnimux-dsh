@@ -11,6 +11,8 @@
   --faint: #9ca3af;
   --line: rgba(0, 0, 0, 0.08);
   --line-strong: rgba(0, 0, 0, 0.14);
+  /* 媒体画廊舞台底色（留白区域），浅色为中性灰、深色近黑 */
+  --stage-bg: #eceef1;
   /* 强调色令牌（沿用 blue 命名）按 design.md 黑白高对比执行，不再使用紫色 */
   --blue: #111827;
   --blue-hover: #374151;
@@ -49,6 +51,7 @@
     --faint: rgba(255, 255, 255, 0.40);
     --line: rgba(255, 255, 255, 0.08);
     --line-strong: rgba(255, 255, 255, 0.14);
+    --stage-bg: #0c0c0e;
     --blue: #ffffff;
     --blue-hover: #e4e4e7;
     --blue-ink: #ffffff;
@@ -75,6 +78,7 @@
   --faint: rgba(255, 255, 255, 0.40);
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
+  --stage-bg: #0c0c0e;
   --blue: #ffffff;
   --blue-hover: #e4e4e7;
   --blue-ink: #ffffff;
@@ -812,85 +816,318 @@ textarea:focus-visible {
   justify-content: flex-end;
 }
 
-.message-image {
+/* 对话媒体画廊。
+   竖屏窄栏固定「上下」排布：舞台在上占满整栏宽度，小图条在下横排（宽度稀缺、高度可滚动）。
+   舞台高度完全交给 CSS —— --media-ratio 是素材宽高比，配合 max/min-height 定档，
+   不做任何 JS 宽度测量，首帧宽度未定也算不错。 */
+.gallery {
+  position: relative;
+  display: flex;
+  width: 100%;
+  /* A definite floor, not `min(220px, 100%)`: the percentage form is
+     unresolvable inside the message bubble (`width: fit-content`), so it would
+     collapse to `auto` and let the stage shrink to its placeholder while the
+     bytes are in flight. The bubble still sizes to the media once it lands, so
+     a landscape attachment grows the row on load. */
+  min-width: 220px;
+  max-width: 100%;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stage-box {
+  position: relative;
   display: grid;
+  width: 100%;
+  min-height: 104px;
+  max-height: 236px;
   flex: 0 0 auto;
   overflow: hidden;
   padding: 0;
   place-items: center;
-  border: 1px solid rgba(126, 139, 173, 0.24);
-  border-radius: 11px;
-  background: var(--canvas-deep);
+  aspect-ratio: var(--media-ratio, 16 / 9);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--stage-bg);
   color: var(--faint);
   cursor: zoom-in;
   font: inherit;
-  font-size: calc(10px * var(--ui-scale));
 }
 
-.message-image.single {
-  max-width: 100%;
+.stage-box:hover {
+  border-color: var(--line-strong);
 }
 
-.message-image.tile {
-  width: 64px;
-  height: 64px;
+.stage-box:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
-.message-image:disabled {
+.stage-box:disabled {
   cursor: wait;
 }
 
-.message-image img {
+.stage-box > img,
+.stage-box > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.stage-kind,
+.stage-count {
+  position: absolute;
+  display: inline-flex;
+  height: 19px;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #ffffff;
+  font-size: calc(10.5px * var(--ui-scale));
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
+.stage-kind {
+  top: 7px;
+  left: 7px;
+}
+
+.stage-count {
+  right: 7px;
+  bottom: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 小图条：横排，溢出时横向滚动，两端渐隐提示还有更多 */
+.rail {
+  position: relative;
+  display: flex;
+  height: 52px;
+  flex: 0 0 auto;
+  flex-direction: row;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail.scrollable {
+  mask-image: linear-gradient(90deg, transparent 0, #000000 12px, #000000 calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000000 12px, #000000 calc(100% - 12px), transparent 100%);
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--canvas-deep);
+  cursor: pointer;
+  font: inherit;
+  opacity: 0.62;
+  transition: opacity 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.thumb > img,
+.thumb > video {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.message-image-error {
-  width: 96px;
-  min-height: 48px;
-  padding: 6px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 10px;
-  background: var(--canvas-deep);
-  color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: calc(10px * var(--ui-scale));
+.thumb:hover {
+  opacity: 0.9;
 }
 
+.thumb:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.thumb[aria-selected="true"] {
+  border-color: var(--ink-strong);
+  box-shadow: 0 0 0 1px var(--ink-strong);
+  opacity: 1;
+}
+
+.thumb-kind {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #ffffff;
+  font-size: calc(9px * var(--ui-scale));
+  line-height: 14px;
+  letter-spacing: 0.02em;
+}
+
+.thumb-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.thumb-play > svg {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+/* 加载中：骨架占位，绝不让浏览器画出破图图标 */
+.stage-skeleton {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--canvas-deep);
+}
+
+.stage-skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, var(--line) 42%, transparent 64%);
+  content: "";
+  animation: media-shimmer 1.5s linear infinite;
+}
+
+@keyframes media-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-skeleton::after {
+    animation: none;
+  }
+}
+
+/* 失败态：舞台位让给一个可点击重试的面板（button 里不能再嵌 button） */
+.stage-fail {
+  gap: 6px;
+  border-style: dashed;
+  cursor: default;
+  color: var(--muted);
+  font-size: calc(11px * var(--ui-scale));
+  text-align: center;
+}
+
+.stage-retry {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: calc(11px * var(--ui-scale));
+}
+
+/* 全屏查看：顶部标题栏 + 舞台 + 底部缩略图条 */
 .image-lightbox {
   position: fixed;
   z-index: 300;
   inset: 0;
   display: grid;
-  padding: 42px 18px 18px;
-  place-items: center;
-  background: rgba(12, 18, 31, 0.82);
+  gap: 10px;
+  padding: 12px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: rgba(6, 8, 12, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
-.image-lightbox > img {
-  max-width: 100%;
-  max-height: 100%;
-  border-radius: 8px;
-  object-fit: contain;
-  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+.image-lightbox-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: calc(12px * var(--ui-scale));
 }
 
-.image-lightbox > button {
-  position: absolute;
-  top: 10px;
-  right: 12px;
+.image-lightbox-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-lightbox-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.image-lightbox-close,
+.image-lightbox-nav {
+  display: grid;
   width: 32px;
   height: 32px;
+  flex: 0 0 auto;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
-  background: rgba(15, 23, 40, 0.8);
+  background: rgba(15, 23, 40, 0.72);
   color: #ffffff;
   cursor: pointer;
-  font-size: calc(22px * var(--ui-scale));
-  line-height: 1;
+}
+
+.image-lightbox-close:hover,
+.image-lightbox-nav:hover {
+  background: rgba(40, 48, 66, 0.86);
+}
+
+.image-lightbox-stage {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.image-lightbox-media {
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+}
+
+.image-lightbox-media > img,
+.image-lightbox-media > video {
+  max-width: 100%;
+  max-height: 74vh;
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+
+.image-lightbox-strip {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.image-lightbox-strip .thumb {
+  width: 46px;
+  height: 46px;
 }
 
 .row.tool {

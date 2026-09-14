@@ -37,8 +37,22 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('<form')
     expect(html).not.toContain('<button')
     expect(html).not.toContain('style=')
-    expect(html).not.toContain('<img')
-    expect(html).not.toContain('evil.example')
+    // The stripped form must not survive as a bare `action=` attribute.
+    expect(html).not.toContain('action=')
+    // The image is no longer dropped (spec §3.6), so its src — and with it the
+    // remote host — legitimately appears in the output. What must hold is that
+    // the surviving media carries the hardening, on that very element.
+    expect(html).toMatch(/<img[^>]*src="https:\/\/evil\.example\/leak"[^>]*referrerpolicy="no-referrer"/)
+  })
+
+  // Reply images used to be dropped outright. They render now, so the case
+  // asserts the hardened form they are allowed in instead of their absence.
+  it('keeps reply images only as hardened https loads', () => {
+    const html = renderMarkdown('<img src="https://cdn.example.com/a.png"><img src="data:image/png;base64,AAAA">')
+    expect(html).toContain('src="https://cdn.example.com/a.png"')
+    expect(html).toContain('referrerpolicy="no-referrer"')
+    expect(html).toContain('loading="lazy"')
+    expect(html).not.toContain('data:image/png')
   })
 
   it('opens http(s) links in a new tab and drops javascript: hrefs', () => {

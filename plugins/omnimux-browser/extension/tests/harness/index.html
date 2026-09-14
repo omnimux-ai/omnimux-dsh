@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>对话媒体画廊 · 真实浏览器验收 harness</title>
+    <style>
+      /* Harness chrome only; every pane below renders the product's own styles.css. */
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 22px;
+        background: #f2f3f5;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 13px;
+      }
+      h1 { margin: 0 0 4px; font-size: 17px; }
+      p.lede { margin: 0 0 20px; color: #4b5563; font-size: 12.5px; line-height: 1.7; }
+      code { padding: 1px 5px; border-radius: 4px; background: #e5e7eb; font-size: 12px; }
+      .grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 22px; }
+      figure { margin: 0; }
+      figcaption {
+        margin-bottom: 7px;
+        color: #4b5563;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      iframe {
+        display: block;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 10px;
+        background: #ffffff;
+      }
+      iframe.dark { background: #000000; }
+    </style>
+  </head>
+  <body>
+    <h1>对话媒体画廊 · 真实浏览器验收</h1>
+    <p class="lede">
+      每个窗格都在固定宽度里渲染<strong>产品自身的</strong> <code>MessageImages</code> 组件与
+      <code>styles.css</code>；<code>session.attachment</code> 由假实现返回 data URI。
+      用例自上而下：单素材 / 4 张图片 / 含 1 个视频 / 8 张素材 / 失败后重试。<br />
+      可直接打开的窗格：<code>frame.html?theme=dark&amp;width=320</code>（参数：<code>theme=light|dark</code>、<code>width=N</code>、<code>delay=ms</code>、<code>locale=zh|en</code>）。
+    </p>
+    <div class="grid">
+      <figure>
+        <figcaption>浅色 · Chrome sidePanel 440px</figcaption>
+        <iframe src="./frame.html?theme=light&amp;width=440" width="440" height="1180" title="浅色 440px"></iframe>
+      </figure>
+      <figure>
+        <figcaption>浅色 · 窄栏 320px</figcaption>
+        <iframe src="./frame.html?theme=light&amp;width=320" width="320" height="1180" title="浅色 320px"></iframe>
+      </figure>
+      <figure>
+        <figcaption>深色 · Chrome sidePanel 440px</figcaption>
+        <iframe class="dark" src="./frame.html?theme=dark&amp;width=440" width="440" height="1180" title="深色 440px"></iframe>
+      </figure>
+      <figure>
+        <figcaption>深色 · 窄栏 320px</figcaption>
+        <iframe class="dark" src="./frame.html?theme=dark&amp;width=320" width="320" height="1180" title="深色 320px"></iframe>
+      </figure>
+    </div>
+  </body>
+</html>

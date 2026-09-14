@@ -32,6 +32,31 @@ export interface DraftImage {
   name?: string
 }
 
+/**
+ * A durable media reference the gallery can render.
+ *
+ * The host attachment protocol still admits images only (`IMAGE_MEDIA_TYPES`),
+ * so `Row.images` is an `ImageAttachmentRef`; video is the already-supported
+ * rendering path for references that reach the panel with a `video/*` type.
+ */
+export interface MediaAttachmentRef extends Omit<ImageAttachmentRef, 'mediaType'> {
+  mediaType: string
+}
+
+/** A conservative `type/subtype` shape, so a type may never inject a data-URL delimiter. */
+const MEDIA_TYPE_PATTERN = /^(?:image|video)\/[a-z0-9][a-z0-9.+-]*$/
+
+/** Uppercase format badge for a media type, e.g. `image/jpeg` → `JPG`. */
+const FORMAT_TAGS: Record<string, string> = {
+  jpeg: 'JPG',
+  png: 'PNG',
+  webp: 'WEBP',
+  gif: 'GIF',
+  mp4: 'MP4',
+  webm: 'WEBM',
+  quicktime: 'MOV',
+}
+
 export type PromptContentPart =
   | { type: 'text'; text: string }
   | { type: 'image'; mediaType: ImageMediaType; data: string; name?: string }
@@ -247,6 +272,52 @@ export function promptContent(text: string, images: readonly DraftImage[]): Prom
 export function attachmentResponseDataUrl(value: unknown, expected: ImageAttachmentRef): string | null {
   if (!isRecord(value) || typeof value.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value.data)) return null
   const attachment = parseImageAttachmentRef(value.attachment)
+  if (attachment === null
+    || attachment.attachmentId !== expected.attachmentId
+    || attachment.mediaType !== expected.mediaType) return null
+  return `data:${attachment.mediaType};base64,${value.data}`
+}
+
+/** Whether a durable media reference should render as a `<video>`. */
+export function isVideoMediaType(mediaType: string): boolean {
+  return mediaType.startsWith('video/') && MEDIA_TYPE_PATTERN.test(mediaType)
+}
+
+/** Short uppercase badge for a media type (`image/jpeg` → `JPG`, `video/mp4` → `MP4`). */
+export function mediaFormatTag(mediaType: string): string {
+  const subtype = mediaType.slice(mediaType.indexOf('/') + 1).toLowerCase()
+  return FORMAT_TAGS[subtype] ?? subtype.toUpperCase()
+}
+
+function parseMediaAttachmentRef(value: unknown): MediaAttachmentRef | null {
+  if (!isRecord(value)
+    || typeof value.attachmentId !== 'string'
+    || value.attachmentId === ''
+    || typeof value.mediaType !== 'string'
+    || !MEDIA_TYPE_PATTERN.test(value.mediaType)
+    || !isPositiveInteger(value.bytes)
+    || !isPositiveInteger(value.width)
+    || !isPositiveInteger(value.height)
+    || (value.name !== undefined && typeof value.name !== 'string')) return null
+  return {
+    attachmentId: value.attachmentId,
+    mediaType: value.mediaType,
+    bytes: value.bytes,
+    width: value.width,
+    height: value.height,
+    ...(value.name === undefined ? {} : { name: value.name }),
+  }
+}
+
+/**
+ * Validate a `session.attachment` response before putting it in a media `src`.
+ *
+ * Same contract as {@link attachmentResponseDataUrl}, widened to the video
+ * references the gallery renders.
+ */
+export function mediaResponseDataUrl(value: unknown, expected: MediaAttachmentRef): string | null {
+  if (!isRecord(value) || typeof value.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value.data)) return null
+  const attachment = parseMediaAttachmentRef(value.attachment)
   if (attachment === null
     || attachment.attachmentId !== expected.attachmentId
     || attachment.mediaType !== expected.mediaType) return null
