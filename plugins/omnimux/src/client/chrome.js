@@ -10,6 +10,7 @@ import { ensureComposerCompactChrome, installComposerCompactObserver } from './c
 import { installAgentPresetAvatarEnhancer } from './agent-preset-enhancer.js'
 import { installSidebarToggleTopbar } from './sidebar-toggle-topbar.js'
 import { NS, en, zh } from './locales.js'
+import { bindWorkbenchDeps } from './workbench/host-adapter.js'
 // x.ai 全壳 overrideTokens 已临时关闭：发送钮在暗色下变成白底白箭头。
 // 恢复时：重新 import applyXaiShellTheme，并把 'theme' 加回 inject + package.json dsh.client.inject。
 // import { applyXaiShellTheme } from './xai-theme.js'
@@ -37,6 +38,12 @@ export function installHubChrome(ctx) {
     })
     ctx.inject(['betterSidebar'], (inner) => {
       workbench.bind({ betterSidebar: inner.betterSidebar ?? inner.get?.('betterSidebar') })
+    })
+    ctx.inject(['sidebarRight'], (inner) => {
+      inner.effect(() => {
+        bindWorkbenchDeps({ sidebarRight: inner.sidebarRight })
+        return () => bindWorkbenchDeps({ sidebarRight: null })
+      }, 'omnimux: native sidebar context')
     })
   }
   ctx.effect(

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
+import { GenerationTasks } from './GenerationTasks.jsx';
+import { currentSessionId } from '../workbench/host-adapter.js';
 import { injectMediaViewerStyles } from './styles.js';
 import { registerContextContributor } from '../workbench/context.js';
 
@@ -15,7 +17,10 @@ export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
  * - Single image/video detail view with right vertical thumbnails rail
  * - Image annotation comments with popovers, consecutive numbering and model prompt integration
  */
-export function MediaViewerTab({ scope }) {
+const noSubscription = () => () => {};
+
+export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
+  const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, () => sessions?.list?.getSnapshot().current || currentSessionId());
   useEffect(() => {
     injectMediaViewerStyles();
   }, []);
@@ -242,7 +247,8 @@ export function MediaViewerTab({ scope }) {
       {/* 主舞台区 */}
       <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
         {/* 视口展示区 */}
-        <div className="omx-mv-viewport">
+        <div className="omx-mv-viewport" data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId) || undefined}>
+          <GenerationTasks tasks={state.generationTasks.filter((task) => task.sessionId === sessionId)} imageUrl={imageUrl} readFile={readFile} />
           {subViewMode === 'grid' ? (
             /* 时间线瀑布流：同一时间线下多图横排 */
             <div className="omx-mv-timeline">
@@ -292,13 +298,13 @@ export function MediaViewerTab({ scope }) {
               >
                 {activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls autoPlay playsInline />
-                ) : (
+                ) : activeItem?.url ? (
                   <img
                     ref={imageRef}
                     src={activeItem?.url}
                     alt={activeItem?.title || '预览'}
                   />
-                )}
+                ) : null}
 
                 {/* 局部打点与气泡输入框层 */}
                 {annotations.map((item) => {

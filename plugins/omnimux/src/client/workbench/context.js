@@ -1,8 +1,8 @@
 /**
  * Workbench Agent context 投影：把宿主快照统一投影为 viewport 信封。
  *
- * `getUiContext` 只消费官方 `SidebarSnapshot = { sessionId, state }`（经
- * host-adapter 的 `snapshotState` 严格读取，无 `snap.state || snap` 猜测）；
+ * `getUiContext` 优先消费官方 sidebarRight 当前活动标签/展开读面；
+ * 无该公开能力时才消费旧 SidebarSnapshot.state，不猜测原生导航参数。
  * `formatCompactContextBlock` 把信封压缩为 `<ui_context>` 文本块，
  * `view.extra.workspaceId` 始终保持纯逻辑 ID（拒绝路径形态）。
  */
@@ -12,6 +12,7 @@ import {
   activeTabId,
   currentSessionId,
   getWorkbenchService,
+  getWorkbenchSidebarRight,
   isSeedFilesTab,
   listOpenTabs,
   snapshotState,
@@ -70,13 +71,20 @@ export function getUiContext() {
   const service = getWorkbenchService()
   const snap = service?.getSnapshot?.()
   const state = snapshotState(snap)
-  const activeTab = activeTabId(state)
-  const panelOpen = Boolean(state?.panelOpen)
+  const native = getWorkbenchSidebarRight()
+  const hasNative = typeof native?.active === 'function' && typeof native?.isExpanded === 'function'
+  const current = currentSessionId()
+  // The native controller addresses only the currently mounted session.
+  const nativeTab = hasNative && current ? native.active() : null
+  const activeTab = hasNative ? nativeTab?.kind : activeTabId(state)
+  const panelOpen = hasNative ? Boolean(current && nativeTab && native.isExpanded()) : Boolean(state?.panelOpen)
   const focus = getWorkbenchFocus()
   const conversationCollapsed = Boolean(getConversationCollapsed())
-  const openedTabs = listOpenTabs(state).map(describeOpenTab).filter(Boolean)
-  const sessionId = currentSessionId() || snap?.sessionId || 'default'
-  const activeDesc = openedTabs.find((t) => t.id === activeTab)
+  const openedTabs = hasNative
+    ? [describeOpenTab(nativeTab && { id: nativeTab.id, type: nativeTab.kind, title: nativeTab.title })].filter(Boolean)
+    : listOpenTabs(state).map(describeOpenTab).filter(Boolean)
+  const sessionId = current || (!hasNative && snap?.sessionId) || 'default'
+  const activeDesc = hasNative ? openedTabs[0] : openedTabs.find((t) => t.id === activeTab)
     || (activeTab ? describeOpenTab({ id: activeTab, type: activeTab }) : null)
 
   let reason = 'ok'
@@ -112,6 +120,7 @@ export function getUiContext() {
     sessionId,
     surface: {
       tabId: activeTab || null,
+      ...(hasNative ? { instanceId: nativeTab?.id || null } : {}),
       title: activeDesc?.title || (activeTab && WORKBENCH_TAB_TITLE_FALLBACKS[activeTab]) || activeTab || null,
       type: activeDesc?.type || activeTab || null,
       kind: activeDesc?.kind || (activeTab ? 'workbench' : null),

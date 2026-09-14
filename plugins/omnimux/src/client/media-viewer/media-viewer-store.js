@@ -42,6 +42,7 @@ export function createMediaViewerStore(initialState = {}) {
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),
     generatingTask: initialState.generatingTask || null,
+    generationTasks: initialState.generationTasks || [],
     isAnnotating: Boolean(initialState.isAnnotating),  // 是否处于打点评论状态
     annotationsByMediaId: initialState.annotationsByMediaId || {}, // mediaId -> AnnotationItem[]
   };
@@ -130,6 +131,21 @@ export function createMediaViewerStore(initialState = {}) {
       let idx = levels.indexOf(state.zoom);
       idx = (idx + 1) % levels.length;
       state = { ...state, zoom: levels[idx] };
+      notify();
+    },
+
+    /** @param {{ sessionId: string, requestId: string, status: string, media?: MediaItem[] }} task */
+    updateGeneration(task) {
+      if (!task.sessionId || !task.requestId) return;
+      if (task.status === 'success' && !task.media?.some((item) => item.url || item.attachment?.attachmentId || (item.type === 'video' && typeof item.path === 'string' && item.path.length))) return;
+      const index = state.generationTasks.findIndex((item) => item.sessionId === task.sessionId && item.requestId === task.requestId);
+      const previous = state.generationTasks[index];
+      if (previous && ['success', 'failure', 'cancelled', 'unresolved'].includes(previous.status)) return;
+      const next = { ...previous, ...task };
+      const tasks = [...state.generationTasks];
+      if (index < 0) tasks.push(next);
+      else tasks[index] = next;
+      state = { ...state, generationTasks: tasks };
       notify();
     },
 

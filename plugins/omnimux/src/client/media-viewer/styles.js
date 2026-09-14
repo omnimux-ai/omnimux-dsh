@@ -6,6 +6,16 @@
 export const MEDIA_VIEWER_STYLE_ID = 'omnimux-media-viewer-styles';
 
 export const MEDIA_VIEWER_CSS = `
+.omx-mv-generation-tasks { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px; width: 100%; box-sizing: border-box; flex: 0 0 auto; }
+.omx-mv-viewport[data-has-generation] { flex-direction: column; justify-content: flex-start; }
+.omx-mv-viewport[data-has-generation] > .omx-mv-single-stage { flex: 0 0 auto; }
+.omx-mv-generation-tasks:empty { display: none; }
+.omx-mv-generation-task { width: min(100%, 480px); overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); }
+.omx-mv-generation-task__label { padding: 12px; font-size: 13px; color: var(--dsw-alias-label-primary); }
+.omx-mv-generation-task > .omx-generating-box { height: 240px; position: relative; }
+.omx-mv-generation-task > img, .omx-mv-generation-task > video { display: block; width: 100%; max-height: 480px; object-fit: contain; }
+.omx-generating-box[data-generation-phase="pending"] .omx-shimmer-overlay { display: none; }
+
 /* ========================================================
    1. 助手消息尾部图片预览卡片 (Message Tail Preview Card)
    ======================================================== */

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { bindWorkbenchDeps } from './workbench/host-adapter.js'
 import { describe, it } from 'node:test'
 import {
   formatCompactContextBlock,
@@ -9,6 +10,67 @@ import {
   installWorkbenchGlobal,
   resetWorkbenchForTests,
 } from './workbench.js'
+
+describe('Native sidebar context admission', () => {
+  const media = 'omnimux:media-viewer'
+  function setup({ expanded = true, tab = { id: 'tab:opaque', kind: media }, current = 'session-a' } = {}) {
+    resetWorkbenchForTests()
+    const state = { current, expanded, tab }
+    bindWorkbenchDeps({
+      sessions: { list: { getSnapshot: () => ({ current: state.current }) } },
+      betterSidebar: { getSnapshot: () => ({ sessionId: 'stale-session', state: {
+        panelOpen: true, activePane: 'pane:old',
+        splits: { kind: 'leaf', id: 'pane:old', active: media, tabs: [{ id: media }] },
+      } }) },
+      sidebarRight: { active: () => state.tab, isExpanded: () => state.expanded },
+    })
+    return state
+  }
+  it('uses native kind for contributor/admission and retains opaque instance id', () => {
+    setup()
+    registerContextContributor(media, () => ({ view: { kind: 'media', activeMediaId: 'sample' } }))
+    const value = getUiContext()
+    assert.equal(value.surface.tabId, media)
+    assert.equal(value.surface.instanceId, 'tab:opaque')
+    assert.equal(value.surface.panelOpen, true)
+    assert.equal(value.view.activeMediaId, 'sample')
+    assert.equal(value.surface.openedTabs[0].id, 'tab:opaque')
+  })
+  it('does not revive closed native sidebar from stale legacy true', () => {
+    setup({ expanded: false })
+    assert.equal(getUiContext().surface.panelOpen, false)
+    assert.equal(getUiContext().reason, 'panel-collapsed')
+  })
+  it('rejects absent mounted active tab despite expanded and stale legacy true', () => {
+    setup({ tab: null })
+    assert.equal(getUiContext().surface.tabId, null)
+    assert.equal(getUiContext().surface.panelOpen, false)
+  })
+  it('does not treat a media-shaped instance id as the media kind', () => {
+    setup({ tab: { id: media, kind: 'editor' } })
+    assert.equal(getUiContext().surface.tabId, 'editor')
+    assert.equal(getUiContext().surface.instanceId, media)
+  })
+  it('reads current session on each call and never falls back to stale legacy session', () => {
+    const state = setup()
+    assert.equal(getUiContext().sessionId, 'session-a')
+    state.current = 'session-b'
+    state.tab = { id: 'tab:b', kind: 'editor' }
+    assert.equal(getUiContext().sessionId, 'session-b')
+    assert.equal(getUiContext().surface.tabId, 'editor')
+    state.current = undefined
+    assert.equal(getUiContext().sessionId, 'default')
+    assert.equal(getUiContext().surface.panelOpen, false)
+    assert.equal(getUiContext().surface.tabId, null)
+  })
+  it('restores the pure legacy read only when optional native API is removed', () => {
+    setup({ expanded: false })
+    bindWorkbenchDeps({ sidebarRight: null })
+    assert.equal(getUiContext().surface.panelOpen, true)
+    assert.equal(getUiContext().surface.tabId, media)
+    assert.equal(getUiContext().surface.instanceId, undefined)
+  })
+})
 
 describe('Workbench UI Context and Envelope', () => {
   it('formats compact context block correctly', () => {
