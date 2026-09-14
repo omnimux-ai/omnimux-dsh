@@ -30,8 +30,8 @@ export async function startFixture() {
     aside{width:240px;padding:16px;border-right:1px solid var(--dsw-alias-border-l1);flex-shrink:0}
     aside button{display:block;margin:8px 0;height:32px}main{flex:1;min-width:0;height:100vh}</style>
     <div id="root"></div><script>window.qaBoot={errors:[],mounted:false};
-    window.addEventListener('error',e=>window.qaBoot.errors.push({message:e.message||'resource load failed',stack:e.error?.stack||''}),true);
-    window.addEventListener('unhandledrejection',e=>window.qaBoot.errors.push({message:String(e.reason),stack:e.reason?.stack||''}));
+    window.onerror = (message, source, lineno, colno, error) => { window.qaBoot.errors.push({message: String(message), stack: error?.stack||''}); };
+    window.onunhandledrejection = (e) => { window.qaBoot.errors.push({message: String(e.reason), stack: e.reason?.stack||''}); };
     </script><script type="module" src="/fixture.js"></script></html>`;
   const videoPath = 'plugins/omnimux/src/client/media-viewer/test-support/fixture-video.mp4';
   const video = await readFile(resolve(root, videoPath));
