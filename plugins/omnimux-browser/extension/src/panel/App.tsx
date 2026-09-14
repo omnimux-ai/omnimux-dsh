@@ -599,6 +599,7 @@ export function App(): React.JSX.Element {
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
+  const [velocityEnabled, setVelocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
   const [targetPort, setTargetPort] = useState<number>(() => {
@@ -2504,6 +2505,22 @@ export function App(): React.JSX.Element {
               type="checkbox"
               checked={mediaHoverEnabled}
               onChange={(event) => updateFeatureFlag(FEATURE_FLAG.mediaHover, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+        </section>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-velocity-setting">
+          <div id="omnimux-velocity-setting" className="settings-card-heading">{copy.settings.velocitySection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.velocityToggle}</strong>
+              <small>{copy.settings.velocityToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={velocityEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.velocity, event.target.checked)}
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
           </label>

@@ -89,6 +89,9 @@ export interface PanelCopy {
     mediaHoverSection: string
     mediaHoverToggle: string
     mediaHoverToggleHelp: string
+    velocitySection: string
+    velocityToggle: string
+    velocityToggleHelp: string
     trustedOrigins: string
     trustedOriginsHelp: string
     trustedOriginInput: string
@@ -334,6 +337,9 @@ const EN: PanelCopy = {
     mediaHoverSection: 'Image toolbar',
     mediaHoverToggle: 'Show it while hovering over an image',
     mediaHoverToggleHelp: 'Enable the OmniMux capsule toolbar that appears when the pointer hovers over a page image or video',
+    velocitySection: 'X velocity badge',
+    velocityToggle: 'Show the X velocity badge',
+    velocityToggleHelp: 'Show velocity metrics and comment-window hints on X tweets',
     trustedOrigins: 'Always-allowed domains',
     trustedOriginsHelp: 'Trusted domains exempt from confirmation',
     trustedOriginInput: 'Domain to always trust (e.g. https://example.com or https://*.example.com)',
@@ -579,6 +585,9 @@ const ZH: PanelCopy = {
     mediaHoverSection: '图片工具栏',
     mediaHoverToggle: '悬停在图片上时显示',
     mediaHoverToggleHelp: '控制页面图片、视频悬停感知的 OmniMux 胶囊工具栏是否启用',
+    velocitySection: 'X 爆速角标',
+    velocityToggle: '显示 X 爆速角标',
+    velocityToggleHelp: '在 X 推文上展示爆速指标与评论机会提示。',
     trustedOrigins: '永久免确认域名',
     trustedOriginsHelp: '免除操作审批的受信域名（支持通配符）',
     trustedOriginInput: '要永久信任的域名（如 https://example.com 或 https://*.example.com）',
