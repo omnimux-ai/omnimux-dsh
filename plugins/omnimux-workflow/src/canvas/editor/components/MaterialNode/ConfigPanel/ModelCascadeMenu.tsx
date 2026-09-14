@@ -400,9 +400,6 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
           >
             {/* 栏 1：品牌（168px x 360px，悬停即切换二级，点击固定当前列） */}
             <div role="group" aria-label="选择品牌" className="wf-loomi-col wf-loomi-col--brand">
-              <div className="wf-loomi-section-title">
-                选择模型
-              </div>
               {brandList.map((brand) => {
                 const isSelected = activeBrandId === brand.id;
                 const isHovered = shownBrandId === brand.id && hoverBrandId !== null;
