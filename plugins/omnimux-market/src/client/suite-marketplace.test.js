@@ -307,8 +307,8 @@ test('A5 确认安装（默认当前项目）：suiteInstall 带 projectDir，�
   tree = ui.render()
   assert.equal(withClass(tree, 'ws-suite-install-dialog').length, 0)
   const installButton = withClass(tree, 'ws-detail-header-actions')[0].children[0]
-  assert.equal(installButton.children[0], '已安装')
-  assert.equal(installButton.props.disabled, true)
+  assert.equal(installButton.children[0], '卸载')
+  assert.equal(installButton.props.disabled, false)
   const receipt = withClass(tree, 'ws-suite-receipt')[0]
   assert.equal(receipt.props.className, 'ws-suite-receipt')
   assert.equal(withClass(receipt, 'ws-suite-receipt-title')[0].children[0], '安装完成')
@@ -403,14 +403,14 @@ test('A5 失败必须回传原因：不得静默成功或标记已安装', async
   assert.deepEqual(installed, [])
 })
 
-test('已安装态：item.installed 为真时按钮直接是「已安装」且不可点', () => {
+test('已安装态：item.installed 为真时按钮呈现为「卸载」并可触发卸载确认', () => {
   const ui = renderSuite({ ...SOCIAL_CONTENT, installed: true })
   const tree = ui.render()
-  const installButton = withClass(tree, 'ws-detail-header-actions')[0].children[0]
-  assert.equal(installButton.children[0], '已安装')
-  assert.equal(installButton.props.disabled, true)
-  installButton.props.onClick()
-  assert.equal(withClass(ui.render(), 'ws-suite-install-dialog').length, 0)
+  const actionButton = withClass(tree, 'ws-detail-header-actions')[0].children[0]
+  assert.equal(actionButton.children[0], '卸载')
+  assert.equal(actionButton.props.disabled, false)
+  actionButton.props.onClick()
+  assert.equal(withClass(ui.render(), 'ws-suite-install-dialog').length, 1)
 })
 
 test('resolveProjectDir：会话 cwd 优先，回落工作区目录，缺失返回空串', () => {

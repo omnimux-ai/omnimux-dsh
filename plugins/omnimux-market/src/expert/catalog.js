@@ -170,6 +170,7 @@ function parseItem(raw) {
   }
   const hub = parseHub(row.hub)
   const item = { id, tab, kind, title, subtitle, summary, category, tags, avatar, skill, serverName, source, hub }
+  if (typeof row.preinstalled === 'boolean') item.preinstalled = row.preinstalled
   if (kind === 'suite') item.suite = parseSuiteManifest(row.suite, id)
   // Skill-only metadata; expert/team fields and top-level featured retain their contract.
   if (kind === 'skill' && tab === 'skills') {
@@ -316,6 +317,17 @@ export function decorateCatalog(catalog, roots) {
 export function isInstalled(item, roots) {
   if (item.kind === 'connector') {
     return mcpInstalled(roots.profileDir, item.id)
+  }
+  if (item.kind === 'suite' && item.preinstalled === true) {
+    const uninstalledFile = join(roots.home, 'omnimux-market', 'uninstalled-suites.json')
+    try {
+      if (existsSync(uninstalledFile)) {
+        const raw = readFileSync(uninstalledFile, 'utf8')
+        const list = JSON.parse(raw)
+        if (Array.isArray(list) && list.includes(item.id)) return false
+      }
+    } catch {}
+    return true
   }
   if (!item.skill) return false
   const path = join(skillDir(roots.home, item.skill), 'SKILL.md')

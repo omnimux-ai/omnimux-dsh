@@ -93,7 +93,11 @@ test('decorate marks missing items uninstalled', () => {
     profileDir: join(home, 'profiles', 'omnimux'),
     packageRoot: PACKAGE_ROOT,
   })
-  assert.equal(doc.items.every((item) => item.installed === false), true)
+  // 非预装条目在空环境下应判定为未安装；预装套件出厂默认判定为已安装。
+  assert.equal(doc.items.filter((item) => !item.preinstalled).every((item) => item.installed === false), true)
+  const preinstalled = doc.items.filter((item) => item.preinstalled === true)
+  assert.ok(preinstalled.length > 0)
+  assert.equal(preinstalled.every((item) => item.installed === true), true)
 })
 
 test('decorate sees a copied skill as installed', () => {

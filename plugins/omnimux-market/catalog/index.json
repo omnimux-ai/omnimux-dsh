@@ -8556,6 +8556,302 @@
         "rules": [],
         "agents": []
       }
+    },
+    {
+      "id": "suite-tiktok-agent",
+      "tab": "skills",
+      "kind": "suite",
+      "title": "TikTok 全能操盘套件",
+      "summary": "全能社媒操盘手官方预装套件，集成选品洞察、爆款视频反推、带货视频生成、买家秀与数据分析等 45 个专业技能。",
+      "category": "sk-suite",
+      "tags": [
+        "TikTok",
+        "社媒操盘",
+        "带货",
+        "短视频"
+      ],
+      "skill": "tiktok-agent",
+      "preinstalled": true,
+      "source": {
+        "type": "bundled",
+        "path": "catalog/experts/social-content-team"
+      },
+      "suite": {
+        "skills": [
+          {
+            "name": "tiktok-blue-ocean-discovery",
+            "title": "TikTok 蓝海爆品发现",
+            "desc": "找出指定地区、指定品类下正在爆卖、但竞争还不饱和的潜力商品，产出可下手的选品清单。一次任务执行约消耗 18 算力。",
+            "content": ""
+          },
+          {
+            "name": "find-similar-products-by-image",
+            "title": "以图找同款商品",
+            "desc": "上传一张商品图，在 TikTok 上找出同款/相似商品并看销量表现，判断是不是红海。一次任务执行约消耗 12 算力。",
+            "content": ""
+          },
+          {
+            "name": "top-store-viral-reference",
+            "title": "头部跨境店爆品参考",
+            "desc": "找出指定地区、品类里最能打的店铺，看它们主推哪些爆品，抄头部作业。约消耗 18 算力。",
+            "content": ""
+          },
+          {
+            "name": "product-reviews-insights",
+            "title": "商品口碑与差评洞察",
+            "desc": "扒一个商品的真实买家评论，告诉你最满意什么、最不满意什么，以及上架前要避的坑。",
+            "content": ""
+          },
+          {
+            "name": "high-commission-product-filter",
+            "title": "高佣金潜力品筛选",
+            "desc": "在指定Tiktok地区和品类里，筛出佣金率达标且近期还在放量的商品，找\"既好卖又赚得多\"的品。约消耗 12 算力。",
+            "content": ""
+          },
+          {
+            "name": "tk-category-video-trends-report",
+            "title": "TK品类视频热度与洞察报告",
+            "desc": "通过AI深度分析某品类在TikTok上的海量视频数据，从标题和标签中提取高热关键词，评估每个关键词的内容热度与商业价值。",
+            "content": ""
+          },
+          {
+            "name": "viral-selling-prompt-generator",
+            "title": "爆款带货提示词生成器",
+            "desc": "检索全球最大的真实 AI 带货视频与提示词库 (涵盖 TikTok 全部国家与品类、真正卖爆的高销量 AI 带货视频)，匹配与生成提示词。",
+            "content": ""
+          },
+          {
+            "name": "collect-viral-videos",
+            "title": "采集爆款视频",
+            "desc": "搜索指定地区、时间内跟关键词相关的爆款带货视频，按播放排好，附链接和挂载商品。数据直接来自 TikTok 搜索，确保真实有效。",
+            "content": ""
+          },
+          {
+            "name": "video-analysis",
+            "title": "竞品爆款复盘",
+            "desc": "从商业说服机制、受众心理痛点与评论区舆情宏观复盘爆款视频，助你吃透带货商业逻辑。",
+            "content": ""
+          },
+          {
+            "name": "reverse-video-prompt",
+            "title": "反推视频提示词",
+            "desc": "上传TK视频链接，自动反推出该视频背后，可用于AI视频生成的高质量提示词。",
+            "content": ""
+          },
+          {
+            "name": "download-tk-video",
+            "title": "下载TK视频",
+            "desc": "高质量下载TikTok/抖音视频，获取视频原始素材。",
+            "content": ""
+          },
+          {
+            "name": "generate-selling-script-prompt",
+            "title": "生成带货脚本提示词",
+            "desc": "输入产品信息和生成要求（可选上传产品图），AI 自动生成一条完整的 TikTok 爆款带货视频脚本，包含逐镜头时间轴、分镜描述与口播文案。",
+            "content": ""
+          },
+          {
+            "name": "reverse-prompt-and-rewrite-script",
+            "title": "反推视频提示词并改写脚本",
+            "desc": "自动反推视频提示词，并基于你的产品图和改写要求生成风格相似的脚本。",
+            "content": ""
+          },
+          {
+            "name": "batch-viral-search-and-analysis",
+            "title": "爆款批量搜索 + 深度拆解报告",
+            "desc": "找到爆款只是起点，真正要懂的是它“为什么火”。本模板将搜索与深度分析打通：先筛选爆款视频，再批量提取口播文案与结构。",
+            "content": ""
+          },
+          {
+            "name": "generate-long-video-script",
+            "title": "生成长时间视频脚本",
+            "desc": "专门用于生成长视频复刻脚本，可输出固定人物出镜的长时段带货视频脚本及对应 prompt。脚本按片段拆分，可直接交付制作。",
+            "content": ""
+          },
+          {
+            "name": "viral-topics-and-tags-mining",
+            "title": "爆款选题与话题tag挖掘",
+            "desc": "挖出跟关键词相关，最近正在热的话题(hashtag)和话题下爆款视频，约消耗 12 算力。",
+            "content": ""
+          },
+          {
+            "name": "replicate-viral-video",
+            "title": "复刻爆款视频",
+            "desc": "参考爆款视频结构，为你的产品一键生成同款带货视频。",
+            "content": ""
+          },
+          {
+            "name": "create-selling-video",
+            "title": "创作带货视频",
+            "desc": "从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。",
+            "content": ""
+          },
+          {
+            "name": "video-hook-analysis",
+            "title": "视频拆解",
+            "desc": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+            "content": ""
+          },
+          {
+            "name": "video-script-creation",
+            "title": "视频脚本创作",
+            "desc": "复刻爆款结构或基于商品原创，生成可执行的带货分镜脚本。",
+            "content": ""
+          },
+          {
+            "name": "video-prompt-generation",
+            "title": "视频提示词生成",
+            "desc": "把脚本或视频转换为可直接使用的 AI 视频生成提示词。",
+            "content": ""
+          },
+          {
+            "name": "video-generation",
+            "title": "视频生成",
+            "desc": "将分镜或提示词渲染为成片视频。",
+            "content": ""
+          },
+          {
+            "name": "image-translation",
+            "title": "图片翻译",
+            "desc": "图片翻译可精准识别并翻译语言，高效转换商品详情图、A+图等跨境内容，轻松满足多语言翻译需求。",
+            "content": ""
+          },
+          {
+            "name": "generate-white-background-image",
+            "title": "生成白底图",
+            "desc": "生成白底图，符合 TikTok、Amazon等平台的主图规范，可用于商品详情页首图、搜索结果缩略图。",
+            "content": ""
+          },
+          {
+            "name": "generate-scene-image",
+            "title": "生成场景图",
+            "desc": "使用场景图展示产品在真实生活语境中被\"用起来\"的瞬间，用于 TikTok Shop 商品详情页、短视频封面、直播间氛围图。",
+            "content": ""
+          },
+          {
+            "name": "generate-selling-point-image",
+            "title": "生成卖点图",
+            "desc": "将产品的核心卖点以 \"图 + 文\" 的方式可视化呈现，用于 TikTok Shop 商品详情页。画面以产品为视觉主体，辅以简短有力的卖点文案。",
+            "content": ""
+          },
+          {
+            "name": "generate-detail-grid-images",
+            "title": "生成细节特写四宫格",
+            "desc": "细节特写四宫格可基于产品图，智能或自定义挑选 4 个关键工艺 / 材质 / 结构部位，一键生成 2×2 微距特写组图，高清展示材质细节。",
+            "content": ""
+          },
+          {
+            "name": "one-click-buyer-show",
+            "title": "一键买家秀",
+            "desc": "一键买家秀可基于产品图，智能生成真实消费者风格的 UGC 买家实拍图，支持智能匹配或自定义买家人种、年龄与生活场景。",
+            "content": ""
+          },
+          {
+            "name": "generate-character-from-reference",
+            "title": "基于参考人物生成角色",
+            "desc": "上传人物参考图，自动分析特征并生成相似风格的 9:16 竖版半身角色图。",
+            "content": ""
+          },
+          {
+            "name": "generate-try-on-outfit",
+            "title": "生成试穿套装",
+            "desc": "基于服装参考图智能生成真人模特上身成片，一比一还原服装细节，支持模特形象自定义，快速产出服饰类上身展示图。",
+            "content": ""
+          },
+          {
+            "name": "generate-ecommerce-image-suite",
+            "title": "生成电商套图",
+            "desc": "生成7张电商套图，包括白底主图、卖点信息图、四宫格多视角、使用场景图、细节特写四宫格。",
+            "content": ""
+          },
+          {
+            "name": "remove-image-background",
+            "title": "去除图片背景",
+            "desc": "一键操作，精准消除图片背景。支持批量上传多张图片，系统自动识别主体轮廓，快速生成纯净透明背景。",
+            "content": ""
+          },
+          {
+            "name": "video-storyboard-image",
+            "title": "视频分镜图",
+            "desc": "为视频脚本生成连贯的分镜画面。",
+            "content": ""
+          },
+          {
+            "name": "product-image-set",
+            "title": "商品套图",
+            "desc": "为商品一键生成一套高质量主图。",
+            "content": ""
+          },
+          {
+            "name": "aplus-content",
+            "title": "A+内容",
+            "desc": "生成电商平台 A+ 详情页图文。",
+            "content": ""
+          },
+          {
+            "name": "image-replication",
+            "title": "图片复刻",
+            "desc": "基于参考图风格批量复刻产品图。",
+            "content": ""
+          },
+          {
+            "name": "multi-angle-product-images",
+            "title": "多角度产品图",
+            "desc": "为同一商品生成多个角度的展示图。",
+            "content": ""
+          },
+          {
+            "name": "ai-virtual-try-on",
+            "title": "AI 换装",
+            "desc": "为模特生成 AI 换装效果。",
+            "content": ""
+          },
+          {
+            "name": "tk-creator-distiller",
+            "title": "TK博主蒸馏器",
+            "desc": "TK博主蒸馏skill，输入任意 TikTok 博主账号，自动拉取热门视频并逐条分析脚本与画面，蒸馏出 TA 的开头钩子公式、人设与视觉风格。",
+            "content": ""
+          },
+          {
+            "name": "collect-creator-videos",
+            "title": "采集创作者账号视频",
+            "desc": "输入tk博主的账号名，就可以提取这个博主所有的视频，包括tk链接、标题、文案内容、时长、点赞、评论、收藏、分享等数据。",
+            "content": ""
+          },
+          {
+            "name": "batch-tk-video-analysis",
+            "title": "TK 视频批量拆解",
+            "desc": "TK 视频批量拆解，输入一批 TikTok 视频链接，自动逐条分析脚本与画面，提取每条视频的开头钩子、脚本结构、视觉表达与卖点。",
+            "content": ""
+          },
+          {
+            "name": "keyword-niche-overview",
+            "title": "关键词赛道速览(商品/视频/达人)",
+            "desc": "输入一个关键词，一次性搜出相关热门商品、视频或达人，一屏看清赛道热度和机会。约消耗 12 算力。",
+            "content": ""
+          },
+          {
+            "name": "tk-account-review-and-optimization",
+            "title": "TK账号内容复盘与优化建议",
+            "desc": "通过抓取自己账号的视频数据，自动完成内容表现复盘，找出高表现和低表现内容的特征差异，给出下一阶段 \"多做什么、少做什么\" 的具体建议。",
+            "content": ""
+          },
+          {
+            "name": "analyze-account",
+            "title": "分析账号",
+            "desc": "拆解 TikTok 账号的内容、受众与增长。",
+            "content": ""
+          },
+          {
+            "name": "sopilot-social-agents",
+            "title": "SoPilot 社媒营销路由中心",
+            "desc": "汇集 14 套社媒营销专项智能体提示词与表单配置，覆盖 Twitter/X 深度运营（高赞互动、Threads改写、引用转推、私信触达、爆款复刻等）。",
+            "content": ""
+          }
+        ],
+        "rules": [],
+        "agents": []
+      }
     }
   ]
 }

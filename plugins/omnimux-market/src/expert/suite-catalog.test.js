@@ -16,6 +16,7 @@ const SUITE_IDS = [
   'suite-marketing-campaign-team',
   'suite-content-monetization-team',
   'suite-amazon-skills',
+  'suite-tiktok-agent',
 ]
 
 /** 平铺多技能仓库（技能直接躺在仓库根、无 `skills/` 中间层）。 */
@@ -23,7 +24,7 @@ const FLAT_SUITE_ID = 'suite-amazon-skills'
 const FLAT_SUITE_SKILLS = 52
 const FLAT_SUITE_CLONE = '/Users/x/Desktop/Project/Github/Amazon-Skills'
 
-test('shelf exposes the seven suites with structured manifests', () => {
+test('shelf exposes the eight suites with structured manifests', () => {
   invalidateCatalogMemos()
   const doc = loadCatalog()
   const suites = doc.items.filter((row) => row.kind === 'suite')
@@ -60,6 +61,15 @@ test('suite counts match the packaged content', () => {
   assert.deepEqual(counts('suite-social-content-team'), { skills: 0, rules: 5, agents: 7 })
   assert.deepEqual(counts('suite-content-distribution-team'), { skills: 6, rules: 0, agents: 5 })
   assert.deepEqual(counts('suite-social-engagement-team'), { skills: 1, rules: 0, agents: 5 })
+  assert.deepEqual(counts('suite-tiktok-agent'), { skills: 45, rules: 0, agents: 0 })
+})
+
+test('preinstalled suite is declared with preinstalled flag', () => {
+  invalidateCatalogMemos()
+  const doc = loadCatalog()
+  const tk = doc.items.find((row) => row.id === 'suite-tiktok-agent')
+  assert.ok(tk, 'suite-tiktok-agent must exist')
+  assert.equal(tk.preinstalled, true)
 })
 
 test('shelf declares the suite category on the skills tab', () => {
