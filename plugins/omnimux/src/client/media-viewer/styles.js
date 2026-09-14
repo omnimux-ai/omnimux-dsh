@@ -592,10 +592,10 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 .omx-mv-btn--comment.active {
-  background: var(--dsw-alias-brand-primary);
-  border-color: var(--dsw-alias-brand-primary);
-  color: #ffffff; /* exempt-ui03: 激活态纯白高亮字 */
-  box-shadow: 0 2px 10px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 激活投影 */
+  background: #2563eb !important; /* exempt-ui03: 标注激活态经典亮蓝高光 */
+  border: 1px solid #2563eb !important; /* exempt-ui03: 蓝框 */
+  color: #ffffff !important; /* exempt-ui03: 激活态纯白高亮字 */
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4) !important; /* exempt-ui03: 激活微光晕 */
 }
 
 /* 顶栏评论状态胶囊 */
@@ -656,15 +656,15 @@ export const MEDIA_VIEWER_CSS = `
   width: 28px;
   height: 28px;
   border-radius: 50% 50% 50% 4px; /* 气泡下尖角 */
-  background: var(--dsw-alias-brand-primary);
-  color: #ffffff; /* exempt-ui03: 图钉纯白数字 */
+  background: #2563eb !important; /* exempt-ui03: 经典亮蓝打点底色 */
+  color: #ffffff !important; /* exempt-ui03: 图钉纯白数字 */
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  border: 2px solid #ffffff; /* exempt-ui03: 白色高亮外边框 */
-  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 阴影 */
+  border: 2px solid #ffffff !important; /* exempt-ui03: 白色高亮外边框 */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important; /* exempt-ui03: 阴影 */
   transform: translate(-50%, -100%);
   cursor: pointer;
   user-select: none;
@@ -675,7 +675,7 @@ export const MEDIA_VIEWER_CSS = `
   transform: translate(-50%, -100%) scale(1.1);
 }
 
-/* 弹出输入框 (Popover) 对标图3/4 */
+/* 弹出输入框 (Popover) 对标图3/4 - 无边框极简黑底胶囊 */
 .omx-mv-annotation-popover {
   position: absolute;
   top: 0;
@@ -683,37 +683,42 @@ export const MEDIA_VIEWER_CSS = `
   transform: translate(-14px, -100%);
   display: flex;
   align-items: center;
-  background: var(--dsw-alias-bg-layer-3);
-  padding: 3px 6px 3px 4px;
+  background: rgba(30, 30, 34, 0.95); /* exempt-ui03: 磨砂深黑胶囊底色 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 4px 6px 4px 5px;
   border-radius: 9999px;
-  box-shadow: 0 8px 28px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 弹窗投影 */
-  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); /* exempt-ui03: 弹窗投影 */
+  border: none !important;
+  outline: none !important;
   z-index: 20;
   gap: 8px;
-  min-width: 220px;
-  max-width: 320px;
+  min-width: 240px;
+  max-width: 340px;
 }
 
 .omx-mv-annotation-popover__badge {
   width: 24px;
   height: 24px;
   border-radius: 50% 50% 50% 4px;
-  background: var(--dsw-alias-brand-primary);
-  color: #ffffff; /* exempt-ui03: 徽标白字 */
+  background: #2563eb !important; /* exempt-ui03: 经典亮蓝徽标底色 */
+  color: #ffffff !important; /* exempt-ui03: 徽标白字 */
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
+  border: 1.5px solid #ffffff !important; /* exempt-ui03: 徽标白描边 */
   flex-shrink: 0;
 }
 
 .omx-mv-annotation-popover__input {
   flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--dsw-alias-label-primary);
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important; /* exempt-ui03: 纯白输入字 */
   font-size: 13px;
   line-height: 1.4;
   padding: 4px 0;
@@ -756,7 +761,7 @@ html[data-omnimux-left-collapsed] .omx-mv-composer-attachment-dock {
 
 .omx-mv-composer-attachment-dock .omx-mv-composer-attachment {
   pointer-events: auto;
-  box-shadow: 0 4px 16px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 挂件投影 */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* exempt-ui03: 挂件投影 */
 }
 
 .omx-mv-composer-attachment {
@@ -766,9 +771,10 @@ html[data-omnimux-left-collapsed] .omx-mv-composer-attachment-dock {
   height: 28px;
   padding: 0 10px;
   border-radius: 9999px;
-  background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-brand-primary);
+  background: rgba(30, 30, 34, 0.95); /* exempt-ui03: 磨砂深黑底 */
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(37, 99, 235, 0.5) !important; /* exempt-ui03: 亮蓝微光圈 */
+  color: #60a5fa !important; /* exempt-ui03: 亮蓝文字 */
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
