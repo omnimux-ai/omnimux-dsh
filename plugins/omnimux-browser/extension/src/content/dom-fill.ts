@@ -43,7 +43,16 @@ function isElementVisible(el: Element | null): el is HTMLElement {
   return rect.width > 0 && rect.height > 0
 }
 
-function findTargetElement(platform: string = 'generic'): { element: HTMLElement; selector: string } | null {
+function findTargetElement(platform: string = 'generic', preferredTarget?: HTMLElement | null): { element: HTMLElement; selector: string } | null {
+  if (
+    preferredTarget &&
+    preferredTarget instanceof HTMLElement &&
+    isElementVisible(preferredTarget) &&
+    (preferredTarget.isContentEditable || preferredTarget.tagName === 'TEXTAREA' || (preferredTarget.tagName === 'INPUT' && (preferredTarget as HTMLInputElement).type === 'text'))
+  ) {
+    return { element: preferredTarget, selector: 'preferredTarget' }
+  }
+
   const candidates = [
     ...(SELECTOR_REGISTRY[platform] || []),
     ...SELECTOR_REGISTRY.generic,
@@ -102,8 +111,8 @@ export interface FillResult {
   message: string
 }
 
-export async function fillHostInput(text: string, platform: string = 'generic'): Promise<FillResult> {
-  const target = findTargetElement(platform)
+export async function fillHostInput(text: string, platform: string = 'generic', preferredTarget?: HTMLElement | null): Promise<FillResult> {
+  const target = findTargetElement(platform, preferredTarget)
 
   if (!target) {
     try {

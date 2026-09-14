@@ -95,17 +95,28 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
   }
 
   // 1. Extract draft text from current textarea
-  // Look for sibling or parent composer container
+  // 严格从图标所属的局部容器查找，绝不向全局 document 退化，避免误取页面上其他编辑框内容
+  const isTooBroad = (el: Element | null | undefined): boolean =>
+    !el || el === document.body || el === document.documentElement || el.tagName === 'BODY' || el.tagName === 'HTML'
+
+  const parentContainer =
+    anchorButton.parentElement && !isTooBroad(anchorButton.parentElement) &&
+    anchorButton.parentElement.querySelector('div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]')
+      ? anchorButton.parentElement
+      : null
+
   const composerContainer =
     anchorButton.closest('[data-testid="tweetTextarea_0_label"]')?.parentElement ||
     anchorButton.closest('[role="dialog"]') ||
     anchorButton.closest('form') ||
     anchorButton.closest('article') ||
-    document
+    parentContainer
 
-  const textarea = composerContainer.querySelector(
-    'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]',
-  ) as HTMLElement | null
+  const textarea = composerContainer
+    ? (composerContainer.querySelector(
+        'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"]',
+      ) as HTMLElement | null)
+    : null
 
   if (textarea) {
     context.draftText = (textarea.textContent || '').trim()
@@ -124,7 +135,10 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
         const textEl = quoteCard.querySelector('[data-testid="tweetText"]')
         context.quotedTweetText = (textEl?.textContent || quoteCard.textContent || '').trim()
 
-        const userLink = quoteCard.querySelector('a[href*="/status/"], a[role="link"][href^="/"]')
+        const userEl = quoteCard.querySelector('[data-testid="User-Name"]')
+        const userLink =
+          userEl?.querySelector('a[role="link"][href^="/"]') ||
+          quoteCard.querySelector('a[href*="/status/"], a[role="link"][href^="/"]')
         if (userLink) {
           const href = userLink.getAttribute('href') || ''
           const match = href.match(/^\/([^/]+)/)
@@ -150,10 +164,7 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
       targetTweet = anchorButton.closest('article[data-testid="tweet"]') as HTMLElement | null
     }
 
-    // Fallback: the first tweet in main
-    if (!targetTweet) {
-      targetTweet = document.querySelector('main article[data-testid="tweet"]') as HTMLElement | null
-    }
+    // 绝对不向 document.querySelector('main article') 兜底，避免对着下面的推文点神评却抓了顶部的推文
 
     if (targetTweet) {
       const tweetTextEl = targetTweet.querySelector('[data-testid="tweetText"]')

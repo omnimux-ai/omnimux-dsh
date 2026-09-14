@@ -108,8 +108,10 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
         }
       }
 
-      // 2. Status 详情页首选推文大图或视频首帧
-      const tweetArticle = mainCol.querySelector('article[data-testid="tweet"]')
+      // 2. Status 详情页首选推文大图或视频首帧 (优先详情页焦点推文)
+      const tweetArticle =
+        mainCol.querySelector('article[tabindex="-1"][data-testid="tweet"]') ||
+        mainCol.querySelector('article[data-testid="tweet"]')
       if (tweetArticle) {
         const photo = tweetArticle.querySelector<HTMLImageElement>('div[data-testid="tweetPhoto"] img, img[src*="media"]')
         if (photo?.src) return photo.src
@@ -161,7 +163,10 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
 export function extractPostData(platform: PageSceneContext['platform']): { author?: string; postText?: string } {
   try {
     if (platform === 'twitter') {
-      const tweetArticle = document.querySelector('article[data-testid="tweet"]')
+      const tweetArticle =
+        document.querySelector('article[tabindex="-1"][data-testid="tweet"]') ||
+        document.querySelector('main article[data-testid="tweet"]') ||
+        document.querySelector('article[data-testid="tweet"]')
       if (tweetArticle) {
         const textEl = tweetArticle.querySelector('div[data-testid="tweetText"]')
         const userEl = tweetArticle.querySelector('div[data-testid="User-Name"]')
