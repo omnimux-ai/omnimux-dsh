@@ -485,6 +485,10 @@ html[data-omnimux-composer-mode='marketing'] .sh-picker-wrap:has([data-omnimux-s
 .ws-suite-block:last-child{margin-bottom:0}
 .ws-suite-block-title{margin:0 0 4px;font-size:14px;line-height:20px;font-weight:650;color:var(--dsw-alias-label-primary,#ffffff)}
 .ws-suite-block-hint{margin:0 0 10px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary,#84878f)}
+.ws-suite-rules{display:flex;flex-direction:column;gap:8px}
+.ws-suite-rule{background:var(--dsw-alias-bg-layer-2,#121316);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.08));border-radius:10px;padding:10px 12px;min-width:0}
+.ws-suite-rule-title{margin-bottom:6px;font-size:13px;line-height:18px;font-weight:600;color:var(--dsw-alias-label-primary,#ffffff);overflow-wrap:anywhere}
+.ws-suite-rule-body{margin:0;font-family:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#a1a1aa);white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow-y:auto}
 .ws-suite-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 @media (max-width:520px){.ws-suite-grid{grid-template-columns:minmax(0,1fr)}}
 .ws-suite-item{background:var(--dsw-alias-bg-layer-2,#121316);border:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.08));border-radius:10px;padding:10px 12px;min-width:0}

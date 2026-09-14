@@ -262,10 +262,23 @@ test('E2E 旅程二：点卡进详情，空块整块省略，其余块按目录�
     lookup('suite.section.agentsHint'),
   ])
 
+  // 规则块已是源文本形态：5 条 .ws-suite-rule，规则不再出现在卡片网格里。
+  const ruleBodies = byClass(view, 'ws-suite-rule-body')
+  assert.equal(byClass(view, 'ws-suite-rule').length, SOCIAL.suite.rules.length)
+  assert.deepEqual(texts(byClass(view, 'ws-suite-rule-title')), SOCIAL.suite.rules.map((rule) => rule.title))
+  assert.deepEqual(ruleBodies.map((node) => node.children[0]), SOCIAL.suite.rules.map((rule) => rule.content))
+  for (const rule of SOCIAL.suite.rules) {
+    assert.ok(rule.content.includes('\n'), `rule ${rule.name} must keep its line breaks`)
+    assert.equal(rule.content.startsWith('---'), false, `rule ${rule.name} must not carry frontmatter`)
+    assert.notEqual(rule.content, rule.desc)
+  }
+  assert.equal(byClass(view, 'ws-suite-rule').some((node) => byClass(node, 'ws-suite-item').length > 0), false)
+
+  // Agent 块仍是卡片网格：7 张 .ws-suite-item，标题与说明与目录逐字一致。
   const itemTitles = texts(byClass(view, 'ws-suite-item-title'))
-  for (const rule of SOCIAL.suite.rules) assert.ok(itemTitles.includes(rule.title), `rule ${rule.name}`)
   for (const agent of SOCIAL.suite.agents) assert.ok(itemTitles.includes(agent.title), `agent ${agent.name}`)
-  assert.equal(byClass(view, 'ws-suite-item').length, SOCIAL.suite.rules.length + SOCIAL.suite.agents.length)
+  assert.deepEqual(texts(byClass(view, 'ws-suite-item-desc')), SOCIAL.suite.agents.map((agent) => agent.desc))
+  assert.equal(byClass(view, 'ws-suite-item').length, SOCIAL.suite.agents.length)
   assert.equal(byClass(view, 'ws-detail-source-label')[0].children[0], lookup('suite.source'))
   assert.equal(installButton(view).children[0], lookup('suite.install'))
 })
