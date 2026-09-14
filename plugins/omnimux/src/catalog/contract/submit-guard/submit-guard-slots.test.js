@@ -6,7 +6,7 @@ import { getContractIndex } from '../index.js'
 const index = getContractIndex()
 
 describe('SubmitGuard slots', () => {
-  const t2i = index.get('gpt-image-2').operations.find((o) => o.id === 'text_to_image')
+  const t2i = index.get('gpt-image-2.5').operations.find((o) => o.id === 'text_to_image')
   const vision = index.get('gemini-3.7-flash').operations.find((o) => o.id === 'vision_chat')
 
   it('requires prompt when min>=1', () => {
@@ -73,27 +73,26 @@ describe('SubmitGuard slots', () => {
     assert.equal(r.rejections[0].code, GUARD_CODES.METADATA_UNKNOWN)
   })
 
-  it('duration boundary and metadata_unknown on audio_track style slots', () => {
-    const avatarOp = index.get('kling-avatar').operations.find((o) => o.id === 'digital_human')
-    const maxDur = avatarOp.inputs.find((s) => s.slot === 'audio_track').maxDurationSec
-    const assets = [
-      { type: 'image', role: 'reference', pathOrUrl: 'https://x/face.png', mime: 'image/png', sizeBytes: 100 },
-      { type: 'audio', role: 'audio_track', pathOrUrl: '/a.mp3', mime: 'audio/mp3', sizeBytes: 100, durationSec: maxDur },
-    ]
-    // research draft — still validate slots in isolation
-    const ok = assignAndValidateSlots(avatarOp, assets, { prompt: '' })
+  it('duration boundary and metadata_unknown on duration-bearing reference slots', () => {
+    // `kling-avatar`/`digital_human` left the contract universe; `minimax-h3` #video_multi_ref
+    // is the shelf operation that still carries a min/max-bounded audio reference slot.
+    const multiRefOp = index.get('minimax-h3').operations.find((o) => o.id === 'video_multi_ref')
+    const maxDur = multiRefOp.inputs.find((s) => s.slot === 'reference_audios').maxDurationSec
+    const image = { type: 'image', role: 'reference', targetSlot: 'reference_images', pathOrUrl: 'https://x/face.png', mime: 'image/png', sizeBytes: 100 }
+    const audio = { type: 'audio', role: 'reference', targetSlot: 'reference_audios', pathOrUrl: '/a.mp3', mime: 'audio/mp3', sizeBytes: 100, durationSec: maxDur }
+    const ok = assignAndValidateSlots(multiRefOp, [image, audio], { prompt: 'reference' })
     assert.equal(ok.ok, true)
     const over = assignAndValidateSlots(
-      avatarOp,
-      [assets[0], { ...assets[1], durationSec: maxDur + 0.01 }],
-      { prompt: '' },
+      multiRefOp,
+      [image, { ...audio, durationSec: maxDur + 0.01 }],
+      { prompt: 'reference' },
     )
     assert.equal(over.ok, false)
     assert.equal(over.rejections[0].code, GUARD_CODES.DURATION_EXCEEDED)
     const unknownDur = assignAndValidateSlots(
-      avatarOp,
-      [assets[0], { type: 'audio', role: 'audio_track', pathOrUrl: '/a.mp3', mime: 'audio/mp3', sizeBytes: 100 }],
-      { prompt: '' },
+      multiRefOp,
+      [image, { type: 'audio', role: 'reference', targetSlot: 'reference_audios', pathOrUrl: '/a.mp3', mime: 'audio/mp3', sizeBytes: 100 }],
+      { prompt: 'reference' },
     )
     assert.equal(unknownDur.ok, false)
     assert.equal(unknownDur.rejections[0].code, GUARD_CODES.METADATA_UNKNOWN)

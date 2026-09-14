@@ -29,7 +29,7 @@
 # the route sets `supportsDeveloperRole: false` — without it, pi-ai would
 # send that role on every reasoning model. `minimax-m3` is on the live
 # catalog but this key's group 403s it; it stays off the hub list.
-# deepseek-v4-flash-vision-exp is the product default agent model (desktop
+# deepseek-v4-flash is the product default agent model (desktop
 # preset and web profile set agent-default-model to it), so it stays selectable.
 #
 # Input modalities follow the measured gateway matrix

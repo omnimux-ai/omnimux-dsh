@@ -51,10 +51,10 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /Nano Banana Pro/)
     assert.match(modelPickerSrc, /专业图像质量和文本布局/)
 
-    assert.match(modelPickerSrc, /"gpt-image-2"/)
-    assert.match(modelPickerSrc, /GPT Image 2/)
+    assert.match(modelPickerSrc, /"gpt-image-2\.5"/)
+    assert.match(modelPickerSrc, /GPT Image 2\.5/)
     assert.doesNotMatch(modelPickerSrc, /GPT图像/)
-    assert.match(modelPickerSrc, /精准文本渲染，更强的推理能力/)
+    assert.match(modelPickerSrc, /高精细节渲染与指令遵循/)
 
     assert.match(modelPickerSrc, /"nanobanana"/)
     assert.match(modelPickerSrc, /Nano Banana/)
@@ -67,6 +67,22 @@ describe('model picker client & session contracts (Issue #1167)', () => {
     assert.match(modelPickerSrc, /"seedream-5-0-lite"/)
     assert.match(modelPickerSrc, /Seedream 5\.0 Lite/)
     assert.match(modelPickerSrc, /卓越的提示遵循和推理能力/)
+  })
+
+  it('hardcoded fallback drops removed IDs and uses the renamed canonical IDs (Issue #1751)', () => {
+    // 移除：gpt-image-2 上游已明示旧 ID 不再接受，且不是兼容别名
+    assert.doesNotMatch(modelPickerSrc, /"gpt-image-2"/)
+    assert.doesNotMatch(modelPickerSrc, /"GPT Image 2"/)
+    assert.match(modelPickerSrc, /"gpt-image-2\.5"/)
+
+    // 改名：grok-imagine-image-2 → grok-imagine-image-2-0（旧写法进入 aliases，不再作为 canonical 出现在兜底列表）
+    assert.doesNotMatch(modelPickerSrc, /"grok-imagine-image-2"/)
+    assert.match(modelPickerSrc, /"grok-imagine-image-2-0"/)
+
+    // 其余已移除模型不得回流到兜底列表
+    for (const removed of ['minimax-h3-max', 'minimax-h3-max-turbo', 'kling-o1', 'veo-3.1', 'veo-3.1-fast', 'omni_flash', 'kling-avatar', 'seedream-4.5', 'midjourney', 'midjourney-7', 'midjourney-niji-7', 'seedance2.5-stable-max-720p']) {
+      assert.doesNotMatch(modelPickerSrc, new RegExp(`"${removed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`))
+    }
   })
 
   it('renders capsule button with model icon + name when model is chosen (Image 3)', () => {

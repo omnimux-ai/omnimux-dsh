@@ -27,13 +27,9 @@
     },
     {
       "id": "gpt-image-2",
-      "disposition": "canonical",
-      "batch": "A",
-      "reason": "命中 runtime；仓内 dated live 证据覆盖 text_to_image",
-      "evidence": [
-        "docs/evidence/2026-08-16-omnimux-image.md"
-      ],
-      "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft；2026-09-14 登记冲突：公开文档公告 gpt-image-2 更名至 gpt-image-2.5（旧 ID 不再提供），但网关 relay/channel/task/goeasy/adaptor.go 仍接受 gpt-image-2 并映射到 gpt-image-2.5-async，故本行保持 canonical，待网关侧裁定后再决定是否降级为别名"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：公开接口文档明写「旧 model ID 不再接受；这不是兼容别名」；生产渠道目录无此 public_id，仅作渠道内部 upstream 名（生产基线 \"2026-09-14 #1751 移除：公开变更日志 2026-09-10 条目（tags 为「不兼容变更 / 图像」）原文「将 gpt-image-2 替换为 gpt-image-2.5 …… 旧 ID 不是兼容别名，也不支持 gpt-image-2-5 拼写」；生产渠道目录无此 public_id，仅作渠道内部 upstream 名（生产基线 gpt-image-2.5 映射到 gpt-image-2）。此前登记的 canonical 冲突已由上游裁定",
+      "notes": "原 dated live 证据早于上游 08-31/09-12/09-14 三次变动，不再作为在售依据；已就绪状态撤销"
     },
     {
       "id": "gpt-image-2.5",
@@ -46,39 +42,29 @@
       "notes": "中枢统一端点，原生支持 1K/2K/4K 聚合调度"
     },
     {
-      "id": "gpt-image-2-5",
-      "disposition": "alias",
-      "target": "gpt-image-2.5",
-      "reason": "规范无点号别名映射至 gpt-image-2.5"
-    },
-    {
       "id": "grok-imagine-image-2",
-      "disposition": "canonical",
-      "batch": "A",
-      "reason": "命中 runtime；仓内 dated live 证据覆盖 text_to_image",
-      "evidence": [
-        "docs/evidence/2026-08-16-omnimux-image.md"
-      ],
-      "notes": "Batch A 仅 text_to_image 上架；multi_reference 另证保持 draft"
+      "disposition": "alias",
+      "target": "grok-imagine-image-2-0",
+      "reason": "2026-09-14 #1751 改名后的兼容旧名：canonical 换为公开文档页所用 ID grok-imagine-image-2-0"
     },
     {
       "id": "grok-imagine-image",
       "disposition": "alias",
-      "target": "grok-imagine-image-2",
+      "target": "grok-imagine-image-2-0",
       "reason": "旧版无版本号 id 归一为 Grok Image 2 产品 id",
       "notes": "向后兼容旧版无版本号 grok-imagine-image"
     },
     {
       "id": "grok-imagine-image-2-0",
-      "disposition": "alias",
-      "target": "grok-imagine-image-2",
-      "reason": "渠道 wire id 归一为 Grok Image 2 产品 id",
-      "notes": "渠道 wire id 别名"
+      "disposition": "canonical",
+      "batch": "A",
+      "reason": "2026-09-14 #1751 改名承接：公开文档页公开 ID 为该写法；同时撤销在售声明降为已登记",
+      "notes": "生产渠道目录(121)与生产配置基线 models(89)两份独立清单零命中、45 条渠道无一绑定 grok 图像；生产配置基线 options.json 仍有活定价行 0.045714，但无渠道绑定故不具可售性。原 dated live 证据 docs/evidence/2026-08-16-omnimux-image.md 早于 08-31/09-12/09-14 三次上游变动，故执行状态降为 stub、撤销全部 listed 操作"
     },
     {
       "id": "grok-imagine-image-2.0",
       "disposition": "alias",
-      "target": "grok-imagine-image-2",
+      "target": "grok-imagine-image-2-0",
       "reason": "上游官方端点 wire id 归一为 Grok Image 2 产品 id",
       "notes": "上游官方端点 wire id 别名"
     },
@@ -160,15 +146,21 @@
       "notes": "2026-09-05 #530 PR-A：chat 四要素齐全 → research verified + execution live → listed"
     },
     {
-      "id": "deepseek-v4-flash-vision-exp",
+      "id": "deepseek-v4-flash",
       "disposition": "canonical",
-      "reason": "runtime + cordis 在列；2026-09-05 dated live 证据覆盖 chat+vision_chat",
+      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的 deepseek-v4-flash。**完整口径（含内部张力）**：上游该档案 notes 明写「该 ID 在官方文档中已退役：现网模型名为 deepseek-flash（DeepSeek-V4.1-Flash）」，deepseek-v4-flash 与 deepseek-v4-flash-vision-exp 同为 legacy 兼容名，并按 Flash 计费（两 ID ModelRatio 同为 0.07）；官方措辞为 temporarily routed，未承诺长期保留，档案过渡指引建议迁移至 deepseek-flash。本仓沿用 deepseek-v4-flash 的理由：生产配置基线 models 采用该名，而上游治理档案的口径存在上述张力，本次不引入新名（规格 §4 不新增模型）",
       "evidence": [
         "docs/evidence/2026-08-20-omnimux-reasoning.md",
         "docs/evidence/2026-09-05-model-deepseek-v4-flash-vision-exp-chat.md",
         "docs/evidence/2026-09-05-model-deepseek-v4-flash-vision-exp-vision_chat.md"
       ],
-      "notes": "2026-09-05 探测：chat+vision_chat 独立 live 四要素齐全，翻 listed；vision max10 policy_conservative（11 未拒）；禁止继承 deepseek-v4-flash 证据"
+      "notes": "旧 ID deepseek-v4-flash-vision-exp 进 aliases[] 作为兼容旧名"
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "disposition": "alias",
+      "target": "deepseek-v4-flash",
+      "reason": "2026-09-14 #1751：上游官方引述 legacy 名 deepseek-v4-flash-vision-exp 仍被接受，收敛为 deepseek-v4-flash 的别名"
     },
     {
       "id": "gemini-3.8-flash",
@@ -246,8 +238,8 @@
     },
     {
       "id": "veo-3.1",
-      "disposition": "canonical",
-      "reason": "命中 runtime；H1 已有契约；无独立 dated live 证据保持 draft"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：上游提交 8322e941f（2026-09-12）从渠道 32/34 与生产配置基线 models/channels 一并移除。证据强度须如实记录：依据是提交差分 + 渠道解绑，公开接口文档中「没有」该模型的退役公告（文档滞后）；生产配置基线 options.json 仍有活定价行 0.1143，但无任何渠道绑定，故不具备可售性"
     },
     {
       "id": "grok-imagine-video-1-5",
@@ -296,49 +288,23 @@
     },
     {
       "id": "minimax-h3-max",
-      "disposition": "canonical",
-      "reason": "fal.ai 官方文档确认 MiniMax H3 Max 接口与文生、首帧、全能参考模式；适配与离线合同已就绪",
-      "evidence": [
-        "docs/specs/2026-09-05-video-phase-one-scope.md"
-      ]
-    },
-    {
-      "id": "minimax/h3-max",
-      "disposition": "alias",
-      "target": "minimax-h3-max",
-      "reason": "fal.ai wire model；产品目录统一使用 canonical id"
-    },
-    {
-      "id": "h3-max",
-      "disposition": "alias",
-      "target": "minimax-h3-max",
-      "reason": "MiniMax H3 Max 别名，统一使用 canonical id"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 上游幽灵清理提交 c8d134c4f 收敛：minimax/h3-max 移出 models，改列为 minimax-h3 的 model_mapping 目标；生产渠道目录与生产配置基线均无该 public_id",
+      "notes": "上架状态撤销；对外取值应走 minimax-h3"
     },
     {
       "id": "minimax-h3-max-turbo",
-      "disposition": "canonical",
-      "reason": "fal.ai 官方文档确认 MiniMax H3 Max Turbo 接口与文生、首帧模式；适配与离线合同已就绪",
-      "evidence": [
-        "docs/specs/2026-09-05-video-phase-one-scope.md"
-      ]
-    },
-    {
-      "id": "minimax/h3-max-turbo",
-      "disposition": "alias",
-      "target": "minimax-h3-max-turbo",
-      "reason": "fal.ai wire model；产品目录统一使用 canonical id"
-    },
-    {
-      "id": "h3-max-turbo",
-      "disposition": "alias",
-      "target": "minimax-h3-max-turbo",
-      "reason": "MiniMax H3 Max Turbo 别名，统一使用 canonical id"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 上游幽灵清理提交 c8d134c4f 收敛：该 SKU 由 minimax-h3-task ← minimax/h3-max 承载；生产渠道目录与生产配置基线均无该 public_id",
+      "notes": "上架状态撤销；对外取值应走 minimax-h3"
     },
     {
       "id": "seed-audio-1.0",
       "disposition": "canonical",
       "reason": "火山引擎 HTTP v3 语音合成接口已在网关验证",
-      "evidence": ["docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md"]
+      "evidence": [
+        "docs/evidence/2026-09-07-model-seed-audio-1.0-text_to_speech.md"
+      ]
     },
     {
       "id": "doubao-seed-audio-1.0",
@@ -363,18 +329,6 @@
       "reason": "命中 runtime；H1 已有契约；无 dated 证据保持 draft"
     },
     {
-      "id": "gpt-image2-hd",
-      "disposition": "alias",
-      "target": "gpt-image-2.5-hd",
-      "reason": "命名变体（无点号/短横）；随 gpt-image-2-hd 一并归并为 gpt-image-2.5-hd 的别名"
-    },
-    {
-      "id": "gpt-image-2-hd",
-      "disposition": "alias",
-      "target": "gpt-image-2.5-hd",
-      "reason": "公开文档 2026-09-10 起将 gpt-image-2-hd 更名至 gpt-image-2.5-hd；收敛为别名"
-    },
-    {
       "id": "gpt-image-2.5-hd",
       "disposition": "canonical",
       "reason": "契约行更名承接：公开文档已公告的更名后高清型号；因无 dated live 证据不上架（op 保持 draft/none）"
@@ -386,35 +340,47 @@
     },
     {
       "id": "midjourney",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：上游摘除 midjourney-v8.2 → midjourney 映射；公开变更日志 2026-09-13 条目标注 tags 为「不兼容变更 / 图像」，原文要求把旧的 midjourney ID 以及所有按动作 ID（例如 mj-v7-upscale）替换为 mj-v7 或 mj-v8-1，并明写「旧 ID 不是兼容别名」；网关 relaykit/types/midjourney.go 白名单只剩 mj-v7 / mj-v8-1 两个键"
     },
     {
-      "id": "midjourney-8.1",
+      "id": "mj-v8-1",
       "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的 mj-v8-1（生产渠道目录在册，另有 6 个 mj-v8-1-* 动作变体）。上游明示旧 ID 不是兼容别名，故旧 ID 不保留"
     },
     {
-      "id": "midjourney-7",
+      "id": "mj-v7",
       "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的 mj-v7（生产渠道目录在册，另有 11 个 mj-v7-* 动作变体）。上游明示旧 ID 不是兼容别名，故旧 ID 不保留"
     },
     {
       "id": "midjourney-niji-7",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：niji 在生产渠道目录、生产配置基线、公开接口文档、网关源码白名单四处全部零命中"
+    },
+    {
+      "id": "nano-banana-2",
+      "disposition": "canonical",
+      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的连字符形 nano-banana-2（生产渠道目录在册、公开文档有 nano-banana-2 页、生产配置基线渠道 46/54/57 绑定）。网关不做下划线归一闪查，方向须以连字符形为准",
+      "notes": "旧下划线写法 nano_banana_2 已登记为 alias；hyphen-less 形 nanobanana-2 同为 alias，禁止双列"
     },
     {
       "id": "nano_banana_2",
+      "disposition": "alias",
+      "target": "nano-banana-2",
+      "reason": "2026-09-14 #1751 改名后的兼容旧名：旧下划线写法归一为上游在册的连字符 canonical"
+    },
+    {
+      "id": "nano-banana-pro",
       "disposition": "canonical",
-      "reason": "runtime 存在（underscore canonical）；tokens-flow 403 修复中；契约行完整；证据不足不上架（draft 级研究状态）",
-      "notes": "hyphen 形 nanobanana-2 为 alias，禁止双列"
+      "reason": "2026-09-14 #1751 改名：canonical 换为上游在册的连字符形 nano-banana-pro（生产渠道目录在册、公开文档有对应页、生产配置基线渠道 33/37/46/54 绑定）",
+      "notes": "旧下划线写法 nano_banana_pro 已登记为 alias；hyphen-less 形 nanobanana-pro 同为 alias，禁止双列"
     },
     {
       "id": "nano_banana_pro",
-      "disposition": "canonical",
-      "reason": "runtime 存在（underscore canonical）；契约行完整；证据不足不上架（draft 级研究状态）",
-      "notes": "hyphen 形 nanobanana-pro 为 alias，禁止双列"
+      "disposition": "alias",
+      "target": "nano-banana-pro",
+      "reason": "2026-09-14 #1751 改名后的兼容旧名：旧下划线写法归一为上游在册的连字符 canonical"
     },
     {
       "id": "seedream-5-0-pro",
@@ -429,29 +395,29 @@
     },
     {
       "id": "seedream-4.5",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：三方真源零命中；上游 Seedream 图像线在册为 seedream-5-0-pro"
     },
     {
       "id": "seedance2.5-stable-max-720p",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：三方真源零命中；seedance2.5-stable-480p 系上游线路名，本 ID 为线路名误作模型 ID（定价账本记 public_id == upstream_id、status: reserve 未启用）"
     },
     {
       "id": "veo-3.1-fast",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：与 veo-3.1 同一次上游提交 8322e941f 移除。证据强度须如实记录：依据是提交差分 + 渠道解绑，公开接口文档无退役公告（文档滞后）；options.json 仍有活定价行 0.05，但无渠道绑定，不具备可售性"
     },
     {
       "id": "nanobanana-2",
       "disposition": "alias",
-      "target": "nano_banana_2",
+      "target": "nano-banana-2",
       "reason": "hyphen→underscore 归一；禁止双列"
     },
     {
       "id": "nanobanana-pro",
       "disposition": "alias",
-      "target": "nano_banana_pro",
+      "target": "nano-banana-pro",
       "reason": "hyphen→underscore 归一；禁止双列"
     },
     {
@@ -491,6 +457,30 @@
       "reason": "APIMart wire model 大小写敏感；产品目录只展示 canonical id"
     },
     {
+      "id": "minimax/h3-max",
+      "disposition": "alias",
+      "target": "minimax-h3",
+      "reason": "2026-09-14 #1751：上游 c8d134c4f 把 minimax/h3-max（及 turbo）移出 models、改列为 minimax-h3 的 model_mapping 目标 —— 该线路名仍被上游接受并路由到 h3 家族，故登记为 minimax-h3 的兼容写法，避免已保存画布/旧快照引旧名时掉进 unknown_model"
+    },
+    {
+      "id": "h3-max",
+      "disposition": "alias",
+      "target": "minimax-h3",
+      "reason": "2026-09-14 #1751：上游 c8d134c4f 把 minimax/h3-max（及 turbo）移出 models、改列为 minimax-h3 的 model_mapping 目标 —— 该线路名仍被上游接受并路由到 h3 家族，故登记为 minimax-h3 的兼容写法，避免已保存画布/旧快照引旧名时掉进 unknown_model"
+    },
+    {
+      "id": "minimax/h3-max-turbo",
+      "disposition": "alias",
+      "target": "minimax-h3",
+      "reason": "2026-09-14 #1751：上游 c8d134c4f 把 minimax/h3-max（及 turbo）移出 models、改列为 minimax-h3 的 model_mapping 目标 —— 该线路名仍被上游接受并路由到 h3 家族，故登记为 minimax-h3 的兼容写法，避免已保存画布/旧快照引旧名时掉进 unknown_model"
+    },
+    {
+      "id": "h3-max-turbo",
+      "disposition": "alias",
+      "target": "minimax-h3",
+      "reason": "2026-09-14 #1751：上游 c8d134c4f 把 minimax/h3-max（及 turbo）移出 models、改列为 minimax-h3 的 model_mapping 目标 —— 该线路名仍被上游接受并路由到 h3 家族，故登记为 minimax-h3 的兼容写法，避免已保存画布/旧快照引旧名时掉进 unknown_model"
+    },
+    {
       "id": "grok-imagine-video-1.5",
       "disposition": "alias",
       "target": "grok-imagine-video-1-5",
@@ -500,14 +490,10 @@
       "id": "doubao-asr-bigmodel",
       "disposition": "canonical",
       "reason": "Issue #744 指定的豆包 ASR 中枢契约；speech_to_text 使用 speechToText profile",
-      "evidence": ["docs/evidence/2026-09-07-model-doubao-asr-bigmodel-speech_to_text.md"],
+      "evidence": [
+        "docs/evidence/2026-09-07-model-doubao-asr-bigmodel-speech_to_text.md"
+      ],
       "notes": "离线请求与响应契约验证；无独立真实模型调用证据"
-    },
-    {
-      "id": "seedasr-auc",
-      "disposition": "alias",
-      "target": "doubao-asr-bigmodel",
-      "reason": "Issue #744 指定的豆包 ASR 别名；提交前归一为 canonical id"
     },
     {
       "id": "whisper-1",
@@ -517,29 +503,32 @@
     },
     {
       "id": "kling-avatar",
-      "disposition": "draft",
-      "reason": "audioTrack 透传已修（#538），digital_human 执行层可探测；仓内无 dated live 证据不上架",
-      "notes": "digital_human 走 videoDigitalHuman profile，不得借粗 videoGenerate listed；探测前 listed 保持空"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：上游提交 7fa7c9d04（2026-09-11）判为无效模型（fix-catalog-integrity.js 原文「无效模型 kling-avatar (118)」）并从 models/abilities 与渠道 32/34 删除；生产配置基线零命中",
+      "notes": "公开接口文档页为 L2 滞后，不作为在售依据"
     },
     {
       "id": "omni_flash",
-      "disposition": "quarantine",
-      "reason": "内部/不明 SKU；无官方/执行证据"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：生产渠道目录/生产配置基线零命中；上游提交 56c67da2c（2026-09-11）「full audit and hard purge of duplicate, legacy, and stale models」点名 omni_flash* 硬删除；命名规范判为 LEGACY_UNDERSCORE",
+      "notes": "上游同品牌另有 gemini-omni-1.1-flash(-task)，与 omni_flash 只是同品牌不同 ID，不构成改名关系"
     },
     {
       "id": "kling-o1",
-      "disposition": "quarantine",
-      "reason": "无官方/执行证据"
+      "disposition": "unavailable",
+      "reason": "2026-09-14 #1751 移除：三方真源零命中；上游 Kling 在册为 kling-o3 / kling-v2-6 / kling-v3 / kling-v3-motion-control"
     },
     {
       "id": "kling-o3",
-      "disposition": "quarantine",
-      "reason": "无官方/执行证据"
+      "disposition": "canonical",
+      "reason": "2026-09-14 #1751 解封：上游生产渠道目录在册 + 生产配置基线渠道 34 绑定 + 公开接口文档有 kling-o3 文档页，quarantine 理由（无官方证据）已被上游在册事实推翻",
+      "notes": "解封仅撤销隔离口径；未取得 dated live 探测证据，execution 保持 none，不自动上架"
     },
     {
       "id": "kling-v3-motion-control",
-      "disposition": "quarantine",
-      "reason": "无官方/执行证据"
+      "disposition": "canonical",
+      "reason": "2026-09-14 #1751 解封：上游生产渠道目录在册 + 生产配置基线渠道 32/34 双绑定 + 公开接口文档有对应文档页，quarantine 理由（无官方证据）已被上游在册事实推翻",
+      "notes": "解封仅撤销隔离口径；未取得 dated live 探测证据，execution 保持 none，不自动上架"
     },
     {
       "id": "jina-reader-v1",

@@ -17,10 +17,10 @@
       "requiredInAuto": true
     },
     {
-      "productId": "deepseek-v4-flash-vision-exp",
+      "productId": "deepseek-v4-flash",
       "kind": "text",
       "priority": "P0",
-      "gatewayIds": ["deepseek-v4-flash-vision-exp"],
+      "gatewayIds": ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
       "requiredInAuto": true
     },
     {
@@ -31,26 +31,20 @@
       "requiredInAuto": true
     },
     {
-      "productId": "gpt-image-2",
-      "kind": "image",
-      "priority": "P0",
-      "gatewayIds": ["gpt-image-2"],
-      "requiredInAuto": true
-    },
-    {
       "productId": "gpt-image-2.5",
       "kind": "image",
       "priority": "P0",
-      "gatewayIds": ["gpt-image-2.5", "gpt-image-2-5"],
+      "gatewayIds": ["gpt-image-2.5"],
       "requiredInAuto": true
     },
     {
-      "productId": "grok-imagine-image-2",
+      "productId": "grok-imagine-image-2-0",
       "kind": "image",
-      "priority": "P0",
-      "gatewayIds": ["grok-imagine-image-2", "grok-imagine-image", "grok-imagine-image-2-0", "grok-imagine-image-2.0"],
-      "upstreamWireId": "grok-imagine-image-2.0",
-      "requiredInAuto": true
+      "priority": "P1",
+      "gatewayIds": ["grok-imagine-image-2-0", "grok-imagine-image-2", "grok-imagine-image", "grok-imagine-image-2.0"],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-14 #1751：上游两份独立清单零命中，已由已就绪降为已登记（无 listed 操作），不再是自动调度必需项；登记保留承载历史别名归一。"
     },
     {
       "productId": "seedance-2-0",
@@ -106,22 +100,6 @@
       "priority": "P0",
       "gatewayIds": ["grok-imagine-video-1-5", "grok-imagine-video-1.5"],
       "upstreamWireId": "grok-imagine-video-1.5",
-      "requiredInAuto": true
-    },
-    {
-      "productId": "minimax-h3-max",
-      "kind": "video",
-      "priority": "P0",
-      "gatewayIds": ["minimax/h3-max", "h3-max", "minimax-h3-max"],
-      "upstreamWireId": "minimax/h3-max",
-      "requiredInAuto": true
-    },
-    {
-      "productId": "minimax-h3-max-turbo",
-      "kind": "video",
-      "priority": "P0",
-      "gatewayIds": ["minimax/h3-max-turbo", "h3-max-turbo", "minimax-h3-max-turbo"],
-      "upstreamWireId": "minimax/h3-max-turbo",
       "requiredInAuto": true
     },
     {

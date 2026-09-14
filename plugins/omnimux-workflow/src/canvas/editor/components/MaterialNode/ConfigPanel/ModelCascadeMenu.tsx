@@ -61,6 +61,8 @@ interface PickerRow {
   id: string;
   name: string;
   description?: string;
+  /** Contract `family` of the row, when the catalog exposes it. */
+  family?: string;
 }
 
 /** 品牌列：只写产品真名，不做「全能模型 X」这类聚合命名。 */
@@ -72,9 +74,9 @@ const ALL_BRANDS: BrandDef[] = [
   { id: 'alibaba', name: 'Wan', iconModelId: 'wan-3.0' },
   { id: 'happyhorse', name: 'HappyHorse', iconModelId: 'wan-3.0' },
   { id: 'anthropic', name: 'Claude', iconModelId: 'claude-opus-4-6' },
-  { id: 'deepseek', name: 'DeepSeek', iconModelId: 'deepseek-v4-flash-vision-exp' },
+  { id: 'deepseek', name: 'DeepSeek', iconModelId: 'deepseek-v4-flash' },
   { id: 'google', name: 'Google', iconModelId: 'gemini-3.8-flash' },
-  { id: 'midjourney', name: 'Midjourney', iconModelId: 'midjourney' },
+  { id: 'midjourney', name: 'Midjourney', iconModelId: 'mj-v8-1' },
   { id: 'xai', name: 'xAI', iconModelId: 'grok-imagine-video-1-5' },
 ];
 
@@ -107,7 +109,7 @@ const FALLBACK_MODELS_BY_BRAND: Readonly<Record<string, readonly PickerRow[]>> =
     { id: 'seedance-2-0-fast', name: 'Seedance 2.0 Fast', description: '快速版，极速出片，支持多参考图' },
   ],
   deepseek: [
-    { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash', description: '全能旗舰模型，高性价比' },
+    { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', description: '全能旗舰模型，高性价比' },
   ],
   google: [
     { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', description: '极速旗舰模型，多模态全能' },
@@ -129,7 +131,7 @@ const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL: Record<string, Partial<Record<string,
     openai: 'gpt-5.5',
     anthropic: 'claude-opus-4-6',
     google: 'gemini-3.8-flash',
-    deepseek: 'deepseek-v4-flash-vision-exp',
+    deepseek: 'deepseek-v4-flash',
     minimax: 'minimax-h3',
   },
   image: {
@@ -137,8 +139,8 @@ const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL: Record<string, Partial<Record<string,
     google: 'nano-banana-2',
     bytedance: 'seedance-2-0-fast',
     kling: 'kling',
-    midjourney: 'midjourney',
-    xai: 'grok-imagine-image-2',
+    midjourney: 'mj-v8-1',
+    xai: 'grok-imagine-image-2-0',
   },
   video: {
     bytedance: 'seedance-2-0-fast',
@@ -155,14 +157,14 @@ const DEFAULT_MODEL_BY_BRAND_AND_MATERIAL: Record<string, Partial<Record<string,
 const DEFAULT_MODEL_BY_BRAND: Record<string, string> = {
   openai: 'gpt-5.5',
   anthropic: 'claude-opus-4-6',
-  deepseek: 'deepseek-v4-flash-vision-exp',
+  deepseek: 'deepseek-v4-flash',
   google: 'gemini-3.8-flash',
   bytedance: 'seedance-2-0-fast',
   minimax: 'minimax-h3',
   kling: 'kling',
   alibaba: 'wan-3.0',
   happyhorse: 'wan-3.0',
-  midjourney: 'midjourney',
+  midjourney: 'mj-v8-1',
   xai: 'grok-imagine-video-1-5',
 };
 
@@ -209,6 +211,8 @@ function toPickerRows(list: readonly CapabilityModelItem[] | undefined): PickerR
       id: item.id,
       name: typeof row.label === 'string' && row.label ? row.label : item.id,
       ...(typeof row.subtitle === 'string' && row.subtitle ? { description: row.subtitle } : {}),
+      // 家族跟契约走：短名/徽标按 family 解析，改名不会断。
+      ...(typeof row.family === 'string' && row.family ? { family: row.family } : {}),
     };
   });
 }
@@ -361,6 +365,12 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
           : catalog?.models;
     return toPickerRows(rawList);
   }, [catalog, materialType]);
+
+  /** 当前选中型号的契约 family；目录未提供时 undefined，短名解析退回 id 片段表。 */
+  const activeFamily = useMemo(() => {
+    const row = catalogRows.find((candidate) => candidate.id === activeModelId);
+    return row?.family;
+  }, [catalogRows, activeModelId]);
 
   const modelsForBrand = useCallback((brandId: string): PickerRow[] => {
     const fragments = BRAND_MATCHERS.find((entry) => entry.brand === brandId)?.fragments ?? [];
@@ -542,7 +552,7 @@ export const ModelCascadeMenu: React.FC<ModelCascadeMenuProps> = ({
     setHoverModelId(null);
   }, [isOpen]);
 
-  const shortName = resolveShortModelName(activeModelId);
+  const shortName = resolveShortModelName(activeModelId, activeFamily);
   const selectedCount = selectedGroupIds.length;
   const strategyLabel = activeStrategy === 'cost_first' ? '低价优先' : '稳定性优先';
 

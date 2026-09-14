@@ -6,10 +6,14 @@ export const CANONICAL_CATALOG_MODEL_IDS: Readonly<Record<string, string>> = Obj
   'grok-imagine-video': 'grok-imagine-video-1-5',
   'grok-imagine-video.1.5': 'grok-imagine-video-1-5',
   'grok-imagine-video-1.5': 'grok-imagine-video-1-5',
-  'minimax/h3-max': 'minimax-h3-max',
-  'h3-max': 'minimax-h3-max',
-  'minimax/h3-max-turbo': 'minimax-h3-max-turbo',
-  'h3-max-turbo': 'minimax-h3-max-turbo',
+  // 2026-09-14 #1751：上游 c8d134c4f 把这些 h3-max 线路名收敛为 minimax-h3 的 model_mapping 目标，
+  // 上游仍接受它们并路由到 h3 家族，故已保存画布里的这些名字归一到仍在册的 minimax-h3，
+  // 而不是掉进 unknown_model。注意：已下架的产品 id `minimax-h3-max` / `minimax-h3-max-turbo`
+  // **不在**此表内，它们必须走 orphan 路径（模型已 unavailable）。
+  'minimax/h3-max': 'minimax-h3',
+  'h3-max': 'minimax-h3',
+  'minimax/h3-max-turbo': 'minimax-h3',
+  'h3-max-turbo': 'minimax-h3',
 });
 
 /**
