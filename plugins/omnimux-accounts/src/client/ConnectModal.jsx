@@ -119,7 +119,8 @@ export function ConnectModal({ t, watchConnect, onClose, onConnected }) {
           </p>
           <div className="omnimux-accounts-platform-grid">
             {SUPPORTED_PLATFORMS.map((id, index) => (
-              <Button
+              <button // exempt-ui01: 账号连接平台选择卡片
+                type="button"
                 key={id}
                 ref={index === 0 ? firstPlatformRef : undefined}
                 className="omnimux-accounts-platform-btn"
@@ -142,26 +143,29 @@ export function ConnectModal({ t, watchConnect, onClose, onConnected }) {
                 <div className="omnimux-accounts-platform-action" aria-hidden="true">
                   <ArrowRightIcon size={14} />
                 </div>
-              </Button>
+              </button>
             ))}
-            {COMING_PLATFORMS.map((id) => (
-              <div key={id} className="omnimux-accounts-platform-btn omnimux-accounts-platform-btn--coming">
-                <div className={`omnimux-accounts-brand-icon omnimux-accounts-brand-icon--${id}`}>
-                  <PlatformBrandIcon platform={id} size={22} />
+          </div>
+          <div className="omnimux-accounts-coming-section">
+            <div className="omnimux-accounts-coming-strip">
+              <div className="omnimux-accounts-coming-left">
+                <div className="omnimux-accounts-coming-icons">
+                  {COMING_PLATFORMS.map((id) => (
+                    <div
+                      key={id}
+                      className={`omnimux-accounts-mini-icon omnimux-accounts-brand-icon--${id}`}
+                      title={localeText(t, `platform.${id}`, id)}
+                    >
+                      <PlatformBrandIcon platform={id} size={14} />
+                    </div>
+                  ))}
                 </div>
-                <div className="omnimux-accounts-platform-info">
-                  <div className="omnimux-accounts-platform-name-row">
-                    <span className="omnimux-accounts-platform-name">
-                      {localeText(t, `platform.${id}`, id)}
-                    </span>
-                    <span className="omnimux-accounts-platform-soon">{t('connect.comingSoon')}</span>
-                  </div>
-                  <span className="omnimux-accounts-platform-desc">
-                    {localeText(t, `platform.desc.${id}`, '')}
-                  </span>
-                </div>
+                <span className="omnimux-accounts-coming-text">
+                  {localeText(t, 'connect.comingChannels', 'X (推特)、Facebook (脸书) 等官方渠道接入中')}
+                </span>
               </div>
-            ))}
+              <span className="omnimux-accounts-platform-soon">{t('connect.comingSoon')}</span>
+            </div>
           </div>
           <div className="omnimux-accounts-modal-security">
             <ShieldCheckIcon size={14} className="omnimux-accounts-security-icon" />
