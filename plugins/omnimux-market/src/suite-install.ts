@@ -42,6 +42,7 @@ export interface SuiteItem {
   skill?: string
   title?: string
   summary?: string
+  preinstalled?: boolean
   source: { type?: string, path?: string, repo?: string, ref?: string }
   suite?: SuiteManifest
 }
@@ -388,6 +389,9 @@ export function installSuite(opts: SuiteInstallOptions): SuiteInstallResult {
     && result.skills.installed === 0
     && result.rules.written === 0
     && result.agents.installed === 0
+  if (!result.partial) {
+    unmarkSuiteUninstalled(home, item.id)
+  }
   invalidateCatalogMemos()
   return result
 }
@@ -722,6 +726,37 @@ export async function uninstallSuite(opts: SuiteUninstallOptions): Promise<Suite
     }
   }
 
+  if (item.preinstalled === true) {
+    markSuiteUninstalled(home, item.id)
+  }
+
   invalidateCatalogMemos()
   return result
+}
+
+export function markSuiteUninstalled(home: string, id: string): void {
+  const dir = join(home, 'omnimux-market')
+  mkdirSync(dir, { recursive: true })
+  const file = join(dir, 'uninstalled-suites.json')
+  let list: string[] = []
+  try {
+    if (existsSync(file)) list = JSON.parse(readFileSync(file, 'utf8'))
+  } catch {}
+  if (!Array.isArray(list)) list = []
+  if (!list.includes(id)) {
+    list.push(id)
+    writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8')
+  }
+}
+
+export function unmarkSuiteUninstalled(home: string, id: string): void {
+  const file = join(home, 'omnimux-market', 'uninstalled-suites.json')
+  if (!existsSync(file)) return
+  try {
+    let list = JSON.parse(readFileSync(file, 'utf8'))
+    if (Array.isArray(list) && list.includes(id)) {
+      list = list.filter((x: string) => x !== id)
+      writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8')
+    }
+  } catch {}
 }

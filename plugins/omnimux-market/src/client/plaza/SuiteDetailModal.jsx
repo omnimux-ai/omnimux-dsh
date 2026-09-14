@@ -48,7 +48,11 @@ function fillParams(text, params) {
 }
 
 function t(tr, key, fallback, params) {
-  const raw = typeof tr === 'function' ? tr(key, params) : '';
+  let raw = '';
+  try {
+    const res = typeof tr === 'function' ? tr(key, params) : '';
+    if (typeof res === 'string') raw = res;
+  } catch {}
   if (raw && raw !== key) return raw;
   return params ? fillParams(fallback, params) : fallback;
 }
@@ -159,9 +163,15 @@ function partLine(h, tr, key, fallback, part, primaryKey) {
   }));
 }
 
-/** 回执：按服务端 suiteInstall 响应逐项列出数量、落点与未完成项。 */
+/** 回执：按服务端 suiteInstall / suiteUninstall 响应列出结果。 */
 function renderReceipt(h, tr, receipt) {
   if (!receipt) return null;
+  if (receipt.uninstalled === true) {
+    return h('div', { className: 'ws-suite-receipt', role: 'status' },
+      h('p', { className: 'ws-suite-receipt-title' }, t(tr, 'suite.receipt.uninstalledTitle', '卸载完成')),
+      h('p', { className: 'ws-suite-receipt-item' }, t(tr, 'suite.receipt.uninstalled', '已完成卸载，相关配置与预设已清理。')),
+    );
+  }
   const failed = Array.isArray(receipt.failed) ? receipt.failed : [];
   const partial = receipt.partial === true || failed.length > 0;
   const lines = [];
@@ -193,7 +203,7 @@ function renderReceipt(h, tr, receipt) {
  */
 export function SuiteDetailModal(opts) {
   const safe = opts || {};
-  const { item, onClose, onInstalled, projectDir } = safe;
+  const { item, onClose, onInstalled, onUninstalled, projectDir } = safe;
   const h = getH(safe);
   const tr = resolveTr(safe);
   const buttonComp = resolveButton(safe);
@@ -201,10 +211,12 @@ export function SuiteDetailModal(opts) {
   const stateFn = resolveStateHook(safe);
   const apiFn = resolveApi(safe);
 
-  const [installedLocal, setInstalledLocal] = stateFn(Boolean(item && item.installed === true));
+  const [installedLocal, setInstalledLocal] = stateFn(Boolean(item && (item.installed === true || item.preinstalled === true)));
   const [confirmOpen, setConfirmOpen] = stateFn(false);
+  const [confirmUninstallOpen, setConfirmUninstallOpen] = stateFn(false);
   const [ruleTarget, setRuleTarget] = stateFn('project');
   const [installing, setInstalling] = stateFn(false);
+  const [uninstalling, setUninstalling] = stateFn(false);
   const [error, setError] = stateFn('');
   const [receipt, setReceipt] = stateFn('');
 
@@ -215,7 +227,7 @@ export function SuiteDetailModal(opts) {
   const title = resolveItemTitle(item, tr);
   const desc = resolveItemDesc(item, tr);
   const sourceLabel = resolveSuiteSourceLabel(item);
-  const installed = installedLocal || item.installed === true;
+  const installed = installedLocal;
   const targetLabel = (target) => (target === 'global'
     ? t(tr, 'suite.install.ruleTargetGlobal', '个人全局')
     : t(tr, 'suite.install.ruleTargetProject', '当前项目'));
@@ -260,9 +272,45 @@ export function SuiteDetailModal(opts) {
     });
   };
 
+  const closeUninstallConfirm = () => {
+    if (uninstalling) return;
+    setConfirmUninstallOpen(false);
+    setError('');
+  };
+  const openUninstallConfirm = () => {
+    setError('');
+    setConfirmUninstallOpen(true);
+  };
+  const confirmUninstallAction = () => {
+    if (uninstalling) return;
+    setUninstalling(true);
+    setError('');
+    const payload = { id: String(item.id || '') };
+    const pending = apiFn ? apiFn('suiteUninstall', payload) : Promise.reject(new Error('suiteUninstall unavailable'));
+    Promise.resolve(pending).then((res) => {
+      setUninstalling(false);
+      setConfirmUninstallOpen(false);
+      setReceipt({ uninstalled: true });
+      setInstalledLocal(false);
+      if (typeof onUninstalled === 'function') onUninstalled(item);
+    }, (err) => {
+      setUninstalling(false);
+      setError(t(tr, 'suite.uninstall.failed', '卸载失败：{m}', {
+        m: err && err.message ? err.message : String(err || ''),
+      }));
+    });
+  };
+
   const blocks = SUITE_BLOCKS
     .map((block) => renderBlock(h, tr, block, suite[block.list]))
     .filter(Boolean);
+
+  const actionButtonText = () => {
+    if (installing) return t(tr, 'suite.install.installing', '正在安装…');
+    if (uninstalling) return t(tr, 'suite.uninstall.uninstalling', '正在卸载…');
+    if (installed) return t(tr, 'suite.uninstall', '卸载');
+    return t(tr, 'suite.install', '安装');
+  };
 
   const detail = h('div', { className: 'modal-dialog ws-detail-dialog', role: 'dialog', 'aria-modal': 'true' },
     h('div', { className: 'ws-detail-header-row' },
@@ -272,10 +320,10 @@ export function SuiteDetailModal(opts) {
       h('div', { className: 'ws-detail-header-actions' },
         h(buttonComp, {
           size: 'sm',
-          variant: 'primary',
-          disabled: installed || installing,
-          onClick: openConfirm,
-        }, installed ? t(tr, 'suite.installed', '已安装') : t(tr, 'suite.install', '安装')),
+          variant: installed ? 'outline' : 'primary',
+          disabled: installing || uninstalling,
+          onClick: installed ? openUninstallConfirm : openConfirm,
+        }, actionButtonText()),
         renderCloseButton(h, tr, onClose),
       ),
     ),
@@ -311,8 +359,25 @@ export function SuiteDetailModal(opts) {
     ),
   ) : null;
 
+  const confirmUninstall = confirmUninstallOpen ? h('div', { className: 'modal-dialog ws-suite-install-dialog', role: 'dialog', 'aria-modal': 'true' },
+    h('div', { className: 'modal-header' },
+      h('h3', { className: 'modal-title' }, t(tr, 'suite.uninstall.title', '卸载套件')),
+    ),
+    h('p', { className: 'ws-suite-install-summary' }, t(tr, 'suite.uninstall.summary',
+      '确定卸载「{title}」吗？卸载后普通对话将无法直接调用其 {skills} 个技能。',
+      { title, skills: counts.skills, rules: counts.rules, agents: counts.agents })),
+    error ? h('p', { className: 'sh-err', role: 'alert' }, error) : null,
+    h('div', { className: 'ws-detail-actions' },
+      h(buttonComp, { size: 'sm', variant: 'outline', disabled: uninstalling, onClick: closeUninstallConfirm },
+        t(tr, 'suite.install.cancel', '取消')),
+      h(buttonComp, { size: 'sm', variant: 'primary', disabled: uninstalling, onClick: confirmUninstallAction },
+        uninstalling ? t(tr, 'suite.uninstall.uninstalling', '正在卸载…') : t(tr, 'suite.uninstall.confirm', '确认卸载')),
+    ),
+  ) : null;
+
   return [
     h(overlayComp, { key: 'suite-detail', onClose }, detail),
     confirm ? h(overlayComp, { key: 'suite-install-confirm', onClose: closeConfirm }, confirm) : null,
+    confirmUninstall ? h(overlayComp, { key: 'suite-uninstall-confirm', onClose: closeUninstallConfirm }, confirmUninstall) : null,
   ];
 }

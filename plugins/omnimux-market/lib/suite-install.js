@@ -271,6 +271,9 @@ export function installSuite(opts) {
         && result.skills.installed === 0
         && result.rules.written === 0
         && result.agents.installed === 0;
+    if (!result.partial) {
+        unmarkSuiteUninstalled(home, item.id);
+    }
     invalidateCatalogMemos();
     return result;
 }
@@ -593,6 +596,39 @@ export async function uninstallSuite(opts) {
             result.agents.items.push({ name: presetId, status: 'absent', path: dir, error: message(err) });
         }
     }
+    if (item.preinstalled === true) {
+        markSuiteUninstalled(home, item.id);
+    }
     invalidateCatalogMemos();
     return result;
+}
+export function markSuiteUninstalled(home, id) {
+    const dir = join(home, 'omnimux-market');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, 'uninstalled-suites.json');
+    let list = [];
+    try {
+        if (existsSync(file))
+            list = JSON.parse(readFileSync(file, 'utf8'));
+    }
+    catch { }
+    if (!Array.isArray(list))
+        list = [];
+    if (!list.includes(id)) {
+        list.push(id);
+        writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8');
+    }
+}
+export function unmarkSuiteUninstalled(home, id) {
+    const file = join(home, 'omnimux-market', 'uninstalled-suites.json');
+    if (!existsSync(file))
+        return;
+    try {
+        let list = JSON.parse(readFileSync(file, 'utf8'));
+        if (Array.isArray(list) && list.includes(id)) {
+            list = list.filter((x) => x !== id);
+            writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8');
+        }
+    }
+    catch { }
 }

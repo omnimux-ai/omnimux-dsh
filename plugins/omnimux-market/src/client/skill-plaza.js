@@ -327,7 +327,7 @@
       // 套件走独立详情模态；技能 / 专家沿用既有 Drawer。
       const drawerNode = openItem
         ? (openItem.kind === "suite"
-          ? h(SuiteDetailModal, { item: openItem, tr, projectDir, onClose: onDrawerClose, onInstalled: onDrawerInstalled })
+          ? h(SuiteDetailModal, { item: openItem, tr, projectDir, onClose: onDrawerClose, onInstalled: onDrawerInstalled, onUninstalled: onDrawerUninstalled })
           : h(Drawer, { item: openItem, onClose: onDrawerClose, onInstalled: onDrawerInstalled, onUninstalled: onDrawerUninstalled }))
         : null;
       const installNode = h(InstallModal, { open: state.openInstallModal, onClose: () => state.setOpenInstallModal(false), onInstalled: (it) => { mark(it, true); loadInstalled(); } });

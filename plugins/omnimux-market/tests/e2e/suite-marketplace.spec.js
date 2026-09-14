@@ -24,6 +24,7 @@ const clientRequire = createRequire(new URL('skill-plaza.js', clientDir))
 const SUITES = catalog.items.filter((item) => item.kind === 'suite')
 const SOCIAL = SUITES.find((item) => item.id === 'suite-social-content-team')
 const AMAZON = SUITES.find((item) => item.id === 'suite-amazon-skills')
+const TIKTOK = SUITES.find((item) => item.id === 'suite-tiktok-agent')
 
 // 真实词典：直接从 i18n 片段求值取 lookup，断言用户可见中文。
 const i18n = runInNewContext(`${readClient('i18n.js')}\n({ lookup })`, {
@@ -198,9 +199,10 @@ async function confirmInstall(suite = SOCIAL, opts) {
 
 const installButton = (view) => byClass(view, 'ws-detail-header-actions')[0].children[0]
 
-test('E2E 旅程一：套件分类只列真实套件，7 张卡的构成计数与目录一致', async () => {
-  assert.equal(SUITES.length, 7)
+test('E2E 旅程一：套件分类只列真实套件，8 张卡的构成计数与目录一致', async () => {
+  assert.equal(SUITES.length, 8)
   assert.ok(AMAZON, '平铺仓库套件必须在货架上')
+  assert.ok(TIKTOK, 'TikTok 预装套件必须在货架上')
   const { ui, tree } = await browseSuiteCategory()
 
   // 套件只存在于本地目录：该分类不发远端检索。
@@ -385,6 +387,47 @@ test('E2E 旅程四：partial 不显示成功且按钮不转「已安装」，�
     lookup('suite.receipt.ruleFile', { file: '/work/current-project/AGENTS.md' }),
   ])
   assert.equal(byClass(ok.view, 'ws-suite-install-dialog').length, 0)
-  assert.equal(installButton(ok.view).children[0], lookup('suite.installed'))
-  assert.equal(installButton(ok.view).props.disabled, true)
+  // 安装成功后，状态切为已安装，右上角按钮变为「卸载」且允许用户点击卸载
+  assert.equal(installButton(ok.view).children[0], lookup('suite.uninstall'))
+  assert.equal(installButton(ok.view).props.disabled, false)
+})
+
+test('E2E 旅程三：TikTok 预装套件出厂默认展示「卸载」，点击弹出卸载确认框并调用卸载', async () => {
+  assert.ok(TIKTOK, 'TikTok 套件必须在货架上')
+  assert.equal(TIKTOK.suite.skills.length, 45)
+  assert.equal(TIKTOK.preinstalled, true)
+
+  const calls = []
+  const detail = await openSuiteDetail(TIKTOK, {
+    projectDir: '/work/current-project',
+    respond: (action, payload) => {
+      calls.push({ action, payload })
+      if (action === 'suiteUninstall') return { ok: true, uninstalled: true }
+      return defaultRespond(action, payload)
+    },
+  })
+  const actionBtn = installButton(detail.view)
+  // 预装套件默认标记为已安装，右上角操作按钮展示为「卸载」
+  assert.equal(actionBtn.children[0], lookup('suite.uninstall'))
+  assert.equal(actionBtn.props.disabled, false)
+
+  // 点击「卸载」打开卸载确认弹窗
+  actionBtn.props.onClick()
+  await detail.ui.settle()
+  const modalTree = detail.ui.mountModal(findModal(detail.ui.draw()))
+  const dialog = byClass(modalTree, 'ws-suite-install-dialog')[0]
+  assert.ok(dialog, '卸载确认弹窗必须挂载')
+  assert.equal(byClass(dialog, 'modal-title')[0].children[0], lookup('suite.uninstall.title'))
+  assert.ok(byClass(dialog, 'ws-suite-install-summary')[0].children[0].includes('TikTok 全能操盘套件'))
+
+  // 点击「确认卸载」
+  const confirmBtn = byClass(dialog, 'modal-actions')[0]?.children?.[1] || byClass(dialog, 'ws-detail-actions')[0]?.children?.[1]
+  assert.ok(confirmBtn, '确认卸载按钮存在')
+  confirmBtn.props.onClick()
+  await detail.ui.settle()
+
+  assert.equal(calls.filter((c) => c.action === 'suiteUninstall').length, 1)
+  const afterView = detail.ui.mountModal(findModal(detail.ui.draw()))
+  assert.equal(installButton(afterView).children[0], lookup('suite.install'))
+  assert.equal(installButton(afterView).props.disabled, false)
 })
