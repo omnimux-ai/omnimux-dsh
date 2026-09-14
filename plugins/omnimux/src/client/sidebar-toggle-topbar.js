@@ -818,59 +818,83 @@ export function syncNativeRightbarControls(doc) {
     }, true)
   }
 
-  // 4. 原生侧边栏按钮在关闭时也显示，以便点击激活展开
+  // 4. 原生右侧栏按钮：收起时提供一个右上角可见入口，但**只保留一份**。
+  //    界面（React）每次重画都会生成新的原生节点；被搬走的旧拷贝若不回收，就会与新的并存，
+  //    表现为同一个按钮出现两份，并随每次收起/展开越攒越多（实测一轮后 body 上残留 toggle+expand 两份）。
+  //    这里以 data-original-parent 标记本插件搬出的拷贝，每轮只保留一个控件并回收其余拷贝。
   const isRightCollapsed = Boolean(
     doc.querySelector('[data-rightbar-collapsed="true"]') ||
     doc.querySelector('.dshDesktopFrame[data-rightbar-collapsed="true"]')
   )
-  const toggleBtn = doc.querySelector('button[data-sidebar-right-toggle="true"], button[data-sidebar-right-expand="true"]')
+  const RIGHTBAR_CONTROL_SELECTOR = 'button[data-sidebar-right-toggle], button[data-sidebar-right-expand]'
+  const controls = Array.from(doc.querySelectorAll(RIGHTBAR_CONTROL_SELECTOR))
+  const movedCopies = controls.filter((el) => el.hasAttribute('data-original-parent'))
+  const nativeControl = controls.find((el) => !el.hasAttribute('data-original-parent')) || null
   const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"], [class*="stripChrome"]')
-
-  if (toggleBtn instanceof HTMLElement) {
-    if (isRightCollapsed) {
-      // 在关闭时，将其挂到 body 上并设置 fixed 显式展示在右上角
-      if (toggleBtn.parentElement !== doc.body) {
-        toggleBtn.dataset.originalParent = '_stripChrome'
-        doc.body.appendChild(toggleBtn)
-      }
-      toggleBtn.style.setProperty('position', 'fixed', 'important')
-      toggleBtn.style.setProperty('right', '8px', 'important')
-      toggleBtn.style.setProperty('top', '5px', 'important')
-      toggleBtn.style.setProperty('z-index', '9999', 'important')
-      toggleBtn.style.setProperty('display', 'flex', 'important')
-      toggleBtn.style.setProperty('visibility', 'visible', 'important')
-      toggleBtn.style.setProperty('cursor', 'pointer', 'important')
-      toggleBtn.style.setProperty('pointer-events', 'auto', 'important')
-
-      if (!toggleBtn.__omnimuxClickBound) {
-        toggleBtn.__omnimuxClickBound = true
-        toggleBtn.addEventListener('click', () => {
-          const frame = doc.querySelector('.dshDesktopFrame')
-          if (frame?.hasAttribute('data-rightbar-collapsed')) {
-            try {
-              const propKey = Object.keys(toggleBtn).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
-              if (propKey && typeof toggleBtn[propKey]?.onClick === 'function') {
-                toggleBtn[propKey].onClick({ preventDefault: () => {}, stopPropagation: () => {} })
-                return
-              }
-            } catch { /* ignore */ }
-            const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
-            win?.__omnimuxWorkbench?.open?.()
+  const clearPin = (el) => {
+    el.style.removeProperty('position')
+    el.style.removeProperty('right')
+    el.style.removeProperty('top')
+    el.style.removeProperty('z-index')
+    el.style.removeProperty('display')
+    el.style.removeProperty('visibility')
+  }
+  const pinToTopRight = (el) => {
+    el.style.setProperty('position', 'fixed', 'important')
+    el.style.setProperty('right', '8px', 'important')
+    el.style.setProperty('top', '5px', 'important')
+    el.style.setProperty('z-index', '9999', 'important')
+    el.style.setProperty('display', 'flex', 'important')
+    el.style.setProperty('visibility', 'visible', 'important')
+    el.style.setProperty('cursor', 'pointer', 'important')
+    el.style.setProperty('pointer-events', 'auto', 'important')
+  }
+  const bindExpandClick = (el) => {
+    if (el.__omnimuxClickBound) return
+    el.__omnimuxClickBound = true
+    el.addEventListener('click', () => {
+      const frame = doc.querySelector('.dshDesktopFrame')
+      if (frame?.hasAttribute('data-rightbar-collapsed')) {
+        try {
+          const propKey = Object.keys(el).find(k => k.startsWith('__reactProps$') || k.startsWith('__reactEventHandlers$'))
+          if (propKey && typeof el[propKey]?.onClick === 'function') {
+            el[propKey].onClick({ preventDefault: () => {}, stopPropagation: () => {} })
+            return
           }
-        })
+        } catch { /* ignore */ }
+        const win = doc.defaultView || (typeof window !== 'undefined' ? window : null)
+        win?.__omnimuxWorkbench?.open?.()
       }
-    } else {
-      // 展开状态下，归位到原生的 stripChrome 容器中
-      if (chrome && toggleBtn.parentElement !== chrome) {
-        chrome.appendChild(toggleBtn)
-      }
-      toggleBtn.style.removeProperty('position')
-      toggleBtn.style.removeProperty('right')
-      toggleBtn.style.removeProperty('top')
-      toggleBtn.style.removeProperty('z-index')
-      toggleBtn.style.removeProperty('display')
-      toggleBtn.style.removeProperty('visibility')
+    })
+  }
+
+  if (isRightCollapsed) {
+    // 收起态：原生节点可能已被搬到 body，也可能已被重画成新节点；优先用原生节点，
+    // 没有原生节点时沿用已有拷贝。无论哪种，最后**只保留一份**。
+    const kept = nativeControl || movedCopies[0] || null
+    for (const dup of movedCopies) {
+      if (dup !== kept) dup.remove()
     }
+    if (kept) {
+      if (kept.parentElement !== doc.body) {
+        kept.dataset.originalParent = '_stripChrome'
+        doc.body.appendChild(kept)
+      }
+      pinToTopRight(kept)
+      bindExpandClick(kept)
+    }
+  } else if (nativeControl) {
+    // 展开态且原生节点在位：本插件搬出的拷贝全部回收，避免与原生按钮重复。
+    for (const dup of movedCopies) dup.remove()
+    clearPin(nativeControl)
+  } else if (movedCopies[0]) {
+    // 展开态但原生节点缺失：把唯一那份拷贝还回原生容器，保证仍可收起右侧栏。
+    const only = movedCopies[0]
+    for (const dup of movedCopies) {
+      if (dup !== only) dup.remove()
+    }
+    if (chrome && only.parentElement !== chrome) chrome.appendChild(only)
+    clearPin(only)
   }
 }
 
