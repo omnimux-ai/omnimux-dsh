@@ -153,11 +153,13 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
       'omnimux-publish',
       'omnimux-analytics',
       'omnimux-forms',
+      'omnimux-automation',
     ])
     assert.deepEqual(alphaToolPrefixes, [
       'omnimux_accounts_',
       'omnimux_publish_',
       'omnimux_analytics_',
+      'automation_',
     ])
   })
 

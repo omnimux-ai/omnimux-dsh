@@ -14,5 +14,9 @@
   "omnimux-forms": {
     "stage": "alpha",
     "toolPrefixes": []
+  },
+  "omnimux-automation": {
+    "stage": "alpha",
+    "toolPrefixes": ["automation_"]
   }
 }
