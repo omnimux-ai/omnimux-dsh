@@ -394,16 +394,20 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   const handleModelChange = useCallback(
-    (newModelId: string) => {
+    (newModelId: string, channelSelection?: { strategy: string; allowedGroups?: string[] }) => {
+      if (!filteredModels.options.some((row) => row.id === newModelId)) return;
+      let nextParams: Record<string, unknown>;
       const modelList = (activeCatalog?.[materialType] ?? []) as CapabilityModelItem[];
       const newModelItem = modelList.find((m) => m.id === newModelId);
-      if (materialType === 'video' && newModelItem) {
+      if (channelSelection && newModelId === params.model) {
+        nextParams = { ...params };
+      } else if (materialType === 'video' && newModelItem) {
         const transition = buildVideoParamTransition(params as Record<string, unknown>, newModelItem, {
           catalog: activeCatalog,
           upstreams: upstreamSnapshots,
           prompt: localPrompt,
         });
-        onUpdateNodeData({ params: transition.params });
+        nextParams = transition.params;
       } else {
         const nextOps = buildEffectiveOpsUiState({
           catalog: activeCatalog,
@@ -413,13 +417,19 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
         });
         const matchedOp = nextOps.effectiveOps.find((op) => op.id === preferredOperationId && op.ready);
         const nextOperation = matchedOp?.id ?? nextOps.selectedOperationId;
-        onUpdateNodeData({ params: setParamsOperation({ ...params, model: newModelId }, nextOperation) });
+        nextParams = setParamsOperation({ ...params, model: newModelId }, nextOperation);
       }
+      if (channelSelection) {
+        const { strategy, allowedGroups } = channelSelection;
+        if (allowedGroups?.length) nextParams.routing = { strategy, allowedGroups };
+        else delete nextParams.routing;
+      }
+      onUpdateNodeData({ params: nextParams });
       void rememberGenerationModel(materialType, newModelId).catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : t('panel.preferenceSaveFailed'));
       });
     },
-    [activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
+    [filteredModels.options, activeCatalog, materialType, onUpdateNodeData, params, upstreamSnapshots, localPrompt, fingerprint, outputTypeForCompat, preferredOperationId, t],
   );
 
   const isMusicOperation = opsState.selectedOperationId === 'text_to_music';
@@ -731,17 +741,10 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
             <ModelCascadeMenu
               modelValue={modelValue}
               routing={routing}
-              catalog={activeCatalog}
-              materialType={materialType}
+              options={filteredModels.options}
               execBusy={execBusy}
               onSelect={({ modelId, strategy, allowedGroups }) => {
-                handleModelChange(modelId);
-                // Persist routing only when a channel pool resolved; a stale
-                // selection from another node must not survive the switch.
-                const nextParams: Record<string, unknown> = { ...params, model: modelId };
-                if (allowedGroups && allowedGroups.length > 0) nextParams.routing = { strategy, allowedGroups };
-                else delete nextParams.routing;
-                onUpdateNodeData({ params: nextParams });
+                handleModelChange(modelId, { strategy, allowedGroups });
               }}
             />
           )}

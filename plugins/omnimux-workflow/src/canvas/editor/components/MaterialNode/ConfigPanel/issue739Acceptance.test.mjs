@@ -7,9 +7,9 @@
  *    - 未填入素材时渲染 44x44px 虚线加号；
  *    - 连入素材后展示缩略图卡片并保留尾部 + 添加按钮；
  *    - panel.slot.reference_image 双语词条（中/英）完整性。
- * 2. 生图模型可用性与兜底放行：
- *    - 上游连入带图素材时，即使模型目录仅声明 text_to_image，buildFilteredModelOptions 仍正确返回可用生图模型（NanoBanana 2, GPT Image 2.5, Nano Banana Pro 等）；
- *    - 验证 zeroCandidates: false，绝不再误报“暂无兼容模型”。
+ * 2. 生图模型可用性与严格契约（Issue #1783）：
+ *    - 仅声明 text_to_image 的目录不能接收上游图片，卡槽常驻不等于模型可提交；
+ *    - 已上架、输出为 image 且实际接受当前输入的操作仍可选；错输出或未上架操作不得补位。
  */
 
 import assert from 'node:assert/strict';
@@ -154,8 +154,8 @@ describe('Issue #739/#1760 Acceptance: 图像槽严格来自所选操作', () =>
   });
 });
 
-describe('Issue #739 Acceptance: 生图模型可用性与兜底放行', () => {
-  it('TC-739-08: 上游连入单张图片时，buildFilteredModelOptions 正确返回所有生图模型，zeroCandidates: false', () => {
+describe('Issue #739/#1783 Acceptance: 生图模型严格兼容边界', () => {
+  it('TC-739-08: 上游单张图片不能由纯文生图操作兜底放行', () => {
     const fingerprint = buildUiUpstreamFingerprint({
       prompt: 'a scenic view',
       upstreams: [
@@ -175,22 +175,11 @@ describe('Issue #739 Acceptance: 生图模型可用性与兜底放行', () => {
     });
 
     assert.equal(res.catalogAvailable, true, 'catalogAvailable 应为 true');
-    assert.equal(res.zeroCandidates, false, 'zeroCandidates 必须为 false，绝不再显示“暂无兼容模型”');
-    assert.ok(res.options.length >= 3, '应返回至少 3 个生图模型候选');
-
-    const modelIds = res.options.map((o) => o.id);
-    assert.ok(modelIds.includes('nanobanana-2'), '必须包含 NanoBanana 2');
-    assert.ok(modelIds.includes('gpt-image-2.5'), '必须包含 GPT Image 2.5');
-    assert.ok(modelIds.includes('nano-banana-pro'), '必须包含 Nano Banana Pro');
-
-    for (const opt of res.options) {
-      assert.equal(opt.verdict.acceptsCurrentInputs, true, `${opt.id} acceptsCurrentInputs 应为 true`);
-      assert.equal(opt.verdict.readyToSubmit, true, `${opt.id} readyToSubmit 应为 true`);
-      assert.deepEqual(opt.verdict.rejections, [], `${opt.id} rejections 应为空`);
-    }
+    assert.equal(res.zeroCandidates, true, '没有接受图片的操作时必须报告零候选');
+    assert.deepEqual(res.options, [], '不得把 text_to_image 伪装为图片输入兼容');
   });
 
-  it('TC-739-09: 上游连入多张图片时，依然稳定返回所有生图模型，放行通过', () => {
+  it('TC-739-09: 上游多张图片不能由纯文生图操作兜底放行', () => {
     const fingerprint = buildUiUpstreamFingerprint({
       prompt: 'blend images',
       upstreams: [
@@ -206,14 +195,63 @@ describe('Issue #739 Acceptance: 生图模型可用性与兜底放行', () => {
       outputType: 'image',
     });
 
-    assert.equal(res.zeroCandidates, false);
-    assert.ok(res.options.length >= 3);
-    for (const opt of res.options) {
-      assert.equal(opt.verdict.acceptsCurrentInputs, true);
+    assert.equal(res.catalogAvailable, true);
+    assert.equal(res.zeroCandidates, true);
+    assert.deepEqual(res.options, [], '多图不能由不接受媒体的操作兜底放行');
+  });
+
+  it('合法纯文本输入仍可使用原目录中的文生图操作', () => {
+    const result = buildFilteredModelOptions({
+      catalog: prodCatalog,
+      fingerprint: buildUiUpstreamFingerprint({ prompt: 'a scenic view', upstreams: [] }),
+      outputType: 'image',
+    });
+    assert.equal(result.zeroCandidates, false);
+    assert.deepEqual(result.options.map((option) => option.id).sort(), prodCatalog.image.map((row) => row.id).sort());
+    for (const { verdict } of result.options) {
+      assert.equal(verdict.chosenOperationId, 'text_to_image');
+      assert.equal(verdict.readyToSubmit, true);
     }
   });
 
-  it('TC-739-10: 隔离安全性：非图像类型（如视频节点不兼容输入）不会被生图兜底意外放行', () => {
+  for (const count of [1, 3]) {
+    it(`合法参考图操作接收 ${count} 张图片，错输出及未上架操作严格排除`, () => {
+      const inputs = [
+        { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 },
+        { slot: 'reference_images', type: 'image', role: 'reference', source: 'upstream_edge', min: 1, max: 3,
+          allowedMimes: ['image/png', 'image/jpeg', 'image/webp'] },
+      ];
+      const operationId = 'image_to_image';
+      const models = [
+        { id: 'fixture-image-ref', operations: [{ id: operationId, listed: true, output: { type: 'image' }, inputs }] },
+        { id: 'fixture-unlisted', operations: [{ id: operationId, listed: false, output: { type: 'image' }, inputs }] },
+        { id: 'fixture-wrong-output', operations: [{ id: operationId, listed: true, output: { type: 'video' }, inputs }] },
+      ];
+      const catalog = {
+        ...prodCatalog,
+        models: [...prodCatalog.models, ...models],
+        image: [...prodCatalog.image, ...models.map(({ id }) => ({ id, label: id }))],
+      };
+      const fingerprint = buildUiUpstreamFingerprint({
+        prompt: 'blend images',
+        upstreams: ['image/png', 'image/jpeg', 'image/webp'].slice(0, count).map((mimeType, index) => ({
+          nodeId: `up-${index}`, materialType: 'image', mimeType, sizeBytes: 1024,
+        })),
+      });
+      const snapshot = structuredClone(fingerprint);
+      const result = buildFilteredModelOptions({ catalog, fingerprint, outputType: 'image' });
+      assert.equal(result.zeroCandidates, false);
+      assert.deepEqual(result.options.map((option) => option.id), ['fixture-image-ref']);
+      const verdict = result.options[0].verdict;
+      assert.equal(verdict.chosenOperationId, operationId);
+      assert.equal(verdict.acceptsCurrentInputs, true);
+      assert.equal(verdict.readyToSubmit, true);
+      assert.deepEqual(verdict.rejections, []);
+      assert.deepEqual(fingerprint, snapshot, '筛选不得丢弃或改写上游输入');
+    });
+  }
+
+  it('TC-739-10: 视频目录存在时仍拒绝不兼容音频输入', () => {
     const fingerprintWithAudioOnly = buildUiUpstreamFingerprint({
       prompt: 'video from audio',
       upstreams: [
@@ -224,6 +262,7 @@ describe('Issue #739 Acceptance: 生图模型可用性与兜底放行', () => {
     // 视频目录中的纯文本生成视频模型（不支持单独音频连入）
     const videoCatalog = {
       source: 'static-stub',
+      video: [{ id: 'video-model', label: 'Video Model' }],
       models: [
         {
           id: 'video-model',
