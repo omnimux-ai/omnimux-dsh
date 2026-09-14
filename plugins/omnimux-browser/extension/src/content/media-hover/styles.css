@@ -147,7 +147,7 @@
 }
 
 .omnimux-capsule-brand:focus-visible {
-  outline: 2px solid rgba(184, 183, 255, 0.9);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: 1px;
 }
 
@@ -250,7 +250,7 @@
 }
 
 .omnimux-capsule-icon:focus-visible {
-  outline: 2px solid rgba(184, 183, 255, 0.9);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: 2px;
 }
 

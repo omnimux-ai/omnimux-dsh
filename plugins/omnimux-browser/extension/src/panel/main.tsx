@@ -96,7 +96,7 @@ class WorkstationErrorBoundary extends Component<
               alignSelf: 'flex-start',
               padding: '8px 16px',
               marginTop: '8px',
-              background: '#8b5cf6',
+              background: '#111827',
               border: 'none',
               borderRadius: '8px',
               color: '#fff',

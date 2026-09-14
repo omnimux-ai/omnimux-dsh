@@ -81,8 +81,9 @@ function pulseHighlightElement(element: HTMLElement) {
     const originalShadow = element.style.boxShadow
 
     element.style.transition = 'outline 0.2s ease, box-shadow 0.2s ease'
-    element.style.outline = '2.5px solid #8b5cf6'
-    element.style.boxShadow = '0 0 16px rgba(139, 92, 246, 0.45)'
+    // 与推特助手填入层同一口径：白色描边 + 深色外圈，浅色/深色页面均可见（design.md 黑白中性，禁紫）
+    element.style.outline = '2.5px solid #ffffff'
+    element.style.boxShadow = '0 0 0 3px rgba(0, 0, 0, 0.55)'
 
     setTimeout(() => {
       element.style.outline = originalOutline
