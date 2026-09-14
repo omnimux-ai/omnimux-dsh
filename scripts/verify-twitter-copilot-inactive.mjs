@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 // 创建仿真 DOM 环境
@@ -128,7 +128,12 @@ evidence.scenarios.push({
   passed: cornerCleaned && expandedMounted.length === 1 && activeSopilotBtn.style.display === 'none',
 })
 
-console.log('全部实景验证结果:', evidence)
+evidence.kind = 'jsdom-simulation-not-browser-acceptance'
+evidence.passed = evidence.scenarios.every((scenario) => scenario.passed)
+console.log('DOM 模拟检查结果（不构成真实浏览器验收）:', evidence)
+mkdirSync(resolve('.workbuddy/evidence/twitter-copilot-inactive-mount-1755'), { recursive: true })
+mkdirSync(resolve('tmp'), { recursive: true })
+if (!evidence.passed) process.exitCode = 1
 
 writeFileSync(
   resolve('.workbuddy/evidence/twitter-copilot-inactive-mount-1755/evidence.json'),
@@ -138,21 +143,14 @@ writeFileSync(
 
 writeFileSync(
   resolve('.workbuddy/evidence/twitter-copilot-inactive-mount-1755/report.md'),
-  `# 推特就地助手未激活与激活双态挂载实景验证报告
+  `# 推特助手 DOM 模拟检查
 
-- 任务单号：Issue #1755
-- 验证时间：${evidence.timestamp}
-- 验证结论：全部场景 100% 通过！
-
-## 场景 1：未激活单行回复条（图 1）
-- 判据：未激活按钮不再被识别为陈旧节点（isStaleOrphan: false）
-- 挂载数：${evidence.scenarios[0].mountedCount} 个（完全符合单实例铁律）
-- 排列顺序：[回复] -> [SoPilot] -> [OmniMux]（平稳并存，无覆盖遮挡）
-
-## 场景 2：展开为回复卡片（图 2）
-- 判据：卡片级单实例守卫自动识别并销毁位于卡片上方的幽灵残留图标
-- 挂载数：${evidence.scenarios[1].mountedCount} 个（仅保留底部操作栏唯一图标）
-- 右上角幽灵：彻底清除（cornerCleaned: true）
+- 历史任务：Issue #1755；报告口径由 #1766 更正。
+- 时间：${evidence.timestamp}
+- 模拟检查结果：${evidence.passed ? '通过' : '失败'}。
+- 范围：JSDOM 合成页面与模拟几何；不包含真实浏览器、真实点击或已安装扩展验收。
+- 紧凑条挂载数：${evidence.scenarios[0].mountedCount}；竞品隐藏：${evidence.scenarios[0].suppressCompetitor}。
+- 展开条挂载数：${evidence.scenarios[1].mountedCount}；旧图标清理：${evidence.scenarios[1].cornerCleaned}。
 `,
   'utf8'
 )
