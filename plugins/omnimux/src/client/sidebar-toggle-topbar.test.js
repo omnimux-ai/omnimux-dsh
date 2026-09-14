@@ -39,6 +39,26 @@ const chromeSource = readFileSync(join(here, 'chrome.js'), 'utf8')
 // collapsedLeftRailFallbackPx moved to the geometry submodule (Issue #545 split).
 const workbenchGeometrySource = readFileSync(join(here, 'workbench/geometry.js'), 'utf8')
 
+it('conversation fill rules leave native panel geometry to its mode owner', () => {
+  const source = readFileSync(join(here, 'conversation-collapse.js'), 'utf8')
+  const fillSelectors = source.split('\n').filter(line => line.includes('.dshDesktopRightbarSurface [class*="_panel"]'))
+  assert.equal(fillSelectors.length, 2)
+  for (const selector of fillSelectors) assert.ok(selector.includes(':not([data-sidebar-right-panel])'), 'native push must not acquire width:auto before fullscreen commits')
+})
+
+it('native open panels share a right-anchored geometry transition across fullscreen modes', () => {
+  const shared = moduleSource.match(/\.dshDesktopFrame \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{([^}]+)\}/)?.[1]
+  assert.ok(shared, 'push and fullscreen need the same positioned geometry before the click')
+  assert.match(shared, /position:\s*fixed\s*!important/)
+  assert.match(shared, /left:\s*auto\s*!important/)
+  assert.match(shared, /right:\s*0\s*!important/)
+  assert.match(shared, /width var\(--ds-transition-duration-slow\) var\(--ds-ease-in-out\)/)
+  assert.doesNotMatch(shared, /transition:\s*left/)
+  const collapsed = moduleSource.match(/\.dshDesktopFrame\[data-sidebar-collapsed\] \[class\*="_panel"\]\[data-sidebar-right-panel="fullscreen"\]\s*\{([^}]+)\}/)?.[1]
+  assert.match(collapsed, /left:\s*auto\s*!important/, 'collapsed fullscreen must stay right-anchored during width interpolation')
+  assert.match(moduleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-sidebar-right-panel\]\[data-sidebar-right-open\][\s\S]*?transition:\s*none\s*!important/)
+})
+
 /** @type {JSDOM | undefined} */
 let dom
 const previous = {
@@ -723,7 +743,7 @@ describe('chrome CSS contracts (conversation-box PRODUCT_STAGE_CHROME)', () => {
 
     // 3. Fullscreen mode expands to true full viewport when left sidebar is collapsed
     assert.match(css, /html\[data-omnimux-left-collapsed\]\s+\[data-sidebar-right-panel="fullscreen"\]/)
-    assert.match(css, /left:\s*var\(--omnimux-sidebar-width,\s*0px\)\s*!important/)
+    assert.match(css, /left:\s*auto\s*!important/)
     assert.match(css, /width:\s*calc\(100vw\s*-\s*var\(--omnimux-sidebar-width,\s*0px\)\)\s*!important/)
 
     // 4. Sidebar surface remains raised above fullscreen panel
