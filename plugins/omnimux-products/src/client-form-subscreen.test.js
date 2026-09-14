@@ -64,13 +64,14 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
     assert.ok(root, 'ProductFormPage must root on the sub-screen class pair')
   })
 
-  it('the action bar sits outside the scroll container so it stays visible', () => {
+  it('the action bar sits in PageHeader actions outside the scroll container so it stays visible', () => {
     const scrollIndex = pageJsx.indexOf('className="omnimux-products-form-scroll"')
-    const footerIndex = pageJsx.indexOf('className="omnimux-products-form-footer"')
+    const actionsIndex = pageJsx.indexOf('className="omnimux-products-form-actions"')
     assert.ok(scrollIndex > 0, 'missing scroll container')
-    assert.ok(footerIndex > scrollIndex, 'the footer must follow the scroll container, not live inside it')
-    assert.match(pageJsx, /\{isDirty \? t\('page\.unsavedHint'\) : ''\}/)
+    assert.ok(actionsIndex > 0 && actionsIndex < scrollIndex, 'actions must be mounted before the scroll container in PageHeader')
+    assert.match(pageJsx, /actions=\{\(\s*<div className="omnimux-products-form-actions">/)
     assert.match(pageJsx, /\{t\('add\.cancel'\)\}/)
+    assert.doesNotMatch(pageJsx, /className="omnimux-products-form-footer"/)
   })
 
   it('keeps one leave guard behind every exit path', () => {

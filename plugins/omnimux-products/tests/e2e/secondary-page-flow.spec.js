@@ -222,3 +222,11 @@ describe('e2e · secondary page · AC-101 页头与表单间分割线', () => {
     assert.match(pageSource, /<PageHeader[\s\S]*?\/>\s*<Divider className="omnimux-products-form-divider" \/>\s*<div className="omnimux-products-form-scroll">/)
   })
 })
+
+describe('e2e · secondary page · AC-102 保存与取消按钮迁移至右上角', () => {
+  it('ProductFormPage mounts actions inside PageHeader and removes bottom footer', () => {
+    const pageSource = readFileSync(new URL('../../src/client/ProductFormPage.jsx', import.meta.url), 'utf8')
+    assert.match(pageSource, /actions=\{\(\s*<div className="omnimux-products-form-actions">/)
+    assert.doesNotMatch(pageSource, /className="omnimux-products-form-footer"/)
+  })
+})
