@@ -496,6 +496,19 @@
       "notes": "离线请求与响应契约验证；无独立真实模型调用证据"
     },
     {
+      "id": "seedasr-auc",
+      "disposition": "canonical",
+      "reason": "2026-09-14 #1789：上游独立在售型号（models.json 独立在册、model-channel-catalog 独立一行、绑渠道 43「[官方直连-火山] Seed Audio 豆包语音」，upstream_id 与公开 ID 相同）。#1751 把它误作 doubao-asr-bigmodel 别名的归一已撤销，本 ID 以独立 canonical 身份登记",
+      "evidence": [
+        "~/Desktop/Project/OmniMux/docs/model-governance/specs/seedasr-auc.json",
+        "~/Desktop/Project/OmniMux/scripts/ops/config-baseline/models.json",
+        "~/Desktop/Project/OmniMux/scripts/ops/config-baseline/channels.json",
+        "~/Desktop/Project/OmniMux/docs/ops/model-channel-catalog.json",
+        "https://docs.byteplus.com/en/docs/byteplusvoice/asraudiofilesubmittask"
+      ],
+      "notes": "与 doubao-asr-bigmodel 双向互不归一：本 ID 不是它的别名，它也不是本 ID 的别名；官方资源 ID volc.seedasr.auc（Seed ASR 2.0 标准模式），单文件 < 512MB、时长 < 5 小时。speech_to_text 产出 text，不进 audio 产出桶"
+    },
+    {
       "id": "whisper-1",
       "disposition": "draft",
       "reason": "speechToText seam 已挂载（#538），可探测；仓内无 dated live 证据不上架，#530 探测后方可翻 live",

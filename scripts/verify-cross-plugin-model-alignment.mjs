@@ -30,7 +30,7 @@ import {
   loadCatalogDefaults,
 } from '../plugins/omnimux/src/catalog/contract/index.js';
 import { DEFAULT_MEDIA } from '../plugins/omnimux/src/media/route.js';
-import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
+import { CANVAS_GENERATION_POLICY, CANVAS_CAPABILITY_TOOLS, CANVAS_INPUT_CAPABILITY_SEAMS } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
 import { ASPECT_RATIO_GEOMETRIES } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/aspectRatioGeometry.ts';
 import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js';
 import { MODEL_CHANNEL_GROUPS as PICKER_CHANNEL_GROUPS } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
@@ -299,11 +299,38 @@ export function verifyCrossPluginModelAlignment(options = {}) {
     }
   }
 
-  // 5. Diff-Aware Notice
+  // 5. Capability-seam admission (models the canvas serves outside the generative whitelists)
+  // A capability tool such as audio transcription reaches its models through a contract seam, not
+  // through CANVAS_GENERATION_POLICY. That path stays safe only while every model it can admit is
+  // a canonical contract row with a LISTED operation on the seam, so it is gated here as well.
+  const capabilitySeams = options.capabilitySeams ?? CANVAS_INPUT_CAPABILITY_SEAMS;
+  const capabilityTools = options.capabilityTools ?? CANVAS_CAPABILITY_TOOLS;
+  let capabilityModelsChecked = 0;
+  for (const [tool, seam] of Object.entries(capabilityTools ?? {})) {
+    if (!capabilitySeams.includes(seam)) {
+      issue('capability_tool_unknown_seam', `Canvas capability tool "${tool}" declares seam "${seam}", which no admission rule consumes.`, tool);
+    }
+  }
+  for (const model of index?.all?.() ?? []) {
+    const bound = (model.operations ?? []).some((op) => op.listed === true
+      && capabilitySeams.includes(op.implementation?.seam ?? op.execution?.seam));
+    if (!bound) continue;
+    capabilityModelsChecked++;
+    if (resolveModelId(index, model.id) !== model.id || governed.get(model.id) !== 'canonical') {
+      issue(
+        'capability_not_canonical',
+        `Model "${model.id}" reaches the canvas through a capability seam but is not canonical in hub dispositions. ` +
+        `Capability admission must never publish an alias, tombstone or undispositioned row.`,
+        model.id,
+      );
+    }
+  }
+
+  // 6. Diff-Aware Notice
   const changedFiles = options.changedFiles ?? detectGitModelChanges();
   const notice = changedFiles.length > 0 ? formatCrossPluginImpactNotice(changedFiles) : null;
 
-  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, aspectRatiosChecked, channelGroupsChecked });
+  return finish(issues, notice, { whitelistModelsChecked, defaultModelsChecked, aspectRatiosChecked, channelGroupsChecked, capabilityModelsChecked });
 }
 
 function finish(issues, notice, alignment) {

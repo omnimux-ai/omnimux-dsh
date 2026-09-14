@@ -23,7 +23,7 @@ subsystem: "omnimux/media"
 
 | 字段 | 值 / 映射 |
 | --- | --- |
-| `model` | `doubao-asr-bigmodel`；`seedasr-auc` 提交前归一为 canonical ID |
+| `model` | `doubao-asr-bigmodel`。`seedasr-auc` 不再归一为本 ID：自 #1789（2026-09-14）起它是本仓独立 canonical 模型，两个 ID 双向互不归一 |
 | `file` | 中枢读取 `audio` 的实际字节；支持绝对本地路径、HTTP(S) URL、`data:audio` URI；按字节识别音频格式 |
 | `response_format` | `json`（中枢默认）、`text`、`verbose_json`、`srt`、`vtt` |
 | `language` | 现有可选语言提示透传，不据此推断渠道语言支持集合 |

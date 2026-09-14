@@ -37,6 +37,49 @@ models:
       seam: "speechToText"
       notes: "按 #744 指定状态登记；本轮仅离线验证，不声明独立真实调用成功"
 
+  # #1789：seedasr-auc 是上游独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），
+  # 与 doubao-asr-bigmodel 不是同一模型，二者互不归一（bigasr-auc 档案 notes 明写「不要与 seedasr-auc 混用」）。
+  # 本 ID 只以 canonical 身份登记，且不得出现在任何模型的 aliases[] 中。
+  - id: "seedasr-auc"
+    label: "Seed ASR 2.0 语音识别"
+    family: "bytedance"
+    badge: "语音识别"
+    subtitle: "火山引擎 Seed ASR 2.0 · 录音文件识别标准模式"
+    operations:
+      - id: "speech_to_text"
+        label: "语音转文字"
+        listed: true
+        output: { type: "text" }
+        inputs:
+          - slot: "audio_input"
+            type: "audio"
+            role: "source"
+            source: "upstream_edge"
+            min: 1
+            max: 1
+            limitSource:
+              kind: "official_docs"
+              url: "https://docs.byteplus.com/en/docs/byteplusvoice/asraudiofile"
+              note: "官方限制：文件 < 512MB、时长 < 5 小时（原文 File Size | < 512MB、Audio Duration | < 5 hours，均为严格小于）。本行不写 maxSizeMb/maxDurationSec 上限：URL-first 提交没有本地字节与时长，声明上限会让每次 URL 提交在 METADATA_UNKNOWN 上被拒。本模型上限有官方确定值（上游档案 max_input_bytes=536870912、max_input_seconds=18000、编码 8 项），不声明是主动取舍；doubao-asr-bigmodel 不声明则是上限未知（其档案 max_input_bytes/max_input_seconds 记 null、input_formats 记空数组），两者证据等级不同，不可类比。支持的编码官方列为 OPUS、WAV、MP3、SPX、OGG、AMR、AAC、M4A。"
+    parameters:
+      response_format:
+        options: ["json", "text", "verbose_json", "srt", "vtt"]
+        defaultValue: "json"
+    research:
+      status: "verified"
+      docUrl: "https://docs.byteplus.com/en/docs/byteplusvoice/asraudiofilesubmittask"
+      verifiedAt: "2026-09-14"
+      notes: "官方出处为字节跳动 BytePlus（Seed Speech）文档：X-Api-Resource-Id 取值 volc.seedasr.auc 与本 ID 逐字对应，即 Seed ASR 2.0 录音文件识别标准模式（异步转写，提交后查询结果）。上游档案记 status=documented、vendor_model_id=volc.seedasr.auc，并绑定 [官方直连-火山] Seed Audio 豆包语音 渠道（upstream_id 与公开 ID 相同）。与 doubao-asr-bigmodel 不可互相归一：该档案自认「是否等价于 Seed ASR 资源 ID 未确认」，bigasr-auc 档案 notes 亦明写「不要与 seedasr-auc 混用」。本轮不发起真实模型调用。"
+    implementation:
+      status: "ready"
+      profileId: "speechToText"
+      seam: "speechToText"
+    execution:
+      status: "live"
+      profileId: "speechToText"
+      seam: "speechToText"
+      notes: "复用已挂载且 live 的 speechToText profile/seam；运行期本 ID 走 URL-first 直传（src/media/stt.js URL_FIRST_MODELS）。execution=live 表示该 ID 挂在 live 执行通道上；本轮不发起真实模型调用，不声明独立真实执行结论。"
+
   - id: "seed-audio-1.0"
     label: "Seed Audio 1.0"
     family: "bytedance"

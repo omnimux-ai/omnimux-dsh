@@ -9,7 +9,8 @@ describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 9)
     assert.equal(VIDEO_MODEL_SPECS.length, 11)
-    assert.equal(AUDIO_MODEL_SPECS.length, 5)
+    // #1789: seedasr-auc is contracted in the audio management group (ASR, text output).
+    assert.equal(AUDIO_MODEL_SPECS.length, 6)
   })
 
   it('GPT Image 2.5 lists all 8 aspect ratios + auto', () => {

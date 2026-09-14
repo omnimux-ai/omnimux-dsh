@@ -30,7 +30,8 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.schemaVersion, CANONICAL_SCHEMA_VERSION);
   assert.equal(Object.prototype.hasOwnProperty.call(index, 'version'), false);
   // 2026-09-14 #1751: 12 models removed, 6 renamed → 50 → 38 contracted models.
-  assert.equal(index.all().length, 38, `expected 38 models, got ${index.all().length}`);
+  // 2026-09-14 #1789: seedasr-auc is registered as its own model → 39.
+  assert.equal(index.all().length, 39, `expected 39 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
   assert.ok(index.get('nano-banana-2'));
   assert.ok(index.get('mj-v7'));
@@ -38,8 +39,12 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 55);
+  assert.equal(index.listedOperations.length, 56);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
+  // #1789: the ASR pair are two independent models; neither declares the other as an alias.
+  assert.ok(index.listedOperations.includes('seedasr-auc#speech_to_text'));
+  assert.deepEqual(index.get('seedasr-auc').aliases ?? [], []);
+  assert.deepEqual(index.get('doubao-asr-bigmodel').aliases ?? [], []);
   for (const key of [
     'seedance-2-0#first_last_frame',
     'seedance-2-0-fast#video_multi_ref',

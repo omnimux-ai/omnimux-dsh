@@ -1,6 +1,11 @@
 /** Canvas picker presentation derived from the shared compatibility kernel. */
 
 import { resolveGenerationPrompt, selectGenerationTextSources } from '../graph/generationPrompt.ts';
+import {
+  CANVAS_CAPABILITY_TOOLS,
+  isCanvasCapabilityModel,
+  modelBindsSeam,
+} from '../generationPolicy.ts';
 import type {
   CapabilityCatalog,
   CapabilityModelItem,
@@ -592,6 +597,12 @@ export function buildFilteredModelOptions(args: {
   fingerprint: UpstreamFingerprint;
   /** Output material type of the generate node (filters by operation.output.type). */
   outputType?: string;
+  /**
+   * Canvas tool the picker serves. Capability-seam models (e.g. the ASR models behind
+   * `speechToText`) are offered only to the tool declared for that seam, so a chat node never
+   * lists them and the transcription node never loses them.
+   */
+  tool?: string;
 }): FilteredModelListResult {
   const catalog = args.catalog;
   if (!catalog) {
@@ -603,6 +614,13 @@ export function buildFilteredModelOptions(args: {
       reasonMessage: '模型目录不可用',
     };
   }
+
+  const seamForTool = args.tool ? CANVAS_CAPABILITY_TOOLS[args.tool] : undefined;
+  const admitsModel = (modelId: string): boolean => {
+    if (!isCanvasCapabilityModel(catalog, modelId)) return true;
+    if (!seamForTool) return false;
+    return modelBindsSeam(catalog.models?.find((row) => row.id === modelId), seamForTool);
+  };
 
   const evaluation = evaluateCatalogCompat(catalog, args.fingerprint, {
     ...(args.outputType ? { outputType: args.outputType } : {}),
@@ -619,6 +637,7 @@ export function buildFilteredModelOptions(args: {
 
   const options: FilteredModelOption[] = [];
   for (const verdict of evaluation.compatible) {
+    if (!admitsModel(verdict.modelId)) continue;
     const auth = findAuthoritativeItem(catalog, verdict.modelId);
     const bucket = args.outputType
       ? findBucketItem(catalog, args.outputType, verdict.modelId)
