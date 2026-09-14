@@ -2,13 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
-import { ChatIcon, PlusIcon, RefreshIcon } from './icons.jsx'
-import { ProductFormDialog } from './ProductFormDialog.jsx'
+import { ChatIcon, PlusIcon } from './icons.jsx'
+import { ProductFormPage } from './ProductFormPage.jsx'
 import { ProductGrid } from './ProductGrid.jsx'
 import { injectProductsStyles } from './styles.js'
 
 const POLL_MS = 5000
 const TAB_ID = 'omnimux-products:library'
+
+/** 列表视图：默认视图，也是表单保存 / 返回后的落点。 */
+const LIST_VIEW = Object.freeze({ name: 'list' })
 
 function messageOf(result, t) {
   if (result.body?.error === 'name-conflict') return t('error.nameConflict')
@@ -32,6 +35,11 @@ function citeOf(product) {
 
 /**
  * Product library workbench tab component in dsh-better-sidebar.
+ *
+ * 视图状态机：`view = { name: 'list' } | { name: 'form', mode, product }`。
+ * 列表视图常驻挂载（切到表单不卸载），因此返回时滚动位置与筛选条件完好；
+ * 表单是覆盖在列表之上的同 Tab 子屏，不是弹窗。
+ *
  * @param {{
  *   t: (key: string) => string,
  *   stage?: { getSnapshot: () => boolean, subscribe: Function, set: Function },
@@ -54,39 +62,19 @@ export function ProductsStage({ t, stage, store, visible = true }) {
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [editing, setEditing] = useState(null)
+  const [view, setView] = useState(LIST_VIEW)
+  const [formBusy, setFormBusy] = useState(false)
   const [formError, setFormError] = useState('')
-  const [editingDirty, setEditingDirty] = useState(false)
+  const [formDirty, setFormDirty] = useState(false)
   const [pendingRemove, setPendingRemove] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [kindTab, setKindTab] = useState('all')
 
   const isFirstMount = useRef(true)
   const editRequest = useRef(0)
 
   useEffect(() => () => { editRequest.current += 1 }, [])
-
-  const invalidateEditRequest = () => {
-    editRequest.current += 1
-    setBusy(false)
-  }
-
-  const handleCreate = () => {
-    invalidateEditRequest()
-    setCreating(true)
-    setFormError('')
-    setEditing(null)
-    setEditingDirty(false)
-  }
-
-  const handleCancelForm = () => {
-    invalidateEditRequest()
-    setCreating(false)
-    setEditing(null)
-    setFormError('')
-    setEditingDirty(false)
-  }
 
   const refreshState = useCallback(async (silent = false) => {
     if (!silent) setBusy(true)
@@ -127,21 +115,28 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
+  const handleCreate = () => {
+    editRequest.current += 1
+    setFormError('')
+    setFormDirty(false)
+    setView({ name: 'form', mode: 'create', product: null })
+  }
+
   const handleOpenProduct = async (product) => {
     const request = ++editRequest.current
     setBusy(true)
     setError('')
+    setFormError('')
     try {
       const result = await getProductForEdit(product.id)
       if (request !== editRequest.current) return
       if (!result.ok || !result.body?.product) {
+        // 取数失败留在列表视图 + 错误条，绝不进入空白二级页。
         setError(messageOf(result, t))
         return
       }
-      setEditing(result.body.product)
-      setEditingDirty(false)
-      setFormError('')
-      setCreating(false)
+      setFormDirty(false)
+      setView({ name: 'form', mode: 'edit', product: result.body.product })
     } catch (caught) {
       if (request === editRequest.current) setError(errText(caught))
     } finally {
@@ -149,25 +144,40 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
-  const handleSaveProduct = (data, id) => {
-    setBusy(true)
+  const leaveForm = useCallback(() => {
+    editRequest.current += 1
+    setFormBusy(false)
     setFormError('')
-    const action = id ? updateProduct(id, data) : createProduct(data)
-    return action.then((result) => {
+    setView(LIST_VIEW)
+  }, [])
+
+  const handleDirtyChange = useCallback((dirty) => { setFormDirty(Boolean(dirty)) }, [])
+
+  /**
+   * 保存并回列表。返回 `true` 表示已落库，调用方据此决定是否离开。
+   * @param {Record<string, unknown>} data
+   * @returns {Promise<boolean>}
+   */
+  const handleSubmitForm = async (data) => {
+    const productId = view.mode === 'edit' ? view.product?.id : null
+    setFormBusy(true)
+    setFormError('')
+    try {
+      const result = productId ? await updateProduct(productId, data) : await createProduct(data)
       if (!result.ok) {
         setFormError(messageOf(result, t))
-        return
+        return false
       }
-      editRequest.current += 1
-      setCreating(false)
-      setEditing(null)
-      setEditingDirty(false)
-      return refreshState(true)
-    }).catch((caught) => {
+      await refreshState(true)
+      setFormDirty(false)
+      setView(LIST_VIEW)
+      return true
+    } catch (caught) {
       setFormError(errText(caught))
-    }).finally(() => {
-      setBusy(false)
-    })
+      return false
+    } finally {
+      setFormBusy(false)
+    }
   }
 
   const handleConfirmDelete = () => {
@@ -207,8 +217,6 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     return typeof result.body?.path === 'string' && result.body.path !== '' ? [result.body.path] : []
   }
 
-  const [kindTab, setKindTab] = useState('all')
-
   const visibleProducts = products.filter((product) => {
     if (kindTab !== 'all') {
       const productKind = product.kind || 'physical'
@@ -233,8 +241,13 @@ export function ProductsStage({ t, stage, store, visible = true }) {
 
   const clearSelection = () => { setSelectedIds(new Set()) }
 
-  const handleClose = () => {
-    handleCancelForm()
+  /**
+   * 关 Tab：不清空表单。平台侧的关闭不可否决，静默清空会让用户连恢复的机会都没有；
+   * 若宿主保留 Tab 实例，再次打开还能回到同一个二级页。
+   * 但仍在路上的取数请求要作废 —— 迟到的响应不该回来改写已经打开的表单。
+   */
+  const handleCloseTab = () => {
+    editRequest.current += 1
     const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
     if (api && typeof api.closeTab === 'function') {
       api.closeTab(TAB_ID)
@@ -263,6 +276,8 @@ export function ProductsStage({ t, stage, store, visible = true }) {
     }
   }
 
+  const formOpen = view.name === 'form'
+
   return (
     <div
       role="region"
@@ -270,135 +285,125 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       aria-hidden={visible ? undefined : 'true'}
       className="omnimux-products-stage"
       data-visible={visible ? 'true' : 'false'}
-      style={{
-        display: visible ? 'flex' : 'none',
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
+      data-form-dirty={formDirty ? 'true' : 'false'}
+      style={visible ? undefined : { display: 'none' }}
     >
-      <PageHeader
-        title={t('stage.title')}
-        subtitle={t('stage.subtitle')}
-        onRefresh={() => {
-          setBusy(true)
-          void refreshState(true).finally(() => { setBusy(false) })
-        }}
-        refreshing={busy}
-        refreshTitle={t('stage.refresh')}
-        onClose={handleClose}
-        closeTitle={t('stage.close')}
-      />
+      <div
+        className="omnimux-products-list-view"
+        aria-hidden={formOpen ? 'true' : undefined}
+      >
+        <PageHeader
+          title={t('stage.title')}
+          subtitle={t('stage.subtitle')}
+          onRefresh={() => {
+            setBusy(true)
+            void refreshState(true).finally(() => { setBusy(false) })
+          }}
+          refreshing={busy}
+          refreshTitle={t('stage.refresh')}
+          onClose={handleCloseTab}
+          closeTitle={t('stage.close')}
+        />
 
-      <div className="omnimux-products-action-row">
-        <Button
-          variant="primary"
-          leadingIcon={<PlusIcon />}
-          onClick={handleCreate}
-        >
-          {t('add.button')}
-        </Button>
-        <Button
-          variant="secondary"
-          leadingIcon={<ChatIcon />}
-          onClick={handleOpenConversation}
-        >
-          {t('add.chatButton') || '对话中添加'}
-        </Button>
-      </div>
-
-      <Divider />
-
-      <FilterBar
-        className="omnimux-products-stage-toolbar"
-        filters={
-          <Tabs
-            variant="underline"
-            items={[
-              { id: 'all', label: t('all') || '全部' },
-              { id: 'physical', label: t('kind.physical') },
-              { id: 'digital', label: t('kind.digital') },
-            ]}
-            activeId={kindTab}
-            onChange={setKindTab}
-          />
-        }
-        search={(
-          <SearchField
-            value={query}
-            placeholder={t('search.placeholder')}
-            aria-label={t('search.placeholder')}
-            debounceMs={0}
-            stretch
-            onValueChange={setQuery}
-          />
-        )}
-      />
-
-      {selecting && (
-        <div className="omnimux-products-selection">
-          <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
-          <div className="omnimux-products-selection-actions">
-            <Button variant="ghost" size="sm" onClick={clearSelection}>
-              {t('select.clear')}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                const names = products.filter((p) => selectedIds.has(p.id)).map((p) => p.name)
-                setPendingRemove({ isBatch: true, ids: Array.from(selectedIds), names })
-              }}
-            >
-              {t('select.delete').replace('{n}', String(selectedCount))}
-            </Button>
-          </div>
+        <div className="omnimux-products-action-row">
+          <Button
+            variant="primary"
+            leadingIcon={<PlusIcon />}
+            onClick={handleCreate}
+          >
+            {t('add.button')}
+          </Button>
+          <Button
+            variant="secondary"
+            leadingIcon={<ChatIcon />}
+            onClick={handleOpenConversation}
+          >
+            {t('add.chatButton') || '对话中添加'}
+          </Button>
         </div>
-      )}
 
-      {error !== '' && <p className="omnimux-products-error">{error}</p>}
+        <Divider />
 
-      <div className="omnimux-products-body">
-        <ProductGrid
-          products={visibleProducts}
-          emptyLabel={t(query.trim() ? 'empty.noMatch' : 'empty.all')}
-          emptyActionLabel={t('add.button')}
-          showEmptyAction={query.trim() === ''}
-          selectedIds={selectedIds}
-          copiedId={copiedId}
-          onToggleSelect={toggleSelect}
-          onOpen={handleOpenProduct}
-          onRemove={(p) => { setPendingRemove({ isBatch: false, product: p, names: [p.name] }) }}
-          onCopy={handleCopyCite}
-          onEmptyAction={handleCreate}
-          t={t}
+        <FilterBar
+          className="omnimux-products-stage-toolbar"
+          filters={
+            <Tabs
+              variant="underline"
+              items={[
+                { id: 'all', label: t('all') || '全部' },
+                { id: 'physical', label: t('kind.physical') },
+                { id: 'digital', label: t('kind.digital') },
+              ]}
+              activeId={kindTab}
+              onChange={setKindTab}
+            />
+          }
+          search={(
+            <SearchField
+              value={query}
+              placeholder={t('search.placeholder')}
+              aria-label={t('search.placeholder')}
+              debounceMs={0}
+              stretch
+              onValueChange={setQuery}
+            />
+          )}
         />
+
+        {selecting && (
+          <div className="omnimux-products-selection">
+            <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
+            <div className="omnimux-products-selection-actions">
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                {t('select.clear')}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  const names = products.filter((p) => selectedIds.has(p.id)).map((p) => p.name)
+                  setPendingRemove({ isBatch: true, ids: Array.from(selectedIds), names })
+                }}
+              >
+                {t('select.delete').replace('{n}', String(selectedCount))}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {error !== '' && <p className="omnimux-products-error">{error}</p>}
+
+        <div className="omnimux-products-body">
+          <ProductGrid
+            products={visibleProducts}
+            emptyLabel={t(query.trim() ? 'empty.noMatch' : 'empty.all')}
+            emptyActionLabel={t('add.button')}
+            showEmptyAction={query.trim() === ''}
+            selectedIds={selectedIds}
+            copiedId={copiedId}
+            onToggleSelect={toggleSelect}
+            onOpen={handleOpenProduct}
+            onRemove={(p) => { setPendingRemove({ isBatch: false, product: p, names: [p.name] }) }}
+            onCopy={handleCopyCite}
+            onEmptyAction={handleCreate}
+            t={t}
+          />
+        </div>
       </div>
 
-      {creating && (
-        <ProductFormDialog
+      {formOpen && (
+        <ProductFormPage
+          key={view.mode === 'edit' ? String(view.product?.id ?? '') : 'create'}
           t={t}
-          data={{ mode: 'create', busy, error: formError, dirty: false, initial: null }}
-          onAction={{
-            onCancel: handleCancelForm,
-            onPick: handlePick,
-            onSubmit: (payload) => { void handleSaveProduct(payload) },
-          }}
-        />
-      )}
-
-      {editing && (
-        <ProductFormDialog
-          t={t}
-          data={{ mode: 'edit', busy, error: formError, dirty: editingDirty, initial: editing }}
-          onAction={{
-            onCancel: handleCancelForm,
-            onPick: handlePick,
-            onSubmit: (payload) => { void handleSaveProduct(payload, editing.id) },
-          }}
+          mode={view.mode}
+          initial={view.mode === 'edit' ? view.product : null}
+          serverError={formError}
+          saving={formBusy}
+          onSubmit={handleSubmitForm}
+          onLeave={leaveForm}
+          onDirtyChange={handleDirtyChange}
+          onPick={handlePick}
         />
       )}
 

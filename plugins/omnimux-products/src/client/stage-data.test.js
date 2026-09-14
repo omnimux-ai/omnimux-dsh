@@ -13,7 +13,7 @@ import { buildPayload, getInitialMedia } from './useProductFormState.js'
 // Run the production stage, grid, and API against the real dispatcher. Only
 // React's rendering hooks and unrelated visual components are substituted.
 const stubs = {
-  './ProductFormDialog.jsx': 'export function ProductFormDialog() {}',
+  './ProductFormPage.jsx': 'export function ProductFormPage() {}',
   './ConfirmRemoveDialog.jsx': 'export function ConfirmRemoveDialog() {}',
   './styles.js': 'export function injectProductsStyles() {}',
 }
@@ -78,7 +78,7 @@ function mount(dispatcher) {
     require(name) {
       if (name === 'react') return react
       if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) }
-      if (name === 'dsh-ui-kit') return { Button: 'Button', IconButton: 'IconButton', PageHeader: 'PageHeader', FilterBar: 'FilterBar', SearchField: 'SearchField' }
+      if (name === 'dsh-ui-kit') return { Button: 'Button', IconButton: 'IconButton', PageHeader: 'PageHeader', FilterBar: 'FilterBar', SearchField: 'SearchField', Tabs: 'Tabs', Divider: 'Divider' }
       throw new Error(`unexpected dependency ${name}`)
     },
     fetch: async (url, opts) => {
@@ -131,13 +131,44 @@ test('stage loads actual state response, opens complete media details and saves 
     const card = find(grid.type(grid.props), node => node.type === 'article')
     card.props.onClick()
     await mounted.flush()
-    const dialog = find(mounted.render(), component('ProductFormDialog'))
-    assert.equal(dialog.props.data.initial.media[0].real_path, realPath)
-    dialog.props.onAction.onSubmit({ name: '修改商品', price: '199', media: dialog.props.data.initial.media })
+    const page = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(page.props.mode, 'edit')
+    assert.equal(page.props.initial.media[0].real_path, realPath)
+    await page.props.onSubmit({ name: '修改商品', price: '199', media: page.props.initial.media })
     await mounted.flush()
-    assert.equal(find(mounted.render(), component('ProductFormDialog')), null)
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
     assert.equal(library.get(product.id).media[0].real_path, realPath)
     assert.equal(find(mounted.render(), component('ProductGrid')).props.products[0].name, '修改商品')
+  })
+})
+
+test('the list view stays mounted behind the sub-screen so filters survive the round trip', async () => {
+  await withStore(async ({ library, dispatcher }) => {
+    library.add({ name: '实体商品', kind: 'physical' })
+    library.add({ name: '数字产品', kind: 'digital' })
+    const mounted = mount(dispatcher)
+    await mounted.flush()
+
+    // 先筛成只剩数字产品，再进二级页 —— 返回后筛选必须原样还在。
+    const filterBar = find(mounted.render(), node => node.type === 'FilterBar')
+    filterBar.props.filters.props.onChange('digital')
+    const filteredCount = find(mounted.render(), component('ProductGrid')).props.products.length
+    assert.equal(filteredCount, 1)
+
+    find(mounted.render(), node => node.type === 'Button' && node.props.children === 'add.button').props.onClick()
+    const opened = mounted.render()
+    assert.equal(find(opened, component('ProductFormPage')).props.mode, 'create')
+    // 列表子树没有被替换掉：它仍在树里，只是被覆盖层盖住。
+    assert.ok(find(opened, component('ProductGrid')), 'the list view must stay mounted behind the sub-screen')
+    assert.equal(
+      find(opened, node => node.props?.className === 'omnimux-products-list-view').props['aria-hidden'],
+      'true',
+    )
+
+    find(opened, component('ProductFormPage')).props.onLeave()
+    const closed = mounted.render()
+    assert.equal(find(closed, component('ProductFormPage')), null)
+    assert.equal(find(closed, component('ProductGrid')).props.products.length, filteredCount)
   })
 })
 
@@ -152,7 +183,7 @@ test('failed detail request is visible and never opens an empty-media editor', a
     card.props.onClick()
     await mounted.flush()
     const tree = mounted.render()
-    assert.equal(find(tree, component('ProductFormDialog')), null)
+    assert.equal(find(tree, component('ProductFormPage')), null)
     assert.equal(find(tree, node => node.props?.className === 'omnimux-products-error').props.children, 'product not found')
   })
 })
@@ -170,7 +201,7 @@ test('empty response clears cards and exposes the grid create action', async () 
     const empty = grid.type(grid.props)
     assert.equal(find(empty, node => node.type === 'p').props.children, 'empty.all')
     find(empty, node => node.type === 'Button').props.onClick()
-    assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.mode, 'create')
+    assert.equal(find(mounted.render(), component('ProductFormPage')).props.mode, 'create')
   })
 })
 
@@ -188,26 +219,31 @@ test('editing preserves a missing source reference and refuses a name-only save 
     const grid = find(mounted.render(), component('ProductGrid'))
     assert.equal(grid.props.products[0].media_count, 0)
     await grid.props.onOpen(grid.props.products[0])
-    const dialog = find(mounted.render(), component('ProductFormDialog'))
-    const initial = dialog.props.data.initial
+    const dialog = find(mounted.render(), component('ProductFormPage'))
+    const initial = dialog.props.initial
     assert.equal(initial.media[0].real_path, realPath)
     const payload = buildPayload({
       name: '修改名称', kind: initial.kind, link: initial.link, categories: initial.categories,
       media: getInitialMedia(initial), coverId: initial.cover_media_id,
     })
-    dialog.props.onAction.onSubmit(payload)
+    await dialog.props.onSubmit(payload)
     await mounted.flush()
-    assert.match(find(mounted.render(), component('ProductFormDialog')).props.data.error, /missing, not a file, or unreadable/)
+    assert.match(find(mounted.render(), component('ProductFormPage')).props.serverError, /missing, not a file, or unreadable/)
     assert.equal(library.get(product.id).name, '原商品')
     assert.equal(library.get(product.id).media[0].real_path, realPath)
     assert.equal(library.revision(), 1)
     assert.equal(readFileSync(libraryFile, 'utf8'), persisted)
     writeFileSync(realPath, 'restored')
     assert.equal(library.getView(product.id).media[0].real_path, realPath)
-    find(mounted.render(), component('ProductFormDialog')).props.onAction.onSubmit(payload)
+    await find(mounted.render(), component('ProductFormPage')).props.onSubmit(payload)
     await mounted.flush()
     assert.equal(library.get(product.id).name, '修改名称')
     assert.equal(library.get(product.id).media[0].real_path, realPath)
+    // 编辑保存走的是更新，不是新建：库里仍然只有一条记录。
+    assert.equal(library.list().length, 1)
+    // 保存成功即回列表：二级页卸载，列表子树还在。
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
+    assert.ok(find(mounted.render(), component('ProductGrid')))
   })
 })
 
@@ -246,10 +282,10 @@ test('a slow A detail response cannot replace the faster B editor', async () => 
     await open(b)
     pending[1].resolve()
     await mounted.flush()
-    assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.initial.id, b.id)
+    assert.equal(find(mounted.render(), component('ProductFormPage')).props.initial.id, b.id)
     pending[0].resolve()
     await mounted.flush()
-    assert.equal(find(mounted.render(), component('ProductFormDialog')).props.data.initial.id, b.id)
+    assert.equal(find(mounted.render(), component('ProductFormPage')).props.initial.id, b.id)
   })
 })
 
@@ -259,10 +295,10 @@ test('closing an editor invalidates an older pending detail request', async () =
     await open(b)
     pending[1].resolve()
     await mounted.flush()
-    find(mounted.render(), component('ProductFormDialog')).props.onAction.onCancel()
+    find(mounted.render(), component('ProductFormPage')).props.onLeave()
     pending[0].resolve()
     await mounted.flush()
-    assert.equal(find(mounted.render(), component('ProductFormDialog')), null)
+    assert.equal(find(mounted.render(), component('ProductFormPage')), null)
   })
 })
 
@@ -272,21 +308,29 @@ test('creating a product invalidates pending edit responses', async () => {
     find(mounted.render(), node => node.type === 'Button' && node.props.children === 'add.button').props.onClick()
     pending[0].resolve()
     await mounted.flush()
-    const dialog = find(mounted.render(), component('ProductFormDialog'))
-    assert.equal(dialog.props.data.mode, 'create')
-    assert.equal(dialog.props.data.busy, false)
+    const dialog = find(mounted.render(), component('ProductFormPage'))
+    assert.equal(dialog.props.mode, 'create')
+    assert.equal(dialog.props.saving, false)
   })
 })
 
+// 关 Tab 与卸载都必须作废在路上的取数请求：迟到的响应不能回来改写已经打开的表单，
+// 但表单本身不再被静默清空（关 Tab 顺带清空是旧形态最不可恢复的一处写法）。
 for (const action of ['close', 'unmount']) {
-  test(`${action} invalidates a pending detail request`, async () => {
-    await withDeferredEdits(async ({ mounted, pending, open, a }) => {
+  test(`${action} invalidates a pending detail request without wiping the open editor`, async () => {
+    await withDeferredEdits(async ({ mounted, pending, open, a, b }) => {
       await open(a)
+      await open(b)
+      pending[1].resolve()
+      await mounted.flush()
+      const opened = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(opened.props.initial.id, b.id)
       if (action === 'close') find(mounted.render(), node => node.type === 'PageHeader').props.onClose()
       else mounted.unmount()
       pending[0].resolve()
       await mounted.flush()
-      assert.equal(find(mounted.render(), component('ProductFormDialog')), null)
+      const after = find(mounted.render(), component('ProductFormPage'))
+      assert.equal(after.props.initial.id, b.id, 'a stale response must never replace the open editor')
     })
   })
 }

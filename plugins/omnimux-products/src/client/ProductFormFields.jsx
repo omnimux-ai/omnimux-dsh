@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Button, InputField } from 'dsh-ui-kit'
 import { importFromLink, isHttpUrl } from './api.js'
 import { LinkIcon } from './icons.jsx'
-import { StrategyFields } from './ProductStrategyFields.jsx'
+import { FormSection, TextareaField } from './ProductFormSections.jsx'
 import { CategoriesEditor, CoverDropzone, MediaList } from './ProductMediaSection.jsx'
+import { ScreenshotPreview } from './ScreenshotPreview.jsx'
+import { StrategyFields } from './ProductStrategyFields.jsx'
 
 export function KindSwitcher(props) {
-  const { t, kind, onSelectPhysical, onSelectDigital } = props
+  const { t, kind, disabled, onSelectPhysical, onSelectDigital } = props
   return (
     <div className="omnimux-products-kind-row">
       <span className="omnimux-products-kind-label">{t('kind.label')}</span>
@@ -15,6 +17,7 @@ export function KindSwitcher(props) {
         size="sm"
         className="omnimux-products-kind-chip"
         aria-pressed={kind === 'physical'}
+        disabled={disabled}
         onClick={onSelectPhysical}
       >
         {t('kind.physical')}
@@ -24,6 +27,7 @@ export function KindSwitcher(props) {
         size="sm"
         className="omnimux-products-kind-chip"
         aria-pressed={kind === 'digital'}
+        disabled={disabled}
         onClick={onSelectDigital}
       >
         {t('kind.digital')}
@@ -32,39 +36,8 @@ export function KindSwitcher(props) {
   )
 }
 
-export function DirtyBanner(props) {
-  const { t, onReload } = props
-  const handleReload = () => { onReload?.() }
-  return (
-    <div className="omnimux-products-dirty">
-      <span className="omnimux-products-dirty-text">{t('add.dirty.banner')}</span>
-      <Button
-        variant="outline"
-        size="xs"
-        onClick={handleReload}
-      >
-        {t('add.dirty.reload')}
-      </Button>
-      <span className="omnimux-products-label">{t('add.dirty.keep')}</span>
-    </div>
-  )
-}
-
-function FormTextarea(props) {
-  const { value, placeholder, onChange } = props
-  return (
-    <textarea
-      className="omnimux-products-textarea omnimux-products-span2"
-      rows={2}
-      value={value}
-      placeholder={placeholder}
-      onChange={onChange}
-    />
-  )
-}
-
 function ProductCoreFields(props) {
-  const { t, values, onChange } = props
+  const { t, values, onChange, busy } = props
   const handleSelling = (e) => { onChange.setSelling(e.target.value) }
   const handleAudience = (e) => { onChange.setAudience(e.target.value) }
   const handleBrand = (e) => { onChange.setBrand(e.target.value) }
@@ -72,24 +45,34 @@ function ProductCoreFields(props) {
 
   return (
     <>
-      <FormTextarea
+      <TextareaField
+        className="omnimux-products-span2"
+        label={t('detail.selling')}
         value={values.selling}
         placeholder={t('add.sellingPlaceholder')}
+        disabled={busy}
         onChange={handleSelling}
       />
       <InputField
+        label={t('detail.audience')}
         value={values.audience}
         placeholder={t('add.audiencePlaceholder')}
+        disabled={busy}
         onChange={handleAudience}
       />
       <InputField
+        label={t('detail.brand')}
         value={values.brand}
         placeholder={t('add.brandPlaceholder')}
+        disabled={busy}
         onChange={handleBrand}
       />
-      <FormTextarea
+      <TextareaField
+        className="omnimux-products-span2"
+        label={t('detail.features')}
         value={values.features}
         placeholder={t('add.featuresPlaceholder')}
+        disabled={busy}
         onChange={handleFeatures}
       />
     </>
@@ -97,7 +80,7 @@ function ProductCoreFields(props) {
 }
 
 function ProductCommerceFields(props) {
-  const { t, values, onChange } = props
+  const { t, values, onChange, busy } = props
   const handlePrice = (e) => { onChange.setPrice(e.target.value) }
   const handleSku = (e) => { onChange.setSku(e.target.value) }
   const handlePromotion = (e) => { onChange.setPromotion(e.target.value) }
@@ -106,23 +89,32 @@ function ProductCommerceFields(props) {
   return (
     <>
       <InputField
+        label={t('detail.price')}
         value={values.price}
         placeholder={t('add.pricePlaceholder')}
+        disabled={busy}
         onChange={handlePrice}
       />
       <InputField
+        label={t('detail.sku')}
         value={values.sku}
         placeholder={t('add.skuPlaceholder')}
+        disabled={busy}
         onChange={handleSku}
       />
       <InputField
+        label={t('detail.promotion')}
         value={values.promotion}
         placeholder={t('add.promotionPlaceholder')}
+        disabled={busy}
         onChange={handlePromotion}
       />
       <InputField
+        className="omnimux-products-span2"
+        label={t('detail.link')}
         value={values.link}
         placeholder={t('add.linkPlaceholder')}
+        disabled={busy}
         onChange={handleLink}
       />
     </>
@@ -130,18 +122,20 @@ function ProductCommerceFields(props) {
 }
 
 export function PhysicalFields(props) {
-  const { t, values, onChange } = props
+  const { t, values, onChange, busy } = props
   return (
     <div className="omnimux-products-grid-fields">
       <ProductCoreFields
         t={t}
         values={values}
         onChange={onChange}
+        busy={busy}
       />
       <ProductCommerceFields
         t={t}
         values={values}
         onChange={onChange}
+        busy={busy}
       />
     </div>
   )
@@ -210,7 +204,7 @@ export function assembleFormHandlers(setters, actions) {
 }
 
 function FormHeaderSection(props) {
-  const { t, state, setters, actions, dirty, busy, onReload, nameRef } = props
+  const { t, state, setters, actions, busy, nameRef } = props
   const handleNameChange = (event) => { setters.setName(event.target.value) }
 
   return (
@@ -222,19 +216,15 @@ function FormHeaderSection(props) {
           className="omnimux-products-name-field"
           value={state.name}
           placeholder={t('add.namePlaceholder')}
+          aria-label={t('detail.name')}
           disabled={busy}
           onChange={handleNameChange}
         />
       </div>
-      {dirty ? (
-        <DirtyBanner
-          t={t}
-          onReload={onReload}
-        />
-      ) : null}
       <KindSwitcher
         t={t}
         kind={state.kind}
+        disabled={busy}
         onSelectPhysical={actions.handleSelectPhysical}
         onSelectDigital={actions.handleSelectDigital}
       />
@@ -242,31 +232,41 @@ function FormHeaderSection(props) {
   )
 }
 
-function ProductFieldsSection(props) {
-  const { t, state, setters } = props
+/**
+ * 商业化设置：实体商品是价格 / SKU / 促销 / 落地页链接；数字产品只有官网地址
+ * （价格与库存维度对数字产品无意义，库层也不写这三个键）。
+ */
+function TradeSection(props) {
+  const { t, state, setters, busy } = props
   const handleLinkChange = (event) => { setters.setLink(event.target.value) }
 
   if (state.kind === 'physical') {
     return (
-      <PhysicalFields
-        t={t}
-        values={state}
-        onChange={setters}
-      />
+      <div className="omnimux-products-grid-fields">
+        <ProductCommerceFields
+          t={t}
+          values={state}
+          onChange={setters}
+          busy={busy}
+        />
+      </div>
     )
   }
 
   return (
     <InputField
+      label={t('detail.link')}
       value={state.link}
       placeholder={t('add.digitalLinkPlaceholder')}
+      disabled={busy}
       onChange={handleLinkChange}
     />
   )
 }
 
-function MediaAndCategoriesSection(props) {
-  const { t, state, actions, mediaActions, categoryActions, onPick } = props
+/** 素材区：拖拽/选择入口 + 已选素材列表。分类标签是独立分区，不在这里重复渲染。 */
+function MediaSection(props) {
+  const { t, state, actions, onPick, previewOf } = props
 
   return (
     <>
@@ -281,17 +281,25 @@ function MediaAndCategoriesSection(props) {
           t={t}
           media={state.media}
           coverId={state.coverId}
-          actions={mediaActions}
+          previewOf={previewOf}
+          actions={props.mediaActions}
         />
       ) : null}
-
-      <CategoriesEditor
-        t={t}
-        categories={state.categories}
-        tagDraft={state.tagDraft}
-        actions={categoryActions}
-      />
     </>
+  )
+}
+
+function ShotsSection(props) {
+  const { t, state, actions, previewOf, busy } = props
+  return (
+    <ScreenshotPreview
+      t={t}
+      media={state.media}
+      coverId={state.coverId}
+      srcOf={previewOf}
+      disabled={busy}
+      onSetCover={actions.handleSetCover}
+    />
   )
 }
 
@@ -381,39 +389,118 @@ export function UrlImportBar(props) {
   )
 }
 
+/**
+ * 表单主体。双栏排布：左栏是「解析 → 基础信息 → 商业化 → 品牌战略」，
+ * 右栏是「双端首屏截图 → 分类标签 → 素材列表」。窄容器由样式层折叠成单栏，
+ * 两栏常驻 React 树、不重挂载，因此拖窄窗口不会丢输入。
+ *
+ * @param {{
+ *   t: (key: string) => string,
+ *   state: Record<string, any>,
+ *   setters: Record<string, Function>,
+ *   actions: Record<string, Function>,
+ *   busy?: boolean,
+ *   error?: string,
+ *   onPick: (kind: 'file' | 'directory') => Promise<string[]>,
+ *   previewOf?: (file: object) => string,
+ *   nameRef?: any,
+ * }} props
+ */
 export function ProductFormBody(props) {
-  const { t, state, setters, actions, dirty, busy, error, onReload, onPick, nameRef } = props
+  const { t, state, setters, actions, busy = false, error = '', onPick, previewOf, nameRef } = props
   const { strategyHandlers, mediaActions, categoryActions } = assembleFormHandlers(setters, actions)
-  const headerProps = { t, state, setters, actions, dirty, busy, onReload, nameRef }
-  const fieldProps = { t, state, setters }
-  const mediaSectionProps = { t, state, actions, mediaActions, categoryActions, onPick }
 
   return (
     <div className="omnimux-products-form">
-      <UrlImportBar
-        t={t}
-        kind={state.kind}
-        onImported={actions.applyImportedData}
-      />
-
-      <FormHeaderSection {...headerProps} />
-
-      <ProductFieldsSection {...fieldProps} />
-
-      {state.kind === 'digital' ? (
-        <DigitalStrategyPanel
-          t={t}
-          strategyOpen={state.strategyOpen}
-          strategy={state.strategy}
-          handlers={strategyHandlers}
-        />
-      ) : null}
-
-      <MediaAndCategoriesSection {...mediaSectionProps} />
-
       {error ? (
         <p className="omnimux-products-error">{error}</p>
       ) : null}
+
+      <div className="omnimux-products-form-columns">
+        <div className="omnimux-products-form-col-left">
+          <FormSection
+            title={t('section.import')}
+            description={t('section.importHint')}
+          >
+            <UrlImportBar
+              t={t}
+              kind={state.kind}
+              onImported={actions.applyImportedData}
+            />
+          </FormSection>
+
+          <FormSection title={t('section.basic')}>
+            <FormHeaderSection
+              t={t}
+              state={state}
+              setters={setters}
+              actions={actions}
+              busy={busy}
+              nameRef={nameRef}
+            />
+            <ProductCoreFields
+              t={t}
+              values={state}
+              onChange={setters}
+              busy={busy}
+            />
+          </FormSection>
+
+          <FormSection title={t('section.trade')}>
+            <TradeSection
+              t={t}
+              state={state}
+              setters={setters}
+              busy={busy}
+            />
+          </FormSection>
+
+          {state.kind === 'digital' ? (
+            <DigitalStrategyPanel
+              t={t}
+              strategyOpen={state.strategyOpen}
+              strategy={state.strategy}
+              handlers={strategyHandlers}
+            />
+          ) : null}
+        </div>
+
+        <div className="omnimux-products-form-col-right">
+          <FormSection
+            title={t('section.shots')}
+            description={t('section.shotsHint')}
+          >
+            <ShotsSection
+              t={t}
+              state={state}
+              actions={actions}
+              previewOf={previewOf}
+              busy={busy}
+            />
+          </FormSection>
+
+          <FormSection title={t('section.classification')}>
+            <CategoriesEditor
+              t={t}
+              categories={state.categories}
+              tagDraft={state.tagDraft}
+              disabled={busy}
+              actions={categoryActions}
+            />
+          </FormSection>
+
+          <FormSection title={t('section.media')}>
+            <MediaSection
+              t={t}
+              state={state}
+              actions={actions}
+              mediaActions={mediaActions}
+              onPick={onPick}
+              previewOf={previewOf}
+            />
+          </FormSection>
+        </div>
+      </div>
     </div>
   )
 }

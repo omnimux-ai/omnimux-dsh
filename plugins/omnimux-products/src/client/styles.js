@@ -2,6 +2,31 @@ export const STYLES_ID = 'omnimux-products-styles'
 
 export const PRODUCTS_CSS = `
 
+/* ── 一级视图（列表）：常驻挂载，关页与切子屏都保活滚动与筛选 ───────────── */
+.omnimux-products-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  color: var(--dsw-alias-label-primary, inherit);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.omnimux-products-stage[data-visible="false"] {
+  display: none !important;
+  pointer-events: none;
+}
+.omnimux-products-list-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* Link import bar: one quiet row above the product name.
    The row reuses the kit's InputField / Button as-is — the bar owns only the
    row layout and the status line, so the field frame (32px / 8px radius /
@@ -35,21 +60,6 @@ export const PRODUCTS_CSS = `
   color: var(--dsw-alias-state-error-primary);
 }
 
-.omnimux-products-stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg));
-  color: var(--dsw-alias-label-primary, inherit);
-  overflow: hidden;
-  pointer-events: auto;
-}
-.omnimux-products-stage[data-visible="false"] {
-  display: none !important;
-  pointer-events: none;
-}
 /* Layer 2: Action Row */
 .omnimux-products-action-row {
   flex: none;
@@ -222,23 +232,182 @@ export const PRODUCTS_CSS = `
 .omnimux-products-focusable:hover { border-color: var(--dsw-alias-border-l4); }
 .omnimux-products-focusable:hover .omnimux-products-check,
 .omnimux-products-focusable:focus-within .omnimux-products-check { opacity: 1; }
-.omnimux-products-form { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── 二级全屏子屏：同 Tab 内覆盖列表，无模态遮罩 ─────────────────────────── */
+.omnimux-products-subscreen {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  color: var(--dsw-alias-label-primary, inherit);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  animation: omnimux-products-fade-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.omnimux-products-form-view {
+  overflow: hidden;
+}
+.omnimux-products-form-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+}
+.omnimux-products-back-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.omnimux-products-back-sep {
+  color: var(--dsw-alias-label-dimmed);
+  font-size: 12px;
+}
+.omnimux-products-back-current {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 26ch;
+}
+.omnimux-products-dirty-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-brand-primary, var(--dsw-alias-button-primary-fill));
+  flex: none;
+  align-self: center;
+}
+
+/* 双栏：容器查询折叠成单栏，两栏常驻 React 树、不重挂载 */
+/* 容器查询的容器必须是「被查询元素的祖先」：把它放在表单根上，双栏这一层才是
+   可折叠的查询目标。同一元素既做容器又做查询目标永远不会命中。 */
+.omnimux-products-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+}
+.omnimux-products-form-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.omnimux-products-form-col-left,
+.omnimux-products-form-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+@container (min-width: 900px) {
+  .omnimux-products-form-columns {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .omnimux-products-form-col-left { flex: 1.15; }
+  .omnimux-products-form-col-right { flex: 1; max-width: 520px; }
+}
+
+/* 常驻底部动作条：内容区滚动到任何位置都可见 */
+.omnimux-products-form-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+}
+.omnimux-products-form-footer-hint {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omnimux-products-unsaved-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 表单分区 */
+.omnimux-products-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.omnimux-products-form-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.omnimux-products-form-section-heading { min-width: 0; }
+.omnimux-products-form-section-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-products-form-section-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-products-form-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.omnimux-products-form-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 双端首屏截图卡片 */
+.omnimux-products-shot-grid { width: 100%; }
+.omnimux-products-shot-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.omnimux-products-shot-cell.is-missing {
+  justify-content: center;
+  border: 1px dashed var(--dsw-alias-border-l4);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 120px;
+}
+.omnimux-products-shot-card { cursor: pointer; }
+.omnimux-products-shot-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .omnimux-products-name-row { display: flex; align-items: center; gap: 8px; }
 .omnimux-products-at { color: var(--dsw-alias-label-tertiary); font-size: 18px; }
 .omnimux-products-name-field { flex: 1; min-width: 0; }
-.omnimux-products-dirty {
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 18px;
-  background: var(--dsw-alias-bg-module-platform);
-  color: var(--dsw-alias-label-secondary);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.omnimux-products-dirty-text { flex: 1; min-width: 160px; }
 .omnimux-products-kind-row {
   display: flex;
   gap: 8px;
@@ -337,6 +506,14 @@ export const PRODUCTS_CSS = `
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
+.omnimux-products-media-thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--dsw-alias-bg-module-platform);
+}
 .omnimux-products-filelist-name {
   flex: 1;
   min-width: 0;
@@ -344,7 +521,8 @@ export const PRODUCTS_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.omnimux-products-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.omnimux-products-categories { display: flex; flex-direction: column; gap: 8px; }
+.omnimux-products-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .omnimux-products-tag {
   font-size: 12px;
   padding: 2px 8px;
@@ -354,6 +532,7 @@ export const PRODUCTS_CSS = `
   align-items: center;
   gap: 4px;
 }
+.omnimux-products-tag-remove { flex: none; }
 .omnimux-products-section { display: flex; flex-direction: column; gap: 8px; }
 .omnimux-products-section-title { font-size: 13px; font-weight: 500; }
 .omnimux-products-section-head {
@@ -456,112 +635,9 @@ export const PRODUCTS_CSS = `
   margin-left: auto;
 }
 
-/* Self-drawn product form modal (outside-corner close, kit controls only) */
-.omnimux-products-modal-backdrop,
-.omnimux-products-modal-backdrop * {
-  box-sizing: border-box;
-}
-.omnimux-products-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.70));
-  backdrop-filter: blur(16px);
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  animation: omnimux-products-fade-in 120ms ease;
-  pointer-events: auto;
-  -webkit-app-region: no-drag;
-}
 @keyframes omnimux-products-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-.omnimux-products-modal-wrapper {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  width: 100%;
-  max-width: 720px;
-  animation: omnimux-products-fade-in 120ms ease;
-}
-.omnimux-products-modal-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-height: 85vh;
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--dsw-alias-bg-module-platform, #131313);
-  border: 1px solid var(--dsw-alias-border-l2, #242424);
-  box-shadow: 0 12px 36px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.60));
-}
-.omnimux-products-modal-close {
-  position: absolute;
-  top: -10px;
-  right: -48px;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px;
-  padding: 0 !important;
-  border-radius: 50%;
-  border: 1px solid var(--dsw-alias-border-hover, rgba(255, 255, 255, 0.22));
-  background: var(--dsw-alias-bg-elevated, rgba(24, 24, 24, 0.88));
-  backdrop-filter: blur(12px);
-  color: var(--dsw-alias-label-primary, #ffffff);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.55));
-  transition: all 120ms ease;
-  flex-shrink: 0;
-  align-self: flex-start;
-}
-.omnimux-products-modal-close:hover {
-  border-color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.45));
-  background: var(--dsw-alias-bg-layer-2, rgba(45, 45, 45, 0.95));
-  transform: scale(1.08);
-}
-@media (max-width: 1160px) {
-  .omnimux-products-modal-close {
-    top: -44px;
-    right: 4px;
-  }
-}
-.omnimux-products-modal-header {
-  flex: none;
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, #242424);
-}
-.omnimux-products-modal-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 24px;
-  color: var(--dsw-alias-label-primary, inherit);
-}
-.omnimux-products-modal-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px 20px;
-}
-.omnimux-products-modal-footer {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--dsw-alias-border-l2, #242424);
 }
 `
 
