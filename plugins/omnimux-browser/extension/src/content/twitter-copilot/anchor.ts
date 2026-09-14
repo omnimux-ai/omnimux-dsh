@@ -45,52 +45,41 @@ export function isCollapsedInlineReply(targetBtn: HTMLElement): boolean {
     return false
   }
 
-  // 4. Find the owning composer container upwards
+  // 4. Find the owning composer container upwards (contains tweetTextarea_0)
   let composer: HTMLElement | null = targetBtn.parentElement
-  let foundEditableTextbox = false
-  let foundToolbar = false
-
-  for (let i = 0; i < 12 && composer && composer !== document.body; i++) {
-    // Check for active editable textbox in this composer
-    const textboxes = composer.querySelectorAll<HTMLElement>(
-      'div[data-testid="tweetTextarea_0"][role="textbox"], div[role="textbox"][contenteditable="true"], div[data-testid="tweetTextarea_0"]'
-    )
-    for (const tb of Array.from(textboxes)) {
-      const isContentEditable = tb.getAttribute('contenteditable') === 'true' || tb.isContentEditable
-      const rect = tb.getBoundingClientRect()
-      if (isContentEditable || (rect.height > 0 && tb.textContent?.trim() !== '')) {
-        foundEditableTextbox = true
-        break
-      }
+  let composerCard: HTMLElement | null = null
+  for (let i = 0; i < 14 && composer && composer !== document.body; i++) {
+    if (composer.querySelector('div[data-testid="tweetTextarea_0"]')) {
+      composerCard = composer
+      break
     }
-
-    // Check for media toolbar icons (images, gif, emoji, poll, schedule)
-    const toolbar = composer.querySelector(
-      '[data-testid="toolBar"], [aria-label*="Media"], [aria-label*="媒体"], [aria-label*="Emoji"], [aria-label*="GIF"], [data-testid="geoButton"]'
-    )
-    if (toolbar) {
-      foundToolbar = true
-    }
-
-    if (foundEditableTextbox && foundToolbar) {
-      return false
-    }
-
     composer = composer.parentElement
   }
 
-  // If there's an editable textbox and toolbar, it's expanded
-  if (foundEditableTextbox && foundToolbar) {
-    return false
+  // If no owning composer card found with tweetTextarea_0, it's a collapsed placeholder
+  if (!composerCard) {
+    return true
   }
 
-  // If it has an editable textbox and the button is active/actionable with non-trivial height
-  if (foundEditableTextbox) {
-    return false
+  // 5. Critical structure check: expanded composer MUST have bottom media toolbar
+  const toolbar = composerCard.querySelector(
+    '[data-testid="toolBar"], input[type="file"], [data-testid="fileInput"], [aria-label*="Media"], [aria-label*="媒体"], [aria-label*="Emoji"], [aria-label*="表情"], [aria-label*="GIF"], [data-testid="geoButton"]'
+  )
+  if (!toolbar) {
+    return true
   }
 
-  // Otherwise, it's a collapsed placeholder bar (no active textbox)
-  return true
+  // 6. Critical structure check: the active reply button in expanded mode MUST be within or accompanying the bottom toolbar
+  const isInToolbar =
+    !!targetBtn.closest('[data-testid="toolBar"]') ||
+    !!composerCard.querySelector('[data-testid="toolBar"]')?.contains(targetBtn) ||
+    !!targetBtn.parentElement?.querySelector('[aria-label*="媒体"], [aria-label*="Media"], [aria-label*="Emoji"], [aria-label*="表情"]')
+
+  if (!isInToolbar) {
+    return true
+  }
+
+  return false
 }
 
 /**
@@ -145,6 +134,37 @@ export function cleanupStaleCopilotButtons(): void {
       }
     }
   })
+
+  // 5. [Card-level Single-instance Enforcement]: Enforce exactly ONE copilot button per reply card.
+  // Purge any orphan/stale buttons in the upper half or top-right corner of the composer card!
+  const textareas = document.querySelectorAll('div[data-testid="tweetTextarea_0"]')
+  textareas.forEach((ta) => {
+    let card: HTMLElement | null = ta.parentElement
+    for (let i = 0; i < 14 && card && card !== document.body; i++) {
+      const cardCopilots = Array.from(
+        card.querySelectorAll<HTMLElement>(`.omnimux-copilot-anchor-btn, [${COPILOT_ATTACHED_ATTR}="true"]`)
+      )
+      if (cardCopilots.length > 1) {
+        // Find bottom-most copilot button (which belongs to the bottom toolbar reply button)
+        let bottomMost: HTMLElement = cardCopilots[0]
+        let maxTop = -Infinity
+        for (const btn of cardCopilots) {
+          const rect = btn.getBoundingClientRect()
+          if (rect.top > maxTop) {
+            maxTop = rect.top
+            bottomMost = btn
+          }
+        }
+        // Remove all other buttons in this card (e.g. top-right corner or stale placeholder buttons)
+        for (const btn of cardCopilots) {
+          if (btn !== bottomMost) {
+            btn.remove()
+          }
+        }
+      }
+      card = card.parentElement
+    }
+  })
 }
 
 export function mountCopilotToTwitterButtons(): void {
@@ -196,21 +216,18 @@ export function findHorizontalToolbarAnchor(targetBtn: HTMLElement): {
       style.flexDirection !== 'column' &&
       style.flexDirection !== 'column-reverse'
 
-    if (isRowFlex && !rowContainer) {
+    if (isRowFlex) {
       rowContainer = curr
-    }
-
-    // Check for competitor sopilot button
-    const competitor = curr.querySelector('.ai-assistant-button') as HTMLElement | null
-    if (competitor && !sopilotBtn) {
-      sopilotBtn = competitor
       break
     }
 
-    if (!rowContainer) {
-      branchChild = curr
-    }
+    branchChild = curr
     curr = curr.parentElement
+  }
+
+  // 严格限制作用域：仅在当前水平工具行内部查找紧邻同级的竞品按钮，严禁向上跨越到外层整张卡片！
+  if (rowContainer) {
+    sopilotBtn = rowContainer.querySelector('.ai-assistant-button') as HTMLElement | null
   }
 
   // If competitor button is detected, insert in its exact place or right after it with overlay elevation

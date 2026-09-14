@@ -822,4 +822,118 @@ AIGC 现在的残酷真相是：模型能力每`
     const textarea = homeComposerContainer.querySelector('div[data-testid="tweetTextarea_0"]') as HTMLElement
     expect(textarea.textContent).toContain('测试首页常驻发帖框注入！')
   })
+
+  it('T28: 卡片级单实例铁律清理 - 卡片内若存在右上角或上半部分残留图标，扫描时强制清除，只保留底部操作栏图标', () => {
+    const card = document.createElement('div')
+    card.innerHTML = `
+      <div class="header-row">
+        <div class="reply-to">回复 @test</div>
+        <button class="omnimux-copilot-anchor-btn" data-omnimux-copilot="true" id="stale-corner">右上角残留</button>
+      </div>
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true"></div>
+      </div>
+      <div data-testid="toolBar" style="display: flex;">
+        <button aria-label="媒体"></button>
+        <button data-testid="tweetButtonInline" id="valid-btn">回复</button>
+      </div>
+    `
+    document.body.appendChild(card)
+
+    vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+      width: 500,
+      height: 150,
+      top: 100,
+      left: 100,
+      right: 600,
+      bottom: 250,
+      x: 100,
+      y: 100,
+      toJSON: () => {},
+    })
+
+    const staleCorner = card.querySelector('#stale-corner') as HTMLElement
+    vi.spyOn(staleCorner, 'getBoundingClientRect').mockReturnValue({
+      width: 32,
+      height: 32,
+      top: 105,
+      left: 550,
+      right: 582,
+      bottom: 137,
+      x: 550,
+      y: 105,
+      toJSON: () => {},
+    })
+
+    const validBtn = card.querySelector('#valid-btn') as HTMLElement
+    vi.spyOn(validBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 36,
+      top: 210,
+      left: 520,
+      right: 580,
+      bottom: 246,
+      x: 520,
+      y: 210,
+      toJSON: () => {},
+    })
+
+    mountCopilotToTwitterButtons()
+
+    // 验证右上角残留已被彻底销毁
+    expect(document.getElementById('stale-corner')).toBeNull()
+
+    // 验证卡片内仅有 1 个幽灵图标，位于底部工具栏
+    const cardCopilots = card.querySelectorAll('.omnimux-copilot-anchor-btn')
+    expect(cardCopilots.length).toBe(1)
+    expect(cardCopilots[0].parentElement).toBe(validBtn.parentElement)
+  })
+
+  it('T29: 工具栏查找作用域严格受限 - 严禁跨层级向整张卡片搜寻外部或右上角的竞品按钮', () => {
+    const rootCard = document.createElement('div')
+    rootCard.innerHTML = `
+      <div class="floating-header">
+        <button class="ai-assistant-button" id="external-sopilot">外部竞品</button>
+      </div>
+      <div data-testid="tweetTextarea_0_label">
+        <div role="textbox" data-testid="tweetTextarea_0" contenteditable="true"></div>
+      </div>
+      <div data-testid="toolBar" class="toolbar-flex" style="display: flex;">
+        <button data-testid="tweetButtonInline" id="toolbar-btn">回复</button>
+      </div>
+    `
+    document.body.appendChild(rootCard)
+
+    vi.spyOn(rootCard, 'getBoundingClientRect').mockReturnValue({
+      width: 500,
+      height: 150,
+      top: 100,
+      left: 100,
+      right: 600,
+      bottom: 250,
+      x: 100,
+      y: 100,
+      toJSON: () => {},
+    })
+
+    const toolbarBtn = rootCard.querySelector('#toolbar-btn') as HTMLElement
+    vi.spyOn(toolbarBtn, 'getBoundingClientRect').mockReturnValue({
+      width: 60,
+      height: 36,
+      top: 210,
+      left: 520,
+      right: 580,
+      bottom: 246,
+      x: 520,
+      y: 210,
+      toJSON: () => {},
+    })
+
+    mountCopilotToTwitterButtons()
+
+    // 挂载点绝不可被外部竞品引偏到 floating-header 中
+    const mountedCopilot = rootCard.querySelector('.omnimux-copilot-anchor-btn') as HTMLElement
+    expect(mountedCopilot).not.toBeNull()
+    expect(mountedCopilot.parentElement).toBe(toolbarBtn.parentElement)
+  })
 })
