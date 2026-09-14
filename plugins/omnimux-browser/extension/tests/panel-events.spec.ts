@@ -43,7 +43,7 @@ describe('rowFromEvent', () => {
 
   it('renders assistant messages from data.message.content', () => {
     const row = rowFromEvent(ev('assistant/message', { message: { content: [{ type: 'text', text: '好的' }] } }))
-    expect(row).toEqual({ seq: 0, kind: 'assistant', text: '好的' })
+    expect(row).toEqual({ seq: 0, kind: 'assistant', text: '好的', status: 'complete', sourceSeq: undefined })
   })
 
   it('renders image-only and mixed multimodal messages from durable attachment refs', () => {
@@ -64,6 +64,8 @@ describe('rowFromEvent', () => {
     }))).toEqual({
       seq: 0,
       kind: 'assistant',
+      status: 'complete',
+      sourceSeq: undefined,
       text: 'I see it',
       images: [image.attachment],
     })

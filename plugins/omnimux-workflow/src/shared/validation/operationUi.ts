@@ -548,39 +548,6 @@ function findAuthoritativeItem(
 }
 
 /**
- * Zero-candidate fallback discovery rules. When the kernel yields no
- * compatible model (e.g. a freshly opened node before any prompt), the
- * picker still surfaces the node's own listed output-type models so it
- * never cries "暂无兼容模型" while legal models exist in the catalog.
- */
-interface FallbackModelDiscoveryRule {
-  /** Bucket list to scan first (catalog[bucketKey]). */
-  bucketKey: 'image' | 'audio';
-  /** Operation predicate for the authoritative catalog.models scan (listed enforced by caller). */
-  matchesModelOperation: (op: { id?: string; output?: { type?: string } }) => boolean;
-  /** Representative operation id used for synthesized fallback verdicts. */
-  defaultOperationId: string;
-}
-
-const FALLBACK_MODEL_DISCOVERY: Record<string, FallbackModelDiscoveryRule> = {
-  image: {
-    bucketKey: 'image',
-    matchesModelOperation: (op) =>
-      op.output?.type === 'image'
-      || op.id === 'text_to_image'
-      || op.id === 'image_to_image'
-      || op.id === 'multi_reference',
-    defaultOperationId: 'text_to_image',
-  },
-  audio: {
-    bucketKey: 'audio',
-    matchesModelOperation: (op) =>
-      op.output?.type === 'audio' || op.id === 'text_to_speech',
-    defaultOperationId: 'text_to_speech',
-  },
-};
-
-/**
  * Build the model picker options for a generate node.
  *
  * Only models with `acceptsCurrentInputs === true` are returned — incompatible
@@ -642,6 +609,7 @@ export function buildFilteredModelOptions(args: {
     const bucket = args.outputType
       ? findBucketItem(catalog, args.outputType, verdict.modelId)
       : undefined;
+    if (args.outputType && !bucket) continue;
     const label = auth?.label || bucket?.label || verdict.modelId;
     options.push({
       id: verdict.modelId,
@@ -658,102 +626,6 @@ export function buildFilteredModelOptions(args: {
   }
 
   if (options.length === 0) {
-    const fallbackRule = FALLBACK_MODEL_DISCOVERY[args.outputType ?? ''];
-    if (fallbackRule) {
-      const candidateItems: Array<{
-        id: string;
-        label: string;
-        badge?: string;
-        subtitle?: string;
-        family?: string;
-        aliases?: string[];
-        item?: CapabilityModelItem | CatalogModelDto;
-      }> = [];
-      const seenIds = new Set<string>();
-
-      const bucketRows = catalog[fallbackRule.bucketKey];
-      if (Array.isArray(bucketRows) && bucketRows.length > 0) {
-        for (const bucketItem of bucketRows) {
-          if (!bucketItem?.id || seenIds.has(bucketItem.id)) continue;
-          const auth = findAuthoritativeItem(catalog, bucketItem.id);
-          const hasListedOp = auth?.operations?.some((op) => op.listed) ?? true;
-          if (!hasListedOp) continue;
-          seenIds.add(bucketItem.id);
-          candidateItems.push({
-            id: bucketItem.id,
-            label: auth?.label || bucketItem.label || bucketItem.id,
-            ...(auth?.badge || bucketItem.badge ? { badge: (auth?.badge ?? bucketItem.badge) as string } : {}),
-            ...(auth?.subtitle || bucketItem.subtitle ? { subtitle: (auth?.subtitle ?? bucketItem.subtitle) as string } : {}),
-            ...(auth?.family || bucketItem.family ? { family: auth?.family ?? bucketItem.family } : {}),
-            ...(auth?.aliases ? { aliases: auth.aliases } : {}),
-            item: auth ?? bucketItem,
-          });
-        }
-      }
-
-      if (Array.isArray(catalog.models)) {
-        for (const m of catalog.models) {
-          if (!m?.id || seenIds.has(m.id)) continue;
-          const isOutputModel = m.operations?.some(
-            (op) => op.listed && fallbackRule.matchesModelOperation(op),
-          );
-          if (isOutputModel) {
-            seenIds.add(m.id);
-            candidateItems.push({
-              id: m.id,
-              label: m.label || m.id,
-              ...(m.badge ? { badge: m.badge } : {}),
-              ...(m.subtitle ? { subtitle: m.subtitle } : {}),
-              ...(m.family ? { family: m.family } : {}),
-              ...(m.aliases ? { aliases: m.aliases } : {}),
-              item: m,
-            });
-          }
-        }
-      }
-
-      if (candidateItems.length > 0) {
-        for (const candidate of candidateItems) {
-          const existingVerdict = evaluation.models.find((v) => v.modelId === candidate.id);
-          const verdict: ModelCompatVerdict = existingVerdict
-            ? {
-                ...existingVerdict,
-                acceptsCurrentInputs: true,
-                readyToSubmit: true,
-                rejections: [],
-              }
-            : {
-                modelId: candidate.id,
-                known: true,
-                ...(candidate.family ? { family: candidate.family } : {}),
-                listedOperationIds: [fallbackRule.defaultOperationId],
-                matches: [],
-                effectiveOperations: [],
-                acceptsCurrentInputs: true,
-                readyToSubmit: true,
-                bindings: [],
-                rejections: [],
-              };
-          options.push({
-            id: candidate.id,
-            label: candidate.label,
-            ...(candidate.badge ? { badge: candidate.badge } : {}),
-            ...(candidate.subtitle ? { subtitle: candidate.subtitle } : {}),
-            ...(candidate.family ? { family: candidate.family } : {}),
-            ...(candidate.aliases ? { aliases: candidate.aliases } : {}),
-            ...(candidate.item ? { item: candidate.item } : {}),
-            verdict,
-          });
-        }
-
-        return {
-          options,
-          catalogAvailable: true,
-          zeroCandidates: false,
-        };
-      }
-    }
-
     // Prefer a specific rejection from the evaluation; fall back to generic.
     let reasonCode: CompatReasonCode = 'no_compatible_model';
     let reasonMessage = '当前输入没有可兼容的已上架模型';

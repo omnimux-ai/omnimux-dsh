@@ -39,6 +39,10 @@ import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnh
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
 import { injectMediaViewerStyles } from './media-viewer/styles.js'
+import { getGlobalMediaViewerStore } from './media-viewer/media-viewer-store.js'
+import { createGenerationFeedback } from './media-viewer/generation-feedback.js'
+import { getSubmittedCanvasText, subscribeSubmittedCanvasText } from './attachments/useCommentAttachment.ts'
+import { getUiContext } from './workbench/context.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
 import { findReplicateAttachment, shouldReleaseReplicateAttachments } from './session-guide/trending/replicate-linkage.js'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
@@ -201,17 +205,25 @@ export function apply(ctx) {
     id: 'omnimux-attachment-tray',
     priority: -10,
     locale: NS,
+    inject: () => ({ getSessions: () => guideSessions }),
   }, AttachmentTray))
 
   ctx.effect(() => {
     const eventsClient = createEventsClient()
     const uninstall = installHubEventsGlobal(eventsClient)
+    const generationBinding = ctx.inject(['sessions'], (inner) => {
+      inner.effect(() => {
+        const feedback = createGenerationFeedback({ sessions: inner.sessions, store: getGlobalMediaViewerStore(), getUiContext, eventsClient, getSubmittedCanvasText, subscribeSubmittedCanvasText })
+        return () => feedback.dispose()
+      }, 'omnimux: canvas generation feedback')
+    })
     const hmr = ctx.inject(['loader', 'modules'], hmrCtx => {
       hmrCtx.effect(() => installWebSocketHmr(hmrCtx, eventsClient, document), 'omnimux: HMR client')
     })
     eventsClient.connect()
     return () => {
       void hmr.dispose()
+      void generationBinding.dispose()
       eventsClient.disconnect()
       uninstall()
     }
@@ -223,22 +235,31 @@ export function apply(ctx) {
     ctx.effect(() => { injectMediaViewerStyles(document) }, 'omnimux: media viewer styles')
     ctx.effect(() => installAssistantMessageMediaEnhancer(document), 'omnimux: assistant message media enhancer')
     if (typeof ctx.inject === 'function') {
-      ctx.inject(['betterSidebar'], (inner) => {
+      ctx.inject(['betterSidebar', 'sessions', 'uiConversation'], (inner) => {
         const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
         if (sidebar && typeof sidebar.registerTab === 'function') {
+          const imageUrl = (sessionId, attachment) => inner.uiConversation.imageUrl(sessionId, attachment)
+          let fileReader = null
+          const readFile = async (sessionId, path, signal) => {
+            if (!fileReader) throw new Error('File preview unavailable')
+            return fileReader(sessionId, path, signal)
+          }
+          inner.inject(['remote', 'remote.workspaceFiles'], (fileCtx) => {
+            fileCtx.effect(() => {
+              const reader = (sessionId, path, signal) => fileCtx.remote.workspaceFiles.readAll(sessionId, path, signal)
+              fileReader = reader
+              return () => { if (fileReader === reader) fileReader = null }
+            }, 'omnimux: media file reader')
+          })
           const registerMediaViewer = () => sidebar.registerTab({
             id: MEDIA_VIEWER_TAB_ID,
             title: () => t('mediaViewer.tabTitle') || '图片浏览',
             order: 7,
             hidden: false,
             single: true,
-            component: (props) => createElement(MediaViewerTab, props),
+            component: (props) => createElement(MediaViewerTab, { ...props, sessions: inner.sessions, imageUrl, readFile }),
           })
-          if (typeof ctx.effect === 'function') {
-            ctx.effect(registerMediaViewer, 'omnimux: media viewer tab')
-          } else {
-            registerMediaViewer()
-          }
+          inner.effect(registerMediaViewer, 'omnimux: media viewer tab')
         }
       })
     }

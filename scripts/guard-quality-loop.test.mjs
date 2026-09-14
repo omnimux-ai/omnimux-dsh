@@ -21,6 +21,7 @@ import {
   taskSpecs,
   hasEvidenceAfterSpec,
   decideQualityGate,
+  handle,
 } from './guard-quality-loop.mjs'
 
 /* ------------------------------------------------------------------ helpers */
@@ -64,6 +65,27 @@ function cleanup(root) {
 
 const SPEC_BODY =
   '# 任务规格\n\n## 用户操作旅程\n1. 打开页面\n2. 点击按钮\n3. 期望出现结果\n\n## 验收用例\n- 用例一：可点击\n- 用例二：几何尺寸大于零\n'
+
+test('bash hook uses workdir without weakening source and delivery gates', () => {
+  const root = makeRepo('workdir')
+  const task = join(root, '.worktrees/task')
+  try {
+    assert.equal(gitIn(root, ['worktree', 'add', '-b', 'agent/task', task]).status, 0)
+    const check = (command, workdir) => handle(JSON.stringify({ cwd: root, tool_name: 'bash', tool_input: { command, workdir } })).hookSpecificOutput.permissionDecision
+    const source = 'echo x > plugins/omnimux/src/client/x.js'
+    assert.equal(check(source, task), 'deny')
+    writeFileAt(task, 'specs/workdir.spec.md', SPEC_BODY)
+    assert.equal(check(source, task), 'allow')
+    assert.equal(check(source, '.worktrees/task'), 'allow')
+    assert.equal(check(source, root), 'deny')
+    const reportCommand = "node --input-type=module <<'EOF'\nimport {build} from 'esbuild';import fs from 'node:fs';import crypto from 'node:crypto';const files=['plugins/omnimux/src/client/attachments/useCommentAttachment.ts','plugins/omnimux/src/client/media-viewer/media-viewer-store.js'];const hashes=Object.fromEntries(files.map(p=>[p,crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));await build({entryPoints:['.agent-reports/comment-only-send/hook-logic-entry.ts'],outfile:'.agent-reports/comment-only-send/hook-logic-run.mjs',bundle:true,platform:'node',format:'esm',packages:'external'});fs.writeFileSync('.agent-reports/comment-only-send/hook-logic-source-hashes.json',JSON.stringify(hashes,null,2));\nEOF\nnode .agent-reports/comment-only-send/hook-logic-run.mjs"
+    assert.equal(bashWritesSource(reportCommand), true)
+    assert.equal(check(reportCommand, task), 'allow')
+    assert.equal(check(reportCommand, root), 'deny')
+    writeFileAt(task, 'plugins/omnimux/src/client/x.js', 'export const x = 1')
+    assert.equal(check('git commit -m example', task), 'deny')
+  } finally { cleanup(root) }
+})
 
 /* ------------------------------------------------------------- 路径判定 */
 

@@ -19,7 +19,9 @@ import whaleUrl from '../../assets/icons/deepseek-256.png'
 import type { PageSceneInfo } from './components/SceneBadge.tsx'
 import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSnifferBar.tsx'
 import { PresetChips } from './components/PresetChips.tsx'
-import { DomFillButton } from './components/DomFillButton.tsx'
+import { FormDraftCard } from './components/FormDraftCard.tsx'
+import { parseDraftMessage } from '../shared/draft.ts'
+import type { DraftField } from '../shared/draft.ts'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
@@ -542,12 +544,14 @@ const MessageBody = memo(function MessageBody({
   api,
   copy,
   locale = 'zh',
+  onFillDraft,
 }: {
   row: Row
   sessionId: string
   api: PanelApi
   copy: PanelCopy
   locale?: UiLocale
+  onFillDraft?: (fields: DraftField[]) => Promise<{ ok: boolean; message?: string }>
 }): React.JSX.Element {
   if (row.kind === 'user' || row.kind === 'assistant') {
     // A user message may carry a page quote; show the quote, not its fence.
@@ -570,18 +574,20 @@ const MessageBody = memo(function MessageBody({
           />
         )}
         {(() => {
-          const parsed = row.kind === 'assistant' && row.status !== 'running' ? parseDraftSections(text) : null
-          if (parsed && parsed.hasDraft) {
+          const parsed = row.kind === 'assistant' && row.status !== 'running' ? parseDraftMessage(text) : null
+          if (parsed && parsed.draft) {
             return (
               <>
-                <div className="draft-box-wrapper">
-                  <div className="md draft-content" dangerouslySetInnerHTML={{ __html: parsed.draftHtml }} />
-                  <div className="dom-fill-actions">
-                    <DomFillButton textToFill={parsed.draftText} locale={locale} />
-                  </div>
-                </div>
-                {parsed.noteHtml !== '' && (
-                  <div className="md draft-note-section" dangerouslySetInnerHTML={{ __html: parsed.noteHtml }} />
+                {parsed.before.trim() !== '' && (
+                  <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.before) }} />
+                )}
+                <FormDraftCard
+                  draft={parsed.draft}
+                  onFill={onFillDraft || (async () => ({ ok: false, message: '未配置填写通道' }))}
+                  locale={locale}
+                />
+                {parsed.after.trim() !== '' && (
+                  <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.after) }} />
                 )}
               </>
             )
@@ -607,6 +613,7 @@ interface HistoryPage {
 export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
   const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
+    .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
 
   return (
     <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
@@ -622,7 +629,7 @@ export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row
               </Fragment>
             ))
           ) : (
-            row.text
+            <span className="tool-step-text">{steps[0] ?? row.text}</span>
           )}
         </span>
       </span>
@@ -2119,6 +2126,49 @@ export function App(): React.JSX.Element {
     }
   }
 
+  const handleFillDraft = async (fields: DraftField[]): Promise<{ ok: boolean; message?: string }> => {
+    if (window.parent && window.parent !== window) {
+      return new Promise((resolve) => {
+        const onMessage = (e: MessageEvent) => {
+          if (e.data?.type === 'FILL_STRUCTURED_DRAFT_RESULT') {
+            window.removeEventListener('message', onMessage)
+            const res = e.data.payload
+            resolve(res || { ok: false, message: '未收到有效响应' })
+          } else if (e.data?.type === 'FILL_HOST_DOM_RESULT') {
+            window.removeEventListener('message', onMessage)
+            const res = e.data.payload
+            resolve({ ok: Boolean(res?.success), message: res?.message })
+          }
+        }
+        window.addEventListener('message', onMessage)
+        window.parent.postMessage({
+          type: 'FILL_STRUCTURED_DRAFT',
+          fields,
+        }, '*')
+        setTimeout(() => {
+          window.removeEventListener('message', onMessage)
+          resolve({ ok: false, message: '填写超时' })
+        }, 5000)
+      })
+    }
+
+    const targetTabId = tabAffinity?.active?.tabId ?? tabAffinity?.controlled?.tabId
+    if (targetTabId) {
+      try {
+        const res = await chrome.tabs.sendMessage(targetTabId, {
+          action: 'FILL_STRUCTURED_DRAFT',
+          payload: { fields },
+        })
+        if (res) return res
+        return { ok: false, message: '未收到有效响应' }
+      } catch (err) {
+        return { ok: false, message: err instanceof Error ? err.message : '与页面通信失败' }
+      }
+    }
+
+    return { ok: false, message: '未连接到宿主网页' }
+  }
+
   async function send(textOverride?: string): Promise<void> {
     const text = (textOverride ?? input).trim()
     const submittedImages = textOverride === undefined ? draftImages : []
@@ -3187,13 +3237,13 @@ export function App(): React.JSX.Element {
             {row.kind === 'assistant' && <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>}
             {row.kind === 'tool'
               ? <ToolActivity row={row} copy={copy} />
-              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />}
+              : <MessageBody row={row} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />}
           </div>
         ))}
         {streamRow !== null && (
           <div className="row assistant" aria-live="polite">
             <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>
-            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} />
+            <MessageBody row={streamRow} sessionId={sessionRef.current ?? ''} api={api} copy={copy} locale={locale} onFillDraft={handleFillDraft} />
           </div>
         )}
         {working && streamRow === null && question === null && rows[rows.length - 1]?.status !== 'running' && (

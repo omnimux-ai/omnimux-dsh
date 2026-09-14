@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
+import { GenerationTasks } from './GenerationTasks.jsx';
+import { currentSessionId } from '../workbench/host-adapter.js';
 import { injectMediaViewerStyles } from './styles.js';
 import { registerContextContributor } from '../workbench/context.js';
 
@@ -16,7 +17,10 @@ export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
  * - Single image/video detail view with right vertical thumbnails rail
  * - Image annotation comments with popovers, consecutive numbering and model prompt integration
  */
-export function MediaViewerTab({ scope }) {
+const noSubscription = () => () => {};
+
+export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
+  const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, () => sessions?.list?.getSnapshot().current || currentSessionId());
   useEffect(() => {
     injectMediaViewerStyles();
   }, []);
@@ -31,19 +35,6 @@ export function MediaViewerTab({ scope }) {
 
   const imageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
-  const [composerCard, setComposerCard] = useState(null);
-
-  useEffect(() => {
-    const locate = () => {
-      const card = typeof document !== 'undefined' ? document.querySelector('[data-composer-card]') : null;
-      if (card && card !== composerCard) {
-        setComposerCard(card);
-      }
-    };
-    locate();
-    const timer = setInterval(locate, 300);
-    return () => clearInterval(timer);
-  }, [composerCard]);
 
   const annotations = store.getAnnotations(activeItem?.id);
   const savedAnnotations = annotations.filter((a) => a.status === 'saved');
@@ -57,14 +48,9 @@ export function MediaViewerTab({ scope }) {
         view: {
           kind: 'canvas',
           activeMediaId: activeItem?.id,
-          activeMediaUrl: activeItem?.url,
           annotationsCount: saved.length,
-          annotationsPrompt: store.formatAnnotationsPrompt(activeItem?.id),
         },
-        selection: saved.map((a) => ({
-          id: `ann_${a.index}`,
-          name: `标记 ${a.index}: ${a.text}`,
-        })),
+        selection: [],
       };
     });
   }, [activeItem?.id]);
@@ -127,22 +113,6 @@ export function MediaViewerTab({ scope }) {
     setDraftText('');
   };
 
-  const handleSendAnnotations = () => {
-    const prompt = store.formatAnnotationsPrompt(activeItem?.id);
-    if (!prompt) return;
-    try {
-      const textarea = document.querySelector('[data-composer-card] textarea');
-      if (textarea) {
-        const cur = textarea.value || '';
-        textarea.value = cur ? `${cur}\n\n${prompt}` : prompt;
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        textarea.focus();
-      }
-    } catch {
-      // ignore
-    }
-  };
-
   return (
     <div className="omx-media-viewer" data-layout-mode={layoutMode}>
       {/* 顶部工具栏 */}
@@ -191,14 +161,7 @@ export function MediaViewerTab({ scope }) {
             savedAnnotations.length > 0 ? (
               <div className="omx-mv-toolbar-comments-bar">
                 <span>{savedAnnotations.length} 条评论</span>
-                <button // exempt-ui01: 评论发送按钮
-                  type="button"
-                  className="omx-mv-toolbar-comments-bar__btn-send"
-                  title="将评论随当前会话发送给模型"
-                  onClick={handleSendAnnotations}
-                >
-                  发送
-                </button>
+                <span>请用对话发送按钮提交评论</span>
                 <button // exempt-ui01: 评论清空按钮
                   type="button"
                   className="omx-mv-toolbar-comments-bar__btn-close"
@@ -284,7 +247,8 @@ export function MediaViewerTab({ scope }) {
       {/* 主舞台区 */}
       <div className="omx-mv-stage-wrapper" data-subview={subViewMode}>
         {/* 视口展示区 */}
-        <div className="omx-mv-viewport">
+        <div className="omx-mv-viewport" data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId) || undefined}>
+          <GenerationTasks tasks={state.generationTasks.filter((task) => task.sessionId === sessionId)} imageUrl={imageUrl} readFile={readFile} />
           {subViewMode === 'grid' ? (
             /* 时间线瀑布流：同一时间线下多图横排 */
             <div className="omx-mv-timeline">
@@ -334,13 +298,13 @@ export function MediaViewerTab({ scope }) {
               >
                 {activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls autoPlay playsInline />
-                ) : (
+                ) : activeItem?.url ? (
                   <img
                     ref={imageRef}
                     src={activeItem?.url}
                     alt={activeItem?.title || '预览'}
                   />
-                )}
+                ) : null}
 
                 {/* 局部打点与气泡输入框层 */}
                 {annotations.map((item) => {
@@ -447,36 +411,6 @@ export function MediaViewerTab({ scope }) {
         </div>
       </div>
 
-      {/* 底部原生输入框内嵌挂件: 精准挂载在 [data-composer-card] 内部第一行 (对标用户红框) */}
-      {composerCard && savedAnnotations.length > 0 ? createPortal(
-        <div className="omx-composer-comment-bar">
-          <div
-            className="omx-mv-composer-attachment"
-            title="点击切换打点评论模式"
-            onClick={() => store.setAnnotating(true)}
-            role="button"
-            tabIndex={0}
-          >
-            <span className="omx-mv-composer-attachment__badge">⊕</span>
-            <span>{savedAnnotations.length} 个评论</span>
-            <button // exempt-ui01: 移除所有评论挂件按钮
-              type="button"
-              className="omx-mv-composer-attachment__close"
-              title="清空所有评论"
-              onClick={(e) => {
-                e.stopPropagation();
-                store.clearAnnotations(activeItem?.id);
-              }}
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        </div>,
-        composerCard
-      ) : null}
     </div>
   );
 }

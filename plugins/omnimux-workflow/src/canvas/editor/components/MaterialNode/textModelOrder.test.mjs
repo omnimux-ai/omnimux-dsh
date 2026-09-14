@@ -256,7 +256,7 @@ test('ConfigPanel 源码契约：只消费 buildFilteredModelOptions，禁止 MA
   assert.doesNotMatch(src, /level === 'disabled'/);
 });
 
-test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，且与 kernel 一致', () => {
+test('parity：候选等于 compatible 与类型 bucket 的交集，不补入缺失的 alias-img', () => {
   const catalog = createCompatTestCatalog();
   // 旧 image whitelist 与 fixture 模型 id 零交集（fixture 用 img-* / alias-*）
   const legacyImageWhitelist = [
@@ -289,7 +289,12 @@ test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，
 
   const kernelIds = evaluation.compatible.map((v) => v.modelId).sort();
   const pickerIds = filtered.options.map((o) => o.id).sort();
-  assert.deepEqual(pickerIds, kernelIds, 'ConfigPanel options must parity gateway kernel set');
+  const bucketIds = new Set(catalog.image.map((row) => row.id));
+  assert.ok(kernelIds.includes('alias-img'), 'alias-img 的已上架操作实际兼容输入');
+  assert.equal(bucketIds.has('alias-img'), false, '保留原 fixture 缺少 alias-img 行的边界');
+  assert.deepEqual(pickerIds, kernelIds.filter((id) => bucketIds.has(id)));
+  assert.deepEqual(pickerIds, ['img-hd', 'img-ref']);
+  assert.equal(pickerIds.includes('alias-img'), false, '兼容不代表可以绕过类型目录');
 
   for (const id of pickerIds) {
     assert.ok(
@@ -299,6 +304,36 @@ test('parity：listed+compatible 与旧 whitelist 零交集时候选仍非空，
   }
   // 至少 img-ref / img-hd / alias-img 这类 listed+compatible 出现
   assert.ok(pickerIds.includes('img-ref') || pickerIds.includes('img-hd') || pickerIds.includes('alias-img'));
+});
+
+test('parity：完整现代 typed buckets 保留合法 alias-img，并拒绝错类型和未上架行', () => {
+  const catalog = createCompatTestCatalog();
+  for (const type of ['text', 'image', 'video', 'audio']) {
+    catalog[type] = catalog.models
+      .filter((model) => model.operations.some((operation) => operation.listed === true && operation.output.type === type))
+      .map(({ id, label }) => ({ id, label }));
+  }
+  const fingerprint = buildUiUpstreamFingerprint({
+    prompt: 'hello',
+    upstreams: [{ nodeId: 's1', materialType: 'image', mimeType: 'image/png', sizeBytes: 1024 }],
+  });
+  const evaluation = evaluateCatalogCompat(catalog, fingerprint, { outputType: 'image' });
+  const result = buildFilteredModelOptions({ catalog, fingerprint, outputType: 'image' });
+  assert.deepEqual(result.options.map((option) => option.id).sort(), ['alias-img', 'img-hd', 'img-ref']);
+  assert.deepEqual(result.options.map((option) => option.id).sort(), evaluation.compatible.map((verdict) => verdict.modelId).sort());
+  for (const { verdict } of result.options) {
+    assert.equal(verdict.chosenOperationId, 'image_to_image');
+    assert.equal(verdict.readyToSubmit, true);
+  }
+
+  // 污染 bucket 不得成为绕过 operation.output/listed 的第二能力真源。
+  catalog.image.push({ id: 'vid-frames', label: 'Wrong output' }, { id: 'unlisted-model', label: 'Unlisted' });
+  const promptOnly = buildUiUpstreamFingerprint({ prompt: 'hello', upstreams: [] });
+  const dirtyResult = buildFilteredModelOptions({ catalog, fingerprint: promptOnly, outputType: 'image' });
+  assert.deepEqual(dirtyResult.options.map((option) => option.id).sort(), ['alias-img', 'img-hd', 'img-prompt-only', 'img-ref', 'img-solo']);
+  // 缺少必填参考图是待补输入，不是错类型；可选不等于可提交。
+  assert.equal(dirtyResult.options.find((option) => option.id === 'alias-img').verdict.readyToSubmit, false);
+  assert.equal(dirtyResult.zeroCandidates, false);
 });
 
 test('harness mock catalog 文本模型按 label A–Z', () => {

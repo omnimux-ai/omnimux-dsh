@@ -124,6 +124,7 @@ export class AssistantStreamView {
     return text.trim() === '' && images.length === 0 ? null : {
       seq: -1,
       kind: 'assistant',
+      status: 'running',
       text,
       ...(images.length === 0 ? {} : { images }),
     }

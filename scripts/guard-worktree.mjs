@@ -797,7 +797,9 @@ function handle(rawInput) {
 
   if (toolName === 'bash') {
     const command = String(toolInput.command || '').trim()
-    const result = decideBashCommand({ command, cwd })
+    const workdir = typeof toolInput.workdir === 'string' && toolInput.workdir.trim()
+      ? resolve(cwd, toolInput.workdir) : cwd
+    const result = decideBashCommand({ command, cwd: workdir })
     return decisionJson(hookEventName, result.decision, result.reason, result)
   }
 

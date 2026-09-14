@@ -315,64 +315,6 @@ function toModelView(model: CatalogModelDto, order: number): ContractModelView |
   };
 }
 
-interface LegacyInputCapabilityLike {
-  modalities?: string[];
-  referenceImages?: { min?: number; max?: number; allowedMimeTypes?: string[]; supportedRoles?: string[] };
-  referenceVideos?: { min?: number; max?: number; allowedMimeTypes?: string[]; supportedRoles?: string[] };
-  referenceAudios?: { min?: number; max?: number; allowedMimeTypes?: string[]; supportedRoles?: string[] };
-}
-
-/**
- * Synthesize a one-operation contract view from a legacy bucket row's merged
- * inputCapability (pre-v1.1 static catalogs). Data-driven — nothing is
- * hardcoded per model; the row simply has no operation granularity.
- */
-function synthesizeLegacyView(
-  row: { id: string; label?: string; family?: string; aliases?: string[]; inputCapability?: LegacyInputCapabilityLike },
-  outputType: string,
-  order: number,
-): ContractModelView {
-  const cap = row.inputCapability ?? {};
-  const inputs: InputSlotDto[] = [];
-  const pushRef = (
-    ref: { min?: number; max?: number; allowedMimeTypes?: string[]; supportedRoles?: string[] } | undefined,
-    type: MediaInputType,
-    slotName: string,
-  ) => {
-    if (!ref) return;
-    inputs.push({
-      slot: slotName,
-      type,
-      role: ref.supportedRoles?.[0] ?? 'reference',
-      source: 'upstream_edge',
-      min: Number.isFinite(ref.min) ? (ref.min as number) : 0,
-      max: Number.isFinite(ref.max) ? (ref.max as number) : 0,
-      ...(Array.isArray(ref.allowedMimeTypes) ? { allowedMimes: [...ref.allowedMimeTypes] } : {}),
-    });
-  };
-  pushRef(cap.referenceImages, 'image', 'reference_images');
-  pushRef(cap.referenceVideos, 'video', 'reference_videos');
-  pushRef(cap.referenceAudios, 'audio', 'reference_audios');
-  return {
-    id: row.id,
-    label: typeof row.label === 'string' ? row.label : row.id,
-    ...(typeof row.family === 'string' ? { family: row.family } : {}),
-    aliases: Array.isArray(row.aliases) ? row.aliases.map(String).filter(Boolean) : [],
-    operations: [
-      {
-        id: 'legacy_default',
-        label: row.label ?? row.id,
-        output: { type: outputType },
-        inputs,
-        inputGroups: [],
-        listed: true,
-      },
-    ],
-    order,
-    synthesized: true,
-  };
-}
-
 /**
  * Normalize any catalog DTO (seam or HTTP) into the contract view the kernel
  * evaluates. `available` is false when the DTO carries no model knowledge at
@@ -393,29 +335,6 @@ export function buildContractView(catalog: CapabilityCatalog | null | undefined)
       const view = toModelView(row, index);
       if (view) models.push(view);
     });
-  } else {
-    // Legacy path: synthesize views from bucket rows that carry capability data.
-    const buckets: Array<{ kind: string; rows: unknown }> = [
-      { kind: 'text', rows: catalog.text },
-      { kind: 'image', rows: catalog.image },
-      { kind: 'video', rows: catalog.video },
-      { kind: 'audio', rows: catalog.audio },
-    ];
-    for (const bucket of buckets) {
-      if (!Array.isArray(bucket.rows)) continue;
-      for (const raw of bucket.rows) {
-        if (!raw || typeof raw !== 'object') continue;
-        const row = raw as { id?: unknown; inputCapability?: unknown };
-        if (typeof row.id !== 'string' || !row.id) continue;
-        models.push(
-          synthesizeLegacyView(
-            row as { id: string; label?: string; family?: string; aliases?: string[]; inputCapability?: LegacyInputCapabilityLike },
-            bucket.kind,
-            models.length,
-          ),
-        );
-      }
-    }
   }
 
   const byIdOrAlias = new Map<string, ContractModelView>();

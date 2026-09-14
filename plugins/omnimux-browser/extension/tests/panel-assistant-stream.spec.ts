@@ -15,6 +15,7 @@ describe('dsh 0.1.5 Assistant stream presentation', () => {
     expect(view.accept(start)).toBe('changed')
     expect(view.accept(delta(2, 0, 'Hel'))).toBe('changed')
     expect(view.row()?.text).toBe('Hel')
+    expect(view.row()?.status).toBe('running')
     view.accept(delta(3, 1, 'lo'))
     expect(view.row()?.text).toBe('Hello')
     expect(view.settle({ type: 'assistant/message', seq: 5, surfaceOp: 'append', data: { turn: 0, step: 0 } })).toBe(true)

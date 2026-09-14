@@ -8,7 +8,7 @@
  *    ImageTriggerBar / ImageParamPopover；
  *  - 音频（非 ASR）分支在 Issue #763 中彻底移除 AudioTriggerBar / AudioParamPopover
  *    （时长由文本长度决定），底栏只保留模型下拉 + wf-voice-trigger + 生成按钮；
- *  - handleModelChange 委托 buildVideoParamTransition（仅视频）；
+ *  - handleModelChange 委托 buildVideoParameterSelection（仅视频）；
  *  - videoPopoverOpen / imagePopoverOpen 状态接线存在（音频浮层状态已随 #763 移除）；
  *  - components.css 已下线 .wf-param-pill--video-summary；
  *
@@ -40,6 +40,33 @@ const componentsCssPath = join(
 );
 const source = readFileSync(configPanelPath, 'utf8');
 const css = readFileSync(componentsCssPath, 'utf8');
+
+test('load migration is revision guarded and does not replay after undo', () => {
+  assert.match(source, /migrationCatalogRef/);
+  assert.match(source, /liveState\.future\.length > 0/);
+  assert.match(source, /liveNode\.data\.params !== params/);
+});
+
+test('actual migration effect preserves redo after panel remount and rejects stale params', () => {
+  const body = source.match(/useEffect\(\(\) => \{\n    if \(!videoSelection\?\.parameterSelections[\s\S]*?\n  \}, \[videoSelection/)[0].replace(/^useEffect\(\(\) => \{/, '').replace(/\n  \}, \[videoSelection$/, '');
+  const run = new Function('videoSelection','activeCatalog','migrationCatalogRef','migrationKey','useCanvasStore','nodeId','params','parameterSelections','commitVideoSelection',body);
+  const params = {model:'a',resolution:'480p'}; const selection={params:{model:'a',resolution:'720p'},parameterSelections:{version:1,byModel:{}}};
+  let writes=0; const invoke=(state,ref={current:new Map()})=>run(selection,{},ref,'w:a',{getState:()=>state},'a',params,undefined,()=>writes++);
+  invoke({future:[{}],nodes:[{id:'a',data:{params}}]});
+  invoke({future:[{}],nodes:[{id:'a',data:{params}}]}); // new ref simulates remount
+  assert.equal(writes,0);
+  invoke({future:[],nodes:[{id:'a',data:{params:{...params,resolution:'1080p'}}}]});
+  assert.equal(writes,0);
+  invoke({future:[],nodes:[{id:'a',data:{params}}]});
+  assert.equal(writes,1);
+});
+
+test('model cascade delegates one atomic model/routing/history update without stale params write', () => {
+  const callback = source.slice(source.indexOf('onSelect={({ modelId, strategy, allowedGroups })'), source.indexOf('onSelect={({ modelId, strategy, allowedGroups })') + 700).split('/>')[0];
+  assert.doesNotMatch(callback, /onUpdateNodeData|\.\.\.params/);
+  assert.match(callback, /handleModelChange\(modelId,/);
+  assert.match(source, /parameterSelections: transition.parameterSelections/);
+});
 
 const imageSlot = slot => ({slot,type:'image',role:'reference',source:'upstream_edge',min:1,max:1});
 const videoCatalog = {models:[{id:'video-test',operations:[
@@ -130,10 +157,10 @@ test('图像 / 音频分支幽灵入口已移除（wf-param-pill--video-summary 
   assert.ok(videoBlock.includes('wf-video-trigger-bar__wrap'), '视频分支应含 TriggerBar 包裹层');
 });
 
-test('handleModelChange 仅视频模型消费 buildVideoParamTransition', () => {
+test('handleModelChange 仅视频模型消费 buildVideoParameterSelection', () => {
   assert.ok(
-    source.includes('buildVideoParamTransition('),
-    'handleModelChange 应委托 buildVideoParamTransition',
+    source.includes('buildVideoParameterSelection('),
+    'handleModelChange 应委托 buildVideoParameterSelection',
   );
   assert.ok(
     source.includes("if (materialType === 'video' && newModelItem) {"),

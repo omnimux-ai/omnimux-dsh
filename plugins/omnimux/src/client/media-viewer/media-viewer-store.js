@@ -42,11 +42,13 @@ export function createMediaViewerStore(initialState = {}) {
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),
     generatingTask: initialState.generatingTask || null,
+    generationTasks: initialState.generationTasks || [],
     isAnnotating: Boolean(initialState.isAnnotating),  // 是否处于打点评论状态
     annotationsByMediaId: initialState.annotationsByMediaId || {}, // mediaId -> AnnotationItem[]
   };
 
   const listeners = new Set();
+  let composerSessionId = null;
 
   function notify() {
     for (const listener of listeners) {
@@ -132,6 +134,21 @@ export function createMediaViewerStore(initialState = {}) {
       notify();
     },
 
+    /** @param {{ sessionId: string, requestId: string, status: string, media?: MediaItem[] }} task */
+    updateGeneration(task) {
+      if (!task.sessionId || !task.requestId) return;
+      if (task.status === 'success' && !task.media?.some((item) => item.url || item.attachment?.attachmentId || (item.type === 'video' && typeof item.path === 'string' && item.path.length))) return;
+      const index = state.generationTasks.findIndex((item) => item.sessionId === task.sessionId && item.requestId === task.requestId);
+      const previous = state.generationTasks[index];
+      if (previous && ['success', 'failure', 'cancelled', 'unresolved'].includes(previous.status)) return;
+      const next = { ...previous, ...task };
+      const tasks = [...state.generationTasks];
+      if (index < 0) tasks.push(next);
+      else tasks[index] = next;
+      state = { ...state, generationTasks: tasks };
+      notify();
+    },
+
     setGenerating(isGenerating, generatingTask = null) {
       state = {
         ...state,
@@ -179,6 +196,17 @@ export function createMediaViewerStore(initialState = {}) {
       return draftItem;
     },
 
+    bindComposerSession(sessionId) {
+      composerSessionId = sessionId && sessionId !== 'default' ? sessionId : null;
+    },
+
+    removeSubmittedComments(sessionId, ids) {
+      const remove = new Set(ids);
+      const annotationsByMediaId = Object.fromEntries(Object.entries(state.annotationsByMediaId).map(([id, comments]) => [id, comments.filter(comment => comment.sessionId !== sessionId || !remove.has(comment.id))]));
+      state = { ...state, annotationsByMediaId };
+      notify();
+    },
+
     commitAnnotation(mediaId, annotationId, text) {
       if (!mediaId || !annotationId) return;
       const trimmed = (text || '').trim();
@@ -199,7 +227,7 @@ export function createMediaViewerStore(initialState = {}) {
 
       const nextList = currentList.map((a) => {
         if (a.id === annotationId) {
-          return { ...a, text: trimmed, status: 'saved' };
+          return { ...a, id: a.status === 'saved' && a.text !== trimmed ? `ann_${crypto.randomUUID()}` : a.id, text: trimmed, status: 'saved', sessionId: a.sessionId || composerSessionId };
         }
         return a;
       });

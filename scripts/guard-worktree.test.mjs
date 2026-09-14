@@ -57,6 +57,18 @@ function runHook(payload) {
   return JSON.parse(res.stdout)
 }
 
+describe('bash workdir JSON dispatch', () => {
+  it('resolves execution workdir while retaining primary commit rejection', () => {
+    const check = (command, workdir, cwd = mainRepoRoot) => runHook({ cwd, tool_name: 'bash', tool_input: { command, workdir } }).hookSpecificOutput.permissionDecision
+    assert.equal(check('git commit -m test', worktreeRoot), 'allow')
+    assert.equal(check('git commit -m test', '.worktrees/task'), 'allow')
+    assert.equal(check('git commit -m test', mainRepoRoot, worktreeRoot), 'deny')
+    assert.equal(check('git commit -m test', undefined), 'deny')
+    assert.equal(check('git -C ../.. commit -m test', worktreeRoot), 'deny')
+    assert.equal(check('git -C .worktrees/task commit -m test', mainRepoRoot), 'allow')
+  })
+})
+
 describe('guard-worktree path classification', () => {
   it('detects worktree vs ephemeral vs tracked', () => {
     assert.equal(

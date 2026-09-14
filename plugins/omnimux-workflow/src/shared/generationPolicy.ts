@@ -93,8 +93,8 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
     lists[kind] = policy[kind].allowedModelIds.flatMap((id) => {
       const row = rows.find((candidate) => candidate.id === id);
       if (!row) return [];
-      // Legacy catalogs have no operation rows. Current catalogs must prove a listed output.
-      if (catalog.models && !catalog.models.some((model) => model.id === id
+      // Every candidate must prove a real listed output in the authoritative catalog.
+      if (!catalog.models?.some((model) => model.id === id
         && model.operations?.some((op) => op.listed === true && op.output?.type === kind))) return [];
       return [row];
     });

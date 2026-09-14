@@ -192,6 +192,9 @@ export function formatCompactContextBlock(envelope) {
 
   const secondLine = `panel: ${s.panelOpen ? 'open' : 'closed'} | focus: ${s.focus || 'split'}`
   lines.push(secondLine)
+  if (s.panelOpen && s.tabId === 'omnimux:media-viewer' && view?.kind === 'canvas') {
+    lines.push('画布操作约定：仅当本轮用户明确要求生成或编辑图片、视频时，优先调用已有生图或生视频工具完成，不以文字方案代替生成。编辑须使用用户指定的原图/参考素材；素材未就绪先说明缺失。普通提问、分析、停止请求不启动生成。等待调度不代表工具已启动，不虚构进度或完成结果。')
+  }
   lines.push('</ui_context>')
   return lines.join(String.fromCharCode(10))
 }
