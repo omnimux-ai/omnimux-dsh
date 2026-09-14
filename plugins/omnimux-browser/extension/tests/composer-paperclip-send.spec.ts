@@ -6,26 +6,28 @@ import { PaperclipIcon } from '../src/panel/components/icons.tsx'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-describe('输入框附件图标与发送按钮重塑 (#1727)', () => {
-  it('PaperclipIcon 渲染正确的推特原生曲别针矢量路径', () => {
+describe('输入框附件图标与发送按钮重塑与防覆盖修复 (#1727, #1740)', () => {
+  it('PaperclipIcon 渲染正确的推特原生高清晰度单线矢量曲别针路径', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
     const root = createRoot(container)
 
     act(() => {
-      root.render(createElement(PaperclipIcon, { size: 18 }))
+      root.render(createElement(PaperclipIcon, { size: 19 }))
     })
 
     const svg = container.querySelector('svg')
     expect(svg).not.toBeNull()
     expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24')
-    expect(svg?.getAttribute('width')).toBe('18')
-    expect(svg?.getAttribute('height')).toBe('18')
+    expect(svg?.getAttribute('width')).toBe('19')
+    expect(svg?.getAttribute('height')).toBe('19')
+    expect(svg?.getAttribute('fill')).toBe('none')
+    expect(svg?.getAttribute('stroke')).toBe('currentColor')
 
     const path = svg?.querySelector('path')
     expect(path).not.toBeNull()
     const d = path?.getAttribute('d')
-    expect(d).toContain('M14 4c-1.66')
+    expect(d).toContain('m21.44 11.05')
 
     act(() => {
       root.unmount()
@@ -47,18 +49,22 @@ describe('输入框附件图标与发送按钮重塑 (#1727)', () => {
     expect(appCode).toContain("placeholder={locale === 'en' ? 'Ask anything...' : '随便问点什么'}")
   })
 
-  it('styles.css 中发送按钮升级为 34px 纯圆白底黑箭头规范', () => {
+  it('styles.css 中高特异性复合选择器锁定发送按钮 50% 纯圆与曲别针独立清晰样式', () => {
     const stylesPath = resolve(__dirname, '../src/panel/styles.css')
     const styles = readFileSync(stylesPath, 'utf8')
 
-    // 检查发送按钮尺寸为 34px 圆形
-    expect(styles).toContain('width: 34px')
-    expect(styles).toContain('height: 34px')
-    expect(styles).toContain('border-radius: 50%')
+    // 检查发送按钮尺寸为 36px/34px 纯圆，并使用 !important 破除 8px 特异性覆盖
+    expect(styles).toContain('.composer-actions button.clean-send-btn')
+    expect(styles).toContain('border-radius: 50% !important')
 
     // 检查深色激活态为纯白圆底黑字
-    expect(styles).toContain(':root[data-theme="dark"] .clean-send-btn.active:not(:disabled)')
-    expect(styles).toContain('background: #ffffff')
-    expect(styles).toContain('color: #09090b')
+    expect(styles).toContain(':root[data-theme="dark"] .composer-actions button.clean-send-btn.active:not(:disabled)')
+    expect(styles).toContain('background: #ffffff !important')
+    expect(styles).toContain('color: #09090b !important')
+
+    // 检查曲别针 svg 独立尺寸与描边，排除全局 .composer-actions button svg 污染
+    expect(styles).toContain('.composer-actions button.clean-add-btn svg')
+    expect(styles).toContain('width: 19px !important')
+    expect(styles).toContain('stroke-width: 2 !important')
   })
 })
