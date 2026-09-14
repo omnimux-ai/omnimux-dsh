@@ -4899,6 +4899,29 @@
       "summaryEn": "Turn loose creative ideas and media references into structured, high-control multimodal video prompts."
     },
     {
+      "id": "sk-omx-wan-3-0-prompt-expert",
+      "tab": "skills",
+      "kind": "skill",
+      "title": "Wan 3.0 提示词专家",
+      "subtitle": "",
+      "summary": "先判断素材属于哪种创作模式，校验参数红线，再按对应公式产出可直接提交的生成提示词，越界输入就地给出修正方案。",
+      "category": "sk-visual",
+      "tags": [
+        "平台工具"
+      ],
+      "skill": "wan-3-0-prompt-expert",
+      "source": {
+        "type": "git",
+        "repo": "omnimux-ai/OmniMux-skills",
+        "path": "skills/wan-3-0-prompt-expert",
+        "ref": "main"
+      },
+      "titleZh": "Wan 3.0 提示词专家",
+      "titleEn": "Wan 3.0 Video Prompt Expert",
+      "summaryZh": "先判断素材属于哪种创作模式，校验参数红线，再按对应公式产出可直接提交的生成提示词，越界输入就地给出修正方案。",
+      "summaryEn": "Checks which creation mode the supplied assets imply, validates the hard parameter limits, then writes a submittable prompt in the matching formula."
+    },
+    {
       "id": "sk-omx-h3-visual-design",
       "tab": "skills",
       "kind": "skill",
