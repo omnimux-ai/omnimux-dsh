@@ -71,6 +71,12 @@ test('setConversationCollapsed writes html attr and injects CSS', () => {
   assert.ok(style)
   assert.match(style.textContent, /centerCol/)
   assert.match(CONVERSATION_COLLAPSE_CSS, /data-omnimux-conversation-collapsed/)
+  // 会话栏收起时右栏面板必须铺满容器，否则面板右侧对齐会在其左侧留下等宽黑空。
+  assert.match(
+    CONVERSATION_COLLAPSE_CSS,
+    /\[data-omnimux-conversation-collapsed\][^{]*\.dshDesktopRightbarSurface\s+\[class\*="_panel"\][^{]*\{[^}]*left:\s*0\s*!important/,
+    '收起的会话栏必须让右栏面板左端贴住容器左端'
+  )
 
   setConversationCollapsed(false, { persist: false, doc, sessionId: 's1' })
   assert.equal(doc.documentElement.hasAttribute(CONVERSATION_COLLAPSED_ATTR), false)
