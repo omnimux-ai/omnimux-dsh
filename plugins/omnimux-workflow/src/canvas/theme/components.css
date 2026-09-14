@@ -5142,7 +5142,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-loomi-col--brand {
   width: 168px;
-  height: 360px;
+  height: 480px;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -5151,7 +5151,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-loomi-col--model {
   width: 230px;
-  height: 360px;
+  height: 480px;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -5160,7 +5160,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-loomi-col--channel {
   width: 400px;
-  max-height: 520px;
+  height: 480px;
   padding: 12px;
   display: flex;
   flex-direction: column;
