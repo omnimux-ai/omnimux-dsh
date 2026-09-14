@@ -153,6 +153,14 @@
       "defaultOutputType": "text",
       "promptPolicy": "none",
       "notes": "source audio only；不得强制 prompt；#538 已挂载 speechToText 执行面，待 #530 探测翻 live"
+    },
+    {
+      "id": "webpage_read",
+      "label": "网页读取",
+      "group": "text",
+      "defaultOutputType": "text",
+      "promptPolicy": "none",
+      "notes": "URL→正文；产品 reader 工具面走独立端点 /v1/reader；输入是 URL 不是 document；不得强制 prompt"
     }
   ]
 }

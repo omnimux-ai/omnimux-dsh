@@ -13,7 +13,7 @@ import * as RegistrySchema from './registrySchema.js';
 import * as ModelSchema from './modelSchema.js';
 
 test('schemas modular architecture: exports parity with facade', () => {
-  assert.equal(FacadeSchema.EXPECTED_OPERATION_COUNT, 21);
+  assert.equal(FacadeSchema.EXPECTED_OPERATION_COUNT, 22);
   assert.equal(FacadeSchema.CANONICAL_SCHEMA_VERSION, '1.1');
   assert.equal(typeof FacadeSchema.validateModel, 'function');
   assert.equal(typeof FacadeSchema.validateDoc, 'function');

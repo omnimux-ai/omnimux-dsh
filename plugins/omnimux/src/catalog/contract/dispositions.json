@@ -268,6 +268,21 @@
       ]
     },
     {
+      "id": "wan-3.0-prime",
+      "disposition": "draft",
+      "reason": "网关 ch34 有独立销售行与主数据行；官方文档 URL 未取证，op 保持 draft 不上架"
+    },
+    {
+      "id": "wan-3.0-ref",
+      "disposition": "draft",
+      "reason": "网关 ch34 有独立销售行与主数据行；参考素材 wire 字段三方冲突未解、上限未公布，op 保持 draft 不上架"
+    },
+    {
+      "id": "wan-3.0-prime-ref",
+      "disposition": "draft",
+      "reason": "网关 ch34 有独立销售行与主数据行；参考素材 wire 字段三方冲突未解、上限未公布，op 保持 draft 不上架"
+    },
+    {
       "id": "minimax-h3",
       "disposition": "canonical",
       "reason": "APIMart 官方文档确认 MiniMax H3 的首帧、尾帧、首尾帧与全能参考模式；适配与离线合同已补齐",
@@ -399,9 +414,15 @@
       "notes": "hyphen 形 nanobanana-pro 为 alias，禁止双列"
     },
     {
+      "id": "seedream-5-0-pro",
+      "disposition": "canonical",
+      "reason": "2026-09-14 命名收敛：契约行改用网关命名规则要求的连字符形；契约完整（含 text_to_image 与多图参考），渠道官方文档 URL 未取证故 op 保持 draft 不上架"
+    },
+    {
       "id": "seedream-5.0-pro",
-      "disposition": "draft",
-      "reason": "runtime 存在；H2 补合法契约占位；证据不足不上架"
+      "disposition": "alias",
+      "target": "seedream-5-0-pro",
+      "reason": "点号形为已弃用的历史写法（网关命名检查 naming-lint 报 R08 ALIAS_RETIRED_STILL_PRESENT 与 R03 MEDIA_DOT_VERSION 两条 error，suggest 连字符形）；登记为别名以打通别名归一：此前该行是 draft 而非 alias，别名桥未建立，导致仓内产品面在用的连字符形在不存在的模型上被拒（unknown_model），点号形则只命中当时自己的 draft 行"
     },
     {
       "id": "seedream-4.5",
@@ -516,6 +537,11 @@
       "id": "kling-v3-motion-control",
       "disposition": "quarantine",
       "reason": "无官方/执行证据"
+    },
+    {
+      "id": "jina-reader-v1",
+      "disposition": "canonical",
+      "reason": "2026-09-14 登记：产品 reader 工具面已在调用（独立端点 /v1/reader），契约层此前零记录；契约行完整（webpage_read），渠道官方文档 URL 未取证故 op 保持 draft 不上架"
     }
   ]
 }

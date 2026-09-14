@@ -49,7 +49,7 @@
       "company": "字节跳动",
       "series": { "zh": "即梦 / 豆包", "en": "Seedance / Seedream" },
       "primaryColor": "#3B82F6",
-      "models": ["seedream-5.0-pro", "seedream-4.5", "seedance-2-0-fast", "seedance-2", "doubao-seedance-pro", "seedream"]
+      "models": ["seedream-5-0-pro", "seedream-4.5", "seedance-2-0-fast", "seedance-2", "doubao-seedance-pro", "seedream"]
     },
     "deepseek": {
       "id": "deepseek",
@@ -77,7 +77,7 @@
       "company": "xAI",
       "series": { "zh": "Grok", "en": "Grok" },
       "primaryColor": "#FFFFFF",
-      "models": ["grok-imagine", "grok-imagine-video", "grok-imagine-video-1-5", "grok-3", "grok-2"]
+      "models": ["grok-imagine", "grok-imagine-video-1-5", "grok-3", "grok-2"]
     },
     "vidu": {
       "id": "vidu",

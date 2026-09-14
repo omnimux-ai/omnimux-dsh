@@ -19,7 +19,7 @@ export const PROFILE_STATUSES = new Set(['live', 'stub', 'unavailable']);
 /**
  * Canonical operation count lock (registry SSOT).
  */
-export const EXPECTED_OPERATION_COUNT = 21;
+export const EXPECTED_OPERATION_COUNT = 22;
 
 /** Canonical model-capability Contract v1.1 schemaVersion literal. */
 export const CANONICAL_SCHEMA_VERSION = '1.1';

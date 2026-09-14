@@ -8,7 +8,7 @@ import { AUDIO_MODEL_SPECS, IMAGE_MODEL_SPECS, VIDEO_MODEL_SPECS, findMediaModel
 describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 13)
-    assert.equal(VIDEO_MODEL_SPECS.length, 19)
+    assert.equal(VIDEO_MODEL_SPECS.length, 22)
     assert.equal(AUDIO_MODEL_SPECS.length, 5)
   })
 
@@ -21,7 +21,7 @@ describe('hub media catalog facade (contract-derived)', () => {
   })
 
   it('Seedream 5.0 Pro includes 4:3 and 21:9', () => {
-    const seedream = IMAGE_MODEL_SPECS.find((m) => m.id === 'seedream-5.0-pro')
+    const seedream = IMAGE_MODEL_SPECS.find((m) => m.id === 'seedream-5-0-pro')
     assert.ok(seedream)
     const ratioValues = seedream.parameters.aspectRatio?.options.map((o) => o.value)
     assert.ok(ratioValues?.includes('4:3'))

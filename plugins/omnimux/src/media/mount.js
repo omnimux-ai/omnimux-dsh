@@ -59,7 +59,7 @@ export function mountMedia(ctx, opts) {
     parameters: objectParams({
       prompt: { type: 'string', description: 'Prompt text. Required only when the selected model operation declares it.' },
       dest: { type: 'string', required: true, description: destHint },
-      model: { type: 'string', description: 'Model ID (e.g. seed-audio-1.0, suno, gpt-4o-mini-tts, nanobanana-2, seedream-5.0-pro, midjourney-8.1, gpt-image-2)' },
+      model: { type: 'string', description: 'Model ID (e.g. seed-audio-1.0, suno, gpt-4o-mini-tts, nanobanana-2, seedream-5-0-pro, midjourney-8.1, gpt-image-2)' },
       operation: {
         type: 'string',
         description:

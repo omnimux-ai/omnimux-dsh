@@ -1,0 +1,30 @@
+# 网页读取类模型能力契约（reader）
+# jina-reader-v1：产品 reader 工具面已在调用（plugins/omnimux/src/reader/，独立端点 /v1/reader）。
+# 契约层登记其「URL→正文」形态，消除「产品在用、契约零记录」的状态。
+# 渠道官方文档 URL 未取证 → research 保持 draft，不上架；routing 暂缺（渠道 slug 未取证，不臆造）。
+schemaVersion: "1.1"
+managementGroup: "reader"
+
+models:
+  - id: "jina-reader-v1"
+    label: "Jina Reader 网页读取"
+    family: "jina"
+    operations:
+      - id: "webpage_read"
+        label: "网页读取"
+        output:
+          type: "text"
+        inputs:
+          - slot: "link_url"
+            type: "document"
+            role: "webpage"
+            source: "node_field"
+            min: 1
+            max: 1
+    research:
+      status: "draft"
+      notes: "产品 reader 工具面已在调用；契约层登记其 URL→正文 形态。渠道官方文档 URL 未取证，故不上架。routing 暂缺：渠道 slug 未取证，不臆造。"
+    implementation:
+      status: "none"
+    execution:
+      status: "none"
