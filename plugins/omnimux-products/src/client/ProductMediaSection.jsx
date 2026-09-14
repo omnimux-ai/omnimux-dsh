@@ -35,20 +35,31 @@ export function CoverDropzone(props) {
   )
 }
 
+/**
+ * One media row. The row currently serving as the cover carries a visible
+ * selected state — a badge and a left rule — so "which one is the cover" is
+ * readable at a glance rather than inferred from a button label.
+ */
 export function MediaItem(props) {
   const { t, file, index, actions } = props
+  const coverId = props.coverId || null
+  const isCover = Boolean(coverId) && coverId === file.id
   const onSetCover = () => actions.onSetCover(file, index)
   const onRemove = () => actions.onRemove(file, index)
 
   return (
-    <li>
+    <li className={isCover ? 'omnimux-products-filelist-row is-cover' : 'omnimux-products-filelist-row'}>
       <FileIcon size={14} />
       <span className="omnimux-products-filelist-name">
         {file.original_name || file.real_path}
       </span>
+      {isCover ? (
+        <span className="omnimux-products-cover-badge">{t('detail.coverBadge')}</span>
+      ) : null}
       <Button
-        variant="ghost"
+        variant={isCover ? 'outline' : 'ghost'}
         size="xs"
+        aria-pressed={isCover}
         onClick={onSetCover}
       >
         {t('detail.primary')}

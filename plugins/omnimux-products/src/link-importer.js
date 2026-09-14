@@ -27,6 +27,13 @@
  * and does the call ([hub contract](../../../../docs/contracts/hub.md)).
  */
 import { ANALYSIS_MODES, analyzeLandingPage, isDigitalLandingPage, normalizeHub } from './ai-analysis.js'
+import { persistSiteScreenshots } from './site-shots-store.js'
+import {
+  SCREENSHOT_BUDGET_MS,
+  SCREENSHOT_REASON,
+  SCREENSHOT_STATUS,
+  reportOf,
+} from './screenshot-contract.js'
 
 /** Canonical import field order — the draft shape this module always returns. */
 export const IMPORT_FIELD_KEYS = Object.freeze([
@@ -44,11 +51,23 @@ export const IMPORT_FIELD_KEYS = Object.freeze([
 ])
 
 /**
+ * The three keys that exist **only** for a digital draft. A physical listing is
+ * returned in exactly the shape it always had (spec §2.3 invariant 12).
+ */
+export const IMPORT_SCREENSHOT_KEYS = Object.freeze(['media', 'cover_media_id', 'screenshots'])
+
+/**
  * Keys `importProductFromUrl` adds on top of the canonical field set: the kind
  * the page turned out to be, the six-module strategy an all-model digital import
- * produced, and how the draft was read.
+ * produced, how the draft was read, and — digital only — the local first-screen
+ * screenshots with the media id that leads them.
  */
-export const IMPORT_DRAFT_EXTRA_KEYS = Object.freeze(['kind', 'brand_strategy', 'analysis'])
+export const IMPORT_DRAFT_EXTRA_KEYS = Object.freeze([
+  'kind',
+  'brand_strategy',
+  'analysis',
+  ...IMPORT_SCREENSHOT_KEYS,
+])
 
 export const DEFAULT_TIMEOUT_MS = 12000
 
@@ -1616,7 +1635,77 @@ export function mergeAnalysisDraft(fields, analysis, input) {
 }
 
 /**
+ * Start the screenshot chain without ever letting it reach the caller.
+ *
+ * A missing seam is not an error: it answers the same in-band report a browser-less
+ * host does, so existing callers and tests keep the degraded path with no stubbing.
+ * An injected seam that throws is swallowed the same way.
+ *
+ * @param {Function | null | undefined} capture
+ * @param {{ url: string, kind: string }} input
+ * @returns {Promise<{ outcomes: object[], report: object }>}
+ */
+function startScreenshotCapture(capture, input) {
+  if (input.kind !== 'digital' || typeof capture !== 'function') {
+    return Promise.resolve({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.NO_BROWSER) })
+  }
+  let started = null
+  try {
+    started = capture({ url: input.url, kind: 'digital', budgetMs: SCREENSHOT_BUDGET_MS })
+  } catch (error) {
+    return Promise.resolve({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.CAPTURE_FAILED) })
+  }
+  return Promise.resolve(started).then(
+    (result) => (result && typeof result === 'object'
+      ? { outcomes: Array.isArray(result.outcomes) ? result.outcomes : [], report: result.report ?? reportOf([]) }
+      : { outcomes: [], report: reportOf([], SCREENSHOT_REASON.CAPTURE_FAILED) }),
+    () => ({ outcomes: [], report: reportOf([], SCREENSHOT_REASON.CAPTURE_FAILED) }),
+  )
+}
+
+/**
+ * Turn an in-memory capture result into the draft's three screenshot keys.
+ *
+ * Persistence happens here and nowhere earlier: by the time this runs the draft
+ * has already passed `isUsableImport`, so a rejected import never leaves an
+ * orphan PNG on disk (spec §2.2 invariant 5).
+ *
+ * @param {{ outcomes: object[], report: object }} capture
+ * @param {{ url: string, persist?: Function, paths?: object }} input
+ * @returns {Promise<{ media: object[], cover_media_id: string | null, screenshots: object }>}
+ */
+async function assembleScreenshotDraft(capture, input) {
+  const frames = capture.outcomes.filter((row) => row?.ok === true && row?.buffer)
+  const persist = input.persist ?? persistSiteScreenshots
+  /** @type {object[]} */
+  let media = []
+  if (frames.length > 0 && typeof persist === 'function') {
+    try {
+      const written = await persist({ outcomes: frames, url: input.url, paths: input.paths })
+      media = Array.isArray(written) ? written : []
+    } catch {
+      media = []
+    }
+  }
+  // Frames were captured but nothing reached the disk: report the loss in-band
+  // rather than claiming a success the media list cannot back up.
+  const screenshots = frames.length > 0 && media.length === 0
+    ? { ...capture.report, status: SCREENSHOT_STATUS.FAILED, reason: SCREENSHOT_REASON.CAPTURE_FAILED }
+    : capture.report
+  return {
+    media,
+    cover_media_id: media.length > 0 ? media[0].id : null,
+    screenshots,
+  }
+}
+
+/**
  * Import a product draft from one landing-page link.
+ *
+ * Two slow steps run together: the model reads the page, and — for a digital
+ * offer — the browser captures the two first screens. The model call is the
+ * slower of the pair, so the capture cost is absorbed rather than added, and
+ * the whole chain still answers inside the original budget (spec §3).
  *
  * @param {{
  *   url: unknown,
@@ -1626,6 +1715,9 @@ export function mergeAnalysisDraft(fields, analysis, input) {
  *   hub?: { textComplete?: Function, pageFetch?: Function } | null,
  *   fetcher?: typeof fetch,
  *   timeoutMs?: number,
+ *   captureScreenshots?: Function,
+ *   persistScreenshots?: Function,
+ *   paths?: { mediaDir?: string, libraryFile?: string },
  * }} args
  * @returns {Promise<ImportedProduct & { kind: string, brand_strategy: object | null, analysis: object }>}
  * @throws {LinkImportError}
@@ -1643,19 +1735,36 @@ export async function importProductFromUrl(args) {
   const kind = isDigitalLandingPage({ kind: requestedKind, page: source.page, url }) ? 'digital' : 'physical'
 
   const fields = buildProductFields({ url, kind, page: source.page })
-  const analysis = await analyzeLandingPage({
-    hub,
-    kind,
-    url,
-    page: source.page,
-    markdown: source.markdown,
-    title: source.title,
-    model: args?.model,
-    language: args?.language,
-  })
+  const paths = args?.paths ?? null
+
+  // Started here — after the page read named the kind, and alongside the model
+  // call — so the browser work overlaps the seconds the model spends thinking.
+  const shots = startScreenshotCapture(args?.captureScreenshots, { url, kind })
+
+  const [analysis, capture] = await Promise.all([
+    analyzeLandingPage({
+      hub,
+      kind,
+      url,
+      page: source.page,
+      markdown: source.markdown,
+      title: source.title,
+      model: args?.model,
+      language: args?.language,
+    }),
+    shots,
+  ])
+
   const draft = mergeAnalysisDraft(fields, analysis, { url, kind })
   if (!isUsableImport(draft)) {
     throw new LinkImportError('link-import-empty', 'no product information was found on the page')
   }
-  return draft
+  if (kind !== 'digital') return draft
+
+  const screenshots = await assembleScreenshotDraft(capture, {
+    url,
+    paths,
+    persist: args?.persistScreenshots,
+  })
+  return { ...draft, ...screenshots }
 }

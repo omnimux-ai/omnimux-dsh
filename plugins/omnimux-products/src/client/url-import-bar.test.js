@@ -6,7 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { buildProductFields, parseHtmlDocument } from '../link-importer.js'
 import { importFromLink, isHttpUrl } from './api.js'
 import { en, zh } from './locales.js'
-import { bundleFormReturn, importedPatchOf } from './useProductFormState.js'
+import {
+  bundleFormReturn,
+  importedCoverIdOf,
+  importedMediaOf,
+  importedPatchOf,
+  mergeImportedMedia,
+} from './useProductFormState.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const read = (name) => readFileSync(join(here, name), 'utf8')
@@ -169,9 +175,15 @@ describe('products client · applyImportedData', () => {
     }
     const mediaState = {
       categories: ['已有标签'],
+      media: [],
+      coverId: null,
       setCategories: (next) => {
         writes.push(['categories', typeof next === 'function' ? next(mediaState.categories) : next])
       },
+      setMedia: (next) => {
+        writes.push(['media', typeof next === 'function' ? next(mediaState.media) : next])
+      },
+      setCoverId: (next) => { writes.push(['coverId', next]) },
     }
     const strategyState = {
       strategyOpen: false,
@@ -205,6 +217,10 @@ describe('products client · applyImportedData', () => {
       setCategories: (next) => {
         mediaState.categories = typeof next === 'function' ? next(mediaState.categories) : next
       },
+      setMedia: (next) => {
+        mediaState.media = typeof next === 'function' ? next(mediaState.media) : next
+      },
+      setCoverId: (next) => { mediaState.coverId = next },
     }
     const strategyState = {
       strategyOpen: false,
@@ -429,5 +445,137 @@ describe('products client · server draft contract', () => {
     assert.equal(patch.promotion, 'Checkout today and enjoy free shipping on every order.')
     assert.deepEqual(patch.categories, ['Home & Kitchen', 'Drinkware'])
     for (const key of STRING_FIELDS) assert.notEqual(patch[key], '', key)
+  })
+})
+
+describe('products client · imported screenshots', () => {
+  const SHOTS = [
+    { id: 'med_1111aaaa', real_path: '/dsh/omnimux/products/media/site-demo-com-desktop-1.png', original_name: 'site-demo-com-desktop-1.png' },
+    { id: 'med_2222bbbb', real_path: '/dsh/omnimux/products/media/site-demo-com-mobile-1.png', original_name: 'site-demo-com-mobile-1.png' },
+  ]
+
+  /** A live form whose media state really writes, seeded with what the user already dropped in. */
+  function mediaHarness(seed = { media: [], coverId: null }) {
+    const base = {
+      fields: { ...Object.fromEntries([...STRING_FIELDS, 'kind'].map((key) => [key, ''])), kind: 'digital' },
+      setters: {},
+    }
+    for (const key of [...STRING_FIELDS, 'kind']) {
+      base.setters[`set${key.charAt(0).toUpperCase()}${key.slice(1)}`] = (value) => { base.fields[key] = value }
+    }
+    const mediaState = {
+      categories: [],
+      media: seed.media,
+      coverId: seed.coverId,
+      setCategories: (next) => {
+        mediaState.categories = typeof next === 'function' ? next(mediaState.categories) : next
+      },
+      setMedia: (next) => {
+        mediaState.media = typeof next === 'function' ? next(mediaState.media) : next
+      },
+      setCoverId: (next) => { mediaState.coverId = next },
+    }
+    const strategyState = {
+      strategyOpen: false,
+      strategyTouched: false,
+      strategy: {},
+      setStrategyOpen: () => {},
+      setStrategyTouched: () => {},
+      setStrategy: () => {},
+      openStrategy: () => {},
+      patchStrategy: () => {},
+      handleSelectPhysical: () => {},
+      handleSelectDigital: () => {},
+    }
+    return {
+      mediaState,
+      bundle: bundleFormReturn(base, mediaState, strategyState, false),
+    }
+  }
+
+  const USER_FILE = { real_path: '/Users/me/Desktop/user-cover.png', original_name: 'user-cover.png' }
+
+  it('reads media and the cover id off an import payload', () => {
+    assert.deepEqual(importedMediaOf({ media: SHOTS, cover_media_id: 'med_1111aaaa' }).length, 2)
+    assert.equal(importedCoverIdOf({ cover_media_id: 'med_1111aaaa' }), 'med_1111aaaa')
+    assert.deepEqual(importedMediaOf({}), [])
+    assert.deepEqual(importedMediaOf(null), [])
+    assert.deepEqual(importedMediaOf({ media: 'nope' }), [])
+    assert.deepEqual(importedMediaOf({ media: [{ id: 'x' }, 'text'] }), [])
+    assert.equal(importedCoverIdOf({ cover_media_id: '' }), null)
+    assert.equal(importedCoverIdOf(null), null)
+  })
+
+  it('appends the imported shots after the file the user already dropped in', () => {
+    const { bundle, mediaState } = mediaHarness({ media: [USER_FILE], coverId: null })
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', media: SHOTS, cover_media_id: 'med_1111aaaa' })
+
+    assert.equal(mediaState.media.length, 3)
+    assert.deepEqual(mediaState.media.map((row) => row.real_path), [USER_FILE.real_path, ...SHOTS.map((row) => row.real_path)])
+  })
+
+  it('takes the imported cover when the form has none', () => {
+    const { bundle, mediaState } = mediaHarness()
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', media: SHOTS, cover_media_id: 'med_1111aaaa' })
+    assert.equal(mediaState.coverId, 'med_1111aaaa')
+    assert.equal(mediaState.media.some((row) => row.id === mediaState.coverId), true)
+  })
+
+  it('never overwrites a cover the user picked by hand', () => {
+    const { bundle, mediaState } = mediaHarness({ media: [USER_FILE], coverId: null })
+    mediaState.coverId = 'med_user'
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', media: SHOTS, cover_media_id: 'med_1111aaaa' })
+    assert.equal(mediaState.coverId, 'med_user')
+    assert.equal(mediaState.media.length, 3)
+  })
+
+  it('refuses a cover id that is not in the merged list', () => {
+    const { bundle, mediaState } = mediaHarness()
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', media: SHOTS, cover_media_id: 'med_9999ffff' })
+    assert.equal(mediaState.coverId, null)
+    assert.equal(mediaState.media.length, 2)
+  })
+
+  it('leaves media and cover untouched for a payload that carries neither', () => {
+    const { bundle, mediaState } = mediaHarness({ media: [USER_FILE], coverId: 'med_user' })
+    bundle.actions.applyImportedData({ name: '只改名字' })
+    assert.deepEqual(mediaState.media, [USER_FILE])
+    assert.equal(mediaState.coverId, 'med_user')
+  })
+
+  it('never duplicates a shot the form already shows', () => {
+    const { bundle, mediaState } = mediaHarness({ media: [...SHOTS], coverId: null })
+    bundle.actions.applyImportedData({ name: '某平台', kind: 'digital', media: SHOTS, cover_media_id: 'med_1111aaaa' })
+    assert.equal(mediaState.media.length, 2)
+  })
+
+  it('merges on id first and path second, and keeps the incoming order', () => {
+    const current = [{ id: 'med_1111aaaa', real_path: '/a.png', original_name: 'a.png' }]
+    const merged = mergeImportedMedia(current, [
+      { id: 'med_1111aaaa', real_path: '/other.png', original_name: 'other.png' },
+      { real_path: '/a.png', original_name: 'a.png' },
+      { id: 'med_3333cccc', real_path: '/c.png', original_name: 'c.png' },
+    ])
+    assert.deepEqual(merged.map((row) => row.real_path), ['/a.png', '/c.png'])
+    assert.equal(mergeImportedMedia(current, []), current, 'an empty import must not copy the list')
+    assert.equal(mergeImportedMedia(null, []).length, 0)
+    assert.equal(mergeImportedMedia(undefined, null).length, 0)
+  })
+
+  it('renders a visible selected state on the row that is the cover', () => {
+    const source = read('ProductMediaSection.jsx')
+    assert.match(source, /is-cover/)
+    assert.match(source, /coverId/)
+    assert.match(source, /detail\.coverBadge/)
+    const styles = read('styles.js')
+    assert.match(styles, /\.omnimux-products-filelist-row\.is-cover/)
+    assert.match(styles, /\.omnimux-products-cover-badge/)
+  })
+
+  it('ships a badge label in both locales', () => {
+    assert.equal(typeof zh['detail.coverBadge'], 'string')
+    assert.equal(typeof en['detail.coverBadge'], 'string')
+    assert.equal(zh['detail.coverBadge'].length > 0, true)
+    assert.equal(en['detail.coverBadge'].length > 0, true)
   })
 })

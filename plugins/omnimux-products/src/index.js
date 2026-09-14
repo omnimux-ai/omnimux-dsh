@@ -1,6 +1,8 @@
 import { createProductsDispatcher, registerProductsRoutes } from './http-routes.js'
+import { importProductFromUrl } from './link-importer.js'
 import { createLibraryStore, listViewOf, ProductsError } from './library.js'
 import { resolveProductsPaths } from './paths.js'
+import { captureSiteScreenshots } from './site-shots.js'
 
 export const name = 'omnimux-products'
 export const inject = ['tools', 'systemPrompt']
@@ -96,7 +98,20 @@ export function apply(ctx) {
   const library = createLibraryStore({ paths })
   // The host context rides along so the link importer can reach the hub seams
   // (`textComplete`, `omnimux_page_fetch`) lazily, at request time.
-  const dispatcher = createProductsDispatcher({ library, ctx })
+  //
+  // The screenshot chain is wired here, at the composition root, and only here:
+  // the importer keeps its seam optional, so no browser code runs until a host
+  // actually mounts this plugin, and every importer unit test stays on the
+  // degraded path without a single stub.
+  const dispatcher = createProductsDispatcher({
+    library,
+    ctx,
+    importFromUrl: (args) => importProductFromUrl({
+      ...args,
+      paths,
+      captureScreenshots: captureSiteScreenshots,
+    }),
+  })
 
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')

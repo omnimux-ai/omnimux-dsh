@@ -1,5 +1,5 @@
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 /**
  * Resolve the official DSH home, matching the hub / assets convention.
@@ -21,5 +21,22 @@ export function resolveProductsPaths(opts = {}) {
   return {
     dir,
     libraryFile: join(dir, 'library.json'),
+    mediaDir: join(dir, 'media'),
   }
+}
+
+/**
+ * The screenshot media directory of an already-resolved path set.
+ *
+ * `mediaDir` is optional by contract: stores built from `{ libraryFile }` alone
+ * still resolve, falling back to the `media/` sibling of the library file.
+ * Callers must never build this path themselves.
+ *
+ * @param {{ mediaDir?: string, libraryFile?: string }} [paths]
+ * @returns {string}
+ */
+export function mediaDirOf(paths) {
+  if (paths && typeof paths.mediaDir === 'string' && paths.mediaDir) return paths.mediaDir
+  const libraryFile = String(paths?.libraryFile ?? '')
+  return libraryFile ? join(dirname(libraryFile), 'media') : ''
 }
