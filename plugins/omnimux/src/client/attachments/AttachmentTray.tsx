@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AttachmentCard } from './AttachmentCard.tsx';
+import { Button } from 'dsh-ui-kit';
 import { getGlobalAttachmentStore } from './store.ts';
 import type { ConversationAttachment } from './types.ts';
 import { PromptSlotChips } from './PromptSlotChips.tsx';
@@ -7,6 +8,7 @@ import { usePromptSlotEnhancer } from './usePromptSlotEnhancer.ts';
 import { ensureStylesInjected } from './trayStyles.ts';
 import { insertNativeVideoChip } from './nativeVideoChip.ts';
 import { useDragDrop } from './useDragDrop.ts';
+import { useCommentAttachment, removeCommentAttachment } from './useCommentAttachment.ts';
 import { usePasteVideoInterceptor } from './usePasteVideoInterceptor.ts';
 import { VideoLinkPopover } from './VideoLinkPopover.tsx';
 import { DropOverlay } from './DropOverlay.tsx';
@@ -33,6 +35,7 @@ export interface AttachmentTrayProps {
   uploads?: Readonly<Record<string, DraftFileUpload>>;
   onRetryFile?: (id: string) => void;
   dropLimits?: { readonly count: number; readonly size: string };
+  getSessions?: () => any;
   sessionId?: string;
   session?: { sessionId?: string; id?: string } | null;
   t?: (key: string, vars?: any) => string;
@@ -164,6 +167,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
     store.getActiveSessionId() ||
     'default';
 
+  const { error: commentError, retry: retryComments } = useCommentAttachment(props, currentSessionId);
   const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof props.onAddFiles === 'function';
   const nativeAttachments: readonly NativeComposerAttachment[] = Array.isArray(props.attachments)
     ? (props.attachments as readonly NativeComposerAttachment[])
@@ -245,8 +249,9 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const handleRemoveNative = useCallback((id: string) => {
     if (typeof props.onRemoveAttachment === 'function') {
       props.onRemoveAttachment(id);
+      removeCommentAttachment(currentSessionId, id);
     }
-  }, [props.onRemoveAttachment]);
+  }, [props.onRemoveAttachment, currentSessionId]);
 
   const closePreview = useCallback(() => {
     setPreview(null);
@@ -306,6 +311,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   return (
     <>
       <DropOverlay active={dragActive} title={dropTitle} description={dropDesc} disabled={!canAcceptDrop} />
+      {commentError && <div role="alert">{commentError}<Button onClick={retryComments}>重试评论附件</Button></div>}
       {SHOW_MANUAL_LINK_BUTTON && (
         <VideoLinkPopover
           isOpen={isPopoverOpen}
