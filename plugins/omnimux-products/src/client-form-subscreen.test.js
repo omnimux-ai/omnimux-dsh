@@ -206,6 +206,11 @@ describe('OmniMux Products secondary form sub-screen contract', () => {
     assert.doesNotMatch(menuJsx, /[\u00d7\u2715\u25be\u25bc]/)
   })
 
+  it('separates page header from the form body with a Divider', () => {
+    assert.match(pageJsx, /import \{[^}]*Divider[^}]*\} from 'dsh-ui-kit'/)
+    assert.match(pageJsx, /<PageHeader[\s\S]*?\/>\s*<Divider \/>\s*<div className="omnimux-products-form-scroll">/)
+  })
+
   it('uses vector icons instead of character glyphs for every remove control', () => {
     assert.match(mediaJsx, /<CloseIcon size=\{12\} \/>/)
     assert.match(mediaJsx, /<CloseIcon size=\{10\} \/>/)

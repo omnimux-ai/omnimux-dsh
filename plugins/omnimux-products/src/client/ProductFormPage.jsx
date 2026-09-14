@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, IconButton, PageHeader } from 'dsh-ui-kit'
+import { Button, Divider, IconButton, PageHeader } from 'dsh-ui-kit'
 import { DigitalProductForm } from './DigitalProductForm.jsx'
 import { PhysicalProductForm } from './PhysicalProductForm.jsx'
 import { mediaPreviewUrl } from './api.js'
@@ -220,6 +220,8 @@ export function ProductFormPage(props) {
           />
         ) : undefined}
       />
+
+      <Divider />
 
       <div className="omnimux-products-form-scroll">
         {formKind === 'digital'

@@ -9,7 +9,7 @@
  * 用例编号对应 `specs/product-secondary-page.spec.md` §2 的 AC 条目。
  */
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
@@ -212,5 +212,13 @@ describe('e2e · secondary page · 截图合并口径与导入一致', () => {
 
     const merged = mergeImportedMedia(first, importedMediaOf(imported))
     assert.equal(merged.length, 2, 're-importing the same shots must not duplicate rows')
+  })
+})
+
+describe('e2e · secondary page · AC-101 页头与表单间分割线', () => {
+  it('ProductFormPage mounts Divider between PageHeader and form-scroll', () => {
+    const pageSource = readFileSync(new URL('../../src/client/ProductFormPage.jsx', import.meta.url), 'utf8')
+    assert.match(pageSource, /import \{[^}]*Divider[^}]*\} from 'dsh-ui-kit'/)
+    assert.match(pageSource, /<PageHeader[\s\S]*?\/>\s*<Divider \/>\s*<div className="omnimux-products-form-scroll">/)
   })
 })
