@@ -40,13 +40,13 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   }
 });
 
-test('H2: 处置表 75 行 + implementation-ready 集合与处置一致', () => {
+test('H2: 处置表 76 行 + implementation-ready 集合与处置一致', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 75);
+  assert.equal(doc.dispositions.length, 76);
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
   // #1751：12 款撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
@@ -69,7 +69,7 @@ test('H2: 处置表 75 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 55);
+  assert.equal(index.listedOperations.length, 56);
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
@@ -92,7 +92,7 @@ test('H2: 处置表 75 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 75);
+  assert.equal(report.dispositions.total, 76);
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CANVAS_GENERATION_POLICY, projectCanvasCatalog } from './generationPolicy.ts';
 import { buildUpstreamFingerprint, evaluateCatalogCompat, planAutoAdaptation } from './validation/compatKernel.ts';
+import { buildFilteredModelOptions, isZeroCandidateEmptyState } from './validation/operationUi.ts';
 import { buildCanvasUpstreamFingerprint, planCanvasInputMutation } from './graph/canvasInputMutationGateway.ts';
 import { reconcileCanvasForCatalog } from './graph/catalogReconcile.ts';
 
@@ -151,4 +152,33 @@ test('only upstream text contributes prompt; media captions cannot make an empty
   assert.equal(buildCanvasUpstreamFingerprint('target', [target, image, text], [edge], ['text']).prompt, 'upstream prompt');
   const result = planCanvasInputMutation({ nodes: [target, image], edges: [] }, { addEdges: [edge] }, { catalog: projectCanvasCatalog(catalog()) });
   assert.equal(result.nodes.find((n) => n.id === 'target').data.compat.readyToSubmit, false);
+});
+
+test('capability seam admits only LISTED speech models, and only to the tool that consumes the seam', () => {
+  const asr = (id, listed, seam = 'speechToText') => ({ id, label: id, family: 'bytedance', operations: [
+    { id: 'speech_to_text', label: '语音转文字', listed, output: { type: 'text' }, inputs: [
+      { slot: 'audio_input', type: 'audio', role: 'source', source: 'upstream_edge', min: 1, max: 1 },
+    ], implementation: { status: 'ready', profileId: 'speechToText', seam }, execution: { status: 'live', profileId: 'speechToText', seam } },
+  ] });
+  const models = [asr('asr-listed', true), asr('asr-unlisted', false), asr('asr-other-seam', true, 'videoGenerate')];
+  const raw = { source: 'omnimux', fingerprint: 'fixture', models, text: [], image: [], video: [], audio: [] };
+  const view = projectCanvasCatalog(raw);
+  // Only the listed speech model joins models[]; an unlisted one or another seam never does.
+  assert.deepEqual(view.models.map((m) => m.id), ['asr-listed']);
+  assert.deepEqual(view.text, [], 'capability models must not enter a generative bucket');
+
+  const fingerprint = buildUpstreamFingerprint({ prompt: '', assets: [{ sourceNodeId: 'audio', type: 'audio', mimeType: 'audio/mpeg', sizeBytes: 1024 }] });
+  const transcription = buildFilteredModelOptions({ catalog: view, fingerprint, outputType: 'text', tool: 'audio-transcription' });
+  assert.deepEqual(transcription.options.map((o) => o.id), ['asr-listed']);
+  assert.equal(isZeroCandidateEmptyState(transcription), false);
+  // A caller with no tool, and a tool with a different seam, both see nothing.
+  assert.deepEqual(buildFilteredModelOptions({ catalog: view, fingerprint, outputType: 'text' }).options, []);
+  assert.deepEqual(buildFilteredModelOptions({ catalog: view, fingerprint, outputType: 'video', tool: 'video-generation' }).options, []);
+  // Unlisting the contract op removes it again — there is no id list to maintain here.
+  models[0].operations[0].listed = false;
+  const afterUnlist = projectCanvasCatalog(raw);
+  assert.equal(afterUnlist.models.some((m) => m.id === 'asr-listed'), false);
+  assert.equal(isZeroCandidateEmptyState(
+    buildFilteredModelOptions({ catalog: afterUnlist, fingerprint, outputType: 'text', tool: 'audio-transcription' }),
+  ), true);
 });

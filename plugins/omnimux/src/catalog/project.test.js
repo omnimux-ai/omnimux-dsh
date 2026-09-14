@@ -107,7 +107,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 38);
+  assert.equal(dto.models.length, 39);
   // #1751: the 12 withdrawn (disposition=unavailable) rows have no YAML block, so they
   // vanish from the authoritative list and from every derived bucket.
   for (const gone of [
@@ -165,6 +165,9 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'gpt-5.6-sol',
     'grok-4.6',
     'kimi-k3',
+    // #1789: the two ASR contracts output text, so both sit in the text bucket by output.type;
+    // they are independent rows — seedasr-auc is not folded into doubao-asr-bigmodel.
+    'seedasr-auc',
     'doubao-asr-bigmodel',
   ]);
   assert.equal(dto.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
@@ -229,7 +232,8 @@ test('projectDirectoryRows: media groups project every contracted model (listed 
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 9);
   assert.equal(projectDirectoryRows(index, 'video').length, 11);
-  assert.equal(projectDirectoryRows(index, 'audio').length, 5);
+  // #1789: seedasr-auc joins the audio management group as its own contracted model.
+  assert.equal(projectDirectoryRows(index, 'audio').length, 6);
   // whisper-1 stays in the audio management directory but its output is text
   const audio = projectDirectoryRows(index, 'audio');
   assert.ok(audio.some((r) => r.id === 'whisper-1'));

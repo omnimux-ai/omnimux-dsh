@@ -228,8 +228,11 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       catalog: activeCatalog,
       fingerprint: consumedFingerprint,
       outputType: outputTypeForCompat,
+      // Capability tools (audio transcription) get their seam's contract models; every other
+      // tool keeps the curated generative whitelist.
+      tool: selectedTool,
     }),
-    [activeCatalog, consumedFingerprint, outputTypeForCompat],
+    [activeCatalog, consumedFingerprint, outputTypeForCompat, selectedTool],
   );
 
   const modelOptions = useMemo(() => {

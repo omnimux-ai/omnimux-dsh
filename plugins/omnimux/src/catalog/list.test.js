@@ -42,11 +42,16 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 38)
+    assert.equal(catalog.models.length, 39)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'nano-banana-2')?.aliases?.includes('nanobanana-2'), true)
+    // #1789: seedasr-auc is its own canonical row with no alias relation to doubao-asr-bigmodel.
+    assert.equal(catalog.models.find((m) => m.id === 'seedasr-auc')?.disposition, 'canonical')
+    // Strong form: an omitted field and an undeclared alias list must both read as [].
+    assert.deepEqual(catalog.models.find((m) => m.id === 'seedasr-auc')?.aliases ?? [], [])
+    assert.deepEqual(catalog.models.find((m) => m.id === 'doubao-asr-bigmodel')?.aliases ?? [], [])
     // #1751: the 12 withdrawn (disposition=unavailable) models have no YAML row and
     // therefore never reach the authoritative models[] at all.
     for (const gone of [
@@ -269,7 +274,8 @@ describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 9)
     assert.equal(VIDEO_MODEL_SPECS.length, 11)
-    assert.equal(AUDIO_MODEL_SPECS.length, 5)
+    // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
+    assert.equal(AUDIO_MODEL_SPECS.length, 6)
   })
 })
 

@@ -149,32 +149,22 @@ test(`STT ${model} forwards public URL fields without downloading audio`, async 
   assert.deepEqual(result, { mode: 'live', model, text: SRT })
 })
 
-test('seedasr-auc left the contract while the STT runtime keeps it URL-first', async () => {
-  const rejection = guardSubmit(
+test('seedasr-auc is an independent canonical model the STT runtime serves URL-first', async () => {
+  // #1789: the id is its own contract model (not an alias of doubao-asr-bigmodel), so the
+  // guard admits it by its own name and the runtime keeps it on the URL-first wire path.
+  const admission = guardSubmit(
     { model: 'seedasr-auc', operation: 'speech_to_text', audio: dataAudio, response_format: 'json', seam: 'speechToText', capability: 'stt' },
     { seam: 'speechToText', capability: 'stt', outputType: 'text' },
   )
-  assert.equal(rejection.ok, false)
-  assert.equal(rejection.code, GUARD_CODES.UNKNOWN_MODEL)
-  await assert.rejects(
-    () => executeOmnimuxSpeechToText({ ...request, model: 'seedasr-auc' }),
-    (error) => {
-      assert.equal(error.code, 'omnimux-invalid-request')
-      assert.equal(error.details?.guardCode, GUARD_CODES.UNKNOWN_MODEL)
-      return true
-    },
-  )
+  assert.equal(admission.ok, true, JSON.stringify(admission))
+  assert.equal(admission.modelId, 'seedasr-auc')
+  assert.notEqual(admission.modelId, 'doubao-asr-bigmodel')
 
-  // URL_FIRST_MODELS is a runtime capability list, not a contract model row:
-  // the wire primitive still treats the id as URL-first and never downloads.
   const captured = {}
   const audio = 'https://cdn.example.com/voice/note.m4a'
   let calls = 0
-  const result = await transcribeSpeechToTextRequest({
-    route: { baseUrl: 'https://api.omnimux.ai/v1', modelId: 'seedasr-auc' },
-    apiKey: 'sk-stt-fixture',
-    audio,
-    response_format: 'srt',
+  const result = await executeOmnimuxSpeechToText({
+    ...request, model: 'seedasr-auc', audio, response_format: 'srt',
     fetcher: async (url, init) => {
       calls++
       assert.equal(init.method, 'POST')
@@ -184,6 +174,7 @@ test('seedasr-auc left the contract while the STT runtime keeps it URL-first', a
   assert.equal(calls, 1)
   assert.equal(captured.init.body.get('url'), audio)
   assert.equal(captured.init.body.get('audio_url'), audio)
+  // URL-first means the canonical id travels on the wire unchanged, with no local download.
   assert.equal(captured.init.body.get('model'), 'seedasr-auc')
   assert.equal(captured.init.body.has('file'), false)
   assert.deepEqual(result, { mode: 'live', model: 'seedasr-auc', text: SRT })

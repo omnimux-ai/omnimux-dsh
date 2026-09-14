@@ -125,6 +125,15 @@
       "requiredInAuto": false,
       "canvasExcluded": true,
       "note": "No listed audio operation; registration is not a serving claim. canvasExcluded: draft+stub 无 listed 操作，不得出现在画布白名单里。"
+    },
+    {
+      "productId": "seedasr-auc",
+      "kind": "audio",
+      "priority": "P1",
+      "gatewayIds": ["seedasr-auc"],
+      "requiredInAuto": false,
+      "canvasExcluded": true,
+      "note": "2026-09-14 #1789：独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），以独立 canonical 登记；speech_to_text 产出 text，不属于任何画布产出桶，故 canvasExcluded。登记只声明网关注册名，不改变默认语音识别型号（仍为 doubao-asr-bigmodel，见 catalog-defaults.json）。"
     }
   ]
 }

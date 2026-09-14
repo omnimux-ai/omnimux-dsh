@@ -37,27 +37,42 @@ function runtimeIdsOf(index) {
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
-test('dispositions.json: exactly 75 rows, unique ids, all kinds valid, reasons present', () => {
+test('dispositions.json: exactly 76 rows, unique ids, all kinds valid, reasons present', () => {
   resetDispositionsCache();
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 75, `expected 75 disposition rows, got ${rows.length}`);
+  assert.equal(rows.length, 76, `expected 76 disposition rows, got ${rows.length}`);
   const ids = new Set(rows.map((r) => r.id));
-  assert.equal(ids.size, 75);
+  assert.equal(ids.size, 76);
   for (const row of rows) {
     assert.ok(DISPOSITION_KINDS.includes(row.disposition), row.id);
     assert.ok(typeof row.reason === 'string' && row.reason.trim(), row.id);
   }
 });
 
-test('75 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
+test('76 disposition rows mirror the runtime universe exactly (no missing, no ghost)', () => {
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 63);
+  assert.equal(runtimeIds.length, 64);
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
+});
+
+test('seedasr-auc is an independent canonical row that neither alias nor id unifies with doubao-asr-bigmodel', () => {
+  const index = freshIndex();
+  const doc = loadDispositions();
+  // #1789: canonical in its own right — #1751 removed the wrong alias, #1789 registers the model.
+  assert.equal(resolveDisposition(doc, 'seedasr-auc')?.disposition, 'canonical');
+  assert.equal(resolveDisposition(doc, 'seedasr-auc')?.target, undefined);
+  assert.equal(resolveDisposition(doc, 'doubao-asr-bigmodel')?.disposition, 'canonical');
+  assert.equal(resolveDisposition(doc, 'doubao-asr-bigmodel')?.target, undefined);
+  // Neither direction of unification may exist: no alias row, no aliases[] entry either way.
+  assert.deepEqual(index.get('seedasr-auc')?.aliases ?? [], []);
+  assert.deepEqual(index.get('doubao-asr-bigmodel')?.aliases ?? [], []);
+  assert.equal(index.get('seedasr-auc')?.listed, true);
+  assert.deepEqual(index.get('seedasr-auc')?.listedOperations, ['seedasr-auc#speech_to_text']);
 });
 
 test('locked dispositions: draft-probeable / tombstones / un-quarantined / alias / Batch A canonical', () => {

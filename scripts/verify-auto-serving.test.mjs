@@ -25,7 +25,7 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
     assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
     assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
   }
-  assert.equal(report.registeredCount, 16)
+  assert.equal(report.registeredCount, 17)
   assert.equal(report.requiredCount, 13)
   assert.equal(report.onlineVerified, false)
 })

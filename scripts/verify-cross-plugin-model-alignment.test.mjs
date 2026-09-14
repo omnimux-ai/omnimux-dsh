@@ -21,6 +21,35 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.alignment.whitelistModelsChecked, 14);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
+  // #1789: the capability seam behind audio transcription admits the two ASR contracts.
+  assert.equal(report.alignment.capabilityModelsChecked, 2);
+});
+
+test('fails when a capability-seam model is not canonical in hub dispositions', () => {
+  // The seam admits every listed speech model; an alias row on that seam would publish a
+  // duplicate card, and a tombstone would resurrect a withdrawn model.
+  const operations = [{ id: 'speech_to_text', listed: true, implementation: { seam: 'speechToText' } }];
+  const index = {
+    get: (id) => (id === 'seedasr-auc' ? { id, operations } : undefined),
+    all: () => [{ id: 'seedasr-auc', operations }],
+  };
+  const report = verifyCrossPluginModelAlignment({
+    index,
+    dispositions: { dispositions: [{ id: 'seedasr-auc', disposition: 'alias', target: 'doubao-asr-bigmodel' }] },
+    changedFiles: [],
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((issue) => issue.code === 'cross_plugin_capability_not_canonical'), JSON.stringify(report.issues));
+});
+
+test('fails when a capability tool declares a seam no admission rule consumes', () => {
+  const report = verifyCrossPluginModelAlignment({
+    capabilityTools: { 'audio-transcription': 'speechToText', 'ghost-tool': 'ghostSeam' },
+    capabilitySeams: ['speechToText'],
+    changedFiles: [],
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((issue) => issue.code === 'cross_plugin_capability_tool_unknown_seam'), JSON.stringify(report.issues));
 });
 
 test('fails when a canvas default model is unlisted in hub specs', () => {

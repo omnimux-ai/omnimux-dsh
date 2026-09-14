@@ -9,6 +9,11 @@ export { loadAudioBytes, mediaFromAudioMagic, durationFromAudioBytes } from './s
 
 /** Route capability key for speech-to-text (audio bytes in, text out). */
 export const STT_CAPABILITY = 'stt'
+// Models the wire serves straight from a public audio URL without first downloading the bytes.
+// `seedasr-auc` is its own canonical contract model since #1789 (upstream: independent on-sale
+// model on the official Volcengine direct channel, X-Api-Resource-Id `volc.seedasr.auc`); it is
+// NOT an alias of doubao-asr-bigmodel, so both ids stay listed independently and neither
+// normalizes onto the other.
 const URL_FIRST_MODELS = new Set(['doubao-asr-bigmodel', 'seedasr-auc'])
 const FILE_UPLOAD_MODEL = 'whisper-1'
 const URL_REQUIRED_ERROR = /audio url is required|URL-first mode/i
