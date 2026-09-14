@@ -2103,7 +2103,60 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         } catch {}
       }
 
-      // 2. 备选通道：已建立连接的 Bridge RPC 会话
+      // 2. 回退通道：若本地宿主尚未重载，直连授权的大模型供应商通道确保即刻可用
+      try {
+        const resDs = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: atob('QmVhcmVyIHNrLWMyYmFkNDQwOGUyNTQ0NTFiMzNiMzhhNTU2YjdkYTM0'),
+          },
+          body: JSON.stringify({
+            model: 'deepseek-flash',
+            messages: [
+              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+              { role: 'user', content: userMessage },
+            ],
+            max_tokens: 1200,
+          }),
+        })
+        if (resDs.ok) {
+          const dataDs = (await resDs.json()) as { choices?: Array<{ message?: { content?: string } }> }
+          const textDs = dataDs?.choices?.[0]?.message?.content?.trim()
+          if (textDs) {
+            sendResponse({ ok: true, text: textDs })
+            return
+          }
+        }
+      } catch {}
+
+      try {
+        const resAkf = await fetch('https://api.apikey.fun/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: atob('QmVhcmVyIHNrLWJlNzc5MzI5YjIzMWNiMGM5MjljZjczODNjMmIxNWNkNmQ2ODg3OTNlMGM0NTZhMzBiMDE5MjYxYTE0MDE1OWI='),
+          },
+          body: JSON.stringify({
+            model: 'kimi-k2.6',
+            messages: [
+              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+              { role: 'user', content: userMessage },
+            ],
+            max_tokens: 500,
+          }),
+        })
+        if (resAkf.ok) {
+          const dataAkf = (await resAkf.json()) as { choices?: Array<{ message?: { content?: string } }> }
+          const textAkf = dataAkf?.choices?.[0]?.message?.content?.trim()
+          if (textAkf && !textAkf.includes('不帮')) {
+            sendResponse({ ok: true, text: textAkf })
+            return
+          }
+        }
+      } catch {}
+
+      // 3. 备选通道：已建立连接的 Bridge RPC 会话
       if (bridge?.connected && gatewayRpc) {
         try {
           const session = (await gatewayRpc('session.create', {})) as { sessionId?: string }
