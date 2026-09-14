@@ -4660,7 +4660,8 @@ textarea:focus-visible {
   background: rgba(0, 0, 0, 0.06) !important;
 }
 
-.session-trigger-binoculars {
+.session-trigger-binoculars,
+.session-trigger-chat-icon {
   color: var(--ink-strong) !important;
   flex-shrink: 0 !important;
 }
@@ -4757,11 +4758,22 @@ textarea:focus-visible {
 
 .session-search-input {
   width: 100%;
-  border: none;
-  background: transparent;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
   color: var(--ink-strong);
   font-size: calc(12px * var(--ui-scale));
-  outline: none;
+  padding: 0 !important;
+  margin: 0 !important;
+  -webkit-appearance: none;
+}
+
+.session-search-input:focus,
+.session-search-input:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .session-picker.youmind-style .session-list {
