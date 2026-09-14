@@ -6,7 +6,7 @@ import {
   formatPriceLabel,
   getModelChannelGroups,
   parseModelAndGroup,
-  resolveChannelGroupFixedParams,
+  resolveLineConstraints,
   resolveShortModelName,
   MODEL_CHANNEL_GROUPS,
 } from './channelGroups.ts';
@@ -158,22 +158,32 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'GPT-5.5');
   });
 
-  // #1804：按次专线上游只产一个固定时长，面板必须收敛到该值，而不是提供一个
-  // 必然被回绝的秒数。
-  it('pins the fixed duration of the per-task lines the node routes to', () => {
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['cheap'] }), { duration: 30 });
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { group: 'pro' }), { duration: 30 });
-    // 自由线不锁；锁定线与自由线同池时仍以锁定值为准（自由线同样接受 30 秒）
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), { duration: 30 });
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['standard'] }), {});
-    // 自动路由与未知线路都不臆造约束
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', undefined), {});
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', {}), {});
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['nope'] }), {});
+  // #1818：线路约束是完整规格——可用生成方式、参数选项集与输入能力，不只是固定时长。
+  it('resolves the full spec of the lines the node routes to', () => {
+    const cheap = resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap'] });
+    assert.deepEqual(cheap.operations, ['video_multi_ref']);
+    assert.deepEqual(cheap.parameters.duration, { fixed: 30 });
+    assert.deepEqual(cheap.parameters.resolution, { only: ['720p'] });
+    assert.deepEqual(cheap.parameters.aspectRatio, { only: ['16:9', '9:16'] });
+    assert.deepEqual(cheap.inputs, { image: { max: 9 }, video: { max: 0 }, audio: { max: 0 } });
+
+    // 进阶版目前只固定了时长；标准版与自动路由都不施加约束
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'pro' }), { parameters: { duration: { fixed: 30 } } });
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['standard'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', undefined), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', {}), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { allowedGroups: ['nope'] }), {});
     // 未声明约束的模型行为不变
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-0', { allowedGroups: ['pro'] }), {});
+    assert.deepEqual(resolveLineConstraints('seedance-2-0', { allowedGroups: ['pro'] }), {});
     // 网关分组标识同样可寻址，带渠道后缀的模型 id 先归一
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { group: 'seedance-cheap' }), { duration: 30 });
-    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5@cheap', { allowedGroups: ['cheap'] }), { duration: 30 });
+    assert.deepEqual(resolveLineConstraints('seedance-2-5', { group: 'seedance-cheap' }).parameters.duration, { fixed: 30 });
+    assert.deepEqual(resolveLineConstraints('seedance-2-5@cheap', { allowedGroups: ['cheap'] }).inputs.video, { max: 0 });
+  });
+
+  it('keeps what several selected lines agree on, with the stricter ceiling', () => {
+    const mixed = resolveLineConstraints('seedance-2-5', { allowedGroups: ['cheap', 'standard'] });
+    assert.deepEqual(mixed.parameters.duration, { fixed: 30 });
+    assert.deepEqual(mixed.inputs, { image: { max: 9 }, video: { max: 0 }, audio: { max: 0 } });
+    assert.deepEqual(mixed.operations, ['video_multi_ref']);
   });
 });

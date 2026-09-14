@@ -13,6 +13,8 @@
  * from `pricing`, so the same fact is never rendered twice.
  */
 
+import { setLineConstraintResolver, type LineConstraints } from '../../../../../shared/validation/lineConstraints.ts';
+
 export interface ChannelGroupItem {
   id: string;
   label: string;
@@ -32,11 +34,11 @@ export interface ChannelGroupItem {
   /** Gateway group appended as `model@wireGroup`; falls back to `id`. */
   wireGroup?: string;
   /**
-   * Values the upstream line behind this group pins. A per-task line that only
-   * renders one length declares `{ duration: { fixed: 30 } }`, so the panel
-   * converges on it instead of offering seconds the line would reject.
+   * What this line actually accepts. The contract publishes the widest union across
+   * every line, so a narrow line corrects it here: one fixed length, a single
+   * resolution and aspect, and the input types it refuses (`max: 0` drops the slot).
    */
-  parameterConstraints?: Record<string, { fixed?: unknown }>;
+  constraints?: LineConstraints;
   enabled: boolean;
 }
 
@@ -171,9 +173,11 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
         "stability24h": 100,
         "avgWaitTimeSec": 45
       },
-      "parameterConstraints": {
-        "duration": {
-          "fixed": 30
+      "constraints": {
+        "parameters": {
+          "duration": {
+            "fixed": 30
+          }
         }
       },
       "wireGroup": "seedance-2-5-task-pro",
@@ -208,9 +212,36 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
         "stability24h": 90,
         "avgWaitTimeSec": 120
       },
-      "parameterConstraints": {
-        "duration": {
-          "fixed": 30
+      "constraints": {
+        "operations": [
+          "video_multi_ref"
+        ],
+        "parameters": {
+          "duration": {
+            "fixed": 30
+          },
+          "resolution": {
+            "only": [
+              "720p"
+            ]
+          },
+          "aspectRatio": {
+            "only": [
+              "16:9",
+              "9:16"
+            ]
+          }
+        },
+        "inputs": {
+          "image": {
+            "max": 9
+          },
+          "video": {
+            "max": 0
+          },
+          "audio": {
+            "max": 0
+          }
         }
       },
       "wireGroup": "seedance-cheap",
@@ -622,34 +653,68 @@ function selectedGroupIds(routing: unknown): Set<string> {
   return ids;
 }
 
+/** What several selected lines agree on; a field they declare differently is released. */
+export function intersectLineConstraints(declarations: LineConstraints[]): LineConstraints {
+  let operations: string[] | null = null;
+  const inputs: Record<string, { max?: number }> = {};
+  const parameters: Record<string, { fixed?: unknown; only?: unknown[] }> = {};
+  for (const declaration of declarations) {
+    if (Array.isArray(declaration.operations) && declaration.operations.length > 0) {
+      operations = operations === null
+        ? [...declaration.operations]
+        : operations.filter((id) => declaration.operations!.includes(id));
+    }
+    for (const [type, limit] of Object.entries(declaration.inputs ?? {})) {
+      if (!limit || typeof limit.max !== 'number') continue;
+      const current = inputs[type]?.max;
+      inputs[type] = { max: typeof current === 'number' ? Math.min(current, limit.max) : limit.max };
+    }
+    for (const [field, constraint] of Object.entries(declaration.parameters ?? {})) {
+      if (!constraint) continue;
+      const current = parameters[field];
+      if (typeof constraint.fixed !== 'undefined') {
+        const conflict = current && typeof current.fixed !== 'undefined' && !Object.is(current.fixed, constraint.fixed);
+        parameters[field] = conflict ? {} : { ...(current ?? {}), fixed: constraint.fixed };
+        continue;
+      }
+      if (Array.isArray(constraint.only)) {
+        const only = Array.isArray(current?.only)
+          ? current.only.filter((value) => constraint.only!.some((candidate) => Object.is(candidate, value)))
+          : constraint.only;
+        parameters[field] = { ...(current ?? {}), only };
+      }
+    }
+  }
+  return {
+    ...(operations ? { operations } : {}),
+    ...(Object.keys(inputs).length > 0 ? { inputs } : {}),
+    ...(Object.keys(parameters).length > 0 ? { parameters } : {}),
+  };
+}
+
 /**
- * Parameter values pinned by the gateway groups the node currently routes to.
+ * Line constraints the node currently routes to.
  *
- * Any value a selected group pins is applied: a request that reaches that line must
- * satisfy it, and a free group in the same pool still accepts the pinned value. Only
- * conflicting pins cancel out, since no single request can satisfy both. Automatic
- * routing pins nothing.
+ * A line may accept far less than the model contract publishes, so the canvas reads
+ * the declaration here before the contract reaches slot layout, operation lists or
+ * parameter controls. Automatic routing applies nothing; several lines apply what
+ * they agree on, with the stricter ceiling winning.
  *
  * @param modelId Model id (may carry a `@channelGroup` suffix).
  * @param routing Persisted routing intent (`group` and/or `allowedGroups`).
  */
-export function resolveChannelGroupFixedParams(modelId: string, routing: unknown): Record<string, unknown> {
+export function resolveLineConstraints(modelId: string, routing: unknown): LineConstraints {
   const selected = selectedGroupIds(routing);
   if (selected.size === 0) return {};
   const { modelId: id } = parseModelAndGroup(modelId);
-  const candidates = new Map<string, Set<unknown>>();
-  for (const group of getModelChannelGroups(id)) {
-    if (!selected.has(group.id) && !(group.wireGroup && selected.has(group.wireGroup))) continue;
-    for (const [field, constraint] of Object.entries(group.parameterConstraints ?? {})) {
-      if (!constraint || typeof constraint.fixed === 'undefined') continue;
-      const bucket = candidates.get(field) ?? new Set<unknown>();
-      bucket.add(constraint.fixed);
-      candidates.set(field, bucket);
-    }
-  }
-  const fixed: Record<string, unknown> = {};
-  for (const [field, values] of candidates) {
-    if (values.size === 1) fixed[field] = [...values][0];
-  }
-  return fixed;
+  const declarations = getModelChannelGroups(id)
+    .filter((group) => selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false))
+    .map((group) => group.constraints)
+    .filter((constraint): constraint is LineConstraints => Boolean(constraint));
+  if (declarations.length === 0) return {};
+  return declarations.length === 1 ? declarations[0] : intersectLineConstraints(declarations);
 }
+
+// This module owns the group table, so it installs the lookup that the shared contract
+// surfaces read through. Without it they keep the full model declaration.
+setLineConstraintResolver(resolveLineConstraints);

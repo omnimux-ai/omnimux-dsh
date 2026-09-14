@@ -6,11 +6,14 @@ import { buildContractView, buildUpstreamFingerprint, matchOperationInputs, plan
 import { autoFillSlots, deriveSlotLayout, hydrateSlotBindings, type SlotBindings, type SlotConflict } from './feedSlot/index.ts';
 import { effectiveSlotFingerprint, feedFromFingerprint } from './feedSlot/effectiveFingerprint.ts';
 import { resolveSlotOperation } from './feedSlot/resolveSlotOperation.ts';
+import { narrowCatalogByRouting } from '../validation/lineConstraints.ts';
 
 /** Initialize unspecified choices only; supply changes cannot replace a saved creative choice. */
 export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutationState, context: CanvasMutationRuntimeContext, previous?: CanvasNode, newEdgeIds = new Set<string>()): CanvasNode {
-  const catalog = context.catalog;
   const params = { ...readCanvasParams(node) };
+  // A narrow line accepts far less than the contract publishes; narrowing the routed model
+  // once here keeps the slot layout, the operation list and the parameter view aligned.
+  const catalog = narrowCatalogByRouting(context.catalog, params.model, params.routing);
   const outputType = node.data.materialType as MaterialType;
   const raw = buildCanvasUpstreamFingerprint(node.id, graph.nodes, graph.edges);
   const view = buildContractView(catalog);
@@ -66,7 +69,8 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
 /** Best-effort mirror for old readers; a single edge cannot express two roles. */
 export function mirrorCanvasSlots(node: CanvasNode, edges: Edge[], context: CanvasMutationRuntimeContext): Edge[] {
   const params = readCanvasParams(node);
-  const layout = deriveSlotLayout(context.catalog, params.model as string | undefined, params.operation as string | undefined);
+  const catalog = narrowCatalogByRouting(context.catalog, params.model, params.routing);
+  const layout = deriveSlotLayout(catalog, params.model as string | undefined, params.operation as string | undefined);
   const bindings = (node.data.slotBindings ?? {}) as SlotBindings;
   return edges.map((edge) => {
     if (edge.target !== node.id) return edge;

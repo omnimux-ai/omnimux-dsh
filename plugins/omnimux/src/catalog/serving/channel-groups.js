@@ -143,9 +143,11 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 100,
         "avgWaitTimeSec": 45
       },
-      "parameterConstraints": {
-        "duration": {
-          "fixed": 30
+      "constraints": {
+        "parameters": {
+          "duration": {
+            "fixed": 30
+          }
         }
       },
       "wireGroup": "seedance-2-5-task-pro",
@@ -180,9 +182,36 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "stability24h": 90,
         "avgWaitTimeSec": 120
       },
-      "parameterConstraints": {
-        "duration": {
-          "fixed": 30
+      "constraints": {
+        "operations": [
+          "video_multi_ref"
+        ],
+        "parameters": {
+          "duration": {
+            "fixed": 30
+          },
+          "resolution": {
+            "only": [
+              "720p"
+            ]
+          },
+          "aspectRatio": {
+            "only": [
+              "16:9",
+              "9:16"
+            ]
+          }
+        },
+        "inputs": {
+          "image": {
+            "max": 9
+          },
+          "video": {
+            "max": 0
+          },
+          "audio": {
+            "max": 0
+          }
         }
       },
       "wireGroup": "seedance-cheap",
