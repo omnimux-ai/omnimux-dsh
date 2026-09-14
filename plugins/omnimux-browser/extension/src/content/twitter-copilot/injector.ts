@@ -6,6 +6,36 @@
 
 import { sanitizeTweetText } from './sanitizer.ts'
 
+/**
+ * 填入层文案（双语）。菜单层已按 detectCopilotLocale 全量双语，此处保持同一份语言口径。
+ */
+export const INJECTOR_COPY = {
+  injected: {
+    zh: '已填入推文输入框，请复核后点击发帖！',
+    en: 'Filled into the tweet box — review, then hit Post.',
+  },
+  copiedToClipboard: {
+    zh: '未找到可输入的输入框，文案已自动复制到剪贴板！',
+    en: 'No input box found — the copy was saved to your clipboard.',
+  },
+  clipboardBlocked: {
+    zh: '未找到推特输入框，且剪贴板访问受限。',
+    en: 'No tweet input box found and clipboard access is blocked.',
+  },
+} as const
+
+/** 黑白中性底：与下拉菜单同一深中性色，杜绝紫色 */
+export const COPILOT_TOAST_BG = '#18181b'
+/** 状态色取 design.md 状态令牌（Dark 档），仅用于文字，底色保持中性 */
+export const COPILOT_TOAST_TEXT_COLOR: Record<'success' | 'info' | 'error', string> = {
+  success: '#4ade80',
+  info: '#ffffff',
+  error: '#f87171',
+}
+/** 填入高亮：白色描边 + 深色外圈，浅色与深色主题下均清晰可见 */
+export const COPILOT_PULSE_OUTLINE = '2px solid #ffffff'
+export const COPILOT_PULSE_SHADOW = '0 0 0 3px rgba(0, 0, 0, 0.55)'
+
 export async function injectTweetText(rawText: string, anchorButton?: HTMLElement, locale: 'zh' | 'en' = 'zh'): Promise<boolean> {
   const text = sanitizeTweetText(rawText, locale)
   if (!text) return false
@@ -36,10 +66,10 @@ export async function injectTweetText(rawText: string, anchorButton?: HTMLElemen
     // Fallback: write to clipboard
     try {
       await navigator.clipboard.writeText(text)
-      showCopilotToast('未找到可输入的输入框，文案已自动复制到剪贴板！', 'info')
+      showCopilotToast(INJECTOR_COPY.copiedToClipboard[locale], 'info')
       return true
     } catch {
-      showCopilotToast('未找到推特输入框，且剪贴板访问受限。', 'error')
+      showCopilotToast(INJECTOR_COPY.clipboardBlocked[locale], 'error')
       return false
     }
   }
@@ -105,7 +135,7 @@ export async function injectTweetText(rawText: string, anchorButton?: HTMLElemen
 
   // 5. Apply graceful pulse highlight
   pulseHighlightElement(targetArea)
-  showCopilotToast('已填入推文输入框，请复核后点击发帖！', 'success')
+  showCopilotToast(INJECTOR_COPY.injected[locale], 'success')
   return true
 }
 
@@ -116,8 +146,8 @@ function pulseHighlightElement(element: HTMLElement) {
     const prevShadow = element.style.boxShadow
 
     element.style.transition = 'outline 0.2s ease, box-shadow 0.2s ease'
-    element.style.outline = '2px solid #a855f7'
-    element.style.boxShadow = '0 0 16px rgba(168, 85, 247, 0.45)'
+    element.style.outline = COPILOT_PULSE_OUTLINE
+    element.style.boxShadow = COPILOT_PULSE_SHADOW
 
     setTimeout(() => {
       element.style.outline = prevOutline
@@ -138,8 +168,8 @@ export function showCopilotToast(message: string, tone: 'success' | 'info' | 'er
     document.body.appendChild(toast)
   }
 
-  const bg = tone === 'success' ? '#10b981' : tone === 'error' ? '#ef4444' : '#8b5cf6'
-  toast.style.background = bg
+  toast.style.background = COPILOT_TOAST_BG
+  toast.style.color = COPILOT_TOAST_TEXT_COLOR[tone]
   toast.textContent = message
   toast.classList.add('omnimux-copilot-toast--visible')
 

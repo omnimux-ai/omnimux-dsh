@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { detectTwitterScene, extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import { mountCopilotToTwitterButtons } from '../src/content/twitter-copilot/anchor.ts'
-import { injectTweetText } from '../src/content/twitter-copilot/injector.ts'
+import { injectTweetText, INJECTOR_COPY, COPILOT_TOAST_BG, COPILOT_TOAST_TEXT_COLOR } from '../src/content/twitter-copilot/injector.ts'
 import { detectCopilotLocale } from '../src/content/twitter-copilot/menu.ts'
 import { sanitizeTweetText } from '../src/content/twitter-copilot/sanitizer.ts'
 
@@ -376,5 +376,53 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(postNewIds).not.toContain('ai-tweet-reply-high')
     expect(postNewIds).not.toContain('cmqolx85u000x1fbggacvllkj')
     expect(postNewIds).not.toContain('ai-tweet-reply')
+  })
+
+  it('T13: 填入提示双语 - 英文环境输出英文提示，中文环境输出中文提示', async () => {
+    const buildTextarea = () => {
+      document.body.innerHTML = ''
+      const ta = document.createElement('div')
+      ta.setAttribute('data-testid', 'tweetTextarea_0')
+      ta.setAttribute('role', 'textbox')
+      ta.setAttribute('contenteditable', 'true')
+      document.body.appendChild(ta)
+      return ta
+    }
+
+    const taEn = buildTextarea()
+    await injectTweetText('Shipping fast beats perfect planning', undefined, 'en')
+    const toastEn = document.getElementById('omnimux-copilot-toast')
+    expect(taEn.textContent).toBe('Shipping fast beats perfect planning')
+    expect(toastEn?.textContent).toBe(INJECTOR_COPY.injected.en)
+    expect(toastEn?.textContent?.includes('已填入')).toBe(false)
+
+    const taZh = buildTextarea()
+    await injectTweetText('先跑起来再优化', undefined, 'zh')
+    const toastZh = document.getElementById('omnimux-copilot-toast')
+    expect(taZh.textContent).toBe('先跑起来再优化')
+    expect(toastZh?.textContent).toBe(INJECTOR_COPY.injected.zh)
+  })
+
+  it('T14: 填入高亮与提示条为黑白中性配色，杜绝紫色', async () => {
+    const ta = document.createElement('div')
+    ta.setAttribute('data-testid', 'tweetTextarea_0')
+    ta.setAttribute('role', 'textbox')
+    ta.setAttribute('contenteditable', 'true')
+    document.body.appendChild(ta)
+
+    await injectTweetText('配色校验文案', undefined, 'zh')
+
+    const purpleLike = /a855f7|8b5cf6|168,\s*85,\s*247|139,\s*92,\s*246/i
+    expect(purpleLike.test(ta.style.outline)).toBe(false)
+    expect(purpleLike.test(ta.style.boxShadow)).toBe(false)
+    // 白色描边 + 深色外圈：浅色/深色主题下均可见
+    expect(ta.style.outline).toContain('#ffffff')
+
+    const toast = document.getElementById('omnimux-copilot-toast')
+    const bg = toast?.style.background || ''
+    const fg = toast?.style.color || ''
+    expect(purpleLike.test(bg)).toBe(false)
+    expect([COPILOT_TOAST_BG, 'rgb(24, 24, 27)']).toContain(bg)
+    expect([COPILOT_TOAST_TEXT_COLOR.success, 'rgb(74, 222, 128)']).toContain(fg)
   })
 })
