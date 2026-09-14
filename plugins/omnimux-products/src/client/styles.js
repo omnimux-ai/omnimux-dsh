@@ -318,6 +318,11 @@ export const PRODUCTS_CSS = `
 .omnimux-products-form-view {
   overflow: hidden;
 }
+.omnimux-products-form-divider {
+  margin: 0 20px !important;
+  width: calc(100% - 40px) !important;
+  flex-shrink: 0;
+}
 .omnimux-products-form-scroll {
   flex: 1;
   min-height: 0;

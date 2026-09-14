@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '..')
 const PLUGIN = join(REPO_ROOT, 'plugins', 'omnimux-products')
-const EVIDENCE_DIR = join(REPO_ROOT, '.workbuddy', 'evidence', 'header-divider')
+const EVIDENCE_DIR = join(REPO_ROOT, '.workbuddy', 'evidence', 'divider-margin')
 const VIEWPORT = { width: 1280, height: 900 }
 
 const CHROME_CANDIDATES = [
@@ -223,7 +223,6 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
     await waitFor('window.__harnessReady && document.querySelector(".omnimux-products-subscreen")')
 
     // 1. 实物表单中断言 Divider
-    // 1. 实物表单中断言 Divider
     const physicalDivider = await evaluate(`
       const header = document.querySelector('.omnimux-products-form-view [class*="PageHeader"]')
       const scroll = document.querySelector('.omnimux-products-form-scroll')
@@ -235,14 +234,17 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
       return {
         width: Math.round(rect.width),
         height: Math.round(rect.height),
+        left: Math.round(rect.left),
+        rightMargin: Math.round(window.innerWidth - rect.right),
         top: Math.round(rect.top),
         headerBottom: Math.round(headerRect.bottom),
         scrollPadTop: Math.round(scrollRect.top),
         isBetween: rect.top >= headerRect.bottom - 2 && rect.bottom <= scrollRect.top + 2,
+        isAligned: Math.abs(rect.left - 20) <= 1 && Math.abs(window.innerWidth - rect.right - 20) <= 1,
       }
     `)
     check('实物表单页渲染出分割线 Divider', Boolean(physicalDivider && physicalDivider.width > 0), physicalDivider)
-    check('实物表单分割线位于页头与滚动区之间', Boolean(physicalDivider?.isBetween), physicalDivider)
+    check('实物表单分割线左右缩进 20px 对齐两侧', Boolean(physicalDivider?.isAligned), physicalDivider)
 
     await shoot('01-physical-form-with-divider')
 
@@ -263,18 +265,17 @@ ${cssFiles.map((file) => `<style>${file.text}</style>`).join('\n')}
       return {
         width: Math.round(rect.width),
         height: Math.round(rect.height),
+        left: Math.round(rect.left),
+        rightMargin: Math.round(window.innerWidth - rect.right),
         top: Math.round(rect.top),
         headerBottom: Math.round(headerRect.bottom),
         scrollPadTop: Math.round(scrollRect.top),
         isBetween: rect.top >= headerRect.bottom - 2 && rect.bottom <= scrollRect.top + 2,
+        isAligned: Math.abs(rect.left - 20) <= 1 && Math.abs(window.innerWidth - rect.right - 20) <= 1,
       }
     `)
     check('数字表单页渲染出分割线 Divider', Boolean(digitalDivider && digitalDivider.width > 0), digitalDivider)
-    check('数字表单分割线位于页头与滚动区之间', Boolean(digitalDivider?.isBetween), digitalDivider)
-
-    await shoot('02-digital-form-with-divider')
-    check('数字表单页渲染出分割线 Divider', Boolean(digitalDivider && digitalDivider.width > 0))
-    check('数字表单分割线位于页头与滚动区之间', Boolean(digitalDivider?.isBetween), digitalDivider)
+    check('数字表单分割线左右缩进 20px 对齐两侧', Boolean(digitalDivider?.isAligned), digitalDivider)
 
     await shoot('02-digital-form-with-divider')
 
