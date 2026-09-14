@@ -12,23 +12,125 @@ describe('Twitter Copilot Native Unit Tests', () => {
     document.body.innerHTML = ''
   })
 
-  it('T1: 场景检测 - 正确识别发新帖与引用转发弹窗', () => {
-    // 1. 普通发帖弹窗
-    const dialog = document.createElement('div')
-    dialog.setAttribute('role', 'dialog')
+  const setPathname = (pathname: string) => {
+    Object.defineProperty(window, 'location', {
+      value: new URL(`https://x.com${pathname}`),
+      writable: true,
+    })
+  }
+
+  it('T1: 场景检测 - 按线上实测结构区分三类弹窗（发新帖 / 引用转发 / 回帖）', () => {
+    setPathname('/home')
+
+    // 1. 纯发新帖弹窗：无被引用卡片、无内嵌原推
+    const postDialog = document.createElement('div')
+    postDialog.setAttribute('role', 'dialog')
     const postBtn = document.createElement('button')
     postBtn.setAttribute('data-testid', 'tweetButton')
-    dialog.appendChild(postBtn)
-    document.body.appendChild(dialog)
+    postDialog.appendChild(postBtn)
+    document.body.appendChild(postDialog)
 
     expect(detectTwitterScene(postBtn)).toBe('POST_NEW')
 
-    // 2. 带有引用推文的弹窗
-    const quoteTweet = document.createElement('div')
-    quoteTweet.setAttribute('data-testid', 'quoteTweet')
-    dialog.appendChild(quoteTweet)
+    // 2. 引用转发弹窗：被引用原推内嵌于 attachments 容器（线上无 quoteTweet 节点）
+    const quoteDialog = document.createElement('div')
+    quoteDialog.setAttribute('role', 'dialog')
+    const attachments = document.createElement('div')
+    attachments.setAttribute('data-testid', 'attachments')
+    const quotedText = document.createElement('div')
+    quotedText.setAttribute('data-testid', 'tweetText')
+    quotedText.textContent = '被引用的原推正文'
+    attachments.appendChild(quotedText)
+    quoteDialog.appendChild(attachments)
+    const quoteBtn = document.createElement('button')
+    quoteBtn.setAttribute('data-testid', 'tweetButton')
+    quoteDialog.appendChild(quoteBtn)
+    document.body.appendChild(quoteDialog)
 
-    expect(detectTwitterScene(postBtn)).toBe('POST_QUOTE')
+    expect(detectTwitterScene(quoteBtn)).toBe('POST_QUOTE')
+  })
+
+  it('T11: 回帖弹窗 - 内嵌原推以 article 呈现，按弹窗背后是否留有聚焦原推分流', () => {
+    const buildReplyDialog = () => {
+      const dialog = document.createElement('div')
+      dialog.setAttribute('role', 'dialog')
+      const article = document.createElement('article')
+      article.setAttribute('data-testid', 'tweet')
+      const tweetText = document.createElement('div')
+      tweetText.setAttribute('data-testid', 'tweetText')
+      tweetText.textContent = '被回复的原推正文'
+      article.appendChild(tweetText)
+      dialog.appendChild(article)
+      const btn = document.createElement('button')
+      btn.setAttribute('data-testid', 'tweetButton')
+      dialog.appendChild(btn)
+      document.body.appendChild(dialog)
+      return btn
+    }
+
+    // 信息流等入口：弹窗背后没有聚焦原推 → 快捷互动菜单
+    setPathname('/compose/post')
+    expect(detectTwitterScene(buildReplyDialog())).toBe('REPLY_FEED')
+
+    // 详情页入口：推特会把地址改写为 /compose/post，但弹窗背后仍留有 tabindex="-1" 的聚焦原推 → 回帖菜单
+    document.body.innerHTML = ''
+    const main = document.createElement('main')
+    const focal = document.createElement('article')
+    focal.setAttribute('data-testid', 'tweet')
+    focal.setAttribute('tabindex', '-1')
+    main.appendChild(focal)
+    document.body.appendChild(main)
+
+    setPathname('/compose/post')
+    expect(detectTwitterScene(buildReplyDialog())).toBe('REPLY_DETAIL')
+  })
+
+  it('T12: 回帖弹窗上下文 - 取弹窗内被回复的原推，不误取信息流其它推文', () => {
+    setPathname('/home')
+
+    // 信息流里另一条推文（干扰项）
+    const feedTweet = document.createElement('article')
+    feedTweet.setAttribute('data-testid', 'tweet')
+    const feedText = document.createElement('div')
+    feedText.setAttribute('data-testid', 'tweetText')
+    feedText.textContent = '信息流里的其它推文'
+    feedTweet.appendChild(feedText)
+    document.body.appendChild(feedTweet)
+
+    // 回帖弹窗内嵌的被回复原推
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    const quotedArticle = document.createElement('article')
+    quotedArticle.setAttribute('data-testid', 'tweet')
+    const userDiv = document.createElement('div')
+    userDiv.setAttribute('data-testid', 'User-Name')
+    const userLink = document.createElement('a')
+    userLink.setAttribute('role', 'link')
+    userLink.setAttribute('href', '/jaxxchen003')
+    userDiv.appendChild(userLink)
+    quotedArticle.appendChild(userDiv)
+    const quotedText = document.createElement('div')
+    quotedText.setAttribute('data-testid', 'tweetText')
+    quotedText.textContent = '弹窗内被回复的原推正文'
+    quotedArticle.appendChild(quotedText)
+    dialog.appendChild(quotedArticle)
+
+    const textarea = document.createElement('div')
+    textarea.setAttribute('data-testid', 'tweetTextarea_0')
+    textarea.setAttribute('role', 'textbox')
+    textarea.textContent = '我的回复草稿'
+    dialog.appendChild(textarea)
+
+    const replyBtn = document.createElement('button')
+    replyBtn.setAttribute('data-testid', 'tweetButton')
+    dialog.appendChild(replyBtn)
+    document.body.appendChild(dialog)
+
+    const ctx = extractTwitterContext(replyBtn, 'REPLY_FEED')
+
+    expect(ctx.targetTweetText).toBe('弹窗内被回复的原推正文')
+    expect(ctx.targetAuthor).toBe('jaxxchen003')
+    expect(ctx.draftText).toBe('我的回复草稿')
   })
 
   it('T2: 场景检测 - 正确识别推文详情页回复', () => {

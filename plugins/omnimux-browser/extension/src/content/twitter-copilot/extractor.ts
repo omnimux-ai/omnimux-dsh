@@ -16,18 +16,34 @@ function findComposerContainer(el: HTMLElement): HTMLElement | null {
   return null
 }
 
+export function isStatusDetailPage(): boolean {
+  return /\/[^/]+\/status\/\d+/.test(window.location.pathname)
+}
+
+/**
+ * 回帖弹窗打开时推特会把地址改写成 /compose/post，地址栏不再能区分入口，
+ * 因此按「弹窗背后是否仍留有被聚焦的原推」判定详情页入口（线上实测：详情页 true、信息流 false）。
+ */
+export function hasFocalTweetBehind(): boolean {
+  return !!document.querySelector('main article[data-testid="tweet"][tabindex="-1"]')
+}
+
 export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotScene {
   // 1. Is this inside a tweet compose modal? (e.g. url includes /compose/post or inside modal role="dialog")
   const dialog = anchorButton.closest('[role="dialog"]')
   if (dialog) {
-    // Check if there is an embedded quoted tweet inside this modal
-    const hasQuote = !!(
-      dialog.querySelector('[data-testid="quoteTweet"]') ||
-      dialog.querySelector('div[aria-labelledby*="quote" i]') ||
-      dialog.querySelector('div[data-testid*="quote" i]') ||
-      dialog.querySelector('article[data-testid="tweet"]')
-    )
-    return hasQuote ? 'POST_QUOTE' : 'POST_NEW'
+    // 引用转发弹窗：被引用原推内嵌在 attachments 容器中，并带 tweetText（线上实测结构）
+    const hasQuotedCard = !!dialog.querySelector('[data-testid="attachments"] [data-testid="tweetText"]')
+    if (hasQuotedCard) {
+      return 'POST_QUOTE'
+    }
+    // 回帖弹窗：被回复的原推以 article[data-testid="tweet"] 内嵌；详情页入口 → 回帖菜单，
+    // 其余入口（信息流、个人页、通知等）→ 快捷互动菜单
+    const hasEmbeddedTweet = !!dialog.querySelector('article[data-testid="tweet"]')
+    if (hasEmbeddedTweet) {
+      return hasFocalTweetBehind() ? 'REPLY_DETAIL' : 'REPLY_FEED'
+    }
+    return 'POST_NEW'
   }
 
   // 2. Find the owning composer container that wraps both textarea and toolbar
@@ -59,9 +75,7 @@ export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotSce
   }
 
   // 5. Is this inline in tweet detail page (/username/status/123)?
-  const pathname = window.location.pathname
-  const isStatusPage = /\/[^/]+\/status\/\d+/.test(pathname)
-  if (isStatusPage || isReplyBtn) {
+  if (isStatusDetailPage() || isReplyBtn) {
     return 'REPLY_DETAIL'
   }
 
@@ -118,8 +132,12 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
 
   // 3. If it is reply detail or feed, extract target main tweet
   if (scene === 'REPLY_DETAIL' || scene === 'REPLY_FEED') {
-    // In status detail page, official Twitter gives the focal parent tweet tabindex="-1"
-    let targetTweet = document.querySelector('article[tabindex="-1"][data-testid="tweet"]') as HTMLElement | null
+    const replyDialog = anchorButton.closest('[role="dialog"]')
+    // 回帖弹窗：被回复的原推内嵌在弹窗内，优先按弹窗取，避免误取信息流里的其它推文
+    let targetTweet =
+      (replyDialog?.querySelector('article[data-testid="tweet"]') as HTMLElement | null) ||
+      // In status detail page, official Twitter gives the focal parent tweet tabindex="-1"
+      (document.querySelector('article[tabindex="-1"][data-testid="tweet"]') as HTMLElement | null)
 
     // If not found (e.g. inline reply on timeline feed), find the closest tweet ancestor of reply button
     if (!targetTweet) {
