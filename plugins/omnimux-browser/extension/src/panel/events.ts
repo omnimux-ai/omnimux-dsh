@@ -246,3 +246,20 @@ export function mergeHistoryRows(
   flushTool()
   return rows
 }
+
+/**
+ * 提取 turn/end 中的异常原因描述，若无异常或正常结束则返回 null。
+ */
+export function errorFromTurnEnd(event: SessionEventView, locale: 'zh' | 'en' = 'zh'): string | null {
+  if (event.type !== 'turn/end') return null
+  const reason = (event.data as Record<string, unknown> | undefined)?.reason
+  if (!reason || typeof reason !== 'object' || (reason as { kind?: unknown }).kind !== 'error') return null
+  const err = (reason as { error?: unknown }).error
+  const rawMsg = typeof err === 'object' && err !== null && 'message' in err
+    ? String((err as { message?: unknown }).message)
+    : (typeof err === 'string' ? err : '')
+  if (rawMsg) {
+    return locale === 'zh' ? `模型响应异常: ${rawMsg}` : `Model error: ${rawMsg}`
+  }
+  return locale === 'zh' ? '模型响应异常，请检查模型配置' : 'Model execution failed'
+}
