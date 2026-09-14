@@ -922,3 +922,80 @@ describe('rightbar toggle dedupe (issue #1622)', () => {
   })
 })
 
+describe('rightbar toggle seating in the header row (issue #1664)', () => {
+  /**
+   * 外壳标题行同形结构：utilities 组（桌面端在这里放「打开工作目录」按钮组，
+   * 也就是被固定定位按钮压住的那个胶囊）+ 最右端空槽位 corner。
+   * @param {{ corner?: boolean, collapsed?: boolean }} [opts]
+   */
+  function makeShellDoc(opts = {}) {
+    const { corner = true, collapsed = true } = opts
+    const cornerHtml = corner
+      ? `<div class="uPhUma_headerCorner" data-conversation-header-corner=""><div data-slot="conversation.session.header.corner" style="display: contents;"></div></div>`
+      : ''
+    return setup(`<!doctype html><html><body>
+      <div class="dshDesktopFrame"${collapsed ? ' data-rightbar-collapsed="true"' : ''}>
+        <header class="uPhUma_header">
+          <div class="uPhUma_titleRow">
+            <div class="uPhUma_titleCluster"><nav class="uPhUma_crumbs">会话标题</nav></div>
+            <div class="uPhUma_headerUtilities"><button type="button" aria-label="在 访达 中打开工作目录">finder</button></div>
+            ${cornerHtml}
+          </div>
+        </header>
+        <div data-dockkit-strip-chrome="true">
+          <button type="button" data-sidebar-right-toggle aria-label="收起右侧边栏">toggle</button>
+        </div>
+      </div>
+    </body></html>`)
+  }
+
+  const seatedControl = (doc) => doc.querySelector('button[data-sidebar-right-toggle][data-original-parent], button[data-sidebar-right-expand][data-original-parent]')
+
+  it('seats the collapsed control in the corner slot as the row right-most item', () => {
+    const doc = makeShellDoc()
+    syncNativeRightbarControls(doc)
+
+    const corner = doc.querySelector('[data-conversation-header-corner]')
+    const kept = seatedControl(doc)
+    assert.ok(kept, '收起态应把控件放进标题行')
+    assert.equal(kept.parentElement, corner, '首选落点是标题行最右槽位')
+    assert.equal(corner.lastElementChild, kept, '行内最右：必须是槽位的最后一个子节点')
+
+    const utilities = doc.querySelector('[class*="headerUtilities"]')
+    assert.ok(utilities.compareDocumentPosition(kept) & 4, 'utilities 组必须在它左边')
+
+    const style = kept.getAttribute('style') || ''
+    assert.match(style, /position:\s*static/)
+    assert.match(style, /right:\s*auto/)
+    assert.match(style, /top:\s*auto/)
+    assert.match(style, /z-index:\s*auto/)
+    assert.doesNotMatch(style, /position:\s*fixed/, '不得再用固定定位压住相邻控件')
+    assert.doesNotMatch(style, /right:\s*8px/, '不得再写死最右偏移')
+  })
+
+  it('falls back to the utilities row when the corner slot is absent', () => {
+    const doc = makeShellDoc({ corner: false })
+    syncNativeRightbarControls(doc)
+
+    const utilities = doc.querySelector('[class*="headerUtilities"]')
+    const kept = seatedControl(doc)
+    assert.ok(kept, '没有 corner 时仍要进入标题行')
+    assert.equal(kept.parentElement, utilities)
+    assert.equal(utilities.lastElementChild, kept, '退回 utilities 时同样落在最右')
+    assert.doesNotMatch(kept.getAttribute('style') || '', /position:\s*fixed/)
+  })
+
+  it('recycles the seated control when the right bar expands again', () => {
+    const doc = makeShellDoc()
+    syncNativeRightbarControls(doc)
+    assert.ok(seatedControl(doc), '前置条件：收起态已入座')
+
+    doc.querySelector('.dshDesktopFrame').removeAttribute('data-rightbar-collapsed')
+    syncNativeRightbarControls(doc)
+
+    const corner = doc.querySelector('[data-conversation-header-corner]')
+    assert.equal(corner.querySelector('button'), null, '展开态不得在右上角留下控件')
+    assert.ok(doc.querySelector('[data-dockkit-strip-chrome="true"] button[data-sidebar-right-toggle]'), '控件应回到原生容器')
+  })
+})
+

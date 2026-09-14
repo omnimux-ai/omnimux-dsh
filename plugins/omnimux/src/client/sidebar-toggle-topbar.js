@@ -831,14 +831,44 @@ export function syncNativeRightbarControls(doc) {
   const movedCopies = controls.filter((el) => el.hasAttribute('data-original-parent'))
   const nativeControl = controls.find((el) => !el.hasAttribute('data-original-parent')) || null
   const chrome = doc.querySelector('[data-dockkit-strip-chrome="true"], [class*="stripChrome"]')
-  const clearPin = (el) => {
-    el.style.removeProperty('position')
-    el.style.removeProperty('right')
-    el.style.removeProperty('top')
-    el.style.removeProperty('z-index')
-    el.style.removeProperty('display')
-    el.style.removeProperty('visibility')
+  /** 本模块写在元素上的内联放置属性；按钮离开落点时整组清掉，交还框架原生样式。 */
+  const PLACEMENT_PROPS = [
+    'position', 'right', 'top', 'z-index', 'display', 'visibility',
+    'flex', 'margin', 'align-items', 'justify-content', 'cursor', 'pointer-events',
+  ]
+  const clearPlacement = (el) => {
+    for (const prop of PLACEMENT_PROPS) el.style.removeProperty(prop)
   }
+  /**
+   * 收起态首选落点：框架标题行最右的空槽位（`data-conversation-header-corner`），
+   * 缺失时退回标题行 utilities 组末尾。两者都是普通流式容器，间距由框架自带的
+   * gap / margin 提供——所以不需要任何坐标测量，也不可能压住相邻控件。
+   * 历史写法是搬进 body 后 `position:fixed; right:8px`，而窗口最右侧并非空闲区域
+   * （桌面端标题行右端是「打开工作目录」按钮组），必然重叠（工单 #1664）。
+   */
+  const headerSeat = () => (
+    doc.querySelector('[data-conversation-header-corner], [class*="headerCorner"]') ||
+    doc.querySelector('[class*="headerUtilities"]')
+  )
+  const seatInHeaderRow = (el, seat) => {
+    if (el.parentElement !== seat) {
+      el.dataset.originalParent = 'headerRow'
+      seat.appendChild(el)
+    }
+    el.style.setProperty('position', 'static', 'important')
+    el.style.setProperty('right', 'auto', 'important')
+    el.style.setProperty('top', 'auto', 'important')
+    el.style.setProperty('z-index', 'auto', 'important')
+    el.style.setProperty('flex', '0 0 auto', 'important')
+    el.style.setProperty('margin', '0', 'important')
+    el.style.setProperty('display', 'flex', 'important')
+    el.style.setProperty('align-items', 'center', 'important')
+    el.style.setProperty('justify-content', 'center', 'important')
+    el.style.setProperty('visibility', 'visible', 'important')
+    el.style.setProperty('cursor', 'pointer', 'important')
+    el.style.setProperty('pointer-events', 'auto', 'important')
+  }
+  /** 兜底：没有任何会话标题行（独立全屏页等）时，仍然固定到右上角。 */
   const pinToTopRight = (el) => {
     el.style.setProperty('position', 'fixed', 'important')
     el.style.setProperty('right', '8px', 'important')
@@ -876,17 +906,22 @@ export function syncNativeRightbarControls(doc) {
       if (dup !== kept) dup.remove()
     }
     if (kept) {
-      if (kept.parentElement !== doc.body) {
-        kept.dataset.originalParent = '_stripChrome'
-        doc.body.appendChild(kept)
+      const seat = headerSeat()
+      if (seat) {
+        seatInHeaderRow(kept, seat)
+      } else {
+        if (kept.parentElement !== doc.body) {
+          kept.dataset.originalParent = '_stripChrome'
+          doc.body.appendChild(kept)
+        }
+        pinToTopRight(kept)
       }
-      pinToTopRight(kept)
       bindExpandClick(kept)
     }
   } else if (nativeControl) {
     // 展开态且原生节点在位：本插件搬出的拷贝全部回收，避免与原生按钮重复。
     for (const dup of movedCopies) dup.remove()
-    clearPin(nativeControl)
+    clearPlacement(nativeControl)
   } else if (movedCopies[0]) {
     // 展开态但原生节点缺失：把唯一那份拷贝还回原生容器，保证仍可收起右侧栏。
     const only = movedCopies[0]
@@ -894,7 +929,7 @@ export function syncNativeRightbarControls(doc) {
       if (dup !== only) dup.remove()
     }
     if (chrome && only.parentElement !== chrome) chrome.appendChild(only)
-    clearPin(only)
+    clearPlacement(only)
   }
 }
 

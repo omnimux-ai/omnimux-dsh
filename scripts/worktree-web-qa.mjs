@@ -22,12 +22,20 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { PNG } from 'pngjs';
 import {
+  RIGHTBAR_SEAT_MODULE_URL,
   SIDEBAR_CHROME_SOURCE_PATH,
+  buildRightbarSeatHarnessHtml,
   buildSidebarChromeHarnessHtml,
   extractRightbarChromeStyles,
   interpretNegativeControl,
+  interpretRightbarSeatNegative,
+  interpretRightbarSeatPositive,
   interpretSidebarChromeGeometry,
+  judgeRightbarSeatRun,
   judgeSidebarChromeRun,
+  legacyPinExpression,
+  rightbarSeatMeasureExpression,
+  runProductionSeatExpression,
   sidebarChromeMeasureExpression,
 } from './sidebar-chrome-qa-fixture.mjs';
 
@@ -849,6 +857,264 @@ export async function runSidebarChromeQa(options = {}) {
   return report;
 }
 
+/** 场景标识：右上角收起态落点门禁（工单 #1664）。 */
+export const RIGHTBAR_SEAT_SCENARIO = 'rightbar-seat';
+
+/**
+ * 右上角收起态落点门禁：真实内核 + 动态端口 + 临时 profile + 用完即焚。
+ *
+ * 与 chrome 几何门禁同样带**反向对照**：夹具先按旧实现（body + 写死
+ * `right:8px; top:5px`）摆放，必须复现「压住相邻 utilities 组」；随后重载页面、
+ * 调用生产模块的同步函数，控件必须落进标题行、与相邻控件留出标准间距且零重叠。
+ * 被测行为只来自 `plugins/omnimux/src/client/sidebar-toggle-topbar.js`，
+ * 夹具不含任何修复规则。
+ * @param {{ root?: string, evidenceDir?: string }} [options]
+ * @returns {Promise<object>}
+ */
+export async function runRightbarSeatQa(options = {}) {
+  const root = options.root || REPO_ROOT;
+  const runId = randomUUID();
+  const evidenceDir = options.evidenceDir || join(root, '.workbuddy/evidence/worktree-qa', `rightbar-seat-${runId}`);
+  mkdirSync(evidenceDir, { recursive: true });
+
+  const report = {
+    runId,
+    stage: RIGHTBAR_SEAT_SCENARIO,
+    plugin: 'omnimux',
+    sourcePath: SIDEBAR_CHROME_SOURCE_PATH,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    pass: false,
+    serverPort: null,
+    cdpPort: null,
+    assertions: [],
+    negativeControl: null,
+    positive: null,
+    screenshot: null,
+    cleanup: {},
+    errors: [],
+  };
+
+  let server = null;
+  let chromeProc = null;
+  let cdpWs = null;
+  const profileDir = join(root, 'tmp', `worktree-qa-chrome-${process.pid}-${runId.slice(0, 8)}`);
+
+  try {
+    // 1. 生产模块与其真实依赖按源文件提供，页面直接 import（不复制、不打补丁）
+    const html = buildRightbarSeatHarnessHtml();
+    const routes = new Map([
+      [RIGHTBAR_SEAT_MODULE_URL, { file: join(root, SIDEBAR_CHROME_SOURCE_PATH), type: 'text/javascript; charset=utf-8' }],
+      ['/src/client/sidebar-coordinator.js', { file: join(root, 'plugins/omnimux/src/client/sidebar-coordinator.js'), type: 'text/javascript; charset=utf-8' }],
+      ['/src/plugin-lifecycle.json', { file: join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), type: 'application/json; charset=utf-8' }],
+    ]);
+    server = http.createServer((req, res) => {
+      const path = (req.url || '/').split('?')[0];
+      const route = routes.get(path);
+      if (route) {
+        res.writeHead(200, { 'Content-Type': route.type });
+        res.end(readFileSync(route.file));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    await new Promise((resolve) => { server.listen(0, '127.0.0.1', resolve); });
+    report.serverPort = server.address().port;
+    report.assertions.push({ name: 'ephemeral-server-listen', pass: true, port: report.serverPort });
+
+    // 2. 无头浏览器（临时 profile，零公共环境污染；视口镜像开发版宽度以便逐像素比对）
+    mkdirSync(profileDir, { recursive: true });
+    const chromeArgs = [
+      '--headless=new',
+      '--remote-debugging-port=0',
+      `--user-data-dir=${profileDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-gpu',
+      '--hide-scrollbars',
+      '--force-device-scale-factor=2',
+      '--window-size=1728,240',
+      'about:blank',
+    ];
+    if (process.platform === 'linux') {
+      chromeArgs.push('--no-sandbox', '--disable-dev-shm-usage');
+    }
+    chromeProc = spawn(findChromePath(), chromeArgs);
+
+    const cdpPort = await new Promise((resolve, reject) => {
+      const portFile = join(profileDir, 'DevToolsActivePort');
+      const stderrTail = [];
+      let settled = false;
+      let poll = null;
+      let deadline = null;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (poll) clearInterval(poll);
+        if (deadline) clearTimeout(deadline);
+        fn(value);
+      };
+      poll = setInterval(() => {
+        try {
+          if (!existsSync(portFile)) return;
+          const port = Number(readFileSync(portFile, 'utf8').split('\n')[0].trim());
+          if (Number.isInteger(port) && port > 0) finish(resolve, port);
+        } catch {}
+      }, 120);
+      deadline = setTimeout(
+        () => finish(reject, new Error(`启动无头浏览器超时（25秒未响应）; stderr: ${stderrTail.join('').slice(-600)}`)),
+        25000,
+      );
+      chromeProc.stderr.on('data', (chunk) => {
+        const text = chunk.toString();
+        stderrTail.push(text);
+        if (stderrTail.length > 20) stderrTail.shift();
+        const match = text.match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
+        if (match) finish(resolve, Number(match[1]));
+      });
+      chromeProc.on('error', (err) => finish(reject, err));
+    });
+    report.cdpPort = cdpPort;
+    report.assertions.push({ name: 'ephemeral-cdp-listen', pass: true, port: cdpPort });
+
+    // 3. CDP 连接
+    const targets = await fetch(`http://127.0.0.1:${cdpPort}/json/list`).then((r) => r.json());
+    const pageTarget = targets.find((t) => t.type === 'page');
+    assert.ok(pageTarget && pageTarget.webSocketDebuggerUrl, '未找到有效的浏览器 Page 调试目标');
+
+    cdpWs = new WebSocket(pageTarget.webSocketDebuggerUrl);
+    let msgId = 0;
+    const sendCdp = (method, params = {}) =>
+      new Promise((resolveCdp, rejectCdp) => {
+        const id = ++msgId;
+        const onMsg = (ev) => {
+          const m = JSON.parse(ev.data);
+          if (m.id === id) {
+            cdpWs.removeEventListener('message', onMsg);
+            if (m.error) rejectCdp(new Error(`CDP [${method}] 失败: ${JSON.stringify(m.error)}`));
+            else resolveCdp(m.result || m);
+          }
+        };
+        cdpWs.addEventListener('message', onMsg);
+        cdpWs.send(JSON.stringify({ id, method, params }));
+      });
+
+    await new Promise((resolveWs, rejectWs) => {
+      cdpWs.addEventListener('open', resolveWs);
+      cdpWs.addEventListener('error', rejectWs);
+    });
+
+    await sendCdp('Page.enable');
+    await sendCdp('Runtime.enable');
+
+    const evaluate = async (expression) => {
+      const res = await sendCdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+      if (res.exceptionDetails) {
+        throw new Error(`页面内执行失败: ${res.exceptionDetails.exception?.description || res.exceptionDetails.text}`);
+      }
+      return res.result?.value;
+    };
+
+    const loadHarness = async () => {
+      await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+      for (let i = 0; i < 40; i += 1) {
+        await new Promise((r) => setTimeout(r, 100));
+        const ready = await evaluate('Boolean(window.__qaRightbarSeatReady)').catch(() => false);
+        if (ready) return;
+      }
+      throw new Error('生产模块未在页面内加载成功（import 失败或超时）');
+    };
+
+    const readSeatMetrics = async () => {
+      const raw = await evaluate(rightbarSeatMeasureExpression());
+      assert.ok(raw, '未取得落点测量结果');
+      const parsed = JSON.parse(raw);
+      assert.ok(!parsed.error, `夹具测量失败: ${parsed.error}`);
+      return parsed;
+    };
+
+    // 4. 反向对照：旧写死固定定位必须压住相邻控件
+    await loadHarness();
+    const pinned = JSON.parse(await evaluate(legacyPinExpression()));
+    assert.ok(pinned.ok, `旧实现注入失败: ${pinned.error}`);
+    await new Promise((r) => setTimeout(r, 200));
+    const before = await readSeatMetrics();
+    report.negativeControl = before;
+    const negative = interpretRightbarSeatNegative(before);
+    report.assertions.push(...negative);
+    assert.ok(
+      negative.every((a) => a.pass),
+      `反向对照失败（夹具失真或缺陷已不存在）: ${negative.filter((a) => !a.pass).map((a) => a.name).join(', ')}`,
+    );
+
+    const shotBefore = await sendCdp('Page.captureScreenshot', {
+      format: 'png',
+      clip: { x: 1428, y: 0, width: 300, height: 46, scale: 2 },
+    });
+    const beforeBuffer = Buffer.from(shotBefore.data, 'base64');
+    assertPng(beforeBuffer);
+    const beforePath = join(evidenceDir, 'before-toggle-overlaps-neighbour.png');
+    writeFileSync(beforePath, beforeBuffer);
+
+    // 5. 正向：重载页面（清掉旧实现痕迹），只调用生产模块的同步函数
+    await loadHarness();
+    const syncResult = JSON.parse(await evaluate(runProductionSeatExpression()));
+    assert.ok(syncResult.ok, `生产模块调用失败: ${syncResult.error}`);
+    await new Promise((r) => setTimeout(r, 200));
+    const after = await readSeatMetrics();
+    report.positive = after;
+    const positive = interpretRightbarSeatPositive(after);
+    report.assertions.push(...positive);
+
+    const shotAfter = await sendCdp('Page.captureScreenshot', {
+      format: 'png',
+      clip: { x: 1428, y: 0, width: 300, height: 46, scale: 2 },
+    });
+    const afterBuffer = Buffer.from(shotAfter.data, 'base64');
+    const { width, height } = assertPng(afterBuffer);
+    const afterPath = join(evidenceDir, 'after-toggle-seated.png');
+    writeFileSync(afterPath, afterBuffer);
+    report.screenshot = { before: beforePath, after: afterPath, width, height, bytes: afterBuffer.length };
+
+    report.pass = judgeRightbarSeatRun({ negative, positive }).pass;
+  } catch (error) {
+    report.errors.push(error instanceof Error ? error.message : String(error));
+  } finally {
+    if (cdpWs) {
+      try { cdpWs.close(); } catch {}
+    }
+    if (chromeProc) {
+      try { chromeProc.kill('SIGTERM'); } catch {}
+      await new Promise((r) => setTimeout(r, 300));
+      if (chromeProc.exitCode === null) {
+        try { chromeProc.kill('SIGKILL'); } catch {}
+      }
+    }
+    if (report.cdpPort) {
+      const released = await fetch(`http://127.0.0.1:${report.cdpPort}/json/version`)
+        .then(() => false)
+        .catch(() => true);
+      report.cleanup.cdpPortReleased = released;
+    }
+    if (server) {
+      await new Promise((r) => server.close(r));
+      report.cleanup.httpServerClosed = !server.listening;
+    }
+    rmSync(profileDir, { recursive: true, force: true });
+    report.cleanup.profileRemoved = !existsSync(profileDir);
+    report.cleanup.allReleased = Object.values(report.cleanup).every(Boolean);
+    if (!report.cleanup.allReleased) {
+      report.pass = false;
+      report.errors.push(`资源未完全释放: ${JSON.stringify(report.cleanup)}`);
+    }
+    report.completedAt = new Date().toISOString();
+    writeFileSync(join(evidenceDir, 'rightbar-seat-qa-report.json'), JSON.stringify(report, null, 2) + '\n');
+  }
+
+  return report;
+}
+
 async function main() {
   const { positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -857,6 +1123,22 @@ async function main() {
   });
 
   const stageArg = positionals[0] || 'all';
+
+  if (stageArg === RIGHTBAR_SEAT_SCENARIO) {
+    console.log('\n🚀 [Worktree Web QA] 启动右上角收起态落点门禁（真实内核 · 动态端口 · 反向对照）...');
+    const started = Date.now();
+    const rep = await runRightbarSeatQa();
+    const elapsed = ((Date.now() - started) / 1000).toFixed(2);
+    const failed = rep.assertions.filter((a) => !a.pass).map((a) => a.name);
+    if (rep.pass) {
+      console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort}, 与相邻控件间距: ${rep.positive?.gap}px, 重叠: ${rep.positive?.overlapArea})`);
+      console.log('   反向对照: 旧写死固定定位 —— 已复现压住相邻控件，夹具未失真');
+      console.log('   证据归档: .workbuddy/evidence/worktree-qa/<runId>/rightbar-seat-qa-report.json');
+      return;
+    }
+    console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);
+    process.exit(1);
+  }
 
   if (stageArg === SIDEBAR_CHROME_SCENARIO) {
     console.log('\n🚀 [Worktree Web QA] 启动右侧栏 chrome 几何门禁（真实内核 · 动态端口 · 反向对照）...');
