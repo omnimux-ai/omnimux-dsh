@@ -89,3 +89,8 @@ test('preserves viewport anchor, accessibility and dismissal', () => {
   for (const token of ['wf-cascade-brand-item', 'wf-cascade-model-item', 'wf-cascade-strategy-btn', 'wf-cascade-channel-row', 'role="menu"', 'role="menuitemcheckbox"', 'role="menuitemradio"', 'aria-expanded={isOpen}', 'POPOVER_MAX_WIDTH = 814', 'document.body', 'resolvePopoverSurface(triggerRef.current)', "event.key === 'Escape'"]) assert.ok(cascadeSrc.includes(token), token);
   assert.doesNotMatch(cascadeSrc, /StabilityDotBar|ModelRoutingModal|--omx-/);
 });
+
+test('brand column removes redundant section title', () => {
+  assert.doesNotMatch(cascadeSrc, /wf-loomi-section-title/, 'wf-loomi-section-title must be completely removed');
+  assert.doesNotMatch(cascadeSrc, /<div[^>]*>\s*选择模型\s*<\/div>/, 'Redundant title "选择模型" must be removed from popover');
+});
