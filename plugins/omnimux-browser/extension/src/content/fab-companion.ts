@@ -13,6 +13,7 @@ import { getFullContext, detectPlatform } from './page-sensor.ts'
 import { fillHostInput } from './dom-fill.ts'
 import { sniffViewportMedia } from './media-sniffer.ts'
 import { BRIDGE_MESSAGE, CONTENT_MESSAGE_SOURCE, TIMING } from './media-hover/messages.ts'
+import { BRAND_GHOST_PATH } from './media-hover/overlay-icons.ts'
 import type { HoveredMedia } from './media-hover/types.ts'
 import { FEATURE_FLAG, readFlag, readFlagSync, subscribeFlag } from '../feature-flags.ts'
 
@@ -59,15 +60,19 @@ export function initFabCompanion(): void {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", sans-serif;
       }
 
-      /* Squircle micro-3D floating action button (FAB) */
+      /* Squircle micro-3D floating action button (FAB) · 对齐推特官方浮标规格 */
       .omnimux-fab {
         position: fixed;
-        width: 56px;
-        height: 56px;
+        box-sizing: border-box;
+        width: 55px;
+        height: 55px;
         border-radius: 16px;
-        background: #111115;
-        border: 1.5px solid rgba(255, 255, 255, 0.28);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgb(75, 78, 82);
+        box-shadow: rgba(255, 255, 255, 0.2) 0px 0px 15px 0px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px;
+        color: #e7e9ea;
         cursor: grab;
         display: flex;
         align-items: center;
@@ -77,16 +82,18 @@ export function initFabCompanion(): void {
         z-index: 2147483647;
         opacity: 1;
         transform: scale(1);
-        transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
                     opacity 0.2s ease,
                     box-shadow 0.2s ease,
+                    background-color 0.2s ease,
                     border-color 0.2s ease;
       }
 
       .omnimux-fab:hover {
-        transform: scale(1.08);
-        border-color: #ffffff;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+        transform: scale(1.04);
+        border-color: rgba(255, 255, 255, 0.45);
+        box-shadow: rgba(255, 255, 255, 0.35) 0px 0px 20px 0px, rgba(255, 255, 255, 0.25) 0px 0px 4px 1px;
+        background: rgba(15, 15, 18, 0.75);
       }
 
       .omnimux-fab:active {
@@ -100,10 +107,10 @@ export function initFabCompanion(): void {
         pointer-events: none;
       }
 
-      .omnimux-fab img {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
+      .omnimux-fab svg {
+        width: 32px;
+        height: 32px;
+        fill: currentColor;
         pointer-events: none;
         display: block;
       }
@@ -158,7 +165,9 @@ export function initFabCompanion(): void {
     </style>
 
     <div id="omnimux-fab-btn" class="omnimux-fab" title="OmniMux-精灵助手 大工作台 (可拖拽移动，点击展开)">
-      <img src="${iconUrl}" alt="OmniMux">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" fill-rule="evenodd" aria-hidden="true" focusable="false">
+        <path d="${BRAND_GHOST_PATH}"/>
+      </svg>
     </div>
 
     <div id="omnimux-workstation" class="omnimux-workstation-container" role="dialog" aria-label="OmniMux工作台">
@@ -208,12 +217,43 @@ export function initFabCompanion(): void {
     }
   })()
 
-  let currentX = window.innerWidth - 80
-  let currentY = window.innerHeight - 88
+  // 默认位置：对齐推特右下角抽屉浮标纵向成列布局
+  // 推特浮标基准：Chat (bottom 12px, right 20px, 55x55), Grok (bottom 79px, right 20px, 55x55), 间距 12px
+  // OmniMux 位于 Grok 正上方 12px：bottom = 79 + 55 + 12 = 146px，right = 20px
+  function computeDefaultPosition(): { x: number; y: number } {
+    const grokEl = document.querySelector('[data-testid="GrokDrawerHeader"]')
+    if (grokEl) {
+      const r = grokEl.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        return {
+          x: Math.round(r.left),
+          y: Math.max(10, Math.round(r.top - 12 - 55)),
+        }
+      }
+    }
+    const chatEl = document.querySelector('[data-testid="chat-drawer-main"]')
+    if (chatEl) {
+      const r = chatEl.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        return {
+          x: Math.round(r.left),
+          y: Math.max(10, Math.round(r.top - 12 - 55 - 12 - 55)),
+        }
+      }
+    }
+    return {
+      x: Math.max(10, window.innerWidth - 75), // 20px 右边距 (window.innerWidth - 20 - 55)
+      y: Math.max(10, window.innerHeight - 201), // 146px 底边距 (window.innerHeight - 146 - 55)
+    }
+  }
+
+  const defaultPos = computeDefaultPosition()
+  let currentX = defaultPos.x
+  let currentY = defaultPos.y
 
   if (savedPos && typeof savedPos.x === 'number' && typeof savedPos.y === 'number') {
-    currentX = Math.max(10, Math.min(window.innerWidth - 66, savedPos.x))
-    currentY = Math.max(10, Math.min(window.innerHeight - 66, savedPos.y))
+    currentX = Math.max(10, Math.min(window.innerWidth - 65, savedPos.x))
+    currentY = Math.max(10, Math.min(window.innerHeight - 65, savedPos.y))
   }
 
   function applyFabPosition(x: number, y: number) {
