@@ -328,7 +328,7 @@ test('Alpha entries retain activation and labels across placement and remount', 
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
   let clicks = 0
-  const rows = ['accounts', 'workflow', 'publish', 'analytics', 'forms', 'inspiration'].map((name, rank) => {
+  const rows = ['accounts', 'workflow', 'publish', 'analytics', 'forms', 'inspiration', 'automation'].map((name, rank) => {
     const element = document.createElement('button')
     element.innerHTML = '<span class="omnimux-sidebar-nav-entry-label">功能</span>'
     element.setAttribute('aria-label', '功能')
@@ -352,7 +352,7 @@ test('Alpha entries retain activation and labels across placement and remount', 
       assert.match(element.title, /内测/)
     }
   }
-  assert.equal(clicks, 6)
+  assert.equal(clicks, 7)
   for (const { dispose } of rows) dispose()
   const again = rows.filter(({ name }) => name !== 'workflow' && name !== 'inspiration').map(({ row }) => api.register(row))
   api.place()
@@ -360,7 +360,7 @@ test('Alpha entries retain activation and labels across placement and remount', 
   const settled = getPlaceCountForTests()
   await new Promise(resolve => setTimeout(resolve, 20))
   assert.equal(getPlaceCountForTests(), settled, 'badge placement must not cause an observer loop')
-  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 4)
+  assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 5)
   for (const dispose of again) dispose()
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
 })
