@@ -243,7 +243,9 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
 
   if (name === 'bash') {
     const command = String(toolInput.command || '')
-    const root = effectiveRepoRoot(command, cwd)
+    const workdir = typeof toolInput.workdir === 'string' && toolInput.workdir.trim()
+      ? resolve(cwd, toolInput.workdir) : cwd
+    const root = effectiveRepoRoot(command, workdir)
     if (isDeliveryCommand(command)) {
       const changed = taskChangeSet(root)
       const ui = changed.filter(isUiSourcePath)
