@@ -25,4 +25,22 @@ describe('hide-permission-select in composer', () => {
       'HUB_CSS should use display: none !important',
     )
   })
+
+  it('HUB_CSS contains defensive rules to hide ContextMeter token usage progress ring in composer', () => {
+    assert.match(
+      HUB_CSS,
+      /button\[aria-label\*="上下文已用"\]/,
+      'HUB_CSS should hide button by aria-label 上下文已用',
+    )
+    assert.match(
+      HUB_CSS,
+      /button\[aria-label\*="context used"\]/,
+      'HUB_CSS should hide button by aria-label context used',
+    )
+    assert.match(
+      HUB_CSS,
+      /\.JdJrwG_root/,
+      'HUB_CSS should include ContextMeter class selector .JdJrwG_root',
+    )
+  })
 })
