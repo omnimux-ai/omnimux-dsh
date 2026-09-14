@@ -665,7 +665,7 @@ export async function runSidebarChromeQa(options = {}) {
 
     // 3. 无头浏览器（临时 profile，零公共环境污染）
     mkdirSync(profileDir, { recursive: true });
-    chromeProc = spawn(findChromePath(), [
+    const chromeArgs = [
       '--headless=new',
       '--remote-debugging-port=0',
       `--user-data-dir=${profileDir}`,
@@ -676,21 +676,47 @@ export async function runSidebarChromeQa(options = {}) {
       '--force-device-scale-factor=2',
       '--window-size=1280,420',
       'about:blank',
-    ]);
+    ];
+    // CI 容器（Linux）需放宽沙箱与 /dev/shm 限制，否则内核常常起不来。
+    if (process.platform === 'linux') {
+      chromeArgs.push('--no-sandbox', '--disable-dev-shm-usage');
+    }
+    chromeProc = spawn(findChromePath(), chromeArgs);
 
+    // 端口来源优先读 profile 内的 DevToolsActivePort（比解析 stderr 稳定），
+    // stderr 正则仅作兜底；等待上限放宽以容纳 CI 冷启动，超时回传诊断尾巴。
     const cdpPort = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('启动无头浏览器超时（5秒未响应）')), 5000);
+      const portFile = join(profileDir, 'DevToolsActivePort');
+      const stderrTail = [];
+      let settled = false;
+      let poll = null;
+      let deadline = null;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (poll) clearInterval(poll);
+        if (deadline) clearTimeout(deadline);
+        fn(value);
+      };
+      poll = setInterval(() => {
+        try {
+          if (!existsSync(portFile)) return;
+          const port = Number(readFileSync(portFile, 'utf8').split('\n')[0].trim());
+          if (Number.isInteger(port) && port > 0) finish(resolve, port);
+        } catch {}
+      }, 120);
+      deadline = setTimeout(
+        () => finish(reject, new Error(`启动无头浏览器超时（25秒未响应）; stderr: ${stderrTail.join('').slice(-600)}`)),
+        25000,
+      );
       chromeProc.stderr.on('data', (chunk) => {
-        const match = chunk.toString().match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
-        if (match) {
-          clearTimeout(timeout);
-          resolve(Number(match[1]));
-        }
+        const text = chunk.toString();
+        stderrTail.push(text);
+        if (stderrTail.length > 20) stderrTail.shift();
+        const match = text.match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
+        if (match) finish(resolve, Number(match[1]));
       });
-      chromeProc.on('error', (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      });
+      chromeProc.on('error', (err) => finish(reject, err));
     });
     report.cdpPort = cdpPort;
     report.assertions.push({ name: 'ephemeral-cdp-listen', pass: true, port: cdpPort });
