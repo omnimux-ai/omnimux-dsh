@@ -17,7 +17,7 @@ const SHARED_SELECTOR_HEAD = [
   '.wf-model-cascade-capsule,',
   '.wf-voice-trigger,',
   '.wf-cfg-summary-bar,',
-  '.wf-video-trigger-bar {',
+  '.wf-video-trigger-bar,',
 ].join('\n');
 
 /** 共享触发器组的首块声明（选择器到闭合大括号）。 */

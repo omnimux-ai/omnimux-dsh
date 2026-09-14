@@ -45,6 +45,21 @@ const BAR_HTML = `
       <button type="button" id="voice" class="wf-voice-trigger">
         <span class="wf-voice-trigger__label">默认音色</span>
       </button>
+      <button type="button" id="asr-model"
+        class="wf-custom-select-trigger wf-custom-select-trigger--pill wf-param-bar__select wf-param-bar__select--model"
+        aria-haspopup="listbox" aria-expanded="false">
+        <span class="wf-custom-select-label">doubao-asr-bigmodel</span>
+      </button>
+      <button type="button" id="asr-model-open"
+        class="wf-custom-select-trigger wf-custom-select-trigger--pill wf-custom-select-trigger--open wf-param-bar__select wf-param-bar__select--model"
+        aria-haspopup="listbox" aria-expanded="true">
+        <span class="wf-custom-select-label">doubao-asr-bigmodel</span>
+      </button>
+      <button type="button" id="asr-model-disabled"
+        class="wf-custom-select-trigger wf-custom-select-trigger--pill wf-custom-select-trigger--disabled wf-param-bar__select wf-param-bar__select--model"
+        aria-haspopup="listbox" disabled>
+        <span class="wf-custom-select-label">doubao-asr-bigmodel</span>
+      </button>
       <button type="button" id="params" class="wf-cfg-summary-bar wf-video-trigger-bar" aria-expanded="false">
         <span class="wf-cfg-summary-bar__slot wf-video-trigger-bar__slot">16:9</span>
       </button>
@@ -114,11 +129,11 @@ function ruleWithSelector(selector) {
 
 test('e2e: 三个底栏触发器由同一份共享几何规则命中（非各自手写）', () => {
   assert.ok(sharedRule, '必须存在覆盖模型触发器的共享几何规则');
-  assert.deepEqual(
-    selectorList(sharedRule).sort(),
-    [...SHARED_TRIGGERS].sort(),
-    '共享几何规则必须同时覆盖模型选择 / 音色 / 参数摘要三类触发器',
-  );
+  // 共享组可容纳异构成员（转写节点的 CustomSelect 以并列选择器加入），故断言「至少包含」而非
+  // 「恰好等于」；成员集合的完整约束由 barControls-convergence.e2e.test.mjs 承担。
+  for (const cls of SHARED_TRIGGERS) {
+    assert.ok(selectorList(sharedRule).includes(cls), `共享几何规则必须覆盖 ${cls}`);
+  }
 
   // 几何与排版契约
   assert.match(sharedRule.body, /height: 32px/);

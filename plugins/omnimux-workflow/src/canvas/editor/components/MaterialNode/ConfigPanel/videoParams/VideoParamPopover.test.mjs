@@ -199,19 +199,23 @@ test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32p
   assert.match(videoCssBlock, /overflow-y:\s*auto/);
   assert.match(videoCssBlock, /scrollbar-width:\s*thin/);
   // 触发条规格：32px 高 / 圆角 999px（胶囊圆角规格） / padding 0 8px 0 10px / max-width 100%
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?height:\s*32px/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?border-radius:\s*999px/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?padding:\s*0\s+8px\s+0\s+10px/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar \{[\s\S]*?max-width:\s*100%/);
-  // 废除旧几何：触发条根规则内禁止 28px / 260px
-  const triggerRule = extractRuleBlock('.wf-video-trigger-bar');
+  // 这些声明由「底栏触发器共享规格」选择器组提供，触发条是其成员之一（后面还跟有其它成员），
+  // 故锚点用带逗号的成员行，不假设它是选择器组的最后一行。
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar,[\s\S]*?\{[\s\S]*?height:\s*32px/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar,[\s\S]*?\{[\s\S]*?border-radius:\s*999px/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar,[\s\S]*?\{[\s\S]*?padding:\s*0\s+8px\s+0\s+10px/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar,[\s\S]*?\{[\s\S]*?max-width:\s*100%/);
+  // 废除旧几何：共享组内禁止 28px / 260px
+  const triggerRule = extractRuleBlock('.wf-model-cascade-capsule');
+  assert.notEqual(triggerRule, '', '共享组规则必须可解析');
   assert.doesNotMatch(triggerRule, /28px|260px/);
   // 触发条 open 态 brand 描边 + focus-visible 焦点环 + 按压 scale
   // open 选择器带 :not(:disabled) 以取得与 hover 同特异性：点开后指针仍停在触发器上时，
   // 品牌描边不能被 hover 描边覆盖（底栏触发器共享规格）。
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar\.wf-video-trigger-bar--open:not\(:disabled\) \{[\s\S]*?brand-primary/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar:focus-visible \{[\s\S]*?state-business-tertiary/);
-  assert.match(videoCssBlock, /\.wf-video-trigger-bar:active \{[\s\S]*?scale\(0\.96\)/);
+  // 这三条同样由共享组的对应规则提供，锚点用带逗号的成员行。
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar\.wf-video-trigger-bar--open:not\(:disabled\),[\s\S]*?\{[\s\S]*?brand-primary/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar:focus-visible,[\s\S]*?\{[\s\S]*?state-business-tertiary/);
+  assert.match(videoCssBlock, /\.wf-video-trigger-bar:active,[\s\S]*?\{[\s\S]*?scale\(0\.96\)/);
   // 段间 CSS 竖线分隔（废除 __dot 与「·」字符）
   assert.doesNotMatch(videoCssBlock, /\.wf-video-trigger-bar__dot/);
   assert.match(videoCssBlock, /\.wf-video-trigger-bar__slot \+ \.wf-video-trigger-bar__slot::before/);
