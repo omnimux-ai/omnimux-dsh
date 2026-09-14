@@ -23,9 +23,8 @@ const GHOST_ICON_SVG = `
  *
  * Rules:
  * 1. Post buttons ("发帖", "Post", dialog composer) are ALWAYS valid targets.
- * 2. Unactivated compact inline reply bars (single-line placeholder bar without expanded textarea)
- *    are FULLY VALID targets. Users expect the icon to show in both active & inactive states!
- * 3. When a card is in the EXPANDED state (contains tweetTextarea_0):
+ * 2. Compact reply bars are valid even with a mounted editable textarea.
+ * 3. When a card has a visible media toolbar:
  *    Only buttons located in or accompanying the bottom media toolbar (below the textarea) are valid.
  *    Any orphaned/stale buttons in the top half or header of the expanded card are rejected.
  */
@@ -57,16 +56,29 @@ export function isStaleOrphanReplyButton(targetBtn: HTMLElement): boolean {
     composer = composer.parentElement
   }
 
-  // 4. If no expanded composer card found (no tweetTextarea_0), this is an unactivated compact bar.
-  // Unactivated compact inline reply bar IS A VALID TARGET! Both inactive and active states must mount!
-  if (!composerCard) {
+  // The compact row may survive expansion while the toolbar is added beside it.
+  let outer = composerCard?.parentElement
+  for (let i = 0; i < 4 && outer && outer !== document.body; i++, outer = outer.parentElement) {
+    if (outer.querySelectorAll('div[data-testid="tweetTextarea_0"]').length !== 1) break
+    if (outer.querySelector('[data-testid="toolBar"]')) {
+      composerCard = outer
+      break
+    }
+  }
+
+  // X mounts the editable textarea before activation; only a visible toolbar
+  // distinguishes the expanded composer from the compact reply row.
+  const visibleToolbar = composerCard && Array.from(
+    composerCard.querySelectorAll<HTMLElement>('[data-testid="toolBar"]')
+  ).find(isElementActionable)
+  if (!visibleToolbar) {
     return false
   }
 
-  // 5. In an expanded composer card, verify if this button is located in or accompanying the bottom toolbar.
+  // Expanded composers must mount beside the bottom toolbar's reply button.
   const isInToolbar =
     !!targetBtn.closest('[data-testid="toolBar"]') ||
-    !!composerCard.querySelector('[data-testid="toolBar"]')?.contains(targetBtn) ||
+    visibleToolbar.contains(targetBtn) ||
     !!targetBtn.parentElement?.querySelector('[aria-label*="媒体"], [aria-label*="Media"], [aria-label*="Emoji"], [aria-label*="表情"]')
 
   // If inside an expanded card but NOT in the bottom toolbar, it's an orphaned/stale node (e.g. top corner residue)
@@ -98,7 +110,8 @@ export function cleanupStaleCopilotButtons(): void {
 
     // 1. If bound target is disconnected, invisible, or identified as a stale orphan
     if (boundTarget) {
-      if (!boundTarget.isConnected || !isElementActionable(boundTarget) || isStaleOrphanReplyButton(boundTarget)) {
+      if (!boundTarget.isConnected || !isElementActionable(boundTarget) || isStaleOrphanReplyButton(boundTarget) ||
+          copilotBtn.parentElement !== findHorizontalToolbarAnchor(boundTarget).container) {
         copilotBtn.remove()
         return
       }
@@ -142,6 +155,7 @@ export function cleanupStaleCopilotButtons(): void {
   textareas.forEach((ta) => {
     let card: HTMLElement | null = ta.parentElement
     for (let i = 0; i < 14 && card && card !== document.body; i++) {
+      if (card.querySelectorAll('div[data-testid="tweetTextarea_0"]').length > 1) break
       const cardCopilots = Array.from(
         card.querySelectorAll<HTMLElement>(`.omnimux-copilot-anchor-btn, [${COPILOT_ATTACHED_ATTR}="true"]`)
       )
@@ -205,7 +219,7 @@ export function findHorizontalToolbarAnchor(targetBtn: HTMLElement): {
   insertBefore: Node | null
   sopilotTarget?: HTMLElement
 } {
-  let curr: HTMLElement | null = targetBtn
+  let curr: HTMLElement | null = targetBtn.parentElement
   let rowContainer: HTMLElement | null = null
   let branchChild: HTMLElement | null = targetBtn
   let sopilotBtn: HTMLElement | null = null
@@ -286,6 +300,7 @@ function attachCopilotButton(targetBtn: HTMLElement): void {
   // Stop mouse/pointer event propagation to prevent Twitter outer container from auto-expanding or toggling focus
   const stopImmediate = (e: Event) => {
     e.stopPropagation()
+    if (e.type === 'mousedown' || e.type === 'pointerdown') e.preventDefault()
   }
   copilotBtn.addEventListener('mousedown', stopImmediate)
   copilotBtn.addEventListener('pointerdown', stopImmediate)

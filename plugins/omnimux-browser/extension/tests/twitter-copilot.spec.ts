@@ -1018,6 +1018,177 @@ AIGC 现在的残酷真相是：模型能力每`
     expect(finalCopilots[0].parentElement).toBe(expandedBtn.parentElement)
   })
 
+  describe('reply textarea #1766', () => {
+    const iconSelector = '[data-omnimux-copilot="true"]'
+
+    // JSDOM has no layout: both native targets and visible toolbars need geometry.
+    const setGeometry = (element: HTMLElement, top = 100, width = 60, height = 32) => {
+      return vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+        x: 500, y: top, top, left: 500, right: 500 + width,
+        bottom: top + height, width, height, toJSON: () => ({}),
+      })
+    }
+
+    const createInactiveComposer = () => {
+      const card = document.createElement('section')
+      card.innerHTML = `
+        <div data-testid="compact-row" style="display: flex; flex-direction: row;">
+          <div data-testid="tweetTextarea_0_label">
+            <div data-testid="tweetTextarea_0" role="textbox" contenteditable="true"></div>
+          </div>
+          <div data-testid="native-wrapper">
+            <button data-testid="tweetButtonInline" disabled style="display: flex; flex-direction: row;">回复</button>
+          </div>
+        </div>
+      `
+      document.body.appendChild(card)
+      const row = card.querySelector<HTMLElement>('[data-testid="compact-row"]')!
+      const target = card.querySelector<HTMLButtonElement>('[data-testid="tweetButtonInline"]')!
+      const wrapper = target.parentElement!
+      setGeometry(target)
+      return { card, row, target, wrapper }
+    }
+
+    const addVisibleToolbar = (card: HTMLElement, target?: HTMLButtonElement) => {
+      const toolbar = document.createElement('div')
+      toolbar.setAttribute('data-testid', 'toolBar')
+      toolbar.style.cssText = 'display: flex; flex-direction: row;'
+      const bottomTarget = target ?? document.createElement('button')
+      bottomTarget.setAttribute('data-testid', 'tweetButtonInline')
+      bottomTarget.textContent = '回复'
+      toolbar.appendChild(bottomTarget)
+      card.appendChild(toolbar)
+      setGeometry(toolbar, 240, 500, 40)
+      if (!target) setGeometry(bottomTarget, 244)
+      expect(toolbar.getBoundingClientRect().width).toBeGreaterThan(0)
+      expect(toolbar.getBoundingClientRect().height).toBeGreaterThan(0)
+      return { toolbar, bottomTarget }
+    }
+
+    it('keeps one inactive icon beside a disabled native flex button with a mounted textarea and no toolbar', () => {
+      const { card, row, target, wrapper } = createInactiveComposer()
+      expect(card.querySelector('[contenteditable="true"]')).not.toBeNull()
+      expect(card.querySelector('[data-testid="toolBar"]')).toBeNull()
+      expect(target.disabled).toBe(true)
+      expect(getComputedStyle(target).display).toBe('flex')
+      expect(isCollapsedInlineReply(target)).toBe(false)
+
+      mountCopilotToTwitterButtons()
+      const icon = card.querySelector<HTMLButtonElement>(iconSelector)!
+      expect(icon).not.toBeNull()
+      expect(icon.parentElement).toBe(row)
+      expect(wrapper.nextElementSibling).toBe(icon)
+      expect(target.contains(icon)).toBe(false)
+      expect(icon.disabled).toBe(false)
+      for (let scan = 0; scan < 3; scan++) {
+        cleanupStaleCopilotButtons()
+        mountCopilotToTwitterButtons()
+        expect(Array.from(card.querySelectorAll(iconSelector))).toEqual([icon])
+      }
+    })
+
+    it('does not classify a mounted but zero-geometry hidden toolbar as expanded', () => {
+      const { card, target } = createInactiveComposer()
+      const toolbar = document.createElement('div')
+      toolbar.setAttribute('data-testid', 'toolBar')
+      toolbar.style.display = 'none'
+      card.appendChild(toolbar)
+      const geometry = setGeometry(toolbar, 0, 0, 0)
+
+      expect(isCollapsedInlineReply(target)).toBe(false)
+      expect(geometry).toHaveBeenCalled()
+      mountCopilotToTwitterButtons()
+      const icon = card.querySelector(iconSelector)
+      expect(icon).not.toBeNull()
+      cleanupStaleCopilotButtons()
+      expect(Array.from(card.querySelectorAll(iconSelector))).toEqual([icon])
+      expect(toolbar.querySelector(iconSelector)).toBeNull()
+    })
+
+    it.each(['pointerdown', 'mousedown'])('cancels %s default focus behavior and stops outer activation', (eventType) => {
+      const { card } = createInactiveComposer()
+      const activate = vi.fn()
+      card.addEventListener(eventType, activate)
+      mountCopilotToTwitterButtons()
+      const icon = card.querySelector<HTMLButtonElement>(iconSelector)!
+      const event = new MouseEvent(eventType, { bubbles: true, cancelable: true })
+
+      expect(icon.dispatchEvent(event)).toBe(false)
+      expect(event.defaultPrevented).toBe(true)
+      expect(activate).not.toHaveBeenCalled()
+    })
+
+    it('relocates the icon when expansion reparents the same still-connected native target', () => {
+      const { card, row, target } = createInactiveComposer()
+      mountCopilotToTwitterButtons()
+      const oldIcon = card.querySelector(iconSelector)!
+      const { toolbar } = addVisibleToolbar(card, target)
+      expect(target.isConnected).toBe(true)
+      expect(isCollapsedInlineReply(target)).toBe(false)
+      expect(oldIcon.parentElement).toBe(row)
+
+      // The old target remains valid: cleanup must notice its changed container.
+      cleanupStaleCopilotButtons()
+      expect(oldIcon.isConnected).toBe(false)
+      mountCopilotToTwitterButtons()
+      const icon = toolbar.querySelector(iconSelector)!
+      expect(icon).not.toBeNull()
+      expect(target.nextElementSibling).toBe(icon)
+      for (let scan = 0; scan < 3; scan++) {
+        cleanupStaleCopilotButtons()
+        mountCopilotToTwitterButtons()
+        expect(Array.from(card.querySelectorAll(iconSelector))).toEqual([icon])
+        expect(row.querySelector(iconSelector)).toBeNull()
+      }
+    })
+
+    it('rejects a retained compact top target when a positive-geometry sibling toolbar appears', () => {
+      const { card, row, target } = createInactiveComposer()
+      mountCopilotToTwitterButtons()
+      const oldIcon = card.querySelector(iconSelector)!
+      const { toolbar, bottomTarget } = addVisibleToolbar(card)
+      expect(target.isConnected).toBe(true)
+      expect(target.getBoundingClientRect().width).toBeGreaterThan(0)
+      expect(isCollapsedInlineReply(target)).toBe(true)
+      expect(isCollapsedInlineReply(bottomTarget)).toBe(false)
+
+      mountCopilotToTwitterButtons()
+      expect(oldIcon.isConnected).toBe(false)
+      expect(row.querySelector(iconSelector)).toBeNull()
+      const icon = toolbar.querySelector(iconSelector)!
+      expect(icon).not.toBeNull()
+      cleanupStaleCopilotButtons()
+      mountCopilotToTwitterButtons()
+      expect(Array.from(card.querySelectorAll(iconSelector))).toEqual([icon])
+    })
+
+    it('preserves both textarea composers and icon identities across repeated cleanup', () => {
+      const first = createInactiveComposer()
+      const second = createInactiveComposer()
+      const sharedPage = document.createElement('main')
+      document.body.appendChild(sharedPage)
+      sharedPage.append(first.card, second.card)
+      const { toolbar } = addVisibleToolbar(second.card, second.target)
+      mountCopilotToTwitterButtons()
+      const firstIcon = first.card.querySelector<HTMLElement>(iconSelector)!
+      const secondIcon = second.card.querySelector<HTMLElement>(iconSelector)!
+      expect(firstIcon).not.toBeNull()
+      expect(secondIcon).not.toBeNull()
+      setGeometry(firstIcon, 100, 32, 32)
+      setGeometry(secondIcon, 244, 32, 32)
+
+      for (let scan = 0; scan < 3; scan++) {
+        cleanupStaleCopilotButtons()
+        expect(Array.from(sharedPage.querySelectorAll(iconSelector))).toEqual([firstIcon, secondIcon])
+        mountCopilotToTwitterButtons()
+        expect(Array.from(first.card.querySelectorAll(iconSelector))).toEqual([firstIcon])
+        expect(Array.from(second.card.querySelectorAll(iconSelector))).toEqual([secondIcon])
+        expect(firstIcon.parentElement).toBe(first.row)
+        expect(secondIcon.parentElement).toBe(toolbar)
+      }
+    })
+  })
+
   it('T31: 竞品覆盖对齐 - 当同级存在 SoPilot 竞品按钮时，OmniMux 图标在其位置挂载并优雅覆盖', () => {
     const bar = document.createElement('div')
     bar.innerHTML = `
