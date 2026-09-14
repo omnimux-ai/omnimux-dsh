@@ -213,4 +213,17 @@ describe('attaching a page selection in the composer', () => {
     await vi.waitFor(() => { expect(panelApi.clearSelection).toHaveBeenCalledWith() })
     expect(document.querySelector('.composer-box .page-selection')).toBeNull()
   })
+
+  it('verifies close button in selection chip can be clicked to dismiss selection', async () => {
+    await startPanel()
+    await act(async () => { onSelection?.(selection) })
+
+    const removeBtn = document.querySelector<HTMLButtonElement>('.page-selection-chip button')
+    expect(removeBtn).not.toBeNull()
+    expect(removeBtn?.textContent).toBe('×')
+
+    await act(async () => { removeBtn!.click() })
+    await vi.waitFor(() => { expect(panelApi.clearSelection).toHaveBeenCalled() })
+    expect(document.querySelector('.composer-box .page-selection')).toBeNull()
+  })
 })
