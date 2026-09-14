@@ -6,16 +6,22 @@ import { fileURLToPath } from 'node:url';
 import {
   assertPng,
   findChromePath,
+  runRightbarSeatQa,
   runSidebarChromeQa,
   runWorktreeWebQa,
   selectStages,
   STAGE_CONFIG,
 } from './worktree-web-qa.mjs';
 import {
+  RIGHTBAR_SEAT_MODULE_URL,
+  buildRightbarSeatHarnessHtml,
   buildSidebarChromeHarnessHtml,
   extractRightbarChromeStyles,
   interpretNegativeControl,
+  interpretRightbarSeatNegative,
+  interpretRightbarSeatPositive,
   interpretSidebarChromeGeometry,
+  judgeRightbarSeatRun,
   judgeSidebarChromeRun,
   SIDEBAR_CHROME_SOURCE_PATH,
 } from './sidebar-chrome-qa-fixture.mjs';
@@ -117,6 +123,92 @@ test('sidebar-chrome: 真实浏览器端到端 —— 动态端口、反向对�
   assert.equal(report.positive.stripHeight, 40, '修复后顶栏必须为 40');
   assert.equal(report.positive.gap, 6, '修复后间距必须为 +6');
   assert.equal(report.positive.tabCoveredByContent, false, '修复后不得再被遮挡');
+
+  assert.ok(report.screenshot?.after && existsSync(report.screenshot.after), '修复后截图必须落盘');
+  assert.ok(report.screenshot?.before && existsSync(report.screenshot.before), '对照截图必须落盘');
+  assert.equal(assertPng(readFileSync(report.screenshot.after)).height > 0, true);
+
+  assert.deepEqual(report.cleanup, {
+    cdpPortReleased: true,
+    httpServerClosed: true,
+    profileRemoved: true,
+    allReleased: true,
+  }, '资源必须全部释放且零配置目录残留');
+});
+
+test('rightbar-seat: 夹具按外壳真实几何摆位，且只 import 生产模块（不自带修复规则）', () => {
+  const html = buildRightbarSeatHarnessHtml();
+  assert.match(html, /data-conversation-header-corner/, '必须提供标题行最右空槽位');
+  assert.match(html, /class="shell-header-utilities"/, '必须提供相邻的 utilities 组（被压住的一方）');
+  assert.match(html, /data-sidebar-right-toggle/, '必须提供原生收起按钮作为被测节点');
+  assert.match(html, new RegExp(RIGHTBAR_SEAT_MODULE_URL.replace(/[/.]/g, '\\$&')), '必须 import 生产模块');
+  assert.match(html, /gap: 8px; margin-left: 20px;/, 'utilities 组必须保留外壳自带的行内间距');
+  assert.doesNotMatch(html, /position:\s*static\s*!important/, '夹具不得预置修复后的内联样式');
+  assert.doesNotMatch(html, /right:\s*auto\s*!important/, '夹具不得预置修复后的内联样式');
+});
+
+test('rightbar-seat: 反向对照裁决在夹具失真时必须变红', () => {
+  const reproduced = interpretRightbarSeatNegative({ position: 'fixed', overlapArea: 352, gap: -16 });
+  assert.ok(reproduced.every((a) => a.pass), '旧实现复现压住相邻控件时必须全绿');
+
+  const distorted = interpretRightbarSeatNegative({ position: 'static', overlapArea: 0, gap: 8 });
+  assert.ok(distorted.every((a) => a.pass === false), '复现不出缺陷时必须全红（防夹具失真）');
+});
+
+test('rightbar-seat: 正向裁决对缺陷态必须全红、对修复态全绿', () => {
+  const defective = interpretRightbarSeatPositive({
+    parentIsCornerSlot: false,
+    position: 'fixed',
+    inlineStyle: 'position: fixed !important; right: 8px !important; top: 5px !important;',
+    gap: -16,
+    overlapArea: 352,
+    buttonRight: 1720,
+    viewportWidth: 1728,
+    buttonWidth: 28,
+    buttonHeight: 28,
+    controlCount: 1,
+  });
+  const flags = new Map(defective.map((a) => [a.name, a.pass]));
+  for (const name of [
+    'positive:seated-in-header-corner',
+    'positive:not-fixed-positioned',
+    'positive:no-hardcoded-right-offset',
+    'positive:standard-gap',
+    'positive:no-overlap',
+  ]) {
+    assert.equal(flags.get(name), false, `${name} 在缺陷态必须为红`);
+  }
+  assert.equal(judgeRightbarSeatRun({ negative: [], positive: defective }).pass, false, '缺陷态整体必须判不通过');
+
+  const fixed = interpretRightbarSeatPositive({
+    parentIsCornerSlot: true,
+    position: 'static',
+    inlineStyle: 'position: static !important; right: auto !important; top: auto !important;',
+    gap: 8,
+    overlapArea: 0,
+    buttonRight: 1716,
+    viewportWidth: 1728,
+    buttonWidth: 28,
+    buttonHeight: 28,
+    controlCount: 1,
+  });
+  const verdict = judgeRightbarSeatRun({ negative: [], positive: fixed });
+  assert.equal(verdict.pass, true, `修复态必须全绿，实际失败: ${verdict.failed.join(', ')}`);
+});
+
+test('rightbar-seat: 真实浏览器端到端 —— 动态端口、反向对照、零污染释放回执', async () => {
+  const report = await runRightbarSeatQa();
+  assert.equal(report.pass, true, `Expected pass, got: ${[...report.errors, ...report.assertions.filter((a) => !a.pass).map((a) => a.name)].join('; ')}`);
+  assert.ok(report.serverPort > 0, '网页服务端口必须是动态分配的有效端口');
+  assert.ok(report.cdpPort > 0, '浏览器调试端口必须是动态分配的有效端口');
+
+  assert.ok(report.negativeControl.overlapArea > 0, '反向对照必须复现重叠');
+  assert.equal(report.negativeControl.gap < 0, true, '反向对照间距必须为负');
+  assert.equal(report.positive.parentIsCornerSlot, true, '修复后必须落进标题行最右槽位');
+  assert.equal(report.positive.position, 'static', '修复后不得再用固定定位');
+  assert.equal(report.positive.gap, 8, '修复后与相邻控件间距必须为标准行内间距');
+  assert.equal(report.positive.overlapArea, 0, '修复后不得再有重叠');
+  assert.equal(report.positive.controlCount, 1, '同一动作的可见控件只能有一份');
 
   assert.ok(report.screenshot?.after && existsSync(report.screenshot.after), '修复后截图必须落盘');
   assert.ok(report.screenshot?.before && existsSync(report.screenshot.before), '对照截图必须落盘');
