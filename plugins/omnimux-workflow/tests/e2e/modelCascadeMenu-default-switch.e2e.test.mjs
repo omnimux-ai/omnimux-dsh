@@ -29,11 +29,18 @@ test('e2e: model cascade menu switches to default model on first-level menu clic
 });
 
 test('e2e: model cascade menu enforces strict brand boundary and prevents cross-brand leakage', () => {
-  // 1. 验证 shownModels 计算中，补全 needsActive 包含所属品牌强校验
+  // 1. 验证存在严格的 modelBelongsToBrand 判定函数
   assert.match(
     cascadeSrc,
-    /const belongsToBrand = brandForModel\(activeModelId, allowedBrands\) === shownBrandId;/,
-    'Must check if activeModelId actually belongs to shownBrandId',
+    /function modelBelongsToBrand\(modelId: string, brandId: string\): boolean/,
+    'Must declare strict modelBelongsToBrand helper',
+  );
+
+  // 2. 验证 shownModels 计算中，补全 needsActive 包含所属品牌强校验（严格特征词判定，无兜底假阳性）
+  assert.match(
+    cascadeSrc,
+    /const belongsToBrand = modelBelongsToBrand\(activeModelId, shownBrandId\);/,
+    'Must check if activeModelId actually belongs to shownBrandId via modelBelongsToBrand',
   );
   assert.match(
     cascadeSrc,
@@ -41,7 +48,7 @@ test('e2e: model cascade menu enforces strict brand boundary and prevents cross-
     'needsActive must guard with belongsToBrand',
   );
 
-  // 2. 确保不存在任何仅判断 shownBrandId === activeBrandId 就直接插入跨品牌模型的漏洞
+  // 3. 确保不存在任何仅判断 shownBrandId === activeBrandId 就直接插入跨品牌模型的漏洞
   assert.doesNotMatch(
     cascadeSrc,
     /const needsActive = shownBrandId === activeBrandId\s*&&\s*activeModelId\s*&&\s*!rows\.some/,
