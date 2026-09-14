@@ -14,13 +14,22 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { PNG } from 'pngjs';
+import {
+  SIDEBAR_CHROME_SOURCE_PATH,
+  buildSidebarChromeHarnessHtml,
+  extractRightbarChromeStyles,
+  interpretNegativeControl,
+  interpretSidebarChromeGeometry,
+  judgeSidebarChromeRun,
+  sidebarChromeMeasureExpression,
+} from './sidebar-chrome-qa-fixture.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -103,6 +112,19 @@ export function findChromePath() {
   const brewChromium = '/opt/homebrew/bin/chromium';
   if (existsSync(brewChromium)) {
     return brewChromium;
+  }
+  // Linux / CI 候选（GitHub ubuntu-latest 预装 Google Chrome）
+  const linuxCandidates = [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/snap/bin/chromium',
+  ];
+  for (const candidate of linuxCandidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
   }
   throw new Error('未找到可用的 Chrome / Chromium 可执行文件，可通过 CHROME_PATH 环境变量指定。');
 }
@@ -586,6 +608,247 @@ export async function runWorktreeWebQa(stageKey, options = {}) {
   return report;
 }
 
+/** 场景标识：右侧栏 chrome 几何门禁。 */
+export const SIDEBAR_CHROME_SCENARIO = 'sidebar-chrome';
+
+/**
+ * 右侧栏 chrome 几何门禁：真实内核 + 动态端口 + 临时 profile + 用完即焚。
+ *
+ * 与 Stage 场景的关键差异：**带反向对照**。未注入被测样式时必须复现遮挡
+ * （顶栏 28、间距为负），否则判定夹具失真并失败——防止「夹具自带答案」的假绿。
+ * @param {{ root?: string, evidenceDir?: string }} [options]
+ * @returns {Promise<object>}
+ */
+export async function runSidebarChromeQa(options = {}) {
+  const root = options.root || REPO_ROOT;
+  const runId = randomUUID();
+  const evidenceDir = options.evidenceDir || join(root, '.workbuddy/evidence/worktree-qa', `sidebar-chrome-${runId}`);
+  mkdirSync(evidenceDir, { recursive: true });
+
+  const report = {
+    runId,
+    stage: SIDEBAR_CHROME_SCENARIO,
+    plugin: 'omnimux',
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    pass: false,
+    serverPort: null,
+    cdpPort: null,
+    assertions: [],
+    negativeControl: null,
+    positive: null,
+    screenshot: null,
+    cleanup: {},
+    errors: [],
+  };
+
+  let server = null;
+  let chromeProc = null;
+  let cdpWs = null;
+  const profileDir = join(root, 'tmp', `worktree-qa-chrome-${process.pid}-${runId.slice(0, 8)}`);
+
+  try {
+    // 1. 被测样式从生产源码抽取（抽取失败即失败，禁止手写补丁）
+    const sourceText = readFileSync(join(root, SIDEBAR_CHROME_SOURCE_PATH), 'utf8');
+    const chromeStyles = extractRightbarChromeStyles(sourceText);
+    report.assertions.push({ name: 'artifact-styles-extracted', pass: true, bytes: chromeStyles.length });
+
+    // 2. 动态随机端口 HTTP 服务（夹具页不含任何修复规则）
+    const html = buildSidebarChromeHarnessHtml();
+    server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    await new Promise((resolve) => { server.listen(0, '127.0.0.1', resolve); });
+    report.serverPort = server.address().port;
+    report.assertions.push({ name: 'ephemeral-server-listen', pass: true, port: report.serverPort });
+
+    // 3. 无头浏览器（临时 profile，零公共环境污染）
+    mkdirSync(profileDir, { recursive: true });
+    const chromeArgs = [
+      '--headless=new',
+      '--remote-debugging-port=0',
+      `--user-data-dir=${profileDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-gpu',
+      '--hide-scrollbars',
+      '--force-device-scale-factor=2',
+      '--window-size=1280,420',
+      'about:blank',
+    ];
+    // CI 容器（Linux）需放宽沙箱与 /dev/shm 限制，否则内核常常起不来。
+    if (process.platform === 'linux') {
+      chromeArgs.push('--no-sandbox', '--disable-dev-shm-usage');
+    }
+    chromeProc = spawn(findChromePath(), chromeArgs);
+
+    // 端口来源优先读 profile 内的 DevToolsActivePort（比解析 stderr 稳定），
+    // stderr 正则仅作兜底；等待上限放宽以容纳 CI 冷启动，超时回传诊断尾巴。
+    const cdpPort = await new Promise((resolve, reject) => {
+      const portFile = join(profileDir, 'DevToolsActivePort');
+      const stderrTail = [];
+      let settled = false;
+      let poll = null;
+      let deadline = null;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (poll) clearInterval(poll);
+        if (deadline) clearTimeout(deadline);
+        fn(value);
+      };
+      poll = setInterval(() => {
+        try {
+          if (!existsSync(portFile)) return;
+          const port = Number(readFileSync(portFile, 'utf8').split('\n')[0].trim());
+          if (Number.isInteger(port) && port > 0) finish(resolve, port);
+        } catch {}
+      }, 120);
+      deadline = setTimeout(
+        () => finish(reject, new Error(`启动无头浏览器超时（25秒未响应）; stderr: ${stderrTail.join('').slice(-600)}`)),
+        25000,
+      );
+      chromeProc.stderr.on('data', (chunk) => {
+        const text = chunk.toString();
+        stderrTail.push(text);
+        if (stderrTail.length > 20) stderrTail.shift();
+        const match = text.match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
+        if (match) finish(resolve, Number(match[1]));
+      });
+      chromeProc.on('error', (err) => finish(reject, err));
+    });
+    report.cdpPort = cdpPort;
+    report.assertions.push({ name: 'ephemeral-cdp-listen', pass: true, port: cdpPort });
+
+    // 4. CDP 连接
+    const targets = await fetch(`http://127.0.0.1:${cdpPort}/json/list`).then((r) => r.json());
+    const pageTarget = targets.find((t) => t.type === 'page');
+    assert.ok(pageTarget && pageTarget.webSocketDebuggerUrl, '未找到有效的浏览器 Page 调试目标');
+
+    cdpWs = new WebSocket(pageTarget.webSocketDebuggerUrl);
+    let msgId = 0;
+    const sendCdp = (method, params = {}) =>
+      new Promise((resolveCdp, rejectCdp) => {
+        const id = ++msgId;
+        const onMsg = (ev) => {
+          const m = JSON.parse(ev.data);
+          if (m.id === id) {
+            cdpWs.removeEventListener('message', onMsg);
+            if (m.error) rejectCdp(new Error(`CDP [${method}] 失败: ${JSON.stringify(m.error)}`));
+            else resolveCdp(m.result || m);
+          }
+        };
+        cdpWs.addEventListener('message', onMsg);
+        cdpWs.send(JSON.stringify({ id, method, params }));
+      });
+
+    await new Promise((resolveWs, rejectWs) => {
+      cdpWs.addEventListener('open', resolveWs);
+      cdpWs.addEventListener('error', rejectWs);
+    });
+
+    await sendCdp('Page.enable');
+    await sendCdp('Runtime.enable');
+    await sendCdp('Page.navigate', { url: `http://127.0.0.1:${report.serverPort}/` });
+    await new Promise((r) => setTimeout(r, 600));
+
+    const readMetrics = async () => {
+      const res = await sendCdp('Runtime.evaluate', {
+        expression: sidebarChromeMeasureExpression(),
+        returnByValue: true,
+      });
+      const raw = res.result?.value;
+      assert.ok(raw, '未取得夹具测量结果');
+      const parsed = JSON.parse(raw);
+      assert.ok(!parsed.error, `夹具测量失败: ${parsed.error}`);
+      return parsed;
+    };
+
+    // 5. 反向对照：未打补丁必须复现遮挡
+    const before = await readMetrics();
+    report.negativeControl = before;
+    const negative = interpretNegativeControl(before);
+    report.assertions.push(...negative);
+    assert.ok(
+      negative.every((a) => a.pass),
+      `反向对照失败（夹具失真或缺陷已不存在）: ${negative.filter((a) => !a.pass).map((a) => a.name).join(', ')}`,
+    );
+
+    const shotBefore = await sendCdp('Page.captureScreenshot', {
+      format: 'png',
+      clip: { x: 0, y: 0, width: 900, height: 200, scale: 2 },
+    });
+    const beforeBuffer = Buffer.from(shotBefore.data, 'base64');
+    assertPng(beforeBuffer);
+    const beforePath = join(evidenceDir, 'before-strip-covered.png');
+    writeFileSync(beforePath, beforeBuffer);
+
+    // 6. 注入从生产源码抽取的补丁样式后复测
+    await sendCdp('Runtime.evaluate', {
+      expression: `(function () {
+        var s = document.createElement('style');
+        s.id = 'qa-artifact-chrome-styles';
+        s.textContent = ${JSON.stringify(chromeStyles)};
+        document.head.appendChild(s);
+        return s.textContent.length;
+      })()`,
+      returnByValue: true,
+    });
+
+    const after = await readMetrics();
+    report.positive = after;
+    const positive = interpretSidebarChromeGeometry(after);
+    report.assertions.push(...positive);
+
+    const shotAfter = await sendCdp('Page.captureScreenshot', {
+      format: 'png',
+      clip: { x: 0, y: 0, width: 900, height: 200, scale: 2 },
+    });
+    const afterBuffer = Buffer.from(shotAfter.data, 'base64');
+    const { width, height } = assertPng(afterBuffer);
+    const afterPath = join(evidenceDir, 'after-strip-fixed.png');
+    writeFileSync(afterPath, afterBuffer);
+    report.screenshot = { before: beforePath, after: afterPath, width, height, bytes: afterBuffer.length };
+
+    report.pass = judgeSidebarChromeRun({ negative, positive }).pass;
+  } catch (error) {
+    report.errors.push(error instanceof Error ? error.message : String(error));
+  } finally {
+    if (cdpWs) {
+      try { cdpWs.close(); } catch {}
+    }
+    if (chromeProc) {
+      try { chromeProc.kill('SIGTERM'); } catch {}
+      await new Promise((r) => setTimeout(r, 300));
+      if (chromeProc.exitCode === null) {
+        try { chromeProc.kill('SIGKILL'); } catch {}
+      }
+    }
+    if (report.cdpPort) {
+      const released = await fetch(`http://127.0.0.1:${report.cdpPort}/json/version`)
+        .then(() => false)
+        .catch(() => true);
+      report.cleanup.cdpPortReleased = released;
+    }
+    if (server) {
+      await new Promise((r) => server.close(r));
+      report.cleanup.httpServerClosed = !server.listening;
+    }
+    rmSync(profileDir, { recursive: true, force: true });
+    report.cleanup.profileRemoved = !existsSync(profileDir);
+    report.cleanup.allReleased = Object.values(report.cleanup).every(Boolean);
+    if (!report.cleanup.allReleased) {
+      report.pass = false;
+      report.errors.push(`资源未完全释放: ${JSON.stringify(report.cleanup)}`);
+    }
+    report.completedAt = new Date().toISOString();
+    writeFileSync(join(evidenceDir, 'sidebar-chrome-qa-report.json'), JSON.stringify(report, null, 2) + '\n');
+  }
+
+  return report;
+}
+
 async function main() {
   const { positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -594,6 +857,23 @@ async function main() {
   });
 
   const stageArg = positionals[0] || 'all';
+
+  if (stageArg === SIDEBAR_CHROME_SCENARIO) {
+    console.log('\n🚀 [Worktree Web QA] 启动右侧栏 chrome 几何门禁（真实内核 · 动态端口 · 反向对照）...');
+    const started = Date.now();
+    const rep = await runSidebarChromeQa();
+    const elapsed = ((Date.now() - started) / 1000).toFixed(2);
+    const failed = rep.assertions.filter((a) => !a.pass).map((a) => a.name);
+    if (rep.pass) {
+      console.log(`✅ PASS (${elapsed}s, 端口: 服务 ${rep.serverPort} / 调试 ${rep.cdpPort}, 修复后间距: ${rep.positive?.gap})`);
+      console.log('   反向对照: 顶栏 28 / 被遮挡 / 间距为负 —— 已复现，夹具未失真');
+      console.log('   证据归档: .workbuddy/evidence/worktree-qa/<runId>/sidebar-chrome-qa-report.json');
+      return;
+    }
+    console.log(`❌ FAIL (${elapsed}s) -> ${[...rep.errors, ...failed].join('; ')}`);
+    process.exit(1);
+  }
+
   const stages = selectStages(stageArg);
   console.log(`\n🚀 [Worktree Web QA] 启动工作树隔离 Web 验收（目标: ${stages.join(', ')}）...`);
 

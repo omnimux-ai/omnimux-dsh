@@ -180,6 +180,13 @@ jobs:
           rm -f plugins/omnimux-workflow/node_modules
           rm -rf "$TMP"
 
+      - name: Isolated right-sidebar chrome geometry gate
+        run: |
+          set -euo pipefail
+          # 合并前真实浏览器几何门禁：真实内核 + 动态端口 + 零污染 + 反向对照。
+          # 反向对照未复现遮挡即判定夹具失真并失败，杜绝「夹具自带答案」的假绿。
+          node scripts/worktree-web-qa.mjs sidebar-chrome
+
       - name: Upload QA evidence
         uses: actions/upload-artifact@v4
         with:
