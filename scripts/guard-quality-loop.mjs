@@ -219,7 +219,11 @@ export function isDeliveryCommand(command) {
     /\bgit\s+commit\b/.test(normalized) ||
     /\bgit\s+push\b/.test(normalized) ||
     /\bgh\s+pr\s+(create|merge|ready)\b/.test(command) ||
-    /\bgit-wt\.sh\s+finish\b/.test(command)
+    // 弃用入口：只有 finish 是交付，start/dev 等不是，保持既有语义。
+    /\bgit-wt\.sh\s+finish\b/.test(command) ||
+    // 现行标准入口 `worktree.sh ship|finish <task>`（树建在 <repo>/.worktrees/<task>）。
+    // 只列交付子命令，避免把 list/remove/prune/new/help 这类查询与清理误判为交付。
+    /\bworktree\.sh\s+(?:ship|finish)\s+\S/.test(command)
   )
 }
 

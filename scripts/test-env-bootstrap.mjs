@@ -14,28 +14,101 @@ const repositoryRoot = sourceRoot.split(`${sep}.worktrees${sep}`)[0];
 const failure = code => Object.assign(new Error('TEST_ENV_' + code), { code: 'TEST_ENV_' + code });
 function safeError(error, fallback) {
   const code = error?.code;
-  return typeof code === 'string' && /^TEST_ENV_(?:CREDENTIAL_)?[A-Z_]+$/.test(code)
-    ? Object.assign(new Error(code), { code }) : failure(fallback);
+  if (typeof code === 'string' && /^TEST_ENV_(?:CREDENTIAL_)?[A-Z_]+$/.test(code)) {
+    // 保留可读说明与精确原因：脱敏只针对底层原文，不能把面向调用者的提示一并丢掉。
+    return Object.assign(new Error(code), { code, hint: error.hint, rootReason: error.rootReason });
+  }
+  return failure(fallback);
 }
 function canonical(io, path, directory) {
   const stat = io.lstatSync(path);
   if (stat.isSymbolicLink() || (directory ? !stat.isDirectory() : !stat.isFile()) || io.realpathSync(path) !== path) throw failure('ROOT_UNSAFE');
 }
+
+/** 位置不合规时的可读说明：只说下一步该做什么，不含凭据或敏感信息。 */
+const ROOT_HINTS = {
+  'not-absolute-or-unnormalized': '请传入已规范化的绝对路径：不要带尾部斜杠、不要包含 . 或 .. 段。',
+  'outside-worktrees': '任务工作树必须是 <仓库根>/.worktrees/<任务名> 的直接子级。仓库外的兄弟目录（如 product/omnimux-dsh-wt-*）不受支持：请用 `bash scripts/worktree.sh new <任务名> origin/main` 在本仓 .worktrees/ 下建树；已有树可用 `git worktree move <当前路径> <仓库根>/.worktrees/<任务名>` 迁入。',
+  'path-missing': '该路径不存在或不可访问。请确认工作树已创建，并核对路径拼写。',
+  'path-through-symlink': '该路径本身或其上级目录是符号链接。请传入真实路径（realpath 结果），不要经快捷方式。',
+  'not-a-git-worktree': '该目录不是 Git 工作树（缺少 .git 文件）。残留空壳目录不满足条件：请用 `bash scripts/worktree.sh new <任务名> origin/main` 重新创建。',
+  'gitlink-shape-unsupported': '该目录的 .git 是目录而不是文件，形态不受支持。请改用 `bash scripts/worktree.sh new <任务名> origin/main` 创建的标准工作树。',
+  'registry-mismatch': '该目录的 .git 内容未指向 <仓库根>/.git/worktrees/<任务名>。请用标准入口重建，或检查 .git 文件是否被改写。',
+  'registry-missing': 'Git 注册目录不存在或不完整（缺 commondir / gitdir）。请用 `bash scripts/worktree.sh new <任务名> origin/main` 重建该工作树。',
+};
+function unsafe(reason) {
+  return {
+    ok: false,
+    reason,
+    code: 'TEST_ENV_ROOT_UNSAFE',
+    hint: ROOT_HINTS[reason] ?? '位置不合规，请使用 <仓库根>/.worktrees/<任务名> 下的标准工作树。',
+  };
+}
+/** 读取路径身份：缺失返回 null，符号链接或 realpath 不一致返回 'symlink'。 */
+function pathShape(io, path) {
+  let stat;
+  try { stat = io.lstatSync(path); } catch { return null; }
+  if (stat.isSymbolicLink()) return 'symlink';
+  let real;
+  try { real = io.realpathSync(path); } catch { return null; }
+  if (real !== path) return 'symlink';
+  if (stat.isDirectory()) return 'directory';
+  if (stat.isFile()) return 'file';
+  return 'other';
+}
+
+/**
+ * 诊断位置为何不合规，返回具体原因而非笼统错误码。
+ * 判定分层：先判路径形状（前缀仓库、root 自身），再判 git 身份，最后判注册内容。
+ * 该顺序保证「残留空壳目录」报 not-a-git-worktree 而非被前缀检查掩盖成 path-missing。
+ * 语义与既有 validateRoot 等价，不放宽任何约束。
+ * @param {unknown} root @param {*} io @param {string} repo
+ * @returns {{ok:true, reason:'ok'} | {ok:false, reason:string, code:string, hint:string}}
+ */
+export function diagnoseWorktreeRoot(root, io, repo) {
+  if (typeof root !== 'string' || !isAbsolute(root) || resolve(root) !== root) return unsafe('not-absolute-or-unnormalized');
+  if (dirname(root) !== join(repo, '.worktrees')) return unsafe('outside-worktrees');
+  // 建树基础设施：仓库根、.worktrees、.git 必须存在且形态正常。
+  for (const path of [repo, join(repo, '.worktrees'), join(repo, '.git')]) {
+    const shape = pathShape(io, path);
+    if (shape === 'symlink') return unsafe('path-through-symlink');
+    if (shape !== 'directory') return unsafe('path-missing');
+  }
+  const rootShape = pathShape(io, root);
+  if (rootShape === 'symlink') return unsafe('path-through-symlink');
+  if (rootShape === null) return unsafe('path-missing');
+  if (rootShape !== 'directory') return unsafe('path-missing');
+  const dotgit = join(root, '.git');
+  const dotgitShape = pathShape(io, dotgit);
+  if (dotgitShape === 'symlink') return unsafe('path-through-symlink');
+  if (dotgitShape === null) return unsafe('not-a-git-worktree');
+  if (dotgitShape !== 'file') return unsafe('gitlink-shape-unsupported');
+  let match;
+  try { match = /^gitdir: (.+)\n?$/.exec(io.readFileSync(dotgit, 'utf8')); } catch { return unsafe('registry-mismatch'); }
+  if (!match) return unsafe('registry-mismatch');
+  const gitdir = resolve(root, match[1].trim());
+  if (dirname(gitdir) !== join(repo, '.git/worktrees')) return unsafe('registry-mismatch');
+  // 注册目录属于 Git 注册表而非建树基础设施，缺失时原因归到注册表，约束强度不变。
+  if (pathShape(io, join(repo, '.git/worktrees')) !== 'directory') return unsafe('registry-missing');
+  if (pathShape(io, gitdir) !== 'directory') return unsafe('registry-missing');
+  for (const name of ['commondir', 'gitdir']) {
+    if (pathShape(io, join(gitdir, name)) !== 'file') return unsafe('registry-missing');
+  }
+  let commonRaw, gitdirRaw;
+  try {
+    commonRaw = io.readFileSync(join(gitdir, 'commondir'), 'utf8');
+    gitdirRaw = io.readFileSync(join(gitdir, 'gitdir'), 'utf8');
+  } catch { return unsafe('registry-missing'); }
+  if (resolve(gitdir, commonRaw.trim()) !== join(repo, '.git') || resolve(gitdir, gitdirRaw.trim()) !== dotgit) return unsafe('registry-mismatch');
+  return { ok: true, reason: 'ok' };
+}
+
 /** Validate the linked-worktree metadata without consulting cwd or inherited Git variables. */
 function validateRoot(root, io, repo) {
-  try {
-    if (typeof root !== 'string' || !isAbsolute(root) || resolve(root) !== root || dirname(root) !== join(repo, '.worktrees')) throw failure('ROOT_UNSAFE');
-    for (const p of [repo, join(repo, '.worktrees'), root, join(repo, '.git'), join(repo, '.git/worktrees')]) canonical(io, p, true);
-    const dotgit = join(root, '.git'); canonical(io, dotgit, false);
-    const match = /^gitdir: (.+)\n?$/.exec(io.readFileSync(dotgit, 'utf8'));
-    if (!match) throw failure('ROOT_UNSAFE');
-    const gitdir = resolve(root, match[1].trim());
-    if (dirname(gitdir) !== join(repo, '.git/worktrees')) throw failure('ROOT_UNSAFE');
-    canonical(io, gitdir, true);
-    for (const name of ['commondir', 'gitdir']) canonical(io, join(gitdir, name), false);
-    if (resolve(gitdir, io.readFileSync(join(gitdir, 'commondir'), 'utf8').trim()) !== join(repo, '.git') || resolve(gitdir, io.readFileSync(join(gitdir, 'gitdir'), 'utf8').trim()) !== dotgit) throw failure('ROOT_UNSAFE');
-    return root;
-  } catch { throw failure('ROOT_UNSAFE'); }
+  const diagnosis = diagnoseWorktreeRoot(root, io, repo);
+  // 错误码保持稳定（既有断言与调用方依赖它），另附可读说明与精确原因。
+  if (!diagnosis.ok) throw Object.assign(failure('ROOT_UNSAFE'), { hint: diagnosis.hint, rootReason: diagnosis.reason });
+  return root;
 }
 
 /** Local-only protocol double; never forwards requests or echoes submitted content. */
