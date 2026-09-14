@@ -18,6 +18,8 @@ export interface TwitterContext {
   quotedAuthor?: string
   /** Tweet URL or ID if available */
   tweetUrl?: string
+  /** Hot tweets extracted from feed for inspiration when draft is empty */
+  feedHotTweets?: Array<{ author: string; text: string; stat?: string }>
 }
 
 export interface CopilotMenuItem {
