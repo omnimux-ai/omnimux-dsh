@@ -44,7 +44,7 @@
   "scripts": {
     "build": "rm -rf lib && tsc -p tsconfig.json && mkdir -p lib/tests/fixtures lib/expert && node scripts/concat-client.mjs && cp src/tests/fixtures/* lib/tests/fixtures/ && for f in src/expert/*.js; do case \"$f\" in *.test.js) ;; *) cp \"$f\" lib/expert/ ;; esac; done",
     "prepare": "npm run build",
-    "test": "npm run build && node --test --test-concurrency=1 lib/tests/*.test.js src/expert/*.test.js src/client/*.test.js",
+    "test": "npm run build && node --test --test-concurrency=1 lib/tests/*.test.js src/expert/*.test.js src/client/*.test.js tests/e2e/*.spec.js",
     "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-include=lib/api.js --test-coverage-include=lib/categories.js --test-coverage-include=lib/config-store.js --test-coverage-include=lib/dsh-cli.js --test-coverage-include=lib/http.js --test-coverage-include=lib/install.js --test-coverage-include=lib/ndjson.js --test-coverage-include=lib/plugin-market.js --test-coverage-include=lib/restart.js --test-coverage-include=lib/skill-detail.js --test-coverage-include=lib/self-update.js --test-coverage-include=lib/unzip.js --test-coverage-lines=95 --test-coverage-functions=85 --test-coverage-branches=70 lib/tests/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

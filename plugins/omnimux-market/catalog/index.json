@@ -43,6 +43,11 @@
       "tab": "experts"
     },
     {
+      "id": "sk-suite",
+      "title": "套件",
+      "tab": "skills"
+    },
+    {
       "id": "sk-commerce",
       "title": "电商变现",
       "tab": "skills"
@@ -7804,6 +7809,409 @@
         "repo": "omnimux-ai/OmniMux-skills",
         "path": "skills/software-dev-team",
         "ref": "main"
+      }
+    },
+    {
+      "id": "suite-social-content-team",
+      "skill": "social-content-team",
+      "title": "社媒多模态内容创作工坊",
+      "summary": "一位主理人与六位可选专家：文案、配音、图像、视频、配乐、剪辑，附带 5 条行为规则。",
+      "tags": [
+        "社媒创作",
+        "多模态",
+        "内容工坊"
+      ],
+      "source": {
+        "type": "bundled",
+        "path": "catalog/experts/social-content-team"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [],
+        "rules": [
+          {
+            "name": "anti-loop",
+            "title": "失败处理契约",
+            "desc": "失败处理由错误类型、可恢复性和成本决定，不用固定次数代替判断。"
+          },
+          {
+            "name": "canvas-discipline",
+            "title": "产物可追溯",
+            "desc": "真实生成的中间与最终媒体必须记录来源、任务、路径和用途。"
+          },
+          {
+            "name": "character-ref-guard",
+            "title": "角色参考守卫",
+            "desc": "人物或主体参考图的绑定与一致性规范。"
+          },
+          {
+            "name": "editing-defaults",
+            "title": "剪辑硬指标",
+            "desc": "多轨拼接与音视频混流后的时长差必须计算并核验。"
+          },
+          {
+            "name": "output-format",
+            "title": "证据输出契约",
+            "desc": "只报告当前任务实际产生或验证的内容，不宣称未发生的动作。"
+          }
+        ],
+        "agents": [
+          {
+            "name": "content-copywriter",
+            "title": "社媒文案专员 - 可可",
+            "desc": "把已核实的产品事实写成钩子、文案与 CTA"
+          },
+          {
+            "name": "editing-agent",
+            "title": "剪辑合成专家 - 艾迪特",
+            "desc": "规划或执行时间线，核验音画与导出"
+          },
+          {
+            "name": "image-agent",
+            "title": "视觉生图专家 - 维森",
+            "desc": "写图像提示词、绑定参考图、保持主体一致"
+          },
+          {
+            "name": "music-agent",
+            "title": "配乐音效专家 - 缪斯",
+            "desc": "给出情绪、结构与剪辑点的音乐方案"
+          },
+          {
+            "name": "social-content-team-lead",
+            "title": "文创总监 - 迪克特",
+            "desc": "守住需求边界、按收益委派、核验证据"
+          },
+          {
+            "name": "speech-agent",
+            "title": "配音解说专家 - 沃伊斯",
+            "desc": "拆分旁白段落，给出演绎方向与时长"
+          },
+          {
+            "name": "video-agent",
+            "title": "分镜生成专家 - 维迪奥",
+            "desc": "把故事板转成有边界的镜头任务与连续性检查"
+          }
+        ]
+      }
+    },
+    {
+      "id": "suite-content-distribution-team",
+      "skill": "content-distribution-team",
+      "title": "全域内容分发专家团",
+      "summary": "覆盖 12+ 平台的内容分发团队，含 6 个分发技能与国内、国际、排期、数据四类角色。",
+      "tags": [
+        "内容分发",
+        "多平台",
+        "排期"
+      ],
+      "source": {
+        "type": "git",
+        "repo": "infometa/workbuddyskills",
+        "path": "experts/content-distribution-team",
+        "ref": "main"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [
+          {
+            "name": "humanizer",
+            "title": "人味化改写",
+            "desc": "去除文本中的 AI 写作痕迹"
+          },
+          {
+            "name": "libtv-skill",
+            "title": "LibTV 生成",
+            "desc": "通过 LibTV AI 平台生成和编辑图片/视频，支持文生图、文生视频、风格迁移等"
+          },
+          {
+            "name": "mp-draft-push",
+            "title": "公众号草稿推送",
+            "desc": "将现成的文章内容发布到微信公众号草稿箱。当用户说\"发布文章\"、\"发布到草稿箱\"、\"publish to draft\"、\"推送到公众号\"时触发。"
+          },
+          {
+            "name": "multi-platform-distribution",
+            "title": "多平台分发",
+            "desc": "一次成稿，按各平台发布规则改写与投放"
+          },
+          {
+            "name": "wechat-article-search",
+            "title": "公众号文章搜索",
+            "desc": "搜索微信公众号文章（标题、摘要、发布时间、来源账号、链接）"
+          },
+          {
+            "name": "xiaohongshu",
+            "title": "小红书运营",
+            "desc": "小红书图文与视频发布、搜索与互动"
+          }
+        ],
+        "rules": [],
+        "agents": [
+          {
+            "name": "content-distribution-team-lead",
+            "title": "分发策略师 - 安拓",
+            "desc": "统筹多平台分发策略与成员分工"
+          },
+          {
+            "name": "distribution-analyst",
+            "title": "分发数据分析师 - 达维",
+            "desc": "跨平台数据对比、归一化与优化建议"
+          },
+          {
+            "name": "domestic-platform-expert",
+            "title": "国内平台专家 - 晓红",
+            "desc": "国内平台发布规则与审核合规"
+          },
+          {
+            "name": "international-platform-expert",
+            "title": "国际平台专家 - 格罗",
+            "desc": "海外平台适配与发布规则"
+          },
+          {
+            "name": "scheduling-specialist",
+            "title": "排期运营专家 - 凯历",
+            "desc": "发布排期、日历与批量发布编排"
+          }
+        ]
+      }
+    },
+    {
+      "id": "suite-social-engagement-team",
+      "skill": "social-engagement-team",
+      "title": "社媒互动增长专家团",
+      "summary": "互动自动化、评论运营、信号挖掘与品牌监控，附 1 个互动运营技能包。",
+      "tags": [
+        "社媒互动",
+        "评论运营",
+        "品牌监控"
+      ],
+      "source": {
+        "type": "bundled",
+        "path": "catalog/experts/social-engagement-team"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [
+          {
+            "name": "social-engagement-ops",
+            "title": "社媒互动运营",
+            "desc": "互动自动化、评论策略、信号挖掘与品牌监控"
+          }
+        ],
+        "rules": [],
+        "agents": [
+          {
+            "name": "ai-comment-specialist",
+            "title": "AI 评论运营专家 - 瑞普",
+            "desc": "对真实评论分类、起草回复、标记升级"
+          },
+          {
+            "name": "brand-monitor",
+            "title": "品牌监控专家 - 沃奇",
+            "desc": "把可核实的提及转成带来源的风险等级"
+          },
+          {
+            "name": "interaction-automator",
+            "title": "自动化互动专家 - 柏特",
+            "desc": "设计可审阅的互动流程与停止条件"
+          },
+          {
+            "name": "signal-miner",
+            "title": "信号挖掘专家 - 麦恩",
+            "desc": "在已授权数据中识别意向、需求与趋势"
+          },
+          {
+            "name": "social-engagement-team-lead",
+            "title": "增长策略师 - 格罗斯",
+            "desc": "守住授权意图，建议落在证据与平台规则上"
+          }
+        ]
+      }
+    },
+    {
+      "id": "suite-ai-content-creator-team",
+      "skill": "ai-content-creator-team",
+      "title": "AI 内容创作专家团",
+      "summary": "从创意策划到成品交付的 AI 多模态生产团队，含视频生成、图像创作、剪辑与素材改编角色。",
+      "tags": [
+        "AI 创作",
+        "多模态",
+        "视频"
+      ],
+      "source": {
+        "type": "git",
+        "repo": "infometa/workbuddyskills",
+        "path": "experts/ai-content-creator-team",
+        "ref": "main"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [
+          {
+            "name": "ai-content-production",
+            "title": "AI 内容生产",
+            "desc": "多模态内容生产的完整方法包"
+          }
+        ],
+        "rules": [],
+        "agents": [
+          {
+            "name": "ai-content-creator-team-lead",
+            "title": "创意总监 - 司远",
+            "desc": "统筹视频、图像、剪辑与改编的端到端交付"
+          },
+          {
+            "name": "content-adapter",
+            "title": "素材改编专家 - 艾达",
+            "desc": "视频分析、高光提取与多素材合成"
+          },
+          {
+            "name": "copywriter",
+            "title": "文案创作专家 - 笔澜",
+            "desc": "长文、短社媒文案与视频脚本"
+          },
+          {
+            "name": "creative-strategist",
+            "title": "创意策划师 - 策凌",
+            "desc": "品牌定位、情绪板与镜头构图"
+          },
+          {
+            "name": "image-creator",
+            "title": "图文创作专家 - 珀西",
+            "desc": "写实场景、风格化插画与产品摄影"
+          },
+          {
+            "name": "video-editor",
+            "title": "视频编辑专家 - 柯立",
+            "desc": "轨道、转场、字幕、混音与调色"
+          },
+          {
+            "name": "video-generator",
+            "title": "视频生成专家 - 维欧",
+            "desc": "文生视频、图生视频与多模型选型"
+          }
+        ]
+      }
+    },
+    {
+      "id": "suite-marketing-campaign-team",
+      "skill": "marketing-campaign-team",
+      "title": "营销战役与内容",
+      "summary": "由营销总监统筹的内容创作、活动策划、SEO 专家与品牌分析师团队，含营销手册技能包。",
+      "tags": [
+        "营销战役",
+        "内容",
+        "SEO"
+      ],
+      "source": {
+        "type": "git",
+        "repo": "infometa/workbuddyskills",
+        "path": "experts/marketing-campaign-team",
+        "ref": "main"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [
+          {
+            "name": "marketing-playbook",
+            "title": "营销战役手册",
+            "desc": "营销战役团队完整手册。覆盖内容创作、活动策划、品牌审核、竞品分析、效果报告、SEO审计、邮件序列和快速内容起草全流程。当涉及任何营销相关的请求时自动触发。"
+          }
+        ],
+        "rules": [],
+        "agents": [
+          {
+            "name": "brand-analyst",
+            "title": "品牌分析师 · 品析",
+            "desc": "品牌声音审核与竞争定位分析"
+          },
+          {
+            "name": "campaign-planner",
+            "title": "活动策划师 · 策略",
+            "desc": "受众定向、渠道组合与预算分配"
+          },
+          {
+            "name": "content-creator",
+            "title": "内容创作者 · 笔达",
+            "desc": "博客、邮件序列与社媒内容写作"
+          },
+          {
+            "name": "marketing-director",
+            "title": "营销总监 · 江增量",
+            "desc": "统筹内容、战役、SEO 与品牌分析"
+          },
+          {
+            "name": "seo-expert",
+            "title": "SEO 专家 · 优搜",
+            "desc": "技术 SEO 审计与关键词策略"
+          }
+        ]
+      }
+    },
+    {
+      "id": "suite-content-monetization-team",
+      "skill": "content-monetization-team",
+      "title": "内容变现商业化专家团",
+      "summary": "覆盖 CPS 带货分佣、CPE/CPM 效果广告与品牌合作撮合的商业化团队。",
+      "tags": [
+        "内容变现",
+        "CPS/CPE/CPM",
+        "商业化"
+      ],
+      "source": {
+        "type": "git",
+        "repo": "infometa/workbuddyskills",
+        "path": "experts/content-monetization-team",
+        "ref": "main"
+      },
+      "tab": "skills",
+      "kind": "suite",
+      "category": "sk-suite",
+      "suite": {
+        "skills": [
+          {
+            "name": "content-monetization-ops",
+            "title": "内容变现运营",
+            "desc": "CPS 带货、CPE/CPM 效果广告与交易运营"
+          }
+        ],
+        "rules": [],
+        "agents": [
+          {
+            "name": "content-monetization-team-lead",
+            "title": "商业化策略师 - 芬利",
+            "desc": "统筹 CPS/CPE/CPM 模式与收益优化"
+          },
+          {
+            "name": "cpe-cpm-expert",
+            "title": "效果广告专家 - 艾菲",
+            "desc": "互动任务设计、曝光策略与竞价优化"
+          },
+          {
+            "name": "cps-specialist",
+            "title": "CPS 佣金专家 - 赛勒",
+            "desc": "选品、佣金率设计与转化漏斗优化"
+          },
+          {
+            "name": "marketplace-operator",
+            "title": "商务合作顾问 - 麦奇",
+            "desc": "定价评估、谈判与品牌合作选型"
+          },
+          {
+            "name": "revenue-analyst",
+            "title": "收益分析师 - 普罗",
+            "desc": "变现表现分析、结算对账与财务建模"
+          }
+        ]
       }
     }
   ]

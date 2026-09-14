@@ -21,7 +21,8 @@ test('shipped configuration adds the admitted collector while preserving all 48 
   assert.equal(config.homeRecommendations.length, 20)
   const home = SkillShelf.plazaDiscoverySections()
   assert.deepEqual(ids(home.featured), config.homeRecommendations)
-  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill').length - 20)
+  // 货架本地卡片 = 全部技能 + 全部套件，再扣掉 20 条首页精选。
+  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 20)
   const collector = catalog.items.find(item => item.id === 'sk-bggg-data-amazon')
   assert.equal(collector.cover, undefined)
   const featuredBggg = SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.find(item => item.id === 'sk-bggg-data-amazon')
@@ -104,7 +105,7 @@ test('real workshop shows one admitted homepage card and retains all 49 on Featu
   const ui = workshop({ 14: 'ready' })
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 1)
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 20)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill').length - 20)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 20)
   ui.state.set(1, 'featured')
   assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 69)
 })

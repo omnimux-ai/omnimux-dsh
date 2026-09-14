@@ -4,6 +4,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { writeAgentPreset } from './expert-presets.js';
 export const DEFAULT_MARKET_EXPERTS = [
     {
         id: 'shopee-ops-expert',
@@ -114,41 +115,13 @@ function resolveExpertPersonaText(exp) {
     return `你是「${exp.name}」AI Agent专家。${exp.description}，工作目录 {{cwd}}。`;
 }
 export function installMarketExpertPreset(home, exp) {
-    const dir = join(home, '.agent-presets', exp.id);
-    mkdirSync(dir, { recursive: true });
-    const presetYml = `name: ${exp.name}\ndescription: ${exp.description}\norder: ${exp.order}\n`;
-    writeFileSync(join(dir, 'preset.yml'), presetYml, 'utf8');
-    const personaText = resolveExpertPersonaText(exp);
-    const cordisYml = `# ${exp.id} Agent Preset
-- id: persona
-  name: '@deepseek-ai/dsh-persona'
-  config:
-    prefix: |
-      ${personaText}
-- id: agent-instructions
-  name: '@deepseek-ai/dsh-agent-instructions'
-  config:
-    maxBytes: 65536
-- id: tool-bash
-  name: '@deepseek-ai/dsh-tool-bash'
-  disabled: !!js process.platform === 'win32'
-- id: tool-pwsh
-  name: '@deepseek-ai/dsh-tool-pwsh'
-  disabled: !!js process.platform !== 'win32'
-- id: tool-fs
-  name: '@deepseek-ai/dsh-tool-fs'
-- id: tool-fs-search
-  name: '@deepseek-ai/dsh-tool-fs-search'
-- id: tool-subagent
-  name: '@deepseek-ai/dsh-tool-subagent'
-- id: tool-subagent-fork
-  name: '@deepseek-ai/dsh-tool-subagent'
-  config:
-    provider: fork
-    toolName: subagent_fork
-    backgroundMode: continuable
-`;
-    writeFileSync(join(dir, 'agent.cordis.yml'), cordisYml, 'utf8');
+    writeAgentPreset(home, {
+        id: exp.id,
+        name: exp.name,
+        description: exp.description,
+        order: exp.order,
+        persona: resolveExpertPersonaText(exp),
+    });
     const retiredDir = join(home, '.agent-presets', '.retired');
     if (existsSync(retiredDir)) {
         try {

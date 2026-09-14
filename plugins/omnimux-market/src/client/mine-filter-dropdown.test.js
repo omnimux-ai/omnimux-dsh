@@ -27,6 +27,7 @@ fn(
     if (id.includes('plazaUtils')) {
       return {
         WORKSHOP_DOMAIN_ORDER: [
+          '套件',
           '短剧漫剧',
           '专业影视',
           '动画',
@@ -41,6 +42,7 @@ fn(
         WorkshopSwitch: () => React.createElement('div', { className: 'switch-mock' }),
         resolveItemDesc: () => '',
         resolveItemTitle: () => '',
+        suiteCompositionText: () => '',
       };
     }
     if (id.includes('FeaturedCard')) return { renderFeaturedCard: () => null };
@@ -212,7 +214,7 @@ describe('MineToolbar Dropdown Filters', () => {
         useEffect: fakeEffect,
       },
     });
-    const domainItem = vdom3.props.children[0].props.children[1].props.children[1][2]; // 动画
+    const domainItem = vdom3.props.children[0].props.children[1].props.children[1][3]; // 动画（套件 / 短剧漫剧 / 专业影视 之后）
     assert.equal(domainItem.key, '动画');
     domainItem.props.onClick();
     assert.equal(chosenCat, '动画');

@@ -9,6 +9,7 @@ import {
   PLAZA_TABS,
   SKILL_SHELF_TAGS,
   SKILL_SHELF_TAXONOMY,
+  SUITE_SHELF_TAG,
   appendSkillGesture,
   buildPlazaSearchPayload,
   buildSearchPayload,
@@ -17,6 +18,7 @@ import {
   filterPlazaShelf,
   inSkillShelf,
   installPayload,
+  isLocalOnlyShelfTag,
   keywordsForTag,
   matchesDomainTag,
   skillGesture,
@@ -37,10 +39,23 @@ import {
 } from './skill-picker-logic.js'
 
 describe('skill shelf taxonomy', () => {
-  it('locks the shelf order: 电商 first, 平台工具 last', () => {
+  it('locks the shelf order: 电商 first, 套件 last', () => {
     assert.deepEqual([...SKILL_SHELF_TAGS], [
-      '电商', '商业广告', '短剧漫剧', '专业影视', '动画', '教育', '创意实验', '音频音乐', '平台工具',
+      '电商', '商业广告', '短剧漫剧', '专业影视', '动画', '教育', '创意实验', '音频音乐', '平台工具', '套件',
     ])
+  })
+
+  it('suite tag is local-only and matches only kind === suite', () => {
+    assert.equal(isLocalOnlyShelfTag(SUITE_SHELF_TAG), true)
+    assert.equal(isLocalOnlyShelfTag('动画'), false)
+    assert.equal(isLocalOnlyShelfTag(''), false)
+    const suite = { kind: 'suite', tags: ['社媒创作'], name: '社媒多模态内容创作工坊' }
+    assert.equal(matchesDomainTag(suite, SUITE_SHELF_TAG), true)
+    assert.equal(matchesDomainTag(suite, '动画'), false)
+    assert.equal(matchesDomainTag(suite, '电商'), false)
+    const skill = { kind: 'skill', tags: ['动画'] }
+    assert.equal(matchesDomainTag(skill, SUITE_SHELF_TAG), false)
+    assert.equal(matchesDomainTag(skill, '动画'), true)
   })
 
   it('taxonomy rows carry unique ids, label keys and keyword lists', () => {
@@ -313,7 +328,7 @@ describe('agent preset skill bindings', () => {
     assert.ok(agentBinding)
     assert.equal(agentBinding.presetId, 'tiktok-agent')
     assert.equal(agentBinding.name, '全能社媒操盘手')
-    assert.equal(agentBinding.skills.length, 44)
+    assert.equal(agentBinding.skills.length, 45)
   })
 
   it('drama-agent contains the 6 short drama categories and 23 skills', () => {
@@ -360,17 +375,17 @@ describe('agent preset skill bindings', () => {
     assert.equal(hasPresetSkillBinding('全能社媒操盘手'), true)
   })
 
-  it('tiktok-agent contains the 6 categories from the screenshots', () => {
+  it('tiktok-agent contains the 7 categories from the screenshots', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     const catIds = binding.categories.map((c) => c.id)
-    assert.deepEqual(catIds, ['选品', '搜索爆款视频', '创作视频', '生成电商图', '创作图片', '数据分析'])
-    assert.equal(binding.tabs.length, 7)
+    assert.deepEqual(catIds, ['选品', '搜索爆款视频', '创作视频', '生成电商图', '创作图片', '数据分析', '社媒营销'])
+    assert.equal(binding.tabs.length, 8)
     assert.equal(binding.tabs[0].id, 'all')
   })
 
-  it('tiktok-agent contains all 44 skills from the 7 screenshots with complete metadata', () => {
+  it('tiktok-agent contains all 45 skills from the 7 screenshots with complete metadata', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
-    assert.equal(binding.skills.length, 44)
+    assert.equal(binding.skills.length, 45)
 
     const titles = new Set(binding.skills.map((s) => s.name))
     // 选品 (Screenshot 4)
@@ -450,8 +465,11 @@ describe('agent preset skill bindings', () => {
     const dataAnalysis = filterPresetSkills(binding.skills, '数据分析')
     assert.equal(dataAnalysis.length, 6)
 
+    const socialMarketing = filterPresetSkills(binding.skills, '社媒营销')
+    assert.equal(socialMarketing.length, 1)
+
     const allSkills = filterPresetSkills(binding.skills, 'all')
-    assert.equal(allSkills.length, 44)
+    assert.equal(allSkills.length, 45)
 
     const searchMatch = filterPresetSkills(binding.skills, 'all', '蓝海')
     assert.equal(searchMatch.length, 1)
@@ -493,8 +511,8 @@ describe('agent preset skill bindings', () => {
     assert.ok(binding)
     assert.equal(binding.name, '内容创作')
     assert.equal(binding.useDefaultContentCatalog, true)
-    // 12 tabs: all, mine, featured, and 9 shelf categories
-    assert.equal(binding.tabs.length, 12)
+    // 13 tabs: all, mine, featured, and 10 shelf categories
+    assert.equal(binding.tabs.length, 13)
     assert.equal(binding.tabs[0].id, 'all')
     assert.equal(binding.tabs[1].id, 'mine')
     assert.equal(binding.tabs[2].id, 'featured')
@@ -503,6 +521,7 @@ describe('agent preset skill bindings', () => {
     assert.equal(binding.tabs[5].id, '短剧漫剧')
     assert.equal(binding.tabs[6].id, '专业影视')
     assert.equal(binding.tabs[7].id, '动画')
+    assert.equal(binding.tabs[12].id, '套件')
 
     // Aliases also resolve to content-creation-team
     assert.equal(getPresetSkillBinding('content-creator-team')?.presetId, 'content-creation-team')
