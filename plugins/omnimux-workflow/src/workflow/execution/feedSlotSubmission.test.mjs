@@ -37,6 +37,35 @@ test('only occupied frames pass through dispatch, standby missing and bad URLs a
   assert.equal(gw.requests.length, 1); assert.equal(catalogReads, 1);
   assert.deepEqual(gw.requests[0].references.map((ref) => [ref.sourceNodeId, ref.role]), [['a', 'first_frame'], ['b', 'last_frame']]);
 });
+test('media-only operation never restores excluded upstream or local prompt at gateway submission', async () => {
+  const mediaOnly = { ...op, inputs: op.inputs.filter((input) => input.type !== 'text') };
+  const gw = gateway(catalogFor('video', 'frames', [mediaOnly]));
+  const target = node({ first_frame: [occupant('a')], last_frame: [occupant('b')] });
+  target.data.prompt = 'local-must-not-leak';
+  await createMaterialGatewayExecutor({ gateway: gw }).execute(target, context({}, {
+    upstreamBindings: [
+      { edgeId: 'e-a', sourceNodeId: 'a', output: media('a') },
+      { edgeId: 'e-b', sourceNodeId: 'b', output: media('b') },
+      { edgeId: 'e-text', sourceNodeId: 'text', output: { text: 'upstream-must-not-leak' } },
+    ],
+  }));
+  assert.equal(gw.requests.length, 1);
+  assert.equal(gw.requests[0].prompt ?? '', '');
+  assert.equal(gw.requests[0].references.length, 2);
+});
+
+test('execution preparation fills valid slots beside retained removed intent without mutating saved graph', () => {
+  const target = node({ removed_slot: [occupant('missing')] });
+  const nodes = [target, graphNode('a'), graphNode('b')];
+  const before = structuredClone(nodes);
+  const prepared = prepareExecutionSlotGraph(nodes, [edge('a'), edge('b')], catalog);
+  const data = prepared.nodes[0].data;
+  assert.deepEqual(data.slotBindings.first_frame.map((item) => item.sourceNodeId), ['a']);
+  assert.deepEqual(data.slotBindings.last_frame.map((item) => item.sourceNodeId), ['b']);
+  assert.equal(data.slotConflicts[0].slot, 'removed_slot');
+  assert.deepEqual(nodes, before);
+});
+
 test('empty explicit slot does not fallback to all upstream outputs; pinned missing source blocks', async () => {
   const gw = gateway(); const executor = createMaterialGatewayExecutor({ gateway: gw });
   await assert.rejects(executor.execute(node({ first_frame: [], last_frame: [] }), context({ a: media('a') })), { code: 'min_unsatisfied' });
@@ -52,11 +81,12 @@ test('one supply edge can fill two named roles and swapped node roles override e
   assert.equal(gw.requests[0].references.length, 2);
   assert.deepEqual(gw.requests[0].references.map((ref) => ref.role), ['first_frame', 'last_frame']);
 });
-test('saved removed slots fail closed even when a graph bypasses canvas recompute', async () => {
+test('removed saved slots are omitted without blocking a satisfied operation', async () => {
   const target = node({ removed_slot: [occupant('a')] }, 'text_to_video'); const gw = gateway();
-  assert.equal(findExecutionReadinessFailure([target], catalog, { nodes: [target, graphNode('a')], edges: [edge('a')] }).reasonCode, 'role_conflict');
-  await assert.rejects(createMaterialGatewayExecutor({ gateway: gw }).execute(target, context({}, { upstreamBindings: [{ edgeId: 'e-a', sourceNodeId: 'a', output: media('a') }] })), { code: 'role_conflict' });
-  assert.equal(gw.requests.length, 0);
+  assert.equal(findExecutionReadinessFailure([target], catalog, { nodes: [target, graphNode('a')], edges: [edge('a')] }), null);
+  await createMaterialGatewayExecutor({ gateway: gw }).execute(target, context({}, { upstreamBindings: [{ edgeId: 'e-a', sourceNodeId: 'a', output: media('a') }] }));
+  assert.equal(gw.requests.length, 1);
+  assert.equal(gw.requests[0].references, undefined);
 });
 test('strip max one admits three edges and sends only the first slot occupant', async () => {
   const refsCatalog = catalogFor('video', 'frames', [operation('video_multi_ref', 'video', [slot('image', 'reference', 1, 1, 'refs')])]);
@@ -65,6 +95,29 @@ test('strip max one admits three edges and sends only the first slot occupant', 
   await createMaterialGatewayExecutor({ gateway: gw }).execute(target, context({}, { upstreamBindings: ['a', 'b', 'c'].map((id) => ({ edgeId: `e-${id}`, sourceNodeId: id, output: media(id) })) }));
   assert.deepEqual(gw.requests[0].references.map((ref) => ref.sourceNodeId), ['b']);
 });
+for (const min of [0, 1]) {
+  test(`pinned unavailable input with ready standby preserves intent at readiness and submission (min ${min})`, async () => {
+    const inputCatalog = catalogFor('video', 'frames', [operation('video_multi_ref', 'video', [slot('image', 'reference', min, 1, 'refs')])]);
+    const target = node({ refs: [occupant('missing')] }, 'video_multi_ref');
+    const graph = { nodes: [target, graphNode('missing', 'image', { mediaUrl: '', status: 'loading' }), graphNode('standby')], edges: [edge('missing'), edge('standby')] };
+    const failure = findExecutionReadinessFailure([target], inputCatalog, graph);
+    assert.equal(failure?.reasonCode ?? null, min ? 'input_unavailable' : null);
+    const gw = gateway(inputCatalog);
+    const pending = createMaterialGatewayExecutor({ gateway: gw }).execute(target, context({}, { upstreamBindings: [
+      { edgeId: 'e-missing', sourceNodeId: 'missing', output: {} },
+      { edgeId: 'e-standby', sourceNodeId: 'standby', output: media('standby') },
+    ] }));
+    if (min) {
+      await assert.rejects(pending, { code: 'input_unavailable' });
+      assert.equal(gw.requests.length, 0);
+    } else {
+      await pending;
+      assert.equal(gw.requests.length, 1);
+      assert.equal(gw.requests[0].references, undefined);
+    }
+  });
+}
+
 test('submission snapshots detach before asynchronous catalog reads', async () => {
   const target = node({ first_frame: [occupant('a')], last_frame: [occupant('b')] });
   const ctx = context({}, { upstreamBindings: ['a', 'b'].map((id) => ({ edgeId: `e-${id}`, sourceNodeId: id, output: media(id) })) });

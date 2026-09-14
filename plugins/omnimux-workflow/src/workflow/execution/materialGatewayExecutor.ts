@@ -109,7 +109,7 @@ export function createMaterialGatewayExecutor(opts: {
       if (capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
         throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
       }
-      const rawPrompt = resolveGenerationPrompt(data, upstream.texts);
+      const rawPrompt = upstream.prompt;
       const dest = join(ctx.mediaDir, `${node.id}.${extFor(capability)}`);
 
       /**

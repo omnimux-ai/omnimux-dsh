@@ -40,12 +40,16 @@ test('fifth supply stays connected while reference slot remains at max four', ()
   assert.equal(target(plan).data.slotBindings.reference_images.length, 4);
   assert.equal(target(plan).data.compat.readyToSubmit, true); assert.equal(plan.edges[4].data.slotBinding, undefined);
 });
-test('MIME mismatch goes to feed; oversize remains visible and blocks submit instead of connection', () => {
+test('MIME mismatch and oversize remain feed without occupying valid material capacity', () => {
   const mime = planCanvasInputMutation(graph(gen(), { mimeType: 'image/gif' }), connect, { catalog });
   assert.equal(mime.status, 'allowed'); assert.equal(target(mime).data.slotBindings.reference_images.length, 0);
   const size = planCanvasInputMutation(graph(gen(), { sizeBytes: 11 * 1024 * 1024 }), connect, { catalog });
   assert.equal(size.status, 'allowed'); assert.equal(target(size).data.compat.readyToSubmit, false);
-  assert.ok(target(size).data.compat.reasonCodes.includes('size_exceeded'));
+  assert.equal(target(size).data.slotBindings.reference_images.length, 0);
+  assert.ok(target(size).data.compat.reasonCodes.includes('min_unsatisfied'));
+  const withValid = planCanvasInputMutation(size, { addNodes: [source('valid')], addEdges: [{ id: 'valid', source: 'valid', target: 'gen' }] }, { catalog });
+  assert.deepEqual(target(withValid).data.slotBindings.reference_images.map((item) => item.edgeId), ['valid']);
+  assert.equal(target(withValid).data.compat.readyToSubmit, true);
 });
 test('missing catalog retains edge and exposes configuration error, legacy caller remains structural', () => {
   const plan = planCanvasInputMutation(graph(), connect, { catalog: null });

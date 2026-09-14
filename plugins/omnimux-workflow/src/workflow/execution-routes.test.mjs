@@ -574,9 +574,9 @@ test('execution API: single mode runs only the target node and seeds upstream ou
   const h = makeHarness();
   try {
     const wsId = await h.createLinearWorkspace(3);
-    const rejected = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
-    assert.equal(rejected.status, 400);
-    assert.equal(rejected.body.reasonCode, 'input_waiting');
+    const localOnly = await h.startExecution(wsId, { mode: 'single', nodeIds: ['n2'] });
+    assert.equal(localOnly.status, 200, 'empty ordinary upstream does not block the local prompt');
+    assert.ok(await waitUntil(async () => (await h.executionStatus(wsId, localOnly.body.execution.id)).body.execution.status === 'completed'));
     const current = (await h.call({ method: 'GET', url: `/omnimux-workflow/api/workspaces/${wsId}` })).body.workspace;
     current.nodes.find((node) => node.id === 'n1').data.generatedContent = 'current upstream result';
     await h.call({ method: 'PUT', url: `/omnimux-workflow/api/workspaces/${wsId}`, headers: h.localHeaders, body: { expectedVersion: current.version, nodes: current.nodes, edges: current.edges } });

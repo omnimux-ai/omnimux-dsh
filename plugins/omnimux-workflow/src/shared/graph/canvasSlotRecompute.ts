@@ -59,7 +59,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   if (fill.conflicts.length) reasonCodes.push('role_conflict');
   return { ...node, data: { ...node.data, params, slotBindings: fill.bindings, slotConflicts: fill.conflicts,
     compat: { status: operation && permitted ? 'ok' : 'configuration_error', acceptsCurrentInputs: match?.accepts ?? false,
-      readyToSubmit: Boolean(match?.ready && !fill.conflicts.length), operation: operation?.id, reasonCodes,
+      readyToSubmit: Boolean(match?.ready), operation: operation?.id, reasonCodes,
       fingerprint: fingerprint.signature, catalogFingerprint: catalog?.fingerprint ?? '' } } };
 }
 

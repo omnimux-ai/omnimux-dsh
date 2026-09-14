@@ -1,6 +1,6 @@
 import { resolveGenerationPrompt } from '../generationPrompt.ts';
 import { isMediaInputType } from '../../validation/compatKernel.ts';
-import { acceptsFeedAsset } from './autoFillSlots.ts';
+import { acceptsFeedAsset, isReadyFeedAsset } from './autoFillSlots.ts';
 import type { EffectiveSubmitInputs, FeedAsset, SlotBindings, SlotConflict, SlotLayout, SlotOccupant, SlotSpec } from './types.ts';
 
 export interface SlotSelection {
@@ -21,6 +21,7 @@ export function selectSlotOccupants(layout: SlotLayout, bindings: SlotBindings, 
       seen.add(occupant.edgeId);
       if (conflicts.some((item) => item.slot === slot.slot && item.occupant.edgeId === occupant.edgeId)) return [];
       const asset = byEdge.get(occupant.edgeId);
+      if (!isReadyFeedAsset(asset) || asset.sourceNodeId !== occupant.sourceNodeId || !acceptsFeedAsset(slot, asset)) return [];
       const identity = JSON.stringify([occupant.sourceNodeId, asset?.outputId ?? occupant.outputId ?? '', slot.role]);
       if (seenRoles.has(identity)) return [];
       seenRoles.add(identity);
@@ -38,7 +39,7 @@ export function assembleEffectiveInputsFromSlots(args: {
   incomingText: string[];
 }): EffectiveSubmitInputs {
   const result: EffectiveSubmitInputs = {
-    prompt: resolveGenerationPrompt(args.nodeData, args.incomingText), references: [],
+    prompt: args.layout.acceptsText === false ? '' : resolveGenerationPrompt(args.nodeData, args.incomingText), references: [],
     unusedFeedEdgeIds: [], emptyRequiredSlots: [], blockedInputs: [],
   };
   const selections = selectSlotOccupants(args.layout, args.bindings, args.feedAssets, args.conflicts);

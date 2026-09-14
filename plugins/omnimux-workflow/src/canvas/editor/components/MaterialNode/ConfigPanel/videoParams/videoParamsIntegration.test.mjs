@@ -100,7 +100,7 @@ test('video raw supply keeps modes discoverable while the selected first-frame g
 
 test('R4: standby image cannot erase a single-operation duration schema or its validation', () => {
   const duration = {options:[{value:5}],defaultValue:5};
-  const catalog = {models:[{id:'single-frame',operations:[{id:'first_frame',listed:true,output:{type:'video'},inputs:[imageSlot('first_frame')],parameters:{duration}}]}]};
+  const catalog = {models:[{id:'single-frame',operations:[{id:'first_frame',listed:true,output:{type:'video'},inputs:[{slot:'prompt',type:'text',role:'prompt',source:'node_field',min:0,max:1},imageSlot('first_frame')],parameters:{duration}}]}]};
   const upstreams = [0,1].map(i => ({nodeId:`image-${i}`,edgeId:`edge-${i}`,materialType:'image',hasMedia:true,availability:'ready',url:`https://example.test/${i}.png`,mimeType:'image/png'}));
   upstreams.push({nodeId:'table',edgeId:'table-edge',materialType:'table',textContent:'table-body-unique',availability:'ready'});
   const raw = buildUiUpstreamFingerprint({prompt:'1dog',upstreams});

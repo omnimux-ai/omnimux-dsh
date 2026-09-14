@@ -13,6 +13,12 @@ for (const type of Object.keys(operations)) {
 }
 const singleFrame = {id:'qa-single-frame',label:'单首帧参数夹具',listed:true,parameterSchema:{},operations:[{...operation('first_frame','video',[slot('image','first_frame',1,1,'first_frame')],false),parameters:{duration:{options:[{value:5}],defaultValue:5}}}]};
 catalog.video.push(singleFrame);catalog.models.push(singleFrame);
+// No text input at all: optional prompt would still permit text consumption.
+const mediaOnly={id:'qa-media-only',label:'离线纯媒体夹具',listed:true,parameterSchema:{},operations:[
+  {id:'speech_to_text',listed:true,output:{type:'text'},inputs:[slot('audio','source',1,1,'audio')]},
+  {id:'video_to_text',listed:true,output:{type:'text'},inputs:[slot('video','reference',1,1,'videos')]},
+]};
+catalog.text.push(mediaOnly);catalog.models.push(mediaOnly);
 export function fixture(name='text', origin='http://127.0.0.1') {
   const type = ['text','image','video','audio'].includes(name) ? name : name === 'music' ? 'audio' : name === 'mixed' ? 'image' : name === 'frames' ? 'video' : 'text';
   const source = (id, materialType, data={}) => ({id,type:'material',position:{x:0,y:0},data:{materialType,nodeKind:'import',kind:'import',label:id,status:'completed',...data}});
@@ -27,5 +33,15 @@ export function fixture(name='text', origin='http://127.0.0.1') {
   if(name==='mixed') { sources=[text,image,image2]; target.data.params.operation='image_to_image'; }
   if(name==='frames') { sources=[image,image2,text]; target.data.params.operation='first_last_frame'; }
   if(name==='single-frame-params') {sources=[image,image2,text];target.data.materialType='video';target.data.params={model:'qa-single-frame',operation:'first_frame',duration:10};target.data.slotBindings={first_frame:[{sourceNodeId:'图片甲',edgeId:'edge-0',outputId:`${origin}/media/a.svg`,pinned:true}]};}
+  const emptyText=source('空正文','text',{generatedContent:'',content:'不得回退旧正文'});
+  const audio=source('音频甲','audio',{mediaUrl:`${origin}/media/silence.wav`,mimeType:'audio/wav',durationSec:1});
+  const video=source('视频甲','video',{mediaUrl:`${origin}/media/demo.mp4`,mimeType:'video/mp4',durationSec:6});
+  if(name==='text-empty') sources=[text,emptyText];
+  if(name==='empty-first-image'){sources=[source('空图片','image'),image,text];target.data.materialType='image';target.data.params={model:'qa-image',operation:'image_to_image'};}
+  if(name==='empty-first-audio'){sources=[source('空音频','audio'),audio,text];target.data.materialType='audio';target.data.params={model:'qa-audio',operation:'text_to_music'};}
+  if(name==='empty-first-video'){sources=[source('空视频','video'),video,text,image,audio];target.data.params={model:'qa-media-only',operation:'video_to_text'};}
+  if(name==='no-text-operation'){sources=[text,emptyText,audio,image,video];target.data.params={model:'qa-media-only',operation:'speech_to_text'};}
+  if(name==='required-frame'){sources=[source('空图片','image'),text];target.data.materialType='video';target.data.params={model:'qa-video',operation:'first_frame'};}
+  if(name==='optional-invalid'){sources=[text,source('失效音频','audio')];target.data.materialType='audio';target.data.params={model:'qa-audio',operation:'text_to_music'};target.data.slotBindings={reference_audio:[{sourceNodeId:'失效音频',edgeId:'edge-1',pinned:true}]};}
   return {nodes:[...sources,target],edges:sources.map((n,i)=>({id:`edge-${i}`,source:n.id,target:'target',targetHandle:i%2?'input':'in',data:{feedType:n.data.materialType}})),targetId:'target',name};
 }

@@ -28,7 +28,8 @@ import { WORKFLOW_ROUTE_PREFIX } from '../../shared/api.ts';
 import { resolveNodeKind } from '../../shared/graph/materialNode.ts';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
 import { readExplicitTargetSlot } from '../../shared/validation/compatKernel.ts';
-import { deriveSlotLayout, selectSlotOccupants, type SlotBindings, type SlotConflict } from '../../shared/graph/feedSlot/index.ts';
+import { deriveSlotLayout, type SlotBindings, type SlotConflict } from '../../shared/graph/feedSlot/index.ts';
+import { effectiveInputDisplay } from '../../shared/graph/feedSlot/effectiveInputDisplay.ts';
 import type { CapabilityCatalog } from '../../shared/api.ts';
 
 const LOG_TAG = 'nodeExecutors';
@@ -102,7 +103,7 @@ export function createDispatchingNodeExecutor(
       const resolvedInputs = new Map([...upstreamOutputs].map(([id, output]) => {
         const media = (output.mediaAssets ?? []).map((asset) => ({
           nodeId: id, materialType: asset.type, availability: 'ready' as const,
-          url: asset.url, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, durationSec: asset.durationSec,
+          url: asset.url || asset.relativePath || asset.path, mimeType: asset.mimeType, sizeBytes: asset.sizeBytes, durationSec: asset.durationSec,
         }));
         const declaredType = edges.find((edge) => edge.target === node.id && edge.source === id)?.data?.feedType;
         // A pending media output is not a text source just because it has no asset yet.
@@ -181,9 +182,11 @@ export function resolveUpstreamBindings(
       const slot = layout.slots.find((item) => saved[item.slot]?.some((occupant) => occupant.edgeId === edge.id));
       return { edgeId: edge.id ?? `feed-${edge.source}-${ordinal}`, sourceNodeId: edge.source, ordinal,
         type: asset?.type ?? String(edge.data?.feedType ?? slot?.type ?? 'text'),
+        url: asset?.url, pathOrUrl: asset?.relativePath || asset?.path, mimeType: asset?.mimeType, sizeBytes: asset?.sizeBytes, durationSec: asset?.durationSec,
         availability: asset ? 'ready' as const : 'waiting' as const };
     });
-    for (const { slot, occupant } of selectSlotOccupants(layout, saved, feed, (node.data?.slotConflicts ?? []) as SlotConflict[])) {
+    for (const { slot, occupant } of effectiveInputDisplay(layout, feed, saved, (node.data?.slotConflicts ?? []) as SlotConflict[], [],
+      (node.data?.slotStandbyEdgeIds ?? []) as string[]).selected) {
       bindings.push({ edgeId: occupant.edgeId, sourceNodeId: occupant.sourceNodeId, role: slot.role,
         targetSlot: slot.slot, output: structuredClone(normalizeOutput(context.getNodeOutput(occupant.sourceNodeId))) });
     }

@@ -202,15 +202,15 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
   const currentOperationId = resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
   const effectiveSlotLayout = useMemo(() => deriveSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
-  const textSources = useMemo(() => selectGenerationTextSources(fingerprint.assets), [fingerprint]);
+  const textSources = useMemo(() => effectiveSlotLayout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets), [fingerprint, effectiveSlotLayout]);
   const feedAssets = useMemo(() => feedFromFingerprint(fingerprint), [fingerprint]);
   const storedSlotBindings = nodeData.slotBindings as SlotBindings | undefined;
   const canvasEdges = useCanvasStore((state) => state.edges);
   const inputDisplay = useMemo(() => effectiveInputDisplay(effectiveSlotLayout, feedAssets,
     materialType === 'audio' && currentOperationId === 'text_to_speech' ? {} : storedSlotBindings,
     materialType === 'audio' && currentOperationId === 'text_to_speech' ? [] : (nodeData.slotConflicts ?? []) as SlotConflict[],
-    canvasEdges.filter((edge) => edge.target === nodeId)),
-  [storedSlotBindings, effectiveSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, materialType, currentOperationId]);
+    canvasEdges.filter((edge) => edge.target === nodeId), (nodeData.slotStandbyEdgeIds ?? []) as string[]),
+  [storedSlotBindings, effectiveSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, materialType, currentOperationId]);
   const slotBindings = inputDisplay.bindings;
   const slotConflicts = inputDisplay.conflicts;
   const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, effectiveSlotLayout, slotBindings, slotConflicts),
@@ -614,7 +614,6 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     || videoValidationErrors.length > 0
     || Boolean(audioPromptGate?.exceeded)
     || missingRequiredSlots.length > 0
-    || slotConflicts.length > 0
     || execBusy;
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
@@ -664,7 +663,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           {textSources.length > 0 && (
             <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-text-inputs">
               {textSources.map((source) => (
-                <div key={source.sourceNodeId} className="wf-effective-text" data-source-node-id={source.sourceNodeId}
+                <div key={source.sourceNodeId} className="wf-effective-text wf-effective-text--slot" data-source-node-id={source.sourceNodeId}
                   data-input-state={source.availability} title={source.sourceLabel} role="button" tabIndex={0}
                   onClick={(event) => setTextPreview({ anchor: event.currentTarget, sourceId: source.sourceNodeId })}
                   onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setTextPreview({ anchor: event.currentTarget, sourceId: source.sourceNodeId }); } }}>
@@ -677,7 +676,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               ))}
             </div>
           )}
-          {slotConflicts.map((conflict, index) => (
+          {[...slotConflicts, ...inputDisplay.unloaded].map((conflict, index) => (
             <button key={`${conflict.slot}-${conflict.occupant.edgeId}-${index}`} type="button"
               className="wf-effective-text nodrag" data-testid="wf-input-conflict"
               onClick={() => handleClearOccupant(conflict.slot, conflict.occupant.edgeId)}

@@ -7,9 +7,10 @@ import { readNodeInputSource } from '../graph/nodeInputSource.ts';
 import type { UpstreamMediaSnapshot } from './operationUi.ts';
 import { readExplicitTargetSlot } from './compatKernel.ts';
 import { resolveNodeKind } from '../graph/materialNode.ts';
-import { deriveSlotLayout, hydrateSlotBindings, slotBindingConflicts, type SlotBindings, type SlotConflict } from '../graph/feedSlot/index.ts';
+import { deriveSlotLayout, type SlotBindings, type SlotConflict } from '../graph/feedSlot/index.ts';
 import { effectiveSlotFingerprint, feedFromFingerprint } from '../graph/feedSlot/effectiveFingerprint.ts';
 import { resolveSlotOperation } from '../graph/feedSlot/resolveSlotOperation.ts';
+import { effectiveInputDisplay } from '../graph/feedSlot/effectiveInputDisplay.ts';
 import {
   buildContractView,
   matchOperationInputs,
@@ -78,14 +79,13 @@ export function findExecutionReadinessFailure(
       return source?.type === 'material' && resolveNodeKind(source.data ?? {}) === 'generate'
         && graph?.scheduledNodeIds?.has(source.id);
     }).map((input) => input.nodeId));
-    const waitingText = upstreams.find((input) => input.materialType === 'text' && input.availability !== 'ready' && !deferred.has(input.nodeId));
-    if (waitingText) return { nodeId: node.id, reasonCode: waitingText.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
-      message: waitingText.availabilityMessage ?? `等待来源 ${waitingText.nodeId} 的内容` };
     if (!view.available) return { nodeId: node.id, reasonCode: 'catalog_unavailable', message: '模型目录不可用，请稍后重试' };
     // These sources will run again; their old result metadata is not this run's input.
     upstreams = upstreams.map((input) => deferred.has(input.nodeId)
       ? { nodeId: input.nodeId, label: input.label, materialType: input.materialType, edgeId: input.edgeId,
-          role: input.role, targetSlot: input.targetSlot, availability: 'waiting' as const }
+          role: input.role, targetSlot: input.targetSlot, availability: 'ready' as const,
+          // Admission-only placeholder: dispatch revalidates the completed scheduled output.
+          ...(input.materialType === 'text' ? { textContent: '__scheduled_text__' } : { url: 'scheduled:pending' }) }
       : input);
     const data = node.data ?? {};
     const params = data.params && typeof data.params === 'object'
@@ -106,10 +106,13 @@ export function findExecutionReadinessFailure(
     const outputType = typeof data.materialType === 'string' ? data.materialType : undefined;
     const chosenId = resolveSlotOperation(catalog, model.id, params.operation, outputType, rawFingerprint);
     const layout = deriveSlotLayout(catalog, model.id, chosenId);
-    const hydrated = data.slotBindings === undefined ? hydrateSlotBindings(feedFromFingerprint(rawFingerprint), layout) : undefined;
-    const bindings = (data.slotBindings ?? hydrated?.bindings ?? {}) as SlotBindings;
-    const conflicts = [...(data.slotConflicts ?? hydrated?.conflicts ?? []) as SlotConflict[], ...slotBindingConflicts(layout, bindings, feedFromFingerprint(rawFingerprint))];
-    if (conflicts.length) return { nodeId: node.id, reasonCode: 'role_conflict', message: '已指定素材的卡槽或用途不再合法，请重新绑定' };
+    const loaded = effectiveInputDisplay(layout, feedFromFingerprint(rawFingerprint), data.slotBindings as SlotBindings | undefined,
+      (data.slotConflicts ?? []) as SlotConflict[], graph?.edges.filter((edge) => edge.target === node.id) ?? [],
+      (data.slotStandbyEdgeIds ?? []) as string[]);
+    const { bindings, conflicts } = loaded;
+    if (loaded.requiredUnavailable && !deferred.has(loaded.requiredUnavailable.occupant.sourceNodeId)) return {
+      nodeId: node.id, reasonCode: 'input_unavailable', message: `来源 ${loaded.requiredUnavailable.occupant.sourceNodeId} 的必需素材不可用，请替换或移除引用`,
+    };
     const fingerprint = effectiveSlotFingerprint(rawFingerprint, layout, bindings, conflicts);
     const unavailable = fingerprint.assets.find((asset) => asset.availability !== 'ready' && !deferred.has(asset.sourceNodeId));
     if (unavailable) return { nodeId: node.id, reasonCode: unavailable.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',

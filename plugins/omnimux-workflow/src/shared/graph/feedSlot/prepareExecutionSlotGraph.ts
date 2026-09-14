@@ -3,9 +3,9 @@ import { buildContractView, resolveModelView } from '../../validation/compatKern
 import { readNodeInputSource } from '../nodeInputSource.ts';
 import { resolveNodeKind } from '../materialNode.ts';
 import { deriveSlotLayout } from './deriveSlotLayout.ts';
-import { hydrateSlotBindings } from './hydrateSlotBindings.ts';
+import { effectiveInputDisplay } from './effectiveInputDisplay.ts';
 import type { LegacySlotEdge } from './hydrateSlotBindings.ts';
-import type { FeedAsset } from './types.ts';
+import type { FeedAsset, SlotBindings, SlotConflict } from './types.ts';
 import { buildCanvasUpstreamFingerprint } from '../canvasInputSources.ts';
 import type { CanvasNode } from '../canvasInputMutationGateway.ts';
 import type { Edge } from '@xyflow/react';
@@ -39,7 +39,7 @@ export function prepareExecutionSlotGraph<
       data.slotBindings = {};
       data.slotConflicts = [];
     }
-    if (data.slotBindings === undefined) {
+    {
       const incoming = nextEdges.filter((edge) => edge.target === node.id);
       const feed: FeedAsset[] = incoming.flatMap((edge, ordinal) => {
         const source = readNodeInputSource(byId.get(edge.source) ?? { id: edge.source });
@@ -49,7 +49,8 @@ export function prepareExecutionSlotGraph<
           url: source.output.mediaAssets?.[0]?.url, ...source.metadata }];
       });
       const layout = deriveSlotLayout(catalog, model?.id, params.operation as string | undefined);
-      const fill = hydrateSlotBindings(feed, layout, incoming);
+      const fill = effectiveInputDisplay(layout, feed, data.slotBindings as SlotBindings | undefined,
+        (data.slotConflicts ?? []) as SlotConflict[], incoming, (data.slotStandbyEdgeIds ?? []) as string[]);
       data.slotBindings = fill.bindings;
       data.slotConflicts = fill.conflicts;
     }

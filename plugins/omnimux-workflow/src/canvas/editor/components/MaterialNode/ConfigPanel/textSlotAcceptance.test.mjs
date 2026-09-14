@@ -313,9 +313,9 @@ describe('场景 3 验收：连入素材后卡槽装填与操作升迁机制正�
   it('TC-T03-02: 多模态模型连入多张图片与视频，分别匹配各自槽位', () => {
     const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', 'vision_chat', 'text');
     const multiFeed = [
-      { edgeId: 'edge-1', sourceNodeId: 'img-1', type: 'image', ordinal: 0, availability: 'ready' },
-      { edgeId: 'edge-2', sourceNodeId: 'img-2', type: 'image', ordinal: 1, availability: 'ready' },
-      { edgeId: 'edge-3', sourceNodeId: 'vid-1', type: 'video', ordinal: 2, availability: 'ready' },
+      { edgeId: 'edge-1', sourceNodeId: 'img-1', type: 'image', ordinal: 0, availability: 'ready', url: 'https://fixture.test/1.png' },
+      { edgeId: 'edge-2', sourceNodeId: 'img-2', type: 'image', ordinal: 1, availability: 'ready', url: 'https://fixture.test/2.png' },
+      { edgeId: 'edge-3', sourceNodeId: 'vid-1', type: 'video', ordinal: 2, availability: 'ready', url: 'https://fixture.test/1.mp4' },
     ];
 
     const fillResult = autoFillSlots(multiFeed, layout);

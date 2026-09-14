@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here=dirname(fileURLToPath(import.meta.url)), root=resolve(here,'../..');
 const outputBase=process.env.WORKFLOW_E2E_OUTPUT || resolve(here,'workflow-effective-input-evidence');
-test('production effective input panel to gateway capture', {timeout:180000}, async()=>{
+test('production effective slots: square text, ready-only media and gateway capture', {timeout:180000}, async()=>{
  await mkdir(outputBase,{recursive:true}); const output=await mkdtemp(resolve(outputBase,'run-'));
  const server=spawn(process.execPath,[resolve(here,'workflow-effective-input-server.mjs')],{cwd:root,env:{...process.env,WORKFLOW_E2E_OUTPUT:output},stdio:['ignore','pipe','pipe']});
  let log='',url;const report={output,status:'running',browserClosed:false,serverClosed:false};
