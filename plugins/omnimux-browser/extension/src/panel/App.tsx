@@ -92,6 +92,7 @@ import {
 import {
   appendLiveRow,
   completeLastTool,
+  errorFromTurnEnd,
   mergeHistoryRows,
   pendingQuestionFromFrame,
   resolvedQuestionFromFrame,
@@ -612,16 +613,22 @@ export function App(): React.JSX.Element {
   const [hostDefaultEffort, setHostDefaultEffort] = useState<string>('')
   const [dynamicModels, setDynamicModels] = useState<Array<{ id: string; name?: string }>>([])
   const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>(() => {
-    return safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model') || 'gpt-6-astra'
+    const saved = safeGetStorage(`omnimux_default_model_${targetPort}`) || safeGetStorage('omnimux_default_model')
+    if (saved === 'gpt-6-astra') return ''
+    return saved || ''
   })
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>(() => {
     return safeGetStorage(`omnimux_default_effort_${targetPort}`) || safeGetStorage('omnimux_default_effort') || 'medium'
   })
+  const [selectedDefaultProvider, setSelectedDefaultProvider] = useState<string>('')
 
-  const handleSelectModel = (modelId: string, effort?: string) => {
+  const handleSelectModel = (modelId: string, effort?: string, provider?: string) => {
     setSelectedDefaultModel(modelId)
     safeSetStorage(`omnimux_default_model_${targetPort}`, modelId)
     safeSetStorage('omnimux_default_model', modelId)
+    if (provider) {
+      setSelectedDefaultProvider(provider)
+    }
 
     const eff = effort || selectedReasoningEffort
     if (eff) {
@@ -634,6 +641,9 @@ export function App(): React.JSX.Element {
     const ops: Array<{ op: string; path: string[]; value?: unknown }> = [
       { op: 'set', path: ['model'], value: modelId },
     ]
+    if (provider) {
+      ops.push({ op: 'set', path: ['provider'], value: provider })
+    }
     if (eff && eff !== 'none') {
       ops.push({ op: 'set', path: ['reasoningEffort'], value: eff })
     }
@@ -648,6 +658,7 @@ export function App(): React.JSX.Element {
       void api.rpc('session.selectModel', {
         sessionId: sessionRef.current,
         model: modelId,
+        ...(provider ? { provider } : {}),
         ...(eff && eff !== 'none' ? { reasoningEffort: eff } : {}),
       }).catch(() => {})
     }
@@ -1334,6 +1345,31 @@ export function App(): React.JSX.Element {
       setCaps(nextCaps)
       const previous = lastStateRef.current
       lastStateRef.current = next
+      if (next === 'connected') {
+        void api.rpc<{
+          namespaces?: Array<{ ns: string; value?: Record<string, unknown> }>
+        }>('settings.describe', {}).then((described) => {
+          const defaults = (described.namespaces?.find((c) => c.ns === 'agent-default-model')
+            ?.value ?? {}) as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
+          if (typeof defaults.model === 'string' && defaults.model.trim() !== '') {
+            const m = defaults.model.trim()
+            setHostDefaultModel(m)
+            setSelectedDefaultModel((current) => {
+              if (!current || current === 'gpt-6-astra') {
+                safeSetStorage(`omnimux_default_model_${targetPort}`, m)
+                return m
+              }
+              return current
+            })
+          }
+          if (typeof defaults.reasoningEffort === 'string' && defaults.reasoningEffort.trim() !== '') {
+            setHostDefaultEffort(defaults.reasoningEffort.trim())
+          }
+          if (typeof defaults.provider === 'string' && defaults.provider.trim() !== '') {
+            setSelectedDefaultProvider((current) => current || String(defaults.provider).trim())
+          }
+        }).catch(() => {})
+      }
       if (previous !== null && next !== previous && next === 'stopped') {
         sessionTransitionRef.current += 1
         sessionInitializationRef.current = false
@@ -1527,6 +1563,10 @@ export function App(): React.JSX.Element {
       setStopping(false)
       setWorking(false)
       clearQuestions()
+      const turnError = errorFromTurnEnd(payload.event, locale)
+      if (turnError) {
+        setError(turnError)
+      }
       await refreshHistory(payload.sessionId)
       return
     }
@@ -1674,10 +1714,11 @@ export function App(): React.JSX.Element {
     if (sessionTransitionRef.current !== transition) return
     sessionRef.current = created.sessionId
     await api.setActiveSession(created.sessionId, true)
-    if (selectedDefaultModel) {
+    if (selectedDefaultModel && selectedDefaultModel !== hostDefaultModel) {
       void api.rpc('session.selectModel', {
         sessionId: created.sessionId,
         model: selectedDefaultModel,
+        ...(selectedDefaultProvider ? { provider: selectedDefaultProvider } : {}),
       }).catch(() => {})
     }
     setSessionTitle(null)
@@ -1968,10 +2009,11 @@ export function App(): React.JSX.Element {
         sessionRef.current = created.sessionId
         id = created.sessionId
         await api.setActiveSession(created.sessionId, true).catch(() => {})
-        if (selectedDefaultModel) {
+        if (selectedDefaultModel && selectedDefaultModel !== hostDefaultModel) {
           void api.rpc('session.selectModel', {
             sessionId: created.sessionId,
             model: selectedDefaultModel,
+            ...(selectedDefaultProvider ? { provider: selectedDefaultProvider } : {}),
           }).catch(() => {})
         }
       }
