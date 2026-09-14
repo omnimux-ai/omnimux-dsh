@@ -50,13 +50,13 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   }
 });
 
-test('H2: 处置表 69 行 + implementation-ready 集合与处置一致', () => {
+test('H2: 处置表 71 行 + implementation-ready 集合与处置一致', () => {
   resetContractCache();
   const index = loadAll(DEFAULT_SPECS_DIR, { useCache: false });
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 69);
+  assert.equal(doc.dispositions.length, 71);
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
 
@@ -97,7 +97,7 @@ test('H2: 处置表 69 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 69);
+  assert.equal(report.dispositions.total, 71);
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 
@@ -138,6 +138,9 @@ test('real specs load via DEFAULT_SPECS_DIR with canonical schemaVersion', () =>
   assert.ok(index.get('kling-v3'));
   assert.ok(index.get('suno'));
   assert.ok(index.get('gpt-image-2'));
+  assert.ok(index.get('gpt-image-2.5'));
+  // 2026-09-14：高清型号更名收敛后，旧写法经别名归一到 gpt-image-2.5-hd
+  assert.equal(index.get('gpt-image-2.5-hd')?.aliases?.includes('gpt-image2-hd'), true);
   assert.ok(index.get('whisper-1'));
   // extra ghost ids deleted
   assert.equal(index.get('deepseek-v3'), undefined);
