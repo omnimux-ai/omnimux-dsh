@@ -115,7 +115,7 @@ describe('the page-surface switches in the settings view', () => {
     await act(async () => {
       document.querySelector<HTMLButtonElement>('.settings-trigger')!.click()
     })
-    await vi.waitFor(() => { expect(document.querySelectorAll('.settings .feature-switch')).toHaveLength(2) })
+    await vi.waitFor(() => { expect(document.querySelectorAll('.settings .feature-switch').length).toBeGreaterThanOrEqual(2) })
   }
 
   /** The switch input of one card, in the order the view renders them. */

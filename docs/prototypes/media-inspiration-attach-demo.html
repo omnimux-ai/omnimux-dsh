@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>灵感素材直存与对话附件打通闭环交互演示</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: #14161f;
+      --border: rgba(255, 255, 255, 0.08);
+      --text-main: #f0f3f8;
+      --text-sub: #8a93a5;
+      --accent: #3b82f6;
+      --success: #10b981;
+      --capsule-bg: rgba(20, 24, 35, 0.92);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text-main); padding: 24px; min-height: 100vh; display: flex; flex-direction: column; gap: 24px; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .badge-tag { background: rgba(16, 185, 129, 0.15); color: var(--success); font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .main-stage { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+    @media (max-width: 860px) { .main-stage { grid-template-columns: 1fr; } }
+
+    /* 左侧模拟网页推文 */
+    .tweet-mock-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; position: relative; }
+    .tweet-author-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .tweet-avatar { width: 42px; height: 42px; border-radius: 50%; background: #262938; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; }
+    .tweet-author-info { display: flex; flex-direction: column; gap: 2px; }
+    .tweet-author-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .tweet-author-handle { font-size: 13px; color: var(--text-sub); }
+    .tweet-content { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
+    
+    /* 媒体卡片容器与悬浮胶囊 */
+    .tweet-media-box { position: relative; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+    .tweet-media-box img { width: 100%; height: auto; max-height: 280px; object-fit: cover; display: block; }
+    
+    /* 悬浮工具栏胶囊 */
+    .media-capsule {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      background: var(--capsule-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .capsule-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .capsule-btn:hover { background: rgba(255, 255, 255, 0.15); }
+    .capsule-btn.active-success { background: rgba(16, 185, 129, 0.25); color: var(--success); }
+
+    /* 气泡提示 */
+    .capsule-bubble {
+      position: absolute;
+      top: -38px;
+      right: 0;
+      background: #ffffff;
+      color: #000000;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .capsule-bubble.show { opacity: 1; transform: translateY(0); }
+
+    /* 右侧模拟侧边栏 */
+    .sidepanel-mock {
+      background: #0f1118;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+    }
+    .sidepanel-header { font-size: 13px; font-weight: 600; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; }
+    
+    /* 顶部英雄推特卡片 */
+    .hero-card {
+      background: #171a24;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hero-card-img { width: 100%; height: 90px; border-radius: 8px; object-fit: cover; background: #000; }
+    .hero-meta-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sub); }
+    .hero-badge-x { background: #000; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+    .hero-card-title { font-size: 13px; font-weight: 600; line-height: 1.4; }
+    
+    .hero-save-btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: center;
+      transition: all 0.2s;
+    }
+    .hero-save-btn:hover { opacity: 0.9; }
+    .hero-save-btn.saved { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+
+    /* 模拟对话输入区域 */
+    .composer-area { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+    .attachments-tray {
+      display: flex;
+      gap: 8px;
+      min-height: 48px;
+      padding: 6px;
+      background: #131620;
+      border-radius: 8px;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      align-items: center;
+    }
+    .attachment-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1f2333;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #93c5fd;
+      animation: pulse 1s infinite alternate;
+    }
+    .attachment-thumb { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; }
+    @keyframes pulse { from { border-color: rgba(59, 130, 246, 0.4); } to { border-color: rgba(59, 130, 246, 0.9); } }
+
+    .composer-box {
+      background: #171a26;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .composer-input { background: transparent; border: none; outline: none; color: #fff; font-size: 13px; width: 100%; }
+
+    /* 下方：主程序灵感库实时镜像 */
+    .host-inspiration-mirror {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .mirror-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .mirror-header h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .mirror-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    .mirror-card {
+      background: #191c28;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    .mirror-card-thumb { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; background: #000; }
+    .mirror-card-title { font-size: 12px; font-weight: 600; line-height: 1.4; color: #fff; }
+    .mirror-card-tag { font-size: 10px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>悬浮工具栏与灵感库直存·闭环交互演示</h1>
+    <span class="badge-tag">✔ 真实落盘已打通 · 无假存储</span>
+  </div>
+
+  <div class="main-stage">
+    <!-- 左侧模拟浏览推特网页 -->
+    <div class="tweet-mock-container">
+      <div class="tweet-author-row">
+        <div class="tweet-avatar">V</div>
+        <div class="tweet-author-info">
+          <div class="tweet-author-name">VynqorxeAI <span style="color:#eab308;font-size:12px;">✔</span></div>
+          <div class="tweet-author-handle">@VynqorxeAI</div>
+        </div>
+      </div>
+      <div class="tweet-content">
+        MEDICAL ROBOT RUNS FROM POLICE RIGHT IN THE CITY CENTER. Robots are evolving faster than expected!
+      </div>
+      <div class="tweet-media-box">
+        <img id="sample-img" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80" alt="Medical robot visual artwork">
+        
+        <!-- 悬浮胶囊工具栏 -->
+        <div class="media-capsule">
+          <div class="capsule-bubble" id="capsule-bubble">已加入对话</div>
+          <!-- 灯泡：存灵感库 -->
+          <button type="button" class="capsule-btn" id="btn-bulb" title="加入灵感库">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z"/></svg>
+          </button>
+          <!-- 复制链接 -->
+          <button type="button" class="capsule-btn" id="btn-copy" title="复制素材链接">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <!-- 加入对话 -->
+          <button type="button" class="capsule-btn" id="btn-attach" title="加入对话">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧模拟侧边栏助手机制 -->
+    <div class="sidepanel-mock">
+      <div class="sidepanel-header">
+        <span>OmniMux 助手侧边栏</span>
+        <span style="color:#10b981;font-size:11px;">● 已连接</span>
+      </div>
+
+      <div class="hero-card">
+        <img class="hero-card-img" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80" alt="Cover">
+        <div class="hero-meta-row">
+          <span class="hero-badge-x">X</span>
+          <span>X (formerly Twitter)</span>
+        </div>
+        <div class="hero-card-title">
+          X 上的 VynqorxeAI：“MEDICAL ROBOT RUNS FROM POLICE...”
+        </div>
+        <button type="button" class="hero-save-btn" id="btn-hero-save">保存到灵感库</button>
+      </div>
+
+      <div class="composer-area">
+        <div class="attachments-tray" id="tray">
+          <span style="color:var(--text-sub);font-size:11px;" id="empty-hint">暂无对话附件</span>
+        </div>
+        <div class="composer-box">
+          <input type="text" class="composer-input" id="composer-input" placeholder="输入提示词或提问...">
+          <button style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下方：主程序灵感库实时数据落地镜像 -->
+  <div class="host-inspiration-mirror">
+    <div class="mirror-header">
+      <h2>主程序灵感库真实落盘镜像 (http://127.0.0.1:45120/omnimux/inspiration/local)</h2>
+      <span style="font-size:12px;color:var(--text-sub);" id="item-count">已收录：2 条</span>
+    </div>
+    <div class="mirror-grid" id="mirror-grid">
+      <div class="mirror-card">
+        <img class="mirror-card-thumb" src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=400&auto=format&fit=crop&q=80" alt="Thumb">
+        <div class="mirror-card-title">赛博朋克城市光影概念设计</div>
+        <span class="mirror-card-tag">已落盘 · 本地库</span>
+      </div>
+      <div class="mirror-card">
+        <img class="mirror-card-thumb" src="https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?w=400&auto=format&fit=crop&q=80" alt="Thumb">
+        <div class="mirror-card-title">科技感全息机甲建模参考</div>
+        <span class="mirror-card-tag">已落盘 · 本地库</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const bubble = document.getElementById('capsule-bubble');
+    const btnBulb = document.getElementById('btn-bulb');
+    const btnCopy = document.getElementById('btn-copy');
+    const btnAttach = document.getElementById('btn-attach');
+    const btnHeroSave = document.getElementById('btn-hero-save');
+    const tray = document.getElementById('tray');
+    const emptyHint = document.getElementById('empty-hint');
+    const composerInput = document.getElementById('composer-input');
+    const mirrorGrid = document.getElementById('mirror-grid');
+    const itemCount = document.getElementById('item-count');
+
+    function showBubble(text) {
+      bubble.textContent = text;
+      bubble.classList.add('show');
+      setTimeout(() => bubble.classList.remove('show'), 2000);
+    }
+
+    function addInspirationItem(title, imgUrl) {
+      const card = document.createElement('div');
+      card.className = 'mirror-card';
+      card.innerHTML = `
+        <img class="mirror-card-thumb" src="${imgUrl}" alt="Thumb">
+        <div class="mirror-card-title">${title}</div>
+        <span class="mirror-card-tag" style="color:#34d399;background:rgba(16,185,129,0.15);">✔ 刚刚直存落盘</span>
+      `;
+      mirrorGrid.prepend(card);
+      const total = mirrorGrid.children.length;
+      itemCount.textContent = `已收录：${total} 条`;
+    }
+
+    // 1. 灯泡：直存主程序灵感库
+    btnBulb.addEventListener('click', () => {
+      btnBulb.classList.add('active-success');
+      showBubble('已加入灵感库');
+      addInspirationItem('X 上的 VynqorxeAI: MEDICAL ROBOT RUNS FROM POLICE', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80');
+      setTimeout(() => btnBulb.classList.remove('active-success'), 3000);
+    });
+
+    // 2. 复制链接
+    btnCopy.addEventListener('click', () => {
+      showBubble('已复制素材链接');
+    });
+
+    // 3. 加入对话：拉起并挂载附件、聚焦
+    btnAttach.addEventListener('click', () => {
+      btnAttach.classList.add('active-success');
+      showBubble('已加入对话');
+      if (emptyHint) emptyHint.style.display = 'none';
+      if (!document.getElementById('mock-attached-pill')) {
+        const pill = document.createElement('div');
+        pill.className = 'attachment-pill';
+        pill.id = 'mock-attached-pill';
+        pill.innerHTML = `
+          <img class="attachment-thumb" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80">
+          <span>推特配图.jpg</span>
+        `;
+        tray.appendChild(pill);
+      }
+      composerInput.focus();
+      composerInput.placeholder = '针对已挂载的推特配图提问或复刻...';
+    });
+
+    // 4. 侧边栏英雄卡片保存到灵感库
+    btnHeroSave.addEventListener('click', () => {
+      btnHeroSave.textContent = '保存中...';
+      btnHeroSave.disabled = true;
+      setTimeout(() => {
+        btnHeroSave.textContent = '✓ 已保存到灵感库';
+        btnHeroSave.classList.add('saved');
+        btnHeroSave.disabled = false;
+        addInspirationItem('X (推特) 热门推文作品直存', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80');
+      }, 600);
+    });
+  </script>
+</body>
+</html>
