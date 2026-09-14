@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
-import { FloatingBottomComposer } from './FloatingBottomComposer.jsx';
 import { injectMediaViewerStyles } from './styles.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
@@ -232,12 +231,6 @@ export function MediaViewerTab({ scope }) {
               )}
             </div>
           )}
-
-          {/* 两栏模式下的底部悬浮输入框 */}
-          <FloatingBottomComposer
-            refThumbUrl={activeItem?.url}
-            hidden={layoutMode !== '2col'}
-          />
         </div>
       </div>
     </div>

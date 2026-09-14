@@ -14,20 +14,53 @@ export const CONVERSATION_COLLAPSE_STYLE_ID = 'omnimux-conversation-collapse-chr
 export const CONVERSATION_COLLAPSE_STORAGE_PREFIX = 'omnimux-conversation-collapsed:v1:'
 
 export const CONVERSATION_COLLAPSE_CSS = `
-/* Middle conversation column — keep mounted, force visual closed (#372) */
+/* Middle conversation column — collapse layout width while projecting native composer fixed to canvas bottom */
 html[${CONVERSATION_COLLAPSED_ATTR}] [class*="centerCol"],
 html[${CONVERSATION_COLLAPSED_ATTR}] .dshDesktopConversationSurface{
   flex:0 0 0!important;
   width:0!important;
   min-width:0!important;
   max-width:0!important;
-  overflow:hidden!important;
-  opacity:0!important;
+  overflow:visible!important;
+  opacity:1!important;
   pointer-events:none!important;
 }
 html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation"]{
-  visibility:hidden!important;
+  visibility:visible!important;
   pointer-events:none!important;
+}
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-conversation-scroll],
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-slot="conversation.header"],
+html[${CONVERSATION_COLLAPSED_ATTR}] header[class*="header"]{
+  display:none!important;
+}
+/* Native DSH Composer floating dock at the bottom of the canvas */
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-seat]{
+  position:fixed!important;
+  bottom:24px!important;
+  left:var(--omnimux-sidebar-width, 280px)!important;
+  right:0!important;
+  width:auto!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  z-index:100!important;
+  pointer-events:auto!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+html[${CONVERSATION_COLLAPSED_ATTR}][data-omnimux-left-collapsed] [data-composer-seat]{
+  left:0!important;
+}
+html[${CONVERSATION_COLLAPSED_ATTR}] [data-composer-card]{
+  width:640px!important;
+  max-width:min(640px, calc(100vw - var(--omnimux-sidebar-width, 280px) - 64px))!important;
+  margin:0 auto!important;
+  box-shadow:0 20px 48px var(--dsw-alias-bg-layer-1, rgba(0, 0, 0, 0.4))!important;
+  border-radius:18px!important;
+  pointer-events:auto!important;
+  visibility:visible!important;
+  opacity:1!important;
 }
 /* 收起后网格第三列会吃掉全部剩余宽度，而外壳的右栏面板是固定宽度 + 右对齐
    （left = 容器宽 − 面板宽）。不补这一条，面板左侧就会留下等宽黑空（实测 670px
