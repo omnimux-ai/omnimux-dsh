@@ -55,7 +55,11 @@ test('共享组提供 hover / open / active / focus-visible / disabled 五态契
   for (const cls of ['wf-model-cascade-capsule', 'wf-voice-trigger', 'wf-cfg-summary-bar', 'wf-video-trigger-bar']) {
     assert.match(themeCss, new RegExp(`\\.${cls}:hover:not\\(:disabled\\)|^\\.${cls}:hover:not`, 'm'), `${cls} 必须共享 hover 态`);
   }
-  assert.match(themeCss, /\.wf-model-cascade-capsule\[aria-expanded='true'\],\n\.wf-cfg-summary-bar--open,/);
+  assert.match(
+    themeCss,
+    /\.wf-model-cascade-capsule\[aria-expanded='true'\]:not\(:disabled\),\n\.wf-cfg-summary-bar\.wf-cfg-summary-bar--open:not\(:disabled\),/,
+    'open 规则必须与 hover 规则同特异性，否则指针停留时展开态描边会被 hover 覆盖',
+  );
   assert.match(themeCss, /\.wf-model-cascade-capsule:active:not\(:disabled\),/);
   assert.match(themeCss, /\.wf-model-cascade-capsule:focus-visible,\n\.wf-voice-trigger:focus-visible,/);
   assert.match(themeCss, /\.wf-model-cascade-capsule:disabled,\n\.wf-model-cascade-capsule\[aria-disabled='true'\],/);

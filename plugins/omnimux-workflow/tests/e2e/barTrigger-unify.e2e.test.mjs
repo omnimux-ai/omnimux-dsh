@@ -146,10 +146,13 @@ test('e2e: 五态契约齐备，且每条状态规则都指向真实存在的元
   assert.match(hover.body, /background: var\(--dsw-alias-interactive-bg-hover/);
   assert.match(hover.body, /border-color: var\(--dsw-alias-border-l3/);
 
-  const open = ruleWithSelector(".wf-model-cascade-capsule[aria-expanded='true']");
+  const open = ruleWithSelector(".wf-model-cascade-capsule[aria-expanded='true']:not(:disabled)");
   assert.ok(open, '展开态必须有一条以 aria-expanded 驱动的规则');
   assert.match(open.body, /border-color: var\(--dsw-alias-brand-primary\)/);
-  assert.ok(selectorList(open).includes('.wf-video-trigger-bar--open'), '展开态必须同时覆盖参数摘要条');
+  assert.ok(
+    selectorList(open).includes('.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled)'),
+    '展开态必须同时覆盖参数摘要条',
+  );
 
   const active = ruleWithSelector('.wf-model-cascade-capsule:active:not(:disabled)');
   assert.ok(active, '必须存在按压规则');
@@ -234,4 +237,44 @@ test('e2e: 同栏不再并存两种圆角语言（红线回归）', () => {
   for (const rule of exclusive) {
     assert.doesNotMatch(rule.body, /border-radius: 8px/, `${selectorList(rule)[0]} 不得保留方角圆角`);
   }
+});
+
+test('e2e: 展开态特异性不低于 hover，指针停留时品牌描边不被覆盖', () => {
+  // 点开触发器后指针必然仍停在它上面，hover 会持续命中；
+  // open 规则若特异性不足，展开态品牌描边会被 hover 描边盖掉。
+  const specificity = (selector) =>
+    (selector.match(/\.[A-Za-z0-9_-]+/g) || []).length +
+    (selector.match(/\[[^\]]*\]/g) || []).length +
+    (selector.match(/:(?!not\b)[a-z-]+(\([^)]*\))?/g) || []).length;
+
+  const indexOfRule = (selector) => RULES.findIndex((r) => selectorList(r).includes(selector));
+
+  const pairs = [
+    ['.wf-model-cascade-capsule:hover:not(:disabled)', ".wf-model-cascade-capsule[aria-expanded='true']:not(:disabled)"],
+    ['.wf-cfg-summary-bar:hover:not(:disabled)', '.wf-cfg-summary-bar.wf-cfg-summary-bar--open:not(:disabled)'],
+    ['.wf-video-trigger-bar:hover:not(:disabled)', '.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled)'],
+  ];
+
+  for (const [hoverSelector, openSelector] of pairs) {
+    const hoverIndex = indexOfRule(hoverSelector);
+    const openIndex = indexOfRule(openSelector);
+    assert.ok(hoverIndex >= 0, `必须存在 hover 规则 ${hoverSelector}`);
+    assert.ok(openIndex >= 0, `必须存在 open 规则 ${openSelector}`);
+    assert.ok(
+      specificity(openSelector) >= specificity(hoverSelector),
+      `open 规则特异性 ${specificity(openSelector)} 必须不低于 hover ${specificity(hoverSelector)}：${openSelector}`,
+    );
+    assert.ok(openIndex > hoverIndex, `open 规则必须在 hover 规则之后声明：${openSelector}`);
+  }
+
+  // DOM 侧：展开元素必须真实命中 open 规则
+  const doc = loadBarDocument();
+  assert.ok(
+    doc.getElementById('model-open').matches(".wf-model-cascade-capsule[aria-expanded='true']:not(:disabled)"),
+    '展开中的模型触发器必须命中 open 规则',
+  );
+  assert.ok(
+    doc.getElementById('params-open').matches('.wf-cfg-summary-bar.wf-cfg-summary-bar--open:not(:disabled)'),
+    '展开中的参数摘要条必须命中 open 规则',
+  );
 });

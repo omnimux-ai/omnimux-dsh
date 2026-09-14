@@ -30,7 +30,7 @@
 ### 3.2 状态契约（浏览器实测）
 
 - AC-3 hover：背景色与边框色均相对默认态改变（三者行为一致）。
-- AC-4 展开（模型按钮 `aria-expanded="true"` / 参数条 `--open`）：背景切到激活底色且边框切到品牌色。
+- AC-4 展开（模型按钮 `aria-expanded="true"` / 参数条 `--open`）：背景切到激活底色且边框切到品牌色。**指针停留在触发器上（hover + open 组合态）时品牌描边必须保持**，不得被 hover 描边覆盖（open 规则特异性须不低于 hover 规则且在其后声明）。
 - AC-5 按压：`:active` 触发 `transform: scale(0.96)`。
 - AC-6 键盘 `:focus-visible`：出现可见焦点环（`box-shadow` 非 none）。
 - AC-7 禁用：`opacity: 0.35` + `cursor: not-allowed`。

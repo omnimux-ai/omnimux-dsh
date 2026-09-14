@@ -7513,10 +7513,12 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
 }
 
-/* open 态：模型触发器由 aria-expanded 派生，摘要条由 --open 类派生 */
-.wf-model-cascade-capsule[aria-expanded='true'],
-.wf-cfg-summary-bar--open,
-.wf-video-trigger-bar--open {
+/* open 态：模型触发器由 aria-expanded 派生，摘要条由 --open 类派生。
+   选择器必须与 hover 规则同特异性（同为 (0,3,0)）：点开后指针仍停在触发器上，
+   hover 会持续命中；特异性不足时品牌描边会被 hover 描边盖掉，展开态看不出激活。 */
+.wf-model-cascade-capsule[aria-expanded='true']:not(:disabled),
+.wf-cfg-summary-bar.wf-cfg-summary-bar--open:not(:disabled),
+.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-active, var(--wb-pill-hover));
   border-color: var(--dsw-alias-brand-primary);
 }

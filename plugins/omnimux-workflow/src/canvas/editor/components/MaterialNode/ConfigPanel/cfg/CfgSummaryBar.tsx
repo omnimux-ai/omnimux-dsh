@@ -1,7 +1,8 @@
 /**
  * CfgSummaryBar — 全模态通用摘要触发条（2026-09-07 全模态收敛 / T02）。
  *
- * 几何铁律：高 32px / 圆角 8px / max-width 100%（废除 28px / 999px / 260px）。
+ * 几何铁律：高 32px / 胶囊圆角 / max-width 100%，几何与五态统一由「底栏触发器共享规格」
+ * 提供（components.css），本组件不再自带外观声明。
  * 段间分隔用语义化 CSS 竖线（::before 伪元素），废除行内中点字符节点。
  * 折叠协议：ResizeObserver 测量可用宽度 → collapseSummary 纯函数按注入
  * collapseOrder 逐步丢弃，Chevron 永不丢。图标统一 14px。
