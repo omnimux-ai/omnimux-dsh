@@ -610,30 +610,72 @@ interface HistoryPage {
   }
 }
 
+/**
+ * 每行容纳的步骤数。
+ *
+ * 进展窗口固定两行，每行两个步骤：步骤链增长时行数随之增加，但窗口只露出最后两行，
+ * 新的一行从下方推进来、旧的一行向上滑出。行宽因此只在一格与两格之间变化，
+ * 而卡片几何完全不变——否则每来一个进展就换行增高，用户看到的就是抖动。
+ */
+const TOOL_STEPS_PER_LINE = 2
+
+/** 单格内的最大字符数：超长的单步名称在格内截断，完整链条留在无障碍名称里。 */
+const TOOL_STEP_MAX_CHARS = 64
+
+/** 在词边界上截断超长步骤名，避免把参数名从中间劈开。 */
+function clipStep(step: string): string {
+  if (step.length <= TOOL_STEP_MAX_CHARS) return step
+  const head = step.slice(0, TOOL_STEP_MAX_CHARS)
+  const boundary = head.lastIndexOf(' ')
+  return `${boundary > TOOL_STEP_MAX_CHARS / 2 ? head.slice(0, boundary) : head}…`
+}
+
+/** 把步骤链切成显示用的行。 */
+export function toolStepLines(steps: string[]): string[][] {
+  const trimmed = steps.map(clipStep)
+  const lines: string[][] = []
+  for (let i = 0; i < trimmed.length; i += TOOL_STEPS_PER_LINE) {
+    lines.push(trimmed.slice(i, i + TOOL_STEPS_PER_LINE))
+  }
+  return lines
+}
+
 export const ToolActivity = memo(function ToolActivity({ row, copy }: { row: Row; copy: PanelCopy }): React.JSX.Element {
   const running = row.status === 'running'
   const steps = row.text.split(/\s*(?:→|->)\s*/).filter(Boolean)
     .map((step) => copy.tool?.labels && Object.hasOwn(copy.tool.labels, step) ? copy.tool.labels[step] : step)
+  const lines = steps.length > 0 ? toolStepLines(steps) : [[row.text]]
 
   return (
-    <div className={`tool-activity ${running ? 'running' : 'complete'}`} role="status">
+    <div
+      className={`tool-activity ${running ? 'running' : 'complete'}`}
+      role="status"
+      aria-label={`${running ? copy.tool.running : copy.tool.complete}：${steps.join(' → ')}`}
+    >
       <span className="tool-icon"><ToolIcon /></span>
       <span className="tool-copy">
         <span className="tool-label">{running ? copy.tool.running : copy.tool.complete}</span>
-        <span className="tool-summary">
-          {steps.length > 1 ? (
-            steps.map((step, idx) => (
-              <Fragment key={idx}>
-                {idx > 0 && <span className="tool-step-arrow" aria-hidden="true">→</span>}
-                <span className={idx < steps.length - 1 ? 'tool-step-tag' : 'tool-step-text'}>{step}</span>
-              </Fragment>
-            ))
-          ) : (
-            <span className="tool-step-text">{steps[0] ?? row.text}</span>
-          )}
+        {/* 两行窗口：只露出最后两行，靠内容整体上移带动画式的流动。 */}
+        <span className="tool-window" data-lines="2">
+          <span className="tool-lines">
+            {lines.map((line, lineIdx) => (
+              <span className="tool-line" key={lineIdx}>
+                {line.map((step, colIdx) => (
+                  <Fragment key={colIdx}>
+                    {colIdx > 0 && <span className="tool-step-arrow" aria-hidden="true">→</span>}
+                    <span className="tool-step-tag">{step}</span>
+                  </Fragment>
+                ))}
+              </span>
+            ))}
+          </span>
         </span>
       </span>
-      <span className="tool-state" aria-label={running ? copy.tool.inProgress : copy.tool.completed}>
+      <span
+        className="tool-state"
+        data-width="fixed"
+        aria-label={running ? copy.tool.inProgress : copy.tool.completed}
+      >
         {running ? (
           <span className="spinner" />
         ) : (

@@ -7476,7 +7476,13 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 /* ============ 全模态参数配置面板（cfg 底座；视频参数配置面板 (Video Param Popover / TriggerBar) 双选择器别名） ============ */
 
-/* ---- 摘要触发条 (TriggerBar)：32px 高度 / 999px 胶囊圆角规格（对齐底栏胶囊圆角） ---- */
+/* ---- 底栏触发器共享规格（模型选择 / 音色 / 参数摘要三处同源） ----
+   几何铁律：高 32px / 圆角 999px 胶囊 / 内边距 0 8px 0 10px / 字号 12px。
+   三个触发器加入同一组选择器：几何与五态（hover / open / active / focus-visible /
+   disabled）契约只有这一份实现，任一触发器不再各自手写外观；新增底栏触发器时
+   加类名即可，禁止复制本段。 */
+.wf-model-cascade-capsule,
+.wf-voice-trigger,
 .wf-cfg-summary-bar,
 .wf-video-trigger-bar {
   display: inline-flex;
@@ -7492,41 +7498,88 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
   color: var(--dsw-alias-label-primary, var(--wb-text-primary));
   font-size: 12px;
   line-height: 16px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
-.wf-cfg-summary-bar:hover,
-.wf-video-trigger-bar:hover {
+.wf-model-cascade-capsule:hover:not(:disabled),
+.wf-voice-trigger:hover:not(:disabled),
+.wf-cfg-summary-bar:hover:not(:disabled),
+.wf-video-trigger-bar:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover, var(--wb-pill-hover));
   border-color: var(--dsw-alias-border-l3, var(--wb-border-strong));
 }
 
-.wf-cfg-summary-bar--open,
-.wf-video-trigger-bar--open {
-  background: var(--dsw-alias-interactive-bg-active);
+/* open 态：模型触发器由 aria-expanded 派生，摘要条由 --open 类派生。
+   选择器必须与 hover 规则同特异性（同为 (0,3,0)）：点开后指针仍停在触发器上，
+   hover 会持续命中；特异性不足时品牌描边会被 hover 描边盖掉，展开态看不出激活。 */
+.wf-model-cascade-capsule[aria-expanded='true']:not(:disabled),
+.wf-cfg-summary-bar.wf-cfg-summary-bar--open:not(:disabled),
+.wf-video-trigger-bar.wf-video-trigger-bar--open:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-active, var(--wb-pill-hover));
   border-color: var(--dsw-alias-brand-primary);
 }
 
+.wf-model-cascade-capsule:active:not(:disabled),
+.wf-voice-trigger:active:not(:disabled),
 .wf-cfg-summary-bar:active,
 .wf-video-trigger-bar:active {
   transform: scale(0.96);
 }
 
+.wf-model-cascade-capsule:focus-visible,
+.wf-voice-trigger:focus-visible,
 .wf-cfg-summary-bar:focus-visible,
 .wf-video-trigger-bar:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
+  /* 宿主 token 缺失时回退到品牌色 45% 混合，保证焦点环在任何环境下可见（不写裸色字面量） */
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary, color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent));
 }
 
+.wf-model-cascade-capsule:disabled,
+.wf-model-cascade-capsule[aria-disabled='true'],
+.wf-voice-trigger:disabled,
 .wf-cfg-summary-bar:disabled,
 .wf-cfg-summary-bar[aria-disabled='true'],
 .wf-video-trigger-bar:disabled,
 .wf-video-trigger-bar[aria-disabled='true'] {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* 模型触发器专属：不参与压缩（品牌名不被挤断），文字不可拖选 */
+.wf-model-cascade-capsule {
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* 模型触发器内层：品牌名加粗 / 渠道徽章 / chevron（14px，与共享组图标同阶） */
+.wf-model-cascade-capsule__name {
+  font-weight: 600;
+}
+
+.wf-model-cascade-capsule__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--dsw-alias-badge-bg);
+  color: var(--dsw-alias-brand-primary);
+  font-size: 11px;
+}
+
+.wf-model-cascade-capsule__chevron {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-secondary, var(--wb-text-secondary));
+  transition: transform 150ms ease;
+}
+
+.wf-model-cascade-capsule[aria-expanded='true'] .wf-model-cascade-capsule__chevron {
+  transform: rotate(180deg);
 }
 
 /* 摘要段：图标 14px + 文字；段间用语义化 CSS 竖线分隔（废除行内「·」字符节点） */
@@ -8103,23 +8156,11 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 /* T03：朗读正文字数统计已并入 PromptTokenEditor 内置 meta-bar（Issue 746），
    外部 wf-config-panel__char-counter 移除，右下角只保留唯一字符统计。 */
 
-/* T04：底栏音色触发按钮（模型下拉右侧） */
+/* T04：底栏音色触发按钮（模型下拉右侧）—— 几何与五态由底栏触发器共享组提供，
+   此处只保留音色特有的宽度约束，避免与共享组重复声明。 */
 .wf-voice-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 8px;
-  background: var(--wb-pill-bg);
-  color: var(--wb-text-primary);
-  font-size: 12px;
-  cursor: pointer;
   max-width: 180px;
   flex-shrink: 1;
-  min-width: 0;
-  transition: background 120ms ease;
 }
 
 /* 模型级联浮层：入场淡入（画布内 portal 挂载） */
@@ -8148,20 +8189,6 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 
 .wf-model-cascade-fade {
   animation: wfModelCascadeFade 150ms ease;
-}
-
-.wf-voice-trigger:hover {
-  background: var(--wb-pill-hover);
-}
-
-.wf-voice-trigger:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.wf-voice-trigger:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: 1px;
 }
 
 .wf-voice-trigger__label {

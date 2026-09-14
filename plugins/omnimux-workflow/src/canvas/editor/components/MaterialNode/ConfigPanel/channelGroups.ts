@@ -31,6 +31,12 @@ export interface ChannelGroupItem {
   };
   /** Gateway group appended as `model@wireGroup`; falls back to `id`. */
   wireGroup?: string;
+  /**
+   * Values the upstream line behind this group pins. A per-task line that only
+   * renders one length declares `{ duration: { fixed: 30 } }`, so the panel
+   * converges on it instead of offering seconds the line would reject.
+   */
+  parameterConstraints?: Record<string, { fixed?: unknown }>;
   enabled: boolean;
 }
 
@@ -165,6 +171,11 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
         "stability24h": 100,
         "avgWaitTimeSec": 45
       },
+      "parameterConstraints": {
+        "duration": {
+          "fixed": 30
+        }
+      },
       "wireGroup": "seedance-2-5-task-pro",
       "enabled": true
     },
@@ -196,6 +207,11 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "sla": {
         "stability24h": 90,
         "avgWaitTimeSec": 120
+      },
+      "parameterConstraints": {
+        "duration": {
+          "fixed": 30
+        }
       },
       "wireGroup": "seedance-cheap",
       "enabled": true
@@ -590,4 +606,50 @@ export function resolveShortModelName(modelId?: string, family?: string): string
     if (lower.includes(fragment)) return label;
   }
   return id;
+}
+
+/** Group ids named by a routing intent (`group`, `allowedGroups`); empty means automatic. */
+function selectedGroupIds(routing: unknown): Set<string> {
+  const ids = new Set<string>();
+  if (!routing || typeof routing !== 'object' || Array.isArray(routing)) return ids;
+  const intent = routing as Record<string, unknown>;
+  if (typeof intent.group === 'string' && intent.group.trim()) ids.add(intent.group.trim());
+  if (Array.isArray(intent.allowedGroups)) {
+    for (const candidate of intent.allowedGroups) {
+      if (typeof candidate === 'string' && candidate.trim()) ids.add(candidate.trim());
+    }
+  }
+  return ids;
+}
+
+/**
+ * Parameter values pinned by the gateway groups the node currently routes to.
+ *
+ * Any value a selected group pins is applied: a request that reaches that line must
+ * satisfy it, and a free group in the same pool still accepts the pinned value. Only
+ * conflicting pins cancel out, since no single request can satisfy both. Automatic
+ * routing pins nothing.
+ *
+ * @param modelId Model id (may carry a `@channelGroup` suffix).
+ * @param routing Persisted routing intent (`group` and/or `allowedGroups`).
+ */
+export function resolveChannelGroupFixedParams(modelId: string, routing: unknown): Record<string, unknown> {
+  const selected = selectedGroupIds(routing);
+  if (selected.size === 0) return {};
+  const { modelId: id } = parseModelAndGroup(modelId);
+  const candidates = new Map<string, Set<unknown>>();
+  for (const group of getModelChannelGroups(id)) {
+    if (!selected.has(group.id) && !(group.wireGroup && selected.has(group.wireGroup))) continue;
+    for (const [field, constraint] of Object.entries(group.parameterConstraints ?? {})) {
+      if (!constraint || typeof constraint.fixed === 'undefined') continue;
+      const bucket = candidates.get(field) ?? new Set<unknown>();
+      bucket.add(constraint.fixed);
+      candidates.set(field, bucket);
+    }
+  }
+  const fixed: Record<string, unknown> = {};
+  for (const [field, values] of candidates) {
+    if (values.size === 1) fixed[field] = [...values][0];
+  }
+  return fixed;
 }

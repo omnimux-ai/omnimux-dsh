@@ -1,6 +1,7 @@
 import type { CapabilityCatalog, CapabilityModelItem, ModelParameterSchema } from '../../../../../../shared/api.ts';
 import { buildEffectiveOpsUiState, buildUiUpstreamFingerprint, readPreferredOperationId, setParamsOperation, type UpstreamMediaSnapshot } from '../../../../../../shared/validation/operationUi.ts';
 import { findDeclaredParameterFailure } from '../../../../../../shared/validation/declaredParameterValidation.ts';
+import { resolveChannelGroupFixedParams } from '../channelGroups.ts';
 import { mergeVideoParameterSchema } from './videoParamAdapter.ts';
 import { DEFAULT_PARAM_CONTROL_POLICY } from './paramControlTable.ts';
 
@@ -66,6 +67,33 @@ function validatedControls(values: Record<string, unknown>, definitions: Record<
   return { controls, notices, errors };
 }
 
+/**
+ * Converge controls on the values the routed groups pin.
+ *
+ * The contract stays authoritative: a pinned value its declaration rejects is dropped
+ * rather than written, so a stale group table can never turn a legal node into an
+ * illegal request.
+ */
+function pinnedControls(
+  modelId: string,
+  routing: unknown,
+  definitions: Record<string, Record<string, unknown>>,
+  controls: VideoControlValues,
+  notices: string[],
+): VideoControlValues {
+  const applied: VideoControlValues = {};
+  for (const [field, value] of Object.entries(resolveChannelGroupFixedParams(modelId, routing))) {
+    const definition = definitions[field];
+    if (!definition || !scalar(value)) continue;
+    if (findDeclaredParameterFailure({ [field]: value }, { [field]: definition }, undefined)) continue;
+    if (!Object.is(controls[field], value)) {
+      notices.push(`${FIELD_LABELS[field] ?? field}已按所选线路固定为 ${String(value)}`);
+    }
+    applied[field] = value;
+  }
+  return applied;
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -121,11 +149,20 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   const source = sameBranch ? args.params : (history.byModel[target.id]?.byOperation[targetBranch.id] ?? {});
   const selection = validatedControls(source, targetBranch.definitions);
   notices.push(...selection.notices);
+  // Routing is already decided when this runs, so a line that renders a single fixed
+  // length converges its control here instead of letting the request reach it illegal.
+  const pinned = pinnedControls(
+    target.id,
+    args.routing === undefined ? args.params.routing : args.routing,
+    targetBranch.definitions,
+    selection.controls,
+    notices,
+  );
   let params = {...args.params};
   const knownControls = DEFAULT_PARAM_CONTROL_POLICY.writeAllowlist.filter(field => !CONTENT_FIELDS.has(field));
   for (const field of new Set([...knownControls, ...Object.keys(currentBranch?.definitions ?? {}), ...Object.keys(targetBranch.definitions)])) delete params[field];
   delete params.pendingVideoParamAdjustment;
-  params = setParamsOperation({...params, model:target.id, ...selection.controls}, targetBranch.id);
+  params = setParamsOperation({...params, model:target.id, ...selection.controls, ...pinned}, targetBranch.id);
   if (args.routing === null) delete params.routing;
   else if (args.routing !== undefined) params.routing = structuredClone(args.routing);
   history.byModel[target.id] = {lastOperationId:targetBranch.id, byOperation:{...history.byModel[target.id]?.byOperation, [targetBranch.id]:selection.controls}};

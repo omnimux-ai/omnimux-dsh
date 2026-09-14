@@ -17,6 +17,24 @@ function entriesOf(definitions: unknown): Array<[string, Record<string, unknown>
   );
 }
 
+/**
+ * Range admission shared with the hub guard: bounds plus the step lattice, with the
+ * declared automatic value (`-1`) standing outside both.
+ */
+function withinRange(range: Record<string, unknown> | null, value: unknown, allowAuto: boolean): boolean {
+  if (!range) return false;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+  if (allowAuto && value === -1) return true;
+  const min = typeof range.min === 'number' ? range.min : undefined;
+  const max = typeof range.max === 'number' ? range.max : undefined;
+  const step = typeof range.step === 'number' ? range.step : undefined;
+  if (min !== undefined && value < min) return false;
+  if (max !== undefined && value > max) return false;
+  if (step !== undefined && min !== undefined
+    && Math.abs((value - min) / step - Math.round((value - min) / step)) > Number.EPSILON) return false;
+  return true;
+}
+
 /** Return the first contract-declared parameter that rejects a supplied value. */
 export function findDeclaredParameterFailure(
   values: Record<string, unknown>,
@@ -37,8 +55,16 @@ export function findDeclaredParameterFailure(
     const value = supplied ? values[field] : definition.defaultValue;
 
     const options = Array.isArray(definition.options) ? definition.options : [];
-    if (options.length > 0) {
-      const matches = options.some((option) => {
+    const range = definition.range && typeof definition.range === 'object' && !Array.isArray(definition.range)
+      ? (definition.range as Record<string, unknown>)
+      : null;
+    // Options and range are alternatives, exactly as in the hub submit guard: a value
+    // is admitted when it matches an option OR falls inside the range. Reading options
+    // as the sole whitelist rejects every in-range value of a declaration that
+    // publishes both — seedance-2-5 duration is 4~30s plus the -1 automatic option,
+    // so the default 5s was refused by the canvas while the hub accepted it.
+    if (options.length > 0 || range) {
+      const optionMatches = options.length > 0 && options.some((option) => {
         const candidate = option && typeof option === 'object' && !Array.isArray(option)
           ? (option as Record<string, unknown>).value
           : option;
@@ -48,7 +74,17 @@ export function findDeclaredParameterFailure(
             && typeof value === 'string'
             && candidate.toLowerCase() === value.toLowerCase());
       });
-      if (!matches) return { field, message: `参数“${field}”不支持值 ${JSON.stringify(value)}` };
+      if (!optionMatches && !withinRange(range, value, definition.allowAuto === true)) {
+        // A range-only declaration keeps its own range wording; a declaration that
+        // also publishes options reports the enum-style rejection the hub guard uses.
+        if (options.length === 0 && range) {
+          if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return { field, message: `参数“${field}”必须为数字` };
+          }
+          return { field, message: `参数“${field}”超出合同允许范围` };
+        }
+        return { field, message: `参数“${field}”不支持值 ${JSON.stringify(value)}` };
+      }
     }
     if (definition.supported === true && typeof value !== 'boolean') {
       return { field, message: `参数“${field}”必须为布尔值` };
@@ -58,25 +94,6 @@ export function findDeclaredParameterFailure(
     }
     if (definition.type === 'integer' && !Number.isInteger(value)) {
       return { field, message: `参数“${field}”必须为整数` };
-    }
-    const range = definition.range;
-    if (range && typeof range === 'object' && !Array.isArray(range)) {
-      const bounds = range as Record<string, unknown>;
-      if (typeof value !== 'number' || !Number.isFinite(value)) {
-        return { field, message: `参数“${field}”必须为数字` };
-      }
-      const auto = definition.allowAuto === true && value === -1;
-      const min = typeof bounds.min === 'number' ? bounds.min : undefined;
-      const max = typeof bounds.max === 'number' ? bounds.max : undefined;
-      const step = typeof bounds.step === 'number' ? bounds.step : undefined;
-      if (!auto && (
-        (min !== undefined && value < min)
-        || (max !== undefined && value > max)
-        || (step !== undefined && min !== undefined
-          && Math.abs((value - min) / step - Math.round((value - min) / step)) > Number.EPSILON)
-      )) {
-        return { field, message: `参数“${field}”超出合同允许范围` };
-      }
     }
     if (typeof value === 'string') {
       const length = Array.from(value).length;

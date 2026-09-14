@@ -908,18 +908,22 @@ textarea:focus-visible {
   content: "";
 }
 
+/*
+ * 工具卡片：顶对齐排布，标签与两行窗口从同一基线往下排，
+ * 图标与状态标记贴住首行；只对颜色类属性做过渡，避免布局属性过渡放大进展时的视觉跳动。
+ */
 .tool-activity {
   display: flex;
   width: min(100%, 420px);
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--canvas-deep);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -989,6 +993,8 @@ textarea:focus-visible {
 .tool-copy {
   display: flex;
   min-width: 0;
+  /* 顶对齐配合 1px 上内边距：标签与两行窗口和图标、状态标记落在同一视野里。 */
+  padding-top: 1px;
   flex: 1;
   flex-direction: column;
   gap: 2px;
@@ -1002,21 +1008,50 @@ textarea:focus-visible {
   line-height: 1.3;
 }
 
-.tool-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
+/*
+ * 两行进展窗口。
+ *
+ * 卡片几何必须与进展次数无关：一旦允许文本自然换行，每来一个进展就多占一行、卡片随之长高，
+ * 用户感知到的就是持续抖动。这里固定露出两行（高度乘 --ui-scale 以跟随界面缩放），
+ * 步骤链增长时由内容整体上移带出流动感，卡片本身尺寸不变。
+ * 行内单格超出时用遮罩淡出，再由组件在字符层面截断，避免撑破行宽。
+ */
+.tool-window {
+  display: block;
+  min-width: 0;
+  height: calc(33.35px * var(--ui-scale));
+  margin-top: 1px;
+  overflow: hidden;
   color: var(--ink);
   font-size: calc(11.5px * var(--ui-scale));
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 15px), rgba(0, 0, 0, 0.35) 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 15px), rgba(0, 0, 0, 0.35) 100%);
 }
 
+.tool-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  height: calc(14.675px * var(--ui-scale));
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%);
+}
+
+/* 卡片按顶对齐排布：标签与两行窗口上下对齐，图标和状态标记贴住首行。 */
 .tool-step-tag {
   min-width: 0;
   max-width: 100%;
   display: inline-block;
+  flex: 0 1 auto;
+  overflow: hidden;
   padding: 0 5px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.04);
@@ -1039,19 +1074,22 @@ textarea:focus-visible {
 
 .tool-step-arrow {
   display: inline-block;
+  flex: 0 0 auto;
   margin: 0 2px;
   color: var(--faint);
   font-size: calc(10px * var(--ui-scale));
 }
 
-.tool-step-text {
-  min-width: 0;
-  max-width: 100%;
-  color: var(--ink);
-}
-
+/*
+ * 状态槽位定宽：进行中的 spinner 居中在完成徽标的宽度里。
+ * 否则状态切换会把文本可用宽度压缩 32.5px，触发一次额外换行，卡片再次长高。
+ */
 .tool-state {
+  display: inline-flex;
+  width: 44.5px;
   flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   margin-left: auto;
 }
 

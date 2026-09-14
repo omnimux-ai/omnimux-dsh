@@ -6,6 +6,7 @@ import {
   formatPriceLabel,
   getModelChannelGroups,
   parseModelAndGroup,
+  resolveChannelGroupFixedParams,
   resolveShortModelName,
   MODEL_CHANNEL_GROUPS,
 } from './channelGroups.ts';
@@ -74,6 +75,7 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
         assert.equal(pickerGroup.pricing?.billingMode, hubGroup.pricing?.billingMode, `${modelId}@${hubGroup.id} billing`);
         assert.equal(pickerGroup.sla?.stability24h, hubGroup.sla?.stability24h, `${modelId}@${hubGroup.id} stability`);
         assert.equal(pickerGroup.sla?.avgWaitTimeSec, hubGroup.sla?.avgWaitTimeSec, `${modelId}@${hubGroup.id} wait`);
+        assert.deepEqual(pickerGroup.parameterConstraints ?? null, hubGroup.parameterConstraints ?? null, `${modelId}@${hubGroup.id} parameterConstraints`);
         assert.equal(pickerGroup.enabled, hubGroup.enabled, `${modelId}@${hubGroup.id} enabled`);
       }
     }
@@ -154,5 +156,24 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     assert.equal(resolveShortModelName('midjourney-8.1', 'midjourney'), 'Midjourney');
     // 未被 family 命中的 id 不得被家族表误吞
     assert.equal(resolveShortModelName('gpt-5.5', 'openai'), 'GPT-5.5');
+  });
+
+  // #1804：按次专线上游只产一个固定时长，面板必须收敛到该值，而不是提供一个
+  // 必然被回绝的秒数。
+  it('pins the fixed duration of the per-task lines the node routes to', () => {
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['cheap'] }), { duration: 30 });
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { group: 'pro' }), { duration: 30 });
+    // 自由线不锁；锁定线与自由线同池时仍以锁定值为准（自由线同样接受 30 秒）
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['cheap', 'standard'] }), { duration: 30 });
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['standard'] }), {});
+    // 自动路由与未知线路都不臆造约束
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', undefined), {});
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', {}), {});
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { allowedGroups: ['nope'] }), {});
+    // 未声明约束的模型行为不变
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-0', { allowedGroups: ['pro'] }), {});
+    // 网关分组标识同样可寻址，带渠道后缀的模型 id 先归一
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5', { group: 'seedance-cheap' }), { duration: 30 });
+    assert.deepEqual(resolveChannelGroupFixedParams('seedance-2-5@cheap', { allowedGroups: ['cheap'] }), { duration: 30 });
   });
 });
